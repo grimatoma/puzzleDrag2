@@ -116,7 +116,8 @@ export function infoboxFacts(conceptId: string, _key: string, e: Rec): Fact[] {
       const entryCost = e["entryCost"];
       if (entryCost != null && typeof entryCost === "object") {
         const coins = (entryCost as Record<string, unknown>)["coins"];
-        add("Entry cost", coins != null ? `${coins} coins` : "Free");
+        const coinNum = typeof coins === "number" ? coins : null;
+        add("Entry cost", coinNum != null && coinNum > 0 ? `${coinNum} coins` : "Free");
       } else {
         add("Entry cost", "Free");
       }

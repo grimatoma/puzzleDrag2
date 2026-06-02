@@ -2,9 +2,9 @@
  * WikiLinkButton.tsx — Renders a [[wikilink]] or data-wiki reference as a
  * navigable button within the Dev Panel wiki.
  *
- * Also exports `wikiNavTarget`, a shared helper that encodes the interim
- * (Phase 4) navigation contract: wiki is still one "wiki" tab; Phase 5 will
- * switch `tab` to the conceptId — change only this helper then.
+ * Also exports `wikiNavTarget`, the shared helper that encodes the wiki
+ * navigation contract. All cross-link call sites (WikiLinkButton, WikiArticle
+ * relations + backlinks, CategoryPage entry cards) route through it.
  */
 
 import React from "react";
@@ -14,23 +14,23 @@ import { resolveWikiLink } from "./wikilink.js";
 import { COLORS } from "../shared.jsx";
 
 // ---------------------------------------------------------------------------
-// wikiNavTarget — Phase 4 interim: everything goes to the "wiki" tab.
-// Phase 5: change `tab` from "wiki" to `conceptId`.
+// wikiNavTarget — each concept routes to its OWN tab (the conceptId), with the
+// focus string `"conceptId:key"` selecting the entity article within that tab.
 // ---------------------------------------------------------------------------
 
 /**
  * Build a navigation target for a resolved wiki entity.
  *
- * INTERIM (Phase 4): the wiki is still a single "wiki" tab. The focus string
- * encodes both conceptId and key as `"conceptId:key"` so the tab can resolve
- * it. When Phase 5 promotes each concept to its own tab, change ONLY this
- * helper.
+ * Each concept owns a tab keyed by its conceptId; the focus string encodes
+ * `"conceptId:key"` so the shell can resolve the specific entity article
+ * (parseWikiFocus) while the tab itself drives the category landing page when
+ * focus is absent.
  */
 export function wikiNavTarget(
   conceptId: string,
   key: string,
 ): { tab: string; focus: string } {
-  return { tab: "wiki", focus: `${conceptId}:${key}` };
+  return { tab: conceptId, focus: `${conceptId}:${key}` };
 }
 
 // ---------------------------------------------------------------------------

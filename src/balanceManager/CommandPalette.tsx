@@ -1,12 +1,12 @@
 // Cmd-K command palette modal for the Dev Panel.
 //
 // Opens with Cmd/Ctrl-K. Type to filter every known balance entity
-// (tiles, items, recipes, buildings, biomes, zones, NPCs, keepers,
-// workers, bosses, achievements, story beats, flags); arrow keys cycle
-// the highlighted result; Enter picks it (which navigates to the
-// appropriate tab); Escape closes.
+// (tiles, resources, tools, recipes, buildings, zones, NPCs,
+// workers, bosses); arrow keys cycle the highlighted result; Enter
+// picks it (which navigates to the wiki article for that entity);
+// Escape closes.
 //
-// The ranking + index live in commandPalette.js — this component is just
+// The ranking + index live in commandPalette.ts — this component is just
 // the input box, results list, and keyboard handling.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -16,19 +16,15 @@ import type { CommandEntry } from "./commandPalette.js";
 
 interface KindTone { bg: string; fg: string; label: string; }
 const KIND_TONE: Record<string, KindTone> = {
-  tile:        { bg: "#fff5e6", fg: COLORS.ember,    label: "TILE" },
-  item:        { bg: "#fff5e6", fg: COLORS.ember,    label: "ITEM" },
-  recipe:      { bg: "#fbf6ea", fg: COLORS.inkLight, label: "RECIPE" },
+  tile:        { bg: "#fff5e6", fg: COLORS.ember,     label: "TILE" },
+  resource:    { bg: "#eef6ea", fg: COLORS.greenDeep, label: "RESOURCE" },
+  tool:        { bg: "#fbf6ea", fg: COLORS.inkLight,  label: "TOOL" },
+  recipe:      { bg: "#fbf6ea", fg: COLORS.inkLight,  label: "RECIPE" },
   building:    { bg: COLORS.parchment, fg: COLORS.inkLight, label: "BUILDING" },
-  biome:       { bg: "#eef6ea", fg: COLORS.greenDeep, label: "BIOME" },
   zone:        { bg: "#eef6ea", fg: COLORS.greenDeep, label: "ZONE" },
-  npc:         { bg: "#f7edff", fg: "#5a3d83",       label: "NPC" },
-  keeper:      { bg: "#f7edff", fg: "#5a3d83",       label: "KEEPER" },
-  worker:      { bg: "#e8f0f7", fg: "#2f5f7a",       label: "WORKER" },
-  boss:        { bg: "#fff0eb", fg: COLORS.red,      label: "BOSS" },
-  achievement: { bg: "#fff7da", fg: "#7a5810",       label: "ACHIEV" },
-  beat:        { bg: "#fbf6ea", fg: COLORS.inkLight, label: "BEAT" },
-  flag:        { bg: "#fff0eb", fg: COLORS.red,      label: "FLAG" },
+  npc:         { bg: "#f7edff", fg: "#5a3d83",        label: "NPC" },
+  worker:      { bg: "#e8f0f7", fg: "#2f5f7a",        label: "WORKER" },
+  boss:        { bg: "#fff0eb", fg: COLORS.red,       label: "BOSS" },
 };
 const DEFAULT_TONE: KindTone = { bg: COLORS.parchmentDeep, fg: COLORS.inkLight, label: "ENTRY" };
 

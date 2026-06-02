@@ -1,0 +1,69 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The world and story of Hearthwood Vale. A spine of story beats is wired (arrival, the first harvest, the keeper at the fence, the smith and healer arriving, founding the mine, the festival, and Mira's Letter — all in <code>src/story.ts</code>). The deeper character arcs, the Hollow Pact mechanics, and the finale below are the <strong>narrative target</strong>, not shipped systems — they are flagged so this page never presents aspiration as fact.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">WIRED</span> a beat that fires in normal play &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;margin:2px;">PARTIAL</span> partly wired &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;margin:2px;">DOC-ONLY</span> in the design bible, not in code
+</p>
+
+<h2>The premise</h2>
+<p>A century ago, the founding settlement of <strong>Hearthwood Vale</strong> emptied in a single bad winter. Before the last lantern went out, the founders <em>banked</em> the hearth — they did not snuff it — and made a vow: one of their line would return. You are the descendant. You arrive in spring with nothing but the oath and a name.</p>
+<p>As your smoke rises, sister settlements across the region — quiet for a hundred years — see it from miles away. Their keepers stir. Their descendants walk home. Your "kingdom" is not built by conquest. It is the <strong>rediscovery of a dormant network of vows</strong>. The opening is a letter from <a data-wiki="npcs:wren">Wren</a>, the seventy-year-old sole hearthkeeper who has tended the ember alone for fifty-two years: <em>"The ember still burns. I am tired. Come home, if you mean to."</em> Her first act is to hand you the tongs. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> (arrival beat)</p>
+
+<div data-game-visual="map-current-home"></div>
+
+<h2>The world &amp; the Hollow Pact</h2>
+<p>The Hearthwood is a wide, fertile valley network — mountains to the north and east, marshlands to the south, the Saltspray Sea to the west. It was once a federation of about eleven small holds bound by a founding <strong>Charter</strong> and a centennial gathering at the <strong>Old Capital</strong> ([[zones:oldcapital]]). The land was made habitable by the <strong>Hollow Folk</strong> — slow, lantern-bearing figures who never speak aloud but communicate through tally-marks and stone-arrangements — under a <strong>Pact</strong> of six terms:</p>
+<ol>
+  <li>The hearths shall not go out.</li>
+  <li>The Pact shall be renewed every century at the place of its making.</li>
+  <li>Sister-holds shall share the labor.</li>
+  <li>Names shall be kept — what is named remains; what is forgotten, the Hollow Folk reclaim.</li>
+  <li>The keepers shall be honored.</li>
+  <li>The Ember shall not be moved.</li>
+</ol>
+<p>The abandonment was mundane, not cursed — bad weather, blight, and unlucky timing in one hard winter. Half the population died; the other half scattered. But the founders banked their hearths before leaving. By the time of your arrival, only one still glowed: the one at the Vale, kept by Wren and her line. Your line. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span> (the Pact terms render as an informational Charter stub; the tithes and finale renewal are not in code)</p>
+
+<h2>The keepers &amp; the central choice</h2>
+<p>Each settled biome has a land-spirit guardian — a <strong>keeper</strong>. A settlement's defining decision happens at its outer hearth: <strong>Coexist</strong> (the keeper stays, the biome keeps its wild magic, you earn Embers) or <strong>Drive Out</strong> (a boss fight for the hearth, the biome becomes orderly, you earn Ingots). The choice is final per settlement; to walk the other path you found a new settlement of that type. Bosses such as [[bosses:frostmaw]] and [[bosses:old_stoneface]] are keeper-style encounters, not gates. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> (reached via a "Face the keeper" button; the full Coexist/Drive-Out fork is paused for Phase 1 — see Design decisions)</p>
+
+<h2>The cast</h2>
+<p>Five named townsfolk anchor the story. Their arrival is triggered by your kingdom's state, so founding order changes who you meet first.</p>
+<table>
+  <thead><tr><th>Character</th><th>Role</th><th>Arc</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td><a data-wiki="npcs:wren">Wren</a></td><td>Hearthkeeper</td><td>Half-mystic, half-pragmatic. Confesses she half-hoped no one would come; at full bond she passes you the ember-locket and retires.</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span></td></tr>
+    <tr><td><a data-wiki="npcs:mira">Mira</a></td><td>Baker</td><td><strong>Mira's Letter</strong> — her partner wants to join the Vale; a four-way choice. The one fully implemented character arc.</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td></tr>
+    <tr><td><a data-wiki="npcs:tomas">Old Tomas</a></td><td>The Last Witness / Beekeeper</td><td>A slow, wandering storyteller who was eleven at the abandonment. The Old Witness + recurring lane-naming (Pact term 4).</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span></td></tr>
+    <tr><td><a data-wiki="npcs:bram">Bram</a></td><td>Smith</td><td>Gruff, works while talking. The Brother's Tools — find his lost brother's pick and choose to bury or forge it ("the most weight in the game").</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> (Bram arrives; the brother arc is doc-only)</td></tr>
+    <tr><td><a data-wiki="npcs:liss">Liss</a></td><td>Healer</td><td>Calm, formal; keeps the Pact fragments. The Buried Charter — reads the full Pact; at full bond reveals she is your cousin.</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> (Liss arrives; her arc is doc-only)</td></tr>
+  </tbody>
+</table>
+
+<h2>The arc — beats that play today</h2>
+<p>A through-line of story beats fires off real game triggers (arriving, harvesting, lighting the hearth, delivering the first order, building the [[buildings:granary]], facing the keeper at the fence, the smith and healer arriving, founding and opening the mine, the [[buildings:caravan_post]], and the harvest festival). These are <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> in <code>src/story.ts</code> and read live game state.</p>
+<ol>
+  <li><strong>A Cold Hearth</strong> — you arrive; Wren hands over the tongs.</li>
+  <li><strong>The First Harvest</strong> &amp; <strong>First Light</strong> — your first chains; the hearth catches.</li>
+  <li><strong>The First Delivery</strong> &amp; <strong>Room For Tomorrow</strong> — the first order; the granary rises.</li>
+  <li><strong>The Keeper At The Fence</strong> — the first keeper challenge.</li>
+  <li><strong>The Smith</strong> / <strong>Iron in the Vale</strong> / <strong>The Healer</strong> — Bram and Liss arrive; first forged goods.</li>
+  <li><strong>The Mine</strong> / <strong>Into the Dark</strong> — you found and open the first expedition.</li>
+  <li><strong>The Harvest Festival</strong> / <strong>The Settlement Lives</strong> — the settlement comes alive.</li>
+</ol>
+
+<h2>The settlements</h2>
+<p>The map is a network of dormant holds, each a single-purpose settlement. The named nodes (from the cartography map):</p>
+<ul>
+  <li>[[zones:home]] — Hearthwood Vale, the home hearth and the tutorial settlement.</li>
+  <li>[[zones:meadow]] — Greenmeadow, a farm hold; [[zones:orchard]] — the Wild Orchard.</li>
+  <li>[[zones:quarry]] — the Cracked Quarry, the first mine; [[zones:caves]] — the Lanternlit Caves; [[zones:forge]] — the Black Forge.</li>
+  <li>[[zones:harbor]] — Saltspray Harbor, the sea hold.</li>
+  <li>[[zones:crossroads]], [[zones:fairground]], [[zones:pit]] — event, festival, and boss nodes.</li>
+  <li>[[zones:oldcapital]] — the Old Capital, where the Pact is renewed at the finale.</li>
+</ul>
+
+<h2>The finale</h2>
+<p>The Old Capital is the meta-endgame, reached only when you hold one Hearth-Token of each type (a Heirloom Seed from a farm, Pact-Iron from a mine, a Tidesinger's Pearl from a harbor). There, the journey reads back your record — which settlement you founded first, which keepers you Coexisted versus Drove Out, which arcs you completed — and gates the Charter renewal accordingly. The precise mechanics are intentionally left open until the rest of the game's identity is firmer. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span> (the unlock gate and map node exist; there is no travel flow or finale yet)</p>
+
+<p style="font-size:12px;color:#867a66;">Themes: memory over conquest; the dignity of mundane keeping; a world that remembers what you did. For the build plan and status on every system, see the <strong>Progression</strong> page; for the settled calls behind this fiction, see <strong>Design decisions</strong>.</p>

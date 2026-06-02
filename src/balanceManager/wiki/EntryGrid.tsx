@@ -71,7 +71,7 @@ export default function EntryGrid({
             <button
               key={entry.key}
               type="button"
-              className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="wiki-entry-card rounded-lg border flex flex-col items-center cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{
                 background: COLORS.parchment,
                 borderColor: COLORS.border,
@@ -89,7 +89,7 @@ export default function EntryGrid({
         return (
           <div
             key={entry.key}
-            className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md"
+            className="wiki-entry-card rounded-lg border flex flex-col items-center"
             style={{
               background: COLORS.parchment,
               borderColor: COLORS.border,

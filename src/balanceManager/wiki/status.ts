@@ -5,7 +5,7 @@
  * one of five status labels that communicate how far along in the implementation
  * the feature is. The status map is seeded from three concrete sources (in priority
  * order): compile-time feature flags, dormant Dev Panel tabs, and the system-by-system
- * assessment in docs/progression-plan-v2.html. Where those sources conflict, code
+ * assessment visible in the in-app wiki at /b/#/page/progression. Where those sources conflict, code
  * signals win over the doc assessment.
  */
 
@@ -58,7 +58,7 @@ export const WIKI_STATUS_LEGEND: Record<WikiStatus, StatusMeta> = {
 // Each entry includes a one-line rationale comment citing the source.
 
 const CONCEPT_STATUS: Partial<Record<string, WikiStatus>> = {
-  // SOURCE: dormant Dev Panel tab + v2 doc §17 "Bosses — PARTIAL"
+  // SOURCE: dormant Dev Panel tab + progression plan "Bosses — PARTIAL"
   // Bosses are defined and have modifiers, but are triggered manually (debug/story
   // beats only) — no auto day-cooldown loop; tickModifier runs only in tests.
   bosses: "PARTIAL",
@@ -68,7 +68,7 @@ const CONCEPT_STATUS: Partial<Record<string, WikiStatus>> = {
   // read them but the full biome-selection / specialization UX is not wired.
   settlementBiomes: "PARTIAL",
 
-  // SOURCE: v2 doc §14 "Hazards — PARTIAL (biome catalog)"
+  // SOURCE: progression plan "Hazards — PARTIAL (biome catalog)"
   // The wiki "hazards" concept surfaces only the mine HAZARDS array
   // (cave_in / gas_vent / lava / mole), all of which are fully wired.
   // The broader hazard system is PARTIAL: farm hazards (fire/wolf/rats) exist in
@@ -88,7 +88,7 @@ export const ENTITY_STATUS: Partial<Record<string, Partial<Record<string, WikiSt
   // which reads HAZARDS from src/features/mine/hazards.ts). Farm hazards (fire/rats/wolf)
   // are NOT wiki entities, so no overrides for them appear here.
   hazards: {
-    // SOURCE: v2 doc §14 — mine hazards (cave_in/gas_vent/lava/mole) are WIRED
+    // SOURCE: progression plan — mine hazards (cave_in/gas_vent/lava/mole) are WIRED
     cave_in: "WIRED",
     gas_vent: "WIRED",
     lava: "WIRED",

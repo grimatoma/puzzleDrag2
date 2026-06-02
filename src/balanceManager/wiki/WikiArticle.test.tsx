@@ -10,7 +10,7 @@
  *  3. Authored body wiring: bread resource → "staple food" from bread.html appears.
  *  4. Back button: clicking "← Back" calls the onBack spy.
  *  5. RefButton navigation: clicking a relation button calls navigate with
- *     the wikiNavTarget shape { tab: "wiki", focus: "conceptId:key" }.
+ *     the wikiNavTarget shape { tab: "<conceptId>", focus: "conceptId:key" }.
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -121,7 +121,7 @@ describe("WikiArticle — back button", () => {
 // ─── Test 5: RefButton navigation via wikiNavTarget ──────────────────────────
 
 describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
-  it("clicking a relation RefButton calls navigate with { tab: 'wiki', focus: '<conceptId>:<key>' }", () => {
+  it("clicking a relation RefButton calls navigate with { tab: '<conceptId>', focus: '<conceptId>:<key>' }", () => {
     const navigate = vi.fn();
     renderArticle("recipes", "rec_bread", { navigate });
 
@@ -137,11 +137,12 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
     expect(relButtons.length).toBeGreaterThan(0);
     fireEvent.click(relButtons[0]);
 
-    expect(navigate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tab: "wiki",
-        focus: expect.stringMatching(/^[a-zA-Z_]+:.+/),
-      }),
-    );
+    // Phase-5 contract: the tab IS the linked entity's conceptId, and the focus
+    // is "<conceptId>:<key>". Assert the wikiNavTarget invariant: tab equals the
+    // conceptId prefix of focus.
+    expect(navigate).toHaveBeenCalledTimes(1);
+    const arg = navigate.mock.calls[0][0] as { tab: string; focus: string };
+    expect(arg.focus).toMatch(/^[a-zA-Z_]+:.+/);
+    expect(arg.tab).toBe(arg.focus.slice(0, arg.focus.indexOf(":")));
   });
 });

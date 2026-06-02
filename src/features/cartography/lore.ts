@@ -7,7 +7,7 @@
 //   hearth    — one-line "state of the hearth" descriptor used in the
 //               Phaser scene's atmospheric label under each node
 //
-// The tone matches docs/the_long_return_master_doc_v3.md — banked hearths,
+// The tone matches the game's narrative bible — banked hearths,
 // the Long Silence, the Hollow Pact, sister-holds whose smoke rises
 // when yours does. Keep it short, suggestive, never explanatory.
 

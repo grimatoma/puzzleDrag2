@@ -183,6 +183,25 @@ describe("infoboxFacts", () => {
     expect(costFact).toBeDefined();
   });
 
+  it("zones — zero-coin entryCost shows 'Free' not '0 coins'", () => {
+    // Use the crossroads zone which has entryCost: { coins: 0 }
+    const entity = getEntity("zones", "crossroads");
+    const facts = infoboxFacts("zones", "crossroads", entity);
+    const costFact = facts.find((f) => f.label === "Entry cost");
+    expect(costFact).toBeDefined();
+    expect(costFact!.value).toBe("Free");
+    expect(costFact!.value).not.toMatch(/0 coins/);
+  });
+
+  it("zones — positive entryCost shows coin amount", () => {
+    // Synthesise an entity with a positive coin entry cost
+    const syntheticZone = { baseTurns: 10, entryCost: { coins: 50 } };
+    const facts = infoboxFacts("zones", "synthetic", syntheticZone);
+    const costFact = facts.find((f) => f.label === "Entry cost");
+    expect(costFact).toBeDefined();
+    expect(costFact!.value).toBe("50 coins");
+  });
+
   it("workers — includes Role fact from real worker", () => {
     const entity = getEntity("workers", realWorkerId);
     const facts = infoboxFacts("workers", realWorkerId, entity);
@@ -254,6 +273,12 @@ describe("scenarioForEntity", () => {
       ["toolPowers", "clear_all"],
       ["seasons", "Spring"],
       ["views", "board"],
+      ["views", "town"],
+      ["views", "inventory"],
+      ["views", "cartography"],
+      ["views", "chronicle"],
+      ["npcs", "merchant"],
+      ["hazards", "fire"],
     ];
     for (const [conceptId, key] of sampleInputs) {
       const result = scenarioForEntity(conceptId, key);
@@ -264,9 +289,56 @@ describe("scenarioForEntity", () => {
   });
 
   it("returns null for unmapped concepts", () => {
-    expect(scenarioForEntity("hazards", "fire")).toBeNull();
     expect(scenarioForEntity("unknown_concept", "foo")).toBeNull();
-    expect(scenarioForEntity("npcs", "merchant")).toBeNull();
+    expect(scenarioForEntity("abilities", "threshold_reduce")).toBeNull();
+  });
+
+  it("views concept — board view maps to a real board scenario", () => {
+    const result = scenarioForEntity("views", "board");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("board-farm-idle");
+  });
+
+  it("views concept — town view maps to a real town scenario", () => {
+    const result = scenarioForEntity("views", "town");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+  });
+
+  it("views concept — cartography view maps to a real map scenario", () => {
+    const result = scenarioForEntity("views", "cartography");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("map-current-home");
+  });
+
+  it("views concept — chronicle view maps to a real chronicle scenario", () => {
+    const result = scenarioForEntity("views", "chronicle");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("chronicle-progressed");
+  });
+
+  it("npcs concept — maps to a townsfolk scenario", () => {
+    const result = scenarioForEntity("npcs", "merchant");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("townsfolk-castle");
+  });
+
+  it("hazards concept — fire maps to a hazard board scenario", () => {
+    const result = scenarioForEntity("hazards", "fire");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("board-farm-fire-rats");
+  });
+
+  it("hazards concept — unknown hazard key falls back to mine board", () => {
+    const result = scenarioForEntity("hazards", "unknown_hazard");
+    expect(result).not.toBeNull();
+    expect(validScenarioIds.has(result!)).toBe(true);
+    expect(result).toBe("board-mine-hazards");
   });
 
   it("tiles returns a board scenario id", () => {

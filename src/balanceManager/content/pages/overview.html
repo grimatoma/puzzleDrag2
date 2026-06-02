@@ -1,1 +1,51 @@
-<p>Welcome to the Hearthwood Vale wiki. Browse <a data-wiki="buildings:bakery">the Bakery</a> or any [[bread]] article.</p>
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">Welcome to the <strong>Hearthwood Vale</strong> wiki — the central place to understand how the game actually works <em>and</em> the drawing board for what is being built next. Every catalog fact on these pages is generated live from the game's configuration and schemas, so the wiki tracks the code. The authored narrative pages (this one, <strong>Progression</strong>, <strong>Design decisions</strong>, and <strong>Story</strong>) supply the connective tissue the generated data can't: the why, the plans, and the world.</p>
+
+<div data-game-visual="town-home-built-out"></div>
+
+<h2>What Hearthwood Vale is</h2>
+<p>Hearthwood Vale is a Phaser + React game that fuses a <strong>drag-to-chain puzzle board</strong> with a settlement-rebuilding loop. You are the descendant of a founder who, a century ago, <em>banked</em> the hearth of the Vale rather than letting it die — and swore one of their line would return. You are that one. The central verb is <strong>remember, not conquer</strong>: you rebuild a dormant kingdom one ruin at a time.</p>
+
+<h3>The core loop</h3>
+<p>A <strong>turn</strong> is one chain: drag through three or more adjacent matching tiles (8-direction movement, no tile reused). Long chains are intentional — at fixed thresholds along a chain, an upgraded tile spawns and a resource is credited. After each move the board collapses downward and refills.</p>
+<ul>
+  <li><strong>Chain → resources + coins.</strong> One chain costs one turn; longer chains yield more. Resource yield is <code>floor(chainLength / threshold)</code> per the tile's <code>UPGRADE_THRESHOLDS</code> entry.</li>
+  <li><strong>Refine &amp; build.</strong> Raw goods feed buildings and recipes — grain becomes [[resources:flour]] at the [[buildings:mill]], flour becomes [[resources:bread]] at the [[buildings:bakery]].</li>
+  <li><strong>Tier up &amp; expand.</strong> Spend the refined economy to climb a settlement, then raise the wagon that wakes the next ruin.</li>
+</ul>
+
+<h3>Seasons &amp; turns</h3>
+<p>A farm session is a fixed turn budget (home/[[zones:meadow]]/[[zones:quarry]] start at 10 turns; deeper zones at 12). That budget is split into <strong>four equal seasons</strong> (Spring, Summer, Autumn, Winter) that bias which tile categories spawn. The standalone calendar-year season system was removed; what remains is the in-session quartering plus the seasonal visuals.</p>
+
+<div data-game-visual="board-season-winter-wheel"></div>
+
+<h3>The three biomes</h3>
+<table>
+  <thead><tr><th>Biome</th><th>Board</th><th>What it yields</th><th>Home zone</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Farm</strong></td><td>Year-structured, season-driven spawn bias</td><td>grass/hay, grain, trees, birds, vegetables, fruit, flowers, herds, cattle, mounts</td><td>[[zones:home]], [[zones:meadow]], [[zones:orchard]]</td></tr>
+    <tr><td><strong>Mine</strong></td><td>Expedition — turns bought with packed food</td><td>stone ([[resources:block]]), iron &amp; metals ([[resources:iron_bar]]), coal, gems, runes</td><td>[[zones:quarry]], [[zones:caves]], [[zones:forge]]</td></tr>
+    <tr><td><strong>Harbor</strong></td><td>Expedition — tide-driven fishing</td><td>fish, fish oil, sea shells, pearls</td><td>[[zones:harbor]]</td></tr>
+  </tbody>
+</table>
+<p>The Mine unlocks once you reach level 2 and have provisioned food (the [[buildings:kitchen]] converts grain into [[resources:supplies]]); the Harbor opens later. Expeditions end gracefully when food runs out — you keep everything gathered.</p>
+
+<h3>Town &amp; expeditions</h3>
+<p>Between boards you manage the <strong>town</strong>: build structures, craft at stations, fill orders for the townsfolk (<a data-wiki="npcs:mira">Mira</a> the baker, <a data-wiki="npcs:bram">Bram</a> the smith, and others), and travel the map to found new settlements. Bosses such as [[bosses:frostmaw]] appear as seasonal challenges.</p>
+
+<h2>Design pillars</h2>
+<ul>
+  <li><strong>Remember, not conquer.</strong> Progress is rediscovery of a dormant network of vows, not conquest.</li>
+  <li><strong>One system at a time.</strong> Content reveals along the rebuild ladder; the first town teaches the farm, the mine arrives later.</li>
+  <li><strong>The dignity of mundane keeping.</strong> Baking bread, naming a lane, tending a hearth — small acts carry weight.</li>
+  <li><strong>Soft fail.</strong> No permanent setbacks; the only cost is time and one-shot consumables.</li>
+  <li><strong>No pay-to-win.</strong> Premium currency only ever skips timers, never buys puzzle advantage.</li>
+</ul>
+
+<h2>How to use this wiki</h2>
+<p>This wiki is two things at once: a <strong>reference</strong> for the game as it exists today, and a <strong>drawing board</strong> for features that are partially built or planned.</p>
+<ul>
+  <li><strong>Everything is generated live.</strong> Tile, resource, recipe, building, boss, and zone pages are built from the same source maps the game runs on (<code>src/constants.ts</code>, <code>src/features/*/data.ts</code>, the config schemas). If a value changes in code, the wiki changes with it — the catalog cannot drift.</li>
+  <li><strong>Status flags mark built-vs-planned.</strong> Each concept and entity carries a status — <strong>WIRED</strong>, <strong>PARTIAL</strong>, <strong>STUB</strong>, <strong>DOC-ONLY</strong>, or <strong>PLANNED</strong> — so you always know whether something runs in normal play or is a future idea. See the <strong>Progression</strong> page for the full roadmap with status on every item.</li>
+  <li><strong>Navigate by category, search, or cross-link.</strong> The sidebar groups concepts (Board, Economy, World, Systems, Screens). Follow the inline links — like [[resources:bread]] or [[buildings:bakery]] — to jump between related entities. Backlinks on each page show what points back.</li>
+</ul>
+<p>Read the <strong>Story</strong> page (in the sidebar) for the world and characters, <strong>Progression</strong> for the build plan, and <strong>Design decisions</strong> for the settled calls that shape it all.</p>
