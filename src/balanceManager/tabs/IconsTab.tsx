@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect, useRef, memo } from "react";
 // Local declaration lives in src/balanceManager/canvas2svg.d.ts.
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
+import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
 import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
 import { getUsedIconKeys } from "../iconUsage.js";
 import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
@@ -117,6 +118,8 @@ function paintIconForCell(ctx: CanvasRenderingContext2D, entry: PaintableIconEnt
   ctx.restore();
   ctx.save();
   ctx.translate(size / 2, size / 2);
+  const scale = size / ICON_DESIGN_BOX;
+  ctx.scale(scale, scale);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   try {
