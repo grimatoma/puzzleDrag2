@@ -52,7 +52,7 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
     case "tools":
       return { schema: toolItemSchema, kind: "definition" };
 
-    // ── game structure (definitions) ─────────────────────────────────────
+    // ── world structure ──────────────────────────────────────────────────
     case "zones":
       return { schema: zoneOverrideSchema, kind: "override" };
     case "settlementBiomes":
