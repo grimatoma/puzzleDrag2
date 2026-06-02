@@ -7,10 +7,11 @@
  *   - an empty synthetic zone: no drops, no upgradeMap → renders nothing
  */
 
-import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import { ZoneDetail, hasZoneDetail } from "./ZoneDetail.jsx";
+import { BalanceNavProvider } from "../../balanceNav.jsx";
 import { ZONES } from "../../../features/zones/data.js";
 
 afterEach(() => cleanup());
@@ -53,6 +54,22 @@ describe("ZoneDetail — home zone (real drops + upgradeMap)", () => {
     expect(body).toContain("→");
     // Source category "grass" is humanized to "Grass".
     expect(body).toContain("Grass");
+  });
+
+  it("renders category tags as buttons that navigate to the category wiki page", () => {
+    const navigate = vi.fn();
+    const { container } = render(
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <ZoneDetail zone={home} />
+      </BalanceNavProvider>,
+    );
+    // Find the "Grass" category button (appears as a column header / upgrade source).
+    const grassBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+      (b.textContent ?? "").includes("Grass"),
+    );
+    expect(grassBtn).toBeDefined();
+    fireEvent.click(grassBtn!);
+    expect(navigate).toHaveBeenCalledWith({ tab: "categories", focus: "categories:grass" });
   });
 });
 

@@ -24,6 +24,9 @@
 import React from "react";
 import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
+import { useBalanceNav } from "../../balanceNav.jsx";
+import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { getEntity } from "../conceptEntities.js";
 import {
   ZONE_TO_TILE_CATEGORIES,
   ZONE_UPGRADE_TARGET_GOLD,
@@ -66,24 +69,67 @@ function humanizeCategory(zoneCat: string): string {
     .join(" ");
 }
 
-/** A category icon + label. Falls back to text when no tile icon resolves. */
+/**
+ * Navigation target for a zone-category's wiki article. Zone categories are
+ * first-class `categories` concept entities, so each tag links to its own
+ * page. Returns null for keys with no wiki entity (e.g. the gold/coins
+ * sentinel, which is a board-only coin tile, not a catalogued category).
+ */
+function wikiTargetForZoneCat(zoneCat: string): { tab: string; focus: string } | null {
+  if (zoneCat === ZONE_UPGRADE_TARGET_GOLD) return null;
+  if (getEntity("categories", zoneCat) == null) return null;
+  return wikiNavTarget("categories", zoneCat);
+}
+
+/**
+ * A category icon + label. Falls back to text when no tile icon resolves.
+ * When the category has a wiki article (every zone category does), the tag is
+ * a button that navigates there; otherwise it renders as inert text.
+ */
 function CategoryTag({ zoneCat, size = 18 }: { zoneCat: string; size?: number }) {
-  if (zoneCat === ZONE_UPGRADE_TARGET_GOLD) {
-    return (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-        <Icon iconKey="coins" size={size} style={{ verticalAlign: "middle" }} />
-        <span style={{ fontWeight: 600 }}>Coins</span>
-      </span>
-    );
-  }
-  const iconKey = representativeTileForCategory(zoneCat);
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+  const { navigate } = useBalanceNav();
+
+  const isGold = zoneCat === ZONE_UPGRADE_TARGET_GOLD;
+  const iconKey = isGold ? "coins" : representativeTileForCategory(zoneCat);
+  const label = isGold ? "Coins" : humanizeCategory(zoneCat);
+
+  const inner = (
+    <>
       {iconKey != null && (
         <Icon iconKey={iconKey} size={size} style={{ verticalAlign: "middle" }} />
       )}
-      <span style={{ fontWeight: 600 }}>{humanizeCategory(zoneCat)}</span>
-    </span>
+      <span style={{ fontWeight: 600 }}>{label}</span>
+    </>
+  );
+
+  const target = wikiTargetForZoneCat(zoneCat);
+  if (target == null) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+        {inner}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(target)}
+      title={`Open ${label} category`}
+      className="inline-flex items-center hover:underline"
+      style={{
+        gap: 5,
+        background: "none",
+        border: "none",
+        padding: 0,
+        margin: 0,
+        font: "inherit",
+        color: "inherit",
+        cursor: "pointer",
+      }}
+    >
+      {inner}
+    </button>
   );
 }
 
