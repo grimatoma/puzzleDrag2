@@ -254,6 +254,7 @@ describe("conceptForKey — round-trip (every concept's first entry resolves)", 
 //   portal       → buildings (building) + views (view); buildings is 8th, views is 17th → buildings wins
 //   explosives   → tools (tool item) + toolPowers (toolPower); tools is 3rd, toolPowers is 14th → tools wins
 //   water_pump   → tools (tool item) + toolPowers (toolPower); tools is 3rd, toolPowers is 14th → tools wins
+//   fish         → categories (tile/zone category) + boardKinds (Harbor board); categories comes before boardKinds → categories wins
 //
 // All other collisions (tool keys in recipes, resource keys in recipes) resolve correctly
 // because tools (3rd) and resources (2nd) come before recipes (7th) in CONCEPTS order.
@@ -262,6 +263,7 @@ const KNOWN_COLLISIONS: Record<string, string> = {
   portal: "buildings",
   explosives: "tools",
   water_pump: "tools",
+  fish: "categories",
 };
 
 describe("conceptForKey — strong ownership round-trip (every entry in every concept)", () => {

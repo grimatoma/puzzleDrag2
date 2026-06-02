@@ -161,16 +161,19 @@ function settlementBiomeEntries() {
   return out;
 }
 
-// Display order: Farm, Mine, Harbor (progression order, not alphabetical).
-const BOARD_KIND_ORDER = ["farm", "mine", "fish"] as const;
+// The three board kinds, keyed by their BIOMES id. Entries are sorted by name
+// (Farm, Harbor, Mine) to match the alphabetical-list invariant shared by every
+// other concept; progression order (Farm → Mine → Harbor) lives in the article
+// bodies, not the nav list.
+const BOARD_KINDS = ["farm", "mine", "fish"] as const;
 
 function boardKindEntries() {
-  return BOARD_KIND_ORDER.filter((k) => (BIOMES as Record<string, unknown>)[k] != null).map(
-    (k) => ({
+  return BOARD_KINDS.filter((k) => (BIOMES as Record<string, unknown>)[k] != null)
+    .map((k) => ({
       key: k,
       name: String((BIOMES as Record<string, { name?: string }>)[k].name ?? k),
-    }),
-  );
+    }))
+    .sort(byName);
 }
 
 function categoryEntries() {

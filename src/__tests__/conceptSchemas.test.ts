@@ -152,6 +152,9 @@ describe("conceptSchemas — spot checks", () => {
 const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "categories",
   "hazards",
+  // Board kinds render straight from BIOMES live config (no Zod override schema);
+  // the article falls back to BoardKindDetail + LiveConfigFallback.
+  "boardKinds",
   "views",
   "modals",
   "tileDiscoveryMethods",
