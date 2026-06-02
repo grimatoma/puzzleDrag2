@@ -52,7 +52,7 @@ export interface Ability {
   id: string;
   name: string;
   desc: string;
-  iconKey: string;
+  look: { iconKey: string };
   scope: string[];
   trigger: string;
   channel: string;

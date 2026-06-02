@@ -71,8 +71,8 @@ function workerEntries() {
   return TYPE_WORKERS.map((w) => ({
     key: w.id,
     name: w.name,
-    iconKey: w.iconKey,
-    color: w.color,
+    iconKey: w.look?.iconKey,
+    color: w.look?.color,
   })).sort(byName);
 }
 
@@ -171,7 +171,7 @@ function abilityEntries() {
   return ABILITIES.map((a) => ({
     key: a.id,
     name: a.name,
-    iconKey: a.iconKey,
+    iconKey: a.look?.iconKey,
   })).sort(byName);
 }
 
