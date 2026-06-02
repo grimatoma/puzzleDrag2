@@ -42,6 +42,9 @@ import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree
 import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
 import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
+import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
+import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -170,13 +173,20 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     conceptId === "bosses" && hasBossDifficulty(entity as Parameters<typeof hasBossDifficulty>[0]);
   const showNpcGifts = conceptId === "npcs" && hasNpcGifts(entityKey);
   const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
+  const showZoneDetail =
+    conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showAbilitySpec = conceptId === "abilities" && hasAbilitySpec(entity);
+  const showToolPowerSpec = conceptId === "toolPowers" && hasToolPowerSpec(entity);
 
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
     ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
+    ...(showAbilitySpec ? [{ id: "ability-spec", label: "Specification" }] : []),
+    ...(showToolPowerSpec ? [{ id: "tool-power-spec", label: "Specification" }] : []),
     ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
+    ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
@@ -257,8 +267,19 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             </section>
           )}
 
+          {/* Ability specification (ability articles) */}
+          {showAbilitySpec && <AbilitySpec ability={entity} />}
+
+          {/* Tool power specification (tool-power articles) */}
+          {showToolPowerSpec && <ToolPowerSpec power={entity} />}
+
           {/* Tile unlock requirement (tile articles) */}
           {showTileUnlock && <TileUnlock tileId={entityKey} />}
+
+          {/* Zone drop rates & chain upgrades (zone articles) */}
+          {showZoneDetail && entity != null && (
+            <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
+          )}
 
           {/* NPC gift preferences (npc articles) */}
           {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}

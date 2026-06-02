@@ -177,6 +177,33 @@ describe("WikiArticle — tile unlock (tile article)", () => {
   });
 });
 
+describe("WikiArticle — zone drop-rate heatmap (zone article)", () => {
+  it("renders a 'Drop rates & upgrades' section for home with a percentage cell", () => {
+    renderArticle("zones", "home");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Drop rates");
+    expect(body).toMatch(/season drop rates/i);
+    // FARM_SEASON_DROPS_TEMPERATE Spring.grass = 0.38 → "38%"
+    expect(body).toContain("38%");
+    // upgrade-map flow renders an arrow
+    expect(body).toContain("→");
+  });
+});
+
+describe("WikiArticle — ability spec (ability article)", () => {
+  it("renders a 'Specification' section for bonus_yield with its params + trigger", () => {
+    renderArticle("abilities", "bonus_yield");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Specification");
+    // params target/amount + the channel
+    expect(body).toContain("target");
+    expect(body).toContain("amount");
+    expect(body).toContain("bonusYield");
+    // trigger on_chain_collect → "On Chain Collect"
+    expect(body).toMatch(/on chain collect/i);
+  });
+});
+
 // ─── Test 4: Back button ──────────────────────────────────────────────────────
 
 describe("WikiArticle — back button", () => {

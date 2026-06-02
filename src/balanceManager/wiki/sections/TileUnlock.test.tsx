@@ -66,6 +66,49 @@ describe("TileUnlock — default-discovery tile (tile_grass_hay)", () => {
   });
 });
 
+describe("TileUnlock — research-discovery tile (tile_grass_spiky)", () => {
+  it("renders the Research requirement with the cumulative amount and source", () => {
+    renderTile("tile_grass_spiky");
+    const body = document.body.textContent ?? "";
+    // discovery: { method: "research", researchOf: "tile_grass_hay", researchAmount: 50 }
+    expect(body).toMatch(/research/i);
+    expect(body).toContain("50");
+    expect(body).toMatch(/hay/i);
+  });
+});
+
+describe("TileUnlock — buy-discovery tile (tile_bird_clover)", () => {
+  it("renders the Buy requirement with the coin cost", () => {
+    renderTile("tile_bird_clover");
+    const body = document.body.textContent ?? "";
+    // discovery: { method: "buy", coinCost: 200 }
+    expect(body).toMatch(/buy for/i);
+    expect(body).toContain("200");
+    expect(body).toMatch(/coins/i);
+  });
+});
+
+describe("TileUnlock — building-discovery tile (tile_veg_broccoli)", () => {
+  it("renders the Build requirement referencing the building", () => {
+    renderTile("tile_veg_broccoli");
+    const body = document.body.textContent ?? "";
+    // discovery: { method: "building", buildingId: "kitchen" }
+    expect(body).toMatch(/build the/i);
+    expect(body).toMatch(/kitchen/i);
+  });
+});
+
+describe("TileUnlock — daily-discovery tile (tile_cattle_triceratops)", () => {
+  it("renders the Day N login reward requirement", () => {
+    renderTile("tile_cattle_triceratops");
+    const body = document.body.textContent ?? "";
+    // discovery: { method: "daily", day: 30 }
+    expect(body).toMatch(/day/i);
+    expect(body).toContain("30");
+    expect(body).toMatch(/login reward/i);
+  });
+});
+
 describe("TileUnlock — non-tile id", () => {
   it("renders nothing for an id not in the tile catalog", () => {
     const { container } = renderTile("not_a_tile_xyz");
