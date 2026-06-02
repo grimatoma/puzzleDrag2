@@ -22,11 +22,7 @@ import { describeSchema } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
 import { RelationalFooter } from "../relational.jsx";
-import {
-  RelationRefGrid,
-  RecipeRelationsFlow,
-  hasRecipeRelationFlow,
-} from "./ConceptRefCard.jsx";
+import { WikiRelationLinks } from "./WikiRelationLinks.jsx";
 import { relationsFor } from "./relations.js";
 import { backlinksFor } from "./backlinks.js";
 import { ledeFor } from "./lede.js";
@@ -53,6 +49,8 @@ import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
 import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
 import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
+import { BuildingAbilities, hasHostAbilities } from "./sections/BuildingAbilities.jsx";
+import { RecipeRelations, hasRecipeRelationFlow } from "./sections/RecipeRelations.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -199,10 +197,16 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     conceptId === "achievements" &&
     hasAchievementCard(entity as Parameters<typeof hasAchievementCard>[0]);
   const showBuildingRecipes = conceptId === "buildings" && hasBuildingRecipes(entityKey);
+  const showHostAbilities =
+    (conceptId === "buildings" || conceptId === "workers") &&
+    hasHostAbilities(conceptId, entityKey, entity);
+  const showRecipeRelations = conceptId === "recipes" && hasRecipeRelationFlow(entity);
 
-  const relationGroups = showBuildingRecipes
-    ? rels.filter((g) => g.title !== "Recipes crafted here")
-    : rels;
+  const relationGroups = rels.filter((g) => {
+    if (showBuildingRecipes && g.title === "Recipes crafted here") return false;
+    if (showHostAbilities && g.title === "Abilities") return false;
+    return true;
+  });
 
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
@@ -220,6 +224,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
+    ...(showHostAbilities ? [{ id: "host-abilities", label: conceptId === "workers" ? "Worker abilities" : "Building abilities" }] : []),
+    ...(showRecipeRelations ? [{ id: "recipe-relations", label: "Crafting flow" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
@@ -348,6 +354,12 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {showBuildingRecipes && <BuildingRecipes buildingId={entityKey} />}
 
+          {showHostAbilities && entity != null && (
+            <BuildingAbilities conceptId={conceptId as "buildings" | "workers"} entityKey={entityKey} entity={entity} />
+          )}
+
+          {showRecipeRelations && entity != null && <RecipeRelations recipe={entity} />}
+
           {/* Crafting dependency tree (recipes + craftable items) */}
           {showCraftTree && craftTreeRecipeId != null && (
             <CraftTree recipeId={craftTreeRecipeId} />
@@ -454,21 +466,17 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {relationGroups.length > 0 && (
             <section id="relations">
               <RelationalFooter standalone title="Related" hint="Derived · click to open">
-                {conceptId === "recipes" && hasRecipeRelationFlow(entity) ? (
-                  <RecipeRelationsFlow recipe={entity ?? {}} />
-                ) : (
-                  relationGroups.map((group) => (
-                    <div key={group.title} className="mb-3 last:mb-0">
-                      <div
-                        className="text-[9px] font-bold uppercase tracking-wide mb-2"
-                        style={{ color: COLORS.inkSubtle }}
-                      >
-                        {group.title}
-                      </div>
-                      <RelationRefGrid links={group.links} />
+                {relationGroups.map((group) => (
+                  <div key={group.title} className="mb-2 last:mb-0">
+                    <div
+                      className="text-[9px] font-bold uppercase tracking-wide mb-1"
+                      style={{ color: COLORS.inkSubtle }}
+                    >
+                      {group.title}
                     </div>
-                  ))
-                )}
+                    <WikiRelationLinks links={group.links} />
+                  </div>
+                ))}
               </RelationalFooter>
             </section>
           )}
@@ -485,7 +493,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     >
                       {group.title}
                     </div>
-                    <RelationRefGrid links={group.links} />
+                    <WikiRelationLinks links={group.links} />
                   </div>
                 ))}
               </RelationalFooter>
