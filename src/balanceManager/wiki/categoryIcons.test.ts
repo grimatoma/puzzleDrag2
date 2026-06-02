@@ -8,6 +8,18 @@ describe("wiki categories — tile type metadata and cat_ icons", () => {
     const grass = categories.find((e) => e.key === "grass");
     expect(grass).toBeDefined();
     expect(grass!.iconKey).toBe("cat_grass");
+
+    const mineStone = categories.find((e) => e.key === "mine_stone");
+    expect(mineStone).toBeDefined();
+    expect(mineStone!.iconKey).toBe("cat_mine_stone");
+  });
+
+  it("all category entries advertise a cat_ icon key", () => {
+    const categories = CONCEPTS.find((c) => c.id === "categories")!.getEntries();
+    expect(categories.length).toBeGreaterThan(0);
+    for (const category of categories) {
+      expect(category.iconKey, `missing icon for ${category.key}`).toBe(`cat_${category.key}`);
+    }
   });
 
   it("tile entities merge their tile-collection type metadata", () => {
@@ -25,10 +37,15 @@ describe("wiki categories — tile type metadata and cat_ icons", () => {
     expect(category!.subCategory).toBe("farm");
   });
 
-  it("category entities omit missing cat_ icon keys instead of advertising broken icons", () => {
-    const category = getEntity("categories", "mine_stone");
-    expect(category).not.toBeNull();
-    expect(category!.subCategory).toBe("mining");
-    expect(category!.iconKey).toBeUndefined();
+  it("category entities expose mine/water cat_ icon aliases", () => {
+    const mineCategory = getEntity("categories", "mine_stone");
+    expect(mineCategory).not.toBeNull();
+    expect(mineCategory!.subCategory).toBe("mining");
+    expect(mineCategory!.iconKey).toBe("cat_mine_stone");
+
+    const fishCategory = getEntity("categories", "fish");
+    expect(fishCategory).not.toBeNull();
+    expect(fishCategory!.subCategory).toBe("water");
+    expect(fishCategory!.iconKey).toBe("cat_fish");
   });
 });
