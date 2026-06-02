@@ -45,7 +45,7 @@ export const viewKey = "achievements";
 interface Resource {
   key: string;
   label: string;
-  color: number;
+  look: { color: number };
 }
 
 const ALL_RESOURCES: Resource[] = [...BIOMES.farm.resources, ...BIOMES.mine.resources] as Resource[];
@@ -153,7 +153,7 @@ interface ResourceChipProps {
 
 function ResourceChip({ resource, count }: ResourceChipProps) {
   const discovered = count > 0;
-  const bg = discovered ? hexColor(resource.color) : "#d8c4a0";
+  const bg = discovered ? hexColor(resource.look.color) : "#d8c4a0";
   const textColor = discovered ? "#fff" : "#7a5e3f";
 
   return (

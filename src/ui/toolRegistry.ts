@@ -37,7 +37,7 @@ function entryFromItem(key: string): ToolEntry | null {
   return {
     key,
     category: toolCategory(key),
-    iconKey: item.iconKey ?? key,
+    iconKey: item.look?.iconKey ?? key,
     name: item.label ?? key,
     armed: toolArmed(power),
     desc: item.desc ?? power?.bubble ?? "",

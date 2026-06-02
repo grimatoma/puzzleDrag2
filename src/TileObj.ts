@@ -9,8 +9,11 @@ const SWAY_SPEED = 1.3;
 export interface TileRes {
   key: string;
   label?: string;
-  sway?: { amp: number; freq: number; gust: number } | null;
-  color?: string | number;
+  look?: {
+    sway?: { amp: number; freq: number; gust: number } | null;
+    color?: string | number;
+    dark?: string | number;
+  } | null;
   value?: number;
   /** @deprecated see constants.ts */
   next?: string | null;
@@ -134,7 +137,7 @@ export class TileObj {
   // those animations.
   ambient(time: number): void {
     if (this._destroying || this.selected) return;
-    const sway = this.res.sway;
+    const sway = this.res.look?.sway;
     if (!sway) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;

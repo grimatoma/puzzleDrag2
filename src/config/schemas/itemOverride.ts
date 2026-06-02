@@ -4,20 +4,27 @@ import { z } from "zod";
  * Fields balance.json may patch on an existing ITEMS row (see applyItemOverrides).
  * Keys must already exist in ITEMS — unknown ids are skipped at apply time.
  */
+const itemLookOverrideSchema = z
+  .object({
+    color: z.number().optional(),
+    dark: z.number().optional(),
+    iconKey: z.string().optional(),
+    anim: z.string().optional(),
+    ms: z.number().optional(),
+  })
+  .strict();
+
 export const itemOverrideSchema = z
   .object({
-    label: z.string().describe("Display name override").optional(),
-    color: z.number().describe("Primary color (0xRRGGBB)").optional(),
-    dark: z.number().describe("Dark color (0xRRGGBB)").optional(),
-    value: z.number().describe("Chain value weight").optional(),
-    next: z.union([z.string(), z.null()]).describe("Produced resource / upgrade key").optional(),
+    label: z.string().optional(),
+    value: z.number().optional(),
+    next: z.union([z.string(), z.null()]).optional(),
     glyph: z.string().optional(),
     description: z.string().optional(),
     desc: z.string().optional(),
-    effect: z.string().describe("Tool power id").optional(),
+    effect: z.string().optional(),
     target: z.string().optional(),
-    anim: z.string().optional(),
-    ms: z.number().optional(),
+    look: itemLookOverrideSchema.optional(),
   })
   .strict();
 

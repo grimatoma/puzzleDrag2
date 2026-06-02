@@ -106,7 +106,7 @@ function asRecord(v: unknown): AnyRecord {
 
 /**
  * Apply per-item overrides to ITEMS. Allowed fields:
- * label, color, dark, value, next, glyph, description, effect, target, anim, ms, desc
+ * label, value, next, glyph, description, effect, target, desc, look ({ color, dark, iconKey, anim, ms })
  * The item is patched in place.
  */
 export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, overrides: Overrides): void {
@@ -120,8 +120,6 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
       continue;
     }
     if (patch.label !== undefined) item.label = patch.label;
-    if (patch.color !== undefined) item.color = patch.color;
-    if (patch.dark !== undefined) item.dark = patch.dark;
     if (patch.value !== undefined) item.value = patch.value;
     if (patch.next !== undefined) item.next = patch.next ?? null;
     if (patch.glyph !== undefined) item.glyph = patch.glyph;
@@ -129,8 +127,9 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
     if (patch.desc !== undefined) item.desc = patch.desc;
     if (patch.effect !== undefined) item.effect = patch.effect;
     if (patch.target !== undefined) item.target = patch.target;
-    if (patch.anim !== undefined) item.anim = patch.anim;
-    if (patch.ms !== undefined) item.ms = patch.ms;
+    if (patch.look) {
+      item.look = { ...asRecord(item.look), ...patch.look };
+    }
   }
 }
 

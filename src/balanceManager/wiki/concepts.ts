@@ -38,13 +38,13 @@ interface ItemKindEntry {
 
 function itemsOfKind(kind: string): ItemKindEntry[] {
   const out: ItemKindEntry[] = [];
-  for (const [key, item] of Object.entries(ITEMS) as Array<[string, { kind?: string; label?: string; color?: number }]>) {
+  for (const [key, item] of Object.entries(ITEMS) as Array<[string, { kind?: string; label?: string; look?: { color?: number } }]>) {
     if (item?.kind !== kind) continue;
     out.push({
       key,
       name: item.label ?? key,
       iconKey: key,
-      color: item.color,
+      color: item.look?.color,
     });
   }
   out.sort(byName);

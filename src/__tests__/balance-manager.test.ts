@@ -29,15 +29,17 @@ describe("Dev Panel — override merge layer", () => {
 
   it("applyItemOverrides patches ITEMS entries by key", () => {
     const items = {
-      tile_grass_hay: { label: "Hay", color: 0xa8c769, value: 1, next: "tile_grain_wheat" },
-      tile_tree_oak:  { label: "Log", color: 0x9b6b3e, value: 2, next: "plank" },
+      tile_grass_hay: { label: "Hay", value: 1, next: "tile_grain_wheat", look: { color: 0xa8c769, dark: 0x4f6b3a } },
+      tile_tree_oak:  { label: "Log", value: 2, next: "plank", look: { color: 0x9b6b3e, dark: 0x4a3520 } },
     };
     applyItemOverrides(items, {
-      tile_grass_hay: { label: "Straw", value: 3, next: "tile_tree_oak" },
+      tile_grass_hay: { label: "Straw", value: 3, next: "tile_tree_oak", look: { color: 0xb0d070 } },
     });
     expect(items.tile_grass_hay.label).toBe("Straw");
     expect(items.tile_grass_hay.value).toBe(3);
     expect(items.tile_grass_hay.next).toBe("tile_tree_oak");
+    expect(items.tile_grass_hay.look.color).toBe(0xb0d070); // patched
+    expect(items.tile_grass_hay.look.dark).toBe(0x4f6b3a); // merged, unchanged
     expect(items.tile_tree_oak.label).toBe("Log"); // unchanged
   });
 

@@ -75,14 +75,14 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 {isCrafted ? (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.look?.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     <Icon iconKey={o.key} size={32} title="" />
                   </div>
                 ) : (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.look?.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} title="" />}
                   </div>

@@ -81,7 +81,7 @@ export function drawTileIcon(ctx: CanvasRenderingContext2D, key: string) {
     if (res) break;
   }
   if (res) {
-    ctx.fillStyle = hex(res.dark);
+    ctx.fillStyle = hex(res.look.dark);
     ctx.font = 'bold 36px "Newsreader", "Times New Roman", serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -113,7 +113,7 @@ export function regenerateTextures(scene: Phaser.Scene) {
         const key = `tile_${r.key}${selected ? "_sel" : ""}`;
         // Remove existing cached texture so canvasTexture will recreate it
         if (scene.textures.exists(key)) scene.textures.remove(key);
-        const tileColor = r.color;
+        const tileColor = r.look.color;
         canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = "rgba(0,0,0,.22)";
@@ -239,7 +239,7 @@ export function makeTextures(scene: Phaser.Scene) {
   Object.values(BIOMES).forEach((biome) => {
     [...biome.tiles, ...biome.resources].forEach((r) => {
       [false, true].forEach((selected) => {
-        const tileColor = r.color;
+        const tileColor = r.look.color;
         canvasTexture(scene, `tile_${r.key}${selected ? "_sel" : ""}`, TILE, TILE, (ctx, w, h) => {
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = "rgba(0,0,0,.22)";

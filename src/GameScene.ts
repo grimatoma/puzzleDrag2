@@ -1002,7 +1002,7 @@ export class GameScene extends Phaser.Scene {
               duration: this._dur(380),
               ease: "Back.Out",
             });
-            this.emitCollectParticles(x, y, (res as { color?: string }).color || "#ffd248", 4);
+            this.emitCollectParticles(x, y, (res as { look?: { color?: string } }).look?.color || "#ffd248", 4);
             this._upgradeSpawnBurst(x, y);
           } else {
             const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
@@ -1795,7 +1795,7 @@ export class GameScene extends Phaser.Scene {
         alpha: 0,
         duration: this._dur(180 + i * 15),
         onComplete: () => {
-          this.emitCollectParticles(tile.x, tile.y, res.color || "#ffffff", 2);
+          this.emitCollectParticles(tile.x, tile.y, res.look?.color || "#ffffff", 2);
           tile.destroy();
         }
       });
@@ -1822,7 +1822,7 @@ export class GameScene extends Phaser.Scene {
           alpha: 0,
           duration: this._dur(180 + i * 15),
           onComplete: () => {
-            this.emitCollectParticles(tileObj.x, tileObj.y, tileObj.res?.color || "#ffffff", 2);
+            this.emitCollectParticles(tileObj.x, tileObj.y, tileObj.res?.look?.color || "#ffffff", 2);
             tileObj.destroy();
           }
         });
