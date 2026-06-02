@@ -59,8 +59,8 @@ export default function StoryTab({ draft }: { draft: import("../index.jsx").Bala
           beat as a node card, with branch edges, a searchable beat list, and a side inspector. From there you can
           edit the title / scene / dialogue lines, <b>add · remove · re-label choices and edit their outcomes</b>
           {" "}(flags, bond, currency, branch target), <b>author whole new dialogue branches &amp; side beats</b>,
-          and collapse / expand forks to tidy the map. It writes to the same draft as this Dev Panel
-          (the <code style={{ fontFamily: "ui-monospace,monospace" }}>hearth.balance.draft</code> key) — beat patches go to
+          and collapse / expand forks to tidy the map. It writes to the shared
+          {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>hearth.balance.draft</code> key — beat patches go to
           {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.beats</code> and new beats to
           {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.newBeats</code>, both picked up by
           {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>applyStoryOverrides</code> on the game's next load.

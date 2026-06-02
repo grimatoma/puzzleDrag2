@@ -1,15 +1,19 @@
 // Shared UI primitives for the Balance Manager. Matches the parchment
 // ember-orange accents.
+//
+// READ-ONLY: the Dev Panel (`/b/`) is a viewer for the live *effective*
+// config, not an editor. The field primitives below (`NumberField`,
+// `TextField`, `TextArea`, `Select`, `ColorField`) therefore render their
+// value as static display rather than an editable input/select/textarea.
+// They keep the editing-era prop shape — including an optional, ignored
+// `onChange` — so the ~20 tabs that still pass it keep compiling without a
+// sweep. The wiring is dead; nothing the panel renders can mutate state.
 import React, { useState } from "react";
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import Icon from "../ui/Icon.jsx";
 import { RESOURCE_KEYS, TILE_KEYS } from "../types/catalogKeys.js";
 import {
-  NumberInput as BaseNumberInput,
   SearchInput as BaseSearchInput,
-  SelectField as BaseSelectField,
-  TextArea as BaseTextArea,
-  TextInput as BaseTextInput,
 } from "../ui/primitives/Field.jsx";
 import { UI_COLORS } from "../ui/primitives/palette.js";
 import SegmentedControl from "../ui/primitives/SegmentedControl.jsx";
@@ -22,75 +26,73 @@ export interface SelectOption {
   label: ReactNode;
 }
 
-export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }: { value: number | null | undefined; onChange: (v: number) => void; min?: number; max?: number; step?: number; width?: number | string }) {
-  return (
-    <BaseNumberInput
-      value={value ?? 0}
-      min={min}
-      max={max}
-      step={step}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value))}
-      className="!h-auto px-1.5 py-1 text-[12px]"
-      style={{ width }}
-    />
-  );
+// Shared chrome for a read-only value cell. Echoes the old input box
+// (bordered, parchment fill) so tabs stay visually structured, but the
+// content is plain text — not focusable, not editable.
+function readOnlyBoxStyle(width?: number | string): CSSProperties {
+  return {
+    width,
+    minHeight: 26,
+    background: COLORS.parchmentDeep,
+    border: `1px solid ${COLORS.border}`,
+    color: COLORS.ink,
+  };
 }
 
-export function TextField({ value, onChange, placeholder = "", width = "100%" }: { value: string | null | undefined; onChange: (v: string) => void; placeholder?: string; width?: number | string }) {
+function DisplayValue({ children, placeholder, mono, width, block }: { children: ReactNode; placeholder?: string; mono?: boolean; width?: number | string; block?: boolean }) {
+  const empty = children == null || children === "";
   return (
-    <BaseTextInput
-      value={value ?? ""}
-      placeholder={placeholder}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-      className="!h-auto px-2 py-1 text-[12px]"
-      style={{ width }}
-    />
-  );
-}
-
-export function TextArea({ value, onChange, rows = 3, placeholder = "" }: { value: string | null | undefined; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
-  return (
-    <BaseTextArea
-      value={value ?? ""}
-      placeholder={placeholder}
-      rows={rows}
-      onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-      className="w-full px-2 py-1 text-[12px]"
-    />
-  );
-}
-
-export function Select({ value, onChange, options, width = "100%" }: { value: unknown; onChange: (v: string) => void; options: SelectOption[]; width?: number | string }) {
-  const selectValue = value == null ? "" : (typeof value === "string" || typeof value === "number" ? value : String(value));
-  return (
-    <BaseSelectField
-      value={selectValue}
-      onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
-      className="!h-auto px-2 py-1 text-[12px]"
-      style={{ width }}
+    <div
+      className={`px-2 py-1 rounded-md text-[12px] ${mono ? "font-mono" : ""} ${block ? "whitespace-pre-wrap break-words" : "truncate"}`}
+      style={readOnlyBoxStyle(width)}
+      title={!block && typeof children === "string" ? children : undefined}
     >
-      {options.map((opt) => (
-        <option key={String(opt.value ?? "_none")} value={opt.value ?? ""}>
-          {opt.label}
-        </option>
-      ))}
-    </BaseSelectField>
+      {empty
+        ? <span style={{ color: COLORS.inkSubtle }} className="italic">{placeholder || "—"}</span>
+        : children}
+    </div>
   );
 }
 
-export function ColorField({ value, onChange }: { value: number | null | undefined; onChange: (v: number) => void }) {
-  // value is a number (0xRRGGBB). Convert to/from hex string for <input type=color>.
+export function NumberField({ value, width = 70 }: { value: number | null | undefined; onChange?: (v: number) => void; min?: number; max?: number; step?: number; width?: number | string }) {
+  const display = Number.isFinite(value as number) ? String(value) : "—";
+  return (
+    <div className="text-right tabular-nums">
+      <DisplayValue mono width={width}>{display}</DisplayValue>
+    </div>
+  );
+}
+
+export function TextField({ value, placeholder = "", width = "100%" }: { value: string | null | undefined; onChange?: (v: string) => void; placeholder?: string; width?: number | string }) {
+  return <DisplayValue placeholder={placeholder} width={width}>{value ?? ""}</DisplayValue>;
+}
+
+export function TextArea({ value, rows = 3, placeholder = "" }: { value: string | null | undefined; onChange?: (v: string) => void; rows?: number; placeholder?: string }) {
+  return (
+    <div style={{ minHeight: rows * 18 }}>
+      <DisplayValue placeholder={placeholder} block width="100%">{value ?? ""}</DisplayValue>
+    </div>
+  );
+}
+
+export function Select({ value, options, width = "100%" }: { value: unknown; onChange?: (v: string) => void; options: SelectOption[]; width?: number | string }) {
+  const selectValue = value == null ? "" : (typeof value === "string" || typeof value === "number" ? value : String(value));
+  // Show the matching option's label (human-readable) rather than the raw key.
+  const match = options.find((opt) => String(opt.value ?? "") === String(selectValue));
+  const label: ReactNode = match ? match.label : (selectValue === "" ? "" : String(selectValue));
+  return <DisplayValue placeholder="—" width={width}>{label}</DisplayValue>;
+}
+
+export function ColorField({ value }: { value: number | null | undefined; onChange?: (v: number) => void }) {
+  // value is a number (0xRRGGBB). Show the swatch + hex code, read-only.
   const toHex = (n: number | null | undefined) =>
     "#" + (Number.isFinite(n as number) ? (n as number) : 0).toString(16).padStart(6, "0").slice(-6);
-  const parse = (str: string) => parseInt(String(str).replace(/^#/, ""), 16);
   return (
     <div className="flex items-center gap-1">
-      <input
-        type="color"
-        value={toHex(value)}
-        onChange={(e) => onChange(parse(e.target.value))}
-        className="w-7 h-7 rounded border-2 cursor-pointer"
-        style={{ borderColor: COLORS.border, background: "transparent" }}
+      <span
+        className="w-7 h-7 rounded border-2 inline-block flex-shrink-0"
+        style={{ borderColor: COLORS.border, background: toHex(value) }}
+        aria-hidden
       />
       <span className="font-mono text-[10px]" style={{ color: COLORS.inkSubtle }}>
         {toHex(value).toUpperCase()}

@@ -1,33 +1,38 @@
-// Dev Panel — standalone console for editing tile chains, resources,
-// recipes, building costs and tile power hooks. Served from its own page at
-// `/b/` (separate Vite entry, see `b/index.html`). Edits are kept in a draft
-// object stored in localStorage (`hearth.balance.draft`) and applied to the
-// game's constants on next page load. The full draft can be exported as
-// JSON for committing to `src/config/balance.json`.
+// Dev Panel — read-only console for browsing the game's effective config:
+// tile chains, resources, recipes, building costs, tile power hooks, and the
+// rest of the catalog. Served from its own page at `/b/` (separate Vite
+// entry, see `b/index.html`).
 //
-// Because both the game and this app share an origin, localStorage drafts
-// written here are picked up by the game on its next load.
+// This used to be an editable balance editor (a localStorage draft applied to
+// the game on reload, exportable to `src/config/balance.json`). That write
+// layer has been removed: the panel now renders the already-merged effective
+// config (`BALANCE_OVERRIDES` from `../constants.js` — committed balance.json
+// layered over defaults) as static display. The game's *read* of that config
+// is unchanged; only the panel's ability to edit/save/export is gone.
 
 import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from "react";
 import { BALANCE_OVERRIDES } from "../constants.js";
-import { writeBalanceDraft } from "../config/applyOverrides.js";
-import balanceFile from "../config/balance.json";
 import Icon from "../ui/Icon.jsx";
 import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
-import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
 import { BalanceNavProvider } from "./balanceNav.jsx";
 import type { CommandEntry } from "./commandPalette.js";
 import type { BalanceDraft as BalanceDraftSchema } from "../config/schemas/index.js";
 
-/** Dev Panel draft — validated by `balanceSchema` on game load. */
+/** Effective game config — committed balance.json merged over defaults. */
 export type BalanceDraft = BalanceDraftSchema;
 
 // Props passed to every lazy tab. Individual tabs destructure only the fields
 // they need (e.g. RationsTab ignores focus); typing them uniformly lets us
 // render <ActiveComponent {...props}/> against a heterogeneous union without
 // fighting every overload.
+//
+// `updateDraft` is retained as a no-op (see `BalanceManagerApp`). The panel is
+// read-only — field primitives in `shared.tsx` render static values — but the
+// tabs still pass mutation callbacks through this prop, so keeping it (inert)
+// avoids a 20-file signature sweep. Any add/remove button still wired to it is
+// dead: calling it does nothing.
 export interface TabProps {
   draft: BalanceDraft;
   updateDraft: (updater: (draft: BalanceDraft) => void) => void;
@@ -56,7 +61,6 @@ const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx")) as unknown as Ta
 const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx")) as unknown as TabComponent;
 const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx")) as unknown as TabComponent;
 const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx")) as unknown as TabComponent;
-const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx")) as unknown as TabComponent;
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx")) as unknown as TabComponent;
 const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx")) as unknown as TabComponent;
 const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx")) as unknown as TabComponent;
@@ -152,11 +156,6 @@ const TABS = [
   { id: "dailyRewards", label: "Daily rewards", iconKey: "ui_star", Component: DailyRewardsTab,
     section: "run", dormant: true,
     blurb: "30-day login track: coin and rune amounts per day. Tool and tile-unlock drops are not editable here." },
-
-  // Workflow — draft I/O
-  { id: "export", label: "Export & import", iconKey: "ui_star", Component: ExportTab,
-    section: "workflow",
-    blurb: "Save draft, download JSON to commit, or paste a config to import." },
 ];
 
 const SECTIONS = [
@@ -166,7 +165,6 @@ const SECTIONS = [
   { id: "world", label: "World" },
   { id: "systems", label: "Systems" },
   { id: "dev", label: "Dev" },
-  { id: "workflow", label: "Workflow" },
   { id: "run", label: "Run" },
 ];
 
@@ -180,51 +178,6 @@ function tabNavStyle(active: boolean, dormant: boolean): React.CSSProperties {
     return { background: "rgba(194, 59, 34, 0.14)", color: COLORS.redDeep };
   }
   return { background: "transparent", color: COLORS.inkLight };
-}
-
-function emptyDraft(): BalanceDraft {
-  return {
-    version: 1,
-    upgradeThresholds: {},
-    items: {},
-    recipes: {},
-    buildings: {},
-    tilePowers: {},
-    tileUnlocks: {},
-    tileDescriptions: {},
-    // Phase 6 — Zones tab patches per-zone fields.
-    zones: {},
-    // Phase 6 — Workers tab patches per-id TYPE_WORKERS entries.
-    workers: {},
-    // Phase 6 — Keepers tab patches per-type KEEPERS entries.
-    keepers: {},
-    // Phase 6 — Expedition Rations / Settlement Biomes / Tuning / NPCs / Story tabs.
-    expedition: {},
-    biomes: {},
-    tuning: {},
-    npcs: {},
-    story: {},
-    flags: {},
-    // Phase 6 — Bosses / Achievements / Daily Rewards tabs.
-    bosses: {},
-    achievements: {},
-    dailyRewards: {},
-  };
-}
-
-function cloneDraft(d: Partial<BalanceDraft> | null | undefined): BalanceDraft {
-  if (!d) return emptyDraft();
-  const base = emptyDraft() as unknown as Record<string, unknown>;
-  const src = d as Record<string, unknown>;
-  for (const k of Object.keys(base)) {
-    if (k === "version") {
-      const v = src[k];
-      base[k] = typeof v === "number" ? v : 1;
-    } else if (src[k] && typeof src[k] === "object") {
-      base[k] = JSON.parse(JSON.stringify(src[k]));
-    }
-  }
-  return base as unknown as BalanceDraft;
 }
 
 const SIDEBAR_COLLAPSED_KEY = "hearth.balance.sidebarCollapsed";
@@ -304,14 +257,12 @@ export default function BalanceManagerApp() {
   const navigate = useCallback(({ tab: nextTab, focus: nextFocus = null }: { tab: string; focus?: string | null }) => {
     navigateTo(nextTab, nextFocus);
   }, [navigateTo]);
-  // Initialise the draft from whatever the constants module merged in:
-  // committed file + previous localStorage draft. That way, opening the
-  // manager always shows the user's full set of overrides as starting point.
-  const {
-    state: draft, setState: setDraft, undo, redo, reset: resetDraft,
-    canUndo, canRedo,
-  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
-  const [savedNotice, setSavedNotice] = useState("");
+
+  // Read-only: the panel renders the effective config the constants module
+  // already merged (committed balance.json over defaults). There is no draft,
+  // no undo stack, and nothing to persist — tabs display these values via the
+  // static field primitives in `shared.tsx`.
+  const draft = BALANCE_OVERRIDES as BalanceDraft;
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((v) => {
@@ -329,48 +280,26 @@ export default function BalanceManagerApp() {
     });
   }, []);
 
-  const updateDraft = useCallback((updater: (draft: BalanceDraft) => void) => {
-    setDraft((prev) => {
-      const next = cloneDraft(prev);
-      updater(next);
-      return next;
-    });
-  }, [setDraft]);
+  // No-op edit hook. Tabs still pass mutation callbacks (add/remove buttons,
+  // field onChange) through `updateDraft`; routing them to a no-op keeps the
+  // ~20 tab files compiling without a signature sweep while guaranteeing the
+  // panel cannot mutate state. The dead wiring is intentional residue.
+  const updateDraft = useCallback((_updater: (draft: BalanceDraft) => void) => {
+    /* read-only: edits are ignored */
+  }, []);
 
-  const isDirty = useMemo(() => {
-    return JSON.stringify(draft) !== JSON.stringify(BALANCE_OVERRIDES);
-  }, [draft]);
-
-  const saveDraft = useCallback(() => {
-    writeBalanceDraft(draft);
-    setSavedNotice("Draft saved · reload to apply");
-    setTimeout(() => setSavedNotice(""), 2400);
-  }, [draft]);
-
-  const resetToCommitted = useCallback(() => {
-    if (!confirm("Reset to the committed balance.json? Your unsaved edits will be lost.")) return;
-    resetDraft(cloneDraft(balanceFile));
-  }, [resetDraft]);
-
-  const clearAllOverrides = useCallback(() => {
-    if (!confirm("Clear EVERY override? The game will revert to its default constants on next reload.")) return;
-    resetDraft(emptyDraft());
-  }, [resetDraft]);
-
-  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
+  // Command palette on Cmd/Ctrl-K. (The former Ctrl-S save and Ctrl-Z/Ctrl-
+  // Shift-Z undo/redo bindings are gone — the panel no longer edits.)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
-      if (key === "s") { e.preventDefault(); saveDraft(); return; }
       if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); return; }
-      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
-      if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft, undo, redo]);
+  }, []);
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
@@ -423,21 +352,11 @@ export default function BalanceManagerApp() {
                 Dev Panel
               </div>
               <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-                Tune game constants · attach power hooks · export config
+                Read-only reference · browse the game's effective config
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {savedNotice && (
-              <span className="text-[11px] font-bold px-2 py-1 rounded-md" style={{ background: COLORS.green, color: "#fff" }}>
-                {savedNotice}
-              </span>
-            )}
-            {isDirty && !savedNotice && (
-              <span className="text-[11px] font-bold px-2 py-1 rounded-md animate-pulse" style={{ background: COLORS.ember, color: "#fff" }}>
-                Unsaved changes
-              </span>
-            )}
             <button
               onClick={() => setPaletteOpen(true)}
               className="flex items-center gap-2 px-2 py-1.5 text-[12px] font-bold rounded-lg border-2"
@@ -447,45 +366,6 @@ export default function BalanceManagerApp() {
             >
               🔎 Search
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: COLORS.parchment, color: COLORS.inkSubtle, border: `1px solid ${COLORS.border}` }}>⌘K</span>
-            </button>
-            <div className="flex items-center rounded-lg border-2 overflow-hidden" style={{ borderColor: COLORS.border }}>
-              <button
-                onClick={() => undo()}
-                disabled={!canUndo}
-                title="Undo (Cmd/Ctrl-Z)"
-                aria-label="Undo last change"
-                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
-                style={{ background: COLORS.parchmentDeep, color: canUndo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? "pointer" : "not-allowed" }}
-              >
-                ↶
-              </button>
-              <span aria-hidden style={{ width: 1, alignSelf: "stretch", background: COLORS.border }} />
-              <button
-                onClick={() => redo()}
-                disabled={!canRedo}
-                title="Redo (Cmd/Ctrl-Shift-Z)"
-                aria-label="Redo last undone change"
-                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
-                style={{ background: COLORS.parchmentDeep, color: canRedo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? "pointer" : "not-allowed" }}
-              >
-                ↷
-              </button>
-            </div>
-            <button
-              onClick={saveDraft}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
-              style={{ background: COLORS.green, borderColor: COLORS.greenDeep, color: "#fff" }}
-              title="Save Draft (Cmd/Ctrl-S). Applied on next reload."
-            >
-              💾 Save Draft
-            </button>
-            <button
-              onClick={() => location.reload()}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
-              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
-              title="Reload the page to apply the saved draft."
-            >
-              ↻ Reload
             </button>
             <a
               href={import.meta.env.BASE_URL}
@@ -600,27 +480,6 @@ export default function BalanceManagerApp() {
                 </div>
               );
             })}
-
-            <div className="mt-3 pt-3" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
-              <button
-                onClick={resetToCommitted}
-                className="w-full px-2 py-1.5 text-[10px] font-bold rounded-md border-2 mb-1"
-                style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
-                title="Discard local edits and reload from balance.json"
-                aria-label="Reset to committed balance.json"
-              >
-                {effectiveCollapsed ? "↺" : "↺ Reset to Committed"}
-              </button>
-              <button
-                onClick={clearAllOverrides}
-                className="w-full px-2 py-1.5 text-[10px] font-bold rounded-md border-2"
-                style={{ background: COLORS.red, borderColor: COLORS.redDeep, color: "#fff" }}
-                title="Wipe every override — restores raw defaults"
-                aria-label="Clear all overrides"
-              >
-                {effectiveCollapsed ? "✕" : "✕ Clear All Overrides"}
-              </button>
-            </div>
           </nav>
 
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
