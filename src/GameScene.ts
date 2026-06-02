@@ -1328,7 +1328,11 @@ export class GameScene extends Phaser.Scene {
       if (!toKey) return;
       const res: TileRes | undefined = resourceByKey(toKey) ?? (this.biome().tiles as TileRes[]).find((t: TileRes) => t.key === toKey);
       if (!res) return;
-      const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
+      const picks: TileObj[] = [];
+      for (let i = 0; i < cells.length; i++) {
+        const t = this.grid[cells[i].row]?.[cells[i].col];
+        if (t != null) picks.push(t);
+      }
       picks.forEach((tile: TileObj) => tile.setResource(res!));
       this.playBoardAnimation(anim, picks, { tint, ms: animMs });
       if (params.to === "biome_rare") {
@@ -1342,7 +1346,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
+    const tileObjs: TileObj[] = [];
+    for (let i = 0; i < cells.length; i++) {
+      const t = this.grid[cells[i].row]?.[cells[i].col];
+      if (t != null) tileObjs.push(t);
+    }
     if (!tileObjs.length && isTapTargetPower(id)) return;
 
     this.playBoardAnimation(anim, tileObjs, { tint, ms: animMs });
