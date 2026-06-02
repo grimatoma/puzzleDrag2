@@ -75,25 +75,23 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // Authored HTML body (optional)
   const body = bodyFor(conceptId, entityKey);
 
-  // Relations (forward) — no useMemo; React Compiler handles memoization.
-  // (Manual useMemo with a non-stable `entity` reference triggers the
-  //  preserve-manual-memoization lint rule in this React Compiler project.)
+  // Relations (forward) — no useMemo: this project runs the React Compiler
+  // (eslint-plugin-react-compiler / react-hooks/preserve-manual-memoization),
+  // which flags manual useMemo calls it cannot verify as safe. The compiler
+  // handles memoization automatically; adding useMemo here produces a lint error.
   const rels = relationsFor(conceptId, entityKey, entity);
 
-  // Backlinks (what links here)
+  // Backlinks (what links here) — same reason as above.
   const back = backlinksFor(conceptId, entityKey);
 
   // Schema field names for AdditionalFieldsSection
   const schemaFieldNames = new Set(schemaDoc?.fields.map((f) => f.field) ?? []);
 
-  // Whether a Properties section will render
-  const hasProperties = schemaDoc != null || entity != null;
-
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
     ...(body != null ? [{ id: "about", label: "About" }] : []),
-    ...(hasProperties ? [{ id: "properties", label: "Properties" }] : []),
+    { id: "properties", label: "Properties" },
     ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
     ...(back.length > 0 ? [{ id: "backlinks", label: "What links here" }] : []),
   ];
@@ -164,42 +162,40 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             </section>
           )}
 
-          {/* Properties section */}
-          {hasProperties && (
-            <section id="properties">
+          {/* Properties section — always rendered */}
+          <section id="properties">
+            <div
+              className="text-[10px] font-bold uppercase tracking-wide mb-2"
+              style={{ color: COLORS.inkSubtle }}
+            >
+              Properties
+            </div>
+
+            {schemaDoc != null && (
+              <>
+                <FieldsTable fields={schemaDoc.fields} entity={entity} />
+                {entity != null && (
+                  <AdditionalFieldsSection
+                    entity={entity}
+                    schemaFieldNames={schemaFieldNames}
+                  />
+                )}
+              </>
+            )}
+
+            {schemaDoc == null && entity != null && (
+              <LiveConfigFallback entity={entity} />
+            )}
+
+            {schemaDoc == null && entity == null && (
               <div
-                className="text-[10px] font-bold uppercase tracking-wide mb-2"
+                className="text-[12px] italic py-4 text-center"
                 style={{ color: COLORS.inkSubtle }}
               >
-                Properties
+                No data for this entry.
               </div>
-
-              {schemaDoc != null && (
-                <>
-                  <FieldsTable fields={schemaDoc.fields} entity={entity} />
-                  {entity != null && (
-                    <AdditionalFieldsSection
-                      entity={entity}
-                      schemaFieldNames={schemaFieldNames}
-                    />
-                  )}
-                </>
-              )}
-
-              {schemaDoc == null && entity != null && (
-                <LiveConfigFallback entity={entity} />
-              )}
-
-              {schemaDoc == null && entity == null && (
-                <div
-                  className="text-[12px] italic py-4 text-center"
-                  style={{ color: COLORS.inkSubtle }}
-                >
-                  No data for this entry.
-                </div>
-              )}
-            </section>
-          )}
+            )}
+          </section>
 
           {/* Forward relations */}
           {rels.length > 0 && (
