@@ -370,6 +370,15 @@
 }
 
 .wiki-root .wiki-concept-ref-card--rich .wiki-concept-ref-card__meta {
+
+.wiki-root .wiki-concept-ref-card--building {
+  /* Buildings in cross-refs: illustration + name only — costs live on the article. */
+}
+
+.wiki-root .wiki-concept-ref-card--building .wiki-concept-ref-card__hero {
+  align-items: center;
+}
+
   justify-content: center;
 }
 

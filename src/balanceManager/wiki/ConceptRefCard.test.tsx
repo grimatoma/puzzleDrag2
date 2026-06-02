@@ -45,13 +45,13 @@ describe("ConceptRefCard — recipe (card)", () => {
 });
 
 describe("ConceptRefCard — building (card)", () => {
-  it("renders building card with cost chips for bakery", () => {
-    const { container } = renderCard({ conceptId: "buildings", entityKey: "bakery", variant: "card" });
-    expect(getEntity("buildings", "bakery")).not.toBeNull();
-    expect(container.querySelector(".wiki-concept-ref-card")).not.toBeNull();
+  it("renders building illustration and name without cost chips", () => {
+    const { container } = renderCard({ conceptId: "buildings", entityKey: "chapel", variant: "card" });
+    expect(getEntity("buildings", "chapel")).not.toBeNull();
+    expect(container.querySelector(".wiki-concept-ref-card--building")).not.toBeNull();
     const body = document.body.textContent ?? "";
-    expect(body).toMatch(/bakery/i);
-    expect(body).toContain("coins");
+    expect(body).toMatch(/chapel/i);
+    expect(container.querySelector(".wiki-concept-ref-card__body")).toBeNull();
   });
 });
 

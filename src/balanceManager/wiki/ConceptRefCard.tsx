@@ -11,7 +11,7 @@ import { COLORS } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { conceptForKey, getEntity } from "./conceptEntities.js";
-import { EntityVisual, AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { EntityVisual, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
 import type { WikiLink } from "./relations.js";
@@ -29,7 +29,7 @@ export interface ConceptRefCardProps {
   layout?: ConceptRefLayout;
   /** Optional trailing annotation (e.g. "×3" for usage qty). */
   detail?: string;
-  /** When false, skip cost / hire / recipe I/O body (e.g. station tile in a flow). */
+  /** When false, skip recipe I/O body. Buildings/zones never show a body regardless. */
   showBody?: boolean;
   className?: string;
 }
@@ -70,7 +70,12 @@ function displayTitle(
   return iconLabel(entityKey) ?? entityKey;
 }
 
-/** Concept-specific body under the title row (recipe flow, build cost, …). */
+/** Only recipes get a default card body — they are defined by inputs → output. */
+function bodyDefaultForConcept(conceptId: string): boolean {
+  return conceptId === "recipes";
+}
+
+/** Concept-specific body under the title row (recipe flow only). */
 function ConceptRefBody({
   conceptId,
   entity,
@@ -78,42 +83,15 @@ function ConceptRefBody({
   conceptId: string;
   entity: Record<string, unknown> | null;
 }) {
-  if (entity == null) return null;
+  if (entity == null || conceptId !== "recipes") return null;
 
-  switch (conceptId) {
-    case "recipes":
-      return (
-        <div className="wiki-concept-ref-card__body">
-          <RecipeIO
-            recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }}
-          />
-        </div>
-      );
-    case "buildings": {
-      const cost = entity.cost as Record<string, number> | undefined;
-      const chips = <AmountChips amounts={cost} />;
-      return chips != null ? <div className="wiki-concept-ref-card__body">{chips}</div> : null;
-    }
-    case "zones": {
-      const entryCost = entity.entryCost as Record<string, number> | undefined;
-      const chips = <AmountChips amounts={entryCost} />;
-      return chips != null ? <div className="wiki-concept-ref-card__body">{chips}</div> : null;
-    }
-    case "workers": {
-      const hireCost = entity.hireCost as
-        | { coins?: number; resources?: Record<string, number> }
-        | undefined;
-      if (hireCost == null) return null;
-      const amounts: Record<string, number> = { ...(hireCost.resources ?? {}) };
-      if (typeof hireCost.coins === "number" && hireCost.coins > 0) {
-        amounts.coins = hireCost.coins;
-      }
-      const chips = <AmountChips amounts={amounts} />;
-      return chips != null ? <div className="wiki-concept-ref-card__body">{chips}</div> : null;
-    }
-    default:
-      return null;
-  }
+  return (
+    <div className="wiki-concept-ref-card__body">
+      <RecipeIO
+        recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }}
+      />
+    </div>
+  );
 }
 
 function FlowArrow() {
@@ -209,14 +187,19 @@ export function ConceptRefCard({
       size={visualSize}
     />
   );
-  const body = showBody ? <ConceptRefBody conceptId={conceptId} entity={entity} /> : null;
+  const body =
+    showBody && bodyDefaultForConcept(conceptId) ? (
+      <ConceptRefBody conceptId={conceptId} entity={entity} />
+    ) : null;
 
   return (
     <button
       type="button"
       title={`${conceptId}:${entityKey}`}
       onClick={onActivate}
-      className={`wiki-concept-ref-card wiki-concept-ref-card--rich ${className}`.trim()}
+      className={`wiki-concept-ref-card wiki-concept-ref-card--rich${
+        conceptId === "buildings" ? " wiki-concept-ref-card--building" : ""
+      } ${className}`.trim()}
     >
       <div className="wiki-concept-ref-card__hero">
         <div className="wiki-concept-ref-card__visual" aria-hidden>
