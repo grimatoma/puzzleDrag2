@@ -142,6 +142,7 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
         style={{
           width: size,
           height: size,
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

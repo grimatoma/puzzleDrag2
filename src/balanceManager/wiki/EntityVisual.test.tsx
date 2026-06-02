@@ -74,6 +74,17 @@ describe("EntityVisual", () => {
     expect(container.querySelector("iframe")).toBeNull();
   });
 
+  it("anchors absolute-positioned building SVGs inside the fixed preview frame", () => {
+    const { container } = render(<EntityVisual conceptId="buildings" entityKey="forge" size={96} />);
+    const frame = container.firstElementChild as HTMLElement | null;
+    expect(frame).not.toBeNull();
+    expect(frame?.style.width).toBe("96px");
+    expect(frame?.style.height).toBe("96px");
+    expect(frame?.style.position).toBe("relative");
+    expect(frame?.style.overflow).toBe("hidden");
+    expect(frame?.querySelector("svg.absolute.inset-0.w-full.h-full")).not.toBeNull();
+  });
+
   it("renders the zone town map (svg) for a known zone, not an iframe", () => {
     const { container } = render(<EntityVisual conceptId="zones" entityKey="home" />);
     expect(container.querySelector("svg")).not.toBeNull();
