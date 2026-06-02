@@ -58,3 +58,33 @@ describe("getEntity — unknown concept", () => {
     expect(getEntity("__unknown_concept__", "anything")).toBeNull();
   });
 });
+
+// ─── Drift guard: every concept with entries must resolve via getEntity ────────
+
+describe("getEntity — drift guard (concepts ↔ conceptEntities parity)", () => {
+  it("resolves at least the first entry for every concept that has entries", () => {
+    const failures: string[] = [];
+
+    for (const concept of CONCEPTS) {
+      const entries = concept.getEntries();
+      if (entries.length === 0) continue; // nothing to check for empty concepts
+
+      const firstEntry = entries[0];
+      const result = getEntity(concept.id, firstEntry.key);
+
+      if (result === null) {
+        failures.push(
+          `concept "${concept.id}": getEntity returned null for first key "${firstEntry.key}"`,
+        );
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new Error(
+        `${failures.length} concept(s) failed to resolve via getEntity — ` +
+          `concepts.ts and conceptEntities.ts have drifted:\n` +
+          failures.map((f) => `  - ${f}`).join("\n"),
+      );
+    }
+  });
+});

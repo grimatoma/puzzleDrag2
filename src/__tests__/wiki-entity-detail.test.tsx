@@ -11,13 +11,14 @@
  *  4. All renders contain zero editable controls (read-only invariant).
  */
 
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import EntityDetail from "../balanceManager/wiki/EntityDetail.jsx";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 import { ZONES } from "../features/zones/data.js";
 import { SEASONS } from "../constants.js";
+import { BOSSES } from "../features/bosses/data.js";
 
 afterEach(() => cleanup());
 
@@ -160,5 +161,66 @@ describe("EntityDetail — seasons (no schema)", () => {
       />,
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
+  });
+});
+
+// ─── Back button ──────────────────────────────────────────────────────────────
+
+describe("EntityDetail — back button", () => {
+  it("calls onBack when the ← Back button is clicked", () => {
+    const onBack = vi.fn();
+    render(
+      <EntityDetail
+        conceptId="zones"
+        entityKey={realZoneId}
+        onBack={onBack}
+      />,
+    );
+
+    const backButton = screen.getByText(/← Back/i);
+    expect(backButton).toBeDefined();
+    fireEvent.click(backButton);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Override concept — Additional fields section ─────────────────────────────
+
+describe("EntityDetail — override concept additional fields", () => {
+  // Bosses use bossOverrideSchema (kind: "override") which covers:
+  //   name, season, description, modifierDescription, targetAmount
+  // The live BossDef also carries: id, target, modifier — those are not in the
+  // override schema and must surface under "Additional fields".
+  const realBossKey = BOSSES[0].id;
+
+  it("renders the 'Additional fields' heading for a boss entity", () => {
+    render(
+      <EntityDetail
+        conceptId="bosses"
+        entityKey={realBossKey}
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/Additional fields/i)).toBeDefined();
+  });
+
+  it("shows at least one runtime key not covered by the override schema", () => {
+    render(
+      <EntityDetail
+        conceptId="bosses"
+        entityKey={realBossKey}
+        onBack={() => {}}
+      />,
+    );
+
+    // "id", "target", and "modifier" are live BossDef fields absent from
+    // bossOverrideSchema — at least one must appear in the table.
+    const runtimeKeys = ["id", "target", "modifier"];
+    const found = runtimeKeys.some((k) => screen.queryAllByText(k).length > 0);
+    expect(
+      found,
+      `Expected at least one of [${runtimeKeys.join(", ")}] to appear in Additional fields`,
+    ).toBe(true);
   });
 });

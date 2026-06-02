@@ -25,6 +25,15 @@ export interface EntityDetailProps {
 
 // ─── Value formatting ─────────────────────────────────────────────────────────
 
+/** Safely serialize a value to JSON, returning "[unserializable]" for circular/non-serializable refs. */
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? "[unserializable]";
+  } catch {
+    return "[unserializable]";
+  }
+}
+
 /**
  * Render a live field value as a React node. Handles color fields specially.
  */
@@ -35,7 +44,8 @@ function formatValue(
   if (value === undefined || value === null) {
     return <span style={{ color: COLORS.inkSubtle }} className="italic">—</span>;
   }
-  // Color fields: numeric color values get a swatch
+  // Color fields: swatch is name-driven (fields "color"/"dark"), not type-driven,
+  // and is guarded by typeof value === "number" to avoid false positives.
   if ((fieldName === "color" || fieldName === "dark") && typeof value === "number") {
     return <ColorField value={value} />;
   }
@@ -61,14 +71,14 @@ function formatValue(
     }
     return (
       <span className="font-mono text-[11px] break-all">
-        {value.map(String).join(", ")}
+        {value.map((el) => (el !== null && typeof el === "object" ? safeStringify(el) : String(el))).join(", ")}
       </span>
     );
   }
   if (typeof value === "object") {
     return (
       <span className="font-mono text-[11px] break-all" style={{ color: COLORS.inkSubtle }}>
-        {JSON.stringify(value)}
+        {safeStringify(value)}
       </span>
     );
   }
@@ -166,78 +176,23 @@ function FieldsTable({ fields, entity }: FieldsTableProps) {
   );
 }
 
-interface AdditionalFieldsProps {
+/** Shared two-column (Field · Value) table used by AdditionalFieldsSection and LiveConfigFallback. */
+function KeyValueTable({
+  heading,
+  keys,
+  entity,
+}: {
+  heading: string;
+  keys: string[];
   entity: Record<string, unknown>;
-  schemaFieldNames: Set<string>;
-}
-
-function AdditionalFieldsSection({ entity, schemaFieldNames }: AdditionalFieldsProps) {
-  const extras = Object.keys(entity).filter((k) => !schemaFieldNames.has(k));
-  if (extras.length === 0) return null;
-
-  return (
-    <div className="mt-4">
-      <div
-        className="text-[10px] font-bold uppercase tracking-wide mb-2"
-        style={{ color: COLORS.inkSubtle }}
-      >
-        Additional fields (not in schema)
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px] border-collapse" style={{ color: COLORS.ink }}>
-          <thead>
-            <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
-              <th
-                className="text-left py-1 px-2 font-bold text-[10px] uppercase tracking-wide"
-                style={{ color: COLORS.inkSubtle }}
-              >
-                Field
-              </th>
-              <th
-                className="text-left py-1 px-2 font-bold text-[10px] uppercase tracking-wide"
-                style={{ color: COLORS.inkSubtle }}
-              >
-                Value
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {extras.map((k, i) => (
-              <tr
-                key={k}
-                style={{
-                  background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
-                  borderBottom: `1px solid ${COLORS.border}`,
-                }}
-              >
-                <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
-                  {k}
-                </td>
-                <td className="py-1.5 px-2 align-top max-w-[300px]">
-                  {formatValue(k, entity[k])}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-interface LiveConfigFallbackProps {
-  entity: Record<string, unknown>;
-}
-
-function LiveConfigFallback({ entity }: LiveConfigFallbackProps) {
-  const keys = Object.keys(entity);
+}) {
   return (
     <div className="overflow-x-auto">
       <div
         className="text-[10px] font-bold uppercase tracking-wide mb-2"
         style={{ color: COLORS.inkSubtle }}
       >
-        Live config (no schema)
+        {heading}
       </div>
       <table className="w-full text-[11px] border-collapse" style={{ color: COLORS.ink }}>
         <thead>
@@ -276,6 +231,40 @@ function LiveConfigFallback({ entity }: LiveConfigFallbackProps) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+interface AdditionalFieldsProps {
+  entity: Record<string, unknown>;
+  schemaFieldNames: Set<string>;
+}
+
+function AdditionalFieldsSection({ entity, schemaFieldNames }: AdditionalFieldsProps) {
+  const extras = Object.keys(entity).filter((k) => !schemaFieldNames.has(k));
+  if (extras.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <KeyValueTable
+        heading="Additional fields (not in schema)"
+        keys={extras}
+        entity={entity}
+      />
+    </div>
+  );
+}
+
+interface LiveConfigFallbackProps {
+  entity: Record<string, unknown>;
+}
+
+function LiveConfigFallback({ entity }: LiveConfigFallbackProps) {
+  return (
+    <KeyValueTable
+      heading="Live config (no schema)"
+      keys={Object.keys(entity)}
+      entity={entity}
+    />
   );
 }
 
