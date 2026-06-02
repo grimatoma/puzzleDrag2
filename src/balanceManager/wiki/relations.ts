@@ -186,6 +186,13 @@ function relationsForTiles(
 ): RelationGroup[] {
   const groups: RelationGroup[] = [];
 
+  // "Tile type": entity.category comes from the tile-collection catalog.
+  const category = typeof entity.category === "string" ? entity.category : null;
+  if (category) {
+    const categoryGroup = makeGroup("Tile type", [resolveLink("categories", category)]);
+    if (categoryGroup) groups.push(categoryGroup);
+  }
+
   // "Produces": entity.next is a resource key (may be null)
   const next = typeof entity.next === "string" ? entity.next : null;
   if (next) {

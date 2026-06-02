@@ -94,7 +94,8 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
 
     case "tiles": {
       const p = labelIn(g, "Produces");
-      s = `${name} is a board tile${p ? ` that produces ${p}` : ""}.`;
+      const type = labelIn(g, "Tile type");
+      s = `${name} is a board tile${type ? ` in the ${type} type` : ""}${p ? ` that produces ${p}` : ""}.`;
       break;
     }
 

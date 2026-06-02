@@ -19,7 +19,7 @@ import { HAZARDS } from "../../features/mine/hazards.js";
 import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
-import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
+import { CATEGORIES as TILE_CATEGORIES, TILE_TYPES_MAP, CATEGORY_TO_SUBCATEGORY } from "../../features/tileCollection/data.js";
 import { KEEPERS } from "../../keepers.js";
 import { allBoons } from "../../features/boons/data.js";
 import { DAILY_REWARDS } from "../../constants.js";
@@ -72,7 +72,14 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
     // ── item kinds ──────────────────────────────────────────────────────────
     case "tiles": {
       const item = toRecord((ITEMS as Record<string, unknown>)[key]);
-      return item !== null && item["kind"] === "tile" ? item : null;
+      if (item === null || item["kind"] !== "tile") return null;
+
+      // Tile species have additional type metadata in the tile-collection
+      // catalog. Merge it into the wiki entity so tile articles can surface
+      // their category/type, tier, unlock method, and description without
+      // duplicating those fields in ITEMS.
+      const tileType = toRecord((TILE_TYPES_MAP as Record<string, unknown>)[key]);
+      return tileType !== null ? { ...item, ...tileType } : item;
     }
     case "resources": {
       const item = toRecord((ITEMS as Record<string, unknown>)[key]);
@@ -145,7 +152,15 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
       const allCats = new Set<string>();
       for (const c of (ZONE_CATEGORIES as unknown as string[])) allCats.add(c);
       for (const c of (TILE_CATEGORIES as unknown as string[])) allCats.add(c);
-      return allCats.has(key) ? { id: key, name: key } : null;
+      if (!allCats.has(key)) return null;
+      const subCategory = (CATEGORY_TO_SUBCATEGORY as Record<string, string | undefined>)[key];
+      const iconKey = `cat_${key}`;
+      return {
+        id: key,
+        name: key,
+        ...(subCategory != null ? { subCategory } : {}),
+        iconKey,
+      };
     }
 
     case "tileDiscoveryMethods": {
