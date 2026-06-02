@@ -131,6 +131,31 @@ describe("WikiArticle — authored body (bread.html)", () => {
   });
 });
 
+// ─── Cross-reference sections (CraftTree / WhereUsed) ─────────────────────────
+
+describe("WikiArticle — crafting tree (recipe article)", () => {
+  it("renders a 'Crafting tree' section for rec_bread", () => {
+    renderArticle("recipes", "rec_bread");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Crafting tree");
+    expect(body).toContain("Raw inputs:");
+  });
+});
+
+describe("WikiArticle — used-in section (resource article)", () => {
+  it("renders a 'Used in' section for plank (referenced widely)", () => {
+    renderArticle("resources", "plank");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Used in");
+  });
+
+  it("renders a crafting tree for a craftable resource (bread)", () => {
+    renderArticle("resources", "bread");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Crafting tree");
+  });
+});
+
 // ─── Test 4: Back button ──────────────────────────────────────────────────────
 
 describe("WikiArticle — back button", () => {

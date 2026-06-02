@@ -37,6 +37,8 @@ import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
+import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -144,10 +146,25 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // At-a-glance visual summary (recipes/buildings/zones/workers) — null otherwise
   const atAGlance = renderAtAGlance(conceptId, entity);
 
+  // Cross-reference + crafting-dependency sections.
+  // - WhereUsed (item articles): "where is this item id referenced".
+  // - CraftTree (recipe articles + craftable item articles): upstream tree.
+  const isItemConcept = conceptId === "resources" || conceptId === "tiles" || conceptId === "tools";
+  const showWhereUsed = isItemConcept && hasWhereUsed(entityKey);
+  const craftTreeRecipeId =
+    conceptId === "recipes"
+      ? entityKey
+      : isItemConcept
+        ? recipeIdProducing(entityKey)
+        : null;
+  const showCraftTree = hasCraftTree(craftTreeRecipeId);
+
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
+    ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
+    ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
     ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
@@ -219,6 +236,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               {atAGlance.node}
             </section>
           )}
+
+          {/* Crafting dependency tree (recipes + craftable items) */}
+          {showCraftTree && craftTreeRecipeId != null && (
+            <CraftTree recipeId={craftTreeRecipeId} />
+          )}
+
+          {/* Cross-references: where this item is used */}
+          {showWhereUsed && <WhereUsed itemId={entityKey} />}
 
           {/* Authored HTML body (optional) */}
           {body != null && (
