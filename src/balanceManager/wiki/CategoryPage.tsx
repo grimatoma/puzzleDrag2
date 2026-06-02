@@ -8,7 +8,7 @@
  * READ-ONLY — no editable controls.
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { COLORS } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { CONCEPTS } from "./concepts.js";
@@ -20,6 +20,11 @@ import HtmlBody from "./HtmlBody.jsx";
 import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+// Direct import — the graph is inside a collapsed section (graphOpen=false by
+// default) so it only renders when the user opens it. No lazy() needed since
+// the collapsed-by-default guard already ensures the graph isn't built until
+// the user expands the section.
+import RecipeGraph from "./RecipeGraph.jsx";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +36,9 @@ export interface CategoryPageProps {
 
 export function CategoryPage({ conceptId }: CategoryPageProps) {
   const { navigate } = useBalanceNav();
+
+  // Tracks whether the recipe graph section is open (collapsed by default)
+  const [graphOpen, setGraphOpen] = useState(false);
 
   // Resolve concept descriptor — fall back to the first concept if unknown
   const concept = CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0];
@@ -86,6 +94,82 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
       {/* ── 3. Field reference ────────────────────────────────────────────── */}
       <ConceptFields conceptId={conceptId} />
+
+      {/* ── 3b. Recipe relationship graph (recipes concept only) ──────────── */}
+      {conceptId === "recipes" && (
+        <section>
+          {/* Native <details> for collapsible — collapsed by default so the
+              heavy graph only initialises when the user opens the section.
+              We use a controlled state toggle so RecipeGraph is only mounted
+              when open (avoids building the graph on every page view). */}
+          <details
+            open={graphOpen}
+            onToggle={(e) => setGraphOpen((e.currentTarget as HTMLDetailsElement).open)}
+            style={{ borderRadius: 8, overflow: "hidden" }}
+          >
+            <summary
+              onClick={(e) => {
+                // Explicitly mirror the native toggle into React state so the
+                // mount/unmount of RecipeGraph is React-controlled and
+                // testable even in jsdom (which doesn't fully emulate the
+                // native details/summary toggle behaviour).
+                e.preventDefault();
+                setGraphOpen((prev) => !prev);
+              }}
+              style={{
+                cursor: "pointer",
+                listStyle: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                background: COLORS.parchmentDeep,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: graphOpen ? "8px 8px 0 0" : 8,
+                fontSize: 13,
+                fontWeight: 600,
+                color: COLORS.ink,
+                userSelect: "none",
+              }}
+            >
+              {/* Chevron indicator */}
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 12,
+                  height: 12,
+                  fontSize: 10,
+                  lineHeight: "12px",
+                  textAlign: "center",
+                  transform: graphOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 150ms ease",
+                  color: COLORS.inkSubtle,
+                  flexShrink: 0,
+                }}
+              >
+                ▶
+              </span>
+              Recipe relationship graph
+            </summary>
+
+            {/* Only mount RecipeGraph when the section is open */}
+            {graphOpen && (
+              <div
+                style={{
+                  padding: 12,
+                  background: COLORS.parchment,
+                  border: `1px solid ${COLORS.border}`,
+                  borderTop: "none",
+                  borderRadius: "0 0 8px 8px",
+                }}
+              >
+                <RecipeGraph />
+              </div>
+            )}
+          </details>
+        </section>
+      )}
 
       {/* ── 4. Entity grid ────────────────────────────────────────────────── */}
       <div>
