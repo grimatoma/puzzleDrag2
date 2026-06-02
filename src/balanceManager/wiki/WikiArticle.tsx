@@ -35,6 +35,22 @@ import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
+import Icon from "../../ui/Icon.jsx";
+
+// ─── Icon helper ─────────────────────────────────────────────────────────────
+
+/**
+ * Return the icon key for a cross-link target, or null if the concept has no
+ * per-entity icons (recipes, buildings, zones, workers, etc. do not).
+ *
+ * Only concepts where every entity has a 1-to-1 icon (item id → icon key)
+ * are included. Boss icons follow the "boss_<key>" convention.
+ */
+function iconKeyForLink(conceptId: string, key: string): string | null {
+  if (conceptId === "tiles" || conceptId === "resources" || conceptId === "tools") return key;
+  if (conceptId === "bosses") return `boss_${key}`;
+  return null;
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -210,23 +226,29 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                       {group.title}
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => (
-                        <RefButton
-                          key={`${link.conceptId}:${link.key}`}
-                          title={`${link.conceptId}:${link.key}`}
-                          onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                        >
-                          <span className="font-mono text-[10px]">{link.label}</span>
-                          {link.label !== link.key && (
-                            <span
-                              className="font-mono text-[9px] opacity-60 ml-0.5"
-                              style={{ color: COLORS.inkSubtle }}
-                            >
-                              {link.key}
-                            </span>
-                          )}
-                        </RefButton>
-                      ))}
+                      {group.links.map((link) => {
+                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        return (
+                          <RefButton
+                            key={`${link.conceptId}:${link.key}`}
+                            title={`${link.conceptId}:${link.key}`}
+                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
+                          >
+                            {ik != null && (
+                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
+                            )}
+                            <span className="font-mono text-[10px]">{link.label}</span>
+                            {link.label !== link.key && (
+                              <span
+                                className="font-mono text-[9px] opacity-60 ml-0.5"
+                                style={{ color: COLORS.inkSubtle }}
+                              >
+                                {link.key}
+                              </span>
+                            )}
+                          </RefButton>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -247,23 +269,29 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                       {group.title}
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => (
-                        <RefButton
-                          key={`${link.conceptId}:${link.key}`}
-                          title={`${link.conceptId}:${link.key}`}
-                          onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                        >
-                          <span className="font-mono text-[10px]">{link.label}</span>
-                          {link.label !== link.key && (
-                            <span
-                              className="font-mono text-[9px] opacity-60 ml-0.5"
-                              style={{ color: COLORS.inkSubtle }}
-                            >
-                              {link.key}
-                            </span>
-                          )}
-                        </RefButton>
-                      ))}
+                      {group.links.map((link) => {
+                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        return (
+                          <RefButton
+                            key={`${link.conceptId}:${link.key}`}
+                            title={`${link.conceptId}:${link.key}`}
+                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
+                          >
+                            {ik != null && (
+                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
+                            )}
+                            <span className="font-mono text-[10px]">{link.label}</span>
+                            {link.label !== link.key && (
+                              <span
+                                className="font-mono text-[9px] opacity-60 ml-0.5"
+                                style={{ color: COLORS.inkSubtle }}
+                              >
+                                {link.key}
+                              </span>
+                            )}
+                          </RefButton>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

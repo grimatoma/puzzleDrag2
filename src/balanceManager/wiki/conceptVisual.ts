@@ -5,7 +5,7 @@
  * the article text. Only returns scenario ids that are VERIFIED to exist in
  * src/visualTesting/matrix.ts (VISUAL_SCENARIOS).
  *
- * Verified scenario ids (all confirmed present in matrix.ts as of 2026-06-01):
+ * Verified scenario ids (all confirmed present in matrix.ts as of 2026-06-02):
  *   "board-farm-idle"          — farm board (tiles concept)
  *   "board-mine-idle"          — mine board (mine tiles)
  *   "board-fish-idle-high-tide" — fish/water board
@@ -16,6 +16,15 @@
  *   "inventory-grid-all"       — inventory with resources
  *   "board-boss-active"        — boss active on board
  *   "board-season-spring-wheel" — spring season indicator
+ *   "map-current-home"         — cartography map (views/cartography)
+ *   "chronicle-progressed"     — chronicle screen (views/chronicle)
+ *   "quests-daily-mixed"       — quests screen (views/quests)
+ *   "achievements-trophies-mixed" — achievements screen (views/achievements)
+ *   "tiles-farm-grass"         — tiles screen (views/tiles)
+ *   "orders-mixed"             — orders screen (views/orders)
+ *   "townsfolk-castle"         — townsfolk castle tab (npcs)
+ *   "board-mine-hazards"       — mine board with hazards (hazards)
+ *   "board-farm-fire-rats"     — farm board with fire/rats hazards
  *
  * Returns null when no good mapping exists — better to show nothing than an
  * invalid/misleading scenario.
@@ -45,6 +54,16 @@ const CONCEPT_DEFAULT_SCENARIO: Readonly<Record<string, string>> = {
   // Bosses appear in the boss gallery.
   bosses:     "townsfolk-bosses",
   // Abilities and tool powers have no single visual home — omit.
+
+  // Views — each maps to the scenario that best shows that screen.
+  // ids verified against matrix.ts VISUAL_SCENARIOS.
+  views:          "town-home-built-out",   // fallback for views with no override
+
+  // NPCs appear on the castle/townsfolk tab.
+  npcs:       "townsfolk-castle",
+
+  // Hazards occur on the mine board — show the mine board with active hazards.
+  hazards:    "board-mine-hazards",
 };
 
 /**
@@ -76,6 +95,24 @@ const ENTITY_OVERRIDES: Readonly<Record<string, string>> = {
   "tools/bomb":    "board-farm-tool-bomb",
   "tools/sickle":  "board-farm-tool-sickle",
   "tools/rake":    "board-farm-tool-rake",
+
+  // Per-view overrides: each game screen maps to its own scenario.
+  // All ids verified present in matrix.ts VISUAL_SCENARIOS.
+  "views/board":        "board-farm-idle",
+  "views/town":         "town-home-built-out",
+  "views/inventory":    "inventory-grid-all",
+  "views/cartography":  "map-current-home",
+  "views/chronicle":    "chronicle-progressed",
+  "views/crafting":     "crafting-bakery",
+  "views/quests":       "quests-daily-mixed",
+  "views/townsfolk":    "townsfolk-workers",
+  "views/achievements": "achievements-trophies-mixed",
+  "views/tiles":        "tiles-farm-grass",
+  "views/orders":       "orders-mixed",
+
+  // Farm hazards — show the farm board with fire/rats.
+  "hazards/fire":  "board-farm-fire-rats",
+  "hazards/rats":  "board-farm-fire-rats",
 };
 
 /**
