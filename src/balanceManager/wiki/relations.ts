@@ -13,10 +13,18 @@ import { ZONES } from "../../features/zones/data.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
+/** Host-specific attachment data (e.g. ability params on a building). */
+export interface WikiLinkContext {
+  params?: Record<string, unknown>;
+  trigger?: string;
+}
+
 export interface WikiLink {
   conceptId: string;
   key: string;
   label: string;
+  /** Per-host instance data when the link is not a bare id reference. */
+  context?: WikiLinkContext;
 }
 
 export interface RelationGroup {
@@ -81,6 +89,29 @@ function extractAbilityId(element: unknown): string | null {
   return null;
 }
 
+/** Resolve an ability attachment, preserving params/trigger from the host entity. */
+function resolveAbilityAttachment(element: unknown): WikiLink | null {
+  const id = extractAbilityId(element);
+  if (id == null) return null;
+  const base = resolveLink("abilities", id);
+  if (base == null) return null;
+  if (element == null || typeof element !== "object") return base;
+
+  const obj = element as Record<string, unknown>;
+  const context: WikiLinkContext = {};
+  const params = obj.params;
+  if (params != null && typeof params === "object" && !Array.isArray(params)) {
+    context.params = params as Record<string, unknown>;
+  }
+  if (typeof obj.trigger === "string" && obj.trigger.length > 0) {
+    context.trigger = obj.trigger;
+  }
+  if (context.params != null || context.trigger != null) {
+    return { ...base, context };
+  }
+  return base;
+}
+
 // ─── Per-concept relation computers ──────────────────────────────────────────
 
 function relationsForZones(entity: Record<string, unknown>): RelationGroup[] {
@@ -110,10 +141,7 @@ function relationsForBuildings(
   const abilitiesRaw = Array.isArray(entity.abilities) ? (entity.abilities as unknown[]) : [];
   const abilityGroup = makeGroup(
     "Abilities",
-    abilitiesRaw
-      .map((a) => extractAbilityId(a))
-      .filter((id): id is string => id !== null)
-      .map((id) => resolveLink("abilities", id)),
+    abilitiesRaw.map((a) => resolveAbilityAttachment(a)),
   );
   if (abilityGroup) groups.push(abilityGroup);
 
@@ -229,10 +257,7 @@ function relationsForWorkers(entity: Record<string, unknown>): RelationGroup[] {
   const abilitiesRaw = Array.isArray(entity.abilities) ? (entity.abilities as unknown[]) : [];
   const abilityGroup = makeGroup(
     "Abilities",
-    abilitiesRaw
-      .map((a) => extractAbilityId(a))
-      .filter((id): id is string => id !== null)
-      .map((id) => resolveLink("abilities", id)),
+    abilitiesRaw.map((a) => resolveAbilityAttachment(a)),
   );
   return abilityGroup ? [abilityGroup] : [];
 }

@@ -274,6 +274,17 @@ describe("relationsFor — buildings (Abilities via object-form extractAbilityId
       expect(link.label.length).toBeGreaterThan(0);
     }
   });
+
+  it("powder_store ability links carry grant_tool params in context", () => {
+    const entity = getEntity("buildings", "powder_store") as Record<string, unknown>;
+    const groups = relationsFor("buildings", "powder_store", entity);
+    const abilityGroup = groups.find((g) => g.title === "Abilities");
+    expect(abilityGroup).toBeDefined();
+    const grant = abilityGroup!.links.find((l) => l.key === "grant_tool");
+    expect(grant).toBeDefined();
+    expect(grant!.context?.params).toMatchObject({ tool: "bomb", amount: 2 });
+    expect(grant!.context?.trigger).toBe("season_end");
+  });
 });
 
 // ─── Workers → Abilities (object-form extractAbilityId) ──────────────────────
