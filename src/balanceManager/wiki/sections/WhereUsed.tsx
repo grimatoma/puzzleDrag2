@@ -3,27 +3,16 @@
  *
  * For a resource / tile / tool article, lists every place the item id is
  * referenced — recipe inputs/outputs, building costs, upgrade-chain feeders,
- * and story rewards — grouped by kind and rendered as clickable icon+label
- * chips that navigate to the referenced entity's wiki article.
+ * and story rewards — grouped by kind and rendered as rich concept ref widgets.
  *
  * COMPUTE is reused from itemReferences.ts (the pure cross-reference index).
- * We roll our OWN chip rows rather than reuse relational.tsx's WhereUsedLinks:
- * that helper navigates via the Dev Panel nav shape ({ tab, focus } with a
- * bare focus id), whereas the wiki needs wikiNavTarget's "conceptId:key" focus
- * so the article shell can resolve the specific entity page.
- *
- * Returns null when the item has no usages (caller may also pre-check).
- *
- * React Compiler is on — no manual useMemo/useCallback.
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
 import { conceptForKey } from "../conceptEntities.js";
+import { ConceptRefCard } from "../ConceptRefCard.jsx";
 import {
   buildItemReferenceIndex,
   usagesFor,
@@ -31,11 +20,8 @@ import {
   type ItemUsage,
 } from "../../itemReferences.js";
 
-// The reference index is pure with static catalog inputs — build it once at
-// module scope rather than per render.
 const REFERENCE_INDEX = buildItemReferenceIndex();
 
-/** Human-readable section title per usage kind, in display order. */
 const KIND_ORDER: ItemUsage["kind"][] = [
   "recipe_input",
   "recipe_output",
@@ -52,21 +38,14 @@ const KIND_HEADINGS: Record<ItemUsage["kind"], string> = {
   story_outcome: "Awarded by story",
 };
 
-/** A single usage rendered as a navigable chip: target concept + key + label. */
 interface ChipSpec {
-  /** Wiki concept id to navigate to (may be null when not a wiki article). */
   conceptId: string | null;
-  /** Entity key within that concept (used for nav + as a fallback label). */
   key: string;
-  /** Icon key to render, or null for no icon. */
   iconKey: string | null;
-  /** Display label. */
   label: string;
-  /** Optional trailing detail (e.g. "×3"). */
   detail?: string;
 }
 
-/** Translate one ItemUsage into a chip spec for its group. */
 function chipForUsage(usage: ItemUsage): ChipSpec {
   switch (usage.kind) {
     case "recipe_input":
@@ -113,60 +92,47 @@ function chipForUsage(usage: ItemUsage): ChipSpec {
   }
 }
 
-function UsageChip({ chip }: { chip: ChipSpec }) {
-  const { navigate } = useBalanceNav();
-  const inner = (
-    <>
-      {chip.iconKey != null && (
-        <Icon iconKey={chip.iconKey} size={18} style={{ marginRight: 4, verticalAlign: "middle" }} />
-      )}
-      <span style={{ fontWeight: 600 }}>{chip.label}</span>
-      {chip.detail != null && (
-        <span className="wiki-mono" style={{ color: COLORS.inkSubtle, marginLeft: 4 }}>
-          {chip.detail}
-        </span>
-      )}
-    </>
-  );
-
-  const baseStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "3px 8px",
-    borderRadius: 8,
-    fontSize: 11,
-    background: COLORS.parchmentDeep,
-    border: `1px solid ${COLORS.border}`,
-    color: COLORS.ink,
-  };
-
+function UsageRef({ chip }: { chip: ChipSpec }) {
   if (chip.conceptId == null) {
-    // Not a navigable wiki article — render an inert chip.
-    return <span style={baseStyle}>{inner}</span>;
+    return (
+      <span
+        className="wiki-concept-ref-inline"
+        style={{ cursor: "default", opacity: 0.85 }}
+      >
+        <span className="wiki-concept-ref-inline__label">{chip.label}</span>
+        {chip.detail != null && (
+          <span className="wiki-concept-ref-inline__detail wiki-mono">{chip.detail}</span>
+        )}
+      </span>
+    );
   }
 
-  const target = wikiNavTarget(chip.conceptId, chip.key);
+  const useCard =
+    chip.conceptId === "recipes" ||
+    chip.conceptId === "buildings" ||
+    chip.conceptId === "zones";
+
   return (
-    <button
-      type="button"
-      title={`${chip.conceptId}:${chip.key}`}
-      onClick={() => navigate(target)}
-      style={{ ...baseStyle, cursor: "pointer", transition: "opacity 120ms ease" }}
-      className="hover:opacity-80"
-    >
-      {inner}
-    </button>
+    <ConceptRefCard
+      conceptId={chip.conceptId}
+      entityKey={chip.key}
+      label={chip.label}
+      detail={chip.detail}
+      variant={useCard ? "card" : "inline"}
+    />
   );
+}
+
+function gridClassForKind(kind: ItemUsage["kind"]): string | undefined {
+  return kind === "recipe_input" || kind === "recipe_output" || kind === "building_cost"
+    ? "wiki-concept-ref-grid"
+    : undefined;
 }
 
 export interface WhereUsedProps {
   itemId: string;
 }
 
-/**
- * Render grouped "where is this item used" chips for `itemId`, or null when the
- * item is not referenced anywhere.
- */
 export function WhereUsed({ itemId }: WhereUsedProps) {
   const usages = usagesFor(itemId, REFERENCE_INDEX);
   if (usages.length === 0) return null;
@@ -185,9 +151,16 @@ export function WhereUsed({ itemId }: WhereUsedProps) {
             >
               {KIND_HEADINGS[kind]}
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div
+              className={gridClassForKind(kind)}
+              style={
+                gridClassForKind(kind) == null
+                  ? { display: "flex", flexWrap: "wrap", gap: 6 }
+                  : undefined
+              }
+            >
               {groups.get(kind)!.map((usage, i) => (
-                <UsageChip key={`${kind}:${i}`} chip={chipForUsage(usage)} />
+                <UsageRef key={`${kind}:${i}`} chip={chipForUsage(usage)} />
               ))}
             </div>
           </div>
@@ -197,7 +170,6 @@ export function WhereUsed({ itemId }: WhereUsedProps) {
   );
 }
 
-/** Cheap precheck for TOC gating — true when the item has any usages. */
 export function hasWhereUsed(itemId: string): boolean {
   return usagesFor(itemId, REFERENCE_INDEX).length > 0;
 }
