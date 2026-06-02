@@ -1,5 +1,12 @@
+export interface BossUiEntry {
+  displayName: string;
+  emoji: string;
+  flavor: string;
+  goal: string;
+}
+
 /** UI-only boss presentation (emoji, flavor, goal). Gameplay from BOSSES in bosses/data.js. */
-export const BOSS_UI = Object.freeze({
+export const BOSS_UI: Readonly<Record<string, BossUiEntry>> = Object.freeze({
   frostmaw: {
     displayName: "The Frostmaw",
     emoji: "❄️",

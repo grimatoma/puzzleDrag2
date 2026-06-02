@@ -84,6 +84,7 @@ export interface Recipe {
   tier?: number;
   inputs: Record<string, number>;
   craftMs: number;
+  coins?: number;
 }
 
 export type RecipeKey = string;

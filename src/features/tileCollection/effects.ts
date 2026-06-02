@@ -24,9 +24,9 @@ interface TileTypeDef {
   id: string;
   category: string;
   displayName: string;
-  tier?: number;
-  baseResource?: string;
-  description?: string | null;
+  tier: number;
+  baseResource: string;
+  description: string;
   discovery?: TileTypeDiscovery;
   effects?: Record<string, unknown>;
   abilities?: Array<Record<string, unknown>>;
