@@ -10,8 +10,8 @@
  *  2. Status wiring — "bosses" concept shows PARTIAL in its StatusChip.
  *  3. Entry navigation — clicking an entry card calls navigate with
  *     wikiNavTarget shape { tab: "<conceptId>", focus: "<conceptId>:<key>" }.
- *  4. No-schema concept ("hazards") — renders without throwing, shows the
- *     ConceptFields graceful no-schema note, and shows the entry grid.
+ *  4. Schema-backed concept with a function field ("hazards") — renders without
+ *     throwing, shows the Fields heading, and shows the entry grid.
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -184,15 +184,15 @@ describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
 
 // ─── Test 4: No-schema concept ────────────────────────────────────────────────
 
-describe("CategoryPage — hazards (no-schema concept)", () => {
+describe("CategoryPage — hazards (definition-schema concept)", () => {
   it("renders without throwing", () => {
     expect(() => renderPage("hazards")).not.toThrow();
   });
 
-  it("renders ConceptFields graceful no-schema note", () => {
+  it("renders a 'Fields' heading from ConceptFields", () => {
     renderPage("hazards");
     const body = document.body.textContent ?? "";
-    expect(body).toMatch(/Fields for this concept come straight from live config/i);
+    expect(body).toMatch(/fields/i);
   });
 
   it("renders the entry grid (hazard entries visible)", () => {
