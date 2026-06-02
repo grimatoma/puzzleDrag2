@@ -106,8 +106,24 @@ describe("conceptSchemas — spot checks", () => {
     expect(cs!.kind).toBe("definition");
   });
 
-  it("'hazards' → null (no schema)", () => {
-    expect(schemaForConcept("hazards")).toBeNull();
+  it("'hazards' → kind: 'definition', schema introspects with look field", () => {
+    const cs = schemaForConcept("hazards");
+    expect(cs).not.toBeNull();
+    expect(cs!.kind).toBe("definition");
+    const doc = describeSchema(cs!.schema);
+    const fieldNames = doc.fields.map((f) => f.field);
+    expect(fieldNames).toContain("look");
+    expect(fieldNames).toContain("spawn");
+  });
+
+  it("'achievements' → kind: 'definition', schema introspects with look field", () => {
+    const cs = schemaForConcept("achievements");
+    expect(cs).not.toBeNull();
+    expect(cs!.kind).toBe("definition");
+    const doc = describeSchema(cs!.schema);
+    const fieldNames = doc.fields.map((f) => f.field);
+    expect(fieldNames).toContain("look");
+    expect(fieldNames).toContain("counter");
   });
 
   it("'categories' → null (no schema)", () => {
@@ -151,7 +167,6 @@ describe("conceptSchemas — spot checks", () => {
  */
 const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "categories",
-  "hazards",
   "views",
   "modals",
   "tileDiscoveryMethods",
@@ -160,7 +175,6 @@ const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "keepers",
   "boons",
   "dailyRewards",
-  "achievements",
 ]);
 
 describe("conceptSchemas — exhaustive CONCEPTS coverage", () => {

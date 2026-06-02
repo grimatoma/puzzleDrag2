@@ -79,7 +79,7 @@ interface TrophyCardProps {
 function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
   // canonical shape uses threshold; legacy shape uses target
   const { name, desc, threshold, target: targetLegacy } = achievement;
-  const icon: ReactNode = (achievement as AchievementDef & { icon?: ReactNode }).icon ?? null;
+  const icon: ReactNode = (achievement as AchievementDef & { look?: { icon?: ReactNode } }).look?.icon ?? null;
   const iconKey = `ach_${achievement.id}`;
   const target = threshold ?? targetLegacy ?? 1;
   const unlocked = !!trophyState;

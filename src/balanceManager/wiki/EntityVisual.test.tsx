@@ -52,8 +52,8 @@ describe("entityIconKey", () => {
     expect(entityIconKey("toolPowers", "clear_all", null)).toBeNull();
   });
 
-  it("uses entity.icon for achievements (and null when absent)", () => {
-    expect(entityIconKey("achievements", "first_steps", { icon: "ach_first_steps" })).toBe("ach_first_steps");
+  it("uses entity.look.icon for achievements (and null when absent)", () => {
+    expect(entityIconKey("achievements", "first_steps", { look: { icon: "ach_first_steps" } })).toBe("ach_first_steps");
     expect(entityIconKey("achievements", "x", {})).toBeNull();
     expect(entityIconKey("achievements", "x", null)).toBeNull();
   });

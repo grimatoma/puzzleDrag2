@@ -75,7 +75,7 @@ const SVG_USAGE_LITERALS = [
 // literal or template-lookup in a live card/panel: quest cards + header,
 // boon cards + branch headers, HUD treasury rows, order bond chips,
 // cartography zone/keeper UI, and crafting/HUD/zone panels. Achievement keys
-// are detected separately from ACHIEVEMENTS[].icon. (season_* are already
+// are detected separately from ACHIEVEMENTS[].look.icon. (season_* are already
 // covered by the SEASONS scan above.)
 const WIRED_ICON_USAGE = [
   "quest_collect", "quest_craft", "quest_order", "quest_tool", "quest_chain", "quest_book",
@@ -168,9 +168,9 @@ export function getUsedIconKeys(): Set<string> {
   for (const key of SVG_USAGE_LITERALS) add(key);
 
   // Wired icon families (Buckets 1+2): achievement badges carry their key in
-  // the `icon` field; the rest are referenced as JSX literals / template
+  // the `look.icon` field; the rest are referenced as JSX literals / template
   // lookups in the cards listed in WIRED_ICON_USAGE below.
-  for (const a of ACHIEVEMENTS || []) add((a as { icon?: string }).icon);
+  for (const a of ACHIEVEMENTS || []) add((a as { look?: { icon?: string } }).look?.icon);
   for (const key of WIRED_ICON_USAGE) add(key);
 
   return used;

@@ -91,11 +91,10 @@ const FARM_HAZARD_LIST = [
   { id: "wolf",  ...FARM_HAZARD_META.wolf, iconKey: "ui_star", biome: "Farm" },
 ];
 
-const MINE_HAZARD_ICONS: Record<string, string> = { cave_in: "🪨", gas_vent: "💨", lava: "🌋", mole: "🐭" };
 const MINE_HAZARD_LIST = (HAZARDS as HazardDef[]).map((h: HazardDef) => ({
   ...h,
   biome: "Mine",
-  icon: MINE_HAZARD_ICONS[h.id] ?? "⚠️",
+  icon: h.look?.icon ?? "⚠️",
 }));
 
 const ALL_HAZARDS = [...FARM_HAZARD_LIST, ...MINE_HAZARD_LIST];

@@ -135,6 +135,7 @@ export interface Hazard {
   weight: number;
   spawn: (grid: unknown[][], rng: () => number) => Record<string, unknown>;
   durationTurns?: number;
+  look: { icon: string };
 }
 
 // ── SettlementBiome ───────────────────────────────────────────────────────

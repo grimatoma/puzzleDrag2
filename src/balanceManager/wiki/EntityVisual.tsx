@@ -65,8 +65,10 @@ export function entityIconKey(
       return typeof item === "string" && item.length > 0 ? item : null;
     }
     case "achievements": {
-      // Achievements store a baked icon-registry key (e.g. `ach_first_steps`).
-      const icon = entity?.icon;
+      // Achievements store a baked icon-registry key (e.g. `ach_first_steps`)
+      // under look.
+      const look = entity?.look as { icon?: unknown } | undefined;
+      const icon = look?.icon;
       return typeof icon === "string" && icon.length > 0 ? icon : null;
     }
     default:

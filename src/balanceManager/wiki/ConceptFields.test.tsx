@@ -96,18 +96,21 @@ describe("ConceptFields — bosses (override schema)", () => {
   });
 });
 
-// ─── Concept without a schema ─────────────────────────────────────────────────
+// ─── Concept with a definition schema that has a function field ───────────────
 
-describe("ConceptFields — hazards (no schema)", () => {
-  it("renders the graceful no-schema note", () => {
+describe("ConceptFields — hazards (definition schema)", () => {
+  it("renders a 'Fields' heading", () => {
     render(<ConceptFields conceptId="hazards" />);
-    expect(screen.getByText(/Fields for this concept come straight from live config/i)).toBeDefined();
+    const headings = screen.queryAllByText(/^Fields/i);
+    expect(headings.length).toBeGreaterThan(0);
   });
 
-  it("does NOT render a fields table", () => {
+  it("renders a fields table including 'look' and 'spawn'", () => {
     render(<ConceptFields conceptId="hazards" />);
     const tables = document.querySelectorAll("table");
-    expect(tables.length, "Expected no <table> to be rendered for a no-schema concept").toBe(0);
+    expect(tables.length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("look").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("spawn").length).toBeGreaterThan(0);
   });
 
   it("renders zero editable controls", () => {

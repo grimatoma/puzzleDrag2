@@ -46,6 +46,7 @@ export interface HazardDef {
   weight: number;
   durationTurns?: number;
   spawn: (grid: MineGridCell[][], rng: () => number) => Record<string, unknown>;
+  look: { icon: string };
 }
 
 export const HAZARDS: HazardDef[] = [
@@ -59,6 +60,7 @@ export const HAZARDS: HazardDef[] = [
       const row = Math.floor(rng() * grid.length);
       return { caveIn: { row } };
     },
+    look: { icon: "🪨" },
   },
   {
     id: "gas_vent",
@@ -72,6 +74,7 @@ export const HAZARDS: HazardDef[] = [
       const col = Math.floor(rng() * (grid[0].length - 1));
       return { gasVent: { row, col, turnsRemaining: 3 } };
     },
+    look: { icon: "💨" },
   },
   {
     id: "lava",
@@ -84,6 +87,7 @@ export const HAZARDS: HazardDef[] = [
       const col = Math.floor(rng() * grid[0].length);
       return { lava: { cells: [{ row, col }], turnsToSpread: 1 } };
     },
+    look: { icon: "🌋" },
   },
   {
     id: "mole",
@@ -96,6 +100,7 @@ export const HAZARDS: HazardDef[] = [
       const col = Math.floor(rng() * grid[0].length);
       return { mole: { row, col, turnsRemaining: 3 } };
     },
+    look: { icon: "🐭" },
   },
 ];
 

@@ -2,18 +2,22 @@ import { describe, it, expect, vi } from "vitest";
 import { ITEMS, RECIPES, BUILDINGS, isRecipeDefinition } from "../constants.js";
 import { ABILITIES } from "../config/abilities.js";
 import { TOOL_POWERS } from "../config/toolPowers.js";
+import { ACHIEVEMENTS } from "../features/achievements/data.js";
+import { HAZARDS } from "../features/mine/hazards.js";
 import {
   itemEntrySchema,
   recipeDefinitionSchema,
   buildingDefinitionSchema,
   abilityCatalogEntrySchema,
   toolPowerCatalogEntrySchema,
+  achievementEntrySchema,
   balanceSchema,
   parseBalanceOverrides,
   itemOverrideSchema,
   tuningSchema,
   _resetBalanceParseWarningsForTests,
 } from "../config/schemas/index.js";
+import { hazardEntrySchema } from "../config/schemas/hazard.js";
 
 describe("configSchemas — canonical ITEMS", () => {
   it("every ITEMS row matches itemEntrySchema", () => {
@@ -55,6 +59,18 @@ describe("configSchemas — catalogs", () => {
   it("TOOL_POWERS entries match toolPowerCatalogEntrySchema", () => {
     for (const p of TOOL_POWERS) {
       expect(toolPowerCatalogEntrySchema.safeParse(p).success, p.id).toBe(true);
+    }
+  });
+
+  it("ACHIEVEMENTS entries match achievementEntrySchema", () => {
+    for (const a of ACHIEVEMENTS) {
+      expect(achievementEntrySchema.safeParse(a).success, a.id).toBe(true);
+    }
+  });
+
+  it("HAZARDS entries match hazardEntrySchema (incl. spawn function)", () => {
+    for (const h of HAZARDS) {
+      expect(hazardEntrySchema.safeParse(h).success, h.id).toBe(true);
     }
   });
 });

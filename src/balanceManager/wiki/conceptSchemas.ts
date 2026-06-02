@@ -25,7 +25,11 @@ import {
   abilityCatalogEntrySchema,
   toolPowerCatalogEntrySchema,
   seasonEntrySchema,
+  achievementEntrySchema,
 } from "../../config/schemas/index.js";
+
+// hazardEntrySchema is not re-exported from index.ts — import directly.
+import { hazardEntrySchema } from "../../config/schemas/hazard.js";
 
 // npcOverrideSchema is not re-exported from index.ts — import directly.
 import { npcOverrideSchema } from "../../config/schemas/npc.js";
@@ -78,10 +82,13 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
       return { schema: abilityCatalogEntrySchema, kind: "definition" };
     case "toolPowers":
       return { schema: toolPowerCatalogEntrySchema, kind: "definition" };
+    case "achievements":
+      return { schema: achievementEntrySchema, kind: "definition" };
+    case "hazards":
+      return { schema: hazardEntrySchema, kind: "definition" };
 
     // ── live-config-only concepts (no Zod schema) ─────────────────────────
     case "categories":
-    case "hazards":
     case "views":
     case "modals":
     case "tileDiscoveryMethods":
