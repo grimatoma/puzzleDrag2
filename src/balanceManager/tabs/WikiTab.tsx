@@ -9,15 +9,24 @@
 // Used as a designer scanning grid and as an alignment artifact for the
 // upcoming type-discipline refactor. The tab does not mutate any draft.
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { CONCEPTS } from "../wiki/concepts.js";
 import EntryGrid from "../wiki/EntryGrid.jsx";
 import { COLORS, SegmentedFilter } from "../shared.jsx";
+
+// Lazy-load EntityDetail so the heavy schema-introspection deps it pulls in
+// (schemaDoc → Zod schemas, conceptSchemas, conceptEntities, and the constants
+// they reach) are only fetched once the designer clicks a card. Keeping this
+// off the WikiTab chunk lets EntryGrid paint immediately on tab open — a static
+// import here made the chunk heavy enough to race the visual-golden capture and
+// catch the Suspense fallback instead of the populated grid.
+const EntityDetail = lazy(() => import("../wiki/EntityDetail.jsx"));
 
 const CONCEPT_OPTIONS = CONCEPTS.map((c) => ({ value: c.id, label: c.label }));
 
 export default function WikiTab() {
   const [conceptId, setConceptId] = useState(CONCEPTS[0].id);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const concept = useMemo(
     () => CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0],
@@ -26,12 +35,17 @@ export default function WikiTab() {
 
   const entries = useMemo(() => concept.getEntries(), [concept]);
 
+  function handleConceptChange(id: string) {
+    setConceptId(id);
+    setSelectedKey(null);
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <SegmentedFilter
         options={CONCEPT_OPTIONS}
         value={concept.id}
-        onChange={setConceptId}
+        onChange={handleConceptChange}
         ariaLabel="Wiki concept"
       />
 
@@ -50,7 +64,29 @@ export default function WikiTab() {
         </div>
       </div>
 
-      <EntryGrid entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]} />
+      {selectedKey != null ? (
+        <Suspense
+          fallback={
+            <div
+              className="text-[11px] italic py-4"
+              style={{ color: COLORS.inkSubtle }}
+            >
+              Loading…
+            </div>
+          }
+        >
+          <EntityDetail
+            conceptId={concept.id}
+            entityKey={selectedKey}
+            onBack={() => setSelectedKey(null)}
+          />
+        </Suspense>
+      ) : (
+        <EntryGrid
+          entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]}
+          onSelect={setSelectedKey}
+        />
+      )}
     </div>
   );
 }
