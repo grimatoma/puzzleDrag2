@@ -110,3 +110,19 @@ describe("RecipeRelationsFlow", () => {
   });
 });
 
+
+describe("ConceptRefCard — ability with host context", () => {
+  it("renders instance params for grant_tool on powder_store", () => {
+    const { container } = renderCard({
+      conceptId: "abilities",
+      entityKey: "grant_tool",
+      variant: "card",
+      context: { params: { tool: "bomb", amount: 2 }, trigger: "season_end" },
+    });
+    expect(container.querySelector(".wiki-ability-instance")).not.toBeNull();
+    const body = document.body.textContent ?? "";
+    expect(body).toMatch(/season end/i);
+    expect(body).toMatch(/bomb/i);
+    expect(body).toContain("2");
+  });
+});

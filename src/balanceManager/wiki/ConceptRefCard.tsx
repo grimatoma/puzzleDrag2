@@ -14,7 +14,8 @@ import { conceptForKey, getEntity } from "./conceptEntities.js";
 import { EntityVisual, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
-import type { WikiLink } from "./relations.js";
+import type { WikiLink, WikiLinkContext } from "./relations.js";
+import { AbilityInstanceBody } from "./abilityInstanceVisual.jsx";
 
 export type ConceptRefVariant = "card" | "inline";
 export type ConceptRefLayout = "auto" | "compact" | "rich";
@@ -31,6 +32,8 @@ export interface ConceptRefCardProps {
   detail?: string;
   /** When false, skip recipe I/O body. Buildings/zones never show a body regardless. */
   showBody?: boolean;
+  /** Host-specific params (ability attachments on buildings/workers). */
+  context?: WikiLinkContext;
   className?: string;
 }
 
@@ -50,9 +53,14 @@ const COMPACT_CONCEPTS = new Set([
   "toolPowers",
 ]);
 
-function resolveLayout(conceptId: string, layout: ConceptRefLayout): "compact" | "rich" {
+function resolveLayout(
+  conceptId: string,
+  layout: ConceptRefLayout,
+  context?: WikiLinkContext,
+): "compact" | "rich" {
   if (layout === "compact") return "compact";
   if (layout === "rich") return "rich";
+  if (conceptId === "abilities" && hasInstanceContext(context)) return "rich";
   return COMPACT_CONCEPTS.has(conceptId) ? "compact" : "rich";
 }
 
@@ -70,28 +78,44 @@ function displayTitle(
   return iconLabel(entityKey) ?? entityKey;
 }
 
-/** Only recipes get a default card body — they are defined by inputs → output. */
-function bodyDefaultForConcept(conceptId: string): boolean {
-  return conceptId === "recipes";
+function hasInstanceContext(context: WikiLinkContext | undefined): boolean {
+  return context?.params != null && Object.keys(context.params).length > 0;
 }
 
-/** Concept-specific body under the title row (recipe flow only). */
+function shouldShowConceptBody(
+  conceptId: string,
+  context: WikiLinkContext | undefined,
+): boolean {
+  if (conceptId === "recipes") return true;
+  if (conceptId === "abilities" && hasInstanceContext(context)) return true;
+  return false;
+}
+
+/** Concept-specific body: recipe I/O or per-host ability params. */
 function ConceptRefBody({
   conceptId,
+  entityKey,
   entity,
+  context,
 }: {
   conceptId: string;
+  entityKey: string;
   entity: Record<string, unknown> | null;
+  context?: WikiLinkContext;
 }) {
-  if (entity == null || conceptId !== "recipes") return null;
-
-  return (
-    <div className="wiki-concept-ref-card__body">
-      <RecipeIO
-        recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }}
-      />
-    </div>
-  );
+  if (conceptId === "recipes" && entity != null) {
+    return (
+      <div className="wiki-concept-ref-card__body">
+        <RecipeIO
+          recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }}
+        />
+      </div>
+    );
+  }
+  if (conceptId === "abilities" && context != null) {
+    return <AbilityInstanceBody abilityKey={entityKey} context={context} />;
+  }
+  return null;
 }
 
 function FlowArrow() {
@@ -122,6 +146,7 @@ export function ConceptRefCard({
   layout = "auto",
   detail,
   showBody = true,
+  context,
   className = "",
 }: ConceptRefCardProps) {
   const { navigate } = useBalanceNav();
@@ -129,7 +154,7 @@ export function ConceptRefCard({
   const title = displayTitle(conceptId, entityKey, entity, label);
   const iconKey = entityIconKey(conceptId, entityKey, entity);
   const target = wikiNavTarget(conceptId, entityKey);
-  const cardLayout = resolveLayout(conceptId, layout);
+  const cardLayout = resolveLayout(conceptId, layout, context);
 
   const onActivate = () => navigate(target);
 
@@ -188,8 +213,13 @@ export function ConceptRefCard({
     />
   );
   const body =
-    showBody && bodyDefaultForConcept(conceptId) ? (
-      <ConceptRefBody conceptId={conceptId} entity={entity} />
+    showBody && shouldShowConceptBody(conceptId, context) ? (
+      <ConceptRefBody
+        conceptId={conceptId}
+        entityKey={entityKey}
+        entity={entity}
+        context={context}
+      />
     ) : null;
 
   return (
@@ -244,6 +274,7 @@ export function RelationRefGrid({ links, className = "" }: RelationRefGridProps)
           conceptId={link.conceptId}
           entityKey={link.key}
           label={link.label}
+          context={link.context}
           variant="card"
           layout="auto"
         />
