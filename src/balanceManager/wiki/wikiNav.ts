@@ -12,7 +12,7 @@ export interface WikiSection {
 }
 
 export const WIKI_SECTIONS: WikiSection[] = [
-  { id: "board",   label: "Board",   conceptIds: ["tiles", "zones", "settlementBiomes", "categories"] },
+  { id: "board",   label: "Board",   conceptIds: ["tiles", "boardKinds", "zones", "settlementBiomes", "categories"] },
   { id: "economy", label: "Economy", conceptIds: ["resources", "tools", "recipes", "buildings"] },
   { id: "world",   label: "World",   conceptIds: ["npcs", "workers", "bosses", "hazards"] },
   { id: "systems", label: "Systems", conceptIds: ["abilities", "toolPowers", "tileDiscoveryMethods", "seasons"] },

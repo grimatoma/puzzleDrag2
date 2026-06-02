@@ -88,6 +88,7 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
       return { schema: hazardEntrySchema, kind: "definition" };
 
     // ── live-config-only concepts (no Zod schema) ─────────────────────────
+    case "boardKinds":
     case "categories":
     case "views":
     case "modals":
