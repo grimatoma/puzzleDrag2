@@ -17,6 +17,17 @@ export interface MemberTile {
   iconKey: string;
 }
 
+/**
+ * A handful of TILE_TYPES entries are keyed by a resource id (mine upgrade
+ * tiers: block, iron_bar, coke, cut_gem) and carry kind "resource" in ITEMS.
+ * We only surface genuine board tiles here, so a member card always links to a
+ * real tile article rather than landing on a resource page.
+ */
+function isTileKey(id: string): boolean {
+  const item = (ITEMS as Record<string, { kind?: string } | undefined>)[id];
+  return item?.kind === "tile";
+}
+
 function toMember(tileId: string): MemberTile {
   const item = (ITEMS as Record<string, { label?: string } | undefined>)[tileId];
   return { key: tileId, name: item?.label ?? tileId, iconKey: tileId };
@@ -26,13 +37,18 @@ export function memberTilesFor(conceptId: string, key: string): MemberTile[] {
   if (conceptId === "categories") {
     const byCat = (TILE_TYPES_BY_CATEGORY as Record<string, Array<{ id: string }>>)[key];
     if (!Array.isArray(byCat)) return [];
-    return byCat.map((t) => toMember(t.id));
+    return byCat
+      .map((t) => t.id)
+      .filter(isTileKey)
+      .map(toMember);
   }
 
   if (conceptId === "tileDiscoveryMethods") {
     return (TILE_TYPES as Array<{ id: string; discovery?: { method?: string } }>)
       .filter((t) => (t.discovery?.method ?? "default") === key)
-      .map((t) => toMember(t.id));
+      .map((t) => t.id)
+      .filter(isTileKey)
+      .map(toMember);
   }
 
   return [];

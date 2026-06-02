@@ -22,4 +22,12 @@ describe("memberTilesFor", () => {
   it("returns [] for concepts that don't group tiles", () => {
     expect(memberTilesFor("recipes", "rec_bread")).toEqual([]);
   });
+
+  it("excludes resource-kind TILE_TYPES entries (mine upgrade tiers)", () => {
+    // `block` is a kind:"resource" entry that lives in TILE_TYPES under the
+    // mine_stone category; it must not surface as a member tile.
+    const tiles = memberTilesFor("categories", "mine_stone");
+    expect(tiles.some((t) => t.key === "block")).toBe(false);
+    expect(tiles.every((t) => t.key.startsWith("tile_"))).toBe(true);
+  });
 });
