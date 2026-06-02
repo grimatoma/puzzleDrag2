@@ -8,11 +8,19 @@
 //
 // Used as a designer scanning grid and as an alignment artifact for the
 // upcoming type-discipline refactor. The tab does not mutate any draft.
+//
+// Navigation: the selected entity is URL-addressable via the Dev Panel's
+// hash router: `#/wiki/<entityKey>`. `useBalanceNav()` provides the routed
+// `focus` and a `navigate` callback. Switching the concept filter clears the
+// focus so the grid returns to the selected concept; back/forward buttons
+// navigate the entity selection history.
 
 import { useState, useMemo, lazy, Suspense } from "react";
 import { CONCEPTS } from "../wiki/concepts.js";
 import EntryGrid from "../wiki/EntryGrid.jsx";
 import { COLORS, SegmentedFilter } from "../shared.jsx";
+import { useBalanceNav } from "../balanceNav.jsx";
+import { conceptForKey } from "../wiki/conceptEntities.js";
 
 // Lazy-load EntityDetail so the heavy schema-introspection deps it pulls in
 // (schemaDoc → Zod schemas, conceptSchemas, conceptEntities, and the constants
@@ -25,8 +33,20 @@ const EntityDetail = lazy(() => import("../wiki/EntityDetail.jsx"));
 const CONCEPT_OPTIONS = CONCEPTS.map((c) => ({ value: c.id, label: c.label }));
 
 export default function WikiTab() {
-  const [conceptId, setConceptId] = useState(CONCEPTS[0].id);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const { focus, navigate } = useBalanceNav();
+
+  // Local concept filter state — drives the segmented filter and the grid when
+  // there is no active focus.
+  const [manualConceptId, setManualConceptId] = useState(CONCEPTS[0].id);
+
+  // Derive the concept from the current focus (if resolvable).
+  const focusedConcept = focus ? conceptForKey(focus) : null;
+
+  // The active concept id is: the focused entity's concept (when a detail panel
+  // is shown), otherwise the manual filter choice. This keeps the segmented
+  // filter highlighting the focused concept and means "← Back" lands on that
+  // concept's grid — all purely derived from props and local state, no effects.
+  const conceptId = focusedConcept ?? manualConceptId;
 
   const concept = useMemo(
     () => CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0],
@@ -36,9 +56,13 @@ export default function WikiTab() {
   const entries = useMemo(() => concept.getEntries(), [concept]);
 
   function handleConceptChange(id: string) {
-    setConceptId(id);
-    setSelectedKey(null);
+    setManualConceptId(id);
+    // Clear any existing focus so we return to the grid for the new concept.
+    navigate({ tab: "wiki", focus: null });
   }
+
+  // If focus is set and resolvable, show the detail panel; otherwise the grid.
+  const showDetail = focus !== null && focusedConcept !== null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -49,22 +73,24 @@ export default function WikiTab() {
         ariaLabel="Wiki concept"
       />
 
-      <div className="flex items-baseline justify-between gap-3">
-        <div
-          className="text-[11px] italic"
-          style={{ color: COLORS.inkSubtle }}
-        >
-          {concept.blurb}
+      {!showDetail && (
+        <div className="flex items-baseline justify-between gap-3">
+          <div
+            className="text-[11px] italic"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            {concept.blurb}
+          </div>
+          <div
+            className="text-[11px] font-bold flex-shrink-0"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            {entries.length} {entries.length === 1 ? "entry" : "entries"}
+          </div>
         </div>
-        <div
-          className="text-[11px] font-bold flex-shrink-0"
-          style={{ color: COLORS.inkSubtle }}
-        >
-          {entries.length} {entries.length === 1 ? "entry" : "entries"}
-        </div>
-      </div>
+      )}
 
-      {selectedKey != null ? (
+      {showDetail ? (
         <Suspense
           fallback={
             <div
@@ -76,15 +102,15 @@ export default function WikiTab() {
           }
         >
           <EntityDetail
-            conceptId={concept.id}
-            entityKey={selectedKey}
-            onBack={() => setSelectedKey(null)}
+            conceptId={focusedConcept!}
+            entityKey={focus!}
+            onBack={() => navigate({ tab: "wiki", focus: null })}
           />
         </Suspense>
       ) : (
         <EntryGrid
           entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]}
-          onSelect={setSelectedKey}
+          onSelect={(key) => navigate({ tab: "wiki", focus: key })}
         />
       )}
     </div>

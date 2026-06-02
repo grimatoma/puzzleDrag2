@@ -19,6 +19,7 @@ import { HAZARDS } from "../../features/mine/hazards.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
+import { CONCEPTS } from "./concepts.js";
 
 /** Coerce a value to Record<string, unknown> if it is a non-null object, else null. */
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -136,4 +137,28 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
     default:
       return null;
   }
+}
+
+/**
+ * Inverse of `getEntity`. Given an entity key, return the first concept id
+ * (in CONCEPTS array order) whose `getEntity(conceptId, key)` is non-null.
+ *
+ * Priority note: entity key namespaces are largely disjoint — tile keys start
+ * with `tile_`, recipe keys with `rec_`, and zone/building/npc/worker/boss/
+ * ability/toolPower ids are distinct. First-match in CONCEPTS order is
+ * sufficient; the CONCEPTS array order is: tiles → resources → tools →
+ * categories → zones → settlementBiomes → recipes → buildings → hazards →
+ * bosses → workers → npcs → abilities → toolPowers → tileDiscoveryMethods →
+ * seasons → views → modals. If a key somehow matches multiple concepts, the
+ * earlier concept wins.
+ *
+ * Returns null if no concept resolves the key.
+ */
+export function conceptForKey(key: string): string | null {
+  for (const concept of CONCEPTS) {
+    if (getEntity(concept.id, key) !== null) {
+      return concept.id;
+    }
+  }
+  return null;
 }
