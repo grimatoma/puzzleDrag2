@@ -192,6 +192,21 @@ describe("CategoryPage — hazards (no-schema concept)", () => {
   });
 });
 
+describe("CategoryPage — tiles (grouped sub-category layout)", () => {
+  it("renders multiple sub-category band headings (Farm + Mining)", () => {
+    renderPage("tiles");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Farm");
+    expect(body).toContain("Mining");
+  });
+
+  it("renders the total Entries count heading", () => {
+    renderPage("tiles");
+    const body = document.body.textContent ?? "";
+    expect(body).toMatch(/entries/i);
+  });
+});
+
 describe("CategoryPage — seasons (no-schema concept)", () => {
   it("renders without throwing", () => {
     expect(() => renderPage("seasons")).not.toThrow();
