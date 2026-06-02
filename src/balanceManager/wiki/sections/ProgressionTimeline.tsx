@@ -21,10 +21,8 @@
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { ConceptRefForKey } from "../refs.js";
 import { TILE_TYPES } from "../../../features/tileCollection/data.js";
 import { TILE_DISCOVERY_METHOD_BY_ID } from "../../../config/tileDiscoveryMethods.js";
 
@@ -149,18 +147,13 @@ function MethodBadge({ method }: { method: string }) {
   );
 }
 
-/** A navigable tile chip: icon + name + discovery-method badge. */
+/** A navigable tile chip: rich ref + discovery-method badge. */
 function TileChip({ tile }: { tile: TileType }) {
-  const { navigate } = useBalanceNav();
   const method = tile.discovery?.method ?? "default";
   const display = tile.displayName ?? tile.id;
 
   return (
-    <button
-      type="button"
-      title={`tiles:${tile.id}`}
-      onClick={() => navigate(wikiNavTarget("tiles", tile.id))}
-      className="hover:opacity-80"
+    <span
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -171,14 +164,16 @@ function TileChip({ tile }: { tile: TileType }) {
         border: `1px solid ${COLORS.border}`,
         borderLeft: `3px solid ${methodColor(method)}`,
         color: COLORS.ink,
-        cursor: "pointer",
-        transition: "opacity 120ms ease",
       }}
     >
-      <Icon iconKey={tile.id} size={24} style={{ verticalAlign: "middle", flexShrink: 0 }} />
-      <span style={{ fontSize: 12, fontWeight: 600 }}>{display}</span>
+      <ConceptRefForKey
+        entityKey={tile.id}
+        conceptId="tiles"
+        label={display}
+        variant="inline"
+      />
       <MethodBadge method={method} />
-    </button>
+    </span>
   );
 }
 

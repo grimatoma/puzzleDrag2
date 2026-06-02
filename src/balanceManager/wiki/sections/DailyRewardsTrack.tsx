@@ -18,13 +18,11 @@
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import DesignIcon from "../../../ui/primitives/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { ConceptRefForKey } from "../refs.js";
 
 // ─── Shapes ─────────────────────────────────────────────────────────────────
 
@@ -83,7 +81,6 @@ export interface DailyRewardsTrackProps {
 
 /** Render a login day's reward, or null when the day grants nothing. */
 export function DailyRewardsTrack({ day }: DailyRewardsTrackProps) {
-  const { navigate } = useBalanceNav();
   if (!hasDailyReward(day)) return null;
 
   const dayNum = typeof day.day === "number" ? day.day : null;
@@ -131,29 +128,25 @@ export function DailyRewardsTrack({ day }: DailyRewardsTrackProps) {
         {Boolean(day.runes) && <CurrencyChip kind="runes" amount={Number(day.runes)} />}
 
         {toolKey != null && (
-          <span className="hl-cost-tag" title={`${toolAmount}× ${toolLabel}`}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <Icon iconKey={toolKey} size={20} />
-              <span style={{ fontWeight: 700 }}>{toolAmount}×</span>
-              <span style={{ color: COLORS.inkSubtle }}>{toolLabel}</span>
-            </span>
-          </span>
+          <ConceptRefForKey
+            entityKey={toolKey}
+            label={toolLabel ?? toolKey}
+            variant="inline"
+            detail={`×${toolAmount}`}
+            className="hl-cost-tag"
+          />
         )}
 
         {unlockTile != null && (
-          <button
-            type="button"
-            title={`tiles:${unlockTile}`}
-            onClick={() => navigate(wikiNavTarget("tiles", unlockTile))}
-            className="hl-cost-tag hover:opacity-80"
-            style={{ cursor: "pointer", border: "none", transition: "opacity 120ms ease" }}
-          >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <Icon iconKey={unlockTile} size={20} />
-              <span style={{ color: COLORS.inkSubtle }}>Unlocks</span>
-              <span style={{ fontWeight: 700 }}>{tileLabel}</span>
-            </span>
-          </button>
+          <span className="hl-cost-tag" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span style={{ color: COLORS.inkSubtle }}>Unlocks</span>
+            <ConceptRefForKey
+              entityKey={unlockTile}
+              conceptId="tiles"
+              label={tileLabel ?? unlockTile}
+              variant="inline"
+            />
+          </span>
         )}
       </div>
     </section>

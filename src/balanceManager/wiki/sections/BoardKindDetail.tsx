@@ -1,34 +1,26 @@
 /**
  * BoardKindDetail.tsx — "Tiles, dangers & seasons" section for board-kind articles.
- *
- * Four blocks rendered from live config (BIOMES + HAZARDS/FARM_HAZARD_META +
- * SEASONS + ZONES):
- *   1. Tile roster   — every board tile this biome spawns, navigable to its article.
- *   2. Dangers       — the board hazards that can appear (mine vs farm), or a
- *                      graceful note for boards with no hazards (the Harbor).
- *   3. Seasons & turns — the four-season cycle every run plays through.
- *   4. Zones using it — map zones whose has{Farm,Mine,Water} flag exposes this board.
- *
- * Read-only. React Compiler is on — no manual useMemo/useCallback.
  */
+
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
 import { SEASONS } from "../../../constants.js";
 import { HAZARDS } from "../../../features/mine/hazards.js";
 import { FARM_HAZARD_META } from "../../../features/farm/hazards.js";
 import { ZONES } from "../../../features/zones/data.js";
 import type { Zone } from "../../../features/zones/data.js";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { iconLabel } from "../../../textures/iconRegistry.js";
+import {
+  ConceptRefList,
+  RelationRefGrid,
+  entityKeysToWikiLinks,
+} from "../refs.js";
 
 interface BoardKindLike {
   name?: string;
   tiles?: Array<{ key: string; label?: string; next?: string | null }>;
 }
 
-// Board hazards keyed by board kind. Harbor (fish) has no board hazards;
-// its tides + pearls live in features/fish/slice.js, surfaced in the lede/body.
 const DANGER_KEYS: Record<string, string[]> = {
   mine: ["cave_in", "gas_vent", "lava", "mole"],
   farm: ["fire", "wolf", "rats"],
@@ -41,7 +33,6 @@ function hazardName(key: string): string {
   return FARM_HAZARD_META[key]?.name ?? key;
 }
 
-/** Cheap precheck for TOC gating — true when the board kind has a tile roster. */
 export function hasBoardKindDetail(entity: BoardKindLike | null | undefined): boolean {
   return !!entity && Array.isArray(entity.tiles) && entity.tiles.length > 0;
 }
@@ -56,7 +47,6 @@ export interface BoardKindDetailProps {
 }
 
 export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProps) {
-  const { navigate } = useBalanceNav();
   const tiles = Array.isArray(boardKind.tiles) ? boardKind.tiles : [];
   const dangers = DANGER_KEYS[boardKindKey] ?? [];
   const zoneFlag =
@@ -65,52 +55,43 @@ export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProp
     (z) => (z as unknown as Record<string, unknown>)[zoneFlag] === true,
   );
 
-  const chip = (onClick: () => void, iconKey: string | null, label: string, key: string) => (
-    <button
-      key={key}
-      onClick={onClick}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "3px 8px",
-        background: COLORS.parchment,
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: 8,
-        cursor: "pointer",
-        fontSize: 12,
-        color: COLORS.ink,
-      }}
-    >
-      {iconKey != null && <Icon iconKey={iconKey} size={16} style={{ verticalAlign: "middle" }} />}
-      <span>{label}</span>
-    </button>
+  const tileLinks = entityKeysToWikiLinks(
+    tiles.map((t) => t.key),
+    {
+      conceptId: "tiles",
+      labelFor: (key) => {
+        const t = tiles.find((tile) => tile.key === key);
+        return t?.next ? `${t.label ?? key} → ${t.next}` : (t?.label ?? iconLabel(key) ?? key);
+      },
+    },
   );
+
+  const hazardLinks = entityKeysToWikiLinks(dangers, {
+    conceptId: "hazards",
+    labelFor: hazardName,
+  });
+
+  const zoneLinks = zones.map((z) => ({
+    conceptId: "zones",
+    key: z.id,
+    label: z.name ?? z.id,
+  }));
 
   return (
     <section id="board-kind-detail" className="flex flex-col gap-4">
       <div>
         {heading("Tile roster")}
-        <div className="flex flex-wrap gap-1.5">
-          {tiles.map((t) =>
-            chip(
-              () => navigate(wikiNavTarget("tiles", t.key)),
-              t.key,
-              t.next ? `${t.label ?? t.key} → ${t.next}` : (t.label ?? t.key),
-              t.key,
-            ),
-          )}
-        </div>
+        {tileLinks.length > 0 ? (
+          <RelationRefGrid links={tileLinks} />
+        ) : (
+          <p className="text-[12px]" style={{ color: COLORS.inkSubtle, margin: 0 }}>No tiles listed.</p>
+        )}
       </div>
 
       <div>
         {heading("Dangers")}
-        {dangers.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {dangers.map((h) =>
-              chip(() => navigate(wikiNavTarget("hazards", h)), `hazard_${h}`, hazardName(h), h),
-            )}
-          </div>
+        {hazardLinks.length > 0 ? (
+          <RelationRefGrid links={hazardLinks} />
         ) : (
           <p className="text-[12px]" style={{ color: COLORS.inkSubtle, margin: 0 }}>
             This board has no board hazards — see the notes below for its tides and pearls.
@@ -120,27 +101,12 @@ export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProp
 
       <div>
         {heading("Seasons & turns")}
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {SEASONS.map((s) => (
-            <span
-              key={s.name}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "3px 8px",
-                background: COLORS.parchment,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-            >
-              <Icon iconKey={s.look.iconKey} size={16} style={{ verticalAlign: "middle" }} />
-              <span>{s.name}</span>
-            </span>
-          ))}
-        </div>
-        <p className="text-[12px]" style={{ color: COLORS.inkSubtle, margin: 0 }}>
+        <ConceptRefList
+          entityKeys={SEASONS.map((s) => s.name)}
+          conceptId="seasons"
+          variant="inline"
+        />
+        <p className="text-[12px] mt-2" style={{ color: COLORS.inkSubtle, margin: 0 }}>
           A run plays through all four seasons. Each session&apos;s turn budget (the zone&apos;s{" "}
           <code>baseTurns</code>) is split evenly across the seasons, so the active season advances
           as turns are spent.
@@ -149,17 +115,8 @@ export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProp
 
       <div>
         {heading("Zones using this board")}
-        {zones.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {zones.map((z) =>
-              chip(
-                () => navigate(wikiNavTarget("zones", z.id)),
-                null,
-                z.name ?? z.id,
-                z.id,
-              ),
-            )}
-          </div>
+        {zoneLinks.length > 0 ? (
+          <RelationRefGrid links={zoneLinks} />
         ) : (
           <p className="text-[12px]" style={{ color: COLORS.inkSubtle, margin: 0 }}>
             No map zones currently enable this board.

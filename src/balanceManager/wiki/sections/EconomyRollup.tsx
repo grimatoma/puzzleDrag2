@@ -21,6 +21,7 @@ import Icon from "../../../ui/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
 import { analyseBuildingCosts } from "../../buildingCosts.js";
+import { ConceptRefForKey } from "../refs.js";
 
 // ─── Currency metric cards ────────────────────────────────────────────────────
 
@@ -139,8 +140,9 @@ export function EconomyRollup() {
                       color: COLORS.ink,
                     }}
                   >
-                    <Icon iconKey={r.key} size={18} style={{ verticalAlign: "middle" }} />
-                    <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{label}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <ConceptRefForKey entityKey={r.key} label={label} variant="inline" />
+                    </span>
                     <span className="wiki-mono" style={{ fontWeight: 700 }}>{fmt(r.qty)}</span>
                     <span style={{ color: COLORS.inkSubtle, fontSize: 11, whiteSpace: "nowrap" }}>
                       used by {usedByN} building{usedByN === 1 ? "" : "s"}

@@ -1,11 +1,5 @@
 /**
  * WhereUsed.tsx — "Used in" cross-reference section for the Game Wiki.
- *
- * For a resource / tile / tool article, lists every place the item id is
- * referenced — recipe inputs/outputs, building costs, upgrade-chain feeders,
- * and story rewards — grouped by kind and rendered as rich concept ref widgets.
- *
- * COMPUTE is reused from itemReferences.ts (the pure cross-reference index).
  */
 
 import React from "react";
@@ -95,10 +89,7 @@ function chipForUsage(usage: ItemUsage): ChipSpec {
 function UsageRef({ chip }: { chip: ChipSpec }) {
   if (chip.conceptId == null) {
     return (
-      <span
-        className="wiki-concept-ref-inline"
-        style={{ cursor: "default", opacity: 0.85 }}
-      >
+      <span className="wiki-concept-ref-inline" style={{ cursor: "default", opacity: 0.85 }}>
         <span className="wiki-concept-ref-inline__label">{chip.label}</span>
         {chip.detail != null && (
           <span className="wiki-concept-ref-inline__detail wiki-mono">{chip.detail}</span>

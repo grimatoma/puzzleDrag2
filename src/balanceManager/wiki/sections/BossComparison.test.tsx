@@ -55,13 +55,12 @@ describe("BossComparison", () => {
   it("clicking a boss row navigates to that boss's article", () => {
     const navigate = vi.fn();
     renderTable({ navigate });
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBe(BOSSES.length);
-    fireEvent.click(buttons[0]);
+    const bossId = BOSSES[0].id;
+    fireEvent.click(screen.getByTitle(`bosses:${bossId}`));
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({
         tab: "bosses",
-        focus: `bosses:${BOSSES[0].id}`,
+        focus: `bosses:${bossId}`,
       }),
     );
   });

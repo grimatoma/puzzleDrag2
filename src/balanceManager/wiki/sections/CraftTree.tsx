@@ -1,29 +1,11 @@
 /**
  * CraftTree.tsx — Crafting dependency tree for the Game Wiki.
- *
- * For a recipe article (or a craftable resource/tool whose item is produced by
- * a recipe), renders the full upstream ingredient tree as a nested, indented
- * list: each node shows its icon + label (+ ×qty for ingredients), with the
- * recipes that produce a craftable ingredient nested beneath it. Raw inputs
- * (no producing recipe) read as leaves and are styled distinctly from
- * craftable nodes.
- *
- * COMPUTE is reused from recipeGraph.ts (traceRecipe / countRawInputs /
- * collectUpstreamRecipes — all pure). Nodes navigate to the matching wiki
- * article via wikiNavTarget when the key/recipe resolves to a known concept.
- *
- * Returns null when the recipe id does not exist.
- *
- * React Compiler is on — no manual useMemo/useCallback.
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
-import { conceptForKey } from "../conceptEntities.js";
+import { ConceptRefForKey } from "../refs.js";
 import {
   traceRecipe,
   countRawInputs,
@@ -33,8 +15,6 @@ import {
 } from "../../recipeGraph.js";
 import { RECIPES } from "../../../constants.js";
 
-// Producer index (output item id → first producing recipe id), built once at
-// module scope from the static RECIPES catalog.
 const PRODUCER_BY_ITEM: Map<string, string> = (() => {
   const map = new Map<string, string>();
   for (const [recipeId, recipe] of Object.entries(RECIPES as Record<string, { item?: string }>)) {
@@ -44,63 +24,14 @@ const PRODUCER_BY_ITEM: Map<string, string> = (() => {
   return map;
 })();
 
-/** Resolve the recipe id that produces `itemId`, or null when not craftable. */
 export function recipeIdProducing(itemId: string): string | null {
   return PRODUCER_BY_ITEM.get(itemId) ?? null;
 }
 
-/** Cheap precheck for TOC gating — true when the recipe id exists. */
 export function hasCraftTree(recipeId: string | null | undefined): boolean {
   return recipeId != null && traceRecipe(recipeId) != null;
 }
 
-/** A navigable item label: links to the item's wiki article when resolvable. */
-function ItemLink({
-  itemKey,
-  label,
-  iconKey,
-  iconSize,
-  bold,
-}: {
-  itemKey: string;
-  label: string;
-  iconKey: string;
-  iconSize: number;
-  bold?: boolean;
-}) {
-  const { navigate } = useBalanceNav();
-  const conceptId = conceptForKey(itemKey);
-  const content = (
-    <>
-      <Icon iconKey={iconKey} size={iconSize} style={{ verticalAlign: "middle", marginRight: 6 }} />
-      <span style={{ fontWeight: bold ? 700 : 600, color: COLORS.ink }}>{label}</span>
-    </>
-  );
-  if (conceptId == null) {
-    return <span style={{ display: "inline-flex", alignItems: "center" }}>{content}</span>;
-  }
-  return (
-    <button
-      type="button"
-      title={`${conceptId}:${itemKey}`}
-      onClick={() => navigate(wikiNavTarget(conceptId, itemKey))}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        background: "transparent",
-        border: "none",
-        padding: 0,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-      className="hover:opacity-80"
-    >
-      {content}
-    </button>
-  );
-}
-
-/** Render the ingredients of a recipe node as nested list rows. */
 function IngredientList({ ingredients, depth }: { ingredients: RecipeTreeIngredient[]; depth: number }) {
   if (ingredients.length === 0) return null;
   return (
@@ -133,9 +64,10 @@ function IngredientRow({ ingredient, depth }: { ingredient: RecipeTreeIngredient
           alignItems: "center",
           gap: 4,
           fontSize: 12,
+          flexWrap: "wrap",
         }}
       >
-        <ItemLink itemKey={ingredient.id} label={label} iconKey={ingredient.id} iconSize={18} />
+        <ConceptRefForKey entityKey={ingredient.id} label={label} variant="inline" />
         <span className="wiki-mono" style={{ color: COLORS.inkSubtle }}>×{ingredient.qty}</span>
         {ingredient.raw ? (
           <span
@@ -174,10 +106,6 @@ export interface CraftTreeProps {
   recipeId: string;
 }
 
-/**
- * Render the crafting dependency tree for `recipeId`, or null when the recipe
- * does not exist.
- */
 export function CraftTree({ recipeId }: CraftTreeProps) {
   const tree: RecipeTreeNode | null = traceRecipe(recipeId);
   if (tree == null) return null;
@@ -191,7 +119,6 @@ export function CraftTree({ recipeId }: CraftTreeProps) {
     <section id="crafting-tree">
       <div className="wiki-section-heading mb-2">Crafting tree</div>
 
-      {/* Output root */}
       <div
         style={{
           display: "flex",
@@ -203,33 +130,26 @@ export function CraftTree({ recipeId }: CraftTreeProps) {
           border: `1px solid ${COLORS.border}`,
           marginBottom: 8,
           width: "fit-content",
+          flexWrap: "wrap",
         }}
       >
         {tree.output != null ? (
-          <ItemLink itemKey={outputKey} label={outputLabel} iconKey={outputKey} iconSize={22} bold />
+          <ConceptRefForKey entityKey={outputKey} label={outputLabel} variant="inline" />
         ) : (
           <span style={{ fontWeight: 700, color: COLORS.ink }}>{outputLabel}</span>
         )}
         {tree.station ? (
-          <span
-            className="text-[9px] uppercase tracking-wide"
-            style={{
-              padding: "1px 6px",
-              borderRadius: 6,
-              background: COLORS.parchment,
-              border: `1px solid ${COLORS.border}`,
-              color: COLORS.inkSubtle,
-            }}
-          >
-            {tree.station}
-          </span>
+          <ConceptRefForKey
+            entityKey={tree.station}
+            fieldName="station"
+            conceptId="buildings"
+            variant="inline"
+          />
         ) : null}
       </div>
 
-      {/* Ingredient tree */}
       <IngredientList ingredients={tree.ingredients} depth={0} />
 
-      {/* Summary */}
       <div
         className="text-[10px] mt-3"
         style={{ color: COLORS.inkSubtle, display: "flex", gap: 12, flexWrap: "wrap" }}

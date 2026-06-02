@@ -24,8 +24,8 @@
 import React from "react";
 import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
 import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { ConceptRefForKey } from "../refs.js";
 import { getEntity } from "../conceptEntities.js";
 import {
   ZONE_TO_TILE_CATEGORIES,
@@ -87,8 +87,6 @@ function wikiTargetForZoneCat(zoneCat: string): { tab: string; focus: string } |
  * a button that navigates there; otherwise it renders as inert text.
  */
 function CategoryTag({ zoneCat, size = 18 }: { zoneCat: string; size?: number }) {
-  const { navigate } = useBalanceNav();
-
   const isGold = zoneCat === ZONE_UPGRADE_TARGET_GOLD;
   const iconKey = isGold ? "coins" : representativeTileForCategory(zoneCat);
   const label = isGold ? "Coins" : humanizeCategory(zoneCat);
@@ -102,8 +100,7 @@ function CategoryTag({ zoneCat, size = 18 }: { zoneCat: string; size?: number })
     </>
   );
 
-  const target = wikiTargetForZoneCat(zoneCat);
-  if (target == null) {
+  if (wikiTargetForZoneCat(zoneCat) == null) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
         {inner}
@@ -112,24 +109,12 @@ function CategoryTag({ zoneCat, size = 18 }: { zoneCat: string; size?: number })
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => navigate(target)}
-      title={`Open ${label} category`}
-      className="inline-flex items-center hover:underline"
-      style={{
-        gap: 5,
-        background: "none",
-        border: "none",
-        padding: 0,
-        margin: 0,
-        font: "inherit",
-        color: "inherit",
-        cursor: "pointer",
-      }}
-    >
-      {inner}
-    </button>
+    <ConceptRefForKey
+      entityKey={zoneCat}
+      conceptId="categories"
+      label={label}
+      variant="inline"
+    />
   );
 }
 
