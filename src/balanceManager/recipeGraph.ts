@@ -76,7 +76,15 @@ export function traceRecipe(recipeId: string, { recipes = RECIPES, items = ITEMS
     for (const [inputId, qty] of Object.entries(recipe["inputs"] || {})) {
       const sources = (producers.get(inputId) || []);
       const raw = sources.length === 0;
-      const expanded: RecipeTreeNode[] = (depth >= maxDepth) ? [] : sources.map((srcId: string) => visit(srcId, depth + 1, nextStack)).filter((n): n is RecipeTreeNode => Boolean(n));
+
+      const expanded: RecipeTreeNode[] = [];
+      if (depth < maxDepth) {
+        for (let i = 0; i < sources.length; i++) {
+          const n = visit(sources[i], depth + 1, nextStack);
+          if (n) expanded.push(n);
+        }
+      }
+
       ingredients.push({
         id: inputId,
         qty: qty as number,
