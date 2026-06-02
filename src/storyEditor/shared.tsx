@@ -653,7 +653,12 @@ export function deriveGraph(draft: StoryDraft | null | undefined, positions: Rec
     edges.push(e);
   };
   // Main-spine trigger edges, derived from real data.
-  const spine = (STORY_BEATS as StoryBeat[]).map((b) => b && b.id).filter((id): id is string => Boolean(id) && nodeIds.has(id));
+  const spine: string[] = [];
+  for (const b of STORY_BEATS as StoryBeat[]) {
+    if (b && b.id && nodeIds.has(b.id)) {
+      spine.push(b.id);
+    }
+  }
   for (let i = 0; i + 1 < spine.length; i++) {
     push({ from: spine[i], to: spine[i + 1], kind: "trigger", side: false });
   }
