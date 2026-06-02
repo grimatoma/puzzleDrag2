@@ -100,6 +100,12 @@ describe("CategoryPage — buildings (schema-backed concept)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toContain(firstKey);
   });
+
+  it("renders the 'Town economy' overview section", () => {
+    const { container } = renderPage("buildings");
+    expect(container.querySelector("#economy-rollup")).not.toBeNull();
+    expect(document.body.textContent ?? "").toMatch(/town economy/i);
+  });
 });
 
 // ─── Test 2: Status wiring ────────────────────────────────────────────────────
@@ -117,6 +123,20 @@ describe("CategoryPage — bosses (PARTIAL status chip)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toContain("Bosses");
   });
+
+  it("renders the 'Boss comparison' overview section", () => {
+    const { container } = renderPage("bosses");
+    expect(container.querySelector("#boss-comparison")).not.toBeNull();
+    expect(document.body.textContent ?? "").toMatch(/boss comparison/i);
+  });
+});
+
+describe("CategoryPage — workers (Worker comparison overview)", () => {
+  it("renders the 'Worker comparison' overview section", () => {
+    const { container } = renderPage("workers");
+    expect(container.querySelector("#worker-comparison")).not.toBeNull();
+    expect(document.body.textContent ?? "").toMatch(/worker comparison/i);
+  });
 });
 
 // ─── Test 3: Entry navigation ─────────────────────────────────────────────────
@@ -130,12 +150,12 @@ describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
     const firstEntry = concept.getEntries()[0];
     const expectedFocus = `bosses:${firstEntry.key}`;
 
-    // Find all buttons — the entry cards are buttons when onSelect is provided
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
-
-    // Click the first button
-    fireEvent.click(buttons[0]);
+    // The Boss-comparison overview table now precedes the entry grid, so the
+    // entry card is no longer the first button on the page. Entry cards are
+    // titled with the bare entry key (EntryGrid uses title={entry.key}); the
+    // comparison rows title themselves "bosses:<id>". Target the entry card.
+    const card = screen.getByTitle(firstEntry.key);
+    fireEvent.click(card);
 
     // Phase-5 contract: each concept routes to its OWN tab (the conceptId).
     expect(navigate).toHaveBeenCalledWith(
