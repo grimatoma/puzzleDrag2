@@ -11,6 +11,8 @@ import { ZONES } from "../../features/zones/data.js";
 import { CONCEPTS } from "./concepts.js";
 import { NPC_DATA } from "../../features/npcs/data.js";
 import { canonicalRecipeEntries } from "../recipeCatalog.js";
+import { BUILDINGS } from "../../constants.js";
+import { TYPE_WORKERS } from "../../features/workers/data.js";
 
 // ─── Resolve real keys from live maps ────────────────────────────────────────
 
@@ -200,6 +202,123 @@ describe("relationsFor — npcs", () => {
       expect(realNpcData.likes).toContain(link.key);
       expect(getEntity(link.conceptId, link.key)).not.toBeNull();
     }
+  });
+});
+
+// ─── Building → Recipes crafted here + Abilities ─────────────────────────────
+//
+// Note: no building in live data is simultaneously a recipe station AND has
+// abilities, so we test each path with the best available real id:
+//
+//   • "Recipes crafted here": workshop (has the most recipes, no abilities)
+//   • "Abilities" + extractAbilityId object-form: mill (has { id, params }
+//     ability; is not a station)
+
+const workshopEntity = getEntity("buildings", "workshop") as Record<string, unknown>;
+const millEntity = getEntity("buildings", "mill") as Record<string, unknown>;
+
+// A building with abilities in the { id, params } object form
+const buildingWithAbilities = (() => {
+  for (const b of BUILDINGS as Array<Record<string, unknown>>) {
+    if (Array.isArray(b.abilities) && b.abilities.length > 0) {
+      const entity = getEntity("buildings", b.id as string) as Record<string, unknown> | null;
+      if (entity) return { id: b.id as string, entity };
+    }
+  }
+  return null;
+})()!;
+
+describe("relationsFor — buildings (Recipes crafted here)", () => {
+  it("returns a 'Recipes crafted here' group for workshop which has many recipe stations", () => {
+    const groups = relationsFor("buildings", "workshop", workshopEntity);
+    const recipeGroup = groups.find((g) => g.title === "Recipes crafted here");
+    expect(recipeGroup, "Expected a 'Recipes crafted here' group for workshop").not.toBeUndefined();
+    expect(recipeGroup!.links.length).toBeGreaterThan(0);
+    for (const link of recipeGroup!.links) {
+      expect(link.conceptId).toBe("recipes");
+      expect(getEntity(link.conceptId, link.key)).not.toBeNull();
+    }
+  });
+
+  it("all recipe links for workshop have a non-empty label", () => {
+    const groups = relationsFor("buildings", "workshop", workshopEntity);
+    const recipeGroup = groups.find((g) => g.title === "Recipes crafted here")!;
+    for (const link of recipeGroup.links) {
+      expect(link.label.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("relationsFor — buildings (Abilities via object-form extractAbilityId)", () => {
+  // buildingWithAbilities is "mill": abilities: [{ id: "recipe_input_reduce", params: {...} }]
+  // This exercises the { id, params } branch of extractAbilityId.
+
+  it(`returns an 'Abilities' group for ${buildingWithAbilities.id} (object-form ability ids)`, () => {
+    const groups = relationsFor("buildings", buildingWithAbilities.id, buildingWithAbilities.entity);
+    const abilityGroup = groups.find((g) => g.title === "Abilities");
+    expect(
+      abilityGroup,
+      `Expected 'Abilities' group for building '${buildingWithAbilities.id}'`,
+    ).not.toBeUndefined();
+    expect(abilityGroup!.links.length).toBeGreaterThan(0);
+    for (const link of abilityGroup!.links) {
+      expect(link.conceptId).toBe("abilities");
+      expect(getEntity(link.conceptId, link.key)).not.toBeNull();
+    }
+  });
+
+  it("mill Abilities group links all have a non-empty label", () => {
+    const groups = relationsFor("buildings", buildingWithAbilities.id, millEntity ?? buildingWithAbilities.entity);
+    const abilityGroup = groups.find((g) => g.title === "Abilities")!;
+    for (const link of abilityGroup.links) {
+      expect(link.label.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ─── Workers → Abilities (object-form extractAbilityId) ──────────────────────
+//
+// All TYPE_WORKERS carry abilities in the { id, params } object form.
+// We pick the first worker that has at least one ability.
+
+const workerWithAbilities = (() => {
+  for (const w of TYPE_WORKERS) {
+    if (Array.isArray(w.abilities) && w.abilities.length > 0) {
+      const entity = getEntity("workers", w.id) as Record<string, unknown> | null;
+      if (entity) return { id: w.id, entity };
+    }
+  }
+  return null;
+})()!;
+
+describe("relationsFor — workers (Abilities via object-form extractAbilityId)", () => {
+  // workerWithAbilities is the Farmer: abilities: [{ id: "threshold_reduce_category", params: {...} }]
+
+  it(`returns an 'Abilities' group for worker '${workerWithAbilities.id}' (object-form ability ids)`, () => {
+    const groups = relationsFor("workers", workerWithAbilities.id, workerWithAbilities.entity);
+    const abilityGroup = groups.find((g) => g.title === "Abilities");
+    expect(
+      abilityGroup,
+      `Expected 'Abilities' group for worker '${workerWithAbilities.id}'`,
+    ).not.toBeUndefined();
+    expect(abilityGroup!.links.length).toBeGreaterThan(0);
+    for (const link of abilityGroup!.links) {
+      expect(link.conceptId).toBe("abilities");
+      expect(getEntity(link.conceptId, link.key)).not.toBeNull();
+    }
+  });
+
+  it("worker Abilities group links all have a non-empty label", () => {
+    const groups = relationsFor("workers", workerWithAbilities.id, workerWithAbilities.entity);
+    const abilityGroup = groups.find((g) => g.title === "Abilities")!;
+    for (const link of abilityGroup.links) {
+      expect(link.label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("returns no groups for a null entity (defensive path)", () => {
+    const groups = relationsFor("workers", "farmer", null);
+    expect(groups).toHaveLength(0);
   });
 });
 

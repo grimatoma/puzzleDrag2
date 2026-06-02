@@ -277,7 +277,10 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
   const { navigate } = useBalanceNav();
   const cs = schemaForConcept(conceptId);
   const entity = getEntity(conceptId, entityKey);
-  const groups = relationsFor(conceptId, entityKey, entity);
+  const groups = React.useMemo(
+    () => relationsFor(conceptId, entityKey, entity),
+    [conceptId, entityKey, entity],
+  );
 
   // Build schema doc — catching in case of unexpected schema shape
   let schemaDoc: ReturnType<typeof describeSchema> | null = null;
@@ -384,12 +387,14 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
                     }
                   >
                     <span className="font-mono text-[10px]">{link.label}</span>
-                    <span
-                      className="font-mono text-[9px] opacity-60 ml-0.5"
-                      style={{ color: COLORS.inkSubtle }}
-                    >
-                      {link.key}
-                    </span>
+                    {link.label !== link.key && (
+                      <span
+                        className="font-mono text-[9px] opacity-60 ml-0.5"
+                        style={{ color: COLORS.inkSubtle }}
+                      >
+                        {link.key}
+                      </span>
+                    )}
                   </RefButton>
                 ))}
               </div>
