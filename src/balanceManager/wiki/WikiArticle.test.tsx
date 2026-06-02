@@ -244,3 +244,27 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
     expect(arg.tab).toBe(arg.focus.slice(0, arg.focus.indexOf(":")));
   });
 });
+
+// ─── Test 6: Keeper article shows the Keeper encounter section ───────────────
+
+describe("WikiArticle — keeper article (deer_spirit)", () => {
+  it("renders the Keeper encounter section with both reward currencies", () => {
+    renderArticle("keepers", "deer_spirit");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Keeper encounter");
+    expect(body).toMatch(/Embers/);
+    expect(body).toMatch(/Core Ingots/);
+  });
+});
+
+// ─── Test 7: Achievement article shows its reward ────────────────────────────
+
+describe("WikiArticle — achievement article (first_steps)", () => {
+  it("renders the Achievement section with the coins reward", () => {
+    renderArticle("achievements", "first_steps");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Achievement");
+    expect(body).toMatch(/Coins/);
+    expect(body).toContain("25");
+  });
+});
