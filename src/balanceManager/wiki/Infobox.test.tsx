@@ -1,21 +1,22 @@
 // @vitest-environment jsdom
 /**
- * Infobox.test.tsx — TDD suite for Infobox and TableOfContents.
+ * Infobox.test.tsx — suite for Infobox and TableOfContents.
  *
- * Written BEFORE the implementation (TDD-first). Uses real data from live maps;
- * no fakes.
+ * Uses real data from live maps; no fakes. The infobox visual is the entity's
+ * REAL asset (procedural Icon, building SVG, zone town-map) — NEVER a game
+ * iframe — and the visual block is omitted entirely when there is no asset.
  *
  * Coverage:
  *  Infobox:
- *   1. Recipe with a mapped scenario → iframe present, src contains "visual=",
- *      status chip text present, and a fact label like "Station" appears.
- *   2. Concept with NO scenario (ability) → no iframe rendered (Icon branch taken),
- *      component renders without throwing.
- *   3. null entity → renders without throwing; no iframe.
+ *   1. Recipe → no iframe; the output item's Icon (img or jsdom fallback) is
+ *      present; status chip text present; a fact label like "Station" appears.
+ *   2. Building → no iframe; a building illustration <svg> is present.
+ *   3. Concept with NO asset (ability) → no iframe; renders without throwing.
+ *   4. null entity → renders without throwing; no iframe.
  *
  *  TableOfContents:
- *   4. items=[{id,label}...] → renders links with correct hrefs (#id).
- *   5. empty items → renders nothing.
+ *   5. items=[{id,label}...] → renders links with correct hrefs (#id).
+ *   6. empty items → renders nothing.
  */
 
 import { describe, it, expect, afterEach } from "vitest";
@@ -27,21 +28,25 @@ import { getEntity } from "./conceptEntities.js";
 
 afterEach(() => cleanup());
 
-// ─── Infobox — recipe (has a mapped scenario) ─────────────────────────────────
+// ─── Infobox — recipe (renders the output item's icon, never an iframe) ───────
 
-describe("Infobox — recipe (scenario mapped → iframe branch)", () => {
+describe("Infobox — recipe (real Icon asset, no iframe)", () => {
   // rec_bread is a real recipe confirmed in status.test.ts
   const conceptId = "recipes";
   const entityKey = "rec_bread";
 
-  it("renders an iframe whose src contains visual=", () => {
+  it("does NOT render an iframe, and renders the output item's Icon", () => {
     const entity = getEntity(conceptId, entityKey);
     const { container } = render(
       <Infobox conceptId={conceptId} entityKey={entityKey} entity={entity} />,
     );
-    const iframe = container.querySelector("iframe");
-    expect(iframe, "expected an <iframe> for a mapped recipe scenario").not.toBeNull();
-    expect(iframe!.src).toContain("visual=");
+    // Never a game iframe.
+    expect(container.querySelector("iframe")).toBeNull();
+    // Icon bakes to an <img>, or falls back to a <div> in jsdom (no canvas
+    // getContext). Either way the visual block is present — assert the recipe
+    // article rendered an Icon element (img or fallback) inside the aside.
+    expect(container.querySelector("img, [data-icon-fallback], div")).not.toBeNull();
+    expect(container.firstChild).not.toBeNull();
   });
 
   it("renders the status chip text (e.g. WIRED)", () => {
@@ -64,21 +69,41 @@ describe("Infobox — recipe (scenario mapped → iframe branch)", () => {
   });
 });
 
-// ─── Infobox — ability (no scenario → Icon branch) ────────────────────────────
+// ─── Infobox — building (real illustration SVG, never an iframe) ──────────────
 
-describe("Infobox — ability (no scenario → no iframe)", () => {
-  // abilities is not in CONCEPT_DEFAULT_SCENARIO, so scenarioForEntity returns null
-  // Use a real ability id from the data (threshold_reduce confirmed in infoboxFacts.test.ts)
-  const conceptId = "abilities";
-  const entityKey = "threshold_reduce";
+describe("Infobox — building (illustration SVG, no iframe)", () => {
+  // hearth is a canonical building key (confirmed in EntityVisual.test.tsx)
+  const conceptId = "buildings";
+  const entityKey = "hearth";
 
-  it("does NOT render an iframe when scenario is null", () => {
+  it("renders a building illustration <svg> and NOT an iframe", () => {
     const entity = getEntity(conceptId, entityKey);
     const { container } = render(
       <Infobox conceptId={conceptId} entityKey={entityKey} entity={entity} />,
     );
-    const iframe = container.querySelector("iframe");
-    expect(iframe, "expected NO <iframe> for a concept without a scenario mapping").toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+});
+
+// ─── Infobox — ability (no asset → no visual block, no iframe) ────────────────
+
+describe("Infobox — ability (no asset → no iframe)", () => {
+  // abilities have no per-entity icon when entity.iconKey is absent, so the
+  // visual block is omitted entirely.
+  // Use a real ability id from the data (threshold_reduce confirmed in infoboxFacts.test.ts)
+  const conceptId = "abilities";
+  const entityKey = "threshold_reduce";
+
+  it("does NOT render an iframe", () => {
+    const entity = getEntity(conceptId, entityKey);
+    const { container } = render(
+      <Infobox conceptId={conceptId} entityKey={entityKey} entity={entity} />,
+    );
+    expect(
+      container.querySelector("iframe"),
+      "expected NO <iframe> for a concept without a per-entity asset",
+    ).toBeNull();
   });
 
   it("renders without throwing", () => {
@@ -102,22 +127,20 @@ describe("Infobox — null entity (null-safe)", () => {
     ).not.toThrow();
   });
 
-  it("does not render an iframe when entity is null (null entity, no scenario override for tiles)", () => {
-    // tiles DOES have a concept-level scenario, but entity is null — the infobox
-    // should still render the scenario embed (conceptId/key still valid).
-    // This test verifies only that no crash occurs; iframe presence is ok.
+  it("never renders an iframe when entity is null", () => {
     const { container } = render(
       <Infobox conceptId="tiles" entityKey="tile_grass_hay" entity={null} />,
     );
-    // Should not throw — component is present in the container
+    // Component renders, and there is never a game iframe.
     expect(container.firstChild).not.toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
   });
 });
 
-// ─── Infobox — toolPowers (no scenario) ───────────────────────────────────────
+// ─── Infobox — toolPowers (no asset → no iframe) ──────────────────────────────
 
-describe("Infobox — toolPowers (no scenario → no iframe)", () => {
-  it("does NOT render an iframe for toolPowers (not in scenario map)", () => {
+describe("Infobox — toolPowers (no asset → no iframe)", () => {
+  it("does NOT render an iframe for toolPowers (no per-entity asset)", () => {
     const { container } = render(
       <Infobox
         conceptId="toolPowers"
