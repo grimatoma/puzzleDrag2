@@ -1,12 +1,36 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+
+import {
+  startPath,
+  tryAddToPath,
+  addToPath,
+  redrawPath,
+  _repaintPathColors,
+  _drawSegment,
+  endPath,
+  clearPath,
+  collectPath,
+  _emitChainUpdate
+} from "./game/pathLogic.js";
+
+
+import {
+  fillBoard,
+  collapseBoard,
+  shuffleBoard,
+  _forceGuaranteedChain,
+  _performShuffleSwap,
+  rebuildGridFromState,
+  _applyGridFromState,
+  _syncGridToState
+} from "./game/boardLogic.js";
+
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SCENE_EVENTS, getItem, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
-import { applySpawnPoolModifiers } from "./features/farm/poolMath.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
-  expandZoneCategories,
   pickByZoneSeasonDrops,
   seasonIndexInSession,
   seasonNameInSession,
@@ -15,16 +39,13 @@ import {
   TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONE_TO_TILE_CATEGORIES,
 } from "./features/zones/data.js";
-import { assertTile } from "./types/guards.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
-import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
-import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -67,17 +88,7 @@ function boardFrameFor(cssVw: number): number {
 
 // Chain path colors (warm orange when the chain meets minimum length, brown
 // when it doesn't). Cross-faded via _pathValidProgress when validity flips.
-const PATH_COLORS_VALID   = { line: 0xff6d00, halo: 0xffd248, nodeOuter: 0xffd248, nodeInner: 0xff6d00 };
-const PATH_COLORS_INVALID = { line: 0x9a4630, halo: 0xc06b3e, nodeOuter: 0xc06b3e, nodeInner: 0x9a4630 };
 
-function lerpHex(a: number, b: number, t: number): number {
-  const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
-  const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
-  const r = Math.round(ar + (br - ar) * t);
-  const g = Math.round(ag + (bg - ag) * t);
-  const bl = Math.round(ab + (bb - ab) * t);
-  return (r << 16) | (g << 8) | bl;
-}
 
 export class GameScene extends Phaser.Scene {
   // ── Instance properties ───────────────────────────────────────────────────
@@ -828,360 +839,38 @@ export class GameScene extends Phaser.Scene {
   // ─── Grid sync helpers ────────────────────────────────────────────────────
 
   _syncGridToState() {
-    const serialized = [];
-    for (let r = 0; r < ROWS; r++) {
-      const row = [];
-      for (let c = 0; c < COLS; c++) {
-        const tile = this.grid[r]?.[c];
-        if (tile) {
-          const cell: { key: string; frozen?: boolean; rubble?: boolean } = { key: tile.res.key };
-          if (tile.frozen) cell.frozen = true;
-          if (tile.rubble) cell.rubble = true;
-          row.push(cell);
-        } else {
-          row.push(null);
-        }
-      }
-      serialized.push(row);
-    }
-    this._suppressNextGridApply = true;
-    this.events.emit(SCENE_EVENTS.GRID_SYNC, { grid: serialized });
-    this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
+    _syncGridToState.call(this);
   }
 
   _applyGridFromState(stateGrid: RegistryGrid | null | undefined): void {
-    if (!stateGrid) return;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const tile = this.grid[r]?.[c];
-        const cell = stateGrid[r]?.[c];
-        if (!tile || !cell) continue;
-        if (tile.res.key !== cell.key) {
-          const newRes = resourceByKey(cell.key);
-          if (newRes) tile.setResource(newRes);
-        }
-        tile.frozen = !!cell.frozen;
-        tile.rubble = !!cell.rubble;
-      }
-    }
+    _applyGridFromState.call(this, stateGrid);
   }
 
   /** Replace every live tile from a serialized grid (visual demo reload). */
   rebuildGridFromState(stateGrid: RegistryGrid | null | undefined): void {
-    if (!stateGrid) return;
-    this.endPath();
-    this.clearPath(false);
-    this.pendingUpgrades = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const tile = this.grid[r]?.[c];
-        if (tile) {
-          this.tweens.killTweensOf(tile.sprite);
-          tile.destroy();
-        }
-        this.grid[r][c] = null;
-      }
-    }
-    const ts = this.tileSize;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const cell = stateGrid[r]?.[c];
-        if (!cell?.key) continue;
-        const res = resourceByKey(cell.key);
-        if (!res) continue;
-        const x = this.boardX + c * ts + ts / 2;
-        const y = this.boardY + r * ts + ts / 2;
-        const tile = new TileObj(this, x, y, c, r, res);
-        tile.sprite.setScale(this.tileSpriteScale);
-        tile.frozen = !!cell.frozen;
-        tile.rubble = !!cell.rubble;
-        this.grid[r][c] = tile;
-      }
-    }
+    rebuildGridFromState.call(this, stateGrid);
   }
 
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
-    const ts = this.tileSize;
-    // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
-    // by the active tile type: a boost for key K only applies when K is the active
-    // tile type in its category (matches getActivePool semantics).
-    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
-    let workerPool = this.activePool();
-    const poolWeights = getRegistry(this.registry, "effectivePoolWeights") ?? {};
-    // Phase 2 — restrict the spawn pool to the categories the player picked
-    // in the Start Farming modal. Empty/missing list = no filter (legacy
-    // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
-    // ignore this filter; it only applies on the farm board.
-    const sessionSelectedTiles = getRegistry(this.registry, "sessionSelectedTiles") ?? [];
-    if (this.biomeKey() === "farm" && sessionSelectedTiles.length > 0) {
-      const allowedCats = expandZoneCategories(sessionSelectedTiles);
-      const filtered = workerPool.filter((k) => {
-        const cat = CATEGORY_OF[k];
-        return cat ? allowedCats.has(cat) : true;
-      });
-      // Guard against an over-restrictive selection that would leave no
-      // tiles to spawn — fall back to the unfiltered pool in that case.
-      if (filtered.length > 0) workerPool = filtered;
-    }
-    // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
-    // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
-    const boss = getRegistry(this.registry, "boss");
-    const spawnBias = boss?.spawnBias ?? null;
-    if (spawnBias) {
-      const baseCounts: Record<string, number> = {};
-      for (const k of workerPool) baseCounts[k] = (baseCounts[k] ?? 0) + 1;
-      for (const [k, factor] of Object.entries(spawnBias as Record<string, number>)) {
-        const extra = Math.round((baseCounts[k] ?? 0) * (factor - 1));
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-    }
-    // Fertilizer bias: double seedling-tier resource copies in pool
-    // Also activated by magic_fertilizer charges (one charge consumed per fill)
-    const fillBiasArmed = !!(getRegistry(this.registry, "fillBiasTarget") ||
-                             (getRegistry(this.registry, "magicFertilizerCharges") ?? 0) > 0);
-    if (fillBiasArmed) {
-      const biasTargetKey = getRegistry(this.registry, "fillBiasTarget")?.key ?? null;
-      const biasKeys = biasTargetKey
-        ? [biasTargetKey, `tile_${biasTargetKey}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
-        : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
-      const fBase: Record<string, number> = {};
-      for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
-      for (const k of biasKeys) {
-        const extra = fBase[k] ?? 0;
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-      this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
-    }
-    const farmSeasonName =
-      this.biomeKey() === "farm"
-        ? seasonNameInSession(
-            getRegistry(this.registry, "turnsUsed") ?? 0,
-            getRegistry(this.registry, "turnBudget") ?? 10,
-          )
-        : null;
-    workerPool = applySpawnPoolModifiers(workerPool, {
-      poolWeights,
-      tileCollectionActive,
-      biomeKey: this.biomeKey(),
-      seasonName: farmSeasonName,
-    });
-    for (let r = 0; r < ROWS; r++) {
-      this.grid[r] = this.grid[r] || [];
-      for (let c = 0; c < COLS; c++) {
-        if (!this.grid[r][c]) {
-          const x = this.boardX + c * ts + ts / 2;
-          const y = this.boardY + r * ts + ts / 2;
-          let res;
-          let isUpgrade = false;
-          if (!initial && this.pendingUpgrades.length) {
-            const idx = this.pendingUpgrades.findIndex(u => u.col === c);
-            if (idx !== -1) {
-              res = this.pendingUpgrades.splice(idx, 1)[0].res;
-              isUpgrade = true;
-            }
-          }
-          // Phase 3b — try the per-(zone, in-session season) drop table
-          // first. Only active on the farm board, only when the active zone
-          // has data for the current season; otherwise fall through to the
-          // existing weighted pool sampler.
-          if (!res) res = this._pickFromZoneSeasonDrops();
-          if (!res) res = this._randomFromPool(workerPool);
-          if (isUpgrade) {
-            // Spawn upgrades in place at scale 0 and pop them in — sells the
-            // moment the chain "promoted" the tile rather than burying it
-            // in the regular fill cascade.
-            const tile = new TileObj(this, x, y, c, r, res);
-            tile.sprite.setScale(0);
-            this.grid[r][c] = tile;
-            const finalScale = this.tileSpriteScale;
-            this.tweens.add({
-              targets: tile.sprite,
-              scale: finalScale,
-              duration: this._dur(380),
-              ease: "Back.Out",
-            });
-            this.emitCollectParticles(x, y, (res as { color?: string }).color || "#ffd248", 4);
-            this._upgradeSpawnBurst(x, y);
-          } else {
-            const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
-            tile.sprite.setScale(this.tileSpriteScale);
-            this.grid[r][c] = tile;
-            this.tweens.add({
-              targets: tile.sprite,
-              y,
-              duration: this._dur(initial ? 450 + r * 28 : 210),
-              ease: "Back.Out",
-              onComplete: () => this._landingBounce(tile.sprite),
-            });
-          }
-        }
-      }
-    }
-    // Fire hazard overlay: replace grid cells at fire positions with fire tiles
-    const hazardFire = getRegistry(this.registry, "hazardFire");
-    if (hazardFire?.cells?.length) {
-      for (const { row: fr, col: fc } of hazardFire.cells) {
-        if (fr < 0 || fr >= ROWS || fc < 0 || fc >= COLS) continue;
-        const existing = this.grid[fr][fc];
-        if (existing) { this.tweens.killTweensOf(existing.sprite); existing.destroy(); }
-        const fx = this.boardX + fc * ts + ts / 2;
-        const fy = this.boardY + fr * ts + ts / 2;
-        const fireRes = { key: "fire", value: 0, sway: null, label: "fire", next: null };
-        const fireTile = new TileObj(this, fx, initial ? fy - 500 : fy - 140, fc, fr, fireRes);
-        fireTile.sprite.setScale(this.tileSpriteScale);
-        this.grid[fr][fc] = fireTile;
-        this.tweens.add({ targets: fireTile.sprite, y: fy, duration: this._dur(initial ? 450 + fr * 28 : 210), ease: "Back.Out" });
-      }
-    }
-
-    // 1.2 — Dead-board auto-shuffle: after every non-initial fill, check for valid chains.
-    if (!initial) {
-      const delay = 240;
-      this.time.delayedCall(delay, () => {
-        if (!hasValidChain(this.grid)) {
-          this.floatText("No moves — reshuffled!", this.boardX + (COLS * ts) / 2, this.boardY - 24 * this.dpr);
-          this.shuffleBoard();
-        }
-        this._syncGridToState();
-        // The board just changed under an armed tool — re-evaluate which
-        // tiles should be dimmed so feedback stays accurate.
-        const pending = getRegistry(this.registry, "toolPending");
-        const pendingPower = getRegistry(this.registry, "toolPendingPower")
-          ?? (pending ? getItem(pending)?.power : null);
-        if (pendingPower && pending && !this.dragging) this.applyToolDimForPower(pendingPower, pending);
-      });
-    } else {
-      this._syncGridToState();
-    }
+    fillBoard.call(this, initial);
   }
 
   collapseBoard() {
-    const ts = this.tileSize;
-    for (let c = 0; c < COLS; c++) {
-      let write = ROWS - 1;
-      for (let r = ROWS - 1; r >= 0; r--) {
-        const tile = this.grid[r][c];
-        if (!tile) continue;
-        if (write !== r) {
-          this.grid[write][c] = tile;
-          this.grid[r][c] = null;
-          tile.row = write;
-          this.tweens.add({
-            targets: tile.sprite,
-            y: this.boardY + write * ts + ts / 2,
-            duration: this._dur(190),
-            onComplete: () => this._landingBounce(tile.sprite),
-          });
-        }
-        write--;
-      }
-    }
-    this.time.delayedCall(210, () => this.fillBoard(false));
+    collapseBoard.call(this);
   }
 
   shuffleBoard(attempt = 0) {
-    const ts = this.tileSize;
-    const boardW = COLS * ts;
-    const boardH = ROWS * ts;
-    const cx = this.boardX + boardW / 2;
-    const cy = this.boardY + boardH / 2;
-
-    // Destroy any existing board container (e.g. from a previous shuffle that
-    // completed before this one was triggered).
-    if (this.board) { this.board.destroy(); this.board = null; }
-
-    // Outer container holds the shuffle visuals. Kept on `this.board` so the
-    // weight-pulse in emitCollectParticles still finds a live target.
-    const spinContainer = this.add.container(cx, cy).setDepth(18);
-    this.board = spinContainer;
-
-    // Clip the whole effect to the board rect so nothing ever spills past the
-    // edges. Geometry-mask graphics stay off the display list (make.graphics).
-    const maskShape = this.make.graphics();
-    maskShape.fillStyle(0xffffff);
-    maskShape.fillRect(this.boardX, this.boardY, boardW, boardH);
-    spinContainer.setMask(maskShape.createGeometryMask());
-
-    // Static dim wash — covers the board edge-to-edge without rotating, so it
-    // no longer reads as a dark square wobbling past the border.
-    spinContainer.add(this.add.rectangle(0, 0, boardW, boardH, 0x17110a, 0.42));
-
-    // Rotating swirl of small tile-like chips — reads as tiles being shuffled.
-    const swirl = this.add.container(0, 0).setScale(0.35);
-    spinContainer.add(swirl);
-    const orbit = Math.min(boardW, boardH) * 0.22;
-    const chipSize = Math.max(10, ts * 0.46);
-    const chipColors = [0xe9cb8b, 0xcf8f57, 0x8fae66, 0xd47a68];
-    for (let i = 0; i < chipColors.length; i++) {
-      const ang = (Math.PI * 2 * i) / chipColors.length;
-      const chip = this.add.rectangle(Math.cos(ang) * orbit, Math.sin(ang) * orbit, chipSize, chipSize, chipColors[i], 0.96);
-      chip.setStrokeStyle(Math.max(2, ts * 0.045), 0x2a2014, 0.85);
-      swirl.add(chip);
-    }
-
-    let cleanedUp = false;
-    const finalizeShuffle = () => {
-      if (cleanedUp) return;
-      cleanedUp = true;
-      if (this.board === spinContainer) this.board = null;
-      if (spinContainer.active) spinContainer.destroy();
-      if (maskShape.active) maskShape.destroy();
-      this._performShuffleSwap();
-      // Re-check after a brief delay to let the new tiles animate in
-      this.time.delayedCall(320, () => {
-        if (!hasValidChain(this.grid)) {
-          if (attempt >= 2) {
-            this._forceGuaranteedChain();
-            this._syncGridToState();
-          } else {
-            this.shuffleBoard(attempt + 1);
-          }
-        }
-      });
-    };
-
-    this.tweens.add({
-      targets: swirl,
-      rotation: Math.PI * 2,
-      scale: 1,
-      duration: this._dur(600),
-      ease: "Cubic.easeInOut",
-      onComplete: finalizeShuffle,
-      onStop: finalizeShuffle,
-    });
-
-    // Failsafe: if tween callbacks are interrupted (scene transition, pause,
-    // or rapid tool usage), ensure the overlay is removed and board unblocked.
-    this.time.delayedCall(this._dur(600) + 120, finalizeShuffle);
+    shuffleBoard.call(this, attempt);
   }
 
   _forceGuaranteedChain() {
-    const pool = this.activePool();
-    const key = pool[0] ?? this.biome().pool[0];
-    const res = resourceByKey(key) ?? this.biome().tiles[0];
-    // Assign the same resource to the first 3 tiles in row-major order
-    let count = 0;
-    for (let r = 0; r < ROWS && count < 3; r++) {
-      for (let c = 0; c < COLS && count < 3; c++) {
-        const t = this.grid[r][c];
-        if (!t) continue;
-        t.setResource(res);
-        count += 1;
-      }
-    }
+    _forceGuaranteedChain.call(this);
   }
 
   _performShuffleSwap(): void {
-    const tiles = this.grid.flat().filter((t): t is TileObj => t !== null && t !== undefined);
-    const resources = tiles.map((t) => t.res);
-    Phaser.Utils.Array.Shuffle(resources);
-    tiles.forEach((t, i) => {
-      t.setResource(resources[i]);
-      this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(300), onComplete: () => (t.sprite.angle = 0) });
-    });
-    this._syncGridToState();
+    _performShuffleSwap.call(this);
   }
 
   // ─── Board tool handlers (1.3 Scythe / 1.4 Seedpack / 1.5 Lockbox) ──────
@@ -1363,282 +1052,34 @@ export class GameScene extends Phaser.Scene {
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
   startPath(tile: TileObj): void {
-    if (this.locked) return;
-    const pendingKey = getRegistry(this.registry, "toolPending");
-    const armedPower = getRegistry(this.registry, "toolPendingPower")
-      ?? (pendingKey ? getItem(pendingKey)?.power : null);
-    if (pendingKey && armedPower?.id && isTapTargetPower(armedPower.id)) {
-      this.applyToolPower(armedPower, tile);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, {
-        key: pendingKey,
-        row: tile.row,
-        col: tile.col,
-      }));
-      return;
-    }
-    this.dragging = true;
-    this.clearPath(false);
-    this.addToPath(tile);
-    this.dimUnselectableTiles(tile.res.key);
-    this.showGrassHover();
-    this.updateGrassHover();
-    this._emitChainUpdate();
-    // Subtle haptic tick on drag-start, gated by user setting.
-    if (getRegistry(this.registry, "hapticsOn") && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch { /* unsupported */ }
-    }
+    startPath.call(this, tile);
   }
 
   tryAddToPath(tile: TileObj): void {
-    if (!this.dragging || !this.path.length) return;
-    if (tile.frozen || tile.rubble) return;
-    const last = this.path[this.path.length - 1];
-    const prev = this.path[this.path.length - 2];
-    if (prev === tile) {
-      last.setSelected(false);
-      this.path.pop();
-      this.redrawPath();
-      this.updateGrassHover();
-      this._emitChainUpdate();
-      return;
-    }
-    if (tile.selected) return;
-    const same = tile.res.key === this.path[0].res.key;
-    const adj = Math.abs(tile.col - last.col) <= 1 && Math.abs(tile.row - last.row) <= 1 && !(tile.col === last.col && tile.row === last.row);
-    if (same && adj) this.addToPath(tile);
+    tryAddToPath.call(this, tile);
   }
 
   addToPath(tile: TileObj): void {
-    tile.setSelected(true);
-    tile.pulse();
-    this.path.push(tile);
-    this.redrawPath();
-    this.updateGrassHover();
-    this._emitChainUpdate();
+    addToPath.call(this, tile);
   }
 
   redrawPath() {
-    const prevLen = this._prevPathLen;
-    const growing = this.path.length > prevLen;
-    this._prevPathLen = this.path.length;
-
-    this.pathStars.forEach((s) => s.destroy());
-    this.pathStars = [];
-
-    // V.1 — Choose path colors based on whether chain meets the effective minimum length
-    const effectiveMinChain = this._effectiveMinChain();
-    const pathValid = this.path.length === 0 || this.path.length >= effectiveMinChain;
-
-    // Tween the validity color when it flips, rather than snapping. Brown ↔ orange
-    // over 160ms. Repaint hooked via onUpdate so segments + nodes both follow.
-    if (pathValid !== this._lastPathValid) {
-      this._lastPathValid = pathValid;
-      if (this._validTween) this._validTween.stop();
-      this._validTween = this.tweens.add({
-        targets: this,
-        _pathValidProgress: pathValid ? 1 : 0,
-        duration: 160,
-        ease: "Quad.Out",
-        onUpdate: () => this._repaintPathColors(),
-      });
-    }
-
-    const t = this._pathValidProgress;
-    const lineColor      = lerpHex(PATH_COLORS_INVALID.line,      PATH_COLORS_VALID.line,      t);
-    const haloColor      = lerpHex(PATH_COLORS_INVALID.halo,      PATH_COLORS_VALID.halo,      t);
-    const nodeOuterColor = lerpHex(PATH_COLORS_INVALID.nodeOuter, PATH_COLORS_VALID.nodeOuter, t);
-    const nodeInnerColor = lerpHex(PATH_COLORS_INVALID.nodeInner, PATH_COLORS_VALID.nodeInner, t);
-
-    for (let i = 1; i < this.path.length; i++) {
-      const a = this.path[i - 1];
-      const b = this.path[i];
-      let g = this.pathLines[i - 1];
-      if (!g) {
-        g = this.add.graphics().setDepth(8);
-        this.pathLines[i - 1] = g;
-      }
-      if (growing && i === this.path.length - 1) {
-        // Newest segment: grow it from a toward b, then pulse
-        this.tweens.killTweensOf(g);
-        g.clear();
-        const ax = a.x, ay = a.y, bx = b.x, by = b.y;
-        const obj = { t: 0 };
-        this.tweens.add({
-          targets: obj, t: 1, duration: 160, ease: "Quad.Out",
-          onUpdate: () => {
-            const mx = ax + (bx - ax) * obj.t;
-            const my = ay + (by - ay) * obj.t;
-            g.clear();
-            this._drawSegment(g, ax, ay, mx, my, lineColor, haloColor);
-          },
-          onComplete: () => {
-            g.clear(); this._drawSegment(g, ax, ay, bx, by, lineColor, haloColor);
-            this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
-          },
-        });
-      } else {
-        g.clear();
-        this._drawSegment(g, a.x, a.y, b.x, b.y, lineColor, haloColor);
-        if (!this.tweens.isTweening(g)) {
-          this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
-        }
-      }
-    }
-    this.pathLines.forEach((g, i) => g.setVisible(i < this.path.length - 1));
-
-    // Expanding ring burst at the newly added tile
-    if (growing && this.path.length > 0) {
-      const nt = this.path[this.path.length - 1];
-      const ring = this.add.graphics().setDepth(10);
-      const ro = { r: 5 * this.tileScale, a: 0.9 };
-      this.tweens.add({
-        targets: ro, r: 28 * this.tileScale, a: 0, duration: 340, ease: "Quad.Out",
-        onUpdate: () => {
-          ring.clear();
-          ring.lineStyle(2.5 * this.tileScale, haloColor, ro.a);
-          ring.strokeCircle(nt.x, nt.y, ro.r);
-        },
-        onComplete: () => ring.destroy(),
-      });
-    }
-
-    // Static node dots
-    if (!this.pathNodeG) this.pathNodeG = this.add.graphics().setDepth(9);
-    const pathNodeG = this.pathNodeG; // narrowed non-null ref
-    pathNodeG.clear();
-    const nr = 7 * this.tileScale;
-    this.path.forEach((t) => {
-      pathNodeG.fillStyle(nodeOuterColor, 0.55);
-      pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
-      pathNodeG.fillStyle(nodeInnerColor, 1);
-      pathNodeG.fillCircle(t.x, t.y, nr);
-      pathNodeG.fillStyle(0xfff4c2, 0.9);
-      pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
-    });
-
-    const res0 = this.path.length ? this.path[0].res : null;
-    // Display the TILE that will spawn on the board (nextUpgradeTile), so the
-    // star preview matches what actually appears at the endpoint.
-    const next = res0 ? this.nextUpgradeTile(res0) : null;
-    const effThresh: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const threshold = res0 ? (effThresh[res0.key] || 0) : 0;
-    const prevGroups = this._prevStarGroups;
-    let groupCount = 0;
-    if (next && threshold > 0) {
-      const off = 24 * this.tileScale;
-      for (let i = threshold - 1; i < this.path.length; i += threshold) {
-        const t = this.path[i];
-        // Scale star by upgrade tier (1×, 2×, 3×)
-        const tier = groupCount + 1; // 1-based
-        const baseStarScale = (0.62 + tier * 0.12) * this.tileSpriteScale;
-        const swayAmp = 10 + tier * 5;  // ±10° / ±15° / ±20°
-        const swayDur = Math.max(400, 950 - (tier - 1) * 175); // 950 / 775 / 600ms
-        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(baseStarScale).setDepth(12);
-        const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
-        // 3× tier: tint star orange-white
-        if (tier >= 3) star.setTint(0xffb347);
-        const swayStar = () => {
-          if (!star.active) return;
-          this.tweens.add({
-            targets: star,
-            angle: { from: swayAmp, to: -swayAmp },
-            yoyo: true,
-            repeat: -1,
-            duration: swayDur,
-            ease: "Sine.InOut",
-          });
-        };
-
-        if (groupCount >= prevGroups) {
-          // Pop-in + sway for new star
-          star.setScale(0).setAngle(-20);
-          this.tweens.add({ targets: star, scale: baseStarScale, angle: swayAmp, duration: 320, ease: "Back.Out" });
-          this.time.delayedCall(320, swayStar);
-          preview.setScale(0).setAlpha(0);
-          this.tweens.add({ targets: preview, scale: 0.32 * this.tileSpriteScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
-          // 2× tier: glow halo
-          if (tier >= 2) {
-            const halo = this.add.graphics().setDepth(11);
-            halo.lineStyle(3 * this.tileScale, 0xffd248, 0.55);
-            halo.strokeCircle(t.x + off, t.y - off, 14 * this.tileScale);
-            this.pathStars.push(halo);
-          }
-        } else {
-          star.setAngle(swayAmp);
-          swayStar();
-        }
-        this.pathStars.push(star, preview);
-        groupCount++;
-      }
-    }
-    this._prevStarGroups = groupCount;
-    this.path.forEach((t) => t.sprite.setDepth(7));
+    redrawPath.call(this);
   }
 
   // Cheap version of redrawPath that just re-colors existing line graphics
   // and the node ring with the current _pathValidProgress. Called on every
   // tween frame during a validity flip so colors blend instead of snap.
   _repaintPathColors() {
-    if (this.path.length === 0) return;
-    const t = this._pathValidProgress;
-    const lineColor      = lerpHex(PATH_COLORS_INVALID.line,      PATH_COLORS_VALID.line,      t);
-    const haloColor      = lerpHex(PATH_COLORS_INVALID.halo,      PATH_COLORS_VALID.halo,      t);
-    const nodeOuterColor = lerpHex(PATH_COLORS_INVALID.nodeOuter, PATH_COLORS_VALID.nodeOuter, t);
-    const nodeInnerColor = lerpHex(PATH_COLORS_INVALID.nodeInner, PATH_COLORS_VALID.nodeInner, t);
-    for (let i = 1; i < this.path.length; i++) {
-      const a = this.path[i - 1];
-      const b = this.path[i];
-      const g = this.pathLines[i - 1];
-      if (!g) continue;
-      // Skip the very last segment if a "grow" tween is still running on it —
-      // letting onUpdate take over its color while the tween's own onUpdate
-      // keeps redrawing its grow progress in the old color would flicker.
-      if (i === this.path.length - 1 && this.tweens.isTweening(g)) continue;
-      g.clear();
-      this._drawSegment(g, a.x, a.y, b.x, b.y, lineColor, haloColor);
-    }
-    if (this.pathNodeG) {
-      const pathNodeG2 = this.pathNodeG; // narrowed non-null ref
-      pathNodeG2.clear();
-      const nr = 7 * this.tileScale;
-      this.path.forEach((tp) => {
-        pathNodeG2.fillStyle(nodeOuterColor, 0.55);
-        pathNodeG2.fillCircle(tp.x, tp.y, nr * 1.6);
-        pathNodeG2.fillStyle(nodeInnerColor, 1);
-        pathNodeG2.fillCircle(tp.x, tp.y, nr);
-        pathNodeG2.fillStyle(0xfff4c2, 0.9);
-        pathNodeG2.fillCircle(tp.x, tp.y, nr * 0.4);
-      });
-    }
+    _repaintPathColors.call(this);
   }
 
   _drawSegment(g: Phaser.GameObjects.Graphics, ax: number, ay: number, bx: number, by: number, lineColor = 0xff6d00, haloColor = 0xffd248): void {
-    g.lineStyle(22 * this.tileScale, haloColor, 0.22);
-    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
-    g.lineStyle(9 * this.tileScale, lineColor, 1);
-    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
-    g.lineStyle(3 * this.tileScale, 0xfff4c2, 0.85);
-    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
+    _drawSegment.call(this, g, ax, ay, bx, by, lineColor, haloColor);
   }
 
   endPath() {
-    if (!this.dragging) return;
-    this.dragging = false;
-    this.hideGrassHover();
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
-    this.clearDimming();
-    const minChain = this._effectiveMinChain();
-    if (this.path.length >= minChain) this.collectPath();
-    else this.clearPath(true);
-    if (this._deferredTool) {
-      const tool = this._deferredTool;
-      this._deferredTool = null;
-      // The registry already holds `tool`; the changedata handler fired but
-      // we shortcircuited because of the drag. Re-poke the registry so the
-      // handler runs cleanly now that dragging is over.
-      setRegistry(this.registry, "toolPending", null);
-      this.time.delayedCall(60, () => setRegistry(this.registry, "toolPending", tool));
-    }
+    endPath.call(this);
   }
 
   dimUnselectableTiles(key: string): void {
@@ -1713,153 +1154,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   clearPath(deselect = true) {
-    if (deselect) this.path.forEach((t) => t.setSelected(false));
-    this.path = [];
-    this._prevPathLen = 0;
-    this._prevStarGroups = 0;
-    this.pathLines.forEach((l) => { this.tweens.killTweensOf(l); l.clear(); });
-    this.pathStars.forEach((s) => s.destroy());
-    this.pathStars = [];
-    if (this.pathNodeG) { this.pathNodeG.clear(); }
-    this.hideGrassHover();
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
+    clearPath.call(this, deselect);
   }
 
   collectPath() {
-    if (!this.path.length) return;
-    const res = this.path[0].res;
-    // Board upgrade: resolve as a TILE (via zone upgradeMap). This is what
-    // spawns on the board at the chain endpoint.
-    const next = this.nextUpgradeTile(res);
-    // Resource progress: the resource key this chain's length contributes
-    // toward (fractional accumulation in state.resourceProgress).
-    const resourceKey = producedResource(res);
-    // Cross-collect: partner-category tiles orthogonally adjacent to the chain
-    // are also collected. Compute BEFORE we null out the path tiles below — the
-    // helper needs the grid intact to inspect chain-cell neighbours.
-    const crossTargets = findCrossCollectTargets(
-      this.grid,
-      this.path.map((t) => ({ row: t.row, col: t.col, key: t.res.key })),
-    );
-    const effThresholds: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const upgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
-    const gained = this.path.length;
-    // Bonus yields: add per-resource bonus if this chain contained that resource
-    const bonusYields: Record<string, number> = getRegistry(this.registry, "bonusYields") ?? {};
-    const bonusGains: Record<string, number> = {};
-    if (bonusYields[res.key]) {
-      bonusGains[res.key] = Math.round(bonusYields[res.key]);
-    }
-    // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
-    const cap = getRegistry(this.registry, "inventoryCap") ?? 200;
-    const inv: Record<string, number> = getRegistry(this.registry, "inventory") ?? {};
-    const isCapped = (CAPPED_TILES as readonly string[]).includes(res.key);
-    const currentAmt = inv[res.key] ?? 0;
-    const wouldGain = gained + (bonusGains[res.key] ?? 0);
-    const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;
-    const overCap = wouldGain - actualGain > 0;
-
-    const floatSuffix = upgrades > 0 ? `  ★×${upgrades}` : "";
-    let bonusText = "";
-    const keys = Object.keys(bonusGains);
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i];
-      if (k !== res.key) {
-        bonusText += `  +${bonusGains[k]} ${k}★`;
-      }
-    }
-    this.floatText(`+${actualGain} ${res.label}${overCap ? " ⓘ" : ""}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
-
-    // Chain-length juice — escalating screen shake and a radial wipe. Big chains
-    // earn loud feedback; upgrades add an extra burst.
-    this.shakeForChain(this.path.length);
-    this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
-
-    // Queue upgrade tiles to spawn at the endpoint after board collapse.
-    // next is a tile def (from nextUpgradeTile), so assertTile guards regressions.
-    if (next && upgrades > 0) {
-      assertTile(next.key);
-      const endpointTile = this.path[this.path.length - 1];
-      for (let u = 0; u < upgrades; u++) {
-        this.pendingUpgrades.push({ res: next, col: endpointTile.col, row: endpointTile.row });
-      }
-      this.upgradeBurst(endpointTile.x, endpointTile.y);
-    }
-
-    this.path.forEach((tile, i) => {
-      this.grid[tile.row][tile.col] = null;
-      this.tweens.add({
-        targets: tile.sprite,
-        scale: 0,
-        angle: Phaser.Math.Between(-25, 25),
-        alpha: 0,
-        duration: this._dur(180 + i * 15),
-        onComplete: () => {
-          this.emitCollectParticles(tile.x, tile.y, res.color || "#ffffff", 2);
-          tile.destroy();
-        }
-      });
-    });
-
-    // Cross-collect partner tiles: clear + animate using the SAME tween /
-    // destroy / particle pattern as the path tiles, and accumulate +1 toward
-    // each partner's produced resource. Cross-collected tiles do NOT spawn
-    // upgrade tiles and do NOT trigger further cross-collects.
-    // crossCollected is keyed by TILE KEY (not produced resource). The reducer
-    // resolves the produced resource + the tile's UPGRADE_THRESHOLDS entry from
-    // the tile key, so partners roll up at their real threshold (mirroring the
-    // main chain). buildCrossCollectedCredits is the single source of truth for
-    // this tile-keyed count map.
-    const crossCollected = buildCrossCollectedCredits(crossTargets);
-    crossTargets.forEach((target, i) => {
-      const tileObj = this.grid[target.row]?.[target.col];
-      this.grid[target.row][target.col] = null;
-      if (tileObj) {
-        this.tweens.add({
-          targets: tileObj.sprite,
-          scale: 0,
-          angle: Phaser.Math.Between(-25, 25),
-          alpha: 0,
-          duration: this._dur(180 + i * 15),
-          onComplete: () => {
-            this.emitCollectParticles(tileObj.x, tileObj.y, tileObj.res?.color || "#ffffff", 2);
-            tileObj.destroy();
-          }
-        });
-      }
-    });
-
-    // Emit to React — gained is the full amount (state.js caps it).
-    // resourceKey tells the reducer which resource to accumulate progress for.
-    const totalGained = gained + ((bonusGains as Record<string, number>)[res.key] ?? 0);
-    // Include tile positions so the reducer can extinguish fire/hazard cells
-    const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles, resourceKey, crossCollected });
-
-    // Reward burst — emit chain center in canvas-local coords so the React
-    // layer can spawn a "+N" chip from the board → HUD coin pill.
-    if (this.path.length > 0) {
-      let sx = 0, sy = 0;
-      for (const t of this.path) { sx += t.x; sy += t.y; }
-      this.events.emit(SCENE_EVENTS.REWARD_BURST, {
-        canvasX: sx / this.path.length,
-        canvasY: sy / this.path.length,
-        canvasW: this.scale?.gameSize?.width ?? 0,
-        canvasH: this.scale?.gameSize?.height ?? 0,
-        coins: totalGained * (res.value ?? 0),
-      });
-    }
-
-    this.pathLines.forEach((l) => l.destroy());
-    this.pathStars.forEach((s) => s.destroy());
-    if (this.pathNodeG) { this.pathNodeG.destroy(); this.pathNodeG = null; }
-    this.pathLines = [];
-    this.pathStars = [];
-    this.path = [];
-    this._prevPathLen = 0;
-    this._prevStarGroups = 0;
-    this.time.delayedCall(300, () => this.collapseBoard());
-    this.time.delayedCall(310, () => this._syncGridToState());
+    collectPath.call(this);
   }
 
   // ─── Grass hover (cursor-following spawn preview) ─────────────────────────
@@ -1926,13 +1225,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _emitChainUpdate() {
-    const payload = buildChainUpdatePayload({
-      path: this.path,
-      nextUpgradeTile: (res: { key: string }) => this.nextUpgradeTile(res),
-      effectiveThresholds: getRegistry(this.registry, "effectiveThresholds"),
-      effectiveMinChain: this._effectiveMinChain(),
-    });
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, payload);
+    _emitChainUpdate.call(this);
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
