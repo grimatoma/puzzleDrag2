@@ -12,6 +12,7 @@ import React from "react";
 import { ColorField, COLORS } from "../shared.jsx";
 import type { FieldDoc } from "../schemaDoc.js";
 import { AmountChips } from "./EntityVisual.jsx";
+import { formatFieldRefValue } from "./refs.js";
 
 /** Fields whose value, when a flat Record<string, number>, renders as icon+count chips. */
 const CHIP_FIELDS = new Set(["cost", "inputs", "entryCost", "hireCost", "outputs"]);
@@ -63,12 +64,16 @@ export function formatValue(
     return <span className="font-mono text-[11px]">{String(value)}</span>;
   }
   if (typeof value === "string") {
+    const ref = formatFieldRefValue(fieldName, value);
+    if (ref != null) return ref;
     return <span className="font-mono text-[11px] break-all">{value}</span>;
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return <span className="font-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>[]</span>;
     }
+    const ref = formatFieldRefValue(fieldName, value);
+    if (ref != null) return ref;
     return (
       <span className="font-mono text-[11px] break-all">
         {value.map((el) => (el !== null && typeof el === "object" ? safeStringify(el) : String(el))).join(", ")}

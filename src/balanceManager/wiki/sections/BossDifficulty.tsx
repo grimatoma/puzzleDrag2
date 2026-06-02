@@ -1,31 +1,14 @@
 /**
  * BossDifficulty.tsx — "Difficulty" assessment section for the Game Wiki.
- *
- * For a boss article, surfaces the derived difficulty read of the encounter:
- *   - a color-coded tier chip (gentle / steady / hard / brutal)
- *   - the per-turn target the player must average over the boss window
- *   - the raw defeat target (amount× resource) with a navigable resource icon
- *   - the season the boss appears in
- *   - the board modifier badge + its hint
- *
- * COMPUTE is reused from bossBalance.ts (assessBoss / BOSS_TIER_LABEL — pure,
- * keyed off the static BOSSES catalog). Returns null when the boss has no
- * usable target (assessBoss can't produce a meaningful per-turn read).
- *
- * React Compiler is on — no manual useMemo/useCallback.
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
-import { conceptForKey } from "../conceptEntities.js";
+import { ConceptRefForKey } from "../refs.js";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
 import { assessBoss, BOSS_TIER_LABEL, type BossLike } from "../../bossBalance.js";
 
-/** StatusChip tone per difficulty tier id. */
 const TIER_TONE: Record<string, "success" | "default" | "warning" | "ember"> = {
   gentle: "success",
   steady: "default",
@@ -33,17 +16,14 @@ const TIER_TONE: Record<string, "success" | "default" | "warning" | "ember"> = {
   brutal: "ember",
 };
 
-/** Read the numeric defeat target off a boss, or 0 when absent. */
 function targetAmount(boss: BossLike): number {
   return Number(boss?.target?.amount) || 0;
 }
 
-/** Cheap precheck for TOC gating — true when the boss has a defeat target. */
 export function hasBossDifficulty(boss: BossLike | null | undefined): boolean {
   return boss != null && targetAmount(boss) > 0;
 }
 
-/** A small labelled stat block used in the difficulty row. */
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -53,7 +33,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
       >
         {label}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: COLORS.ink }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: COLORS.ink, flexWrap: "wrap" }}>
         {children}
       </div>
     </div>
@@ -64,12 +44,7 @@ export interface BossDifficultyProps {
   boss: BossLike;
 }
 
-/**
- * Render the difficulty assessment for `boss`, or null when there is no
- * usable defeat target.
- */
 export function BossDifficulty({ boss }: BossDifficultyProps) {
-  const { navigate } = useBalanceNav();
   if (!hasBossDifficulty(boss)) return null;
 
   const assessment = assessBoss(boss);
@@ -80,18 +55,7 @@ export function BossDifficulty({ boss }: BossDifficultyProps) {
   const resource = String(boss?.target?.resource ?? "");
   const amount = targetAmount(boss);
   const resourceLabel = (resource && iconLabel(resource)) || resource;
-  const resourceConcept = resource ? conceptForKey(resource) : null;
   const season = typeof boss?.season === "string" ? boss.season : null;
-
-  const resourceContent = (
-    <>
-      <span className="wiki-mono" style={{ color: COLORS.inkSubtle }}>{amount}×</span>
-      {resource && (
-        <Icon iconKey={resource} size={18} style={{ verticalAlign: "middle" }} />
-      )}
-      <span style={{ fontWeight: 600 }}>{resourceLabel}</span>
-    </>
-  );
 
   return (
     <section id="boss-difficulty">
@@ -123,35 +87,27 @@ export function BossDifficulty({ boss }: BossDifficultyProps) {
         </Stat>
 
         <Stat label="Defeat target">
-          {resourceConcept != null ? (
-            <button
-              type="button"
-              title={`${resourceConcept}:${resource}`}
-              onClick={() => navigate(wikiNavTarget(resourceConcept, resource))}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                color: COLORS.ink,
-              }}
-              className="hover:opacity-80"
-            >
-              {resourceContent}
-            </button>
+          {resource ? (
+            <ConceptRefForKey
+              entityKey={resource}
+              fieldName="resource"
+              label={resourceLabel}
+              detail={`${amount}×`}
+              variant="inline"
+            />
           ) : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {resourceContent}
-            </span>
+            <span className="wiki-mono">{amount}×</span>
           )}
         </Stat>
 
         {season != null && (
           <Stat label="Season">
-            <span style={{ textTransform: "capitalize", fontWeight: 600 }}>{season}</span>
+            <ConceptRefForKey
+              entityKey={season.charAt(0).toUpperCase() + season.slice(1)}
+              conceptId="seasons"
+              label={season}
+              variant="inline"
+            />
           </Stat>
         )}
 

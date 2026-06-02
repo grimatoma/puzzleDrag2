@@ -1,38 +1,15 @@
 /**
  * TileUnlock.tsx — "How to unlock" section for the Game Wiki.
- *
- * For a tile article, surfaces the tile's discovery condition in friendly
- * prose plus the concrete params rendered visually:
- *   - default   → "Available from the start"
- *   - chain     → "Chain N× <tile>" with a navigable icon for the prerequisite
- *   - research  → "Research N <resource>" with a navigable icon
- *   - buy       → "Buy for N coins"
- *   - building  → "Build the <building>" with a navigable building link
- *   - daily     → "Day N login reward"
- * Also shows the tile's tier band.
- *
- * COMPUTE is reused from the static catalogs:
- *   - TILE_TYPES_MAP  (features/tileCollection/data.js) — id → tile def
- *   - TILE_DISCOVERY_METHOD_BY_ID (config/tileDiscoveryMethods.js) — friendly
- *     names + descriptions per method.
- *
- * Returns null when the tile id is not in TILE_TYPES_MAP.
- *
- * React Compiler is on — no manual useMemo/useCallback.
  */
 
 import React from "react";
 import Icon from "../../../ui/Icon.jsx";
-import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
-import { conceptForKey } from "../conceptEntities.js";
+import { ConceptRefForKey } from "../refs.js";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
 import { TILE_TYPES_MAP } from "../../../features/tileCollection/data.js";
 import { TILE_DISCOVERY_METHOD_BY_ID } from "../../../config/tileDiscoveryMethods.js";
 
-/** Shape of the `discovery` object stored on a tile type. */
 interface TileDiscovery {
   method?: string;
   chainLengthOf?: string;
@@ -49,59 +26,15 @@ interface TileType {
   discovery?: TileDiscovery;
 }
 
-/** Read the live tile type record, or null when the id is unknown. */
 function tileType(tileId: string): TileType | null {
   const t = (TILE_TYPES_MAP as Record<string, unknown>)[tileId];
   return t != null && typeof t === "object" ? (t as TileType) : null;
 }
 
-/** Cheap precheck for TOC gating — true when the tile id is in the catalog. */
 export function hasTileUnlock(tileId: string): boolean {
   return tileType(tileId) != null;
 }
 
-/** A navigable item/building chip: icon + label linking to its wiki article. */
-function LinkChip({ navKey, label }: { navKey: string; label?: string }) {
-  const { navigate } = useBalanceNav();
-  const display = label ?? iconLabel(navKey) ?? navKey;
-  const conceptId = conceptForKey(navKey);
-
-  const inner = (
-    <>
-      <Icon iconKey={navKey} size={18} style={{ marginRight: 4, verticalAlign: "middle" }} />
-      <span style={{ fontWeight: 600 }}>{display}</span>
-    </>
-  );
-
-  const baseStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "3px 8px",
-    borderRadius: 8,
-    fontSize: 11,
-    background: COLORS.parchmentDeep,
-    border: `1px solid ${COLORS.border}`,
-    color: COLORS.ink,
-  };
-
-  if (conceptId == null) {
-    return <span style={baseStyle}>{inner}</span>;
-  }
-
-  return (
-    <button
-      type="button"
-      title={`${conceptId}:${navKey}`}
-      onClick={() => navigate(wikiNavTarget(conceptId, navKey))}
-      style={{ ...baseStyle, cursor: "pointer", transition: "opacity 120ms ease" }}
-      className="hover:opacity-80"
-    >
-      {inner}
-    </button>
-  );
-}
-
-/** Mono numeric emphasis for inline counts/costs. */
 function Amount({ children }: { children: React.ReactNode }) {
   return (
     <span className="wiki-mono" style={{ fontWeight: 700, color: COLORS.ink }}>
@@ -110,11 +43,6 @@ function Amount({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Render the concrete "how to unlock" detail for a tile's discovery object.
- * Returns a node describing the requirement, with prerequisite tile / building
- * references rendered as navigable chips.
- */
 function unlockDetail(discovery: TileDiscovery): React.ReactNode {
   const method = discovery.method ?? "default";
 
@@ -126,7 +54,9 @@ function unlockDetail(discovery: TileDiscovery): React.ReactNode {
         <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <span>Chain</span>
           <Amount>{n}×</Amount>
-          {prereq != null && <LinkChip navKey={prereq} />}
+          {prereq != null && (
+            <ConceptRefForKey entityKey={prereq} fieldName="chainLengthOf" conceptId="tiles" variant="inline" />
+          )}
         </span>
       );
     }
@@ -137,7 +67,9 @@ function unlockDetail(discovery: TileDiscovery): React.ReactNode {
         <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <span>Research</span>
           <Amount>{n}</Amount>
-          {prereq != null && <LinkChip navKey={prereq} />}
+          {prereq != null && (
+            <ConceptRefForKey entityKey={prereq} fieldName="researchOf" conceptId="resources" variant="inline" />
+          )}
         </span>
       );
     }
@@ -157,7 +89,16 @@ function unlockDetail(discovery: TileDiscovery): React.ReactNode {
       return (
         <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <span>Build the</span>
-          {buildingId != null ? <LinkChip navKey={buildingId} /> : <span>building</span>}
+          {buildingId != null ? (
+            <ConceptRefForKey
+              entityKey={buildingId}
+              fieldName="buildingId"
+              conceptId="buildings"
+              variant="card"
+            />
+          ) : (
+            <span>building</span>
+          )}
         </span>
       );
     }
@@ -177,7 +118,6 @@ function unlockDetail(discovery: TileDiscovery): React.ReactNode {
   }
 }
 
-/** A small labelled stat block, matching BossDifficulty's row idiom. */
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -187,7 +127,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
       >
         {label}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: COLORS.ink }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: COLORS.ink, flexWrap: "wrap" }}>
         {children}
       </div>
     </div>
@@ -198,10 +138,6 @@ export interface TileUnlockProps {
   tileId: string;
 }
 
-/**
- * Render the "How to unlock" detail for `tileId`, or null when the tile id is
- * not in the tile catalog.
- */
 export function TileUnlock({ tileId }: TileUnlockProps) {
   const tile = tileType(tileId);
   if (tile == null) return null;

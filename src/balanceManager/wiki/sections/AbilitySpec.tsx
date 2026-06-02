@@ -17,6 +17,7 @@
 import React from "react";
 import { COLORS, Pill } from "../../shared.jsx";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
+import { ConceptRefForKey, resolveConceptId } from "../refs.js";
 
 // ─── Shapes ─────────────────────────────────────────────────────────────────
 
@@ -71,8 +72,11 @@ function humanize(id: string): string {
 }
 
 /** Format a param default for display, distinguishing "" / undefined from real values. */
-function formatDefault(value: unknown): string {
+function formatDefault(value: unknown): React.ReactNode {
   if (value === undefined || value === null || value === "") return "—";
+  if (typeof value === "string" && resolveConceptId(value) != null) {
+    return <ConceptRefForKey entityKey={value} variant="inline" />;
+  }
   return String(value);
 }
 
