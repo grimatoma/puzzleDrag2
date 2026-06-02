@@ -15,10 +15,12 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import EntityDetail from "../balanceManager/wiki/EntityDetail.jsx";
+import { BalanceNavProvider } from "../balanceManager/balanceNav.jsx";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 import { ZONES } from "../features/zones/data.js";
 import { SEASONS } from "../constants.js";
 import { BOSSES } from "../features/bosses/data.js";
+import { statusForEntity, WIKI_STATUS_LEGEND } from "../balanceManager/wiki/status.js";
 
 afterEach(() => cleanup());
 
@@ -33,14 +35,24 @@ const realSeasonName = SEASONS[0].name; // e.g. "Spring"
 
 // ─── Zone entity (override schema) ───────────────────────────────────────────
 
+function wrapWithProvider(element: React.ReactElement): React.ReactElement {
+  return (
+    <BalanceNavProvider focus={null} navigate={() => {}}>
+      {element}
+    </BalanceNavProvider>
+  );
+}
+
 describe("EntityDetail — zones (override schema)", () => {
   it("renders all expected schema field names", () => {
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     const expectedFields = [
@@ -64,11 +76,13 @@ describe("EntityDetail — zones (override schema)", () => {
 
   it("shows the upgradeMap description 'Replaced wholesale'", () => {
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText("Replaced wholesale")).toBeDefined();
@@ -76,11 +90,13 @@ describe("EntityDetail — zones (override schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -91,11 +107,13 @@ describe("EntityDetail — zones (override schema)", () => {
 describe("EntityDetail — tiles (definition schema)", () => {
   it("renders schema fields", () => {
     render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // tileItemSchema has at minimum: kind, label, biome, color, dark, value
@@ -107,11 +125,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 
   it("surfaces at least one additional field (passthrough schema, extra runtime keys)", () => {
     render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // The "Additional fields" header should appear for passthrough tile entries
@@ -127,11 +147,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -142,11 +164,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 describe("EntityDetail — seasons (no schema)", () => {
   it("renders 'Live config (no schema)' fallback", () => {
     render(
-      <EntityDetail
-        conceptId="seasons"
-        entityKey={realSeasonName}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="seasons"
+          entityKey={realSeasonName}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText(/Live config \(no schema\)/i)).toBeDefined();
@@ -154,11 +178,13 @@ describe("EntityDetail — seasons (no schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="seasons"
-        entityKey={realSeasonName}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="seasons"
+          entityKey={realSeasonName}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -170,17 +196,91 @@ describe("EntityDetail — back button", () => {
   it("calls onBack when the ← Back button is clicked", () => {
     const onBack = vi.fn();
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={onBack}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={onBack}
+        />,
+      ),
     );
 
     const backButton = screen.getByText(/← Back/i);
     expect(backButton).toBeDefined();
     fireEvent.click(backButton);
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Status chip ──────────────────────────────────────────────────────────────
+
+describe("EntityDetail — status chip", () => {
+  it("renders a status chip with the WIRED label for a tile entity", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    const expectedLabel = WIKI_STATUS_LEGEND["WIRED"].label; // "WIRED"
+    expect(statusForEntity("tiles", realTileKey!)).toBe("WIRED");
+
+    // The chip text should be visible in the rendered output
+    const chips = screen.queryAllByText(expectedLabel);
+    expect(chips.length, `Expected status chip with text "${expectedLabel}" to be rendered`).toBeGreaterThan(0);
+  });
+
+  it("renders a status chip with a title tooltip describing the status", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    // The chip should have a title attribute matching the WIRED description
+    const description = WIKI_STATUS_LEGEND["WIRED"].description;
+    const chipWithTitle = document.querySelector(`[title="${description}"]`);
+    expect(chipWithTitle, `Expected an element with title="${description}"`).toBeTruthy();
+  });
+
+  it("renders the status legend line with all 5 status names", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    // The compact legend row should show all 5 status abbreviations
+    for (const s of ["WIRED", "PARTIAL", "STUB", "DOC-ONLY", "PLANNED"] as const) {
+      // Each status label appears at least once (the chip + the legend)
+      const matches = screen.queryAllByText(new RegExp(s.replace("-", "\\-")));
+      expect(matches.length, `Expected "${s}" to appear in the status legend`).toBeGreaterThan(0);
+    }
+  });
+
+  it("read-only invariant: renders zero editable controls even with status chip added", () => {
+    const { container } = render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+    expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
 });
 
@@ -195,11 +295,13 @@ describe("EntityDetail — override concept additional fields", () => {
 
   it("renders the 'Additional fields' heading for a boss entity", () => {
     render(
-      <EntityDetail
-        conceptId="bosses"
-        entityKey={realBossKey}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="bosses"
+          entityKey={realBossKey}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText(/Additional fields/i)).toBeDefined();
@@ -207,11 +309,13 @@ describe("EntityDetail — override concept additional fields", () => {
 
   it("shows at least one runtime key not covered by the override schema", () => {
     render(
-      <EntityDetail
-        conceptId="bosses"
-        entityKey={realBossKey}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="bosses"
+          entityKey={realBossKey}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // "id", "target", and "modifier" are live BossDef fields absent from
