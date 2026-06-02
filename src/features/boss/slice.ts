@@ -10,20 +10,20 @@ const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stonefac
 
 export interface BossState {
   key: string;
-  name?: string;
+  name: string;
   emoji?: string;
   flavor?: string;
   goal?: string;
-  description?: string | null;
-  modifierDescription?: string | null;
+  description: string | null;
+  modifierDescription: string | null;
   resource?: string;
   targetCount: number;
   progress: number;
   turnsLeft: number;
   turnsRemaining?: number;
-  minChain?: number | null;
-  spawnBias?: Record<string, number> | null;
-  modifier?: BossModifier;
+  minChain: number | null;
+  spawnBias: Record<string, number> | null;
+  modifier: BossModifier;
   isKeeperTrial?: boolean;
   id?: string;
 }
@@ -86,7 +86,7 @@ function triggerBoss(state: GameState, bossKey: string): GameState {
     boss: {
       ...spawned.boss,
       key: bossKey,
-      name: ui.displayName ?? def.name,
+      name: (ui.displayName ?? def.name) as string,
       emoji: ui.emoji,
       flavor: ui.flavor,
       goal: ui.goal,
