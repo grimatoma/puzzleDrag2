@@ -52,4 +52,12 @@ describe("BoardKindDetail", () => {
     renderBoardKind("fish");
     expect(screen.getByText(/no board hazards/i)).toBeTruthy();
   });
+
+  it("tile roster shows display names only, not produced resource keys", () => {
+    renderBoardKind("farm");
+    const body = document.body.textContent ?? "";
+    // Farm hay tile produces hay_bundle — label should be the friendly name, not the resource id.
+    expect(body).toMatch(/Hay/i);
+    expect(body).not.toMatch(/hay_bundle/i);
+  });
 });
