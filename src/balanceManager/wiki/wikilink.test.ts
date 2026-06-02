@@ -10,7 +10,6 @@ import {
   parseWikiLinks,
   resolveWikiLink,
   focusForLink,
-  type Segment,
   type TextSegment,
   type LinkSegment,
 } from "./wikilink.js";
