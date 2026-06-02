@@ -26,6 +26,10 @@ import { groupTileEntries } from "./tileGrouping.js";
 // the collapsed-by-default guard already ensures the graph isn't built until
 // the user expands the section.
 import RecipeGraph from "./RecipeGraph.jsx";
+import { EconomyRollup } from "./sections/EconomyRollup.jsx";
+import { BossComparison } from "./sections/BossComparison.jsx";
+import { WorkerComparison } from "./sections/WorkerComparison.jsx";
+import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +99,14 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
       {/* ── 3. Field reference ────────────────────────────────────────────── */}
       <ConceptFields conceptId={conceptId} />
+
+      {/* ── 3a. Category overview / comparison sections ───────────────────────
+          Analytical roll-ups that lead the entity list on specific category
+          pages. Each returns null when its concept has no data. */}
+      {conceptId === "buildings" && <EconomyRollup />}
+      {conceptId === "bosses" && <BossComparison />}
+      {conceptId === "workers" && <WorkerComparison />}
+      {conceptId === "tiles" && <ProgressionTimeline />}
 
       {/* ── 3b. Recipe relationship graph (recipes concept only) ──────────── */}
       {conceptId === "recipes" && (
