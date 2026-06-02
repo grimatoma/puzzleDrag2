@@ -12,6 +12,7 @@
 
 import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
+import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
@@ -64,11 +65,9 @@ function bossEntries() {
 }
 
 function hazardEntries() {
-  return HAZARDS.map((h) => ({
-    key: h.id,
-    name: h.name,
-    iconKey: `hazard_${h.id}`,
-  })).sort(byName);
+  const mine = HAZARDS.map((h) => ({ key: h.id, name: h.name, iconKey: `hazard_${h.id}` }));
+  const farm = Object.entries(FARM_HAZARD_META).map(([key, meta]) => ({ key, name: meta.name, iconKey: `hazard_${key}` }));
+  return [...mine, ...farm].sort(byName);
 }
 
 function workerEntries() {
@@ -310,7 +309,7 @@ export const CONCEPTS = [
   {
     id: "hazards",
     label: "Hazards",
-    blurb: "Board threats that spawn in the Mine biome.",
+    blurb: "Board threats — mine cave-ins and gas, farm fire/wolves/rats.",
     getEntries: hazardEntries,
   },
   {

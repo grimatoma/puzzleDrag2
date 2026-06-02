@@ -16,6 +16,7 @@ import { ABILITIES } from "../../config/abilities.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { BOSSES } from "../../features/bosses/data.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
+import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
@@ -125,7 +126,10 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
 
     // ── live-config-only concepts ────────────────────────────────────────────
     case "hazards": {
-      return findById(HAZARDS, key);
+      const mine = findById(HAZARDS, key);
+      if (mine != null) return mine;
+      const farm = FARM_HAZARD_META[key];
+      return farm != null ? { id: key, ...farm } : null;
     }
 
     case "seasons": {

@@ -84,15 +84,20 @@ const CONCEPT_STATUS: Partial<Record<string, WikiStatus>> = {
 // An entity override takes precedence over the concept-level status.
 
 export const ENTITY_STATUS: Partial<Record<string, Partial<Record<string, WikiStatus>>>> = {
-  // Only mine hazards are surfaced as wiki entities (via hazardEntries() in concepts.ts,
-  // which reads HAZARDS from src/features/mine/hazards.ts). Farm hazards (fire/rats/wolf)
-  // are NOT wiki entities, so no overrides for them appear here.
+  // Both mine and farm hazards are now surfaced as wiki entities (via hazardEntries()
+  // in concepts.ts, which reads HAZARDS from src/features/mine/hazards.ts and
+  // FARM_HAZARD_META from src/features/farm/hazards.ts).
   hazards: {
     // SOURCE: progression plan — mine hazards (cave_in/gas_vent/lava/mole) are WIRED
     cave_in: "WIRED",
     gas_vent: "WIRED",
     lava: "WIRED",
     mole: "WIRED",
+    // Farm hazards: wolves & rats run in normal play; fire is gated off behind
+    // FIRE_HAZARD_ENABLED = false in src/featureFlags.ts.
+    wolf: "WIRED",
+    rats: "WIRED",
+    fire: "PARTIAL",
   },
 };
 
