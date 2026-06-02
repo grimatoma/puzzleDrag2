@@ -77,16 +77,6 @@ export function allNavConceptIds(): string[] {
   return out;
 }
 
-/** The parent primary concept id for a given concept id, or null if it is a primary (or absent). */
-export function parentConceptId(conceptId: string): string | null {
-  for (const sec of WIKI_SECTIONS) {
-    for (const node of sec.nodes) {
-      if ((node.children ?? []).includes(conceptId)) return node.conceptId;
-    }
-  }
-  return null;
-}
-
 export interface NarrativePageDef {
   slug: string;
   label: string;

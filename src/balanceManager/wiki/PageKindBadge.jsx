@@ -6,7 +6,6 @@
  * Driven by PAGE_KIND_META in pageKind.ts — never hand-set per page.
  */
 
-import React from "react";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { PAGE_KIND_META } from "./pageKind.js";
 
