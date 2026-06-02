@@ -43,6 +43,7 @@ import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx
 import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
 import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { BoardKindDetail, hasBoardKindDetail } from "./sections/BoardKindDetail.jsx";
 import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
 import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
 import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.jsx";
@@ -179,6 +180,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
   const showZoneDetail =
     conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showBoardKindDetail =
+    conceptId === "boardKinds" &&
+    hasBoardKindDetail(entity as Parameters<typeof hasBoardKindDetail>[0]);
   const showAbilitySpec = conceptId === "abilities" && hasAbilitySpec(entity);
   const showToolPowerSpec = conceptId === "toolPowers" && hasToolPowerSpec(entity);
   // Reward / cost enrichment for the post-keeper progression concepts.
@@ -207,6 +211,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showAchievementCard ? [{ id: "achievement", label: "Achievement" }] : []),
     ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
     ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
+    ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
@@ -321,6 +326,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {/* Zone drop rates & chain upgrades (zone articles) */}
           {showZoneDetail && entity != null && (
             <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
+          )}
+
+          {/* Board-kind detail: tile roster, dangers, seasons & zones */}
+          {showBoardKindDetail && entity != null && (
+            <BoardKindDetail
+              boardKindKey={entityKey}
+              boardKind={entity as React.ComponentProps<typeof BoardKindDetail>["boardKind"]}
+            />
           )}
 
           {/* NPC gift preferences (npc articles) */}

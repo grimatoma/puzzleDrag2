@@ -268,3 +268,13 @@ describe("WikiArticle — achievement article (first_steps)", () => {
     expect(body).toContain("25");
   });
 });
+
+// ─── Test 8: Board-kind article shows the BoardKindDetail section ────────────
+
+describe("WikiArticle — board-kind article (mine)", () => {
+  it("renders BoardKindDetail for a board-kind article", () => {
+    renderArticle("boardKinds", "mine");
+    expect(screen.getByText(/Tile roster/i)).toBeTruthy();
+    expect(screen.getByText(/Seasons & turns/i)).toBeTruthy();
+  });
+});
