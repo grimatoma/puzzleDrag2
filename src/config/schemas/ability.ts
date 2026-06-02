@@ -11,13 +11,13 @@ export const abilityParamDefSchema = z.object({
 
 export const abilityCatalogEntrySchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
-    iconKey: z.string(),
-    desc: z.string(),
-    scope: z.array(z.string()),
-    trigger: z.string(),
-    channel: z.string(),
-    params: z.array(abilityParamDefSchema),
+    id: z.string().describe("Stable ability key used in building/worker/tile data"),
+    name: z.string().describe("Human-readable name shown in the Dev Panel"),
+    iconKey: z.string().describe("Icon registry key used to render the ability badge"),
+    desc: z.string().describe("Short description of what the ability does"),
+    scope: z.array(z.string()).describe("Entity kinds that may attach this ability (building, worker, tile)"),
+    trigger: z.string().describe("Lifecycle moment when the ability fires (e.g. passive, on_chain_collect, season_end)"),
+    channel: z.string().describe("Aggregator output bucket this ability contributes to"),
+    params: z.array(abilityParamDefSchema).describe("Parameter schema for the Dev Panel editor and runtime arguments"),
   })
   .passthrough();

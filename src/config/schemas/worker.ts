@@ -13,9 +13,9 @@ const hireCostPatchSchema = z
 
 export const workerOverrideSchema = z
   .object({
-    hireCost: hireCostPatchSchema.optional(),
-    maxCount: z.number().int().min(1).optional(),
-    abilities: z.array(abilityInstanceSchema).optional(),
+    hireCost: hireCostPatchSchema.optional().describe("Partial patch to the coin/resource cost fields for hiring this worker"),
+    maxCount: z.number().int().min(1).optional().describe("Maximum number of this worker type the player can hire"),
+    abilities: z.array(abilityInstanceSchema).optional().describe("Passive ability modifiers granted per hired worker"),
   })
   .strict();
 
