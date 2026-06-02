@@ -25,7 +25,7 @@ export const tileItemSchema = z
     value: z.number().describe("Chain length contribution / sort weight"),
     next: z.union([z.string(), z.null()]).optional().describe("Produced resource key"),
     sway: swayParamsSchema.optional(),
-    effects: z.record(z.string(), z.unknown()).optional(),
+    effects: z.record(z.string(), z.unknown()).optional().describe("Compiled per-tile effect channels derived from abilities (e.g. producesResource, freeMoves, coinBonus*)"),
     ...itemCommonOptional,
   })
   .passthrough()

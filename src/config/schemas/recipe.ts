@@ -4,7 +4,7 @@ export const recipeDefinitionSchema = z
   .object({
     item: z.string().describe("Output item key"),
     station: z.string().describe("Crafting station id"),
-    tier: z.number().int().optional().describe("Crafting tier gate — tier 2 requires building level 3+"),
+    tier: z.number().int().optional().describe("Crafting tier; tier 2 recipes require town level 3+"),
     inputs: z.record(z.string(), z.number()).describe("Resource keys → quantities"),
     coins: z.number().optional().describe("Coin reward credited to the player on craft completion"),
     craftMs: z.number().optional().describe("Queue duration override in ms"),
