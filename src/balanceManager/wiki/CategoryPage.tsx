@@ -19,6 +19,7 @@ import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
 import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import PageKindBadge from "./PageKindBadge.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { groupTileEntries } from "./tileGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
@@ -67,6 +68,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           <span className="wiki-concept-title">
             {concept.label}
           </span>
+
+          {/* Page-kind badge */}
+          <PageKindBadge kind="concept" />
 
           {/* Status chip */}
           <StatusChip

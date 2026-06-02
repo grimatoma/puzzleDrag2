@@ -33,6 +33,8 @@ import { TableOfContents } from "./TableOfContents.jsx";
 import type { TocItem } from "./TableOfContents.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import PageKindBadge from "./PageKindBadge.jsx";
+import { pageKindFor } from "./pageKind.js";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import Icon from "../../ui/Icon.jsx";
@@ -244,6 +246,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           >
             {entityKey}
           </code>
+          {/* Page-kind badge */}
+          <PageKindBadge kind={pageKindFor(conceptId)} />
+
           {/* Status chip */}
           <StatusChip
             tone={statusMeta.tone}
