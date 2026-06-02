@@ -1,0 +1,110 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">This is the single progression plan for Hearthwood Vale — both a verified account of the loop that runs <em>today</em> and the drawing board for what we are building next. It ports the v2 World Bible &amp; Progression Plan into the wiki so it stays beside the live catalog. Where this page and the code disagree, <strong>code is truth</strong> — update this page in the same change.</p>
+
+<h2>Status legend</h2>
+<p>Every item below carries one of five status chips. They mirror the wiki's own status system (the same labels stamp each generated concept page).</p>
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">WIRED</span> implemented &amp; runs in normal play &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;margin:2px;">PARTIAL</span> partly wired / only some paths &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;margin:2px;">STUB</span> present but inert ("coming soon") &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;margin:2px;">DOC-ONLY</span> in the design doc, not in code &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;margin:2px;">PLANNED</span> a v2 change this plan introduces
+</p>
+
+<h2>The core loop</h2>
+<div data-game-visual="board-farm-idle"></div>
+<p>Drag a chain of 3+ matching tiles (8-direction, no reuse) → spend one turn → collect resources + coins → refine at buildings → climb the settlement → raise the wagon to the next ruin. The loop below is <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> end to end; the <em>structure</em> that sequences it across towns is the plan.</p>
+
+<h2>The settlement / biome arc</h2>
+<p>Following the genre's "village 1 = farm only" convention, content reveals one main thread at a time along the rebuild ladder.</p>
+<table>
+  <thead><tr><th>Town</th><th>Boards</th><th>Introduces</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Town 1 — Hearthwood</strong> ([[zones:home]])</td><td>Farm only (6×6)</td><td>The drag, thresholds, orders, the Market, first buildings, first worker</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> farm loop wired; farm-only gating is <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td></tr>
+    <tr><td><strong>Town 2 — the Ridge</strong> ([[zones:quarry]])</td><td>Farm + Mine</td><td>[[buildings:kitchen]] → [[resources:supplies]], the food→mine gate, [[resources:block]]/[[resources:iron_bar]] metals, the [[buildings:forge]], the Miner, the capacity ladder</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> mine board wired; town-2 sequencing is <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td></tr>
+    <tr><td><strong>Town 3 — the Vale</strong></td><td>Farm + Mine, both deeper</td><td>Fruit (pie), flower (honey), deeper ore tiers, more per-step workers, capacity rungs</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td></tr>
+    <tr><td><strong>Harbor</strong> ([[zones:harbor]])</td><td>Sea expedition (tides, pearls)</td><td>Fish, pearls, sea-treasures</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> board runs; deferred as a progression slot</td></tr>
+    <tr><td><strong>The Old Capital</strong> ([[zones:oldcapital]])</td><td>Meta-finale</td><td>Renew the Pact; needs one Hearth-Token of each type</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;">STUB</span> map node + unlock gate; no travel flow or finale</td></tr>
+  </tbody>
+</table>
+
+<h2>The town-tier ladder (Camp → City)</h2>
+<p>Each ruin climbs the same rank ladder. A tier-up is one town-center upgrade costing escalating <em>local</em> resources that (a) unlocks the next batch of content, (b) raises caps, (c) adds plots. The top tier builds the <strong>wagon</strong> to the next ruin. This replaces today's scattered <code>lv</code> gates and is <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> — costs below are first-pass proposals for the balance simulator.</p>
+<table>
+  <thead><tr><th>Tier</th><th>Name</th><th>Town-center cost (farm-local)</th><th>Unlocks (Town 1)</th><th>Caps / plots</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td><strong>Rubble</strong></td><td>—</td><td>Arrival; board is debris + the two staple tiles</td><td>—</td></tr>
+    <tr><td>1</td><td><strong>Camp</strong></td><td>Hearth (free)</td><td>Farm board (hay + wheat only), Orders, the Market</td><td>cap 200 · 3 plots</td></tr>
+    <tr><td>2</td><td><strong>Hamlet</strong></td><td>120c + 8 [[resources:hay_bundle]]</td><td>Lumber Camp → trees ([[resources:plank]]); [[buildings:granary]]; first Worker (Farmer)</td><td>cap 300 · 5 plots</td></tr>
+    <tr><td>3</td><td><strong>Village</strong></td><td>300c + 15 [[resources:plank]]</td><td>Coop → birds ([[resources:eggs]]); Garden → veg ([[resources:soup]]); [[buildings:mill]], [[buildings:bakery]]; Quests/XP</td><td>cap 400 · 7 plots</td></tr>
+    <tr><td>4</td><td><strong>Town</strong></td><td>600c + 25 [[resources:plank]]</td><td>[[buildings:workshop]] + farm tools, more workers, [[buildings:caravan_post]]</td><td>cap 500 · 9 plots</td></tr>
+    <tr><td>5</td><td><strong>City</strong></td><td>1000c + 40 plank + 12 [[resources:soup]]</td><td>Top farm buildings; <strong>the Wagon</strong> → Town 2</td><td>cap 600 · 11 plots</td></tr>
+  </tbody>
+</table>
+<p style="font-size:12px;color:#867a66;">Town-1 costs are farm-only (no [[resources:block]]/[[resources:iron_bar]] — there is no mine here). Town 2 folds the mine, Kitchen/supplies, the food→mine gate, metal buildings, the Miner, and the capacity ladder into these same tiers, and its higher tiers cost mine resources.</p>
+
+<h2>Unlock gates — what's available when</h2>
+<details>
+  <summary>Building-gated tile spawners (the backbone mechanism)</summary>
+  <p>Beyond the two staple tiles, a category appears on the board when you <strong>build the structure that produces it</strong>: a Coop spawns birds (eggs), a Lumber Camp spawns oak ([[resources:plank]]), a Garden spawns carrots ([[resources:soup]]). The town you construct reshapes the board you play on.</p>
+  <p><strong>The forcing function:</strong> each tile's resource is consumed by a later cost ([[resources:plank]] gates the [[buildings:mill]]/[[buildings:bakery]] and every tier-up; [[resources:eggs]] gates [[recipes:rec_bread]]; the 12 [[resources:soup]] is part of the City→Wagon cost) — so every spawner is eventually required, but the player picks the order.</p>
+  <p><strong>Implementation reality:</strong> <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> the <code>pool_weight</code> ability mechanism ships and its scope includes "building", but no building uses it yet and there is no Coop/Garden/Lumber-Camp. Wiring it is the headline plan task — <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span>.</p>
+</details>
+<details>
+  <summary>The three bridges (Town 2+)</summary>
+  <ul>
+    <li><strong>Farm food → mine turns.</strong> <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> — keep the expedition model; make it the hard gate at Town 2 (out of food → session ends).</li>
+    <li><strong>Mine metal → higher tiers + tools.</strong> <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> — from Town 2, tier-ups + [[buildings:workshop]]/[[buildings:forge]] cost mine resources.</li>
+    <li><strong>Better tools → both boards faster.</strong> <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> — tools are global, shared across settlements.</li>
+  </ul>
+</details>
+
+<h2>The economy loop</h2>
+<p>The pipeline: chains generate raw resources → buildings &amp; recipes refine them → refined goods sell for coins or feed the next cost → coins, tools, workers, level, and knowledge carry globally while resources stay per-settlement.</p>
+<table>
+  <thead><tr><th>Carries globally (meta)</th><th>Stays per-settlement</th></tr></thead>
+  <tbody>
+    <tr><td>Coins — bootstrap a fresh ruin via its Market</td><td>Resources / inventory</td></tr>
+    <tr><td>Player level + XP + Almanac perks</td><td>Buildings — each town from scratch</td></tr>
+    <tr><td>Tools · Knowledge (researched tiles, recipes)</td><td>Town tier / rebuild progress · board · hazards · biome</td></tr>
+    <tr><td>Workers (hired once, help everywhere) + runes</td><td>—</td></tr>
+  </tbody>
+</table>
+<p><strong>The load-bearing refactor:</strong> today <code>state.inventory</code> is one global pool. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> per-zone resources means re-keying inventory by settlement while keeping coins/tools/workers/level/knowledge global. The simulator must prove a fresh ruin can bootstrap from coins alone.</p>
+
+<h2>Upcoming features &amp; the paused meta-layer</h2>
+<p>Phase 1 deliberately pauses the narrative meta-systems to first prove a complete, legible core loop across farm + mine + the first 1–3 towns. Status here is what's <em>coded today</em>, so a future session knows what it's switching off and returning to.</p>
+<table>
+  <thead><tr><th>System</th><th>Status</th><th>What exists today</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Bosses</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span></td><td>6 bosses ([[bosses:frostmaw]], [[bosses:quagmire]], [[bosses:ember_drake]], [[bosses:old_stoneface]], [[bosses:mossback]], [[bosses:storm]]) with target + board modifier + reward. Triggered manually (debug) or by story beats — no auto day-cooldown loop.</td></tr>
+    <tr><td><strong>NPCs + bonds</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>5 NPCs ([[npcs:wren]], [[npcs:mira]], [[npcs:tomas]], [[npcs:bram]], [[npcs:liss]]); bonds 0–10, gift &amp; order-delivery gains, decay above 5.</td></tr>
+    <tr><td><strong>Keepers (Coexist / Drive-Out)</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span></td><td>3 keepers; Coexist (+embers, instant) or Drive-Out (trial board, +ingots). Reached via a "Face the keeper" button, not an auto-prompt.</td></tr>
+    <tr><td><strong>Hearth-Tokens / completion</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>Settlement completion mints the type's token; all three tokens unlock the [[zones:oldcapital]].</td></tr>
+    <tr><td><strong>Boons</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span></td><td>12 boons but only two effect types exist (<code>coin_gain_mult</code>, <code>bond_gain_mult</code>). The keeper choice will return as a <em>qualitative</em> fork, not a multiplicative boon.</td></tr>
+    <tr><td><strong>Charter / Hollow Pact</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;">STUB</span></td><td>6 Pact terms rendered honored/violated/pending from flags — informational only; no tithes, no finale renewal.</td></tr>
+    <tr><td><strong>Festivals</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;">STUB</span></td><td>Modal says "coming soon"; recurring festivals are <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span>.</td></tr>
+    <tr><td><strong>Instant crafting</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td><td>Remove the real-time craft queue + gem-skip; make crafting instant. Retire <code>CRAFT_QUEUE_HOURS</code>, <code>craftMs</code>, the queue UI.</td></tr>
+    <tr><td><strong>Building specialization per zone</strong></td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span></td><td>The master doc's per-settlement specialization (Crops / Animals / Forestry, etc.) is not in code — all buildings are available everywhere for now.</td></tr>
+  </tbody>
+</table>
+
+<h2>Per-stage pacing (first-time player, active play)</h2>
+<table>
+  <thead><tr><th>Stage</th><th>Town</th><th>Goal</th><th>Doing</th><th>Est.</th></tr></thead>
+  <tbody>
+    <tr><td><strong>0 First chains</strong></td><td>1</td><td>learn the drag</td><td>chain hay to the threshold → bundle + upgrade tile</td><td>3–5m</td></tr>
+    <tr><td><strong>1 First harvest</strong></td><td>1</td><td>"what are resources for?"</td><td>fill orders; trees→[[resources:plank]]; Camp→Hamlet; [[buildings:granary]]</td><td>8–12m</td></tr>
+    <tr><td><strong>2 A working farm</strong></td><td>1</td><td>the farm becomes an engine</td><td>[[buildings:mill]]→[[buildings:bakery]]→[[resources:bread]]; hire Farmer; climb to City; build the Wagon</td><td>20–35m</td></tr>
+    <tr><td><strong>3 Smoke on the ridge</strong></td><td>2</td><td>food gains a purpose</td><td>rebuild base; [[buildings:kitchen]]→[[resources:supplies]]; found the mine; stone→[[resources:block]], iron→[[resources:iron_bar]]</td><td>20–40m</td></tr>
+    <tr><td><strong>4 Iron &amp; stone</strong></td><td>2</td><td>metal → better tools → faster</td><td>[[buildings:workshop]]/[[buildings:forge]]; metal tools; capacity rung; build the Wagon</td><td>25–45m</td></tr>
+  </tbody>
+</table>
+<p style="font-size:12px;color:#867a66;">Town 1 ≈ 45–75 min · Town 2 ≈ 50–90 min · Town 3 wider. The 3-town arc ≈ 3–5 hrs across many short sessions.</p>
+
+<h2>The long-term sink &amp; open questions</h2>
+<ul>
+  <li><strong>Capacity ladder</strong> — rising tool/worker/storage caps are the confirmed mid-game sink. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></li>
+  <li><strong>The Old Capital</strong> — the deferred "build toward" endgame finale (renew the Pact). <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;">STUB</span></li>
+  <li><strong>A net-new "third pillar"</strong> — curation vs monument vs network. Design after towns 1–3 play. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;">DOC-ONLY</span></li>
+</ul>
+<p style="font-size:12px;color:#867a66;">Still open (simulator-driven): Stage-0 board width, per-zone spawn-weight tables, the supplies ratio, the tier-up cost curve, the exact new worker roster, how many tiers Town 1 needs, and the bread sell-price reconciliation.</p>
