@@ -695,8 +695,17 @@ for (const t of TILE_TYPES) {
 
 export const TILE_TYPES_MAP = Object.fromEntries(TILE_TYPES.map((t) => [t.id, t]));
 
+const groupedByCategory: Record<string, typeof TILE_TYPES> = {};
+for (const t of TILE_TYPES) {
+  if (groupedByCategory[t.category]) {
+    groupedByCategory[t.category].push(t);
+  } else {
+    groupedByCategory[t.category] = [t];
+  }
+}
+
 export const TILE_TYPES_BY_CATEGORY = Object.fromEntries(
-  CATEGORIES.map((c) => [c, TILE_TYPES.filter((t) => t.category === c)]),
+  CATEGORIES.map((c) => [c, groupedByCategory[c] || []]),
 );
 
 /** Quick O(1) lookup: resource key → category (or null if not in catalog). */
