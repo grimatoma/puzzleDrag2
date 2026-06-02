@@ -169,6 +169,7 @@ function boardKindEntries() {
     (k) => ({
       key: k,
       name: String((BIOMES as Record<string, { name?: string }>)[k].name ?? k),
+      iconKey: `biome_${k}`,
     }),
   );
 }

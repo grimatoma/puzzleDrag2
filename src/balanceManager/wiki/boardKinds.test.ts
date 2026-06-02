@@ -26,6 +26,18 @@ describe("boardKinds concept registration", () => {
     expect(byKey.mine).toBe("Mine");
     expect(byKey.fish).toBe("Harbor");
   });
+  it("entries expose the biome icon keys used by the wiki grid", () => {
+    const iconsByKey = Object.fromEntries(
+      concept()!
+        .getEntries()
+        .map((e) => [(e as { key: string }).key, (e as { iconKey: string }).iconKey]),
+    );
+    expect(iconsByKey).toEqual({
+      farm: "biome_farm",
+      fish: "biome_fish",
+      mine: "biome_mine",
+    });
+  });
   it("getEntity resolves a board kind from BIOMES", () => {
     const mine = getEntity("boardKinds", "mine");
     expect(mine).not.toBeNull();
