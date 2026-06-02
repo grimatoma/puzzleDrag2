@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { CONCEPTS } from "./concepts.js";
-import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES } from "./wikiNav.js";
+import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES, allNavConceptIds } from "./wikiNav.js";
 
 describe("WIKI_SECTIONS concept coverage", () => {
-  const allIds = WIKI_SECTIONS.flatMap((s) => s.conceptIds);
+  const allIds = allNavConceptIds();
 
-  it("has no duplicate concept ids across sections", () => {
+  it("has no duplicate concept ids across sections, primaries, or children", () => {
     expect(new Set(allIds).size).toBe(allIds.length);
   });
 
@@ -16,6 +16,17 @@ describe("WIKI_SECTIONS concept coverage", () => {
     }
     for (const c of CONCEPTS) {
       expect(allIds.includes(c.id), `concept "${c.id}" is missing from WIKI_SECTIONS`).toBe(true);
+    }
+  });
+
+  it("every child concept names a real concept", () => {
+    const conceptSet = new Set(CONCEPTS.map((c) => c.id));
+    for (const sec of WIKI_SECTIONS) {
+      for (const node of sec.nodes) {
+        for (const child of node.children ?? []) {
+          expect(conceptSet.has(child), `child "${child}" is not a real concept id`).toBe(true);
+        }
+      }
     }
   });
 });
