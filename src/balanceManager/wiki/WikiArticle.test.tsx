@@ -225,10 +225,12 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
 
     // rec_bread has relations (Station, Output, Ingredients).
     // At least one RefButton in the Relations section should call navigate.
-    // Find all buttons except "← Back".
+    // Find all buttons except "← Back" and the breadcrumb ("Go to …").
     const allButtons = screen.getAllByRole("button");
     const relButtons = allButtons.filter(
-      (b) => !/back/i.test(b.textContent ?? ""),
+      (b) =>
+        !/back/i.test(b.textContent ?? "") &&
+        !(b.getAttribute("title") ?? "").startsWith("Go to"),
     );
 
     // Click the first relation button and verify the navigate signature.
@@ -266,5 +268,24 @@ describe("WikiArticle — achievement article (first_steps)", () => {
     expect(body).toContain("Achievement");
     expect(body).toMatch(/Coins/);
     expect(body).toContain("25");
+  });
+});
+
+// ─── Test 8: Breadcrumb navigates to concept page ────────────────────────────
+
+describe("WikiArticle — breadcrumb links to the concept page", () => {
+  it("navigates to the concept landing on clicking the breadcrumb", () => {
+    const navigate = vi.fn();
+    render(
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <WikiArticle conceptId="categories" entityKey="vegetables" onBack={() => {}} />
+      </BalanceNavProvider>,
+    );
+    const crumb = screen
+      .getAllByRole("button")
+      .find((b) => (b.getAttribute("title") ?? "") === "Go to Categories");
+    expect(crumb).toBeTruthy();
+    fireEvent.click(crumb!);
+    expect(navigate).toHaveBeenCalledWith({ tab: "categories" });
   });
 });

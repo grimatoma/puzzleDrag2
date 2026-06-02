@@ -21,6 +21,7 @@ import { Card, SmallButton, COLORS } from "../shared.jsx";
 import { describeSchema } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
+import { CONCEPTS } from "./concepts.js";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { RefButton, RelationalFooter } from "../relational.jsx";
 import { relationsFor } from "./relations.js";
@@ -119,6 +120,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
+  const conceptLabel = CONCEPTS.find((c) => c.id === conceptId)?.label ?? conceptId;
   const cs = schemaForConcept(conceptId);
 
   // Build schema doc — catching in case of unexpected schema shape
@@ -224,12 +226,16 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
       <div className="flex items-start gap-2 mb-3 flex-wrap">
         <SmallButton onClick={onBack}>← Back</SmallButton>
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          {/* Breadcrumb */}
-          <span
-            className="wiki-breadcrumb"
+          {/* Breadcrumb — links up to the concept landing page */}
+          <button
+            type="button"
+            title={`Go to ${conceptLabel}`}
+            onClick={() => navigate({ tab: conceptId })}
+            className="wiki-breadcrumb hover:opacity-80"
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
-            {conceptId}
-          </span>
+            {conceptLabel}
+          </button>
           <span style={{ color: COLORS.inkSubtle }}>›</span>
           {/* Entity title — display serif, big */}
           <span className="wiki-title wiki-title--article">
