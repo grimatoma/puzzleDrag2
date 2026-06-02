@@ -171,6 +171,14 @@ export function infoboxFacts(conceptId: string, _key: string, e: Rec): Fact[] {
       break;
     }
 
+    case "boardKinds": {
+      const tiles = e["tiles"];
+      if (Array.isArray(tiles)) add("Tile species", tiles.length);
+      const resources = e["resources"];
+      if (Array.isArray(resources)) add("Resources", resources.length);
+      break;
+    }
+
     default:
       // Unrecognised concept — return empty (no guessing).
       break;
