@@ -707,7 +707,10 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
         {valLines && valLines.some((l) => l && l.speaker) && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: -4 }}>
             <span style={{ font: "600 8px/1 system-ui", letterSpacing: "0.1em", textTransform: "uppercase", color: C.inkSubtle }}>Speakers</span>
-            {[...new Set(valLines.map((l) => l?.speaker).filter((s): s is string => Boolean(s)))].map((sp) => {
+            {Array.from(valLines.reduce((acc, l) => {
+              if (l?.speaker) acc.add(l.speaker);
+              return acc;
+            }, new Set<string>())).map((sp) => {
               const info = npcByKey(sp);
               return (
                 <span key={sp} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
