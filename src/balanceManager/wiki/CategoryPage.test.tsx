@@ -225,6 +225,12 @@ describe("CategoryPage — tiles (grouped sub-category layout)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toMatch(/entries/i);
   });
+
+  it("renders the 'Progression & unlock map' overview section", () => {
+    const { container } = renderPage("tiles");
+    expect(container.querySelector("#progression-timeline")).not.toBeNull();
+    expect(document.body.textContent ?? "").toMatch(/progression & unlock map/i);
+  });
 });
 
 describe("CategoryPage — seasons (no-schema concept)", () => {

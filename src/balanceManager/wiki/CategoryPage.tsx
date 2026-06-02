@@ -29,6 +29,7 @@ import RecipeGraph from "./RecipeGraph.jsx";
 import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
+import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       {conceptId === "buildings" && <EconomyRollup />}
       {conceptId === "bosses" && <BossComparison />}
       {conceptId === "workers" && <WorkerComparison />}
+      {conceptId === "tiles" && <ProgressionTimeline />}
 
       {/* ── 3b. Recipe relationship graph (recipes concept only) ──────────── */}
       {conceptId === "recipes" && (
