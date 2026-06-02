@@ -5,6 +5,8 @@ import { WIKI_SECTIONS } from "./wikiNav.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { ledeFor } from "./lede.js";
 import { infoboxFacts } from "./infoboxFacts.js";
+import { relationsFor } from "./relations.js";
+import { backlinksFor, __resetBacklinkIndex } from "./backlinks.js";
 
 const concept = () => CONCEPTS.find((c) => c.id === "boardKinds");
 
@@ -52,5 +54,30 @@ describe("boardKinds lede + facts", () => {
     const facts = infoboxFacts("boardKinds", "mine", mine);
     const labels = facts.map((f) => f.label);
     expect(labels).toContain("Tile species");
+  });
+});
+
+describe("boardKinds relations", () => {
+  it("links to its tiles and its dangers", () => {
+    const mine = getEntity("boardKinds", "mine");
+    const groups = relationsFor("boardKinds", "mine", mine);
+    const titles = groups.map((g) => g.title);
+    expect(titles).toContain("Tiles");
+    expect(titles).toContain("Dangers");
+    const dangers = groups.find((g) => g.title === "Dangers")!.links.map((l) => l.key);
+    expect(dangers).toContain("cave_in");
+  });
+  it("links to the zones that use it", () => {
+    const mine = getEntity("boardKinds", "mine");
+    const groups = relationsFor("boardKinds", "mine", mine);
+    expect(groups.map((g) => g.title)).toContain("Zones");
+  });
+  it("a board-kind tile back-links to its board kind", () => {
+    __resetBacklinkIndex();
+    const mine = getEntity("boardKinds", "mine");
+    const firstTileKey = (mine!.tiles as Array<{ key: string }>)[0].key;
+    const back = backlinksFor("tiles", firstTileKey);
+    const hasBoardKind = back.some((g) => g.links.some((l) => l.conceptId === "boardKinds" && l.key === "mine"));
+    expect(hasBoardKind).toBe(true);
   });
 });
