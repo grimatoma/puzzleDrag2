@@ -64,6 +64,7 @@ export const ZONE_TO_TILE_CATEGORIES: Readonly<Record<string, string[]>> = Objec
   herd_animals: ["herd_animals"],
   cattle: ["cattle"],
   mounts: ["mounts"],
+  mining: ["mining", "stone"],
 });
 
 /**
