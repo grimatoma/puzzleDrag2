@@ -21,6 +21,8 @@ import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import PageKindBadge from "./PageKindBadge.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+import { schemaForConcept } from "./conceptSchemas.js";
+import { describeSchema } from "../schemaDoc.js";
 import { groupTileEntries } from "./tileGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
@@ -51,6 +53,17 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
   // Entries from the live config
   const entries = concept.getEntries();
+
+  // Attribute count for the definition sentence (from the concept's Zod schema).
+  const cs = schemaForConcept(conceptId);
+  let attrCount = 0;
+  if (cs != null) {
+    try {
+      attrCount = describeSchema(cs.schema).fields.length;
+    } catch {
+      attrCount = 0;
+    }
+  }
 
   // Authored intro HTML (optional — none seeded yet; gracefully absent)
   const intro = bodyFor(conceptId, "_index");
@@ -93,6 +106,21 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           {concept.blurb}
         </p>
       </div>
+
+      {/* ── 1b. Definition lead ───────────────────────────────────────────── */}
+      <section id="definition" className="flex flex-col gap-1">
+        <div className="wiki-section-heading mb-1">Definition</div>
+        <p className="text-[13px] leading-relaxed m-0" style={{ color: COLORS.ink }}>
+          {concept.blurb}
+          {attrCount > 0 && (
+            <>
+              {" "}Every <span className="wiki-mono">{concept.label.toLowerCase()}</span> entry
+              shares {attrCount} defined {attrCount === 1 ? "attribute" : "attributes"},
+              listed in the field reference below.
+            </>
+          )}
+        </p>
+      </section>
 
       {/* ── 2. Authored intro (optional) ──────────────────────────────────── */}
       {intro != null && (
