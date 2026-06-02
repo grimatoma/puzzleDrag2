@@ -53,7 +53,7 @@ export default function TuningTab({ draft, updateDraft }: TabProps) {
       </Card>
 
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-        These take effect on the next page reload (after Save Draft) — they are read once at module load.
+        These are read once at module load — change them in balance.json (tuning) or the source constants.
       </div>
     </div>
   );
