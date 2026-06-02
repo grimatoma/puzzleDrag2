@@ -61,7 +61,7 @@ export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProp
       conceptId: "tiles",
       labelFor: (key) => {
         const t = tiles.find((tile) => tile.key === key);
-        return t?.next ? `${t.label ?? key} → ${t.next}` : (t?.label ?? iconLabel(key) ?? key);
+        return t?.label ?? iconLabel(key) ?? key;
       },
     },
   );
