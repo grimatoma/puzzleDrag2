@@ -132,12 +132,10 @@ describe("TileUnlock — method links to its discovery-method page", () => {
         <TileUnlock tileId="tile_grain_wheat" />
       </BalanceNavProvider>,
     );
-    // The method button carries a title of "tileDiscoveryMethods:<id>"
-    const methodBtn = screen
-      .getAllByRole("button")
-      .find((b) => (b.getAttribute("title") ?? "").startsWith("tileDiscoveryMethods:"));
+    // The method button exposes a friendly accessible name ("Go to <method>").
+    const methodBtn = screen.getByRole("button", { name: /^Go to / });
     expect(methodBtn).toBeTruthy();
-    fireEvent.click(methodBtn!);
+    fireEvent.click(methodBtn);
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate.mock.calls[0][0]).toMatchObject({ tab: "tileDiscoveryMethods" });
   });

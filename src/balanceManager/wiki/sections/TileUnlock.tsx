@@ -233,7 +233,8 @@ export function TileUnlock({ tileId }: TileUnlockProps) {
         <Stat label="Method">
           <button
             type="button"
-            title={`tileDiscoveryMethods:${method}`}
+            aria-label={`Go to ${methodName}`}
+            title={`Go to ${methodName}`}
             onClick={() => navigate(wikiNavTarget("tileDiscoveryMethods", method))}
             style={{ cursor: "pointer", background: "none", border: "none", padding: 0 }}
             className="hover:opacity-80"
