@@ -94,11 +94,13 @@ function renderRows(
   depth: number,
   entity: Record<string, unknown> | null,
   showValue: boolean,
+  keyPath: string = "",
 ): React.ReactNode[] {
   const liveParent = entity != null ? entity[f.field] : undefined;
+  const fieldKey = keyPath ? `${keyPath}.${f.field}` : f.field;
   const rows: React.ReactNode[] = [
     <tr
-      key={`${depth}-${f.field}`}
+      key={fieldKey}
       style={{
         background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
         borderBottom: `1px solid ${COLORS.border}`,
@@ -137,7 +139,7 @@ function renderRows(
         ? (liveParent as Record<string, unknown>)
         : null;
     f.children.forEach((c, ci) =>
-      rows.push(...renderRows(c, i + ci + 1, depth + 1, childEntity, showValue)),
+      rows.push(...renderRows(c, i + ci + 1, depth + 1, childEntity, showValue, fieldKey)),
     );
   }
   return rows;
