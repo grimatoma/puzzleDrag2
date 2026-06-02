@@ -15,6 +15,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import EntityDetail from "../balanceManager/wiki/EntityDetail.jsx";
+import { BalanceNavProvider } from "../balanceManager/balanceNav.jsx";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 import { ZONES } from "../features/zones/data.js";
 import { SEASONS } from "../constants.js";
@@ -33,14 +34,24 @@ const realSeasonName = SEASONS[0].name; // e.g. "Spring"
 
 // ─── Zone entity (override schema) ───────────────────────────────────────────
 
+function wrapWithProvider(element: React.ReactElement): React.ReactElement {
+  return (
+    <BalanceNavProvider focus={null} navigate={() => {}}>
+      {element}
+    </BalanceNavProvider>
+  );
+}
+
 describe("EntityDetail — zones (override schema)", () => {
   it("renders all expected schema field names", () => {
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     const expectedFields = [
@@ -64,11 +75,13 @@ describe("EntityDetail — zones (override schema)", () => {
 
   it("shows the upgradeMap description 'Replaced wholesale'", () => {
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText("Replaced wholesale")).toBeDefined();
@@ -76,11 +89,13 @@ describe("EntityDetail — zones (override schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -91,11 +106,13 @@ describe("EntityDetail — zones (override schema)", () => {
 describe("EntityDetail — tiles (definition schema)", () => {
   it("renders schema fields", () => {
     render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // tileItemSchema has at minimum: kind, label, biome, color, dark, value
@@ -107,11 +124,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 
   it("surfaces at least one additional field (passthrough schema, extra runtime keys)", () => {
     render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // The "Additional fields" header should appear for passthrough tile entries
@@ -127,11 +146,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="tiles"
-        entityKey={realTileKey!}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -142,11 +163,13 @@ describe("EntityDetail — tiles (definition schema)", () => {
 describe("EntityDetail — seasons (no schema)", () => {
   it("renders 'Live config (no schema)' fallback", () => {
     render(
-      <EntityDetail
-        conceptId="seasons"
-        entityKey={realSeasonName}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="seasons"
+          entityKey={realSeasonName}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText(/Live config \(no schema\)/i)).toBeDefined();
@@ -154,11 +177,13 @@ describe("EntityDetail — seasons (no schema)", () => {
 
   it("renders zero editable controls", () => {
     const { container } = render(
-      <EntityDetail
-        conceptId="seasons"
-        entityKey={realSeasonName}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="seasons"
+          entityKey={realSeasonName}
+          onBack={() => {}}
+        />,
+      ),
     );
     expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
@@ -170,11 +195,13 @@ describe("EntityDetail — back button", () => {
   it("calls onBack when the ← Back button is clicked", () => {
     const onBack = vi.fn();
     render(
-      <EntityDetail
-        conceptId="zones"
-        entityKey={realZoneId}
-        onBack={onBack}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="zones"
+          entityKey={realZoneId}
+          onBack={onBack}
+        />,
+      ),
     );
 
     const backButton = screen.getByText(/← Back/i);
@@ -195,11 +222,13 @@ describe("EntityDetail — override concept additional fields", () => {
 
   it("renders the 'Additional fields' heading for a boss entity", () => {
     render(
-      <EntityDetail
-        conceptId="bosses"
-        entityKey={realBossKey}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="bosses"
+          entityKey={realBossKey}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     expect(screen.getByText(/Additional fields/i)).toBeDefined();
@@ -207,11 +236,13 @@ describe("EntityDetail — override concept additional fields", () => {
 
   it("shows at least one runtime key not covered by the override schema", () => {
     render(
-      <EntityDetail
-        conceptId="bosses"
-        entityKey={realBossKey}
-        onBack={() => {}}
-      />,
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="bosses"
+          entityKey={realBossKey}
+          onBack={() => {}}
+        />,
+      ),
     );
 
     // "id", "target", and "modifier" are live BossDef fields absent from

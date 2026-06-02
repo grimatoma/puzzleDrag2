@@ -14,6 +14,9 @@ import { describeSchema } from "../schemaDoc.js";
 import type { FieldDoc } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
+import { useBalanceNav } from "../balanceNav.jsx";
+import { RefButton, RelationalFooter } from "../relational.jsx";
+import { relationsFor } from "./relations.js";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -271,8 +274,10 @@ function LiveConfigFallback({ entity }: LiveConfigFallbackProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDetailProps) {
+  const { navigate } = useBalanceNav();
   const cs = schemaForConcept(conceptId);
   const entity = getEntity(conceptId, entityKey);
+  const groups = relationsFor(conceptId, entityKey, entity);
 
   // Build schema doc — catching in case of unexpected schema shape
   let schemaDoc: ReturnType<typeof describeSchema> | null = null;
@@ -356,6 +361,41 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
         >
           No data for this entry.
         </div>
+      )}
+
+      {/* Cross-links — Related section */}
+      {groups.length > 0 && (
+        <RelationalFooter standalone title="Related" hint="Derived · click to open">
+          {groups.map((group) => (
+            <div key={group.title} className="mb-2 last:mb-0">
+              <div
+                className="text-[9px] font-bold uppercase tracking-wide mb-1"
+                style={{ color: COLORS.inkSubtle }}
+              >
+                {group.title}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {group.links.map((link) => (
+                  <RefButton
+                    key={`${link.conceptId}:${link.key}`}
+                    title={`${link.conceptId}:${link.key}`}
+                    onClick={() =>
+                      navigate({ tab: "wiki", focus: `${link.conceptId}:${link.key}` })
+                    }
+                  >
+                    <span className="font-mono text-[10px]">{link.label}</span>
+                    <span
+                      className="font-mono text-[9px] opacity-60 ml-0.5"
+                      style={{ color: COLORS.inkSubtle }}
+                    >
+                      {link.key}
+                    </span>
+                  </RefButton>
+                ))}
+              </div>
+            </div>
+          ))}
+        </RelationalFooter>
       )}
     </Card>
   );

@@ -53,8 +53,6 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
       return { schema: toolItemSchema, kind: "definition" };
 
     // ── world structure ──────────────────────────────────────────────────
-    case "zones":
-      return { schema: zoneOverrideSchema, kind: "override" };
     case "settlementBiomes":
       return { schema: settlementBiomeEntrySchema, kind: "definition" };
     case "recipes":
@@ -63,6 +61,8 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
       return { schema: buildingDefinitionSchema, kind: "definition" };
 
     // ── override patches ──────────────────────────────────────────────────
+    case "zones":
+      return { schema: zoneOverrideSchema, kind: "override" };
     case "bosses":
       return { schema: bossOverrideSchema, kind: "override" };
     case "workers":
