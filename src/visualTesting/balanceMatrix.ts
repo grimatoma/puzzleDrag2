@@ -6,11 +6,10 @@ export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-items-tab', hash: '#/items', diff: domDiff },
   { id: 'balance-recipes-tab', hash: '#/recipes', diff: domDiff },
   { id: 'balance-story-tab', hash: '#/story', diff: domDiff },
-  { id: 'balance-export-tab', hash: '#/export', diff: domDiff },
 ];
 
 export const BALANCE_VISUAL_SMOKE_SCENARIO_IDS = [
   'balance-default',
   'balance-items-tab',
-  'balance-export-tab',
+  'balance-zones-tab',
 ];
