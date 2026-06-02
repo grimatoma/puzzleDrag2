@@ -326,7 +326,8 @@ export default function RecipeGraph() {
     }));
   }
 
-  function endPan() {
+  function endPan(e: ReactPointerEvent<HTMLDivElement>) {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     pointersRef.current.clear();
     dragRef.current = null;
     pinchRef.current = null;
@@ -370,17 +371,14 @@ export default function RecipeGraph() {
 
   // Select / deselect then navigate
   function handleSelect(key: string) {
-    setSelectedKey((prev: string | null) => {
-      const next = prev === key ? null : key;
-      // Navigate to the wiki article for this item when selecting
-      if (next !== null) {
-        const conceptId = conceptForKey(key);
-        if (conceptId != null) {
-          navigate(wikiNavTarget(conceptId, key));
-        }
+    const next = selectedKey === key ? null : key;
+    setSelectedKey(next);
+    if (next !== null) {
+      const conceptId = conceptForKey(key);
+      if (conceptId != null) {
+        navigate(wikiNavTarget(conceptId, key));
       }
-      return next;
-    });
+    }
   }
 
   return (
