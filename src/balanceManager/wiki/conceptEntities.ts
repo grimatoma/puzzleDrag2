@@ -9,7 +9,7 @@
  * conceptSchemas.ts (keeps those pure / cycle-free).
  */
 
-import { ITEMS, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
+import { ITEMS, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS, BIOMES } from "../../constants.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
 import { ABILITIES } from "../../config/abilities.js";
@@ -86,6 +86,10 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
     // ── world structure ─────────────────────────────────────────────────────
     case "zones": {
       return toRecord((ZONES as Record<string, unknown>)[key]);
+    }
+
+    case "boardKinds": {
+      return toRecord((BIOMES as Record<string, unknown>)[key]);
     }
 
     case "buildings": {

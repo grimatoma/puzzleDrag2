@@ -10,7 +10,7 @@
 // Used as an alignment artifact for the upcoming type-discipline refactor:
 // every distinct concept in the game shows up exactly once here.
 
-import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
+import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS, BIOMES } from "../../constants.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
 import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
@@ -161,6 +161,18 @@ function settlementBiomeEntries() {
   return out;
 }
 
+// Display order: Farm, Mine, Harbor (progression order, not alphabetical).
+const BOARD_KIND_ORDER = ["farm", "mine", "fish"] as const;
+
+function boardKindEntries() {
+  return BOARD_KIND_ORDER.filter((k) => (BIOMES as Record<string, unknown>)[k] != null).map(
+    (k) => ({
+      key: k,
+      name: String((BIOMES as Record<string, { name?: string }>)[k].name ?? k),
+    }),
+  );
+}
+
 function categoryEntries() {
   const set = new Set();
   for (const c of ZONE_CATEGORIES) set.add(c);
@@ -293,6 +305,12 @@ export const CONCEPTS = [
     label: "Settlement biomes",
     blurb: "Biomes a new settlement can be founded as.",
     getEntries: settlementBiomeEntries,
+  },
+  {
+    id: "boardKinds",
+    label: "Board kinds",
+    blurb: "Farm, Mine, Harbor — the three board types and their rules.",
+    getEntries: boardKindEntries,
   },
   {
     id: "recipes",

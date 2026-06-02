@@ -80,6 +80,7 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
       return { schema: toolPowerCatalogEntrySchema, kind: "definition" };
 
     // ── live-config-only concepts (no Zod schema) ─────────────────────────
+    case "boardKinds":
     case "categories":
     case "hazards":
     case "views":
