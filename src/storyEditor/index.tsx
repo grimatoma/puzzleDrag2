@@ -186,9 +186,16 @@ interface NodeCommonProps { node: StoryNode; beat: StoryBeat | null; selected: b
 
 function CompactNode({ node, beat, selected }: NodeCommonProps) {
   const ring = actColor(beat);
-  const speakers = [...new Set((beat?.lines || []).map((l) => l?.speaker).filter((s): s is string => Boolean(s)))];
+  const speakersSet = new Set<string>();
+  let hasSpeaker: string | undefined;
+  for (const l of beat?.lines || []) {
+    if (l?.speaker) {
+      speakersSet.add(l.speaker);
+      if (!hasSpeaker) hasSpeaker = l.speaker;
+    }
+  }
+  const speakers = [...speakersSet];
   const firstLine = beat?.lines?.[0]?.text || beat?.body || "—";
-  const hasSpeaker = beat?.lines?.find((l) => l?.speaker)?.speaker;
   const choices = beat?.choices || [];
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 10,
