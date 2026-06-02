@@ -19,10 +19,17 @@ describe("season icons wired", () => {
 });
 
 describe("achievement icons wired", () => {
-  it("every achievement has icon === ach_<id> and the key is registered", () => {
+  it("every achievement has look.icon === ach_<id> and the key is registered", () => {
     for (const a of ACHIEVEMENTS) {
-      expect(a.icon, a.id).toBe(`ach_${a.id}`);
+      expect(a.look.icon, a.id).toBe(`ach_${a.id}`);
       expect(ICON_REGISTRY[`ach_${a.id}`], a.id).toBeDefined();
+    }
+  });
+
+  it("achievement icon lives under look, not top-level", () => {
+    for (const a of ACHIEVEMENTS) {
+      expect(typeof a.look.icon, a.id).toBe("string");
+      expect((a as unknown as { icon?: string }).icon, a.id).toBeUndefined();
     }
   });
 });

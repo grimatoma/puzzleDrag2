@@ -71,8 +71,10 @@ export { flagsOverridesSchema } from "./flags.js";
 export { bossOverrideSchema, bossesOverridesSchema } from "./boss.js";
 
 export {
+  achievementEntrySchema,
   achievementOverrideSchema,
   achievementsOverridesSchema,
+  type AchievementEntry,
 } from "./achievement.js";
 
 export { dailyRewardsOverridesSchema } from "./dailyReward.js";

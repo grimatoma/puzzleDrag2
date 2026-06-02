@@ -857,6 +857,7 @@ export function applyAchievementOverrides(achievements: unknown, overrides: Over
     if (patch.threshold !== undefined) a.threshold = patch.threshold;
     if (patch.target !== undefined) a.target = patch.target;
     if (patch.rewardCoins !== undefined) a.reward = { ...asRecord(a.reward), coins: patch.rewardCoins };
+    if (patch.look?.icon != null) a.look = { ...asRecord(a.look), icon: patch.look.icon };
   }
 }
 

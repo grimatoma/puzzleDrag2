@@ -170,7 +170,7 @@ export function getUsedIconKeys(): Set<string> {
   // Wired icon families (Buckets 1+2): achievement badges carry their key in
   // the `icon` field; the rest are referenced as JSX literals / template
   // lookups in the cards listed in WIRED_ICON_USAGE below.
-  for (const a of ACHIEVEMENTS || []) add((a as { icon?: string }).icon);
+  for (const a of ACHIEVEMENTS || []) add((a as { look?: { icon?: string } }).look?.icon);
   for (const key of WIRED_ICON_USAGE) add(key);
 
   return used;

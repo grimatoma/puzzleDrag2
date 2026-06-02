@@ -85,7 +85,7 @@ describe("new wiki concepts — getEntity", () => {
     const e = getEntity("achievements", "first_steps");
     expect(e).not.toBeNull();
     expect(e!.id).toBe("first_steps");
-    expect(e!.icon).toBe("ach_first_steps");
+    expect((e!.look as { icon?: string }).icon).toBe("ach_first_steps");
     expect(getEntity("achievements", "nope")).toBeNull();
   });
 

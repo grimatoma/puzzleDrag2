@@ -242,7 +242,7 @@ function achievementEntries() {
   return ACHIEVEMENTS.map((a) => ({
     key: a.id,
     name: a.name,
-    iconKey: a.icon,
+    iconKey: a.look.icon,
   })).sort(byName);
 }
 
