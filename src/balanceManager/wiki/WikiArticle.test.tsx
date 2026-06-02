@@ -285,3 +285,31 @@ describe("WikiArticle — board-kind article (mine)", () => {
     expect(screen.getByText(/Seasons & turns/i)).toBeTruthy();
   });
 });
+
+// ─── Simple relation links + enriched ability body ───────────────────────────
+
+describe("WikiArticle — powder_store abilities", () => {
+  it("renders enriched ability cards in the body section", () => {
+    const { container } = renderArticle("buildings", "powder_store");
+    expect(document.body.textContent).toContain("Building abilities");
+    expect(container.querySelector(".wiki-ability-instance")).not.toBeNull();
+    expect(document.body.textContent).toMatch(/bomb/i);
+  });
+
+  it("does not duplicate abilities in Related when the body section exists", () => {
+    const { container } = renderArticle("buildings", "powder_store");
+    expect(container.querySelector("#host-abilities")).not.toBeNull();
+    expect(container.querySelector("#relations")).toBeNull();
+  });
+
+  it("recipe Related footer uses plain links; crafting flow lives in the body", () => {
+    const { container } = renderArticle("recipes", "rec_bread");
+    const relations = container.querySelector("#relations");
+    expect(relations).not.toBeNull();
+    expect(relations!.querySelector(".wiki-relation-link")).not.toBeNull();
+    expect(relations!.querySelector(".wiki-concept-ref-card")).toBeNull();
+    expect(container.querySelector("#recipe-relations")).not.toBeNull();
+    expect(container.querySelector(".wiki-recipe-relation-flow")).not.toBeNull();
+  });
+});
+
