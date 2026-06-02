@@ -10,6 +10,7 @@
 
 import { relationsFor, type RelationGroup } from "./relations.js";
 import { statusForEntity } from "./status.js";
+import { getEntity } from "./conceptEntities.js";
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -35,6 +36,23 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
+/**
+ * Resolve the station (building) name for the first "Crafted by" recipe link.
+ *
+ * "Crafted by" links point to recipes, not buildings. This helper walks:
+ *   recipe key → recipe.station → building entity → building display name.
+ * Returns null when any step in the chain fails.
+ */
+function stationOf(g: RelationGroup[]): string | null {
+  const craftedByKey = g.find((x) => x.title === "Crafted by")?.links[0]?.key ?? null;
+  if (!craftedByKey) return null;
+  const recipe = getEntity("recipes", craftedByKey);
+  const station = typeof recipe?.station === "string" ? recipe.station : null;
+  if (!station) return null;
+  const building = getEntity("buildings", station);
+  return building ? String(building.label ?? building.name ?? building.id ?? station) : station;
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -55,18 +73,18 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
 
   switch (conceptId) {
     case "resources": {
-      const by = labelIn(g, "Crafted by");
+      const station = stationOf(g);
       const u = count(g, "Used in recipes");
       s = `${name} is a resource`;
-      if (by) s += ` crafted at the ${by}`;
+      if (station) s += ` crafted at the ${station}`;
       if (u > 0) s += `, used in ${plural(u, "recipe")}`;
       s += ".";
       break;
     }
 
     case "tools": {
-      const u = count(g, "Used in recipes");
-      s = `${name} is a tool${u > 0 ? `, crafted via ${plural(u, "recipe")}` : ""}.`;
+      const station = stationOf(g);
+      s = `${name} is a tool${station ? ` crafted at the ${station}` : ""}.`;
       break;
     }
 
@@ -103,8 +121,11 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
     case "npcs": {
       const lo = count(g, "Loves");
       const li = count(g, "Likes");
+      const parts: string[] = [];
+      if (lo > 0) parts.push(`loves ${lo} gift${lo === 1 ? "" : "s"}`);
+      if (li > 0) parts.push(`likes ${li} gift${li === 1 ? "" : "s"}`);
       s = `${name} is a townsperson`;
-      if (lo || li) s += ` who loves ${lo} and likes ${li} gift${li === 1 ? "" : "s"}`;
+      if (parts.length) s += ` who ${parts.join(" and ")}`;
       s += ".";
       break;
     }

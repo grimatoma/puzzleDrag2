@@ -30,9 +30,7 @@
 import { describe, it, expect } from "vitest";
 import { ledeFor } from "./lede.js";
 import { getEntity } from "./conceptEntities.js";
-import { canonicalRecipeEntries } from "../recipeCatalog.js";
 import { CONCEPTS } from "./concepts.js";
-import { conceptForKey } from "./conceptEntities.js";
 
 // ─── Real key resolution (mirrors approach in relations.test.ts) ──────────────
 
@@ -277,10 +275,10 @@ describe("ledeFor — status suffix", () => {
     expect(lede).not.toMatch(/\(WIRED\)/);
   });
 
-  it("appends (WIRED) for mine hazards (entity-level override)", () => {
+  it("does not append a status suffix for a WIRED entity-level override (mine hazards)", () => {
     // cave_in has entity-level WIRED override even though concept is PARTIAL
     const lede = ledeFor("hazards", "cave_in", realHazardEntity);
-    // WIRED → no suffix
+    // WIRED → no suffix at all
     expect(lede).not.toMatch(/\(WIRED\)/);
     expect(lede).not.toMatch(/\(PARTIAL\)/);
   });
