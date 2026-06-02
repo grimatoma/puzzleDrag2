@@ -1,37 +1,42 @@
 /**
- * GameScreenEmbed.tsx — Lazy iframe that boots the real game at a named
- * visual-testing scenario.
+ * GameScreenEmbed.tsx — static screenshot of a named visual-testing scenario.
  *
- * The embed is the actual interactive game running inside an iframe, not a
- * screenshot. It uses the same visual-testing bridge as `?visual=<id>` in the
- * dev server and Playwright visual tests. The `visualPanel=0` flag suppresses
- * the scenario-picker overlay so the embed looks clean.
+ * Wiki content pages place a `<div data-game-visual="<scenario-id>">`; the
+ * renderer swaps it for this component. Historically this booted the real game
+ * in an `<iframe>`, which surfaced a full, interactive game instance mid-article
+ * (and broke entirely if the visual-testing bridge wasn't present in the build).
+ * It now shows a committed screenshot instead — an illustration, not a live game.
+ *
+ * Screenshots live in `assets/game-screens/` and are mapped by id in
+ * `gameScreenImages.ts`; regenerate them with `tools/capture-wiki-screens.mjs`.
  */
 
 import React from "react";
 import { COLORS } from "../shared.jsx";
+import { gameScreenImageFor } from "./gameScreenImages.js";
 
 export interface GameScreenEmbedProps {
   /** A scenario id from `src/visualTesting/matrix.js`, e.g. "board-farm-idle". */
   scenarioId: string;
-  /** Height of the iframe in pixels. Defaults to 360. */
-  height?: number;
+  /** Optional alt text; defaults to a description of the scenario. */
+  alt?: string;
 }
 
 /**
- * Renders an iframe pointed at the game entry with `?visual=<scenarioId>`.
- * Loading is deferred (`loading="lazy"`) so it doesn't block wiki page paint.
+ * Renders a static screenshot for the scenario. If no screenshot is bundled for
+ * the id, renders nothing rather than a broken image or a live game instance.
  */
-export function GameScreenEmbed({ scenarioId, height = 360 }: GameScreenEmbedProps) {
-  const src = `${import.meta.env.BASE_URL}?visual=${encodeURIComponent(scenarioId)}&visualPanel=0`;
+export function GameScreenEmbed({ scenarioId, alt }: GameScreenEmbedProps) {
+  const src = gameScreenImageFor(scenarioId);
+  if (!src) return null;
   return (
-    <iframe
+    <img
       src={src}
-      title={`Game screen: ${scenarioId}`}
+      alt={alt ?? `Game screen: ${scenarioId}`}
       loading="lazy"
       style={{
         width: "100%",
-        height,
+        height: "auto",
         border: `2px solid ${COLORS.border}`,
         borderRadius: 8,
         background: COLORS.parchmentDeep,

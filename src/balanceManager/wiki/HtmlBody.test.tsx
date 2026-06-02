@@ -129,16 +129,17 @@ describe("HtmlBody — wikilink text expansion", () => {
   });
 });
 
-// ─── data-game-visual → GameScreenEmbed (iframe) ─────────────────────────────
+// ─── data-game-visual → GameScreenEmbed (static screenshot) ──────────────────
 
 describe("HtmlBody — data-game-visual embed", () => {
-  it("renders an iframe for a data-game-visual div", () => {
+  it("renders a static image (not an iframe) for a data-game-visual div", () => {
     const { container } = renderHtml(
       '<div data-game-visual="board-farm-idle">fallback text</div>',
     );
-    const iframe = container.querySelector("iframe");
-    expect(iframe).not.toBeNull();
-    expect(iframe!.src).toContain("visual=board-farm-idle");
+    expect(container.querySelector("iframe")).toBeNull();
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute("alt")).toContain("board-farm-idle");
   });
 
   it("does NOT render the children of data-game-visual (replaced by embed)", () => {
@@ -146,12 +147,21 @@ describe("HtmlBody — data-game-visual embed", () => {
     expect(screen.queryByText("fallback text")).toBeNull();
   });
 
-  it("iframe has lazy loading attribute", () => {
+  it("image has lazy loading attribute", () => {
     const { container } = renderHtml(
       '<div data-game-visual="board-farm-idle"></div>',
     );
-    const iframe = container.querySelector("iframe");
-    expect(iframe!.getAttribute("loading")).toBe("lazy");
+    const img = container.querySelector("img");
+    expect(img!.getAttribute("loading")).toBe("lazy");
+  });
+
+  it("renders nothing for a data-game-visual id with no bundled screenshot", () => {
+    const { container } = renderHtml(
+      '<div data-game-visual="no-such-scenario">fallback text</div>',
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.queryByText("fallback text")).toBeNull();
   });
 });
 

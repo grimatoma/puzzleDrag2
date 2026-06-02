@@ -1,12 +1,11 @@
 const domDiff = { maxDiffPixelRatio: 0.02, threshold: 0.2 };
 
-// Routes target the Phase-5 wiki shell. The set deliberately avoids pages whose
-// infobox/hero mounts a live `?visual=` game embed (Overview/Progression/Story
-// narrative pages and most entity articles) — the embedded game boots
-// asynchronously and would make the screenshot nondeterministic. These four are
-// iframe-free: a narrative page (Decisions), two category pages (field
-// reference + entity grid), and an entity article whose concept has no game
-// scenario (abilities → procedural icon, no embed).
+// Routes target the Phase-5 wiki shell. `data-game-visual` placeholders now
+// render committed static screenshots (see wiki/GameScreenEmbed.tsx) rather than
+// a live `?visual=` game iframe, so embed pages are deterministic again. This
+// set still favours iframe-free pages to keep the goldens focused: a narrative
+// page (Decisions), two category pages (field reference + entity grid), and an
+// entity article whose concept has no game scenario (abilities → procedural icon).
 export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-narrative-page', hash: '#/page/decisions', diff: domDiff },
   { id: 'balance-recipes-category', hash: '#/recipes', diff: domDiff },
