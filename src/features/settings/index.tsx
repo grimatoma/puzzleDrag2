@@ -124,10 +124,12 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
 
         <a
           href={`${import.meta.env.BASE_URL}b/`}
+          target="_blank"
+          rel="noopener"
           className="w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 flex items-center justify-center no-underline"
           style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
         >
-          🛠 Dev Panel
+          📖 Game Wiki
         </a>
       </div>
     </div>
