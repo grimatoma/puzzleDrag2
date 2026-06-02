@@ -15,7 +15,7 @@ describe("new harbor + smokehouse buildings", () => {
       const b = BUILDINGS.find((x) => x.id === id);
       expect(b.cost.coins).toBeGreaterThan(0);
       expect(b.lv).toBeGreaterThanOrEqual(1);
-      expect(typeof b.color).toBe("string");
+      expect(typeof b.look.color).toBe("string");
       expect(typeof b.desc).toBe("string");
       expect(b.desc.length).toBeGreaterThan(10);
     }

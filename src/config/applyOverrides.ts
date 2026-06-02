@@ -163,7 +163,7 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
 }
 
 /** Apply patches to BUILDINGS entries (matched by id). Fields: name, desc,
- *  cost, lv, color, abilities. */
+ *  cost, lv, look.color, abilities. */
 export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrides: Overrides): void {
   const parsed = parseOptionalOverrideSection("buildings", buildingsOverridesSchema, overrides);
   if (!parsed) return;
@@ -177,7 +177,7 @@ export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrid
     if (patch.desc !== undefined) b.desc = patch.desc;
     if (patch.cost !== undefined) b.cost = { ...patch.cost };
     if (patch.lv !== undefined) b.lv = patch.lv;
-    if (patch.color !== undefined) b.color = patch.color;
+    if (patch.look?.color != null) b.look = { ...(b.look ?? {}), color: patch.look.color };
     if (patch.abilities !== undefined) b.abilities = [...patch.abilities];
   }
 }

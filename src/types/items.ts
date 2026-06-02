@@ -106,7 +106,7 @@ export interface Building {
   y: number;
   w: number;
   h: number;
-  color: string;
+  look: { color: string };
   built?: boolean;
   biome?: string;
   requires?: string;

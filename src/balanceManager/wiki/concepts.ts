@@ -89,7 +89,7 @@ function buildingEntries() {
     key: b.id,
     name: b.name,
     iconKey: BUILDING_ICON_KEYS[b.id],
-    color: b.color,
+    color: b.look?.color,
   })).sort(byName);
 }
 
