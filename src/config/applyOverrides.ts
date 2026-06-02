@@ -689,7 +689,13 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
 
   // 1 — author-created beats (always side beats).
   if (Array.isArray(o.newBeats)) {
-    const taken = new Set([...story, ...side].map((b) => b && b.id).filter((x): x is string => typeof x === "string"));
+    const taken = new Set<string>();
+    for (const b of story) {
+      if (b && typeof b.id === "string") taken.add(b.id);
+    }
+    for (const b of side) {
+      if (b && typeof b.id === "string") taken.add(b.id);
+    }
     for (const rawRaw of o.newBeats as unknown[]) {
       if (!rawRaw || typeof rawRaw !== "object") continue;
       const raw = rawRaw as AnyRecord;
@@ -798,7 +804,10 @@ export function applyFlagOverrides(flags: unknown, overrides: Overrides): void {
     }
   }
   if (o.new) {
-    const taken = new Set(flagList.map((f) => f && f.id).filter((x): x is string => typeof x === "string"));
+    const taken = new Set<string>();
+    for (const f of flagList) {
+      if (f && typeof f.id === "string") taken.add(f.id);
+    }
     for (const raw of o.new) {
       const id = raw.id.trim();
       if (!id || taken.has(id)) continue;
