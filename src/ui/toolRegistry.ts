@@ -6,11 +6,37 @@ import { ITEMS, getItem } from "../constants.js";
 import type { ToolPowerDefinition } from "../constants.js";
 import { isTapTargetPower } from "../config/toolPowers.js";
 
-const FIELD_TOOLS = new Set(["clear", "basic", "rare", "shuffle", "bomb"]);
+const DEFAULT_PIN_KEYS = ["clear", "basic", "rare", "shuffle", "bomb"];
+const FARM_TOOL_KEYS = new Set([
+  "clear", "basic", "rare", "rake", "axe", "sickle", "fertilizer", "cat",
+  "bird_cage", "scythe_full", "rifle", "hound", "hoe", "bird_feed", "sapling",
+  "trimmer", "plough", "fruit_picker", "herders_crook", "milk_churn", "saddle",
+  "bee", "terrier", "magic_fertilizer", "golden_apple", "golden_carrot",
+  "golden_idol", "golden_sheep",
+]);
+const MINE_TOOL_KEYS = new Set([
+  "stone_hammer", "iron_pick", "auger", "blast_charge", "water_pump", "explosives",
+  "drill", "coal_hammer", "gold_pick", "magnet", "coal_transmuter",
+  "philosophers_stone", "miners_hat",
+]);
+const FISH_TOOL_KEYS = new Set<string>([]);
+export type ToolBoardKind = "all" | "farm" | "mine" | "fish";
+
+const TOOL_BOARD_KIND_ORDER: ToolBoardKind[] = ["all", "farm", "mine", "fish"];
+
+export const TOOL_BOARD_KIND_LABELS: Record<ToolBoardKind, string> = {
+  all: "All boards",
+  farm: "Farm board",
+  mine: "Mine board",
+  fish: "Harbor board",
+};
 
 export interface ToolEntry {
   key: string;
-  category: "field" | "workshop";
+  /** Board kind this tool is most relevant to; `all` means board-agnostic. */
+  boardKind: ToolBoardKind;
+  /** Human-readable group label used by grouped tool strips. */
+  category: string;
   iconKey: string;
   name: string;
   armed: "instant" | "passive" | "tap";
@@ -18,10 +44,11 @@ export interface ToolEntry {
   count?: number;
 }
 
-function toolCategory(key: string): "field" | "workshop" {
-  if (FIELD_TOOLS.has(key)) return "field";
-  if (getItem(key)?.kind === "tool") return "workshop";
-  return "workshop";
+function toolBoardKind(key: string): ToolBoardKind {
+  if (FARM_TOOL_KEYS.has(key)) return "farm";
+  if (MINE_TOOL_KEYS.has(key)) return "mine";
+  if (FISH_TOOL_KEYS.has(key)) return "fish";
+  return "all";
 }
 
 function toolArmed(power: ToolPowerDefinition | undefined): "instant" | "passive" | "tap" {
@@ -34,9 +61,11 @@ function entryFromItem(key: string): ToolEntry | null {
   const item = getItem(key);
   if (!item || item.kind !== "tool") return null;
   const power = item.power;
+  const boardKind = toolBoardKind(key);
   return {
     key,
-    category: toolCategory(key),
+    boardKind,
+    category: TOOL_BOARD_KIND_LABELS[boardKind],
     iconKey: item.look?.iconKey ?? key,
     name: item.label ?? key,
     armed: toolArmed(power),
@@ -46,14 +75,17 @@ function entryFromItem(key: string): ToolEntry | null {
 
 export const TOOL_CATALOG: ToolEntry[] = Object.keys(ITEMS)
   .map(entryFromItem)
-  .filter((t): t is ToolEntry => t !== null);
+  .filter((t): t is ToolEntry => t !== null)
+  .sort((a, b) => TOOL_BOARD_KIND_ORDER.indexOf(a.boardKind) - TOOL_BOARD_KIND_ORDER.indexOf(b.boardKind));
 
 export const TOOL_BY_KEY: Record<string, ToolEntry> = Object.fromEntries(TOOL_CATALOG.map((t) => [t.key, t]));
 
-export const TOOL_CATEGORIES = [
-  { key: "field", label: "Field" },
-  { key: "workshop", label: "Workshop" },
-];
+export const TOOL_CATEGORIES = (Object.keys(TOOL_BOARD_KIND_LABELS) as ToolBoardKind[]).map((key) => ({
+  key,
+  label: TOOL_BOARD_KIND_LABELS[key],
+}));
+
+export const DEFAULT_TOOL_PINS = DEFAULT_PIN_KEYS.filter((key) => !!TOOL_BY_KEY[key]);
 
 export function isTapTargetTool(key: string): boolean {
   const power = getItem(key)?.power;

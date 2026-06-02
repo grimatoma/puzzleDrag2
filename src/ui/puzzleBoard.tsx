@@ -22,7 +22,7 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import _LegacyIconRaw from "./Icon.jsx";
 const LegacyIcon = _LegacyIconRaw as unknown as React.ComponentType<{ iconKey: string; size?: number; className?: string; title?: string }>;
 import { BIOMES } from "../constants.js";
-import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
+import { TOOL_BY_KEY, isTapTargetTool, visibleTools, DEFAULT_TOOL_PINS } from "./toolRegistry.js";
 import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
@@ -904,6 +904,7 @@ function buildVisibleToolList(state: GameState): RuntimeTool[] {
   const tools = (state.tools ?? {}) as Record<string, number>;
   return visibleTools(tools).map((def): RuntimeTool => ({
     key: def.key,
+    boardKind: def.boardKind,
     category: def.category,
     iconKey: def.iconKey,
     name: def.name,
@@ -992,10 +993,7 @@ const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
 // Absolute ceiling. The actual cap is computed dynamically from the hotbar
 // container width so adding more tools never forces horizontal scrolling.
 export const MAX_PINS = 8;
-const DEFAULT_PINS = TOOL_CATALOG
-  .filter((t) => t.category === "field")
-  .slice(0, 5)
-  .map((t) => t.key);
+const DEFAULT_PINS = DEFAULT_TOOL_PINS;
 
 function readStoredPins() {
   try {
