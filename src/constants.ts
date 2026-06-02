@@ -736,7 +736,7 @@ export const NPCS = {
   mira: {
     name: "Mira",
     role: "Baker",
-    color: "#d6612a",
+    look: { color: "#d6612a" },
     lines: [
       "Sundown's coming — bring me {n} {r} for the workers' supper.",
       "I've kneaded all morning. Could you spare {n} {r}?",
@@ -746,7 +746,7 @@ export const NPCS = {
   tomas: {
     name: "Old Tomas",
     role: "Beekeeper",
-    color: "#c8923a",
+    look: { color: "#c8923a" },
     lines: [
       "The hives need bedding — {n} {r} should do.",
       "Slow and steady. I'll trade for {n} {r} when you can.",
@@ -755,7 +755,7 @@ export const NPCS = {
   bram: {
     name: "Bram",
     role: "Smith",
-    color: "#5a6973",
+    look: { color: "#5a6973" },
     lines: [
       "Forge's hungry. {n} {r}, and quick.",
       "Don't bother me unless you've {n} {r}.",
@@ -764,7 +764,7 @@ export const NPCS = {
   liss: {
     name: "Sister Liss",
     role: "Physician",
-    color: "#8d3a5c",
+    look: { color: "#8d3a5c" },
     lines: [
       "For poultices: {n} {r}. The Hartson child is feverish.",
       "{n} {r} for winter tinctures, when convenient.",
@@ -773,7 +773,7 @@ export const NPCS = {
   wren: {
     name: "Wren",
     role: "Scout",
-    color: "#4f6b3a",
+    look: { color: "#4f6b3a" },
     lines: [
       "The road south needs {n} {r}. I'll mark it on your map.",
       "Trade route opens with {n} {r} — fair price.",

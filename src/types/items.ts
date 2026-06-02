@@ -118,7 +118,7 @@ export interface Building {
 export interface NPC {
   name: string;
   role: string;
-  color: string;
+  look: { color: string };
   lines: string[];
 }
 

@@ -71,7 +71,7 @@ const STEPS: StepDef[] = [
   },
 ];
 
-interface NpcDef { color: string; name: string }
+interface NpcDef { look?: { color?: string }; name: string }
 function NpcAvatar({ npcKey, size = 36 }: { npcKey: string; size?: number }) {
   const npcs = NPCS as Record<string, NpcDef>;
   const npc: NpcDef = npcs[npcKey] || npcs.wren;
@@ -81,7 +81,7 @@ function NpcAvatar({ npcKey, size = 36 }: { npcKey: string; size?: number }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: npc.color,
+        background: npc.look?.color,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

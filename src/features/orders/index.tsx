@@ -29,7 +29,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
           const have = inventoryQty(inventory, o.key);
           const needed = o.need ?? o.amount;
           const done = have >= needed;
-          const npc = (NPCS as Record<string, { name: string; color: string } | undefined>)[o.npc];
+          const npc = (NPCS as Record<string, { name: string; look?: { color?: string } } | undefined>)[o.npc];
           if (!npc) return null;
           const itemDef = getItem(o.key);
           const isCrafted = itemDef?.kind === "resource" && !itemDef?.biome;
@@ -54,7 +54,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
               <div className="flex items-center gap-2.5">
                 <div
                   className="w-9 h-9 rounded-full grid place-items-center text-white font-bold text-[14px] flex-shrink-0"
-                  style={{ backgroundColor: npc.color, border: "2px solid #fff" }}
+                  style={{ backgroundColor: npc.look?.color, border: "2px solid #fff" }}
                 >
                   {npc.name[0]}
                 </div>

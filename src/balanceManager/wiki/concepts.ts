@@ -100,7 +100,7 @@ function npcEntries() {
       key: id,
       name: npc.name ?? id,
       iconKey: `char_${id}`,
-      color: npc.color,
+      color: npc.look?.color,
     });
   }
   out.sort(byName);
