@@ -40,6 +40,8 @@ export interface FieldDoc {
   default?: unknown;
   /** .describe() text (checked on outer schema then inner after unwrapping). */
   description?: string;
+  /** Present when this field is itself a Zod object — its sub-fields, one level deep. */
+  children?: FieldDoc[];
 }
 
 export interface SchemaDoc {
@@ -82,6 +84,13 @@ export function describeSchema(schema: unknown): SchemaDoc {
     };
     if (hasDefault) {
       entry.default = defaultValue;
+    }
+    if (isZodObject(inner)) {
+      try {
+        entry.children = describeSchema(inner).fields;
+      } catch {
+        // leave children undefined on introspection failure
+      }
     }
     return entry;
   });
