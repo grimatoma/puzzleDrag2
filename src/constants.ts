@@ -1171,7 +1171,7 @@ export const RAT_CLEAR_REWARD_PER = 5;
 // The `default` palette reads back from BIOMES + SEASONS to guarantee zero
 // visual drift versus the hex baseline.
 const _defaultTiles = Object.fromEntries(
-  [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources].map((r) => [r.key, r.color]),
+  [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources].map((r) => [r.key, r.look?.color]),
 );
 const _defaultSeasons = Object.fromEntries(
   SEASONS.map((s) => [s.name, { bg: s.bg, fill: s.fill, accent: s.accent }]),
