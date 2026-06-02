@@ -36,19 +36,57 @@ import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
 
-// ─── Icon helper ─────────────────────────────────────────────────────────────
+// ─── At-a-glance visual ────────────────────────────────────────────────────────
 
 /**
- * Return the icon key for a cross-link target, or null if the concept has no
- * per-entity icons (recipes, buildings, zones, workers, etc. do not).
+ * Render a lead-in visual summary for concepts whose key attributes are
+ * icon+count costs or a recipe flow. Returns null when the concept has no
+ * at-a-glance visual (so the caller can skip the whole section + heading).
  *
- * Only concepts where every entity has a 1-to-1 icon (item id → icon key)
- * are included. Boss icons follow the "boss_<key>" convention.
+ * Zones intentionally render their town map in the Infobox (via EntityVisual),
+ * so here we only surface the entry cost — not the map.
  */
-function iconKeyForLink(conceptId: string, key: string): string | null {
-  if (conceptId === "tiles" || conceptId === "resources" || conceptId === "tools") return key;
-  if (conceptId === "bosses") return `boss_${key}`;
+function renderAtAGlance(
+  conceptId: string,
+  entity: Record<string, unknown> | null,
+): { heading: string; node: React.ReactNode } | null {
+  if (entity == null) return null;
+
+  if (conceptId === "recipes") {
+    return {
+      heading: "Recipe",
+      node: <RecipeIO recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }} />,
+    };
+  }
+
+  if (conceptId === "buildings") {
+    const cost = entity.cost as Record<string, number> | undefined;
+    const node = <AmountChips amounts={cost} />;
+    if (node == null || cost == null || Object.keys(cost).length === 0) return null;
+    return { heading: "Cost to build", node };
+  }
+
+  if (conceptId === "zones") {
+    const entryCost = entity.entryCost as Record<string, number> | undefined;
+    if (entryCost == null || Object.keys(entryCost).length === 0) return null;
+    return { heading: "Entry cost", node: <AmountChips amounts={entryCost} /> };
+  }
+
+  if (conceptId === "workers") {
+    const hireCost = entity.hireCost as
+      | { coins?: number; resources?: Record<string, number> }
+      | undefined;
+    if (hireCost == null) return null;
+    const amounts: Record<string, number> = { ...(hireCost.resources ?? {}) };
+    if (typeof hireCost.coins === "number" && hireCost.coins > 0) {
+      amounts.coins = hireCost.coins;
+    }
+    if (Object.keys(amounts).length === 0) return null;
+    return { heading: "Hire cost", node: <AmountChips amounts={amounts} /> };
+  }
+
   return null;
 }
 
@@ -103,9 +141,13 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // Schema field names for AdditionalFieldsSection
   const schemaFieldNames = new Set(schemaDoc?.fields.map((f) => f.field) ?? []);
 
+  // At-a-glance visual summary (recipes/buildings/zones/workers) — null otherwise
+  const atAGlance = renderAtAGlance(conceptId, entity);
+
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
     ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
@@ -170,6 +212,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             {ledeFor(conceptId, entityKey, entity)}
           </p>
 
+          {/* At-a-glance visual summary (recipes/buildings/zones/workers) */}
+          {atAGlance != null && (
+            <section id="at-a-glance">
+              <div className="wiki-section-heading mb-2">{atAGlance.heading}</div>
+              {atAGlance.node}
+            </section>
+          )}
+
           {/* Authored HTML body (optional) */}
           {body != null && (
             <section id="about">
@@ -185,30 +235,83 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               Properties
             </div>
 
-            {schemaDoc != null && (
-              <>
-                <FieldsTable fields={schemaDoc.fields} entity={entity} />
-                {entity != null && (
-                  <AdditionalFieldsSection
-                    entity={entity}
-                    schemaFieldNames={schemaFieldNames}
-                  />
-                )}
-              </>
-            )}
-
-            {schemaDoc == null && entity != null && (
-              <LiveConfigFallback entity={entity} />
-            )}
-
-            {schemaDoc == null && entity == null && (
-              <div
-                className="text-[12px] italic py-4 text-center"
-                style={{ color: COLORS.inkSubtle }}
+            {/* Raw schema table demoted to a collapsed developer reference */}
+            <details className="wiki-schema-details" style={{ borderRadius: 8, overflow: "hidden" }}>
+              {/* Self-contained chevron rotation — no shared CSS dependency */}
+              <style>{".wiki-schema-details[open] .wiki-details-chevron{transform:rotate(90deg)}"}</style>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  listStyle: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  background: COLORS.parchmentDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: COLORS.ink,
+                  userSelect: "none",
+                }}
               >
-                No data for this entry.
+                {/* Chevron indicator */}
+                <span
+                  aria-hidden
+                  className="wiki-details-chevron"
+                  style={{
+                    display: "inline-block",
+                    width: 12,
+                    height: 12,
+                    fontSize: 10,
+                    lineHeight: "12px",
+                    textAlign: "center",
+                    transition: "transform 150ms ease",
+                    color: COLORS.inkSubtle,
+                    flexShrink: 0,
+                  }}
+                >
+                  ▶
+                </span>
+                Schema reference (developer)
+              </summary>
+
+              <div
+                style={{
+                  padding: 12,
+                  background: COLORS.parchment,
+                  border: `1px solid ${COLORS.border}`,
+                  borderTop: "none",
+                  borderRadius: "0 0 8px 8px",
+                }}
+              >
+                {schemaDoc != null && (
+                  <>
+                    <FieldsTable fields={schemaDoc.fields} entity={entity} />
+                    {entity != null && (
+                      <AdditionalFieldsSection
+                        entity={entity}
+                        schemaFieldNames={schemaFieldNames}
+                      />
+                    )}
+                  </>
+                )}
+
+                {schemaDoc == null && entity != null && (
+                  <LiveConfigFallback entity={entity} />
+                )}
+
+                {schemaDoc == null && entity == null && (
+                  <div
+                    className="text-[12px] italic py-4 text-center"
+                    style={{ color: COLORS.inkSubtle }}
+                  >
+                    No data for this entry.
+                  </div>
+                )}
               </div>
-            )}
+            </details>
           </section>
 
           {/* Forward relations */}
@@ -225,7 +328,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {group.links.map((link) => {
-                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        const ik = entityIconKey(link.conceptId, link.key, null);
                         return (
                           <RefButton
                             key={`${link.conceptId}:${link.key}`}
@@ -268,7 +371,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {group.links.map((link) => {
-                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        const ik = entityIconKey(link.conceptId, link.key, null);
                         return (
                           <RefButton
                             key={`${link.conceptId}:${link.key}`}

@@ -75,6 +75,28 @@ describe("FieldsTable — showValue=true (default) with entity", () => {
   });
 });
 
+describe("FieldsTable — chip-aware values for cost-like fields", () => {
+  const CHIP_FIELDS: FieldDoc[] = [
+    { field: "cost", type: "object", optional: false, description: "build cost" },
+  ];
+
+  it("renders AmountChips (icon+count+label) for a flat Record<string, number> cost field", () => {
+    render(<FieldsTable fields={CHIP_FIELDS} entity={{ cost: { wood: 3, coins: 50 } }} />);
+    const body = document.body.textContent ?? "";
+    // Counts and labels are surfaced via chips rather than raw JSON.
+    expect(body).toContain("3");
+    expect(body).toContain("50");
+    // Should NOT fall back to the JSON-y serialization for these fields.
+    expect(body).not.toContain('{"wood":3,"coins":50}');
+  });
+
+  it("falls back to JSON for non-numeric object values", () => {
+    render(<FieldsTable fields={CHIP_FIELDS} entity={{ cost: { wood: "lots" } }} />);
+    const body = document.body.textContent ?? "";
+    expect(body).toContain('{"wood":"lots"}');
+  });
+});
+
 describe("FieldsTable — showValue omitted (defaults true), entity=null (default)", () => {
   it("renders a Value column header even when entity is null", () => {
     render(<FieldsTable fields={FIELDS} />);

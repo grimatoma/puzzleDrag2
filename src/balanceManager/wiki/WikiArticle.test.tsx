@@ -70,6 +70,31 @@ describe("WikiArticle — recipe article (rec_bread)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toContain("Overview");
   });
+
+  it("renders an 'At a glance' section with the Recipe heading (RecipeIO)", () => {
+    renderArticle("recipes", "rec_bread");
+    const body = document.body.textContent ?? "";
+    // The at-a-glance section + its TOC entry render for recipes.
+    expect(body).toContain("At a glance");
+    expect(body).toContain("Recipe");
+  });
+
+  it("demotes the schema table behind a 'Schema reference (developer)' details summary", () => {
+    const { container } = renderArticle("recipes", "rec_bread");
+    const summary = container.querySelector("details > summary");
+    expect(summary).not.toBeNull();
+    expect(summary!.textContent).toContain("Schema reference (developer)");
+  });
+});
+
+// ─── At-a-glance gating: buildings render a cost; non-cost concepts skip ──────
+
+describe("WikiArticle — at-a-glance cost chips (bakery)", () => {
+  it("renders a 'Cost to build' heading for a building with a cost", () => {
+    renderArticle("buildings", "bakery");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Cost to build");
+  });
 });
 
 // ─── Test 2: Backlinks present ────────────────────────────────────────────────
