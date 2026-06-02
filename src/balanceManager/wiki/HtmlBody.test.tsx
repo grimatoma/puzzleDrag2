@@ -79,15 +79,16 @@ describe("HtmlBody — data-wiki anchor", () => {
     expect(btn).toBeDefined();
   });
 
-  it("clicking the data-wiki button calls navigate with wiki tab and correct focus", () => {
+  it("clicking the data-wiki button calls navigate with the concept tab and correct focus", () => {
     const navigate = vi.fn();
     renderHtml('<a data-wiki="buildings:bakery">Bakery</a>', navigate);
 
     const btn = screen.getByRole("button", { name: /Bakery/i });
     fireEvent.click(btn);
 
+    // Phase-5 contract (wikiNavTarget): each concept routes to its OWN tab.
     expect(navigate).toHaveBeenCalledWith({
-      tab: "wiki",
+      tab: "buildings",
       focus: "buildings:bakery",
     });
   });

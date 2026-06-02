@@ -2,14 +2,33 @@ import { describe, it, expect } from "vitest";
 import {
   buildCommandIndex, scoreEntry, searchCommandIndex,
 } from "../balanceManager/commandPalette.js";
+import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
+
+const CONCEPT_IDS = new Set(CONCEPTS.map((c) => c.id));
 
 describe("buildCommandIndex", () => {
-  it("returns a non-empty index covering all major catalogs", () => {
+  it("returns a non-empty index covering the wiki catalogs", () => {
     const idx = buildCommandIndex();
     expect(idx.length).toBeGreaterThan(0);
     const kinds = new Set(idx.map((e) => e.kind));
-    for (const k of ["tile", "item", "recipe", "building", "biome", "zone", "npc", "worker", "boss", "achievement", "beat", "flag"]) {
+    // Items are split per kind (tile/resource/tool); the rest are concept kinds.
+    for (const k of ["tile", "resource", "tool", "recipe", "building", "zone", "npc", "worker", "boss"]) {
       expect(kinds.has(k)).toBe(true);
+    }
+  });
+
+  it("emits ONLY tabs that are valid wiki concept ids", () => {
+    const idx = buildCommandIndex();
+    for (const e of idx) {
+      expect(CONCEPT_IDS.has(e.tab)).toBe(true);
+    }
+  });
+
+  it("never emits a non-concept tab (no items/biomes/keepers/story/flags tabs)", () => {
+    const idx = buildCommandIndex();
+    const tabs = new Set(idx.map((e) => e.tab));
+    for (const bogus of ["items", "biomes", "keepers", "achievements", "story", "flags"]) {
+      expect(tabs.has(bogus)).toBe(false);
     }
   });
 
@@ -23,32 +42,67 @@ describe("buildCommandIndex", () => {
     }
   });
 
-  it("routes story beats to the story tab and flags to the flags tab", () => {
+  it("routes items to their per-kind concept tab (resource → resources, etc.)", () => {
+    // Resolve a real resource/tile/tool key from the live concept maps so the
+    // assertion tracks the catalog rather than a hardcoded id.
+    const resourceKey = CONCEPTS.find((c) => c.id === "resources")!.getEntries()[0].key;
+    const tileKey = CONCEPTS.find((c) => c.id === "tiles")!.getEntries()[0].key;
+    const toolKey = CONCEPTS.find((c) => c.id === "tools")!.getEntries()[0].key;
+
     const idx = buildCommandIndex();
-    const beat = idx.find((e) => e.kind === "beat");
-    const flag = idx.find((e) => e.kind === "flag");
-    expect(beat.tab).toBe("story");
-    expect(flag.tab).toBe("flags");
+    expect(idx.find((e) => e.id === resourceKey)?.tab).toBe("resources");
+    expect(idx.find((e) => e.id === tileKey)?.tab).toBe("tiles");
+    expect(idx.find((e) => e.id === toolKey)?.tab).toBe("tools");
+  });
+
+  it("emits each item exactly once (no duplicate bogus 'tile' rows)", () => {
+    const idx = buildCommandIndex();
+    const itemKinds = new Set(["tile", "resource", "tool"]);
+    const itemRows = idx.filter((e) => itemKinds.has(e.kind));
+    const ids = itemRows.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("routes recipes/buildings/zones/npcs/workers/bosses to their concept tabs", () => {
+    const idx = buildCommandIndex();
+    const tabFor = (kind: string) => idx.find((e) => e.kind === kind)?.tab;
+    expect(tabFor("recipe")).toBe("recipes");
+    expect(tabFor("building")).toBe("buildings");
+    expect(tabFor("zone")).toBe("zones");
+    expect(tabFor("npc")).toBe("npcs");
+    expect(tabFor("worker")).toBe("workers");
+    expect(tabFor("boss")).toBe("bosses");
   });
 
   it("supports dependency injection (callers can pass synthetic catalogs)", () => {
     const idx = buildCommandIndex({
-      items: { test_item: { label: "Test Item", effect: "boom" } },
+      items: {
+        a_tile: { kind: "tile", label: "A Tile" },
+        a_res: { kind: "resource", label: "A Resource" },
+        a_tool: { kind: "tool", label: "A Tool", effect: "boom" },
+        a_misc: { label: "Kindless — skipped" },
+      },
       recipes: { test_recipe: { name: "Test Recipe", station: "anvil", coins: 7 } },
-      buildings: [{ id: "test_b", label: "Test Building", level: 2, coins: 100 }],
-      biomes: { home: { name: "Home" } },
+      buildings: [{ id: "test_b", name: "Test Building", level: 2, coins: 100 }],
       zones: { home: { name: "Home Vale" } },
       npcs: { wren: { name: "Wren" } },
-      keepers: {},
-      workers: [{ id: "test_w", label: "Test Worker" }],
+      workers: [{ id: "test_w", name: "Test Worker" }],
       bosses: [{ id: "test_boss", name: "Test Boss", season: "Spring" }],
-      achievements: [{ id: "test_ach", name: "Test Ach" }],
-      storyBeats: [{ id: "test_beat", title: "Test Beat", act: 1, scene: "x" }],
-      sideBeats: [],
-      flags: [{ id: "test_flag", label: "Test Flag", category: "story" }],
     });
-    const kinds = new Set(idx.map((e) => e.kind));
-    expect(kinds).toEqual(new Set(["tile", "item", "recipe", "building", "biome", "zone", "npc", "worker", "boss", "achievement", "beat", "flag"]));
+    const byId = Object.fromEntries(idx.map((e) => [e.id, e]));
+    expect(byId.a_tile.tab).toBe("tiles");
+    expect(byId.a_res.tab).toBe("resources");
+    expect(byId.a_tool.tab).toBe("tools");
+    // The kindless item is skipped — no concept tab would render it.
+    expect(byId.a_misc).toBeUndefined();
+    expect(byId.test_recipe.tab).toBe("recipes");
+    expect(byId.test_b.tab).toBe("buildings");
+    expect(byId.home.tab).toBe("zones");
+    expect(byId.wren.tab).toBe("npcs");
+    expect(byId.test_w.tab).toBe("workers");
+    expect(byId.test_boss.tab).toBe("bosses");
+    // Every emitted tab is still a valid concept id.
+    for (const e of idx) expect(CONCEPT_IDS.has(e.tab)).toBe(true);
   });
 });
 
@@ -82,7 +136,7 @@ describe("searchCommandIndex", () => {
   const idx = [
     { id: "iron_hinge", kind: "recipe", label: "Iron Hinge", sublabel: "recipe · forge", keywords: ["forge"] },
     { id: "bread", kind: "recipe", label: "Bread", sublabel: "recipe · bakery", keywords: [] },
-    { id: "iron_ingot", kind: "item", label: "Iron Ingot", sublabel: "item · 5◉", keywords: [] },
+    { id: "iron_ingot", kind: "resource", label: "Iron Ingot", sublabel: "resource · 5◉", keywords: [] },
   ];
 
   it("ranks better matches first", () => {
@@ -93,7 +147,7 @@ describe("searchCommandIndex", () => {
 
   it("returns at most `limit` entries", () => {
     const padded = [];
-    for (let i = 0; i < 50; i += 1) padded.push({ id: `iron_${i}`, kind: "item", label: `Iron ${i}`, sublabel: "" });
+    for (let i = 0; i < 50; i += 1) padded.push({ id: `iron_${i}`, kind: "resource", label: `Iron ${i}`, sublabel: "" });
     const out = searchCommandIndex(padded, "iron", 5);
     expect(out).toHaveLength(5);
   });

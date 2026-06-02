@@ -9,7 +9,7 @@
  *     least one entry card (key from getEntries()[0]).
  *  2. Status wiring — "bosses" concept shows PARTIAL in its StatusChip.
  *  3. Entry navigation — clicking an entry card calls navigate with
- *     { tab: "wiki", focus: "<conceptId>:<key>" }.
+ *     wikiNavTarget shape { tab: "<conceptId>", focus: "<conceptId>:<key>" }.
  *  4. No-schema concept ("hazards") — renders without throwing, shows the
  *     ConceptFields graceful no-schema note, and shows the entry grid.
  */
@@ -122,7 +122,7 @@ describe("CategoryPage — bosses (PARTIAL status chip)", () => {
 // ─── Test 3: Entry navigation ─────────────────────────────────────────────────
 
 describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
-  it("clicking an entry card calls navigate with { tab: 'wiki', focus: '<conceptId>:<key>' }", () => {
+  it("clicking an entry card calls navigate with { tab: '<conceptId>', focus: '<conceptId>:<key>' }", () => {
     const navigate = vi.fn();
     renderPage("bosses", { navigate });
 
@@ -137,9 +137,10 @@ describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
     // Click the first button
     fireEvent.click(buttons[0]);
 
+    // Phase-5 contract: each concept routes to its OWN tab (the conceptId).
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({
-        tab: "wiki",
+        tab: "bosses",
         focus: expectedFocus,
       }),
     );
@@ -154,7 +155,7 @@ describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
 
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({
-        tab: "wiki",
+        tab: "recipes",
         focus: expect.stringMatching(/^recipes:.+/),
       }),
     );

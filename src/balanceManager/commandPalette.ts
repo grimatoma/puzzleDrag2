@@ -1,22 +1,17 @@
-// Cmd-K command palette index for the Dev Panel.
+// Cmd-K command palette index for the wiki shell.
 //
-// Walks the canonical game data (TILE/ITEM/recipe/building/biome/zone
-// catalogs + worker/keeper/boss/achievement lists + story beats + flags)
-// and emits a flat array of `{ id, label, sublabel, kind, tab }` entries.
-// The palette UI ranks entries against a free-form query (token-match scoring
-// with a small bonus for prefix hits) and routes the selected entry to the
-// appropriate dev-panel tab via the same hash routing the sidebar uses.
+// Walks the canonical game data (ITEMS split per kind into tiles/resources/
+// tools, recipes, buildings, zones, NPCs, workers, bosses) and emits a flat
+// array of `{ id, label, sublabel, kind, tab }` entries. Every emitted `tab`
+// is a real wiki concept id (a member of CONCEPTS) so the shell can route the
+// selected entry straight to that concept's article via `wikiNavTarget`.
 //
 // Pure module — no React, no DOM. The UI lives in CommandPalette.jsx.
 
-import { ITEMS, NPCS, BUILDINGS, RECIPES, BIOMES } from "../constants.js";
-import { KEEPERS } from "../keepers.js";
+import { ITEMS, NPCS, BUILDINGS, RECIPES } from "../constants.js";
 import { TYPE_WORKERS } from "../features/workers/data.js";
 import { BOSSES } from "../features/bosses/data.js";
-import { ACHIEVEMENTS } from "../features/achievements/data.js";
 import { ZONES, ZONE_IDS } from "../features/zones/data.js";
-import { STORY_BEATS, SIDE_BEATS } from "../story.js";
-import { STORY_FLAGS } from "../flags.js";
 import { getToolPower } from "../config/toolPowers.js";
 
 function asArrayValues<T = unknown>(obj: unknown): T[] {
@@ -39,24 +34,26 @@ interface BuildIndexOptions {
   npcs?: Record<string, unknown>;
   buildings?: unknown;
   recipes?: Record<string, unknown>;
-  biomes?: Record<string, unknown>;
-  keepers?: Record<string, unknown>;
   workers?: unknown;
   bosses?: unknown;
-  achievements?: unknown;
   zones?: Record<string, unknown>;
-  storyBeats?: unknown[];
-  sideBeats?: unknown[];
-  flags?: unknown;
 }
+
+// ITEMS.kind → the wiki concept tab that owns that kind. Items with no
+// recognised kind are skipped (no concept page would render them).
+const KIND_TO_TAB: Record<string, string> = {
+  tile: "tiles",
+  resource: "resources",
+  tool: "tools",
+};
 
 /**
  * Build a search index from the live game data. Returns an array of entry
  * descriptors with `id`, `kind`, `label`, `sublabel`, and `tab` fields. Each
- * entry's `tab` is the Dev Panel tab id (e.g. `recipes`, `bosses`) the
- * palette should navigate to when the entry is picked.
+ * entry's `tab` is a wiki concept id (e.g. `recipes`, `bosses`, `tiles`) the
+ * palette routes to via `wikiNavTarget` when the entry is picked.
  */
-export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS }: BuildIndexOptions = {}): CommandEntry[] {
+export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, workers = TYPE_WORKERS, bosses = BOSSES, zones = ZONES }: BuildIndexOptions = {}): CommandEntry[] {
   const entries: CommandEntry[] = [];
   const push = (entry: CommandEntry) => entries.push(entry);
   // Narrow individual entries to a loose record so the dynamic field reads
@@ -65,24 +62,20 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
   const stringList = (...xs: unknown[]): string[] =>
     xs.filter((x): x is string => typeof x === "string" && x.length > 0);
 
+  // Items: one pass, split per kind into the matching concept tab. Items with
+  // no recognised kind are skipped — there is no wiki page to route them to.
   for (const [id, raw] of Object.entries(items || {})) {
     const item = asRec(raw);
+    const kind = typeof item.kind === "string" ? item.kind : null;
+    const tab = kind ? KIND_TO_TAB[kind] : undefined;
+    if (!tab) continue;
     const label = typeof item.label === "string" ? item.label : id;
-    push({ id, kind: "tile", tab: "tiles",
-      label, sublabel: `tile · ${id}`,
-      keywords: stringList(id, item.label, "tile") });
-  }
-  for (const [id, raw] of Object.entries(items || {})) {
-    const item = asRec(raw);
     const effect = typeof item.effect === "string" ? item.effect : null;
     const power = effect ? getToolPower(effect) : null;
-    const powerBit = power
-      ? ` · ${power.name}`
-      : (effect ? ` · ${effect}` : "");
-    const label = typeof item.label === "string" ? item.label : id;
-    push({ id, kind: "item", tab: "items",
-      label, sublabel: `item · ${id}${powerBit}`,
-      keywords: stringList(id, item.label, effect, power?.name, item.target, "item", "tool", "power") });
+    const powerBit = power ? ` · ${power.name}` : (effect ? ` · ${effect}` : "");
+    push({ id, kind: kind!, tab,
+      label, sublabel: `${kind} · ${id}${powerBit}`,
+      keywords: stringList(id, item.label, effect, power?.name, item.target, kind!) });
   }
   for (const [id, raw] of Object.entries(recipes || {})) {
     const recipe = asRec(raw);
@@ -97,19 +90,12 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
     const b = asRec(raw);
     const bid = typeof b.id === "string" ? b.id : null;
     if (!bid) continue;
-    const label = typeof b.label === "string" ? b.label : bid;
+    const label = typeof b.label === "string" ? b.label : (typeof b.name === "string" ? b.name : bid);
     const lvl = typeof b.level === "number" ? String(b.level) : "?";
     const coins = typeof b.coins === "number" ? b.coins : null;
     push({ id: bid, kind: "building", tab: "buildings",
       label, sublabel: `building · level ${lvl}${coins !== null ? ` · ${coins}◉` : ""}`,
-      keywords: stringList(bid, b.label, "building") });
-  }
-  for (const [id, raw] of Object.entries(biomes || {})) {
-    const biome = asRec(raw);
-    const label = typeof biome.name === "string" ? biome.name : (typeof biome.label === "string" ? biome.label : id);
-    push({ id, kind: "biome", tab: "biomes",
-      label, sublabel: `biome · ${id}`,
-      keywords: stringList(id, biome.name, biome.label, "biome") });
+      keywords: stringList(bid, b.label, b.name, "building") });
   }
   for (const id of ZONE_IDS || Object.keys(zones || {})) {
     const z = asRec((zones as Record<string, unknown>)?.[id]);
@@ -125,21 +111,14 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
       label, sublabel: `NPC · ${id}`,
       keywords: stringList(id, npc.name, "npc") });
   }
-  for (const [id, raw] of Object.entries(keepers || {})) {
-    const keeper = asRec(raw);
-    const label = typeof keeper.name === "string" ? keeper.name : id;
-    push({ id, kind: "keeper", tab: "keepers",
-      label, sublabel: `keeper · ${id}`,
-      keywords: stringList(id, keeper.name, "keeper") });
-  }
   for (const raw of asArrayValues(workers)) {
     const w = asRec(raw);
     const wid = typeof w.id === "string" ? w.id : null;
     if (!wid) continue;
-    const label = typeof w.label === "string" ? w.label : wid;
+    const label = typeof w.label === "string" ? w.label : (typeof w.name === "string" ? w.name : wid);
     push({ id: wid, kind: "worker", tab: "workers",
       label, sublabel: `worker · ${wid}`,
-      keywords: stringList(wid, w.label, "worker") });
+      keywords: stringList(wid, w.label, w.name, "worker") });
   }
   for (const raw of asArrayValues(bosses)) {
     const b = asRec(raw);
@@ -150,37 +129,6 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
     push({ id: bid, kind: "boss", tab: "bosses",
       label, sublabel: `boss · ${season}`,
       keywords: stringList(bid, b.name, b.label, b.season, "boss") });
-  }
-  for (const raw of asArrayValues(achievements)) {
-    const a = asRec(raw);
-    const aid = typeof a.id === "string" ? a.id : null;
-    if (!aid) continue;
-    const label = typeof a.name === "string" ? a.name : (typeof a.label === "string" ? a.label : aid);
-    push({ id: aid, kind: "achievement", tab: "achievements",
-      label, sublabel: "achievement",
-      keywords: stringList(aid, a.name, a.label, "achievement") });
-  }
-  for (const raw of [...(storyBeats || []), ...(sideBeats || [])]) {
-    const beat = asRec(raw);
-    const beatId = typeof beat.id === "string" ? beat.id : null;
-    if (!beatId) continue;
-    const title = typeof beat.title === "string" ? beat.title : beatId;
-    const act = typeof beat.act === "number" ? beat.act : null;
-    const scene = typeof beat.scene === "string" ? beat.scene : null;
-    push({ id: beatId, kind: "beat", tab: "story",
-      label: title,
-      sublabel: `story beat · ${act ? `Act ${act}` : "side"}${scene ? ` · ${scene}` : ""}`,
-      keywords: stringList(beatId, beat.title, beat.scene, act ? `act${act}` : "side", "beat") });
-  }
-  for (const raw of asArrayValues(flags)) {
-    const flag = asRec(raw);
-    const flagId = typeof flag.id === "string" ? flag.id : null;
-    if (!flagId) continue;
-    const label = typeof flag.label === "string" ? flag.label : flagId;
-    const category = typeof flag.category === "string" ? flag.category : "story";
-    push({ id: flagId, kind: "flag", tab: "flags",
-      label, sublabel: `flag · ${category}`,
-      keywords: stringList(flagId, flag.label, flag.category, "flag") });
   }
   return entries;
 }
