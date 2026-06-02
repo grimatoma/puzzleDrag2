@@ -123,3 +123,22 @@ describe("hasTileUnlock", () => {
     expect(hasTileUnlock("tile_grain_wheat")).toBe(true);
   });
 });
+
+describe("TileUnlock — method links to its discovery-method page", () => {
+  it("navigates to tileDiscoveryMethods on clicking the method", () => {
+    const navigate = vi.fn();
+    render(
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <TileUnlock tileId="tile_grain_wheat" />
+      </BalanceNavProvider>,
+    );
+    // The method button carries a title of "tileDiscoveryMethods:<id>"
+    const methodBtn = screen
+      .getAllByRole("button")
+      .find((b) => (b.getAttribute("title") ?? "").startsWith("tileDiscoveryMethods:"));
+    expect(methodBtn).toBeTruthy();
+    fireEvent.click(methodBtn!);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate.mock.calls[0][0]).toMatchObject({ tab: "tileDiscoveryMethods" });
+  });
+});

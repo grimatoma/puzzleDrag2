@@ -203,6 +203,7 @@ export interface TileUnlockProps {
  * not in the tile catalog.
  */
 export function TileUnlock({ tileId }: TileUnlockProps) {
+  const { navigate } = useBalanceNav();
   const tile = tileType(tileId);
   if (tile == null) return null;
 
@@ -230,9 +231,17 @@ export function TileUnlock({ tileId }: TileUnlockProps) {
         }}
       >
         <Stat label="Method">
-          <StatusChip tone="info" size="sm" uppercase title={methodDesc}>
-            {methodName}
-          </StatusChip>
+          <button
+            type="button"
+            title={`tileDiscoveryMethods:${method}`}
+            onClick={() => navigate(wikiNavTarget("tileDiscoveryMethods", method))}
+            style={{ cursor: "pointer", background: "none", border: "none", padding: 0 }}
+            className="hover:opacity-80"
+          >
+            <StatusChip tone="info" size="sm" uppercase title={methodDesc}>
+              {methodName}
+            </StatusChip>
+          </button>
         </Stat>
 
         <Stat label="Requirement">{unlockDetail(discovery)}</Stat>
