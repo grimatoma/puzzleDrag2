@@ -52,6 +52,7 @@ import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.
 import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
 import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
+import MemberTiles, { hasMemberTiles } from "./sections/MemberTiles.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -197,10 +198,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showAchievementCard =
     conceptId === "achievements" &&
     hasAchievementCard(entity as Parameters<typeof hasAchievementCard>[0]);
+  const showMemberTiles =
+    (conceptId === "categories" || conceptId === "tileDiscoveryMethods") &&
+    hasMemberTiles(conceptId, entityKey);
 
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(showMemberTiles ? [{ id: "member-tiles", label: "Tiles" }] : []),
     ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
     ...(showAbilitySpec ? [{ id: "ability-spec", label: "Specification" }] : []),
@@ -284,6 +289,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           >
             {ledeFor(conceptId, entityKey, entity)}
           </p>
+
+          {/* Member tiles (category / discovery-method pages) */}
+          {showMemberTiles && <MemberTiles conceptId={conceptId} entityKey={entityKey} />}
 
           {/* Boss difficulty assessment (boss articles) — near the top */}
           {showBossDifficulty && entity != null && (

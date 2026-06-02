@@ -289,3 +289,16 @@ describe("WikiArticle — breadcrumb links to the concept page", () => {
     expect(navigate).toHaveBeenCalledWith({ tab: "categories" });
   });
 });
+
+describe("WikiArticle — member tiles on a category page", () => {
+  it("lists member tiles for a tile category", () => {
+    render(
+      <BalanceNavProvider focus={null} navigate={vi.fn()}>
+        <WikiArticle conceptId="categories" entityKey="grain" onBack={() => {}} />
+      </BalanceNavProvider>,
+    );
+    const body = document.body.textContent ?? "";
+    expect(body).toMatch(/Tiles \(\d+\)/);
+    expect(body).toMatch(/wheat/i);
+  });
+});
