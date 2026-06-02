@@ -1,0 +1,275 @@
+/**
+ * FieldsTable.tsx — Reusable schema field-table components for the Dev Panel Wiki.
+ *
+ * Extracted from EntityDetail.tsx so that both the per-entity detail panel and
+ * the concept-level field reference (ConceptFields.tsx) can share the same
+ * rendering logic.
+ *
+ * READ-ONLY — no editable controls.
+ */
+
+import React from "react";
+import { ColorField, COLORS } from "../shared.jsx";
+import type { FieldDoc } from "../schemaDoc.js";
+
+// ─── Value formatting ─────────────────────────────────────────────────────────
+
+/** Safely serialize a value to JSON, returning "[unserializable]" for circular/non-serializable refs. */
+export function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? "[unserializable]";
+  } catch {
+    return "[unserializable]";
+  }
+}
+
+/**
+ * Render a live field value as a React node. Handles color fields specially.
+ */
+export function formatValue(
+  fieldName: string,
+  value: unknown,
+): React.ReactNode {
+  if (value === undefined || value === null) {
+    return <span style={{ color: COLORS.inkSubtle }} className="italic">—</span>;
+  }
+  // Color fields: swatch is name-driven (fields "color"/"dark"), not type-driven,
+  // and is guarded by typeof value === "number" to avoid false positives.
+  if ((fieldName === "color" || fieldName === "dark") && typeof value === "number") {
+    return <ColorField value={value} />;
+  }
+  if (typeof value === "boolean") {
+    return (
+      <span
+        className="font-mono text-[11px]"
+        style={{ color: value ? COLORS.green : COLORS.inkSubtle }}
+      >
+        {String(value)}
+      </span>
+    );
+  }
+  if (typeof value === "number") {
+    return <span className="font-mono text-[11px]">{String(value)}</span>;
+  }
+  if (typeof value === "string") {
+    return <span className="font-mono text-[11px] break-all">{value}</span>;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return <span className="font-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>[]</span>;
+    }
+    return (
+      <span className="font-mono text-[11px] break-all">
+        {value.map((el) => (el !== null && typeof el === "object" ? safeStringify(el) : String(el))).join(", ")}
+      </span>
+    );
+  }
+  if (typeof value === "object") {
+    return (
+      <span className="font-mono text-[11px] break-all" style={{ color: COLORS.inkSubtle }}>
+        {safeStringify(value)}
+      </span>
+    );
+  }
+  return <span className="font-mono text-[11px]">{String(value)}</span>;
+}
+
+/** Format a default value (from FieldDoc.default) — same rules as formatValue. */
+export function formatDefault(fieldName: string, value: unknown): React.ReactNode {
+  if (value === undefined) {
+    return <span style={{ color: COLORS.inkSubtle }} className="italic">—</span>;
+  }
+  return formatValue(fieldName, value);
+}
+
+// ─── FieldsTable ──────────────────────────────────────────────────────────────
+
+/**
+ * Schema field table.
+ *
+ * - `entity`    — when provided, a live "Value" column is rendered for each field.
+ * - `showValue` — default `true`; set to `false` to omit the Value column entirely
+ *                 (used by concept-level reference pages that have no single entity).
+ */
+export function FieldsTable({
+  fields,
+  entity = null,
+  showValue = true,
+}: {
+  fields: FieldDoc[];
+  entity?: Record<string, unknown> | null;
+  showValue?: boolean;
+}) {
+  const columns = showValue
+    ? (["Field", "Type", "Req", "Default", "Value", "Description"] as const)
+    : (["Field", "Type", "Req", "Default", "Description"] as const);
+
+  return (
+    <div className="overflow-x-auto">
+      <table
+        className="w-full text-[11px] border-collapse"
+        style={{ color: COLORS.ink }}
+      >
+        <thead>
+          <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
+            {columns.map((col) => (
+              <th
+                key={col}
+                className="text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide whitespace-nowrap"
+                style={{ color: COLORS.inkSubtle }}
+              >
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {fields.map((f, i) => {
+            const liveVal = entity != null ? entity[f.field] : undefined;
+            return (
+              <tr
+                key={f.field}
+                style={{
+                  background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
+                  borderBottom: `1px solid ${COLORS.border}`,
+                }}
+              >
+                {/* Field */}
+                <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
+                  {f.field}
+                </td>
+                {/* Type */}
+                <td
+                  className="py-1.5 px-2 font-mono whitespace-nowrap align-top"
+                  style={{ color: COLORS.inkSubtle }}
+                >
+                  {f.type}
+                </td>
+                {/* Req */}
+                <td className="py-1.5 px-2 whitespace-nowrap align-top">
+                  {f.optional ? (
+                    <span style={{ color: COLORS.inkSubtle }}>optional</span>
+                  ) : (
+                    <span style={{ color: COLORS.ember }} className="font-bold">required</span>
+                  )}
+                </td>
+                {/* Default */}
+                <td className="py-1.5 px-2 align-top">
+                  {formatDefault(f.field, f.default)}
+                </td>
+                {/* Value — only when showValue is true */}
+                {showValue && (
+                  <td className="py-1.5 px-2 align-top max-w-[200px]">
+                    {formatValue(f.field, liveVal)}
+                  </td>
+                )}
+                {/* Description */}
+                <td
+                  className="py-1.5 px-2 align-top"
+                  style={{ color: COLORS.inkSubtle }}
+                >
+                  {f.description ?? "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── KeyValueTable ────────────────────────────────────────────────────────────
+
+/** Shared two-column (Field · Value) table used by AdditionalFieldsSection and LiveConfigFallback. */
+export function KeyValueTable({
+  heading,
+  keys,
+  entity,
+}: {
+  heading: string;
+  keys: string[];
+  entity: Record<string, unknown>;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <div
+        className="text-[10px] font-bold uppercase tracking-wide mb-2"
+        style={{ color: COLORS.inkSubtle }}
+      >
+        {heading}
+      </div>
+      <table className="w-full text-[11px] border-collapse" style={{ color: COLORS.ink }}>
+        <thead>
+          <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
+            <th
+              className="text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide"
+              style={{ color: COLORS.inkSubtle }}
+            >
+              Field
+            </th>
+            <th
+              className="text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide"
+              style={{ color: COLORS.inkSubtle }}
+            >
+              Value
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {keys.map((k, i) => (
+            <tr
+              key={k}
+              style={{
+                background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
+                borderBottom: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
+                {k}
+              </td>
+              <td className="py-1.5 px-2 align-top max-w-[300px]">
+                {formatValue(k, entity[k])}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── AdditionalFieldsSection ──────────────────────────────────────────────────
+
+export function AdditionalFieldsSection({
+  entity,
+  schemaFieldNames,
+}: {
+  entity: Record<string, unknown>;
+  schemaFieldNames: Set<string>;
+}) {
+  const extras = Object.keys(entity).filter((k) => !schemaFieldNames.has(k));
+  if (extras.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <KeyValueTable
+        heading="Additional fields (not in schema)"
+        keys={extras}
+        entity={entity}
+      />
+    </div>
+  );
+}
+
+// ─── LiveConfigFallback ───────────────────────────────────────────────────────
+
+export function LiveConfigFallback({ entity }: { entity: Record<string, unknown> }) {
+  return (
+    <KeyValueTable
+      heading="Live config (no schema)"
+      keys={Object.keys(entity)}
+      entity={entity}
+    />
+  );
+}

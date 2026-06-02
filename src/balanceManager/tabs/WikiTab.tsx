@@ -16,6 +16,10 @@
 // and a `navigate` callback. Switching the concept filter clears the focus
 // so the grid returns to the selected concept; back/forward buttons navigate
 // the entity selection history.
+//
+// Detail panel: renders WikiArticle (the rich Wikipedia-style template built
+// in Phase 4) in place of the older EntityDetail. The grid/landing branch is
+// intentionally unchanged — CategoryPage will be wired in Phase 5's WikiShell.
 
 import { useState, useMemo, lazy, Suspense } from "react";
 import { CONCEPTS } from "../wiki/concepts.js";
@@ -24,13 +28,13 @@ import { COLORS, SegmentedFilter } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { parseWikiFocus } from "../wiki/conceptEntities.js";
 
-// Lazy-load EntityDetail so the heavy schema-introspection deps it pulls in
+// Lazy-load WikiArticle so the heavy schema-introspection deps it pulls in
 // (schemaDoc → Zod schemas, conceptSchemas, conceptEntities, and the constants
 // they reach) are only fetched once the designer clicks a card. Keeping this
 // off the WikiTab chunk lets EntryGrid paint immediately on tab open — a static
 // import here made the chunk heavy enough to race the visual-golden capture and
 // catch the Suspense fallback instead of the populated grid.
-const EntityDetail = lazy(() => import("../wiki/EntityDetail.jsx"));
+const WikiArticle = lazy(() => import("../wiki/WikiArticle.jsx"));
 
 const CONCEPT_OPTIONS = CONCEPTS.map((c) => ({ value: c.id, label: c.label }));
 
@@ -106,7 +110,7 @@ export default function WikiTab() {
             </div>
           }
         >
-          <EntityDetail
+          <WikiArticle
             conceptId={parsedFocus!.conceptId}
             entityKey={parsedFocus!.entityKey}
             onBack={() => navigate({ tab: "wiki", focus: null })}
