@@ -507,11 +507,17 @@ export function effectiveChoices(beatId: string | null | undefined, draft: Story
 /** Every beat id known to the editor (built-ins + drafts). */
 export function allBeatIds(draft: StoryDraft | null | undefined): string[] {
   const suppressed = suppressedBeatIds(draft);
-  return [
-    ...(STORY_BEATS as StoryBeat[]).map((b) => b.id),
-    ...(SIDE_BEATS as StoryBeat[]).map((b) => b.id).filter((id) => !suppressed.has(id)),
-    ...draftBeats(draft).map((b) => b && b.id).filter((id): id is string => Boolean(id)),
-  ];
+  const result: string[] = [];
+  for (const b of STORY_BEATS as StoryBeat[]) {
+    result.push(b.id);
+  }
+  for (const b of SIDE_BEATS as StoryBeat[]) {
+    if (!suppressed.has(b.id)) result.push(b.id);
+  }
+  for (const b of draftBeats(draft)) {
+    if (b && b.id) result.push(b.id);
+  }
+  return result;
 }
 
 /** The first effective choice (across all beats) whose outcome queues `beatId`. */
