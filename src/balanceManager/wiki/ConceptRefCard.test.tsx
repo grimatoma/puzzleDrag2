@@ -7,7 +7,11 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import { BalanceNavProvider } from "../balanceNav.jsx";
-import { ConceptRefCard, RelationRefGrid } from "./ConceptRefCard.jsx";
+import {
+  ConceptRefCard,
+  RelationRefGrid,
+  RecipeRelationsFlow,
+} from "./ConceptRefCard.jsx";
 import { getEntity } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 
@@ -74,3 +78,35 @@ describe("RelationRefGrid", () => {
     expect(document.querySelectorAll(".wiki-concept-ref-card").length).toBe(2);
   });
 });
+
+describe("ConceptRefCard — compact resource card", () => {
+  it("does not render entity key or concept pill for flour", () => {
+    const { container } = renderCard({
+      conceptId: "resources",
+      entityKey: "flour",
+      variant: "card",
+      layout: "compact",
+    });
+    expect(container.querySelector(".wiki-concept-ref-card--compact")).not.toBeNull();
+    expect(container.querySelector(".wiki-concept-ref-card__key")).toBeNull();
+    expect(container.textContent).not.toMatch(/resources/i);
+  });
+});
+
+describe("RecipeRelationsFlow", () => {
+  it("renders a horizontal flow with arrows for rec_harvestpie", () => {
+    const entity = getEntity("recipes", "rec_harvestpie") as Record<string, unknown>;
+    if (entity == null) return;
+    render(
+      <BalanceNavProvider focus={null} navigate={vi.fn()}>
+        <RecipeRelationsFlow recipe={entity} />
+      </BalanceNavProvider>,
+    );
+    expect(document.querySelector(".wiki-recipe-relation-flow")).not.toBeNull();
+    expect(document.querySelectorAll(".wiki-recipe-relation-flow__arrow").length).toBeGreaterThan(0);
+    const body = document.body.textContent ?? "";
+    expect(body).toMatch(/flour|Flour/i);
+    expect(body).toMatch(/bakery|Bakery/i);
+  });
+});
+

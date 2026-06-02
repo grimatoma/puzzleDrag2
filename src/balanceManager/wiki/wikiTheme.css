@@ -313,11 +313,6 @@
   line-height: 1.2;
 }
 
-.wiki-root .wiki-concept-ref-card__key {
-  font-size: 10px;
-  color: var(--wiki-ink-subtle);
-}
-
 .wiki-root .wiki-concept-ref-card__detail {
   font-size: 10px;
   color: var(--wiki-ink-subtle);
@@ -353,6 +348,91 @@
   color: var(--wiki-ink-subtle);
   margin-left: 2px;
 }
+/* Compact item tile — icon stacked over title, no metadata chrome */
+.wiki-root .wiki-concept-ref-card--compact {
+  align-items: center;
+  text-align: center;
+  padding: 10px 12px;
+  min-width: 96px;
+  max-width: 120px;
+}
+
+.wiki-root .wiki-concept-ref-card__visual--compact {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+}
+
+.wiki-root .wiki-concept-ref-card__title--compact {
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.25;
+}
+
+.wiki-root .wiki-concept-ref-card--rich .wiki-concept-ref-card__meta {
+  justify-content: center;
+}
+
+/* Recipe article Related — horizontal ingredients → station → output */
+.wiki-root .wiki-recipe-relation-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--wiki-border);
+  background: linear-gradient(
+    165deg,
+    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment)) 100%
+  );
+}
+
+.wiki-root .wiki-recipe-relation-flow__lane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wiki-root .wiki-recipe-relation-flow__lane-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+.wiki-root .wiki-recipe-relation-flow__cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.wiki-root .wiki-recipe-relation-flow__arrow {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--wiki-ink-subtle);
+  opacity: 0.75;
+  padding: 0 2px 18px;
+}
+
+@media (max-width: 640px) {
+  .wiki-root .wiki-recipe-relation-flow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wiki-root .wiki-recipe-relation-flow__arrow {
+    align-self: center;
+    transform: rotate(90deg);
+    padding: 0;
+  }
+}
+
+
 
 /* ── Search / action buttons ─────────────────────────────────────────────────── */
 

@@ -22,7 +22,11 @@ import { describeSchema } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
 import { RelationalFooter } from "../relational.jsx";
-import { RelationRefGrid } from "./ConceptRefCard.jsx";
+import {
+  RelationRefGrid,
+  RecipeRelationsFlow,
+  hasRecipeRelationFlow,
+} from "./ConceptRefCard.jsx";
 import { relationsFor } from "./relations.js";
 import { backlinksFor } from "./backlinks.js";
 import { ledeFor } from "./lede.js";
@@ -450,17 +454,21 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {relationGroups.length > 0 && (
             <section id="relations">
               <RelationalFooter standalone title="Related" hint="Derived · click to open">
-                {relationGroups.map((group) => (
-                  <div key={group.title} className="mb-3 last:mb-0">
-                    <div
-                      className="text-[9px] font-bold uppercase tracking-wide mb-2"
-                      style={{ color: COLORS.inkSubtle }}
-                    >
-                      {group.title}
+                {conceptId === "recipes" && hasRecipeRelationFlow(entity) ? (
+                  <RecipeRelationsFlow recipe={entity ?? {}} />
+                ) : (
+                  relationGroups.map((group) => (
+                    <div key={group.title} className="mb-3 last:mb-0">
+                      <div
+                        className="text-[9px] font-bold uppercase tracking-wide mb-2"
+                        style={{ color: COLORS.inkSubtle }}
+                      >
+                        {group.title}
+                      </div>
+                      <RelationRefGrid links={group.links} />
                     </div>
-                    <RelationRefGrid links={group.links} />
-                  </div>
-                ))}
+                  ))
+                )}
               </RelationalFooter>
             </section>
           )}
