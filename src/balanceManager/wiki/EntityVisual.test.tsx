@@ -51,6 +51,18 @@ describe("entityIconKey", () => {
     expect(entityIconKey("views", "town", null)).toBeNull();
     expect(entityIconKey("toolPowers", "clear_all", null)).toBeNull();
   });
+
+  it("uses entity.icon for achievements (and null when absent)", () => {
+    expect(entityIconKey("achievements", "first_steps", { icon: "ach_first_steps" })).toBe("ach_first_steps");
+    expect(entityIconKey("achievements", "x", {})).toBeNull();
+    expect(entityIconKey("achievements", "x", null)).toBeNull();
+  });
+
+  it("returns null for keepers / boons / dailyRewards (no procedural icon)", () => {
+    expect(entityIconKey("keepers", "deer_spirit", { icon: "🦌" })).toBeNull();
+    expect(entityIconKey("boons", "deer_blessing", null)).toBeNull();
+    expect(entityIconKey("dailyRewards", "7", null)).toBeNull();
+  });
 });
 
 // ─── EntityVisual ──────────────────────────────────────────────────────────────

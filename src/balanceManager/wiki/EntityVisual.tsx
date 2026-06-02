@@ -63,9 +63,15 @@ export function entityIconKey(
       const item = entity?.item;
       return typeof item === "string" && item.length > 0 ? item : null;
     }
+    case "achievements": {
+      // Achievements store a baked icon-registry key (e.g. `ach_first_steps`).
+      const icon = entity?.icon;
+      return typeof icon === "string" && icon.length > 0 ? icon : null;
+    }
     default:
       // zones, buildings, categories, views, modals, toolPowers,
-      // settlementBiomes, tileDiscoveryMethods, … have no per-entity icon.
+      // settlementBiomes, tileDiscoveryMethods, keepers (emoji-only icon),
+      // boons, dailyRewards, … have no per-entity procedural icon.
       return null;
   }
 }
