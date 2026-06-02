@@ -23,6 +23,7 @@
  */
 
 import React from "react";
+import DOMPurify from "dompurify";
 import { parseWikiLinks } from "./wikilink.js";
 import { WikiLinkButton } from "./WikiLinkButton.jsx";
 import { GameScreenEmbed } from "./GameScreenEmbed.jsx";
@@ -198,10 +199,16 @@ function convertNode(node: Node, keyPrefix: string): React.ReactNode {
   if (tag === "svg") {
     const clone = el.cloneNode(true) as Element;
     clone.querySelectorAll("script, style").forEach((n) => n.remove());
+
+    // Sanitize the SVG using DOMPurify with the SVG profile
+    const safeHtml = DOMPurify.sanitize(clone.outerHTML, {
+      USE_PROFILES: { svg: true },
+    });
+
     return (
       <span
         key={keyPrefix}
-        dangerouslySetInnerHTML={{ __html: clone.outerHTML }}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
     );
   }
