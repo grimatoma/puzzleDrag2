@@ -1,0 +1,63 @@
+/**
+ * htmlContent.test.ts — TDD suite for the HTML content loader.
+ *
+ * Written BEFORE the implementation. All tests should fail until
+ * htmlContent.ts and the seed content files are created.
+ *
+ * Coverage:
+ *  1. bodyFor("resources","bread") matches /staple food/i
+ *  2. bodyFor("resources","no_such_key") === null
+ *  3. pageFor("overview") matches /Welcome/
+ *  4. listPages() contains "overview"
+ */
+
+import { describe, it, expect } from "vitest";
+import { bodyFor, pageFor, listPages } from "./htmlContent.js";
+
+describe("bodyFor", () => {
+  it('returns the authored HTML for resources/bread (matches /staple food/i)', () => {
+    const result = bodyFor("resources", "bread");
+    expect(result).not.toBeNull();
+    expect(result).toMatch(/staple food/i);
+  });
+
+  it('returns null for a key that does not exist', () => {
+    expect(bodyFor("resources", "no_such_key")).toBeNull();
+  });
+
+  it('returns null for a concept that does not exist', () => {
+    expect(bodyFor("__no_concept__", "bread")).toBeNull();
+  });
+});
+
+describe("pageFor", () => {
+  it('returns the authored HTML for pages/overview (matches /Welcome/)', () => {
+    const result = pageFor("overview");
+    expect(result).not.toBeNull();
+    expect(result).toMatch(/Welcome/);
+  });
+
+  it('returns null for a slug that does not exist', () => {
+    expect(pageFor("no_such_page")).toBeNull();
+  });
+});
+
+describe("listPages", () => {
+  it('contains "overview"', () => {
+    expect(listPages()).toContain("overview");
+  });
+
+  it('returns a sorted array of strings', () => {
+    const pages = listPages();
+    expect(Array.isArray(pages)).toBe(true);
+    const sorted = [...pages].sort();
+    expect(pages).toEqual(sorted);
+  });
+
+  it('does not include the "pages/" prefix in returned slugs', () => {
+    const pages = listPages();
+    for (const p of pages) {
+      expect(p).not.toMatch(/^pages\//);
+    }
+  });
+});
