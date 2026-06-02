@@ -37,6 +37,14 @@ import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
+import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
+import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
+import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
+import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
+import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
+import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -144,10 +152,44 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // At-a-glance visual summary (recipes/buildings/zones/workers) — null otherwise
   const atAGlance = renderAtAGlance(conceptId, entity);
 
+  // Cross-reference + crafting-dependency sections.
+  // - WhereUsed (item articles): "where is this item id referenced".
+  // - CraftTree (recipe articles + craftable item articles): upstream tree.
+  const isItemConcept = conceptId === "resources" || conceptId === "tiles" || conceptId === "tools";
+  const showWhereUsed = isItemConcept && hasWhereUsed(entityKey);
+  const craftTreeRecipeId =
+    conceptId === "recipes"
+      ? entityKey
+      : isItemConcept
+        ? recipeIdProducing(entityKey)
+        : null;
+  const showCraftTree = hasCraftTree(craftTreeRecipeId);
+
+  // Concept-specific enrichment sections.
+  // - BossDifficulty (boss articles): derived difficulty assessment.
+  // - NpcGifts (npc articles): loves/likes gift preferences.
+  // - TileUnlock (tile articles): how the tile is discovered + its tier.
+  const showBossDifficulty =
+    conceptId === "bosses" && hasBossDifficulty(entity as Parameters<typeof hasBossDifficulty>[0]);
+  const showNpcGifts = conceptId === "npcs" && hasNpcGifts(entityKey);
+  const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
+  const showZoneDetail =
+    conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showAbilitySpec = conceptId === "abilities" && hasAbilitySpec(entity);
+  const showToolPowerSpec = conceptId === "toolPowers" && hasToolPowerSpec(entity);
+
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
+    ...(showAbilitySpec ? [{ id: "ability-spec", label: "Specification" }] : []),
+    ...(showToolPowerSpec ? [{ id: "tool-power-spec", label: "Specification" }] : []),
+    ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
+    ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
+    ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
+    ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
+    ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
     ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
@@ -212,6 +254,11 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             {ledeFor(conceptId, entityKey, entity)}
           </p>
 
+          {/* Boss difficulty assessment (boss articles) — near the top */}
+          {showBossDifficulty && entity != null && (
+            <BossDifficulty boss={entity as React.ComponentProps<typeof BossDifficulty>["boss"]} />
+          )}
+
           {/* At-a-glance visual summary (recipes/buildings/zones/workers) */}
           {atAGlance != null && (
             <section id="at-a-glance">
@@ -219,6 +266,31 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               {atAGlance.node}
             </section>
           )}
+
+          {/* Ability specification (ability articles) */}
+          {showAbilitySpec && <AbilitySpec ability={entity} />}
+
+          {/* Tool power specification (tool-power articles) */}
+          {showToolPowerSpec && <ToolPowerSpec power={entity} />}
+
+          {/* Tile unlock requirement (tile articles) */}
+          {showTileUnlock && <TileUnlock tileId={entityKey} />}
+
+          {/* Zone drop rates & chain upgrades (zone articles) */}
+          {showZoneDetail && entity != null && (
+            <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
+          )}
+
+          {/* NPC gift preferences (npc articles) */}
+          {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}
+
+          {/* Crafting dependency tree (recipes + craftable items) */}
+          {showCraftTree && craftTreeRecipeId != null && (
+            <CraftTree recipeId={craftTreeRecipeId} />
+          )}
+
+          {/* Cross-references: where this item is used */}
+          {showWhereUsed && <WhereUsed itemId={entityKey} />}
 
           {/* Authored HTML body (optional) */}
           {body != null && (
