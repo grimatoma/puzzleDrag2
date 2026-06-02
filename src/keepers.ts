@@ -14,7 +14,7 @@ export const KEEPERS = {
     id: "deer_spirit",
     name: "The Deer-Spirit",
     title: "Keeper of Field & Herd",
-    icon: "🦌",
+    look: { icon: "🦌" },
     // Buildings the settlement needs before the keeper makes itself known.
     appearsAfterBuildings: 4,
     intro: [
@@ -43,7 +43,7 @@ export const KEEPERS = {
     id: "stone_knocker",
     name: "The Stone-Knocker",
     title: "Keeper of the Deep Ways",
-    icon: "🪨",
+    look: { icon: "🪨" },
     appearsAfterBuildings: 3,
     intro: [
       "Deep in the workings a stout figure of living rock raps its knuckles along the wall, listening for weak seams. Its voice is a copper kettle. It is older than the other keepers and does not enjoy small talk.",
@@ -71,7 +71,7 @@ export const KEEPERS = {
     id: "tidesinger",
     name: "The Tidesinger",
     title: "Keeper of Wrecks & Runs",
-    icon: "🌊",
+    look: { icon: "🌊" },
     appearsAfterBuildings: 3,
     intro: [
       "On a strange, glassy grey morning the sea goes still and someone is singing. A thin, fluid figure sits on the breakwater with her feet in the foam, far too cheerful for the hour.",

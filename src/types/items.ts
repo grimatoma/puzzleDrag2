@@ -141,7 +141,7 @@ export interface Hazard {
 export interface SettlementBiome {
   id: string;
   name: string;
-  icon: string;
+  look: { icon: string };
   hazards: [string, string];
   bonus: string;
 }

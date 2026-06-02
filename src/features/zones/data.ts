@@ -530,7 +530,7 @@ export function grantEarnedHearthTokens(state: GameState | null | undefined): He
 export interface SettlementBiomeDef {
   id: string;
   name: string;
-  icon?: string;
+  look?: { icon?: string };
   hazards: string[];
   bonus?: string;
 }

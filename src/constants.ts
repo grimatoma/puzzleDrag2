@@ -205,22 +205,22 @@ export let MIN_EXPEDITION_TURNS = 3;    // Dev Panel: tuning.minExpeditionTurns
 // The `bonus` is descriptive for now — not yet a mechanical spawn multiplier.
 export const SETTLEMENT_BIOMES = Object.freeze({
   farm: [
-    { id: "prairie",  name: "Prairie",  icon: "🌾", hazards: ["fire", "locusts"],    bonus: "grain yield" },
-    { id: "forest",   name: "Forest",   icon: "🌲", hazards: ["wolves", "fungus"],   bonus: "wood & herbs" },
-    { id: "marsh",    name: "Marsh",    icon: "🪷", hazards: ["poison", "flooding"], bonus: "rare herbs" },
-    { id: "highland", name: "Highland", icon: "⛰️", hazards: ["frost", "rockslide"], bonus: "livestock & hardy crops" },
+    { id: "prairie",  name: "Prairie",  look: { icon: "🌾" }, hazards: ["fire", "locusts"],    bonus: "grain yield" },
+    { id: "forest",   name: "Forest",   look: { icon: "🌲" }, hazards: ["wolves", "fungus"],   bonus: "wood & herbs" },
+    { id: "marsh",    name: "Marsh",    look: { icon: "🪷" }, hazards: ["poison", "flooding"], bonus: "rare herbs" },
+    { id: "highland", name: "Highland", look: { icon: "⛰️" }, hazards: ["frost", "rockslide"], bonus: "livestock & hardy crops" },
   ],
   mine: [
-    { id: "mountain",  name: "Mountain",  icon: "🏔️", hazards: ["cave_in", "gas_pocket"], bonus: "iron & stone" },
-    { id: "tundra",    name: "Tundra",    icon: "❄️", hazards: ["frost", "ice_spike"],     bonus: "gems" },
-    { id: "volcanic",  name: "Volcanic",  icon: "🌋", hazards: ["lava", "ash_cloud"],      bonus: "rare metals" },
-    { id: "deep_cave", name: "Deep Cave", icon: "🦇", hazards: ["bats", "sinkhole"],       bonus: "crystals & runes" },
+    { id: "mountain",  name: "Mountain",  look: { icon: "🏔️" }, hazards: ["cave_in", "gas_pocket"], bonus: "iron & stone" },
+    { id: "tundra",    name: "Tundra",    look: { icon: "❄️" }, hazards: ["frost", "ice_spike"],     bonus: "gems" },
+    { id: "volcanic",  name: "Volcanic",  look: { icon: "🌋" }, hazards: ["lava", "ash_cloud"],      bonus: "rare metals" },
+    { id: "deep_cave", name: "Deep Cave", look: { icon: "🦇" }, hazards: ["bats", "sinkhole"],       bonus: "crystals & runes" },
   ],
   harbor: [
-    { id: "coastal",  name: "Coastal",  icon: "🌊", hazards: ["storm", "shark"],         bonus: "standard fish" },
-    { id: "coral",    name: "Coral",    icon: "🪸", hazards: ["jellyfish", "riptide"],    bonus: "pearls" },
-    { id: "arctic",   name: "Arctic",   icon: "🧊", hazards: ["iceberg", "frostbite"],    bonus: "exotic catches" },
-    { id: "tropical", name: "Tropical", icon: "🏝️", hazards: ["cyclone", "sea_monster"], bonus: "spices & trade goods" },
+    { id: "coastal",  name: "Coastal",  look: { icon: "🌊" }, hazards: ["storm", "shark"],         bonus: "standard fish" },
+    { id: "coral",    name: "Coral",    look: { icon: "🪸" }, hazards: ["jellyfish", "riptide"],    bonus: "pearls" },
+    { id: "arctic",   name: "Arctic",   look: { icon: "🧊" }, hazards: ["iceberg", "frostbite"],    bonus: "exotic catches" },
+    { id: "tropical", name: "Tropical", look: { icon: "🏝️" }, hazards: ["cyclone", "sea_monster"], bonus: "spices & trade goods" },
   ],
 });
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).

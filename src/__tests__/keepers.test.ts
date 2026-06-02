@@ -24,7 +24,7 @@ describe("KEEPERS config", () => {
       const k = KEEPERS[type];
       expect(typeof k.id).toBe("string");
       expect(typeof k.name).toBe("string");
-      expect(typeof k.icon).toBe("string");
+      expect(typeof k.look?.icon).toBe("string");
       expect(k.appearsAfterBuildings).toBeGreaterThan(0);
       expect(Array.isArray(k.intro)).toBe(true);
       expect(k.intro.length).toBeGreaterThan(0);
@@ -49,7 +49,7 @@ describe("KEEPERS config", () => {
 describe("applyKeeperOverrides", () => {
   it("merges whitelisted fields in place; ignores a missing override object", () => {
     const fake = {
-      farm: { id: "f", name: "Old", title: "T", icon: "x", appearsAfterBuildings: 4, intro: ["a"], coexist: { label: "c", pitch: ["p"], embers: 5 }, driveout: { label: "d", pitch: ["q"], coreIngots: 5 } },
+      farm: { id: "f", name: "Old", title: "T", look: { icon: "x" }, appearsAfterBuildings: 4, intro: ["a"], coexist: { label: "c", pitch: ["p"], embers: 5 }, driveout: { label: "d", pitch: ["q"], coreIngots: 5 } },
     };
     applyKeeperOverrides(fake, { farm: { name: "New", appearsAfterBuildings: 2, intro: ["one", "two"], coexist: { embers: 11, label: "stay!" }, driveout: { coreIngots: 3 } } });
     expect(fake.farm.name).toBe("New");

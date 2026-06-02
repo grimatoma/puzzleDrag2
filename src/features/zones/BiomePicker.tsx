@@ -35,7 +35,7 @@ export default function BiomePicker({ node, type, cost, dispatch, onClose }: Bio
               className="hl-card hl-card--interactive text-left !p-3"
             >
               <div className="flex items-center gap-2">
-                <span className="text-[22px] leading-none">{b.icon}</span>
+                <span className="text-[22px] leading-none">{b.look?.icon}</span>
                 <span className="font-bold text-[14px] text-on-panel flex-1">{b.name}</span>
                 <RewardChip className="text-[#1f3a10] bg-[#cbe0b8] border-[#6a9a3a]">+ {b.bonus}</RewardChip>
               </div>
