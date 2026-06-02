@@ -27,7 +27,7 @@ import { FieldsTable } from "./FieldsTable.jsx";
 export function ConceptFields({ conceptId }: { conceptId: string }) {
   const cs = schemaForConcept(conceptId);
 
-  // No schema for this concept — live-config-only (hazards, seasons, …)
+  // No schema for this concept — live-config-only (hazards, …)
   if (cs == null) {
     return (
       <p

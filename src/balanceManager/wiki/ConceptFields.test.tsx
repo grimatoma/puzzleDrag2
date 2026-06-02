@@ -130,6 +130,19 @@ describe("ConceptFields — seasons (definition schema)", () => {
     const cells = screen.queryAllByText("look");
     expect(cells.length).toBeGreaterThan(0);
   });
+
+  it("renders the nested 'look' sub-fields (grouping not collapsed)", () => {
+    render(<ConceptFields conceptId="seasons" />);
+    // The grouped `look` object should expand into its sub-rows
+    // (iconKey / bg / fill / accent). Assert a representative one renders so a
+    // regression that collapses the grouping is caught. Sub-rows render their
+    // field name in the cell with a "↳ " indent prefix (parent rows do not), so
+    // matching the prefixed text targets the expanded sub-row specifically.
+    expect(
+      screen.queryAllByText(/↳\s*accent/).length,
+      "Expected the nested 'look.accent' sub-field row to render",
+    ).toBeGreaterThan(0);
+  });
 });
 
 // ─── Concept with a buildings definition schema ───────────────────────────────
