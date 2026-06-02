@@ -352,9 +352,9 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
         title="Status legend: WIRED = runs in normal play · PARTIAL = partly wired · STUB = present but inert · DOC-ONLY = design only · PLANNED = not yet built"
       >
         Status:{" "}
-        {(["WIRED", "PARTIAL", "STUB", "DOC-ONLY", "PLANNED"] as const).map((s, i, arr) => (
+        {(Object.entries(WIKI_STATUS_LEGEND) as Array<[string, typeof WIKI_STATUS_LEGEND[keyof typeof WIKI_STATUS_LEGEND]]>).map(([s, meta], i, arr) => (
           <span key={s}>
-            <strong>{s}</strong> = {WIKI_STATUS_LEGEND[s].description.replace(/\.$/, "")}
+            <strong>{s}</strong> = {meta.description.replace(/\.$/, "")}
             {i < arr.length - 1 ? " · " : ""}
           </span>
         ))}

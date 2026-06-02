@@ -83,7 +83,7 @@ const CONCEPT_STATUS: Partial<Record<string, WikiStatus>> = {
 // Keyed by conceptId → entityKey → WikiStatus.
 // An entity override takes precedence over the concept-level status.
 
-const ENTITY_STATUS: Partial<Record<string, Partial<Record<string, WikiStatus>>>> = {
+export const ENTITY_STATUS: Partial<Record<string, Partial<Record<string, WikiStatus>>>> = {
   // Only mine hazards are surfaced as wiki entities (via hazardEntries() in concepts.ts,
   // which reads HAZARDS from src/features/mine/hazards.ts). Farm hazards (fire/rats/wolf)
   // are NOT wiki entities, so no overrides for them appear here.

@@ -15,6 +15,7 @@ import {
   statusForConcept,
   statusForEntity,
   WIKI_STATUS_LEGEND,
+  ENTITY_STATUS,
 } from "./status.js";
 import type { WikiStatus } from "./status.js";
 import { getEntity } from "./conceptEntities.js";
@@ -114,33 +115,14 @@ describe("statusForEntity — hazards (mine hazard overrides)", () => {
 // returns null).
 
 describe("drift-guard: entity override keys must resolve to real wiki entities", () => {
-  // Access the ENTITY_STATUS map via its public surface:
-  // statusForEntity returns the override value, but we need the keys themselves.
-  // We do this by re-importing the module and reading the compiled object indirectly
-  // through getEntity — a cleaner approach is to enumerate known concepts with overrides
-  // and assert each key is real.
-  //
-  // The canonical set of concepts with entity overrides in status.ts is: hazards.
-  // If a new concept gains overrides, add it here.
-
-  const knownOverrides: Array<{ conceptId: string; keys: string[] }> = [
-    {
-      conceptId: "hazards",
-      keys: ["cave_in", "gas_vent", "lava", "mole"],
-    },
-  ];
-
-  for (const { conceptId, keys } of knownOverrides) {
-    describe(`concept: ${conceptId}`, () => {
-      for (const key of keys) {
-        it(`override key "${key}" resolves to a real wiki entity`, () => {
-          expect(
-            getEntity(conceptId, key),
-            `getEntity("${conceptId}", "${key}") returned null — override is dead code`,
-          ).not.toBeNull();
-        });
-      }
-    });
+  // Iterates the REAL ENTITY_STATUS map exported from status.ts so that any new
+  // dead override added to the map is caught automatically — no manual list to update.
+  for (const [conceptId, overrides] of Object.entries(ENTITY_STATUS)) {
+    for (const key of Object.keys(overrides ?? {})) {
+      it(`override "${conceptId}:${key}" resolves to a real wiki entity`, () => {
+        expect(getEntity(conceptId, key), `getEntity("${conceptId}","${key}") returned null — dead override`).not.toBeNull();
+      });
+    }
   }
 });
 
