@@ -46,15 +46,12 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   const statusMeta = WIKI_STATUS_LEGEND[status];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 wiki-reveal-stagger">
       {/* ── 1. Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Concept title */}
-          <span
-            className="font-bold"
-            style={{ fontSize: 20, color: COLORS.ember }}
-          >
+          {/* Concept title — display serif */}
+          <span className="wiki-concept-title">
             {concept.label}
           </span>
 
@@ -92,10 +89,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
       {/* ── 4. Entity grid ────────────────────────────────────────────────── */}
       <div>
-        <div
-          className="text-[10px] font-bold uppercase tracking-wide mb-2"
-          style={{ color: COLORS.inkSubtle }}
-        >
+        <div className="wiki-section-heading mb-2">
           Entries ({entries.length})
         </div>
         <EntryGrid

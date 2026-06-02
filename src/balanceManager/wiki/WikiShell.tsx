@@ -15,6 +15,7 @@ import { BALANCE_OVERRIDES } from "../../constants.js";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS } from "../shared.jsx";
 import { parseHash, useBalanceRouter } from "../router.js";
+import "./wikiTheme.css";
 import CommandPalette from "../CommandPalette.jsx";
 import { BalanceNavProvider } from "../balanceNav.jsx";
 import type { CommandEntry } from "../commandPalette.js";
@@ -84,12 +85,6 @@ function useIsSmallScreen() {
     return () => mq.removeEventListener?.("change", update);
   }, []);
   return small;
-}
-
-function navLinkStyle(active: boolean): React.CSSProperties {
-  return active
-    ? { background: COLORS.ember, color: "#fff" }
-    : { background: "transparent", color: COLORS.inkLight };
 }
 
 export default function WikiShell() {
@@ -192,31 +187,27 @@ export default function WikiShell() {
 
   return (
     <div
-      className="fixed inset-0 grid place-items-stretch"
+      className="wiki-root fixed inset-0 grid place-items-stretch"
       style={{ background: COLORS.parchmentDeep }}
     >
       <div
         className="relative flex flex-col overflow-hidden"
         style={{
-          background: COLORS.parchment,
+          background: COLORS.canvas,
           width: "100%",
           height: "100%",
         }}
       >
         {/* Header */}
         <header
-          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
-          style={{
-            background: `linear-gradient(180deg, ${COLORS.parchmentDeep} 0%, ${COLORS.parchment} 100%)`,
-            borderBottom: `3px solid ${COLORS.border}`,
-          }}
+          className="wiki-header flex items-center justify-between px-5 py-3 flex-shrink-0"
         >
           <div className="flex items-center gap-3">
             {isSmallScreen && (
               <button
                 onClick={() => setMobileNavOpen((v) => !v)}
-                className="grid place-items-center w-9 h-9 rounded-md border-2 text-[18px] font-bold"
-                style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
+                className="wiki-toggle-btn"
+                style={{ width: 36, height: 36, fontSize: 18 }}
                 title={overlayOpen ? "Close navigation" : "Open navigation"}
                 aria-label={overlayOpen ? "Close navigation" : "Open navigation"}
                 aria-expanded={overlayOpen}
@@ -225,31 +216,43 @@ export default function WikiShell() {
                 ☰
               </button>
             )}
-            <span className="text-[24px]">📖</span>
+            {/* Inline SVG hearth/flame accent — no external asset */}
+            <svg
+              className="wiki-header-icon"
+              viewBox="0 0 36 36"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              {/* Stone arch base */}
+              <rect x="4" y="26" width="28" height="7" rx="2" fill="#b28b62" />
+              {/* Hearth opening */}
+              <path d="M10 26 Q10 18 18 14 Q26 18 26 26Z" fill="#e8dcc4" />
+              {/* Flame — ember orange */}
+              <path d="M18 24 Q15 20 17 16 Q18 14 18 12 Q20 15 21 18 Q22 16 21 13 Q24 16 23 20 Q22 23 18 24Z" fill="#d6612a" />
+              {/* Flame inner glow */}
+              <path d="M18 22 Q16.5 19 17.5 17 Q18 15.5 18 14.5 Q19.2 17 19.5 19 Q20 17.5 19.5 16 Q21.5 18 20.5 21 Q19.5 22.5 18 22Z" fill="#f09050" opacity="0.7" />
+              {/* Logs */}
+              <rect x="11" y="25" width="14" height="3" rx="1.5" fill="#8b6845" />
+            </svg>
             <div>
-              <div className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ember }}>
-                Hearthwood Vale
-              </div>
-              <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-                Game wiki — every tile, recipe, building, and beat
-              </div>
+              <div className="wiki-wordmark">Hearthwood Vale</div>
+              <div className="wiki-tagline">Game wiki — every tile, recipe, building, and beat</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="flex items-center gap-2 px-2 py-1.5 text-[12px] font-bold rounded-lg border-2"
-              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              className="wiki-search-btn"
               title="Search the wiki (Cmd/Ctrl-K)"
               aria-label="Open command palette"
             >
               🔎 Search
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: COLORS.parchment, color: COLORS.inkSubtle, border: `1px solid ${COLORS.border}` }}>⌘K</span>
+              <span className="wiki-kbd">⌘K</span>
             </button>
             <a
               href={import.meta.env.BASE_URL}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 no-underline"
-              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              className="wiki-back-btn"
               title="Return to the game"
             >
               ← Back to Game
@@ -270,7 +273,7 @@ export default function WikiShell() {
           {/* Sidebar — inline column on desktop, fixed overlay on small screens. */}
           <nav
             id="wiki-mobile-nav"
-            className="flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto transition-transform duration-200"
+            className="wiki-sidebar flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto transition-transform duration-200"
             style={
               isSmallScreen
                 ? {
@@ -279,16 +282,12 @@ export default function WikiShell() {
                     bottom: 0,
                     left: 0,
                     width: 240,
-                    background: COLORS.parchmentDeep,
-                    borderRight: `2px solid ${COLORS.border}`,
                     transform: overlayOpen ? "translateX(0)" : "translateX(-100%)",
                     zIndex: 20,
-                    boxShadow: overlayOpen ? "2px 0 12px rgba(0,0,0,0.25)" : "none",
+                    boxShadow: overlayOpen ? "4px 0 20px rgba(43,34,24,0.20)" : "none",
                   }
                 : {
                     width: effectiveCollapsed ? 56 : 210,
-                    background: COLORS.parchmentDeep,
-                    borderRight: `2px solid ${COLORS.border}`,
                     position: "relative",
                     transition: "width 200ms",
                   }
@@ -298,8 +297,7 @@ export default function WikiShell() {
             <div className="self-end mb-1 flex gap-1">
               <button
                 onClick={isSmallScreen ? () => setMobileNavOpen(false) : toggleSidebar}
-                className="w-7 h-7 grid place-items-center text-[14px] font-bold rounded-md border-2"
-                style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
+                className="wiki-toggle-btn"
                 title={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
                 aria-label={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
                 aria-expanded={isSmallScreen ? overlayOpen : !sidebarCollapsed}
@@ -312,10 +310,7 @@ export default function WikiShell() {
             {WIKI_SECTIONS.map((sec) => (
               <div key={sec.id} className="flex flex-col gap-1">
                 {!effectiveCollapsed ? (
-                  <div
-                    className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: COLORS.inkSubtle }}
-                  >
+                  <div className="wiki-sidebar-label px-2 pt-2 pb-1">
                     {sec.label}
                   </div>
                 ) : (
@@ -328,8 +323,7 @@ export default function WikiShell() {
                     <button
                       key={cid}
                       onClick={() => navigate({ tab: cid })}
-                      className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
-                      style={navLinkStyle(active)}
+                      className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
                       title={effectiveCollapsed ? label : undefined}
                       aria-label={label}
                     >
@@ -344,10 +338,7 @@ export default function WikiShell() {
             {/* Narrative pages */}
             <div className="flex flex-col gap-1">
               {!effectiveCollapsed ? (
-                <div
-                  className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: COLORS.inkSubtle }}
-                >
+                <div className="wiki-sidebar-label px-2 pt-2 pb-1">
                   Pages
                 </div>
               ) : (
@@ -359,8 +350,7 @@ export default function WikiShell() {
                   <button
                     key={p.slug}
                     onClick={() => navigate({ tab: "page", focus: p.slug })}
-                    className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
-                    style={navLinkStyle(active)}
+                    className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
                     title={effectiveCollapsed ? p.label : undefined}
                     aria-label={p.label}
                   >
@@ -374,10 +364,7 @@ export default function WikiShell() {
             {/* Dev utilities */}
             <div className="flex flex-col gap-1">
               {!effectiveCollapsed ? (
-                <div
-                  className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: COLORS.inkSubtle }}
-                >
+                <div className="wiki-sidebar-label px-2 pt-2 pb-1">
                   Dev
                 </div>
               ) : (
@@ -389,8 +376,7 @@ export default function WikiShell() {
                   <button
                     key={u.id}
                     onClick={() => navigate({ tab: u.id })}
-                    className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
-                    style={navLinkStyle(active)}
+                    className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
                     title={effectiveCollapsed ? u.label : undefined}
                     aria-label={u.label}
                   >
@@ -405,7 +391,7 @@ export default function WikiShell() {
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
 
           {/* Main content */}
-          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <main className="wiki-main flex-1 flex flex-col min-w-0 overflow-hidden">
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <Suspense fallback={
                 <div className="text-center py-8 text-[12px] italic" style={{ color: COLORS.inkSubtle }}>
@@ -413,7 +399,9 @@ export default function WikiShell() {
                 </div>
               }>
                 <BalanceNavProvider focus={focus} navigate={navigate}>
-                  {mainContent}
+                  <div className="wiki-reveal">
+                    {mainContent}
+                  </div>
                 </BalanceNavProvider>
               </Suspense>
             </div>

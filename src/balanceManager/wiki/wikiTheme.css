@@ -1,0 +1,334 @@
+/**
+ * wikiTheme.css — Player-facing wiki theme for Hearthwood Vale
+ *
+ * Scoped under `.wiki-root` so styles don't leak into the rest of the Dev Panel
+ * or the game bundle. Imported by WikiShell.tsx (Vite handles CSS imports).
+ *
+ * Font pairing:
+ *   Display/headings : Fraunces (variable-weight serif — distinctive, warm)
+ *   Body             : IBM Plex Sans (clean, readable at small sizes)
+ *   Mono             : JetBrains Mono (entity keys, field names, code)
+ *
+ * Palette: reuses the existing UI_COLORS parchment/ember/ink tokens via CSS
+ * custom properties seeded here. No new colour scheme; no purple-on-white.
+ */
+
+/* ── CSS custom properties (seeded from UI_COLORS palette) ─────────────────── */
+.wiki-root {
+  --wiki-parchment:     #f4ecd8;
+  --wiki-parchment-deep:#e8dcc4;
+  --wiki-border:        #b28b62;
+  --wiki-border-deep:   #8b6845;
+  --wiki-ink:           #2b2218;
+  --wiki-ink-light:     #5a3a20;
+  --wiki-ink-subtle:    #7a5a38;
+  --wiki-ember:         #d6612a;
+  --wiki-ember-deep:    #a84010;
+  --wiki-canvas:        #f0e8d4;
+  --wiki-canvas-rule:   #ddd0b4;
+
+  /* typography */
+  --wiki-font-display: "Fraunces", "Newsreader", Georgia, serif;
+  --wiki-font-body:    "IBM Plex Sans", system-ui, sans-serif;
+  --wiki-font-mono:    "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* depth tokens */
+  --wiki-shadow-card:   0 2px 8px rgba(43, 34, 24, 0.10), 0 1px 2px rgba(43, 34, 24, 0.08);
+  --wiki-shadow-panel:  0 4px 16px rgba(43, 34, 24, 0.12), 0 1px 3px rgba(43, 34, 24, 0.08);
+  --wiki-shadow-header: 0 2px 10px rgba(43, 34, 24, 0.10);
+
+  /* transitions */
+  --wiki-transition: 150ms ease;
+
+  font-family: var(--wiki-font-body);
+  color: var(--wiki-ink);
+}
+
+/* ── Page-load reveal animation ─────────────────────────────────────────────── */
+
+@keyframes wiki-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wiki-reveal {
+  animation: wiki-fade-up 380ms ease both;
+}
+
+/* Stagger siblings inside a reveal container */
+.wiki-reveal-stagger > *:nth-child(1) { animation: wiki-fade-up 360ms 0ms   ease both; }
+.wiki-reveal-stagger > *:nth-child(2) { animation: wiki-fade-up 360ms 60ms  ease both; }
+.wiki-reveal-stagger > *:nth-child(3) { animation: wiki-fade-up 360ms 120ms ease both; }
+.wiki-reveal-stagger > *:nth-child(4) { animation: wiki-fade-up 360ms 180ms ease both; }
+.wiki-reveal-stagger > *:nth-child(5) { animation: wiki-fade-up 360ms 220ms ease both; }
+.wiki-reveal-stagger > *:nth-child(n+6) { animation: wiki-fade-up 360ms 260ms ease both; }
+
+/* Reduced-motion: no animation at all */
+@media (prefers-reduced-motion: reduce) {
+  .wiki-reveal,
+  .wiki-reveal-stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Typography hierarchy ───────────────────────────────────────────────────── */
+
+/* Article/entity title — large, display serif, heavy */
+.wiki-root .wiki-title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--wiki-ink);
+  letter-spacing: -0.02em;
+}
+
+/* Section heading inside an article — display serif, medium */
+.wiki-root .wiki-section-heading {
+  font-family: var(--wiki-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.01em;
+}
+
+/* Category page concept title — display serif, ember accent */
+.wiki-root .wiki-concept-title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 800;
+  color: var(--wiki-ember);
+  letter-spacing: -0.02em;
+}
+
+/* Sidebar section header (uppercase label) */
+.wiki-root .wiki-sidebar-label {
+  font-family: var(--wiki-font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+/* Mono elements: entity keys, field names, code snippets */
+.wiki-root code,
+.wiki-root .wiki-mono {
+  font-family: var(--wiki-font-mono);
+  font-size: 0.88em;
+}
+
+/* Header wordmark */
+.wiki-root .wiki-wordmark {
+  font-family: var(--wiki-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--wiki-ember);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* Header tagline */
+.wiki-root .wiki-tagline {
+  font-family: var(--wiki-font-body);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--wiki-ink-subtle);
+  line-height: 1.3;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+
+.wiki-root .wiki-header {
+  background: linear-gradient(
+    180deg,
+    var(--wiki-parchment-deep) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 60%, var(--wiki-parchment)) 60%,
+    var(--wiki-parchment) 100%
+  );
+  border-bottom: 2px solid var(--wiki-border);
+  box-shadow: var(--wiki-shadow-header);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+
+.wiki-root .wiki-sidebar {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--wiki-parchment-deep) 80%, #c9a87a) 0%,
+    var(--wiki-parchment-deep) 100%
+  );
+  border-right: 2px solid var(--wiki-border);
+}
+
+/* Sidebar nav links */
+.wiki-root .wiki-nav-link {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 7px;
+  padding: 7px 10px;
+  transition: background var(--wiki-transition), color var(--wiki-transition),
+              box-shadow var(--wiki-transition);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+}
+
+.wiki-root .wiki-nav-link:not(.wiki-nav-link--active):hover {
+  background: color-mix(in srgb, var(--wiki-ember) 10%, var(--wiki-parchment-deep)) !important;
+  color: var(--wiki-ink-light) !important;
+  box-shadow: inset 0 0 0 1px var(--wiki-border);
+}
+
+.wiki-root .wiki-nav-link--active {
+  background: var(--wiki-ember) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 4px rgba(214, 97, 42, 0.35);
+}
+
+/* ── Main content area ──────────────────────────────────────────────────────── */
+
+.wiki-root .wiki-main {
+  background: var(--wiki-canvas);
+  /* Subtle geometric texture: very faint rule lines */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 27px,
+      color-mix(in srgb, var(--wiki-canvas-rule) 40%, transparent) 28px
+    );
+}
+
+/* ── Cards / panels ─────────────────────────────────────────────────────────── */
+
+/* Enhance the existing Card component — applied via a wrapper class */
+.wiki-root .wiki-card {
+  background: var(--wiki-parchment);
+  border: 2px solid var(--wiki-border);
+  border-radius: 14px;
+  box-shadow: var(--wiki-shadow-card);
+  transition: box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-card:hover {
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+/* Entry grid cards — add depth on hover */
+.wiki-root .wiki-entry-card {
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition), border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-entry-card:hover {
+  box-shadow: var(--wiki-shadow-panel);
+  transform: translateY(-1px);
+  border-color: var(--wiki-border-deep) !important;
+}
+
+/* ── Search / action buttons ─────────────────────────────────────────────────── */
+
+.wiki-root .wiki-search-btn {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9px;
+  border: 2px solid var(--wiki-border);
+  background: var(--wiki-parchment-deep);
+  color: var(--wiki-ink-light);
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background var(--wiki-transition), border-color var(--wiki-transition),
+              box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-search-btn:hover {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 80%, var(--wiki-border));
+  border-color: var(--wiki-border-deep);
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.12);
+}
+
+.wiki-root .wiki-back-btn {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9px;
+  border: 2px solid var(--wiki-border);
+  background: var(--wiki-parchment-deep);
+  color: var(--wiki-ink-light);
+  padding: 5px 12px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--wiki-transition), border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-back-btn:hover {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 80%, var(--wiki-border));
+  border-color: var(--wiki-border-deep);
+}
+
+/* ── SVG Hearth accent ───────────────────────────────────────────────────────── */
+/* The inline SVG is rendered in the header JSX; this class positions + sizes it */
+.wiki-root .wiki-header-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* ── Article-level breadcrumb ────────────────────────────────────────────────── */
+.wiki-root .wiki-breadcrumb {
+  font-family: var(--wiki-font-body);
+  font-size: 11px;
+  color: var(--wiki-ink-subtle);
+}
+
+/* ── Collapsible sidebar toggle button ──────────────────────────────────────── */
+.wiki-root .wiki-toggle-btn {
+  background: var(--wiki-parchment);
+  border: 2px solid var(--wiki-border);
+  color: var(--wiki-ink-light);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--wiki-transition), border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-toggle-btn:hover {
+  background: var(--wiki-canvas);
+  border-color: var(--wiki-border-deep);
+}
+
+/* ── Keyboard shortcut badge ─────────────────────────────────────────────────── */
+.wiki-root .wiki-kbd {
+  font-family: var(--wiki-font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--wiki-parchment);
+  border: 1px solid var(--wiki-border);
+  color: var(--wiki-ink-subtle);
+  line-height: 1.5;
+}

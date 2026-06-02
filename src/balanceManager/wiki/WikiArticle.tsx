@@ -120,19 +120,18 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           {/* Breadcrumb */}
           <span
-            className="text-[11px]"
-            style={{ color: COLORS.inkSubtle }}
+            className="wiki-breadcrumb"
           >
             {conceptId}
           </span>
           <span style={{ color: COLORS.inkSubtle }}>›</span>
-          {/* Entity title */}
-          <span className="font-bold text-[15px]" style={{ color: COLORS.ink }}>
+          {/* Entity title — display serif, big */}
+          <span className="wiki-title" style={{ fontSize: "clamp(18px, 2.5vw, 26px)" }}>
             {title}
           </span>
-          {/* Entity key */}
+          {/* Entity key — mono */}
           <code
-            className="text-[11px] font-mono px-1.5 py-0.5 rounded"
+            className="wiki-mono text-[11px] px-1.5 py-0.5 rounded"
             style={{
               background: COLORS.parchmentDeep,
               color: COLORS.inkSubtle,
@@ -158,7 +157,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
       {/* Two-column layout: main content + right-rail Infobox */}
       <div className="flex gap-4 items-start min-w-0">
         {/* LEFT: main content column */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
+        <div className="flex-1 min-w-0 flex flex-col gap-4 wiki-reveal-stagger">
           {/* Table of contents */}
           <TableOfContents items={tocItems} />
 
@@ -181,8 +180,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {/* Properties section — always rendered */}
           <section id="properties">
             <div
-              className="text-[10px] font-bold uppercase tracking-wide mb-2"
-              style={{ color: COLORS.inkSubtle }}
+              className="wiki-section-heading mb-2"
             >
               Properties
             </div>
@@ -237,10 +235,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                             {ik != null && (
                               <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
                             )}
-                            <span className="font-mono text-[10px]">{link.label}</span>
+                            <span className="wiki-mono text-[10px]">{link.label}</span>
                             {link.label !== link.key && (
                               <span
-                                className="font-mono text-[9px] opacity-60 ml-0.5"
+                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
                                 style={{ color: COLORS.inkSubtle }}
                               >
                                 {link.key}
@@ -280,10 +278,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                             {ik != null && (
                               <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
                             )}
-                            <span className="font-mono text-[10px]">{link.label}</span>
+                            <span className="wiki-mono text-[10px]">{link.label}</span>
                             {link.label !== link.key && (
                               <span
-                                className="font-mono text-[9px] opacity-60 ml-0.5"
+                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
                                 style={{ color: COLORS.inkSubtle }}
                               >
                                 {link.key}
