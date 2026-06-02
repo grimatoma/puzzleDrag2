@@ -459,7 +459,7 @@ function profileState(profile: string): VisualStateTree {
     case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
     case "boardFarm": return boardState("farm");
     case "boardFarmLong": return { ...boardState("farm"), grid: farmGrid };
-    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
+    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns.", description: null, modifierDescription: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "boardFarmHazards": return { ...boardState("farm"), hazards: { ...boardState("farm").hazards, fire: { cells: [{ row: 0, col: 4 }, { row: 1, col: 4 }] }, rats: [{ row: 4, col: 0, age: 1 }, { row: 4, col: 1, age: 1 }, { row: 5, col: 0, age: 1 }] } };
     case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", toolPendingPower: { id: "area_blast", params: { radius: 1 }, tint: 0xff4444 }, tools: { ...boardState("farm").tools, bomb: 3 } };
     case "boardFarmSickle": return { ...boardState("farm"), toolPending: "sickle", toolPendingPower: { id: "clear_row", params: {}, tint: 0xff9900 }, tools: { ...boardState("farm").tools, sickle: 2 } };
@@ -491,8 +491,8 @@ function profileState(profile: string): VisualStateTree {
       g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
-    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
-    case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing." }, fish: { tide: "high", tideTurn: 3 } };
+    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
+    case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", description: null, modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.", spawnBias: null, modifier: { type: "", params: {} } }, fish: { tide: "high", tideTurn: 3 } };
     case "craftQueue": {
       // Multi-station queue snapshot: bakery has two stacked, forge has
       // one mid-progress, larder has a ready-to-claim item. Anchored to
@@ -564,7 +564,7 @@ function profileState(profile: string): VisualStateTree {
       };
     }
     case "bossGallery": return { ...richState(), story: quietStory({ frostmaw_defeated: true, ember_drake_active: true }) };
-    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
+    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood.", description: null, modifierDescription: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "runSummary": return withRunSummary(richState());
     case "boons": return { ...richState(), story: quietStory({ keeper_anyzone_coexist: true, keeper_anyzone_driveout: true }), boons: { deer_blessing: true } };
     case "storyBar": return withBeat(richState(), "act1_light_hearth");
