@@ -17,6 +17,8 @@ import { getEntity } from "./conceptEntities.js";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { RefButton, RelationalFooter } from "../relational.jsx";
 import { relationsFor } from "./relations.js";
+import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -282,6 +284,10 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
     [conceptId, entityKey, entity],
   );
 
+  // Status chip
+  const status = statusForEntity(conceptId, entityKey);
+  const statusMeta = WIKI_STATUS_LEGEND[status];
+
   // Build schema doc — catching in case of unexpected schema shape
   let schemaDoc: ReturnType<typeof describeSchema> | null = null;
   if (cs != null) {
@@ -327,7 +333,31 @@ export default function EntityDetail({ conceptId, entityKey, onBack }: EntityDet
             {entityKey}
           </code>
           <Pill color={pillColor} bg={pillBg}>{pillContent}</Pill>
+          <StatusChip
+            tone={statusMeta.tone}
+            size="xs"
+            uppercase
+            mono
+            title={statusMeta.description}
+            aria-label={`Status: ${statusMeta.label}`}
+          >
+            {statusMeta.label}
+          </StatusChip>
         </div>
+      </div>
+      {/* Status legend — compact one-liner, unobtrusive */}
+      <div
+        className="text-[9px] mb-3 leading-tight"
+        style={{ color: COLORS.inkSubtle }}
+        title="Status legend: WIRED = runs in normal play · PARTIAL = partly wired · STUB = present but inert · DOC-ONLY = design only · PLANNED = not yet built"
+      >
+        Status:{" "}
+        {(["WIRED", "PARTIAL", "STUB", "DOC-ONLY", "PLANNED"] as const).map((s, i, arr) => (
+          <span key={s}>
+            <strong>{s}</strong> = {WIKI_STATUS_LEGEND[s].description.replace(/\.$/, "")}
+            {i < arr.length - 1 ? " · " : ""}
+          </span>
+        ))}
       </div>
 
       {/* Schema-driven fields table */}

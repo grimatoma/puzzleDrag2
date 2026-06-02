@@ -20,6 +20,7 @@ import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 import { ZONES } from "../features/zones/data.js";
 import { SEASONS } from "../constants.js";
 import { BOSSES } from "../features/bosses/data.js";
+import { statusForEntity, WIKI_STATUS_LEGEND } from "../balanceManager/wiki/status.js";
 
 afterEach(() => cleanup());
 
@@ -208,6 +209,78 @@ describe("EntityDetail — back button", () => {
     expect(backButton).toBeDefined();
     fireEvent.click(backButton);
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Status chip ──────────────────────────────────────────────────────────────
+
+describe("EntityDetail — status chip", () => {
+  it("renders a status chip with the WIRED label for a tile entity", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    const expectedLabel = WIKI_STATUS_LEGEND["WIRED"].label; // "WIRED"
+    expect(statusForEntity("tiles", realTileKey!)).toBe("WIRED");
+
+    // The chip text should be visible in the rendered output
+    const chips = screen.queryAllByText(expectedLabel);
+    expect(chips.length, `Expected status chip with text "${expectedLabel}" to be rendered`).toBeGreaterThan(0);
+  });
+
+  it("renders a status chip with a title tooltip describing the status", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    // The chip should have a title attribute matching the WIRED description
+    const description = WIKI_STATUS_LEGEND["WIRED"].description;
+    const chipWithTitle = document.querySelector(`[title="${description}"]`);
+    expect(chipWithTitle, `Expected an element with title="${description}"`).toBeTruthy();
+  });
+
+  it("renders the status legend line with all 5 status names", () => {
+    render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+
+    // The compact legend row should show all 5 status abbreviations
+    for (const s of ["WIRED", "PARTIAL", "STUB", "DOC-ONLY", "PLANNED"] as const) {
+      // Each status label appears at least once (the chip + the legend)
+      const matches = screen.queryAllByText(new RegExp(s.replace("-", "\\-")));
+      expect(matches.length, `Expected "${s}" to appear in the status legend`).toBeGreaterThan(0);
+    }
+  });
+
+  it("read-only invariant: renders zero editable controls even with status chip added", () => {
+    const { container } = render(
+      wrapWithProvider(
+        <EntityDetail
+          conceptId="tiles"
+          entityKey={realTileKey!}
+          onBack={() => {}}
+        />,
+      ),
+    );
+    expect(container.querySelectorAll("input, select, textarea").length).toBe(0);
   });
 });
 
