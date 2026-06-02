@@ -50,6 +50,9 @@ export interface KeeperBossMirror {
   goal: string;
   flavor: string;
   description: string;
+  modifierDescription: string | null;
+  spawnBias: Record<string, number> | null;
+  modifier: import("../features/bosses/modifiers.js").BossModifier;
   isKeeperTrial: true;
 }
 
@@ -111,6 +114,9 @@ export function bossMirrorForTrial(trial: KeeperTrial | null | undefined): Keepe
     goal: `Collect ${trial.goal.amount} ${trial.goal.resource} before the trial ends.`,
     flavor: "Keeper Trial",
     description: "A special board with keeper rules.",
+    modifierDescription: null,
+    spawnBias: null,
+    modifier: { type: "", params: {} },
     isKeeperTrial: true,
   };
 }

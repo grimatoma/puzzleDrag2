@@ -52,7 +52,7 @@ export interface CraftingPayload {
 }
 
 export interface StoryPickChoicePayload {
-  choiceId?: string;
+  choiceId: string;
   value?: unknown;
 }
 
@@ -79,8 +79,8 @@ export interface MarketSellPayload {
 }
 
 export interface CastleContributePayload {
-  key?: string;
-  amount?: number;
+  key: string;
+  amount: number;
 }
 
 // ── Typed actions (bridge + core reducer hot paths) ───────────────────────

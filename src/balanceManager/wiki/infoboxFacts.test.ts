@@ -1,5 +1,5 @@
 /**
- * Tests for infoboxFacts.ts and conceptVisual.ts
+ * Tests for infoboxFacts.ts
  *
  * TDD — written before the implementation. Uses real keys from live maps; no fakes.
  *
@@ -17,18 +17,11 @@
  *  10. bosses — facts include "Season" from a real boss
  *  11. abilities — facts include "Trigger" from a real ability
  *  12. toolPowers — facts include "Tap target?" from a real tool power
- *
- *  conceptVisual:
- *  13. non-null ids are all valid scenario ids from VISUAL_SCENARIOS
- *  14. unmapped concept returns null
- *  15. specific spot-check mappings return expected ids
  */
 
 import { describe, it, expect } from "vitest";
 import { infoboxFacts } from "./infoboxFacts.js";
-import { scenarioForEntity } from "./conceptVisual.js";
 import { getEntity } from "./conceptEntities.js";
-import { VISUAL_SCENARIOS } from "../../visualTesting/matrix.js";
 import { ITEMS, BUILDINGS, RECIPES } from "../../constants.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES } from "../../features/zones/data.js";
@@ -72,9 +65,6 @@ const realAbilityId = realAbility.id as string;
 // Tool powers: first tool power
 const realToolPower = (TOOL_POWERS as unknown as Array<Record<string, unknown>>)[0];
 const realToolPowerId = realToolPower.id as string;
-
-// ─── Valid scenario id set ────────────────────────────────────────────────────
-const validScenarioIds = new Set(VISUAL_SCENARIOS.map((s) => s.id));
 
 // ─── infoboxFacts tests ───────────────────────────────────────────────────────
 
@@ -250,118 +240,6 @@ describe("infoboxFacts", () => {
     for (const conceptId of conceptIds) {
       expect(() => infoboxFacts(conceptId, "nope", null)).not.toThrow();
       expect(infoboxFacts(conceptId, "nope", null)).toEqual([]);
-    }
-  });
-});
-
-// ─── conceptVisual tests ──────────────────────────────────────────────────────
-
-describe("scenarioForEntity", () => {
-  it("every non-null return value is a valid scenario id from VISUAL_SCENARIOS", () => {
-    // Sample a range of concepts and keys — any non-null must be a real scenario
-    const sampleInputs: Array<[string, string]> = [
-      ["tiles", "tile_grass_hay"],
-      ["tiles", "tile_mine_stone"],
-      ["resources", "flour"],
-      ["tools", "bomb"],
-      ["recipes", "rec_bread"],
-      ["buildings", "bakery"],
-      ["zones", "home"],
-      ["workers", "farmer"],
-      ["bosses", "frostmaw"],
-      ["abilities", "threshold_reduce"],
-      ["toolPowers", "clear_all"],
-      ["seasons", "Spring"],
-      ["views", "board"],
-      ["views", "town"],
-      ["views", "inventory"],
-      ["views", "cartography"],
-      ["views", "chronicle"],
-      ["npcs", "merchant"],
-      ["hazards", "fire"],
-    ];
-    for (const [conceptId, key] of sampleInputs) {
-      const result = scenarioForEntity(conceptId, key);
-      if (result !== null) {
-        expect(validScenarioIds.has(result), `"${result}" returned for ${conceptId}/${key} is not in VISUAL_SCENARIOS`).toBe(true);
-      }
-    }
-  });
-
-  it("returns null for unmapped concepts", () => {
-    expect(scenarioForEntity("unknown_concept", "foo")).toBeNull();
-    expect(scenarioForEntity("abilities", "threshold_reduce")).toBeNull();
-  });
-
-  it("views concept — board view maps to a real board scenario", () => {
-    const result = scenarioForEntity("views", "board");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("board-farm-idle");
-  });
-
-  it("views concept — town view maps to a real town scenario", () => {
-    const result = scenarioForEntity("views", "town");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-  });
-
-  it("views concept — cartography view maps to a real map scenario", () => {
-    const result = scenarioForEntity("views", "cartography");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("map-current-home");
-  });
-
-  it("views concept — chronicle view maps to a real chronicle scenario", () => {
-    const result = scenarioForEntity("views", "chronicle");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("chronicle-progressed");
-  });
-
-  it("npcs concept — maps to a townsfolk scenario", () => {
-    const result = scenarioForEntity("npcs", "merchant");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("townsfolk-castle");
-  });
-
-  it("hazards concept — fire maps to a hazard board scenario", () => {
-    const result = scenarioForEntity("hazards", "fire");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("board-farm-fire-rats");
-  });
-
-  it("hazards concept — unknown hazard key falls back to mine board", () => {
-    const result = scenarioForEntity("hazards", "unknown_hazard");
-    expect(result).not.toBeNull();
-    expect(validScenarioIds.has(result!)).toBe(true);
-    expect(result).toBe("board-mine-hazards");
-  });
-
-  it("tiles returns a board scenario id", () => {
-    const result = scenarioForEntity("tiles", "tile_grass_hay");
-    expect(result).not.toBeNull();
-    if (result !== null) {
-      expect(validScenarioIds.has(result)).toBe(true);
-    }
-  });
-
-  it("bosses returns a boss-related scenario id", () => {
-    const result = scenarioForEntity("bosses", "frostmaw");
-    expect(result).not.toBeNull();
-    if (result !== null) {
-      expect(validScenarioIds.has(result)).toBe(true);
-    }
-  });
-
-  it("zones returns a scenario id", () => {
-    const result = scenarioForEntity("zones", "home");
-    expect(result).not.toBeNull();
-    if (result !== null) {
-      expect(validScenarioIds.has(result)).toBe(true);
     }
   });
 });

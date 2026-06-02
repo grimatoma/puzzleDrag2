@@ -70,6 +70,31 @@ describe("WikiArticle — recipe article (rec_bread)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toContain("Overview");
   });
+
+  it("renders an 'At a glance' section with the Recipe heading (RecipeIO)", () => {
+    renderArticle("recipes", "rec_bread");
+    const body = document.body.textContent ?? "";
+    // The at-a-glance section + its TOC entry render for recipes.
+    expect(body).toContain("At a glance");
+    expect(body).toContain("Recipe");
+  });
+
+  it("demotes the schema table behind a 'Schema reference (developer)' details summary", () => {
+    const { container } = renderArticle("recipes", "rec_bread");
+    const summary = container.querySelector("details > summary");
+    expect(summary).not.toBeNull();
+    expect(summary!.textContent).toContain("Schema reference (developer)");
+  });
+});
+
+// ─── At-a-glance gating: buildings render a cost; non-cost concepts skip ──────
+
+describe("WikiArticle — at-a-glance cost chips (bakery)", () => {
+  it("renders a 'Cost to build' heading for a building with a cost", () => {
+    renderArticle("buildings", "bakery");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Cost to build");
+  });
 });
 
 // ─── Test 2: Backlinks present ────────────────────────────────────────────────
@@ -103,6 +128,79 @@ describe("WikiArticle — authored body (bread.html)", () => {
     renderArticle("resources", "bread");
     const body = document.body.textContent ?? "";
     expect(body).toContain("About");
+  });
+});
+
+// ─── Cross-reference sections (CraftTree / WhereUsed) ─────────────────────────
+
+describe("WikiArticle — crafting tree (recipe article)", () => {
+  it("renders a 'Crafting tree' section for rec_bread", () => {
+    renderArticle("recipes", "rec_bread");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Crafting tree");
+    expect(body).toContain("Raw inputs:");
+  });
+});
+
+describe("WikiArticle — used-in section (resource article)", () => {
+  it("renders a 'Used in' section for plank (referenced widely)", () => {
+    renderArticle("resources", "plank");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Used in");
+  });
+
+  it("renders a crafting tree for a craftable resource (bread)", () => {
+    renderArticle("resources", "bread");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Crafting tree");
+  });
+});
+
+// ─── Concept-specific enrichment sections (boss / tile) ──────────────────────
+
+describe("WikiArticle — boss difficulty (boss article)", () => {
+  it("renders a Difficulty section with the tier for frostmaw", () => {
+    renderArticle("bosses", "frostmaw");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Difficulty");
+    // frostmaw: 30 / 10 = 3 per turn → Gentle tier
+    expect(body).toMatch(/gentle/i);
+  });
+});
+
+describe("WikiArticle — tile unlock (tile article)", () => {
+  it("renders a 'How to unlock' section for tile_grain_wheat", () => {
+    renderArticle("tiles", "tile_grain_wheat");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("How to unlock");
+    expect(body).toMatch(/chain/i);
+  });
+});
+
+describe("WikiArticle — zone drop-rate heatmap (zone article)", () => {
+  it("renders a 'Drop rates & upgrades' section for home with a percentage cell", () => {
+    renderArticle("zones", "home");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Drop rates");
+    expect(body).toMatch(/season drop rates/i);
+    // FARM_SEASON_DROPS_TEMPERATE Spring.grass = 0.38 → "38%"
+    expect(body).toContain("38%");
+    // upgrade-map flow renders an arrow
+    expect(body).toContain("→");
+  });
+});
+
+describe("WikiArticle — ability spec (ability article)", () => {
+  it("renders a 'Specification' section for bonus_yield with its params + trigger", () => {
+    renderArticle("abilities", "bonus_yield");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Specification");
+    // params target/amount + the channel
+    expect(body).toContain("target");
+    expect(body).toContain("amount");
+    expect(body).toContain("bonusYield");
+    // trigger on_chain_collect → "On Chain Collect"
+    expect(body).toMatch(/on chain collect/i);
   });
 });
 
@@ -144,5 +242,29 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
     const arg = navigate.mock.calls[0][0] as { tab: string; focus: string };
     expect(arg.focus).toMatch(/^[a-zA-Z_]+:.+/);
     expect(arg.tab).toBe(arg.focus.slice(0, arg.focus.indexOf(":")));
+  });
+});
+
+// ─── Test 6: Keeper article shows the Keeper encounter section ───────────────
+
+describe("WikiArticle — keeper article (deer_spirit)", () => {
+  it("renders the Keeper encounter section with both reward currencies", () => {
+    renderArticle("keepers", "deer_spirit");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Keeper encounter");
+    expect(body).toMatch(/Embers/);
+    expect(body).toMatch(/Core Ingots/);
+  });
+});
+
+// ─── Test 7: Achievement article shows its reward ────────────────────────────
+
+describe("WikiArticle — achievement article (first_steps)", () => {
+  it("renders the Achievement section with the coins reward", () => {
+    renderArticle("achievements", "first_steps");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Achievement");
+    expect(body).toMatch(/Coins/);
+    expect(body).toContain("25");
   });
 });

@@ -2,8 +2,9 @@
  * Infobox.tsx — Right-rail summary card for wiki entity articles.
  *
  * Shows:
- *  - A visual preview: either a live-game GameScreenEmbed (when the concept/key
- *    has a mapped visual scenario) or a procedural icon fallback.
+ *  - A visual preview: the entity's real asset (procedural icon, building SVG,
+ *    or zone town-map) via <EntityVisual>. Never a game iframe; renders no
+ *    visual block when the entity has no asset.
  *  - An implementation-status chip.
  *  - A compact two-column facts table sourced from infoboxFacts().
  *
@@ -12,33 +13,35 @@
 
 import React from "react";
 import { COLORS } from "../shared.jsx";
-import Icon from "../../ui/Icon.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
-import { GameScreenEmbed } from "./GameScreenEmbed.jsx";
+import { EntityVisual, entityIconKey } from "./EntityVisual.jsx";
+import { CANONICAL_BUILDING_KEYS } from "../../ui/buildings/index.jsx";
 import { infoboxFacts } from "./infoboxFacts.js";
-import { scenarioForEntity } from "./conceptVisual.js";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 
 export function Infobox({
   conceptId,
   entityKey,
   entity,
-  iconKey,
 }: {
   conceptId: string;
   entityKey: string;
   entity: Record<string, unknown> | null;
-  iconKey?: string;
 }) {
-  const scenario = scenarioForEntity(conceptId, entityKey);
   const status = statusForEntity(conceptId, entityKey);
   const meta = WIKI_STATUS_LEGEND[status];
   const facts = infoboxFacts(conceptId, entityKey, entity);
+  // EntityVisual returns null when there is no asset; gate the centering
+  // wrapper on the same conditions so we never render an empty padded box.
+  const hasVisual =
+    (conceptId === "buildings" && CANONICAL_BUILDING_KEYS.includes(entityKey)) ||
+    conceptId === "zones" ||
+    entityIconKey(conceptId, entityKey, entity) != null;
 
   return (
     <aside
       style={{
-        width: 260,
+        width: 190,
         flexShrink: 0,
         background: COLORS.parchmentDeep,
         border: `1px solid ${COLORS.border}`,
@@ -49,14 +52,12 @@ export function Infobox({
         gap: 10,
       }}
     >
-      {/* Visual block */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-        {scenario != null ? (
-          <GameScreenEmbed scenarioId={scenario} height={220} />
-        ) : (
-          <Icon iconKey={iconKey ?? entityKey} size={96} />
-        )}
-      </div>
+      {/* Visual block — the entity's real asset, or nothing. Never an iframe. */}
+      {hasVisual && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <EntityVisual conceptId={conceptId} entityKey={entityKey} entity={entity} size={96} />
+        </div>
+      )}
 
       {/* Status chip */}
       <div style={{ display: "flex", justifyContent: "center" }}>

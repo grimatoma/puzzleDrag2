@@ -36,19 +36,69 @@ import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
+import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
+import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
+import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
+import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
+import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
+import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
+import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.jsx";
+import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
+import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
+import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
 
-// ─── Icon helper ─────────────────────────────────────────────────────────────
+// ─── At-a-glance visual ────────────────────────────────────────────────────────
 
 /**
- * Return the icon key for a cross-link target, or null if the concept has no
- * per-entity icons (recipes, buildings, zones, workers, etc. do not).
+ * Render a lead-in visual summary for concepts whose key attributes are
+ * icon+count costs or a recipe flow. Returns null when the concept has no
+ * at-a-glance visual (so the caller can skip the whole section + heading).
  *
- * Only concepts where every entity has a 1-to-1 icon (item id → icon key)
- * are included. Boss icons follow the "boss_<key>" convention.
+ * Zones intentionally render their town map in the Infobox (via EntityVisual),
+ * so here we only surface the entry cost — not the map.
  */
-function iconKeyForLink(conceptId: string, key: string): string | null {
-  if (conceptId === "tiles" || conceptId === "resources" || conceptId === "tools") return key;
-  if (conceptId === "bosses") return `boss_${key}`;
+function renderAtAGlance(
+  conceptId: string,
+  entity: Record<string, unknown> | null,
+): { heading: string; node: React.ReactNode } | null {
+  if (entity == null) return null;
+
+  if (conceptId === "recipes") {
+    return {
+      heading: "Recipe",
+      node: <RecipeIO recipe={entity as { item: string; station?: string; inputs?: Record<string, number> }} />,
+    };
+  }
+
+  if (conceptId === "buildings") {
+    const cost = entity.cost as Record<string, number> | undefined;
+    const node = <AmountChips amounts={cost} />;
+    if (node == null || cost == null || Object.keys(cost).length === 0) return null;
+    return { heading: "Cost to build", node };
+  }
+
+  if (conceptId === "zones") {
+    const entryCost = entity.entryCost as Record<string, number> | undefined;
+    if (entryCost == null || Object.keys(entryCost).length === 0) return null;
+    return { heading: "Entry cost", node: <AmountChips amounts={entryCost} /> };
+  }
+
+  if (conceptId === "workers") {
+    const hireCost = entity.hireCost as
+      | { coins?: number; resources?: Record<string, number> }
+      | undefined;
+    if (hireCost == null) return null;
+    const amounts: Record<string, number> = { ...(hireCost.resources ?? {}) };
+    if (typeof hireCost.coins === "number" && hireCost.coins > 0) {
+      amounts.coins = hireCost.coins;
+    }
+    if (Object.keys(amounts).length === 0) return null;
+    return { heading: "Hire cost", node: <AmountChips amounts={amounts} /> };
+  }
+
   return null;
 }
 
@@ -103,9 +153,63 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // Schema field names for AdditionalFieldsSection
   const schemaFieldNames = new Set(schemaDoc?.fields.map((f) => f.field) ?? []);
 
+  // At-a-glance visual summary (recipes/buildings/zones/workers) — null otherwise
+  const atAGlance = renderAtAGlance(conceptId, entity);
+
+  // Cross-reference + crafting-dependency sections.
+  // - WhereUsed (item articles): "where is this item id referenced".
+  // - CraftTree (recipe articles + craftable item articles): upstream tree.
+  const isItemConcept = conceptId === "resources" || conceptId === "tiles" || conceptId === "tools";
+  const showWhereUsed = isItemConcept && hasWhereUsed(entityKey);
+  const craftTreeRecipeId =
+    conceptId === "recipes"
+      ? entityKey
+      : isItemConcept
+        ? recipeIdProducing(entityKey)
+        : null;
+  const showCraftTree = hasCraftTree(craftTreeRecipeId);
+
+  // Concept-specific enrichment sections.
+  // - BossDifficulty (boss articles): derived difficulty assessment.
+  // - NpcGifts (npc articles): loves/likes gift preferences.
+  // - TileUnlock (tile articles): how the tile is discovered + its tier.
+  const showBossDifficulty =
+    conceptId === "bosses" && hasBossDifficulty(entity as Parameters<typeof hasBossDifficulty>[0]);
+  const showNpcGifts = conceptId === "npcs" && hasNpcGifts(entityKey);
+  const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
+  const showZoneDetail =
+    conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showAbilitySpec = conceptId === "abilities" && hasAbilitySpec(entity);
+  const showToolPowerSpec = conceptId === "toolPowers" && hasToolPowerSpec(entity);
+  // Reward / cost enrichment for the post-keeper progression concepts.
+  const showKeeperEncounter =
+    conceptId === "keepers" &&
+    hasKeeperEncounter(entity as Parameters<typeof hasKeeperEncounter>[0]);
+  const showBoonCard =
+    conceptId === "boons" && hasBoonCard(entity as Parameters<typeof hasBoonCard>[0]);
+  const showDailyReward =
+    conceptId === "dailyRewards" &&
+    hasDailyReward(entity as Parameters<typeof hasDailyReward>[0]);
+  const showAchievementCard =
+    conceptId === "achievements" &&
+    hasAchievementCard(entity as Parameters<typeof hasAchievementCard>[0]);
+
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
+    ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
+    ...(showAbilitySpec ? [{ id: "ability-spec", label: "Specification" }] : []),
+    ...(showToolPowerSpec ? [{ id: "tool-power-spec", label: "Specification" }] : []),
+    ...(showKeeperEncounter ? [{ id: "keeper-encounter", label: "Keeper encounter" }] : []),
+    ...(showBoonCard ? [{ id: "boon", label: "Boon" }] : []),
+    ...(showDailyReward ? [{ id: "daily-reward", label: "Reward" }] : []),
+    ...(showAchievementCard ? [{ id: "achievement", label: "Achievement" }] : []),
+    ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
+    ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
+    ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
+    ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
+    ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
     ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
@@ -170,6 +274,66 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             {ledeFor(conceptId, entityKey, entity)}
           </p>
 
+          {/* Boss difficulty assessment (boss articles) — near the top */}
+          {showBossDifficulty && entity != null && (
+            <BossDifficulty boss={entity as React.ComponentProps<typeof BossDifficulty>["boss"]} />
+          )}
+
+          {/* At-a-glance visual summary (recipes/buildings/zones/workers) */}
+          {atAGlance != null && (
+            <section id="at-a-glance">
+              <div className="wiki-section-heading mb-2">{atAGlance.heading}</div>
+              {atAGlance.node}
+            </section>
+          )}
+
+          {/* Ability specification (ability articles) */}
+          {showAbilitySpec && <AbilitySpec ability={entity} />}
+
+          {/* Tool power specification (tool-power articles) */}
+          {showToolPowerSpec && <ToolPowerSpec power={entity} />}
+
+          {/* Keeper founding-bargain encounter (keeper articles) */}
+          {showKeeperEncounter && entity != null && (
+            <KeeperEncounter keeper={entity as React.ComponentProps<typeof KeeperEncounter>["keeper"]} />
+          )}
+
+          {/* Boon cost + effect (boon articles) */}
+          {showBoonCard && entity != null && (
+            <BoonCard boon={entity as React.ComponentProps<typeof BoonCard>["boon"]} />
+          )}
+
+          {/* Daily login reward (daily-reward articles) */}
+          {showDailyReward && entity != null && (
+            <DailyRewardsTrack day={entity as React.ComponentProps<typeof DailyRewardsTrack>["day"]} />
+          )}
+
+          {/* Achievement requirement + reward (achievement articles) */}
+          {showAchievementCard && entity != null && (
+            <AchievementCard
+              achievement={entity as React.ComponentProps<typeof AchievementCard>["achievement"]}
+            />
+          )}
+
+          {/* Tile unlock requirement (tile articles) */}
+          {showTileUnlock && <TileUnlock tileId={entityKey} />}
+
+          {/* Zone drop rates & chain upgrades (zone articles) */}
+          {showZoneDetail && entity != null && (
+            <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
+          )}
+
+          {/* NPC gift preferences (npc articles) */}
+          {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}
+
+          {/* Crafting dependency tree (recipes + craftable items) */}
+          {showCraftTree && craftTreeRecipeId != null && (
+            <CraftTree recipeId={craftTreeRecipeId} />
+          )}
+
+          {/* Cross-references: where this item is used */}
+          {showWhereUsed && <WhereUsed itemId={entityKey} />}
+
           {/* Authored HTML body (optional) */}
           {body != null && (
             <section id="about">
@@ -185,30 +349,83 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               Properties
             </div>
 
-            {schemaDoc != null && (
-              <>
-                <FieldsTable fields={schemaDoc.fields} entity={entity} />
-                {entity != null && (
-                  <AdditionalFieldsSection
-                    entity={entity}
-                    schemaFieldNames={schemaFieldNames}
-                  />
-                )}
-              </>
-            )}
-
-            {schemaDoc == null && entity != null && (
-              <LiveConfigFallback entity={entity} />
-            )}
-
-            {schemaDoc == null && entity == null && (
-              <div
-                className="text-[12px] italic py-4 text-center"
-                style={{ color: COLORS.inkSubtle }}
+            {/* Raw schema table demoted to a collapsed developer reference */}
+            <details className="wiki-schema-details" style={{ borderRadius: 8, overflow: "hidden" }}>
+              {/* Self-contained chevron rotation — no shared CSS dependency */}
+              <style>{".wiki-schema-details[open] .wiki-details-chevron{transform:rotate(90deg)}"}</style>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  listStyle: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  background: COLORS.parchmentDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: COLORS.ink,
+                  userSelect: "none",
+                }}
               >
-                No data for this entry.
+                {/* Chevron indicator */}
+                <span
+                  aria-hidden
+                  className="wiki-details-chevron"
+                  style={{
+                    display: "inline-block",
+                    width: 12,
+                    height: 12,
+                    fontSize: 10,
+                    lineHeight: "12px",
+                    textAlign: "center",
+                    transition: "transform 150ms ease",
+                    color: COLORS.inkSubtle,
+                    flexShrink: 0,
+                  }}
+                >
+                  ▶
+                </span>
+                Schema reference (developer)
+              </summary>
+
+              <div
+                style={{
+                  padding: 12,
+                  background: COLORS.parchment,
+                  border: `1px solid ${COLORS.border}`,
+                  borderTop: "none",
+                  borderRadius: "0 0 8px 8px",
+                }}
+              >
+                {schemaDoc != null && (
+                  <>
+                    <FieldsTable fields={schemaDoc.fields} entity={entity} />
+                    {entity != null && (
+                      <AdditionalFieldsSection
+                        entity={entity}
+                        schemaFieldNames={schemaFieldNames}
+                      />
+                    )}
+                  </>
+                )}
+
+                {schemaDoc == null && entity != null && (
+                  <LiveConfigFallback entity={entity} />
+                )}
+
+                {schemaDoc == null && entity == null && (
+                  <div
+                    className="text-[12px] italic py-4 text-center"
+                    style={{ color: COLORS.inkSubtle }}
+                  >
+                    No data for this entry.
+                  </div>
+                )}
               </div>
-            )}
+            </details>
           </section>
 
           {/* Forward relations */}
@@ -225,7 +442,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {group.links.map((link) => {
-                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        const ik = entityIconKey(link.conceptId, link.key, null);
                         return (
                           <RefButton
                             key={`${link.conceptId}:${link.key}`}
@@ -268,7 +485,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {group.links.map((link) => {
-                        const ik = iconKeyForLink(link.conceptId, link.key);
+                        const ik = entityIconKey(link.conceptId, link.key, null);
                         return (
                           <RefButton
                             key={`${link.conceptId}:${link.key}`}

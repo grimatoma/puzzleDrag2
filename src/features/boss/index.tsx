@@ -34,7 +34,7 @@ interface BossModalProps {
 }
 
 function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
-  const meta = (BOSS_UI as Record<string, { displayName?: string; emoji?: string; flavor?: string; goal?: string }>)[boss.key] || {};
+  const meta = BOSS_UI[boss.key] ?? {};
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;

@@ -20,11 +20,16 @@ import HtmlBody from "./HtmlBody.jsx";
 import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+import { groupTileEntries } from "./tileGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
 // the collapsed-by-default guard already ensures the graph isn't built until
 // the user expands the section.
 import RecipeGraph from "./RecipeGraph.jsx";
+import { EconomyRollup } from "./sections/EconomyRollup.jsx";
+import { BossComparison } from "./sections/BossComparison.jsx";
+import { WorkerComparison } from "./sections/WorkerComparison.jsx";
+import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +99,14 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
       {/* ── 3. Field reference ────────────────────────────────────────────── */}
       <ConceptFields conceptId={conceptId} />
+
+      {/* ── 3a. Category overview / comparison sections ───────────────────────
+          Analytical roll-ups that lead the entity list on specific category
+          pages. Each returns null when its concept has no data. */}
+      {conceptId === "buildings" && <EconomyRollup />}
+      {conceptId === "bosses" && <BossComparison />}
+      {conceptId === "workers" && <WorkerComparison />}
+      {conceptId === "tiles" && <ProgressionTimeline />}
 
       {/* ── 3b. Recipe relationship graph (recipes concept only) ──────────── */}
       {conceptId === "recipes" && (
@@ -172,15 +185,57 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       )}
 
       {/* ── 4. Entity grid ────────────────────────────────────────────────── */}
-      <div>
-        <div className="wiki-section-heading mb-2">
-          Entries ({entries.length})
+      {conceptId === "tiles" ? (
+        <div className="flex flex-col gap-4">
+          <div className="wiki-section-heading">
+            Entries ({entries.length})
+          </div>
+          {groupTileEntries(entries as unknown as WikiEntry[]).map((subGroup) => (
+            <section key={subGroup.sub} className="flex flex-col gap-3">
+              {/* Sub-category band heading — icon + label, ember accent */}
+              <div
+                className="flex items-center gap-2 pb-1"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              >
+                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                  {subGroup.icon}
+                </span>
+                <span
+                  className="wiki-concept-title"
+                  style={{ fontSize: 18 }}
+                >
+                  {subGroup.label}
+                </span>
+              </div>
+
+              {subGroup.categories.map((catGroup) => (
+                <div key={catGroup.category} className="flex flex-col gap-2">
+                  <div
+                    className="text-[12px] font-bold uppercase tracking-wide"
+                    style={{ color: COLORS.inkSubtle }}
+                  >
+                    {catGroup.label}
+                  </div>
+                  <EntryGrid
+                    entries={catGroup.entries}
+                    onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+                  />
+                </div>
+              ))}
+            </section>
+          ))}
         </div>
-        <EntryGrid
-          entries={entries as unknown as WikiEntry[]}
-          onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
-        />
-      </div>
+      ) : (
+        <div>
+          <div className="wiki-section-heading mb-2">
+            Entries ({entries.length})
+          </div>
+          <EntryGrid
+            entries={entries as unknown as WikiEntry[]}
+            onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,17 @@
 import React from "react";
 import { ColorField, COLORS } from "../shared.jsx";
 import type { FieldDoc } from "../schemaDoc.js";
+import { AmountChips } from "./EntityVisual.jsx";
+
+/** Fields whose value, when a flat Record<string, number>, renders as icon+count chips. */
+const CHIP_FIELDS = new Set(["cost", "inputs", "entryCost", "hireCost", "outputs"]);
+
+/** True when `value` is a plain object whose every value is a number. */
+function isFlatNumberRecord(value: object): value is Record<string, number> {
+  if (Array.isArray(value)) return false;
+  const entries = Object.values(value);
+  return entries.length > 0 && entries.every((v) => typeof v === "number");
+}
 
 // ─── Value formatting ─────────────────────────────────────────────────────────
 
@@ -65,6 +76,9 @@ export function formatValue(
     );
   }
   if (typeof value === "object") {
+    if (CHIP_FIELDS.has(fieldName) && isFlatNumberRecord(value)) {
+      return <AmountChips amounts={value} variant="chip" />;
+    }
     return (
       <span className="font-mono text-[11px] break-all" style={{ color: COLORS.inkSubtle }}>
         {safeStringify(value)}
@@ -124,7 +138,7 @@ function renderRows(
       </td>
       <td className="py-1.5 px-2 align-top">{formatDefault(f.field, f.default)}</td>
       {showValue && (
-        <td className="py-1.5 px-2 align-top max-w-[200px]">
+        <td className="py-1.5 px-2 align-top">
           {f.children ? <span style={{ color: COLORS.inkSubtle }}>—</span> : formatValue(f.field, liveParent)}
         </td>
       )}
@@ -241,7 +255,7 @@ export function KeyValueTable({
               <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
                 {k}
               </td>
-              <td className="py-1.5 px-2 align-top max-w-[300px]">
+              <td className="py-1.5 px-2 align-top">
                 {formatValue(k, entity[k])}
               </td>
             </tr>

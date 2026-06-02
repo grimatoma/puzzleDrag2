@@ -2,7 +2,7 @@ import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn, spawnBoss } from "../bosses/data.js";
 import { clearModifier, tickModifier, type BossModifier } from "../bosses/modifiers.js";
 import { awardXp } from "../almanac/data.js";
-import { BOSS_UI } from "./uiMeta.js";
+import { BOSS_UI, type BossUiEntry } from "./uiMeta.js";
 import type { Action, GameState, Grid } from "../../types/state.js";
 import { ResourceKey } from "../../types/catalogKeys.js";
 
@@ -10,20 +10,20 @@ const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stonefac
 
 export interface BossState {
   key: string;
-  name?: string;
+  name: string;
   emoji?: string;
   flavor?: string;
   goal?: string;
-  description?: string | null;
-  modifierDescription?: string | null;
+  description: string | null;
+  modifierDescription: string | null;
   resource?: string;
   targetCount: number;
   progress: number;
   turnsLeft: number;
   turnsRemaining?: number;
-  minChain?: number | null;
-  spawnBias?: Record<string, number> | null;
-  modifier?: BossModifier;
+  minChain: number | null;
+  spawnBias: Record<string, number> | null;
+  modifier: BossModifier;
   isKeeperTrial?: boolean;
   id?: string;
 }
@@ -76,7 +76,7 @@ interface BossDef {
 function triggerBoss(state: GameState, bossKey: string): GameState {
   const def = (BOSSES as BossDef[]).find((b) => b.id === bossKey);
   if (!def) return state;
-  const ui = (BOSS_UI as Record<string, { displayName?: string; emoji?: string; flavor?: string; goal?: string }>)[bossKey] ?? {};
+  const ui: Partial<BossUiEntry> = BOSS_UI[bossKey] ?? {};
   const year = bossYear(state);
   const spawned = spawnBoss(state, bossKey, year);
   if (!spawned.boss) return state;
@@ -86,7 +86,7 @@ function triggerBoss(state: GameState, bossKey: string): GameState {
     boss: {
       ...spawned.boss,
       key: bossKey,
-      name: ui.displayName ?? def.name,
+      name: (ui.displayName ?? def.name) as string,
       emoji: ui.emoji,
       flavor: ui.flavor,
       goal: ui.goal,

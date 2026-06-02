@@ -155,6 +155,12 @@ const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "views",
   "modals",
   "tileDiscoveryMethods",
+  // Registered schema-less for now — the article falls back to LiveConfigFallback.
+  // RICH reward cards / schemas land in a later task.
+  "keepers",
+  "boons",
+  "dailyRewards",
+  "achievements",
 ]);
 
 describe("conceptSchemas — exhaustive CONCEPTS coverage", () => {
