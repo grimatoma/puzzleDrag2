@@ -736,7 +736,7 @@ export class GameScene extends Phaser.Scene {
     if (!zoneId) return null;
     const farm = zoneFarmBoard(zoneId);
     if (!farm?.upgradeMap) return null;
-    const targetZoneCat = farm.upgradeMap[sourceZoneCat];
+    const targetZoneCat = farm.upgradeMap[sourceZoneCat as import("./types/catalog/tileCategories.js").ZoneCategoryId];
     if (!targetZoneCat) return null;
 
     // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
@@ -947,7 +947,7 @@ export class GameScene extends Phaser.Scene {
       const biasTargetKey = getRegistry(this.registry, "fillBiasTarget")?.key ?? null;
       const biasKeys = biasTargetKey
         ? [biasTargetKey, `tile_${biasTargetKey}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
-        : ["seedling", "tile_grass_grass", "tile_grain_wheat"];
+        : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
       const fBase: Record<string, number> = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
       for (const k of biasKeys) {

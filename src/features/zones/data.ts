@@ -26,6 +26,10 @@ import type {
   FishBoardInstance,
   MineBoardInstance,
 } from "../../config/schemas/boardInstance.js";
+import { ZONE_UPGRADE_TARGET_GOLD } from "../../config/schemas/boardInstance.js";
+import type { BuildingId } from "../../types/catalog/buildings.js";
+import type { SeasonId } from "../../types/catalog/seasons.js";
+import type { ZoneCategoryId } from "../../types/catalog/tileCategories.js";
 import { computeAggregatedAbilities } from "../workers/aggregate.js";
 import { keeperForType } from "../../keepers.js";
 import {
@@ -52,7 +56,7 @@ export const ZONE_CATEGORIES = Object.freeze([
 
 export type ZoneCategoryKey = (typeof ZONE_CATEGORIES)[number];
 
-export const ZONE_UPGRADE_TARGET_GOLD = "gold";
+export { ZONE_UPGRADE_TARGET_GOLD };
 
 // Translation from the abstract zone-category names (used in the rules table)
 // to the concrete `category` values that exist on items in
@@ -125,7 +129,7 @@ export interface Zone {
   boards: ZoneBoards;
   entryCost: { coins?: number };
   dangers: string[];
-  buildings: string[];
+  buildings: BuildingId[];
   plotCount: number;
 }
 
@@ -221,7 +225,7 @@ export function pickByZoneSeasonDrops({
   if (!zoneId || !seasonName) return null;
   const farm = zoneFarmBoard(zoneId);
   if (!farm?.seasonDrops) return null;
-  const drops = farm.seasonDrops[seasonName];
+  const drops = farm.seasonDrops[seasonName as SeasonId];
   if (!drops) return null;
 
   const total = Object.values(drops).reduce((a: number, b: number) => a + (b > 0 ? b : 0), 0);
@@ -291,7 +295,7 @@ export function nextResourceForZone({
   const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat];
   if (!sourceZoneCat) return null;
 
-  const targetZoneCat = farm.upgradeMap[sourceZoneCat];
+  const targetZoneCat = farm.upgradeMap[sourceZoneCat as ZoneCategoryId];
   if (!targetZoneCat || targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) return null;
 
   const targetTileCats: string[] = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
@@ -415,7 +419,7 @@ export function settlementFoundingCost(state: GameState | null | undefined): { c
 export function settlementCompleted(state: GameState | null | undefined, zoneId: string): boolean {
   const z = ZONES[zoneId];
   if (!z) return false;
-  const need = (z.buildings ?? []).filter((b) => b !== "_plots");
+  const need = z.buildings ?? [];
   if (need.length === 0) return false;
   const built = state?.built?.[zoneId] ?? {};
   const have = need.filter((b) => built[b]).length;

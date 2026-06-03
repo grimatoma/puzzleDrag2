@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { zoneBoardsPatchSchema } from "./boardInstance.js";
+import { buildingIdSchema, zoneBoardsPatchSchema } from "./boardInstance.js";
 
 export const zoneOverrideSchema = z
   .object({
     name: z.string().optional().describe("Display name shown on the map and zone info modal"),
     buildings: z
-      .array(z.string().min(1))
+      .array(buildingIdSchema)
       .optional()
       .describe("Ordered list of building ids available to construct at this zone"),
     entryCost: z

@@ -1,3 +1,4 @@
+import type { ZoneCategoryId } from "../../types/catalog/tileCategories.js";
 import {
   ZONES,
   displayZoneName,
@@ -108,7 +109,7 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
                             {ZONE_CATEGORY_LABELS[cat] ?? cat}
                           </td>
                           {SESSION_SEASON_NAMES.map((season) => {
-                            const w = farmBoard?.seasonDrops?.[season]?.[cat];
+                            const w = farmBoard?.seasonDrops?.[season]?.[cat as ZoneCategoryId];
                             return (
                               <td
                                 key={`${cat}-${season}`}
