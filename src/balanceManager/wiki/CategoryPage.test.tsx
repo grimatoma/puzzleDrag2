@@ -332,3 +332,34 @@ describe("CategoryPage — Phase 1 layout order", () => {
     expect(html).not.toContain("Field reference");
   });
 });
+
+// ─── Phase 3: --wiki-accent CSS variable applied to page root ─────────────────
+
+describe("CategoryPage — Phase 3 per-concept accent wiring", () => {
+  it("sets --wiki-accent inline style on the root element for 'tiles' (board section → green)", () => {
+    const { container } = renderPage("tiles");
+    const root = container.firstElementChild as HTMLElement | null;
+    expect(root).not.toBeNull();
+    // The style attribute should contain --wiki-accent set to a color
+    const style = root!.getAttribute("style") ?? root!.style.cssText;
+    expect(style).toMatch(/--wiki-accent/);
+  });
+
+  it("sets --wiki-accent inline style on the root element for 'npcs' (world section → violet)", () => {
+    const { container } = renderPage("npcs");
+    const root = container.firstElementChild as HTMLElement | null;
+    expect(root).not.toBeNull();
+    const style = root!.getAttribute("style") ?? root!.style.cssText;
+    expect(style).toMatch(/--wiki-accent/);
+  });
+
+  it("accent for 'tiles' differs from accent for 'npcs'", () => {
+    const { container: ctTiles } = renderPage("tiles");
+    const { container: ctNpcs } = renderPage("npcs");
+    const rootTiles = ctTiles.firstElementChild as HTMLElement;
+    const rootNpcs = ctNpcs.firstElementChild as HTMLElement;
+    const styleTiles = rootTiles.getAttribute("style") ?? "";
+    const styleNpcs = rootNpcs.getAttribute("style") ?? "";
+    expect(styleTiles).not.toBe(styleNpcs);
+  });
+});

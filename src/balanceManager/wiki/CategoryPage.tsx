@@ -40,6 +40,7 @@ import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
 import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
+import { conceptAccent } from "./conceptAccent.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,7 +104,10 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   const stats = conceptHeadlineStats(conceptId, entries);
 
   return (
-    <div className="flex flex-col gap-3 wiki-reveal-stagger">
+    <div
+      className="flex flex-col gap-3 wiki-reveal-stagger"
+      style={{ "--wiki-accent": conceptAccent(conceptId) } as React.CSSProperties}
+    >
 
       {/* ── 1. Concept hero ────────────────────────────────────────────────── */}
       <div className="wiki-concept-hero">

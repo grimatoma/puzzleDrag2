@@ -57,6 +57,7 @@ import MemberTiles, { hasMemberTiles } from "./sections/MemberTiles.jsx";
 import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
 import { BuildingAbilities, hasHostAbilities } from "./sections/BuildingAbilities.jsx";
 import { RecipeRelations, hasRecipeRelationFlow } from "./sections/RecipeRelations.jsx";
+import { entityAccent } from "./conceptAccent.js";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -239,7 +240,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   ];
 
   return (
-    <Card>
+    <Card style={{ "--wiki-accent": entityAccent(conceptId, entityKey) } as React.CSSProperties}>
       {/* Header row */}
       <div className="flex items-start gap-2 mb-3 flex-wrap">
         <SmallButton onClick={onBack}>← Back</SmallButton>

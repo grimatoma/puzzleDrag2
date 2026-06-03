@@ -330,3 +330,32 @@ describe("WikiArticle — powder_store abilities", () => {
     expect(container.querySelector(".wiki-recipe-relation-flow")).not.toBeNull();
   });
 });
+
+// ─── Phase 3: --wiki-accent CSS variable applied to WikiArticle ───────────────
+
+describe("WikiArticle — Phase 3 per-entity accent wiring", () => {
+  it("sets --wiki-accent inline style on the Card root for a resource article", () => {
+    const { container } = renderArticle("resources", "bread");
+    // Card is the outermost element; find the first div with an inline style containing --wiki-accent
+    const styledEl = container.querySelector("[style]") as HTMLElement | null;
+    expect(styledEl).not.toBeNull();
+    const style = styledEl!.getAttribute("style") ?? "";
+    expect(style).toMatch(/--wiki-accent/);
+  });
+
+  it("sets --wiki-accent for a boardKinds article (farm → biome color)", () => {
+    const { container } = renderArticle("boardKinds", "farm");
+    const styledEl = container.querySelector("[style]") as HTMLElement | null;
+    expect(styledEl).not.toBeNull();
+    const style = styledEl!.getAttribute("style") ?? "";
+    expect(style).toMatch(/--wiki-accent/);
+  });
+
+  it("boardKinds/farm accent differs from boardKinds/mine accent", () => {
+    const { container: ctFarm } = renderArticle("boardKinds", "farm");
+    const { container: ctMine } = renderArticle("boardKinds", "mine");
+    const farmStyle = (ctFarm.querySelector("[style]") as HTMLElement)?.getAttribute("style") ?? "";
+    const mineStyle = (ctMine.querySelector("[style]") as HTMLElement)?.getAttribute("style") ?? "";
+    expect(farmStyle).not.toBe(mineStyle);
+  });
+});

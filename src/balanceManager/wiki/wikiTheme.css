@@ -27,15 +27,19 @@
   --wiki-canvas:        #f0e8d4;
   --wiki-canvas-rule:   #ddd0b4;
 
+  /* Phase 3 accent defaults — overridden per-concept via inline style */
+  --wiki-accent:      var(--wiki-ember);
+
   /* typography */
   --wiki-font-display: "Fraunces", "Newsreader", Georgia, serif;
   --wiki-font-body:    "IBM Plex Sans", system-ui, sans-serif;
   --wiki-font-mono:    "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
-  /* depth tokens */
-  --wiki-shadow-card:   0 2px 8px rgba(43, 34, 24, 0.10), 0 1px 2px rgba(43, 34, 24, 0.08);
-  --wiki-shadow-panel:  0 4px 16px rgba(43, 34, 24, 0.12), 0 1px 3px rgba(43, 34, 24, 0.08);
-  --wiki-shadow-header: 0 2px 10px rgba(43, 34, 24, 0.10);
+  /* depth tokens — boosted for Phase 3 */
+  --wiki-shadow-card:   0 2px 10px rgba(43, 34, 24, 0.12), 0 1px 3px rgba(43, 34, 24, 0.08);
+  --wiki-shadow-panel:  0 6px 24px rgba(43, 34, 24, 0.16), 0 2px 6px rgba(43, 34, 24, 0.10);
+  --wiki-shadow-header: 0 3px 14px rgba(43, 34, 24, 0.14);
+  --wiki-shadow-hover:  0 8px 28px rgba(43, 34, 24, 0.18), 0 2px 8px rgba(43, 34, 24, 0.12);
 
   /* transitions */
   --wiki-transition: 150ms ease;
@@ -81,36 +85,49 @@
 
 /* ── Typography hierarchy ───────────────────────────────────────────────────── */
 
-/* Article/entity title — large, display serif, heavy */
+/*
+ * Phase 3: Bold type scale with clear weight+size deltas at every level.
+ * Fraunces 800 titles >> 700 section headings >> IBM Plex 400 body.
+ * Sizes are intentionally bigger jumps than Phase 1–2: titles feel like titles.
+ */
+
+/* Article/entity title — large, display serif, very heavy */
 .wiki-root .wiki-title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--wiki-ink);
+  letter-spacing: -0.025em;
+}
+
+/* Article entity title — clearly smaller but still commanding */
+.wiki-root .wiki-title--article {
+  font-size: clamp(22px, 2.8vw, 32px);
+}
+
+/*
+ * Section heading — display serif, 700, with an accent underline divider.
+ * The accent bar uses --wiki-accent so each concept section gets its own color.
+ * Implemented as a left border stripe for compact vertical rhythm.
+ */
+.wiki-root .wiki-section-heading {
+  font-family: var(--wiki-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  margin-bottom: 2px;
+}
+
+/* Category page concept title — display serif, accent colored, very large */
+.wiki-root .wiki-concept-title {
   font-family: var(--wiki-font-display);
   font-size: clamp(24px, 3vw, 32px);
   font-weight: 800;
-  line-height: 1.15;
-  color: var(--wiki-ink);
-  letter-spacing: -0.02em;
-}
-
-/* Article entity title — slightly smaller than the concept/category title */
-.wiki-root .wiki-title--article {
-  font-size: clamp(18px, 2.5vw, 26px);
-}
-
-/* Section heading inside an article — display serif, medium */
-.wiki-root .wiki-section-heading {
-  font-family: var(--wiki-font-display);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--wiki-ink-light);
-  letter-spacing: -0.01em;
-}
-
-/* Category page concept title — display serif, ember accent */
-.wiki-root .wiki-concept-title {
-  font-family: var(--wiki-font-display);
-  font-size: clamp(20px, 2.5vw, 26px);
-  font-weight: 800;
-  color: var(--wiki-ember);
+  color: var(--wiki-accent, var(--wiki-ember));
   letter-spacing: -0.02em;
 }
 
@@ -131,13 +148,13 @@
   font-size: 0.88em;
 }
 
-/* Header wordmark */
+/* Header wordmark — slightly larger for Phase 3 visual weight */
 .wiki-root .wiki-wordmark {
   font-family: var(--wiki-font-display);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--wiki-ember);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1;
 }
 
@@ -155,8 +172,8 @@
 .wiki-root .wiki-header {
   background: linear-gradient(
     180deg,
-    var(--wiki-parchment-deep) 0%,
-    color-mix(in srgb, var(--wiki-parchment-deep) 60%, var(--wiki-parchment)) 60%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 90%, #c2a070) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-parchment)) 55%,
     var(--wiki-parchment) 100%
   );
   border-bottom: 2px solid var(--wiki-border);
@@ -166,12 +183,22 @@
 /* ── Sidebar ─────────────────────────────────────────────────────────────────── */
 
 .wiki-root .wiki-sidebar {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--wiki-parchment-deep) 80%, #c9a87a) 0%,
-    var(--wiki-parchment-deep) 100%
-  );
+  background-color: var(--wiki-parchment-deep);
   border-right: 2px solid var(--wiki-border);
+  /* subtle grain-like CSS texture via tiny repeating-linear-gradient layered over the base gradient */
+  background-image:
+    repeating-linear-gradient(
+      125deg,
+      transparent,
+      transparent 3px,
+      color-mix(in srgb, var(--wiki-border) 5%, transparent) 4px
+    ),
+    linear-gradient(
+      175deg,
+      color-mix(in srgb, var(--wiki-parchment-deep) 75%, #c2a070) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 90%, var(--wiki-parchment)) 60%,
+      var(--wiki-parchment-deep) 100%
+    );
 }
 
 /* Sidebar nav links */
@@ -182,7 +209,7 @@
   border-radius: 7px;
   padding: 7px 10px;
   transition: background var(--wiki-transition), color var(--wiki-transition),
-              box-shadow var(--wiki-transition);
+              box-shadow var(--wiki-transition), transform var(--wiki-transition);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -193,28 +220,40 @@
 }
 
 .wiki-root .wiki-nav-link:not(.wiki-nav-link--active):hover {
-  background: color-mix(in srgb, var(--wiki-ember) 10%, var(--wiki-parchment-deep)) !important;
+  background: color-mix(in srgb, var(--wiki-ember) 12%, var(--wiki-parchment-deep)) !important;
   color: var(--wiki-ink-light) !important;
-  box-shadow: inset 0 0 0 1px var(--wiki-border);
+  box-shadow: inset 0 0 0 1px var(--wiki-border), 0 1px 4px rgba(43, 34, 24, 0.08);
 }
 
 .wiki-root .wiki-nav-link--active {
   background: var(--wiki-ember) !important;
   color: #fff !important;
-  box-shadow: 0 1px 4px rgba(214, 97, 42, 0.35);
+  box-shadow: 0 2px 8px rgba(214, 97, 42, 0.40), 0 1px 2px rgba(214, 97, 42, 0.20);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-nav-link {
+    transition: background var(--wiki-transition), color var(--wiki-transition);
+  }
 }
 
 /* ── Main content area ──────────────────────────────────────────────────────── */
 
 .wiki-root .wiki-main {
   background: var(--wiki-canvas);
-  /* Subtle geometric texture: very faint rule lines */
+  /* Layered texture: a diagonal shimmer over the rule lines gives papery depth */
   background-image:
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 27px,
-      color-mix(in srgb, var(--wiki-canvas-rule) 40%, transparent) 28px
+      color-mix(in srgb, var(--wiki-canvas-rule) 45%, transparent) 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 59px,
+      color-mix(in srgb, var(--wiki-canvas-rule) 15%, transparent) 60px
     );
 }
 
@@ -224,24 +263,38 @@
 .wiki-root .wiki-card {
   background: var(--wiki-parchment);
   border: 2px solid var(--wiki-border);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: var(--wiki-shadow-card);
-  transition: box-shadow var(--wiki-transition);
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition);
 }
 
 .wiki-root .wiki-card:hover {
   box-shadow: var(--wiki-shadow-panel);
 }
 
-/* Entry grid cards — add depth on hover */
+/*
+ * Entry grid cards — Phase 3 lift: stronger shadow, accent border on hover,
+ * a subtle top-bar tint using --wiki-accent. The top-bar is achieved via a
+ * box-inset border-top so we don't need extra DOM.
+ */
 .wiki-root .wiki-entry-card {
-  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition), border-color var(--wiki-transition);
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition),
+              border-color var(--wiki-transition);
 }
 
 .wiki-root .wiki-entry-card:hover {
-  box-shadow: var(--wiki-shadow-panel);
-  transform: translateY(-1px);
-  border-color: var(--wiki-border-deep) !important;
+  box-shadow: var(--wiki-shadow-hover);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 60%, var(--wiki-border)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-entry-card {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-entry-card:hover {
+    transform: none;
+  }
 }
 
 /* ── Concept reference cards (relations, backlinks, where-used) ─────────────── */
@@ -259,11 +312,12 @@
   width: 100%;
   text-align: left;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 2px solid var(--wiki-border);
+  /* Layered gradient: parchment + faint accent tint at the top */
   background: linear-gradient(
     165deg,
-    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 4%, var(--wiki-parchment)) 0%,
     color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-parchment)) 100%
   );
   box-shadow: var(--wiki-shadow-card);
@@ -273,9 +327,18 @@
 }
 
 .wiki-root .wiki-concept-ref-card:hover {
-  box-shadow: var(--wiki-shadow-panel);
+  box-shadow: var(--wiki-shadow-hover);
   transform: translateY(-2px);
-  border-color: var(--wiki-border-deep);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 50%, var(--wiki-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-concept-ref-card {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-concept-ref-card:hover {
+    transform: none;
+  }
 }
 
 .wiki-root .wiki-concept-ref-card__hero {
@@ -433,11 +496,11 @@
   justify-content: center;
   gap: 16px 14px;
   padding: 22px 24px;
-  border-radius: 14px;
-  border: 2px solid var(--wiki-border);
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 20%, var(--wiki-border));
   background: linear-gradient(
     165deg,
-    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 5%, var(--wiki-parchment)) 0%,
     color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment)) 100%
   );
   box-shadow: var(--wiki-shadow-card);
@@ -709,65 +772,65 @@
 
 /* ── Concept hero (category page lead) ──────────────────────────────────────── */
 /*
- * Phase 1: gallery-first layout — the hero replaces the old bare header +
- * redundant "Definition" paragraph. Reads --wiki-accent (defaulting to ember)
- * so Phase 3 can set per-concept accents without touching the layout.
+ * Phase 3: Deeper atmosphere. The hero picks up --wiki-accent (set via inline
+ * style on the page root from conceptAccent.ts) for its border + banner tint.
+ * The background gains a subtle layered diagonal gradient so it reads as an
+ * intentional card, not a flat parchment block.
  */
 
 .wiki-root .wiki-concept-hero {
-  /* Per-concept accent hook — defaults to ember. Phase 3 sets --wiki-accent. */
-  --wiki-accent: var(--wiki-ember);
-  --wiki-accent-deep: var(--wiki-ember-deep);
-
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px 14px;
-  border-radius: 14px;
-  border: 2px solid var(--wiki-border);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-parchment)) 0%,
-    var(--wiki-parchment) 100%
-  );
+  gap: 12px;
+  padding: 20px 22px 16px;
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 25%, var(--wiki-border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 6%, var(--wiki-parchment-deep)) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 40%, var(--wiki-parchment)) 55%,
+      var(--wiki-parchment) 100%
+    );
   box-shadow: var(--wiki-shadow-panel);
 }
 
-/* Banner strip — soft accent background with stat chips */
+/* Banner strip — richer accent background with stat chips */
 .wiki-root .wiki-hero-banner {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 12px;
-  border-radius: 9px;
+  padding: 10px 14px;
+  border-radius: 10px;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--wiki-accent) 12%, var(--wiki-parchment-deep)) 0%,
-    color-mix(in srgb, var(--wiki-accent) 6%, var(--wiki-parchment)) 100%
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 14%, var(--wiki-parchment-deep)) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 7%, var(--wiki-parchment)) 100%
   );
-  border: 1px solid color-mix(in srgb, var(--wiki-accent) 30%, var(--wiki-border));
+  border: 1px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 35%, var(--wiki-border));
+  box-shadow: inset 0 1px 3px rgba(43, 34, 24, 0.06);
 }
 
 /* Individual stat chip inside the banner */
 .wiki-root .wiki-stat-chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--wiki-accent) 10%, var(--wiki-parchment));
-  border: 1px solid color-mix(in srgb, var(--wiki-accent) 35%, var(--wiki-border));
-  box-shadow: 0 1px 3px rgba(43, 34, 24, 0.07);
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 10%, var(--wiki-parchment));
+  border: 1px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.09);
   white-space: nowrap;
 }
 
 .wiki-root .wiki-stat-chip__value {
   font-family: var(--wiki-font-display);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
-  color: var(--wiki-accent);
+  color: var(--wiki-accent, var(--wiki-ember));
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .wiki-root .wiki-stat-chip__label {
