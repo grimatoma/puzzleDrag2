@@ -9,13 +9,14 @@
  * conceptSchemas.ts (keeps those pure / cycle-free).
  */
 
-import { ITEMS, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
+import { ITEMS, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS, BIOMES } from "../../constants.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
 import { ABILITIES } from "../../config/abilities.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { BOSSES } from "../../features/bosses/data.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
+import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
@@ -87,6 +88,10 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
       return toRecord((ZONES as Record<string, unknown>)[key]);
     }
 
+    case "boardKinds": {
+      return toRecord((BIOMES as Record<string, unknown>)[key]);
+    }
+
     case "buildings": {
       return findById(BUILDINGS, key);
     }
@@ -125,7 +130,10 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
 
     // ── live-config-only concepts ────────────────────────────────────────────
     case "hazards": {
-      return findById(HAZARDS, key);
+      const mine = findById(HAZARDS, key);
+      if (mine != null) return mine;
+      const farm = FARM_HAZARD_META[key];
+      return farm != null ? { id: key, ...farm } : null;
     }
 
     case "seasons": {

@@ -23,7 +23,8 @@ import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
 import { CONCEPTS } from "./concepts.js";
 import { useBalanceNav } from "../balanceNav.jsx";
-import { RefButton, RelationalFooter } from "../relational.jsx";
+import { RelationalFooter } from "../relational.jsx";
+import { WikiRelationLinks } from "./WikiRelationLinks.jsx";
 import { relationsFor } from "./relations.js";
 import { backlinksFor } from "./backlinks.js";
 import { ledeFor } from "./lede.js";
@@ -32,20 +33,19 @@ import HtmlBody from "./HtmlBody.jsx";
 import { Infobox } from "./Infobox.jsx";
 import { TableOfContents } from "./TableOfContents.jsx";
 import type { TocItem } from "./TableOfContents.jsx";
-import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import PageKindBadge from "./PageKindBadge.jsx";
 import { pageKindFor } from "./pageKind.js";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
-import Icon from "../../ui/Icon.jsx";
-import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { AmountChips, RecipeIO } from "./EntityVisual.jsx";
 import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
 import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
 import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
 import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
 import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { BoardKindDetail, hasBoardKindDetail } from "./sections/BoardKindDetail.jsx";
 import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
 import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
 import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.jsx";
@@ -53,6 +53,9 @@ import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
 import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
 import MemberTiles, { hasMemberTiles } from "./sections/MemberTiles.jsx";
+import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
+import { BuildingAbilities, hasHostAbilities } from "./sections/BuildingAbilities.jsx";
+import { RecipeRelations, hasRecipeRelationFlow } from "./sections/RecipeRelations.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -184,6 +187,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
   const showZoneDetail =
     conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showBoardKindDetail =
+    conceptId === "boardKinds" &&
+    hasBoardKindDetail(entity as Parameters<typeof hasBoardKindDetail>[0]);
   const showAbilitySpec = conceptId === "abilities" && hasAbilitySpec(entity);
   const showToolPowerSpec = conceptId === "toolPowers" && hasToolPowerSpec(entity);
   // Reward / cost enrichment for the post-keeper progression concepts.
@@ -201,6 +207,17 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showMemberTiles =
     (conceptId === "categories" || conceptId === "tileDiscoveryMethods") &&
     hasMemberTiles(conceptId, entityKey);
+  const showBuildingRecipes = conceptId === "buildings" && hasBuildingRecipes(entityKey);
+  const showHostAbilities =
+    (conceptId === "buildings" || conceptId === "workers") &&
+    hasHostAbilities(conceptId, entityKey, entity);
+  const showRecipeRelations = conceptId === "recipes" && hasRecipeRelationFlow(entity);
+
+  const relationGroups = rels.filter((g) => {
+    if (showBuildingRecipes && g.title === "Recipes crafted here") return false;
+    if (showHostAbilities && g.title === "Abilities") return false;
+    return true;
+  });
 
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
@@ -216,12 +233,16 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showAchievementCard ? [{ id: "achievement", label: "Achievement" }] : []),
     ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
     ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
+    ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
+    ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
+    ...(showHostAbilities ? [{ id: "host-abilities", label: conceptId === "workers" ? "Worker abilities" : "Building abilities" }] : []),
+    ...(showRecipeRelations ? [{ id: "recipe-relations", label: "Crafting flow" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
-    ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
+    ...(relationGroups.length > 0 ? [{ id: "relations", label: "Related" }] : []),
     ...(back.length > 0 ? [{ id: "backlinks", label: "What links here" }] : []),
   ];
 
@@ -342,8 +363,24 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
           )}
 
+          {/* Board-kind detail: tile roster, dangers, seasons & zones */}
+          {showBoardKindDetail && entity != null && (
+            <BoardKindDetail
+              boardKindKey={entityKey}
+              boardKind={entity as React.ComponentProps<typeof BoardKindDetail>["boardKind"]}
+            />
+          )}
+
           {/* NPC gift preferences (npc articles) */}
           {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}
+
+          {showBuildingRecipes && <BuildingRecipes buildingId={entityKey} />}
+
+          {showHostAbilities && entity != null && (
+            <BuildingAbilities conceptId={conceptId as "buildings" | "workers"} entityKey={entityKey} entity={entity} />
+          )}
+
+          {showRecipeRelations && entity != null && <RecipeRelations recipe={entity} />}
 
           {/* Crafting dependency tree (recipes + craftable items) */}
           {showCraftTree && craftTreeRecipeId != null && (
@@ -448,10 +485,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           </section>
 
           {/* Forward relations */}
-          {rels.length > 0 && (
+          {relationGroups.length > 0 && (
             <section id="relations">
               <RelationalFooter standalone title="Related" hint="Derived · click to open">
-                {rels.map((group) => (
+                {relationGroups.map((group) => (
                   <div key={group.title} className="mb-2 last:mb-0">
                     <div
                       className="text-[9px] font-bold uppercase tracking-wide mb-1"
@@ -459,31 +496,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
                     >
                       {group.title}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => {
-                        const ik = entityIconKey(link.conceptId, link.key, null);
-                        return (
-                          <RefButton
-                            key={`${link.conceptId}:${link.key}`}
-                            title={`${link.conceptId}:${link.key}`}
-                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                          >
-                            {ik != null && (
-                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
-                            )}
-                            <span className="wiki-mono text-[10px]">{link.label}</span>
-                            {link.label !== link.key && (
-                              <span
-                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
-                                style={{ color: COLORS.inkSubtle }}
-                              >
-                                {link.key}
-                              </span>
-                            )}
-                          </RefButton>
-                        );
-                      })}
-                    </div>
+                    <WikiRelationLinks links={group.links} />
                   </div>
                 ))}
               </RelationalFooter>
@@ -495,38 +508,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             <section id="backlinks">
               <RelationalFooter standalone title="What links here" hint="Referenced by">
                 {back.map((group) => (
-                  <div key={group.title} className="mb-2 last:mb-0">
+                  <div key={group.title} className="mb-3 last:mb-0">
                     <div
-                      className="text-[9px] font-bold uppercase tracking-wide mb-1"
+                      className="text-[9px] font-bold uppercase tracking-wide mb-2"
                       style={{ color: COLORS.inkSubtle }}
                     >
                       {group.title}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => {
-                        const ik = entityIconKey(link.conceptId, link.key, null);
-                        return (
-                          <RefButton
-                            key={`${link.conceptId}:${link.key}`}
-                            title={`${link.conceptId}:${link.key}`}
-                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                          >
-                            {ik != null && (
-                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
-                            )}
-                            <span className="wiki-mono text-[10px]">{link.label}</span>
-                            {link.label !== link.key && (
-                              <span
-                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
-                                style={{ color: COLORS.inkSubtle }}
-                              >
-                                {link.key}
-                              </span>
-                            )}
-                          </RefButton>
-                        );
-                      })}
-                    </div>
+                    <WikiRelationLinks links={group.links} />
                   </div>
                 ))}
               </RelationalFooter>

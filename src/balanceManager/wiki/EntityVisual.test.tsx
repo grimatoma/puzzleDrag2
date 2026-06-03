@@ -23,10 +23,11 @@ describe("entityIconKey", () => {
     expect(entityIconKey("tools", "axe", null)).toBe("axe");
   });
 
-  it("prefixes boss / npc / hazard keys", () => {
+  it("prefixes boss / npc / hazard / board-kind keys", () => {
     expect(entityIconKey("bosses", "blight", null)).toBe("boss_blight");
     expect(entityIconKey("npcs", "keeper", null)).toBe("char_keeper");
     expect(entityIconKey("hazards", "fire", null)).toBe("hazard_fire");
+    expect(entityIconKey("boardKinds", "farm", null)).toBe("biome_farm");
   });
 
   it("uses entity.look.iconKey for workers / abilities / seasons (and null when absent)", () => {
@@ -74,10 +75,30 @@ describe("EntityVisual", () => {
     expect(container.querySelector("iframe")).toBeNull();
   });
 
+  it("anchors absolute-positioned building SVGs inside the fixed preview frame", () => {
+    const { container } = render(<EntityVisual conceptId="buildings" entityKey="forge" size={96} />);
+    const frame = container.firstElementChild as HTMLElement | null;
+    expect(frame).not.toBeNull();
+    expect(frame?.style.width).toBe("96px");
+    expect(frame?.style.height).toBe("96px");
+    expect(frame?.style.position).toBe("relative");
+    expect(frame?.style.overflow).toBe("hidden");
+    expect(frame?.querySelector("svg.absolute.inset-0.w-full.h-full")).not.toBeNull();
+  });
+
   it("renders the zone town map (svg) for a known zone, not an iframe", () => {
     const { container } = render(<EntityVisual conceptId="zones" entityKey="home" />);
     expect(container.querySelector("svg")).not.toBeNull();
     expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("renders a biome Icon for board-kind articles, not an iframe", () => {
+    const entity = getEntity("boardKinds", "farm");
+    const { container } = render(
+      <EntityVisual conceptId="boardKinds" entityKey="farm" entity={entity} />,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.firstChild).not.toBeNull();
   });
 
   it("renders an Icon <img> for a recipe's output, not an iframe", () => {

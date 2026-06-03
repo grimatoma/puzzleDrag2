@@ -170,6 +170,9 @@ const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "views",
   "modals",
   "tileDiscoveryMethods",
+  // Board kinds (Farm/Mine/Harbor) render from live BIOMES config via
+  // BoardKindDetail + LiveConfigFallback; no Zod schema, like categories.
+  "boardKinds",
   // Registered schema-less for now — the article falls back to LiveConfigFallback.
   // RICH reward cards / schemas land in a later task.
   "keepers",

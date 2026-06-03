@@ -1,31 +1,14 @@
 /**
- * BossComparison.tsx — "Boss comparison" overview section for the Bosses
- * category page of the Game Wiki.
- *
- * One row per boss in a side-by-side table:
- *   - Boss (icon boss_<id> + name, clickable → that boss's article)
- *   - Season
- *   - Difficulty (color-coded tier chip — gentle / steady / hard / brutal)
- *   - Target (amount× resource, with a resource icon)
- *   - Per-turn (~perTurnTarget resource/turn — the average pace to clear)
- *
- * COMPUTE is reused from bossBalance.ts (assessAllBosses / BOSS_TIER_LABEL —
- * pure, keyed off the static BOSSES catalog). Returns null when there are no
- * bosses.
- *
- * React Compiler is on — no manual useMemo/useCallback.
+ * BossComparison.tsx — "Boss comparison" overview section for the Bosses category page.
  */
 
 import React from "react";
-import Icon from "../../../ui/Icon.jsx";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import { COLORS } from "../../shared.jsx";
-import { useBalanceNav } from "../../balanceNav.jsx";
-import { wikiNavTarget } from "../WikiLinkButton.jsx";
+import { ConceptRefForKey } from "../refs.js";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
 import { assessAllBosses, BOSS_TIER_LABEL } from "../../bossBalance.js";
 
-/** StatusChip tone per difficulty tier id (matches BossDifficulty.tsx). */
 const TIER_TONE: Record<string, "success" | "default" | "warning" | "ember"> = {
   gentle: "success",
   steady: "default",
@@ -51,21 +34,13 @@ const TD: React.CSSProperties = {
   verticalAlign: "middle",
 };
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
-/**
- * Render the boss comparison table, or null when there are no bosses.
- */
 export function BossComparison() {
-  const { navigate } = useBalanceNav();
   const assessments = assessAllBosses({});
-
   if (assessments.length === 0) return null;
 
   return (
     <section id="boss-comparison">
       <div className="wiki-section-heading mb-2">Boss comparison</div>
-
       <div
         style={{
           borderRadius: 10,
@@ -98,26 +73,7 @@ export function BossComparison() {
               return (
                 <tr key={id} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                   <td style={TD}>
-                    <button
-                      type="button"
-                      title={`bosses:${id}`}
-                      onClick={() => navigate(wikiNavTarget("bosses", id))}
-                      className="hover:opacity-80"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        background: "transparent",
-                        border: "none",
-                        padding: 0,
-                        cursor: "pointer",
-                        color: COLORS.ink,
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Icon iconKey={`boss_${id}`} size={22} style={{ verticalAlign: "middle" }} />
-                      <span>{name}</span>
-                    </button>
+                    <ConceptRefForKey entityKey={id} conceptId="bosses" label={name} variant="inline" />
                   </td>
                   <td style={{ ...TD, textTransform: "capitalize" }}>{season}</td>
                   <td style={TD}>
@@ -126,13 +82,16 @@ export function BossComparison() {
                     </StatusChip>
                   </td>
                   <td style={TD}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span className="wiki-mono" style={{ color: COLORS.inkSubtle }}>{amount}×</span>
-                      {resource && (
-                        <Icon iconKey={resource} size={18} style={{ verticalAlign: "middle" }} />
-                      )}
-                      <span style={{ fontWeight: 600 }}>{resourceLabel}</span>
-                    </span>
+                    {resource ? (
+                      <ConceptRefForKey
+                        entityKey={resource}
+                        label={resourceLabel}
+                        detail={`${amount}×`}
+                        variant="inline"
+                      />
+                    ) : (
+                      <span className="wiki-mono">{amount}×</span>
+                    )}
                   </td>
                   <td style={TD}>
                     <span className="wiki-mono" style={{ fontWeight: 700 }}>~{perTurnTarget}</span>

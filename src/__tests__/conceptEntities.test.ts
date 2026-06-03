@@ -262,6 +262,10 @@ const KNOWN_COLLISIONS: Record<string, string> = {
   portal: "buildings",
   explosives: "tools",
   water_pump: "tools",
+  // "fish" is both the Harbor board-kind key and a tile category; `categories`
+  // precedes `boardKinds` in CONCEPTS order, so it wins the bare-key round-trip.
+  // Board-kind nav uses the prefixed "boardKinds:fish" focus, so this is benign.
+  fish: "categories",
 };
 
 describe("conceptForKey — strong ownership round-trip (every entry in every concept)", () => {

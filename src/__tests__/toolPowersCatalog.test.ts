@@ -14,7 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { ITEMS, WORKSHOP_RECIPES, ROWS, COLS } from "../constants.js";
 import { TOOL_POWERS } from "../config/toolPowers.js";
-import { TOOL_BY_KEY } from "../ui/toolRegistry.js";
+import { DEFAULT_TOOL_PINS, TOOL_BY_KEY } from "../ui/toolRegistry.js";
 import { MAGIC_TOOLS } from "../features/portal/data.js";
 import { rootReducer, createInitialState } from "../state.js";
 
@@ -155,6 +155,25 @@ describe("Phase 3 catalog — new tools registered in ITEMS with typed powers", 
     for (const key of NEW_TAP_TARGETS) {
       expect(TOOL_BY_KEY[key]?.armed, `${key} armed`).toBe("tap");
     }
+  });
+
+  it("groups tool catalog entries by their board kind", () => {
+    for (const key of NEW_FARM_TOOLS) {
+      expect(TOOL_BY_KEY[key]?.boardKind, `${key} boardKind`).toBe("farm");
+      expect(TOOL_BY_KEY[key]?.category, `${key} category`).toBe("Farm board");
+    }
+    for (const key of NEW_MINE_TOOLS) {
+      expect(TOOL_BY_KEY[key]?.boardKind, `${key} boardKind`).toBe("mine");
+      expect(TOOL_BY_KEY[key]?.category, `${key} category`).toBe("Mine board");
+    }
+    expect(TOOL_BY_KEY.philosophers_stone?.boardKind).toBe("mine");
+    expect(TOOL_BY_KEY.golden_apple?.boardKind).toBe("farm");
+    expect(TOOL_BY_KEY.shuffle?.boardKind).toBe("all");
+    expect(TOOL_BY_KEY.shuffle?.category).toBe("All boards");
+  });
+
+  it("keeps starter hotbar pins stable after board-kind regrouping", () => {
+    expect(DEFAULT_TOOL_PINS).toEqual(["clear", "basic", "rare", "shuffle", "bomb"]);
   });
 });
 

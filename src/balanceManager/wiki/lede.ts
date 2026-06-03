@@ -168,6 +168,14 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
       s = `${name} is a tile-discovery method.`;
       break;
 
+    case "boardKinds": {
+      const tiles = Array.isArray(entity?.tiles) ? (entity!.tiles as unknown[]).length : 0;
+      s = `${name} is one of the game's board kinds`;
+      if (tiles > 0) s += `, drawing from ${tiles} tile species`;
+      s += ".";
+      break;
+    }
+
     case "views":
       s = `${name} is a top-level game view.`;
       break;

@@ -10,13 +10,22 @@ import { getEntity, conceptForKey } from "./conceptEntities.js";
 import { canonicalRecipeEntries, buildRecipesByOutput } from "../recipeCatalog.js";
 import { NPC_DATA } from "../../features/npcs/data.js";
 import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
+import { ZONES } from "../../features/zones/data.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
+
+/** Host-specific attachment data (e.g. ability params on a building). */
+export interface WikiLinkContext {
+  params?: Record<string, unknown>;
+  trigger?: string;
+}
 
 export interface WikiLink {
   conceptId: string;
   key: string;
   label: string;
+  /** Per-host instance data when the link is not a bare id reference. */
+  context?: WikiLinkContext;
 }
 
 export interface RelationGroup {
@@ -81,6 +90,29 @@ function extractAbilityId(element: unknown): string | null {
   return null;
 }
 
+/** Resolve an ability attachment, preserving params/trigger from the host entity. */
+function resolveAbilityAttachment(element: unknown): WikiLink | null {
+  const id = extractAbilityId(element);
+  if (id == null) return null;
+  const base = resolveLink("abilities", id);
+  if (base == null) return null;
+  if (element == null || typeof element !== "object") return base;
+
+  const obj = element as Record<string, unknown>;
+  const context: WikiLinkContext = {};
+  const params = obj.params;
+  if (params != null && typeof params === "object" && !Array.isArray(params)) {
+    context.params = params as Record<string, unknown>;
+  }
+  if (typeof obj.trigger === "string" && obj.trigger.length > 0) {
+    context.trigger = obj.trigger;
+  }
+  if (context.params != null || context.trigger != null) {
+    return { ...base, context };
+  }
+  return base;
+}
+
 // ─── Per-concept relation computers ──────────────────────────────────────────
 
 function relationsForZones(entity: Record<string, unknown>): RelationGroup[] {
@@ -110,10 +142,7 @@ function relationsForBuildings(
   const abilitiesRaw = Array.isArray(entity.abilities) ? (entity.abilities as unknown[]) : [];
   const abilityGroup = makeGroup(
     "Abilities",
-    abilitiesRaw
-      .map((a) => extractAbilityId(a))
-      .filter((id): id is string => id !== null)
-      .map((id) => resolveLink("abilities", id)),
+    abilitiesRaw.map((a) => resolveAbilityAttachment(a)),
   );
   if (abilityGroup) groups.push(abilityGroup);
 
@@ -245,12 +274,43 @@ function relationsForWorkers(entity: Record<string, unknown>): RelationGroup[] {
   const abilitiesRaw = Array.isArray(entity.abilities) ? (entity.abilities as unknown[]) : [];
   const abilityGroup = makeGroup(
     "Abilities",
-    abilitiesRaw
-      .map((a) => extractAbilityId(a))
-      .filter((id): id is string => id !== null)
-      .map((id) => resolveLink("abilities", id)),
+    abilitiesRaw.map((a) => resolveAbilityAttachment(a)),
   );
   return abilityGroup ? [abilityGroup] : [];
+}
+
+/**
+ * Hazard ids that threaten a given board kind. Mine hazards live in the mine
+ * HAZARDS array; farm hazards in FARM_HAZARD_META; Harbor has none (tides are a
+ * mechanic documented in the authored body). Validated via resolveLink so a
+ * stale id is dropped.
+ */
+const BOARD_KIND_DANGERS: Record<string, string[]> = {
+  mine: ["cave_in", "gas_vent", "lava", "mole"],
+  farm: ["fire", "wolf", "rats"],
+  fish: [],
+};
+
+function relationsForBoardKinds(key: string, entity: Record<string, unknown>): RelationGroup[] {
+  const tiles = Array.isArray(entity.tiles) ? (entity.tiles as Array<{ key?: unknown }>) : [];
+  const tileGroup = makeGroup(
+    "Tiles",
+    tiles.map((t) => resolveLink("tiles", String(t.key ?? ""))),
+  );
+
+  const dangerGroup = makeGroup(
+    "Dangers",
+    (BOARD_KIND_DANGERS[key] ?? []).map((h) => resolveLink("hazards", h)),
+  );
+
+  const flag: "hasFarm" | "hasMine" | "hasWater" =
+    key === "farm" ? "hasFarm" : key === "mine" ? "hasMine" : "hasWater";
+  const zoneLinks = Object.values(ZONES)
+    .filter((z) => z[flag] === true)
+    .map((z) => resolveLink("zones", String(z.id)));
+  const zoneGroup = makeGroup("Zones", zoneLinks);
+
+  return [tileGroup, dangerGroup, zoneGroup].filter((g): g is RelationGroup => g !== null);
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -285,6 +345,8 @@ export function relationsFor(
       return relationsForNpcs(entityKey);
     case "workers":
       return entity ? relationsForWorkers(entity) : [];
+    case "boardKinds":
+      return entity ? relationsForBoardKinds(entityKey, entity) : [];
     default:
       return [];
   }

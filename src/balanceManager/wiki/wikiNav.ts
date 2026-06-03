@@ -24,6 +24,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
     label: "Board",
     nodes: [
       { conceptId: "tiles", children: ["categories", "tileDiscoveryMethods"] },
+      { conceptId: "boardKinds" },
       { conceptId: "zones", children: ["settlementBiomes", "keepers"] },
       { conceptId: "seasons" },
     ],

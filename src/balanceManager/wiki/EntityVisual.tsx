@@ -51,6 +51,8 @@ export function entityIconKey(
       return `char_${entityKey}`;
     case "hazards":
       return `hazard_${entityKey}`;
+    case "boardKinds":
+      return `biome_${entityKey}`;
     case "workers":
     case "abilities":
     case "seasons": {
@@ -142,6 +144,7 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
         style={{
           width: size,
           height: size,
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

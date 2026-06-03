@@ -11,10 +11,12 @@ export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-recipes-category', hash: '#/recipes', diff: domDiff },
   { id: 'balance-bosses-category', hash: '#/bosses', diff: domDiff },
   { id: 'balance-ability-article', hash: '#/abilities/abilities:threshold_reduce', diff: domDiff },
+  { id: 'balance-building-powder-store', hash: '#/buildings/buildings:powder_store', diff: domDiff },
 ];
 
 export const BALANCE_VISUAL_SMOKE_SCENARIO_IDS = [
   'balance-narrative-page',
   'balance-recipes-category',
   'balance-ability-article',
+  'balance-building-powder-store',
 ];

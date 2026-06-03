@@ -10,8 +10,9 @@
 // Used as an alignment artifact for the upcoming type-discipline refactor:
 // every distinct concept in the game shows up exactly once here.
 
-import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
+import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS, BIOMES } from "../../constants.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
+import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
@@ -64,11 +65,9 @@ function bossEntries() {
 }
 
 function hazardEntries() {
-  return HAZARDS.map((h) => ({
-    key: h.id,
-    name: h.name,
-    iconKey: `hazard_${h.id}`,
-  })).sort(byName);
+  const mine = HAZARDS.map((h) => ({ key: h.id, name: h.name, iconKey: `hazard_${h.id}` }));
+  const farm = Object.entries(FARM_HAZARD_META).map(([key, meta]) => ({ key, name: meta.name, iconKey: `hazard_${key}` }));
+  return [...mine, ...farm].sort(byName);
 }
 
 function workerEntries() {
@@ -160,6 +159,21 @@ function settlementBiomeEntries() {
   }
   out.sort(byName);
   return out;
+}
+
+// Entries are sorted alphabetically by name (Farm, Harbor, Mine) to satisfy the
+// shared wiki-concepts sort invariant; progression order (Farm → Mine → Harbor)
+// lives in the article bodies, not the nav list.
+const BOARD_KIND_ORDER = ["farm", "mine", "fish"] as const;
+
+function boardKindEntries() {
+  return BOARD_KIND_ORDER.filter((k) => (BIOMES as Record<string, unknown>)[k] != null)
+    .map((k) => ({
+      key: k,
+      name: String((BIOMES as Record<string, { name?: string }>)[k].name ?? k),
+      iconKey: `biome_${k}`,
+    }))
+    .sort(byName);
 }
 
 function categoryEntries() {
@@ -297,6 +311,12 @@ export const CONCEPTS = [
     getEntries: settlementBiomeEntries,
   },
   {
+    id: "boardKinds",
+    label: "Board kinds",
+    blurb: "Farm, Mine, Harbor — the three board types and their rules.",
+    getEntries: boardKindEntries,
+  },
+  {
     id: "recipes",
     label: "Recipes",
     blurb: "Crafted goods and tools with station and ingredients.",
@@ -311,7 +331,7 @@ export const CONCEPTS = [
   {
     id: "hazards",
     label: "Hazards",
-    blurb: "Board threats that spawn in the Mine biome.",
+    blurb: "Board threats — mine cave-ins and gas, farm fire/wolves/rats.",
     getEntries: hazardEntries,
   },
   {

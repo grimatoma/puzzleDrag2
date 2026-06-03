@@ -244,6 +244,249 @@
   border-color: var(--wiki-border-deep) !important;
 }
 
+/* ── Concept reference cards (relations, backlinks, where-used) ─────────────── */
+
+.wiki-root .wiki-concept-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.wiki-root .wiki-concept-ref-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--wiki-border);
+  background: linear-gradient(
+    165deg,
+    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-parchment)) 100%
+  );
+  box-shadow: var(--wiki-shadow-card);
+  cursor: pointer;
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition),
+    border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-concept-ref-card:hover {
+  box-shadow: var(--wiki-shadow-panel);
+  transform: translateY(-2px);
+  border-color: var(--wiki-border-deep);
+}
+
+.wiki-root .wiki-concept-ref-card__hero {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.wiki-root .wiki-concept-ref-card__visual {
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, transparent);
+  border: 1px solid var(--wiki-border);
+  overflow: hidden;
+}
+
+.wiki-root .wiki-concept-ref-card__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wiki-root .wiki-concept-ref-card__title {
+  font-family: var(--wiki-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wiki-ink);
+  line-height: 1.2;
+}
+
+.wiki-root .wiki-concept-ref-card__detail {
+  font-size: 10px;
+  color: var(--wiki-ink-subtle);
+}
+
+.wiki-root .wiki-concept-ref-card__body {
+  padding-top: 8px;
+  border-top: 1px dashed color-mix(in srgb, var(--wiki-border) 70%, transparent);
+}
+
+.wiki-root .wiki-concept-ref-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--wiki-parchment-deep);
+  border: 1px solid var(--wiki-border);
+  color: var(--wiki-ink);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: opacity var(--wiki-transition), box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-concept-ref-inline:hover {
+  opacity: 0.9;
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.12);
+}
+
+.wiki-root .wiki-concept-ref-inline__detail {
+  color: var(--wiki-ink-subtle);
+  margin-left: 2px;
+}
+/* Compact item tile — icon stacked over title, no metadata chrome */
+.wiki-root .wiki-concept-ref-card--compact {
+  align-items: center;
+  text-align: center;
+  padding: 10px 12px;
+  min-width: 96px;
+  max-width: 120px;
+}
+
+.wiki-root .wiki-concept-ref-card__visual--compact {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+}
+
+.wiki-root .wiki-concept-ref-card__title--compact {
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.25;
+}
+
+.wiki-root .wiki-concept-ref-card--rich .wiki-concept-ref-card__meta {
+
+.wiki-root .wiki-concept-ref-card--building {
+  /* Buildings in cross-refs: illustration + name only — costs live on the article. */
+}
+/* Per-host ability attachment summary on ref cards */
+.wiki-root .wiki-ability-instance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiki-root .wiki-ability-instance__trigger {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+.wiki-root .wiki-ability-instance__params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wiki-root .wiki-ability-instance__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 11px;
+}
+
+.wiki-root .wiki-ability-instance__label {
+  font-weight: 600;
+  color: var(--wiki-ink-subtle);
+  min-width: 3.5rem;
+}
+
+.wiki-root .wiki-ability-instance__value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--wiki-ink);
+}
+
+
+
+.wiki-root .wiki-concept-ref-card--building .wiki-concept-ref-card__hero {
+  align-items: center;
+}
+
+  justify-content: center;
+}
+
+/* Recipe article Related — horizontal ingredients → station → output */
+.wiki-root .wiki-recipe-relation-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--wiki-border);
+  background: linear-gradient(
+    165deg,
+    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment)) 100%
+  );
+}
+
+.wiki-root .wiki-recipe-relation-flow__lane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wiki-root .wiki-recipe-relation-flow__lane-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+.wiki-root .wiki-recipe-relation-flow__cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.wiki-root .wiki-recipe-relation-flow__arrow {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--wiki-ink-subtle);
+  opacity: 0.75;
+  padding: 0 2px 18px;
+}
+
+@media (max-width: 640px) {
+  .wiki-root .wiki-recipe-relation-flow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wiki-root .wiki-recipe-relation-flow__arrow {
+    align-self: center;
+    transform: rotate(90deg);
+    padding: 0;
+  }
+}
+
+
+
 /* ── Search / action buttons ─────────────────────────────────────────────────── */
 
 .wiki-root .wiki-search-btn {
@@ -343,4 +586,37 @@
   border: 1px solid var(--wiki-border);
   color: var(--wiki-ink-subtle);
   line-height: 1.5;
+}
+
+/* ── Relation footer: plain text links (no icon cards) ─────────────────────── */
+.wiki-root .wiki-relation-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  line-height: 1.5;
+}
+
+.wiki-root .wiki-relation-links__sep {
+  color: var(--wiki-ink-subtle);
+  font-size: 11px;
+  user-select: none;
+}
+
+.wiki-root .wiki-relation-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wiki-slate, #5a5e66);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.wiki-root .wiki-relation-link:hover {
+  color: var(--wiki-ink);
 }
