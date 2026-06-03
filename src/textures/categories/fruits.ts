@@ -207,60 +207,68 @@ function drawRambutan(ctx: CanvasRenderingContext2D) {
 
 function drawStarfruit(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath(); ctx.ellipse(1, 22, 17, 4, 0, 0, Math.PI * 2); ctx.fill();
-  // Carambola: an oblong yellow fruit with deep longitudinal ridges. Drawn in
-  // a slightly tilted side view so the ridge tips give a scalloped silhouette,
-  // with two foreground star points fanning toward the viewer to telegraph the
-  // star cross-section. All art kept inside ±26.
+  ctx.beginPath(); ctx.ellipse(0, 23, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // Carambola read head-on: the iconic 5-pointed star cross-section. A rounded
+  // five-point star reads unambiguously as star-fruit. Points are softened with
+  // quadratic curves so the silhouette is a plump fruit, not a sharp icon star.
+  // All art kept inside ±24.
   ctx.save();
-  ctx.rotate(-0.12);
-  // Build a tapered body whose right edge waves in/out for the rib ridges.
-  const top = -19, bot = 19;
-  const ribsY = [-19, -12, -5, 2, 9, 14, 19];
-  const ribX  = [  0,  15,   9, 16,  9, 15,  0];
-  const grad = ctx.createLinearGradient(-13, 0, 16, 0);
-  grad.addColorStop(0, "#b8901c");
-  grad.addColorStop(0.45, "#f4d850");
-  grad.addColorStop(0.75, "#e6c038");
+  ctx.rotate(-0.05);
+  const points = 5;
+  const outer = 23, inner = 8.5;
+  const rounding = 3.2; // tip softness
+  const grad = ctx.createRadialGradient(-7, -8, 4, 0, 2, 26);
+  grad.addColorStop(0, "#f8e27a");
+  grad.addColorStop(0.5, "#f0cf42");
+  grad.addColorStop(0.82, "#d6a91e");
   grad.addColorStop(1, "#9c7410");
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(0, top);
-  // right scalloped edge (ridge tips)
-  for (let i = 1; i < ribsY.length; i++) {
-    ctx.quadraticCurveTo(ribX[i] + 2, (ribsY[i - 1] + ribsY[i]) / 2, ribX[i], ribsY[i]);
+  // -Math.PI/2 puts a point straight up.
+  const verts: Array<[number, number, boolean]> = [];
+  for (let i = 0; i < points * 2; i++) {
+    const ang = -Math.PI / 2 + (i * Math.PI) / points;
+    const r = i % 2 === 0 ? outer : inner;
+    verts.push([Math.cos(ang) * r, Math.sin(ang) * r, i % 2 === 0]);
   }
-  // left, smoother side back up to the top
-  ctx.bezierCurveTo(-10, 16, -14, 6, -13, 0);
-  ctx.bezierCurveTo(-14, -7, -10, -15, 0, top);
+  // Walk vertices; round each tip (outer point) with a small arc, straight to valleys.
+  for (let i = 0; i < verts.length; i++) {
+    const [x, y, isTip] = verts[i];
+    const prev = verts[(i - 1 + verts.length) % verts.length];
+    const next = verts[(i + 1) % verts.length];
+    if (i === 0) ctx.moveTo(prev[0] + (x - prev[0]) * 0.5, prev[1] + (y - prev[1]) * 0.5);
+    if (isTip) {
+      // approach tip then round it toward next
+      const dInX = x - prev[0], dInY = y - prev[1];
+      const lenIn = Math.hypot(dInX, dInY);
+      const ax = x - (dInX / lenIn) * rounding, ay = y - (dInY / lenIn) * rounding;
+      const dOutX = next[0] - x, dOutY = next[1] - y;
+      const lenOut = Math.hypot(dOutX, dOutY);
+      const bx = x + (dOutX / lenOut) * rounding, by = y + (dOutY / lenOut) * rounding;
+      ctx.lineTo(ax, ay);
+      ctx.quadraticCurveTo(x, y, bx, by);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#5e4210"; ctx.lineWidth = 2.0; ctx.stroke();
-  // Two foreground ribs (the star edges) fanning from top to bottom
-  ctx.strokeStyle = "#8a6212"; ctx.lineWidth = 1.5;
-  [4, 9].forEach((x) => {
+  ctx.strokeStyle = "#6e5012"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Inner star ridge lines from centre toward each tip to read the cross-section.
+  ctx.strokeStyle = "rgba(110,80,18,0.55)"; ctx.lineWidth = 1.3;
+  for (let i = 0; i < points; i++) {
+    const ang = -Math.PI / 2 + (i * 2 * Math.PI) / points;
     ctx.beginPath();
-    ctx.moveTo(1, top + 1);
-    ctx.bezierCurveTo(x, -6, x, 6, 1, bot - 1);
+    ctx.moveTo(0, 1);
+    ctx.lineTo(Math.cos(ang) * (outer - 5), Math.sin(ang) * (outer - 5) + 1);
     ctx.stroke();
-  });
-  // Brown calyx + tiny stem at the top
-  ctx.strokeStyle = "#5a3a14"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(1, -23); ctx.stroke();
-  ctx.fillStyle = "#5a3a14";
-  ctx.beginPath(); ctx.arc(1, -23, 1.8, 0, Math.PI * 2); ctx.fill();
-  // Single small leaf, grounded on the stem
-  ctx.fillStyle = "#5a8a26";
-  ctx.beginPath();
-  ctx.moveTo(1, -23);
-  ctx.bezierCurveTo(10, -25, 13, -19, 7, -16);
-  ctx.bezierCurveTo(4, -18, 2, -21, 1, -23);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#33550f"; ctx.lineWidth = 1.0; ctx.stroke();
+  }
+  // Translucent core seeds hint
+  ctx.fillStyle = "rgba(180,140,30,0.4)";
+  ctx.beginPath(); ctx.arc(0, 1, 3, 0, Math.PI * 2); ctx.fill();
   // Sheen highlight (upper-left)
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.beginPath(); ctx.ellipse(-5, -4, 2.4, 7, -0.12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.beginPath(); ctx.ellipse(-7, -7, 3.2, 5, -0.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
