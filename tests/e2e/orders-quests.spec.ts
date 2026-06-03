@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { inv } from "../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
@@ -31,7 +32,7 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
   await waitForState(page, (s) => !(s.orders ?? []).some((o) => o.id === 'o1'));
   const s = await getReactState(page);
-  expect(s.inventory.tile_grass_hay).toBe(0);
+  expect(inv(s).tile_grass_hay).toBe(0);
   // Reward reaches the player as coins — we just assert it moved. The exact
   // number depends on bond + season multipliers and is covered in unit tests.
   expect(s.coins).toBeGreaterThan(0);
@@ -48,7 +49,7 @@ test('TURN_IN_ORDER with insufficient inventory is rejected', async ({ page }) =
   const s = await getReactState(page);
   // The order id is still present (not removed).
   expect((s.orders ?? []).some((o) => o.id === 'o1')).toBe(true);
-  expect(s.inventory.tile_grass_hay).toBe(1);
+  expect(inv(s).tile_grass_hay).toBe(1);
   expect(s.coins).toBe(0);
 });
 

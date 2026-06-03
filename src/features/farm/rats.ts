@@ -16,6 +16,7 @@ import { hasTag } from "../tileCollection/tags.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { effectiveRatSpawnRate } from "./attractsRats.js";
 import type { GameState } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 
 const PLANT_KEYS = new Set<string>(["tile_grass_hay", "tile_grain_wheat", "tile_fruit_blackberry"]);
 
@@ -53,7 +54,7 @@ interface WorkerEffectsView {
 export function rollRatSpawn(state: GameState, rng: () => number = Math.random): Rat | null {
   if (!RATS_HAZARD_ENABLED) return null;
   if (state.biome !== "farm") return null;
-  const inv: Record<string, number> = state.inventory ?? {};
+  const inv = zoneInventory(state);
   if ((inv.tile_grass_hay ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grass_hay) return null;
   if ((inv.tile_grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grain_wheat) return null;
   const rats: Rat[] = (state.hazards?.rats ?? []) as Rat[];

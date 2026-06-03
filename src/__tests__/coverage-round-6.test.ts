@@ -4,6 +4,7 @@
 // fallbacks, modifier branches, and clearModifier.
 
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import type { Action } from "../types/state.js";
 import { reduce as decoReduce } from "../features/decorations/slice.js";
 import { DECORATIONS } from "../features/decorations/data.js";
@@ -37,7 +38,7 @@ describe("decorations slice — coverage gaps", () => {
   const baseState = (over: Record<string, unknown> = {}) =>
     mergeTestState({
       coins: 1000,
-      inventory: { tile_grass_hay: 50, tile_mine_stone: 50, plank: 50, berry: 50 },
+      inventory: { home: { tile_grass_hay: 50, tile_mine_stone: 50, plank: 50, berry: 50 } },
       influence: 0,
       built: { decorations: {} },
       ...over,
@@ -67,7 +68,7 @@ describe("decorations slice — coverage gaps", () => {
   });
 
   it("rejects when inventory resource is short", () => {
-    const s0 = baseState({ inventory: { tile_grass_hay: 0 } });
+    const s0 = baseState({ inventory: { home: { tile_grass_hay: 0 } } });
     const s1 = decoReduce(s0, {
       type: "BUILD_DECORATION",
       payload: { id: "violet_bed" },
@@ -84,7 +85,7 @@ describe("decorations slice — coverage gaps", () => {
     const def = DECORATIONS.violet_bed;
     const loc = (s1.mapCurrent as string | undefined) ?? "home";
     expect(s1.coins).toBe(1000 - def.cost.coins);
-    expect(s1.inventory.tile_grass_hay).toBe(50 - def.cost.tile_grass_hay);
+    expect(inv(s1).tile_grass_hay).toBe(50 - def.cost.tile_grass_hay);
     expect(s1.influence).toBe(def.influence);
     expect((s1.built[loc]?.decorations as Record<string, number> | undefined)?.violet_bed).toBe(1);
   });
@@ -110,12 +111,12 @@ describe("decorations slice — coverage gaps", () => {
       type: "BUILD_DECORATION",
       payload: { id: "apple_sapling" },
     } as Action);
-    expect(s1.inventory.plank).toBe(50 - DECORATIONS.apple_sapling.cost.plank);
-    expect(s1.inventory.berry).toBe(50 - DECORATIONS.apple_sapling.cost.berry);
+    expect(inv(s1).plank).toBe(50 - DECORATIONS.apple_sapling.cost.plank);
+    expect(inv(s1).berry).toBe(50 - DECORATIONS.apple_sapling.cost.berry);
   });
 
   it("missing built / inventory slices fall back gracefully", () => {
-    const s0 = unsafeGameState({ coins: 500, inventory: { tile_grass_hay: 10 } });
+    const s0 = unsafeGameState({ coins: 500, inventory: { home: { tile_grass_hay: 10 } } });
     const s1 = decoReduce(s0, {
       type: "BUILD_DECORATION",
       payload: { id: "violet_bed" },
@@ -216,12 +217,12 @@ describe("bosses/modifiers — coverage gaps", () => {
 
   it("tickModifier: heat tile past burnAfter consumes inventory and is removed", () => {
     const state = mergeTestState({
-      inventory: { tile_grass_hay: 5 },
+      inventory: { home: { tile_grass_hay: 5 } },
       boss: { modifierState: { heat: [{ row: 0, col: 0, age: 5 }] } },
     });
     const r = tickModifier(state, { type: "heat_tiles", params: { burnAfter: 2 } });
     expect(bossBag(r.newState)?.modifierState?.heat).toHaveLength(0);
-    expect(r.newState.inventory.tile_grass_hay).toBe(4);
+    expect(inv(r.newState).tile_grass_hay).toBe(4);
   });
 
   it("clearModifier: removes overlay flags from every tile in the grid", () => {

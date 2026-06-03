@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { BOSSES } from "../features/bosses/data.js";
 import {
   applyModifierToFreshGrid,
@@ -90,7 +91,7 @@ describe("8.1 — Boss board modifiers", () => {
   it("heat_tiles: age 1 → 2 → burn 1 random inventory unit", () => {
     const ed = requireBoss("ember_drake");
     let s = mergeTestState({
-      inventory: { tile_grass_hay: 5, tile_tree_oak: 3 },
+      inventory: { home: { tile_grass_hay: 5, tile_tree_oak: 3 } },
       boss: {
         id: "ember_drake",
         target: { resource: "iron_bar", amount: 3 },
@@ -102,7 +103,7 @@ describe("8.1 — Boss board modifiers", () => {
     s = tickModifier(s, ed.modifier).newState;
     expect(bossBag(s)?.modifierState?.heat?.[0].age).toBe(2);
     s = tickModifier(s, ed.modifier).newState;
-    expect(s.inventory.tile_grass_hay + s.inventory.tile_tree_oak).toBe(7);
+    expect(inv(s).tile_grass_hay + inv(s).tile_tree_oak).toBe(7);
     expect(bossBag(s)?.modifierState?.heat).toHaveLength(0);
   });
 

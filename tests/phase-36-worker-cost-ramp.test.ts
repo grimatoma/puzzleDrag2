@@ -14,13 +14,11 @@ function workerState(coins) {
   return {
     ...createInitialState(),
     coins,
-    inventory: {
-      tile_grass_hay: 10000,
+    inventory: { home: { tile_grass_hay: 10000,
       tile_tree_oak: 10000,
       tile_mine_stone: 10000,
       flour: 10000,
-      eggs: 10000,
-    },
+      eggs: 10000, } },
   };
 }
 

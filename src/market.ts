@@ -1,5 +1,6 @@
 import { MARKET_PRICES } from "./constants.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
+import { zoneInventory } from "./state/zoneInventory.js";
 import type { GameState, Action } from "./types/state.js";
 
 export interface MarketEvent {
@@ -66,22 +67,26 @@ export function applyTrade(state: GameState, action: Action): GameState {
   const { key, qty } = payload;
   const p = state.market.prices[key];
   if (!p) return state;
+  const tradeZone = (state.mapCurrent as string | undefined) ?? "home";
+  const tradeInv = zoneInventory(state, tradeZone);
   if (action.type === "BUY_RESOURCE") {
     const cost = p.buy * qty;
     if (state.coins < cost) return state;
+    const nextInv = inventoryPut({ ...tradeInv }, key, inventoryQty(tradeInv, key) + qty);
     return {
       ...state,
       coins: state.coins - cost,
-      inventory: inventoryPut({ ...state.inventory }, key, inventoryQty(state.inventory, key) + qty),
+      inventory: { ...state.inventory, [tradeZone]: nextInv },
     };
   }
   if (action.type === "SELL_RESOURCE") {
-    const owned = inventoryQty(state.inventory, key);
+    const owned = inventoryQty(tradeInv, key);
     if (owned < qty) return state;
+    const nextInv = inventoryPut({ ...tradeInv }, key, owned - qty);
     return {
       ...state,
       coins: state.coins + p.sell * qty,
-      inventory: inventoryPut({ ...state.inventory }, key, owned - qty),
+      inventory: { ...state.inventory, [tradeZone]: nextInv },
     };
   }
   return state;

@@ -19,7 +19,7 @@ test('Building Bakery via BUILD action debits coins and adds to state.built', as
   await gotoFresh(page, {
     coins: 5000,
     built: { hearth: true },
-    inventory: { wood_plank: 50, tile_mine_stone: 50, mine_ingot: 10 },
+    inventory: { home: { wood_plank: 50, tile_mine_stone: 50, mine_ingot: 10 } },
   });
   const before = await getReactState(page);
   expect(builtAtCurrentLocation(before, 'bakery')).toBeFalsy();
@@ -35,7 +35,7 @@ test('BUILD with insufficient coins is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 0,
     built: { hearth: true },
-    inventory: { wood_plank: 50, tile_mine_stone: 50 },
+    inventory: { home: { wood_plank: 50, tile_mine_stone: 50 } },
   });
   await dispatchAction(page, { type: 'BUILD', payload: { id: 'bakery' } });
   await page.waitForTimeout(150);
@@ -60,7 +60,7 @@ test('Building a decoration debits coins and increments influence', async ({ pag
   await gotoFresh(page, {
     coins: 5000,
     built: { hearth: true, decorations: {} },
-    inventory: { wood_plank: 5, tile_grass_hay: 10 },
+    inventory: { home: { wood_plank: 5, tile_grass_hay: 10 } },
   });
   // BUILD_DECORATION is the slice action for decor purchases.
   await dispatchAction(page, { type: 'BUILD_DECORATION', payload: { id: 'flower_pot' } });

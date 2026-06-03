@@ -2,6 +2,7 @@
 // stripSpeakerPrefix / applyChoiceOutcome / beatScene / interpolateBeatText,
 // plus the STORY/PICK_CHOICE reducer.
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import {
   beatLines,
   beatChoices,
@@ -131,8 +132,8 @@ describe("applyChoiceOutcome", () => {
   });
   it("adds resources / coins, clamped at ≥ 0", () => {
     const s = applyChoiceOutcome(base(), { resources: { berry: -10, log: 4 }, coins: -1000 });
-    expect(s.inventory.berry).toBe(0);
-    expect(s.inventory.log).toBe(4);
+    expect(inv(s).berry).toBe(0);
+    expect(inv(s).log).toBe(4);
     expect(s.coins).toBe(0);
   });
   it("queues a real beat by id", () => {

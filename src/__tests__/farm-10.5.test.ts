@@ -3,6 +3,7 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { WORKSHOP_RECIPES } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 
@@ -79,14 +80,15 @@ describe("10.5 — USE_TOOL cat", () => {
 
 describe("10.5 — CRAFT_TOOL cat", () => {
   it("crafts cat with 2 block + 1 dirt", () => {
-    const s0 = {
-      ...createInitialState(),
-      built: { ...createInitialState().built, workshop: true },
-      inventory: { ...createInitialState().inventory, block: 3, dirt: 2 },
+    const base = createInitialState();
+    const withWorkshop = {
+      ...base,
+      built: { ...base.built, home: { ...(base.built.home as object), workshop: true } },
     };
+    const s0 = { ...withWorkshop, ...patchInventory(withWorkshop, { block: 3, dirt: 2 }) };
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "cat" });
     expect(s1.tools.cat).toBe(1);
-    expect(s1.inventory.block).toBe(1);
-    expect(s1.inventory.dirt).toBe(1);
+    expect(inv(s1).block).toBe(1);
+    expect(inv(s1).dirt).toBe(1);
   });
 });

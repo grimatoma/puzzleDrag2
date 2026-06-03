@@ -27,6 +27,8 @@ import {
 import FeaturePanel from "./primitives/FeaturePanel.jsx";
 import type { GameState, Dispatch } from "../types/state.js";
 import type { Building } from "../types/items.js";
+import { inventoryQty } from "../types/inventory.js";
+import { zoneInventory } from "../state/zoneInventory.js";
 
 interface LocationBuiltState {
   _plots?: Record<string, string | null>;
@@ -684,11 +686,12 @@ interface CostEntry {
 }
 
 function buildingCostEntries(building: Building | null | undefined, state: GameState): CostEntry[] {
+  const locInv = zoneInventory(state);
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
     label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : getItem(key)?.label || key,
     amount: Number(amount),
-    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : (state.inventory as Record<string, number> | undefined)?.[key] ?? 0,
+    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : inventoryQty(locInv, key),
     showHave: true,
     check: true,
   }));
@@ -717,8 +720,9 @@ function buildingRows(
     const cost = b.cost as Record<string, number>;
     const canCoin = state.coins >= (cost.coins || 0);
     const canRunes = (state.runes ?? 0) >= (cost.runes ?? 0);
+    const locInv = zoneInventory(state);
     const canRes = Object.entries(cost).every(
-      ([k, v]) => k === "coins" || k === "runes" || ((state.inventory as Record<string, number>)[k] || 0) >= Number(v),
+      ([k, v]) => k === "coins" || k === "runes" || inventoryQty(locInv, k) >= Number(v),
     );
     const canAfford = canCoin && canRes && canRunes;
     const reason = isBuilt

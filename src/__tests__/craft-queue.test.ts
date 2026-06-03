@@ -2,6 +2,7 @@
 // sequential queue under `craftQueues[station]`. Stations craft in parallel;
 // within a station only the head ticks down.
 import { describe, it, expect, beforeEach } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { reduce as craftingReduce } from "../features/crafting/slice.js";
 import { RECIPES, CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST } from "../constants.js";
@@ -16,9 +17,9 @@ const STATION = RECIPE.station;
 function bakeryReady(over = {}) {
   const s = createInitialState();
   const built = { ...s.built, home: { ...s.built.home, [STATION]: true } };
-  const inventory = { ...s.inventory };
-  for (const [res, need] of Object.entries(RECIPE.inputs)) inventory[res] = need * 4;
-  return { ...s, built, inventory, ...over };
+  const homeInv = { ...inv(s) };
+  for (const [res, need] of Object.entries(RECIPE.inputs)) homeInv[res] = need * 4;
+  return { ...s, built, inventory: { ...s.inventory, home: homeInv }, ...over };
 }
 
 describe("constants + fresh state", () => {
@@ -34,17 +35,17 @@ describe("constants + fresh state", () => {
 describe("CRAFTING/QUEUE_RECIPE", () => {
   it("deducts inputs and appends a queue entry under the recipe's station", () => {
     const s0 = bakeryReady();
-    const before = { ...s0.inventory };
+    const before = { ...inv(s0) };
     const s1 = rootReducer(s0, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
     for (const [res, need] of Object.entries(RECIPE.inputs)) {
-      expect(s1.inventory[res]).toBe(before[res] - need);
+      expect(inv(s1)[res]).toBe(before[res] - need);
     }
     expect(s1.craftQueues[STATION]).toHaveLength(1);
     expect(s1.craftQueues[STATION][0].key).toBe(RECIPE_KEY);
     expect(s1.craftQueues[STATION][0].readyAt).toBeGreaterThan(Date.now());
     expect(s1.craftQueues[STATION][0].startAt).toBeLessThanOrEqual(Date.now() + 5);
     expect(s1.craftQueues[STATION][0].durationMs).toBeGreaterThan(0);
-    expect(s1.inventory[RECIPE_KEY] ?? 0).toBe(0); // not granted yet
+    expect(inv(s1)[RECIPE_KEY] ?? 0).toBe(0); // not granted yet
     expect(s1.coins).toBe(s0.coins);                // coins not granted yet
   });
 
@@ -104,7 +105,7 @@ describe("CRAFTING/CLAIM_CRAFT", () => {
     const coinsBefore = s.coins;
     s = rootReducer(s, { type: "CRAFTING/CLAIM_CRAFT", payload: { station: STATION } });
     expect(s.craftQueues[STATION]).toHaveLength(0);
-    expect(s.inventory[RECIPE_KEY]).toBe(1);
+    expect(inv(s)[RECIPE_KEY]).toBe(1);
     expect(s.coins).toBe(coinsBefore + (RECIPE.coins || 0));
     expect(s.craftedTotals[RECIPE_KEY]).toBe(1);
   });
@@ -127,7 +128,7 @@ describe("CRAFTING/SKIP_CRAFT", () => {
     s = rootReducer(s, { type: "CRAFTING/SKIP_CRAFT", payload: { station: STATION } });
     expect(s.gems).toBe(2 - CRAFT_GEM_SKIP_COST);
     expect(s.craftQueues[STATION]).toHaveLength(0);
-    expect(s.inventory[RECIPE_KEY]).toBe(1);
+    expect(inv(s)[RECIPE_KEY]).toBe(1);
     expect(s.craftedTotals[RECIPE_KEY]).toBe(1);
   });
 

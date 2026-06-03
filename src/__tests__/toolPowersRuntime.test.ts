@@ -10,6 +10,7 @@
  * Until then, the action payload is the contract.
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState, disarmAllTools } from "../state.js";
 import { ROWS, COLS } from "../constants.js";
 
@@ -69,7 +70,7 @@ describe("USE_TOOL { power: clear_category } — sweeps every tile family member
     // Tool charge consumed.
     expect(s1.tools.trimmer).toBe(0);
     // Inventory credited per existing collection-sweep convention.
-    expect(s1.inventory.tile_tree_oak ?? 0).toBe(before.trees);
+    expect(inv(s1).tile_tree_oak ?? 0).toBe(before.trees);
   });
 });
 
@@ -185,7 +186,7 @@ describe("USE_TOOL + TOOL_FIRED { power: area_blast }", () => {
     expect(s2.grid[0][0].key).toBe("tile_grass_hay");
     expect(s2.grid[4][4].key).toBe("tile_grass_hay");
     // 9 hay cells collected to inventory.
-    expect(s2.inventory.tile_grass_hay ?? 0).toBe(9);
+    expect(inv(s2).tile_grass_hay ?? 0).toBe(9);
     expect(s2.tools.bomb_v2).toBe(0);
   });
 
@@ -234,7 +235,7 @@ describe("USE_TOOL + TOOL_FIRED { power: tap_clear_type }", () => {
     const remainingHay = totalCells - 4 /* swept wheat slots are now null */;
     expect(countKey(s2.grid, "tile_grass_hay")).toBe(remainingHay);
     // Inventory credited for the wheat.
-    expect(s2.inventory.tile_grain_wheat ?? 0).toBe(4);
+    expect(inv(s2).tile_grain_wheat ?? 0).toBe(4);
     expect(s2.tools.wand_v2).toBe(0);
   });
 });
@@ -254,11 +255,12 @@ describe("USE_TOOL { power: undo_move } — restores last chain snapshot", () =>
     const s0 = {
       ...createInitialState(),
       grid: afterGrid,
-      inventory: { tile_grass_hay: 12 },
+      inventory: { home: { tile_grass_hay: 12 } },
       farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 7, startedAt: 0, mode: "normal" },
       turnsUsed: 1,
       tools: { hourglass_v2: 1 },
       lastChainSnapshot: {
+        zoneId: "home",
         inventory: beforeInventory,
         grid: beforeGrid,
         turnsUsed: 0,
@@ -272,7 +274,7 @@ describe("USE_TOOL { power: undo_move } — restores last chain snapshot", () =>
     });
 
     expect(s1.grid).toBe(beforeGrid);
-    expect(s1.inventory).toBe(beforeInventory);
+    expect(inv(s1)).toEqual(beforeInventory);
     expect(s1.farmRun).toBe(beforeFarmRun);
     expect(s1.turnsUsed).toBe(0);
     expect(s1.tools.hourglass_v2).toBe(0);

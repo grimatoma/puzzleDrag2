@@ -3,6 +3,7 @@
  * §17 locked: linear 150 XP/level; sources: 1/chain, 5/order, 10/build, 25/boss, 20/quest.
  */
 import { describe, it, expect } from "vitest";
+import { patchInventory } from "../src/testUtils/inventory.js";
 import { awardXp, XP_PER_LEVEL } from "../src/features/almanac/data.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 import { BUILDINGS } from "../src/constants.js";
@@ -88,7 +89,7 @@ describe("XP per source — TURN_IN_ORDER (5 XP)", () => {
     // Pre-fill inventory
     const s2 = {
       ...s,
-      inventory: { ...s.inventory, [order.key]: order.need + 10 },
+      ...patchInventory(s, { [order.key]: order.need + 10 }),
     };
     const next = rootReducer(s2, { type: "TURN_IN_ORDER", id: order.id });
     expect(next.almanac.xp).toBe(5);
@@ -101,7 +102,7 @@ describe("XP per source — BUILD (10 XP)", () => {
     const b = BUILDINGS.find((x) => x.id === "hearth_upgrade") ?? BUILDINGS[0];
     if (!b) return; // guard if no buildings available cheaply
     // Give enough resources to build cheaply
-    const rich = { ...s, coins: 99999, inventory: { tile_grass_hay: 999, tile_tree_oak: 999, tile_mine_stone: 999, tile_mine_iron_ore: 999, grain: 999 } };
+    const rich = { ...s, coins: 99999, inventory: { home: { tile_grass_hay: 999, tile_tree_oak: 999, tile_mine_stone: 999, tile_mine_iron_ore: 999, grain: 999 } } };
     const next = rootReducer(rich, { type: "BUILD", building: b });
     if (next === rich) return; // build was rejected (no-op guard)
     expect(next.almanac.xp).toBe(10);

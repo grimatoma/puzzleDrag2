@@ -1,9 +1,10 @@
 import { BIOMES, getItem, NPCS, RECIPES, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
-import type { InventoryKey, RecipeInputKey } from "../types/catalogKeys.js";
+import { type InventoryKey, type RecipeInputKey } from "../types/catalogKeys.js";
 import type { Inventory } from "../types/inventory.js";
-import { inventoryPutMut, inventoryQty, parseInventory, quantityFor } from "../types/inventory.js";
+import { inventoryPutMut, inventoryQty, parseZoneInventories, parseZoneResourceProgress, quantityFor } from "../types/inventory.js";
 import type { GameState, Order } from "../types/state.js";
+import { zoneInventory } from "./zoneInventory.js";
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
 
@@ -59,12 +60,13 @@ export function addCappedResourceMut(
   }
 }
 
-/** Returns true if state.inventory has at least `needs[k]` of every key. */
+/** Returns true if the active settlement inventory has at least `needs[k]` of every key. */
 export function hasAllInventory(
-  state: GameState | { inventory?: Inventory } | null | undefined,
+  state: GameState | null | undefined,
   needs: Partial<Record<RecipeInputKey, number>>,
+  zoneId?: string,
 ): boolean {
-  const inv = state?.inventory ?? {};
+  const inv = state ? zoneInventory(state, zoneId) : {};
   for (const [k, n] of Object.entries(needs) as [RecipeInputKey, number][]) {
     if (quantityFor(inv, k) < n) return false;
   }
@@ -141,7 +143,10 @@ export function mergeLoadedState(saved: Record<string, unknown> | null | undefin
   const out = { ...savedRec };
   delete out.species; // remove legacy key if present
   if ("inventory" in out) {
-    out.inventory = parseInventory(out.inventory as Record<string, unknown>);
+    out.inventory = parseZoneInventories(out.inventory);
+  }
+  if ("resourceProgress" in out) {
+    out.resourceProgress = parseZoneResourceProgress(out.resourceProgress);
   }
   return { ...out, tileCollection };
 }

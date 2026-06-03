@@ -174,6 +174,12 @@ function richInventory() {
   };
 }
 
+/** Rich inventory mirrored into every founded settlement bucket for visual scenarios. */
+function allZoneInventory(patch: Record<string, number> = {}) {
+  const inv = { ...richInventory(), ...patch };
+  return { home: inv, meadow: inv, quarry: inv, harbor: inv };
+}
+
 interface ParsedRoute {
   view?: string;
   modal?: string | null;
@@ -210,8 +216,9 @@ function applyRoute(state: VisualStateTree, scenario: VisualScenario): VisualSta
 function baseState(): VisualStateTree {
   const state = createFreshState({ saveSeed: "visual-seed-0001" });
   const orders = visualOrders();
-  const inventory: Record<string, number> = { ...state.inventory };
-  for (const o of orders) inventory[o.key] = o._visualHave;
+  const homeInv: Record<string, number> = { ...(state.inventory.home ?? {}) };
+  for (const o of orders) homeInv[o.key] = o._visualHave;
+  const inventory = { ...state.inventory, home: homeInv };
   return {
     ...state,
     saveSeed: "visual-seed-0001",
@@ -255,7 +262,7 @@ function richState(): VisualStateTree {
     embers: 12,
     coreIngots: 9,
     influence: 180,
-    inventory: richInventory(),
+    inventory: allZoneInventory(),
     tools: {
       ...state.tools,
       clear: 5,
@@ -446,7 +453,7 @@ function profileState(profile: string): VisualStateTree {
     case "rich": return richState();
     case "bubble": return { ...richState(), bubble: { id: 101, npc: "wren", text: "A visual check toast is on the wind.", ms: 10_000 } };
     case "buildReady": return { ...richState(), built: { ...richState().built, home: builtFromPlots({ 0: "hearth" }) } };
-    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { supplies: 0 } };
+    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { home: { supplies: 0 } } };
     case "unfoundedBlocked": return { ...richState(), mapCurrent: "orchard", activeZone: "orchard", settlements: { home: { founded: true, biome: "prairie" } }, coins: 50 };
     case "unfoundedReady": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { home: { founded: true, biome: "prairie", keeperPath: "coexist" } } };
     case "mineTown": return { ...richState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "mine", biome: "mine" };
@@ -454,7 +461,7 @@ function profileState(profile: string): VisualStateTree {
     case "fertilizerEntry": return { ...richState(), tools: { ...richState().tools, fertilizer: 3 } };
     case "farmDangersEntry": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { ...richState().settlements, meadow: { founded: true, biome: "prairie" } } };
     case "mineLocked": return { ...baseState(), level: 1, mapCurrent: "quarry", activeZone: "quarry", settlements: { home: { founded: true, biome: "prairie" }, quarry: { founded: true, biome: "mountain" } } };
-    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...richInventory(), supplies: 0, bread: 0, tile_fruit_apple: 0 } };
+    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...allZoneInventory(), quarry: { ...richInventory(), supplies: 0, bread: 0, tile_fruit_apple: 0 } } };
     case "mineTownFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry" };
     case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
     case "boardFarm": return boardState("farm");
@@ -576,13 +583,13 @@ function profileState(profile: string): VisualStateTree {
     // Inventory progress display scenarios (Task D)
     case "inventoryMidProgress": return {
       ...richState(),
-      inventory: { ...richInventory(), hay_bundle: 0 },
-      resourceProgress: { hay_bundle: 4 },
+      inventory: { ...allZoneInventory(), home: { ...richInventory(), hay_bundle: 0 } },
+      resourceProgress: { home: { hay_bundle: 4 } },
     };
     case "inventoryFullWithProgress": return {
       ...richState(),
-      inventory: { ...richInventory(), eggs: 15 },
-      resourceProgress: { eggs: 2 },
+      inventory: { ...allZoneInventory(), home: { ...richInventory(), eggs: 15 } },
+      resourceProgress: { home: { eggs: 2 } },
     };
     default: return richState();
   }

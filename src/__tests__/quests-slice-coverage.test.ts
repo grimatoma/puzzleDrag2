@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import type { Action, GameState } from "../types/state.js";
+import { patchInventory } from "../testUtils/inventory.js";
 import { reduce as questReduce, seedQuestIdSeq } from "../features/quests/slice.js";
 import { mergeTestState, testAction } from "../testUtils/testState.js";
 
@@ -161,13 +162,12 @@ describe("quests slice — coverage gaps", () => {
   });
 
   it("TURN_IN_ORDER ticks 'deliver' daily and ignores when order missing", () => {
-    const s0 = baseState({
+    const s0 = patchInventory(baseState({
       orders: [{ id: 1, key: "tile_grass_hay", need: 5 }],
-      inventory: { tile_grass_hay: 5 },
       dailies: [
         { id: "q1", key: "deliver", target: 3, progress: 0, done: false, claimed: false, reward: { coins: 50 } },
       ],
-    });
+    }), { tile_grass_hay: 5 });
     const s1 = questReduce(s0, {
       type: "TURN_IN_ORDER",
       id: 1,

@@ -241,7 +241,7 @@ export function applyConstantsTuning(tuning: TuningOverrides): void {
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 42;
+export const SAVE_SCHEMA_VERSION = 43;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_hay: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,

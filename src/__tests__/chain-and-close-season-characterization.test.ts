@@ -9,16 +9,22 @@
 // during a refactor mean the refactor changed observable state shape.
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 
 beforeEach(() => global.localStorage.clear());
 
-const baseState = (overrides = {}) => {
+const baseState = (overrides: Record<string, unknown> = {}) => {
   const fresh = createInitialState();
   // Ensure the tutorial slice doesn't auto-start on the first dispatch — that
   // would clobber `state.modal` and skew CLOSE_SEASON / chain assertions.
   fresh.tutorial = { ...fresh.tutorial, seen: true, active: false };
-  return { ...fresh, ...overrides };
+  const { inventory: invOverride, ...rest } = overrides;
+  let state = { ...fresh, ...rest } as ReturnType<typeof createInitialState>;
+  if (invOverride && typeof invOverride === "object") {
+    state = patchInventory(state, invOverride as Record<string, number>);
+  }
+  return state;
 };
 
 describe("CHAIN_COLLECTED — noTurn path (tool-driven gains)", () => {
@@ -28,7 +34,7 @@ describe("CHAIN_COLLECTED — noTurn path (tool-driven gains)", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", resourceKey: "hay_bundle", gained: 4, upgrades: 0, value: 1, chainLength: 4, noTurn: true },
     });
-    expect(s1.inventory.hay_bundle).toBe(9);
+    expect(inv(s1).hay_bundle).toBe(9);
     expect(s1.turnsUsed).toBe(3);
   });
 
@@ -49,7 +55,7 @@ describe("CHAIN_COLLECTED — noTurn path (tool-driven gains)", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", resourceKey: "hay_bundle", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: true },
     });
-    expect(s1.inventory.hay_bundle).toBe(200);
+    expect(inv(s1).hay_bundle).toBe(200);
   });
 
   it("does not push a stash-full floater on noTurn", () => {
@@ -73,7 +79,7 @@ describe("CHAIN_COLLECTED — boss min-chain rejection", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
     });
-    expect(s1.inventory.tile_grass_hay ?? 0).toBe(0);
+    expect(inv(s1).tile_grass_hay ?? 0).toBe(0);
     expect(s1.turnsUsed).toBe(3);
   });
 
@@ -98,9 +104,9 @@ describe("CHAIN_COLLECTED — gains-map path", () => {
       type: "CHAIN_COLLECTED",
       payload: { gains: { tile_grass_hay: 3, berry: 4, tile_tree_oak: 1 } },
     });
-    expect(s1.inventory.tile_grass_hay).toBe(8);
-    expect(s1.inventory.berry).toBe(6);
-    expect(s1.inventory.tile_tree_oak).toBe(1);
+    expect(inv(s1).tile_grass_hay).toBe(8);
+    expect(inv(s1).berry).toBe(6);
+    expect(inv(s1).tile_tree_oak).toBe(1);
   });
 
   it("does not advance turnsUsed on gains-map", () => {
@@ -130,7 +136,7 @@ describe("CHAIN_COLLECTED — lastChainSnapshot capture", () => {
       payload: { key: "tile_grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
     });
     expect(s1.lastChainSnapshot).toBeDefined();
-    expect(s1.lastChainSnapshot.inventory).toBe(s0.inventory);
+    expect(s1.lastChainSnapshot.inventory).toEqual(inv(s0));
     expect(s1.lastChainSnapshot.grid).toBe(preGrid);
     expect(s1.lastChainSnapshot.turnsUsed).toBe(4);
   });

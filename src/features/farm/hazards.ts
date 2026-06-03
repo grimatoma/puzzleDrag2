@@ -12,6 +12,8 @@
 
 import { isFireHazardEnabled } from "../../featureFlags.js";
 import type { GameState } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
+import { inventoryQty } from "../../types/inventory.js";
 
 // ─── Hazard metadata (player-facing) ─────────────────────────────────────────
 
@@ -99,8 +101,8 @@ export function rollFarmHazard(
 
   // Wolf spawn gate (independent roll, but still single-active cap)
   if (allowedHazards.includes("wolf") && !wolves && rats.length === 0 && !fire) {
-    const inv: Record<string, number> = state.inventory ?? {};
-    const birdRich = (inv.eggs ?? 0) > 30 || (inv.tile_bird_turkey ?? 0) > 5;
+    const inv = zoneInventory(state);
+    const birdRich = inventoryQty(inv, "eggs") > 30 || inventoryQty(inv, "tile_bird_turkey") > 5;
     if (birdRich) {
       const wolvesRead = wolves as WolfHazard | null | undefined;
       const wolvesCount = (wolvesRead?.list?.length ?? 0);

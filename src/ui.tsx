@@ -1,6 +1,7 @@
 import React from "react";
 import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
 import { inventoryQty } from "./types/inventory.js";
+import { zoneInventory } from "./state/zoneInventory.js";
 import type { Dispatch, GameState } from "./types/state.js";
 
 interface FeatureErrorBoundaryProps {
@@ -53,7 +54,7 @@ interface BottomNavOrder {
 
 export function BottomNav({ view, dispatch, state }: { view: string; dispatch: Dispatch; state: GameState }) {
   const orders = (state?.orders ?? []) as BottomNavOrder[];
-  const inventory = state?.inventory ?? {};
+  const inventory = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as import("./types/state.js").GameState);
   const ordersReady = orders.filter((o) => inventoryQty(inventory, o.key) >= o.need).length;
   const ordersBadge = ordersReady > 0 ? { count: ordersReady, tone: "moss" } : undefined;
   return (

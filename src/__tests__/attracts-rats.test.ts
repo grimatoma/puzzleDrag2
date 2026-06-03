@@ -59,7 +59,7 @@ describe("rollRatSpawn integration with attracts_rats", () => {
   // Deterministic state with both spawn-threshold prerequisites met.
   const baseState = (grid) => ({
     biome: "farm",
-    inventory: { tile_grass_hay: 100, tile_grain_wheat: 100 },
+    inventory: { home: { tile_grass_hay: 100, tile_grain_wheat: 100 } },
     hazards: { rats: [] },
     grid,
   });

@@ -8,6 +8,8 @@ import Stepper from "../../ui/primitives/Stepper.jsx";
 import IconCanvas from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
+import { inventoryQty } from "../../types/inventory.js";
 
 const FOOD_LABELS: Record<string, string> = {
   supplies: "Supplies", tile_fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
@@ -29,6 +31,7 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }: 
   const access = canEnterBiome(state, biomeKey) as { ok: boolean; reason?: string };
   const locked = !access.ok;
   const zoneId = s.activeZone ?? s.mapCurrent ?? "home";
+  const zoneInv = zoneInventory(state, zoneId);
   const descriptions: Record<string, string> = {
     mine: "Descend into the depths. Stone, ore, and gems wait below — but you only stay as long as your provisions last.",
     fish: "Cast off from the harbor. Fish come in with the tide; longer trips land the rare catches. Pack enough food for the voyage.",
@@ -36,7 +39,7 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }: 
   const portraitIcon = biomeKey === "mine" ? "biome_mine" : "biome_fish";
 
   const available: FoodEntry[] = Object.keys(EXPEDITION_FOOD_TURNS)
-    .map((key: string) => ({ key, have: s.inventory?.[key] ?? 0, per: expeditionTurnsForFood(state, key, zoneId) }))
+    .map((key: string) => ({ key, have: inventoryQty(zoneInv, key), per: expeditionTurnsForFood(state, key, zoneId) }))
     .filter((f: FoodEntry) => f.have > 0);
 
   const [supply, setSupply] = useState<Record<string, number>>({});
