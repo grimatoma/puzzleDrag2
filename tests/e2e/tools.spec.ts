@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { inv } from "../src/testUtils/inventory.js";
+import { inv } from "../../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
@@ -16,7 +16,7 @@ test('USE_TOOL "rake" arms toolPending without spending the charge', async ({ pa
   await gotoFresh(page, {
     tools: { rake: 2 },
     coins: 100,
-    inventory: { wood_plank: 0 },
+    inventory: { plank: 0 },
   });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   // Tap-target tools defer the charge spend to TOOL_FIRED so the player can
@@ -29,7 +29,7 @@ test('TOOL_FIRED "rake" spends the charge and clears toolPending', async ({ page
   await gotoFresh(page, {
     tools: { rake: 2 },
     coins: 100,
-    inventory: { wood_plank: 0 },
+    inventory: { plank: 0 },
   });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'rake' } });
@@ -67,7 +67,7 @@ test('CRAFT_TOOL: building a Workshop tool from WORKSHOP_RECIPES debits inventor
   await gotoFresh(page, {
     coins: 100,
     built: { workshop: true },
-    inventory: { wood_plank: 1 },
+    inventory: { plank: 1 },
     tools: { rake: 0 },
   });
   // CRAFT_TOOL is the coreReducer path for WORKSHOP_RECIPES (rake/axe/etc.) —
@@ -75,19 +75,19 @@ test('CRAFT_TOOL: building a Workshop tool from WORKSHOP_RECIPES debits inventor
   await dispatchAction(page, { type: 'CRAFT_TOOL', id: 'rake' });
   await waitForState(page, (s) => (s.tools?.rake ?? 0) === 1);
   const s = await getReactState(page);
-  expect(inv(s).wood_plank).toBe(0);
+  expect(inv(s).plank).toBe(0);
 });
 
 test('CRAFT_TOOL with no workshop is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 100,
     built: {},
-    inventory: { wood_plank: 5 },
+    inventory: { plank: 5 },
     tools: { rake: 0 },
   });
   await dispatchAction(page, { type: 'CRAFT_TOOL', id: 'rake' });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
   expect(s.tools?.rake ?? 0).toBe(0);
-  expect(inv(s).wood_plank).toBe(5);
+  expect(inv(s).plank).toBe(5);
 });
