@@ -114,75 +114,98 @@ function drawBuckwheat(ctx: CanvasRenderingContext2D) {
     ctx.fill();
     ctx.stroke();
   });
-  // White flower clusters at top — small 5-petal florets
-  const florets = [[-6, -16], [0, -22], [6, -16], [-3, -10], [4, -10], [0, -14]];
+  // White flower clusters at top — small 5-petal florets, tightly grouped.
+  const florets = [[-5, -15], [0, -20], [5, -15], [-2, -11], [3, -11], [0, -16]];
   florets.forEach(([fx, fy]) => {
-    ctx.fillStyle = "#fffaf0";
+    // soft petal ring
     [0, 1, 2, 3, 4].forEach((i) => {
       const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const px = fx + Math.cos(a) * 1.7;
+      const py = fy + Math.sin(a) * 1.7;
+      const pg = ctx.createRadialGradient(px - 0.5, py - 0.5, 0.2, px, py, 1.5);
+      pg.addColorStop(0, "#ffffff");
+      pg.addColorStop(1, "#e8dcc0");
+      ctx.fillStyle = pg;
       ctx.beginPath();
-      ctx.arc(fx + Math.cos(a) * 1.6, fy + Math.sin(a) * 1.6, 1.3, 0, Math.PI * 2);
+      ctx.arc(px, py, 1.4, 0, Math.PI * 2);
       ctx.fill();
     });
-    // Center seed (dark triangle = buckwheat seed)
-    ctx.fillStyle = "#5a3a14";
+    // Center seed (small warm dot = buckwheat floret heart)
+    ctx.fillStyle = "#a07838";
     ctx.beginPath();
-    ctx.moveTo(fx - 1.2, fy + 0.8);
-    ctx.lineTo(fx + 1.2, fy + 0.8);
-    ctx.lineTo(fx, fy - 1.2);
-    ctx.closePath();
+    ctx.arc(fx, fy, 1.0, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
 function drawManna(ctx: CanvasRenderingContext2D) {
-  // Soft white pillowy clusters with golden glow
-  // Glow halo
-  const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 26);
-  glow.addColorStop(0, "rgba(255,240,180,0.6)");
+  // Soft white pillowy clusters with a gentle golden glow.
+  // Glow halo (fades out well before the box edge)
+  const glow = ctx.createRadialGradient(0, -2, 4, 0, -2, 24);
+  glow.addColorStop(0, "rgba(255,240,180,0.55)");
   glow.addColorStop(1, "rgba(255,240,180,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, 26, 0, Math.PI * 2);
+  ctx.arc(0, -2, 24, 0, Math.PI * 2);
   ctx.fill();
   // Shadow
-  ctx.fillStyle = "rgba(120,90,30,0.25)";
+  ctx.fillStyle = "rgba(120,90,30,0.22)";
   ctx.beginPath();
-  ctx.ellipse(2, 22, 18, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(1, 22, 17, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Three fluffy lobes
-  const lobes = [
-    { x: -8, y: 4, r: 12 },
-    { x: 8, y: 6, r: 11 },
-    { x: 0, y: -8, r: 13 },
+  // Pillowy clustered mound — one unified soft blob made of rounded bumps.
+  const bumps = [
+    { x: -10, y: 6, r: 10 },
+    { x: 10, y: 7, r: 9.5 },
+    { x: -2, y: -9, r: 11 },
+    { x: 7, y: -3, r: 8 },
+    { x: -7, y: -2, r: 7 },
   ];
-  lobes.forEach((l) => {
-    const grad = ctx.createRadialGradient(l.x - l.r * 0.4, l.y - l.r * 0.4, 1, l.x, l.y, l.r);
+  // Base fill: draw all bumps with a shared soft gradient so they merge.
+  bumps.forEach((b) => {
+    const grad = ctx.createRadialGradient(b.x - b.r * 0.45, b.y - b.r * 0.5, 1, b.x, b.y, b.r);
     grad.addColorStop(0, "#ffffff");
-    grad.addColorStop(0.6, "#f8eccd");
-    grad.addColorStop(1, "#c8a868");
+    grad.addColorStop(0.55, "#f7ead0");
+    grad.addColorStop(1, "#d8bd8a");
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#7a5a18";
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
   });
-  // Sparkle accents
-  ctx.fillStyle = "#fffbe0";
-  [[-12, -10, 1.8], [10, -4, 1.6], [-2, 14, 1.4], [14, 10, 1.2]].forEach(([sx, sy, sr]) => {
+  // Single soft contour tracing only the outer arc of each rim bump so the
+  // cluster reads as one mound (not three full rings).
+  ctx.strokeStyle = "#a98a44";
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.arc(bumps[2].x, bumps[2].y, bumps[2].r - 0.3, Math.PI * 1.05, Math.PI * 2.05); // top, outer
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bumps[0].x, bumps[0].y, bumps[0].r - 0.3, Math.PI * 0.35, Math.PI * 1.4); // lower-left, outer
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bumps[1].x, bumps[1].y, bumps[1].r - 0.3, Math.PI * -0.45, Math.PI * 0.65); // lower-right, outer
+  ctx.stroke();
+  // Soft dimples where bumps meet (interior detail, restrained).
+  ctx.strokeStyle = "rgba(168,138,68,0.45)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(0, 2, 5, -0.7, 0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(2, -6, 4.5, 2.2, 3.6);
+  ctx.stroke();
+  // Two contained sparkle accents, upper-left bias.
+  ctx.fillStyle = "rgba(255,251,224,0.95)";
+  [[-9, -10, 1.7], [4, -1, 1.3]].forEach(([sx, sy, sr]) => {
     ctx.beginPath();
     ctx.arc(sx, sy, sr, 0, Math.PI * 2);
     ctx.fill();
   });
-  // Tiny gold flecks
-  ctx.fillStyle = "#f4c84a";
-  [[-5, -4], [4, -2], [-3, 8], [6, 10]].forEach(([fx, fy]) => {
-    ctx.beginPath();
-    ctx.arc(fx, fy, 0.9, 0, Math.PI * 2);
-    ctx.fill();
-  });
+  // Soft specular highlight upper-left.
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath();
+  ctx.ellipse(-5, -11, 4, 2.4, -0.5, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawRice(ctx: CanvasRenderingContext2D) {
@@ -221,23 +244,28 @@ function drawRice(ctx: CanvasRenderingContext2D) {
     ctx.bezierCurveTo(x - 1, 4, x - 3 + i, -10, x - 6 + i, -22);
     ctx.stroke();
   });
-  // Drooping rice grains in clusters at top
-  ctx.fillStyle = "#f4ecc0";
-  ctx.strokeStyle = "#a08820";
-  ctx.lineWidth = 0.9;
-  const grains = [
-    [-14, -22, -0.6], [-10, -18, -0.4], [-6, -14, -0.2],
-    [-8, -22, -0.5], [-4, -18, -0.3],
-    [2, -22, 0.3], [6, -18, 0.4], [10, -14, 0.5],
-    [4, -22, 0.4], [0, -18, 0.1],
-    [-2, -16, 0],
+  // Drooping rice grain heads — two tidy clusters of plump golden grains.
+  const grains: Array<[number, number, number]> = [
+    // left head, drooping down-left
+    [-13, -16, -0.9], [-11, -20, -0.7], [-8, -17, -0.5],
+    [-9, -22, -0.6], [-6, -19, -0.35],
+    // right head, drooping down-right
+    [11, -16, 0.9], [9, -20, 0.65], [6, -17, 0.45],
+    [7, -22, 0.55], [4, -19, 0.3],
   ];
   grains.forEach(([gx, gy, ga]) => {
     ctx.save();
     ctx.translate(gx, gy);
     ctx.rotate(ga);
+    // grain body with a tiny gradient for plumpness
+    const gg = ctx.createLinearGradient(-1.4, 0, 1.4, 0);
+    gg.addColorStop(0, "#fbf3cc");
+    gg.addColorStop(1, "#d9bd5e");
+    ctx.fillStyle = gg;
+    ctx.strokeStyle = "#9c8020";
+    ctx.lineWidth = 1.0;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 1.4, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 1.8, 3.4, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
