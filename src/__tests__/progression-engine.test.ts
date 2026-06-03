@@ -50,3 +50,23 @@ describe("describeCond", () => {
     expect(describeCond({ not: { fact: "x" } })).toBe("NOT x");
   });
 });
+
+import { isKnownFact, FACT_FAMILIES } from "../config/progression/facts.js";
+
+describe("isKnownFact", () => {
+  it("accepts parameterised families", () => {
+    expect(isKnownFact("resource.bread.total")).toBe(true);
+    expect(isKnownFact("building.granary.built")).toBe(true);
+    expect(isKnownFact("flag.met_keeper")).toBe(true);
+    expect(isKnownFact("zone.quarry.founded")).toBe(true);
+    expect(isKnownFact("level")).toBe(true);
+    expect(isKnownFact("npc.bram.bond")).toBe(true);
+  });
+  it("rejects unknown facts", () => {
+    expect(isKnownFact("totally.made.up")).toBe(false);
+    expect(isKnownFact("resource.bread")).toBe(false); // missing .total
+  });
+  it("FACT_FAMILIES is non-empty", () => {
+    expect(FACT_FAMILIES.length).toBeGreaterThan(5);
+  });
+});
