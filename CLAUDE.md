@@ -99,7 +99,7 @@ The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discrimi
 
 | Kind | Lives on | Key prefix | Examples |
 |---|---|---|---|
-| `tile` | the board | `tile_*` | `tile_grass_hay`, `tile_mount_horse`, `tile_mine_stone` |
+| `tile` | the board | `tile_*` | `tile_grass_grass`, `tile_mount_horse`, `tile_mine_stone` |
 | `resource` | inventory | no prefix | `flour`, `bread`, `block`, `horseshoe`, `supplies` |
 | `tool` | inventory (consumed on use) | no prefix | `axe`, `bomb`, `rake`, `shovel` |
 

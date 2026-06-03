@@ -67,14 +67,14 @@ describe("XP per source — CHAIN_COLLECTED (1 XP/chain)", () => {
     // Build a chain-collected action for hay (value ~1)
     const next = rootReducer(s2, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
+      payload: { key: "tile_grass_grass", gained: 5, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
     });
     expect(next.almanac.xp).toBe(1);
   });
 
   it("two chains = 2 almanac XP", () => {
     let s = fresh();
-    const payload = { key: "tile_grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false };
+    const payload = { key: "tile_grass_grass", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false };
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });
     expect(s.almanac.xp).toBe(2);
@@ -101,7 +101,7 @@ describe("XP per source — BUILD (10 XP)", () => {
     const b = BUILDINGS.find((x) => x.id === "hearth_upgrade") ?? BUILDINGS[0];
     if (!b) return; // guard if no buildings available cheaply
     // Give enough resources to build cheaply
-    const rich = { ...s, coins: 99999, inventory: { tile_grass_hay: 999, tile_tree_oak: 999, tile_mine_stone: 999, tile_mine_iron_ore: 999, grain: 999 } };
+    const rich = { ...s, coins: 99999, inventory: { tile_grass_grass: 999, tile_tree_oak: 999, tile_mine_stone: 999, tile_mine_iron_ore: 999, grain: 999 } };
     const next = rootReducer(rich, { type: "BUILD", building: b });
     if (next === rich) return; // build was rejected (no-op guard)
     expect(next.almanac.xp).toBe(10);
@@ -133,7 +133,7 @@ describe("XP per source — CLAIM_QUEST (20 XP)", () => {
     const s = {
       ...fresh(),
       quests: [{
-        id: "tq1", template: "collect_hay", category: "collect", key: "tile_grass_hay",
+        id: "tq1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
         target: 10, progress: 10, claimed: false, reward: { coins: 50, xp: 20 },
       }],
     };

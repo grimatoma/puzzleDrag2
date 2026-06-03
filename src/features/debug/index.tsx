@@ -43,7 +43,7 @@ const MENU_LINKS = [
 
 export default function DebugModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [itemBiome, setItemBiome] = useState('farm');
-  const [itemKey, setItemKey] = useState('tile_grass_hay');
+  const [itemKey, setItemKey] = useState('tile_grass_grass');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   const settings = (state.settings ?? {}) as { bespokeSeasonWidget?: boolean; seasonStripPhaser?: boolean };

@@ -80,9 +80,9 @@ describe("BIOMES.fish.resourceOrderPool", () => {
 
 describe("canonical resourceByKey via ITEMS", () => {
   it("returns a tile def for a tile key", () => {
-    const r = resourceByKey("tile_grass_hay");
+    const r = resourceByKey("tile_grass_grass");
     expect(r).not.toBeNull();
-    expect(r.key).toBe("tile_grass_hay");
+    expect(r.key).toBe("tile_grass_grass");
     expect(r.kind).toBe("tile");
   });
 

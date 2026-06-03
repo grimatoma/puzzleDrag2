@@ -25,7 +25,7 @@ afterEach(() => cleanup());
 
 describe("entityIconKey", () => {
   it("returns the key itself for tiles / resources / tools", () => {
-    expect(entityIconKey("tiles", "tile_grass_hay", null)).toBe("tile_grass_hay");
+    expect(entityIconKey("tiles", "tile_grass_grass", null)).toBe("tile_grass_grass");
     expect(entityIconKey("resources", "flour", null)).toBe("flour");
     expect(entityIconKey("tools", "axe", null)).toBe("axe");
   });

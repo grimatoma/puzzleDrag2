@@ -43,7 +43,7 @@ describe("mine-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
+      payload: { key: "tile_grass_grass", gained: 10, chainLength: 10, upgrades: 0 },
     } as Action);
     expect(s1.achievements.counters.mine_chained).toBe(0);
   });

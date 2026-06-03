@@ -825,7 +825,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! [icon:ui_build] Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
       } else if (b.id === "inn" && !hintsShown.innHint) {
-        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_grass] You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
       // §17 locked: 10 XP per building into almanac

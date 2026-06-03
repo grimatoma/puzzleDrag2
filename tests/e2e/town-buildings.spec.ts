@@ -60,7 +60,7 @@ test('Building a decoration debits coins and increments influence', async ({ pag
   await gotoFresh(page, {
     coins: 5000,
     built: { hearth: true, decorations: {} },
-    inventory: { wood_plank: 5, tile_grass_hay: 10 },
+    inventory: { wood_plank: 5, tile_grass_grass: 10 },
   });
   // BUILD_DECORATION is the slice action for decor purchases.
   await dispatchAction(page, { type: 'BUILD_DECORATION', payload: { id: 'flower_pot' } });

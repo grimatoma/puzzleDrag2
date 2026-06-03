@@ -241,10 +241,10 @@ export function applyConstantsTuning(tuning: TuningOverrides): void {
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 42;
+export const SAVE_SCHEMA_VERSION = 43;
 
 export const UPGRADE_THRESHOLDS = {
-  tile_grass_hay: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
+  tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
   tile_grain_wheat: 5,
   tile_mine_stone: 8,
   tile_mine_iron_ore: 6, tile_mine_copper_ore: 6, tile_mine_coal: 7, tile_mine_gem: 5, tile_mine_gold: 6,
@@ -290,7 +290,7 @@ export const SEASONS = [
 // the board becoming chain-impossible at 6×6 = 36 cells. (wood and berry
 // are resources/items, not tile species — see BIOMES.farm.resources.)
 export const FARM_TILE_POOL = [
-  "tile_grass_hay", "tile_grass_hay", "tile_grass_hay",
+  "tile_grass_grass", "tile_grass_grass", "tile_grass_grass",
   "tile_grain_wheat",
   "tile_bird_pheasant",
   "tile_veg_carrot",
@@ -350,7 +350,7 @@ export const TILES_WITH_CUSTOM_OUTPUT = new Set([
   "tile_special_giant_pearl",
 ]);
 
-// Extract the family portion of a tile key, e.g. "tile_grass_hay" -> "grass",
+// Extract the family portion of a tile key, e.g. "tile_grass_grass" -> "grass",
 // "tile_mine_iron_ore" -> "mine_iron_ore", "tile_fish_clam" -> "fish_clam",
 // "tile_fish_sardine" -> "fish". Uses longest-match against TILE_FAMILY_RESOURCE
 // keys so compound families (mine_iron_ore, fish_clam, ...) win over their
@@ -399,7 +399,7 @@ export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
 
 const ITEMS_DATA = {
   // Farm tiles/resources
-  tile_grass_hay: { kind: "tile", biome: "farm", label: "Hay", value: 1, next: "hay_bundle", look: { color: 0xa8c769, dark: 0x4f6b3a, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } } },
+  tile_grass_grass: { kind: "tile", biome: "farm", label: "Grass", value: 1, next: "hay_bundle", look: { color: 0x6fa838, dark: 0x3a5e18, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } } },
   tile_grass_meadow: { kind: "tile", biome: "farm", label: "Meadow Grass", value: 1, next: "hay_bundle", look: { color: 0x7fb24a, dark: 0x3e5a18, sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } } },
   tile_grass_spiky: { kind: "tile", biome: "farm", label: "Spiky Grass", value: 1, next: "hay_bundle", look: { color: 0x9bb55a, dark: 0x4a5e1c, sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } } },
   tile_grain_wheat: { kind: "tile", biome: "farm", label: "Wheat", value: 2, next: "flour", look: { color: 0xdab947, dark: 0x7e5e1a, sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } } },
@@ -543,7 +543,7 @@ const ITEMS_DATA = {
 
   // ── Phase 3 net-new tools (tool-powers overhaul) ────────────────────────
   // Farm tools — all use typed powers exclusively (no legacy effect/target).
-  trimmer: { kind: "tool", label: "Trimmer", power: { id: "transform_tiles", params: { from: "trees", to: "tile_grass_hay" } }, desc: "Heavy garden shears — transforms every tree tile into hay so the chain can roll fresh.", look: { anim: "sweep", ms: 320 } },
+  trimmer: { kind: "tool", label: "Trimmer", power: { id: "transform_tiles", params: { from: "trees", to: "tile_grass_grass" } }, desc: "Heavy garden shears — transforms every tree tile into grass so the chain can roll fresh.", look: { anim: "sweep", ms: 320 } },
   plough: { kind: "tool", label: "Plough", power: { id: "clear_category", params: { target: ["grass", "grain"] } }, desc: "Two-furrow plough that harvests every grass AND grain tile in one pass.", look: { anim: "sweep", ms: 360 } },
   fruit_picker: { kind: "tool", label: "Fruit Picker", power: { id: "clear_category", params: { target: "fruits" } }, desc: "Long-handled basket that gathers every fruit tile on the board at once.", look: { anim: "pick", ms: 320 } },
   herders_crook: { kind: "tool", label: "Herder's Crook", power: { id: "clear_category", params: { target: "herd_animals" } }, desc: "A shepherd's crook that rounds up every herd animal tile in one motion.", look: { anim: "sweep", ms: 360 } },
@@ -616,7 +616,7 @@ export const ITEMS = {
 // `${ItemKey}` coerces the enum members to their underlying string-literal
 // values — TS treats enum singletons and structurally identical string
 // literals as mutually assignable but not type-equal, so a direct
-// `Exclude<ItemKey, "tile_grass_hay">` does *not* remove `TileKey.TileGrassHay`
+// `Exclude<ItemKey, "tile_grass_grass">` does *not* remove `TileKey.TileGrassGrass`
 // and the check would spuriously report every literal key as "extra".
 const _ITEMS_KEY_LITERAL = {
   ...ITEMS_DATA,
@@ -1043,7 +1043,7 @@ Object.assign(RECIPES, { tools: WORKSHOP_RECIPES });
 
 export const MARKET_PRICES = {
   // Raw tiles (board pieces sometimes sold).
-  tile_grass_hay:    { buy: 40,  sell: 0  },
+  tile_grass_grass:    { buy: 40,  sell: 0  },
   tile_grain_wheat:  { buy: 60,  sell: 2  },
   tile_mine_stone:   { buy: 50,  sell: 1  },
   tile_mine_coal:    { buy: 60,  sell: 2  },
@@ -1099,7 +1099,7 @@ export const RESOURCE_CAP_GRANARY = 500;
  * 62 entries — all tile_* keys from the original CAPPED_RESOURCES.
  */
 export const CAPPED_TILES = [
-  "tile_grass_hay","tile_grain_wheat","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal",
+  "tile_grass_grass","tile_grain_wheat","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal",
   "tile_veg_carrot","tile_veg_eggplant","tile_veg_turnip","tile_veg_beet","tile_veg_cucumber","tile_veg_squash","tile_veg_mushroom","tile_veg_pepper","tile_veg_broccoli",
   // Catalog-import placeholders.
   "tile_grass_heather",
@@ -1155,12 +1155,12 @@ export const SEASON_POOL_MODS = {
   Spring: { tile_fruit_blackberry: +1 },
   Summer: { tile_grain_wheat: +1 },
   Autumn: { tile_tree_oak:   +2 },
-  Winter: { tile_mine_stone: +1, tile_grass_hay: -1 },
+  Winter: { tile_mine_stone: +1, tile_grass_grass: -1 },
 };
 
 // ─── Phase 10.4 — Rat hazard constants ────────────────────────────────────────
 export const RAT_SPAWN_THRESHOLDS = {
-  tile_grass_hay:         50,
+  tile_grass_grass:         50,
   tile_grain_wheat:       50,
   perFillRate: 0.10,
   maxActive:   4,

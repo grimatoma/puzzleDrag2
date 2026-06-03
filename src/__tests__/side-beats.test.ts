@@ -67,7 +67,7 @@ describe("evaluateSideBeats", () => {
   });
   it("does not fire on a non-settle event even if the bond is met", () => {
     expect(evaluateSideBeats(mk(9), { type: "building_built", id: "mill" })).toBeNull();
-    expect(evaluateSideBeats(mk(9), { type: "resource_total", key: "tile_grass_hay", amount: 99 })).toBeNull();
+    expect(evaluateSideBeats(mk(9), { type: "resource_total", key: "tile_grass_grass", amount: 99 })).toBeNull();
   });
   it("does not re-fire once mira_letter_seen is set", () => {
     expect(evaluateSideBeats(mk(10, { mira_letter_seen: true }), ended)).toBeNull();

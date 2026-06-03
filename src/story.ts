@@ -115,7 +115,7 @@ export const STORY_BEATS = [
       { speaker: "wren", text: "There. The first of many. This land was dead, but it still remembers how to grow." },
       { speaker: "wren", text: "Mira will be here soon. She'll need that hay for the workers' fires." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 1 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 1 },
     onComplete: { setFlag: "first_harvest" },
   },
   {
@@ -124,7 +124,7 @@ export const STORY_BEATS = [
     title: "First Light",
     scene: "hearth",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 20 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
@@ -230,7 +230,7 @@ export const STORY_BEATS = [
     body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
-      req: { tile_grass_hay: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
+      req: { tile_grass_grass: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
     },
     onComplete: { setFlag: "isWon" },
   },
@@ -253,7 +253,7 @@ export const SIDE_BEATS: Beat[] = [
       { speaker: "wren", text: "Every move you make on that board spends time. See the counter? When it hits zero, the season turns." },
       { speaker: "wren", text: "Harvest what you can, but remember: we're not just collecting hay. We're building a home. Every scrap counts toward the next construction." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 5 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 5 },
     onComplete: { setFlag: "tutorial_beat_4" },
   },
 
