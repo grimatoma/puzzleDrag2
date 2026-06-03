@@ -43,6 +43,84 @@ function heart(ctx, cx, cy, w) {
   ctx.closePath();
 }
 
+// ── Path-drawn glyphs (no ctx.fillText — see icon style guide) ──────────────
+// Stroke a single digit 1–8 inside a box of half-size `s` centred on (cx,cy).
+// Drawn as clean strokes so it reads crisply at 56px and never depends on a
+// system font being available in the canvas backend.
+function drawDigit(ctx, n, cx, cy, s, color, lw) {
+  const x0 = cx - s * 0.6, x1 = cx + s * 0.6;
+  const yt = cy - s, ym = cy, yb = cy + s;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  switch (n) {
+    case 1:
+      ctx.moveTo(cx - s * 0.3, yt + s * 0.4); ctx.lineTo(cx, yt); ctx.lineTo(cx, yb);
+      ctx.moveTo(cx - s * 0.5, yb); ctx.lineTo(cx + s * 0.5, yb);
+      break;
+    case 2:
+      ctx.moveTo(x0, yt + s * 0.3);
+      ctx.quadraticCurveTo(cx, yt - s * 0.1, x1, yt + s * 0.3);
+      ctx.quadraticCurveTo(x1 + s * 0.1, ym, x0, yb);
+      ctx.lineTo(x1, yb);
+      break;
+    case 3:
+      ctx.moveTo(x0, yt + s * 0.2);
+      ctx.quadraticCurveTo(x1, yt - s * 0.1, x1, yt + s * 0.5);
+      ctx.quadraticCurveTo(x1, ym, cx - s * 0.1, ym);
+      ctx.quadraticCurveTo(x1, ym, x1, yb - s * 0.5);
+      ctx.quadraticCurveTo(x1, yb + s * 0.1, x0, yb - s * 0.2);
+      break;
+    case 4:
+      ctx.moveTo(x1 - s * 0.2, yt); ctx.lineTo(x0, ym + s * 0.2); ctx.lineTo(x1, ym + s * 0.2);
+      ctx.moveTo(x1 - s * 0.2, yt); ctx.lineTo(x1 - s * 0.2, yb);
+      break;
+    case 5:
+      ctx.moveTo(x1, yt); ctx.lineTo(x0, yt); ctx.lineTo(x0, ym - s * 0.1);
+      ctx.quadraticCurveTo(x1, ym - s * 0.4, x1, yb - s * 0.4);
+      ctx.quadraticCurveTo(x1, yb + s * 0.1, x0, yb - s * 0.15);
+      break;
+    case 6:
+      ctx.moveTo(x1 - s * 0.1, yt + s * 0.1);
+      ctx.quadraticCurveTo(x0, yt, x0, ym);
+      ctx.quadraticCurveTo(x0, yb, cx, yb);
+      ctx.quadraticCurveTo(x1, yb, x1, ym + s * 0.3);
+      ctx.quadraticCurveTo(x1, ym - s * 0.1, cx, ym - s * 0.1);
+      ctx.quadraticCurveTo(x0, ym - s * 0.1, x0, ym + s * 0.3);
+      break;
+    case 7:
+      ctx.moveTo(x0, yt); ctx.lineTo(x1, yt); ctx.lineTo(cx - s * 0.1, yb);
+      break;
+    case 8:
+      ctx.moveTo(cx, ym);
+      ctx.quadraticCurveTo(x0 - s * 0.05, ym - s * 0.05, x0, yt + s * 0.45);
+      ctx.quadraticCurveTo(x0, yt, cx, yt);
+      ctx.quadraticCurveTo(x1, yt, x1, yt + s * 0.45);
+      ctx.quadraticCurveTo(x1 + s * 0.05, ym - s * 0.05, cx, ym);
+      ctx.quadraticCurveTo(x0 - s * 0.1, ym + s * 0.05, x0, yb - s * 0.45);
+      ctx.quadraticCurveTo(x0, yb, cx, yb);
+      ctx.quadraticCurveTo(x1, yb, x1, yb - s * 0.45);
+      ctx.quadraticCurveTo(x1 + s * 0.1, ym + s * 0.05, cx, ym);
+      break;
+    default:
+      ctx.moveTo(cx, yt); ctx.lineTo(cx, yb);
+  }
+  ctx.stroke();
+}
+
+// "×" multiply mark centred on (cx,cy), arm half-length `s`.
+function drawTimesMark(ctx, cx, cy, s, color, lw) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+  ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+  ctx.stroke();
+}
+
 // ── Story / metaplot ──────────────────────────────────────────────────────
 
 function drawPactScroll(ctx) {
@@ -413,50 +491,75 @@ const drawPhaseSandbox = drawPhaseBanner(function (ctx) {
 // ── Keepers / bosses ──────────────────────────────────────────────────────
 
 function drawDeerSpirit(ctx) {
-  drawShadow(ctx, 14, 3);
-  // Glowing antlered deer silhouette
-  // Body
-  ctx.fillStyle = "#3a6018";
+  drawShadow(ctx, 13, 3);
+  // Soft aura FIRST so it sits behind the figure (was washing it out on top)
+  const aura = ctx.createRadialGradient(0, -2, 2, 0, -2, 16);
+  aura.addColorStop(0, "rgba(216,240,200,0.32)");
+  aura.addColorStop(1, "rgba(216,240,200,0)");
+  ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.ellipse(0, 4, 8, 4, 0, 0, Math.PI * 2);
+  ctx.arc(0, -2, 16, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#1a3008"; ctx.lineWidth = 1.2; ctx.stroke();
-  // Legs
-  ctx.strokeStyle = "#1a3008"; ctx.lineWidth = 1.6;
+  // Glowing antlered deer, facing forward, centred
+  const body = ctx.createLinearGradient(0, -4, 0, 12);
+  body.addColorStop(0, "#5a8030"); body.addColorStop(1, "#1a3008");
+  // Body
+  ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(-5, 7); ctx.lineTo(-5, 14);
-  ctx.moveTo(-2, 8); ctx.lineTo(-2, 14);
-  ctx.moveTo(2, 8); ctx.lineTo(2, 14);
-  ctx.moveTo(5, 7); ctx.lineTo(5, 14);
-  ctx.stroke();
-  // Neck + head
-  ctx.fillStyle = "#3a6018";
+  ctx.ellipse(0, 5, 7, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#102008"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Neck (connects body to head)
+  ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(6, 2);
-  ctx.bezierCurveTo(10, -4, 12, -6, 11, -8);
-  ctx.bezierCurveTo(10, -10, 6, -8, 4, -4);
+  ctx.moveTo(-3, 2); ctx.lineTo(3, 2); ctx.lineTo(2.4, -6); ctx.lineTo(-2.4, -6);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  // Antlers — branching white-ish glow
-  ctx.strokeStyle = "#d8f0c8"; ctx.lineWidth = 1.4; ctx.lineCap = "round";
+  // Head
+  ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(9, -8); ctx.lineTo(7, -13);
-  ctx.moveTo(9, -8); ctx.lineTo(12, -12);
-  ctx.moveTo(7, -13); ctx.lineTo(5, -16);
-  ctx.moveTo(7, -13); ctx.lineTo(9, -15);
-  ctx.moveTo(12, -12); ctx.lineTo(14, -15);
-  ctx.moveTo(12, -12); ctx.lineTo(11, -16);
+  ctx.moveTo(0, -12);
+  ctx.bezierCurveTo(4, -12, 4, -5, 0, -4);
+  ctx.bezierCurveTo(-4, -5, -4, -12, 0, -12);
+  ctx.closePath();
+  ctx.fill();
   ctx.stroke();
-  // Eye glow
+  // Ears
+  ctx.beginPath();
+  ctx.ellipse(-3.4, -10, 1.4, 2.2, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(3.4, -10, 1.4, 2.2, 0.5, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Legs
+  ctx.strokeStyle = "#102008"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-4.5, 8); ctx.lineTo(-4.5, 14);
+  ctx.moveTo(-1.6, 9); ctx.lineTo(-1.6, 14);
+  ctx.moveTo(1.6, 9); ctx.lineTo(1.6, 14);
+  ctx.moveTo(4.5, 8); ctx.lineTo(4.5, 14);
+  ctx.stroke();
+  // Antlers — branching white-ish glow rising from the head crown
+  ctx.strokeStyle = "#e0f4d0"; ctx.lineWidth = 1.6; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  // left rack
+  ctx.moveTo(-2, -11); ctx.lineTo(-5, -18);
+  ctx.moveTo(-3.4, -14); ctx.lineTo(-7, -15);
+  ctx.moveTo(-4.2, -16); ctx.lineTo(-6.5, -19);
+  // right rack
+  ctx.moveTo(2, -11); ctx.lineTo(5, -18);
+  ctx.moveTo(3.4, -14); ctx.lineTo(7, -15);
+  ctx.moveTo(4.2, -16); ctx.lineTo(6.5, -19);
+  ctx.stroke();
+  // Eyes glow
   ctx.fillStyle = "#fff080";
   ctx.beginPath();
-  ctx.arc(9, -6, 1, 0, Math.PI * 2);
+  ctx.arc(-1.8, -8, 0.9, 0, Math.PI * 2);
+  ctx.arc(1.8, -8, 0.9, 0, Math.PI * 2);
   ctx.fill();
-  // Aura
-  ctx.fillStyle = "rgba(216,240,200,0.25)";
+  // Back highlight
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
   ctx.beginPath();
-  ctx.arc(2, -2, 14, 0, Math.PI * 2);
+  ctx.ellipse(-2, 3, 2.6, 1, -0.3, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -551,17 +654,22 @@ function drawTidesinger(ctx) {
   ctx.arc(0, -9, 3, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 0.9; ctx.stroke();
-  // Conch held up
+  // Arm reaching up to the conch — connects the shell to the body
+  ctx.strokeStyle = "#e8b888"; ctx.lineWidth = 2.0; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(3, -5); ctx.lineTo(7, -8);
+  ctx.stroke();
+  // Conch held up (touching the hand)
   ctx.fillStyle = "#fbe8c8";
   ctx.beginPath();
-  ctx.moveTo(7, -6); ctx.lineTo(11, -10); ctx.lineTo(11, -4); ctx.closePath();
+  ctx.moveTo(6, -6); ctx.lineTo(10, -11); ctx.lineTo(11, -5); ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#a8703a"; ctx.lineWidth = 0.8; ctx.stroke();
-  // Aura
-  ctx.fillStyle = "rgba(168,216,224,0.3)";
+  ctx.strokeStyle = "#a8703a"; ctx.lineWidth = 0.9; ctx.stroke();
+  // Conch spiral hint
+  ctx.strokeStyle = "#c89060"; ctx.lineWidth = 0.7;
   ctx.beginPath();
-  ctx.arc(0, 0, 16, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.arc(8.5, -7, 1.4, 0.4, Math.PI * 1.4);
+  ctx.stroke();
 }
 
 function drawCoexistVsDriveOut(ctx) {
@@ -717,9 +825,8 @@ function drawBondRank(n) {
     ctx.arc(7, 6, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#1a0408"; ctx.lineWidth = 1.0; ctx.stroke();
-    ctx.fillStyle = "#1a0408";
-    ctx.font = "bold 7px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(String(n), 7, 6.4);
+    // Rank numeral — drawn as paths (no fillText)
+    drawDigit(ctx, n, 7, 6, 2.4, "#1a0408", 1.2);
   };
 }
 
@@ -1310,9 +1417,7 @@ function multiplierBadge(ctx) {
   ctx.arc(8, -8, 4, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 0.9; ctx.stroke();
-  ctx.fillStyle = "#3a1c08";
-  ctx.font = "bold 6px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("×", 8, -8);
+  drawTimesMark(ctx, 8, -8, 1.8, "#3a1c08", 1.4);
 }
 
 function drawBoonCoin(ctx) {
@@ -1404,28 +1509,33 @@ function drawBoonBranchCoexist(ctx) {
 
 function drawBoonBranchDriveOut(ctx) {
   drawShadow(ctx, 14, 3);
+  // Cold blue glow FIRST so it sits behind (was washing the figure on top)
+  const glow = ctx.createRadialGradient(0, -7, 2, 0, -7, 14);
+  glow.addColorStop(0, "rgba(90,160,210,0.38)");
+  glow.addColorStop(1, "rgba(90,160,210,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, -7, 14, 0, Math.PI * 2);
+  ctx.fill();
   // Bare branch + sword/spike tips — colder, harsher
   ctx.strokeStyle = "#3a2818"; ctx.lineWidth = 2.4; ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(0, 14); ctx.lineTo(0, -8);
-  ctx.moveTo(0, -2); ctx.lineTo(-7, -6);
-  ctx.moveTo(0, -2); ctx.lineTo(7, -6);
+  ctx.moveTo(0, 14); ctx.lineTo(0, -9);
+  ctx.moveTo(0, -3); ctx.lineTo(-7, -8);
+  ctx.moveTo(0, -3); ctx.lineTo(7, -8);
   ctx.stroke();
-  // Spike tips (iron)
+  // Spike tips (iron) — seated on each branch end so they don't float
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.9; ctx.lineJoin = "round";
   ctx.fillStyle = "#dadfe6";
-  [[0, -12, [-2, -8], [2, -8]], [-7, -10, [-9, -6], [-5, -6]], [7, -10, [5, -6], [9, -6]]].forEach(([tx, ty, p1, p2]) => {
+  [[0, -9], [-7, -8], [7, -8]].forEach(([bx, by]) => {
     ctx.beginPath();
-    ctx.moveTo(tx, ty); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]);
+    ctx.moveTo(bx, by - 5);          // tip
+    ctx.lineTo(bx - 2.2, by + 0.5);  // base left (overlaps branch end)
+    ctx.lineTo(bx + 2.2, by + 0.5);  // base right
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.9;
     ctx.stroke();
   });
-  // Cold blue glow
-  ctx.fillStyle = "rgba(58,120,176,0.3)";
-  ctx.beginPath();
-  ctx.arc(0, -8, 12, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 function drawAbilityTrigger(ctx) {
@@ -1642,10 +1752,19 @@ function drawXPLevelUp(ctx) {
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a3008"; ctx.lineWidth = 1.4; ctx.stroke();
-  // "XP" or up-text
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 6px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("XP", 0, 5);
+  // "XP" monogram — drawn as paths (no fillText)
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  // X
+  ctx.beginPath();
+  ctx.moveTo(-5.2, 3.2); ctx.lineTo(-1.6, 8);
+  ctx.moveTo(-1.6, 3.2); ctx.lineTo(-5.2, 8);
+  ctx.stroke();
+  // P
+  ctx.beginPath();
+  ctx.moveTo(1.4, 8); ctx.lineTo(1.4, 3.2);
+  ctx.quadraticCurveTo(5.2, 3.0, 5.0, 4.8);
+  ctx.quadraticCurveTo(4.8, 6.2, 1.4, 6.0);
+  ctx.stroke();
   // Sparkles
   ctx.fillStyle = "#fff080";
   [[-10, -8, 2], [10, -6, 2.2], [-8, 8, 1.6]].forEach(([x, y, s]) => {
@@ -1857,13 +1976,15 @@ function drawCraftQueueSkipGem(ctx) {
   ctx.moveTo(-5, -5); ctx.lineTo(-2, -8); ctx.lineTo(-1, -5);
   ctx.closePath();
   ctx.fill();
-  // Fast-forward double arrow
+  // Fast-forward double arrow — overlaid on the gem face (skip = advance now)
   ctx.fillStyle = "#fff";
+  ctx.strokeStyle = "#3a0438"; ctx.lineWidth = 0.9; ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(8, -10); ctx.lineTo(14, -8); ctx.lineTo(8, -6); ctx.closePath();
-  ctx.moveTo(12, -10); ctx.lineTo(18, -8); ctx.lineTo(12, -6); ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.moveTo(-6, -3); ctx.lineTo(0, 0.5); ctx.lineTo(-6, 4); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -3); ctx.lineTo(6, 0.5); ctx.lineTo(0, 4); ctx.closePath();
+  ctx.fill(); ctx.stroke();
 }
 
 function drawExpeditionPack(ctx) {
