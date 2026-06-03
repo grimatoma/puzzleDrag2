@@ -16,6 +16,19 @@ import {
 import * as zonesSlice from "../src/features/zones/slice.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 
+  it("gives each farm zone its own boards.farm instance (not shared references)", () => {
+    const homeFarm = ZONES.home.boards.farm!;
+    const meadowFarm = ZONES.meadow.boards.farm!;
+    expect(homeFarm).not.toBe(meadowFarm);
+    expect(homeFarm.seasonDrops).not.toBe(meadowFarm.seasonDrops);
+    expect(homeFarm.upgradeMap).not.toBe(meadowFarm.upgradeMap);
+    expect(homeFarm.seasonDrops.Spring).not.toBe(meadowFarm.seasonDrops.Spring);
+    // Values may match today, but mutating one zone must not affect another.
+    meadowFarm.baseTurns = 99;
+    expect(homeFarm.baseTurns).toBe(10);
+    meadowFarm.baseTurns = 10;
+  });
+
 describe("Phase 30 — ZONES schema", () => {
   it("ZONE_IDS contains the expected location ids", () => {
     expect(ZONE_IDS).toContain("home");

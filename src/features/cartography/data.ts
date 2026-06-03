@@ -1,11 +1,20 @@
 // Map node positions are in a 0..100 SVG viewBox.
 // Each node IS a zone: boards, dangers, entryCost, buildings.
 
-import type {
-  FarmBoardInstance,
-  FishBoardInstance,
-  MineBoardInstance,
+import {
+  cloneFarmBoard,
+  cloneFishBoard,
+  cloneMineBoard,
+  farmSeasonDropRow,
+  farmSeasonDrops,
+  ZONE_UPGRADE_TARGET_GOLD,
+  type FarmBoardInstance,
+  type FishBoardInstance,
+  type MineBoardInstance,
 } from "../../config/schemas/boardInstance.js";
+import { BuildingId } from "../../types/catalog/buildings.js";
+import { SeasonId } from "../../types/catalog/seasons.js";
+import { ZoneCategoryId } from "../../types/catalog/tileCategories.js";
 
 export type MapNodeKind = "home" | "farm" | "mine" | "fish" | "festival" | "boss" | "event" | "capital";
 export type MapRegionId = "hearth" | "farm" | "mine" | "coast" | "wilds" | "boss" | "capital";
@@ -19,10 +28,6 @@ export interface ZoneBoards {
 
 export interface MapEntryCost {
   coins?: number;
-}
-
-export interface SeasonDrops {
-  [season: string]: Record<string, number>;
 }
 
 export interface MapNode {
@@ -39,7 +44,7 @@ export interface MapNode {
   boards: ZoneBoards;
   entryCost: MapEntryCost;
   dangers?: string[];
-  buildings: string[];
+  buildings: BuildingId[];
   plotCount: number;
   requiresHearthTokens?: boolean;
 }
@@ -54,39 +59,131 @@ export interface MapRegion {
   fill: string;
 }
 
-const GOLD = "gold";
+const GOLD = ZONE_UPGRADE_TARGET_GOLD;
 
-const FARM_SEASON_DROPS_TEMPERATE = {
-  Spring: { grass: 0.38, grain: 0.20, trees: 0.20, birds: 0.05, vegetables: 0.13, fruits: 0.04 },
-  Summer: { grass: 0.12, grain: 0.38, trees: 0.10, birds: 0.15, vegetables: 0.21, fruits: 0.04 },
-  Autumn: { grass: 0.10, grain: 0.15, trees: 0.42, birds: 0.15, vegetables: 0.15, fruits: 0.03 },
-  Winter: { grass: 0.05, grain: 0.05, trees: 0.73, birds: 0.10, vegetables: 0.05, fruits: 0.02 },
-};
-
-const FARM_SEASON_DROPS_ORCHARD = {
-  Spring: { grass: 0.10, grain: 0.10, trees: 0.25, birds: 0.10, vegetables: 0.05, fruits: 0.40 },
-  Summer: { grass: 0.05, grain: 0.10, trees: 0.20, birds: 0.20, vegetables: 0.05, fruits: 0.40 },
-  Autumn: { grass: 0.05, grain: 0.10, trees: 0.35, birds: 0.10, vegetables: 0.05, fruits: 0.35 },
-  Winter: { grass: 0.05, grain: 0.05, trees: 0.60, birds: 0.15, vegetables: 0.05, fruits: 0.10 },
-};
-
-const FARM_BOARD_TEMPERATE: FarmBoardInstance = {
+const TEMPERATE_FARM_TEMPLATE: FarmBoardInstance = {
   baseTurns: 10,
   upgradeMap: {
-    grass: "birds", grain: "vegetables", trees: "birds",
-    birds: "herd_animals", vegetables: "fruits", fruits: GOLD,
+    [ZoneCategoryId.Grass]: ZoneCategoryId.Birds,
+    [ZoneCategoryId.Grain]: ZoneCategoryId.Vegetables,
+    [ZoneCategoryId.Trees]: ZoneCategoryId.Birds,
+    [ZoneCategoryId.Birds]: ZoneCategoryId.HerdAnimals,
+    [ZoneCategoryId.Vegetables]: ZoneCategoryId.Fruits,
+    [ZoneCategoryId.Fruits]: GOLD,
   },
-  seasonDrops: FARM_SEASON_DROPS_TEMPERATE,
+  seasonDrops: farmSeasonDrops({
+    [SeasonId.Spring]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.38,
+      [ZoneCategoryId.Grain]: 0.20,
+      [ZoneCategoryId.Trees]: 0.20,
+      [ZoneCategoryId.Birds]: 0.05,
+      [ZoneCategoryId.Vegetables]: 0.13,
+      [ZoneCategoryId.Fruits]: 0.04,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Summer]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.12,
+      [ZoneCategoryId.Grain]: 0.38,
+      [ZoneCategoryId.Trees]: 0.10,
+      [ZoneCategoryId.Birds]: 0.15,
+      [ZoneCategoryId.Vegetables]: 0.21,
+      [ZoneCategoryId.Fruits]: 0.04,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Autumn]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.10,
+      [ZoneCategoryId.Grain]: 0.15,
+      [ZoneCategoryId.Trees]: 0.42,
+      [ZoneCategoryId.Birds]: 0.15,
+      [ZoneCategoryId.Vegetables]: 0.15,
+      [ZoneCategoryId.Fruits]: 0.03,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Winter]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.05,
+      [ZoneCategoryId.Grain]: 0.05,
+      [ZoneCategoryId.Trees]: 0.73,
+      [ZoneCategoryId.Birds]: 0.10,
+      [ZoneCategoryId.Vegetables]: 0.05,
+      [ZoneCategoryId.Fruits]: 0.02,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+  }),
 };
 
-const FARM_BOARD_ORCHARD: FarmBoardInstance = {
+const ORCHARD_FARM_TEMPLATE: FarmBoardInstance = {
   baseTurns: 12,
   upgradeMap: {
-    grass: "grain", grain: "vegetables", trees: "fruits",
-    birds: "herd_animals", vegetables: "fruits", fruits: GOLD,
-    herd_animals: GOLD,
+    [ZoneCategoryId.Grass]: ZoneCategoryId.Grain,
+    [ZoneCategoryId.Grain]: ZoneCategoryId.Vegetables,
+    [ZoneCategoryId.Trees]: ZoneCategoryId.Fruits,
+    [ZoneCategoryId.Birds]: ZoneCategoryId.HerdAnimals,
+    [ZoneCategoryId.Vegetables]: ZoneCategoryId.Fruits,
+    [ZoneCategoryId.Fruits]: GOLD,
+    [ZoneCategoryId.HerdAnimals]: GOLD,
   },
-  seasonDrops: FARM_SEASON_DROPS_ORCHARD,
+  seasonDrops: farmSeasonDrops({
+    [SeasonId.Spring]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.10,
+      [ZoneCategoryId.Grain]: 0.10,
+      [ZoneCategoryId.Trees]: 0.25,
+      [ZoneCategoryId.Birds]: 0.10,
+      [ZoneCategoryId.Vegetables]: 0.05,
+      [ZoneCategoryId.Fruits]: 0.40,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Summer]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.05,
+      [ZoneCategoryId.Grain]: 0.10,
+      [ZoneCategoryId.Trees]: 0.20,
+      [ZoneCategoryId.Birds]: 0.20,
+      [ZoneCategoryId.Vegetables]: 0.05,
+      [ZoneCategoryId.Fruits]: 0.40,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Autumn]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.05,
+      [ZoneCategoryId.Grain]: 0.10,
+      [ZoneCategoryId.Trees]: 0.35,
+      [ZoneCategoryId.Birds]: 0.10,
+      [ZoneCategoryId.Vegetables]: 0.05,
+      [ZoneCategoryId.Fruits]: 0.35,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+    [SeasonId.Winter]: farmSeasonDropRow({
+      [ZoneCategoryId.Grass]: 0.05,
+      [ZoneCategoryId.Grain]: 0.05,
+      [ZoneCategoryId.Trees]: 0.60,
+      [ZoneCategoryId.Birds]: 0.15,
+      [ZoneCategoryId.Vegetables]: 0.05,
+      [ZoneCategoryId.Fruits]: 0.10,
+      [ZoneCategoryId.Flowers]: 0,
+      [ZoneCategoryId.HerdAnimals]: 0,
+      [ZoneCategoryId.Cattle]: 0,
+      [ZoneCategoryId.Mounts]: 0,
+    }),
+  }),
 };
 
 const MINE_BOARD_STANDARD: MineBoardInstance = { baseTurns: 10 };
@@ -99,15 +196,15 @@ export const MAP_NODES: MapNode[] = [
     x: 10, y: 50, level: 1, region: "hearth",
     description: "Your home village. Build, craft, and rest by the hearth.",
     activities: ["Manage town", "Craft & build", "Turn in orders"],
-    boards: { farm: FARM_BOARD_TEMPERATE },
+    boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
     entryCost: { coins: 50 },
     dangers: [],
     buildings: [
-      "hearth", "mill", "bakery", "inn", "granary", "larder",
-      "forge", "caravan_post", "kitchen", "workshop", "powder_store",
-      "portal", "housing", "housing2", "housing3", "silo",
-      "clock_tower", "apothecary", "sawmill", "watchtower", "stable",
-      "apiary", "chapel", "brewery", "observatory",
+      BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery, BuildingId.Inn, BuildingId.Granary, BuildingId.Larder,
+      BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Kitchen, BuildingId.Workshop, BuildingId.PowderStore,
+      BuildingId.Portal, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3, BuildingId.Silo,
+      BuildingId.ClockTower, BuildingId.Apothecary, BuildingId.Sawmill, BuildingId.Watchtower, BuildingId.Stable,
+      BuildingId.Apiary, BuildingId.Chapel, BuildingId.Brewery, BuildingId.Observatory,
     ],
     plotCount: 20,
   },
@@ -116,13 +213,13 @@ export const MAP_NODES: MapNode[] = [
     x: 24, y: 28, level: 1, region: "farm",
     description: "Sun-drenched fields. Easy harvests for new farmers.",
     activities: ["Harvest farm tiles", "Common resources"],
-    boards: { farm: FARM_BOARD_TEMPERATE },
+    boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
     entryCost: { coins: 50 },
     dangers: [],
     buildings: [
-      "hearth", "mill", "granary", "silo", "bakery", "larder",
-      "inn", "housing", "housing2", "housing3",
-      "stable", "apiary", "sawmill", "brewery", "watchtower",
+      BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Silo, BuildingId.Bakery, BuildingId.Larder,
+      BuildingId.Inn, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
+      BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Brewery, BuildingId.Watchtower,
     ],
     plotCount: 8,
   },
@@ -131,13 +228,13 @@ export const MAP_NODES: MapNode[] = [
     x: 24, y: 72, level: 2, region: "farm",
     description: "Tangled rows of fruit trees. Richer farm yields.",
     activities: ["Harvest farm tiles", "Higher-tier crops"],
-    boards: { farm: FARM_BOARD_ORCHARD },
+    boards: { farm: cloneFarmBoard(ORCHARD_FARM_TEMPLATE) },
     entryCost: { coins: 50 },
     dangers: [],
     buildings: [
-      "hearth", "mill", "granary", "silo", "bakery", "larder",
-      "inn", "caravan_post", "housing", "housing2", "housing3",
-      "stable", "apiary", "sawmill", "brewery", "chapel",
+      BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Silo, BuildingId.Bakery, BuildingId.Larder,
+      BuildingId.Inn, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
+      BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Brewery, BuildingId.Chapel,
     ],
     plotCount: 9,
   },
@@ -149,7 +246,7 @@ export const MAP_NODES: MapNode[] = [
     boards: {},
     entryCost: { coins: 0 },
     dangers: [],
-    buildings: ["hearth", "inn", "caravan_post"],
+    buildings: [BuildingId.Hearth, BuildingId.Inn, BuildingId.CaravanPost],
     plotCount: 3,
   },
   {
@@ -157,13 +254,13 @@ export const MAP_NODES: MapNode[] = [
     x: 56, y: 26, level: 2, region: "mine",
     description: "A wide, shattered pit. Stone, ore, and a few coins lost in cracks.",
     activities: ["Harvest mine tiles", "Ore & stone"],
-    boards: { mine: MINE_BOARD_STANDARD },
+    boards: { mine: cloneMineBoard(MINE_BOARD_STANDARD) },
     entryCost: { coins: 100 },
     dangers: ["cave_in", "gas_vent", "mole"],
     buildings: [
-      "hearth", "kitchen", "workshop", "forge", "barn",
-      "powder_store", "inn", "housing", "housing2", "housing3",
-      "watchtower", "apothecary", "observatory",
+      BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Workshop, BuildingId.Forge, BuildingId.Barn,
+      BuildingId.PowderStore, BuildingId.Inn, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
+      BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory,
     ],
     plotCount: 8,
   },
@@ -172,13 +269,13 @@ export const MAP_NODES: MapNode[] = [
     x: 56, y: 74, level: 4, region: "mine",
     description: "Twisting tunnels lit by old miners’ lanterns. Rare gems hide deep within.",
     activities: ["Harvest mine tiles", "Rare gems"],
-    boards: { mine: MINE_BOARD_EXTENDED },
+    boards: { mine: cloneMineBoard(MINE_BOARD_EXTENDED) },
     entryCost: { coins: 100 },
     dangers: ["cave_in", "gas_vent", "lava", "mole"],
     buildings: [
-      "hearth", "kitchen", "workshop", "forge", "barn",
-      "powder_store", "inn", "caravan_post", "housing", "housing2", "housing3",
-      "watchtower", "apothecary", "observatory", "chapel",
+      BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Workshop, BuildingId.Forge, BuildingId.Barn,
+      BuildingId.PowderStore, BuildingId.Inn, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
+      BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory, BuildingId.Chapel,
     ],
     plotCount: 9,
   },
@@ -190,7 +287,7 @@ export const MAP_NODES: MapNode[] = [
     boards: {},
     entryCost: { coins: 0 },
     dangers: [],
-    buildings: ["hearth", "inn", "caravan_post"],
+    buildings: [BuildingId.Hearth, BuildingId.Inn, BuildingId.CaravanPost],
     plotCount: 3,
   },
   {
@@ -198,12 +295,12 @@ export const MAP_NODES: MapNode[] = [
     x: 86, y: 28, level: 5, region: "mine",
     description: "A roaring smithy at the foot of the mountain. Where heroes’ tools are born.",
     activities: ["Advanced crafting", "Boss-tier resources"],
-    boards: { mine: MINE_BOARD_EXTENDED },
+    boards: { mine: cloneMineBoard(MINE_BOARD_EXTENDED) },
     entryCost: { coins: 200 },
     dangers: [],
     buildings: [
-      "hearth", "forge", "workshop", "barn", "powder_store",
-      "portal", "caravan_post", "housing", "housing2", "housing3",
+      BuildingId.Hearth, BuildingId.Forge, BuildingId.Workshop, BuildingId.Barn, BuildingId.PowderStore,
+      BuildingId.Portal, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
     ],
     plotCount: 8,
   },
@@ -215,7 +312,7 @@ export const MAP_NODES: MapNode[] = [
     boards: {},
     entryCost: { coins: 0 },
     dangers: [],
-    buildings: ["hearth", "inn"],
+    buildings: [BuildingId.Hearth, BuildingId.Inn],
     plotCount: 2,
   },
   {
@@ -223,12 +320,12 @@ export const MAP_NODES: MapNode[] = [
     x: 16, y: 86, level: 3, region: "coast",
     description: "A weather-bleached pier with nets full of sardines and clams. Tide and luck do most of the work.",
     activities: ["Harvest fish tiles", "Sardine, mackerel & clams"],
-    boards: { fish: FISH_BOARD_HARBOR },
+    boards: { fish: cloneFishBoard(FISH_BOARD_HARBOR) },
     entryCost: { coins: 50 },
     dangers: [],
     buildings: [
-      "hearth", "harbor_dock", "fishmonger", "smokehouse", "lighthouse",
-      "inn", "caravan_post", "housing", "housing2", "housing3", "watchtower",
+      BuildingId.Hearth, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse, BuildingId.Lighthouse,
+      BuildingId.Inn, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3, BuildingId.Watchtower,
     ],
     plotCount: 8,
   },

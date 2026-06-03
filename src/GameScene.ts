@@ -736,7 +736,7 @@ export class GameScene extends Phaser.Scene {
     if (!zoneId) return null;
     const farm = zoneFarmBoard(zoneId);
     if (!farm?.upgradeMap) return null;
-    const targetZoneCat = farm.upgradeMap[sourceZoneCat];
+    const targetZoneCat = farm.upgradeMap[sourceZoneCat as import("./types/catalog/tileCategories.js").ZoneCategoryId];
     if (!targetZoneCat) return null;
 
     // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.

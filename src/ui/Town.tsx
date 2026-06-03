@@ -323,7 +323,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   // Filter buildings to those available at this location, then by biome.
   const allowedBuildings = zoneConfig?.buildings ?? ALL_BUILDING_IDS;
   const eligibleBuildings = useMemo(
-    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant)),
+    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant)),
     [allowedBuildings, biomeVariant],
   );
   const freePlots = plotCount - occupiedPlots;
