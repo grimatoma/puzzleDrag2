@@ -204,8 +204,8 @@
 
       <section id="why-not-fold">
         <h2>Why the code docs do not move into the wiki</h2>
-        <p>It is tempting to read “make the wiki the source” as “put <em>everything</em> in the wiki.” That would re-introduce exactly the drift the wiki was built to kill. The wiki's whole value is that its catalog is <strong>generated</strong> — a hand-written “how to add an enum” page pasted into it would be unmaintained prose with no config behind it, indistinguishable from the markdown it replaced. The three engineering docs document <em>code mechanics</em> that have no config representation and that no player/designer reads. They stay code-side, and the wiki <em>links to them</em> from its developer-facing notes rather than absorbing them.</p>
-        <div class="box warn"><b>The one real overlap.</b> <code>catalog-enums.md</code> contains a “Dev Panel / Wiki concept map” table that hand-restates the wiki's live concept inventory. That is duplication the wiki already owns — it becomes a pointer (see the Plan).</div>
+        <p>It is tempting to read “make the wiki the source” as “put <em>everything</em> in the wiki.” That would re-introduce exactly the drift the wiki was built to kill. The wiki's whole value is that its catalog is <strong>generated</strong> — a hand-written “how to add an enum” page pasted into it would be unmaintained prose with no config behind it, indistinguishable from the markdown it replaced. The engineering docs document <em>code mechanics</em> that have no config representation and that no player/designer reads. They stay code-side, and the wiki <em>links to them</em> from its developer-facing notes rather than absorbing them.</p>
+        <div class="box warn"><b>Update — catalog enums folded into <code>CLAUDE.md</code>.</b> The former <code>docs/engineering/catalog-enums.md</code> (enum/attribute split, add-an-item workflow, parity tests, and the concept → enum → source map) was <strong>base knowledge agents need</strong>, so it now lives in the “Catalog enums” section of <code>CLAUDE.md</code> and the standalone doc was removed. That's a third surface — <em>agent base knowledge</em> — distinct from the wiki (game) and the longer-form contributor docs. The concept map is the contributor counterpart of the wiki inventory (which TS enum / source map backs each concept), not a duplicate of it.</div>
       </section>
 
     </div>
@@ -227,10 +227,10 @@
               <td><span class="pill ok">done</span> Already the wiki's story/plans/scope home. No action beyond the Overview intro test.</td>
             </tr>
             <tr>
-              <td><code>docs/engineering/catalog-enums.md</code></td>
-              <td>Enum-vs-attribute split, “add a new item” workflow, parity tests, + a Wiki concept-map table</td>
-              <td>Code</td>
-              <td><span class="pill warn">trim</span> Keep the code-workflow body; replace the concept-map table with a pointer to the live wiki inventory.</td>
+              <td><code>docs/engineering/catalog-enums.md</code> <span class="pill danger">removed</span></td>
+              <td>Enum-vs-attribute split, “add a new item” workflow, parity tests, + the concept → enum → source map</td>
+              <td>Agent base knowledge</td>
+              <td><span class="pill info">moved</span> Folded into the “Catalog enums” section of <code>CLAUDE.md</code> (agents need it inline); standalone doc deleted; the 3 inbound references repointed.</td>
             </tr>
             <tr>
               <td><code>src/config/balance.schema.md</code></td>
@@ -285,13 +285,13 @@
         <p>No new wiki rendering engine is needed: the wiki already generates the concept catalog, so “migration” here means <em>removing duplication and stating the boundary</em>, not building pages. Each phase is independently committable.</p>
 
         <div class="card"><h3>P1 · De-stale <code>CLAUDE.md</code> <span class="pill info">fix</span></h3>
-          <p>Remove/repoint the two references to the missing <code>docs/engineering/ts-migration-completion.md</code> (line 22) and <code>docs/engineering/typed-tests.md</code> (line 37). Point line 37 at the live <code>npm run typecheck:tests</code> script and <code>catalog-enums.md</code> where appropriate.</p></div>
+          <p>Remove/repoint the two references to the missing <code>docs/engineering/ts-migration-completion.md</code> (line 22) and <code>docs/engineering/typed-tests.md</code> (line 37). Point line 37 at the live <code>npm run typecheck:tests</code> script.</p></div>
 
         <div class="card"><h3>P2 · Write the boundary down <span class="pill warn">edit</span></h3>
-          <p>Add a short <strong>“Docs map”</strong> note to <code>CLAUDE.md</code> and a sentence to the wiki Overview's <em>“How to use this wiki”</em> section: game knowledge → wiki; code/contributor reference → <code>docs/engineering/</code> + <code>src/**/*.md</code>. This is the durable answer to “what's the purpose of these?”.</p></div>
+          <p>Add a short <strong>“Docs map”</strong> note to <code>CLAUDE.md</code> and a sentence to the wiki Overview's <em>“How to use this wiki”</em> section: game knowledge → wiki; agent base knowledge → <code>CLAUDE.md</code>; longer-form contributor reference → markdown by the code + the published docs site. This is the durable answer to “what's the purpose of these?”.</p></div>
 
-        <div class="card"><h3>P3 · Kill the one duplication <span class="pill warn">trim</span></h3>
-          <p>In <code>catalog-enums.md</code>, replace the “Dev Panel / Wiki concept map” table with a one-line pointer to the live wiki (<code>/b/</code>) inventory. Keep the code-only workflow (add-an-item steps, parity tests). Add a cross-link line to <code>balance.schema.md</code> pointing per-field semantics at the generated wiki concept pages.</p></div>
+        <div class="card"><h3>P3 · Consolidate the enum reference into <code>CLAUDE.md</code> <span class="pill info">moved</span></h3>
+          <p>The catalog-enum reference is base knowledge agents need, so its whole body — enum/attribute split, add-an-item workflow, Zod layer, parity tests, inventory typing, the concept → enum → source map, board-only keys, runtime guards/imports — folds into the “Catalog enums” section of <code>CLAUDE.md</code>; the standalone <code>docs/engineering/catalog-enums.md</code> is deleted and its 3 inbound references (CLAUDE.md ×2, <code>src/types/items.ts</code>) repointed. Separately, <code>balance.schema.md</code> gains a cross-link pointing per-field semantics at the generated wiki concept pages.</p></div>
 
         <div class="card t2"><h3>P4 · Harden Overview-as-intro <span class="pill ok">test</span></h3>
           <p>Add a unit test asserting that an empty hash resolves to the <code>overview</code> narrative page, so the front-door default can't silently regress.</p></div>
@@ -325,7 +325,7 @@
             <tr><td>Narrative pages</td><td><code>src/balanceManager/content/pages/*.html</code></td><td>authored HTML</td></tr>
             <tr><td>Per-entity “About” + category intros</td><td><code>src/balanceManager/content/&lt;concept&gt;/{&lt;key&gt;,_index}.html</code></td><td>authored HTML (optional)</td></tr>
             <tr><td>Field reference on concept pages</td><td><code>src/balanceManager/wiki/conceptSchemas.ts</code></td><td>Zod <code>.describe()</code></td></tr>
-            <tr><td>Catalog enum workflow</td><td><code>docs/engineering/catalog-enums.md</code></td><td>code reference</td></tr>
+            <tr><td>Catalog enum workflow + concept→enum→source map</td><td><code>CLAUDE.md</code> → “Catalog enums” section</td><td>agent base knowledge</td></tr>
             <tr><td>balance.json overrides</td><td><code>src/config/balance.schema.md</code></td><td>code reference</td></tr>
           </tbody>
         </table>
