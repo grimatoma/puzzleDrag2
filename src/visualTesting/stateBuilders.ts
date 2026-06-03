@@ -500,34 +500,6 @@ function profileState(profile: string): VisualStateTree {
     }
     case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_grass", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", description: null, modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.", spawnBias: null, modifier: { type: "", params: {} } }, fish: { tide: "high", tideTurn: 3 } };
-    case "craftQueue": {
-      // Multi-station queue snapshot: bakery has two stacked, forge has
-      // one mid-progress, larder has a ready-to-claim item. Anchored to
-      // VISUAL_FIXED_NOW so buildVisualState remains deterministic across
-      // repeated calls (matches the rest of the visual matrix). Note: the
-      // queue UI compares each `readyAt` against real wall-clock time, so
-      // every entry will render as "ready" when this scenario is loaded
-      // live — the DOM is still deterministic for the visual diff suite.
-      const NOW = VISUAL_FIXED_NOW;
-      const MIN = 60_000;
-      const SEC = 1_000;
-      // Bakery: head mid-progress, one waiting behind it.
-      const bread     = { key: "bread",     queuedAt: NOW - 90 * SEC, startAt: NOW - 90 * SEC, readyAt: NOW + 30 * SEC,            durationMs: 2 * MIN };
-      const honeyroll = { key: "honeyroll", queuedAt: NOW - 90 * SEC, startAt: bread.readyAt,  readyAt: bread.readyAt + 20 * MIN,  durationMs: 20 * MIN };
-      // Forge: a long iron hinge mid-progress.
-      const ironHinge = { key: "iron_hinge", queuedAt: NOW - 5 * MIN, startAt: NOW - 5 * MIN, readyAt: NOW + 40 * MIN, durationMs: 45 * MIN };
-      // Larder: a ready-to-claim preserve.
-      const preserve  = { key: "preserve",  queuedAt: NOW - 5 * MIN, startAt: NOW - 5 * MIN, readyAt: NOW - 2 * SEC, durationMs: 4 * MIN };
-      return {
-        ...richState(),
-        gems: 3,
-        craftQueues: {
-          bakery: [bread, honeyroll],
-          forge:  [ironHinge],
-          larder: [preserve],
-        },
-      };
-    }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
     case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...(richState().market ?? { seed: 0, season: 0, prices: {}, prevPrices: null }), season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
     case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_grass" } }) };

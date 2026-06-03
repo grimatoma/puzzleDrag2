@@ -7,7 +7,6 @@ export const recipeDefinitionSchema = z
     tier: z.number().int().optional().describe("Crafting tier; tier 2 recipes require town level 3+"),
     inputs: z.record(z.string(), z.number()).describe("Resource keys → quantities"),
     coins: z.number().optional().describe("Coin reward credited to the player on craft completion"),
-    craftMs: z.number().describe("Queue duration in ms"),
   })
   .passthrough();
 

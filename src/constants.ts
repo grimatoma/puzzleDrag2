@@ -91,7 +91,6 @@ export interface RecipeDefinition {
   station: StationId;
   inputs: RecipeInputs;
   tier?: number;
-  craftMs?: number;
   name?: string;
   coins?: number;
   tool?: string;
@@ -142,10 +141,6 @@ export function isRecipeDefinition(value: unknown): value is RecipeDefinition {
     && isObjectRecord(value.inputs);
 }
 
-export function hasRecipeCraftMs(value: unknown): value is RecipeDefinition & { craftMs: number } {
-  return isRecipeDefinition(value) && typeof value.craftMs === "number" && value.craftMs > 0;
-}
-
 export function isBiomeDefinition(value: unknown): value is BiomeDefinition {
   return isObjectRecord(value)
     && typeof value.name === "string"
@@ -156,23 +151,6 @@ export function isBiomeDefinition(value: unknown): value is BiomeDefinition {
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
-
-// Phase 5 — real-time crafting queues (alongside the instant CRAFT_RECIPE).
-// Per-station: each station (bakery, forge, …) has its own sequential queue
-// under `state.craftQueues[station]`. Within a station only the head ticks
-// down; across stations queues run in parallel. Spending CRAFT_GEM_SKIP_COST
-// gems finishes the head instantly. Each recipe may override the default
-// duration via a `craftMs` field (see RECIPES); when unset the recipe falls
-// back to CRAFT_QUEUE_HOURS hours.
-export let CRAFT_QUEUE_HOURS = 4;       // Dev Panel: tuning.craftQueueHours
-export let CRAFT_GEM_SKIP_COST = 1;     // Dev Panel: tuning.craftGemSkipCost
-
-/** Wall-clock ms a queued craft of `recipeKey` takes (recipe override or default). */
-export function recipeCraftMs(recipeKey: string): number {
-  const r = RECIPES[recipeKey];
-  if (hasRecipeCraftMs(r)) return r.craftMs;
-  return CRAFT_QUEUE_HOURS * 60 * 60 * 1000;
-}
 
 // Phase 5 — expedition rations (master doc §VI). Mine/Harbor rounds are
 // supply-structured: you bring food before the round, each unit is worth this
@@ -228,8 +206,6 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Dev Panel: tuning.homeBiome
 
 /** Apply Dev Panel tuning fields owned by this module (`export let` bindings). */
 export function applyConstantsTuning(tuning: TuningOverrides): void {
-  if (tuning.craftQueueHours !== undefined) CRAFT_QUEUE_HOURS = tuning.craftQueueHours;
-  if (tuning.craftGemSkipCost !== undefined) CRAFT_GEM_SKIP_COST = tuning.craftGemSkipCost;
   if (tuning.minExpeditionTurns !== undefined) MIN_EXPEDITION_TURNS = tuning.minExpeditionTurns;
   if (
     tuning.homeBiome !== undefined
@@ -926,73 +902,66 @@ export const BUILDINGS = [
     abilities: [{ id: "threshold_reduce_category", params: { category: "mine_gem", amount: 1 } }] },
 ];
 
-// `craftMs` is the wall-clock duration of a queued craft. When omitted, the
-// recipe falls back to `CRAFT_QUEUE_HOURS` hours via `recipeCraftMs(key)`.
-// Values below are demo-tuned (seconds-to-hours) so the queue UI is visible
-// without waiting half a day; tune via Dev Panel for shipped balance.
-const MIN = 60_000;
-const HOUR = 60 * MIN;
-
 export const RECIPES: RecipeRecord = {
   // Workshop recipes (Tools)
-  rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 },                            craftMs: 1 * MIN },
-  rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 },                            craftMs: 1 * MIN },
-  rec_sickle:      { item: "sickle",        station: "workshop", inputs: { plank: 1, iron_bar: 1 },               craftMs: 3 * MIN },
-  rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { hay_bundle: 1, dirt: 1 },               craftMs: 3 * MIN },
-  rec_cat:         { item: "cat",           station: "workshop", inputs: { block: 2, dirt: 1 },              craftMs: 5 * MIN },
-  rec_bird_cage:   { item: "bird_cage",     station: "workshop", inputs: { hay_bundle: 1 },                             craftMs: 2 * MIN },
-  rec_scythe_full: { item: "scythe_full",   station: "workshop", inputs: { block: 1 },                            craftMs: 5 * MIN },
-  rec_rifle:       { item: "rifle",         station: "workshop", inputs: { plank: 1, block: 1, iron_bar: 1 }, craftMs: 30 * MIN },
-  rec_hound:       { item: "hound",         station: "workshop", inputs: { bread: 1, block: 3 },                  craftMs: 15 * MIN },
-  rec_hoe:         { item: "hoe",           station: "workshop", inputs: { plank: 1, block: 1 },             craftMs: 2 * MIN },
-  rec_stone_hammer:{ item: "stone_hammer",  station: "workshop", inputs: { block: 2, plank: 1 },             craftMs: 5 * MIN },
-  rec_iron_pick:   { item: "iron_pick",     station: "workshop", inputs: { iron_bar: 1, plank: 1 },             craftMs: 8 * MIN },
-  rec_auger:       { item: "auger",         station: "workshop", inputs: { iron_bar: 1, plank: 1 },               craftMs: 5 * MIN },
-  rec_blast_charge:{ item: "blast_charge",  station: "workshop", inputs: { iron_bar: 1, coke: 1 },                craftMs: 8 * MIN },
-  rec_bird_feed:   { item: "bird_feed",     station: "workshop", inputs: { flour: 1, hay_bundle: 2 },                   craftMs: 3 * MIN },
-  rec_sapling:     { item: "sapling",       station: "workshop", inputs: { plank: 1, hay_bundle: 2 },                craftMs: 5 * MIN },
+  rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 }},
+  rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 }},
+  rec_sickle:      { item: "sickle",        station: "workshop", inputs: { plank: 1, iron_bar: 1 }},
+  rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { hay_bundle: 1, dirt: 1 }},
+  rec_cat:         { item: "cat",           station: "workshop", inputs: { block: 2, dirt: 1 }},
+  rec_bird_cage:   { item: "bird_cage",     station: "workshop", inputs: { hay_bundle: 1 }},
+  rec_scythe_full: { item: "scythe_full",   station: "workshop", inputs: { block: 1 }},
+  rec_rifle:       { item: "rifle",         station: "workshop", inputs: { plank: 1, block: 1, iron_bar: 1 }},
+  rec_hound:       { item: "hound",         station: "workshop", inputs: { bread: 1, block: 3 }},
+  rec_hoe:         { item: "hoe",           station: "workshop", inputs: { plank: 1, block: 1 }},
+  rec_stone_hammer:{ item: "stone_hammer",  station: "workshop", inputs: { block: 2, plank: 1 }},
+  rec_iron_pick:   { item: "iron_pick",     station: "workshop", inputs: { iron_bar: 1, plank: 1 }},
+  rec_auger:       { item: "auger",         station: "workshop", inputs: { iron_bar: 1, plank: 1 }},
+  rec_blast_charge:{ item: "blast_charge",  station: "workshop", inputs: { iron_bar: 1, coke: 1 }},
+  rec_bird_feed:   { item: "bird_feed",     station: "workshop", inputs: { flour: 1, hay_bundle: 2 }},
+  rec_sapling:     { item: "sapling",       station: "workshop", inputs: { plank: 1, hay_bundle: 2 }},
 
   // Tools in workshop originally from RECIPES
-  rec_water_pump:  { item: "water_pump",    station: "workshop", tier: 2, inputs: { plank: 1, block: 1 },    craftMs: 20 * MIN },
-  rec_explosives:  { item: "explosives",    station: "workshop", tier: 2, inputs: { hay_bundle: 1, dirt: 1 },      craftMs: 15 * MIN },
+  rec_water_pump:  { item: "water_pump",    station: "workshop", tier: 2, inputs: { plank: 1, block: 1 }},
+  rec_explosives:  { item: "explosives",    station: "workshop", tier: 2, inputs: { hay_bundle: 1, dirt: 1 }},
 
   // Phase 3 (tool-powers overhaul) — workshop recipes for the new craftable
   // farm + mine tools. Costs follow the existing tier conventions (sweeping
   // tools cost a plank or two; transmuters / drills cost iron + coal).
-  rec_trimmer:        { item: "trimmer",        station: "workshop", tier: 1, inputs: { iron_bar: 1, plank: 1 },           craftMs: 4 * MIN },
-  rec_plough:         { item: "plough",         station: "workshop", tier: 2, inputs: { iron_bar: 1, plank: 2 },           craftMs: 8 * MIN },
-  rec_fruit_picker:   { item: "fruit_picker",   station: "workshop", tier: 1, inputs: { plank: 2 },                        craftMs: 3 * MIN },
-  rec_herders_crook:  { item: "herders_crook",  station: "workshop", tier: 1, inputs: { plank: 1, hay_bundle: 1 },         craftMs: 3 * MIN },
-  rec_milk_churn:     { item: "milk_churn",     station: "workshop", tier: 2, inputs: { plank: 2, iron_bar: 1 },           craftMs: 6 * MIN },
-  rec_saddle:         { item: "saddle",         station: "workshop", tier: 2, inputs: { plank: 1, iron_bar: 1, hay_bundle: 2 }, craftMs: 6 * MIN },
-  rec_bee:            { item: "bee",            station: "workshop", tier: 1, inputs: { honey: 1, hay_bundle: 1 },         craftMs: 4 * MIN },
-  rec_terrier:        { item: "terrier",        station: "workshop", tier: 1, inputs: { bread: 1, block: 2 },              craftMs: 10 * MIN },
-  rec_drill:          { item: "drill",          station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 1, plank: 1 },  craftMs: 20 * MIN },
-  rec_coal_hammer:    { item: "coal_hammer",    station: "workshop", tier: 2, inputs: { iron_bar: 1, plank: 1 },           craftMs: 5 * MIN },
-  rec_gold_pick:      { item: "gold_pick",      station: "workshop", tier: 3, inputs: { iron_bar: 2, gold_bar: 1, plank: 1 }, craftMs: 12 * MIN },
-  rec_magnet:         { item: "magnet",         station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 1 },            craftMs: 12 * MIN },
-  rec_coal_transmuter:{ item: "coal_transmuter", station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 2, block: 1 },  craftMs: 15 * MIN },
+  rec_trimmer:        { item: "trimmer",        station: "workshop", tier: 1, inputs: { iron_bar: 1, plank: 1 }},
+  rec_plough:         { item: "plough",         station: "workshop", tier: 2, inputs: { iron_bar: 1, plank: 2 }},
+  rec_fruit_picker:   { item: "fruit_picker",   station: "workshop", tier: 1, inputs: { plank: 2 }},
+  rec_herders_crook:  { item: "herders_crook",  station: "workshop", tier: 1, inputs: { plank: 1, hay_bundle: 1 }},
+  rec_milk_churn:     { item: "milk_churn",     station: "workshop", tier: 2, inputs: { plank: 2, iron_bar: 1 }},
+  rec_saddle:         { item: "saddle",         station: "workshop", tier: 2, inputs: { plank: 1, iron_bar: 1, hay_bundle: 2 }},
+  rec_bee:            { item: "bee",            station: "workshop", tier: 1, inputs: { honey: 1, hay_bundle: 1 }},
+  rec_terrier:        { item: "terrier",        station: "workshop", tier: 1, inputs: { bread: 1, block: 2 }},
+  rec_drill:          { item: "drill",          station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 1, plank: 1 }},
+  rec_coal_hammer:    { item: "coal_hammer",    station: "workshop", tier: 2, inputs: { iron_bar: 1, plank: 1 }},
+  rec_gold_pick:      { item: "gold_pick",      station: "workshop", tier: 3, inputs: { iron_bar: 2, gold_bar: 1, plank: 1 }},
+  rec_magnet:         { item: "magnet",         station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 1 }},
+  rec_coal_transmuter:{ item: "coal_transmuter", station: "workshop", tier: 3, inputs: { iron_bar: 2, coke: 2, block: 1 }},
 
   // Crafted goods
-  rec_bread:       { item: "bread",         station: "bakery", tier: 1, inputs: { flour: 3, eggs: 1 },           craftMs: 2 * MIN },
-  rec_honeyroll:   { item: "honeyroll",     station: "bakery", tier: 2, inputs: { flour: 2, eggs: 1, jam: 1 }, craftMs: 20 * MIN },
-  rec_harvestpie:  { item: "harvestpie",    station: "bakery", tier: 2, inputs: { flour: 2, jam: 1, eggs: 1 }, craftMs: 1 * HOUR },
-  rec_preserve:    { item: "preserve",      station: "larder", tier: 1, inputs: { jam: 2, eggs: 1 },             craftMs: 4 * MIN },
-  rec_tincture:    { item: "tincture",      station: "larder", tier: 1, inputs: { jam: 3 },                craftMs: 5 * MIN },
-  rec_iron_hinge:  { item: "iron_hinge",    station: "forge",  tier: 2, inputs: { iron_bar: 2, coke: 1 },           craftMs: 45 * MIN },
-  rec_cobblepath:  { item: "cobblepath",    station: "forge",  tier: 1, inputs: { block: 5, plank: 2 },          craftMs: 8 * MIN },
-  rec_lantern:     { item: "lantern",       station: "forge",  tier: 2, inputs: { iron_bar: 1, coke: 1, plank: 1 }, craftMs: 30 * MIN },
-  rec_goldring:    { item: "goldring",      station: "forge",  tier: 2, inputs: { gold_bar: 1, iron_bar: 2 },           craftMs: 1 * HOUR },
-  rec_gemcrown:    { item: "gemcrown",      station: "forge",  tier: 2, inputs: { cut_gem: 1, gold_bar: 2 },          craftMs: 90 * MIN },
-  rec_ironframe:   { item: "ironframe",     station: "forge",  tier: 3, inputs: { plank: 2, iron_bar: 1 },           craftMs: 2 * HOUR },
-  rec_stonework:   { item: "stonework",     station: "forge",  tier: 3, inputs: { block: 2, coke: 1 },           craftMs: 3 * HOUR },
-  rec_chowder:     { item: "chowder",       station: "larder", tier: 2, inputs: { fish_fillet: 2, milk: 1, soup: 1 }, craftMs: 10 * MIN },
-  rec_fish_oil_bot:{ item: "fish_oil_bottled", station: "workshop", tier: 1, inputs: { fish_oil: 1, plank: 1 },       craftMs: 10 * MIN },
-  rec_cured_meat:  { item: "cured_meat",    station: "smokehouse", tier: 1, inputs: { meat: 2, coke: 1 },             craftMs: 10 * MIN },
-  rec_festival_loaf:{ item: "festival_loaf", station: "bakery",     tier: 2, inputs: { flour: 3, jam: 2, eggs: 1 }, craftMs: 45 * MIN },
-  rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, honey: 1, jam: 2 },    craftMs: 2 * HOUR },
-  rec_iron_ration: { item: "iron_ration",   station: "kitchen",    tier: 2, inputs: { flour: 5, meat: 1, iron_bar: 1 },  craftMs: 12 * MIN },
-  rec_supplies:    { item: "supplies",      station: "kitchen",    tier: 1, inputs: { flour: 5 },                          craftMs: 5 * MIN },
+  rec_bread:       { item: "bread",         station: "bakery", tier: 1, inputs: { flour: 3, eggs: 1 }},
+  rec_honeyroll:   { item: "honeyroll",     station: "bakery", tier: 2, inputs: { flour: 2, eggs: 1, jam: 1 }},
+  rec_harvestpie:  { item: "harvestpie",    station: "bakery", tier: 2, inputs: { flour: 2, jam: 1, eggs: 1 }},
+  rec_preserve:    { item: "preserve",      station: "larder", tier: 1, inputs: { jam: 2, eggs: 1 }},
+  rec_tincture:    { item: "tincture",      station: "larder", tier: 1, inputs: { jam: 3 }},
+  rec_iron_hinge:  { item: "iron_hinge",    station: "forge",  tier: 2, inputs: { iron_bar: 2, coke: 1 }},
+  rec_cobblepath:  { item: "cobblepath",    station: "forge",  tier: 1, inputs: { block: 5, plank: 2 }},
+  rec_lantern:     { item: "lantern",       station: "forge",  tier: 2, inputs: { iron_bar: 1, coke: 1, plank: 1 }},
+  rec_goldring:    { item: "goldring",      station: "forge",  tier: 2, inputs: { gold_bar: 1, iron_bar: 2 }},
+  rec_gemcrown:    { item: "gemcrown",      station: "forge",  tier: 2, inputs: { cut_gem: 1, gold_bar: 2 }},
+  rec_ironframe:   { item: "ironframe",     station: "forge",  tier: 3, inputs: { plank: 2, iron_bar: 1 }},
+  rec_stonework:   { item: "stonework",     station: "forge",  tier: 3, inputs: { block: 2, coke: 1 }},
+  rec_chowder:     { item: "chowder",       station: "larder", tier: 2, inputs: { fish_fillet: 2, milk: 1, soup: 1 }},
+  rec_fish_oil_bot:{ item: "fish_oil_bottled", station: "workshop", tier: 1, inputs: { fish_oil: 1, plank: 1 }},
+  rec_cured_meat:  { item: "cured_meat",    station: "smokehouse", tier: 1, inputs: { meat: 2, coke: 1 }},
+  rec_festival_loaf:{ item: "festival_loaf", station: "bakery",     tier: 2, inputs: { flour: 3, jam: 2, eggs: 1 }},
+  rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, honey: 1, jam: 2 }},
+  rec_iron_ration: { item: "iron_ration",   station: "kitchen",    tier: 2, inputs: { flour: 5, meat: 1, iron_bar: 1 }},
+  rec_supplies:    { item: "supplies",      station: "kitchen",    tier: 1, inputs: { flour: 5 }},
 };
 
 // ── Backward-compatible aliases ────────────────────────────────────────────

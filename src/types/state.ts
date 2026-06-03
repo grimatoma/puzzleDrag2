@@ -12,7 +12,6 @@ import type { ResourceKey } from "./catalogKeys.js";
 import type {
   BossState,
   CastleState,
-  CraftQueueEntry,
   FishBiomeState,
   GameSettings,
   Quest,
@@ -25,7 +24,6 @@ import type { ZoneInventoryMap, ZoneResourceProgressMap } from "./inventory.js";
 export type {
   BossState,
   CastleState,
-  CraftQueueEntry,
   FishBiomeState,
   GameSettings,
   Quest,
@@ -284,7 +282,6 @@ export interface GameState {
   mapDiscovered: string[];
   activeZone: string;
   craftedTotals: Record<string, number>;
-  craftQueues: Record<string, CraftQueueEntry[]>;
   boss: BossState | null;
   bossPending: boolean;
   bossMinimized: boolean;

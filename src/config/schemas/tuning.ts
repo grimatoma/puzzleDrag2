@@ -3,18 +3,6 @@ import { TuningKey } from "../../types/catalog/tuningKeys.js";
 
 export const tuningSchema = z
   .object({
-    [TuningKey.CraftQueueHours]: z
-      .number()
-      .int()
-      .min(1)
-      .optional()
-      .describe("Default craft queue duration in hours"),
-    [TuningKey.CraftGemSkipCost]: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Gems to skip the head of a craft queue (0 = free)"),
     [TuningKey.MinExpeditionTurns]: z
       .number()
       .int()
