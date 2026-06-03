@@ -78,35 +78,46 @@ function drawNet(ctx: CanvasRenderingContext2D) {
 
 function drawHarpoon(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 16);
-  // Shaft
-  woodHandle(ctx, 16, 20, -14, -16, 3.5);
+  // Shaft (top-left head to bottom-right butt)
+  const hx = -15, hy = -17, bx = 17, by = 21;
+  woodHandle(ctx, bx, by, hx, hy, 3.6);
+  const ang = Math.atan2(by - hy, bx - hx); // shaft direction
+  const ux = Math.cos(ang), uy = Math.sin(ang);   // along shaft
+  const px = -uy, py = ux;                         // perpendicular to shaft
+  // Rope whipping near the head: short bands wrapped across the shaft
+  ctx.lineWidth = 2.2;
+  for (let i = 0; i < 5; i++) {
+    const d = 7 + i * 3.4; // distance from head along shaft
+    const cx = hx + ux * d, cy = hy + uy * d;
+    ctx.strokeStyle = i % 2 === 0 ? "#c89030" : "#8a5a18";
+    ctx.beginPath();
+    ctx.moveTo(cx - px * 2.7, cy - py * 2.7);
+    ctx.lineTo(cx + px * 2.7, cy + py * 2.7);
+    ctx.stroke();
+  }
   // Spearhead
-  ctx.save(); ctx.translate(-14, -16); ctx.rotate(Math.atan2(-16-20, -14-16) + Math.PI);
+  ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang + Math.PI);
   const g = ctx.createLinearGradient(-3, 0, 3, 0);
-  g.addColorStop(0, "#3a3a40"); g.addColorStop(0.5, "#a8a8b0"); g.addColorStop(1, "#1a1a1e");
+  g.addColorStop(0, "#3a3a40"); g.addColorStop(0.5, "#c2c2cc"); g.addColorStop(1, "#1a1a1e");
+  // Barbs first (so the central blade overlaps their roots) — bold downswept
+  // hooks in bright steel so the "barbed harpoon" silhouette reads at 56px.
+  ctx.fillStyle = "#9a9aa4"; ctx.strokeStyle = "#0a0a0e"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-2.6, -12); ctx.lineTo(-10.5, -3.5); ctx.lineTo(-8.5, -3); ctx.lineTo(-3, -7.5);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(2.6, -12); ctx.lineTo(10.5, -3.5); ctx.lineTo(8.5, -3); ctx.lineTo(3, -7.5);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Central blade
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(-4, -10); ctx.lineTo(0, -14); ctx.lineTo(4, -10);
+  ctx.moveTo(0, 1); ctx.lineTo(-5, -12); ctx.lineTo(0, -18); ctx.lineTo(5, -12);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#0a0a0e"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Barbs
-  ctx.fillStyle = "#5a5a62";
-  ctx.beginPath(); ctx.moveTo(-4, -8); ctx.lineTo(-7, -4); ctx.lineTo(-3, -6); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(4, -8); ctx.lineTo(7, -4); ctx.lineTo(3, -6); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#0a0a0e"; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.strokeStyle = "#0a0a0e"; ctx.lineWidth = 1.6; ctx.stroke();
   // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.beginPath(); ctx.moveTo(-1, -2); ctx.lineTo(0, -12); ctx.lineTo(1, -2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.beginPath(); ctx.moveTo(-1.2, -3); ctx.lineTo(0, -15); ctx.lineTo(1.2, -3); ctx.closePath(); ctx.fill();
   ctx.restore();
-  // Rope wrapping
-  ctx.strokeStyle = "#a87010"; ctx.lineWidth = 1.0;
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    const t = -10 + i * 4;
-    const x = -14 + (16 - (-14)) * (t + 16) / 36;
-    const y = -16 + (20 - (-16)) * (t + 16) / 36;
-    ctx.arc(x, y, 3, 0, Math.PI*2); ctx.stroke();
-  }
 }
 
 function drawAnchor(ctx: CanvasRenderingContext2D) {
@@ -218,34 +229,53 @@ function drawSpyglass(ctx: CanvasRenderingContext2D) {
 }
 
 function drawRopeKnot(ctx: CanvasRenderingContext2D) {
-  shadow(ctx, 16);
-  // Two interlinked loops (Carrick bend)
-  const drawLoop = (cx: number, cy: number, ang: number, color: string) => {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
-    ctx.strokeStyle = color; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI*2); ctx.stroke();
-    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0;
-    ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI*2); ctx.stroke();
-    // Twist marks
-    ctx.strokeStyle = "rgba(58,32,8,0.6)"; ctx.lineWidth = 0.7;
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a)*10, Math.sin(a)*7);
-      ctx.lineTo(Math.cos(a + 0.2)*8, Math.sin(a + 0.2)*5);
-      ctx.stroke();
-    }
-    ctx.restore();
+  shadow(ctx, 15);
+  const ROPE = 6.2;
+  // A rope strand drawn as: dark outline, body fill, then a light core highlight
+  // for cylindrical rope volume, with sparse diagonal twist ticks.
+  const strand = (path: () => void) => {
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#2a1808"; ctx.lineWidth = ROPE + 2.4; ctx.beginPath(); path(); ctx.stroke();
+    ctx.strokeStyle = "#b88a44"; ctx.lineWidth = ROPE;       ctx.beginPath(); path(); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,238,200,0.45)"; ctx.lineWidth = ROPE * 0.32; ctx.beginPath(); path(); ctx.stroke();
   };
-  drawLoop(-4, -2, 0.4, "#d8b070");
-  drawLoop(4, 2, -0.4, "#a87838");
-  // Tails
-  ctx.strokeStyle = "#a87838"; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(-12, 8); ctx.bezierCurveTo(-18, 14, -16, 22, -10, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(12, -8); ctx.bezierCurveTo(18, -14, 16, -22, 10, -22); ctx.stroke();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.9;
-  ctx.beginPath(); ctx.moveTo(-12, 8); ctx.bezierCurveTo(-18, 14, -16, 22, -10, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(12, -8); ctx.bezierCurveTo(18, -14, 16, -22, 10, -22); ctx.stroke();
+  // Two interlocked bights forming a balanced overhand/reef knot.
+  // Left bight (its lower-left crossing sits under the right bight).
+  const leftBight = () => { ctx.moveTo(-3, -13); ctx.bezierCurveTo(-17, -10, -17, 10, -3, 13); };
+  // Right bight, mirrored.
+  const rightBight = () => { ctx.moveTo(3, 13); ctx.bezierCurveTo(17, 10, 17, -10, 3, -13); };
+  // Short balanced tails dropping from the bottom of each bight.
+  const leftTail = () => { ctx.moveTo(-3, 13); ctx.bezierCurveTo(-5, 18, -7, 19, -8, 21); };
+  const rightTail = () => { ctx.moveTo(3, 13); ctx.bezierCurveTo(5, 18, 7, 19, 8, 21); };
+
+  // Draw order produces an over/under weave: left bight, then right over it,
+  // then the short central cross that ties them.
+  strand(leftBight);
+  strand(leftTail);
+  strand(rightBight);
+  strand(rightTail);
+  // Central nip where the two bights cross, drawn last so it reads as the knot.
+  strand(() => { ctx.moveTo(-4, 3); ctx.bezierCurveTo(0, 0, 0, 0, 4, -3); });
+
+  // Sparse twist ticks for rope texture (kept light so they don't muddy at 56px).
+  ctx.strokeStyle = "rgba(42,24,8,0.5)"; ctx.lineWidth = 0.9;
+  const ticksAlong = (path: (t: number) => [number, number]) => {
+    for (let i = 0; i <= 6; i++) {
+      const [x, y] = path(i / 6);
+      ctx.beginPath(); ctx.moveTo(x - 1.6, y - 1.6); ctx.lineTo(x + 1.6, y + 1.6); ctx.stroke();
+    }
+  };
+  // ticks along the left and right outer arcs
+  const bez = (p0:[number,number],p1:[number,number],p2:[number,number],p3:[number,number]) =>
+    (t:number):[number,number] => {
+      const u = 1 - t;
+      return [
+        u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0],
+        u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1],
+      ];
+    };
+  ticksAlong(bez([-3,-13],[-17,-10],[-17,10],[-3,13]));
+  ticksAlong(bez([3,13],[17,10],[17,-10],[3,-13]));
 }
 
 function drawCrabPot(ctx: CanvasRenderingContext2D) {
@@ -449,20 +479,21 @@ function drawTridentSpear(ctx: CanvasRenderingContext2D) {
   woodHandle(ctx, 0, 22, 0, -10, 4);
   // Three prongs
   ctx.save(); ctx.translate(0, -10);
-  const g = ctx.createLinearGradient(0, -14, 0, 0);
-  g.addColorStop(0, "#fff4a0"); g.addColorStop(0.5, "#a8a8b0"); g.addColorStop(1, "#3a3a40");
-  ctx.fillStyle = g; ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.4;
+  // Steel gradient that stays legible at the tips (no near-white wash-out).
+  const g = ctx.createLinearGradient(-8, 0, 8, 0);
+  g.addColorStop(0, "#3a3a44"); g.addColorStop(0.5, "#c2c2cc"); g.addColorStop(1, "#42424c");
+  ctx.fillStyle = g; ctx.strokeStyle = "#15151a"; ctx.lineWidth = 1.6;
   // Center prong
   ctx.beginPath();
-  ctx.moveTo(-2, 0); ctx.lineTo(-1.5, -16); ctx.lineTo(0, -20); ctx.lineTo(1.5, -16); ctx.lineTo(2, 0);
+  ctx.moveTo(-2.4, 0); ctx.lineTo(-2, -16); ctx.lineTo(0, -20); ctx.lineTo(2, -16); ctx.lineTo(2.4, 0);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Left prong (curved)
+  // Left prong (curved, thicker)
   ctx.beginPath();
-  ctx.moveTo(-3, 0); ctx.bezierCurveTo(-10, -6, -10, -12, -8, -16); ctx.lineTo(-6, -16); ctx.bezierCurveTo(-7, -10, -5, -4, -2, 0);
+  ctx.moveTo(-3.5, 0); ctx.bezierCurveTo(-11, -6, -11, -13, -9, -17); ctx.lineTo(-6, -16.5); ctx.bezierCurveTo(-7.5, -10, -5.5, -4, -2.2, 0);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Right prong (curved)
+  // Right prong (curved, thicker)
   ctx.beginPath();
-  ctx.moveTo(3, 0); ctx.bezierCurveTo(10, -6, 10, -12, 8, -16); ctx.lineTo(6, -16); ctx.bezierCurveTo(7, -10, 5, -4, 2, 0);
+  ctx.moveTo(3.5, 0); ctx.bezierCurveTo(11, -6, 11, -13, 9, -17); ctx.lineTo(6, -16.5); ctx.bezierCurveTo(7.5, -10, 5.5, -4, 2.2, 0);
   ctx.closePath(); ctx.fill(); ctx.stroke();
   // Crossbar base
   ctx.fillStyle = "#5a5a62";
