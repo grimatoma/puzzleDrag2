@@ -4,3 +4,4 @@ export * from "./conditions.js";
 export * from "./facts.js";
 export * from "./derive.js";
 export { PROGRESSION_TRIGGERS } from "./triggers.js";
+export { beatTriggerToCond, buildFactSnapshot } from "./storyBridge.js";
