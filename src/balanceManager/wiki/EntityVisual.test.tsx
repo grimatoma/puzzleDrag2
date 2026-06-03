@@ -9,7 +9,14 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import React from "react";
-import { entityIconKey, EntityVisual, AmountChips, RecipeIO } from "./EntityVisual.jsx";
+import {
+  entityIconKey,
+  EntityVisual,
+  AmountChips,
+  RecipeIO,
+  zoneMapIconKey,
+  zoneMapEmoji,
+} from "./EntityVisual.jsx";
 import { getEntity } from "./conceptEntities.js";
 
 afterEach(() => cleanup());
@@ -18,7 +25,7 @@ afterEach(() => cleanup());
 
 describe("entityIconKey", () => {
   it("returns the key itself for tiles / resources / tools", () => {
-    expect(entityIconKey("tiles", "tile_grass_hay", null)).toBe("tile_grass_hay");
+    expect(entityIconKey("tiles", "tile_grass_grass", null)).toBe("tile_grass_grass");
     expect(entityIconKey("resources", "flour", null)).toBe("flour");
     expect(entityIconKey("tools", "axe", null)).toBe("axe");
   });
@@ -45,8 +52,13 @@ describe("entityIconKey", () => {
     expect(entityIconKey("recipes", "rec_x", null)).toBeNull();
   });
 
+  it("returns map_<id> for zones with a registered cartography icon", () => {
+    expect(entityIconKey("zones", "home", null)).toBe("map_home");
+    expect(entityIconKey("zones", "quarry", null)).toBe("map_quarry");
+    expect(entityIconKey("zones", "harbor", null)).toBeNull();
+  });
+
   it("returns null for concepts without per-entity icons", () => {
-    expect(entityIconKey("zones", "home", null)).toBeNull();
     expect(entityIconKey("buildings", "hearth", null)).toBeNull();
     expect(entityIconKey("categories", "grain", null)).toBeNull();
     expect(entityIconKey("views", "town", null)).toBeNull();
@@ -101,9 +113,20 @@ describe("EntityVisual", () => {
     expect(frame?.querySelector("svg.absolute.inset-0.w-full.h-full")).not.toBeNull();
   });
 
-  it("renders the zone town map (svg) for a known zone, not an iframe", () => {
+  it("renders the cartography map icon for a known zone, not an iframe", () => {
+    expect(zoneMapIconKey("home")).toBe("map_home");
     const { container } = render(<EntityVisual conceptId="zones" entityKey="home" />);
-    expect(container.querySelector("svg")).not.toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.firstChild).not.toBeNull();
+    // Baked icon → <img> when canvas is available; never the old town-map SVG.
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("renders the map-node emoji for zones without a baked map_* icon", () => {
+    expect(zoneMapIconKey("harbor")).toBeNull();
+    expect(zoneMapEmoji("harbor")).toBe("⚓");
+    const { container } = render(<EntityVisual conceptId="zones" entityKey="harbor" />);
+    expect(container.textContent).toContain("⚓");
     expect(container.querySelector("iframe")).toBeNull();
   });
 

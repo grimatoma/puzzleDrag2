@@ -61,7 +61,7 @@ describe("typed action payloads", () => {
   it("accepts bridge-shaped CHAIN_COLLECTED and TOOL_FIRED", () => {
     const chain: ChainCollectedAction = {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 3, chainLength: 3, value: 1 },
+      payload: { key: "tile_grass_grass", gained: 3, chainLength: 3, value: 1 },
     };
     const tool: ToolFiredAction = { type: "TOOL_FIRED", key: "rake", row: 0, col: 1 };
     expect(chain.payload.resourceKey).toBeUndefined();

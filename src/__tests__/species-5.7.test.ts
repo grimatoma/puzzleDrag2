@@ -42,7 +42,7 @@ describe("Phase 5.7 — Free moves per season", () => {
         activeByCategory: { ...base.tileCollection.activeByCategory, bird: "tile_bird_turkey" },
       },
     };
-    const c1 = rootReducer(a0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 12, chainLength: 12, upgrades: 0, value: 1 } });
+    const c1 = rootReducer(a0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 12, chainLength: 12, upgrades: 0, value: 1 } });
     expect(c1.tileCollection.freeMoves).toBe(0);
   });
 
@@ -57,7 +57,7 @@ describe("Phase 5.7 — Free moves per season", () => {
     };
     let d = d0;
     for (let i = 0; i < 5; i++) {
-      d = rootReducer(d, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0, value: 1 } });
+      d = rootReducer(d, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 6, chainLength: 6, upgrades: 0, value: 1 } });
     }
     expect(d.tileCollection.freeMoves).toBe(0);
   });

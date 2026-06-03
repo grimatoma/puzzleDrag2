@@ -111,17 +111,17 @@ describe("utils — clamp / contrast / adjacency", () => {
 
 describe("utils — chain math", () => {
   it("upgradeCountForChain: floor(length/threshold) when threshold known; 0 when unknown", () => {
-    // tile_grass_hay threshold is 6 in UPGRADE_THRESHOLDS (default map).
-    expect(upgradeCountForChain(11, "tile_grass_hay")).toBe(1);
-    expect(upgradeCountForChain(12, "tile_grass_hay")).toBe(2);
-    expect(upgradeCountForChain(2, "tile_grass_hay")).toBe(0);
+    // tile_grass_grass threshold is 6 in UPGRADE_THRESHOLDS (default map).
+    expect(upgradeCountForChain(11, "tile_grass_grass")).toBe(1);
+    expect(upgradeCountForChain(12, "tile_grass_grass")).toBe(2);
+    expect(upgradeCountForChain(2, "tile_grass_grass")).toBe(0);
     // Terminal / unknown key
     expect(upgradeCountForChain(99, "no_such_key")).toBe(0);
   });
 
   it("rollResource samples the pool by index using the supplied RNG", () => {
-    const pool = ["tile_grass_hay", "tile_tree_oak", "berry"];
-    expect(rollResource(pool, () => 0)).toBe("tile_grass_hay");
+    const pool = ["tile_grass_grass", "tile_tree_oak", "berry"];
+    expect(rollResource(pool, () => 0)).toBe("tile_grass_grass");
     expect(rollResource(pool, () => 0.5)).toBe("tile_tree_oak");
     expect(rollResource(pool, () => 0.99)).toBe("berry");
   });

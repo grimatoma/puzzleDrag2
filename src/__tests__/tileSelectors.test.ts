@@ -7,7 +7,7 @@ function gridFrom(rows) {
   for (let r = 0; r < ROWS; r++) {
     const row = [];
     for (let c = 0; c < COLS; c++) {
-      row.push({ key: rows[r]?.[c] ?? "tile_grass_hay" });
+      row.push({ key: rows[r]?.[c] ?? "tile_grass_grass" });
     }
     grid.push(row);
   }
@@ -21,8 +21,8 @@ function coords(cells) {
 describe("tileSelectors", () => {
   it("clear_row selects entire row of tap", () => {
     const grid = gridFrom([
-      ["tile_tree_oak", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
-      ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
+      ["tile_tree_oak", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
+      ["tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
     ]);
     const cells = selectTilesForPower("clear_row", grid, {}, { row: 0, col: 2 });
     expect(cells).toHaveLength(6);
@@ -31,8 +31,8 @@ describe("tileSelectors", () => {
 
   it("clear_column selects entire column of tap", () => {
     const grid = gridFrom([
-      ["tile_tree_oak", "tile_grass_hay"],
-      ["tile_grass_hay", "tile_tree_oak"],
+      ["tile_tree_oak", "tile_grass_grass"],
+      ["tile_grass_grass", "tile_tree_oak"],
     ]);
     const cells = selectTilesForPower("clear_column", grid, {}, { row: 1, col: 1 });
     expect(coords(cells)).toEqual(
@@ -42,8 +42,8 @@ describe("tileSelectors", () => {
 
   it("clear_cross is row ∪ column through tap", () => {
     const grid = gridFrom([
-      ["tile_grass_hay", "tile_grass_hay"],
-      ["tile_grass_hay", "tile_tree_oak"],
+      ["tile_grass_grass", "tile_grass_grass"],
+      ["tile_grass_grass", "tile_tree_oak"],
     ]);
     const cells = selectTilesForPower("clear_cross", grid, {}, { row: 1, col: 1 });
     const set = new Set(coords(cells));
@@ -59,13 +59,13 @@ describe("tileSelectors", () => {
         grid[r][c] = { key: "tile_tree_oak" };
       }
     }
-    grid[2][2] = { key: "tile_grass_hay" };
-    grid[2][3] = { key: "tile_grass_hay" };
-    grid[3][2] = { key: "tile_grass_hay" };
-    grid[3][3] = { key: "tile_grass_hay" };
+    grid[2][2] = { key: "tile_grass_grass" };
+    grid[2][3] = { key: "tile_grass_grass" };
+    grid[3][2] = { key: "tile_grass_grass" };
+    grid[3][3] = { key: "tile_grass_grass" };
     const cells = selectTilesForPower("clear_component", grid, {}, { row: 2, col: 2 });
     expect(cells).toHaveLength(4);
-    expect(cells.every((c) => c.key === "tile_grass_hay")).toBe(true);
+    expect(cells.every((c) => c.key === "tile_grass_grass")).toBe(true);
   });
 
   it("clear_random_n returns at most N cells", () => {
@@ -83,8 +83,8 @@ describe("tileSelectors", () => {
 
   it("tap_clear_type selects all tiles matching tapped key", () => {
     const grid = gridFrom([
-      ["tile_tree_oak", "tile_grass_hay"],
-      ["tile_tree_oak", "tile_grass_hay"],
+      ["tile_tree_oak", "tile_grass_grass"],
+      ["tile_tree_oak", "tile_grass_grass"],
     ]);
     const cells = selectTilesForPower("tap_clear_type", grid, {}, { row: 0, col: 0 });
     expect(cells).toHaveLength(2);

@@ -11,7 +11,7 @@ function withCoins(coins) {
     ...createInitialState(),
     coins,
     inventory: {
-      tile_grass_hay: 100,
+      tile_grass_grass: 100,
       tile_tree_oak: 100,
       tile_mine_stone: 100,
       flour: 100,
@@ -52,15 +52,15 @@ describe("Phase 4 — WORKERS/HIRE", () => {
     const s = withCoins(100);
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(50);
-    expect(next.inventory.tile_grass_hay).toBe(98);
+    expect(next.inventory.tile_grass_grass).toBe(98);
     expect(next.workers.hired.farmer).toBe(1);
   });
 
   it("rejects hire when role resources are short without debiting coins", () => {
-    const s = { ...withCoins(100), inventory: { tile_grass_hay: 1 } };
+    const s = { ...withCoins(100), inventory: { tile_grass_grass: 1 } };
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(100);
-    expect(next.inventory.tile_grass_hay).toBe(1);
+    expect(next.inventory.tile_grass_grass).toBe(1);
     expect(next.workers.hired.farmer).toBe(0);
   });
 

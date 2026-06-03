@@ -7,7 +7,7 @@ import { createInitialState, rootReducer } from "../state.js";
 import { RAT_SPAWN_THRESHOLDS } from "../constants.js";
 import { rollRatSpawn, tickRats } from "../features/farm/rats.js";
 
-function makeGrid(rows = 2, cols = 3, key = "tile_grass_hay") {
+function makeGrid(rows = 2, cols = 3, key = "tile_grass_grass") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key })),
   );
@@ -16,7 +16,7 @@ function makeGrid(rows = 2, cols = 3, key = "tile_grass_hay") {
 // ── Threshold constants locked ─────────────────────────────────────────────────
 
 describe("10.4 — RAT_SPAWN_THRESHOLDS constants", () => {
-  it("hay > 50 threshold", () => expect(RAT_SPAWN_THRESHOLDS.tile_grass_hay).toBe(50));
+  it("grass inventory > 50 threshold", () => expect(RAT_SPAWN_THRESHOLDS.tile_grass_grass).toBe(50));
   it("wheat > 50 threshold", () => expect(RAT_SPAWN_THRESHOLDS.tile_grain_wheat).toBe(50));
   it("10% per fillBoard", () => expect(RAT_SPAWN_THRESHOLDS.perFillRate).toBe(0.10));
   it("max 4 active rats", () => expect(RAT_SPAWN_THRESHOLDS.maxActive).toBe(4));
@@ -29,7 +29,7 @@ describe("10.4 — rollRatSpawn", () => {
     const mine = {
       ...createInitialState(),
       biome: "mine",
-      inventory: { tile_grass_hay: 99, tile_grain_wheat: 99 },
+      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
       hazards: { caveIn: null, gasVent: null, rats: [] },
     };
     for (let i = 0; i < 1000; i++) {
@@ -41,7 +41,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_hay: 50, tile_grain_wheat: 51 },
+      inventory: { tile_grass_grass: 50, tile_grain_wheat: 51 },
       hazards: { rats: [] },
       grid: makeGrid(),
     };
@@ -52,7 +52,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_hay: 51, tile_grain_wheat: 51 },
+      inventory: { tile_grass_grass: 51, tile_grain_wheat: 51 },
       hazards: { rats: [] },
       grid: makeGrid(),
     };
@@ -66,7 +66,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_hay: 99, tile_grain_wheat: 99 },
+      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
       hazards: { rats: Array.from({ length: 4 }, (_, i) => ({ row: 0, col: i, age: 0 })) },
       grid: makeGrid(),
     };
@@ -77,7 +77,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_hay: 99, tile_grain_wheat: 99 },
+      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
       hazards: { rats: [] },
       grid: makeGrid(),
     };
@@ -93,7 +93,7 @@ describe("10.4 — tickRats", () => {
       ...createInitialState(),
       biome: "farm",
       grid: [
-        [{ key: "tile_grass_hay" }, { key: "rat" }, { key: "tile_grain_wheat" }],
+        [{ key: "tile_grass_grass" }, { key: "rat" }, { key: "tile_grain_wheat" }],
         [{ key: "berry" }, { key: "tile_tree_oak" }, { key: "tile_mine_stone" }],
       ],
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1, age: 0 }] },
@@ -108,7 +108,7 @@ describe("10.4 — tickRats", () => {
       ...createInitialState(),
       biome: "farm",
       grid: [
-        [{ key: "tile_grass_hay" }, { key: "rat" }, { key: "tile_grain_wheat" }],
+        [{ key: "tile_grass_grass" }, { key: "rat" }, { key: "tile_grain_wheat" }],
       ],
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1, age: 0 }] },
     };
@@ -190,7 +190,7 @@ describe("10.4 — COMMIT_CHAIN rat chains", () => {
     };
     const before = JSON.stringify(s0.hazards.rats);
     const mixed = [
-      { key: "rat", row: 0, col: 0 }, { key: "rat", row: 0, col: 1 }, { key: "tile_grass_hay", row: 0, col: 2 },
+      { key: "rat", row: 0, col: 0 }, { key: "rat", row: 0, col: 1 }, { key: "tile_grass_grass", row: 0, col: 2 },
     ];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",

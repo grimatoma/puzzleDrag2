@@ -6,7 +6,7 @@
  */
 export const QUEST_TEMPLATES = [
   // ── collect-resource ────────────────────────────────────────────────────────
-  { id: "collect_hay",   category: "collect", key: "tile_grass_hay",   label: "Collect {n} hay",
+  { id: "collect_hay",   category: "collect", key: "tile_grass_grass",   label: "Collect {n} grass",
     targetMin: 20, targetMax: 50, coinBase: 30, coinPerUnit: 1 },
   { id: "collect_wheat", category: "collect", key: "tile_grain_wheat", label: "Collect {n} wheat",
     targetMin: 8,  targetMax: 20, coinBase: 40, coinPerUnit: 2 },

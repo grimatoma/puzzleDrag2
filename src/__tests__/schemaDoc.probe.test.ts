@@ -182,24 +182,13 @@ describe("Zod 4 introspection — schemaDoc.probe", () => {
   it("zoneOverrideSchema: shape has expected fields", () => {
     const fields = Object.keys(zoneOverrideSchema.shape);
     expect(fields).toContain("name");
-    expect(fields).toContain("baseTurns");
-    expect(fields).toContain("upgradeMap");
-    expect(fields).toContain("seasonDrops");
+    expect(fields).toContain("boards");
+    expect(fields).toContain("entryCost");
   });
 
-  it("zoneOverrideSchema.upgradeMap has description 'Replaced wholesale' on outer optional", () => {
-    const upgradeMap = zoneOverrideSchema.shape.upgradeMap;
-    // .describe() is on the optional wrapper
-    expect(upgradeMap.description).toBe("Replaced wholesale");
-  });
-
-  it("zoneOverrideSchema.baseTurns is optional with int + min(1) number inside", () => {
-    const baseTurns = zoneOverrideSchema.shape.baseTurns;
-    expect(baseTurns._zod.def.type).toBe("optional");
-    const inner = baseTurns._zod.def.innerType;
-    expect(inner.type).toBe("number");
-    expect(inner.isInt).toBe(true);
-    expect(inner.minValue).toBe(1);
+  it("zoneOverrideSchema.boards is optional", () => {
+    const boards = zoneOverrideSchema.shape.boards;
+    expect(boards._zod.def.type).toBe("optional");
   });
 
   it("zoneOverrideSchema is strict (catchall = never)", () => {

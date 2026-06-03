@@ -11,7 +11,7 @@ describe("isDeadlyToPests", () => {
   });
 
   it("returns false for non-deadly keys", () => {
-    expect(isDeadlyToPests("tile_grass_hay")).toBe(false);
+    expect(isDeadlyToPests("tile_grass_grass")).toBe(false);
     expect(isDeadlyToPests("tile_fish_sardine")).toBe(false);
     expect(isDeadlyToPests("anything")).toBe(false);
   });
@@ -20,7 +20,7 @@ describe("isDeadlyToPests", () => {
 describe("tryDeadlyPestsKill", () => {
   it("returns null when chain has no deadly tile", () => {
     const state = { hazards: { rats: [{ row: 0, col: 0 }] } };
-    const chain = [{ key: "tile_grass_hay", row: 1, col: 1 }];
+    const chain = [{ key: "tile_grass_grass", row: 1, col: 1 }];
     expect(tryDeadlyPestsKill(state, chain)).toBeNull();
   });
 

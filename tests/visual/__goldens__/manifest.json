@@ -8,7 +8,7 @@
         "type": "api",
         "method": "holdChain",
         "args": {
-          "key": "tile_grass_hay",
+          "key": "tile_grass_grass",
           "length": 7
         }
       }
@@ -230,7 +230,7 @@
         "type": "api",
         "method": "holdChain",
         "args": {
-          "key": "tile_grass_hay",
+          "key": "tile_grass_grass",
           "length": 7
         }
       }

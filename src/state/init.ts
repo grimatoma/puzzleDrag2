@@ -110,7 +110,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
       fire: null,
       wolves: null 
     },
-    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "tile_grass_hay" }))),
+    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "tile_grass_grass" }))),
     _biomeRestored: false,
     _boardNonce: 0,
     lastChainSnapshot: null,

@@ -19,8 +19,8 @@ import {
   tileFamilyResource,
 } from "../constants.js";
 
-// tile_grass_hay threshold is 6
-const HAY_THRESHOLD = UPGRADE_THRESHOLDS["tile_grass_hay"]; // 6
+// tile_grass_grass threshold is 6
+const HAY_THRESHOLD = UPGRADE_THRESHOLDS["tile_grass_grass"]; // 6
 
 function minState(overrides = {}) {
   return {
@@ -50,7 +50,7 @@ function dispatchHayChain(state, chainLength) {
   return gameReducer(state, {
     type: "CHAIN_COLLECTED",
     payload: {
-      key: "tile_grass_hay",
+      key: "tile_grass_grass",
       gained: chainLength,
       upgrades: 0,
       value: 1,
@@ -67,7 +67,7 @@ describe("resourceProgress — accumulation (no rollover)", () => {
     const s1 = dispatchHayChain(s0, 4);
     expect(s1.resourceProgress.hay_bundle).toBe(4);
     expect(s1.inventory.hay_bundle).toBeFalsy();
-    expect(s1.inventory.tile_grass_hay).toBeUndefined();
+    expect(s1.inventory.tile_grass_grass).toBeUndefined();
   });
 });
 

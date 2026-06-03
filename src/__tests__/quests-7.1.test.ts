@@ -88,17 +88,17 @@ describe("7.1 rollQuests", () => {
 describe("7.1 tickQuest", () => {
   const hayQuest = {
     id: "x", template: "collect_hay", category: "collect",
-    key: "tile_grass_hay", target: 30, progress: 0, claimed: false,
+    key: "tile_grass_grass", target: 30, progress: 0, claimed: false,
     reward: { coins: 60, xp: 20 },
   };
 
   it("ticks collect quest by event amount on matching key", () => {
-    const after = tickQuest(hayQuest, { type: "collect", key: "tile_grass_hay", amount: 7 });
+    const after = tickQuest(hayQuest, { type: "collect", key: "tile_grass_grass", amount: 7 });
     expect(after.progress).toBe(7);
   });
 
   it("is pure — original quest unchanged", () => {
-    tickQuest(hayQuest, { type: "collect", key: "tile_grass_hay", amount: 7 });
+    tickQuest(hayQuest, { type: "collect", key: "tile_grass_grass", amount: 7 });
     expect(hayQuest.progress).toBe(0);
   });
 
@@ -113,13 +113,13 @@ describe("7.1 tickQuest", () => {
   });
 
   it("caps progress at target", () => {
-    const r = tickQuest(hayQuest, { type: "collect", key: "tile_grass_hay", amount: 999 });
+    const r = tickQuest(hayQuest, { type: "collect", key: "tile_grass_grass", amount: 999 });
     expect(r.progress).toBe(hayQuest.target);
   });
 
   it("does not tick a claimed quest", () => {
     const claimed = { ...hayQuest, claimed: true };
-    const r = tickQuest(claimed, { type: "collect", key: "tile_grass_hay", amount: 10 });
+    const r = tickQuest(claimed, { type: "collect", key: "tile_grass_grass", amount: 10 });
     expect(r.progress).toBe(0);
   });
 
@@ -187,7 +187,7 @@ describe("7.1 tickQuest", () => {
 describe("7.1 claimQuest", () => {
   it("rejects claim when progress < target", () => {
     const s = { ...freshState(), coins: 0,
-      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_hay",
+      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
         target: 30, progress: 10, claimed: false, reward: { coins: 60, xp: 20 } }] };
     const r = claimQuest(s, "q1");
     expect(r.ok).toBe(false);
@@ -197,7 +197,7 @@ describe("7.1 claimQuest", () => {
 
   it("accepts claim when progress >= target — pays coins, flips claimed, reports xpGain", () => {
     const s = { ...freshState(), coins: 0,
-      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_hay",
+      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
         target: 30, progress: 30, claimed: false, reward: { coins: 60, xp: 20 } }] };
     const r = claimQuest(s, "q1");
     expect(r.ok).toBe(true);
@@ -208,7 +208,7 @@ describe("7.1 claimQuest", () => {
 
   it("re-claim is a no-op — no double-pay", () => {
     const s0 = { ...freshState(), coins: 0,
-      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_hay",
+      quests: [{ id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
         target: 30, progress: 30, claimed: false, reward: { coins: 60, xp: 20 } }] };
     const r1 = claimQuest(s0, "q1");
     const r2 = claimQuest(r1.newState, "q1");

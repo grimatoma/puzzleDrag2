@@ -135,7 +135,7 @@ function order(id: string, npc: string, key: string, need: number, have: number,
 
 function visualOrders() {
   return [
-    order("order-ready", "mira", "tile_grass_hay", 12, 40, 90),
+    order("order-ready", "mira", "tile_grass_grass", 12, 40, 90),
     order("order-partial", "tomas", "plank", 18, 8, 130),
     order("order-crafted", "bram", "bread", 2, 3, 180),
   ];
@@ -152,7 +152,7 @@ function visualQuests() {
 function richInventory() {
   return {
     supplies: 12,
-    tile_grass_hay: 40,
+    tile_grass_grass: 40,
     tile_grain_wheat: 22,
     flour: 12,
     tile_tree_oak: 28,
@@ -316,7 +316,7 @@ function richState(): VisualStateTree {
       unlocked,
     },
     collected: {
-      tile_grass_hay: 120,
+      tile_grass_grass: 120,
       tile_grain_wheat: 44,
       tile_tree_oak: 31,
       plank: 18,
@@ -334,8 +334,8 @@ function grid(rows: GridCellInput[][]): Grid {
 }
 
 const farmGrid = grid([
-  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
-  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
+  ["tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
+  ["tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
   ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
   ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
   ["tile_flower_pansy", "tile_bird_pheasant", "tile_mount_horse", "tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple"],
@@ -427,10 +427,10 @@ function withRunSummary(state: VisualStateTree): VisualStateTree {
       mode: "normal",
       turnsAtStart: 10,
       chainsPlayed: 5,
-      biggestChain: { count: 12, key: "tile_grass_hay", coinGain: 28, upgrades: 2, gained: 12 },
+      biggestChain: { count: 12, key: "tile_grass_grass", coinGain: 28, upgrades: 2, gained: 12 },
       totalUpgrades: 4,
       totalCoinGain: 140,
-      resourcesGained: { tile_grass_hay: 34, tile_grain_wheat: 8, tile_fruit_apple: 5 },
+      resourcesGained: { tile_grass_grass: 34, tile_grain_wheat: 8, tile_fruit_apple: 5 },
       bondsAtStart: { wren: 5, mira: 5 },
       bondDeltas: { wren: 0.5, mira: 0.3 },
       beatsTriggered: [{ id: "act1_first_harvest", title: "The First Harvest" }],
@@ -491,7 +491,7 @@ function profileState(profile: string): VisualStateTree {
       g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
-    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
+    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_grass", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", description: null, modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.", spawnBias: null, modifier: { type: "", params: {} } }, fish: { tide: "high", tideTurn: 3 } };
     case "craftQueue": {
       // Multi-station queue snapshot: bakery has two stacked, forge has
@@ -523,7 +523,7 @@ function profileState(profile: string): VisualStateTree {
     }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
     case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...(richState().market ?? { seed: 0, season: 0, prices: {}, prevPrices: null }), season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
-    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_hay" } }) };
+    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_grass" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();
       delete tc.discovered.tile_bird_clover;

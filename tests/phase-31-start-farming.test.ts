@@ -51,7 +51,7 @@ describe("Phase 31 — FARM/ENTER: turn budget", () => {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
     });
-    expect(next.farmRun.turnBudget).toBe(ZONES.home.baseTurns);
+    expect(next.farmRun.turnBudget).toBe(ZONES.home.boards.farm!.baseTurns);
     expect(next.farmRun.turnsRemaining).toBe(10);
   });
 
@@ -185,7 +185,7 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
     });
-    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.baseTurns);
+    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.boards.farm!.baseTurns);
   });
 
   it("Meadow base turns + fertilizer doubles the run budget", () => {
@@ -201,6 +201,6 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: true },
     });
-    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.baseTurns * 2);
+    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.boards.farm!.baseTurns * 2);
   });
 });

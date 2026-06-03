@@ -33,9 +33,9 @@ describe("Phase 5.3 — SET_ACTIVE_TILE toggle", () => {
     });
     const a2 = rootReducer(a1, {
       type: "SET_ACTIVE_TILE",
-      payload: { category: "grass", tileId: "tile_grass_hay" },
+      payload: { category: "grass", tileId: "tile_grass_grass" },
     });
-    expect(a2.tileCollection.activeByCategory.grass).toBe("tile_grass_hay");
+    expect(a2.tileCollection.activeByCategory.grass).toBe("tile_grass_grass");
   });
 
   it("B: null clears the slot", () => {
@@ -65,7 +65,7 @@ describe("Phase 5.3 — SET_ACTIVE_TILE toggle", () => {
   it("E: unknown category → strict no-op", () => {
     const e1 = rootReducer(seeded, {
       type: "SET_ACTIVE_TILE",
-      payload: { category: "fish", tileId: "tile_grass_hay" },
+      payload: { category: "fish", tileId: "tile_grass_grass" },
     });
     expect(e1).toBe(seeded);
   });
@@ -73,7 +73,7 @@ describe("Phase 5.3 — SET_ACTIVE_TILE toggle", () => {
   it("F: setting the same active tile type → strict no-op (no ref churn)", () => {
     const f1 = rootReducer(seeded, {
       type: "SET_ACTIVE_TILE",
-      payload: { category: "grass", tileId: "tile_grass_hay" },
+      payload: { category: "grass", tileId: "tile_grass_grass" },
     });
     expect(f1).toBe(seeded);
   });
