@@ -33,6 +33,7 @@ const GROUPS = {
   Crafted: ["craftedProducts", "craftingStations", "recipes"],
   Biome: ["existingFarm", "existingMine", "tileCategories"],
   "Chars & Hazards": ["characters", "hazards", "mineHazards"],
+  "Chars v2": ["charactersV2"],
   Systems: ["uiElements", "fixed-icons", "currencies", "achievements", "quests", "missingItems"],
 };
 

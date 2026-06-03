@@ -41,6 +41,7 @@ const MODULE_ORDER = [
   "grass", "grain", "vegetables", "fruits", "flowers", "trees", "birds",
   "herdAnimals", "cattle", "mounts", "toolsFarm", "toolsMine", "toolsPortal",
   "toolsSea", "existingFarm", "existingMine", "craftedProducts", "characters",
+  "charactersV2",
   "mapNodes", "decorations", "playerTools", "craftingStations", "hazards",
   "tileCategories", "mineHazards", "fish", "recipes", "uiElements",
   "missingItems", "achievements", "quests", "currencies", "fixed-icons",
