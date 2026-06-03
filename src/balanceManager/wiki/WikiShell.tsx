@@ -24,6 +24,7 @@ import { CONCEPTS } from "./concepts.js";
 import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES } from "./wikiNav.js";
 import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+import { WikiViewProvider, useWikiView } from "./wikiView.js";
 
 type TabComponent = React.ComponentType<TabProps>;
 
@@ -85,6 +86,194 @@ function useIsSmallScreen() {
     return () => mq.removeEventListener?.("change", update);
   }, []);
   return small;
+}
+
+// ─── Developer-only sidebar sections ─────────────────────────────────────────
+//
+// These components call useWikiView() and must be rendered inside
+// <WikiViewProvider> (i.e. as children of WikiShell's JSX, not in
+// WikiShell's own function body).
+
+const SCREENS_SECTION_ID = "screens";
+const DEV_ONLY_SECTION_IDS = new Set([SCREENS_SECTION_ID]);
+
+interface SidebarConceptSectionsProps {
+  tab: string;
+  effectiveCollapsed: boolean;
+  manualExpanded: Set<string>;
+  setManualExpanded: React.Dispatch<React.SetStateAction<Set<string>>>;
+  navigate: (target: { tab: string; focus?: string | null }) => void;
+}
+
+function SidebarConceptSections({
+  tab,
+  effectiveCollapsed,
+  manualExpanded,
+  setManualExpanded,
+  navigate,
+}: SidebarConceptSectionsProps) {
+  const { view } = useWikiView();
+  // In player view, hide the Screens section (views/modals are developer-only).
+  const visibleSections = view === "player"
+    ? WIKI_SECTIONS.filter((sec) => !DEV_ONLY_SECTION_IDS.has(sec.id))
+    : WIKI_SECTIONS;
+
+  return (
+    <>
+      {visibleSections.map((sec) => (
+        <div key={sec.id} className="flex flex-col gap-1">
+          {!effectiveCollapsed ? (
+            <div className="wiki-sidebar-label px-2 pt-2 pb-1">{sec.label}</div>
+          ) : (
+            <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
+          )}
+
+          {sec.nodes.map((node) => {
+            const cid = node.conceptId;
+            const label = CONCEPT_LABELS[cid] ?? cid;
+            const active = tab === cid;
+            const children = node.children ?? [];
+            const hasChildren = children.length > 0;
+            const isOpen = children.includes(tab) || manualExpanded.has(cid);
+
+            return (
+              <div key={cid} className="flex flex-col">
+                <div className="flex items-stretch">
+                  {hasChildren && !effectiveCollapsed && (
+                    <button
+                      type="button"
+                      aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
+                      aria-expanded={isOpen}
+                      onClick={() =>
+                        setManualExpanded((prev) => {
+                          const next = new Set(prev);
+                          if (isOpen) next.delete(cid);
+                          else next.add(cid);
+                          return next;
+                        })
+                      }
+                      className="px-1 flex items-center"
+                      style={{ color: COLORS.inkSubtle, cursor: "pointer" }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          display: "inline-block",
+                          width: 10,
+                          fontSize: 9,
+                          transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 150ms ease",
+                        }}
+                      >
+                        ▶
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => navigate({ tab: cid })}
+                    className={`wiki-nav-link flex-1${active ? " wiki-nav-link--active" : ""}`}
+                    title={effectiveCollapsed ? label : undefined}
+                    aria-label={label}
+                  >
+                    <Icon iconKey="ui_star" size={16} title="" />
+                    {!effectiveCollapsed && <span className="flex-1">{label}</span>}
+                  </button>
+                </div>
+
+                {hasChildren && !effectiveCollapsed && isOpen && (
+                  <div className="flex flex-col gap-1" style={{ paddingLeft: 18 }}>
+                    {children.map((childId) => {
+                      const childLabel = CONCEPT_LABELS[childId] ?? childId;
+                      const childActive = tab === childId;
+                      return (
+                        <button
+                          key={childId}
+                          onClick={() => navigate({ tab: childId })}
+                          className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
+                          aria-label={childLabel}
+                        >
+                          <Icon iconKey="ui_star" size={13} title="" />
+                          <span className="flex-1">{childLabel}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+}
+
+interface SidebarDevUtilitiesProps {
+  tab: string;
+  effectiveCollapsed: boolean;
+  navigate: (target: { tab: string; focus?: string | null }) => void;
+}
+
+function SidebarDevUtilities({ tab, effectiveCollapsed, navigate }: SidebarDevUtilitiesProps) {
+  const { view } = useWikiView();
+  // Dev utilities are developer-only — hidden in player view.
+  if (view === "player") return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {!effectiveCollapsed ? (
+        <div className="wiki-sidebar-label px-2 pt-2 pb-1">
+          Dev
+        </div>
+      ) : (
+        <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
+      )}
+      {UTILITIES.map((u) => {
+        const active = tab === u.id;
+        return (
+          <button
+            key={u.id}
+            onClick={() => navigate({ tab: u.id })}
+            className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
+            title={effectiveCollapsed ? u.label : undefined}
+            aria-label={u.label}
+          >
+            <Icon iconKey="ui_devtools" size={16} title="" />
+            {!effectiveCollapsed && <span className="flex-1">{u.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── View toggle control ──────────────────────────────────────────────────────
+
+function WikiViewToggle() {
+  const { view, setView } = useWikiView();
+  return (
+    <div className="wiki-view-toggle" role="group" aria-label="Wiki view mode">
+      <button
+        type="button"
+        className={`wiki-view-toggle__btn${view === "developer" ? " wiki-view-toggle__btn--active" : ""}`}
+        onClick={() => setView("developer")}
+        aria-pressed={view === "developer"}
+        title="Developer view — shows schema tables, raw keys, and dev utilities"
+      >
+        Developer
+      </button>
+      <button
+        type="button"
+        className={`wiki-view-toggle__btn${view === "player" ? " wiki-view-toggle__btn--active" : ""}`}
+        onClick={() => setView("player")}
+        aria-pressed={view === "player"}
+        title="Player view — shows only player-facing content"
+      >
+        Player
+      </button>
+    </div>
+  );
 }
 
 export default function WikiShell() {
@@ -190,6 +379,7 @@ export default function WikiShell() {
   }
 
   return (
+    <WikiViewProvider>
     <div
       className="wiki-root fixed inset-0 grid place-items-stretch"
       style={{ background: COLORS.parchmentDeep }}
@@ -244,6 +434,7 @@ export default function WikiShell() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <WikiViewToggle />
             <button
               onClick={() => setPaletteOpen(true)}
               className="wiki-search-btn"
@@ -309,93 +500,14 @@ export default function WikiShell() {
               </button>
             </div>
 
-            {/* Concept sections */}
-            {WIKI_SECTIONS.map((sec) => (
-              <div key={sec.id} className="flex flex-col gap-1">
-                {!effectiveCollapsed ? (
-                  <div className="wiki-sidebar-label px-2 pt-2 pb-1">{sec.label}</div>
-                ) : (
-                  <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
-                )}
-
-                {sec.nodes.map((node) => {
-                  const cid = node.conceptId;
-                  const label = CONCEPT_LABELS[cid] ?? cid;
-                  const active = tab === cid;
-                  const children = node.children ?? [];
-                  const hasChildren = children.length > 0;
-                  // Auto-open when the active tab is a child; respect manual toggles otherwise.
-                  const isOpen = children.includes(tab) || manualExpanded.has(cid);
-
-                  return (
-                    <div key={cid} className="flex flex-col">
-                      <div className="flex items-stretch">
-                        {hasChildren && !effectiveCollapsed && (
-                          <button
-                            type="button"
-                            aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
-                            aria-expanded={isOpen}
-                            onClick={() =>
-                              setManualExpanded((prev) => {
-                                const next = new Set(prev);
-                                if (isOpen) next.delete(cid);
-                                else next.add(cid);
-                                return next;
-                              })
-                            }
-                            className="px-1 flex items-center"
-                            style={{ color: COLORS.inkSubtle, cursor: "pointer" }}
-                          >
-                            <span
-                              aria-hidden
-                              style={{
-                                display: "inline-block",
-                                width: 10,
-                                fontSize: 9,
-                                transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-                                transition: "transform 150ms ease",
-                              }}
-                            >
-                              ▶
-                            </span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => navigate({ tab: cid })}
-                          className={`wiki-nav-link flex-1${active ? " wiki-nav-link--active" : ""}`}
-                          title={effectiveCollapsed ? label : undefined}
-                          aria-label={label}
-                        >
-                          <Icon iconKey="ui_star" size={16} title="" />
-                          {!effectiveCollapsed && <span className="flex-1">{label}</span>}
-                        </button>
-                      </div>
-
-                      {hasChildren && !effectiveCollapsed && isOpen && (
-                        <div className="flex flex-col gap-1" style={{ paddingLeft: 18 }}>
-                          {children.map((childId) => {
-                            const childLabel = CONCEPT_LABELS[childId] ?? childId;
-                            const childActive = tab === childId;
-                            return (
-                              <button
-                                key={childId}
-                                onClick={() => navigate({ tab: childId })}
-                                className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
-                                aria-label={childLabel}
-                              >
-                                <Icon iconKey="ui_star" size={13} title="" />
-                                <span className="flex-1">{childLabel}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            {/* Concept sections — Screens section hidden in player view */}
+            <SidebarConceptSections
+              tab={tab}
+              effectiveCollapsed={effectiveCollapsed}
+              manualExpanded={manualExpanded}
+              setManualExpanded={setManualExpanded}
+              navigate={navigate}
+            />
 
             {/* Narrative pages */}
             <div className="flex flex-col gap-1">
@@ -423,31 +535,12 @@ export default function WikiShell() {
               })}
             </div>
 
-            {/* Dev utilities */}
-            <div className="flex flex-col gap-1">
-              {!effectiveCollapsed ? (
-                <div className="wiki-sidebar-label px-2 pt-2 pb-1">
-                  Dev
-                </div>
-              ) : (
-                <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
-              )}
-              {UTILITIES.map((u) => {
-                const active = tab === u.id;
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => navigate({ tab: u.id })}
-                    className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
-                    title={effectiveCollapsed ? u.label : undefined}
-                    aria-label={u.label}
-                  >
-                    <Icon iconKey="ui_devtools" size={16} title="" />
-                    {!effectiveCollapsed && <span className="flex-1">{u.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Dev utilities — hidden entirely in player view */}
+            <SidebarDevUtilities
+              tab={tab}
+              effectiveCollapsed={effectiveCollapsed}
+              navigate={navigate}
+            />
           </nav>
 
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
@@ -471,5 +564,6 @@ export default function WikiShell() {
         </div>
       </div>
     </div>
+    </WikiViewProvider>
   );
 }

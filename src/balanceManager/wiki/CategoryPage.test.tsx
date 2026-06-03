@@ -7,7 +7,7 @@
  * Coverage:
  *  1. Schema-backed concept ("recipes") — renders label, Fields heading, and at
  *     least one entry card (key from getEntries()[0]).
- *  2. Status wiring — "bosses" concept shows PARTIAL in its StatusChip.
+ *  2. Status wiring — "bosses" concept shows PARTIAL in its StatusBadge.
  *  3. Entry navigation — clicking an entry card calls navigate with
  *     wikiNavTarget shape { tab: "<conceptId>", focus: "<conceptId>:<key>" }.
  *  4. Schema-backed concept with a function field ("hazards") — renders without
@@ -110,12 +110,14 @@ describe("CategoryPage — buildings (schema-backed concept)", () => {
 
 // ─── Test 2: Status wiring ────────────────────────────────────────────────────
 
-describe("CategoryPage — bosses (PARTIAL status chip)", () => {
-  it("renders 'PARTIAL' in the StatusChip", () => {
+describe("CategoryPage — bosses (PARTIAL status badge)", () => {
+  it("renders the player label and tier token for PARTIAL status", () => {
     renderPage("bosses");
-    // statusForConcept("bosses") === "PARTIAL" — chip renders the label
+    // statusForConcept("bosses") === "PARTIAL"
+    // StatusBadge renders both the human-readable player label and the raw tier token
     const body = document.body.textContent ?? "";
-    expect(body).toContain("PARTIAL");
+    expect(body).toContain("Partly in"); // player label for PARTIAL
+    expect(body).toContain("PARTIAL");   // raw tier token (always shown)
   });
 
   it("renders the Bosses label", () => {

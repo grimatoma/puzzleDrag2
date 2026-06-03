@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS, hexToCss } from "../shared.jsx";
+import { useWikiView } from "./wikiView.js";
 
 export interface WikiEntry {
   key: string;
@@ -29,6 +30,8 @@ export default function EntryGrid({
   emptyLabel?: ReactNode;
   onSelect?: (key: string) => void;
 }) {
+  const { view } = useWikiView();
+
   if (!entries || entries.length === 0) {
     return (
       <div
@@ -56,12 +59,14 @@ export default function EntryGrid({
               >
                 {entry.name}
               </div>
-              <div
-                className="font-mono text-[10px] text-center leading-tight break-all w-full"
-                style={{ color: COLORS.inkSubtle }}
-              >
-                {entry.key}
-              </div>
+              {view === "developer" && (
+                <div
+                  className="font-mono text-[10px] text-center leading-tight break-all w-full"
+                  style={{ color: COLORS.inkSubtle }}
+                >
+                  {entry.key}
+                </div>
+              )}
             </div>
           </>
         );

@@ -33,10 +33,12 @@ import HtmlBody from "./HtmlBody.jsx";
 import { Infobox } from "./Infobox.jsx";
 import { TableOfContents } from "./TableOfContents.jsx";
 import type { TocItem } from "./TableOfContents.jsx";
-import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import PageKindBadge from "./PageKindBadge.jsx";
 import { pageKindFor } from "./pageKind.js";
-import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
+import { statusForEntity } from "./status.js";
+import { StatusBadge } from "./StatusBadge.jsx";
+import { ReferenceSection } from "./ReferenceSection.jsx";
+import { useWikiView } from "./wikiView.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import { AmountChips, RecipeIO } from "./EntityVisual.jsx";
 import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
@@ -120,6 +122,7 @@ export interface WikiArticleProps {
 
 export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticleProps) {
   const { navigate } = useBalanceNav();
+  const { view } = useWikiView();
 
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
@@ -136,9 +139,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     }
   }
 
-  // Status chip
+  // Status badge
   const status = statusForEntity(conceptId, entityKey);
-  const statusMeta = WIKI_STATUS_LEGEND[status];
 
   // Title for the entity
   const title = entity
@@ -257,31 +259,27 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           <span className="wiki-title wiki-title--article">
             {title}
           </span>
-          {/* Entity key — mono */}
-          <code
-            className="wiki-mono text-[11px] px-1.5 py-0.5 rounded"
-            style={{
-              background: COLORS.parchmentDeep,
-              color: COLORS.inkSubtle,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            {entityKey}
-          </code>
-          {/* Page-kind badge */}
-          <PageKindBadge kind={pageKindFor(conceptId)} />
+          {/* Entity key — mono (developer view only) */}
+          {view === "developer" && (
+            <code
+              className="wiki-mono text-[11px] px-1.5 py-0.5 rounded"
+              style={{
+                background: COLORS.parchmentDeep,
+                color: COLORS.inkSubtle,
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              {entityKey}
+            </code>
+          )}
+          {/* Page-kind badge — only shown for grouping concepts (CATEGORY);
+              INSTANCE is self-evident and adds visual noise */}
+          {pageKindFor(conceptId) === "category" && (
+            <PageKindBadge kind="category" />
+          )}
 
-          {/* Status chip */}
-          <StatusChip
-            tone={statusMeta.tone}
-            size="xs"
-            uppercase
-            mono
-            title={statusMeta.description}
-            aria-label={`Status: ${statusMeta.label}`}
-          >
-            {statusMeta.label}
-          </StatusChip>
+          {/* Status badge — shown in both developer and player views */}
+          <StatusBadge status={status} />
         </div>
       </div>
 
@@ -390,83 +388,33 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               Properties
             </div>
 
-            {/* Raw schema table demoted to a collapsed developer reference */}
-            <details className="wiki-schema-details" style={{ borderRadius: 8, overflow: "hidden" }}>
-              {/* Self-contained chevron rotation — no shared CSS dependency */}
-              <style>{".wiki-schema-details[open] .wiki-details-chevron{transform:rotate(90deg)}"}</style>
-              <summary
-                style={{
-                  cursor: "pointer",
-                  listStyle: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  background: COLORS.parchmentDeep,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: COLORS.ink,
-                  userSelect: "none",
-                }}
-              >
-                {/* Chevron indicator */}
-                <span
-                  aria-hidden
-                  className="wiki-details-chevron"
-                  style={{
-                    display: "inline-block",
-                    width: 12,
-                    height: 12,
-                    fontSize: 10,
-                    lineHeight: "12px",
-                    textAlign: "center",
-                    transition: "transform 150ms ease",
-                    color: COLORS.inkSubtle,
-                    flexShrink: 0,
-                  }}
+            {/* Raw schema table — hidden in player view via ReferenceSection */}
+            <ReferenceSection heading="Schema reference (developer)">
+              {schemaDoc != null && (
+                <>
+                  <FieldsTable fields={schemaDoc.fields} entity={entity} />
+                  {entity != null && (
+                    <AdditionalFieldsSection
+                      entity={entity}
+                      schemaFieldNames={schemaFieldNames}
+                    />
+                  )}
+                </>
+              )}
+
+              {schemaDoc == null && entity != null && (
+                <LiveConfigFallback entity={entity} />
+              )}
+
+              {schemaDoc == null && entity == null && (
+                <div
+                  className="text-[12px] italic py-4 text-center"
+                  style={{ color: COLORS.inkSubtle }}
                 >
-                  ▶
-                </span>
-                Schema reference (developer)
-              </summary>
-
-              <div
-                style={{
-                  padding: 12,
-                  background: COLORS.parchment,
-                  border: `1px solid ${COLORS.border}`,
-                  borderTop: "none",
-                  borderRadius: "0 0 8px 8px",
-                }}
-              >
-                {schemaDoc != null && (
-                  <>
-                    <FieldsTable fields={schemaDoc.fields} entity={entity} />
-                    {entity != null && (
-                      <AdditionalFieldsSection
-                        entity={entity}
-                        schemaFieldNames={schemaFieldNames}
-                      />
-                    )}
-                  </>
-                )}
-
-                {schemaDoc == null && entity != null && (
-                  <LiveConfigFallback entity={entity} />
-                )}
-
-                {schemaDoc == null && entity == null && (
-                  <div
-                    className="text-[12px] italic py-4 text-center"
-                    style={{ color: COLORS.inkSubtle }}
-                  >
-                    No data for this entry.
-                  </div>
-                )}
-              </div>
-            </details>
+                  No data for this entry.
+                </div>
+              )}
+            </ReferenceSection>
           </section>
 
           {/* Forward relations */}

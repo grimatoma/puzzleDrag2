@@ -626,3 +626,117 @@
 .wiki-root .wiki-relation-link:hover {
   color: var(--wiki-ink);
 }
+
+/* ── Status badge ────────────────────────────────────────────────────────────── */
+/*
+ * Shown in both developer and player views. The inline background/color/border
+ * are set via JSX inline style using the TONE_STYLES map in StatusBadge.tsx so
+ * the badge is usable without a CSS class per tone. These rules handle layout,
+ * sizing, and the mono tier suffix.
+ */
+
+.wiki-root .wiki-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.wiki-root .wiki-status-badge--compact {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 7px;
+  gap: 4px;
+}
+
+/* The raw status tier — always shown in both player and developer views */
+.wiki-root .wiki-status-badge__tier {
+  font-family: var(--wiki-font-mono);
+  font-size: 0.8em;
+  opacity: 0.72;
+  letter-spacing: 0.03em;
+}
+
+/* ── View toggle segmented control ───────────────────────────────────────────── */
+/*
+ * A two-button segmented control placed in the wiki header next to the Search
+ * button. The active button is ember-tinted to match the overall palette.
+ */
+
+.wiki-root .wiki-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--wiki-border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--wiki-parchment-deep);
+}
+
+.wiki-root .wiki-view-toggle__btn {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wiki-ink-light);
+  background: transparent;
+  border: none;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background var(--wiki-transition), color var(--wiki-transition);
+  line-height: 1.4;
+}
+
+.wiki-root .wiki-view-toggle__btn:hover:not(.wiki-view-toggle__btn--active) {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-border));
+}
+
+.wiki-root .wiki-view-toggle__btn--active {
+  background: var(--wiki-ember);
+  color: #fff;
+}
+
+/* Separator between the two buttons */
+.wiki-root .wiki-view-toggle__btn + .wiki-view-toggle__btn {
+  border-left: 1px solid var(--wiki-border);
+}
+
+/* ── Reference section (collapsible developer-only wrapper) ──────────────────── */
+/*
+ * Used to gate field-reference and schema tables behind a <details> element.
+ * Layout and sizing; colors are supplied via JSX inline styles that match the
+ * COLORS constants used elsewhere in the wiki.
+ */
+
+.wiki-root .wiki-reference-section {
+  /* No extra layout — children handle their own borders/padding. */
+}
+
+.wiki-root .wiki-reference-section__summary {
+  /* Suppress the native marker; we provide our own chevron arrow. */
+  list-style: none;
+}
+
+.wiki-root .wiki-reference-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+.wiki-root .wiki-ref-chevron {
+  transition: transform 150ms ease;
+}
+
+.wiki-root .wiki-reference-section[open] .wiki-ref-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-ref-chevron {
+    transition: none;
+  }
+}

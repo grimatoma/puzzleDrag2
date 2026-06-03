@@ -17,9 +17,9 @@ import type { WikiEntry } from "./EntryGrid.jsx";
 import { ConceptFields } from "./ConceptFields.jsx";
 import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
-import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
-import StatusChip from "../../ui/primitives/StatusChip.jsx";
-import PageKindBadge from "./PageKindBadge.jsx";
+import { statusForConcept } from "./status.js";
+import { StatusBadge } from "./StatusBadge.jsx";
+import { ReferenceSection } from "./ReferenceSection.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { describeSchema } from "../schemaDoc.js";
@@ -68,9 +68,8 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   // Authored intro HTML (optional — none seeded yet; gracefully absent)
   const intro = bodyFor(conceptId, "_index");
 
-  // Status chip
+  // Status badge
   const status = statusForConcept(conceptId);
-  const statusMeta = WIKI_STATUS_LEGEND[status];
 
   return (
     <div className="flex flex-col gap-3 wiki-reveal-stagger">
@@ -82,20 +81,8 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
             {concept.label}
           </span>
 
-          {/* Page-kind badge */}
-          <PageKindBadge kind="concept" />
-
-          {/* Status chip */}
-          <StatusChip
-            tone={statusMeta.tone}
-            size="xs"
-            uppercase
-            mono
-            title={statusMeta.description}
-            aria-label={`Status: ${statusMeta.label}`}
-          >
-            {statusMeta.label}
-          </StatusChip>
+          {/* Status badge — shown in both developer and player views */}
+          <StatusBadge status={status} />
         </div>
 
         {/* Blurb */}
@@ -129,8 +116,10 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
         </section>
       )}
 
-      {/* ── 3. Field reference ────────────────────────────────────────────── */}
-      <ConceptFields conceptId={conceptId} />
+      {/* ── 3. Field reference — hidden in player view ────────────────────── */}
+      <ReferenceSection>
+        <ConceptFields conceptId={conceptId} />
+      </ReferenceSection>
 
       {/* ── 3a. Category overview / comparison sections ───────────────────────
           Analytical roll-ups that lead the entity list on specific category
