@@ -49,17 +49,36 @@ function pigBase(ctx: CanvasRenderingContext2D, fillC1: string, fillC2: string, 
   ctx.beginPath(); ctx.ellipse(-2, 0, 4, 6, -0.3, 0, Math.PI*2); ctx.fill();
 }
 
+// One soft fleece coat: a single scalloped cloud silhouette (a ring of arcs)
+// with ONE outer contour and a gradient fill, plus light interior curls — not
+// a pile of separately-outlined circles (which read as a bunch of balls).
 function woolBody(ctx: CanvasRenderingContext2D, woolC1: string, woolC2: string, outline: string) {
-  const fluff = (cx: number, cy: number, r: number) => {
-    const g = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
-    g.addColorStop(0, woolC1); g.addColorStop(1, woolC2);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = outline; ctx.lineWidth = 1.2; ctx.stroke();
-  };
-  fluff(-8, 4, 8); fluff(0, 0, 8); fluff(8, 4, 8);
-  fluff(-4, 8, 7); fluff(4, 8, 7); fluff(12, 0, 6);
-  fluff(0, 10, 6); fluff(-12, 0, 6);
+  const cx = 2, cy = 4, lobes = 11;
+  const baseRx = 15, baseRy = 9.5, bumpRx = 18, bumpRy = 12.5;
+  ctx.beginPath();
+  for (let i = 0; i <= lobes; i++) {
+    const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+    const px = cx + Math.cos(a) * baseRx;
+    const py = cy + Math.sin(a) * baseRy;
+    if (i === 0) ctx.moveTo(px, py);
+    else {
+      const pa = ((i - 1) / lobes) * Math.PI * 2 - Math.PI / 2;
+      const ma = (a + pa) / 2;
+      ctx.quadraticCurveTo(cx + Math.cos(ma) * bumpRx, cy + Math.sin(ma) * bumpRy, px, py);
+    }
+  }
+  ctx.closePath();
+  const g = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, bumpRx);
+  g.addColorStop(0, woolC1); g.addColorStop(1, woolC2);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = 1.6; ctx.stroke();
+  // Subtle wool curls (interior detail, kept light — no hard circles)
+  ctx.save();
+  ctx.globalAlpha = 0.4; ctx.strokeStyle = outline; ctx.lineWidth = 0.9;
+  for (const [x, y] of [[-7, -1], [-1, 3], [6, 0], [10, 5], [-4, 8], [3, -4]]) {
+    ctx.beginPath(); ctx.arc(cx + x, cy + y, 2.2, Math.PI * 0.1, Math.PI * 0.95); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawPig(ctx: CanvasRenderingContext2D) { shadow(ctx, 22); pigBase(ctx, "#ffd0d8", "#e88a98", "#3a1820"); }
@@ -221,17 +240,35 @@ function drawAlpaca(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#1a0e04";
   for (const lx of [-3, 3, 9, 13]) ctx.fillRect(lx, 21, 2.5, 1.5);
 
-  // Wooly body — fewer, larger fluff blobs centred over the legs
-  const fluff = (cx: number, cy: number, r: number) => {
-    const g = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
+  // Wooly body — one scalloped fleece cloud (single contour), not separate
+  // outlined blobs.
+  {
+    const cx = 4, cy = 6, lobes = 9;
+    const baseRx = 12, baseRy = 8, bumpRx = 14.5, bumpRy = 10.5;
+    ctx.beginPath();
+    for (let i = 0; i <= lobes; i++) {
+      const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+      const px = cx + Math.cos(a) * baseRx;
+      const py = cy + Math.sin(a) * baseRy;
+      if (i === 0) ctx.moveTo(px, py);
+      else {
+        const pa = ((i - 1) / lobes) * Math.PI * 2 - Math.PI / 2;
+        const ma = (a + pa) / 2;
+        ctx.quadraticCurveTo(cx + Math.cos(ma) * bumpRx, cy + Math.sin(ma) * bumpRy, px, py);
+      }
+    }
+    ctx.closePath();
+    const g = ctx.createRadialGradient(cx - 4, cy - 4, 1, cx, cy, bumpRx);
     g.addColorStop(0, wool); g.addColorStop(1, wool2);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke();
-  };
-  fluff(2, 4, 9);
-  fluff(11, 6, 7);
-  fluff(-3, 7, 7);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.save();
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = stroke; ctx.lineWidth = 0.8;
+    for (const [x, y] of [[-3, 0], [4, 2], [9, 4], [0, 5]]) {
+      ctx.beginPath(); ctx.arc(cx + x, cy + y, 1.9, Math.PI * 0.1, Math.PI * 0.95); ctx.stroke();
+    }
+    ctx.restore();
+  }
 
   // Long S-curved neck — drawn as a tapered stroke
   ctx.strokeStyle = stroke; ctx.lineWidth = 1.4;
