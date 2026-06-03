@@ -453,52 +453,61 @@ function drawSupplies(ctx: CanvasRenderingContext2D) {
   ctx.stroke();
 }
 
-// ── hay_bundle — round bale of hay tied with twine ────────────────────────
+// ── hay_bundle — classic rectangular hay bale (same art as pre–tile_grass_grass) ─
 function drawHayBundle(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 22, 4);
-  // Hay bale body (circular cross-section)
-  const grad = ctx.createRadialGradient(-4, -4, 4, 0, 0, 22);
-  grad.addColorStop(0, "#f0d878");
-  grad.addColorStop(0.55, "#c9b160");
-  grad.addColorStop(1, "#6a5828");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
-  ctx.ellipse(0, 2, 18, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 23, 21, 4.5, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#3a2c10";
-  ctx.lineWidth = 1.6;
+  const body = ctx.createLinearGradient(0, -20, 0, 22);
+  body.addColorStop(0, "#f4cf63");
+  body.addColorStop(0.55, "#d4a020");
+  body.addColorStop(1, "#8a5e14");
+  ctx.fillStyle = body;
+  rr(ctx, -22, -20, 44, 42, 8);
+  ctx.fill();
+  ctx.strokeStyle = "#5e3a08";
+  ctx.lineWidth = 2.2;
   ctx.stroke();
-  // Straw striations
-  ctx.strokeStyle = "rgba(106,88,40,0.6)";
-  ctx.lineWidth = 0.7;
-  for (let y = -10; y <= 14; y += 4) {
+  ctx.save();
+  rr(ctx, -22, -20, 44, 42, 8);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(94,58,8,0.55)";
+  ctx.lineWidth = 1.4;
+  [-16, -8, 0, 8, 16].forEach((x) => {
     ctx.beginPath();
-    ctx.moveTo(-16, y);
-    ctx.bezierCurveTo(-6, y - 2, 6, y + 2, 16, y);
-    ctx.stroke();
-  }
-  // Loose straw ends poking out
-  ctx.strokeStyle = "#8a7028";
-  ctx.lineWidth = 0.9;
-  [[-16, -6, -20, -10], [16, -4, 20, -8], [-14, 12, -18, 16], [14, 14, 18, 18]].forEach(([x1, y1, x2, y2]) => {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(x, -18);
+    ctx.lineTo(x + 1.5, 20);
     ctx.stroke();
   });
-  // Twine wraps (two horizontal bands)
-  ctx.strokeStyle = "#5a3a18";
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "rgba(255,232,144,0.7)";
+  ctx.lineWidth = 1.1;
+  [-12, -4, 4, 12].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, -18);
+    ctx.lineTo(x + 1.5, 20);
+    ctx.stroke();
+  });
+  ctx.restore();
+  ctx.strokeStyle = "#5e3a08";
+  ctx.lineWidth = 3.6;
+  [-7, 9].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(-22, y);
+    ctx.lineTo(22, y);
+    ctx.stroke();
+  });
+  ctx.strokeStyle = "rgba(255,200,120,0.6)";
+  ctx.lineWidth = 1.1;
+  [-9, 7].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(-20, y);
+    ctx.lineTo(20, y);
+    ctx.stroke();
+  });
+  ctx.fillStyle = "rgba(255,255,255,0.30)";
   ctx.beginPath();
-  ctx.ellipse(0, -4, 18, 6, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(0, 8, 18, 5, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  // Highlight
-  ctx.fillStyle = "rgba(255,250,210,0.45)";
-  ctx.beginPath();
-  ctx.ellipse(-6, -4, 4, 2, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-11, -12, 6, 4, -0.5, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -798,7 +807,7 @@ export const ICONS = {
   stone_hammer: { label: "Stone Hammer",  color: "#8a9098", draw: drawStoneHammer },
   iron_ration:  { label: "Iron Ration",   color: "#5a4030", draw: drawIronRation },
   supplies:     { label: "Supplies",      color: "#a87838", draw: drawSupplies },
-  hay_bundle:   { label: "Hay Bundle",    color: "#c9b160", draw: drawHayBundle },
+  hay_bundle:   { label: "Hay Bundle",    color: "#e8b85c", draw: drawHayBundle },
   iron_bar:     { label: "Iron Bar",      color: "#8a8e94", draw: drawIronBar },
   copper_bar:   { label: "Copper Bar",    color: "#c97f3c", draw: drawCopperBar },
   gold_bar:     { label: "Gold Bar",      color: "#f4c430", draw: drawGoldBar },
