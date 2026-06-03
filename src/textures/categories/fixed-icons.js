@@ -121,6 +121,42 @@ function drawTimesMark(ctx, cx, cy, s, color, lw) {
   ctx.stroke();
 }
 
+// "?" glyph drawn as strokes inside a box of half-height `s` centred on (cx,cy).
+// Path-drawn so it reads crisply at 56px without depending on a system font.
+function drawQuestionMark(ctx, cx, cy, s, color, lw) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  // Hook: open curve over to the stem
+  ctx.beginPath();
+  ctx.moveTo(cx - s * 0.6, cy - s * 0.5);
+  ctx.quadraticCurveTo(cx - s * 0.6, cy - s, cx, cy - s);
+  ctx.quadraticCurveTo(cx + s * 0.7, cy - s, cx + s * 0.7, cy - s * 0.35);
+  ctx.quadraticCurveTo(cx + s * 0.7, cy + s * 0.1, cx, cy + s * 0.2);
+  ctx.lineTo(cx, cy + s * 0.45);
+  ctx.stroke();
+  // Dot
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy + s * 0.85, lw * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// "!" glyph drawn as a tapered stem + dot inside a box of half-height `s`.
+function drawBangMark(ctx, cx, cy, s, color, lw) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s * 0.35);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy + s * 0.8, lw * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // ── Story / metaplot ──────────────────────────────────────────────────────
 
 function drawPactScroll(ctx) {
@@ -174,32 +210,38 @@ function drawPactScroll(ctx) {
 
 function drawPactViolation(ctx) {
   drawShadow(ctx, 14, 3);
-  // Cracked broken wax seal
+  // Cracked broken wax seal — split down the middle into two halves
   const wax = ctx.createRadialGradient(-3, -3, 1, 0, 0, 12);
   wax.addColorStop(0, "#f86848"); wax.addColorStop(0.55, "#a82018"); wax.addColorStop(1, "#3a0408");
-  ctx.fillStyle = wax;
-  ctx.beginPath();
   const pts = [[0,-12],[5,-10],[10,-5],[12,2],[9,9],[3,12],[-3,11],[-9,6],[-12,-1],[-9,-8],[-3,-11]];
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.closePath();
+  const sealPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+  };
+  ctx.fillStyle = wax;
+  sealPath();
   ctx.fill();
   ctx.strokeStyle = "#3a0408"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Crack — jagged white split through middle
-  ctx.strokeStyle = "#fff0d0"; ctx.lineWidth = 2.4; ctx.lineCap = "round";
+  // Clip the crack to the seal so nothing pokes outside the silhouette
+  ctx.save();
+  sealPath();
+  ctx.clip();
+  // Crack — jagged split running fully inside the seal, top to bottom
+  const crack = [[1, -11], [-2, -5], [3, -1], [-1, 4], [2, 11]];
+  ctx.strokeStyle = "#fff0d0"; ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(-10, -8); ctx.lineTo(-2, -2); ctx.lineTo(2, -4); ctx.lineTo(6, 4); ctx.lineTo(2, 6); ctx.lineTo(8, 12);
+  ctx.moveTo(crack[0][0], crack[0][1]);
+  for (let i = 1; i < crack.length; i++) ctx.lineTo(crack[i][0], crack[i][1]);
   ctx.stroke();
   ctx.strokeStyle = "#5a0808"; ctx.lineWidth = 1.0;
   ctx.beginPath();
-  ctx.moveTo(-10, -8); ctx.lineTo(-2, -2); ctx.lineTo(2, -4); ctx.lineTo(6, 4); ctx.lineTo(2, 6); ctx.lineTo(8, 12);
+  ctx.moveTo(crack[0][0], crack[0][1]);
+  for (let i = 1; i < crack.length; i++) ctx.lineTo(crack[i][0], crack[i][1]);
   ctx.stroke();
-  // Warning glyph stamped on
-  ctx.fillStyle = "rgba(58,4,8,0.7)";
-  ctx.beginPath();
-  ctx.moveTo(-6, -4); ctx.lineTo(0, -8); ctx.lineTo(6, -4); ctx.lineTo(0, 0); ctx.closePath();
-  ctx.fill();
-  // Sheen
+  ctx.restore();
+  // Sheen (drawn after the crack so the highlight reads on the wax)
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath();
   ctx.ellipse(-5, -6, 2, 1, -0.4, 0, Math.PI * 2);
@@ -476,14 +518,16 @@ const drawPhaseOldCapital = drawPhaseBanner(function (ctx) {
 }, "#9a3828", "#3a0808");
 
 const drawPhaseSandbox = drawPhaseBanner(function (ctx) {
-  // Infinity loop
-  ctx.strokeStyle = "#fff8d0"; ctx.lineWidth = 2.0; ctx.lineCap = "round";
+  // Infinity loop — clean symmetric figure-eight (sandbox = endless)
+  ctx.strokeStyle = "#fff8d0"; ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(-3, 0);
-  ctx.bezierCurveTo(-6, -5, -8, 4, -3, 0);
-  ctx.bezierCurveTo(0, -4, 2, 4, 5, 0);
-  ctx.bezierCurveTo(8, -5, 6, 4, 3, 0);
-  ctx.bezierCurveTo(0, -4, -2, 4, -3, 0);
+  // start at the centre crossing, loop left lobe
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-3.5, -5, -9, -5, -9, 0);
+  ctx.bezierCurveTo(-9, 5, -3.5, 5, 0, 0);
+  // right lobe
+  ctx.bezierCurveTo(3.5, -5, 9, -5, 9, 0);
+  ctx.bezierCurveTo(9, 5, 3.5, 5, 0, 0);
   ctx.closePath();
   ctx.stroke();
 }, "#6a3aa8", "#1a0a3a");
@@ -1173,10 +1217,8 @@ function drawSettlementUnfounded(ctx) {
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 0.9; ctx.stroke();
-  // "?" inside
-  ctx.fillStyle = "#3a1c08";
-  ctx.font = "bold 8px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("?", 6, 8);
+  // "?" inside the plot — path-drawn (no fillText, per icon style guide)
+  drawQuestionMark(ctx, 5, 7, 3.4, "#5a3008", 1.6);
 }
 
 function drawSettlementComplete(ctx) {
@@ -1555,15 +1597,18 @@ function drawAbilityTrigger(ctx) {
   ctx.fillStyle = "#f0c040";
   ctx.fillRect(-2, 1, 4, 4);
   ctx.strokeRect(-2, 1, 4, 4);
-  // Spark burst on top
+  // Spark burst on top — slightly larger so the "!" reads inside it
   ctx.fillStyle = "#f8d050";
-  star(ctx, 8, -10, 5.0, 1.8, 8);
+  star(ctx, 9, -11, 6.0, 2.4, 8);
   ctx.fill();
   ctx.strokeStyle = "#7a4818"; ctx.lineWidth = 0.9; ctx.stroke();
-  // "!" inside
-  ctx.fillStyle = "#3a1c08";
-  ctx.font = "bold 6px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("!", 8, -10);
+  // Bright core so the burst pops on the dark roof
+  ctx.fillStyle = "#fff080";
+  ctx.beginPath();
+  ctx.arc(9, -11, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  // "!" inside — path-drawn (no fillText, per icon style guide)
+  drawBangMark(ctx, 9, -11, 2.2, "#7a3008", 1.4);
 }
 
 // ── Seasons & time ────────────────────────────────────────────────────────
