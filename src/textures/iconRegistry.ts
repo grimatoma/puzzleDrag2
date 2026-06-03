@@ -38,6 +38,12 @@ import { ICONS as G_ACHIEVEMENTS } from "./categories/achievements.js";
 import { ICONS as G_QUESTS } from "./categories/quests.js";
 import { ICONS as G_CURRENCIES } from "./categories/currencies.js";
 import { ICONS as G_FIXED_ICONS } from "./categories/fixed-icons.js";
+import { ICONS as G_GEMS } from "./categories/gems.js";
+import { ICONS as G_WEATHER } from "./categories/weather.js";
+import { ICONS as G_DISHES } from "./categories/dishes.js";
+import { ICONS as G_REEF } from "./categories/reef.js";
+import { ICONS as G_CRITTERS } from "./categories/critters.js";
+import { ICONS as G_ARCANE } from "./categories/arcane.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
 
 export interface IconRegistryEntry {
@@ -144,6 +150,14 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...G_QUESTS,
   ...G_CURRENCIES,
   ...G_FIXED_ICONS,
+  // Decorative concept batches — additive icons that surface in the Dev Panel
+  // Icons tab (grouped by key prefix). Not referenced by any catalog yet.
+  ...G_GEMS,
+  ...G_WEATHER,
+  ...G_DISHES,
+  ...G_REEF,
+  ...G_CRITTERS,
+  ...G_ARCANE,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
   // Dev Panel's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
