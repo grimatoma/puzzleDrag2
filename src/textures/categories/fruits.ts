@@ -156,99 +156,111 @@ function drawBlackberry(ctx: CanvasRenderingContext2D) {
 
 function drawRambutan(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath(); ctx.ellipse(2, 22, 20, 4, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#5a8a26"; ctx.lineWidth = 1.4;
-  for (let i = 0; i < 24; i++) {
-    const a = (i / 24) * Math.PI * 2;
-    const innerR = 16; const outerR = 24 + Math.sin(i * 1.7) * 3;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*innerR, Math.sin(a)*innerR + 2);
-    ctx.quadraticCurveTo(Math.cos(a+0.1)*(outerR-2), Math.sin(a+0.1)*(outerR-2)+2, Math.cos(a+0.2)*outerR, Math.sin(a+0.2)*outerR + 2);
-    ctx.stroke();
-  }
-  const grad = ctx.createRadialGradient(-6, -2, 3, 0, 4, 18);
-  grad.addColorStop(0,"#ffd0c0"); grad.addColorStop(0.5,"#e83a48"); grad.addColorStop(1,"#7a0a18");
+  ctx.beginPath(); ctx.ellipse(2, 22, 17, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // A rambutan: a round red fruit covered in soft, fleshy hair-spines
+  // (spinterns) that curve gently. Body sits at the origin; spine tips are kept
+  // well inside the ±26 safe area (max tip radius ≈ 23.5). Spines all sweep the
+  // same way (a soft clockwise comb) so they read as fuzzy hair, not a star/urchin.
+  const cx = 0, cy = 4;
+  const bodyR = 14;
+  ctx.lineCap = "round";
+  // Two layered passes of curved spines for a dense, soft pelt. Each spine is a
+  // tapered quadratic curve: thick reddish base on the body, thin pale tip.
+  const drawSpineRing = (count: number, baseR: number, len: number, sweep: number, phase: number, baseW: number) => {
+    for (let i = 0; i < count; i++) {
+      const a = phase + (i / count) * Math.PI * 2;
+      const l = len + ((i * 37) % 3) * 0.7; // slight length variation
+      const rootR = baseR;
+      const tipR = baseR + l;
+      const tipA = a + sweep;          // consistent gentle lean -> hair comb
+      const rx = cx + Math.cos(a) * rootR;
+      const ry = cy + Math.sin(a) * rootR;
+      const tx = cx + Math.cos(tipA) * tipR;
+      const ty = cy + Math.sin(tipA) * tipR;
+      const ctrlR = (rootR + tipR) * 0.5;
+      const ctrlA = a + sweep * 0.5;
+      const mx = cx + Math.cos(ctrlA) * ctrlR;
+      const my = cy + Math.sin(ctrlA) * ctrlR;
+      // reddish base
+      ctx.strokeStyle = "#c23042"; ctx.lineWidth = baseW;
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+      // soft pale-pink tip on the outer third
+      ctx.strokeStyle = "rgba(242,168,160,0.85)"; ctx.lineWidth = baseW * 0.5;
+      const ix = mx + (tx - mx) * 0.55, iy = my + (ty - my) * 0.55;
+      ctx.beginPath(); ctx.moveTo(ix, iy); ctx.lineTo(tx, ty); ctx.stroke();
+    }
+  };
+  // Back layer (slightly longer, drawn first so it tucks behind the body).
+  drawSpineRing(26, bodyR - 2, 8.5, 0.34, 0.0, 1.6);
+  // Round red body.
+  const grad = ctx.createRadialGradient(cx - 5, cy - 6, 3, cx, cy + 2, bodyR + 4);
+  grad.addColorStop(0, "#ffd0c0"); grad.addColorStop(0.5, "#e0303f"); grad.addColorStop(1, "#7a0a18");
   ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.ellipse(0,4,15,14,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, bodyR, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = "#3a0a08"; ctx.lineWidth = 2.2; ctx.stroke();
-  ctx.strokeStyle = "#a8d048"; ctx.lineWidth = 1.1;
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*13, Math.sin(a)*12 + 4);
-    ctx.lineTo(Math.cos(a)*18, Math.sin(a)*17 + 4);
-    ctx.stroke();
-  }
+  // Front layer of spines sprouting from the body rim, over the fill.
+  drawSpineRing(24, bodyR - 1, 7.5, 0.30, 0.12, 1.8);
+  // Specular highlight (upper-left).
   ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.beginPath(); ctx.ellipse(-6,-1,3,5,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx - 5, cy - 5, 3.2, 5.5, -0.4, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawStarfruit(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath(); ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
-  // Whole carambola is an oblong yellow fruit with deep longitudinal ridges.
-  // Draw it as a side-view oblong body so it reads as fruit; show the star
-  // cross-section only as a small inset at the top-right.
+  ctx.beginPath(); ctx.ellipse(1, 22, 17, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // Carambola: an oblong yellow fruit with deep longitudinal ridges. Drawn in
+  // a slightly tilted side view so the ridge tips give a scalloped silhouette,
+  // with two foreground star points fanning toward the viewer to telegraph the
+  // star cross-section. All art kept inside ±26.
   ctx.save();
-  ctx.rotate(-0.18);
-  const grad = ctx.createLinearGradient(-12, 0, 12, 0);
-  grad.addColorStop(0, "#a87810");
-  grad.addColorStop(0.5, "#f0d048");
-  grad.addColorStop(1, "#a87810");
+  ctx.rotate(-0.12);
+  // Build a tapered body whose right edge waves in/out for the rib ridges.
+  const top = -19, bot = 19;
+  const ribsY = [-19, -12, -5, 2, 9, 14, 19];
+  const ribX  = [  0,  15,   9, 16,  9, 15,  0];
+  const grad = ctx.createLinearGradient(-13, 0, 16, 0);
+  grad.addColorStop(0, "#b8901c");
+  grad.addColorStop(0.45, "#f4d850");
+  grad.addColorStop(0.75, "#e6c038");
+  grad.addColorStop(1, "#9c7410");
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(-14, -12);
-  ctx.bezierCurveTo(-10, -18, 10, -18, 14, -12);
-  ctx.bezierCurveTo(  8,  -8, 16,  -4, 10,   0);
-  ctx.bezierCurveTo( 16,   4,  8,   8, 14,  12);
-  ctx.bezierCurveTo( 10,  18,-10,  18,-14,  12);
-  ctx.bezierCurveTo( -8,   8,-16,   4,-10,   0);
-  ctx.bezierCurveTo(-16,  -4, -8,  -8,-14, -12);
+  ctx.moveTo(0, top);
+  // right scalloped edge (ridge tips)
+  for (let i = 1; i < ribsY.length; i++) {
+    ctx.quadraticCurveTo(ribX[i] + 2, (ribsY[i - 1] + ribsY[i]) / 2, ribX[i], ribsY[i]);
+  }
+  // left, smoother side back up to the top
+  ctx.bezierCurveTo(-10, 16, -14, 6, -13, 0);
+  ctx.bezierCurveTo(-14, -7, -10, -15, 0, top);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#5e4210"; ctx.lineWidth = 2.0;
-  ctx.stroke();
-  // Vertical ridge lines (project the star points along the body)
-  ctx.strokeStyle = "#7a5210"; ctx.lineWidth = 1.4;
-  [-8, -3, 3, 8].forEach((x) => {
+  ctx.strokeStyle = "#5e4210"; ctx.lineWidth = 2.0; ctx.stroke();
+  // Two foreground ribs (the star edges) fanning from top to bottom
+  ctx.strokeStyle = "#8a6212"; ctx.lineWidth = 1.5;
+  [4, 9].forEach((x) => {
     ctx.beginPath();
-    ctx.moveTo(x, -14);
-    ctx.bezierCurveTo(x - 1, -4, x + 1, 4, x, 14);
+    ctx.moveTo(1, top + 1);
+    ctx.bezierCurveTo(x, -6, x, 6, 1, bot - 1);
     ctx.stroke();
   });
   // Brown calyx + tiny stem at the top
+  ctx.strokeStyle = "#5a3a14"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(1, -23); ctx.stroke();
   ctx.fillStyle = "#5a3a14";
-  ctx.beginPath(); ctx.arc(0, -16, 1.8, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#5a3a14"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(2, -22); ctx.stroke();
-  // Single small leaf
+  ctx.beginPath(); ctx.arc(1, -23, 1.8, 0, Math.PI * 2); ctx.fill();
+  // Single small leaf, grounded on the stem
   ctx.fillStyle = "#5a8a26";
   ctx.beginPath();
-  ctx.moveTo(2, -22);
-  ctx.bezierCurveTo(10, -24, 12, -18, 6, -16);
-  ctx.bezierCurveTo(3, -18, 1, -20, 2, -22);
+  ctx.moveTo(1, -23);
+  ctx.bezierCurveTo(10, -25, 13, -19, 7, -16);
+  ctx.bezierCurveTo(4, -18, 2, -21, 1, -23);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#33550f"; ctx.lineWidth = 1.0; ctx.stroke();
-  // Sheen highlight
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.beginPath(); ctx.ellipse(-6, -2, 2, 8, -0.15, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-  // Tiny inset 5-point star at the top-right corner — telegraphs
-  // "starfruit" by association without replacing the whole icon with a star.
-  ctx.save();
-  ctx.translate(16, -16);
-  ctx.fillStyle = "#fff4a0";
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    const r = i % 2 === 0 ? 5 : 2;
-    const x = Math.cos(a) * r;
-    const y = Math.sin(a) * r;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#a87810"; ctx.lineWidth = 0.9; ctx.stroke();
+  // Sheen highlight (upper-left)
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath(); ctx.ellipse(-5, -4, 2.4, 7, -0.12, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
