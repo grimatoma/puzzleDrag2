@@ -14,12 +14,12 @@ function single(abilityId, params, weight = 1) {
 
 describe("ability: threshold_reduce", () => {
   it("contributes amount × weight to thresholdReduce[target]", () => {
-    const out = single("threshold_reduce", { target: "tile_grass_hay", amount: 4 }, 0.5);
-    expect(out.thresholdReduce.tile_grass_hay).toBe(2);
+    const out = single("threshold_reduce", { target: "tile_grass_grass", amount: 4 }, 0.5);
+    expect(out.thresholdReduce.tile_grass_grass).toBe(2);
   });
   it("zero weight contributes nothing", () => {
-    const out = single("threshold_reduce", { target: "tile_grass_hay", amount: 4 }, 0);
-    expect(out.thresholdReduce.tile_grass_hay ?? 0).toBe(0);
+    const out = single("threshold_reduce", { target: "tile_grass_grass", amount: 4 }, 0);
+    expect(out.thresholdReduce.tile_grass_grass ?? 0).toBe(0);
   });
 });
 

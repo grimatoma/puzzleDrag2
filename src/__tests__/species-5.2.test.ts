@@ -26,7 +26,7 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
 
   it("activeByCategory: grass=hay, bird=pheasant, fruits=apple, trees=oak (wood/berry/egg are resources, not tiles)", () => {
     const s0 = initialState();
-    expect(s0.tileCollection.activeByCategory.grass).toBe("tile_grass_hay");
+    expect(s0.tileCollection.activeByCategory.grass).toBe("tile_grass_grass");
     expect(s0.tileCollection.activeByCategory.bird).toBe("tile_bird_pheasant");
     expect(s0.tileCollection.activeByCategory.fruits).toBe("tile_fruit_apple");
     expect(s0.tileCollection.activeByCategory.tile_tree_oak ?? s0.tileCollection.activeByCategory.trees).toBeDefined();
@@ -61,8 +61,8 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     delete oldSave.tileCollection;
     const migrated = mergeLoadedState(oldSave);
     expect(migrated.tileCollection).toBeTruthy();
-    expect(migrated.tileCollection.discovered.tile_grass_hay).toBe(true);
-    expect(migrated.tileCollection.activeByCategory.grass).toBe("tile_grass_hay");
+    expect(migrated.tileCollection.discovered.tile_grass_grass).toBe(true);
+    expect(migrated.tileCollection.activeByCategory.grass).toBe("tile_grass_grass");
     expect(migrated.tileCollection.freeMoves).toBe(0);
   });
 

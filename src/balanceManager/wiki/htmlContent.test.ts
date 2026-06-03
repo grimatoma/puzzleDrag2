@@ -117,6 +117,14 @@ describe("Phase 4c entity body files", () => {
     ["tools", "axe"],
     ["zones", "meadow"],
     ["zones", "quarry"],
+    ["zones", "orchard"],
+    ["zones", "crossroads"],
+    ["zones", "caves"],
+    ["zones", "fairground"],
+    ["zones", "forge"],
+    ["zones", "pit"],
+    ["zones", "harbor"],
+    ["zones", "oldcapital"],
   ];
 
   for (const [concept, key] of entries) {
@@ -136,4 +144,24 @@ describe("Phase 4c entity body files", () => {
       }
     });
   }
+});
+
+// ── Zone flow page ────────────────────────────────────────────────────────────
+
+describe("Zone flow page", () => {
+  it('pageFor("zone-flow") is non-null and non-empty', () => {
+    const html = pageFor("zone-flow");
+    expect(html).not.toBeNull();
+    expect(html!.length).toBeGreaterThan(0);
+  });
+
+  it('pageFor("zone-flow") has no broken [[wikilinks]]', () => {
+    const html = pageFor("zone-flow");
+    if (!html) return;
+    const links = extractWikiLinks(html);
+    for (const raw of links) {
+      const resolved = resolveWikiLink(raw);
+      expect(resolved, `Broken wikilink [[${raw}]] in pages/zone-flow`).not.toBeNull();
+    }
+  });
 });

@@ -56,7 +56,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     name: "Farmer",
     role: "Farmer",
     look: { iconKey: "worker_farmer", color: "#4f8c3a" },
-    hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_hay: 2 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_grass: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
       { id: "threshold_reduce_category", params: { category: "grain", amount: 1 } },

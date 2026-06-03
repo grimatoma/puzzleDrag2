@@ -71,7 +71,7 @@ export function keeperTrialDefinition(state: GameState, zoneId: string | null | 
   if (!keeper || !info || !type) return null;
   const biomeKey = biomeForSettlementType(type);
   const goalByType: Record<string, { resource: string; amount: number }> = {
-    farm: { resource: "tile_grass_hay", amount: 25 },
+    farm: { resource: "tile_grass_grass", amount: 25 },
     mine: { resource: "tile_mine_stone", amount: 20 },
     harbor: { resource: "fish_fillet", amount: 20 },
   };

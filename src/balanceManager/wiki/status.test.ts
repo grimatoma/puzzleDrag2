@@ -128,7 +128,7 @@ describe("drift-guard: entity override keys must resolve to real wiki entities",
 
 describe("statusForEntity — normal WIRED concepts", () => {
   it("returns WIRED for a tile entity", () => {
-    expect(statusForEntity("tiles", "tile_grass_hay")).toBe("WIRED");
+    expect(statusForEntity("tiles", "tile_grass_grass")).toBe("WIRED");
   });
 
   it("returns WIRED for a recipe entity", () => {

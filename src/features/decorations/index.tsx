@@ -3,6 +3,7 @@ import { locBuilt } from "../../locBuilt.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
 import { inventoryQty } from "../../types/inventory.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 import type { Dispatch, GameState } from "../../types/state";
 
 export const viewKey = "decorations";
@@ -17,7 +18,7 @@ interface Decoration {
 function canAfford(decor: Decoration, state: GameState): boolean {
   const { cost } = decor;
   if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
-  const inv = state.inventory ?? {};
+  const inv = zoneInventory(state);
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
     if (inventoryQty(inv, k) < (v as number)) return false;

@@ -135,7 +135,7 @@ function order(id: string, npc: string, key: string, need: number, have: number,
 
 function visualOrders() {
   return [
-    order("order-ready", "mira", "tile_grass_hay", 12, 40, 90),
+    order("order-ready", "mira", "tile_grass_grass", 12, 40, 90),
     order("order-partial", "tomas", "plank", 18, 8, 130),
     order("order-crafted", "bram", "bread", 2, 3, 180),
   ];
@@ -152,7 +152,7 @@ function visualQuests() {
 function richInventory() {
   return {
     supplies: 12,
-    tile_grass_hay: 40,
+    tile_grass_grass: 40,
     tile_grain_wheat: 22,
     flour: 12,
     tile_tree_oak: 28,
@@ -172,6 +172,12 @@ function richInventory() {
     tile_fish_sardine: 12,
     fish_fillet: 9,
   };
+}
+
+/** Rich inventory mirrored into every founded settlement bucket for visual scenarios. */
+function allZoneInventory(patch: Record<string, number> = {}) {
+  const inv = { ...richInventory(), ...patch };
+  return { home: inv, meadow: inv, quarry: inv, harbor: inv };
 }
 
 interface ParsedRoute {
@@ -210,8 +216,9 @@ function applyRoute(state: VisualStateTree, scenario: VisualScenario): VisualSta
 function baseState(): VisualStateTree {
   const state = createFreshState({ saveSeed: "visual-seed-0001" });
   const orders = visualOrders();
-  const inventory: Record<string, number> = { ...state.inventory };
-  for (const o of orders) inventory[o.key] = o._visualHave;
+  const homeInv: Record<string, number> = { ...(state.inventory.home ?? {}) };
+  for (const o of orders) homeInv[o.key] = o._visualHave;
+  const inventory = { ...state.inventory, home: homeInv };
   return {
     ...state,
     saveSeed: "visual-seed-0001",
@@ -255,7 +262,7 @@ function richState(): VisualStateTree {
     embers: 12,
     coreIngots: 9,
     influence: 180,
-    inventory: richInventory(),
+    inventory: allZoneInventory(),
     tools: {
       ...state.tools,
       clear: 5,
@@ -316,7 +323,7 @@ function richState(): VisualStateTree {
       unlocked,
     },
     collected: {
-      tile_grass_hay: 120,
+      tile_grass_grass: 120,
       tile_grain_wheat: 44,
       tile_tree_oak: 31,
       plank: 18,
@@ -334,8 +341,8 @@ function grid(rows: GridCellInput[][]): Grid {
 }
 
 const farmGrid = grid([
-  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
-  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
+  ["tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
+  ["tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass", "tile_grass_grass"],
   ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
   ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
   ["tile_flower_pansy", "tile_bird_pheasant", "tile_mount_horse", "tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple"],
@@ -427,10 +434,10 @@ function withRunSummary(state: VisualStateTree): VisualStateTree {
       mode: "normal",
       turnsAtStart: 10,
       chainsPlayed: 5,
-      biggestChain: { count: 12, key: "tile_grass_hay", coinGain: 28, upgrades: 2, gained: 12 },
+      biggestChain: { count: 12, key: "tile_grass_grass", coinGain: 28, upgrades: 2, gained: 12 },
       totalUpgrades: 4,
       totalCoinGain: 140,
-      resourcesGained: { tile_grass_hay: 34, tile_grain_wheat: 8, tile_fruit_apple: 5 },
+      resourcesGained: { tile_grass_grass: 34, tile_grain_wheat: 8, tile_fruit_apple: 5 },
       bondsAtStart: { wren: 5, mira: 5 },
       bondDeltas: { wren: 0.5, mira: 0.3 },
       beatsTriggered: [{ id: "act1_first_harvest", title: "The First Harvest" }],
@@ -446,7 +453,7 @@ function profileState(profile: string): VisualStateTree {
     case "rich": return richState();
     case "bubble": return { ...richState(), bubble: { id: 101, npc: "wren", text: "A visual check toast is on the wind.", ms: 10_000 } };
     case "buildReady": return { ...richState(), built: { ...richState().built, home: builtFromPlots({ 0: "hearth" }) } };
-    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { supplies: 0 } };
+    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { home: { supplies: 0 } } };
     case "unfoundedBlocked": return { ...richState(), mapCurrent: "orchard", activeZone: "orchard", settlements: { home: { founded: true, biome: "prairie" } }, coins: 50 };
     case "unfoundedReady": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { home: { founded: true, biome: "prairie", keeperPath: "coexist" } } };
     case "mineTown": return { ...richState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "mine", biome: "mine" };
@@ -454,7 +461,7 @@ function profileState(profile: string): VisualStateTree {
     case "fertilizerEntry": return { ...richState(), tools: { ...richState().tools, fertilizer: 3 } };
     case "farmDangersEntry": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { ...richState().settlements, meadow: { founded: true, biome: "prairie" } } };
     case "mineLocked": return { ...baseState(), level: 1, mapCurrent: "quarry", activeZone: "quarry", settlements: { home: { founded: true, biome: "prairie" }, quarry: { founded: true, biome: "mountain" } } };
-    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...richInventory(), supplies: 0, bread: 0, tile_fruit_apple: 0 } };
+    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...allZoneInventory(), quarry: { ...richInventory(), supplies: 0, bread: 0, tile_fruit_apple: 0 } } };
     case "mineTownFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry" };
     case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
     case "boardFarm": return boardState("farm");
@@ -491,7 +498,7 @@ function profileState(profile: string): VisualStateTree {
       g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
-    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
+    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_grass", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", description: null, modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.", spawnBias: null, modifier: { type: "", params: {} } }, fish: { tide: "high", tideTurn: 3 } };
     case "craftQueue": {
       // Multi-station queue snapshot: bakery has two stacked, forge has
@@ -523,7 +530,7 @@ function profileState(profile: string): VisualStateTree {
     }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
     case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...(richState().market ?? { seed: 0, season: 0, prices: {}, prevPrices: null }), season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
-    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_hay" } }) };
+    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_grass" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();
       delete tc.discovered.tile_bird_clover;
@@ -576,13 +583,13 @@ function profileState(profile: string): VisualStateTree {
     // Inventory progress display scenarios (Task D)
     case "inventoryMidProgress": return {
       ...richState(),
-      inventory: { ...richInventory(), hay_bundle: 0 },
-      resourceProgress: { hay_bundle: 4 },
+      inventory: { ...allZoneInventory(), home: { ...richInventory(), hay_bundle: 0 } },
+      resourceProgress: { home: { hay_bundle: 4 } },
     };
     case "inventoryFullWithProgress": return {
       ...richState(),
-      inventory: { ...richInventory(), eggs: 15 },
-      resourceProgress: { eggs: 2 },
+      inventory: { ...allZoneInventory(), home: { ...richInventory(), eggs: 15 } },
+      resourceProgress: { home: { eggs: 2 } },
     };
     default: return richState();
   }

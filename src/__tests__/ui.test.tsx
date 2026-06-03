@@ -60,10 +60,10 @@ describe("BottomNav", () => {
         { key: "itemA", need: 2 },
         { key: "itemB", need: 3 }
       ],
-      inventory: {
-        itemA: 5,
-        itemB: 1
-      }
+      inventory: { home: { itemA: 5, itemB: 1 } },
+      mapCurrent: "home",
+      activeZone: "home",
+      farmRun: null,
     } as unknown as GameState;
 
     render(<BottomNav view="town" dispatch={mockDispatch} state={state} />);
@@ -80,9 +80,10 @@ describe("BottomNav", () => {
       orders: [
         { key: "itemA", need: 10 }
       ],
-      inventory: {
-        itemA: 5
-      }
+      inventory: { home: { itemA: 5 } },
+      mapCurrent: "home",
+      activeZone: "home",
+      farmRun: null,
     } as unknown as GameState;
 
     render(<BottomNav view="town" dispatch={mockDispatch} state={state} />);

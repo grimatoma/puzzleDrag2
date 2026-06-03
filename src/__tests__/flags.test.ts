@@ -80,7 +80,7 @@ describe("evaluateFlagTriggers", () => {
     const cases: Array<[Partial<FlagDef>, ReturnType<typeof baseState>, FlagEvent, boolean]> = [
       [{ triggers: [{ type: "resource_total", key: "tile_tree_oak", amount: 30 }] }, baseState({}, { inventory: { tile_tree_oak: 30 } }), { type: "resource_total", key: "tile_tree_oak", amount: 30 }, true],
       [{ triggers: [{ type: "resource_total", key: "tile_tree_oak", amount: 30 }] }, baseState({}, { inventory: { tile_tree_oak: 12 } }), { type: "resource_total", key: "tile_tree_oak", amount: 12 }, false],
-      [{ triggers: [{ type: "resource_total_multi", req: { tile_mine_stone: 20, tile_mine_coal: 10 } }] }, baseState({}, { inventory: { tile_mine_stone: 25, tile_mine_coal: 10 } }), { type: "resource_total_multi" }, true],
+      [{ triggers: [{ type: "resource_total_multi", req: { tile_mine_stone: 20, tile_mine_coal: 10 } }] }, baseState({}, { inventory: { home: { tile_mine_stone: 25, tile_mine_coal: 10 } } }), { type: "resource_total_multi" }, true],
       [{ triggers: [{ type: "craft_made", item: "bread", count: 1 }] }, baseState(), { type: "craft_made", item: "bread", count: 1 }, true],
       [{ triggers: [{ type: "act_entered", act: 3 }] }, baseState(), { type: "act_entered", act: 3 }, true],
       [{ triggers: [{ type: "bond_at_least", npc: "mira", amount: 8 }] }, baseState({}, withBonds({ mira: 8 })), { type: "session_start" }, true],

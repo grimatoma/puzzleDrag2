@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory, zoneProgress } from "../testUtils/inventory.js";
 import { gameReducer } from "../state.js";
 import {
   UPGRADE_THRESHOLDS,
@@ -19,11 +20,11 @@ import {
   tileFamilyResource,
 } from "../constants.js";
 
-// tile_grass_hay threshold is 6
-const HAY_THRESHOLD = UPGRADE_THRESHOLDS["tile_grass_hay"]; // 6
+// tile_grass_grass threshold is 6
+const HAY_THRESHOLD = UPGRADE_THRESHOLDS["tile_grass_grass"]; // 6
 
 function minState(overrides = {}) {
-  return {
+  const base = {
     biomeKey: "farm",
     view: "board",
     coins: 100,
@@ -31,8 +32,11 @@ function minState(overrides = {}) {
     xp: 0,
     turnsUsed: 0,
     seasonsCycled: 1, // Summer — no seasonal modifiers
-    inventory: {},
+    inventory: { home: {} },
     resourceProgress: {},
+    mapCurrent: "home",
+    activeZone: "home",
+    farmRun: null,
     orders: [],
     tools: { clear: 0, basic: 0, rare: 0, shuffle: 0 },
     built: {},
@@ -42,15 +46,26 @@ function minState(overrides = {}) {
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
     almanac: { xp: 0, level: 1 },
-    ...overrides,
   };
+  const { inventory: invOverride, resourceProgress: progOverride, seasonStats: seasonOverride, ...rest } = overrides;
+  let state = { ...base, ...rest };
+  if (invOverride && typeof invOverride === "object") {
+    state = patchInventory(state, invOverride);
+  }
+  if (progOverride && typeof progOverride === "object") {
+    state = { ...state, resourceProgress: { home: progOverride } };
+  }
+  if (seasonOverride && typeof seasonOverride === "object") {
+    state = { ...state, seasonStats: { ...base.seasonStats, ...seasonOverride } };
+  }
+  return state;
 }
 
 function dispatchHayChain(state, chainLength) {
   return gameReducer(state, {
     type: "CHAIN_COLLECTED",
     payload: {
-      key: "tile_grass_hay",
+      key: "tile_grass_grass",
       gained: chainLength,
       upgrades: 0,
       value: 1,
@@ -65,9 +80,9 @@ describe("resourceProgress — accumulation (no rollover)", () => {
     expect(HAY_THRESHOLD).toBe(6); // guard: confirm threshold hasn't changed
     const s0 = minState();
     const s1 = dispatchHayChain(s0, 4);
-    expect(s1.resourceProgress.hay_bundle).toBe(4);
-    expect(s1.inventory.hay_bundle).toBeFalsy();
-    expect(s1.inventory.tile_grass_hay).toBeUndefined();
+    expect(zoneProgress(s1).hay_bundle).toBe(4);
+    expect(inv(s1).hay_bundle).toBeFalsy();
+    expect(inv(s1).tile_grass_grass).toBeUndefined();
   });
 });
 
@@ -75,8 +90,8 @@ describe("resourceProgress — rollover (single)", () => {
   it("chain of 7 hay (threshold 6): inventory += 1, progress === 1", () => {
     const s0 = minState();
     const s1 = dispatchHayChain(s0, 7);
-    expect(s1.resourceProgress.hay_bundle).toBe(1); // 7 % 6 = 1
-    expect(s1.inventory.hay_bundle).toBe(1);
+    expect(zoneProgress(s1).hay_bundle).toBe(1); // 7 % 6 = 1
+    expect(inv(s1).hay_bundle).toBe(1);
   });
 });
 
@@ -84,8 +99,8 @@ describe("resourceProgress — multi-rollover", () => {
   it("chain of 13 hay: inventory += 2, progress === 1 (13 % 6 = 1, floor(13/6) = 2)", () => {
     const s0 = minState();
     const s1 = dispatchHayChain(s0, 13);
-    expect(s1.resourceProgress.hay_bundle).toBe(1); // 13 % 6 = 1
-    expect(s1.inventory.hay_bundle).toBe(2);
+    expect(zoneProgress(s1).hay_bundle).toBe(1); // 13 % 6 = 1
+    expect(inv(s1).hay_bundle).toBe(2);
   });
 });
 
@@ -93,13 +108,13 @@ describe("resourceProgress — cross-chain persistence", () => {
   it("two chains of 4 each → running total 8: inventory === 1, progress === 2", () => {
     // First chain: progress 0 → 4 (no rollover)
     const s1 = dispatchHayChain(minState(), 4);
-    expect(s1.resourceProgress.hay_bundle).toBe(4);
-    expect(s1.inventory.hay_bundle).toBeFalsy();
+    expect(zoneProgress(s1).hay_bundle).toBe(4);
+    expect(inv(s1).hay_bundle).toBeFalsy();
 
     // Second chain: progress 4 + 4 = 8 → floor(8/6)=1 rollover, 8%6=2 remainder
     const s2 = dispatchHayChain(s1, 4);
-    expect(s2.resourceProgress.hay_bundle).toBe(2);
-    expect(s2.inventory.hay_bundle).toBe(1);
+    expect(zoneProgress(s2).hay_bundle).toBe(2);
+    expect(inv(s2).hay_bundle).toBe(1);
   });
 });
 
@@ -123,9 +138,9 @@ describe("resourceProgress — TILES_WITH_CUSTOM_OUTPUT (tile_special_dirt)", ()
       },
     });
     // resourceProgress.dirt must be unchanged (still 0 / falsy)
-    expect(s1.resourceProgress.dirt ?? 0).toBe(0);
+    expect(zoneProgress(s1).dirt ?? 0).toBe(0);
     // dirt must not appear in inventory either
-    expect(s1.inventory.dirt).toBeUndefined();
+    expect(inv(s1).dirt).toBeUndefined();
   });
 });
 
@@ -146,7 +161,7 @@ describe("resourceProgress — cap interaction", () => {
       floaters: [],
     });
     const s1 = dispatchHayChain(s0, 13);
-    expect(s1.inventory.hay_bundle).toBe(RESOURCE_CAP);
+    expect(inv(s1).hay_bundle).toBe(RESOURCE_CAP);
     // capFloaters flag set so a second overflow this season stays silent
     expect(s1.seasonStats?.capFloaters?.hay_bundle).toBe(true);
     // At least one "stash full" floater emitted
@@ -163,7 +178,7 @@ describe("resourceProgress — cap interaction", () => {
     });
     const s1 = dispatchHayChain(s0, 1);
     // Still capped
-    expect(s1.inventory.hay_bundle).toBe(RESOURCE_CAP);
+    expect(inv(s1).hay_bundle).toBe(RESOURCE_CAP);
     // No new cap floater (capFloater flag already set)
     const capFloaterCount = s1.floaters?.filter((f) => /stash full/.test(f.text)).length ?? 0;
     expect(capFloaterCount).toBe(0);

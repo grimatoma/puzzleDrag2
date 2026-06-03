@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { inv } from "../../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
@@ -74,7 +75,7 @@ test('CRAFT_TOOL: building a Workshop tool from WORKSHOP_RECIPES debits inventor
   await dispatchAction(page, { type: 'CRAFT_TOOL', id: 'rake' });
   await waitForState(page, (s) => (s.tools?.rake ?? 0) === 1);
   const s = await getReactState(page);
-  expect(s.inventory.wood_plank).toBe(0);
+  expect(inv(s).wood_plank).toBe(0);
 });
 
 test('CRAFT_TOOL with no workshop is rejected', async ({ page }) => {
@@ -88,5 +89,5 @@ test('CRAFT_TOOL with no workshop is rejected', async ({ page }) => {
   await page.waitForTimeout(150);
   const s = await getReactState(page);
   expect(s.tools?.rake ?? 0).toBe(0);
-  expect(s.inventory.wood_plank).toBe(5);
+  expect(inv(s).wood_plank).toBe(5);
 });

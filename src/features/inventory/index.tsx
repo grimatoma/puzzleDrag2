@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Dispatch, GameState } from "../../types/state";
+import { zoneInventory, zoneResourceProgress } from "../../state/zoneInventory.js";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
 import { INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
@@ -149,7 +150,9 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   const searchOpen = searchOpenProp ?? false;
   const [viewMode, toggleViewMode] = useViewMode();
   const query = useDebounced(queryInput, 100);
-  const recentOrder = useRecentOrder(state.inventory);
+  const settlementInv = zoneInventory(state);
+  const settlementProgress = zoneResourceProgress(state);
+  const recentOrder = useRecentOrder(settlementInv);
 
   useEffect(() => {
     if (!searchOpen) {
@@ -203,7 +206,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
             </div>
           </div>
           <InventoryGrid
-            inventory={state.inventory}
+            inventory={settlementInv}
             biomeKey={biomeKey}
             orders={state.orders}
             state={state}
@@ -214,7 +217,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
             recentOrder={recentOrder}
             compact={isPhone}
             viewMode={viewMode}
-            resourceProgress={state.resourceProgress ?? {}}
+            resourceProgress={settlementProgress}
           />
         </div>
       </FeaturePanel.Body>

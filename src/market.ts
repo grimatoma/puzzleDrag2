@@ -1,5 +1,6 @@
 import { MARKET_PRICES } from "./constants.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
+import { zoneInventory } from "./state/zoneInventory.js";
 import type { GameState, Action } from "./types/state.js";
 
 export interface MarketEvent {
@@ -11,7 +12,7 @@ export interface MarketEvent {
 
 export const MARKET_EVENTS: MarketEvent[] = [
   { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } },
-  { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { tile_grass_hay: 0.5, tile_grain_wheat: 0.5 } },
+  { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { tile_grass_grass: 0.5, tile_grain_wheat: 0.5 } },
   { id: "iron_rush",     label: "Iron Rush",     desc: "The King's army is buying iron. Ingot prices are soaring!", mults: { tile_mine_iron_ore: 2.5 } },
   { id: "gem_fever",     label: "Gem Fever",     desc: "A rich merchant is in town. Gems are trading at a premium.", mults: { tile_mine_gem: 1.8 } },
 ];
@@ -66,22 +67,26 @@ export function applyTrade(state: GameState, action: Action): GameState {
   const { key, qty } = payload;
   const p = state.market.prices[key];
   if (!p) return state;
+  const tradeZone = (state.mapCurrent as string | undefined) ?? "home";
+  const tradeInv = zoneInventory(state, tradeZone);
   if (action.type === "BUY_RESOURCE") {
     const cost = p.buy * qty;
     if (state.coins < cost) return state;
+    const nextInv = inventoryPut({ ...tradeInv }, key, inventoryQty(tradeInv, key) + qty);
     return {
       ...state,
       coins: state.coins - cost,
-      inventory: inventoryPut({ ...state.inventory }, key, inventoryQty(state.inventory, key) + qty),
+      inventory: { ...state.inventory, [tradeZone]: nextInv },
     };
   }
   if (action.type === "SELL_RESOURCE") {
-    const owned = inventoryQty(state.inventory, key);
+    const owned = inventoryQty(tradeInv, key);
     if (owned < qty) return state;
+    const nextInv = inventoryPut({ ...tradeInv }, key, owned - qty);
     return {
       ...state,
       coins: state.coins + p.sell * qty,
-      inventory: inventoryPut({ ...state.inventory }, key, owned - qty),
+      inventory: { ...state.inventory, [tradeZone]: nextInv },
     };
   }
   return state;

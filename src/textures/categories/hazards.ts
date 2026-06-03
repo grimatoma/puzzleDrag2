@@ -7,177 +7,68 @@ function drawShadow(ctx: CanvasRenderingContext2D, w = 22, h = 4) {
   ctx.fill();
 }
 
-function drawRatsHazard(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 22, 4);
-  // Rat body (sitting)
-  const body = ctx.createRadialGradient(-4, 0, 4, 0, 4, 18);
-  body.addColorStop(0, "#7a6048");
-  body.addColorStop(0.6, "#3a2818");
-  body.addColorStop(1, "#1a0e08");
+// A single, clean side-profile rat facing left, drawn around its own origin.
+// Shared by the hero rat and its smaller companion so both read identically.
+function drawOneRat(ctx: CanvasRenderingContext2D, light: string, mid: string, outline: string) {
+  // Tail first (curls away behind the body to the right).
+  ctx.strokeStyle = mid; ctx.lineWidth = 2.4; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(13, 6);
+  ctx.bezierCurveTo(23, 2, 23, 15, 17, 15);
+  ctx.stroke();
+  // Body (rounded, gradient for volume).
+  const body = ctx.createRadialGradient(-3, -2, 3, 1, 4, 16);
+  body.addColorStop(0, light);
+  body.addColorStop(0.7, mid);
+  body.addColorStop(1, outline);
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.ellipse(0, 6, 16, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(2, 4, 14, 10, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#0a0604";
-  ctx.lineWidth = 1.6;
-  ctx.stroke();
-  // Head
-  ctx.fillStyle = "#5a4830";
-  ctx.beginPath();
-  ctx.ellipse(-12, -2, 8, 7, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604";
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  // Snout (point)
-  ctx.fillStyle = "#5a4830";
-  ctx.beginPath();
-  ctx.moveTo(-18, -1);
-  ctx.lineTo(-22, 1);
-  ctx.lineTo(-18, 4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // Nose
-  ctx.fillStyle = "#e88898";
-  ctx.beginPath();
-  ctx.arc(-22, 1.5, 1.2, 0, Math.PI * 2);
-  ctx.fill();
-  // Whiskers (kept inside the safe area)
-  ctx.strokeStyle = "rgba(180,160,140,0.85)";
-  ctx.lineWidth = 0.6;
-  [[-22, 1, -26, -1], [-22, 1, -26, 3], [-22, 2, -26, 5]].forEach(([x1, y1, x2, y2]) => {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  });
-  // Ears (round)
-  ctx.fillStyle = "#5a4830";
-  ctx.beginPath();
-  ctx.ellipse(-10, -10, 4, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604";
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
+  ctx.strokeStyle = outline; ctx.lineWidth = 1.6; ctx.stroke();
+  // Big round ear.
+  ctx.fillStyle = mid;
+  ctx.beginPath(); ctx.ellipse(-8, -8, 5, 4.4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke();
   ctx.fillStyle = "#a86878";
+  ctx.beginPath(); ctx.ellipse(-8, -8, 2.8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+  // Head.
+  ctx.fillStyle = mid;
+  ctx.beginPath(); ctx.ellipse(-11, 0, 8, 7, -0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = 1.4; ctx.stroke();
+  // Pointed snout.
   ctx.beginPath();
-  ctx.ellipse(-10, -10, 2.4, 1.6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Beady red eye
+  ctx.moveTo(-16, 1); ctx.lineTo(-21, 3); ctx.lineTo(-16, 5); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Pink nose.
+  ctx.fillStyle = "#e88898";
+  ctx.beginPath(); ctx.arc(-21, 3, 1.2, 0, Math.PI * 2); ctx.fill();
+  // Beady red eye + glint.
   ctx.fillStyle = "#c83830";
-  ctx.beginPath();
-  ctx.arc(-14, -2, 1.4, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(-12, -1, 1.7, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#fffae0";
-  ctx.beginPath();
-  ctx.arc(-14.4, -2.4, 0.5, 0, Math.PI * 2);
-  ctx.fill();
-  // Teeth
+  ctx.beginPath(); ctx.arc(-12.5, -1.5, 0.6, 0, Math.PI * 2); ctx.fill();
+  // Buck teeth.
   ctx.fillStyle = "#fff080";
-  ctx.beginPath();
-  ctx.moveTo(-20, 3); ctx.lineTo(-18, 3); ctx.lineTo(-19, 5); ctx.closePath();
-  ctx.fill();
-  // Tail (curling)
-  ctx.strokeStyle = "#5a4830";
-  ctx.lineWidth = 2.6;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(14, 8);
-  ctx.bezierCurveTo(22, 4, 24, 18, 18, 20);
-  ctx.stroke();
-  ctx.strokeStyle = "#a87078";
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(14, 8);
-  ctx.bezierCurveTo(22, 4, 24, 18, 18, 20);
-  ctx.stroke();
-  // Feet
-  ctx.fillStyle = "#3a2010";
-  ctx.beginPath();
-  ctx.ellipse(-4, 16, 2.4, 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(8, 16, 2.4, 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Second rat — fully-drawn, smaller, positioned to the LOWER-RIGHT so it
-  // doesn't overlap the first rat's body. It sits behind/beside the main
-  // rat to read as "a swarm" not "a rat".
+  ctx.beginPath(); ctx.moveTo(-18, 5.2); ctx.lineTo(-15.4, 5.2); ctx.lineTo(-16.7, 7.6); ctx.closePath(); ctx.fill();
+  // Little feet.
+  ctx.fillStyle = outline;
+  ctx.beginPath(); ctx.ellipse(-3, 13.4, 2.4, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7, 13.4, 2.4, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawRatsHazard(ctx: CanvasRenderingContext2D) {
+  drawShadow(ctx, 22, 4);
+  // A smaller second rat, set clearly apart in the upper-right (a real gap, no
+  // body overlap) so the icon still reads "rats" without the two merging into
+  // one muddy blob at small sizes.
   ctx.save();
-  ctx.translate(15, 13);
+  ctx.translate(13, -12);
   ctx.scale(0.5, 0.5);
-  // Body
-  ctx.fillStyle = "#4a3828";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 14, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Head (turned right — so the two rats face opposite directions, which
-  // breaks any "single rat" reading)
-  ctx.fillStyle = "#3a2818";
-  ctx.beginPath();
-  ctx.ellipse(11, -3, 7, 6, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Pointed snout
-  ctx.fillStyle = "#3a2818";
-  ctx.beginPath();
-  ctx.moveTo(16, -3); ctx.lineTo(22, -1); ctx.lineTo(16, 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  // Pink nose
-  ctx.fillStyle = "#e88898";
-  ctx.beginPath(); ctx.arc(22, -1, 1.4, 0, Math.PI * 2); ctx.fill();
-  // Round ear
-  ctx.fillStyle = "#3a2818";
-  ctx.beginPath();
-  ctx.ellipse(11, -10, 4, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 0.9; ctx.stroke();
-  ctx.fillStyle = "#a86878";
-  ctx.beginPath();
-  ctx.ellipse(11, -10, 2.4, 1.6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Beady red eye
-  ctx.fillStyle = "#c83830";
-  ctx.beginPath(); ctx.arc(13, -4, 1.2, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#fffae0";
-  ctx.beginPath(); ctx.arc(12.6, -4.4, 0.4, 0, Math.PI * 2); ctx.fill();
-  // Long curling tail trailing away (off-screen feel)
-  ctx.strokeStyle = "#5a4830"; ctx.lineWidth = 2.4; ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-12, 4);
-  ctx.bezierCurveTo(-22, 10, -22, -4, -16, -8);
-  ctx.stroke();
-  // Feet
-  ctx.fillStyle = "#3a2010";
-  ctx.beginPath();
-  ctx.ellipse(-4, 10, 2.4, 1.4, 0, 0, Math.PI * 2);
-  ctx.ellipse( 6, 10, 2.4, 1.4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  drawOneRat(ctx, "#5a4634", "#392b1b", "#0a0604");
   ctx.restore();
-  // Third scurrying-rat silhouette in the lower-left foreground — gives the
-  // composition real depth and confirms "swarm".
-  ctx.save();
-  ctx.translate(-16, 16);
-  ctx.fillStyle = "rgba(30,18,8,0.85)";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 5, 2.8, -0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-5, -1, 2.4, 1.8, -0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(30,18,8,0.85)"; ctx.lineWidth = 1.0;
-  ctx.beginPath();
-  ctx.moveTo(4, 0);
-  ctx.bezierCurveTo(8, -1, 10, 3, 6, 4);
-  ctx.stroke();
-  ctx.fillStyle = "#e88898";
-  ctx.beginPath(); ctx.arc(-7, -1, 0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
+  // Hero rat — large, bold, unmistakable.
+  drawOneRat(ctx, "#7c6042", "#4a3826", "#0a0604");
 }
 
 function drawFireHazard(ctx: CanvasRenderingContext2D) {
@@ -244,83 +135,86 @@ function drawFireHazard(ctx: CanvasRenderingContext2D) {
 }
 
 function drawWolfHazard(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 22, 4);
-  // Helper to draw a single side-view wolf at the given anchor with the
-  // requested scale and tint. Drawn back-to-front so the foreground wolf
-  // overlaps the background one and the silhouette reads as a *pack*.
-  const drawOneWolf = (ax: number, ay: number, scale: number, tintDark: string, tintLight: string, outline: string) => {
-    ctx.save();
-    ctx.translate(ax, ay);
-    ctx.scale(scale, scale);
-    // Body
-    ctx.fillStyle = tintDark;
-    ctx.beginPath();
-    ctx.ellipse(0, 4, 13, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = outline; ctx.lineWidth = 1.4; ctx.stroke();
-    // Underbelly
-    ctx.fillStyle = tintLight;
-    ctx.beginPath();
-    ctx.ellipse(0, 8, 9, 2.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Legs (4, simple)
-    ctx.fillStyle = tintDark;
-    [-7, -3, 5, 9].forEach((lx) => {
-      ctx.fillRect(lx, 9, 2.4, 6);
-    });
-    ctx.strokeStyle = outline; ctx.lineWidth = 0.8;
-    [-7, -3, 5, 9].forEach((lx) => { ctx.strokeRect(lx, 9, 2.4, 6); });
-    // Tail — bushy, low
-    ctx.strokeStyle = tintDark; ctx.lineWidth = 4; ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(11, 2);
-    ctx.bezierCurveTo(17, -2, 18, 6, 16, 9);
-    ctx.stroke();
-    ctx.fillStyle = tintLight;
-    ctx.beginPath(); ctx.arc(16, 9, 1.4, 0, Math.PI * 2); ctx.fill();
-    // Head + muzzle
-    ctx.fillStyle = tintDark;
-    ctx.beginPath();
-    ctx.ellipse(-12, -1, 6, 5, -0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = outline; ctx.lineWidth = 1.2; ctx.stroke();
-    // Pointed muzzle
-    ctx.beginPath();
-    ctx.moveTo(-15, 2);
-    ctx.lineTo(-21, 0);
-    ctx.lineTo(-15, -2);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // Ears (two pointed triangles)
-    ctx.beginPath();
-    ctx.moveTo(-14, -6); ctx.lineTo(-12, -10); ctx.lineTo(-10, -5); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-10, -7); ctx.lineTo(-8, -11); ctx.lineTo(-7, -5); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // Inner ear blush
-    ctx.fillStyle = tintLight;
-    ctx.beginPath();
-    ctx.moveTo(-13, -7); ctx.lineTo(-12, -9); ctx.lineTo(-11, -6); ctx.closePath();
-    ctx.fill();
-    // Nose
-    ctx.fillStyle = outline;
-    ctx.beginPath();
-    ctx.ellipse(-21, 0, 1.4, 1, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Yellow glowing eye
-    ctx.fillStyle = "#f8d040";
-    ctx.beginPath();
-    ctx.arc(-12, -2, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = outline;
-    ctx.fillRect(-12.4, -3, 0.8, 2.2);
-    ctx.restore();
-  };
-  // Back-rank wolf (smaller, cooler grey)
-  drawOneWolf(10, 0, 0.7, "#3a3a40", "rgba(150,150,160,0.55)", "#0a0a0e");
-  // Front-rank wolf (large, leading the pack)
-  drawOneWolf(-2, 4, 1.0, "#5a5a62", "rgba(160,160,170,0.55)", "#1a1c20");
+  // One bold, front-facing snarling wolf head — reads instantly at any size
+  // (the old two-overlapping-wolves silhouette muddied into a grey blob).
+  drawShadow(ctx, 18, 4);
+  const OUT = "#15161b";
+
+  // Big pointed ears (behind the head).
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1.8; ctx.lineJoin = "round";
+  ctx.fillStyle = "#4b4b55";
+  ctx.beginPath(); ctx.moveTo(-13, -9); ctx.lineTo(-19, -24); ctx.lineTo(-3, -16); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(13, -9); ctx.lineTo(19, -24); ctx.lineTo(3, -16); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Inner ears.
+  ctx.fillStyle = "#26262d";
+  ctx.beginPath(); ctx.moveTo(-12, -11); ctx.lineTo(-15, -20); ctx.lineTo(-6, -15); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(12, -11); ctx.lineTo(15, -20); ctx.lineTo(6, -15); ctx.closePath(); ctx.fill();
+
+  // Head — one broad grey muzzle, gradient for volume.
+  const head = ctx.createRadialGradient(-5, -7, 4, 0, 0, 25);
+  head.addColorStop(0, "#73737d");
+  head.addColorStop(0.6, "#53535d");
+  head.addColorStop(1, "#34343c");
+  ctx.fillStyle = head;
+  ctx.beginPath();
+  ctx.moveTo(-16, -9);
+  ctx.bezierCurveTo(-19, 3, -13, 9, -7, 12);
+  ctx.bezierCurveTo(-7, 17, 7, 17, 7, 12);
+  ctx.bezierCurveTo(13, 9, 19, 3, 16, -9);
+  ctx.bezierCurveTo(10, -16, -10, -16, -16, -9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1.8; ctx.stroke();
+
+  // Jagged cheek fur tufts.
+  ctx.fillStyle = "#53535d"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-15, -1); ctx.lineTo(-22, 0); ctx.lineTo(-14, 4); ctx.closePath(); ctx.fill(); ctx.strokeStyle = OUT; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(15, -1); ctx.lineTo(22, 0); ctx.lineTo(14, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Lighter muzzle wedge.
+  ctx.fillStyle = "#9d9da7";
+  ctx.beginPath();
+  ctx.moveTo(0, -3);
+  ctx.bezierCurveTo(-6, 0, -5, 9, 0, 13);
+  ctx.bezierCurveTo(5, 9, 6, 0, 0, -3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Angry brows.
+  ctx.fillStyle = "#23232a";
+  ctx.beginPath(); ctx.moveTo(-12, -7); ctx.lineTo(-2, -3); ctx.lineTo(-2, -6.5); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(12, -7); ctx.lineTo(2, -3); ctx.lineTo(2, -6.5); ctx.closePath(); ctx.fill();
+
+  // Glowing yellow eyes + slit pupils + glint.
+  ctx.fillStyle = "#ffd23c";
+  ctx.beginPath(); ctx.ellipse(-7, -2, 2.7, 2.1, 0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7, -2, 2.7, 2.1, -0.35, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#1a1206";
+  ctx.beginPath(); ctx.ellipse(-7, -2, 0.8, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7, -2, 0.8, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath(); ctx.arc(-8, -3, 0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -3, 0.6, 0, Math.PI * 2); ctx.fill();
+
+  // Nose + snarl line.
+  ctx.fillStyle = OUT;
+  ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(-2.6, 3.4); ctx.lineTo(2.6, 3.4); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1.3; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(0, 8.5); ctx.stroke();
+
+  // Open snarling mouth with fangs.
+  ctx.fillStyle = "#1b0d0d";
+  ctx.beginPath();
+  ctx.moveTo(-7, 9);
+  ctx.quadraticCurveTo(0, 7.5, 7, 9);
+  ctx.quadraticCurveTo(4, 14.5, 0, 13.5);
+  ctx.quadraticCurveTo(-4, 14.5, -7, 9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#fdf6ec";
+  ([[-4.6, 9], [4.6, 9]] as [number, number][]).forEach(([x, y]) => {
+    ctx.beginPath(); ctx.moveTo(x - 1.5, y); ctx.lineTo(x + 1.5, y); ctx.lineTo(x, y + 3.4); ctx.closePath(); ctx.fill();
+  });
 }
 
 function drawSmokeHazard(ctx: CanvasRenderingContext2D) {

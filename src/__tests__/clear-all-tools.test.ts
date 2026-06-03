@@ -2,6 +2,7 @@
  * Generic clear_all tool power — driven by ITEMS.power.params.target (tile key).
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { ITEMS } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 import { clearTilesOfKey } from "../features/farm/tools.js";
@@ -25,12 +26,12 @@ describe("clearTilesOfKey", () => {
   it("clears only the requested tile type", () => {
     const s0 = {
       ...createInitialState(),
-      grid: makeGrid(["tile_veg_carrot", "tile_veg_carrot", "tile_grass_hay"]),
+      grid: makeGrid(["tile_veg_carrot", "tile_veg_carrot", "tile_grass_grass"]),
       inventory: {},
     };
     const { state: s1, collected } = clearTilesOfKey(s0, "tile_veg_carrot");
     expect(collected).toBe(2);
-    expect(s1.inventory.tile_veg_carrot).toBe(2);
+    expect(inv(s1).tile_veg_carrot).toBe(2);
   });
 });
 
@@ -46,11 +47,11 @@ describe("USE_TOOL — clear_all via power.params.target", () => {
     };
     const used = rootReducer(withCarrots, { type: "USE_TOOL", payload: { id: "hoe" } });
     expect(used.tools.hoe).toBe(0);
-    expect(used.inventory.tile_veg_carrot).toBe(2);
+    expect(inv(used).tile_veg_carrot).toBe(2);
 
     const empty = {
       ...createInitialState(),
-      grid: makeGrid(["tile_grass_hay"]),
+      grid: makeGrid(["tile_grass_grass"]),
       tools: { ...createInitialState().tools, hoe: 1 },
     };
     const refunded = rootReducer(empty, { type: "USE_TOOL", payload: { id: "hoe" } });

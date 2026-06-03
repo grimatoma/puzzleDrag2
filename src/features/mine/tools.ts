@@ -41,7 +41,7 @@ export function applyTransformAdjacent(board: Board, row: number, col: number, r
 /**
  * Board-wide variant of {@link applyTransformAdjacent} — replaces every
  * matching tile regardless of distance. Used by Drill (special_dirt →
- * tile_mine_stone) and Trimmer (trees → tile_grass_hay).
+ * tile_mine_stone) and Trimmer (trees → tile_grass_grass).
  */
 export function applyTransformAll(board: Board, fromKeys: string[], toKey: string): TransformResult {
   return _applyTransformAll(board, fromKeys, toKey);

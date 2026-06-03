@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { inv } from "../../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
@@ -40,8 +41,8 @@ test('Bakery: crafting bread debits flour+egg and credits inventory.bread', asyn
 
   await waitForState(page, (s) => (s.inventory?.bread ?? 0) >= 1);
   const s = await getReactState(page);
-  expect(s.inventory.grain_flour).toBe(3);
-  expect(s.inventory.bird_egg).toBe(1);
+  expect(inv(s).grain_flour).toBe(3);
+  expect(inv(s).bird_egg).toBe(1);
   expect((s.craftedTotals?.bread ?? 0) + (s.craftedTotals?.rec_bread ?? 0)).toBe(1);
 });
 
@@ -49,7 +50,7 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { wood_plank: 2, tile_mine_stone: 2 },
+    inventory: { home: { wood_plank: 2, tile_mine_stone: 2 } },
     level: 3, // tier-2 recipes require level ≥ 3
   });
   await openCraftingTab(page, 'workshop');
@@ -61,15 +62,15 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
   const s = await getReactState(page);
   // Routing assertion: NOT in inventory under the recipe key.
   expect(s.inventory?.water_pump ?? 0).toBe(0);
-  expect(s.inventory.wood_plank).toBe(1);
-  expect(s.inventory.tile_mine_stone).toBe(1);
+  expect(inv(s).wood_plank).toBe(1);
+  expect(inv(s).tile_mine_stone).toBe(1);
 });
 
 test('Workshop: crafting explosives also routes to state.tools', async ({ page }) => {
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { tile_grass_hay: 2, tile_special_dirt: 2 },
+    inventory: { home: { tile_grass_grass: 2, tile_special_dirt: 2 } },
     level: 3,
   });
   await openCraftingTab(page, 'workshop');
@@ -104,5 +105,5 @@ test('CRAFTING/CRAFT_RECIPE dispatch with no station built is rejected', async (
   await page.waitForTimeout(150);
   const s = await getReactState(page);
   expect(s.inventory?.bread ?? 0).toBe(0);
-  expect(s.inventory.grain_flour).toBe(6);
+  expect(inv(s).grain_flour).toBe(6);
 });

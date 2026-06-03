@@ -14,13 +14,11 @@ function workerState(coins) {
   return {
     ...createInitialState(),
     coins,
-    inventory: {
-      tile_grass_hay: 10000,
+    inventory: { home: { tile_grass_grass: 10000,
       tile_tree_oak: 10000,
       tile_mine_stone: 10000,
       flour: 10000,
-      eggs: 10000,
-    },
+      eggs: 10000, } },
   };
 }
 
@@ -54,9 +52,9 @@ describe("Phase 36 — nextHireCost helper", () => {
   });
 
   it("ramps resource costs every three hires", () => {
-    expect(nextHireResourceCost(FARMER, 0)).toEqual({ tile_grass_hay: 2 });
-    expect(nextHireResourceCost(FARMER, 2)).toEqual({ tile_grass_hay: 2 });
-    expect(nextHireResourceCost(FARMER, 3)).toEqual({ tile_grass_hay: 4 });
+    expect(nextHireResourceCost(FARMER, 0)).toEqual({ tile_grass_grass: 2 });
+    expect(nextHireResourceCost(FARMER, 2)).toEqual({ tile_grass_grass: 2 });
+    expect(nextHireResourceCost(FARMER, 3)).toEqual({ tile_grass_grass: 4 });
     expect(nextHireResourceCost(BAKER, 6)).toEqual({ flour: 3, eggs: 3 });
   });
 

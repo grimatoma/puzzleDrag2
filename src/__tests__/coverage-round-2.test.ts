@@ -3,6 +3,7 @@
 // (settings/market/mood). Castle was 35%, story 54%, tutorial 72%.
 
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import type { Action } from "../types/state.js";
 import { reduce as castleReduce } from "../features/castle/slice.js";
 import { reduce as storyReduce } from "../features/story/slice.js";
@@ -16,7 +17,7 @@ describe("castle slice — coverage gaps", () => {
     contributed: { soup: 0, meat: 0, tile_mine_coal: 0 },
   });
   const baseState = (over: Record<string, unknown> = {}) =>
-    mergeTestState({ castle: baseCastle(), inventory: { soup: 5, meat: 5, tile_mine_coal: 5 }, ...over });
+    mergeTestState({ castle: baseCastle(), inventory: { home: { soup: 5, meat: 5, tile_mine_coal: 5 } }, ...over });
 
   it("non-CASTLE/CONTRIBUTE action returns state unchanged", () => {
     const s0 = baseState();
@@ -47,7 +48,7 @@ describe("castle slice — coverage gaps", () => {
   });
 
   it("CASTLE/CONTRIBUTE with insufficient inventory is rejected", () => {
-    const s0 = baseState({ inventory: { soup: 0 } });
+    const s0 = baseState({ inventory: { home: { soup: 0 } } });
     const s1 = castleReduce(s0, {
       type: "CASTLE/CONTRIBUTE",
       payload: { key: "soup", amount: 1 },
@@ -72,7 +73,7 @@ describe("castle slice — coverage gaps", () => {
       type: "CASTLE/CONTRIBUTE",
       payload: { key: "soup", amount: 3 },
     } as Action);
-    expect(s1.inventory.soup).toBe(2);
+    expect(inv(s1).soup).toBe(2);
     expect(s1.castle.contributed.soup).toBe(3);
   });
 
@@ -82,22 +83,22 @@ describe("castle slice — coverage gaps", () => {
       type: "CASTLE/CONTRIBUTE",
       payload: { key: "coal", amount: 2 },
     } as Action);
-    expect(s1.inventory.tile_mine_coal).toBe(3);
+    expect(inv(s1).tile_mine_coal).toBe(3);
     expect(s1.castle.contributed.coal).toBe(2);
   });
 
   it("castleOf defensive accessor handles a missing castle slice on old saves", () => {
-    const s0 = unsafeGameState({ inventory: { soup: 5 } });
+    const s0 = unsafeGameState({ inventory: { home: { soup: 5 } } });
     const s1 = castleReduce(s0, {
       type: "CASTLE/CONTRIBUTE",
       payload: { key: "soup", amount: 2 },
     } as Action);
     expect(s1.castle.contributed.soup).toBe(2);
-    expect(s1.inventory.soup).toBe(3);
+    expect(inv(s1).soup).toBe(3);
   });
 
   it("castleOf defensive accessor handles a malformed castle.contributed", () => {
-    const s0 = unsafeGameState({ castle: { contributed: null }, inventory: { soup: 5 } });
+    const s0 = unsafeGameState({ castle: { contributed: null }, inventory: { home: { soup: 5 } } });
     const s1 = castleReduce(s0, {
       type: "CASTLE/CONTRIBUTE",
       payload: { key: "soup", amount: 1 },

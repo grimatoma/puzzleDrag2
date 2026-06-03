@@ -5,12 +5,13 @@
  * so rollFarmHazard kept spawning hazards during mine sessions.
  */
 import { describe, it, expect } from "vitest";
+import { patchInventory } from "../testUtils/inventory.js";
 import { createInitialState, rootReducer } from "../state.js";
 import { rollFarmHazard } from "../features/farm/hazards.js";
 
 function makeGrid(rows = 4, cols = 4) {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ key: "tile_grass_hay" })),
+    Array.from({ length: cols }, () => ({ key: "tile_grass_grass" })),
   );
 }
 
@@ -51,7 +52,7 @@ describe("QA-Pass4 Fix1 — SWITCH_BIOME syncs state.biome", () => {
 
 describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
   it("EXPEDITION/DEPART to mine sets state.biome to 'mine'", () => {
-    const s0 = {
+    const base = {
       ...createInitialState(),
       level: 5,
       mapCurrent: "quarry",
@@ -59,19 +60,19 @@ describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
       biomeKey: "farm",
       biome: "farm",
       story: { flags: { mine_unlocked: true } },
-      inventory: { ...createInitialState().inventory, bread: 5 },
       settlements: {
         ...createInitialState().settlements,
         quarry: { founded: true, biome: "tundra" },
       },
     };
+    const s0 = { ...base, ...patchInventory(base, { bread: 5 }, "quarry") };
     const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 3 } } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
   });
 
   it("EXPEDITION/DEPART with supplies sets state.biome to 'mine'", () => {
-    const s0 = {
+    const base = {
       ...createInitialState(),
       level: 5,
       mapCurrent: "quarry",
@@ -79,12 +80,12 @@ describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
       biomeKey: "farm",
       biome: "farm",
       story: { flags: { mine_unlocked: true } },
-      inventory: { ...createInitialState().inventory, supplies: 5 },
       settlements: {
         ...createInitialState().settlements,
         quarry: { founded: true, biome: "tundra" },
       },
     };
+    const s0 = { ...base, ...patchInventory(base, { supplies: 5 }, "quarry") };
     const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 3 } } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
