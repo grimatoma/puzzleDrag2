@@ -117,6 +117,14 @@ describe("Phase 4c entity body files", () => {
     ["tools", "axe"],
     ["zones", "meadow"],
     ["zones", "quarry"],
+    ["zones", "orchard"],
+    ["zones", "crossroads"],
+    ["zones", "caves"],
+    ["zones", "fairground"],
+    ["zones", "forge"],
+    ["zones", "pit"],
+    ["zones", "harbor"],
+    ["zones", "oldcapital"],
   ];
 
   for (const [concept, key] of entries) {
