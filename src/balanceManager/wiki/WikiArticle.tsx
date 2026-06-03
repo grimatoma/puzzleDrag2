@@ -66,8 +66,8 @@ import { entityAccent } from "./conceptAccent.js";
  * icon+count costs or a recipe flow. Returns null when the concept has no
  * at-a-glance visual (so the caller can skip the whole section + heading).
  *
- * Zones intentionally render their town map in the Infobox (via EntityVisual),
- * so here we only surface the entry cost — not the map.
+ * Zones render their cartography map icon in the Infobox (via EntityVisual),
+ * so here we only surface the entry cost — not the icon.
  */
 function renderAtAGlance(
   conceptId: string,
