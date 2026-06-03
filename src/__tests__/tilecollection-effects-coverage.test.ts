@@ -19,22 +19,22 @@ describe("discoverTileTypesFromChain", () => {
   });
 
   it("does not re-discover already-known ids", () => {
-    // tile_grain_wheat is the chain-method discovery for tile_grass_hay (chainLengthOf).
+    // tile_grain_wheat is the chain-method discovery for tile_grass_grass (chainLengthOf).
     const state = {
       tileCollection: { discovered: { tile_grain_wheat: true } },
     };
-    const r = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_hay", chainLength: 99 });
+    const r = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_grass", chainLength: 99 });
     expect(r.discoveredIds).not.toContain("tile_grain_wheat");
   });
 
   it("requires chainLength >= chainLength threshold", () => {
-    // tile_grain_wheat needs chain ≥ 6 of tile_grass_hay
+    // tile_grain_wheat needs chain ≥ 6 of tile_grass_grass
     const state = { tileCollection: { discovered: {} } };
-    const lo = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_hay", chainLength: 3 });
+    const lo = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_grass", chainLength: 3 });
     expect(lo.discoveredIds).toEqual([]);
 
-    const hi = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_hay", chainLength: 99 });
-    // tile_grass_meadow is also chain-method on tile_grass_hay, with a different chainLength.
+    const hi = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_grass", chainLength: 99 });
+    // tile_grass_meadow is also chain-method on tile_grass_grass, with a different chainLength.
     // The order returned is tier ascending then alphabetical.
     expect(hi.discoveredIds).toContain("tile_grain_wheat");
     // newDiscoveredMap is a fresh object (not the same as `known`).
@@ -43,7 +43,7 @@ describe("discoverTileTypesFromChain", () => {
 
   it("missing tileCollection slice falls back to empty discovered map", () => {
     const state = {}; // no tileCollection
-    const r = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_hay", chainLength: 99 });
+    const r = discoverTileTypesFromChain(state, { resourceKey: "tile_grass_grass", chainLength: 99 });
     // Whatever it discovers, it should not throw.
     expect(Array.isArray(r.discoveredIds)).toBe(true);
   });
@@ -51,7 +51,7 @@ describe("discoverTileTypesFromChain", () => {
 
 describe("getActivePool", () => {
   const stateWith = (active = {}, registry = {}) => ({
-    tileCollection: { activeByCategory: { grass: "tile_grass_hay", wood: "tile_tree_oak", grain: "tile_grain_wheat", berry: "berry", bird: "tile_bird_pheasant", vegetables: "tile_veg_carrot", fruits: "tile_fruit_apple", flowers: "tile_flower_pansy", trees: "tile_tree_oak", herd_animals: "tile_herd_pig", cattle: "tile_cattle_cow", mounts: "tile_mount_horse", ...active } },
+    tileCollection: { activeByCategory: { grass: "tile_grass_grass", wood: "tile_tree_oak", grain: "tile_grain_wheat", berry: "berry", bird: "tile_bird_pheasant", vegetables: "tile_veg_carrot", fruits: "tile_fruit_apple", flowers: "tile_flower_pansy", trees: "tile_tree_oak", herd_animals: "tile_herd_pig", cattle: "tile_cattle_cow", mounts: "tile_mount_horse", ...active } },
     registry,
   });
 
@@ -64,24 +64,24 @@ describe("getActivePool", () => {
   it("drops slots whose category is disabled (active=null)", () => {
     const s = stateWith({ grass: null, trees: null });
     const pool = getActivePool(s, "farm");
-    expect(pool).not.toContain("tile_grass_hay");
+    expect(pool).not.toContain("tile_grass_grass");
     expect(pool).not.toContain("tile_grass_meadow");
     expect(pool).not.toContain("tile_tree_oak");
   });
 
   it("worker pool_weight only applies when matching key is active in its category", () => {
-    const s = stateWith({ grass: "tile_grass_meadow" }, { effectivePoolWeights: { tile_grass_hay: 3 } });
+    const s = stateWith({ grass: "tile_grass_meadow" }, { effectivePoolWeights: { tile_grass_grass: 3 } });
     const pool = getActivePool(s, "farm");
-    // tile_grass_hay isn't active so the boost is dropped.
-    expect(pool.filter((k) => k === "tile_grass_hay")).toHaveLength(0);
+    // tile_grass_grass isn't active so the boost is dropped.
+    expect(pool.filter((k) => k === "tile_grass_grass")).toHaveLength(0);
   });
 
   it("worker pool_weight applies when matching key IS active", () => {
-    const s = stateWith({}, { effectivePoolWeights: { tile_grass_hay: 3 } });
+    const s = stateWith({}, { effectivePoolWeights: { tile_grass_grass: 3 } });
     const pool = getActivePool(s, "farm");
-    // 3 extra tile_grass_hay copies show up beyond the base pool count.
-    const baseCount = 3; // base FARM_TILE_POOL has 3 tile_grass_hay
-    expect(pool.filter((k) => k === "tile_grass_hay").length).toBe(baseCount + 3);
+    // 3 extra tile_grass_grass copies show up beyond the base pool count.
+    const baseCount = 3; // base FARM_TILE_POOL has 3 tile_grass_grass
+    expect(pool.filter((k) => k === "tile_grass_grass").length).toBe(baseCount + 3);
   });
 
   it("biomeKey unknown returns empty pool", () => {
@@ -134,7 +134,7 @@ describe("getCategoryViewModel", () => {
   it("default-method row always reads 'always available'", () => {
     const state = { tileCollection: { discovered: {} } };
     const rows = getCategoryViewModel(state, "grass");
-    const hay = rows.find((r) => r.id === "tile_grass_hay");
+    const hay = rows.find((r) => r.id === "tile_grass_grass");
     expect(hay.status).toBe("Default — always available");
   });
 });

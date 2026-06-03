@@ -16,16 +16,16 @@ describe("Phase 5.5 — Research timer (cumulative, global)", () => {
   });
 
   it("B: chain of prerequisite increments progress and accumulates", () => {
-    const a1 = rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 8, chainLength: 8, upgrades: 0, value: 1 } });
+    const a1 = rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 8, chainLength: 8, upgrades: 0, value: 1 } });
     expect(a1.tileCollection.researchProgress.tile_grass_spiky).toBe(8);
-    const a2 = rootReducer(a1, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
+    const a2 = rootReducer(a1, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
     expect(a2.tileCollection.researchProgress.tile_grass_spiky).toBe(13);
   });
 
   it("C: unrelated chain does not move unrelated counters", () => {
     const a2 = rootReducer(
-      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
-      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
+      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
+      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
     );
     const cBefore = a2.tileCollection.researchProgress.tile_grass_spiky;
     // Chain an unrelated resource (tile_veg_carrot drives tile_veg_mushroom research,
@@ -44,7 +44,7 @@ describe("Phase 5.5 — Research timer (cumulative, global)", () => {
         researchProgress: { ...base.tileCollection.researchProgress, tile_grass_spiky: wheatThresh - 1 },
       },
     };
-    const d1 = rootReducer(d0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
+    const d1 = rootReducer(d0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
     expect(d1.tileCollection.discovered.tile_grass_spiky).toBe(true);
     expect(d1.bubble).toBeTruthy();
     expect(/New tile type: Spiky Grass/i.test(d1.bubble.text)).toBe(true);
@@ -59,10 +59,10 @@ describe("Phase 5.5 — Research timer (cumulative, global)", () => {
         researchProgress: { ...base.tileCollection.researchProgress, tile_grass_spiky: wheatThresh - 1 },
       },
     };
-    const d1 = rootReducer(d0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
+    const d1 = rootReducer(d0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
     // Clear the stale discovery bubble from d1 before testing no-re-fire
     const d1Clean = { ...d1, bubble: null };
-    const e1 = rootReducer(d1Clean, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 9, chainLength: 9, upgrades: 0, value: 1 } });
+    const e1 = rootReducer(d1Clean, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 9, chainLength: 9, upgrades: 0, value: 1 } });
     expect(e1.tileCollection.researchProgress.tile_grass_spiky).toBe(d1.tileCollection.researchProgress.tile_grass_spiky);
     const noDoubleDisc = !e1.bubble || !/New tile type: Spiky Grass/i.test(e1.bubble?.text ?? "");
     expect(noDoubleDisc).toBe(true);
@@ -70,8 +70,8 @@ describe("Phase 5.5 — Research timer (cumulative, global)", () => {
 
   it("F: LOCKED — save/reload preserves cumulative research progress", () => {
     const a2 = rootReducer(
-      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
-      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
+      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
+      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
     );
     const saved = JSON.stringify(a2);
     const rehydrated = JSON.parse(saved);
@@ -80,8 +80,8 @@ describe("Phase 5.5 — Research timer (cumulative, global)", () => {
 
   it("G: SESSION_START never zeroes research progress", () => {
     const a2 = rootReducer(
-      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
-      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
+      rootReducer(base, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 8, chainLength: 8, upgrades: 0, value: 1 } }),
+      { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_grass", gained: 5, chainLength: 5, upgrades: 0, value: 1 } }
     );
     const g1 = rootReducer(a2, { type: "SESSION_START" });
     expect(g1.tileCollection.researchProgress.tile_grass_spiky).toBe(13);

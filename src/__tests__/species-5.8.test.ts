@@ -8,22 +8,22 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
   // and break strict same-reference assertions.
   const base = { ...rawBase, tutorial: { ...(rawBase.tutorial ?? {}), seen: true, active: false } };
 
-  it("A: fresh save — hay is default-active, others locked with correct status strings", () => {
+  it("A: fresh save — grass is default-active, others locked with correct status strings", () => {
     const grassRows = getCategoryViewModel(base, "grass");
-    const hayRow = grassRows.find((r) => r.id === "tile_grass_hay");
+    const grassRow = grassRows.find((r) => r.id === "tile_grass_grass");
     const meadowRow = grassRows.find((r) => r.id === "tile_grass_meadow");
     const spikyRow = grassRows.find((r) => r.id === "tile_grass_spiky");
 
-    expect(hayRow.active).toBe(true);
-    expect(hayRow.locked).toBe(false);
-    expect(hayRow.status).toBe("Default — always available");
+    expect(grassRow.active).toBe(true);
+    expect(grassRow.locked).toBe(false);
+    expect(grassRow.status).toBe("Default — always available");
 
     expect(meadowRow.active).toBe(false);
     expect(meadowRow.locked).toBe(true);
-    expect(meadowRow.status).toBe("Locked — chain 20 hay to discover");
+    expect(meadowRow.status).toBe("Locked — chain 20 grass to discover");
 
-    // Display strips the catalog category prefix → user sees "hay" not "tile_grass_hay".
-    expect(spikyRow.status).toBe("Researching hay: 0 / 50");
+    // Display strips the catalog category prefix → user sees "grass" not "tile_grass_grass".
+    expect(spikyRow.status).toBe("Researching grass: 0 / 50");
   });
 
   it("B: chain-discovered tile type shows discovered status", () => {
@@ -35,7 +35,7 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
     const meadowB = bRows.find((r) => r.id === "tile_grass_meadow");
     expect(meadowB.locked).toBe(false);
     expect(meadowB.active).toBe(false);
-    expect(/Discovered — chain 20 hay/.test(meadowB.status)).toBe(true);
+    expect(/Discovered — chain 20 grass/.test(meadowB.status)).toBe(true);
   });
 
   it("C: in-progress research surfaces the live counter", () => {
@@ -48,7 +48,7 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
     };
     const grassRows = getCategoryViewModel(c0, "grass");
     const spikyRow = grassRows.find((r) => r.id === "tile_grass_spiky");
-    expect(spikyRow.status).toBe("Researching hay: 12 / 50");
+    expect(spikyRow.status).toBe("Researching grass: 12 / 50");
   });
 
   it("D: dispatch SET_ACTIVE_TILE with discovered tile type toggles active", () => {

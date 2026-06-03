@@ -13,13 +13,14 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { gameReducer } from "../state.js";
 import { ITEMS, MINE_TILE_POOL, tileFamilyResource } from "../constants.js";
 import { producedResource } from "../game/producedResource.js";
 import { TILE_TYPES_MAP } from "../features/tileCollection/data.js";
 
 function minState(overrides = {}) {
-  return {
+  const base = {
     biomeKey: "mine",
     view: "board",
     coins: 100,
@@ -27,8 +28,11 @@ function minState(overrides = {}) {
     xp: 0,
     turnsUsed: 0,
     seasonsCycled: 1, // Summer — no seasonal modifiers
-    inventory: {},
+    inventory: { home: {} },
     resourceProgress: {},
+    mapCurrent: "home",
+    activeZone: "home",
+    farmRun: null,
     orders: [],
     tools: { clear: 0, basic: 0, rare: 0, shuffle: 0 },
     built: {},
@@ -38,8 +42,16 @@ function minState(overrides = {}) {
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
     almanac: { xp: 0, level: 1 },
-    ...overrides,
   };
+  const { inventory: invOverride, resourceProgress: progOverride, ...rest } = overrides;
+  let state = { ...base, ...rest };
+  if (invOverride && typeof invOverride === "object") {
+    state = patchInventory(state, invOverride);
+  }
+  if (progOverride && typeof progOverride === "object") {
+    state = { ...state, resourceProgress: { home: progOverride } };
+  }
+  return state;
 }
 
 function dispatchCoinChain(state, chainLength) {
@@ -90,9 +102,9 @@ describe("Golden Coin tile — chaining grants coins", () => {
     // The coin balance increases.
     expect(s1.coins).toBeGreaterThan(s0.coins);
     // No resource is accumulated for a coin tile.
-    expect(s1.resourceProgress).toEqual({});
+    expect(s1.resourceProgress?.home ?? {}).toEqual({});
     // Tiles never enter inventory.
-    expect(s1.inventory.tile_coin_golden).toBeUndefined();
+    expect(inv(s1).tile_coin_golden).toBeUndefined();
   });
 
   it("longer chains pay out more (per-tile scaling)", () => {

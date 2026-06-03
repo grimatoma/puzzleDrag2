@@ -3,6 +3,7 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { WORKSHOP_RECIPES } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 
@@ -45,7 +46,7 @@ describe("10.6 — initial tool counts", () => {
 
 describe("10.6 — USE_TOOL bird_cage", () => {
   it("collects all 3 chicken tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 3 }, { key: "tile_grass_hay", count: 4 }]);
+    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 3 }, { key: "tile_grass_grass", count: 4 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -53,7 +54,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
       inventory: { ...createInitialState().inventory, tile_bird_chicken: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "bird_cage" } });
-    expect(s1.inventory.tile_bird_chicken).toBe(3);
+    expect(inv(s1).tile_bird_chicken).toBe(3);
     expect(s1.tools.bird_cage).toBe(0);
   });
 
@@ -70,7 +71,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
   });
 
   it("refunds when no chicken tiles (tool count unchanged)", () => {
-    const grid = makeGridWith([{ key: "tile_grass_hay", count: 6 }]);
+    const grid = makeGridWith([{ key: "tile_grass_grass", count: 6 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -85,7 +86,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
 
 describe("10.6 — USE_TOOL scythe_full", () => {
   it("collects all 5 wheat tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_grass", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -93,7 +94,7 @@ describe("10.6 — USE_TOOL scythe_full", () => {
       inventory: { ...createInitialState().inventory, tile_grain_wheat: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "scythe_full" } });
-    expect(s1.inventory.tile_grain_wheat).toBe(5);
+    expect(inv(s1).tile_grain_wheat).toBe(5);
     expect(s1.tools.scythe_full).toBe(0);
   });
 
@@ -110,7 +111,7 @@ describe("10.6 — USE_TOOL scythe_full", () => {
   });
 
   it("Phase-1 Scythe (key 'clear') is NOT affected", () => {
-    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_grass", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,

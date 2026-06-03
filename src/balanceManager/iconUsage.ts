@@ -31,7 +31,7 @@ const HARDCODED_USAGE = [
   "ui_scale", "ui_devtools", "ui_heart", "ui_farmer",
   // RichText [icon:X] embeds in state.js / story.js / feature slices.
   "ui_build", "ui_star", "ui_warning",
-  "berry", "tile_special_giant_pearl", "tile_grass_hay",
+  "berry", "tile_special_giant_pearl", "tile_grass_grass",
   // charter/index.tsx renders <IconCanvas iconKey="pact_scroll"> via a JSX literal.
   "pact_scroll",
 ];
@@ -101,7 +101,7 @@ const WIRED_ICON_USAGE = [
  * that references one. Returns `Set<string>` keyed by icon key.
  *
  * The returned set treats the two registries (canvas + SVG) as one address
- * space: a `design.tile.grass` key and a canvas `tile_grass_hay` key both appear
+ * space: a `design.tile.grass` key and a canvas `tile_grass_grass` key both appear
  * as plain strings if referenced.
  */
 export function getUsedIconKeys(): Set<string> {
@@ -111,7 +111,7 @@ export function getUsedIconKeys(): Set<string> {
   };
 
   // Resource items — every item key in ITEMS doubles as an icon key (e.g.
-  // ITEMS.tile_grass_hay is rendered via the `tile_grass_hay` icon).
+  // ITEMS.tile_grass_grass is rendered via the `tile_grass_grass` icon).
   for (const key of Object.keys(ITEMS || {})) add(key);
 
   // Recipes — outputs and inputs both reference item keys, which are icons.

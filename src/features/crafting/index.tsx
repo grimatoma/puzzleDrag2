@@ -17,6 +17,7 @@ import {
 } from "../../ui/primitives/BrowserDetail.jsx";
 import type { CSSProperties } from "react";
 import type { GameState, Dispatch } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 
 export const viewKey = "crafting";
 
@@ -365,7 +366,7 @@ function StationTabIndicator({ queue, now }: StationTabIndicatorProps) {
 function canAffordDecor(decor: DecorDef, state: GameState): boolean {
   const { cost } = decor;
   if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
-  const inv: Record<string, number> = state.inventory ?? {};
+  const inv: Record<string, number> = zoneInventory(state);
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
     if ((inv[k] ?? 0) < v) return false;
@@ -386,7 +387,7 @@ function DecorIcon({ decor, size = 42 }: { decor: DecorDef; size?: number }) {
 }
 
 function decorCostEntries(decor: DecorDef, state: GameState) {
-  const inv: Record<string, number> = state.inventory ?? {};
+  const inv: Record<string, number> = zoneInventory(state);
   const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
   return Object.entries(decor.cost ?? {}).map(([key, amount]: [string, number]) => ({
     key,
@@ -473,7 +474,7 @@ interface CraftingScreenProps {
 }
 
 export default function CraftingScreen({ state, dispatch }: CraftingScreenProps) {
-  const inventory: Record<string, number> = state.inventory ?? {};
+  const inventory: Record<string, number> = zoneInventory(state);
   const level: number = state.level ?? 1;
   const craftedTotals: Record<string, number> = state.craftedTotals ?? {};
   const craftingTab = state.craftingTab;

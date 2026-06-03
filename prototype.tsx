@@ -25,6 +25,7 @@ import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
 import { useA11yBridge } from "./src/a11y.js";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
+import { zoneInventory } from "./src/state/zoneInventory.js";
 import {
   BoardFrame,
   BoardLayout,
@@ -358,7 +359,7 @@ export default function App() {
       inspectedTool={inspectedTool}
       armedTool={armedTool}
       fillBiasArmed={!!(state.fillBiasTarget || (state.magicFertilizerCharges ?? 0) > 0)}
-      inventory={state.inventory}
+      inventory={zoneInventory(state)}
       biomeKey={state.biomeKey}
       cap={currentCap(state)}
       dispatch={dispatch}

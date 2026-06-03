@@ -310,9 +310,9 @@ For each tile/resource/tool row, move `color`, `dark`, `iconKey`, `anim`, `ms`, 
 
 ```js
 // before
-tile_grass_hay: { kind: "tile", biome: "farm", label: "Hay", color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+tile_grass_grass: { kind: "tile", biome: "farm", label: "Hay", color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
 // after
-tile_grass_hay: { kind: "tile", biome: "farm", label: "Hay", value: 1, next: "hay_bundle", look: { color: 0xa8c769, dark: 0x4f6b3a, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } } },
+tile_grass_grass: { kind: "tile", biome: "farm", label: "Hay", value: 1, next: "hay_bundle", look: { color: 0xa8c769, dark: 0x4f6b3a, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } } },
 ```
 
 ```js

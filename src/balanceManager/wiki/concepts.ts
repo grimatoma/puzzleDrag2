@@ -15,6 +15,7 @@ import { HAZARDS } from "../../features/mine/hazards.js";
 import { FARM_HAZARD_META } from "../../features/farm/hazards.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
+import { zoneMapEmoji, zoneMapIconKey } from "./zoneVisual.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
 import { ABILITIES } from "../../config/abilities.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
@@ -132,9 +133,12 @@ function zoneEntries() {
       // The Zone type doesn't always expose a `label`; older configs used it
       // as a fallback display name. Read both via a loose record cast.
       const zz = z as unknown as { id: string; name?: string; label?: string };
+      const iconKey = zoneMapIconKey(zz.id);
       return {
         key: zz.id,
         name: zz.name ?? zz.label ?? zz.id,
+        iconKey: iconKey ?? undefined,
+        emoji: iconKey ? undefined : (zoneMapEmoji(zz.id) ?? undefined),
       };
     })
     .sort(byName);

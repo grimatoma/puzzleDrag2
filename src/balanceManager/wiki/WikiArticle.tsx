@@ -19,7 +19,8 @@
 import React from "react";
 import { Card, SmallButton, COLORS } from "../shared.jsx";
 import { describeSchema } from "../schemaDoc.js";
-import { schemaForConcept } from "./conceptSchemas.js";
+import { schemaForConcept, schemaForBoardKind } from "./conceptSchemas.js";
+import { ZONES, zoneHasBoard } from "../../features/zones/data.js";
 import { getEntity } from "./conceptEntities.js";
 import { CONCEPTS } from "./concepts.js";
 import { useBalanceNav } from "../balanceNav.jsx";
@@ -128,7 +129,18 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
   const conceptLabel = CONCEPTS.find((c) => c.id === conceptId)?.label ?? conceptId;
-  const cs = schemaForConcept(conceptId);
+  const cs =
+    conceptId === "boardKinds"
+      ? schemaForBoardKind(entityKey)
+      : schemaForConcept(conceptId);
+
+  const propertiesEntity =
+    conceptId === "boardKinds"
+      ? (() => {
+          const sampleZone = Object.values(ZONES).find((z) => zoneHasBoard(z, entityKey as "farm" | "mine" | "fish"));
+          return sampleZone?.boards?.[entityKey as "farm" | "mine" | "fish"] ?? null;
+        })()
+      : entity;
 
   // Build schema doc — catching in case of unexpected schema shape
   let schemaDoc: ReturnType<typeof describeSchema> | null = null;
@@ -393,10 +405,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             <ReferenceSection heading="Schema reference (developer)">
               {schemaDoc != null && (
                 <>
-                  <FieldsTable fields={schemaDoc.fields} entity={entity} />
-                  {entity != null && (
+                  <FieldsTable fields={schemaDoc.fields} entity={propertiesEntity as Record<string, unknown>} />
+                  {propertiesEntity != null && (
                     <AdditionalFieldsSection
-                      entity={entity}
+                      entity={propertiesEntity}
                       schemaFieldNames={schemaFieldNames}
                     />
                   )}

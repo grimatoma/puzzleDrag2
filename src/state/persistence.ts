@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
-import { parseInventory } from "../types/inventory.js";
+import { parseZoneInventories } from "../types/inventory.js";
 import type { GameState } from "../types/state.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
@@ -38,7 +38,7 @@ export function persistStateNow(state: GameState): void {
     // string-indexed view without casting reducer state through `unknown`.
     for (const [k, v] of Object.entries(state)) if (!VOLATILE.has(k)) out[k] = v;
     if (out.inventory != null) {
-      out.inventory = parseInventory(out.inventory as Record<string, unknown>);
+      out.inventory = parseZoneInventories(out.inventory);
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
   } catch { /* storage unavailable (private browsing / quota) */ }

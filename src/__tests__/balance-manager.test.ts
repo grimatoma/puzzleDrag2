@@ -10,18 +10,18 @@ import {
 
 describe("Dev Panel — override merge layer", () => {
   it("mergeOverrides shallow-merges nested objects", () => {
-    const a = { upgradeThresholds: { tile_grass_hay: 6 }, resources: {} };
+    const a = { upgradeThresholds: { tile_grass_grass: 6 }, resources: {} };
     const b = { upgradeThresholds: { tile_grain_wheat: 4 }, recipes: { bread: { coins: 200 } } };
     const out = mergeOverrides(a, b);
-    expect(out.upgradeThresholds).toEqual({ tile_grass_hay: 6, tile_grain_wheat: 4 });
+    expect(out.upgradeThresholds).toEqual({ tile_grass_grass: 6, tile_grain_wheat: 4 });
     expect(out.recipes).toEqual({ bread: { coins: 200 } });
     expect(out.resources).toEqual({});
   });
 
   it("applyUpgradeThresholdOverrides mutates in place; invalid section throws", () => {
-    const target = { tile_grass_hay: 6, tile_tree_oak: 5 };
-    applyUpgradeThresholdOverrides(target, { tile_grass_hay: 8 });
-    expect(target.tile_grass_hay).toBe(8);
+    const target = { tile_grass_grass: 6, tile_tree_oak: 5 };
+    applyUpgradeThresholdOverrides(target, { tile_grass_grass: 8 });
+    expect(target.tile_grass_grass).toBe(8);
     expect(() => applyUpgradeThresholdOverrides(target, { tile_tree_oak: 0 }))
       .toThrow(/Invalid balance overrides \(upgradeThresholds\)/);
     expect(target.tile_tree_oak).toBe(5);
@@ -29,24 +29,24 @@ describe("Dev Panel — override merge layer", () => {
 
   it("applyItemOverrides patches ITEMS entries by key", () => {
     const items = {
-      tile_grass_hay: { label: "Hay", value: 1, next: "tile_grain_wheat", look: { color: 0xa8c769, dark: 0x4f6b3a } },
+      tile_grass_grass: { label: "Grass", value: 1, next: "tile_grain_wheat", look: { color: 0x6fa838, dark: 0x3a5e18 } },
       tile_tree_oak:  { label: "Log", value: 2, next: "plank", look: { color: 0x9b6b3e, dark: 0x4a3520 } },
     };
     applyItemOverrides(items, {
-      tile_grass_hay: { label: "Straw", value: 3, next: "tile_tree_oak", look: { color: 0xb0d070 } },
+      tile_grass_grass: { label: "Straw", value: 3, next: "tile_tree_oak", look: { color: 0xb0d070 } },
     });
-    expect(items.tile_grass_hay.label).toBe("Straw");
-    expect(items.tile_grass_hay.value).toBe(3);
-    expect(items.tile_grass_hay.next).toBe("tile_tree_oak");
-    expect(items.tile_grass_hay.look.color).toBe(0xb0d070); // patched
-    expect(items.tile_grass_hay.look.dark).toBe(0x4f6b3a); // merged, unchanged
+    expect(items.tile_grass_grass.label).toBe("Straw");
+    expect(items.tile_grass_grass.value).toBe(3);
+    expect(items.tile_grass_grass.next).toBe("tile_tree_oak");
+    expect(items.tile_grass_grass.look.color).toBe(0xb0d070); // patched
+    expect(items.tile_grass_grass.look.dark).toBe(0x3a5e18); // merged, unchanged
     expect(items.tile_tree_oak.label).toBe("Log"); // unchanged
   });
 
   it("applyItemOverrides treats `next: null/empty` as terminal", () => {
-    const items = { tile_grass_hay: { label: "Hay", next: "tile_grain_wheat" } };
-    applyItemOverrides(items, { tile_grass_hay: { next: null } });
-    expect(items.tile_grass_hay.next).toBeNull();
+    const items = { tile_grass_grass: { label: "Grass", next: "tile_grain_wheat" } };
+    applyItemOverrides(items, { tile_grass_grass: { next: null } });
+    expect(items.tile_grass_grass.next).toBeNull();
   });
 
   it("applyRecipeOverrides replaces inputs wholesale", () => {
@@ -87,12 +87,12 @@ describe("Dev Panel — override merge layer", () => {
 describe("Dev Panel — applyTileOverrides", () => {
   it("merges power hooks into tile.effects via expansion", () => {
     const tiles = [
-      { id: "tile_grass_hay", category: "grass", baseResource: "tile_grass_hay", tier: 0,
+      { id: "tile_grass_grass", category: "grass", baseResource: "tile_grass_grass", tier: 0,
         discovery: { method: "default" }, effects: {} },
     ];
     applyTileOverrides(tiles, {
       tilePowers: {
-        tile_grass_hay: {
+        tile_grass_grass: {
           // Legacy `hooks` form is translated 1:1 into the new abilities shape.
           hooks: [{ id: "coin_bonus_flat", params: { amount: 10 } }],
         },

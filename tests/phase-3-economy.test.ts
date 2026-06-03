@@ -1,14 +1,15 @@
 // Phase 3 — Economy: market drift, runes, daily streak, supply chain.
 // Migrated from market.test.js, runes.test.js, daily-streak.test.js, supply-chain.test.js.
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../src/testUtils/inventory.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 import { MARKET_PRICES } from "../src/constants.js";
 
 describe("Phase 3 — market prices defined", () => {
-  it("hay has buy price", () => expect(MARKET_PRICES.tile_grass_hay.buy).toBeGreaterThan(0));
+  it("hay has buy price", () => expect(MARKET_PRICES.tile_grass_grass.buy).toBeGreaterThan(0));
   it("wheat has sell price", () => expect(MARKET_PRICES.tile_grain_wheat.sell).toBeGreaterThan(0));
   it("all base resources covered", () => {
-    const keys = ["tile_grass_hay", "tile_grain_wheat", "flour", "plank", "jam", "tile_mine_stone", "tile_mine_coal"];
+    const keys = ["tile_grass_grass", "tile_grain_wheat", "flour", "plank", "jam", "tile_mine_stone", "tile_mine_coal"];
     for (const k of keys) {
       expect(MARKET_PRICES[k], `${k} missing`).toBeDefined();
     }
@@ -50,14 +51,14 @@ describe("Phase 3 — daily streak in fresh state", () => {
 
 describe("Phase 3 — supply chain (CONVERT_TO_SUPPLY)", () => {
   it("converts 3 flour to 1 supply", () => {
-    const s = { ...createInitialState(), inventory: { flour: 9 } };
+    const s = patchInventory(createInitialState(), { flour: 9 });
     const next = rootReducer(s, { type: "CONVERT_TO_SUPPLY", payload: { qty: 1 } });
-    expect(next.inventory.flour).toBe(6);
-    expect(next.inventory.supplies).toBe(1);
+    expect(inv(next).flour).toBe(6);
+    expect(inv(next).supplies).toBe(1);
   });
 
   it("rejects conversion when flour < 3", () => {
-    const s = { ...createInitialState(), inventory: { flour: 2 } };
+    const s = patchInventory(createInitialState(), { flour: 2 });
     const next = rootReducer(s, { type: "CONVERT_TO_SUPPLY", payload: { qty: 1 } });
     expect(next).toBe(s);
   });

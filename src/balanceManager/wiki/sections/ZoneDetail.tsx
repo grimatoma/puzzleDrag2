@@ -36,8 +36,16 @@ import { TILE_TYPES } from "../../../features/tileCollection/data.js";
 // ─── Shapes ─────────────────────────────────────────────────────────────────
 
 interface ZoneLike {
-  seasonDrops?: Record<string, Record<string, number>> | null;
-  upgradeMap?: Record<string, string> | null;
+  boards?: {
+    farm?: {
+      seasonDrops?: Record<string, Record<string, number>> | null;
+      upgradeMap?: Record<string, string> | null;
+    };
+  };
+}
+
+function farmBoard(zone: ZoneLike | null | undefined) {
+  return zone?.boards?.farm ?? null;
 }
 
 // Season column order — matches SESSION_SEASON_NAMES in features/zones/data.js
@@ -149,7 +157,7 @@ function pctLabel(value: number): string {
 // ─── Gating ───────────────────────────────────────────────────────────────────
 
 function dropCategories(zone: ZoneLike): string[] {
-  const drops = zone.seasonDrops ?? {};
+  const drops = farmBoard(zone)?.seasonDrops ?? {};
   const seen = new Set<string>();
   for (const season of SEASON_ORDER) {
     for (const cat of Object.keys(drops[season] ?? {})) seen.add(cat);
@@ -163,7 +171,7 @@ function hasAnyDrops(zone: ZoneLike): boolean {
 }
 
 function upgradePairs(zone: ZoneLike): Array<[string, string]> {
-  return Object.entries(zone.upgradeMap ?? {});
+  return Object.entries(farmBoard(zone)?.upgradeMap ?? {});
 }
 
 /** Cheap precheck for TOC gating — true when the zone has drops or an upgrade map. */
@@ -186,7 +194,7 @@ export function ZoneDetail({ zone }: ZoneDetailProps) {
   if (!hasZoneDetail(zone)) return null;
 
   const cats = dropCategories(zone);
-  const drops = zone.seasonDrops ?? {};
+  const drops = farmBoard(zone)?.seasonDrops ?? {};
   const seasons = SEASON_ORDER.filter((s) => drops[s] != null);
   const pairs = upgradePairs(zone);
 

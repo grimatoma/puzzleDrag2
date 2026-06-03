@@ -5,6 +5,7 @@
 // Fire decrements with no refund.
 import { TYPE_WORKER_MAP, defaultWorkersSlice, nextHireCost, nextHireResourceCost } from "./data.js";
 import { inventoryPut, inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = defaultWorkersSlice();
@@ -26,7 +27,8 @@ export function reduce(state: GameState, action: Action): GameState {
     const cost = nextHireCost(def, cur);
     if ((state.coins ?? 0) < cost) return state;
     const resourceCost = nextHireResourceCost(def, cur);
-    const inv = state.inventory ?? {};
+    const hireZone = inventoryZone(state);
+    const inv = zoneInventory(state, hireZone);
     for (const [key, amount] of Object.entries(resourceCost) as [string, number][]) {
       if (inventoryQty(inv, key) < amount) return state;
     }
@@ -38,7 +40,7 @@ export function reduce(state: GameState, action: Action): GameState {
     return {
       ...state,
       coins: state.coins - cost,
-      inventory: nextInventory,
+      inventory: { ...state.inventory, [hireZone]: nextInventory },
       workers: {
         ...(state.workers ?? {}),
         hired: { ...hired, [id]: cur + 1 },

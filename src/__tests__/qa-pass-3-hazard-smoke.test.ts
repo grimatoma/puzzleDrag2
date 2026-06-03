@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
 import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 
-function makeGrid(rows = 6, cols = 6, key = "tile_grass_hay") {
+function makeGrid(rows = 6, cols = 6, key = "tile_grass_grass") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key })),
   );
@@ -16,7 +16,7 @@ function dispatchChain(state, n = 3) {
   return rootReducer(state, {
     type: "CHAIN_COLLECTED",
     payload: {
-      key: "tile_grass_hay",
+      key: "tile_grass_grass",
       gained: n,
       upgrades: 0,
       value: 1,

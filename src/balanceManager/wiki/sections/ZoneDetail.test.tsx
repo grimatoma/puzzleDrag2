@@ -34,7 +34,7 @@ describe("ZoneDetail — home zone (real drops + upgradeMap)", () => {
   it("renders one row per season present in the drops", () => {
     const { container } = render(<ZoneDetail zone={home} />);
     const body = container.textContent ?? "";
-    for (const season of Object.keys(ZONES.home.seasonDrops)) {
+    for (const season of Object.keys(ZONES.home.boards.farm!.seasonDrops)) {
       expect(body).toContain(season);
     }
   });
@@ -74,7 +74,7 @@ describe("ZoneDetail — home zone (real drops + upgradeMap)", () => {
 });
 
 describe("ZoneDetail — empty zone", () => {
-  const emptyZone = { seasonDrops: { Spring: {}, Summer: {}, Autumn: {}, Winter: {} }, upgradeMap: {} };
+  const emptyZone = { boards: { farm: { seasonDrops: { Spring: {}, Summer: {}, Autumn: {}, Winter: {} }, upgradeMap: {} } } };
 
   it("hasZoneDetail is false and renders nothing", () => {
     expect(hasZoneDetail(emptyZone)).toBe(false);

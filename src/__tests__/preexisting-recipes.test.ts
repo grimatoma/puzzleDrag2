@@ -8,6 +8,7 @@
  * No implementation changes — these tests close the §11 coverage gap.
  */
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { RECIPES } from "../constants.js";
 import { createInitialState, rootReducer, sellPriceFor } from "../state.js";
 
@@ -40,26 +41,25 @@ describe("Pre-existing crafting recipes — §11 spec backfill", () => {
     });
 
     it(`${id} successful craft debits inputs and credits +1 output`, () => {
-      // Build a state with the station built and double-stock all inputs in inventory
       const s = createInitialState();
-      const stocked = {
-        ...s,
-        built: { ...s.built, [recipe.station]: true },
-        inventory: { ...s.inventory },
-      };
-      for (const [input, qty] of Object.entries(recipe.inputs)) {
-        stocked.inventory[input] = qty * 2;
-      }
-      const before = stocked.inventory[id] ?? 0;
+      const inputStock = Object.fromEntries(
+        Object.entries(recipe.inputs).map(([input, qty]) => [input, (qty as number) * 2]),
+      );
+      const stocked = patchInventory(
+        {
+          ...s,
+          built: { ...s.built, home: { ...s.built.home, [recipe.station]: true } },
+        },
+        inputStock,
+      );
+      const before = inv(stocked)[id] ?? 0;
       const after = rootReducer(stocked, {
         type: "CRAFTING/CRAFT_RECIPE",
         payload: { key: id },
       });
-      // Output item incremented in inventory
-      expect(after.inventory[id]).toBe(before + 1);
-      // Inputs debited
+      expect(inv(after)[id]).toBe(before + 1);
       for (const [input, qty] of Object.entries(recipe.inputs)) {
-        expect(after.inventory[input]).toBe(qty * 2 - qty);
+        expect(inv(after)[input]).toBe((qty as number) * 2 - (qty as number));
       }
     });
 
@@ -67,15 +67,13 @@ describe("Pre-existing crafting recipes — §11 spec backfill", () => {
       const empty = createInitialState();
       const emptyBuilt = {
         ...empty,
-        built: { ...empty.built, [recipe.station]: true },
+        built: { ...empty.built, home: { ...empty.built.home, [recipe.station]: true } },
       };
-      // Inventory has no inputs
       const afterEmpty = rootReducer(emptyBuilt, {
         type: "CRAFTING/CRAFT_RECIPE",
         payload: { key: id },
       });
-      // Output should not have been added
-      expect(afterEmpty.inventory[id] ?? 0).toBe(empty.inventory[id] ?? 0);
+      expect(inv(afterEmpty)[id] ?? 0).toBe(inv(empty)[id] ?? 0);
     });
   }
 });

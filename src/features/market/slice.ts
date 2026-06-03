@@ -1,6 +1,7 @@
 import { sellPriceFor } from "./pricing.js";
 import { locBuilt } from "../../locBuilt.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {};
@@ -21,7 +22,9 @@ export function reduce(state: GameState, action: Action): GameState {
   // Caravan Post must be built
   if (!locBuilt(state).caravan_post) return state;
 
-  const have = inventoryQty(state.inventory, resource);
+  const sellZone = inventoryZone(state);
+  const sellInv = zoneInventory(state, sellZone);
+  const have = inventoryQty(sellInv, resource);
   if (have < qty) return state;
 
   const price = sellPriceFor(resource);
@@ -31,7 +34,7 @@ export function reduce(state: GameState, action: Action): GameState {
     ...state,
     inventory: {
       ...state.inventory,
-      [resource]: have - qty,
+      [sellZone]: { ...sellInv, [resource]: have - qty },
     },
     coins: (state.coins ?? 0) + price * qty,
   };

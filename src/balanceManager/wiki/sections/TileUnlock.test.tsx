@@ -3,8 +3,8 @@
  * TileUnlock.test.tsx — TDD suite for the wiki tile unlock section.
  *
  * Uses real catalog data:
- *   - tile_grain_wheat: chain discovery (chainLengthOf tile_grass_hay)
- *   - tile_grass_hay:   default discovery (available from the start)
+ *   - tile_grain_wheat: chain discovery (chainLengthOf tile_grass_grass)
+ *   - tile_grass_grass:   default discovery (available from the start)
  *   - non-tile id:      renders nothing
  */
 
@@ -42,8 +42,8 @@ describe("TileUnlock — chain-discovery tile (tile_grain_wheat)", () => {
     ].discovery!;
     // The concrete chain length param renders as "N×"
     expect(body).toContain(`${d.chainLength}×`);
-    // Prerequisite tile (Hay) label renders
-    expect(body).toMatch(/hay/i);
+    // Prerequisite tile (Grass) label renders
+    expect(body).toMatch(/grass/i);
   });
 
   it("renders a navigable prerequisite chip via wikiNavTarget", () => {
@@ -58,9 +58,9 @@ describe("TileUnlock — chain-discovery tile (tile_grain_wheat)", () => {
   });
 });
 
-describe("TileUnlock — default-discovery tile (tile_grass_hay)", () => {
+describe("TileUnlock — default-discovery tile (tile_grass_grass)", () => {
   it("renders 'from the start'", () => {
-    renderTile("tile_grass_hay");
+    renderTile("tile_grass_grass");
     const body = document.body.textContent ?? "";
     expect(body).toMatch(/from the start/i);
   });
@@ -70,10 +70,10 @@ describe("TileUnlock — research-discovery tile (tile_grass_spiky)", () => {
   it("renders the Research requirement with the cumulative amount and source", () => {
     renderTile("tile_grass_spiky");
     const body = document.body.textContent ?? "";
-    // discovery: { method: "research", researchOf: "tile_grass_hay", researchAmount: 50 }
+    // discovery: { method: "research", researchOf: "tile_grass_grass", researchAmount: 50 }
     expect(body).toMatch(/research/i);
     expect(body).toContain("50");
-    expect(body).toMatch(/hay/i);
+    expect(body).toMatch(/grass/i);
   });
 });
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv, zoneProgress } from "../testUtils/inventory.js";
 import {
   CROSS_COLLECT_PAIRINGS,
   findCrossCollectTargets,
@@ -17,7 +18,7 @@ function gridFromKeys(rows: Array<Array<string | null>>): Array<Array<{ key: str
 }
 
 // Canonical tile keys per category (from src/features/tileCollection/data.ts).
-const GRASS = "tile_grass_hay";       // category: grass
+const GRASS = "tile_grass_grass";       // category: grass
 const GRAIN = "tile_grain_wheat";     // category: grain (partner of grass)
 const FRUIT = "tile_fruit_apple";     // category: fruits
 const TREE = "tile_tree_oak";         // category: trees (partner of fruits)
@@ -206,8 +207,8 @@ describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's thresh
 
     // 3 < 5 → flour progress accrues, NO flour minted. (If the bug were present,
     // threshold would fall back to 1 and mint 3 flour immediately.)
-    expect(s1.resourceProgress?.flour).toBe(3);
-    expect(s1.inventory.flour ?? 0).toBe(0);
+    expect(zoneProgress(s1).flour ?? 0).toBe(3);
+    expect(inv(s1).flour ?? 0).toBe(0);
 
     // A second dispatch of 3 more grain pushes total to 6 → crosses threshold 5
     // exactly once: mint 1 flour, carry 1.
@@ -223,8 +224,8 @@ describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's thresh
         crossCollected: { [GRAIN]: 3 },
       },
     });
-    expect(s2.inventory.flour ?? 0).toBe(1);
-    expect(s2.resourceProgress?.flour).toBe(6 % GRAIN_THRESH);
+    expect(inv(s2).flour ?? 0).toBe(1);
+    expect(zoneProgress(s2).flour ?? 0).toBe(6 % GRAIN_THRESH);
   });
 
   it("a partner count >= threshold mints the right whole-unit count", () => {
@@ -242,7 +243,7 @@ describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's thresh
         crossCollected: { [GRAIN]: 11 },
       },
     });
-    expect(s1.inventory.flour ?? 0).toBe(Math.floor(11 / GRAIN_THRESH));
-    expect(s1.resourceProgress?.flour).toBe(11 % GRAIN_THRESH);
+    expect(inv(s1).flour ?? 0).toBe(Math.floor(11 / GRAIN_THRESH));
+    expect(zoneProgress(s1).flour ?? 0).toBe(11 % GRAIN_THRESH);
   });
 });

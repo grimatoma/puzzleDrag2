@@ -8,162 +8,169 @@ const TIER = {
     rimHi: "#f0b078", rimMid: "#b46a2c", rimLo: "#5a2808",
     faceHi: "#f8c898", faceMid: "#c08858", faceLo: "#5a3008",
     ribbonHi: "#a83828", ribbonMid: "#7a1c10", ribbonLo: "#3a0808",
-    pip: "#fff0d8", pipCount: 1,
   },
   silver: {
     rimHi: "#fafcff", rimMid: "#9aa4ac", rimLo: "#3a3e44",
     faceHi: "#f0f4f8", faceMid: "#a8b0b8", faceLo: "#5a6068",
     ribbonHi: "#5a78a8", ribbonMid: "#2a4878", ribbonLo: "#0a1c38",
-    pip: "#ffffff", pipCount: 2,
   },
   gold: {
     rimHi: "#fff0a0", rimMid: "#e0a020", rimLo: "#6a3808",
     faceHi: "#fff4b8", faceMid: "#f0c040", faceLo: "#8a5008",
     ribbonHi: "#c83038", ribbonMid: "#8a1018", ribbonLo: "#3a0408",
-    pip: "#fff8d0", pipCount: 3,
   },
 };
 
-function drawShadow(ctx, w = 16, h = 3.5) {
+// Geometry — a larger medallion than before so motifs read at 56px, with a
+// star banner under it for the tier rank. Everything stays inside the ±26 box.
+const MED_CY = -3;   // medallion centre y
+const MED_R = 16.5;  // outer rim radius
+const MOTIF_SCALE = 1.45;
+
+function drawShadow(ctx, w = 17, h = 3.5) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
-  ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 25, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-// Two-tail ribbon below the medallion. Drawn first so the medallion
-// overlaps it cleanly.
+// Two-tail ribbon behind the medallion. Drawn first so the medallion overlaps.
 function drawRibbon(ctx, t) {
-  const grad = ctx.createLinearGradient(0, 6, 0, 22);
+  const grad = ctx.createLinearGradient(0, 2, 0, 24);
   grad.addColorStop(0, t.ribbonHi);
   grad.addColorStop(0.5, t.ribbonMid);
   grad.addColorStop(1, t.ribbonLo);
   ctx.fillStyle = grad;
-  // left tail
-  ctx.beginPath();
-  ctx.moveTo(-9, 6);
-  ctx.lineTo(-13, 20);
-  ctx.lineTo(-7, 17);
-  ctx.lineTo(-3, 10);
-  ctx.closePath();
-  ctx.fill();
-  // right tail
-  ctx.beginPath();
-  ctx.moveTo(9, 6);
-  ctx.lineTo(13, 20);
-  ctx.lineTo(7, 17);
-  ctx.lineTo(3, 10);
-  ctx.closePath();
-  ctx.fill();
+  const tail = (s) => {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 4);
+    ctx.lineTo(s * 15, 23);
+    ctx.lineTo(s * 8.5, 19.5);
+    ctx.lineTo(s * 3.5, 9);
+    ctx.closePath();
+    ctx.fill();
+  };
+  tail(-1); tail(1);
   ctx.strokeStyle = t.ribbonLo;
   ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-9, 6); ctx.lineTo(-13, 20); ctx.lineTo(-7, 17); ctx.lineTo(-3, 10);
-  ctx.moveTo(9, 6); ctx.lineTo(13, 20); ctx.lineTo(7, 17); ctx.lineTo(3, 10);
-  ctx.stroke();
-  // Notch shadow where the medallion overlaps
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath();
-  ctx.ellipse(0, 8, 9, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 4); ctx.lineTo(s * 15, 23); ctx.lineTo(s * 8.5, 19.5); ctx.lineTo(s * 3.5, 9);
+    ctx.stroke();
+  }
 }
 
-// Tier "pips" — tiny stars set around the rim. Count = tier rank.
-function drawPips(ctx, t) {
-  const r = 12.5;
-  const positions = t.pipCount === 1
-    ? [-Math.PI / 2]
-    : t.pipCount === 2
-    ? [-Math.PI / 2 - 0.55, -Math.PI / 2 + 0.55]
-    : [-Math.PI / 2 - 1.0, -Math.PI / 2, -Math.PI / 2 + 1.0];
-  ctx.fillStyle = t.pip;
-  for (const a of positions) {
-    const x = Math.cos(a) * r;
-    const y = Math.sin(a) * r;
-    // tiny 4-pointed star
-    ctx.beginPath();
-    ctx.moveTo(x, y - 1.6);
-    ctx.lineTo(x + 0.5, y - 0.5);
-    ctx.lineTo(x + 1.6, y);
-    ctx.lineTo(x + 0.5, y + 0.5);
-    ctx.lineTo(x, y + 1.6);
-    ctx.lineTo(x - 0.5, y + 0.5);
-    ctx.lineTo(x - 1.6, y);
-    ctx.lineTo(x - 0.5, y - 0.5);
-    ctx.closePath();
+// Five-pointed star path centred at (cx,cy).
+function star5(ctx, cx, cy, rOut, rIn) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? rOut : rIn;
+    const px = cx + Math.cos(a) * r;
+    const py = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// Tier banner: a dark rounded plaque holding `stars` gold stars, sitting over
+// the ribbon at the base of the medallion. This is the prominent "level" cue.
+function drawStarBanner(ctx, stars) {
+  const n = Math.max(1, Math.min(3, stars));
+  const gap = 8.4;
+  const w = n * gap + 5;
+  const cy = 16.5;
+  const h = 9.5;
+  // plaque
+  ctx.fillStyle = "#2a1c10";
+  ctx.beginPath();
+  ctx.roundRect(-w / 2, cy - h / 2, w, h, h / 2);
+  ctx.fill();
+  ctx.strokeStyle = "#0e0805"; ctx.lineWidth = 1.1; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.roundRect(-w / 2 + 1.2, cy - h / 2 + 1.2, w - 2.4, h - 2.4, (h - 2.4) / 2);
+  ctx.stroke();
+  // stars
+  const x0 = -((n - 1) * gap) / 2;
+  for (let i = 0; i < n; i++) {
+    const cx = x0 + i * gap;
+    const g = ctx.createLinearGradient(cx, cy - 3.4, cx, cy + 3.4);
+    g.addColorStop(0, "#fff2b0"); g.addColorStop(0.5, "#ffd23c"); g.addColorStop(1, "#c8860c");
+    ctx.fillStyle = g;
+    star5(ctx, cx, cy, 3.5, 1.5);
+    ctx.fill();
+    ctx.strokeStyle = "#6a3c08"; ctx.lineWidth = 0.9; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    star5(ctx, cx - 0.5, cy - 0.7, 1.3, 0.6);
     ctx.fill();
   }
 }
 
 // Medallion: outer rim → inner face → bevel highlight.
 function drawMedallion(ctx, t) {
-  // Outer rim
-  const rim = ctx.createLinearGradient(0, -14, 0, 14);
+  const rim = ctx.createLinearGradient(0, MED_CY - MED_R, 0, MED_CY + MED_R);
   rim.addColorStop(0, t.rimHi);
   rim.addColorStop(0.5, t.rimMid);
   rim.addColorStop(1, t.rimLo);
   ctx.fillStyle = rim;
   ctx.beginPath();
-  ctx.arc(0, 0, 14, 0, Math.PI * 2);
+  ctx.arc(0, MED_CY, MED_R, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = t.rimLo;
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
   ctx.stroke();
 
   // Inner face
-  const face = ctx.createRadialGradient(-3, -4, 1, 0, 0, 13);
+  const faceR = MED_R - 3.5;
+  const face = ctx.createRadialGradient(-3, MED_CY - 5, 1, 0, MED_CY, faceR);
   face.addColorStop(0, t.faceHi);
   face.addColorStop(0.55, t.faceMid);
   face.addColorStop(1, t.faceLo);
   ctx.fillStyle = face;
   ctx.beginPath();
-  ctx.arc(0, 0, 10.5, 0, Math.PI * 2);
+  ctx.arc(0, MED_CY, faceR, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = t.rimLo;
-  ctx.lineWidth = 0.9;
+  ctx.lineWidth = 1.0;
   ctx.stroke();
-
-  drawPips(ctx, t);
 
   // Top-left specular highlight on rim
   ctx.strokeStyle = "rgba(255,255,255,0.5)";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.arc(0, 0, 13, Math.PI * 1.05, Math.PI * 1.55);
+  ctx.arc(0, MED_CY, MED_R - 1.5, Math.PI * 1.05, Math.PI * 1.55);
   ctx.stroke();
 }
 
 // Glossy sheen on top of the medallion face. Call last.
 function drawSheen(ctx) {
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillStyle = "rgba(255,255,255,0.32)";
   ctx.beginPath();
-  ctx.ellipse(-3, -6, 5, 1.6, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.18)";
-  ctx.beginPath();
-  ctx.ellipse(2, 7, 4, 1, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(-4, MED_CY - 8, 6, 2, -0.3, 0, Math.PI * 2);
   ctx.fill();
 }
 
-// `motif` is a function (ctx, t) → draws the central glyph inside a ~16px
-// well centered at (0,0). Use `t.motifInk` for the dark stroke/fill and the
-// medallion face colors for any fills.
-function makeAchievement(label, color, tierKey, motif) {
+// `motif` is a function (ctx, t) → draws the central glyph around (0,0) sized
+// for a ~16px well. We scale it up and recentre it on the medallion face.
+function makeAchievement(label, color, tierKey, stars, motif) {
   return {
     label,
     color,
     draw(ctx) {
       const t = { ...TIER[tierKey] };
-      // Ink color chosen to read on each tier's face
       t.motifInk = tierKey === "silver" ? "#1a2030" : "#3a1c04";
       t.motifInkSoft = tierKey === "silver" ? "#5a6478" : "#7a4a18";
       drawShadow(ctx);
       drawRibbon(ctx, t);
       drawMedallion(ctx, t);
       ctx.save();
+      ctx.translate(0, MED_CY);
+      ctx.scale(MOTIF_SCALE, MOTIF_SCALE);
       motif(ctx, t);
       ctx.restore();
       drawSheen(ctx);
+      drawStarBanner(ctx, stars);
     },
   };
 }
@@ -745,42 +752,45 @@ function motifWands(ctx, t) {
 
 // ── Registry ──────────────────────────────────────────────────────────────
 
+// Per-counter progressions ramp bronze → silver → gold and carry 1/2/3 stars
+// (rank within the group). Standalone achievements carry a single star.
+const BRONZE = "#c08858", SILVER = "#a8b0b8", GOLD = "#e0a020";
 export const ICONS = {
-  // chains_committed
-  ach_first_steps:    makeAchievement("First Steps",        "#c08858", "bronze", motifChain),
-  ach_patient_hands:  makeAchievement("Patient Hands",      "#a8b0b8", "silver", motifChain),
-  ach_tireless:       makeAchievement("Tireless",           "#e0a020", "gold",   motifChain),
-  // orders_fulfilled
-  ach_trusted_friend: makeAchievement("Trusted Friend",     "#c08858", "bronze", motifHandshake),
-  ach_village_voice:  makeAchievement("Village Voice",      "#a8b0b8", "silver", motifHandshake),
-  // bosses_defeated
-  ach_first_blood:    makeAchievement("First Blood",        "#c08858", "bronze", motifSword),
-  ach_champion:       makeAchievement("Champion",           "#e0a020", "gold",   motifCrossedSwords),
-  // discovery
-  ach_naturalist:     makeAchievement("Naturalist",         "#c08858", "bronze", motifLeaf),
-  ach_polymath:       makeAchievement("Polymath",           "#e0a020", "gold",   motifTriLeaf),
-  // buildings
-  ach_town_planner:   makeAchievement("Town Planner",       "#a8b0b8", "silver", motifCompass),
-  // supplies
-  ach_supply_chain:   makeAchievement("Supply Chain",       "#c08858", "bronze", motifSack),
-  // fish_chained
-  ach_first_catch:    makeAchievement("First Catch",        "#c08858", "bronze", motifFish),
-  ach_tide_runner:    makeAchievement("Tide Runner",        "#a8b0b8", "silver", motifFish),
-  ach_master_angler:  makeAchievement("Master Angler",      "#e0a020", "gold",   motifFish),
-  // mine_chained
-  ach_first_strike:   makeAchievement("First Strike",       "#c08858", "bronze", motifPickaxe),
-  ach_deep_digger:    makeAchievement("Deep Digger",        "#a8b0b8", "silver", motifPickaxe),
-  ach_mine_master:    makeAchievement("Mine Master",        "#e0a020", "gold",   motifPickaxe),
-  // category harvests
-  ach_veg_patron:     makeAchievement("Vegetable Patron",   "#a8b0b8", "silver", motifCarrot),
-  ach_orchard_friend: makeAchievement("Orchard Hand",       "#a8b0b8", "silver", motifApple),
-  ach_pollinator:     makeAchievement("Pollinator",         "#a8b0b8", "silver", motifFlower),
-  ach_herder:         makeAchievement("Herder",             "#a8b0b8", "silver", motifSheep),
-  ach_dairyman:       makeAchievement("Dairyman",           "#a8b0b8", "silver", motifCow),
-  ach_stable_hand:    makeAchievement("Stable Hand",        "#a8b0b8", "silver", motifHorse),
-  ach_forester:       makeAchievement("Forester",           "#a8b0b8", "silver", motifTree),
-  ach_fowler:         makeAchievement("Fowler",             "#a8b0b8", "silver", motifBird),
+  // chains_committed — 3 tiers
+  ach_first_steps:    makeAchievement("First Steps",        BRONZE, "bronze", 1, motifChain),
+  ach_patient_hands:  makeAchievement("Patient Hands",      SILVER, "silver", 2, motifChain),
+  ach_tireless:       makeAchievement("Tireless",           GOLD,   "gold",   3, motifChain),
+  // orders_fulfilled — 2 tiers
+  ach_trusted_friend: makeAchievement("Trusted Friend",     BRONZE, "bronze", 1, motifHandshake),
+  ach_village_voice:  makeAchievement("Village Voice",      GOLD,   "gold",   2, motifHandshake),
+  // bosses_defeated — 2 tiers
+  ach_first_blood:    makeAchievement("First Blood",        BRONZE, "bronze", 1, motifSword),
+  ach_champion:       makeAchievement("Champion",           GOLD,   "gold",   2, motifCrossedSwords),
+  // distinct_resources_chained — 2 tiers
+  ach_naturalist:     makeAchievement("Naturalist",         BRONZE, "bronze", 1, motifLeaf),
+  ach_polymath:       makeAchievement("Polymath",           GOLD,   "gold",   2, motifTriLeaf),
+  // buildings (standalone)
+  ach_town_planner:   makeAchievement("Town Planner",       SILVER, "silver", 1, motifCompass),
+  // supplies (standalone)
+  ach_supply_chain:   makeAchievement("Supply Chain",       SILVER, "silver", 1, motifSack),
+  // fish_chained — 3 tiers
+  ach_first_catch:    makeAchievement("First Catch",        BRONZE, "bronze", 1, motifFish),
+  ach_tide_runner:    makeAchievement("Tide Runner",        SILVER, "silver", 2, motifFish),
+  ach_master_angler:  makeAchievement("Master Angler",      GOLD,   "gold",   3, motifFish),
+  // mine_chained — 3 tiers
+  ach_first_strike:   makeAchievement("First Strike",       BRONZE, "bronze", 1, motifPickaxe),
+  ach_deep_digger:    makeAchievement("Deep Digger",        SILVER, "silver", 2, motifPickaxe),
+  ach_mine_master:    makeAchievement("Mine Master",        GOLD,   "gold",   3, motifPickaxe),
+  // category harvests (standalone)
+  ach_veg_patron:     makeAchievement("Vegetable Patron",   SILVER, "silver", 1, motifCarrot),
+  ach_orchard_friend: makeAchievement("Orchard Hand",       SILVER, "silver", 1, motifApple),
+  ach_pollinator:     makeAchievement("Pollinator",         SILVER, "silver", 1, motifFlower),
+  ach_herder:         makeAchievement("Herder",             SILVER, "silver", 1, motifSheep),
+  ach_dairyman:       makeAchievement("Dairyman",           SILVER, "silver", 1, motifCow),
+  ach_stable_hand:    makeAchievement("Stable Hand",        SILVER, "silver", 1, motifHorse),
+  ach_forester:       makeAchievement("Forester",           SILVER, "silver", 1, motifTree),
+  ach_fowler:         makeAchievement("Fowler",             SILVER, "silver", 1, motifBird),
   // abilities
-  ach_powerful_keep:   makeAchievement("Powerful Keep",     "#a8b0b8", "silver", motifSpark),
-  ach_ability_artisan: makeAchievement("Ability Artisan",   "#e0a020", "gold",   motifWands),
+  ach_powerful_keep:   makeAchievement("Powerful Keep",     SILVER, "silver", 1, motifSpark),
+  ach_ability_artisan: makeAchievement("Ability Artisan",   GOLD,   "gold",   1, motifWands),
 };

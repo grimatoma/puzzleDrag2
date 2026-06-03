@@ -13,7 +13,7 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 }
 
 const FARM_HANDLED_KEYS = new Set([
-  "tile_grass_hay", "tile_grain_wheat",
+  "tile_grass_grass", "tile_grain_wheat",
   "tile_grass_meadow", "tile_grass_spiky",
   "tile_bird_turkey", "tile_bird_clover", "tile_bird_melon",
   "tile_veg_carrot", "tile_veg_eggplant", "tile_veg_turnip", "tile_veg_beet",
@@ -23,56 +23,40 @@ const FARM_HANDLED_KEYS = new Set([
 
 export function drawFarmTileIcon(ctx: CanvasRenderingContext2D, key: string) {
   if (!FARM_HANDLED_KEYS.has(key)) return false;
-  if (key === "tile_grass_hay") {
-    // Golden bundle of dried straw tied with twine
-    // Outer dark straw (warm brown)
-    ctx.strokeStyle = "#5e3a08";
-    ctx.lineWidth = 5;
-    [-18, -10, -2, 6, 14].forEach((x, i) => {
+  if (key === "tile_grass_grass") {
+    // Base meadow grass — green blades (hay is the inventory resource from chaining)
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#5a3a18";
+    ctx.beginPath();
+    ctx.ellipse(0, 21, 12, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2a5010";
+    ctx.lineWidth = 4.5;
+    [-12, -4, 4, 12].forEach((x, i) => {
       ctx.beginPath();
       ctx.moveTo(x, 22);
-      ctx.quadraticCurveTo(x - 2 + i, 0, x - 6 + i * 2, -24);
+      ctx.quadraticCurveTo(x - 2 + i, 4, x - 5 + i * 2, -22);
       ctx.stroke();
     });
-    // Mid golden straw
-    ctx.strokeStyle = "#d4a020";
-    ctx.lineWidth = 3.5;
-    [-14, -7, 0, 7, 14].forEach((x, i) => {
+    ctx.strokeStyle = "#5c9c2e";
+    ctx.lineWidth = 3;
+    [-9, -1, 7].forEach((x, i) => {
       ctx.beginPath();
       ctx.moveTo(x, 20);
-      ctx.quadraticCurveTo(x + 1, 0, x - 4 + i * 2, -22);
+      ctx.quadraticCurveTo(x + 1, 2, x - 3 + i * 2, -20);
       ctx.stroke();
     });
-    // Top bright straw highlights
-    ctx.strokeStyle = "#ffe890";
-    ctx.lineWidth = 1.8;
-    [-10, -3, 4, 10].forEach((x, i) => {
+    ctx.strokeStyle = "#b6e068";
+    ctx.lineWidth = 1.6;
+    [-6, 2, 10].forEach((x, i) => {
       ctx.beginPath();
-      ctx.moveTo(x, 16);
-      ctx.quadraticCurveTo(x + 2, -2, x - 2 + i * 2, -20);
+      ctx.moveTo(x, 18);
+      ctx.quadraticCurveTo(x + 2, 0, x - 2 + i * 2, -18);
       ctx.stroke();
     });
-    // Brown twine band
-    ctx.fillStyle = "#5e3a08";
-    rr(ctx, -22, -3, 44, 11, 4);
-    ctx.fill();
-    ctx.strokeStyle = "#2a1804";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // Twine highlight
-    ctx.strokeStyle = "rgba(255,200,120,0.75)";
-    ctx.lineWidth = 1.1;
-    ctx.beginPath();
-    ctx.moveTo(-20, 0);
-    ctx.lineTo(20, 0);
-    ctx.stroke();
-    // Twine knot
-    ctx.fillStyle = "#5e3a08";
-    ctx.beginPath();
-    ctx.arc(-22, 2, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#2a1804";
-    ctx.stroke();
   }
 
   else if (key === "tile_grain_wheat") {

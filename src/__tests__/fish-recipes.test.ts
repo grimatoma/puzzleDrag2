@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { RECIPES, MARKET_PRICES } from "../constants.js";
 
@@ -32,13 +33,13 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 0,
       built: { larder: true },
-      inventory: { fish_fillet: 5, milk: 2, soup: 3 },
+      inventory: { home: { fish_fillet: 5, milk: 2, soup: 3 } },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
-    expect(s1.inventory.fish_fillet).toBe(3);
-    expect(s1.inventory.milk).toBe(1);
-    expect(s1.inventory.soup).toBe(2);
-    expect(s1.inventory.chowder).toBe(1);
+    expect(inv(s1).fish_fillet).toBe(3);
+    expect(inv(s1).milk).toBe(1);
+    expect(inv(s1).soup).toBe(2);
+    expect(inv(s1).chowder).toBe(1);
     expect(s1.coins).toBe(RECIPES.chowder.coins);
   });
 
@@ -47,10 +48,10 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 0,
       built: {},
-      inventory: { fish_fillet: 5, milk: 2, soup: 3 },
+      inventory: { home: { fish_fillet: 5, milk: 2, soup: 3 } },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
-    expect(s1.inventory.chowder).toBeUndefined();
+    expect(inv(s1).chowder).toBeUndefined();
     expect(s1.coins).toBe(0);
   });
 
@@ -58,11 +59,11 @@ describe("fish biome recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { larder: true },
-      inventory: { fish_fillet: 1, milk: 1, soup: 1 }, // need 2 fillet
+      inventory: { home: { fish_fillet: 1, milk: 1, soup: 1 } }, // need 2 fillet
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
-    expect(s1.inventory.chowder).toBeUndefined();
-    expect(s1.inventory.fish_fillet).toBe(1);
+    expect(inv(s1).chowder).toBeUndefined();
+    expect(inv(s1).fish_fillet).toBe(1);
   });
 
   it("crafting fish_oil_bottled consumes inputs, grants coins, adds the bottled product", () => {
@@ -70,12 +71,12 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 5,
       built: { workshop: true },
-      inventory: { fish_oil: 2, plank: 1 },
+      inventory: { home: { fish_oil: 2, plank: 1 } },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "fish_oil_bottled" });
-    expect(s1.inventory.fish_oil).toBe(1);
-    expect(s1.inventory.plank).toBe(0);
-    expect(s1.inventory.fish_oil_bottled).toBe(1);
+    expect(inv(s1).fish_oil).toBe(1);
+    expect(inv(s1).plank).toBe(0);
+    expect(inv(s1).fish_oil_bottled).toBe(1);
     expect(s1.coins).toBe(5 + RECIPES.fish_oil_bottled.coins);
   });
 });

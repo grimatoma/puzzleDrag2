@@ -23,7 +23,8 @@ import { COLORS, Pill } from "../shared.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
 import { buildTownPlan, STAGE_W, STAGE_H } from "../../townLayout.js";
 import TownGround from "../../ui/TownGround.jsx";
-import { ZONES } from "../../features/zones/data.js";
+import { MAP_NODES } from "../../features/cartography/data.js";
+import { ZONES, zoneHasBoard } from "../../features/zones/data.js";
 import { keeperIconKey, dailyRewardIconKey } from "./concepts.js";
 
 // ─── entityIconKey ─────────────────────────────────────────────────────────────
@@ -91,11 +92,30 @@ export function entityIconKey(
       return keeperIconKey(entityKey) ?? null;
     }
 
+    case "zones":
+      return zoneMapIconKey(entityKey);
+
     default:
-      // zones, buildings, categories, views, modals, toolPowers,
+      // buildings, categories, views, modals, toolPowers,
       // settlementBiomes, tileDiscoveryMethods, … have no per-entity procedural icon.
       return null;
   }
+}
+
+
+const MAP_NODE_BY_ID = Object.fromEntries(MAP_NODES.map((n) => [n.id, n]));
+const ZONES_WITH_MAP_ICON = new Set([
+  "home", "meadow", "orchard", "crossroads", "quarry", "caves", "fairground", "forge", "pit",
+]);
+
+/** Baked cartography icon key when this zone has a mapNodes texture; null otherwise. */
+export function zoneMapIconKey(zoneId: string): string | null {
+  return ZONES_WITH_MAP_ICON.has(zoneId) ? `map_${zoneId}` : null;
+}
+
+/** Map-node emoji from cartography data (harbor, oldcapital, …). */
+export function zoneMapEmoji(zoneId: string): string | null {
+  return MAP_NODE_BY_ID[zoneId]?.icon ?? null;
 }
 
 // ─── Zone town map ─────────────────────────────────────────────────────────────
@@ -110,9 +130,9 @@ function ZoneTownMap({ zoneId, size }: { zoneId: string; size: number }) {
   if (!zone) return null;
 
   const boardKinds = [
-    zone.hasFarm && "farm",
-    zone.hasMine && "mine",
-    zone.hasWater && "fish",
+    zoneHasBoard(zone, "farm") && "farm",
+    zoneHasBoard(zone, "mine") && "mine",
+    zoneHasBoard(zone, "fish") && "fish",
   ].filter(Boolean) as string[];
 
   const plan = buildTownPlan({
@@ -121,7 +141,7 @@ function ZoneTownMap({ zoneId, size }: { zoneId: string; size: number }) {
     boardKinds,
   });
 
-  const biomeVariant = zone.hasMine && !zone.hasFarm ? "mine" : "farm";
+  const biomeVariant = zoneHasBoard(zone, "mine") && !zoneHasBoard(zone, "farm") ? "mine" : "farm";
   // Render every lot as built so the wiki town reads as a populated settlement.
   const builtLots = new Set<number>(plan.lots.map((l) => l.index));
 
@@ -175,8 +195,29 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
     );
   }
 
-  // Zones: the top-down town map.
+  // Zones: baked map icon when available, otherwise the node's map emoji.
   if (conceptId === "zones") {
+    const mapKey = zoneMapIconKey(entityKey);
+    if (mapKey != null) return <Icon iconKey={mapKey} size={size} />;
+    const emoji = zoneMapEmoji(entityKey);
+    if (emoji) {
+      return (
+        <span
+          aria-hidden="true"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: size,
+            height: size,
+            fontSize: size * 0.55,
+            lineHeight: 1,
+          }}
+        >
+          {emoji}
+        </span>
+      );
+    }
     return <ZoneTownMap zoneId={entityKey} size={size} />;
   }
 

@@ -278,45 +278,15 @@ describe("schemaDoc — error handling", () => {
 // ─── Real schema fixtures ─────────────────────────────────────────────────────
 
 describe("schemaDoc — zoneOverrideSchema (real)", () => {
-  it("returns exactly the expected 9 fields", () => {
+  it("returns exactly the expected zone override fields", () => {
     const doc = describeSchema(zoneOverrideSchema);
     const names = doc.fields.map((f) => f.field);
     expect(names).toEqual([
       "name",
-      "hasFarm",
-      "hasMine",
-      "hasWater",
       "buildings",
-      "baseTurns",
       "entryCost",
-      "upgradeMap",
-      "seasonDrops",
+      "boards",
     ]);
-  });
-
-  it("upgradeMap has description 'Replaced wholesale'", () => {
-    const doc = describeSchema(zoneOverrideSchema);
-    const upgradeMap = doc.fields.find((f) => f.field === "upgradeMap");
-    expect(upgradeMap?.description).toBe("Replaced wholesale");
-  });
-
-  it("upgradeMap is optional", () => {
-    const doc = describeSchema(zoneOverrideSchema);
-    const upgradeMap = doc.fields.find((f) => f.field === "upgradeMap");
-    expect(upgradeMap?.optional).toBe(true);
-  });
-
-  it("upgradeMap type is a record string->string", () => {
-    const doc = describeSchema(zoneOverrideSchema);
-    const upgradeMap = doc.fields.find((f) => f.field === "upgradeMap");
-    expect(upgradeMap?.type).toBe("record<string, string>");
-  });
-
-  it("baseTurns is optional, type 'number (int, ≥1)'", () => {
-    const doc = describeSchema(zoneOverrideSchema);
-    const baseTurns = doc.fields.find((f) => f.field === "baseTurns");
-    expect(baseTurns?.optional).toBe(true);
-    expect(baseTurns?.type).toBe("number (int, ≥1)");
   });
 
   it("name is optional string", () => {

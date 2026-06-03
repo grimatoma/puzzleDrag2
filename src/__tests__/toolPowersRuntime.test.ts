@@ -10,6 +10,7 @@
  * Until then, the action payload is the contract.
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState, disarmAllTools } from "../state.js";
 import { ROWS, COLS } from "../constants.js";
 
@@ -17,7 +18,7 @@ import { ROWS, COLS } from "../constants.js";
 
 /**
  * Build a grid of the requested size populated from a 2D array of tile keys.
- * Any missing rows/cols pad with `tile_grass_hay` so callers can focus on
+ * Any missing rows/cols pad with `tile_grass_grass` so callers can focus on
  * the interesting cells.
  */
 function gridFrom(keyRows) {
@@ -25,7 +26,7 @@ function gridFrom(keyRows) {
   for (let r = 0; r < ROWS; r++) {
     const row = [];
     for (let c = 0; c < COLS; c++) {
-      const k = keyRows[r]?.[c] ?? "tile_grass_hay";
+      const k = keyRows[r]?.[c] ?? "tile_grass_grass";
       row.push({ key: k });
     }
     grid.push(row);
@@ -51,11 +52,11 @@ describe("USE_TOOL { power: clear_category } — sweeps every tile family member
   it("clears all tree tiles, leaves grass untouched", () => {
     // Top-left 2×2 oak, top-right 2×2 hay, rest hay (default).
     const keyRows = [
-      ["tile_tree_oak", "tile_tree_oak", "tile_grass_hay", "tile_grass_hay"],
-      ["tile_tree_oak", "tile_tree_oak", "tile_grass_hay", "tile_grass_hay"],
+      ["tile_tree_oak", "tile_tree_oak", "tile_grass_grass", "tile_grass_grass"],
+      ["tile_tree_oak", "tile_tree_oak", "tile_grass_grass", "tile_grass_grass"],
     ];
     const s0 = withGrid(gridFrom(keyRows), { tools: { trimmer: 1 } });
-    const before = { trees: countKey(s0.grid, "tile_tree_oak"), hay: countKey(s0.grid, "tile_grass_hay") };
+    const before = { trees: countKey(s0.grid, "tile_tree_oak"), hay: countKey(s0.grid, "tile_grass_grass") };
     expect(before.trees).toBeGreaterThan(0);
 
     const s1 = rootReducer(s0, {
@@ -65,11 +66,11 @@ describe("USE_TOOL { power: clear_category } — sweeps every tile family member
 
     expect(countKey(s1.grid, "tile_tree_oak")).toBe(0);
     // Hay count unchanged (the only other key on the test board).
-    expect(countKey(s1.grid, "tile_grass_hay")).toBe(before.hay);
+    expect(countKey(s1.grid, "tile_grass_grass")).toBe(before.hay);
     // Tool charge consumed.
     expect(s1.tools.trimmer).toBe(0);
     // Inventory credited per existing collection-sweep convention.
-    expect(s1.inventory.tile_tree_oak ?? 0).toBe(before.trees);
+    expect(inv(s1).tile_tree_oak ?? 0).toBe(before.trees);
   });
 });
 
@@ -78,7 +79,7 @@ describe("USE_TOOL { power: clear_category } — sweeps every tile family member
 describe("USE_TOOL { power: transform_tiles } — replaces matching tiles", () => {
   it("transforms every grass tile into wheat tiles", () => {
     const s0 = withGrid(gridFrom([]), { tools: { fertilizer_transform: 1 } });
-    const beforeHay = countKey(s0.grid, "tile_grass_hay");
+    const beforeHay = countKey(s0.grid, "tile_grass_grass");
     expect(beforeHay).toBe(ROWS * COLS);
 
     const s1 = rootReducer(s0, {
@@ -89,13 +90,13 @@ describe("USE_TOOL { power: transform_tiles } — replaces matching tiles", () =
       },
     });
 
-    expect(countKey(s1.grid, "tile_grass_hay")).toBe(0);
+    expect(countKey(s1.grid, "tile_grass_grass")).toBe(0);
     expect(countKey(s1.grid, "tile_grain_wheat")).toBe(beforeHay);
     expect(s1.tools.fertilizer_transform).toBe(0);
   });
 
   it("accepts a literal tileKey for `from` (not a category)", () => {
-    const keyRows = [["tile_grain_wheat", "tile_grain_wheat", "tile_grass_hay"]];
+    const keyRows = [["tile_grain_wheat", "tile_grain_wheat", "tile_grass_grass"]];
     const s0 = withGrid(gridFrom(keyRows), { tools: { generic: 1 } });
 
     const s1 = rootReducer(s0, {
@@ -182,10 +183,10 @@ describe("USE_TOOL + TOOL_FIRED { power: area_blast }", () => {
       }
     }
     // Outside the box is untouched.
-    expect(s2.grid[0][0].key).toBe("tile_grass_hay");
-    expect(s2.grid[4][4].key).toBe("tile_grass_hay");
+    expect(s2.grid[0][0].key).toBe("tile_grass_grass");
+    expect(s2.grid[4][4].key).toBe("tile_grass_grass");
     // 9 hay cells collected to inventory.
-    expect(s2.inventory.tile_grass_hay ?? 0).toBe(9);
+    expect(inv(s2).tile_grass_grass ?? 0).toBe(9);
     expect(s2.tools.bomb_v2).toBe(0);
   });
 
@@ -232,9 +233,9 @@ describe("USE_TOOL + TOOL_FIRED { power: tap_clear_type }", () => {
     // Hay untouched (49 of them remain — 36 cells, 4 swept wheat from a 36-cell board where wheat replaced hay).
     const totalCells = ROWS * COLS;
     const remainingHay = totalCells - 4 /* swept wheat slots are now null */;
-    expect(countKey(s2.grid, "tile_grass_hay")).toBe(remainingHay);
+    expect(countKey(s2.grid, "tile_grass_grass")).toBe(remainingHay);
     // Inventory credited for the wheat.
-    expect(s2.inventory.tile_grain_wheat ?? 0).toBe(4);
+    expect(inv(s2).tile_grain_wheat ?? 0).toBe(4);
     expect(s2.tools.wand_v2).toBe(0);
   });
 });
@@ -244,7 +245,7 @@ describe("USE_TOOL + TOOL_FIRED { power: tap_clear_type }", () => {
 describe("USE_TOOL { power: undo_move } — restores last chain snapshot", () => {
   it("rewinds grid + inventory + turn counter to the pre-chain snapshot", () => {
     const beforeGrid = gridFrom([]);
-    const beforeInventory = { tile_grass_hay: 5 };
+    const beforeInventory = { tile_grass_grass: 5 };
     const beforeFarmRun = { zoneId: "home", turnBudget: 10, turnsRemaining: 8, startedAt: 0, mode: "normal" };
 
     // Current state diverges from the snapshot — sim a chain having been
@@ -254,11 +255,12 @@ describe("USE_TOOL { power: undo_move } — restores last chain snapshot", () =>
     const s0 = {
       ...createInitialState(),
       grid: afterGrid,
-      inventory: { tile_grass_hay: 12 },
+      inventory: { home: { tile_grass_grass: 12 } },
       farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 7, startedAt: 0, mode: "normal" },
       turnsUsed: 1,
       tools: { hourglass_v2: 1 },
       lastChainSnapshot: {
+        zoneId: "home",
         inventory: beforeInventory,
         grid: beforeGrid,
         turnsUsed: 0,
@@ -272,7 +274,7 @@ describe("USE_TOOL { power: undo_move } — restores last chain snapshot", () =>
     });
 
     expect(s1.grid).toBe(beforeGrid);
-    expect(s1.inventory).toBe(beforeInventory);
+    expect(inv(s1)).toEqual(beforeInventory);
     expect(s1.farmRun).toBe(beforeFarmRun);
     expect(s1.turnsUsed).toBe(0);
     expect(s1.tools.hourglass_v2).toBe(0);
