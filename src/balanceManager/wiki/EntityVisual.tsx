@@ -5,7 +5,7 @@
  * entity's *actual* procedural / SVG asset:
  *   - tiles / resources / tools / bosses / npcs / hazards → baked <Icon>
  *   - buildings → the inline-SVG <BuildingIllustration>
- *   - zones → the top-down town-map SVG (<TownGround>)
+ *   - zones → cartography map-node icon (<Icon map_<id>>), emoji when unregistered
  *   - recipes → the output item's <Icon>
  * Anything without an asset renders NOTHING (returns null) — never an iframe.
  *
@@ -21,10 +21,10 @@ import { iconLabel } from "../../textures/iconRegistry.js";
 import BuildingIllustration, { BUILDING_KEYS } from "../../ui/buildings/index.jsx";
 import { COLORS, Pill } from "../shared.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
-import { buildTownPlan, STAGE_W, STAGE_H } from "../../townLayout.js";
-import TownGround from "../../ui/TownGround.jsx";
-import { ZONES } from "../../features/zones/data.js";
 import { keeperIconKey, dailyRewardIconKey } from "./concepts.js";
+import { zoneMapEmoji, zoneMapIconKey } from "./zoneVisual.js";
+
+export { zoneMapEmoji, zoneMapIconKey } from "./zoneVisual.js";
 
 // ─── entityIconKey ─────────────────────────────────────────────────────────────
 
@@ -91,53 +91,14 @@ export function entityIconKey(
       return keeperIconKey(entityKey) ?? null;
     }
 
+    case "zones":
+      return zoneMapIconKey(entityKey);
+
     default:
-      // zones, buildings, categories, views, modals, toolPowers,
+      // buildings, categories, views, modals, toolPowers,
       // settlementBiomes, tileDiscoveryMethods, … have no per-entity procedural icon.
       return null;
   }
-}
-
-// ─── Zone town map ─────────────────────────────────────────────────────────────
-
-/**
- * Render the zone's top-down town map as a static, fully-built SVG, mirroring
- * the wiring in Town.tsx (buildTownPlan → TownGround). Returns null for unknown
- * zones.
- */
-function ZoneTownMap({ zoneId, size }: { zoneId: string; size: number }) {
-  const zone = ZONES[zoneId];
-  if (!zone) return null;
-
-  const boardKinds = [
-    zone.hasFarm && "farm",
-    zone.hasMine && "mine",
-    zone.hasWater && "fish",
-  ].filter(Boolean) as string[];
-
-  const plan = buildTownPlan({
-    zoneId,
-    plotCount: Math.max(1, zone.plotCount ?? 12),
-    boardKinds,
-  });
-
-  const biomeVariant = zone.hasMine && !zone.hasFarm ? "mine" : "farm";
-  // Render every lot as built so the wiki town reads as a populated settlement.
-  const builtLots = new Set<number>(plan.lots.map((l) => l.index));
-
-  return (
-    <svg
-      viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}
-      preserveAspectRatio="xMidYMid meet"
-      width={size}
-      height={size}
-      style={{ display: "block", borderRadius: 8, background: COLORS.parchmentDeep }}
-      role="img"
-      aria-label={`${zoneId} town map`}
-    >
-      <TownGround plan={plan} biomeVariant={biomeVariant} builtLots={builtLots} />
-    </svg>
-  );
 }
 
 // ─── EntityVisual ──────────────────────────────────────────────────────────────
@@ -175,15 +136,33 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
     );
   }
 
-  // Zones: the top-down town map.
-  if (conceptId === "zones") {
-    return <ZoneTownMap zoneId={entityKey} size={size} />;
-  }
-
   // Baked icon resolved by the canonical helper (single source of truth for all
   // concept→key mappings, including keeperIconKey / dailyRewardIconKey).
   const k = entityIconKey(conceptId, entityKey, entity);
   if (k != null) return <Icon iconKey={k} size={size} />;
+
+  // Zones without a baked map_* icon (e.g. harbor, old capital) use the map emoji.
+  if (conceptId === "zones") {
+    const mapEmoji = zoneMapEmoji(entityKey);
+    if (mapEmoji) {
+      return (
+        <span
+          aria-hidden="true"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: size,
+            height: size,
+            fontSize: size * 0.55,
+            lineHeight: 1,
+          }}
+        >
+          {mapEmoji}
+        </span>
+      );
+    }
+  }
 
   // Emoji fallback — used by unknown keepers (look.icon) and any other entity
   // that carries a look.icon but has no canvas key registered yet.

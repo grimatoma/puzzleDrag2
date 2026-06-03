@@ -3,7 +3,7 @@
  *
  * Shows:
  *  - A visual preview: the entity's real asset (procedural icon, building SVG,
- *    or zone town-map) via <EntityVisual>. Never a game iframe; renders no
+ *    or zone map icon) via <EntityVisual>. Never a game iframe; renders no
  *    visual block when the entity has no asset.
  *  - An implementation-status chip.
  *  - A compact two-column facts table sourced from infoboxFacts().

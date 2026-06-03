@@ -2,7 +2,7 @@
  * ZoneDetail.tsx — "Drop rates & upgrades" section for the Game Wiki.
  *
  * For a zone article, surfaces the two data-rich config tables that the
- * Infobox town map can't show:
+ * Infobox map icon can't show:
  *   - Season drop-rate heatmap: a row per season × a column per zone category,
  *     each cell tinted by a value→color ramp so high-drop categories read hot.
  *   - Upgrade-map flow: each `category → upgradedCategory` chain pair rendered
