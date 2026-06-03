@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import ZoneInfoModal from "./ZoneInfoModal.jsx";
-import { ZONES } from "./data.js";
+import { ZONES, zoneHasBoard } from "./data.js";
 import type { GameState } from "../../types/state.js";
 import type { SessionSeasonName } from "./zoneInfoFormat.js";
 
@@ -25,7 +25,7 @@ export default function ZoneEntryCostInfo({ zoneId, state, highlightSeason, info
   if (!zone) return null;
 
   const cost = zone.entryCost?.coins ?? 0;
-  const showCoinCost = !infoOnly && zone.hasFarm;
+  const showCoinCost = !infoOnly && zoneHasBoard(zone, "farm");
 
   return (
     <>

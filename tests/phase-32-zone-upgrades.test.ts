@@ -74,7 +74,7 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
     });
     expect(r).toBeNull();
     // Sanity-check: the zone really does say "gold" for fruits.
-    expect(ZONES.home.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
+    expect(ZONES.home.boards.farm!.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
   });
 });
 
@@ -117,7 +117,7 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
       categoryOf: CATEGORY_OF,
     });
     expect(r).toBeNull();
-    expect(ZONES.orchard.upgradeMap.flowers).toBeUndefined();
+    expect(ZONES.orchard.boards.farm!.upgradeMap.flowers).toBeUndefined();
   });
 });
 
