@@ -40,7 +40,6 @@ import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import { AmountChips, RecipeIO } from "./EntityVisual.jsx";
 import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
-import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
 import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
 import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
@@ -164,18 +163,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // At-a-glance visual summary (recipes/buildings/zones/workers) — null otherwise
   const atAGlance = renderAtAGlance(conceptId, entity);
 
-  // Cross-reference + crafting-dependency sections.
+  // Cross-reference sections.
   // - WhereUsed (item articles): "where is this item id referenced".
-  // - CraftTree (recipe articles + craftable item articles): upstream tree.
   const isItemConcept = conceptId === "resources" || conceptId === "tiles" || conceptId === "tools";
   const showWhereUsed = isItemConcept && hasWhereUsed(entityKey);
-  const craftTreeRecipeId =
-    conceptId === "recipes"
-      ? entityKey
-      : isItemConcept
-        ? recipeIdProducing(entityKey)
-        : null;
-  const showCraftTree = hasCraftTree(craftTreeRecipeId);
 
   // Concept-specific enrichment sections.
   // - BossDifficulty (boss articles): derived difficulty assessment.
@@ -238,7 +229,6 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
     ...(showHostAbilities ? [{ id: "host-abilities", label: conceptId === "workers" ? "Worker abilities" : "Building abilities" }] : []),
     ...(showRecipeRelations ? [{ id: "recipe-relations", label: "Crafting flow" }] : []),
-    ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
@@ -381,11 +371,6 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           )}
 
           {showRecipeRelations && entity != null && <RecipeRelations recipe={entity} />}
-
-          {/* Crafting dependency tree (recipes + craftable items) */}
-          {showCraftTree && craftTreeRecipeId != null && (
-            <CraftTree recipeId={craftTreeRecipeId} />
-          )}
 
           {/* Cross-references: where this item is used */}
           {showWhereUsed && <WhereUsed itemId={entityKey} />}
