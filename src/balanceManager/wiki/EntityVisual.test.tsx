@@ -59,10 +59,25 @@ describe("entityIconKey", () => {
     expect(entityIconKey("achievements", "x", null)).toBeNull();
   });
 
-  it("returns null for keepers / boons / dailyRewards (no procedural icon)", () => {
-    expect(entityIconKey("keepers", "deer_spirit", { look: { icon: "🦌" } })).toBeNull();
-    expect(entityIconKey("boons", "deer_blessing", null)).toBeNull();
-    expect(entityIconKey("dailyRewards", "7", null)).toBeNull();
+  it("returns canvas icon keys for keepers / boons / dailyRewards (Phase 2)", () => {
+    // Keepers now have canvas icon keys from the fixed-icons registry.
+    expect(entityIconKey("keepers", "deer_spirit", { look: { icon: "🦌" } })).toBe("keeper_deer_spirit");
+    expect(entityIconKey("keepers", "stone_knocker", null)).toBe("keeper_stone_knocker");
+    expect(entityIconKey("keepers", "tidesinger", null)).toBe("keeper_tidesinger");
+    // Unknown keeper falls back to null.
+    expect(entityIconKey("keepers", "unknown_keeper", null)).toBeNull();
+
+    // Boons use boon_coin_mult / boon_bond_mult canvas icons.
+    expect(entityIconKey("boons", "deer_blessing", { effect: { type: "coin_gain_mult" } })).toBe("boon_coin_mult");
+    expect(entityIconKey("boons", "deer_blessing", { effect: { type: "bond_gain_mult" } })).toBe("boon_bond_mult");
+
+    // Daily rewards: coin days → tile_coin_golden, rune days → rune_stone, tool days → tool key.
+    // Day 7: { coins: 150, tool: "shuffle" } → tool key wins over coins.
+    expect(entityIconKey("dailyRewards", "7", { coins: 150, tool: "shuffle" })).toBe("shuffle");
+    // Day 2: { coins: 50 } → tile_coin_golden.
+    expect(entityIconKey("dailyRewards", "2", { coins: 50 })).toBe("tile_coin_golden");
+    // Day 14: { coins: 300, runes: 1 } → rune_stone (runes over coins).
+    expect(entityIconKey("dailyRewards", "14", { coins: 300, runes: 1 })).toBe("rune_stone");
   });
 });
 
@@ -113,17 +128,64 @@ describe("EntityVisual", () => {
     expect(container.firstChild).not.toBeNull();
   });
 
-  it("renders nothing for a concept with no asset (categories) — never an iframe", () => {
+  it("renders a muted initial placeholder for a concept with no asset (categories) — never an iframe or '?'", () => {
+    // Phase 2: EntityVisual never returns null — abstract concepts get a muted initial circle.
     const { container } = render(<EntityVisual conceptId="categories" entityKey="grain" />);
-    expect(container.firstChild).toBeNull();
+    // A placeholder span is rendered (not null).
+    expect(container.firstChild).not.toBeNull();
+    // Never an iframe.
     expect(container.querySelector("iframe")).toBeNull();
+    // The placeholder shows the entity key's initial letter, not a "?".
+    expect(container.textContent).toContain("G"); // initial of "grain"
+    expect(container.textContent).not.toContain("?");
   });
 
-  it("falls through to icon (null) for a non-canonical building key", () => {
+  it("falls through to initial placeholder for a non-canonical building key — never null or '?'", () => {
     const { container } = render(<EntityVisual conceptId="buildings" entityKey="not_a_building" />);
-    // Not canonical → falls to entityIconKey("buildings") → null → renders nothing.
-    expect(container.firstChild).toBeNull();
+    // Phase 2: non-canonical building → entityIconKey returns null → muted initial placeholder.
+    expect(container.firstChild).not.toBeNull();
     expect(container.querySelector("iframe")).toBeNull();
+    // Shows the initial 'N' of "not_a_building".
+    expect(container.textContent).toContain("N");
+    expect(container.textContent).not.toContain("?");
+  });
+
+  it("renders a canvas Icon (not the look.icon emoji) for a canonical keeper", () => {
+    // The 3 canonical keepers have canvas keys from the fixed-icons registry.
+    // entityIconKey("keepers", id, …) delegates to keeperIconKey → canvas key.
+    // In jsdom the canvas isn't available so <Icon> may render its internal fallback,
+    // but crucially the look.icon emoji must NOT appear (the canvas path was taken).
+    const { container } = render(
+      <EntityVisual conceptId="keepers" entityKey="deer_spirit" entity={{ look: { icon: "🦌" } }} />,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    // The emoji from look.icon must not appear — the canvas Icon path was taken instead.
+    expect(container.textContent).not.toContain("🦌");
+    expect(container.firstChild).not.toBeNull();
+  });
+
+  it("renders the emoji for an unknown keeper that has look.icon but no canvas key", () => {
+    // Unknown keeper: entityIconKey returns null → falls through to emoji fallback.
+    const { container } = render(
+      <EntityVisual
+        conceptId="keepers"
+        entityKey="unknown_keeper_xyz"
+        entity={{ look: { icon: "🌿" } }}
+      />,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.textContent).toContain("🌿");
+    expect(container.textContent).not.toContain("?");
+  });
+
+  it("renders initial circle for an unknown keeper with no look.icon", () => {
+    const { container } = render(
+      <EntityVisual conceptId="keepers" entityKey="unknown_keeper_xyz" entity={null} />,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    // Shows initial 'U' of "unknown_keeper_xyz"
+    expect(container.textContent).toContain("U");
+    expect(container.textContent).not.toContain("?");
   });
 });
 

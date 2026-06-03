@@ -96,3 +96,95 @@ describe("EntryGrid — empty state", () => {
     expect(document.body.textContent).toContain("No entries.");
   });
 });
+
+// ─── Fact chips ────────────────────────────────────────────────────────────────
+
+describe("EntryGrid — fact chips", () => {
+  it("renders fact chip values when facts array is provided", () => {
+    const entries: WikiEntry[] = [
+      {
+        key: "test_entity",
+        name: "Test Entity",
+        facts: [
+          { value: "+50 coins" },
+          { label: "Station", value: "Bakery" },
+        ],
+      },
+    ];
+    renderWithView("player", entries);
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("+50 coins");
+    expect(body).toContain("Bakery");
+  });
+
+  it("renders at most 3 fact chips even when more are provided", () => {
+    const entries: WikiEntry[] = [
+      {
+        key: "test_entity",
+        name: "Test Entity",
+        facts: [
+          { value: "fact-one" },
+          { value: "fact-two" },
+          { value: "fact-three" },
+          { value: "fact-four-should-not-appear" },
+        ],
+      },
+    ];
+    renderWithView("player", entries);
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("fact-one");
+    expect(body).toContain("fact-two");
+    expect(body).toContain("fact-three");
+    expect(body).not.toContain("fact-four-should-not-appear");
+  });
+
+  it("renders normally (icon + name only) when facts is absent", () => {
+    const entries: WikiEntry[] = [{ key: "no_facts", name: "No Facts" }];
+    const { container } = renderWithView("player", entries);
+    // Should have no fact chip elements
+    expect(container.querySelectorAll(".wiki-card-fact").length).toBe(0);
+    expect(document.body.textContent).toContain("No Facts");
+  });
+
+  it("renders normally when facts is an empty array", () => {
+    const entries: WikiEntry[] = [{ key: "empty_facts", name: "Empty Facts", facts: [] }];
+    const { container } = renderWithView("player", entries);
+    expect(container.querySelectorAll(".wiki-card-fact").length).toBe(0);
+  });
+
+  it("renders a label: prefix when the fact has a label", () => {
+    const entries: WikiEntry[] = [
+      {
+        key: "test",
+        name: "Test",
+        facts: [{ label: "Biome", value: "Farm" }],
+      },
+    ];
+    renderWithView("player", entries);
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Biome:");
+    expect(body).toContain("Farm");
+  });
+});
+
+// ─── Placeholder visual (no iconKey, no emoji) ─────────────────────────────────
+
+describe("EntryGrid — placeholder visual fallback", () => {
+  it("renders the entry initial as placeholder when no iconKey or emoji is set", () => {
+    const entries: WikiEntry[] = [{ key: "abstract_thing", name: "Abstract Thing" }];
+    renderWithView("player", entries);
+    // The placeholder renders the first letter of the name as a capital
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("A"); // initial of "Abstract Thing"
+    // Crucially: no "?" should appear
+    const questionMarks = document.querySelectorAll('[title*="Missing icon"]');
+    expect(questionMarks.length).toBe(0);
+  });
+
+  it("renders emoji when entry has an emoji property but no iconKey", () => {
+    const entries: WikiEntry[] = [{ key: "keeper", name: "Deer Spirit", emoji: "🦌" }];
+    renderWithView("player", entries);
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("🦌");
+  });
+});

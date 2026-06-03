@@ -17,7 +17,7 @@ import { COLORS } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { CONCEPTS } from "./concepts.js";
 import EntryGrid from "./EntryGrid.jsx";
-import type { WikiEntry } from "./EntryGrid.jsx";
+import type { WikiEntry, WikiEntryFact } from "./EntryGrid.jsx";
 import { ConceptFields } from "./ConceptFields.jsx";
 import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
@@ -29,6 +29,8 @@ import { schemaForConcept } from "./conceptSchemas.js";
 import { describeSchema } from "../schemaDoc.js";
 import { groupTileEntries } from "./tileGrouping.js";
 import { conceptHeadlineStats } from "./conceptStats.js";
+import { getEntity } from "./conceptEntities.js";
+import { infoboxFacts } from "./infoboxFacts.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
 // the collapsed-by-default guard already ensures the graph isn't built until
@@ -38,6 +40,26 @@ import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
 import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Enrich a raw entry with up to 3 fact chips, sourced from infoboxFacts.
+ * Pure — reads live entity via getEntity, maps first 2–3 facts to card chips.
+ * Returns the entry unchanged when no facts can be derived.
+ */
+function enrichEntry(conceptId: string, entry: WikiEntry): WikiEntry {
+  const entity = getEntity(conceptId, entry.key);
+  if (!entity) return entry;
+  const rawFacts = infoboxFacts(conceptId, entry.key, entity);
+  if (rawFacts.length === 0) return entry;
+  const facts: WikiEntryFact[] = rawFacts.map((f) => ({
+    value: f.value,
+    label: f.label,
+    iconKey: f.iconKey,
+  }));
+  return { ...entry, facts };
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -56,8 +78,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   // Resolve concept descriptor — fall back to the first concept if unknown
   const concept = CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0];
 
-  // Entries from the live config
-  const entries = concept.getEntries();
+  // Entries from the live config — enriched with up to 3 fact chips each
+  const rawEntries = concept.getEntries();
+  const entries = rawEntries.map((e) => enrichEntry(conceptId, e as unknown as WikiEntry));
 
   // Attribute count (used inside ReferenceSection intro line only)
   const cs = schemaForConcept(conceptId);
@@ -77,7 +100,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   const status = statusForConcept(conceptId);
 
   // Headline stats for the hero banner
-  const stats = conceptHeadlineStats(conceptId, entries as unknown as WikiEntry[]);
+  const stats = conceptHeadlineStats(conceptId, entries);
 
   return (
     <div className="flex flex-col gap-3 wiki-reveal-stagger">
@@ -126,7 +149,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           <div className="wiki-section-heading">
             Entries ({entries.length})
           </div>
-          {groupTileEntries(entries as unknown as WikiEntry[]).map((subGroup) => (
+          {groupTileEntries(entries).map((subGroup) => (
             <section key={subGroup.sub} className="flex flex-col gap-3">
               {/* Sub-category band heading — icon + label, ember accent */}
               <div
@@ -167,7 +190,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
             Entries ({entries.length})
           </div>
           <EntryGrid
-            entries={entries as unknown as WikiEntry[]}
+            entries={entries}
             onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
           />
         </div>
