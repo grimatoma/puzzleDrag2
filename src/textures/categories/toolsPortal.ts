@@ -968,13 +968,34 @@ function drawGoldenIdol(ctx: CanvasRenderingContext2D) {
 function drawGoldenSheep(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   magicHalo(ctx, "rgba(248,192,64,0.5)", 18);
-  // Cloud-like body — gold-tinged wool
-  const g = ctx.createRadialGradient(-3, -2, 3, 0, 0, 14);
-  g.addColorStop(0, "#fffce0"); g.addColorStop(0.6, "#f8c040"); g.addColorStop(1, "#7a4810");
-  ctx.fillStyle = g;
-  for (const [x, y, r] of [[-8, -2, 6], [0, -6, 7], [8, -2, 6], [-4, 4, 6], [5, 5, 6]]) {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2; ctx.stroke();
+  // Cloud-like body — gold-tinged fleece as ONE scalloped silhouette with a
+  // single contour (not a cluster of separately-outlined balls).
+  {
+    const cx = 0, cy = 0, lobes = 10;
+    const baseRx = 12, baseRy = 9, bumpRx = 14.5, bumpRy = 11.5;
+    ctx.beginPath();
+    for (let i = 0; i <= lobes; i++) {
+      const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+      const px = cx + Math.cos(a) * baseRx;
+      const py = cy + Math.sin(a) * baseRy;
+      if (i === 0) ctx.moveTo(px, py);
+      else {
+        const pa = ((i - 1) / lobes) * Math.PI * 2 - Math.PI / 2;
+        const ma = (a + pa) / 2;
+        ctx.quadraticCurveTo(cx + Math.cos(ma) * bumpRx, cy + Math.sin(ma) * bumpRy, px, py);
+      }
+    }
+    ctx.closePath();
+    const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, 15);
+    g.addColorStop(0, "#fffce0"); g.addColorStop(0.6, "#f8c040"); g.addColorStop(1, "#7a4810");
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.save();
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = "#7a4810"; ctx.lineWidth = 0.8;
+    for (const [x, y] of [[-6, -2], [1, -4], [6, -1], [-2, 4], [4, 4]]) {
+      ctx.beginPath(); ctx.arc(x, y, 2, Math.PI * 0.1, Math.PI * 0.95); ctx.stroke();
+    }
+    ctx.restore();
   }
   // Head poking out (right side)
   ctx.fillStyle = "#3a2008";
