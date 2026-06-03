@@ -252,3 +252,12 @@ describe("CategoryPage — seasons (definition schema concept)", () => {
     expect(body).toContain(firstKey);
   });
 });
+
+describe("CategoryPage — definition lead", () => {
+  it("renders a Definition heading with the concept blurb", () => {
+    renderPage("tiles");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Definition");
+    expect(body).toMatch(/Board pieces/i); // tiles blurb
+  });
+});

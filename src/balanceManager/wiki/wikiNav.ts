@@ -5,20 +5,78 @@
 // WIKI_SECTIONS must cover every concept id in concepts.ts exactly once.
 // The test wikiNav.test.ts enforces this in both directions.
 
+export interface WikiNavNode {
+  /** Primary concept id (always a real concept). */
+  conceptId: string;
+  /** Secondary concept ids nested under this primary (collapsible in the sidebar). */
+  children?: string[];
+}
+
 export interface WikiSection {
   id: string;
   label: string;
-  conceptIds: string[];
+  nodes: WikiNavNode[];
 }
 
 export const WIKI_SECTIONS: WikiSection[] = [
-  { id: "board",   label: "Board",   conceptIds: ["tiles", "boardKinds", "zones", "settlementBiomes", "categories"] },
-  { id: "economy", label: "Economy", conceptIds: ["resources", "tools", "recipes", "buildings"] },
-  { id: "world",   label: "World",   conceptIds: ["npcs", "workers", "bosses", "hazards"] },
-  { id: "systems", label: "Systems", conceptIds: ["abilities", "toolPowers", "tileDiscoveryMethods", "seasons"] },
-  { id: "progression", label: "Progression", conceptIds: ["keepers", "boons", "dailyRewards", "achievements"] },
-  { id: "screens", label: "Screens", conceptIds: ["views", "modals"] },
+  {
+    id: "board",
+    label: "Board",
+    nodes: [
+      { conceptId: "tiles", children: ["categories", "tileDiscoveryMethods"] },
+      { conceptId: "boardKinds" },
+      { conceptId: "zones", children: ["settlementBiomes", "keepers"] },
+      { conceptId: "seasons" },
+    ],
+  },
+  {
+    id: "economy",
+    label: "Economy",
+    nodes: [
+      { conceptId: "resources" },
+      { conceptId: "recipes" },
+      { conceptId: "buildings" },
+      { conceptId: "tools", children: ["toolPowers"] },
+    ],
+  },
+  {
+    id: "world",
+    label: "World",
+    nodes: [
+      { conceptId: "npcs" },
+      { conceptId: "workers" },
+      { conceptId: "bosses" },
+      { conceptId: "hazards" },
+      { conceptId: "abilities" },
+    ],
+  },
+  {
+    id: "progression",
+    label: "Progression",
+    nodes: [
+      { conceptId: "boons" },
+      { conceptId: "dailyRewards" },
+      { conceptId: "achievements" },
+    ],
+  },
+  {
+    id: "screens",
+    label: "Screens",
+    nodes: [{ conceptId: "views" }, { conceptId: "modals" }],
+  },
 ];
+
+/** Flatten every concept id referenced anywhere in the nav (primaries + children). */
+export function allNavConceptIds(): string[] {
+  const out: string[] = [];
+  for (const sec of WIKI_SECTIONS) {
+    for (const node of sec.nodes) {
+      out.push(node.conceptId);
+      for (const child of node.children ?? []) out.push(child);
+    }
+  }
+  return out;
+}
 
 export interface NarrativePageDef {
   slug: string;

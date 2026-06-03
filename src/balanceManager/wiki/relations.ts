@@ -9,6 +9,7 @@
 import { getEntity, conceptForKey } from "./conceptEntities.js";
 import { canonicalRecipeEntries, buildRecipesByOutput } from "../recipeCatalog.js";
 import { NPC_DATA } from "../../features/npcs/data.js";
+import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
 import { ZONES } from "../../features/zones/data.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -190,6 +191,22 @@ function relationsForTiles(
   if (next) {
     const producesGroup = makeGroup("Produces", [resolveLink(conceptForKey(next), next)]);
     if (producesGroup) groups.push(producesGroup);
+  }
+
+  // "Category" + "Discovered via": read from the tile-collection catalog
+  // (TILE_TYPES_MAP is keyed by tile id, which equals the ITEMS tile key).
+  const tileType = (TILE_TYPES_MAP as Record<string, unknown>)[entityKey];
+  if (tileType != null && typeof tileType === "object") {
+    const tt = tileType as { category?: string; discovery?: { method?: string } };
+
+    if (typeof tt.category === "string") {
+      const catGroup = makeGroup("Category", [resolveLink("categories", tt.category)]);
+      if (catGroup) groups.push(catGroup);
+    }
+
+    const method = tt.discovery?.method ?? "default";
+    const discGroup = makeGroup("Discovered via", [resolveLink("tileDiscoveryMethods", method)]);
+    if (discGroup) groups.push(discGroup);
   }
 
   // Item cross-references (Crafted by / Used in recipes) also apply to tiles

@@ -5,7 +5,8 @@
 import React from "react";
 import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
-import { ConceptRefForKey } from "../refs.js";
+import { ConceptRefForKey, wikiNavTarget } from "../refs.js";
+import { useBalanceNav } from "../../balanceNav.jsx";
 import StatusChip from "../../../ui/primitives/StatusChip.jsx";
 import { TILE_TYPES_MAP } from "../../../features/tileCollection/data.js";
 import { TILE_DISCOVERY_METHOD_BY_ID } from "../../../config/tileDiscoveryMethods.js";
@@ -139,6 +140,7 @@ export interface TileUnlockProps {
 }
 
 export function TileUnlock({ tileId }: TileUnlockProps) {
+  const { navigate } = useBalanceNav();
   const tile = tileType(tileId);
   if (tile == null) return null;
 
@@ -166,9 +168,18 @@ export function TileUnlock({ tileId }: TileUnlockProps) {
         }}
       >
         <Stat label="Method">
-          <StatusChip tone="info" size="sm" uppercase title={methodDesc}>
-            {methodName}
-          </StatusChip>
+          <button
+            type="button"
+            aria-label={`Go to ${methodName}`}
+            title={`Go to ${methodName}`}
+            onClick={() => navigate(wikiNavTarget("tileDiscoveryMethods", method))}
+            style={{ cursor: "pointer", background: "none", border: "none", padding: 0 }}
+            className="hover:opacity-80"
+          >
+            <StatusChip tone="info" size="sm" uppercase title={methodDesc}>
+              {methodName}
+            </StatusChip>
+          </button>
         </Stat>
 
         <Stat label="Requirement">{unlockDetail(discovery)}</Stat>

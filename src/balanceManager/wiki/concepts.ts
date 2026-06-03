@@ -295,6 +295,7 @@ export const CONCEPTS = [
     id: "categories",
     label: "Categories",
     blurb: "Tile/zone category names for spawn pools, thresholds, and upgrade maps.",
+    pageKind: "category" as const,
     getEntries: categoryEntries,
   },
   {
@@ -367,6 +368,7 @@ export const CONCEPTS = [
     id: "tileDiscoveryMethods",
     label: "Tile discovery",
     blurb: "How tiles unlock: default, chain, research, buy, daily reward.",
+    pageKind: "category" as const,
     getEntries: tileDiscoveryMethodEntries,
   },
   {

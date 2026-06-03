@@ -96,6 +96,10 @@ export default function WikiShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const isSmallScreen = useIsSmallScreen();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Tracks which primary nodes the user has manually toggled. Auto-open is
+  // derived separately: a primary node is open if `tab` is one of its children.
+  const [manualExpanded, setManualExpanded] = useState<Set<string>>(() => new Set());
+
   // The overlay is only meaningful on small screens; ignore the toggle on desktop.
   const overlayOpen = isSmallScreen && mobileNavOpen;
 
@@ -309,26 +313,85 @@ export default function WikiShell() {
             {WIKI_SECTIONS.map((sec) => (
               <div key={sec.id} className="flex flex-col gap-1">
                 {!effectiveCollapsed ? (
-                  <div className="wiki-sidebar-label px-2 pt-2 pb-1">
-                    {sec.label}
-                  </div>
+                  <div className="wiki-sidebar-label px-2 pt-2 pb-1">{sec.label}</div>
                 ) : (
                   <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
                 )}
-                {sec.conceptIds.map((cid) => {
+
+                {sec.nodes.map((node) => {
+                  const cid = node.conceptId;
                   const label = CONCEPT_LABELS[cid] ?? cid;
                   const active = tab === cid;
+                  const children = node.children ?? [];
+                  const hasChildren = children.length > 0;
+                  // Auto-open when the active tab is a child; respect manual toggles otherwise.
+                  const isOpen = children.includes(tab) || manualExpanded.has(cid);
+
                   return (
-                    <button
-                      key={cid}
-                      onClick={() => navigate({ tab: cid })}
-                      className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
-                      title={effectiveCollapsed ? label : undefined}
-                      aria-label={label}
-                    >
-                      <Icon iconKey="ui_star" size={16} title="" />
-                      {!effectiveCollapsed && <span className="flex-1">{label}</span>}
-                    </button>
+                    <div key={cid} className="flex flex-col">
+                      <div className="flex items-stretch">
+                        {hasChildren && !effectiveCollapsed && (
+                          <button
+                            type="button"
+                            aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
+                            aria-expanded={isOpen}
+                            onClick={() =>
+                              setManualExpanded((prev) => {
+                                const next = new Set(prev);
+                                if (isOpen) next.delete(cid);
+                                else next.add(cid);
+                                return next;
+                              })
+                            }
+                            className="px-1 flex items-center"
+                            style={{ color: COLORS.inkSubtle, cursor: "pointer" }}
+                          >
+                            <span
+                              aria-hidden
+                              style={{
+                                display: "inline-block",
+                                width: 10,
+                                fontSize: 9,
+                                transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                                transition: "transform 150ms ease",
+                              }}
+                            >
+                              ▶
+                            </span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => navigate({ tab: cid })}
+                          className={`wiki-nav-link flex-1${active ? " wiki-nav-link--active" : ""}`}
+                          title={effectiveCollapsed ? label : undefined}
+                          aria-label={label}
+                        >
+                          <Icon iconKey="ui_star" size={16} title="" />
+                          {!effectiveCollapsed && <span className="flex-1">{label}</span>}
+                        </button>
+                      </div>
+
+                      {hasChildren && !effectiveCollapsed && isOpen && (
+                        <div className="flex flex-col gap-1" style={{ paddingLeft: 18 }}>
+                          {children.map((childId) => {
+                            const childLabel = CONCEPT_LABELS[childId] ?? childId;
+                            const childActive = tab === childId;
+                            return (
+                              <button
+                                key={childId}
+                                onClick={() => navigate({ tab: childId })}
+                                className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
+                                aria-label={childLabel}
+                              >
+                                <Icon iconKey="ui_star" size={13} title="" />
+                                <span className="flex-1">{childLabel}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

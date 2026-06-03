@@ -384,3 +384,71 @@ describe("relationsFor — fail-safe (bogus references yield no links)", () => {
     expect(groups).toHaveLength(0);
   });
 });
+
+import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
+import { backlinksFor, __resetBacklinkIndex } from "./backlinks.js";
+
+describe("relationsForTiles — category + discovery edges", () => {
+  // tile_grain_wheat: category "grain", discovery method "chain"
+  it("emits a Category group linking to the tile's category", () => {
+    const entity = getEntity("tiles", "tile_grain_wheat") as Record<string, unknown>;
+    const groups = relationsFor("tiles", "tile_grain_wheat", entity);
+    const cat = groups.find((g) => g.title === "Category");
+    expect(cat).toBeDefined();
+    expect(cat!.links[0]).toMatchObject({ conceptId: "categories", key: "grain" });
+  });
+
+  it("emits a Discovered via group linking to the discovery method", () => {
+    const entity = getEntity("tiles", "tile_grain_wheat") as Record<string, unknown>;
+    const groups = relationsFor("tiles", "tile_grain_wheat", entity);
+    const disc = groups.find((g) => g.title === "Discovered via");
+    expect(disc).toBeDefined();
+    expect(disc!.links[0]).toMatchObject({
+      conceptId: "tileDiscoveryMethods",
+      key: TILE_TYPES_MAP["tile_grain_wheat"].discovery!.method,
+    });
+  });
+
+  it("backlinks: the category page lists its member tiles", () => {
+    __resetBacklinkIndex();
+    const back = backlinksFor("categories", "grain");
+    const tilesGroup = back.find((g) => g.title === "Tiles");
+    expect(tilesGroup).toBeDefined();
+    expect(tilesGroup!.links.some((l) => l.key === "tile_grain_wheat")).toBe(true);
+  });
+
+  it("backlinks: the discovery-method page lists tiles discovered that way", () => {
+    __resetBacklinkIndex();
+    const back = backlinksFor("tileDiscoveryMethods", "chain");
+    const tilesGroup = back.find((g) => g.title === "Tiles");
+    expect(tilesGroup).toBeDefined();
+    expect(tilesGroup!.links.length).toBeGreaterThan(0);
+  });
+});
+
+describe("relation/backlink consistency invariant", () => {
+  // Every forward edge from every entity must round-trip as a backlink on its
+  // target. backlinks.ts builds by inverting relationsFor, so this guards
+  // against any future forward-edge source that the index forgets to walk.
+  it("every forward edge appears in its target's backlinks", () => {
+    __resetBacklinkIndex();
+    for (const concept of CONCEPTS) {
+      for (const entry of concept.getEntries()) {
+        const srcKey = (entry as { key: string }).key;
+        const srcEntity = getEntity(concept.id, srcKey) as Record<string, unknown> | null;
+        for (const group of relationsFor(concept.id, srcKey, srcEntity)) {
+          for (const link of group.links) {
+            const back = backlinksFor(link.conceptId, link.key);
+            const present = back.some((g) =>
+              g.links.some((l) => l.conceptId === concept.id && l.key === srcKey),
+            );
+            expect(
+              present,
+              `${concept.id}:${srcKey} → ${link.conceptId}:${link.key} missing from backlinks`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+});

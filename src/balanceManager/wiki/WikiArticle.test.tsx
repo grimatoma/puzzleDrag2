@@ -232,10 +232,12 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
 
     // rec_bread has relations (Station, Output, Ingredients).
     // At least one RefButton in the Relations section should call navigate.
-    // Find all buttons except "← Back".
+    // Find all buttons except "← Back" and the breadcrumb ("Go to …").
     const allButtons = screen.getAllByRole("button");
     const relButtons = allButtons.filter(
-      (b) => !/back/i.test(b.textContent ?? ""),
+      (b) =>
+        !/back/i.test(b.textContent ?? "") &&
+        !(b.getAttribute("title") ?? "").startsWith("Go to"),
     );
 
     // Click the first relation button and verify the navigate signature.
@@ -276,7 +278,38 @@ describe("WikiArticle — achievement article (first_steps)", () => {
   });
 });
 
-// ─── Test 8: Board-kind article shows the BoardKindDetail section ────────────
+// ─── Test 8: Breadcrumb navigates to concept page ────────────────────────────
+
+describe("WikiArticle — breadcrumb links to the concept page", () => {
+  it("navigates to the concept landing on clicking the breadcrumb", () => {
+    const navigate = vi.fn();
+    render(
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <WikiArticle conceptId="categories" entityKey="vegetables" onBack={() => {}} />
+      </BalanceNavProvider>,
+    );
+    const crumb = screen
+      .getAllByRole("button")
+      .find((b) => (b.getAttribute("title") ?? "") === "Go to Categories");
+    expect(crumb).toBeTruthy();
+    fireEvent.click(crumb!);
+    expect(navigate).toHaveBeenCalledWith({ tab: "categories" });
+  });
+});
+
+describe("WikiArticle — member tiles on a category page", () => {
+  it("lists member tiles for a tile category", () => {
+    render(
+      <BalanceNavProvider focus={null} navigate={vi.fn()}>
+        <WikiArticle conceptId="categories" entityKey="grain" onBack={() => {}} />
+      </BalanceNavProvider>,
+    );
+    const body = document.body.textContent ?? "";
+    expect(body).toMatch(/Tiles \(\d+\)/);
+    expect(body).toMatch(/wheat/i);
+  });
+});
+// ─── Board-kind article shows the BoardKindDetail section ────────────────────
 
 describe("WikiArticle — board-kind article (mine)", () => {
   it("renders BoardKindDetail for a board-kind article", () => {
@@ -312,4 +345,3 @@ describe("WikiArticle — powder_store abilities", () => {
     expect(container.querySelector(".wiki-recipe-relation-flow")).not.toBeNull();
   });
 });
-

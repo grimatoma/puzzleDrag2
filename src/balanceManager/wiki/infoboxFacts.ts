@@ -21,6 +21,8 @@
 
 // Pure module — no React/DOM imports.
 
+import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
+
 type Rec = Record<string, unknown> | null;
 
 export interface Fact {
@@ -41,7 +43,7 @@ const str = (v: unknown): string => {
  * Never throws. Returns [] when entity is null or concept is unrecognised.
  * Each fact is only included when its source field is present (not null/undefined).
  */
-export function infoboxFacts(conceptId: string, _key: string, e: Rec): Fact[] {
+export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
   if (!e) return [];
 
   const f: Fact[] = [];
@@ -57,6 +59,8 @@ export function infoboxFacts(conceptId: string, _key: string, e: Rec): Fact[] {
       // Fields: kind, biome, value (tile weight), next (resource produced)
       add("Kind", e["kind"]);
       add("Biome", e["biome"]);
+      const tt = (TILE_TYPES_MAP as Record<string, { category?: string }>)[key];
+      if (tt?.category) add("Category", tt.category);
       if (e["next"] != null) {
         add("Produces", e["next"]);
       }

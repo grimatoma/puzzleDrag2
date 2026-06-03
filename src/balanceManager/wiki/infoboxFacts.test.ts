@@ -243,3 +243,15 @@ describe("infoboxFacts", () => {
     }
   });
 });
+
+import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
+
+describe("infoboxFacts — tile category", () => {
+  it("includes the tile's category as a fact", () => {
+    const e = getEntity("tiles", "tile_grain_wheat") as Record<string, unknown>;
+    const facts = infoboxFacts("tiles", "tile_grain_wheat", e);
+    const cat = facts.find((f) => f.label === "Category");
+    expect(cat).toBeDefined();
+    expect(cat!.value).toBe(TILE_TYPES_MAP["tile_grain_wheat"].category);
+  });
+});

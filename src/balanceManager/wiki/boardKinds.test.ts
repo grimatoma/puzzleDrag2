@@ -45,7 +45,11 @@ describe("boardKinds concept registration", () => {
     expect(Array.isArray(mine!.tiles)).toBe(true);
   });
   it("appears in exactly one nav section (board)", () => {
-    const sections = WIKI_SECTIONS.filter((s) => s.conceptIds.includes("boardKinds"));
+    const sections = WIKI_SECTIONS.filter((s) =>
+      s.nodes.some(
+        (n) => n.conceptId === "boardKinds" || (n.children ?? []).includes("boardKinds"),
+      ),
+    );
     expect(sections.map((s) => s.id)).toEqual(["board"]);
   });
   it("has no Zod schema (live-config-only)", () => {

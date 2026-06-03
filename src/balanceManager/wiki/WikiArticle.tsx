@@ -21,6 +21,8 @@ import { Card, SmallButton, COLORS } from "../shared.jsx";
 import { describeSchema } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
+import { CONCEPTS } from "./concepts.js";
+import { useBalanceNav } from "../balanceNav.jsx";
 import { RelationalFooter } from "../relational.jsx";
 import { WikiRelationLinks } from "./WikiRelationLinks.jsx";
 import { relationsFor } from "./relations.js";
@@ -32,6 +34,8 @@ import { Infobox } from "./Infobox.jsx";
 import { TableOfContents } from "./TableOfContents.jsx";
 import type { TocItem } from "./TableOfContents.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import PageKindBadge from "./PageKindBadge.jsx";
+import { pageKindFor } from "./pageKind.js";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
 import { AmountChips, RecipeIO } from "./EntityVisual.jsx";
@@ -48,6 +52,7 @@ import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.
 import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
 import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
+import MemberTiles, { hasMemberTiles } from "./sections/MemberTiles.jsx";
 import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
 import { BuildingAbilities, hasHostAbilities } from "./sections/BuildingAbilities.jsx";
 import { RecipeRelations, hasRecipeRelationFlow } from "./sections/RecipeRelations.jsx";
@@ -115,8 +120,11 @@ export interface WikiArticleProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticleProps) {
+  const { navigate } = useBalanceNav();
+
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
+  const conceptLabel = CONCEPTS.find((c) => c.id === conceptId)?.label ?? conceptId;
   const cs = schemaForConcept(conceptId);
 
   // Build schema doc — catching in case of unexpected schema shape
@@ -196,6 +204,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showAchievementCard =
     conceptId === "achievements" &&
     hasAchievementCard(entity as Parameters<typeof hasAchievementCard>[0]);
+  const showMemberTiles =
+    (conceptId === "categories" || conceptId === "tileDiscoveryMethods") &&
+    hasMemberTiles(conceptId, entityKey);
   const showBuildingRecipes = conceptId === "buildings" && hasBuildingRecipes(entityKey);
   const showHostAbilities =
     (conceptId === "buildings" || conceptId === "workers") &&
@@ -211,6 +222,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(showMemberTiles ? [{ id: "member-tiles", label: "Tiles" }] : []),
     ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
     ...(showAbilitySpec ? [{ id: "ability-spec", label: "Specification" }] : []),
@@ -240,12 +252,16 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
       <div className="flex items-start gap-2 mb-3 flex-wrap">
         <SmallButton onClick={onBack}>← Back</SmallButton>
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          {/* Breadcrumb */}
-          <span
-            className="wiki-breadcrumb"
+          {/* Breadcrumb — links up to the concept landing page */}
+          <button
+            type="button"
+            title={`Go to ${conceptLabel}`}
+            onClick={() => navigate({ tab: conceptId })}
+            className="wiki-breadcrumb hover:opacity-80"
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
-            {conceptId}
-          </span>
+            {conceptLabel}
+          </button>
           <span style={{ color: COLORS.inkSubtle }}>›</span>
           {/* Entity title — display serif, big */}
           <span className="wiki-title wiki-title--article">
@@ -262,6 +278,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           >
             {entityKey}
           </code>
+          {/* Page-kind badge */}
+          <PageKindBadge kind={pageKindFor(conceptId)} />
+
           {/* Status chip */}
           <StatusChip
             tone={statusMeta.tone}
@@ -291,6 +310,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           >
             {ledeFor(conceptId, entityKey, entity)}
           </p>
+
+          {/* Member tiles (category / discovery-method pages) */}
+          {showMemberTiles && <MemberTiles conceptId={conceptId} entityKey={entityKey} />}
 
           {/* Boss difficulty assessment (boss articles) — near the top */}
           {showBossDifficulty && entity != null && (
