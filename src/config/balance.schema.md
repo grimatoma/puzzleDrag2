@@ -1,6 +1,6 @@
 # balance.json schema
 
-Dev Panel and committed tuning overrides. **Canonical game data** (ITEMS, RECIPES, ZONES, …) lives in TypeScript; this file only patches existing ids.
+Dev Panel and committed tuning overrides. **Canonical game data** (ITEMS, RECIPES, ZONES, …) lives in TypeScript; this file only patches existing ids. This doc is the *contributor* reference for the override **file format**; for the per-field meaning of each attribute (what `value`, `next`, `effect`, … mean on a given concept) see that concept's page in the Game Wiki at `/b/`, whose field reference is generated from the same Zod schemas.
 
 Runtime validation: `balanceSchema` in [`schemas/balance.ts`](schemas/balance.ts), applied at load via `parseBalanceOverrides` in [`schemas/parseBalance.ts`](schemas/parseBalance.ts).
 

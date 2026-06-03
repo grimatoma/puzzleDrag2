@@ -32,6 +32,8 @@ Helpers: `inventoryQty`, `inventoryPut`, `parseInventory` (save boundary) in `sr
 
 ## Dev Panel / Wiki concept map
 
+The **canonical concept list and player-facing attributes** are owned by the live Game Wiki at `/b/` (generated from config + Zod). This table is the *contributor* counterpart: it maps each wiki concept to the **TypeScript enum** that defines its membership and the **source map/array** that holds its attributes — the one thing the wiki doesn't surface. Edit ids in the enum, attributes in the source.
+
 | Wiki / Dev tab | Enum(s) | Attribute source |
 |----------------|---------|------------------|
 | Tiles | `TileKey` | `ITEMS` (`kind: "tile"`) |

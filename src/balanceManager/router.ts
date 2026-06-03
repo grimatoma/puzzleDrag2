@@ -31,6 +31,18 @@ export function parseHash(hash: string | null | undefined, validTabs: readonly s
   return { tab, focus };
 }
 
+/**
+ * Initial tab/focus for the wiki shell, derived from a parsed hash. The wiki's
+ * front door (`/b/` with no usable tab — empty or unknown hash) lands on the
+ * **Overview** narrative page: `tab:"page"`, `focus:"overview"`. A valid hash
+ * passes through unchanged. This is the single source of truth for the default
+ * landing; keep it in sync with the `pageSlug` fallback in `WikiShell`.
+ */
+export function initialWikiRoute(parsed: ParsedHash): { tab: string; focus: string | null } {
+  if (parsed.tab) return { tab: parsed.tab, focus: parsed.focus ?? null };
+  return { tab: "page", focus: "overview" };
+}
+
 export function buildHash({ tab, focus }: { tab?: string | null; focus?: string | null } = {}) {
   if (!tab) return "#/";
   const base = `#/${encodeURIComponent(tab)}`;

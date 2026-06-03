@@ -19,13 +19,15 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
-| TS migration Phases 1–2 (drop `GameState` index, Phaser bridge) | `docs/engineering/ts-migration-completion.md` | `catalog-enums.md`, `typed-tests.md` |
+| TS migration (drop `GameState` index, Phaser bridge, typed actions) | `src/types/` + `src/phaserBridge.ts` | `docs/engineering/catalog-enums.md` |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
 | Canonical concept inventory | Game wiki at `/b/` (also reachable via "📖 Game Wiki" in the game menu) | Every concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) is a category page with an intro, a schema-generated field reference, and the full entity list; every entity is an article with a generated lede, an infobox (icon or live interactive game embed), properties, relations, and "what links here" backlinks. Narrative/planning pages (Overview · Progression · Decisions · Story) live in-app under `src/balanceManager/content/*.html`. Everything is generated live from config + Zod schemas and flagged WIRED/PARTIAL/STUB/DOC-ONLY/PLANNED. Config is edited in source, not in the panel. Do not duplicate concept lists elsewhere — point at the wiki. |
 
 The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
+
+**Docs map (two sources of truth).** *Game* knowledge — story, world, design decisions, progression/roadmap, upcoming-feature scope, and every config-generated concept — lives in the **Game Wiki at `/b/`** (narrative pages under `src/balanceManager/content/`; concepts generated live from config + Zod). *Code/contributor* knowledge — how the codebase is built — lives in **markdown under `docs/engineering/` and `src/**/*.md`** (catalog enum/schema workflow, `balance.json` overrides, feature-slice authoring). Put game content in the wiki, not in markdown; put code mechanics in markdown, not in the wiki; don't duplicate the wiki's generated concept lists. Rationale + the full per-doc disposition: `docs/wiki-migration-plan.html`.
 
 ## Commands
 
@@ -34,7 +36,7 @@ npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
 npm run lint                 # ESLint over src/ + prototype.tsx
 npm run typecheck            # tsc --noEmit over `src/` + entries (excludes `**/*.test.ts`; `src/testUtils/` is included)
-npm run typecheck:tests      # Playwright specs + Vitest setup; see `docs/engineering/typed-tests.md`
+npm run typecheck:tests      # Playwright specs + Vitest setup (test-only tsconfig)
 npm run typecheck:test-files # Per-file strict tsc on src/__tests__/*.test.ts (CI gate)
 npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
