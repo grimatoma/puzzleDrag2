@@ -72,6 +72,33 @@ function writeSidebarCollapsed(v: boolean) {
   } catch { /* storage unavailable */ }
 }
 
+/**
+ * Pure keydown handler extracted from WikiShell's keyboard effect so tests can
+ * import and exercise the real logic without mounting the full lazy tree.
+ *
+ * - Escape → setMobileNavOpen(false)
+ * - Cmd/Ctrl-K → setPaletteOpen(toggle)
+ */
+export function handleWikiShellKeydown(
+  e: KeyboardEvent,
+  {
+    setMobileNavOpen,
+    setPaletteOpen,
+  }: {
+    setMobileNavOpen: (value: boolean) => void;
+    setPaletteOpen: (updater: (v: boolean) => boolean) => void;
+  },
+) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (e.key === "Escape") {
+    setMobileNavOpen(false);
+    return;
+  }
+  if (!mod) return;
+  const key = e.key.toLowerCase();
+  if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); }
+}
+
 // Below this width, the sidebar becomes an overlay toggled by a hamburger
 // button in the header instead of a permanent column.
 const SMALL_SCREEN_QUERY = "(max-width: 768px)";
@@ -262,7 +289,9 @@ function WikiViewToggle() {
         aria-pressed={view === "developer"}
         title="Developer view — shows schema tables, raw keys, and dev utilities"
       >
-        Developer
+        {/* Full label on desktop; compact on mobile via CSS */}
+        <span className="wiki-view-label--full">Developer</span>
+        <span className="wiki-view-label--compact" aria-hidden="true">Dev</span>
       </button>
       <button
         type="button"
@@ -271,7 +300,9 @@ function WikiViewToggle() {
         aria-pressed={view === "player"}
         title="Player view — shows only player-facing content"
       >
-        Player
+        {/* Full label on desktop; compact on mobile via CSS */}
+        <span className="wiki-view-label--full">Player</span>
+        <span className="wiki-view-label--compact" aria-hidden="true">Play</span>
       </button>
     </div>
   );
@@ -320,14 +351,10 @@ export default function WikiShell() {
     });
   }, []);
 
-  // Command palette on Cmd/Ctrl-K.
+  // Command palette on Cmd/Ctrl-K; Escape closes the mobile nav drawer.
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-      if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); return; }
-    }
+    const onKey = (e: KeyboardEvent) =>
+      handleWikiShellKeydown(e, { setMobileNavOpen, setPaletteOpen });
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -435,7 +462,8 @@ export default function WikiShell() {
               {/* Logs */}
               <rect x="11" y="25" width="14" height="3" rx="1.5" fill="#8b6845" />
             </svg>
-            <div>
+            {/* Wordmark wrapper — shrinks gracefully on small screens */}
+            <div className="wiki-wordmark-wrap">
               <div className="wiki-wordmark">Hearthwood Vale</div>
               <div className="wiki-tagline">Game wiki — every tile, recipe, building, and beat</div>
             </div>
@@ -448,15 +476,16 @@ export default function WikiShell() {
               title="Search the wiki (Cmd/Ctrl-K)"
               aria-label="Open command palette"
             >
-              🔎 Search
+              🔎<span className="wiki-search-label"> Search</span>
               <span className="wiki-kbd">⌘K</span>
             </button>
             <a
               href={import.meta.env.BASE_URL}
               className="wiki-back-btn"
               title="Return to the game"
+              aria-label="Back to Game"
             >
-              ← Back to Game
+              ←<span className="wiki-back-label"> Back to Game</span>
             </a>
           </div>
         </header>

@@ -1202,7 +1202,43 @@
   padding-top: 24px;
 }
 
+/* ── Phase 4b: Mobile pass ──────────────────────────────────────────────────── */
+
+/*
+ * Responsive table scroll wrapper — applied around wide tables so they scroll
+ * horizontally inside their container instead of pushing the page wider.
+ * Applied to FieldsTable, ZoneDetail heatmap, WorkerComparison, BossComparison,
+ * ToolPowerSpec, and AbilitySpec.
+ */
+.wiki-root .wiki-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* View toggle label visibility — compact span hidden on desktop, full hidden on mobile */
+.wiki-root .wiki-view-label--compact {
+  display: none;
+}
+
+/* Wordmark wrapper base rule — ensures the class exists at base level and is not
+ * mobile-only by accident; mobile block overrides min-width + overflow below. */
+.wiki-root .wiki-header .wiki-wordmark-wrap {
+  min-width: 0;
+}
+
+/* General mobile rules (≤640px): WikiHome layout + compact header.
+ *
+ * Compact header strategy at 390px (ONE row):
+ *   hamburger | icon + wordmark | [controls: view-toggle, search-icon, back-icon]
+ *   - flex-nowrap on the header to prevent line-wrapping
+ *   - wordmark container gets min-width:0 + text-overflow:ellipsis so it shrinks
+ *   - tagline hidden entirely (display:none)
+ *   - search: hide the "Search" label text + ⌘K badge (icon-only)
+ *   - back: hide the " Back to Game" text (arrow-only)
+ *   - view toggle: show abbreviated "Dev"/"Player" labels
+ */
 @media (max-width: 640px) {
+  /* ── WikiHome ── */
   .wiki-root .wiki-home-hero {
     padding: 16px 16px 14px;
   }
@@ -1217,5 +1253,108 @@
 
   .wiki-root .wiki-home-start {
     padding: 14px 16px;
+  }
+
+  /* ── Compact header ── */
+  .wiki-root .wiki-header {
+    flex-wrap: nowrap;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 6px;
+  }
+
+  /* Left side: shrink to allow controls room */
+  .wiki-root .wiki-header > :first-child {
+    min-width: 0;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  /* Don't shrink controls group */
+  .wiki-root .wiki-header > :last-child {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  /* Wordmark container — truncate if needed */
+  .wiki-root .wiki-header .wiki-wordmark-wrap {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .wiki-root .wiki-header .wiki-wordmark {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  /* Hide the tagline below the wordmark */
+  .wiki-root .wiki-tagline {
+    display: none;
+  }
+
+  /* Compact search button: icon-only */
+  .wiki-root .wiki-search-btn .wiki-search-label,
+  .wiki-root .wiki-search-btn .wiki-kbd {
+    display: none;
+  }
+
+  .wiki-root .wiki-search-btn {
+    padding: 6px 8px;
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  /* Compact back button: arrow-only */
+  .wiki-root .wiki-back-btn .wiki-back-label {
+    display: none;
+  }
+
+  .wiki-root .wiki-back-btn {
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  /* Compact view toggle: shorter label text */
+  .wiki-root .wiki-view-toggle__btn {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  /* Swap view toggle labels to compact versions */
+  .wiki-root .wiki-view-label--full {
+    display: none;
+  }
+
+  .wiki-root .wiki-view-label--compact {
+    display: inline;
+  }
+
+  /* Hamburger button tap target — at least 40×40 */
+  .wiki-root .wiki-toggle-btn--lg {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Sidebar icon — slightly smaller on mobile */
+  .wiki-root .wiki-header-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+}
+
+/* Drawer slide transition — respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-sidebar {
+    transition: none !important;
   }
 }
