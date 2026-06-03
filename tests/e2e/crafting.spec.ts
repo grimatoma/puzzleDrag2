@@ -70,7 +70,7 @@ test('Workshop: crafting explosives also routes to state.tools', async ({ page }
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { home: { tile_grass_hay: 2, tile_special_dirt: 2 } },
+    inventory: { home: { tile_grass_grass: 2, tile_special_dirt: 2 } },
     level: 3,
   });
   await openCraftingTab(page, 'workshop');

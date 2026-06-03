@@ -57,7 +57,7 @@ describe("BoardKindDetail", () => {
     renderBoardKind("farm");
     const body = document.body.textContent ?? "";
     // Farm hay tile produces hay_bundle — label should be the friendly name, not the resource id.
-    expect(body).toMatch(/Hay/i);
+    expect(body).toMatch(/Grass/i);
     expect(body).not.toMatch(/hay_bundle/i);
   });
 });

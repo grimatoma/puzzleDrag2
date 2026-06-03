@@ -133,8 +133,8 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
 
   it("rake TOOL_FIRED: spends the charge and clears connected hay", () => {
     const grid = [
-      [{ key: "tile_grass_hay" }, { key: "tile_grass_hay" }, { key: "tile_tree_oak" }],
-      [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grain_wheat" }],
+      [{ key: "tile_grass_grass" }, { key: "tile_grass_grass" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_grass" }, { key: "tile_fruit_blackberry" }, { key: "tile_grain_wheat" }],
     ];
     const s0 = {
       ...createInitialState(),
@@ -146,7 +146,7 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     const s1 = rootReducer(s0, { type: "TOOL_FIRED", key: "rake", row: 0, col: 0 });
     expect(s1.tools.rake).toBe(0);
     expect(s1.toolPending).toBeNull();
-    expect(inv(s1).tile_grass_hay ?? 0).toBe(3);
+    expect(inv(s1).tile_grass_grass ?? 0).toBe(3);
   });
 
   it("rake CANCEL_TOOL: clears toolPending without touching count", () => {
@@ -165,8 +165,8 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
   it("axe: instant clear_category sweeps all trees and spends the charge", () => {
     const base = createInitialState();
     const grid = [
-      [{ key: "tile_tree_oak" }, { key: "tile_grass_hay" }, { key: "tile_tree_oak" }],
-      [{ key: "tile_grass_hay" }, { key: "tile_grass_hay" }, { key: "tile_grass_hay" }],
+      [{ key: "tile_tree_oak" }, { key: "tile_grass_grass" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_grass" }, { key: "tile_grass_grass" }, { key: "tile_grass_grass" }],
     ];
     const s0 = { ...base, grid, tools: { ...base.tools, axe: 1 }, turnsUsed: 2 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "axe" });

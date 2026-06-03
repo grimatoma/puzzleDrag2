@@ -158,12 +158,12 @@ describe("infoboxFacts", () => {
     expect(Number(levelFact!.value)).toBeGreaterThanOrEqual(1);
   });
 
-  it("zones — includes Base turns fact", () => {
+  it("zones — includes Boards fact", () => {
     const entity = getEntity("zones", realZoneKey);
     const facts = infoboxFacts("zones", realZoneKey, entity);
-    const turnsFact = facts.find((f) => f.label === "Base turns");
-    expect(turnsFact).toBeDefined();
-    expect(Number(turnsFact!.value)).toBeGreaterThan(0);
+    const boardsFact = facts.find((f) => f.label === "Boards");
+    expect(boardsFact).toBeDefined();
+    expect(boardsFact!.value).toContain("farm");
   });
 
   it("zones — includes Entry cost fact", () => {

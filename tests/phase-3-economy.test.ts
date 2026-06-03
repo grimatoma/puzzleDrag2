@@ -6,10 +6,10 @@ import { createInitialState, rootReducer } from "../src/state.js";
 import { MARKET_PRICES } from "../src/constants.js";
 
 describe("Phase 3 — market prices defined", () => {
-  it("hay has buy price", () => expect(MARKET_PRICES.tile_grass_hay.buy).toBeGreaterThan(0));
+  it("hay has buy price", () => expect(MARKET_PRICES.tile_grass_grass.buy).toBeGreaterThan(0));
   it("wheat has sell price", () => expect(MARKET_PRICES.tile_grain_wheat.sell).toBeGreaterThan(0));
   it("all base resources covered", () => {
-    const keys = ["tile_grass_hay", "tile_grain_wheat", "flour", "plank", "jam", "tile_mine_stone", "tile_mine_coal"];
+    const keys = ["tile_grass_grass", "tile_grain_wheat", "flour", "plank", "jam", "tile_mine_stone", "tile_mine_coal"];
     for (const k of keys) {
       expect(MARKET_PRICES[k], `${k} missing`).toBeDefined();
     }

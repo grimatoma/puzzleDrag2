@@ -17,7 +17,7 @@ describe("attractsRats helper module", () => {
   });
 
   it("attractsRats: unknown / wrong key", () => {
-    expect(attractsRats("tile_grass_hay")).toBe(false);
+    expect(attractsRats("tile_grass_grass")).toBe(false);
     expect(attractsRats("anything")).toBe(false);
     expect(attractsRats(undefined)).toBe(false);
   });
@@ -31,7 +31,7 @@ describe("attractsRats helper module", () => {
 
   it("countAttractsRatTiles tallies attract tiles", () => {
     const g = makeGrid([
-      ["tile_grass_hay", "tile_grain_manna"],
+      ["tile_grass_grass", "tile_grain_manna"],
       ["tile_fruit_jackfruit", "berry"],
     ]);
     expect(countAttractsRatTiles(g)).toBe(2);
@@ -42,7 +42,7 @@ describe("attractsRats helper module", () => {
   });
 
   it("effectiveRatSpawnRate: bumps by ATTRACT_RATE_BONUS per tile", () => {
-    const g = makeGrid([["tile_grain_manna", "tile_fruit_jackfruit", "tile_grass_hay"]]);
+    const g = makeGrid([["tile_grain_manna", "tile_fruit_jackfruit", "tile_grass_grass"]]);
     expect(effectiveRatSpawnRate(0.1, g)).toBeCloseTo(0.1 + 2 * ATTRACT_RATE_BONUS);
   });
 
@@ -59,13 +59,13 @@ describe("rollRatSpawn integration with attracts_rats", () => {
   // Deterministic state with both spawn-threshold prerequisites met.
   const baseState = (grid) => ({
     biome: "farm",
-    inventory: { home: { tile_grass_hay: 100, tile_grain_wheat: 100 } },
+    inventory: { home: { tile_grass_grass: 100, tile_grain_wheat: 100 } },
     hazards: { rats: [] },
     grid,
   });
 
   it("base rate (10%) — rng 0.99 → no spawn on plain board", () => {
-    const grid = makeGrid([["tile_grass_hay", "tile_grain_wheat"]]);
+    const grid = makeGrid([["tile_grass_grass", "tile_grain_wheat"]]);
     const r = rollRatSpawn(baseState(grid), () => 0.99);
     expect(r).toBeNull();
   });
@@ -73,7 +73,7 @@ describe("rollRatSpawn integration with attracts_rats", () => {
   it("with two attract tiles, rate is 0.20 — rng 0.15 spawns", () => {
     const grid = makeGrid([
       ["tile_grain_manna", "tile_fruit_jackfruit"],
-      ["tile_grass_hay",  "tile_grain_wheat"],
+      ["tile_grass_grass",  "tile_grain_wheat"],
     ]);
     let i = 0;
     const seq = [0.15, 0.5, 0.5, 0.5];

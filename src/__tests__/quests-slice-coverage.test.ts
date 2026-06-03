@@ -141,7 +141,7 @@ describe("quests slice — coverage gaps", () => {
     });
     const s1 = questReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { gained: 4, chainLength: 7, key: "tile_grass_hay", value: 2 },
+      payload: { gained: 4, chainLength: 7, key: "tile_grass_grass", value: 2 },
     } as Action);
     expect(dailiesOf(s1)[0].progress).toBe(4);
     expect(dailiesOf(s1)[1].progress).toBe(1); // chain5 ticked
@@ -155,7 +155,7 @@ describe("quests slice — coverage gaps", () => {
     });
     const s1 = questReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { gained: 6, chainLength: 4, key: "tile_grass_hay", value: 3 },
+      payload: { gained: 6, chainLength: 4, key: "tile_grass_grass", value: 3 },
     } as Action);
     // floor(6 * 3 / 2) = 9
     expect(dailiesOf(s1)[0].progress).toBe(9);
@@ -163,11 +163,11 @@ describe("quests slice — coverage gaps", () => {
 
   it("TURN_IN_ORDER ticks 'deliver' daily and ignores when order missing", () => {
     const s0 = patchInventory(baseState({
-      orders: [{ id: 1, key: "tile_grass_hay", need: 5 }],
+      orders: [{ id: 1, key: "tile_grass_grass", need: 5 }],
       dailies: [
         { id: "q1", key: "deliver", target: 3, progress: 0, done: false, claimed: false, reward: { coins: 50 } },
       ],
-    }), { tile_grass_hay: 5 });
+    }), { tile_grass_grass: 5 });
     const s1 = questReduce(s0, {
       type: "TURN_IN_ORDER",
       id: 1,

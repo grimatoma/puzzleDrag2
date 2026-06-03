@@ -35,13 +35,13 @@ describe("discoveredTileSources", () => {
 
   it("includes a tile when it is BOTH discovered AND active in its category", () => {
     let s = createInitialState();
-    s = withTile(s, "tile_grass_meadow", "grass"); // tile_grass_meadow has pool_weight tile_grass_hay +1
+    s = withTile(s, "tile_grass_meadow", "grass"); // tile_grass_meadow has pool_weight tile_grass_grass +1
     const sources = discoveredTileSources(s);
     const meadow = sources.find((src) => src.sourceId === "tile_grass_meadow");
     expect(meadow).toBeTruthy();
     expect(meadow.weight).toBe(1);
     expect(meadow.abilities).toEqual([
-      { id: "pool_weight", params: { target: "tile_grass_hay", amount: 1 } },
+      { id: "pool_weight", params: { target: "tile_grass_grass", amount: 1 } },
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("discoveredTileSources", () => {
         ...tc,
         discovered: { ...(tc.discovered ?? {}), tile_grass_meadow: true },
         // activeByCategory.grass intentionally NOT pointing at tile_grass_meadow
-        activeByCategory: { ...(tc.activeByCategory ?? {}), grass: "tile_grass_hay" },
+        activeByCategory: { ...(tc.activeByCategory ?? {}), grass: "tile_grass_grass" },
       },
     };
     const sources = discoveredTileSources(s);
@@ -63,27 +63,27 @@ describe("discoveredTileSources", () => {
 });
 
 describe("computeWorkerEffects — tile contributions land on global channels", () => {
-  it("active tile_grass_meadow contributes +1 to effectivePoolWeights.tile_grass_hay", () => {
+  it("active tile_grass_meadow contributes +1 to effectivePoolWeights.tile_grass_grass", () => {
     let s = createInitialState();
     s = withTile(s, "tile_grass_meadow", "grass");
     const eff = computeWorkerEffects(s);
-    expect(eff.effectivePoolWeights.tile_grass_hay).toBe(1);
+    expect(eff.effectivePoolWeights.tile_grass_grass).toBe(1);
   });
 
   it("active tile_grass_spiky contributes +2 (replaces tile_grass_meadow when activated)", () => {
     let s = createInitialState();
     s = withTile(s, "tile_grass_spiky", "grass");
     const eff = computeWorkerEffects(s);
-    expect(eff.effectivePoolWeights.tile_grass_hay).toBe(2);
+    expect(eff.effectivePoolWeights.tile_grass_grass).toBe(2);
   });
 
   it("tile pool_weight surfaces in effectivePoolWeights for the active key", () => {
     let s = createInitialState();
-    s = withTile(s, "tile_grass_meadow", "grass"); // tile_grass_meadow has pool_weight tile_grass_hay +1
+    s = withTile(s, "tile_grass_meadow", "grass"); // tile_grass_meadow has pool_weight tile_grass_grass +1
     // Stacking with worker/building sources on a shared key is exercised in
     // abilities-combo.test.js; here we pin the tile-only contribution.
     const eff = computeWorkerEffects(s);
-    expect(eff.effectivePoolWeights.tile_grass_hay).toBe(1);
+    expect(eff.effectivePoolWeights.tile_grass_grass).toBe(1);
   });
 });
 

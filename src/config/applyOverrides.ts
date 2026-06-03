@@ -255,12 +255,10 @@ export function applyTileOverrides(tileTypes: unknown, overrides: Overrides): vo
 
 /**
  * Apply patches to ZONES entries (Phase 6, Dev Panel Zones tab).
- * Allowed fields per zone: baseTurns, entryCost.coins, upgradeMap,
- * seasonDrops. Each is whitelisted so unrelated keys can't bleed in.
+ * Allowed fields per zone: name, buildings, entryCost.coins, boards.{farm,mine,fish}.
  *
- * `upgradeMap` is replaced wholesale (rather than merged) so the designer
- * can clear an entry by leaving it absent. `seasonDrops` is merged
- * per-season so a partial patch only clobbers the named seasons.
+ * Farm board: `upgradeMap` is replaced wholesale; `seasonDrops` is merged per-season.
+ * Mine/fish boards: only `baseTurns` is patchable.
  */
 export function applyZoneOverrides(zones: unknown, overrides: Overrides): void {
   const parsed = parseOptionalOverrideSection("zones", zonesOverridesSchema, overrides);
@@ -273,23 +271,39 @@ export function applyZoneOverrides(zones: unknown, overrides: Overrides): void {
       continue;
     }
     if (patch.name !== undefined) zone.name = patch.name;
-    if (patch.hasFarm !== undefined) zone.hasFarm = patch.hasFarm;
-    if (patch.hasMine !== undefined) zone.hasMine = patch.hasMine;
-    if (patch.hasWater !== undefined) zone.hasWater = patch.hasWater;
     if (patch.buildings !== undefined) zone.buildings = [...patch.buildings];
-    if (patch.baseTurns !== undefined) zone.baseTurns = patch.baseTurns;
     if (patch.entryCost !== undefined) {
       zone.entryCost = { ...asRecord(zone.entryCost), coins: patch.entryCost.coins };
     }
-    if (patch.upgradeMap !== undefined) zone.upgradeMap = { ...patch.upgradeMap };
-    if (patch.seasonDrops !== undefined) {
-      const out: Record<string, Record<string, number>> = {
-        ...(asRecord(zone.seasonDrops) as Record<string, Record<string, number>>),
-      };
-      for (const [seasonName, table] of Object.entries(patch.seasonDrops)) {
-        out[seasonName] = { ...table };
+    if (patch.boards !== undefined) {
+      const boards = asRecord(zone.boards ?? (zone.boards = {}));
+      const patchBoards = patch.boards;
+
+      if (patchBoards.farm !== undefined) {
+        const farm = asRecord(boards.farm ?? (boards.farm = {}));
+        const farmPatch = patchBoards.farm;
+        if (farmPatch.baseTurns !== undefined) farm.baseTurns = farmPatch.baseTurns;
+        if (farmPatch.upgradeMap !== undefined) farm.upgradeMap = { ...farmPatch.upgradeMap };
+        if (farmPatch.seasonDrops !== undefined) {
+          const out: Record<string, Record<string, number>> = {
+            ...(asRecord(farm.seasonDrops) as Record<string, Record<string, number>>),
+          };
+          for (const [seasonName, table] of Object.entries(farmPatch.seasonDrops)) {
+            out[seasonName] = { ...table };
+          }
+          farm.seasonDrops = out;
+        }
       }
-      zone.seasonDrops = out;
+
+      if (patchBoards.mine !== undefined) {
+        const mine = asRecord(boards.mine ?? (boards.mine = {}));
+        if (patchBoards.mine.baseTurns !== undefined) mine.baseTurns = patchBoards.mine.baseTurns;
+      }
+
+      if (patchBoards.fish !== undefined) {
+        const fish = asRecord(boards.fish ?? (boards.fish = {}));
+        if (patchBoards.fish.baseTurns !== undefined) fish.baseTurns = patchBoards.fish.baseTurns;
+      }
     }
   }
 }

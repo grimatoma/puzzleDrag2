@@ -46,7 +46,7 @@ describe("10.6 — initial tool counts", () => {
 
 describe("10.6 — USE_TOOL bird_cage", () => {
   it("collects all 3 chicken tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 3 }, { key: "tile_grass_hay", count: 4 }]);
+    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 3 }, { key: "tile_grass_grass", count: 4 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -71,7 +71,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
   });
 
   it("refunds when no chicken tiles (tool count unchanged)", () => {
-    const grid = makeGridWith([{ key: "tile_grass_hay", count: 6 }]);
+    const grid = makeGridWith([{ key: "tile_grass_grass", count: 6 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -86,7 +86,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
 
 describe("10.6 — USE_TOOL scythe_full", () => {
   it("collects all 5 wheat tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_grass", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -111,7 +111,7 @@ describe("10.6 — USE_TOOL scythe_full", () => {
   });
 
   it("Phase-1 Scythe (key 'clear') is NOT affected", () => {
-    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "tile_grain_wheat", count: 5 }, { key: "tile_grass_grass", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,

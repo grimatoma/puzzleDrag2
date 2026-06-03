@@ -12,7 +12,7 @@ export interface MarketEvent {
 
 export const MARKET_EVENTS: MarketEvent[] = [
   { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } },
-  { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { tile_grass_hay: 0.5, tile_grain_wheat: 0.5 } },
+  { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { tile_grass_grass: 0.5, tile_grain_wheat: 0.5 } },
   { id: "iron_rush",     label: "Iron Rush",     desc: "The King's army is buying iron. Ingot prices are soaring!", mults: { tile_mine_iron_ore: 2.5 } },
   { id: "gem_fever",     label: "Gem Fever",     desc: "A rich merchant is in town. Gems are trading at a premium.", mults: { tile_mine_gem: 1.8 } },
 ];

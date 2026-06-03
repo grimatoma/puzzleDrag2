@@ -20,7 +20,7 @@ import { rootReducer, createInitialState } from "../state.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────
 
-function blankGrid(fillKey = "tile_grass_hay") {
+function blankGrid(fillKey = "tile_grass_grass") {
   const grid = [];
   for (let r = 0; r < ROWS; r++) {
     const row = [];
@@ -185,7 +185,7 @@ describe("Phase 3 — clear_category tools collect family tiles", () => {
     const s0 = { ...createInitialState(), grid, tools: { ...createInitialState().tools, trimmer: 1 } };
     const s1 = useTool(s0, "trimmer");
     expect(countKey(s1.grid, "tile_tree_oak")).toBe(0);
-    expect(countKey(s1.grid, "tile_grass_hay")).toBe(ROWS * COLS);
+    expect(countKey(s1.grid, "tile_grass_grass")).toBe(ROWS * COLS);
     expect(s1.tools.trimmer).toBe(0);
   });
 
@@ -257,14 +257,14 @@ describe("Phase 3 — clear_category tools collect family tiles", () => {
   it("plough sweeps grass AND grain in one pass (clear_category / array)", () => {
     // plough's `target` is ["grass", "grain"]. Make sure both clear.
     const grid = blankGrid();
-    grid[0][0].key = "tile_grass_hay";
+    grid[0][0].key = "tile_grass_grass";
     grid[0][1].key = "tile_grain_wheat";
     grid[1][0].key = "tile_grass_meadow";
     grid[1][1].key = "tile_grain_corn";
     grid[2][2].key = "tile_fruit_apple"; // unrelated — should survive
     const s0 = { ...createInitialState(), grid, tools: { ...createInitialState().tools, plough: 1 } };
     const s1 = useTool(s0, "plough");
-    expect(countKey(s1.grid, "tile_grass_hay")).toBe(0);
+    expect(countKey(s1.grid, "tile_grass_grass")).toBe(0);
     expect(countKey(s1.grid, "tile_grain_wheat")).toBe(0);
     expect(countKey(s1.grid, "tile_grass_meadow")).toBe(0);
     expect(countKey(s1.grid, "tile_grain_corn")).toBe(0);
@@ -337,22 +337,22 @@ describe("Phase 3 — transform_tiles tools mutate matching board tiles", () => 
   });
 
   it("golden_carrot turns every grass tile into a carrot tile", () => {
-    const grid = blankGrid("tile_grass_hay");
+    const grid = blankGrid("tile_grass_grass");
     const s0 = { ...createInitialState(), grid, tools: { ...createInitialState().tools, golden_carrot: 1 } };
     const s1 = useTool(s0, "golden_carrot");
-    expect(countKey(s1.grid, "tile_grass_hay")).toBe(0);
+    expect(countKey(s1.grid, "tile_grass_grass")).toBe(0);
     expect(countKey(s1.grid, "tile_veg_carrot")).toBe(ROWS * COLS);
   });
 
   it("golden_idol turns every grass tile into a cow tile", () => {
-    const grid = blankGrid("tile_grass_hay");
+    const grid = blankGrid("tile_grass_grass");
     const s0 = { ...createInitialState(), grid, tools: { ...createInitialState().tools, golden_idol: 1 } };
     const s1 = useTool(s0, "golden_idol");
     expect(countKey(s1.grid, "tile_cattle_cow")).toBe(ROWS * COLS);
   });
 
   it("golden_sheep turns every grass tile into a sheep tile", () => {
-    const grid = blankGrid("tile_grass_hay");
+    const grid = blankGrid("tile_grass_grass");
     const s0 = { ...createInitialState(), grid, tools: { ...createInitialState().tools, golden_sheep: 1 } };
     const s1 = useTool(s0, "golden_sheep");
     expect(countKey(s1.grid, "tile_herd_sheep")).toBe(ROWS * COLS);

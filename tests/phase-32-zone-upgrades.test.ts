@@ -40,7 +40,7 @@ describe("Phase 32 — TILE_CATEGORY_TO_ZONE_CATEGORY reverse mapping", () => {
 describe("Phase 32 — nextResourceForZone returns null when the zone has no override", () => {
   it("returns null when zoneId is missing", () => {
     const r = nextResourceForZone({
-      currentRes: findResource("tile_grass_hay"),
+      currentRes: findResource("tile_grass_grass"),
       zoneId: null,
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -74,13 +74,13 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
     });
     expect(r).toBeNull();
     // Sanity-check: the zone really does say "gold" for fruits.
-    expect(ZONES.home.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
+    expect(ZONES.home.boards.farm!.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
   });
 });
 
 describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", () => {
   it("Home chain of grass spawns a bird tile (per base farm spec)", () => {
-    const grassRes = findResource("tile_grass_hay");
+    const grassRes = findResource("tile_grass_grass");
     const r = nextResourceForZone({
       currentRes: grassRes,
       zoneId: "home",
@@ -117,7 +117,7 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
       categoryOf: CATEGORY_OF,
     });
     expect(r).toBeNull();
-    expect(ZONES.orchard.upgradeMap.flowers).toBeUndefined();
+    expect(ZONES.orchard.boards.farm!.upgradeMap.flowers).toBeUndefined();
   });
 });
 
@@ -129,7 +129,7 @@ describe("Phase 32 — nextResourceForZone honours the player's active species",
     const desired = allBirds[allBirds.length - 1];
     const tileCollectionActive = { bird: desired.id };
     const r = nextResourceForZone({
-      currentRes: findResource("tile_grass_hay"),
+      currentRes: findResource("tile_grass_grass"),
       zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive,

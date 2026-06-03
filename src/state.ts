@@ -45,7 +45,7 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
@@ -839,7 +839,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! [icon:ui_build] Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
       } else if (b.id === "inn" && !hintsShown.innHint) {
-        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_grass] You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
       // §17 locked: 10 XP per building into almanac
@@ -1093,7 +1093,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const zoneId = ((state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home");
       const zone = ZONES[zoneId];
       if (!zone) return state;
-      if (!zone.hasFarm) {
+      if (!zoneHasBoard(zone, "farm")) {
         return {
           ...state,
           bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} does not have farm fields.`, ms: 2200 },

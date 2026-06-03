@@ -7,7 +7,7 @@ import { COLORS } from "../../shared.jsx";
 import { SEASONS } from "../../../constants.js";
 import { HAZARDS } from "../../../features/mine/hazards.js";
 import { FARM_HAZARD_META } from "../../../features/farm/hazards.js";
-import { ZONES } from "../../../features/zones/data.js";
+import { ZONES, zoneHasBoard } from "../../../features/zones/data.js";
 import type { Zone } from "../../../features/zones/data.js";
 import { iconLabel } from "../../../textures/iconRegistry.js";
 import {
@@ -49,10 +49,8 @@ export interface BoardKindDetailProps {
 export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProps) {
   const tiles = Array.isArray(boardKind.tiles) ? boardKind.tiles : [];
   const dangers = DANGER_KEYS[boardKindKey] ?? [];
-  const zoneFlag =
-    boardKindKey === "farm" ? "hasFarm" : boardKindKey === "mine" ? "hasMine" : "hasWater";
-  const zones = (Object.values(ZONES) as Zone[]).filter(
-    (z) => (z as unknown as Record<string, unknown>)[zoneFlag] === true,
+  const zones = (Object.values(ZONES) as Zone[]).filter((z) =>
+    zoneHasBoard(z, boardKindKey as "farm" | "mine" | "fish"),
   );
 
   const tileLinks = entityKeysToWikiLinks(
@@ -108,7 +106,7 @@ export function BoardKindDetail({ boardKindKey, boardKind }: BoardKindDetailProp
         />
         <p className="text-[12px] mt-2" style={{ color: COLORS.inkSubtle, margin: 0 }}>
           A run plays through all four seasons. Each session&apos;s turn budget (the zone&apos;s{" "}
-          <code>baseTurns</code>) is split evenly across the seasons, so the active season advances
+          <code>boards.{boardKindKey}.baseTurns</code>) is split evenly across the seasons, so the active season advances
           as turns are spent.
         </p>
       </div>

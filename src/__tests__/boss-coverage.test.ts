@@ -101,7 +101,7 @@ describe("boss slice — RESOLVE (win / loss)", () => {
     });
 
   it("BOSS/RESOLVE strips frozen/rubble/hidden flags from the grid", () => {
-    const grid = [[{ key: "tile_grass_hay", frozen: true, rubble: true }]];
+    const grid = [[{ key: "tile_grass_grass", frozen: true, rubble: true }]];
     const s0 = withBoss({ grid, progress: 5, targetCount: 30 });
     const s1 = bossReduce(s0, { type: "BOSS/RESOLVE", won: false } as Action);
     expect(s1.boss).toBeNull();

@@ -121,8 +121,11 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
     }
 
     case "zones": {
-      // Fields: baseTurns (number), entryCost (object with coins)
-      add("Base turns", e["baseTurns"]);
+      const boards = e["boards"];
+      if (boards != null && typeof boards === "object") {
+        const enabled = Object.keys(boards as Record<string, unknown>).filter(Boolean);
+        if (enabled.length > 0) add("Boards", enabled.join(", "));
+      }
       const entryCost = e["entryCost"];
       if (entryCost != null && typeof entryCost === "object") {
         const coins = (entryCost as Record<string, unknown>)["coins"];

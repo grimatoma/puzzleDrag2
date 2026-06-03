@@ -4,7 +4,7 @@
  */
 
 export enum TileKey {
-  TileGrassHay = "tile_grass_hay",
+  TileGrassGrass = "tile_grass_grass",
   TileGrassMeadow = "tile_grass_meadow",
   TileGrassSpiky = "tile_grass_spiky",
   TileGrainWheat = "tile_grain_wheat",

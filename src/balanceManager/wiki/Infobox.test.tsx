@@ -122,14 +122,14 @@ describe("Infobox — null entity (null-safe)", () => {
   it("renders without throwing when entity is null", () => {
     expect(() =>
       render(
-        <Infobox conceptId="tiles" entityKey="tile_grass_hay" entity={null} />,
+        <Infobox conceptId="tiles" entityKey="tile_grass_grass" entity={null} />,
       ),
     ).not.toThrow();
   });
 
   it("never renders an iframe when entity is null", () => {
     const { container } = render(
-      <Infobox conceptId="tiles" entityKey="tile_grass_hay" entity={null} />,
+      <Infobox conceptId="tiles" entityKey="tile_grass_grass" entity={null} />,
     );
     // Component renders, and there is never a game iframe.
     expect(container.firstChild).not.toBeNull();

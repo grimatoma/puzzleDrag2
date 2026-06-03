@@ -81,7 +81,7 @@ describe("market slice — coverage gaps", () => {
   const baseState = (over: Record<string, unknown> = {}) =>
     mergeTestState({
       built: { caravan_post: true },
-      inventory: { home: { tile_grass_hay: 5, tile_mine_stone: 10 } },
+      inventory: { home: { tile_grass_grass: 5, tile_mine_stone: 10 } },
       coins: 0,
       ...over,
     });
@@ -96,7 +96,7 @@ describe("market slice — coverage gaps", () => {
     const s0 = baseState({ built: {} });
     const s1 = marketReduce(s0, {
       type: "MARKET/SELL",
-      payload: { resource: "tile_grass_hay" },
+      payload: { resource: "tile_grass_grass" },
     } as Action);
     expect(s1).toBe(s0);
   });
@@ -105,7 +105,7 @@ describe("market slice — coverage gaps", () => {
     const s0 = baseState();
     const s1 = marketReduce(s0, {
       type: "MARKET/SELL",
-      payload: { resource: "tile_grass_hay", qty: 100 },
+      payload: { resource: "tile_grass_grass", qty: 100 },
     } as Action);
     expect(s1).toBe(s0);
   });
@@ -145,10 +145,10 @@ describe("rootReducer composition smokes (settings + market)", () => {
   });
 
   it("rootReducer rejects MARKET/SELL when caravan_post not built", () => {
-    const s0 = mergeTestState({ built: {}, inventory: { home: { tile_grass_hay: 5 } } });
+    const s0 = mergeTestState({ built: {}, inventory: { home: { tile_grass_grass: 5 } } });
     const s1 = rootReducer(s0, {
       type: "MARKET/SELL",
-      payload: { resource: "tile_grass_hay", qty: 1 },
+      payload: { resource: "tile_grass_grass", qty: 1 },
     } as Action);
     expect(s1.coins).toBe(s0.coins);
   });

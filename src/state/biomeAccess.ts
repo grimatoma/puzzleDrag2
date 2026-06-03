@@ -1,4 +1,4 @@
-import { ZONES } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard } from "../features/zones/data.js";
 import type { GameState } from "../types/state.js";
 
 /**
@@ -20,7 +20,7 @@ export function canEnterBiome(state: GameState | null | undefined, biomeKey: str
     if (level < 2 && !storyMine) {
       return { ok: false, reason: "Mine unlocks at Level 2." };
     }
-    if (zone && !zone.hasMine) {
+    if (zone && !zoneHasBoard(zone, "mine")) {
       return { ok: false, reason: "Travel to a mining settlement before opening the mine board." };
     }
     return { ok: true };
@@ -30,7 +30,7 @@ export function canEnterBiome(state: GameState | null | undefined, biomeKey: str
     if (level < 3) {
       return { ok: false, reason: "Harbor fishing unlocks at Level 3." };
     }
-    if (zone && !zone.hasWater) {
+    if (zone && !zoneHasBoard(zone, "fish")) {
       return { ok: false, reason: "Travel to a harbor before opening the fishing board." };
     }
     return { ok: true };

@@ -4,7 +4,7 @@ import { BIOMES } from "../constants.js";
 
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
-    grass: "tile_grass_hay", grain: "tile_grain_wheat", bird: "tile_bird_pheasant",
+    grass: "tile_grass_grass", grain: "tile_grain_wheat", bird: "tile_bird_pheasant",
     vegetables: "tile_veg_carrot",
     fruits: "tile_fruit_apple", flowers: "tile_flower_pansy", trees: "tile_tree_oak",
     herd_animals: "tile_herd_pig", cattle: "tile_cattle_cow", mounts: "tile_mount_horse",
@@ -13,7 +13,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
     tileCollection: {
       activeByCategory: { ...baseDefaults, ...overrides },
       discovered: {
-        tile_grass_hay: true, tile_grain_wheat: true, tile_bird_pheasant: true,
+        tile_grass_grass: true, tile_grain_wheat: true, tile_bird_pheasant: true,
         grain: true, tile_bird_turkey: true,
         tile_grass_meadow: true, tile_grass_spiky: true, flour: true,
         tile_veg_carrot: true, tile_veg_eggplant: true, tile_veg_turnip: true, tile_veg_cucumber: true,
@@ -39,7 +39,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
   it("C: setting a category to null removes that category's resource", () => {
     const r2 = getActivePool(mkState({ bird: null }), "farm");
     expect(r2.filter((k) => k === "tile_bird_pheasant").length).toBe(0);
-    expect(r2.filter((k) => k === "tile_grass_hay").length).toBe(3);
+    expect(r2.filter((k) => k === "tile_grass_grass").length).toBe(3);
   });
 
   it("D: worker pool_weight stacks when key is the active tile type", () => {
