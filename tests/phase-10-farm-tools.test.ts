@@ -1,6 +1,7 @@
 // Phase 10 — Farm tools, fertilizer, rats, wolves.
 // Migrated from src/__tests__/farm-10.1 through farm-10.8 tests.
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../src/testUtils/inventory.js";
 import { WORKSHOP_RECIPES } from "../src/constants.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 
@@ -47,20 +48,21 @@ describe("Phase 10 — fresh state tools", () => {
 
 describe("Phase 10 — CRAFT_TOOL action", () => {
   it("crafts rake when workshop built and plank available", () => {
-    const s = {
-      ...createInitialState(),
-      built: { ...createInitialState().built, workshop: true },
-      inventory: { ...createInitialState().inventory, plank: 5 },
+    const base = createInitialState();
+    const withWorkshop = {
+      ...base,
+      built: { ...base.built, home: { ...(base.built.home as object), workshop: true } },
     };
+    const s = { ...withWorkshop, ...patchInventory(withWorkshop, { plank: 5 }) };
     const next = rootReducer(s, { type: "CRAFT_TOOL", id: "rake" });
     expect(next.tools.rake).toBe(1);
-    expect(next.inventory.plank).toBe(4);
+    expect(inv(next).plank).toBe(4);
   });
 
   it("rejects craft when workshop not built", () => {
     const s = {
       ...createInitialState(),
-      inventory: { ...createInitialState().inventory, plank: 5 },
+      ...patchInventory(createInitialState(), { plank: 5 }),
     };
     const next = rootReducer(s, { type: "CRAFT_TOOL", id: "rake" });
     expect(next.tools.rake).toBe(0);

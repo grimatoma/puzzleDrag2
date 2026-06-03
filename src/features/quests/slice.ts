@@ -3,6 +3,7 @@ import { QUEST_CLAIM_XP, claimQuest, tickQuest } from "./data.js";
 import type { Quest, QuestEvent, QuestTemplate } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState, QuestDailyLegacy } from "../../types/state.js";
 
 interface QuestsSubstate {
@@ -145,7 +146,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const orderId = action.id;
       const order = (state.orders || []).find((o) => o.id === orderId);
       const needed = (order?.need ?? order?.amount) ?? 0;
-      if (!order || inventoryQty(state.inventory, order.key) < needed) return state;
+      if (!order || inventoryQty(zoneInventory(state), order.key) < needed) return state;
       // Legacy dailies
       const dailies = progressQuests(state.dailies || [], "deliver", 1);
       // New deterministic quests

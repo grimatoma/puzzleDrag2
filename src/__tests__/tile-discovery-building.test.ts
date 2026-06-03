@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { BUILDINGS } from "../constants.js";
 import {
@@ -45,11 +46,11 @@ describe("own-a-building tile discovery", () => {
 
   it("BUILD on the Kitchen discovers Broccoli end-to-end", () => {
     const def = BUILDINGS.find((b) => b.id === "kitchen");
+    const base = createInitialState();
+    const stocked = { ...base, ...patchInventory(base, { plank: (def.cost.plank ?? 0) + 10 }), coins: (def.cost.coins ?? 0) + 100 };
     const s0 = {
-      ...createInitialState(),
-      coins: (def.cost.coins ?? 0) + 100,
-      inventory: { plank: (def.cost.plank ?? 0) + 10 },
-      built: {},
+      ...stocked,
+      built: { ...stocked.built, home: { ...(stocked.built.home as object), decorations: {}, _plots: {} } },
     };
     expect(s0.tileCollection.discovered.tile_veg_broccoli).toBeFalsy();
     const s1 = rootReducer(s0, { type: "BUILD", building: def });

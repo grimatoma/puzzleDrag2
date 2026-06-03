@@ -3,6 +3,7 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { RECIPES } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 import { sellPriceFor } from "../features/market/pricing.js";
@@ -58,57 +59,57 @@ describe("10.3 — §11 forge recipe registration", () => {
 describe("10.3 — CRAFT iron_frame via CRAFT action", () => {
   function forgeState(inventoryOverrides = {}) {
     const s = createInitialState();
-    return {
+    const withForge = {
       ...s,
-      built: { ...s.built, forge: true },
-      inventory: { ...s.inventory, ...inventoryOverrides },
+      built: { ...s.built, home: { ...(s.built.home as object), forge: true } },
     };
+    return { ...withForge, ...patchInventory(withForge, { ...inventoryOverrides }) };
   }
 
   it("crafts iron_frame: debits 2 beam + 1 ingot, adds 1 iron_frame", () => {
     const s0 = forgeState({ plank: 3, iron_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
-    expect(s1.inventory.plank).toBe(1);
-    expect(s1.inventory.iron_bar).toBe(2);
-    expect(s1.inventory.iron_frame ?? 0).toBe(1);
+    expect(inv(s1).plank).toBe(1);
+    expect(inv(s1).iron_bar).toBe(2);
+    expect(inv(s1).iron_frame ?? 0).toBe(1);
   });
 
   it("insufficient inputs = no-op (inventory and iron_frame unchanged)", () => {
     const s0 = forgeState({ plank: 1, iron_bar: 1 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
     // Core state should be unchanged: inventory not debited, no iron_frame added
-    expect(s1.inventory.plank).toBe(1);
-    expect(s1.inventory.iron_bar).toBe(1);
-    expect(s1.inventory.iron_frame ?? 0).toBe(0);
+    expect(inv(s1).plank).toBe(1);
+    expect(inv(s1).iron_bar).toBe(1);
+    expect(inv(s1).iron_frame ?? 0).toBe(0);
   });
 
   it("no forge = no craft", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, inventory: { ...s0.inventory, plank: 5, iron_bar: 5 } },
+      { ...s0, ...patchInventory(s0, { plank: 5, iron_bar: 5 }) },
       { type: "CRAFT", payload: { id: "iron_frame" } },
     );
-    expect(s1.inventory.iron_frame ?? 0).toBe(0);
+    expect(inv(s1).iron_frame ?? 0).toBe(0);
   });
 
   it("crafts stonework", () => {
     const s0 = forgeState({ block: 3, coke: 2 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "stonework" } });
-    expect(s1.inventory.stonework ?? 0).toBe(1);
-    expect(s1.inventory.block).toBe(1);
-    expect(s1.inventory.coke).toBe(1);
+    expect(inv(s1).stonework ?? 0).toBe(1);
+    expect(inv(s1).block).toBe(1);
+    expect(inv(s1).coke).toBe(1);
   });
 
   it("crafts gem_crown", () => {
     const s0 = forgeState({ cut_gem: 2, gold_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gem_crown" } });
-    expect(s1.inventory.gem_crown ?? 0).toBe(1);
+    expect(inv(s1).gem_crown ?? 0).toBe(1);
   });
 
   it("crafts gold_ring", () => {
     const s0 = forgeState({ gold_bar: 2, iron_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gold_ring" } });
-    expect(s1.inventory.gold_ring ?? 0).toBe(1);
+    expect(inv(s1).gold_ring ?? 0).toBe(1);
   });
 });
 
@@ -125,14 +126,14 @@ describe("10.3 — sellPriceFor (10% half-up)", () => {
 
 describe("10.3 — SELL_ITEM iron_frame", () => {
   it("sells 1 iron_frame: inventory -1, coins +28", () => {
-    const s0 = { ...createInitialState(), inventory: { ...createInitialState().inventory, iron_frame: 2 }, coins: 100 };
+    const s0 = { ...createInitialState(), ...patchInventory(createInitialState(), { iron_frame: 2 }), coins: 100 };
     const s1 = rootReducer(s0, { type: "SELL_ITEM", id: "iron_frame", qty: 1 });
-    expect(s1.inventory.iron_frame).toBe(1);
+    expect(inv(s1).iron_frame).toBe(1);
     expect(s1.coins).toBe(128);
   });
 
   it("sells 1 stonework: coins +30", () => {
-    const s0 = { ...createInitialState(), inventory: { ...createInitialState().inventory, stonework: 1 }, coins: 0 };
+    const s0 = { ...createInitialState(), ...patchInventory(createInitialState(), { stonework: 1 }), coins: 0 };
     const s1 = rootReducer(s0, { type: "SELL_ITEM", id: "stonework", qty: 1 });
     expect(s1.coins).toBe(30);
   });

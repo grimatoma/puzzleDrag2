@@ -4,6 +4,7 @@
 // a regression here is a real signal.
 
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import type { Action } from "../types/state.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { reduce as settingsReduce } from "../features/settings/slice.js";
@@ -80,7 +81,7 @@ describe("market slice — coverage gaps", () => {
   const baseState = (over: Record<string, unknown> = {}) =>
     mergeTestState({
       built: { caravan_post: true },
-      inventory: { tile_grass_grass: 5, tile_mine_stone: 10 },
+      inventory: { home: { tile_grass_grass: 5, tile_mine_stone: 10 } },
       coins: 0,
       ...over,
     });
@@ -110,7 +111,7 @@ describe("market slice — coverage gaps", () => {
   });
 
   it("MARKET/SELL with a zero-priced resource is rejected", () => {
-    const s0 = baseState({ inventory: { unknown_thing: 5 } });
+    const s0 = baseState({ inventory: { home: { unknown_thing: 5 } } });
     const s1 = marketReduce(s0, {
       type: "MARKET/SELL",
       payload: { resource: "unknown_thing" },
@@ -120,12 +121,12 @@ describe("market slice — coverage gaps", () => {
 
   it("MARKET/SELL deducts inventory and credits coins for a crafted recipe item", () => {
     // sellPriceFor only knows about RECIPES; bread is the simplest non-zero one.
-    const s0 = baseState({ inventory: { bread: 4 } });
+    const s0 = baseState({ inventory: { home: { bread: 4 } } });
     const s1 = marketReduce(s0, {
       type: "MARKET/SELL",
       payload: { resource: "bread", qty: 2 },
     } as Action);
-    expect(s1.inventory.bread).toBe(2);
+    expect(inv(s1).bread).toBe(2);
     expect(s1.coins).toBeGreaterThan(0);
   });
 
@@ -144,7 +145,7 @@ describe("rootReducer composition smokes (settings + market)", () => {
   });
 
   it("rootReducer rejects MARKET/SELL when caravan_post not built", () => {
-    const s0 = mergeTestState({ built: {}, inventory: { tile_grass_grass: 5 } });
+    const s0 = mergeTestState({ built: {}, inventory: { home: { tile_grass_grass: 5 } } });
     const s1 = rootReducer(s0, {
       type: "MARKET/SELL",
       payload: { resource: "tile_grass_grass", qty: 1 },

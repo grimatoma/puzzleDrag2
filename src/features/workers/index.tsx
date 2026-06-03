@@ -19,6 +19,8 @@ import {
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
+import { inventoryQty } from "../../types/inventory.js";
 
 function effectSummary(abilities: WorkerAbility[] | null | undefined, count: number, maxCount: number): string {
   if (!abilities || abilities.length === 0) return "";
@@ -87,8 +89,8 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   // is moot but we still pass `count` for a stable display.
   const coinCost = nextHireCost(worker, count);
   const resourceCost = nextHireResourceCost(worker, count);
-  const inv = (state?.inventory ?? {}) as Record<string, number>;
-  const canPayResources = Object.entries(resourceCost).every(([key, amount]) => (inv[key] ?? 0) >= amount);
+  const inv = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as GameState);
+  const canPayResources = Object.entries(resourceCost).every(([key, amount]) => inventoryQty(inv, key) >= amount);
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && count < worker.maxCount;
   const canFire = count > 0;
   interface CostEntry {
@@ -116,10 +118,10 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
       label: getItem(key)?.label || key,
       amount,
       icon: <Icon iconKey={key} size={18} title="" />,
-      have: inv[key] ?? 0,
+      have: inventoryQty(inv, key),
       showHave: true,
       check: true,
-      ok: (inv[key] ?? 0) >= amount,
+      ok: inventoryQty(inv, key) >= amount,
     })),
   ];
   return (

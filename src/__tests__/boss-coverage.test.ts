@@ -4,6 +4,7 @@
 // and CLOSE_SEASON's boss scheduling.
 
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import type { Action } from "../types/state.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { mergeTestState, testAction } from "../testUtils/testState.js";
@@ -181,12 +182,12 @@ describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
   });
 
   it("CHAIN_COLLECTED with no boss is a passive copy", () => {
-    const s0 = baseState({ inventory: { berry: 0 } });
+    const s0 = patchInventory(baseState(), { berry: 0 });
     const s1 = bossReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "berry", gained: 4 },
     } as Action);
-    expect(s1.inventory.berry).toBe(0);
+    expect(inv(s1).berry).toBe(0);
     expect(s1.boss).toBeNull();
   });
 });

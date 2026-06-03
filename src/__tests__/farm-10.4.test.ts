@@ -29,7 +29,7 @@ describe("10.4 — rollRatSpawn", () => {
     const mine = {
       ...createInitialState(),
       biome: "mine",
-      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
+      inventory: { home: { tile_grass_grass: 99, tile_grain_wheat: 99 } },
       hazards: { caveIn: null, gasVent: null, rats: [] },
     };
     for (let i = 0; i < 1000; i++) {
@@ -41,7 +41,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_grass: 50, tile_grain_wheat: 51 },
+      inventory: { home: { tile_grass_grass: 50, tile_grain_wheat: 51 } },
       hazards: { rats: [] },
       grid: makeGrid(),
     };
@@ -52,7 +52,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_grass: 51, tile_grain_wheat: 51 },
+      inventory: { home: { tile_grass_grass: 51, tile_grain_wheat: 51 } },
       hazards: { rats: [] },
       grid: makeGrid(),
     };
@@ -66,7 +66,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
+      inventory: { home: { tile_grass_grass: 99, tile_grain_wheat: 99 } },
       hazards: { rats: Array.from({ length: 4 }, (_, i) => ({ row: 0, col: i, age: 0 })) },
       grid: makeGrid(),
     };
@@ -77,7 +77,7 @@ describe("10.4 — rollRatSpawn", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      inventory: { tile_grass_grass: 99, tile_grain_wheat: 99 },
+      inventory: { home: { tile_grass_grass: 99, tile_grain_wheat: 99 } },
       hazards: { rats: [] },
       grid: makeGrid(),
     };

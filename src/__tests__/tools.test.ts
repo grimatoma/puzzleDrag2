@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { gameReducer } from "../state.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -12,7 +13,10 @@ function minState(overrides = {}) {
     xp: 0,
     turnsUsed: 0,
     seasonsCycled: 1,
-    inventory: {},
+    inventory: { home: {} },
+    mapCurrent: "home",
+    activeZone: "home",
+    farmRun: null,
     orders: [],
     tools: { clear: 0, basic: 0, rare: 0, shuffle: 0 },
     built: {},
@@ -47,10 +51,10 @@ describe("1.3 — Scythe USE_TOOL { key: 'clear' }", () => {
   });
 
   it("does NOT silently add inventory", () => {
-    const s0 = minState({ tools: { clear: 2, basic: 0, rare: 0, shuffle: 0 }, inventory: { tile_grass_grass: 3 } });
+    const s0 = minState({ tools: { clear: 2, basic: 0, rare: 0, shuffle: 0 }, inventory: { home: { tile_grass_grass: 3 } } });
     const s1 = gameReducer(s0, { type: "USE_TOOL", payload: { key: "clear" } });
     // inventory should be unchanged — Phaser handles the resource gain via board animation
-    expect(s1.inventory.tile_grass_grass).toBe(3);
+    expect(inv(s1).tile_grass_grass).toBe(3);
   });
 });
 
@@ -72,7 +76,7 @@ describe("1.4 — Seedpack USE_TOOL { key: 'basic' }", () => {
   it("does NOT add inventory (Phaser handles board placement)", () => {
     const s0 = minState({ tools: { basic: 1, clear: 0, rare: 0, shuffle: 0 }, inventory: { tile_grass_grass: 0 } });
     const s1 = gameReducer(s0, { type: "USE_TOOL", payload: { key: "basic" } });
-    expect(s1.inventory.tile_grass_grass || 0).toBe(0);
+    expect(inv(s1).tile_grass_grass || 0).toBe(0);
   });
 });
 
@@ -100,7 +104,7 @@ describe("1.5 — Lockbox USE_TOOL { key: 'rare' }", () => {
   it("does NOT add inventory (Phaser handles board placement)", () => {
     const s0 = minState({ biomeKey: "farm", tools: { rare: 1, clear: 0, basic: 0, shuffle: 0 }, inventory: { berry: 0 } });
     const s1 = gameReducer(s0, { type: "USE_TOOL", payload: { key: "rare" } });
-    expect(s1.inventory.berry || 0).toBe(0);
+    expect(inv(s1).berry || 0).toBe(0);
   });
 });
 

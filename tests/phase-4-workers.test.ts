@@ -2,6 +2,7 @@
 // (The original named-individual "apprentice" roster was removed; the
 // type-tier workers introduced alongside it are now the worker system.)
 import { describe, it, expect } from "vitest";
+import { inv } from "../src/testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../src/state.js";
 import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
@@ -10,13 +11,11 @@ function withCoins(coins) {
   return {
     ...createInitialState(),
     coins,
-    inventory: {
-      tile_grass_grass: 100,
+    inventory: { home: { tile_grass_grass: 100,
       tile_tree_oak: 100,
       tile_mine_stone: 100,
       flour: 100,
-      eggs: 100,
-    },
+      eggs: 100, } },
   };
 }
 
@@ -52,15 +51,15 @@ describe("Phase 4 — WORKERS/HIRE", () => {
     const s = withCoins(100);
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(50);
-    expect(next.inventory.tile_grass_grass).toBe(98);
+    expect(inv(next).tile_grass_grass).toBe(98);
     expect(next.workers.hired.farmer).toBe(1);
   });
 
   it("rejects hire when role resources are short without debiting coins", () => {
-    const s = { ...withCoins(100), inventory: { tile_grass_grass: 1 } };
+    const s = { ...withCoins(100), inventory: { home: { tile_grass_grass: 1 } } };
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(100);
-    expect(next.inventory.tile_grass_grass).toBe(1);
+    expect(inv(next).tile_grass_grass).toBe(1);
     expect(next.workers.hired.farmer).toBe(0);
   });
 

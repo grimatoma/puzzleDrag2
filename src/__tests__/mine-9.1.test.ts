@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { BIOMES, MINE_TILE_POOL, FARM_TILE_POOL, UPGRADE_THRESHOLDS } from "../constants.js";
 import { createInitialState, rootReducer as reduce } from "../state.js";
 import { upgradeCountForChain } from "../utils.js";
@@ -85,7 +86,7 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
   // ── Shared inventory ──────────────────────────────────────────────────────
   it("8-stone chain in mine biome → 7 stone + 1 block (threshold 8)", () => {
     let g = createInitialState();
-    g = { ...g, biome: "mine", inventory: { ...g.inventory, tile_mine_stone: 0 } };
+    g = { ...g, biome: "mine", ...patchInventory(g, { tile_mine_stone: 0 }) };
     g = reduce(g, {
       type: "CHAIN_COLLECTED",
       payload: {
@@ -97,7 +98,7 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
         value: 1,
       },
     });
-    expect(g.inventory.block).toBeGreaterThanOrEqual(1);
+    expect(inv(g).block).toBeGreaterThanOrEqual(1);
   });
 
   it("no separate mine inventory bag", () => {
@@ -107,7 +108,7 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_mine_stone", gained: 8, chainLength: 8, upgrades: 0, value: 1 },
     });
-    expect(g.inventory.mine).toBeUndefined();
+    expect(inv(g).mine).toBeUndefined();
   });
 
   // ── upgradeCountForChain honours mine thresholds without code changes ──────

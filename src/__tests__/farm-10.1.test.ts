@@ -3,6 +3,7 @@
  * Tests written FIRST (red phase), then implementation makes them green.
  */
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { createInitialState, rootReducer } from "../state.js";
 import { RECIPES, ITEMS } from "../constants.js";
 import { applyToolPending } from "../features/farm/tools.js";
@@ -67,14 +68,12 @@ describe("10.1 — createInitialState tool counters", () => {
 // ── CRAFT_TOOL action ─────────────────────────────────────────────────────────
 
 describe("10.1 — CRAFT_TOOL action", () => {
-  function workshopState(overrides = {}) {
-    const s = createInitialState();
-    return {
-      ...s,
-      built: { ...s.built, workshop: true },
-      inventory: { ...s.inventory, ...overrides.inventory },
-      ...overrides,
-    };
+  function workshopState(overrides: { inventory?: Record<string, number>; [k: string]: unknown } = {}) {
+    let s = createInitialState();
+    s = { ...s, built: { ...s.built, home: { ...(s.built.home as object), workshop: true } } };
+    if (overrides.inventory) s = patchInventory(s, overrides.inventory);
+    const { inventory: _omit, ...rest } = overrides;
+    return { ...s, ...rest };
   }
 
   it("crafts rake with 1 plank → tools.rake = 1", () => {
@@ -86,15 +85,15 @@ describe("10.1 — CRAFT_TOOL action", () => {
   it("crafts rake debits 1 plank", () => {
     const s0 = workshopState({ inventory: { plank: 2 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "rake" });
-    expect(s1.inventory.plank).toBe(1);
+    expect(inv(s1).plank).toBe(1);
   });
 
   it("no workshop = no craft (state unchanged)", () => {
     const s0 = createInitialState();
-    const s1 = { ...s0, inventory: { ...s0.inventory, plank: 5 } };
+    const s1 = { ...s0, ...patchInventory(s0, { plank: 5 }) };
     const s2 = rootReducer(s1, { type: "CRAFT_TOOL", id: "rake" });
     expect(s2.tools.rake).toBe(0);
-    expect(s2.inventory.plank).toBe(5);
+    expect(inv(s2).plank).toBe(5);
   });
 
   it("no plank = no rake (tools.rake stays 0)", () => {
@@ -107,15 +106,15 @@ describe("10.1 — CRAFT_TOOL action", () => {
     const s0 = workshopState({ inventory: { block: 3 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "axe" });
     expect(s1.tools.axe).toBe(1);
-    expect(s1.inventory.block).toBe(2);
+    expect(inv(s1).block).toBe(2);
   });
 
   it("crafts fertilizer with 1 hay + 1 dirt", () => {
     const s0 = workshopState({ inventory: { hay_bundle: 2, dirt: 2 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "fertilizer" });
     expect(s1.tools.fertilizer).toBe(1);
-    expect(s1.inventory.hay_bundle).toBe(1);
-    expect(s1.inventory.dirt).toBe(1);
+    expect(inv(s1).hay_bundle).toBe(1);
+    expect(inv(s1).dirt).toBe(1);
   });
 });
 
@@ -147,7 +146,7 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     const s1 = rootReducer(s0, { type: "TOOL_FIRED", key: "rake", row: 0, col: 0 });
     expect(s1.tools.rake).toBe(0);
     expect(s1.toolPending).toBeNull();
-    expect(s1.inventory.tile_grass_grass ?? 0).toBe(3);
+    expect(inv(s1).tile_grass_grass ?? 0).toBe(3);
   });
 
   it("rake CANCEL_TOOL: clears toolPending without touching count", () => {
@@ -174,7 +173,7 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.toolPending).toBeNull();
     expect(s1.tools.axe).toBe(0);
     expect(s1.turnsUsed).toBe(2);
-    expect(s1.inventory.tile_tree_oak ?? 0).toBe(2);
+    expect(inv(s1).tile_tree_oak ?? 0).toBe(2);
     expect(s1.grid.flat().every((t) => t.key !== "tile_tree_oak")).toBe(true);
   });
 

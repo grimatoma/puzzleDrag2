@@ -8,6 +8,7 @@
  * inventory items, so the player paid the inputs and got nothing playable.
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { RECIPES } from "../constants.js";
 
@@ -24,40 +25,40 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { plank: 2, block: 2 },
+      inventory: { home: { plank: 2, block: 2 } },
     };
     const before = (s0.tools?.water_pump ?? 0);
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "water_pump" });
     expect(s1.tools.water_pump).toBe(before + 1);
     // And it must NOT have been added to inventory under the recipe key.
-    expect(s1.inventory.water_pump ?? 0).toBe(0);
+    expect(inv(s1).water_pump ?? 0).toBe(0);
     // Inputs were debited.
-    expect(s1.inventory.plank).toBe(1);
-    expect(s1.inventory.block).toBe(1);
+    expect(inv(s1).plank).toBe(1);
+    expect(inv(s1).block).toBe(1);
   });
 
   it("crafting explosives credits state.tools, not inventory", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { hay_bundle: 2, dirt: 2 },
+      inventory: { home: { hay_bundle: 2, dirt: 2 } },
     };
     const before = (s0.tools?.explosives ?? 0);
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "explosives" });
     expect(s1.tools.explosives).toBe(before + 1);
-    expect(s1.inventory.explosives ?? 0).toBe(0);
-    expect(s1.inventory.hay_bundle).toBe(1);
-    expect(s1.inventory.dirt).toBe(1);
+    expect(inv(s1).explosives ?? 0).toBe(0);
+    expect(inv(s1).hay_bundle).toBe(1);
+    expect(inv(s1).dirt).toBe(1);
   });
 
   it("non-tool recipes still go to inventory (control)", () => {
     const s0 = {
       ...createInitialState(),
       built: { bakery: true },
-      inventory: { flour: 6, eggs: 2 },
+      inventory: { home: { flour: 6, eggs: 2 } },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "bread" });
-    expect(s1.inventory.bread).toBe(1);
+    expect(inv(s1).bread).toBe(1);
     // Tools dictionary should be untouched (no `bread` key sneaks in).
     expect(s1.tools.bread).toBeUndefined();
   });
@@ -66,7 +67,7 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { plank: 0, block: 0 },
+      inventory: { home: { plank: 0, block: 0 } },
       totalCrafted: 0,
     };
     const beforeTools = s0.tools?.water_pump ?? 0;

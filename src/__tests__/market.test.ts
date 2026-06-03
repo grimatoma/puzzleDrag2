@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { MARKET_PRICES } from "../constants.js";
 import { driftPrices, applyTrade, bombFootprint } from "../market.js";
 
@@ -58,7 +59,7 @@ describe("3.1 — Market prices", () => {
     };
     const r2 = applyTrade(flush, { type: "BUY_RESOURCE", payload: { key: "tile_grass_grass", qty: 2 } });
     expect(r2.coins).toBe(20);
-    expect(r2.inventory.tile_grass_grass).toBe(2);
+    expect(inv(r2).tile_grass_grass).toBe(2);
   });
 
   it("SELL_RESOURCE: selling more than owned → no-op", () => {

@@ -73,8 +73,8 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     xp: 0,
     turnsUsed: 0,
     farmRun: null,
-    inventory: { supplies: 0 },
-    /** Per-resource fractional progress toward the next whole unit. Resets to 0 on rollover. */
+    inventory: { home: { supplies: 0 } },
+    /** Per-resource fractional progress toward the next whole unit, keyed by settlement. */
     resourceProgress: {},
     orders: [o1, o2, o3],
     quests: rollQuests(saveSeed, 1, "spring"),

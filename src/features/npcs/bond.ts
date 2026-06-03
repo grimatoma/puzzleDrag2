@@ -1,6 +1,8 @@
 import { BOND_BANDS, NPC_DATA } from "./data.js";
 import { boonEffectMult } from "../boons/data.js";
 import type { GameState } from "../../types/state.js";
+import { inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
@@ -64,17 +66,19 @@ export interface ApplyGiftResult {
 }
 
 export function applyGift(state: GameState, npcId: string, itemKey: string): ApplyGiftResult {
-  // Inventory is `Partial<Record<InventoryKey, number>>`; gifts can be any
-  // catalog key the player carries, so widen indexing at the read boundary.
-  const inventory = state.inventory as Record<string, number> | undefined;
-  if ((inventory?.[itemKey] ?? 0) <= 0) return { ok: false };
+  const giftZone = inventoryZone(state);
+  const inventory = zoneInventory(state, giftZone);
+  if (inventoryQty(inventory, itemKey) <= 0) return { ok: false };
   if (!state.npcs) return { ok: false };
   if (state.npcs.giftCooldown[npcId] === state.season) return { ok: false };
   const tier = giftTier(npcId, itemKey);
   const delta = GIFT_DELTAS[tier] * boonEffectMult(state, "bond_gain_mult");
   const newState: GameState = {
     ...state,
-    inventory: { ...state.inventory, [itemKey]: (inventory?.[itemKey] ?? 0) - 1 },
+    inventory: {
+      ...state.inventory,
+      [giftZone]: { ...inventory, [itemKey]: inventoryQty(inventory, itemKey) - 1 },
+    },
     npcs: {
       ...state.npcs,
       bonds: {

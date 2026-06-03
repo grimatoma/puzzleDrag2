@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { applyGift, giftTier, GIFT_DELTAS } from "../features/npcs/bond.js";
 import { NPC_DATA } from "../features/npcs/data.js";
 import { createInitialState } from "../state.js";
@@ -39,7 +40,7 @@ describe("6.2 — multi-tier gift preferences", () => {
 describe("6.2 — applyGift loved gift (+0.5)", () => {
   it("accepts a loved gift and bumps bond by +0.5", () => {
     const s = createInitialState();
-    s.inventory.flour = 3;
+    inv(s).flour = 3;
     s.season = 1;
     const r = applyGift(s, "mira", "flour");
     expect(r.ok).toBe(true);
@@ -47,7 +48,7 @@ describe("6.2 — applyGift loved gift (+0.5)", () => {
     expect(r.isFavorite).toBe(true);
     expect(r.delta).toBe(GIFT_DELTAS.loves);
     expect(r.newState.npcs.bonds.mira).toBe(5.5);
-    expect(r.newState.inventory.flour).toBe(2);
+    expect(inv(r.newState).flour).toBe(2);
     expect(r.newState.npcs.giftCooldown.mira).toBe(1);
   });
 });
@@ -55,7 +56,7 @@ describe("6.2 — applyGift loved gift (+0.5)", () => {
 describe("6.2 — applyGift liked gift (+0.3)", () => {
   it("accepts a liked gift and bumps bond by +0.3", () => {
     const s = createInitialState();
-    s.inventory.honey = 2;
+    inv(s).honey = 2;
     s.season = 1;
     const r = applyGift(s, "mira", "honey");
     expect(r.ok).toBe(true);
@@ -69,7 +70,7 @@ describe("6.2 — applyGift liked gift (+0.3)", () => {
 describe("6.2 — applyGift neutral gift (+0.15)", () => {
   it("accepts a neutral gift and bumps bond by +0.15", () => {
     const s = createInitialState();
-    s.inventory.tile_grass_grass = 4;
+    inv(s).tile_grass_grass = 4;
     s.season = 1;
     const r = applyGift(s, "mira", "tile_grass_grass");
     expect(r.ok).toBe(true);
@@ -83,7 +84,7 @@ describe("6.2 — applyGift neutral gift (+0.15)", () => {
 describe("6.2 — cooldown blocks re-gift in same season", () => {
   it("second gift returns ok:false and leaves state unchanged", () => {
     const s = createInitialState();
-    s.inventory.tile_grass_grass = 4;
+    inv(s).tile_grass_grass = 4;
     s.season = 1;
     const r = applyGift(s, "mira", "tile_grass_grass");
     const cooled = r.newState;
@@ -91,7 +92,7 @@ describe("6.2 — cooldown blocks re-gift in same season", () => {
     const r2 = applyGift(cooled, "mira", "tile_grass_grass");
     expect(r2.ok).toBe(false);
     // No mutation: cooled state unchanged
-    expect(cooled.inventory.tile_grass_grass).toBe(3);
+    expect(inv(cooled).tile_grass_grass).toBe(3);
     expect(Math.abs(cooled.npcs.bonds.mira - 5.15)).toBeLessThan(1e-9);
   });
 });
@@ -99,7 +100,7 @@ describe("6.2 — cooldown blocks re-gift in same season", () => {
 describe("6.2 — empty inventory blocks gift", () => {
   it("returns ok:false and does not set cooldown", () => {
     const s = createInitialState();
-    s.inventory.flour = 0;
+    inv(s).flour = 0;
     s.season = 1;
     const r = applyGift(s, "mira", "flour");
     expect(r.ok).toBe(false);
@@ -111,7 +112,7 @@ describe("6.2 — empty inventory blocks gift", () => {
 describe("6.2 — bond clamps at 10", () => {
   it("clamps from 9.8 + 0.5 to 10", () => {
     const s = createInitialState();
-    s.inventory.flour = 1;
+    inv(s).flour = 1;
     s.npcs.bonds.mira = 9.8;
     s.season = 1;
     const r = applyGift(s, "mira", "flour");
@@ -122,8 +123,8 @@ describe("6.2 — bond clamps at 10", () => {
 describe("6.2 — cross-NPC gifts are independent", () => {
   it("Bram gift OK after Mira gift in the same season", () => {
     const s = createInitialState();
-    s.inventory.iron_bar = 1;
-    s.inventory.flour = 1;
+    inv(s).iron_bar = 1;
+    inv(s).flour = 1;
     s.season = 2;
     const r3 = applyGift(s, "mira", "flour");
     const r4 = applyGift(r3.newState, "bram", "iron_bar");

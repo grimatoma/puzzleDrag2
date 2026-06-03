@@ -4,6 +4,7 @@
  */
 
 import type { GameState, BossState } from "../../types/state.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 
 export interface BossModifierParams {
   n?: number;
@@ -113,7 +114,8 @@ export function tickModifier(state: GameState, modifier: BossModifier): TickModi
   const bossState = state.boss as (BossState & { modifierState?: { heat?: HeatEntry[] } }) | null | undefined;
   const heat: HeatEntry[] = (bossState?.modifierState?.heat ?? []).map((h: HeatEntry) => ({ ...h, age: h.age + 1 }));
   const surviving: HeatEntry[] = [];
-  const inv: Record<string, number> = { ...(state.inventory ?? {}) };
+  const heatZone = inventoryZone(state);
+  const inv: Record<string, number> = { ...zoneInventory(state, heatZone) };
 
   for (const h of heat) {
     if (h.age > (modifier.params.burnAfter ?? Infinity)) {
@@ -130,7 +132,7 @@ export function tickModifier(state: GameState, modifier: BossModifier): TickModi
   return {
     newState: {
       ...state,
-      inventory: inv,
+      inventory: { ...state.inventory, [heatZone]: inv },
       boss: {
         ...(state.boss ?? {}),
         modifierState: {

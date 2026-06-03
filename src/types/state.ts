@@ -20,7 +20,7 @@ import type {
   RunSummary,
   TutorialState,
 } from "./gameStateFields.js";
-import type { Inventory } from "./inventory.js";
+import type { ZoneInventoryMap, ZoneResourceProgressMap } from "./inventory.js";
 
 export type {
   BossState,
@@ -220,8 +220,10 @@ export interface GameState {
   xp: number;
   turnsUsed: number;
   farmRun: FarmRun | null;
-  inventory: Inventory;
-  resourceProgress: Partial<Record<ResourceKey, number>>;
+  /** Resource counts keyed by settlement id (zone). Coins/tools stay global. */
+  inventory: ZoneInventoryMap;
+  /** Fractional chain progress toward the next whole unit, per settlement. */
+  resourceProgress: ZoneResourceProgressMap;
   orders: Order[];
   quests: Quest[];
   tools: Tools;

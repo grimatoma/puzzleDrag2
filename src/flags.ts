@@ -1,4 +1,5 @@
 // ─── Story-flag registry ─────────────────────────────────────────────────────
+import { inventoryForStory } from "./state/zoneInventory.js";
 // A flag is a boolean on `state.story.flags` (default-false when absent). Before
 // this module flags only "existed" implicitly — popped into being the moment a
 // beat's `onComplete.setFlag` or a choice's `outcome.setFlag` fired. STORY_FLAGS
@@ -142,7 +143,10 @@ interface FlagEvent {
 
 interface FlagGameState {
   npcs?: { bonds?: Record<string, number> };
-  inventory?: Record<string, number>;
+  inventory?: import("./types/inventory.js").ZoneInventoryMap;
+  farmRun?: { zoneId?: string } | null;
+  activeZone?: string;
+  mapCurrent?: string;
   story?: { flags?: Record<string, boolean> };
 }
 
@@ -154,7 +158,7 @@ function flagTriggerMatches(trigger: FlagTrigger | null | undefined, event: Flag
     const amount = trigger.amount as number;
     return (gameState?.npcs?.bonds?.[npc] ?? 0) >= amount;
   }
-  return conditionMatches(trigger, event, gameState?.inventory ?? {}, gameState?.story?.flags ?? {});
+  return conditionMatches(trigger, event, inventoryForStory(gameState), gameState?.story?.flags ?? {});
 }
 
 /**

@@ -5,6 +5,7 @@
  */
 import { CASTLE_NEEDS } from "./data.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 interface CastleSubstate {
@@ -44,7 +45,9 @@ export function reduce(state: GameState, action: Action): GameState {
   const qty = amount | 0;
   if (qty <= 0) return state;
 
-  const have = inventoryQty(state.inventory, need.resource);
+  const castleZone = inventoryZone(state);
+  const castleInv = zoneInventory(state, castleZone);
+  const have = inventoryQty(castleInv, need.resource);
   if (have < qty) return state;
 
   const castle = castleOf(state);
@@ -55,7 +58,7 @@ export function reduce(state: GameState, action: Action): GameState {
     ...state,
     inventory: {
       ...state.inventory,
-      [need.resource]: have - qty,
+      [castleZone]: { ...castleInv, [need.resource]: have - qty },
     },
     castle: {
       ...castle,

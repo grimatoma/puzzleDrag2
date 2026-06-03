@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { createInitialState, rootReducer } from "../state.js";
 import { DECORATIONS } from "../features/decorations/data.js";
 
@@ -32,12 +33,12 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("BUILD_DECORATION: deducts cost, credits influence, increments count", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, tile_grass_grass: 10 } },
+      patchInventory({ ...s0, coins: 200 }, { tile_grass_grass: 10 }),
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const loc = s1.mapCurrent ?? "home";
     expect(s1.coins).toBe(140);
-    expect(s1.inventory.tile_grass_grass).toBe(6);
+    expect(inv(s1).tile_grass_grass).toBe(6);
     expect(s1.influence).toBe(20);
     expect(s1.built[loc]?.decorations?.violet_bed).toBe(1);
   });
@@ -45,11 +46,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("BUILD_DECORATION is repeatable — second build grants same influence again", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, tile_grass_grass: 10 } },
+      patchInventory({ ...s0, coins: 200 }, { tile_grass_grass: 10 }),
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const s2 = rootReducer(
-      { ...s1, coins: 100, inventory: { ...s1.inventory, tile_grass_grass: 8 } },
+      patchInventory({ ...s1, coins: 100 }, { tile_grass_grass: 8 }),
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const loc = s2.mapCurrent ?? "home";
@@ -72,11 +73,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("save/load round-trip preserves influence and decoration counts", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, tile_grass_grass: 10 } },
+      patchInventory({ ...s0, coins: 200 }, { tile_grass_grass: 10 }),
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const s2 = rootReducer(
-      { ...s1, coins: 100, inventory: { ...s1.inventory, tile_grass_grass: 8 } },
+      patchInventory({ ...s1, coins: 100 }, { tile_grass_grass: 8 }),
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const round = JSON.parse(JSON.stringify(s2));

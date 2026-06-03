@@ -9,6 +9,7 @@ import {
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { locBuilt } from "../../locBuilt.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 // Phase 5 — per-station crafting queues. Each station (bakery, larder, forge,
@@ -66,7 +67,7 @@ export function canPayForRecipe(state: GameState, recipeKey: string): CanPayResu
   const built = locBuilt(state) as Record<string, boolean>;
   if (!built[recipe.station]) return null;
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
-  const inv = state.inventory;
+  const inv = zoneInventory(state);
   for (const [res, need] of Object.entries(inputs)) {
     if (inventoryQty(inv, res) < need) return null;
   }
@@ -91,7 +92,8 @@ function itemDef(key: string): ItemEntry | undefined {
  * input-deducted inventory (the queue path deducted at queue time).
  */
 function grantCraftOutput(state: GameState, recipeKey: string, recipe: RecipeDefinition, baseInventory?: Record<string, number>): GameState {
-  const inv: Record<string, number> = { ...(baseInventory ?? state.inventory) };
+  const craftZone = inventoryZone(state);
+  const inv: Record<string, number> = { ...(baseInventory ?? zoneInventory(state)) };
   let tools = state.tools;
   const item = itemDef(recipe.item);
   if (item?.kind === "tool") {
@@ -101,7 +103,7 @@ function grantCraftOutput(state: GameState, recipeKey: string, recipe: RecipeDef
   }
   return {
     ...state,
-    inventory: inv,
+    inventory: { ...state.inventory, [craftZone]: inv },
     tools,
     coins: state.coins + (recipe.coins ?? 0),
     craftedTotals: {
@@ -123,7 +125,7 @@ export function reduce(state: GameState, action: Action): GameState {
       if (!recipeKey) return state;
       const paid = canPayForRecipe(state, recipeKey);
       if (!paid) return state;
-      const inv = payInputs(state.inventory, paid.inputs);
+      const inv = payInputs(zoneInventory(state), paid.inputs);
       const next = grantCraftOutput(state, recipeKey, paid.recipe, inv);
       return { ...next, bubble: { npc: "mira", text: `Crafted ${itemDef(paid.recipe.item)?.label}!`, ms: 1500, id: Date.now() } };
     }
@@ -134,7 +136,8 @@ export function reduce(state: GameState, action: Action): GameState {
       const paid = canPayForRecipe(state, recipeKey);
       if (!paid) return state;
       const station = paid.recipe.station;
-      const inv = payInputs(state.inventory, paid.inputs);
+      const craftZone = inventoryZone(state);
+      const inv = payInputs(zoneInventory(state), paid.inputs);
       const now = Date.now();
       const queues = state.craftQueues;
       const queue: CraftQueueEntry[] = queues[station] ?? [];
@@ -144,7 +147,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const readyAt = startAt + durationMs;
       return {
         ...state,
-        inventory: inv,
+        inventory: { ...state.inventory, [craftZone]: inv },
         craftQueues: {
           ...queues,
           [station]: [...queue, { key: recipeKey, queuedAt: now, startAt, readyAt, durationMs }],
@@ -161,7 +164,7 @@ export function reduce(state: GameState, action: Action): GameState {
       if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state;
       const recipe = RECIPES[entry.key];
       if (!recipe) return state;
-      const next = grantCraftOutput(state, entry.key, recipe, state.inventory);
+      const next = grantCraftOutput(state, entry.key, recipe, zoneInventory(state));
       return {
         ...next,
         craftQueues: { ...queues, [station]: queue.slice(1) },
@@ -190,7 +193,7 @@ export function reduce(state: GameState, action: Action): GameState {
         { ...state, gems: state.gems - CRAFT_GEM_SKIP_COST },
         entry.key,
         recipe,
-        state.inventory,
+        zoneInventory(state),
       );
       return {
         ...next,
