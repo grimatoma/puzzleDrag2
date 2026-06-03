@@ -9,14 +9,20 @@
 //
 //   node tools/build-icon-tracker.mjs
 
-import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ROOT = resolve("icon-review");
 const manifest = JSON.parse(readFileSync(`${ROOT}/manifest.json`, "utf8"));
-const notes = existsSync(`${ROOT}/notes.json`)
-  ? JSON.parse(readFileSync(`${ROOT}/notes.json`, "utf8"))
-  : {};
+// Merge notes.json plus any per-module notes.<module>.json (parallel agents
+// each write their own file to avoid races; later files win on key conflict).
+const notes = {};
+if (existsSync(`${ROOT}/notes.json`)) Object.assign(notes, JSON.parse(readFileSync(`${ROOT}/notes.json`, "utf8")));
+for (const f of readdirSync(ROOT)) {
+  if (/^notes\..+\.json$/.test(f)) {
+    try { Object.assign(notes, JSON.parse(readFileSync(`${ROOT}/${f}`, "utf8"))); } catch { /* skip bad file */ }
+  }
+}
 
 // Logical tab groups (cluster the 33 modules into a readable handful).
 const GROUPS = {
