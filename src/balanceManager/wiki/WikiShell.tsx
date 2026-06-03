@@ -40,6 +40,9 @@ const NarrativePageLazy = lazy(() =>
 const WikiHomeLazy = lazy(() =>
   import("./WikiHome.jsx").then((m) => ({ default: m.WikiHome })),
 );
+const ProgressionFeedLazy = lazy(() =>
+  import("./sections/ProgressionFeed.jsx").then((m) => ({ default: m.default })),
+);
 const IconsTab = lazy(() => import("../tabs/IconsTab.jsx")) as unknown as TabComponent;
 const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
 
@@ -391,6 +394,8 @@ export default function WikiShell() {
     // category browser + start-here + prose). Other slugs render NarrativePage.
     if (pageSlug === "overview") {
       mainContent = <WikiHomeLazy navigate={navigate} />;
+    } else if (pageSlug === "progression") {
+      mainContent = <ProgressionFeedLazy />;
     } else {
       mainContent = <NarrativePageLazy slug={pageSlug!} />;
     }
