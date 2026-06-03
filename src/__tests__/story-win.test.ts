@@ -35,7 +35,7 @@ const postAnnounce = {
   flags: { ...preAnnounceFlags, festival_announced: true },
 };
 
-const fullTotals = { tile_grass_hay: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 };
+const fullTotals = { tile_grass_grass: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 };
 
 describe("2.5 — win beat gating", () => {
   it("win does NOT fire before festival announced, even with 50/50/50/50/50", () => {
@@ -77,7 +77,7 @@ describe("2.5 — win beat gating", () => {
   });
 
   it("49 hay does NOT trigger win", () => {
-    const short = { ...fullTotals, tile_grass_hay: 49 };
+    const short = { ...fullTotals, tile_grass_grass: 49 };
     const r = evaluateStoryTriggers(
       postAnnounce,
       { type: "resource_total_multi" },

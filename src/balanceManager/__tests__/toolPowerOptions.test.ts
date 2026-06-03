@@ -13,7 +13,7 @@ describe("tileKeyOptions", () => {
       expect(ITEMS[k]?.kind).toBe("tile");
     }
     // Known tile key is present
-    expect(values).toContain("tile_grass_hay");
+    expect(values).toContain("tile_grass_grass");
     expect(values).toContain("*");
     // Known resource key is absent
     expect(values).not.toContain("bread");
@@ -31,6 +31,6 @@ describe("resourceKeyOptions", () => {
       expect(ITEMS[k]?.kind).not.toBe("tile");
     }
     // Known tile key is absent
-    expect(values).not.toContain("tile_grass_hay");
+    expect(values).not.toContain("tile_grass_grass");
   });
 });

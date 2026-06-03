@@ -72,7 +72,7 @@
     <tr><td>Workers (hired once, help everywhere) + runes</td><td>—</td></tr>
   </tbody>
 </table>
-<p><strong>The load-bearing refactor:</strong> today <code>state.inventory</code> is one global pool. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> per-zone resources means re-keying inventory by settlement while keeping coins/tools/workers/level/knowledge global. The simulator must prove a fresh ruin can bootstrap from coins alone.</p>
+<p><strong>The load-bearing refactor:</strong> <code>state.inventory</code> is keyed by settlement id (<code>Record&lt;zoneId, Inventory&gt;</code>); coins, tools, workers, level, and knowledge stay global. Each ruin keeps its own resource pool — travel leaves stock behind and a fresh settlement bootstraps from global coins via its Market. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></p>
 
 <h2>Upcoming features &amp; the paused meta-layer</h2>
 <p>Phase 1 deliberately pauses the narrative meta-systems to first prove a complete, legible core loop across farm + mine + the first 1–3 towns. Status here is what's <em>coded today</em>, so a future session knows what it's switching off and returning to.</p>

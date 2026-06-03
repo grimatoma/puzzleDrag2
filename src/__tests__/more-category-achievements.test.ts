@@ -68,11 +68,11 @@ describe("cattle / mount / tree / bird achievements", () => {
     expect(s1.achievements.counters.bird_chained).toBe(6);
   });
 
-  it("CHAIN_COLLECTED on tile_grass_hay touches none of the four new counters", () => {
+  it("CHAIN_COLLECTED on tile_grass_grass touches none of the four new counters", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "tile_grass_grass", gained: 6, chainLength: 6, upgrades: 0 },
     } as Action);
     expect(s1.achievements.counters.cattle_chained).toBe(0);
     expect(s1.achievements.counters.mount_chained).toBe(0);

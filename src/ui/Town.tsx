@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
 import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
@@ -27,6 +27,8 @@ import {
 import FeaturePanel from "./primitives/FeaturePanel.jsx";
 import type { GameState, Dispatch } from "../types/state.js";
 import type { Building } from "../types/items.js";
+import { inventoryQty } from "../types/inventory.js";
+import { zoneInventory } from "../state/zoneInventory.js";
 
 interface LocationBuiltState {
   _plots?: Record<string, string | null>;
@@ -70,7 +72,7 @@ const BUILD_FILL = 1.06;
 // `boards`): label / nav icon / lot border / the art that fills the tile.
 // `kind` matches the `setEntryBiome` argument.
 const BOARD_META: Record<string, BoardMetaEntry> = {
-  farm: { label: "Farm Field", icon: "tile_grass_hay", border: "#2a5010", art: () => <FarmFieldArt /> },
+  farm: { label: "Farm Field", icon: "tile_grass_grass", border: "#2a5010", art: () => <FarmFieldArt /> },
   mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={!!locked} /> },
   fish: { label: "Harbor",     icon: "ui_enter",  border: "#1a3a5a", art: () => <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 55%, #1a3a5a 100%)" }} /> },
 };
@@ -262,7 +264,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
   const townPlan = useMemo(() => {
     const z = ZONES[mapCurrent];
-    const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean) as string[];
+    const boardKinds = [z && zoneHasBoard(z, "farm") && "farm", z && zoneHasBoard(z, "mine") && "mine", z && zoneHasBoard(z, "fish") && "fish"].filter(Boolean) as string[];
     return buildTownPlan({ zoneId: mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
   }, [mapCurrent, requestedPlots]);
   const layoutPlots = useMemo(
@@ -684,11 +686,12 @@ interface CostEntry {
 }
 
 function buildingCostEntries(building: Building | null | undefined, state: GameState): CostEntry[] {
+  const locInv = zoneInventory(state);
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
     label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : getItem(key)?.label || key,
     amount: Number(amount),
-    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : (state.inventory as Record<string, number> | undefined)?.[key] ?? 0,
+    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : inventoryQty(locInv, key),
     showHave: true,
     check: true,
   }));
@@ -717,8 +720,9 @@ function buildingRows(
     const cost = b.cost as Record<string, number>;
     const canCoin = state.coins >= (cost.coins || 0);
     const canRunes = (state.runes ?? 0) >= (cost.runes ?? 0);
+    const locInv = zoneInventory(state);
     const canRes = Object.entries(cost).every(
-      ([k, v]) => k === "coins" || k === "runes" || ((state.inventory as Record<string, number>)[k] || 0) >= Number(v),
+      ([k, v]) => k === "coins" || k === "runes" || inventoryQty(locInv, k) >= Number(v),
     );
     const canAfford = canCoin && canRes && canRunes;
     const reason = isBuilt

@@ -7,7 +7,7 @@ import { createInitialState, rootReducer } from "../state.js";
 import { rollFarmHazard, tickFire } from "../features/farm/hazards.js";
 import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 
-function makeGrid(rows = 4, cols = 4, key = "tile_grass_hay") {
+function makeGrid(rows = 4, cols = 4, key = "tile_grass_grass") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key })),
   );
@@ -107,7 +107,7 @@ describe("10.7 — COMMIT_CHAIN chain-extinguish", () => {
     };
     const chain = [
       { key: "fire", row: 2, col: 2 },
-      { key: "tile_grass_hay",  row: 2, col: 3 },
+      { key: "tile_grass_grass",  row: 2, col: 3 },
       { key: "fire", row: 2, col: 4 },
     ];
     const s1 = rootReducer(s0, {
@@ -118,7 +118,7 @@ describe("10.7 — COMMIT_CHAIN chain-extinguish", () => {
     expect(s1.coins).toBeGreaterThanOrEqual(4);
   });
 
-  it("chain through 1 fire tile among tile_grass_hay: fire extinguished, +2◉", () => {
+  it("chain through 1 fire tile among tile_grass_grass: fire extinguished, +2◉", () => {
     const s0 = {
       ...createInitialState(),
       biome: "farm",
@@ -130,8 +130,8 @@ describe("10.7 — COMMIT_CHAIN chain-extinguish", () => {
     };
     const chain = [
       { key: "fire", row: 0, col: 0 },
-      { key: "tile_grass_hay", row: 0, col: 1 },
-      { key: "tile_grass_hay", row: 0, col: 2 },
+      { key: "tile_grass_grass", row: 0, col: 1 },
+      { key: "tile_grass_grass", row: 0, col: 2 },
     ];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
@@ -152,9 +152,9 @@ describe("10.7 — COMMIT_CHAIN chain-extinguish", () => {
       },
     };
     const chain = [
-      { key: "tile_grass_hay", row: 0, col: 0 },
-      { key: "tile_grass_hay", row: 0, col: 1 },
-      { key: "tile_grass_hay", row: 0, col: 2 },
+      { key: "tile_grass_grass", row: 0, col: 0 },
+      { key: "tile_grass_grass", row: 0, col: 1 },
+      { key: "tile_grass_grass", row: 0, col: 2 },
     ];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",

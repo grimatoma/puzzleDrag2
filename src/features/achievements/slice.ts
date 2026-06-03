@@ -3,6 +3,7 @@ import { tickAchievement } from "./data.js";
 import { getAbility } from "../../config/abilities.js";
 import { locBuilt } from "../../locBuilt.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {
@@ -93,7 +94,7 @@ export function reduce(state: GameState, action: Action): GameState {
     case "TURN_IN_ORDER": {
       const order = state.orders.find((o) => o.id === action.id);
       const needed = (order?.need ?? order?.amount) ?? 0;
-      if (!order || inventoryQty(state.inventory, order.key) < needed) return state;
+      if (!order || inventoryQty(zoneInventory(state), order.key) < needed) return state;
       const next: GameState = { ...state, totalOrders: state.totalOrders + 1 };
       return tick(next, "orders_fulfilled", 1);
     }

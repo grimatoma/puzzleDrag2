@@ -45,9 +45,10 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
+import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
 import type { Action, GameState, Grid, Order, Tile } from "./types/state";
 import { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel } from "./state/helpers.js";
 export { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel };
@@ -241,13 +242,18 @@ function coreReducer(state: GameState, action: Action): GameState {
         const gainsMap = payload.gains;
         const cap = currentCap(state);
         const cf: Record<string, unknown> = { ...((state.seasonStats?.capFloaters as Record<string, unknown> | undefined) ?? {}) };
-        const inv = { ...state.inventory };
+        const zone = inventoryZone(state);
+        const inv = { ...zoneInventory(state) };
         const floaters = [...((state.floaters as unknown[] | undefined) ?? [])];
         for (const [k, n] of Object.entries(gainsMap)) {
           addCappedResourceMut(inv, cf, floaters, k, n, cap);
         }
-        return { ...state, inventory: inv, floaters,
-          seasonStats: { ...state.seasonStats, capFloaters: cf } };
+        return {
+          ...state,
+          inventory: { ...state.inventory, [zone]: inv },
+          floaters,
+          seasonStats: { ...state.seasonStats, capFloaters: cf },
+        };
       }
 
       const { key, gained, upgrades = 0, value, chainLength, noTurn, resourceKey } = payload ?? { key: "", gained: 0 };
@@ -258,10 +264,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // resources without consuming a turn.
       if (noTurn) {
         const capNoTurn = currentCap(state);
-        const inventory = { ...state.inventory };
+        const zone = inventoryZone(state);
+        const inv = { ...zoneInventory(state) };
         const creditKey = resourceKey ?? tileFamilyResource(key) ?? key;
-        addCappedResourceMut(inventory, {}, null, creditKey, gained, capNoTurn);
-        return { ...state, inventory };
+        addCappedResourceMut(inv, {}, null, creditKey, gained, capNoTurn);
+        return { ...state, inventory: { ...state.inventory, [zone]: inv } };
       }
 
       // Mine/Farm hazard processing when full chain is provided in payload
@@ -332,16 +339,17 @@ function coreReducer(state: GameState, action: Action): GameState {
         return applyKeeperTrialChainProgress(next, null, 0, turn);
       }
 
-      const inventory = { ...state.inventory };
+      const zone = inventoryZone(state);
+      const inventory = { ...zoneInventory(state) };
       const chainCap = currentCap(state);
       const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
       const chainFloaters = [...(state.floaters ?? [])];
 
       // Fractional resource accumulation: chain length contributes to
-      // state.resourceProgress[resourceKey], rolling into inventory once it
+      // zoneResourceProgress[resourceKey], rolling into inventory once it
       // crosses UPGRADE_THRESHOLDS[key] (the chained tile's threshold).
       // Tile keys no longer enter state.inventory directly.
-      const progress: Partial<Record<ResourceKey, number>> = { ...(state.resourceProgress ?? {}) };
+      const progress: Partial<Record<ResourceKey, number>> = { ...zoneResourceProgress(state) };
       if (resourceKey) {
         const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
         const threshold = thresholds[key] ?? Infinity;
@@ -420,7 +428,8 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       // Capture snapshot for hourglass rewind (before chain is applied)
       const lastChainSnapshot = {
-        inventory: state.inventory,
+        zoneId: zone,
+        inventory,
         grid: state.grid ?? null,
         turnsUsed: state.turnsUsed,
         farmRun: state.farmRun ?? null,
@@ -442,8 +451,8 @@ function coreReducer(state: GameState, action: Action): GameState {
       let afterChain: GameState = {
         ...state,
         ...(mergedHazards ? { hazards: mergedHazards } : {}),
-        inventory,
-        resourceProgress: progress,
+        inventory: { ...state.inventory, [zone]: inventory },
+        resourceProgress: { ...state.resourceProgress, [zone]: progress },
         coins: state.coins + coinsGain + fireCoinBonus + deadlyCoinBonus,
         xp: afterAlmanacXp.almanac.xp,
         level: afterAlmanacXp.almanac.level,
@@ -513,13 +522,15 @@ function coreReducer(state: GameState, action: Action): GameState {
       const o = state.orders.find((x) => x.id === action.id);
       if (!o) return state;
       const requiredQty = o.need ?? o.amount ?? 0;
-      if (inventoryQty(state.inventory, o.key) < requiredQty) {
+      const orderZone = (state.mapCurrent as string | undefined) ?? "home";
+      const orderInv = zoneInventory(state, orderZone);
+      if (inventoryQty(orderInv, o.key) < requiredQty) {
         return { ...state, bubble: { id: Date.now(), npc: o.npc, text: "Need more!", ms: 1100 } };
       }
-      const inventory = inventoryPut(
-        { ...state.inventory },
+      const nextOrderInv = inventoryPut(
+        { ...orderInv },
         o.key,
-        inventoryQty(state.inventory, o.key) - requiredQty,
+        inventoryQty(orderInv, o.key) - requiredQty,
       );
       const remainingOrders = state.orders.filter((x) => x.id !== o.id);
       const usedNpcs = remainingOrders.map((x) => x.npc);
@@ -551,7 +562,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       const afterOrder = {
         ...state,
-        inventory,
+        inventory: { ...state.inventory, [orderZone]: nextOrderInv },
         coins: state.coins + actualReward,
         xp: afterOrderAlmanac.almanac.xp,
         level: afterOrderAlmanac.almanac.level,
@@ -572,9 +583,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Workshop must be built
       if (!locBuilt(state).workshop) return state;
       if (!hasAllInventory(state, toolRecipe.inputs)) return state;
+      const craftZone = (state.mapCurrent as string | undefined) ?? "home";
+      const toolInv = zoneInventory(state, craftZone);
       return {
         ...state,
-        inventory: deductInventory(state.inventory ?? {}, toolRecipe.inputs),
+        inventory: { ...state.inventory, [craftZone]: deductInventory(toolInv, toolRecipe.inputs) },
         tools: { ...state.tools, [toolId]: toolCount(state.tools, toolId) + 1 },
       };
     }
@@ -788,8 +801,9 @@ function coreReducer(state: GameState, action: Action): GameState {
         };
       }
       const canCoin = state.coins >= (b.cost.coins || 0);
+      const buildInv = zoneInventory(state, currentZone);
       const canRes = Object.entries(b.cost).every(
-        ([k, v]) => k === "coins" || k === "runes" || inventoryQty(state.inventory, k) >= v,
+        ([k, v]) => k === "coins" || k === "runes" || inventoryQty(buildInv, k) >= v,
       );
       // Special gate: portal requires runes (not inventory)
       const runesNeeded = b.cost.runes ?? 0;
@@ -810,10 +824,10 @@ function coreReducer(state: GameState, action: Action): GameState {
         while (occupied(plotIdx)) plotIdx++;
       }
       plots[plotIdx] = b.id;
-      let inventory = { ...state.inventory };
+      let nextBuildInv = { ...buildInv };
       Object.entries(b.cost).forEach(([k, v]) => {
         if (k !== "coins" && k !== "runes") {
-          inventory = inventoryPut(inventory, k, inventoryQty(inventory, k) - (v as number));
+          nextBuildInv = inventoryPut(nextBuildInv, k, inventoryQty(nextBuildInv, k) - (v as number));
         }
       });
       const hintsShown = state._hintsShown || {};
@@ -825,7 +839,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! [icon:ui_build] Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
       } else if (b.id === "inn" && !hintsShown.innHint) {
-        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_grass] You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
       // §17 locked: 10 XP per building into almanac
@@ -834,7 +848,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
-        inventory,
+        inventory: { ...state.inventory, [currentZone]: nextBuildInv },
         built: { ...state.built, [currentZone]: { ...locBuilt(state), [b.id]: true, _plots: plots } },
         almanac: afterBuildAlmanac.almanac,
         bubble,
@@ -1035,7 +1049,8 @@ function coreReducer(state: GameState, action: Action): GameState {
       // of inventory. Cap-check against both lists.
       if ((CAPPED_INVENTORY_RESOURCES as readonly string[]).includes(buyKey)) {
         const buyingCap = currentCap(state);
-        const currentAmt = inventoryQty(state.inventory, buyKey);
+        const tradeZone = (state.mapCurrent as string | undefined) ?? "home";
+        const currentAmt = inventoryQty(zoneInventory(state, tradeZone), buyKey);
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
       }
       return applyTrade(state, action);
@@ -1047,14 +1062,17 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "CONVERT_TO_SUPPLY": {
       const qty = Math.max(1, (action.payload?.qty ?? 0) | 0);
       const cost = qty * 3;
-      if (inventoryQty(state.inventory, ResourceKey.Flour) < cost) return state;
+      const supplyZone = (state.mapCurrent as string | undefined) ?? "home";
+      const supplyInv = zoneInventory(state, supplyZone);
+      if (inventoryQty(supplyInv, ResourceKey.Flour) < cost) return state;
+      const nextSupplyInv = inventoryPut(
+        inventoryPut({ ...supplyInv }, ResourceKey.Flour, inventoryQty(supplyInv, ResourceKey.Flour) - cost),
+        ResourceKey.Supplies,
+        inventoryQty(supplyInv, ResourceKey.Supplies) + qty,
+      );
       return {
         ...state,
-        inventory: inventoryPut(
-          inventoryPut({ ...state.inventory }, ResourceKey.Flour, inventoryQty(state.inventory, ResourceKey.Flour) - cost),
-          ResourceKey.Supplies,
-          inventoryQty(state.inventory, ResourceKey.Supplies) + qty,
-        ),
+        inventory: { ...state.inventory, [supplyZone]: nextSupplyInv },
       };
     }
 
@@ -1075,7 +1093,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const zoneId = ((state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home");
       const zone = ZONES[zoneId];
       if (!zone) return state;
-      if (!zone.hasFarm) {
+      if (!zoneHasBoard(zone, "farm")) {
         return {
           ...state,
           bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} does not have farm fields.`, ms: 2200 },
@@ -1147,7 +1165,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       const supply: Record<string, number> = action.payload?.supply ?? {};
       // Validate: every entry is a real ration the player has enough of.
-      let inv = { ...(state.inventory ?? {}) };
+      let inv = { ...zoneInventory(state, zoneId) };
       for (const [foodKey, rawCount] of Object.entries(supply)) {
         const n = Math.floor(rawCount as number);
         if (n <= 0) continue;
@@ -1163,7 +1181,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       const staged = {
         ...state,
-        inventory: inv,
+        inventory: { ...state.inventory, [zoneId]: inv },
         turnsUsed: 0,
         farmRun: {
           zoneId,
@@ -1199,12 +1217,14 @@ function coreReducer(state: GameState, action: Action): GameState {
         ? recipe.inputs
         : Object.fromEntries(Object.entries(recipe.inputs).map(([k, n]) => [k, (n as number) * craftQty]))) as typeof recipe.inputs;
       if (!hasAllInventory(state, scaledInputs)) return state;
+      const craftZone = (state.mapCurrent as string | undefined) ?? "home";
+      const craftInv = zoneInventory(state, craftZone);
       const newInv = inventoryPut(
-        deductInventory(state.inventory ?? {}, scaledInputs),
+        deductInventory(craftInv, scaledInputs),
         craftId,
-        inventoryQty(state.inventory, craftId) + craftQty,
+        inventoryQty(craftInv, craftId) + craftQty,
       );
-      return { ...state, inventory: newInv };
+      return { ...state, inventory: { ...state.inventory, [craftZone]: newInv } };
     }
 
     case "GRANT_RUNES": {
@@ -1217,13 +1237,15 @@ function coreReducer(state: GameState, action: Action): GameState {
       const itemId = action.id ?? action.payload?.id;
       const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
       if (!itemId) return state;
-      const owned = inventoryQty(state.inventory, itemId);
+      const sellZone = (state.mapCurrent as string | undefined) ?? "home";
+      const sellInv = zoneInventory(state, sellZone);
+      const owned = inventoryQty(sellInv, itemId);
       if (owned < sellQty) return state;
       const price = _sellPriceFor(itemId);
       const proceeds = price * sellQty;
       return {
         ...state,
-        inventory: inventoryPut({ ...state.inventory }, itemId, owned - sellQty),
+        inventory: { ...state.inventory, [sellZone]: inventoryPut({ ...sellInv }, itemId, owned - sellQty) },
         coins: (state.coins ?? 0) + proceeds,
       };
     }
@@ -1330,16 +1352,24 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "MIGRATE/APPLY_CAPS": {
       // Clamp all capped resources to current cap; no floaters (silent migration)
       const migCap = currentCap(state);
-      const migInv = { ...state.inventory };
+      const nextInventory = { ...state.inventory };
       let changed = false;
-      for (const k of CAPPED_INVENTORY_RESOURCES) {
-        if ((migInv[k] ?? 0) > migCap) {
-          migInv[k] = migCap;
+      for (const [zoneId, bucket] of Object.entries(nextInventory)) {
+        const migInv = { ...bucket };
+        let zoneChanged = false;
+        for (const k of CAPPED_INVENTORY_RESOURCES) {
+          if ((migInv[k] ?? 0) > migCap) {
+            migInv[k] = migCap;
+            zoneChanged = true;
+          }
+        }
+        if (zoneChanged) {
+          nextInventory[zoneId] = migInv;
           changed = true;
         }
       }
       if (!changed) return state;
-      return { ...state, inventory: migInv };
+      return { ...state, inventory: nextInventory };
     }
 
     // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
@@ -1433,27 +1463,30 @@ function coreReducer(state: GameState, action: Action): GameState {
         return { ...state, coins: state.coins + (action.amount ?? 1000) };
       }
       if (action.type === "DEV/FILL_STORAGE") {
-        let inventory = { ...state.inventory };
+        const devZone = inventoryZone(state);
+        let devInv = { ...zoneInventory(state, devZone) };
         for (const biome of Object.values(BIOMES)) {
           for (const res of [...(biome.tiles ?? []), ...(biome.resources ?? [])]) {
-            inventory = inventoryPut(
-              inventory,
+            devInv = inventoryPut(
+              devInv,
               res.key,
-              inventoryQty(inventory, res.key) + (action.amount ?? 100),
+              inventoryQty(devInv, res.key) + (action.amount ?? 100),
             );
           }
         }
-        return { ...state, inventory };
+        return { ...state, inventory: { ...state.inventory, [devZone]: devInv } };
       }
       if (action.type === "DEV/ADD_ITEM") {
         const key = action.key;
         if (!key) return state;
-        const inventory = inventoryPut(
-          { ...state.inventory },
+        const devZone = inventoryZone(state);
+        const devInv = zoneInventory(state, devZone);
+        const nextDevInv = inventoryPut(
+          { ...devInv },
           key,
-          inventoryQty(state.inventory, key) + (action.amount ?? 50),
+          inventoryQty(devInv, key) + (action.amount ?? 50),
         );
-        return { ...state, inventory };
+        return { ...state, inventory: { ...state.inventory, [devZone]: nextDevInv } };
       }
       if (action.type === "DEV/ADD_XP") {
         const { newState } = applyAlmanacXp(state, action.amount ?? 100);
@@ -1488,12 +1521,14 @@ function coreReducer(state: GameState, action: Action): GameState {
         return { ...state, tools: tools as GameState["tools"] };
       }
       if (action.type === "DEV/ADD_SUPPLIES") {
-        const inventory = inventoryPut(
-          { ...state.inventory },
+        const devZone = inventoryZone(state);
+        const devInv = zoneInventory(state, devZone);
+        const nextDevInv = inventoryPut(
+          { ...devInv },
           ResourceKey.Supplies,
-          inventoryQty(state.inventory, ResourceKey.Supplies) + (action.amount ?? 10),
+          inventoryQty(devInv, ResourceKey.Supplies) + (action.amount ?? 10),
         );
-        return { ...state, inventory };
+        return { ...state, inventory: { ...state.inventory, [devZone]: nextDevInv } };
       }
       if (action.type === "DEV/BUILD_ALL") {
         const allIds: Record<string, boolean> = {};

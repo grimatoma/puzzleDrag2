@@ -11,7 +11,7 @@ describe("Phase 5.4 — Chain-length discovery", () => {
       ...base,
       tileCollection: { ...base.tileCollection, discovered: { ...base.tileCollection.discovered, tile_grain_wheat: true } },
     };
-    const a1 = discoverTileTypesFromChain(wheatKnown, { resourceKey: "tile_grass_hay", chainLength: 19 });
+    const a1 = discoverTileTypesFromChain(wheatKnown, { resourceKey: "tile_grass_grass", chainLength: 19 });
     expect(a1.discoveredIds.length).toBe(0);
     expect(a1.newDiscoveredMap).toBe(wheatKnown.tileCollection.discovered);
   });
@@ -21,21 +21,21 @@ describe("Phase 5.4 — Chain-length discovery", () => {
       ...base,
       tileCollection: { ...base.tileCollection, discovered: { ...base.tileCollection.discovered, tile_grain_wheat: true } },
     };
-    const b1 = discoverTileTypesFromChain(wheatKnown, { resourceKey: "tile_grass_hay", chainLength: 20 });
+    const b1 = discoverTileTypesFromChain(wheatKnown, { resourceKey: "tile_grass_grass", chainLength: 20 });
     expect(b1.discoveredIds).toContain("tile_grass_meadow");
     expect(b1.discoveredIds.length).toBe(1);
   });
 
   it("C: fresh state + 20 hay → discovers both wheat AND meadow_grass (tier order)", () => {
-    const c1 = discoverTileTypesFromChain(base, { resourceKey: "tile_grass_hay", chainLength: 20 });
+    const c1 = discoverTileTypesFromChain(base, { resourceKey: "tile_grass_grass", chainLength: 20 });
     expect(c1.discoveredIds).toContain("tile_grain_wheat");
     expect(c1.discoveredIds).toContain("tile_grass_meadow");
     // wheat (tier 0) before meadow_grass (tier 1)
     expect(c1.discoveredIds[0]).toBe("tile_grain_wheat");
   });
 
-  it("D: exactly UPGRADE_THRESHOLDS.tile_grass_hay discovers wheat only", () => {
-    const d1 = discoverTileTypesFromChain(base, { resourceKey: "tile_grass_hay", chainLength: UPGRADE_THRESHOLDS.tile_grass_hay });
+  it("D: exactly UPGRADE_THRESHOLDS.tile_grass_grass discovers wheat only", () => {
+    const d1 = discoverTileTypesFromChain(base, { resourceKey: "tile_grass_grass", chainLength: UPGRADE_THRESHOLDS.tile_grass_grass });
     expect(d1.discoveredIds.length).toBe(1);
     expect(d1.discoveredIds[0]).toBe("tile_grain_wheat");
   });
@@ -45,7 +45,7 @@ describe("Phase 5.4 — Chain-length discovery", () => {
       type: "TILE_DISCOVERED",
       payload: { ids: ["tile_grain_wheat", "tile_grass_meadow"] },
     });
-    const e1 = discoverTileTypesFromChain(afterDiscovery, { resourceKey: "tile_grass_hay", chainLength: 20 });
+    const e1 = discoverTileTypesFromChain(afterDiscovery, { resourceKey: "tile_grass_grass", chainLength: 20 });
     expect(e1.discoveredIds.length).toBe(0);
   });
 
@@ -90,7 +90,7 @@ describe("Phase 5.4 — Chain-length discovery", () => {
 
   it("I: discoverTileTypesFromChain does not mutate state", () => {
     const before = JSON.stringify(base);
-    discoverTileTypesFromChain(base, { resourceKey: "tile_grass_hay", chainLength: 20 });
+    discoverTileTypesFromChain(base, { resourceKey: "tile_grass_grass", chainLength: 20 });
     expect(JSON.stringify(base)).toBe(before);
   });
 });

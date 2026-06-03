@@ -13,6 +13,7 @@ import {
   applyRevealTiles,
 } from "./boardMutations.js";
 import { normalizeHazardId } from "../config/hazardIds.js";
+import { inventoryZone, zoneInventory } from "./zoneInventory.js";
 import type { GameState } from "../types/state.js";
 
 /**
@@ -177,10 +178,11 @@ function _sweepSelected(state: GameState, cells: TileSelectorCell[]): GameState 
   const { grid, collected } = sweepAtCoords(state.grid, cells);
   const total = Object.values(collected).reduce((s, n) => s + n, 0);
   if (total === 0) return state;
+  const zone = inventoryZone(state);
   return {
     ...state,
     grid,
-    inventory: _creditCollected(state.inventory ?? {}, collected),
+    inventory: { ...state.inventory, [zone]: _creditCollected(zoneInventory(state, zone), collected) },
   };
 }
 
@@ -290,10 +292,12 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
       if (!snap) return state;
       const spent = _spendToolCharge(state, key);
       if (spent === null) return state;
+      const snapZone = (snap.zoneId as string | undefined) ?? inventoryZone(state);
+      const snapInv = (snap.inventory as Record<string, number> | undefined) ?? zoneInventory(spent, snapZone);
       return {
         ...spent,
         grid: snap.grid ?? spent.grid,
-        inventory: snap.inventory ?? spent.inventory,
+        inventory: { ...spent.inventory, [snapZone]: snapInv },
         turnsUsed: snap.turnsUsed ?? spent.turnsUsed,
         farmRun: snap.farmRun ?? spent.farmRun,
         lastChainSnapshot: null,

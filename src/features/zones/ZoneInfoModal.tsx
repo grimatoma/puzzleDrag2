@@ -4,6 +4,8 @@ import {
   settlementBiome,
   settlementHazards,
   zoneBaseTurns,
+  zoneFarmBoard,
+  zoneHasBoard,
   type Zone,
 } from "./data.js";
 import {
@@ -44,8 +46,14 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
   const categories = zoneInfoCategories(zone);
   const hazards = settlementHazards(state, zoneId);
   const biome = settlementBiome(state, zoneId);
+  const farmBoard = zoneFarmBoard(zone);
   const entryCoins = zone?.entryCost?.coins ?? 0;
   const boards = boardKindLabels(zone);
+
+  const turnLabels: string[] = [];
+  if (zoneHasBoard(zone, "farm")) turnLabels.push(`Farm ${zoneBaseTurns(zone, "farm")}`);
+  if (zoneHasBoard(zone, "mine")) turnLabels.push(`Mine ${zoneBaseTurns(zone, "mine")}`);
+  if (zoneHasBoard(zone, "fish")) turnLabels.push(`Harbor ${zoneBaseTurns(zone, "fish")}`);
 
   return (
     <ParchmentDialog open onClose={onClose} size="lg" ariaLabel={`${name} — zone details`}>
@@ -59,11 +67,11 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
               <div className="hl-section-label">Session</div>
               <div className="hl-card !p-2.5 flex flex-col gap-1">
                 <ModifierRow label="Boards">{boards.length ? boards.join(" · ") : "—"}</ModifierRow>
-                <ModifierRow label="Base turns">{zoneBaseTurns(zone)}</ModifierRow>
-                {zone.hasFarm && (
+                <ModifierRow label="Base turns">{turnLabels.length ? turnLabels.join(" · ") : "—"}</ModifierRow>
+                {zoneHasBoard(zone, "farm") && (
                   <ModifierRow label="Farm entry">{entryCoins}◉</ModifierRow>
                 )}
-                {(zone.hasMine || zone.hasWater) && (
+                {(zoneHasBoard(zone, "mine") || zoneHasBoard(zone, "fish")) && (
                   <ModifierRow label="Expedition">Pack food · no coin entry</ModifierRow>
                 )}
               </div>
@@ -100,7 +108,7 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
                             {ZONE_CATEGORY_LABELS[cat] ?? cat}
                           </td>
                           {SESSION_SEASON_NAMES.map((season) => {
-                            const w = zone.seasonDrops?.[season]?.[cat];
+                            const w = farmBoard?.seasonDrops?.[season]?.[cat];
                             return (
                               <td
                                 key={`${cat}-${season}`}
@@ -120,14 +128,14 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
               </section>
             )}
 
-            {Object.keys(zone.upgradeMap ?? {}).length > 0 && (
+            {Object.keys(farmBoard?.upgradeMap ?? {}).length > 0 && (
               <section className="flex flex-col gap-1.5">
                 <div className="hl-section-label">Chain upgrades</div>
                 <p className="text-[11px] text-on-panel-faint leading-snug">
                   Long chains on a category spawn the next-tier tile listed here.
                 </p>
                 <ul className="flex flex-col gap-1">
-                  {Object.entries(zone.upgradeMap).map(([src, tgt]) => (
+                  {Object.entries(farmBoard!.upgradeMap).map(([src, tgt]) => (
                     <li
                       key={src}
                       className="flex items-center justify-between gap-2 text-[12px] bg-[#fffaf1] border border-[#8c7656]/35 rounded-lg px-2 py-1"

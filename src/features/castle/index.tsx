@@ -2,6 +2,8 @@ import { CASTLE_NEEDS } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
+import { inventoryQty } from "../../types/inventory.js";
 
 export const viewKey = "castle";
 
@@ -24,14 +26,14 @@ interface CastleNeedsListProps {
 
 function CastleNeedsList({ state, dispatch }: CastleNeedsListProps) {
   const contributed = (state?.castle as { contributed?: Record<string, number> } | undefined)?.contributed ?? {};
-  const inventory = (state?.inventory ?? {}) as Record<string, number>;
+  const inventory = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as GameState);
 
   return (
     <div className="hl-well">
       <div className="hl-section-label">🏰 Castle Needs</div>
       {Object.entries(CASTLE_NEEDS).map(([key, need]) => {
         const value = contributed[key] ?? 0;
-        const have = inventory[need.resource] ?? 0;
+        const have = inventoryQty(inventory, need.resource);
         const remaining = Math.max(0, need.target - value);
         // Wired contribute targets — all three needs point at real
         // farm/mine resources: soup (vegetables), meat (herd animals),

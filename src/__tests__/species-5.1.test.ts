@@ -70,14 +70,14 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     }
   });
 
-  it("wheat chain threshold === UPGRADE_THRESHOLDS.tile_grass_hay (no UPGRADE_EVERY literal)", () => {
+  it("wheat chain threshold === UPGRADE_THRESHOLDS.tile_grass_grass (no UPGRADE_EVERY literal)", () => {
     const wheat = TILE_TYPES_MAP.tile_grain_wheat;
     expect(wheat).toBeTruthy();
     expect(wheat.discovery.method).toBe("chain");
-    expect(wheat.discovery.chainLength).toBe(UPGRADE_THRESHOLDS.tile_grass_hay);
+    expect(wheat.discovery.chainLength).toBe(UPGRADE_THRESHOLDS.tile_grass_grass);
   });
 
-  it("meadow_grass chains at exactly 20 hay (GAME_SPEC §13)", () => {
+  it("meadow_grass chains at exactly 20 grass (GAME_SPEC §13)", () => {
     expect(TILE_TYPES_MAP.tile_grass_meadow.discovery.chainLength).toBe(20);
   });
 

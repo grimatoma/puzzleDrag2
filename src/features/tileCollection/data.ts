@@ -73,38 +73,38 @@ export function categoriesForSubCategory(sub: string): string[] {
 export const TILE_TYPES = [
   // Grass
   {
-    id: "tile_grass_hay", category: "grass", displayName: "Hay", baseResource: "tile_grass_hay", tier: 0,
+    id: "tile_grass_grass", category: "grass", displayName: "Grass", baseResource: "tile_grass_grass", tier: 0,
     discovery: { method: "default" },
     effects: {},
-    description: "The common meadow grass of the vale, harvested as fodder for livestock and thatch for roofs.",
+    description: "The common meadow grass of the vale — chain it to dry and bundle into hay for livestock and thatch.",
   },
   {
     id: "tile_grass_meadow", category: "grass", displayName: "Meadow Grass",
     baseResource: "tile_grass_meadow", tier: 1,
-    discovery: { method: "chain", chainLengthOf: "tile_grass_hay", chainLength: 20 },
+    discovery: { method: "chain", chainLengthOf: "tile_grass_grass", chainLength: 20 },
     abilities: [
-      { id: "pool_weight", params: { target: "tile_grass_hay", amount: 1 } },
+      { id: "pool_weight", params: { target: "tile_grass_grass", amount: 1 } },
     ],
     effects: {},
-    description: "A lush grass variety that grows in dense clumps, boosting hay tile spawn frequency on the board.",
+    description: "A lush grass variety that grows in dense clumps, boosting base grass tile spawn frequency on the board.",
   },
   {
     id: "tile_grass_spiky", category: "grass", displayName: "Spiky Grass",
     baseResource: "tile_grass_spiky", tier: 2,
-    discovery: { method: "research", researchOf: "tile_grass_hay", researchAmount: 50 },
+    discovery: { method: "research", researchOf: "tile_grass_grass", researchAmount: 50 },
     abilities: [
-      { id: "pool_weight", params: { target: "tile_grass_hay", amount: 2 } },
+      { id: "pool_weight", params: { target: "tile_grass_grass", amount: 2 } },
     ],
     effects: {},
-    description: "A hardy, drought-tolerant grass that spreads quickly, adding two extra hay tiles to every board fill.",
+    description: "A hardy, drought-tolerant grass that spreads quickly, adding two extra grass tiles to every board fill.",
   },
 
   // Grain — no "default" tile type; grain category starts null
   {
     id: "tile_grain_wheat", category: "grain", displayName: "Wheat", baseResource: "tile_grain_wheat", tier: 0,
-    discovery: { method: "chain", chainLengthOf: "tile_grass_hay", chainLength: UPGRADE_THRESHOLDS.tile_grass_hay },
+    discovery: { method: "chain", chainLengthOf: "tile_grass_grass", chainLength: UPGRADE_THRESHOLDS.tile_grass_grass },
     effects: {},
-    description: "Golden stalks of grain unlocked when hay chains grow long enough to harvest properly.",
+    description: "Golden stalks of grain unlocked when grass chains grow long enough to harvest properly.",
   },
 
   // (grain and flour are late resources/recipe ingredients, not tile

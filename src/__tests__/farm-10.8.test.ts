@@ -3,17 +3,24 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
+import { patchInventory } from "../testUtils/inventory.js";
 import { WORKSHOP_RECIPES } from "../constants.js";
 import { rollFarmHazard, tickWolves } from "../features/farm/hazards.js";
 import { createInitialState, rootReducer } from "../state.js";
 
-function farmState(overrides = {}) {
-  return {
-    ...createInitialState(),
+function farmState(overrides: Record<string, unknown> = {}) {
+  const base = createInitialState();
+  const { inventory: invOverride, ...rest } = overrides;
+  let state = {
+    ...base,
     biome: "farm",
-    hazards: { ...createInitialState().hazards },
-    ...overrides,
+    hazards: { ...base.hazards },
+    ...rest,
   };
+  if (invOverride && typeof invOverride === "object") {
+    state = { ...state, ...patchInventory(base, invOverride as Record<string, number>) };
+  }
+  return state;
 }
 
 // ── Recipe locked ─────────────────────────────────────────────────────────────
@@ -52,7 +59,7 @@ describe("10.8 — rollFarmHazard wolf spawn condition", () => {
   });
 
   it("mine biome: no wolves", () => {
-    const s = { ...farmState(), biome: "mine", inventory: { eggs: 99 } };
+    const s = { ...farmState({ inventory: { eggs: 99 } }), biome: "mine" };
     const r = rollFarmHazard(s, () => 0.001);
     expect(r).toBeNull();
   });

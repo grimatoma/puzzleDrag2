@@ -9,6 +9,9 @@ import {
   ZONE_UPGRADE_TARGET_GOLD,
   DEFAULT_ZONE,
   zoneCategories,
+  zoneHasBoard,
+  zoneBoard,
+  zoneBaseTurns,
 } from "../src/features/zones/data.js";
 import * as zonesSlice from "../src/features/zones/slice.js";
 import { createInitialState, rootReducer } from "../src/state.js";
@@ -19,39 +22,35 @@ describe("Phase 30 — ZONES schema", () => {
     expect(ZONE_IDS).toContain("meadow");
     expect(ZONE_IDS).toContain("quarry");
     expect(ZONE_IDS).toContain("harbor");
-    // No abstract zone1-zone6 ids
     expect(ZONE_IDS).not.toContain("zone1");
     expect(ZONE_IDS).not.toContain("zone6");
   });
 
-  it("farm zones expose a farm board (hasFarm = true)", () => {
-    const farmZones = ZONE_IDS.filter((id) => ZONES[id].hasFarm);
+  it("farm zones expose a farm board instance", () => {
+    const farmZones = ZONE_IDS.filter((id) => zoneHasBoard(ZONES[id], "farm"));
     expect(farmZones.length).toBeGreaterThan(0);
     for (const id of farmZones) {
-      expect(ZONES[id].hasFarm).toBe(true);
+      expect(zoneHasBoard(ZONES[id], "farm")).toBe(true);
     }
   });
 
   it("mine-only zones do not expose a farm board", () => {
-    expect(ZONES.quarry.hasFarm).toBe(false);
-    expect(ZONES.quarry.hasMine).toBe(true);
+    expect(zoneHasBoard(ZONES.quarry, "farm")).toBe(false);
+    expect(zoneHasBoard(ZONES.quarry, "mine")).toBe(true);
   });
 
-  it("zone base turns — home = 10, quarry = 10", () => {
-    expect(ZONES.home.baseTurns).toBe(10);
-    expect(ZONES.quarry.baseTurns).toBe(10);
+  it("zone base turns — home farm = 10, quarry mine = 10", () => {
+    expect(zoneBaseTurns("home", "farm")).toBe(10);
+    expect(zoneBaseTurns("quarry", "mine")).toBe(10);
   });
 
-  it("Has Mine / Has Water flags match the location design", () => {
-    // Home: farm-only, no mine or water
-    expect(ZONES.home.hasMine).toBe(false);
-    expect(ZONES.home.hasWater).toBe(false);
-    // Quarry: mine-only
-    expect(ZONES.quarry.hasMine).toBe(true);
-    expect(ZONES.quarry.hasWater).toBe(false);
-    // Harbor: water-only
-    expect(ZONES.harbor.hasMine).toBe(false);
-    expect(ZONES.harbor.hasWater).toBe(true);
+  it("board kind flags match the location design", () => {
+    expect(zoneHasBoard(ZONES.home, "mine")).toBe(false);
+    expect(zoneHasBoard(ZONES.home, "fish")).toBe(false);
+    expect(zoneHasBoard(ZONES.quarry, "mine")).toBe(true);
+    expect(zoneHasBoard(ZONES.quarry, "fish")).toBe(false);
+    expect(zoneHasBoard(ZONES.harbor, "mine")).toBe(false);
+    expect(zoneHasBoard(ZONES.harbor, "fish")).toBe(true);
   });
 
   it("farm zones charge 50 coins to start a session, mine zones charge more", () => {
@@ -60,25 +59,23 @@ describe("Phase 30 — ZONES schema", () => {
     expect(ZONES.quarry.entryCost.coins).toBeGreaterThan(50);
   });
 
-  it("home upgrade map matches the base farm spec (Grass→Birds, Fruits→Gold, etc.)", () => {
-    const m = ZONES.home.upgradeMap;
+  it("home farm upgrade map matches the base farm spec (Grass→Birds, Fruits→Gold, etc.)", () => {
+    const m = zoneBoard("home", "farm")!.upgradeMap;
     expect(m.grass).toBe("birds");
     expect(m.grain).toBe("vegetables");
     expect(m.trees).toBe("birds");
     expect(m.birds).toBe("herd_animals");
     expect(m.vegetables).toBe("fruits");
     expect(m.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
-    // Advanced categories not present on the basic farm
     expect(m.flowers).toBeUndefined();
     expect(m.cattle).toBeUndefined();
     expect(m.mounts).toBeUndefined();
   });
 
-  it("orchard upgrade map has a tree→fruit focus and caps at herd_animals (no cattle/mounts/flowers)", () => {
-    const m = ZONES.orchard.upgradeMap;
-    expect(m.trees).toBe("fruits");          // orchard specialty vs home's trees→birds
-    expect(m.herd_animals).toBe(ZONE_UPGRADE_TARGET_GOLD); // cashed out immediately
-    // Advanced categories not configured on orchard — only present when a zone defines them
+  it("orchard farm upgrade map has a tree→fruit focus and caps at herd_animals", () => {
+    const m = zoneBoard("orchard", "farm")!.upgradeMap;
+    expect(m.trees).toBe("fruits");
+    expect(m.herd_animals).toBe(ZONE_UPGRADE_TARGET_GOLD);
     expect(m.flowers).toBeUndefined();
     expect(m.cattle).toBeUndefined();
     expect(m.mounts).toBeUndefined();
@@ -87,7 +84,8 @@ describe("Phase 30 — ZONES schema", () => {
   it("upgrade targets only point at known categories or the gold sentinel", () => {
     const allowedTargets = new Set([...ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD]);
     for (const id of ZONE_IDS) {
-      const m = ZONES[id].upgradeMap;
+      const m = zoneBoard(id, "farm")?.upgradeMap;
+      if (!m) continue;
       for (const [src, tgt] of Object.entries(m)) {
         expect(ZONE_CATEGORIES, `${id}.${src}`).toContain(src);
         expect(allowedTargets, `${id}.${src}->${tgt}`).toContain(tgt);
@@ -96,7 +94,7 @@ describe("Phase 30 — ZONES schema", () => {
   });
 
   it("zoneCategories returns at most 8 source categories per farm zone", () => {
-    const farmZones = ZONE_IDS.filter((id) => ZONES[id].hasFarm);
+    const farmZones = ZONE_IDS.filter((id) => zoneHasBoard(ZONES[id], "farm"));
     for (const id of farmZones) {
       const cats = zoneCategories(id);
       expect(cats.length).toBeLessThanOrEqual(8);
@@ -113,7 +111,6 @@ describe("Phase 30 — zones slice (zone selection via CARTO/TRAVEL)", () => {
   });
 
   it("CARTO/TRAVEL to a discovered node updates activeZone and mapCurrent", () => {
-    // Initial state has meadow in mapDiscovered, adjacent to home, level 1
     const s = createInitialState();
     const next = rootReducer(s, { type: "CARTO/TRAVEL", nodeId: "meadow" });
     expect(next.activeZone).toBe("meadow");
@@ -135,7 +132,6 @@ describe("Phase 30 — zones slice (zone selection via CARTO/TRAVEL)", () => {
   it("ZONE/UNLOCK is a no-op (zone discovery is managed by cartography)", () => {
     const s = createInitialState();
     const next = rootReducer(s, { type: "ZONE/UNLOCK", payload: { id: "meadow" } });
-    // activeZone and mapCurrent unchanged
     expect(next.activeZone).toBe(DEFAULT_ZONE);
     expect(next.mapCurrent).toBe(DEFAULT_ZONE);
   });

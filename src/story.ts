@@ -1,6 +1,10 @@
 // ─── Story state slice ────────────────────────────────────────────────────────
 // Pure helpers: no Phaser, no DOM, fully testable in Vitest.
 
+import type { GameState } from "./types/state.js";
+import type { ZoneInventoryMap } from "./types/inventory.js";
+import { inventoryForStory, inventoryZone, zoneInventory } from "./state/zoneInventory.js";
+
 export const INITIAL_STORY_STATE = {
   act: 1,
   beat: "act1_arrival",
@@ -115,7 +119,7 @@ export const STORY_BEATS = [
       { speaker: "wren", text: "There. The first of many. This land was dead, but it still remembers how to grow." },
       { speaker: "wren", text: "Mira will be here soon. She'll need that hay for the workers' fires." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 1 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 1 },
     onComplete: { setFlag: "first_harvest" },
   },
   {
@@ -124,7 +128,7 @@ export const STORY_BEATS = [
     title: "First Light",
     scene: "hearth",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 20 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
@@ -230,7 +234,7 @@ export const STORY_BEATS = [
     body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
-      req: { tile_grass_hay: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
+      req: { tile_grass_grass: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
     },
     onComplete: { setFlag: "isWon" },
   },
@@ -253,7 +257,7 @@ export const SIDE_BEATS: Beat[] = [
       { speaker: "wren", text: "Every move you make on that board spends time. See the counter? When it hits zero, the season turns." },
       { speaker: "wren", text: "Harvest what you can, but remember: we're not just collecting hay. We're building a home. Every scrap counts toward the next construction." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 5 },
+    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 5 },
     onComplete: { setFlag: "tutorial_beat_4" },
   },
 
@@ -520,7 +524,10 @@ const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi",
 
 interface SideBeatGameState {
   story?: StoryState | { flags?: Record<string, boolean>; repeatCooldowns?: Record<string, number> };
-  inventory?: Record<string, number>;
+  inventory?: import("./types/inventory.js").ZoneInventoryMap;
+  farmRun?: { zoneId?: string } | null;
+  activeZone?: string;
+  mapCurrent?: string;
   npcs?: { bonds?: Record<string, number> };
 }
 
@@ -549,7 +556,7 @@ function sideTriggerMatches(beat: Beat, event: StoryEvent, gameState: SideBeatGa
   // event conditions) can match on any event — the fired-marker stops repeats.
   if (beat.repeat && STATE_CONDITION_TYPES.has(t.type) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
   const flags = (gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags ?? {};
-  return conditionMatches(t, event, gameState?.inventory ?? {}, flags);
+  return conditionMatches(t, event, inventoryForStory(gameState), flags);
 }
 
 function fireSideBeat(beat: Beat, flags: Record<string, boolean>): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } {
@@ -835,12 +842,14 @@ export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: Choi
   }
 
   if (outcome.resources && typeof outcome.resources === "object") {
-    const inventory: Record<string, number> = { ...((next.inventory as Record<string, number> | undefined) ?? {}) };
+    const zone = inventoryZone(next as GameState);
+    const inventory: Record<string, number> = { ...zoneInventory(next as GameState, zone) };
     for (const [k, v] of Object.entries(outcome.resources)) {
       if (!Number.isFinite(v)) continue;
       inventory[k] = Math.max(0, (inventory[k] ?? 0) + (v as number));
     }
-    next = { ...next, inventory };
+    const zoneMap = (next.inventory ?? {}) as ZoneInventoryMap;
+    next = { ...next, inventory: { ...zoneMap, [zone]: inventory } };
   }
 
   if (Number.isFinite(outcome.coins)) {

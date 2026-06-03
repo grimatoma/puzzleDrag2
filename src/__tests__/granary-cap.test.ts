@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import { currentCap } from "../utils.js";
 import { RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "../constants.js";
@@ -17,18 +18,16 @@ describe("Phase 4.7 — Granary inventory cap", () => {
   });
 
   it("CHAIN_COLLECTED clamps at cap and emits one floater", () => {
-    const s0 = { ...createInitialState(),
-      inventory: { hay_bundle: 198 }, seasonStats: { capFloaters: {} } };
+    const s0 = { ...patchInventory(createInitialState(), { hay_bundle: 198 }), seasonStats: { capFloaters: {} } };
     const s1 = rootReducer(s0,
       { type: "CHAIN_COLLECTED", payload: { gains: { hay_bundle: 10 } } });
-    expect(s1.inventory.hay_bundle).toBe(200);
+    expect(inv(s1).hay_bundle).toBe(200);
     expect(s1.seasonStats.capFloaters.hay_bundle).toBe(true);
     expect(s1.floaters?.some(f => /hay_bundle stash full/.test(f.text))).toBe(true);
   });
 
   it("repeat overflow same season emits no second floater", () => {
-    const s0 = { ...createInitialState(),
-      inventory: { hay_bundle: 200 }, seasonStats: { capFloaters: { hay_bundle: true } } };
+    const s0 = { ...patchInventory(createInitialState(), { hay_bundle: 200 }), seasonStats: { capFloaters: { hay_bundle: true } } };
     const s1 = rootReducer(s0,
       { type: "CHAIN_COLLECTED", payload: { gains: { hay_bundle: 5 } } });
     expect(s1.floaters?.filter(f => /hay_bundle stash full/.test(f.text)).length ?? 0)
@@ -36,28 +35,33 @@ describe("Phase 4.7 — Granary inventory cap", () => {
   });
 
   it("Market BUY blocks at cap with no debit", () => {
-    const s0 = { ...createInitialState(), coins: 1000,
-      inventory: { hay_bundle: 195 },
+    const s0 = { ...patchInventory(createInitialState(), { hay_bundle: 195 }),
+      coins: 1000,
       market: { ...createInitialState().market, prices: { hay_bundle: { buy: 10, sell: 1 } } } };
     const s1 = rootReducer(s0,
       { type: "BUY_RESOURCE", payload: { key: "hay_bundle", qty: 10 } });
     expect(s1.coins).toBe(1000);
-    expect(s1.inventory.hay_bundle).toBe(195);
+    expect(inv(s1).hay_bundle).toBe(195);
   });
 
   it("Granary build raises cap, allowing further accumulation", () => {
-    const s0 = { ...createInitialState(),
-      built: { ...createInitialState().built, home: { granary: true } }, inventory: { hay_bundle: 200 },
-      seasonStats: { capFloaters: {} } };
+    const s0 = patchInventory(
+      {
+        ...createInitialState(),
+        built: { ...createInitialState().built, home: { granary: true } },
+        seasonStats: { capFloaters: {} },
+      },
+      { hay_bundle: 200 },
+    );
     const s1 = rootReducer(s0,
       { type: "CHAIN_COLLECTED", payload: { gains: { hay_bundle: 50 } } });
-    expect(s1.inventory.hay_bundle).toBe(250);
+    expect(inv(s1).hay_bundle).toBe(250);
   });
 
   it("save migration clamps overstocked legacy state with no floater", () => {
-    const legacy = { ...createInitialState(), inventory: { hay_bundle: 999 } };
+    const legacy = patchInventory(createInitialState(), { hay_bundle: 999 });
     const migrated = rootReducer(legacy, { type: "MIGRATE/APPLY_CAPS" });
-    expect(migrated.inventory.hay_bundle).toBe(200);
+    expect(inv(migrated).hay_bundle).toBe(200);
     expect(migrated.floaters?.length ?? 0).toBe(0);
   });
 

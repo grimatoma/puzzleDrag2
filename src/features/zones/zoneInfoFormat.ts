@@ -1,4 +1,4 @@
-import { ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD, type Zone } from "./data.js";
+import { ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD, zoneFarmBoard, zoneHasBoard, type Zone } from "./data.js";
 
 export const ZONE_CATEGORY_LABELS: Readonly<Record<string, string>> = Object.freeze({
   grass: "Grass",
@@ -24,17 +24,19 @@ export function formatDropWeight(weight: number | undefined | null): string {
   return `${Math.round(w * 100)}%`;
 }
 
-/** Categories that appear in season drops or the upgrade map for this zone. */
+/** Categories that appear in season drops or the upgrade map for this zone's farm board. */
 export function zoneInfoCategories(zone: Zone | null | undefined): string[] {
   if (!zone) return [];
+  const farm = zoneFarmBoard(zone);
+  if (!farm) return [];
   const cats = new Set<string>();
   for (const season of SESSION_SEASON_NAMES) {
-    const table = zone.seasonDrops?.[season] ?? {};
+    const table = farm.seasonDrops?.[season] ?? {};
     for (const [cat, w] of Object.entries(table)) {
       if ((w ?? 0) > 0) cats.add(cat);
     }
   }
-  for (const src of Object.keys(zone.upgradeMap ?? {})) cats.add(src);
+  for (const src of Object.keys(farm.upgradeMap ?? {})) cats.add(src);
   return ZONE_CATEGORIES.filter((c) => cats.has(c));
 }
 
@@ -47,8 +49,8 @@ export function upgradeTargetLabel(target: string | undefined): string {
 export function boardKindLabels(zone: Zone | null | undefined): string[] {
   if (!zone) return [];
   const out: string[] = [];
-  if (zone.hasFarm) out.push("Farm");
-  if (zone.hasMine) out.push("Mine");
-  if (zone.hasWater) out.push("Harbor");
+  if (zoneHasBoard(zone, "farm")) out.push("Farm");
+  if (zoneHasBoard(zone, "mine")) out.push("Mine");
+  if (zoneHasBoard(zone, "fish")) out.push("Harbor");
   return out;
 }

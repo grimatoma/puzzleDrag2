@@ -1,4 +1,5 @@
 import { expect, test, describe, vi, beforeEach, afterEach } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { loadSavedState, persistStateNow, clearSave } from "../state/persistence.js";
 import { initialState } from "../state.js";
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
@@ -73,23 +74,23 @@ describe("persistence", () => {
   test("persistStateNow strips unknown inventory keys", () => {
     const mockState = {
       version: SAVE_SCHEMA_VERSION,
-      inventory: { flour: 2, totally_fake_resource: 99 },
+      inventory: { home: { flour: 2, totally_fake_resource: 99 } },
     } as GameState;
     persistStateNow(mockState);
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY)!);
-    expect(saved.inventory).toEqual({ flour: 2 });
-    expect(saved.inventory.totally_fake_resource).toBeUndefined();
+    expect(saved.inventory).toEqual({ home: { flour: 2 } });
+    expect(inv(saved as GameState).totally_fake_resource).toBeUndefined();
   });
 
   test("initialState strips unknown inventory keys from saves", () => {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       version: SAVE_SCHEMA_VERSION,
-      inventory: { supplies: 1, junk_tile_key: 5 },
+      inventory: { home: { supplies: 1, junk_tile_key: 5 } },
       coins: 200,
     }));
     const state = initialState();
-    expect(state.inventory?.supplies).toBe(1);
-    expect((state.inventory as Record<string, number>).junk_tile_key).toBeUndefined();
+    expect(inv(state).supplies).toBe(1);
+    expect(inv(state).junk_tile_key).toBeUndefined();
   });
 
   test("persistStateNow ignores VOLATILE fields", () => {
