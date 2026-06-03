@@ -47,4 +47,23 @@ describe("icon audit (Round 3)", () => {
       expect((w as Record<string, unknown>).color, w.id).toBeUndefined();
     }
   });
+
+  it("promotes cozy-chibi v2 portrait draws onto canonical char_/boss_/worker_ keys", () => {
+    const mira = ICON_REGISTRY.char_mira;
+    const miraV2 = ICON_REGISTRY.char_mira_v2;
+    const legacyMira = ICON_REGISTRY.legacy_char_mira;
+    expect(mira?.draw).toBe(miraV2?.draw);
+    expect(mira?.color).toBe("#e0833a");
+    expect(legacyMira?.archive).toBe(true);
+    expect(legacyMira?.replacedBy).toBe("char_mira");
+    expect(legacyMira?.color).toBe("#d6612a");
+
+    const frostmaw = ICON_REGISTRY.boss_frostmaw;
+    expect(frostmaw?.draw).toBe(ICON_REGISTRY.boss_frostmaw_v2?.draw);
+    expect(ICON_REGISTRY.legacy_boss_frostmaw?.archive).toBe(true);
+
+    const farmer = ICON_REGISTRY.worker_farmer;
+    expect(farmer?.draw).toBe(ICON_REGISTRY.worker_farmer_v2?.draw);
+    expect(ICON_REGISTRY.legacy_worker_farmer?.archive).toBe(true);
+  });
 });

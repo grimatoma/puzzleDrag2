@@ -55,6 +55,36 @@ export type IconRegistryDictionary = Record<string, IconRegistryEntry>;
 // src/constants.js:329-331). The active icons live under the
 // concatenated form; alias the underscore form so the game's lookup
 // `drawIcon("iron_frame")` resolves instead of falling back to "?".
+/** Promote cozy-chibi v2 portrait draws onto canonical char_/boss_/worker_ keys. */
+function promotePortraitIconsV2(reg: IconRegistryDictionary) {
+  for (const [v2Key, v2Entry] of Object.entries(reg)) {
+    if (!v2Key.endsWith("_v2")) continue;
+    const baseKey = v2Key.slice(0, -3);
+    if (
+      !baseKey.startsWith("char_") &&
+      !baseKey.startsWith("boss_") &&
+      !baseKey.startsWith("worker_")
+    ) {
+      continue;
+    }
+    const v1Entry = reg[baseKey];
+    if (!v1Entry || v1Entry === v2Entry) continue;
+
+    const legacyKey = `legacy_${baseKey}`;
+    if (!reg[legacyKey]) {
+      reg[legacyKey] = {
+        ...v1Entry,
+        archive: true,
+        replacedBy: baseKey,
+        label: v1Entry.label ? `${v1Entry.label} (legacy)` : `${baseKey} (legacy)`,
+      };
+    }
+
+    const cleanLabel = (v2Entry.label ?? baseKey).replace(/ \(v2\)$/, "");
+    reg[baseKey] = { ...v2Entry, label: cleanLabel };
+  }
+}
+
 function aliasIconKeys(reg: IconRegistryDictionary) {
   const aliases: Record<string, IconRegistryEntry | undefined> = {
     iron_frame: reg.ironframe,
@@ -119,6 +149,7 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   // they can never accidentally override an active key.
   ...G_ARCHIVED,
 };
+promotePortraitIconsV2(REGISTRY_DRAFT);
 aliasIconKeys(REGISTRY_DRAFT);
 export const ICON_REGISTRY: Readonly<IconRegistryDictionary> = Object.freeze(REGISTRY_DRAFT);
 
