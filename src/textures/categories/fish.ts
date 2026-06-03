@@ -91,13 +91,13 @@ function drawClam(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(-18, 4);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
-  // Ridges on upper shell
-  ctx.strokeStyle = "rgba(90,64,40,0.55)"; ctx.lineWidth = 1.0;
+  // Ridges fanning up from the hinge, kept inside the shell silhouette
+  ctx.strokeStyle = "rgba(90,64,40,0.55)"; ctx.lineWidth = 1.2;
   for (let i = -3; i <= 3; i++) {
-    const x = i * 4.5;
+    const t = i / 3;
     ctx.beginPath();
-    ctx.moveTo(x * 0.4, 2);
-    ctx.quadraticCurveTo(x * 0.7, -8, x, -8);
+    ctx.moveTo(0, 3);
+    ctx.quadraticCurveTo(t * 8, -4, t * 12, -3);
     ctx.stroke();
   }
   // Soft body peeking at the seam
@@ -191,14 +191,17 @@ function drawFishFillet(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(-22, 6);
   ctx.bezierCurveTo(-24, 2, -24, -2, -22, -6);
   ctx.closePath();
-  ctx.fill(); ctx.stroke();
+  ctx.fill();
+  // Clip flesh detail to the body so nothing escapes the silhouette
+  ctx.save();
+  ctx.clip();
   // Diagonal flesh stripes (the salmon look)
   ctx.strokeStyle = "rgba(120,70,50,0.55)"; ctx.lineWidth = 1.4;
   for (let i = 0; i < 5; i++) {
-    const x = -16 + i * 9;
+    const x = -16 + i * 8;
     ctx.beginPath();
-    ctx.moveTo(x, -5);
-    ctx.lineTo(x + 4, 5);
+    ctx.moveTo(x, -6);
+    ctx.lineTo(x + 4, 6);
     ctx.stroke();
   }
   // Highlight along the top
@@ -206,6 +209,10 @@ function drawFishFillet(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.moveTo(-18, -4);
   ctx.lineTo(18, -6);
+  ctx.stroke();
+  ctx.restore();
+  // Body outline on top (restored stroke style)
+  ctx.strokeStyle = "#7a4a30"; ctx.lineWidth = 1.6;
   ctx.stroke();
 }
 

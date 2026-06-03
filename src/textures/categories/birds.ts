@@ -8,20 +8,18 @@ function shadow(ctx: CanvasRenderingContext2D, w: number) {
 
 function drawPheasant(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
-  // Long tail feathers
+  // Long tail feathers (kept inside the ±26 safe area)
   ctx.strokeStyle = "#8a4a18"; ctx.lineWidth = 3;
   [0.0, 0.15, -0.1, 0.25].forEach((d, i) => {
     ctx.beginPath();
     ctx.moveTo(8, 4);
-    ctx.bezierCurveTo(18, -2 + i*2, 24, 2 + d*8, 26, 8 + d*10);
+    ctx.bezierCurveTo(15, -1 + i*1.6, 20, 2 + d*7, 22, 7 + d*8);
     ctx.stroke();
   });
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2;
-  [0,1,2,3].forEach(() => {
-    for (let s = 0.3; s <= 1; s += 0.2) {
-      ctx.beginPath(); ctx.moveTo(8 + 18*s - 2, 4 + 4*s); ctx.lineTo(8 + 18*s + 2, 4 + 4*s); ctx.stroke();
-    }
-  });
+  for (let s = 0.35; s <= 0.9; s += 0.22) {
+    ctx.beginPath(); ctx.moveTo(8 + 14*s - 2, 4 + 3*s); ctx.lineTo(8 + 14*s + 2, 4 + 3*s); ctx.stroke();
+  }
   // Body
   const bodyG = ctx.createRadialGradient(-4, 0, 3, 0, 4, 18);
   bodyG.addColorStop(0, "#d8743a"); bodyG.addColorStop(0.6, "#7a2a08"); bodyG.addColorStop(1, "#3a1408");
@@ -104,14 +102,14 @@ function drawChicken(ctx: CanvasRenderingContext2D) {
 
 function drawHen(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 17);
-  // Hen sitting on a nest
+  // Hen sitting on a nest (kept inside the ±26 safe area)
   ctx.fillStyle = "#a87838";
-  for (let i = -16; i <= 16; i += 2) {
+  for (let i = -14; i <= 14; i += 2) {
     ctx.strokeStyle = "#7a5418"; ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.moveTo(i, 18); ctx.lineTo(i + (i%4===0?3:-3), 12); ctx.stroke();
   }
   ctx.fillStyle = "#5a3814";
-  ctx.beginPath(); ctx.ellipse(0, 18, 17, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, 18, 15, 4, 0, 0, Math.PI*2); ctx.fill();
   // Body — fluffier than chicken
   const g = ctx.createRadialGradient(-4, -2, 3, 0, 4, 16);
   g.addColorStop(0, "#f8d8a0"); g.addColorStop(0.6, "#a86838"); g.addColorStop(1, "#5a3408");
@@ -153,8 +151,8 @@ function drawRooster(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = c;
     ctx.beginPath();
     ctx.moveTo(8, 4);
-    ctx.bezierCurveTo(18, -8 - i*3, 18 - i*2, -16 - i*2, 8 - i*2, -14 - i);
-    ctx.bezierCurveTo(14 - i*2, -8 - i, 14 - i*2, -2, 8, 4);
+    ctx.bezierCurveTo(16, -7 - i*2.4, 16 - i*1.6, -14 - i*1.6, 7 - i*1.6, -12 - i);
+    ctx.bezierCurveTo(12 - i*1.6, -7 - i, 12 - i*1.6, -2, 8, 4);
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = "#0a0a04"; ctx.lineWidth = 1.0; ctx.stroke();
   });
@@ -260,14 +258,14 @@ function drawGoose(ctx: CanvasRenderingContext2D) {
 
 function drawParrot(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
-  // Branch
+  // Branch (kept inside ±26)
   ctx.fillStyle = "#5a3814";
-  ctx.fillRect(-22, 18, 44, 4);
+  ctx.fillRect(-24, 18, 48, 4);
   ctx.strokeStyle = "#2a1808"; ctx.lineWidth = 1.2;
-  ctx.strokeRect(-22, 18, 44, 4);
+  ctx.strokeRect(-24, 18, 48, 4);
   // Tail
   ctx.fillStyle = "#1a4a8a";
-  ctx.beginPath(); ctx.moveTo(8, 4); ctx.lineTo(20, 14); ctx.lineTo(14, 18); ctx.lineTo(8, 12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8, 4); ctx.lineTo(18, 12); ctx.lineTo(13, 17); ctx.lineTo(8, 12); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#0a1a3a"; ctx.lineWidth = 1.4; ctx.stroke();
   // Body — bright red
   const bg = ctx.createRadialGradient(-4, -2, 3, 0, 4, 16);
@@ -323,8 +321,8 @@ function drawPhoenix(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = c;
     ctx.beginPath();
     ctx.moveTo(8, 4);
-    ctx.bezierCurveTo(18 + i, -4 - i*2, 22 - i, -14 - i*2, 12 - i*2, -18 - i);
-    ctx.bezierCurveTo(18 - i*2, -8 - i, 16, -2, 8, 4);
+    ctx.bezierCurveTo(16 + i*0.4, -4 - i*1.6, 19 - i, -13 - i*1.6, 11 - i*1.6, -16 - i);
+    ctx.bezierCurveTo(16 - i*1.6, -8 - i, 15, -2, 8, 4);
     ctx.closePath(); ctx.fill();
   });
   // Body — fiery
@@ -368,7 +366,7 @@ function drawPhoenix(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#d83a08"; ctx.beginPath(); ctx.arc(-11, -9, 0.8, 0, Math.PI*2); ctx.fill();
   // Sparks
   ctx.fillStyle = "#fff4a0";
-  [[18, -8], [-16, 6], [12, 14], [-18, -2], [16, 0]].forEach(([sx, sy]) => {
+  [[16, -8], [-15, 6], [12, 14], [-16, -2], [15, 0]].forEach(([sx, sy]) => {
     ctx.beginPath();
     for (let i = 0; i < 8; i++) {
       const a = (i * Math.PI) / 4;
@@ -382,12 +380,12 @@ function drawPhoenix(ctx: CanvasRenderingContext2D) {
 
 function drawDodo(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
-  // Tail — silly tuft
+  // Tail — silly tuft (kept inside the ±26 safe area, attached to body)
   ctx.fillStyle = "#fff8e0";
-  ctx.beginPath(); ctx.moveTo(12, 2); ctx.bezierCurveTo(20, -4, 22, 4, 14, 8); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(10, 2); ctx.bezierCurveTo(18, -4, 20, 4, 12, 8); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#5a4818"; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.fillStyle = "#a89878";
-  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(15 + i*1.5, -2 + i*2, 1.5, 0, Math.PI*2); ctx.fill(); }
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(13 + i*1.4, 0 + i*1.6, 1.5, 0, Math.PI*2); ctx.fill(); }
   // Body — round and chunky
   const bg = ctx.createRadialGradient(-4, -2, 3, 0, 4, 18);
   bg.addColorStop(0, "#d8c8a0"); bg.addColorStop(0.6, "#8a7048"); bg.addColorStop(1, "#3a2810");

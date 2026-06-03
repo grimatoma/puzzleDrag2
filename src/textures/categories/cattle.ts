@@ -68,56 +68,44 @@ function drawCow(ctx: CanvasRenderingContext2D) {
 function drawLonghorn(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 24);
   cowBase(ctx, "#d89048", "#7a4818", "#1a0e04", false);
-  // White face blaze
+  // White face blaze — a soft tapered patch down the snout, not a hard rectangle
   ctx.fillStyle = "#fffce8";
-  ctx.beginPath(); ctx.moveTo(-18, -4); ctx.lineTo(-15, -8); ctx.lineTo(-12, 4); ctx.lineTo(-16, 4); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.0; ctx.stroke();
-  // MASSIVE swept horns — wider sweep, drawn as filled tapered shapes so
-  // they read as the dominant silhouette feature.
-  // Left horn — sweeps far out and slightly forward then up at the tip
-  ctx.fillStyle = "#d8b878";
   ctx.beginPath();
-  ctx.moveTo(-13, -7);
-  ctx.bezierCurveTo(-22, -10, -32, -10, -34, -2);
-  ctx.bezierCurveTo(-34, -6, -32, -7, -30, -5);
-  ctx.bezierCurveTo(-22, -7, -16, -6, -12, -5);
+  ctx.moveTo(-14, -7);
+  ctx.bezierCurveTo(-17, -5, -18, 1, -17, 3);
+  ctx.bezierCurveTo(-15, 4, -13, 2, -13, -2);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Right horn (mirrored)
-  ctx.fillStyle = "#d8b878";
-  ctx.beginPath();
-  ctx.moveTo(-9, -7);
-  ctx.bezierCurveTo(0, -10, 10, -10, 12, -2);
-  ctx.bezierCurveTo(12, -6, 10, -7, 8, -5);
-  ctx.bezierCurveTo(0, -7, -6, -6, -10, -5);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Tip caps (lighter, polished)
-  ctx.fillStyle = "#fff8d0";
-  ctx.beginPath();
-  ctx.moveTo(-34, -2); ctx.lineTo(-32, -6); ctx.lineTo(-30, -3); ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(12, -2); ctx.lineTo(10, -6); ctx.lineTo(8, -3); ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8;
-  ctx.stroke();
-  // Length ridges on the horn shafts (catches the eye, sells the length)
-  ctx.strokeStyle = "rgba(80,50,12,0.55)"; ctx.lineWidth = 0.7;
-  for (let i = 0; i < 4; i++) {
+  // Wide symmetric longhorn horns drawn as one continuous tapered sweep from
+  // a central poll, curving up at each tip. One contour stroke unifies them so
+  // they read as the dominant feature without scattered parts. Kept inside ±26.
+  const px = -10; // poll x (crown of head)
+  const horn = (dir: number, span: number) => {
+    ctx.fillStyle = "#d8b878";
     ctx.beginPath();
-    ctx.moveTo(-30 + i * 4, -7);
-    ctx.lineTo(-29 + i * 4, -4);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 4; i++) {
+    ctx.moveTo(px, -8);
+    ctx.bezierCurveTo(px + dir * span * 0.4, -11, px + dir * span * 0.8, -12, px + dir * span, -7);
+    ctx.bezierCurveTo(px + dir * (span + 1), -10, px + dir * (span - 1), -10, px + dir * (span - 3), -9);
+    ctx.bezierCurveTo(px + dir * span * 0.55, -9, px + dir * span * 0.28, -7, px + dir * 2, -6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
+    // Polished tip cap
+    ctx.fillStyle = "#fff8d0";
     ctx.beginPath();
-    ctx.moveTo(8 - i * 4, -7);
-    ctx.lineTo(7 - i * 4, -4);
-    ctx.stroke();
-  }
+    ctx.moveTo(px + dir * span, -7);
+    ctx.lineTo(px + dir * (span - 1), -10);
+    ctx.lineTo(px + dir * (span - 3), -9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8; ctx.stroke();
+  };
+  horn(-1, 15); // left tip ≈ -25
+  horn(1, 15);  // right tip ≈ +5
+  // Central poll boss where both horns meet
+  ctx.fillStyle = "#b88848";
+  ctx.beginPath(); ctx.ellipse(px, -8, 3, 2.4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2; ctx.stroke();
 }
 
 function drawTriceratops(ctx: CanvasRenderingContext2D) {
@@ -139,42 +127,50 @@ function drawTriceratops(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(18, 0); ctx.lineTo(26, -2); ctx.lineTo(26, 6); ctx.lineTo(18, 8);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Spine bumps
-  ctx.fillStyle = "#1a2a08";
-  for (let i = 0; i < 5; i++) ctx.beginPath(), ctx.arc(0 + i*4, -7, 1.6, 0, Math.PI*2), ctx.fill();
-  // Head
-  ctx.fillStyle = "#3a5a18";
-  ctx.beginPath(); ctx.ellipse(-13, 0, 8, 7, -0.1, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 1.8; ctx.stroke();
-  // Frill
+  // Frill — a broad scalloped plate behind the head, drawn first so the head
+  // overlaps and anchors it. Scalloped outer edge replaces the old scattered
+  // spikes so there are no floating parts.
   ctx.fillStyle = "#5a8a28";
   ctx.beginPath();
-  ctx.moveTo(-8, -4); ctx.bezierCurveTo(-4, -14, 4, -14, 6, -2);
-  ctx.bezierCurveTo(4, 4, -4, 4, -8, -4);
-  ctx.closePath(); ctx.fill();
+  ctx.moveTo(-6, -3);
+  // up the back of the frill with three rounded scallops along the rim
+  ctx.bezierCurveTo(-6, -13, -1, -16, 2, -14);
+  ctx.bezierCurveTo(3, -16, 7, -16, 8, -12);
+  ctx.bezierCurveTo(11, -13, 14, -11, 13, -7);
+  ctx.bezierCurveTo(15, -6, 15, -1, 11, 1);
+  ctx.bezierCurveTo(6, 3, -2, 3, -6, -3);
+  ctx.closePath();
+  ctx.fill();
   ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Frill spikes
-  ctx.fillStyle = "#fff8d0";
-  for (let i = 0; i < 5; i++) {
-    const a = -Math.PI*0.7 + (i / 4) * Math.PI*0.4;
-    const x = -1 + Math.cos(a) * 11; const y = -1 + Math.sin(a) * 11;
-    ctx.beginPath();
-    ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*4, y + Math.sin(a)*4); ctx.lineTo(x + Math.cos(a + 0.2)*1, y + Math.sin(a + 0.2)*1);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8; ctx.stroke();
+  // Frill bony bosses — small studs sitting ON the frill plate (connected, not floating)
+  ctx.fillStyle = "#3a5a18"; ctx.strokeStyle = "#1a2a08"; ctx.lineWidth = 0.9;
+  for (const [bx, by] of [[1, -11], [8, -10], [12, -5]] as const) {
+    ctx.beginPath(); ctx.arc(bx, by, 1.7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   }
-  // Three horns
-  ctx.fillStyle = "#fff8d0";
-  ctx.beginPath(); ctx.moveTo(-19, 0); ctx.lineTo(-23, 2); ctx.lineTo(-19, 3); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-15, -6); ctx.lineTo(-17, -12); ctx.lineTo(-13, -8); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-11, -6); ctx.lineTo(-9, -12); ctx.lineTo(-9, -7); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0;
-  ctx.beginPath(); ctx.moveTo(-19, 0); ctx.lineTo(-23, 2); ctx.lineTo(-19, 3); ctx.closePath(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-15, -6); ctx.lineTo(-17, -12); ctx.lineTo(-13, -8); ctx.closePath(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-11, -6); ctx.lineTo(-9, -12); ctx.lineTo(-9, -7); ctx.closePath(); ctx.stroke();
+  // Head
+  ctx.fillStyle = "#3a5a18";
+  ctx.beginPath(); ctx.ellipse(-13, 1, 9, 7, -0.1, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Beak/snout
+  ctx.fillStyle = "#2a4012";
+  ctx.beginPath(); ctx.moveTo(-20, 0); ctx.bezierCurveTo(-24, 1, -24, 5, -20, 6); ctx.bezierCurveTo(-18, 5, -18, 1, -20, 0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 1.2; ctx.stroke();
+  // Three horns — large pale ivory: one nose horn, two big brow horns
+  ctx.fillStyle = "#fff8d0"; ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2;
+  const horn = (pts: readonly [number, number][]) => {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  };
+  horn([[-19, 2], [-24, 4], [-19, 5]]);       // nose horn
+  horn([[-16, -5], [-19, -13], [-13, -7]]);    // left brow horn
+  horn([[-11, -5], [-9, -13], [-8, -6]]);      // right brow horn
   // Eye
-  ctx.fillStyle = "#fff8c0"; ctx.beginPath(); ctx.arc(-14, -1, 1.4, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#0a0e04"; ctx.fillRect(-14.4, -2, 0.8, 2);
+  ctx.fillStyle = "#fff8c0"; ctx.beginPath(); ctx.arc(-14, 0, 1.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-14, 0, 0.8, 0, Math.PI*2); ctx.fill();
+  // Specular highlight on body
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.beginPath(); ctx.ellipse(-2, -3, 6, 3, -0.3, 0, Math.PI*2); ctx.fill();
 }
 
 export const ICONS = {
