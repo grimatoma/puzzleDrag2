@@ -7,12 +7,12 @@ function drawPansy(ctx: CanvasRenderingContext2D) {
   // Stem
   ctx.strokeStyle = "#2a4810"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(0, 22); ctx.quadraticCurveTo(-2, 8, 0, -2); ctx.stroke();
-  // Leaves on stem
+  // Leaves on stem — rooted on the stem axis so they read as attached, not floating.
   ctx.fillStyle = "#3a6818";
-  ctx.beginPath(); ctx.ellipse(-6, 14, 5, 2.6, -0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-5, 14, 5, 2.6, -0.5, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.0; ctx.stroke();
   ctx.fillStyle = "#3a6818";
-  ctx.beginPath(); ctx.ellipse(5, 6, 5, 2.6, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4, 7, 5, 2.6, 0.5, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.0; ctx.stroke();
   // Pansy face — 5 broad overlapping petals arranged in the classic
   // two-up / two-side / one-down configuration. Drawn back-to-front so the
@@ -82,11 +82,20 @@ function drawWaterLily(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(2, 4);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.8; ctx.stroke();
-  ctx.strokeStyle = "rgba(31,42,8,0.6)"; ctx.lineWidth = 1.0;
+  // Pad veins — clipped to the pad so no stray tails poke outside the leaf.
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(2, 4);
+  ctx.bezierCurveTo(-22, 4, -22, 22, 0, 22);
+  ctx.bezierCurveTo(22, 22, 22, 4, 4, 4);
+  ctx.closePath();
+  ctx.clip();
+  ctx.strokeStyle = "rgba(31,42,8,0.55)"; ctx.lineWidth = 1.2;
   for (let i = 0; i < 7; i++) {
     const a = Math.PI*0.55 + (i * Math.PI*0.9 / 6);
-    ctx.beginPath(); ctx.moveTo(3, 4); ctx.lineTo(Math.cos(a)*20, 12 + Math.sin(a)*12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3, 6); ctx.lineTo(Math.cos(a)*16, 12 + Math.sin(a)*10); ctx.stroke();
   }
+  ctx.restore();
   const drawFlowerPetal = (angle: number, len: number, w: number, c1: string, c2: string) => {
     ctx.save(); ctx.translate(0, -2); ctx.rotate(angle);
     const grad = ctx.createLinearGradient(0, 0, 0, -len);
