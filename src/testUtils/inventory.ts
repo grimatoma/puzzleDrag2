@@ -6,11 +6,11 @@ import { inventoryZone, zoneInventory } from "../state/zoneInventory.js";
 export const DEFAULT_INV_ZONE = "home";
 
 export function inv(
-  state: Pick<GameState, "inventory"> & Partial<Pick<GameState, "farmRun" | "activeZone" | "mapCurrent">>,
+  state: Partial<Pick<GameState, "inventory" | "farmRun" | "activeZone" | "mapCurrent">>,
   zone?: string,
-): Inventory {
+): Record<string, number> {
   const z = zone ?? inventoryZone(state as GameState);
-  return zoneInventory(state as GameState, z);
+  return zoneInventory(state as GameState, z) as Record<string, number>;
 }
 
 export function withInv(state: GameState, patch: Inventory, zone?: string): GameState {

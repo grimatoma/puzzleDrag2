@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { inv } from "../src/testUtils/inventory.js";
+import { inv } from "../../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
