@@ -370,6 +370,8 @@
 }
 
 .wiki-root .wiki-concept-ref-card--rich .wiki-concept-ref-card__meta {
+  justify-content: center;
+}
 
 .wiki-root .wiki-concept-ref-card--building {
   /* Buildings in cross-refs: illustration + name only — costs live on the article. */
@@ -423,65 +425,69 @@
   align-items: center;
 }
 
-  justify-content: center;
-}
-
 /* Recipe article Related — horizontal ingredients → station → output */
 .wiki-root .wiki-recipe-relation-flow {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 8px;
-  padding: 14px 16px;
-  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 14px;
+  padding: 22px 24px;
+  border-radius: 14px;
   border: 2px solid var(--wiki-border);
   background: linear-gradient(
     165deg,
     var(--wiki-parchment) 0%,
     color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment)) 100%
   );
+  box-shadow: var(--wiki-shadow-card);
 }
 
 .wiki-root .wiki-recipe-relation-flow__lane {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
 .wiki-root .wiki-recipe-relation-flow__lane-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--wiki-ink-subtle);
 }
 
 .wiki-root .wiki-recipe-relation-flow__cluster {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
   align-items: stretch;
 }
 
+/* Arrow sits on the card row — nudge it down past the lane labels. */
 .wiki-root .wiki-recipe-relation-flow__arrow {
   flex-shrink: 0;
   align-self: center;
-  color: var(--wiki-ink-subtle);
-  opacity: 0.75;
-  padding: 0 2px 18px;
+  margin-top: 22px;
+  color: var(--wiki-border-deep);
+  opacity: 0.85;
 }
 
 @media (max-width: 640px) {
   .wiki-root .wiki-recipe-relation-flow {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .wiki-root .wiki-recipe-relation-flow__arrow {
     align-self: center;
+    margin-top: 0;
     transform: rotate(90deg);
-    padding: 0;
   }
 }
 

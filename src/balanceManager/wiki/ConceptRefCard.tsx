@@ -121,11 +121,11 @@ function ConceptRefBody({
 function FlowArrow() {
   return (
     <div className="wiki-recipe-relation-flow__arrow" aria-hidden="true">
-      <svg width="32" height="16" viewBox="0 0 32 16" fill="none">
+      <svg width="38" height="18" viewBox="0 0 38 18" fill="none">
         <path
-          d="M0 8h24m0 0l-6-6m6 6l-6 6"
+          d="M2 9h28m0 0l-7-7m7 7l-7 7"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.25"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
