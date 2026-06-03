@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { inv, patchInventory, zoneProgress } from "../testUtils/inventory.js";
 import { gameReducer, initialState } from "../state.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { canPayForRecipe } from "../features/crafting/slice.js";
@@ -12,28 +13,39 @@ function freshState() {
   return initialState();
 }
 
-function minState(overrides = {}) {
-  return {
+function minState(overrides: Record<string, unknown> = {}) {
+  const base = {
     biomeKey: "farm",
     view: "board",
     coins: 100,
     level: 1,
     xp: 0,
     turnsUsed: 0,
-    // Default to Summer (1) — no seasonal harvest/order bonus, no Spring +20%.
     seasonsCycled: 1,
-    inventory: {},
+    inventory: { home: {} },
+    resourceProgress: {},
+    mapCurrent: "home",
+    activeZone: "home",
+    farmRun: null,
     orders: [],
     tools: { clear: 0, basic: 0, rare: 0, shuffle: 0 },
-    built: {},
+    built: { home: {} },
     bubble: null,
     modal: null,
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
     almanac: { xp: 0, level: 1 },
-    ...overrides,
   };
+  const { inventory: invOverride, resourceProgress: progOverride, ...rest } = overrides;
+  let state = { ...base, ...rest } as typeof base & Record<string, unknown>;
+  if (invOverride && typeof invOverride === "object") {
+    state = patchInventory(state as import("../types/state.js").GameState, invOverride as Record<string, number>);
+  }
+  if (progOverride && typeof progOverride === "object") {
+    state = { ...state, resourceProgress: { home: progOverride as Record<string, number> } };
+  }
+  return state;
 }
 
 // ─── coreReducer via gameReducer ─────────────────────────────────────────────
@@ -47,10 +59,10 @@ describe("CHAIN_COLLECTED", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_grass", gained: 4, upgrades: 0, value: 1, chainLength: 4, resourceKey: "hay_bundle" },
     });
-    expect(next.resourceProgress.hay_bundle).toBe(4);
-    expect(next.inventory.hay_bundle).toBeFalsy();
+    expect(zoneProgress(next).hay_bundle).toBe(4);
+    expect(inv(next).hay_bundle).toBeFalsy();
     // Tile key never enters inventory in the new model.
-    expect(next.inventory.tile_grass_grass).toBeUndefined();
+    expect(inv(next).tile_grass_grass).toBeUndefined();
   });
 
   // Phase 7 — calendar season effects (spring +20%, autumn 2× upgrades,
@@ -94,7 +106,7 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.tile_grass_grass).toBe(5);
+    expect(inv(next).tile_grass_grass).toBe(5);
     expect(next.coins).toBe(state.coins + 30);
   });
 
@@ -115,7 +127,7 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.tile_grass_grass).toBe(2); // unchanged
+    expect(inv(next).tile_grass_grass).toBe(2); // unchanged
     expect(next.coins).toBe(state.coins); // unchanged
   });
 });
@@ -182,7 +194,7 @@ describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
 
   it("iron_hinge (forge output) increments Drake progress", () => {
     const ready = drakeState({
-      built: { forge: true },
+      built: { home: { forge: true } },
       inventory: { iron_bar: 2, coke: 1 },
     });
     expect(canPayForRecipe(ready, "rec_iron_hinge")).toBeTruthy();

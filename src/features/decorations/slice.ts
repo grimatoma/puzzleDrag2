@@ -1,6 +1,7 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
 import { inventoryQty, inventoryPut } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {};
@@ -33,7 +34,8 @@ export function reduce(state: GameState, action: Action): GameState {
   if ((state.coins ?? 0) < (cost.coins ?? 0)) return state;
 
   // Check resource inventory items
-  const inv = state.inventory ?? {};
+  const decorZone = inventoryZone(state);
+  const inv = zoneInventory(state, decorZone);
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
     if (inventoryQty(inv, k) < (v as number)) return state;
@@ -54,7 +56,7 @@ export function reduce(state: GameState, action: Action): GameState {
   return {
     ...state,
     coins: state.coins - (cost.coins ?? 0),
-    inventory: newInv,
+    inventory: { ...state.inventory, [decorZone]: newInv },
     influence: (state.influence ?? 0) + influence,
     built: {
       ...state.built,

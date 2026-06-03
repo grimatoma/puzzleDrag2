@@ -3,6 +3,7 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import { WORKSHOP_RECIPES } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 
@@ -53,7 +54,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
       inventory: { ...createInitialState().inventory, tile_bird_chicken: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "bird_cage" } });
-    expect(s1.inventory.tile_bird_chicken).toBe(3);
+    expect(inv(s1).tile_bird_chicken).toBe(3);
     expect(s1.tools.bird_cage).toBe(0);
   });
 
@@ -93,7 +94,7 @@ describe("10.6 — USE_TOOL scythe_full", () => {
       inventory: { ...createInitialState().inventory, tile_grain_wheat: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "scythe_full" } });
-    expect(s1.inventory.tile_grain_wheat).toBe(5);
+    expect(inv(s1).tile_grain_wheat).toBe(5);
     expect(s1.tools.scythe_full).toBe(0);
   });
 

@@ -1,6 +1,7 @@
 // Phase 4a — settlement founding: state.settlements + FOUND_SETTLEMENT +
 // the founding-cost / founded / completed helpers.
 import { describe, it, expect, beforeEach } from "vitest";
+import { inv, patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import {
   isSettlementFounded,
@@ -110,17 +111,17 @@ describe("Founding enforcement — gameplay actions refuse at unfounded zones", 
   });
 
   it("EXPEDITION/DEPART at an unfounded zone refuses", () => {
-    const s = {
+    const base = {
       ...createInitialState(),
       level: 5,
       mapCurrent: "quarry",
       activeZone: "quarry",
-      inventory: { ...createInitialState().inventory, bread: 6 },
       story: { ...createInitialState().story, flags: { ...createInitialState().story.flags, mine_unlocked: true } },
     };
+    const s = { ...base, ...patchInventory(base, { bread: 6 }, "quarry") };
     const result = rootReducer(s, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 4 } } });
     expect(result.view).not.toBe("board");
-    expect(result.inventory.bread).toBe(6); // not consumed
+    expect(inv(result).bread).toBe(6); // not consumed
     expect(result.bubble?.text).toMatch(/Found .* before you depart/i);
   });
 

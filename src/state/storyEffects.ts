@@ -2,6 +2,7 @@ import { INITIAL_STORY_STATE, evaluateStoryTriggers, evaluateSideBeats } from ".
 import { applyFlagTriggersWithResult } from "../flags.js";
 import * as storySlice from "../features/story/slice.js";
 import * as boss from "../features/boss/slice.js";
+import { zoneInventory, inventoryZone } from "./zoneInventory.js";
 import type { GameState } from "../types/state.js";
 
 /** Event payload accepted by the story-beat evaluator. Shape is event-type dependent. */
@@ -30,7 +31,7 @@ function tickStoryRepeatCooldowns(state: GameState): GameState {
 export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): GameState {
   let next = tickStoryRepeatCooldowns(state);
   const actBefore = next.story?.act;
-  const totals = (next.inventory ?? {}) as Record<string, number>;
+  const totals = zoneInventory(next) as Record<string, number>;
   const baseStory = (next.story ?? { ...INITIAL_STORY_STATE, flags: {} }) as Parameters<typeof evaluateStoryTriggers>[0];
   const result = evaluateStoryTriggers(baseStory, event, totals);
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
@@ -53,7 +54,7 @@ export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): 
   next = flagResult.state;
   if (flagResult.changed) {
     const storyForFlag = (next.story ?? { ...INITIAL_STORY_STATE, flags: {} }) as Parameters<typeof evaluateStoryTriggers>[0];
-    const storyFlagResult = evaluateStoryTriggers(storyForFlag, event, (next.inventory ?? {}) as Record<string, number>, { onlyFlagConditions: true });
+    const storyFlagResult = evaluateStoryTriggers(storyForFlag, event, zoneInventory(next) as Record<string, number>, { onlyFlagConditions: true });
     if (storyFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: storyFlagResult });
     const sideFlagResult = evaluateSideBeats(next, event, { onlyFlagConditions: true });
     if (sideFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideFlagResult });
@@ -62,8 +63,9 @@ export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): 
 }
 
 export function maybeFireResourceBeats(stateAfter: GameState, stateBefore: GameState): GameState {
-  const inv = (stateAfter.inventory ?? {}) as Record<string, number>;
-  const prevInv = (stateBefore.inventory ?? {}) as Record<string, number>;
+  const zone = inventoryZone(stateAfter);
+  const inv = zoneInventory(stateAfter, zone) as Record<string, number>;
+  const prevInv = zoneInventory(stateBefore, zone) as Record<string, number>;
   const keys = Object.keys(inv);
   let next = stateAfter;
   for (const key of keys) {

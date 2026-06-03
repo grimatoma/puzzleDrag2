@@ -1,6 +1,10 @@
 // ─── Story state slice ────────────────────────────────────────────────────────
 // Pure helpers: no Phaser, no DOM, fully testable in Vitest.
 
+import type { GameState } from "./types/state.js";
+import type { ZoneInventoryMap } from "./types/inventory.js";
+import { inventoryForStory, inventoryZone, zoneInventory } from "./state/zoneInventory.js";
+
 export const INITIAL_STORY_STATE = {
   act: 1,
   beat: "act1_arrival",
@@ -520,7 +524,10 @@ const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi",
 
 interface SideBeatGameState {
   story?: StoryState | { flags?: Record<string, boolean>; repeatCooldowns?: Record<string, number> };
-  inventory?: Record<string, number>;
+  inventory?: import("./types/inventory.js").ZoneInventoryMap;
+  farmRun?: { zoneId?: string } | null;
+  activeZone?: string;
+  mapCurrent?: string;
   npcs?: { bonds?: Record<string, number> };
 }
 
@@ -549,7 +556,7 @@ function sideTriggerMatches(beat: Beat, event: StoryEvent, gameState: SideBeatGa
   // event conditions) can match on any event — the fired-marker stops repeats.
   if (beat.repeat && STATE_CONDITION_TYPES.has(t.type) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
   const flags = (gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags ?? {};
-  return conditionMatches(t, event, gameState?.inventory ?? {}, flags);
+  return conditionMatches(t, event, inventoryForStory(gameState), flags);
 }
 
 function fireSideBeat(beat: Beat, flags: Record<string, boolean>): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } {
@@ -835,12 +842,14 @@ export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: Choi
   }
 
   if (outcome.resources && typeof outcome.resources === "object") {
-    const inventory: Record<string, number> = { ...((next.inventory as Record<string, number> | undefined) ?? {}) };
+    const zone = inventoryZone(next as GameState);
+    const inventory: Record<string, number> = { ...zoneInventory(next as GameState, zone) };
     for (const [k, v] of Object.entries(outcome.resources)) {
       if (!Number.isFinite(v)) continue;
       inventory[k] = Math.max(0, (inventory[k] ?? 0) + (v as number));
     }
-    next = { ...next, inventory };
+    const zoneMap = (next.inventory ?? {}) as ZoneInventoryMap;
+    next = { ...next, inventory: { ...zoneMap, [zone]: inventory } };
   }
 
   if (Number.isFinite(outcome.coins)) {

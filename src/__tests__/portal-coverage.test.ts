@@ -4,6 +4,7 @@
 // fertilizer-charge tick.
 
 import { describe, it, expect } from "vitest";
+import { inv } from "../testUtils/inventory.js";
 import type { Action } from "../types/state.js";
 import { reduce as portalReduce } from "../features/portal/slice.js";
 import { rootReducer } from "../state.js";
@@ -94,7 +95,7 @@ describe("portal slice — coverage gaps", () => {
       payload: { id: "hourglass" },
     } as Action);
     expect(s1.tools.hourglass).toBe(1);
-    expect(s1.inventory.foo).toBe(5);
+    expect(inv(s1).foo).toBe(5);
     expect(s1.turnsUsed).toBe(3);
     expect(s1.lastChainSnapshot).toBeNull();
   });

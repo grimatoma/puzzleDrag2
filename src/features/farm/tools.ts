@@ -7,6 +7,8 @@
  */
 
 import type { GameState } from "../../types/state.js";
+import { inventoryPutMut, inventoryQty } from "../../types/inventory.js";
+import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 
 interface ToolGridCell {
   key?: string | null;
@@ -42,13 +44,14 @@ export function clearTilesOfKey(state: GameState, targetKey: string): { state: G
   );
 
   const collected = Object.values(byKey).reduce((sum: number, n: number) => sum + n, 0);
-  let inventory: Record<string, number> = state.inventory ?? {};
+  const zone = inventoryZone(state);
+  const inventory = { ...zoneInventory(state, zone) };
   for (const [k, n] of Object.entries(byKey)) {
-    inventory = { ...inventory, [k]: (inventory[k] ?? 0) + n };
+    inventoryPutMut(inventory, k, inventoryQty(inventory, k) + n);
   }
 
   return {
-    state: { ...state, grid, inventory } as GameState,
+    state: { ...state, grid, inventory: { ...state.inventory, [zone]: inventory } } as GameState,
     collected,
   };
 }
