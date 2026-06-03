@@ -190,7 +190,7 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
           overflow: "hidden",
         }}
       >
-        <BuildingIllustration id={entityKey} />
+        <BuildingIllustration id={entityKey} isBuilt />
       </div>
     );
   }
