@@ -6,3 +6,8 @@ test-results/
 playwright-report/
 playwright/.cache/
 coverage/
+
+# Icon review working dir — rendered before/after PNGs, contact sheets, and the
+# generated manifest. Disposable: the tracker (docs/icon-review.html) embeds
+# base64 thumbnails, so this dir can be deleted once categories are signed off.
+icon-review/
