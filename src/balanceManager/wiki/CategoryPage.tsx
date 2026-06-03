@@ -1,9 +1,13 @@
 /**
  * CategoryPage.tsx — Concept/category article page for the Dev Panel Wiki.
  *
- * Renders the "Bosses page" model for a concept: title + status chip, blurb,
- * an optional authored intro, a field reference (ConceptFields), and the full
- * entity grid (each card navigates to that entity's article).
+ * Phase 1 layout (gallery-first):
+ *   1. Concept hero   — title + blurb + status badge + banner stat chips
+ *   2. Authored intro — optional bodyFor(conceptId, "_index")
+ *   3. Entity gallery — entry grid (tiles uses grouped sub-category layout)
+ *   4. Analytical sections — EconomyRollup, BossComparison, WorkerComparison,
+ *      ProgressionTimeline, recipe graph
+ *   5. Field reference — ReferenceSection + ConceptFields (developer view only)
  *
  * READ-ONLY — no editable controls.
  */
@@ -13,18 +17,21 @@ import { COLORS } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { CONCEPTS } from "./concepts.js";
 import EntryGrid from "./EntryGrid.jsx";
-import type { WikiEntry } from "./EntryGrid.jsx";
+import type { WikiEntry, WikiEntryFact } from "./EntryGrid.jsx";
 import { EntityVisual } from "./EntityVisual.jsx";
 import { ConceptFields } from "./ConceptFields.jsx";
 import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
-import { statusForConcept, WIKI_STATUS_LEGEND } from "./status.js";
-import StatusChip from "../../ui/primitives/StatusChip.jsx";
-import PageKindBadge from "./PageKindBadge.jsx";
+import { statusForConcept } from "./status.js";
+import { StatusBadge } from "./StatusBadge.jsx";
+import { ReferenceSection } from "./ReferenceSection.jsx";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { describeSchema } from "../schemaDoc.js";
 import { groupTileEntries } from "./tileGrouping.js";
+import { conceptHeadlineStats } from "./conceptStats.js";
+import { getEntity } from "./conceptEntities.js";
+import { infoboxFacts } from "./infoboxFacts.js";
 import { groupToolEntries } from "./toolGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
@@ -35,6 +42,27 @@ import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
 import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
+import { conceptAccent } from "./conceptAccent.js";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Enrich a raw entry with up to 3 fact chips, sourced from infoboxFacts.
+ * Pure — reads live entity via getEntity, maps first 2–3 facts to card chips.
+ * Returns the entry unchanged when no facts can be derived.
+ */
+function enrichEntry(conceptId: string, entry: WikiEntry): WikiEntry {
+  const entity = getEntity(conceptId, entry.key);
+  if (!entity) return entry;
+  const rawFacts = infoboxFacts(conceptId, entry.key, entity);
+  if (rawFacts.length === 0) return entry;
+  const facts: WikiEntryFact[] = rawFacts.map((f) => ({
+    value: f.value,
+    label: f.label,
+    iconKey: f.iconKey,
+  }));
+  return { ...entry, facts };
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -53,10 +81,11 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   // Resolve concept descriptor — fall back to the first concept if unknown
   const concept = CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0];
 
-  // Entries from the live config
-  const entries = concept.getEntries();
+  // Entries from the live config — enriched with up to 3 fact chips each
+  const rawEntries = concept.getEntries();
+  const entries = rawEntries.map((e) => enrichEntry(conceptId, e as unknown as WikiEntry));
 
-  // Attribute count for the definition sentence (from the concept's Zod schema).
+  // Attribute count (used inside ReferenceSection intro line only)
   const cs = schemaForConcept(conceptId);
   let attrCount = 0;
   if (cs != null) {
@@ -70,59 +99,48 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   // Authored intro HTML (optional — none seeded yet; gracefully absent)
   const intro = bodyFor(conceptId, "_index");
 
-  // Status chip
+  // Status badge
   const status = statusForConcept(conceptId);
-  const statusMeta = WIKI_STATUS_LEGEND[status];
+
+  // Headline stats for the hero banner
+  const stats = conceptHeadlineStats(conceptId, entries);
 
   return (
-    <div className="flex flex-col gap-3 wiki-reveal-stagger">
-      {/* ── 1. Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1">
+    <div
+      className="flex flex-col gap-3 wiki-reveal-stagger"
+      style={{ "--wiki-accent": conceptAccent(conceptId) } as React.CSSProperties}
+    >
+
+      {/* ── 1. Concept hero ────────────────────────────────────────────────── */}
+      <div className="wiki-concept-hero">
+        {/* Title row */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Concept title — display serif */}
           <span className="wiki-concept-title">
             {concept.label}
           </span>
-
-          {/* Page-kind badge */}
-          <PageKindBadge kind="concept" />
-
-          {/* Status chip */}
-          <StatusChip
-            tone={statusMeta.tone}
-            size="xs"
-            uppercase
-            mono
-            title={statusMeta.description}
-            aria-label={`Status: ${statusMeta.label}`}
-          >
-            {statusMeta.label}
-          </StatusChip>
+          <StatusBadge status={status} />
         </div>
 
-        {/* Blurb */}
+        {/* Blurb — once, inside the hero */}
         <p
           className="text-[13px] italic m-0"
           style={{ color: COLORS.inkSubtle }}
         >
           {concept.blurb}
         </p>
-      </div>
 
-      {/* ── 1b. Definition lead ───────────────────────────────────────────── */}
-      <section id="definition" className="flex flex-col gap-1">
-        <div className="wiki-section-heading mb-1">Definition</div>
-        <p className="text-[13px] leading-relaxed m-0" style={{ color: COLORS.ink }}>
-          {concept.blurb}
-          {attrCount > 0 && (
-            <>
-              {" "}Every <span className="wiki-mono">{concept.label.toLowerCase()}</span> entry
-              shares {attrCount} defined {attrCount === 1 ? "attribute" : "attributes"},
-              listed in the field reference below.
-            </>
-          )}
-        </p>
-      </section>
+        {/* Banner strip with stat chips */}
+        {stats.length > 0 && (
+          <div className="wiki-hero-banner">
+            {stats.map((s) => (
+              <div key={s.label} className="wiki-stat-chip">
+                <span className="wiki-stat-chip__value">{s.value}</span>
+                <span className="wiki-stat-chip__label">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ── 2. Authored intro (optional) ──────────────────────────────────── */}
       {intro != null && (
@@ -131,18 +149,103 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
         </section>
       )}
 
-      {/* ── 3. Field reference ────────────────────────────────────────────── */}
-      <ConceptFields conceptId={conceptId} />
+      {/* ── 3. Entity gallery ─────────────────────────────────────────────── */}
+      {conceptId === "tiles" ? (
+        <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
+          <div className="wiki-section-heading">
+            Entries ({entries.length})
+          </div>
+          {groupTileEntries(entries).map((subGroup) => (
+            <section key={subGroup.sub} className="flex flex-col gap-3">
+              {/* Sub-category band heading — icon + label, ember accent */}
+              <div
+                className="flex items-center gap-2 pb-1"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              >
+                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                  {subGroup.icon}
+                </span>
+                <span
+                  className="wiki-concept-title"
+                  style={{ fontSize: 18 }}
+                >
+                  {subGroup.label}
+                </span>
+              </div>
 
-      {/* ── 3a. Category overview / comparison sections ───────────────────────
-          Analytical roll-ups that lead the entity list on specific category
-          pages. Each returns null when its concept has no data. */}
+              {subGroup.categories.map((catGroup) => (
+                <div key={catGroup.category} className="flex flex-col gap-2">
+                  <div
+                    className="text-[12px] font-bold uppercase tracking-wide"
+                    style={{ color: COLORS.inkSubtle }}
+                  >
+                    {catGroup.label}
+                  </div>
+                  <EntryGrid
+                    entries={catGroup.entries}
+                    onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+                  />
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
+      ) : conceptId === "tools" ? (
+        <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
+          <div className="wiki-section-heading">
+            Entries ({entries.length})
+          </div>
+          {groupToolEntries(entries).map((group) => (
+            <section key={group.boardKind} className="flex flex-col gap-3">
+              {/* Board-kind band heading — icon + label, ember accent */}
+              <div
+                className="flex items-center gap-2 pb-1"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              >
+                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                  {group.icon}
+                </span>
+                <span className="wiki-concept-title" style={{ fontSize: 18 }}>
+                  {group.label}
+                </span>
+                <span className="text-[12px]" style={{ color: COLORS.inkSubtle }}>
+                  ({group.entries.length})
+                </span>
+              </div>
+              <EntryGrid
+                entries={group.entries}
+                onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+              />
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div data-testid="wiki-entry-gallery">
+          <div className="wiki-section-heading mb-2">
+            Entries ({entries.length})
+          </div>
+          <EntryGrid
+            entries={entries}
+            onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+            renderVisual={
+              conceptId === "buildings"
+                ? (entry) => (
+                    <EntityVisual conceptId="buildings" entityKey={entry.key} size={36} />
+                  )
+                : undefined
+            }
+          />
+        </div>
+      )}
+
+      {/* ── 4. Analytical rollups / comparison sections ────────────────────
+          Placed below the gallery so the player sees entities first. */}
       {conceptId === "buildings" && <EconomyRollup />}
       {conceptId === "bosses" && <BossComparison />}
       {conceptId === "workers" && <WorkerComparison />}
       {conceptId === "tiles" && <ProgressionTimeline />}
 
-      {/* ── 3b. Recipe relationship graph (recipes concept only) ──────────── */}
+      {/* ── 4b. Recipe relationship graph (recipes concept only) ─────────── */}
       {conceptId === "recipes" && (
         <section>
           {/* Native <details> for collapsible — collapsed by default so the
@@ -218,97 +321,20 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
         </section>
       )}
 
-      {/* ── 4. Entity grid ────────────────────────────────────────────────── */}
-      {conceptId === "tiles" ? (
-        <div className="flex flex-col gap-4">
-          <div className="wiki-section-heading">
-            Entries ({entries.length})
-          </div>
-          {groupTileEntries(entries as unknown as WikiEntry[]).map((subGroup) => (
-            <section key={subGroup.sub} className="flex flex-col gap-3">
-              {/* Sub-category band heading — icon + label, ember accent */}
-              <div
-                className="flex items-center gap-2 pb-1"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
-              >
-                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
-                  {subGroup.icon}
-                </span>
-                <span
-                  className="wiki-concept-title"
-                  style={{ fontSize: 18 }}
-                >
-                  {subGroup.label}
-                </span>
-              </div>
+      {/* ── 5. Field reference — hidden in player view, always at bottom ──── */}
+      <div data-testid="wiki-field-reference">
+      <ReferenceSection>
+        {/* Intro sentence lives here, next to the table, not in the hero. */}
+        {attrCount > 0 && (
+          <p className="text-[13px] leading-relaxed m-0 mb-2" style={{ color: COLORS.ink }}>
+            Every <span className="wiki-mono">{concept.label.toLowerCase()}</span> entry
+            shares {attrCount} defined {attrCount === 1 ? "attribute" : "attributes"}.
+          </p>
+        )}
+        <ConceptFields conceptId={conceptId} />
+      </ReferenceSection>
+      </div>
 
-              {subGroup.categories.map((catGroup) => (
-                <div key={catGroup.category} className="flex flex-col gap-2">
-                  <div
-                    className="text-[12px] font-bold uppercase tracking-wide"
-                    style={{ color: COLORS.inkSubtle }}
-                  >
-                    {catGroup.label}
-                  </div>
-                  <EntryGrid
-                    entries={catGroup.entries}
-                    onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
-                  />
-                </div>
-              ))}
-            </section>
-          ))}
-        </div>
-      ) : conceptId === "tools" ? (
-        <div className="flex flex-col gap-4">
-          <div className="wiki-section-heading">
-            Entries ({entries.length})
-          </div>
-          {groupToolEntries(entries as unknown as WikiEntry[]).map((group) => (
-            <section key={group.boardKind} className="flex flex-col gap-3">
-              {/* Board-kind band heading — icon + label, ember accent */}
-              <div
-                className="flex items-center gap-2 pb-1"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
-              >
-                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
-                  {group.icon}
-                </span>
-                <span className="wiki-concept-title" style={{ fontSize: 18 }}>
-                  {group.label}
-                </span>
-                <span
-                  className="text-[12px]"
-                  style={{ color: COLORS.inkSubtle }}
-                >
-                  ({group.entries.length})
-                </span>
-              </div>
-              <EntryGrid
-                entries={group.entries}
-                onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
-              />
-            </section>
-          ))}
-        </div>
-      ) : (
-        <div>
-          <div className="wiki-section-heading mb-2">
-            Entries ({entries.length})
-          </div>
-          <EntryGrid
-            entries={entries as unknown as WikiEntry[]}
-            onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
-            renderVisual={
-              conceptId === "buildings"
-                ? (entry) => (
-                    <EntityVisual conceptId="buildings" entityKey={entry.key} size={36} />
-                  )
-                : undefined
-            }
-          />
-        </div>
-      )}
     </div>
   );
 }

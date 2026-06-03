@@ -21,9 +21,10 @@ import { BalanceNavProvider } from "../balanceNav.jsx";
 import type { CommandEntry } from "../commandPalette.js";
 import type { BalanceDraft, TabProps } from "../tabProps.js";
 import { CONCEPTS } from "./concepts.js";
-import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES } from "./wikiNav.js";
+import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
 import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+import { WikiViewProvider, useWikiView } from "./wikiView.js";
 
 type TabComponent = React.ComponentType<TabProps>;
 
@@ -35,6 +36,9 @@ const CategoryPageLazy = lazy(() =>
 );
 const NarrativePageLazy = lazy(() =>
   import("./NarrativePage.jsx").then((m) => ({ default: m.NarrativePage })),
+);
+const WikiHomeLazy = lazy(() =>
+  import("./WikiHome.jsx").then((m) => ({ default: m.WikiHome })),
 );
 const IconsTab = lazy(() => import("../tabs/IconsTab.jsx")) as unknown as TabComponent;
 const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
@@ -68,6 +72,33 @@ function writeSidebarCollapsed(v: boolean) {
   } catch { /* storage unavailable */ }
 }
 
+/**
+ * Pure keydown handler extracted from WikiShell's keyboard effect so tests can
+ * import and exercise the real logic without mounting the full lazy tree.
+ *
+ * - Escape → setMobileNavOpen(false)
+ * - Cmd/Ctrl-K → setPaletteOpen(toggle)
+ */
+export function handleWikiShellKeydown(
+  e: KeyboardEvent,
+  {
+    setMobileNavOpen,
+    setPaletteOpen,
+  }: {
+    setMobileNavOpen: (value: boolean) => void;
+    setPaletteOpen: (updater: (v: boolean) => boolean) => void;
+  },
+) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (e.key === "Escape") {
+    setMobileNavOpen(false);
+    return;
+  }
+  if (!mod) return;
+  const key = e.key.toLowerCase();
+  if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); }
+}
+
 // Below this width, the sidebar becomes an overlay toggled by a hamburger
 // button in the header instead of a permanent column.
 const SMALL_SCREEN_QUERY = "(max-width: 768px)";
@@ -85,6 +116,196 @@ function useIsSmallScreen() {
     return () => mq.removeEventListener?.("change", update);
   }, []);
   return small;
+}
+
+// ─── Developer-only sidebar sections ─────────────────────────────────────────
+//
+// These components call useWikiView() and must be rendered inside
+// <WikiViewProvider> (i.e. as children of WikiShell's JSX, not in
+// WikiShell's own function body).
+// DEV_ONLY_SECTION_IDS is imported from wikiNav.ts — single source of truth.
+
+interface SidebarConceptSectionsProps {
+  tab: string;
+  effectiveCollapsed: boolean;
+  manualExpanded: Set<string>;
+  setManualExpanded: React.Dispatch<React.SetStateAction<Set<string>>>;
+  navigate: (target: { tab: string; focus?: string | null }) => void;
+}
+
+function SidebarConceptSections({
+  tab,
+  effectiveCollapsed,
+  manualExpanded,
+  setManualExpanded,
+  navigate,
+}: SidebarConceptSectionsProps) {
+  const { view } = useWikiView();
+  // In player view, hide the Screens section (views/modals are developer-only).
+  const visibleSections = view === "player"
+    ? WIKI_SECTIONS.filter((sec) => !DEV_ONLY_SECTION_IDS.has(sec.id))
+    : WIKI_SECTIONS;
+
+  return (
+    <>
+      {visibleSections.map((sec) => (
+        <div key={sec.id} className="flex flex-col gap-1">
+          {!effectiveCollapsed ? (
+            <div className="wiki-sidebar-label px-2 pt-2 pb-1">{sec.label}</div>
+          ) : (
+            <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
+          )}
+
+          {sec.nodes.map((node) => {
+            const cid = node.conceptId;
+            const label = CONCEPT_LABELS[cid] ?? cid;
+            const active = tab === cid;
+            const children = node.children ?? [];
+            const hasChildren = children.length > 0;
+            const isOpen = children.includes(tab) || manualExpanded.has(cid);
+
+            return (
+              <div key={cid} className="flex flex-col">
+                <div className="flex items-stretch">
+                  {hasChildren && !effectiveCollapsed && (
+                    <button
+                      type="button"
+                      aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
+                      aria-expanded={isOpen}
+                      onClick={() =>
+                        setManualExpanded((prev) => {
+                          const next = new Set(prev);
+                          if (isOpen) next.delete(cid);
+                          else next.add(cid);
+                          return next;
+                        })
+                      }
+                      className="px-1 flex items-center"
+                      style={{ color: COLORS.inkSubtle, cursor: "pointer" }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          display: "inline-block",
+                          width: 10,
+                          fontSize: 9,
+                          transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 150ms ease",
+                        }}
+                      >
+                        ▶
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => navigate({ tab: cid })}
+                    className={`wiki-nav-link flex-1${active ? " wiki-nav-link--active" : ""}`}
+                    title={effectiveCollapsed ? label : undefined}
+                    aria-label={label}
+                  >
+                    <Icon iconKey="ui_star" size={16} title="" />
+                    {!effectiveCollapsed && <span className="flex-1">{label}</span>}
+                  </button>
+                </div>
+
+                {hasChildren && !effectiveCollapsed && isOpen && (
+                  <div className="flex flex-col gap-1" style={{ paddingLeft: 18 }}>
+                    {children.map((childId) => {
+                      const childLabel = CONCEPT_LABELS[childId] ?? childId;
+                      const childActive = tab === childId;
+                      return (
+                        <button
+                          key={childId}
+                          onClick={() => navigate({ tab: childId })}
+                          className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
+                          aria-label={childLabel}
+                        >
+                          <Icon iconKey="ui_star" size={13} title="" />
+                          <span className="flex-1">{childLabel}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+}
+
+interface SidebarDevUtilitiesProps {
+  tab: string;
+  effectiveCollapsed: boolean;
+  navigate: (target: { tab: string; focus?: string | null }) => void;
+}
+
+function SidebarDevUtilities({ tab, effectiveCollapsed, navigate }: SidebarDevUtilitiesProps) {
+  const { view } = useWikiView();
+  // Dev utilities are developer-only — hidden in player view.
+  if (view === "player") return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {!effectiveCollapsed ? (
+        <div className="wiki-sidebar-label px-2 pt-2 pb-1">
+          Dev
+        </div>
+      ) : (
+        <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
+      )}
+      {UTILITIES.map((u) => {
+        const active = tab === u.id;
+        return (
+          <button
+            key={u.id}
+            onClick={() => navigate({ tab: u.id })}
+            className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
+            title={effectiveCollapsed ? u.label : undefined}
+            aria-label={u.label}
+          >
+            <Icon iconKey="ui_devtools" size={16} title="" />
+            {!effectiveCollapsed && <span className="flex-1">{u.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── View toggle control ──────────────────────────────────────────────────────
+
+function WikiViewToggle() {
+  const { view, setView } = useWikiView();
+  return (
+    <div className="wiki-view-toggle" role="group" aria-label="Wiki view mode">
+      <button
+        type="button"
+        className={`wiki-view-toggle__btn${view === "developer" ? " wiki-view-toggle__btn--active" : ""}`}
+        onClick={() => setView("developer")}
+        aria-pressed={view === "developer"}
+        title="Developer view — shows schema tables, raw keys, and dev utilities"
+      >
+        {/* Full label on desktop; compact on mobile via CSS */}
+        <span className="wiki-view-label--full">Developer</span>
+        <span className="wiki-view-label--compact" aria-hidden="true">Dev</span>
+      </button>
+      <button
+        type="button"
+        className={`wiki-view-toggle__btn${view === "player" ? " wiki-view-toggle__btn--active" : ""}`}
+        onClick={() => setView("player")}
+        aria-pressed={view === "player"}
+        title="Player view — shows only player-facing content"
+      >
+        {/* Full label on desktop; compact on mobile via CSS */}
+        <span className="wiki-view-label--full">Player</span>
+        <span className="wiki-view-label--compact" aria-hidden="true">Play</span>
+      </button>
+    </div>
+  );
 }
 
 export default function WikiShell() {
@@ -131,14 +352,10 @@ export default function WikiShell() {
     });
   }, []);
 
-  // Command palette on Cmd/Ctrl-K.
+  // Command palette on Cmd/Ctrl-K; Escape closes the mobile nav drawer.
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-      if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); return; }
-    }
+    const onKey = (e: KeyboardEvent) =>
+      handleWikiShellKeydown(e, { setMobileNavOpen, setPaletteOpen });
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -170,7 +387,13 @@ export default function WikiShell() {
   // ── Main pane content — switch on (tab, focus) ────────────────────────────
   let mainContent: React.ReactNode;
   if (tab === "page") {
-    mainContent = <NarrativePageLazy slug={pageSlug!} />;
+    // Special-case: the overview landing renders the full WikiHome (visual
+    // category browser + start-here + prose). Other slugs render NarrativePage.
+    if (pageSlug === "overview") {
+      mainContent = <WikiHomeLazy navigate={navigate} />;
+    } else {
+      mainContent = <NarrativePageLazy slug={pageSlug!} />;
+    }
   } else if (tab === "icons") {
     mainContent = <IconsTab draft={draft} updateDraft={noop} focus={focus} />;
   } else if (tab === "animationsDemo") {
@@ -191,6 +414,7 @@ export default function WikiShell() {
   }
 
   return (
+    <WikiViewProvider>
     <div
       className="wiki-root fixed inset-0 grid place-items-stretch"
       style={{ background: COLORS.parchmentDeep }}
@@ -239,27 +463,30 @@ export default function WikiShell() {
               {/* Logs */}
               <rect x="11" y="25" width="14" height="3" rx="1.5" fill="#8b6845" />
             </svg>
-            <div>
+            {/* Wordmark wrapper — shrinks gracefully on small screens */}
+            <div className="wiki-wordmark-wrap">
               <div className="wiki-wordmark">Hearthwood Vale</div>
               <div className="wiki-tagline">Game wiki — every tile, recipe, building, and beat</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <WikiViewToggle />
             <button
               onClick={() => setPaletteOpen(true)}
               className="wiki-search-btn"
               title="Search the wiki (Cmd/Ctrl-K)"
               aria-label="Open command palette"
             >
-              🔎 Search
+              🔎<span className="wiki-search-label"> Search</span>
               <span className="wiki-kbd">⌘K</span>
             </button>
             <a
               href={import.meta.env.BASE_URL}
               className="wiki-back-btn"
               title="Return to the game"
+              aria-label="Back to Game"
             >
-              ← Back to Game
+              ←<span className="wiki-back-label"> Back to Game</span>
             </a>
           </div>
         </header>
@@ -310,93 +537,14 @@ export default function WikiShell() {
               </button>
             </div>
 
-            {/* Concept sections */}
-            {WIKI_SECTIONS.map((sec) => (
-              <div key={sec.id} className="flex flex-col gap-1">
-                {!effectiveCollapsed ? (
-                  <div className="wiki-sidebar-label px-2 pt-2 pb-1">{sec.label}</div>
-                ) : (
-                  <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
-                )}
-
-                {sec.nodes.map((node) => {
-                  const cid = node.conceptId;
-                  const label = CONCEPT_LABELS[cid] ?? cid;
-                  const active = tab === cid;
-                  const children = node.children ?? [];
-                  const hasChildren = children.length > 0;
-                  // Auto-open when the active tab is a child; respect manual toggles otherwise.
-                  const isOpen = children.includes(tab) || manualExpanded.has(cid);
-
-                  return (
-                    <div key={cid} className="flex flex-col">
-                      <div className="flex items-stretch">
-                        {hasChildren && !effectiveCollapsed && (
-                          <button
-                            type="button"
-                            aria-label={isOpen ? `Collapse ${label}` : `Expand ${label}`}
-                            aria-expanded={isOpen}
-                            onClick={() =>
-                              setManualExpanded((prev) => {
-                                const next = new Set(prev);
-                                if (isOpen) next.delete(cid);
-                                else next.add(cid);
-                                return next;
-                              })
-                            }
-                            className="px-1 flex items-center"
-                            style={{ color: COLORS.inkSubtle, cursor: "pointer" }}
-                          >
-                            <span
-                              aria-hidden
-                              style={{
-                                display: "inline-block",
-                                width: 10,
-                                fontSize: 9,
-                                transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-                                transition: "transform 150ms ease",
-                              }}
-                            >
-                              ▶
-                            </span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => navigate({ tab: cid })}
-                          className={`wiki-nav-link flex-1${active ? " wiki-nav-link--active" : ""}`}
-                          title={effectiveCollapsed ? label : undefined}
-                          aria-label={label}
-                        >
-                          <Icon iconKey="ui_star" size={16} title="" />
-                          {!effectiveCollapsed && <span className="flex-1">{label}</span>}
-                        </button>
-                      </div>
-
-                      {hasChildren && !effectiveCollapsed && isOpen && (
-                        <div className="flex flex-col gap-1" style={{ paddingLeft: 18 }}>
-                          {children.map((childId) => {
-                            const childLabel = CONCEPT_LABELS[childId] ?? childId;
-                            const childActive = tab === childId;
-                            return (
-                              <button
-                                key={childId}
-                                onClick={() => navigate({ tab: childId })}
-                                className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
-                                aria-label={childLabel}
-                              >
-                                <Icon iconKey="ui_star" size={13} title="" />
-                                <span className="flex-1">{childLabel}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            {/* Concept sections — Screens section hidden in player view */}
+            <SidebarConceptSections
+              tab={tab}
+              effectiveCollapsed={effectiveCollapsed}
+              manualExpanded={manualExpanded}
+              setManualExpanded={setManualExpanded}
+              navigate={navigate}
+            />
 
             {/* Narrative pages */}
             <div className="flex flex-col gap-1">
@@ -424,31 +572,12 @@ export default function WikiShell() {
               })}
             </div>
 
-            {/* Dev utilities */}
-            <div className="flex flex-col gap-1">
-              {!effectiveCollapsed ? (
-                <div className="wiki-sidebar-label px-2 pt-2 pb-1">
-                  Dev
-                </div>
-              ) : (
-                <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
-              )}
-              {UTILITIES.map((u) => {
-                const active = tab === u.id;
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => navigate({ tab: u.id })}
-                    className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
-                    title={effectiveCollapsed ? u.label : undefined}
-                    aria-label={u.label}
-                  >
-                    <Icon iconKey="ui_devtools" size={16} title="" />
-                    {!effectiveCollapsed && <span className="flex-1">{u.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Dev utilities — hidden entirely in player view */}
+            <SidebarDevUtilities
+              tab={tab}
+              effectiveCollapsed={effectiveCollapsed}
+              navigate={navigate}
+            />
           </nav>
 
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
@@ -472,5 +601,6 @@ export default function WikiShell() {
         </div>
       </div>
     </div>
+    </WikiViewProvider>
   );
 }

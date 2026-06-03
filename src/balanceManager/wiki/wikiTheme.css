@@ -27,15 +27,19 @@
   --wiki-canvas:        #f0e8d4;
   --wiki-canvas-rule:   #ddd0b4;
 
+  /* Phase 3 accent defaults — overridden per-concept via inline style */
+  --wiki-accent:      var(--wiki-ember);
+
   /* typography */
   --wiki-font-display: "Fraunces", "Newsreader", Georgia, serif;
   --wiki-font-body:    "IBM Plex Sans", system-ui, sans-serif;
   --wiki-font-mono:    "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
-  /* depth tokens */
-  --wiki-shadow-card:   0 2px 8px rgba(43, 34, 24, 0.10), 0 1px 2px rgba(43, 34, 24, 0.08);
-  --wiki-shadow-panel:  0 4px 16px rgba(43, 34, 24, 0.12), 0 1px 3px rgba(43, 34, 24, 0.08);
-  --wiki-shadow-header: 0 2px 10px rgba(43, 34, 24, 0.10);
+  /* depth tokens — boosted for Phase 3 */
+  --wiki-shadow-card:   0 2px 10px rgba(43, 34, 24, 0.12), 0 1px 3px rgba(43, 34, 24, 0.08);
+  --wiki-shadow-panel:  0 6px 24px rgba(43, 34, 24, 0.16), 0 2px 6px rgba(43, 34, 24, 0.10);
+  --wiki-shadow-header: 0 3px 14px rgba(43, 34, 24, 0.14);
+  --wiki-shadow-hover:  0 8px 28px rgba(43, 34, 24, 0.18), 0 2px 8px rgba(43, 34, 24, 0.12);
 
   /* transitions */
   --wiki-transition: 150ms ease;
@@ -81,36 +85,49 @@
 
 /* ── Typography hierarchy ───────────────────────────────────────────────────── */
 
-/* Article/entity title — large, display serif, heavy */
+/*
+ * Phase 3: Bold type scale with clear weight+size deltas at every level.
+ * Fraunces 800 titles >> 700 section headings >> IBM Plex 400 body.
+ * Sizes are intentionally bigger jumps than Phase 1–2: titles feel like titles.
+ */
+
+/* Article/entity title — large, display serif, very heavy */
 .wiki-root .wiki-title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--wiki-ink);
+  letter-spacing: -0.025em;
+}
+
+/* Article entity title — clearly smaller but still commanding */
+.wiki-root .wiki-title--article {
+  font-size: clamp(22px, 2.8vw, 32px);
+}
+
+/*
+ * Section heading — display serif, 700, with an accent underline divider.
+ * The accent bar uses --wiki-accent so each concept section gets its own color.
+ * Implemented as a left border stripe for compact vertical rhythm.
+ */
+.wiki-root .wiki-section-heading {
+  font-family: var(--wiki-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  margin-bottom: 2px;
+}
+
+/* Category page concept title — display serif, accent colored, very large */
+.wiki-root .wiki-concept-title {
   font-family: var(--wiki-font-display);
   font-size: clamp(24px, 3vw, 32px);
   font-weight: 800;
-  line-height: 1.15;
-  color: var(--wiki-ink);
-  letter-spacing: -0.02em;
-}
-
-/* Article entity title — slightly smaller than the concept/category title */
-.wiki-root .wiki-title--article {
-  font-size: clamp(18px, 2.5vw, 26px);
-}
-
-/* Section heading inside an article — display serif, medium */
-.wiki-root .wiki-section-heading {
-  font-family: var(--wiki-font-display);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--wiki-ink-light);
-  letter-spacing: -0.01em;
-}
-
-/* Category page concept title — display serif, ember accent */
-.wiki-root .wiki-concept-title {
-  font-family: var(--wiki-font-display);
-  font-size: clamp(20px, 2.5vw, 26px);
-  font-weight: 800;
-  color: var(--wiki-ember);
+  color: var(--wiki-accent, var(--wiki-ember));
   letter-spacing: -0.02em;
 }
 
@@ -131,13 +148,13 @@
   font-size: 0.88em;
 }
 
-/* Header wordmark */
+/* Header wordmark — slightly larger for Phase 3 visual weight */
 .wiki-root .wiki-wordmark {
   font-family: var(--wiki-font-display);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--wiki-ember);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1;
 }
 
@@ -155,8 +172,8 @@
 .wiki-root .wiki-header {
   background: linear-gradient(
     180deg,
-    var(--wiki-parchment-deep) 0%,
-    color-mix(in srgb, var(--wiki-parchment-deep) 60%, var(--wiki-parchment)) 60%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 90%, #c2a070) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-parchment)) 55%,
     var(--wiki-parchment) 100%
   );
   border-bottom: 2px solid var(--wiki-border);
@@ -166,12 +183,22 @@
 /* ── Sidebar ─────────────────────────────────────────────────────────────────── */
 
 .wiki-root .wiki-sidebar {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--wiki-parchment-deep) 80%, #c9a87a) 0%,
-    var(--wiki-parchment-deep) 100%
-  );
+  background-color: var(--wiki-parchment-deep);
   border-right: 2px solid var(--wiki-border);
+  /* subtle grain-like CSS texture via tiny repeating-linear-gradient layered over the base gradient */
+  background-image:
+    repeating-linear-gradient(
+      125deg,
+      transparent,
+      transparent 3px,
+      color-mix(in srgb, var(--wiki-border) 5%, transparent) 4px
+    ),
+    linear-gradient(
+      175deg,
+      color-mix(in srgb, var(--wiki-parchment-deep) 75%, #c2a070) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 90%, var(--wiki-parchment)) 60%,
+      var(--wiki-parchment-deep) 100%
+    );
 }
 
 /* Sidebar nav links */
@@ -182,7 +209,7 @@
   border-radius: 7px;
   padding: 7px 10px;
   transition: background var(--wiki-transition), color var(--wiki-transition),
-              box-shadow var(--wiki-transition);
+              box-shadow var(--wiki-transition), transform var(--wiki-transition);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -193,28 +220,40 @@
 }
 
 .wiki-root .wiki-nav-link:not(.wiki-nav-link--active):hover {
-  background: color-mix(in srgb, var(--wiki-ember) 10%, var(--wiki-parchment-deep)) !important;
+  background: color-mix(in srgb, var(--wiki-ember) 12%, var(--wiki-parchment-deep)) !important;
   color: var(--wiki-ink-light) !important;
-  box-shadow: inset 0 0 0 1px var(--wiki-border);
+  box-shadow: inset 0 0 0 1px var(--wiki-border), 0 1px 4px rgba(43, 34, 24, 0.08);
 }
 
 .wiki-root .wiki-nav-link--active {
   background: var(--wiki-ember) !important;
   color: #fff !important;
-  box-shadow: 0 1px 4px rgba(214, 97, 42, 0.35);
+  box-shadow: 0 2px 8px rgba(214, 97, 42, 0.40), 0 1px 2px rgba(214, 97, 42, 0.20);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-nav-link {
+    transition: background var(--wiki-transition), color var(--wiki-transition);
+  }
 }
 
 /* ── Main content area ──────────────────────────────────────────────────────── */
 
 .wiki-root .wiki-main {
   background: var(--wiki-canvas);
-  /* Subtle geometric texture: very faint rule lines */
+  /* Layered texture: a diagonal shimmer over the rule lines gives papery depth */
   background-image:
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 27px,
-      color-mix(in srgb, var(--wiki-canvas-rule) 40%, transparent) 28px
+      color-mix(in srgb, var(--wiki-canvas-rule) 45%, transparent) 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 59px,
+      color-mix(in srgb, var(--wiki-canvas-rule) 15%, transparent) 60px
     );
 }
 
@@ -224,24 +263,38 @@
 .wiki-root .wiki-card {
   background: var(--wiki-parchment);
   border: 2px solid var(--wiki-border);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: var(--wiki-shadow-card);
-  transition: box-shadow var(--wiki-transition);
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition);
 }
 
 .wiki-root .wiki-card:hover {
   box-shadow: var(--wiki-shadow-panel);
 }
 
-/* Entry grid cards — add depth on hover */
+/*
+ * Entry grid cards — Phase 3 lift: stronger shadow, accent border on hover,
+ * a subtle top-bar tint using --wiki-accent. The top-bar is achieved via a
+ * box-inset border-top so we don't need extra DOM.
+ */
 .wiki-root .wiki-entry-card {
-  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition), border-color var(--wiki-transition);
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition),
+              border-color var(--wiki-transition);
 }
 
 .wiki-root .wiki-entry-card:hover {
-  box-shadow: var(--wiki-shadow-panel);
-  transform: translateY(-1px);
-  border-color: var(--wiki-border-deep) !important;
+  box-shadow: var(--wiki-shadow-hover);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 60%, var(--wiki-border)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-entry-card {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-entry-card:hover {
+    transform: none;
+  }
 }
 
 /* ── Concept reference cards (relations, backlinks, where-used) ─────────────── */
@@ -259,11 +312,12 @@
   width: 100%;
   text-align: left;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 2px solid var(--wiki-border);
+  /* Layered gradient: parchment + faint accent tint at the top */
   background: linear-gradient(
     165deg,
-    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 4%, var(--wiki-parchment)) 0%,
     color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-parchment)) 100%
   );
   box-shadow: var(--wiki-shadow-card);
@@ -273,9 +327,18 @@
 }
 
 .wiki-root .wiki-concept-ref-card:hover {
-  box-shadow: var(--wiki-shadow-panel);
+  box-shadow: var(--wiki-shadow-hover);
   transform: translateY(-2px);
-  border-color: var(--wiki-border-deep);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 50%, var(--wiki-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-concept-ref-card {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-concept-ref-card:hover {
+    transform: none;
+  }
 }
 
 .wiki-root .wiki-concept-ref-card__hero {
@@ -433,11 +496,11 @@
   justify-content: center;
   gap: 16px 14px;
   padding: 22px 24px;
-  border-radius: 14px;
-  border: 2px solid var(--wiki-border);
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 20%, var(--wiki-border));
   background: linear-gradient(
     165deg,
-    var(--wiki-parchment) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 5%, var(--wiki-parchment)) 0%,
     color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment)) 100%
   );
   box-shadow: var(--wiki-shadow-card);
@@ -625,4 +688,673 @@
 
 .wiki-root .wiki-relation-link:hover {
   color: var(--wiki-ink);
+}
+
+/* ── Status badge ────────────────────────────────────────────────────────────── */
+/*
+ * Shown in both developer and player views. The inline background/color/border
+ * are set via JSX inline style using the TONE_STYLES map in StatusBadge.tsx so
+ * the badge is usable without a CSS class per tone. These rules handle layout,
+ * sizing, and the mono tier suffix.
+ */
+
+.wiki-root .wiki-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.wiki-root .wiki-status-badge--compact {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 7px;
+  gap: 4px;
+}
+
+/* The raw status tier — always shown in both player and developer views */
+.wiki-root .wiki-status-badge__tier {
+  font-family: var(--wiki-font-mono);
+  font-size: 0.8em;
+  opacity: 0.72;
+  letter-spacing: 0.03em;
+}
+
+/* ── View toggle segmented control ───────────────────────────────────────────── */
+/*
+ * A two-button segmented control placed in the wiki header next to the Search
+ * button. The active button is ember-tinted to match the overall palette.
+ */
+
+.wiki-root .wiki-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--wiki-border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--wiki-parchment-deep);
+}
+
+.wiki-root .wiki-view-toggle__btn {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wiki-ink-light);
+  background: transparent;
+  border: none;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background var(--wiki-transition), color var(--wiki-transition);
+  line-height: 1.4;
+}
+
+.wiki-root .wiki-view-toggle__btn:hover:not(.wiki-view-toggle__btn--active) {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-border));
+}
+
+.wiki-root .wiki-view-toggle__btn--active {
+  background: var(--wiki-ember);
+  color: #fff;
+}
+
+/* Separator between the two buttons */
+.wiki-root .wiki-view-toggle__btn + .wiki-view-toggle__btn {
+  border-left: 1px solid var(--wiki-border);
+}
+
+/* ── Concept hero (category page lead) ──────────────────────────────────────── */
+/*
+ * Phase 3: Deeper atmosphere. The hero picks up --wiki-accent (set via inline
+ * style on the page root from conceptAccent.ts) for its border + banner tint.
+ * The background gains a subtle layered diagonal gradient so it reads as an
+ * intentional card, not a flat parchment block.
+ */
+
+.wiki-root .wiki-concept-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 25%, var(--wiki-border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 6%, var(--wiki-parchment-deep)) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 40%, var(--wiki-parchment)) 55%,
+      var(--wiki-parchment) 100%
+    );
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+/* Banner strip — richer accent background with stat chips */
+.wiki-root .wiki-hero-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 14%, var(--wiki-parchment-deep)) 0%,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 7%, var(--wiki-parchment)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 35%, var(--wiki-border));
+  box-shadow: inset 0 1px 3px rgba(43, 34, 24, 0.06);
+}
+
+/* Individual stat chip inside the banner */
+.wiki-root .wiki-stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 10%, var(--wiki-parchment));
+  border: 1px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.09);
+  white-space: nowrap;
+}
+
+.wiki-root .wiki-stat-chip__value {
+  font-family: var(--wiki-font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--wiki-accent, var(--wiki-ember));
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.wiki-root .wiki-stat-chip__label {
+  font-family: var(--wiki-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wiki-ink-subtle);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+/* ── Entity card fact chips ──────────────────────────────────────────────────── */
+/*
+ * Rendered below the entity name on every gallery card that carries `facts`.
+ * Keep these tiny and muted — they are supplemental, not primary content.
+ */
+
+.wiki-root .wiki-card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px 4px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.wiki-root .wiki-card-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-family: var(--wiki-font-body);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--wiki-ink-subtle);
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-border));
+  border: 1px solid color-mix(in srgb, var(--wiki-border) 50%, transparent);
+  white-space: nowrap;
+  line-height: 1.4;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wiki-root .wiki-card-fact__label {
+  color: color-mix(in srgb, var(--wiki-ink-subtle) 70%, var(--wiki-ink));
+  font-weight: 600;
+  margin-right: 1px;
+}
+
+/* ── Reference section (collapsible developer-only wrapper) ──────────────────── */
+/*
+ * Used to gate field-reference and schema tables behind a <details> element.
+ * Layout and sizing; colors are supplied via JSX inline styles that match the
+ * COLORS constants used elsewhere in the wiki.
+ */
+
+.wiki-root .wiki-reference-section {
+  /* No extra layout — children handle their own borders/padding. */
+}
+
+.wiki-root .wiki-reference-section__summary {
+  /* Suppress the native marker; we provide our own chevron arrow. */
+  list-style: none;
+}
+
+.wiki-root .wiki-reference-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+.wiki-root .wiki-ref-chevron {
+  transition: transform 150ms ease;
+}
+
+.wiki-root .wiki-reference-section[open] .wiki-ref-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-ref-chevron {
+    transition: none;
+  }
+}
+
+/* ── Phase 4a: WikiHome — visual discovery landing ────────────────────────── */
+
+/* ── Hero ── */
+
+.wiki-root .wiki-home {
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.wiki-root .wiki-home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 28px 20px;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--wiki-ember) 20%, var(--wiki-border));
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--wiki-ember) 7%, var(--wiki-parchment-deep)) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 50%, var(--wiki-parchment)) 60%,
+      var(--wiki-parchment) 100%
+    );
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+.wiki-root .wiki-home-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wiki-root .wiki-home-hero__title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  color: var(--wiki-ember);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.wiki-root .wiki-home-hero__subtitle {
+  font-family: var(--wiki-font-body);
+  font-size: 13px;
+  color: var(--wiki-ink-subtle);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Browse by category ── */
+
+.wiki-root .wiki-home-section-heading {
+  font-family: var(--wiki-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+}
+
+.wiki-root .wiki-home-category-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Category section (one per WIKI_SECTIONS entry) ── */
+
+.wiki-root .wiki-home-category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiki-root .wiki-home-category-section__label {
+  font-family: var(--wiki-font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+/* ── Concept tile row ── */
+
+.wiki-root .wiki-home-concept-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Individual concept tile ── */
+
+.wiki-root .wiki-home-concept-tile {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 30%, var(--wiki-border));
+  border-radius: 11px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 5%, var(--wiki-parchment)) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 50%, var(--wiki-parchment)) 100%
+  );
+  box-shadow: var(--wiki-shadow-card);
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition:
+    box-shadow var(--wiki-transition),
+    transform var(--wiki-transition),
+    border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-concept-tile:hover {
+  box-shadow: var(--wiki-shadow-hover);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 60%, var(--wiki-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-home-concept-tile {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-home-concept-tile:hover {
+    transform: none;
+  }
+}
+
+/* Accent left-bar stripe */
+.wiki-root .wiki-home-concept-tile__bar {
+  display: block;
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--wiki-accent, var(--wiki-ember));
+  border-radius: 0;
+}
+
+.wiki-root .wiki-home-concept-tile__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 8px 10px;
+}
+
+.wiki-root .wiki-home-concept-tile__label {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wiki-ink);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.wiki-root .wiki-home-concept-tile__count {
+  font-family: var(--wiki-font-mono);
+  font-size: 10px;
+  color: var(--wiki-ink-subtle);
+  line-height: 1;
+}
+
+/* ── Start here ── */
+
+.wiki-root .wiki-home-start {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-ember) 20%, var(--wiki-border));
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--wiki-ember) 5%, var(--wiki-parchment-deep)) 0%,
+    var(--wiki-parchment-deep) 100%
+  );
+  box-shadow: var(--wiki-shadow-card);
+}
+
+.wiki-root .wiki-home-start__heading {
+  font-family: var(--wiki-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+}
+
+.wiki-root .wiki-home-start__desc {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  color: var(--wiki-ink-subtle);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Core loop chip chain */
+.wiki-root .wiki-home-start__chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.wiki-root .wiki-home-start__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 10%, var(--wiki-parchment));
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wiki-ink);
+  cursor: pointer;
+  transition:
+    background var(--wiki-transition),
+    border-color var(--wiki-transition),
+    box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-start__chip:hover {
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 20%, var(--wiki-parchment));
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 70%, var(--wiki-border));
+  box-shadow: 0 2px 8px rgba(43, 34, 24, 0.14);
+}
+
+.wiki-root .wiki-home-start__arrow {
+  font-size: 14px;
+  color: var(--wiki-ink-subtle);
+  line-height: 1;
+  user-select: none;
+}
+
+/* Narrative page links row */
+.wiki-root .wiki-home-start__pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--wiki-border) 60%, transparent);
+}
+
+.wiki-root .wiki-home-start__page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9px;
+  border: 2px solid var(--wiki-border);
+  background: var(--wiki-parchment);
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wiki-ink-light);
+  cursor: pointer;
+  transition:
+    background var(--wiki-transition),
+    border-color var(--wiki-transition),
+    box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-start__page-link:hover {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 80%, var(--wiki-border));
+  border-color: var(--wiki-border-deep);
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.10);
+}
+
+/* ── Overview prose wrapper ── */
+
+.wiki-root .wiki-home-prose {
+  /* Article prose renders its own max-width via NarrativePage's <article class="max-w-[820px]"> */
+  border-top: 2px solid var(--wiki-border);
+  padding-top: 24px;
+}
+
+/* ── Phase 4b: Mobile pass ──────────────────────────────────────────────────── */
+
+/*
+ * Responsive table scroll wrapper — applied around wide tables so they scroll
+ * horizontally inside their container instead of pushing the page wider.
+ * Applied to FieldsTable, ZoneDetail heatmap, WorkerComparison, BossComparison,
+ * ToolPowerSpec, and AbilitySpec.
+ */
+.wiki-root .wiki-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* View toggle label visibility — compact span hidden on desktop, full hidden on mobile */
+.wiki-root .wiki-view-label--compact {
+  display: none;
+}
+
+/* Wordmark wrapper base rule — ensures the class exists at base level and is not
+ * mobile-only by accident; mobile block overrides min-width + overflow below. */
+.wiki-root .wiki-header .wiki-wordmark-wrap {
+  min-width: 0;
+}
+
+/* General mobile rules (≤640px): WikiHome layout + compact header.
+ *
+ * Compact header strategy at 390px (ONE row):
+ *   hamburger | icon + wordmark | [controls: view-toggle, search-icon, back-icon]
+ *   - flex-nowrap on the header to prevent line-wrapping
+ *   - wordmark container gets min-width:0 + text-overflow:ellipsis so it shrinks
+ *   - tagline hidden entirely (display:none)
+ *   - search: hide the "Search" label text + ⌘K badge (icon-only)
+ *   - back: hide the " Back to Game" text (arrow-only)
+ *   - view toggle: show abbreviated "Dev"/"Player" labels
+ */
+@media (max-width: 640px) {
+  /* ── WikiHome ── */
+  .wiki-root .wiki-home-hero {
+    padding: 16px 16px 14px;
+  }
+
+  .wiki-root .wiki-home {
+    gap: 20px;
+  }
+
+  .wiki-root .wiki-home-concept-row {
+    gap: 6px;
+  }
+
+  .wiki-root .wiki-home-start {
+    padding: 14px 16px;
+  }
+
+  /* ── Compact header ── */
+  .wiki-root .wiki-header {
+    flex-wrap: nowrap;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 6px;
+  }
+
+  /* Left side: shrink to allow controls room */
+  .wiki-root .wiki-header > :first-child {
+    min-width: 0;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  /* Don't shrink controls group */
+  .wiki-root .wiki-header > :last-child {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  /* Wordmark container — truncate if needed */
+  .wiki-root .wiki-header .wiki-wordmark-wrap {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .wiki-root .wiki-header .wiki-wordmark {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  /* Hide the tagline below the wordmark */
+  .wiki-root .wiki-tagline {
+    display: none;
+  }
+
+  /* Compact search button: icon-only */
+  .wiki-root .wiki-search-btn .wiki-search-label,
+  .wiki-root .wiki-search-btn .wiki-kbd {
+    display: none;
+  }
+
+  .wiki-root .wiki-search-btn {
+    padding: 6px 8px;
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  /* Compact back button: arrow-only */
+  .wiki-root .wiki-back-btn .wiki-back-label {
+    display: none;
+  }
+
+  .wiki-root .wiki-back-btn {
+    padding: 6px 10px;
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  /* Compact view toggle: shorter label text */
+  .wiki-root .wiki-view-toggle__btn {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  /* Swap view toggle labels to compact versions */
+  .wiki-root .wiki-view-label--full {
+    display: none;
+  }
+
+  .wiki-root .wiki-view-label--compact {
+    display: inline;
+  }
+
+  /* Hamburger button tap target — at least 40×40 */
+  .wiki-root .wiki-toggle-btn--lg {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Sidebar icon — slightly smaller on mobile */
+  .wiki-root .wiki-header-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+}
+
+/* Drawer slide transition — respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-sidebar {
+    transition: none !important;
+  }
 }

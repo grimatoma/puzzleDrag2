@@ -99,3 +99,10 @@ export const UTILITIES: UtilityDef[] = [
   { id: "icons",          label: "Icons" },
   { id: "animationsDemo", label: "Board animations" },
 ];
+
+/**
+ * Set of WIKI_SECTIONS ids that are hidden in player view (developer-only).
+ * Both WikiShell (sidebar) and WikiHome (category browser) import this set so
+ * the player-view filter can never drift between the two surfaces.
+ */
+export const DEV_ONLY_SECTION_IDS: ReadonlySet<string> = new Set(["screens"]);

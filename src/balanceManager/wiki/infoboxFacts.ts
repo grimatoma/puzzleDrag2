@@ -32,6 +32,8 @@ type Rec = Record<string, unknown> | null;
 export interface Fact {
   label: string;
   value: string;
+  /** Optional icon key to render alongside the fact value. */
+  iconKey?: string;
 }
 
 /** Coerce a value to a display string. Objects are JSON-stringified. */
@@ -193,6 +195,42 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
       if (Array.isArray(tiles)) add("Tile species", tiles.length);
       const resources = e["resources"];
       if (Array.isArray(resources)) add("Resources", resources.length);
+      break;
+    }
+
+    case "dailyRewards": {
+      // Entity shape: { day, coins?, runes?, tool?, amount?, unlockTile? }
+      const coins = e["coins"];
+      const runes = e["runes"];
+      const tool = e["tool"];
+      const amount = e["amount"];
+      const unlockTile = e["unlockTile"];
+      if (coins != null && Number(coins) > 0) add("Coins", `+${coins}`);
+      if (runes != null && Number(runes) > 0) add("Runes", `+${runes}`);
+      if (tool != null) {
+        const toolLabel = tool === "rare" ? "Rare tool" : tool === "basic" ? "Basic tool" : String(tool);
+        add("Tool", amount != null && Number(amount) > 1 ? `${amount}× ${toolLabel}` : toolLabel);
+      }
+      if (unlockTile != null) add("Unlocks", String(unlockTile).replace(/^tile_/, "").replace(/_/g, " "));
+      break;
+    }
+
+    case "keepers": {
+      // Entity shape: { id, name, title, look: { icon }, appearsAfterBuildings, coexist, driveout }
+      add("Title", e["title"]);
+      const coexist = e["coexist"] as Record<string, unknown> | undefined;
+      if (coexist?.["embers"] != null) add("Coexist", `${coexist["embers"]} Embers`);
+      const driveout = e["driveout"] as Record<string, unknown> | undefined;
+      if (driveout?.["coreIngots"] != null) add("Drive out", `${driveout["coreIngots"]} Ingots`);
+      break;
+    }
+
+    case "boons": {
+      // Entity shape: { id, name, desc, cost: { embers?, coreIngots? }, effect: { type, params } }
+      add("Description", e["desc"]);
+      const cost = e["cost"] as Record<string, unknown> | undefined;
+      if (cost?.["embers"] != null) add("Cost", `${cost["embers"]} Embers`);
+      else if (cost?.["coreIngots"] != null) add("Cost", `${cost["coreIngots"]} Ingots`);
       break;
     }
 

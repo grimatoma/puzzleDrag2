@@ -1,12 +1,25 @@
 import type { CSSProperties, ReactNode } from "react";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS, hexToCss } from "../shared.jsx";
+import { useWikiView } from "./wikiView.js";
+
+/** A single fact chip rendered below an entity card's name. */
+export interface WikiEntryFact {
+  label?: string;
+  value: string;
+  /** Optional icon key to render before the value text. */
+  iconKey?: string;
+}
 
 export interface WikiEntry {
   key: string;
   name?: ReactNode;
   iconKey?: string;
+  /** Emoji character to show as the card visual when no iconKey is available. */
+  emoji?: string;
   color?: number | string | null;
+  /** Fact chips rendered below the name. Concept-agnostic: EntryGrid renders up to 3. */
+  facts?: WikiEntryFact[];
 }
 
 function colorBarStyle(color: number | string | null | undefined): CSSProperties | null {
@@ -37,6 +50,8 @@ export default function EntryGrid({
    */
   renderVisual?: (entry: WikiEntry) => ReactNode;
 }) {
+  const { view } = useWikiView();
+
   if (!entries || entries.length === 0) {
     return (
       <div
@@ -53,23 +68,85 @@ export default function EntryGrid({
       {entries.map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
         const isSelectable = onSelect != null;
+        // Visual: use iconKey if set, else emoji if set, else a muted initial placeholder
+        const cardVisual = (() => {
+          if (entry.iconKey) {
+            return <Icon iconKey={entry.iconKey} size={36} />;
+          }
+          if (entry.emoji) {
+            return (
+              <span
+                aria-hidden="true"
+                style={{ fontSize: 28, lineHeight: 1, display: "block", textAlign: "center" }}
+              >
+                {entry.emoji}
+              </span>
+            );
+          }
+          // Muted initial placeholder — never a "?"
+          const initial = (typeof entry.name === "string" ? entry.name : entry.key)
+            .trim()
+            .charAt(0)
+            .toUpperCase();
+          return (
+            <span
+              aria-hidden="true"
+              style={{
+                width: 36,
+                height: 36,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "50%",
+                background: COLORS.border,
+                color: COLORS.inkSubtle,
+                fontSize: 16,
+                fontWeight: 700,
+                lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              {initial}
+            </span>
+          );
+        })();
+
+        const visibleFacts = entry.facts?.slice(0, 3) ?? [];
+
         const cardInner = (
           <>
             {bar && <div style={{ ...bar, width: "100%" }} />}
             <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
-              {renderVisual ? renderVisual(entry) : <Icon iconKey={entry.iconKey} size={36} />}
+              {renderVisual ? renderVisual(entry) : cardVisual}
               <div
                 className="text-[12px] font-bold text-center leading-tight break-words w-full"
                 style={{ color: COLORS.ink }}
               >
                 {entry.name}
               </div>
-              <div
-                className="font-mono text-[10px] text-center leading-tight break-all w-full"
-                style={{ color: COLORS.inkSubtle }}
-              >
-                {entry.key}
-              </div>
+              {view === "developer" && (
+                <div
+                  className="font-mono text-[10px] text-center leading-tight break-all w-full"
+                  style={{ color: COLORS.inkSubtle }}
+                >
+                  {entry.key}
+                </div>
+              )}
+              {visibleFacts.length > 0 && (
+                <div className="wiki-card-facts">
+                  {visibleFacts.map((fact, i) => (
+                    <span key={fact.label ?? fact.value ?? i} className="wiki-card-fact">
+                      {fact.iconKey && (
+                        <Icon iconKey={fact.iconKey} size={12} style={{ flexShrink: 0 }} />
+                      )}
+                      {fact.label && (
+                        <span className="wiki-card-fact__label">{fact.label}:</span>
+                      )}
+                      <span>{fact.value}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         );

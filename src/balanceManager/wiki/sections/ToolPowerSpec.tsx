@@ -94,6 +94,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
 
 function ParamsTable({ rows }: { rows: ToolPowerParam[] }) {
   return (
+    <div className="wiki-table-scroll">
     <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", fontSize: 12 }}>
       <thead>
         <tr>
@@ -136,6 +137,7 @@ function ParamsTable({ rows }: { rows: ToolPowerParam[] }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

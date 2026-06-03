@@ -214,12 +214,12 @@ export function ZoneDetail({ zone }: ZoneDetailProps) {
       {/* Season drop-rate heatmap */}
       {cats.length > 0 && seasons.length > 0 && (
         <div
+          className="wiki-table-scroll"
           style={{
             padding: "12px 14px",
             borderRadius: 10,
             background: COLORS.parchmentDeep,
             border: `1px solid ${COLORS.border}`,
-            overflowX: "auto",
             marginBottom: pairs.length > 0 ? 14 : 0,
           }}
         >

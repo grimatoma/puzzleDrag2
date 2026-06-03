@@ -210,40 +210,93 @@ function seasonEntries() {
   })).sort(byName);
 }
 
+/**
+ * Derive the canvas icon key for a keeper by id.
+ * The fixed-icons.js registry has keeper_deer_spirit, keeper_stone_knocker, keeper_tidesinger.
+ */
+export function keeperIconKey(keeperId: string): string | undefined {
+  const map: Record<string, string> = {
+    deer_spirit:    "keeper_deer_spirit",
+    stone_knocker:  "keeper_stone_knocker",
+    tidesinger:     "keeper_tidesinger",
+  };
+  return map[keeperId];
+}
+
 function keeperEntries() {
   // One entry per keeper (the values of the biome-keyed KEEPERS object).
-  // The keeper `icon` is an emoji, not an icon-registry key, so no iconKey.
+  // Prefer canvas iconKey from the keeper icon map; fall back to emoji.
   return Object.values(KEEPERS)
-    .map((k) => ({
-      key: k.id,
-      name: k.name,
-    }))
+    .map((k) => {
+      const iconKey = keeperIconKey(k.id);
+      const emoji = iconKey ? undefined : (k as unknown as { look?: { icon?: string } }).look?.icon;
+      return {
+        key: k.id,
+        name: k.name,
+        iconKey,
+        emoji,
+      };
+    })
     .sort(byName);
 }
 
 function boonEntries() {
   // Flatten boons across every catalog; dedupe by id.
+  // Boons affect coin_gain_mult or bond_gain_mult — use the relevant currency icon.
   const seen = new Set<string>();
-  const out: Array<{ key: string; name: string }> = [];
+  const out: Array<{ key: string; name: string; iconKey: string }> = [];
   for (const b of allBoons()) {
     if (seen.has(b.id)) continue;
     seen.add(b.id);
-    out.push({ key: b.id, name: b.name });
+    // Map effect type to a canvas icon key (verified in ICON_REGISTRY):
+    //   coin_gain_mult → "boon_coin_mult"  (fixed-icons.js: Boon · Coin ×)
+    //   bond_gain_mult → "boon_bond_mult"  (fixed-icons.js: Boon · Bond ×)
+    const effectType = (b as unknown as { effect?: { type?: string } }).effect?.type;
+    const iconKey = effectType === "bond_gain_mult"
+      ? "boon_bond_mult"
+      : "boon_coin_mult";
+    out.push({ key: b.id, name: b.name, iconKey });
   }
   out.sort(byName);
   return out;
 }
 
+/**
+ * Derive the most salient icon key from a DAILY_REWARDS entry.
+ * Priority: unlockTile > tool > runes > coins
+ *
+ * Icon key sources (verified against the ICON_REGISTRY / canvas-based Icon):
+ *   coins     → "tile_coin_golden"  (from currencies.js, renders a golden coin)
+ *   runes     → "rune_stone"        (from toolsPortal.ts)
+ *   tool      → the tool item key   (aliased to player_basic/rare/shuffle etc.)
+ *   unlockTile → the tile item key  (rendered by the canvas Icon directly)
+ */
+export function dailyRewardIconKey(reward: {
+  coins?: number;
+  runes?: number;
+  tool?: string;
+  amount?: number;
+  unlockTile?: string;
+}): string {
+  if (reward.unlockTile) return reward.unlockTile;
+  if (reward.tool) return reward.tool;
+  if (reward.runes) return "rune_stone";
+  return "tile_coin_golden";
+}
+
 function dailyRewardEntries() {
   // One entry per reward day, sorted numerically (Day 2 before Day 10).
-  return Object.keys(DAILY_REWARDS)
-    .map((day) => ({
+  return (Object.entries(DAILY_REWARDS) as Array<[string, {
+    coins?: number; runes?: number; tool?: string; amount?: number; unlockTile?: string;
+  }]>)
+    .map(([day, reward]) => ({
       key: String(day),
       name: `Day ${day}`,
       day: Number(day),
+      iconKey: dailyRewardIconKey(reward),
     }))
     .sort((a, b) => a.day - b.day)
-    .map(({ key, name }) => ({ key, name }));
+    .map(({ key, name, iconKey }) => ({ key, name, iconKey }));
 }
 
 function achievementEntries() {

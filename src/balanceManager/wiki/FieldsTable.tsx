@@ -185,7 +185,7 @@ export function FieldsTable({
     : (["Field", "Type", "Req", "Default", "Description"] as const);
 
   return (
-    <div className="overflow-x-auto">
+    <div className="wiki-table-scroll">
       <table
         className="w-full text-[11px] border-collapse"
         style={{ color: COLORS.ink }}
@@ -224,7 +224,7 @@ export function KeyValueTable({
   entity: Record<string, unknown>;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="wiki-table-scroll">
       <div
         className="text-[10px] font-bold uppercase tracking-wide mb-2"
         style={{ color: COLORS.inkSubtle }}

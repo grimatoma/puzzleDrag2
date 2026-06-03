@@ -34,11 +34,11 @@ export function WorkerComparison() {
     <section id="worker-comparison">
       <div className="wiki-section-heading mb-2">Worker comparison</div>
       <div
+        className="wiki-table-scroll"
         style={{
           borderRadius: 10,
           background: COLORS.parchmentDeep,
           border: `1px solid ${COLORS.border}`,
-          overflowX: "auto",
         }}
       >
         <table style={{ borderCollapse: "collapse", width: "100%" }}>

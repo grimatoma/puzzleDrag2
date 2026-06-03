@@ -24,6 +24,7 @@ import { CostChip } from "../../ui/primitives/Chip.jsx";
 import { buildTownPlan, STAGE_W, STAGE_H } from "../../townLayout.js";
 import TownGround from "../../ui/TownGround.jsx";
 import { ZONES } from "../../features/zones/data.js";
+import { keeperIconKey, dailyRewardIconKey } from "./concepts.js";
 
 // ─── entityIconKey ─────────────────────────────────────────────────────────────
 
@@ -73,10 +74,26 @@ export function entityIconKey(
       const icon = look?.icon;
       return typeof icon === "string" && icon.length > 0 ? icon : null;
     }
+    case "dailyRewards": {
+      // Delegate to the canonical helper in concepts.ts (single source of truth).
+      return dailyRewardIconKey(entity as Parameters<typeof dailyRewardIconKey>[0] ?? {});
+    }
+
+    case "boons": {
+      // Boons affect coin or bond gains — use the matching canvas icon.
+      // boon_coin_mult and boon_bond_mult are in fixed-icons.js.
+      const effectType = (entity?.effect as { type?: string } | undefined)?.type;
+      return effectType === "bond_gain_mult" ? "boon_bond_mult" : "boon_coin_mult";
+    }
+
+    case "keepers": {
+      // Delegate to the canonical helper in concepts.ts (single source of truth).
+      return keeperIconKey(entityKey) ?? null;
+    }
+
     default:
       // zones, buildings, categories, views, modals, toolPowers,
-      // settlementBiomes, tileDiscoveryMethods, keepers (emoji-only icon),
-      // boons, dailyRewards, … have no per-entity procedural icon.
+      // settlementBiomes, tileDiscoveryMethods, … have no per-entity procedural icon.
       return null;
   }
 }
@@ -163,10 +180,56 @@ export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }:
     return <ZoneTownMap zoneId={entityKey} size={size} />;
   }
 
-  // Everything else: a baked icon, or nothing.
+  // Baked icon resolved by the canonical helper (single source of truth for all
+  // concept→key mappings, including keeperIconKey / dailyRewardIconKey).
   const k = entityIconKey(conceptId, entityKey, entity);
-  if (k == null) return null;
-  return <Icon iconKey={k} size={size} />;
+  if (k != null) return <Icon iconKey={k} size={size} />;
+
+  // Emoji fallback — used by unknown keepers (look.icon) and any other entity
+  // that carries a look.icon but has no canvas key registered yet.
+  const lookEmoji = (entity?.look as { icon?: string } | undefined)?.icon;
+  if (lookEmoji) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: size,
+          height: size,
+          fontSize: size * 0.55,
+          lineHeight: 1,
+        }}
+      >
+        {lookEmoji}
+      </span>
+    );
+  }
+
+  // Graceful fallback: muted initial circle — consistent with EntryGrid's fallback.
+  const initial = entityKey.trim().charAt(0).toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "50%",
+        background: "rgba(178, 139, 98, 0.25)",
+        color: "rgba(122, 90, 56, 0.6)",
+        fontSize: size * 0.4,
+        fontWeight: 700,
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {initial}
+    </span>
+  );
 }
 
 // ─── AmountChips ───────────────────────────────────────────────────────────────
