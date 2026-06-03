@@ -4,6 +4,8 @@
 import type { GameState } from "./types/state.js";
 import type { ZoneInventoryMap } from "./types/inventory.js";
 import { inventoryForStory, inventoryZone, zoneInventory } from "./state/zoneInventory.js";
+import { evaluate } from "./config/progression/conditions.js";
+import { beatTriggerToCond, buildFactSnapshot } from "./config/progression/storyBridge.js";
 
 export const INITIAL_STORY_STATE = {
   act: 1,
@@ -445,35 +447,14 @@ export function conditionMatches(
   flags: Record<string, boolean> = {},
 ): boolean {
   if (!t) return false;
-  // state conditions — checked regardless of which event fired
-  switch (t.type) {
-    case "resource_total": {
-      const key = t.key as string;
-      const amount = t.amount as number;
-      return (totals[key] ?? 0) >= amount;
-    }
-    case "resource_total_multi": {
-      const req = (t.req ?? {}) as Record<string, number>;
-      return Object.entries(req).every(([k, v]) => (totals[k] ?? 0) >= v);
-    }
-    case "flag_set":             return !!flags[t.flag as string];
-    case "flag_cleared":         return !!t.flag && !flags[t.flag as string];
-    default: break;
-  }
-  // event conditions — must match the event's type
-  if (t.type !== event?.type) return false;
-  switch (t.type) {
-    case "session_start":
-    case "session_ended":      return true;
-    case "act_entered":        return event.act === t.act;
-    case "craft_made":         return event.item === t.item && ((event.count as number | undefined) ?? 1) >= ((t.count as number | undefined) ?? 1);
-    case "building_built":     return event.id === t.id;
-    case "order_fulfilled":    return ((event.count as number | undefined) ?? 1) >= ((t.count as number | undefined) ?? 1);
-    case "keeper_confronted":  return (!t.zoneId || event.zoneId === t.zoneId) && (!t.path || event.path === t.path);
-    case "boss_defeated":      return event.id === t.id;
-    case "all_buildings_built":return event.allBuilt === true;
-    default:                   return false;
-  }
+  return evaluate(
+    beatTriggerToCond(t),
+    buildFactSnapshot(
+      event as Record<string, unknown> | null | undefined,
+      totals,
+      flags,
+    ),
+  );
 }
 
 /**
