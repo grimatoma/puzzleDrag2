@@ -136,6 +136,24 @@ describe("CategoryPage — buildings (schema-backed concept)", () => {
     expect(container.querySelector("#economy-rollup")).not.toBeNull();
     expect(document.body.textContent ?? "").toMatch(/town economy/i);
   });
+
+  it("renders an inline-SVG illustration inside every building entry card", () => {
+    // Regression: buildings have no baked icon texture, so the grid must render
+    // each building's inline-SVG illustration via EntityVisual. Previously only
+    // the few buildings with a station icon (bakery/forge/larder/workshop/portal)
+    // showed art; the rest fell back to an empty "?" placeholder.
+    renderPage("buildings");
+    const concept = CONCEPTS.find((c) => c.id === "buildings")!;
+    // Sample buildings that previously rendered no icon, plus a housing alias.
+    for (const key of ["barn", "apiary", "observatory", "housing2"]) {
+      expect(
+        concept.getEntries().some((e) => e.key === key),
+        `expected a "${key}" building entry`,
+      ).toBe(true);
+      const card = screen.getByTitle(key);
+      expect(card.querySelector("svg"), `expected an <svg> illustration in the "${key}" card`).not.toBeNull();
+    }
+  });
 });
 
 // ─── Test 2: Status wiring ────────────────────────────────────────────────────

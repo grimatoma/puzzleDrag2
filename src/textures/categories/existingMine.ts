@@ -178,8 +178,10 @@ function drawCoke(ctx: CanvasRenderingContext2D) {
   ctx.beginPath(); ctx.moveTo(-6,-8); ctx.lineTo(2,-2); ctx.lineTo(-3,5); ctx.lineTo(7,9); ctx.stroke();
   ctx.strokeStyle = "#ffe390"; ctx.lineWidth = 0.6;
   ctx.beginPath(); ctx.moveTo(-6,-8); ctx.lineTo(2,-2); ctx.lineTo(-3,5); ctx.lineTo(7,9); ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(-10,-19); ctx.lineTo(10,-19); ctx.stroke();
+  // Specular gleam along the upper-left facet edge (attached to the body,
+  // not floating above it).
+  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-3,-20); ctx.lineTo(-15,-13); ctx.stroke();
 }
 
 function drawGem(ctx: CanvasRenderingContext2D) {
@@ -260,7 +262,7 @@ function drawGold(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(255,255,180,0.85)";
   [[10,-8,1.4],[14,4,1.2],[-2,16,1.0],[6,-16,0.9]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
   ctx.strokeStyle = "rgba(255,255,200,0.55)"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.arc(-4,-10,14,Math.PI*1.1,Math.PI*1.55); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,-2,12,Math.PI*1.18,Math.PI*1.5); ctx.stroke();
 }
 
 export const ICONS = {

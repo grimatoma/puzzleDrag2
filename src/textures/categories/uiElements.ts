@@ -310,10 +310,10 @@ function drawClipboard(ctx: CanvasRenderingContext2D) {
   ctx.stroke();
   ctx.strokeStyle = "rgba(58,28,8,0.5)";
   ctx.lineWidth = 0.7;
-  [-7, 0, 6].forEach((y) => {
+  [-8.5, 12, 14].forEach((y) => {
     ctx.beginPath();
-    ctx.moveTo(-10, -8 + y);
-    ctx.bezierCurveTo(-4, -8 + y + 1, 4, -8 + y - 1, 10, -8 + y);
+    ctx.moveTo(-10, y);
+    ctx.bezierCurveTo(-4, y + 1, 4, y - 1, 10, y);
     ctx.stroke();
   });
   ctx.fillStyle = "#fefae0";
@@ -385,20 +385,6 @@ function drawHome(ctx: CanvasRenderingContext2D) {
     ctx.lineTo(x2, y2);
     ctx.stroke();
   });
-  ctx.fillStyle = "#7a8898";
-  ctx.beginPath();
-  ctx.rect(4, -10, 3, 8);
-  ctx.fill();
-  ctx.strokeStyle = "#3a4048";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(220,220,220,0.55)";
-  ctx.lineWidth = 1.2;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(5.5, -10);
-  ctx.bezierCurveTo(7, -14, 3, -16, 5, -20);
-  ctx.stroke();
   const roof = ctx.createLinearGradient(0, -14, 0, -2);
   roof.addColorStop(0, "#f08858");
   roof.addColorStop(0.5, "#c84818");
@@ -419,6 +405,30 @@ function drawHome(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(-12, -3);
   ctx.lineTo(0, -13);
   ctx.stroke();
+  const chimney = ctx.createLinearGradient(6, -16, 12, -16);
+  chimney.addColorStop(0, "#9a4a30");
+  chimney.addColorStop(0.5, "#7a3418");
+  chimney.addColorStop(1, "#4a1c08");
+  ctx.fillStyle = chimney;
+  rr(ctx, 6, -16, 5, 9, 0.8);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1408";
+  ctx.lineWidth = 1.4;
+  rr(ctx, 6, -16, 5, 9, 0.8);
+  ctx.stroke();
+  ctx.fillStyle = "#5a2410";
+  rr(ctx, 5, -17, 7, 2.4, 0.8);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1408";
+  ctx.lineWidth = 1.2;
+  rr(ctx, 5, -17, 7, 2.4, 0.8);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(200,200,210,0.5)";
+  [[8.5, -19, 1.8], [10, -21.5, 2.2], [8, -23.5, 2], [9.5, -24.5, 1.4]].forEach(([x, y, r]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
   ctx.fillStyle = "#1a3838";
   ctx.beginPath();
   ctx.moveTo(-4, 14);
@@ -978,16 +988,14 @@ function drawStar(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#4a2808";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.55)";
-  ctx.lineWidth = 1;
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
-  for (let i = 0; i < 5; i++) {
-    const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
-    if (i === 0) ctx.moveTo(Math.cos(a) * 11, Math.sin(a) * 11);
-    else ctx.lineTo(Math.cos(a) * 11, Math.sin(a) * 11);
-  }
+  ctx.moveTo(0, -2);
+  ctx.lineTo(-2, -6);
+  ctx.lineTo(0, -12);
+  ctx.lineTo(2, -6);
   ctx.closePath();
-  ctx.stroke();
+  ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.beginPath();
   ctx.ellipse(-2, -8, 2.6, 1.5, -0.3, 0, Math.PI * 2);

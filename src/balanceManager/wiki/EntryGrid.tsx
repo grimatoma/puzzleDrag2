@@ -37,10 +37,18 @@ export default function EntryGrid({
   entries,
   emptyLabel = "No entries.",
   onSelect,
+  renderVisual,
 }: {
   entries: WikiEntry[] | null | undefined;
   emptyLabel?: ReactNode;
   onSelect?: (key: string) => void;
+  /**
+   * Optional per-entry visual override. When provided, its result replaces the
+   * default baked `<Icon iconKey={entry.iconKey}>` — used for concepts whose
+   * entities have no baked icon (e.g. buildings, which render an inline-SVG
+   * illustration via EntityVisual).
+   */
+  renderVisual?: (entry: WikiEntry) => ReactNode;
 }) {
   const { view } = useWikiView();
 
@@ -109,7 +117,7 @@ export default function EntryGrid({
           <>
             {bar && <div style={{ ...bar, width: "100%" }} />}
             <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
-              {cardVisual}
+              {renderVisual ? renderVisual(entry) : cardVisual}
               <div
                 className="text-[12px] font-bold text-center leading-tight break-words w-full"
                 style={{ color: COLORS.ink }}

@@ -14,7 +14,7 @@ import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
 import { BALANCE_OVERRIDES } from "../../constants.js";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS } from "../shared.jsx";
-import { parseHash, useBalanceRouter } from "../router.js";
+import { parseHash, initialWikiRoute, useBalanceRouter } from "../router.js";
 import "./wikiTheme.css";
 import CommandPalette from "../CommandPalette.jsx";
 import { BalanceNavProvider } from "../balanceNav.jsx";
@@ -309,10 +309,11 @@ function WikiViewToggle() {
 }
 
 export default function WikiShell() {
-  const initialRoute = parseHash(typeof window !== "undefined" ? window.location.hash : "", VALID_TABS);
-  // Default landing: the Overview narrative page (`/b/` with no hash).
-  const [tab, setTab] = useState(() => initialRoute.tab ?? "page");
-  const [focus, setFocus] = useState(() => initialRoute.tab ? (initialRoute.focus ?? null) : "overview");
+  // Default landing: the Overview narrative page (`/b/` with no hash). The
+  // resolution lives in `initialWikiRoute` so it has one tested source of truth.
+  const landing = initialWikiRoute(parseHash(typeof window !== "undefined" ? window.location.hash : "", VALID_TABS));
+  const [tab, setTab] = useState(() => landing.tab);
+  const [focus, setFocus] = useState(() => landing.focus);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const isSmallScreen = useIsSmallScreen();

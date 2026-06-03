@@ -24,7 +24,12 @@ async function runAction(page, action) {
 }
 
 for (const scenario of STORY_EDITOR_VISUAL_SCENARIOS) {
-  test(`${scenario.id}`, async ({ page }) => {
+  test(`${scenario.id}`, async ({ page }, testInfo) => {
+    test.skip(
+      Boolean(scenario.skipProjects?.includes(testInfo.project.name)),
+      `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,
+    );
+
     const pageErrors = [];
     const consoleErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));

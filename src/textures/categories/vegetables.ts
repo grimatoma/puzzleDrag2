@@ -8,26 +8,26 @@ function drawCarrot(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(0, 22, 14, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Carrot body — tapered cone
-  const body = ctx.createLinearGradient(-10, 0, 10, 0);
+  // Carrot body — long tapered cone
+  const body = ctx.createLinearGradient(-9, 0, 9, 0);
   body.addColorStop(0, "#ffae5a");
   body.addColorStop(0.5, "#e07820");
   body.addColorStop(1, "#a44808");
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(-10, -10);
-  ctx.bezierCurveTo(-12, -4, -8, 16, 0, 22);
-  ctx.bezierCurveTo(8, 16, 12, -4, 10, -10);
-  ctx.bezierCurveTo(8, -14, -8, -14, -10, -10);
+  ctx.moveTo(-9, -11);
+  ctx.bezierCurveTo(-11, -2, -5, 16, 0, 24);
+  ctx.bezierCurveTo(5, 16, 11, -2, 9, -11);
+  ctx.bezierCurveTo(7, -14, -7, -14, -9, -11);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#5a2806";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.stroke();
   // Ridges
-  ctx.strokeStyle = "rgba(90,40,6,0.55)";
-  ctx.lineWidth = 1.1;
-  [[-7, -8, -3, 18], [-2, -10, 1, 20], [4, -8, 6, 16]].forEach(([x1, y1, x2, y2]) => {
+  ctx.strokeStyle = "rgba(90,40,6,0.5)";
+  ctx.lineWidth = 1.3;
+  [[-6, -8, -2, 18], [-1, -10, 1, 21], [4, -8, 5, 16]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.bezierCurveTo(x1 + 1, (y1 + y2) / 2, x2 - 1, y2 - 4, x2, y2);
@@ -35,37 +35,47 @@ function drawCarrot(ctx: CanvasRenderingContext2D) {
   });
   // Highlight
   ctx.strokeStyle = "rgba(255,230,180,0.7)";
-  ctx.lineWidth = 1.3;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(-6, -8);
-  ctx.bezierCurveTo(-4, 0, -3, 12, -2, 20);
+  ctx.moveTo(-5, -8);
+  ctx.bezierCurveTo(-4, 0, -3, 12, -1, 21);
   ctx.stroke();
-  // Greens at top — three feathery fronds
-  ctx.strokeStyle = "#3a6014";
-  ctx.lineWidth = 4;
-  [[-6, -12, -10, -24], [0, -14, 0, -26], [6, -12, 10, -24]].forEach(([x1, y1, x2, y2]) => {
+  // Greens at top — feathery fronds: a central stem + paired leaflets
+  const fronds: Array<[number, number, number]> = [[-6, -11, -0.5], [0, -13, 0], [6, -11, 0.5]];
+  // dark base pass for depth
+  ctx.strokeStyle = "#2e4d10";
+  ctx.lineWidth = 3.2;
+  fronds.forEach(([bx, by, lean]) => {
+    const tx = bx + lean * 6;
+    const ty = by - 13;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo((x1 + x2) / 2, y1 - 6, x2, y2);
+    ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(bx + lean * 4, by - 8, tx, ty);
     ctx.stroke();
   });
-  ctx.strokeStyle = "#7cb840";
-  ctx.lineWidth = 2;
-  [[-6, -12, -10, -24], [0, -14, 0, -26], [6, -12, 10, -24]].forEach(([x1, y1, x2, y2]) => {
+  // bright stalk
+  ctx.strokeStyle = "#6fae34";
+  ctx.lineWidth = 1.8;
+  fronds.forEach(([bx, by, lean]) => {
+    const tx = bx + lean * 6;
+    const ty = by - 13;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo((x1 + x2) / 2, y1 - 6, x2, y2);
+    ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(bx + lean * 4, by - 8, tx, ty);
     ctx.stroke();
-  });
-  // Frond tufts
-  ctx.fillStyle = "#7cb840";
-  ctx.strokeStyle = "#3a6014";
-  ctx.lineWidth = 0.8;
-  [[-10, -24], [0, -26], [10, -24], [-7, -20], [7, -20], [-3, -22], [3, -22]].forEach(([fx, fy]) => {
-    ctx.beginPath();
-    ctx.arc(fx, fy, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    // paired leaflets along the stalk
+    ctx.lineWidth = 1.3;
+    for (let t = 0.35; t <= 0.85; t += 0.25) {
+      const mx = bx + (tx - bx) * t + lean * 4 * Math.sin(Math.PI * t) * 0;
+      const my = by + (ty - by) * t;
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx - 3, my - 2);
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx + 3, my - 2);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 1.8;
   });
   ctx.restore();
 }
@@ -167,10 +177,10 @@ function drawTurnip(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(0, -8);
   ctx.lineTo(0, 22);
   ctx.stroke();
-  // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  // Highlight (soft, restrained)
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath();
-  ctx.ellipse(-6, 6, 3, 7, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-6, 4, 2.6, 5.5, -0.3, 0, Math.PI * 2);
   ctx.fill();
   // Root tap at bottom
   ctx.strokeStyle = "#5a3a48";
@@ -179,23 +189,37 @@ function drawTurnip(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(0, 20);
   ctx.lineTo(2, 26);
   ctx.stroke();
-  // Greens
+  // Greens — short stalks then broad pointed leaves
   ctx.strokeStyle = "#3a6014";
-  ctx.lineWidth = 3.5;
-  [[-4, -10, -10, -22], [0, -12, 0, -24], [4, -10, 10, -22]].forEach(([x1, y1, x2, y2]) => {
+  ctx.lineWidth = 2.4;
+  [[-4, -9, -8, -15], [0, -11, 0, -17], [4, -9, 8, -15]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo((x1 + x2) / 2 + 1, y1 - 4, x2, y2);
+    ctx.quadraticCurveTo((x1 + x2) / 2 + 1, y1 - 3, x2, y2);
     ctx.stroke();
   });
-  // Leaves
-  ctx.fillStyle = "#7cb840";
-  ctx.strokeStyle = "#3a6014";
-  ctx.lineWidth = 1;
-  [[-10, -22], [0, -24], [10, -22]].forEach(([lx, ly]) => {
+  // Leaves — broad teardrop blades pointing outward
+  const tLeaves: Array<[number, number, number]> = [[-8, -16, -0.6], [0, -18, 0], [8, -16, 0.6]];
+  tLeaves.forEach(([lx, ly, lean]) => {
+    const grad = ctx.createLinearGradient(lx, ly - 9, lx, ly + 3);
+    grad.addColorStop(0, "#9ccc54");
+    grad.addColorStop(1, "#5a8a26");
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(lx, ly, 4, 6, 0, 0, Math.PI * 2);
+    ctx.moveTo(lx, ly + 3);
+    ctx.bezierCurveTo(lx - 6 + lean * 4, ly - 2, lx - 4 + lean * 5, ly - 9, lx + lean * 5, ly - 10);
+    ctx.bezierCurveTo(lx + 4 + lean * 5, ly - 9, lx + 6 + lean * 4, ly - 2, lx, ly + 3);
+    ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = "#3a6014";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // midrib
+    ctx.strokeStyle = "rgba(46,72,16,0.6)";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly + 2);
+    ctx.lineTo(lx + lean * 4, ly - 8);
     ctx.stroke();
   });
 }
@@ -242,32 +266,39 @@ function drawBeet(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(0, 18);
   ctx.quadraticCurveTo(2, 22, 4, 26);
   ctx.stroke();
-  // Stems
+  // Magenta stems
   ctx.strokeStyle = "#a82058";
   ctx.lineWidth = 2.2;
-  [[-3, -10, -8, -22], [0, -12, 0, -24], [3, -10, 8, -22]].forEach(([x1, y1, x2, y2]) => {
+  [[-3, -8, -7, -18], [0, -10, 0, -20], [3, -8, 7, -18]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
   });
-  // Leaves — dark green with magenta veins
-  ctx.fillStyle = "#3a6018";
-  ctx.strokeStyle = "#1f3808";
-  ctx.lineWidth = 1.2;
-  [[-8, -22], [0, -24], [8, -22]].forEach(([lx, ly]) => {
+  // Leaves — dark green teardrop blades
+  const bLeaves: Array<[number, number, number]> = [[-7, -18, -0.5], [0, -20, 0], [7, -18, 0.5]];
+  bLeaves.forEach(([lx, ly, lean]) => {
+    const grad = ctx.createLinearGradient(lx, ly - 6, lx, ly + 3);
+    grad.addColorStop(0, "#4a7a1e");
+    grad.addColorStop(1, "#2a4c0e");
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(lx, ly, 5, 7, 0, 0, Math.PI * 2);
+    ctx.moveTo(lx, ly + 3);
+    ctx.bezierCurveTo(lx - 5 + lean * 3, ly - 1, lx - 3 + lean * 4, ly - 6, lx + lean * 4, ly - 7);
+    ctx.bezierCurveTo(lx + 3 + lean * 4, ly - 6, lx + 5 + lean * 3, ly - 1, lx, ly + 3);
+    ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = "#1f3808";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // magenta midrib
+    ctx.strokeStyle = "rgba(200,74,138,0.7)";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly + 2);
+    ctx.lineTo(lx + lean * 3, ly - 6);
     ctx.stroke();
   });
-  // Magenta vein on one leaf
-  ctx.strokeStyle = "#c84a8a";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, -18);
-  ctx.lineTo(0, -28);
-  ctx.stroke();
 }
 
 function drawCucumber(ctx: CanvasRenderingContext2D) {

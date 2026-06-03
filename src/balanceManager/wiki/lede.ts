@@ -11,6 +11,10 @@
 import { relationsFor, type RelationGroup } from "./relations.js";
 import { statusForEntity } from "./status.js";
 import { getEntity } from "./conceptEntities.js";
+import { HAZARDS } from "../../features/mine/hazards.js";
+
+/** Mine-hazard ids; everything else in the hazards concept is a farm hazard. */
+const MINE_HAZARD_IDS = new Set(HAZARDS.map((h) => h.id));
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -145,7 +149,7 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
       break;
 
     case "hazards":
-      s = `${name} is a board hazard.`;
+      s = `${name} is a ${MINE_HAZARD_IDS.has(key) ? "mine" : "farm"} board hazard.`;
       break;
 
     case "bosses":

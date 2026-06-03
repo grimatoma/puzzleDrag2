@@ -33,65 +33,74 @@ function drawOak(ctx: CanvasRenderingContext2D) {
 
 function drawBirch(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath(); ctx.ellipse(2, 24, 16, 4, 0, 0, Math.PI*2); ctx.fill();
-  const g = ctx.createLinearGradient(-4, 0, 4, 0);
-  g.addColorStop(0, "#a89060"); g.addColorStop(0.5, "#fff8e8"); g.addColorStop(1, "#a89060");
+  ctx.beginPath(); ctx.ellipse(2, 24, 14, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Slender white-bark trunk (solid, lit from upper-left).
+  const g = ctx.createLinearGradient(-3.5, 0, 3.5, 0);
+  g.addColorStop(0, "#cfc4a8"); g.addColorStop(0.4, "#fbf4e4"); g.addColorStop(1, "#9c8c64");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(-3, 24); ctx.lineTo(-2.5, -16); ctx.lineTo(2.5, -16); ctx.lineTo(3, 24);
+  ctx.moveTo(-3, 24);
+  ctx.lineTo(-2.2, -14);
+  ctx.lineTo(2.2, -14);
+  ctx.lineTo(3, 24);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a200a"; ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.fillStyle = "#1a0e04";
-  [[-1,-10,3,1.5],[0,-2,3.5,1.4],[-1,8,3,1.6],[0,16,3.4,1.4],[-1,2,1.5,0.8],[1,12,1.5,0.8]].forEach(([sx,sy,sw,sh])=>{
-    ctx.beginPath(); ctx.ellipse(sx,sy,sw,sh,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#5a4a2a"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Birch bark dashes: short dark horizontal marks on the surface (not holes).
+  ctx.strokeStyle = "rgba(40,28,14,0.7)"; ctx.lineWidth = 1.2;
+  [[-2,-8,3],[0,0,3.4],[-1,8,3],[1,16,3.2]].forEach(([mx,my,mw])=>{
+    ctx.beginPath(); ctx.moveTo(mx - mw/2, my); ctx.lineTo(mx + mw/2, my); ctx.stroke();
   });
-  const drawLeafCluster = (cx: number, cy: number, r: number) => {
-    const cg = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, 1, cx, cy, r);
-    cg.addColorStop(0, "#d8e840"); cg.addColorStop(0.7, "#7ea818"); cg.addColorStop(1, "#3a5808");
+  ctx.strokeStyle = "rgba(40,28,14,0.45)"; ctx.lineWidth = 0.9;
+  [[-1,4,1.5],[1,12,1.5],[-1,-3,1.4]].forEach(([mx,my,mw])=>{
+    ctx.beginPath(); ctx.moveTo(mx - mw/2, my); ctx.lineTo(mx + mw/2, my); ctx.stroke();
+  });
+  // Light, rounded birch canopy (brighter, yellow-green).
+  const drawBlob = (cx: number, cy: number, r: number) => {
+    const cg = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
+    cg.addColorStop(0, "#cfe060"); cg.addColorStop(0.6, "#7ea828"); cg.addColorStop(1, "#46680e");
     ctx.fillStyle = cg;
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2;
-      ctx.beginPath(); ctx.ellipse(cx + Math.cos(a)*r*0.6, cy + Math.sin(a)*r*0.6, r*0.5, r*0.7, a, 0, Math.PI*2); ctx.fill();
-    }
-    ctx.strokeStyle = "#3a5808"; ctx.lineWidth = 1.0; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#3a5808"; ctx.lineWidth = 1.4; ctx.stroke();
   };
-  drawLeafCluster(-10, -10, 9);
-  drawLeafCluster(10, -10, 9);
-  drawLeafCluster(0, -18, 9);
-  drawLeafCluster(0, -8, 8);
-  ctx.fillStyle = "rgba(255,255,200,0.5)";
-  [[-11,-13,2],[11,-13,2],[0,-21,2.2]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
+  drawBlob(-9, -8, 9);
+  drawBlob(9, -8, 9);
+  drawBlob(-3, -17, 9);
+  drawBlob(6, -16, 9);
+  drawBlob(0, -10, 10);
+  ctx.fillStyle = "rgba(255,255,210,0.5)";
+  [[-9,-11,3],[6,-11,2.6],[-2,-20,2.6]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
 function drawWillow(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.beginPath(); ctx.ellipse(2, 24, 22, 4, 0, 0, Math.PI*2); ctx.fill();
-  trunk(ctx, 4, -8, 24, "#6b4818", "#3a2008", "#1a0e04");
-  const drawDrape = (cx: number, len: number, sway: number) => {
-    ctx.strokeStyle = "#5a8a18"; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(cx, -10); ctx.quadraticCurveTo(cx + sway, -10 + len/2, cx + sway*1.5, -10 + len); ctx.stroke();
-    ctx.fillStyle = "#7eb83a";
-    for (let i = 1; i <= 6; i++) {
-      const t = i / 6;
-      const x = cx + sway * t * 1.5;
-      const y = -10 + len * t;
-      ctx.beginPath(); ctx.ellipse(x - 1, y, 1.4, 4, sway * 0.3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(x + 2, y - 2, 1.4, 4, sway * 0.3, 0, Math.PI*2); ctx.fill();
-    }
-  };
-  const canopyG = ctx.createRadialGradient(-4, -14, 3, 0, -10, 18);
-  canopyG.addColorStop(0, "#9cd048"); canopyG.addColorStop(0.7, "#5a8a18"); canopyG.addColorStop(1, "#3a5808");
+  ctx.beginPath(); ctx.ellipse(2, 24, 20, 4, 0, 0, Math.PI*2); ctx.fill();
+  trunk(ctx, 4, -6, 24, "#6b4818", "#3a2008", "#1a0e04");
+  // Mounded canopy on top, then trailing drapes hang from its rim.
+  const canopyG = ctx.createRadialGradient(-5, -16, 3, 0, -12, 18);
+  canopyG.addColorStop(0, "#aee05a"); canopyG.addColorStop(0.6, "#5a8a18"); canopyG.addColorStop(1, "#365408");
   ctx.fillStyle = canopyG;
-  ctx.beginPath(); ctx.ellipse(0, -12, 18, 10, 0, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a5808"; ctx.lineWidth = 1.6; ctx.stroke();
-  drawDrape(-14, 28, -3);
-  drawDrape(-8, 32, -1);
-  drawDrape(-2, 30, 0);
-  drawDrape(4, 33, 1);
-  drawDrape(11, 28, 3);
-  drawDrape(15, 24, 4);
-  ctx.fillStyle = "rgba(255,255,200,0.4)";
-  [[-6,-16,3],[6,-16,3]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
+  ctx.beginPath(); ctx.ellipse(0, -13, 17, 10, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#365408"; ctx.lineWidth = 2.0; ctx.stroke();
+  // Drooping strands: wider overlapping ribbons that curtain over the trunk.
+  const drawDrape = (cx: number, top: number, len: number, sway: number, half: number) => {
+    const grad = ctx.createLinearGradient(cx, top, cx + sway, top + len);
+    grad.addColorStop(0, "#7fb030"); grad.addColorStop(1, "#3f6210");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(cx - half, top);
+    ctx.quadraticCurveTo(cx + sway * 0.6 - half * 0.5, top + len * 0.55, cx + sway, top + len);
+    ctx.quadraticCurveTo(cx + sway * 0.6 + half * 0.5, top + len * 0.55, cx + half, top);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#365408"; ctx.lineWidth = 1.0; ctx.stroke();
+  };
+  drawDrape(-13, -11, 26, -3, 3.4);
+  drawDrape(-8, -14, 30, -1, 3.8);
+  drawDrape(-3, -16, 33, 0, 3.8);
+  drawDrape(3, -16, 33, 0, 3.8);
+  drawDrape(8, -14, 30, 1, 3.8);
+  drawDrape(13, -11, 26, 3, 3.4);
+  ctx.fillStyle = "rgba(255,255,210,0.45)";
+  [[-7,-17,3],[4,-16,2.4]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
 function drawFir(ctx: CanvasRenderingContext2D) {
@@ -154,15 +163,26 @@ function drawCypress(ctx: CanvasRenderingContext2D) {
   ctx.bezierCurveTo(11, 0, 10, -16, 0, -24);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#0a1a04"; ctx.lineWidth = 2.0; ctx.stroke();
-  ctx.strokeStyle = "rgba(10,26,4,0.55)"; ctx.lineWidth = 0.9;
-  for (let yy = -20; yy < 18; yy += 3) {
-    const w = 6 + Math.sin((yy + 24) * 0.15) * 4;
+  // Foliage texture clipped inside the body so nothing escapes the silhouette.
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, -24);
+  ctx.bezierCurveTo(-10, -16, -11, 0, -8, 18);
+  ctx.bezierCurveTo(-6, 22, 6, 22, 8, 18);
+  ctx.bezierCurveTo(11, 0, 10, -16, 0, -24);
+  ctx.closePath();
+  ctx.clip();
+  ctx.strokeStyle = "rgba(10,26,4,0.45)"; ctx.lineWidth = 1.2;
+  for (let yy = -18; yy < 18; yy += 4) {
     ctx.beginPath();
-    for (let xx = -w; xx <= w; xx += 2) ctx.lineTo(xx, yy + (xx % 2 === 0 ? 0 : 1));
+    ctx.moveTo(-9, yy);
+    ctx.quadraticCurveTo(0, yy + 2.5, 9, yy);
     ctx.stroke();
   }
+  ctx.restore();
   ctx.fillStyle = "rgba(180,220,140,0.4)";
-  ctx.beginPath(); ctx.ellipse(-3, -8, 2, 14, 0.05, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-3, -6, 2.4, 14, 0.05, 0, Math.PI*2); ctx.fill();
+  // Small brown cones nestled against the foliage.
   ctx.fillStyle = "#8a5814";
   [[-4,4,1.6],[4,-2,1.6],[-2,-12,1.4],[3,10,1.5]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
@@ -188,26 +208,27 @@ function drawPalm(ctx: CanvasRenderingContext2D) {
   }
   const drawFrond = (angle: number, len: number, droop: number) => {
     ctx.save(); ctx.translate(0, -14); ctx.rotate(angle);
-    ctx.strokeStyle = "#3a5808"; ctx.lineWidth = 2.0;
+    const fg = ctx.createLinearGradient(0, 0, len, 0);
+    fg.addColorStop(0, "#6fa028"); fg.addColorStop(1, "#3f6210");
+    // Leaf blade as one tapered shape (no floating ovals).
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(0, -2.6);
+    ctx.quadraticCurveTo(len*0.5, droop*0.3 - 4, len, droop);
+    ctx.quadraticCurveTo(len*0.5, droop*0.3 + 4, 0, 2.6);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#2f4a0c"; ctx.lineWidth = 1.0; ctx.stroke();
+    // Central rib.
+    ctx.strokeStyle = "rgba(30,46,8,0.7)"; ctx.lineWidth = 1.0;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(len*0.5, droop*0.3, len, droop); ctx.stroke();
-    ctx.fillStyle = "#5a8a18";
-    for (let i = 1; i <= 6; i++) {
-      const t = i / 6;
-      const x = len * t;
-      const y = droop * t * t;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(droop * 0.05);
-      ctx.beginPath(); ctx.ellipse(0, -3, 2, 5, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0, 3, 2, 5, 0, 0, Math.PI*2); ctx.fill();
-      ctx.restore();
-    }
     ctx.restore();
   };
-  drawFrond(-Math.PI*0.55, 22, 4);
-  drawFrond(-Math.PI*0.35, 22, -2);
-  drawFrond(-Math.PI*0.15, 20, -8);
-  drawFrond(-Math.PI*0.85, 22, -2);
-  drawFrond(-Math.PI*1.05, 22, 4);
-  drawFrond(-Math.PI*1.25, 20, 8);
+  drawFrond(-Math.PI*0.52, 17, 3);
+  drawFrond(-Math.PI*0.32, 17, -3);
+  drawFrond(-Math.PI*0.12, 15, -6);
+  drawFrond(-Math.PI*0.88, 17, -3);
+  drawFrond(-Math.PI*1.08, 17, 3);
+  drawFrond(-Math.PI*1.28, 15, 6);
   ctx.fillStyle = "#8a5418";
   [[-3,-12,2.2],[3,-12,2.2],[0,-9,2.2],[-2,-15,2]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
   ctx.strokeStyle = "#3a200a"; ctx.lineWidth = 0.8;

@@ -18,6 +18,7 @@ import { useBalanceNav } from "../balanceNav.jsx";
 import { CONCEPTS } from "./concepts.js";
 import EntryGrid from "./EntryGrid.jsx";
 import type { WikiEntry, WikiEntryFact } from "./EntryGrid.jsx";
+import { EntityVisual } from "./EntityVisual.jsx";
 import { ConceptFields } from "./ConceptFields.jsx";
 import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
@@ -31,6 +32,7 @@ import { groupTileEntries } from "./tileGrouping.js";
 import { conceptHeadlineStats } from "./conceptStats.js";
 import { getEntity } from "./conceptEntities.js";
 import { infoboxFacts } from "./infoboxFacts.js";
+import { groupToolEntries } from "./toolGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
 // the collapsed-by-default guard already ensures the graph isn't built until
@@ -188,6 +190,35 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
             </section>
           ))}
         </div>
+      ) : conceptId === "tools" ? (
+        <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
+          <div className="wiki-section-heading">
+            Entries ({entries.length})
+          </div>
+          {groupToolEntries(entries).map((group) => (
+            <section key={group.boardKind} className="flex flex-col gap-3">
+              {/* Board-kind band heading — icon + label, ember accent */}
+              <div
+                className="flex items-center gap-2 pb-1"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              >
+                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                  {group.icon}
+                </span>
+                <span className="wiki-concept-title" style={{ fontSize: 18 }}>
+                  {group.label}
+                </span>
+                <span className="text-[12px]" style={{ color: COLORS.inkSubtle }}>
+                  ({group.entries.length})
+                </span>
+              </div>
+              <EntryGrid
+                entries={group.entries}
+                onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+              />
+            </section>
+          ))}
+        </div>
       ) : (
         <div data-testid="wiki-entry-gallery">
           <div className="wiki-section-heading mb-2">
@@ -196,6 +227,13 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           <EntryGrid
             entries={entries}
             onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+            renderVisual={
+              conceptId === "buildings"
+                ? (entry) => (
+                    <EntityVisual conceptId="buildings" entityKey={entry.key} size={36} />
+                  )
+                : undefined
+            }
           />
         </div>
       )}

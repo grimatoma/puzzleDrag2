@@ -22,6 +22,10 @@
 // Pure module — no React/DOM imports.
 
 import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
+import { HAZARDS } from "../../features/mine/hazards.js";
+
+/** Mine-hazard ids; every other hazard concept entry is a farm hazard. */
+const MINE_HAZARD_IDS = new Set(HAZARDS.map((h) => h.id));
 
 type Rec = Record<string, unknown> | null;
 
@@ -174,6 +178,15 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
         add("Tap target?", isTapTarget ? "Yes" : "No");
       }
       add("Description", e["desc"]);
+      break;
+    }
+
+    case "hazards": {
+      // Fields: weight (spawn weight, mine only), durationTurns (optional).
+      // Biome is derived: mine hazards live in HAZARDS, the rest are farm.
+      add("Biome", MINE_HAZARD_IDS.has(key) ? "mine" : "farm");
+      add("Spawn weight", e["weight"]);
+      if (e["durationTurns"] != null) add("Duration", `${e["durationTurns"]} turns`);
       break;
     }
 

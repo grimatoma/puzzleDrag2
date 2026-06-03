@@ -45,10 +45,13 @@ function drawHeather(ctx: CanvasRenderingContext2D) {
     ctx.arc(cx, cy, 0.9, 0, Math.PI * 2);
     ctx.fill();
   });
-  // Soil base
-  ctx.fillStyle = "#5a3a18";
+  // Soil base — a low, soft mound the blades root into (not a stark brown disc).
+  const soil = ctx.createRadialGradient(0, 21, 2, 0, 21, 14);
+  soil.addColorStop(0, "#6a4620");
+  soil.addColorStop(1, "rgba(74,46,18,0)");
+  ctx.fillStyle = soil;
   ctx.beginPath();
-  ctx.ellipse(0, 24, 14, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 21, 13, 3.5, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 

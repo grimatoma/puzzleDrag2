@@ -125,26 +125,32 @@ function drawTrimmer(ctx: CanvasRenderingContext2D) {
   ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
   ctx.restore();
-  // Pivot
-  ctx.fillStyle = "#3a3a40"; ctx.beginPath(); ctx.arc(0, 4, 2.4, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.0; ctx.stroke();
-  // Blades — long pointed, going up
-  const bladeG = ctx.createLinearGradient(0, -22, 0, 4);
-  bladeG.addColorStop(0, "#fff8e0"); bladeG.addColorStop(0.7, "#a8a8b0"); bladeG.addColorStop(1, "#3a3a40");
-  ctx.fillStyle = bladeG; ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.4;
-  ctx.save(); ctx.rotate(-0.15);
+  // Blades — two crossing metal blades forming a clear open "V" of shears.
+  // Each blade is a tapered solid sweeping from the pivot to a point near the top.
+  const bladeG = ctx.createLinearGradient(-6, -22, 6, 2);
+  bladeG.addColorStop(0, "#fff8e0"); bladeG.addColorStop(0.55, "#b4b4bc"); bladeG.addColorStop(1, "#5a5a62");
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.8; ctx.lineJoin = "round";
+  // Left blade: root at right of pivot, tip up-left.
+  ctx.fillStyle = bladeG;
   ctx.beginPath();
-  ctx.moveTo(-3, 4); ctx.lineTo(0, -22); ctx.lineTo(2, 4);
+  ctx.moveTo(1.5, 1);
+  ctx.bezierCurveTo(0, -8, -4, -16, -7, -22);
+  ctx.bezierCurveTo(-4, -18, -1, -10, 4, 0);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.restore();
-  ctx.save(); ctx.rotate(0.15);
+  // Right blade: root at left of pivot, tip up-right.
   ctx.beginPath();
-  ctx.moveTo(-2, 4); ctx.lineTo(0, -22); ctx.lineTo(3, 4);
+  ctx.moveTo(-1.5, 1);
+  ctx.bezierCurveTo(0, -8, 4, -16, 7, -22);
+  ctx.bezierCurveTo(4, -18, 1, -10, -4, 0);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.restore();
-  // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.beginPath(); ctx.moveTo(-1, -16); ctx.lineTo(0, -2); ctx.lineTo(1, -16); ctx.closePath(); ctx.fill();
+  // Sharp inner highlight on each blade
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(-1, -4); ctx.bezierCurveTo(-3, -12, -5, -17, -6.5, -20.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(1, -4); ctx.bezierCurveTo(3, -12, 5, -17, 6.5, -20.5); ctx.stroke();
+  // Pivot bolt last, sitting over the blade roots.
+  ctx.fillStyle = "#6a6a72"; ctx.beginPath(); ctx.arc(0, 2, 2.6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.arc(-0.8, 1.2, 1.0, 0, Math.PI*2); ctx.fill();
 }
 
 function drawScythe(ctx: CanvasRenderingContext2D) {
@@ -332,30 +338,37 @@ function drawHoe(ctx: CanvasRenderingContext2D) {
 }
 
 function drawFruitPicker(ctx: CanvasRenderingContext2D) {
-  shadow(ctx, 14);
-  // Long pole
-  woodHandle(ctx, 6, 22, -2, -14, 3);
-  // Wire basket head
-  ctx.save(); ctx.translate(-2, -14);
-  ctx.fillStyle = "rgba(180,180,200,0.4)";
-  ctx.beginPath();
-  ctx.moveTo(-8, 0); ctx.lineTo(-6, -10); ctx.lineTo(6, -10); ctx.lineTo(8, 0);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#a8a8b0"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Wires
-  ctx.strokeStyle = "#7a7a82"; ctx.lineWidth = 1.0;
-  for (let i = -4; i <= 4; i += 2) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i*0.8, -10); ctx.stroke();
-  }
-  ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(6, -10); ctx.stroke();
-  // Apple inside
-  const ag = ctx.createRadialGradient(-2, -6, 1, 0, -4, 6);
-  ag.addColorStop(0, "#ff8a40"); ag.addColorStop(1, "#7a1410");
+  shadow(ctx, 13);
+  // Long pole, lower-right to upper-left.
+  woodHandle(ctx, 8, 22, -3, -6, 3);
+  // Picker head: an open metal claw cradling a fruit, mounted on the pole top.
+  ctx.save(); ctx.translate(-3, -6);
+  // Apple cradled in the claw (drawn first so prongs wrap over it)
+  const ag = ctx.createRadialGradient(-3, -14, 1, 0, -10, 9);
+  ag.addColorStop(0, "#ff9a4a"); ag.addColorStop(0.6, "#d8401c"); ag.addColorStop(1, "#7a1410");
   ctx.fillStyle = ag;
-  ctx.beginPath(); ctx.arc(0, -5, 4, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -11, 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.0; ctx.stroke();
+  // little leaf
+  ctx.fillStyle = "#5a8a18";
+  ctx.beginPath(); ctx.ellipse(3, -16, 3, 1.6, 0.6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1f3a08"; ctx.lineWidth = 0.7; ctx.stroke();
+  // Metal collar at the pole top
+  ctx.fillStyle = "#8a8a92"; ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.ellipse(0, -2, 6, 3, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // Curved claw prongs reaching up around the fruit
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+  const prong = (sx: number, mx: number, tx: number, ty: number) => {
+    ctx.beginPath(); ctx.moveTo(sx, -3); ctx.bezierCurveTo(mx, -10, tx, -16, tx, ty); ctx.stroke();
+  };
+  prong(-5, -8, -7, -15);
+  prong(-2, -4, -3, -18);
+  prong(2, 4, 3, -18);
+  prong(5, 8, 7, -15);
+  // wire colour on top of the contour
+  ctx.strokeStyle = "#b0b0b8"; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(-5, -3); ctx.bezierCurveTo(-8, -10, -7, -15, -7, -15); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5, -3); ctx.bezierCurveTo(8, -10, 7, -15, 7, -15); ctx.stroke();
   ctx.restore();
 }
 
@@ -645,29 +658,33 @@ function drawHound(ctx: CanvasRenderingContext2D) {
 
 // Phase 3 net-new farm tools (tool-powers overhaul).
 function drawHerdersCrook(ctx: CanvasRenderingContext2D) {
-  shadow(ctx, 16);
-  woodHandle(ctx, -6, 22, 8, -16, 4);
-  // Curved hook at the top
-  ctx.save(); ctx.translate(8, -16);
-  ctx.strokeStyle = "#7a4818"; ctx.lineWidth = 5;
+  shadow(ctx, 14);
+  // Long staff running lower-left to upper-right, stopping below the hook.
+  woodHandle(ctx, -7, 22, 6, -8, 4);
+  // Shepherd's crook — a single open curl hooking back at the top.
+  // Centre of the curl sits just left of the staff top so it reads as a cane hook.
+  ctx.save(); ctx.translate(6, -8);
+  // dark contour underlay
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 6.4; ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(-6, 0, 7, -Math.PI*0.1, Math.PI*1.2, false);
+  ctx.arc(-5, -8, 7, Math.PI*0.5, -Math.PI*0.65, true);
   ctx.stroke();
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.2;
+  // wood body
+  ctx.strokeStyle = "#8a5520"; ctx.lineWidth = 4.4;
   ctx.beginPath();
-  ctx.arc(-6, 0, 7, -Math.PI*0.1, Math.PI*1.2, false);
+  ctx.arc(-5, -8, 7, Math.PI*0.5, -Math.PI*0.65, true);
   ctx.stroke();
-  // Highlight on hook
-  ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.6;
+  // upper-left highlight along the curl
+  ctx.strokeStyle = "rgba(255,235,200,0.5)"; ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.arc(-6, 0, 7, -Math.PI*0.05, Math.PI*0.6, false);
+  ctx.arc(-5, -8, 7.4, Math.PI*0.15, -Math.PI*0.55, true);
   ctx.stroke();
   ctx.restore();
   // Leather wrap at the grip
   ctx.fillStyle = "#3a2008";
-  ctx.fillRect(-2, 8, 6, 4);
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.8;
-  ctx.strokeRect(-2, 8, 6, 4);
+  ctx.fillRect(-3, 6, 6, 5);
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.9;
+  ctx.strokeRect(-3, 6, 6, 5);
 }
 
 function drawSaddle(ctx: CanvasRenderingContext2D) {

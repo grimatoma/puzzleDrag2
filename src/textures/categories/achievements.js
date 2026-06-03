@@ -171,50 +171,73 @@ function makeAchievement(label, color, tierKey, motif) {
 // ── Motif primitives ──────────────────────────────────────────────────────
 
 function motifChain(ctx, t) {
-  // Two interlocking links
-  ctx.strokeStyle = t.motifInk;
-  ctx.lineWidth = 2;
+  // Two interlocking oval links, clearly offset so they read as a chain.
   ctx.lineCap = "round";
+  // Back link (drawn first, sits behind)
+  ctx.strokeStyle = t.motifInk;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.ellipse(-3, -1, 3.6, 2.4, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(-3.2, -2.6, 3.4, 2.2, -0.5, 0, Math.PI * 2);
   ctx.stroke();
+  // Front link, overlapping the back one's lower-right
   ctx.beginPath();
-  ctx.ellipse(3, 1, 3.6, 2.4, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(3.2, 2.6, 3.4, 2.2, -0.5, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  // Re-stroke the front link's overlap edge so it reads as "in front"
+  ctx.strokeStyle = t.motifInk;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.ellipse(3.2, 2.6, 3.4, 2.2, -0.5, Math.PI * 0.55, Math.PI * 1.55);
+  ctx.stroke();
+  // Top-left sheen on each link
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
   ctx.lineWidth = 0.9;
   ctx.beginPath();
-  ctx.ellipse(-3, -1.6, 2.6, 1.4, -0.4, 0, Math.PI);
+  ctx.ellipse(-3.2, -3.1, 2.4, 1.3, -0.5, Math.PI * 0.9, Math.PI * 1.7);
+  ctx.ellipse(3.2, 2.1, 2.4, 1.3, -0.5, Math.PI * 0.9, Math.PI * 1.7);
   ctx.stroke();
 }
 
 function motifHandshake(ctx, t) {
-  // Two simplified clasped hands (palms meeting in middle)
+  // Two forearms angling in to a clasped grip in the centre.
+  ctx.strokeStyle = t.motifInk;
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  // left forearm (sleeve thick stroke + skin tip)
+  ctx.strokeStyle = "#8a5828";
+  ctx.lineWidth = 4.2;
+  ctx.beginPath();
+  ctx.moveTo(-8, 5); ctx.lineTo(-2.5, 0.5);
+  ctx.stroke();
+  // right forearm
+  ctx.beginPath();
+  ctx.moveTo(8, 5); ctx.lineTo(2.5, 0.5);
+  ctx.stroke();
+  // clasped hands — interlocked rounded block in the middle, tilted so the
+  // two hands read as gripping rather than as a mouth.
   ctx.fillStyle = "#e8b888";
   ctx.strokeStyle = t.motifInk;
   ctx.lineWidth = 1.2;
-  // left arm
   ctx.beginPath();
-  ctx.moveTo(-8, 3);
-  ctx.lineTo(-2, -2);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(-6, 5);
+  ctx.moveTo(-4.5, 2.2);
+  ctx.bezierCurveTo(-3.5, -2, 1, -3.2, 4.5, -1.2);
+  ctx.bezierCurveTo(3.5, 3, -1, 4.2, -4.5, 2.2);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
-  // right arm
+  // knuckle/finger seams across the grip (reads as interlocked fingers)
+  ctx.strokeStyle = t.motifInk;
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(8, 3);
-  ctx.lineTo(2, -2);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(6, 5);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  // grip block
-  ctx.fillStyle = "#c88858";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 3.4, 2.4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(-2, -1.4); ctx.lineTo(-1.4, 1.8);
+  ctx.moveTo(0, -2); ctx.lineTo(0.6, 1.4);
+  ctx.moveTo(2, -2); ctx.lineTo(2.6, 0.8);
   ctx.stroke();
+  // top-left sheen on the upper hand
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.beginPath();
+  ctx.ellipse(-1, -1.6, 1.6, 0.6, -0.4, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function motifSword(ctx, t) {
@@ -334,18 +357,26 @@ function motifSack(ctx, t) {
   ctx.beginPath();
   ctx.moveTo(-5, -3); ctx.lineTo(5, -3);
   ctx.stroke();
-  // gather
-  ctx.strokeStyle = "rgba(255,255,255,0.45)";
-  ctx.lineWidth = 0.8;
+  // gather creases on the body
+  ctx.strokeStyle = "rgba(58,16,4,0.5)";
+  ctx.lineWidth = 0.9;
   ctx.beginPath();
-  ctx.moveTo(-3, 1); ctx.lineTo(-2, 5);
-  ctx.moveTo(3, 1); ctx.lineTo(2, 5);
+  ctx.moveTo(-3, 0); ctx.lineTo(-2.2, 5);
+  ctx.moveTo(0, 0); ctx.lineTo(0, 6);
+  ctx.moveTo(3, 0); ctx.lineTo(2.2, 5);
   ctx.stroke();
-  // $ symbol on side
-  ctx.fillStyle = t.motifInk;
-  ctx.font = "bold 6px serif";
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("◉", 0, 2);
+  // coin badge on the side (drawn, not a glyph)
+  ctx.fillStyle = "#f0c040";
+  ctx.beginPath();
+  ctx.arc(0, 2.4, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = t.motifInk;
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.beginPath();
+  ctx.arc(-0.6, 1.8, 0.7, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function motifFish(ctx, t) {

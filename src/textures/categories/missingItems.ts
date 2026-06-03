@@ -90,16 +90,6 @@ function drawScytheFull(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.arc(-22, 10, 1.2, 0, Math.PI * 2);
   ctx.fill();
-  // Slash motion lines
-  ctx.strokeStyle = "rgba(180,200,220,0.55)";
-  ctx.lineWidth = 1.4;
-  ctx.lineCap = "round";
-  [[-30, 12], [-32, 16], [-28, 8]].forEach(([x, y]) => {
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 6, y - 3);
-    ctx.stroke();
-  });
 }
 
 // ── iron_pick — upgraded pickaxe with iron head ───────────────────────────
@@ -585,24 +575,31 @@ function drawSeaShells(ctx: CanvasRenderingContext2D) {
   back.addColorStop(0.6, "#e8d8b0");
   back.addColorStop(1, "#9a8460");
   ctx.fillStyle = back;
-  ctx.beginPath();
-  ctx.moveTo(-10, 6);
-  ctx.bezierCurveTo(-14, -10, 14, -10, 10, 6);
-  ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
-  ctx.closePath();
+  const backPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(-10, 6);
+    ctx.bezierCurveTo(-14, -10, 14, -10, 10, 6);
+    ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
+    ctx.closePath();
+  };
+  backPath();
   ctx.fill();
   ctx.strokeStyle = "#5a4a28";
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Radial ribs
+  // Radial ribs — clipped to the shell so they never poke out as spikes
+  ctx.save();
+  backPath();
+  ctx.clip();
   ctx.strokeStyle = "rgba(122,96,56,0.55)";
   ctx.lineWidth = 0.8;
   for (let i = -3; i <= 3; i++) {
     ctx.beginPath();
-    ctx.moveTo(0, 6);
-    ctx.lineTo(i * 3, -8);
+    ctx.moveTo(0, 7);
+    ctx.lineTo(i * 3.2, -9);
     ctx.stroke();
   }
+  ctx.restore();
   ctx.restore();
   // Front shell (pearly pink-cream)
   ctx.save();
@@ -613,23 +610,30 @@ function drawSeaShells(ctx: CanvasRenderingContext2D) {
   front.addColorStop(0.6, "#f4ead0");
   front.addColorStop(1, "#a89878");
   ctx.fillStyle = front;
-  ctx.beginPath();
-  ctx.moveTo(-10, 6);
-  ctx.bezierCurveTo(-14, -8, 14, -8, 10, 6);
-  ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
-  ctx.closePath();
+  const frontPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(-10, 6);
+    ctx.bezierCurveTo(-14, -8, 14, -8, 10, 6);
+    ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
+    ctx.closePath();
+  };
+  frontPath();
   ctx.fill();
   ctx.strokeStyle = "#5a4a28";
   ctx.lineWidth = 1.4;
   ctx.stroke();
+  ctx.save();
+  frontPath();
+  ctx.clip();
   ctx.strokeStyle = "rgba(122,96,56,0.55)";
   ctx.lineWidth = 0.8;
   for (let i = -3; i <= 3; i++) {
     ctx.beginPath();
-    ctx.moveTo(0, 6);
-    ctx.lineTo(i * 3, -6);
+    ctx.moveTo(0, 7);
+    ctx.lineTo(i * 3.2, -7);
     ctx.stroke();
   }
+  ctx.restore();
   // Highlight
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.beginPath();
@@ -742,24 +746,15 @@ function drawAuger(ctx: CanvasRenderingContext2D) {
 // ── blast_charge — dynamite bundle with cross-blast motif ─────────────────
 function drawBlastCharge(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
-  // Orange cross-blast lines behind the charge
-  ctx.strokeStyle = "rgba(255,136,68,0.55)";
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
+  // Soft radial glow behind the charge (kept inside ±18 so nothing hits the box)
+  const glow = ctx.createRadialGradient(0, 2, 2, 0, 2, 17);
+  glow.addColorStop(0, "rgba(255,170,90,0.42)");
+  glow.addColorStop(0.6, "rgba(255,136,68,0.18)");
+  glow.addColorStop(1, "rgba(255,136,68,0)");
+  ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.moveTo(-22, 0); ctx.lineTo(22, 0);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, -22); ctx.lineTo(0, 22);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,200,120,0.35)";
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-20, 0); ctx.lineTo(20, 0);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, -20); ctx.lineTo(0, 20);
-  ctx.stroke();
+  ctx.arc(0, 2, 17, 0, Math.PI * 2);
+  ctx.fill();
   // Charge body (two red sticks)
   const drawStick = (x: number) => {
     const g = ctx.createLinearGradient(x - 4, 0, x + 4, 0);
@@ -768,12 +763,14 @@ function drawBlastCharge(ctx: CanvasRenderingContext2D) {
     ctx.fillRect(x - 4, -10, 8, 22);
     ctx.strokeStyle = "#1a0408"; ctx.lineWidth = 1.4;
     ctx.strokeRect(x - 4, -10, 8, 22);
+    // Cap band near the top of each stick
     ctx.fillStyle = "#fffce0";
     ctx.fillRect(x - 4, -2, 8, 3);
     ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 0.7;
     ctx.strokeRect(x - 4, -2, 8, 3);
-    ctx.fillStyle = "#3a0808"; ctx.font = "bold 5px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("BLT", x, 1);
+    // Vertical sheen streak
+    ctx.strokeStyle = "rgba(255,200,160,0.5)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 1.5, -8); ctx.lineTo(x - 1.5, 10); ctx.stroke();
   };
   drawStick(-5); drawStick(5);
   // Binding cord
@@ -782,14 +779,14 @@ function drawBlastCharge(ctx: CanvasRenderingContext2D) {
   ctx.beginPath(); ctx.moveTo(-9, 6); ctx.lineTo(9, 6); ctx.stroke();
   // Fuse
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(-3, -15, 5, -17, 3, -21); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(-3, -14, 5, -15, 3, -18); ctx.stroke();
   // Spark
   ctx.fillStyle = "#fff4a0";
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
     const a = (i * Math.PI) / 5;
-    const r = i % 2 === 0 ? 2.8 : 1;
-    const px = 3 + Math.cos(a) * r; const py = -21 + Math.sin(a) * r;
+    const r = i % 2 === 0 ? 2.6 : 1;
+    const px = 3 + Math.cos(a) * r; const py = -18 + Math.sin(a) * r;
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   }
   ctx.closePath(); ctx.fill();

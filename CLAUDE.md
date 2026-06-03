@@ -19,13 +19,15 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
-| TS migration Phases 1–2 (drop `GameState` index, Phaser bridge) | `docs/engineering/ts-migration-completion.md` | `catalog-enums.md`, `typed-tests.md` |
+| TS migration (drop `GameState` index, Phaser bridge, typed actions) | `src/types/` + `src/phaserBridge.ts` | "Catalog enums" section below |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
 | Canonical concept inventory | Game wiki at `/b/` (also reachable via "📖 Game Wiki" in the game menu) | Every concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) is a category page with an intro, a schema-generated field reference, and the full entity list; every entity is an article with a generated lede, an infobox (icon or live interactive game embed), properties, relations, and "what links here" backlinks. Narrative/planning pages (Overview · Progression · Decisions · Story) live in-app under `src/balanceManager/content/*.html`. Everything is generated live from config + Zod schemas and flagged WIRED/PARTIAL/STUB/DOC-ONLY/PLANNED. Config is edited in source, not in the panel. Do not duplicate concept lists elsewhere — point at the wiki. |
 
 The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
+
+**Docs map (three surfaces).** *Game* knowledge — story, world, design decisions, progression/roadmap, upcoming-feature scope, and every config-generated concept — lives in the **Game Wiki at `/b/`** (narrative pages under `src/balanceManager/content/`; concepts generated live from config + Zod). *Agent base knowledge* — how the codebase is built (catalog enums, save/schema rules, slice wiring) — lives in **this file (`CLAUDE.md`)**. *Longer-form contributor reference* lives in **markdown next to the code** (`src/config/balance.schema.md`, `src/features/README.md`) and in the published docs site built from `docs/**` by `tools/build-docs.mjs`. Put game content in the wiki, not in markdown; put core code mechanics in `CLAUDE.md`; don't duplicate the wiki's generated concept lists. Rationale + the full per-doc disposition: `docs/wiki-migration-plan.html`.
 
 ## Commands
 
@@ -34,7 +36,7 @@ npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
 npm run lint                 # ESLint over src/ + prototype.tsx
 npm run typecheck            # tsc --noEmit over `src/` + entries (excludes `**/*.test.ts`; `src/testUtils/` is included)
-npm run typecheck:tests      # Playwright specs + Vitest setup; see `docs/engineering/typed-tests.md`
+npm run typecheck:tests      # Playwright specs + Vitest setup (test-only tsconfig)
 npm run typecheck:test-files # Per-file strict tsc on src/__tests__/*.test.ts (CI gate)
 npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
@@ -127,11 +129,54 @@ The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discrimi
 | `balance.json` / Dev Panel draft | No (unknown keys skipped) | Yes |
 | Player save | No (`parseInventory` strips unknown) | Counts |
 
-**New item:** enum member in `catalog/itemKeys.ts` + `ITEMS` row → restart dev server. No emit/codegen step. See `docs/engineering/catalog-enums.md` for the full Wiki/Dev Panel enum inventory.
+**New item:** add the enum member in `catalog/itemKeys.ts` (`TileKey`/`ResourceKey`/`ToolKey`/`ItemAliasKey`), then the `ITEMS` row in `constants.ts` (`[ResourceKey.Flour]: { … }`, or a string key matching the enum value) → restart Vite. No emit/codegen step.
+
+**Zod schema layer (`src/config/schemas/`).** Attributes are validated with Zod; item shapes use a `discriminatedUnion` on `kind` (`tile`|`resource`|`tool`), not a single id enum. `balance.json` is validated at load (`parseBalanceOverrides`); canonical `ITEMS`/`RECIPES` conformance is checked in CI, not per page load. See `src/config/balance.schema.md` for override keys.
+
+**Parity tests.** `src/__tests__/catalog-keys-invariants.test.ts` asserts enum values ↔ `Object.keys(ITEMS)` (+ aliases); `src/__tests__/configSchemas.test.ts` (a.k.a. `npm run config:validate`) asserts each `ITEMS`/`RECIPES`/catalog row matches the Zod canonical schema.
+
+**Inventory typing.** `Inventory = Partial<Record<InventoryKey, number>>` — sparse counts, a missing key reads as 0; `Partial` is about optional slots, not open-ended keys. Helpers `inventoryQty`/`inventoryPut`/`parseInventory` (save boundary) in `src/types/inventory.ts`.
+
+**Concept → enum → source map.** Membership lives in the enum; attributes in the source map. The live Wiki at `/b/` owns the concept list + player-facing attributes; this table is the contributor counterpart the wiki doesn't surface — which TS enum to edit and which map holds the attributes.
+
+| Wiki / Dev tab | Enum(s) | Attribute source |
+|----------------|---------|------------------|
+| Tiles | `TileKey` | `ITEMS` (`kind: "tile"`) |
+| Resources | `ResourceKey` | `ITEMS` (`kind: "resource"`) |
+| Tools | `ToolKey` | `ITEMS` (`kind: "tool"`) |
+| Aliases | `ItemAliasKey` | `ITEMS` (`iron_frame`, …) |
+| All ITEMS keys | `ItemKey` | `ITEMS` |
+| Categories | `TileCategoryId`, `ZoneCategoryId` | tile collection / zones data |
+| Zones | `ZoneId` | cartography `MAP_NODES` |
+| Settlement biomes | `SettlementBiomeId` | `SETTLEMENT_BIOMES` |
+| Recipes | `RecipeKey` | `RECIPES` |
+| Buildings | `BuildingId` | `BUILDINGS` |
+| Hazards | `MineHazardId` | mine `HAZARDS` |
+| Bosses | `BossId` | bosses data |
+| Workers | `WorkerTypeId` | workers data |
+| NPCs | `NpcId` | `NPCS` |
+| Abilities | `AbilityId` | `config/abilities.ts` |
+| Tool powers | `ToolPowerId` | `config/toolPowers.ts` |
+| Tile discovery | `TileDiscoveryMethodId` | `config/tileDiscoveryMethods.ts` |
+| Seasons | `SeasonId` | `SEASONS` |
+| Views | `ViewId` | `router.js` `KNOWN_VIEWS` |
+| Modals | `ModalId` | `KNOWN_MODALS` |
+| Board animations | `BoardAnimationId` | `config/boardAnimations.ts` |
+| Playable biomes | `BiomeId` | `BIOMES` / zones |
+| Story beats | `StoryBeatId` | `story.ts` `STORY_BEATS` + `SIDE_BEATS` |
+| Story flags | `StoryFlagId` | `flags.ts` `STORY_FLAGS` |
+| Flag categories | `StoryFlagCategoryId` | `flags.ts` `FLAG_CATEGORIES` |
+| Story / flag triggers | `StoryTriggerType` | `conditionMatches` / `sanitizeTrigger` |
+| Dev tuning keys | `TuningKey` | `sanitizeTuning` (`balance.json` → `tuning`) |
+| Feature flags (concept ids) | `FeatureFlagId` | `featureFlags.ts` exports + tuning mirrors |
+
+Related: `InventoryKey` (resources + capped tiles), `RecipeInputKey` (= `ItemKey`), `ActionType` in `types/actions.ts`. Beats/flags accept **presentation-only** patches from `balance.json`; new author-created ids are runtime-validated by sanitizers — promote durable ids to the enum + source array when they ship.
+
+**Board-only keys (not in `ITEMS`).** Runtime cells may use `rat`, `mysterious_ore`, `lava` — these are not catalog enums; board `Tile.key` stays `string` until they're promoted to first-class entries.
+
+**Runtime guards & imports.** Use `isItemKey`/`isInventoryKey`/`parseInventory` at saves, JSON, and balance drafts; prefer enum members (`ResourceKey.Flour`) and `getItem()` over raw `ITEMS[key]` indexing. Barrel: `src/types/catalog/index.ts`; re-exports: `src/types/catalogKeys.ts` (`ALL_ITEM_KEYS`, `RESOURCE_KEYS`, `TILE_KEYS`, …); item types: `src/types/items.ts`.
 
 **Dev Panel pickers** use `RESOURCE_KEYS` / `TILE_KEYS` from `catalogKeys.ts`, not free-text ids. `applyItemOverrides` / `applyRecipeOverrides` skip keys not in the live maps.
-
-**Story & tuning:** `StoryBeatId`, `StoryFlagId`, `StoryFlagCategoryId`, `StoryTriggerType`, and `TuningKey` cover `STORY_BEATS` / `SIDE_BEATS`, `STORY_FLAGS` (+ categories), trigger vocabulary, and `sanitizeTuning` keys — see `docs/engineering/catalog-enums.md`.
 
 **Feature flags:** compile-time toggles live in `src/featureFlags.ts` (`FIRE_HAZARD_ENABLED`, `RATS_HAZARD_ENABLED`) and their concept ids are enumerated by `FeatureFlagId` under `src/types/catalog/`. Runtime Dev Panel mirror uses `TuningKey.FireHazardEnabled` / `balance.json` `tuning.fireHazardEnabled`.
 

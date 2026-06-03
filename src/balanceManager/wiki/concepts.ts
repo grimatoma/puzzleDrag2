@@ -79,19 +79,13 @@ function workerEntries() {
   })).sort(byName);
 }
 
-const BUILDING_ICON_KEYS: Record<string, string> = {
-  bakery: "station_bakery",
-  forge: "station_forge",
-  larder: "station_larder",
-  workshop: "station_workshop",
-  portal: "ui_portal",
-};
-
 function buildingEntries() {
+  // Buildings have no baked icon-registry texture — the Wiki renders each one's
+  // inline-SVG illustration via EntityVisual (see CategoryPage's renderVisual /
+  // Infobox), so no iconKey is supplied here.
   return BUILDINGS.map((b) => ({
     key: b.id,
     name: b.name,
-    iconKey: BUILDING_ICON_KEYS[b.id],
     color: b.look?.color,
   })).sort(byName);
 }

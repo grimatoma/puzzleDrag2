@@ -14,10 +14,10 @@ function drawPlayerScythe(ctx: CanvasRenderingContext2D) {
   ctx.rotate(0.2);
   ctx.fillStyle = "#a87838";
   ctx.beginPath();
-  ctx.rect(-2, -22, 4, 44);
+  ctx.rect(-2.5, -22, 5, 44);
   ctx.fill();
   ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 2;
   ctx.stroke();
   // Wood grain
   ctx.strokeStyle = "rgba(58,28,8,0.6)";
@@ -32,7 +32,7 @@ function drawPlayerScythe(ctx: CanvasRenderingContext2D) {
   ctx.restore();
   // Curved blade (scythe-shaped)
   ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 2.2;
   ctx.fillStyle = "#c8c8d0";
   ctx.beginPath();
   ctx.moveTo(-4, -20);
@@ -53,95 +53,96 @@ function drawPlayerScythe(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.arc(-22, 4, 1, 0, Math.PI * 2);
   ctx.fill();
-  // Slash motion lines
-  ctx.strokeStyle = "rgba(180,200,220,0.6)";
-  ctx.lineWidth = 1.4;
-  ctx.lineCap = "round";
-  [-30, -32, -28].forEach((x, i) => {
-    ctx.beginPath();
-    ctx.moveTo(x, 8 + i * 4);
-    ctx.lineTo(x + 6, 4 + i * 4);
-    ctx.stroke();
-  });
 }
 
 function drawSeedpack(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 18, 4);
-  // Cloth pouch body
-  const body = ctx.createLinearGradient(0, -12, 0, 22);
-  body.addColorStop(0, "#d4b878");
-  body.addColorStop(0.6, "#a87838");
-  body.addColorStop(1, "#5a3014");
+  drawShadow(ctx, 17, 4);
+  // Cloth pouch body (rounded sack, cinched neck), light upper-left
+  const body = ctx.createRadialGradient(-7, -2, 4, 0, 8, 26);
+  body.addColorStop(0, "#e0c585");
+  body.addColorStop(0.55, "#b98a42");
+  body.addColorStop(1, "#6a3d18");
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(-14, -8);
-  ctx.bezierCurveTo(-18, 4, -16, 18, -8, 22);
+  ctx.moveTo(-9, -8);
+  ctx.bezierCurveTo(-18, -2, -18, 16, -8, 22);
   ctx.lineTo(8, 22);
-  ctx.bezierCurveTo(16, 18, 18, 4, 14, -8);
-  ctx.bezierCurveTo(8, -10, -8, -10, -14, -8);
+  ctx.bezierCurveTo(18, 16, 18, -2, 9, -8);
+  ctx.bezierCurveTo(5, -10, -5, -10, -9, -8);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 2.2;
   ctx.stroke();
-  // Cloth folds
-  ctx.strokeStyle = "rgba(58,28,8,0.4)";
-  ctx.lineWidth = 1;
+  // Cloth folds (interior detail) — gathered toward the cinched neck
+  ctx.strokeStyle = "rgba(58,28,8,0.35)";
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
-  ctx.moveTo(-10, 0); ctx.bezierCurveTo(-10, 8, -8, 16, -6, 20);
-  ctx.moveTo(10, 0); ctx.bezierCurveTo(10, 8, 8, 16, 6, 20);
-  ctx.moveTo(0, 4); ctx.lineTo(0, 20);
+  ctx.moveTo(-4, -7); ctx.bezierCurveTo(-12, 4, -10, 15, -5, 20);
+  ctx.moveTo(4, -7); ctx.bezierCurveTo(12, 4, 10, 15, 5, 20);
+  ctx.moveTo(0, -6); ctx.bezierCurveTo(-1, 6, 1, 14, 0, 19);
   ctx.stroke();
-  // Drawstring tied at top
-  ctx.fillStyle = "#5a3014";
+  // Cinched neck gathers above the body
+  ctx.fillStyle = "#9c6e30";
   ctx.beginPath();
-  ctx.ellipse(0, -10, 12, 4, 0, 0, Math.PI * 2);
+  ctx.moveTo(-9, -8);
+  ctx.bezierCurveTo(-8, -13, -3, -15, 0, -15);
+  ctx.bezierCurveTo(3, -15, 8, -13, 9, -8);
+  ctx.bezierCurveTo(4, -10, -4, -10, -9, -8);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#1a0a04";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "#3a1c08";
+  ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Rope ties
+  // Drawstring wrapped around the neck
+  ctx.strokeStyle = "#5a3014";
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-9, -8);
+  ctx.bezierCurveTo(-4, -6, 4, -6, 9, -8);
+  ctx.stroke();
+  // Drawstring loops looping back onto the neck (grounded, no floating ends)
   ctx.strokeStyle = "#7a4a18";
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.moveTo(-6, -12); ctx.lineTo(-10, -18);
-  ctx.moveTo(6, -12); ctx.lineTo(10, -18);
+  ctx.moveTo(-7, -8);
+  ctx.bezierCurveTo(-12, -12, -10, -16, -5, -13);
+  ctx.moveTo(7, -8);
+  ctx.bezierCurveTo(12, -12, 10, -16, 5, -13);
   ctx.stroke();
-  // Tie ends
-  ctx.fillStyle = "#7a4a18";
-  ctx.beginPath(); ctx.arc(-10, -18, 1.4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(10, -18, 1.4, 0, Math.PI * 2); ctx.fill();
-  // Seeds spilling out
-  ctx.fillStyle = "#5a3014";
-  [[-3, -8], [0, -10], [3, -8], [-1, -6]].forEach(([x, y]) => {
+  // A few seeds peeking from the gathered opening
+  ctx.fillStyle = "#cdb074";
+  [[-3, -13], [0, -14], [3, -13]].forEach(([x, y]) => {
     ctx.beginPath();
-    ctx.ellipse(x, y, 1.2, 0.7, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 1.6, 1, 0.3, 0, Math.PI * 2);
     ctx.fill();
   });
-  // Plus emblem (says "add resources")
-  ctx.fillStyle = "#5a8a26";
-  ctx.beginPath();
-  ctx.arc(0, 8, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#2a4810";
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(-1.4, 4, 2.8, 8);
-  ctx.fillRect(-4, 6.6, 8, 2.8);
-  // Sprout on top
+  ctx.strokeStyle = "rgba(58,28,8,0.5)";
+  ctx.lineWidth = 0.8;
+  [[-3, -13], [0, -14], [3, -13]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1.6, 1, 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  // Sprout rising from the opening (connected to the seeds)
   ctx.strokeStyle = "#3a6014";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.moveTo(0, -10);
-  ctx.bezierCurveTo(2, -14, -2, -18, 0, -22);
+  ctx.moveTo(0, -14);
+  ctx.bezierCurveTo(1, -18, -2, -20, 0, -23);
   ctx.stroke();
   ctx.fillStyle = "#5a8028";
   ctx.beginPath();
-  ctx.ellipse(-2, -20, 2, 1, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(-2.5, -20, 2.4, 1.2, -0.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(2, -22, 2, 1, 0.5, 0, Math.PI * 2);
+  ctx.ellipse(2.5, -22, 2.4, 1.2, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Specular highlight upper-left
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(-6, 2, 3.5, 6, 0.4, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -216,11 +217,11 @@ function drawLockbox(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#a87018";
   ctx.lineWidth = 0.8;
   ctx.stroke();
-  // Spark dots
+  // Spark dots (kept close to the star sparkle, grounded to the glow)
   ctx.fillStyle = "rgba(255,240,140,0.85)";
-  [[-10, -16], [10, -14], [-6, -20], [8, -18]].forEach(([x, y]) => {
+  [[-8, -16], [8, -15]].forEach(([x, y]) => {
     ctx.beginPath();
-    ctx.arc(x, y, 0.9, 0, Math.PI * 2);
+    ctx.arc(x, y, 1, 0, Math.PI * 2);
     ctx.fill();
   });
 }
@@ -270,40 +271,48 @@ function drawReshuffleHorn(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#0a0a0e";
   ctx.lineWidth = 1;
   ctx.stroke();
-  // Bell flare
+  // Bell flare (kept inside +-26)
   ctx.fillStyle = "#7a4a18";
   ctx.beginPath();
-  ctx.moveTo(20, -16);
-  ctx.lineTo(28, -22);
-  ctx.lineTo(28, -2);
-  ctx.lineTo(22, -4);
+  ctx.moveTo(18, -16);
+  ctx.lineTo(25, -21);
+  ctx.lineTo(25, -3);
+  ctx.lineTo(20, -4);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a0a04";
   ctx.lineWidth = 1.4;
   ctx.stroke();
+  // Bell rim highlight
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(25, -21);
+  ctx.lineTo(25, -3);
+  ctx.stroke();
   ctx.restore();
-  // Sound waves emerging
+  // Sound waves emerging from the bell (inside +-26)
   ctx.strokeStyle = "rgba(248,200,80,0.85)";
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
-  [4, 8, 12].forEach((d) => {
+  [4, 8].forEach((d) => {
     ctx.beginPath();
-    ctx.arc(28, -12, d, -Math.PI / 3, Math.PI / 3);
+    ctx.arc(25, -12, d, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
   });
-  // Curving arrow (reshuffle)
+  // Curving reshuffle arrow looping around the horn body (grounded near the bend)
   ctx.strokeStyle = "#3a82c4";
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(-10, 10, 6, -Math.PI / 4, Math.PI * 1.4);
+  ctx.arc(-6, 8, 7, -Math.PI * 0.15, Math.PI * 1.35);
   ctx.stroke();
-  // Arrow head
+  // Arrow head closing the loop
   ctx.fillStyle = "#3a82c4";
   ctx.beginPath();
-  ctx.moveTo(-14, 12);
-  ctx.lineTo(-10, 14);
-  ctx.lineTo(-12, 18);
+  ctx.moveTo(2, 5);
+  ctx.lineTo(-1, 11);
+  ctx.lineTo(4, 11);
   ctx.closePath();
   ctx.fill();
 }
