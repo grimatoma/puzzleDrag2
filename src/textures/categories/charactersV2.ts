@@ -4,8 +4,9 @@
 // `characters.ts`. The brief: ditch the uncanny realistic faces and draw
 // warm, rounded mascot busts with big expressive eyes (bright catchlights),
 // soft cheek blush, and tidy little smiles — the things that read as charming
-// rather than "off" at 56px. Figures are drawn on a transparent field (no
-// coin badge or circular backdrop).
+// rather than "off" at 56px. Every figure sits inside a glossy circular
+// "coin" badge and is clipped to it, so nothing spills past the rim the way
+// the old avatar frames did.
 //
 // Keys are suffixed `_v2` for the icon tracker's "Chars v2" tab (side-by-side
 // with legacy originals). `iconRegistry.ts` promotes these draws onto the
@@ -35,13 +36,42 @@ function rrect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) 
   ctx.closePath();
 }
 
-// Portrait stack isolation (no circular badge — callers still pair with restore).
-function badgeFill(_ctx: Ctx, _top: string, _bottom: string) {}
+// Glossy coin backdrop: vertical theme gradient + a soft top sheen.
+function badgeFill(ctx: Ctx, top: string, bottom: string) {
+  const g = ctx.createLinearGradient(0, -30, 0, 30);
+  g.addColorStop(0, top);
+  g.addColorStop(1, bottom);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, 29, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, 29, 0, Math.PI * 2);
+  ctx.clip();
+  const sheen = ctx.createLinearGradient(0, -30, 0, 2);
+  sheen.addColorStop(0, "rgba(255,255,255,0.22)");
+  sheen.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(-30, -30, 60, 34);
+  ctx.restore();
+}
 
-function rim(_ctx: Ctx, _color: string) {}
+// Crisp rim drawn on top of the (clipped) figure.
+function rim(ctx: Ctx, color: string) {
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = color;
+  ctx.beginPath();
+  ctx.arc(0, 0, 29, 0, Math.PI * 2);
+  ctx.stroke();
+}
 
+// Clip the figure to the inside of the coin so nothing pokes past the rim.
 function clipIn(ctx: Ctx) {
   ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, 28.4, 0, Math.PI * 2);
+  ctx.clip();
 }
 
 // Small rounded chibi torso rising from the bottom of the coin.
