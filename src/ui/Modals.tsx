@@ -128,7 +128,7 @@ export function StoryPortrait({ npcKey, size = 56 }: { npcKey: string | null | u
   if (iconKey && hasIcon(iconKey)) {
     return (
       <div className="rounded-full overflow-hidden flex-shrink-0" aria-hidden="true" style={{ width: size, height: size, border: "2px solid #f0e6cf" }}>
-        <IconCanvas iconKey={iconKey} size={size} background={null} rounded={false} />
+        <IconCanvas iconKey={iconKey} size={size} rounded background="#2a1e10" />
       </div>
     );
   }
