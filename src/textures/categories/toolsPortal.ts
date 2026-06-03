@@ -289,9 +289,9 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(15, 12); ctx.lineTo(13, 14); ctx.lineTo(-13, 14); ctx.lineTo(-15, 12);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#7a5018"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Glowing text lines
-  ctx.strokeStyle = "#5a2080"; ctx.lineWidth = 0.9;
-  ctx.shadowColor = "rgba(184,120,232,0.7)"; ctx.shadowBlur = 3;
+  // Script text lines — clean wavy strokes, no heavy blur (kept crisp so they
+  // read as writing rather than a muddy smudge at 56px).
+  ctx.strokeStyle = "#6a4a8a"; ctx.lineWidth = 1.0;
   for (let i = 0; i < 4; i++) {
     const y = -6 + i * 4;
     ctx.beginPath();
@@ -302,9 +302,12 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
     }
     ctx.stroke();
   }
-  ctx.shadowBlur = 0;
-  // Wax seal
-  magicHalo(ctx, "rgba(200,32,24,0.5)", 8);
+  // Wax seal — its halo sits on the seal (bottom-right), not the scroll centre,
+  // so it no longer smudges a red blob across the text.
+  ctx.save();
+  ctx.translate(11, 8);
+  magicHalo(ctx, "rgba(200,32,24,0.45)", 7);
+  ctx.restore();
   ctx.fillStyle = "#c82018";
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
@@ -315,8 +318,16 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
   }
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#5a0808"; ctx.lineWidth = 0.8; ctx.stroke();
-  ctx.fillStyle = "#5a0808"; ctx.font = "bold 5px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("✦", 11, 8);
+  // Embossed star sigil on the seal (drawn path — reliable across canvases)
+  ctx.fillStyle = "#5a0808";
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 2.4 : 1.0;
+    const x = 11 + Math.cos(a) * r, y = 8 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill();
 }
 
 // 8. Hourglass
@@ -900,36 +911,56 @@ function drawGoldenCarrot(ctx: CanvasRenderingContext2D) {
 function drawGoldenIdol(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   magicHalo(ctx, "rgba(248,192,64,0.55)", 20);
-  // Base / pedestal
-  ctx.fillStyle = "#a87010";
+  const gold = ctx.createLinearGradient(-12, -22, 12, 18);
+  gold.addColorStop(0, "#fffce0"); gold.addColorStop(0.35, "#f8c040");
+  gold.addColorStop(0.75, "#d69a18"); gold.addColorStop(1, "#7a4810");
+  // Pedestal base
+  ctx.fillStyle = "#b47e16";
   ctx.beginPath();
-  ctx.moveTo(-14, 18); ctx.lineTo(14, 18); ctx.lineTo(10, 12); ctx.lineTo(-10, 12);
+  ctx.moveTo(-13, 21); ctx.lineTo(13, 21); ctx.lineTo(9, 14); ctx.lineTo(-9, 14);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Idol body — pyramidal
-  const g = ctx.createLinearGradient(0, -16, 0, 12);
-  g.addColorStop(0, "#fffce0"); g.addColorStop(0.4, "#f8c040"); g.addColorStop(1, "#7a4810");
-  ctx.fillStyle = g;
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Tiki / totem idol body: broad fanned headdress, narrow shoulders, tapered torso.
+  ctx.fillStyle = gold;
   ctx.beginPath();
-  ctx.moveTo(0, -18);
-  ctx.lineTo(8, 0);
-  ctx.lineTo(10, 12);
-  ctx.lineTo(-10, 12);
-  ctx.lineTo(-8, 0);
+  ctx.moveTo(0, -23);
+  ctx.lineTo(13, -16);          // right headdress flare
+  ctx.lineTo(7, -10);
+  ctx.lineTo(9, -4);            // cheek
+  ctx.lineTo(6, 4);             // shoulder
+  ctx.lineTo(8, 14);            // hip
+  ctx.lineTo(-8, 14);
+  ctx.lineTo(-6, 4);
+  ctx.lineTo(-9, -4);
+  ctx.lineTo(-7, -10);
+  ctx.lineTo(-13, -16);         // left headdress flare
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Face glyphs
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Carved face panel (recessed darker oval)
+  ctx.fillStyle = "rgba(58,32,8,0.32)";
+  ctx.beginPath(); ctx.ellipse(0, -6, 6.5, 7.5, 0, 0, Math.PI * 2); ctx.fill();
+  // Heavy carved brow
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-5, -9); ctx.quadraticCurveTo(0, -11, 5, -9); ctx.stroke();
+  // Eyes
   ctx.fillStyle = "#3a2008";
-  ctx.beginPath(); ctx.arc(-3, -4, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(3, -4, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0;
-  ctx.beginPath(); ctx.moveTo(-3, 2); ctx.lineTo(3, 2); ctx.stroke();
-  // Highlight
+  ctx.beginPath(); ctx.arc(-3, -6, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3, -6, 1.5, 0, Math.PI * 2); ctx.fill();
+  // Nose ridge
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(0, -1); ctx.stroke();
+  // Grimacing mouth
+  ctx.beginPath(); ctx.moveTo(-4, 1.5); ctx.quadraticCurveTo(0, 3.5, 4, 1.5); ctx.stroke();
+  // Body engraving lines
+  ctx.strokeStyle = "rgba(58,32,8,0.5)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-5, 8); ctx.lineTo(5, 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4, 11); ctx.lineTo(4, 11); ctx.stroke();
+  // Headdress highlight (upper-left)
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath();
-  ctx.moveTo(0, -18); ctx.lineTo(-3, -2); ctx.lineTo(-1, -2); ctx.lineTo(2, -18);
+  ctx.moveTo(0, -22); ctx.lineTo(-11, -16); ctx.lineTo(-6, -11); ctx.lineTo(-1, -19);
   ctx.closePath();
   ctx.fill();
 }

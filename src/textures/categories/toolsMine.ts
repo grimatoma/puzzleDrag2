@@ -498,54 +498,58 @@ function drawGoldPick(ctx: CanvasRenderingContext2D) {
 }
 
 function drawMagnet(ctx: CanvasRenderingContext2D) {
-  shadow(ctx, 18);
-  // Classic horseshoe magnet
-  ctx.save();
-  // Outer red body
-  ctx.strokeStyle = "#a82018"; ctx.lineWidth = 9; ctx.lineCap = "butt";
+  shadow(ctx, 16, 22);
+  // Classic horseshoe magnet — opening downward, centred & large.
+  // The arc is the bend at top; the two legs point down to silver poles.
+  const cx = 0, cy = -4;     // centre of the bend
+  const rOut = 17, rIn = 9;  // outer / inner radius of the U
+  const aStart = Math.PI, aEnd = Math.PI * 2; // upper half (the bend)
+
+  // Red horseshoe body as a filled ring sweep + two straight legs.
+  const g = ctx.createLinearGradient(-rOut, 0, rOut, 0);
+  g.addColorStop(0, "#7a0e08"); g.addColorStop(0.5, "#e23226"); g.addColorStop(1, "#5a0808");
+  ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(0, 0, 11, Math.PI*0.25, Math.PI*0.75, false);
-  ctx.stroke();
-  // Outline
-  ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.arc(0, 0, 15, Math.PI*0.25, Math.PI*0.75, false);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 0, 7, Math.PI*0.25, Math.PI*0.75, false);
-  ctx.stroke();
-  // Silver tips (poles)
-  const tipL = [Math.cos(Math.PI*0.75) * 11, Math.sin(Math.PI*0.75) * 11];
-  const tipR = [Math.cos(Math.PI*0.25) * 11, Math.sin(Math.PI*0.25) * 11];
-  ctx.fillStyle = "#a8a8b0";
-  ctx.beginPath();
-  ctx.rect(tipL[0] - 4, tipL[1] - 1, 8, 6);
+  // outer arc (left->right across the top)
+  ctx.arc(cx, cy, rOut, aStart, aEnd, false);
+  // down the right outer leg to the pole top
+  ctx.lineTo(cx + rOut, cy + 14);
+  // across to right inner
+  ctx.lineTo(cx + rIn, cy + 14);
+  // up the right inner leg, then inner arc back to left inner
+  ctx.lineTo(cx + rIn, cy);
+  ctx.arc(cx, cy, rIn, aEnd, aStart, true);
+  // down the left inner leg, across, up the left outer leg (closes)
+  ctx.lineTo(cx - rIn, cy + 14);
+  ctx.lineTo(cx - rOut, cy + 14);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.fillStyle = "#a8a8b0";
-  ctx.beginPath();
-  ctx.rect(tipR[0] - 4, tipR[1] - 1, 8, 6);
-  ctx.fill();
-  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.restore();
-  // Pole labels
-  ctx.fillStyle = "#fffce0"; ctx.font = "bold 6px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("N", tipL[0], tipL[1] + 2);
-  ctx.fillText("S", tipR[0], tipR[1] + 2);
-  // Attraction lines (orbiting iron flecks)
-  ctx.strokeStyle = "rgba(80,80,90,0.7)"; ctx.lineWidth = 1.0;
-  for (let i = 0; i < 4; i++) {
-    const y = 14 + i * 2;
+  ctx.strokeStyle = "#2a0606"; ctx.lineWidth = 2.2; ctx.stroke();
+
+  // Silver pole caps at the bottom of each leg.
+  ctx.fillStyle = "#bcbcc4";
+  const poleY = cy + 14, poleH = 7;
+  [[-rOut, -rIn], [rIn, rOut]].forEach(([x1, x2]) => {
     ctx.beginPath();
-    ctx.moveTo(-10 + i * 0.5, y);
-    ctx.lineTo(10 - i * 0.5, y);
-    ctx.stroke();
-  }
-  // Iron filings being pulled up
-  ctx.fillStyle = "#5a5a62";
-  [[-6, 18, 1.6], [3, 20, 1.2], [9, 18, 1.0]].forEach(([x, y, r]) => {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.rect(Math.min(x1, x2), poleY, Math.abs(x2 - x1), poleH);
+    ctx.fill();
+    ctx.strokeStyle = "#3a3a40"; ctx.lineWidth = 1.4; ctx.stroke();
   });
+  // Pole shading
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillRect(-rOut, poleY + poleH - 2, rOut - rIn, 2);
+  ctx.fillRect(rIn, poleY + poleH - 2, rOut - rIn, 2);
+
+  // Pole labels
+  ctx.fillStyle = "#1a1a1e"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("N", (-rOut - rIn) / 2, poleY + poleH / 2 + 0.5);
+  ctx.fillText("S", (rOut + rIn) / 2, poleY + poleH / 2 + 0.5);
+
+  // Specular highlight on the upper-left of the bend.
+  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2.0; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(cx, cy, (rOut + rIn) / 2, Math.PI * 1.08, Math.PI * 1.42, false);
+  ctx.stroke();
 }
 
 function drawCoalTransmuter(ctx: CanvasRenderingContext2D) {
@@ -572,21 +576,23 @@ function drawCoalTransmuter(ctx: CanvasRenderingContext2D) {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 0.6; ctx.stroke();
   });
-  // Embers / sparks above
+  // Rising embers — a tapering column tied to the glowing coal (grounded plume).
   ctx.fillStyle = "#f8a020";
-  [[-4, -2], [3, -6], [6, -2], [-8, -6]].forEach(([x, y]) => {
-    ctx.beginPath(); ctx.arc(x, y, 1.2, 0, Math.PI*2); ctx.fill();
+  [[-3, -1, 1.4], [2, -4, 1.2], [-1, -8, 1.0], [3, -11, 0.9], [-2, -14, 0.8]].forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
   });
-  // Arrow / transmutation glyph above
-  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.4;
+  ctx.fillStyle = "#fff4a0";
+  [[-3, -1, 0.6], [2, -4, 0.5]].forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  });
+  // Faint heat glow rising from the embers (keeps the cue connected, not floating).
+  const heat = ctx.createLinearGradient(0, 6, 0, -16);
+  heat.addColorStop(0, "rgba(248,160,32,0.30)");
+  heat.addColorStop(1, "rgba(248,160,32,0)");
+  ctx.fillStyle = heat;
   ctx.beginPath();
-  ctx.moveTo(-2, -12); ctx.lineTo(2, -16); ctx.lineTo(-2, -20);
-  ctx.stroke();
-  // Smoke wisp
-  ctx.strokeStyle = "rgba(120,120,140,0.6)"; ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(8, -2); ctx.bezierCurveTo(12, -8, 6, -12, 10, -18);
-  ctx.stroke();
+  ctx.moveTo(-7, 4); ctx.lineTo(7, 4); ctx.lineTo(3, -16); ctx.lineTo(-3, -16);
+  ctx.closePath(); ctx.fill();
 }
 
 export const ICONS = {

@@ -13,60 +13,78 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 }
 
 function drawHay(ctx: CanvasRenderingContext2D) {
-  ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 5;
-  [-18,-10,-2,6,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,22); ctx.quadraticCurveTo(x-2+i,0,x-6+i*2,-24); ctx.stroke(); });
-  ctx.strokeStyle = "#d4a020"; ctx.lineWidth = 3.5;
-  [-14,-7,0,7,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,20); ctx.quadraticCurveTo(x+1,0,x-4+i*2,-22); ctx.stroke(); });
-  ctx.strokeStyle = "#ffe890"; ctx.lineWidth = 1.8;
-  [-10,-3,4,10].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,16); ctx.quadraticCurveTo(x+2,-2,x-2+i*2,-20); ctx.stroke(); });
-  ctx.fillStyle = "#5e3a08"; rr(ctx,-22,-3,44,11,4); ctx.fill();
-  ctx.strokeStyle = "#2a1804"; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.strokeStyle = "rgba(255,200,120,0.75)"; ctx.lineWidth = 1.1;
-  ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.stroke();
-  ctx.fillStyle = "#5e3a08"; ctx.beginPath(); ctx.arc(-22,2,4,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#2a1804"; ctx.stroke();
+  // ground shadow
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,21,4.5,0,0,Math.PI*2); ctx.fill();
+  // rounded hay-bale body with a vertical gradient (golden straw)
+  const body = ctx.createLinearGradient(0,-20,0,22);
+  body.addColorStop(0,"#f4cf63"); body.addColorStop(0.55,"#d4a020"); body.addColorStop(1,"#8a5e14");
+  ctx.fillStyle = body; rr(ctx,-22,-20,44,42,8); ctx.fill();
+  ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 2.2; ctx.stroke();
+  // straw texture — short strokes clipped to the body
+  ctx.save(); rr(ctx,-22,-20,44,42,8); ctx.clip();
+  ctx.strokeStyle = "rgba(94,58,8,0.55)"; ctx.lineWidth = 1.4;
+  [-16,-8,0,8,16].forEach((x)=>{ ctx.beginPath(); ctx.moveTo(x,-18); ctx.lineTo(x+1.5,20); ctx.stroke(); });
+  ctx.strokeStyle = "rgba(255,232,144,0.7)"; ctx.lineWidth = 1.1;
+  [-12,-4,4,12].forEach((x)=>{ ctx.beginPath(); ctx.moveTo(x,-18); ctx.lineTo(x+1.5,20); ctx.stroke(); });
+  ctx.restore();
+  // two binding bands
+  ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 3.6;
+  [-7,9].forEach((y)=>{ ctx.beginPath(); ctx.moveTo(-22,y); ctx.lineTo(22,y); ctx.stroke(); });
+  ctx.strokeStyle = "rgba(255,200,120,0.6)"; ctx.lineWidth = 1.1;
+  [-9,7].forEach((y)=>{ ctx.beginPath(); ctx.moveTo(-20,y); ctx.lineTo(20,y); ctx.stroke(); });
+  // soft specular highlight upper-left
+  ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.beginPath(); ctx.ellipse(-11,-12,6,4,-0.5,0,Math.PI*2); ctx.fill();
 }
 
 function drawMeadowGrass(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,22,22,5,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#234012"; ctx.lineWidth = 4.5;
-  [-18,-10,-2,6,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,22); ctx.bezierCurveTo(x+4-i*2,6,x-6+i*3,-8,x-10+i*4,-22); ctx.stroke(); });
-  ctx.strokeStyle = "#5c9c2e"; ctx.lineWidth = 3.2;
-  [-15,-7,1,9,16].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,20); ctx.bezierCurveTo(x+2,4,x-4+i*2,-10,x-8+i*3,-22); ctx.stroke(); });
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,20,4.5,0,0,Math.PI*2); ctx.fill();
+  // grounded soil clump at the base of the tuft
+  ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,21,13,4,0,0,Math.PI*2); ctx.fill();
+  // blades rise from the clump, tips kept within the safe area (>= -24)
+  ctx.strokeStyle = "#234012"; ctx.lineWidth = 4.2;
+  [[-12,-9,-16,-23],[-5,-2,-8,-22],[2,4,-1,-24],[8,9,4,-22],[14,14,10,-21]].forEach(([x,c,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,20); ctx.bezierCurveTo(c,6,tx+2,-8,tx,ty); ctx.stroke();
+  });
+  ctx.strokeStyle = "#5c9c2e"; ctx.lineWidth = 3;
+  [[-9,-6,-12,-21],[-2,0,-4,-20],[5,6,2,-22],[11,11,7,-19]].forEach(([x,c,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,19); ctx.bezierCurveTo(c,5,tx+1,-7,tx,ty); ctx.stroke();
+  });
   ctx.strokeStyle = "#b6e068"; ctx.lineWidth = 1.5;
-  [-12,-4,4,12].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,18); ctx.bezierCurveTo(x+2,2,x-2+i*2,-8,x-4+i*3,-20); ctx.stroke(); });
+  [[-7,-9,-18],[0,-1,-18],[6,3,-19]].forEach(([x,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,16); ctx.bezierCurveTo(x,3,tx+1,-6,tx,ty); ctx.stroke();
+  });
+  // a small clustered flower nestled in the blades
   ctx.fillStyle = "#fffbe0";
   [[-7,-2],[-4,-4],[-10,-4],[-7,-6],[-4,-1]].forEach(([px,py])=>{ ctx.beginPath(); ctx.arc(px,py,2.2,0,Math.PI*2); ctx.fill(); });
   ctx.strokeStyle = "#7a8a30"; ctx.lineWidth = 0.8;
   [[-7,-2],[-4,-4],[-10,-4],[-7,-6],[-4,-1]].forEach(([px,py])=>{ ctx.beginPath(); ctx.arc(px,py,2.2,0,Math.PI*2); ctx.stroke(); });
   ctx.fillStyle = "#ffd248"; ctx.beginPath(); ctx.arc(-7,-3,1.6,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,24,14,3,0,0,Math.PI*2); ctx.fill();
 }
 
 function drawSpikyGrass(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,22,22,4.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,20,4.5,0,0,Math.PI*2); ctx.fill();
+  // grounded soil clump the spikes spring from
+  ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,21,14,4,0,0,Math.PI*2); ctx.fill();
+  // back spikes (dark), tips kept within ±22
   ctx.fillStyle = "#3d4a14"; ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.5;
-  [[-22,20,-16,-22],[-14,22,-10,-20],[-6,22,-4,-24],[2,22,4,-24],[10,22,12,-20],[18,20,16,-22]].forEach(([x1,y1,xt,yt])=>{
+  [[-20,20,-15,-20],[-13,21,-10,-18],[-5,21,-4,-22],[3,21,4,-22],[11,21,12,-18],[18,20,15,-20]].forEach(([x1,y1,xt,yt])=>{
     ctx.beginPath(); ctx.moveTo(x1-4,y1); ctx.lineTo(x1+4,y1); ctx.lineTo(xt,yt); ctx.closePath(); ctx.fill(); ctx.stroke();
   });
+  // front spikes (lighter)
   ctx.fillStyle = "#83a235"; ctx.strokeStyle = "#3a4818"; ctx.lineWidth = 1.2;
-  [[-18,18,-14,-16],[-10,20,-8,-16],[-2,20,0,-20],[6,20,8,-16],[14,18,12,-16]].forEach(([x1,y1,xt,yt])=>{
+  [[-16,19,-13,-15],[-9,20,-7,-15],[-1,20,0,-19],[6,20,7,-15],[13,19,11,-15]].forEach(([x1,y1,xt,yt])=>{
     ctx.beginPath(); ctx.moveTo(x1-3,y1); ctx.lineTo(x1+3,y1); ctx.lineTo(xt,yt); ctx.closePath(); ctx.fill(); ctx.stroke();
   });
+  // bright highlight tips
   ctx.fillStyle = "#c8de72";
-  [-14,-4,6,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x-1,-8-i); ctx.lineTo(x+1,-8-i); ctx.lineTo(x,-16-i*2); ctx.closePath(); ctx.fill(); });
-  ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.4;
-  [[-8,-4,-14,-6],[4,-4,10,-6],[-10,4,-16,2],[6,4,12,2]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  });
-  ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,24,16,3,0,0,Math.PI*2); ctx.fill();
+  [[-13,-9],[-4,-14],[6,-10],[13,-9]].forEach(([x,ty])=>{ ctx.beginPath(); ctx.moveTo(x-1.4,ty+6); ctx.lineTo(x+1.4,ty+6); ctx.lineTo(x,ty); ctx.closePath(); ctx.fill(); });
 }
 
 function drawWheat(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#6b4710"; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(0,26); ctx.lineTo(0,-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,24); ctx.lineTo(0,-12); ctx.stroke();
   ctx.strokeStyle = "#a47619"; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(0,26); ctx.lineTo(0,-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,24); ctx.lineTo(0,-12); ctx.stroke();
   ctx.fillStyle = "#8aab2e"; ctx.strokeStyle = "#4a5c12"; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(0,18); ctx.quadraticCurveTo(-12,12,-18,4); ctx.quadraticCurveTo(-10,10,0,22); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,18); ctx.quadraticCurveTo(12,12,18,4); ctx.quadraticCurveTo(10,10,0,22); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -85,7 +103,7 @@ function drawWheat(ctx: CanvasRenderingContext2D) {
     });
   }
   ctx.strokeStyle = "#c89320"; ctx.lineWidth = 1.5;
-  [-4,-2,0,2,4].forEach((dx)=>{ ctx.beginPath(); ctx.moveTo(dx,-16); ctx.lineTo(dx*1.4,-26); ctx.stroke(); });
+  [-4,-2,0,2,4].forEach((dx)=>{ ctx.beginPath(); ctx.moveTo(dx,-16); ctx.lineTo(dx*1.3,-24); ctx.stroke(); });
 }
 
 function drawFlour(ctx: CanvasRenderingContext2D) {

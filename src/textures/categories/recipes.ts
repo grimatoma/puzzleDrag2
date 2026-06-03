@@ -426,11 +426,16 @@ function drawPreserve(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#7a4838";
   ctx.lineWidth = 0.8;
   ctx.stroke();
-  ctx.fillStyle = "#5a2848";
-  ctx.font = "bold 6px serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("JAM", 0, 11);
+  // Painted "label text" scribble (no fillText — unreliable across backends)
+  ctx.strokeStyle = "#7a3868";
+  ctx.lineWidth = 1.1;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-4.5, 9.6);
+  ctx.lineTo(4.5, 9.6);
+  ctx.moveTo(-4, 12.2);
+  ctx.lineTo(2.5, 12.2);
+  ctx.stroke();
   ctx.strokeStyle = "rgba(255,255,255,0.7)";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
@@ -1315,55 +1320,122 @@ function drawFishOilBottled(ctx: CanvasRenderingContext2D) {
   ctx.closePath();
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = "#7a3818";
-  ctx.font = "bold 5px serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("FO", 9.5, 6);
+  // Painted scribble standing in for label text (no fillText)
+  ctx.strokeStyle = "#7a3818";
+  ctx.lineWidth = 0.8;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(8, 5);
+  ctx.lineTo(11.5, 5.6);
+  ctx.moveTo(8.2, 7);
+  ctx.lineTo(11, 7.5);
+  ctx.stroke();
 }
 
 function drawLantern(ctx: CanvasRenderingContext2D) {
-  // Handle
-  ctx.strokeStyle = "#3a3a40";
-  ctx.lineWidth = 2;
+  drawShadow(ctx, 16, 4);
+
+  // Warm glow cast around the lantern
+  const halo = ctx.createRadialGradient(0, 2, 2, 0, 2, 22);
+  halo.addColorStop(0, "rgba(255,200,90,0.4)");
+  halo.addColorStop(0.55, "rgba(240,160,40,0.16)");
+  halo.addColorStop(1, "rgba(240,160,40,0)");
+  ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(0, -12, 6, Math.PI, 0);
+  ctx.arc(0, 2, 22, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Bail handle (metal arc) sitting on the cap
+  const bailGrad = ctx.createLinearGradient(0, -22, 0, -14);
+  bailGrad.addColorStop(0, "#9aa6b2");
+  bailGrad.addColorStop(1, "#3a4650");
+  ctx.strokeStyle = bailGrad;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(0, -14, 7, Math.PI * 1.08, Math.PI * 1.92);
   ctx.stroke();
 
-  // Top cap
-  ctx.fillStyle = "#5a6a76";
+  // Top cap (metal, vented)
+  const capGrad = ctx.createLinearGradient(0, -18, 0, -10);
+  capGrad.addColorStop(0, "#8a96a2");
+  capGrad.addColorStop(0.5, "#5a6772");
+  capGrad.addColorStop(1, "#2a343c");
+  ctx.fillStyle = capGrad;
   ctx.beginPath();
-  ctx.moveTo(-8, -10);
-  ctx.lineTo(8, -10);
-  ctx.lineTo(4, -16);
-  ctx.lineTo(-4, -16);
+  ctx.moveTo(-9, -10);
+  ctx.lineTo(9, -10);
+  ctx.lineTo(5, -17);
+  ctx.lineTo(-5, -17);
   ctx.closePath();
   ctx.fill();
+  ctx.strokeStyle = "#171d22";
+  ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Glass body
-  ctx.fillStyle = "#f4e090";
-  ctx.globalAlpha = 0.8;
-  rr(ctx, -6, -10, 12, 18, 2);
+  // Glass body (rounded, lit from upper-left)
+  const glassGrad = ctx.createLinearGradient(-8, -10, 8, 10);
+  glassGrad.addColorStop(0, "#fff4c0");
+  glassGrad.addColorStop(0.45, "#f2cf60");
+  glassGrad.addColorStop(1, "#b98828");
+  ctx.fillStyle = glassGrad;
+  rr(ctx, -8, -10, 16, 19, 3);
   ctx.fill();
-  ctx.globalAlpha = 1.0;
+  ctx.strokeStyle = "#171d22";
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
 
-  // Inner glow/flame
+  // Inner flame
+  ctx.save();
+  rr(ctx, -8, -10, 16, 19, 3);
+  ctx.clip();
+  const flameGrad = ctx.createRadialGradient(0, 1, 0.5, 0, 1, 7);
+  flameGrad.addColorStop(0, "#fff2c0");
+  flameGrad.addColorStop(0.45, "#f0a030");
+  flameGrad.addColorStop(1, "rgba(200,90,20,0)");
+  ctx.fillStyle = flameGrad;
+  ctx.beginPath();
+  ctx.arc(0, 1, 7, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "#d4783a";
   ctx.beginPath();
-  ctx.arc(0, 0, 4, 0, Math.PI * 2);
+  ctx.moveTo(0, -3);
+  ctx.bezierCurveTo(3, 0, 2.5, 5, 0, 6);
+  ctx.bezierCurveTo(-2.5, 5, -3, 0, 0, -3);
+  ctx.closePath();
   ctx.fill();
-
-  // Base
-  ctx.fillStyle = "#5a6a76";
-  ctx.fillRect(-8, 8, 16, 4);
-  ctx.strokeRect(-8, 8, 16, 4);
-
-  // Frame lines
+  ctx.fillStyle = "#fff0b0";
   ctx.beginPath();
-  ctx.moveTo(-6, -10); ctx.lineTo(-6, 8);
-  ctx.moveTo(6, -10); ctx.lineTo(6, 8);
+  ctx.ellipse(0, 2, 1.2, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Vertical frame ribs
+  ctx.strokeStyle = "#3a2c14";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-6.5, -9);
+  ctx.lineTo(-6.5, 8);
+  ctx.moveTo(6.5, -9);
+  ctx.lineTo(6.5, 8);
   ctx.stroke();
+
+  // Base (metal foot)
+  const baseGrad = ctx.createLinearGradient(0, 8, 0, 13);
+  baseGrad.addColorStop(0, "#7a8792");
+  baseGrad.addColorStop(1, "#2a343c");
+  ctx.fillStyle = baseGrad;
+  rr(ctx, -9, 8, 18, 5, 1.5);
+  ctx.fill();
+  ctx.strokeStyle = "#171d22";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Specular highlight on glass, upper-left
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.beginPath();
+  ctx.ellipse(-4, -4, 1.4, 5, -0.15, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 export const ICONS = {

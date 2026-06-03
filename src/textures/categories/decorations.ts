@@ -450,100 +450,128 @@ function drawPearlFountain(ctx: CanvasRenderingContext2D) {
 
 function drawFishingDock(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
-  // Water beneath dock
+  // Water beneath dock (kept inside ±25)
   ctx.fillStyle = "#3a5878";
   ctx.beginPath();
-  ctx.rect(-26, 16, 52, 12);
+  rrLocal(ctx, -25, 14, 50, 11, 3);
   ctx.fill();
+  ctx.strokeStyle = "#27445e";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  rrLocal(ctx, -25, 14, 50, 11, 3);
+  ctx.stroke();
   // Water ripples
   ctx.strokeStyle = "rgba(168,200,224,0.7)";
   ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(-22, 22); ctx.quadraticCurveTo(-14, 20, -6, 22);
-  ctx.quadraticCurveTo(2, 24, 10, 22); ctx.quadraticCurveTo(18, 20, 24, 22);
-  ctx.moveTo(-20, 26); ctx.quadraticCurveTo(-10, 24, 0, 26);
-  ctx.quadraticCurveTo(10, 28, 22, 26);
+  ctx.moveTo(-20, 19); ctx.quadraticCurveTo(-12, 17.5, -4, 19);
+  ctx.quadraticCurveTo(4, 20.5, 12, 19); ctx.quadraticCurveTo(18, 18, 22, 19);
+  ctx.moveTo(-18, 23); ctx.quadraticCurveTo(-8, 21.5, 2, 23);
+  ctx.quadraticCurveTo(12, 24.5, 20, 23);
   ctx.stroke();
   // Pilings — three weathered posts going down into water
-  [-16, 0, 14].forEach((x) => {
+  [-15, -1, 13].forEach((x) => {
     ctx.fillStyle = "#5a3a14";
-    rrLocal(ctx, x - 3, 4, 6, 24, 1);
+    rrLocal(ctx, x - 3, 2, 6, 21, 1);
     ctx.fill();
     ctx.strokeStyle = "#1a0e04";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    rrLocal(ctx, x - 3, 4, 6, 24, 1);
+    rrLocal(ctx, x - 3, 2, 6, 21, 1);
     ctx.stroke();
     // Plank grain
     ctx.strokeStyle = "rgba(40,16,4,0.6)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(x - 1, 8); ctx.lineTo(x - 1, 24);
-    ctx.moveTo(x + 1, 6); ctx.lineTo(x + 1, 22);
+    ctx.moveTo(x - 1, 6); ctx.lineTo(x - 1, 20);
+    ctx.moveTo(x + 1, 4); ctx.lineTo(x + 1, 18);
     ctx.stroke();
   });
   // Deck planks across the top
   ctx.fillStyle = "#8a5a28";
-  rrLocal(ctx, -24, -2, 48, 8, 1);
+  rrLocal(ctx, -23, -4, 46, 8, 1);
   ctx.fill();
   ctx.strokeStyle = "#3a1e08";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  rrLocal(ctx, -24, -2, 48, 8, 1);
+  rrLocal(ctx, -23, -4, 46, 8, 1);
   ctx.stroke();
+  // Deck highlight (upper-left light)
+  ctx.fillStyle = "rgba(255,224,160,0.35)";
+  ctx.beginPath();
+  rrLocal(ctx, -22, -3.5, 44, 2, 1);
+  ctx.fill();
   // Plank gaps
   ctx.strokeStyle = "#3a1e08";
   ctx.lineWidth = 0.8;
-  [-12, 0, 12].forEach((x) => {
+  [-11, 1, 13].forEach((x) => {
     ctx.beginPath();
-    ctx.moveTo(x, -2); ctx.lineTo(x, 6);
+    ctx.moveTo(x, -4); ctx.lineTo(x, 4);
     ctx.stroke();
   });
-  // Lantern post — top-left
+  // Lantern post — left side, rising from deck
   ctx.fillStyle = "#5a3a14";
   ctx.beginPath();
-  ctx.rect(-22, -22, 3, 22);
+  rrLocal(ctx, -19, -20, 3, 17, 1);
   ctx.fill();
   ctx.strokeStyle = "#1a0e04";
   ctx.lineWidth = 1;
+  ctx.beginPath();
+  rrLocal(ctx, -19, -20, 3, 17, 1);
   ctx.stroke();
-  // Lantern hanging
-  ctx.fillStyle = "#3a3038";
-  rrLocal(ctx, -25, -22, 9, 8, 1);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0a0e";
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  // Lantern glass
-  ctx.fillStyle = "#ffe080";
-  ctx.fillRect(-24, -21, 7, 6);
   // Lantern glow halo
   ctx.fillStyle = "rgba(255,220,120,0.35)";
   ctx.beginPath();
-  ctx.arc(-20.5, -18, 10, 0, Math.PI * 2);
+  ctx.arc(-13.5, -19, 9, 0, Math.PI * 2);
   ctx.fill();
-  // Rope coil on the deck
+  // Lantern housing
+  ctx.fillStyle = "#3a3038";
+  ctx.beginPath();
+  rrLocal(ctx, -18, -24, 9, 9, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#0a0a0e";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  rrLocal(ctx, -18, -24, 9, 9, 1);
+  ctx.stroke();
+  // Lantern glass
+  ctx.fillStyle = "#ffe080";
+  ctx.beginPath();
+  rrLocal(ctx, -16.5, -22.5, 6, 6, 1);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.beginPath();
+  ctx.arc(-15, -21, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Rope coil on the deck — right side
   ctx.strokeStyle = "#a88040";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.arc(14, 0, 3, 0, Math.PI * 2);
+  ctx.arc(13, -1, 3, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(14, 0, 1.6, 0, Math.PI * 2);
+  ctx.arc(13, -1, 1.6, 0, Math.PI * 2);
   ctx.stroke();
-  // Tiny fish leaping in foreground
+  // Tiny fish leaping over water on the right
+  ctx.save();
+  ctx.translate(19, 11);
   ctx.fillStyle = "#b0c4d4";
   ctx.beginPath();
-  ctx.moveTo(20, 14);
-  ctx.bezierCurveTo(24, 12, 26, 14, 25, 16);
-  ctx.lineTo(28, 18);
-  ctx.lineTo(26, 16);
-  ctx.bezierCurveTo(25, 17, 22, 17, 20, 14);
+  ctx.moveTo(-4, 0);
+  ctx.bezierCurveTo(0, -2.5, 4, -2, 5, 0);
+  ctx.bezierCurveTo(6, -0.6, 7, -0.6, 7.4, 0.4);
+  ctx.bezierCurveTo(6.6, 0.8, 6, 1, 5, 1.6);
+  ctx.bezierCurveTo(4, 3.5, 0, 3, -4, 0);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a3848";
   ctx.lineWidth = 0.6;
   ctx.stroke();
+  ctx.fillStyle = "#1a3848";
+  ctx.beginPath();
+  ctx.arc(-1.5, -0.2, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 // ── Mine-themed decorations ──────────────────────────────────────────────

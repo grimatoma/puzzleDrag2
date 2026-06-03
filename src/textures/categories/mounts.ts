@@ -83,74 +83,44 @@ function drawMoose(ctx: CanvasRenderingContext2D) {
   // Dewlap
   ctx.fillStyle = "#3a2008";
   ctx.beginPath(); ctx.moveTo(-12, -8); ctx.lineTo(-14, -2); ctx.lineTo(-10, -4); ctx.closePath(); ctx.fill();
-  // Massive palmate antlers. The head is at (-14,-14) so antlers sprout
-  // upward from there and flare LEFT (out of the screen) and RIGHT (over
-  // the body). Each one is a wide hand-like palm with 4 finger-tines
-  // along the outer edge — moose antlers are unmistakable when drawn big.
-  const drawAntler = (anchorX: number, anchorY: number, mirror: boolean) => {
+  // Palmate moose antlers. Each one is a broad scoop-shaped palm rising from
+  // the crown and flaring outward, with three short rounded tines along the
+  // top edge. One contour stroke per antler keeps them clean; the inner edge
+  // connects to the pedicel so nothing floats. Kept inside ±26.
+  const drawAntler = (dir: number) => {
     ctx.save();
-    ctx.translate(anchorX, anchorY);
-    if (mirror) ctx.scale(-1, 1);
-    // Base / pedicel — small column rising from the head
-    ctx.fillStyle = "#7a5018";
+    ctx.translate(-13, -16);
+    ctx.scale(dir, 1);
+    // Pedicel — short column from the crown
+    ctx.fillStyle = "#7a5018"; ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(-1.5, 0);
-    ctx.lineTo(-3, -4);
-    ctx.lineTo(3, -4);
-    ctx.lineTo(1.5, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2; ctx.stroke();
-    // Palmate fan with prominent fingers running along the top/outer edge
+    ctx.moveTo(0, 2); ctx.lineTo(1, -3); ctx.lineTo(4, -3); ctx.lineTo(3, 2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Palm — concave scoop flaring up and out, three tines along the rim
     ctx.fillStyle = "#c89548";
     ctx.beginPath();
-    ctx.moveTo(-2, -4);     // base inner
-    ctx.lineTo(-2, -10);    // up the inner side
-    ctx.lineTo(-4, -14);    // inner-most tine
-    ctx.lineTo(  2, -12);
-    ctx.lineTo(  6, -16);   // tine 2
-    ctx.lineTo( 10, -12);
-    ctx.lineTo( 14, -16);   // tine 3
-    ctx.lineTo( 18, -12);
-    ctx.lineTo( 22, -14);   // tine 4 (outermost)
-    ctx.lineTo( 20, -8);    // outer-bottom corner
-    ctx.lineTo( 14, -6);    // bottom curve back to base
-    ctx.lineTo(  6, -4);
-    ctx.lineTo(  2, -4);
+    ctx.moveTo(1, -3);            // inner base
+    ctx.bezierCurveTo(2, -8, 5, -11, 9, -12); // inner sweep up to first tine root
+    ctx.lineTo(9, -15);          // tine 1
+    ctx.lineTo(11, -12);
+    ctx.lineTo(13, -15);         // tine 2
+    ctx.lineTo(15, -11);
+    ctx.lineTo(17, -13);         // tine 3 (outermost)
+    ctx.lineTo(17, -9);          // outer rim
+    ctx.bezierCurveTo(14, -6, 8, -4, 4, -3); // bottom of palm back to base
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
-    // Inner shadow band along the bottom of the palm so the fan looks
-    // 3-dimensional rather than flat.
-    ctx.fillStyle = "rgba(58,32,8,0.45)";
+    // Soft shading along the lower scoop for volume
+    ctx.fillStyle = "rgba(58,32,8,0.4)";
     ctx.beginPath();
-    ctx.moveTo(-2, -4);
-    ctx.lineTo(20, -8);
-    ctx.lineTo(14, -6);
-    ctx.lineTo(2, -4);
-    ctx.closePath();
-    ctx.fill();
-    // Tine ridge lines (catches the eye)
-    ctx.strokeStyle = "rgba(80,50,12,0.6)"; ctx.lineWidth = 0.8;
-    [[2,-12],[10,-12],[18,-12]].forEach(([x,y]) => {
-      ctx.beginPath();
-      ctx.moveTo(0, -6);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    });
+    ctx.moveTo(4, -3); ctx.bezierCurveTo(8, -4, 14, -6, 17, -9);
+    ctx.lineTo(15, -7); ctx.bezierCurveTo(11, -5, 7, -4, 4, -3);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   };
-  // Left antler — sprouts from the top of the head (-14,-15) and sweeps
-  // out and back to the left, off the head.
-  ctx.save();
-  ctx.translate(-14, -15);
-  // mirror horizontally so the "fingers" point left
-  ctx.scale(-1, 1);
-  drawAntler(0, 0, false);
-  ctx.restore();
-  // Right antler — sprouts from the same crown and sweeps right, OVER
-  // the body. (The body is darker than the antlers so they read.)
-  drawAntler(-14, -15, false);
+  drawAntler(-1); // left antler, flares left
+  drawAntler(1);  // right antler, flares right over the body
 }
 
 function drawMammoth(ctx: CanvasRenderingContext2D) {
@@ -196,43 +166,37 @@ function drawMammoth(ctx: CanvasRenderingContext2D) {
   for (let i = 0; i < 4; i++) {
     ctx.beginPath(); ctx.arc(-18, 0 + i*3, 3.5, -0.6, 0.6); ctx.stroke();
   }
-  // Tusks — much larger and curling forward/up so they read instantly as
-  // tusks instead of tiny outlines lost inside the trunk.
-  ctx.fillStyle = "#fff8d0";
-  ctx.beginPath();
-  ctx.moveTo(-14, 2);
-  ctx.bezierCurveTo(-26, 6, -28, -10, -18, -14);
-  ctx.bezierCurveTo(-16, -10, -14, -4, -12, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#5a3814";
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  // Right tusk (smaller, behind — gives a sense of two)
+  // Two curved ivory tusks emerging from below the head and sweeping
+  // forward then up. Drawn as distinct tapered crescents so they read as a
+  // pair of tusks, not one white blob. The back tusk is darker/behind.
+  // Back tusk (slightly higher, dimmer)
   ctx.fillStyle = "#e8d8a8";
   ctx.beginPath();
-  ctx.moveTo(-10, 2);
-  ctx.bezierCurveTo(-2, 6, -2, -8, -8, -12);
-  ctx.bezierCurveTo(-9, -8, -10, -2, -9, 2);
+  ctx.moveTo(-15, 6);
+  ctx.bezierCurveTo(-22, 8, -25, 2, -23, -3);
+  ctx.bezierCurveTo(-22, 0, -20, 4, -16, 4);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#5a3814";
-  ctx.lineWidth = 1.0;
-  ctx.stroke();
-  // Tusk highlight stripe (catches eye, sells the ivory)
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 1.0; ctx.stroke();
+  // Front tusk (brighter, lower) — clear forward-then-up curl
+  ctx.fillStyle = "#fff8d0";
   ctx.beginPath();
-  ctx.moveTo(-22, -6);
-  ctx.bezierCurveTo(-18, -10, -16, -8, -14, -2);
-  ctx.stroke();
+  ctx.moveTo(-13, 8);
+  ctx.bezierCurveTo(-21, 11, -25, 5, -22, 0);
+  ctx.bezierCurveTo(-21, 4, -18, 7, -14, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Ivory highlight stripe
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(-22, 2); ctx.bezierCurveTo(-20, 6, -17, 7, -14, 7); ctx.stroke();
   // Ear
   ctx.fillStyle = "#5a3414";
-  ctx.beginPath(); ctx.ellipse(-8, -8, 4, 5, -0.4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-7, -7, 4, 5, -0.4, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.2; ctx.stroke();
   // Eye
-  ctx.fillStyle = "#fff8e0"; ctx.beginPath(); ctx.arc(-13, -3, 1.3, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-13, -3, 0.8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#fff8e0"; ctx.beginPath(); ctx.arc(-15, -2, 1.3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-15, -2, 0.8, 0, Math.PI*2); ctx.fill();
 }
 
 export const ICONS = {

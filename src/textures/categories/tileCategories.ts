@@ -78,15 +78,16 @@ function drawCatGrain(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#7a5018";
   ctx.lineWidth = 0.6;
   ctx.stroke();
-  // Whiskers
+  // Whiskers (awns) — short fan kept inside the safe area
   ctx.strokeStyle = "#c89320";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 3; i++) {
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = "round";
+  [-1, 0, 1].forEach((side) => {
     ctx.beginPath();
-    ctx.moveTo(-2 + i, -22);
-    ctx.lineTo(-4 + i * 2, -28);
+    ctx.moveTo(0, -23);
+    ctx.lineTo(side * 3, -25.5);
     ctx.stroke();
-  }
+  });
 }
 
 function drawCatWood(ctx: CanvasRenderingContext2D) {
@@ -495,54 +496,95 @@ function drawCatTrees(ctx: CanvasRenderingContext2D) {
 }
 
 function drawCatHerd(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 22, 4);
-  // Sheep silhouette — wooly cloud body
-  ctx.fillStyle = "#fffae0";
+  drawShadow(ctx, 20, 4);
+  // Legs first (behind the wool)
+  ctx.fillStyle = "#3a2010";
+  ctx.strokeStyle = "#1a0e06";
+  ctx.lineWidth = 0.8;
+  [-6, 0, 6].forEach((x) => {
+    ctx.beginPath();
+    ctx.rect(x - 1, 11, 2.6, 9);
+    ctx.fill();
+    ctx.stroke();
+  });
+  // Wool body — one bumpy cloud silhouette built from a ring of arcs
+  const cx = 2;
+  const cy = 1;
+  const lobes = 9;
   ctx.beginPath();
-  ctx.arc(-10, 4, 7, 0, Math.PI * 2);
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
-  ctx.arc(10, 4, 7, 0, Math.PI * 2);
-  ctx.arc(-4, -4, 6, 0, Math.PI * 2);
-  ctx.arc(6, -4, 6, 0, Math.PI * 2);
-  ctx.ellipse(0, 6, 14, 6, 0, 0, Math.PI * 2);
+  for (let i = 0; i <= lobes; i++) {
+    const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+    const px = cx + Math.cos(a) * 13;
+    const py = cy + Math.sin(a) * 9.5;
+    if (i === 0) ctx.moveTo(px, py);
+    else {
+      const pa = ((i - 1) / lobes) * Math.PI * 2 - Math.PI / 2;
+      const ma = (a + pa) / 2;
+      ctx.quadraticCurveTo(
+        cx + Math.cos(ma) * 16.5,
+        cy + Math.sin(ma) * 12,
+        px,
+        py,
+      );
+    }
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, 17);
+  grad.addColorStop(0, "#fffdf2");
+  grad.addColorStop(0.7, "#f3ebd6");
+  grad.addColorStop(1, "#d8cbac");
+  ctx.fillStyle = grad;
   ctx.fill();
-  ctx.strokeStyle = "#7a6248";
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "#8a7252";
+  ctx.lineWidth = 1.6;
   ctx.stroke();
+  // Subtle wool curls (interior detail, kept light)
+  ctx.strokeStyle = "rgba(138,114,82,0.45)";
+  ctx.lineWidth = 0.9;
+  [[-6, -2], [0, 2], [6, -1], [-2, 5]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(cx + x, cy + y, 1.8, Math.PI * 0.1, Math.PI * 0.95);
+    ctx.stroke();
+  });
   // Head
   ctx.fillStyle = "#3a2010";
   ctx.beginPath();
-  ctx.ellipse(-14, 4, 5, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(-13, 2, 5, 4.2, -0.1, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#0a0604";
+  ctx.strokeStyle = "#1a0e06";
   ctx.lineWidth = 1.2;
   ctx.stroke();
   // Ears
   ctx.fillStyle = "#3a2010";
   ctx.beginPath();
-  ctx.ellipse(-16, -1, 1.6, 3, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(-15, -2, 1.6, 3, -0.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(-12, -1, 1.6, 3, 0.4, 0, Math.PI * 2);
+  ctx.ellipse(-11, -2, 1.6, 3, 0.5, 0, Math.PI * 2);
   ctx.fill();
-  // Eye
+  ctx.stroke();
+  // Wool tuft on forehead
+  ctx.fillStyle = "#fffdf2";
+  ctx.beginPath();
+  ctx.arc(-13, -3, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#8a7252";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Eye with catch-light
   ctx.fillStyle = "#fffae0";
   ctx.beginPath();
-  ctx.arc(-15, 3, 0.8, 0, Math.PI * 2);
+  ctx.arc(-14, 1.5, 1, 0, Math.PI * 2);
   ctx.fill();
-  // Legs
-  ctx.fillStyle = "#3a2010";
-  ctx.fillRect(-8, 12, 2, 8);
-  ctx.fillRect(-2, 12, 2, 8);
-  ctx.fillRect(4, 12, 2, 8);
-  // Wool curls
-  ctx.strokeStyle = "rgba(122,98,72,0.5)";
-  ctx.lineWidth = 0.7;
-  for (let x = -8; x <= 8; x += 4) {
-    ctx.beginPath();
-    ctx.arc(x, 0, 1.4, 0, Math.PI);
-    ctx.stroke();
-  }
+  ctx.fillStyle = "#1a0e06";
+  ctx.beginPath();
+  ctx.arc(-14, 1.5, 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  // Specular highlight on wool
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath();
+  ctx.ellipse(cx - 5, cy - 5, 3.5, 2.2, -0.5, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawCatCattle(ctx: CanvasRenderingContext2D) {

@@ -256,13 +256,13 @@ function drawBram(ctx: CanvasRenderingContext2D) {
   ctx.beginPath(); ctx.arc(4.5, -7, 0.5, 0, Math.PI * 2); ctx.fill();
   // Hammer over shoulder
   ctx.save();
-  ctx.translate(-22, 4);
-  ctx.rotate(-0.5);
+  ctx.translate(-19, 6);
+  ctx.rotate(-0.4);
   ctx.fillStyle = "#7a4a18";
-  ctx.fillRect(-1.5, 0, 3, 14);
+  ctx.fillRect(-1.5, 0, 3, 13);
   ctx.fillStyle = "#5a6066";
-  ctx.fillRect(-5, -3, 10, 6);
-  ctx.strokeStyle = "#1a1c20"; ctx.lineWidth = 1; ctx.strokeRect(-5, -3, 10, 6);
+  ctx.fillRect(-4.5, -3, 9, 5.5);
+  ctx.strokeStyle = "#1a1c20"; ctx.lineWidth = 1; ctx.strokeRect(-4.5, -3, 9, 5.5);
   ctx.restore();
 }
 
@@ -412,7 +412,7 @@ function drawFrostmaw(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#cfe8f8";
   ctx.strokeStyle = "#3a82c4";
   ctx.lineWidth = 1;
-  [[-12, -22, -14, -32], [-4, -26, -3, -38], [4, -26, 3, -38], [12, -22, 14, -32], [-8, -24, -8, -34], [8, -24, 8, -34]].forEach(([bx, by, tx, ty]) => {
+  [[-12, -20, -14, -28], [-4, -23, -3, -30], [4, -23, 3, -30], [12, -20, 14, -28], [-8, -22, -8, -29], [8, -22, 8, -29]].forEach(([bx, by, tx, ty]) => {
     ctx.beginPath();
     ctx.moveTo(bx - 2, by);
     ctx.lineTo(bx + 2, by);
@@ -497,10 +497,10 @@ function drawQuagmire(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#5a8028";
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
-  [[-14, -16, -22, -24], [-6, -22, -10, -32], [6, -22, 10, -32], [14, -16, 22, -24], [-10, -20, -16, -28], [10, -20, 16, -28]].forEach(([x1, y1, x2, y2]) => {
+  [[-14, -16, -20, -22], [-6, -20, -9, -27], [6, -20, 9, -27], [14, -16, 20, -22], [-10, -18, -14, -25], [10, -18, 14, -25]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
-    ctx.bezierCurveTo((x1 + x2) / 2 + 4, (y1 + y2) / 2, x2 + 2, y2 + 4, x2, y2);
+    ctx.bezierCurveTo((x1 + x2) / 2 + 3, (y1 + y2) / 2, x2 + 1, y2 + 3, x2, y2);
     ctx.stroke();
   });
   // Mushroom tufts
@@ -577,7 +577,7 @@ function drawEmberDrake(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.8; ctx.stroke();
   // Horns
   ctx.fillStyle = "#3a1808";
-  [[-12, -22, -16, -32], [12, -22, 16, -32]].forEach(([bx, by, tx, ty]) => {
+  [[-12, -21, -16, -29], [12, -21, 16, -29]].forEach(([bx, by, tx, ty]) => {
     ctx.beginPath();
     ctx.moveTo(bx - 3, by);
     ctx.lineTo(bx + 3, by - 2);
@@ -866,15 +866,15 @@ function drawStorm(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = cloudGrad;
   ctx.beginPath();
   // Top puff line
-  ctx.moveTo(-26, -8);
-  ctx.bezierCurveTo(-28, -22, -12, -28, -4, -22);
-  ctx.bezierCurveTo(4, -32, 18, -28, 20, -18);
-  ctx.bezierCurveTo(30, -20, 32, -8, 24, -4);
+  ctx.moveTo(-24, -8);
+  ctx.bezierCurveTo(-26, -21, -12, -27, -4, -21);
+  ctx.bezierCurveTo(4, -30, 17, -27, 19, -18);
+  ctx.bezierCurveTo(28, -19, 29, -8, 23, -4);
   // Bumpy underside
-  ctx.bezierCurveTo(22, 2, 14, 4, 10, -2);
+  ctx.bezierCurveTo(21, 2, 14, 4, 10, -2);
   ctx.bezierCurveTo(6, 4, -2, 4, -6, -2);
-  ctx.bezierCurveTo(-12, 4, -20, 2, -22, -4);
-  ctx.bezierCurveTo(-30, -4, -30, -10, -26, -8);
+  ctx.bezierCurveTo(-12, 4, -19, 2, -21, -4);
+  ctx.bezierCurveTo(-28, -4, -28, -10, -24, -8);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#0a0e1a";

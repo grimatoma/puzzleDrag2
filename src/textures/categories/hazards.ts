@@ -45,10 +45,10 @@ function drawRatsHazard(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.arc(-22, 1.5, 1.2, 0, Math.PI * 2);
   ctx.fill();
-  // Whiskers
+  // Whiskers (kept inside the safe area)
   ctx.strokeStyle = "rgba(180,160,140,0.85)";
   ctx.lineWidth = 0.6;
-  [[-22, 1, -28, -1], [-22, 1, -28, 3], [-22, 2, -28, 5]].forEach(([x1, y1, x2, y2]) => {
+  [[-22, 1, -26, -1], [-22, 1, -26, 3], [-22, 2, -26, 5]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -106,8 +106,8 @@ function drawRatsHazard(ctx: CanvasRenderingContext2D) {
   // doesn't overlap the first rat's body. It sits behind/beside the main
   // rat to read as "a swarm" not "a rat".
   ctx.save();
-  ctx.translate(22, 12);
-  ctx.scale(0.55, 0.55);
+  ctx.translate(15, 13);
+  ctx.scale(0.5, 0.5);
   // Body
   ctx.fillStyle = "#4a3828";
   ctx.beginPath();

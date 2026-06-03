@@ -253,29 +253,29 @@ function drawMeat(ctx: CanvasRenderingContext2D) {
   ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.arc(-13, -19, 2.6, 0, Math.PI * 2); ctx.stroke();
   ctx.beginPath(); ctx.arc(-7, -13, 2.6, 0, Math.PI * 2); ctx.stroke();
-  // Bone shaft
+  // Bone shaft — extended so its lower end sinks into the meat blob (no gap)
   ctx.fillStyle = "#f4ecd2";
   ctx.beginPath();
   ctx.moveTo(-8, -14);
-  ctx.lineTo(2, -4);
-  ctx.lineTo(-2, 0);
+  ctx.lineTo(6, 0);
+  ctx.lineTo(1, 5);
   ctx.lineTo(-12, -10);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#7a6448";
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Roasted meat blob (pear shape)
+  // Roasted meat blob (pear shape) — drawn so its top wraps over the bone end
   const meat = ctx.createRadialGradient(2, 6, 2, 2, 6, 22);
   meat.addColorStop(0, "#e88a4a");
   meat.addColorStop(0.4, "#c44848");
   meat.addColorStop(1, "#5e1818");
   ctx.fillStyle = meat;
   ctx.beginPath();
-  ctx.moveTo(-2, -2);
+  ctx.moveTo(-4, -2);
   ctx.bezierCurveTo(-16, 0, -18, 18, 0, 22);
-  ctx.bezierCurveTo(20, 22, 22, 2, 8, 0);
-  ctx.bezierCurveTo(8, -4, 2, -4, -2, -2);
+  ctx.bezierCurveTo(20, 22, 22, 2, 8, -2);
+  ctx.bezierCurveTo(6, -6, 0, -6, -4, -2);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a0808";
@@ -399,12 +399,12 @@ function drawHorseshoe(ctx: CanvasRenderingContext2D) {
   ctx.bezierCurveTo(-22, 0, -14, 18, 0, 18);
   ctx.bezierCurveTo(14, 18, 22, 0, 14, -14);
   ctx.stroke();
-  // Specular highlight
-  ctx.strokeStyle = "rgba(255,255,255,0.65)";
-  ctx.lineWidth = 2;
+  // Specular highlight — a short soft sheen on the upper-left arm only
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.moveTo(-12, -10);
-  ctx.bezierCurveTo(-18, 4, -12, 14, -2, 14);
+  ctx.moveTo(-13, -10);
+  ctx.bezierCurveTo(-18, -2, -17, 6, -13, 12);
   ctx.stroke();
   // Nail holes (8)
   ctx.fillStyle = "#1a1c20";
