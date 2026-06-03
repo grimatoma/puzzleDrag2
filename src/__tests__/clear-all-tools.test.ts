@@ -25,7 +25,7 @@ describe("clearTilesOfKey", () => {
   it("clears only the requested tile type", () => {
     const s0 = {
       ...createInitialState(),
-      grid: makeGrid(["tile_veg_carrot", "tile_veg_carrot", "tile_grass_hay"]),
+      grid: makeGrid(["tile_veg_carrot", "tile_veg_carrot", "tile_grass_grass"]),
       inventory: {},
     };
     const { state: s1, collected } = clearTilesOfKey(s0, "tile_veg_carrot");
@@ -50,7 +50,7 @@ describe("USE_TOOL — clear_all via power.params.target", () => {
 
     const empty = {
       ...createInitialState(),
-      grid: makeGrid(["tile_grass_hay"]),
+      grid: makeGrid(["tile_grass_grass"]),
       tools: { ...createInitialState().tools, hoe: 1 },
     };
     const refunded = rootReducer(empty, { type: "USE_TOOL", payload: { id: "hoe" } });

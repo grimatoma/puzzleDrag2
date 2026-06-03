@@ -73,7 +73,7 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
 
   { id: "board-farm-idle", state: "boardFarm", hash: "#/board", diff: canvasDiff },
   { id: "board-anim-demo", state: "boardFarm", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
-  { id: "board-farm-chain-7", state: "boardFarm", hash: "#/board", actions: [api("holdChain", { key: "tile_grass_hay", length: 7 })], diff: canvasDiff },
+  { id: "board-farm-chain-7", state: "boardFarm", hash: "#/board", actions: [api("holdChain", { key: "tile_grass_grass", length: 7 })], diff: canvasDiff },
   { id: "board-farm-fire-rats", state: "boardFarmHazards", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-tool-bomb", state: "boardFarmBomb", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-tool-sickle", state: "boardFarmSickle", hash: "#/board", diff: canvasDiff },
@@ -152,7 +152,7 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
 ];
 
 const expectationOverrideById: Record<string, string> = {
-  "board-farm-chain-7": "A 7-tile hay chain is visibly held on the farm board before capture.",
+  "board-farm-chain-7": "A 7-tile grass chain is visibly held on the farm board before capture.",
   "shell-menu-settings": "Settings panel is open from the menu modal.",
   "town-build-picker-locked": "Build picker is open and a locked building option is shown.",
 };

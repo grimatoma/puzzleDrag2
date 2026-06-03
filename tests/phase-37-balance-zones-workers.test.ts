@@ -30,7 +30,7 @@ function freshWorkers() {
     {
       id: "farmer",
       name: "Farmer",
-      hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_hay: 2 }, resourcesStepEvery: 3 },
+      hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_grass: 2 }, resourcesStepEvery: 3 },
       maxCount: 10,
       effect: { type: "threshold_reduce_category", category: "grain", from: 6, to: 5 },
     },
@@ -139,7 +139,7 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[0].hireCost.coins).toBe(60);
     // Sibling step preserved.
     expect(w[0].hireCost.coinsStep).toBe(25);
-    expect(w[0].hireCost.resources).toEqual({ tile_grass_hay: 2 });
+    expect(w[0].hireCost.resources).toEqual({ tile_grass_grass: 2 });
   });
 
   it("patches resource costs and resource step", () => {

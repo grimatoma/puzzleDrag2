@@ -70,7 +70,7 @@ const BUILD_FILL = 1.06;
 // `boards`): label / nav icon / lot border / the art that fills the tile.
 // `kind` matches the `setEntryBiome` argument.
 const BOARD_META: Record<string, BoardMetaEntry> = {
-  farm: { label: "Farm Field", icon: "tile_grass_hay", border: "#2a5010", art: () => <FarmFieldArt /> },
+  farm: { label: "Farm Field", icon: "tile_grass_grass", border: "#2a5010", art: () => <FarmFieldArt /> },
   mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={!!locked} /> },
   fish: { label: "Harbor",     icon: "ui_enter",  border: "#1a3a5a", art: () => <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 55%, #1a3a5a 100%)" }} /> },
 };

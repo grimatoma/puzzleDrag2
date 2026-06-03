@@ -34,7 +34,7 @@ describe("farmRun turn budgets", () => {
     );
     const next = rootReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
+      payload: { key: "tile_grass_grass", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
     } as Action);
     expect(next.farmRun).not.toBeNull();
     expect(next.farmRun!.turnsRemaining).toBe(0);

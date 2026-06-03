@@ -10,7 +10,7 @@ describe("species tag system", () => {
   });
 
   it("hasTag: unknown key returns false", () => {
-    expect(hasTag("tile_grass_hay", "avoids_rats")).toBe(false);
+    expect(hasTag("tile_grass_grass", "avoids_rats")).toBe(false);
     expect(hasTag("no_such_key", "anything")).toBe(false);
   });
 
@@ -31,13 +31,13 @@ describe("rats avoid tagged adjacent tiles", () => {
     [{ key: "x" }, { key: "x" },     { key: "x" }],
   ];
 
-  it("rat eats tile_grass_hay if adjacent (no avoids_rats tag)", () => {
+  it("rat eats tile_grass_grass if adjacent (no avoids_rats tag)", () => {
     const state = {
-      grid: makeGrid("tile_grass_hay"),
+      grid: makeGrid("tile_grass_grass"),
       hazards: { rats: [{ row: 1, col: 1, age: 0 }] },
     };
     const r = tickRats(state);
-    // Rat at (1,1): adjacent (0,1) is tile_grass_hay → eaten.
+    // Rat at (1,1): adjacent (0,1) is tile_grass_grass → eaten.
     expect(r.grid[0][1].key).toBeNull();
     expect(r.grid[0][1]._eaten).toBe(true);
   });
@@ -69,7 +69,7 @@ describe("rats avoid tagged adjacent tiles", () => {
     // (0,1) wheat (avoided), (1,0) hay (eaten), (1,2) wheat (avoided), (2,1) cucumber (avoided)
     const grid = [
       [{ key: "x" },         { key: "tile_grain_wheat" }, { key: "x" }],
-      [{ key: "tile_grass_hay" }, { key: "x" },           { key: "tile_grain_wheat" }],
+      [{ key: "tile_grass_grass" }, { key: "x" },           { key: "tile_grain_wheat" }],
       [{ key: "x" },         { key: "tile_veg_cucumber" }, { key: "x" }],
     ];
     const state = { grid, hazards: { rats: [{ row: 1, col: 1, age: 0 }] } };

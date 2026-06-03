@@ -22,7 +22,7 @@ describe("10.2 — SEASON_POOL_MODS constants", () => {
   it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.tile_grain_wheat).toBe(1));
   it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.tile_tree_oak).toBe(2));
   it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.tile_mine_stone).toBe(1));
-  it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.tile_grass_hay).toBe(-1));
+  it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.tile_grass_grass).toBe(-1));
 });
 
 // ── Pool counts by season ─────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("spring hay is unchanged", () => {
-    expect(cnt(farmAt("Spring"), "tile_grass_hay")).toBe(cnt(BASE, "tile_grass_hay"));
+    expect(cnt(farmAt("Spring"), "tile_grass_grass")).toBe(cnt(BASE, "tile_grass_grass"));
   });
 
   it("summer pool has +1 wheat over base", () => {
@@ -49,7 +49,7 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("winter pool has -1 hay (clamped at min 1)", () => {
-    expect(cnt(farmAt("Winter"), "tile_grass_hay")).toBe(Math.max(1, cnt(BASE, "tile_grass_hay") - 1));
+    expect(cnt(farmAt("Winter"), "tile_grass_grass")).toBe(Math.max(1, cnt(BASE, "tile_grass_grass") - 1));
   });
 
   it("pool never collapses below 9 entries", () => {

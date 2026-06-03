@@ -72,7 +72,7 @@ describe("8.1 — Boss board modifiers", () => {
   it("quagmire: 50 hay", () => {
     const qm = requireBoss("quagmire");
     expect(qm.target.amount).toBe(50);
-    expect(qm.target.resource).toBe("tile_grass_hay");
+    expect(qm.target.resource).toBe("tile_grass_grass");
   });
 
   it("freeze_columns: 2 distinct columns flagged, frozen tiles not chainable", () => {
@@ -90,7 +90,7 @@ describe("8.1 — Boss board modifiers", () => {
   it("heat_tiles: age 1 → 2 → burn 1 random inventory unit", () => {
     const ed = requireBoss("ember_drake");
     let s = mergeTestState({
-      inventory: { tile_grass_hay: 5, tile_tree_oak: 3 },
+      inventory: { tile_grass_grass: 5, tile_tree_oak: 3 },
       boss: {
         id: "ember_drake",
         target: { resource: "iron_bar", amount: 3 },
@@ -102,7 +102,7 @@ describe("8.1 — Boss board modifiers", () => {
     s = tickModifier(s, ed.modifier).newState;
     expect(bossBag(s)?.modifierState?.heat?.[0].age).toBe(2);
     s = tickModifier(s, ed.modifier).newState;
-    expect(s.inventory.tile_grass_hay + s.inventory.tile_tree_oak).toBe(7);
+    expect(s.inventory.tile_grass_grass + s.inventory.tile_tree_oak).toBe(7);
     expect(bossBag(s)?.modifierState?.heat).toHaveLength(0);
   });
 

@@ -90,7 +90,7 @@ test('Mixed chain (rat + non-rat) is rejected', async ({ page }) => {
       chain: [
         { key: 'rat', row: 0, col: 0 },
         { key: 'rat', row: 0, col: 1 },
-        { key: 'tile_grass_hay', row: 0, col: 2 },
+        { key: 'tile_grass_grass', row: 0, col: 2 },
       ],
       key: 'rat',
       gained: 0,

@@ -19,7 +19,7 @@ export const DECORATIONS = {
   [DecorationId.VioletBed]: {
     id: DecorationId.VioletBed,
     name: "Violet Bed",
-    cost: { coins: 60, tile_grass_hay: 4 },
+    cost: { coins: 60, tile_grass_grass: 4 },
     influence: 20,
   },
   [DecorationId.StoneLantern]: {

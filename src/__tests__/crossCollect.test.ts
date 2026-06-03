@@ -17,7 +17,7 @@ function gridFromKeys(rows: Array<Array<string | null>>): Array<Array<{ key: str
 }
 
 // Canonical tile keys per category (from src/features/tileCollection/data.ts).
-const GRASS = "tile_grass_hay";       // category: grass
+const GRASS = "tile_grass_grass";       // category: grass
 const GRAIN = "tile_grain_wheat";     // category: grain (partner of grass)
 const FRUIT = "tile_fruit_apple";     // category: fruits
 const TREE = "tile_tree_oak";         // category: trees (partner of fruits)

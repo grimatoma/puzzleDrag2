@@ -54,25 +54,25 @@ describe("ProgressionTimelineContent — tier bands + legend + chips", () => {
   it("renders the friendly method names (Default + Chain) as badges", () => {
     const { container } = renderContent();
     const body = container.textContent ?? "";
-    // Default tiles exist (tile_grass_hay) and chain tiles exist (wheat).
+    // Default tiles exist (tile_grass_grass) and chain tiles exist (wheat).
     expect(body).toContain("Default");
     expect(body).toContain("Chain");
   });
 
   it("renders a navigable tile chip carrying its displayName", () => {
     renderContent();
-    // tile_grass_hay → "Hay", default discovery → present in tier 0.
-    const chip = screen.getByTitle("tiles:tile_grass_hay");
+    // tile_grass_grass → "Grass", default discovery → present in tier 0.
+    const chip = screen.getByTitle("tiles:tile_grass_grass");
     expect(chip).not.toBeNull();
-    expect(chip.textContent ?? "").toContain("Hay");
+    expect(chip.textContent ?? "").toContain("Grass");
   });
 
   it("a tile chip navigates to its wiki article via wikiNavTarget", () => {
     const navigate = vi.fn();
     renderContent({ navigate });
-    fireEvent.click(screen.getByTitle("tiles:tile_grass_hay"));
+    fireEvent.click(screen.getByTitle("tiles:tile_grass_grass"));
     expect(navigate).toHaveBeenCalledWith(
-      expect.objectContaining({ tab: "tiles", focus: "tiles:tile_grass_hay" }),
+      expect.objectContaining({ tab: "tiles", focus: "tiles:tile_grass_grass" }),
     );
   });
 
@@ -93,7 +93,7 @@ describe("ProgressionTimeline — collapsed-by-default section", () => {
   it("does not mount the heavy content until opened", () => {
     renderSection();
     // Collapsed by default — no tile chips and no legend label rendered yet.
-    expect(screen.queryByTitle("tiles:tile_grass_hay")).toBeNull();
+    expect(screen.queryByTitle("tiles:tile_grass_grass")).toBeNull();
     expect(document.body.textContent ?? "").not.toMatch(/unlock method/i);
   });
 
@@ -101,7 +101,7 @@ describe("ProgressionTimeline — collapsed-by-default section", () => {
     const { container } = renderSection();
     const summary = container.querySelector("summary")!;
     fireEvent.click(summary);
-    expect(screen.getByTitle("tiles:tile_grass_hay")).not.toBeNull();
+    expect(screen.getByTitle("tiles:tile_grass_grass")).not.toBeNull();
     expect(document.body.textContent ?? "").toMatch(/unlock method/i);
   });
 });

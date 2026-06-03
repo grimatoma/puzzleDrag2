@@ -35,7 +35,7 @@ describe("Abilities → achievements counters", () => {
     s = {
       ...s,
       biomeKey: "farm",
-      grid: [["tile_grass_hay"]],
+      grid: [["tile_grass_grass"]],
       farm: { savedField: null },
     };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });

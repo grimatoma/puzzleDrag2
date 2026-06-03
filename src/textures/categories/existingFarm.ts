@@ -12,28 +12,22 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.closePath();
 }
 
-function drawHay(ctx: CanvasRenderingContext2D) {
-  // ground shadow
-  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,21,4.5,0,0,Math.PI*2); ctx.fill();
-  // rounded hay-bale body with a vertical gradient (golden straw)
-  const body = ctx.createLinearGradient(0,-20,0,22);
-  body.addColorStop(0,"#f4cf63"); body.addColorStop(0.55,"#d4a020"); body.addColorStop(1,"#8a5e14");
-  ctx.fillStyle = body; rr(ctx,-22,-20,44,42,8); ctx.fill();
-  ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 2.2; ctx.stroke();
-  // straw texture — short strokes clipped to the body
-  ctx.save(); rr(ctx,-22,-20,44,42,8); ctx.clip();
-  ctx.strokeStyle = "rgba(94,58,8,0.55)"; ctx.lineWidth = 1.4;
-  [-16,-8,0,8,16].forEach((x)=>{ ctx.beginPath(); ctx.moveTo(x,-18); ctx.lineTo(x+1.5,20); ctx.stroke(); });
-  ctx.strokeStyle = "rgba(255,232,144,0.7)"; ctx.lineWidth = 1.1;
-  [-12,-4,4,12].forEach((x)=>{ ctx.beginPath(); ctx.moveTo(x,-18); ctx.lineTo(x+1.5,20); ctx.stroke(); });
-  ctx.restore();
-  // two binding bands
-  ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 3.6;
-  [-7,9].forEach((y)=>{ ctx.beginPath(); ctx.moveTo(-22,y); ctx.lineTo(22,y); ctx.stroke(); });
-  ctx.strokeStyle = "rgba(255,200,120,0.6)"; ctx.lineWidth = 1.1;
-  [-9,7].forEach((y)=>{ ctx.beginPath(); ctx.moveTo(-20,y); ctx.lineTo(20,y); ctx.stroke(); });
-  // soft specular highlight upper-left
-  ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.beginPath(); ctx.ellipse(-11,-12,6,4,-0.5,0,Math.PI*2); ctx.fill();
+/** Base farm grass — green blades (hay is the bundled resource, not the tile). */
+function drawGrass(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,20,4.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,21,13,4,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#2a5010"; ctx.lineWidth = 4;
+  [[-10,-8,-14,-22],[-3,-2,-6,-21],[4,4,1,-23],[10,10,6,-20]].forEach(([x,c,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,20); ctx.bezierCurveTo(c,6,tx+2,-8,tx,ty); ctx.stroke();
+  });
+  ctx.strokeStyle = "#5c9c2e"; ctx.lineWidth = 2.8;
+  [[-7,-5,-10,-20],[0,0,-2,-19],[7,6,4,-21]].forEach(([x,c,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,19); ctx.bezierCurveTo(c,5,tx+1,-7,tx,ty); ctx.stroke();
+  });
+  ctx.strokeStyle = "#a8d858"; ctx.lineWidth = 1.4;
+  [[-5,-6,-16],[2,-1,-17],[8,2,-18]].forEach(([x,tx,ty])=>{
+    ctx.beginPath(); ctx.moveTo(x,16); ctx.bezierCurveTo(x,3,tx+1,-6,tx,ty); ctx.stroke();
+  });
 }
 
 function drawMeadowGrass(ctx: CanvasRenderingContext2D) {
@@ -281,7 +275,7 @@ function drawMelon(ctx: CanvasRenderingContext2D) {
 }
 
 export const ICONS = {
-  tile_grass_hay:           { label:"Hay",          color:"#e8b85c", draw:drawHay },
+  tile_grass_grass:         { label:"Grass",        color:"#6fa838", draw:drawGrass },
   tile_grass_meadow:        { label:"Meadow Grass", color:"#7eb84a", draw:drawMeadowGrass },
   tile_grass_spiky:         { label:"Spiky Grass",  color:"#9ec25a", draw:drawSpikyGrass },
   tile_grain_wheat:         { label:"Wheat",        color:"#e8c34c", draw:drawWheat },

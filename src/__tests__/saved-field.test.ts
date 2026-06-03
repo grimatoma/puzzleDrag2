@@ -23,7 +23,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
   });
 
   it("CLOSE_SEASON snapshots farm field when silo built", () => {
-    const tiles = [["tile_grass_hay","tile_tree_oak","tile_grass_hay","tile_grain_wheat","berry","eggs"]];
+    const tiles = [["tile_grass_grass","tile_tree_oak","tile_grass_grass","tile_grain_wheat","berry","eggs"]];
     const s0 = { ...createInitialState(),
       biomeKey: "farm", built: { ...createInitialState().built, silo: true },
       grid: tiles, hazards: null };
@@ -34,13 +34,13 @@ describe("Phase 12.5 — saved-field preservation", () => {
   it("CLOSE_SEASON does NOT snapshot when silo not built", () => {
     const s0 = { ...createInitialState(),
       biomeKey: "farm",
-      grid: [["tile_grass_hay"]], hazards: null };
+      grid: [["tile_grass_grass"]], hazards: null };
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
     expect(s1.farm.savedField).toBeNull();
   });
 
   it("SWITCH_BIOME restores saved field when non-null", () => {
-    const tiles = [["tile_grain_wheat","tile_grain_wheat","tile_grass_hay","tile_tree_oak","berry","eggs"]];
+    const tiles = [["tile_grain_wheat","tile_grain_wheat","tile_grass_grass","tile_tree_oak","berry","eggs"]];
     const s0 = { ...createInitialState(),
       biomeKey: "mine",
       farm: { savedField: { tiles, hazards: [{ id: "vent" }], turnsUsed: 5 } } };
