@@ -86,6 +86,7 @@ export interface NarrativePageDef {
 export const NARRATIVE_PAGES: NarrativePageDef[] = [
   { slug: "overview",    label: "Overview" },
   { slug: "progression", label: "Progression" },
+  { slug: "zone-flow",   label: "Zone flow" },
   { slug: "decisions",   label: "Design decisions" },
   { slug: "story",       label: "Story" },
 ];
