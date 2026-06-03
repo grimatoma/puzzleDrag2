@@ -5,6 +5,7 @@ import { ZONES } from "../features/zones/data.js";
 import { PROGRESSION_TRIGGERS } from "../config/progression/triggers.js";
 import { factIdsIn } from "../config/progression/conditions.js";
 import { isKnownFact } from "../config/progression/facts.js";
+import type { Effect } from "../config/progression/types.js";
 import { BUILDINGS, ITEMS, RECIPES } from "../constants.js";
 import { TYPE_WORKERS } from "../features/workers/data.js";
 
@@ -30,7 +31,7 @@ const RECIPE_KEYS = new Set(Object.keys(RECIPES));
 const ZONE_IDS = new Set(Object.keys(ZONES));
 const WORKER_IDS = new Set(TYPE_WORKERS.map((w: { id: string }) => w.id));
 
-function refResolves(effect: any): boolean {
+function refResolves(effect: Effect): boolean {
   switch (effect.kind) {
     case "unlockBuilding": return BUILDING_IDS.has(effect.building);
     case "unlockZone": return ZONE_IDS.has(effect.zone);
