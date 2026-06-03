@@ -5,20 +5,27 @@
 // abstract ids like "zone1" now uses the location id directly.
 //
 // Zone config fields (defined on each MAP_NODE):
-//   hasFarm / hasMine / hasWater — which puzzle boards the location exposes
-//   baseTurns      — base puzzle turns per session before local bonuses
+//   boards         — per-board-kind instances (farm: baseTurns/upgradeMap/seasonDrops;
+//                    mine/fish: baseTurns only). Presence of a key means that board is enabled.
 //   entryCost      — cost object to start a session
-//   upgradeMap     — source zone-category → spawned upgrade zone-category
-//   seasonDrops    — per-season percentage drop rates per category
 //   dangers        — per-location hazard list
 //   buildings      — building ids available to build at this location
+//
+// Farm board instance fields (boards.farm):
+//   upgradeMap     — source zone-category → spawned upgrade zone-category
+//   seasonDrops    — per-season percentage drop rates per category
 //
 // Categories (upgradeMap keys / seasonDrops keys):
 //   grass, grain, trees, birds, vegetables, fruits,
 //   flowers, herd_animals, cattle, mounts
 // Special upgrade target: "gold" (board-only coin tile, not in inventory).
 
-import { MAP_NODES, type MapNode } from "../cartography/data.js";
+import { MAP_NODES, type MapNode, type BoardKind, type ZoneBoards } from "../cartography/data.js";
+import type {
+  FarmBoardInstance,
+  FishBoardInstance,
+  MineBoardInstance,
+} from "../../config/schemas/boardInstance.js";
 import { computeAggregatedAbilities } from "../workers/aggregate.js";
 import { keeperForType } from "../../keepers.js";
 import {
@@ -109,24 +116,53 @@ export function seasonNameInSession(turnsUsed: number, turnBudget: number): Sess
   return SESSION_SEASON_NAMES[seasonIndexInSession(turnsUsed, turnBudget)];
 }
 
+export type { BoardKind, ZoneBoards };
+export type { FarmBoardInstance, MineBoardInstance, FishBoardInstance };
+
 export interface Zone {
   id: string;
   name: string;
-  hasFarm: boolean;
-  hasMine: boolean;
-  hasWater: boolean;
-  baseTurns: number;
+  boards: ZoneBoards;
   entryCost: { coins?: number };
-  upgradeMap: Record<string, string>;
-  seasonDrops: Record<string, Record<string, number>>;
   dangers: string[];
   buildings: string[];
   plotCount: number;
 }
 
-export function zoneBaseTurns(zoneOrId: string | Zone | undefined | null): number {
-  const zone = typeof zoneOrId === "string" ? ZONES[zoneOrId] : zoneOrId;
-  const raw = zone?.baseTurns ?? 10;
+function resolveZone(zoneOrId: string | Zone | undefined | null): Zone | null {
+  if (!zoneOrId) return null;
+  if (typeof zoneOrId === "string") return ZONES[zoneOrId] ?? null;
+  return zoneOrId;
+}
+
+/** True when the zone has a board instance for the given kind. */
+export function zoneHasBoard(zoneOrId: string | Zone | undefined | null, kind: BoardKind): boolean {
+  const zone = resolveZone(zoneOrId);
+  return !!zone?.boards?.[kind];
+}
+
+/** Return the board instance for a zone, or null when that board is not enabled. */
+export function zoneBoard(
+  zoneOrId: string | Zone | undefined | null,
+  kind: BoardKind,
+): FarmBoardInstance | MineBoardInstance | FishBoardInstance | null {
+  const zone = resolveZone(zoneOrId);
+  return zone?.boards?.[kind] ?? null;
+}
+
+/** Typed shortcut for the farm board instance on a zone. */
+export function zoneFarmBoard(zoneOrId: string | Zone | undefined | null): FarmBoardInstance | null {
+  const zone = resolveZone(zoneOrId);
+  return zone?.boards?.farm ?? null;
+}
+
+export function zoneBaseTurns(
+  zoneOrId: string | Zone | undefined | null,
+  boardKind: BoardKind = "farm",
+): number {
+  const zone = resolveZone(zoneOrId);
+  const board = zone?.boards?.[boardKind];
+  const raw = board?.baseTurns ?? 10;
   return Math.max(0, Math.floor(Number(raw) || 0));
 }
 
@@ -143,10 +179,12 @@ export interface TurnBudgetOpts {
   bonusTurns?: number;
   multiplier?: number;
   useFertilizer?: boolean;
+  boardKind?: BoardKind;
 }
 
 export function turnBudgetForZone(state: GameState, zoneId: string, opts: TurnBudgetOpts = {}): number {
-  const baseTurns = opts.baseTurns ?? zoneBaseTurns(zoneId);
+  const boardKind = opts.boardKind ?? "farm";
+  const baseTurns = opts.baseTurns ?? zoneBaseTurns(zoneId, boardKind);
   const additive = opts.additiveBonus ?? turnBudgetAdditiveBonusForZone(state, zoneId);
   const bonusTurns = opts.bonusTurns ?? 0;
   const multiplier = opts.multiplier ?? (opts.useFertilizer ? 2 : 1);
@@ -181,9 +219,9 @@ export function pickByZoneSeasonDrops({
   rng,
 }: PickByDropsArgs): ResourceRef | null {
   if (!zoneId || !seasonName) return null;
-  const zone = ZONES[zoneId];
-  if (!zone || !zone.seasonDrops) return null;
-  const drops = zone.seasonDrops[seasonName];
+  const farm = zoneFarmBoard(zoneId);
+  if (!farm?.seasonDrops) return null;
+  const drops = farm.seasonDrops[seasonName];
   if (!drops) return null;
 
   const total = Object.values(drops).reduce((a: number, b: number) => a + (b > 0 ? b : 0), 0);
@@ -244,8 +282,8 @@ export function nextResourceForZone({
   categoryOf,
 }: NextResourceArgs): ResourceRef | null {
   if (!currentRes || !zoneId) return null;
-  const zone = ZONES[zoneId];
-  if (!zone || !zone.upgradeMap) return null;
+  const farm = zoneFarmBoard(zoneId);
+  if (!farm?.upgradeMap) return null;
 
   const sourceTileCat = categoryOf?.[currentRes.key];
   if (!sourceTileCat) return null;
@@ -253,7 +291,7 @@ export function nextResourceForZone({
   const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat];
   if (!sourceZoneCat) return null;
 
-  const targetZoneCat = zone.upgradeMap[sourceZoneCat];
+  const targetZoneCat = farm.upgradeMap[sourceZoneCat];
   if (!targetZoneCat || targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) return null;
 
   const targetTileCats: string[] = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
@@ -280,35 +318,29 @@ export function nextResourceForZone({
  * Returns at most 8 entries — the "8 fixed slots" rule from the Start Farming modal.
  */
 export function zoneCategories(zoneId: string): string[] {
-  const z = ZONES[zoneId];
-  if (!z) return [];
-  return Object.keys(z.upgradeMap).slice(0, 8);
+  const farm = zoneFarmBoard(zoneId);
+  if (!farm?.upgradeMap) return [];
+  return Object.keys(farm.upgradeMap).slice(0, 8);
 }
 
 // ZONES is derived from MAP_NODES so node id === zone id.
 // Engine code accesses ZONES[state.mapCurrent] or ZONES[state.activeZone]
 // (activeZone mirrors mapCurrent, set in cartography/slice.js on CARTO/TRAVEL).
 // Inner zone objects are intentionally NOT frozen — `applyZoneOverrides`
-// mutates them in place so Dev Panel toggles (hasMine, hasWater, etc.)
-// take effect on the live module export. The outer dict is frozen so the
-// set of zone ids is fixed.
+// mutates them in place so Dev Panel patches to boards.* take effect on the
+// live module export. The outer dict is frozen so the set of zone ids is fixed.
 export const ZONES: Readonly<Record<string, Zone>> = Object.freeze(
   Object.fromEntries(
     (MAP_NODES as MapNode[]).map((n) => [
       n.id,
       {
-        id:           n.id,
-        name:         n.name,
-        hasFarm:      n.hasFarm  ?? false,
-        hasMine:      n.hasMine  ?? false,
-        hasWater:     n.hasWater ?? false,
-        baseTurns:    n.baseTurns ?? 10,
-        entryCost:    n.entryCost    ?? { coins: 0 },
-        upgradeMap:   n.upgradeMap   ?? {},
-        seasonDrops:  n.seasonDrops  ?? { Spring: {}, Summer: {}, Autumn: {}, Winter: {} },
-        dangers:      n.dangers      ?? [],
-        buildings:    n.buildings    ?? [],
-        plotCount:    n.plotCount    ?? (n.buildings?.length ?? 0),
+        id: n.id,
+        name: n.name,
+        boards: { ...n.boards },
+        entryCost: n.entryCost ?? { coins: 0 },
+        dangers: n.dangers ?? [],
+        buildings: n.buildings ?? [],
+        plotCount: n.plotCount ?? (n.buildings?.length ?? 0),
       } as Zone,
     ]),
   ) as Record<string, Zone>,

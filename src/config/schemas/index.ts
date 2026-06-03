@@ -49,6 +49,20 @@ export {
 
 export { zoneOverrideSchema, zonesOverridesSchema } from "./zone.js";
 
+export {
+  seasonDropsSchema,
+  farmBoardInstanceSchema,
+  farmBoardInstancePatchSchema,
+  mineBoardInstanceSchema,
+  mineBoardInstancePatchSchema,
+  fishBoardInstanceSchema,
+  fishBoardInstancePatchSchema,
+  zoneBoardsPatchSchema,
+  type FarmBoardInstance,
+  type MineBoardInstance,
+  type FishBoardInstance,
+} from "./boardInstance.js";
+
 export { workerOverrideSchema, workersOverridesSchema } from "./worker.js";
 
 export { keeperOverrideSchema, keepersOverridesSchema } from "./keeper.js";

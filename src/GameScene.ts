@@ -14,6 +14,8 @@ import {
   ZONE_UPGRADE_TARGET_GOLD,
   TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONE_TO_TILE_CATEGORIES,
+  zoneFarmBoard,
+  zoneBaseTurns,
 } from "./features/zones/data.js";
 import { assertTile } from "./types/guards.js";
 import type { TileRes } from "./TileObj.js";
@@ -732,9 +734,9 @@ export class GameScene extends Phaser.Scene {
     // Look up the zone's upgradeMap for this source category.
     const zoneId = getRegistry(this.registry, "activeZone") ?? null;
     if (!zoneId) return null;
-    const zone = ZONES[zoneId];
-    if (!zone?.upgradeMap) return null;
-    const targetZoneCat = zone.upgradeMap[sourceZoneCat];
+    const farm = zoneFarmBoard(zoneId);
+    if (!farm?.upgradeMap) return null;
+    const targetZoneCat = farm.upgradeMap[sourceZoneCat];
     if (!targetZoneCat) return null;
 
     // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
@@ -813,7 +815,7 @@ export class GameScene extends Phaser.Scene {
     const turnsUsed = getRegistry(this.registry, "turnsUsed") ?? 0;
     // Fall back to the existing seasonsCycled-based season name when no
     // session is active (e.g. tests that don't dispatch FARM/ENTER).
-    const turnBudget = getRegistry(this.registry, "turnBudget") ?? ZONES[zoneId].baseTurns ?? 10;
+    const turnBudget = getRegistry(this.registry, "turnBudget") ?? zoneBaseTurns(zoneId, "farm");
     const seasonName = seasonNameInSession(turnsUsed, turnBudget);
     return pickByZoneSeasonDrops({
       zoneId,

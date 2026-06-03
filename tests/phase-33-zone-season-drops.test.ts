@@ -51,19 +51,19 @@ describe("Phase 33 — seasonIndexInSession (turn split)", () => {
 
 describe("Phase 33 — Home seasonDrops illustrate the per-zone mechanic", () => {
   it("Spring trees = 20%, Winter trees = 73%", () => {
-    expect(ZONES.home.seasonDrops.Spring.trees).toBe(0.20);
-    expect(ZONES.home.seasonDrops.Winter.trees).toBe(0.73);
+    expect(ZONES.home.boards.farm!.seasonDrops.Spring.trees).toBe(0.20);
+    expect(ZONES.home.boards.farm!.seasonDrops.Winter.trees).toBe(0.73);
   });
 
   it("fruit is a rare drop on the general farm — under 5% every season", () => {
     for (const season of ["Spring", "Summer", "Autumn", "Winter"]) {
-      expect(ZONES.home.seasonDrops[season].fruits).toBeLessThan(0.05);
+      expect(ZONES.home.boards.farm!.seasonDrops[season].fruits).toBeLessThan(0.05);
     }
   });
 
   it("each season's percentages sum to 1", () => {
     for (const season of ["Spring", "Summer", "Autumn", "Winter"]) {
-      const total = Object.values(ZONES.home.seasonDrops[season]).reduce(
+      const total = Object.values(ZONES.home.boards.farm!.seasonDrops[season]).reduce(
         (a, b) => a + b,
         0,
       );

@@ -14,12 +14,16 @@ function freshZones() {
     zone1: {
       id: "zone1",
       name: "Zone 1",
-      baseTurns: 16,
       entryCost: { coins: 50 },
-      upgradeMap: { grass: "birds", grain: "vegetables" },
-      seasonDrops: {
-        Spring: { trees: 0.20 },
-        Winter: { trees: 0.70 },
+      boards: {
+        farm: {
+          baseTurns: 16,
+          upgradeMap: { grass: "birds", grain: "vegetables" },
+          seasonDrops: {
+            Spring: { trees: 0.20 },
+            Winter: { trees: 0.70 },
+          },
+        },
       },
     },
   };
@@ -49,28 +53,28 @@ describe("Phase 37 — applyZoneOverrides", () => {
     const z = freshZones();
     applyZoneOverrides(z, undefined);
     applyZoneOverrides(z, {});
-    expect(z.zone1.baseTurns).toBe(16);
+    expect(z.zone1.boards.farm.baseTurns).toBe(16);
     expect(z.zone1.entryCost.coins).toBe(50);
   });
 
-  it("patches baseTurns when valid", () => {
+  it("patches farm baseTurns when valid", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { baseTurns: 12 } });
-    expect(z.zone1.baseTurns).toBe(12);
+    applyZoneOverrides(z, { zone1: { boards: { farm: { baseTurns: 12 } } } });
+    expect(z.zone1.boards.farm.baseTurns).toBe(12);
   });
 
   it("throws on fractional baseTurns (all-or-nothing)", () => {
     const z = freshZones();
-    expect(() => applyZoneOverrides(z, { zone1: { baseTurns: 12.7 } }))
+    expect(() => applyZoneOverrides(z, { zone1: { boards: { farm: { baseTurns: 12.7 } } } }))
       .toThrow(/Invalid balance overrides \(zones\)/);
-    expect(z.zone1.baseTurns).toBe(16);
+    expect(z.zone1.boards.farm.baseTurns).toBe(16);
   });
 
   it("throws when base turns < 1", () => {
     const z = freshZones();
-    expect(() => applyZoneOverrides(z, { zone1: { baseTurns: 0 } }))
+    expect(() => applyZoneOverrides(z, { zone1: { boards: { farm: { baseTurns: 0 } } } }))
       .toThrow(/Invalid balance overrides \(zones\)/);
-    expect(z.zone1.baseTurns).toBe(16);
+    expect(z.zone1.boards.farm.baseTurns).toBe(16);
   });
 
   it("patches entryCost.coins while preserving sibling fields", () => {
@@ -84,14 +88,14 @@ describe("Phase 37 — applyZoneOverrides", () => {
   it("replaces upgradeMap wholesale when valid", () => {
     const z = freshZones();
     applyZoneOverrides(z, {
-      zone1: { upgradeMap: { grass: "trees", vegetables: "fruits" } },
+      zone1: { boards: { farm: { upgradeMap: { grass: "trees", vegetables: "fruits" } } } },
     });
-    expect(z.zone1.upgradeMap).toEqual({ grass: "trees", vegetables: "fruits" });
+    expect(z.zone1.boards.farm.upgradeMap).toEqual({ grass: "trees", vegetables: "fruits" });
   });
 
   it("throws when upgradeMap has empty targets", () => {
     const z = freshZones();
-    expect(() => applyZoneOverrides(z, { zone1: { upgradeMap: { grass: "trees", grain: "" } } }))
+    expect(() => applyZoneOverrides(z, { zone1: { boards: { farm: { upgradeMap: { grass: "trees", grain: "" } } } } }))
       .toThrow(/Invalid balance overrides \(zones\)/);
   });
 
@@ -99,29 +103,32 @@ describe("Phase 37 — applyZoneOverrides", () => {
     const z = freshZones();
     applyZoneOverrides(z, {
       zone1: {
-        seasonDrops: {
-          Spring: { trees: 0.30, grass: 0.40 },   // replaces the whole Spring table
-          Summer: { fruits: 0.25 },               // adds a brand-new season
-          // Autumn untouched
+        boards: {
+          farm: {
+            seasonDrops: {
+              Spring: { trees: 0.30, grass: 0.40 },
+              Summer: { fruits: 0.25 },
+            },
+          },
         },
       },
     });
-    expect(z.zone1.seasonDrops.Spring).toEqual({ trees: 0.30, grass: 0.40 });
-    expect(z.zone1.seasonDrops.Summer).toEqual({ fruits: 0.25 });
-    expect(z.zone1.seasonDrops.Winter).toEqual({ trees: 0.70 }); // unchanged
+    expect(z.zone1.boards.farm.seasonDrops.Spring).toEqual({ trees: 0.30, grass: 0.40 });
+    expect(z.zone1.boards.farm.seasonDrops.Summer).toEqual({ fruits: 0.25 });
+    expect(z.zone1.boards.farm.seasonDrops.Winter).toEqual({ trees: 0.70 });
   });
 
   it("throws on negative seasonDrops percentages", () => {
     const z = freshZones();
-    expect(() => applyZoneOverrides(z, { zone1: { seasonDrops: { Spring: { trees: -1, grass: 0.2 } } } }))
+    expect(() => applyZoneOverrides(z, { zone1: { boards: { farm: { seasonDrops: { Spring: { trees: -1, grass: 0.2 } } } } } }))
       .toThrow(/Invalid balance overrides \(zones\)/);
   });
 
   it("skips patches for unknown zone ids in production builds", () => {
     withImportMetaDev(false, () => {
       const z = freshZones();
-      applyZoneOverrides(z, { zoneX: { baseTurns: 99 } });
-      expect(z.zone1.baseTurns).toBe(16);
+      applyZoneOverrides(z, { zoneX: { boards: { farm: { baseTurns: 99 } } } });
+      expect(z.zone1.boards.farm.baseTurns).toBe(16);
     });
   });
 });

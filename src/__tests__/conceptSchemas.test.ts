@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { schemaForConcept } from "../balanceManager/wiki/conceptSchemas.js";
+import { schemaForConcept, schemaForBoardKind } from "../balanceManager/wiki/conceptSchemas.js";
 import { describeSchema } from "../balanceManager/schemaDoc.js";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 
@@ -23,8 +23,18 @@ describe("conceptSchemas — spot checks", () => {
     expect(cs!.kind).toBe("override");
     const doc = describeSchema(cs!.schema);
     const fieldNames = doc.fields.map((f) => f.field);
-    expect(fieldNames).toContain("upgradeMap");
+    expect(fieldNames).toContain("boards");
+  });
+
+  it("schemaForBoardKind('farm') exposes farm board instance fields", () => {
+    const cs = schemaForBoardKind("farm");
+    expect(cs).not.toBeNull();
+    expect(cs!.kind).toBe("definition");
+    const doc = describeSchema(cs!.schema);
+    const fieldNames = doc.fields.map((f) => f.field);
     expect(fieldNames).toContain("baseTurns");
+    expect(fieldNames).toContain("upgradeMap");
+    expect(fieldNames).toContain("seasonDrops");
   });
 
   it("'tiles' → kind: 'definition', schema introspects with tile fields", () => {

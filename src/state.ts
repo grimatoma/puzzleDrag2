@@ -45,7 +45,7 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import type { Action, GameState, Grid, Order, Tile } from "./types/state";
@@ -1075,7 +1075,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const zoneId = ((state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home");
       const zone = ZONES[zoneId];
       if (!zone) return state;
-      if (!zone.hasFarm) {
+      if (!zoneHasBoard(zone, "farm")) {
         return {
           ...state,
           bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} does not have farm fields.`, ms: 2200 },

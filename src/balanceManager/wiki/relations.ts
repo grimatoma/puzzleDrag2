@@ -10,7 +10,7 @@ import { getEntity, conceptForKey } from "./conceptEntities.js";
 import { canonicalRecipeEntries, buildRecipesByOutput } from "../recipeCatalog.js";
 import { NPC_DATA } from "../../features/npcs/data.js";
 import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
-import { ZONES } from "../../features/zones/data.js";
+import { ZONES, zoneHasBoard } from "../../features/zones/data.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -303,10 +303,8 @@ function relationsForBoardKinds(key: string, entity: Record<string, unknown>): R
     (BOARD_KIND_DANGERS[key] ?? []).map((h) => resolveLink("hazards", h)),
   );
 
-  const flag: "hasFarm" | "hasMine" | "hasWater" =
-    key === "farm" ? "hasFarm" : key === "mine" ? "hasMine" : "hasWater";
   const zoneLinks = Object.values(ZONES)
-    .filter((z) => z[flag] === true)
+    .filter((z) => zoneHasBoard(z, key as "farm" | "mine" | "fish"))
     .map((z) => resolveLink("zones", String(z.id)));
   const zoneGroup = makeGroup("Zones", zoneLinks);
 

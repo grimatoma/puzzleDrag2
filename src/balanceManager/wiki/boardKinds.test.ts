@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { CONCEPTS } from "./concepts.js";
 import { getEntity } from "./conceptEntities.js";
 import { WIKI_SECTIONS } from "./wikiNav.js";
-import { schemaForConcept } from "./conceptSchemas.js";
+import { schemaForConcept, schemaForBoardKind } from "./conceptSchemas.js";
 import { ledeFor } from "./lede.js";
 import { infoboxFacts } from "./infoboxFacts.js";
 import { relationsFor } from "./relations.js";
@@ -52,8 +52,10 @@ describe("boardKinds concept registration", () => {
     );
     expect(sections.map((s) => s.id)).toEqual(["board"]);
   });
-  it("has no Zod schema (live-config-only)", () => {
+  it("has no concept-level Zod schema (instance schema is per board kind)", () => {
     expect(schemaForConcept("boardKinds")).toBeNull();
+    expect(schemaForBoardKind("farm")).not.toBeNull();
+    expect(schemaForBoardKind("mine")).not.toBeNull();
   });
 });
 

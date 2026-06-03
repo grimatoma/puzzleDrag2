@@ -17,6 +17,9 @@ import {
   resourceItemSchema,
   toolItemSchema,
   zoneOverrideSchema,
+  farmBoardInstanceSchema,
+  mineBoardInstanceSchema,
+  fishBoardInstanceSchema,
   settlementBiomeEntrySchema,
   recipeDefinitionSchema,
   buildingDefinitionSchema,
@@ -41,6 +44,22 @@ export interface ConceptSchema {
   schema: unknown;
   /** "definition" = full canonical entry shape; "override" = partial balance.json patch. */
   kind: "definition" | "override";
+}
+
+/**
+ * Return the Zod schema describing a single board instance for a board kind.
+ */
+export function schemaForBoardKind(boardKindKey: string): ConceptSchema | null {
+  switch (boardKindKey) {
+    case "farm":
+      return { schema: farmBoardInstanceSchema, kind: "definition" };
+    case "mine":
+      return { schema: mineBoardInstanceSchema, kind: "definition" };
+    case "fish":
+      return { schema: fishBoardInstanceSchema, kind: "definition" };
+    default:
+      return null;
+  }
 }
 
 /**

@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
 import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
@@ -262,7 +262,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
   const townPlan = useMemo(() => {
     const z = ZONES[mapCurrent];
-    const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean) as string[];
+    const boardKinds = [z && zoneHasBoard(z, "farm") && "farm", z && zoneHasBoard(z, "mine") && "mine", z && zoneHasBoard(z, "fish") && "fish"].filter(Boolean) as string[];
     return buildTownPlan({ zoneId: mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
   }, [mapCurrent, requestedPlots]);
   const layoutPlots = useMemo(
