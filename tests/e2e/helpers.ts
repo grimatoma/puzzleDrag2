@@ -26,6 +26,25 @@ export type QuietSaveOverrides = Record<string, unknown>;
 
 type BoardTile = { row: number; col: number; res?: { key: string } };
 
+/** Zone-scoped inventory counts from a React/fiber state snapshot (no src/ imports). */
+export function inv(
+  state: {
+    inventory?: Record<string, Record<string, number>>;
+    farmRun?: { zoneId?: string } | null;
+    activeZone?: string;
+    mapCurrent?: string;
+  },
+  zone?: string,
+): Record<string, number> {
+  const z =
+    zone ??
+    state.farmRun?.zoneId ??
+    state.activeZone ??
+    state.mapCurrent ??
+    "home";
+  return state.inventory?.[z] ?? {};
+}
+
 // ─── Boot / setup ──────────────────────────────────────────────────────────
 
 export async function waitForBoot(page: Page): Promise<void> {

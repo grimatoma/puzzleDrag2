@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { inv } from "../../src/testUtils/inventory.js";
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
+import { gotoFresh, inv, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Crafting flow coverage. The crafting screen lives at view='crafting'
@@ -32,14 +31,14 @@ test('Bakery: crafting bread debits flour+egg and credits inventory.bread', asyn
   await gotoFresh(page, {
     coins: 500,
     built: { bakery: true },
-    inventory: { flour: 6, eggs: 2 },
+    inventory: { home: { flour: 6, eggs: 2 } },
   });
   await openCraftingTab(page, 'bakery');
 
   await selectRecipe(page, 'Bread Loaf');
   await detailCraftButton(page).click();
 
-  await waitForState(page, (s) => (s.inventory?.bread ?? 0) >= 1);
+  await waitForState(page, (s) => (inv(s).bread ?? 0) >= 1);
   const s = await getReactState(page);
   expect(inv(s).flour).toBe(3);
   expect(inv(s).eggs).toBe(1);
@@ -87,7 +86,7 @@ test('CRAFT button is disabled when inputs are missing', async ({ page }) => {
   await gotoFresh(page, {
     coins: 500,
     built: { bakery: true },
-    inventory: { flour: 0, eggs: 0 },
+    inventory: { home: { flour: 0, eggs: 0 } },
   });
   await openCraftingTab(page, 'bakery');
 
@@ -99,11 +98,11 @@ test('CRAFTING/CRAFT_RECIPE dispatch with no station built is rejected', async (
   await gotoFresh(page, {
     coins: 500,
     built: {},
-    inventory: { flour: 6, eggs: 2 },
+    inventory: { home: { flour: 6, eggs: 2 } },
   });
   await dispatchAction(page, { type: 'CRAFTING/CRAFT_RECIPE', recipeKey: 'bread' });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
-  expect(s.inventory?.bread ?? 0).toBe(0);
+  expect(inv(s).bread ?? 0).toBe(0);
   expect(inv(s).flour).toBe(6);
 });

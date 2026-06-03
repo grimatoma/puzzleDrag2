@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { inv } from "../../src/testUtils/inventory.js";
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
+import { gotoFresh, inv, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Tools coverage. The tools panel is reachable from the MobileDock (📦 Tools

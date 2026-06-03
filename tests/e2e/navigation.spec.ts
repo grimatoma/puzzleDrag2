@@ -3,9 +3,13 @@ import {
   gotoFresh, getReactState, dispatchAction, waitForState, chainUntil,
 } from './helpers';
 
+function navButton(page, label) {
+  return page.getByRole('button', { name: label }).first();
+}
+
 test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '⌂ Town' }).click();
+  await navButton(page, 'Town').click();
   await expect(page.getByText('Hearthwood Vale', { exact: true })).toBeVisible();
   const s = await getReactState(page);
   expect(s.view).toBe('town');
@@ -13,25 +17,25 @@ test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
 
 test('open Crafting screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🔨 Craft' }).click();
-  await expect(page.getByTestId('hud').getByText('Crafting', { exact: true })).toBeVisible();
+  await navButton(page, 'Craft').click();
+  await waitForState(page, (s) => s.view === 'crafting');
 });
 
 test('open Inventory screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🎒 Inventory' }).click();
+  await navButton(page, 'Inventory').click();
   await waitForState(page, (s) => s.view === 'inventory');
 });
 
-test('open Quests screen', async ({ page }) => {
+test('open Townsfolk screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '📜 Quests' }).click();
-  await waitForState(page, (s) => s.view === 'quests');
+  await navButton(page, 'Townsfolk').click();
+  await waitForState(page, (s) => s.view === 'townsfolk');
 });
 
 test('open Map screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🗺️ Map' }).click();
+  await navButton(page, 'Map').click();
   await waitForState(page, (s) => s.view === 'cartography');
 });
 

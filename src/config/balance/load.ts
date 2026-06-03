@@ -1,4 +1,4 @@
-import balanceFile from "../balance.json";
+import balanceFile from "../balance.json" with { type: "json" };
 import { parseBalanceOverrides } from "../schemas/parseBalance.js";
 import type { BalanceOverrides } from "../schemas/balance.js";
 

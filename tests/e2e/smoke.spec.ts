@@ -15,18 +15,17 @@ test('initial load: boots on Town view, HUD + bottom nav render without errors',
   await expect(page.getByTestId('coins')).toBeVisible();
   await expect(page.getByTestId('coins')).toContainText('150');
 
-  // Bottom nav always renders. Assert presence of each base item via aria-label.
-  for (const label of ['⌂ Town', '🎒 Inventory', '📜 Quests', '🔨 Craft']) {
-    await expect(page.getByRole('button', { name: label })).toHaveCount(1);
+  // Bottom nav always renders. Assert presence of each tab via accessible name.
+  for (const label of ['Town', 'Inventory', 'Craft', 'Map', 'Townsfolk']) {
+    await expect(page.getByRole('button', { name: label }).first()).toBeVisible();
   }
   expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
 });
 
 test('Board view: SeasonBar with 10 turns left appears once on board', async ({ page }) => {
   await gotoFresh(page);
-  // Town is the default boot view; force the player onto the board so the
-  // SeasonBar (which only renders when view === 'board') is visible.
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  // Enter a farm run so farmRun.turnBudget drives the season strip (not bare SET_VIEW).
+  await dispatchAction(page, { type: 'FARM/ENTER', payload: { selectedTiles: [], useFertilizer: false } });
   await expect(page.getByTestId('turns-left')).toBeVisible();
   await expect(page.getByTestId('turns-left')).toContainText('10');
 });

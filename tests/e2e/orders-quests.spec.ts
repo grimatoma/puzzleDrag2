@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { inv } from "../../src/testUtils/inventory.js";
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
+import { gotoFresh, inv, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Orders + quests / dailies. Orders live at state.orders[]; turning one in
@@ -20,7 +19,7 @@ async function withOrder(page, key, need, reward, extras: { invExtra?: number } 
   // pickDialog throws on a typo'd lookup, so we always seed it.
   await gotoFresh(page, {
     coins: 0,
-    inventory: { [key]: need + (extras.invExtra ?? 0) },
+    inventory: { home: { [key]: need + (extras.invExtra ?? 0) } },
     orders: [{ id: 'o1', npc: 'wren', key, need, reward, deadline: 99 }],
   });
 }
@@ -32,7 +31,7 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
   await waitForState(page, (s) => !(s.orders ?? []).some((o) => o.id === 'o1'));
   const s = await getReactState(page);
-  expect(inv(s).tile_grass_grass).toBe(0);
+  expect(inv(s).tile_grass_grass ?? 0).toBe(0);
   // Reward reaches the player as coins — we just assert it moved. The exact
   // number depends on bond + season multipliers and is covered in unit tests.
   expect(s.coins).toBeGreaterThan(0);
@@ -41,7 +40,7 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
 test('TURN_IN_ORDER with insufficient inventory is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 0,
-    inventory: { tile_grass_grass: 1 },
+    inventory: { home: { tile_grass_grass: 1 } },
     orders: [{ id: 'o1', npc: 'wren', key: 'tile_grass_grass', need: 50, reward: 100, deadline: 99 }],
   });
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
