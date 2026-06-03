@@ -83,6 +83,28 @@ describe("iconUsage", () => {
     expect(isIconUsed("hazard_smoke")).toBe(true);
   });
 
+  it("treats station_* prefix as in-use (crafting STATION_META iconKey)", () => {
+    expect(isIconUsed("station_bakery")).toBe(true);
+    expect(isIconUsed("station_forge")).toBe(true);
+    expect(isIconUsed("station_decor")).toBe(true);
+  });
+
+  it("treats biome_* prefix as in-use (BiomeEntryModal + wiki boardKinds)", () => {
+    expect(isIconUsed("biome_farm")).toBe(true);
+    expect(isIconUsed("biome_mine")).toBe(true);
+    expect(isIconUsed("biome_fish")).toBe(true);
+  });
+
+  it("treats map_* prefix as in-use (cartography map_${node.id} lookups)", () => {
+    expect(isIconUsed("map_home")).toBe(true);
+    expect(isIconUsed("map_caves")).toBe(true);
+    expect(isIconUsed("map_quarry")).toBe(true);
+  });
+
+  it("includes pact_scroll (charter IconCanvas JSX literal)", () => {
+    expect(isIconUsed("pact_scroll")).toBe(true);
+  });
+
   it("flags design.* SVG icons whose key is NOT in SVG_USAGE_LITERALS", () => {
     // tea-house is one we know is registered but doesn't show up as a JSX
     // string literal anywhere — should be flagged as unused.

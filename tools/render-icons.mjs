@@ -107,9 +107,16 @@ console.log("manifest:", JSON.stringify(byStatus), "total", manifest.length);
 if (MANIFEST_ONLY) { await browser.close(); process.exit(0); }
 
 // ---- Render one diagnostic PNG per icon ----
-// Reviewable set = in-use + alias-target (we still review what the aliases show).
+// Render every non-legacy/non-archive icon (the manifest already excludes those),
+// regardless of usage status, so the tracker shows a real before/after for every
+// card instead of a "–" placeholder. The manifest still tags each row in-use /
+// alias-target / removal-candidate, so the "unused?" chip is preserved — only the
+// preview boxes get filled. Pass --reviewable-only to render the old in-use +
+// alias-target subset.
+const REVIEWABLE_ONLY = opt("reviewable-only", false);
 const reviewable = manifest.filter(
-  (r) => r.status !== "removal-candidate" && (!MODULE_FILTER || r.module === MODULE_FILTER),
+  (r) => (!REVIEWABLE_ONLY || r.status !== "removal-candidate") &&
+         (!MODULE_FILTER || r.module === MODULE_FILTER),
 );
 
 async function renderKey(key) {

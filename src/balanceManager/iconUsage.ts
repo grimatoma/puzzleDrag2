@@ -32,6 +32,8 @@ const HARDCODED_USAGE = [
   // RichText [icon:X] embeds in state.js / story.js / feature slices.
   "ui_build", "ui_star", "ui_warning",
   "berry", "tile_special_giant_pearl", "tile_grass_grass",
+  // charter/index.tsx renders <IconCanvas iconKey="pact_scroll"> via a JSX literal.
+  "pact_scroll",
 ];
 
 // Prefixes for icon keys that are referenced dynamically (template literals,
@@ -48,6 +50,11 @@ const DYNAMIC_PREFIXES_CANVAS = [
   "worker_",     // TYPE_WORKERS.look.iconKey (also explicitly added below)
   "player_",     // player tools — TOOL_CATALOG.iconKey (also covered below)
   "tile_",       // baked Phaser texture keys (tile_<resource>)
+  "station_",    // crafting/index.tsx STATION_META[*].iconKey (station_bakery…station_decor)
+  "biome_",      // BiomeEntryModal.tsx + wiki entityIconKey("boardKinds")→biome_<k>; only
+                 //   biome_farm/mine/fish are registered (biome_base/biome_rare are
+                 //   tile-transform targets, not icons, so the prefix can't match them)
+  "map_",        // cartography MapScene.ts `map_${node.id}` template literals (same as cat_)
 ];
 
 // design.* SVG keys that appear as JSX literals across the codebase. List
