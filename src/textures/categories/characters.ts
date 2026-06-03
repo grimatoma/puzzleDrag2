@@ -8,8 +8,16 @@
 interface AvatarFrameOpts { bg?: string; border?: string; radius?: number; }
 interface HeadOpts { skin?: string; outline?: string; chinY?: number; brow?: string; }
 
-function drawAvatarFrame(_ctx: CanvasRenderingContext2D, _opts: AvatarFrameOpts = {}) {
-  // No circular backdrop — portraits render on a transparent field.
+function drawAvatarFrame(ctx: CanvasRenderingContext2D, opts: AvatarFrameOpts = {}) {
+  const { bg = "#f4ecd8", border = "#c5a87a", radius = 30 } = opts;
+  // Round backdrop
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
 }
 
 function drawShoulders(ctx: CanvasRenderingContext2D, color: string, accent?: string) {

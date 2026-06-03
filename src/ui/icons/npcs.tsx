@@ -2,18 +2,21 @@ import { useId } from "react";
 import type { IconProps } from "./types.js";
 
 // Illustrative NPC portraits. Self-colored (the `fill` prop is ignored).
-// Shared recipe: shoulders, layered hair, a soft-shaded face,
-// brows/eyes-with-catchlight/mouth, then a per-character signature trait.
-// No circular backdrop — figures render on a transparent field.
+// Shared recipe: gradient background disc, shoulders, layered hair, a
+// soft-shaded face, brows/eyes-with-catchlight/mouth, then a per-character
+// signature trait.
 
 export function NpcMira({ size = 48 }: IconProps) {
   const u = useId().replace(/:/g, "");
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>
+        <radialGradient id={`${u}bg`} cx="50%" cy="38%" r="68%"><stop offset="0" stopColor="#f7e6c6"/><stop offset="1" stopColor="#e3c089"/></radialGradient>
         <linearGradient id={`${u}hair`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#824f29"/><stop offset="1" stopColor="#4c2c13"/></linearGradient>
         <radialGradient id={`${u}skin`} cx="50%" cy="40%" r="62%"><stop offset="0" stopColor="#fce2c0"/><stop offset="1" stopColor="#ecbf8d"/></radialGradient>
       </defs>
+      <circle cx="24" cy="24" r="22" fill={`url(#${u}bg)`}/>
+      <circle cx="24" cy="24" r="21.2" fill="none" stroke="#c69f6b" strokeWidth="0.8" opacity="0.6"/>
       <path d="M9 47 Q11 33 24 33 Q37 33 39 47 Z" fill="#b3673a"/>
       <path d="M16 35 Q24 32 32 35 L31 39 Q24 36.5 17 39 Z" fill="#cf8a52" opacity="0.7"/>
       <path d="M10.5 27 Q7 12 24 9 Q41 12 37.5 27 Q39.5 30.5 36.5 33.5 Q34 22 24 21 Q14 22 11.5 33.5 Q8.5 30.5 10.5 27 Z" fill={`url(#${u}hair)`}/>
@@ -35,9 +38,12 @@ export function NpcBram({ size = 48 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>
+        <radialGradient id={`${u}bg`} cx="50%" cy="38%" r="68%"><stop offset="0" stopColor="#dccfba"/><stop offset="1" stopColor="#b3a489"/></radialGradient>
         <linearGradient id={`${u}hair`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a2e22"/><stop offset="1" stopColor="#191108"/></linearGradient>
         <radialGradient id={`${u}skin`} cx="50%" cy="40%" r="62%"><stop offset="0" stopColor="#dca878"/><stop offset="1" stopColor="#b07e4e"/></radialGradient>
       </defs>
+      <circle cx="24" cy="24" r="22" fill={`url(#${u}bg)`}/>
+      <circle cx="24" cy="24" r="21.2" fill="none" stroke="#9c8c70" strokeWidth="0.8" opacity="0.6"/>
       <path d="M8 47 Q10 32 24 32 Q38 32 40 47 Z" fill="#5a4030"/>
       <path d="M9 26 Q6 10 24 8.5 Q42 10 39 26 Q40 22 36 20 Q31 17 24 17 Q17 17 12 20 Q8 22 9 26 Z" fill={`url(#${u}hair)`}/>
       <ellipse cx="24" cy="24" rx="11" ry="12.6" fill={`url(#${u}skin)`}/>
@@ -59,9 +65,12 @@ export function NpcLiss({ size = 48 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>
+        <radialGradient id={`${u}bg`} cx="50%" cy="38%" r="68%"><stop offset="0" stopColor="#c8dcec"/><stop offset="1" stopColor="#a6c0d8"/></radialGradient>
         <linearGradient id={`${u}hair`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a3626"/><stop offset="1" stopColor="#271a10"/></linearGradient>
         <radialGradient id={`${u}skin`} cx="50%" cy="40%" r="62%"><stop offset="0" stopColor="#ecceA4"/><stop offset="1" stopColor="#d2ac80"/></radialGradient>
       </defs>
+      <circle cx="24" cy="24" r="22" fill={`url(#${u}bg)`}/>
+      <circle cx="24" cy="24" r="21.2" fill="none" stroke="#8aa6c0" strokeWidth="0.8" opacity="0.6"/>
       <path d="M10 47 Q12 34 24 34 Q36 34 38 47 Z" fill="#4a5a7a"/>
       <path d="M16 36 Q24 33.5 32 36 L31 40 Q24 37.5 17 40 Z" fill="#6a7a98" opacity="0.7"/>
       <circle cx="24" cy="9.5" r="3.4" fill={`url(#${u}hair)`}/>
@@ -88,9 +97,12 @@ export function NpcTomas({ size = 48 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>
+        <radialGradient id={`${u}bg`} cx="50%" cy="38%" r="68%"><stop offset="0" stopColor="#d6cfa6"/><stop offset="1" stopColor="#b6ae82"/></radialGradient>
         <linearGradient id={`${u}hair`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c4bcb2"/><stop offset="1" stopColor="#8c847a"/></linearGradient>
         <radialGradient id={`${u}skin`} cx="50%" cy="40%" r="62%"><stop offset="0" stopColor="#e8ca9c"/><stop offset="1" stopColor="#ccA878"/></radialGradient>
       </defs>
+      <circle cx="24" cy="24" r="22" fill={`url(#${u}bg)`}/>
+      <circle cx="24" cy="24" r="21.2" fill="none" stroke="#a09868" strokeWidth="0.8" opacity="0.6"/>
       <path d="M8 47 Q12 33 24 33 Q36 33 40 47 Z" fill="#6a7050"/>
       <path d="M15 38 Q24 35.5 33 38 L32 41 Q24 38.5 16 41 Z" fill="#838a64" opacity="0.7"/>
       <ellipse cx="24" cy="25" rx="11" ry="12.8" fill={`url(#${u}skin)`}/>
@@ -114,10 +126,13 @@ export function NpcWren({ size = 48 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>
+        <radialGradient id={`${u}bg`} cx="50%" cy="36%" r="70%"><stop offset="0" stopColor="#33403a"/><stop offset="1" stopColor="#171c16"/></radialGradient>
         <linearGradient id={`${u}hood`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#42433a"/><stop offset="1" stopColor="#20211a"/></linearGradient>
         <radialGradient id={`${u}skin`} cx="50%" cy="42%" r="62%"><stop offset="0" stopColor="#dccbb6"/><stop offset="1" stopColor="#b8a387"/></radialGradient>
         <radialGradient id={`${u}eye`} cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#fff3b0"/><stop offset="0.45" stopColor="#ffd23a"/><stop offset="1" stopColor="#ffd23a" stopOpacity="0"/></radialGradient>
       </defs>
+      <circle cx="24" cy="24" r="22" fill={`url(#${u}bg)`}/>
+      <circle cx="24" cy="24" r="21.2" fill="none" stroke="#4a5a4c" strokeWidth="0.8" opacity="0.5"/>
       <path d="M6 47 Q9 33 24 33 Q39 33 42 47 Z" fill={`url(#${u}hood)`}/>
       <path d="M24 6 Q12 7 9.5 20 Q8.5 26 12 28 Q12 19 16 16 Q12 21 13 27 L13 30 Q18 26 24 26 Q30 26 35 30 L35 27 Q36 21 32 16 Q36 19 36 28 Q39.5 26 38.5 20 Q36 7 24 6 Z" fill={`url(#${u}hood)`}/>
       <ellipse cx="24" cy="24.5" rx="9.6" ry="11.4" fill={`url(#${u}skin)`}/>
