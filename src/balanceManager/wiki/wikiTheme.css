@@ -707,6 +707,78 @@
   border-left: 1px solid var(--wiki-border);
 }
 
+/* ── Concept hero (category page lead) ──────────────────────────────────────── */
+/*
+ * Phase 1: gallery-first layout — the hero replaces the old bare header +
+ * redundant "Definition" paragraph. Reads --wiki-accent (defaulting to ember)
+ * so Phase 3 can set per-concept accents without touching the layout.
+ */
+
+.wiki-root .wiki-concept-hero {
+  /* Per-concept accent hook — defaults to ember. Phase 3 sets --wiki-accent. */
+  --wiki-accent: var(--wiki-ember);
+  --wiki-accent-deep: var(--wiki-ember-deep);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--wiki-border);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-parchment)) 0%,
+    var(--wiki-parchment) 100%
+  );
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+/* Banner strip — soft accent background with stat chips */
+.wiki-root .wiki-hero-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--wiki-accent) 12%, var(--wiki-parchment-deep)) 0%,
+    color-mix(in srgb, var(--wiki-accent) 6%, var(--wiki-parchment)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--wiki-accent) 30%, var(--wiki-border));
+}
+
+/* Individual stat chip inside the banner */
+.wiki-root .wiki-stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wiki-accent) 10%, var(--wiki-parchment));
+  border: 1px solid color-mix(in srgb, var(--wiki-accent) 35%, var(--wiki-border));
+  box-shadow: 0 1px 3px rgba(43, 34, 24, 0.07);
+  white-space: nowrap;
+}
+
+.wiki-root .wiki-stat-chip__value {
+  font-family: var(--wiki-font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--wiki-accent);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.wiki-root .wiki-stat-chip__label {
+  font-family: var(--wiki-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wiki-ink-subtle);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
 /* ── Reference section (collapsible developer-only wrapper) ──────────────────── */
 /*
  * Used to gate field-reference and schema tables behind a <details> element.

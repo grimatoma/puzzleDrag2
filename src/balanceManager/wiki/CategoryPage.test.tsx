@@ -2,7 +2,11 @@
 /**
  * CategoryPage.test.tsx — TDD suite for the concept/category article page.
  *
- * Written BEFORE the implementation (TDD-first). Uses real data; no fakes.
+ * Phase 1 layout: gallery-first.
+ *  - Hero (title + blurb + StatusBadge + stat chips) leads.
+ *  - Entity gallery ("Entries (N)") appears BEFORE the field reference.
+ *  - The redundant standalone "Definition" section is gone.
+ *  - Field reference is at the very bottom (developer view only).
  *
  * Coverage:
  *  1. Schema-backed concept ("recipes") — renders label, Fields heading, and at
@@ -12,16 +16,21 @@
  *     wikiNavTarget shape { tab: "<conceptId>", focus: "<conceptId>:<key>" }.
  *  4. Schema-backed concept with a function field ("hazards") — renders without
  *     throwing, shows the Fields heading, and shows the entry grid.
+ *  5. Phase 1 layout order — gallery before field reference; stat chips present.
  */
 
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import { BalanceNavProvider } from "../balanceNav.jsx";
+import { WikiViewProvider } from "./wikiView.js";
 import { CategoryPage } from "./CategoryPage.jsx";
 import { CONCEPTS } from "./concepts.js";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  localStorage.removeItem("hearth.wiki.view");
+});
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -30,9 +39,30 @@ function renderPage(
   { navigate = vi.fn() } = {},
 ) {
   return render(
-    <BalanceNavProvider focus={null} navigate={navigate}>
-      <CategoryPage conceptId={conceptId} />
-    </BalanceNavProvider>,
+    <WikiViewProvider>
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <CategoryPage conceptId={conceptId} />
+      </BalanceNavProvider>
+    </WikiViewProvider>,
+  );
+}
+
+/**
+ * Render with a specific wiki view mode pre-set via localStorage.
+ * WikiViewProvider reads from localStorage on initialisation.
+ */
+function renderPageWithView(
+  conceptId: string,
+  view: "developer" | "player",
+  { navigate = vi.fn() } = {},
+) {
+  localStorage.setItem("hearth.wiki.view", view);
+  return render(
+    <WikiViewProvider>
+      <BalanceNavProvider focus={null} navigate={navigate}>
+        <CategoryPage conceptId={conceptId} />
+      </BalanceNavProvider>
+    </WikiViewProvider>,
   );
 }
 
@@ -255,11 +285,50 @@ describe("CategoryPage — seasons (definition schema concept)", () => {
   });
 });
 
-describe("CategoryPage — definition lead", () => {
-  it("renders a Definition heading with the concept blurb", () => {
+// ─── Phase 1 layout: gallery before field reference ──────────────────────────
+
+describe("CategoryPage — Phase 1 layout order", () => {
+  it("renders the blurb in the hero (no standalone Definition section)", () => {
     renderPage("tiles");
     const body = document.body.textContent ?? "";
-    expect(body).toContain("Definition");
+    // Blurb still present — now inside the hero card, not a separate section
     expect(body).toMatch(/Board pieces/i); // tiles blurb
+    // There should be NO standalone "Definition" heading (that section is gone)
+    expect(body).not.toContain("Definition");
+  });
+
+  it("gallery ('Entries') appears before the field reference in the DOM", () => {
+    const { container } = renderPage("recipes");
+    const gallery = container.querySelector("[data-testid='wiki-entry-gallery']");
+    const reference = container.querySelector("[data-testid='wiki-field-reference']");
+    expect(gallery).not.toBeNull();
+    expect(reference).not.toBeNull();
+    // Node.DOCUMENT_POSITION_FOLLOWING (4) means reference comes after gallery
+    const position = gallery!.compareDocumentPosition(reference!);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("renders hero stat chips for recipes (count + stations)", () => {
+    const { container } = renderPage("recipes");
+    const chips = container.querySelectorAll(".wiki-stat-chip");
+    expect(chips.length).toBeGreaterThanOrEqual(1);
+    // At minimum the entry count chip is present
+    const chipText = Array.from(chips).map((c) => c.textContent ?? "").join(" ");
+    expect(chipText).toMatch(/entries|stations/i);
+  });
+
+  it("renders hero stat chips for tiles (count + biomes)", () => {
+    const { container } = renderPage("tiles");
+    const chips = container.querySelectorAll(".wiki-stat-chip");
+    expect(chips.length).toBeGreaterThanOrEqual(2);
+    const chipText = Array.from(chips).map((c) => c.textContent ?? "").join(" ");
+    expect(chipText).toMatch(/species/i);
+    expect(chipText).toMatch(/biomes/i);
+  });
+
+  it("field reference is absent in player view (ReferenceSection hidden)", () => {
+    const { container } = renderPageWithView("recipes", "player");
+    const html = container.innerHTML;
+    expect(html).not.toContain("Field reference");
   });
 });
