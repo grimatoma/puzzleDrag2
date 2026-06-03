@@ -193,13 +193,19 @@ function drawLava(ctx: CanvasRenderingContext2D) {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  // Steam / smoke
-  ctx.fillStyle = "rgba(160,80,40,0.5)";
-  [[-8, -16, 4], [4, -20, 3.4], [10, -16, 3]].forEach(([x, y, r]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
+  // Heat smoke — a single soft, vertically-connected wisp rising off the pool
+  // (replaces the three disconnected brown blobs that read as floating mud).
+  const smoke = ctx.createLinearGradient(0, 4, 0, -24);
+  smoke.addColorStop(0, "rgba(150,90,55,0.55)");
+  smoke.addColorStop(1, "rgba(150,90,55,0)");
+  ctx.fillStyle = smoke;
+  ctx.beginPath();
+  ctx.moveTo(-4, 2);
+  ctx.bezierCurveTo(-12, -6, -2, -12, -6, -20);
+  ctx.bezierCurveTo(-1, -24, 3, -20, 4, -16);
+  ctx.bezierCurveTo(8, -10, 6, -4, 4, 2);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawMole(ctx: CanvasRenderingContext2D) {
