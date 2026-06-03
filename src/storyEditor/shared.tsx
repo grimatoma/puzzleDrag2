@@ -123,7 +123,7 @@ export function Portrait({ npcKey, size = 24 }: PortraitProps) {
   if (npc?.look.iconKey && hasIcon(npc.look.iconKey)) {
     return (
       <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", flexShrink: 0 }} title={npc.name}>
-        <IconCanvas iconKey={npc.look.iconKey} size={size} rounded background="#2a1e10" />
+        <IconCanvas iconKey={npc.look.iconKey} size={size} background={null} rounded={false} />
       </div>
     );
   }
