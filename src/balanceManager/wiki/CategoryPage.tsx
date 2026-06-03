@@ -24,6 +24,7 @@ import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { describeSchema } from "../schemaDoc.js";
 import { groupTileEntries } from "./tileGrouping.js";
+import { groupToolEntries } from "./toolGrouping.js";
 // Direct import — the graph is inside a collapsed section (graphOpen=false by
 // default) so it only renders when the user opens it. No lazy() needed since
 // the collapsed-by-default guard already ensures the graph isn't built until
@@ -254,6 +255,38 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
                   />
                 </div>
               ))}
+            </section>
+          ))}
+        </div>
+      ) : conceptId === "tools" ? (
+        <div className="flex flex-col gap-4">
+          <div className="wiki-section-heading">
+            Entries ({entries.length})
+          </div>
+          {groupToolEntries(entries as unknown as WikiEntry[]).map((group) => (
+            <section key={group.boardKind} className="flex flex-col gap-3">
+              {/* Board-kind band heading — icon + label, ember accent */}
+              <div
+                className="flex items-center gap-2 pb-1"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              >
+                <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                  {group.icon}
+                </span>
+                <span className="wiki-concept-title" style={{ fontSize: 18 }}>
+                  {group.label}
+                </span>
+                <span
+                  className="text-[12px]"
+                  style={{ color: COLORS.inkSubtle }}
+                >
+                  ({group.entries.length})
+                </span>
+              </div>
+              <EntryGrid
+                entries={group.entries}
+                onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+              />
             </section>
           ))}
         </div>
