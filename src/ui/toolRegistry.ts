@@ -98,3 +98,4 @@ export function visibleTools(toolsState: Record<string, number> = {}): ToolEntry
     count: toolsState[t.key] || 0,
   }));
 }
+
