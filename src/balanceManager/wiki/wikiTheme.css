@@ -1197,9 +1197,96 @@
 /* ── Overview prose wrapper ── */
 
 .wiki-root .wiki-home-prose {
-  /* Article prose renders its own max-width via NarrativePage's <article class="max-w-[820px]"> */
+  /* Article prose renders its own max-width via NarrativePage's <article class="wiki-prose"> */
   border-top: 2px solid var(--wiki-border);
   padding-top: 24px;
+}
+
+/* ── Narrative page prose (Overview · Progression · Decisions · Story) ──────────
+ *
+ * These authored pages were previously capped at a tight 820px, which left the
+ * wide content pane mostly empty and crammed multi-column tables into a narrow
+ * strip. Widen the column so prose and tables both use the available pane while
+ * still keeping a sane upper bound on very wide monitors.
+ */
+.wiki-root .wiki-prose {
+  max-width: 1180px;
+}
+
+/* Game-screen embeds: keep a single screenshot from dominating the page — they
+ * are figures, not full-bleed banners. */
+.wiki-root .wiki-prose .wiki-html > img {
+  max-width: 760px;
+}
+
+/* ── Tables in authored narrative content ──────────────────────────────────────
+ *
+ * Authored HTML fragments (NarrativePage / HtmlBody) emit bare <table> markup
+ * with no styling, which rendered as borderless, hard-to-scan rows. Give them
+ * a proper parchment-themed grid: a tinted display-font header, cell padding,
+ * row separators, zebra striping, and a rounded clipped frame.
+ */
+.wiki-root .wiki-html table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.85em 0 1.1em;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--wiki-ink);
+  background: var(--wiki-parchment);
+  border: 1.5px solid var(--wiki-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--wiki-shadow-card);
+}
+
+.wiki-root .wiki-html thead th {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--wiki-accent) 14%, var(--wiki-parchment-deep)),
+    var(--wiki-parchment-deep)
+  );
+  font-family: var(--wiki-font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--wiki-ink);
+  border-bottom: 2px solid var(--wiki-border);
+}
+
+.wiki-root .wiki-html th,
+.wiki-root .wiki-html td {
+  padding: 8px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--wiki-border) 50%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--wiki-border) 26%, transparent);
+}
+
+.wiki-root .wiki-html th:last-child,
+.wiki-root .wiki-html td:last-child {
+  border-right: none;
+}
+
+.wiki-root .wiki-html tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 45%, var(--wiki-parchment));
+}
+
+.wiki-root .wiki-html tbody tr:hover {
+  background: color-mix(in srgb, var(--wiki-accent) 8%, var(--wiki-parchment));
+}
+
+.wiki-root .wiki-html tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* On narrow screens let a wide table scroll horizontally instead of forcing
+ * the whole page wider. */
+@media (max-width: 640px) {
+  .wiki-root .wiki-html table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
 
 /* ── Phase 4b: Mobile pass ──────────────────────────────────────────────────── */
