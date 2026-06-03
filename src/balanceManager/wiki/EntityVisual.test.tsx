@@ -113,6 +113,14 @@ describe("EntityVisual", () => {
     expect(frame?.querySelector("svg.absolute.inset-0.w-full.h-full")).not.toBeNull();
   });
 
+  it("renders wiki buildings in full color (isBuilt), not the unbuilt ghost filter", () => {
+    const { container } = render(<EntityVisual conceptId="buildings" entityKey="mill" size={96} />);
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+    // svgState(false) applies saturate(0.15) — wiki catalog should show built art.
+    expect(svg?.getAttribute("style") ?? "").not.toMatch(/saturate\(0\.15\)/);
+  });
+
   it("renders the cartography map icon for a known zone, not an iframe", () => {
     expect(zoneMapIconKey("home")).toBe("map_home");
     const { container } = render(<EntityVisual conceptId="zones" entityKey="home" />);
