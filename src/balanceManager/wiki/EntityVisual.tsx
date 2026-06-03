@@ -18,7 +18,7 @@
 import React from "react";
 import Icon from "../../ui/Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
-import BuildingIllustration, { CANONICAL_BUILDING_KEYS } from "../../ui/buildings/index.jsx";
+import BuildingIllustration, { BUILDING_KEYS } from "../../ui/buildings/index.jsx";
 import { COLORS, Pill } from "../shared.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
 import { buildTownPlan, STAGE_W, STAGE_H } from "../../townLayout.js";
@@ -137,8 +137,10 @@ export interface EntityVisualProps {
  * asset. NEVER renders a game iframe.
  */
 export function EntityVisual({ conceptId, entityKey, entity = null, size = 96 }: EntityVisualProps) {
-  // Buildings: prefer the inline-SVG illustration (only for canonical keys).
-  if (conceptId === "buildings" && CANONICAL_BUILDING_KEYS.includes(entityKey)) {
+  // Buildings: render the inline-SVG illustration for any building that has one
+  // (BUILDING_KEYS includes the housing2/housing3 aliases, so every building
+  // entry — not just the canonical iso set — gets its art).
+  if (conceptId === "buildings" && BUILDING_KEYS.includes(entityKey)) {
     return (
       <div
         style={{

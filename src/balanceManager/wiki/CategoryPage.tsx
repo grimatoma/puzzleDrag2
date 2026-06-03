@@ -14,6 +14,7 @@ import { useBalanceNav } from "../balanceNav.jsx";
 import { CONCEPTS } from "./concepts.js";
 import EntryGrid from "./EntryGrid.jsx";
 import type { WikiEntry } from "./EntryGrid.jsx";
+import { EntityVisual } from "./EntityVisual.jsx";
 import { ConceptFields } from "./ConceptFields.jsx";
 import { bodyFor } from "./htmlContent.js";
 import HtmlBody from "./HtmlBody.jsx";
@@ -298,6 +299,13 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           <EntryGrid
             entries={entries as unknown as WikiEntry[]}
             onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+            renderVisual={
+              conceptId === "buildings"
+                ? (entry) => (
+                    <EntityVisual conceptId="buildings" entityKey={entry.key} size={36} />
+                  )
+                : undefined
+            }
           />
         </div>
       )}
