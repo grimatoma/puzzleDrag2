@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progression Feed &amp; Configurable Triggers — design spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2c2317; --muted:#7a6f5c; --line:#e3d8c2; --bg:#f5ecda;
+    --paper:#fffdf5; --code:#efe5cf;
+    --accent:#9a6a1f;       /* ochre / almanac amber */
+    --accent2:#3f6b3a;      /* field green          */
+    --shadow:0 1px 2px rgba(50,36,12,.07), 0 8px 24px -12px rgba(50,36,12,.26);
+    --ok:#2f8a3e; --warn:#cf7411; --info:#3b6ea5; --danger:#b5341f; --idle:#8a7f6b;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 82% -8%, color-mix(in srgb,var(--accent) 11%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #efe3cc 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#6a5326;}
+  pre{background:#2a2317;color:#f3ead4;padding:.95rem 1.1rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.55 var(--mono);}
+  pre code{background:none;padding:0;color:inherit;}
+  pre .c{color:#9a8f76;} pre .k{color:#e0a458;} pre .s{color:#9ccb6e;} pre .t{color:#7fb0d8;}
+
+  .page{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.5rem 1.6rem 1.15rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 12%,transparent), color-mix(in srgb,var(--accent2) 9%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero .kicker{font:600 .76rem/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--accent);}
+  header.hero h1{font:800 2.75rem/1.06 var(--serif);letter-spacing:-.018em;margin:.35rem 0 .4rem;color:var(--ink);}
+  .sub{color:#5d5444;font-size:1.06rem;margin:.2rem 0 .8rem;max-width:70ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;font-family:var(--mono);}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.76rem;font-weight:600;padding:.22rem .62rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,#fff);color:#6a4a14;border:1px solid color-mix(in srgb,var(--accent) 32%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(50,36,12,.32);}
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.9rem/1.14 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.28rem;color:var(--ink);}
+  section + section h2{margin-top:2.5rem;}
+  h3{font:600 1.24rem/1.25 var(--serif);margin-top:1.6rem;color:var(--ink);}
+  h4{font:600 1rem/1.3 var(--sans);margin:1.1rem 0 .2rem;color:#5d5444;text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.86rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.48rem .68rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 11%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 55%,#fff);}
+  td code{font-size:.92em;white-space:nowrap;}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.78rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box.key{background:color-mix(in srgb,var(--accent) 10%,#fff);border-left-color:var(--accent);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.7rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;font-family:var(--mono);letter-spacing:.02em;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card.g{border-left-color:var(--accent2);}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(50,36,12,.08),0 14px 30px -14px rgba(50,36,12,.34);}
+  .card h3{margin-top:.2rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+  .diagram figcaption{font-size:.78rem;color:var(--muted);margin-top:.5rem;text-align:center;}
+
+  .filterbar{display:flex;flex-wrap:wrap;gap:.35rem;margin:.7rem 0 .2rem;align-items:center;}
+  .filterbar .lbl{font-size:.8rem;color:var(--muted);margin-right:.2rem;}
+  .filterbar button{font:600 .8rem/1 var(--sans);padding:.34rem .65rem;border:1px solid var(--line);background:var(--paper);border-radius:7px;cursor:pointer;color:var(--ink);transition:background .14s,color .14s,border-color .14s;}
+  .filterbar button:hover{border-color:var(--accent);color:var(--accent);}
+  .filterbar button.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.5rem 0;color:var(--ink);}
+  details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:.5rem;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+    td code{white-space:normal;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs,.filterbar{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="kicker">Hearthwood · Design spec · Draft for review</div>
+    <h1>Progression Feed &amp; Configurable Triggers</h1>
+    <p class="sub">A config-driven trigger/effect engine — triggers become data-defined logical checks instead of a closed enum — and the wiki "Progression" timeline that simply reads it. One source of truth, two consumers, kept honest by status flags and parity tests.</p>
+    <p class="meta">Status: Draft for review · Updated 2026-06-03 · Scope: engine schema + wiki view (content authoring &amp; story prose are out of scope)</p>
+    <div class="chips">
+      <span class="chip">Trigger engine</span>
+      <span class="chip">Progression view</span>
+      <span class="chip">Wiki / Dev Panel</span>
+      <span class="chip">Schema-first</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="engine">Engine (A)</button>
+    <button class="tab" role="tab" data-tab="view">View (B)</button>
+    <button class="tab" role="tab" data-tab="plan">Migration &amp; Plan</button>
+    <button class="tab" role="tab" data-tab="reference">Reference</button>
+  </nav>
+
+  <main>
+
+  <!-- ════════════════ OVERVIEW ════════════════ -->
+  <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+
+    <section id="summary">
+      <h2>Overview</h2>
+      <p>The game already has a notion of "things that happen" — <em>triggers</em> — but only the <b>story system</b> uses them, and they live in a <b>closed enum</b> (<code>StoryTriggerType</code>) with a hand-maintained <code>switch</code>. Every other unlock (zones, buildings, tools, tiles, recipes) is gated by unrelated mechanisms (level checks, <code>stationBuilt</code>, discovery methods, costs).</p>
+      <p>This spec proposes two layers:</p>
+      <div class="grid">
+        <div class="card"><h3>A · The engine</h3><p>Replace the closed enum with <b>configurable triggers</b>: a trigger is a data object with a <code>when</code> predicate (composable <code>all</code>/<code>any</code>/<code>not</code> over a <b>fact registry</b>) plus <code>effects</code>. Flags become one kind of fact; gating, story, and progression all become "triggers + effects."</p></div>
+        <div class="card g"><h3>B · The view</h3><p>A new <b>"Progression" wiki tab</b> that reads that same config and renders it as a reporter-style, two-tier <b>live feed</b> — each event and what it unlocked — ordered by the milestone spine, with zones as parallel tags. Status-flagged, deep-linked, CI-validated against live config so it cannot drift.</p></div>
+      </div>
+      <div class="box tip"><b>TL;DR.</b> One config of <code>{ when, effects, classification, status }</code> triggers becomes the single source of truth. The <b>view</b> reads it now; the <b>engine</b> migrates onto it incrementally behind <b>parity tests</b>, so we ship the timeline early without risking the story system.</div>
+    </section>
+
+    <section id="decisions">
+      <h2>What we settled (brainstorm outcomes)</h2>
+      <table>
+        <thead><tr><th>Question</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Gating backbone</td><td><b>Hybrid</b> — diegetic build/gather gates by default; level/soft gates reserved and explicitly flagged as deliberate.</td></tr>
+          <tr><td>Granularity</td><td><b>Fine</b> — every unlock is represented, folded under its triggering moment.</td></tr>
+          <tr><td>View form</td><td><b>Reporter-style vertical live feed</b>: an <em>action</em> and the rows of what it <em>unlocked</em>.</td></tr>
+          <tr><td>Ordering</td><td><b>Chronological by the milestone spine only</b> — the one genuinely sequential thing. Everything else is grouped, not sequenced.</td></tr>
+          <tr><td>Density</td><td><b>Two-tier</b> — big moments are full cards; minor unlocks nest/collapse beneath.</td></tr>
+          <tr><td>Source</td><td><b>Config-backed, reading the game's triggers</b> — not a hand-authored narrative.</td></tr>
+          <tr><td>Grouping</td><td><b>Milestones + zone</b>; zones are <b>non-linear parallel tracks</b> (a zone is a tag/colour/filter on the spine, not a position in a sequence).</td></tr>
+          <tr><td>Engine</td><td><b>Redesign</b> the closed <code>StoryTriggerType</code> into configurable triggers with logical checks; <b>open-ended &amp; config-based</b>.</td></tr>
+          <tr><td>Sequencing</td><td><b>Schema first, view next</b>, engine migration incremental with parity tests.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture: one config, two consumers</h2>
+      <p>The pivotal idea: the trigger config the <em>engine</em> evaluates at runtime is the <em>same</em> config the <em>view</em> renders. They are reconciled by a <code>status</code> field (is this actually wired today?) and, during migration, by parity tests against the current behaviour.</p>
+      <div class="diagram">
+        <svg viewBox="0 0 920 300" width="100%" role="img" aria-label="One trigger config feeds both the runtime engine and the wiki progression view">
+          <defs>
+            <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+          </defs>
+          <g font-family="IBM Plex Sans, sans-serif" font-size="13.5">
+            <!-- sources -->
+            <rect x="20" y="20" width="240" height="92" rx="10" fill="color-mix(in srgb,var(--accent) 8%,#fff)" stroke="var(--line)"/>
+            <text x="140" y="44" text-anchor="middle" font-weight="700" fill="var(--ink)">Sources</text>
+            <text x="140" y="66" text-anchor="middle" fill="#5d5444">derived: ZONES · BUILDINGS</text>
+            <text x="140" y="84" text-anchor="middle" fill="#5d5444">RECIPES · discovery · workers</text>
+            <text x="140" y="102" text-anchor="middle" fill="#5d5444">+ a few authored PLANNED</text>
+            <!-- config -->
+            <rect x="340" y="14" width="240" height="104" rx="12" fill="color-mix(in srgb,var(--accent) 18%,#fff)" stroke="var(--accent)" stroke-width="2"/>
+            <text x="460" y="46" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="17" fill="var(--ink)">Trigger Config</text>
+            <text x="460" y="70" text-anchor="middle" fill="#5d5444" font-family="JetBrains Mono, monospace" font-size="11.5">{ when, effects,</text>
+            <text x="460" y="88" text-anchor="middle" fill="#5d5444" font-family="JetBrains Mono, monospace" font-size="11.5">classification, status }</text>
+            <text x="460" y="108" text-anchor="middle" fill="#5d5444" font-size="11.5">the single source of truth</text>
+            <!-- consumers -->
+            <rect x="660" y="14" width="240" height="92" rx="10" fill="color-mix(in srgb,var(--accent2) 13%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+            <text x="780" y="40" text-anchor="middle" font-weight="700" fill="var(--ink)">Engine (runtime)</text>
+            <text x="780" y="62" text-anchor="middle" fill="#5d5444">evaluates `when`, fires,</text>
+            <text x="780" y="80" text-anchor="middle" fill="#5d5444">applies effects: gating ·</text>
+            <text x="780" y="98" text-anchor="middle" fill="#5d5444">story beats · unlocks</text>
+            <rect x="660" y="186" width="240" height="92" rx="10" fill="color-mix(in srgb,var(--info) 12%,#fff)" stroke="var(--info)" stroke-width="1.5"/>
+            <text x="780" y="212" text-anchor="middle" font-weight="700" fill="var(--ink)">View (wiki)</text>
+            <text x="780" y="234" text-anchor="middle" fill="#5d5444">Progression feed:</text>
+            <text x="780" y="252" text-anchor="middle" fill="#5d5444">milestone spine + zone</text>
+            <text x="780" y="270" text-anchor="middle" fill="#5d5444">tracks, two-tier, linked</text>
+            <!-- reconcile -->
+            <rect x="340" y="196" width="240" height="72" rx="10" fill="color-mix(in srgb,var(--bg) 40%,#fff)" stroke="var(--line)" stroke-dasharray="5 4"/>
+            <text x="460" y="226" text-anchor="middle" font-weight="700" fill="var(--ink)">Reconciled by</text>
+            <text x="460" y="248" text-anchor="middle" fill="#5d5444" font-size="12">status flags + parity tests</text>
+            <!-- arrows -->
+            <line x1="260" y1="66" x2="338" y2="66" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+            <line x1="580" y1="60" x2="658" y2="60" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+            <line x1="540" y1="118" x2="700" y2="184" stroke="var(--info)" stroke-width="2" marker-end="url(#arr)"/>
+            <line x1="460" y1="118" x2="460" y2="194" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="4 4"/>
+          </g>
+        </svg>
+        <figcaption>The view ships first (reads the config); the engine migrates onto the same config later, parity-checked.</figcaption>
+      </div>
+    </section>
+
+    <section id="goals">
+      <h2>Goals &amp; non-goals</h2>
+      <div class="grid">
+        <div class="card g">
+          <h3>Goals</h3>
+          <ul>
+            <li>A <b>data-defined trigger schema</b> (facts + predicates + effects) that's open-ended — new triggers are config, not code.</li>
+            <li>A <b>generated progression view</b> in the wiki that reads it, honest by status flag, navigable, and drift-proof.</li>
+            <li>A <b>parity-safe path</b> to migrate the live story engine — and later the other gates — onto the new model.</li>
+            <li>Make the current half-wired gaps (dead <code>mine_unlocked</code> flag, UI-only token gates, coop→chickens) <b>visible and explicitly planned</b>.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Non-goals (here)</h3>
+          <ul>
+            <li><b>Story content</b> authoring — the dialogue/beats themselves (your stage two).</li>
+            <li>An <b>in-game</b> chronicle/feed for the player's actual run (separate feature; the existing <code>#/chronicle</code> view is untouched).</li>
+            <li>Rebalancing values — the view <em>enables</em> balancing; it doesn't change numbers.</li>
+            <li>A big-bang rewrite — the migration is incremental and reversible until parity is green.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ════════════════ ENGINE ════════════════ -->
+  <div class="panel" id="engine" role="tabpanel" aria-label="Engine">
+
+    <section id="facts">
+      <h2>Layer A · The configurable-trigger engine</h2>
+      <p>Today <code>conditionMatches</code> (<code>src/story.ts:441</code>) is a <code>switch</code> over 14 enum variants, reading from three places: the current <em>event</em>, an inventory <em>totals</em> snapshot, and <em>flags</em>. The redesign generalises exactly those three inputs into a <b>fact registry</b> and makes the check <b>data</b>.</p>
+      <h3>Facts</h3>
+      <p>A <b>fact</b> is a named getter over game state (plus the current event context). Facts are <em>parameterised families</em> — <code>resource.&lt;key&gt;.total</code>, <code>building.&lt;id&gt;.built</code>, <code>flag.&lt;id&gt;</code> — resolved by a small matcher. This is the whole vocabulary of "things that happen."</p>
+      <table>
+        <thead><tr><th>Fact family</th><th>Reads</th><th>Replaces (old)</th></tr></thead>
+        <tbody>
+          <tr><td><code>resource.&lt;key&gt;.total</code></td><td>zone inventory snapshot</td><td><code>resource_total</code></td></tr>
+          <tr><td><code>flag.&lt;id&gt;</code></td><td><code>state.story.flags</code></td><td><code>flag_set</code> / <code>flag_cleared</code></td></tr>
+          <tr><td><code>building.&lt;id&gt;.built</code></td><td><code>locBuilt(state)</code> / built set</td><td><code>building_built</code></td></tr>
+          <tr><td><code>zone.&lt;id&gt;.founded</code></td><td><code>state.settlements</code></td><td>— (new)</td></tr>
+          <tr><td><code>level</code> · <code>act</code> · <code>season</code> · <code>turn</code></td><td>top-level state</td><td><code>act_entered</code></td></tr>
+          <tr><td><code>npc.&lt;id&gt;.bond</code></td><td><code>state.npcs.bonds</code></td><td><code>bond_at_least</code></td></tr>
+          <tr><td><code>boss.&lt;id&gt;.defeated</code></td><td>defeated set</td><td><code>boss_defeated</code></td></tr>
+          <tr><td><code>craft.&lt;key&gt;.count</code> · <code>order.fulfilled</code></td><td>cumulative counters (new, persisted)</td><td><code>craft_made</code> / <code>order_fulfilled</code></td></tr>
+          <tr><td><code>event.type</code> · <code>event.item</code> · <code>event.count</code> …</td><td>current-tick event context</td><td><code>session_start</code>/<code>_ended</code>, edge cases</td></tr>
+        </tbody>
+      </table>
+      <div class="box"><b>State facts vs event context.</b> Most facts are <em>state</em> (queryable any time). A few current cases are genuinely <em>edge-triggered</em> (<code>craft_made</code>, <code>order_fulfilled</code>, <code>session_start</code>). We support both: predicates read state facts <em>plus</em> an optional event context for the tick — a faithful generalisation of today's <code>conditionMatches(t, event, totals, flags)</code> signature. Where it's cheap, we add a <b>cumulative counter</b> (e.g. <code>craft.&lt;key&gt;.count</code>) so the check becomes pure state and survives reloads.</div>
+    </section>
+
+    <section id="conditions">
+      <h2>The logical check (<code>when</code>)</h2>
+      <p>A composable predicate tree. Leaves read a fact and compare; branches combine. This is the "actually configurable trigger with a logical check" from the brief.</p>
+      <pre><code><span class="k">type</span> Op = <span class="s">"eq"</span>|<span class="s">"ne"</span>|<span class="s">"gte"</span>|<span class="s">"lte"</span>|<span class="s">"gt"</span>|<span class="s">"lt"</span>|<span class="s">"truthy"</span>;
+
+<span class="c">// A leaf reads one fact; op defaults to "truthy" (so { fact } means "is set").</span>
+<span class="k">type</span> Leaf = { fact: <span class="t">string</span>; op?: Op; value?: <span class="t">JsonValue</span> };
+
+<span class="k">type</span> Cond =
+  | Leaf
+  | { all: Cond[] }      <span class="c">// AND</span>
+  | { any: Cond[] }      <span class="c">// OR</span>
+  | { not: Cond };       <span class="c">// NOT</span>
+
+<span class="c">// Example — "the Mine opens":</span>
+<span class="k">const</span> when: Cond = { all: [
+  { fact: <span class="s">"resource.supplies.total"</span>, op: <span class="s">"gte"</span>, value: <span class="k">3</span> },
+  { any: [
+    { fact: <span class="s">"building.pit_props.built"</span> },
+    { fact: <span class="s">"level"</span>, op: <span class="s">"gte"</span>, value: <span class="k">2</span> }   <span class="c">// the reserved soft-gate</span>
+  ]}
+]};</code></pre>
+      <p>The evaluator is a ~30-line pure function <code>evaluate(cond, ctx) → boolean</code> with no game knowledge beyond the fact registry — trivially unit-testable.</p>
+    </section>
+
+    <section id="effects">
+      <h2>Effects</h2>
+      <p>When a trigger fires it applies <code>effects</code>. This generalises today's two overlapping shapes — <code>BeatSideEffects</code> (<code>src/story.ts:65</code>) and <code>ChoiceOutcome</code> (<code>:74</code>) — into one discriminated list, and adds the gating unlocks so <em>availability</em> is an effect too.</p>
+      <pre><code><span class="k">type</span> Effect =
+  | { kind: <span class="s">"setFlag"</span>;       flag: <span class="t">string</span> | <span class="t">string</span>[] }
+  | { kind: <span class="s">"clearFlag"</span>;     flag: <span class="t">string</span> | <span class="t">string</span>[] }
+  | { kind: <span class="s">"unlockZone"</span>;    zone: <span class="t">ZoneId</span> }
+  | { kind: <span class="s">"unlockBuilding"</span>;building: <span class="t">BuildingId</span> }
+  | { kind: <span class="s">"discoverTile"</span>;  tile: <span class="t">TileKey</span> }
+  | { kind: <span class="s">"grant"</span>;         resources?: <span class="t">Inventory</span>; coins?: <span class="t">number</span> }
+  | { kind: <span class="s">"advanceAct"</span>;    to: <span class="t">number</span> }
+  | { kind: <span class="s">"spawnNpc"</span>;      npc: <span class="t">NpcId</span> }
+  | { kind: <span class="s">"spawnBoss"</span>;     boss: <span class="t">BossId</span> }
+  | { kind: <span class="s">"bondDelta"</span>;     npc: <span class="t">NpcId</span>; amount: <span class="t">number</span> }
+  | { kind: <span class="s">"showBeat"</span>;      beat: <span class="t">StoryBeatId</span> };  <span class="c">// narrative attaches here</span></code></pre>
+      <div class="box key"><b>Story becomes one effect kind.</b> "Trigger fires → show a story beat" is just <code>{ kind:"showBeat" }</code>. Narrative stops being a separate engine and becomes <em>content hung off the same triggers</em> — which is exactly the seam your stage-two story work needs.</div>
+    </section>
+
+    <section id="trigger-shape">
+      <h2>The trigger object</h2>
+      <p>One object carries the runtime check, its effects, and the classification the view reads. Authoring is mostly this last group.</p>
+      <pre><code><span class="k">interface</span> <span class="t">ProgTrigger</span> {
+  id: <span class="t">string</span>;
+  label?: <span class="t">string</span>;
+  when: Cond;                 <span class="c">// the configurable logical check</span>
+  effects?: Effect[];
+  once?: <span class="t">boolean</span>;            <span class="c">// default true: fires once when `when` first holds</span>
+  repeat?: { cooldown: <span class="t">number</span> };
+
+  <span class="c">// ── classification the view reads ──</span>
+  milestone?: <span class="t">boolean</span>;       <span class="c">// part of the ordered spine</span>
+  requires?: <span class="t">string</span>[];        <span class="c">// prior trigger ids → encodes spine order as DATA</span>
+  zone?: <span class="t">ZoneId</span>;             <span class="c">// parallel-track tag (non-linear)</span>
+  phase?: <span class="t">string</span>;            <span class="c">// derived from spine, or explicit</span>
+  status?: <span class="t">WikiStatus</span>;       <span class="c">// WIRED | PARTIAL | PLANNED | STUB | DOC-ONLY</span>
+  blurb?: <span class="t">string</span>;            <span class="c">// reporter flavour / future story hook</span>
+}</code></pre>
+      <div class="box tip"><b>Ordering as data.</b> The main arc's sequence today is enforced imperatively by <code>nextPendingBeat</code> (<code>src/story.ts:407</code>). Here it's just <code>requires: [prevId]</code> inside <code>when</code> — order <em>emerges</em> from predicates. Zones carry no order at all; they're a <code>zone</code> tag, honouring "zones aren't linear."</div>
+    </section>
+
+    <section id="firing">
+      <h2>Evaluation &amp; edge-firing</h2>
+      <p>Replace the ~8 scattered <code>evaluateAndApplyStoryBeat</code> calls (<code>state.ts:575, 878, 883, 1001, 1007, 1014, 1029</code>; <code>keeperTrials.ts:184</code>) with one <code>evaluateTriggers(state, eventCtx)</code> step. A non-repeat trigger fires once when its <code>when</code> first holds — tracked by a persisted <b>fired set</b> (the principled version of today's <code>_fired_&lt;beatId&gt;</code> flags).</p>
+      <div class="diagram">
+        <svg viewBox="0 0 920 120" width="100%" role="img" aria-label="Evaluation loop from game event to new state">
+          <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+          <g font-family="IBM Plex Sans, sans-serif" font-size="12.5" font-weight="600">
+            <rect x="8"   y="40" width="138" height="48" rx="9" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)"/><text x="77"  y="69" text-anchor="middle" fill="var(--ink)">game event</text>
+            <rect x="186" y="40" width="160" height="48" rx="9" fill="color-mix(in srgb,var(--accent2) 11%,#fff)" stroke="var(--accent2)"/><text x="266" y="62" text-anchor="middle" fill="var(--ink)">snapshot facts</text><text x="266" y="79" text-anchor="middle" fill="#5d5444" font-weight="400" font-size="11">state + event ctx</text>
+            <rect x="386" y="40" width="160" height="48" rx="9" fill="color-mix(in srgb,var(--accent2) 11%,#fff)" stroke="var(--accent2)"/><text x="466" y="62" text-anchor="middle" fill="var(--ink)">evaluate `when`</text><text x="466" y="79" text-anchor="middle" fill="#5d5444" font-weight="400" font-size="11">vs fired-set (edge)</text>
+            <rect x="586" y="40" width="160" height="48" rx="9" fill="color-mix(in srgb,var(--info) 12%,#fff)" stroke="var(--info)"/><text x="666" y="62" text-anchor="middle" fill="var(--ink)">apply effects</text><text x="666" y="79" text-anchor="middle" fill="#5d5444" font-weight="400" font-size="11">unlock/flag/beat</text>
+            <rect x="786" y="40" width="126" height="48" rx="9" fill="color-mix(in srgb,var(--ok) 13%,#fff)" stroke="var(--ok)"/><text x="849" y="69" text-anchor="middle" fill="var(--ink)">new state</text>
+            <line x1="146" y1="64" x2="184" y2="64" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+            <line x1="346" y1="64" x2="384" y2="64" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+            <line x1="546" y1="64" x2="584" y2="64" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+            <line x1="746" y1="64" x2="784" y2="64" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+          </g>
+        </svg>
+      </div>
+      <p>Cascading (an effect makes another trigger's <code>when</code> true in the same tick) is handled by iterating to a fixpoint, matching today's beat→flag→beat cascade in <code>storyEffects.ts</code>. To keep it cheap, triggers are <b>indexed by the facts/events they depend on</b>, so a tick only re-checks the affected few.</p>
+    </section>
+
+    <section id="subsume">
+      <h2>Subsuming flags &amp; the other gates</h2>
+      <h3>The 14 trigger types → predicates</h3>
+      <p>Every current <code>StoryTriggerType</code> maps to a <code>when</code>. This table <em>is</em> the migration translator.</p>
+      <table>
+        <thead><tr><th>Old type</th><th>New <code>when</code></th></tr></thead>
+        <tbody>
+          <tr><td><code>resource_total</code></td><td><code>{ fact:"resource.K.total", op:"gte", value:N }</code></td></tr>
+          <tr><td><code>resource_total_multi</code></td><td><code>{ all: [ …per-key totals ] }</code></td></tr>
+          <tr><td><code>flag_set</code> / <code>flag_cleared</code></td><td><code>{ fact:"flag.F" }</code> / <code>{ not:{ fact:"flag.F" } }</code></td></tr>
+          <tr><td><code>act_entered</code></td><td><code>{ fact:"act", op:"gte", value:N }</code></td></tr>
+          <tr><td><code>building_built</code></td><td><code>{ fact:"building.ID.built" }</code></td></tr>
+          <tr><td><code>boss_defeated</code></td><td><code>{ fact:"boss.ID.defeated" }</code></td></tr>
+          <tr><td><code>bond_at_least</code></td><td><code>{ fact:"npc.ID.bond", op:"gte", value:N }</code></td></tr>
+          <tr><td><code>craft_made</code></td><td><code>{ fact:"craft.K.count", op:"gte", value:N }</code> (or event ctx)</td></tr>
+          <tr><td><code>order_fulfilled</code></td><td><code>{ fact:"order.fulfilled", op:"gte", value:N }</code></td></tr>
+          <tr><td><code>session_start</code> / <code>_ended</code></td><td><code>{ fact:"event.type", op:"eq", value:"session_start" }</code></td></tr>
+          <tr><td><code>all_buildings_built</code></td><td><code>{ fact:"buildings.allBuilt" }</code></td></tr>
+          <tr><td><code>keeper_confronted</code></td><td><code>{ all:[ event.type, event.zoneId, event.path ] }</code></td></tr>
+        </tbody>
+      </table>
+      <h3>The non-story gates → triggers</h3>
+      <p>These bypass the trigger engine today; Phase 3 expresses each as a trigger. <b>Costs stay costs</b> — the trigger model governs <em>availability</em>, not affordability.</p>
+      <table>
+        <thead><tr><th>Gate today</th><th>Source</th><th>Becomes</th></tr></thead>
+        <tbody>
+          <tr><td>Mine access (lvl≥2 ∨ flag ∨ unlockedBiomes)</td><td><code>biomeAccess.ts:7</code></td><td><code>when:{any:[level≥2, flag.mine_unlocked]}</code> → <code>unlockZone</code></td></tr>
+          <tr><td>Building availability (<code>lv</code>)</td><td><code>constants.ts:784</code></td><td><code>when:{ fact:"level", op:"gte", value:lv }</code> → <code>unlockBuilding</code></td></tr>
+          <tr><td>Recipe station</td><td><code>state.ts:1213</code></td><td><code>when:{ fact:"building.STATION.built" }</code></td></tr>
+          <tr><td>Tile discovery (chain/research/buy)</td><td><code>tileCollection/data.ts:77</code></td><td><code>when:{ fact:"chain.TILE.max", op:"gte", value:N }</code> → <code>discoverTile</code></td></tr>
+          <tr><td>Zone <code>entryCost.coins</code></td><td><code>state.ts:1110</code></td><td><b>stays a cost</b> (transaction), not a gate</td></tr>
+          <tr><td>Keeper trials</td><td><code>keeperTrials.ts:184</code></td><td><code>when</code> over keeper-ready facts → <code>keeper_confronted</code> effect</td></tr>
+        </tbody>
+      </table>
+      <div class="box warn"><b>On "remove flags".</b> We <em>demote</em> flags, we don't delete them: <code>state.story.flags</code> stays as the backing store, exposed as the <code>flag.*</code> fact family, and <code>STORY_FLAGS</code> metadata (labels/categories, <code>flags.ts:50</code>) is kept for the editor. Flags lose their <em>privileged</em> status (their own trigger types) and become one fact among many. This is far safer than nuking saved flag state — <a href="#open">flagged as a decision to confirm</a>.</div>
+    </section>
+  </div>
+
+  <!-- ════════════════ VIEW ════════════════ -->
+  <div class="panel" id="view" role="tabpanel" aria-label="View">
+
+    <section id="feed">
+      <h2>Layer B · The progression feed</h2>
+      <p>A new top-level <b>"Progression"</b> tab in the wiki (the <code>/b/</code> Dev Panel + Game Wiki). It renders the trigger config as the reporter-style feed validated in the brainstorm mockups: a vertical timeline whose <b>spine is the milestone triggers</b> (ordered via <code>requires</code>), with each non-milestone trigger <b>bucketed by milestone-phase and grouped by category</b> under it (two-tier), and <b>zone as a colour/tag + filter</b> rather than an ordering.</p>
+      <div class="grid">
+        <div class="card"><h3>Tier 1 — milestones</h3><p>Full "event" cards: arrivals, zone foundings, key story beats. Ordered top-to-bottom. The only sequenced layer.</p></div>
+        <div class="card g"><h3>Tier 2 — unlocks</h3><p>Grouped <code>➜ Unlocked</code> rows (tiles / buildings / tools / recipes / workers / effects) — collapsible, <em>not</em> individually sequenced.</p></div>
+        <div class="card"><h3>Facets</h3><p>Zone tag + filter (non-linear), category filter, and a <span class="pill ok">WIRED</span>/<span class="pill warn">PARTIAL</span>/<span class="pill idle">PLANNED</span> status chip per row.</p></div>
+      </div>
+      <p class="meta">Visual reference: the two interactive mockups shared in the brainstorm (<code>livefeed</code> + the layered/lanes comparison).</p>
+    </section>
+
+    <section id="data">
+      <h2>Where the feed's data comes from</h2>
+      <p>The feed reads the trigger config and <b>enriches terse effects by deriving detail from the same maps the wiki already imports</b> (<code>concepts.ts:13-28</code>). A founding trigger says <code>unlockZone: quarry</code>; the view expands that into the zone's tiles/resources/buildings/workers by reading <code>ZONES</code> + <code>BIOMES</code> — so authoring stays small and the detail can't go stale.</p>
+      <table>
+        <thead><tr><th>Feed needs</th><th>Derives from</th></tr></thead>
+        <tbody>
+          <tr><td>A zone's unlock bundle</td><td><code>ZONES</code>, <code>BIOMES</code>, <code>BUILDINGS</code> (filtered by biome), <code>TYPE_WORKERS</code></td></tr>
+          <tr><td>A building's effect</td><td><code>BUILDINGS[].abilities</code>, <code>ABILITIES</code></td></tr>
+          <tr><td>A recipe's gate</td><td><code>RECIPES[].station</code></td></tr>
+          <tr><td>A tile's discovery</td><td><code>TILE_DISCOVERY_METHODS</code></td></tr>
+        </tbody>
+      </table>
+      <div class="box"><b>Authoring burden is small.</b> Most events are <em>derived</em> from existing config; the authored layer is classification (<code>milestone</code>/<code>zone</code>/<code>requires</code>), a status flag where code-truth isn't obvious, and a handful of <span class="pill idle">PLANNED</span> entries that don't exist in code yet (coop, chickens).</div>
+    </section>
+
+    <section id="wiki">
+      <h2>Wiki integration (insertion points)</h2>
+      <p>All confirmed against the current code. Recommended path: add it as a <b>concept tab</b> (auto-wires into routing, sidebar, and the command palette).</p>
+      <table>
+        <thead><tr><th>Step</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>Register the tab</td><td>append a concept to <code>CONCEPTS</code> in <code>wiki/concepts.ts</code> → auto-joins <code>VALID_TABS</code> (<code>WikiShell.tsx:54</code>)</td></tr>
+          <tr><td>Render the pane</td><td>lazy component + branch in <code>WikiShell.tsx:~409</code></td></tr>
+          <tr><td>The component</td><td>new <code>wiki/sections/ProgressionFeed.tsx</code> (sibling to the tile-only <code>ProgressionTimeline.tsx</code>)</td></tr>
+          <tr><td>Deep links</td><td><code>ConceptRefCard</code> / <code>wikiNavTarget</code> (<code>WikiLinkButton.tsx:20</code>) → <code>#/&lt;concept&gt;/&lt;key&gt;</code></td></tr>
+          <tr><td>Status chips</td><td><code>statusForEntity()</code> + <code>StatusBadge</code> (<code>status.ts</code>) — reuse as-is</td></tr>
+          <tr><td>Fold prose</td><td><code>pageFor("progression"|"zone-flow")</code> via <code>htmlContent.ts</code> as phase intros; retire the duplicate roadmaps</td></tr>
+          <tr><td>Player/dev</td><td><code>useWikiView()</code> — feed is player-visible; hide raw keys in player view</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="antidrift">
+      <h2>Anti-drift validation</h2>
+      <p>A unit test (the honesty guarantee) asserts:</p>
+      <ul>
+        <li>every effect's referenced key (<code>zone</code>/<code>building</code>/<code>tile</code>/<code>resource</code>/<code>recipe</code>) <b>resolves in the live maps</b> — or the trigger is explicitly <span class="pill idle">PLANNED</span>;</li>
+        <li>every <code>when</code> leaf references a <b>known fact family</b>;</li>
+        <li>the <code>requires</code> graph is <b>acyclic</b> (the spine is a DAG);</li>
+        <li>every <code>zone</code> tag is a real <code>ZoneId</code>.</li>
+      </ul>
+      <div class="box tip">Rename a building or ship the coop, and the feed either updates or <b>fails CI</b> — it can't silently lie. This is the payoff of reading config rather than hand-writing prose.</div>
+    </section>
+  </div>
+
+  <!-- ════════════════ PLAN ════════════════ -->
+  <div class="panel" id="plan" role="tabpanel" aria-label="Migration and plan">
+
+    <section id="phases">
+      <h2>Build phases</h2>
+      <p class="legend">
+        <span><span class="pill warn">now</span> Phase 1</span>
+        <span><span class="pill info">next</span> Phase 2</span>
+        <span><span class="pill idle">later</span> Phase 3+</span>
+      </p>
+      <div class="filterbar">
+        <span class="lbl">Filter:</span>
+        <button class="on" data-filter="all">All</button>
+        <button data-filter="warn">Phase 1</button>
+        <button data-filter="info">Phase 2</button>
+        <button data-filter="idle">Phase 3+</button>
+      </div>
+      <table id="status-table">
+        <thead><tr><th>Work</th><th>Phase</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr data-status="warn"><td>Fact registry + <code>evaluate(cond)</code> (pure, unit-tested)</td><td><span class="pill warn">now</span></td><td>No game coupling beyond facts.</td></tr>
+          <tr data-status="warn"><td>Effect vocabulary + applier</td><td><span class="pill warn">now</span></td><td>Unifies <code>BeatSideEffects</code> + <code>ChoiceOutcome</code> + unlocks.</td></tr>
+          <tr data-status="warn"><td>Trigger config type + Zod schema</td><td><span class="pill warn">now</span></td><td>Lives in <code>src/config/progression/</code>.</td></tr>
+          <tr data-status="warn"><td>Author/derive initial config (spine + early-game fine detail + PLANNED)</td><td><span class="pill warn">now</span></td><td>Derived from existing maps; classified.</td></tr>
+          <tr data-status="warn"><td>Progression wiki tab + feed component</td><td><span class="pill warn">now</span></td><td>Reads config; folds prose.</td></tr>
+          <tr data-status="warn"><td>Anti-drift validation test</td><td><span class="pill warn">now</span></td><td>Refs resolve · facts known · DAG.</td></tr>
+          <tr data-status="info"><td>Translator <code>BeatTrigger → Cond</code> + parity test</td><td><span class="pill info">next</span></td><td>Old vs new over sampled states/events.</td></tr>
+          <tr data-status="info"><td>Flip story-beat evaluation to the new engine</td><td><span class="pill info">next</span></td><td>Keep beat queue/modal mechanics.</td></tr>
+          <tr data-status="info"><td>Demote flags to facts; retire <code>StoryTriggerType</code> switch</td><td><span class="pill info">next</span></td><td>Update <code>sanitizeTrigger</code> + story editor.</td></tr>
+          <tr data-status="info"><td>Bump <code>SAVE_SCHEMA_VERSION</code> (43→44)</td><td><span class="pill info">next</span></td><td>New counters / fired-set.</td></tr>
+          <tr data-status="idle"><td>Express non-story gates as triggers (mine, building lv, discovery, keeper)</td><td><span class="pill idle">later</span></td><td>Each behind parity vs old gate fn.</td></tr>
+          <tr data-status="idle"><td>Wire PLANNED mechanics (coop→chickens, resource-gated zones)</td><td><span class="pill idle">later</span></td><td>Turns PLANNED rows WIRED.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="parity">
+      <h2>Parity-safe migration</h2>
+      <ol>
+        <li>Build the new evaluator <b>beside</b> the old <code>conditionMatches</code> — nothing wired yet.</li>
+        <li>Translate every existing beat trigger to <code>when</code> form (the table in <a href="#subsume">Engine → Subsuming</a> is the spec).</li>
+        <li><b>Parity test:</b> for sampled <code>(state, event)</code> pairs across all beats, assert <code>conditionMatches(old) === evaluate(translate(old))</code>. Fuzz a little.</li>
+        <li>Flip the runtime to the new evaluator; keep the old as dead code until parity is green in CI.</li>
+        <li>Delete <code>StoryTriggerType</code> + the switch; demote flags. Repeat the same beside-then-flip dance per non-story gate in Phase 3.</li>
+      </ol>
+      <div class="box warn"><b>Touchpoints beyond the reducer.</b> <code>sanitizeTrigger</code> (<code>config/applyOverrides.ts:593</code>), the <b>Story Tree Editor</b> (<code>/story/</code>) trigger picker, and <code>balance.json</code> presentation patches all reference the old trigger vocabulary. The redesign must update the editor's picker to author <code>when</code> trees. Budget for this — it's the least-fun part.</div>
+    </section>
+
+    <section id="save">
+      <h2>Save schema &amp; persistence</h2>
+      <p>Persisted story state today: <code>state.story.{act, flags, choiceLog, repeatCooldowns}</code> (<code>persistence.ts:34</code>). The new model adds a <b>fired set</b> and optional <b>cumulative counters</b> (<code>craft.*.count</code>, <code>order.fulfilled</code>). Bump <code>SAVE_SCHEMA_VERSION</code> 43→44 (<code>constants.ts:244</code>).</p>
+      <div class="box">Per repo convention, forward migrations aren't maintained — a version bump simply discards old saves and the player starts fresh. That's acceptable here and removes migration complexity.</div>
+    </section>
+
+    <section id="risks">
+      <h2>Risks &amp; mitigations</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Story regressions from the engine swap</td><td>Parity tests; keep old evaluator until green; flip behind nothing user-visible.</td></tr>
+          <tr><td>Story editor / <code>balance.json</code> break on the new schema</td><td>Treat the editor picker as in-scope for Phase 2; sanitiser accepts both shapes during transition.</td></tr>
+          <tr><td>Event-vs-state edge cases (craft/order)</td><td>Add cumulative counters; retain event-context facts for the few genuinely momentary cases.</td></tr>
+          <tr><td>Evaluating all triggers each tick = slow</td><td>Index triggers by dependent facts/events; evaluate only the affected subset; fixpoint only on change.</td></tr>
+          <tr><td>Feed becomes a wall at full scale</td><td>Two-tier collapse + zone/category filters; milestones-only default density.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="scope">
+      <h2>Scope boundaries</h2>
+      <p><b>In:</b> the engine schema (facts/conditions/effects/triggers), the wiki feed reading it, the initial config (full spine + early-game fine detail + a few PLANNED), anti-drift validation, and the parity-safe story-engine migration.</p>
+      <p><b>Deferred but explicitly planned by this work:</b> wiring the missing mechanics (coop→chickens, resource-gated zones, the three dead gates) — each is a PLANNED row that turns WIRED as it ships. <b>Out entirely:</b> story content authoring (stage two) and an in-game player chronicle.</p>
+    </section>
+  </div>
+
+  <!-- ════════════════ REFERENCE ════════════════ -->
+  <div class="panel" id="reference" role="tabpanel" aria-label="Reference">
+
+    <section id="open">
+      <h2>Decisions to confirm</h2>
+      <p>Recommended defaults are baked into the spec above; flag any you'd change before we write the plan.</p>
+      <div class="grid">
+        <div class="card"><h3>Flags: demote, not delete</h3><p>Keep the flag store as a fact family; remove only their privileged trigger types. <em>Alt: delete flags entirely (riskier).</em></p></div>
+        <div class="card g"><h3>Tab = concept tab</h3><p>Auto-wires routing/sidebar/palette. <em>Alt: a dev-only utility tab.</em></p></div>
+        <div class="card"><h3>Facts = state + event ctx</h3><p>Hybrid; add counters where cheap. <em>Alt: pure-state, counters for everything.</em></p></div>
+        <div class="card g"><h3>Order via <code>requires</code></h3><p>Spine order is data, no <code>nextPendingBeat</code>. <em>Alt: keep an imperative sequence helper.</em></p></div>
+        <div class="card"><h3>Config home</h3><p>One <code>src/config/progression/</code> module (facts + effects + triggers). <em>Alt: split across files.</em></p></div>
+        <div class="card g"><h3>Feed is player-visible</h3><p>Public progression page. <em>Alt: dev-only.</em></p></div>
+      </div>
+    </section>
+
+    <section id="current">
+      <h2>Current system inventory</h2>
+      <details>
+        <summary>Trigger / story engine (file:line map)</summary>
+        <table>
+          <thead><tr><th>Thing</th><th>Location</th></tr></thead>
+          <tbody>
+            <tr><td><code>StoryTriggerType</code> (14 variants)</td><td><code>src/types/catalog/storyTriggerTypes.ts:7</code></td></tr>
+            <tr><td><code>BeatTrigger</code> / <code>Beat</code> shapes</td><td><code>src/story.ts:43</code> / <code>:48</code></td></tr>
+            <tr><td><code>conditionMatches(t, event, totals?, flags?)</code></td><td><code>src/story.ts:441</code></td></tr>
+            <tr><td><code>STORY_BEATS</code> (act-ordered) / <code>SIDE_BEATS</code> (reactive)</td><td><code>src/story.ts:95</code> / <code>:243</code></td></tr>
+            <tr><td><code>nextPendingBeat</code> (spine ordering)</td><td><code>src/story.ts:407</code></td></tr>
+            <tr><td><code>BeatSideEffects</code> / <code>ChoiceOutcome</code></td><td><code>src/story.ts:65</code> / <code>:74</code></td></tr>
+            <tr><td><code>STORY_FLAGS</code> (26) / <code>FLAG_CATEGORIES</code></td><td><code>src/flags.ts:50</code> / <code>:39</code></td></tr>
+            <tr><td><code>evaluateAndApplyStoryBeat</code> (loop)</td><td><code>src/state/storyEffects.ts:31</code></td></tr>
+            <tr><td>Call sites (~8)</td><td><code>state.ts:575,878,883,1001,1007,1014,1029</code>; <code>keeperTrials.ts:184</code></td></tr>
+            <tr><td><code>sanitizeTrigger</code></td><td><code>src/config/applyOverrides.ts:593</code></td></tr>
+            <tr><td><code>SAVE_SCHEMA_VERSION = 43</code></td><td><code>src/constants.ts:244</code></td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details>
+        <summary>Non-trigger gating mechanisms</summary>
+        <table>
+          <thead><tr><th>Gate</th><th>Location</th></tr></thead>
+          <tbody>
+            <tr><td><code>canEnterBiome</code> (mine lvl≥2 / fish lvl≥3)</td><td><code>src/state/biomeAccess.ts:7</code></td></tr>
+            <tr><td>Building <code>lv</code> + cost</td><td><code>src/constants.ts:784</code></td></tr>
+            <tr><td>Recipe station check</td><td><code>src/state.ts:1213</code></td></tr>
+            <tr><td>Tile discovery methods</td><td><code>src/features/tileCollection/data.ts:77</code></td></tr>
+            <tr><td>Zone <code>entryCost</code></td><td><code>src/features/zones/data.ts:126</code>; deducted <code>state.ts:1110</code></td></tr>
+            <tr><td>Keeper trials</td><td><code>src/state/keeperTrials.ts:66</code></td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details>
+        <summary>Wiki integration map</summary>
+        <table>
+          <thead><tr><th>Thing</th><th>Location</th></tr></thead>
+          <tbody>
+            <tr><td><code>VALID_TABS</code> / main-pane switch</td><td><code>src/balanceManager/wiki/WikiShell.tsx:53</code> / <code>:387</code></td></tr>
+            <tr><td><code>CONCEPTS</code> + config import hub</td><td><code>wiki/concepts.ts:13</code></td></tr>
+            <tr><td><code>wikiNavTarget</code> / <code>ConceptRefCard</code></td><td><code>wiki/WikiLinkButton.tsx:20</code> / <code>wiki/ConceptRefCard.tsx:141</code></td></tr>
+            <tr><td>Existing <code>ProgressionTimeline</code> (tiles only)</td><td><code>wiki/sections/ProgressionTimeline.tsx</code></td></tr>
+            <tr><td>Narrative pages loader / registry</td><td><code>wiki/htmlContent.ts:15</code> / <code>wiki/wikiNav.ts:86</code></td></tr>
+            <tr><td>Status flags (WIRED…PLANNED)</td><td><code>wiki/status.ts:14</code>; <code>StatusBadge.tsx</code></td></tr>
+            <tr><td>Player/dev view toggle</td><td><code>wiki/wikiView.ts:84</code></td></tr>
+          </tbody>
+        </table>
+      </details>
+    </section>
+
+    <section id="glossary">
+      <h2>Glossary</h2>
+      <table>
+        <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><b>Trigger</b></td><td>A config object: a <code>when</code> predicate + <code>effects</code> + classification. Fires once when <code>when</code> first holds.</td></tr>
+          <tr><td><b>Fact</b></td><td>A named getter over game state (+ event context). Parameterised families like <code>resource.&lt;key&gt;.total</code>.</td></tr>
+          <tr><td><b>Effect</b></td><td>What firing does: unlock, set flag, grant, advance act, show beat, …</td></tr>
+          <tr><td><b>Milestone</b></td><td>A trigger on the ordered spine (<code>milestone:true</code>, sequenced via <code>requires</code>).</td></tr>
+          <tr><td><b>Phase</b></td><td>The span between milestones; the bucket non-milestone triggers fall into for the feed.</td></tr>
+          <tr><td><b>Parity test</b></td><td>Asserts the new evaluator reproduces the old <code>conditionMatches</code> before anything is deleted.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+  (function(){
+    var bar = document.querySelector('.filterbar');
+    if(!bar) return;
+    bar.addEventListener('click', function(e){
+      var btn = e.target.closest('button'); if(!btn) return;
+      bar.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var f = btn.dataset.filter;
+      document.querySelectorAll('#status-table tbody tr').forEach(function(tr){
+        tr.style.display = (f === 'all' || tr.dataset.status === f) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+</body>
+</html>
