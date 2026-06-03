@@ -289,9 +289,9 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(15, 12); ctx.lineTo(13, 14); ctx.lineTo(-13, 14); ctx.lineTo(-15, 12);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#7a5018"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Glowing text lines
-  ctx.strokeStyle = "#5a2080"; ctx.lineWidth = 0.9;
-  ctx.shadowColor = "rgba(184,120,232,0.7)"; ctx.shadowBlur = 3;
+  // Script text lines — clean wavy strokes, no heavy blur (kept crisp so they
+  // read as writing rather than a muddy smudge at 56px).
+  ctx.strokeStyle = "#6a4a8a"; ctx.lineWidth = 1.0;
   for (let i = 0; i < 4; i++) {
     const y = -6 + i * 4;
     ctx.beginPath();
@@ -302,9 +302,12 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
     }
     ctx.stroke();
   }
-  ctx.shadowBlur = 0;
-  // Wax seal
-  magicHalo(ctx, "rgba(200,32,24,0.5)", 8);
+  // Wax seal — its halo sits on the seal (bottom-right), not the scroll centre,
+  // so it no longer smudges a red blob across the text.
+  ctx.save();
+  ctx.translate(11, 8);
+  magicHalo(ctx, "rgba(200,32,24,0.45)", 7);
+  ctx.restore();
   ctx.fillStyle = "#c82018";
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
@@ -315,8 +318,16 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
   }
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#5a0808"; ctx.lineWidth = 0.8; ctx.stroke();
-  ctx.fillStyle = "#5a0808"; ctx.font = "bold 5px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("✦", 11, 8);
+  // Embossed star sigil on the seal (drawn path — reliable across canvases)
+  ctx.fillStyle = "#5a0808";
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 2.4 : 1.0;
+    const x = 11 + Math.cos(a) * r, y = 8 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill();
 }
 
 // 8. Hourglass
