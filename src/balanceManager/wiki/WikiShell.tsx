@@ -21,7 +21,7 @@ import { BalanceNavProvider } from "../balanceNav.jsx";
 import type { CommandEntry } from "../commandPalette.js";
 import type { BalanceDraft, TabProps } from "../tabProps.js";
 import { CONCEPTS } from "./concepts.js";
-import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES } from "./wikiNav.js";
+import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
 import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { WikiViewProvider, useWikiView } from "./wikiView.js";
@@ -36,6 +36,9 @@ const CategoryPageLazy = lazy(() =>
 );
 const NarrativePageLazy = lazy(() =>
   import("./NarrativePage.jsx").then((m) => ({ default: m.NarrativePage })),
+);
+const WikiHomeLazy = lazy(() =>
+  import("./WikiHome.jsx").then((m) => ({ default: m.WikiHome })),
 );
 const IconsTab = lazy(() => import("../tabs/IconsTab.jsx")) as unknown as TabComponent;
 const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
@@ -93,9 +96,7 @@ function useIsSmallScreen() {
 // These components call useWikiView() and must be rendered inside
 // <WikiViewProvider> (i.e. as children of WikiShell's JSX, not in
 // WikiShell's own function body).
-
-const SCREENS_SECTION_ID = "screens";
-const DEV_ONLY_SECTION_IDS = new Set([SCREENS_SECTION_ID]);
+// DEV_ONLY_SECTION_IDS is imported from wikiNav.ts — single source of truth.
 
 interface SidebarConceptSectionsProps {
   tab: string;
@@ -358,7 +359,13 @@ export default function WikiShell() {
   // ── Main pane content — switch on (tab, focus) ────────────────────────────
   let mainContent: React.ReactNode;
   if (tab === "page") {
-    mainContent = <NarrativePageLazy slug={pageSlug!} />;
+    // Special-case: the overview landing renders the full WikiHome (visual
+    // category browser + start-here + prose). Other slugs render NarrativePage.
+    if (pageSlug === "overview") {
+      mainContent = <WikiHomeLazy navigate={navigate} />;
+    } else {
+      mainContent = <NarrativePageLazy slug={pageSlug!} />;
+    }
   } else if (tab === "icons") {
     mainContent = <IconsTab draft={draft} updateDraft={noop} focus={focus} />;
   } else if (tab === "animationsDemo") {

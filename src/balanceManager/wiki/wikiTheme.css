@@ -915,3 +915,307 @@
     transition: none;
   }
 }
+
+/* ── Phase 4a: WikiHome — visual discovery landing ────────────────────────── */
+
+/* ── Hero ── */
+
+.wiki-root .wiki-home {
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.wiki-root .wiki-home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 28px 20px;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--wiki-ember) 20%, var(--wiki-border));
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--wiki-ember) 7%, var(--wiki-parchment-deep)) 0%,
+      color-mix(in srgb, var(--wiki-parchment-deep) 50%, var(--wiki-parchment)) 60%,
+      var(--wiki-parchment) 100%
+    );
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+.wiki-root .wiki-home-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wiki-root .wiki-home-hero__title {
+  font-family: var(--wiki-font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  color: var(--wiki-ember);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.wiki-root .wiki-home-hero__subtitle {
+  font-family: var(--wiki-font-body);
+  font-size: 13px;
+  color: var(--wiki-ink-subtle);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Browse by category ── */
+
+.wiki-root .wiki-home-section-heading {
+  font-family: var(--wiki-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+}
+
+.wiki-root .wiki-home-category-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Category section (one per WIKI_SECTIONS entry) ── */
+
+.wiki-root .wiki-home-category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiki-root .wiki-home-category-section__label {
+  font-family: var(--wiki-font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wiki-ink-subtle);
+}
+
+/* ── Concept tile row ── */
+
+.wiki-root .wiki-home-concept-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Individual concept tile ── */
+
+.wiki-root .wiki-home-concept-tile {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 30%, var(--wiki-border));
+  border-radius: 11px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 5%, var(--wiki-parchment)) 0%,
+    color-mix(in srgb, var(--wiki-parchment-deep) 50%, var(--wiki-parchment)) 100%
+  );
+  box-shadow: var(--wiki-shadow-card);
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition:
+    box-shadow var(--wiki-transition),
+    transform var(--wiki-transition),
+    border-color var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-concept-tile:hover {
+  box-shadow: var(--wiki-shadow-hover);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 60%, var(--wiki-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-home-concept-tile {
+    transition: box-shadow var(--wiki-transition), border-color var(--wiki-transition);
+  }
+  .wiki-root .wiki-home-concept-tile:hover {
+    transform: none;
+  }
+}
+
+/* Accent left-bar stripe */
+.wiki-root .wiki-home-concept-tile__bar {
+  display: block;
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--wiki-accent, var(--wiki-ember));
+  border-radius: 0;
+}
+
+.wiki-root .wiki-home-concept-tile__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 8px 10px;
+}
+
+.wiki-root .wiki-home-concept-tile__label {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wiki-ink);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.wiki-root .wiki-home-concept-tile__count {
+  font-family: var(--wiki-font-mono);
+  font-size: 10px;
+  color: var(--wiki-ink-subtle);
+  line-height: 1;
+}
+
+/* ── Start here ── */
+
+.wiki-root .wiki-home-start {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--wiki-ember) 20%, var(--wiki-border));
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--wiki-ember) 5%, var(--wiki-parchment-deep)) 0%,
+    var(--wiki-parchment-deep) 100%
+  );
+  box-shadow: var(--wiki-shadow-card);
+}
+
+.wiki-root .wiki-home-start__heading {
+  font-family: var(--wiki-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wiki-ink-light);
+  letter-spacing: -0.015em;
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+}
+
+.wiki-root .wiki-home-start__desc {
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  color: var(--wiki-ink-subtle);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Core loop chip chain */
+.wiki-root .wiki-home-start__chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.wiki-root .wiki-home-start__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 10%, var(--wiki-parchment));
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wiki-ink);
+  cursor: pointer;
+  transition:
+    background var(--wiki-transition),
+    border-color var(--wiki-transition),
+    box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-start__chip:hover {
+  background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 20%, var(--wiki-parchment));
+  border-color: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 70%, var(--wiki-border));
+  box-shadow: 0 2px 8px rgba(43, 34, 24, 0.14);
+}
+
+.wiki-root .wiki-home-start__arrow {
+  font-size: 14px;
+  color: var(--wiki-ink-subtle);
+  line-height: 1;
+  user-select: none;
+}
+
+/* Narrative page links row */
+.wiki-root .wiki-home-start__pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--wiki-border) 60%, transparent);
+}
+
+.wiki-root .wiki-home-start__page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9px;
+  border: 2px solid var(--wiki-border);
+  background: var(--wiki-parchment);
+  font-family: var(--wiki-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wiki-ink-light);
+  cursor: pointer;
+  transition:
+    background var(--wiki-transition),
+    border-color var(--wiki-transition),
+    box-shadow var(--wiki-transition);
+}
+
+.wiki-root .wiki-home-start__page-link:hover {
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 80%, var(--wiki-border));
+  border-color: var(--wiki-border-deep);
+  box-shadow: 0 1px 4px rgba(43, 34, 24, 0.10);
+}
+
+/* ── Overview prose wrapper ── */
+
+.wiki-root .wiki-home-prose {
+  /* Article prose renders its own max-width via NarrativePage's <article class="max-w-[820px]"> */
+  border-top: 2px solid var(--wiki-border);
+  padding-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .wiki-root .wiki-home-hero {
+    padding: 16px 16px 14px;
+  }
+
+  .wiki-root .wiki-home {
+    gap: 20px;
+  }
+
+  .wiki-root .wiki-home-concept-row {
+    gap: 6px;
+  }
+
+  .wiki-root .wiki-home-start {
+    padding: 14px 16px;
+  }
+}
