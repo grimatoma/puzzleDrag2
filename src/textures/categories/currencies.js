@@ -307,32 +307,41 @@ function drawTokenFrame(ctx, ring1, ring2) {
 
 function drawHearthTokenForest(ctx) {
   drawTokenFrame(ctx, "#4f8c3a", "#1a3808");
-  // Antler motif — two simplified deer antlers branching up
+  // Antler motif — two symmetric beams rising from a base, each with two
+  // forward-sweeping tines. Drawn as a clean cream silhouette so it reads
+  // small, matching the cairn / wave motifs on the sibling tokens.
   ctx.strokeStyle = "#fbf2d4";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
   ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  // left beam, curving up and out
   ctx.beginPath();
-  // left antler
-  ctx.moveTo(-1, 4);
-  ctx.lineTo(-3, -2);
-  ctx.lineTo(-6, -5);
-  ctx.moveTo(-3, -2);
-  ctx.lineTo(-1, -4);
-  ctx.moveTo(-3, -2);
-  ctx.lineTo(-5, 0);
-  // right antler
-  ctx.moveTo(1, 4);
-  ctx.lineTo(3, -2);
-  ctx.lineTo(6, -5);
-  ctx.moveTo(3, -2);
-  ctx.lineTo(1, -4);
-  ctx.moveTo(3, -2);
-  ctx.lineTo(5, 0);
+  ctx.moveTo(0, 6);
+  ctx.quadraticCurveTo(-4, 2, -5, -6);
   ctx.stroke();
-  // base notch
+  // left tines
+  ctx.beginPath();
+  ctx.moveTo(-3.4, 0);
+  ctx.quadraticCurveTo(-6.5, -1, -7, -3);
+  ctx.moveTo(-4.4, -3.5);
+  ctx.quadraticCurveTo(-2.5, -4.5, -2, -6.5);
+  ctx.stroke();
+  // right beam (mirror)
+  ctx.beginPath();
+  ctx.moveTo(0, 6);
+  ctx.quadraticCurveTo(4, 2, 5, -6);
+  ctx.stroke();
+  // right tines
+  ctx.beginPath();
+  ctx.moveTo(3.4, 0);
+  ctx.quadraticCurveTo(6.5, -1, 7, -3);
+  ctx.moveTo(4.4, -3.5);
+  ctx.quadraticCurveTo(2.5, -4.5, 2, -6.5);
+  ctx.stroke();
+  // base boss where the beams meet
   ctx.fillStyle = "#fbf2d4";
   ctx.beginPath();
-  ctx.arc(0, 4, 1.4, 0, Math.PI * 2);
+  ctx.arc(0, 6, 1.6, 0, Math.PI * 2);
   ctx.fill();
 }
 
