@@ -23,7 +23,7 @@ export function NarrativePage({ slug }: { slug: string }) {
     );
   }
   return (
-    <article className="max-w-[820px]">
+    <article className="wiki-prose">
       <HtmlBody source={src} />
     </article>
   );
