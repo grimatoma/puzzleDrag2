@@ -3,7 +3,7 @@
  * Item shapes are inferred from Zod schemas (config/schemas/item.ts).
  * Runtime predicates live in `./guards.ts`.
  *
- * Catalog keys are hand-maintained enums in `./catalog/` (see `docs/engineering/catalog-enums.md`).
+ * Catalog keys are hand-maintained enums in `./catalog/` (see the "Catalog enums" section in CLAUDE.md).
  */
 
 export type { ItemKey, InventoryKey, RecipeInputKey } from "./catalogKeys.js";
