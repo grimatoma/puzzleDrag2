@@ -38,11 +38,17 @@ export function beatTriggerToCond(trigger: BeatTrigger): Cond {
 
     case "flag_set": {
       const flag = t.flag as string;
+      // `{fact}` uses the "truthy" op, which matches the oracle's `!!flags[flag]`.
+      // This is safe only because `flags` is Record<string, boolean>: a 0 or ""
+      // value in the flag store would diverge from the oracle's !! cast.
       return { fact: `flag.${flag}` };
     }
 
     case "flag_cleared": {
       const flag = t.flag as string;
+      // Intentionally drops the oracle's `!!t.flag` guard (the trigger name being
+      // non-empty). Every authored flag_cleared trigger names a non-empty flag, so
+      // this is always safe; the guard would only matter for a malformed trigger.
       return { not: { fact: `flag.${flag}` } };
     }
 

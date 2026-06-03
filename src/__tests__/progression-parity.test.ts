@@ -150,6 +150,9 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
         { label: "matching-act (true)",      event: { type: "act_entered", act },        totals: {}, flags: {} },
         { label: "wrong-act (false)",        event: { type: "act_entered", act: 99 },    totals: {}, flags: {} },
         { label: "wrong-event-type (false)", event: { type: "session_start" },            totals: {}, flags: {} },
+        // Cross-field: wrong type but carries the act value the trigger matches on.
+        // Catches a dropped event.type guard on this arm.
+        { label: "cross-field wrong-type (false)", event: { type: "building_built", act }, totals: {}, flags: {} },
         { label: "null-event (false)",       event: null, totals: {}, flags: {} },
       );
       break;
@@ -163,6 +166,9 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
         { label: "wrong-item (false)",             event: { type: "craft_made", item: "__wrong__", count }, totals: {}, flags: {} },
         { label: "count-below (false)",            event: { type: "craft_made", item, count: count - 1 > 0 ? count - 1 : 0 }, totals: {}, flags: {} },
         { label: "wrong-event-type (false)",       event: { type: "building_built", id: "x" },         totals: {}, flags: {} },
+        // Cross-field: wrong type but carries the item+count the trigger matches on.
+        // Catches a dropped event.type guard on this arm.
+        { label: "cross-field wrong-type (false)", event: { type: "order_fulfilled", item, count },    totals: {}, flags: {} },
         { label: "null-event (false)",             event: null, totals: {}, flags: {} },
       );
       break;
@@ -173,6 +179,9 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
         { label: "matching-id (true)",       event: { type: "building_built", id },         totals: {}, flags: {} },
         { label: "wrong-id (false)",         event: { type: "building_built", id: "__x__" }, totals: {}, flags: {} },
         { label: "wrong-event-type (false)", event: { type: "session_start" },               totals: {}, flags: {} },
+        // Cross-field: wrong type but carries the id the trigger matches on.
+        // Catches a dropped event.type guard on this arm.
+        { label: "cross-field wrong-type (false)", event: { type: "boss_defeated", id },    totals: {}, flags: {} },
         { label: "null-event (false)",       event: null, totals: {}, flags: {} },
       );
       break;
@@ -195,10 +204,16 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
       const matchingEvent: Record<string, unknown> = { type: "keeper_confronted" };
       if (zoneId) matchingEvent["zoneId"] = zoneId;
       if (path)   matchingEvent["path"]   = path;
+      // Cross-field: wrong type but carries the same zoneId/path the trigger expects.
+      // Catches a dropped event.type guard on this arm.
+      const crossFieldEvent: Record<string, unknown> = { type: "building_built" };
+      if (zoneId) crossFieldEvent["zoneId"] = zoneId;
+      if (path)   crossFieldEvent["path"]   = path;
       probes.push(
-        { label: "matching-event (true)",        event: matchingEvent,                                     totals: {}, flags: {} },
-        { label: "wrong-event-type (false)",     event: { type: "building_built", id: "x" },              totals: {}, flags: {} },
-        { label: "null-event (false)",           event: null,                                              totals: {}, flags: {} },
+        { label: "matching-event (true)",            event: matchingEvent,                                     totals: {}, flags: {} },
+        { label: "wrong-event-type (false)",         event: { type: "building_built", id: "x" },              totals: {}, flags: {} },
+        { label: "cross-field wrong-type (false)",   event: crossFieldEvent,                                   totals: {}, flags: {} },
+        { label: "null-event (false)",               event: null,                                              totals: {}, flags: {} },
       );
       if (zoneId) {
         probes.push({ label: "wrong-zoneId (false)", event: { type: "keeper_confronted", zoneId: "__bad__", ...(path ? { path } : {}) }, totals: {}, flags: {} });
@@ -214,6 +229,9 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
         { label: "matching-id (true)",       event: { type: "boss_defeated", id },         totals: {}, flags: {} },
         { label: "wrong-id (false)",         event: { type: "boss_defeated", id: "__x__" }, totals: {}, flags: {} },
         { label: "wrong-event-type (false)", event: { type: "session_start" },              totals: {}, flags: {} },
+        // Cross-field: wrong type but carries the id the trigger matches on.
+        // Catches a dropped event.type guard on this arm.
+        { label: "cross-field wrong-type (false)", event: { type: "building_built", id }, totals: {}, flags: {} },
         { label: "null-event (false)",       event: null, totals: {}, flags: {} },
       );
       break;
@@ -224,6 +242,9 @@ function buildProbes(trigger: Record<string, unknown>): Probe[] {
         { label: "allBuilt-false (false)",   event: { type: "all_buildings_built", allBuilt: false }, totals: {}, flags: {} },
         { label: "allBuilt-absent (false)",  event: { type: "all_buildings_built" },                  totals: {}, flags: {} },
         { label: "wrong-event-type (false)", event: { type: "session_start" },                        totals: {}, flags: {} },
+        // Cross-field: wrong type but carries allBuilt: true (the matching value).
+        // Catches a dropped event.type guard on this arm.
+        { label: "cross-field wrong-type (false)", event: { type: "building_built", allBuilt: true }, totals: {}, flags: {} },
         { label: "null-event (false)",       event: null, totals: {}, flags: {} },
       );
       break;
