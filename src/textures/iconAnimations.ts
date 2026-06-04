@@ -18,6 +18,9 @@ import { ANIMATIONS as A_REEF } from "./animations/reef.js";
 import { ANIMATIONS as A_CRITTERS } from "./animations/critters.js";
 import { ANIMATIONS as A_WEATHER } from "./animations/weather.js";
 import { ANIMATIONS as A_GEMS_DISHES } from "./animations/gemsDishes.js";
+import { ANIMATIONS as A_COZY_DECOR } from "./animations/cozyDecor.js";
+import { ANIMATIONS as A_CELESTIAL } from "./animations/celestial.js";
+import { ANIMATIONS as A_ORES } from "./animations/ores.js";
 
 /** Draws the full icon `key` for elapsed time `t` (seconds), origin-centered. */
 export type IconAnimation = (ctx: CanvasRenderingContext2D, t: number) => void;
@@ -28,6 +31,9 @@ const REGISTRY: Record<string, IconAnimation> = {
   ...A_CRITTERS,
   ...A_WEATHER,
   ...A_GEMS_DISHES,
+  ...A_COZY_DECOR,
+  ...A_CELESTIAL,
+  ...A_ORES,
 };
 
 export const ICON_ANIMATIONS: Readonly<Record<string, IconAnimation>> = Object.freeze(REGISTRY);
