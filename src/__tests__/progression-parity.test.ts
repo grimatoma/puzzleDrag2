@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from "vitest";
 import { evaluate } from "../config/progression/conditions.js";
-import { beatTriggerToCond, buildFactSnapshot } from "../config/progression/storyBridge.js";
+import { beatTriggerToCond, buildFactSnapshot, condToTrigger } from "../config/progression/storyBridge.js";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
 
@@ -48,14 +48,21 @@ type TriggerEntry = { beatId: string; trigger: Record<string, unknown> };
 
 const TRIGGERS: TriggerEntry[] = [];
 
-// STORY_BEATS triggers
+// Beats now author native `when:` Conds (no `trigger:`). Recover the equivalent
+// BeatTrigger for each bridge-mappable beat via `condToTrigger` (the inverse of
+// `beatTriggerToCond`). The `bond_at_least` settle-composite has no single
+// BeatTrigger, so `condToTrigger` returns null and it's skipped here — its
+// firing is covered by side-beats.test.ts / progression-when-migration.test.ts.
 for (const beat of STORY_BEATS) {
-  if (beat.trigger) TRIGGERS.push({ beatId: beat.id, trigger: beat.trigger as Record<string, unknown> });
+  if (!beat.when) continue;
+  const trigger = condToTrigger(beat.when);
+  if (trigger) TRIGGERS.push({ beatId: beat.id, trigger: trigger as Record<string, unknown> });
 }
 
-// SIDE_BEATS triggers
 for (const beat of SIDE_BEATS) {
-  if (beat.trigger) TRIGGERS.push({ beatId: beat.id, trigger: beat.trigger as Record<string, unknown> });
+  if (!beat.when) continue;
+  const trigger = condToTrigger(beat.when);
+  if (trigger) TRIGGERS.push({ beatId: beat.id, trigger: trigger as Record<string, unknown> });
 }
 
 // STORY_FLAGS triggers (each flag can have multiple triggers)

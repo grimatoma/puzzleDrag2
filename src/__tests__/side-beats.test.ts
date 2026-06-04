@@ -24,13 +24,26 @@ describe("SIDE_BEATS shape", () => {
     expect(ids).toContain("mira_letter_kept");
     expect(ids).toContain("mira_letter_read");
   });
-  it("the trigger beat carries a bond_at_least trigger and choices; resolution beats have no trigger", () => {
+  it("the trigger beat carries a bond_at_least when-composite and choices; resolution beats have no when", () => {
     const trig = SIDE_BEATS.find((b) => b.id === "mira_letter_1");
-    expect(trig.trigger).toEqual({ type: "bond_at_least", npc: "mira", amount: 8 });
+    // bond_at_least migrated to the settle-composite `when:` (Phase 2b).
+    expect(trig.trigger).toBeUndefined();
+    expect(trig.when).toEqual({
+      all: [
+        { fact: "npc.mira.bond", op: "gte", value: 8 },
+        {
+          any: [
+            { fact: "event.type", op: "eq", value: "session_start" },
+            { fact: "event.type", op: "eq", value: "session_ended" },
+          ],
+        },
+      ],
+    });
     expect(beatChoices(trig).length).toBe(3);
     expect(beatIsContinueOnly(trig)).toBe(false);
     for (const id of ["mira_letter_sent", "mira_letter_kept", "mira_letter_read"]) {
       const b = SIDE_BEATS.find((x) => x.id === id);
+      expect(b.when).toBeUndefined();
       expect(b.trigger).toBeUndefined();
       expect(beatIsContinueOnly(b)).toBe(true);
     }
@@ -86,7 +99,7 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
   const gs = (extra = {}) => ({ story: { flags: {} }, inventory: {}, npcs: { bonds: {} }, ...extra });
 
   it("fires a side beat on a discrete event trigger (building_built), then doesn't re-fire", () => {
-    withSideBeats([{ id: "_t_built_mill", title: "T", lines: [{ text: "hi" }], trigger: { type: "building_built", id: "mill" } }], () => {
+    withSideBeats([{ id: "_t_built_mill", title: "T", lines: [{ text: "hi" }], when: { all: [{ fact: "event.type", op: "eq", value: "building_built" }, { fact: "event.id", op: "eq", value: "mill" }] } }], () => {
       const r = evaluateSideBeats(gs(), { type: "building_built", id: "mill" });
       expect(r?.firedBeat?.id).toBe("_t_built_mill");
       // wrong building → no fire
@@ -97,7 +110,7 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
   });
 
   it("a flag_set trigger fires on the next event once the flag is true", () => {
-    withSideBeats([{ id: "_t_after_flag", title: "T", lines: [{ text: "hi" }], trigger: { type: "flag_set", flag: "mine_unlocked" } }], () => {
+    withSideBeats([{ id: "_t_after_flag", title: "T", lines: [{ text: "hi" }], when: { fact: "flag.mine_unlocked" } }], () => {
       expect(evaluateSideBeats(gs(), { type: "craft_made", item: "x" })).toBeNull();           // flag not set
       const r = evaluateSideBeats(gs({ story: { flags: { mine_unlocked: true } } }), { type: "craft_made", item: "x" });
       expect(r?.firedBeat?.id).toBe("_t_after_flag");
@@ -106,7 +119,7 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
 
   it("a flag_set side beat can fire in the same dispatch as a flag trigger", () => {
     STORY_FLAGS.push({ id: "_t_instant_flag", label: "Instant", category: "misc", default: false, triggers: [{ type: "session_start" }] });
-    withSideBeats([{ id: "_t_after_instant_flag", title: "Instant side", lines: [{ text: "hi" }], trigger: { type: "flag_set", flag: "_t_instant_flag" } }], () => {
+    withSideBeats([{ id: "_t_after_instant_flag", title: "Instant side", lines: [{ text: "hi" }], when: { fact: "flag._t_instant_flag" } }], () => {
       try {
         const s0 = createInitialState();
         const s1 = rootReducer({ ...s0, story: { ...s0.story, flags: { ...s0.story.flags, intro_seen: true } } }, { type: "SESSION_START" });
@@ -119,9 +132,10 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
   });
 
   it("a repeat beat re-fires (no permanent fired marker) and yields to fresh one-shot beats", () => {
+    const craftBreadWhen = { all: [{ fact: "event.type", op: "eq", value: "craft_made" }, { fact: "event.item", op: "eq", value: "bread" }, { fact: "event.count", op: "gte", value: 1 }] };
     withSideBeats([
-      { id: "_t_repeat", title: "R", lines: [{ text: "again" }], repeat: true, trigger: { type: "craft_made", item: "bread" } },
-      { id: "_t_once", title: "O", lines: [{ text: "once" }], trigger: { type: "craft_made", item: "bread" } },
+      { id: "_t_repeat", title: "R", lines: [{ text: "again" }], repeat: true, when: craftBreadWhen },
+      { id: "_t_once", title: "O", lines: [{ text: "once" }], when: craftBreadWhen },
     ], () => {
       // fresh one-shot beat wins this event…
       let r = evaluateSideBeats(gs(), { type: "craft_made", item: "bread" });
@@ -137,7 +151,7 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
   });
 
   it("a repeat beat on a perpetual predicate (flag_set) only re-fires at settle moments", () => {
-    withSideBeats([{ id: "_t_repeat_flag", title: "RF", lines: [{ text: "x" }], repeat: true, trigger: { type: "flag_set", flag: "festival_announced" } }], () => {
+    withSideBeats([{ id: "_t_repeat_flag", title: "RF", lines: [{ text: "x" }], repeat: true, when: { fact: "flag.festival_announced" } }], () => {
       const set = gs({ story: { flags: { festival_announced: true } } });
       expect(evaluateSideBeats(set, { type: "craft_made", item: "x" })).toBeNull();          // not a settle event
       expect(evaluateSideBeats(set, { type: "session_start" })?.firedBeat?.id).toBe("_t_repeat_flag");
@@ -146,7 +160,7 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
   });
 
   it("a repeat beat with cooldown waits for the cooldown to expire", () => {
-    withSideBeats([{ id: "_t_repeat_cd", title: "CD", lines: [{ text: "x" }], repeat: true, repeatCooldown: 2, trigger: { type: "craft_made", item: "bread" } }], () => {
+    withSideBeats([{ id: "_t_repeat_cd", title: "CD", lines: [{ text: "x" }], repeat: true, repeatCooldown: 2, when: { all: [{ fact: "event.type", op: "eq", value: "craft_made" }, { fact: "event.item", op: "eq", value: "bread" }, { fact: "event.count", op: "gte", value: 1 }] } }], () => {
       const r = evaluateSideBeats(gs(), { type: "craft_made", item: "bread" });
       expect(r?.firedBeat?.id).toBe("_t_repeat_cd");
       expect(r.repeatCooldown).toBe(2);

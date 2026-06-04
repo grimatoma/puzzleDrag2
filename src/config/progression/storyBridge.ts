@@ -10,6 +10,7 @@
 // Import type only from story.ts to avoid a runtime import cycle.
 import type { BeatTrigger } from "../../story.js";
 import type { Cond, FactSnapshot } from "./types.js";
+import { factIdsIn } from "./conditions.js";
 
 /**
  * Translate a BeatTrigger (the legacy authoring vocabulary) into a Cond tree
@@ -120,6 +121,25 @@ export function beatTriggerToCond(trigger: BeatTrigger): Cond {
       };
     }
 
+    case "bond_at_least": {
+      const npc    = t.npc    as string;
+      const amount = t.amount as number;
+      // Faithful to the legacy bond_at_least semantics (which fired only at a
+      // settle moment once the bond threshold held): gate the bond predicate on
+      // a session_start/ended event. This is the single source of truth for the
+      // bond→Cond mapping — the canonical mira_letter_1 beat and any override
+      // both resolve to this exact composite.
+      return {
+        all: [
+          { fact: `npc.${npc}.bond`, op: "gte", value: amount },
+          { any: [
+            { fact: "event.type", op: "eq", value: "session_start" },
+            { fact: "event.type", op: "eq", value: "session_ended" },
+          ]},
+        ],
+      };
+    }
+
     case "all_buildings_built":
       return {
         all: [
@@ -135,15 +155,18 @@ export function beatTriggerToCond(trigger: BeatTrigger): Cond {
 }
 
 /**
- * Build a flat FactSnapshot from the three sources the oracle reads.
+ * Build a flat FactSnapshot from the four sources the oracle reads.
  *
  * Defaults chosen to reproduce the oracle semantics exactly:
  * - `event.count` defaults to 1 (oracle: `(event.count ?? 1)`)
+ * - `bonds` is optional (3-arg callers keep working unchanged); each entry
+ *   adds a `npc.<id>.bond` fact with that numeric value.
  */
 export function buildFactSnapshot(
   event: Record<string, unknown> | null | undefined,
   totals: Record<string, number> = {},
   flags: Record<string, boolean> = {},
+  bonds: Record<string, number> = {},
 ): FactSnapshot {
   const snap: FactSnapshot = {};
 
@@ -155,6 +178,10 @@ export function buildFactSnapshot(
     snap[`flag.${k}`] = v;
   }
 
+  for (const [k, v] of Object.entries(bonds)) {
+    snap[`npc.${k}.bond`] = v;
+  }
+
   if (event && typeof event === "object") {
     for (const [k, v] of Object.entries(event)) {
       snap[`event.${k}`] = v as FactSnapshot[string];
@@ -164,4 +191,175 @@ export function buildFactSnapshot(
   }
 
   return snap;
+}
+
+/**
+ * True iff the condition references at least one fact, and every referenced
+ * fact id starts with "flag." (i.e. the cond is purely about story flags and
+ * nothing else).
+ */
+export function isFlagOnlyCond(cond: Cond): boolean {
+  const ids = factIdsIn(cond);
+  return ids.length > 0 && ids.every((id) => id.startsWith("flag."));
+}
+
+/**
+ * True iff NO referenced fact id starts with "event." — i.e. the condition
+ * is a pure state predicate (resource totals, flags, bonds, …) that can be
+ * re-evaluated on any game tick without needing a specific event in scope.
+ */
+export function isStateCond(cond: Cond): boolean {
+  return factIdsIn(cond).every((id) => !id.startsWith("event."));
+}
+
+// ─── condToTrigger helpers ────────────────────────────────────────────────────
+
+/**
+ * Attempt to match a single leaf `{ fact, op?, value? }` from an `all` array
+ * and return its value, or undefined if not found.
+ */
+function findLeafValue(
+  leaves: Extract<Cond, { all: Cond[] }>["all"],
+  fact: string,
+  op?: string,
+): unknown {
+  for (const c of leaves) {
+    if ("fact" in c && c.fact === fact) {
+      if (op === undefined || c.op === op) return c.value;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The inverse of `beatTriggerToCond` — reconstructs a typed `BeatTrigger`
+ * from a Cond produced by `beatTriggerToCond`.
+ *
+ * Returns `null` for any Cond shape that:
+ *  - was produced by the `default:` / sentinel path (`{ fact: "__never__" }`), or
+ *  - is a composite/hand-authored Cond that doesn't correspond to any single
+ *    trigger type.
+ */
+export function condToTrigger(cond: Cond): BeatTrigger | null {
+  // ── Leaf cases ────────────────────────────────────────────────────────────
+  if ("fact" in cond) {
+    const { fact, op, value } = cond as { fact: string; op?: string; value?: unknown };
+
+    // Sentinel / unknown-trigger passthrough
+    if (fact === "__never__") return null;
+
+    // resource_total: { fact: "resource.<key>.total", op: "gte", value: <n> }
+    const resMatch = /^resource\.(.+)\.total$/.exec(fact);
+    if (resMatch && op === "gte") {
+      return { type: "resource_total", key: resMatch[1], amount: value as number };
+    }
+
+    // flag_set: { fact: "flag.<id>" }  (op defaults to "truthy")
+    const flagMatch = /^flag\.(.+)$/.exec(fact);
+    if (flagMatch && (op === undefined || op === "truthy")) {
+      return { type: "flag_set", flag: flagMatch[1] };
+    }
+
+    // session_start / session_ended: { fact: "event.type", op: "eq", value: "<type>" }
+    if (fact === "event.type" && op === "eq") {
+      if (value === "session_start") return { type: "session_start" };
+      if (value === "session_ended") return { type: "session_ended" };
+    }
+
+    // Any other bare leaf shape is not invertible
+    return null;
+  }
+
+  // ── not case ─────────────────────────────────────────────────────────────
+  if ("not" in cond) {
+    const inner = (cond as { not: Cond }).not;
+    // flag_cleared: { not: { fact: "flag.<id>" } }
+    if ("fact" in inner) {
+      const { fact, op } = inner as { fact: string; op?: string };
+      const flagMatch = /^flag\.(.+)$/.exec(fact);
+      if (flagMatch && (op === undefined || op === "truthy")) {
+        return { type: "flag_cleared", flag: flagMatch[1] };
+      }
+    }
+    return null;
+  }
+
+  // ── any case ─────────────────────────────────────────────────────────────
+  // beatTriggerToCond never emits `any`; always return null
+  if ("any" in cond) return null;
+
+  // ── all case ─────────────────────────────────────────────────────────────
+  if ("all" in cond) {
+    const leaves = (cond as { all: Cond[] }).all;
+
+    // resource_total_multi: { all: [ { fact: "resource.<k>.total", op:"gte", value:<v> }, ... ] }
+    // Distinguishable because every leaf must match the resource.*.total pattern with op gte
+    const allResourceLeaves = leaves.every(
+      (c) => "fact" in c && /^resource\.[^.]+\.total$/.test((c as { fact: string }).fact) && (c as { op?: string }).op === "gte",
+    );
+    if (allResourceLeaves) {
+      const req: Record<string, number> = {};
+      for (const c of leaves) {
+        const leaf = c as { fact: string; value: unknown };
+        const m = /^resource\.(.+)\.total$/.exec(leaf.fact)!;
+        req[m[1]] = leaf.value as number;
+      }
+      return { type: "resource_total_multi", req };
+    }
+
+    // From here on we need an event.type eq leaf to identify the trigger type
+    const eventType = findLeafValue(leaves, "event.type", "eq");
+    if (typeof eventType !== "string") return null;
+
+    switch (eventType) {
+      case "act_entered": {
+        const act = findLeafValue(leaves, "event.act", "eq");
+        if (act === undefined) return null;
+        return { type: "act_entered", act: act as number | string };
+      }
+
+      case "craft_made": {
+        const item  = findLeafValue(leaves, "event.item",  "eq");
+        const count = findLeafValue(leaves, "event.count", "gte");
+        if (typeof item !== "string") return null;
+        return { type: "craft_made", item, count: count as number };
+      }
+
+      case "building_built": {
+        const id = findLeafValue(leaves, "event.id", "eq");
+        if (typeof id !== "string") return null;
+        return { type: "building_built", id };
+      }
+
+      case "order_fulfilled": {
+        const count = findLeafValue(leaves, "event.count", "gte");
+        return { type: "order_fulfilled", count: count as number };
+      }
+
+      case "keeper_confronted": {
+        const zoneId = findLeafValue(leaves, "event.zoneId", "eq") as string | undefined;
+        const path   = findLeafValue(leaves, "event.path",   "eq") as string | undefined;
+        return {
+          type: "keeper_confronted",
+          ...(zoneId !== undefined ? { zoneId } : {}),
+          ...(path   !== undefined ? { path   } : {}),
+        };
+      }
+
+      case "boss_defeated": {
+        const id = findLeafValue(leaves, "event.id", "eq");
+        if (typeof id !== "string") return null;
+        return { type: "boss_defeated", id };
+      }
+
+      case "all_buildings_built": {
+        return { type: "all_buildings_built" };
+      }
+
+      default:
+        return null;
+    }
+  }
+
+  return null;
 }
