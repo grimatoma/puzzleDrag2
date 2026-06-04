@@ -45,6 +45,13 @@ describe("FieldsTable — showValue=false", () => {
     expect(screen.getByText("a")).toBeDefined();
     expect(screen.getByText("b")).toBeDefined();
   });
+
+  it("Type column cells use wiki-field-type for max-width wrapping", () => {
+    const { container } = render(<FieldsTable fields={FIELDS} showValue={false} />);
+    const typeCells = container.querySelectorAll("td.wiki-field-type");
+    expect(typeCells.length).toBe(FIELDS.length);
+    expect(container.querySelector("th.wiki-field-type")?.textContent).toBe("Type");
+  });
 });
 
 describe("FieldsTable — showValue=true (default) with entity", () => {
