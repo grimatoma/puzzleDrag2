@@ -30,6 +30,9 @@ import { ANIMATIONS as A_FESTIVE } from "./animations/festive.js";
 import { ANIMATIONS as A_CROPS } from "./animations/crops.js";
 import { ANIMATIONS as A_WORKSHOP_TOOLS } from "./animations/workshopTools.js";
 import { ANIMATIONS as A_NATURE } from "./animations/nature.js";
+import { ANIMATIONS as A_WEAPONS } from "./animations/weapons.js";
+import { ANIMATIONS as A_SPELLS } from "./animations/spells.js";
+import { ANIMATIONS as A_BUILDINGS } from "./animations/buildings.js";
 
 /** Draws the full icon `key` for elapsed time `t` (seconds), origin-centered. */
 export type IconAnimation = (ctx: CanvasRenderingContext2D, t: number) => void;
@@ -52,6 +55,9 @@ const REGISTRY: Record<string, IconAnimation> = {
   ...A_CROPS,
   ...A_WORKSHOP_TOOLS,
   ...A_NATURE,
+  ...A_WEAPONS,
+  ...A_SPELLS,
+  ...A_BUILDINGS,
 };
 
 export const ICON_ANIMATIONS: Readonly<Record<string, IconAnimation>> = Object.freeze(REGISTRY);
