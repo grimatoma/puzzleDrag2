@@ -30,6 +30,19 @@
   </tbody>
 </table>
 
+<h2>New: active frontier + idle hinterland (the no-pile-up model)</h2>
+<div style="border:1.5px solid #b28b62;border-left:5px solid #d6612a;border-radius:10px;background:linear-gradient(165deg,#fbf3e0,#f0e6cf);padding:12px 16px;margin:0.4em 0 1em;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <p style="margin:0 0 0.5em;font-size:13px;color:#4a3a26;">A first-pass design (dated 2026-06-04, <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span>) settles the open question of <em>how completed zones behave once order is player-chosen with no cap.</em> Rather than every founded zone staying "always active" — which piles up into an unplayable game — a zone moves through a lifecycle and then <strong>retires into a passive hinterland</strong> you glance at and collect from. The full zone-by-zone treatment lives on the <strong>Zones</strong> page; the meta-model in brief:</p>
+  <ul style="margin:0;">
+    <li><strong>Three lifecycle states.</strong> <em>Frontier</em> (newest, hand-played) → <em>Settling</em> (mid Camp→City build-out) → <em>Hinterland</em> (completed: core buildings + keeper resolved + Hearth-Token minted). The active surface stays bounded to the 1–2 frontier zones.</li>
+    <li><strong>Idle hinterland loop.</strong> A completed zone trickles its specialization goods + coin into a local cache, scaled by its buildings/workers. <strong>Caravan delivery</strong> (built on the [[buildings:caravan_post]] building) ferries each cache to a shared <strong>Kingdom Stockpile</strong> at the [[zones:home|home]] hub — caravans run themselves by default, with optional routing as an upgrade layer.</li>
+    <li><strong>Support-lists + civic unlocks.</strong> Each zone's per-zone building whitelist becomes a <code>supports</code> list of <code>{ id, gate }</code> entries (<code>from_founding</code> | <code>event:&lt;id&gt;</code>). A global civic milestone (e.g. religion → <code>chapel</code>) flips a gated building on across every founded zone that supports it — a bounded, one-tap reason to revisit a hinterland.</li>
+    <li><strong>Progressive boards.</strong> A zone can unlock extra boards as it tiers up (farm builds [[buildings:harbor_dock]] → a fish board; a mine's [[buildings:forge]] at City tier → a hazard-free smithing board). This folds the old standalone <strong>Black Forge</strong> node into a progressive board inside the mine region.</li>
+    <li><strong>Optional pull-back.</strong> The [[zones:fairground|Fairground]] runs seasonal contests demanding a specific old zone's specialty good (honey · pearls · gems · steel) — complementing idle without forcing active replay.</li>
+  </ul>
+  <p style="margin:0.5em 0 0;font-size:12px;color:#867a66;">This is additive context for the roadmap below; encoding (support-list data, the hinterland/caravan subsystem, zone-scoped triggers, progressive board slots, the fairground loop) is deferred to follow-on plans. See the <strong>Zones</strong> page for the full design, per-zone schema, and resolved decisions.</p>
+</div>
+
 <h2>The town-tier ladder (Camp → City)</h2>
 <p>Each ruin climbs the same rank ladder. A tier-up is one town-center upgrade costing escalating <em>local</em> resources that (a) unlocks the next batch of content, (b) raises caps, (c) adds plots. The top tier builds the <strong>wagon</strong> to the next ruin. This replaces today's scattered <code>lv</code> gates and is <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> — costs below are first-pass proposals for the balance simulator.</p>
 <table>
