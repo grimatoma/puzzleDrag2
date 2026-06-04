@@ -56,6 +56,9 @@ import { ICONS as G_FESTIVE } from "./categories/festive.js";
 import { ICONS as G_CROPS } from "./categories/crops.js";
 import { ICONS as G_WORKSHOP_TOOLS } from "./categories/workshopTools.js";
 import { ICONS as G_NATURE } from "./categories/nature.js";
+import { ICONS as G_WEAPONS } from "./categories/weapons.js";
+import { ICONS as G_SPELLS } from "./categories/spells.js";
+import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
 
 export interface IconRegistryEntry {
@@ -182,6 +185,9 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...G_CROPS,
   ...G_WORKSHOP_TOOLS,
   ...G_NATURE,
+  ...G_WEAPONS,
+  ...G_SPELLS,
+  ...G_BUILDINGS,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
   // Dev Panel's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
