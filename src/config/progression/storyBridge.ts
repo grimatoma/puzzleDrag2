@@ -124,7 +124,20 @@ export function beatTriggerToCond(trigger: BeatTrigger): Cond {
     case "bond_at_least": {
       const npc    = t.npc    as string;
       const amount = t.amount as number;
-      return { fact: `npc.${npc}.bond`, op: "gte", value: amount };
+      // Faithful to the legacy bond_at_least semantics (which fired only at a
+      // settle moment once the bond threshold held): gate the bond predicate on
+      // a session_start/ended event. This is the single source of truth for the
+      // bond→Cond mapping — the canonical mira_letter_1 beat and any override
+      // both resolve to this exact composite.
+      return {
+        all: [
+          { fact: `npc.${npc}.bond`, op: "gte", value: amount },
+          { any: [
+            { fact: "event.type", op: "eq", value: "session_start" },
+            { fact: "event.type", op: "eq", value: "session_ended" },
+          ]},
+        ],
+      };
     }
 
     case "all_buildings_built":

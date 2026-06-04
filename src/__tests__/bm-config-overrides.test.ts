@@ -183,7 +183,7 @@ describe("applyStoryOverrides", () => {
     ] });
     expect(side).toHaveLength(3);
     expect(side[1]).toEqual({ id: "branch_a", side: true, draft: true, title: "Branch A", lines: [{ speaker: "wren", text: "hi" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] });
-    expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", when: { fact: "npc.mira.bond", op: "gte", value: 6 }, onComplete: { setFlag: "done_b" } });
+    expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", when: { all: [ { fact: "npc.mira.bond", op: "gte", value: 6 }, { any: [ { fact: "event.type", op: "eq", value: "session_start" }, { fact: "event.type", op: "eq", value: "session_ended" } ] } ] }, onComplete: { setFlag: "done_b" } });
     expect(story).toHaveLength(1); // dup id didn't overwrite the built-in
   });
   it("throws when newBeats contains non-objects", () => {
