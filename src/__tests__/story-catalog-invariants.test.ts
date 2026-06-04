@@ -46,6 +46,14 @@ describe("story catalog enums", () => {
     }
   });
 
+  it("no beat in STORY_BEATS or SIDE_BEATS carries the legacy trigger: field", () => {
+    // The runtime evaluates beat.when only; beat.trigger is a dead path.
+    // Override/draft writes when: via sanitizeCond + beatTriggerToCond; never trigger:.
+    for (const b of [...STORY_BEATS, ...SIDE_BEATS]) {
+      expect((b as Record<string, unknown>).trigger, `beat ${b.id} still has trigger:`).toBeUndefined();
+    }
+  });
+
   it("StoryTriggerType covers sanitizeTrigger + conditionMatches event types", () => {
     const set = new Set<string>(STORY_TRIGGER_TYPE_VALUES);
     const fromSanitizer = [

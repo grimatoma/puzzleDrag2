@@ -14,6 +14,9 @@
 import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
 import { rejectUnknownOverrideKeys, rejectUnknownOverrideTarget } from "./overrideStrict.js";
 import { ALL_ITEM_KEY_VALUES, type ItemKey } from "../types/catalog/itemKeys.js";
+import { isKnownFact } from "./progression/facts.js";
+import { beatTriggerToCond } from "./progression/storyBridge.js";
+import type { Cond, Op } from "./progression/types.js";
 import type { BalanceOverrides } from "./schemas/balance.js";
 import { upgradeThresholdsOverridesSchema } from "./schemas/balance.js";
 import { achievementsOverridesSchema } from "./schemas/achievement.js";
@@ -641,6 +644,64 @@ export function sanitizeTrigger(raw: unknown): AnyRecord | undefined {
 export const sanitizeBeatTrigger = sanitizeTrigger;
 export const sanitizeFlagTrigger = sanitizeTrigger;
 
+const KNOWN_OPS = new Set<string>(["eq", "ne", "gte", "lte", "gt", "lt", "truthy"]);
+
+/**
+ * Defensively sanitise an untrusted `Cond` tree from `balance.json` or an
+ * editor draft. Returns `undefined` for anything unrecognisable or empty.
+ *
+ * Accepted shapes (mirrors `src/config/progression/types.ts`):
+ *   leaf: `{ fact: string }` where `isKnownFact(fact)` holds, with optional
+ *         `op` (one of the engine Op values) and optional `value` (scalar).
+ *   `{ all: Cond[] }` / `{ any: Cond[] }` — arrays; invalid elements dropped.
+ *   `{ not: Cond }` — the inner Cond is recursively sanitised.
+ */
+export function sanitizeCond(raw: unknown): Cond | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+
+  // ── leaf ──────────────────────────────────────────────────────────────────
+  if (typeof r.fact === "string") {
+    const fact = (r.fact as string).trim();
+    if (!fact || !isKnownFact(fact)) return undefined;
+    const leaf: { fact: string; op?: Op; value?: string | number | boolean } = { fact };
+    if (r.op !== undefined) {
+      if (typeof r.op !== "string" || !KNOWN_OPS.has(r.op as string)) return undefined;
+      leaf.op = r.op as Op;
+    }
+    if (r.value !== undefined) {
+      const v = r.value;
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+        leaf.value = v;
+      }
+      // anything else (object, array, null) → reject the leaf
+      else return undefined;
+    }
+    return leaf;
+  }
+
+  // ── all / any ─────────────────────────────────────────────────────────────
+  for (const k of ["all", "any"] as const) {
+    if (k in r) {
+      if (!Array.isArray(r[k])) return undefined;
+      const children: Cond[] = (r[k] as unknown[])
+        .map((c) => sanitizeCond(c))
+        .filter((c): c is Cond => c !== undefined);
+      if (children.length === 0) return undefined;
+      return { [k]: children } as Cond;
+    }
+  }
+
+  // ── not ───────────────────────────────────────────────────────────────────
+  if ("not" in r) {
+    const inner = sanitizeCond(r.not);
+    if (!inner) return undefined;
+    return { not: inner };
+  }
+
+  return undefined;
+}
+
 /** `repeat` field on a beat: true (re-fires) or undefined (one-shot). */
 export function sanitizeBeatRepeat(raw: unknown): true | undefined {
   return raw === true ? true : undefined;
@@ -717,8 +778,15 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
       else if (typeof raw.body === "string" && (raw.body as string).length > 0) beat.body = raw.body;
       const choices = sanitizeChoiceArray(raw.choices);
       if (choices && choices.length > 0) beat.choices = choices;
-      const trigger = sanitizeBeatTrigger(raw.trigger);
-      if (trigger) beat.trigger = trigger;
+      // Resolve the firing condition to the native `when:` field.
+      // Precedence: explicit `when` Cond → compiled legacy `trigger` → nothing.
+      const rawWhen = sanitizeCond(raw.when);
+      if (rawWhen) {
+        beat.when = rawWhen;
+      } else if (raw.trigger) {
+        const legacyTrigger = sanitizeBeatTrigger(raw.trigger);
+        if (legacyTrigger) beat.when = beatTriggerToCond(legacyTrigger as import("../story.js").BeatTrigger);
+      }
       if (sanitizeBeatRepeat(raw.repeat)) beat.repeat = true;
       const repeatCooldown = sanitizeBeatRepeatCooldown(raw.repeatCooldown);
       if (repeatCooldown) beat.repeatCooldown = repeatCooldown;
@@ -753,7 +821,15 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
           if (ch && cp && typeof cp.label === "string" && (cp.label as string).length > 0) ch.label = cp.label;
         }
       }
-      if (patch.trigger) { const t = sanitizeBeatTrigger(patch.trigger); if (t) beat.trigger = t; }
+      // Resolve firing condition to the native `when:` field (never `beat.trigger`).
+      // Precedence: explicit `when` Cond → compiled legacy `trigger` → no change.
+      if (Object.prototype.hasOwnProperty.call(patch, "when")) {
+        const w = sanitizeCond(patch.when);
+        if (w) beat.when = w;
+      } else if (patch.trigger) {
+        const t = sanitizeBeatTrigger(patch.trigger);
+        if (t) beat.when = beatTriggerToCond(t as import("../story.js").BeatTrigger);
+      }
       if (Object.prototype.hasOwnProperty.call(patch, "repeat")) {
         if (sanitizeBeatRepeat(patch.repeat)) beat.repeat = true; else delete beat.repeat;
       }

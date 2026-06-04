@@ -121,6 +121,12 @@ export function beatTriggerToCond(trigger: BeatTrigger): Cond {
       };
     }
 
+    case "bond_at_least": {
+      const npc    = t.npc    as string;
+      const amount = t.amount as number;
+      return { fact: `npc.${npc}.bond`, op: "gte", value: amount };
+    }
+
     case "all_buildings_built":
       return {
         all: [

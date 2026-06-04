@@ -1,6 +1,6 @@
 // Phase 6 — Dev Panel override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, applyUpgradeThresholdOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, applyUpgradeThresholdOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray, sanitizeCond } from "../config/applyOverrides.js";
 import { withImportMetaDev } from "../testUtils/testState.js";
 
 describe("applyExpeditionOverrides", () => {
@@ -183,7 +183,7 @@ describe("applyStoryOverrides", () => {
     ] });
     expect(side).toHaveLength(3);
     expect(side[1]).toEqual({ id: "branch_a", side: true, draft: true, title: "Branch A", lines: [{ speaker: "wren", text: "hi" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] });
-    expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", trigger: { type: "bond_at_least", npc: "mira", amount: 6 }, onComplete: { setFlag: "done_b" } });
+    expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", when: { fact: "npc.mira.bond", op: "gte", value: 6 }, onComplete: { setFlag: "done_b" } });
     expect(story).toHaveLength(1); // dup id didn't overwrite the built-in
   });
   it("throws when newBeats contains non-objects", () => {
@@ -198,8 +198,8 @@ describe("applyStoryOverrides", () => {
     });
     expect(side[0]).toMatchObject({ id: "draft1", title: "Renamed", scene: "frost", choices: [{ id: "c1", label: "Pick" }] });
   });
-  it("trigger + repeat are sanitised on newBeats and beats[] patches", () => {
-    const story = [{ id: "a1", title: "A", trigger: { type: "session_start" } }];
+  it("trigger + repeat are sanitised on newBeats and beats[] patches; compiled to when:", () => {
+    const story = [{ id: "a1", title: "A" }];
     const side = [];
     applyStoryOverrides(story, side, {
       newBeats: [{ id: "d1", title: "D1", trigger: { type: "building_built", id: "mill" }, repeat: true, repeatCooldown: 3 },
@@ -207,16 +207,40 @@ describe("applyStoryOverrides", () => {
       beats: { a1: { trigger: { type: "resource_total", key: "tile_tree_oak", amount: 30 }, repeat: true },
                d1: { repeat: false, repeatCooldown: 0 } },   // turn the repeat back off
     });
-    expect(story[0].trigger).toEqual({ type: "resource_total", key: "tile_tree_oak", amount: 30 });
+    // legacy `trigger:` overrides are compiled to the native `when:` Cond; `beat.trigger` is never written
+    expect(story[0].when).toEqual({ fact: "resource.tile_tree_oak.total", op: "gte", value: 30 });
+    expect(story[0].trigger).toBeUndefined();
     expect(story[0].repeat).toBe(true);
     const d1 = side.find((b) => b.id === "d1"), d2 = side.find((b) => b.id === "d2");
-    expect(d1).toMatchObject({ id: "d1", trigger: { type: "building_built", id: "mill" } });
+    expect(d1.when).toEqual({ all: [{ fact: "event.type", op: "eq", value: "building_built" }, { fact: "event.id", op: "eq", value: "mill" }] });
+    expect(d1.trigger).toBeUndefined();
     expect(d1.repeat).toBeUndefined();   // newBeat set repeat:true, beats[] patch cleared it
     expect(d1.repeatCooldown).toBeUndefined();
-    expect(d2).toMatchObject({ id: "d2", trigger: { type: "flag_set", flag: "mine_unlocked" } });
-    // a bad trigger in a patch is ignored (keeps the prior one)
+    expect(d2.when).toEqual({ fact: "flag.mine_unlocked" });
+    expect(d2.trigger).toBeUndefined();
+    // a bad trigger in a patch is ignored (keeps the prior when)
+    const prevWhen = story[0].when;
     applyStoryOverrides(story, [], { beats: { a1: { trigger: { type: "no_such" } } } });
-    expect(story[0].trigger).toEqual({ type: "resource_total", key: "tile_tree_oak", amount: 30 });
+    expect(story[0].when).toEqual(prevWhen);
+  });
+  it("a direct when: Cond override on a beat patch writes beat.when", () => {
+    const story = [{ id: "a1", title: "A" }];
+    applyStoryOverrides(story, [], {
+      beats: { a1: { when: { fact: "flag.hearth_lit" } } },
+    });
+    expect(story[0].when).toEqual({ fact: "flag.hearth_lit" });
+    expect(story[0].trigger).toBeUndefined();
+  });
+  it("a direct when: Cond on a newBeat writes beat.when; precedence over trigger:", () => {
+    const side = [];
+    applyStoryOverrides([], side, {
+      newBeats: [{ id: "w1", title: "W1",
+        when: { fact: "flag.hearth_lit" },
+        trigger: { type: "session_start" } }],
+    });
+    // when: takes precedence over trigger:
+    expect(side[0].when).toEqual({ fact: "flag.hearth_lit" });
+    expect(side[0].trigger).toBeUndefined();
   });
   it("suppresses built-in side beats without deleting draft side beats", () => {
     const side = [
@@ -261,6 +285,47 @@ describe("story-beat sanitizers", () => {
     expect(sanitizeBeatRepeatCooldown(0)).toBeUndefined();
     expect(sanitizeBeatRepeatCooldown(-1)).toBeUndefined();
     expect(sanitizeBeatRepeatCooldown("x")).toBeUndefined();
+  });
+});
+
+describe("sanitizeCond", () => {
+  it("accepts a bare leaf with a known fact", () => {
+    expect(sanitizeCond({ fact: "flag.hearth_lit" })).toEqual({ fact: "flag.hearth_lit" });
+    expect(sanitizeCond({ fact: "npc.mira.bond", op: "gte", value: 8 })).toEqual({ fact: "npc.mira.bond", op: "gte", value: 8 });
+    expect(sanitizeCond({ fact: "event.type", op: "eq", value: "session_start" })).toEqual({ fact: "event.type", op: "eq", value: "session_start" });
+  });
+  it("rejects a leaf with an unknown fact", () => {
+    expect(sanitizeCond({ fact: "not_a_real_fact" })).toBeUndefined();
+    expect(sanitizeCond({ fact: "" })).toBeUndefined();
+  });
+  it("rejects a leaf with an unknown op", () => {
+    expect(sanitizeCond({ fact: "flag.hearth_lit", op: "starts_with" })).toBeUndefined();
+  });
+  it("rejects a leaf with an invalid value type", () => {
+    expect(sanitizeCond({ fact: "flag.hearth_lit", value: { nested: "obj" } })).toBeUndefined();
+    expect(sanitizeCond({ fact: "flag.hearth_lit", value: ["arr"] })).toBeUndefined();
+  });
+  it("accepts all / any / not composites with valid children", () => {
+    expect(sanitizeCond({ all: [{ fact: "flag.hearth_lit" }, { fact: "npc.mira.bond", op: "gte", value: 5 }] }))
+      .toEqual({ all: [{ fact: "flag.hearth_lit" }, { fact: "npc.mira.bond", op: "gte", value: 5 }] });
+    expect(sanitizeCond({ any: [{ fact: "flag.hearth_lit" }, { fact: "flag.mine_unlocked" }] }))
+      .toEqual({ any: [{ fact: "flag.hearth_lit" }, { fact: "flag.mine_unlocked" }] });
+    expect(sanitizeCond({ not: { fact: "flag.hearth_lit" } }))
+      .toEqual({ not: { fact: "flag.hearth_lit" } });
+  });
+  it("drops invalid elements from all / any arrays rather than rejecting the whole node", () => {
+    expect(sanitizeCond({ all: [{ fact: "flag.hearth_lit" }, { fact: "bad_fact" }, null] }))
+      .toEqual({ all: [{ fact: "flag.hearth_lit" }] });
+  });
+  it("returns undefined when all children are invalid (empty after filtering)", () => {
+    expect(sanitizeCond({ all: [{ fact: "bad_fact" }] })).toBeUndefined();
+    expect(sanitizeCond({ any: [] })).toBeUndefined();
+  });
+  it("returns undefined for an unrecognised / empty shape", () => {
+    expect(sanitizeCond(null)).toBeUndefined();
+    expect(sanitizeCond("string")).toBeUndefined();
+    expect(sanitizeCond({})).toBeUndefined();
+    expect(sanitizeCond({ not: { fact: "bad_fact" } })).toBeUndefined();
   });
 });
 
