@@ -1,20 +1,23 @@
 import { isConceptTileIconsEnabled } from "../../featureFlags.js";
-import { CONCEPT_TILE_SPECS, isConceptTileKey, type ConceptTileSpec } from "./manifest.js";
+import { CONCEPT_TILE_SPECS, isConceptTileKey } from "./manifest.js";
 import { loadConceptGifPlayer, type ConceptTileDraw } from "./gifPlayer.js";
 
 export { CONCEPT_TILE_KEYS, CONCEPT_TILE_SPECS, isConceptTileKey } from "./manifest.js";
 
 const players = new Map<string, ConceptTileDraw>();
 let preloadPromise: Promise<void> | null = null;
-
-function specFor(key: string): ConceptTileSpec | undefined {
-  return CONCEPT_TILE_SPECS[key];
-}
+let lastPreloadEnabled = false;
 
 /** Begin loading concept GIF decoders (no-op when the URL flag is off). */
 export function preloadConceptTileGifs(): Promise<void> {
-  if (!isConceptTileIconsEnabled()) return Promise.resolve();
-  if (!preloadPromise) {
+  const enabled = isConceptTileIconsEnabled();
+  if (!enabled) {
+    lastPreloadEnabled = false;
+    return Promise.resolve();
+  }
+  if (!preloadPromise || !lastPreloadEnabled) {
+    lastPreloadEnabled = true;
+    players.clear();
     preloadPromise = Promise.all(
       Object.entries(CONCEPT_TILE_SPECS).map(async ([key, spec]) => {
         const player = await loadConceptGifPlayer(spec);
@@ -23,6 +26,11 @@ export function preloadConceptTileGifs(): Promise<void> {
     ).then(() => {});
   }
   return preloadPromise;
+}
+
+/** True when at least one concept GIF has finished decoding. */
+export function conceptTilesPreloadReady(): boolean {
+  return players.size > 0;
 }
 
 /** Whether a loaded concept animation is ready for `key`. */

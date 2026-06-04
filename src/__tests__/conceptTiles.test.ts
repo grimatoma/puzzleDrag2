@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { CONCEPT_TILE_KEYS, CONCEPT_TILE_SPECS, isConceptTileKey } from "../textures/conceptTiles/manifest.js";
 import { isConceptTileIconsEnabled } from "../featureFlags.js";
+import { isConceptTilesFlagEnabled } from "../appQueryParams.js";
 
 describe("concept tile manifest", () => {
   it("lists exactly seven preview tiles (5 farm + 2 grass)", () => {
@@ -28,26 +29,13 @@ describe("concept tile manifest", () => {
 });
 
 describe("isConceptTileIconsEnabled", () => {
-  function stubSearch(search: string) {
-    vi.stubGlobal("window", { location: { search } });
-  }
-
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("is off by default", () => {
-    stubSearch("");
-    expect(isConceptTileIconsEnabled()).toBe(false);
-  });
-
-  it("enables with ?conceptTiles=1", () => {
-    stubSearch("?conceptTiles=1");
+  it("delegates to hash-aware app query params", () => {
+    vi.stubGlobal("window", { location: { search: "", hash: "#/board?conceptTiles=1" } });
+    expect(isConceptTileIconsEnabled()).toBe(isConceptTilesFlagEnabled());
     expect(isConceptTileIconsEnabled()).toBe(true);
-  });
-
-  it("disables with ?conceptTiles=0", () => {
-    stubSearch("?conceptTiles=0");
-    expect(isConceptTileIconsEnabled()).toBe(false);
   });
 });
