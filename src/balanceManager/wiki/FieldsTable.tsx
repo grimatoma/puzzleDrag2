@@ -131,8 +131,11 @@ function renderRows(
       >
         {depth > 0 ? "↳ " : ""}{f.field}
       </td>
-      <td className="py-1.5 px-2 font-mono whitespace-nowrap align-top" style={{ color: COLORS.inkSubtle }}>
-        {f.children ? "object" : f.type}
+      <td
+        className="py-1.5 px-2 font-mono align-top wiki-field-type"
+        style={{ color: COLORS.inkSubtle }}
+      >
+        {f.type}
       </td>
       <td className="py-1.5 px-2 whitespace-nowrap align-top">
         {f.optional ? (
@@ -195,7 +198,11 @@ export function FieldsTable({
             {columns.map((col) => (
               <th
                 key={col}
-                className="text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide whitespace-nowrap"
+                className={
+                  col === "Type"
+                    ? "text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide wiki-field-type"
+                    : "text-left py-1.5 px-2 font-bold text-[10px] uppercase tracking-wide whitespace-nowrap"
+                }
                 style={{ color: COLORS.inkSubtle }}
               >
                 {col}

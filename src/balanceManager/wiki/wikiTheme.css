@@ -1302,6 +1302,15 @@
   max-width: 100%;
 }
 
+/* Schema field tables: cap Type column width so aliases stay readable. */
+.wiki-root .wiki-field-type {
+  max-width: 14rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
 /* View toggle label visibility — compact span hidden on desktop, full hidden on mobile */
 .wiki-root .wiki-view-label--compact {
   display: none;
