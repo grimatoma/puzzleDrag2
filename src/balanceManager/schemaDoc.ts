@@ -86,13 +86,7 @@ export function describeSchema(schema: unknown): SchemaDoc {
     if (hasDefault) {
       entry.default = defaultValue;
     }
-    if (isZodObject(inner)) {
-      try {
-        entry.children = describeSchema(inner).fields;
-      } catch {
-        // leave children undefined on introspection failure
-      }
-    }
+    entry.children = fieldChildren(inner);
     return entry;
   });
 
@@ -219,7 +213,61 @@ function isPassthrough(objectSchema: ZodLike): boolean {
   return getTag(catchall) === "unknown";
 }
 
-// ─── Type-string builder ──────────────────────────────────────────────────────
+
+/** Peel wrappers for structural expansion (ignores type aliases). */
+function unwrapStructural(schema: ZodLike): ZodLike {
+  let s = schema;
+  for (;;) {
+    const tag = getTag(s);
+    if (tag === "optional" || tag === "default" || tag === "nullable") {
+      s = (s._zod.def as { innerType: ZodLike }).innerType;
+    } else {
+      break;
+    }
+  }
+  return s;
+}
+
+/**
+ * Sub-field rows for nested wiki tables: strict objects and enum-keyed records
+ * (e.g. FarmUpgradeMap, FarmSeasonDropsPatch).
+ */
+function fieldChildren(schema: ZodLike): FieldDoc[] | undefined {
+  const structural = unwrapStructural(schema);
+  if (isZodObject(structural)) {
+    try {
+      return describeSchema(structural).fields;
+    } catch {
+      return undefined;
+    }
+  }
+  if (getTag(structural) === "record") {
+    return recordEnumKeyChildren(structural);
+  }
+  return undefined;
+}
+
+function recordEnumKeyChildren(recordSchema: ZodLike): FieldDoc[] | undefined {
+  const def = recordSchema._zod.def as { keyType: ZodLike; valueType: ZodLike };
+  if (getTag(def.keyType) !== "enum") return undefined;
+
+  const entries = (def.keyType._zod.def as { entries: Record<string, string> }).entries;
+  const keys = Object.values(entries);
+  const valueSchema = def.valueType;
+
+  return keys.map((key) => {
+    const row: FieldDoc = {
+      field: key,
+      type: typeString(valueSchema),
+      optional: true,
+    };
+    const nested = fieldChildren(valueSchema);
+    if (nested) row.children = nested;
+    return row;
+  });
+}
+
+// ─── Type-string builder─────────────────────────────────────────────────────
 
 // safeint min/max — set by .int() when no explicit min/max is given.
 const SAFEINT_MIN = -9007199254740991;
