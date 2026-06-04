@@ -20,6 +20,20 @@ export function isFireHazardEnabled() {
 // Production builds (the GitHub Pages deploy) default to suppressed so the
 // public site doesn't pop story beats, season summaries, and NPC bubbles;
 // dev and test (Vite dev server, Vitest, Playwright) default to enabled.
+/** Animated pixel-art concept GIFs for seven farm/grass tiles (docs review assets).
+ *  Enable with `?conceptTiles=1` on the game URL; default off. */
+export function isConceptTileIconsEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const v = new URLSearchParams(window.location.search).get("conceptTiles");
+    if (v === "1" || v === "true") return true;
+    if (v === "0" || v === "false") return false;
+  } catch {
+    // Ignore parse failures in non-browser environments.
+  }
+  return false;
+}
+
 export function isDialogsDisabled() {
   const globalOverride = globalThis.__HEARTH_DISABLE_DIALOGS__;
   if (typeof globalOverride === 'boolean') return globalOverride;
