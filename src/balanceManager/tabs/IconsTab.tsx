@@ -15,6 +15,8 @@ import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
 import { getUsedIconKeys } from "../iconUsage.js";
 import { iconAnimation } from "../../textures/iconAnimations.js";
 import { iconAnimationTicker } from "../iconAnimationTicker.js";
+import { seasonalTileDraw, seasonalTileAnim, hasSeasonalTile } from "../../textures/seasonal/seasonalTiles.js";
+import type { SeasonName } from "../../textures/seasonal/types.js";
 import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 
 // Derive category buckets from key prefixes (e.g. "ui_lock" → "ui").
@@ -65,6 +67,14 @@ const STATUS_OPTIONS = [
 const ANIMATE_OPTIONS = [
   { id: "off", label: "Off" },
   { id: "on", label: "Play" },
+];
+
+const SEASON_OPTIONS = [
+  { id: "none", label: "None" },
+  { id: "Spring", label: "Spring" },
+  { id: "Summer", label: "Summer" },
+  { id: "Autumn", label: "Autumn" },
+  { id: "Winter", label: "Winter" },
 ];
 
 const TAGS_EXPANDED_KEY = "hearth.balance.iconsTagsExpanded";
@@ -132,6 +142,8 @@ interface IconCellProps {
   onClick: (key: string) => void;
   selected: boolean;
   animate: boolean;
+  /** Active season variant (null = base art). Affects keys with seasonal art. */
+  season: SeasonName | null;
   scrollRoot: RefObject<HTMLElement | null>;
   style?: React.CSSProperties;
 }
@@ -141,6 +153,7 @@ const IconCell = memo(function IconCell({
   onClick,
   selected,
   animate,
+  season,
   scrollRoot,
   style,
 }: IconCellProps) {
@@ -150,7 +163,11 @@ const IconCell = memo(function IconCell({
   const tickerId = useRef(Symbol("icon-cell"));
   const [hovered, setHovered] = useState(false);
   const [visible, setVisible] = useState(false);
-  const animFn = entry.animFn;
+
+  // When a season is selected and this key has seasonal art, prefer the
+  // seasonal variant; otherwise use the base draw/animation.
+  const seasonalDraw = season ? seasonalTileDraw(entry.key, season) : null;
+  const animFn = season ? seasonalTileAnim(entry.key, season) : entry.animFn;
 
   const playing = visible && !!animFn && (animate || hovered);
 
@@ -190,15 +207,16 @@ const IconCell = memo(function IconCell({
     };
     iconAnimationTicker.subscribe(id, draw);
     return () => iconAnimationTicker.unsubscribe(id);
-  }, [playing, animFn, entry.color, entry.draw]);
+  }, [playing, animFn, entry.color]);
 
   useEffect(() => {
     if (!visible || playing) return;
     const ctx = ctxRef.current;
     if (!ctx) return;
     ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
-    paintIconForCell(ctx, entry, ICON_SIZE);
-  }, [visible, playing, entry]);
+    if (seasonalDraw) paintDrawIntoCell(ctx, entry.color, ICON_SIZE, seasonalDraw);
+    else paintIconForCell(ctx, entry, ICON_SIZE);
+  }, [visible, playing, entry, seasonalDraw]);
 
   let badge = null;
   if (entry.archive) badge = { label: "Legacy", color: "#7a4a18" };
@@ -245,6 +263,15 @@ const IconCell = memo(function IconCell({
           {playing ? "▶" : "◷"}
         </span>
       )}
+      {hasSeasonalTile(entry.key) && (
+        <span
+          className="absolute bottom-[26px] right-1 text-[9px] leading-none px-1 py-[1px] rounded pointer-events-none font-bold"
+          title="Has seasonal variants — pick a Season to preview"
+          style={{ background: entry.color + "33", color: entry.color }}
+        >
+          S
+        </span>
+      )}
       <canvas
         ref={canvasRef}
         style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
@@ -278,9 +305,10 @@ interface VirtualIconGridProps {
   onClick: (key: string) => void;
   selectedKey: string | null;
   animate: boolean;
+  season: SeasonName | null;
 }
 
-function VirtualIconGrid({ entries, scrollRef, onClick, selectedKey, animate }: VirtualIconGridProps) {
+function VirtualIconGrid({ entries, scrollRef, onClick, selectedKey, animate, season }: VirtualIconGridProps) {
   const [viewport, setViewport] = useState({ width: 0, height: 0, scrollTop: 0 });
 
   const updateViewport = useCallback(() => {
@@ -348,6 +376,7 @@ function VirtualIconGrid({ entries, scrollRef, onClick, selectedKey, animate }: 
           onClick={onClick}
           selected={selectedKey === entry.key}
           animate={animate}
+          season={season}
           scrollRoot={scrollRef}
           style={{
             top: row * rowStride,
@@ -365,7 +394,9 @@ export default function IconsTab() {
   const [status, setStatus] = useState("all");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [animate, setAnimate] = useState(false);
+  const [season, setSeason] = useState<"none" | SeasonName>("none");
   const [tagsExpanded, setTagsExpanded] = useState(readTagsExpanded);
+  const seasonName: SeasonName | null = season === "none" ? null : season;
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   function toggleTagsExpanded() {
@@ -448,6 +479,26 @@ export default function IconsTab() {
             className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
           />
         </div>
+        <div
+          className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
+          role="group"
+          aria-label="Season variant"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide pr-1"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            Season
+          </span>
+          <SegmentedFilter
+            options={SEASON_OPTIONS}
+            value={season}
+            onChange={(v) => setSeason(v as "none" | SeasonName)}
+            ariaLabel="Season variant"
+            className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
+          />
+        </div>
         <div className="text-[11px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
           {filtered.length} / {ALL_ENTRIES.length} icons
         </div>
@@ -510,12 +561,13 @@ export default function IconsTab() {
             onClick={handleClick}
             selectedKey={copiedKey}
             animate={animate}
+            season={seasonName}
           />
         )}
       </div>
 
       <div className="text-[10px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
-        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code. Icons marked <span className="font-bold">▶</span> are animated — hover one to preview, or flip <span className="font-bold">Animate</span> to play all (filter by <span className="font-bold">Animated</span> status).
+        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code. Icons marked <span className="font-bold">▶</span> are animated — hover one to preview, or flip <span className="font-bold">Animate</span> to play all (filter by <span className="font-bold">Animated</span> status). Icons marked <span className="font-bold">S</span> have seasonal art — pick a <span className="font-bold">Season</span> to preview their Spring/Summer/Autumn/Winter variants.
       </div>
     </div>
   );
