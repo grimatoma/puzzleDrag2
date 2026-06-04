@@ -9,6 +9,7 @@ import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
 import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
 import { getUsedIconKeys } from "../iconUsage.js";
+import { iconAnimation, type IconAnimation } from "../../textures/iconAnimations.js";
 import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 
 // Derive category buckets from key prefixes. Canvas keys use `_` (e.g.
@@ -52,6 +53,7 @@ const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string,
   replacedBy: entry.replacedBy ?? null,
   category: categoryOf(key, entry.replacedBy),
   inUse: USED_KEYS.has(key),
+  animFn: iconAnimation(key),
 }));
 
 const SVG_ENTRIES = Object.entries(DESIGN_ICONS_MAP).map(([key, Component]) => ({
@@ -64,6 +66,7 @@ const SVG_ENTRIES = Object.entries(DESIGN_ICONS_MAP).map(([key, Component]) => (
   replacedBy: null as string | null,
   category: categoryOf(key, null),
   inUse: USED_KEYS.has(key),
+  animFn: null as IconAnimation | null,
 }));
 
 type IconEntry = (typeof CANVAS_ENTRIES)[number] | (typeof SVG_ENTRIES)[number];
@@ -80,6 +83,12 @@ const STATUS_OPTIONS = [
   { id: "in-use", label: "In Use" },
   { id: "unused", label: "Unused" },
   { id: "legacy", label: "Legacy" },
+  { id: "animated", label: "Animated" },
+];
+
+const ANIMATE_OPTIONS = [
+  { id: "off", label: "Off" },
+  { id: "on", label: "Play" },
 ];
 
 const TAGS_EXPANDED_KEY = "hearth.balance.iconsTagsExpanded";
@@ -109,11 +118,19 @@ interface PaintableIconEntry {
   draw: (ctx: CanvasRenderingContext2D) => void;
 }
 
-function paintIconForCell(ctx: CanvasRenderingContext2D, entry: PaintableIconEntry, size: number) {
+// Core cell painter: tinted circle backdrop + origin-centered design-box
+// transform, then runs an arbitrary draw callback. Used for both the static
+// `entry.draw` and the per-frame animation `(ctx) => animFn(ctx, t)`.
+function paintDrawIntoCell(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  size: number,
+  draw: (ctx: CanvasRenderingContext2D) => void,
+) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
-  ctx.fillStyle = entry.color + "28";
+  ctx.fillStyle = color + "28";
   ctx.fill();
   ctx.restore();
   ctx.save();
@@ -123,11 +140,15 @@ function paintIconForCell(ctx: CanvasRenderingContext2D, entry: PaintableIconEnt
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   try {
-    entry.draw(ctx);
+    draw(ctx);
   } catch {
     // Silently skip broken draw functions in dev viewer.
   }
   ctx.restore();
+}
+
+function paintIconForCell(ctx: CanvasRenderingContext2D, entry: PaintableIconEntry, size: number) {
+  paintDrawIntoCell(ctx, entry.color, size, entry.draw);
 }
 
 // canvas2svg v1.0.16 predates several Canvas2D methods that iconRegistry
@@ -222,13 +243,20 @@ interface IconCellProps {
   onClick: (key: string) => void;
   selected: boolean;
   mode: "canvas" | "svg";
+  animate: boolean;
 }
-const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: IconCellProps) {
+const IconCell = memo(function IconCell({ entry, onClick, selected, mode, animate }: IconCellProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [hovered, setHovered] = useState(false);
+  const animFn = entry.animFn;
   const svgMarkup = useMemo(
     () => (mode === "svg" && entry.source === "canvas" ? renderIconSvg(entry, ICON_SIZE) : null),
     [entry, mode],
   );
+
+  // Animate when the global toggle is on, or on hover (preview-on-hover), as
+  // long as the icon has a registered animation and we're in canvas mode.
+  const playing = mode === "canvas" && !!animFn && (animate || hovered);
 
   useEffect(() => {
     if (entry.source !== "canvas") return;
@@ -245,9 +273,25 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: Icon
     if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
+
+    if (playing && animFn) {
+      // Drive the animation with a shared monotonic clock so every playing
+      // cell stays in phase. Cancelled on unmount / dependency change.
+      let raf = 0;
+      const loop = () => {
+        const t = (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+        ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
+        paintDrawIntoCell(ctx, entry.color, ICON_SIZE, (c) => animFn(c, t));
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+      return () => cancelAnimationFrame(raf);
+    }
+
     ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
     paintIconForCell(ctx, entry, ICON_SIZE);
-  }, [entry, mode]);
+    return undefined;
+  }, [entry, mode, playing, animFn]);
 
   // Status badge: "Legacy" wins over "Unused" because it's more specific
   // (legacy entries are always unused but the legacy badge tells the
@@ -262,6 +306,8 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: Icon
   return (
     <button
       onClick={() => onClick(entry.key)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       title={`${entry.key}\n${entry.label}`}
       className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ember/50 relative"
       style={{
@@ -282,6 +328,18 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: Icon
           }}
         >
           {badge.label}
+        </span>
+      )}
+      {animFn && (
+        <span
+          className="absolute top-1 left-1 text-[9px] leading-none px-1 py-[1px] rounded pointer-events-none"
+          title={playing ? "Playing" : "Hover or toggle Animate to play"}
+          style={{
+            background: playing ? entry.color : entry.color + "33",
+            color: playing ? "#fff" : entry.color,
+          }}
+        >
+          {playing ? "▶" : "◷"}
         </span>
       )}
       {isSvgSource && SvgComp ? (
@@ -338,6 +396,7 @@ export default function IconsTab() {
   const [status, setStatus] = useState("all");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [mode, setMode] = useState<"canvas" | "svg">("canvas");
+  const [animate, setAnimate] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(readTagsExpanded);
 
   function toggleTagsExpanded() {
@@ -355,6 +414,7 @@ export default function IconsTab() {
       if (status === "in-use" && (!e.inUse || e.archive)) return false;
       if (status === "unused" && (e.inUse || e.archive)) return false;
       if (status === "legacy" && !e.archive) return false;
+      if (status === "animated" && !e.animFn) return false;
       if (!q) return true;
       return e.key.toLowerCase().includes(q) || e.label.toLowerCase().includes(q);
     }).sort((a, b) => {
@@ -423,6 +483,26 @@ export default function IconsTab() {
             className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
           />
         </div>
+        <div
+          className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
+          role="group"
+          aria-label="Animation playback"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide pr-1"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            Animate
+          </span>
+          <SegmentedFilter
+            options={ANIMATE_OPTIONS}
+            value={animate ? "on" : "off"}
+            onChange={(v) => setAnimate(v === "on")}
+            ariaLabel="Animation playback"
+            className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
+          />
+        </div>
         <div className="text-[11px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
           {filtered.length} / {ALL_ENTRIES.length} icons
         </div>
@@ -488,6 +568,7 @@ export default function IconsTab() {
                 onClick={handleClick}
                 selected={copiedKey === entry.key}
                 mode={mode}
+                animate={animate}
               />
             ))}
           </div>
@@ -495,7 +576,7 @@ export default function IconsTab() {
       </div>
 
       <div className="text-[10px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
-        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code.
+        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code. Icons marked <span className="font-bold">▶</span> are animated — hover one to preview, or flip <span className="font-bold">Animate</span> to play all (filter by <span className="font-bold">Animated</span> status).
       </div>
     </div>
   );
