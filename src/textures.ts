@@ -5,6 +5,8 @@ import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
 import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
+import { isConceptTileIconsEnabled } from "./featureFlags.js";
+import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { seasonNameInSession } from "./features/zones/data.js";
 
@@ -61,9 +63,10 @@ export function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: nu
 //
 // Paints one full board tile (card background + shadow + selected ring + radial
 // gradient) then its icon. The icon resolves season-aware:
-//   1. seasonal per-frame animation (when `t` + `season` given)
-//   2. seasonal static draw (when `season` given and a variant exists)
-//   3. the base static icon (`drawTileIcon`)
+//   1. concept-tile GIF animation (`?conceptTiles=1`, when `t` given)
+//   2. seasonal per-frame animation (when `t` + `season` given)
+//   3. seasonal static draw (when `season` given and a variant exists)
+//   4. the base static icon (`drawTileIcon`)
 // Used by the initial bake, the resize re-bake, the season-change re-bake, and
 // the per-frame animation pass — so all four share identical tile chrome.
 export function paintTileCanvas(
@@ -107,9 +110,12 @@ export function paintTileCanvas(
   }
   ctx.save();
   ctx.translate(w / 2, h / 2);
-  const anim = (t != null && season) ? seasonalTileAnim(res.key, season) : null;
-  const sdraw = season ? seasonalTileDraw(res.key, season) : null;
-  if (anim) anim(ctx, t as number);
+  const conceptAnim =
+    isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
+  const anim = !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
+  const sdraw = !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
+  if (conceptAnim) conceptAnim(ctx, t as number);
+  else if (anim) anim(ctx, t as number);
   else if (sdraw) sdraw(ctx);
   else drawTileIcon(ctx, res.key);
   ctx.restore();
