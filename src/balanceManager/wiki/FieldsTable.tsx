@@ -132,7 +132,7 @@ function renderRows(
         {depth > 0 ? "↳ " : ""}{f.field}
       </td>
       <td className="py-1.5 px-2 font-mono whitespace-nowrap align-top" style={{ color: COLORS.inkSubtle }}>
-        {f.children ? "object" : f.type}
+        {f.type}
       </td>
       <td className="py-1.5 px-2 whitespace-nowrap align-top">
         {f.optional ? (
