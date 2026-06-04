@@ -1,5 +1,5 @@
-// Icons viewer tab — renders every entry in ICON_REGISTRY on a card so
-// designers can browse, search, filter by usage, and copy icon keys.
+// Icons viewer tab — renders ICON_REGISTRY (canvas) and DESIGN_ICONS_MAP
+// (React SVG) entries so designers can browse, search, filter, and copy keys.
 
 import {
   useState,
@@ -9,21 +9,33 @@ import {
   memo,
   useCallback,
   type RefObject,
+  type ComponentType,
 } from "react";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
+import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
 import { getUsedIconKeys } from "../iconUsage.js";
 import { iconAnimation } from "../../textures/iconAnimations.js";
 import { iconAnimationTicker } from "../iconAnimationTicker.js";
 import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 
-// Derive category buckets from key prefixes (e.g. "ui_lock" → "ui").
-// When an archived/legacy canvas entry has `replacedBy`, use that key's
-// category instead so the legacy entry sorts next to its active sibling.
+// Derive category buckets from key prefixes. Canvas keys use `_` (e.g.
+// "ui_lock" → "ui"); design SVG keys use `.` (e.g. "design.tile.grass" →
+// "design.tile"). When an archived canvas entry has `replacedBy`, use that
+// key's category instead so the legacy entry sorts next to its replacement.
 function categoryOf(key: string, replacedBy: string | null | undefined): string {
   const effective = replacedBy || key;
+  if (effective.includes(".")) {
+    const parts = effective.split(".");
+    return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : parts[0];
+  }
   const idx = effective.indexOf("_");
   return idx === -1 ? "other" : effective.slice(0, idx);
+}
+
+function deriveSvgLabel(key: string): string {
+  const tail = key.startsWith("design.") ? key.slice("design.".length) : key;
+  return tail.replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 const USED_KEYS = getUsedIconKeys();
@@ -36,12 +48,18 @@ interface CanvasEntryRaw {
   replacedBy?: string;
 }
 
-const ALL_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string, CanvasEntryRaw>).map(
+interface DesignSvgRenderProps {
+  size: number;
+  fill: string;
+}
+
+const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string, CanvasEntryRaw>).map(
   ([key, entry]) => ({
     key,
     label: entry.label ?? key,
     color: entry.color ?? "#888",
     draw: entry.draw,
+    source: "canvas" as const,
     archive: entry.archive === true,
     replacedBy: entry.replacedBy ?? null,
     category: categoryOf(key, entry.replacedBy),
@@ -49,6 +67,21 @@ const ALL_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string, Ca
     animFn: iconAnimation(key),
   }),
 );
+
+const DESIGN_SVG_ENTRIES = Object.entries(DESIGN_ICONS_MAP).map(([key, Component]) => ({
+  key,
+  label: deriveSvgLabel(key),
+  color: "#5a6a76",
+  Component: Component as ComponentType<DesignSvgRenderProps>,
+  source: "design-svg" as const,
+  archive: false as const,
+  replacedBy: null as null,
+  category: categoryOf(key, null),
+  inUse: USED_KEYS.has(key),
+  animFn: null as null,
+}));
+
+const ALL_ENTRIES = [...CANVAS_ENTRIES, ...DESIGN_SVG_ENTRIES];
 
 type IconEntry = (typeof ALL_ENTRIES)[number];
 
@@ -60,6 +93,12 @@ const STATUS_OPTIONS = [
   { id: "unused", label: "Unused" },
   { id: "legacy", label: "Legacy" },
   { id: "animated", label: "Animated" },
+];
+
+const SOURCE_OPTIONS = [
+  { id: "all", label: "All" },
+  { id: "canvas", label: "Canvas" },
+  { id: "design-svg", label: "Design SVG" },
 ];
 
 const ANIMATE_OPTIONS = [
@@ -150,9 +189,11 @@ const IconCell = memo(function IconCell({
   const tickerId = useRef(Symbol("icon-cell"));
   const [hovered, setHovered] = useState(false);
   const [visible, setVisible] = useState(false);
-  const animFn = entry.animFn;
+  const isCanvas = entry.source === "canvas";
+  const animFn = isCanvas ? entry.animFn : null;
+  const SvgComp = entry.source === "design-svg" ? entry.Component : null;
 
-  const playing = visible && !!animFn && (animate || hovered);
+  const playing = isCanvas && visible && !!animFn && (animate || hovered);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -167,6 +208,7 @@ const IconCell = memo(function IconCell({
   }, [scrollRoot]);
 
   useEffect(() => {
+    if (!isCanvas) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
@@ -177,31 +219,36 @@ const IconCell = memo(function IconCell({
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     ctxRef.current = ctx;
-  }, []);
+  }, [isCanvas]);
 
   useEffect(() => {
-    if (!playing || !animFn) return;
+    if (!playing || !animFn || !isCanvas) return;
     const ctx = ctxRef.current;
     if (!ctx) return;
     const id = tickerId.current;
-    const draw = (t: number) => {
+    const color = entry.color;
+    const tickDraw = (t: number) => {
       ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
-      paintDrawIntoCell(ctx, entry.color, ICON_SIZE, (c) => animFn(c, t));
+      paintDrawIntoCell(ctx, color, ICON_SIZE, (c) => animFn!(c, t));
     };
-    iconAnimationTicker.subscribe(id, draw);
+    iconAnimationTicker.subscribe(id, tickDraw);
     return () => iconAnimationTicker.unsubscribe(id);
-  }, [playing, animFn, entry.color, entry.draw]);
+  }, [playing, animFn, isCanvas, entry]);
 
   useEffect(() => {
-    if (!visible || playing) return;
+    if (!isCanvas || !visible || playing) return;
     const ctx = ctxRef.current;
     if (!ctx) return;
     ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
     paintIconForCell(ctx, entry, ICON_SIZE);
-  }, [visible, playing, entry]);
+  }, [visible, playing, entry, isCanvas]);
 
   let badge = null;
-  if (entry.archive) badge = { label: "Legacy", color: "#7a4a18" };
+  let secondaryBadge = null;
+  if (entry.source === "design-svg") {
+    badge = { label: "Design", color: "#3a5a78" };
+    if (!entry.inUse) secondaryBadge = { label: "Unused", color: "#6a6a72" };
+  } else if (entry.archive) badge = { label: "Legacy", color: "#7a4a18" };
   else if (!entry.inUse) badge = { label: "Unused", color: "#6a6a72" };
 
   return (
@@ -233,6 +280,18 @@ const IconCell = memo(function IconCell({
           {badge.label}
         </span>
       )}
+      {secondaryBadge && (
+        <span
+          className="absolute bottom-8 right-1 text-[8px] font-bold px-1.5 py-[1px] rounded uppercase tracking-wide pointer-events-none"
+          style={{
+            background: secondaryBadge.color,
+            color: "#fefae0",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {secondaryBadge.label}
+        </span>
+      )}
       {animFn && (
         <span
           className="absolute top-1 left-1 text-[9px] leading-none px-1 py-[1px] rounded pointer-events-none"
@@ -245,10 +304,26 @@ const IconCell = memo(function IconCell({
           {playing ? "▶" : "◷"}
         </span>
       )}
-      <canvas
-        ref={canvasRef}
-        style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
-      />
+      {SvgComp ? (
+        <div
+          style={{
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: entry.color + "20",
+            borderRadius: "50%",
+          }}
+        >
+          <SvgComp size={ICON_SIZE - 8} fill={entry.color} />
+        </div>
+      ) : (
+        <canvas
+          ref={canvasRef}
+          style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
+        />
+      )}
       <div
         className="text-center leading-tight max-w-full"
         style={{ width: ICON_SIZE + 24 }}
@@ -363,6 +438,7 @@ export default function IconsTab() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
+  const [source, setSource] = useState("all");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [animate, setAnimate] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(readTagsExpanded);
@@ -379,6 +455,7 @@ export default function IconsTab() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return ALL_ENTRIES.filter((e) => {
+      if (source !== "all" && e.source !== source) return false;
       if (category !== "all" && e.category !== category) return false;
       if (status === "in-use" && (!e.inUse || e.archive)) return false;
       if (status === "unused" && (e.inUse || e.archive)) return false;
@@ -387,6 +464,7 @@ export default function IconsTab() {
       if (!q) return true;
       return e.key.toLowerCase().includes(q) || e.label.toLowerCase().includes(q);
     }).sort((a, b) => {
+      if (a.source !== b.source) return a.source.localeCompare(b.source);
       const rankA = a.archive ? 2 : a.inUse ? 0 : 1;
       const rankB = b.archive ? 2 : b.inUse ? 0 : 1;
       if (rankA !== rankB) return rankA - rankB;
@@ -394,7 +472,7 @@ export default function IconsTab() {
       const groupB = b.replacedBy || b.key;
       return groupA.localeCompare(groupB);
     });
-  }, [search, category, status]);
+  }, [search, category, status, source]);
 
   function handleClick(key: string) {
     navigator.clipboard?.writeText(key).catch(() => {});
@@ -425,6 +503,26 @@ export default function IconsTab() {
             value={status}
             onChange={setStatus}
             ariaLabel="Icon usage status"
+            className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
+          />
+        </div>
+        <div
+          className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
+          role="group"
+          aria-label="Icon source"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide pr-1"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            Source
+          </span>
+          <SegmentedFilter
+            options={SOURCE_OPTIONS}
+            value={source}
+            onChange={setSource}
+            ariaLabel="Icon source filter"
             className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
           />
         </div>
@@ -515,7 +613,7 @@ export default function IconsTab() {
       </div>
 
       <div className="text-[10px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
-        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code. Icons marked <span className="font-bold">▶</span> are animated — hover one to preview, or flip <span className="font-bold">Animate</span> to play all (filter by <span className="font-bold">Animated</span> status).
+        Click any icon to copy its key. <span className="font-bold">Design</span> badges mark React-SVG icons from <span className="font-mono">design.*</span> (filter by <span className="font-bold">Design SVG</span> source). <span className="font-bold">Legacy</span> / <span className="font-bold">Unused</span> apply to canvas registry entries. Canvas icons marked <span className="font-bold">▶</span> animate — hover or flip <span className="font-bold">Animate</span>.
       </div>
     </div>
   );
