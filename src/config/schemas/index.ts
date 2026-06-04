@@ -68,6 +68,8 @@ export {
   cloneMineBoard,
   cloneFishBoard,
   ZONE_UPGRADE_TARGET_GOLD,
+  zoneCategoryIdSchema,
+  farmUpgradeTargetSchema,
   type FarmSeasonDropRow,
   type FarmSeasonDrops,
   type FarmUpgradeMap,
