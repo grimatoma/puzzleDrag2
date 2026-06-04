@@ -11,7 +11,7 @@ import {
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
 } from "../config/applyOverrides.js";
 import { condToTrigger } from "../config/progression/storyBridge.js";
-import { describeCond } from "../config/progression/conditions.js";
+import { describeCond, factIdsIn } from "../config/progression/conditions.js";
 import { UI_COLORS } from "../ui/primitives/palette.js";
 import type {
   DraftBeatIdValidation,
@@ -331,7 +331,21 @@ export function storyWarningsForBeat(beatId: string, draft: StoryDraft | null | 
   const isDraft = isDraftBeat(draft, beatId);
   const warnings: StoryWarning[] = [];
 
-  if (beat.trigger && (beat.trigger.type === "flag_set" || beat.trigger.type === "flag_cleared")) {
+  // Validate flag ids referenced in the beat's `when:` Cond condition.
+  // factIdsIn walks the full tree; only flag.* facts are flag refs.
+  if (beat.when) {
+    const flagFactIds = factIdsIn(beat.when)
+      .filter((id) => id.startsWith("flag."))
+      .map((id) => id.slice(5)); // strip "flag." prefix
+    for (const flagId of flagFactIds) {
+      if (flagId && !flagId.startsWith("_fired_") && !knownFlags.has(flagId)) {
+        warnings.push({ type: "unknownFlag", flag: flagId, message: `trigger references unregistered flag "${flagId}".` });
+      }
+    }
+  }
+  // Legacy `beat.trigger` — still check it for author-created draft beats that
+  // haven't been migrated to `when:` yet (e.g. from existing saved drafts).
+  if (!beat.when && beat.trigger && (beat.trigger.type === "flag_set" || beat.trigger.type === "flag_cleared")) {
     addFlagWarnings(beat.trigger.flag, knownFlags, warnings, `${beat.trigger.type} trigger`);
   }
   addFlagWarnings(beat.onComplete?.setFlag, knownFlags, warnings, "onComplete.setFlag");

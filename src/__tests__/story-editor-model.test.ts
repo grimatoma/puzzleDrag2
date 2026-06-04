@@ -7,6 +7,7 @@ import {
   isBeatSuppressed, directionalNodeId, knownStoryFlagIds, NPCS,
 } from "../storyEditor/shared.jsx";
 import { applyPreviewEffects, blankPreviewState, firstTriggeredByPreviewState, previewStateSummary } from "../storyEditor/previewModel.js";
+import { condToTrigger, beatTriggerToCond } from "../config/progression/storyBridge.js";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
 
@@ -293,12 +294,16 @@ describe("story editor preview model", () => {
     expect(next.heirlooms.crown).toBe(1);
   });
 
-  it("finds downstream beats unlocked by preview state", () => {
+  it("finds downstream beats unlocked by preview state (uses beat.when)", () => {
+    // Beats must carry `when:` Cond, not legacy `trigger:`, because
+    // firstTriggeredByPreviewState evaluates beat.when via the conditions engine.
     const d = draftWith({
       newBeats: [
         { id: "source", choices: [{ id: "go", label: "Go", outcome: { setFlag: "custom_oath" } }] },
-        { id: "flag_followup", title: "Flag", trigger: { type: "flag_set", flag: "custom_oath" } },
-        { id: "resource_followup", title: "Resource", trigger: { type: "resource_total", key: "tile_tree_oak", amount: 3 } },
+        { id: "flag_followup", title: "Flag",
+          when: { fact: "flag.custom_oath" } },
+        { id: "resource_followup", title: "Resource",
+          when: { fact: "resource.tile_tree_oak.total", op: "gte", value: 3 } },
       ],
     });
     const flagged = applyPreviewEffects(blankPreviewState(), null, { outcome: { setFlag: "custom_oath" } });
@@ -306,5 +311,55 @@ describe("story editor preview model", () => {
     const resourced = applyPreviewEffects(blankPreviewState(), null, { outcome: { resources: { tile_tree_oak: 3 } } });
     expect(firstTriggeredByPreviewState(resourced, d, new Set(["source", "flag_followup"]))).toBe("resource_followup");
     expect(previewStateSummary(resourced).join(" ")).toContain("tile_tree_oak");
+  });
+});
+
+describe("storyBridge round-trip: beatTriggerToCond / condToTrigger", () => {
+  // Picker-representable trigger types must survive a round-trip through the
+  // editor's compile (save) → decompile (load) path without changing beat.when.
+  const ROUND_TRIP_CASES = [
+    { label: "flag_set",             trigger: { type: "flag_set", flag: "hearth_lit" } },
+    { label: "flag_cleared",         trigger: { type: "flag_cleared", flag: "hearth_lit" } },
+    { label: "resource_total",       trigger: { type: "resource_total", key: "tile_tree_oak", amount: 10 } },
+    { label: "resource_total_multi", trigger: { type: "resource_total_multi", req: { tile_tree_oak: 10, iron_ingot: 3 } } },
+    { label: "craft_made",           trigger: { type: "craft_made", item: "bread" } },
+    { label: "craft_made (count)",   trigger: { type: "craft_made", item: "bread", count: 3 } },
+    { label: "building_built",       trigger: { type: "building_built", id: "mill" } },
+    { label: "boss_defeated",        trigger: { type: "boss_defeated", id: "frostmaw" } },
+    { label: "act_entered",          trigger: { type: "act_entered", act: 2 } },
+    { label: "all_buildings_built",  trigger: { type: "all_buildings_built" } },
+    { label: "session_start",        trigger: { type: "session_start" } },
+    { label: "session_ended",        trigger: { type: "session_ended" } },
+  ] as const;
+
+  it("compiles every picker trigger type to a Cond and decompiles it back to the same trigger", () => {
+    for (const { label, trigger } of ROUND_TRIP_CASES) {
+      const cond = beatTriggerToCond(trigger as Parameters<typeof beatTriggerToCond>[0]);
+      const back = condToTrigger(cond);
+      expect(back, `round-trip failed for ${label}`).not.toBeNull();
+      expect(back!.type, `type mismatch for ${label}`).toBe(trigger.type);
+    }
+  });
+
+  it("round-trip: compile then decompile produces the identical Cond (beat.when stability)", () => {
+    for (const { label, trigger } of ROUND_TRIP_CASES) {
+      const cond = beatTriggerToCond(trigger as Parameters<typeof beatTriggerToCond>[0]);
+      const back = condToTrigger(cond);
+      expect(back, `null decompile for ${label}`).not.toBeNull();
+      const recompiled = beatTriggerToCond(back!);
+      // The recompiled Cond must be structurally identical to the first compile.
+      expect(JSON.stringify(recompiled), `Cond changed after round-trip for ${label}`).toBe(JSON.stringify(cond));
+    }
+  });
+
+  it("mira_letter_1 composite when: is not picker-representable (condToTrigger returns null)", () => {
+    // mira_letter_1 uses an all/any composite Cond (bond ≥ 8 AND session event).
+    // condToTrigger cannot represent this as a single BeatTrigger — it must return null
+    // so the Inspector shows the read-only "Advanced condition" row.
+    const beat = effectiveBeat("mira_letter_1", emptyDraft());
+    expect(beat, "mira_letter_1 should exist").not.toBeNull();
+    expect(beat!.when, "mira_letter_1 should carry a when: Cond").toBeTruthy();
+    const result = condToTrigger(beat!.when!);
+    expect(result, "condToTrigger should return null for the bond composite").toBeNull();
   });
 });

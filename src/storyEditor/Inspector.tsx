@@ -1,7 +1,7 @@
 // Story Tree Editor — the side inspector.
 // Edits the selected beat: presentation (title / scene / body / lines), the
 // full choice list (add / remove / label / whitelisted outcome — flags, bond,
-// currency, queueBeat target), the **trigger** (when the dialog fires — full
+// currency, queueBeat target), the **when** condition (when the dialog fires — full
 // game-event vocabulary, incl. `flag_set`) + `repeat`, and — for author-created
 // draft beats — onComplete.setFlag, plus delete.
 
@@ -14,6 +14,8 @@ import {
   FieldLabel, TextInput, Btn,
 } from "./shared.jsx";
 import { STORY_FLAGS } from "../flags.js";
+import { condToTrigger, beatTriggerToCond } from "../config/progression/storyBridge.js";
+import { describeCond } from "../config/progression/conditions.js";
 import type { DraftBeatIdValidation, RenameDraftBeatResult, StoryBeat, StoryChoice, StoryDraft, StoryOutcome, StoryTrigger } from "./types.js";
 
 // ─── tiny styled atoms ───────────────────────────────────────────────────────
@@ -286,7 +288,7 @@ function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }: ChoicesBlockPr
     <Section title="Choices" accent={C.ember} hint={`(${choices.length} — player picks one; outcome is whitelisted)`}>
       {choices.length === 0 && (
         <div style={{ font: "italic 400 11px/1.4 Georgia,serif", color: C.inkSubtle }}>
-          No choices — this beat shows a single “Continue”. Add one to make it a fork.
+          No choices — this beat shows a single "Continue". Add one to make it a fork.
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -445,21 +447,54 @@ interface TriggerEditorProps {
 }
 
 function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }: TriggerEditorProps) {
-  const t = beat?.trigger;
+  // Decompile `beat.when` → working BeatTrigger for the picker.
+  // Legacy `beat.trigger` is still honoured if present (editor-draft round-trips).
+  // If condToTrigger returns null, the when: is a composite/hand-authored Cond
+  // the picker cannot represent — show a read-only "Advanced condition" row instead.
+  const decompiled: StoryTrigger | null = beat?.when
+    ? condToTrigger(beat.when)
+    : (beat?.trigger ?? null);
+  const isAdvanced = !!(beat?.when && decompiled === null);
+
+  const t: StoryTrigger | undefined = decompiled ?? undefined;
   const type = t?.type || "none";
-  const setTrigger = (next: StoryTrigger | undefined) => onEditBeat(beatId, { trigger: next ?? undefined });
+
+  // On save: compile picked BeatTrigger → Cond and persist as `when:`.
+  // Ensures no stale `trigger:` field is written.
+  const setTrigger = (next: StoryTrigger | undefined) => {
+    if (next) {
+      onEditBeat(beatId, { when: beatTriggerToCond(next), trigger: undefined });
+    } else {
+      onEditBeat(beatId, { when: undefined, trigger: undefined });
+    }
+  };
+
   const knownFlags = knownStoryFlagIds(draft);
   return (
     <Section title="Trigger" accent={isMainChain ? undefined : C.ember}
-      hint={isMainChain ? "(built-in story beat — overriding the trigger can break act order; “no trigger” reverts to the built-in)" : "(when does this dialog fire?)"}>
-      <Row label="When">
-        <select style={{ ...selStyle, flex: 1, minWidth: 0 }} value={type}
-          onChange={(e) => { const v = e.target.value; setTrigger(v === "none" ? undefined : defaultTriggerFor(v)); }}>
-          {TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </Row>
-      {t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} knownFlags={knownFlags} />}
-      {!isMainChain && (
+      hint={isMainChain ? '(built-in story beat — overriding the trigger can break act order; "no trigger" reverts to the built-in)' : "(when does this dialog fire?)"}>
+      {isAdvanced ? (
+        // Composite / hand-authored when: that the picker can't represent.
+        <div style={{ padding: "7px 9px", borderRadius: 7, background: "rgba(43,34,24,0.05)",
+          border: `1px dashed ${C.border}`, display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ font: "700 9px/1 system-ui", letterSpacing: "0.08em", textTransform: "uppercase", color: C.inkSubtle }}>Advanced condition</span>
+          <span style={{ font: "400 10px/1.4 ui-monospace,monospace", color: C.inkLight, wordBreak: "break-word" }}>
+            {describeCond(beat.when!)}
+          </span>
+          <span style={{ font: "italic 400 9.5px/1.35 system-ui", color: C.inkSubtle }}>
+            Composite condition authored in code — edit in src/story.ts.
+          </span>
+        </div>
+      ) : (
+        <Row label="When">
+          <select style={{ ...selStyle, flex: 1, minWidth: 0 }} value={type}
+            onChange={(e) => { const v = e.target.value; setTrigger(v === "none" ? undefined : defaultTriggerFor(v)); }}>
+            {TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+      )}
+      {!isAdvanced && t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} knownFlags={knownFlags} />}
+      {!isMainChain && !isAdvanced && (
         <Row label="Repeat">
           <label style={{ display: "flex", alignItems: "center", gap: 6, font: "400 11px/1.3 system-ui", color: type === "none" ? C.inkSubtle : C.inkLight }}>
             <input type="checkbox" checked={!!beat.repeat} disabled={type === "none"}
@@ -468,7 +503,7 @@ function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }: Trigger
           </label>
         </Row>
       )}
-      {!isMainChain && beat.repeat && type !== "none" && (
+      {!isMainChain && beat.repeat && type !== "none" && !isAdvanced && (
         <Row label="Cooldown">
           <NumberField step="1" width={48} value={Number.isFinite(beat.repeatCooldown) ? beat.repeatCooldown : undefined}
             onCommit={(n) => onEditBeat(beatId, { repeatCooldown: Number.isFinite(n) && (n as number) > 0 ? Math.trunc(n as number) : undefined })} />
@@ -523,7 +558,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
   const ring = actColor(beat);
   const isSide = !!(beat.side || !beat.act);
   const incoming = findIncomingChoice(beatId, draft);
-  const unreached = isDraft && !beat.trigger && !incoming;
+  const unreached = isDraft && !beat.trigger && !beat.when && !incoming;
   const warnings = storyWarningsForBeat(beatId, draft);
   const idCheck: DraftBeatIdValidation = isDraft
     ? validateDraftBeatId(draft, beatId, draftId)
@@ -545,7 +580,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
               FORK · {beat.choices.length}
             </span>
           )}
-          {(beat.resolution || (isSide && !beat.trigger && !beat.choices?.length)) && (
+          {(beat.resolution || (isSide && !beat.trigger && !beat.when && !beat.choices?.length)) && (
             <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, background: "rgba(90,90,90,0.1)",
               color: C.inkSubtle, font: "700 8px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase" }}>
               RESOLUTION
@@ -574,13 +609,13 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
               style={{ border: "none", background: "transparent", color: C.inkLight, cursor: "pointer", font: "600 10px/1.3 system-ui", textDecoration: "underline", padding: 0 }}>
               {incoming.parent?.title || incoming.parentId}
             </button>
-            <span style={{ font: "400 9px/1 ui-monospace,monospace" }}>· “{incoming.choice?.label}”</span>
+            <span style={{ font: "400 9px/1 ui-monospace,monospace" }}>· "{incoming.choice?.label}"</span>
           </div>
         )}
         {unreached && (
           <div style={{ marginTop: 4, padding: "4px 7px", borderRadius: 6, background: "rgba(226,178,74,0.14)",
             border: "1px dashed rgba(226,178,74,0.6)", font: "400 10px/1.35 system-ui", color: "#7a5810" }}>
-            ⚠ Nothing leads here. Point a choice’s “Leads to” at <code style={{ fontFamily: "ui-monospace,monospace" }}>{beatId}</code>, or give this beat a bond trigger.
+            ⚠ Nothing leads here. Point a choice’s "Leads to" at <code style={{ fontFamily: "ui-monospace,monospace" }}>{beatId}</code>, or give this beat a bond trigger.
           </div>
         )}
         {warnings.length > 0 && (
@@ -675,7 +710,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
             </Section>
             <Section title="Danger zone">
               <Btn tone="danger" style={{ alignSelf: "flex-start" }}
-                onClick={() => { if (typeof window === "undefined" || window.confirm(`Delete draft beat “${beat.title || beatId}”? Choices pointing here will be unlinked.`)) onDeleteBeat(beatId); }}>
+                onClick={() => { if (typeof window === "undefined" || window.confirm(`Delete draft beat "${beat.title || beatId}"? Choices pointing here will be unlinked.`)) onDeleteBeat(beatId); }}>
                 🗑 Delete this beat
               </Btn>
             </Section>
@@ -685,7 +720,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
           {isSide && (
             <Section title="Built-in side beat" hint="(disables this side arc in the saved draft; restore from the header)">
               <Btn tone="ghost" style={{ alignSelf: "flex-start", color: C.redDeep, borderColor: C.redDeep }}
-                onClick={() => { if (typeof window === "undefined" || window.confirm(`Disable built-in side beat “${beat.title || beatId}” in this draft?`)) onSuppressBeat && onSuppressBeat(beatId); }}>
+                onClick={() => { if (typeof window === "undefined" || window.confirm(`Disable built-in side beat "${beat.title || beatId}" in this draft?`)) onSuppressBeat && onSuppressBeat(beatId); }}>
                 Disable side beat
               </Btn>
             </Section>

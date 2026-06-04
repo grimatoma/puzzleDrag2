@@ -1,5 +1,6 @@
-import { conditionMatches } from "../story.js";
 import { allBeatIds, effectiveBeat, NPCS } from "./shared.jsx";
+import { evaluate } from "../config/progression/conditions.js";
+import { buildFactSnapshot } from "../config/progression/storyBridge.js";
 import type { NpcRegistry, PreviewState, StoryBeat, StoryChoice, StoryDraft } from "./types.js";
 
 const arr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []));
@@ -72,18 +73,20 @@ export function firstTriggeredByPreviewState(sim: PreviewState | null | undefine
   const flags = sim?.flags ?? {};
   const resources = sim?.resources ?? {};
   const bonds = sim?.bonds ?? {};
+  // Build a snapshot without event fields — this is a state-change check, not
+  // an event-driven check (mirrors how src/story.ts builds snapshots at settle).
+  const snapshot = buildFactSnapshot(
+    { type: "preview_state_changed" },
+    resources,
+    flags,
+    bonds,
+  );
   for (const id of allBeatIds(draft)) {
     if (visited.has(id)) continue;
     const beat = effectiveBeat(id, draft);
-    const trigger = beat?.trigger;
-    if (!trigger) continue;
-    if (trigger.type === "bond_at_least") {
-      const npcKey = trigger.npc;
-      const amount = trigger.amount;
-      if (typeof npcKey === "string" && typeof amount === "number" && (bonds[npcKey] ?? 0) >= amount) return id;
-      continue;
-    }
-    if (conditionMatches(trigger, { type: "preview_state_changed" }, resources, flags)) return id;
+    const when = beat?.when ?? (beat?.trigger ? null : null);
+    if (!when) continue;
+    if (evaluate(when, snapshot)) return id;
   }
   return null;
 }
