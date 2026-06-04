@@ -165,3 +165,23 @@ describe("Zone flow page", () => {
     }
   });
 });
+
+// ── Zones (first-pass progression design) page ────────────────────────────────
+
+describe("Zones page", () => {
+  it('pageFor("zones") is non-null and non-empty', () => {
+    const html = pageFor("zones");
+    expect(html).not.toBeNull();
+    expect(html!.length).toBeGreaterThan(0);
+  });
+
+  it('pageFor("zones") has no broken [[wikilinks]]', () => {
+    const html = pageFor("zones");
+    if (!html) return;
+    const links = extractWikiLinks(html);
+    for (const raw of links) {
+      const resolved = resolveWikiLink(raw);
+      expect(resolved, `Broken wikilink [[${raw}]] in pages/zones`).not.toBeNull();
+    }
+  });
+});
