@@ -2,50 +2,76 @@ import { z } from "zod";
 import { BuildingId } from "../../types/catalog/buildings.js";
 import { SeasonId, SEASON_ID_VALUES } from "../../types/catalog/seasons.js";
 import { ZoneCategoryId, ZONE_CATEGORY_VALUES } from "../../types/catalog/tileCategories.js";
+import { schemaTypeName } from "./schemaTypeName.js";
 
 /** Board-only coin tile target — not a zone category or inventory resource. */
 export const ZONE_UPGRADE_TARGET_GOLD = "gold" as const;
 
 export type FarmUpgradeTarget = ZoneCategoryId | typeof ZONE_UPGRADE_TARGET_GOLD;
 
-const zoneCategorySchema = z.nativeEnum(ZoneCategoryId);
-const seasonIdSchema = z.nativeEnum(SeasonId);
-const farmUpgradeTargetSchema = z.union([
-  zoneCategorySchema,
-  z.literal(ZONE_UPGRADE_TARGET_GOLD),
-]);
+/** Zone drop-table category id (farm upgradeMap keys and seasonDrops columns). */
+export const zoneCategoryIdSchema = schemaTypeName(
+  "ZoneCategoryId",
+  z.nativeEnum(ZoneCategoryId),
+);
+
+const seasonIdSchema = schemaTypeName("SeasonId", z.nativeEnum(SeasonId));
+
+/** Zone category or the gold-tile sentinel used in upgrade maps. */
+export const farmUpgradeTargetSchema = schemaTypeName(
+  "FarmUpgradeTarget",
+  z.union([zoneCategoryIdSchema, z.literal(ZONE_UPGRADE_TARGET_GOLD)]),
+);
 
 const farmSeasonDropRowShape = Object.fromEntries(
   ZONE_CATEGORY_VALUES.map((cat) => [cat, z.number().min(0)]),
 ) as { [K in ZoneCategoryId]: z.ZodNumber };
 
 /** One season row: every farm zone category must be present (use 0 when unused). */
-export const farmSeasonDropRowSchema = z.object(farmSeasonDropRowShape).strict();
+export const farmSeasonDropRowSchema = schemaTypeName(
+  "FarmSeasonDropRow",
+  z.object(farmSeasonDropRowShape).strict(),
+);
 
 /** Full farm drop table: all four calendar seasons, each with a complete category row. */
 const farmSeasonDropsShape = Object.fromEntries(
   SEASON_ID_VALUES.map((season) => [season, farmSeasonDropRowSchema]),
 ) as { [K in SeasonId]: typeof farmSeasonDropRowSchema };
 
-export const farmSeasonDropsSchema = z.object(farmSeasonDropsShape).strict();
+export const farmSeasonDropsSchema = schemaTypeName(
+  "FarmSeasonDrops",
+  z.object(farmSeasonDropsShape).strict(),
+);
 
 export type FarmSeasonDropRow = z.infer<typeof farmSeasonDropRowSchema>;
 export type FarmSeasonDrops = z.infer<typeof farmSeasonDropsSchema>;
 
-export const farmUpgradeMapSchema = z
-  .partialRecord(zoneCategorySchema, farmUpgradeTargetSchema)
-  .describe("Source zone category → upgraded zone category (or gold sentinel)");
+/** Source zone category → upgraded zone category (or gold sentinel). */
+export const farmUpgradeMapSchema = schemaTypeName(
+  "FarmUpgradeMap",
+  z
+    .partialRecord(zoneCategoryIdSchema, farmUpgradeTargetSchema)
+    .describe(
+      "Source zone category → upgraded zone category spawned after a chain (or gold sentinel)",
+    ),
+);
 
 export type FarmUpgradeMap = Partial<Record<ZoneCategoryId, FarmUpgradeTarget>>;
 
 /** Dev Panel / balance.json patch — partial category rows per season. */
-export const farmSeasonDropRowPatchSchema = z
-  .partialRecord(zoneCategorySchema, z.number().min(0))
-  .describe("Partial category weights for one season patch");
+export const farmSeasonDropRowPatchSchema = schemaTypeName(
+  "FarmSeasonDropRowPatch",
+  z
+    .partialRecord(zoneCategoryIdSchema, z.number().min(0))
+    .describe("Partial category weights for one season patch"),
+);
 
-export const farmSeasonDropsPatchSchema = z
-  .partialRecord(seasonIdSchema, farmSeasonDropRowPatchSchema)
-  .describe("Partial per-season drop patches merged into the live table");
+export const farmSeasonDropsPatchSchema = schemaTypeName(
+  "FarmSeasonDropsPatch",
+  z
+    .partialRecord(seasonIdSchema, farmSeasonDropRowPatchSchema)
+    .describe("Partial per-season drop patches merged into the live table"),
+);
 
 /** @deprecated Use farmSeasonDropsSchema — kept for wiki/schema re-exports. */
 export const seasonDropsSchema = farmSeasonDropsSchema;
@@ -68,9 +94,7 @@ export const farmBoardInstanceSchema = z
       .int()
       .min(1)
       .describe("Turn budget for a farm session at this zone before worker bonuses"),
-    upgradeMap: farmUpgradeMapSchema.describe(
-      "Source zone category → upgraded zone category spawned after a chain",
-    ),
+    upgradeMap: farmUpgradeMapSchema,
     seasonDrops: farmSeasonDropsSchema,
   })
   .strict()

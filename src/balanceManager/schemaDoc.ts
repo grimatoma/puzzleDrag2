@@ -1,3 +1,4 @@
+import { getSchemaTypeName } from "../config/schemas/schemaTypeName.js";
 /**
  * schemaDoc.ts — Pure Zod-4 introspection engine.
  *
@@ -232,6 +233,10 @@ const SAFEINT_MAX = 9007199254740991;
  */
 export function typeString(schema: unknown): string {
   if (schema == null || typeof schema !== "object") return "unknown";
+
+  const registered = getSchemaTypeName(schema);
+  if (registered) return registered;
+
   const s = schema as ZodLike;
   const tag = getTag(s);
 
@@ -276,7 +281,15 @@ export function typeString(schema: unknown): string {
 
     case "record": {
       const def = s._zod.def as { keyType: ZodLike; valueType: ZodLike };
-      return `record<${typeString(def.keyType)}, ${typeString(def.valueType)}>`;
+      const keyTs = typeString(def.keyType);
+      const valueTs = typeString(def.valueType);
+      if (keyTs === "string") {
+        return `record<${keyTs}, ${valueTs}>`;
+      }
+      if (!isVerboseEnumType(keyTs) && !isVerboseEnumType(valueTs)) {
+        return `PartialRecord<${keyTs}, ${valueTs}>`;
+      }
+      return `record<${keyTs}, ${valueTs}>`;
     }
 
     case "object":
@@ -315,6 +328,11 @@ export function typeString(schema: unknown): string {
     default:
       return "unknown";
   }
+}
+
+/** Long inlined native-enum strings — prefer catalog type aliases when possible. */
+function isVerboseEnumType(typeStr: string): boolean {
+  return typeStr.startsWith("enum:");
 }
 
 /** Build the number type string: "number", "number (int)", "number (int, ≥1)", etc. */
