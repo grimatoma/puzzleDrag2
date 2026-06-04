@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NPCS } from "../constants.js";
-import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText } from "../story.js";
+import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText, bondAmountForBeat } from "../story.js";
 import type { Beat as StoryBeatType, BeatLine as StoryBeatLine, BeatChoice as StoryBeatChoice, ChoiceOutcome } from "../story.js";
 import { displayZoneName } from "../features/zones/data.js";
 import Icon from "./Icon.jsx";
@@ -209,7 +209,8 @@ export function TapCue({ label = "Tap to continue" }: { label?: string }) {
 
 /** Short uppercase meta for a beat — "Act II", "Bond 8", or null. */
 function beatMetaLabel(beat: StoryBeat) {
-  if (beat.trigger?.type === "bond_at_least" && Number.isFinite(beat.trigger.amount)) return `Bond ${beat.trigger.amount}`;
+  const bond = bondAmountForBeat(beat);
+  if (bond !== null) return `Bond ${bond}`;
   if (beat.act) {
     const roman = ["", "I", "II", "III", "IV", "V"][beat.act] || beat.act;
     return `Act ${roman}`;

@@ -7,26 +7,34 @@ import {
   evaluateStoryTriggers,
   firedFlagKey,
 } from "../src/story.js";
+import { factIdsIn, describeCond } from "../src/config/progression/conditions.js";
 import { rootReducer, createInitialState } from "../src/state.js";
 import { seasonIndexInSession } from "../src/features/zones/data.js";
 
 describe("Phase 38 — story beats no longer use the calendar", () => {
   it("no beat uses the deleted `season_entered` trigger", () => {
-    const lingering = STORY_BEATS.filter((b) => b.trigger?.type === "season_entered");
+    // Beats now carry a native `when:` Cond; ensure none reference a season
+    // event or fact (the old `season_entered` trigger is gone).
+    const lingering = STORY_BEATS.filter(
+      (b) =>
+        b.when &&
+        (factIdsIn(b.when).some((f) => f.startsWith("season.")) ||
+          /season_entered/.test(describeCond(b.when))),
+    );
     expect(lingering).toEqual([]);
   });
 
   it("act2_frostmaw now points at quarry progress instead of the legacy boss", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
     expect(frostmaw).toBeTruthy();
-    expect(frostmaw.trigger.type).toBe("resource_total");
-    expect(frostmaw.trigger.key).toBe("tile_mine_stone");
+    // Migrated to a native resource-total leaf `when:`.
+    expect(frostmaw.when).toEqual({ fact: "resource.tile_mine_stone.total", op: "gte", value: 20 });
     expect(frostmaw.onComplete.spawnBoss).toBeUndefined();
   });
 
   it("act2_frostmaw fires once total tile_mine_stone gathered hits the threshold", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
-    const need = frostmaw.trigger.amount;
+    const need = frostmaw.when.value;
     // evaluateStoryTriggers walks the queue sequentially; fast-forward by
     // marking earlier beats as already fired so Frostmaw is the next pending.
     const flags = {};

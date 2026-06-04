@@ -49,10 +49,10 @@ describe("story.js — flag helpers", () => {
 });
 
 describe("evaluateStoryTriggers — triggerMatches branches", () => {
-  it("session_start matches when next pending beat trigger is session_start", () => {
+  it("session_start matches when next pending beat when is session_start", () => {
     const r = evaluateStoryTriggers(INITIAL_STORY_STATE, { type: "session_start" });
     if (r) {
-      expect(r.firedBeat.trigger.type).toBe("session_start");
+      expect(r.firedBeat.when).toEqual({ fact: "event.type", op: "eq", value: "session_start" });
     }
   });
 
@@ -85,15 +85,21 @@ describe("evaluateStoryTriggers — triggerMatches branches", () => {
       flags[k] = true;
     }
     const stateNoFestival = { act: 3, beat: "act3_win", flags };
-    // Even with the right event, festival_announced not set → null
-    const r = evaluateStoryTriggers(stateNoFestival, { type: win.trigger.type });
+    // Even with the right event, festival_announced not set → null. (act3_win's
+    // `when` is a pure resource predicate, so any event reaches the festival gate.)
+    const r = evaluateStoryTriggers(stateNoFestival, { type: "resource_total_multi" });
     expect(r).toBeNull();
   });
 
-  it("resource_total trigger checks the totals map", () => {
-    // Find a beat with resource_total trigger
-    const beat = STORY_BEATS.find((b) => b.trigger?.type === "resource_total");
+  it("resource_total when checks the totals map", () => {
+    // Find a beat whose `when` is a single resource-total leaf:
+    //   { fact: "resource.<key>.total", op: "gte", value: <amount> }
+    const isResourceLeaf = (w) =>
+      w && typeof w === "object" && "fact" in w && /^resource\..+\.total$/.test(w.fact) && w.op === "gte";
+    const beat = STORY_BEATS.find((b) => isResourceLeaf(b.when));
     if (!beat) return;
+    const key = beat.when.fact.replace(/^resource\.(.+)\.total$/, "$1");
+    const amount = beat.when.value;
     // Mark all earlier beats complete
     const flags = {};
     for (const b of STORY_BEATS) {
@@ -103,13 +109,13 @@ describe("evaluateStoryTriggers — triggerMatches branches", () => {
     }
     const state = { ...INITIAL_STORY_STATE, act: beat.act, flags };
     // Below threshold → null
-    const lo = evaluateStoryTriggers(state, { type: "resource_total" }, { [beat.trigger.key]: 0 });
+    const lo = evaluateStoryTriggers(state, { type: "resource_total" }, { [key]: 0 });
     expect(lo).toBeNull();
     // At threshold → fires
     const hi = evaluateStoryTriggers(
       state,
       { type: "resource_total" },
-      { [beat.trigger.key]: beat.trigger.amount },
+      { [key]: amount },
     );
     expect(hi?.firedBeat?.id).toBe(beat.id);
   });

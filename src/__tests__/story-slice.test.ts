@@ -34,7 +34,8 @@ describe("2.1 — STORY_BEATS shape", () => {
       // A beat carries content either as a legacy `body` string or as the
       // newer `lines[]` form — `beatLines` normalises both.
       expect(beatLines(b).length, `beat ${b.id} has no dialogue lines`).toBeGreaterThan(0);
-      expect(b.trigger, `beat ${b.id} missing trigger`).toBeTruthy();
+      // Beats now carry a native `when:` Cond (the old `trigger:` was removed).
+      expect(b.when, `beat ${b.id} missing when`).toBeTruthy();
     }
   });
 

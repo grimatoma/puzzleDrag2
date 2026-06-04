@@ -103,7 +103,7 @@ export function computeStoryStats(draft: StoryDraft | null | undefined): StorySt
     if (!beat) continue;
     // Beats with a real trigger or that sit on the main act spine reach
     // themselves; everything else needs to be queued by a choice.
-    if (beat.trigger || (typeof beat.act === "number" && isFinite(beat.act))) reachable.add(id);
+    if (beat.trigger || beat.when || (typeof beat.act === "number" && isFinite(beat.act))) reachable.add(id);
   }
   for (const id of ids) {
     const beat = beatLookup.get(id);

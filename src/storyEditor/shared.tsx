@@ -10,6 +10,8 @@ import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
 } from "../config/applyOverrides.js";
+import { condToTrigger } from "../config/progression/storyBridge.js";
+import { describeCond } from "../config/progression/conditions.js";
 import { UI_COLORS } from "../ui/primitives/palette.js";
 import type {
   DraftBeatIdValidation,
@@ -80,9 +82,14 @@ const TRIGGER_BEAT_HINTS: Record<string, TriggerSummary> = {
 };
 
 export function triggerSummary(beat: StoryBeat | null | undefined): TriggerSummary | null {
-  // The runtime trigger type uses a string + open index signature, so each
-  // field is `unknown` and needs narrowing.
-  const t = beat?.trigger as Record<string, unknown> & { type?: string } | undefined;
+  // Beats now author a native `when:` Cond; decompile it back to the picker's
+  // BeatTrigger vocabulary for the summary. Legacy/editor-draft `trigger:` is
+  // still honoured. A composite `when:` that has no single BeatTrigger (e.g. the
+  // bond settle-composite) falls through to a describeCond "advanced" summary.
+  const t = (beat?.trigger ?? (beat?.when ? condToTrigger(beat.when) : null)) as
+    | (Record<string, unknown> & { type?: string })
+    | undefined
+    | null;
   if (t) {
     const num = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
     const str = (v: unknown): string => (typeof v === "string" ? v : String(v ?? ""));
@@ -105,9 +112,34 @@ export function triggerSummary(beat: StoryBeat | null | undefined): TriggerSumma
       default:                     return { icon: "?", label: String(t.type ?? ""), kind: "trigger" };
     }
   }
+  // Composite `when:` with no single BeatTrigger (e.g. the bond settle-composite).
+  if (beat?.when) {
+    const bondLeaf = findBondLeaf(beat.when);
+    if (bondLeaf) {
+      return { icon: "♥", label: `${npcByKey(bondLeaf.npc)?.name || bondLeaf.npc} bond ≥ ${bondLeaf.amount}`, kind: "trigger" };
+    }
+    return { icon: "≡", label: describeCond(beat.when), kind: "trigger" };
+  }
   if (beat?.id && Object.prototype.hasOwnProperty.call(TRIGGER_BEAT_HINTS, beat.id)) {
     return TRIGGER_BEAT_HINTS[beat.id];
   }
+  return null;
+}
+
+/**
+ * Find an `npc.<id>.bond ≥ N` leaf anywhere in a Cond tree (the migrated
+ * `bond_at_least` settle-composite), returning its npc + amount, or null.
+ */
+function findBondLeaf(cond: import("../config/progression/types.js").Cond | undefined): { npc: string; amount: number } | null {
+  if (!cond) return null;
+  if ("fact" in cond) {
+    const m = /^npc\.(.+)\.bond$/.exec(cond.fact);
+    if (m && cond.op === "gte" && typeof cond.value === "number") return { npc: m[1], amount: cond.value };
+    return null;
+  }
+  if ("all" in cond) { for (const c of cond.all) { const r = findBondLeaf(c); if (r) return r; } return null; }
+  if ("any" in cond) { for (const c of cond.any) { const r = findBondLeaf(c); if (r) return r; } return null; }
+  if ("not" in cond) return findBondLeaf(cond.not);
   return null;
 }
 
@@ -331,7 +363,7 @@ export function storyWarningsForBeat(beatId: string, draft: StoryDraft | null | 
     addFlagWarnings(c?.outcome?.clearFlag, knownFlags, warnings, `Choice "${c.label || c.id}" clearFlag`);
   }
 
-  if (isDraft && !beat.trigger && incoming && !incoming.has(beatId)) {
+  if (isDraft && !beat.trigger && !beat.when && incoming && !incoming.has(beatId)) {
     warnings.push({ type: "orphanBeat", message: `Draft beat "${beat.title || beatId}" has no trigger and nothing leads to it — it can never fire.` });
   }
 
@@ -599,7 +631,9 @@ const NODE_W_FORK = 240;
 export function nodeKind(beatId: string, draft: StoryDraft | null | undefined, isDraftNode: boolean): "branching" | "expanded" | "compact" {
   const beat = effectiveBeat(beatId, draft);
   if (Array.isArray(beat?.choices) && beat!.choices!.length > 0) return "branching";
-  if (isDraftNode || !beat?.trigger) return "expanded";
+  // A beat with a firing condition (native `when:` or legacy `trigger:`) is a
+  // mid-chain compact node; everything else is an expanded resolution card.
+  if (isDraftNode || (!beat?.when && !beat?.trigger)) return "expanded";
   return "compact";
 }
 

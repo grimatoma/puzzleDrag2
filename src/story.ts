@@ -3,9 +3,15 @@
 
 import type { GameState } from "./types/state.js";
 import type { ZoneInventoryMap } from "./types/inventory.js";
+import type { Cond } from "./config/progression/types.js";
 import { inventoryForStory, inventoryZone, zoneInventory } from "./state/zoneInventory.js";
 import { evaluate } from "./config/progression/conditions.js";
-import { beatTriggerToCond, buildFactSnapshot } from "./config/progression/storyBridge.js";
+import {
+  beatTriggerToCond,
+  buildFactSnapshot,
+  isFlagOnlyCond,
+  isStateCond,
+} from "./config/progression/storyBridge.js";
 
 export const INITIAL_STORY_STATE = {
   act: 1,
@@ -55,7 +61,18 @@ export interface Beat {
   body?: string;
   lines?: BeatLine[];
   prompt?: { kind: string; zoneId?: string; placeholder?: string; buttonLabel?: string };
+  /**
+   * Legacy authoring vocabulary. Still declared because `BeatTrigger` is
+   * referenced elsewhere (editor, `condToTrigger`, `conditionMatches`), but no
+   * beat ENTRY carries this any more — they all use the native `when:` Cond.
+   */
   trigger?: BeatTrigger;
+  /**
+   * Native condition tree evaluated by the runtime (`evaluate(when, snapshot)`).
+   * Replaces the old `trigger`. Beats with no firing condition (choice-queued
+   * resolution beats) carry neither field.
+   */
+  when?: Cond;
   onComplete?: BeatSideEffects;
   choices?: BeatChoice[];
   continueLabel?: string;
@@ -109,7 +126,7 @@ export const STORY_BEATS = [
       { speaker: "wren", text: "Bring me 20 hay — we light it tonight. But first this place needs a name. Yours, now." },
     ],
     prompt: { kind: "name_settlement", zoneId: "home", placeholder: "Name your settlement…", buttonLabel: "Found it" },
-    trigger: { type: "session_start" },
+    when: { fact: "event.type", op: "eq", value: "session_start" },
     onComplete: { setFlag: "intro_seen" },
   },
   {
@@ -121,7 +138,7 @@ export const STORY_BEATS = [
       { speaker: "wren", text: "There. The first of many. This land was dead, but it still remembers how to grow." },
       { speaker: "wren", text: "Mira will be here soon. She'll need that hay for the workers' fires." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 1 },
+    when: { fact: "resource.tile_grass_grass.total", op: "gte", value: 1 },
     onComplete: { setFlag: "first_harvest" },
   },
   {
@@ -130,7 +147,7 @@ export const STORY_BEATS = [
     title: "First Light",
     scene: "hearth",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
-    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 20 },
+    when: { fact: "resource.tile_grass_grass.total", op: "gte", value: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
@@ -138,7 +155,12 @@ export const STORY_BEATS = [
     act: 1,
     title: "The First Delivery",
     body: "Mira: 'There. Someone asked, you answered, and the Vale knows it can ask again.'",
-    trigger: { type: "order_fulfilled", count: 1 },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "order_fulfilled" },
+        { fact: "event.count", op: "gte", value: 1 },
+      ],
+    },
     onComplete: { setFlag: "first_order", spawnNPC: "tomas" },
   },
   {
@@ -146,7 +168,12 @@ export const STORY_BEATS = [
     act: 1,
     title: "Room For Tomorrow",
     body: "Tomas: 'A granary means you are not just surviving the field. You are planning the next one.'",
-    trigger: { type: "building_built", id: "granary" },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "building_built" },
+        { fact: "event.id", op: "eq", value: "granary" },
+      ],
+    },
     onComplete: { setFlag: "granary_built" },
   },
   {
@@ -154,7 +181,12 @@ export const STORY_BEATS = [
     act: 1,
     title: "The Keeper At The Fence",
     body: "Wren: 'The old keeper has noticed us. Settle this, and the road beyond the Vale can open.'",
-    trigger: { type: "keeper_confronted", zoneId: "home" },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "keeper_confronted" },
+        { fact: "event.zoneId", op: "eq", value: "home" },
+      ],
+    },
     onComplete: { setFlag: "home_keeper_resolved", advanceAct: 2 },
   },
   // ── Act 2 ──────────────────────────────────────────────────────────────────
@@ -163,7 +195,12 @@ export const STORY_BEATS = [
     act: 2,
     title: "The Smith",
     body: "Bram: 'I need a forge. The vale needs iron.'",
-    trigger: { type: "act_entered", act: 2 },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "act_entered" },
+        { fact: "event.act", op: "eq", value: 2 },
+      ],
+    },
     onComplete: { spawnNPC: "bram", setFlag: "bram_arrived" },
   },
   {
@@ -171,7 +208,13 @@ export const STORY_BEATS = [
     act: 2,
     title: "Iron in the Vale",
     body: "Bram: 'A hinge! Small thing — but it begins.'",
-    trigger: { type: "craft_made", item: "iron_hinge", count: 1 },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "craft_made" },
+        { fact: "event.item", op: "eq", value: "iron_hinge" },
+        { fact: "event.count", op: "gte", value: 1 },
+      ],
+    },
     onComplete: { setFlag: "first_iron" },
   },
   {
@@ -181,7 +224,7 @@ export const STORY_BEATS = [
     body: "Bram: 'That stone is not just stone. It is road, wall, kiln, and promise.'",
     // Save-compat id: this was the Frostmaw audit-boss beat. Keeper Trials now
     // own boss progression, so Act 2 uses the quarry as the next-zone tutorial.
-    trigger: { type: "resource_total", key: "tile_mine_stone", amount: 20 },
+    when: { fact: "resource.tile_mine_stone.total", op: "gte", value: 20 },
     onComplete: { setFlag: "quarry_foothold" },
   },
   {
@@ -189,7 +232,12 @@ export const STORY_BEATS = [
     act: 2,
     title: "The Healer",
     body: "Sister Liss: 'A child has fever. I need berries.'",
-    trigger: { type: "resource_total_multi", req: { tile_mine_stone: 20, tile_fruit_blackberry: 10 } },
+    when: {
+      all: [
+        { fact: "resource.tile_mine_stone.total", op: "gte", value: 20 },
+        { fact: "resource.tile_fruit_blackberry.total", op: "gte", value: 10 },
+      ],
+    },
     onComplete: { spawnNPC: "liss", setFlag: "liss_arrived", advanceAct: 3 },
   },
   // ── Act 3 ──────────────────────────────────────────────────────────────────
@@ -198,7 +246,12 @@ export const STORY_BEATS = [
     act: 3,
     title: "The Mine",
     body: "Wren: 'I found a sealed mine. Stone and coal will open it.'",
-    trigger: { type: "act_entered", act: 3 },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "act_entered" },
+        { fact: "event.act", op: "eq", value: 3 },
+      ],
+    },
     onComplete: { setFlag: "mine_revealed" },
   },
   {
@@ -206,7 +259,12 @@ export const STORY_BEATS = [
     act: 3,
     title: "Into the Dark",
     body: "Wren: 'The seal is broken. The mine is yours.'",
-    trigger: { type: "resource_total_multi", req: { tile_mine_stone: 20, tile_mine_coal: 10 } },
+    when: {
+      all: [
+        { fact: "resource.tile_mine_stone.total", op: "gte", value: 20 },
+        { fact: "resource.tile_mine_coal.total", op: "gte", value: 10 },
+      ],
+    },
     onComplete: { setFlag: "mine_unlocked", unlockBiome: "mine" },
   },
   {
@@ -214,7 +272,12 @@ export const STORY_BEATS = [
     act: 3,
     title: "The Caravan Post",
     body: "Tomas: 'Far traders are coming. The vale is on the map again.'",
-    trigger: { type: "building_built", id: "caravan_post" },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "building_built" },
+        { fact: "event.id", op: "eq", value: "caravan_post" },
+      ],
+    },
     onComplete: { setFlag: "caravan_open" },
   },
   {
@@ -222,7 +285,12 @@ export const STORY_BEATS = [
     act: 3,
     title: "The Harvest Festival",
     body: "Mira: 'Fill the larder — 50 each of hay, wheat, grain, berry, log. The vale will feast.'",
-    trigger: { type: "all_buildings_built" },
+    when: {
+      all: [
+        { fact: "event.type", op: "eq", value: "all_buildings_built" },
+        { fact: "event.allBuilt", op: "eq", value: true },
+      ],
+    },
     onComplete: { setFlag: "festival_announced" },
   },
   {
@@ -234,9 +302,14 @@ export const STORY_BEATS = [
     // (The recurring-festival / Old-Capital-finale rework is a later phase;
     // for now this stays the act-3 milestone, just no longer "the vale".)
     body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
-    trigger: {
-      type: "resource_total_multi",
-      req: { tile_grass_grass: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
+    when: {
+      all: [
+        { fact: "resource.tile_grass_grass.total", op: "gte", value: 50 },
+        { fact: "resource.tile_grain_wheat.total", op: "gte", value: 50 },
+        { fact: "resource.flour.total", op: "gte", value: 50 },
+        { fact: "resource.tile_fruit_blackberry.total", op: "gte", value: 50 },
+        { fact: "resource.tile_tree_oak.total", op: "gte", value: 50 },
+      ],
     },
     onComplete: { setFlag: "isWon" },
   },
@@ -259,7 +332,7 @@ export const SIDE_BEATS: Beat[] = [
       { speaker: "wren", text: "Every move you make on that board spends time. See the counter? When it hits zero, the season turns." },
       { speaker: "wren", text: "Harvest what you can, but remember: we're not just collecting hay. We're building a home. Every scrap counts toward the next construction." },
     ],
-    trigger: { type: "resource_total", key: "tile_grass_grass", amount: 5 },
+    when: { fact: "resource.tile_grass_grass.total", op: "gte", value: 5 },
     onComplete: { setFlag: "tutorial_beat_4" },
   },
 
@@ -274,7 +347,20 @@ export const SIDE_BEATS: Beat[] = [
       { speaker: "mira", text: "It's for my brother. Edrin. He went south before the kingdom emptied — said he'd be back by harvest. That was a long string of harvests ago." },
       { speaker: "mira", text: "If I send it and there's no answer... that's a worse kind of quiet than not knowing. I keep telling myself I'll decide tomorrow." },
     ],
-    trigger: { type: "bond_at_least", npc: "mira", amount: 8 },
+    // bond_at_least has no direct beatTriggerToCond mapping (it maps to the
+    // never-sentinel), so the old settle-moment semantics are written out as a
+    // composite: fire on a session start/end once Mira's bond reaches 8.
+    when: {
+      all: [
+        { fact: "npc.mira.bond", op: "gte", value: 8 },
+        {
+          any: [
+            { fact: "event.type", op: "eq", value: "session_start" },
+            { fact: "event.type", op: "eq", value: "session_ended" },
+          ],
+        },
+      ],
+    },
     choices: [
       { id: "send", label: "Send it. He'd want to hear from you.",
         outcome: { setFlag: ["mira_letter_resolved", "mira_letter_sent"], bondDelta: { npc: "mira", amount: 1 }, queueBeat: "mira_letter_sent" } },
@@ -370,6 +456,30 @@ export function findBeat(id: string): Beat | null {
  */
 export function firedFlagKey(beatId: string): string {
   return `_fired_${beatId}`;
+}
+
+/**
+ * If a beat's `when:` is the migrated `bond_at_least` settle-composite, return
+ * the bond threshold it gates on (e.g. 8); otherwise null. Used by the dialogue
+ * UI's "Bond N" meta badge now that beats carry `when:` instead of `trigger:`.
+ * Matches a leaf `{ fact: "npc.<id>.bond", op: "gte", value: <n> }` nested
+ * anywhere inside the condition tree.
+ */
+export function bondAmountForBeat(beat: Beat | null | undefined): number | null {
+  const find = (cond: Cond | undefined): number | null => {
+    if (!cond) return null;
+    if ("fact" in cond) {
+      if (/^npc\..+\.bond$/.test(cond.fact) && cond.op === "gte" && Number.isFinite(cond.value as number)) {
+        return cond.value as number;
+      }
+      return null;
+    }
+    if ("all" in cond) { for (const c of cond.all) { const v = find(c); if (v !== null) return v; } return null; }
+    if ("any" in cond) { for (const c of cond.any) { const v = find(c); if (v !== null) return v; } return null; }
+    if ("not" in cond) return find(cond.not);
+    return null;
+  };
+  return find(beat?.when);
 }
 
 function flagList(value: string | string[] | null | undefined): string[] {
@@ -476,12 +586,13 @@ export function evaluateStoryTriggers(
 ): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects } | null {
   const next = nextPendingBeat(state);
   if (!next) return null;
-  if (opts.onlyFlagConditions && next.trigger?.type !== "flag_set" && next.trigger?.type !== "flag_cleared") return null;
+  // In flag-only mode, skip any beat whose condition isn't purely flag-driven.
+  if (opts.onlyFlagConditions && next.when && !isFlagOnlyCond(next.when)) return null;
 
   // Extra guard for the win beat: festival must be announced first
   if (next.id === "act3_win" && !state.flags.festival_announced) return null;
 
-  if (!next.trigger || !conditionMatches(next.trigger, event, totals, state.flags ?? {})) return null;
+  if (!next.when || !evaluate(next.when, buildFactSnapshot(event, totals, state.flags ?? {}))) return null;
 
   const newFlags = { ...state.flags };
   const setFlags = flagList(next.onComplete?.setFlag);
@@ -499,9 +610,6 @@ export function evaluateStoryTriggers(
 // ─── Side-beat trigger evaluation ────────────────────────────────────────────
 
 const SIDE_SETTLE_EVENTS = new Set(["session_start", "session_ended"]);
-// Predicate-style conditions (true as long as some state holds), as opposed to
-// the discrete event conditions (`craft_made`, `building_built`, …).
-const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi", "bond_at_least", "flag_set", "flag_cleared"]);
 
 interface SideBeatGameState {
   story?: StoryState | { flags?: Record<string, boolean>; repeatCooldowns?: Record<string, number> };
@@ -520,24 +628,17 @@ function sideBeatFired(flags: Record<string, boolean> | undefined, beat: Beat): 
 }
 
 function sideTriggerMatches(beat: Beat, event: StoryEvent, gameState: SideBeatGameState | undefined): boolean {
-  const t = beat.trigger;
-  if (!t) return false; // resolution beats (queued via choices) have no trigger
+  if (!beat.when) return false; // resolution beats (queued via choices) have no condition
   const cooldowns = (gameState?.story as { repeatCooldowns?: Record<string, number> } | undefined)?.repeatCooldowns ?? {};
   if (beat.repeat && (cooldowns[beat.id] ?? 0) > 0) return false;
-  if (t.type === "bond_at_least") {
-    // State-driven via the bonds snapshot (not in `conditionMatches`) — fires
-    // the next settle moment once the bond threshold holds.
-    if (!SIDE_SETTLE_EVENTS.has(event.type)) return false;
-    const npc = t.npc as string;
-    const amount = t.amount as number;
-    return (gameState?.npcs?.bonds?.[npc] ?? 0) >= amount;
-  }
-  // A `repeat` beat on a perpetual predicate would re-fire on every event, so
-  // pin those re-fires to settle moments. One-shot beats (and beats on discrete
-  // event conditions) can match on any event — the fired-marker stops repeats.
-  if (beat.repeat && STATE_CONDITION_TYPES.has(t.type) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
+  // A `repeat` beat on a perpetual predicate (no `event.*` fact) would re-fire on
+  // every event, so pin those re-fires to settle moments. One-shot beats (and
+  // beats on discrete event conditions) can match on any event — the fired-marker
+  // stops repeats. (The bond `when:` already carries its own settle clause.)
+  if (beat.repeat && isStateCond(beat.when) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
   const flags = (gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags ?? {};
-  return conditionMatches(t, event, inventoryForStory(gameState), flags);
+  const snap = buildFactSnapshot(event, inventoryForStory(gameState), flags, gameState?.npcs?.bonds ?? {});
+  return evaluate(beat.when, snap);
 }
 
 function fireSideBeat(beat: Beat, flags: Record<string, boolean>): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } {
@@ -572,7 +673,8 @@ export function evaluateSideBeats(
   const flags = ((gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags) ?? {};
   let repeatCandidate: Beat | null = null;
   for (const beat of SIDE_BEATS) {
-    if (opts.onlyFlagConditions && beat.trigger?.type !== "flag_set" && beat.trigger?.type !== "flag_cleared") continue;
+    // In flag-only mode, skip any beat whose condition isn't purely flag-driven.
+    if (opts.onlyFlagConditions && beat.when && !isFlagOnlyCond(beat.when)) continue;
     if (!sideTriggerMatches(beat, event, gameState)) continue;
     if (beat.repeat === true) { if (!repeatCandidate) repeatCandidate = beat; continue; }
     if (sideBeatFired(flags, beat)) continue;

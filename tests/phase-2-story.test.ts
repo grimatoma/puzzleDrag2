@@ -20,14 +20,16 @@ describe("Phase 2 — STORY_BEATS shape", () => {
     for (const b of STORY_BEATS) {
       expect(b.id, `beat ${b.id} missing id`).toBeTruthy();
       expect(b.act, `beat ${b.id} missing act`).toBeGreaterThanOrEqual(1);
-      expect(b.trigger, `beat ${b.id} missing trigger`).toBeTruthy();
+      // Beats now carry a native `when:` Cond (the old `trigger:` was removed).
+      expect(b.when, `beat ${b.id} missing when`).toBeTruthy();
+      expect(b.trigger, `beat ${b.id} should not carry trigger`).toBeUndefined();
     }
   });
 
   it("act1_arrival triggers on session_start", () => {
     const arrival = STORY_BEATS.find(b => b.id === "act1_arrival");
     expect(arrival).toBeDefined();
-    expect(arrival.trigger.type).toBe("session_start");
+    expect(arrival.when).toEqual({ fact: "event.type", op: "eq", value: "session_start" });
   });
 });
 
