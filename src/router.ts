@@ -13,6 +13,7 @@
 //   #/cartography/orchard
 //   #/town?modal=menu
 //   #/town?modal=menu&tab=settings
+//   #/board?conceptTiles=1   (global preview flag — preserved across navigation)
 //
 // The Dev Panel is a separate Vite entry served at `/b/` and has its
 // own hash router (`src/balanceManager/router.js`) — it does not share this
@@ -20,6 +21,7 @@
 
 import { useEffect, useRef } from "react";
 import type { GameState, Dispatch } from "./types/state.js";
+import { appendGlobalHashFlags } from "./appQueryParams.js";
 
 interface FeatureModuleShape { viewKey?: string }
 
@@ -152,7 +154,8 @@ export function buildHash({ view = "town", modal = null, viewParams = {}, modalP
       queryParts.push(`tab=${encodeURIComponent(modalParams.tab)}`);
     }
   }
-  const query = queryParts.length ? `?${queryParts.join("&")}` : "";
+  const withGlobals = appendGlobalHashFlags(queryParts);
+  const query = withGlobals.length ? `?${withGlobals.join("&")}` : "";
   return `#/${path}${query}`;
 }
 

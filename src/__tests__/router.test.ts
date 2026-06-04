@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { parseHash, buildHash, routeFromState } from "../router.js";
 import { gameReducer, initialState } from "../state.js";
 
@@ -102,6 +102,25 @@ describe("router.buildHash", () => {
   it("encodes modal queries with sub-tab", () => {
     expect(buildHash({ view: "town", modal: "menu", modalParams: { tab: "about" } }))
       .toBe("#/town?modal=menu&tab=about");
+  });
+
+  it("preserves conceptTiles=1 while navigating when the preview flag is on", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        store.set(k, v);
+      },
+      removeItem: (k: string) => {
+        store.delete(k);
+      },
+      clear: () => store.clear(),
+    });
+    vi.stubGlobal("window", { location: { search: "", hash: "#/board?conceptTiles=1" } });
+    expect(buildHash({ view: "town", modal: null, viewParams: {}, modalParams: {} })).toBe(
+      "#/town?conceptTiles=1",
+    );
+    vi.unstubAllGlobals();
   });
 
   it("round-trips via parseHash for the supported shapes", () => {

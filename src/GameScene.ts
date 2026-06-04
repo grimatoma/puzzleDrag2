@@ -23,7 +23,11 @@ const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(nu
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
-import { hasConceptTileAnim, preloadConceptTileGifs } from "./textures/conceptTiles/index.js";
+import {
+  conceptTilesPreloadReady,
+  hasConceptTileAnim,
+  preloadConceptTileGifs,
+} from "./textures/conceptTiles/index.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
@@ -2026,13 +2030,15 @@ export class GameScene extends Phaser.Scene {
       this._seasonalAnimLast = time;
       this._animateSeasonalTiles(time / 1000);
     }
-    if (
-      isConceptTileIconsEnabled() &&
-      this._motionEnabled() &&
-      time - this._conceptAnimLast >= 50
-    ) {
-      this._conceptAnimLast = time;
-      this._animateConceptTiles(time / 1000);
+    if (isConceptTileIconsEnabled()) {
+      if (!conceptTilesPreloadReady()) {
+        preloadConceptTileGifs().then(() => {
+          if (this.scene.isActive()) this._animateConceptTiles(time / 1000);
+        });
+      } else if (this._motionEnabled() && time - this._conceptAnimLast >= 50) {
+        this._conceptAnimLast = time;
+        this._animateConceptTiles(time / 1000);
+      }
     }
   }
 
