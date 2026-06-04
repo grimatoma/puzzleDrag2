@@ -72,17 +72,47 @@ function childrenOf(id: string): ProgTrigger[] {
   );
 }
 
-// ─── Effect row ──────────────────────────────────────────────────────────────
+// ─── Effect categorisation ───────────────────────────────────────────────────
 
-function EffectRow({ effect }: { effect: Effect }) {
+type Category =
+  | "zone" | "tile" | "resource" | "building"
+  | "tool" | "recipe" | "worker" | "effect" | "system" | "story" | "hazard";
+
+const CATEGORY_LABEL: Record<Category, string> = {
+  zone: "Areas", tile: "Tiles", resource: "Items", building: "Buildings",
+  tool: "Tools", recipe: "Recipes", worker: "Workers", effect: "Effects",
+  system: "Systems", story: "Story", hazard: "Hazards",
+};
+
+// The order categories appear in within a card's "Unlocked" block.
+const CATEGORY_ORDER: Category[] = [
+  "zone", "tile", "resource", "building", "recipe", "tool",
+  "worker", "effect", "system", "story", "hazard",
+];
+
+/** Which "Unlocked → <Category>:" bucket an effect belongs to. */
+function effectCategory(e: Effect): Category {
+  switch (e.kind) {
+    case "unlockZone":     return "zone";
+    case "discoverTile":   return "tile";
+    case "unlockBuilding": return "building";
+    case "unlockRecipe":   return "recipe";
+    case "unlockTool":     return "tool";
+    case "unlockWorker":   return "worker";
+    case "grant":          return "resource";
+    case "advanceAct":
+    case "showBeat":       return "story";
+    case "note":           return e.consequence as Category;
+    default:               return "effect";
+  }
+}
+
+/** One unlock — a deep-linked concept ref, or a plain text chip. */
+function EffectChip({ effect }: { effect: Effect }) {
   const ref = effectRef(effect);
   if (ref) {
     return (
-      <ConceptRefForKey
-        entityKey={ref.key}
-        conceptId={ref.conceptId}
-        variant="inline"
-      />
+      <ConceptRefForKey entityKey={ref.key} conceptId={ref.conceptId} variant="inline" />
     );
   }
   const label = noteLabel(effect);
@@ -103,15 +133,38 @@ function EffectRow({ effect }: { effect: Effect }) {
   );
 }
 
-// ─── Unlock rows ─────────────────────────────────────────────────────────────
+// ─── Grouped unlock rows ─────────────────────────────────────────────────────
 
 function UnlockRows({ trigger }: { trigger: ProgTrigger }) {
   if (trigger.effects.length === 0) return null;
+
+  // Bucket effects by category, preserving declaration order within a bucket.
+  const byCategory = new Map<Category, Effect[]>();
+  for (const e of trigger.effects) {
+    const cat = effectCategory(e);
+    const bucket = byCategory.get(cat);
+    if (bucket) bucket.push(e);
+    else byCategory.set(cat, [e]);
+  }
+
+  const rows = CATEGORY_ORDER.filter((c) => byCategory.has(c));
+  if (rows.length === 0) return null;
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "4px 0" }}>
-      <span style={{ color: COLORS.inkSubtle, fontSize: 12 }}>➜ unlocked:</span>
-      {trigger.effects.map((e, i) => (
-        <EffectRow key={i} effect={e} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 3, margin: "4px 0 2px" }}>
+      <span style={{ color: COLORS.inkSubtle, fontSize: 12, fontWeight: 600 }}>➜ Unlocked</span>
+      {rows.map((cat) => (
+        <div
+          key={cat}
+          style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", paddingLeft: 10 }}
+        >
+          <span style={{ color: COLORS.inkSubtle, fontSize: 12, minWidth: 70 }}>
+            {CATEGORY_LABEL[cat]}:
+          </span>
+          {(byCategory.get(cat) ?? []).map((e, i) => (
+            <EffectChip key={i} effect={e} />
+          ))}
+        </div>
       ))}
     </div>
   );
