@@ -506,6 +506,11 @@ interface LeftRailProps {
   onNewBeat: () => void;
 }
 
+const ACT_1_IDS = (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 1).map((b) => b.id);
+const ACT_2_IDS = (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 2).map((b) => b.id);
+const ACT_3_IDS = (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 3).map((b) => b.id);
+const SIDE_BEATS_IDS = (SIDE_BEATS as StoryBeat[]).map((b) => b.id);
+
 function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }: LeftRailProps) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
@@ -525,10 +530,10 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
   const matches = (id: string) => !q || beatMatchKinds.has(id);
 
   const groups: { id: number | string; label: string; color: string; ids: string[] }[] = [
-    { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 1).map((b) => b.id) },
-    { id: 2,      label: "Act II · Iron",      color: "#c9863a", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 2).map((b) => b.id) },
-    { id: 3,      label: "Act III · Kingdom",  color: "#a8431a", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 3).map((b) => b.id) },
-    { id: "side", label: "Side events",        color: C.violet,  ids: (SIDE_BEATS as StoryBeat[]).map((b) => b.id).filter((id) => knownIds.has(id)) },
+    { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: ACT_1_IDS },
+    { id: 2,      label: "Act II · Iron",      color: "#c9863a", ids: ACT_2_IDS },
+    { id: 3,      label: "Act III · Kingdom",  color: "#a8431a", ids: ACT_3_IDS },
+    { id: "side", label: "Side events",        color: C.violet,  ids: SIDE_BEATS_IDS.filter((id) => knownIds.has(id)) },
   ];
 
   if (collapsed) {
