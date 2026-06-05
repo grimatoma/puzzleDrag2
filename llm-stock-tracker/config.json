@@ -1,0 +1,58 @@
+{
+  "port": 4321,
+  "pollIntervalCron": "0 * * * *",
+  "priceWatchCron": "*/15 * * * *",
+  "llm": {
+    "provider": "mock",
+    "model": "gpt-4o-mini"
+  },
+  "market": {
+    "provider": "mock"
+  },
+  "mock": {
+    "simulateSpikes": false
+  },
+  "watchlist": ["SPY"],
+  "tickerUniverse": [
+    "AAPL", "NVDA", "MSFT", "TSLA", "AMZN", "GOOGL", "GOOG", "META",
+    "AMD", "PLTR", "NFLX", "INTC", "CRM", "ORCL", "ADBE", "AVGO",
+    "QCOM", "COIN", "SHOP", "UBER", "DIS", "BA", "JPM", "V", "MA",
+    "SPY", "QQQ", "ARM", "SMCI", "MU"
+  ],
+  "spike": {
+    "thresholdPct": 2,
+    "windowsHours": [1, 4, 24]
+  },
+  "prompts": [
+    {
+      "key": "buy_now",
+      "label": "What to buy now",
+      "text": "What stocks should I buy right now?",
+      "active": true
+    },
+    {
+      "key": "thousand_dollars",
+      "label": "$1000 to invest",
+      "text": "If you had $1000 to invest today, what would you pick?",
+      "active": true
+    },
+    {
+      "key": "top3_week",
+      "label": "Top 3 this week",
+      "text": "Top 3 stocks to buy this week?",
+      "active": true
+    },
+    {
+      "key": "before_it_pops",
+      "label": "Before it goes up",
+      "text": "What's a good stock to buy before it goes up?",
+      "active": true
+    },
+    {
+      "key": "most_bullish",
+      "label": "Most bullish",
+      "text": "Which stocks are you most bullish on right now?",
+      "active": true
+    }
+  ]
+}
