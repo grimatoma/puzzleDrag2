@@ -8,9 +8,10 @@
 // "coin" badge and is clipped to it, so nothing spills past the rim the way
 // the old avatar frames did.
 //
-// Keys are suffixed `_v2` for the icon tracker's "Chars v2" tab (side-by-side
-// with legacy originals). `iconRegistry.ts` promotes these draws onto the
-// canonical `char_*` / `worker_*` / `boss_*` keys at registry build time.
+// Keys are suffixed `_v2` so they live alongside the originals for side-by-side
+// review in the icon tracker ("Chars v2" tab). The game uses v1 on the canonical
+// `char_*` / `worker_*` / `boss_*` keys; opt into v2 later by promoting or
+// repointing those keys.
 
 type Ctx = CanvasRenderingContext2D;
 interface Skin { hi: string; mid: string; lo: string }

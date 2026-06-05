@@ -48,22 +48,17 @@ describe("icon audit (Round 3)", () => {
     }
   });
 
-  it("promotes cozy-chibi v2 portrait draws onto canonical char_/boss_/worker_ keys", () => {
-    const mira = ICON_REGISTRY.char_mira;
-    const miraV2 = ICON_REGISTRY.char_mira_v2;
-    const legacyMira = ICON_REGISTRY.legacy_char_mira;
-    expect(mira?.draw).toBe(miraV2?.draw);
-    expect(mira?.color).toBe("#e0833a");
-    expect(legacyMira?.archive).toBe(true);
-    expect(legacyMira?.replacedBy).toBe("char_mira");
-    expect(legacyMira?.color).toBe("#d6612a");
+  it("keeps v1 portraits on canonical keys and v2 alternates registered separately", () => {
+    expect(ICON_REGISTRY.char_mira?.color).toBe("#d6612a");
+    expect(ICON_REGISTRY.char_mira_v2?.color).toBe("#e0833a");
+    expect(ICON_REGISTRY.char_mira?.draw).not.toBe(ICON_REGISTRY.char_mira_v2?.draw);
+    expect(ICON_REGISTRY.legacy_char_mira).toBeUndefined();
 
-    const frostmaw = ICON_REGISTRY.boss_frostmaw;
-    expect(frostmaw?.draw).toBe(ICON_REGISTRY.boss_frostmaw_v2?.draw);
-    expect(ICON_REGISTRY.legacy_boss_frostmaw?.archive).toBe(true);
+    expect(ICON_REGISTRY.boss_frostmaw?.color).toBe("#3a82c4");
+    expect(ICON_REGISTRY.boss_frostmaw_v2?.draw).toBeTruthy();
+    expect(ICON_REGISTRY.boss_frostmaw?.draw).not.toBe(ICON_REGISTRY.boss_frostmaw_v2?.draw);
 
-    const farmer = ICON_REGISTRY.worker_farmer;
-    expect(farmer?.draw).toBe(ICON_REGISTRY.worker_farmer_v2?.draw);
-    expect(ICON_REGISTRY.legacy_worker_farmer?.archive).toBe(true);
+    expect(ICON_REGISTRY.worker_farmer?.color).toBe("#4f8c3a");
+    expect(ICON_REGISTRY.worker_farmer_v2?.draw).toBeTruthy();
   });
 });
