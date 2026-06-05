@@ -1,0 +1,21 @@
+# Godot 4 — generated / machine-local files.
+# Keep project.godot, scenes, scripts, assets, and export_presets.cfg.
+
+# Godot's import + cache directory (regenerated on open).
+.godot/
+
+# Imported resource binaries (regenerated from sources).
+*.import.md5
+.import/
+
+# Export output.
+/dist/
+/build/
+*.tmp
+
+# Editor-local overrides.
+override.cfg
+
+# OS noise.
+.DS_Store
+Thumbs.db

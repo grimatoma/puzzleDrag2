@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot Migration — Progress Tracker · puzzleDrag2</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink: #1c2014;
+    --muted: #6b7460;
+    --line: #d8e0c8;
+    --bg: #f5f7ef;
+    --paper: #fbfdf5;
+    --code: #edf0e3;
+    --accent: #4a7c59;      /* forest green */
+    --accent2: #b45309;     /* warm amber */
+    --shadow: 0 1px 2px rgba(20,28,12,.06), 0 6px 20px -10px rgba(20,28,12,.18);
+    --ok: #2f9e44;
+    --warn: #e8590c;
+    --info: #1971c2;
+    --danger: #b5341f;
+    --idle: #868e96;
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font: 400 16px/1.64 var(--sans);
+    color: var(--ink);
+    margin: 0;
+    background:
+      radial-gradient(1100px 480px at 85% -5%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+      radial-gradient(900px 420px at -8% 6%, color-mix(in srgb, var(--accent2) 8%, transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #ecf0e2 100%);
+    background-attachment: fixed;
+    background-color: var(--bg);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code); padding: .08rem .36rem; border-radius: 4px; font: .84em var(--mono); color: #3d5a35; }
+  pre { background: #11160d; color: #e6ecd8; padding: .9rem 1.05rem; border-radius: 10px; overflow-x: auto; box-shadow: var(--shadow); font: .82rem/1.5 var(--mono); }
+  pre code { background: none; padding: 0; color: inherit; }
+  pre .c { color: #7f8c6a; }
+  pre .g { color: #8fd18a; }
+
+  .page { max-width: 1080px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+
+  header.hero {
+    border-bottom: 3px solid var(--accent);
+    padding: 1.5rem 1.6rem 1.2rem;
+    margin-bottom: 1.2rem;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      color-mix(in srgb, var(--accent2) 6%, transparent));
+    border-radius: 14px 14px 6px 6px;
+    box-shadow: var(--shadow);
+  }
+  header.hero h1 { font: 900 2.7rem/1.06 var(--serif); letter-spacing: -.02em; margin: .1rem 0 .35rem; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 1.04rem; margin: .2rem 0 .75rem; max-width: 70ch; }
+  .meta { font-size: .8rem; color: var(--muted); margin: .4rem 0 .7rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+  .chip { font-size: .78rem; font-weight: 600; padding: .2rem .65rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 13%, #fff); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 32%, #fff); }
+  .chip.amber { background: color-mix(in srgb, var(--accent2) 12%, #fff); color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 30%, #fff); }
+
+  nav.tabs { display: flex; flex-wrap: wrap; gap: .35rem; border-bottom: 2px solid var(--line); margin: .1rem 0 1.7rem; }
+  nav.tabs .tab { font: 700 1rem/1 var(--serif); letter-spacing: -.01em; padding: .62rem 1.15rem; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid transparent; border-bottom: none; border-radius: 11px 11px 0 0; margin-bottom: -2px; transition: color .14s, background .14s, border-color .14s; }
+  nav.tabs .tab:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  nav.tabs .tab.active { color: var(--ink); background: var(--paper); border-color: var(--line); border-top: 3px solid var(--accent); box-shadow: 0 -5px 16px -9px rgba(20,28,12,.28); }
+
+  html.tabs-on main > .panel { display: none; }
+  html.tabs-on main > .panel.active { display: block; }
+
+  main { min-width: 0; }
+  section { scroll-margin-top: 1rem; }
+  h2 { font: 800 1.78rem/1.15 var(--serif); letter-spacing: -.01em; margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: .25rem; color: var(--ink); }
+  section + section h2 { margin-top: 2.4rem; }
+  h3 { font: 600 1.2rem/1.25 var(--serif); margin-top: 1.5rem; color: var(--ink); }
+  p, li { margin: .45rem 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: .9rem 0; font-size: .88rem; background: var(--paper); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
+  th, td { border: 1px solid var(--line); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: color-mix(in srgb, var(--accent) 10%, #fff); color: var(--ink); font-weight: 700; }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg) 60%, #fff); }
+
+  .box { background: color-mix(in srgb, var(--accent) 7%, #fff); border-left: 4px solid var(--accent); padding: .75rem 1.05rem; margin: 1.1rem 0; border-radius: 0 8px 8px 0; box-shadow: var(--shadow); }
+  .box.warn { background: color-mix(in srgb, var(--danger) 7%, #fff); border-left-color: var(--danger); }
+  .box.tip { background: color-mix(in srgb, var(--ok) 8%, #fff); border-left-color: var(--ok); }
+  .box.amber { background: color-mix(in srgb, var(--accent2) 8%, #fff); border-left-color: var(--accent2); }
+  .box b { font-family: var(--serif); }
+
+  .pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .pill.ok { background: var(--ok); }
+  .pill.warn { background: var(--warn); }
+  .pill.info { background: var(--info); }
+  .pill.danger { background: var(--danger); }
+  .pill.idle { background: var(--idle); }
+  .legend { font-size: .78rem; color: var(--muted); margin: .4rem 0 1rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+
+  .card { background: var(--paper); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 10px; padding: .8rem 1.1rem; margin: .85rem 0; box-shadow: var(--shadow); transition: transform .14s, box-shadow .14s; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(20,28,12,.08), 0 12px 28px -12px rgba(20,28,12,.28); }
+  .card.amber { border-left-color: var(--accent2); }
+  .card h3 { margin-top: .2rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .grid .card { margin: 0; }
+
+  /* progress bar */
+  .progress-wrap { margin: 1.2rem 0 .4rem; }
+  .progress-label { display: flex; justify-content: space-between; align-items: baseline; font-size: .82rem; color: var(--muted); margin-bottom: .35rem; }
+  .progress-label b { font: 800 1.05rem var(--serif); color: var(--ink); }
+  .bar { height: 16px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, #fff); overflow: hidden; border: 1px solid var(--line); box-shadow: inset 0 1px 2px rgba(20,28,12,.08); }
+  .bar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent2))); }
+
+  /* milestone status row */
+  .ms-row { display: grid; grid-template-columns: 64px 1fr auto; gap: .8rem; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: .6rem .9rem; margin: .5rem 0; box-shadow: var(--shadow); }
+  .ms-row .num { font: 900 .95rem/1 var(--serif); color: #fff; background: var(--idle); padding: .3rem 0; border-radius: 8px; text-align: center; }
+  .ms-row .num.on { background: var(--accent); }
+  .ms-row .num.amber { background: var(--accent2); }
+  .ms-row .t { font-weight: 600; }
+  .ms-row .d { font-size: .82rem; color: var(--muted); }
+
+  /* checklist */
+  ul.check { list-style: none; padding-left: 0; margin: .6rem 0; }
+  ul.check li { position: relative; padding: .3rem 0 .3rem 2rem; border-bottom: 1px dashed var(--line); }
+  ul.check li:last-child { border-bottom: none; }
+  ul.check li::before { position: absolute; left: 0; top: .28rem; width: 1.4rem; height: 1.4rem; border-radius: 6px; text-align: center; font-size: .9rem; font-weight: 700; line-height: 1.4rem; }
+  ul.check li.done::before    { content: "✓"; background: color-mix(in srgb, var(--ok) 18%, #fff); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 40%, #fff); }
+  ul.check li.partial::before { content: "◐"; background: color-mix(in srgb, var(--warn) 16%, #fff); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 40%, #fff); }
+  ul.check li.todo::before    { content: "○"; background: var(--code); color: var(--muted); border: 1px solid var(--line); }
+  ul.check li .note { display: block; font-size: .82rem; color: var(--muted); margin-top: .1rem; }
+
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.1rem 0; }
+  .shots figure { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: .6rem; box-shadow: var(--shadow); }
+  .shots img { width: 100%; height: auto; border-radius: 8px; display: block; background: #11160d; }
+  .shots figcaption { font-size: .8rem; color: var(--muted); text-align: center; margin-top: .45rem; }
+
+  .log { border-left: 3px solid var(--line); margin: 1rem 0 1rem .3rem; padding-left: 1.1rem; }
+  .log .entry { position: relative; margin: 0 0 1.1rem; }
+  .log .entry::before { content: ""; position: absolute; left: -1.49rem; top: .35rem; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--bg); }
+  .log .date { font: 700 .82rem var(--mono); color: var(--accent2); }
+  .log h3 { margin: .1rem 0 .3rem; }
+
+  details { border: 1px solid var(--line); border-radius: 10px; padding: .2rem .9rem; margin: .85rem 0; background: var(--paper); box-shadow: var(--shadow); }
+  details > summary { cursor: pointer; font: 600 1.02rem/1.3 var(--serif); padding: .45rem 0; color: var(--ink); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  header.hero { animation: fadeUp .55s cubic-bezier(.21,.61,.35,1) both; }
+  html.tabs-on main > .panel.active { animation: fadeUp .4s cubic-bezier(.21,.61,.35,1) both; }
+  html.tabs-on main > .panel.active > section { animation: fadeUp .45s cubic-bezier(.21,.61,.35,1) both; }
+  html.tabs-on main > .panel.active > section:nth-child(2) { animation-delay: .05s; }
+  html.tabs-on main > .panel.active > section:nth-child(3) { animation-delay: .1s; }
+  html.tabs-on main > .panel.active > section:nth-child(4) { animation-delay: .15s; }
+
+  @media (max-width: 820px) {
+    header.hero h1 { font-size: 2rem; }
+    nav.tabs { gap: .2rem; }
+    nav.tabs .tab { padding: .5rem .8rem; font-size: .92rem; }
+    .ms-row { grid-template-columns: 56px 1fr; }
+    .ms-row > .pill { grid-column: 2; justify-self: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation: none !important; transition: none !important; }
+    .card:hover { transform: none; }
+  }
+  @media print {
+    nav.tabs { display: none; }
+    details { border: 0; box-shadow: none; }
+    a { color: inherit; }
+    body { background: #fff; }
+    header.hero, table, .box, .card, .ms-row, details, pre, .shots figure { box-shadow: none; }
+    html.tabs-on main > .panel { display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Godot Migration — Progress Tracker</h1>
+    <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
+      <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m1</code></p>
+    <div class="chips">
+      <span class="chip">Godot 4.6.2</span>
+      <span class="chip">GDScript</span>
+      <span class="chip amber">M1 in progress</span>
+      <span class="chip">CI wired</span>
+      <span class="chip">tests green</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="status">Status</button>
+    <button class="tab" role="tab" data-tab="m1">M1 detail</button>
+    <button class="tab" role="tab" data-tab="decisions">Decisions</button>
+    <button class="tab" role="tab" data-tab="verify">Verification</button>
+    <button class="tab" role="tab" data-tab="next">Next &amp; risks</button>
+  </nav>
+
+  <main>
+
+    <!-- ════════════════════════════════════════════════════ STATUS -->
+    <div class="panel" id="status" role="tabpanel" aria-label="Status">
+
+      <section id="at-a-glance">
+        <h2>At a glance</h2>
+        <div class="box tip"><b>Where we are.</b> The migration has <b>started</b>. The Godot 4.6 project exists at
+          <code>godot/</code>, the core puzzle mechanic (drag-chain → collapse → refill → resource credit) is ported,
+          unit-tested, and renders as a playable board with placeholder art and a working HUD. Headless tests and a Web-export
+          job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
+
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>~70%</b></div>
+          <div class="bar"><span style="width:70%"></span></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~12%</b></div>
+          <div class="bar"><span style="width:12%"></span></div>
+        </div>
+
+        <h3>Milestone board</h3>
+        <div class="legend">
+          <span><span class="pill ok">done</span> built &amp; verified</span>
+          <span><span class="pill warn">partial</span> started / partial</span>
+          <span><span class="pill idle">todo</span> not started</span>
+        </div>
+
+        <div class="ms-row">
+          <div class="num amber">PR-B</div>
+          <div><div class="t">Balance baseline alignment</div><div class="d">Phaser-side data work; optional precursor — values feed Godot <code>Constants.gd</code></div></div>
+          <span class="pill idle">todo</span>
+        </div>
+        <div class="ms-row">
+          <div class="num on">M1</div>
+          <div><div class="t">Base playable puzzle board</div><div class="d">Grid, drag/chain, collapse, refill, HUD, tests, CI, Web export</div></div>
+          <span class="pill warn">partial</span>
+        </div>
+        <div class="ms-row">
+          <div class="num">M2</div>
+          <div><div class="t">Game systems</div><div class="d">Resource/inventory, turn/season cycle, save/load, full tile set, Constants parity</div></div>
+          <span class="pill idle">todo</span>
+        </div>
+        <div class="ms-row">
+          <div class="num">M3</div>
+          <div><div class="t">Content &amp; progression</div><div class="d">Buildings, tiers, biomes, expeditions, capstone boss (the Direction spec)</div></div>
+          <span class="pill idle">todo</span>
+        </div>
+        <div class="ms-row">
+          <div class="num">M4</div>
+          <div><div class="t">UI &amp; polish</div><div class="d">Full UI, animation, audio, real pixel-art assets</div></div>
+          <span class="pill idle">todo</span>
+        </div>
+        <div class="ms-row">
+          <div class="num">M5</div>
+          <div><div class="t">Mobile app</div><div class="d">iOS + Android export, store submission</div></div>
+          <span class="pill idle">todo</span>
+        </div>
+      </section>
+
+      <section id="session-summary">
+        <h2>This session — 2026-06-05</h2>
+        <p>Kicked off M1 from a clean branch off the strategy branch. Built end-to-end, verifying each layer with the locally
+          installed Godot 4.6.2 binary before moving on.</p>
+        <div class="grid">
+          <div class="card"><h3>Project scaffold</h3><p><code>godot/</code> with <code>project.godot</code> (GL Compatibility, portrait, touch→mouse emulation), <code>.gitignore</code>, <code>icon.svg</code>, and a structurally-validated <code>Web</code> export preset.</p></div>
+          <div class="card"><h3>Core logic ported</h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code>: chain validation (8-way, same-key, no-revisit), collapse, refill, upgrade counting, dead-board detection — pure and headless-testable.</p></div>
+          <div class="card amber"><h3>Playable board</h3><p><code>Tile</code> / <code>Board</code> / <code>Main</code> scenes: a 6×6 board you can drag chains on, with collapse + fall-in animation and a live HUD (chain counter + resource tally).</p></div>
+          <div class="card"><h3>Tests + CI</h3><p>18 logic checks and a 9-check scene smoke, both green (exit 0). New <code>godot-ci.yml</code> runs them headless plus a Web export on every <code>godot/**</code> change.</p></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ M1 DETAIL -->
+    <div class="panel" id="m1" role="tabpanel" aria-label="M1 detail">
+
+      <section id="m1-checklist">
+        <h2>Milestone 1 — checklist</h2>
+        <p>Mapped one-to-one to the <a href="godot-migration-plan.html#m1">plan's M1 list</a>. <b>Done when</b> a human can drag a
+          chain, it resolves, the board collapses, and it feels right on desktop and mobile browser.</p>
+        <div class="legend">
+          <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
+        </div>
+        <ul class="check">
+          <li class="done">Godot 4 project setup + repo structure, <code>.gitignore</code>, export presets
+            <span class="note"><code>godot/project.godot</code>, <code>.gitignore</code>, <code>export_presets.cfg</code> — Web preset validated structurally (only the export-template download is missing locally).</span></li>
+          <li class="done">6×6 grid rendering — basic tile scenes (solid-color placeholders)
+            <span class="note"><code>scenes/Tile.gd</code> draws a colored rounded square per <code>Constants.Tile</code>; <code>Board</code> lays out the centered grid. See screenshots in Verification.</span></li>
+          <li class="done">Drag / chain input — touch-first, mouse secondary
+            <span class="note"><code>emulate_mouse_from_touch</code> in project settings; <code>Board._unhandled_input</code> handles press/drag/release with backtrack support.</span></li>
+          <li class="done">Chain validation: min length 3, adjacency rules, tile-type matching
+            <span class="note"><code>BoardLogic.is_valid_chain</code> — 8-way (king) adjacency, same key, no revisit. Rules confirmed against <code>src/GameScene.ts:1434–1436</code>. Unit-tested.</span></li>
+          <li class="done">Board collapse after a valid chain; tile refill from the top
+            <span class="note"><code>BoardLogic.collapse</code> / <code>refill</code> (unit-tested); <code>Board</code> animates the fall-in. Dead boards auto-reshuffle.</span></li>
+          <li class="done">Basic HUD: chain length counter, resources collected
+            <span class="note"><code>scenes/Main.gd</code> — live "Chain: N", a last-result line, and a running resource tally.</span></li>
+          <li class="partial">GdUnit4 wired up — chain logic covered by unit tests
+            <span class="note">Tests exist and pass via a small dependency-free headless runner (<code>tests/run_tests.gd</code>). The GdUnit4 addon is not yet vendored — see Decision #2. The same <code>BoardLogic</code> is what GdUnit4 will wrap.</span></li>
+          <li class="partial">GitHub Actions CI running headless tests on every push
+            <span class="note"><code>.github/workflows/godot-ci.yml</code> added (tests + Web export). Pending its first cloud run to confirm the <code>setup-godot</code> action resolves 4.6.2.</span></li>
+          <li class="partial">HTML5 export working — Playwright can open it and run a smoke test
+            <span class="note">Web preset validated; export runs in the CI job and uploads an artifact. The Playwright-on-export browser smoke is not yet added.</span></li>
+        </ul>
+
+        <h3>Built beyond the M1 list</h3>
+        <ul class="check">
+          <li class="done">Resource-credit model ported — <code>upgrade_count(chain_len, threshold)</code> + per-tile <code>THRESHOLDS</code>, unit-tested (the fractional accumulator itself lands with M2's inventory).</li>
+          <li class="done">Dead-board detection &amp; auto-reshuffle — <code>BoardLogic.has_valid_chain</code> (8-connected component ≥ 3).</li>
+          <li class="done">Screenshot tooling — <code>tools/screenshot.gd</code> / <code>tools/demo_capture.gd</code> render the scene to PNGs for evidence.</li>
+        </ul>
+      </section>
+
+      <section id="m1-files">
+        <h2>What landed (files)</h2>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/project.godot</code></td><td>Project config — GL Compatibility renderer, 720×1280 portrait, touch↔mouse emulation</td></tr>
+            <tr><td><code>godot/export_presets.cfg</code></td><td>Web export preset (<code>nothreads</code> variant — runs on GitHub Pages without COOP/COEP)</td></tr>
+            <tr><td><code>godot/scripts/Constants.gd</code></td><td><code>class_name</code> global: board dims, Farm tile enum + string keys, produced resources, thresholds, placeholder colors</td></tr>
+            <tr><td><code>godot/scripts/BoardLogic.gd</code></td><td>Pure rules: <code>is_valid_chain</code>, <code>collapse</code>, <code>refill</code>, <code>upgrade_count</code>, <code>has_valid_chain</code></td></tr>
+            <tr><td><code>godot/scenes/Tile.gd</code></td><td>One placeholder tile (procedural <code>_draw</code>, highlight ring)</td></tr>
+            <tr><td><code>godot/scenes/Board.gd</code></td><td>6×6 grid: render, drag input, collect → collapse → refill with tweens</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code> / <code>Main.tscn</code></td><td>Root scene: owns the Board + the CanvasLayer HUD</td></tr>
+            <tr><td><code>godot/tests/run_tests.gd</code></td><td>Headless BoardLogic unit tests (18 checks)</td></tr>
+            <tr><td><code>godot/tests/run_scene_smoke.gd</code></td><td>Headless Main+Board wiring smoke (9 checks)</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>CI: headless tests + Web export on <code>godot/**</code> changes</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ DECISIONS -->
+    <div class="panel" id="decisions" role="tabpanel" aria-label="Decisions">
+
+      <section id="decisions-list">
+        <h2>Decisions &amp; deviations from the plan</h2>
+        <p>Each is a deliberate call made while building M1. Where it deviates from the strategy doc, the rationale is noted so a
+          future reader (or a reviewer) can challenge it.</p>
+
+        <div class="card">
+          <h3>1 · <code>Constants</code> is a <code>class_name</code> global, not an autoload</h3>
+          <p>The plan calls for a <code>Constants</code> autoload. Autoloads aren't guaranteed to be instantiated when a script is
+            run via <code>--script</code> (headless tests), so a pure <code>class_name</code> with <code>const</code>/<code>enum</code>/<code>static func</code>
+            members is reachable at compile time from tests with no live tree. This satisfies the plan's intent (one shared constants
+            module) while keeping tests dependency-free. An autoload instance can still be added later if a singleton with mutable
+            state is needed.</p>
+        </div>
+        <div class="card amber">
+          <h3>2 · Lightweight headless test runner now; GdUnit4 later</h3>
+          <p>The plan specifies GdUnit4. Vendoring that addon needs a network fetch that could block "tests from day one," so M1 ships
+            a tiny dependency-free runner (<code>extends SceneTree</code>, asserts, <code>quit(0/1)</code>) that CI gates on. It exercises the exact
+            same <code>BoardLogic</code> class GdUnit4 will wrap, so adopting GdUnit4 is additive, not a rewrite. Tracked as a partial M1 item.</p>
+        </div>
+        <div class="card">
+          <h3>3 · Web export uses the <code>nothreads</code> variant</h3>
+          <p><code>variant/thread_support=false</code>. Threaded WebAssembly requires the host to send COOP/COEP cross-origin-isolation
+            headers; GitHub Pages does not. Single-threaded keeps the export runnable on Pages (where the dev tools already deploy).</p>
+        </div>
+        <div class="card">
+          <h3>4 · Mechanic rules verified against source, not assumed</h3>
+          <p>Adjacency is <b>8-way</b> (king moves), matching is by exact tile key, the path may not revisit a cell, and dragging back
+            onto the previous cell backtracks. All confirmed against <code>src/GameScene.ts:1434–1436</code> before porting.</p>
+        </div>
+        <div class="card">
+          <h3>5 · Visual layer is authoritative; <code>grid</code> is re-synced from it</h3>
+          <p><code>Board</code> mutates its tile <i>nodes</i> during collapse/refill, then derives the integer <code>grid</code> from them
+            (<code>_sync_grid_from_tiles</code>). This avoids keeping two sources of truth in lock-step and guarantees drag validation always
+            sees exactly what's on screen.</p>
+        </div>
+        <div class="card">
+          <h3>6 · Minimal animation for M1 (by design)</h3>
+          <p>Collected tiles pop, survivors slide down, new tiles fall in — enough to "feel right". Full collect/collapse VFX
+            (particles, golden upgrade burst, staggered timing) is explicitly <a href="godot-migration-plan.html#m4">M4</a> and is not
+            attempted here.</p>
+        </div>
+        <div class="card warn">
+          <h3>7 · Cross-collection deferred to M2/M3 — flagged so it's not lost</h3>
+          <p>The Phaser game also collects tiles of a <i>different</i> family that are 4-way adjacent to the chain
+            (<code>src/GameScene.ts:1769–1772</code>). M1 ports the single-family chain only. Cross-collection is a resource-systems detail
+            and rides along with M2's inventory work. Recorded here as an explicit debt.</p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ VERIFICATION -->
+    <div class="panel" id="verify" role="tabpanel" aria-label="Verification">
+
+      <section id="evidence">
+        <h2>Verification evidence</h2>
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> Both test scripts exit <code>0</code>; the
+          screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
+
+        <h3>Rendered board (visual proof)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m1-board.png" alt="Fresh 6x6 board of colored farm tiles"><figcaption>Fresh board — weighted Farm pool, centered, with HUD.</figcaption></figure>
+          <figure><img src="assets/godot/m1-chain.png" alt="A 6-tile grass chain highlighted with white rings"><figcaption>Dragging a 6-grass chain — live "Chain: 6", tiles ringed.</figcaption></figure>
+          <figure><img src="assets/godot/m1-resolved.png" alt="Board after the chain resolved, refilled, HUD shows +1 hay_bundle"><figcaption>After release — collapsed, refilled, "+1 hay_bundle" credited.</figcaption></figure>
+        </div>
+
+        <h3>Headless test output</h3>
+        <pre><code><span class="c">$ godot --headless --path godot --script res://tests/run_tests.gd</span>
+── BoardLogic tests ──────────────────────────────
+  <span class="g">PASS</span>  valid 3-chain of GRASS accepted
+  <span class="g">PASS</span>  2-chain rejected (below MIN_CHAIN)
+  <span class="g">PASS</span>  mixed-type chain rejected
+  <span class="g">PASS</span>  non-adjacent jump rejected
+  <span class="g">PASS</span>  revisited cell rejected
+  <span class="g">PASS</span>  diagonal (8-way) chain accepted
+  <span class="g">PASS</span>  collapse leaves no floating gaps in any column
+  <span class="g">PASS</span>  collapse stacks column-0 tiles on the floor
+  <span class="g">PASS</span>  collapse preserves vertical order
+  <span class="g">PASS</span>  refill leaves zero empty cells (board full)
+  <span class="g">PASS</span>  refill does not overwrite surviving tiles
+  <span class="g">PASS</span>  7 tiles / threshold 6 -> 1 unit
+  <span class="g">PASS</span>  12 tiles / threshold 6 -> 2 units
+  <span class="g">PASS</span>  5 tiles / threshold 6 -> 0 units
+  <span class="g">PASS</span>  9 tiles / threshold 10 -> 0 units
+  <span class="g">PASS</span>  20 tiles / threshold 10 -> 2 units
+  <span class="g">PASS</span>  full-grass board has a valid chain
+  <span class="g">PASS</span>  king-coloring board has NO valid chain (dead board)
+──────────────────────────────────────────────────
+18 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
+<span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
+── Scene smoke (Main + Board wiring) ──────────────
+  <span class="g">PASS</span>  Main.tscn loads
+  <span class="g">PASS</span>  Main created a Board
+  <span class="g">PASS</span>  try_resolve accepts a valid 3-chain
+  <span class="g">PASS</span>  chain_resolved signal fired
+  <span class="g">PASS</span>  resolved resource is hay_bundle (GRASS family)
+  <span class="g">PASS</span>  resolved chain length is 3
+  <span class="g">PASS</span>  board is full after resolve (collapse + refill)
+  <span class="g">PASS</span>  every cell has a live Tile node after resolve
+  <span class="g">PASS</span>  HUD chain label was built
+──────────────────────────────────────────────────
+9 checks, 0 failure(s)         <span class="c"># exit 0</span></code></pre>
+
+        <h3>Web-export preset check</h3>
+        <p>The export command was run locally to validate the preset's structure. It reaches the template stage and stops only
+          because the 4.6.2 export templates aren't installed on this machine — i.e. the <code>Web</code> preset itself is valid:</p>
+        <pre><code><span class="c">$ godot --headless --path godot --export-release "Web" dist/index.html</span>
+ERROR: Cannot export project with preset "Web" due to configuration errors:
+No export template found at the expected path:
+  …/export_templates/4.6.2.stable/web_nothreads_debug.zip
+  …/export_templates/4.6.2.stable/web_nothreads_release.zip</code></pre>
+        <p>CI installs the templates via <code>chickensoft-games/setup-godot</code> (<code>include-templates: true</code>), so the export completes there.</p>
+      </section>
+
+      <section id="reproduce">
+        <h2>How to reproduce</h2>
+        <pre><code><span class="c"># from the repo root</span>
+godot --headless --path godot --import                              <span class="c"># build .godot/ cache</span>
+godot --headless --path godot --script res://tests/run_tests.gd     <span class="c"># unit tests</span>
+godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke</span>
+godot --path godot                                                  <span class="c"># play it (windowed)</span>
+godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
+        <p>See <a href="../godot/README.md"><code>godot/README.md</code></a> for the full command list.</p>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ NEXT & RISKS -->
+    <div class="panel" id="next" role="tabpanel" aria-label="Next and risks">
+
+      <section id="next-steps">
+        <h2>Next steps</h2>
+        <h3>Finish M1</h3>
+        <ul class="check">
+          <li class="todo">Open the PR and confirm <b>Godot CI is green in the cloud</b> — validates the <code>setup-godot</code> action resolves 4.6.2 and the headless run behaves like local.</li>
+          <li class="todo">Add a <b>Playwright-on-export smoke</b>: serve the Web build, assert the canvas boots and a chain can be dragged.</li>
+          <li class="todo">Vendor <b>GdUnit4</b> and re-home the two runners into it (keep the lightweight runner as a fast pre-check, or retire it).</li>
+          <li class="todo">Add the <b>session-start hook</b> that fetches the Godot headless binary in the Claude cloud container (per plan §workflow).</li>
+          <li class="todo">Touch-test on a real <b>Android browser</b> early — surface safe-area / gesture issues well before M5.</li>
+        </ul>
+
+        <h3>Then M2 — game systems</h3>
+        <div class="log">
+          <div class="entry"><div class="date">M2 · later</div><h3>Resource &amp; inventory</h3><p>Promote the resource-credit model into a real inventory with the fractional <code>resourceProgress</code> accumulator; wire cross-collection (Decision&nbsp;#7).</p></div>
+          <div class="entry"><div class="date">M2 · later</div><h3>Turn / season cycle</h3><p>10 turns × 4 seasons; season pools and drops.</p></div>
+          <div class="entry"><div class="date">M2 · later</div><h3>Save / load</h3><p>Via <code>FileAccess</code>; use <code>Constants.STRING_KEYS</code> for the int↔string tile-key mapping in serialized saves.</p></div>
+          <div class="entry"><div class="date">M2 · later</div><h3>Full tile set + Constants parity</h3><p>All tile types beyond the Farm starter; mirror <code>src/constants.ts</code> at the PC2 baseline.</p></div>
+        </div>
+
+        <div class="box amber"><b>Optional precursor — PR-B.</b> The plan recommends aligning the Phaser <code>constants.ts</code> to the PC2 balance baseline first, since those numbers copy straight into <code>Constants.gd</code>. It is pure data work and can be done in the Phaser repo independently; it is <i>not</i> a blocker for continuing the Godot build with current values.</div>
+      </section>
+
+      <section id="risks">
+        <h2>Risks &amp; open questions</h2>
+        <table>
+          <thead><tr><th>Item</th><th>Risk</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>setup-godot version</td><td>The action may not expose exactly <code>4.6.2</code>.</td><td>First CI run will tell; pin to the nearest available 4.6.x if needed.</td></tr>
+            <tr><td>Headless <code>await process_frame</code> in CI</td><td>The scene smoke needs one rendered frame for <code>_ready</code>; behaviour could differ on Linux headless.</td><td>Logic tests (no frames) are the primary gate; smoke is secondary. Verified locally on Windows headless.</td></tr>
+            <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
+            <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
+            <tr><td>Visual parity vs Phaser</td><td>Placeholder colors ≠ the procedural Phaser textures.</td><td>Intentional for M1; the asset pipeline (plan §assets) replaces them in Stage 2/3.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if (!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+
+    function resolve(id) {
+      for (var i = 0; i < panels.length; i++) {
+        if (panels[i].id === id) return { panel: panels[i], section: null };
+        var esc = window.CSS && CSS.escape ? CSS.escape(id) : id;
+        var sec = id && panels[i].querySelector('#' + esc);
+        if (sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+
+    function activate(panelEl, sectionEl) {
+      panels.forEach(function (p) { p.classList.remove('active'); });
+      tabs.forEach(function (t) { t.classList.remove('active'); });
+      panelEl.classList.add('active');
+      var btn = document.querySelector('nav.tabs .tab[data-tab="' + panelEl.id + '"]');
+      if (btn) btn.classList.add('active');
+      if (sectionEl) { setTimeout(function () { sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
+    }
+
+    function fromHash() {
+      var hash = location.hash.slice(1);
+      if (!hash) { activate(panels[0], null); return; }
+      var r = resolve(hash);
+      if (r) { activate(r.panel, r.section); } else { activate(panels[0], null); }
+    }
+
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var r = resolve(btn.dataset.tab);
+        if (r) { history.pushState(null, '', '#' + btn.dataset.tab); activate(r.panel, null); }
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var id = a.getAttribute('href').slice(1);
+      var r = resolve(id);
+      if (r) { e.preventDefault(); history.pushState(null, '', '#' + id); activate(r.panel, r.section); }
+    });
+
+    window.addEventListener('popstate', fromHash);
+    fromHash();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+# Godot CI — runs the Godot port's headless tests and validates the Web export.
+# Separate from ci.yml (the Phaser suite) so the existing branch-protected
+# checks are untouched while the migration runs side-by-side (see
+# docs/godot-migration-plan.html). Triggers only when godot/** changes.
+#
+# Godot is pinned to 4.6.2 to match the version the port is developed against.
+
+name: Godot CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'godot/**'
+      - '.github/workflows/godot-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'godot/**'
+      - '.github/workflows/godot-ci.yml'
+
+env:
+  GODOT_VERSION: '4.6.2'
+
+jobs:
+  godot-tests:
+    name: Headless unit + scene tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot ${{ env.GODOT_VERSION }}
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: false
+
+      # First run builds .godot/ (import cache + global class registry).
+      - name: Import project
+        run: godot --headless --path godot --import
+
+      - name: Board logic tests
+        run: godot --headless --path godot --script res://tests/run_tests.gd
+
+      - name: Scene wiring smoke test
+        run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
+
+  godot-web-export:
+    name: Web (HTML5) export
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot ${{ env.GODOT_VERSION }} + export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+
+      - name: Import project
+        run: godot --headless --path godot --import
+
+      - name: Export Web build
+        run: |
+          mkdir -p godot/dist
+          godot --headless --path godot --export-release "Web" dist/index.html
+
+      - name: Sanity-check export output
+        run: |
+          test -f godot/dist/index.html
+          test -f godot/dist/index.wasm
+          echo "Web export contents:"
+          ls -la godot/dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot-web
+          path: godot/dist/
