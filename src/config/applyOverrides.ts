@@ -804,10 +804,16 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
 
   // 2 — patch existing / just-created beats.
   if (o.beats && typeof o.beats === "object") {
-    const all = [...story, ...side];
+    const allById = new Map<string, AnyRecord>();
+    for (const b of story) {
+      if (b && typeof b.id === "string") allById.set(b.id, b);
+    }
+    for (const b of side) {
+      if (b && typeof b.id === "string") allById.set(b.id, b);
+    }
     for (const [beatId, patchRaw] of Object.entries(o.beats as AnyRecord)) {
       const patch = asRecord(patchRaw);
-      const beat = all.find((b) => b && b.id === beatId);
+      const beat = allById.get(beatId);
       if (!beat) {
         rejectUnknownOverrideTarget("story.beats", beatId);
         continue;
