@@ -4,7 +4,7 @@
  * is a one-way sink (no reset) per REFERENCE_CATALOG.md §11.
  *
  * NOTE: the Castle is slated to be reworked into a quest chain that unlocks
- * the final settlement (see the narrative Progression page at /b/#/page/progression). For now it
+ * the final settlement (see the narrative Direction page at /b/#/page/direction). For now it
  * keeps three wired needs; the `cocoa`/`ink` placeholder needs were removed.
  */
 export const CASTLE_NEEDS = {

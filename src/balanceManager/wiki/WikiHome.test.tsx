@@ -266,15 +266,15 @@ describe("WikiHome — narrative page links", () => {
     }
   });
 
-  it("clicking the Progression narrative link calls navigate({ tab: 'page', focus: 'progression' })", () => {
+  it("clicking the Direction narrative link calls navigate({ tab: 'page', focus: 'direction' })", () => {
     const navigate = vi.fn();
     const { container } = renderHome({ navigate });
     // Query by aria-label — buttons have no role="listitem", they keep their implicit button role.
-    const progLink = container.querySelector('[aria-label="Read Progression"]');
-    expect(progLink, "Expected 'Read Progression' link to be present").not.toBeNull();
-    fireEvent.click(progLink!);
+    const dirLink = container.querySelector('[aria-label="Read Direction"]');
+    expect(dirLink, "Expected 'Read Direction' link to be present").not.toBeNull();
+    fireEvent.click(dirLink!);
     expect(navigate).toHaveBeenCalledWith(
-      expect.objectContaining({ tab: "page", focus: "progression" }),
+      expect.objectContaining({ tab: "page", focus: "direction" }),
     );
   });
 });

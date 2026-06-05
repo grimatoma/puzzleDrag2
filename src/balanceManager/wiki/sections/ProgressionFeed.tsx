@@ -235,7 +235,7 @@ export function ProgressionFeedContent() {
 
 /**
  * Full page wrapper with heading and description, lazy-loaded by WikiShell.tsx
- * at the `#/page/progression` route.
+ * at the `#/page/timeline` route.
  */
 export default function ProgressionFeed() {
   return (

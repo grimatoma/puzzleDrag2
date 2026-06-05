@@ -146,7 +146,7 @@
         <h2>What is already done</h2>
         <div class="grid">
           <div class="card"><h3>Overview is the intro <span class="pill ok">done</span></h3><p>Opening <code>/b/</code> with no hash already lands on the <strong>Overview</strong> narrative page (<code>WikiShell.tsx:94</code> → <code>focus:"overview"</code>). This plan only <em>hardens</em> it with a regression test.</p></div>
-          <div class="card"><h3>Narrative pages migrated <span class="pill ok">done</span></h3><p><strong>Overview · Progression · Design decisions · Story</strong> live in <code>content/pages/*.html</code>, wired into the sidebar “Pages” group. This is the game's story/plans/scope home.</p></div>
+          <div class="card"><h3>Narrative pages migrated <span class="pill ok">done</span></h3><p>The locked-direction group <strong>Overview · Direction · Timeline · Balance · Story</strong> and a separate <strong>Parked / Future</strong> group (Zones · Future) live in <code>content/pages/*.html</code>. <strong>Direction</strong> is the single canonical plan; the old Progression/Zone-flow/Decisions pages were folded into it and deleted. This is the game's story/plans/scope home.</p></div>
           <div class="card t2"><h3>Concepts generated from config <span class="pill ok">done</span></h3><p>24 concepts (Tiles, Resources, Recipes, Bosses, Zones, …) render live from <code>ITEMS</code>/<code>RECIPES</code>/<code>BOSSES</code> + Zod schemas. The catalog cannot drift from code.</p></div>
         </div>
       </section>
@@ -221,7 +221,7 @@
           <thead><tr><th>Doc</th><th>What it is</th><th>Game or code?</th><th>Disposition</th></tr></thead>
           <tbody>
             <tr>
-              <td><code>content/pages/*.html</code><br>(overview, progression, decisions, story)</td>
+              <td><code>content/pages/*.html</code><br>(overview, direction, timeline, balance, story; parked: zones, future)</td>
               <td>Authored narrative pages in the wiki</td>
               <td>Game</td>
               <td><span class="pill ok">done</span> Already the wiki's story/plans/scope home. No action beyond the Overview intro test.</td>

@@ -21,7 +21,7 @@ import { BalanceNavProvider } from "../balanceNav.jsx";
 import type { CommandEntry } from "../commandPalette.js";
 import type { BalanceDraft, TabProps } from "../tabProps.js";
 import { CONCEPTS } from "./concepts.js";
-import { WIKI_SECTIONS, NARRATIVE_PAGES, UTILITIES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
+import { WIKI_SECTIONS, NARRATIVE_PAGES, PARKED_PAGES, UTILITIES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
 import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { WikiViewProvider, useWikiView } from "./wikiView.js";
@@ -394,7 +394,7 @@ export default function WikiShell() {
     // category browser + start-here + prose). Other slugs render NarrativePage.
     if (pageSlug === "overview") {
       mainContent = <WikiHomeLazy navigate={navigate} />;
-    } else if (pageSlug === "progression") {
+    } else if (pageSlug === "timeline") {
       mainContent = <ProgressionFeedLazy />;
     } else {
       mainContent = <NarrativePageLazy slug={pageSlug!} />;
@@ -571,6 +571,32 @@ export default function WikiShell() {
                     aria-label={p.label}
                   >
                     <Icon iconKey="ui_star" size={16} title="" />
+                    {!effectiveCollapsed && <span className="flex-1">{p.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Parked / Future — fenced design content, NOT the current direction */}
+            <div className="flex flex-col gap-1">
+              {!effectiveCollapsed ? (
+                <div className="wiki-sidebar-label px-2 pt-2 pb-1">
+                  Parked / Future
+                </div>
+              ) : (
+                <div className="mx-2 my-1 h-px" style={{ background: COLORS.border, opacity: 0.4 }} />
+              )}
+              {PARKED_PAGES.map((p) => {
+                const active = tab === "page" && pageSlug === p.slug;
+                return (
+                  <button
+                    key={p.slug}
+                    onClick={() => navigate({ tab: "page", focus: p.slug })}
+                    className={`wiki-nav-link${active ? " wiki-nav-link--active" : ""}`}
+                    title={effectiveCollapsed ? p.label : undefined}
+                    aria-label={p.label}
+                  >
+                    <Icon iconKey="ui_lock" size={16} title="" />
                     {!effectiveCollapsed && <span className="flex-1">{p.label}</span>}
                   </button>
                 );

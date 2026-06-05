@@ -1,0 +1,177 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">This is the <strong>single, canonical account of where Hearthwood Vale is going</strong> — the locked direction every contributor and agent should build toward. It folds together what used to be spread across the old Progression, Zone&nbsp;flow, and Design&nbsp;decisions pages into one cohesive plan, and it draws a hard line between what is <strong>locked now</strong> and what is <strong>parked for later</strong>. Where this page and the code disagree, <strong>code is truth</strong> — update this page in the same change.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">LOCKED DIRECTION</span>
+  &nbsp;The plan below is committed. Anything not on it lives under <strong>Parked / Future</strong> in the sidebar and must not be presented or built as the current direction.
+</p>
+
+<h2>The shape of the game right now</h2>
+<p>We are building one <strong>complete, legible vertical slice</strong> first — not the whole kingdom. The slice runs across <strong>three towns</strong> and showcases most of the game's systems end to end. Everything past Town&nbsp;3 (more towns, the harbor, the idle hinterland, the finale, keepers, festivals) is parked until this slice plays well.</p>
+
+<pre style="background:#2a2317;color:#f3ead4;padding:0.95rem 1.1rem;border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.5;">
+ TOWN 1 — farm basics      ──expedition──▶   TOWN 2 — the mine          ──▶  TOWN 3 — farm + rats
+ [[zones:home|Hearthwood Vale]]                              the "combination"               a richer, specialized farm
+ drag-chain · orders ·                       food → mine turns ·             that introduces the RATS
+ build the town · tiers ·                     [[buildings:kitchen]] → [[resources:supplies]] ·        hazard + Ratcatcher /
+ the farm economy                            stone/iron · the [[buildings:forge]]          Master-Ratcatcher buildings
+                                             ★ CAPSTONE BOSS at the end
+</pre>
+
+<h2>The core loop</h2>
+<p>A <strong>turn</strong> is one chain: drag through three or more adjacent matching tiles (8-direction, no tile reused). At fixed thresholds along the chain an upgraded tile spawns and a resource is credited (<code>floor(chainLength / threshold)</code> per the tile's <code>UPGRADE_THRESHOLDS</code> entry). The board collapses downward and refills. Raw goods refine at buildings — grain → [[resources:flour]] at the [[buildings:mill]], flour → [[resources:bread]] at the [[buildings:bakery]] — and the refined economy is spent to <strong>grow the town</strong>. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></p>
+
+<h2>The introductory arc (the locked slice)</h2>
+
+<h3>Town 1 — Hearthwood Vale · farm basics</h3>
+<p>The tutorial settlement. Teaches the drag-chain, upgrade thresholds, filling <strong>orders</strong>, the Market, growing the town through the tier ladder, shaping the board with buildings, and the farm refining economy (grain → [[resources:flour]] → [[resources:bread]]). Town&nbsp;1's specialization is the grain/bread farm.</p>
+
+<h3>The expedition to find Town 2</h3>
+<p>Town&nbsp;2 is not simply unlocked by a level — you <strong>run an expedition to discover it</strong>. Raising the wagon at the top of Town&nbsp;1's tier ladder funds and launches that expedition, bridging the farm cluster to the first mine. This is the forcing function that turns "what do I do next?" into one obvious answer.</p>
+
+<h3>Town 2 — the mine &amp; "the combination"</h3>
+<p>Town&nbsp;2 teaches mining and, crucially, <strong>the combination</strong> of the two economies: mine rounds are <em>expeditions</em> whose turns are bought with packed food. The [[buildings:kitchen]] converts farm grain into [[resources:supplies]]; you bring supplies before a run and play until they run out (soft fail — you keep everything gathered). Stone chains yield [[resources:block]], iron chains yield [[resources:iron_bar]]; the [[buildings:workshop]] and [[buildings:forge]] turn metal into better tools. Mine hazards (cave-ins, gas, moles) add urgency the farm never had.</p>
+
+<h3>★ The capstone boss (end of Town 2)</h3>
+<p>Completing Town&nbsp;2 culminates in a <strong>boss battle</strong> (reusing an existing boss such as [[bosses:frostmaw]]). It is the dramatic close of the introductory loop and the gate that proves you have mastered farm + mine before the slice opens up. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> bosses exist; the end-of-Town-2 placement + encounter wiring is the build target.</p>
+
+<h3>Town 3 — a richer farm &amp; the rats hazard</h3>
+<p>The slice closes back on the farm with a <strong>second, richer farm hold</strong> that introduces farm-side <strong>hazard management</strong> — mirroring the mine's hazards. Its signature lesson is the <strong>rats</strong> hazard, handled with <em>Ratcatcher</em> (free moves for rats) and <em>Master&nbsp;Ratcatcher</em> (collect rats together with grass) buildings. It also opens a deeper crop economy and its own distinct specialization. Town&nbsp;3 = farm + rats is fixed; the exact specialization roster stays draft (see <strong>Zones (parked)</strong>).</p>
+
+<h2>How a zone grows: the Camp → City tier ladder</h2>
+<p>Every town climbs the <strong>same rank ladder</strong>; climbing it <em>is</em> the restoration. A tier-up is one town-center upgrade costing escalating local resources that (a) unlocks the next batch of buildings, (b) raises caps, and (c) <strong>adds building plots</strong>. The top tier raises the expedition/wagon to the next town. This <strong>replaces the old scattered player-level gates</strong> <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">legacy</span>.</p>
+<table>
+  <thead><tr><th>Tier</th><th>Name</th><th>Unlocks (Town 1)</th><th>Caps / plots</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Camp</td><td>Farm board (staple tiles), Orders, the Market</td><td>cap 200 · 3 plots</td></tr>
+    <tr><td>2</td><td>Hamlet</td><td>Lumber Camp → trees ([[resources:plank]]); [[buildings:granary]]; first Worker</td><td>cap 300 · 5 plots</td></tr>
+    <tr><td>3</td><td>Village</td><td>Coop → birds ([[resources:eggs]]); Garden → veg ([[resources:soup]]); [[buildings:mill]], [[buildings:bakery]]</td><td>cap 400 · 7 plots</td></tr>
+    <tr><td>4</td><td>Town</td><td>[[buildings:workshop]] + farm tools, more workers, [[buildings:caravan_post]]</td><td>cap 500 · 9 plots</td></tr>
+    <tr><td>5</td><td>City</td><td>Top farm buildings; the expedition → Town 2</td><td>cap 600 · 11 plots</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6f5c;">Costs are PC2-aligned first-pass values — see the <strong>Balance baseline</strong> page. Tunable against the Dev Panel.</p>
+
+<h2>How you shape your board: the building loadout</h2>
+<p>Beyond a town's two <strong>staple tiles</strong>, the buildings you place decide what the board <em>is</em>. Two mechanics combine into the central choice of the game:</p>
+<ul>
+  <li><strong>Building-gated category spawners.</strong> Building a category's producer puts that whole <strong>tile category</strong> into the spawn pool — a <em>Coop</em> makes the <strong>birds</strong> category appear (not one specific bird), a <em>Vegetable Patch</em> makes <strong>vegetables</strong> appear. The per-session <strong>picker</strong> (Start Farming) then lets you choose which of your <em>unlocked</em> categories to run. The town you build reshapes the board you play.</li>
+  <li><strong>A flexible, demolishable loadout.</strong> Some buildings are required for progression, but <strong>plots are scarce</strong>, so you choose the rest — and you can <strong>demolish</strong> a building to free its plot and remove its power/category. Because buildings carry powers (spawning a category, boosting yield, combining tiles, granting free moves), the loadout is how <em>you</em> tune your own board. <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span> open sub-questions: demolish refund, and whether progression-required buildings are non-demolishable.</li>
+</ul>
+
+<h2>The four locked PC2 meta-systems</h2>
+<p>Adopted from Puzzle Craft 2's already-balanced design. Each maps onto an <strong>existing ability channel</strong>, so adopting them is mostly data + value-tuning (see <strong>Balance baseline</strong>).</p>
+<table>
+  <thead><tr><th>System</th><th>What it does</th><th>Maps to (ability)</th></tr></thead>
+  <tbody>
+    <tr><td>Taxes / passive income</td><td>Civic buildings/villagers trickle coin between/within sessions</td><td><code>season_bonus</code> / <code>coin_bonus_flat</code></td></tr>
+    <tr><td>Tile-combine</td><td>Collect two tile types in one chain (e.g. grass + trees, rats + grass)</td><td><code>chain_redirect_category</code></td></tr>
+    <tr><td>Free-moves buildings</td><td>Barn-type buildings grant N free moves/year for a category</td><td><code>free_moves</code></td></tr>
+    <tr><td>Reward wheel / daily login</td><td>Daily + level-up reward rolls</td><td><code>DAILY_REWARDS</code> (existing path)</td></tr>
+  </tbody>
+</table>
+
+<h2>Per-zone unlock timelines</h2>
+<p>For each town: what unlocks, what triggers it, and what ordering is <strong>fixed</strong> vs <strong>player-chosen</strong>. The live, config-driven version of this is the <strong>Timeline</strong> page (generated from <code>PROGRESSION_TRIGGERS</code>); the tables below are the authored intent.</p>
+
+<h3>Town 1 (farm)</h3>
+<table>
+  <thead><tr><th>Unlock</th><th>Trigger</th><th>Ordering</th></tr></thead>
+  <tbody>
+    <tr><td>Staple tiles, Orders, Market</td><td>arrive</td><td>fixed (first)</td></tr>
+    <tr><td>Tier-ups Camp → City</td><td>town-center upgrade (resource cost)</td><td><strong>fixed spine</strong></td></tr>
+    <tr><td>Category spawners (Lumber Camp, Coop, Garden, …)</td><td>build the producer building (within its tier)</td><td>flexible</td></tr>
+    <tr><td>[[buildings:mill]] / [[buildings:bakery]] (bread)</td><td>Village tier + build</td><td>fixed gate (bread needed later)</td></tr>
+    <tr><td>Expedition → Town 2</td><td>reach City tier + raise the wagon</td><td>fixed (last)</td></tr>
+  </tbody>
+</table>
+
+<h3>Town 2 (mine)</h3>
+<table>
+  <thead><tr><th>Unlock</th><th>Trigger</th><th>Ordering</th></tr></thead>
+  <tbody>
+    <tr><td>[[buildings:kitchen]] → [[resources:supplies]] (the food gate)</td><td>build the Kitchen</td><td><strong>fixed</strong> — required before mining</td></tr>
+    <tr><td>Mine spawners (more stone/iron)</td><td>build the producer building</td><td>flexible</td></tr>
+    <tr><td>[[buildings:workshop]] / [[buildings:forge]] + metal tools</td><td>tier-up + build</td><td>fixed gate</td></tr>
+    <tr><td>★ Capstone boss</td><td>complete Town 2</td><td>fixed (last)</td></tr>
+  </tbody>
+</table>
+
+<h3>Town 3 (farm + rats)</h3>
+<table>
+  <thead><tr><th>Unlock</th><th>Trigger</th><th>Ordering</th></tr></thead>
+  <tbody>
+    <tr><td>Rats hazard appears on the board</td><td>found Town 3</td><td><strong>fixed</strong> — the zone's lesson</td></tr>
+    <tr><td>Ratcatcher (free moves) / Master Ratcatcher (combine)</td><td>build the producer building</td><td>flexible</td></tr>
+    <tr><td>Richer-farm spawners + specialization</td><td>tier-ups + build</td><td>flexible (specifics draft)</td></tr>
+  </tbody>
+</table>
+
+<h2>Game-level timeline (the global spine)</h2>
+<p>The only thing that is globally sequential is the town spine; within each town, building order is mostly the player's choice.</p>
+<pre style="background:#2a2317;color:#f3ead4;padding:0.95rem 1.1rem;border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.5;">
+ [Town1: Camp→City]──▶[expedition]──▶[Town2: Camp→City]──▶[★ boss]──▶[Town3: Camp→City + rats]
+        fixed spine          fixed          fixed spine        fixed         fixed spine
+        (build order            (build order          (build order
+         flexible within)        flexible within)      flexible within)
+</pre>
+
+<h2>Settled calls</h2>
+<p>The design decisions that are no longer up for debate (folded from the old Design&nbsp;decisions page):</p>
+<ul>
+  <li><strong>Remember, not conquer.</strong> Progress is rediscovery, not conquest.</li>
+  <li><strong>Soft fail everywhere.</strong> No permanent setbacks; the only cost is time and one-shot consumables.</li>
+  <li><strong>No pay-to-win.</strong> Premium currency only skips real-time timers; it never buys puzzle advantage.</li>
+  <li><strong>Exactly three biomes</strong> (Farm, Mine, Harbor) — though only Farm + Mine appear in this slice; Harbor is parked.</li>
+  <li><strong>Instant crafting.</strong> No real-time craft queue or gem-skip.</li>
+  <li><strong>Resources stay per-settlement</strong>; coins, tools, workers, level/XP, and knowledge carry globally. A fresh town bootstraps from global coins via its Market.</li>
+  <li><strong>Advancement = the wagon/expedition</strong>, built at the top tier — one clear forcing function, not scattered level gates.</li>
+</ul>
+
+<h2>Now vs Later</h2>
+<p>The fence. Everything in <strong>LATER</strong> is parked — documented under <strong>Parked / Future</strong>, not to be built or presented as the current direction.</p>
+<table>
+  <thead><tr><th>NOW (locked)</th><th>LATER (parked)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>
+        Town 1 → Town 2 (+boss) → Town 3 slice ·
+        Camp → City tier ladder + plots ·
+        building-gated category spawners ·
+        demolishable building loadout ·
+        the rats hazard + Ratcatcher buildings ·
+        per-zone specialization <em>as a concept</em> ·
+        the four PC2 meta-systems (taxes, tile-combine, free-moves, daily/reward) ·
+        PC2-aligned balance for Town 1 + Town 2
+      </td>
+      <td>
+        Town 4+ &amp; the full zone roster ·
+        the Harbor / fish biome ·
+        the active-frontier / idle-hinterland + caravan model ·
+        the Old Capital finale &amp; Hollow Pact ·
+        the keeper Coexist / Drive-Out fork ·
+        festivals / the Fairground ·
+        progressive boards · civic unlocks / support-lists ·
+        the <em>specific</em> per-zone specialization roster ·
+        PC2 meta-systems we lack (Influence, royal quests, decorations, treasure maps)
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>System status spine</h2>
+<table>
+  <thead><tr><th>System</th><th>Status</th><th>Now / Later</th></tr></thead>
+  <tbody>
+    <tr><td>Core chain loop + refining</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>NOW</td></tr>
+    <tr><td>Camp → City tier ladder + plots</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td><td>NOW</td></tr>
+    <tr><td>Building-gated category spawners</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> ability ships; no building uses it yet</td><td>NOW</td></tr>
+    <tr><td>Demolish / flexible loadout</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td><td>NOW</td></tr>
+    <tr><td>Mine expedition + food gate</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>NOW</td></tr>
+    <tr><td>Capstone boss (end of Town 2)</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> bosses exist; placement is the build target</td><td>NOW</td></tr>
+    <tr><td>Rats hazard + Ratcatcher buildings</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> rats hazard flag exists</td><td>NOW</td></tr>
+    <tr><td>Four PC2 meta-systems</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> ability channels exist</td><td>NOW</td></tr>
+    <tr><td>Hinterland / caravan, finale, keepers, festivals</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PARKED</span></td><td>LATER</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top:1.5em;">See the <strong>Timeline</strong> page for the live, config-driven unlock feed; <strong>Balance baseline</strong> for the PC2-derived numbers we are matching; <strong>Story</strong> for the fiction; and <strong>Parked / Future</strong> for everything deferred. Dated to the consolidation lock; trust code over this page where they drift.</p>
