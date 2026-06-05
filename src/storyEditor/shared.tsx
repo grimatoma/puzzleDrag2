@@ -226,12 +226,35 @@ export function storySlicesEqual(a: StoryDraft | null | undefined, b: StoryDraft
 
 interface FlagOption { id?: string }
 
+let cachedStoryFlagIds: Set<string> | null = null;
+
 export function knownStoryFlagIds(draft: StoryDraft | null | undefined): Set<string> {
-  const flagsList = STORY_FLAGS as FlagOption[];
-  const ids = new Set<string>(flagsList.map((f) => f?.id).filter((id): id is string => typeof id === "string" && id.length > 0));
-  const add = (id: unknown) => { if (typeof id === "string" && id.trim()) ids.add(id.trim()); };
-  for (const f of draft?.flags?.new || []) add(f?.id);
-  for (const id of Object.keys(draft?.flags?.byId || {})) add(id);
+  if (!cachedStoryFlagIds) {
+    cachedStoryFlagIds = new Set<string>();
+    const flagsList = STORY_FLAGS as FlagOption[];
+    for (let i = 0; i < flagsList.length; i++) {
+      const id = flagsList[i]?.id;
+      if (typeof id === "string" && id.length > 0) {
+        cachedStoryFlagIds.add(id);
+      }
+    }
+  }
+
+  const ids = new Set<string>(cachedStoryFlagIds);
+  const add = (id: unknown) => {
+    if (typeof id === "string") {
+      const trimmed = id.trim();
+      if (trimmed) ids.add(trimmed);
+    }
+  };
+
+  if (draft?.flags?.new) {
+    for (const f of draft.flags.new) add(f?.id);
+  }
+  if (draft?.flags?.byId) {
+    for (const id in draft.flags.byId) add(id);
+  }
+
   return ids;
 }
 
