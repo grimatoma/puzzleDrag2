@@ -76,7 +76,7 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
     }
 
     case "categories": {
-      add("Key", _key);
+      add("Key", key);
       const sub = e["subCategory"];
       if (sub != null) add("Group", sub);
       break;

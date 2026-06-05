@@ -146,23 +146,34 @@ describe("Phase 4c entity body files", () => {
   }
 });
 
-// ── Zone flow page ────────────────────────────────────────────────────────────
+// ── Authored narrative pages (locked direction + parked) ──────────────────────
+// `timeline` is generated (ProgressionFeed), not an authored fragment, so it is
+// intentionally excluded here. `overview` and `zones` have their own blocks.
 
-describe("Zone flow page", () => {
-  it('pageFor("zone-flow") is non-null and non-empty', () => {
-    const html = pageFor("zone-flow");
-    expect(html).not.toBeNull();
-    expect(html!.length).toBeGreaterThan(0);
-  });
+describe("Authored narrative pages", () => {
+  const authoredSlugs = ["direction", "balance", "future", "story"];
+  for (const slug of authoredSlugs) {
+    it(`pageFor("${slug}") is non-null and non-empty`, () => {
+      const html = pageFor(slug);
+      expect(html, `Missing page ${slug}`).not.toBeNull();
+      expect(html!.length).toBeGreaterThan(0);
+    });
 
-  it('pageFor("zone-flow") has no broken [[wikilinks]]', () => {
-    const html = pageFor("zone-flow");
-    if (!html) return;
-    const links = extractWikiLinks(html);
-    for (const raw of links) {
-      const resolved = resolveWikiLink(raw);
-      expect(resolved, `Broken wikilink [[${raw}]] in pages/zone-flow`).not.toBeNull();
-    }
+    it(`pageFor("${slug}") has no broken [[wikilinks]]`, () => {
+      const html = pageFor(slug);
+      if (!html) return;
+      const links = extractWikiLinks(html);
+      for (const raw of links) {
+        const resolved = resolveWikiLink(raw);
+        expect(resolved, `Broken wikilink [[${raw}]] in pages/${slug}`).not.toBeNull();
+      }
+    });
+  }
+
+  it("the retired pages are gone", () => {
+    expect(pageFor("zone-flow")).toBeNull();
+    expect(pageFor("decisions")).toBeNull();
+    expect(pageFor("progression")).toBeNull();
   });
 });
 

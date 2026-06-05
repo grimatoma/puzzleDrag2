@@ -5,7 +5,7 @@
  * one of five status labels that communicate how far along in the implementation
  * the feature is. The status map is seeded from three concrete sources (in priority
  * order): compile-time feature flags, dormant Dev Panel tabs, and the system-by-system
- * assessment visible in the in-app wiki at /b/#/page/progression. Where those sources conflict, code
+ * assessment visible in the in-app wiki at /b/#/page/direction. Where those sources conflict, code
  * signals win over the doc assessment.
  */
 
