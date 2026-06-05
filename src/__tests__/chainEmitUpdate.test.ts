@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { producedResource, buildChainUpdatePayload } from "../game/producedResource.js";
 import { ITEMS } from "../constants.js";
+import { TILE_TYPES_MAP } from "../features/tileCollection/data.js";
 
 describe("producedResource (chain HUD source)", () => {
   it("returns family default for a vegetable tile", () => {
@@ -23,6 +24,23 @@ describe("producedResource (chain HUD source)", () => {
     expect(producedResource({})).toBeNull();
     expect(producedResource(null)).toBeNull();
     expect(producedResource(undefined)).toBeNull();
+  });
+
+  it("returns the per-tile override if specified in effects.producesResource", () => {
+    const carrotKey = "tile_veg_carrot";
+    // Setup: Temporarily add a custom override to a standard tile
+    const originalEffects = TILE_TYPES_MAP[carrotKey].effects;
+    TILE_TYPES_MAP[carrotKey].effects = {
+      ...originalEffects,
+      producesResource: "override_soup_variant"
+    };
+
+    try {
+      expect(producedResource({ key: carrotKey })).toBe("override_soup_variant");
+    } finally {
+      // Teardown: Restore the original effects object
+      TILE_TYPES_MAP[carrotKey].effects = originalEffects;
+    }
   });
 });
 
