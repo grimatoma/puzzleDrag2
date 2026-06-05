@@ -21,7 +21,6 @@
 
 // Pure module — no React/DOM imports.
 
-import { TILE_TYPES_MAP } from "../../features/tileCollection/data.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
 
 /** Mine-hazard ids; every other hazard concept entry is a farm hazard. */
@@ -62,15 +61,24 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
 
   switch (conceptId) {
     case "tiles": {
-      // Fields: kind, biome, value (tile weight), next (resource produced)
+      // Fields: kind, biome, category/type, value (tile weight), next (resource produced)
       add("Kind", e["kind"]);
       add("Biome", e["biome"]);
-      const tt = (TILE_TYPES_MAP as Record<string, { category?: string }>)[key];
-      if (tt?.category) add("Category", tt.category);
+      add("Category", e["category"]);
+      if (e["tier"] != null) {
+        add("Tier", e["tier"]);
+      }
       if (e["next"] != null) {
         add("Produces", e["next"]);
       }
       add("Value", e["value"]);
+      break;
+    }
+
+    case "categories": {
+      add("Key", _key);
+      const sub = e["subCategory"];
+      if (sub != null) add("Group", sub);
       break;
     }
 

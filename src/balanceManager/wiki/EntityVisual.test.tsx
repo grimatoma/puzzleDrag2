@@ -37,6 +37,10 @@ describe("entityIconKey", () => {
     expect(entityIconKey("boardKinds", "farm", null)).toBe("biome_farm");
   });
 
+  it("uses cat_ icon keys for tile/zone categories when registered", () => {
+    expect(entityIconKey("categories", "grass", null)).toBe("cat_grass");
+  });
+
   it("uses entity.look.iconKey for workers / abilities / seasons (and null when absent)", () => {
     expect(entityIconKey("workers", "w1", { look: { iconKey: "char_farmer" } })).toBe("char_farmer");
     expect(entityIconKey("abilities", "a1", { look: { iconKey: "ui_star" } })).toBe("ui_star");
@@ -60,7 +64,6 @@ describe("entityIconKey", () => {
 
   it("returns null for concepts without per-entity icons", () => {
     expect(entityIconKey("buildings", "hearth", null)).toBeNull();
-    expect(entityIconKey("categories", "grain", null)).toBeNull();
     expect(entityIconKey("views", "town", null)).toBeNull();
     expect(entityIconKey("toolPowers", "clear_all", null)).toBeNull();
   });

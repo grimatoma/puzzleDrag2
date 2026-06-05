@@ -124,6 +124,19 @@ function aliasIconKeys(reg: IconRegistryDictionary) {
     rare:              reg.player_rare,
     shuffle:           reg.player_shuffle,
     bomb:              reg.dynamite,
+    // Tile/zone category badges used by the Wiki and tile collection UI. The
+    // farm categories have bespoke cat_* drawings in tileCategories.ts; these
+    // aliases give the mine, treasure, water, and plural zone-category keys the
+    // same cat_* contract by reusing their representative tile drawings.
+    cat_birds:          reg.cat_bird,
+    cat_mine_stone:     reg.tile_mine_stone,
+    cat_mine_iron_ore:  reg.tile_mine_iron_ore,
+    cat_mine_coal:      reg.tile_mine_coal,
+    cat_mine_gem:       reg.tile_mine_gem,
+    cat_mine_gold:      reg.tile_mine_gold,
+    cat_special_dirt:   reg.tile_special_dirt,
+    cat_treasure:       reg.tile_coin_golden ?? reg.coins,
+    cat_fish:           reg.tile_fish_sardine,
   };
   for (const [key, value] of Object.entries(aliases)) {
     if (value && !reg[key]) reg[key] = value;

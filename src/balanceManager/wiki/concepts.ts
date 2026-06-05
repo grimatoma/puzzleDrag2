@@ -26,6 +26,7 @@ import { KEEPERS } from "../../keepers.js";
 import { allBoons } from "../../features/boons/data.js";
 import { DAILY_REWARDS } from "../../constants.js";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
+import { iconColor } from "../../textures/iconRegistry.js";
 
 function byName<T extends { name?: unknown }>(a: T, b: T): number {
   const an = String(a.name ?? "").toLowerCase();
@@ -174,12 +175,17 @@ function boardKindEntries() {
     .sort(byName);
 }
 
+function categoryIconKey(category: string): string | undefined {
+  const iconKey = `cat_${category}`;
+  return iconColor(iconKey) != null ? iconKey : undefined;
+}
+
 function categoryEntries() {
-  const set = new Set();
+  const set = new Set<string>();
   for (const c of ZONE_CATEGORIES) set.add(c);
   for (const c of TILE_CATEGORIES) set.add(c);
   return [...set]
-    .map((c) => ({ key: c, name: c }))
+    .map((c) => ({ key: c, name: c, iconKey: categoryIconKey(c) }))
     .sort(byName);
 }
 
