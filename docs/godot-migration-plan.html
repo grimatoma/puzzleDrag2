@@ -176,7 +176,7 @@
 
       <section id="decision">
         <h2>Decision</h2>
-        <div class="box tip"><b>TL;DR.</b> Migrate to Godot 4 now. Do not implement the remaining gameplay mechanics (demolish, tier-up plots, expeditions, capstone boss) in the Phaser codebase — build them directly in Godot against the locked Direction spec.</div>
+        <div class="box tip"><b>TL;DR.</b> Migrate to Godot 4 now, running both versions side-by-side in one repo (<code>godot/</code> subdirectory). Do not implement the remaining gameplay mechanics (demolish, tier-up plots, expeditions, capstone boss) in the Phaser codebase — build them directly in Godot against the locked Direction spec. Delete the Phaser version once Godot reaches M3 feature parity.</div>
 
         <p>The primary target for this game is a <strong>mobile app</strong> (iOS + Android). That single fact makes Godot the right choice: it exports natively to both platforms with real OpenGL/Vulkan rendering, while a React + Phaser app wrapped in Capacitor hits a WebView performance ceiling and carries App Store approval risk.</p>
 
@@ -204,6 +204,79 @@
             <p>Any mechanic (demolish, tier-up plots, expedition flow, capstone boss) built in Phaser now gets thrown away. The Direction spec is the implementation target — build against it once, in Godot.</p>
           </div>
         </div>
+      </section>
+
+      <section id="strategy">
+        <h2>Migration strategy — side-by-side in one repo</h2>
+
+        <p>The Godot project lives in a <code>godot/</code> subdirectory of the existing repo. The Phaser version stays at the root and remains fully functional throughout the migration. Both are committed to <code>main</code>; neither is on a long-lived branch.</p>
+
+        <div class="box tip"><b>Why one repo.</b> The Dev Panel, Story Editor, Wiki, balance constants, story content, and all docs are shared by both versions. Keeping them in one repo means there is one source of truth for design and data — no syncing between repos, no duplication.</div>
+
+        <h3>Repo layout</h3>
+        <pre><code>puzzleDrag2/
+  src/                    # Phaser game (existing — untouched during migration)
+  godot/                  # New Godot 4 project root
+    project.godot
+    scenes/
+    scripts/
+    assets/
+    addons/gdUnit4/       # Test framework
+    export_presets.cfg
+    .gitignore            # Godot-specific ignores (cache, .import, etc.)
+  b/                      # Dev Panel (shared by both)
+  story/                  # Story Editor (shared by both)
+  docs/                   # Docs (shared)
+  tests/                  # Phaser Vitest + Playwright tests (existing)
+  .github/workflows/      # CI — runs both Phaser and Godot suites
+  tools/                  # export-v1-tiles.mjs + other shared tooling</code></pre>
+
+        <h3>How the two versions coexist</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Phaser version (root)</h3>
+            <p>Stays fully playable throughout the migration. Serves as a working reference implementation. No new mechanics are added here — it freezes at the PR-B balance state.</p>
+            <p>Deleted once Godot reaches feature parity at the end of M3.</p>
+          </div>
+          <div class="card amber">
+            <h3>Godot version (<code>godot/</code>)</h3>
+            <p>Built milestone by milestone. Starts with a playable board (M1) and grows to full feature parity. The Dev Panel and Story Editor remain accessible for balance tuning and story authoring throughout.</p>
+            <p>Becomes the sole version once M3 is complete.</p>
+          </div>
+        </div>
+
+        <h3>Shared resources — no duplication</h3>
+        <table>
+          <thead><tr><th>Resource</th><th>Location</th><th>Used by</th></tr></thead>
+          <tbody>
+            <tr><td>Dev Panel (balance tuning, Wiki)</td><td><code>src/balanceManager/</code></td><td>Both — via <code>localStorage</code></td></tr>
+            <tr><td>Story Editor</td><td><code>src/storyEditor/</code></td><td>Both — via <code>localStorage</code></td></tr>
+            <tr><td>Balance constants (PC2 baseline)</td><td><code>src/constants.ts</code> → <code>godot/scripts/Constants.gd</code></td><td>Port once as data; keep in sync manually until Phaser is deleted</td></tr>
+            <tr><td>Story content</td><td><code>src/story.ts</code></td><td>Port beat IDs to GDScript enums; prose is text either way</td></tr>
+            <tr><td>v1 PNG assets</td><td><code>tools/export-v1-tiles.mjs</code> → <code>godot/assets/tiles/</code></td><td>Godot only (Phaser generates its own procedurally)</td></tr>
+            <tr><td>Design docs</td><td><code>docs/</code></td><td>Both — engine-agnostic</td></tr>
+          </tbody>
+        </table>
+
+        <h3>CI — both suites run on every push</h3>
+        <pre><code># .github/workflows/ci.yml (sketch)
+jobs:
+  phaser:                          # existing jobs — unchanged
+    runs-on: ubuntu-latest
+    steps: [npm test, typecheck, lint, build]
+
+  godot:                           # new jobs — added at M1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: chickensoft-games/setup-godot@v1
+      - uses: MikeSchulze/gdUnit4-action@v1   # headless unit tests
+      - run: godot --headless --export-release "HTML5" dist/godot/index.html
+      - run: npx playwright test tests/godot-e2e/  # Playwright on HTML5 export</code></pre>
+
+        <div class="box"><b>Switching between versions during development.</b> The Phaser game runs at <code>http://localhost:5173/puzzleDrag2/</code> via <code>npm run dev</code>. The Godot HTML5 export is served separately (e.g. <code>npx serve godot/dist/</code>) or opened directly in the editor. Both can run simultaneously; they share nothing at runtime.</div>
+
+        <h3>Deletion checkpoint (end of M3)</h3>
+        <p>Once the Godot build covers the full Town 1 → Town 2 feature set and passes visual parity review, a single cleanup PR deletes <code>src/</code>, <code>main.jsx</code>, <code>prototype.jsx</code>, <code>vite.config.js</code>, and the Phaser test suite. The Dev Panel and Story Editor stay — they are framework-agnostic and continue serving their purpose.</p>
       </section>
 
       <section id="what-stays">
