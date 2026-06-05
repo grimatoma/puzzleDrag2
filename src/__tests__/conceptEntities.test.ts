@@ -65,7 +65,10 @@ describe("getEntity — tiles", () => {
     const result = getEntity("tiles", realTileKey!);
     expect(result).not.toBeNull();
     const item = ITEMS[realTileKey as keyof typeof ITEMS] as Record<string, unknown> | undefined;
-    expect(result).toEqual(item);
+    // getEntity merges tile-collection type metadata (category/tier/…) on top of
+    // the ITEMS row, so the result is a superset of the raw item — assert it
+    // contains every ITEMS field rather than an exact match.
+    expect(result).toMatchObject(item!);
   });
 
   it("returns null for an unknown tile key", () => {
