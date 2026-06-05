@@ -108,13 +108,12 @@ export type SessionSeasonName = (typeof SESSION_SEASON_NAMES)[number];
  * return the season index for the supplied `turnsUsed`. Returns 0..3.
  */
 export function seasonIndexInSession(turnsUsed: number, turnBudget: number): number {
-  const t = Math.max(0, Math.min(turnsUsed | 0, (turnBudget | 0) - 1));
-  const S = Math.max(1, turnBudget | 0);
-  for (let i = 0; i < 4; i++) {
-    const end = Math.floor(((i + 1) * S) / 4);
-    if (t < end) return i;
-  }
-  return 3;
+  if (turnBudget <= 0) return 0;
+  const turnsRemaining = Math.max(0, turnBudget - turnsUsed);
+  if (turnsRemaining > turnBudget * 0.75) return 0; // Spring
+  if (turnsRemaining > turnBudget * 0.5) return 1;  // Summer
+  if (turnsRemaining > turnBudget * 0.25) return 2; // Autumn
+  return 3; // Winter
 }
 
 export function seasonNameInSession(turnsUsed: number, turnBudget: number): SessionSeasonName {

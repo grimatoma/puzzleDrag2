@@ -24,15 +24,19 @@ describe("Phase 33 — seasonIndexInSession (turn split)", () => {
     expect(seasonIndexInSession(15, 16)).toBe(3);
   });
 
-  it("10-turn session uses a deterministic 2/3/2/3 floor split", () => {
-    // Boundaries via floor((i+1) * S / 4): 2, 5, 7, 10
-    expect(seasonIndexInSession(0, 10)).toBe(0);
+  it("10-turn session uses a 3/2/3/2 split based on remaining turns percentages", () => {
+    expect(seasonIndexInSession(0, 10)).toBe(0); // 10 remaining > 7.5
     expect(seasonIndexInSession(1, 10)).toBe(0);
-    expect(seasonIndexInSession(2, 10)).toBe(1);
+    expect(seasonIndexInSession(2, 10)).toBe(0);
+
+    expect(seasonIndexInSession(3, 10)).toBe(1); // 7 remaining > 5.0
     expect(seasonIndexInSession(4, 10)).toBe(1);
-    expect(seasonIndexInSession(5, 10)).toBe(2);
+
+    expect(seasonIndexInSession(5, 10)).toBe(2); // 5 remaining > 2.5
     expect(seasonIndexInSession(6, 10)).toBe(2);
-    expect(seasonIndexInSession(7, 10)).toBe(3);
+    expect(seasonIndexInSession(7, 10)).toBe(2);
+
+    expect(seasonIndexInSession(8, 10)).toBe(3); // 2 remaining <= 2.5
     expect(seasonIndexInSession(9, 10)).toBe(3);
   });
 
