@@ -23,7 +23,7 @@ describe("wiki categories — tile type metadata and cat_ icons", () => {
   });
 
   it("tile entities merge their tile-collection type metadata", () => {
-    const tile = getEntity("tiles", "tile_grass_hay");
+    const tile = getEntity("tiles", "tile_grass_grass");
     expect(tile).not.toBeNull();
     expect(tile!.category).toBe("grass");
     expect(tile!.tier).toBe(0);

@@ -162,15 +162,17 @@ describe("EntityVisual", () => {
     expect(container.firstChild).not.toBeNull();
   });
 
-  it("renders a muted initial placeholder for a concept with no asset (categories) — never an iframe or '?'", () => {
-    // Phase 2: EntityVisual never returns null — abstract concepts get a muted initial circle.
-    const { container } = render(<EntityVisual conceptId="categories" entityKey="grain" />);
+  it("renders a muted initial placeholder for a category with no registered icon — never an iframe or '?'", () => {
+    // Phase 2: EntityVisual never returns null — a category key with no cat_ icon
+    // falls through to a muted initial circle. (Every *real* category now has a
+    // cat_ badge icon, so we use an unregistered key to exercise the fallback.)
+    const { container } = render(<EntityVisual conceptId="categories" entityKey="unmapped" />);
     // A placeholder span is rendered (not null).
     expect(container.firstChild).not.toBeNull();
     // Never an iframe.
     expect(container.querySelector("iframe")).toBeNull();
     // The placeholder shows the entity key's initial letter, not a "?".
-    expect(container.textContent).toContain("G"); // initial of "grain"
+    expect(container.textContent).toContain("U"); // initial of "unmapped"
     expect(container.textContent).not.toContain("?");
   });
 

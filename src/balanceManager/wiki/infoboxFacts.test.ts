@@ -103,8 +103,8 @@ describe("infoboxFacts", () => {
   });
 
   it("tiles — includes Category and Tier facts from tile type metadata", () => {
-    const entity = getEntity("tiles", "tile_grass_hay");
-    const facts = infoboxFacts("tiles", "tile_grass_hay", entity);
+    const entity = getEntity("tiles", "tile_grass_grass");
+    const facts = infoboxFacts("tiles", "tile_grass_grass", entity);
     expect(facts.find((f) => f.label === "Category")?.value).toBe("grass");
     expect(facts.find((f) => f.label === "Tier")?.value).toBe("0");
   });
