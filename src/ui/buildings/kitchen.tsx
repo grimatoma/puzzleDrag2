@@ -35,8 +35,8 @@ export default function KitchenIllustration({ isBuilt }: { isBuilt?: boolean }) 
       {/* FIX: layered smoke that doesn't read as a moon */}
       {detail !== 'low' && (
         <g>
-          <Smoke x={21} y={-64} scale={0.9} count={4} dur={4.2} color="#e8dcc2" />
-          <Smoke x={19} y={-64} scale={0.7} count={3} dur={3.4} color="#c9b993" />
+          <Smoke x={21} y={-64} scale={0.9} count={4} dur={4.2} color="#c9b993" />
+          <Smoke x={19} y={-64} scale={0.7} count={3} dur={3.4} color="#e8dcc2" />
           {/* tiny embers rising with smoke */}
           {[0, .8, 1.6, 2.4].map((d, i) => (
             <circle key={i} cx={21} cy={-64} r=".6" fill="#ffb14a"
