@@ -68,4 +68,108 @@ describe("buildChainUpdatePayload", () => {
     expect(payload.tileKey).toBeNull();
     expect(payload.valid).toBe(true);
   });
+
+  describe("valid logic", () => {
+    it("is valid when chain length is 0", () => {
+      const payload = buildChainUpdatePayload({
+        path: [],
+        nextUpgradeTile: () => null,
+        effectiveMinChain: 3,
+      });
+      expect(payload.valid).toBe(true);
+    });
+
+    it("is invalid when chain length is greater than 0 but less than effectiveMinChain", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "tile_veg_carrot" } }, { res: { key: "tile_veg_carrot" } }],
+        nextUpgradeTile: () => null,
+        effectiveMinChain: 3,
+      });
+      expect(payload.valid).toBe(false);
+    });
+
+    it("is valid when chain length is >= effectiveMinChain", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "tile_veg_carrot" } }, { res: { key: "tile_veg_carrot" } }, { res: { key: "tile_veg_carrot" } }],
+        nextUpgradeTile: () => null,
+        effectiveMinChain: 3,
+      });
+      expect(payload.valid).toBe(true);
+    });
+  });
+
+  describe("nextTileProgress & upgrades logic", () => {
+    it("populates nextTileProgress correctly when threshold > 0", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "test_res" } }, { res: { key: "test_res" } }, { res: { key: "test_res" } }],
+        nextUpgradeTile: () => ({ key: "test_upgrade", label: "Test Upgrade" }),
+        effectiveThresholds: { test_res: 5 },
+        effectiveMinChain: 3,
+      });
+
+      expect(payload.upgrades).toBe(0);
+      expect(payload.nextTileProgress).toEqual({
+        current: 3,
+        threshold: 5,
+        targetKey: "test_upgrade",
+        targetLabel: "Test Upgrade",
+      });
+    });
+
+    it("calculates upgrades correctly when chain length exceeds threshold", () => {
+      const payload = buildChainUpdatePayload({
+        path: Array.from({ length: 11 }, () => ({ res: { key: "test_res" } })),
+        nextUpgradeTile: () => ({ key: "test_upgrade", label: "Test Upgrade" }),
+        effectiveThresholds: { test_res: 5 },
+        effectiveMinChain: 3,
+      });
+
+      expect(payload.upgrades).toBe(2);
+      expect(payload.nextTileProgress).toEqual({
+        current: 11,
+        threshold: 5,
+        targetKey: "test_upgrade",
+        targetLabel: "Test Upgrade",
+      });
+    });
+
+    it("leaves nextTileProgress null when threshold <= 0", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "test_res" } }],
+        nextUpgradeTile: () => ({ key: "test_upgrade", label: "Test Upgrade" }),
+        effectiveThresholds: { test_res: 0 },
+        effectiveMinChain: 3,
+      });
+
+      expect(payload.upgrades).toBe(0);
+      expect(payload.nextTileProgress).toBeNull();
+    });
+
+    it("leaves nextTileProgress null when nextUpgradeTile returns null", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "test_res" } }],
+        nextUpgradeTile: () => null,
+        effectiveThresholds: { test_res: 5 },
+        effectiveMinChain: 3,
+      });
+
+      expect(payload.nextTileProgress).toBeNull();
+    });
+
+    it("falls back to empty strings for missing next keys/labels", () => {
+      const payload = buildChainUpdatePayload({
+        path: [{ res: { key: "test_res" } }],
+        nextUpgradeTile: () => ({}), // Missing key and label
+        effectiveThresholds: { test_res: 5 },
+        effectiveMinChain: 3,
+      });
+
+      expect(payload.nextTileProgress).toEqual({
+        current: 1,
+        threshold: 5,
+        targetKey: "",
+        targetLabel: "",
+      });
+    });
+  });
 });
