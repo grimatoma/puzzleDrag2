@@ -22,7 +22,8 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import _LegacyIconRaw from "./Icon.jsx";
 const LegacyIcon = _LegacyIconRaw as unknown as React.ComponentType<{ iconKey: string; size?: number; className?: string; title?: string }>;
 import { BIOMES } from "../constants.js";
-import { TOOL_BY_KEY, isTapTargetTool, visibleTools, DEFAULT_TOOL_PINS } from "./toolRegistry.js";
+import { TOOL_BY_KEY, isTapTargetTool, DEFAULT_TOOL_PINS } from "./toolRegistry.js";
+import { visiblePuzzleTools } from "./puzzleToolFilter.js";
 import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
@@ -902,7 +903,7 @@ const ToolTile = forwardRef<HTMLButtonElement, {
 
 function buildVisibleToolList(state: GameState): RuntimeTool[] {
   const tools = (state.tools ?? {}) as Record<string, number>;
-  return visibleTools(tools).map((def): RuntimeTool => ({
+  return visiblePuzzleTools(state).map((def): RuntimeTool => ({
     key: def.key,
     boardKind: def.boardKind,
     category: def.category,
