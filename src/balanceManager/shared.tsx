@@ -8,7 +8,7 @@
 // They keep the editing-era prop shape — including an optional, ignored
 // `onChange` — so the ~20 tabs that still pass it keep compiling without a
 // sweep. The wiring is dead; nothing the panel renders can mutate state.
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import Icon from "../ui/Icon.jsx";
 import { RESOURCE_KEYS, TILE_KEYS } from "../types/catalogKeys.js";
@@ -267,7 +267,11 @@ export function SearchAndAddPicker({ label = "Add Item", placeholder = "Search..
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const filtered = options.filter((o) => o.searchText.toLowerCase().includes(query.toLowerCase()));
+  const filtered = useMemo(() => {
+    if (!query) return options;
+    const lowerQuery = query.toLowerCase();
+    return options.filter((o) => o.searchText.toLowerCase().includes(lowerQuery));
+  }, [options, query]);
 
   return (
     <div className="flex flex-col gap-2 w-full">
