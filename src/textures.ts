@@ -4,6 +4,11 @@ import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
+import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
+import { isConceptTileIconsEnabled } from "./featureFlags.js";
+import { conceptTileAnim } from "./textures/conceptTiles/index.js";
+import type { SeasonName } from "./textures/seasonal/types.js";
+import { seasonNameInSession } from "./features/zones/data.js";
 
 export function rounded(scene: Phaser.Scene, x: number, y: number, w: number, h: number, r: number, fill: number, alpha = 1, stroke: number | null = null, sw = 0, sa = 1) {
   const g = scene.add.graphics();
@@ -52,6 +57,105 @@ export function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: nu
   if (dpr !== 1) ctx.scale(dpr, dpr);
   draw(ctx, w, h);
   tex.refresh();
+}
+
+// ─── Shared tile-canvas painter ───────────────────────────────────────────────
+//
+// Paints one full board tile (card background + shadow + selected ring + radial
+// gradient) then its icon. The icon resolves season-aware:
+//   1. concept-tile GIF animation (`?conceptTiles=1`, when `t` given)
+//   2. seasonal per-frame animation (when `t` + `season` given)
+//   3. seasonal static draw (when `season` given and a variant exists)
+//   4. the base static icon (`drawTileIcon`)
+// Used by the initial bake, the resize re-bake, the season-change re-bake, and
+// the per-frame animation pass — so all four share identical tile chrome.
+export function paintTileCanvas(
+  ctx: CanvasRenderingContext2D,
+  res: { key: string; look: { color: number } },
+  selected: boolean,
+  w: number,
+  h: number,
+  season: SeasonName | null,
+  t?: number,
+) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(0,0,0,.22)";
+  ctx.beginPath();
+  ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (selected) {
+    rr(ctx, 3, 1, w - 6, h - 6, 16);
+    ctx.fillStyle = "rgba(255,160,0,.35)";
+    ctx.fill();
+  }
+  rr(ctx, 7, 5, w - 14, h - 14, 14);
+  const baseColor = hex(res.look.color);
+  const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
+  tileGrad.addColorStop(0, lighten(baseColor, 0.50));
+  tileGrad.addColorStop(1, lighten(baseColor, 0.18));
+  ctx.fillStyle = tileGrad;
+  ctx.fill();
+  if (selected) {
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "#ffb300";
+    ctx.stroke();
+    rr(ctx, 11, 9, w - 22, h - 22, 11);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,240,180,.65)";
+    ctx.stroke();
+  } else {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,.32)";
+    ctx.stroke();
+  }
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  const conceptAnim =
+    isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
+  const anim = !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
+  const sdraw = !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
+  if (conceptAnim) conceptAnim(ctx, t as number);
+  else if (anim) anim(ctx, t as number);
+  else if (sdraw) sdraw(ctx);
+  else drawTileIcon(ctx, res.key);
+  ctx.restore();
+}
+
+/** Current season name from the registry (turnsUsed/turnBudget), or null when
+ *  there's no session/turn budget — in which case tiles bake with their base
+ *  (season-independent) art, preserving legacy output for tests. */
+export function currentSeasonName(scene: Phaser.Scene): SeasonName | null {
+  const turnsUsed = getRegistry(scene.registry, "turnsUsed");
+  const turnBudget = getRegistry(scene.registry, "turnBudget");
+  if (typeof turnBudget !== "number" || turnBudget < 1) return null;
+  const used = typeof turnsUsed === "number" ? turnsUsed : 0;
+  return seasonNameInSession(used, turnBudget) as SeasonName;
+}
+
+/** Re-bake the cached textures of seasonal tiles in place for the current
+ *  season. Cheap: only distinct seasonal keys present in BIOMES (≤5), and only
+ *  textures already baked. Mutates the shared `tile_<key>`(+`_sel`) so every
+ *  on-board sprite instance updates with no setTexture call. */
+export function rebakeSeasonalTilesForSeason(scene: Phaser.Scene) {
+  const dpr = bakeScaleFor(scene);
+  const season = currentSeasonName(scene);
+  const seen = new Set<string>();
+  Object.values(BIOMES).forEach((biome) => {
+    [...biome.tiles, ...biome.resources].forEach((r) => {
+      if (!SEASONAL_TILE_KEYS.has(r.key) || seen.has(r.key)) return;
+      seen.add(r.key);
+      [false, true].forEach((selected) => {
+        const key = `tile_${r.key}${selected ? "_sel" : ""}`;
+        if (!scene.textures.exists(key)) return;
+        const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
+        const ctx = tex.getContext();
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        paintTileCanvas(ctx, r, selected, TILE, TILE, season);
+        tex.refresh();
+      });
+    });
+  });
 }
 
 // ─── Per-resource icon drawing ────────────────────────────────────────────────
@@ -107,48 +211,15 @@ function bakeScaleFor(scene: Phaser.Scene): number {
  */
 export function regenerateTextures(scene: Phaser.Scene) {
   const dpr = bakeScaleFor(scene);
+  const season = currentSeasonName(scene);
   Object.values(BIOMES).forEach((biome) => {
     [...biome.tiles, ...biome.resources].forEach((r) => {
       [false, true].forEach((selected) => {
         const key = `tile_${r.key}${selected ? "_sel" : ""}`;
         // Remove existing cached texture so canvasTexture will recreate it
         if (scene.textures.exists(key)) scene.textures.remove(key);
-        const tileColor = r.look.color;
         canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
-          ctx.clearRect(0, 0, w, h);
-          ctx.fillStyle = "rgba(0,0,0,.22)";
-          ctx.beginPath();
-          ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
-          ctx.fill();
-          if (selected) {
-            rr(ctx, 3, 1, w - 6, h - 6, 16);
-            ctx.fillStyle = "rgba(255,160,0,.35)";
-            ctx.fill();
-          }
-          rr(ctx, 7, 5, w - 14, h - 14, 14);
-          const baseColor = hex(tileColor);
-          const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
-          tileGrad.addColorStop(0, lighten(baseColor, 0.50));
-          tileGrad.addColorStop(1, lighten(baseColor, 0.18));
-          ctx.fillStyle = tileGrad;
-          ctx.fill();
-          if (selected) {
-            ctx.lineWidth = 7;
-            ctx.strokeStyle = "#ffb300";
-            ctx.stroke();
-            rr(ctx, 11, 9, w - 22, h - 22, 11);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "rgba(255,240,180,.65)";
-            ctx.stroke();
-          } else {
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = "rgba(255,255,255,.32)";
-            ctx.stroke();
-          }
-          ctx.save();
-          ctx.translate(w / 2, h / 2);
-          drawTileIcon(ctx, r.key);
-          ctx.restore();
+          paintTileCanvas(ctx, r, selected, w, h, season);
         }, dpr);
       });
     });
@@ -236,48 +307,12 @@ function bakeFireTile(scene: Phaser.Scene, dpr: number) {
 
 export function makeTextures(scene: Phaser.Scene) {
   const dpr = bakeScaleFor(scene);
+  const season = currentSeasonName(scene);
   Object.values(BIOMES).forEach((biome) => {
     [...biome.tiles, ...biome.resources].forEach((r) => {
       [false, true].forEach((selected) => {
-        const tileColor = r.look.color;
         canvasTexture(scene, `tile_${r.key}${selected ? "_sel" : ""}`, TILE, TILE, (ctx, w, h) => {
-          ctx.clearRect(0, 0, w, h);
-          ctx.fillStyle = "rgba(0,0,0,.22)";
-          ctx.beginPath();
-          ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
-          ctx.fill();
-          if (selected) {
-            // Outer glow ring
-            rr(ctx, 3, 1, w - 6, h - 6, 16);
-            ctx.fillStyle = "rgba(255,160,0,.35)";
-            ctx.fill();
-          }
-          rr(ctx, 7, 5, w - 14, h - 14, 14);
-          // Subtle radial backing for the icon tile
-          const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
-          const baseColor = hex(tileColor);
-          tileGrad.addColorStop(0, lighten(baseColor, 0.50));
-          tileGrad.addColorStop(1, lighten(baseColor, 0.18));
-          ctx.fillStyle = tileGrad;
-          ctx.fill();
-          if (selected) {
-            ctx.lineWidth = 7;
-            ctx.strokeStyle = "#ffb300";
-            ctx.stroke();
-            // Inner highlight line
-            rr(ctx, 11, 9, w - 22, h - 22, 11);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "rgba(255,240,180,.65)";
-            ctx.stroke();
-          } else {
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = "rgba(255,255,255,.32)";
-            ctx.stroke();
-          }
-          ctx.save();
-          ctx.translate(w / 2, h / 2);
-          drawTileIcon(ctx, r.key);
-          ctx.restore();
+          paintTileCanvas(ctx, r, selected, w, h, season);
         }, dpr);
       });
     });

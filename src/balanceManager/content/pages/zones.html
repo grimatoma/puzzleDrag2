@@ -1,0 +1,378 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">A <strong>first-pass, zone-by-zone progression design</strong> for Hearthwood Vale's kingdom of holds. The maintainer is building the game one town at a time — each zone fleshed out as a self-contained unit before reasoning about how they interlock — and this page captures the approved meta-model and the populated first-pass roster. It is a companion to the <strong>Zone flow</strong> page (which describes today's linear map order) and the <strong>Progression</strong> page (the build roadmap): this one answers <em>what each zone becomes, and how finished zones keep paying out without piling up into an unplayable always-active game.</em></p>
+
+<p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 0.4em;">
+  <span style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:0.06em;padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#ffe8cc,#ffd8b0);color:#8a3c0a;border:1.5px solid #d99a52;">FIRST-PASS DESIGN — DRAFT</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span>
+  <span style="font-size:12px;color:#867a66;">Design doc, dated 2026-06-04. Deliberately open to changing the roster, specializations, boards, and teaching of any town. Like everything under the wiki, this is allowed to drift from code — trust code where they disagree.</span>
+</p>
+
+<div style="border:1.5px solid #b28b62;border-left:5px solid #d6612a;border-radius:10px;background:linear-gradient(165deg,#fbf3e0,#f0e6cf);padding:12px 16px;margin:0.5em 0 1em;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <p style="margin:0;font-size:13px;color:#4a3a26;"><strong>The central worry this design answers.</strong> Zone order is player-chosen with no cap. Left naive, an "always active" game becomes unplayable as completed zones pile up, each still demanding attention. The fix below: a completed zone retires into a passive <strong>hinterland</strong> that you glance at and collect from, while your active surface stays bounded to the 1–2 <strong>frontier</strong> zones you are currently exploring. That promise — finished zones stop being chores — is the spine of everything here.</p>
+</div>
+
+<h2>Status legend</h2>
+<p>This page is a design doc, so most of it is forward-looking. Chips mirror the wiki's shared status system; almost everything here is <strong>PLANNED</strong> (a design this doc introduces) or reuses data that exists today.</p>
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">WIRED</span> implemented &amp; runs in normal play &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;margin:2px;">PARTIAL</span> partly wired / only some paths &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;margin:2px;">STUB</span> present but inert &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;margin:2px;">DOC-ONLY</span> in the design doc, not in code &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;margin:2px;">PLANNED</span> a change this doc introduces
+</p>
+
+<h2>The problem today</h2>
+<p>The game has ~11 map nodes, but per-zone identity is thin. Every building is buildable everywhere; zones don't differ in what they <em>teach</em>; there is no reason to revisit a finished zone; and nothing automates an old zone once you move on. Per-zone whitelists exist in data (<code>MAP_NODES[*].buildings</code>) but they don't gate, specialize, or idle. This doc gives each town a distinct fantasy, a specialization, a teaching job, a lifecycle, and a bounded reason to return.</p>
+
+<hr style="border:none;border-top:2px solid #ddd0b4;margin:1.2em 0;" />
+
+<h1>Part 1 — The meta-model (cross-cutting)</h1>
+<p style="font-size:13px;color:#867a66;margin:0 0 0.8em;">The rules every zone obeys. Read this first: it is the load-bearing design. The per-zone roster in Part 3 is just this template, filled in.</p>
+
+<h2>1.1 Active frontier + idle hinterland</h2>
+<p>Every founded zone sits in one of three lifecycle states. The player's <strong>active surface is always the 1–2 frontier zones</strong>; the hinterland is glance-and-collect, not grind.</p>
+<table>
+  <thead><tr><th>State</th><th>What it is</th><th>Player attention</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Frontier</strong></td><td>newest zone(s) being explored / run</td><td>full, hand-played</td></tr>
+    <tr><td><strong>Settling</strong></td><td>founded, mid build-out (Camp → City tier ladder)</td><td>active</td></tr>
+    <tr><td><strong>Hinterland</strong></td><td>completed — core supported buildings built + keeper resolved + Hearth-Token minted</td><td>passive — glance &amp; collect</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>A completed zone flips to <strong>Hinterland</strong> and starts an <strong>idle production loop</strong>: a slow trickle of its specialization goods + coin, scaled by the buildings/workers placed there, accumulating as a <em>local cache</em>.</li>
+  <li>That cache is periodically ferried by caravans to the shared <strong>Kingdom Stockpile</strong> at the <strong>[[zones:home|home]]</strong> hub (see 1.5).</li>
+  <li><strong>[[zones:home|home]] is the permanent hub:</strong> it never fully idles — it holds the Kingdom Stockpile, is where civic unlocks first land, and is where caravans deliver.</li>
+</ul>
+
+<h3>Why you return to a hinterland zone (bounded, never forced)</h3>
+<p>Three pull-backs, all optional or one-tap — none reopen an active grind:</p>
+<table>
+  <thead><tr><th>#</th><th>Pull-back</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Civic upgrades</strong></td><td>When a global civic unlock fires, hinterland zones that <em>support</em> the new building get a <strong>one-tap upgrade</strong> that raises idle yield and/or opens a beat. You pop in to place it.</td></tr>
+    <tr><td>2</td><td><strong>Narrative beats</strong></td><td>Zone-scoped story hooks (build chapel → nun) play on revisit.</td></tr>
+    <tr><td>3</td><td><strong>Episodic demand</strong> <span style="font-size:11px;color:#867a66;">(optional)</span></td><td>The <strong>[[zones:fairground|Fairground]]</strong> runs seasonal contests asking for a specific old zone's specialty good (honey, pearls, gems, steel) for big rewards — the optional pull-back that complements idle without forcing active replay.</td></tr>
+  </tbody>
+</table>
+
+<h2>1.2 Cross-zone civic unlocks via support-lists</h2>
+<p>Each zone gets a <code>supports</code> list: the buildings it can <strong>ever</strong> host. This is separate from what is <em>currently</em> buildable. Per building in the list, an unlock gate:</p>
+<ul>
+  <li><code>from_founding</code> — buildable as soon as the zone is founded.</li>
+  <li><code>event:&lt;id&gt;</code> — buildable only after a trigger fires (local, or global/civic).</li>
+  <li>Buildings <strong>not in the list</strong> are never available there — a landlocked farm never supports <code>harbor_dock</code>.</li>
+</ul>
+
+<div style="border:1.5px solid #b28b62;border-left:5px solid #1d5bb0;border-radius:10px;background:linear-gradient(165deg,#eef4fb,#e2ecf6);padding:12px 16px;margin:0.6em 0 1em;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <p style="margin:0 0 0.4em;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#1d5bb0;">Worked example</p>
+  <p style="margin:0 0 0.5em;font-size:13px;color:#33414e;">Zone 1 supports A, B, C but never D. A and B are available from founding; C unlocks after an event. D is simply absent from the list:</p>
+  <pre style="margin:0;padding:10px 12px;background:#fbf6ea;border:1px solid #cdbf9e;border-radius:8px;overflow-x:auto;"><code style="font-size:12px;color:#3a2f1f;">supports: {
+  A: from_founding,
+  B: from_founding,
+  C: event:found_chapel_order,
+}
+// D absent → never supported here</code></pre>
+</div>
+
+<p><strong>Civic unlocks</strong> are global events that flip a gated building's availability across <em>all founded zones that list it in</em> <code>supports</code>. Example: a "religion" milestone reached anywhere flips <code>chapel</code> from event-locked → available in every zone whose support-list includes <code>chapel</code>. A mine town that doesn't list <code>chapel</code> is unaffected.</p>
+<p style="font-size:12px;color:#867a66;">Maps onto existing data: <code>MAP_NODES[*].buildings</code> is already a per-zone building whitelist (<code>src/features/cartography/data.ts</code>); the change is to turn each entry from a bare id into <code>{ id, gate }</code>.</p>
+
+<h2>1.3 Progressive boards</h2>
+<p>A zone opens with its <strong>primary board</strong> (its biome). As it tiers up, it can unlock <strong>additional boards</strong>, including cross-biome ones — each tied to a building/event and listed in the zone's support set. This makes "multiple boards per zone" the vehicle for cross-biome depth in late zones.</p>
+<table>
+  <thead><tr><th>Host zone builds…</th><th>…opens this board</th></tr></thead>
+  <tbody>
+    <tr><td>farm town builds [[buildings:harbor_dock|Harbor Dock]]</td><td>a small <strong>fish board</strong> alongside the farm board</td></tr>
+    <tr><td>mine town builds [[buildings:forge|Forge]] at City tier</td><td>a hazard-free <strong>Forge (smithing) board</strong></td></tr>
+    <tr><td>mine town builds [[buildings:observatory|Observatory]]</td><td>a <strong>deep-shaft board</strong></td></tr>
+  </tbody>
+</table>
+<p style="font-size:12px;color:#867a66;">The board-instance schema already supports <code>boards: { farm?, mine?, fish? }</code> per zone (<code>src/config/schemas/boardInstance.ts</code>) — today each zone fills only one slot.</p>
+
+<h2>1.4 Zone-relative progression (player-chosen order)</h2>
+<p>Because order is player-chosen after the first settlements, progression is <strong>zone-relative</strong>, not globally linear:</p>
+<ul>
+  <li>A shared <strong>settlement template</strong> runs per zone, keyed on <code>event.zoneId</code>: found → tier-ups (Camp → Hamlet → Village → Town → City) → keeper decision → complete → Hearth-Token.</li>
+  <li>A thin layer of <strong>zone-specific flavor triggers</strong> sits on top (the per-zone "key triggers" in Part 3).</li>
+  <li>The <strong>only global spine</strong> is: found a complete zone of each biome (farm / mine / fish) → unlock the <strong>[[zones:oldcapital|Old Capital]]</strong> finale. Everything else is local to a zone and reorderable.</li>
+</ul>
+
+<h2>1.5 Idle collection — caravan delivery</h2>
+<p><strong>Chosen hand-off.</strong> Hinterland zones don't auto-teleport their output. Each accrues a <em>local cache</em>; a <strong>caravan network</strong> periodically carries it to the Kingdom Stockpile at the hub. This repurposes the existing <strong>[[buildings:caravan_post|caravan_post]]</strong> building as the hinterland's connective infrastructure:</p>
+<ul>
+  <li>A zone needs a [[buildings:caravan_post|caravan_post]] (and a route to the hub) for its idle goods to flow.</li>
+  <li>The player can <em>optionally</em> route/upgrade caravans to raise throughput or shorten trips.</li>
+  <li>Kept deliberately light — <strong>caravans run themselves by default</strong> (no per-zone clicking), so active workload stays bounded; routing is an optional optimization layer, not a chore.</li>
+</ul>
+<p style="font-size:12px;color:#867a66;">Caravan raids/escorts are a possible later hazard hook — noted, not chosen.</p>
+
+<hr style="border:none;border-top:2px solid #ddd0b4;margin:1.2em 0;" />
+
+<h1>Part 2 — Per-zone schema (the template each town fills)</h1>
+<p>Every populated zone in Part 3 answers the same fields. Listing them once here keeps the per-zone cards scannable.</p>
+<table>
+  <thead><tr><th>Field</th><th>What it captures</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Theme / fantasy</strong></td><td>the zone's identity and pitch</td></tr>
+    <tr><td><strong>Specialization</strong></td><td>resource family + the mechanic it teaches + what it idle-produces</td></tr>
+    <tr><td><strong>Board(s)</strong></td><td>primary biome board (template, size, turns) + progressive additions with their gate</td></tr>
+    <tr><td><strong>Signature tiles</strong></td><td>the tile set + its upgrade chain</td></tr>
+    <tr><td><strong>Puzzle features</strong></td><td>any special board mechanic</td></tr>
+    <tr><td><strong>Hazards</strong></td><td>intro → escalating</td></tr>
+    <tr><td><strong>Supported buildings</strong></td><td>a 3-way split: Available @ founding · Event-locked (trigger) · Never supported</td></tr>
+    <tr><td><strong>Idle yield</strong></td><td>what it trickles as a Hinterland</td></tr>
+    <tr><td><strong>Key triggers</strong></td><td>event → result, including the keeper decision + civic/beat hooks</td></tr>
+    <tr><td><strong>Return hook</strong></td><td>the concrete reason to come back</td></tr>
+  </tbody>
+</table>
+<p style="font-size:12px;color:#867a66;">Real ids grounding the roster — buildings: hearth, mill, bakery, granary, larder, kitchen, workshop, forge, powder_store, barn, silo, housing, harbor_dock, fishmonger, smokehouse, lighthouse, apiary, sawmill, stable, observatory, chapel, brewery, inn, apothecary, watchtower, caravan_post · farm tiles: grass, grain, trees/oak, birds, veg, fruit, herd/horse, flowers · mine tiles: stone, coal, iron_ore, copper_ore, gem, gold, special_dirt · fish tiles: sardine, mackerel, clam, oyster, kelp, giant_pearl · NPCs: [[npcs:wren|wren]], [[npcs:mira|mira]], [[npcs:tomas|tomas]], [[npcs:bram|bram]], [[npcs:liss|liss]] · workers: farmer, lumberjack, miner, baker · keepers: [[keepers:deer_spirit|farm Deer-Spirit]], [[keepers:stone_knocker|mine Stone-Knocker]], [[keepers:tidesinger|harbor Tidesinger]] · tokens: heirloomSeed, pactIron, tidesingerPearl.</p>
+
+<p style="font-size:13px;color:#5d5544;"><strong>How to read a support-list:</strong>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:1px;">Available @ founding</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:1px;">Event-locked</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:1px;">Never supported</span>
+  — these three chips recur on every zone card below.</p>
+
+<hr style="border:none;border-top:2px solid #ddd0b4;margin:1.2em 0;" />
+
+<h1>Part 3 — Populated zones (first pass)</h1>
+<p>Six board-zones plus four non-board nodes. The farm region was re-spec'd into three distinct sub-specializations; the standalone Black Forge was folded into a progressive board. See <strong>Resolved decisions</strong> at the foot of this part.</p>
+
+<h2>Farm region</h2>
+<p style="font-size:13px;color:#867a66;margin:0 0 0.6em;"><strong>Re-spec confirmed:</strong> three distinct sub-specializations — grain/bread hub, livestock/pasture, fruit/luxury — each teaching a different chain + hazard and idling a different good.</p>
+
+<!-- HOME -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#fbf4e3,#f1e7d0);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">home — Hearthwood Vale <span style="font-size:12px;font-weight:600;color:#867a66;">· tutorial + permanent hub; never fully idles</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> The core loop (drag-chain, upgrade tiles, orders, build, first worker). Grain → [[resources:bread|bread]] staple. <strong>Idle-produces:</strong> [[resources:bread|bread]] + coin — the breadbasket.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Farm <strong>TEMPERATE</strong>, 6×6, 10 turns. Upgrade grass→birds, grain→veg, birds→herd.</p>
+  <p style="margin:0.2em 0;"><strong>Signature tiles.</strong> grass, grain, oak, birds.</p>
+  <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> Tutorial-safe (no hazards early); introduces <strong>rats</strong> as the first managed hazard mid-tutorial.</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]] · first bread order</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]] · first NPC</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:housing|housing]] · first worker</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:silo|silo]] · preserve board</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic: religion</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]] · founding 2nd zone</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Key triggers.</strong></p>
+  <ul style="margin:0;">
+    <li><code>arrive_home</code> → tutorial + grant starting tiles</li>
+    <li><code>build_kitchen</code> → [[resources:supplies|supplies]] recipe (opens the mine gate)</li>
+    <li><code>build_bakery</code> → [[npcs:mira|Mira]] beat</li>
+    <li><code>build_chapel</code> → Sister [[npcs:liss|Liss]] beat</li>
+    <li>[[keepers:deer_spirit|Deer-Spirit]] keeper after 4 buildings → home keeper decision</li>
+    <li>complete → <strong>heirloomSeed</strong></li>
+  </ul>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> It <em>is</em> the hub — Kingdom Stockpile, caravan terminus, where civic unlocks appear.</p>
+</div>
+
+<!-- MEADOW -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#fbf4e3,#f1e7d0);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">meadow — Greenmeadow <span style="font-size:12px;font-weight:600;color:#867a66;">· livestock / pasture</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> Pasture — birds→herd→horse; milk, meat, eggs, wool/leather. Teaches the <strong>animal upgrade chain</strong> + wolves. <strong>Idle-produces:</strong> [[resources:meat|meat]] / [[resources:milk|milk]] / [[resources:eggs|eggs]] + coin.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Farm <strong>PASTURE</strong> variant (new template), 10 turns. Progressive: [[buildings:stable|stable]] → a small "ranch" board / herd-mechanic.</p>
+  <p style="margin:0.2em 0;"><strong>Hazards.</strong> <strong>wolves</strong> (hunt bird tiles) — meadow is where you learn wolf management.</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:housing|housing]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:stable|stable]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apiary|apiary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> Livestock feeds frontier recipes (leather for tools, [[resources:meat|meat]] for soup).</p>
+</div>
+
+<!-- ORCHARD -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#fbf4e3,#f1e7d0);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">orchard — Wild Orchard <span style="font-size:12px;font-weight:600;color:#867a66;">· fruit / luxury</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> Orchard — trees→fruit, fruit → [[resources:pie|pie]]/[[resources:jam|jam]], flowers → [[resources:honey|honey]]. Teaches <strong>longer chains</strong> (12 turns) + blight/fungus. <strong>Idle-produces:</strong> [[resources:jam|jam]] / [[resources:honey|honey]] / [[resources:pie|pie]] — high-coin luxuries.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Farm <strong>ORCHARD</strong>, 12 turns. Progressive: [[buildings:apiary|apiary]] → pollination board/mechanic.</p>
+  <p style="margin:0.2em 0;"><strong>Hazards.</strong> blight/fungus + fire.</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:apiary|apiary]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:sawmill|sawmill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> Luxury goods ([[resources:honey|honey]]/[[resources:jam|jam]]) are the Fairground's favorite contest demand → repeated high-value episodic pulls; strong idle coin.</p>
+</div>
+
+<h2>Mine region</h2>
+<p style="font-size:13px;color:#867a66;margin:0 0 0.6em;"><strong>Black Forge folded into a progressive board.</strong> The mastery smithy is no longer a standalone node — it opens inside a mine zone once the [[buildings:forge|forge]] is raised at City tier.</p>
+
+<!-- QUARRY -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#f7f1e6,#ece2cc);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">quarry — Cracked Quarry <span style="font-size:12px;font-weight:600;color:#867a66;">· intro mine</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> Stone &amp; base metal — stone→[[resources:block|block]], iron_ore→[[resources:iron_bar|iron_bar]]. Teaches <strong>mine hazards + the supplies gate</strong>. <strong>Idle-produces:</strong> [[resources:block|block]] + [[resources:iron_bar|iron_bar]] — construction materials that feed every zone's tier-ups, so quarry is the <em>materials backbone</em>.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Mine <strong>STANDARD</strong>, 10 turns. Progressive: building [[buildings:forge|forge]] at City tier opens the <strong>Forge board</strong> (mastery smithing — see below).</p>
+  <p style="margin:0.2em 0;"><strong>Hazards.</strong> cave_in, gas_vent, mole (intro tier).</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:forge|forge]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: farm-pure ([[buildings:mill|mill]]/[[buildings:granary|granary]]) &amp; fish buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Key triggers.</strong></p>
+  <ul style="margin:0;">
+    <li><code>found_quarry</code> → unlock [[buildings:workshop|workshop]]/[[buildings:forge|forge]] + Miner worker</li>
+    <li><code>open_mine</code> gate</li>
+    <li><code>build_workshop</code> → tools</li>
+    <li>[[keepers:stone_knocker|Stone-Knocker]] keeper after 3 buildings</li>
+    <li>complete → <strong>pactIron</strong></li>
+  </ul>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> Construction materials needed everywhere; civic/forge upgrades raise output.</p>
+</div>
+
+<!-- CAVES -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#f7f1e6,#ece2cc);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">caves — Lanternlit Caves <span style="font-size:12px;font-weight:600;color:#867a66;">· gems</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> Gems &amp; precious — gem→[[resources:cut_gem|cut_gem]], gold→[[resources:gold_bar|gold_bar]]. Teaches <strong>lava + deep-tier extraction</strong> (12 turns). <strong>Idle-produces:</strong> [[resources:cut_gem|cut_gem]] + [[resources:gold_bar|gold_bar]] — funds the economy.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Mine <strong>EXTENDED</strong>, 12 turns. Progressive: [[buildings:observatory|observatory]] → deep-shaft board; [[buildings:forge|forge]] → Forge board.</p>
+  <p style="margin:0.2em 0;"><strong>Hazards.</strong> + <strong>lava</strong> (spreads each turn) on top of quarry's set.</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:forge|forge]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]] · gem threshold</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: farm-pure ([[buildings:mill|mill]]/[[buildings:granary|granary]]) &amp; fish buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> Gems/gold = currency for expensive frontier builds + jewelry recipes.</p>
+</div>
+
+<!-- FORGE BOARD -->
+<div style="border:2px dashed #a04c14;border-radius:14px;background:linear-gradient(160deg,#f6ebda,#ead9be);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">Forge board <span style="font-size:12px;font-weight:600;color:#867a66;">· progressive — replaces the standalone Black Forge zone</span></h3>
+  <p style="margin:0.2em 0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">RESOLVED</span>
+    The [[zones:forge|Black Forge]] is <strong>no longer a standalone node</strong>. It becomes a progressive, hazard-free smithing board that opens inside a mine zone (quarry or caves) once the [[buildings:forge|forge]] building is raised at City tier — so "multiple boards per zone" carries the region's mastery content.</p>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> Master smithing — [[resources:iron_bar|iron_bar]] + [[resources:coke|coke]] → steel/tools, runes. <strong>Idle-produces:</strong> finished tools / steel / runes (top tier) into the host zone's cache.</p>
+  <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> No hazards (mastery board); long, high-value chains.</p>
+  <p style="margin:0.2em 0;"><strong>Unlock gate.</strong> <code>event:build_forge</code> at the host mine zone's City tier.</p>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> The only source of best-in-slot tools/runes for boss fights — a strong reason to keep a mature mine zone in rotation.</p>
+</div>
+
+<h2>Fish region</h2>
+
+<!-- HARBOR -->
+<div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#eef4f6,#dceaef);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
+  <h3 style="margin-top:0;">harbor — Saltspray Harbor <span style="font-size:12px;font-weight:600;color:#867a66;">· seafood &amp; luxuries</span></h3>
+  <p style="margin:0.2em 0;"><strong>Specialization.</strong> fish→[[resources:fish_fillet|fillet]]/[[resources:fish_oil|oil]], oyster→[[resources:pearls|pearls]], kelp. Teaches the <strong>tide mechanic</strong> + storm/shark. <strong>Idle-produces:</strong> [[resources:fish_fillet|fish_fillet]]/[[resources:fish_oil|fish_oil]] + [[resources:pearls|pearls]] — food + luxury.</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Fish <strong>HARBOR</strong>, 12 turns, tides. Progressive: [[buildings:smokehouse|smokehouse]] → preserved-goods board; [[buildings:lighthouse|lighthouse]] → deep-sea board.</p>
+  <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> Tides create <strong>episodic high-yield windows</strong> — a natural built-in pull-back.</p>
+  <p style="margin:0.2em 0;"><strong>Hazards.</strong> storm, shark, jellyfish.</p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
+  <p style="margin:0;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:harbor_dock|harbor_dock]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:fishmonger|fishmonger]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:smokehouse|smokehouse]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:lighthouse|lighthouse]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    &nbsp;
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: deep-mine buildings</span>
+  </p>
+  <p style="margin:0.4em 0 0.2em;"><strong>Key triggers.</strong></p>
+  <ul style="margin:0;">
+    <li><code>found_harbor</code> → fish board</li>
+    <li>[[keepers:tidesinger|Tidesinger]] keeper</li>
+    <li>complete → <strong>tidesingerPearl</strong></li>
+  </ul>
+  <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> [[resources:pearls|pearls]] (luxury currency) + [[resources:fish_oil|fish_oil]] (lamp/recipe input); tide windows.</p>
+</div>
+
+<h2>Non-board nodes</h2>
+<p>Briefer — these have no board and no idle loop. They are the connective tissue and the optional pull-back engine.</p>
+<table>
+  <thead><tr><th>Node</th><th>Role</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>[[zones:crossroads|crossroads]]</strong></td><td>event hub</td><td>No board / idle. Rotating merchants &amp; rumors (story encounters).</td></tr>
+    <tr><td><strong>[[zones:fairground|fairground]]</strong></td><td>festival hub — the <strong>episodic pull-back engine</strong></td><td>Seasonal contests demand a specific old zone's specialty good (honey · pearls · gems · steel) for big rewards. The optional return loop that complements idle.</td></tr>
+    <tr><td><strong>[[zones:pit|pit]]</strong></td><td>boss arena (L6)</td><td>Spend top-tier tools/runes; recurring boss → rare loot.</td></tr>
+    <tr><td><strong>[[zones:oldcapital|oldcapital]]</strong></td><td>finale</td><td>Requires <strong>heirloomSeed + pactIron + tidesingerPearl</strong> (one complete zone of each biome). The Long Return conclusion.</td></tr>
+  </tbody>
+</table>
+
+<h2>Resolved decisions (this pass)</h2>
+<p>All three forks were resolved with the designer. Each is marked <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">RESOLVED</span>.</p>
+<table>
+  <thead><tr><th>#</th><th>Decision</th><th>Outcome</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Farm re-spec</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> [[zones:home|home]] grain/bread hub · [[zones:meadow|meadow]] livestock/pasture · [[zones:orchard|orchard]] fruit/luxury. Each teaches a different chain + hazard and idles a different good.</td></tr>
+    <tr><td>2</td><td>Black Forge</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">FOLDED</span> becomes a progressive Forge (smithing) board in the mine region, not a standalone node. Roster of board-zones drops to <strong>6</strong>: home, meadow, orchard, quarry, caves, harbor.</td></tr>
+    <tr><td>3</td><td>home as permanent hub</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> Kingdom Stockpile + caravan terminus; civic unlocks land here first.</td></tr>
+    <tr><td>4</td><td>fairground as episodic pull-back engine</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> seasonal demands for old-zone goods.</td></tr>
+    <tr><td>5</td><td>Idle hand-off</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">CARAVAN DELIVERY</span> local caches ferried to the hub by a caravan network built on [[buildings:caravan_post|caravan_post]]; optional routing/upgrade; runs itself by default.</td></tr>
+  </tbody>
+</table>
+
+<hr style="border:none;border-top:2px solid #ddd0b4;margin:1.2em 0;" />
+
+<h1>Part 4 — How this gets encoded (roadmap)</h1>
+<p>This page ships the <strong>design only</strong>. Encoding is deliberately deferred and sequenced as follow-on plans so the content can settle first, tuned later against the Dev Panel.</p>
+<details>
+  <summary><strong>Encoding sequence (NOT built now)</strong> — five follow-on plans</summary>
+  <ol style="margin:0.6em 0 0;">
+    <li><strong>Support-list data.</strong> Turn <code>MAP_NODES[*].buildings</code> entries into <code>{ id, gate }</code> (<code>from_founding</code> | <code>event:&lt;id&gt;</code>); build UI + a new <code>civicUnlock</code> effect read the gate. <span style="font-size:12px;color:#867a66;">(<code>src/features/cartography/data.ts</code>, build UI, <code>src/config/progression/types.ts</code> effects.)</span></li>
+    <li><strong>Per-zone specialization + idle-yield config, the Hinterland lifecycle, and the caravan network → Kingdom Stockpile delivery subsystem</strong> (repurposing the [[buildings:caravan_post|caravan_post]] building; the largest piece — its own plan).</li>
+    <li><strong>Zone-scoped + civic triggers</strong> in <code>triggers.ts</code> (<code>event.zoneId</code>) and story beats for the flavor hooks (build chapel → nun) in <code>src/story.ts</code> via <code>showBeat</code>.</li>
+    <li><strong>Progressive board unlocks</strong> (fill more <code>boards</code> slots per zone, gated) — including the Forge board in the mine region.</li>
+    <li><strong>Fairground episodic-demand loop.</strong></li>
+  </ol>
+</details>
+
+<h2>Status</h2>
+<p>First pass. All three forks resolved with the designer (farm re-spec · forge→board · caravan delivery). Remaining specifics — caravan routing depth, exact idle-yield rates, board templates, hazard cadence — are intentionally left to the encoding follow-on plans, tuned later against the Dev Panel.</p>
+
+<h2>See also</h2>
+<p>The <strong>Zone flow</strong> page describes today's semi-linear map order and the level gates. <strong>Progression</strong> covers the build roadmap, the Camp → City tier ladder, and status on every game system — and now carries a short note on this active-frontier / idle-hinterland model. <strong>Design decisions</strong> explains why there are exactly three biomes and why per-settlement specialization is the intended direction. <strong>Story</strong> tells the fiction of the dormant network of holds.</p>
+<p style="font-size:12px;color:#867a66;">Like everything under the wiki/docs, this is allowed to drift from code; dated 2026-06-04. Where this page and the code disagree, code is truth — update this page in the same change.</p>

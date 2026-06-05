@@ -20,7 +20,14 @@ import {
 import { assertTile } from "./types/guards.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
-import { rounded, makeTextures, regenerateTextures } from "./textures.js";
+import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
+import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { isConceptTileIconsEnabled } from "./featureFlags.js";
+import {
+  conceptTilesPreloadReady,
+  hasConceptTileAnim,
+  preloadConceptTileGifs,
+} from "./textures/conceptTiles/index.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
@@ -118,6 +125,9 @@ export class GameScene extends Phaser.Scene {
   boardY: number = 0;
   boardFrame: number = 0;
   bakeScale: number = 1;
+  /** Last time (ms) the seasonal-tile animation pass re-baked (≈20fps throttle). */
+  _seasonalAnimLast: number = 0;
+  _conceptAnimLast: number = 0;
 
   // Misc scene objects
   sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -148,6 +158,11 @@ export class GameScene extends Phaser.Scene {
     this.bakeScale = computeBakeScale(this.dpr, this.tileSize);
     setRegistry(this.registry, "bakeScale", this.bakeScale);
     makeTextures(this);
+    if (isConceptTileIconsEnabled()) {
+      preloadConceptTileGifs().then(() => {
+        if (this.scene.isActive()) this._animateConceptTiles(0);
+      });
+    }
     this.layoutDims();
     this.drawBackground();
     this.fillBoard(true);
@@ -654,6 +669,10 @@ export class GameScene extends Phaser.Scene {
   refreshSeasonTint() {
     (this.children.list as Array<Phaser.GameObjects.GameObject & { __layer?: string }>).filter((o) => o.__layer === "bg").forEach((o) => o.destroy());
     this.drawBackground();
+    // Re-bake seasonal tile textures (e.g. grain) so their art matches the
+    // current season. Cheap: only distinct seasonal keys, in place. Fired on
+    // season flips (turnsUsed) and biome/board changes.
+    rebakeSeasonalTilesForSeason(this);
   }
 
   handleBiomeChange() {
@@ -2003,6 +2022,93 @@ export class GameScene extends Phaser.Scene {
         const t = row[c];
         if (t) t.ambient(time);
       }
+    }
+    // Seasonal tile animation: re-bake the (shared) textures of animated
+    // seasonal tiles on the board at ~20fps. Throttled + distinct-key only, so
+    // the cost is ≤5 small texture redraws per tick (usually 1, often 0).
+    if (this._motionEnabled() && time - this._seasonalAnimLast >= 50) {
+      this._seasonalAnimLast = time;
+      this._animateSeasonalTiles(time / 1000);
+    }
+    if (isConceptTileIconsEnabled()) {
+      if (!conceptTilesPreloadReady()) {
+        preloadConceptTileGifs().then(() => {
+          if (this.scene.isActive()) this._animateConceptTiles(time / 1000);
+        });
+      } else if (this._motionEnabled() && time - this._conceptAnimLast >= 50) {
+        this._conceptAnimLast = time;
+        this._animateConceptTiles(time / 1000);
+      }
+    }
+  }
+
+  /** Whether per-frame motion should play. Honors prefers-reduced-motion; the
+   *  correct seasonal STATIC art is still baked when motion is off. */
+  private _motionEnabled(): boolean {
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      try {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+      } catch {
+        // matchMedia may throw in some embedded webviews — treat as enabled.
+      }
+    }
+    return true;
+  }
+
+  /** Re-bake distinct on-board seasonal tiles that have an animation for the
+   *  current season, at elapsed time `tSec` (seconds — same clock the gallery
+   *  uses). Mutates the shared `tile_<key>` texture so all instances update. */
+  /** Re-bake concept-tile GIF frames when `?conceptTiles=1` is set. */
+  private _animateConceptTiles(tSec: number) {
+    const reps = new Map<string, TileRes>();
+    for (let r = 0; r < ROWS; r++) {
+      const row = this.grid[r];
+      if (!row) continue;
+      for (let c = 0; c < COLS; c++) {
+        const t = row[c];
+        if (t && !reps.has(t.res.key) && hasConceptTileAnim(t.res.key)) {
+          reps.set(t.res.key, t.res);
+        }
+      }
+    }
+    if (reps.size === 0) return;
+    const dpr = this.bakeScale || this.dpr;
+    for (const res of reps.values()) {
+      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
+      if (!tex || typeof tex.getContext !== "function") continue;
+      const ctx = tex.getContext();
+      if (!ctx) continue;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, null, tSec);
+      tex.refresh();
+    }
+  }
+
+  private _animateSeasonalTiles(tSec: number) {
+    const season = currentSeasonName(this);
+    if (!season) return;
+    // Collect one representative TileObj.res per distinct animated key present.
+    const reps = new Map<string, TileRes>();
+    for (let r = 0; r < ROWS; r++) {
+      const row = this.grid[r];
+      if (!row) continue;
+      for (let c = 0; c < COLS; c++) {
+        const t = row[c];
+        if (t && !reps.has(t.res.key) && hasSeasonalTileAnim(t.res.key, season)) {
+          reps.set(t.res.key, t.res);
+        }
+      }
+    }
+    if (reps.size === 0) return;
+    const dpr = this.bakeScale || this.dpr;
+    for (const res of reps.values()) {
+      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
+      if (!tex || typeof tex.getContext !== "function") continue;
+      const ctx = tex.getContext();
+      if (!ctx) continue;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, tSec);
+      tex.refresh();
     }
   }
 }

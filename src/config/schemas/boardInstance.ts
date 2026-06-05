@@ -184,4 +184,4 @@ export function cloneFishBoard(template: FishBoardInstance): FishBoardInstance {
   return { baseTurns: template.baseTurns };
 }
 
-export const buildingIdSchema = z.nativeEnum(BuildingId);
+export const buildingIdSchema = schemaTypeName("BuildingId", z.nativeEnum(BuildingId));
