@@ -1,5 +1,5 @@
 import { isConceptTileIconsEnabled } from "../../featureFlags.js";
-import { CONCEPT_TILE_SPECS, isConceptTileKey } from "./manifest.js";
+import { CONCEPT_TILE_SPECS } from "./manifest.js";
 import { loadConceptGifPlayer, type ConceptTileDraw } from "./gifPlayer.js";
 
 export { CONCEPT_TILE_KEYS, CONCEPT_TILE_SPECS, isConceptTileKey } from "./manifest.js";
