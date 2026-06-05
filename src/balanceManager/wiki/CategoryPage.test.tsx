@@ -220,8 +220,10 @@ describe("CategoryPage — entry navigation (wikiNavTarget)", () => {
     const navigate = vi.fn();
     renderPage("recipes", { navigate });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    const concept = CONCEPTS.find((c) => c.id === "recipes")!;
+    const firstEntry = concept.getEntries()[0];
+    const card = screen.getByTitle(firstEntry.key);
+    fireEvent.click(card);
 
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({
