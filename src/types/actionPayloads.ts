@@ -211,24 +211,6 @@ export interface CraftingRecipeAction {
   payload?: CraftingPayload;
 }
 
-export interface CraftingQueueAction {
-  type: "CRAFTING/QUEUE_RECIPE";
-  recipeKey?: string;
-  payload?: CraftingPayload;
-}
-
-export interface CraftingClaimAction {
-  type: "CRAFTING/CLAIM_CRAFT";
-  station?: string;
-  payload?: CraftingPayload;
-}
-
-export interface CraftingSkipAction {
-  type: "CRAFTING/SKIP_CRAFT";
-  station?: string;
-  payload?: CraftingPayload;
-}
-
 export interface TradeResourcePayload {
   key: ResourceKey;
   qty: number;
@@ -593,9 +575,6 @@ export type TypedActionType =
   | RouteApplyAction["type"]
   | BuildAction["type"]
   | CraftingRecipeAction["type"]
-  | CraftingQueueAction["type"]
-  | CraftingClaimAction["type"]
-  | CraftingSkipAction["type"]
   | BuyResourceAction["type"]
   | SellResourceAction["type"]
   | CartoTravelAction["type"]
@@ -685,9 +664,6 @@ export type TypedAction =
   | RouteApplyAction
   | BuildAction
   | CraftingRecipeAction
-  | CraftingQueueAction
-  | CraftingClaimAction
-  | CraftingSkipAction
   | BuyResourceAction
   | SellResourceAction
   | CartoTravelAction

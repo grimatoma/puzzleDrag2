@@ -83,7 +83,6 @@ export interface Recipe {
   station: string;
   tier?: number;
   inputs: Record<string, number>;
-  craftMs: number;
   coins?: number;
 }
 

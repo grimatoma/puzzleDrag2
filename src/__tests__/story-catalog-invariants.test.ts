@@ -81,8 +81,6 @@ describe("story catalog enums", () => {
   it("TuningKey matches sanitizeTuning whitelist", () => {
     const set = new Set<string>(TUNING_KEY_VALUES);
     const expected = [
-      "craftQueueHours",
-      "craftGemSkipCost",
       "minExpeditionTurns",
       "foundingBaseCoins",
       "foundingGrowth",

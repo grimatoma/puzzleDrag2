@@ -5,7 +5,6 @@
  */
 
 import type { RunSummary } from "../features/runSummary/slice.js";
-import type { CraftQueueEntry } from "../features/crafting/slice.js";
 import type { BossState } from "../features/boss/slice.js";
 import type { Quest } from "../features/quests/data.js";
 
@@ -55,7 +54,6 @@ export interface SliceRootFields {
   mapDiscovered: string[];
   activeZone: string;
   craftedTotals: Record<string, number>;
-  craftQueues: Record<string, CraftQueueEntry[]>;
   boss: BossState | null;
   bossPending: boolean;
   bossMinimized: boolean;
@@ -86,4 +84,4 @@ export interface SliceRootFields {
   year?: number;
 }
 
-export type { RunSummary, CraftQueueEntry, BossState, Quest };
+export type { RunSummary, BossState, Quest };

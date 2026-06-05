@@ -455,7 +455,7 @@ export function applyBiomeOverrides(
  * Validate the Dev Panel "Tuning" section (loose top-level constants).
  * Returns a clean object containing only the keys that passed validation; the
  * caller (constants.js / zones/data.js) reassigns the matching `export let`s.
- *   craftQueueHours, craftGemSkipCost, minExpeditionTurns,
+ *   minExpeditionTurns,
  *   foundingBaseCoins                      — positive integers
  *   foundingGrowth                         — positive number
  *   homeBiome                              — non-empty string

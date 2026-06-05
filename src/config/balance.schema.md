@@ -46,7 +46,7 @@ Keys must already exist in `ITEMS`.
 
 ## Tuning (`tuning`)
 
-- `craftQueueHours`, `craftGemSkipCost`, `minExpeditionTurns`, `foundingBaseCoins`, `foundingGrowth`, `homeBiome`, `fireHazardEnabled`
+- `minExpeditionTurns`, `foundingBaseCoins`, `foundingGrowth`, `homeBiome`, `fireHazardEnabled`
 
 ## CI validation
 

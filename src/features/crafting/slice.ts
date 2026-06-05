@@ -1,8 +1,6 @@
 import {
   RECIPES,
   getItem,
-  CRAFT_GEM_SKIP_COST,
-  recipeCraftMs,
   type RecipeDefinition,
   type ItemEntry,
 } from "../../constants.js";
@@ -12,26 +10,11 @@ import { inventoryQty } from "../../types/inventory.js";
 import { inventoryZone, zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
-// Phase 5 — per-station crafting queues. Each station (bakery, larder, forge,
-// workshop, kitchen, smokehouse, …) has its own sequential queue under
-// `craftQueues[station]`. Stations run independently in parallel; within a
-// station only the head ticks down.
-//
-// Queue entry: { key, queuedAt, startAt, readyAt, durationMs }
-export interface CraftQueueEntry {
-  key: string;
-  queuedAt: number;
-  startAt: number;
-  readyAt: number;
-  durationMs: number;
-}
-
 export interface CraftingSlice {
   craftedTotals: Record<string, number>;
-  craftQueues: Record<string, CraftQueueEntry[]>;
 }
 
-export const initial: CraftingSlice = { craftedTotals: {}, craftQueues: {} };
+export const initial: CraftingSlice = { craftedTotals: {} };
 
 interface WorkerEffects {
   recipeInputReduce?: Record<string, Record<string, number>>;
@@ -85,12 +68,7 @@ function itemDef(key: string): ItemEntry | undefined {
   return getItem(key);
 }
 
-/**
- * Grant the output of a completed craft onto `state` (inventory/tools +
- * craftedTotals) and return the new state. Shared by instant CRAFT_RECIPE,
- * CLAIM_CRAFT, and SKIP_CRAFT. `baseInventory` lets callers pass an already
- * input-deducted inventory (the queue path deducted at queue time).
- */
+/** Grant the output of a completed craft onto `state` (inventory/tools + craftedTotals). */
 function grantCraftOutput(state: GameState, recipeKey: string, recipe: RecipeDefinition, baseInventory?: Record<string, number>): GameState {
   const craftZone = inventoryZone(state);
   const inv: Record<string, number> = { ...(baseInventory ?? zoneInventory(state)) };
@@ -130,78 +108,7 @@ export function reduce(state: GameState, action: Action): GameState {
       return { ...next, bubble: { npc: "mira", text: `Crafted ${itemDef(paid.recipe.item)?.label}!`, ms: 1500, id: Date.now() } };
     }
 
-    case "CRAFTING/QUEUE_RECIPE": {
-      const recipeKey = action.recipeKey ?? action.payload?.key;
-      if (!recipeKey) return state;
-      const paid = canPayForRecipe(state, recipeKey);
-      if (!paid) return state;
-      const station = paid.recipe.station;
-      const craftZone = inventoryZone(state);
-      const inv = payInputs(zoneInventory(state), paid.inputs);
-      const now = Date.now();
-      const queues = state.craftQueues;
-      const queue: CraftQueueEntry[] = queues[station] ?? [];
-      const last = queue[queue.length - 1];
-      const startAt = Math.max(now, last?.readyAt ?? 0);
-      const durationMs = recipeCraftMs(recipeKey);
-      const readyAt = startAt + durationMs;
-      return {
-        ...state,
-        inventory: { ...state.inventory, [craftZone]: inv },
-        craftQueues: {
-          ...queues,
-          [station]: [...queue, { key: recipeKey, queuedAt: now, startAt, readyAt, durationMs }],
-        },
-        bubble: { npc: "mira", text: `Queued ${itemDef(paid.recipe.item)?.label}.`, ms: 1500, id: Date.now() },
-      };
-    }
-    case "CRAFTING/CLAIM_CRAFT": {
-      const station = action.payload?.station ?? action.station;
-      if (!station) return state;
-      const queues = state.craftQueues;
-      const queue: CraftQueueEntry[] = queues[station] ?? [];
-      const entry = queue[0];
-      if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state;
-      const recipe = RECIPES[entry.key];
-      if (!recipe) return state;
-      const next = grantCraftOutput(state, entry.key, recipe, zoneInventory(state));
-      return {
-        ...next,
-        craftQueues: { ...queues, [station]: queue.slice(1) },
-        totalCrafted: state.totalCrafted + 1,
-        bubble: { npc: "mira", text: `Crafted ${itemDef(recipe.item)?.label}!`, ms: 1500, id: Date.now() },
-      };
-    }
-    case "CRAFTING/SKIP_CRAFT": {
-      const station = action.payload?.station ?? action.station;
-      if (!station) return state;
-      const queues = state.craftQueues;
-      const queue: CraftQueueEntry[] = queues[station] ?? [];
-      const entry = queue[0];
-      if (!entry) return state;
-      const recipe = RECIPES[entry.key];
-      if (!recipe) return state;
-      if (state.gems < CRAFT_GEM_SKIP_COST) return state;
-      const now = Date.now();
-      const shift = Math.max(0, (entry.readyAt ?? now) - now);
-      const restShifted: CraftQueueEntry[] = queue.slice(1).map((e: CraftQueueEntry) => ({
-        ...e,
-        startAt: (e.startAt ?? 0) - shift,
-        readyAt: (e.readyAt ?? 0) - shift,
-      }));
-      const next = grantCraftOutput(
-        { ...state, gems: state.gems - CRAFT_GEM_SKIP_COST },
-        entry.key,
-        recipe,
-        zoneInventory(state),
-      );
-      return {
-        ...next,
-        craftQueues: { ...queues, [station]: restShifted },
-        totalCrafted: state.totalCrafted + 1,
-        bubble: { npc: "mira", text: `Skipped ahead — crafted ${itemDef(recipe.item)?.label}!`, ms: 1600, id: Date.now() },
-      };
-    }
+
 
     default:
       return state;

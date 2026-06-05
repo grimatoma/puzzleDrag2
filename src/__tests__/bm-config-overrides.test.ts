@@ -77,17 +77,15 @@ describe("applyUpgradeThresholdOverrides", () => {
 });
 
 describe("sanitizeTuning", () => {
-  it("keeps only valid keys, floors integers, allows craftGemSkipCost 0", () => {
+  it("keeps only valid keys and floors integers", () => {
     expect(sanitizeTuning({
-      craftQueueHours: 6, craftGemSkipCost: 0,
       minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
     })).toEqual({
-      craftQueueHours: 6, craftGemSkipCost: 0,
       minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
     });
   });
   it("throws on invalid tuning", () => {
-    expect(() => sanitizeTuning({ foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" }))
+    expect(() => sanitizeTuning({ foundingGrowth: 0, homeBiome: "", minExpeditionTurns: "x" }))
       .toThrow(/Invalid balance overrides \(tuning\)/);
     expect(sanitizeTuning(undefined)).toEqual({});
   });

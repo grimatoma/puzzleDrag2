@@ -5,8 +5,6 @@
  */
 
 export enum TuningKey {
-  CraftQueueHours = "craftQueueHours",
-  CraftGemSkipCost = "craftGemSkipCost",
   MinExpeditionTurns = "minExpeditionTurns",
   FoundingBaseCoins = "foundingBaseCoins",
   FoundingGrowth = "foundingGrowth",

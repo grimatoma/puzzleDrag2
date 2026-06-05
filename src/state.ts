@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, getItem, tileFamilyResource } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, getItem, tileFamilyResource } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
@@ -1013,34 +1013,6 @@ function coreReducer(state: GameState, action: Action): GameState {
       if (!crafting.canPayForRecipe(state, craftKey)) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
     }
-    case "CRAFTING/CLAIM_CRAFT": {
-      // Mirror CRAFT_RECIPE for queued completions: claiming the ready head
-      // entry of a station's queue should fire `craft_made` so story beats,
-      // boss progress (ember_drake counts iron_bar crafts) and achievements
-      // (totalCrafted, distinct_crafts) all advance. The slice owns the
-      // actual inventory mutation + queue removal; we only emit the event
-      // when the action would succeed.
-      const station = action.payload?.station ?? action.station;
-      if (!station) return state;
-      const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string; readyAt?: number }>>;
-      const queue = queueMap[station] ?? [];
-      const entry = queue[0];
-      if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state;
-      return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: entry.key, count: 1 });
-    }
-    case "CRAFTING/SKIP_CRAFT": {
-      // Same idea as CLAIM_CRAFT but for gem-skip completions. Validate gem
-      // cost so we don't fire the event on a rejected skip.
-      const station = action.payload?.station ?? action.station;
-      if (!station) return state;
-      const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string }>>;
-      const queue = queueMap[station] ?? [];
-      const entry = queue[0];
-      if (!entry) return state;
-      if ((state.gems ?? 0) < CRAFT_GEM_SKIP_COST) return state;
-      return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: entry.key, count: 1 });
-    }
-
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE": {
@@ -1595,15 +1567,6 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Story modal dismiss / choice picks are owned by story/slice
   "STORY/DISMISS_MODAL",
   "STORY/PICK_CHOICE",
-  // Phase 5 — real-time crafting queue (crafting/slice). Instant CRAFT_RECIPE
-  // stays in ALWAYS_RUN_SLICES (coreReducer fires its `craft_made` story beat).
-  // CLAIM_CRAFT / SKIP_CRAFT also fire `craft_made` from coreReducer, but the
-  // slice still owns the inventory mutation + queue removal, so they remain
-  // slice-primary — coreReducer may or may not change state (depends on
-  // whether a beat is queued for this item), but the slice must always run.
-  "CRAFTING/QUEUE_RECIPE",
-  "CRAFTING/CLAIM_CRAFT",
-  "CRAFTING/SKIP_CRAFT",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
   "SETTINGS/OPEN_DEBUG",
