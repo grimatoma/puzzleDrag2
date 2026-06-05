@@ -550,14 +550,27 @@ export function effectiveChoices(beatId: string | null | undefined, draft: Story
   return Array.isArray(b?.choices) ? (b!.choices as StoryChoice[]) : [];
 }
 
+const STORY_BEAT_IDS = (STORY_BEATS as StoryBeat[]).map((b) => b.id);
+const SIDE_BEAT_IDS = (SIDE_BEATS as StoryBeat[]).map((b) => b.id);
+
 /** Every beat id known to the editor (built-ins + drafts). */
 export function allBeatIds(draft: StoryDraft | null | undefined): string[] {
   const suppressed = suppressedBeatIds(draft);
-  return [
-    ...(STORY_BEATS as StoryBeat[]).map((b) => b.id),
-    ...(SIDE_BEATS as StoryBeat[]).map((b) => b.id).filter((id) => !suppressed.has(id)),
-    ...draftBeats(draft).map((b) => b && b.id).filter((id): id is string => Boolean(id)),
-  ];
+  const out: string[] = [];
+
+  for (let i = 0; i < STORY_BEAT_IDS.length; i++) {
+    out.push(STORY_BEAT_IDS[i]);
+  }
+  for (let i = 0; i < SIDE_BEAT_IDS.length; i++) {
+    const id = SIDE_BEAT_IDS[i];
+    if (!suppressed.has(id)) out.push(id);
+  }
+  const dBeats = draftBeats(draft);
+  for (let i = 0; i < dBeats.length; i++) {
+    const id = dBeats[i]?.id;
+    if (id) out.push(id);
+  }
+  return out;
 }
 
 /** The first effective choice (across all beats) whose outcome queues `beatId`. */
