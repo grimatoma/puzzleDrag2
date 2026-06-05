@@ -157,12 +157,14 @@
       <span class="chip">GDScript</span>
       <span class="chip amber">Mobile App</span>
       <span class="chip">CI/CD</span>
+      <span class="chip">Asset Pipeline</span>
     </div>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" data-tab="overview">Overview</button>
     <button class="tab" role="tab" data-tab="milestones">Milestones</button>
+    <button class="tab" role="tab" data-tab="assets">Asset Pipeline</button>
     <button class="tab" role="tab" data-tab="workflow">Workflow &amp; CI</button>
     <button class="tab" role="tab" data-tab="reference">Reference</button>
   </nav>
@@ -401,6 +403,162 @@
         <h2>Parallel track (throughout all milestones)</h2>
         <div class="box"><b>Dev tooling stays live.</b> The Dev Panel, Wiki, and Story Editor remain deployed on GitHub Pages and usable throughout the migration. Balance tuning via the Dev Panel still works — the constants transfer as data. No need to rebuild these tools in Godot.</div>
         <p>Visual regression testing migrates alongside the game: as each milestone produces a working HTML5 export, the existing Playwright infrastructure extends to cover Godot scenes via the browser.</p>
+        <p>The <a href="#assets">asset pipeline</a> is also an independent parallel workstream — Stage 1 (placeholders) ships with M1, Stage 2 (v1 PNG export) can land any time during M2/M3, and Stage 3 (v2 animated sprite sheets) feeds in through M4 and beyond.</p>
+      </section>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ ASSETS -->
+    <div class="panel" id="assets" role="tabpanel" aria-label="Asset Pipeline">
+
+      <section id="assets-overview">
+        <h2>Asset pipeline — auxiliary plan</h2>
+        <div class="box tip"><b>Independent workstream.</b> This plan can be started at any point during the migration — M1, M2, M3 or later. It does not block any milestone. Each stage replaces the previous one cleanly without changing the surrounding Godot code.</div>
+
+        <p>The current game textures are <strong>Canvas 2D procedural drawings</strong> generated in JavaScript at Phaser scene init (<code>src/textures/categories/</code>). They are not SVG files — they're rasterized at runtime into Phaser's texture cache and cannot be transferred to Godot directly. The path forward is a three-stage progression from placeholders to exported v1 PNGs to full v2 animated sprite sheets.</p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 740 110" width="100%" role="img" aria-label="Asset stages: placeholder, v1 PNG export, v2 animated sprites">
+            <defs>
+              <marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="600">
+              <rect x="20"  y="28" width="190" height="56" rx="9" fill="color-mix(in srgb,var(--idle) 14%,#fff)" stroke="var(--idle)" stroke-width="1.5"/>
+              <text x="115" y="51" text-anchor="middle" fill="var(--idle)">Stage 1 — M1</text>
+              <text x="115" y="67" text-anchor="middle" fill="var(--muted)" font-weight="400">Colored placeholders</text>
+              <text x="115" y="79" text-anchor="middle" fill="var(--muted)" font-weight="400">(no art needed)</text>
+
+              <rect x="270" y="28" width="190" height="56" rx="9" fill="color-mix(in srgb,var(--accent2) 13%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="365" y="51" text-anchor="middle" fill="var(--accent2)">Stage 2 — M2/M3</text>
+              <text x="365" y="67" text-anchor="middle" fill="var(--ink)" font-weight="400">v1 PNG export</text>
+              <text x="365" y="79" text-anchor="middle" fill="var(--ink)" font-weight="400">(one-time script)</text>
+
+              <rect x="520" y="28" width="190" height="56" rx="9" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)" stroke-width="1.5"/>
+              <text x="615" y="51" text-anchor="middle" fill="var(--ok)">Stage 3 — M4+</text>
+              <text x="615" y="67" text-anchor="middle" fill="var(--ink)" font-weight="400">v2 animated sprite sheets</text>
+              <text x="615" y="79" text-anchor="middle" fill="var(--ink)" font-weight="400">(swap per tile)</text>
+
+              <line x1="210" y1="56" x2="265" y2="56" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr2)"/>
+              <line x1="460" y1="56" x2="515" y2="56" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr2)"/>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section id="assets-stage1">
+        <h2>Stage 1 — Colored placeholders (M1)</h2>
+        <p>Do not use real tile art during Milestone 1. The milestone proves the <em>mechanic</em> works, not the art. In Godot each tile is a <code>ColorRect</code> or a <code>Sprite2D</code> with a 1×1 pixel solid color texture — one color per tile type.</p>
+        <pre><code># tile.gd — v1 placeholder color lookup
+const TILE_COLORS = {
+    TileKey.GRASS:  Color(0.42, 0.68, 0.32),
+    TileKey.STONE:  Color(0.55, 0.55, 0.55),
+    TileKey.WATER:  Color(0.28, 0.52, 0.82),
+    # … one entry per TileKey enum value
+}</code></pre>
+        <p>Zero asset cost. Replace with real PNGs in Stage 2 by swapping the texture on the same <code>Sprite2D</code> node — the surrounding code does not change.</p>
+      </section>
+
+      <section id="assets-stage2">
+        <h2>Stage 2 — Export v1 PNGs once (M2 / M3)</h2>
+        <p>Build a one-time Playwright export script that drives the existing Phaser web app headlessly, extracts every texture from Phaser's cache, and saves each as a named PNG. The current game already exposes <code>window.__phaserScene</code> in dev mode, making this straightforward.</p>
+
+        <h3>Export script outline</h3>
+        <pre><code>// tools/export-v1-tiles.mjs
+// Run once: node tools/export-v1-tiles.mjs
+// Writes assets/tiles/*.png ready to drop into res://assets/tiles/
+
+import { chromium } from 'playwright';
+import { writeFileSync, mkdirSync } from 'fs';
+
+const browser = await chromium.launch();
+const page    = await browser.newPage();
+await page.goto('http://localhost:5173/puzzleDrag2/?visual=board-farm');
+await page.waitForFunction(() => window.__phaserScene?.textures);
+
+const pngs = await page.evaluate(() => {
+  const tm  = window.__phaserScene.textures;
+  const out = {};
+  for (const key of Object.keys(tm.list)) {
+    if (key === '__DEFAULT' || key === '__MISSING') continue;
+    const src = tm.get(key).getSourceImage();       // HTMLCanvasElement or HTMLImageElement
+    const c   = document.createElement('canvas');
+    c.width   = src.width;  c.height = src.height;
+    c.getContext('2d').drawImage(src, 0, 0);
+    out[key]  = c.toDataURL('image/png');
+  }
+  return out;
+});
+
+mkdirSync('assets/tiles', { recursive: true });
+for (const [key, dataUrl] of Object.entries(pngs)) {
+  const buf = Buffer.from(dataUrl.split(',')[1], 'base64');
+  writeFileSync(`assets/tiles/${key}.png`, buf);
+  console.log(`  wrote ${key}.png  (${buf.length} bytes)`);
+}
+await browser.close();</code></pre>
+
+        <div class="box"><b>Run once, commit the PNGs.</b> The output folder (<code>assets/tiles/</code>) gets committed to the Godot repo. This is a bootstrap — you run the script once to seed the folder, then only re-run it if a v1 texture is intentionally changed in the Phaser codebase before v2 replaces it.</div>
+
+        <h3>Using the PNGs in Godot</h3>
+        <pre><code># tile_visual.gd
+func set_tile(key: TileKey) -> void:
+    var path := "res://assets/tiles/%s.png" % TileKey.keys()[key].to_lower()
+    texture = load(path)</code></pre>
+        <p>Godot caches <code>load()</code> calls — no performance concern for a 6×6 board.</p>
+      </section>
+
+      <section id="assets-stage3">
+        <h2>Stage 3 — v2 animated sprite sheets (M4+)</h2>
+        <p>As each v2 asset arrives from PixelLab / Ludo.ai, it replaces the corresponding v1 PNG. In Godot the swap is a node-level change — replace <code>Sprite2D</code> with <code>AnimatedSprite2D</code> and point it at a <code>SpriteFrames</code> resource. The rest of the tile code is unchanged.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Static tile (v1)</h3>
+            <p><code>Sprite2D</code> node loading a flat PNG. Simple, no animation state.</p>
+            <pre><code>Tile (Node2D)
+  └─ Sprite2D
+       texture = tile_grass_grass.png</code></pre>
+          </div>
+          <div class="card">
+            <h3>Animated tile (v2)</h3>
+            <p><code>AnimatedSprite2D</code> with a <code>SpriteFrames</code> resource. Drop-in swap — the parent Tile node interface is unchanged.</p>
+            <pre><code>Tile (Node2D)
+  └─ AnimatedSprite2D
+       frames = grass_idle.tres
+       autoplay = "idle"</code></pre>
+          </div>
+        </div>
+
+        <h3>Asset generation tools for v2</h3>
+        <table>
+          <thead><tr><th>Tool</th><th>Strengths</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>PixelLab.ai</strong></td>
+              <td>Skeleton-based animation rigging, 4/8-direction rotation, tileset generation, style consistency</td>
+              <td>Character sprites, directional tiles, tile sets where consistency across variants matters</td>
+            </tr>
+            <tr>
+              <td><strong>Ludo.ai</strong></td>
+              <td>Duration-based animation (up to 4s), transparent PNG sprite sheet export, native MCP integration — animate existing sprites without leaving Claude Code</td>
+              <td>Adding animation loops to existing designs; quick turn-around on idle/walk/attack cycles</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="box amber"><b>Sprite sheet format for Godot.</b> Export from PixelLab / Ludo.ai as a <strong>horizontal strip</strong> PNG (all frames in one row) or as individual frame PNGs. Godot's <code>SpriteFrames</code> editor imports both. Prefer transparent background PNGs at the tile's native resolution (32×32 or 64×64 to match the board grid). Avoid atlases with mixed tile types in Stage 3 — keep one file per tile for clean per-tile swapping.</div>
+      </section>
+
+      <section id="assets-consistency">
+        <h2>Visual consistency across v1 and v2</h2>
+        <p>Because each tile's visual is fully encapsulated in its own Godot scene, v1 and v2 tiles can coexist on the same board during the transition — there is no "all-or-nothing" art swap. Grass goes v2 while stone stays v1, and they render side by side without any code changes.</p>
+        <p>The only consistency requirement is that all tile scenes expose the same interface to the board:</p>
+        <pre><code># Every tile visual scene (v1 or v2) implements this
+func set_selected(on: bool) -> void: …   # highlight / deselect
+func play_collect() -> void: …           # collect animation
+func get_tile_key() -> TileKey: …</code></pre>
       </section>
 
     </div>
@@ -508,6 +666,7 @@
         <details>
           <summary>Godot &amp; tooling links</summary>
           <ul>
+            <li><a href="#assets">Asset pipeline plan</a> — v1 PNG export script, v2 sprite sheet workflow, PixelLab vs Ludo.ai</li>
             <li><a href="https://godotengine.org/" target="_blank" rel="noopener">Godot Engine</a></li>
             <li><a href="https://github.com/godot-gdunit-labs/gdUnit4" target="_blank" rel="noopener">GdUnit4</a> — unit testing framework</li>
             <li><a href="https://github.com/MikeSchulze/gdUnit4-action" target="_blank" rel="noopener">gdUnit4-action</a> — official GitHub Action</li>
