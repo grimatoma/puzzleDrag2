@@ -75,6 +75,10 @@ const StoryModalScript := preload("res://scenes/StoryModal.gd")
 const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
 var _story_modal                        ## CanvasLayer (StoryModalScript), lazily created
 var _chronicle_screen                   ## CanvasLayer (ChronicleScreenScript), lazily created
+## Townsfolk roster screen — NPC cards with bond bars, lazily created. Loaded via preload
+## (NO class_name) so the port never needs an --import pass to register it as a global.
+const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
+var _townsfolk_screen                   ## CanvasLayer (TownsfolkScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -544,6 +548,26 @@ func _build_hud() -> void:
 	chronicle_btn.connect("pressed", Callable(self, "_open_chronicle"))
 	root.add_child(chronicle_btn)
 
+	# Townsfolk — always-visible "👥" roster button, pinned top-LEFT just under the
+	# 📜 chronicle button (offset_top 248, ~38px tall) so the seven buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the TownsfolkScreen roster modal.
+	var folk_btn := Button.new()
+	folk_btn.text = "👥"
+	folk_btn.add_theme_font_size_override("font_size", 20)
+	folk_btn.add_theme_color_override("font_color", Palette.INK)
+	folk_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	folk_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	folk_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	folk_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	folk_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	folk_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	folk_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	folk_btn.offset_left = 18
+	folk_btn.offset_top = 294
+	folk_btn.connect("pressed", Callable(self, "_open_townsfolk"))
+	root.add_child(folk_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -945,6 +969,26 @@ func _on_chronicle_closed() -> void:
 		_chronicle_screen.visible = false
 	_router.close_modal()
 
+# ── Townsfolk roster screen ────────────────────────────────────────────────────
+
+## Open the townsfolk roster modal, lazily creating + wiring it on first use (mirrors
+## _open_chronicle). The screen is READ-ONLY — it only emits `closed`, routed to a
+## hide handler. open() re-reads game.npcs bonds each time, so the roster always
+## reflects the current bond state.
+func _open_townsfolk() -> void:
+	if _townsfolk_screen == null:
+		_townsfolk_screen = TownsfolkScreenScript.new()
+		add_child(_townsfolk_screen)
+		_townsfolk_screen.setup(game)
+		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
+	_townsfolk_screen.open()
+	_router.open_modal(ViewRouter.Modal.TOWNSFOLK)
+
+func _on_townsfolk_closed() -> void:
+	if _townsfolk_screen != null:
+		_townsfolk_screen.visible = false
+	_router.close_modal()
+
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 
 ## Present the FRONT of game.story.beat_queue in the beat modal, lazily creating + wiring
@@ -1021,6 +1065,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_tiles()
 		ViewRouter.Modal.CHRONICLE:
 			_open_chronicle()
+		ViewRouter.Modal.TOWNSFOLK:
+			_open_townsfolk()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1043,6 +1089,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _chronicle_screen != null and _chronicle_screen.visible:
 				_chronicle_screen.visible = false
+				_router.close_modal()
+			elif _townsfolk_screen != null and _townsfolk_screen.visible:
+				_townsfolk_screen.visible = false
 				_router.close_modal()
 	return true
 
