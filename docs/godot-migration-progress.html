@@ -187,12 +187,13 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m2</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3a-tiers</code></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
       <span class="chip">M1 merged</span>
-      <span class="chip amber">M2 done</span>
+      <span class="chip">M2 done</span>
+      <span class="chip amber">M3 in progress</span>
       <span class="chip">CI wired</span>
       <span class="chip">tests green</span>
     </div>
@@ -202,6 +203,7 @@
     <button class="tab" role="tab" data-tab="status">Status</button>
     <button class="tab" role="tab" data-tab="m1">M1 detail</button>
     <button class="tab" role="tab" data-tab="m2">M2 detail</button>
+    <button class="tab" role="tab" data-tab="m3">M3 detail</button>
     <button class="tab" role="tab" data-tab="decisions">Decisions</button>
     <button class="tab" role="tab" data-tab="verify">Verification</button>
     <button class="tab" role="tab" data-tab="next">Next &amp; risks</button>
@@ -214,12 +216,14 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> <b>M1 and M2 are both complete.</b> The Godot 4.6 project at
+        <div class="box tip"><b>Where we are.</b> <b>M1 and M2 are complete; M3 is now in progress.</b> The Godot 4.6 project at
           <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
           run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
-          mismatched saves. It renders as a playable board with placeholder art and a live economy HUD. Headless tests and a
-          Web-export job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
+          mismatched saves. <b>M3a</b> has now landed the progression spine — the <b>Camp→City tier ladder</b>: a single
+          town-center upgrade that costs escalating local resources and raises a storage cap, plot count, and the next batch of
+          building unlocks. It renders as a playable board with placeholder art and a live economy + settlement HUD. Headless
+          tests and a Web-export job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
         <div class="progress-wrap">
           <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
@@ -230,8 +234,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~35%</b></div>
-          <div class="bar"><span style="width:35%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3f)</span> <b>~17% · 1 of 6 sub-parts (M3a done)</b></div>
+          <div class="bar"><span style="width:17%"></span></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~40%</b></div>
+          <div class="bar"><span style="width:40%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -257,9 +265,9 @@
           <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
-          <div class="num">M3</div>
-          <div><div class="t">Content &amp; progression</div><div class="d">Buildings, tiers, biomes, expeditions, capstone boss (the Direction spec)</div></div>
-          <span class="pill idle">todo</span>
+          <div class="num amber">M3</div>
+          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3f. <b>M3a — Camp→City tier ladder — done</b>; M3b buildings/plots, M3c refining/orders/market, M3d town UI, M3e expedition→Town 2, M3f capstone boss + Town 3 to come (the Direction spec)</div></div>
+          <span class="pill warn">partial</span>
         </div>
         <div class="ms-row">
           <div class="num">M4</div>
@@ -274,16 +282,17 @@
       </section>
 
       <section id="session-summary">
-        <h2>Current focus — M3 (the Direction vertical slice)</h2>
+        <h2>Current focus — M3b (buildings, after the M3a tier ladder)</h2>
         <p>With the foundational board (M1, merged as PR #930) and the run-economy layer (M2, done on
-          <code>claude/godot-migration-m2</code>) both landed and verified on Godot 4.6.2, the next milestone is <b>M3</b>:
-          buildings, tiers/upgrades, biomes/expeditions, NPCs, and the capstone boss — the Town&nbsp;1→2→3 slice from the
-          Direction spec.</p>
+          <code>claude/godot-migration-m2</code>) both landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
+          Direction slice — is now in progress as a sequence of sub-PRs. <b>M3a (the Camp→City tier ladder)</b> just landed on
+          <code>claude/godot-migration-m3a-tiers</code>: the progression spine every town climbs. Next up is <b>M3b</b> —
+          buildings, plots, and building-gated category spawners.</p>
         <div class="grid">
           <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
-          <div class="card amber"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
-          <div class="card"><h3>State tests + CI step</h3><p>New <code>run_state_tests.gd</code> (42 checks: carry-over, exact-threshold, multi-unit, per-resource buckets, coins/turn, save→load→clear round-trip). CI runs it as its own step after the <code>--import</code> pass that registers the new <code>class_name</code> globals.</p></div>
-          <div class="card"><h3>Next — M3 content</h3><p>Promote the economy into the Direction slice: buildings &amp; build costs, resource tiers/upgrade tiles, biomes + expeditions, NPCs, and the capstone boss. Cross-collection (Decision&nbsp;#7) rides along here.</p></div>
+          <div class="card"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
+          <div class="card amber"><h3>M3a — Camp→City tier ladder <span class="pill ok">done</span></h3><p><code>TownConfig.gd</code> holds the five-tier farm ladder (Camp 200/3 → City 600/11) as data; <code>Settlement.gd</code> is the mutable tier cursor; <code>GameState</code> gains <code>can_tier_up</code>/<code>try_tier_up</code> (exact-cost deduction) and clamps every credit to <code>settlement.cap()</code>. A 69-check town suite covers it; a temporary T-key affordance drives the ladder until the M3d town UI ships.</p></div>
+          <div class="card"><h3>Next — M3b buildings</h3><p>Buildings + scarce plots + building-gated category spawners + demolish (a Coop puts the <i>birds</i> category in the spawn pool, etc.). Then M3c refining/orders/market, M3d town UI, M3e expedition→Town 2, M3f capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along here.</p></div>
         </div>
       </section>
 
@@ -403,6 +412,66 @@
 
     </div>
 
+    <!-- ════════════════════════════════════════════════════ M3 DETAIL -->
+    <div class="panel" id="m3" role="tabpanel" aria-label="M3 detail">
+
+      <section id="m3-checklist">
+        <h2>Milestone 3 — checklist</h2>
+        <p>The content &amp; progression milestone — the locked <b>Direction</b> spec's Town&nbsp;1 → Town&nbsp;2 (+capstone boss)
+          → Town&nbsp;3 vertical slice. It ships as a sequence of sub-PRs (<b>M3a…M3f</b>). <b>M3a — the Camp→City tier ladder —
+          is done and merge-ready</b> on branch <code>claude/godot-migration-m3a-tiers</code>; the rest are sequenced below.</p>
+        <div class="legend">
+          <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
+        </div>
+
+        <h3>M3a — Camp→City tier ladder <span class="pill ok">done</span></h3>
+        <ul class="check">
+          <li class="done">Town-1 farm tier ladder as data + static helpers
+            <span class="note"><code>TownConfig.gd</code> (<code>class_name TownConfig extends Node</code>): five tiers — <b>Camp</b> (cap 200, 3 plots) · <b>Hamlet</b> (300, 5) · <b>Village</b> (400, 7) · <b>Town</b> (500, 9) · <b>City</b> (600, 11) — with per-tier storage cap, plot count, building unlocks (description-only for now), and next-tier costs. Static helpers expose cap/plots/unlocks/next-cost by tier.</span></li>
+          <li class="done">Per-town mutable settlement cursor with clamped round-trip
+            <span class="note"><code>Settlement.gd</code> (<code>class_name Settlement extends RefCounted</code>): a mutable <code>tier</code> cursor delegating cap/plots/unlocks/next-cost to <code>TownConfig</code>; <code>to_dict</code>/<code>from_dict</code> clamps a corrupt tier into <code>[1,5]</code>.</span></li>
+          <li class="done">Tier-up affordability + exact-cost deduction in <code>GameState</code>
+            <span class="note"><code>GameState</code> now owns a <code>Settlement</code>. <code>can_tier_up()</code> is true only when not maxed <i>and</i> inventory covers the next cost; <code>try_tier_up()</code> deducts the exact cost (leaves surplus and non-cost goods, never mutates on failure) and returns <code>{ok, tier, name}</code> or <code>{ok:false, reason}</code>. The settlement round-trips through <code>SaveManager</code>.</span></li>
+          <li class="done">Storage cap enforced at the credit site
+            <span class="note"><code>credit_chain</code> now clamps every resource to <code>settlement.cap()</code> (Camp 200 … City 600). Central and simple — see Decision&nbsp;#12.</span></li>
+          <li class="done">HUD settlement line + temporary T-key tier-up affordance
+            <span class="note"><code>Main.gd</code> shows "Camp · cap 200 · 3 plots" plus a "▲ Press T to advance to &lt;next&gt;" prompt when affordable. The <b>T-key</b> is a temporary affordance (Decision&nbsp;#13) until the M3d town UI ships the real button. Title bumped to "puzzleDrag2 · Godot M3".</span></li>
+          <li class="done">Town test suite — 69 checks
+            <span class="note"><code>tests/run_town_tests.gd</code>: ladder table values for all 5 tiers, affordability gating, exact-cost deduction, surplus/non-cost goods preserved, partial-funds failure leaves inventory untouched, max-tier behaviour, the cap clamp, and a tier-3 save/load round-trip. CI runs it as its own step.</span></li>
+        </ul>
+
+        <h3>M3b…M3f — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <ul class="check">
+          <li class="todo">M3b — Buildings + plots + building-gated category spawners + demolish
+            <span class="note">A Coop puts the <i>birds</i> category in the spawn pool, etc.; plots are scarce; demolish frees a plot. <b>Next.</b></span></li>
+          <li class="todo">M3c — Refining economy + Orders + Market
+            <span class="note">Mill grain→flour, Bakery flour→bread; orders pay coins; spend coins at the Market.</span></li>
+          <li class="todo">M3d — Town UI in Godot
+            <span class="note">Town screen: plots, build/demolish, the real tier-up button replacing the T-key affordance; board↔town navigation.</span></li>
+          <li class="todo">M3e — Expedition → Town 2 (mine)
+            <span class="note">The food gate (Kitchen→supplies), mine tiles + hazards.</span></li>
+          <li class="todo">M3f — Capstone boss (end of Town 2) + Town 3
+            <span class="note">Capstone boss encounter, then Town 3 with the rats hazard + Ratcatcher buildings.</span></li>
+        </ul>
+      </section>
+
+      <section id="m3-files">
+        <h2>What landed in M3a (files)</h2>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/TownConfig.gd</code></td><td><code>class_name TownConfig extends Node</code> — the Town-1 farm ladder as data + static helpers (5 tiers: Camp 200/3 → City 600/11, with caps, plots, unlocks, escalating cross-category tier-up costs)</td></tr>
+            <tr><td><code>godot/scripts/Settlement.gd</code></td><td><code>class_name Settlement extends RefCounted</code> — mutable per-town <code>tier</code> cursor; delegates cap/plots/unlocks/next-cost to <code>TownConfig</code>; <code>to_dict</code>/<code>from_dict</code> clamps tier into <code>[1,5]</code></td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td>Now owns a <code>Settlement</code>; adds <code>can_tier_up</code> / <code>try_tier_up</code> (exact-cost deduction, no mutation on failure); <code>credit_chain</code> clamps every resource to <code>settlement.cap()</code></td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>HUD settlement line ("Camp · cap 200 · 3 plots") + temporary <b>T-key</b> tier-up affordance; title bumped to "puzzleDrag2 · Godot M3"</td></tr>
+            <tr><td><code>godot/tests/run_town_tests.gd</code></td><td>Headless TownConfig + Settlement + tier-up tests (69 checks): ladder table, affordability gating, exact deduction, surplus/non-cost preservation, partial-funds no-op, max-tier, cap clamp, tier-3 save/load round-trip</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the town-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+
     <!-- ════════════════════════════════════════════════════ DECISIONS -->
     <div class="panel" id="decisions" role="tabpanel" aria-label="Decisions">
 
@@ -486,6 +555,33 @@
             economy (and the XP/almanac, bubbles, and hazards that go with it) is deferred to M3. M2's coin counter exists to prove
             the HUD and persistence wiring end-to-end; the real numbers land with the content/progression milestone.</p>
         </div>
+
+        <h3>M3 decisions</h3>
+
+        <div class="card">
+          <h3>12 · Storage cap enforced in <code>credit_chain</code>, not a separate pass</h3>
+          <p>The Direction "cap" (200→600 by tier) is applied at the credit site: <code>credit_chain</code> clamps each resource to
+            <code>settlement.cap()</code> as it writes it. This keeps cap enforcement simple and central — there is one place that
+            mutates inventory and it is also the place that respects the ceiling, so no resource can slip past the cap through a
+            side path. Revisit if per-resource or soft (overflow-with-decay) caps are needed later; for the first-pass single
+            global cap this is the least machinery.</p>
+        </div>
+        <div class="card amber">
+          <h3>13 · Temporary T-key tier-up affordance until the M3d town UI</h3>
+          <p>The real tier-up button belongs to the Godot town screen, which is a later sub-PR (<b>M3d</b>). Rather than block the
+            ladder on that UI, M3a drives the town-center upgrade with a keyboard <b>T</b> key so the whole Camp→City progression is
+            exercisable and demoable today (and the 69-check suite can assert it). It is flagged temporary both in
+            <code>Main.gd</code> and here, and is removed when M3d ships the button.</p>
+        </div>
+        <div class="card amber">
+          <h3>14 · Tier-up costs are PC2-aligned first-pass values (tunable)</h3>
+          <p>The escalating, cross-category tier-up costs in <code>TownConfig.gd</code> (→Hamlet <code>{hay_bundle:10, plank:4}</code>,
+            →Village <code>{flour:10, eggs:8, plank:8}</code>, →Town <code>{soup:8, pie:6, plank:12}</code>, →City
+            <code>{honey:6, horseshoe:4, milk:8, soup:8}</code>) are a first-pass aligned to the PC2 balance baseline and expressed
+            only in resources the port already produces, so the ladder is playable today. They live as data in <code>TownConfig</code>
+            and are tunable — same spirit as the M2 coins simplification (Decision&nbsp;#11); final balance rides with the broader
+            M3 content work.</p>
+        </div>
       </section>
 
     </div>
@@ -495,8 +591,9 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All three test scripts exit <code>0</code>; the
-          screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All four test scripts
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_scene_smoke</code> 11)
+          exit <code>0</code>; the screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
         <div class="shots">
@@ -508,6 +605,12 @@
         <h3>Economy HUD — M2 (visual proof)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m2-hud.png" alt="M2 economy HUD after one 6-grass chain: title 'puzzleDrag2 · Godot M2', 'Coins: 3 · Turn: 1', a full board, and 'Collected: hay_bundle x1'"><figcaption>After one 6-grass chain — title "puzzleDrag2 · Godot M2", "Coins: 3 · Turn: 1", a full post-collapse board, "Chain of 6 → +1 hay_bundle", and "Collected: hay_bundle ×1". Proves <code>credit_chain</code>, the coin/turn counters, and the live tally are wired end-to-end through <code>GameState</code>.</figcaption></figure>
+        </div>
+
+        <h3>Tier ladder — M3a (before / after tier-up)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3a-camp.png" alt="M3a Camp tier: settlement line 'Camp · cap 200 · 3 plots' with a '▲ Press T to advance to Hamlet' affordance and a stocked inventory"><figcaption>Camp tier with the cost in hand — settlement line "Camp · cap 200 · 3 plots" and the "▲ Press T to advance to Hamlet" affordance lit because the inventory covers the →Hamlet cost. Proves <code>can_tier_up()</code> gating and the HUD settlement line.</figcaption></figure>
+          <figure><img src="assets/godot/m3a-hamlet.png" alt="M3a after the tier-up: 'Hamlet · cap 300 · 5 plots', 'Town advanced → Hamlet', inventory showing hay_bundle and plank reduced by exactly the cost while surplus/flour is preserved"><figcaption>After pressing T — "Hamlet · cap 300 · 5 plots", "Town advanced → Hamlet", and the inventory showing <code>hay_bundle</code> and <code>plank</code> reduced by exactly the cost while surplus and non-cost goods (flour) are preserved. Proves <code>try_tier_up()</code> exact-cost deduction and the raised cap/plots.</figcaption></figure>
         </div>
 
         <h3>Headless test output</h3>
@@ -553,6 +656,26 @@
 ──────────────────────────────────────────────────
 42 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
+<span class="c">$ godot --headless --path godot --script res://tests/run_town_tests.gd</span>
+── TownConfig + Settlement + tier-up tests ────────
+  <span class="g">PASS</span>  tier 1 is Camp (cap 200, 3 plots)
+  <span class="g">PASS</span>  tier 2 is Hamlet (cap 300, 5 plots)
+  <span class="g">PASS</span>  tier 3 is Village (cap 400, 7 plots)
+  <span class="g">PASS</span>  tier 4 is Town (cap 500, 9 plots)
+  <span class="g">PASS</span>  tier 5 is City (cap 600, 11 plots)
+  <span class="g">PASS</span>  can_tier_up false when inventory cannot cover next cost
+  <span class="g">PASS</span>  can_tier_up true when inventory covers next cost
+  <span class="g">PASS</span>  try_tier_up deducts the exact cost (hay_bundle, plank)
+  <span class="g">PASS</span>  try_tier_up leaves surplus and non-cost goods untouched
+  <span class="g">PASS</span>  partial-funds try_tier_up fails and never mutates inventory
+  <span class="g">PASS</span>  max-tier City cannot tier up (can_tier_up false)
+  <span class="g">PASS</span>  credit_chain clamps each resource to settlement.cap()
+  <span class="g">PASS</span>  Settlement from_dict clamps a corrupt tier into [1,5]
+  <span class="g">PASS</span>  tier-3 settlement survives a save/load round-trip
+  <span class="c">…  (55 further ladder-table / gating / deduction / cap checks)</span>
+──────────────────────────────────────────────────
+69 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
 <span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
 ── Scene smoke (Main + Board wiring) ──────────────
   <span class="g">PASS</span>  Main.tscn loads
@@ -586,6 +709,7 @@ No export template found at the expected path:
 godot --headless --path godot --import                                <span class="c"># build .godot/ cache (registers class_name globals)</span>
 godot --headless --path godot --script res://tests/run_tests.gd       <span class="c"># board-logic tests (18)</span>
 godot --headless --path godot --script res://tests/run_state_tests.gd <span class="c"># GameState + SaveManager tests (42)</span>
+godot --headless --path godot --script res://tests/run_town_tests.gd  <span class="c"># TownConfig + Settlement + tier-up tests (69)</span>
 godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke (11)</span>
 godot --path godot                                                    <span class="c"># play it (windowed)</span>
 godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
@@ -599,18 +723,20 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1 &amp; M2</h3>
+        <h3>Done — M1, M2 &amp; M3a</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
+          <li class="done">M3a — the Camp→City tier ladder — built and verified on <code>claude/godot-migration-m3a-tiers</code>: <code>TownConfig</code> + <code>Settlement</code>, <code>can_tier_up</code>/<code>try_tier_up</code>, the cap clamp, HUD settlement line + temporary T-key affordance, 69-check town suite, CI step.</li>
         </ul>
 
-        <h3>Then M3 — content &amp; progression (the Direction vertical slice)</h3>
+        <h3>Then M3b…M3f — the rest of the Direction vertical slice</h3>
         <div class="log">
-          <div class="entry"><div class="date">M3 · next</div><h3>Buildings &amp; build costs</h3><p>Town buildings with resource costs drawn from the M2 inventory; the Town&nbsp;1→2→3 progression gates.</p></div>
-          <div class="entry"><div class="date">M3 · next</div><h3>Tiers / upgrades</h3><p>Resource tiers and board upgrade tiles driven by a zone <code>upgradeMap</code>, now that the carry-over accumulator exists.</p></div>
-          <div class="entry"><div class="date">M3 · next</div><h3>Biomes &amp; expeditions</h3><p>Tile sets beyond the Farm starter, biome entry costs, and the expedition flow; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
-          <div class="entry"><div class="date">M3 · next</div><h3>NPCs &amp; the capstone boss</h3><p>NPC interactions and the milestone's capstone boss encounter (boss <code>minChain</code> raises the chain floor).</p></div>
+          <div class="entry"><div class="date">M3b · next</div><h3>Buildings + plots + category spawners</h3><p>Town buildings on scarce plots, building-gated category spawners (a Coop adds the <i>birds</i> category to the spawn pool), and demolish to free a plot. Build costs draw from the M2 inventory and respect the M3a cap.</p></div>
+          <div class="entry"><div class="date">M3c</div><h3>Refining economy + Orders + Market</h3><p>Mill grain→flour, Bakery flour→bread; orders pay coins; spend coins at the Market. The real per-tile value economy (Decision&nbsp;#11) lands here.</p></div>
+          <div class="entry"><div class="date">M3d</div><h3>Town UI in Godot</h3><p>The town screen — plots, build/demolish, and the <b>real tier-up button replacing the temporary T-key affordance</b> (Decision&nbsp;#13); board↔town navigation.</p></div>
+          <div class="entry"><div class="date">M3e</div><h3>Expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies), mine tiles + hazards; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
+          <div class="entry"><div class="date">M3f</div><h3>Capstone boss + Town 3</h3><p>The end-of-Town-2 capstone boss (boss <code>minChain</code> raises the chain floor), then Town 3 with the rats hazard + Ratcatcher buildings.</p></div>
         </div>
 
         <h3>Carried-over M1/M2 polish (not blockers)</h3>
