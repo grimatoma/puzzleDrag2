@@ -218,8 +218,8 @@
           job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>~70%</b></div>
-          <div class="bar"><span style="width:70%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>~75%</b></div>
+          <div class="bar"><span style="width:75%"></span></div>
         </div>
         <div class="progress-wrap">
           <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~12%</b></div>
@@ -304,10 +304,10 @@
             <span class="note"><code>scenes/Main.gd</code> — live "Chain: N", a last-result line, and a running resource tally.</span></li>
           <li class="partial">GdUnit4 wired up — chain logic covered by unit tests
             <span class="note">Tests exist and pass via a small dependency-free headless runner (<code>tests/run_tests.gd</code>). The GdUnit4 addon is not yet vendored — see Decision #2. The same <code>BoardLogic</code> is what GdUnit4 will wrap.</span></li>
-          <li class="partial">GitHub Actions CI running headless tests on every push
-            <span class="note"><code>.github/workflows/godot-ci.yml</code> added (tests + Web export). Pending its first cloud run to confirm the <code>setup-godot</code> action resolves 4.6.2.</span></li>
+          <li class="done">GitHub Actions CI running headless tests on every push
+            <span class="note"><code>.github/workflows/godot-ci.yml</code> — <b>green on its first cloud run</b> (PR #930): headless tests 15s, Web export 1m1s. <code>setup-godot</code> resolves 4.6.2 and the headless run matches local.</span></li>
           <li class="partial">HTML5 export working — Playwright can open it and run a smoke test
-            <span class="note">Web preset validated; export runs in the CI job and uploads an artifact. The Playwright-on-export browser smoke is not yet added.</span></li>
+            <span class="note">Web export <b>confirmed green in CI</b> (produces <code>index.html</code> + <code>index.wasm</code>, uploaded as an artifact). The Playwright-on-export browser smoke is the remaining piece.</span></li>
         </ul>
 
         <h3>Built beyond the M1 list</h3>
@@ -477,7 +477,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
         <h2>Next steps</h2>
         <h3>Finish M1</h3>
         <ul class="check">
-          <li class="todo">Open the PR and confirm <b>Godot CI is green in the cloud</b> — validates the <code>setup-godot</code> action resolves 4.6.2 and the headless run behaves like local.</li>
+          <li class="done">PR opened (#930) and <b>Godot CI is green in the cloud</b> — the <code>setup-godot</code> action resolves 4.6.2 and the headless run behaves like local.</li>
           <li class="todo">Add a <b>Playwright-on-export smoke</b>: serve the Web build, assert the canvas boots and a chain can be dragged.</li>
           <li class="todo">Vendor <b>GdUnit4</b> and re-home the two runners into it (keep the lightweight runner as a fast pre-check, or retire it).</li>
           <li class="todo">Add the <b>session-start hook</b> that fetches the Godot headless binary in the Claude cloud container (per plan §workflow).</li>
@@ -500,8 +500,8 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
         <table>
           <thead><tr><th>Item</th><th>Risk</th><th>Mitigation</th></tr></thead>
           <tbody>
-            <tr><td>setup-godot version</td><td>The action may not expose exactly <code>4.6.2</code>.</td><td>First CI run will tell; pin to the nearest available 4.6.x if needed.</td></tr>
-            <tr><td>Headless <code>await process_frame</code> in CI</td><td>The scene smoke needs one rendered frame for <code>_ready</code>; behaviour could differ on Linux headless.</td><td>Logic tests (no frames) are the primary gate; smoke is secondary. Verified locally on Windows headless.</td></tr>
+            <tr><td>setup-godot version</td><td>The action may not expose exactly <code>4.6.2</code>.</td><td><span class="pill ok">resolved</span> CI resolved 4.6.2 and both Godot jobs pass (PR #930).</td></tr>
+            <tr><td>Headless <code>await process_frame</code> in CI</td><td>The scene smoke needs one rendered frame for <code>_ready</code>; behaviour could differ on Linux headless.</td><td><span class="pill ok">resolved</span> Scene smoke is green on Linux headless CI. Logic tests remain the primary gate.</td></tr>
             <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
             <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
             <tr><td>Visual parity vs Phaser</td><td>Placeholder colors ≠ the procedural Phaser textures.</td><td>Intentional for M1; the asset pipeline (plan §assets) replaces them in Stage 2/3.</td></tr>
