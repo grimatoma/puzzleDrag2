@@ -39,6 +39,46 @@ var orders: Array = []
 ## seed_orders(); the live scene seeds it with a fixed int for stable screenshots.
 var rng := RandomNumberGenerator.new()
 
+# ── NPC roster + bonding (ADDITIVE — ported from src/features/npcs) ────────────
+## The 5-NPC roster and per-NPC bond (a float in [0, 10]). Every order is REQUESTED
+## by an NPC (generate_order picks one via the seeded `rng`); filling it pays a
+## bond-ADJUSTED reward (NpcConfig.reward_with_bond) and raises that NPC's bond by
+## BOND_GAIN_PER_FILL. The default bond is 5.0 (Warm, ×1.00), so a fresh order's
+## payout is IDENTICAL to the pre-bonding flat reward until a bond crosses into
+## Liked (≥7) or Sour (<5) — keeping this layer additive (the orders economy stays
+## green at the default bond). Roster = NpcConfig.all_ids(); bonds map id → float.
+## Persisted in to_dict / from_dict (defensive defaults for old saves).
+var npcs: Dictionary = {
+	"roster": NpcConfig.all_ids(),
+	"bonds": _default_bonds(),
+}
+## Bond gained each time an order from that NPC is filled (+0.3 per React bond.ts).
+const BOND_GAIN_PER_FILL: float = 0.3
+## Fallback NPC for an old save's order missing its `npc` field (defensive).
+const DEFAULT_ORDER_NPC: String = "wren"
+
+## Build the starting bonds map: every roster NPC at the Warm default (5.0).
+static func _default_bonds() -> Dictionary:
+	var out: Dictionary = {}
+	for id in NpcConfig.all_ids():
+		out[id] = 5.0
+	return out
+
+## Current bond for `id` (0..10 float). A missing/unknown id reads as the Warm
+## default 5.0 so reward math never divides by a phantom band.
+func npc_bond(id: String) -> float:
+	var bonds: Dictionary = npcs.get("bonds", {})
+	return float(bonds.get(id, 5.0))
+
+## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. No-op for
+## an id not in the bonds map's keys EXCEPT it will seed a known roster id at the
+## default first. Stores a float.
+func gain_bond(id: String, amount: float) -> void:
+	var bonds: Dictionary = npcs.get("bonds", {})
+	var current: float = float(bonds.get(id, 5.0))
+	bonds[id] = clampf(current + amount, 0.0, 10.0)
+	npcs["bonds"] = bonds
+
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
 ## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
 ## resources per-settlement, but for this milestone mine goods (block/iron_bar/
@@ -426,10 +466,22 @@ func generate_order() -> Dictionary:
 	var pool: Array = orderable_resources()
 	var resource: String = String(pool[rng.randi_range(0, pool.size() - 1)])
 	var qty: int = rng.randi_range(OrderConfig.MIN_QTY, OrderConfig.MAX_QTY)
+	var reward: int = OrderConfig.reward_for(resource, qty)
+	# ADDITIVE (NPC bonding): pick the requesting NPC via the SAME seeded `rng` so
+	# generation stays reproducible, and carry `base_reward` (== the rolled reward)
+	# alongside the unchanged `reward` field. `reward` STAYS the base so any
+	# order["reward"] reader is unaffected; fill_order computes the bond-adjusted
+	# PAYOUT from `base_reward` at fill time.
+	var roster: Array = npcs.get("roster", NpcConfig.all_ids())
+	if roster.is_empty():
+		roster = NpcConfig.all_ids()
+	var npc: String = String(roster[rng.randi_range(0, roster.size() - 1)])
 	return {
 		"resource": resource,
 		"qty": qty,
-		"reward": OrderConfig.reward_for(resource, qty),
+		"reward": reward,
+		"npc": npc,
+		"base_reward": reward,
 	}
 
 ## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls.
@@ -458,7 +510,16 @@ func fill_order(index: int) -> Dictionary:
 	var order: Dictionary = orders[index]
 	var resource: String = String(order["resource"])
 	var qty: int = int(order["qty"])
-	var reward: int = int(order["reward"])
+	# ADDITIVE (NPC bonding): resolve the requesting NPC and the bond-ADJUSTED
+	# payout. Defensive for old saves / hand-built orders missing the new fields:
+	# `base_reward` falls back to the legacy `reward`, and a missing `npc` falls
+	# back to DEFAULT_ORDER_NPC ("wren"). At the default bond 5.0 (Warm, ×1.00) the
+	# payout == base == the old flat reward, so nothing observable changes for fresh
+	# orders — the orders economy stays green.
+	var base_reward: int = int(order.get("base_reward", order.get("reward", 0)))
+	var npc: String = String(order.get("npc", DEFAULT_ORDER_NPC))
+	var bond: float = npc_bond(npc)
+	var payout: int = NpcConfig.reward_with_bond(base_reward, bond)
 	# Deduct the delivered goods (floor at 0, erase the key when it hits 0).
 	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - qty)
 	if remaining == 0:
@@ -467,7 +528,9 @@ func fill_order(index: int) -> Dictionary:
 		inventory[resource] = remaining
 	# Coins are UNCAPPED — only inventory resources are bounded by the settlement
 	# cap, so a big-reward order can push coins arbitrarily high.
-	coins += reward
+	coins += payout
+	# Filling an order warms the relationship: +BOND_GAIN_PER_FILL, clamped to 10.
+	gain_bond(npc, BOND_GAIN_PER_FILL)
 	orders.remove_at(index)
 	refill_orders()
 	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
@@ -475,7 +538,9 @@ func fill_order(index: int) -> Dictionary:
 	# Story engine (ADDITIVE, after the order is committed): post an "order_fulfilled"
 	# event so act1_first_order can fire. The success result below is UNCHANGED.
 	post_story_event({"type": "order_fulfilled"})
-	return {"ok": true, "reward": reward, "resource": resource, "qty": qty}
+	# The result's `reward` reports the ACTUAL coins paid (payout) so callers/UI show
+	# what was credited; `npc` is carried for the same reason.
+	return {"ok": true, "reward": payout, "resource": resource, "qty": qty, "npc": npc}
 
 # ── Expedition / mine biome (M3f) ─────────────────────────────────────────────
 
@@ -984,6 +1049,11 @@ func to_dict() -> Dictionary:
 		"settlement": settlement.to_dict(),
 		"buildings": buildings.duplicate(),
 		"orders": orders.duplicate(true),
+		# NPC bonding (ADDITIVE): the roster + per-NPC bonds (floats). Deep-copied so
+		# the snapshot is independent. Orders themselves carry their `npc`/`base_reward`
+		# inside the `orders` array above. SAVE_VERSION is NOT bumped — a save written
+		# before npcs existed loads the default roster/bonds (from_dict defensive default).
+		"npcs": npcs.duplicate(true),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
 		"boss_active": boss_active,
@@ -1053,7 +1123,41 @@ static func from_dict(d: Dictionary) -> GameState:
 			var reward: int = int(o["reward"])
 			if qty <= 0 or reward < 0:
 				continue
-			s.orders.append({"resource": String(resource), "qty": qty, "reward": reward})
+			# Preserve the additive NPC-bonding fields when present (a save written by
+			# this build carries them). An old save lacking them keeps reward as the base
+			# and fill_order falls back to wren/order.reward defensively. `base_reward`
+			# defaults to the legacy reward; `npc` only survives if it's a real roster id.
+			var rebuilt_order: Dictionary = {"resource": String(resource), "qty": qty, "reward": reward}
+			rebuilt_order["base_reward"] = maxi(0, int(o.get("base_reward", reward)))
+			var o_npc: Variant = o.get("npc", null)
+			if o_npc is String and NpcConfig.has(String(o_npc)):
+				rebuilt_order["npc"] = String(o_npc)
+			s.orders.append(rebuilt_order)
+	# Restore the NPC roster + bonds (ADDITIVE). Missing key (any save written before
+	# npcs existed) → the default roster (NpcConfig.all_ids) at the Warm default 5.0,
+	# so old saves load with neutral relationships. The roster keeps only REAL ids,
+	# de-duplicated; bonds keep only roster ids, coerced to float and clamped to
+	# [0, 10] (JSON yields floats; a corrupt out-of-range value can't break banding).
+	# Any roster id missing a saved bond defaults to 5.0. SAVE_VERSION is NOT bumped.
+	var npcs_d: Variant = d.get("npcs", null)
+	if npcs_d is Dictionary:
+		var roster: Array = []
+		var raw_roster: Variant = npcs_d.get("roster", [])
+		if raw_roster is Array:
+			for rid in raw_roster:
+				var sid := String(rid)
+				if NpcConfig.has(sid) and not roster.has(sid):
+					roster.append(sid)
+		if roster.is_empty():
+			roster = NpcConfig.all_ids()
+		var bonds: Dictionary = {}
+		var raw_bonds: Variant = npcs_d.get("bonds", {})
+		for id in roster:
+			var v: float = 5.0
+			if raw_bonds is Dictionary and raw_bonds.has(id):
+				v = clampf(float(raw_bonds[id]), 0.0, 10.0)
+			bonds[id] = v
+		s.npcs = {"roster": roster, "bonds": bonds}
 	# Restore the expedition state defensively (M3f). The biome must be one of the
 	# two known values (anything else falls back to "farm"); turns can't go negative;
 	# and a corrupt "mine"-with-no-turns save snaps back to the farm (turns 0) so a
