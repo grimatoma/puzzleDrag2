@@ -187,11 +187,12 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m1</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m2</code></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
-      <span class="chip amber">M1 in progress</span>
+      <span class="chip">M1 merged</span>
+      <span class="chip amber">M2 done</span>
       <span class="chip">CI wired</span>
       <span class="chip">tests green</span>
     </div>
@@ -200,6 +201,7 @@
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" data-tab="status">Status</button>
     <button class="tab" role="tab" data-tab="m1">M1 detail</button>
+    <button class="tab" role="tab" data-tab="m2">M2 detail</button>
     <button class="tab" role="tab" data-tab="decisions">Decisions</button>
     <button class="tab" role="tab" data-tab="verify">Verification</button>
     <button class="tab" role="tab" data-tab="next">Next &amp; risks</button>
@@ -212,18 +214,24 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> The migration has <b>started</b>. The Godot 4.6 project exists at
-          <code>godot/</code>, the core puzzle mechanic (drag-chain → collapse → refill → resource credit) is ported,
-          unit-tested, and renders as a playable board with placeholder art and a working HUD. Headless tests and a Web-export
-          job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
+        <div class="box tip"><b>Where we are.</b> <b>M1 and M2 are both complete.</b> The Godot 4.6 project at
+          <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
+          run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
+          accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
+          mismatched saves. It renders as a playable board with placeholder art and a live economy HUD. Headless tests and a
+          Web-export job are wired into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>~75%</b></div>
-          <div class="bar"><span style="width:75%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
+          <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~12%</b></div>
-          <div class="bar"><span style="width:12%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;2 — game economy (inventory, save/load, turn)</span> <b>100% · done</b></div>
+          <div class="bar"><span style="width:100%"></span></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~35%</b></div>
+          <div class="bar"><span style="width:35%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -240,13 +248,13 @@
         </div>
         <div class="ms-row">
           <div class="num on">M1</div>
-          <div><div class="t">Base playable puzzle board</div><div class="d">Grid, drag/chain, collapse, refill, HUD, tests, CI, Web export</div></div>
-          <span class="pill warn">partial</span>
+          <div><div class="t">Base playable puzzle board</div><div class="d">Grid, drag/chain, collapse, refill, HUD, tests, CI, Web export — <b>merged (PR #930)</b></div></div>
+          <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
-          <div class="num">M2</div>
-          <div><div class="t">Game systems</div><div class="d">Resource/inventory, turn/season cycle, save/load, full tile set, Constants parity</div></div>
-          <span class="pill idle">todo</span>
+          <div class="num on">M2</div>
+          <div><div class="t">Game economy</div><div class="d">Carry-over <code>GameState</code> (inventory + progress + coins + turn), versioned save/load, economy HUD, 42-check state suite</div></div>
+          <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
           <div class="num">M3</div>
@@ -266,14 +274,16 @@
       </section>
 
       <section id="session-summary">
-        <h2>This session — 2026-06-05</h2>
-        <p>Kicked off M1 from a clean branch off the strategy branch. Built end-to-end, verifying each layer with the locally
-          installed Godot 4.6.2 binary before moving on.</p>
+        <h2>Current focus — M3 (the Direction vertical slice)</h2>
+        <p>With the foundational board (M1, merged as PR #930) and the run-economy layer (M2, done on
+          <code>claude/godot-migration-m2</code>) both landed and verified on Godot 4.6.2, the next milestone is <b>M3</b>:
+          buildings, tiers/upgrades, biomes/expeditions, NPCs, and the capstone boss — the Town&nbsp;1→2→3 slice from the
+          Direction spec.</p>
         <div class="grid">
-          <div class="card"><h3>Project scaffold</h3><p><code>godot/</code> with <code>project.godot</code> (GL Compatibility, portrait, touch→mouse emulation), <code>.gitignore</code>, <code>icon.svg</code>, and a structurally-validated <code>Web</code> export preset.</p></div>
-          <div class="card"><h3>Core logic ported</h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code>: chain validation (8-way, same-key, no-revisit), collapse, refill, upgrade counting, dead-board detection — pure and headless-testable.</p></div>
-          <div class="card amber"><h3>Playable board</h3><p><code>Tile</code> / <code>Board</code> / <code>Main</code> scenes: a 6×6 board you can drag chains on, with collapse + fall-in animation and a live HUD (chain counter + resource tally).</p></div>
-          <div class="card"><h3>Tests + CI</h3><p>18 logic checks and a 9-check scene smoke, both green (exit 0). New <code>godot-ci.yml</code> runs them headless plus a Web export on every <code>godot/**</code> change.</p></div>
+          <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
+          <div class="card amber"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
+          <div class="card"><h3>State tests + CI step</h3><p>New <code>run_state_tests.gd</code> (42 checks: carry-over, exact-threshold, multi-unit, per-resource buckets, coins/turn, save→load→clear round-trip). CI runs it as its own step after the <code>--import</code> pass that registers the new <code>class_name</code> globals.</p></div>
+          <div class="card"><h3>Next — M3 content</h3><p>Promote the economy into the Direction slice: buildings &amp; build costs, resource tiers/upgrade tiles, biomes + expeditions, NPCs, and the capstone boss. Cross-collection (Decision&nbsp;#7) rides along here.</p></div>
         </div>
       </section>
 
@@ -312,7 +322,7 @@
 
         <h3>Built beyond the M1 list</h3>
         <ul class="check">
-          <li class="done">Resource-credit model ported — <code>upgrade_count(chain_len, threshold)</code> + per-tile <code>THRESHOLDS</code>, unit-tested (the fractional accumulator itself lands with M2's inventory).</li>
+          <li class="done">Resource-credit model ported — <code>upgrade_count(chain_len, threshold)</code> + per-tile <code>THRESHOLDS</code>, unit-tested (the fractional accumulator itself <b>landed in M2</b> — see the M2 detail tab).</li>
           <li class="done">Dead-board detection &amp; auto-reshuffle — <code>BoardLogic.has_valid_chain</code> (8-connected component ≥ 3).</li>
           <li class="done">Screenshot tooling — <code>tools/screenshot.gd</code> / <code>tools/demo_capture.gd</code> render the scene to PNGs for evidence.</li>
         </ul>
@@ -333,6 +343,60 @@
             <tr><td><code>godot/tests/run_tests.gd</code></td><td>Headless BoardLogic unit tests (18 checks)</td></tr>
             <tr><td><code>godot/tests/run_scene_smoke.gd</code></td><td>Headless Main+Board wiring smoke (9 checks)</td></tr>
             <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>CI: headless tests + Web export on <code>godot/**</code> changes</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ M2 DETAIL -->
+    <div class="panel" id="m2" role="tabpanel" aria-label="M2 detail">
+
+      <section id="m2-checklist">
+        <h2>Milestone 2 — checklist</h2>
+        <p>The game-economy layer that sits on top of M1's board. <b>Done when</b> a resolved chain credits a real inventory
+          through the carry-over accumulator, coins and turn advance, and the run survives a reload. All items below are built
+          and verified on Godot 4.6.2 (branch <code>claude/godot-migration-m2</code>).</p>
+        <div class="legend">
+          <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
+        </div>
+        <ul class="check">
+          <li class="done">Carry-over resource accumulator — the exact React <code>resourceProgress</code> port
+            <span class="note"><code>GameState.credit_chain(tile_type, chain_len)</code>: <code>new_progress = progress[res] + n</code> → <code>units = new_progress / threshold</code> (integer floor) → <code>progress[res] = new_progress % threshold</code>. The remainder <b>carries across chains</b> — a 4-grass chain at threshold 6 yields 0 units but leaves progress 4; a later 4-grass chain makes progress 8 → 1 unit, progress 2. Mirrors <code>src/state.ts</code> at the <code>CHAIN_COLLECTED</code> site.</span></li>
+          <li class="done">Inventory + coins + turn owned in one place
+            <span class="note"><code>GameState</code> (<code>class_name … extends RefCounted</code>): <code>inventory</code> (resource→count), <code>progress</code> (resource→carry remainder), <code>coins</code>, <code>turn</code>, plus <code>qty()</code> and <code>to_dict()</code>/<code>from_dict()</code>.</span></li>
+          <li class="done">Versioned save/load — discard-don't-migrate
+            <span class="note"><code>SaveManager.gd</code> (all static): JSON at <code>user://save.json</code>. <code>load_state()</code> discards saves that are missing, unparseable, or version-mismatched and starts fresh — the same policy as the React <code>SAVE_SCHEMA_VERSION</code>. <code>save()</code> / <code>clear()</code> complete the API.</span></li>
+          <li class="done">Board narrowed to <code>chain_resolved(tile_type, length)</code>
+            <span class="note"><code>Board.gd</code> no longer computes units per-chain (which couldn't carry over) — it just reports the resolved family + length and leaves all economy to <code>GameState</code>.</span></li>
+          <li class="done">Economy HUD + live persistence
+            <span class="note"><code>Main.gd</code> owns a <code>GameState</code> loaded via <code>SaveManager.load_state()</code> on <code>_ready</code>, credits every resolve, persists after each, and shows the title "puzzleDrag2 · Godot M2", a "Coins: N · Turn: N" line, and a "Collected: …" tally. A restored save shows its coins/turn/inventory on load.</span></li>
+          <li class="done">State test suite — 42 checks
+            <span class="note"><code>tests/run_state_tests.gd</code>: below-threshold accumulation, cross-chain carry-over, exact-threshold, multi-unit chains, per-resource bucket independence, coins/turn increments, NO_THRESHOLD safety, <code>to_dict</code>/<code>from_dict</code> round-trip, and a SaveManager save→load→clear round-trip.</span></li>
+          <li class="done">CI step for the state suite
+            <span class="note"><code>godot-ci.yml</code> runs the new suite as its own step after the existing <code>--import</code> pass (import is required so the new <code>class_name</code> globals register before the <code>--script</code> runners execute). <code>run_scene_smoke.gd</code> updated to the 2-arg signal.</span></li>
+        </ul>
+
+        <h3>Deferred to M3 (by design)</h3>
+        <ul class="check">
+          <li class="todo">Per-tile <code>value</code>-based coin economy — M2 uses a placeholder <code>max(1, chain_len/2)</code> per resolve (Decision&nbsp;#10).</li>
+          <li class="todo">XP / almanac, bubbles, hazards — ride along with the M3 content/progression work.</li>
+          <li class="todo">Full tile set + cross-collection (Decision&nbsp;#7) — beyond the Farm starter; promoted with M3 biomes.</li>
+        </ul>
+      </section>
+
+      <section id="m2-files">
+        <h2>What landed (files)</h2>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td><code>class_name GameState extends RefCounted</code> — run economy owner: inventory, carry-over progress, coins, turn; <code>credit_chain</code>, <code>qty</code>, <code>to_dict</code>/<code>from_dict</code></td></tr>
+            <tr><td><code>godot/scripts/SaveManager.gd</code></td><td>Static versioned JSON persistence at <code>user://save.json</code> — <code>load_state</code> (discard-don't-migrate), <code>save</code>, <code>clear</code></td></tr>
+            <tr><td><code>godot/scenes/Board.gd</code></td><td>Signal narrowed to <code>chain_resolved(tile_type, length)</code> — board no longer knows about resources/economy</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>Owns the <code>GameState</code> (loaded on <code>_ready</code>), credits + persists each resolve, renders the economy HUD (coins / turn / collected)</td></tr>
+            <tr><td><code>godot/tests/run_state_tests.gd</code></td><td>Headless GameState + SaveManager tests (42 checks)</td></tr>
+            <tr><td><code>godot/tests/run_scene_smoke.gd</code></td><td>Updated to the 2-arg <code>chain_resolved</code> signal</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the state-suite step after the required <code>--import</code> pass that registers the new <code>class_name</code> globals</td></tr>
           </tbody>
         </table>
       </section>
@@ -387,7 +451,40 @@
           <h3>7 · Cross-collection deferred to M2/M3 — flagged so it's not lost</h3>
           <p>The Phaser game also collects tiles of a <i>different</i> family that are 4-way adjacent to the chain
             (<code>src/GameScene.ts:1769–1772</code>). M1 ports the single-family chain only. Cross-collection is a resource-systems detail
-            and rides along with M2's inventory work. Recorded here as an explicit debt.</p>
+            and now rides along with the M3 content/biome work. Recorded here as an explicit debt.</p>
+        </div>
+
+        <h3>M2 decisions</h3>
+
+        <div class="card">
+          <h3>8 · The carry-over accumulator lives in <code>GameState</code>, not the board</h3>
+          <p>In M1 the board computed units per-chain, but a per-chain calculation <i>cannot</i> carry a remainder across chains. M2
+            moves the whole resource credit into <code>GameState.credit_chain</code> and narrows the board signal to
+            <code>chain_resolved(tile_type, length)</code> — the board reports the family + length and knows nothing about resources or
+            economy. <code>credit_chain</code> ports the React <code>resourceProgress</code> accumulator from <code>src/state.ts</code>
+            (the <code>CHAIN_COLLECTED</code> site) exactly: <code>units = (progress[res] + n) / threshold</code>, with
+            <code>progress[res] = (progress[res] + n) % threshold</code> persisting the remainder between chains. This keeps a single
+            owner of run state and makes the carry-over behaviour unit-testable in isolation.</p>
+        </div>
+        <div class="card">
+          <h3>9 · Save/load discards on mismatch — it does not migrate</h3>
+          <p><code>SaveManager.load_state()</code> discards a save that is missing, unparseable, or version-mismatched and starts a
+            fresh run, rather than maintaining forward migrations. This is the deliberate policy the React app uses with
+            <code>SAVE_SCHEMA_VERSION</code> (the reducer discards saves whose <code>version</code> doesn't match). Bumping the version is the
+            sanctioned way to invalidate old saves; there is intentionally no migration ladder to maintain.</p>
+        </div>
+        <div class="card amber">
+          <h3>10 · No season-of-year calendar — a plain monotonic <code>turn</code> instead</h3>
+          <p>The strategy doc's M2 list mentions a "10 turns × 4 seasons" cycle. But the live React app removed the season calendar
+            from gameplay in <b>Phase 7</b> — <code>SEASONS</code> is now visual-only and no longer drives harvest bonuses, order
+            multipliers, or a winter min-chain floor. So M2 implements a plain monotonic <code>turn</code> counter and ports no
+            season mechanics. This is faithful to the current code, not the stale plan.</p>
+        </div>
+        <div class="card amber">
+          <h3>11 · Coins simplified for M2 — full value economy is M3</h3>
+          <p>Each resolved chain earns <code>max(1, chain_len / 2)</code> coins. The React per-tile <code>value</code>-based coin
+            economy (and the XP/almanac, bubbles, and hazards that go with it) is deferred to M3. M2's coin counter exists to prove
+            the HUD and persistence wiring end-to-end; the real numbers land with the content/progression milestone.</p>
         </div>
       </section>
 
@@ -398,14 +495,19 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> Both test scripts exit <code>0</code>; the
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All three test scripts exit <code>0</code>; the
           screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
-        <h3>Rendered board (visual proof)</h3>
+        <h3>Rendered board — M1 (visual proof)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m1-board.png" alt="Fresh 6x6 board of colored farm tiles"><figcaption>Fresh board — weighted Farm pool, centered, with HUD.</figcaption></figure>
           <figure><img src="assets/godot/m1-chain.png" alt="A 6-tile grass chain highlighted with white rings"><figcaption>Dragging a 6-grass chain — live "Chain: 6", tiles ringed.</figcaption></figure>
           <figure><img src="assets/godot/m1-resolved.png" alt="Board after the chain resolved, refilled, HUD shows +1 hay_bundle"><figcaption>After release — collapsed, refilled, "+1 hay_bundle" credited.</figcaption></figure>
+        </div>
+
+        <h3>Economy HUD — M2 (visual proof)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m2-hud.png" alt="M2 economy HUD after one 6-grass chain: title 'puzzleDrag2 · Godot M2', 'Coins: 3 · Turn: 1', a full board, and 'Collected: hay_bundle x1'"><figcaption>After one 6-grass chain — title "puzzleDrag2 · Godot M2", "Coins: 3 · Turn: 1", a full post-collapse board, "Chain of 6 → +1 hay_bundle", and "Collected: hay_bundle ×1". Proves <code>credit_chain</code>, the coin/turn counters, and the live tally are wired end-to-end through <code>GameState</code>.</figcaption></figure>
         </div>
 
         <h3>Headless test output</h3>
@@ -432,19 +534,40 @@
 ──────────────────────────────────────────────────
 18 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
+<span class="c">$ godot --headless --path godot --script res://tests/run_state_tests.gd</span>
+── GameState + SaveManager tests ──────────────────
+  <span class="g">PASS</span>  below-threshold chain credits 0 units, accumulates progress
+  <span class="g">PASS</span>  progress carries across chains (4 + 4 @ thr 6 -> 1 unit, rem 2)
+  <span class="g">PASS</span>  exact-threshold chain credits 1 unit, leaves 0 progress
+  <span class="g">PASS</span>  multi-unit chain (12 @ thr 6 -> 2 units)
+  <span class="g">PASS</span>  per-resource progress buckets are independent
+  <span class="g">PASS</span>  inventory accrues across multiple resources
+  <span class="g">PASS</span>  coins increment on resolve
+  <span class="g">PASS</span>  turn increments on resolve
+  <span class="g">PASS</span>  NO_THRESHOLD tile credits no units (no divide-by-zero)
+  <span class="g">PASS</span>  qty() reads a missing key as 0
+  <span class="g">PASS</span>  to_dict / from_dict round-trip preserves state
+  <span class="g">PASS</span>  SaveManager save -> load restores coins/turn/inventory
+  <span class="g">PASS</span>  SaveManager clear wipes the save (next load is fresh)
+  <span class="c">…  (29 further GameState carry-over / bucket / persistence checks)</span>
+──────────────────────────────────────────────────
+42 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
 <span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
 ── Scene smoke (Main + Board wiring) ──────────────
   <span class="g">PASS</span>  Main.tscn loads
   <span class="g">PASS</span>  Main created a Board
+  <span class="g">PASS</span>  Main loaded a GameState via SaveManager
   <span class="g">PASS</span>  try_resolve accepts a valid 3-chain
-  <span class="g">PASS</span>  chain_resolved signal fired
+  <span class="g">PASS</span>  chain_resolved(tile_type, length) signal fired
   <span class="g">PASS</span>  resolved resource is hay_bundle (GRASS family)
   <span class="g">PASS</span>  resolved chain length is 3
+  <span class="g">PASS</span>  GameState credited the resolve (inventory/progress moved)
   <span class="g">PASS</span>  board is full after resolve (collapse + refill)
   <span class="g">PASS</span>  every cell has a live Tile node after resolve
-  <span class="g">PASS</span>  HUD chain label was built
+  <span class="g">PASS</span>  HUD coins/turn/collected labels were built
 ──────────────────────────────────────────────────
-9 checks, 0 failure(s)         <span class="c"># exit 0</span></code></pre>
+11 checks, 0 failure(s)        <span class="c"># exit 0</span></code></pre>
 
         <h3>Web-export preset check</h3>
         <p>The export command was run locally to validate the preset's structure. It reaches the template stage and stops only
@@ -460,10 +583,11 @@ No export template found at the expected path:
       <section id="reproduce">
         <h2>How to reproduce</h2>
         <pre><code><span class="c"># from the repo root</span>
-godot --headless --path godot --import                              <span class="c"># build .godot/ cache</span>
-godot --headless --path godot --script res://tests/run_tests.gd     <span class="c"># unit tests</span>
-godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke</span>
-godot --path godot                                                  <span class="c"># play it (windowed)</span>
+godot --headless --path godot --import                                <span class="c"># build .godot/ cache (registers class_name globals)</span>
+godot --headless --path godot --script res://tests/run_tests.gd       <span class="c"># board-logic tests (18)</span>
+godot --headless --path godot --script res://tests/run_state_tests.gd <span class="c"># GameState + SaveManager tests (42)</span>
+godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke (11)</span>
+godot --path godot                                                    <span class="c"># play it (windowed)</span>
 godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
         <p>See <a href="../godot/README.md"><code>godot/README.md</code></a> for the full command list.</p>
       </section>
@@ -475,24 +599,29 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Finish M1</h3>
+        <h3>Done — M1 &amp; M2</h3>
         <ul class="check">
-          <li class="done">PR opened (#930) and <b>Godot CI is green in the cloud</b> — the <code>setup-godot</code> action resolves 4.6.2 and the headless run behaves like local.</li>
+          <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
+          <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
+        </ul>
+
+        <h3>Then M3 — content &amp; progression (the Direction vertical slice)</h3>
+        <div class="log">
+          <div class="entry"><div class="date">M3 · next</div><h3>Buildings &amp; build costs</h3><p>Town buildings with resource costs drawn from the M2 inventory; the Town&nbsp;1→2→3 progression gates.</p></div>
+          <div class="entry"><div class="date">M3 · next</div><h3>Tiers / upgrades</h3><p>Resource tiers and board upgrade tiles driven by a zone <code>upgradeMap</code>, now that the carry-over accumulator exists.</p></div>
+          <div class="entry"><div class="date">M3 · next</div><h3>Biomes &amp; expeditions</h3><p>Tile sets beyond the Farm starter, biome entry costs, and the expedition flow; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
+          <div class="entry"><div class="date">M3 · next</div><h3>NPCs &amp; the capstone boss</h3><p>NPC interactions and the milestone's capstone boss encounter (boss <code>minChain</code> raises the chain floor).</p></div>
+        </div>
+
+        <h3>Carried-over M1/M2 polish (not blockers)</h3>
+        <ul class="check">
           <li class="todo">Add a <b>Playwright-on-export smoke</b>: serve the Web build, assert the canvas boots and a chain can be dragged.</li>
-          <li class="todo">Vendor <b>GdUnit4</b> and re-home the two runners into it (keep the lightweight runner as a fast pre-check, or retire it).</li>
+          <li class="todo">Vendor <b>GdUnit4</b> and re-home the three runners into it (keep the lightweight runners as a fast pre-check, or retire them).</li>
           <li class="todo">Add the <b>session-start hook</b> that fetches the Godot headless binary in the Claude cloud container (per plan §workflow).</li>
           <li class="todo">Touch-test on a real <b>Android browser</b> early — surface safe-area / gesture issues well before M5.</li>
         </ul>
 
-        <h3>Then M2 — game systems</h3>
-        <div class="log">
-          <div class="entry"><div class="date">M2 · later</div><h3>Resource &amp; inventory</h3><p>Promote the resource-credit model into a real inventory with the fractional <code>resourceProgress</code> accumulator; wire cross-collection (Decision&nbsp;#7).</p></div>
-          <div class="entry"><div class="date">M2 · later</div><h3>Turn / season cycle</h3><p>10 turns × 4 seasons; season pools and drops.</p></div>
-          <div class="entry"><div class="date">M2 · later</div><h3>Save / load</h3><p>Via <code>FileAccess</code>; use <code>Constants.STRING_KEYS</code> for the int↔string tile-key mapping in serialized saves.</p></div>
-          <div class="entry"><div class="date">M2 · later</div><h3>Full tile set + Constants parity</h3><p>All tile types beyond the Farm starter; mirror <code>src/constants.ts</code> at the PC2 baseline.</p></div>
-        </div>
-
-        <div class="box amber"><b>Optional precursor — PR-B.</b> The plan recommends aligning the Phaser <code>constants.ts</code> to the PC2 balance baseline first, since those numbers copy straight into <code>Constants.gd</code>. It is pure data work and can be done in the Phaser repo independently; it is <i>not</i> a blocker for continuing the Godot build with current values.</div>
+        <div class="box amber"><b>Optional precursor — PR-B.</b> The plan recommends aligning the Phaser <code>constants.ts</code> to the PC2 balance baseline, since those numbers copy straight into <code>Constants.gd</code> — most relevant now that M3 expands the tile set and balance surface. It is pure data work, can be done in the Phaser repo independently, and is <i>not</i> a blocker for continuing the Godot build with current values.</div>
       </section>
 
       <section id="risks">
@@ -504,7 +633,8 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
             <tr><td>Headless <code>await process_frame</code> in CI</td><td>The scene smoke needs one rendered frame for <code>_ready</code>; behaviour could differ on Linux headless.</td><td><span class="pill ok">resolved</span> Scene smoke is green on Linux headless CI. Logic tests remain the primary gate.</td></tr>
             <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
             <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
-            <tr><td>Visual parity vs Phaser</td><td>Placeholder colors ≠ the procedural Phaser textures.</td><td>Intentional for M1; the asset pipeline (plan §assets) replaces them in Stage 2/3.</td></tr>
+            <tr><td>M5 mobile export</td><td>iOS export needs a Mac + Xcode; both stores need paid developer accounts and signing/provisioning — an <b>external blocker</b> outside the codebase.</td><td>Surface to the maintainer well before M5: the Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</td></tr>
+            <tr><td>Visual parity vs Phaser</td><td>Placeholder colors ≠ the procedural Phaser textures.</td><td>Intentional through M2; the asset pipeline (plan §assets) replaces them in Stage 2/3 (M4).</td></tr>
           </tbody>
         </table>
       </section>
