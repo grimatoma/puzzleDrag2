@@ -58,6 +58,7 @@ var _last_threshold: int = 0
 
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
+var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 # A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
@@ -386,6 +387,26 @@ func _build_hud() -> void:
 	menu_btn.connect("pressed", Callable(self, "_open_menu"))
 	root.add_child(menu_btn)
 
+	# M4g — always-visible "📦 Items" button, pinned top-LEFT just under the "🏠 Town"
+	# button (which sits at offset_top 18, ≈38px tall) so the two stack without
+	# overlapping and both clear the centred board drag area. Same parchment-pill look.
+	# Opens the dedicated Inventory ledger modal (InventoryScreen).
+	var items_btn := Button.new()
+	items_btn.text = "📦 Items"
+	items_btn.add_theme_font_size_override("font_size", 20)
+	items_btn.add_theme_color_override("font_color", Palette.INK)
+	items_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	items_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	items_btn.add_theme_stylebox_override("normal", _parchment_box(Palette.PARCHMENT))
+	items_btn.add_theme_stylebox_override("hover", _parchment_box(Palette.PARCHMENT_SOFT))
+	items_btn.add_theme_stylebox_override("pressed", _parchment_box(Palette.DIM))
+	items_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
+	items_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	items_btn.offset_left = 18
+	items_btn.offset_top = 64
+	items_btn.connect("pressed", Callable(self, "_open_inventory"))
+	root.add_child(items_btn)
+
 ## M4a (optional) — the Cinzel display serif used by the original game for headings.
 ## Loads the variable TTF from res://assets/fonts/Cinzel-Regular.ttf and returns a
 ## BOLD FontVariation of it. Returns null when the asset isn't imported/present, so
@@ -712,6 +733,24 @@ func _open_menu() -> void:
 func _on_menu_closed() -> void:
 	if _menu_screen != null:
 		_menu_screen.visible = false
+
+# ── Inventory ledger (M4g) ─────────────────────────────────────────────────────
+
+## Open the dedicated Inventory ledger modal, lazily creating + wiring it on first
+## use (mirrors _open_town / _open_menu). The screen is READ-ONLY — it only emits
+## `closed`, which we route to a hide handler. open() re-reads game.inventory each
+## time, so the ledger always reflects the latest stockpile.
+func _open_inventory() -> void:
+	if _inventory_screen == null:
+		_inventory_screen = InventoryScreen.new()
+		add_child(_inventory_screen)
+		_inventory_screen.setup(game)
+		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
+	_inventory_screen.open()
+
+func _on_inventory_closed() -> void:
+	if _inventory_screen != null:
+		_inventory_screen.visible = false
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
 ## accounting point): toggle the persisted preference, mute/unmute the Audio service,

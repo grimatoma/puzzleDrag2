@@ -83,6 +83,9 @@ jobs:
       - name: Menu / settings tests
         run: godot --headless --path godot --script res://tests/run_menu_tests.gd
 
+      - name: Inventory screen tests
+        run: godot --headless --path godot --script res://tests/run_inventory_tests.gd
+
   godot-web-export:
     name: Web (HTML5) export
     runs-on: ubuntu-latest
