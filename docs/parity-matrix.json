@@ -600,10 +600,10 @@
       "feature_or_screen": "workers slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-workers"],
-      "note": "NPC roster + bonding shipped (see slice-npcs / system-townsfolk-npcs), but the hired worker-type ability reducer system (type-based passive bonuses) is not yet ported."
+      "verified_by": ["run_workers_tests.gd", "run_town_ui_tests.gd", "golden:townsfolk-workers"],
+      "note": "Hire-by-type workers (Farmer/Lumberjack/Miner/Baker) with ramped costs + passive ability reducers (category threshold -1/hire; Baker recipe-input -1) wired into credit_chain/craft; additive (0 hired = identical economy); hire/fire UI in TownScreen. Gift/dialog niceties deferred."
     },
     {
       "id": "slice-zones",
