@@ -12,6 +12,11 @@ signal chain_changed(length: int)                               ## live, while d
 ## Fired once a legal chain is collected. The Board reports only WHAT was
 ## chained (tile type + length); resource/economy accounting lives in GameState.
 signal chain_resolved(tile_type: int, length: int)
+## M8c — fired when a TAP-target tool is armed and the player taps a board cell while
+## the Board is in targeting mode (set_targeting(true)). The Board itself does NOT use
+## the tool — it only reports WHICH cell was tapped; Main owns the GameState ref and
+## applies the tool (mirrors how chain_resolved keeps the Board decoupled from economy).
+signal cell_tapped(cell: Vector2i)
 
 const POP_TIME := 0.13
 const FALL_TIME := 0.22
@@ -53,6 +58,13 @@ var clear_rubble_on_stone: bool = false
 
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
+
+## M8c — TAP-tool targeting mode. While true, a left-button PRESS reports the tapped
+## cell via cell_tapped and does NOT start a drag (chains are suppressed); motion +
+## release do nothing. Main flips this on (set_targeting(true)) when it arms a
+## tap-target tool and off again once the tap fires (or is cancelled). When false the
+## input path behaves exactly as before — drags + chains are completely unaffected.
+var _targeting := false
 
 ## M4a — the orange/gold chain-path overlay. A sibling of the tile nodes (shares
 ## Board-local space) but drawn ON TOP via a high z_index. Created once in _ready
@@ -169,6 +181,22 @@ func clear_all_rats() -> int:
 		_build_tiles()
 	return cleared
 
+## M8c — adopt `new_grid` as the live board after a TOOL transformed it. This is how a
+## tool's resulting grid (GameState.use_tool_on_grid returns it; the pure ToolEffects
+## already cleared/transformed the cells) lands on-screen. Mirrors clear_all_rats's
+## tail: take the grid, run the pure BoardLogic collapse (drop survivors down) +
+## refill (spawn fresh tiles up top from the active pool), guard against a dead board,
+## then rebuild the visual tile layer. The Board stays decoupled from GameState — Main
+## already credited the collected tiles; this only updates what's on the board.
+func apply_external_grid(new_grid: Array) -> void:
+	if new_grid == null or new_grid.is_empty():
+		return
+	grid = new_grid
+	BoardLogic.collapse(grid)
+	BoardLogic.refill(grid, rng, tile_pool)
+	_ensure_live_board()
+	_build_tiles()
+
 # ── layout ─────────────────────────────────────────────────────────────────
 
 ## Size the board to the viewport and reposition all tiles. Called by Main on
@@ -199,9 +227,35 @@ func _cell_from_local(p: Vector2) -> Vector2i:
 # Touch is delivered as mouse events (emulate_mouse_from_touch in project.godot),
 # so handling mouse covers both pointer kinds with one path.
 
+## M8c — enter/leave TAP-tool targeting mode. While on, the next board press is routed
+## to cell_tapped (and suppresses the drag) instead of starting a chain. Main calls
+## set_targeting(true) when it arms a tap-target tool and set_targeting(false) once the
+## tap has fired (or been cancelled). Leaving targeting never strands a half-built
+## chain because a press in targeting mode returns before _begin_drag (so _dragging is
+## never set), but we clear any stray drag state defensively for safety.
+func set_targeting(on: bool) -> void:
+	_targeting = on
+	if on and _dragging:
+		# Defensive: if a drag were somehow in flight, cancel it cleanly so targeting
+		# starts from a known-idle state (no highlighted/overlaid path lingering).
+		for cell in _path:
+			_set_highlight(cell, false)
+		_path = []
+		_dragging = false
+		_update_chain_overlay()
+		chain_changed.emit(0)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			# M8c — when a tap-target tool is armed (targeting mode), a press reports the
+			# tapped cell to Main and returns early WITHOUT starting a drag, so the armed
+			# tool fires on that cell instead of beginning a chain. Motion/release below
+			# stay inert while targeting (we never set _dragging). When NOT targeting this
+			# guard is skipped entirely and the press starts a drag exactly as before.
+			if _targeting:
+				cell_tapped.emit(_cell_from_local(to_local(event.position)))
+				return
 			_begin_drag(_cell_from_local(to_local(event.position)))
 		elif _dragging:
 			_finish_drag()
