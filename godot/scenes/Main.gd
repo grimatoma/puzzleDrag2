@@ -15,6 +15,7 @@ var _prev_chain_len: int = 0           ## last chain length seen → fire chain_
 var _last_tier: int = 0                ## settlement tier → detect a tier-up
 var _last_coins: int = 0               ## coin balance → tell sell/buy from build/craft
 var _last_in_mine: bool = false        ## biome flag → detect entering the mine
+var _last_in_harbor: bool = false      ## biome flag → detect entering the harbor (M3j)
 
 # ── M4b HUD: the original game's clean structure ──────────────────────────────
 # A parchment top-bar of pills (settlement title + coins/tier/biome, with boss/rats
@@ -35,6 +36,8 @@ var _boss_pill_box: PanelContainer      ## boss pill wrapper (toggled visible)
 var _boss_pill: Label                   ## ⚔ Frostmaw HP/max
 var _rats_pill_box: PanelContainer      ## rats pill wrapper (toggled visible)
 var _rats_pill: Label                   ## 🐀 N/5
+var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
+var _runes_pill: Label                  ## ᚱ N (harbor's premium reward)
 
 # Chain-progress bar.
 var _chain_prog_label: Label            ## "{res}: {progress}/{threshold}"
@@ -128,13 +131,16 @@ func _ready() -> void:
 	board.chain_resolved.connect(_on_chain_resolved)
 	# M8c — a tapped cell while a tap-target tool is armed fires the armed tool on it.
 	board.cell_tapped.connect(_on_tool_target)
+	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
+	# can ask GameState.capture_pearl_if_adjacent whether they sit next to the live pearl.
+	board.pearl_chain.connect(_on_pearl_chain)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
 	# Rebuild whenever we're in the mine OR any spawner was placed (the staples-only
 	# board drawn in Board._ready would otherwise hide both).
 	board.set_tile_pool(game.active_biome_pool())
-	if game.is_in_mine() or not game.buildings.is_empty():
+	if game.is_in_mine() or game.is_in_harbor() or not game.buildings.is_empty():
 		board.setup_new_board()
 	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
 	board.set_min_chain(game.boss_min_chain())
@@ -144,6 +150,12 @@ func _ready() -> void:
 	# chain clears adjacent rubble — no building needed). A save restored mid-expedition
 	# keeps it on.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# M3j: pearl capture is live exactly while on a harbor expedition (a fish chain next to
+	# the pearl grabs the Rune). A save restored mid-harbor keeps it on; place the live pearl
+	# back onto the board at its seeded cell so the rune target shows immediately.
+	board.clear_pearl_on_fish_chain = game.is_in_harbor()
+	if game.is_in_harbor() and game.has_active_pearl():
+		board.place_pearl(Vector2i(int(game.fish_pearl.get("col", 0)), int(game.fish_pearl.get("row", 0))))
 	# M4d: SFX service (owned by Main, not an autoload — see Audio.gd). Seed the
 	# change-trackers from the restored save so the FIRST town/biome event compares
 	# against the loaded state, not zero, and doesn't fire a spurious sound.
@@ -155,6 +167,7 @@ func _ready() -> void:
 	_last_tier = game.settlement.tier
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
+	_last_in_harbor = game.is_in_harbor()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
 	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats).
@@ -166,6 +179,7 @@ func _ready() -> void:
 	_refresh_biome()
 	_refresh_boss()
 	_refresh_rats()
+	_refresh_runes()
 	_refresh_chain_progress()
 	# Story UI: present any beats already queued (the arrival beat fired by
 	# start_story_session above, plus any threshold/flag beats a loaded save satisfied).
@@ -307,6 +321,14 @@ func _build_hud() -> void:
 	_rats_pill = _rats_pill_box.get_meta("label")
 	_rats_pill_box.visible = false
 	topbar_row.add_child(_rats_pill_box)
+
+	# M3j — runes pill (the harbor's premium reward). A cool sea-teal; shown whenever the
+	# player owns at least one rune (captured a giant pearl). Hidden at 0 so it doesn't
+	# clutter the bar before the harbor arc.
+	_runes_pill_box = UiKit.make_pill("ᚱ 0", Color(0.18, 0.46, 0.50))
+	_runes_pill = _runes_pill_box.get_meta("label")
+	_runes_pill_box.visible = false
+	topbar_row.add_child(_runes_pill_box)
 
 	# ── B. Chain-progress bar (just under the top-bar) ────────────────────────
 	# A thin parchment pill holding a small label and a 2-color progress fill: a DIM
@@ -1127,9 +1149,17 @@ func _on_new_game() -> void:
 ## biome swap must replace what's on the board NOW).
 func _on_town_changed() -> void:
 	var was_mine: bool = _board_pool_is_mine()
+	var was_harbor: bool = _board_pool_is_harbor()
 	board.set_tile_pool(game.active_biome_pool())
 	if game.is_in_mine() != was_mine:
 		board.setup_new_board()
+	# M3j: entering/leaving the harbor via the Town screen flips the biome — regenerate the
+	# board so fish tiles show NOW (mirrors the mine flip above). On ENTRY, place the live
+	# pearl onto the freshly-built board at its seeded cell so the rune target is visible.
+	if game.is_in_harbor() != was_harbor:
+		board.setup_new_board()
+		if game.is_in_harbor() and game.has_active_pearl():
+			board.place_pearl(Vector2i(int(game.fish_pearl.get("col", 0)), int(game.fish_pearl.get("row", 0))))
 	# M3g: starting the boss fight from the Town menu must raise the board's chain bar
 	# immediately (and dropping back to no-fight restores the base min).
 	board.set_min_chain(game.boss_min_chain())
@@ -1139,6 +1169,9 @@ func _on_town_changed() -> void:
 	# M3i: entering/leaving the mine via the Town screen flips whether STONE chains mine
 	# through rubble, so refresh that flag on every town action too.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# M3j: entering/leaving the harbor flips whether a fish chain next to the pearl captures
+	# it — refresh that flag on every town action too (off the harbor it is simply false).
+	board.clear_pearl_on_fish_chain = game.is_in_harbor()
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -1147,13 +1180,14 @@ func _on_town_changed() -> void:
 	_refresh_biome()
 	_refresh_boss()
 	_refresh_rats()
+	_refresh_runes()
 	# M4d: pick a confirm sound for whatever the town action did. Priority: a tier-up
-	# rings the warm bell; entering the mine whooshes; a coin-balance change (sell /
+	# rings the warm bell; entering the mine OR harbor whooshes; a coin-balance change (sell /
 	# buy / order-fill) chimes "coin"; anything else (build / craft / demolish) pops.
 	if _audio != null:
 		if game.settlement.tier > _last_tier:
 			_audio.play("tier_up")
-		elif game.is_in_mine() and not _last_in_mine:
+		elif (game.is_in_mine() and not _last_in_mine) or (game.is_in_harbor() and not _last_in_harbor):
 			_audio.play("whoosh")
 		elif game.coins != _last_coins:
 			_audio.play("coin")
@@ -1162,6 +1196,7 @@ func _on_town_changed() -> void:
 	_last_tier = game.settlement.tier
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
+	_last_in_harbor = game.is_in_harbor()
 	SaveManager.save(game)
 	# Story UI: a town action posts events (tier_up → act1_hamlet / act2_city_expedition,
 	# building_built → act1_lumber_raised / act2_kitchen, order_fulfilled → act1_first_order).
@@ -1173,6 +1208,13 @@ func _on_town_changed() -> void:
 ## biome flip before we overwrite the pool. Compares against Constants.MINE_POOL.
 func _board_pool_is_mine() -> bool:
 	return board != null and board.tile_pool == Constants.MINE_POOL
+
+## M3j — True when the board's CURRENT refill pool is the fish pool — used to detect a
+## harbor biome flip before we overwrite the pool. active_biome_pool() returns a duplicate
+## of Constants.FISH_POOL while on the harbor, and `==` compares Array CONTENTS in GDScript,
+## so this is true exactly while the board is on the harbor.
+func _board_pool_is_harbor() -> bool:
+	return board != null and board.tile_pool == Constants.FISH_POOL
 
 # ── signal handlers ────────────────────────────────────────────────────────
 
@@ -1228,6 +1270,34 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
+	# M3j: a chain resolved on the harbor spends one harbor turn (the catch is already
+	# credited above). note_harbor_turn ticks the turn budget, the tide cycle, and the pearl
+	# countdown together. We react to each: a TIDE FLIP reseeds the bottom row from the new
+	# tide pool; an uncaptured PEARL EXPIRY degrades the on-board pearl tile back to kelp; and
+	# when the turns run out the run SOFT-FAILS — keep the catch, swap the board back to the
+	# farm pool, regenerate, and clear the harbor board flag. Mirrors the mine-exit path.
+	if game.is_in_harbor():
+		# Capture the pearl's board cell BEFORE the tick (note_harbor_turn clears fish_pearl on
+		# expiry) so degrade_pearl still knows which cell to revert.
+		var pearl_cell := Vector2i(-1, -1)
+		if game.has_active_pearl():
+			pearl_cell = Vector2i(int(game.fish_pearl.get("col", -1)), int(game.fish_pearl.get("row", -1)))
+		var h_res: Dictionary = game.note_harbor_turn()
+		if bool(h_res.get("exited", false)):
+			_status_label.text = "Harbor run over — supplies spent. Back to the farm."
+			board.set_tile_pool(game.active_biome_pool())
+			board.setup_new_board()
+			# The harbor ended — back on the farm, so the pearl-capture flag is off.
+			board.clear_pearl_on_fish_chain = game.is_in_harbor()
+		else:
+			# TIDE FLIP — the surface catch changed with the water; reseed the bottom row.
+			if bool(h_res.get("tide_flipped", false)):
+				board.mutate_bottom_row(game.current_tide_pool())
+			# PEARL EXPIRED uncaptured — revert its on-board tile to plain kelp.
+			if bool(h_res.get("pearl_expired", false)) and pearl_cell.x >= 0:
+				board.degrade_pearl(pearl_cell)
+			_status_label.text = "%s  ·  🌊 %d harbor turn(s) left · %s tide" % [
+				_status_label.text, int(h_res.get("turns_left", 0)), game.fish_tide]
 	# M3g: a chain landed while the capstone boss is active damages it by the chain
 	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
 	# board's raised chain bar back to the base min and surface the win.
@@ -1256,12 +1326,39 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# M3h: a chain that DEFEATED the boss just turned rats on (rats_enabled flips with
 	# town2_complete), so refresh the rats line so the hazard shows immediately.
 	_refresh_rats()
+	# M3j: a pearl capture (via _on_pearl_chain, fired before this handler) may have granted a
+	# rune, and a harbor exit may have flipped the biome — refresh both surfaces.
+	_refresh_runes()
 	_refresh_chain_progress()
 	SaveManager.save(game)
 	# Story UI: a chain can post events (chain threshold beats, a boss_defeated that queues
 	# the Frostmaw aftermath choice, a tier-up/order/build path) — surface any newly-queued
 	# beat immediately. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
+
+## M3j — the Board reports a fish chain long enough to count toward a pearl capture. Ask
+## GameState whether those cells sit 8-adjacent to the live pearl; on a capture, grant the
+## rune (GameState already did, returning {captured, runes}), remove the on-board pearl tile
+## by degrading its cell to kelp, surface a status hint, and play the upgrade sparkle. Fires
+## BEFORE _on_chain_resolved (see Board._resolve emit order), so it runs before the harbor
+## turn ticks — a final-turn chain can still capture. The HUD refresh + save happen in
+## _on_chain_resolved, which runs immediately after.
+func _on_pearl_chain(cells: Array) -> void:
+	if game == null or board == null:
+		return
+	# Snapshot the pearl cell before capture clears fish_pearl, so we can degrade its tile.
+	var pearl_cell := Vector2i(-1, -1)
+	if game.has_active_pearl():
+		pearl_cell = Vector2i(int(game.fish_pearl.get("col", -1)), int(game.fish_pearl.get("row", -1)))
+	var cap: Dictionary = game.capture_pearl_if_adjacent(cells)
+	if not bool(cap.get("captured", false)):
+		return
+	# Remove the on-board pearl tile (it's been captured) by reverting its cell to kelp.
+	if pearl_cell.x >= 0:
+		board.degrade_pearl(pearl_cell)
+	_status_label.text = "🦪 Pearl captured! +1 rune"
+	if _audio != null:
+		_audio.play("upgrade")
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
 
@@ -1643,6 +1740,11 @@ func _refresh_biome() -> void:
 		# cave-in clutter clears by mining (a STONE chain) rather than by chaining it.
 		_biome_pill.text = "⛏ Mine · %d · clear rubble by mining" % game.mine_turns_left
 		_biome_pill.add_theme_color_override("font_color", Palette.EMBER)
+	elif game.is_in_harbor():
+		# M3j: the harbor pill surfaces the live tide + remaining turns ("🌊 Harbor · <tide> ·
+		# N"), mirroring the mine pill. A cool sea-teal so it reads as water.
+		_biome_pill.text = "🌊 Harbor · %s · %d" % [game.fish_tide, game.harbor_turns_left]
+		_biome_pill.add_theme_color_override("font_color", Color(0.18, 0.46, 0.50))
 	else:
 		_biome_pill.text = "Farm"
 		_biome_pill.add_theme_color_override("font_color", Palette.MOSS)
@@ -1674,6 +1776,18 @@ func _refresh_rats() -> void:
 	else:
 		_rats_pill.text = "🐀 active"
 	_rats_pill_box.visible = true
+
+## M3j — the runes pill (the harbor's premium reward). Shown only once the player owns at
+## least one rune (captured a giant pearl); reads "ᚱ N". Hidden at 0 so it stays out of the
+## bar before the harbor arc. Mirrors GameState.runes.
+func _refresh_runes() -> void:
+	if _runes_pill_box == null or _runes_pill == null or game == null:
+		return
+	if game.runes <= 0:
+		_runes_pill_box.visible = false
+		return
+	_runes_pill.text = "ᚱ %d" % game.runes
+	_runes_pill_box.visible = true
 
 ## M4b — refresh the chain-progress bar: label "{res}: {progress}/{threshold}" and a
 ## MOSS→GOLD fill at progress/threshold. With nothing chained yet it shows a neutral
