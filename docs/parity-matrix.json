@@ -229,10 +229,10 @@
       "feature_or_screen": "Achievements & trophies",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
-      "note": "No counter tracking or trophy/collection UI."
+      "verified_by": ["run_achievements_tests.gd", "run_achievements_view_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "19 port-reachable counter/threshold trophies tracked at chain/order/build/boss events with one-time rewards + save/load; grouped trophy view (AchievementsScreen) reachable via HUD + deep-link. Unreachable trophies (4-boss, fish, abilities, supply_chain) omitted; the React 'collection' tab (tile-collection) is separate and still pending."
     },
     {
       "id": "system-chronicle",
@@ -320,10 +320,10 @@
       "feature_or_screen": "achievements slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_achievements_tests.gd"],
-      "note": "Trophy/collection tracker for gameplay milestones."
+      "verified_by": ["run_achievements_tests.gd", "run_achievements_view_tests.gd"],
+      "note": "Trophy tracker (AchievementConfig.gd + GameState counters/bump_counter) and trophy view (AchievementsScreen) shipped. Collection tab (tile-collection) still pending."
     },
     {
       "id": "slice-almanac",
@@ -641,10 +641,10 @@
       "feature_or_screen": "achievements view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
-      "note": "Trophy and collection tracking."
+      "verified_by": ["run_achievements_view_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "Trophy tab (AchievementsScreen — grouped rows, progress bars, unlocked/locked, rewards) shipped; reachable via HUD button + apply_deeplink. Collection tab + golden await tile-collection + M-infra visual suite."
     },
     {
       "id": "view-boons",
@@ -1343,10 +1343,10 @@
       "feature_or_screen": "achievements-trophies-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
-      "note": "Achievements trophy tab; depends on M10 achievements."
+      "verified_by": ["run_achievements_view_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "Trophy screen renders (screenshot m10-achievements.png captured: 6/19 unlocked, gold full bars + moss partials + rewards incl. +Bomb). Visual golden itself awaits the M-infra visual suite."
     },
     {
       "id": "golden-achievements-collection-mixed",
