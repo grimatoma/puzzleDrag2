@@ -199,10 +199,10 @@
       "feature_or_screen": "Story beats & narrative",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:story-prompt"],
-      "note": "No beat progression, narrative modals, choice system, or chronicle view."
+      "verified_by": ["run_story_tests.gd", "run_story_ui_tests.gd", "golden:story-prompt"],
+      "note": "Beat/flag/trigger/choice engine (condition tree) wired at chain/tier/boss/build/order/session events; 13 port-reachable beats; beat modal + chronicle view. NPC-bond/keeper/zone-gated beats omitted (those systems unported)."
     },
     {
       "id": "system-cartography-zones",
@@ -239,10 +239,10 @@
       "feature_or_screen": "Chronicle & story timeline",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
-      "note": "No timeline of completed story beats."
+      "verified_by": ["run_story_tests.gd", "run_story_ui_tests.gd"],
+      "note": "Chronicle timeline of fired beats grouped by Act now shipped alongside the story engine and beat modal."
     },
     {
       "id": "system-tile-collection",
@@ -400,10 +400,10 @@
       "feature_or_screen": "chronicle slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
-      "note": "Story timeline and completed narrative beats."
+      "verified_by": ["run_story_tests.gd", "run_story_ui_tests.gd", "golden:chronicle-progressed"],
+      "note": "Chronicle timeline of fired beats grouped by Act shipped (ChronicleScreen.gd). Beat/choice engine + modal also shipped (StoryEngine.gd + StoryModal.gd). NPC/keeper arcs pending."
     },
     {
       "id": "slice-crafting",
@@ -550,10 +550,10 @@
       "feature_or_screen": "story slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:story-choices"],
-      "note": "Narrative beats and choice system."
+      "verified_by": ["run_story_tests.gd", "run_story_ui_tests.gd", "golden:story-choices"],
+      "note": "Beat/choice engine (StoryEngine.gd + StoryState.gd) + beat modal (StoryModal.gd) shipped. 13 port-reachable beats wired at chain/tier/boss/build/order/session events. NPC/keeper arcs pending."
     },
     {
       "id": "slice-tilecollection",
@@ -701,10 +701,10 @@
       "feature_or_screen": "chronicle view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
-      "note": "Story timeline."
+      "verified_by": ["run_story_ui_tests.gd", "golden:chronicle-progressed"],
+      "note": "ChronicleScreen.gd shipped — timeline of fired beats grouped by Act, \"N/total chapters\" counter, reachable via HUD button + apply_deeplink(\"chronicle\"). Visual golden awaits M-infra visual suite."
     },
     {
       "id": "view-crafting",
@@ -1333,10 +1333,10 @@
       "feature_or_screen": "chronicle-progressed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
-      "note": "Chronicle with story progress; depends on M10 story/chronicle."
+      "verified_by": ["run_story_ui_tests.gd", "golden:chronicle-progressed"],
+      "note": "ChronicleScreen.gd now renders the timeline of fired beats grouped by Act. Screenshot story-chronicle.png captured (8/13 chapters across Acts 1–3). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-achievements-trophies-mixed",
@@ -1596,27 +1596,27 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_story_tests.gd", "golden:story-bar"],
-      "note": "Story bar on board; depends on M10 story."
+      "note": "Story HUD bar on board not yet ported (the beat modal and chronicle view now render but the in-board story progress bar is still absent). Visual golden awaits M-infra visual suite."
     },
     {
       "id": "golden-story-prompt",
       "feature_or_screen": "story-prompt",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:story-prompt"],
-      "note": "Story prompt modal; depends on M10 story."
+      "verified_by": ["run_story_ui_tests.gd", "golden:story-prompt"],
+      "note": "Story beat modal now renders (StoryModal.gd — parchment dialog with title + speaker lines + Continue/choice buttons). Screenshot story-beat.png captured. Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-story-choices",
       "feature_or_screen": "story-choices",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_story_tests.gd", "golden:story-choices"],
-      "note": "Story with choice options; depends on M10 story choice system."
+      "verified_by": ["run_story_ui_tests.gd", "golden:story-choices"],
+      "note": "Choice-bearing beats now render in StoryModal.gd (choice buttons drain beat_queue, only explicit choices grant). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-story-win",
