@@ -7,8 +7,10 @@
 //   - an `index.html` landing page lists everything, grouped by section.
 //
 // Only git-tracked files are considered, so gitignored scratch content under
-// `docs/references/` never leaks into the deploy. No external image assets and
-// no network access required at build time.
+// `docs/references/` never leaks into the deploy. Static assets under
+// `docs/assets/` (PNG/GIF/etc.) are copied alongside the HTML so relative
+// `<img src="assets/...">` links resolve on GitHub Pages. No network access
+// required at build time.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
@@ -289,6 +291,7 @@ marked.setOptions({ gfm: true, breaks: false, mangle: false, headerIds: false })
 
 const files = trackedDocs();
 const entries = [];
+let assetCount = 0;
 
 for (const repoRel of files) {
   const abs = join(repoRoot, repoRel);
@@ -323,10 +326,17 @@ for (const repoRel of files) {
       kind: "md",
       title,
     });
+  } else {
+    const outPath = join(outRoot, docRel);
+    mkdirSync(dirname(outPath), { recursive: true });
+    copyFileSync(abs, outPath);
+    assetCount += 1;
   }
 }
 
 mkdirSync(outRoot, { recursive: true });
 writeFileSync(join(outRoot, "index.html"), renderIndex(entries));
 
-console.log(`[build-docs] wrote ${entries.length} docs + index → dist/docs/`);
+console.log(
+  `[build-docs] wrote ${entries.length} docs + ${assetCount} assets + index → dist/docs/`,
+);
