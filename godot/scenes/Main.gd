@@ -91,6 +91,12 @@ func _ready() -> void:
 	# screenshots) are deterministic, then top the order board up to MAX_ORDERS.
 	game.seed_orders(1337)
 	game.refill_orders()
+	# Story engine: post the session-start event so the arrival beat (and any beats whose
+	# thresholds/flags a loaded save already satisfies) fire and enqueue. Posting here (vs
+	# auto-calling in GameState.new()) keeps headless economy suites unaffected. The modal
+	# + chronicle UI that DRAINS story.beat_queue arrives in a later slice; for now the
+	# queue simply accumulates fired beat ids (persisted across reloads).
+	game.start_story_session()
 	# M8c — STARTER TOOL GRANT (the honest minimal source so tools are reachable now that
 	# they're wired into the live board). Grant a tiny starter set ONLY on a FRESH game:
 	# `game.tools.is_empty()` is true for a brand-new save (and for an old pre-M8b save
