@@ -58,6 +58,13 @@ var _last_threshold: int = 0
 
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 
+# ── M4e reward "juice" ────────────────────────────────────────────────────────
+# A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
+# the short-lived reward chips that fly from the board to the coin pill on every
+# resolved chain — the original game's "rewardTrajectory" feedback. Kept separate so
+# the flying chips always render over the top-bar pills they land on.
+var _fx_layer: CanvasLayer
+
 func _ready() -> void:
 	game = SaveManager.load_state()
 	# Seed the order generator with a fixed int so the running game's orders (and
@@ -155,6 +162,12 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 1
 	add_child(layer)
+
+	# M4e — reward-chip FX layer, ABOVE the HUD so the flying chips render over the
+	# top-bar pills (especially the coin pill they fly toward). Full-screen, no input.
+	_fx_layer = CanvasLayer.new()
+	_fx_layer.layer = 2
+	add_child(_fx_layer)
 
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -554,6 +567,90 @@ func _on_chain_track_resized() -> void:
 	_chain_prog_fill.size.y = maxf(0.0, h - 2.0)
 	_apply_chain_progress_fill()
 
+# ── M4e reward "juice" (fly-to-coins + pill pulse) ───────────────────────────
+
+## Spawn a small parchment reward chip at the board's centre and fly it to the coin
+## pill — the original game's "rewardTrajectory" feedback. The chip rises slightly,
+## swoops toward the coin pill (an eased arc), scales down + fades over the back end
+## of the flight, then frees itself. No-op (and never crashes) if the board or coin
+## pill aren't present yet. One chip per resolved chain — they're cheap + auto-freed.
+func _spawn_reward_chip(text: String, color: Color) -> void:
+	if _fx_layer == null or board == null or _coin_pill == null:
+		return
+	# A tiny parchment pill (PanelContainer + Label) styled like the HUD chips, so the
+	# flying reward reads as a piece of the stockpile leaping toward the coin purse.
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_theme_stylebox_override("panel", _make_chip_box())
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(lbl)
+	_fx_layer.add_child(chip)
+	# Let the container compute its size so we can centre the pivot + start position.
+	chip.reset_size()
+	var half: Vector2 = chip.size * 0.5
+	chip.pivot_offset = half
+
+	# START — the board's centre in screen space (the board is a plain Node2D at
+	# board.global_position with a board-local origin), nudged up so it reads as
+	# rising off the board. END — the coin pill's on-screen centre.
+	var board_center: Vector2 = board.global_position + board.board_origin + board.board_pixel_size() * 0.5
+	var start: Vector2 = board_center - Vector2(0, board.tile_size * 0.6) - half
+	var end: Vector2 = _coin_pill.get_global_rect().get_center() - half
+	chip.position = start
+	chip.scale = Vector2(1.2, 1.2)
+
+	# Fly: an eased (accelerating) swoop start→end over ~0.7s; in parallel scale down
+	# 1.2→0.7 and fade the alpha 1→0 over the last ~40% of the flight, then free.
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(chip, "position", end, 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(chip, "scale", Vector2(0.7, 0.7), 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(chip, "modulate:a", 0.0, 0.28).set_delay(0.42)
+	tw.chain().tween_callback(chip.queue_free)
+	# A little bounce on the coin pill so the purse "reacts" as the reward leaves.
+	_pulse_coin_pill()
+
+## A soft scale bounce (1 → 1.18 → 1 over ~0.3s) on the coin pill's wrapper so it
+## reacts when a reward chip is dispatched. The pill Label lives inside a
+## PanelContainer; pulsing the parent (with a centred pivot) bounces the whole pill.
+func _pulse_coin_pill() -> void:
+	if _coin_pill == null:
+		return
+	var box: Control = _coin_pill.get_parent() as Control
+	if box == null:
+		return
+	box.pivot_offset = box.size * 0.5
+	var tw := create_tween()
+	tw.tween_property(box, "scale", Vector2(1.18, 1.18), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(box, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+## A small parchment StyleBox for a flying reward chip — soft fill, thin iron border,
+## fully rounded, snug padding (matches the HUD pill look at a smaller scale).
+func _make_chip_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.IRON
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.corner_radius_top_left = 999
+	sb.corner_radius_top_right = 999
+	sb.corner_radius_bottom_left = 999
+	sb.corner_radius_bottom_right = 999
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	sb.shadow_size = 4
+	sb.shadow_color = Color(0, 0, 0, 0.20)
+	sb.shadow_offset = Vector2(0, 2)
+	return sb
+
 # ── Town screen ─────────────────────────────────────────────────────────────
 
 ## Open the town panel, lazily creating + wiring it on first use.
@@ -640,6 +737,13 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_audio.play("chain_collect")
 		if int(res.get("units", 0)) > 0:
 			_audio.play("upgrade")
+	# M4e: fly ONE reward chip from the board to the coin pill (the original's
+	# "rewardTrajectory"). Show the produced resource when a whole unit landed
+	# (gold), else the coins this chain earned (ember) — coins are always gained.
+	if int(res.get("units", 0)) > 0:
+		_spawn_reward_chip("+%d %s" % [int(res["units"]), res["resource"]], Palette.GOLD)
+	else:
+		_spawn_reward_chip("+%d 🪙" % int(res.get("coins_gain", 0)), Palette.EMBER)
 	# M4b: remember the resource + threshold this chain fed so the progress bar can
 	# show fractional progress toward its next unit (RAT/empty-threshold chains
 	# produce nothing, so leave the bar on the previous resource).

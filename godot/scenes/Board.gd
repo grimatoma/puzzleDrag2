@@ -317,7 +317,12 @@ func _resolve(path: Array) -> void:
 			var node := _make_tile(ttype)
 			node.position = _cell_center(c, r) - Vector2(0, (write + 2) * tile_size)
 			tiles[r][c] = node
+			# M4e — fresh refill tiles POP in: start at half-scale and overshoot up to
+			# full scale (TRANS_BACK) alongside the existing fall. Collapsing tiles
+			# (handled above via _slide_to) keep scale 1 and just slide.
+			node.scale = Vector2(0.5, 0.5)
 			_slide_to(node, c, r)
+			_pop_in_scale(node)
 
 	# Re-derive the logic grid from the visual layer, keep the board playable.
 	_sync_grid_from_tiles()
@@ -330,6 +335,15 @@ func _slide_to(t: Tile, c: int, r: int) -> void:
 	var tw := create_tween()
 	tw.tween_property(t, "position", _cell_center(c, r), FALL_TIME) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+## M4e — scale a freshly-spawned refill tile from its start scale (0.5) up to full
+## with a slight overshoot (TRANS_BACK / EASE_OUT) over the fall, so new tiles "pop"
+## in rather than just sliding. A separate tween from the position slide so neither
+## interferes with the other; both run over FALL_TIME.
+func _pop_in_scale(t: Tile) -> void:
+	var tw := create_tween()
+	tw.tween_property(t, "scale", Vector2.ONE, FALL_TIME) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _sync_grid_from_tiles() -> void:
 	for r in Constants.ROWS:
