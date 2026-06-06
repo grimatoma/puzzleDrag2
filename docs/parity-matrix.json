@@ -621,10 +621,10 @@
       "feature_or_screen": "town view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M6",
-      "verified_by": ["run_town_layout_tests.gd", "e2e:town-build", "golden:town-home-built-out"],
-      "note": "Spatial town building-placement map with roads/river/trees. Godot has a button-row list, not a map."
+      "verified_by": ["run_town_layout_tests.gd", "run_townmap_tests.gd", "run_town_map_tests.gd", "e2e:town-build", "golden:town-home-built-out"],
+      "note": "Spatial town map ported from src/townLayout.ts (TownLayout.gd) and rendered (TownMap.gd); reachable in-game via TownMapScreen with real GameState (plots from tier, built buildings as placeholder houses). View-only — pan/zoom + clickable plots (M6d) and e2e/golden land with M-infra."
     },
     {
       "id": "view-board",
