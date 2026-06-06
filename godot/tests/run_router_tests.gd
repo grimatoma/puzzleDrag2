@@ -1,0 +1,159 @@
+extends SceneTree
+## Headless tests for M5b — ViewRouter nav state machine + deep-link entry.
+##
+##   1. Pure state machine on ViewRouter.new() — initial state, open_modal,
+##      close_modal, is_open, current_modal.
+##   2. Deep-link resolve() — all known ids map to the right intent; unknown id
+##      returns not-ok; modal_id() round-trips; known_ids() is complete.
+##   3. Main integration — apply_deeplink() creates + shows the right screen;
+##      "board" closes the open modal and resets router state.
+##
+## Same dependency-free harness as the other run_*.gd suites.
+## Run from the godot/ project root:
+##   godot --headless --script res://tests/run_router_tests.gd
+## Exits 0 when every check passes, 1 on any failure — so CI can gate on it.
+
+var _checks: int = 0
+var _failures: int = 0
+
+func _check(cond: bool, msg: String) -> void:
+	_checks += 1
+	if cond:
+		print("  PASS  ", msg)
+	else:
+		_failures += 1
+		print("  FAIL  ", msg)
+		push_error("FAIL: " + msg)
+
+func _initialize() -> void:
+	print("\n── ViewRouter (M5b) tests ──────────────────────────")
+
+	# ── 1. Pure state machine ─────────────────────────────────────────────────
+	var r := ViewRouter.new()
+
+	# Initial state
+	_check(r.view  == ViewRouter.View.BOARD,  "initial view == BOARD")
+	_check(r.modal == ViewRouter.Modal.NONE,  "initial modal == NONE")
+	_check(r.current_modal() == ViewRouter.Modal.NONE, "current_modal() == NONE initially")
+	_check(not r.is_open(ViewRouter.Modal.TOWN), "is_open(TOWN) == false initially")
+
+	# open_modal(TOWN)
+	r.open_modal(ViewRouter.Modal.TOWN)
+	_check(r.current_modal() == ViewRouter.Modal.TOWN, "current_modal() == TOWN after open")
+	_check(r.is_open(ViewRouter.Modal.TOWN),  "is_open(TOWN) == true after open_modal(TOWN)")
+	_check(not r.is_open(ViewRouter.Modal.MENU), "is_open(MENU) == false while TOWN open")
+
+	# open_modal(MENU) switches modal
+	r.open_modal(ViewRouter.Modal.MENU)
+	_check(r.current_modal() == ViewRouter.Modal.MENU, "current_modal() switches to MENU")
+	_check(r.is_open(ViewRouter.Modal.MENU),  "is_open(MENU) == true after switch")
+	_check(not r.is_open(ViewRouter.Modal.TOWN), "is_open(TOWN) == false after switch to MENU")
+
+	# open_modal(INVENTORY)
+	r.open_modal(ViewRouter.Modal.INVENTORY)
+	_check(r.current_modal() == ViewRouter.Modal.INVENTORY, "current_modal() == INVENTORY")
+	_check(r.is_open(ViewRouter.Modal.INVENTORY), "is_open(INVENTORY) == true")
+
+	# close_modal -> NONE
+	r.close_modal()
+	_check(r.current_modal() == ViewRouter.Modal.NONE, "current_modal() == NONE after close")
+	_check(not r.is_open(ViewRouter.Modal.INVENTORY), "is_open(INVENTORY) == false after close")
+
+	# view field is unchanged throughout modal operations
+	_check(r.view == ViewRouter.View.BOARD, "view stays BOARD throughout modal operations")
+
+	# ── 2. Deep-link resolve() ────────────────────────────────────────────────
+	# "" → board / NONE
+	var d_empty := ViewRouter.resolve("")
+	_check(bool(d_empty.get("ok", false)),  "resolve('') ok")
+	_check(int(d_empty.get("view",  -1)) == ViewRouter.View.BOARD,  "resolve('') view == BOARD")
+	_check(int(d_empty.get("modal", -1)) == ViewRouter.Modal.NONE, "resolve('') modal == NONE")
+
+	# "board" → board / NONE
+	var d_board := ViewRouter.resolve("board")
+	_check(bool(d_board.get("ok", false)),  "resolve('board') ok")
+	_check(int(d_board.get("modal", -1)) == ViewRouter.Modal.NONE, "resolve('board') modal == NONE")
+
+	# "town" → TOWN modal
+	var d_town := ViewRouter.resolve("town")
+	_check(bool(d_town.get("ok", false)),  "resolve('town') ok")
+	_check(int(d_town.get("modal", -1)) == ViewRouter.Modal.TOWN,  "resolve('town') modal == TOWN")
+	_check(int(d_town.get("view",  -1)) == ViewRouter.View.BOARD,  "resolve('town') view == BOARD")
+
+	# "menu" → MENU modal
+	var d_menu := ViewRouter.resolve("menu")
+	_check(bool(d_menu.get("ok", false)),  "resolve('menu') ok")
+	_check(int(d_menu.get("modal", -1)) == ViewRouter.Modal.MENU,  "resolve('menu') modal == MENU")
+
+	# "inventory" → INVENTORY modal
+	var d_inv := ViewRouter.resolve("inventory")
+	_check(bool(d_inv.get("ok", false)),   "resolve('inventory') ok")
+	_check(int(d_inv.get("modal", -1)) == ViewRouter.Modal.INVENTORY, "resolve('inventory') modal == INVENTORY")
+
+	# "items" is an alias for inventory
+	var d_items := ViewRouter.resolve("items")
+	_check(bool(d_items.get("ok", false)), "resolve('items') ok")
+	_check(int(d_items.get("modal", -1)) == ViewRouter.Modal.INVENTORY, "resolve('items') modal == INVENTORY")
+
+	# Unknown id → not-ok
+	var d_bad := ViewRouter.resolve("unknown_xyz")
+	_check(not bool(d_bad.get("ok", true)), "resolve(unknown) returns ok=false")
+
+	# modal_id() round-trips
+	_check(ViewRouter.modal_id(ViewRouter.Modal.NONE)      == "board",     "modal_id(NONE) == 'board'")
+	_check(ViewRouter.modal_id(ViewRouter.Modal.TOWN)      == "town",      "modal_id(TOWN) == 'town'")
+	_check(ViewRouter.modal_id(ViewRouter.Modal.MENU)      == "menu",      "modal_id(MENU) == 'menu'")
+	_check(ViewRouter.modal_id(ViewRouter.Modal.INVENTORY) == "inventory", "modal_id(INVENTORY) == 'inventory'")
+
+	# known_ids() contains the canonical set
+	var ids := ViewRouter.known_ids()
+	_check(ids.has(""),          "known_ids() contains ''")
+	_check(ids.has("board"),     "known_ids() contains 'board'")
+	_check(ids.has("town"),      "known_ids() contains 'town'")
+	_check(ids.has("menu"),      "known_ids() contains 'menu'")
+	_check(ids.has("inventory"), "known_ids() contains 'inventory'")
+	_check(ids.has("items"),     "known_ids() contains 'items'")
+
+	# ── 3. Main integration ───────────────────────────────────────────────────
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	_check(packed != null, "Main.tscn loads")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+
+	_check(main.has_method("apply_deeplink"), "Main has apply_deeplink()")
+
+	# apply_deeplink("inventory") → creates + shows _inventory_screen; router updated
+	var ok_inv: bool = main.apply_deeplink("inventory")
+	_check(ok_inv, "apply_deeplink('inventory') returns true")
+	_check(main._inventory_screen != null, "apply_deeplink('inventory') created _inventory_screen")
+	_check(main._inventory_screen is InventoryScreen, "_inventory_screen is InventoryScreen")
+	_check(main._inventory_screen.visible, "_inventory_screen is visible after deeplink")
+	_check(main._router.current_modal() == ViewRouter.Modal.INVENTORY,
+		"_router.current_modal() == INVENTORY after apply_deeplink('inventory')")
+
+	# apply_deeplink("town") → creates + shows _town_screen; router updated
+	var ok_town: bool = main.apply_deeplink("town")
+	_check(ok_town, "apply_deeplink('town') returns true")
+	_check(main._town_screen != null, "apply_deeplink('town') created _town_screen")
+	_check(main._town_screen.visible, "_town_screen is visible after deeplink")
+	_check(main._router.current_modal() == ViewRouter.Modal.TOWN,
+		"_router.current_modal() == TOWN after apply_deeplink('town')")
+
+	# apply_deeplink("board") → closes the open modal; router resets to NONE
+	var ok_board: bool = main.apply_deeplink("board")
+	_check(ok_board, "apply_deeplink('board') returns true")
+	_check(main._router.current_modal() == ViewRouter.Modal.NONE,
+		"_router.current_modal() == NONE after apply_deeplink('board')")
+	_check(main._town_screen == null or not main._town_screen.visible,
+		"_town_screen hidden after apply_deeplink('board')")
+
+	# apply_deeplink with an unknown id returns false
+	var ok_bad: bool = main.apply_deeplink("totally_unknown")
+	_check(not ok_bad, "apply_deeplink(unknown) returns false")
+
+	SaveManager.clear()
+	print("──────────────────────────────────────────────────")
+	print("%d checks, %d failure(s)\n" % [_checks, _failures])
+	quit(1 if _failures > 0 else 0)
