@@ -187,7 +187,7 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete · <b>M4 in progress — M4a parchment identity + M4b HUD done</b></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete · <b>M4 in progress — M4a parchment identity + M4b HUD + M4c Town re-skin done</b></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
@@ -218,7 +218,7 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) is under way</span>: its first two parts, <span style="color:var(--accent2)">M4a — the parchment visual identity</span> and <span style="color:var(--accent2)">M4b — the HUD top-bar + stockpile/chain-progress</span>, are done.</b> The Godot 4.6 project at
+        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) is under way</span>: its first three parts, <span style="color:var(--accent2)">M4a — the parchment visual identity</span>, <span style="color:var(--accent2)">M4b — the HUD top-bar + stockpile/chain-progress</span>, and <span style="color:var(--accent2)">M4c — the Town-screen parchment re-skin</span>, are done.</b> The Godot 4.6 project at
           <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
           run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
@@ -237,7 +237,7 @@
           board with the <b>exported v1 Phaser tile art</b> (the auxiliary asset pipeline's Stage&nbsp;2 has landed; see Verification), a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
           <b>M3f</b> opened the <b>mine expedition</b> (the food gate → Town&nbsp;2), <b>M3g</b> landed the Direction's dramatic ★ <b>capstone boss</b> (Frostmaw — <code>min_chain 4</code> while engaged, raising the bar to resolve a chain — closing Town&nbsp;2), and <b>M3h</b> shipped <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (rats are a no-yield tile seeded into the farm pool once Town&nbsp;2 is done; Ratcatcher shoos them, Master Ratcatcher folds 8-adjacent rats into a grass chain). With M3g+M3h the <b>M3 introductory slice is COMPLETE (8 sub-parts, M3a–M3h)</b>. There are now <b>11 headless CI-gated test suites totalling 794 checks</b> (plus a 32-check asset suite being wired into CI in the current hardening pass).
           The Phaser version at the repo root is untouched and still fully playable, and the <b>GitHub Pages deploy is live</b> (PR #938): pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.
-          <b>M4 — UX/UI parity with the original React+Phaser game — has now started.</b> Its first part, <b>M4a</b>, ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic: a stateless <code>Palette.gd</code> (the parchment surfaces / ink text / iron border / ember-gold-moss accents ported from <code>src/tokens.css</code>), a rounded field-tinted <b>framed board</b> drawn in <code>Board.gd</code> (StyleBoxFlat + drop shadow), the signature glowing <b>chain-path overlay</b> (<code>ChainOverlay.gd</code> — orange/gold when valid, muddy rust when too short), and a re-skinned HUD with the <b>Cinzel</b> display serif. The transformation is dramatic — from a flat dark grid to a cream backdrop, a green field card, real PNG tile art, and the orange/gold chain path — while gameplay is unchanged (the scene smoke + all 12 suites stay green). <b>M4b</b> then replaced the cluttered 11-label HUD with the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> (coins, tier·plots, biome, plus conditional boss / rats pills), a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource, and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The now-redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). See the M4 detail tab.</div>
+          <b>M4 — UX/UI parity with the original React+Phaser game — has now started.</b> Its first part, <b>M4a</b>, ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic: a stateless <code>Palette.gd</code> (the parchment surfaces / ink text / iron border / ember-gold-moss accents ported from <code>src/tokens.css</code>), a rounded field-tinted <b>framed board</b> drawn in <code>Board.gd</code> (StyleBoxFlat + drop shadow), the signature glowing <b>chain-path overlay</b> (<code>ChainOverlay.gd</code> — orange/gold when valid, muddy rust when too short), and a re-skinned HUD with the <b>Cinzel</b> display serif. The transformation is dramatic — from a flat dark grid to a cream backdrop, a green field card, real PNG tile art, and the orange/gold chain path — while gameplay is unchanged (the scene smoke + all 12 suites stay green). <b>M4b</b> then replaced the cluttered 11-label HUD with the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> (coins, tier·plots, biome, plus conditional boss / rats pills), a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource, and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The now-redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). <b>M4c</b> then re-skinned the <b>Town screen</b> (<code>TownScreen.gd</code>) to the same parchment aesthetic — a <b>visual-only</b> pass that leaves structure, sections, <code>_action_buttons</code> keys, signals, and handlers untouched (so <code>run_town_ui_tests</code> stays green, 35 checks). The flat-black scrim becomes a warm brown one; the centered panel is now a <b>parchment card</b> (iron border, radius&nbsp;16, soft drop shadow) with a <b>Cinzel</b> title; <b>iron-hairline separators</b> sit above each section for a "ledger" feel; and a <code>_style_button</code> helper gives every action button a <b>parchment-pill</b> style with normal/hover/pressed/disabled states, accent-coded (tier-up/boss/expedition = ember, sell/fill/shoo = gold, build/craft = moss, demolish/leave/close = rose) — so the panel reads as paper-on-a-desk and matches the M4b HUD behind it. See the M4 detail tab.</div>
 
         <div class="progress-wrap">
           <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
@@ -252,12 +252,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (early; multi-PR)</span> <b>~30% · M4a parchment identity + M4b HUD done</b></div>
-          <div class="bar"><span style="width:30%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (early; multi-PR)</span> <b>~42% · M4a parchment identity + M4b HUD + M4c Town re-skin done</b></div>
+          <div class="bar"><span style="width:42%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~74%</b></div>
-          <div class="bar"><span style="width:74%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~76%</b></div>
+          <div class="bar"><span style="width:76%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -289,7 +289,7 @@
         </div>
         <div class="ms-row">
           <div class="num amber">M4</div>
-          <div><div class="t">UX/UI parity <span class="pill warn">in progress</span></div><div class="d">Replicate the Phaser game's full UI/UX in Godot — HUD, inventory, modals, town, crafting/cartography, animation, audio, real pixel-art assets. <b>M4a — the parchment visual identity (palette, framed board, chain-path overlay, HUD re-skin + Cinzel) — done.</b> <b>M4b — the HUD top-bar (title + coins/tier/biome/boss/rats pills), chain-progress bar, and Stockpile chip grid — done.</b> M4c (board collapse/collect animations) next.</div></div>
+          <div><div class="t">UX/UI parity <span class="pill warn">in progress</span></div><div class="d">Replicate the Phaser game's full UI/UX in Godot — HUD, inventory, modals, town, crafting/cartography, animation, audio, real pixel-art assets. <b>M4a — the parchment visual identity (palette, framed board, chain-path overlay, HUD re-skin + Cinzel) — done.</b> <b>M4b — the HUD top-bar (title + coins/tier/biome/boss/rats pills), chain-progress bar, and Stockpile chip grid — done.</b> <b>M4c — the Town-screen parchment re-skin (parchment card, ember Cinzel headers, ledger hairlines, accent-coded pill buttons; visual-only) — done.</b> M4d (board collapse/collect animations) next.</div></div>
           <span class="pill warn">partial</span>
         </div>
         <div class="ms-row">
@@ -300,16 +300,19 @@
       </section>
 
       <section id="session-summary">
-        <h2>M3 slice complete · M4 (UX/UI parity) under way — M4a parchment identity + M4b HUD done</h2>
+        <h2>M3 slice complete · M4 (UX/UI parity) under way — M4a parchment identity + M4b HUD + M4c Town re-skin done</h2>
         <div class="box tip"><b>M3 is done; M4 has begun.</b> All eight M3 sub-parts (M3a–M3h) landed and merged — the full
           <b>Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats)</b> introductory vertical slice
           plays end-to-end in Godot, backed by 11 headless CI-gated test suites (794 checks). The focus has now shifted to
-          <b>M4 — replicating the Phaser game's full UI/UX in Godot</b>, and its first two parts are in: <b>M4a — the parchment visual
+          <b>M4 — replicating the Phaser game's full UI/UX in Godot</b>, and its first three parts are in: <b>M4a — the parchment visual
           identity</b> (the cozy "leather-bound journal" look ported from <code>src/tokens.css</code> — palette, a framed
           field-tinted board, the orange/gold chain-path overlay, and a re-skinned Cinzel HUD) and <b>M4b — the HUD top-bar</b> (a
           parchment <code>PanelContainer</code> with a Cinzel "Hearthwood Vale" title + right-aligned coins/tier/biome/boss/rats pills,
           a MOSS→GOLD chain-progress bar for the last-chained resource, and a "Stockpile" chip grid rebuilt from <code>inventory</code>
-          — replacing the cluttered 11-label HUD). <b>Current focus: M4c</b> — board collapse/collect animations (tile pop + fall easing
+          — replacing the cluttered 11-label HUD), and <b>M4c — the Town-screen parchment re-skin</b> (a <b>visual-only</b> pass over
+          <code>TownScreen.gd</code>: a parchment panel card, ember Cinzel section headers, iron-hairline "ledger" separators, and
+          accent-coded parchment-pill buttons with disabled states — structure, signals, and the 35-check <code>run_town_ui_tests</code>
+          all unchanged). <b>Current focus: M4d (animations)</b> — board collapse/collect animations (tile pop + fall easing
           + a reward fly-to-coins, per the original <code>src/config/boardAnimations</code>). M5 — mobile — remains the externally-gated finale.</div>
         <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2), the Camp→City tier ladder (M3a),
           the buildings/plots/spawners layer (M3b), the refining + market economy (M3c), the orders system (M3d), the Town UI
@@ -334,6 +337,7 @@
           <div class="card amber"><h3>M3h — Town 3 rats hazard + Ratcatcher <span class="pill ok">done</span></h3><p>The Direction's fixed Town-3 lesson. <code>Constants.Tile.RAT</code> (ordinal 15, append-only) — a <b>no-yield hazard tile</b> (no threshold; chaining rats wastes a move); <code>BuildingConfig</code> Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind). <code>GameState</code> gains <code>rats_enabled()</code> = <code>town2_complete</code> (seeds 2 rats into the <b>farm</b> pool when enabled), the Ratcatcher's 5 shoo charges, and gates hazard buildings on <code>rats_enabled</code>. <code>Board</code> gains <code>clear_all_rats()</code> and <code>clear_rats_on_grass</code> (Master Ratcatcher folds 8-adjacent rats into a grass chain, uncredited). <code>Main.gd</code>/<code>TownScreen</code> rats HUD + Rats section + a "Shoo rats" free move. An 80-check rats suite covers it.</p></div>
           <div class="card"><h3>M4a — parchment visual identity <span class="pill ok">done</span></h3><p>The first part of <b>M4 (UX/UI parity)</b>: the cozy "leather-bound journal" look ported from <code>src/tokens.css</code>. New stateless <code>Palette.gd</code> (parchment surfaces, ink text, iron border, ember/gold/moss accents, field tint, chain colors); <code>Board.gd</code> draws a rounded, field-tinted <b>framed card</b> behind the tiles (StyleBoxFlat + drop shadow); a new <code>ChainOverlay.gd</code> draws the signature glowing chain path — <b>orange/gold when valid</b> (≥ min_chain), muddy rust when too short; and <code>Main.gd</code> re-skins the HUD onto parchment with the <b>Cinzel</b> display serif. A flat dark grid becomes a cream backdrop + a green field card + real PNG tile art + the orange/gold chain path. Gameplay unchanged — scene smoke + all 12 suites stay green.</p></div>
           <div class="card"><h3>M4b — HUD top-bar + stockpile/chain-progress <span class="pill ok">done</span></h3><p>The second part of <b>M4</b>: the cluttered 11-label HUD becomes the original game's structure. <code>Main.gd</code> now builds a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title + right-aligned <b>pills</b> — coins (🪙), tier·plots ("City · 2/11"), biome ("Farm" / "⛏ Mine · N"), plus conditionally-visible <b>boss</b> (⚔ HP) and <b>rats</b> (🐀 charges) pills; a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) driven by <code>progress/threshold</code> for the last-chained resource; and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The redundant per-tile selection ring is dropped in <code>Tile.gd</code> (the M4a <code>ChainOverlay</code> is the selection feedback); <code>set_selected()</code> kept as a state-only no-op. All <code>_refresh_*</code> method names + <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> retained so the headless smoke/capture scripts still work — all suites green.</p></div>
+          <div class="card"><h3>M4c — Town-screen parchment re-skin <span class="pill ok">done</span></h3><p>The third part of <b>M4</b>: a <b>visual-only</b> re-skin of the Town screen (<code>TownScreen.gd</code>) to the parchment aesthetic — structure, sections, <code>_action_buttons</code> keys, signals, and handlers all unchanged (so the 35-check <code>run_town_ui_tests</code> stays green). Color consts repoint at <code>Palette</code> (ink body text, <b>ember Cinzel section headers</b>, parchment panel); the flat-black scrim becomes a warm brown one; the centered panel is now a <b>parchment card</b> (iron border, radius&nbsp;16, soft drop shadow) with a <b>Cinzel</b> title; <b>iron-hairline separators</b> sit above each section for a "ledger" feel; and a <code>_style_button</code> helper gives every action button a <b>parchment-pill</b> style with normal/hover/pressed/disabled states, accent-coded (tier-up/boss/expedition = ember, sell/fill/shoo = gold, build/craft = moss, demolish/leave/close = rose). The panel reads as paper-on-a-desk and matches the M4b HUD behind it.</p></div>
         </div>
       </section>
 
@@ -701,12 +705,12 @@
         <div class="box tip"><b>M4 has begun.</b> <b>M4 = parchment UX/UI parity with the original React+Phaser game.</b> The maintainer's
           directive: the Godot port's UI was "very barebones," so M4 replicates the original's cozy "leather-bound journal"
           <b>parchment</b> aesthetic and its full interface (HUD, board presentation, town, inventory, crafting, animations, audio,
-          tooltips). It is a multi-PR effort. Its first two parts — <b>M4a, the parchment visual identity</b> and <b>M4b, the HUD
-          top-bar + stockpile/chain-progress</b> — are done.</div>
+          tooltips). It is a multi-PR effort. Its first three parts — <b>M4a, the parchment visual identity</b>, <b>M4b, the HUD
+          top-bar + stockpile/chain-progress</b>, and <b>M4c, the Town-screen parchment re-skin</b> — are done.</div>
         <p>The UX/UI parity milestone — bringing the Godot build's look and feel up to the original game's. It ships as a sequence of
-          sub-PRs (<b>M4a…</b>): the parchment visual identity (M4a) and the HUD top-bar + stockpile/chain-progress (M4b) are in; the
-          board collapse/collect animations (M4c), the town/inventory/crafting screens, tooltips/modals, and
-          WebAudio→<code>AudioStreamPlayer</code> SFX follow.</p>
+          sub-PRs (<b>M4a…</b>): the parchment visual identity (M4a), the HUD top-bar + stockpile/chain-progress (M4b), and the
+          Town-screen parchment re-skin (M4c) are in; the board collapse/collect animations (M4d), the inventory/crafting screens,
+          tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX follow.</p>
         <div class="legend">
           <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
         </div>
@@ -741,10 +745,23 @@
             <span class="note">Every <code>_refresh_*</code> method name is kept (re-pointed at the new pills/chips), and <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> are retained so the headless scene-smoke + capture scripts still resolve them. The headless scene-smoke + e2e + town-UI + all logic suites stay green.</span></li>
         </ul>
 
-        <h3>M4c … — the rest of M4 <span class="pill idle">todo</span></h3>
+        <h3>M4c — Town-screen parchment re-skin <span class="pill ok">done</span></h3>
+        <ul class="check">
+          <li class="done">Visual-only re-skin — structure, sections, signals, and handlers left intact
+            <span class="note"><code>TownScreen.gd</code> is re-skinned to the parchment aesthetic with <b>no behavioural change</b>: the five live sections, the <code>_action_buttons</code> (string→Button) map keys, the <code>state_changed</code>/<code>closed</code> signals, and every button handler are untouched, so the 35-check <code>run_town_ui_tests</code> stays green without edits. Color constants are repointed at <code>Palette</code> — ink for body text, <b>ember</b> for the Cinzel section headers, parchment for the panel.</span></li>
+          <li class="done">Parchment card + warm scrim + Cinzel title
+            <span class="note">The flat-black backdrop becomes a <b>warm brown scrim</b>, and the centered panel is now a <b>parchment card</b> — a <code>StyleBoxFlat</code> with an iron border, corner radius 16, and a soft drop shadow — with the title set in <b>Cinzel</b>, so the modal reads as paper-on-a-desk and matches the M4b HUD behind it.</span></li>
+          <li class="done">Iron-hairline "ledger" separators above each section
+            <span class="note">A thin iron hairline sits above each section header, giving the panel a ledger feel that organizes the Settlement / Buildings / Refine / Market / Orders (+ Expedition / Boss / Rats) rows.</span></li>
+          <li class="done">Accent-coded parchment-pill buttons with full state set
+            <span class="note">A new <code>_style_button</code> helper gives <b>every action button</b> a parchment-pill style with normal / hover / pressed / disabled states, accent-coded by intent: <b>ember</b> (tier-up / boss / expedition), <b>gold</b> (sell / fill / shoo), <b>moss</b> (build / craft), <b>rose</b> (demolish / leave / close). Disabled states stay accurate because the existing per-action re-render is unchanged.</span></li>
+          <li class="done">Suites stay green — purely presentational
+            <span class="note">The re-skin touches only <code>TownScreen.gd</code> and is purely presentational: <code>run_town_ui_tests</code> (35 checks) and all other suites stay green. See the M4c figure in Verification.</span></li>
+        </ul>
+
+        <h3>M4d … — the rest of M4 <span class="pill idle">todo</span></h3>
         <ul class="check">
           <li class="todo">Board collapse / collect animations — the full collect → collapse → refill VFX (tile pop + fall easing, a golden upgrade burst, a reward fly-to-coins, staggered timing), per the original <code>src/config/boardAnimations</code>.</li>
-          <li class="todo">Town screen re-skin — bring <code>TownScreen</code> up to the parchment identity and the original's layout.</li>
           <li class="todo">Inventory &amp; crafting screens — the original's full inventory and crafting/cartography surfaces in Godot.</li>
           <li class="todo">Tooltips &amp; modals — the original's hover tooltips and modal chrome.</li>
           <li class="todo">Audio — port the WebAudio engine's SFX to Godot <code>AudioStreamPlayer</code>.</li>
@@ -769,6 +786,13 @@
           <tbody>
             <tr><td><code>godot/scenes/Main.gd</code></td><td>The HUD rework — a parchment <b>top-bar</b> (<code>PanelContainer</code>) with the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional boss / rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> 4-column parchment resource-chip grid rebuilt from <code>inventory</code> — replacing the old 11-label HUD. All <code>_refresh_*</code> method names re-pointed at the pills/chips; <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> retained for the headless smoke/capture scripts</td></tr>
             <tr><td><code>godot/scenes/Tile.gd</code></td><td>Drops the now-redundant per-tile white selection ring (the M4a <code>ChainOverlay</code> is the selection feedback); <code>set_selected()</code> kept as a state-only no-op</td></tr>
+          </tbody>
+        </table>
+        <h3>M4c — Town-screen parchment re-skin</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scenes/TownScreen.gd</code></td><td><b>Visual-only re-skin.</b> Color consts repointed at <code>Palette</code> (ink body text, ember Cinzel section headers, parchment panel); a warm brown scrim; the centered panel as a <b>parchment card</b> (<code>StyleBoxFlat</code>: iron border, radius 16, soft drop shadow) with a Cinzel title; iron-hairline "ledger" separators above each section; and a <code>_style_button</code> helper giving every action button an accent-coded parchment-pill style with normal/hover/pressed/disabled states. <b>Structure, sections, <code>_action_buttons</code> keys, signals, and handlers unchanged</b> — <code>run_town_ui_tests</code> (35 checks) stays green</td></tr>
           </tbody>
         </table>
       </section>
@@ -1140,6 +1164,11 @@
           <figure><img src="assets/godot/m4b-hud.png" alt="M4b HUD: a parchment top-bar with a Cinzel 'Hearthwood Vale' title and right-aligned pills reading '🪙 1240 · City · 2/11 · Farm', a MOSS-to-GOLD chain-progress bar below it, the framed field-tinted board showing the orange/gold chain path, and a 'Stockpile' card of parchment resource chips in a 4-column grid"><figcaption><b>The M4b HUD rework.</b> The cluttered 11-label HUD becomes the original game's structure: a parchment <b>top-bar</b> with the <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> — here "🪙 1240 · City · 2/11 · Farm" (coins · tier·plots · biome), with the conditional ⚔ boss / 🐀 rats pills surfacing only when active; a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource; the framed board with the orange/gold chain path (M4a); and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code>, replacing the old "Collected: …" label. The per-tile selection ring was dropped (the <code>ChainOverlay</code> is the selection feedback). Built in <code>Main.gd</code> + <code>Tile.gd</code>; the headless scene-smoke + e2e + town-UI + all logic suites stay green.</figcaption></figure>
         </div>
 
+        <h3>Town-screen parchment re-skin — M4c (the dim modal → a parchment ledger)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m4c-town.png" alt="M4c Town screen: a parchment card with an iron border and soft drop shadow over a warm brown scrim, a Cinzel title, ember Cinzel section headers separated by iron 'ledger' hairlines, and accent-coded parchment-pill action buttons — ember tier-up/boss/expedition, gold sell/fill/shoo, moss build/craft, rose demolish/leave/close — with disabled buttons greyed"><figcaption><b>The M4c Town re-skin.</b> The dim-black modal becomes a <b>parchment ledger</b>: a parchment <b>card</b> (iron border, radius 16, soft drop shadow) over a warm brown scrim, a <b>Cinzel</b> title, <b>ember Cinzel section headers</b> set off by iron-hairline "ledger" separators, and <b>accent-coded parchment-pill buttons</b> with normal/hover/pressed/disabled states — ember (tier-up / boss / expedition), gold (sell / fill / shoo), moss (build / craft), rose (demolish / leave / close) — with disabled buttons correctly greyed. It now matches the M4b HUD behind it. The pass is <b>visual-only</b>: structure, sections, <code>_action_buttons</code> keys, signals, and handlers are unchanged, so <code>run_town_ui_tests</code> (35 checks) stays green without edits.</figcaption></figure>
+        </div>
+
         <h3>Asset pipeline — Stage 2 + Stage 3 (real tile art, not placeholders)</h3>
         <div class="box tip"><b>The auxiliary asset pipeline (plan §assets) is now operational end-to-end.</b> The board no
           longer draws flat placeholder squares: <b>Stage&nbsp;2</b> exported all 77 board-tile textures from the Phaser
@@ -1388,7 +1417,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, the full M3 slice (M3a–M3h), M4a &amp; M4b</h3>
+        <h3>Done — M1, M2, the full M3 slice (M3a–M3h), M4a, M4b &amp; M4c</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
@@ -1403,14 +1432,17 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <li class="done"><b>GitHub Pages deploy live (PR #938)</b> — pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.</li>
           <li class="done"><b>M4a — parchment visual identity</b> — <b>M4 (UX/UI parity) begins</b>: <code>Palette.gd</code> (the parchment palette ported from <code>src/tokens.css</code>), a field-tinted framed board card in <code>Board.gd</code>, the orange/gold glowing chain-path overlay (<code>ChainOverlay.gd</code>), a re-skinned HUD with the <b>Cinzel</b> display serif, and <code>godot/assets/fonts/Cinzel-Regular.ttf</code>. Gameplay unchanged — scene smoke + all 12 suites stay green.</li>
           <li class="done"><b>M4b — HUD top-bar + stockpile / chain-progress</b>: <code>Main.gd</code> replaces the cluttered 11-label HUD with the original game's structure — a parchment <b>top-bar</b> (<code>PanelContainer</code>) carrying the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> 4-column parchment resource-chip grid rebuilt from <code>inventory</code>; <code>Tile.gd</code> drops the redundant per-tile selection ring (the M4a <code>ChainOverlay</code> is the selection feedback). All <code>_refresh_*</code> + <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> names kept — scene-smoke + e2e + town-UI + all logic suites stay green.</li>
+          <li class="done"><b>M4c — Town-screen parchment re-skin</b>: a <b>visual-only</b> pass over <code>TownScreen.gd</code> — color consts repointed at <code>Palette</code> (ink body, ember Cinzel headers, parchment panel), a warm brown scrim, a parchment <b>card</b> (iron border, radius 16, drop shadow) with a Cinzel title, iron-hairline "ledger" separators above each section, and a <code>_style_button</code> helper giving every action button an accent-coded parchment-pill style with normal/hover/pressed/disabled states (ember tier-up/boss/expedition, gold sell/fill/shoo, moss build/craft, rose demolish/leave/close). Structure, sections, <code>_action_buttons</code> keys, signals, and handlers unchanged — <code>run_town_ui_tests</code> (35 checks) and all suites stay green.</li>
         </ul>
 
         <h3>Next — finish M4 (UX/UI parity), then M5 (mobile)</h3>
+        <!-- M4c done; next M4d (animations) -->
         <div class="log">
           <div class="entry"><div class="date">M3 · complete</div><h3>Introductory vertical slice done</h3><p>The full Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats) slice plays end-to-end in Godot, backed by 11 headless CI-gated suites (794 checks). <b>Deliberately deferred</b> (honest debt — Decision&nbsp;#29): the per-settlement resource split (the slice uses one shared inventory), the Town-2 tier ladder, mine hazards, and Town-3's broader specialization roster.</p></div>
           <div class="entry"><div class="date">M4a · done</div><h3>Parchment visual identity ported from the original</h3><p>M4 (UX/UI parity) has begun. The Godot UI was barebones (a flat dark grid + code-built HUD); M4a ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic — <code>Palette.gd</code> (from <code>src/tokens.css</code>), a field-tinted framed board card, the orange/gold glowing chain-path overlay, and a re-skinned Cinzel HUD. A dramatic facelift with gameplay unchanged (all suites green).</p></div>
           <div class="entry"><div class="date">M4b · done</div><h3>HUD top-bar + stockpile / chain-progress</h3><p>The cluttered 11-label HUD becomes the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> resource-chip grid rebuilt from <code>inventory</code>. The redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). Built in <code>Main.gd</code> + <code>Tile.gd</code> — all suites green. The HUD shows the port's <i>real</i> state; the original's level/XP/season pills are intentionally absent (Decision&nbsp;#31).</p></div>
-          <div class="entry"><div class="date">M4c · next</div><h3>Board collapse / collect animations</h3><p>Next in M4: the full collect → collapse → refill VFX — tile pop + fall easing, a golden upgrade burst, and a reward fly-to-coins — per the original <code>src/config/boardAnimations</code>. The rest of M4 follows — the town/inventory/crafting screens, tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX — plus the deferred content/balance debt above. This is the bulk of the remaining migration work.</p></div>
+          <div class="entry"><div class="date">M4c · done</div><h3>Town-screen parchment re-skin</h3><p>The Town modal (<code>TownScreen.gd</code>) is re-skinned to the parchment aesthetic in a <b>visual-only</b> pass: a parchment <b>card</b> (iron border, radius 16, soft drop shadow) over a warm brown scrim, a <b>Cinzel</b> title, <b>ember Cinzel section headers</b> with iron-hairline "ledger" separators, and a <code>_style_button</code> helper giving every action button an accent-coded parchment-pill style with normal/hover/pressed/disabled states (ember tier-up/boss/expedition, gold sell/fill/shoo, moss build/craft, rose demolish/leave/close). Structure, sections, <code>_action_buttons</code> keys, signals, and handlers are unchanged — the panel now matches the M4b HUD behind it, and <code>run_town_ui_tests</code> (35 checks) stays green.</p></div>
+          <div class="entry"><div class="date">M4d · next</div><h3>Board collapse / collect animations</h3><p>Next in M4: the full collect → collapse → refill VFX — tile pop + fall easing, a golden upgrade burst, and a reward fly-to-coins — per the original <code>src/config/boardAnimations</code>. The rest of M4 follows — the inventory/crafting screens, tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX — plus the deferred content/balance debt above. This is the bulk of the remaining migration work.</p></div>
           <div class="entry"><div class="date">M5</div><h3>Mobile app (externally gated)</h3><p>iOS + Android export and store submission. <b>External blocker</b> outside the codebase: iOS needs a Mac + Xcode, and both stores need paid developer accounts with signing/provisioning. The Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</p></div>
         </div>
 
@@ -1435,7 +1467,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
             <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
             <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
             <tr><td>M5 mobile export</td><td>iOS export needs a Mac + Xcode; both stores need paid developer accounts and signing/provisioning — an <b>external blocker</b> outside the codebase.</td><td>Surface to the maintainer well before M5: the Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</td></tr>
-            <tr><td>Visual parity vs Phaser</td><td><s>Placeholder colors ≠ the procedural Phaser textures.</s> <b>Resolved (Stage&nbsp;2):</b> the board renders the exact exported Phaser tile PNGs (v1 parity 1:1); <b>M4a</b> ported the original's parchment chrome (palette, framed board, chain-path overlay, Cinzel HUD); and <b>M4b</b> brought the HUD up to the original's structure (top-bar pills, chain-progress bar, stockpile chip grid).</td><td>Asset pipeline (plan §assets) Stage&nbsp;2 landed — <code>tools/export-v1-tiles.mjs</code> + <code>godot/assets/tiles/</code> + <code>Tile.gd</code>. Stage&nbsp;3 (v2 animated sprites) is a proven drop-in; production v2 art is the external PixelLab/Ludo.ai feed. <b>M4a+M4b</b> ported the parchment identity and HUD structure from the original; the rest of the UI/UX parity (M4c animations onward) is the remaining M4 work.</td></tr>
+            <tr><td>Visual parity vs Phaser</td><td><s>Placeholder colors ≠ the procedural Phaser textures.</s> <b>Resolved (Stage&nbsp;2):</b> the board renders the exact exported Phaser tile PNGs (v1 parity 1:1); <b>M4a</b> ported the original's parchment chrome (palette, framed board, chain-path overlay, Cinzel HUD); and <b>M4b</b> brought the HUD up to the original's structure (top-bar pills, chain-progress bar, stockpile chip grid); <b>M4c</b> re-skinned the Town modal to the parchment ledger (parchment card, ember Cinzel headers, accent-coded pill buttons).</td><td>Asset pipeline (plan §assets) Stage&nbsp;2 landed — <code>tools/export-v1-tiles.mjs</code> + <code>godot/assets/tiles/</code> + <code>Tile.gd</code>. Stage&nbsp;3 (v2 animated sprites) is a proven drop-in; production v2 art is the external PixelLab/Ludo.ai feed. <b>M4a+M4b+M4c</b> ported the parchment identity, HUD structure, and Town modal from the original; the rest of the UI/UX parity (M4d animations onward) is the remaining M4 work.</td></tr>
           </tbody>
         </table>
       </section>
