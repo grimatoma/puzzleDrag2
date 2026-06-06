@@ -119,6 +119,16 @@ var achievements_unlocked: Dictionary = {}
 ## seenResources / seenBuildings maps, generalised to one map keyed by counter.
 var _distinct_seen: Dictionary = {}
 
+# ── Story engine (beats / flags / triggers / choices) ─────────────────────────
+## Persisted story progress, ported from the React story slice (src/story.ts +
+## src/state/storyEffects.ts) as a beat/flag/trigger/choice engine scoped to the
+## port's reachable arc (StoryConfig). Wired ADDITIVELY: post_story_event is called at
+## the END of each gameplay hook site (credit_chain / try_tier_up / damage_boss /
+## build / fill_order) AFTER the existing result is computed, so beats only ENQUEUE
+## for a later UI slice — they never alter the economy. Only an EXPLICIT player choice
+## (resolve_story_choice) ever grants resources/coins; firing a beat does not.
+var story := StoryState.new()
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -157,6 +167,11 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var cat_counter: String = AchievementConfig.counter_for_category(Constants.category_of(tile_type))
 	if cat_counter != "":
 		bump_counter(cat_counter, chain_len)
+	# ── Story engine (ADDITIVE, after the economy is fully credited) ─────────────
+	# Post a "chain" event so resource-THRESHOLD beats (act1_light_hearth on
+	# inventory.hay_bundle, act2_quarry_foothold on inventory.block, …) can fire off
+	# the now-updated inventory snapshot. The summary below is UNCHANGED — only enqueue.
+	post_story_event({"type": "chain", "resource": resource, "units": units})
 	return {
 		"resource": resource,
 		"units": units,
@@ -199,6 +214,10 @@ func try_tier_up() -> Dictionary:
 		else:
 			inventory[k] = remaining
 	settlement.tier += 1
+	# Story engine (ADDITIVE, after the tier is committed): post a "tier_up" event so
+	# tier-driven beats (act1_hamlet on event.tier>=2, act2_city_expedition on >=5) can
+	# fire. The success result below is UNCHANGED — only enqueue.
+	post_story_event({"type": "tier_up", "tier": settlement.tier})
 	return {"ok": true, "tier": settlement.tier, "name": settlement.tier_name()}
 
 # ── Spawner buildings (board-pool gating) ─────────────────────────────────────
@@ -270,6 +289,10 @@ func build(id: String) -> Dictionary:
 	# each id (build() already rejects a re-build of an existing id, but the distinct
 	# guard makes the counter robust even if a future caller demolishes + rebuilds).
 	bump_counter("distinct_buildings_built", 1, id)
+	# Story engine (ADDITIVE, after the build is committed): post a "building_built"
+	# event so build-gated beats (act1_lumber_raised on event.id=="lumber_camp",
+	# act2_kitchen on "kitchen") can fire. The success result below is UNCHANGED.
+	post_story_event({"type": "building_built", "id": id})
 	return {"ok": true, "id": id, "name": BuildingConfig.building_name(id)}
 
 ## Remove spawner `id`, freeing its plot and dropping its category from the pool.
@@ -449,6 +472,9 @@ func fill_order(index: int) -> Dictionary:
 	refill_orders()
 	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
 	bump_counter("orders_fulfilled")
+	# Story engine (ADDITIVE, after the order is committed): post an "order_fulfilled"
+	# event so act1_first_order can fire. The success result below is UNCHANGED.
+	post_story_event({"type": "order_fulfilled"})
 	return {"ok": true, "reward": reward, "resource": resource, "qty": qty}
 
 # ── Expedition / mine biome (M3f) ─────────────────────────────────────────────
@@ -633,6 +659,10 @@ func damage_boss(chain_len: int) -> Dictionary:
 		# non-fatal hit falls through to the {defeated:false} return below and never
 		# touches the counter.
 		bump_counter("bosses_defeated")
+		# Story engine (ADDITIVE, only on a DEFEAT): post a "boss_defeated" event so
+		# act2_frostmaw_felled fires (and queues its choice aftermath). The defeat result
+		# below is UNCHANGED. A non-fatal hit falls through and posts nothing.
+		post_story_event({"type": "boss_defeated"})
 		return {"active": true, "defeated": true, "reward": r, "name": nm}
 	return {"active": true, "defeated": false, "hp": boss_hp}
 
@@ -770,6 +800,106 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		pending_tool = ""
 	return {"ok": true, "reason": "", "grid": new_grid, "collected": collected}
 
+# ── Story engine (beats / flags / triggers / choices) ─────────────────────────
+
+## Post a gameplay `event` to the story engine. Builds the fact snapshot from
+## (event, inventory, settlement.tier, story.flags), then fires beats via StoryEngine
+## in a LOOP until none match — so a single session_start can cascade several beats
+## whose thresholds/flags are already satisfied. Each fired beat's on_complete flags +
+## fired marker are applied to `story`, and its id is ENQUEUED into story.beat_queue
+## for the (later) UI slice to display. Returns the Array of newly-fired beat ids.
+##
+## Beats NEVER auto-grant resources/coins — only an explicit resolve_story_choice does.
+## So this is safe to call additively at every hook site: it cannot change the economy.
+func post_story_event(event: Dictionary) -> Array:
+	var fired: Array = []
+	# Loop-with-guard: each fired beat sets a marker/flag, so the next next_beat() sees
+	# a fresh story_state and may fire a follow-up (cascade). The guard bounds it to the
+	# catalog size so a (data-bug) repeat beat can't spin forever.
+	var guard: int = 0
+	var limit: int = StoryConfig.all_beats().size() + 4
+	while guard < limit:
+		guard += 1
+		var story_dict: Dictionary = story.to_engine_dict()
+		var beat: Dictionary = StoryEngine.next_beat(story_dict, event, inventory, settlement.tier)
+		if beat.is_empty():
+			break
+		var beat_id: String = String(beat.get("id", ""))
+		# Apply the beat's effects (marker + on_complete flags + act advance).
+		story.apply_engine_dict(StoryEngine.apply_beat(story_dict, beat))
+		# Enqueue for display (dedup) and honour an on_complete.queue_beat follow-up.
+		_enqueue_beat(beat_id)
+		var qb: String = String(beat.get("on_complete", {}).get("queue_beat", ""))
+		if qb != "" and StoryConfig.has_beat(qb):
+			_enqueue_beat(qb)
+		fired.append(beat_id)
+	return fired
+
+## Resolve a player CHOICE on a queued beat. Applies the chosen outcome's flags to
+## `story` via StoryEngine.apply_choice, then CREDITS the choice's grants — resources
+## through the same cap-respecting inventory path as any gain, coins via coins += —
+## and honours a follow-up queue_beat (enqueued for display). Returns the engine's
+## { story_state, grants, queue_beat } dict (with story_state already adopted) plus an
+## "ok" flag; ok=false (no mutation beyond the no-op clone) for an unknown beat/choice.
+func resolve_story_choice(beat_id: String, choice_id: String) -> Dictionary:
+	var beat: Dictionary = StoryConfig.beat_by_id(beat_id)
+	if beat.is_empty():
+		return {"ok": false, "reason": "unknown_beat"}
+	# Validate the choice exists before mutating, so an unknown id is a clean no-op.
+	var has_choice: bool = false
+	for c in beat.get("choices", []):
+		if String(c.get("id", "")) == choice_id:
+			has_choice = true
+			break
+	if not has_choice:
+		return {"ok": false, "reason": "unknown_choice"}
+	var res: Dictionary = StoryEngine.apply_choice(story.to_engine_dict(), beat, choice_id)
+	story.apply_engine_dict(res.get("story_state", {}))
+	# Credit grants — the ONLY path where a story beat adds resources/coins.
+	var grants: Dictionary = res.get("grants", {})
+	var grant_coins: int = int(grants.get("coins", 0))
+	if grant_coins != 0:
+		# Coins are uncapped (same as order rewards); floor the total at 0 defensively.
+		coins = maxi(0, coins + grant_coins)
+	var grant_resources: Dictionary = grants.get("resources", {})
+	for k in grant_resources.keys():
+		_credit_resource(String(k), int(grant_resources[k]))
+	# Honour a follow-up beat queued by the choice (enqueue for display).
+	var qb: String = String(res.get("queue_beat", ""))
+	if qb != "":
+		_enqueue_beat(qb)
+	return {
+		"ok": true,
+		"grants": grants,
+		"queue_beat": qb,
+	}
+
+## Post the session-start event (Main calls this on load). A separate entry point so
+## existing suites that build a GameState.new() are NOT affected — session beats only
+## fire when this is explicitly called. Returns the newly-fired beat ids.
+func start_story_session() -> Array:
+	return post_story_event({"type": "session_start"})
+
+## Add `beat_id` to the story display queue (dedup). The (later) UI slice drains it.
+func _enqueue_beat(beat_id: String) -> void:
+	if beat_id == "":
+		return
+	if not story.beat_queue.has(beat_id):
+		story.beat_queue.append(beat_id)
+
+## Credit `amount` units of `resource` into inventory, cap-clamped (and floored at 0
+## for a negative grant). The shared cap path used by choice grants so a story reward
+## obeys the same storage cap as a chain/recipe gain.
+func _credit_resource(resource: String, amount: int) -> void:
+	if resource == "" or amount == 0:
+		return
+	var current: int = int(inventory.get(resource, 0))
+	var total: int = current + amount
+	if total <= 0:
+		inventory.erase(resource)
+		return
+	inventory[resource] = mini(total, settlement.cap())
+
 # ── Achievements (M10) ─────────────────────────────────────────────────────────
 
 ## Bump achievement counter `counter` and grant any trophies it just crossed.
@@ -871,6 +1001,12 @@ func to_dict() -> Dictionary:
 		"achievement_counters": achievement_counters.duplicate(),
 		"achievements_unlocked": achievements_unlocked.duplicate(),
 		"_distinct_seen": _distinct_seen.duplicate(true),
+		# Story engine: act + flags (incl. _fired_* markers) + choice_log + beat_queue.
+		# Persisting the fired markers is what makes one-time beats stay fired across a
+		# reload (post_story_event sees them and skips). SAVE_VERSION is NOT bumped —
+		# like every prior additive field, a save written before story existed loads with
+		# the defensive default (a fresh act-1 StoryState).
+		"story": story.to_dict(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -993,4 +1129,12 @@ static func from_dict(d: Dictionary) -> GameState:
 					seen[String(sk)] = true
 			if not seen.is_empty():
 				s._distinct_seen[String(ckey)] = seen
+	# Restore the story engine state (beats/flags/triggers/choices). Missing key (any
+	# save written before story existed) → a fresh act-1 StoryState via from_dict({}).
+	# StoryState.from_dict floors the act at 1, keeps only truthy flags (incl. fired
+	# markers), and well-forms choice_log / beat_queue — so a corrupt save can't strand
+	# a phantom act or re-fire a one-time beat. SAVE_VERSION is NOT bumped (additive).
+	var story_d: Variant = d.get("story", {})
+	if story_d is Dictionary:
+		s.story = StoryState.from_dict(story_d)
 	return s
