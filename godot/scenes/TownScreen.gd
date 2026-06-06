@@ -37,7 +37,8 @@ signal shoo_rats
 ## headless tests can locate + press a specific button. Keys:
 ##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>", "buy:<res>",
 ##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss",
-##   "shoo_rats" (M3h), "hire:<worker_id>", "fire:<worker_id>".
+##   "shoo_rats" (M3h), "hire:<worker_id>", "fire:<worker_id>",
+##   "enter_harbor", "leave_harbor" (M3j).
 var _action_buttons: Dictionary = {}
 
 ## Static shell (built once in setup()) — the dynamic section bodies hang off the
@@ -443,6 +444,21 @@ func _build_expedition_section() -> void:
 		_action_buttons["leave_mine"] = leave_btn
 		return
 
+	# M3j — the HARBOR expedition (the Town-3 outing), mirroring the mine. While on the
+	# harbor the section shows remaining turns + the live tide + a "Leave the harbor"
+	# button; off it, the enter row appears (gated below).
+	if game.is_in_harbor():
+		_expedition_body.add_child(_make_label(
+			"🌊 On the harbor — %d turns left · %s tide" % [
+				game.harbor_turns_left, game.fish_tide], COL_BODY))
+		var leave_h_btn := Button.new()
+		leave_h_btn.text = "Leave the harbor"
+		UiKit.style_button(leave_h_btn, COL_DANGER, 6, 0, true)
+		leave_h_btn.connect("pressed", Callable(self, "_do_leave_harbor"))
+		_expedition_body.add_child(leave_h_btn)
+		_action_buttons["leave_harbor"] = leave_h_btn
+		return
+
 	var supplies: int = game.qty("supplies")
 	var gate_text: String = "City reached" if game.settlement.tier >= TownConfig.TIER_CITY \
 		else "reach City to launch"
@@ -455,6 +471,23 @@ func _build_expedition_section() -> void:
 	enter_btn.connect("pressed", Callable(self, "_do_enter_mine"))
 	_expedition_body.add_child(enter_btn)
 	_action_buttons["enter_mine"] = enter_btn
+
+	# M3j — the HARBOR enter row. The harbor has NO City-tier gate of its own
+	# (can_enter_harbor only needs supplies), but it's the Town-3 outing, so it's framed
+	# behind town2_complete (the Frostmaw capstone) — matching how rats/Town-3 unlock. The
+	# button is disabled unless can_enter_harbor() AND town2_complete; the label shows the
+	# supplies cost (turns) and a hint when Town 2 isn't done yet.
+	var harbor_gate_text: String = "Town 2 done" if game.town2_complete \
+		else "defeat Frostmaw to unlock"
+	_expedition_body.add_child(_make_label(
+		"Harbor — Supplies: %d · %s" % [supplies, harbor_gate_text], COL_BODY))
+	var enter_h_btn := Button.new()
+	enter_h_btn.text = "Enter the harbor (%d turns)" % supplies
+	enter_h_btn.disabled = not (game.can_enter_harbor() and game.town2_complete)
+	UiKit.style_button(enter_h_btn, Palette.EMBER, 6, 0, true)
+	enter_h_btn.connect("pressed", Callable(self, "_do_enter_harbor"))
+	_expedition_body.add_child(enter_h_btn)
+	_action_buttons["enter_harbor"] = enter_h_btn
 
 func _build_boss_section() -> void:
 	# M3g — the capstone boss (Frostmaw), the Town-2 close. You don't fight from a
@@ -635,6 +668,19 @@ func _do_leave_mine() -> void:
 	# leave_mine() returns void (no failure mode — it always snaps to the farm), so
 	# emit state_changed directly instead of routing through _after.
 	game.leave_mine()
+	emit_signal("state_changed")
+	refresh()
+
+func _do_enter_harbor() -> void:
+	# enter_harbor() returns the standard {ok, reason|turns} dict, so _after handles it.
+	# Main's _on_town_changed reacts to state_changed by re-pooling the board onto the harbor
+	# and placing the giant pearl.
+	_after(game.enter_harbor())
+
+func _do_leave_harbor() -> void:
+	# leave_harbor() returns void (no failure mode — it always snaps to the farm), so emit
+	# state_changed directly instead of routing through _after (mirrors _do_leave_mine).
+	game.leave_harbor()
 	emit_signal("state_changed")
 	refresh()
 

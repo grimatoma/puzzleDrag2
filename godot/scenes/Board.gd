@@ -17,6 +17,13 @@ signal chain_resolved(tile_type: int, length: int)
 ## the tool — it only reports WHICH cell was tapped; Main owns the GameState ref and
 ## applies the tool (mirrors how chain_resolved keeps the Board decoupled from economy).
 signal cell_tapped(cell: Vector2i)
+## M3j (harbor pearl capture) — fired when clear_pearl_on_fish_chain is set and a resolved
+## chain is a FISH-category tile of length >= Constants.REQUIRED_FISH_IN_CHAIN. Carries the
+## chained cells (Array[Vector2i]) so Main can ask GameState.capture_pearl_if_adjacent
+## whether they sit next to the live pearl. The Board stays decoupled from GameState (it has
+## no pearl ref) — exactly like chain_resolved / cell_tapped report WHAT happened and let
+## Main own the economy.
+signal pearl_chain(cells: Array)
 
 const POP_TIME := 0.13
 const FALL_TIME := 0.22
@@ -55,6 +62,14 @@ var clear_rats_on_grass: bool = false
 ## just how mining works). The cleared rubble is a side effect: NOT counted in the
 ## chain length nor credited (RUBBLE produces nothing).
 var clear_rubble_on_stone: bool = false
+
+## M3j (harbor giant pearl): when true (exactly while on a harbor expedition), a resolved
+## FISH-category chain of length >= Constants.REQUIRED_FISH_IN_CHAIN emits `pearl_chain` with
+## its chained cells so Main can run GameState.capture_pearl_if_adjacent (a fish chain run
+## 8-adjacent to the live pearl captures it for a Rune). Main sets this from
+## GameState.is_in_harbor() after load and on every board re-pool. Mirrors
+## clear_rubble_on_stone — it only ever fires in the harbor; farm/mine are untouched.
+var clear_pearl_on_fish_chain: bool = false
 
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
@@ -196,6 +211,58 @@ func apply_external_grid(new_grid: Array) -> void:
 	BoardLogic.refill(grid, rng, tile_pool)
 	_ensure_live_board()
 	_build_tiles()
+
+# ── harbor (M3j): tide mutation + giant-pearl placement ──────────────────────
+# These act only while Main has flipped the harbor on (it sets clear_pearl_on_fish_chain
+# from GameState.is_in_harbor() and calls these on the tide/pearl ticks). Off the harbor
+# they are never invoked, so farm/mine behaviour is unchanged.
+
+## M3j — rewrite the board's BOTTOM ROW with fresh draws from `pool` (the live tide pool,
+## GameState.current_tide_pool()), rebuilding those Tile nodes. Called by Main when a harbor
+## turn FLIPS the tide (note_harbor_turn → tide_flipped): the surface catch changes with the
+## water, so the row the player is about to chain is reseeded from the new tide's pool. An
+## empty/null pool is a no-op (nothing to draw). Mirrors the per-cell rebuild that
+## clear_all_rats / the refill loop do; only the bottom row's `grid` + Tile nodes change, so
+## the rest of the board (and any in-flight collapse) is untouched.
+func mutate_bottom_row(pool: Array) -> void:
+	if pool == null or pool.is_empty():
+		return
+	var r: int = Constants.ROWS - 1
+	for c in Constants.COLS:
+		grid[r][c] = pool[rng.randi_range(0, pool.size() - 1)]
+		_rebuild_cell(c, r)
+
+## M3j — set grid cell `cell` (col=x, row=y) to the giant pearl tile and rebuild its Tile
+## node so the rune-capture target shows on the board. Called by Main on harbor entry (and
+## on load mid-session) using GameState.fish_pearl's seeded cell. Out-of-bounds is a no-op.
+func place_pearl(cell: Vector2i) -> void:
+	if not BoardLogic.in_bounds(cell):
+		return
+	grid[cell.y][cell.x] = Constants.Tile.FISH_PEARL
+	_rebuild_cell(cell.x, cell.y)
+
+## M3j — degrade the giant pearl back to kelp at `cell` and rebuild its Tile node. Called by
+## Main when the pearl's countdown EXPIRES uncaptured (note_harbor_turn → pearl_expired) — the
+## React behaviour is the pearl reverting to a plain kelp tile. Out-of-bounds is a no-op.
+func degrade_pearl(cell: Vector2i) -> void:
+	if not BoardLogic.in_bounds(cell):
+		return
+	grid[cell.y][cell.x] = Constants.Tile.FISH_KELP
+	_rebuild_cell(cell.x, cell.y)
+
+## Free + rebuild the single Tile node at (c, r) from its current grid value, positioned at
+## the cell centre. Shared by the harbor mutators above. Keeps `tiles` in lockstep with
+## `grid` for that cell without disturbing any other cell (mirrors _build_tiles' per-cell work
+## for one cell). Guarded so it is safe before tiles[] is populated.
+func _rebuild_cell(c: int, r: int) -> void:
+	if tiles.is_empty():
+		return
+	var old: Tile = tiles[r][c]
+	if old != null:
+		old.queue_free()
+	var t := _make_tile(grid[r][c])
+	t.position = _cell_center(c, r)
+	tiles[r][c] = t
 
 # ── layout ─────────────────────────────────────────────────────────────────
 
@@ -400,6 +467,18 @@ func _resolve(path: Array) -> void:
 	_sync_grid_from_tiles()
 	if not BoardLogic.has_valid_chain(grid):
 		setup_new_board()
+
+	# M3j (harbor): a resolved FISH-category chain long enough to count toward a pearl
+	# capture reports its cells so Main can run GameState.capture_pearl_if_adjacent (a fish
+	# chain 8-adjacent to the live pearl grabs the Rune). Only fires while on the harbor
+	# (clear_pearl_on_fish_chain) — farm/mine resolves never emit it. We pass the ORIGINAL
+	# chain cells (`path`), not the rubble/rat-swept `removal` set, so Main checks adjacency
+	# against exactly what the player chained. Emitted BEFORE chain_resolved so the capture
+	# is attempted FIRST — _on_chain_resolved then ticks note_harbor_turn (which could expire
+	# the pearl on its final turn), so checking capture ahead of the tick is the right order.
+	if clear_pearl_on_fish_chain and length >= Constants.REQUIRED_FISH_IN_CHAIN \
+			and Constants.category_of(key) == "fish":
+		pearl_chain.emit(path.duplicate())
 
 	chain_resolved.emit(key, length)
 

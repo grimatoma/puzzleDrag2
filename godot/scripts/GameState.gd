@@ -925,6 +925,44 @@ func try_capture_pearl(chain_keys: Array) -> Dictionary:
 	fish_pearl = {}
 	return {"captured": true, "runes": runes}
 
+## BOARD-side pearl capture (the LIVE harbor board's actual rule). `chain_cells` is the
+## resolved chain's cells (Array[Vector2i], board coords col=x/row=y). On a VALID capture
+## — in the harbor, with a live pearl, a chain of at least Constants.REQUIRED_FISH_IN_CHAIN
+## cells, and at least one chained cell 8-ADJACENT (Chebyshev distance <= 1) to the live
+## pearl cell — grant +1 Rune, clear the pearl (no double-grant), and return
+## {captured:true, runes}. Otherwise returns {captured:false} WITHOUT mutating.
+##
+## WHY THIS EXISTS ALONGSIDE try_capture_pearl. The React rule is "the chain CONTAINS the
+## pearl tile + >= REQUIRED_FISH_IN_CHAIN other fish" (try_capture_pearl / FishConfig). The
+## port's is_valid_chain requires an ALL-SAME-KEY chain, so a chain can never simultaneously
+## contain the pearl AND fish tiles — that rule can't fire on the live board. The board
+## therefore adapts it to the engine's existing ADJACENCY pattern (exactly like
+## Board.clear_rubble_on_stone sweeping rubble 8-adjacent to a STONE chain): a same-key
+## fish chain run NEXT TO the pearl captures it. The Board only emits its `pearl_chain`
+## signal for a FISH-category chain of length >= REQUIRED_FISH_IN_CHAIN (it owns the grid +
+## tile types), so the fish-category + length gates are enforced there; this method enforces
+## the harbor / live-pearl / adjacency gates against GameState. try_capture_pearl stays as
+## the pure, React-parity rule (still unit-tested + reachable); the LIVE board uses THIS.
+func capture_pearl_if_adjacent(chain_cells: Array) -> Dictionary:
+	if not is_in_harbor():
+		return {"captured": false}
+	if not has_active_pearl():
+		return {"captured": false}
+	if chain_cells == null or chain_cells.size() < Constants.REQUIRED_FISH_IN_CHAIN:
+		return {"captured": false}
+	var pearl := Vector2i(int(fish_pearl.get("col", -1)), int(fish_pearl.get("row", -1)))
+	var adjacent: bool = false
+	for cell in chain_cells:
+		var v: Vector2i = cell
+		if maxi(absi(v.x - pearl.x), absi(v.y - pearl.y)) <= 1:
+			adjacent = true
+			break
+	if not adjacent:
+		return {"captured": false}
+	runes += 1
+	fish_pearl = {}
+	return {"captured": true, "runes": runes}
+
 ## Active board CATEGORIES: the two staples plus the category of each placed
 ## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".
 ## Refiners (Bakery) have no category and contribute nothing — the empty-string

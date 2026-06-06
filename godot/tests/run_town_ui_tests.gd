@@ -242,6 +242,39 @@ func _initialize() -> void:
 	_check(game.worker_count(WorkerConfig.FARMER) == farmers_pre_fire - 1,
 		"farmer count fell by 1 after fire")
 
+	# ── Expedition: enter / leave the HARBOR (M3j) ─────────────────────────────
+	# The harbor enter row is gated by can_enter_harbor() AND town2_complete (the Town-3
+	# framing). With Town 2 NOT done it's disabled even with supplies; once town2_complete is
+	# set and supplies exist it enables, pressing it enters the harbor, the row swaps to a
+	# "Leave the harbor" button, and pressing that returns to the farm.
+	game.active_biome = "farm"
+	game.harbor_turns_left = 0
+	game.town2_complete = false
+	game.inventory["supplies"] = 4
+	town.refresh()
+	var harbor_btn_locked: Variant = town._action_buttons.get("enter_harbor")
+	_check(harbor_btn_locked != null, "enter_harbor button exists (Expedition section)")
+	_check(harbor_btn_locked != null and harbor_btn_locked.disabled,
+		"enter_harbor disabled before Town 2 is complete (even with supplies)")
+
+	game.town2_complete = true
+	town.refresh()
+	var harbor_btn: Variant = town._action_buttons.get("enter_harbor")
+	_check(harbor_btn != null and not harbor_btn.disabled,
+		"enter_harbor enabled once town2_complete + supplies present")
+	var harbor_changes_before := _changes
+	_check(not game.is_in_harbor(), "(pre) not in the harbor on the farm")
+	_check(_press(town, "enter_harbor"), "pressed enter_harbor")
+	_check(game.is_in_harbor(), "entering the harbor put the game on the harbor biome")
+	_check(game.harbor_turns_left == 4, "all 4 supplies converted to harbor turns")
+	_check(_changes == harbor_changes_before + 1, "state_changed fired once on enter_harbor")
+	# Now on the harbor, the row offers a Leave button (and the enter button is gone).
+	_check(town._action_buttons.has("leave_harbor"), "row now shows leave_harbor while on the harbor")
+	_check(not town._action_buttons.has("enter_harbor"), "enter_harbor replaced while on the harbor")
+	_check(_press(town, "leave_harbor"), "pressed leave_harbor")
+	_check(not game.is_in_harbor(), "leaving the harbor returned to the farm")
+	_check(town._action_buttons.has("enter_harbor"), "row reverted to enter_harbor on the farm")
+
 	# ── Close ─────────────────────────────────────────────────────────────────
 	_check(_press(town, "close"), "pressed close")
 	_check(_closed, "closed signal fired")
