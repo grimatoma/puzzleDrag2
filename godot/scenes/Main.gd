@@ -64,6 +64,10 @@ var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), laz
 ## has NO class_name) so the port never needs an --import to register it as a global.
 const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
 var _achievements_screen                ## CanvasLayer (AchievementsScreenScript), lazily created
+## M11 — the tile-collection browser modal, lazily created. Loaded via preload (NO
+## class_name) so the port never needs an --import pass to register it as a global.
+const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
+var _tile_collection_screen             ## CanvasLayer (TileCollectionScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -483,6 +487,26 @@ func _build_hud() -> void:
 	ach_btn.connect("pressed", Callable(self, "_open_achievements"))
 	root.add_child(ach_btn)
 
+	# M11 — always-visible "📖" tile-collection button, pinned top-LEFT just under the
+	# 🏆 achievements button (offset_top 156, ~38px tall) so the five buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the tile-collection browser modal (TileCollectionScreen).
+	var tiles_btn := Button.new()
+	tiles_btn.text = "📖"
+	tiles_btn.add_theme_font_size_override("font_size", 20)
+	tiles_btn.add_theme_color_override("font_color", Palette.INK)
+	tiles_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	tiles_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	tiles_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	tiles_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	tiles_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	tiles_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	tiles_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	tiles_btn.offset_left = 18
+	tiles_btn.offset_top = 202
+	tiles_btn.connect("pressed", Callable(self, "_open_tiles"))
+	root.add_child(tiles_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -844,6 +868,26 @@ func _on_achievements_closed() -> void:
 		_achievements_screen.visible = false
 	_router.close_modal()
 
+# ── Tile Collection browser (M11) ─────────────────────────────────────────────
+
+## Open the tile-collection browser modal, lazily creating + wiring it on first use
+## (mirrors _open_achievements). The screen is READ-ONLY — it only emits `closed`,
+## routed to a hide handler. open() re-renders from Constants.STRING_KEYS each time,
+## so the gallery always reflects the current wired tile set.
+func _open_tiles() -> void:
+	if _tile_collection_screen == null:
+		_tile_collection_screen = TileCollectionScreenScript.new()
+		add_child(_tile_collection_screen)
+		_tile_collection_screen.setup(game)
+		_tile_collection_screen.connect("closed", Callable(self, "_on_tiles_closed"))
+	_tile_collection_screen.open()
+	_router.open_modal(ViewRouter.Modal.TILES)
+
+func _on_tiles_closed() -> void:
+	if _tile_collection_screen != null:
+		_tile_collection_screen.visible = false
+	_router.close_modal()
+
 ## M5b — resolve a deep-link id and navigate to the matching screen.
 ## Routes to the existing _open_* / close methods so all lazy-create and
 ## visibility logic remains in one place. Returns true if the id was known.
@@ -862,6 +906,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_townmap()
 		ViewRouter.Modal.ACHIEVEMENTS:
 			_open_achievements()
+		ViewRouter.Modal.TILES:
+			_open_tiles()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -878,6 +924,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _achievements_screen != null and _achievements_screen.visible:
 				_achievements_screen.visible = false
+				_router.close_modal()
+			elif _tile_collection_screen != null and _tile_collection_screen.visible:
+				_tile_collection_screen.visible = false
 				_router.close_modal()
 	return true
 
