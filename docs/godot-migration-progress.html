@@ -187,7 +187,7 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3e-town-ui</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3f-mine</code></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
@@ -232,7 +232,7 @@
           <b>Town UI screen</b> — a Control-based modal (built in code, like the HUD) with five live sections (Settlement,
           Buildings, Refine, Market, Orders) whose <b>buttons drive the whole Town-1 economy</b>, replacing the temporary
           T/1-6/B/G/F dev keys (which remain only as a keyboard fallback). It renders as a playable
-          board with placeholder art, a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
+          board with the <b>exported v1 Phaser tile art</b> (the auxiliary asset pipeline's Stage&nbsp;2 has landed; see Verification), a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
           Headless tests and a Web-export job are wired
           into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
@@ -301,9 +301,11 @@
           <code>claude/godot-migration-m3c-economy</code>), and the orders system (M3d, done on
           <code>claude/godot-migration-m3d-orders</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
           Direction slice — continues as a sequence of sub-PRs (re-scoped from 6→7 when Orders and the Town UI were split for
-          reviewability). <b>M3e (the Town UI screen)</b> just landed on
-          <code>claude/godot-migration-m3e-town-ui</code>: a Control-based Town modal with five live sections whose buttons drive
-          the whole Town-1 economy, replacing the temporary T/1-6/B/G/F dev keys (kept only as a keyboard fallback). Next up is
+          reviewability). <b>M3e (the Town UI screen)</b> landed on <code>claude/godot-migration-m3e-town-ui</code>: a
+          Control-based Town modal with five live sections whose buttons drive the whole Town-1 economy. Alongside M3e, the
+          <b>Stage&nbsp;2+3 asset pipeline</b> shipped — 77 v1 Phaser tile PNGs and one v2 animated SpriteFrames grass fixture;
+          <code>Tile.gd</code> now resolves the newest available stage per tile so the board shows <b>real tile art</b> instead of
+          colored placeholders; a 32-check suite covers all three stages. Now scaffolded on <code>claude/godot-migration-m3f-mine</code>:
           <b>M3f</b> — the expedition → Town 2 (the mine).</p>
         <div class="grid">
           <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
@@ -313,7 +315,7 @@
           <div class="card amber"><h3>M3c — refining + market economy <span class="pill ok">done</span></h3><p><code>RecipeConfig.gd</code> holds the station-gated recipe catalog (bread = 3 flour + 1 eggs at the Bakery); <code>MarketConfig.gd</code> holds the SELL/BUY price tables; <code>BuildingConfig.gd</code> gains a building <code>kind</code> and the Bakery refiner; <code>GameState</code> gains <code>can_craft</code>/<code>craft</code>, <code>sell</code>, and a cap-aware <code>buy</code>, with refiners guarded out of the board pool. A 136-check economy suite covers it; temporary B (bake) and G (sell) keys drive it until the Market/Bakery UI ships.</p></div>
           <div class="card amber"><h3>M3d — orders system <span class="pill ok">done</span></h3><p><code>OrderConfig.gd</code> holds the order tuning (<code>MAX_ORDERS=3</code>, qty 3–8, <code>REWARD_MULT=3</code>); <code>GameState</code> gains an <code>orders</code> list, a seeded <code>rng</code>, <code>orderable_resources()</code>, and <code>generate_order</code>/<code>refill_orders</code>/<code>can_fill_order</code>/<code>fill_order</code> (deduct the qty, credit the <b>uncapped</b> reward = <code>sell_price × qty × 3</code>, then refill). Orders persist and are sanitised on load. A 121-check orders suite covers it; the M3e Town UI now ships the real order Fill buttons, with the F key kept as a fallback.</p></div>
           <div class="card amber"><h3>M3e — Town UI screen <span class="pill ok">done</span></h3><p><code>TownScreen.gd</code> (<code>class_name TownScreen extends CanvasLayer</code>) is a dim-backdrop Control modal with five <b>live</b> sections — Settlement (tier line + "Advance" button), Buildings (Build/Demolish rows), Refine (Craft buttons), Market (Sell buttons), Orders (Fill buttons) — each reading current <code>GameState</code>, calling the matching method, and re-rendering so disabled states stay accurate. <code>Main.gd</code> opens it from an always-visible "🏠 Town" button; the temporary T/1-6/B/G/F keys remain only as a keyboard fallback. A 35-check town-UI suite presses the buttons headless and asserts <code>GameState</code> mutated.</p></div>
-          <div class="card"><h3>Next — M3f expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies) and the mine: mine tiles + hazards, and the expedition that opens Town 2. Then M3g capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along with M3f.</p></div>
+          <div class="card amber"><h3>M3f — expedition → Town 2 (mine) <span class="pill warn">in progress</span></h3><p>Mine biome tiles + pool (<code>MINE_POOL</code>), Kitchen building (farm food → <code>supplies</code>), Supplies recipe (bread + flour → supplies), mine goods market prices, and the expedition system in <code>GameState</code> (<code>enter_mine</code> / <code>note_mine_turn</code> / <code>leave_mine</code> / <code>active_biome_pool</code>). Board switches to mine tiles for the duration of the expedition; soft-fail keeps everything gathered. <code>TownScreen</code> gains an Expedition section (Enter / Leave). Tests + M3g capstone boss + Town 3 to follow.</p></div>
         </div>
       </section>
 
@@ -834,8 +836,8 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All eight test scripts
-          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_scene_smoke</code> 11)
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All ten test scripts
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_assets_tests</code> 32 + <code>run_mine_tests</code> 109 + <code>run_scene_smoke</code> 11)
           exit <code>0</code>; the screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
@@ -875,6 +877,18 @@
         <h3>Town UI screen — M3e (the real panel; live enabled/disabled buttons)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m3e-town.png" alt="M3e Town panel open over a dimmed board: a scrollable modal with five sections — Settlement (greyed 'Advance to Town' button), Buildings (some Build buttons greyed, built ones showing Demolish), Refine (active Craft button), Market ('Sell 1' buttons), Orders (active Fill buttons) — faithfully reflecting the current GameState"><figcaption>The open Town panel over a dimmed board, showing all five live sections — Settlement, Buildings, Refine, Market, Orders. The button states mirror the real game state: "Advance to Town" and Garden's "Build" are greyed because building the three structures dropped <code>plank</code> below their costs, while Craft and the affordable order Fills are active. Proves the real Town UI drives the whole Town-1 economy through <code>GameState</code> methods with correct <code>can_tier_up</code>/<code>can_build</code>/<code>can_craft</code>/<code>can_fill_order</code> enabled-state gating — the M3e panel replacing the temporary T/1-6/B/G/F keys.</figcaption></figure>
+        </div>
+
+        <h3>Asset pipeline — Stage 2 + Stage 3 (real tile art, not placeholders)</h3>
+        <div class="box tip"><b>The auxiliary asset pipeline (plan §assets) is now operational end-to-end.</b> The board no
+          longer draws flat placeholder squares: <b>Stage&nbsp;2</b> exported all 77 board-tile textures from the Phaser
+          procedural cache to PNGs (<code>tools/export-v1-tiles.mjs</code> → <code>godot/assets/tiles/&lt;key&gt;.png</code>),
+          and <code>scenes/Tile.gd</code> loads them by canonical item key. <b>Stage&nbsp;3</b> is a proven drop-in: a tile
+          with a v2 <code>SpriteFrames</code> renders via <code>AnimatedSprite2D</code> instead, with the board interface
+          unchanged. A tile with neither asset still falls back to the Stage-1 placeholder, so the board is never blank.</div>
+        <div class="shots">
+          <figure><img src="assets/godot/assets-v1-board.png" alt="Godot board rendering the exported v1 Phaser tile textures: detailed grass, wheat, cow, horse, carrot, apple, oak, pansy and pig tiles instead of flat colored squares, with a 6-grass chain ringed in white"><figcaption><b>Stage&nbsp;2 — v1 PNGs on the board.</b> The same Godot board, now rendering the <i>exported Phaser textures</i> (grass, wheat, cow, horse, carrot, apple, oak, pansy, pig) by canonical item key, with the white selection ring drawn on top of a 6-grass chain. Each tile is <code>res://assets/tiles/&lt;key&gt;.png</code>; <code>Tile.gd</code> resolves it from <code>Constants.STRING_KEYS</code>. Proves the one-time export bootstrap and the texture-load-with-fallback path.</figcaption></figure>
+          <figure><img src="assets/godot/assets-v2-grass-frames.png" alt="Eight-frame filmstrip of the v2 grass tile: blades bend left, return upright, bend right, return — a seamless sway loop with the dirt base held still"><figcaption><b>Stage&nbsp;3 — v2 animated tile (drop-in proof).</b> The eight frames of the grass tile's looping <code>idle</code> <code>SpriteFrames</code> (<code>godot/assets/tiles/v2/tile_grass_grass.tres</code>): a height-weighted blade sway — tips travel, base holds — i.e. real articulation, not a rigid shift. <code>Tile.gd</code> auto-prefers this v2 asset over the v1 PNG with zero board changes. (A pipeline-validation fixture derived from the v1 PNG; production v2 art is the external PixelLab/Ludo.ai feed.)</figcaption></figure>
         </div>
 
         <h3>Headless test output</h3>
@@ -1107,7 +1121,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
             <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
             <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
             <tr><td>M5 mobile export</td><td>iOS export needs a Mac + Xcode; both stores need paid developer accounts and signing/provisioning — an <b>external blocker</b> outside the codebase.</td><td>Surface to the maintainer well before M5: the Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</td></tr>
-            <tr><td>Visual parity vs Phaser</td><td>Placeholder colors ≠ the procedural Phaser textures.</td><td>Intentional through M2; the asset pipeline (plan §assets) replaces them in Stage 2/3 (M4).</td></tr>
+            <tr><td>Visual parity vs Phaser</td><td><s>Placeholder colors ≠ the procedural Phaser textures.</s> <b>Resolved (Stage&nbsp;2):</b> the board now renders the exact exported Phaser tile PNGs, so v1 parity is 1:1.</td><td>Asset pipeline (plan §assets) Stage&nbsp;2 landed — <code>tools/export-v1-tiles.mjs</code> + <code>godot/assets/tiles/</code> + <code>Tile.gd</code>. Stage&nbsp;3 (v2 animated sprites) is a proven drop-in; production v2 art is the external PixelLab/Ludo.ai feed (M4+).</td></tr>
           </tbody>
         </table>
       </section>
