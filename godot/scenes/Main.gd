@@ -68,6 +68,13 @@ var _achievements_screen                ## CanvasLayer (AchievementsScreenScript
 ## class_name) so the port never needs an --import pass to register it as a global.
 const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
 var _tile_collection_screen             ## CanvasLayer (TileCollectionScreenScript), lazily created
+## Story UI — the beat presenter (drains game.story.beat_queue) + the chronicle timeline,
+## both lazily created. Loaded via preload (NO class_name) so the port never needs an
+## --import pass to register them as globals (mirrors AchievementsScreen / TileCollection).
+const StoryModalScript := preload("res://scenes/StoryModal.gd")
+const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
+var _story_modal                        ## CanvasLayer (StoryModalScript), lazily created
+var _chronicle_screen                   ## CanvasLayer (ChronicleScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -93,9 +100,9 @@ func _ready() -> void:
 	game.refill_orders()
 	# Story engine: post the session-start event so the arrival beat (and any beats whose
 	# thresholds/flags a loaded save already satisfies) fire and enqueue. Posting here (vs
-	# auto-calling in GameState.new()) keeps headless economy suites unaffected. The modal
-	# + chronicle UI that DRAINS story.beat_queue arrives in a later slice; for now the
-	# queue simply accumulates fired beat ids (persisted across reloads).
+	# auto-calling in GameState.new()) keeps headless economy suites unaffected. The beat
+	# modal that DRAINS story.beat_queue is presented at the END of _ready via
+	# _drain_story_queue() (the HUD must exist first so the modal layers above it).
 	game.start_story_session()
 	# M8c — STARTER TOOL GRANT (the honest minimal source so tools are reachable now that
 	# they're wired into the live board). Grant a tiny starter set ONLY on a FRESH game:
@@ -156,6 +163,10 @@ func _ready() -> void:
 	_refresh_boss()
 	_refresh_rats()
 	_refresh_chain_progress()
+	# Story UI: present any beats already queued (the arrival beat fired by
+	# start_story_session above, plus any threshold/flag beats a loaded save satisfied).
+	# The HUD + board are built now, so the beat modal layers cleanly above them.
+	_drain_story_queue()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -512,6 +523,26 @@ func _build_hud() -> void:
 	tiles_btn.offset_top = 202
 	tiles_btn.connect("pressed", Callable(self, "_open_tiles"))
 	root.add_child(tiles_btn)
+
+	# Story UI — always-visible "📜" chronicle button, pinned top-LEFT just under the
+	# 📖 tile-collection button (offset_top 202, ~38px tall) so the six buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the chronicle timeline modal (ChronicleScreen).
+	var chronicle_btn := Button.new()
+	chronicle_btn.text = "📜"
+	chronicle_btn.add_theme_font_size_override("font_size", 20)
+	chronicle_btn.add_theme_color_override("font_color", Palette.INK)
+	chronicle_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	chronicle_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	chronicle_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	chronicle_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	chronicle_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	chronicle_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	chronicle_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	chronicle_btn.offset_left = 18
+	chronicle_btn.offset_top = 248
+	chronicle_btn.connect("pressed", Callable(self, "_open_chronicle"))
+	root.add_child(chronicle_btn)
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
@@ -894,6 +925,80 @@ func _on_tiles_closed() -> void:
 		_tile_collection_screen.visible = false
 	_router.close_modal()
 
+# ── Chronicle timeline (story UI) ──────────────────────────────────────────────
+
+## Open the chronicle timeline modal, lazily creating + wiring it on first use (mirrors
+## _open_achievements). The screen is READ-ONLY — it only emits `closed`, routed to a
+## hide handler. open() re-reads game.story (fired markers) each time, so the timeline
+## always reflects the beats fired so far.
+func _open_chronicle() -> void:
+	if _chronicle_screen == null:
+		_chronicle_screen = ChronicleScreenScript.new()
+		add_child(_chronicle_screen)
+		_chronicle_screen.setup(game)
+		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
+	_chronicle_screen.open()
+	_router.open_modal(ViewRouter.Modal.CHRONICLE)
+
+func _on_chronicle_closed() -> void:
+	if _chronicle_screen != null:
+		_chronicle_screen.visible = false
+	_router.close_modal()
+
+# ── Story beat queue (story UI) ────────────────────────────────────────────────
+
+## Present the FRONT of game.story.beat_queue in the beat modal, lazily creating + wiring
+## the modal on first use. No-op when the queue is empty or the modal is already showing a
+## beat (so we don't reset the player mid-read). The modal's `advanced` signal routes to
+## _on_story_advanced, which presents the next queued beat or hides the modal + refreshes
+## the HUD (a choice may have granted coins/resources).
+##
+## SIMPLEST-CORRECT layering: this fires at the END of _ready and after each post-action
+## refresh (chain/tool/town). Those refreshes only run while the player is ON THE BOARD
+## (chains can't resolve under an open modal; town actions close back to the board via
+## _on_town_changed). The beat modal lives at the top layer (5), above the others, so even
+## if a beat surfaces while a lower modal is technically still visible it reads on top and
+## the player dismisses it to return — no conflict, no suppression needed.
+func _drain_story_queue() -> void:
+	if game == null:
+		return
+	if game.story.beat_queue.is_empty():
+		return
+	# Don't interrupt a beat already on screen — it'll advance to the next on dismiss.
+	if _story_modal != null and _story_modal.visible:
+		return
+	if _story_modal == null:
+		_story_modal = StoryModalScript.new()
+		add_child(_story_modal)
+		_story_modal.setup(game)
+		_story_modal.connect("advanced", Callable(self, "_on_story_advanced"))
+		_story_modal.connect("closed", Callable(self, "_on_story_closed"))
+	_story_modal.open_for(String(game.story.beat_queue[0]))
+
+## A beat was dismissed/resolved (and popped off the front of the queue by the modal):
+## present the next queued beat, or — when the queue is drained — hide the modal and
+## refresh the HUD + save (a choice may have granted coins/resources). Persist so the
+## drained queue (and any choice grants) survive a reload.
+func _on_story_advanced() -> void:
+	if game == null:
+		return
+	if not game.story.beat_queue.is_empty():
+		_story_modal.open_for(String(game.story.beat_queue[0]))
+		return
+	if _story_modal != null:
+		_story_modal.visible = false
+	# A resolved choice can credit coins/resources, so refresh the affected HUD surfaces.
+	_refresh_totals()
+	_refresh_meta()
+	_refresh_chain_progress()
+	SaveManager.save(game)
+
+## The beat modal was force-closed (defensive — the modal has no explicit close button in
+## normal flow, advancing handles dismissal). Mirror the advanced drain-complete path.
+func _on_story_closed() -> void:
+	if _story_modal != null:
+		_story_modal.visible = false
+
 ## M5b — resolve a deep-link id and navigate to the matching screen.
 ## Routes to the existing _open_* / close methods so all lazy-create and
 ## visibility logic remains in one place. Returns true if the id was known.
@@ -914,6 +1019,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_achievements()
 		ViewRouter.Modal.TILES:
 			_open_tiles()
+		ViewRouter.Modal.CHRONICLE:
+			_open_chronicle()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -933,6 +1040,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _tile_collection_screen != null and _tile_collection_screen.visible:
 				_tile_collection_screen.visible = false
+				_router.close_modal()
+			elif _chronicle_screen != null and _chronicle_screen.visible:
+				_chronicle_screen.visible = false
 				_router.close_modal()
 	return true
 
@@ -1004,6 +1114,11 @@ func _on_town_changed() -> void:
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
 	SaveManager.save(game)
+	# Story UI: a town action posts events (tier_up → act1_hamlet / act2_city_expedition,
+	# building_built → act1_lumber_raised / act2_kitchen, order_fulfilled → act1_first_order).
+	# The Town/Map modal closed back to the board before this fires, so surface any queued
+	# beat now. No-op when nothing queued or a beat is already showing.
+	_drain_story_queue()
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
 ## biome flip before we overwrite the pool. Compares against Constants.MINE_POOL.
@@ -1094,6 +1209,10 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_rats()
 	_refresh_chain_progress()
 	SaveManager.save(game)
+	# Story UI: a chain can post events (chain threshold beats, a boss_defeated that queues
+	# the Frostmaw aftermath choice, a tier-up/order/build path) — surface any newly-queued
+	# beat immediately. No-op when nothing queued or a beat is already showing.
+	_drain_story_queue()
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
 
@@ -1363,6 +1482,9 @@ func _after_tool_used() -> void:
 	_refresh_chain_progress()
 	_refresh_tools()   # M8d: update palette counts / hide spent tools
 	SaveManager.save(game)
+	# Story UI: a tool credits tiles through credit_chain, which posts chain events that may
+	# fire a threshold beat — surface any newly-queued beat immediately.
+	_drain_story_queue()
 
 ## Swap the board onto the CURRENT active biome and refresh the biome-affected HUD.
 ## Used after any biome flip (M demo key entry; the Town screen routes through
