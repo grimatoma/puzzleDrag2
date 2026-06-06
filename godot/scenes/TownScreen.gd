@@ -35,7 +35,7 @@ signal shoo_rats
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
-##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>",
+##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>", "buy:<res>",
 ##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss",
 ##   "shoo_rats" (M3h).
 var _action_buttons: Dictionary = {}
@@ -345,12 +345,12 @@ func _build_refine_section() -> void:
 		_refine_body.add_child(row)
 
 func _build_market_section() -> void:
-	var any := false
+	var any_sell := false
 	for res in MarketConfig.sellable_resources():
 		var owned: int = game.qty(res)
 		if owned <= 0:
 			continue
-		any = true
+		any_sell = true
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
@@ -369,8 +369,34 @@ func _build_market_section() -> void:
 
 		_market_body.add_child(row)
 
-	if not any:
+	if not any_sell:
 		_market_body.add_child(_make_label("nothing to sell yet", COL_MUTED))
+
+	# ── Buy rows ─────────────────────────────────────────────────────────────
+	# A "Buy" subheading visually separates the sell rows from the buy rows.
+	var buy_header := _make_label("— Buy —", COL_MUTED)
+	buy_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_market_body.add_child(buy_header)
+
+	for res in MarketConfig.buyable_resources():
+		var price: int = MarketConfig.buy_price(res)
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 10)
+		var label := _make_label("%s  (buy %d)" % [res, price], COL_BODY)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+
+		var buy_btn := Button.new()
+		buy_btn.text = "Buy 1"
+		buy_btn.disabled = game.coins < price
+		buy_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+		UiKit.style_button(buy_btn, Palette.MOSS, 6, 0, true)
+		buy_btn.connect("pressed", Callable(self, "_do_buy").bind(res))
+		row.add_child(buy_btn)
+		_action_buttons["buy:" + res] = buy_btn
+
+		_market_body.add_child(row)
 
 func _build_orders_section() -> void:
 	if game.orders.is_empty():
@@ -529,6 +555,9 @@ func _do_craft(id: String) -> void:
 
 func _do_sell(res: String) -> void:
 	_after(game.sell(res, 1))
+
+func _do_buy(res: String) -> void:
+	_after(game.buy(res, 1))
 
 func _do_fill(index: int) -> void:
 	_after(game.fill_order(index))
