@@ -77,6 +77,9 @@ jobs:
       - name: Asset pipeline tests
         run: godot --headless --path godot --script res://tests/run_assets_tests.gd
 
+      - name: Audio tests
+        run: godot --headless --path godot --script res://tests/run_audio_tests.gd
+
   godot-web-export:
     name: Web (HTML5) export
     runs-on: ubuntu-latest
