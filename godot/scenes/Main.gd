@@ -59,6 +59,7 @@ var _last_threshold: int = 0
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
 var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
+var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
@@ -412,6 +413,26 @@ func _build_hud() -> void:
 	items_btn.connect("pressed", Callable(self, "_open_inventory"))
 	root.add_child(items_btn)
 
+	# M6c — always-visible Map button, pinned top-LEFT just under the Items button
+	# (offset_top 64, ~38px tall) so the three stack without overlapping and all
+	# clear the centred board drag area. Same parchment-pill look. Opens the spatial
+	# town-map modal (TownMapScreen).
+	var map_btn := Button.new()
+	map_btn.text = "🗺 Map"
+	map_btn.add_theme_font_size_override("font_size", 20)
+	map_btn.add_theme_color_override("font_color", Palette.INK)
+	map_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	map_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	map_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	map_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	map_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	map_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	map_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	map_btn.offset_left = 18
+	map_btn.offset_top = 110
+	map_btn.connect("pressed", Callable(self, "_open_townmap"))
+	root.add_child(map_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -653,6 +674,26 @@ func _on_inventory_closed() -> void:
 		_inventory_screen.visible = false
 	_router.close_modal()
 
+# ── Town map (M6c) ──────────────────────────────────────────────────────────────
+
+## Open the spatial town-map modal, lazily creating + wiring it on first use
+## (mirrors _open_inventory). The screen reads REAL GameState (settlement plots +
+## built buildings + active biome) and re-renders on open(), so the map always
+## reflects the current state.
+func _open_townmap() -> void:
+	if _townmap_screen == null:
+		_townmap_screen = TownMapScreen.new()
+		add_child(_townmap_screen)
+		_townmap_screen.setup(game)
+		_townmap_screen.connect("closed", Callable(self, "_on_townmap_closed"))
+	_townmap_screen.open()
+	_router.open_modal(ViewRouter.Modal.TOWNMAP)
+
+func _on_townmap_closed() -> void:
+	if _townmap_screen != null:
+		_townmap_screen.visible = false
+	_router.close_modal()
+
 ## M5b — resolve a deep-link id and navigate to the matching screen.
 ## Routes to the existing _open_* / close methods so all lazy-create and
 ## visibility logic remains in one place. Returns true if the id was known.
@@ -667,6 +708,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_menu()
 		ViewRouter.Modal.INVENTORY:
 			_open_inventory()
+		ViewRouter.Modal.TOWNMAP:
+			_open_townmap()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -677,6 +720,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _inventory_screen != null and _inventory_screen.visible:
 				_inventory_screen.visible = false
+				_router.close_modal()
+			elif _townmap_screen != null and _townmap_screen.visible:
+				_townmap_screen.visible = false
 				_router.close_modal()
 	return true
 
