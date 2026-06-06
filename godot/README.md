@@ -4,6 +4,14 @@ The Godot 4.6 version of the game, built side-by-side with the React+Phaser
 version at the repo root. Strategy: [`docs/godot-migration-plan.html`](../docs/godot-migration-plan.html).
 Live status & decisions: [`docs/godot-migration-progress.html`](../docs/godot-migration-progress.html).
 
+## Live build (GitHub Pages)
+
+The Web export is deployed alongside the Phaser game at **`/puzzleDrag2/godot/`**
+(e.g. `https://<user>.github.io/puzzleDrag2/godot/`). The Pages workflow
+([`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)) exports the
+"Web" preset into `dist/godot/` after the Vite build, on every push to `main`.
+The export is nothreads, so it runs on plain Pages with no special headers.
+
 ## Layout
 
 ```

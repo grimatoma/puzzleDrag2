@@ -32,6 +32,38 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # --- Godot Web export (migration port) → dist/godot/ ---
+      # The Pages artifact is dist/. Vite empties dist/ on each build, so this
+      # MUST run after `npm run build` or the export gets wiped.
+      #
+      # The "Web" preset is nothreads (godot/export_presets.cfg →
+      # variant/thread_support=false), so the build needs no SharedArrayBuffer
+      # and therefore no cross-origin-isolation (COOP/COEP) headers — it runs on
+      # plain GitHub Pages as-is. Godot's Web export references its assets with
+      # relative URLs, so the same files work unchanged under the
+      # /puzzleDrag2/godot/ sub-path; no base-path override is needed.
+      #
+      # These steps are non-fatal: a broken Godot export must never block the
+      # production game deploy. The real gate for export health is godot-ci.yml,
+      # which runs (and fails) on every PR that touches godot/**.
+      - name: Set up Godot 4.6.2 + export templates
+        uses: chickensoft-games/setup-godot@v2
+        continue-on-error: true
+        with:
+          version: '4.6.2'
+          use-dotnet: false
+          include-templates: true
+
+      - name: Export Godot Web build into dist/godot/
+        continue-on-error: true
+        run: |
+          mkdir -p dist/godot
+          godot --headless --path godot --import
+          godot --headless --path godot --export-release "Web" "$GITHUB_WORKSPACE/dist/godot/index.html"
+          test -f dist/godot/index.html && test -f dist/godot/index.wasm
+          echo "Godot export OK — dist/godot:"
+          ls -la dist/godot
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
