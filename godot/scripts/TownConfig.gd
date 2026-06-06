@@ -18,6 +18,16 @@ extends Node
 ## cross-category goods, all expressed in resources the port can already produce
 ## (Farm tiles), so the ladder is playable today. They are tunable: edit TIERS.
 ##
+## GATING RATIONALE (M3b). Once the board refill pool is building-gated, a tier-up
+## cost may only reference resources producible AT or BELOW the prior tier — any
+## category tile requires its spawner, and a spawner only unlocks AT a tier. The
+## M3a costs deadlocked here: reaching Hamlet needed `plank`, but plank needs the
+## Lumber Camp, which only unlocks AT Hamlet. The revised ladder breaks the cycle:
+##   → Hamlet  : staples only (hay_bundle + flour)            — payable at Camp
+##   → Village : adds plank (Lumber Camp unlocked at Hamlet)
+##   → Town    : adds eggs + soup (Coop + Garden at Village)
+##   → City    : more of the same
+##
 ## Registered as a `class_name` global (like Constants) so its consts/helpers are
 ## reachable WITHOUT a live autoload — headless tests run before the scene tree.
 
@@ -50,28 +60,28 @@ const TIERS: Array = [
 		"cap": 300,
 		"plots": 5,
 		"unlocks": "Lumber Camp (trees → plank), Granary, first Worker",
-		"cost": {"hay_bundle": 10, "plank": 4},
+		"cost": {"hay_bundle": 12, "flour": 6},
 	},
 	{
 		"name": "Village",
 		"cap": 400,
 		"plots": 7,
 		"unlocks": "Coop (birds → eggs), Garden (veg → soup), Mill & Bakery",
-		"cost": {"flour": 10, "eggs": 8, "plank": 8},
+		"cost": {"plank": 8, "hay_bundle": 16, "flour": 8},
 	},
 	{
 		"name": "Town",
 		"cap": 500,
 		"plots": 9,
 		"unlocks": "Workshop + farm tools, more workers, Caravan Post",
-		"cost": {"soup": 8, "pie": 6, "plank": 12},
+		"cost": {"eggs": 8, "soup": 6, "plank": 10},
 	},
 	{
 		"name": "City",
 		"cap": 600,
 		"plots": 11,
 		"unlocks": "Top farm buildings; the expedition → Town 2",
-		"cost": {"honey": 6, "horseshoe": 4, "milk": 8, "soup": 8},
+		"cost": {"soup": 10, "eggs": 12, "plank": 14},
 	},
 ]
 
