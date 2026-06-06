@@ -162,6 +162,51 @@ func _initialize() -> void:
 	_check(game.orders.size() == OrderConfig.MAX_ORDERS,
 		"orders refilled back to MAX_ORDERS (%d)" % OrderConfig.MAX_ORDERS)
 
+	# ── Buy: hay_bundle (affordable) ─────────────────────────────────────────
+	# Give the player enough coins and a known buyable resource to exercise the
+	# buy surface. hay_bundle costs MC.buy_price("hay_bundle") = 40 coins.
+	var buy_res := "hay_bundle"
+	var buy_price: int = MC.buy_price(buy_res)
+	game.coins = buy_price + 100          # clearly affordable
+	game.inventory[buy_res] = 0           # start at 0 so we can track the +1
+	town.refresh()
+
+	var buy_btn_check: Variant = town._action_buttons.get("buy:" + buy_res)
+	_check(buy_btn_check != null, "buy:%s button exists after refresh()" % buy_res)
+	_check(buy_btn_check != null and not buy_btn_check.disabled,
+		"buy:%s button enabled when coins >= buy_price" % buy_res)
+
+	var coins_before_buy: int = game.coins
+	var qty_before_buy: int = game.qty(buy_res)
+	var buy_changes_before := _changes
+	_check(_press(town, "buy:" + buy_res), "pressed buy:%s" % buy_res)
+	_check(game.qty(buy_res) == qty_before_buy + 1,
+		"inventory[%s] rose by 1 after buy" % buy_res)
+	_check(game.coins == coins_before_buy - buy_price,
+		"coins fell by buy_price(%s) = %d after buy" % [buy_res, buy_price])
+	_check(_changes == buy_changes_before + 1,
+		"state_changed fired once on successful buy")
+
+	# ── Buy: insufficient coins → button disabled ─────────────────────────────
+	# For a different buyable resource (plank, buy price 40), set coins to 0 so
+	# the button should be disabled.
+	var poor_res := "plank"
+	game.coins = 0
+	town.refresh()
+	var poor_btn: Variant = town._action_buttons.get("buy:" + poor_res)
+	_check(poor_btn != null, "buy:%s button exists even when unaffordable" % poor_res)
+	_check(poor_btn != null and poor_btn.disabled,
+		"buy:%s button disabled when coins < buy_price" % poor_res)
+
+	# ── All buyable resources have a buy:<res> button after refresh() ─────────
+	town.refresh()
+	var missing_buy_btns: Array = []
+	for r in MC.buyable_resources():
+		if not town._action_buttons.has("buy:" + r):
+			missing_buy_btns.append(r)
+	_check(missing_buy_btns.is_empty(),
+		"all buyable resources have buy:<res> buttons (missing: %s)" % str(missing_buy_btns))
+
 	# ── Close ─────────────────────────────────────────────────────────────────
 	_check(_press(town, "close"), "pressed close")
 	_check(_closed, "closed signal fired")
