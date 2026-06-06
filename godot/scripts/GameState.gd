@@ -30,6 +30,18 @@ var settlement := Settlement.new()
 ## consumes a plot and adds its tile CATEGORY to the active board refill pool. See
 ## BuildingConfig for the catalog; demolish() frees a plot and removes a category.
 var buildings: Array = []
+## Active NPC orders, each a Dictionary { "resource": String, "qty": int,
+## "reward": int }. Orders are the Direction's coin sink (OrderConfig): deliver a
+## requested quantity from inventory for a reward that beats the Market. Kept
+## topped up to OrderConfig.MAX_ORDERS via refill_orders().
+var orders: Array = []
+## Reproducible generator for order resource/quantity rolls. Tests seed it with
+## seed_orders(); the live scene seeds it with a fixed int for stable screenshots.
+var rng := RandomNumberGenerator.new()
+
+## Seed the order generator so generate_order / refill_orders are reproducible.
+func seed_orders(s: int) -> void:
+	rng.seed = s
 
 ## Apply one resolved chain to the run economy and return a summary dict.
 ## Mutates inventory/progress, increments coins and turn.
@@ -266,6 +278,73 @@ func buy(resource: String, qty: int) -> Dictionary:
 		"added": actual,
 	}
 
+# ── Orders (the Direction's coin sink) ───────────────────────────────────────
+
+## Resources an order may request — derived from CURRENT production so every order
+## is fillable in principle. Starts with the two staples (always producible), then
+## appends each placed building's produced resource (plank/eggs/soup/bread),
+## deduplicated, in a stable order. A built Bakery adds "bread".
+func orderable_resources() -> Array:
+	var out: Array = ["hay_bundle", "flour"]
+	for id in buildings:
+		var res: String = BuildingConfig.building_resource(id)
+		if res != "" and not out.has(res):
+			out.append(res)
+	return out
+
+## Roll a single fresh order from the current orderable resources — a uniform
+## resource pick, a qty in [MIN_QTY, MAX_QTY], and the matching reward. Pure: does
+## NOT mutate `orders`.
+func generate_order() -> Dictionary:
+	var pool: Array = orderable_resources()
+	var resource: String = String(pool[rng.randi_range(0, pool.size() - 1)])
+	var qty: int = rng.randi_range(OrderConfig.MIN_QTY, OrderConfig.MAX_QTY)
+	return {
+		"resource": resource,
+		"qty": qty,
+		"reward": OrderConfig.reward_for(resource, qty),
+	}
+
+## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls.
+## Idempotent once full. Call after load and after each fill.
+func refill_orders() -> void:
+	while orders.size() < OrderConfig.MAX_ORDERS:
+		orders.append(generate_order())
+
+## True when `index` is a real order AND inventory holds enough to fill it.
+func can_fill_order(index: int) -> bool:
+	if index < 0 or index >= orders.size():
+		return false
+	var order: Dictionary = orders[index]
+	return int(inventory.get(order["resource"], 0)) >= int(order["qty"])
+
+## Fill order `index`: deduct the requested qty (floored/erased), credit the
+## reward, remove the filled order, then refill the board back up. Returns
+## {ok:true, reward, resource, qty} on success. On failure returns {ok:false,
+## reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "bad_index" → "insufficient".
+func fill_order(index: int) -> Dictionary:
+	if index < 0 or index >= orders.size():
+		return {"ok": false, "reason": "bad_index"}
+	if not can_fill_order(index):
+		return {"ok": false, "reason": "insufficient"}
+	var order: Dictionary = orders[index]
+	var resource: String = String(order["resource"])
+	var qty: int = int(order["qty"])
+	var reward: int = int(order["reward"])
+	# Deduct the delivered goods (floor at 0, erase the key when it hits 0).
+	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - qty)
+	if remaining == 0:
+		inventory.erase(resource)
+	else:
+		inventory[resource] = remaining
+	# Coins are UNCAPPED — only inventory resources are bounded by the settlement
+	# cap, so a big-reward order can push coins arbitrarily high.
+	coins += reward
+	orders.remove_at(index)
+	refill_orders()
+	return {"ok": true, "reward": reward, "resource": resource, "qty": qty}
+
 ## Active board CATEGORIES: the two staples plus the category of each placed
 ## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".
 ## Refiners (Bakery) have no category and contribute nothing — the empty-string
@@ -303,6 +382,7 @@ func to_dict() -> Dictionary:
 		"turn": turn,
 		"settlement": settlement.to_dict(),
 		"buildings": buildings.duplicate(),
+		"orders": orders.duplicate(true),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -330,4 +410,24 @@ static func from_dict(d: Dictionary) -> GameState:
 			var sid := String(id)
 			if BuildingConfig.is_building(sid) and not s.buildings.has(sid):
 				s.buildings.append(sid)
+	# Rebuild orders, keeping only WELL-FORMED entries: a Dictionary with a String
+	# resource, an int qty > 0, and an int reward >= 0 (floats coerced to int).
+	# Malformed rows are dropped silently. NOT auto-refilled here — Main tops the
+	# board up via refill_orders() after load, so a fresh save (zero saved orders)
+	# fills to MAX_ORDERS while a loaded save keeps exactly what it had until topped up.
+	var ords: Variant = d.get("orders", [])
+	if ords is Array:
+		for o in ords:
+			if not (o is Dictionary):
+				continue
+			if not (o.has("resource") and o.has("qty") and o.has("reward")):
+				continue
+			var resource: Variant = o["resource"]
+			if not (resource is String):
+				continue
+			var qty: int = int(o["qty"])
+			var reward: int = int(o["reward"])
+			if qty <= 0 or reward < 0:
+				continue
+			s.orders.append({"resource": String(resource), "qty": qty, "reward": reward})
 	return s
