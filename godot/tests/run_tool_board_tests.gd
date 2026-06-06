@@ -78,6 +78,7 @@ func _run() -> void:
 	await _test_use_tap_tool()
 	await _test_use_guard_no_charges()
 	await _test_chain_resolves_when_not_targeting()
+	await _test_tool_palette()
 	SaveManager.clear()
 
 # ── starter grant (fresh-only, no double-grant) ──────────────────────────────
@@ -274,6 +275,81 @@ func _test_chain_resolves_when_not_targeting() -> void:
 
 func _on_resolved(key: int, length: int) -> void:
 	_resolved = {"key": key, "length": length}
+
+# ── M8d: ToolPalette HUD integration ─────────────────────────────────────────
+
+func _test_tool_palette() -> void:
+	print("\n── ToolPalette (M8d) ──────────────────────────────")
+
+	# ── 1. After _ready, palette is visible + starter tools are in _tool_buttons ──
+	var main = await _fresh_main()
+	_check(main._tool_palette_box != null, "M8d: _tool_palette_box exists")
+	_check(main._tool_palette_box.visible, "M8d: palette visible after starter grant")
+	_check(main._tool_buttons.has("bomb"),   "M8d: _tool_buttons has 'bomb'")
+	_check(main._tool_buttons.has("scythe"), "M8d: _tool_buttons has 'scythe'")
+	# Labels must include the tool names + charge counts.
+	if main._tool_buttons.has("bomb"):
+		var lbl: String = main._tool_buttons["bomb"].text
+		_check("Bomb" in lbl, "M8d: bomb button label includes 'Bomb'")
+		_check("×1" in lbl,   "M8d: bomb button label includes '×1'")
+	if main._tool_buttons.has("scythe"):
+		var lbl: String = main._tool_buttons["scythe"].text
+		_check("Scythe" in lbl, "M8d: scythe button label includes 'Scythe'")
+		_check("×1" in lbl,     "M8d: scythe button label includes '×1'")
+
+	# ── 2. Pressing scythe button fires the instant tool, palette updates ────────
+	# Lay a board with GRASS tiles so scythe (clear_random_n 6) has tiles to clear.
+	var board: Board = main.board
+	board.grid = _full(T.GRASS)
+	board._build_tiles()
+	# scythe is instant — pressing its button fires it now.
+	_check(main._tool_buttons.has("scythe"), "M8d: scythe button present before press")
+	main._tool_buttons["scythe"].pressed.emit()
+	# After the emit, _refresh_tools ran and the scythe (1 charge → 0) is removed.
+	_check(not main._tool_buttons.has("scythe"),
+		"M8d: scythe button removed from _tool_buttons after its charge was spent")
+	# Charge is gone.
+	_check(main.game.tool_count("scythe") == 0, "M8d: scythe charge 0 after button press")
+
+	main.free()
+	await process_frame
+	SaveManager.clear()
+
+	# ── 3. Pressing bomb button ARMS it (tap tool) — status hint + targeting ─────
+	var main2 = await _fresh_main()
+	var board2: Board = main2.board
+	board2.grid = _full(T.GRASS)
+	board2._build_tiles()
+	_check(main2._tool_buttons.has("bomb"), "M8d: bomb button present before press")
+	main2._tool_buttons["bomb"].pressed.emit()
+	# After pressing, the bomb is armed (tap tool path in use_tool).
+	_check(main2.game.is_tool_armed(), "M8d: game.is_tool_armed() true after bomb button press")
+	_check(board2._targeting,          "M8d: board._targeting true after bomb button press")
+	# Status label shows the targeting hint.
+	var hint: String = main2._status_label.text
+	_check("Tap" in hint or "tap" in hint, "M8d: status label shows a targeting hint after arming bomb")
+	# Resolve the tap: fire the bomb at (2,2).
+	main2._on_tool_target(Vector2i(2, 2))
+	_check(not main2.game.is_tool_armed(),  "M8d: game disarmed after _on_tool_target")
+	_check(not board2._targeting,           "M8d: board left targeting after _on_tool_target")
+	# _after_tool_used (via _on_tool_target) called _refresh_tools → bomb is gone.
+	_check(main2.game.tool_count("bomb") == 0, "M8d: bomb charge 0 after tap fired")
+	_check(not main2._tool_buttons.has("bomb"), "M8d: bomb button removed after charge spent")
+
+	main2.free()
+	await process_frame
+	SaveManager.clear()
+
+	# ── 4. Empty tools → palette hidden, _tool_buttons empty ─────────────────────
+	var main3 = await _fresh_main()
+	# Drain all tools manually (game.tools cleared by erasing each key).
+	main3.game.tools.clear()
+	main3._refresh_tools()
+	_check(not main3._tool_palette_box.visible, "M8d: palette hidden when game.tools empty")
+	_check(main3._tool_buttons.is_empty(),      "M8d: _tool_buttons empty when no tools")
+	main3.free()
+	await process_frame
+	SaveManager.clear()
 
 ## A deterministic board with a top-left GRASS L (reused from run_scene_smoke).
 func _known_grid() -> Array:
