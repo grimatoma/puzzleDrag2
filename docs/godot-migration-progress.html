@@ -187,7 +187,7 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete · <b>M4 in progress — M4a parchment identity done</b></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete · <b>M4 in progress — M4a parchment identity + M4b HUD done</b></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
@@ -218,7 +218,7 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) has now begun</span>: its first part, <span style="color:var(--accent2)">M4a — the parchment visual identity</span>, is done.</b> The Godot 4.6 project at
+        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) is under way</span>: its first two parts, <span style="color:var(--accent2)">M4a — the parchment visual identity</span> and <span style="color:var(--accent2)">M4b — the HUD top-bar + stockpile/chain-progress</span>, are done.</b> The Godot 4.6 project at
           <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
           run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
@@ -237,7 +237,7 @@
           board with the <b>exported v1 Phaser tile art</b> (the auxiliary asset pipeline's Stage&nbsp;2 has landed; see Verification), a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
           <b>M3f</b> opened the <b>mine expedition</b> (the food gate → Town&nbsp;2), <b>M3g</b> landed the Direction's dramatic ★ <b>capstone boss</b> (Frostmaw — <code>min_chain 4</code> while engaged, raising the bar to resolve a chain — closing Town&nbsp;2), and <b>M3h</b> shipped <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (rats are a no-yield tile seeded into the farm pool once Town&nbsp;2 is done; Ratcatcher shoos them, Master Ratcatcher folds 8-adjacent rats into a grass chain). With M3g+M3h the <b>M3 introductory slice is COMPLETE (8 sub-parts, M3a–M3h)</b>. There are now <b>11 headless CI-gated test suites totalling 794 checks</b> (plus a 32-check asset suite being wired into CI in the current hardening pass).
           The Phaser version at the repo root is untouched and still fully playable, and the <b>GitHub Pages deploy is live</b> (PR #938): pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.
-          <b>M4 — UX/UI parity with the original React+Phaser game — has now started.</b> Its first part, <b>M4a</b>, ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic: a stateless <code>Palette.gd</code> (the parchment surfaces / ink text / iron border / ember-gold-moss accents ported from <code>src/tokens.css</code>), a rounded field-tinted <b>framed board</b> drawn in <code>Board.gd</code> (StyleBoxFlat + drop shadow), the signature glowing <b>chain-path overlay</b> (<code>ChainOverlay.gd</code> — orange/gold when valid, muddy rust when too short), and a re-skinned HUD with the <b>Cinzel</b> display serif. The transformation is dramatic — from a flat dark grid to a cream backdrop, a green field card, real PNG tile art, and the orange/gold chain path — while gameplay is unchanged (the scene smoke + all 12 suites stay green). See the M4 detail tab.</div>
+          <b>M4 — UX/UI parity with the original React+Phaser game — has now started.</b> Its first part, <b>M4a</b>, ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic: a stateless <code>Palette.gd</code> (the parchment surfaces / ink text / iron border / ember-gold-moss accents ported from <code>src/tokens.css</code>), a rounded field-tinted <b>framed board</b> drawn in <code>Board.gd</code> (StyleBoxFlat + drop shadow), the signature glowing <b>chain-path overlay</b> (<code>ChainOverlay.gd</code> — orange/gold when valid, muddy rust when too short), and a re-skinned HUD with the <b>Cinzel</b> display serif. The transformation is dramatic — from a flat dark grid to a cream backdrop, a green field card, real PNG tile art, and the orange/gold chain path — while gameplay is unchanged (the scene smoke + all 12 suites stay green). <b>M4b</b> then replaced the cluttered 11-label HUD with the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> (coins, tier·plots, biome, plus conditional boss / rats pills), a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource, and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The now-redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). See the M4 detail tab.</div>
 
         <div class="progress-wrap">
           <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
@@ -252,12 +252,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (early; multi-PR)</span> <b>~15% · M4a parchment identity done</b></div>
-          <div class="bar"><span style="width:15%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (early; multi-PR)</span> <b>~30% · M4a parchment identity + M4b HUD done</b></div>
+          <div class="bar"><span style="width:30%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~72%</b></div>
-          <div class="bar"><span style="width:72%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~74%</b></div>
+          <div class="bar"><span style="width:74%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -289,7 +289,7 @@
         </div>
         <div class="ms-row">
           <div class="num amber">M4</div>
-          <div><div class="t">UX/UI parity <span class="pill warn">in progress</span></div><div class="d">Replicate the Phaser game's full UI/UX in Godot — HUD, inventory, modals, town, crafting/cartography, animation, audio, real pixel-art assets. <b>M4a — the parchment visual identity (palette, framed board, chain-path overlay, HUD re-skin + Cinzel) — done.</b> M4b (HUD top-bar pills + right-side action panel) next.</div></div>
+          <div><div class="t">UX/UI parity <span class="pill warn">in progress</span></div><div class="d">Replicate the Phaser game's full UI/UX in Godot — HUD, inventory, modals, town, crafting/cartography, animation, audio, real pixel-art assets. <b>M4a — the parchment visual identity (palette, framed board, chain-path overlay, HUD re-skin + Cinzel) — done.</b> <b>M4b — the HUD top-bar (title + coins/tier/biome/boss/rats pills), chain-progress bar, and Stockpile chip grid — done.</b> M4c (board collapse/collect animations) next.</div></div>
           <span class="pill warn">partial</span>
         </div>
         <div class="ms-row">
@@ -300,15 +300,17 @@
       </section>
 
       <section id="session-summary">
-        <h2>M3 slice complete · M4 (UX/UI parity) under way — M4a parchment identity done</h2>
+        <h2>M3 slice complete · M4 (UX/UI parity) under way — M4a parchment identity + M4b HUD done</h2>
         <div class="box tip"><b>M3 is done; M4 has begun.</b> All eight M3 sub-parts (M3a–M3h) landed and merged — the full
           <b>Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats)</b> introductory vertical slice
           plays end-to-end in Godot, backed by 11 headless CI-gated test suites (794 checks). The focus has now shifted to
-          <b>M4 — replicating the Phaser game's full UI/UX in Godot</b>, and its first part is in: <b>M4a — the parchment visual
+          <b>M4 — replicating the Phaser game's full UI/UX in Godot</b>, and its first two parts are in: <b>M4a — the parchment visual
           identity</b> (the cozy "leather-bound journal" look ported from <code>src/tokens.css</code> — palette, a framed
-          field-tinted board, the orange/gold chain-path overlay, and a re-skinned Cinzel HUD). <b>Current focus: M4b</b> — a proper
-          HUD top-bar (coin / level / season pills) plus the original's right-side action panel (stockpile, chain-progress, tool
-          inspector). M5 — mobile — remains the externally-gated finale.</div>
+          field-tinted board, the orange/gold chain-path overlay, and a re-skinned Cinzel HUD) and <b>M4b — the HUD top-bar</b> (a
+          parchment <code>PanelContainer</code> with a Cinzel "Hearthwood Vale" title + right-aligned coins/tier/biome/boss/rats pills,
+          a MOSS→GOLD chain-progress bar for the last-chained resource, and a "Stockpile" chip grid rebuilt from <code>inventory</code>
+          — replacing the cluttered 11-label HUD). <b>Current focus: M4c</b> — board collapse/collect animations (tile pop + fall easing
+          + a reward fly-to-coins, per the original <code>src/config/boardAnimations</code>). M5 — mobile — remains the externally-gated finale.</div>
         <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2), the Camp→City tier ladder (M3a),
           the buildings/plots/spawners layer (M3b), the refining + market economy (M3c), the orders system (M3d), the Town UI
           screen (M3e), the mine expedition → Town&nbsp;2 (M3f, PR #937), the ★ <b>capstone boss Frostmaw</b> (M3g, PR #939),
@@ -331,6 +333,7 @@
           <div class="card amber"><h3>M3g — ★ capstone boss (Frostmaw) <span class="pill ok">done</span></h3><p>The Direction's dramatic gate closing Town&nbsp;2. <code>BossConfig.gd</code> (Frostmaw: hp 40, <b><code>min_chain 4</code></b>, reward 500c); <code>GameState</code> gains <code>boss_active</code>/<code>boss_hp</code>/<code>town2_complete</code>, <code>can_challenge_boss()</code> (City tier + <code>block+iron_bar ≥ 12</code> mine-mastery), <code>start_boss</code>, <code>boss_min_chain</code>, and <code>damage_boss(len)</code> (the killing blow sets <code>town2_complete</code> + credits the reward). While engaged, the boss <b>raises the board's minimum chain to resolve</b> (both <code>is_valid_chain</code> resolve sites; dead-board checks stay at base min). <code>Main.gd</code> boss HUD + <code>TownScreen</code> gated "Challenge Frostmaw" button. A 73-check boss suite covers it; the board now renders real Stage-2 PNG tile art.</p></div>
           <div class="card amber"><h3>M3h — Town 3 rats hazard + Ratcatcher <span class="pill ok">done</span></h3><p>The Direction's fixed Town-3 lesson. <code>Constants.Tile.RAT</code> (ordinal 15, append-only) — a <b>no-yield hazard tile</b> (no threshold; chaining rats wastes a move); <code>BuildingConfig</code> Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind). <code>GameState</code> gains <code>rats_enabled()</code> = <code>town2_complete</code> (seeds 2 rats into the <b>farm</b> pool when enabled), the Ratcatcher's 5 shoo charges, and gates hazard buildings on <code>rats_enabled</code>. <code>Board</code> gains <code>clear_all_rats()</code> and <code>clear_rats_on_grass</code> (Master Ratcatcher folds 8-adjacent rats into a grass chain, uncredited). <code>Main.gd</code>/<code>TownScreen</code> rats HUD + Rats section + a "Shoo rats" free move. An 80-check rats suite covers it.</p></div>
           <div class="card"><h3>M4a — parchment visual identity <span class="pill ok">done</span></h3><p>The first part of <b>M4 (UX/UI parity)</b>: the cozy "leather-bound journal" look ported from <code>src/tokens.css</code>. New stateless <code>Palette.gd</code> (parchment surfaces, ink text, iron border, ember/gold/moss accents, field tint, chain colors); <code>Board.gd</code> draws a rounded, field-tinted <b>framed card</b> behind the tiles (StyleBoxFlat + drop shadow); a new <code>ChainOverlay.gd</code> draws the signature glowing chain path — <b>orange/gold when valid</b> (≥ min_chain), muddy rust when too short; and <code>Main.gd</code> re-skins the HUD onto parchment with the <b>Cinzel</b> display serif. A flat dark grid becomes a cream backdrop + a green field card + real PNG tile art + the orange/gold chain path. Gameplay unchanged — scene smoke + all 12 suites stay green.</p></div>
+          <div class="card"><h3>M4b — HUD top-bar + stockpile/chain-progress <span class="pill ok">done</span></h3><p>The second part of <b>M4</b>: the cluttered 11-label HUD becomes the original game's structure. <code>Main.gd</code> now builds a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title + right-aligned <b>pills</b> — coins (🪙), tier·plots ("City · 2/11"), biome ("Farm" / "⛏ Mine · N"), plus conditionally-visible <b>boss</b> (⚔ HP) and <b>rats</b> (🐀 charges) pills; a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) driven by <code>progress/threshold</code> for the last-chained resource; and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The redundant per-tile selection ring is dropped in <code>Tile.gd</code> (the M4a <code>ChainOverlay</code> is the selection feedback); <code>set_selected()</code> kept as a state-only no-op. All <code>_refresh_*</code> method names + <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> retained so the headless smoke/capture scripts still work — all suites green.</p></div>
         </div>
       </section>
 
@@ -698,10 +701,12 @@
         <div class="box tip"><b>M4 has begun.</b> <b>M4 = parchment UX/UI parity with the original React+Phaser game.</b> The maintainer's
           directive: the Godot port's UI was "very barebones," so M4 replicates the original's cozy "leather-bound journal"
           <b>parchment</b> aesthetic and its full interface (HUD, board presentation, town, inventory, crafting, animations, audio,
-          tooltips). It is a multi-PR effort. Its first part — <b>M4a, the parchment visual identity</b> — is done.</div>
+          tooltips). It is a multi-PR effort. Its first two parts — <b>M4a, the parchment visual identity</b> and <b>M4b, the HUD
+          top-bar + stockpile/chain-progress</b> — are done.</div>
         <p>The UX/UI parity milestone — bringing the Godot build's look and feel up to the original game's. It ships as a sequence of
-          sub-PRs (<b>M4a…</b>): the parchment visual identity (M4a) is in; the HUD top-bar + action panel, board collapse/collect
-          animations, the town/inventory/crafting screens, tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX follow.</p>
+          sub-PRs (<b>M4a…</b>): the parchment visual identity (M4a) and the HUD top-bar + stockpile/chain-progress (M4b) are in; the
+          board collapse/collect animations (M4c), the town/inventory/crafting screens, tooltips/modals, and
+          WebAudio→<code>AudioStreamPlayer</code> SFX follow.</p>
         <div class="legend">
           <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
         </div>
@@ -720,10 +725,25 @@
             <span class="note">The transformation is purely presentational: the headless scene-smoke and all 12 test suites stay green. See the M4a figure in Verification (before: flat dark grid → after: parchment identity).</span></li>
         </ul>
 
-        <h3>M4b … — the rest of M4 <span class="pill idle">todo</span></h3>
+        <h3>M4b — HUD top-bar + stockpile / chain-progress <span class="pill ok">done</span></h3>
         <ul class="check">
-          <li class="todo">HUD top-bar (coin / level / season pills) + the right-side action panel — stockpile, chain-progress, and tool inspector, per the original.</li>
-          <li class="todo">Board collapse / collect animations — the full collect → collapse → refill VFX (pops, golden upgrade burst, staggered timing).</li>
+          <li class="done">Parchment top-bar with the Cinzel title + right-aligned status pills
+            <span class="note"><code>Main.gd</code> now builds a parchment <b>top-bar</b> (<code>PanelContainer</code>) carrying a <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b>: coins (🪙), tier·plots (e.g. "City · 2/11"), and biome ("Farm" / "⛏ Mine · N"), replacing the original's flat label stack. This is the structure of the original game's HUD, not a re-theme of the placeholder one.</span></li>
+          <li class="done">Conditionally-visible boss + rats pills
+            <span class="note">A <b>boss</b> pill (⚔ HP) shows only while a boss is engaged, and a <b>rats</b> pill (🐀 charges) only once the Town-3 rats hazard is live — the top-bar surfaces the port's <i>real</i> state and hides what isn't active.</span></li>
+          <li class="done">Chain-progress bar for the last-chained resource
+            <span class="note">A <b>chain-progress bar</b> — a DIM track with a MOSS→GOLD fill — is driven by <code>progress/threshold</code> for the most-recently-chained resource (e.g. "hay_bundle 4/6"), giving the player the original's "how close to the next unit" read.</span></li>
+          <li class="done">"Stockpile" card — a parchment resource-chip grid
+            <span class="note">A <b>"Stockpile" card</b> rebuilds a 4-column grid of styled parchment resource chips from <code>inventory</code> on every refresh, replacing the old single "Collected: …" label with the original's at-a-glance stockpile.</span></li>
+          <li class="done">Dropped the redundant per-tile selection ring
+            <span class="note"><code>Tile.gd</code> no longer draws the white selection ring — the M4a <code>ChainOverlay</code> path is the selection feedback now. <code>Tile.set_selected()</code> is kept as a state-only no-op so callers are undisturbed.</span></li>
+          <li class="done">Refresh / label names preserved — suites stay green
+            <span class="note">Every <code>_refresh_*</code> method name is kept (re-pointed at the new pills/chips), and <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> are retained so the headless scene-smoke + capture scripts still resolve them. The headless scene-smoke + e2e + town-UI + all logic suites stay green.</span></li>
+        </ul>
+
+        <h3>M4c … — the rest of M4 <span class="pill idle">todo</span></h3>
+        <ul class="check">
+          <li class="todo">Board collapse / collect animations — the full collect → collapse → refill VFX (tile pop + fall easing, a golden upgrade burst, a reward fly-to-coins, staggered timing), per the original <code>src/config/boardAnimations</code>.</li>
           <li class="todo">Town screen re-skin — bring <code>TownScreen</code> up to the parchment identity and the original's layout.</li>
           <li class="todo">Inventory &amp; crafting screens — the original's full inventory and crafting/cartography surfaces in Godot.</li>
           <li class="todo">Tooltips &amp; modals — the original's hover tooltips and modal chrome.</li>
@@ -741,6 +761,14 @@
             <tr><td><code>godot/scenes/Board.gd</code></td><td>Draws a rounded, field-tinted board card behind the tiles in <code>_draw()</code> (StyleBoxFlat: corner radius 16, iron edge, soft drop shadow); <code>_build_tiles</code> now frees only Tile children so the persistent chain overlay survives</td></tr>
             <tr><td><code>godot/scenes/Main.gd</code></td><td>Parchment background; every HUD label recolored to read on parchment (ink / ink-mid / ember-gold / moss); the "🏠 Town" button restyled as a parchment pill; the Cinzel display serif on the title (loaded defensively with a graceful fallback)</td></tr>
             <tr><td><code>godot/assets/fonts/Cinzel-Regular.ttf</code></td><td><b>New.</b> The Cinzel display serif used for the HUD title (matches the original's display face)</td></tr>
+          </tbody>
+        </table>
+        <h3>M4b — HUD top-bar + stockpile / chain-progress</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>The HUD rework — a parchment <b>top-bar</b> (<code>PanelContainer</code>) with the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional boss / rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> 4-column parchment resource-chip grid rebuilt from <code>inventory</code> — replacing the old 11-label HUD. All <code>_refresh_*</code> method names re-pointed at the pills/chips; <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> retained for the headless smoke/capture scripts</td></tr>
+            <tr><td><code>godot/scenes/Tile.gd</code></td><td>Drops the now-redundant per-tile white selection ring (the M4a <code>ChainOverlay</code> is the selection feedback); <code>set_selected()</code> kept as a state-only no-op</td></tr>
           </tbody>
         </table>
       </section>
@@ -1030,6 +1058,16 @@
             <code>Node2D</code> draw in <code>ChainOverlay.gd</code> — with <b>no <code>.tscn</code> art assets</b>, keeping the visual
             layer consistent with the already-code-built HUD and Town modal (Decision&nbsp;#24) and free of binary scene files to review.</p>
         </div>
+        <div class="card amber">
+          <h3>31 · The HUD top-bar shows the port's <i>real</i> state — no level / XP / season pills</h3>
+          <p>M4b mirrors the original's top-bar <b>structure</b> (a title + right-aligned status pills) but only surfaces state the
+            Godot port actually has: <b>coins</b>, <b>tier·plots</b>, and <b>biome</b>, plus a <b>boss</b> pill and a <b>rats</b> pill
+            that appear only while those systems are live. The original's <b>level / XP</b> and <b>season</b> pills are
+            <b>deliberately absent</b> — the season calendar was removed from gameplay (Decision&nbsp;#10) and the per-tile
+            <code>value</code> economy / XP-almanac layer is deferred (Decision&nbsp;#11), so showing those pills would be
+            decoration with nothing behind it. The HUD is an honest readout of the slice that exists, not a pixel-copy of the
+            original's chrome; the missing pills come back if and when their systems are ported.</p>
+        </div>
       </section>
 
     </div>
@@ -1095,6 +1133,11 @@
         <h3>Parchment visual identity — M4a (barebones grid → cozy parchment)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m4a-parchment.png" alt="M4a parchment re-skin: a cream/parchment backdrop, a rounded green field-tinted board card with a soft drop shadow and iron edge, colorful real PNG tile art, an orange/gold glowing chain path drawn through a dragged grass chain, a Cinzel-serif title, and a parchment '🏠 Town' pill"><figcaption><b>The M4a transformation.</b> <i>Before:</i> a flat dark grid with placeholder chrome. <i>After:</i> the original game's cozy <b>parchment</b> identity — a cream backdrop, a rounded <b>field-tinted board card</b> (StyleBoxFlat + iron edge + drop shadow), colorful real PNG tile art, and the signature <b>orange/gold glowing chain path</b> drawn through the dragged chain (<code>ChainOverlay.gd</code>), under a re-skinned <b>Cinzel</b>-serif HUD and a parchment "🏠 Town" pill. Palette ported from <code>src/tokens.css</code> via <code>Palette.gd</code>; gameplay unchanged (scene smoke + all 12 suites green).</figcaption></figure>
+        </div>
+
+        <h3>HUD top-bar + stockpile / chain-progress — M4b (the label pile → the original's structure)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m4b-hud.png" alt="M4b HUD: a parchment top-bar with a Cinzel 'Hearthwood Vale' title and right-aligned pills reading '🪙 1240 · City · 2/11 · Farm', a MOSS-to-GOLD chain-progress bar below it, the framed field-tinted board showing the orange/gold chain path, and a 'Stockpile' card of parchment resource chips in a 4-column grid"><figcaption><b>The M4b HUD rework.</b> The cluttered 11-label HUD becomes the original game's structure: a parchment <b>top-bar</b> with the <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> — here "🪙 1240 · City · 2/11 · Farm" (coins · tier·plots · biome), with the conditional ⚔ boss / 🐀 rats pills surfacing only when active; a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource; the framed board with the orange/gold chain path (M4a); and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code>, replacing the old "Collected: …" label. The per-tile selection ring was dropped (the <code>ChainOverlay</code> is the selection feedback). Built in <code>Main.gd</code> + <code>Tile.gd</code>; the headless scene-smoke + e2e + town-UI + all logic suites stay green.</figcaption></figure>
         </div>
 
         <h3>Asset pipeline — Stage 2 + Stage 3 (real tile art, not placeholders)</h3>
@@ -1345,7 +1388,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, the full M3 slice (M3a–M3h) &amp; M4a</h3>
+        <h3>Done — M1, M2, the full M3 slice (M3a–M3h), M4a &amp; M4b</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
@@ -1359,13 +1402,15 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <li class="done">M3h — Town 3 rats hazard + Ratcatcher — <b>merged (PR #940)</b>: <code>Constants.Tile.RAT</code> (a no-yield hazard tile, gated on <code>town2_complete</code>, seeded into the farm pool); Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind) + 5 shoo charges; <code>Board.clear_all_rats</code> / grass-chain adjacency clearing; rats HUD + a Rats section + a "Shoo rats" free move; an 80-check rats suite, CI step. <b>The M3 introductory slice is complete (8 sub-parts, M3a–M3h).</b></li>
           <li class="done"><b>GitHub Pages deploy live (PR #938)</b> — pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.</li>
           <li class="done"><b>M4a — parchment visual identity</b> — <b>M4 (UX/UI parity) begins</b>: <code>Palette.gd</code> (the parchment palette ported from <code>src/tokens.css</code>), a field-tinted framed board card in <code>Board.gd</code>, the orange/gold glowing chain-path overlay (<code>ChainOverlay.gd</code>), a re-skinned HUD with the <b>Cinzel</b> display serif, and <code>godot/assets/fonts/Cinzel-Regular.ttf</code>. Gameplay unchanged — scene smoke + all 12 suites stay green.</li>
+          <li class="done"><b>M4b — HUD top-bar + stockpile / chain-progress</b>: <code>Main.gd</code> replaces the cluttered 11-label HUD with the original game's structure — a parchment <b>top-bar</b> (<code>PanelContainer</code>) carrying the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> 4-column parchment resource-chip grid rebuilt from <code>inventory</code>; <code>Tile.gd</code> drops the redundant per-tile selection ring (the M4a <code>ChainOverlay</code> is the selection feedback). All <code>_refresh_*</code> + <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> names kept — scene-smoke + e2e + town-UI + all logic suites stay green.</li>
         </ul>
 
         <h3>Next — finish M4 (UX/UI parity), then M5 (mobile)</h3>
         <div class="log">
           <div class="entry"><div class="date">M3 · complete</div><h3>Introductory vertical slice done</h3><p>The full Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats) slice plays end-to-end in Godot, backed by 11 headless CI-gated suites (794 checks). <b>Deliberately deferred</b> (honest debt — Decision&nbsp;#29): the per-settlement resource split (the slice uses one shared inventory), the Town-2 tier ladder, mine hazards, and Town-3's broader specialization roster.</p></div>
           <div class="entry"><div class="date">M4a · done</div><h3>Parchment visual identity ported from the original</h3><p>M4 (UX/UI parity) has begun. The Godot UI was barebones (a flat dark grid + code-built HUD); M4a ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic — <code>Palette.gd</code> (from <code>src/tokens.css</code>), a field-tinted framed board card, the orange/gold glowing chain-path overlay, and a re-skinned Cinzel HUD. A dramatic facelift with gameplay unchanged (all suites green).</p></div>
-          <div class="entry"><div class="date">M4b · next</div><h3>HUD top-bar + right-side action panel</h3><p>Next in M4: a proper HUD top-bar with coin / level / season pills plus the original's right-side action panel (stockpile, chain-progress, tool inspector). The rest of M4 follows — board collapse/collect animations, the town/inventory/crafting screens, tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX — plus the deferred content/balance debt above. This is the bulk of the remaining migration work.</p></div>
+          <div class="entry"><div class="date">M4b · done</div><h3>HUD top-bar + stockpile / chain-progress</h3><p>The cluttered 11-label HUD becomes the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> resource-chip grid rebuilt from <code>inventory</code>. The redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). Built in <code>Main.gd</code> + <code>Tile.gd</code> — all suites green. The HUD shows the port's <i>real</i> state; the original's level/XP/season pills are intentionally absent (Decision&nbsp;#31).</p></div>
+          <div class="entry"><div class="date">M4c · next</div><h3>Board collapse / collect animations</h3><p>Next in M4: the full collect → collapse → refill VFX — tile pop + fall easing, a golden upgrade burst, and a reward fly-to-coins — per the original <code>src/config/boardAnimations</code>. The rest of M4 follows — the town/inventory/crafting screens, tooltips/modals, and WebAudio→<code>AudioStreamPlayer</code> SFX — plus the deferred content/balance debt above. This is the bulk of the remaining migration work.</p></div>
           <div class="entry"><div class="date">M5</div><h3>Mobile app (externally gated)</h3><p>iOS + Android export and store submission. <b>External blocker</b> outside the codebase: iOS needs a Mac + Xcode, and both stores need paid developer accounts with signing/provisioning. The Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</p></div>
         </div>
 
@@ -1390,7 +1435,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
             <tr><td>Save schema for enum tile keys</td><td>Enum ints aren't stable across reorderings of <code>Constants.Tile</code>.</td><td>Serialize via <code>STRING_KEYS</code> (already defined), never raw ints.</td></tr>
             <tr><td>On-device touch</td><td>Notches / safe areas / gesture conflicts untested.</td><td>M5 territory, but schedule an early Android smoke (listed above).</td></tr>
             <tr><td>M5 mobile export</td><td>iOS export needs a Mac + Xcode; both stores need paid developer accounts and signing/provisioning — an <b>external blocker</b> outside the codebase.</td><td>Surface to the maintainer well before M5: the Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</td></tr>
-            <tr><td>Visual parity vs Phaser</td><td><s>Placeholder colors ≠ the procedural Phaser textures.</s> <b>Resolved (Stage&nbsp;2):</b> the board renders the exact exported Phaser tile PNGs (v1 parity 1:1), and <b>M4a</b> ported the original's parchment chrome (palette, framed board, chain-path overlay, Cinzel HUD).</td><td>Asset pipeline (plan §assets) Stage&nbsp;2 landed — <code>tools/export-v1-tiles.mjs</code> + <code>godot/assets/tiles/</code> + <code>Tile.gd</code>. Stage&nbsp;3 (v2 animated sprites) is a proven drop-in; production v2 art is the external PixelLab/Ludo.ai feed. <b>M4a</b> ported the parchment identity from <code>src/tokens.css</code>; the rest of the UI/UX parity is the remaining M4 work.</td></tr>
+            <tr><td>Visual parity vs Phaser</td><td><s>Placeholder colors ≠ the procedural Phaser textures.</s> <b>Resolved (Stage&nbsp;2):</b> the board renders the exact exported Phaser tile PNGs (v1 parity 1:1); <b>M4a</b> ported the original's parchment chrome (palette, framed board, chain-path overlay, Cinzel HUD); and <b>M4b</b> brought the HUD up to the original's structure (top-bar pills, chain-progress bar, stockpile chip grid).</td><td>Asset pipeline (plan §assets) Stage&nbsp;2 landed — <code>tools/export-v1-tiles.mjs</code> + <code>godot/assets/tiles/</code> + <code>Tile.gd</code>. Stage&nbsp;3 (v2 animated sprites) is a proven drop-in; production v2 art is the external PixelLab/Ludo.ai feed. <b>M4a+M4b</b> ported the parchment identity and HUD structure from the original; the rest of the UI/UX parity (M4c animations onward) is the remaining M4 work.</td></tr>
           </tbody>
         </table>
       </section>
