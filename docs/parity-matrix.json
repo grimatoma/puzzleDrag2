@@ -219,10 +219,10 @@
       "feature_or_screen": "Townsfolk & NPCs",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
-      "note": "No NPC roster, bonding, dialog, or order multipliers; orders are anonymous."
+      "verified_by": ["run_npc_tests.gd", "run_townsfolk_view_tests.gd", "golden:townsfolk-workers"],
+      "note": "5-NPC roster (wren/Scout, mira/Baker, tomas/Beekeeper, bram/Smith, liss/Physician) + 0–10 float bond (Sour ×0.70 / Warm ×1.00 / Liked ×1.15 / Beloved ×1.25 tiers) wired into orders (each order belongs to an NPC; fill grants +0.3 bond; bond tier multiplies reward) + townsfolk roster view (TownsfolkScreen.gd — color avatar, name, role, bond bar tinted by tier). Additive: default bond 5 ×1.00 keeps orders tests green unedited. Workers system, NPC gifts, per-NPC dialog pools, and bond decay are deferred."
     },
     {
       "id": "system-achievements",
@@ -490,10 +490,10 @@
       "feature_or_screen": "npcs slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
-      "note": "NPC roster, bonding, and dialog system."
+      "verified_by": ["run_npc_tests.gd", "run_townsfolk_view_tests.gd"],
+      "note": "NPC roster (5 NPCs) + 0–10 bond + order-multiplier wiring shipped (NpcConfig.gd + GameState npcs). Per-NPC dialog pools and NPC gifts pending."
     },
     {
       "id": "slice-orders",
@@ -570,10 +570,10 @@
       "feature_or_screen": "townsfolk slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-quests"],
-      "note": "NPC roster view with bonding tiers."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-quests"],
+      "note": "Townsfolk roster view (TownsfolkScreen.gd — 5 NPC cards with color avatar, name, role, bond bar tinted by tier) shipped. Quests/gifts sub-tabs and per-NPC dialog pending."
     },
     {
       "id": "slice-tutorial",
@@ -602,8 +602,8 @@
       "react_has": true,
       "godot_status": "absent",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
-      "note": "Settlement worker system and effects."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-workers"],
+      "note": "NPC roster + bonding shipped (see slice-npcs / system-townsfolk-npcs), but the hired worker-type ability reducer system (type-based passive bonuses) is not yet ported."
     },
     {
       "id": "slice-zones",
@@ -781,10 +781,10 @@
       "feature_or_screen": "townsfolk view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
-      "note": "NPC roster and bonding."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-bosses"],
+      "note": "Townsfolk roster view shipped (TownsfolkScreen.gd — 5 NPC cards, reachable via '👥' HUD button + apply_deeplink('townsfolk')). Visual golden awaits M-infra visual suite."
     },
     {
       "id": "view-recipewiki",
@@ -1633,20 +1633,20 @@
       "feature_or_screen": "townsfolk-bosses",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
-      "note": "Townsfolk bosses tab; depends on M10 townsfolk."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-bosses"],
+      "note": "Townsfolk roster view now renders (TownsfolkScreen.gd — screenshot townsfolk.png captured: 5 cards, mira Liked, bram Sour, rest Warm). The bosses sub-tab is distinct React content; visual golden awaits M-infra visual suite."
     },
     {
       "id": "golden-townsfolk-workers",
       "feature_or_screen": "townsfolk-workers",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
-      "note": "Townsfolk workers tab; depends on M10 townsfolk/workers."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-workers"],
+      "note": "Townsfolk roster view now renders (screenshot townsfolk.png). Workers sub-tab depends on the hired worker-type ability system, which is not yet ported. Visual golden awaits M-infra visual suite."
     },
     {
       "id": "golden-townsfolk-castle",
@@ -1655,8 +1655,8 @@
       "react_has": true,
       "godot_status": "absent",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-castle"],
-      "note": "Townsfolk castle connections; depends on M10 townsfolk."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-castle"],
+      "note": "Townsfolk castle sub-tab depends on unported castle/charter system."
     },
     {
       "id": "golden-townsfolk-quests",
@@ -1665,8 +1665,8 @@
       "react_has": true,
       "godot_status": "absent",
       "target_milestone": "M10",
-      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-quests"],
-      "note": "Townsfolk quests connections; depends on M10 townsfolk/quests."
+      "verified_by": ["run_townsfolk_view_tests.gd", "golden:townsfolk-quests"],
+      "note": "Townsfolk quests sub-tab depends on unported quests system."
     },
 
     {
