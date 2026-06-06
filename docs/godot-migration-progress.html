@@ -136,10 +136,22 @@
   ul.check li.todo::before    { content: "○"; background: var(--code); color: var(--muted); border: 1px solid var(--line); }
   ul.check li .note { display: block; font-size: .82rem; color: var(--muted); margin-top: .1rem; }
 
-  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.1rem 0; }
+  /* Capped, centered thumbnails — portrait captures (720×1280) no longer balloon a solo-row
+     figure to full page width. Click any shot to enlarge (see the lightbox below). */
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 200px)); justify-content: center; gap: 1rem; margin: 1.1rem 0; }
   .shots figure { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: .6rem; box-shadow: var(--shadow); }
-  .shots img { width: 100%; height: auto; border-radius: 8px; display: block; background: #11160d; }
+  .shots img { display: block; margin: 0 auto; max-width: 100%; max-height: 300px; width: auto; height: auto; border-radius: 8px; background: #11160d; cursor: zoom-in; transition: transform .15s ease, box-shadow .15s ease; }
+  .shots img:hover, .shots img:focus-visible { transform: scale(1.03); box-shadow: 0 6px 18px rgba(0,0,0,.18); outline: none; }
   .shots figcaption { font-size: .8rem; color: var(--muted); text-align: center; margin-top: .45rem; }
+
+  /* Click-to-enlarge lightbox — built once in JS, toggled by the .open class.
+     No-JS degradation: thumbnails simply stay capped (the overlay never appears). */
+  .lightbox { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .9rem; padding: 2.4rem 1.4rem; background: rgba(20,15,8,.88); cursor: zoom-out; opacity: 0; visibility: hidden; transition: opacity .18s ease, visibility .18s ease; }
+  .lightbox.open { opacity: 1; visibility: visible; }
+  .lightbox img { max-width: min(96vw, 1100px); max-height: 84vh; width: auto; height: auto; border-radius: 10px; background: #11160d; box-shadow: 0 16px 50px rgba(0,0,0,.5); }
+  .lightbox .lb-cap { color: #f6efe0; font-size: .9rem; line-height: 1.45; text-align: center; max-width: 72ch; }
+  .lightbox .lb-close { position: absolute; top: 1rem; right: 1.2rem; width: 2.3rem; height: 2.3rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(246,239,224,.45); background: rgba(0,0,0,.35); color: #f6efe0; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+  .lightbox .lb-close:hover { background: rgba(0,0,0,.55); }
 
   .log { border-left: 3px solid var(--line); margin: 1rem 0 1rem .3rem; padding-left: 1.1rem; }
   .log .entry { position: relative; margin: 0 0 1.1rem; }
@@ -1776,10 +1788,6 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
         </table>
       </section>
 
-    </div>
-
-    <!-- ════════════════════════════════════════════════════ ROADMAP AHEAD -->
-    <div class="panel" id="roadmap-ahead" role="tabpanel" aria-label="Roadmap ahead" style="display:block!important;">
       <section id="roadmap-pointer">
         <div class="box amber">
           <b>Roadmap ahead — M5 → M11 parity arc.</b>
@@ -1791,6 +1799,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           to this archive when it lands (see the going-forward convention in the banner above).
         </div>
       </section>
+
     </div>
 
   </main>
@@ -1847,6 +1856,53 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
     window.addEventListener('popstate', fromHash);
     fromHash();
+  })();
+
+  // Click-to-enlarge lightbox for the screenshot galleries.
+  (function () {
+    var shots = [].slice.call(document.querySelectorAll('.shots img'));
+    if (!shots.length) return;
+
+    var box = document.createElement('div');
+    box.className = 'lightbox';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.innerHTML =
+      '<button type="button" class="lb-close" aria-label="Close enlarged image">×</button>' +
+      '<img alt=""><div class="lb-cap"></div>';
+    var lbImg = box.querySelector('img');
+    var lbCap = box.querySelector('.lb-cap');
+    var closeBtn = box.querySelector('.lb-close');
+    document.body.appendChild(box);
+
+    function openShot(src, alt, caption) {
+      lbImg.src = src;
+      lbImg.alt = alt || '';
+      lbCap.textContent = caption || '';
+      box.classList.add('open');
+      document.addEventListener('keydown', onKey);
+    }
+    function closeShot() {
+      box.classList.remove('open');
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e) { if (e.key === 'Escape') closeShot(); }
+
+    shots.forEach(function (img) {
+      img.setAttribute('tabindex', '0');
+      img.setAttribute('role', 'button');
+      img.addEventListener('click', function () {
+        var fig = img.closest('figure');
+        var cap = fig ? fig.querySelector('figcaption') : null;
+        openShot(img.currentSrc || img.src, img.alt, cap ? cap.textContent : '');
+      });
+      img.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); img.click(); }
+      });
+    });
+    box.addEventListener('click', function (e) {
+      if (e.target === box || e.target === closeBtn) closeShot();
+    });
   })();
 </script>
 </body>
