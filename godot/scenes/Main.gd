@@ -12,9 +12,14 @@ var _totals_label: Label
 var _meta_label: Label                  ## coins + turn readout
 var _settlement_label: Label            ## town tier · cap · plots readout
 var _buildings_label: Label             ## plots used + placed spawners readout
+var _orders_label: Label                ## active NPC orders (resource → reward) readout
 
 func _ready() -> void:
 	game = SaveManager.load_state()
+	# Seed the order generator with a fixed int so the running game's orders (and
+	# screenshots) are deterministic, then top the order board up to MAX_ORDERS.
+	game.seed_orders(1337)
+	game.refill_orders()
 	_build_hud()
 	board = Board.new()
 	add_child(board)
@@ -33,6 +38,7 @@ func _ready() -> void:
 	_refresh_meta()
 	_refresh_settlement()
 	_refresh_buildings()
+	_refresh_orders()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -146,6 +152,19 @@ func _build_hud() -> void:
 	_buildings_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_buildings_label)
 
+	_orders_label = Label.new()
+	_orders_label.text = "Orders:  —"
+	_orders_label.add_theme_font_size_override("font_size", 18)
+	_orders_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.62))
+	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_orders_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_orders_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_orders_label.offset_top = 186
+	_orders_label.offset_left = 24
+	_orders_label.offset_right = -24
+	_orders_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_orders_label)
+
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
@@ -164,6 +183,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_meta()
 	_refresh_settlement()
 	_refresh_buildings()
+	_refresh_orders()
 	SaveManager.save(game)
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
@@ -178,6 +198,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 ##   4/5/6 — demolish Lumber Camp / Coop / Garden
 ##   B     — bake bread at the Bakery (refiner: 3 flour + 1 eggs → 1 bread)  [TEMP]
 ##   G     — sell 1 hay_bundle at the Market (+1 coin)                       [TEMP]
+##   F     — fill the first fillable NPC order (coin sink)                   [TEMP]
 func _unhandled_key_input(event: InputEvent) -> void:
 	if game == null:
 		return
@@ -211,6 +232,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_try_bake()       # TEMP M3c demo: refine flour + eggs into bread
 		KEY_G:
 			_try_sell_hay()   # TEMP M3c demo: sell 1 hay_bundle for a coin
+		KEY_F:
+			_try_fill_order() # TEMP M3d demo: fill the first fillable NPC order
 
 ## Dev affordance: attempt a build, then re-pool the board + refresh HUD + save.
 func _try_build(id: String) -> void:
@@ -257,6 +280,27 @@ func _try_sell_hay() -> void:
 		SaveManager.save(game)
 	else:
 		_status_label.text = "No hay_bundle to sell"
+	get_viewport().set_input_as_handled()
+
+## TEMP M3d demo: fill the FIRST fillable NPC order (lowest index whose resource
+## is in stock). Real order buttons land in the next milestone (the Town UI).
+func _try_fill_order() -> void:
+	var idx: int = -1
+	for i in game.orders.size():
+		if game.can_fill_order(i):
+			idx = i
+			break
+	if idx < 0:
+		_status_label.text = "No order you can fill yet"
+		get_viewport().set_input_as_handled()
+		return
+	var res: Dictionary = game.fill_order(idx)
+	_status_label.text = "Filled order: %d×%s → +%d coins" % [
+		int(res["qty"]), res["resource"], int(res["reward"])]
+	_refresh_orders()
+	_refresh_totals()
+	_refresh_meta()
+	SaveManager.save(game)
 	get_viewport().set_input_as_handled()
 
 ## Push the new active pool onto the board and refresh the building-affected HUD.
@@ -316,6 +360,18 @@ func _refresh_buildings() -> void:
 	if game.has_building(BuildingConfig.BAKERY):
 		text += "    🍞 B to bake bread"
 	_buildings_label.text = text
+
+func _refresh_orders() -> void:
+	if _orders_label == null or game == null:
+		return
+	if game.orders.is_empty():
+		_orders_label.text = "Orders:  —"
+		return
+	# Compact one-line readout: each order as "qty×resource → rewardc".
+	var parts: Array = []
+	for order in game.orders:
+		parts.append("%d×%s → %dc" % [int(order["qty"]), order["resource"], int(order["reward"])])
+	_orders_label.text = "Orders:  " + "   ·   ".join(parts) + "    📦 F to fill"
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

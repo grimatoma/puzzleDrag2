@@ -56,6 +56,9 @@ jobs:
       - name: Economy (refining / market) tests
         run: godot --headless --path godot --script res://tests/run_economy_tests.gd
 
+      - name: Orders tests
+        run: godot --headless --path godot --script res://tests/run_orders_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 
