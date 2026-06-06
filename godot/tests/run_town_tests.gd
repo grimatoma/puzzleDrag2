@@ -49,8 +49,8 @@ func _test_fresh_settlement() -> void:
 	_check(s.cap() == 200, "Camp cap is 200")
 	_check(s.plots() == 3, "Camp has 3 plots")
 	_check(not s.is_max_tier(), "Camp is not the max tier")
-	_check(s.next_tier_cost() == {"hay_bundle": 10, "plank": 4},
-		"Camp's next-tier cost is the Hamlet cost")
+	_check(s.next_tier_cost() == {"hay_bundle": 12, "flour": 6},
+		"Camp's next-tier cost is the Hamlet cost (staples only)")
 
 func _test_townconfig_table() -> void:
 	# TownConfig helpers return the Direction-spec table values for every tier.
@@ -81,10 +81,11 @@ func _test_cannot_tier_up_empty() -> void:
 	_check(g.inventory.is_empty(), "inventory untouched after failed tier-up")
 
 func _test_tier_up_exact_cost() -> void:
-	# Give EXACTLY the Hamlet cost; tier-up succeeds and deducts to zero.
+	# Give EXACTLY the Hamlet cost (hay_bundle 12 + flour 6); tier-up succeeds and
+	# deducts to zero.
 	var g := GameState.new()
-	g.inventory["hay_bundle"] = 10
-	g.inventory["plank"] = 4
+	g.inventory["hay_bundle"] = 12
+	g.inventory["flour"] = 6
 	_check(g.can_tier_up(), "exact Hamlet cost can tier up")
 	var res := g.try_tier_up()
 	_check(bool(res["ok"]), "try_tier_up returns ok=true with exact funds")
@@ -95,31 +96,31 @@ func _test_tier_up_exact_cost() -> void:
 	_check(g.settlement.cap() == 300, "Hamlet cap is 300")
 	_check(g.settlement.plots() == 5, "Hamlet has 5 plots")
 	_check(g.qty("hay_bundle") == 0, "hay_bundle deducted to 0")
-	_check(g.qty("plank") == 0, "plank deducted to 0")
+	_check(g.qty("flour") == 0, "flour deducted to 0")
 
 func _test_partial_funds_blocked() -> void:
-	# hay_bundle covered but plank short — cannot tier up, inventory untouched.
+	# hay_bundle covered but flour short — cannot tier up, inventory untouched.
 	var g := GameState.new()
-	g.inventory["hay_bundle"] = 10
-	g.inventory["plank"] = 0
+	g.inventory["hay_bundle"] = 12
+	g.inventory["flour"] = 0
 	_check(not g.can_tier_up(), "partial funds cannot tier up")
 	var res := g.try_tier_up()
 	_check(not bool(res["ok"]), "try_tier_up with partial funds returns ok=false")
 	_check(g.settlement.tier == 1, "tier unchanged with partial funds")
-	_check(g.qty("hay_bundle") == 10, "hay_bundle untouched after failed tier-up")
+	_check(g.qty("hay_bundle") == 12, "hay_bundle untouched after failed tier-up")
 
 func _test_surplus_funds_remain() -> void:
 	# Extra resources beyond the cost remain after a successful tier-up.
 	var g := GameState.new()
-	g.inventory["hay_bundle"] = 25    # cost 10 → 15 remain
-	g.inventory["plank"] = 10         # cost 4  → 6 remain
-	g.inventory["flour"] = 7          # not part of the cost → untouched
+	g.inventory["hay_bundle"] = 25    # cost 12 → 13 remain
+	g.inventory["flour"] = 10         # cost 6  → 4 remain
+	g.inventory["plank"] = 7          # not part of the cost → untouched
 	_check(g.can_tier_up(), "surplus funds can tier up")
 	var res := g.try_tier_up()
 	_check(bool(res["ok"]), "surplus tier-up succeeds")
-	_check(g.qty("hay_bundle") == 15, "surplus hay_bundle (25-10) remains")
-	_check(g.qty("plank") == 6, "surplus plank (10-4) remains")
-	_check(g.qty("flour") == 7, "non-cost resource untouched")
+	_check(g.qty("hay_bundle") == 13, "surplus hay_bundle (25-12) remains")
+	_check(g.qty("flour") == 4, "surplus flour (10-6) remains")
+	_check(g.qty("plank") == 7, "non-cost resource untouched")
 
 func _test_max_tier_blocked() -> void:
 	# A settlement at City (tier 5) is maxed: cannot tier up even when flush.
@@ -159,10 +160,11 @@ func _test_save_load_round_trip() -> void:
 	SaveManager.clear()                      # isolation: start from no save
 	var g := GameState.new()
 	# Pay the Hamlet then Village costs to reach tier 3 the real way.
-	g.inventory["hay_bundle"] = 10
-	g.inventory["plank"] = 20                 # 4 for Hamlet, 8 for Village → 8 left
-	g.inventory["flour"] = 10
-	g.inventory["eggs"] = 8
+	#   → Hamlet : hay_bundle 12, flour 6
+	#   → Village : plank 8, hay_bundle 16, flour 8
+	g.inventory["hay_bundle"] = 30            # 12 for Hamlet, 16 for Village → 2 left
+	g.inventory["flour"] = 14                 # 6 for Hamlet, 8 for Village → 0 left
+	g.inventory["plank"] = 12                 # 8 for Village → 4 left
 	_check(g.try_tier_up()["ok"], "advance to Hamlet (tier 2)")
 	_check(g.try_tier_up()["ok"], "advance to Village (tier 3)")
 	_check(g.settlement.tier == 3, "settlement is tier 3 (Village) pre-save")
@@ -173,7 +175,7 @@ func _test_save_load_round_trip() -> void:
 	var loaded := SaveManager.load_state()
 	_check(loaded.settlement.tier == 3, "save→load preserves tier 3 (Village)")
 	_check(loaded.settlement.tier_name() == "Village", "loaded settlement name is 'Village'")
-	_check(loaded.qty("plank") == 8, "save→load preserves leftover plank (20-4-8)")
+	_check(loaded.qty("plank") == 4, "save→load preserves leftover plank (12-8)")
 	_check(loaded.coins == 42, "save→load preserves coins")
 
 	# A save with no settlement block (legacy/missing) defaults to Camp.

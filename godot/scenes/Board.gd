@@ -23,6 +23,11 @@ var rng := RandomNumberGenerator.new()
 var tile_size: float = 96.0
 var board_origin := Vector2.ZERO       ## top-left of cell (0,0) in local space
 
+## Active refill pool (Array[int] of Constants.Tile). Defaults to staples only, so
+## a fresh game starts staples-only; Main swaps in GameState.active_tile_pool()
+## (staples + each placed spawner's tiles) whenever buildings change.
+var tile_pool: Array = Constants.STAPLE_POOL.duplicate()
+
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
 
@@ -32,19 +37,27 @@ func _ready() -> void:
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 
+## Replace the active refill pool (a copy is stored). Empty/invalid pools fall
+## back to the staple pool so the board can always refill.
+func set_tile_pool(pool: Array) -> void:
+	if pool == null or pool.is_empty():
+		tile_pool = Constants.STAPLE_POOL.duplicate()
+	else:
+		tile_pool = pool.duplicate()
+
 func setup_new_board() -> void:
 	grid = BoardLogic.make_empty_grid()
-	BoardLogic.refill(grid, rng)
+	BoardLogic.refill(grid, rng, tile_pool)
 	_ensure_live_board()
 	_build_tiles()
 
 ## Reshuffle until the board has at least one legal chain (dead boards are rare
-## with the weighted Farm pool, but this guarantees a playable start).
+## with the weighted pool, but this guarantees a playable start).
 func _ensure_live_board() -> void:
 	var guard := 0
 	while not BoardLogic.has_valid_chain(grid) and guard < 64:
 		grid = BoardLogic.make_empty_grid()
-		BoardLogic.refill(grid, rng)
+		BoardLogic.refill(grid, rng, tile_pool)
 		guard += 1
 
 func _build_tiles() -> void:
@@ -189,7 +202,7 @@ func _resolve(path: Array) -> void:
 				write -= 1
 		# Fill rows 0..write (inclusive) with fresh tiles falling from above.
 		for r in range(write, -1, -1):
-			var ttype: int = Constants.FARM_POOL[rng.randi_range(0, Constants.FARM_POOL.size() - 1)]
+			var ttype: int = tile_pool[rng.randi_range(0, tile_pool.size() - 1)]
 			var node := _make_tile(ttype)
 			node.position = _cell_center(c, r) - Vector2(0, (write + 2) * tile_size)
 			tiles[r][c] = node

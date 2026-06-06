@@ -18,9 +18,9 @@ func _initialize() -> void:
 	root.add_child(main)
 	await process_frame                         # let the deferred _ready run
 
-	# Stock the inventory so the Camp→Hamlet tier-up is affordable (cost is
-	# hay_bundle 10 + plank 4; give a little surplus to show it survives).
-	main.game.inventory = {"hay_bundle": 14, "plank": 6, "flour": 3}
+	# Stock the inventory so the Camp→Hamlet tier-up is affordable (revised cost is
+	# hay_bundle 12 + flour 6; give a little surplus to show it survives).
+	main.game.inventory = {"hay_bundle": 16, "flour": 8, "plank": 6}
 	main.game.coins = 28
 	main.game.turn = 9
 	main._refresh_totals()

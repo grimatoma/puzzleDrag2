@@ -26,6 +26,10 @@ var turn: int = 0
 ## Town progression on the Camp→City ladder (storage cap, building plots, and
 ## the tier-up cost gate). See Settlement / TownConfig.
 var settlement := Settlement.new()
+## Placed spawner-building ids, in build order, at most one of each. Each one
+## consumes a plot and adds its tile CATEGORY to the active board refill pool. See
+## BuildingConfig for the catalog; demolish() frees a plot and removes a category.
+var buildings: Array = []
 
 ## Apply one resolved chain to the run economy and return a summary dict.
 ## Mutates inventory/progress, increments coins and turn.
@@ -94,6 +98,95 @@ func try_tier_up() -> Dictionary:
 	settlement.tier += 1
 	return {"ok": true, "tier": settlement.tier, "name": settlement.tier_name()}
 
+# ── Spawner buildings (board-pool gating) ─────────────────────────────────────
+
+## True when spawner `id` is currently placed.
+func has_building(id: String) -> bool:
+	return buildings.has(id)
+
+## Plots occupied by placed buildings.
+func plots_used() -> int:
+	return buildings.size()
+
+## Free building plots remaining at the current tier (never negative).
+func plots_free() -> int:
+	return maxi(0, settlement.plots() - plots_used())
+
+## True when `id` is a real, unbuilt spawner whose unlock tier is reached, there
+## is a free plot for it, and the inventory covers its full cost.
+func can_build(id: String) -> bool:
+	if not BuildingConfig.is_building(id):
+		return false
+	if has_building(id):
+		return false
+	if settlement.tier < BuildingConfig.unlock_tier(id):
+		return false
+	if plots_free() <= 0:
+		return false
+	var cost: Dictionary = BuildingConfig.building_cost(id)
+	for k in cost.keys():
+		if int(inventory.get(k, 0)) < int(cost[k]):
+			return false
+	return true
+
+## Place spawner `id`: deduct its cost (floored at 0), occupy a plot, and add its
+## category to the board pool. Returns {ok:true, id, name} on success. On failure
+## returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that
+## trips, in order: "unknown" → "exists" → "locked" → "no_plot" → "insufficient".
+func build(id: String) -> Dictionary:
+	if not BuildingConfig.is_building(id):
+		return {"ok": false, "reason": "unknown"}
+	if has_building(id):
+		return {"ok": false, "reason": "exists"}
+	if settlement.tier < BuildingConfig.unlock_tier(id):
+		return {"ok": false, "reason": "locked"}
+	if plots_free() <= 0:
+		return {"ok": false, "reason": "no_plot"}
+	var cost: Dictionary = BuildingConfig.building_cost(id)
+	for k in cost.keys():
+		if int(inventory.get(k, 0)) < int(cost[k]):
+			return {"ok": false, "reason": "insufficient"}
+	# All guards passed — commit: deduct cost, then occupy the plot.
+	for k in cost.keys():
+		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(cost[k]))
+		if remaining == 0:
+			inventory.erase(k)
+		else:
+			inventory[k] = remaining
+	buildings.append(id)
+	return {"ok": true, "id": id, "name": BuildingConfig.building_name(id)}
+
+## Remove spawner `id`, freeing its plot and dropping its category from the pool.
+## NO resource refund — the Direction lists demolish refunds as an open design
+## question, so for this first pass demolition is free but un-refunded. Returns
+## {ok:true, id} on success or {ok:false, reason:"not_built"} when `id` isn't placed.
+func demolish(id: String) -> Dictionary:
+	if not has_building(id):
+		return {"ok": false, "reason": "not_built"}
+	buildings.erase(id)
+	return {"ok": true, "id": id}
+
+## Active board CATEGORIES: the two staples plus the category of each placed
+## spawner, in build order, deduplicated. Drives "what can spawn / be chained".
+func active_categories() -> Array:
+	var cats: Array = ["grass", "grain"]
+	for id in buildings:
+		var cat: String = BuildingConfig.building_category(id)
+		if cat != "" and not cats.has(cat):
+			cats.append(cat)
+	return cats
+
+## Active weighted refill pool (Array[int] of Constants.Tile): the STAPLE_POOL
+## plus each placed spawner's representative tile TWICE (a moderate slice). A
+## fresh, building-less game is staples-only.
+func active_tile_pool() -> Array:
+	var pool: Array = Constants.STAPLE_POOL.duplicate()
+	for id in buildings:
+		var tile: int = BuildingConfig.building_tile(id)
+		pool.append(tile)
+		pool.append(tile)
+	return pool
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
@@ -102,6 +195,7 @@ func to_dict() -> Dictionary:
 		"coins": coins,
 		"turn": turn,
 		"settlement": settlement.to_dict(),
+		"buildings": buildings.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -121,4 +215,12 @@ static func from_dict(d: Dictionary) -> GameState:
 	var settle: Variant = d.get("settlement", {})
 	if settle is Dictionary:
 		s.settlement = Settlement.from_dict(settle)
+	# Rebuild placed spawners, keeping only real ids and dropping duplicates so a
+	# corrupt or stale save can never desync the plot count or the board pool.
+	var blds: Variant = d.get("buildings", [])
+	if blds is Array:
+		for id in blds:
+			var sid := String(id)
+			if BuildingConfig.is_building(sid) and not s.buildings.has(sid):
+				s.buildings.append(sid)
 	return s

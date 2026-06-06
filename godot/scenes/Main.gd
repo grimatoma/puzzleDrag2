@@ -11,6 +11,7 @@ var _status_label: Label
 var _totals_label: Label
 var _meta_label: Label                  ## coins + turn readout
 var _settlement_label: Label            ## town tier · cap · plots readout
+var _buildings_label: Label             ## plots used + placed spawners readout
 
 func _ready() -> void:
 	game = SaveManager.load_state()
@@ -19,12 +20,19 @@ func _ready() -> void:
 	add_child(board)
 	board.chain_changed.connect(_on_chain_changed)
 	board.chain_resolved.connect(_on_chain_resolved)
+	# Seed the board's refill pool from the restored save's spawners. If any were
+	# placed, rebuild the board so their categories show up immediately (the pool
+	# is applied at refill time, and _ready already drew a staples-only board).
+	board.set_tile_pool(game.active_tile_pool())
+	if not game.buildings.is_empty():
+		board.setup_new_board()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
 	# Reflect any restored save immediately (inventory + coins + turn + tier).
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
+	_refresh_buildings()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -125,6 +133,19 @@ func _build_hud() -> void:
 	_settlement_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_settlement_label)
 
+	_buildings_label = Label.new()
+	_buildings_label.text = "Plots 0/3 · (no buildings)"
+	_buildings_label.add_theme_font_size_override("font_size", 18)
+	_buildings_label.add_theme_color_override("font_color", Color(0.70, 0.82, 0.92))
+	_buildings_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_buildings_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_buildings_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_buildings_label.offset_top = 156
+	_buildings_label.offset_left = 24
+	_buildings_label.offset_right = -24
+	_buildings_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_buildings_label)
+
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
@@ -142,28 +163,86 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
+	_refresh_buildings()
 	SaveManager.save(game)
 
-# ── tier-up affordance ───────────────────────────────────────────────────────
+# ── tier-up + build affordances ──────────────────────────────────────────────
 
-## Temporary dev/demo affordance: press T to advance the town one tier when the
-## inventory can afford the next tier-up cost. The real town-UI button arrives in
-## a later milestone — this keyboard path keeps the ladder exercisable now. Key
-## input is separate from the board's _unhandled_input mouse handling, so this
-## never interferes with chain drags.
+## Temporary dev/demo keyboard affordances (the real town-UI build menu + tier-up
+## button land in M3d). These keep the ladder and the spawner system exercisable
+## now. Key input is separate from the board's _unhandled_input mouse handling, so
+## it never interferes with chain drags.
+##   T     — advance the town one tier (when affordable)
+##   1/2/3 — build Lumber Camp / Coop / Garden
+##   4/5/6 — demolish Lumber Camp / Coop / Garden
 func _unhandled_key_input(event: InputEvent) -> void:
 	if game == null:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_T and game.can_tier_up():
-			var res: Dictionary = game.try_tier_up()
-			if bool(res.get("ok", false)):
-				_status_label.text = "Town advanced  →  %s" % res.get("name", "")
-				_refresh_totals()
-				_refresh_meta()
-				_refresh_settlement()
-				SaveManager.save(game)
-			get_viewport().set_input_as_handled()
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	match event.keycode:
+		KEY_T:
+			if game.can_tier_up():
+				var res: Dictionary = game.try_tier_up()
+				if bool(res.get("ok", false)):
+					_status_label.text = "Town advanced  →  %s" % res.get("name", "")
+					_refresh_totals()
+					_refresh_meta()
+					_refresh_settlement()
+					_refresh_buildings()   # plots change with tier
+					SaveManager.save(game)
+				get_viewport().set_input_as_handled()
+		KEY_1:
+			_try_build(BuildingConfig.LUMBER_CAMP)
+		KEY_2:
+			_try_build(BuildingConfig.COOP)
+		KEY_3:
+			_try_build(BuildingConfig.GARDEN)
+		KEY_4:
+			_try_demolish(BuildingConfig.LUMBER_CAMP)
+		KEY_5:
+			_try_demolish(BuildingConfig.COOP)
+		KEY_6:
+			_try_demolish(BuildingConfig.GARDEN)
+
+## Dev affordance: attempt a build, then re-pool the board + refresh HUD + save.
+func _try_build(id: String) -> void:
+	var res: Dictionary = game.build(id)
+	if bool(res.get("ok", false)):
+		_apply_pool_change()
+		_status_label.text = "Built %s — %s now spawn" % [
+			BuildingConfig.building_name(id), BuildingConfig.building_category(id)]
+		SaveManager.save(game)
+	else:
+		# Brief, non-blocking hint; no mutation happened.
+		_status_label.text = "Can't build %s (%s)" % [
+			BuildingConfig.building_name(id), _build_hint(res.get("reason", ""))]
+	get_viewport().set_input_as_handled()
+
+## Dev affordance: attempt a demolish, then re-pool the board + refresh HUD + save.
+func _try_demolish(id: String) -> void:
+	var res: Dictionary = game.demolish(id)
+	if bool(res.get("ok", false)):
+		_apply_pool_change()
+		_status_label.text = "Demolished %s" % BuildingConfig.building_name(id)
+		SaveManager.save(game)
+	get_viewport().set_input_as_handled()
+
+## Push the new active pool onto the board and refresh the building-affected HUD.
+func _apply_pool_change() -> void:
+	board.set_tile_pool(game.active_tile_pool())
+	_refresh_buildings()
+	_refresh_settlement()
+	_refresh_totals()
+
+## Short player-facing hint for a build() failure reason.
+func _build_hint(reason: String) -> String:
+	match reason:
+		"exists":       return "already built"
+		"locked":       return "need a higher tier"
+		"no_plot":      return "no free plot"
+		"insufficient": return "not enough resources"
+		_:              return "unavailable"
 
 func _refresh_totals() -> void:
 	if game == null or game.inventory.is_empty():
@@ -189,6 +268,19 @@ func _refresh_settlement() -> void:
 		var next_name: String = TownConfig.tier_name(s.tier + 1)
 		text += "    ▲ Press T to advance to %s" % next_name
 	_settlement_label.text = text
+
+func _refresh_buildings() -> void:
+	if _buildings_label == null or game == null:
+		return
+	var used: int = game.plots_used()
+	var total: int = game.settlement.plots()
+	if game.buildings.is_empty():
+		_buildings_label.text = "Plots %d/%d · (no buildings)" % [used, total]
+		return
+	var names: Array = []
+	for id in game.buildings:
+		names.append(BuildingConfig.building_name(id))
+	_buildings_label.text = "Plots %d/%d · %s" % [used, total, ", ".join(names)]
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

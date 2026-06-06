@@ -81,11 +81,42 @@ const THRESHOLDS := {
 
 ## Weighted spawn pool for the Farm biome (src/constants.ts:268-281).
 ## Grass is weighted 3x so a fresh board always has a common matchable type.
+## Retained as the DEFAULT fallback for BoardLogic.refill and existing tests; the
+## live game (M3b+) builds its refill pool dynamically from STAPLE_POOL plus the
+## tiles unlocked by placed spawner buildings (see GameState.active_tile_pool).
 const FARM_POOL: Array = [
 	Tile.GRASS, Tile.GRASS, Tile.GRASS,
 	Tile.WHEAT, Tile.PHEASANT, Tile.CARROT, Tile.APPLE,
 	Tile.PANSY, Tile.OAK, Tile.PIG, Tile.COW, Tile.HORSE,
 ]
+
+# ── Staples + categories (M3b building-gated spawners) ──────────────────────
+## The two staple tiles every Town-1 board always provides, regardless of which
+## spawner buildings are placed: grass (→hay_bundle) and wheat/grain (→flour).
+const STAPLE_TILES: Array = [Tile.GRASS, Tile.WHEAT]
+
+## Refill pool for a fresh, building-less board: staples only, with grass weighted
+## heavier so a starting board always has a common, chainable staple. Spawner
+## buildings append their tiles to this at runtime (GameState.active_tile_pool).
+const STAPLE_POOL: Array = [
+	Tile.GRASS, Tile.GRASS, Tile.GRASS,
+	Tile.WHEAT, Tile.WHEAT,
+]
+
+## Tile -> category id. Staples are "grass"/"grain"; every other family belongs to
+## a category gated by a spawner building (BuildingConfig).
+const CATEGORY := {
+	Tile.GRASS:    "grass",
+	Tile.WHEAT:    "grain",
+	Tile.OAK:      "trees",
+	Tile.PHEASANT: "birds",
+	Tile.CARROT:   "veg",
+	Tile.APPLE:    "fruit",
+	Tile.PANSY:    "flower",
+	Tile.PIG:      "herd",
+	Tile.COW:      "cattle",
+	Tile.HORSE:    "mount",
+}
 
 ## A very large int that stands in for "no threshold" without needing INF.
 const NO_THRESHOLD: int = 1 << 30
@@ -100,6 +131,10 @@ static func threshold_for(tile: int) -> int:
 
 static func string_key(tile: int) -> String:
 	return STRING_KEYS.get(tile, "")
+
+## Category id for a tile ("grass", "grain", "trees", …); "" for unknown tiles.
+static func category_of(tile: int) -> String:
+	return CATEGORY.get(tile, "")
 
 ## Stage-1 placeholder fill color. Replaced wholesale by PNG textures in
 ## asset-pipeline Stage 2 without touching surrounding code. Kept as a match
