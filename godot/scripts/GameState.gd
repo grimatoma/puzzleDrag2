@@ -169,6 +169,125 @@ var _distinct_seen: Dictionary = {}
 ## (resolve_story_choice) ever grants resources/coins; firing a beat does not.
 var story := StoryState.new()
 
+# ── Workers (hire-by-type; threshold / recipe reductions) ──────────────────────
+## Hired worker counts, keyed by WorkerConfig id (String) → count (int). Ported
+## from the React workers slice (src/features/workers). Wired ADDITIVELY: with EVERY
+## count at 0 the reductions below all sum to 0, so credit_chain / craft are
+## byte-identical to the pre-workers economy (every existing suite stays green).
+## Initialised to all-ids-at-0 via _default_workers(); persisted defensively in
+## to_dict / from_dict (a save written before workers existed loads all 0).
+var workers: Dictionary = _default_workers()
+
+## A threshold can NEVER be reduced below this floor — so stacking enough workers
+## of a category can't collapse the threshold to 0/1 and "explode" the unit math
+## (a chain of 3 would otherwise mint absurd quantities). Mirrors a sane minimum
+## chain length; at 0 workers the reduction is 0 so this floor is never even reached.
+const WORKER_MIN_THRESHOLD: int = 2
+
+## Build the starting workers map: every WorkerConfig id at 0 hires.
+static func _default_workers() -> Dictionary:
+	var out: Dictionary = {}
+	for id in WorkerConfig.all_ids():
+		out[id] = 0
+	return out
+
+## Hired count of worker `id` (0 when none hired / unknown id).
+func worker_count(id: String) -> int:
+	return int(workers.get(id, 0))
+
+## Total coins a hire of `id` would cost RIGHT NOW (the ramped coins for the next
+## hire). Convenience for the UI / affordability checks.
+func worker_hire_coins(id: String) -> int:
+	return int(WorkerConfig.hire_cost_at(id, worker_count(id)).get("coins", 0))
+
+## True when worker `id` can be hired right now: it's a real type, under its
+## max_count, AND the ramped coins + every ramped resource cost is covered.
+func can_hire_worker(id: String) -> bool:
+	if not WorkerConfig.has_worker(id):
+		return false
+	if worker_count(id) >= WorkerConfig.max_count(id):
+		return false
+	var cost: Dictionary = WorkerConfig.hire_cost_at(id, worker_count(id))
+	if coins < int(cost.get("coins", 0)):
+		return false
+	var res: Dictionary = cost.get("resources", {})
+	for k in res.keys():
+		if int(inventory.get(k, 0)) < int(res[k]):
+			return false
+	return true
+
+## Hire one worker of `id`: deduct the ramped coins + resources (floored at 0, key
+## erased at 0) and increment the count. Returns {ok:true, id, count, cost} on
+## success. On failure returns {ok:false, reason} WITHOUT mutating; reason is the
+## FIRST guard that trips, in order: "unknown" → "maxed" → "cant_afford".
+func hire_worker(id: String) -> Dictionary:
+	if not WorkerConfig.has_worker(id):
+		return {"ok": false, "reason": "unknown"}
+	if worker_count(id) >= WorkerConfig.max_count(id):
+		return {"ok": false, "reason": "maxed"}
+	var cost: Dictionary = WorkerConfig.hire_cost_at(id, worker_count(id))
+	var coin_cost: int = int(cost.get("coins", 0))
+	var res: Dictionary = cost.get("resources", {})
+	if coins < coin_cost:
+		return {"ok": false, "reason": "cant_afford"}
+	for k in res.keys():
+		if int(inventory.get(k, 0)) < int(res[k]):
+			return {"ok": false, "reason": "cant_afford"}
+	# All guards passed — commit: deduct coins + each resource, then increment.
+	coins -= coin_cost
+	for k in res.keys():
+		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(res[k]))
+		if remaining == 0:
+			inventory.erase(k)
+		else:
+			inventory[k] = remaining
+	workers[id] = worker_count(id) + 1
+	return {"ok": true, "id": id, "count": worker_count(id), "cost": cost}
+
+## Fire one worker of `id`: decrement the count by 1 (floored at 0). NO refund —
+## consistent with demolish() (which lists refunds as an open design question), so
+## firing is free but un-refunded for this first pass. Returns {ok:true, id, count}
+## on success, else {ok:false, reason} ("unknown" | "none" when count is already 0).
+func fire_worker(id: String) -> Dictionary:
+	if not WorkerConfig.has_worker(id):
+		return {"ok": false, "reason": "unknown"}
+	if worker_count(id) <= 0:
+		return {"ok": false, "reason": "none"}
+	workers[id] = worker_count(id) - 1
+	return {"ok": true, "id": id, "count": worker_count(id)}
+
+## Total threshold reduction applied to a chain of `tile_type`: the SUM over every
+## threshold_reduce_category worker whose target category == this tile's category of
+## (amount × hired count). 0 when no matching worker is hired — which is what makes
+## the workers layer additive (credit_chain at 0 hires is unchanged).
+func worker_threshold_reduction(tile_type: int) -> int:
+	var cat: String = Constants.category_of(tile_type)
+	if cat == "":
+		return 0
+	var total: int = 0
+	for id in WorkerConfig.all_ids():
+		if WorkerConfig.ability_kind(id) != WorkerConfig.KIND_THRESHOLD_REDUCE_CATEGORY:
+			continue
+		if WorkerConfig.ability_category(id) != cat:
+			continue
+		total += WorkerConfig.ability_amount(id) * worker_count(id)
+	return total
+
+## Total input reduction applied to `input` of `recipe_id`: the SUM over every
+## recipe_input_reduce worker targeting that recipe+input of (amount × hired count).
+## 0 when no matching worker is hired (craft at 0 hires is unchanged).
+func worker_recipe_input_reduction(recipe_id: String, input: String) -> int:
+	var total: int = 0
+	for id in WorkerConfig.all_ids():
+		if WorkerConfig.ability_kind(id) != WorkerConfig.KIND_RECIPE_INPUT_REDUCE:
+			continue
+		if WorkerConfig.ability_recipe(id) != recipe_id:
+			continue
+		if WorkerConfig.ability_input(id) != input:
+			continue
+		total += WorkerConfig.ability_amount(id) * worker_count(id)
+	return total
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -178,6 +297,15 @@ func seed_orders(s: int) -> void:
 func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var resource: String = Constants.produced_resource(tile_type)
 	var threshold: int = Constants.threshold_for(tile_type)
+	# Workers (ADDITIVE): threshold_reduce_category workers shave tiles off the
+	# matching chain. worker_threshold_reduction is 0 when no worker of this tile's
+	# category is hired, so eff_threshold == threshold and the unit/progress math is
+	# IDENTICAL to the pre-workers economy. The WORKER_MIN_THRESHOLD floor keeps a
+	# fully-staffed category from collapsing the threshold to 0/1 and exploding the
+	# units. The floor only ever applies to a REAL (positive) threshold — the
+	# NO_THRESHOLD sentinel branch below (threshold <= 0, hazards) is untouched.
+	if threshold > 0:
+		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type))
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -354,11 +482,25 @@ func can_craft(recipe_id: String) -> bool:
 		return false
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
 		return false
-	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	# Workers (ADDITIVE): mirror craft()'s effective inputs so the gate matches what
+	# craft will actually deduct. At 0 bakers this equals RecipeConfig.recipe_inputs.
+	var inputs: Dictionary = _effective_recipe_inputs(recipe_id)
 	for k in inputs.keys():
 		if int(inventory.get(k, 0)) < int(inputs[k]):
 			return false
 	return true
+
+## The recipe inputs for `recipe_id` AFTER worker recipe_input_reduce (the Baker).
+## A COPY of RecipeConfig.recipe_inputs with each input reduced by the matching
+## worker reduction, FLOORED AT 1 (a recipe always costs at least 1 of each input).
+## At 0 matching workers the reduction is 0, so this returns the base inputs verbatim.
+func _effective_recipe_inputs(recipe_id: String) -> Dictionary:
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	for k in inputs.keys():
+		var reduction: int = worker_recipe_input_reduction(recipe_id, String(k))
+		if reduction > 0:
+			inputs[k] = maxi(1, int(inputs[k]) - reduction)
+	return inputs
 
 ## Craft `recipe_id`: deduct every input (floored at 0), add the recipe's output
 ## quantity to inventory (clamped to the settlement cap), and return
@@ -370,7 +512,12 @@ func craft(recipe_id: String) -> Dictionary:
 		return {"ok": false, "reason": "unknown"}
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
 		return {"ok": false, "reason": "no_station"}
-	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	# Workers (ADDITIVE): recipe_input_reduce workers (the Baker) shave inputs off the
+	# matching recipe. _effective_recipe_inputs floors each reduced input at 1, and the
+	# reduction is 0 when no Baker is hired — so at 0 bakers the inputs are byte-identical
+	# to RecipeConfig.recipe_inputs and craft is unchanged. Used for BOTH the
+	# affordability check and the deduction below so they can never diverge.
+	var inputs: Dictionary = _effective_recipe_inputs(recipe_id)
 	for k in inputs.keys():
 		if int(inventory.get(k, 0)) < int(inputs[k]):
 			return {"ok": false, "reason": "insufficient"}
@@ -1077,6 +1224,10 @@ func to_dict() -> Dictionary:
 		# like every prior additive field, a save written before story existed loads with
 		# the defensive default (a fresh act-1 StoryState).
 		"story": story.to_dict(),
+		# Workers (ADDITIVE): hired counts per type. SAVE_VERSION is NOT bumped — like
+		# every prior additive field, a save written before workers existed loads with
+		# all counts at 0 (from_dict defensive default), so the economy is unchanged.
+		"workers": workers.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1241,4 +1392,15 @@ static func from_dict(d: Dictionary) -> GameState:
 	var story_d: Variant = d.get("story", {})
 	if story_d is Dictionary:
 		s.story = StoryState.from_dict(story_d)
+	# Restore hired workers (ADDITIVE). Missing key (any save written before workers
+	# existed) → all counts at 0 (the _default_workers() the new GameState already
+	# carries). Each value is coerced to int (JSON yields floats), kept only for REAL
+	# worker ids, and clamped to [0, max_count] so a corrupt/over-large saved count can
+	# never over-apply a reduction. SAVE_VERSION is NOT bumped (additive default).
+	var wk: Variant = d.get("workers", null)
+	if wk is Dictionary:
+		for k in wk:
+			var wid := String(k)
+			if WorkerConfig.has_worker(wid):
+				s.workers[wid] = clampi(int(wk[k]), 0, WorkerConfig.max_count(wid))
 	return s
