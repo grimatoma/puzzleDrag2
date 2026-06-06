@@ -75,11 +75,25 @@ func _ready() -> void:
 	# screenshots) are deterministic, then top the order board up to MAX_ORDERS.
 	game.seed_orders(1337)
 	game.refill_orders()
+	# M8c — STARTER TOOL GRANT (the honest minimal source so tools are reachable now that
+	# they're wired into the live board). Grant a tiny starter set ONLY on a FRESH game:
+	# `game.tools.is_empty()` is true for a brand-new save (and for an old pre-M8b save
+	# with no tools) but false once any tool has been granted, so a LOADED game with
+	# existing tool charges is never double-granted (and spent-to-zero tools stay gone —
+	# use_tool_on_grid erases a tool at 0 charges, so this only re-fires on a truly
+	# tool-less save). Persisted automatically via the M8b save/load. This is a MINIMAL
+	# PLACEHOLDER source — richer sources (crafting recipes, a portal/expedition reward)
+	# arrive in later milestones; M8d adds the ToolPalette UI to actually pick + use them.
+	if game.tools.is_empty():
+		game.grant_tool("bomb", 1)     # tap-target (3x3 area blast) — proves targeting mode
+		game.grant_tool("scythe", 1)   # instant (clears 6 random tiles) — proves instant path
 	_build_hud()
 	board = Board.new()
 	add_child(board)
 	board.chain_changed.connect(_on_chain_changed)
 	board.chain_resolved.connect(_on_chain_resolved)
+	# M8c — a tapped cell while a tap-target tool is armed fires the armed tool on it.
+	board.cell_tapped.connect(_on_tool_target)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
@@ -1088,6 +1102,73 @@ func _on_shoo_rats() -> void:
 	_refresh_rats()
 	if _town_screen != null:
 		_town_screen.refresh()
+	SaveManager.save(game)
+
+# ── Tools on the live board (M8c) ─────────────────────────────────────────────
+# The tested tool API (GameState.use_tool_on_grid + ToolConfig + ToolEffects) is wired
+# into the LIVE board here. Main owns the GameState ref and the Board; the Board stays
+# decoupled (it only adopts the resulting grid via apply_external_grid and reports a
+# tapped cell via cell_tapped). NO ToolPalette UI yet (that's M8d) — these entry points
+# are driven programmatically + by the Board's targeting-mode input branch.
+
+## Use tool `id` on the live board. Returns true when the tool started/fired.
+##   • Guard: with no usable charge (can_use_tool false) returns false, untouched.
+##   • TAP-target tool (bomb/rake/sickle/auger/blast_charge/magnet): ARM it and put the
+##     Board into targeting mode, so the next board tap fires it (see _on_tool_target).
+##     Returns true (the tool is armed, not yet spent — the charge is consumed on the tap).
+##   • INSTANT tool (axe/scythe/stone_hammer/drill): fire it NOW over the whole board.
+##     use_tool_on_grid applies the effect, credits collected tiles, and consumes a
+##     charge; on ok we land the resulting grid on the board (apply_external_grid does
+##     the collapse/refill) and refresh the HUD + save exactly like a resolved chain.
+func use_tool(id: String) -> bool:
+	if game == null or board == null:
+		return false
+	if not game.can_use_tool(id):
+		_status_label.text = "Can't use %s (no charges)" % ToolConfig.tool_label(id)
+		return false
+	if ToolConfig.is_tap_target(id):
+		game.arm_tool(id)
+		board.set_targeting(true)
+		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
+		return true
+	# Instant tool — fire immediately over the whole board.
+	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
+	if bool(r.get("ok", false)):
+		board.apply_external_grid(r["grid"])
+		_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+		_after_tool_used()
+	return bool(r.get("ok", false))
+
+## M8c — the Board reports a tapped cell (a tap-target tool is armed). Apply the armed
+## tool at that cell, land the resulting grid, then ALWAYS leave targeting + disarm +
+## refresh. On a failed apply (e.g. a no-effect tap) we just disarm with a hint — the
+## charge is only consumed by use_tool_on_grid on an ok result, so a miss costs nothing.
+func _on_tool_target(cell: Vector2i) -> void:
+	if game == null or board == null:
+		return
+	var id: String = game.pending_tool
+	var r: Dictionary = game.use_tool_on_grid(id, board.grid, cell)
+	if bool(r.get("ok", false)):
+		board.apply_external_grid(r["grid"])
+		_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+	else:
+		_status_label.text = "%s did nothing here" % ToolConfig.tool_label(id)
+	# Always exit targeting + disarm so the board returns to normal chaining, even on a miss.
+	board.set_targeting(false)
+	game.clear_pending_tool()
+	_after_tool_used()
+
+## Shared post-tool refresh: a tool can change inventory/coins/progress (credited via
+## credit_chain inside use_tool_on_grid), so refresh the same HUD surfaces a resolved
+## chain does and persist. Kept narrow (no chain-progress-resource tracking — a tool
+## isn't a chain) but covers everything a tool can move.
+func _after_tool_used() -> void:
+	_refresh_totals()
+	_refresh_meta()
+	_refresh_settlement()
+	_refresh_buildings()
+	_refresh_orders()
+	_refresh_chain_progress()
 	SaveManager.save(game)
 
 ## Swap the board onto the CURRENT active biome and refresh the biome-affected HUD.
