@@ -83,6 +83,14 @@ var _view_h: float = 1280.0
 # M6c: built-building ids assigned to the first N lots (lot[i] is built iff
 # i < _built_ids.size()); empty otherwise. Set by render_plan.
 var _built_ids: Array = []
+# M6d: the build-slot lot currently hovered (a subtle highlight outline is drawn
+# on it); -1 = none. Set by set_hover_lot; only affects _draw, never state.
+var _hover_lot: int = -1
+
+# M6d: highlight tones for the hover outline (warm gold so it reads over both the
+# empty fenced pad and a built house without clashing with the parchment UI).
+const HOVER_OUTLINE := Color("ffd248")
+const HOVER_FILL := Color(1.0, 0.82, 0.28, 0.12)
 
 ## Store the plan + the built-building ids, compute a CONTENT-AWARE fit transform,
 ## then request a redraw.
@@ -172,6 +180,74 @@ func _content_bbox(stage_w: float, stage_h: float) -> Dictionary:
 	acc.y1 = min(stage_h, acc.y1)
 	return acc
 
+# ── M6d: hit-testing (screen → lot) ───────────────────────────────────────────
+# The town map is now INTERACTIVE: TownMapScreen turns a click into a lot via
+# lot_at_screen(). The index returned here is the SAME "build-slot" ordinal that
+# _draw_lot_pads uses to decide built-vs-empty — it walks _plan["lots"] in array
+# order, skips the defensive `row == "plaza"` entries, and counts the rest. So the
+# screen can compare the returned index against built_count() to know whether the
+# clicked plot holds a building (index < built_count) or is empty (index >=).
+#
+# Inverse-map a SCREEN-space point back to plan space, then return the build-slot
+# index of the lot whose rect (cx±w/2, cy±h/2) contains it, or -1 when the click
+# misses every lot (or the plan is empty). Mirrors _p()/_pxy(): screen = plan*s+o,
+# so plan = (screen - o) / s.
+func lot_at_screen(pos: Vector2) -> int:
+	if _plan.is_empty() or _scale <= 0.0:
+		return -1
+	var px: float = (pos.x - _ox) / _scale
+	var py: float = (pos.y - _oy) / _scale
+	var slot: int = -1
+	for l in _plan.get("lots", []):
+		if String(l.get("row", "")) == "plaza":
+			continue
+		slot += 1
+		var lcx: float = float(l["cx"])
+		var lcy: float = float(l["cy"])
+		var hw: float = float(l["w"]) / 2.0
+		var hh: float = float(l["h"]) / 2.0
+		if px >= lcx - hw and px <= lcx + hw and py >= lcy - hh and py <= lcy + hh:
+			return slot
+	return -1
+
+# Screen-space centre of the build-slot lot at `slot` (the same ordinal used by
+# lot_at_screen / _draw_lot_pads). Returns Vector2.INF when the slot is out of
+# range. Exposed so a headless test can compute a known lot's centre and feed it
+# back through lot_at_screen without synthesising real input events.
+func lot_screen_center(slot: int) -> Vector2:
+	var i: int = -1
+	for l in _plan.get("lots", []):
+		if String(l.get("row", "")) == "plaza":
+			continue
+		i += 1
+		if i == slot:
+			return _pxy(float(l["cx"]), float(l["cy"]))
+	return Vector2(INF, INF)
+
+# Number of build-slot lots in the current plan (non-plaza lots) — the total
+# clickable plots, regardless of how many are built.
+func lot_count() -> int:
+	var n: int = 0
+	for l in _plan.get("lots", []):
+		if String(l.get("row", "")) != "plaza":
+			n += 1
+	return n
+
+# How many build-slot lots are currently BUILT (lots[0..built_count-1]); equals
+# the number of building ids the last render_plan was given. The screen uses this
+# to tell a clicked built lot from an empty one.
+func built_count() -> int:
+	return _built_ids.size()
+
+# Set the hovered build-slot lot (or -1 to clear) and redraw if it changed, so a
+# subtle highlight outline tracks the cursor. Purely cosmetic — never mutates the
+# plan or built state.
+func set_hover_lot(i: int) -> void:
+	if i == _hover_lot:
+		return
+	_hover_lot = i
+	queue_redraw()
+
 # Map a plan {x,y} dict (or any object with x/y) into screen space.
 func _p(pt: Dictionary) -> Vector2:
 	return Vector2(float(pt["x"]) * _scale + _ox, float(pt["y"]) * _scale + _oy)
@@ -206,6 +282,28 @@ func _draw() -> void:
 	_draw_props()
 	# Front-layer trees draw LAST so their canopies sit over the lots they front.
 	_draw_trees_front()
+	# M6d: the hover highlight sits on TOP of everything so it's always visible.
+	_draw_hover_lot()
+
+# ── M6d: hover highlight ──────────────────────────────────────────────────────
+# A subtle gold tint + outline over the hovered build-slot lot's full rect, so the
+# player sees which plot a click will hit. Resolved from the same non-plaza ordinal
+# as lot_at_screen; a no-op when nothing is hovered or the slot is out of range.
+func _draw_hover_lot() -> void:
+	if _hover_lot < 0:
+		return
+	var i: int = -1
+	for l in _plan.get("lots", []):
+		if String(l.get("row", "")) == "plaza":
+			continue
+		i += 1
+		if i != _hover_lot:
+			continue
+		var x0: float = float(l["cx"]) - float(l["w"]) / 2.0
+		var y0: float = float(l["cy"]) - float(l["h"]) / 2.0
+		_draw_screen_rect(x0, y0, float(l["w"]), float(l["h"]), HOVER_FILL)
+		_draw_screen_rect_outline(x0, y0, float(l["w"]), float(l["h"]), HOVER_OUTLINE, _s(2.5))
+		return
 
 # ── 1. grass texture ──────────────────────────────────────────────────────────
 func _draw_grass_texture() -> void:
