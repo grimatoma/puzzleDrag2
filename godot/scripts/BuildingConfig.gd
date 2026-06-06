@@ -13,6 +13,17 @@ extends Node
 ##   Coop          Village  plank 6, flour 6         birds     PHEASANT   eggs
 ##   Garden        Village  plank 6, hay_bundle 10   veg       CARROT     soup
 ##
+## Buildings come in two KINDS (the `kind` field):
+##   "spawner" — the three above; adds a tile CATEGORY to the board refill pool.
+##   "refiner" — the Bakery; consumes no plot category, instead it unlocks a
+##               RecipeConfig station that REFINES raw goods into a refined good
+##               (Direction: "raw goods refine at buildings"). A refiner has NO
+##               tile/category, so it must never contribute to the board pool.
+##
+## Direction spec — refiner (M3c):
+##   Building   Unlock    Cost                 Kind      Output
+##   Bakery     Village   plank 8, flour 6     refiner   bread (RecipeConfig)
+##
 ## Costs are PC2-aligned FIRST-PASS values — chosen so the whole Town-1 ladder is
 ## deadlock-free (every cost references resources producible at or below the tier
 ## it unlocks at). They are tunable: edit BUILDINGS.
@@ -25,18 +36,25 @@ extends Node
 const LUMBER_CAMP: String = "lumber_camp"
 const COOP: String = "coop"
 const GARDEN: String = "garden"
+const BAKERY: String = "bakery"
 
-## Spawner catalog keyed by id. Each entry:
+## Building catalog keyed by id. Each entry:
 ##   name:        String  — display name
+##   kind:        String  — "spawner" (adds a board category) | "refiner" (a
+##                          RecipeConfig station; no tile/category)
 ##   unlock_tier: int     — minimum settlement tier to build (TownConfig tier int)
 ##   cost:        Dictionary — resource_key:String -> int, paid from inventory
 ##   category:    String  — the tile category this building adds to the pool
+##                          ("" for refiners — they add no category)
 ##   tile:        int     — representative Constants.Tile that spawns once built
-##   resource:    String  — resource that the spawned tile family produces
+##                          (Constants.EMPTY for refiners — they spawn no tile)
+##   resource:    String  — resource produced (spawner: the tile family's resource;
+##                          refiner: the refined good its recipes output)
 ##   desc:        String  — one-line player-facing description
 const BUILDINGS: Dictionary = {
 	LUMBER_CAMP: {
 		"name": "Lumber Camp",
+		"kind": "spawner",
 		"unlock_tier": TownConfig.TIER_HAMLET,
 		"cost": {"hay_bundle": 8, "flour": 4},
 		"category": "trees",
@@ -46,6 +64,7 @@ const BUILDINGS: Dictionary = {
 	},
 	COOP: {
 		"name": "Coop",
+		"kind": "spawner",
 		"unlock_tier": TownConfig.TIER_VILLAGE,
 		"cost": {"plank": 6, "flour": 6},
 		"category": "birds",
@@ -55,6 +74,7 @@ const BUILDINGS: Dictionary = {
 	},
 	GARDEN: {
 		"name": "Garden",
+		"kind": "spawner",
 		"unlock_tier": TownConfig.TIER_VILLAGE,
 		"cost": {"plank": 6, "hay_bundle": 10},
 		"category": "veg",
@@ -62,10 +82,25 @@ const BUILDINGS: Dictionary = {
 		"resource": "soup",
 		"desc": "Adds vegetable tiles to the board — chain them for soup.",
 	},
+	BAKERY: {
+		"name": "Bakery",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_VILLAGE,
+		"cost": {"plank": 8, "flour": 6},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "bread",
+		"desc": "Refines flour + eggs into bread.",
+	},
 }
 
-## Stable display / iteration order for the spawner buildings.
+## Stable display / iteration order for the SPAWNER buildings only (the three that
+## gate a board category). Refiners (Bakery) are NOT here — they add no category.
 const SPAWNER_IDS: Array = [LUMBER_CAMP, COOP, GARDEN]
+
+## Stable display / iteration order for EVERY buildable id (spawners + refiners).
+## available_at_tier iterates this, so the Bakery is offered alongside the spawners.
+const ALL_BUILD_IDS: Array = [LUMBER_CAMP, COOP, GARDEN, BAKERY]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
 
@@ -108,10 +143,25 @@ static func building_resource(id: String) -> String:
 		return ""
 	return String(BUILDINGS[id].get("resource", ""))
 
-## Spawner ids whose unlock_tier is at or below `tier`, in stable display order.
+## Kind of `id`: "spawner" | "refiner" | "" (unknown / unset).
+static func building_kind(id: String) -> String:
+	if not is_building(id):
+		return ""
+	return String(BUILDINGS[id].get("kind", ""))
+
+## True when `id` is a board-category SPAWNER (Lumber Camp / Coop / Garden).
+static func is_spawner(id: String) -> bool:
+	return building_kind(id) == "spawner"
+
+## True when `id` is a recipe-station REFINER (Bakery).
+static func is_refiner(id: String) -> bool:
+	return building_kind(id) == "refiner"
+
+## Buildable ids (spawners AND refiners) whose unlock_tier is at or below `tier`,
+## in stable display order (ALL_BUILD_IDS) — so the Bakery is offered too.
 static func available_at_tier(tier: int) -> Array:
 	var out: Array = []
-	for id in SPAWNER_IDS:
+	for id in ALL_BUILD_IDS:
 		if unlock_tier(id) <= tier:
 			out.append(id)
 	return out

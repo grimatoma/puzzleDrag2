@@ -166,22 +166,129 @@ func demolish(id: String) -> Dictionary:
 	buildings.erase(id)
 	return {"ok": true, "id": id}
 
+# ── Refining (recipe crafting at refiner buildings) ───────────────────────────
+
+## True when `recipe_id` exists, its station building is built, AND inventory
+## covers every input at the required quantity.
+func can_craft(recipe_id: String) -> bool:
+	if not RecipeConfig.is_recipe(recipe_id):
+		return false
+	if not has_building(RecipeConfig.recipe_station(recipe_id)):
+		return false
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	for k in inputs.keys():
+		if int(inventory.get(k, 0)) < int(inputs[k]):
+			return false
+	return true
+
+## Craft `recipe_id`: deduct every input (floored at 0), add the recipe's output
+## quantity to inventory (clamped to the settlement cap), and return
+## {ok:true, output, qty, recipe} on success. On failure returns {ok:false, reason}
+## WITHOUT mutating; reason is the FIRST guard that trips, in order:
+## "unknown" → "no_station" → "insufficient".
+func craft(recipe_id: String) -> Dictionary:
+	if not RecipeConfig.is_recipe(recipe_id):
+		return {"ok": false, "reason": "unknown"}
+	if not has_building(RecipeConfig.recipe_station(recipe_id)):
+		return {"ok": false, "reason": "no_station"}
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	for k in inputs.keys():
+		if int(inventory.get(k, 0)) < int(inputs[k]):
+			return {"ok": false, "reason": "insufficient"}
+	# All guards passed — commit: deduct inputs, then add the output (cap-clamped).
+	for k in inputs.keys():
+		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(inputs[k]))
+		if remaining == 0:
+			inventory.erase(k)
+		else:
+			inventory[k] = remaining
+	var output: String = RecipeConfig.recipe_output(recipe_id)
+	var qty_out: int = RecipeConfig.recipe_qty(recipe_id)
+	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, settlement.cap())
+	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id}
+
+# ── Market (sell / buy for coins) ─────────────────────────────────────────────
+
+## Sell `qty` units of `resource` for coins. Deducts the units (floored at 0) and
+## credits coins at the Market sell price. Returns {ok:true, coins_gain, resource,
+## qty} on success, else {ok:false, reason} WITHOUT mutating; reason is the FIRST
+## guard that trips: "bad_qty" → "not_sellable" → "insufficient".
+func sell(resource: String, qty: int) -> Dictionary:
+	if qty <= 0:
+		return {"ok": false, "reason": "bad_qty"}
+	if not MarketConfig.can_sell(resource):
+		return {"ok": false, "reason": "not_sellable"}
+	if int(inventory.get(resource, 0)) < qty:
+		return {"ok": false, "reason": "insufficient"}
+	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - qty)
+	if remaining == 0:
+		inventory.erase(resource)
+	else:
+		inventory[resource] = remaining
+	var coins_gain: int = MarketConfig.sell_price(resource) * qty
+	coins += coins_gain
+	return {"ok": true, "coins_gain": coins_gain, "resource": resource, "qty": qty}
+
+## Buy `resource` for coins, adding it to inventory (cap-clamped). The settlement
+## storage cap is respected: if the cap would clip the purchase we only buy (and
+## only CHARGE for) what fits — never charging for units that wouldn't be stored.
+##   room   = max(0, cap - current)
+##   actual = min(qty, room)
+## When actual == 0 the inventory is already at cap → {ok:false, reason:"cap_full"}.
+## Otherwise charges buy_price * actual and stores `actual` units. Returns
+## {ok:true, coins_spent, resource, qty, added} (added == actual, may be < qty when
+## the cap clipped it). On the up-front guards returns {ok:false, reason} WITHOUT
+## mutating; reason order: "bad_qty" → "not_buyable" → "cant_afford" → "cap_full".
+func buy(resource: String, qty: int) -> Dictionary:
+	if qty <= 0:
+		return {"ok": false, "reason": "bad_qty"}
+	if not MarketConfig.can_buy(resource):
+		return {"ok": false, "reason": "not_buyable"}
+	var price: int = MarketConfig.buy_price(resource)
+	# Affordability is checked against the FULL requested qty first: if the player
+	# can't pay for what they asked for, the order is rejected outright.
+	if coins < price * qty:
+		return {"ok": false, "reason": "cant_afford"}
+	# Cap discipline: only buy (and only charge for) what actually fits in storage.
+	var current: int = int(inventory.get(resource, 0))
+	var room: int = maxi(0, settlement.cap() - current)
+	var actual: int = mini(qty, room)
+	if actual == 0:
+		return {"ok": false, "reason": "cap_full"}
+	var coins_spent: int = price * actual
+	coins -= coins_spent
+	inventory[resource] = current + actual
+	return {
+		"ok": true,
+		"coins_spent": coins_spent,
+		"resource": resource,
+		"qty": qty,
+		"added": actual,
+	}
+
 ## Active board CATEGORIES: the two staples plus the category of each placed
-## spawner, in build order, deduplicated. Drives "what can spawn / be chained".
+## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".
+## Refiners (Bakery) have no category and contribute nothing — the empty-string
+## filter already guards them, but is_spawner makes the intent explicit.
 func active_categories() -> Array:
 	var cats: Array = ["grass", "grain"]
 	for id in buildings:
+		if not BuildingConfig.is_spawner(id):
+			continue
 		var cat: String = BuildingConfig.building_category(id)
 		if cat != "" and not cats.has(cat):
 			cats.append(cat)
 	return cats
 
 ## Active weighted refill pool (Array[int] of Constants.Tile): the STAPLE_POOL
-## plus each placed spawner's representative tile TWICE (a moderate slice). A
-## fresh, building-less game is staples-only.
+## plus each placed SPAWNER's representative tile TWICE (a moderate slice). A
+## fresh, building-less game is staples-only. Refiners (Bakery) spawn no tile, so
+## they are skipped — appending their EMPTY tile would corrupt the board pool.
 func active_tile_pool() -> Array:
 	var pool: Array = Constants.STAPLE_POOL.duplicate()
 	for id in buildings:
+		if not BuildingConfig.is_spawner(id):
+			continue
 		var tile: int = BuildingConfig.building_tile(id)
 		pool.append(tile)
 		pool.append(tile)

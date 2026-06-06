@@ -187,7 +187,7 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3b-buildings</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3c-economy</code></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
@@ -222,11 +222,13 @@
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
           mismatched saves. <b>M3a</b> landed the progression spine — the <b>Camp→City tier ladder</b>: a single
           town-center upgrade that costs escalating local resources and raises a storage cap, plot count, and the next batch of
-          building unlocks. <b>M3b</b> now adds the central "the town you build reshapes the board" mechanic: every non-staple
+          building unlocks. <b>M3b</b> added the central "the town you build reshapes the board" mechanic: every non-staple
           tile category enters the refill pool <i>only</i> because a spawner <b>building</b> (Lumber Camp, Coop, Garden) put it
-          there, plots are scarce, and demolish frees a plot and drops its category. It renders as a playable board with
-          placeholder art and a live economy + settlement + buildings HUD. Headless tests and a Web-export job are wired into CI.
-          The Phaser version at the repo root is untouched and still fully playable.</div>
+          there, plots are scarce, and demolish frees a plot and drops its category. <b>M3c</b> now closes the loop with the
+          <b>refining + market economy</b>: a <b>Bakery</b> refiner bakes raw goods into bread (3&nbsp;flour&nbsp;+&nbsp;1&nbsp;eggs → 1&nbsp;bread)
+          via station-gated recipes, and a cap-aware <b>Market</b> sells goods for coins and buys them back. It renders as a playable
+          board with placeholder art and a live economy + settlement + buildings HUD. Headless tests and a Web-export job are wired
+          into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
         <div class="progress-wrap">
           <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
@@ -237,12 +239,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3f)</span> <b>~33% · 2 of 6 sub-parts (M3a, M3b done)</b></div>
-          <div class="bar"><span style="width:33%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3f)</span> <b>~50% · 3 of 6 sub-parts (M3a, M3b, M3c done)</b></div>
+          <div class="bar"><span style="width:50%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~45%</b></div>
-          <div class="bar"><span style="width:45%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~50%</b></div>
+          <div class="bar"><span style="width:50%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -269,7 +271,7 @@
         </div>
         <div class="ms-row">
           <div class="num amber">M3</div>
-          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3f. <b>M3a — Camp→City tier ladder — done</b>; <b>M3b — buildings/plots/spawners/demolish — done</b>; M3c refining/orders/market, M3d town UI, M3e expedition→Town 2, M3f capstone boss + Town 3 to come (the Direction spec)</div></div>
+          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3f. <b>M3a — Camp→City tier ladder — done</b>; <b>M3b — buildings/plots/spawners/demolish — done</b>; <b>M3c — refining + market economy — done</b>; M3d orders + town UI, M3e expedition→Town 2, M3f capstone boss + Town 3 to come (the Direction spec)</div></div>
           <span class="pill warn">partial</span>
         </div>
         <div class="ms-row">
@@ -285,19 +287,21 @@
       </section>
 
       <section id="session-summary">
-        <h2>Current focus — M3c (refining economy, after the M3b buildings)</h2>
+        <h2>Current focus — M3d (orders + town UI, after the M3c economy)</h2>
         <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2, done on
-          <code>claude/godot-migration-m2</code>), and the Camp→City tier ladder (M3a, done on
-          <code>claude/godot-migration-m3a-tiers</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
-          Direction slice — continues as a sequence of sub-PRs. <b>M3b (buildings, plots, building-gated category spawners,
-          demolish)</b> just landed on <code>claude/godot-migration-m3b-buildings</code>: the town you build now reshapes the
-          board you play. Next up is <b>M3c</b> — the refining economy + Orders + Market.</p>
+          <code>claude/godot-migration-m2</code>), the Camp→City tier ladder (M3a, done on
+          <code>claude/godot-migration-m3a-tiers</code>), and the buildings/plots/spawners layer (M3b, done on
+          <code>claude/godot-migration-m3b-buildings</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
+          Direction slice — continues as a sequence of sub-PRs. <b>M3c (refining + market economy)</b> just landed on
+          <code>claude/godot-migration-m3c-economy</code>: raw goods now refine at a Bakery into bread, and the refined economy is
+          spent and earned at the Market. Next up is <b>M3d</b> — Orders + the Godot town UI.</p>
         <div class="grid">
           <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
           <div class="card"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
           <div class="card amber"><h3>M3a — Camp→City tier ladder <span class="pill ok">done</span></h3><p><code>TownConfig.gd</code> holds the five-tier farm ladder (Camp 200/3 → City 600/11) as data; <code>Settlement.gd</code> is the mutable tier cursor; <code>GameState</code> gains <code>can_tier_up</code>/<code>try_tier_up</code> (exact-cost deduction) and clamps every credit to <code>settlement.cap()</code>. A 69-check town suite covers it; a temporary T-key affordance drives the ladder until the M3d town UI ships.</p></div>
-          <div class="card amber"><h3>M3b — buildings + spawners + demolish <span class="pill ok">done</span></h3><p><code>BuildingConfig.gd</code> holds the Town-1 spawner catalog (Lumber Camp → trees, Coop → birds, Garden → veg); <code>GameState</code> gains a <code>buildings</code> list with <code>can_build</code>/<code>build</code>/<code>demolish</code> and an <code>active_tile_pool()</code> that <code>Board</code> draws from, so building a spawner makes its category start appearing as the board refills. The tier-up costs were revised to be gating-aware (deadlock-free). A 90-check building suite covers it; temporary 1/2/3/4/5/6 build/demolish keys drive it until the M3d town UI ships.</p></div>
-          <div class="card"><h3>Next — M3c refining economy</h3><p>Refining (Mill grain→flour, Bakery flour→bread) + Orders that pay coins + a Market to spend them; the real per-tile <code>value</code> economy (Decision&nbsp;#11) lands here. Then M3d town UI, M3e expedition→Town 2, M3f capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along with M3e.</p></div>
+          <div class="card amber"><h3>M3b — buildings + spawners + demolish <span class="pill ok">done</span></h3><p><code>BuildingConfig.gd</code> holds the Town-1 spawner catalog (Lumber Camp → trees, Coop → birds, Garden → veg); <code>GameState</code> gains a <code>buildings</code> list with <code>can_build</code>/<code>build</code>/<code>demolish</code> and an <code>active_tile_pool()</code> that <code>Board</code> draws from, so building a spawner makes its category start appearing as the board refills. The tier-up costs were revised to be gating-aware (deadlock-free). A 91-check building suite covers it; temporary 1/2/3/4/5/6 build/demolish keys drive it until the M3d town UI ships.</p></div>
+          <div class="card amber"><h3>M3c — refining + market economy <span class="pill ok">done</span></h3><p><code>RecipeConfig.gd</code> holds the station-gated recipe catalog (bread = 3 flour + 1 eggs at the Bakery); <code>MarketConfig.gd</code> holds the SELL/BUY price tables; <code>BuildingConfig.gd</code> gains a building <code>kind</code> and the Bakery refiner; <code>GameState</code> gains <code>can_craft</code>/<code>craft</code>, <code>sell</code>, and a cap-aware <code>buy</code>, with refiners guarded out of the board pool. A 136-check economy suite covers it; temporary B (bake) and G (sell) keys drive it until the M3d Market/Bakery UI ships.</p></div>
+          <div class="card"><h3>Next — M3d orders + town UI</h3><p>Orders that pay coins, plus the Godot town screen — plots, build/demolish, the real tier-up button and build menu replacing the temporary keys, and the Market/Bakery UI replacing the B/G keys; board↔town navigation. Then M3e expedition→Town 2, M3f capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along with M3e.</p></div>
         </div>
       </section>
 
@@ -424,8 +428,9 @@
         <h2>Milestone 3 — checklist</h2>
         <p>The content &amp; progression milestone — the locked <b>Direction</b> spec's Town&nbsp;1 → Town&nbsp;2 (+capstone boss)
           → Town&nbsp;3 vertical slice. It ships as a sequence of sub-PRs (<b>M3a…M3f</b>). <b>M3a — the Camp→City tier ladder</b>
-          (branch <code>claude/godot-migration-m3a-tiers</code>) and <b>M3b — buildings + plots + spawners + demolish</b> (branch
-          <code>claude/godot-migration-m3b-buildings</code>) <b>are both done and merge-ready</b>; the rest are sequenced below.</p>
+          (branch <code>claude/godot-migration-m3a-tiers</code>), <b>M3b — buildings + plots + spawners + demolish</b> (branch
+          <code>claude/godot-migration-m3b-buildings</code>), and <b>M3c — refining + market economy</b> (branch
+          <code>claude/godot-migration-m3c-economy</code>) <b>are all done and merge-ready</b>; the rest are sequenced below.</p>
         <div class="legend">
           <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
         </div>
@@ -460,16 +465,30 @@
             <span class="note"><code>TownConfig.gd</code> ladder costs rewritten so every cost references only resources producible at or below the tier it gates (→Hamlet <code>{hay_bundle:12, flour:6}</code>, →Village <code>{plank:8, hay_bundle:16, flour:8}</code>, →Town <code>{eggs:8, soup:6, plank:10}</code>, →City <code>{soup:10, eggs:12, plank:14}</code>). The M3a first-pass costs would deadlock once the pool is gated (plank needs Lumber Camp, which only unlocks AT Hamlet). See Decision&nbsp;#16.</span></li>
           <li class="done">HUD buildings line + temporary 1/2/3/4/5/6 build/demolish keys
             <span class="note"><code>Main.gd</code> shows a buildings line ("Plots 3/7 · Lumber Camp, Coop, Garden"); temporary keys <b>1/2/3 build</b> and <b>4/5/6 demolish</b> (Decision&nbsp;#18) drive it until the M3d town build menu ships; the board is re-pooled and the game saved on every change.</span></li>
-          <li class="done">Building test suite — 90 checks
-            <span class="note"><code>tests/run_building_tests.gd</code>: catalog values, tier/plot/cost gating, exact-cost build, the plot cap, demolish/free + no-refund, pool/category derivation, save-load filtering of bogus ids, and a full Camp→City <b>no-deadlock progression walk</b> (builds each spawner and tiers up at each step). <code>run_town_tests.gd</code> updated to the revised costs. CI runs it as its own step.</span></li>
+          <li class="done">Building test suite — 91 checks
+            <span class="note"><code>tests/run_building_tests.gd</code>: catalog values, tier/plot/cost gating, exact-cost build, the plot cap, demolish/free + no-refund, pool/category derivation, save-load filtering of bogus ids, and a full Camp→City <b>no-deadlock progression walk</b> (builds each spawner and tiers up at each step). <code>run_town_tests.gd</code> updated to the revised costs. <b>M3c updated it for the Bakery refiner (now 91 checks).</b> CI runs it as its own step.</span></li>
         </ul>
 
-        <h3>M3c…M3f — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <h3>M3c — Refining + market economy <span class="pill ok">done</span></h3>
         <ul class="check">
-          <li class="todo">M3c — Refining economy + Orders + Market
-            <span class="note">Mill grain→flour, Bakery flour→bread; orders pay coins; spend coins at the Market. <b>Next.</b></span></li>
-          <li class="todo">M3d — Town UI in Godot
-            <span class="note">Town screen: plots, build/demolish, the real tier-up button replacing the T-key affordance and the build menu replacing the 1/2/3 keys; board↔town navigation.</span></li>
+          <li class="done">Station-gated recipe catalog as data + static helpers
+            <span class="note"><code>RecipeConfig.gd</code> (<code>class_name RecipeConfig extends Node</code>, stateless): the recipe catalog, shipping one — <b>bread</b> = <code>3 flour + 1 eggs → 1 bread</code> at the <b>Bakery</b> station (ports the React <code>rec_bread</code>). Copy-returning helpers expose inputs/output/qty/station, <code>is_recipe</code>, and <code>recipes_for_station</code>.</span></li>
+          <li class="done">PC2-aligned market price tables as data + static helpers
+            <span class="note"><code>MarketConfig.gd</code> (<code>class_name MarketConfig extends Node</code>): first-pass SELL/BUY price tables from the Balance baseline (e.g. hay_bundle 1/40, flour 2/30, plank 5/40, eggs 12/80, soup 20/220, bread 5/60 — tunable), with <code>sell_price</code>/<code>buy_price</code>, <code>can_sell</code>/<code>can_buy</code>, and <code>sellable_resources</code>/<code>buyable_resources</code>.</span></li>
+          <li class="done">Building <code>kind</code> (spawner vs refiner) + the Bakery refiner
+            <span class="note"><code>BuildingConfig.gd</code> buildings now carry a <code>kind</code> ("spawner" | "refiner"); the three category buildings are spawners, and a new <b>Bakery</b> refiner (unlock Village, cost <code>{plank:8, flour:6}</code>, adds no tile/category) is added. <code>ALL_BUILD_IDS</code>, <code>is_spawner</code>/<code>is_refiner</code>; <code>available_at_tier</code> now also offers refiners.</span></li>
+          <li class="done">Refining + market spend/earn in <code>GameState</code>
+            <span class="note"><code>can_craft</code>/<code>craft</code> (station-gated, deducts inputs, output cap-clamped; guard order unknown→no_station→insufficient), <code>sell</code> (<code>coins += sell_price × qty</code>; bad_qty→not_sellable→insufficient), and a <b>cap-aware</b> <code>buy</code> (only buys and charges for what fits in storage — <code>cant_afford</code> vs <code>cap_full</code>). <code>active_tile_pool</code>/<code>active_categories</code> now guard refiners so a Bakery never adds a blank tile/category to the board pool.</span></li>
+          <li class="done">HUD demo keys + Bakery hint
+            <span class="note"><code>Main.gd</code> gains temporary keys <b>B</b> (bake bread) and <b>G</b> (sell 1 hay_bundle) plus a Bakery hint in the HUD; the real Market/Bakery UI is M3d.</span></li>
+          <li class="done">Economy test suite — 136 checks
+            <span class="note"><code>tests/run_economy_tests.gd</code>: recipe catalog, craft gating + exact deduction, the refiner-not-in-pool guard, market sell/buy math, cap-clipped buy, a refined-good save/load round-trip, and a bake-then-sell integration. <code>run_building_tests.gd</code> updated for the Bakery (now 91 checks). CI runs the new economy suite as its own step.</span></li>
+        </ul>
+
+        <h3>M3d…M3f — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <ul class="check">
+          <li class="todo">M3d — Orders + Town UI in Godot
+            <span class="note">Orders that pay coins; the town screen: plots, build/demolish, the real tier-up button replacing the T-key affordance, the build menu replacing the 1/2/3 keys, and the Market/Bakery UI replacing the M3c B/G keys; board↔town navigation. <b>Next.</b></span></li>
           <li class="todo">M3e — Expedition → Town 2 (mine)
             <span class="note">The food gate (Kitchen→supplies), mine tiles + hazards.</span></li>
           <li class="todo">M3f — Capstone boss (end of Town 2) + Town 3
@@ -478,7 +497,7 @@
       </section>
 
       <section id="m3-files">
-        <h2>What landed in M3a + M3b (files)</h2>
+        <h2>What landed in M3a + M3b + M3c (files)</h2>
         <h3>M3a — tier ladder</h3>
         <table>
           <thead><tr><th>File</th><th>Role</th></tr></thead>
@@ -500,7 +519,20 @@
             <tr><td><code>godot/scripts/GameState.gd</code></td><td>Adds the <code>buildings</code> list, <code>can_build</code>/<code>build</code>/<code>demolish</code> (build guard order; demolish frees the plot with no refund), <code>plots_used</code>/<code>plots_free</code>, and <code>active_categories()</code>/<code>active_tile_pool()</code>; buildings persisted + sanitised on load (unknown ids dropped)</td></tr>
             <tr><td><code>godot/scenes/Board.gd</code></td><td>Dynamic <code>tile_pool</code> (+<code>set_tile_pool</code>); setup/reshuffle/refill all draw from it, so newly built categories appear as the board refills</td></tr>
             <tr><td><code>godot/scenes/Main.gd</code></td><td>Buildings HUD line ("Plots 3/7 · Lumber Camp, Coop, Garden"); temporary <b>1/2/3 build</b> + <b>4/5/6 demolish</b> keys; re-pools the board + saves on every change</td></tr>
-            <tr><td><code>godot/tests/run_building_tests.gd</code></td><td><b>New.</b> Headless BuildingConfig + build/demolish + pool tests (90 checks): catalog values, tier/plot/cost gating, exact-cost build, plot cap, demolish/free + no-refund, pool/category derivation, save-load id filtering, and a full Camp→City no-deadlock progression walk</td></tr>
+            <tr><td><code>godot/tests/run_building_tests.gd</code></td><td><b>New.</b> Headless BuildingConfig + build/demolish + pool tests (90 checks): catalog values, tier/plot/cost gating, exact-cost build, plot cap, demolish/free + no-refund, pool/category derivation, save-load id filtering, and a full Camp→City no-deadlock progression walk. <b>M3c updated it for the Bakery refiner (now 91 checks).</b></td></tr>
+          </tbody>
+        </table>
+        <h3>M3c — refining + market economy</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/RecipeConfig.gd</code></td><td><b>New.</b> <code>class_name RecipeConfig extends Node</code> (stateless) — the station-gated recipe catalog (ships bread = 3&nbsp;flour&nbsp;+&nbsp;1&nbsp;eggs → 1&nbsp;bread at the Bakery, ported from the React <code>rec_bread</code>); copy-returning <code>recipe_inputs</code>/<code>output</code>/<code>qty</code>/<code>station</code>, <code>is_recipe</code>, <code>recipes_for_station</code></td></tr>
+            <tr><td><code>godot/scripts/MarketConfig.gd</code></td><td><b>New.</b> <code>class_name MarketConfig extends Node</code> — PC2-aligned first-pass SELL/BUY price tables from the Balance baseline (tunable) + <code>sell_price</code>/<code>buy_price</code>, <code>can_sell</code>/<code>can_buy</code>, <code>sellable_resources</code>/<code>buyable_resources</code></td></tr>
+            <tr><td><code>godot/scripts/BuildingConfig.gd</code></td><td>Buildings gain a <code>kind</code> ("spawner" | "refiner"); adds the <b>Bakery</b> refiner (unlock Village, cost <code>{plank:8, flour:6}</code>, adds no tile/category); <code>ALL_BUILD_IDS</code>, <code>is_spawner</code>/<code>is_refiner</code>; <code>available_at_tier</code> now also offers refiners</td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td>Adds <code>can_craft</code>/<code>craft</code> (station-gated, deducts inputs, output cap-clamped), <code>sell</code> (<code>coins += sell_price × qty</code>), and a cap-aware <code>buy</code> (<code>cant_afford</code> vs <code>cap_full</code>); <code>active_tile_pool</code>/<code>active_categories</code> guard refiners so a Bakery adds nothing to the board pool</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>Temporary <b>B</b> (bake bread) + <b>G</b> (sell 1 hay_bundle) demo keys and a Bakery hint in the HUD; the real Market/Bakery UI is M3d</td></tr>
+            <tr><td><code>godot/tests/run_economy_tests.gd</code></td><td><b>New.</b> Headless RecipeConfig + MarketConfig + craft/sell/buy tests (136 checks): recipe catalog, craft gating + exact deduction, refiner-not-in-pool guard, market sell/buy math, cap-clipped buy, refined-good save/load round-trip, and a bake-then-sell integration</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the economy-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
           </tbody>
         </table>
       </section>
@@ -655,6 +687,38 @@
             it). Same spirit as the temporary T-key tier-up affordance (Decision&nbsp;#13); the keys are removed when M3d ships the
             menu.</p>
         </div>
+
+        <h3>M3c decisions</h3>
+
+        <div class="card">
+          <h3>19 · Refining is station-gated recipes, deducting inputs for a cap-clamped output</h3>
+          <p>The Direction's "raw goods refine at buildings" loop is modelled as recipes that name a <b>station</b> building.
+            <code>GameState.craft</code> requires that station to be placed, deducts the recipe's exact inputs, and adds the
+            (cap-clamped) output — guard order <code>unknown → no_station → insufficient</code>, never mutating on failure. The
+            first recipe is <b>bread</b> (<code>3 flour + 1 eggs → 1 bread</code>) at the <b>Bakery</b>, ported from the React
+            <code>RECIPES</code> (<code>rec_bread</code>). The catalog lives as data in <code>RecipeConfig.gd</code> and is the
+            single place a station-gated transform is defined, so adding the Mill (grain→flour) or any later refiner is a data
+            row, not new control flow.</p>
+        </div>
+        <div class="card amber">
+          <h3>20 · Market buy is cap-aware; sell credits <code>sell_price × qty</code></h3>
+          <p>Selling is straightforward — <code>sell</code> credits <code>coins += sell_price × qty</code> (guard order
+            <code>bad_qty → not_sellable → insufficient</code>). Buying is the subtle one: it respects the settlement storage cap,
+            so <code>buy</code> only purchases and charges for the units that actually fit — <code>cant_afford</code> when you can't
+            pay the full ask, <code>cap_full</code> when storage is already maxed, and a partial fill when only some units fit. This
+            keeps the cap (Decision&nbsp;#12) authoritative on the spend side too: coins can never conjure inventory past the
+            ceiling. The SELL/BUY tables are PC2-aligned first-pass values in <code>MarketConfig.gd</code> (tunable), same spirit as
+            the tier-cost first pass (Decision&nbsp;#14).</p>
+        </div>
+        <div class="card">
+          <h3>21 · Buildings carry a <code>kind</code> — spawners seed the board, refiners do not</h3>
+          <p>Adding the Bakery surfaced a split in what a building <i>does</i>: the three category buildings are <b>spawners</b>
+            (they put a tile category into the board pool — Decision&nbsp;#15), but the Bakery is a <b>refiner</b> (it enables a
+            recipe and adds nothing to the pool). So <code>BuildingConfig</code> buildings now carry a <code>kind</code>
+            ("spawner" | "refiner"), and <code>active_tile_pool()</code>/<code>active_categories()</code> guard on
+            <code>is_spawner</code> so a placed Bakery never seeds a blank tile/category onto the board. Same building list,
+            two roles — the dynamic pool stays exactly the placed spawners.</p>
+        </div>
       </section>
 
     </div>
@@ -664,8 +728,8 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All five test scripts
-          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 90 + <code>run_scene_smoke</code> 11)
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All six test scripts
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_scene_smoke</code> 11)
           exit <code>0</code>; the screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
@@ -690,6 +754,11 @@
         <div class="shots">
           <figure><img src="assets/godot/m3b-staples.png" alt="M3b Camp board of only the two staple tile colors — grass green and wheat yellow — with the buildings line 'Plots 0/3 · (no buildings)'"><figcaption>Camp, no buildings — the board spawns <i>only</i> the two staple colors (grass green + wheat yellow) because nothing has seeded any other category yet; "Plots 0/3 · (no buildings)". Proves <code>STAPLE_POOL</code> is the entire pool until a spawner is built.</figcaption></figure>
           <figure><img src="assets/godot/m3b-built.png" alt="M3b after placing Lumber Camp + Coop + Garden at Village: the board now also spawns trees/birds/veg tiles, 'Plots 3/7 · Lumber Camp, Coop, Garden', 'trees, birds, veg now spawn', and a Collected line showing the build costs deducted"><figcaption>After building Lumber Camp + Coop + Garden at Village — the board now <i>also</i> spawns trees/birds/veg tiles; "Plots 3/7 · Lumber Camp, Coop, Garden", "trees, birds, veg now spawn", and a Collected line showing the build costs deducted. Proves <code>active_tile_pool()</code> + <code>set_tile_pool</code> reshape the refill pool from the placed loadout.</figcaption></figure>
+        </div>
+
+        <h3>Refining + market — M3c (refined goods earn coins)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3c-economy.png" alt="M3c Village with Lumber Camp + Garden + Bakery placed: 'Plots 3/7', a '🍞 B to bake bread' hint, the board spawning trees/veg/staples, 'Coins: 80', status 'Baked 3 bread (flour+eggs) · sold 2 soup at Market', and a Collected line showing bread x3 alongside the drawn-down raw inputs"><figcaption>A Village with Lumber Camp + Garden + <b>Bakery</b> placed — "Plots 3/7", a "🍞 B to bake bread" hint, the board spawning trees/veg/staples, "Coins: 80", and status "Baked 3 bread (flour+eggs) · sold 2 soup at Market". The Collected line shows <b>bread ×3</b> (a refined good) alongside the raw inputs drawn down. Proves the Bakery refines bread via <code>craft</code> and the Market credits coins via <code>sell</code> — the full refine→spend loop wired end-to-end through <code>GameState</code>.</figcaption></figure>
         </div>
 
         <h3>Headless test output</h3>
@@ -771,9 +840,29 @@
   <span class="g">PASS</span>  active_categories derives from the placed buildings
   <span class="g">PASS</span>  save/load filters out a bogus building id
   <span class="g">PASS</span>  Camp→City no-deadlock walk: every tier reachable by building + tiering up
+  <span class="g">PASS</span>  Bakery is a refiner — adds no tile/category to the board pool
   <span class="c">…  (76 further catalog / gating / pool / progression checks)</span>
 ──────────────────────────────────────────────────
-90 checks, 0 failure(s)        <span class="c"># exit 0</span>
+91 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
+<span class="c">$ godot --headless --path godot --script res://tests/run_economy_tests.gd</span>
+── RecipeConfig + MarketConfig + craft/sell/buy tests ──
+  <span class="g">PASS</span>  bread recipe = 3 flour + 1 eggs -> 1 bread at the Bakery
+  <span class="g">PASS</span>  craft fails when the recipe's station building is not placed (no_station)
+  <span class="g">PASS</span>  craft fails when inputs are insufficient (no mutation)
+  <span class="g">PASS</span>  craft deducts the exact inputs and adds the output
+  <span class="g">PASS</span>  craft output is clamped to settlement.cap()
+  <span class="g">PASS</span>  Bakery refiner is absent from active_tile_pool / active_categories
+  <span class="g">PASS</span>  sell credits coins += sell_price × qty
+  <span class="g">PASS</span>  sell fails on bad qty / not-sellable / insufficient (no mutation)
+  <span class="g">PASS</span>  buy charges and grants only the units that fit (cap-aware)
+  <span class="g">PASS</span>  buy fails cant_afford when coins can't cover the full ask
+  <span class="g">PASS</span>  buy fails cap_full when storage is already maxed
+  <span class="g">PASS</span>  refined good (bread) survives a save/load round-trip
+  <span class="g">PASS</span>  integration: bake bread then sell it credits the expected coins
+  <span class="c">…  (123 further recipe / craft / market / cap / round-trip checks)</span>
+──────────────────────────────────────────────────
+136 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
 <span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
 ── Scene smoke (Main + Board wiring) ──────────────
@@ -809,7 +898,8 @@ godot --headless --path godot --import                                <span clas
 godot --headless --path godot --script res://tests/run_tests.gd       <span class="c"># board-logic tests (18)</span>
 godot --headless --path godot --script res://tests/run_state_tests.gd <span class="c"># GameState + SaveManager tests (42)</span>
 godot --headless --path godot --script res://tests/run_town_tests.gd  <span class="c"># TownConfig + Settlement + tier-up tests (69)</span>
-godot --headless --path godot --script res://tests/run_building_tests.gd <span class="c"># BuildingConfig + build/demolish + pool tests (90)</span>
+godot --headless --path godot --script res://tests/run_building_tests.gd <span class="c"># BuildingConfig + build/demolish + pool tests (91)</span>
+godot --headless --path godot --script res://tests/run_economy_tests.gd <span class="c"># RecipeConfig + MarketConfig + craft/sell/buy tests (136)</span>
 godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke (11)</span>
 godot --path godot                                                    <span class="c"># play it (windowed)</span>
 godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
@@ -823,18 +913,18 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, M3a &amp; M3b</h3>
+        <h3>Done — M1, M2, M3a, M3b &amp; M3c</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
           <li class="done">M3a — the Camp→City tier ladder — built and verified on <code>claude/godot-migration-m3a-tiers</code>: <code>TownConfig</code> + <code>Settlement</code>, <code>can_tier_up</code>/<code>try_tier_up</code>, the cap clamp, HUD settlement line + temporary T-key affordance, 69-check town suite, CI step.</li>
           <li class="done">M3b — buildings + plots + building-gated spawners + demolish — built and verified on <code>claude/godot-migration-m3b-buildings</code>: <code>BuildingConfig</code> (Lumber Camp/Coop/Garden), <code>GameState</code> build/demolish + <code>active_tile_pool()</code>, the dynamic <code>Board</code> pool, the gating-aware tier-cost revision, buildings HUD + temporary 1/2/3/4/5/6 keys, 90-check building suite, CI step.</li>
+          <li class="done">M3c — refining + market economy — built and verified on <code>claude/godot-migration-m3c-economy</code>: <code>RecipeConfig</code> (bread at the Bakery), <code>MarketConfig</code> (SELL/BUY tables), the Bakery refiner + building <code>kind</code>, <code>GameState</code> <code>craft</code>/<code>sell</code>/cap-aware <code>buy</code>, B/G demo keys, 136-check economy suite + the building suite bumped to 91, CI step.</li>
         </ul>
 
-        <h3>Then M3c…M3f — the rest of the Direction vertical slice</h3>
+        <h3>Then M3d…M3f — the rest of the Direction vertical slice</h3>
         <div class="log">
-          <div class="entry"><div class="date">M3c · next</div><h3>Refining economy + Orders + Market</h3><p>Mill grain→flour, Bakery flour→bread; orders pay coins; spend coins at the Market. The real per-tile value economy (Decision&nbsp;#11) lands here.</p></div>
-          <div class="entry"><div class="date">M3d</div><h3>Town UI in Godot</h3><p>The town screen — plots, build/demolish (the <b>real build menu replacing the temporary 1/2/3 keys</b>, Decision&nbsp;#18), and the <b>real tier-up button replacing the temporary T-key affordance</b> (Decision&nbsp;#13); board↔town navigation. The demolish refund/lock policy (Decision&nbsp;#17) is settled here.</p></div>
+          <div class="entry"><div class="date">M3d · next</div><h3>Orders + Town UI in Godot</h3><p>Orders that pay coins; the town screen — plots, build/demolish (the <b>real build menu replacing the temporary 1/2/3 keys</b>, Decision&nbsp;#18), the <b>real tier-up button replacing the temporary T-key affordance</b> (Decision&nbsp;#13), and the <b>Market/Bakery UI replacing the M3c B/G keys</b> (Decisions&nbsp;#19–#20); board↔town navigation. The demolish refund/lock policy (Decision&nbsp;#17) is settled here.</p></div>
           <div class="entry"><div class="date">M3e</div><h3>Expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies), mine tiles + hazards; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
           <div class="entry"><div class="date">M3f</div><h3>Capstone boss + Town 3</h3><p>The end-of-Town-2 capstone boss (boss <code>minChain</code> raises the chain floor), then Town 3 with the rats hazard + Ratcatcher buildings.</p></div>
         </div>

@@ -53,6 +53,9 @@ jobs:
       - name: Building / spawner tests
         run: godot --headless --path godot --script res://tests/run_building_tests.gd
 
+      - name: Economy (refining / market) tests
+        run: godot --headless --path godot --script res://tests/run_economy_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 
