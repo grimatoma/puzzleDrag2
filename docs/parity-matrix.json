@@ -249,10 +249,10 @@
       "feature_or_screen": "Tile collection browser",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-farm-grass"],
-      "note": "77 tile PNGs on disk but only ~17 wired; no catalog/discovery/research UI."
+      "note": "Tile-collection browser: a grouped gallery of the 23 wired tiles (farm/mine/hazard/fish) with art + name + category + produced resource, reachable via the 📖 HUD button + deep-link. Discovery/research/buy + tile-abilities deferred."
     },
     {
       "id": "system-crafting-stations",
@@ -279,10 +279,10 @@
       "feature_or_screen": "Abilities & tool powers",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M8",
-      "verified_by": ["run_tools_tests.gd", "e2e:tools", "golden:board-farm-fertilizer-active"],
-      "note": "Active tool powers (area_blast, clear_row/col/cross/component, transform, clear_random_n) are ported in M8a–M8d for 10 representative tools. PASSIVE abilities system and the magic-tool/portal influence economy (fill_bias, auto-apply without board selection) remain absent."
+      "verified_by": ["run_tools_tests.gd", "run_tool_board_tests.gd", "golden:board-farm-tool-rake"],
+      "note": "Active tool powers shipped (M8: ToolConfig/ToolEffects + GameState tool API + live board + ToolPalette). Passive abilities + magic-tool/portal influence economy remain absent."
     },
     {
       "id": "system-farm-hazards",
@@ -560,10 +560,10 @@
       "feature_or_screen": "tileCollection slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-farm-grass"],
-      "note": "Collectible tile browser and discovery."
+      "verified_by": ["run_tile_collection_tests.gd"],
+      "note": "Tile-collection browser shipped: 23 wired tiles (farm/mine/hazard/fish) grouped by category, reachable via 📖 HUD button + deep-link. Discovery/research/buy deferred."
     },
     {
       "id": "slice-townsfolk",
@@ -771,10 +771,10 @@
       "feature_or_screen": "tileCollection view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-mining-stone"],
-      "note": "Collectible tile browser."
+      "note": "TileCollectionScreen shipped: 23 wired tiles grouped by category (farm/mine/hazard/fish), reachable via 📖 HUD button + apply_deeplink(\"tiles\"). Discovery/research/buy UI deferred."
     },
     {
       "id": "view-townsfolk",
@@ -1677,17 +1677,17 @@
       "godot_status": "absent",
       "target_milestone": "M-infra",
       "verified_by": ["gdunit4:suite-green", "ci:godot-ci.yml"],
-      "note": "Adopt GdUnit4 + gdUnit GitHub action; migrate the 17 monolithic run_*.gd runners one class per system, kept as a compatibility harness until migrated."
+      "note": "Adopt GdUnit4 + gdUnit GitHub action; migrate the 36 monolithic run_*.gd runners (CI now auto-discovers all 36 suites) one class per system, kept as a compatibility harness until migrated."
     },
     {
       "id": "infra-e2e-input-sim",
       "feature_or_screen": "E2E input-sim DSL (InputEvent + scene-state harness)",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M-infra",
-      "verified_by": ["e2e:smoke", "e2e:navigation", "e2e:chain", "e2e:town-build"],
-      "note": "No input simulation today. Build an InputEventMouseButton/Key + scene-state DSL beside run_slice_e2e.gd; port ~5 Playwright specs."
+      "verified_by": ["run_e2e_input.gd", "e2e:smoke", "e2e:chain", "e2e:navigation"],
+      "note": "Real-InputEvent e2e harness (run_e2e_input.gd) drives the live Main via root.push_input: HUD button clicks open screens + a seeded board drag resolves a 3-chain. Port of ~3 Playwright flows; more flows + GdUnit4 migration pending."
     },
     {
       "id": "infra-visual-regression",
@@ -1697,7 +1697,7 @@
       "godot_status": "absent",
       "target_milestone": "M-infra",
       "verified_by": ["run_visual_tests.gd", "golden:__goldens__-diff"],
-      "note": "Generalize tools/screenshot.gd into a scenario x viewport matrix capturing PNGs under godot/tests/visual/__goldens__/{scenario}/{vp}.png with pixelwise diff."
+      "note": "Generalize tools/screenshot.gd into a scenario x viewport matrix capturing PNGs under godot/tests/visual/__goldens__/{scenario}/{vp}.png with pixelwise diff. CI now auto-discovers and runs all 36 run_*.gd suites; visual golden-diff suite itself is still absent."
     },
     {
       "id": "infra-web-export-smoke",
@@ -1707,17 +1707,17 @@
       "godot_status": "absent",
       "target_milestone": "M-infra",
       "verified_by": ["ci:web-smoke", "e2e:smoke-web"],
-      "note": "Closes the 'export succeeds but untested' gap: serve godot/dist after Web export and run a Playwright smoke spec against it."
+      "note": "Closes the 'export succeeds but untested' gap: serve godot/dist after Web export and run a Playwright smoke spec against it. CI now auto-discovers and runs all 36 run_*.gd suites; web-export smoke is still absent."
     },
     {
       "id": "infra-parity-matrix-check",
       "feature_or_screen": "Parity-matrix CI validation check",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M-infra",
       "verified_by": ["check-parity-matrix.mjs", "ci:godot-ci.yml"],
-      "note": "Parses docs/parity-matrix.json and fails if any 'full' row names a run_*.gd suite that does not exist on disk. Built in this PR; wired into godot-ci.yml in M-infra."
+      "note": "Built + WIRED into godot-ci.yml (parity-matrix-check job) and the CI now auto-runs all 36 run_*.gd suites (was a hardcoded subset)."
     },
 
     {
