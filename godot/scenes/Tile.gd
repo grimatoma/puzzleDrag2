@@ -95,11 +95,11 @@ func set_size_px(s: float) -> void:
 	_scale_anim()
 	queue_redraw()
 
-## Highlight / un-highlight while the tile is part of an in-progress chain.
+## Track whether this tile is part of an in-progress chain. M4b: this no longer
+## paints anything (the ChainOverlay path is the selection feedback now), but the
+## method + state are kept so the board's _set_highlight callers don't break.
 func set_selected(on: bool) -> void:
-	if _selected != on:
-		_selected = on
-		queue_redraw()
+	_selected = on
 
 func _draw() -> void:
 	if tile_type == Constants.EMPTY:
@@ -110,8 +110,10 @@ func _draw() -> void:
 			_draw_textured()
 		else:
 			_draw_placeholder()
-	if _selected:
-		_draw_selection_ring()
+	# M4b — the per-tile white selection ring is intentionally NOT drawn anymore: the
+	# ChainOverlay (M4a) renders the orange/gold chain PATH, which is the headline
+	# selection feedback the original game uses. set_selected() still tracks state (so
+	# callers don't break), but it no longer paints a competing ring on each tile.
 
 ## v1 PNG: draw the exported tile texture filling the cell. The PNG carries its
 ## own transparent margin + soft shadow, which forms the gap between tiles.
@@ -130,11 +132,3 @@ func _draw_placeholder() -> void:
 	var hi := Rect2(rect.position, Vector2(rect.size.x, rect.size.y * 0.34))
 	draw_rect(hi, col.lightened(0.16), true)
 	draw_rect(rect, col.darkened(0.30), false, maxf(2.0, size_px * 0.03))
-
-## White frame drawn on top of any visual while the tile is selected.
-func _draw_selection_ring() -> void:
-	var inset: float = size_px * 0.05
-	var ring := Rect2(
-		-size_px / 2.0 + inset, -size_px / 2.0 + inset,
-		size_px - inset * 2.0, size_px - inset * 2.0)
-	draw_rect(ring, Color(1, 1, 1, 0.95), false, maxf(3.0, size_px * 0.06))

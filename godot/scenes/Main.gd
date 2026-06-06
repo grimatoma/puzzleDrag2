@@ -6,16 +6,47 @@ extends Node2D
 
 var board: Board
 var game: GameState                    ## canonical run economy (inventory/coins/turn)
-var _chain_label: Label
-var _status_label: Label
-var _totals_label: Label
-var _meta_label: Label                  ## coins + turn readout
-var _settlement_label: Label            ## town tier · cap · plots readout
-var _buildings_label: Label             ## plots used + placed spawners readout
-var _orders_label: Label                ## active NPC orders (resource → reward) readout
-var _biome_label: Label                 ## current biome + mine turns (M3f expedition) readout
-var _boss_label: Label                  ## capstone boss HP / min-chain (M3g) readout
-var _rats_label: Label                  ## Town-3 rats hazard + shoo-charges (M3h) readout
+
+# ── M4b HUD: the original game's clean structure ──────────────────────────────
+# A parchment top-bar of pills (settlement title + coins/tier/biome, with boss/rats
+# pills surfacing only when active), a chain-progress bar under it, and a stockpile
+# chip panel below the board. The old 11-stacked-labels HUD is gone; the kept member
+# + method names (the *_label fields and every _refresh_* method) re-point here so
+# the scene-smoke assertion (main._chain_label != null) and the capture scripts that
+# call the refreshers all keep working.
+var _chain_label: Label                 ## chain prompt above the board (KEPT — smoke asserts it)
+var _status_label: Label                ## action feedback near the bottom (KEPT)
+var _orders_label: Label                ## compact one-line orders readout above the stockpile
+
+# Top-bar pill inner Labels (the PanelContainer wrappers hold them; we mutate text/visibility here).
+var _coin_pill: Label                   ## 🪙 N
+var _tier_pill: Label                   ## tier name · plots used/total
+var _biome_pill: Label                  ## Farm / ⛏ Mine · N
+var _boss_pill_box: PanelContainer      ## boss pill wrapper (toggled visible)
+var _boss_pill: Label                   ## ⚔ Frostmaw HP/max
+var _rats_pill_box: PanelContainer      ## rats pill wrapper (toggled visible)
+var _rats_pill: Label                   ## 🐀 N/5
+
+# Chain-progress bar.
+var _chain_prog_label: Label            ## "{res}: {progress}/{threshold}"
+var _chain_prog_track: Panel            ## DIM track behind the fill
+var _chain_prog_fill: Panel             ## MOSS→GOLD fill (width = ratio * track width)
+var _chain_prog_track_w: float = 0.0    ## current track inner width (recomputed on layout)
+
+# Stockpile chip panel.
+var _stockpile_grid: GridContainer      ## 4-col grid of resource chips
+var _stockpile_empty: Label             ## muted "Stockpile empty" placeholder
+
+# Top-bar / stockpile container refs, repositioned in _layout().
+var _topbar: PanelContainer
+var _chain_prog_box: PanelContainer
+var _stockpile_box: PanelContainer
+
+# M4b chain-progress tracking: the last resolved resource + its threshold, so the
+# bar shows fractional progress toward the next unit. Mirrors GameState.progress.
+var _last_res: String = ""
+var _last_threshold: int = 0
+
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 
 func _ready() -> void:
@@ -52,13 +83,42 @@ func _ready() -> void:
 	_refresh_biome()
 	_refresh_boss()
 	_refresh_rats()
+	_refresh_chain_progress()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	board.layout_for(vp)
 	var bw: Vector2 = board.board_pixel_size()
-	board.position = Vector2((vp.x - bw.x) / 2.0, vp.y * 0.22)
+	# Board sits below the top-bar + chain-progress bar (≈ 0–110px) and above the
+	# orders + stockpile below it. A touch lower than the old 0.22 to clear the bar.
+	board.position = Vector2((vp.x - bw.x) / 2.0, vp.y * 0.24)
+	_layout_hud(vp)
 	_refresh_status()
+	# The chain-progress track width tracks the box width, so re-measure + redraw
+	# the fill after the containers have settled at the new viewport size.
+	_refresh_chain_progress.call_deferred()
+
+## Pin the width-anchored HUD containers to the current viewport: the top-bar spans
+## the full width at the top; the chain-progress bar centres just under it; the
+## stockpile card spans most of the width below the board.
+func _layout_hud(vp: Vector2) -> void:
+	# The top-bar is PRESET_TOP_WIDE (anchors left=0..right=1), so zero L/R offsets
+	# already make it span the full viewport width — don't set size.x (that fights
+	# the anchors and triggers a "non-equal opposite anchors" warning).
+	if _topbar != null:
+		_topbar.offset_left = 0
+		_topbar.offset_right = 0
+		_topbar.offset_top = 0
+	if _chain_prog_box != null:
+		var cw: float = minf(520.0, vp.x - 32.0)
+		_chain_prog_box.offset_left = -cw / 2.0
+		_chain_prog_box.offset_right = cw / 2.0
+		_chain_prog_box.offset_top = 76.0
+	if _stockpile_box != null:
+		var margin: float = maxf(16.0, vp.x * 0.04)
+		_stockpile_box.offset_left = margin
+		_stockpile_box.offset_right = -margin
+		_stockpile_box.offset_top = vp.y * 0.74
 
 # ── HUD ────────────────────────────────────────────────────────────────────
 
@@ -86,149 +146,166 @@ func _build_hud() -> void:
 
 	var heading_font: Font = _heading_font()   # Cinzel (bold) when present, else null
 
+	# ── A. Parchment top-bar of pills ─────────────────────────────────────────
+	# A full-width soft-parchment bar with an iron bottom border + a soft shadow,
+	# holding the settlement title on the left and the live coins/tier/biome pills
+	# (plus boss/rats pills) on the right.
+	_topbar = PanelContainer.new()
+	_topbar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_topbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_topbar.add_theme_stylebox_override("panel", _topbar_box())
+	root.add_child(_topbar)
+
+	var topbar_margin := MarginContainer.new()
+	topbar_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Left margin clears the floating "🏠 Town" button (pinned top-left at offset 18,
+	# ≈135px wide) so the settlement title isn't clipped under it.
+	topbar_margin.add_theme_constant_override("margin_left", 168)
+	topbar_margin.add_theme_constant_override("margin_right", 18)
+	topbar_margin.add_theme_constant_override("margin_top", 10)
+	topbar_margin.add_theme_constant_override("margin_bottom", 10)
+	_topbar.add_child(topbar_margin)
+
+	var topbar_row := HBoxContainer.new()
+	topbar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	topbar_row.add_theme_constant_override("separation", 8)
+	topbar_margin.add_child(topbar_row)
+
+	# LEFT — the in-fiction settlement name in Cinzel (parity with the original's
+	# heading). Replaces the old "puzzleDrag2 · Godot M3" debug title.
 	var title := Label.new()
-	title.text = "puzzleDrag2 · Godot M3"
-	title.add_theme_font_size_override("font_size", 32)
+	title.text = "Hearthwood Vale"
+	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title.offset_top = 18
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(title)
+	topbar_row.add_child(title)
 
+	# Spacer pushes the pills to the right edge.
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	topbar_row.add_child(spacer)
+
+	# RIGHT — the pill cluster. coins (gold), tier (ink), biome (moss/ember), then
+	# the conditionally-visible boss + rats pills.
+	var coin_box := _make_pill("🪙 0", Palette.EMBER)
+	_coin_pill = coin_box.get_meta("label")
+	topbar_row.add_child(coin_box)
+
+	var tier_box := _make_pill("Camp · 0/3", Palette.INK)
+	_tier_pill = tier_box.get_meta("label")
+	topbar_row.add_child(tier_box)
+
+	var biome_box := _make_pill("Farm", Palette.MOSS)
+	_biome_pill = biome_box.get_meta("label")
+	topbar_row.add_child(biome_box)
+
+	# Boss pill — cool ice-blue; hidden unless a boss fight is active.
+	_boss_pill_box = _make_pill("⚔ —", Color(0.20, 0.36, 0.52))
+	_boss_pill = _boss_pill_box.get_meta("label")
+	_boss_pill_box.visible = false
+	topbar_row.add_child(_boss_pill_box)
+
+	# Rats pill — warm rust; hidden until rats are a live threat (Town 2 done).
+	_rats_pill_box = _make_pill("🐀 —", Palette.EMBER)
+	_rats_pill = _rats_pill_box.get_meta("label")
+	_rats_pill_box.visible = false
+	topbar_row.add_child(_rats_pill_box)
+
+	# ── B. Chain-progress bar (just under the top-bar) ────────────────────────
+	# A thin parchment pill holding a small label and a 2-color progress fill: a DIM
+	# track with a MOSS→GOLD foreground whose width tracks the fractional progress
+	# toward the next unit of the last-chained resource.
+	_chain_prog_box = PanelContainer.new()
+	_chain_prog_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_chain_prog_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_box.add_theme_stylebox_override("panel", _parchment_box(Palette.PARCHMENT))
+	root.add_child(_chain_prog_box)
+
+	var prog_margin := MarginContainer.new()
+	prog_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prog_margin.add_theme_constant_override("margin_left", 12)
+	prog_margin.add_theme_constant_override("margin_right", 12)
+	prog_margin.add_theme_constant_override("margin_top", 6)
+	prog_margin.add_theme_constant_override("margin_bottom", 8)
+	_chain_prog_box.add_child(prog_margin)
+
+	var prog_col := VBoxContainer.new()
+	prog_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prog_col.add_theme_constant_override("separation", 4)
+	prog_margin.add_child(prog_col)
+
+	_chain_prog_label = Label.new()
+	_chain_prog_label.text = "Chain tiles to gather"
+	_chain_prog_label.add_theme_font_size_override("font_size", 15)
+	_chain_prog_label.add_theme_color_override("font_color", Palette.INK_MID)
+	_chain_prog_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_chain_prog_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prog_col.add_child(_chain_prog_label)
+
+	# Track + fill: a fixed-height container so the fill Panel can be width-driven.
+	_chain_prog_track = Panel.new()
+	_chain_prog_track.custom_minimum_size = Vector2(0, 12)
+	_chain_prog_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_chain_prog_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_track.add_theme_stylebox_override("panel", _bar_box(Palette.DIM, Palette.IRON))
+	prog_col.add_child(_chain_prog_track)
+
+	_chain_prog_fill = Panel.new()
+	_chain_prog_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_fill.add_theme_stylebox_override("panel", _bar_box(Palette.MOSS, Palette.MOSS))
+	# Manually positioned/sized inside the track (it's a child Control, not laid out).
+	_chain_prog_fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_chain_prog_fill.position = Vector2.ZERO
+	_chain_prog_fill.size = Vector2(0, 12)
+	_chain_prog_track.add_child(_chain_prog_fill)
+	# Keep the fill height + track width in sync when the track is resized.
+	_chain_prog_track.resized.connect(_on_chain_track_resized)
+
+	# ── chain prompt (kept) — sits just above the board, centered ─────────────
 	_chain_label = Label.new()
 	_chain_label.text = "Drag 3+ matching tiles"
 	_chain_label.add_theme_font_size_override("font_size", 22)
-	_chain_label.add_theme_color_override("font_color", Palette.EMBER)
+	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_chain_label.offset_top = 60
+	_chain_label.offset_top = 124
 	_chain_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_chain_label)
 
+	# ── status (kept) — action feedback near the bottom, centered ─────────────
 	_status_label = Label.new()
 	_status_label.text = ""
 	_status_label.add_theme_font_size_override("font_size", 20)
 	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_status_label.offset_top = -150
-	_status_label.offset_left = -300
-	_status_label.offset_right = 300
+	_status_label.offset_top = -56
+	_status_label.offset_left = -340
+	_status_label.offset_right = 340
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_status_label)
 
-	_totals_label = Label.new()
-	_totals_label.text = "Collected: —"
-	_totals_label.add_theme_font_size_override("font_size", 20)
-	_totals_label.add_theme_color_override("font_color", Palette.INK)
-	_totals_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_totals_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_totals_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_totals_label.offset_top = -110
-	_totals_label.offset_left = 24
-	_totals_label.offset_right = -24
-	_totals_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_totals_label)
-
-	_meta_label = Label.new()
-	_meta_label.text = "Coins: 0   ·   Turn: 0"
-	_meta_label.add_theme_font_size_override("font_size", 20)
-	_meta_label.add_theme_color_override("font_color", Palette.EMBER)
-	_meta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_meta_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_meta_label.offset_top = 96
-	_meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_meta_label)
-
-	_settlement_label = Label.new()
-	_settlement_label.text = "Camp · cap 200 · 3 plots"
-	_settlement_label.add_theme_font_size_override("font_size", 18)
-	_settlement_label.add_theme_color_override("font_color", Palette.INK_MID)
-	_settlement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_settlement_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_settlement_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_settlement_label.offset_top = 126
-	_settlement_label.offset_left = 24
-	_settlement_label.offset_right = -24
-	_settlement_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_settlement_label)
-
-	_buildings_label = Label.new()
-	_buildings_label.text = "Plots 0/3 · (no buildings)"
-	_buildings_label.add_theme_font_size_override("font_size", 18)
-	_buildings_label.add_theme_color_override("font_color", Palette.INK_MID)
-	_buildings_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_buildings_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_buildings_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_buildings_label.offset_top = 156
-	_buildings_label.offset_left = 24
-	_buildings_label.offset_right = -24
-	_buildings_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_buildings_label)
-
+	# ── orders — compact one-line readout just above the stockpile ────────────
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
-	_orders_label.add_theme_font_size_override("font_size", 18)
+	_orders_label.add_theme_font_size_override("font_size", 16)
 	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_orders_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_orders_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_orders_label.offset_top = 186
+	_orders_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_orders_label.offset_top = -118
 	_orders_label.offset_left = 24
 	_orders_label.offset_right = -24
 	_orders_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_orders_label)
 
-	# M3f: current biome + (while mining) remaining expedition turns.
-	_biome_label = Label.new()
-	_biome_label.text = "Farm"
-	_biome_label.add_theme_font_size_override("font_size", 18)
-	_biome_label.add_theme_color_override("font_color", Palette.INK_MID)
-	_biome_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_biome_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_biome_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_biome_label.offset_top = 216
-	_biome_label.offset_left = 24
-	_biome_label.offset_right = -24
-	_biome_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_biome_label)
-
-	# M3g: capstone boss readout — HP + raised min-chain while fighting, a "Town 2
-	# complete" mark once Frostmaw is down, empty otherwise. Cool ice-blue so it
-	# reads as the mine-heart threat against the warm farm HUD.
-	_boss_label = Label.new()
-	_boss_label.text = ""
-	_boss_label.add_theme_font_size_override("font_size", 18)
-	# Cool slate-blue threat tone that still reads on the light parchment.
-	_boss_label.add_theme_color_override("font_color", Color(0.20, 0.36, 0.52))
-	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_boss_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_boss_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_boss_label.offset_top = 246
-	_boss_label.offset_left = 24
-	_boss_label.offset_right = -24
-	_boss_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_boss_label)
-
-	# M3h: Town-3 rats hazard readout — empty until Town 2 is complete, then
-	# "🐀 Rats active" plus the shoo-charge count while a Ratcatcher is placed. A
-	# warm rust tone so the vermin warning stands out from the cool boss line.
-	_rats_label = Label.new()
-	_rats_label.text = ""
-	_rats_label.add_theme_font_size_override("font_size", 18)
-	# Warm rust so the vermin warning stands apart from the cool boss line.
-	_rats_label.add_theme_color_override("font_color", Palette.EMBER)
-	_rats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_rats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rats_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_rats_label.offset_top = 276
-	_rats_label.offset_left = 24
-	_rats_label.offset_right = -24
-	_rats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_rats_label)
+	# ── C. Stockpile chip panel — parchment card below the board ──────────────
+	_build_stockpile(root)
 
 	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
 	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
@@ -296,6 +373,170 @@ func _parchment_box(fill: Color) -> StyleBoxFlat:
 	sb.content_margin_bottom = 7
 	return sb
 
+# ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
+
+## A pill: a PanelContainer with a fully-rounded parchment StyleBox (iron 1px
+## border) wrapping a Label of `text` in `fg`. The inner Label is stashed on the
+## container as meta "label" so the caller can keep a ref and mutate its text.
+func _make_pill(text: String, fg: Color, bg := Palette.PARCHMENT) -> PanelContainer:
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = Palette.IRON
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.corner_radius_top_left = 999
+	sb.corner_radius_top_right = 999
+	sb.corner_radius_bottom_left = 999
+	sb.corner_radius_bottom_right = 999
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
+	box.add_theme_stylebox_override("panel", sb)
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_color_override("font_color", fg)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(lbl)
+	box.set_meta("label", lbl)
+	return box
+
+## The top-bar surface: soft parchment fill, an iron bottom border, and a soft
+## drop shadow so it reads as a raised banner over the warm app frame.
+func _topbar_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.IRON
+	sb.border_width_bottom = 2
+	sb.shadow_size = 8
+	sb.shadow_color = Color(0, 0, 0, 0.18)
+	sb.shadow_offset = Vector2(0, 3)
+	return sb
+
+## A small bar StyleBox (progress track / fill): flat fill, thin border, gently
+## rounded so the track + its fill read as a slim capsule.
+func _bar_box(fill: Color, border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = border
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.corner_radius_top_left = 6
+	sb.corner_radius_top_right = 6
+	sb.corner_radius_bottom_left = 6
+	sb.corner_radius_bottom_right = 6
+	return sb
+
+## A card StyleBox for the stockpile panel: parchment fill, iron border, rounded
+## 12, soft drop shadow — the cozy journal card.
+func _card_box(fill: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = Palette.IRON
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.corner_radius_top_left = 12
+	sb.corner_radius_top_right = 12
+	sb.corner_radius_bottom_left = 12
+	sb.corner_radius_bottom_right = 12
+	sb.shadow_size = 8
+	sb.shadow_color = Color(0, 0, 0, 0.18)
+	sb.shadow_offset = Vector2(0, 3)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 12
+	return sb
+
+## Build the stockpile card: a titled parchment card holding a 4-col grid of
+## resource chips (filled in _refresh_totals) plus a muted "empty" placeholder.
+func _build_stockpile(root: Control) -> void:
+	_stockpile_box = PanelContainer.new()
+	_stockpile_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_stockpile_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stockpile_box.add_theme_stylebox_override("panel", _card_box(Palette.PARCHMENT))
+	root.add_child(_stockpile_box)
+
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	_stockpile_box.add_child(col)
+
+	var heading_font: Font = _heading_font()
+	var title := Label.new()
+	title.text = "Stockpile"
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", Palette.INK)
+	if heading_font != null:
+		title.add_theme_font_override("font", heading_font)
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(title)
+
+	_stockpile_empty = Label.new()
+	_stockpile_empty.text = "Stockpile empty"
+	_stockpile_empty.add_theme_font_size_override("font_size", 15)
+	_stockpile_empty.add_theme_color_override("font_color", Palette.INK_MID)
+	_stockpile_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_stockpile_empty)
+
+	_stockpile_grid = GridContainer.new()
+	_stockpile_grid.columns = 4
+	_stockpile_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stockpile_grid.add_theme_constant_override("h_separation", 8)
+	_stockpile_grid.add_theme_constant_override("v_separation", 8)
+	col.add_child(_stockpile_grid)
+
+## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a
+## "{res} {count}" Label (ink text). Used by _refresh_totals to populate the grid.
+func _make_stock_chip(res: String, count: int) -> PanelContainer:
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.IRON
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	box.add_theme_stylebox_override("panel", sb)
+	var lbl := Label.new()
+	lbl.text = "%s  %d" % [res, count]
+	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.add_theme_color_override("font_color", Palette.INK)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(lbl)
+	return box
+
+## Keep the chain-progress fill height matched to the track, remember the inner
+## width (border-inset), and re-apply the current ratio so a resize keeps the fill
+## proportional.
+func _on_chain_track_resized() -> void:
+	if _chain_prog_track == null or _chain_prog_fill == null:
+		return
+	var h: float = _chain_prog_track.size.y
+	_chain_prog_track_w = maxf(0.0, _chain_prog_track.size.x - 2.0)  # inset for the 1px border
+	_chain_prog_fill.position = Vector2(1, 1)
+	_chain_prog_fill.size.y = maxf(0.0, h - 2.0)
+	_apply_chain_progress_fill()
+
 # ── Town screen ─────────────────────────────────────────────────────────────
 
 ## Open the town panel, lazily creating + wiring it on first use.
@@ -356,6 +597,13 @@ func _on_chain_changed(length: int) -> void:
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	var res: Dictionary = game.credit_chain(tile_type, length)
+	# M4b: remember the resource + threshold this chain fed so the progress bar can
+	# show fractional progress toward its next unit (RAT/empty-threshold chains
+	# produce nothing, so leave the bar on the previous resource).
+	var produced: String = Constants.produced_resource(tile_type)
+	if produced != "":
+		_last_res = produced
+		_last_threshold = Constants.threshold_for(tile_type)
 	if int(res.get("units", 0)) > 0:
 		_status_label.text = "Chain of %d  →  +%d %s" % [length, res["units"], res["resource"]]
 	else:
@@ -394,6 +642,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# M3h: a chain that DEFEATED the boss just turned rats on (rats_enabled flips with
 	# town2_complete), so refresh the rats line so the hazard shows immediately.
 	_refresh_rats()
+	_refresh_chain_progress()
 	SaveManager.save(game)
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
@@ -614,47 +863,56 @@ func _build_hint(reason: String) -> String:
 		"insufficient": return "not enough resources"
 		_:              return "unavailable"
 
+## M4b — rebuild the stockpile chip grid from inventory (skip zero counts, sort by
+## key). KEEPS the name `_refresh_totals` so the capture scripts + _ready still call
+## it; the body now repopulates the GridContainer of chips instead of one label.
 func _refresh_totals() -> void:
-	if game == null or game.inventory.is_empty():
-		_totals_label.text = "Collected: —"
+	if _stockpile_grid == null:
 		return
-	var parts: Array = []
-	for key in game.inventory:
-		parts.append("%s ×%d" % [key, game.inventory[key]])
-	parts.sort()
-	_totals_label.text = "Collected:  " + "   ".join(parts)
+	# Clear the previous chips.
+	for child in _stockpile_grid.get_children():
+		child.queue_free()
+	var keys: Array = []
+	if game != null:
+		for key in game.inventory:
+			if int(game.inventory[key]) > 0:
+				keys.append(key)
+	keys.sort()
+	if keys.is_empty():
+		if _stockpile_empty != null:
+			_stockpile_empty.visible = true
+		_stockpile_grid.visible = false
+		return
+	if _stockpile_empty != null:
+		_stockpile_empty.visible = false
+	_stockpile_grid.visible = true
+	for key in keys:
+		_stockpile_grid.add_child(_make_stock_chip(String(key), int(game.inventory[key])))
 
+## M4b — coins now live in the top-bar coin pill (the old _meta_label is gone). The
+## per-run turn counter is no longer surfaced (it was debug noise); the pill shows
+## just the live coin balance. KEEPS the name so callers don't break.
 func _refresh_meta() -> void:
-	if _meta_label == null or game == null:
+	if _coin_pill == null or game == null:
 		return
-	_meta_label.text = "Coins: %d   ·   Turn: %d" % [game.coins, game.turn]
+	_coin_pill.text = "🪙 %d" % game.coins
 
+## M4b — the settlement tier + plots now live in the top-bar tier pill (e.g.
+## "City · 2/11"); a "▲" prefix hints when a tier-up is affordable. KEEPS the name.
 func _refresh_settlement() -> void:
-	if _settlement_label == null or game == null:
+	if _tier_pill == null or game == null:
 		return
 	var s := game.settlement
-	var text: String = "%s · cap %d · %d plots" % [s.tier_name(), s.cap(), s.plots()]
+	var text: String = "%s · %d/%d" % [s.tier_name(), game.plots_used(), s.plots()]
 	if game.can_tier_up():
-		var next_name: String = TownConfig.tier_name(s.tier + 1)
-		text += "    ▲ Press T to advance to %s" % next_name
-	_settlement_label.text = text
+		text = "▲ " + text
+	_tier_pill.text = text
 
+## M4b — plots are shown inside the tier pill (used/total), so this just re-points at
+## _refresh_settlement to keep the tier pill's plot count current. KEEPS the name so
+## the build/demolish paths that call it still update the HUD.
 func _refresh_buildings() -> void:
-	if _buildings_label == null or game == null:
-		return
-	var used: int = game.plots_used()
-	var total: int = game.settlement.plots()
-	if game.buildings.is_empty():
-		_buildings_label.text = "Plots %d/%d · (no buildings)" % [used, total]
-		return
-	var names: Array = []
-	for id in game.buildings:
-		names.append(BuildingConfig.building_name(id))
-	var text: String = "Plots %d/%d · %s" % [used, total, ", ".join(names)]
-	# Surface the M3c refining affordance only while a Bakery is placed.
-	if game.has_building(BuildingConfig.BAKERY):
-		text += "    🍞 B to bake bread"
-	_buildings_label.text = text
+	_refresh_settlement()
 
 func _refresh_orders() -> void:
 	if _orders_label == null or game == null:
@@ -666,48 +924,78 @@ func _refresh_orders() -> void:
 	var parts: Array = []
 	for order in game.orders:
 		parts.append("%d×%s → %dc" % [int(order["qty"]), order["resource"], int(order["reward"])])
-	_orders_label.text = "Orders:  " + "   ·   ".join(parts) + "    📦 F to fill"
+	_orders_label.text = "Orders:  " + "   ·   ".join(parts)
 
-## M3f: show the current biome. On the farm it reads "Farm"; on an expedition it
-## reads "⛏ Mine · turns left: N". Mirrors GameState.active_biome / mine_turns_left.
+## M3f/M4b: show the current biome in the top-bar biome pill. On the farm it reads
+## "Farm" (moss); on an expedition "⛏ Mine · N" (ember). Mirrors GameState.
 func _refresh_biome() -> void:
-	if _biome_label == null or game == null:
+	if _biome_pill == null or game == null:
 		return
 	if game.is_in_mine():
-		_biome_label.text = "⛏ Mine · turns left: %d" % game.mine_turns_left
+		_biome_pill.text = "⛏ Mine · %d" % game.mine_turns_left
+		_biome_pill.add_theme_color_override("font_color", Palette.EMBER)
 	else:
-		_biome_label.text = "Farm"
+		_biome_pill.text = "Farm"
+		_biome_pill.add_theme_color_override("font_color", Palette.MOSS)
 
-## M3g: show the capstone boss state. While fighting it reads "⚔ <name>  HP cur/max
-##  ·  min chain N"; once Town 2 is complete it reads "✓ Town 2 complete"; otherwise
-## it's empty. Mirrors GameState.boss_active / boss_hp / town2_complete.
+## M3g/M4b: the capstone boss now lives in the top-bar boss pill, shown only while a
+## fight is active ("⚔ <name> cur/max"). Hidden otherwise. Mirrors GameState.
 func _refresh_boss() -> void:
-	if _boss_label == null or game == null:
+	if _boss_pill_box == null or _boss_pill == null or game == null:
 		return
 	if game.is_boss_active():
 		var max_hp: int = BossConfig.boss_hp(game.boss_active)
-		_boss_label.text = "⚔ %s  HP %d/%d  ·  min chain %d" % [
-			BossConfig.boss_name(game.boss_active), game.boss_hp, max_hp,
-			game.boss_min_chain()]
-	elif game.town2_complete:
-		_boss_label.text = "✓ Town 2 complete"
+		_boss_pill.text = "⚔ %s %d/%d" % [
+			BossConfig.boss_name(game.boss_active), game.boss_hp, max_hp]
+		_boss_pill_box.visible = true
 	else:
-		_boss_label.text = ""
+		_boss_pill_box.visible = false
 
-## M3h: show the Town-3 rats hazard. Empty until rats are enabled (Town 2 done);
-## then "🐀 Rats active", plus " · shoo charges N/5" while a Ratcatcher is placed.
-## Mirrors GameState.rats_enabled / has_ratcatcher / ratcatcher_charges_left.
+## M3h/M4b: the Town-3 rats hazard now lives in the top-bar rats pill, shown only
+## once rats are a live threat (Town 2 done). With a Ratcatcher it reads "🐀 N/5"
+## (charges left); without one it reads "🐀 active". Mirrors GameState.
 func _refresh_rats() -> void:
-	if _rats_label == null or game == null:
+	if _rats_pill_box == null or _rats_pill == null or game == null:
 		return
 	if not game.rats_enabled():
-		_rats_label.text = ""
+		_rats_pill_box.visible = false
 		return
-	var text: String = "🐀 Rats active"
 	if game.has_ratcatcher():
-		text += " · shoo charges %d/%d" % [
-			game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES]
-	_rats_label.text = text
+		_rats_pill.text = "🐀 %d/%d" % [game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES]
+	else:
+		_rats_pill.text = "🐀 active"
+	_rats_pill_box.visible = true
+
+## M4b — refresh the chain-progress bar: label "{res}: {progress}/{threshold}" and a
+## MOSS→GOLD fill at progress/threshold. With nothing chained yet it shows a neutral
+## empty bar with "Chain tiles to gather". Mirrors GameState.progress.
+func _refresh_chain_progress() -> void:
+	if _chain_prog_label == null:
+		return
+	if game == null or _last_res == "" or _last_threshold <= 0:
+		_chain_prog_label.text = "Chain tiles to gather"
+		_apply_chain_progress_fill()
+		return
+	var prog: int = int(game.progress.get(_last_res, 0))
+	_chain_prog_label.text = "%s: %d/%d" % [_last_res, prog, _last_threshold]
+	_apply_chain_progress_fill()
+
+## Position + size + tint the chain-progress fill from the current ratio. The fill
+## goes MOSS at low progress and lerps toward GOLD as it approaches a full unit.
+func _apply_chain_progress_fill() -> void:
+	if _chain_prog_fill == null or _chain_prog_track == null:
+		return
+	var ratio: float = 0.0
+	if game != null and _last_res != "" and _last_threshold > 0:
+		ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
+	# Track inner width (inset for the 1px border on each side).
+	var inner_w: float = maxf(0.0, _chain_prog_track.size.x - 2.0)
+	if inner_w <= 0.0:
+		inner_w = _chain_prog_track_w
+	_chain_prog_fill.position = Vector2(1, 1)
+	_chain_prog_fill.size = Vector2(inner_w * ratio, maxf(0.0, _chain_prog_track.size.y - 2.0))
+	var col: Color = Palette.MOSS.lerp(Palette.GOLD, ratio)
+	_chain_prog_fill.add_theme_stylebox_override("panel", _bar_box(col, col))
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":
