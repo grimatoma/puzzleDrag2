@@ -12,7 +12,7 @@ class_name ViewRouter extends RefCounted
 ## what overlay (if any) is shown on top of it.
 
 enum View  { BOARD }
-enum Modal { NONE, TOWN, MENU, INVENTORY }
+enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP }
 
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
@@ -50,6 +50,8 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.MENU }
 		"inventory", "items":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.INVENTORY }
+		"map", "townmap":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWNMAP }
 		_:
 			return { "ok": false }
 
@@ -61,8 +63,9 @@ static func modal_id(m: int) -> String:
 		Modal.TOWN:      return "town"
 		Modal.MENU:      return "menu"
 		Modal.INVENTORY: return "inventory"
+		Modal.TOWNMAP:   return "map"
 		_:               return ""
 
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "menu", "inventory", "items"])
+	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap"])

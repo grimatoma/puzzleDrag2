@@ -8,12 +8,22 @@ extends Node2D
 ##   grass base → water → roads (+ bridges) → front paths → fields → plaza →
 ##   lot pads → board pads → fences → trees → street trees → lot decor → props.
 ##
-## The plan lives in the 1280×960 landscape "design space"; render_plan() fits it
-## by WIDTH into the portrait viewport (720×1280) and centres it vertically. All
-## draw coordinates pass through _p() so the whole map honours that fit transform.
+## The plan lives in the 1280×960 landscape "design space". render_plan() performs
+## a CONTENT-AWARE fit (M6c): rather than fitting the full stage_w×stage_h rect, it
+## measures the bounding box of the STRUCTURAL town content (lots, boards, plaza,
+## trees) and fits THAT bbox — with a small padding margin — into the portrait
+## viewport, centred. (Roads + the river deliberately run to the stage edges, so
+## they're excluded from the bbox; they simply bleed past the viewport border,
+## which reads as intentional — see _content_bbox.) This trims the empty grass
+## borders so the map FILLS the viewport instead of floating in a sea of grass.
+## All draw coordinates pass through the single _p() / _pxy() / _s() helpers so
+## every layer honours the same fit transform.
 ##
-## ISOLATED for M6b: this is a renderer + companion capture tool + smoke test. It
-## is intentionally NOT wired into Main's navigation yet.
+## M6c: wired into Main's navigation (TownMapScreen → ViewRouter.Modal.TOWNMAP).
+## render_plan() also accepts an optional `built_ids` array: the first N lots are
+## marked "built" and drawn as honest placeholder houses (a wall + roof + the
+## building id label) — see _draw_lot_pads. These stand in for real built buildings
+## from GameState.buildings; full iso building art is a later milestone.
 
 # ── Farm-biome palette (the React `farm` variant of groundPalette) ─────────────
 const GRASS := Color("6f9a44")
@@ -56,31 +66,111 @@ const BOARD_TINT := {
 	"fish": Color("6fa0b8"),
 }
 
+# Built-house placeholder tones (warm, distinct from the grass/dirt pads so a
+# built lot reads at a glance). A warm clay wall + a deep terracotta roof.
+const HOUSE_WALL := Color("d8b27a")
+const HOUSE_WALL_EDGE := Color("9a734a")
+const HOUSE_ROOF := Color("b25a36")
+const HOUSE_ROOF_EDGE := Color("7a3a1c")
+const HOUSE_LABEL := Color("3a2c18")
+
 var _plan: Dictionary = {}
 var _scale: float = 1.0
 var _ox: float = 0.0
 var _oy: float = 0.0
 var _view_w: float = 720.0
 var _view_h: float = 1280.0
+# M6c: built-building ids assigned to the first N lots (lot[i] is built iff
+# i < _built_ids.size()); empty otherwise. Set by render_plan.
+var _built_ids: Array = []
 
-## Store the plan, compute a fit-by-width transform that centres the landscape
-## stage vertically in the portrait viewport, then request a redraw.
-func render_plan(plan: Dictionary, view_w: float, view_h: float) -> void:
+## Store the plan + the built-building ids, compute a CONTENT-AWARE fit transform,
+## then request a redraw.
+##
+## `built_ids` (M6c): building id Strings assigned IN ORDER to the first lots —
+## plan.lots[i] is "built" (drawn as a placeholder house labelled built_ids[i])
+## iff i < built_ids.size(). The remaining lots keep the empty fenced-pad look.
+##
+## Content-aware fit: instead of fitting the full stage_w×stage_h rect (which
+## leaves empty grass borders), measure the bounding box of the actual structural
+## content and fit THAT (uniform scale, with a small padding margin), centred in
+## the viewport — so the map fills the portrait viewport.
+func render_plan(plan: Dictionary, view_w: float, view_h: float, built_ids: Array = []) -> void:
 	_plan = plan if plan != null else {}
+	_built_ids = built_ids if built_ids is Array else []
 	_view_w = view_w
 	_view_h = view_h
+
 	var stage_w: float = float(_plan.get("stage_w", 1280.0))
 	var stage_h: float = float(_plan.get("stage_h", 960.0))
 	if stage_w <= 0.0:
 		stage_w = 1280.0
 	if stage_h <= 0.0:
 		stage_h = 960.0
-	# Fit by width; centre vertically. (Width is the binding dimension because the
-	# stage is landscape and the viewport is portrait.)
-	_scale = view_w / stage_w
-	_ox = 0.0
-	_oy = (view_h - stage_h * _scale) / 2.0
+
+	# Bounding box of the actual drawn content (falls back to the full stage when
+	# the plan is empty / degenerate). PAD keeps content off the very viewport edge.
+	var bb := _content_bbox(stage_w, stage_h)
+	var bw: float = max(1.0, bb.x1 - bb.x0)
+	var bh: float = max(1.0, bb.y1 - bb.y0)
+	const PAD: float = 24.0  # screen-px breathing room around the fitted content
+
+	# Uniform fit so the wider of the two dims binds (both must fit); centre the
+	# scaled bbox in the viewport.
+	_scale = min((view_w - 2.0 * PAD) / bw, (view_h - 2.0 * PAD) / bh)
+	if _scale <= 0.0:
+		_scale = min(view_w / stage_w, view_h / stage_h)
+	_ox = (view_w - bw * _scale) / 2.0 - bb.x0 * _scale
+	_oy = (view_h - bh * _scale) / 2.0 - bb.y0 * _scale
 	queue_redraw()
+
+# Compute the bounding box (in plan space) of the STRUCTURAL town content that
+# should drive the fit: lots, boards, plaza, and trees. Roads and water are drawn
+# too, but they're laid out to bleed all the way to the stage edges (the perimeter
+# avenues run 0→stage_w / 0→stage_h, the river runs off-canvas), so INCLUDING them
+# would always reproduce the full stage rect and defeat the whole point — there'd
+# be nothing to trim. By fitting the building cluster instead, the empty grass
+# margin around the town is removed and the map fills the viewport; the edge roads
+# and river simply continue past the viewport border, which reads as intentional.
+# Returns a Rect-like dict; on an empty plan it falls back to the full stage so the
+# transform stays valid.
+func _content_bbox(stage_w: float, stage_h: float) -> Dictionary:
+	var acc := {"x0": INF, "y0": INF, "x1": -INF, "y1": -INF}
+	var add_pt := func(x: float, y: float) -> void:
+		acc.x0 = min(acc.x0, x)
+		acc.y0 = min(acc.y0, y)
+		acc.x1 = max(acc.x1, x)
+		acc.y1 = max(acc.y1, y)
+	var add_rect := func(cx: float, cy: float, w: float, h: float) -> void:
+		add_pt.call(cx - w / 2.0, cy - h / 2.0)
+		add_pt.call(cx + w / 2.0, cy + h / 2.0)
+
+	# Lots + boards (centred rects).
+	for l in _plan.get("lots", []):
+		add_rect.call(float(l["cx"]), float(l["cy"]), float(l["w"]), float(l["h"]))
+	for b in _plan.get("boards", []):
+		add_rect.call(float(b["cx"]), float(b["cy"]), float(b["w"]), float(b["h"]))
+
+	# Plaza (ellipse bounds) + trees (canopy circles).
+	if _plan.has("plaza"):
+		var pz: Dictionary = _plan["plaza"]
+		add_rect.call(float(pz["cx"]), float(pz["cy"]), float(pz["rx"]) * 2.0, float(pz["ry"]) * 2.0)
+	for t in _plan.get("trees", []):
+		var tr: float = float(t["r"])
+		add_pt.call(float(t["x"]) - tr, float(t["y"]) - tr)
+		add_pt.call(float(t["x"]) + tr, float(t["y"]) + tr)
+
+	# Degenerate / empty plan → fall back to the full stage so we always return a
+	# valid, positive box.
+	if not is_finite(acc.x0) or acc.x1 <= acc.x0 or acc.y1 <= acc.y0:
+		return {"x0": 0.0, "y0": 0.0, "x1": stage_w, "y1": stage_h}
+	# Clamp to the stage so any overshoot at the edges can't push the fit off into
+	# empty design space.
+	acc.x0 = max(0.0, acc.x0)
+	acc.y0 = max(0.0, acc.y0)
+	acc.x1 = min(stage_w, acc.x1)
+	acc.y1 = min(stage_h, acc.y1)
+	return acc
 
 # Map a plan {x,y} dict (or any object with x/y) into screen space.
 func _p(pt: Dictionary) -> Vector2:
@@ -310,44 +400,107 @@ func _draw_plaza() -> void:
 		draw_circle(dot, _s(2.0), PAD_EDGE)
 
 # ── 6. lot pads ─────────────────────────────────────────────────────────────
-# We don't know built/empty state here, so treat every lot as an empty pad: a
-# small bottom-anchored foundation footprint (pad fill + darker fenced edge).
+# M6c: the first N lots (N = _built_ids.size()) are BUILT and drawn as honest
+# placeholder houses (wall rect + roof triangle + the building id label); the
+# rest keep the M6b empty fenced-pad look. The placeholder houses stand in for
+# real GameState.buildings — full iso building art is a later milestone.
 func _draw_lot_pads() -> void:
 	if not _plan.has("lots"):
 		return
+	var i: int = -1
 	for l in _plan["lots"]:
 		if String(l.get("row", "")) == "plaza":
 			continue
-		var lcx: float = float(l["cx"])
-		var lcy: float = float(l["cy"])
-		var lw: float = float(l["w"])
-		var lh: float = float(l["h"])
-		var fw: float = lw * 0.6
-		var fh: float = lh * 0.6
-		var fx0: float = lcx - fw / 2.0
-		var fy1: float = lcy + lh / 2.0 - 4.0
-		var fy0: float = fy1 - fh
-		# Foundation pad (semi-transparent dirt).
-		var pad := DIRT
-		pad.a = 0.5
-		_draw_screen_rect(fx0 + 4.0, fy0 + 4.0, fw - 8.0, fh - 8.0, pad)
-		# Post-and-rail fence outline around the foundation.
-		_draw_screen_rect_outline(fx0, fy0, fw, fh, WOOD, _s(2.5))
-		var lwood := WOOD_LIGHT
-		lwood.a = 0.7
-		_draw_screen_rect_outline(fx0, fy0, fw, fh, lwood, _s(1.0))
-		# Corner + midpoint posts.
-		var mx: float = (fx0 + fx0 + fw) / 2.0
-		var my: float = (fy0 + fy1) / 2.0
-		var posts := [
-			Vector2(fx0, fy0), Vector2(fx0 + fw, fy0), Vector2(fx0, fy1), Vector2(fx0 + fw, fy1),
-			Vector2(mx, fy0), Vector2(mx, fy1), Vector2(fx0, my), Vector2(fx0 + fw, my),
-		]
-		for pp in posts:
-			draw_circle(_pxy(pp.x, pp.y), _s(2.4), WOOD_DARK)
-		# "Build here" stake at the front.
-		_draw_screen_rect(lcx - 1.25, fy1 - 14.0, 2.5, 12.0, WOOD)
-		_draw_screen_rect(lcx - 2.0, fy1 - 18.0, 12.0, 6.0, DIRT_EDGE)
+		i += 1
+		if i < _built_ids.size():
+			_draw_built_house(l, String(_built_ids[i]))
+		else:
+			_draw_empty_lot(l)
+
+# A built lot: a placeholder house — a warm clay wall rect, a deep terracotta roof
+# triangle on top, and a small centred label = the building id. NOT final art; an
+# honest stand-in for a real built building (full iso art lands in a later milestone).
+func _draw_built_house(l: Dictionary, id: String) -> void:
+	var lcx: float = float(l["cx"])
+	var lcy: float = float(l["cy"])
+	var lw: float = float(l["w"])
+	var lh: float = float(l["h"])
+	# House footprint: bottom-anchored in the lot, slightly inset.
+	var hw: float = lw * 0.62
+	var wall_h: float = lh * 0.42
+	var roof_h: float = lh * 0.26
+	var hx0: float = lcx - hw / 2.0
+	var base_y: float = lcy + lh / 2.0 - 6.0      # ground line
+	var wall_y0: float = base_y - wall_h
+	var roof_apex_y: float = wall_y0 - roof_h
+	# Ground shadow under the house.
+	_draw_filled_ellipse(_pxy(lcx, base_y + 2.0), _s(hw * 0.56), _s(max(4.0, lh * 0.06)), SHADOW)
+	# Wall.
+	_draw_screen_rect(hx0, wall_y0, hw, wall_h, HOUSE_WALL)
+	_draw_screen_rect_outline(hx0, wall_y0, hw, wall_h, HOUSE_WALL_EDGE, _s(2.0))
+	# A little door so the wall reads as a building, not a box.
+	var door_w: float = hw * 0.26
+	var door_h: float = wall_h * 0.5
+	_draw_screen_rect(lcx - door_w / 2.0, base_y - door_h, door_w, door_h, HOUSE_WALL_EDGE)
+	# Roof triangle (overhangs the wall a touch on each side).
+	var roof := PackedVector2Array([
+		_pxy(hx0 - hw * 0.08, wall_y0),
+		_pxy(lcx, roof_apex_y),
+		_pxy(hx0 + hw + hw * 0.08, wall_y0),
+	])
+	draw_colored_polygon(roof, HOUSE_ROOF)
+	var ring := roof.duplicate()
+	ring.append(roof[0])
+	draw_polyline(ring, HOUSE_ROOF_EDGE, _s(1.5), true)
+	# Centred building-id label above the house (e.g. "lumber_camp").
+	_draw_house_label(id, lcx, roof_apex_y - 4.0)
+
+# Draw the building id, centred horizontally on `cx` with its baseline near `y`,
+# using the default font. Sized down with the fit so labels don't overlap on a
+# dense map; skipped if no default font is available.
+func _draw_house_label(id: String, cx: float, y: float) -> void:
+	var font := ThemeDB.fallback_font
+	if font == null:
+		return
+	var fs: int = int(max(8.0, _s(13.0)))
+	var width: float = font.get_string_size(id, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var pos := _pxy(cx, y)
+	pos.x -= width / 2.0
+	draw_string(font, pos, id, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, HOUSE_LABEL)
+
+# An empty lot: the M6b look — a small bottom-anchored foundation footprint (pad
+# fill + a darker post-and-rail fence + a "build here" stake at the front).
+func _draw_empty_lot(l: Dictionary) -> void:
+	var lcx: float = float(l["cx"])
+	var lcy: float = float(l["cy"])
+	var lw: float = float(l["w"])
+	var lh: float = float(l["h"])
+	var fw: float = lw * 0.6
+	var fh: float = lh * 0.6
+	var fx0: float = lcx - fw / 2.0
+	var fy1: float = lcy + lh / 2.0 - 4.0
+	var fy0: float = fy1 - fh
+	# Foundation pad (semi-transparent dirt).
+	var pad := DIRT
+	pad.a = 0.5
+	_draw_screen_rect(fx0 + 4.0, fy0 + 4.0, fw - 8.0, fh - 8.0, pad)
+	# Post-and-rail fence outline around the foundation.
+	_draw_screen_rect_outline(fx0, fy0, fw, fh, WOOD, _s(2.5))
+	var lwood := WOOD_LIGHT
+	lwood.a = 0.7
+	_draw_screen_rect_outline(fx0, fy0, fw, fh, lwood, _s(1.0))
+	# Corner + midpoint posts.
+	var mx: float = (fx0 + fx0 + fw) / 2.0
+	var my: float = (fy0 + fy1) / 2.0
+	var posts := [
+		Vector2(fx0, fy0), Vector2(fx0 + fw, fy0), Vector2(fx0, fy1), Vector2(fx0 + fw, fy1),
+		Vector2(mx, fy0), Vector2(mx, fy1), Vector2(fx0, my), Vector2(fx0 + fw, my),
+	]
+	for pp in posts:
+		draw_circle(_pxy(pp.x, pp.y), _s(2.4), WOOD_DARK)
+	# "Build here" stake at the front.
+	_draw_screen_rect(lcx - 1.25, fy1 - 14.0, 2.5, 12.0, WOOD)
+	_draw_screen_rect(lcx - 2.0, fy1 - 18.0, 12.0, 6.0, DIRT_EDGE)
 
 # ── 6b. board pads ──────────────────────────────────────────────────────────
 func _draw_board_pads() -> void:

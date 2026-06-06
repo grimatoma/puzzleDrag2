@@ -46,11 +46,20 @@ func _run() -> void:
 	# 3. The renderer stored the plan + computed a positive fit scale.
 	_check(not town_map._plan.is_empty(), "stored plan is non-empty after render_plan")
 	_check(town_map._scale > 0.0, "computed fit scale is > 0 (got %f)" % town_map._scale)
-	# Fit-by-width: scale should be view_w / stage_w = 720/1280 = 0.5625.
-	_check(abs(town_map._scale - (720.0 / 1280.0)) < 1e-4,
-		"fit-by-width scale == view_w/stage_w (got %f)" % town_map._scale)
-	# Vertical centring offset (stage shorter than viewport after scaling → > 0).
-	_check(town_map._oy > 0.0, "stage is vertically centred (offset_y > 0)")
+	# M6c: the fit is now CONTENT-AWARE — it measures the drawn-content bbox and fits
+	# THAT (with a small PAD) into the viewport, centred. Assert the content bbox is a
+	# proper sub-rectangle of the full stage (the empty grass border is trimmed)…
+	var bb: Dictionary = town_map._content_bbox(1280.0, 960.0)
+	var bbw: float = bb.x1 - bb.x0
+	var bbh: float = bb.y1 - bb.y0
+	_check(bbw > 0.0 and bbw <= 1280.0 + 1e-3, "content bbox width within the stage (got %f)" % bbw)
+	_check(bbh > 0.0 and bbh <= 960.0 + 1e-3, "content bbox height within the stage (got %f)" % bbh)
+	_check(bbw < 1280.0 or bbh < 960.0, "content bbox is tighter than the full stage on at least one axis")
+	# …and the fitted content FILLS the viewport on its binding axis (the scaled bbox
+	# reaches the viewport edge minus the ~24px PAD, so the offset on that axis is ~PAD,
+	# not a wide empty margin). This is the "fills the portrait viewport" guarantee.
+	var min_off: float = min(town_map._ox + bb.x0 * town_map._scale, town_map._oy + bb.y0 * town_map._scale)
+	_check(min_off <= 24.0 + 1.0, "fitted content fills a viewport axis (binding-axis offset ~PAD, got %f)" % min_off)
 
 	# 4. Adding to the tree + ticking a frame drives _draw without crashing.
 	root.add_child(town_map)
