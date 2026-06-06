@@ -1,7 +1,8 @@
 # Godot CI — runs the Godot port's headless tests and validates the Web export.
 # Separate from ci.yml (the Phaser suite) so the existing branch-protected
 # checks are untouched while the migration runs side-by-side (see
-# docs/godot-migration-plan.html). Triggers only when godot/** changes.
+# docs/godot-migration-plan.html). Triggers when godot/** changes, when this
+# workflow changes, or when the parity matrix / its tooling changes.
 #
 # Godot is pinned to 4.6.2 to match the version the port is developed against.
 
@@ -13,11 +14,17 @@ on:
     paths:
       - 'godot/**'
       - '.github/workflows/godot-ci.yml'
+      - 'docs/parity-matrix.json'
+      - 'tools/check-parity-matrix.mjs'
+      - 'tools/build-parity-matrix.mjs'
   pull_request:
     branches: [main]
     paths:
       - 'godot/**'
       - '.github/workflows/godot-ci.yml'
+      - 'docs/parity-matrix.json'
+      - 'tools/check-parity-matrix.mjs'
+      - 'tools/build-parity-matrix.mjs'
 
 env:
   GODOT_VERSION: '4.6.2'
@@ -37,57 +44,44 @@ jobs:
           use-dotnet: false
           include-templates: false
 
-      # First run builds .godot/ (import cache + global class registry).
+      # First run builds .godot/ (import cache + global class registry). MUST run
+      # before the suite loop so class_name globals are registered.
       - name: Import project
         run: godot --headless --path godot --import
 
-      - name: Board logic tests
-        run: godot --headless --path godot --script res://tests/run_tests.gd
+      # Auto-discover + run EVERY godot/tests/run_*.gd suite. Each runner prints
+      # "N checks, M failure(s)" and exits 0 on all-pass / 1 on failure. This one
+      # step gates ALL suites (current + future) — no per-suite step to keep in
+      # sync. A suite is a failure if godot exits non-zero OR its output reports a
+      # non-zero failure count (belt-and-suspenders, in case a runner ever prints
+      # failures but still exits 0).
+      - name: Run all headless test suites
+        run: |
+          fail=0
+          for f in godot/tests/run_*.gd; do
+            name=$(basename "$f")
+            echo "── $name ──────────────"
+            out=$(godot --headless --path godot --script "res://tests/$name" 2>&1) || { echo "$out"; echo "::error::$name exited non-zero"; fail=1; continue; }
+            echo "$out"
+            if echo "$out" | grep -qE "[1-9][0-9]* failure"; then echo "::error::$name reported failures"; fail=1; fi
+          done
+          exit $fail
 
-      - name: Game state + save/load tests
-        run: godot --headless --path godot --script res://tests/run_state_tests.gd
+  parity-matrix-check:
+    name: Parity matrix validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Town tier ladder tests
-        run: godot --headless --path godot --script res://tests/run_town_tests.gd
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: Building / spawner tests
-        run: godot --headless --path godot --script res://tests/run_building_tests.gd
-
-      - name: Economy (refining / market) tests
-        run: godot --headless --path godot --script res://tests/run_economy_tests.gd
-
-      - name: Orders tests
-        run: godot --headless --path godot --script res://tests/run_orders_tests.gd
-
-      - name: Town UI tests
-        run: godot --headless --path godot --script res://tests/run_town_ui_tests.gd
-
-      - name: Mine / expedition tests
-        run: godot --headless --path godot --script res://tests/run_mine_tests.gd
-
-      - name: Boss tests
-        run: godot --headless --path godot --script res://tests/run_boss_tests.gd
-
-      - name: Rats / Ratcatcher tests
-        run: godot --headless --path godot --script res://tests/run_rats_tests.gd
-
-      - name: Mine hazard (rubble) tests
-        run: godot --headless --path godot --script res://tests/run_rubble_tests.gd
-
-      - name: Scene wiring smoke test
-        run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
-
-      - name: Asset pipeline tests
-        run: godot --headless --path godot --script res://tests/run_assets_tests.gd
-
-      - name: Audio tests
-        run: godot --headless --path godot --script res://tests/run_audio_tests.gd
-
-      - name: Menu / settings tests
-        run: godot --headless --path godot --script res://tests/run_menu_tests.gd
-
-      - name: Inventory screen tests
-        run: godot --headless --path godot --script res://tests/run_inventory_tests.gd
+      # Guards docs/parity-matrix.json: every "full" row must reference a real
+      # run_*.gd suite on disk (the anti-"+undefined" guard). Exits 0 clean.
+      - name: Validate parity matrix
+        run: node tools/check-parity-matrix.mjs
 
   godot-web-export:
     name: Web (HTML5) export
