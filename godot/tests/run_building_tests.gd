@@ -96,8 +96,11 @@ func _test_available_at_tier() -> void:
 	_check(BC.available_at_tier(2) == [BC.LUMBER_CAMP], "only lumber_camp at Hamlet (tier 2)")
 	var at3: Array = BC.available_at_tier(3)
 	_check(at3.has(BC.LUMBER_CAMP) and at3.has(BC.COOP) and at3.has(BC.GARDEN),
-		"all three buildings available at Village (tier 3)")
-	_check(at3.size() == 3, "exactly three buildings available at Village")
+		"all three spawners available at Village (tier 3)")
+	# M3c: available_at_tier now iterates ALL_BUILD_IDS, so the Bakery (refiner) is
+	# offered at Village too — four buildable ids, not three.
+	_check(at3.has(BC.BAKERY), "Bakery (refiner) also available at Village (tier 3)")
+	_check(at3.size() == 4, "exactly four buildings available at Village")
 
 func _test_cost_returns_copy() -> void:
 	# Mutating a returned cost must not mutate the const catalog.

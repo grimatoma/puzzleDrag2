@@ -168,13 +168,16 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
 
-## Temporary dev/demo keyboard affordances (the real town-UI build menu + tier-up
-## button land in M3d). These keep the ladder and the spawner system exercisable
-## now. Key input is separate from the board's _unhandled_input mouse handling, so
-## it never interferes with chain drags.
+## Temporary dev/demo keyboard affordances (the real town-UI build menu, tier-up
+## button, and Market/Bakery panels land in M3d). These keep the ladder, the
+## spawner system, and the M3c refining/market economy exercisable now. Key input
+## is separate from the board's _unhandled_input mouse handling, so it never
+## interferes with chain drags.
 ##   T     — advance the town one tier (when affordable)
 ##   1/2/3 — build Lumber Camp / Coop / Garden
 ##   4/5/6 — demolish Lumber Camp / Coop / Garden
+##   B     — bake bread at the Bakery (refiner: 3 flour + 1 eggs → 1 bread)  [TEMP]
+##   G     — sell 1 hay_bundle at the Market (+1 coin)                       [TEMP]
 func _unhandled_key_input(event: InputEvent) -> void:
 	if game == null:
 		return
@@ -204,6 +207,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_try_demolish(BuildingConfig.COOP)
 		KEY_6:
 			_try_demolish(BuildingConfig.GARDEN)
+		KEY_B:
+			_try_bake()       # TEMP M3c demo: refine flour + eggs into bread
+		KEY_G:
+			_try_sell_hay()   # TEMP M3c demo: sell 1 hay_bundle for a coin
 
 ## Dev affordance: attempt a build, then re-pool the board + refresh HUD + save.
 func _try_build(id: String) -> void:
@@ -226,6 +233,30 @@ func _try_demolish(id: String) -> void:
 		_apply_pool_change()
 		_status_label.text = "Demolished %s" % BuildingConfig.building_name(id)
 		SaveManager.save(game)
+	get_viewport().set_input_as_handled()
+
+## TEMP M3c demo: bake one bread at the Bakery (refiner). Real Bakery UI is M3d.
+func _try_bake() -> void:
+	if game.can_craft(RecipeConfig.BREAD):
+		game.craft(RecipeConfig.BREAD)
+		_status_label.text = "Baked bread (3 flour + 1 eggs)"
+		_refresh_totals()
+		_refresh_meta()
+		SaveManager.save(game)
+	else:
+		_status_label.text = "Can't bake (need a Bakery + 3 flour + 1 eggs)"
+	get_viewport().set_input_as_handled()
+
+## TEMP M3c demo: sell one hay_bundle at the Market. Real Market UI is M3d.
+func _try_sell_hay() -> void:
+	if game.qty("hay_bundle") > 0:
+		game.sell("hay_bundle", 1)
+		_status_label.text = "Sold 1 hay_bundle (+1 coin)"
+		_refresh_totals()
+		_refresh_meta()
+		SaveManager.save(game)
+	else:
+		_status_label.text = "No hay_bundle to sell"
 	get_viewport().set_input_as_handled()
 
 ## Push the new active pool onto the board and refresh the building-affected HUD.
@@ -280,7 +311,11 @@ func _refresh_buildings() -> void:
 	var names: Array = []
 	for id in game.buildings:
 		names.append(BuildingConfig.building_name(id))
-	_buildings_label.text = "Plots %d/%d · %s" % [used, total, ", ".join(names)]
+	var text: String = "Plots %d/%d · %s" % [used, total, ", ".join(names)]
+	# Surface the M3c refining affordance only while a Bakery is placed.
+	if game.has_building(BuildingConfig.BAKERY):
+		text += "    🍞 B to bake bread"
+	_buildings_label.text = text
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":
