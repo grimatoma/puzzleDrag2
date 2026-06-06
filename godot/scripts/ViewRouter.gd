@@ -1,0 +1,68 @@
+class_name ViewRouter extends RefCounted
+## Pure navigation state machine — no Node, no signals, no scene access.
+## Instantiate directly in tests: ViewRouter.new()
+##
+## Resolve dictionary shape (returned by resolve()):
+##   Success:  { "ok": true,  "view": View.*,  "modal": Modal.* }
+##   Failure:  { "ok": false }
+##
+## Every successful resolve includes BOTH view and modal so callers can
+## act on either field without nil-checking. The board view is always
+## BOARD (it is the only top-level view today); the modal field controls
+## what overlay (if any) is shown on top of it.
+
+enum View  { BOARD }
+enum Modal { NONE, TOWN, MENU, INVENTORY }
+
+var view:  int = View.BOARD
+var modal: int = Modal.NONE
+
+# ── Instance state machine ────────────────────────────────────────────────────
+
+## Set the active modal. Pass Modal.NONE to close without calling close_modal().
+func open_modal(m: int) -> void:
+	modal = m
+
+## Close whatever modal is open (set to NONE).
+func close_modal() -> void:
+	modal = Modal.NONE
+
+## Return true if modal m is currently open.
+func is_open(m: int) -> bool:
+	return modal == m
+
+## Return the currently active modal (one of the Modal.* enum values).
+func current_modal() -> int:
+	return modal
+
+# ── Static helpers ────────────────────────────────────────────────────────────
+
+## Resolve a deep-link id string to a navigation intent.
+## Returns { "ok": true, "view": View.*, "modal": Modal.* } on success,
+## or       { "ok": false }                                  on unknown id.
+static func resolve(id: String) -> Dictionary:
+	match id:
+		"", "board":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.NONE }
+		"town":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWN }
+		"menu":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.MENU }
+		"inventory", "items":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.INVENTORY }
+		_:
+			return { "ok": false }
+
+## Inverse of the modal component of resolve() — map a Modal.* value back to
+## its canonical string id. Useful for harness round-tripping and logging.
+static func modal_id(m: int) -> String:
+	match m:
+		Modal.NONE:      return "board"
+		Modal.TOWN:      return "town"
+		Modal.MENU:      return "menu"
+		Modal.INVENTORY: return "inventory"
+		_:               return ""
+
+## All valid deep-link ids (the full set accepted by resolve()).
+static func known_ids() -> PackedStringArray:
+	return PackedStringArray(["", "board", "town", "menu", "inventory", "items"])

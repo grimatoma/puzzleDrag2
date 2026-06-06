@@ -59,6 +59,7 @@ var _last_threshold: int = 0
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
 var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
+var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 # A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
@@ -604,10 +605,12 @@ func _open_town() -> void:
 		# `shoo_rats` and Main does the actual clear (spending the charge in ONE place).
 		_town_screen.connect("shoo_rats", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
+	_router.open_modal(ViewRouter.Modal.TOWN)
 
 func _on_town_closed() -> void:
 	if _town_screen != null:
 		_town_screen.visible = false
+	_router.close_modal()
 
 # ── Menu / settings (M4f) ─────────────────────────────────────────────────────
 
@@ -623,10 +626,12 @@ func _open_menu() -> void:
 		_menu_screen.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
 		_menu_screen.connect("new_game", Callable(self, "_on_new_game"))
 	_menu_screen.open()
+	_router.open_modal(ViewRouter.Modal.MENU)
 
 func _on_menu_closed() -> void:
 	if _menu_screen != null:
 		_menu_screen.visible = false
+	_router.close_modal()
 
 # ── Inventory ledger (M4g) ─────────────────────────────────────────────────────
 
@@ -641,10 +646,39 @@ func _open_inventory() -> void:
 		_inventory_screen.setup(game)
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
 	_inventory_screen.open()
+	_router.open_modal(ViewRouter.Modal.INVENTORY)
 
 func _on_inventory_closed() -> void:
 	if _inventory_screen != null:
 		_inventory_screen.visible = false
+	_router.close_modal()
+
+## M5b — resolve a deep-link id and navigate to the matching screen.
+## Routes to the existing _open_* / close methods so all lazy-create and
+## visibility logic remains in one place. Returns true if the id was known.
+func apply_deeplink(id: String) -> bool:
+	var intent: Dictionary = ViewRouter.resolve(id)
+	if not bool(intent.get("ok", false)):
+		return false
+	match int(intent.get("modal", ViewRouter.Modal.NONE)):
+		ViewRouter.Modal.TOWN:
+			_open_town()
+		ViewRouter.Modal.MENU:
+			_open_menu()
+		ViewRouter.Modal.INVENTORY:
+			_open_inventory()
+		_:
+			# NONE / board — close whatever is open
+			if _town_screen != null and _town_screen.visible:
+				_town_screen.visible = false
+				_router.close_modal()
+			elif _menu_screen != null and _menu_screen.visible:
+				_menu_screen.visible = false
+				_router.close_modal()
+			elif _inventory_screen != null and _inventory_screen.visible:
+				_inventory_screen.visible = false
+				_router.close_modal()
+	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
 ## accounting point): toggle the persisted preference, mute/unmute the Audio service,
