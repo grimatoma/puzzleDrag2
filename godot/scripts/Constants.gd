@@ -48,6 +48,14 @@ enum Tile {
 	# a board-only HAZARD tile: it produces NOTHING (chaining rats wastes a move) and
 	# only seeds into the FARM pool once Town 2 is complete (GameState.rats_enabled).
 	RAT,
+	# ── Rubble mine hazard (M3i, Town 2 expedition) — APPENDED (ordinal 16) so every
+	# farm/mine/rat ordinal above is unchanged (GRASS==0 … RAT==15). RUBBLE is the
+	# mine's cave-in clutter: a board-only HAZARD tile that produces NOTHING (chaining
+	# rubble wastes a precious mine turn) and only seeds into the MINE pool while on an
+	# expedition (GameState.active_biome_pool). You clear it by MINING THROUGH it — a
+	# resolved STONE chain clears every rubble 8-adjacent to it (Board.clear_rubble_on_stone),
+	# the built-in mine analogue of the Master Ratcatcher's grass→rats sweep.
+	RUBBLE,
 }
 
 const STRING_KEYS := {
@@ -69,6 +77,8 @@ const STRING_KEYS := {
 	Tile.GEM:      "tile_mine_gem",
 	# Rats hazard (M3h).
 	Tile.RAT:      "rat",
+	# Rubble mine hazard (M3i).
+	Tile.RUBBLE:   "rubble",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -95,6 +105,11 @@ const PRODUCES := {
 	# point of the hazard. Deliberately absent from THRESHOLDS too, so
 	# threshold_for(RAT) returns the NO_THRESHOLD sentinel and produced_resource is "".
 	Tile.RAT:      "",
+	# Rubble mine hazard (M3i): RUBBLE produces NOTHING — chaining it wastes a mine
+	# turn (the food/supplies gate makes turns scarce, so the clutter bites). Like RAT
+	# it is deliberately ABSENT from THRESHOLDS, so threshold_for(RUBBLE) returns the
+	# NO_THRESHOLD sentinel and produced_resource is "".
+	Tile.RUBBLE:   "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -176,6 +191,9 @@ const CATEGORY := {
 	# Rats hazard (M3h) — its own "rat" category; it is neither a spawner-gated farm
 	# category nor a mine category, so no building adds it to the pool.
 	Tile.RAT:      "rat",
+	# Rubble mine hazard (M3i) — its own "rubble" category; it is seeded directly into
+	# the mine pool (active_biome_pool), not via any building/category gate.
+	Tile.RUBBLE:   "rubble",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
@@ -185,6 +203,12 @@ const NO_THRESHOLD: int = 1 << 30
 ## while rats are active (GameState.rats_enabled / active_tile_pool). Kept low so
 ## rats are a recurring nuisance the player has to manage, not a board takeover.
 const RAT_POOL_SLOTS: int = 2
+
+## Rubble mine hazard (M3i, Town 2 expedition). How many RUBBLE tiles seed into the
+## MINE refill pool while on an expedition (GameState.active_biome_pool). Kept low so
+## rubble is a recurring nuisance the player mines through, not a board takeover — with
+## only 2 slots in a 10-slot MINE_POOL it never dominates the board.
+const RUBBLE_POOL_SLOTS: int = 2
 
 # ── Static helpers (usable without an instance) ────────────────────────────
 
@@ -225,4 +249,7 @@ static func color_for(tile: int) -> Color:
 		# Rats hazard (M3h) — a drab vermin grey. No PNG ships this milestone; the
 		# Stage-1 fallback renders this flat color.
 		Tile.RAT:      return Color(0.36, 0.34, 0.38)
+		# Rubble mine hazard (M3i) — a dark cave-rock grey-brown that reads as inert
+		# cave-in stone against the cooler mine ores. No PNG ships; flat fallback fill.
+		Tile.RUBBLE:   return Color(0.34, 0.30, 0.27)
 		_:             return Color.MAGENTA

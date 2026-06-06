@@ -43,6 +43,14 @@ var min_chain: int = Constants.MIN_CHAIN
 ## chain length nor credited (RAT produces nothing).
 var clear_rats_on_grass: bool = false
 
+## M3i (Town 2 mine rubble): when true, a resolved STONE chain ALSO clears every
+## RUBBLE tile 8-adjacent to the chain — you mine THROUGH the cave-in clutter. Main
+## sets this from GameState.is_in_mine() (true exactly while on an expedition), so it
+## needs no building (unlike the Master Ratcatcher's grass sweep — mining-through is
+## just how mining works). The cleared rubble is a side effect: NOT counted in the
+## chain length nor credited (RUBBLE produces nothing).
+var clear_rubble_on_stone: bool = false
+
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
 
@@ -289,6 +297,16 @@ func _resolve(path: Array) -> void:
 			if not removal.has(rat_cell):
 				removal.append(rat_cell)
 
+	# M3i (mine rubble): a resolved STONE chain ALSO clears every RUBBLE that is
+	# 8-adjacent to a chained cell — you mine through the cave-in. Same removal-set
+	# fold as the rats sweep: the rubble cells collapse + refill like the popped chain
+	# tiles, do NOT count toward `length`, and are never credited (RUBBLE produces
+	# nothing). The chain still reports the STONE key + the STONE chain length.
+	if clear_rubble_on_stone and key == Constants.Tile.STONE:
+		for rubble_cell in _adjacent_rubble_cells(path):
+			if not removal.has(rubble_cell):
+				removal.append(rubble_cell)
+
 	# 1. Pop the collected tiles out (chain + any Master-Ratcatcher rats), then free.
 	for cell in removal:
 		var t: Tile = tiles[cell.y][cell.x]
@@ -366,6 +384,26 @@ func _adjacent_rat_cells(path: Array) -> Array:
 				if not BoardLogic.in_bounds(nb):
 					continue
 				if grid[nb.y][nb.x] != Constants.Tile.RAT:
+					continue
+				if not out.has(nb):
+					out.append(nb)
+	return out
+
+## M3i — every distinct RUBBLE cell that is 8-adjacent (king move) to any cell in
+## `path`. Used by _resolve when clear_rubble_on_stone is active (in the mine) so a
+## STONE chain mines through the rubble around it. Parallels _adjacent_rat_cells:
+## cells in `path` themselves are never returned, only their neighbours.
+func _adjacent_rubble_cells(path: Array) -> Array:
+	var out: Array = []
+	for cell in path:
+		for dy in [-1, 0, 1]:
+			for dx in [-1, 0, 1]:
+				if dx == 0 and dy == 0:
+					continue
+				var nb := Vector2i(cell.x + dx, cell.y + dy)
+				if not BoardLogic.in_bounds(nb):
+					continue
+				if grid[nb.y][nb.x] != Constants.Tile.RUBBLE:
 					continue
 				if not out.has(nb):
 					out.append(nb)

@@ -235,7 +235,7 @@
           Buildings, Refine, Market, Orders) whose <b>buttons drive the whole Town-1 economy</b>, replacing the temporary
           T/1-6/B/G/F dev keys (which remain only as a keyboard fallback). It renders as a playable
           board with the <b>exported v1 Phaser tile art</b> (the auxiliary asset pipeline's Stage&nbsp;2 has landed; see Verification), a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
-          <b>M3f</b> opened the <b>mine expedition</b> (the food gate → Town&nbsp;2), <b>M3g</b> landed the Direction's dramatic ★ <b>capstone boss</b> (Frostmaw — <code>min_chain 4</code> while engaged, raising the bar to resolve a chain — closing Town&nbsp;2), and <b>M3h</b> shipped <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (rats are a no-yield tile seeded into the farm pool once Town&nbsp;2 is done; Ratcatcher shoos them, Master Ratcatcher folds 8-adjacent rats into a grass chain). With M3g+M3h the <b>M3 introductory slice is COMPLETE (8 sub-parts, M3a–M3h)</b>. There are now <b>11 headless CI-gated test suites totalling 794 checks</b> (plus a 32-check asset suite being wired into CI in the current hardening pass).
+          <b>M3f</b> opened the <b>mine expedition</b> (the food gate → Town&nbsp;2), <b>M3g</b> landed the Direction's dramatic ★ <b>capstone boss</b> (Frostmaw — <code>min_chain 4</code> while engaged, raising the bar to resolve a chain — closing Town&nbsp;2), and <b>M3h</b> shipped <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (rats are a no-yield tile seeded into the farm pool once Town&nbsp;2 is done; Ratcatcher shoos them, Master Ratcatcher folds 8-adjacent rats into a grass chain). With M3g+M3h the <b>M3 introductory slice is COMPLETE (8 sub-parts, M3a–M3h)</b>. A follow-on hardening pass then built the <b>mine hazard deferred from M3f</b> — <b>M3i — rubble (cave-ins)</b>: <code>Tile.RUBBLE</code> is a no-yield cave-rock tile seeded into the <b>mine</b> pool only, and a resolved <b>stone</b> chain folds every 8-adjacent rubble into the same removal set, so you <b>mine through it</b> (the rats pattern generalized — a no-yield board tile cleared by chaining a trigger tile adjacent — but biome-distinct: mine vs farm, stone vs grass). There are now <b>12 headless CI-gated test suites totalling 841 checks</b> (plus a 32-check asset suite being wired into CI in the current hardening pass).
           The Phaser version at the repo root is untouched and still fully playable, and the <b>GitHub Pages deploy is live</b> (PR #938): pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.
           <b>M4 — UX/UI parity with the original React+Phaser game — has now started.</b> Its first part, <b>M4a</b>, ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic: a stateless <code>Palette.gd</code> (the parchment surfaces / ink text / iron border / ember-gold-moss accents ported from <code>src/tokens.css</code>), a rounded field-tinted <b>framed board</b> drawn in <code>Board.gd</code> (StyleBoxFlat + drop shadow), the signature glowing <b>chain-path overlay</b> (<code>ChainOverlay.gd</code> — orange/gold when valid, muddy rust when too short), and a re-skinned HUD with the <b>Cinzel</b> display serif. The transformation is dramatic — from a flat dark grid to a cream backdrop, a green field card, real PNG tile art, and the orange/gold chain path — while gameplay is unchanged (the scene smoke + all 12 suites stay green). <b>M4b</b> then replaced the cluttered 11-label HUD with the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with a <b>Cinzel</b> "Hearthwood Vale" title and right-aligned <b>pills</b> (coins, tier·plots, biome, plus conditional boss / rats pills), a <b>chain-progress bar</b> (DIM track → MOSS→GOLD fill) for the last-chained resource, and a <b>"Stockpile" card</b> — a 4-column grid of parchment resource chips rebuilt from <code>inventory</code> (replacing the old "Collected: …" label). The now-redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). <b>M4c</b> then re-skinned the <b>Town screen</b> (<code>TownScreen.gd</code>) to the same parchment aesthetic — a <b>visual-only</b> pass that leaves structure, sections, <code>_action_buttons</code> keys, signals, and handlers untouched (so <code>run_town_ui_tests</code> stays green, 35 checks). The flat-black scrim becomes a warm brown one; the centered panel is now a <b>parchment card</b> (iron border, radius&nbsp;16, soft drop shadow) with a <b>Cinzel</b> title; <b>iron-hairline separators</b> sit above each section for a "ledger" feel; and a <code>_style_button</code> helper gives every action button a <b>parchment-pill</b> style with normal/hover/pressed/disabled states, accent-coded (tier-up/boss/expedition = ember, sell/fill/shoo = gold, build/craft = moss, demolish/leave/close = rose) — so the panel reads as paper-on-a-desk and matches the M4b HUD behind it. <b>M4d</b> then gave the silent port <b>sound</b>: a new <code>Audio.gd</code> (<code>class_name Audio extends Node</code>, a runtime SFX service <b>owned by Main rather than an autoload</b>, so the headless <code>--script</code> test harness stays autoload-free) synthesizes <b>9 SFX</b> (chain_start, chain_collect, upgrade, tier_up "bell", pop, fanfare arpeggio, coin, buzz, whoosh) into 22050&nbsp;Hz mono 16-bit <code>AudioStreamWAV</code>s at init — the same oscillator approach as the original WebAudio synth (<code>src/audio/index.ts</code>: sine/square/triangle/sawtooth + frequency glide + attack/decay envelope), with a 6-player round-robin pool for overlap and a respected mute flag. <code>Main.gd</code> wires them via before/after change-trackers (so nothing double-fires): chain_start on drag begin, chain_collect on resolve (+ upgrade when a unit drops), tier_up on tier-up, fanfare on boss defeat (pop on a boss hit), whoosh on entering the mine, coin/pop on a town action, and pop on a rats shoo. A new 63-check <code>run_audio_tests</code> suite runs in CI (no screenshot — audio isn't visual). <b>M4e</b> then added cosmetic <b>board juice</b> matching the original's reward feedback: <code>Main.gd</code> grows a top <code>_fx_layer</code> (<code>CanvasLayer</code> 2) and a <code>_spawn_reward_chip()</code> that flies a small parchment chip from the board center to the coin pill on each resolved chain ("+N resource" gold when a unit drops, else "+N 🪙" ember) — a ~700ms eased swoop + scale-down + fade, auto-freed, plus a small coin-pill bounce on spawn — wired into <code>_on_chain_resolved</code> after the credit; and <code>Board.gd</code> now pops refilled tiles in (start at scale 0.5, tween to 1 with a <code>TRANS_BACK</code> overshoot alongside the existing fall slide). Cosmetic only — no logic change — and the scene-smoke + e2e + town-UI + audio suites stay green. <b>M4f</b> then gives the M4d audio a <b>mute control</b> and adds a standard in-game menu: a new <code>MenuScreen.gd</code> (<code>class_name MenuScreen extends CanvasLayer</code>, layer&nbsp;4) — a small <b>parchment settings modal</b> modeled on the re-skinned TownScreen (warm brown scrim, a centered parchment card with iron border + drop shadow, a Cinzel "☰ Menu" title) with three pill buttons — <b>Sound: On/Off</b>, <b>New Game</b>, <b>Close</b> — emitting <code>toggle_sound</code>/<code>new_game</code>/<code>closed</code> and exposing <code>_action_buttons</code> for tests; <code>GameState.gd</code> gains a persisted <b><code>audio_muted</code></b> preference (to_dict/from_dict) so mute survives a reload; and <code>Main.gd</code> adds a top-right <b>"☰"</b> parchment pill that opens the menu (lazily created like the Town panel), flips + persists the mute on <code>toggle_sound</code> and applies it to the <code>_audio</code> service, clears the save + <code>reload_current_scene()</code> on New Game, and applies <code>_audio.set_muted(game.audio_muted)</code> on launch. A 37-check <code>run_menu_tests</code> suite runs in CI. <b>M4g</b> then shipped the port's first <b>dedicated Inventory screen</b> — the HUD previously had only a cramped stockpile strip. A new <code>InventoryScreen.gd</code> (<code>class_name InventoryScreen extends CanvasLayer</code>) is a parchment modal modeled on the Menu/Town screens that reads <b>real</b> <code>GameState</code> + <code>MarketConfig</code> data (no placeholder rows): it groups owned resources (count&gt;0) into <b>Farm goods / Refined / Mine / Other</b> (unknowns fall to Other so nothing is dropped), sorted, each row showing name · ×count · sell-each · line-value (gold; "—" for non-sellable like supplies), with a footer of <b>total stockpile value</b> + "{kinds} kinds · {units} items"; it's a read-only ledger with pure helpers (<code>total_value</code>/<code>kinds</code>/<code>total_units</code>/<code>group_of</code>). <code>Main.gd</code> adds a top-left "📦 Items" parchment pill (under "🏠 Town") that opens it, lazily created like the Town/Menu panels. A 43-check <code>run_inventory_tests</code> suite (ledger math, grouping, zero-count handling, close wiring, empty/unsellable-only, Main integration) runs in CI. With M4a–M4g the <b>core UX/UI parity goal is essentially met</b> (look + sound + menu + inventory); the M4 long tail (tooltips next; then the parity ceiling is reached — screens for unported systems like cartography/townsfolk/achievements are intentionally NOT built per the no-fakes rule) remains, and M5 (mobile) is externally gated. See the M4 detail tab.</div>
 
@@ -256,8 +256,8 @@
           <div class="bar"><span style="width:75%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~84%</b></div>
-          <div class="bar"><span style="width:84%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~85%</b></div>
+          <div class="bar"><span style="width:85%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -284,7 +284,7 @@
         </div>
         <div class="ms-row">
           <div class="num on">M3</div>
-          <div><div class="t">Content &amp; progression <span class="pill ok">complete</span></div><div class="d">Built as sub-PRs M3a…M3h (re-scoped from 6→7 when Orders and the Town UI were split, then →8 with the boss and rats as separate PRs). <b>M3a — Camp→City tier ladder</b>; <b>M3b — buildings/plots/spawners/demolish</b>; <b>M3c — refining + market economy</b>; <b>M3d — orders system</b>; <b>M3e — Town UI screen</b>; <b>M3f — mine expedition + Stage 2+3 asset pipeline (PR #937)</b>; <b>M3g — ★ capstone boss Frostmaw (PR #939)</b>; <b>M3h — Town 3 rats hazard + Ratcatcher (PR #940)</b> — <b>all done.</b> The full Town&nbsp;1 → Town&nbsp;2 (+boss) → Town&nbsp;3 slice plays end-to-end.</div></div>
+          <div><div class="t">Content &amp; progression <span class="pill ok">complete</span></div><div class="d">Built as sub-PRs M3a…M3h (re-scoped from 6→7 when Orders and the Town UI were split, then →8 with the boss and rats as separate PRs). <b>M3a — Camp→City tier ladder</b>; <b>M3b — buildings/plots/spawners/demolish</b>; <b>M3c — refining + market economy</b>; <b>M3d — orders system</b>; <b>M3e — Town UI screen</b>; <b>M3f — mine expedition + Stage 2+3 asset pipeline (PR #937)</b>; <b>M3g — ★ capstone boss Frostmaw (PR #939)</b>; <b>M3h — Town 3 rats hazard + Ratcatcher (PR #940)</b> — <b>all done.</b> The full Town&nbsp;1 → Town&nbsp;2 (+boss) → Town&nbsp;3 slice plays end-to-end. A hardening follow-on then built the <b>mine hazard deferred from M3f — M3i, rubble (cave-ins)</b>: a no-yield cave-rock tile seeded into the <b>mine</b> pool only, cleared by mining (a resolved stone chain folds 8-adjacent rubble into the removal set); 47-check suite.</div></div>
           <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
@@ -608,6 +608,21 @@
           <li class="done">Rats test suite — 80 checks
             <span class="note"><code>tests/run_rats_tests.gd</code>: rat-tile no-yield invariants, the <code>town2_complete</code> seeding gate, the hazard-building gate + shoo charges, <code>clear_all_rats</code> / grass-chain adjacency clearing, and save/load. CI runs it as its own step.</span></li>
         </ul>
+
+        <h3>M3i — Mine hazard: rubble (cave-ins) <span class="pill ok">done</span></h3>
+        <div class="box tip"><b>The mine hazard deferred from M3f is now built.</b> The Direction spec's "mine hazards add urgency the
+          farm never had" — built as a faithful first hazard, <b>rubble (cave-in rock)</b>. It mirrors the M3h rats pattern but is
+          biome-distinct: a no-yield board tile cleared by chaining a trigger tile adjacent — but in the <b>mine</b> (not the farm),
+          triggered by <b>stone</b> (not grass), and <b>built-in</b> (not building-gated). The urgency comes free from the limited mine
+          turns (the supplies/food gate).</div>
+        <ul class="check">
+          <li class="done">A no-yield rubble (cave-in) tile, seeded into the mine pool only
+            <span class="note"><code>Constants.Tile.RUBBLE</code> (ordinal 16, <b>append-only</b> so existing save enum ints stay stable) produces nothing and has no threshold, so chaining rubble just <b>wastes a move</b>; a dark cave-rock color; <code>RUBBLE_POOL_SLOTS=2</code>. <code>GameState.active_biome_pool()</code> seeds 2 rubble into the <b>mine</b> pool only (the farm pool is untouched); <code>mine_hazard_active()</code>. No save-shape change — rubble is board-only, like rats. See Decision&nbsp;#34.</span></li>
+          <li class="done">Clear rubble by mining — a resolved stone chain folds adjacent rubble
+            <span class="note"><code>Board.gd</code> gains <code>clear_rubble_on_stone</code>: a resolved STONE chain folds every 8-adjacent RUBBLE into the same removal set — you <b>mine through it</b> (not counted in the chain length, not credited). <code>_adjacent_rubble_cells</code> parallels the rats-adjacency helper. <code>Main.gd</code> sets <code>clear_rubble_on_stone = is_in_mine()</code>; the biome pill now reads "⛏ Mine · N · clear rubble by mining".</span></li>
+          <li class="done">Rubble test suite — 47 checks
+            <span class="note"><code>tests/run_rubble_tests.gd</code>: tile attrs + the append-only ordinal, mine-only pool seeding, a STONE chain clearing adjacent rubble while far rubble survives (and the board stays full), adjacency, the off-switch, and the farm being unaffected. <code>run_mine_tests</code>'s pool assertion updated for the seeded rubble. CI runs the new suite as its own step.</span></li>
+        </ul>
       </section>
 
       <section id="m3-files">
@@ -706,6 +721,18 @@
             <tr><td><code>godot/scenes/Main.gd</code></td><td>Rats HUD + a "Shoo rats" free-move button</td></tr>
             <tr><td><code>godot/scenes/TownScreen.gd</code></td><td>Adds a Rats section with the two build buttons + the shoo control</td></tr>
             <tr><td><code>godot/tests/run_rats_tests.gd</code></td><td><b>New.</b> Headless rats tests (80 checks): no-yield invariants, the <code>town2_complete</code> seeding gate, the hazard-building gate + shoo charges, <code>clear_all_rats</code> / grass-chain adjacency clearing, save/load</td></tr>
+          </tbody>
+        </table>
+        <h3>M3i — mine hazard: rubble (cave-ins)</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/Constants.gd</code></td><td>Adds <code>Tile.RUBBLE</code> (ordinal 16, append-only) — a no-yield, no-threshold cave-rock hazard tile (a dark cave-rock color) — and <code>RUBBLE_POOL_SLOTS=2</code></td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td><code>active_biome_pool()</code> seeds 2 rubble into the <b>mine</b> pool only (the farm is untouched); <code>mine_hazard_active()</code>. No save-shape change (rubble is board-only, like rats)</td></tr>
+            <tr><td><code>godot/scenes/Board.gd</code></td><td><code>clear_rubble_on_stone</code> — a resolved STONE chain folds every 8-adjacent RUBBLE into the same removal set (you mine through it; not counted in the chain length, not credited); <code>_adjacent_rubble_cells</code> parallels the rats-adjacency helper</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td><code>clear_rubble_on_stone = is_in_mine()</code>; the biome pill now reads "⛏ Mine · N · clear rubble by mining"</td></tr>
+            <tr><td><code>godot/tests/run_rubble_tests.gd</code></td><td><b>New.</b> Headless rubble tests (47 checks): tile attrs + append-only ordinal, mine-only pool seeding, STONE clears adjacent rubble while far rubble survives + board stays full, adjacency, the off-switch, farm unaffected. <code>run_mine_tests</code>'s pool assertion updated for the seeded rubble</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the rubble-suite step (runs after the <code>--import</code> pass)</td></tr>
           </tbody>
         </table>
       </section>
@@ -1175,6 +1202,23 @@
             value legible.</p>
         </div>
 
+        <h3>M3i decisions</h3>
+
+        <div class="card amber">
+          <h3>34 · The mine hazard reuses the rats pattern, generalized — biome-distinct</h3>
+          <p>The mine hazard (rubble / cave-ins) is the <b>rats hazard pattern generalized</b>: a no-yield board tile that a player
+            clears by chaining a <i>trigger</i> tile adjacent to it. <code>Constants.Tile.RUBBLE</code> (ordinal 16, <b>append-only</b>
+            so existing save enum ints stay stable — Decision&nbsp;#9 / the save-schema risk) produces nothing and has no threshold, so
+            chaining rubble only <b>wastes a move</b> — exactly the rats invariant (Decision&nbsp;#27). But it is deliberately
+            <b>biome-distinct</b> from rats on every axis: it seeds into the <b>mine</b> pool (not the farm — <code>active_biome_pool()</code>
+            seeds <code>RUBBLE_POOL_SLOTS=2</code> rubble only inside an expedition, leaving the farm pool untouched), it is cleared by a
+            resolving <b>STONE</b> chain (not grass — <code>Board.clear_rubble_on_stone</code> folds 8-adjacent rubble into the removal
+            set, uncredited, so you "mine through it"), and it is <b>built-in</b> rather than building-gated (there is no Ratcatcher
+            equivalent — the urgency comes free from the limited mine turns / the supplies-food gate). Reusing the proven adjacency-clear
+            shape kept the hazard cheap to build and legible to a player who already learned the rats lesson, while the per-axis
+            differences keep the mine feeling like its own place. Rubble is board-only (no save-shape change), like rats.</p>
+        </div>
+
         <h3>M3f / scope decisions</h3>
 
         <div class="card amber">
@@ -1182,9 +1226,10 @@
           <p>The Direction ultimately wants <b>per-settlement resource pools</b> (each town hoards its own goods). The M3a–M3h slice
             deliberately uses <b>one shared <code>GameState</code> inventory</b> across Town&nbsp;1, the mine expedition, and Town&nbsp;3,
             so the vertical slice could be built and verified end-to-end without the bookkeeping of a multi-pool model. Recorded here as
-            an explicit, honest debt — alongside the other deliberately deferred pieces: the <b>Town-2 tier ladder</b>, <b>mine hazards</b>,
-            and <b>Town-3's broader specialization roster</b> (the Direction's draft beyond the fixed rats lesson). These land with the
-            broader M4 content/parity work, not the introductory slice.</p>
+            an explicit, honest debt — alongside the other deliberately deferred pieces: the <b>Town-2 tier ladder</b> and
+            <b>Town-3's broader specialization roster</b> (the Direction's draft beyond the fixed rats lesson). These land with the
+            broader M4 content/parity work, not the introductory slice. (The <b>mine hazard</b> deferred here has since been <b>built</b> —
+            see M3i / Decision&nbsp;#34.)</p>
         </div>
 
         <h3>M4 decisions</h3>
@@ -1238,8 +1283,8 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> The <b>15 headless CI-gated suites total 969 checks</b>
-          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 137 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_mine_tests</code> 117 + <code>run_boss_tests</code> 73 + <code>run_rats_tests</code> 80 + <code>run_assets_tests</code> 32 + <code>run_audio_tests</code> 63 + <code>run_menu_tests</code> 37 + <code>run_inventory_tests</code> 43 + <code>run_scene_smoke</code> 11) and all
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> The <b>16 headless CI-gated suites total 1016 checks</b>
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 137 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_mine_tests</code> 117 + <code>run_boss_tests</code> 73 + <code>run_rats_tests</code> 80 + <code>run_rubble_tests</code> 47 + <code>run_assets_tests</code> 32 + <code>run_audio_tests</code> 63 + <code>run_menu_tests</code> 37 + <code>run_inventory_tests</code> 43 + <code>run_scene_smoke</code> 11) and all
           exit <code>0</code>. The screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
@@ -1289,6 +1334,11 @@
         <h3>Town 3 rats hazard — M3h (rats infest the farm; Ratcatcher shoos them)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m3h-rats.png" alt="M3h Town-3 farm board after clearing Town 2: drab grey rat cells are seeded among the farm tiles, with a HUD line 'Plots 2/11 · Ratcatcher, Master Ratcatcher' and 5 shoo charges available"><figcaption>After Town&nbsp;2 is cleared, rats — the drab grey cells — infest the <b>farm</b> board: a no-yield hazard tile (chaining them wastes a move). The HUD shows "Plots 2/11 · Ratcatcher, Master Ratcatcher" with 5 shoo charges. The Ratcatcher's "Shoo rats" free move clears every rat; the Master Ratcatcher folds rats 8-adjacent to a grass chain into the removal set (uncredited). Proves <code>rats_enabled()</code> seeding (Decision&nbsp;#27), the hazard-building gate + shoo charges (Decision&nbsp;#28), and the board-side clearing.</figcaption></figure>
+        </div>
+
+        <h3>Mine hazard: rubble — M3i (cave-ins clutter the mine; cleared by mining)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3i-rubble.png" alt="M3i mine board during an expedition: dark grey-brown rubble (cave-in) tiles scattered among the mine ores, with a biome pill reading '⛏ Mine · N · clear rubble by mining'"><figcaption>Inside the mine, <b>rubble</b> — the dark grey-brown cave-rock tiles — clutters the board among the ores: a no-yield hazard (chaining rubble wastes a move), seeded into the <b>mine</b> pool only (the farm is untouched). The biome pill reads "⛏ Mine · N · clear rubble by mining" — you clear it by <b>mining through it</b>: a resolved STONE chain folds any 8-adjacent rubble into the removal set (uncredited). Proves the mine-only seeding + <code>mine_hazard_active()</code> (Decision&nbsp;#34) and <code>Board.clear_rubble_on_stone</code>'s stone-chain adjacency clearing.</figcaption></figure>
         </div>
 
         <h3>Parchment visual identity — M4a (barebones grid → cozy parchment)</h3>
@@ -1515,6 +1565,22 @@
 ──────────────────────────────────────────────────
 80 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
+<span class="c">$ godot --headless --path godot --script res://tests/run_rubble_tests.gd</span>
+── Mine hazard — rubble (cave-ins) tests ──────────
+  <span class="g">PASS</span>  RUBBLE tile produces nothing and has no threshold (wasted move)
+  <span class="g">PASS</span>  RUBBLE ordinal is 16 (append-only — save enum ints stay stable)
+  <span class="g">PASS</span>  active_biome_pool seeds 2 rubble into the MINE pool (inside an expedition)
+  <span class="g">PASS</span>  farm pool is untouched — no rubble outside the mine
+  <span class="g">PASS</span>  mine_hazard_active() true only inside an expedition
+  <span class="g">PASS</span>  a resolved STONE chain clears its 8-adjacent rubble (uncredited)
+  <span class="g">PASS</span>  rubble not adjacent to the stone chain survives
+  <span class="g">PASS</span>  board stays full after a stone-chain rubble clear (collapse + refill)
+  <span class="g">PASS</span>  rubble folded into the removal set is not counted in the chain length
+  <span class="g">PASS</span>  clear_rubble_on_stone off-switch leaves rubble untouched
+  <span class="c">…  (37 further attr / seeding / adjacency / off-switch checks)</span>
+──────────────────────────────────────────────────
+47 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
 <span class="c">$ godot --headless --path godot --script res://tests/run_audio_tests.gd</span>
 ── Audio / synthesized SFX tests ──────────────────
   <span class="g">PASS</span>  all 9 SFX synthesized (chain_start … whoosh)
@@ -1603,6 +1669,7 @@ godot --headless --path godot --script res://tests/run_town_ui_tests.gd <span cl
 godot --headless --path godot --script res://tests/run_mine_tests.gd  <span class="c"># mine expedition → Town 2 tests (117)</span>
 godot --headless --path godot --script res://tests/run_boss_tests.gd  <span class="c"># Frostmaw capstone-boss tests (73)</span>
 godot --headless --path godot --script res://tests/run_rats_tests.gd  <span class="c"># Town 3 rats hazard + Ratcatcher tests (80)</span>
+godot --headless --path godot --script res://tests/run_rubble_tests.gd <span class="c"># mine hazard — rubble (cave-ins) tests (47)</span>
 godot --headless --path godot --script res://tests/run_audio_tests.gd <span class="c"># synthesized SFX / Audio tests (63)</span>
 godot --headless --path godot --script res://tests/run_menu_tests.gd  <span class="c"># settings / menu modal tests (37)</span>
 godot --headless --path godot --script res://tests/run_inventory_tests.gd <span class="c"># Inventory screen / ledger tests (43)</span>
@@ -1619,7 +1686,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, the full M3 slice (M3a–M3h), M4a, M4b, M4c, M4d, M4e, M4f &amp; M4g</h3>
+        <h3>Done — M1, M2, the full M3 slice (M3a–M3h) + the M3i mine hazard, M4a, M4b, M4c, M4d, M4e, M4f &amp; M4g</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
@@ -1631,6 +1698,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <li class="done">M3f — expedition → Town 2 (mine) — <b>merged (PR #937)</b>: mine tiles + <code>MINE_POOL</code>, the Kitchen→supplies food gate + Supplies recipe, mine-good Market prices, and the <code>enter_mine</code>/<code>note_mine_turn</code>/<code>leave_mine</code>/<code>active_biome_pool</code> expedition lifecycle (soft-fail keeps everything gathered); a <code>TownScreen</code> Expedition section; a 117-check mine suite, CI step.</li>
           <li class="done">M3g — ★ capstone boss (Frostmaw) — <b>merged (PR #939)</b>: <code>BossConfig.gd</code> (hp 40, <code>min_chain 4</code>, reward 500c); <code>GameState</code> <code>can_challenge_boss</code>/<code>start_boss</code>/<code>boss_min_chain</code>/<code>damage_boss</code> (killing blow sets <code>town2_complete</code> + credits the reward); a dynamic <code>Board.min_chain</code> that raises the resolve bar while keeping dead-board checks at base min; boss HUD + a gated "Challenge Frostmaw" button; a 73-check boss suite, CI step.</li>
           <li class="done">M3h — Town 3 rats hazard + Ratcatcher — <b>merged (PR #940)</b>: <code>Constants.Tile.RAT</code> (a no-yield hazard tile, gated on <code>town2_complete</code>, seeded into the farm pool); Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind) + 5 shoo charges; <code>Board.clear_all_rats</code> / grass-chain adjacency clearing; rats HUD + a Rats section + a "Shoo rats" free move; an 80-check rats suite, CI step. <b>The M3 introductory slice is complete (8 sub-parts, M3a–M3h).</b></li>
+          <li class="done"><b>M3i — mine hazard: rubble (cave-ins)</b> — the mine hazard deferred from M3f, now built: <code>Constants.Tile.RUBBLE</code> (ordinal 16, append-only) — a no-yield cave-rock tile seeded into the <b>mine</b> pool only (<code>RUBBLE_POOL_SLOTS=2</code>; <code>GameState.active_biome_pool</code> + <code>mine_hazard_active</code>); <code>Board.clear_rubble_on_stone</code> folds 8-adjacent rubble into a resolving STONE chain's removal set (you mine through it, uncredited), wired by <code>Main.gd</code> via <code>is_in_mine()</code> with the biome pill "⛏ Mine · N · clear rubble by mining"; a 47-check <code>run_rubble_tests</code> suite + the <code>run_mine_tests</code> pool assertion updated, CI step. The rats pattern generalized but biome-distinct (mine/stone/built-in — Decision&nbsp;#34); no save-shape change. <b>One of the M3-era deferred items closed.</b></li>
           <li class="done"><b>GitHub Pages deploy live (PR #938)</b> — pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.</li>
           <li class="done"><b>M4a — parchment visual identity</b> — <b>M4 (UX/UI parity) begins</b>: <code>Palette.gd</code> (the parchment palette ported from <code>src/tokens.css</code>), a field-tinted framed board card in <code>Board.gd</code>, the orange/gold glowing chain-path overlay (<code>ChainOverlay.gd</code>), a re-skinned HUD with the <b>Cinzel</b> display serif, and <code>godot/assets/fonts/Cinzel-Regular.ttf</code>. Gameplay unchanged — scene smoke + all 12 suites stay green.</li>
           <li class="done"><b>M4b — HUD top-bar + stockpile / chain-progress</b>: <code>Main.gd</code> replaces the cluttered 11-label HUD with the original game's structure — a parchment <b>top-bar</b> (<code>PanelContainer</code>) carrying the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> 4-column parchment resource-chip grid rebuilt from <code>inventory</code>; <code>Tile.gd</code> drops the redundant per-tile selection ring (the M4a <code>ChainOverlay</code> is the selection feedback). All <code>_refresh_*</code> + <code>_chain_label</code>/<code>_status_label</code>/<code>_orders_label</code> names kept — scene-smoke + e2e + town-UI + all logic suites stay green.</li>
@@ -1644,7 +1712,8 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
         <h3>Next — finish M4 (UX/UI parity), then M5 (mobile)</h3>
         <!-- M4g done; next the M4 long tail (tooltips, more board animations) — then the parity ceiling for ported systems is reached (no fakes for unported cartography/townsfolk/achievements) -->
         <div class="log">
-          <div class="entry"><div class="date">M3 · complete</div><h3>Introductory vertical slice done</h3><p>The full Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats) slice plays end-to-end in Godot, backed by 11 headless CI-gated suites (794 checks). <b>Deliberately deferred</b> (honest debt — Decision&nbsp;#29): the per-settlement resource split (the slice uses one shared inventory), the Town-2 tier ladder, mine hazards, and Town-3's broader specialization roster.</p></div>
+          <div class="entry"><div class="date">M3 · complete</div><h3>Introductory vertical slice done</h3><p>The full Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats) slice plays end-to-end in Godot, backed by 11 headless CI-gated suites (794 checks). <b>Deliberately deferred</b> (honest debt — Decision&nbsp;#29): the per-settlement resource split (the slice uses one shared inventory), the Town-2 tier ladder, and Town-3's broader specialization roster. (The <b>mine hazard</b> was on this list and has since been <b>built</b> — see M3i below.)</p></div>
+          <div class="entry"><div class="date">M3i · done</div><h3>Mine hazard — rubble (cave-ins)</h3><p>The mine hazard deferred from M3f is now built — the Direction's "mine hazards add urgency the farm never had," shipped as a faithful first hazard: <b>rubble (cave-in rock)</b>. <code>Constants.Tile.RUBBLE</code> (ordinal 16, append-only) is a no-yield cave-rock tile seeded into the <b>mine</b> pool only (<code>RUBBLE_POOL_SLOTS=2</code>; the farm is untouched); a resolved <b>STONE</b> chain folds every 8-adjacent rubble into the same removal set, so you <b>mine through it</b> (uncredited) — <code>Board.clear_rubble_on_stone</code>, set by <code>Main.gd</code> via <code>is_in_mine()</code>, with the biome pill reading "⛏ Mine · N · clear rubble by mining." It is the M3h rats pattern <b>generalized</b> (a no-yield board tile cleared by chaining a trigger tile adjacent) but biome-distinct (mine vs farm; stone vs grass; built-in vs building-gated; urgency from the limited mine turns — Decision&nbsp;#34). A 47-check <code>run_rubble_tests</code> suite runs in CI; <code>run_mine_tests</code>'s pool assertion was updated. No save-shape change. Screenshot <code>m3i-rubble.png</code>.</p></div>
           <div class="entry"><div class="date">M4a · done</div><h3>Parchment visual identity ported from the original</h3><p>M4 (UX/UI parity) has begun. The Godot UI was barebones (a flat dark grid + code-built HUD); M4a ports the original's cozy "leather-bound journal" <b>parchment</b> aesthetic — <code>Palette.gd</code> (from <code>src/tokens.css</code>), a field-tinted framed board card, the orange/gold glowing chain-path overlay, and a re-skinned Cinzel HUD. A dramatic facelift with gameplay unchanged (all suites green).</p></div>
           <div class="entry"><div class="date">M4b · done</div><h3>HUD top-bar + stockpile / chain-progress</h3><p>The cluttered 11-label HUD becomes the original game's structure: a parchment <b>top-bar</b> (<code>PanelContainer</code>) with the Cinzel "Hearthwood Vale" title + right-aligned pills (coins / tier·plots / biome, plus conditional ⚔ boss / 🐀 rats pills), a MOSS→GOLD <b>chain-progress bar</b> for the last-chained resource, and a <b>"Stockpile"</b> resource-chip grid rebuilt from <code>inventory</code>. The redundant per-tile selection ring was dropped (the M4a <code>ChainOverlay</code> is the selection feedback). Built in <code>Main.gd</code> + <code>Tile.gd</code> — all suites green. The HUD shows the port's <i>real</i> state; the original's level/XP/season pills are intentionally absent (Decision&nbsp;#31).</p></div>
           <div class="entry"><div class="date">M4c · done</div><h3>Town-screen parchment re-skin</h3><p>The Town modal (<code>TownScreen.gd</code>) is re-skinned to the parchment aesthetic in a <b>visual-only</b> pass: a parchment <b>card</b> (iron border, radius 16, soft drop shadow) over a warm brown scrim, a <b>Cinzel</b> title, <b>ember Cinzel section headers</b> with iron-hairline "ledger" separators, and a <code>_style_button</code> helper giving every action button an accent-coded parchment-pill style with normal/hover/pressed/disabled states (ember tier-up/boss/expedition, gold sell/fill/shoo, moss build/craft, rose demolish/leave/close). Structure, sections, <code>_action_buttons</code> keys, signals, and handlers are unchanged — the panel now matches the M4b HUD behind it, and <code>run_town_ui_tests</code> (35 checks) stays green.</p></div>
