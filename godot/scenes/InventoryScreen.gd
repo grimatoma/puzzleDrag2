@@ -154,7 +154,7 @@ func _build_shell() -> void:
 	title.text = "📦 Inventory"
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", COL_TITLE)
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -163,7 +163,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✕ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_style_button(close_btn, Palette.EMBER)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -223,7 +223,7 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 	header.text = group_name
 	header.add_theme_font_size_override("font_size", 22)
 	header.add_theme_color_override("font_color", COL_HEADER)
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		header.add_theme_font_override("font", heading_font)
 	_body.add_child(header)
@@ -241,7 +241,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 
 	var chip := PanelContainer.new()
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", _row_box())
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -295,7 +295,7 @@ func _build_footer() -> void:
 	total.text = "Total stockpile value: %d 🪙" % total_value()
 	total.add_theme_font_size_override("font_size", 22)
 	total.add_theme_color_override("font_color", COL_VALUE)
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		total.add_theme_font_override("font", heading_font)
 	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -367,67 +367,6 @@ func _grouped_owned() -> Dictionary:
 	return out
 
 # ── helpers (copied from TownScreen / MenuScreen to keep the journal look) ──────
-
-## The Cinzel display serif used by Main's headings / the other modals. Loads
-## res://assets/fonts/Cinzel-Regular.ttf as a BOLD FontVariation, returning null when
-## the asset isn't present so callers fall back to the default font (the parchment
-## look does NOT depend on the font landing). Cached after the first try.
-static var _heading_font_cache: Font = null
-static var _heading_font_tried: bool = false
-func _heading_font() -> Font:
-	if _heading_font_tried:
-		return _heading_font_cache
-	_heading_font_tried = true
-	var path := "res://assets/fonts/Cinzel-Regular.ttf"
-	if ResourceLoader.exists(path):
-		var base := load(path)
-		if base is FontFile:
-			var fv := FontVariation.new()
-			fv.base_font = base
-			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
-			_heading_font_cache = fv
-	return _heading_font_cache
-
-## A reusable parchment StyleBoxFlat for action buttons: warm fill, iron border,
-## rounded corners, comfortable padding.
-func _btn_box(fill: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = Palette.IRON
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	return sb
-
-## A soft-parchment row chip StyleBox: gentle fill, thin iron border, rounded 8,
-## snug padding — the per-resource ledger line.
-func _row_box() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Palette.PARCHMENT_SOFT
-	sb.border_color = Palette.IRON
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	return sb
-
-## Give an action Button the parchment-pill look: parchment fills for
-## normal/hover/pressed/focus, an iron border, and ink text that shifts to `accent`
-## on hover. Purely visual.
-func _style_button(btn: Button, accent := Palette.EMBER) -> void:
-	btn.add_theme_stylebox_override("normal", _btn_box(Palette.PARCHMENT))
-	btn.add_theme_stylebox_override("hover", _btn_box(Palette.PARCHMENT_SOFT))
-	btn.add_theme_stylebox_override("pressed", _btn_box(Palette.DIM))
-	btn.add_theme_stylebox_override("focus", _btn_box(Palette.PARCHMENT_SOFT))
-	btn.add_theme_color_override("font_color", Palette.INK)
-	btn.add_theme_color_override("font_hover_color", accent)
-	btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	btn.add_theme_font_size_override("font_size", 20)
 
 ## A wrapping body Label in the given color.
 func _make_label(text: String, color: Color) -> Label:

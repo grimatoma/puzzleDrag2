@@ -157,7 +157,7 @@ func _build_shell() -> void:
 	title.add_theme_color_override("font_color", COL_TITLE)
 	# M4c: the Cinzel display serif (parity with Main's headings). Defensive — falls
 	# back to the default font when the asset isn't imported/present.
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -166,7 +166,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✕ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_style_button(close_btn, COL_DANGER)
+	UiKit.style_button(close_btn, COL_DANGER, 6, 0, true)
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -197,7 +197,7 @@ func _add_section(header_text: String) -> VBoxContainer:
 	header.text = header_text
 	header.add_theme_font_size_override("font_size", 22)
 	header.add_theme_color_override("font_color", COL_HEADER)
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		header.add_theme_font_override("font", heading_font)
 	_root_vbox.add_child(header)
@@ -275,7 +275,7 @@ func _build_settlement_section() -> void:
 	var btn := Button.new()
 	btn.text = "Advance to %s — %s" % [next_name, cost_text]
 	btn.disabled = not game.can_tier_up()
-	_style_button(btn, Palette.EMBER)
+	UiKit.style_button(btn, Palette.EMBER, 6, 0, true)
 	btn.connect("pressed", Callable(self, "_do_tier_up"))
 	_settlement_body.add_child(btn)
 	_action_buttons["tierup"] = btn
@@ -304,7 +304,7 @@ func _build_buildings_section() -> void:
 			var demo := Button.new()
 			demo.text = "Demolish"
 			demo.size_flags_horizontal = Control.SIZE_SHRINK_END
-			_style_button(demo, COL_DANGER)
+			UiKit.style_button(demo, COL_DANGER, 6, 0, true)
 			demo.connect("pressed", Callable(self, "_do_demolish").bind(id))
 			row.add_child(demo)
 			_action_buttons["demolish:" + id] = demo
@@ -313,7 +313,7 @@ func _build_buildings_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			_style_button(build_btn, Palette.MOSS)
+			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
@@ -337,7 +337,7 @@ func _build_refine_section() -> void:
 		craft_btn.text = "Craft"
 		craft_btn.disabled = not game.can_craft(id)
 		craft_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		_style_button(craft_btn, Palette.MOSS)
+		UiKit.style_button(craft_btn, Palette.MOSS, 6, 0, true)
 		craft_btn.connect("pressed", Callable(self, "_do_craft").bind(id))
 		row.add_child(craft_btn)
 		_action_buttons["craft:" + id] = craft_btn
@@ -362,7 +362,7 @@ func _build_market_section() -> void:
 		var sell_btn := Button.new()
 		sell_btn.text = "Sell 1"
 		sell_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		_style_button(sell_btn, Palette.GOLD)
+		UiKit.style_button(sell_btn, Palette.GOLD, 6, 0, true)
 		sell_btn.connect("pressed", Callable(self, "_do_sell").bind(res))
 		row.add_child(sell_btn)
 		_action_buttons["sell:" + res] = sell_btn
@@ -390,7 +390,7 @@ func _build_orders_section() -> void:
 		fill_btn.text = "Fill"
 		fill_btn.disabled = not game.can_fill_order(i)
 		fill_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		_style_button(fill_btn, Palette.GOLD)
+		UiKit.style_button(fill_btn, Palette.GOLD, 6, 0, true)
 		fill_btn.connect("pressed", Callable(self, "_do_fill").bind(i))
 		row.add_child(fill_btn)
 		_action_buttons["fill:" + str(i)] = fill_btn
@@ -407,7 +407,7 @@ func _build_expedition_section() -> void:
 			"⛏ On expedition — %d turns left" % game.mine_turns_left, COL_BODY))
 		var leave_btn := Button.new()
 		leave_btn.text = "Leave the mine"
-		_style_button(leave_btn, COL_DANGER)
+		UiKit.style_button(leave_btn, COL_DANGER, 6, 0, true)
 		leave_btn.connect("pressed", Callable(self, "_do_leave_mine"))
 		_expedition_body.add_child(leave_btn)
 		_action_buttons["leave_mine"] = leave_btn
@@ -421,7 +421,7 @@ func _build_expedition_section() -> void:
 	var enter_btn := Button.new()
 	enter_btn.text = "Enter the Mine (%d turns)" % supplies
 	enter_btn.disabled = not game.can_enter_mine()
-	_style_button(enter_btn, Palette.EMBER)
+	UiKit.style_button(enter_btn, Palette.EMBER, 6, 0, true)
 	enter_btn.connect("pressed", Callable(self, "_do_enter_mine"))
 	_expedition_body.add_child(enter_btn)
 	_action_buttons["enter_mine"] = enter_btn
@@ -450,7 +450,7 @@ func _build_boss_section() -> void:
 	var challenge_btn := Button.new()
 	challenge_btn.text = "⚔ Challenge Frostmaw"
 	challenge_btn.disabled = not game.can_challenge_boss()
-	_style_button(challenge_btn, Palette.EMBER)
+	UiKit.style_button(challenge_btn, Palette.EMBER, 6, 0, true)
 	challenge_btn.connect("pressed", Callable(self, "_do_challenge_boss"))
 	_boss_body.add_child(challenge_btn)
 	_action_buttons["challenge_boss"] = challenge_btn
@@ -484,7 +484,7 @@ func _build_rats_section() -> void:
 			var demo := Button.new()
 			demo.text = "Demolish"
 			demo.size_flags_horizontal = Control.SIZE_SHRINK_END
-			_style_button(demo, COL_DANGER)
+			UiKit.style_button(demo, COL_DANGER, 6, 0, true)
 			demo.connect("pressed", Callable(self, "_do_demolish").bind(id))
 			row.add_child(demo)
 			_action_buttons["demolish:" + id] = demo
@@ -493,7 +493,7 @@ func _build_rats_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			_style_button(build_btn, Palette.MOSS)
+			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
@@ -505,7 +505,7 @@ func _build_rats_section() -> void:
 	if game.can_shoo_rats():
 		var shoo_btn := Button.new()
 		shoo_btn.text = "Shoo rats (free move, %d left)" % game.ratcatcher_charges_left()
-		_style_button(shoo_btn, Palette.GOLD)
+		UiKit.style_button(shoo_btn, Palette.GOLD, 6, 0, true)
 		shoo_btn.connect("pressed", Callable(self, "_do_shoo_rats"))
 		_rats_body.add_child(shoo_btn)
 		_action_buttons["shoo_rats"] = shoo_btn
@@ -565,57 +565,9 @@ func _after(result: Dictionary) -> void:
 	refresh()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-
-## M4c — the Cinzel display serif used by the original game / Main's headings.
-## Loads res://assets/fonts/Cinzel-Regular.ttf as a BOLD FontVariation, returning
-## null when the asset isn't present so callers fall back to the default font (the
-## parchment look does NOT depend on the font landing). Cached after the first try.
-static var _heading_font_cache: Font = null
-static var _heading_font_tried: bool = false
-func _heading_font() -> Font:
-	if _heading_font_tried:
-		return _heading_font_cache
-	_heading_font_tried = true
-	var path := "res://assets/fonts/Cinzel-Regular.ttf"
-	if ResourceLoader.exists(path):
-		var base := load(path)
-		if base is FontFile:
-			var fv := FontVariation.new()
-			fv.base_font = base
-			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
-			_heading_font_cache = fv
-	return _heading_font_cache
-
-## A reusable parchment StyleBoxFlat for action buttons: warm fill, iron border,
-## rounded corners, comfortable padding. `fill` lets the hover/pressed/disabled
-## states swap to a softer/darker parchment.
-func _btn_box(fill: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = Palette.IRON
-	sb.set_border_width_all(2)               # ~1.5px reads as 2 at these sizes
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	return sb
-
-## M4c — give an action Button the parchment-pill look: parchment fills for
-## normal/hover/pressed/disabled stylebox overrides, an iron border, and ink text
-## that shifts to `accent` on hover (ink-mid pressed, faded-ink disabled). Purely
-## visual: it never touches the button's text, key, signal, or disabled flag.
-func _style_button(btn: Button, accent := Palette.EMBER) -> void:
-	btn.add_theme_stylebox_override("normal", _btn_box(Palette.PARCHMENT))
-	btn.add_theme_stylebox_override("hover", _btn_box(Palette.PARCHMENT_SOFT))
-	btn.add_theme_stylebox_override("pressed", _btn_box(Palette.DIM))
-	btn.add_theme_stylebox_override("focus", _btn_box(Palette.PARCHMENT_SOFT))
-	# Disabled: a muted parchment fill so the affordance reads clearly "off".
-	btn.add_theme_stylebox_override("disabled", _btn_box(Palette.DIM))
-	btn.add_theme_color_override("font_color", Palette.INK)
-	btn.add_theme_color_override("font_hover_color", accent)
-	btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	btn.add_theme_color_override("font_disabled_color", Color(Palette.INK_MID, 0.5))
+# Note: heading_font(), btn_box(), style_button() have moved to UiKit (M5a).
+# TownScreen calls UiKit.style_button(..., 6, 0, true) to preserve the
+# disabled-state override that TownScreen originally carried.
 
 ## A wrapping body Label in the given color.
 func _make_label(text: String, color: Color) -> Label:

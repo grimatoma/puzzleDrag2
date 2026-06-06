@@ -129,7 +129,7 @@ func _build_shell() -> void:
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
 	col.add_child(title)
@@ -138,7 +138,7 @@ func _build_shell() -> void:
 	_sound_btn = Button.new()
 	_sound_btn.text = "Sound: On"
 	_sound_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(_sound_btn, Palette.MOSS)
+	UiKit.style_button(_sound_btn, Palette.MOSS, 8, 20)
 	_sound_btn.connect("pressed", Callable(self, "_on_sound_pressed"))
 	col.add_child(_sound_btn)
 	_action_buttons["toggle_sound"] = _sound_btn
@@ -147,7 +147,7 @@ func _build_shell() -> void:
 	var new_btn := Button.new()
 	new_btn.text = "New Game"
 	new_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(new_btn, COL_DANGER)
+	UiKit.style_button(new_btn, COL_DANGER, 8, 20)
 	new_btn.connect("pressed", Callable(self, "_on_new_game_pressed"))
 	col.add_child(new_btn)
 	_action_buttons["new_game"] = new_btn
@@ -156,7 +156,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "Close"
 	close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(close_btn, Palette.EMBER)
+	UiKit.style_button(close_btn, Palette.EMBER, 8, 20)
 	close_btn.connect("pressed", Callable(self, "close"))
 	col.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -173,51 +173,6 @@ func _on_new_game_pressed() -> void:
 	emit_signal("new_game")
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-
-## The Cinzel display serif used by Main's headings / TownScreen. Loads
-## res://assets/fonts/Cinzel-Regular.ttf as a BOLD FontVariation, returning null when
-## the asset isn't present so callers fall back to the default font (the parchment look
-## does NOT depend on the font landing). Cached after the first try.
-static var _heading_font_cache: Font = null
-static var _heading_font_tried: bool = false
-func _heading_font() -> Font:
-	if _heading_font_tried:
-		return _heading_font_cache
-	_heading_font_tried = true
-	var path := "res://assets/fonts/Cinzel-Regular.ttf"
-	if ResourceLoader.exists(path):
-		var base := load(path)
-		if base is FontFile:
-			var fv := FontVariation.new()
-			fv.base_font = base
-			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
-			_heading_font_cache = fv
-	return _heading_font_cache
-
-## A reusable parchment StyleBoxFlat for action buttons: warm fill, iron border,
-## rounded corners, comfortable padding. `fill` lets the hover/pressed states swap to a
-## softer/darker parchment. (Copied from TownScreen._btn_box to keep the pill look.)
-func _btn_box(fill: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = Palette.IRON
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 8
-	sb.content_margin_bottom = 8
-	return sb
-
-## Give an action Button the parchment-pill look: parchment fills for
-## normal/hover/pressed/focus, an iron border, and ink text that shifts to `accent` on
-## hover. Purely visual. (Copied from TownScreen._style_button.)
-func _style_button(btn: Button, accent := Palette.EMBER) -> void:
-	btn.add_theme_stylebox_override("normal", _btn_box(Palette.PARCHMENT))
-	btn.add_theme_stylebox_override("hover", _btn_box(Palette.PARCHMENT_SOFT))
-	btn.add_theme_stylebox_override("pressed", _btn_box(Palette.DIM))
-	btn.add_theme_stylebox_override("focus", _btn_box(Palette.PARCHMENT_SOFT))
-	btn.add_theme_color_override("font_color", Palette.INK)
-	btn.add_theme_color_override("font_hover_color", accent)
-	btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	btn.add_theme_font_size_override("font_size", 20)
+# Note: heading_font(), btn_box(), style_button() have moved to UiKit (M5a).
+# MenuScreen calls UiKit.style_button(..., 8, 20) to preserve its original
+# padding_v=8 and font_size=20 (slightly different from TownScreen's variant).

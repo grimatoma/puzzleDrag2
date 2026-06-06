@@ -183,7 +183,7 @@ func _build_hud() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE   # never eat board drags
 	layer.add_child(root)
 
-	var heading_font: Font = _heading_font()   # Cinzel (bold) when present, else null
+	var heading_font: Font = UiKit.heading_font()   # Cinzel (bold) when present, else null
 
 	# ── A. Parchment top-bar of pills ─────────────────────────────────────────
 	# A full-width soft-parchment bar with an iron bottom border + a soft shadow,
@@ -230,26 +230,26 @@ func _build_hud() -> void:
 
 	# RIGHT — the pill cluster. coins (gold), tier (ink), biome (moss/ember), then
 	# the conditionally-visible boss + rats pills.
-	var coin_box := _make_pill("🪙 0", Palette.EMBER)
+	var coin_box := UiKit.make_pill("🪙 0", Palette.EMBER)
 	_coin_pill = coin_box.get_meta("label")
 	topbar_row.add_child(coin_box)
 
-	var tier_box := _make_pill("Camp · 0/3", Palette.INK)
+	var tier_box := UiKit.make_pill("Camp · 0/3", Palette.INK)
 	_tier_pill = tier_box.get_meta("label")
 	topbar_row.add_child(tier_box)
 
-	var biome_box := _make_pill("Farm", Palette.MOSS)
+	var biome_box := UiKit.make_pill("Farm", Palette.MOSS)
 	_biome_pill = biome_box.get_meta("label")
 	topbar_row.add_child(biome_box)
 
 	# Boss pill — cool ice-blue; hidden unless a boss fight is active.
-	_boss_pill_box = _make_pill("⚔ —", Color(0.20, 0.36, 0.52))
+	_boss_pill_box = UiKit.make_pill("⚔ —", Color(0.20, 0.36, 0.52))
 	_boss_pill = _boss_pill_box.get_meta("label")
 	_boss_pill_box.visible = false
 	topbar_row.add_child(_boss_pill_box)
 
 	# Rats pill — warm rust; hidden until rats are a live threat (Town 2 done).
-	_rats_pill_box = _make_pill("🐀 —", Palette.EMBER)
+	_rats_pill_box = UiKit.make_pill("🐀 —", Palette.EMBER)
 	_rats_pill = _rats_pill_box.get_meta("label")
 	_rats_pill_box.visible = false
 	topbar_row.add_child(_rats_pill_box)
@@ -261,7 +261,7 @@ func _build_hud() -> void:
 	_chain_prog_box = PanelContainer.new()
 	_chain_prog_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_chain_prog_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_box.add_theme_stylebox_override("panel", _parchment_box(Palette.PARCHMENT))
+	_chain_prog_box.add_theme_stylebox_override("panel", UiKit.parchment_box(Palette.PARCHMENT))
 	root.add_child(_chain_prog_box)
 
 	var prog_margin := MarginContainer.new()
@@ -290,12 +290,12 @@ func _build_hud() -> void:
 	_chain_prog_track.custom_minimum_size = Vector2(0, 12)
 	_chain_prog_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_chain_prog_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_track.add_theme_stylebox_override("panel", _bar_box(Palette.DIM, Palette.IRON))
+	_chain_prog_track.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.DIM, Palette.IRON))
 	prog_col.add_child(_chain_prog_track)
 
 	_chain_prog_fill = Panel.new()
 	_chain_prog_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_fill.add_theme_stylebox_override("panel", _bar_box(Palette.MOSS, Palette.MOSS))
+	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.MOSS, Palette.MOSS))
 	# Manually positioned/sized inside the track (it's a child Control, not laid out).
 	_chain_prog_fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_chain_prog_fill.position = Vector2.ZERO
@@ -358,13 +358,13 @@ func _build_hud() -> void:
 	town_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
 	# Parchment chip: warm fill, iron border, soft rounded corners — the cozy
 	# journal look. Hover/pressed states lighten/darken the same parchment.
-	var normal := _parchment_box(Palette.PARCHMENT)
-	var hover := _parchment_box(Palette.PARCHMENT_SOFT)
-	var pressed := _parchment_box(Palette.DIM)
+	var normal := UiKit.parchment_box(Palette.PARCHMENT)
+	var hover := UiKit.parchment_box(Palette.PARCHMENT_SOFT)
+	var pressed := UiKit.parchment_box(Palette.DIM)
 	town_btn.add_theme_stylebox_override("normal", normal)
 	town_btn.add_theme_stylebox_override("hover", hover)
 	town_btn.add_theme_stylebox_override("pressed", pressed)
-	town_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
+	town_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
 	town_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	town_btn.offset_left = 18
 	town_btn.offset_top = 18
@@ -380,10 +380,10 @@ func _build_hud() -> void:
 	menu_btn.add_theme_color_override("font_color", Palette.INK)
 	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
 	menu_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	menu_btn.add_theme_stylebox_override("normal", _parchment_box(Palette.PARCHMENT))
-	menu_btn.add_theme_stylebox_override("hover", _parchment_box(Palette.PARCHMENT_SOFT))
-	menu_btn.add_theme_stylebox_override("pressed", _parchment_box(Palette.DIM))
-	menu_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	menu_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	menu_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
 	menu_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	menu_btn.offset_right = -18
 	menu_btn.offset_top = 18
@@ -401,90 +401,19 @@ func _build_hud() -> void:
 	items_btn.add_theme_color_override("font_color", Palette.INK)
 	items_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
 	items_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	items_btn.add_theme_stylebox_override("normal", _parchment_box(Palette.PARCHMENT))
-	items_btn.add_theme_stylebox_override("hover", _parchment_box(Palette.PARCHMENT_SOFT))
-	items_btn.add_theme_stylebox_override("pressed", _parchment_box(Palette.DIM))
-	items_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
+	items_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	items_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	items_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	items_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
 	items_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	items_btn.offset_left = 18
 	items_btn.offset_top = 64
 	items_btn.connect("pressed", Callable(self, "_open_inventory"))
 	root.add_child(items_btn)
 
-## M4a (optional) — the Cinzel display serif used by the original game for headings.
-## Loads the variable TTF from res://assets/fonts/Cinzel-Regular.ttf and returns a
-## BOLD FontVariation of it. Returns null when the asset isn't imported/present, so
-## the caller falls back to the default font (the parchment look does NOT depend on
-## the font landing). Cached after the first build.
-static var _heading_font_cache: Font = null
-static var _heading_font_tried: bool = false
-func _heading_font() -> Font:
-	if _heading_font_tried:
-		return _heading_font_cache
-	_heading_font_tried = true
-	var path := "res://assets/fonts/Cinzel-Regular.ttf"
-	if ResourceLoader.exists(path):
-		var base := load(path)
-		if base is FontFile:
-			var fv := FontVariation.new()
-			fv.base_font = base
-			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
-			_heading_font_cache = fv
-	return _heading_font_cache
-
-## A reusable parchment StyleBoxFlat: warm fill, 2px iron border, rounded corners,
-## comfortable padding. Used to skin HUD buttons in the journal aesthetic.
-func _parchment_box(fill: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = Palette.IRON
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_left = 8
-	sb.corner_radius_bottom_right = 8
-	sb.content_margin_left = 14
-	sb.content_margin_right = 14
-	sb.content_margin_top = 7
-	sb.content_margin_bottom = 7
-	return sb
-
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
-
-## A pill: a PanelContainer with a fully-rounded parchment StyleBox (iron 1px
-## border) wrapping a Label of `text` in `fg`. The inner Label is stashed on the
-## container as meta "label" so the caller can keep a ref and mutate its text.
-func _make_pill(text: String, fg: Color, bg := Palette.PARCHMENT) -> PanelContainer:
-	var box := PanelContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = Palette.IRON
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.corner_radius_top_left = 999
-	sb.corner_radius_top_right = 999
-	sb.corner_radius_bottom_left = 999
-	sb.corner_radius_bottom_right = 999
-	sb.content_margin_left = 10
-	sb.content_margin_right = 10
-	sb.content_margin_top = 3
-	sb.content_margin_bottom = 3
-	box.add_theme_stylebox_override("panel", sb)
-	var lbl := Label.new()
-	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 16)
-	lbl.add_theme_color_override("font_color", fg)
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(lbl)
-	box.set_meta("label", lbl)
-	return box
+# Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
+# are now in UiKit (M5a). Call via UiKit.<fn>(...).
 
 ## The top-bar surface: soft parchment fill, an iron bottom border, and a soft
 ## drop shadow so it reads as a raised banner over the warm app frame.
@@ -498,52 +427,13 @@ func _topbar_box() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 3)
 	return sb
 
-## A small bar StyleBox (progress track / fill): flat fill, thin border, gently
-## rounded so the track + its fill read as a slim capsule.
-func _bar_box(fill: Color, border: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = border
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.corner_radius_top_left = 6
-	sb.corner_radius_top_right = 6
-	sb.corner_radius_bottom_left = 6
-	sb.corner_radius_bottom_right = 6
-	return sb
-
-## A card StyleBox for the stockpile panel: parchment fill, iron border, rounded
-## 12, soft drop shadow — the cozy journal card.
-func _card_box(fill: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = Palette.IRON
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.corner_radius_top_left = 12
-	sb.corner_radius_top_right = 12
-	sb.corner_radius_bottom_left = 12
-	sb.corner_radius_bottom_right = 12
-	sb.shadow_size = 8
-	sb.shadow_color = Color(0, 0, 0, 0.18)
-	sb.shadow_offset = Vector2(0, 3)
-	sb.content_margin_left = 14
-	sb.content_margin_right = 14
-	sb.content_margin_top = 10
-	sb.content_margin_bottom = 12
-	return sb
-
 ## Build the stockpile card: a titled parchment card holding a 4-col grid of
 ## resource chips (filled in _refresh_totals) plus a muted "empty" placeholder.
 func _build_stockpile(root: Control) -> void:
 	_stockpile_box = PanelContainer.new()
 	_stockpile_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_stockpile_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_stockpile_box.add_theme_stylebox_override("panel", _card_box(Palette.PARCHMENT))
+	_stockpile_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
 	root.add_child(_stockpile_box)
 
 	var col := VBoxContainer.new()
@@ -551,7 +441,7 @@ func _build_stockpile(root: Control) -> void:
 	col.add_theme_constant_override("separation", 8)
 	_stockpile_box.add_child(col)
 
-	var heading_font: Font = _heading_font()
+	var heading_font: Font = UiKit.heading_font()
 	var title := Label.new()
 	title.text = "Stockpile"
 	title.add_theme_font_size_override("font_size", 20)
@@ -1285,7 +1175,7 @@ func _apply_chain_progress_fill() -> void:
 	_chain_prog_fill.position = Vector2(1, 1)
 	_chain_prog_fill.size = Vector2(inner_w * ratio, maxf(0.0, _chain_prog_track.size.y - 2.0))
 	var col: Color = Palette.MOSS.lerp(Palette.GOLD, ratio)
-	_chain_prog_fill.add_theme_stylebox_override("panel", _bar_box(col, col))
+	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(col, col))
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":
