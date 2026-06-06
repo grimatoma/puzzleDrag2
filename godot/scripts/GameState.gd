@@ -100,6 +100,25 @@ var tools: Dictionary = {}
 ## reload always starts disarmed.
 var pending_tool: String = ""
 
+# ── Achievements (M10, counters + trophies) ───────────────────────────────────
+## The trophy system, ported from the React achievements slice
+## (src/features/achievements/data.ts) as a counter/threshold/reward layer wired
+## ADDITIVELY into the existing event sites (credit_chain / fill_order / build /
+## damage_boss). See AchievementConfig for the ported, port-reachable catalog.
+##
+## counter_name:String -> int running total. Bumped by bump_counter() at each event
+## site; a missing key reads as 0. Plain quantity/chain counters increment freely;
+## DISTINCT counters (see _distinct_seen) only increment on a newly-seen key.
+var achievement_counters: Dictionary = {}
+## achievement_id:String -> true for every UNLOCKED trophy. An id present here is
+## already earned: bump_counter never re-grants its reward (idempotent unlock).
+var achievements_unlocked: Dictionary = {}
+## counter_name:String -> {distinct_key:String -> true}. Backs the distinct counters
+## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the
+## FIRST time it is seen for that counter and never again. Mirrors the React
+## seenResources / seenBuildings maps, generalised to one map keyed by counter.
+var _distinct_seen: Dictionary = {}
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -127,6 +146,17 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var coins_gain: int = maxi(1, chain_len / 2)
 	coins += coins_gain
 	turn += 1
+	# ── M10 achievements (ADDITIVE, after the economy is fully credited) ─────────
+	# Every resolved chain is one chain (bump by 1). The produced resource feeds the
+	# distinct counter (only first sighting counts; "" for a hazard tile is ignored by
+	# bump_counter's empty-key guard). The tile's category feeds a per-category /
+	# mine quantity counter that counts TILES — bump by chain_len (React "Harvest 50
+	# <things>" counts tiles). Hazard tiles (rat/rubble) map to no counter → skipped.
+	bump_counter("chains_committed")
+	bump_counter("distinct_resources_chained", 1, resource)
+	var cat_counter: String = AchievementConfig.counter_for_category(Constants.category_of(tile_type))
+	if cat_counter != "":
+		bump_counter(cat_counter, chain_len)
 	return {
 		"resource": resource,
 		"units": units,
@@ -236,6 +266,10 @@ func build(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	buildings.append(id)
+	# M10 achievements (ADDITIVE): a DISTINCT building id → +1 on the first build of
+	# each id (build() already rejects a re-build of an existing id, but the distinct
+	# guard makes the counter robust even if a future caller demolishes + rebuilds).
+	bump_counter("distinct_buildings_built", 1, id)
 	return {"ok": true, "id": id, "name": BuildingConfig.building_name(id)}
 
 ## Remove spawner `id`, freeing its plot and dropping its category from the pool.
@@ -413,6 +447,8 @@ func fill_order(index: int) -> Dictionary:
 	coins += reward
 	orders.remove_at(index)
 	refill_orders()
+	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
+	bump_counter("orders_fulfilled")
 	return {"ok": true, "reward": reward, "resource": resource, "qty": qty}
 
 # ── Expedition / mine biome (M3f) ─────────────────────────────────────────────
@@ -593,6 +629,10 @@ func damage_boss(chain_len: int) -> Dictionary:
 		town2_complete = true
 		coins += r
 		boss_active = ""
+		# M10 achievements (ADDITIVE): only a DEFEAT bumps bosses_defeated (+1). A
+		# non-fatal hit falls through to the {defeated:false} return below and never
+		# touches the counter.
+		bump_counter("bosses_defeated")
 		return {"active": true, "defeated": true, "reward": r, "name": nm}
 	return {"active": true, "defeated": false, "hp": boss_hp}
 
@@ -730,6 +770,67 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		pending_tool = ""
 	return {"ok": true, "reason": "", "grid": new_grid, "collected": collected}
 
+# ── Achievements (M10) ─────────────────────────────────────────────────────────
+
+## Bump achievement counter `counter` and grant any trophies it just crossed.
+##
+##   amount       how much to add (default 1). Quantity counters pass chain_len;
+##                chain/order/boss counters pass 1.
+##   distinct_key when non-null, this is a DISTINCT counter: the counter only
+##                increments the FIRST time `distinct_key` is seen for `counter`
+##                (subsequent same-key calls are a no-op, like React's seen* maps).
+##                A null key (the default) is a plain increment-by-`amount` counter.
+##
+## After incrementing, every AchievementConfig.for_counter(counter) NOT already
+## unlocked whose threshold was just CROSSED (prev < threshold <= new) is marked
+## unlocked and its reward GRANTED ONCE — coins add to `coins`, tools route through
+## the M8b grant_tool path. Returns the list of newly-unlocked achievement dicts (so
+## a UI can toast them); an empty Array when nothing crossed. Crossing-not-polling is
+## what keeps load idempotent: from_dict restores achievements_unlocked, so a later
+## bump skips already-unlocked rows and never double-grants.
+func bump_counter(counter: String, amount: int = 1, distinct_key = null) -> Array:
+	var prev: int = int(achievement_counters.get(counter, 0))
+	if distinct_key != null:
+		# Distinct counter: only the first sighting of this key bumps the count.
+		var seen: Dictionary = _distinct_seen.get(counter, {})
+		var key: String = String(distinct_key)
+		if key == "" or seen.has(key):
+			return []   # empty key or already counted → no change, nothing unlocks
+		seen[key] = true
+		_distinct_seen[counter] = seen
+		achievement_counters[counter] = prev + 1
+	else:
+		if amount == 0:
+			return []   # a zero bump can't cross a threshold
+		achievement_counters[counter] = prev + amount
+	var new_total: int = int(achievement_counters[counter])
+
+	# Mark + reward every achievement on this counter that just crossed its threshold.
+	var newly: Array = []
+	for a in AchievementConfig.for_counter(counter):
+		var id: String = String(a.get("id", ""))
+		if bool(achievements_unlocked.get(id, false)):
+			continue   # already earned — idempotent, never re-grant
+		var threshold: int = int(a.get("threshold", 0))
+		if prev < threshold and new_total >= threshold:
+			achievements_unlocked[id] = true
+			_grant_reward(a.get("reward", {}))
+			newly.append(a)
+	return newly
+
+## Grant an achievement reward dict ({"coins": N} and/or {"tools": {id: n}}). Coins
+## add straight to the (uncapped) coins int; tools route through grant_tool so a
+## reward tool obeys the same validity/stacking rules as any other grant.
+func _grant_reward(reward: Dictionary) -> void:
+	if reward.is_empty():
+		return
+	var c: int = int(reward.get("coins", 0))
+	if c > 0:
+		coins += c
+	var tools_reward: Dictionary = reward.get("tools", {})
+	for id in tools_reward.keys():
+		grant_tool(String(id), int(tools_reward[id]))
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
@@ -750,6 +851,13 @@ func to_dict() -> Dictionary:
 		# M8b: owned tool charges. pending_tool is TRANSIENT and intentionally NOT
 		# persisted (a reload always starts disarmed).
 		"tools": tools.duplicate(),
+		# M10: achievement counters, the unlocked set, and the distinct-seen maps.
+		# Persisting `achievements_unlocked` is what makes load NON-double-granting —
+		# a restored unlocked id is skipped by bump_counter, so its reward is never
+		# re-issued (the reward was already banked the run it was first earned).
+		"achievement_counters": achievement_counters.duplicate(),
+		"achievements_unlocked": achievements_unlocked.duplicate(),
+		"_distinct_seen": _distinct_seen.duplicate(true),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -844,4 +952,32 @@ static func from_dict(d: Dictionary) -> GameState:
 			var n: int = int(tls[k])
 			if n > 0:
 				s.tools[String(k)] = n
+	# Restore achievements (M10). Missing keys (any pre-M10 save) → empty maps, so
+	# old saves load with zero progress. Counters coerce values to int (JSON yields
+	# floats); the unlocked map keeps only truthy entries; _distinct_seen rebuilds a
+	# {counter -> {key -> true}} shape, dropping malformed rows. SAVE_VERSION is NOT
+	# bumped — like every prior additive field, the defensive defaults keep old saves
+	# loading. Because the unlocked set is restored here, a subsequent bump_counter
+	# sees the id as already-unlocked and never re-grants its reward on load.
+	var counters: Variant = d.get("achievement_counters", {})
+	if counters is Dictionary:
+		for k in counters:
+			s.achievement_counters[String(k)] = int(counters[k])
+	var unlocked: Variant = d.get("achievements_unlocked", {})
+	if unlocked is Dictionary:
+		for k in unlocked:
+			if bool(unlocked[k]):
+				s.achievements_unlocked[String(k)] = true
+	var distinct: Variant = d.get("_distinct_seen", {})
+	if distinct is Dictionary:
+		for ckey in distinct:
+			var inner: Variant = distinct[ckey]
+			if not (inner is Dictionary):
+				continue
+			var seen: Dictionary = {}
+			for sk in inner:
+				if bool(inner[sk]):
+					seen[String(sk)] = true
+			if not seen.is_empty():
+				s._distinct_seen[String(ckey)] = seen
 	return s

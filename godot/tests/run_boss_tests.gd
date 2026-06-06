@@ -162,7 +162,12 @@ func _test_damage_boss() -> void:
 	_check(int(kill.get("reward", -1)) == 500, "defeat returns reward 500")
 	_check(kill.get("name", "") == "Frostmaw", "defeat returns the boss name")
 	_check(g.town2_complete, "town2_complete set on defeat")
-	_check(g.coins == coins_before + 500, "500 reward coins credited on defeat")
+	# M10 (additive): the FIRST boss defeat in a fresh state also unlocks the
+	# `first_blood` achievement, which grants +200 coins ON TOP of the 500 boss
+	# reward. The boss reward itself is unchanged (kill["reward"] is still 500 above);
+	# this is the achievement bonus stacking, not a change to damage_boss's payout.
+	_check(g.coins == coins_before + 500 + 200,
+		"500 boss reward + 200 first_blood achievement credited on the first defeat")
 	_check(not g.is_boss_active(), "boss cleared after defeat")
 	_check(g.boss_active == "", "boss_active back to '' after defeat")
 	_check(g.boss_min_chain() == Constants.MIN_CHAIN,

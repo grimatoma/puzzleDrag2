@@ -85,15 +85,19 @@ func _test_resource_buckets_independent() -> void:
 	_check(g.qty("hay_bundle") == 0, "no hay_bundle units yet (still below threshold)")
 
 func _test_coins_and_turn_increment() -> void:
-	# coins += max(1, n/2) per chain; turn += 1 per chain.
+	# coins += max(1, n/2) per chain; turn += 1 per chain. The per-chain `coins_gain`
+	# field is the UNCHANGED economy payout (the chain coins only) and is asserted
+	# directly. The running `coins` total now also includes the M10 (additive)
+	# `first_steps` achievement reward (+25), which the FIRST chain unlocks — that is
+	# the achievement bonus stacking on top, not a change to credit_chain's payout.
 	var g := GameState.new()
-	var r1 := g.credit_chain(T.GRASS, 3)       # max(1, 1) = 1 coin
+	var r1 := g.credit_chain(T.GRASS, 3)       # max(1, 1) = 1 coin (+ first_steps +25)
 	_check(r1["coins_gain"] == 1, "chain of 3 grants max(1, 3/2)=1 coin")
-	_check(g.coins == 1, "coins == 1 after first chain")
+	_check(g.coins == 1 + 25, "coins == 1 chain + 25 first_steps after the first chain")
 	_check(g.turn == 1, "turn == 1 after first chain")
-	var r2 := g.credit_chain(T.WHEAT, 8)       # max(1, 4) = 4 coins
+	var r2 := g.credit_chain(T.WHEAT, 8)       # max(1, 4) = 4 coins (no new achievement)
 	_check(r2["coins_gain"] == 4, "chain of 8 grants max(1, 8/2)=4 coins")
-	_check(g.coins == 5, "coins accumulate to 5")
+	_check(g.coins == 5 + 25, "coins accumulate to 5 chain-coins + 25 first_steps bonus")
 	_check(g.turn == 2, "turn == 2 after two chains")
 
 func _test_high_threshold_wrap() -> void:
