@@ -6,6 +6,15 @@ extends Node2D
 
 var board: Board
 var game: GameState                    ## canonical run economy (inventory/coins/turn)
+var _audio: Audio                      ## M4d SFX service (owned, not autoload)
+
+# ── M4d audio change-detection state ──────────────────────────────────────────
+# A handful of "what changed" trackers so we can pick the right SFX on signals
+# that only tell us "something happened" (town actions, chain extend/begin).
+var _prev_chain_len: int = 0           ## last chain length seen → fire chain_start once per drag
+var _last_tier: int = 0                ## settlement tier → detect a tier-up
+var _last_coins: int = 0               ## coin balance → tell sell/buy from build/craft
+var _last_in_mine: bool = false        ## biome flag → detect entering the mine
 
 # ── M4b HUD: the original game's clean structure ──────────────────────────────
 # A parchment top-bar of pills (settlement title + coins/tier/biome, with boss/rats
@@ -72,6 +81,14 @@ func _ready() -> void:
 	board.set_min_chain(game.boss_min_chain())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# M4d: SFX service (owned by Main, not an autoload — see Audio.gd). Seed the
+	# change-trackers from the restored save so the FIRST town/biome event compares
+	# against the loaded state, not zero, and doesn't fire a spurious sound.
+	_audio = Audio.new()
+	add_child(_audio)
+	_last_tier = game.settlement.tier
+	_last_coins = game.coins
+	_last_in_mine = game.is_in_mine()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
 	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats).
@@ -580,6 +597,21 @@ func _on_town_changed() -> void:
 	_refresh_biome()
 	_refresh_boss()
 	_refresh_rats()
+	# M4d: pick a confirm sound for whatever the town action did. Priority: a tier-up
+	# rings the warm bell; entering the mine whooshes; a coin-balance change (sell /
+	# buy / order-fill) chimes "coin"; anything else (build / craft / demolish) pops.
+	if _audio != null:
+		if game.settlement.tier > _last_tier:
+			_audio.play("tier_up")
+		elif game.is_in_mine() and not _last_in_mine:
+			_audio.play("whoosh")
+		elif game.coins != _last_coins:
+			_audio.play("coin")
+		else:
+			_audio.play("pop")
+	_last_tier = game.settlement.tier
+	_last_coins = game.coins
+	_last_in_mine = game.is_in_mine()
 	SaveManager.save(game)
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
@@ -590,6 +622,11 @@ func _board_pool_is_mine() -> bool:
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
+	# M4d: a soft bleep on the FIRST tile of a drag (prev length was 0, now ≥1) —
+	# not on every extend. Track the previous length to fire it once per drag.
+	if length >= 1 and _prev_chain_len <= 0 and _audio != null:
+		_audio.play("chain_start")
+	_prev_chain_len = length
 	if length <= 0:
 		_chain_label.text = "Drag 3+ matching tiles"
 	else:
@@ -597,6 +634,12 @@ func _on_chain_changed(length: int) -> void:
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	var res: Dictionary = game.credit_chain(tile_type, length)
+	# M4d: a chain always lands a collect bleep; a whole unit (units > 0) adds the
+	# sparkle "upgrade" over it.
+	if _audio != null:
+		_audio.play("chain_collect")
+		if int(res.get("units", 0)) > 0:
+			_audio.play("upgrade")
 	# M4b: remember the resource + threshold this chain fed so the progress bar can
 	# show fractional progress toward its next unit (RAT/empty-threshold chains
 	# produce nothing, so leave the bar on the previous resource).
@@ -629,9 +672,15 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			_status_label.text = "%s defeated! Town 2 complete — +%d coins." % [
 				boss_res.get("name", "Boss"), int(boss_res.get("reward", 0))]
 			board.set_min_chain(Constants.MIN_CHAIN)
+			# M4d: the boss is down — triumphant arpeggio.
+			if _audio != null:
+				_audio.play("fanfare")
 		else:
 			_status_label.text = "%s  ·  ⚔ boss HP %d" % [
 				_status_label.text, int(boss_res.get("hp", 0))]
+			# M4d: a non-killing hit — a soft thud.
+			if _audio != null:
+				_audio.play("pop")
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -673,6 +722,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				var res: Dictionary = game.try_tier_up()
 				if bool(res.get("ok", false)):
 					_status_label.text = "Town advanced  →  %s" % res.get("name", "")
+					# M4d: tier-up bell (keyboard path; the Town-panel path rings it
+					# via _on_town_changed). Keep the tracker in sync so that handler
+					# doesn't double-ring on its next refresh.
+					if _audio != null:
+						_audio.play("tier_up")
+					_last_tier = game.settlement.tier
 					_refresh_totals()
 					_refresh_meta()
 					_refresh_settlement()
@@ -831,6 +886,9 @@ func _on_shoo_rats() -> void:
 		return
 	game.use_ratcatcher_charge()
 	var n: int = board.clear_all_rats()
+	# M4d: a soft pop as the rats scatter.
+	if _audio != null:
+		_audio.play("pop")
 	_status_label.text = "Shooed %d rats (%d charge(s) left)" % [n, game.ratcatcher_charges_left()]
 	_refresh_rats()
 	if _town_screen != null:
@@ -844,6 +902,11 @@ func _on_shoo_rats() -> void:
 func _enter_mine_visuals() -> void:
 	board.set_tile_pool(game.active_biome_pool())
 	board.setup_new_board()
+	# M4d: low, slow whoosh on the biome flip INTO the mine (keyboard M path). Keep
+	# the tracker in sync so _on_town_changed doesn't re-whoosh on its next refresh.
+	if _audio != null and game.is_in_mine() and not _last_in_mine:
+		_audio.play("whoosh")
+	_last_in_mine = game.is_in_mine()
 	_refresh_biome()
 	_refresh_totals()
 
