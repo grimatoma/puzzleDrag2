@@ -74,6 +74,9 @@ jobs:
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 
+      - name: Asset pipeline tests
+        run: godot --headless --path godot --script res://tests/run_assets_tests.gd
+
   godot-web-export:
     name: Web (HTML5) export
     runs-on: ubuntu-latest
