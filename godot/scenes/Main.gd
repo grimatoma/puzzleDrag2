@@ -10,6 +10,7 @@ var _chain_label: Label
 var _status_label: Label
 var _totals_label: Label
 var _meta_label: Label                  ## coins + turn readout
+var _settlement_label: Label            ## town tier · cap · plots readout
 
 func _ready() -> void:
 	game = SaveManager.load_state()
@@ -20,9 +21,10 @@ func _ready() -> void:
 	board.chain_resolved.connect(_on_chain_resolved)
 	_layout()
 	get_viewport().size_changed.connect(_layout)
-	# Reflect any restored save immediately (inventory + coins + turn).
+	# Reflect any restored save immediately (inventory + coins + turn + tier).
 	_refresh_totals()
 	_refresh_meta()
+	_refresh_settlement()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -56,7 +58,7 @@ func _build_hud() -> void:
 	layer.add_child(root)
 
 	var title := Label.new()
-	title.text = "puzzleDrag2 · Godot M2"
+	title.text = "puzzleDrag2 · Godot M3"
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.83, 0.90, 0.74))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -110,6 +112,19 @@ func _build_hud() -> void:
 	_meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_meta_label)
 
+	_settlement_label = Label.new()
+	_settlement_label.text = "Camp · cap 200 · 3 plots"
+	_settlement_label.add_theme_font_size_override("font_size", 18)
+	_settlement_label.add_theme_color_override("font_color", Color(0.74, 0.86, 0.62))
+	_settlement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_settlement_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_settlement_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_settlement_label.offset_top = 126
+	_settlement_label.offset_left = 24
+	_settlement_label.offset_right = -24
+	_settlement_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_settlement_label)
+
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
@@ -126,7 +141,29 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_status_label.text = "Chain of %d  →  building progress…" % length
 	_refresh_totals()
 	_refresh_meta()
+	_refresh_settlement()
 	SaveManager.save(game)
+
+# ── tier-up affordance ───────────────────────────────────────────────────────
+
+## Temporary dev/demo affordance: press T to advance the town one tier when the
+## inventory can afford the next tier-up cost. The real town-UI button arrives in
+## a later milestone — this keyboard path keeps the ladder exercisable now. Key
+## input is separate from the board's _unhandled_input mouse handling, so this
+## never interferes with chain drags.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if game == null:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_T and game.can_tier_up():
+			var res: Dictionary = game.try_tier_up()
+			if bool(res.get("ok", false)):
+				_status_label.text = "Town advanced  →  %s" % res.get("name", "")
+				_refresh_totals()
+				_refresh_meta()
+				_refresh_settlement()
+				SaveManager.save(game)
+			get_viewport().set_input_as_handled()
 
 func _refresh_totals() -> void:
 	if game == null or game.inventory.is_empty():
@@ -142,6 +179,16 @@ func _refresh_meta() -> void:
 	if _meta_label == null or game == null:
 		return
 	_meta_label.text = "Coins: %d   ·   Turn: %d" % [game.coins, game.turn]
+
+func _refresh_settlement() -> void:
+	if _settlement_label == null or game == null:
+		return
+	var s := game.settlement
+	var text: String = "%s · cap %d · %d plots" % [s.tier_name(), s.cap(), s.plots()]
+	if game.can_tier_up():
+		var next_name: String = TownConfig.tier_name(s.tier + 1)
+		text += "    ▲ Press T to advance to %s" % next_name
+	_settlement_label.text = text
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":
