@@ -212,7 +212,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
-      "note": "No map render, no zone switching, no settlement founding, no road network. The mine is a board-pool swap, not a zone."
+      "note": "No map render, no zone switching, no settlement founding, no road network. The port now has three playable biomes (farm / mine / harbor) via the expedition model (board-pool swap + separate enter/leave), but true multi-zone world/cartography is still pending."
     },
     {
       "id": "system-townsfolk-npcs",
@@ -450,10 +450,10 @@
       "feature_or_screen": "fish slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_fish_tests.gd", "golden:board-fish-idle-high-tide"],
-      "note": "Harbor/fishing biome board mechanics (tides, pearl capture)."
+      "verified_by": ["run_fish_tests.gd", "run_fish_board_tests.gd", "golden:board-fish-idle-high-tide"],
+      "note": "Harbor biome: 6 fish tiles, tide cycle (high/low every 3 turns swaps the bottom-row pool), giant-pearl capture (≥2 fish chain adjacent → +1 rune), enter_harbor expedition (supplies→turns, mirrors the mine). Additive. Full cartography-gated zone entry deferred (no zones yet)."
     },
     {
       "id": "slice-inventory",
@@ -613,7 +613,7 @@
       "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
-      "note": "Multi-biome system; Godot mine is a board-pool swap, not a true zone. Full zone model lands in M10."
+      "note": "Multi-biome system; Godot now has 3 playable biomes (farm / mine / harbor) via the expedition model (board-pool swap + separate enter/leave logistics), not true zones. Full zone model (world map, settlement founding, road network) lands in M10."
     },
 
     {
@@ -973,20 +973,20 @@
       "feature_or_screen": "board-fish-idle-high-tide",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_fish_tests.gd", "golden:board-fish-idle-high-tide"],
-      "note": "Harbor biome at high tide; depends on M10 fish biome."
+      "verified_by": ["run_fish_board_tests.gd", "golden:board-fish-idle-high-tide"],
+      "note": "Harbor board renders (screenshot fish-harbor.png: water-tinted board, 6 fish tiles, giant pearl, catch stockpile). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-board-fish-pearl-low-tide",
       "feature_or_screen": "board-fish-pearl-low-tide",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_fish_tests.gd", "golden:board-fish-pearl-low-tide"],
-      "note": "Harbor with pearl mechanic at low tide; depends on M10 fish biome."
+      "verified_by": ["run_fish_board_tests.gd", "golden:board-fish-pearl-low-tide"],
+      "note": "Pearl placement/degrade and low-tide board mutation mechanics shipped; visual golden awaits M-infra visual suite."
     },
     {
       "id": "golden-board-boss-active",
@@ -1116,7 +1116,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_fish_tests.gd", "golden:town-harbor-settlement"],
-      "note": "Harbor zone settlement view; depends on M10 fish/zones."
+      "note": "Harbor zone settlement view; the harbor BIOME (board + expedition) is now ported (slice-fish partial), but a harbor SETTLEMENT/zone — a second founded town on the harbor — depends on M10 cartography/zones founding."
     },
     {
       "id": "golden-town-mine-settlement",
