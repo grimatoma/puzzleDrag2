@@ -69,7 +69,32 @@ func _run() -> void:
 	await process_frame
 	_check(town_map.is_inside_tree(), "TownMap node live in the SceneTree after a frame")
 	_check(true, "_draw with built lots did not crash")
+
+	# ── 2b. M6d hit-testing — screen → lot inverse map ────────────────────────
+	# The centre of a known build-slot lot must round-trip back to that slot's
+	# index; a point far outside every lot must return -1.
+	var slot1_center: Vector2 = town_map.lot_screen_center(1)
+	_check(slot1_center.x != INF, "lot_screen_center(1) resolved a finite centre")
+	_check(town_map.lot_at_screen(slot1_center) == 1,
+		"lot_at_screen(centre of slot 1) == 1 (round-trips)")
+	var slot0_center: Vector2 = town_map.lot_screen_center(0)
+	_check(town_map.lot_at_screen(slot0_center) == 0,
+		"lot_at_screen(centre of slot 0) == 0")
+	_check(town_map.lot_at_screen(Vector2(-9999.0, -9999.0)) == -1,
+		"lot_at_screen(far outside) == -1")
+	_check(town_map.built_count() == 2, "built_count() == 2 (matches built ids given)")
+	_check(town_map.lot_count() >= town_map.built_count(),
+		"lot_count() (%d) >= built_count() (%d)" % [town_map.lot_count(), town_map.built_count()])
+	# Hover is cosmetic + safe: setting it then drawing must not crash.
+	town_map.set_hover_lot(0)
+	town_map.queue_redraw()
+	await process_frame
+	_check(town_map._hover_lot == 0, "set_hover_lot(0) stored the hover index")
+	town_map.set_hover_lot(-1)
 	town_map.queue_free()
+
+	# ── 2c. M6d interaction — build picker + demolish via TownMapScreen ────────
+	await _run_interaction()
 
 	# ── 3. Main integration ───────────────────────────────────────────────────
 	SaveManager.clear()
@@ -117,3 +142,76 @@ func _run() -> void:
 		"_router.current_modal() == NONE after apply_deeplink('board')")
 
 	SaveManager.clear()
+
+## ── M6d interaction (build picker + demolish) ─────────────────────────────────
+## Stand up a Village-tier GameState with ONE building already built and a generous
+## inventory (so at least one further build is affordable), open a TownMapScreen on
+## it, and drive the two click paths WITHOUT real input events:
+##   • clicking the built lot (slot 0) → a "demolish" button exists; pressing it
+##     shrinks game.buildings by 1 and the map re-renders (built_count drops).
+##   • clicking an empty lot → a build picker with ≥1 "build:<id>" button exists;
+##     pressing an affordable one grows game.buildings by 1.
+## Mirrors run_town_ui_tests' setup + _press helper.
+func _run_interaction() -> void:
+	var game := GameState.new()
+	game.settlement.tier = TownConfig.TIER_VILLAGE
+	# Start with one building placed on slot 0 (lumber_camp), and stock the cost of a
+	# second affordable build (coop = plank 6, flour 6) plus headroom.
+	game.buildings = ["lumber_camp"]
+	game.inventory = {"plank": 30, "flour": 30, "hay_bundle": 30, "eggs": 12}
+
+	var screen := TownMapScreen.new()
+	root.add_child(screen)
+	screen.setup(game)
+	screen.open()
+	await process_frame
+
+	var map = screen._map
+	_check(map != null, "TownMapScreen exposes its TownMap node")
+	_check(map.built_count() == 1, "map built_count() == 1 (lumber_camp on slot 0)")
+
+	# A click on the centre of slot 0 resolves to slot 0, which is BUILT.
+	var c0: Vector2 = map.lot_screen_center(0)
+	_check(map.lot_at_screen(c0) == 0, "click on slot 0 resolves to lot 0")
+	_check(0 < map.built_count(), "slot 0 is a BUILT lot (index < built_count)")
+
+	# Open the built-lot info card (what a click on a built lot does) → demolish btn.
+	screen._open_info_for_lot(0)
+	await process_frame
+	_check(screen._action_buttons.has("demolish"), "built-lot card registered a 'demolish' button")
+	var built_before: int = game.buildings.size()
+	screen._action_buttons["demolish"].emit_signal("pressed")
+	await process_frame
+	_check(game.buildings.size() == built_before - 1,
+		"pressing demolish shrank game.buildings by 1 (%d → %d)" % [built_before, game.buildings.size()])
+	_check(map.built_count() == game.buildings.size(),
+		"map re-rendered after demolish (built_count == buildings.size())")
+	_check(not screen._action_buttons.has("demolish"), "demolish button cleared after the panel closed")
+
+	# Now every plot is empty (buildings emptied). Click an empty lot → build picker.
+	var first_empty: int = map.built_count()   # the first empty build-slot
+	var ce: Vector2 = map.lot_screen_center(first_empty)
+	_check(map.lot_at_screen(ce) == first_empty, "click on empty slot resolves to it")
+	_check(map.lot_at_screen(ce) >= map.built_count(), "that slot is EMPTY (index >= built_count)")
+
+	screen._open_build_picker_for_lot(first_empty)
+	await process_frame
+	_check(screen._action_buttons.has("picker_close"), "build picker registered a 'picker_close' button")
+	# Find an affordable build button (coop is stocked + Village-unlocked).
+	var build_key: String = ""
+	for k in screen._action_buttons.keys():
+		if String(k).begins_with("build:") and not screen._action_buttons[k].disabled:
+			build_key = String(k)
+			break
+	_check(build_key != "", "build picker has ≥1 ENABLED build:<id> button (got '%s')" % build_key)
+	var grow_before: int = game.buildings.size()
+	if build_key != "":
+		screen._action_buttons[build_key].emit_signal("pressed")
+		await process_frame
+	_check(game.buildings.size() == grow_before + 1,
+		"pressing an affordable build grew game.buildings by 1 (%d → %d)" % [grow_before, game.buildings.size()])
+	_check(map.built_count() == game.buildings.size(),
+		"map re-rendered after build (built_count == buildings.size())")
+
+	screen.queue_free()
+	await process_frame

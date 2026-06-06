@@ -686,6 +686,10 @@ func _open_townmap() -> void:
 		add_child(_townmap_screen)
 		_townmap_screen.setup(game)
 		_townmap_screen.connect("closed", Callable(self, "_on_townmap_closed"))
+		# M6d: building/demolishing from the map mutates the same GameState (and a
+		# spawner changes the board pool), so route its state_changed through the
+		# shared _on_town_changed re-pool/refresh path — same as the Town panel.
+		_townmap_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 
