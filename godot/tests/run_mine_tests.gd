@@ -193,10 +193,16 @@ func _test_enter_mine() -> void:
 	_check(g.is_in_mine(), "is_in_mine() true after entering")
 	_check(g.qty("supplies") == 0, "all supplies consumed into turns")
 	_check(not g.inventory.has("supplies"), "supplies key erased from inventory")
-	# The active biome pool is now the mine pool (flat MINE_POOL, contains STONE).
+	# The active biome pool is now the mine pool: MINE_POOL plus the M3i rubble hazard
+	# slots (RUBBLE_POOL_SLOTS copies of RUBBLE appended — the cave-in clutter). It is
+	# no longer EXACTLY MINE_POOL, so assert MINE_POOL's tiles are present + the size delta.
 	var pool := g.active_biome_pool()
-	_check(pool == Constants.MINE_POOL, "active_biome_pool() == MINE_POOL in the mine")
+	_check(pool.size() == Constants.MINE_POOL.size() + Constants.RUBBLE_POOL_SLOTS,
+		"active_biome_pool() == MINE_POOL + RUBBLE_POOL_SLOTS in the mine")
+	for mine_tile in Constants.MINE_POOL:
+		_check(pool.has(mine_tile), "mine pool still contains MINE_POOL tile %d" % int(mine_tile))
 	_check(pool.has(T.STONE), "mine pool contains STONE")
+	_check(not pool.has(T.GRASS), "mine pool contains no farm GRASS")
 
 	# Entering again while already mining → reason 'already_mining', no mutation.
 	_give(g, "supplies", 2)        # even with supplies, re-entry is blocked

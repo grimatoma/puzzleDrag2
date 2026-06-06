@@ -455,13 +455,28 @@ func leave_mine() -> void:
 	active_biome = "farm"
 	mine_turns_left = 0
 
-## The refill pool for the CURRENTLY active biome: the flat MINE_POOL while mining,
-## otherwise the farm's building-gated pool (active_tile_pool). The mine board is
-## not building-gated this milestone (no mine spawners yet).
+## The refill pool for the CURRENTLY active biome: the flat MINE_POOL (plus the rubble
+## hazard) while mining, otherwise the farm's building-gated pool (active_tile_pool).
+## The mine board is not building-gated this milestone (no mine spawners yet).
 func active_biome_pool() -> Array:
 	if is_in_mine():
-		return Constants.MINE_POOL.duplicate()
+		# M3i: seed RUBBLE_POOL_SLOTS cave-in rubble tiles into the mine pool — the
+		# expedition's clutter hazard. RUBBLE produces nothing, so chaining it wastes a
+		# scarce mine turn; you clear it by mining through it (a STONE chain sweeps the
+		# adjacent rubble — see Board.clear_rubble_on_stone). The FARM pool is untouched
+		# (rubble is a mine-only hazard; rats are the farm-only one).
+		var pool: Array = Constants.MINE_POOL.duplicate()
+		for _i in Constants.RUBBLE_POOL_SLOTS:
+			pool.append(Constants.Tile.RUBBLE)
+		return pool
 	return active_tile_pool()
+
+## True while the mine hazard (rubble) is live — i.e. on a mine expedition. A readable
+## alias of is_in_mine() for the hazard wiring (Main sets Board.clear_rubble_on_stone
+## from it; symmetry with rats_enabled()). Rubble exists only on the transient mine
+## board, so this is exactly "are we in the mine".
+func mine_hazard_active() -> bool:
+	return is_in_mine()
 
 ## Active board CATEGORIES: the two staples plus the category of each placed
 ## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".

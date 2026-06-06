@@ -90,6 +90,10 @@ func _ready() -> void:
 	board.set_min_chain(game.boss_min_chain())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# M3i: mining through rubble is active exactly while on a mine expedition (a STONE
+	# chain clears adjacent rubble — no building needed). A save restored mid-expedition
+	# keeps it on.
+	board.clear_rubble_on_stone = game.is_in_mine()
 	# M4d: SFX service (owned by Main, not an autoload — see Audio.gd). Seed the
 	# change-trackers from the restored save so the FIRST town/biome event compares
 	# against the loaded state, not zero, and doesn't fire a spurious sound.
@@ -793,6 +797,9 @@ func _on_town_changed() -> void:
 	# M3h: a Master Ratcatcher purchase (or demolish) flips whether grass chains sweep
 	# adjacent rats, so refresh the board flag whenever a town action lands.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# M3i: entering/leaving the mine via the Town screen flips whether STONE chains mine
+	# through rubble, so refresh that flag on every town action too.
+	board.clear_rubble_on_stone = game.is_in_mine()
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -871,6 +878,9 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			_status_label.text = "Expedition over — supplies spent. Back to the farm."
 			board.set_tile_pool(game.active_biome_pool())
 			board.setup_new_board()
+			# M3i: the expedition ended — back on the farm, so mining-through-rubble is
+			# off (there's no rubble on the farm board anyway; keep the flag honest).
+			board.clear_rubble_on_stone = game.is_in_mine()
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
@@ -1113,6 +1123,10 @@ func _on_shoo_rats() -> void:
 func _enter_mine_visuals() -> void:
 	board.set_tile_pool(game.active_biome_pool())
 	board.setup_new_board()
+	# M3i: mining through rubble is live exactly while in the mine. Set it on the same
+	# biome flip that re-pools the board (the M demo key path), mirroring _ready /
+	# _on_town_changed.
+	board.clear_rubble_on_stone = game.is_in_mine()
 	# M4d: low, slow whoosh on the biome flip INTO the mine (keyboard M path). Keep
 	# the tracker in sync so _on_town_changed doesn't re-whoosh on its next refresh.
 	if _audio != null and game.is_in_mine() and not _last_in_mine:
@@ -1206,7 +1220,9 @@ func _refresh_biome() -> void:
 	if _biome_pill == null or game == null:
 		return
 	if game.is_in_mine():
-		_biome_pill.text = "⛏ Mine · %d" % game.mine_turns_left
+		# M3i: surface the rubble hazard hint in the biome pill so the player knows the
+		# cave-in clutter clears by mining (a STONE chain) rather than by chaining it.
+		_biome_pill.text = "⛏ Mine · %d · clear rubble by mining" % game.mine_turns_left
 		_biome_pill.add_theme_color_override("font_color", Palette.EMBER)
 	else:
 		_biome_pill.text = "Farm"
