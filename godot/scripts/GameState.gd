@@ -80,6 +80,12 @@ var town2_complete: bool = false    ## set true when the capstone boss is defeat
 const RATCATCHER_CHARGES: int = 5
 var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
 
+# ── Settings (M4f) ────────────────────────────────────────────────────────────
+## Player audio preference, surfaced by the settings/menu modal (MenuScreen). Main
+## applies it to the owned Audio service on launch (Audio.set_muted) and toggles it
+## from the menu; persisted so the choice survives a reload. Defaults to "on".
+var audio_muted: bool = false
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -614,6 +620,7 @@ func to_dict() -> Dictionary:
 		"boss_hp": boss_hp,
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
+		"audio_muted": audio_muted,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -692,4 +699,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
+	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
+	# "on" (false) for any save written before this field existed.
+	s.audio_muted = bool(d.get("audio_muted", false))
 	return s

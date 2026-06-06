@@ -80,6 +80,9 @@ jobs:
       - name: Audio tests
         run: godot --headless --path godot --script res://tests/run_audio_tests.gd
 
+      - name: Menu / settings tests
+        run: godot --headless --path godot --script res://tests/run_menu_tests.gd
+
   godot-web-export:
     name: Web (HTML5) export
     runs-on: ubuntu-latest
