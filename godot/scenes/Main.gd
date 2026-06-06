@@ -87,6 +87,11 @@ var _townsfolk_screen                   ## CanvasLayer (TownsfolkScreenScript), 
 ## register it as a global (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk).
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
 var _cartography_screen                  ## CanvasLayer (CartographyScreenScript), lazily created
+## Recipe wiki — read-only reference of all craftable recipes, lazily created. Loaded via
+## preload (NO class_name) so the port never needs an --import pass to register it as a global
+## (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk / Cartography).
+const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
+var _recipe_wiki_screen                  ## CanvasLayer (RecipeWikiScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -616,6 +621,26 @@ func _build_hud() -> void:
 	carto_btn.connect("pressed", Callable(self, "_open_cartography"))
 	root.add_child(carto_btn)
 
+	# Recipe Wiki — always-visible "🍳" recipe-wiki button, pinned top-LEFT just under the
+	# 🧭 cartography button (offset_top 340, ~38px tall) so the nine buttons stack without
+	# overlapping and all clear the centred board drag area. Same parchment-pill look.
+	# Opens the RecipeWikiScreen read-only recipe reference.
+	var recipes_btn := Button.new()
+	recipes_btn.text = "🍳"
+	recipes_btn.add_theme_font_size_override("font_size", 20)
+	recipes_btn.add_theme_color_override("font_color", Palette.INK)
+	recipes_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	recipes_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	recipes_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	recipes_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	recipes_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	recipes_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	recipes_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	recipes_btn.offset_left = 18
+	recipes_btn.offset_top = 386
+	recipes_btn.connect("pressed", Callable(self, "_open_recipes"))
+	root.add_child(recipes_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1059,6 +1084,26 @@ func _on_cartography_closed() -> void:
 		_cartography_screen.visible = false
 	_router.close_modal()
 
+# ── Recipe Wiki (read-only recipe reference) ─────────────────────────────────
+
+## Open the recipe wiki modal, lazily creating + wiring it on first use (mirrors
+## _open_cartography). The screen is READ-ONLY — it only emits `closed`, routed to
+## a hide handler. open() re-renders from RecipeConfig.RECIPE_IDS each time, so the
+## wiki always reflects the current recipe catalog.
+func _open_recipes() -> void:
+	if _recipe_wiki_screen == null:
+		_recipe_wiki_screen = RecipeWikiScreenScript.new()
+		add_child(_recipe_wiki_screen)
+		_recipe_wiki_screen.setup(game)
+		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
+	_recipe_wiki_screen.open()
+	_router.open_modal(ViewRouter.Modal.RECIPES)
+
+func _on_recipes_closed() -> void:
+	if _recipe_wiki_screen != null:
+		_recipe_wiki_screen.visible = false
+	_router.close_modal()
+
 ## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
 ## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
 ## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
@@ -1162,6 +1207,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_townsfolk()
 		ViewRouter.Modal.CARTOGRAPHY:
 			_open_cartography()
+		ViewRouter.Modal.RECIPES:
+			_open_recipes()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1190,6 +1237,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _cartography_screen != null and _cartography_screen.visible:
 				_cartography_screen.visible = false
+				_router.close_modal()
+			elif _recipe_wiki_screen != null and _recipe_wiki_screen.visible:
+				_recipe_wiki_screen.visible = false
 				_router.close_modal()
 	return true
 
