@@ -187,13 +187,13 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3f-mine</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete (M3g PR #939, M3h PR #940 merged)</p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
       <span class="chip">M1 merged</span>
       <span class="chip">M2 done</span>
-      <span class="chip amber">M3 in progress</span>
+      <span class="chip">M3 complete</span>
       <span class="chip">CI wired</span>
       <span class="chip">tests green</span>
     </div>
@@ -216,7 +216,7 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> <b>M1 and M2 are complete; M3 is now in progress.</b> The Godot 4.6 project at
+        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice now plays end-to-end in Godot.</b> The Godot 4.6 project at
           <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
           run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
@@ -233,8 +233,8 @@
           Buildings, Refine, Market, Orders) whose <b>buttons drive the whole Town-1 economy</b>, replacing the temporary
           T/1-6/B/G/F dev keys (which remain only as a keyboard fallback). It renders as a playable
           board with the <b>exported v1 Phaser tile art</b> (the auxiliary asset pipeline's Stage&nbsp;2 has landed; see Verification), a live economy + settlement + buildings + orders HUD, and a "🏠 Town" button that opens the panel.
-          Headless tests and a Web-export job are wired
-          into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
+          <b>M3f</b> opened the <b>mine expedition</b> (the food gate → Town&nbsp;2), <b>M3g</b> landed the Direction's dramatic ★ <b>capstone boss</b> (Frostmaw — <code>min_chain 4</code> while engaged, raising the bar to resolve a chain — closing Town&nbsp;2), and <b>M3h</b> shipped <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (rats are a no-yield tile seeded into the farm pool once Town&nbsp;2 is done; Ratcatcher shoos them, Master Ratcatcher folds 8-adjacent rats into a grass chain). With M3g+M3h the <b>M3 introductory slice is COMPLETE (8 sub-parts, M3a–M3h)</b>. There are now <b>11 headless CI-gated test suites totalling 794 checks</b> (plus a 32-check asset suite being wired into CI in the current hardening pass).
+          The Phaser version at the repo root is untouched and still fully playable, and the <b>GitHub Pages deploy is live</b> (PR #938): pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.</div>
 
         <div class="progress-wrap">
           <div class="progress-label"><span>Milestone&nbsp;1 — base playable board</span> <b>100% · merged</b></div>
@@ -245,12 +245,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3g)</span> <b>~71% · 5 of 7 sub-parts (M3a, M3b, M3c, M3d, M3e done)</b></div>
-          <div class="bar"><span style="width:71%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3h)</span> <b>100% · 8 of 8 sub-parts done (M3a–M3h)</b></div>
+          <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~62%</b></div>
-          <div class="bar"><span style="width:62%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~70%</b></div>
+          <div class="bar"><span style="width:70%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -276,37 +276,38 @@
           <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
-          <div class="num amber">M3</div>
-          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3g (re-scoped from 6→7 sub-parts when Orders and the Town UI were split). <b>M3a — Camp→City tier ladder — done</b>; <b>M3b — buildings/plots/spawners/demolish — done</b>; <b>M3c — refining + market economy — done</b>; <b>M3d — orders system — done</b>; <b>M3e — Town UI screen — done</b>; M3f expedition→Town 2, M3g capstone boss + Town 3 to come (the Direction spec)</div></div>
-          <span class="pill warn">partial</span>
+          <div class="num on">M3</div>
+          <div><div class="t">Content &amp; progression <span class="pill ok">complete</span></div><div class="d">Built as sub-PRs M3a…M3h (re-scoped from 6→7 when Orders and the Town UI were split, then →8 with the boss and rats as separate PRs). <b>M3a — Camp→City tier ladder</b>; <b>M3b — buildings/plots/spawners/demolish</b>; <b>M3c — refining + market economy</b>; <b>M3d — orders system</b>; <b>M3e — Town UI screen</b>; <b>M3f — mine expedition + Stage 2+3 asset pipeline (PR #937)</b>; <b>M3g — ★ capstone boss Frostmaw (PR #939)</b>; <b>M3h — Town 3 rats hazard + Ratcatcher (PR #940)</b> — <b>all done.</b> The full Town&nbsp;1 → Town&nbsp;2 (+boss) → Town&nbsp;3 slice plays end-to-end.</div></div>
+          <span class="pill ok">done</span>
         </div>
         <div class="ms-row">
-          <div class="num">M4</div>
-          <div><div class="t">UI &amp; polish</div><div class="d">Full UI, animation, audio, real pixel-art assets</div></div>
+          <div class="num amber">M4</div>
+          <div><div class="t">UX/UI parity <span class="pill warn">next</span></div><div class="d">Replicate the Phaser game's full UI/UX in Godot — HUD, inventory, modals, town, crafting/cartography, animation, audio, real pixel-art assets</div></div>
           <span class="pill idle">todo</span>
         </div>
         <div class="ms-row">
           <div class="num">M5</div>
-          <div><div class="t">Mobile app</div><div class="d">iOS + Android export, store submission</div></div>
+          <div><div class="t">Mobile app</div><div class="d">iOS + Android export, store submission (externally gated — Mac/signing/store accounts)</div></div>
           <span class="pill idle">todo</span>
         </div>
       </section>
 
       <section id="session-summary">
-        <h2>Current focus — M3f (expedition → Town 2 / the mine, after the M3e Town UI screen)</h2>
-        <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2, done on
-          <code>claude/godot-migration-m2</code>), the Camp→City tier ladder (M3a, done on
-          <code>claude/godot-migration-m3a-tiers</code>), the buildings/plots/spawners layer (M3b, done on
-          <code>claude/godot-migration-m3b-buildings</code>), the refining + market economy (M3c, done on
-          <code>claude/godot-migration-m3c-economy</code>), and the orders system (M3d, done on
-          <code>claude/godot-migration-m3d-orders</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
-          Direction slice — continues as a sequence of sub-PRs (re-scoped from 6→7 when Orders and the Town UI were split for
-          reviewability). <b>M3e (the Town UI screen)</b> landed on <code>claude/godot-migration-m3e-town-ui</code>: a
-          Control-based Town modal with five live sections whose buttons drive the whole Town-1 economy. Alongside M3e, the
-          <b>Stage&nbsp;2+3 asset pipeline</b> shipped — 77 v1 Phaser tile PNGs and one v2 animated SpriteFrames grass fixture;
-          <code>Tile.gd</code> now resolves the newest available stage per tile so the board shows <b>real tile art</b> instead of
-          colored placeholders; a 32-check suite covers all three stages. Now scaffolded on <code>claude/godot-migration-m3f-mine</code>:
-          <b>M3f</b> — the expedition → Town 2 (the mine).</p>
+        <h2>M3 introductory slice complete — next is M4 (UX/UI parity)</h2>
+        <div class="box tip"><b>M3 is done.</b> All eight sub-parts (M3a–M3h) have landed and merged. The full
+          <b>Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats)</b> introductory vertical slice
+          plays end-to-end in Godot, backed by 11 headless CI-gated test suites (794 checks). The focus now shifts to
+          <b>M4 — replicating the Phaser game's full UI/UX in Godot</b>, then <b>M5 — mobile</b> (externally gated).</div>
+        <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2), the Camp→City tier ladder (M3a),
+          the buildings/plots/spawners layer (M3b), the refining + market economy (M3c), the orders system (M3d), the Town UI
+          screen (M3e), the mine expedition → Town&nbsp;2 (M3f, PR #937), the ★ <b>capstone boss Frostmaw</b> (M3g, PR #939),
+          and <b>Town&nbsp;3's rats hazard + Ratcatcher</b> (M3h, PR #940) all landed and verified on Godot 4.6.2, the
+          Direction's introductory slice is <b>complete</b>. It re-scoped from 6→7 sub-parts when Orders and the Town UI were
+          split for reviewability, then →8 when the boss and the rats hazard each shipped as their own PR. The
+          <b>Stage&nbsp;2+3 asset pipeline</b> shipped alongside (77 v1 Phaser tile PNGs + a v2 animated SpriteFrames grass
+          fixture; <code>Tile.gd</code> resolves the newest available stage so the board shows <b>real tile art</b>), the
+          <b>GitHub Pages deploy</b> went live (PR #938), and a 32-check asset suite is being wired into CI in the current
+          hardening pass. <b>Next: M4 — UX/UI parity with the React/Phaser game</b> (the current Godot UI is barebones).</p>
         <div class="grid">
           <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
           <div class="card"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
@@ -315,7 +316,9 @@
           <div class="card amber"><h3>M3c — refining + market economy <span class="pill ok">done</span></h3><p><code>RecipeConfig.gd</code> holds the station-gated recipe catalog (bread = 3 flour + 1 eggs at the Bakery); <code>MarketConfig.gd</code> holds the SELL/BUY price tables; <code>BuildingConfig.gd</code> gains a building <code>kind</code> and the Bakery refiner; <code>GameState</code> gains <code>can_craft</code>/<code>craft</code>, <code>sell</code>, and a cap-aware <code>buy</code>, with refiners guarded out of the board pool. A 136-check economy suite covers it; temporary B (bake) and G (sell) keys drive it until the Market/Bakery UI ships.</p></div>
           <div class="card amber"><h3>M3d — orders system <span class="pill ok">done</span></h3><p><code>OrderConfig.gd</code> holds the order tuning (<code>MAX_ORDERS=3</code>, qty 3–8, <code>REWARD_MULT=3</code>); <code>GameState</code> gains an <code>orders</code> list, a seeded <code>rng</code>, <code>orderable_resources()</code>, and <code>generate_order</code>/<code>refill_orders</code>/<code>can_fill_order</code>/<code>fill_order</code> (deduct the qty, credit the <b>uncapped</b> reward = <code>sell_price × qty × 3</code>, then refill). Orders persist and are sanitised on load. A 121-check orders suite covers it; the M3e Town UI now ships the real order Fill buttons, with the F key kept as a fallback.</p></div>
           <div class="card amber"><h3>M3e — Town UI screen <span class="pill ok">done</span></h3><p><code>TownScreen.gd</code> (<code>class_name TownScreen extends CanvasLayer</code>) is a dim-backdrop Control modal with five <b>live</b> sections — Settlement (tier line + "Advance" button), Buildings (Build/Demolish rows), Refine (Craft buttons), Market (Sell buttons), Orders (Fill buttons) — each reading current <code>GameState</code>, calling the matching method, and re-rendering so disabled states stay accurate. <code>Main.gd</code> opens it from an always-visible "🏠 Town" button; the temporary T/1-6/B/G/F keys remain only as a keyboard fallback. A 35-check town-UI suite presses the buttons headless and asserts <code>GameState</code> mutated.</p></div>
-          <div class="card amber"><h3>M3f — expedition → Town 2 (mine) <span class="pill warn">in progress</span></h3><p>Mine biome tiles + pool (<code>MINE_POOL</code>), Kitchen building (farm food → <code>supplies</code>), Supplies recipe (bread + flour → supplies), mine goods market prices, and the expedition system in <code>GameState</code> (<code>enter_mine</code> / <code>note_mine_turn</code> / <code>leave_mine</code> / <code>active_biome_pool</code>). Board switches to mine tiles for the duration of the expedition; soft-fail keeps everything gathered. <code>TownScreen</code> gains an Expedition section (Enter / Leave). Tests + M3g capstone boss + Town 3 to follow.</p></div>
+          <div class="card amber"><h3>M3f — expedition → Town 2 (mine) <span class="pill ok">done</span></h3><p>Mine biome tiles + pool (<code>MINE_POOL</code>), Kitchen building (farm food → <code>supplies</code>), Supplies recipe (bread + flour → supplies), mine goods market prices, and the expedition system in <code>GameState</code> (<code>enter_mine</code> / <code>note_mine_turn</code> / <code>leave_mine</code> / <code>active_biome_pool</code>). Board switches to mine tiles for the duration of the expedition; soft-fail keeps everything gathered. <code>TownScreen</code> gains an Expedition section (Enter / Leave). A 117-check mine suite covers it.</p></div>
+          <div class="card amber"><h3>M3g — ★ capstone boss (Frostmaw) <span class="pill ok">done</span></h3><p>The Direction's dramatic gate closing Town&nbsp;2. <code>BossConfig.gd</code> (Frostmaw: hp 40, <b><code>min_chain 4</code></b>, reward 500c); <code>GameState</code> gains <code>boss_active</code>/<code>boss_hp</code>/<code>town2_complete</code>, <code>can_challenge_boss()</code> (City tier + <code>block+iron_bar ≥ 12</code> mine-mastery), <code>start_boss</code>, <code>boss_min_chain</code>, and <code>damage_boss(len)</code> (the killing blow sets <code>town2_complete</code> + credits the reward). While engaged, the boss <b>raises the board's minimum chain to resolve</b> (both <code>is_valid_chain</code> resolve sites; dead-board checks stay at base min). <code>Main.gd</code> boss HUD + <code>TownScreen</code> gated "Challenge Frostmaw" button. A 73-check boss suite covers it; the board now renders real Stage-2 PNG tile art.</p></div>
+          <div class="card amber"><h3>M3h — Town 3 rats hazard + Ratcatcher <span class="pill ok">done</span></h3><p>The Direction's fixed Town-3 lesson. <code>Constants.Tile.RAT</code> (ordinal 15, append-only) — a <b>no-yield hazard tile</b> (no threshold; chaining rats wastes a move); <code>BuildingConfig</code> Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind). <code>GameState</code> gains <code>rats_enabled()</code> = <code>town2_complete</code> (seeds 2 rats into the <b>farm</b> pool when enabled), the Ratcatcher's 5 shoo charges, and gates hazard buildings on <code>rats_enabled</code>. <code>Board</code> gains <code>clear_all_rats()</code> and <code>clear_rats_on_grass</code> (Master Ratcatcher folds 8-adjacent rats into a grass chain, uncredited). <code>Main.gd</code>/<code>TownScreen</code> rats HUD + Rats section + a "Shoo rats" free move. An 80-check rats suite covers it.</p></div>
         </div>
       </section>
 
@@ -440,16 +443,18 @@
 
       <section id="m3-checklist">
         <h2>Milestone 3 — checklist</h2>
+        <div class="box tip"><b>M3 slice complete.</b> All eight sub-parts (M3a–M3h) have landed and merged — the full
+          <b>Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats)</b> introductory vertical slice
+          plays end-to-end in Godot, covered by 11 headless CI-gated suites (794 checks).</div>
         <p>The content &amp; progression milestone — the locked <b>Direction</b> spec's Town&nbsp;1 → Town&nbsp;2 (+capstone boss)
-          → Town&nbsp;3 vertical slice. It ships as a sequence of sub-PRs (<b>M3a…M3g</b>). <b>M3a — the Camp→City tier ladder</b>
-          (branch <code>claude/godot-migration-m3a-tiers</code>), <b>M3b — buildings + plots + spawners + demolish</b> (branch
-          <code>claude/godot-migration-m3b-buildings</code>), <b>M3c — refining + market economy</b> (branch
-          <code>claude/godot-migration-m3c-economy</code>), <b>M3d — the orders system</b> (branch
-          <code>claude/godot-migration-m3d-orders</code>), and <b>M3e — the Town UI screen</b> (branch
-          <code>claude/godot-migration-m3e-town-ui</code>) <b>are all done and merge-ready</b>; the rest are sequenced below.</p>
-        <div class="box amber"><b>Re-scoped 6 → 7 sub-parts.</b> M3 originally planned its sixth part as "M3d orders + town UI". When
-          Orders landed it was split into <b>M3d (Orders)</b> and <b>M3e (the Town UI screen)</b> so each is independently reviewable
-          and verifiable — making the slice <b>M3a…M3g</b> (seven parts). The progress bars and counts above reflect 5 of 7 done.</div>
+          → Town&nbsp;3 vertical slice. It shipped as a sequence of sub-PRs (<b>M3a…M3h</b>): the Camp→City tier ladder (M3a),
+          buildings + plots + spawners + demolish (M3b), refining + market economy (M3c), the orders system (M3d), the Town UI
+          screen (M3e), the mine expedition → Town&nbsp;2 (M3f), the ★ capstone boss Frostmaw (M3g), and Town&nbsp;3's rats hazard
+          + Ratcatcher (M3h) — <b>all done, verified, and merged.</b></p>
+        <div class="box amber"><b>Re-scoped 6 → 7 → 8 sub-parts.</b> M3 originally planned its sixth part as "M3d orders + town UI".
+          When Orders landed it was split into <b>M3d (Orders)</b> and <b>M3e (the Town UI screen)</b> for independent review; the
+          end-of-Town-2 capstone boss and the Town-3 rats hazard then each shipped as their own PR — <b>M3g</b> and <b>M3h</b> — making
+          the slice <b>M3a…M3h</b> (eight parts). The progress bars and counts above reflect 8 of 8 done.</div>
         <div class="legend">
           <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
         </div>
@@ -532,17 +537,47 @@
             <span class="note"><code>tests/run_town_ui_tests.gd</code>: instantiate the panel, <code>emit_signal("pressed")</code> on the build/demolish/tier-up/craft/sell/fill/close buttons, assert <code>GameState</code> mutated and <code>state_changed</code>/<code>closed</code> fired, and that a built building flips its row from Build→Demolish. CI runs it as its own step.</span></li>
         </ul>
 
-        <h3>M3f…M3g — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <h3>M3f — Expedition → Town 2 (mine) <span class="pill ok">done</span></h3>
         <ul class="check">
-          <li class="todo">M3f — Expedition → Town 2 (mine)
-            <span class="note">The food gate (Kitchen→supplies), mine tiles + hazards. Cross-collection (Decision&nbsp;#7) rides along here. <b>Next.</b></span></li>
-          <li class="todo">M3g — Capstone boss (end of Town 2) + Town 3
-            <span class="note">Capstone boss encounter, then Town 3 with the rats hazard + Ratcatcher buildings.</span></li>
+          <li class="done">Mine biome tiles + a dedicated mine pool, and the expedition lifecycle in <code>GameState</code>
+            <span class="note">Mine tiles + <code>MINE_POOL</code> in <code>Constants.gd</code>; <code>enter_mine</code> / <code>note_mine_turn</code> / <code>leave_mine</code> / <code>active_biome_pool</code> switch the board to mine tiles for the duration of the expedition, soft-failing so everything gathered is kept.</span></li>
+          <li class="done">The food gate — Kitchen building + Supplies recipe
+            <span class="note">A Kitchen building turns farm food into <code>supplies</code> (Supplies recipe = bread + flour → supplies); mine goods get Market prices. <code>TownScreen</code> gains an Expedition section (Enter / Leave).</span></li>
+          <li class="done">Mine test suite — 117 checks
+            <span class="note"><code>tests/run_mine_tests.gd</code>: mine pool derivation, the expedition enter/leave lifecycle, the Kitchen→supplies food gate, mine-good pricing, and save/load. CI runs it as its own step.</span></li>
+        </ul>
+
+        <h3>M3g — ★ Capstone boss (Frostmaw) <span class="pill ok">done</span></h3>
+        <ul class="check">
+          <li class="done">Boss config as data — Frostmaw (hp 40, <code>min_chain 4</code>, reward 500c)
+            <span class="note"><code>BossConfig.gd</code>: the Direction's dramatic gate closing Town&nbsp;2 — hp 40, a <code>min_chain</code> of 4, and a 500-coin reward.</span></li>
+          <li class="done">Boss state + the challenge gate + the damage loop in <code>GameState</code>
+            <span class="note"><code>boss_active</code>/<code>boss_hp</code>/<code>town2_complete</code>; <code>can_challenge_boss()</code> (City tier + a <code>block + iron_bar ≥ 12</code> mine-mastery check, not already done or in-fight), <code>start_boss()</code>, <code>boss_min_chain()</code>, and <code>damage_boss(len)</code> (clamps at 0; the killing blow sets <code>town2_complete</code>, credits the reward, and clears the fight).</span></li>
+          <li class="done">The boss raises the board's minimum chain while engaged
+            <span class="note"><code>Board.gd</code> gains a dynamic <code>min_chain</code> passed to both <code>is_valid_chain</code> resolve sites — an active boss raises the bar to <i>resolve</i> a chain (4), while the dead-board / has-valid-chain checks stay at the base min (3). See Decision&nbsp;#26.</span></li>
+          <li class="done">Boss HUD + a gated Challenge button
+            <span class="note"><code>Main.gd</code> shows a boss HUD ("⚔ Frostmaw HP 16/40 · min chain 4") and each chain damages the boss; defeat resets the bar. <code>TownScreen.gd</code> gains a Boss section with a gated "Challenge Frostmaw" button.</span></li>
+          <li class="done">Boss test suite — 73 checks
+            <span class="note"><code>tests/run_boss_tests.gd</code>: the challenge gate, the raised resolve min-chain (vs base dead-board min), the damage loop, the killing-blow reward + <code>town2_complete</code>, and save/load. CI runs it as its own step.</span></li>
+        </ul>
+
+        <h3>M3h — Town 3 rats hazard + Ratcatcher <span class="pill ok">done</span></h3>
+        <ul class="check">
+          <li class="done">A no-yield rat hazard tile, gated on <code>town2_complete</code>
+            <span class="note"><code>Constants.Tile.RAT</code> (ordinal 15, append-only) produces nothing and has no threshold, so chaining rats just wastes a move; <code>RAT_POOL_SLOTS=2</code>. <code>GameState.rats_enabled()</code> = <code>town2_complete</code> seeds 2 rats into the <b>farm</b> <code>active_tile_pool()</code> when enabled (the mine pool is untouched). See Decision&nbsp;#27.</span></li>
+          <li class="done">Ratcatcher + Master Ratcatcher (a new <code>"hazard"</code> building kind)
+            <span class="note"><code>BuildingConfig</code> gains the Ratcatcher and Master Ratcatcher (kind <code>"hazard"</code>, City unlock); <code>GameState.can_build</code>/<code>build</code> gate hazard buildings on <code>rats_enabled</code>. The Ratcatcher has 5 shoo charges (<code>ratcatcher_charges_left</code>/<code>can_shoo_rats</code>/<code>use_ratcatcher_charge</code>). See Decision&nbsp;#28.</span></li>
+          <li class="done">Board-side rat clearing — direct shoo + grass-chain adjacency
+            <span class="note"><code>Board.gd</code> gains <code>clear_all_rats()</code> (blank the rats → collapse + refill) and <code>clear_rats_on_grass</code> (a grass chain folds its 8-adjacent rats into the same removal set — Master Ratcatcher — not counted or credited).</span></li>
+          <li class="done">Rats HUD + a Rats section + a "Shoo rats" free move
+            <span class="note"><code>Main.gd</code>/<code>TownScreen.gd</code> show a rats HUD, a Rats section with the two build buttons, and a "Shoo rats" free-move button.</span></li>
+          <li class="done">Rats test suite — 80 checks
+            <span class="note"><code>tests/run_rats_tests.gd</code>: rat-tile no-yield invariants, the <code>town2_complete</code> seeding gate, the hazard-building gate + shoo charges, <code>clear_all_rats</code> / grass-chain adjacency clearing, and save/load. CI runs it as its own step.</span></li>
         </ul>
       </section>
 
       <section id="m3-files">
-        <h2>What landed in M3a + M3b + M3c + M3d + M3e (files)</h2>
+        <h2>What landed in M3a … M3h (files)</h2>
         <h3>M3a — tier ladder</h3>
         <table>
           <thead><tr><th>File</th><th>Role</th></tr></thead>
@@ -599,6 +634,44 @@
             <tr><td><code>godot/scenes/Main.gd</code></td><td>Adds an always-visible "🏠 Town" HUD button that lazily creates + opens the <code>TownScreen</code>; on <code>state_changed</code> re-pools the board (<code>set_tile_pool</code>), refreshes the HUD, and saves. The temporary T/1-6/B/G/F keys remain only as a keyboard fallback</td></tr>
             <tr><td><code>godot/tests/run_town_ui_tests.gd</code></td><td><b>New.</b> Headless TownScreen tests (35 checks): instantiate the panel, <code>emit_signal("pressed")</code> on the build/demolish/tier-up/craft/sell/fill/close buttons, assert <code>GameState</code> mutated and <code>state_changed</code>/<code>closed</code> fired, and that a built building's row flips Build→Demolish</td></tr>
             <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the town-UI-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
+          </tbody>
+        </table>
+        <h3>M3f — expedition → Town 2 (mine)</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/Constants.gd</code></td><td>Adds the mine biome tiles + <code>MINE_POOL</code></td></tr>
+            <tr><td><code>godot/scripts/BuildingConfig.gd</code></td><td>Adds the <b>Kitchen</b> (farm food → <code>supplies</code>)</td></tr>
+            <tr><td><code>godot/scripts/RecipeConfig.gd</code></td><td>Adds the <b>Supplies</b> recipe (bread + flour → supplies)</td></tr>
+            <tr><td><code>godot/scripts/MarketConfig.gd</code></td><td>Adds mine-good SELL/BUY prices</td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td>The expedition lifecycle — <code>enter_mine</code> / <code>note_mine_turn</code> / <code>leave_mine</code> / <code>active_biome_pool</code> (board switches to mine tiles for the expedition; soft-fail keeps everything gathered)</td></tr>
+            <tr><td><code>godot/scenes/TownScreen.gd</code></td><td>Adds an Expedition section (Enter / Leave)</td></tr>
+            <tr><td><code>godot/tests/run_mine_tests.gd</code></td><td><b>New.</b> Headless mine + expedition tests (117 checks)</td></tr>
+          </tbody>
+        </table>
+        <h3>M3g — ★ capstone boss (Frostmaw)</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/BossConfig.gd</code></td><td><b>New.</b> Frostmaw as data — hp 40, <code>min_chain 4</code>, reward 500c</td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td>Adds <code>boss_active</code>/<code>boss_hp</code>/<code>town2_complete</code>, <code>can_challenge_boss()</code> (City tier + <code>block+iron_bar ≥ 12</code> mine-mastery), <code>start_boss</code>, <code>boss_min_chain</code>, and <code>damage_boss(len)</code> (the killing blow sets <code>town2_complete</code> + credits the reward)</td></tr>
+            <tr><td><code>godot/scenes/Board.gd</code></td><td>Dynamic <code>min_chain</code> passed to both <code>is_valid_chain</code> resolve sites — an active boss raises the resolve bar (4); dead-board checks stay at base min (3)</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>Boss HUD ("⚔ Frostmaw HP 16/40 · min chain 4"); each chain damages the boss; defeat resets the bar</td></tr>
+            <tr><td><code>godot/scenes/TownScreen.gd</code></td><td>Adds a Boss section with a gated "Challenge Frostmaw" button</td></tr>
+            <tr><td><code>godot/tests/run_boss_tests.gd</code></td><td><b>New.</b> Headless boss tests (73 checks): challenge gate, raised resolve min-chain vs base dead-board min, damage loop, killing-blow reward + <code>town2_complete</code>, save/load</td></tr>
+          </tbody>
+        </table>
+        <h3>M3h — Town 3 rats hazard + Ratcatcher</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/Constants.gd</code></td><td>Adds <code>Tile.RAT</code> (ordinal 15, append-only) — a no-yield, no-threshold hazard tile — and <code>RAT_POOL_SLOTS=2</code></td></tr>
+            <tr><td><code>godot/scripts/BuildingConfig.gd</code></td><td>Adds the <b>Ratcatcher</b> + <b>Master Ratcatcher</b> (new <code>"hazard"</code> kind, City unlock)</td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td><code>rats_enabled()</code> = <code>town2_complete</code> (seeds 2 rats into the <b>farm</b> pool when enabled; mine pool untouched); the Ratcatcher's 5 shoo charges (<code>ratcatcher_charges_left</code>/<code>can_shoo_rats</code>/<code>use_ratcatcher_charge</code>); hazard-building build gate</td></tr>
+            <tr><td><code>godot/scenes/Board.gd</code></td><td><code>clear_all_rats()</code> (blank rats → collapse + refill) and <code>clear_rats_on_grass</code> (a grass chain folds 8-adjacent rats into the same removal set — Master Ratcatcher; uncredited)</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>Rats HUD + a "Shoo rats" free-move button</td></tr>
+            <tr><td><code>godot/scenes/TownScreen.gd</code></td><td>Adds a Rats section with the two build buttons + the shoo control</td></tr>
+            <tr><td><code>godot/tests/run_rats_tests.gd</code></td><td><b>New.</b> Headless rats tests (80 checks): no-yield invariants, the <code>town2_complete</code> seeding gate, the hazard-building gate + shoo charges, <code>clear_all_rats</code> / grass-chain adjacency clearing, save/load</td></tr>
           </tbody>
         </table>
       </section>
@@ -827,6 +900,54 @@
             This is the fix for the "freed while a signal is being emitted" class of bug; detaching synchronously keeps the live tree
             correct, deferring the free keeps the in-flight emit safe.</p>
         </div>
+
+        <h3>M3g decisions</h3>
+
+        <div class="card">
+          <h3>26 · The boss raises the chain floor to <i>resolve</i>, not the dead-board check</h3>
+          <p>An engaged capstone boss (Frostmaw) raises the board's minimum chain to <code>min_chain 4</code> — but only for
+            <i>resolving</i> a chain. <code>Board.gd</code> carries a dynamic <code>min_chain</code> that is passed to both
+            <code>is_valid_chain</code> resolve sites, so while the boss is alive the player must drag a longer chain to land a hit.
+            The <b>dead-board / <code>has_valid_chain</code> check deliberately stays at the base minimum (3)</b>: it answers "does a
+            playable move exist at all?", and tying it to the raised boss bar would falsely declare a board dead (and trigger an
+            auto-reshuffle) whenever only 3-chains remained. Two distinct questions — "is this resolution legal?" (raised) vs "is the
+            board still alive?" (base) — so two distinct thresholds. This ports the React <code>boss.minChain</code> behaviour faithfully.</p>
+        </div>
+
+        <h3>M3h decisions</h3>
+
+        <div class="card amber">
+          <h3>27 · Rats are a no-yield hazard tile, gated on <code>town2_complete</code></h3>
+          <p>Town&nbsp;3's fixed lesson is a hazard, not a resource. <code>Constants.Tile.RAT</code> (ordinal 15, <b>append-only</b> so
+            existing save enum ints stay stable — Decision&nbsp;#9 / the save-schema risk) produces nothing and has no threshold, so
+            chaining rats only <b>wastes a move</b>. They appear only after Town&nbsp;2 is cleared: <code>rats_enabled()</code> =
+            <code>town2_complete</code> seeds <code>RAT_POOL_SLOTS=2</code> rats into the <b>farm</b> <code>active_tile_pool()</code>
+            (the mine pool is left untouched, since the hazard is a Town-3 farm lesson). Gating the hazard on the boss-clear flag keeps
+            the introductory difficulty curve in order — rats can't surprise a Town-1 player.</p>
+        </div>
+        <div class="card">
+          <h3>28 · Ratcatcher charges vs Master-Ratcatcher adjacency clear — two distinct counters</h3>
+          <p>The hazard has two answers, modelled as a new building <code>kind: "hazard"</code> (City unlock, gated on
+            <code>rats_enabled</code>). The <b>Ratcatcher</b> is an active, metered tool: 5 shoo charges
+            (<code>ratcatcher_charges_left</code> / <code>can_shoo_rats</code> / <code>use_ratcatcher_charge</code>) drive
+            <code>Board.clear_all_rats()</code>, a free move that blanks every rat then collapses + refills. The <b>Master Ratcatcher</b>
+            is passive geometry: <code>Board.clear_rats_on_grass</code> folds any rat 8-adjacent to a resolving grass chain into the
+            same removal set — the rats are cleared as a side-effect of normal play, but are deliberately <b>not counted or credited</b>
+            (they yield nothing — Decision&nbsp;#27). Separating the metered charge from the free adjacency sweep keeps each upgrade's
+            value legible.</p>
+        </div>
+
+        <h3>M3f / scope decisions</h3>
+
+        <div class="card amber">
+          <h3>29 · One shared inventory for the whole slice — per-settlement split deferred</h3>
+          <p>The Direction ultimately wants <b>per-settlement resource pools</b> (each town hoards its own goods). The M3a–M3h slice
+            deliberately uses <b>one shared <code>GameState</code> inventory</b> across Town&nbsp;1, the mine expedition, and Town&nbsp;3,
+            so the vertical slice could be built and verified end-to-end without the bookkeeping of a multi-pool model. Recorded here as
+            an explicit, honest debt — alongside the other deliberately deferred pieces: the <b>Town-2 tier ladder</b>, <b>mine hazards</b>,
+            and <b>Town-3's broader specialization roster</b> (the Direction's draft beyond the fixed rats lesson). These land with the
+            broader M4 content/parity work, not the introductory slice.</p>
+        </div>
       </section>
 
     </div>
@@ -836,9 +957,9 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All ten test scripts
-          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_assets_tests</code> 32 + <code>run_mine_tests</code> 109 + <code>run_scene_smoke</code> 11)
-          exit <code>0</code>; the screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> The <b>11 headless CI-gated suites total 794 checks</b>
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 137 + <code>run_orders_tests</code> 121 + <code>run_town_ui_tests</code> 35 + <code>run_mine_tests</code> 117 + <code>run_boss_tests</code> 73 + <code>run_rats_tests</code> 80 + <code>run_scene_smoke</code> 11) and all
+          exit <code>0</code>; a 12th suite, <code>run_assets_tests</code> (32 checks), is being wired into CI in the current hardening pass. The screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
         <div class="shots">
@@ -877,6 +998,16 @@
         <h3>Town UI screen — M3e (the real panel; live enabled/disabled buttons)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m3e-town.png" alt="M3e Town panel open over a dimmed board: a scrollable modal with five sections — Settlement (greyed 'Advance to Town' button), Buildings (some Build buttons greyed, built ones showing Demolish), Refine (active Craft button), Market ('Sell 1' buttons), Orders (active Fill buttons) — faithfully reflecting the current GameState"><figcaption>The open Town panel over a dimmed board, showing all five live sections — Settlement, Buildings, Refine, Market, Orders. The button states mirror the real game state: "Advance to Town" and Garden's "Build" are greyed because building the three structures dropped <code>plank</code> below their costs, while Craft and the affordable order Fills are active. Proves the real Town UI drives the whole Town-1 economy through <code>GameState</code> methods with correct <code>can_tier_up</code>/<code>can_build</code>/<code>can_craft</code>/<code>can_fill_order</code> enabled-state gating — the M3e panel replacing the temporary T/1-6/B/G/F keys.</figcaption></figure>
+        </div>
+
+        <h3>★ Capstone boss — M3g (Frostmaw engaged; min chain raised)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3g-boss.png" alt="M3g Frostmaw boss fight: the board (now rendering real Stage-2 PNG tile art) under a boss HUD reading '⚔ Frostmaw HP 16/40 · min chain 4', with a chain in progress that must be at least 4 tiles long to land a hit"><figcaption>The Frostmaw capstone fight closing Town&nbsp;2 — boss HUD "⚔ Frostmaw HP 16/40 · min chain 4". While the boss is alive the <i>resolve</i> minimum chain is raised to 4 (the dead-board check stays at 3 — Decision&nbsp;#26), each chain damages the boss, and the killing blow sets <code>town2_complete</code> and credits 500c. Note the board now renders <b>real Stage-2 PNG tile art</b> from the asset pipeline. Proves <code>can_challenge_boss</code> gating, <code>boss_min_chain</code>, and the <code>damage_boss</code> loop wired end-to-end.</figcaption></figure>
+        </div>
+
+        <h3>Town 3 rats hazard — M3h (rats infest the farm; Ratcatcher shoos them)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3h-rats.png" alt="M3h Town-3 farm board after clearing Town 2: drab grey rat cells are seeded among the farm tiles, with a HUD line 'Plots 2/11 · Ratcatcher, Master Ratcatcher' and 5 shoo charges available"><figcaption>After Town&nbsp;2 is cleared, rats — the drab grey cells — infest the <b>farm</b> board: a no-yield hazard tile (chaining them wastes a move). The HUD shows "Plots 2/11 · Ratcatcher, Master Ratcatcher" with 5 shoo charges. The Ratcatcher's "Shoo rats" free move clears every rat; the Master Ratcatcher folds rats 8-adjacent to a grass chain into the removal set (uncredited). Proves <code>rats_enabled()</code> seeding (Decision&nbsp;#27), the hazard-building gate + shoo charges (Decision&nbsp;#28), and the board-side clearing.</figcaption></figure>
         </div>
 
         <h3>Asset pipeline — Stage 2 + Stage 3 (real tile art, not placeholders)</h3>
@@ -990,9 +1121,9 @@
   <span class="g">PASS</span>  buy fails cap_full when storage is already maxed
   <span class="g">PASS</span>  refined good (bread) survives a save/load round-trip
   <span class="g">PASS</span>  integration: bake bread then sell it credits the expected coins
-  <span class="c">…  (123 further recipe / craft / market / cap / round-trip checks)</span>
+  <span class="c">…  (124 further recipe / craft / market / cap / round-trip checks)</span>
 ──────────────────────────────────────────────────
-136 checks, 0 failure(s)        <span class="c"># exit 0</span>
+137 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
 <span class="c">$ godot --headless --path godot --script res://tests/run_orders_tests.gd</span>
 ── OrderConfig + orders tests ─────────────────────
@@ -1032,6 +1163,47 @@
 ──────────────────────────────────────────────────
 35 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
+<span class="c">$ godot --headless --path godot --script res://tests/run_mine_tests.gd</span>
+── Mine expedition tests ──────────────────────────
+  <span class="g">PASS</span>  active_biome_pool switches to MINE_POOL inside an expedition
+  <span class="g">PASS</span>  enter_mine / note_mine_turn / leave_mine lifecycle
+  <span class="g">PASS</span>  leaving the mine keeps everything gathered (soft-fail)
+  <span class="g">PASS</span>  Kitchen refines farm food into supplies
+  <span class="g">PASS</span>  Supplies recipe = bread + flour -> supplies
+  <span class="g">PASS</span>  mine goods carry Market SELL/BUY prices
+  <span class="g">PASS</span>  expedition state survives a save/load round-trip
+  <span class="c">…  (110 further pool / lifecycle / food-gate / pricing checks)</span>
+──────────────────────────────────────────────────
+117 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
+<span class="c">$ godot --headless --path godot --script res://tests/run_boss_tests.gd</span>
+── Frostmaw capstone-boss tests ───────────────────
+  <span class="g">PASS</span>  Frostmaw config: hp 40, min_chain 4, reward 500
+  <span class="g">PASS</span>  can_challenge_boss true only at City tier + block+iron_bar >= 12
+  <span class="g">PASS</span>  can_challenge_boss false when already town2_complete / in-fight
+  <span class="g">PASS</span>  boss_min_chain raises the RESOLVE bar to 4 while engaged
+  <span class="g">PASS</span>  dead-board / has_valid_chain check stays at base min 3
+  <span class="g">PASS</span>  damage_boss reduces hp, clamps at 0
+  <span class="g">PASS</span>  killing blow sets town2_complete + credits 500 coins + clears the fight
+  <span class="g">PASS</span>  boss state survives a save/load round-trip
+  <span class="c">…  (65 further gate / min-chain / damage / reward checks)</span>
+──────────────────────────────────────────────────
+73 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
+<span class="c">$ godot --headless --path godot --script res://tests/run_rats_tests.gd</span>
+── Town-3 rats hazard + Ratcatcher tests ──────────
+  <span class="g">PASS</span>  RAT tile produces nothing and has no threshold (wasted move)
+  <span class="g">PASS</span>  rats_enabled() == town2_complete
+  <span class="g">PASS</span>  enabling rats seeds 2 rats into the FARM pool (mine pool untouched)
+  <span class="g">PASS</span>  hazard buildings gated on rats_enabled
+  <span class="g">PASS</span>  Ratcatcher has 5 shoo charges; use_ratcatcher_charge decrements
+  <span class="g">PASS</span>  clear_all_rats blanks every rat then collapses + refills
+  <span class="g">PASS</span>  grass chain folds 8-adjacent rats into the removal set (uncredited)
+  <span class="g">PASS</span>  rat / charge state survives a save/load round-trip
+  <span class="c">…  (72 further no-yield / seeding / gate / clearing checks)</span>
+──────────────────────────────────────────────────
+80 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
 <span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
 ── Scene smoke (Main + Board wiring) ──────────────
   <span class="g">PASS</span>  Main.tscn loads
@@ -1067,9 +1239,12 @@ godot --headless --path godot --script res://tests/run_tests.gd       <span clas
 godot --headless --path godot --script res://tests/run_state_tests.gd <span class="c"># GameState + SaveManager tests (42)</span>
 godot --headless --path godot --script res://tests/run_town_tests.gd  <span class="c"># TownConfig + Settlement + tier-up tests (69)</span>
 godot --headless --path godot --script res://tests/run_building_tests.gd <span class="c"># BuildingConfig + build/demolish + pool tests (91)</span>
-godot --headless --path godot --script res://tests/run_economy_tests.gd <span class="c"># RecipeConfig + MarketConfig + craft/sell/buy tests (136)</span>
+godot --headless --path godot --script res://tests/run_economy_tests.gd <span class="c"># RecipeConfig + MarketConfig + craft/sell/buy tests (137)</span>
 godot --headless --path godot --script res://tests/run_orders_tests.gd <span class="c"># OrderConfig + orders tests (121)</span>
 godot --headless --path godot --script res://tests/run_town_ui_tests.gd <span class="c"># TownScreen UI tests (35)</span>
+godot --headless --path godot --script res://tests/run_mine_tests.gd  <span class="c"># mine expedition → Town 2 tests (117)</span>
+godot --headless --path godot --script res://tests/run_boss_tests.gd  <span class="c"># Frostmaw capstone-boss tests (73)</span>
+godot --headless --path godot --script res://tests/run_rats_tests.gd  <span class="c"># Town 3 rats hazard + Ratcatcher tests (80)</span>
 godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke (11)</span>
 godot --path godot                                                    <span class="c"># play it (windowed)</span>
 godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
@@ -1083,7 +1258,7 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, M3a, M3b, M3c, M3d &amp; M3e</h3>
+        <h3>Done — M1, M2 &amp; the full M3 slice (M3a–M3h)</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
@@ -1092,12 +1267,17 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <li class="done">M3c — refining + market economy — built and verified on <code>claude/godot-migration-m3c-economy</code>: <code>RecipeConfig</code> (bread at the Bakery), <code>MarketConfig</code> (SELL/BUY tables), the Bakery refiner + building <code>kind</code>, <code>GameState</code> <code>craft</code>/<code>sell</code>/cap-aware <code>buy</code>, B/G demo keys, 136-check economy suite + the building suite bumped to 91, CI step.</li>
           <li class="done">M3d — orders system — built and verified on <code>claude/godot-migration-m3d-orders</code>: <code>OrderConfig</code> (<code>MAX_ORDERS=3</code>, qty 3–8, 3× reward), <code>GameState</code> <code>orders</code> + seeded <code>rng</code> + <code>orderable_resources</code>/<code>generate_order</code>/<code>refill_orders</code>/<code>fill_order</code> (uncapped 3× reward, persisted + sanitised on load), a temporary F-key fill, a 121-check orders suite, CI step. <b>M3 re-scoped 6 → 7 sub-parts (Orders and the Town UI split).</b></li>
           <li class="done">M3e — Town UI screen — built and verified on <code>claude/godot-migration-m3e-town-ui</code>: <code>TownScreen.gd</code> (a <code>CanvasLayer</code> modal with five live sections whose buttons drive the whole Town-1 economy via existing <code>GameState</code> methods, re-rendering after each action), a "🏠 Town" button in <code>Main.gd</code> that opens it (the T/1-6/B/G/F keys demoted to a keyboard fallback), the safe-under-emit <code>refresh()</code>, a 35-check town-UI suite, CI step.</li>
+          <li class="done">M3f — expedition → Town 2 (mine) — <b>merged (PR #937)</b>: mine tiles + <code>MINE_POOL</code>, the Kitchen→supplies food gate + Supplies recipe, mine-good Market prices, and the <code>enter_mine</code>/<code>note_mine_turn</code>/<code>leave_mine</code>/<code>active_biome_pool</code> expedition lifecycle (soft-fail keeps everything gathered); a <code>TownScreen</code> Expedition section; a 117-check mine suite, CI step.</li>
+          <li class="done">M3g — ★ capstone boss (Frostmaw) — <b>merged (PR #939)</b>: <code>BossConfig.gd</code> (hp 40, <code>min_chain 4</code>, reward 500c); <code>GameState</code> <code>can_challenge_boss</code>/<code>start_boss</code>/<code>boss_min_chain</code>/<code>damage_boss</code> (killing blow sets <code>town2_complete</code> + credits the reward); a dynamic <code>Board.min_chain</code> that raises the resolve bar while keeping dead-board checks at base min; boss HUD + a gated "Challenge Frostmaw" button; a 73-check boss suite, CI step.</li>
+          <li class="done">M3h — Town 3 rats hazard + Ratcatcher — <b>merged (PR #940)</b>: <code>Constants.Tile.RAT</code> (a no-yield hazard tile, gated on <code>town2_complete</code>, seeded into the farm pool); Ratcatcher + Master Ratcatcher (new <code>"hazard"</code> kind) + 5 shoo charges; <code>Board.clear_all_rats</code> / grass-chain adjacency clearing; rats HUD + a Rats section + a "Shoo rats" free move; an 80-check rats suite, CI step. <b>The M3 introductory slice is complete (8 sub-parts, M3a–M3h).</b></li>
+          <li class="done"><b>GitHub Pages deploy live (PR #938)</b> — pushes to <code>main</code> publish both the Phaser game and the Godot Web export to Pages.</li>
         </ul>
 
-        <h3>Then M3f…M3g — the rest of the Direction vertical slice</h3>
+        <h3>Next — M4 (UX/UI parity), then M5 (mobile)</h3>
         <div class="log">
-          <div class="entry"><div class="date">M3f · next</div><h3>Expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies), mine tiles + hazards; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
-          <div class="entry"><div class="date">M3g</div><h3>Capstone boss + Town 3</h3><p>The end-of-Town-2 capstone boss (boss <code>minChain</code> raises the chain floor), then Town 3 with the rats hazard + Ratcatcher buildings.</p></div>
+          <div class="entry"><div class="date">M3 · complete</div><h3>Introductory vertical slice done</h3><p>The full Town&nbsp;1 (farm) → Town&nbsp;2 (mine) + ★ capstone boss → Town&nbsp;3 (farm + rats) slice plays end-to-end in Godot, backed by 11 headless CI-gated suites (794 checks). <b>Deliberately deferred</b> (honest debt — Decision&nbsp;#29): the per-settlement resource split (the slice uses one shared inventory), the Town-2 tier ladder, mine hazards, and Town-3's broader specialization roster.</p></div>
+          <div class="entry"><div class="date">M4 · next</div><h3>Replicate the Phaser game's full UI/UX in Godot</h3><p>The current Godot UI is barebones (code-built HUD + a single Town modal). M4 brings it to parity with the React/Phaser game: the full HUD, inventory, modals, town, crafting/cartography screens, board animations, and audio — plus the deferred content/balance debt above. This is the bulk of the remaining migration work.</p></div>
+          <div class="entry"><div class="date">M5</div><h3>Mobile app (externally gated)</h3><p>iOS + Android export and store submission. <b>External blocker</b> outside the codebase: iOS needs a Mac + Xcode, and both stores need paid developer accounts with signing/provisioning. The Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</p></div>
         </div>
 
         <h3>Carried-over M1/M2 polish (not blockers)</h3>
