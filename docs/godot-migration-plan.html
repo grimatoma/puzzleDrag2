@@ -151,8 +151,8 @@
 
   <header class="hero">
     <h1>Godot Migration Plan</h1>
-    <p class="sub">Strategic rationale and phased roadmap for migrating puzzleDrag2 from React + Phaser 3 to Godot 4, targeting mobile app distribution.</p>
-    <p class="meta">Status: Approved · June 2026 · Supersedes the Phaser prototype</p>
+    <p class="sub">Strategic rationale and phased roadmap for migrating puzzleDrag2 from React + Phaser 3 to Godot 4. Phase 1 (M1–M4) shipped a playable Town 1→2→3 vertical slice. Phase 2 (M5–M11) pursues full feature parity — logic-first, mobile-first, with GdUnit4 + e2e + visual golden-diff.</p>
+    <p class="meta">Status: Re-baselined · 2026-06-06 · Phase 1 done · Phase 2 in progress</p>
     <div class="chips">
       <span class="chip">Godot 4</span>
       <span class="chip">GDScript</span>
@@ -302,6 +302,21 @@ jobs:
         <div class="box amber"><b>Immediate next step before migrating.</b> Complete <strong>PR-B</strong>: align <code>constants.ts</code> building costs, <code>MARKET_PRICES</code>, <code>seasonDrops</code>, and <code>DAILY_REWARDS</code> to the documented PC2 baseline. This is config/data work that transfers directly and costs little. Everything else in the deferred mechanics list (demolish, plots, expeditions, boss) waits for Godot.</div>
       </section>
 
+      <section id="rebaseline">
+        <h2>Re-baseline — 2026-06</h2>
+        <div class="box ok"><b>Phase 1 shipped.</b> The original M1–M4 arc delivered a playable Town 1 → Town 2 → Town 3 vertical slice: board logic, core game systems, content &amp; progression, and a first-pass UI layer. An audit then confirmed: the logic foundation is sound and well-tested, but the UI layer was built the fast/wrong way — all imperative GDScript with no Theme, no reusable scenes, no router — and tile art is mostly unfed, leaving the game looking broken or barebones.</div>
+        <p>Decision: <strong>keep the logic, rebuild the UI</strong>. The new direction is <strong>full feature parity</strong> with the React version — port the ~24 absent slices logic-first, then UI for each. Mobile-first throughout. Testing backbone: <strong>GdUnit4 + e2e + visual golden-diff</strong>. The new milestone ladder (<a href="#milestones">Milestones tab</a>) replaces "M5 = Mobile app" with M5 UI-foundation → M6 spatial town map → M7 effects + tile-art → M-infra (parallel) → M8 tools → M9 seasons → M10 long-tail → M11 export hardening.</p>
+        <p><strong>No-fakes ceiling:</strong> no screen ships before its backing logic is ported and tested. UI work on an unported system is treated as a fake.</p>
+
+        <div class="box tip"><b>Tracking — three docs, three roles.</b>
+          <ul style="margin:.45rem 0 0;">
+            <li><b>This page</b> — the roadmap (milestones &amp; rationale).</li>
+            <li><b>Live status</b> — the parity matrix: <a href="godot-parity-matrix.html">godot-parity-matrix.html</a> (generated from <code>docs/parity-matrix.json</code>), the single queryable source of truth for Godot-vs-React parity.</li>
+            <li><b>Screenshot story</b> — the narrative archive: <a href="godot-migration-progress.html">godot-migration-progress.html</a>, milestone-by-milestone with screenshots.</li>
+          </ul>
+        </div>
+      </section>
+
     </div>
 
     <!-- ══════════════════════════════════════════════════════════ MILESTONES -->
@@ -311,48 +326,94 @@ jobs:
         <h2>Migration roadmap</h2>
 
         <div class="diagram">
-          <svg viewBox="0 0 860 110" width="100%" role="img" aria-label="Migration phases: PR-B, then M1 through M5">
+          <svg viewBox="0 0 860 230" width="100%" role="img" aria-label="Two-phase migration: Phase 1 (M1–M4, shipped) then Re-baseline arrow then Phase 2 (M5–M11, parity arc) with M-infra running in parallel">
             <defs>
               <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
                 <path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/>
               </marker>
+              <marker id="arr-ok" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="var(--ok)"/>
+              </marker>
             </defs>
-            <g font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="600">
-              <!-- PR-B -->
-              <rect x="10" y="30" width="100" height="48" rx="8" fill="color-mix(in srgb,var(--accent2) 14%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
-              <text x="60" y="52" text-anchor="middle" fill="var(--accent2)">PR-B</text>
-              <text x="60" y="68" text-anchor="middle" fill="var(--muted)" font-weight="400">Balance</text>
-              <!-- M1 -->
-              <rect x="135" y="30" width="115" height="48" rx="8" fill="color-mix(in srgb,var(--accent) 16%,#fff)" stroke="var(--accent)" stroke-width="2"/>
-              <text x="192" y="49" text-anchor="middle" fill="var(--accent)">M1</text>
-              <text x="192" y="63" text-anchor="middle" fill="var(--ink)" font-weight="400">Playable</text>
-              <text x="192" y="75" text-anchor="middle" fill="var(--ink)" font-weight="400">Board</text>
-              <!-- M2 -->
-              <rect x="275" y="30" width="115" height="48" rx="8" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
-              <text x="332" y="49" text-anchor="middle" fill="var(--accent)">M2</text>
-              <text x="332" y="63" text-anchor="middle" fill="var(--ink)" font-weight="400">Game</text>
-              <text x="332" y="75" text-anchor="middle" fill="var(--ink)" font-weight="400">Systems</text>
-              <!-- M3 -->
-              <rect x="415" y="30" width="115" height="48" rx="8" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
-              <text x="472" y="49" text-anchor="middle" fill="var(--accent)">M3</text>
-              <text x="472" y="63" text-anchor="middle" fill="var(--ink)" font-weight="400">Content &amp;</text>
-              <text x="472" y="75" text-anchor="middle" fill="var(--ink)" font-weight="400">Progression</text>
-              <!-- M4 -->
-              <rect x="555" y="30" width="115" height="48" rx="8" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
-              <text x="612" y="49" text-anchor="middle" fill="var(--accent)">M4</text>
-              <text x="612" y="63" text-anchor="middle" fill="var(--ink)" font-weight="400">UI &amp;</text>
-              <text x="612" y="75" text-anchor="middle" fill="var(--ink)" font-weight="400">Polish</text>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="11" font-weight="600">
+
+              <!-- ── Phase 1 label ── -->
+              <text x="8" y="16" fill="var(--ok)" font-size="10" font-weight="700" letter-spacing=".04em">PHASE 1 — SHIPPED</text>
+
+              <!-- M1 done -->
+              <rect x="8"   y="22" width="90" height="44" rx="7" fill="color-mix(in srgb,var(--ok) 18%,#fff)" stroke="var(--ok)" stroke-width="2"/>
+              <text x="53"  y="40" text-anchor="middle" fill="var(--ok)">M1</text>
+              <text x="53"  y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Board</text>
+              <!-- M2 done -->
+              <rect x="118" y="22" width="90" height="44" rx="7" fill="color-mix(in srgb,var(--ok) 18%,#fff)" stroke="var(--ok)" stroke-width="2"/>
+              <text x="163" y="40" text-anchor="middle" fill="var(--ok)">M2</text>
+              <text x="163" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Systems</text>
+              <!-- M3 done -->
+              <rect x="228" y="22" width="90" height="44" rx="7" fill="color-mix(in srgb,var(--ok) 18%,#fff)" stroke="var(--ok)" stroke-width="2"/>
+              <text x="273" y="40" text-anchor="middle" fill="var(--ok)">M3</text>
+              <text x="273" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Content</text>
+              <!-- M4 done -->
+              <rect x="338" y="22" width="90" height="44" rx="7" fill="color-mix(in srgb,var(--ok) 18%,#fff)" stroke="var(--ok)" stroke-width="2"/>
+              <text x="383" y="40" text-anchor="middle" fill="var(--ok)">M4</text>
+              <text x="383" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">UI &amp; Polish</text>
+              <!-- Phase 1 arrows -->
+              <line x1="98"  y1="44" x2="113"  y2="44" stroke="var(--ok)" stroke-width="1.8" marker-end="url(#arr-ok)"/>
+              <line x1="208" y1="44" x2="223"  y2="44" stroke="var(--ok)" stroke-width="1.8" marker-end="url(#arr-ok)"/>
+              <line x1="318" y1="44" x2="333"  y2="44" stroke="var(--ok)" stroke-width="1.8" marker-end="url(#arr-ok)"/>
+
+              <!-- Re-baseline bridge -->
+              <line x1="428" y1="44" x2="452"  y2="44" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+              <text x="440"  y="38" text-anchor="middle" fill="var(--accent2)" font-size="9" font-weight="700">re-</text>
+              <text x="440"  y="60" text-anchor="middle" fill="var(--accent2)" font-size="9" font-weight="700">base</text>
+
+              <!-- ── Phase 2 label ── -->
+              <text x="458" y="16" fill="var(--accent)" font-size="10" font-weight="700" letter-spacing=".04em">PHASE 2 — PARITY ARC</text>
+
               <!-- M5 -->
-              <rect x="695" y="30" width="115" height="48" rx="8" fill="color-mix(in srgb,var(--ok) 16%,#fff)" stroke="var(--ok)" stroke-width="1.5"/>
-              <text x="752" y="49" text-anchor="middle" fill="var(--ok)">M5</text>
-              <text x="752" y="63" text-anchor="middle" fill="var(--ink)" font-weight="400">Mobile</text>
-              <text x="752" y="75" text-anchor="middle" fill="var(--ink)" font-weight="400">App</text>
-              <!-- arrows -->
-              <line x1="110" y1="54" x2="130" y2="54" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
-              <line x1="250" y1="54" x2="270" y2="54" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
-              <line x1="390" y1="54" x2="410" y2="54" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
-              <line x1="530" y1="54" x2="550" y2="54" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
-              <line x1="670" y1="54" x2="690" y2="54" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
+              <rect x="458" y="22" width="52" height="44" rx="7" fill="color-mix(in srgb,var(--warn) 14%,#fff)" stroke="var(--warn)" stroke-width="2"/>
+              <text x="484" y="40" text-anchor="middle" fill="var(--warn)">M5</text>
+              <text x="484" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">UI&nbsp;Fdn</text>
+              <!-- M6 -->
+              <rect x="520" y="22" width="52" height="44" rx="7" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="546" y="40" text-anchor="middle" fill="var(--accent)">M6</text>
+              <text x="546" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Town</text>
+              <!-- M7 -->
+              <rect x="582" y="22" width="52" height="44" rx="7" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="608" y="40" text-anchor="middle" fill="var(--accent)">M7</text>
+              <text x="608" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">FX&nbsp;Art</text>
+              <!-- M8 -->
+              <rect x="644" y="22" width="52" height="44" rx="7" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="670" y="40" text-anchor="middle" fill="var(--accent)">M8</text>
+              <text x="670" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Tools</text>
+              <!-- M9 -->
+              <rect x="706" y="22" width="52" height="44" rx="7" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="732" y="40" text-anchor="middle" fill="var(--accent)">M9</text>
+              <text x="732" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Seasons</text>
+              <!-- M10 -->
+              <rect x="768" y="22" width="48" height="44" rx="7" fill="color-mix(in srgb,var(--accent) 10%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="792" y="40" text-anchor="middle" fill="var(--accent)">M10</text>
+              <text x="792" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400">Long‑tail</text>
+              <!-- M11 -->
+              <rect x="826" y="22" width="28" height="44" rx="7" fill="color-mix(in srgb,var(--idle) 14%,#fff)" stroke="var(--idle)" stroke-width="1.5"/>
+              <text x="840" y="40" text-anchor="middle" fill="var(--idle)" font-size="10">M11</text>
+              <text x="840" y="54" text-anchor="middle" fill="var(--muted)" font-weight="400" font-size="9">Export</text>
+
+              <!-- Phase 2 arrows -->
+              <line x1="510" y1="44" x2="515"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="572" y1="44" x2="577"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="634" y1="44" x2="639"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="696" y1="44" x2="701"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="758" y1="44" x2="763"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="816" y1="44" x2="821"  y2="44" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+              <!-- ── M-infra parallel track ── -->
+              <rect x="458" y="84" width="396" height="38" rx="9" fill="color-mix(in srgb,var(--info) 10%,#fff)" stroke="var(--info)" stroke-width="1.5" stroke-dasharray="5 3"/>
+              <text x="656" y="98" text-anchor="middle" fill="var(--info)" font-size="11">M-infra — testing parity (parallel from M5)</text>
+              <text x="656" y="113" text-anchor="middle" fill="var(--info)" font-weight="400" font-size="10">GdUnit4 · e2e · visual golden-diff · parity-matrix CI</text>
+
+              <!-- Dashed connector from M5 down to M-infra -->
+              <line x1="484" y1="66" x2="484" y2="84" stroke="var(--info)" stroke-width="1.2" stroke-dasharray="3 2"/>
+
             </g>
           </svg>
         </div>
@@ -364,7 +425,7 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num amber">PR-B</span>
             <h3>Balance baseline alignment</h3>
-            <span class="pill warn">next</span>
+            <span class="pill idle">historical</span>
           </div>
           <p>Align the current Phaser codebase to the PC2 balance baseline documented in the Direction spec. This is data work — no new mechanics, no new UI.</p>
           <ul>
@@ -372,6 +433,7 @@ jobs:
             <li>Align ability params to documented PC2 values</li>
           </ul>
           <p>These numbers transfer directly into Godot's <code>Constants.gd</code> — doing this now means the migration starts from a correct baseline rather than having to reconcile two sets of numbers later.</p>
+          <p><em>Balance now lives in the Game Wiki and the parity tooling — this card is retained for historical context.</em></p>
         </div>
       </section>
 
@@ -381,8 +443,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M1</span>
             <h3>Prove the core mechanic works in Godot</h3>
-            <span class="pill idle">upcoming</span>
+            <span class="pill ok">done</span>
           </div>
+          <p><em>Shipped — see <a href="godot-migration-progress.html">godot-migration-progress.html</a> for screenshots.</em></p>
           <p><strong>Done when:</strong> a human can drag a chain, it resolves, the board collapses, and it feels right on both desktop and a mobile browser.</p>
           <ul>
             <li>Godot 4 project setup + repo structure, <code>.gitignore</code>, export presets</li>
@@ -404,8 +467,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M2</span>
             <h3>Core loop and state</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">done</span>
           </div>
+          <p><em>Shipped — see <a href="godot-migration-progress.html">godot-migration-progress.html</a> for screenshots.</em></p>
           <ul>
             <li>Resource system and inventory (typed GDScript enums replacing <code>ResourceKey</code>, <code>TileKey</code>)</li>
             <li>Turn / season cycle — 10 turns, 4 seasons</li>
@@ -422,9 +486,10 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M3</span>
             <h3>Town 1 → Town 2 vertical slice (the Direction spec)</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">done</span>
           </div>
-          <p>This is where the deferred Phaser mechanics get built — for the first time, directly in Godot:</p>
+          <p><em>Shipped — see <a href="godot-migration-progress.html">godot-migration-progress.html</a> for screenshots.</em></p>
+          <p>The deferred Phaser mechanics were built for the first time, directly in Godot:</p>
           <ul>
             <li>Buildings + upgrade system; demolish action + UI</li>
             <li>Camp → City tier ladder; tier-up → new plots</li>
@@ -444,8 +509,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M4</span>
             <h3>Full UI, animation, audio, art</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">done</span>
           </div>
+          <p><em>Shipped — see <a href="godot-migration-progress.html">godot-migration-progress.html</a> for screenshots. Audit after M4 triggered the re-baseline: UI built imperatively, tile art mostly unfed — see the Re-baseline section in Overview.</em></p>
           <ul>
             <li>Full HUD, inventory screen, crafting, cartography views (Godot Control nodes)</li>
             <li>Tile chain, collapse, and resource-collect animations</li>
@@ -456,28 +522,158 @@ jobs:
         </div>
       </section>
 
+      <h2>Re-baseline — Phase 2 (parity arc)</h2>
+
       <section id="m5">
-        <h2>Milestone 5 — Mobile app</h2>
+        <h2>Milestone 5 — UI Foundation</h2>
         <div class="milestone">
           <div class="milestone-header">
-            <span class="milestone-num muted">M5</span>
-            <h3>iOS + Android distribution</h3>
+            <span class="milestone-num">M5</span>
+            <h3>Theme + reusable scenes + router + signal bus</h3>
+            <span class="pill warn">next · prerequisite</span>
+          </div>
+          <p>The unblocking refactor — no behavior change, all tests stay green. Hard prerequisite for everything else: the imperative-UI tax compounds until this lands.</p>
+          <ul>
+            <li><code>godot/themes/journal_theme.tres</code> — one Theme resource; all StyleBox/font/color sourced from <code>Palette.gd</code> which already mirrors <code>src/tokens.css</code></li>
+            <li>Reusable Control scenes: <code>godot/scenes/ui/{PillLabel,ActionButton,SectionCard,ModalShell,ProgressBar}.tscn</code></li>
+            <li><code>godot/scripts/ViewRouter.gd</code> autoload — view/modal enum + show/hide stack + <code>?visual=&lt;id&gt;</code> deep-link entry for tests, mirroring React's <code>src/router.js</code> <code>KNOWN_VIEWS</code>/<code>KNOWN_MODALS</code></li>
+            <li><code>GameState.state_changed</code> signal / small <code>EventBus.gd</code> so screens bind reactively rather than polling</li>
+            <li>Migrate the 4 existing screens (Main / Town / Menu / Inventory) onto Theme + scenes + router; delete inline dev-keyboard fallbacks</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m6">
+        <h2>Milestone 6 — Spatial town building-placement map</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num">M6</span>
+            <h3>Port the React town map — the #1 player complaint</h3>
+            <span class="pill idle">later</span>
+          </div>
+          <p>The town is currently a button-row list, not a map. The hard part is a pure-function port, not freehand design.</p>
+          <ul>
+            <li>Port <code>src/townLayout.ts</code> (seeded-PRNG <code>buildTownPlan</code> emitting lots/roads/water/trees/fields/plaza/boards, ~627 lines) → <code>godot/scripts/TownLayout.gd</code>; deterministic + headless-testable like <code>BoardLogic</code></li>
+            <li><code>godot/scenes/town/TownMap.tscn</code> — terrain and clickable plots with Camera2D pan/zoom</li>
+            <li><code>Plot</code> / <code>BuildPicker</code> / <code>BuildingTooltip</code> scenes</li>
+            <li>Wire to the already-tested <code>GameState.build</code> / <code>demolish</code> / plot-gating (rendering + interaction over proven logic, not new economy)</li>
+            <li><b>Graphics note:</b> the React town map is 100% SVG (<code>src/ui/TownGround.tsx</code> draws ground/roads/river/trees/fields/plaza; <code>src/ui/Town.tsx</code> places buildings) — that SVG is the porting source for the Godot 2D terrain. Building art reuses the procedural SVG isometric set in <code>src/iso/</code> (27 buildings, <code>isoKit.tsx</code>) or first-pass placeholders keyed by building id.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m7">
+        <h2>Milestone 7 — Effects / juice + tile-art feed</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num">M7</span>
+            <h3>Kill the "looks broken" perception on two fronts</h3>
             <span class="pill idle">later</span>
           </div>
           <ul>
-            <li>Touch input refinement — safe areas, notches, gesture conflict resolution</li>
-            <li>iOS export (<code>.ipa</code>) via Godot export templates</li>
-            <li>Android export (<code>.apk</code> / <code>.aab</code>)</li>
-            <li>App store submission prep (metadata, screenshots, privacy manifest)</li>
+            <li><b>(1) Feed the existing 3-tier art pipeline</b> — author/import the missing PNGs + v2 <code>SpriteFrames</code> <code>.tres</code> for already-WIRED tiles that currently fall through to flat grey placeholder squares (rat, rubble, some mine tiles); drop-in, one <code>.tres</code> animates a tile with zero code changes</li>
+            <li><b>(2) Effects pass</b> — <code>godot/scenes/fx/{ChainBurst,Floater}.tscn</code> (<code>GPUParticles2D</code>) fired from <code>Board</code> on chain resolve; cascade/refill tween polish on collapse; chain-glow polish; optional biome tint overlay (visual-only); hazard tile overlay sprites</li>
+            <li>Cross-reference the <a href="#assets">Asset Pipeline tab</a> — Stage 1/2/3 are documented there; the missing-art feed is Stage 3 completion</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="minfra">
+        <h2>M-infra — Testing parity (parallel from M5)</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num" style="background:var(--info)">M‑infra</span>
+            <h3>The verification backbone every later milestone plugs into</h3>
+            <span class="pill info">parallel</span>
+          </div>
+          <p>Runs in parallel from M5 onward. Each later milestone wires its own logic suites into this backbone before any UI ships.</p>
+          <ul>
+            <li>Adopt <b>GdUnit4</b> + the gdUnit GitHub action (auto-discovery + parallel), migrating the ~17 monolithic <code>run_*.gd</code> SceneTree runners one-class-per-system while keeping legacy runners as a compatibility harness so CI is never red</li>
+            <li>Headless <b>e2e</b> InputEvent + scene-state DSL under <code>godot/tests/e2e/</code> — port ~5 Playwright specs: smoke, navigation, chain, economy/orders, town-build</li>
+            <li><b>Visual</b> golden-diff suite <code>godot/tests/visual/run_visual_tests.gd</code> with <code>__goldens__/{scenario}/{vp}.png</code> (mobile 720×1280 now, desktop later)</li>
+            <li>Upgrade <code>.github/workflows/godot-ci.yml</code> — parallel unit matrix, non-headless visual job, post-export Playwright web smoke, parity-matrix validation check (<code>tools/check-parity-matrix.mjs</code>) + rebuild (<code>tools/build-parity-matrix.mjs</code>)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m8">
+        <h2>Milestone 8 — Tools + tool-powers</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num">M8</span>
+            <h3>First milestone needing new logic before any UI (no-fakes ceiling in action)</h3>
+            <span class="pill idle">later</span>
+          </div>
+          <ul>
+            <li><code>godot/scripts/ToolConfig.gd</code> — tool catalog + tool-power equivalents, porting <code>src/config/toolPowers.ts</code> + <code>src/config/abilities.ts</code>; <code>GameState.use_tool</code> returning <code>{ok, reason}</code></li>
+            <li><code>godot/scenes/board/ToolPalette.tscn</code> + a tap-target targeting overlay</li>
+            <li>Tool effects integrated into <code>Board</code> resolution (fill bias, sweeps, instant clears)</li>
+            <li>Magic-tool / auto-apply powers (ports React <code>portal</code> / <code>abilities</code> slices)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m9">
+        <h2>Milestone 9 — Seasons / calendar / boons + weather</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num">M9</span>
+            <h3>Currently intentionally dropped — turn counter only</h3>
+            <span class="pill idle">later</span>
+          </div>
+          <ul>
+            <li><code>GameState</code> season/calendar fields + boon modifiers + season-end stats (headless-tested)</li>
+            <li><code>godot/scenes/{SeasonStrip,BoonsPicker,RunSummary}.tscn</code></li>
+            <li>Weather <code>GPUParticles</code> overlay on <code>Board</code></li>
+            <li>Ports React <code>boons</code> / <code>festivals</code> / <code>runSummary</code> slices + the season system</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m10">
+        <h2>Milestone 10 — Long-tail content</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num">M10</span>
+            <h3>Container milestone — the arc to React's full slice set</h3>
+            <span class="pill idle">later</span>
+          </div>
+          <p>Each sub-feature is its own logic-then-UI pair; only enters scope once its logic suite passes.</p>
+          <ul>
+            <li>Cartography / zones — zone model + founding + world-map render</li>
+            <li>Townsfolk / NPCs / workers — roster + bonding + order multipliers</li>
+            <li>Achievements — counter tracking + multi-tab view</li>
+            <li>Story beats + chronicle — beat triggers + choice dialogs + timeline</li>
+            <li>Tile-collection browser — the 77 exported tile PNGs are already on disk</li>
+            <li>Fish / harbor biome — tides + pearl capture</li>
+            <li>Migrate config from GDScript <code>const</code> to data resources (<code>.tres</code> / JSON) with a schema-validation pass (a Godot stand-in for React's Zod / <code>balance.json</code>)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="m11">
+        <h2>Milestone 11 — Desktop + mobile export hardening</h2>
+        <div class="milestone">
+          <div class="milestone-header">
+            <span class="milestone-num muted">M11</span>
+            <h3>Export / distribution endgame (absorbs old "M5 Mobile app")</h3>
+            <span class="pill idle">later</span>
+          </div>
+          <ul>
+            <li><code>project.godot</code> display config — <b>restore <code>window/stretch/aspect="keep"</code> + <code>pointing/emulate_mouse_from_touch=true</code></b> (dropped by an editor re-save); add desktop default size + content-scale/aspect while preserving mobile portrait</li>
+            <li>Responsive breakpoints reusing the M5 Theme/scenes — board + HUD reflow for desktop vs mobile</li>
+            <li>Validated Web + desktop export presets</li>
+            <li>Release checklist</li>
+            <li><b>Note:</b> mobile store export (iOS <code>.ipa</code> / Android <code>.aab</code>, App Store / Play submission, safe-areas/notches) remains externally blocked (Mac + Apple/Google signing + store accounts) but the build targets are validated here</li>
           </ul>
         </div>
       </section>
 
       <section id="parallel">
-        <h2>Parallel track (throughout all milestones)</h2>
+        <h2>Parallel track — M-infra + dev tooling</h2>
         <div class="box"><b>Dev tooling stays live.</b> The Dev Panel, Wiki, and Story Editor remain deployed on GitHub Pages and usable throughout the migration. Balance tuning via the Dev Panel still works — the constants transfer as data. No need to rebuild these tools in Godot.</div>
-        <p>Visual regression testing migrates alongside the game: as each milestone produces a working HTML5 export, the existing Playwright infrastructure extends to cover Godot scenes via the browser.</p>
-        <p>The <a href="#assets">asset pipeline</a> is also an independent parallel workstream — Stage 1 (placeholders) ships with M1, Stage 2 (v1 PNG export) can land any time during M2/M3, and Stage 3 (v2 animated sprite sheets) feeds in through M4 and beyond.</p>
+        <p><b>M-infra</b> is the verification backbone running in parallel from M5 onward — GdUnit4 unit suites, headless e2e, visual golden-diff, and the parity-matrix CI check. See the <a href="#minfra">M-infra card</a> above for the full checklist, and the <a href="godot-parity-matrix.html">parity matrix</a> for live status.</p>
+        <p>The <a href="#assets">asset pipeline</a> is also an independent parallel workstream — Stage 1 (placeholders) shipped with M1, Stage 2 (v1 PNG export) landed during M2/M3, and Stage 3 (v2 animated sprite sheets) feeds in through M7 and beyond.</p>
       </section>
 
     </div>
