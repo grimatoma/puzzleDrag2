@@ -68,6 +68,9 @@ jobs:
       - name: Boss tests
         run: godot --headless --path godot --script res://tests/run_boss_tests.gd
 
+      - name: Rats / Ratcatcher tests
+        run: godot --headless --path godot --script res://tests/run_rats_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 

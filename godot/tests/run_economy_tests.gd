@@ -119,9 +119,11 @@ func _test_building_kinds() -> void:
 	_check(BC.building_resource(BC.BAKERY) == "bread", "bakery resource is bread")
 
 	# available_at_tier now iterates ALL_BUILD_IDS, so the Bakery is offered. M3f
-	# appended the Kitchen (refiner) after the Bakery, so ALL_BUILD_IDS is now five.
-	_check(BC.ALL_BUILD_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY, BC.KITCHEN],
-		"ALL_BUILD_IDS is the five buildings in stable order")
+	# appended the Kitchen (refiner) after the Bakery; M3h appended the two rats-
+	# hazard buildings (Ratcatcher, Master Ratcatcher) after the Kitchen — seven total.
+	_check(BC.ALL_BUILD_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY, BC.KITCHEN,
+			BC.RATCATCHER, BC.MASTER_RATCATCHER],
+		"ALL_BUILD_IDS is the seven buildings in stable order")
 	_check(BC.SPAWNER_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN],
 		"SPAWNER_IDS stays the three spawners only")
 	# At Village (tier 3) the Kitchen (Town-tier) is NOT yet offered, so the Bakery

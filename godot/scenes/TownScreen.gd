@@ -28,11 +28,16 @@ var game: GameState
 
 signal closed
 signal state_changed   ## emitted after any action mutates `game`
+## M3h — the "Shoo rats" button emits this instead of clearing the board itself
+## (this screen has no board ref). Main connects it, spends the charge, and clears
+## the board (the single accounting point for a shoo-move).
+signal shoo_rats
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
 ##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>",
-##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss".
+##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss",
+##   "shoo_rats" (M3h).
 var _action_buttons: Dictionary = {}
 
 ## Static shell (built once in setup()) — the dynamic section bodies hang off the
@@ -45,6 +50,7 @@ var _market_body: VBoxContainer
 var _orders_body: VBoxContainer
 var _expedition_body: VBoxContainer   ## M3f — enter/leave the mine
 var _boss_body: VBoxContainer         ## M3g — challenge the capstone boss
+var _rats_body: VBoxContainer         ## M3h — Town-3 rats hazard (build/shoo)
 var _built: bool = false
 
 # ── earthy palette (matches Main's HUD) ───────────────────────────────────────
@@ -154,6 +160,7 @@ func _build_shell() -> void:
 	_orders_body = _add_section("Orders")
 	_expedition_body = _add_section("Expedition")
 	_boss_body = _add_section("Boss")
+	_rats_body = _add_section("Rats")
 
 ## Append a section to the root VBox: a header Label then an (initially empty)
 ## body VBox that refresh() repopulates. Returns the body VBox.
@@ -199,6 +206,7 @@ func refresh() -> void:
 	_clear(_orders_body)
 	_clear(_expedition_body)
 	_clear(_boss_body)
+	_clear(_rats_body)
 
 	_build_settlement_section()
 	_build_buildings_section()
@@ -207,6 +215,7 @@ func refresh() -> void:
 	_build_orders_section()
 	_build_expedition_section()
 	_build_boss_section()
+	_build_rats_section()
 
 ## Detach every child of `container` from the tree NOW (so the rebuilt rows render
 ## correctly and the dict is the only live reference), then queue_free it. The
@@ -245,6 +254,10 @@ func _build_buildings_section() -> void:
 	_buildings_body.add_child(_make_label("Plots %d/%d" % [used, total], COL_MUTED))
 
 	for id in BuildingConfig.available_at_tier(game.settlement.tier):
+		# M3h: rats-HAZARD buildings (Ratcatcher / Master Ratcatcher) live in the Rats
+		# section instead — skip them here so each build button has ONE owner + key.
+		if BuildingConfig.is_hazard_building(id):
+			continue
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
@@ -402,6 +415,58 @@ func _build_boss_section() -> void:
 	_boss_body.add_child(challenge_btn)
 	_action_buttons["challenge_boss"] = challenge_btn
 
+func _build_rats_section() -> void:
+	# M3h — the Town-3 rats hazard. Renders NOTHING until rats are live (Town 2 done):
+	# until then the section header sits over an empty body. Once enabled it shows a
+	# status line, Build/Demolish rows for the two Ratcatcher buildings (gated by
+	# can_build, which requires City + rats_enabled), and — when a Ratcatcher with
+	# charges is placed — a "Shoo rats" button that emits `shoo_rats` for Main to act on.
+	if not game.rats_enabled():
+		return
+
+	_rats_body.add_child(_make_label("🐀 Rats infest the board", COL_BODY))
+	if game.has_ratcatcher():
+		_rats_body.add_child(_make_label(
+			"Shoo charges: %d/%d" % [
+				game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES], COL_MUTED))
+
+	for id in [BuildingConfig.RATCATCHER, BuildingConfig.MASTER_RATCATCHER]:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 10)
+		var cost_text: String = _format_cost(BuildingConfig.building_cost(id))
+		var label := _make_label("%s  (%s)" % [
+			BuildingConfig.building_name(id), cost_text], COL_BODY)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+
+		if game.has_building(id):
+			var demo := Button.new()
+			demo.text = "Demolish"
+			demo.size_flags_horizontal = Control.SIZE_SHRINK_END
+			demo.connect("pressed", Callable(self, "_do_demolish").bind(id))
+			row.add_child(demo)
+			_action_buttons["demolish:" + id] = demo
+		else:
+			var build_btn := Button.new()
+			build_btn.text = "Build"
+			build_btn.disabled = not game.can_build(id)
+			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
+			row.add_child(build_btn)
+			_action_buttons["build:" + id] = build_btn
+
+		_rats_body.add_child(row)
+
+	# A free-shoo button only when a Ratcatcher is placed with charges left. It does
+	# NOT spend the charge here — it emits `shoo_rats` and Main owns the single spend.
+	if game.can_shoo_rats():
+		var shoo_btn := Button.new()
+		shoo_btn.text = "Shoo rats (free move, %d left)" % game.ratcatcher_charges_left()
+		shoo_btn.connect("pressed", Callable(self, "_do_shoo_rats"))
+		_rats_body.add_child(shoo_btn)
+		_action_buttons["shoo_rats"] = shoo_btn
+
 # ── action handlers ───────────────────────────────────────────────────────────
 # Each calls the GameState method, emits `state_changed` only when the result is
 # ok (a real mutation), and always refresh()es so disabled states re-evaluate
@@ -440,6 +505,14 @@ func _do_challenge_boss() -> void:
 	# start_boss() returns the standard {ok, reason|...} dict, so _after handles it.
 	# Main's _on_town_changed reacts to state_changed by raising the board's chain bar.
 	_after(game.start_boss())
+
+func _do_shoo_rats() -> void:
+	# M3h — this screen has no board ref and must NOT spend the charge (Main owns the
+	# single spend). Just gate on availability and emit `shoo_rats`; Main spends the
+	# charge, clears the board, and calls back refresh() so the count/button update.
+	if not game.can_shoo_rats():
+		return
+	emit_signal("shoo_rats")
 
 ## Shared tail: emit state_changed when the action succeeded, then always
 ## re-render so disabled affordances reflect the new state.
