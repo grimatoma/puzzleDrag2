@@ -219,7 +219,13 @@ func _run_slice() -> void:
 	_check(defeated, "12. boss defeated by repeated chains")
 	_check(g.town2_complete, "12. town2_complete set on defeat")
 	_check(reward_coins > 0, "12. defeat returned a reward")
-	_check(g.coins == coins_before_boss + reward_coins, "12. reward coins credited")
+	# M10 (additive): this first boss defeat also unlocks `first_blood` (+200 coins) on
+	# top of the boss reward. damage_boss's own payout is unchanged (reward_coins above
+	# is still the pure boss reward); the +200 is the achievement bonus stacking. The
+	# boss is ground down with bare damage_boss(8) calls (not credit_chain), so no chain
+	# achievement fires here — first_blood is the only new unlock in this step.
+	_check(g.coins == coins_before_boss + reward_coins + 200,
+		"12. boss reward + first_blood achievement coins credited")
 	_check(not g.is_boss_active(), "12. boss cleared after defeat")
 
 	# ── 13. Rats hazard + Ratcatcher (Town 3 lesson). ────────────────────────
