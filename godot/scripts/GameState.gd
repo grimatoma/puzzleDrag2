@@ -831,6 +831,19 @@ func _grant_reward(reward: Dictionary) -> void:
 	for id in tools_reward.keys():
 		grant_tool(String(id), int(tools_reward[id]))
 
+## Current progress on `counter`, as a plain int the AchievementsScreen renders
+## against the threshold. DISTINCT counters (distinct_resources_chained,
+## distinct_buildings_built) report the number of distinct keys seen so far
+## (`_distinct_seen[counter].size()`), since their `achievement_counters` value
+## tracks that same count; every other counter reports its running total straight
+## from `achievement_counters`. The two distinct counters are matched against
+## `_distinct_seen` so a counter that has only ever been bumped via the distinct
+## path still reads correctly even if `achievement_counters` were absent.
+func achievement_progress(counter: String) -> int:
+	if _distinct_seen.has(counter):
+		return int((_distinct_seen[counter] as Dictionary).size())
+	return int(achievement_counters.get(counter, 0))
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {

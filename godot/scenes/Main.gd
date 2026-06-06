@@ -60,6 +60,10 @@ var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), 
 var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
 var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
 var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), lazily created
+## M10 — the achievements trophy modal, lazily created. Loaded via preload (the script
+## has NO class_name) so the port never needs an --import to register it as a global.
+const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
+var _achievements_screen                ## CanvasLayer (AchievementsScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -459,6 +463,26 @@ func _build_hud() -> void:
 	map_btn.connect("pressed", Callable(self, "_open_townmap"))
 	root.add_child(map_btn)
 
+	# M10 — always-visible "🏆" trophy button, pinned top-LEFT just under the Map button
+	# (offset_top 110, ~38px tall) so the four buttons stack without overlapping and all
+	# clear the centred board drag area. Same parchment-pill look. Opens the achievements
+	# trophy modal (AchievementsScreen).
+	var ach_btn := Button.new()
+	ach_btn.text = "🏆"
+	ach_btn.add_theme_font_size_override("font_size", 20)
+	ach_btn.add_theme_color_override("font_color", Palette.INK)
+	ach_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	ach_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	ach_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	ach_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	ach_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	ach_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	ach_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	ach_btn.offset_left = 18
+	ach_btn.offset_top = 156
+	ach_btn.connect("pressed", Callable(self, "_open_achievements"))
+	root.add_child(ach_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -800,6 +824,26 @@ func _on_townmap_closed() -> void:
 		_townmap_screen.visible = false
 	_router.close_modal()
 
+# ── Achievements trophy screen (M10) ──────────────────────────────────────────────
+
+## Open the achievements trophy modal, lazily creating + wiring it on first use
+## (mirrors _open_inventory). The screen is READ-ONLY — it only emits `closed`, routed
+## to a hide handler. open() re-reads the live achievement counters + unlocked set each
+## time, so the trophy list always reflects current progress.
+func _open_achievements() -> void:
+	if _achievements_screen == null:
+		_achievements_screen = AchievementsScreenScript.new()
+		add_child(_achievements_screen)
+		_achievements_screen.setup(game)
+		_achievements_screen.connect("closed", Callable(self, "_on_achievements_closed"))
+	_achievements_screen.open()
+	_router.open_modal(ViewRouter.Modal.ACHIEVEMENTS)
+
+func _on_achievements_closed() -> void:
+	if _achievements_screen != null:
+		_achievements_screen.visible = false
+	_router.close_modal()
+
 ## M5b — resolve a deep-link id and navigate to the matching screen.
 ## Routes to the existing _open_* / close methods so all lazy-create and
 ## visibility logic remains in one place. Returns true if the id was known.
@@ -816,6 +860,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_inventory()
 		ViewRouter.Modal.TOWNMAP:
 			_open_townmap()
+		ViewRouter.Modal.ACHIEVEMENTS:
+			_open_achievements()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -829,6 +875,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _townmap_screen != null and _townmap_screen.visible:
 				_townmap_screen.visible = false
+				_router.close_modal()
+			elif _achievements_screen != null and _achievements_screen.visible:
+				_achievements_screen.visible = false
 				_router.close_modal()
 	return true
 
