@@ -18,6 +18,9 @@ extends Node
 
 # ── Recipe ids ────────────────────────────────────────────────────────────────
 const BREAD: String = "bread"
+## M3f — the Kitchen recipe: refines farm food into `supplies`, the intermediate
+## spent as mine turns (GameState.enter_mine converts supplies → turns).
+const SUPPLIES: String = "supplies"
 
 ## Recipe catalog keyed by recipe id. Each entry:
 ##   name:    String      — display name
@@ -35,10 +38,18 @@ const RECIPES: Dictionary = {
 		"qty": 1,
 		"desc": "3 flour + 1 eggs → 1 bread (Bakery).",
 	},
+	SUPPLIES: {
+		"name": "Supplies",
+		"station": BuildingConfig.KITCHEN,
+		"inputs": {"bread": 1, "flour": 2},
+		"output": "supplies",
+		"qty": 1,
+		"desc": "1 bread + 2 flour → 1 supplies (Kitchen).",
+	},
 }
 
 ## Stable display / iteration order for the recipes.
-const RECIPE_IDS: Array = [BREAD]
+const RECIPE_IDS: Array = [BREAD, SUPPLIES]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
 

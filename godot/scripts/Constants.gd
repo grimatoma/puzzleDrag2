@@ -35,6 +35,14 @@ enum Tile {
 	PIG,
 	COW,
 	HORSE,
+	# ── Mine biome (M3f, Town 2) — APPENDED so the farm ordinals 0..9 above are
+	# unchanged (save keys + tests depend on GRASS==0 … HORSE==9). These tiles
+	# only enter the board during a mine expedition (GameState.active_biome_pool).
+	STONE,
+	IRON_ORE,
+	COAL,
+	DIRT,
+	GEM,
 }
 
 const STRING_KEYS := {
@@ -48,6 +56,12 @@ const STRING_KEYS := {
 	Tile.PIG:      "tile_herd_pig",
 	Tile.COW:      "tile_cattle_cow",
 	Tile.HORSE:    "tile_mount_horse",
+	# Mine biome (M3f).
+	Tile.STONE:    "tile_mine_stone",
+	Tile.IRON_ORE: "tile_mine_iron_ore",
+	Tile.COAL:     "tile_mine_coal",
+	Tile.DIRT:     "tile_special_dirt",
+	Tile.GEM:      "tile_mine_gem",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -62,6 +76,14 @@ const PRODUCES := {
 	Tile.PIG:      "meat",
 	Tile.COW:      "milk",
 	Tile.HORSE:    "horseshoe",
+	# Mine biome (M3f): stone→block, iron_ore→iron_bar, coal→coke, dirt→dirt,
+	# gem→cut_gem. credit_chain is biome-agnostic and routes these through the
+	# SAME shared inventory as farm goods (see GameState M3f SIMPLIFICATION note).
+	Tile.STONE:    "block",
+	Tile.IRON_ORE: "iron_bar",
+	Tile.COAL:     "coke",
+	Tile.DIRT:     "dirt",
+	Tile.GEM:      "cut_gem",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -77,6 +99,12 @@ const THRESHOLDS := {
 	Tile.PIG:      5,
 	Tile.COW:      6,
 	Tile.HORSE:    10,
+	# Mine biome (M3f) — first-pass, tunable. Stone is the cheap staple; gem rare.
+	Tile.STONE:    6,
+	Tile.IRON_ORE: 6,
+	Tile.COAL:     8,
+	Tile.DIRT:     5,
+	Tile.GEM:      10,
 }
 
 ## Weighted spawn pool for the Farm biome (src/constants.ts:268-281).
@@ -103,6 +131,18 @@ const STAPLE_POOL: Array = [
 	Tile.WHEAT, Tile.WHEAT,
 ]
 
+## Weighted refill pool for the MINE biome (M3f, Town 2). Stone is the common
+## staple (×3); iron + coal are mid-weight (×2 each); dirt fills (×2); gem is rare
+## (×1). Used by GameState.active_biome_pool() while on a mine expedition — the
+## mine board is NOT building-gated this milestone (no mine spawners yet).
+const MINE_POOL: Array = [
+	Tile.STONE, Tile.STONE, Tile.STONE,
+	Tile.IRON_ORE, Tile.IRON_ORE,
+	Tile.COAL, Tile.COAL,
+	Tile.DIRT, Tile.DIRT,
+	Tile.GEM,
+]
+
 ## Tile -> category id. Staples are "grass"/"grain"; every other family belongs to
 ## a category gated by a spawner building (BuildingConfig).
 const CATEGORY := {
@@ -116,6 +156,12 @@ const CATEGORY := {
 	Tile.PIG:      "herd",
 	Tile.COW:      "cattle",
 	Tile.HORSE:    "mount",
+	# Mine biome (M3f).
+	Tile.STONE:    "stone",
+	Tile.IRON_ORE: "iron",
+	Tile.COAL:     "coal",
+	Tile.DIRT:     "dirt",
+	Tile.GEM:      "gem",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
@@ -151,4 +197,10 @@ static func color_for(tile: int) -> Color:
 		Tile.PIG:      return Color(0.90, 0.56, 0.63)
 		Tile.COW:      return Color(0.92, 0.89, 0.82)
 		Tile.HORSE:    return Color(0.35, 0.26, 0.20)
+		# Mine biome (M3f) — cool greys/earths against the warm farm palette.
+		Tile.STONE:    return Color(0.55, 0.55, 0.58)
+		Tile.IRON_ORE: return Color(0.72, 0.45, 0.34)
+		Tile.COAL:     return Color(0.18, 0.18, 0.20)
+		Tile.DIRT:     return Color(0.45, 0.34, 0.24)
+		Tile.GEM:      return Color(0.40, 0.78, 0.85)
 		_:             return Color.MAGENTA

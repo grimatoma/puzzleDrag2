@@ -62,6 +62,9 @@ jobs:
       - name: Town UI tests
         run: godot --headless --path godot --script res://tests/run_town_ui_tests.gd
 
+      - name: Mine / expedition tests
+        run: godot --headless --path godot --script res://tests/run_mine_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 

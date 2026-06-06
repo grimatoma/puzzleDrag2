@@ -91,6 +91,7 @@
   .box { background: color-mix(in srgb, var(--accent) 7%, #fff); border-left: 4px solid var(--accent); padding: .75rem 1.05rem; margin: 1.1rem 0; border-radius: 0 8px 8px 0; box-shadow: var(--shadow); }
   .box.warn { background: color-mix(in srgb, var(--danger) 7%, #fff); border-left-color: var(--danger); }
   .box.tip { background: color-mix(in srgb, var(--ok) 8%, #fff); border-left-color: var(--ok); }
+  .box.ok { background: color-mix(in srgb, var(--ok) 15%, #fff); border-left-color: var(--ok); border-left-width: 5px; }
   .box.amber { background: color-mix(in srgb, var(--accent2) 8%, #fff); border-left-color: var(--accent2); }
   .box b { font-family: var(--serif); }
 
@@ -487,6 +488,7 @@ jobs:
       <section id="assets-overview">
         <h2>Asset pipeline — auxiliary plan</h2>
         <div class="box tip"><b>Independent workstream.</b> This plan can be started at any point during the migration — M1, M2, M3 or later. It does not block any milestone. Each stage replaces the previous one cleanly without changing the surrounding Godot code.</div>
+        <div class="box ok"><b>Status (landed).</b> <b>Stage&nbsp;1</b> ✓ (placeholder colors, M1). <b>Stage&nbsp;2</b> ✓ — <code>tools/export-v1-tiles.mjs</code> exported all 77 board-tile textures from the live Phaser cache to <code>godot/assets/tiles/&lt;key&gt;.png</code>, and <code>godot/scenes/Tile.gd</code> loads them by canonical item key with a graceful placeholder fallback. <b>Stage&nbsp;3</b> ✓ <i>as a proven drop-in</i> — <code>Tile.gd</code> auto-prefers a v2 <code>res://assets/tiles/v2/&lt;key&gt;.tres</code> <code>SpriteFrames</code> (<code>AnimatedSprite2D</code>) over the v1 PNG with no board changes; a validation fixture (animated grass) exercises the path and is covered by <code>tests/run_assets_tests.gd</code>. What remains for Stage&nbsp;3 is the <i>external art feed itself</i> (PixelLab / Ludo.ai), which arrives per-tile over M4+. See the living status in <a href="godot-migration-progress.html">godot-migration-progress.html</a> → Verification.</div>
 
         <p>The current game textures are <strong>Canvas 2D procedural drawings</strong> generated in JavaScript at Phaser scene init (<code>src/textures/categories/</code>). They are not SVG files — they're rasterized at runtime into Phaser's texture cache and cannot be transferred to Godot directly. The path forward is a three-stage progression from placeholders to exported v1 PNGs to full v2 animated sprite sheets.</p>
 
