@@ -91,8 +91,38 @@ func gain_bond(id: String, amount: float) -> void:
 ## the Kitchen packs food into `supplies`, and supplies are spent as MINE TURNS on
 ## an expedition into the mine biome. Mine runs are SOFT-FAIL — when the turns run
 ## out the run ends and everything gathered is kept (it's already in `inventory`).
-var active_biome: String = "farm"   ## "farm" | "mine" — which biome the board shows
+var active_biome: String = "farm"   ## "farm" | "mine" | "harbor" — which biome the board shows
 var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
+
+# ── Fish / Harbor expedition (M3j, ported from src/features/fish) ──────────────
+## The harbor is the THIRD biome, MIRRORING the mine expedition (M3f) and SHARING the
+## same single inventory (the catch — fish_fillet/sea_shells/pearls/fish_oil — lands in
+## `inventory` alongside farm + mine goods). Like the mine it is SOFT-FAIL: when the
+## harbor turns run out the run ends and everything caught is kept. Two harbor-only
+## mechanics ported from React (src/features/fish):
+##   1. TIDE CYCLE — the tide is "high" or "low" and flips every Constants.TIDE_PERIOD
+##      spent harbor turns. The tide drives which fish surface on the board's bottom row
+##      (HIGH_TIDE_POOL / LOW_TIDE_POOL); the live bottom-row mutation is the next (board)
+##      slice's job — this layer just owns the tide state + flip bookkeeping.
+##   2. GIANT PEARL — one rune-capture pearl per harbor session (the analogue of the
+##      mine's Mysterious Ore). It carries a Constants.PEARL_TURNS countdown; chaining it
+##      with >= Constants.REQUIRED_FISH_IN_CHAIN other fish tiles before it expires grants
+##      +1 Rune (try_capture_pearl). The board slice places it on a live cell; for the
+##      LOGIC slice we just record its turns_left (and a deterministic seed cell).
+##
+## ADDITIVE GUARANTEE: none of this runs unless active_biome == "harbor". On the farm /
+## in the mine every harbor field sits at its default and every harbor method is a no-op
+## or guarded out, so farm + mine behaviour is byte-identical (existing suites stay green).
+var harbor_turns_left: int = 0      ## remaining harbor turns this expedition (0 off the harbor)
+var fish_tide: String = "high"      ## "high" | "low" — the current tide on the harbor board
+var fish_tide_turn: int = 0         ## spent harbor turns under the current tide (flips at TIDE_PERIOD)
+## The live giant pearl, or {} when none is active. Shape: { row:int, col:int,
+## turns_left:int }. row/col are the seed cell (the board slice owns live placement);
+## turns_left is the capture countdown ticked by note_harbor_turn.
+var fish_pearl: Dictionary = {}
+## Runes — the harbor's premium reward, granted ONLY by capturing the giant pearl
+## (try_capture_pearl). Uncapped (like coins); persisted defensively.
+var runes: int = 0
 
 # ── Capstone boss (M3g, the Town-2 close) ─────────────────────────────────────
 ## The Direction's "capstone boss" (Frostmaw): the gate that proves farm + mine
@@ -757,6 +787,12 @@ func active_biome_pool() -> Array:
 		for _i in Constants.RUBBLE_POOL_SLOTS:
 			pool.append(Constants.Tile.RUBBLE)
 		return pool
+	if is_in_harbor():
+		# M3j: the harbor board draws from the GENERAL fish pool (FISH_POOL). The giant
+		# pearl is NOT weighted in — the board slice seeds it conditionally — and the
+		# tide-driven bottom-row swap (HIGH/LOW_TIDE_POOL) is also the board slice's job,
+		# so the refill pool here is just the flat FISH_POOL (mirrors the un-gated mine).
+		return Constants.FISH_POOL.duplicate()
 	return active_tile_pool()
 
 ## True while the mine hazard (rubble) is live — i.e. on a mine expedition. A readable
@@ -765,6 +801,129 @@ func active_biome_pool() -> Array:
 ## board, so this is exactly "are we in the mine".
 func mine_hazard_active() -> bool:
 	return is_in_mine()
+
+# ── Fish / Harbor expedition (M3j) ─────────────────────────────────────────────
+
+## True while the player is on a harbor expedition (the board shows fish tiles).
+func is_in_harbor() -> bool:
+	return active_biome == "harbor"
+
+## True when a harbor expedition can be LAUNCHED right now: on the farm (not already on
+## an expedition), with at least 1 supplies to spend as turns. MIRRORS can_enter_mine
+## but WITHOUT the City-tier gate — the harbor is the Town-3 expedition (it opens once
+## the Town-2 capstone is past), and the simplified single-settlement port already gates
+## "Town 3" behind town2_complete (rats_enabled). Guards are ordered so enter_harbor can
+## report the FIRST failing reason.
+func can_enter_harbor() -> bool:
+	if active_biome != "farm":
+		return false
+	if qty("supplies") <= 0:
+		return false
+	return true
+
+## Launch a harbor expedition. On failure returns {ok:false, reason} (the FIRST guard
+## that trips, in order: "already_out" → "no_supplies") WITHOUT mutating. On success:
+## convert ALL supplies into harbor turns (1 supplies = 1 turn), remove "supplies" from
+## inventory, reset the tide to high (turn 0), seed the giant pearl, enter the harbor,
+## and return {ok:true, turns}. MIRRORS enter_mine; the catch accrues in the shared
+## inventory.
+func enter_harbor() -> Dictionary:
+	if active_biome != "farm":
+		return {"ok": false, "reason": "already_out"}
+	if qty("supplies") <= 0:
+		return {"ok": false, "reason": "no_supplies"}
+	var s: int = qty("supplies")
+	inventory.erase("supplies")
+	harbor_turns_left = s
+	active_biome = "harbor"
+	# Reset the tide cycle for a fresh session: high tide, 0 spent turns.
+	fish_tide = FishConfig.TIDE_HIGH
+	fish_tide_turn = 0
+	# Seed the session's single giant pearl (one per session).
+	_init_pearl()
+	return {"ok": true, "turns": s}
+
+## Seed the harbor session's single giant pearl. Pure-ish helper (uses the seeded `rng`
+## only for the deterministic seed CELL): records { row, col, turns_left = PEARL_TURNS }.
+## The LIVE board placement is the next slice's job — for the LOGIC slice we just record
+## the countdown (and a deterministic seed cell from the seeded rng so screenshots/tests
+## are reproducible). Called by enter_harbor.
+func _init_pearl() -> void:
+	var row: int = rng.randi_range(0, Constants.ROWS - 1)
+	var col: int = rng.randi_range(0, Constants.COLS - 1)
+	fish_pearl = {"row": row, "col": col, "turns_left": Constants.PEARL_TURNS}
+
+## True while the giant pearl is live (a pearl is seeded with turns remaining).
+func has_active_pearl() -> bool:
+	return not fish_pearl.is_empty() and int(fish_pearl.get("turns_left", 0)) > 0
+
+## The refill pool for the tide currently up (Array[int]) — FishConfig.tide_pool. The
+## board slice uses this to mutate the bottom row on a tide flip.
+func current_tide_pool() -> Array:
+	return FishConfig.tide_pool(fish_tide)
+
+## Spend one harbor turn. Call AFTER a harbor chain resolves (its resources are already
+## credited via credit_chain). Three things tick, in order:
+##   1. Decrement harbor_turns_left; if it hits 0 the expedition ENDS (back to the farm),
+##      and the pearl is cleared. SOFT-FAIL: everything caught is kept (it's already in
+##      `inventory`).
+##   2. The TIDE: increment fish_tide_turn; when it reaches Constants.TIDE_PERIOD the tide
+##      FLIPS (high↔low) and fish_tide_turn resets to 0.
+##   3. The PEARL countdown: decrement fish_pearl.turns_left; at 0 the pearl EXPIRES
+##      (cleared — the board slice degrades the tile back to kelp).
+## Returns { exited:bool, turns_left:int, tide_flipped:bool, pearl_expired:bool }.
+## MIRRORS note_mine_turn, with the tide + pearl ticks layered on.
+func note_harbor_turn() -> Dictionary:
+	harbor_turns_left = maxi(0, harbor_turns_left - 1)
+	# Tide tick (independent of the turn-budget exhaustion below).
+	var tide_flipped: bool = false
+	fish_tide_turn += 1
+	if fish_tide_turn >= Constants.TIDE_PERIOD:
+		fish_tide = FishConfig.flip_tide(fish_tide)
+		fish_tide_turn = 0
+		tide_flipped = true
+	# Pearl countdown tick (independent of the tide). At 0 the pearl expires.
+	var pearl_expired: bool = false
+	if not fish_pearl.is_empty():
+		var left: int = maxi(0, int(fish_pearl.get("turns_left", 0)) - 1)
+		if left <= 0:
+			fish_pearl = {}
+			pearl_expired = true
+		else:
+			fish_pearl["turns_left"] = left
+	# Expedition end: when the turn budget is spent, return to the farm and clear the
+	# pearl (the session is over). Reported via `exited` like note_mine_turn.
+	if harbor_turns_left == 0:
+		active_biome = "farm"
+		fish_pearl = {}
+		return {"exited": true, "turns_left": 0, "tide_flipped": tide_flipped, "pearl_expired": pearl_expired}
+	return {"exited": false, "turns_left": harbor_turns_left, "tide_flipped": tide_flipped, "pearl_expired": pearl_expired}
+
+## Manually abandon the harbor expedition early (the Town screen "Leave the harbor"
+## button). Snap back to the farm, drop the remaining turns, and clear the pearl —
+## everything caught is kept. MIRRORS leave_mine.
+func leave_harbor() -> void:
+	active_biome = "farm"
+	harbor_turns_left = 0
+	fish_pearl = {}
+
+## Attempt to capture the giant pearl with a resolved harbor chain. `chain_keys` is the
+## resolved chain's tiles (either String tile keys or int Constants.Tile ordinals — see
+## FishConfig.is_pearl_chain_valid). On a VALID capture while in the harbor with a live
+## pearl: grant +1 Rune, clear the pearl (no double-grant), and return
+## {captured:true, runes}. Otherwise (not in the harbor, no live pearl, or an invalid
+## chain) returns {captured:false} WITHOUT mutating. The board slice calls this on each
+## resolved harbor chain.
+func try_capture_pearl(chain_keys: Array) -> Dictionary:
+	if not is_in_harbor():
+		return {"captured": false}
+	if not has_active_pearl():
+		return {"captured": false}
+	if not FishConfig.is_pearl_chain_valid(chain_keys):
+		return {"captured": false}
+	runes += 1
+	fish_pearl = {}
+	return {"captured": true, "runes": runes}
 
 ## Active board CATEGORIES: the two staples plus the category of each placed
 ## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".
@@ -1203,6 +1362,16 @@ func to_dict() -> Dictionary:
 		"npcs": npcs.duplicate(true),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
+		# Fish / Harbor expedition (M3j, ADDITIVE). The tide cycle (fish_tide /
+		# fish_tide_turn), the live giant pearl (fish_pearl, deep-copied), the harbor
+		# turn budget, and the rune count. SAVE_VERSION is NOT bumped — like every prior
+		# additive field, a save written before the harbor existed loads with defaults
+		# (farm, high tide, no pearl, 0 runes) via from_dict's defensive defaults.
+		"harbor_turns_left": harbor_turns_left,
+		"fish_tide": fish_tide,
+		"fish_tide_turn": fish_tide_turn,
+		"fish_pearl": fish_pearl.duplicate(true),
+		"runes": runes,
 		"boss_active": boss_active,
 		"boss_hp": boss_hp,
 		"town2_complete": town2_complete,
@@ -1309,19 +1478,50 @@ static func from_dict(d: Dictionary) -> GameState:
 				v = clampf(float(raw_bonds[id]), 0.0, 10.0)
 			bonds[id] = v
 		s.npcs = {"roster": roster, "bonds": bonds}
-	# Restore the expedition state defensively (M3f). The biome must be one of the
-	# two known values (anything else falls back to "farm"); turns can't go negative;
-	# and a corrupt "mine"-with-no-turns save snaps back to the farm (turns 0) so a
-	# stale save can never strand the player in a turn-less mine.
+	# Restore the expedition state defensively (M3f / M3j). The biome must be one of the
+	# three known values (anything else falls back to "farm"); turns can't go negative;
+	# and a corrupt "mine"/"harbor"-with-no-turns save snaps back to the farm (turns 0)
+	# so a stale save can never strand the player in a turn-less expedition.
 	var biome := String(d.get("active_biome", "farm"))
-	if biome != "farm" and biome != "mine":
+	if biome != "farm" and biome != "mine" and biome != "harbor":
 		biome = "farm"
 	var turns: int = maxi(0, int(d.get("mine_turns_left", 0)))
 	if biome == "mine" and turns <= 0:
 		biome = "farm"
 		turns = 0
+	# Fish / Harbor expedition (M3j, ADDITIVE). Restore the harbor turn budget, tide
+	# cycle, live pearl, and runes defensively (missing → defaults). A corrupt
+	# "harbor"-with-no-turns save snaps back to the farm, mirroring the mine guard. The
+	# tide must be a known value (anything else → "high"); the tide turn can't go
+	# negative; the pearl is kept only when well-formed with turns_left > 0.
+	var harbor_turns: int = maxi(0, int(d.get("harbor_turns_left", 0)))
+	if biome == "harbor" and harbor_turns <= 0:
+		biome = "farm"
+		harbor_turns = 0
+	if biome != "harbor":
+		# Off the harbor: drop any stale harbor turns so a non-harbor save never carries
+		# a phantom turn budget (matches how a non-mine biome implies mine_turns 0).
+		harbor_turns = 0
 	s.active_biome = biome
 	s.mine_turns_left = turns
+	s.harbor_turns_left = harbor_turns
+	var tide := String(d.get("fish_tide", "high"))
+	if tide != FishConfig.TIDE_HIGH and tide != FishConfig.TIDE_LOW:
+		tide = FishConfig.TIDE_HIGH
+	s.fish_tide = tide
+	s.fish_tide_turn = maxi(0, int(d.get("fish_tide_turn", 0)))
+	var pearl_d: Variant = d.get("fish_pearl", {})
+	if pearl_d is Dictionary and not (pearl_d as Dictionary).is_empty():
+		var pturns: int = maxi(0, int((pearl_d as Dictionary).get("turns_left", 0)))
+		# Keep the pearl only while on the harbor with a live countdown — a stale pearl
+		# from a non-harbor save (or one whose countdown has elapsed) is dropped.
+		if biome == "harbor" and pturns > 0:
+			s.fish_pearl = {
+				"row": int((pearl_d as Dictionary).get("row", 0)),
+				"col": int((pearl_d as Dictionary).get("col", 0)),
+				"turns_left": pturns,
+			}
+	s.runes = maxi(0, int(d.get("runes", 0)))
 	# Restore the capstone-boss state defensively (M3g). Keep boss_active only if it
 	# names a REAL boss (a bogus id → "" = no fight); HP can't go negative; and a
 	# "no fight" state ("") snaps HP to 0 so a stale save can't strand a phantom

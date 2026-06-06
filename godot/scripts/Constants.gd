@@ -56,6 +56,29 @@ enum Tile {
 	# resolved STONE chain clears every rubble 8-adjacent to it (Board.clear_rubble_on_stone),
 	# the built-in mine analogue of the Master Ratcatcher's grass→rats sweep.
 	RUBBLE,
+	# ── Fish / Harbor biome (M3j, Town 3 expedition — ported from src/features/fish) —
+	# APPENDED (ordinals 17..22) so every farm/mine/rat/rubble ordinal above is unchanged
+	# (GRASS==0 … RUBBLE==16; saves use STRING_KEYS, so appending is the safe way to add
+	# tiles). These tiles only enter the board during a HARBOR expedition (the fish biome —
+	# GameState.active_biome_pool). The harbor mirrors the mine expedition: the farm packs
+	# food into supplies, supplies are spent as HARBOR TURNS, and the catch lands in the
+	# SAME shared inventory. The board has a TIDE cycle (high↔low every TIDE_PERIOD turns)
+	# that the next (board) slice uses to mutate the bottom row from HIGH_TIDE_POOL /
+	# LOW_TIDE_POOL.
+	FISH_SARDINE,
+	FISH_MACKEREL,
+	FISH_CLAM,
+	FISH_OYSTER,
+	FISH_KELP,
+	# FISH_PEARL (the "giant pearl") is the harbor's rune-capture tile — the analogue of
+	# the mine's Mysterious Ore. It produces NOTHING on its own (deliberately ABSENT from
+	# PRODUCES/THRESHOLDS, so produced_resource is "" and threshold_for returns the
+	# NO_THRESHOLD sentinel, exactly like RAT/RUBBLE). It is captured by chaining it with
+	# >= REQUIRED_FISH_IN_CHAIN other fish-category tiles before its PEARL_TURNS countdown
+	# expires → +1 Rune (GameState.try_capture_pearl). Its own "fish_pearl" category keeps
+	# it out of the fish-spawn pools (it is conditionally seeded by the board slice, not
+	# weighted into FISH_POOL / the tide pools).
+	FISH_PEARL,
 }
 
 const STRING_KEYS := {
@@ -79,6 +102,15 @@ const STRING_KEYS := {
 	Tile.RAT:      "rat",
 	# Rubble mine hazard (M3i).
 	Tile.RUBBLE:   "rubble",
+	# Fish / Harbor biome (M3j). The five catchable fish tiles use their canonical
+	# Phaser tile keys (res://assets/tiles/<key>.png exists for all five). The giant
+	# pearl reuses the special key the React port assigns it (PEARL_KEY).
+	Tile.FISH_SARDINE:  "tile_fish_sardine",
+	Tile.FISH_MACKEREL: "tile_fish_mackerel",
+	Tile.FISH_CLAM:     "tile_fish_clam",
+	Tile.FISH_OYSTER:   "tile_fish_oyster",
+	Tile.FISH_KELP:     "tile_fish_kelp",
+	Tile.FISH_PEARL:    "tile_special_giant_pearl",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -110,6 +142,18 @@ const PRODUCES := {
 	# it is deliberately ABSENT from THRESHOLDS, so threshold_for(RUBBLE) returns the
 	# NO_THRESHOLD sentinel and produced_resource is "".
 	Tile.RUBBLE:   "",
+	# Fish / Harbor biome (M3j): the catch lands in the SAME shared inventory as farm +
+	# mine goods (credit_chain is biome-agnostic). sardine/mackerel → fish_fillet,
+	# clam → sea_shells, oyster → pearls, kelp → fish_oil.
+	Tile.FISH_SARDINE:  "fish_fillet",
+	Tile.FISH_MACKEREL: "fish_fillet",
+	Tile.FISH_CLAM:     "sea_shells",
+	Tile.FISH_OYSTER:   "pearls",
+	Tile.FISH_KELP:     "fish_oil",
+	# FISH_PEARL produces NOTHING via the normal chain path — it is the rune-capture
+	# tile, deliberately ABSENT from THRESHOLDS (threshold_for → NO_THRESHOLD,
+	# produced_resource → ""), captured via GameState.try_capture_pearl for +1 Rune.
+	Tile.FISH_PEARL:    "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -131,6 +175,14 @@ const THRESHOLDS := {
 	Tile.COAL:     8,
 	Tile.DIRT:     5,
 	Tile.GEM:      10,
+	# Fish / Harbor biome (M3j) — sardine/mackerel/clam/oyster at 5, kelp the cheap
+	# filler at 6. FISH_PEARL is deliberately ABSENT (threshold_for → NO_THRESHOLD): it
+	# is never credited through the normal chain path; capture grants a Rune instead.
+	Tile.FISH_SARDINE:  5,
+	Tile.FISH_MACKEREL: 5,
+	Tile.FISH_CLAM:     5,
+	Tile.FISH_OYSTER:   5,
+	Tile.FISH_KELP:     6,
 }
 
 ## Weighted spawn pool for the Farm biome (src/constants.ts:268-281).
@@ -169,6 +221,53 @@ const MINE_POOL: Array = [
 	Tile.GEM,
 ]
 
+## ── Fish / Harbor biome pools (M3j, ported from src/features/fish) ──────────────
+## The GENERAL weighted refill pool for the harbor board: sardine ×3 (the common
+## staple catch), mackerel ×2, clam ×2, kelp ×2, oyster ×1 (rare). Used by
+## GameState.active_biome_pool() while on a harbor expedition — the harbor board is
+## NOT building-gated this milestone (no harbor spawners yet), mirroring the mine.
+## The giant pearl is NOT in any pool — the board slice seeds it conditionally.
+const FISH_POOL: Array = [
+	Tile.FISH_SARDINE, Tile.FISH_SARDINE, Tile.FISH_SARDINE,
+	Tile.FISH_MACKEREL, Tile.FISH_MACKEREL,
+	Tile.FISH_CLAM, Tile.FISH_CLAM,
+	Tile.FISH_KELP, Tile.FISH_KELP,
+	Tile.FISH_OYSTER,
+]
+
+## The HIGH-tide bottom-row pool: surface/pelagic fish. Mirrors React HIGH_TIDE_POOL
+## (sardine ×2, mackerel ×2, kelp). The board slice mutates the board's bottom row
+## from this pool when the tide rises (see GameState.note_harbor_turn tide tick).
+const HIGH_TIDE_POOL: Array = [
+	Tile.FISH_SARDINE, Tile.FISH_SARDINE,
+	Tile.FISH_MACKEREL, Tile.FISH_MACKEREL,
+	Tile.FISH_KELP,
+]
+
+## The LOW-tide bottom-row pool: shellfish + kelp exposed at low water. Mirrors React
+## LOW_TIDE_POOL (clam ×2, kelp ×2, oyster).
+const LOW_TIDE_POOL: Array = [
+	Tile.FISH_CLAM, Tile.FISH_CLAM,
+	Tile.FISH_KELP, Tile.FISH_KELP,
+	Tile.FISH_OYSTER,
+]
+
+## Spent harbor turns between tide flips (high↔low). Mirrors React TIDE_PERIOD.
+const TIDE_PERIOD: int = 3
+
+## Countdown (in harbor turns) on a freshly-seeded giant pearl before it expires.
+## Mirrors React PEARL_TURNS — chain it within this window to capture the Rune.
+const PEARL_TURNS: int = 5
+
+## How many OTHER fish-category tiles a pearl chain must also contain to be a valid
+## capture (the pearl itself does not count). Mirrors React REQUIRED_FISH_IN_CHAIN.
+const REQUIRED_FISH_IN_CHAIN: int = 2
+
+## The giant-pearl tile's string key (the rune-capture tile). Mirrors React PEARL_KEY
+## (src/features/fish/pearl.ts) — kept as a named const so FishConfig and the board
+## slice agree on the same key without re-deriving it from STRING_KEYS.
+const PEARL_KEY: String = "tile_special_giant_pearl"
+
 ## Tile -> category id. Staples are "grass"/"grain"; every other family belongs to
 ## a category gated by a spawner building (BuildingConfig).
 const CATEGORY := {
@@ -194,6 +293,18 @@ const CATEGORY := {
 	# Rubble mine hazard (M3i) — its own "rubble" category; it is seeded directly into
 	# the mine pool (active_biome_pool), not via any building/category gate.
 	Tile.RUBBLE:   "rubble",
+	# Fish / Harbor biome (M3j) — the five catchable tiles share the "fish" category,
+	# which is what FishConfig.is_fish_tile and the pearl-chain rule key off (a valid
+	# pearl chain needs the pearl PLUS >= REQUIRED_FISH_IN_CHAIN tiles in this category).
+	Tile.FISH_SARDINE:  "fish",
+	Tile.FISH_MACKEREL: "fish",
+	Tile.FISH_CLAM:     "fish",
+	Tile.FISH_OYSTER:   "fish",
+	Tile.FISH_KELP:     "fish",
+	# FISH_PEARL gets its OWN "fish_pearl" category so it is NOT counted as one of the
+	# required fish tiles in its own capture chain, and so it never seeds into the fish
+	# spawn pools (the board slice conditionally places it instead).
+	Tile.FISH_PEARL:    "fish_pearl",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
@@ -252,4 +363,13 @@ static func color_for(tile: int) -> Color:
 		# Rubble mine hazard (M3i) — a dark cave-rock grey-brown that reads as inert
 		# cave-in stone against the cooler mine ores. No PNG ships; flat fallback fill.
 		Tile.RUBBLE:   return Color(0.34, 0.30, 0.27)
+		# Fish / Harbor biome (M3j) — cool sea blues/greens. PNGs ship for the five
+		# catchable tiles (res://assets/tiles/tile_fish_*.png); these flat fallbacks
+		# only render if a texture is missing. The giant pearl is a pearlescent white.
+		Tile.FISH_SARDINE:  return Color(0.55, 0.66, 0.74)
+		Tile.FISH_MACKEREL: return Color(0.36, 0.52, 0.62)
+		Tile.FISH_CLAM:     return Color(0.78, 0.72, 0.62)
+		Tile.FISH_OYSTER:   return Color(0.62, 0.60, 0.56)
+		Tile.FISH_KELP:     return Color(0.24, 0.46, 0.36)
+		Tile.FISH_PEARL:    return Color(0.94, 0.93, 0.97)
 		_:             return Color.MAGENTA
