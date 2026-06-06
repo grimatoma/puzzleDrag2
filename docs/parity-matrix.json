@@ -209,10 +209,10 @@
       "feature_or_screen": "Cartography & zones",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
-      "note": "No map render, no zone switching, no settlement founding, no road network. The port now has three playable biomes (farm / mine / harbor) via the expedition model (board-pool swap + separate enter/leave), but true multi-zone world/cartography is still pending."
+      "verified_by": ["run_cartography_tests.gd", "run_fish_tests.gd", "run_mine_tests.gd"],
+      "note": "3 biomes (farm/mine/harbor) reachable via expeditions + a world-map navigation view. Full multi-zone settlement model (founding, per-zone inventory, discovery) deferred."
     },
     {
       "id": "system-townsfolk-npcs",
@@ -370,10 +370,10 @@
       "feature_or_screen": "cartography slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
-      "note": "Multi-zone world map with settlement founding."
+      "note": "World-map view of 3 zones (home/mine/harbor) with roads + current-location marker; travel buttons launch the existing mine/harbor expeditions (gated on town2_complete). Settlement founding, per-zone inventory, discovery gating, road-building, and the full 11-node map are deferred (multi-settlement refactor parked)."
     },
     {
       "id": "slice-castle",
@@ -613,7 +613,7 @@
       "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
-      "note": "Multi-biome system; Godot now has 3 playable biomes (farm / mine / harbor) via the expedition model (board-pool swap + separate enter/leave logistics), not true zones. Full zone model (world map, settlement founding, road network) lands in M10."
+      "note": "3 biomes (farm/mine/harbor) reachable via expeditions + a world-map view showing all 3 nodes/roads/current-location. True multi-zone settlement model (founding, per-zone inventory, discovery) deferred."
     },
 
     {
@@ -671,10 +671,10 @@
       "feature_or_screen": "cartography view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
-      "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
-      "note": "World map and zone navigation."
+      "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
+      "note": "CartographyScreen renders the 3-zone world map (home/mine/harbor nodes + roads + current-location marker); travel buttons launch the existing mine/harbor expeditions (gated on town2_complete). Settlement founding, keeper/road-building, and full 11-node map deferred."
     },
     {
       "id": "view-castle",
@@ -1086,7 +1086,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:town-found-biome-picker"],
-      "note": "Biome selection for new settlement; depends on M10 cartography founding."
+      "note": "Biome selection for new settlement; the 3-zone map VIEW exists (CartographyScreen), but settlement founding (multi-settlement refactor) is deferred."
     },
     {
       "id": "golden-town-unfounded-blocked",
@@ -1203,10 +1203,10 @@
       "feature_or_screen": "map-current-home",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
-      "note": "Map showing current home zone; depends on M10 cartography."
+      "note": "CartographyScreen renders the 3-zone map with the current home zone marked (screenshot cartography.png captured). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-map-empty-panel",
@@ -1236,7 +1236,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
-      "note": "Map founder selection modal; depends on M10 founding logic."
+      "note": "Map founder selection modal; the 3-zone map VIEW exists (CartographyScreen), but settlement founding is deferred (multi-settlement refactor parked)."
     },
     {
       "id": "golden-map-ready-road",
@@ -1246,7 +1246,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-ready-road"],
-      "note": "Map showing road ready to build; depends on M10 road network."
+      "note": "Map showing road ready to build; the 3-zone map VIEW exists (CartographyScreen with static roads rendered), but player-built road-building mechanic is deferred."
     },
     {
       "id": "golden-map-founded-complete",
@@ -1256,7 +1256,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-founded-complete"],
-      "note": "Map with founded settlement complete; depends on M10 cartography."
+      "note": "Map with founded settlement complete; the 3-zone map VIEW exists (CartographyScreen), but settlement founding (multi-settlement model) is deferred."
     },
     {
       "id": "golden-map-keeper-choice",
@@ -1266,7 +1266,7 @@
       "godot_status": "absent",
       "target_milestone": "M10",
       "verified_by": ["run_cartography_tests.gd", "golden:map-keeper-choice"],
-      "note": "Map with keeper trial choice; depends on M10 cartography + story."
+      "note": "Map with keeper trial choice; the 3-zone map VIEW exists (CartographyScreen), but the keeper/founding flow is deferred (multi-settlement refactor parked)."
     },
     {
       "id": "golden-orders-mixed",
