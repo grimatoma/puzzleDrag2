@@ -62,6 +62,14 @@ var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal 
 var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
+# ── M8d ToolPalette ────────────────────────────────────────────────────────────
+# A vertical parchment strip pinned to the RIGHT edge of the screen (below the ☰
+# menu button) showing each owned tool with charges > 0 as a clickable button.
+# Clicking fires use_tool(id) then _refresh_tools() so the count or disappearance
+# reflects the spend immediately. Hidden completely when game.tools is empty.
+var _tool_palette_box: PanelContainer   ## outer parchment card (hidden when no tools)
+var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each _refresh_tools()
+
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 # A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
 # the short-lived reward chips that fly from the board to the coin pill on every
@@ -88,6 +96,7 @@ func _ready() -> void:
 		game.grant_tool("bomb", 1)     # tap-target (3x3 area blast) — proves targeting mode
 		game.grant_tool("scythe", 1)   # instant (clears 6 random tiles) — proves instant path
 	_build_hud()
+	_refresh_tools()   # M8d: populate the palette after the starter grant
 	board = Board.new()
 	add_child(board)
 	board.chain_changed.connect(_on_chain_changed)
@@ -362,6 +371,9 @@ func _build_hud() -> void:
 	# ── C. Stockpile chip panel — parchment card below the board ──────────────
 	_build_stockpile(root)
 
+	# ── D. Tool palette — vertical parchment strip pinned to the right edge ───
+	_build_tool_palette(root)
+
 	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
 	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
 	# IS clickable (unlike every other HUD Control), so it must NOT use
@@ -500,6 +512,82 @@ func _build_stockpile(root: Control) -> void:
 	_stockpile_grid.add_theme_constant_override("h_separation", 8)
 	_stockpile_grid.add_theme_constant_override("v_separation", 8)
 	col.add_child(_stockpile_grid)
+
+## M8d — build the ToolPalette container: a parchment card pinned to the RIGHT edge
+## of the board area, just below the ☰ menu button. It starts hidden (_refresh_tools
+## shows/hides it based on game.tools). The inner VBox gets rebuilt on each refresh.
+func _build_tool_palette(root: Control) -> void:
+	_tool_palette_box = PanelContainer.new()
+	_tool_palette_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_tool_palette_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from right edge
+	_tool_palette_box.mouse_filter = Control.MOUSE_FILTER_IGNORE       # children override this
+	_tool_palette_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
+	_tool_palette_box.offset_right = -18   # inset from the right edge (mirrors ☰ button)
+	_tool_palette_box.offset_top = 64      # sit below the ☰ button (which is at offset_top 18)
+	_tool_palette_box.visible = false      # hidden until _refresh_tools sees tools in the bag
+	root.add_child(_tool_palette_box)
+
+## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
+## > 0 a styled Button is added labelled "{name} ×{charges}" (plus a "↗" tap hint
+## for tap-target tools). Hidden completely when game.tools is empty (no phantom box).
+## Registers every button in _tool_buttons keyed by id for test access.
+func _refresh_tools() -> void:
+	if _tool_palette_box == null:
+		return
+	# Clear previous buttons + the registry.
+	for child in _tool_palette_box.get_children():
+		child.queue_free()
+	_tool_buttons.clear()
+
+	# Collect owned tools (charges > 0) in stable ToolConfig order.
+	var owned: Array = []
+	if game != null:
+		for id in ToolConfig.TOOL_IDS:
+			var charges: int = game.tool_count(id)
+			if charges > 0:
+				owned.append({"id": id, "charges": charges})
+
+	if owned.is_empty():
+		_tool_palette_box.visible = false
+		return
+
+	_tool_palette_box.visible = true
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	_tool_palette_box.add_child(col)
+
+	# Heading — "Tools" in Cinzel when available.
+	var heading_font: Font = UiKit.heading_font()
+	var heading_lbl := Label.new()
+	heading_lbl.text = "Tools"
+	heading_lbl.add_theme_font_size_override("font_size", 18)
+	heading_lbl.add_theme_color_override("font_color", Palette.INK)
+	if heading_font != null:
+		heading_lbl.add_theme_font_override("font", heading_font)
+	heading_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(heading_lbl)
+
+	for entry in owned:
+		var id: String = String(entry["id"])
+		var charges: int = int(entry["charges"])
+		var cfg: Dictionary = ToolConfig.get_tool(id)
+		var label: String = String(cfg.get("label", id))
+		var is_tap: bool = ToolConfig.is_tap_target(id)
+		var btn_text: String = "%s ×%d" % [label, charges]
+		if is_tap:
+			btn_text += " ↗"   # subtle tap affordance
+		var btn := Button.new()
+		btn.text = btn_text
+		btn.tooltip_text = ("Tap a tile to use" if is_tap else "Fires instantly over the board")
+		UiKit.style_button(btn, Palette.EMBER, 6, 17)
+		# Wire: click → use the tool → rebuild the palette.
+		btn.pressed.connect(func():
+			use_tool(id)
+			_refresh_tools()
+		)
+		col.add_child(btn)
+		_tool_buttons[id] = btn
 
 ## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a
 ## "{res} {count}" Label (ink text). Used by _refresh_totals to populate the grid.
@@ -1169,6 +1257,7 @@ func _after_tool_used() -> void:
 	_refresh_buildings()
 	_refresh_orders()
 	_refresh_chain_progress()
+	_refresh_tools()   # M8d: update palette counts / hide spent tools
 	SaveManager.save(game)
 
 ## Swap the board onto the CURRENT active biome and refresh the biome-affected HUD.
