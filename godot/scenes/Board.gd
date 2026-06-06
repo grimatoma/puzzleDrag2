@@ -28,6 +28,14 @@ var board_origin := Vector2.ZERO       ## top-left of cell (0,0) in local space
 ## (staples + each placed spawner's tiles) whenever buildings change.
 var tile_pool: Array = Constants.STAPLE_POOL.duplicate()
 
+## Minimum chain length the board demands to RESOLVE a drag. Defaults to the base
+## Constants.MIN_CHAIN; an active capstone boss raises it via set_min_chain (the
+## boss makes you chain harder — see GameState.boss_min_chain / BossConfig). Only
+## the resolve checks (_finish_drag / try_resolve) honour it; the dead-board
+## reshuffle checks stay at the base min so a raised bar never reads a normal board
+## as "dead".
+var min_chain: int = Constants.MIN_CHAIN
+
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
 
@@ -44,6 +52,13 @@ func set_tile_pool(pool: Array) -> void:
 		tile_pool = Constants.STAPLE_POOL.duplicate()
 	else:
 		tile_pool = pool.duplicate()
+
+## Set the minimum chain length required to resolve a drag (clamped to a sane floor
+## of 2 — a chain of 1 is just a tap). Main calls this with GameState.boss_min_chain()
+## when the boss state changes, so the raised bar applies immediately and survives a
+## save restored mid-fight.
+func set_min_chain(n: int) -> void:
+	min_chain = maxi(2, n)
 
 func setup_new_board() -> void:
 	grid = BoardLogic.make_empty_grid()
@@ -156,7 +171,7 @@ func _finish_drag() -> void:
 	_path = []
 	_dragging = false
 	chain_changed.emit(0)
-	if BoardLogic.is_valid_chain(grid, path):
+	if BoardLogic.is_valid_chain(grid, path, min_chain):
 		_resolve(path)
 
 func _set_highlight(cell: Vector2i, on: bool) -> void:
@@ -169,7 +184,7 @@ func _set_highlight(cell: Vector2i, on: bool) -> void:
 ## Validate-and-resolve a path. Returns true if it was a legal chain. Exposed
 ## so headless smoke tests can drive a move without synthesising input events.
 func try_resolve(path: Array) -> bool:
-	if not BoardLogic.is_valid_chain(grid, path):
+	if not BoardLogic.is_valid_chain(grid, path, min_chain):
 		return false
 	_resolve(path)
 	return true

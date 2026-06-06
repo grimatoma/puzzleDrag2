@@ -14,6 +14,7 @@ var _settlement_label: Label            ## town tier · cap · plots readout
 var _buildings_label: Label             ## plots used + placed spawners readout
 var _orders_label: Label                ## active NPC orders (resource → reward) readout
 var _biome_label: Label                 ## current biome + mine turns (M3f expedition) readout
+var _boss_label: Label                  ## capstone boss HP / min-chain (M3g) readout
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 
 func _ready() -> void:
@@ -35,15 +36,18 @@ func _ready() -> void:
 	board.set_tile_pool(game.active_biome_pool())
 	if game.is_in_mine() or not game.buildings.is_empty():
 		board.setup_new_board()
+	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
+	board.set_min_chain(game.boss_min_chain())
 	_layout()
 	get_viewport().size_changed.connect(_layout)
-	# Reflect any restored save immediately (inventory + coins + turn + tier + biome).
+	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss).
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
 	_refresh_buildings()
 	_refresh_orders()
 	_refresh_biome()
+	_refresh_boss()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -184,6 +188,22 @@ func _build_hud() -> void:
 	_biome_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_biome_label)
 
+	# M3g: capstone boss readout — HP + raised min-chain while fighting, a "Town 2
+	# complete" mark once Frostmaw is down, empty otherwise. Cool ice-blue so it
+	# reads as the mine-heart threat against the warm farm HUD.
+	_boss_label = Label.new()
+	_boss_label.text = ""
+	_boss_label.add_theme_font_size_override("font_size", 18)
+	_boss_label.add_theme_color_override("font_color", Color(0.62, 0.82, 0.95))
+	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_boss_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_boss_label.offset_top = 246
+	_boss_label.offset_left = 24
+	_boss_label.offset_right = -24
+	_boss_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_boss_label)
+
 	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
 	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
 	# IS clickable (unlike every other HUD Control), so it must NOT use
@@ -223,12 +243,16 @@ func _on_town_changed() -> void:
 	board.set_tile_pool(game.active_biome_pool())
 	if game.is_in_mine() != was_mine:
 		board.setup_new_board()
+	# M3g: starting the boss fight from the Town menu must raise the board's chain bar
+	# immediately (and dropping back to no-fight restores the base min).
+	board.set_min_chain(game.boss_min_chain())
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
 	_refresh_buildings()
 	_refresh_orders()
 	_refresh_biome()
+	_refresh_boss()
 	SaveManager.save(game)
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
@@ -262,12 +286,25 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
+	# M3g: a chain landed while the capstone boss is active damages it by the chain
+	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
+	# board's raised chain bar back to the base min and surface the win.
+	if game.is_boss_active():
+		var boss_res: Dictionary = game.damage_boss(length)
+		if bool(boss_res.get("defeated", false)):
+			_status_label.text = "%s defeated! Town 2 complete — +%d coins." % [
+				boss_res.get("name", "Boss"), int(boss_res.get("reward", 0))]
+			board.set_min_chain(Constants.MIN_CHAIN)
+		else:
+			_status_label.text = "%s  ·  ⚔ boss HP %d" % [
+				_status_label.text, int(boss_res.get("hp", 0))]
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
 	_refresh_buildings()
 	_refresh_orders()
 	_refresh_biome()
+	_refresh_boss()
 	SaveManager.save(game)
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
@@ -285,6 +322,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 ##   G     — sell 1 hay_bundle at the Market (+1 coin)                       [TEMP]
 ##   F     — fill the first fillable NPC order (coin sink)                   [TEMP]
 ##   M     — launch a mine expedition when eligible (City + supplies)        [TEMP]
+##   K     — challenge the capstone boss when eligible (City + mine mastery)  [TEMP]
 func _unhandled_key_input(event: InputEvent) -> void:
 	if game == null:
 		return
@@ -322,6 +360,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_try_fill_order() # TEMP M3d demo: fill the first fillable NPC order
 		KEY_M:
 			_try_enter_mine() # TEMP M3f demo: launch a mine expedition (real path: Town screen)
+		KEY_K:
+			_try_challenge_boss() # TEMP M3g demo: challenge the capstone boss (real path: Town screen)
 
 ## Dev affordance: attempt a build, then re-pool the board + refresh HUD + save.
 func _try_build(id: String) -> void:
@@ -404,6 +444,24 @@ func _try_enter_mine() -> void:
 	if bool(res.get("ok", false)):
 		_enter_mine_visuals()
 		_status_label.text = "⛏ Expedition underway — %d mine turns" % int(res.get("turns", 0))
+		SaveManager.save(game)
+	get_viewport().set_input_as_handled()
+
+## TEMP M3g demo: challenge the capstone boss (Frostmaw) from the keyboard. The REAL
+## entry is the Town screen's Boss section ("⚔ Challenge Frostmaw") — this key is a
+## harmless dev fallback so the boss fight stays exercisable. Arms the boss, raises
+## the board's chain bar, then refreshes the boss HUD + saves.
+func _try_challenge_boss() -> void:
+	if not game.can_challenge_boss():
+		_status_label.text = "Can't challenge the boss (need City + 12 mine goods)"
+		get_viewport().set_input_as_handled()
+		return
+	var res: Dictionary = game.start_boss()
+	if bool(res.get("ok", false)):
+		board.set_min_chain(game.boss_min_chain())
+		_status_label.text = "Frostmaw appears! Chains of 4+."
+		_refresh_boss()
+		_refresh_meta()
 		SaveManager.save(game)
 	get_viewport().set_input_as_handled()
 
@@ -496,6 +554,22 @@ func _refresh_biome() -> void:
 		_biome_label.text = "⛏ Mine · turns left: %d" % game.mine_turns_left
 	else:
 		_biome_label.text = "Farm"
+
+## M3g: show the capstone boss state. While fighting it reads "⚔ <name>  HP cur/max
+##  ·  min chain N"; once Town 2 is complete it reads "✓ Town 2 complete"; otherwise
+## it's empty. Mirrors GameState.boss_active / boss_hp / town2_complete.
+func _refresh_boss() -> void:
+	if _boss_label == null or game == null:
+		return
+	if game.is_boss_active():
+		var max_hp: int = BossConfig.boss_hp(game.boss_active)
+		_boss_label.text = "⚔ %s  HP %d/%d  ·  min chain %d" % [
+			BossConfig.boss_name(game.boss_active), game.boss_hp, max_hp,
+			game.boss_min_chain()]
+	elif game.town2_complete:
+		_boss_label.text = "✓ Town 2 complete"
+	else:
+		_boss_label.text = ""
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

@@ -65,6 +65,9 @@ jobs:
       - name: Mine / expedition tests
         run: godot --headless --path godot --script res://tests/run_mine_tests.gd
 
+      - name: Boss tests
+        run: godot --headless --path godot --script res://tests/run_boss_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 
