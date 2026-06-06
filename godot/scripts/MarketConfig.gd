@@ -27,6 +27,13 @@ const SELL: Dictionary = {
 	"meat": 21,
 	"milk": 30,
 	"horseshoe": 60,
+	# Mine goods (M3f). supplies is NOT market-traded — it's a Kitchen-only
+	# intermediate spent as mine turns, so it's intentionally absent from SELL/BUY.
+	"block": 10,
+	"iron_bar": 11,
+	"coke": 40,
+	"cut_gem": 60,
+	"dirt": 1,
 }
 
 ## Coins paid per unit BOUGHT. A resource absent from this table is not buyable.
@@ -42,6 +49,12 @@ const BUY: Dictionary = {
 	"meat": 240,
 	"milk": 300,
 	"horseshoe": 400,
+	# Mine goods (M3f). supplies is not buyable (Kitchen-only intermediate).
+	"block": 80,
+	"iron_bar": 100,
+	"coke": 260,
+	"cut_gem": 600,
+	"dirt": 40,
 }
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

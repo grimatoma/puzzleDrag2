@@ -10,6 +10,7 @@ extends CanvasLayer
 ##   Refine     — Craft each recipe at its station building (Bakery → bread)
 ##   Market     — Sell 1 of each owned, sellable resource
 ##   Orders     — Fill each active NPC order
+##   Expedition — (M3f) Enter the Mine (spend supplies as turns) / Leave the mine
 ##
 ## All game logic already lives on GameState (build/demolish/craft/sell/
 ## fill_order/try_tier_up). This screen is purely the UI that calls those and
@@ -31,7 +32,7 @@ signal state_changed   ## emitted after any action mutates `game`
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
 ##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>",
-##   "craft:<recipe>", "fill:<index>".
+##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine".
 var _action_buttons: Dictionary = {}
 
 ## Static shell (built once in setup()) — the dynamic section bodies hang off the
@@ -42,6 +43,7 @@ var _buildings_body: VBoxContainer
 var _refine_body: VBoxContainer
 var _market_body: VBoxContainer
 var _orders_body: VBoxContainer
+var _expedition_body: VBoxContainer   ## M3f — enter/leave the mine
 var _built: bool = false
 
 # ── earthy palette (matches Main's HUD) ───────────────────────────────────────
@@ -149,6 +151,7 @@ func _build_shell() -> void:
 	_refine_body = _add_section("Refine")
 	_market_body = _add_section("Market")
 	_orders_body = _add_section("Orders")
+	_expedition_body = _add_section("Expedition")
 
 ## Append a section to the root VBox: a header Label then an (initially empty)
 ## body VBox that refresh() repopulates. Returns the body VBox.
@@ -192,12 +195,14 @@ func refresh() -> void:
 	_clear(_refine_body)
 	_clear(_market_body)
 	_clear(_orders_body)
+	_clear(_expedition_body)
 
 	_build_settlement_section()
 	_build_buildings_section()
 	_build_refine_section()
 	_build_market_section()
 	_build_orders_section()
+	_build_expedition_section()
 
 ## Detach every child of `container` from the tree NOW (so the rebuilt rows render
 ## correctly and the dict is the only live reference), then queue_free it. The
@@ -338,6 +343,33 @@ func _build_orders_section() -> void:
 
 		_orders_body.add_child(row)
 
+func _build_expedition_section() -> void:
+	# M3f — "the combination": spend Kitchen-made `supplies` as mine turns. While on
+	# an expedition the section shows remaining turns + a "Leave the mine" button;
+	# on the farm it shows the supply count + an "Enter the Mine" button (disabled
+	# until City tier with at least 1 supplies — can_enter_mine() gates it).
+	if game.is_in_mine():
+		_expedition_body.add_child(_make_label(
+			"⛏ On expedition — %d turns left" % game.mine_turns_left, COL_BODY))
+		var leave_btn := Button.new()
+		leave_btn.text = "Leave the mine"
+		leave_btn.connect("pressed", Callable(self, "_do_leave_mine"))
+		_expedition_body.add_child(leave_btn)
+		_action_buttons["leave_mine"] = leave_btn
+		return
+
+	var supplies: int = game.qty("supplies")
+	var gate_text: String = "City reached" if game.settlement.tier >= TownConfig.TIER_CITY \
+		else "reach City to launch"
+	_expedition_body.add_child(_make_label(
+		"Supplies: %d · %s" % [supplies, gate_text], COL_BODY))
+	var enter_btn := Button.new()
+	enter_btn.text = "Enter the Mine (%d turns)" % supplies
+	enter_btn.disabled = not game.can_enter_mine()
+	enter_btn.connect("pressed", Callable(self, "_do_enter_mine"))
+	_expedition_body.add_child(enter_btn)
+	_action_buttons["enter_mine"] = enter_btn
+
 # ── action handlers ───────────────────────────────────────────────────────────
 # Each calls the GameState method, emits `state_changed` only when the result is
 # ok (a real mutation), and always refresh()es so disabled states re-evaluate
@@ -360,6 +392,17 @@ func _do_sell(res: String) -> void:
 
 func _do_fill(index: int) -> void:
 	_after(game.fill_order(index))
+
+func _do_enter_mine() -> void:
+	# enter_mine() returns the standard {ok, reason|turns} dict, so _after handles it.
+	_after(game.enter_mine())
+
+func _do_leave_mine() -> void:
+	# leave_mine() returns void (no failure mode — it always snaps to the farm), so
+	# emit state_changed directly instead of routing through _after.
+	game.leave_mine()
+	emit_signal("state_changed")
+	refresh()
 
 ## Shared tail: emit state_changed when the action succeeded, then always
 ## re-render so disabled affordances reflect the new state.

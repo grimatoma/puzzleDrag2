@@ -37,6 +37,9 @@ const LUMBER_CAMP: String = "lumber_camp"
 const COOP: String = "coop"
 const GARDEN: String = "garden"
 const BAKERY: String = "bakery"
+## M3f — the Kitchen refiner: packs farm food into `supplies`, the intermediate
+## spent as mine turns on an expedition. Unlocks at Town tier (TIER_TOWN).
+const KITCHEN: String = "kitchen"
 
 ## Building catalog keyed by id. Each entry:
 ##   name:        String  — display name
@@ -92,6 +95,16 @@ const BUILDINGS: Dictionary = {
 		"resource": "bread",
 		"desc": "Refines flour + eggs into bread.",
 	},
+	KITCHEN: {
+		"name": "Kitchen",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_TOWN,
+		"cost": {"plank": 8, "flour": 8},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "supplies",
+		"desc": "Packs farm food into supplies for mine expeditions.",
+	},
 }
 
 ## Stable display / iteration order for the SPAWNER buildings only (the three that
@@ -100,7 +113,7 @@ const SPAWNER_IDS: Array = [LUMBER_CAMP, COOP, GARDEN]
 
 ## Stable display / iteration order for EVERY buildable id (spawners + refiners).
 ## available_at_tier iterates this, so the Bakery is offered alongside the spawners.
-const ALL_BUILD_IDS: Array = [LUMBER_CAMP, COOP, GARDEN, BAKERY]
+const ALL_BUILD_IDS: Array = [LUMBER_CAMP, COOP, GARDEN, BAKERY, KITCHEN]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
 

@@ -39,6 +39,21 @@ var orders: Array = []
 ## seed_orders(); the live scene seeds it with a fixed int for stable screenshots.
 var rng := RandomNumberGenerator.new()
 
+# ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
+## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
+## resources per-settlement, but for this milestone mine goods (block/iron_bar/
+## coke/dirt/cut_gem) land in the SAME `inventory` as farm goods, and there is no
+## separate Town-2 tier ladder. The per-settlement resource split + a full Town-2
+## settlement are deferred to a later milestone. (Mine HAZARDS — cave-ins/gas/
+## moles — are also out of scope here; they arrive with the boss milestone.)
+##
+## The expedition is "the combination" from the Direction: the farm makes food,
+## the Kitchen packs food into `supplies`, and supplies are spent as MINE TURNS on
+## an expedition into the mine biome. Mine runs are SOFT-FAIL — when the turns run
+## out the run ends and everything gathered is kept (it's already in `inventory`).
+var active_biome: String = "farm"   ## "farm" | "mine" — which biome the board shows
+var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -345,6 +360,68 @@ func fill_order(index: int) -> Dictionary:
 	refill_orders()
 	return {"ok": true, "reward": reward, "resource": resource, "qty": qty}
 
+# ── Expedition / mine biome (M3f) ─────────────────────────────────────────────
+
+## True while the player is on a mine expedition (the board shows mine tiles).
+func is_in_mine() -> bool:
+	return active_biome == "mine"
+
+## True when an expedition can be LAUNCHED right now: on the farm (not already
+## mining), the settlement has reached City (the expedition unlocks at City per the
+## Direction), and there is at least 1 supplies to spend as turns. Guards are
+## checked in this order so enter_mine can report the FIRST failing reason.
+func can_enter_mine() -> bool:
+	if active_biome != "farm":
+		return false
+	if settlement.tier < TownConfig.TIER_CITY:
+		return false
+	if qty("supplies") <= 0:
+		return false
+	return true
+
+## Launch a mine expedition. On failure returns {ok:false, reason} (the FIRST
+## guard that trips, in order: "already_mining" → "locked" → "no_supplies")
+## WITHOUT mutating. On success: convert ALL supplies into mine turns (1 supplies =
+## 1 turn), remove "supplies" from inventory, enter the mine, and return
+## {ok:true, turns}. Collected mine goods accrue in the shared inventory.
+func enter_mine() -> Dictionary:
+	if active_biome != "farm":
+		return {"ok": false, "reason": "already_mining"}
+	if settlement.tier < TownConfig.TIER_CITY:
+		return {"ok": false, "reason": "locked"}
+	if qty("supplies") <= 0:
+		return {"ok": false, "reason": "no_supplies"}
+	var s: int = qty("supplies")
+	inventory.erase("supplies")
+	mine_turns_left = s
+	active_biome = "mine"
+	return {"ok": true, "turns": s}
+
+## Spend one mine turn. Call AFTER a mine chain resolves (the chain's resources are
+## already credited via credit_chain). Decrements mine_turns_left; if it hits 0 the
+## expedition ends (back to the farm). SOFT-FAIL: everything gathered is kept (it's
+## in `inventory` already). Returns {exited, turns_left}.
+func note_mine_turn() -> Dictionary:
+	mine_turns_left = maxi(0, mine_turns_left - 1)
+	if mine_turns_left == 0:
+		active_biome = "farm"
+		return {"exited": true, "turns_left": 0}
+	return {"exited": false, "turns_left": mine_turns_left}
+
+## Manually abandon the expedition early (the Town screen "Leave the mine" button).
+## Snap back to the farm and drop any remaining turns — everything gathered is kept.
+func leave_mine() -> void:
+	active_biome = "farm"
+	mine_turns_left = 0
+
+## The refill pool for the CURRENTLY active biome: the flat MINE_POOL while mining,
+## otherwise the farm's building-gated pool (active_tile_pool). The mine board is
+## not building-gated this milestone (no mine spawners yet).
+func active_biome_pool() -> Array:
+	if is_in_mine():
+		return Constants.MINE_POOL.duplicate()
+	return active_tile_pool()
+
 ## Active board CATEGORIES: the two staples plus the category of each placed
 ## SPAWNER, in build order, deduplicated. Drives "what can spawn / be chained".
 ## Refiners (Bakery) have no category and contribute nothing — the empty-string
@@ -383,6 +460,8 @@ func to_dict() -> Dictionary:
 		"settlement": settlement.to_dict(),
 		"buildings": buildings.duplicate(),
 		"orders": orders.duplicate(true),
+		"active_biome": active_biome,
+		"mine_turns_left": mine_turns_left,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -430,4 +509,17 @@ static func from_dict(d: Dictionary) -> GameState:
 			if qty <= 0 or reward < 0:
 				continue
 			s.orders.append({"resource": String(resource), "qty": qty, "reward": reward})
+	# Restore the expedition state defensively (M3f). The biome must be one of the
+	# two known values (anything else falls back to "farm"); turns can't go negative;
+	# and a corrupt "mine"-with-no-turns save snaps back to the farm (turns 0) so a
+	# stale save can never strand the player in a turn-less mine.
+	var biome := String(d.get("active_biome", "farm"))
+	if biome != "farm" and biome != "mine":
+		biome = "farm"
+	var turns: int = maxi(0, int(d.get("mine_turns_left", 0)))
+	if biome == "mine" and turns <= 0:
+		biome = "farm"
+		turns = 0
+	s.active_biome = biome
+	s.mine_turns_left = turns
 	return s

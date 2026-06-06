@@ -66,7 +66,9 @@ func _state_with_bakery(extra: Dictionary = {}) -> GameState:
 # ── RecipeConfig ──────────────────────────────────────────────────────────────
 
 func _test_recipe_config() -> void:
-	_check(RC.RECIPE_IDS == [RC.BREAD], "one recipe in the catalog (bread)")
+	# M3f added the Kitchen's SUPPLIES recipe, so the catalog now holds two recipes
+	# (bread first, supplies second). Bread's own attributes are still asserted below.
+	_check(RC.RECIPE_IDS == [RC.BREAD, RC.SUPPLIES], "two recipes in the catalog (bread, supplies)")
 	_check(RC.is_recipe(RC.BREAD), "bread is a real recipe")
 	_check(not RC.is_recipe("nope"), "'nope' is not a recipe")
 
@@ -116,15 +118,19 @@ func _test_building_kinds() -> void:
 	_check(BC.building_tile(BC.BAKERY) == Constants.EMPTY, "bakery has no tile (EMPTY)")
 	_check(BC.building_resource(BC.BAKERY) == "bread", "bakery resource is bread")
 
-	# available_at_tier now iterates ALL_BUILD_IDS, so the Bakery is offered.
-	_check(BC.ALL_BUILD_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY],
-		"ALL_BUILD_IDS is the four buildings in stable order")
+	# available_at_tier now iterates ALL_BUILD_IDS, so the Bakery is offered. M3f
+	# appended the Kitchen (refiner) after the Bakery, so ALL_BUILD_IDS is now five.
+	_check(BC.ALL_BUILD_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY, BC.KITCHEN],
+		"ALL_BUILD_IDS is the five buildings in stable order")
 	_check(BC.SPAWNER_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN],
 		"SPAWNER_IDS stays the three spawners only")
+	# At Village (tier 3) the Kitchen (Town-tier) is NOT yet offered, so the Bakery
+	# is the fourth — the count here is unchanged by M3f (Kitchen needs tier 4).
 	var at3: Array = BC.available_at_tier(3)
 	_check(at3.has(BC.BAKERY), "available_at_tier(3) includes the Bakery")
-	_check(at3.size() == 4, "all four buildings available at Village (tier 3)")
+	_check(at3.size() == 4, "all four pre-Kitchen buildings available at Village (tier 3)")
 	_check(not BC.available_at_tier(2).has(BC.BAKERY), "Bakery NOT offered at Hamlet (tier 2)")
+	_check(not at3.has(BC.KITCHEN), "Kitchen NOT offered at Village — it's a Town-tier building")
 
 	# Bakery is gated at Village: it can't be built at Hamlet even if affordable.
 	var g := GameState.new()
