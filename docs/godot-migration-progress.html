@@ -196,6 +196,16 @@
     (generated from <code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">docs/parity-matrix.json</code>,
     CI-validated). Check there first for what is ported / partial / absent and which milestone owns each surface;
     keep reading below only for the historical record of how the slice was built.
+    The forward plan (M5→M11 parity arc) lives in the
+    <a href="godot-migration-plan.html" style="font-weight:700;">roadmap</a> (<code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">docs/godot-migration-plan.html</code>).
+    <p style="margin:.55rem 0 0; font-size:.88rem; color:var(--muted);">
+      <strong style="color:var(--ink);">Going-forward convention (M5+):</strong>
+      Each new milestone adds its screenshot(s) to <code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">docs/assets/godot/</code>
+      plus a shots-row and log entry on this page, keeping the archive the visual progression story.
+      Captures are produced headless at 720×1280 via
+      <code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">godot/tools/screenshot.gd</code>
+      and the per-milestone <code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">godot/tools/m*_capture.gd</code> scripts.
+    </p>
   </div>
 
   <header class="hero">
@@ -1766,6 +1776,21 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
         </table>
       </section>
 
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ ROADMAP AHEAD -->
+    <div class="panel" id="roadmap-ahead" role="tabpanel" aria-label="Roadmap ahead" style="display:block!important;">
+      <section id="roadmap-pointer">
+        <div class="box amber">
+          <b>Roadmap ahead — M5 → M11 parity arc.</b>
+          This archive covers <strong>Phase 1</strong> (M1–M4, shipped) plus the early re-baseline work.
+          The forward plan — the M5→M11 parity arc, infra milestones, and per-surface ownership — lives in the
+          <a href="godot-migration-plan.html"><strong>roadmap</strong></a>
+          (<code>docs/godot-migration-plan.html</code>).
+          No empty milestone sections are pre-built here; each milestone adds its own shots-row and log entry
+          to this archive when it lands (see the going-forward convention in the banner above).
+        </div>
+      </section>
     </div>
 
   </main>
