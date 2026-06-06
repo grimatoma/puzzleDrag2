@@ -36,6 +36,13 @@ var tile_pool: Array = Constants.STAPLE_POOL.duplicate()
 ## as "dead".
 var min_chain: int = Constants.MIN_CHAIN
 
+## M3h (Town 3 rats): when true, a resolved GRASS chain ALSO clears every RAT tile
+## 8-adjacent to the chain (Master Ratcatcher — "grass chains collect rats too").
+## Main sets this from GameState.has_master_ratcatcher() after load and on every
+## board re-pool. The cleared rats are a side effect: they are NOT counted in the
+## chain length nor credited (RAT produces nothing).
+var clear_rats_on_grass: bool = false
+
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
 
@@ -92,6 +99,26 @@ func _make_tile(t: int) -> Tile:
 	node.setup(t, tile_size)
 	add_child(node)
 	return node
+
+## M3h — the Ratcatcher "shoo": clear EVERY rat on the board as a FREE move (no
+## chain, no resource credit). Scans `grid` for RAT cells, blanks them, then runs
+## the pure BoardLogic collapse+refill and rebuilds the visual tile layer (and
+## reshuffles to a live board, mirroring setup_new_board's guard, so a refill that
+## happens to land dead can't strand the player). Returns the rat count cleared.
+## GameState.use_ratcatcher_charge spends the charge; this just clears the board.
+func clear_all_rats() -> int:
+	var cleared := 0
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			if grid[r][c] == Constants.Tile.RAT:
+				grid[r][c] = Constants.EMPTY
+				cleared += 1
+	if cleared > 0:
+		BoardLogic.collapse(grid)
+		BoardLogic.refill(grid, rng, tile_pool)
+		_ensure_live_board()
+		_build_tiles()
+	return cleared
 
 # ── layout ─────────────────────────────────────────────────────────────────
 
@@ -193,8 +220,19 @@ func _resolve(path: Array) -> void:
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
 
-	# 1. Pop the collected tiles out, then free them.
-	for cell in path:
+	# M3h (Master Ratcatcher): a resolved GRASS chain ALSO collects every rat that is
+	# 8-adjacent to a chained cell. These rat cells are appended to the SAME removal
+	# set the chain uses, so collapse+refill fills them just like the popped chain
+	# tiles. They do NOT count toward `length` and are never credited (RAT produces
+	# nothing) — the chain still reports the GRASS key + the GRASS chain length.
+	var removal: Array = path.duplicate()
+	if clear_rats_on_grass and key == Constants.Tile.GRASS:
+		for rat_cell in _adjacent_rat_cells(path):
+			if not removal.has(rat_cell):
+				removal.append(rat_cell)
+
+	# 1. Pop the collected tiles out (chain + any Master-Ratcatcher rats), then free.
+	for cell in removal:
 		var t: Tile = tiles[cell.y][cell.x]
 		tiles[cell.y][cell.x] = null
 		if t != null:
@@ -240,3 +278,23 @@ func _sync_grid_from_tiles() -> void:
 		for c in Constants.COLS:
 			var t: Tile = tiles[r][c]
 			grid[r][c] = t.tile_type if t != null else Constants.EMPTY
+
+## M3h — every distinct RAT cell that is 8-adjacent (king move) to any cell in
+## `path`. Used by _resolve when the Master Ratcatcher is active so a grass chain
+## sweeps up the rats around it. Cells in `path` themselves are never returned (a
+## grass chain has no rats in it), only their neighbours.
+func _adjacent_rat_cells(path: Array) -> Array:
+	var out: Array = []
+	for cell in path:
+		for dy in [-1, 0, 1]:
+			for dx in [-1, 0, 1]:
+				if dx == 0 and dy == 0:
+					continue
+				var nb := Vector2i(cell.x + dx, cell.y + dy)
+				if not BoardLogic.in_bounds(nb):
+					continue
+				if grid[nb.y][nb.x] != Constants.Tile.RAT:
+					continue
+				if not out.has(nb):
+					out.append(nb)
+	return out

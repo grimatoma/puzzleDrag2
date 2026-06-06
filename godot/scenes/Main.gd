@@ -15,6 +15,7 @@ var _buildings_label: Label             ## plots used + placed spawners readout
 var _orders_label: Label                ## active NPC orders (resource → reward) readout
 var _biome_label: Label                 ## current biome + mine turns (M3f expedition) readout
 var _boss_label: Label                  ## capstone boss HP / min-chain (M3g) readout
+var _rats_label: Label                  ## Town-3 rats hazard + shoo-charges (M3h) readout
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 
 func _ready() -> void:
@@ -38,9 +39,11 @@ func _ready() -> void:
 		board.setup_new_board()
 	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
 	board.set_min_chain(game.boss_min_chain())
+	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
+	board.clear_rats_on_grass = game.has_master_ratcatcher()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
-	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss).
+	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats).
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -48,6 +51,7 @@ func _ready() -> void:
 	_refresh_orders()
 	_refresh_biome()
 	_refresh_boss()
+	_refresh_rats()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -204,6 +208,22 @@ func _build_hud() -> void:
 	_boss_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_boss_label)
 
+	# M3h: Town-3 rats hazard readout — empty until Town 2 is complete, then
+	# "🐀 Rats active" plus the shoo-charge count while a Ratcatcher is placed. A
+	# warm rust tone so the vermin warning stands out from the cool boss line.
+	_rats_label = Label.new()
+	_rats_label.text = ""
+	_rats_label.add_theme_font_size_override("font_size", 18)
+	_rats_label.add_theme_color_override("font_color", Color(0.86, 0.62, 0.46))
+	_rats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rats_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_rats_label.offset_top = 276
+	_rats_label.offset_left = 24
+	_rats_label.offset_right = -24
+	_rats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_rats_label)
+
 	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
 	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
 	# IS clickable (unlike every other HUD Control), so it must NOT use
@@ -227,6 +247,9 @@ func _open_town() -> void:
 		_town_screen.setup(game)
 		_town_screen.connect("closed", Callable(self, "_on_town_closed"))
 		_town_screen.connect("state_changed", Callable(self, "_on_town_changed"))
+		# M3h: the Town screen's "Shoo rats" button has no board ref, so it emits
+		# `shoo_rats` and Main does the actual clear (spending the charge in ONE place).
+		_town_screen.connect("shoo_rats", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
 
 func _on_town_closed() -> void:
@@ -246,6 +269,9 @@ func _on_town_changed() -> void:
 	# M3g: starting the boss fight from the Town menu must raise the board's chain bar
 	# immediately (and dropping back to no-fight restores the base min).
 	board.set_min_chain(game.boss_min_chain())
+	# M3h: a Master Ratcatcher purchase (or demolish) flips whether grass chains sweep
+	# adjacent rats, so refresh the board flag whenever a town action lands.
+	board.clear_rats_on_grass = game.has_master_ratcatcher()
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -253,6 +279,7 @@ func _on_town_changed() -> void:
 	_refresh_orders()
 	_refresh_biome()
 	_refresh_boss()
+	_refresh_rats()
 	SaveManager.save(game)
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
@@ -305,6 +332,9 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_orders()
 	_refresh_biome()
 	_refresh_boss()
+	# M3h: a chain that DEFEATED the boss just turned rats on (rats_enabled flips with
+	# town2_complete), so refresh the rats line so the hazard shows immediately.
+	_refresh_rats()
 	SaveManager.save(game)
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
@@ -323,6 +353,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 ##   F     — fill the first fillable NPC order (coin sink)                   [TEMP]
 ##   M     — launch a mine expedition when eligible (City + supplies)        [TEMP]
 ##   K     — challenge the capstone boss when eligible (City + mine mastery)  [TEMP]
+##   R     — shoo all rats off the board (free move, spends a Ratcatcher charge)[TEMP]
 func _unhandled_key_input(event: InputEvent) -> void:
 	if game == null:
 		return
@@ -362,6 +393,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_try_enter_mine() # TEMP M3f demo: launch a mine expedition (real path: Town screen)
 		KEY_K:
 			_try_challenge_boss() # TEMP M3g demo: challenge the capstone boss (real path: Town screen)
+		KEY_R:
+			_try_shoo_rats() # TEMP M3h demo: shoo rats off the board (real path: Town screen button)
 
 ## Dev affordance: attempt a build, then re-pool the board + refresh HUD + save.
 func _try_build(id: String) -> void:
@@ -464,6 +497,37 @@ func _try_challenge_boss() -> void:
 		_refresh_meta()
 		SaveManager.save(game)
 	get_viewport().set_input_as_handled()
+
+## TEMP M3h demo: shoo all rats off the board from the keyboard. The REAL entry is the
+## Town screen's "Shoo rats" button (which routes through `_on_shoo_rats`). Spends one
+## Ratcatcher charge (the ONE place the charge is booked for the keyboard path), clears
+## every rat via the board, then refreshes the rats HUD + saves.
+func _try_shoo_rats() -> void:
+	if not game.can_shoo_rats():
+		_status_label.text = "Can't shoo rats (need a Ratcatcher with charges left)"
+		get_viewport().set_input_as_handled()
+		return
+	game.use_ratcatcher_charge()
+	var n: int = board.clear_all_rats()
+	_status_label.text = "Shooed %d rats (%d charge(s) left)" % [n, game.ratcatcher_charges_left()]
+	_refresh_rats()
+	SaveManager.save(game)
+	get_viewport().set_input_as_handled()
+
+## M3h — the Town screen's "Shoo rats" button emits `shoo_rats`; Main owns the board,
+## so it spends the charge HERE (the single accounting point) and clears the board.
+## Then refreshes the rats HUD, the Town screen (so its charge count + button state
+## update), and saves.
+func _on_shoo_rats() -> void:
+	if not game.can_shoo_rats():
+		return
+	game.use_ratcatcher_charge()
+	var n: int = board.clear_all_rats()
+	_status_label.text = "Shooed %d rats (%d charge(s) left)" % [n, game.ratcatcher_charges_left()]
+	_refresh_rats()
+	if _town_screen != null:
+		_town_screen.refresh()
+	SaveManager.save(game)
 
 ## Swap the board onto the CURRENT active biome and refresh the biome-affected HUD.
 ## Used after any biome flip (M demo key entry; the Town screen routes through
@@ -570,6 +634,21 @@ func _refresh_boss() -> void:
 		_boss_label.text = "✓ Town 2 complete"
 	else:
 		_boss_label.text = ""
+
+## M3h: show the Town-3 rats hazard. Empty until rats are enabled (Town 2 done);
+## then "🐀 Rats active", plus " · shoo charges N/5" while a Ratcatcher is placed.
+## Mirrors GameState.rats_enabled / has_ratcatcher / ratcatcher_charges_left.
+func _refresh_rats() -> void:
+	if _rats_label == null or game == null:
+		return
+	if not game.rats_enabled():
+		_rats_label.text = ""
+		return
+	var text: String = "🐀 Rats active"
+	if game.has_ratcatcher():
+		text += " · shoo charges %d/%d" % [
+			game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES]
+	_rats_label.text = text
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

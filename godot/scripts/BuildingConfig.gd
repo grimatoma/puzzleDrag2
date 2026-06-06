@@ -40,6 +40,14 @@ const BAKERY: String = "bakery"
 ## M3f — the Kitchen refiner: packs farm food into `supplies`, the intermediate
 ## spent as mine turns on an expedition. Unlocks at Town tier (TIER_TOWN).
 const KITCHEN: String = "kitchen"
+## M3h — the Town-3 rats hazard buildings. A THIRD kind, "hazard": neither a
+## board-pool spawner nor a recipe refiner, so they never touch the pool/recipe
+## paths. Both unlock at City (TIER_CITY) but GameState.can_build ALSO gates them on
+## rats_enabled() (town2_complete) — you can't build a Ratcatcher before Town 2 is
+## done and rats appear. Ratcatcher shoos rats off the board as a free move; Master
+## Ratcatcher makes grass chains also clear rats adjacent to the chain.
+const RATCATCHER: String = "ratcatcher"
+const MASTER_RATCATCHER: String = "master_ratcatcher"
 
 ## Building catalog keyed by id. Each entry:
 ##   name:        String  — display name
@@ -105,15 +113,41 @@ const BUILDINGS: Dictionary = {
 		"resource": "supplies",
 		"desc": "Packs farm food into supplies for mine expeditions.",
 	},
+	# M3h — Town-3 rats hazard buildings (kind "hazard"): no category, no tile, no
+	# resource, so is_spawner / is_refiner both return false and they never feed the
+	# board pool or a recipe station. can_build additionally gates them on rats being
+	# enabled (town2_complete) — see GameState.
+	RATCATCHER: {
+		"name": "Ratcatcher",
+		"kind": "hazard",
+		"unlock_tier": TownConfig.TIER_CITY,
+		"cost": {"plank": 6, "hay_bundle": 8},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "",
+		"desc": "Shoo rats off the board as a free move (no turn spent).",
+	},
+	MASTER_RATCATCHER: {
+		"name": "Master Ratcatcher",
+		"kind": "hazard",
+		"unlock_tier": TownConfig.TIER_CITY,
+		"cost": {"plank": 10, "eggs": 6, "hay_bundle": 12},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "",
+		"desc": "Grass chains also clear rats adjacent to the chain.",
+	},
 }
 
 ## Stable display / iteration order for the SPAWNER buildings only (the three that
 ## gate a board category). Refiners (Bakery) are NOT here — they add no category.
 const SPAWNER_IDS: Array = [LUMBER_CAMP, COOP, GARDEN]
 
-## Stable display / iteration order for EVERY buildable id (spawners + refiners).
-## available_at_tier iterates this, so the Bakery is offered alongside the spawners.
-const ALL_BUILD_IDS: Array = [LUMBER_CAMP, COOP, GARDEN, BAKERY, KITCHEN]
+## Stable display / iteration order for EVERY buildable id (spawners + refiners +
+## hazard buildings). available_at_tier iterates this, so the Bakery and the rats
+## buildings are offered alongside the spawners (the rats buildings only once City
+## is reached AND rats are enabled — the rats-enabled gate lives in GameState).
+const ALL_BUILD_IDS: Array = [LUMBER_CAMP, COOP, GARDEN, BAKERY, KITCHEN, RATCATCHER, MASTER_RATCATCHER]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
 
@@ -169,6 +203,12 @@ static func is_spawner(id: String) -> bool:
 ## True when `id` is a recipe-station REFINER (Bakery).
 static func is_refiner(id: String) -> bool:
 	return building_kind(id) == "refiner"
+
+## True when `id` is a rats-HAZARD building (Ratcatcher / Master Ratcatcher). These
+## add no board category and no recipe station — they never touch the pool/recipe
+## paths. GameState.can_build gates them on rats_enabled() (Town 2 complete).
+static func is_hazard_building(id: String) -> bool:
+	return building_kind(id) == "hazard"
 
 ## Buildable ids (spawners AND refiners) whose unlock_tier is at or below `tier`,
 ## in stable display order (ALL_BUILD_IDS) — so the Bakery is offered too.

@@ -64,6 +64,22 @@ var boss_active: String = ""        ## "" when no fight in progress, else a boss
 var boss_hp: int = 0                ## remaining HP of the active boss
 var town2_complete: bool = false    ## set true when the capstone boss is defeated
 
+# ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
+## SIMPLIFICATION (M3h, consistent with the M3f single-shared-inventory note): per
+## the Direction, Town 3 is its own settlement with the rats lesson. For this
+## milestone "Town 3" is just the EXISTING farm board gaining the rats hazard once
+## town2_complete — a separate Town-3 settlement + the per-settlement resource split
+## remain deferred to a later milestone. Rats become active the moment the capstone
+## boss is defeated (rats_enabled), seeding Constants.RAT_POOL_SLOTS rat tiles into
+## the farm pool. RAT produces nothing, so chaining rats wastes a move — that's the
+## hazard. The Ratcatcher (free "shoo" moves) and Master Ratcatcher (grass chains
+## also clear adjacent rats) are the Town-3 answer (BuildingConfig hazard buildings).
+## The "5 free moves/year" from the Direction maps to RATCATCHER_CHARGES (there is no
+## year/season calendar in the port — see the turn-counter note above — so the
+## charges are a flat per-run budget the player spends down).
+const RATCATCHER_CHARGES: int = 5
+var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -158,6 +174,11 @@ func can_build(id: String) -> bool:
 		return false
 	if settlement.tier < BuildingConfig.unlock_tier(id):
 		return false
+	# M3h: the rats-HAZARD buildings (Ratcatcher / Master Ratcatcher) are buildable
+	# only once rats are a live threat — you can't pre-build a Ratcatcher before
+	# Town 2 is done. Gated ALONGSIDE the unlock-tier check (same "locked" class).
+	if BuildingConfig.is_hazard_building(id) and not rats_enabled():
+		return false
 	if plots_free() <= 0:
 		return false
 	var cost: Dictionary = BuildingConfig.building_cost(id)
@@ -176,6 +197,10 @@ func build(id: String) -> Dictionary:
 	if has_building(id):
 		return {"ok": false, "reason": "exists"}
 	if settlement.tier < BuildingConfig.unlock_tier(id):
+		return {"ok": false, "reason": "locked"}
+	# M3h: rats-HAZARD buildings are locked until rats are enabled (Town 2 done).
+	# Reported with the same "locked" reason as the tier gate — both mean "not yet".
+	if BuildingConfig.is_hazard_building(id) and not rats_enabled():
 		return {"ok": false, "reason": "locked"}
 	if plots_free() <= 0:
 		return {"ok": false, "reason": "no_plot"}
@@ -458,6 +483,12 @@ func active_tile_pool() -> Array:
 		var tile: int = BuildingConfig.building_tile(id)
 		pool.append(tile)
 		pool.append(tile)
+	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat
+	# tiles into the FARM pool (a recurring nuisance, not a takeover). Only the farm
+	# pool gets rats; the mine pool (active_biome_pool while mining) is untouched.
+	if rats_enabled():
+		for _i in Constants.RAT_POOL_SLOTS:
+			pool.append(Constants.Tile.RAT)
 	return pool
 
 # ── Capstone boss (M3g) ───────────────────────────────────────────────────────
@@ -530,6 +561,43 @@ func damage_boss(chain_len: int) -> Dictionary:
 		return {"active": true, "defeated": true, "reward": r, "name": nm}
 	return {"active": true, "defeated": false, "hp": boss_hp}
 
+# ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
+
+## True once rats are a live threat: they appear the moment the capstone boss is
+## defeated (town2_complete) — the Town-3 lesson. SIMPLIFICATION: a single
+## settlement, so this is just "is Town 2 done" rather than "am I in Town 3" (see
+## the per-settlement deferral note on town2_complete / the rats fields above).
+func rats_enabled() -> bool:
+	return town2_complete
+
+## True when a Ratcatcher is placed (free-shoo capability).
+func has_ratcatcher() -> bool:
+	return has_building(BuildingConfig.RATCATCHER)
+
+## True when a Master Ratcatcher is placed (grass chains clear adjacent rats).
+func has_master_ratcatcher() -> bool:
+	return has_building(BuildingConfig.MASTER_RATCATCHER)
+
+## Free shoo-moves left this run: the per-run budget minus what's been spent, never
+## negative, and 0 without a Ratcatcher.
+func ratcatcher_charges_left() -> int:
+	if not has_ratcatcher():
+		return 0
+	return maxi(0, RATCATCHER_CHARGES - ratcatcher_charges_used)
+
+## True when a Ratcatcher is placed AND at least one shoo-move remains.
+func can_shoo_rats() -> bool:
+	return has_ratcatcher() and ratcatcher_charges_left() > 0
+
+## Spend one Ratcatcher shoo-move. Returns true (and increments the spent count)
+## when a charge was available, false otherwise. The ACTUAL board clear happens in
+## Board.clear_all_rats — this only books the charge so the cost is accounted once.
+func use_ratcatcher_charge() -> bool:
+	if not can_shoo_rats():
+		return false
+	ratcatcher_charges_used += 1
+	return true
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
@@ -545,6 +613,7 @@ func to_dict() -> Dictionary:
 		"boss_active": boss_active,
 		"boss_hp": boss_hp,
 		"town2_complete": town2_complete,
+		"ratcatcher_charges_used": ratcatcher_charges_used,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -618,4 +687,9 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.boss_active = saved_boss
 	s.boss_hp = bhp
 	s.town2_complete = bool(d.get("town2_complete", false))
+	# Restore the Town-3 rats state (M3h). Charges-used is clamped to >= 0 (a
+	# corrupt negative can't grant phantom shoo-moves). It is NOT clamped to
+	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
+	# count at 0, so an over-large saved value simply reads as "no charges left".
+	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
 	return s

@@ -43,6 +43,11 @@ enum Tile {
 	COAL,
 	DIRT,
 	GEM,
+	# ── Rats hazard (M3h, Town 3) — APPENDED (ordinal 15) so every farm/mine
+	# ordinal above is unchanged (GRASS==0 … HORSE==9, STONE==10 … GEM==14). RAT is
+	# a board-only HAZARD tile: it produces NOTHING (chaining rats wastes a move) and
+	# only seeds into the FARM pool once Town 2 is complete (GameState.rats_enabled).
+	RAT,
 }
 
 const STRING_KEYS := {
@@ -62,6 +67,8 @@ const STRING_KEYS := {
 	Tile.COAL:     "tile_mine_coal",
 	Tile.DIRT:     "tile_special_dirt",
 	Tile.GEM:      "tile_mine_gem",
+	# Rats hazard (M3h).
+	Tile.RAT:      "rat",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -84,6 +91,10 @@ const PRODUCES := {
 	Tile.COAL:     "coke",
 	Tile.DIRT:     "dirt",
 	Tile.GEM:      "cut_gem",
+	# Rats hazard (M3h): RAT produces NOTHING. Chaining rats is a wasted move — the
+	# point of the hazard. Deliberately absent from THRESHOLDS too, so
+	# threshold_for(RAT) returns the NO_THRESHOLD sentinel and produced_resource is "".
+	Tile.RAT:      "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -162,10 +173,18 @@ const CATEGORY := {
 	Tile.COAL:     "coal",
 	Tile.DIRT:     "dirt",
 	Tile.GEM:      "gem",
+	# Rats hazard (M3h) — its own "rat" category; it is neither a spawner-gated farm
+	# category nor a mine category, so no building adds it to the pool.
+	Tile.RAT:      "rat",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
 const NO_THRESHOLD: int = 1 << 30
+
+## Rats hazard (M3h, Town 3). How many RAT tiles seed into the FARM refill pool
+## while rats are active (GameState.rats_enabled / active_tile_pool). Kept low so
+## rats are a recurring nuisance the player has to manage, not a board takeover.
+const RAT_POOL_SLOTS: int = 2
 
 # ── Static helpers (usable without an instance) ────────────────────────────
 
@@ -203,4 +222,7 @@ static func color_for(tile: int) -> Color:
 		Tile.COAL:     return Color(0.18, 0.18, 0.20)
 		Tile.DIRT:     return Color(0.45, 0.34, 0.24)
 		Tile.GEM:      return Color(0.40, 0.78, 0.85)
+		# Rats hazard (M3h) — a drab vermin grey. No PNG ships this milestone; the
+		# Stage-1 fallback renders this flat color.
+		Tile.RAT:      return Color(0.36, 0.34, 0.38)
 		_:             return Color.MAGENTA
