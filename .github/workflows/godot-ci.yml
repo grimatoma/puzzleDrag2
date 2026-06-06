@@ -44,6 +44,9 @@ jobs:
       - name: Board logic tests
         run: godot --headless --path godot --script res://tests/run_tests.gd
 
+      - name: Game state + save/load tests
+        run: godot --headless --path godot --script res://tests/run_state_tests.gd
+
       - name: Scene wiring smoke test
         run: godot --headless --path godot --script res://tests/run_scene_smoke.gd
 

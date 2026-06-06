@@ -1,15 +1,18 @@
 extends Node2D
 ## Root scene: owns the Board and a CanvasLayer HUD (title, live chain counter,
-## and a running tally of collected resources). M1 deliverable — proves the core
-## mechanic end-to-end with placeholder art.
+## a running tally of collected resources, and a coins/turn readout). M2
+## deliverable — wires the core mechanic to a persistent run economy (GameState)
+## that is loaded on start and saved after every resolved chain.
 
 var board: Board
+var game: GameState                    ## canonical run economy (inventory/coins/turn)
 var _chain_label: Label
 var _status_label: Label
 var _totals_label: Label
-var _totals := {}                      ## resource name -> whole units collected
+var _meta_label: Label                  ## coins + turn readout
 
 func _ready() -> void:
+	game = SaveManager.load_state()
 	_build_hud()
 	board = Board.new()
 	add_child(board)
@@ -17,6 +20,9 @@ func _ready() -> void:
 	board.chain_resolved.connect(_on_chain_resolved)
 	_layout()
 	get_viewport().size_changed.connect(_layout)
+	# Reflect any restored save immediately (inventory + coins + turn).
+	_refresh_totals()
+	_refresh_meta()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -50,7 +56,7 @@ func _build_hud() -> void:
 	layer.add_child(root)
 
 	var title := Label.new()
-	title.text = "puzzleDrag2 · Godot M1"
+	title.text = "puzzleDrag2 · Godot M2"
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.83, 0.90, 0.74))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -94,6 +100,16 @@ func _build_hud() -> void:
 	_totals_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_totals_label)
 
+	_meta_label = Label.new()
+	_meta_label.text = "Coins: 0   ·   Turn: 0"
+	_meta_label.add_theme_font_size_override("font_size", 20)
+	_meta_label.add_theme_color_override("font_color", Color(0.91, 0.78, 0.44))
+	_meta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_meta_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_meta_label.offset_top = 96
+	_meta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_meta_label)
+
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
@@ -102,23 +118,30 @@ func _on_chain_changed(length: int) -> void:
 	else:
 		_chain_label.text = "Chain: %d" % length
 
-func _on_chain_resolved(_tile_type: int, length: int, resource: String, units: int) -> void:
-	if units > 0:
-		_totals[resource] = int(_totals.get(resource, 0)) + units
-		_status_label.text = "Chain of %d  →  +%d %s" % [length, units, resource]
+func _on_chain_resolved(tile_type: int, length: int) -> void:
+	var res: Dictionary = game.credit_chain(tile_type, length)
+	if int(res.get("units", 0)) > 0:
+		_status_label.text = "Chain of %d  →  +%d %s" % [length, res["units"], res["resource"]]
 	else:
 		_status_label.text = "Chain of %d  →  building progress…" % length
 	_refresh_totals()
+	_refresh_meta()
+	SaveManager.save(game)
 
 func _refresh_totals() -> void:
-	if _totals.is_empty():
+	if game == null or game.inventory.is_empty():
 		_totals_label.text = "Collected: —"
 		return
 	var parts: Array = []
-	for key in _totals:
-		parts.append("%s ×%d" % [key, _totals[key]])
+	for key in game.inventory:
+		parts.append("%s ×%d" % [key, game.inventory[key]])
 	parts.sort()
 	_totals_label.text = "Collected:  " + "   ".join(parts)
+
+func _refresh_meta() -> void:
+	if _meta_label == null or game == null:
+		return
+	_meta_label.text = "Coins: %d   ·   Turn: %d" % [game.coins, game.turn]
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

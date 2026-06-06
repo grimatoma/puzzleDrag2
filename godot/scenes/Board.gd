@@ -9,7 +9,9 @@ extends Node2D
 ## from `tiles` so drag validation always sees what the player sees.
 
 signal chain_changed(length: int)                               ## live, while dragging
-signal chain_resolved(tile_type: int, length: int, resource: String, units: int)
+## Fired once a legal chain is collected. The Board reports only WHAT was
+## chained (tile type + length); resource/economy accounting lives in GameState.
+signal chain_resolved(tile_type: int, length: int)
 
 const POP_TIME := 0.13
 const FALL_TIME := 0.22
@@ -162,9 +164,6 @@ func try_resolve(path: Array) -> bool:
 func _resolve(path: Array) -> void:
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
-	var threshold: int = Constants.threshold_for(key)
-	var units: int = BoardLogic.upgrade_count(length, threshold)
-	var resource: String = Constants.produced_resource(key)
 
 	# 1. Pop the collected tiles out, then free them.
 	for cell in path:
@@ -201,7 +200,7 @@ func _resolve(path: Array) -> void:
 	if not BoardLogic.has_valid_chain(grid):
 		setup_new_board()
 
-	chain_resolved.emit(key, length, resource, units)
+	chain_resolved.emit(key, length)
 
 func _slide_to(t: Tile, c: int, r: int) -> void:
 	var tw := create_tween()

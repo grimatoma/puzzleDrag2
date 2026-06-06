@@ -39,8 +39,16 @@ func _initialize() -> void:
 	_check(ok, "try_resolve accepts a valid 3-chain")
 	_check(not _resolved.is_empty(), "chain_resolved signal fired")
 	if not _resolved.is_empty():
-		_check(_resolved["resource"] == "hay_bundle", "resolved resource is hay_bundle (GRASS family)")
+		var key: int = int(_resolved["key"])
+		# Economy now lives in GameState; derive the resource from the chained tile.
+		_check(Constants.produced_resource(key) == "hay_bundle",
+			"resolved tile is GRASS family (produces hay_bundle)")
 		_check(_resolved["length"] == 3, "resolved chain length is 3")
+		# Credit the chain through GameState and confirm the accumulator path.
+		var game := GameState.new()
+		var res := game.credit_chain(key, int(_resolved["length"]))
+		_check(res["resource"] == "hay_bundle", "GameState credits hay_bundle for GRASS")
+		_check(game.turn == 1, "GameState turn advanced after crediting one chain")
 
 	var empties := 0
 	var missing := 0
@@ -58,8 +66,8 @@ func _initialize() -> void:
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
-func _on_resolved(key: int, length: int, resource: String, units: int) -> void:
-	_resolved = {"key": key, "length": length, "resource": resource, "units": units}
+func _on_resolved(key: int, length: int) -> void:
+	_resolved = {"key": key, "length": length}
 
 func _known_grid() -> Array:
 	var t := Constants.Tile
