@@ -13,6 +13,7 @@ var _meta_label: Label                  ## coins + turn readout
 var _settlement_label: Label            ## town tier · cap · plots readout
 var _buildings_label: Label             ## plots used + placed spawners readout
 var _orders_label: Label                ## active NPC orders (resource → reward) readout
+var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
 
 func _ready() -> void:
 	game = SaveManager.load_state()
@@ -165,6 +166,45 @@ func _build_hud() -> void:
 	_orders_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_orders_label)
 
+	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
+	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
+	# IS clickable (unlike every other HUD Control), so it must NOT use
+	# MOUSE_FILTER_IGNORE. Pinned top-left, away from the centred board drag area.
+	var town_btn := Button.new()
+	town_btn.text = "🏠 Town"
+	town_btn.add_theme_font_size_override("font_size", 20)
+	town_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	town_btn.offset_left = 18
+	town_btn.offset_top = 18
+	town_btn.connect("pressed", Callable(self, "_open_town"))
+	root.add_child(town_btn)
+
+# ── Town screen ─────────────────────────────────────────────────────────────
+
+## Open the town panel, lazily creating + wiring it on first use.
+func _open_town() -> void:
+	if _town_screen == null:
+		_town_screen = TownScreen.new()
+		add_child(_town_screen)
+		_town_screen.setup(game)
+		_town_screen.connect("closed", Callable(self, "_on_town_closed"))
+		_town_screen.connect("state_changed", Callable(self, "_on_town_changed"))
+	_town_screen.open()
+
+func _on_town_closed() -> void:
+	if _town_screen != null:
+		_town_screen.visible = false
+
+## A town action mutated `game`: re-pool the board, refresh every HUD label, save.
+func _on_town_changed() -> void:
+	board.set_tile_pool(game.active_tile_pool())
+	_refresh_totals()
+	_refresh_meta()
+	_refresh_settlement()
+	_refresh_buildings()
+	_refresh_orders()
+	SaveManager.save(game)
+
 # ── signal handlers ────────────────────────────────────────────────────────
 
 func _on_chain_changed(length: int) -> void:
@@ -188,11 +228,12 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 
 # ── tier-up + build affordances ──────────────────────────────────────────────
 
-## Temporary dev/demo keyboard affordances (the real town-UI build menu, tier-up
-## button, and Market/Bakery panels land in M3d). These keep the ladder, the
-## spawner system, and the M3c refining/market economy exercisable now. Key input
-## is separate from the board's _unhandled_input mouse handling, so it never
-## interferes with chain drags.
+## Dev/demo keyboard affordances — now a HARMLESS FALLBACK. As of M3e the real
+## path into the town economy is the "🏠 Town" HUD button + the TownScreen panel
+## (build/demolish/tier-up/craft/sell/fill buttons); these keys are kept only so
+## the ladder, spawner system, and refining/market economy stay exercisable from
+## the keyboard. Key input is separate from the board's _unhandled_input mouse
+## handling, so it never interferes with chain drags.
 ##   T     — advance the town one tier (when affordable)
 ##   1/2/3 — build Lumber Camp / Coop / Garden
 ##   4/5/6 — demolish Lumber Camp / Coop / Garden
