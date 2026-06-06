@@ -37,7 +37,7 @@ signal shoo_rats
 ## headless tests can locate + press a specific button. Keys:
 ##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>", "buy:<res>",
 ##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss",
-##   "shoo_rats" (M3h).
+##   "shoo_rats" (M3h), "hire:<worker_id>", "fire:<worker_id>".
 var _action_buttons: Dictionary = {}
 
 ## Static shell (built once in setup()) — the dynamic section bodies hang off the
@@ -51,6 +51,7 @@ var _orders_body: VBoxContainer
 var _expedition_body: VBoxContainer   ## M3f — enter/leave the mine
 var _boss_body: VBoxContainer         ## M3g — challenge the capstone boss
 var _rats_body: VBoxContainer         ## M3h — Town-3 rats hazard (build/shoo)
+var _workers_body: VBoxContainer      ## workers — hire/fire by type
 var _built: bool = false
 
 # ── parchment palette (M4c — matches Main's HUD / Palette.gd journal tokens) ───
@@ -180,6 +181,7 @@ func _build_shell() -> void:
 	_expedition_body = _add_section("Expedition")
 	_boss_body = _add_section("Boss")
 	_rats_body = _add_section("Rats")
+	_workers_body = _add_section("Workers")
 
 ## Append a section to the root VBox: a thin "ledger rule" divider, a header Label,
 ## then an (initially empty) body VBox that refresh() repopulates. Returns the body
@@ -238,6 +240,7 @@ func refresh() -> void:
 	_clear(_expedition_body)
 	_clear(_boss_body)
 	_clear(_rats_body)
+	_clear(_workers_body)
 
 	_build_settlement_section()
 	_build_buildings_section()
@@ -247,6 +250,7 @@ func refresh() -> void:
 	_build_expedition_section()
 	_build_boss_section()
 	_build_rats_section()
+	_build_workers_section()
 
 ## Detach every child of `container` from the tree NOW (so the rebuilt rows render
 ## correctly and the dict is the only live reference), then queue_free it. The
@@ -536,6 +540,67 @@ func _build_rats_section() -> void:
 		_rats_body.add_child(shoo_btn)
 		_action_buttons["shoo_rats"] = shoo_btn
 
+func _build_workers_section() -> void:
+	# Workers — hire-by-type units whose passive effects shave tiles off a chain
+	# (threshold_reduce_category) or stretch a recipe (recipe_input_reduce). One row
+	# per WorkerConfig type: name/role + "×count/max" + an effect summary + the ramped
+	# next-hire cost, a Hire button (disabled unless can_hire_worker), and a Fire button
+	# (only when at least one is hired). Wired to game.hire_worker / fire_worker via
+	# _after, exactly like the build/market rows.
+	for id in WorkerConfig.all_ids():
+		var count: int = game.worker_count(id)
+		var maxc: int = WorkerConfig.max_count(id)
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 10)
+
+		var cost: Dictionary = WorkerConfig.hire_cost_at(id, count)
+		var cost_text: String = _format_worker_cost(cost)
+		var label := _make_label("%s ×%d/%d — %s  (%s)" % [
+			WorkerConfig.worker_name(id), count, maxc,
+			_worker_effect_summary(id), cost_text], COL_BODY)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+
+		# Fire button only when at least one of this type is hired.
+		if count > 0:
+			var fire_btn := Button.new()
+			fire_btn.text = "Fire"
+			fire_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+			UiKit.style_button(fire_btn, COL_DANGER, 6, 0, true)
+			fire_btn.connect("pressed", Callable(self, "_do_fire").bind(id))
+			row.add_child(fire_btn)
+			_action_buttons["fire:" + id] = fire_btn
+
+		var hire_btn := Button.new()
+		hire_btn.text = "Hire"
+		hire_btn.disabled = not game.can_hire_worker(id)
+		hire_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+		UiKit.style_button(hire_btn, Palette.MOSS, 6, 0, true)
+		hire_btn.connect("pressed", Callable(self, "_do_hire").bind(id))
+		row.add_child(hire_btn)
+		_action_buttons["hire:" + id] = hire_btn
+
+		_workers_body.add_child(row)
+
+## A short player-facing description of `id`'s passive effect.
+func _worker_effect_summary(id: String) -> String:
+	var kind: String = WorkerConfig.ability_kind(id)
+	var amount: int = WorkerConfig.ability_amount(id)
+	if kind == WorkerConfig.KIND_THRESHOLD_REDUCE_CATEGORY:
+		return "-%d %s chain" % [amount, WorkerConfig.ability_category(id)]
+	if kind == WorkerConfig.KIND_RECIPE_INPUT_REDUCE:
+		return "-%d %s in %s" % [amount, WorkerConfig.ability_input(id), WorkerConfig.ability_recipe(id)]
+	return ""
+
+## Format a worker hire cost {coins, resources} like "50c, hay_bundle 2".
+func _format_worker_cost(cost: Dictionary) -> String:
+	var parts: Array = ["%dc" % int(cost.get("coins", 0))]
+	var res: Dictionary = cost.get("resources", {})
+	for k in res.keys():
+		parts.append("%s %d" % [k, int(res[k])])
+	return ", ".join(parts)
+
 # ── action handlers ───────────────────────────────────────────────────────────
 # Each calls the GameState method, emits `state_changed` only when the result is
 # ok (a real mutation), and always refresh()es so disabled states re-evaluate
@@ -577,6 +642,15 @@ func _do_challenge_boss() -> void:
 	# start_boss() returns the standard {ok, reason|...} dict, so _after handles it.
 	# Main's _on_town_changed reacts to state_changed by raising the board's chain bar.
 	_after(game.start_boss())
+
+func _do_hire(id: String) -> void:
+	# hire_worker() returns the standard {ok, reason|...} dict, so _after handles it
+	# (emits state_changed on success, always refreshes so disabled states re-evaluate).
+	_after(game.hire_worker(id))
+
+func _do_fire(id: String) -> void:
+	# fire_worker() returns the standard {ok, reason|...} dict, so _after handles it.
+	_after(game.fire_worker(id))
 
 func _do_shoo_rats() -> void:
 	# M3h — this screen has no board ref and must NOT spend the charge (Main owns the
