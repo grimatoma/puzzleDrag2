@@ -54,6 +54,16 @@ var rng := RandomNumberGenerator.new()
 var active_biome: String = "farm"   ## "farm" | "mine" — which biome the board shows
 var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
 
+# ── Capstone boss (M3g, the Town-2 close) ─────────────────────────────────────
+## The Direction's "capstone boss" (Frostmaw): the gate that proves farm + mine
+## mastery before Town 2 opens up. While a boss is active it RAISES the board's
+## minimum chain length (boss_min_chain); you defeat it by landing chains against
+## its HP. Defeating it sets town2_complete, which a later milestone consumes to
+## unlock Town 3. See BossConfig for the catalog.
+var boss_active: String = ""        ## "" when no fight in progress, else a boss id
+var boss_hp: int = 0                ## remaining HP of the active boss
+var town2_complete: bool = false    ## set true when the capstone boss is defeated
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -450,6 +460,76 @@ func active_tile_pool() -> Array:
 		pool.append(tile)
 	return pool
 
+# ── Capstone boss (M3g) ───────────────────────────────────────────────────────
+
+## True while a boss fight is in progress.
+func is_boss_active() -> bool:
+	return boss_active != ""
+
+## True when the capstone boss CAN be challenged right now: Town 2 isn't already
+## done, no fight is in progress, the settlement has reached City (the boss is the
+## City-tier gate), and you've "mastered the mine" — at least 12 combined refined
+## mine goods (block + iron_bar) banked. Guards are ordered so start_boss can report
+## the FIRST failing reason.
+func can_challenge_boss() -> bool:
+	if town2_complete:
+		return false
+	if is_boss_active():
+		return false
+	if settlement.tier < TownConfig.TIER_CITY:
+		return false
+	if qty("block") + qty("iron_bar") < 12:
+		return false
+	return true
+
+## Begin the capstone boss fight. On failure returns {ok:false, reason} (the FIRST
+## guard that trips, in order: "already_done" → "in_fight" → "locked" → "not_ready")
+## WITHOUT mutating. On success: arm Frostmaw at full HP and return
+## {ok:true, name, hp, min_chain}.
+func start_boss() -> Dictionary:
+	if town2_complete:
+		return {"ok": false, "reason": "already_done"}
+	if is_boss_active():
+		return {"ok": false, "reason": "in_fight"}
+	if settlement.tier < TownConfig.TIER_CITY:
+		return {"ok": false, "reason": "locked"}
+	if qty("block") + qty("iron_bar") < 12:
+		return {"ok": false, "reason": "not_ready"}
+	boss_active = BossConfig.FROSTMAW
+	boss_hp = BossConfig.boss_hp(BossConfig.FROSTMAW)
+	return {
+		"ok": true,
+		"name": BossConfig.boss_name(BossConfig.FROSTMAW),
+		"hp": boss_hp,
+		"min_chain": BossConfig.boss_min_chain(BossConfig.FROSTMAW),
+	}
+
+## Minimum chain length the BOARD must demand right now: the active boss's raised
+## bar while fighting, else the base Constants.MIN_CHAIN.
+func boss_min_chain() -> int:
+	if is_boss_active():
+		return BossConfig.boss_min_chain(boss_active)
+	return Constants.MIN_CHAIN
+
+## Apply one resolved chain of length `chain_len` as boss damage. With no boss
+## active returns {active:false} (and changes nothing). Otherwise subtracts the
+## chain length from HP (clamped at 0). When HP hits 0 the boss is DEFEATED: mark
+## Town 2 complete, credit the reward coins, clear the fight, and return
+## {active:true, defeated:true, reward, name}. Otherwise returns
+## {active:true, defeated:false, hp:<remaining>}.
+func damage_boss(chain_len: int) -> Dictionary:
+	if not is_boss_active():
+		return {"active": false}
+	boss_hp = maxi(0, boss_hp - chain_len)
+	if boss_hp == 0:
+		var r: int = BossConfig.boss_reward(boss_active)
+		var nm: String = BossConfig.boss_name(boss_active)
+		town2_complete = true
+		coins += r
+		boss_active = ""
+		return {"active": true, "defeated": true, "reward": r, "name": nm}
+	return {"active": true, "defeated": false, "hp": boss_hp}
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
@@ -462,6 +542,9 @@ func to_dict() -> Dictionary:
 		"orders": orders.duplicate(true),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
+		"boss_active": boss_active,
+		"boss_hp": boss_hp,
+		"town2_complete": town2_complete,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -522,4 +605,17 @@ static func from_dict(d: Dictionary) -> GameState:
 		turns = 0
 	s.active_biome = biome
 	s.mine_turns_left = turns
+	# Restore the capstone-boss state defensively (M3g). Keep boss_active only if it
+	# names a REAL boss (a bogus id → "" = no fight); HP can't go negative; and a
+	# "no fight" state ("") snaps HP to 0 so a stale save can't strand a phantom
+	# fight with leftover HP. town2_complete is coerced to a plain bool.
+	var saved_boss := String(d.get("boss_active", ""))
+	if not BossConfig.is_boss(saved_boss):
+		saved_boss = ""
+	var bhp: int = maxi(0, int(d.get("boss_hp", 0)))
+	if saved_boss == "":
+		bhp = 0
+	s.boss_active = saved_boss
+	s.boss_hp = bhp
+	s.town2_complete = bool(d.get("town2_complete", false))
 	return s

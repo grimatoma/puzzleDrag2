@@ -32,7 +32,7 @@ signal state_changed   ## emitted after any action mutates `game`
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
 ##   "close", "tierup", "build:<id>", "demolish:<id>", "sell:<res>",
-##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine".
+##   "craft:<recipe>", "fill:<index>", "enter_mine", "leave_mine", "challenge_boss".
 var _action_buttons: Dictionary = {}
 
 ## Static shell (built once in setup()) — the dynamic section bodies hang off the
@@ -44,6 +44,7 @@ var _refine_body: VBoxContainer
 var _market_body: VBoxContainer
 var _orders_body: VBoxContainer
 var _expedition_body: VBoxContainer   ## M3f — enter/leave the mine
+var _boss_body: VBoxContainer         ## M3g — challenge the capstone boss
 var _built: bool = false
 
 # ── earthy palette (matches Main's HUD) ───────────────────────────────────────
@@ -152,6 +153,7 @@ func _build_shell() -> void:
 	_market_body = _add_section("Market")
 	_orders_body = _add_section("Orders")
 	_expedition_body = _add_section("Expedition")
+	_boss_body = _add_section("Boss")
 
 ## Append a section to the root VBox: a header Label then an (initially empty)
 ## body VBox that refresh() repopulates. Returns the body VBox.
@@ -196,6 +198,7 @@ func refresh() -> void:
 	_clear(_market_body)
 	_clear(_orders_body)
 	_clear(_expedition_body)
+	_clear(_boss_body)
 
 	_build_settlement_section()
 	_build_buildings_section()
@@ -203,6 +206,7 @@ func refresh() -> void:
 	_build_market_section()
 	_build_orders_section()
 	_build_expedition_section()
+	_build_boss_section()
 
 ## Detach every child of `container` from the tree NOW (so the rebuilt rows render
 ## correctly and the dict is the only live reference), then queue_free it. The
@@ -370,6 +374,34 @@ func _build_expedition_section() -> void:
 	_expedition_body.add_child(enter_btn)
 	_action_buttons["enter_mine"] = enter_btn
 
+func _build_boss_section() -> void:
+	# M3g — the capstone boss (Frostmaw), the Town-2 close. You don't fight from a
+	# button here: an active boss raises the BOARD's chain bar, so you damage it by
+	# chaining on the board. While fighting we show its HP + a hint to go chain; once
+	# Town 2 is done we show the win mark; otherwise a challenge row gated by
+	# can_challenge_boss() (City tier + mine mastery).
+	if game.is_boss_active():
+		_boss_body.add_child(_make_label(
+			"⚔ Fighting %s — HP %d" % [
+				BossConfig.boss_name(game.boss_active), game.boss_hp], COL_BODY))
+		_boss_body.add_child(_make_label(
+			"Close this menu and chain 4+ tiles to damage it.", COL_MUTED))
+		return
+
+	if game.town2_complete:
+		_boss_body.add_child(_make_label(
+			"✓ Town 2 complete — Frostmaw defeated.", COL_BODY))
+		return
+
+	_boss_body.add_child(_make_label(
+		"Capstone: %s" % BossConfig.boss_desc(BossConfig.FROSTMAW), COL_BODY))
+	var challenge_btn := Button.new()
+	challenge_btn.text = "⚔ Challenge Frostmaw"
+	challenge_btn.disabled = not game.can_challenge_boss()
+	challenge_btn.connect("pressed", Callable(self, "_do_challenge_boss"))
+	_boss_body.add_child(challenge_btn)
+	_action_buttons["challenge_boss"] = challenge_btn
+
 # ── action handlers ───────────────────────────────────────────────────────────
 # Each calls the GameState method, emits `state_changed` only when the result is
 # ok (a real mutation), and always refresh()es so disabled states re-evaluate
@@ -403,6 +435,11 @@ func _do_leave_mine() -> void:
 	game.leave_mine()
 	emit_signal("state_changed")
 	refresh()
+
+func _do_challenge_boss() -> void:
+	# start_boss() returns the standard {ok, reason|...} dict, so _after handles it.
+	# Main's _on_town_changed reacts to state_changed by raising the board's chain bar.
+	_after(game.start_boss())
 
 ## Shared tail: emit state_changed when the action succeeded, then always
 ## re-render so disabled affordances reflect the new state.
