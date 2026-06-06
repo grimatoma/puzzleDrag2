@@ -86,6 +86,20 @@ var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGE
 ## from the menu; persisted so the choice survives a reload. Defaults to "on".
 var audio_muted: bool = false
 
+# ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
+## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
+## A missing key reads as 0 (no charges). This is the persisted half of the tool
+## system: tools are GRANTED (grant_tool), CONSUMED one charge per use
+## (use_tool_on_grid), and the key is ERASED when its count hits 0 so the dict stays
+## a clean "owned, usable" set. The pure board effects live in ToolEffects /
+## ToolConfig (M8a); this layer just owns the inventory + the credit/consume flow.
+var tools: Dictionary = {}
+## The armed TAP-target tool awaiting a board cell, or "" when nothing is armed.
+## TRANSIENT — deliberately NOT persisted (arm_tool / clear_pending_tool only):
+## arming is a momentary input mode the live Board (M8c) drives, not save state. A
+## reload always starts disarmed.
+var pending_tool: String = ""
+
 ## Seed the order generator so generate_order / refill_orders are reproducible.
 func seed_orders(s: int) -> void:
 	rng.seed = s
@@ -619,6 +633,103 @@ func use_ratcatcher_charge() -> bool:
 	ratcatcher_charges_used += 1
 	return true
 
+# ── Tools (M8b) ───────────────────────────────────────────────────────────────
+
+## Grant `n` charges of tool `id`. No-op for an unknown id (ToolConfig doesn't know
+## it) or a non-positive `n`. Adds to any existing charges so granting the same tool
+## twice stacks. A fresh grant creates the key; the count is always kept > 0.
+func grant_tool(id: String, n: int = 1) -> void:
+	if n <= 0:
+		return
+	if not ToolConfig.has_tool(id):
+		return
+	tools[id] = int(tools.get(id, 0)) + n
+
+## Remaining charges of tool `id` (0 when unowned / never granted).
+func tool_count(id: String) -> int:
+	return int(tools.get(id, 0))
+
+## True when `id` has at least one charge owned (regardless of whether ToolConfig
+## still knows it — a count > 0 means it was validly granted).
+func has_tool_charges(id: String) -> bool:
+	return tool_count(id) > 0
+
+## True when `id` is a REAL tool (ToolConfig knows it) AND has at least one charge.
+## The gate use_tool_on_grid checks first.
+func can_use_tool(id: String) -> bool:
+	return ToolConfig.has_tool(id) and has_tool_charges(id)
+
+## Arm a TAP-target tool so the next board cell fires it. Returns true on success
+## (the tool is a known tap tool with charges → pending_tool is set). Returns false
+## WITHOUT arming for an unknown tool, a NON-tap (instant) tool, or one with no
+## charges — instant tools fire immediately and never need arming.
+func arm_tool(id: String) -> bool:
+	if not can_use_tool(id):
+		return false
+	if not ToolConfig.is_tap_target(id):
+		return false
+	pending_tool = id
+	return true
+
+## True while a tap-target tool is armed and waiting for a board cell.
+func is_tool_armed() -> bool:
+	return pending_tool != ""
+
+## Disarm any pending tap-target tool (cancel the armed input mode).
+func clear_pending_tool() -> void:
+	pending_tool = ""
+
+## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
+## Returns {ok, reason, grid, collected}:
+##   - ok=false leaves the grid/inventory/charges UNCHANGED and names the FIRST guard
+##     that trips: "unknown" (ToolConfig doesn't know it), "no_charges" (owned 0),
+##     "needs_target" (a tap tool with an out-of-bounds / (-1,-1) cell).
+##   - ok=true applies the dispatched ToolEffects result: tap tools go through
+##     ToolConfig.apply_tap(grid, id, cell); instant tools through apply_instant.
+##     Every {tile_value: count} in the effect's `collected` is credited via
+##     credit_chain(tile_value, count) — so a tool-harvested tile yields resources/
+##     coins EXACTLY like a chain of that length (same thresholds, cap, carry-over,
+##     coins path). Transform tools return `transformed` (not `collected`) and credit
+##     nothing — they only remap the grid. One charge of `id` is then consumed (the
+##     key erased at 0) and, if `id` was the armed pending_tool, it's disarmed.
+## Does NOT collapse/refill — that's the Board's job in M8c. The caller threads the
+## returned grid into its own collapse/refill pipeline.
+func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)) -> Dictionary:
+	if not ToolConfig.has_tool(id):
+		return {"ok": false, "reason": "unknown", "grid": grid, "collected": {}}
+	if not has_tool_charges(id):
+		return {"ok": false, "reason": "no_charges", "grid": grid, "collected": {}}
+	var is_tap: bool = ToolConfig.is_tap_target(id)
+	if is_tap and not BoardLogic.in_bounds(cell):
+		return {"ok": false, "reason": "needs_target", "grid": grid, "collected": {}}
+	# Dispatch to the matching ToolEffects primitive via ToolConfig.
+	var res: Dictionary
+	if is_tap:
+		res = ToolConfig.apply_tap(grid, id, cell)
+	else:
+		res = ToolConfig.apply_instant(grid, id)
+	# Defensive: an unhandled power id returns {} from ToolConfig — treat as a no-op
+	# failure WITHOUT consuming a charge so a misconfigured tool can't burn uses.
+	if res.is_empty() or not res.has("grid"):
+		return {"ok": false, "reason": "no_effect", "grid": grid, "collected": {}}
+	var new_grid: Array = res["grid"]
+	# Credit each collected tile EXACTLY like a chain of that length (credit_chain
+	# routes thresholds/cap/coins). Transform effects carry `transformed`, not
+	# `collected`, so this loop simply doesn't run for them (they credit nothing).
+	var collected: Dictionary = res.get("collected", {})
+	for tile_value in collected.keys():
+		credit_chain(int(tile_value), int(collected[tile_value]))
+	# Consume one charge; erase the key at 0 so `tools` stays an owned-and-usable set.
+	var left: int = int(tools.get(id, 0)) - 1
+	if left <= 0:
+		tools.erase(id)
+	else:
+		tools[id] = left
+	# If this was the armed tap tool, disarm it now that it has fired.
+	if pending_tool == id:
+		pending_tool = ""
+	return {"ok": true, "reason": "", "grid": new_grid, "collected": collected}
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
@@ -636,6 +747,9 @@ func to_dict() -> Dictionary:
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
 		"audio_muted": audio_muted,
+		# M8b: owned tool charges. pending_tool is TRANSIENT and intentionally NOT
+		# persisted (a reload always starts disarmed).
+		"tools": tools.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -717,4 +831,17 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
+	# Restore owned tool charges (M8b). Missing key (any save written before tools
+	# existed) → {} (no tools). Each value is coerced to int (JSON yields floats) and
+	# only positive counts are kept — a 0/negative or non-numeric entry is dropped so
+	# the loaded `tools` is always a clean owned-and-usable set. pending_tool is
+	# transient and never restored (a reload starts disarmed). SAVE_VERSION is NOT
+	# bumped: like every prior additive field (M3f/M3g/M3h/M4f), the defensive default
+	# means old v1 saves still load (a save with no tools == tools {}).
+	var tls: Variant = d.get("tools", {})
+	if tls is Dictionary:
+		for k in tls:
+			var n: int = int(tls[k])
+			if n > 0:
+				s.tools[String(k)] = n
 	return s

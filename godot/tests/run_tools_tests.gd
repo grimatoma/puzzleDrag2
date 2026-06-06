@@ -50,6 +50,16 @@ func _initialize() -> void:
 	_test_apply_instant_stone_hammer()
 	_test_apply_instant_drill()
 	_test_apply_dispatch_guards()
+	# ── GameState tool API (M8b) ───────────────────────────────────────────────
+	print("── GameState tool API (M8b) ───────────────────────")
+	_test_gs_grant_and_counts()
+	_test_gs_arm_only_tap_tools()
+	_test_gs_use_instant_credits_and_consumes()
+	_test_gs_use_tap_credits_consumes_disarms()
+	_test_gs_use_guards()
+	_test_gs_hazard_not_credited()
+	_test_gs_transform_credits_nothing()
+	_test_gs_save_load_roundtrip()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -431,3 +441,167 @@ func _test_apply_dispatch_guards() -> void:
 	_check(ToolConfig.apply_tap(g, "stone_hammer", Vector2i(0, 0)).is_empty(), "apply_tap refuses an instant tool (stone_hammer)")
 	_check(ToolConfig.apply_instant(g, "not_a_tool").is_empty(), "apply_instant(unknown) returns empty dict")
 	_check(ToolConfig.apply_tap(g, "not_a_tool", Vector2i(0, 0)).is_empty(), "apply_tap(unknown) returns empty dict")
+
+# ── GameState tool API (M8b) ──────────────────────────────────────────────────
+
+func _test_gs_grant_and_counts() -> void:
+	var gs := GameState.new()
+	_check(gs.tool_count("stone_hammer") == 0, "fresh GameState owns 0 stone_hammer")
+	_check(not gs.can_use_tool("stone_hammer"), "can_use_tool false with no charges")
+	gs.grant_tool("stone_hammer", 2)
+	_check(gs.tool_count("stone_hammer") == 2, "grant_tool(2) → count 2")
+	_check(gs.can_use_tool("stone_hammer"), "can_use_tool true after grant")
+	_check(gs.has_tool_charges("stone_hammer"), "has_tool_charges true after grant")
+	# Granting again stacks.
+	gs.grant_tool("stone_hammer")
+	_check(gs.tool_count("stone_hammer") == 3, "grant_tool() default n=1 stacks → 3")
+	# Unknown id and non-positive n are no-ops.
+	gs.grant_tool("not_a_tool", 5)
+	_check(gs.tool_count("not_a_tool") == 0, "grant_tool(unknown) is a no-op")
+	_check(not gs.can_use_tool("not_a_tool"), "can_use_tool(unknown) is false")
+	gs.grant_tool("bomb", 0)
+	gs.grant_tool("bomb", -3)
+	_check(gs.tool_count("bomb") == 0, "grant_tool with n<=0 is a no-op")
+
+func _test_gs_arm_only_tap_tools() -> void:
+	var gs := GameState.new()
+	# Cannot arm without charges.
+	_check(not gs.arm_tool("bomb"), "arm_tool fails with no charges")
+	_check(not gs.is_tool_armed(), "not armed after a failed arm")
+	gs.grant_tool("bomb")
+	_check(gs.arm_tool("bomb"), "arm_tool('bomb') succeeds (tap tool with a charge)")
+	_check(gs.is_tool_armed(), "is_tool_armed true after arming bomb")
+	_check(gs.pending_tool == "bomb", "pending_tool names the armed tool")
+	gs.clear_pending_tool()
+	_check(not gs.is_tool_armed(), "clear_pending_tool disarms")
+	# Instant tools can never be armed.
+	gs.grant_tool("stone_hammer")
+	_check(not gs.arm_tool("stone_hammer"), "arm_tool refuses an INSTANT tool")
+	_check(not gs.is_tool_armed(), "instant tool did not arm anything")
+	# Unknown id can't arm.
+	_check(not gs.arm_tool("not_a_tool"), "arm_tool refuses an unknown id")
+
+func _test_gs_use_instant_credits_and_consumes() -> void:
+	var gs := GameState.new()
+	gs.grant_tool("stone_hammer", 2)
+	# A grid with a known number of STONE; the rest grass so credit is isolated.
+	var g := _full(T.GRASS)
+	g[0][0] = T.STONE
+	g[0][1] = T.STONE
+	g[3][3] = T.STONE
+	g[5][5] = T.STONE   # 4 STONE total
+	# Expected credit: compare against what credit_chain(STONE, 4) does on a twin state.
+	var twin := GameState.new()
+	var expected := twin.credit_chain(T.STONE, 4)
+	var res := gs.use_tool_on_grid("stone_hammer", g)
+	_check(res["ok"], "use_tool_on_grid('stone_hammer') ok")
+	_check(_count_of(res["grid"], T.STONE) == 0, "stone_hammer cleared every STONE on the grid")
+	_check(_count_of(res["grid"], T.GRASS) == 32, "stone_hammer left grass untouched")
+	_check(int(res["collected"].get(T.STONE, 0)) == 4, "use returned collected: 4 STONE")
+	# Credited resources match the credit_chain(STONE,4) twin exactly.
+	_check(gs.qty("block") == twin.qty("block"), "credited 'block' matches credit_chain(STONE,4)")
+	_check(int(gs.progress.get("block", 0)) == int(twin.progress.get("block", 0)),
+		"credited progress for 'block' matches the twin (carry-over identical)")
+	_check(expected["resource"] == "block", "STONE produces 'block' (sanity)")
+	# Charge decremented 2 → 1.
+	_check(gs.tool_count("stone_hammer") == 1, "stone_hammer charge decremented to 1")
+	# Input grid not mutated by GameState either (ToolEffects deep-copies).
+	_check(_count_of(g, T.STONE) == 4, "use_tool_on_grid did not mutate the caller's grid")
+
+func _test_gs_use_tap_credits_consumes_disarms() -> void:
+	var gs := GameState.new()
+	gs.grant_tool("bomb")
+	_check(gs.arm_tool("bomb"), "armed bomb")
+	# Interior 3x3 of GEM at (2,2) so the whole blast credits the same resource.
+	var g := _full(T.GRASS)
+	for r in range(1, 4):
+		for c in range(1, 4):
+			g[r][c] = T.GEM   # 9 GEM in the 3x3 the bomb will clear
+	var twin := GameState.new()
+	twin.credit_chain(T.GEM, 9)
+	var res := gs.use_tool_on_grid("bomb", g, Vector2i(2, 2))
+	_check(res["ok"], "use_tool_on_grid('bomb', cell) ok")
+	# All 9 GEM in the 3x3 cleared.
+	_check(_count_of(res["grid"], T.GEM) == 0, "bomb cleared the 3x3 GEM block")
+	_check(int(res["collected"].get(T.GEM, 0)) == 9, "bomb collected 9 GEM")
+	_check(gs.qty("cut_gem") == twin.qty("cut_gem"), "credited 'cut_gem' matches credit_chain(GEM,9)")
+	# Charge consumed (1 → 0, key erased) and disarmed.
+	_check(gs.tool_count("bomb") == 0, "bomb charge consumed to 0")
+	_check(not gs.tools.has("bomb"), "bomb key erased at 0 charges")
+	_check(not gs.is_tool_armed(), "pending_tool cleared after firing the armed bomb")
+
+func _test_gs_use_guards() -> void:
+	var gs := GameState.new()
+	var g := _full(T.GRASS)
+	# 0 charges → ok=false, grid + inventory untouched.
+	var r0 := gs.use_tool_on_grid("stone_hammer", g)
+	_check(not r0["ok"] and r0["reason"] == "no_charges", "use with 0 charges → ok=false no_charges")
+	_check(r0["grid"] == g and gs.inventory.is_empty(), "no_charges guard mutated nothing")
+	# Tap tool with the default (-1,-1) cell → needs_target (no charge spent).
+	gs.grant_tool("bomb")
+	var r1 := gs.use_tool_on_grid("bomb", g)
+	_check(not r1["ok"] and r1["reason"] == "needs_target", "tap tool with (-1,-1) → needs_target")
+	_check(gs.tool_count("bomb") == 1, "needs_target did NOT consume a charge")
+	# Out-of-bounds cell for a tap tool → also needs_target.
+	var r2 := gs.use_tool_on_grid("bomb", g, Vector2i(99, 99))
+	_check(not r2["ok"] and r2["reason"] == "needs_target", "tap tool with OOB cell → needs_target")
+	# Unknown id → unknown.
+	var r3 := gs.use_tool_on_grid("not_a_tool", g)
+	_check(not r3["ok"] and r3["reason"] == "unknown", "unknown id → ok=false unknown")
+
+func _test_gs_hazard_not_credited() -> void:
+	# A bomb over a 3x3 that contains a RAT and a RUBBLE: hazards survive and are NOT
+	# credited (ToolEffects skips them, so they never appear in `collected`).
+	var gs := GameState.new()
+	gs.grant_tool("bomb")
+	var g := _full(T.STONE)
+	g[2][2] = T.RAT      # center of the blast (col=2,row=2)
+	g[2][3] = T.RUBBLE   # also in the 3x3 (col=3,row=2)
+	var res := gs.use_tool_on_grid("bomb", g, Vector2i(2, 2))
+	_check(res["ok"], "bomb over hazards still ok")
+	_check(res["grid"][2][2] == T.RAT and res["grid"][2][3] == T.RUBBLE, "RAT/RUBBLE survive the bomb")
+	# Only the 7 non-hazard STONE in the 3x3 are collected/credited.
+	_check(int(res["collected"].get(T.STONE, 0)) == 7, "collected only 7 non-hazard STONE")
+	# RAT/RUBBLE produce nothing, and credit must never gain a rat/rubble resource.
+	_check(not gs.inventory.has("rat") and not gs.inventory.has("rubble"),
+		"inventory gained no rat/rubble resource")
+	_check(not gs.progress.has("rat") and not gs.progress.has("rubble"),
+		"progress gained no rat/rubble entry")
+
+func _test_gs_transform_credits_nothing() -> void:
+	# A transform tool (drill: DIRT→STONE) returns `transformed`, not `collected`, so
+	# it credits NOTHING — it only remaps the grid.
+	var gs := GameState.new()
+	gs.grant_tool("drill")
+	var g := _full(T.DIRT)
+	var res := gs.use_tool_on_grid("drill", g)
+	_check(res["ok"], "drill (transform) ok")
+	_check(_count_of(res["grid"], T.STONE) == 36 and _count_of(res["grid"], T.DIRT) == 0,
+		"drill remapped DIRT→STONE on the grid")
+	_check(res["collected"].is_empty(), "transform tool returns no collected counts")
+	_check(gs.inventory.is_empty() and gs.progress.is_empty(), "transform credited nothing")
+	_check(gs.tool_count("drill") == 0, "drill charge still consumed (1 → 0)")
+
+func _test_gs_save_load_roundtrip() -> void:
+	var gs := GameState.new()
+	gs.grant_tool("stone_hammer", 3)
+	gs.grant_tool("bomb", 1)
+	gs.arm_tool("bomb")   # pending_tool set — must NOT survive the round-trip.
+	var d := gs.to_dict()
+	_check(d.has("tools"), "to_dict includes 'tools'")
+	_check(not d.has("pending_tool"), "to_dict does NOT persist transient pending_tool")
+	var back := GameState.from_dict(d)
+	_check(back.tool_count("stone_hammer") == 3 and back.tool_count("bomb") == 1,
+		"from_dict round-trips tool charges exactly")
+	_check(back.tools.size() == 2, "no extra tool keys after round-trip")
+	_check(not back.is_tool_armed(), "loaded state starts disarmed (pending_tool not persisted)")
+	# A save dict with NO 'tools' key (an old save) loads as {} — defensive default.
+	var legacy := GameState.new().to_dict()
+	legacy.erase("tools")
+	var old := GameState.from_dict(legacy)
+	_check(old.tools.is_empty(), "a dict missing 'tools' loads as {} (old-save default)")
+	# Malformed entries (0 / negative / non-numeric) are dropped on load.
+	var dirty := {"tools": {"bomb": 2, "stone_hammer": 0, "axe": -1, "scythe": "x"}}
+	var cleaned := GameState.from_dict(dirty)
+	_check(cleaned.tool_count("bomb") == 2, "from_dict keeps the valid positive tool count")
+	_check(cleaned.tools.size() == 1, "from_dict drops 0/negative/non-numeric tool entries")
