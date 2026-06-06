@@ -82,6 +82,11 @@ var _chronicle_screen                   ## CanvasLayer (ChronicleScreenScript), 
 ## (NO class_name) so the port never needs an --import pass to register it as a global.
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
 var _townsfolk_screen                   ## CanvasLayer (TownsfolkScreenScript), lazily created
+## Cartography world-map screen — the 3-zone world view + alternate expedition entry, lazily
+## created. Loaded via preload (NO class_name) so the port never needs an --import pass to
+## register it as a global (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk).
+const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
+var _cartography_screen                  ## CanvasLayer (CartographyScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -590,6 +595,27 @@ func _build_hud() -> void:
 	folk_btn.connect("pressed", Callable(self, "_open_townsfolk"))
 	root.add_child(folk_btn)
 
+	# Cartography — always-visible "🧭" world-map button, pinned top-LEFT just under the
+	# 👥 townsfolk button (offset_top 294, ~38px tall) so the eight buttons stack without
+	# overlapping and all clear the centred board drag area. Same parchment-pill look.
+	# Opens the CartographyScreen world map (a DISTINCT icon + modal from the 🗺 town
+	# building map, which keeps the "map"→TOWNMAP routing).
+	var carto_btn := Button.new()
+	carto_btn.text = "🧭"
+	carto_btn.add_theme_font_size_override("font_size", 20)
+	carto_btn.add_theme_color_override("font_color", Palette.INK)
+	carto_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	carto_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	carto_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	carto_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	carto_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	carto_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	carto_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	carto_btn.offset_left = 18
+	carto_btn.offset_top = 340
+	carto_btn.connect("pressed", Callable(self, "_open_cartography"))
+	root.add_child(carto_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1011,6 +1037,51 @@ func _on_townsfolk_closed() -> void:
 		_townsfolk_screen.visible = false
 	_router.close_modal()
 
+# ── Cartography world map (3-zone view + alternate expedition entry) ────────────
+
+## Open the cartography world-map modal, lazily creating + wiring it on first use (mirrors
+## _open_townsfolk). The screen re-reads the live GameState (active_biome → current zone,
+## town2_complete / can_enter_mine / can_enter_harbor → travel-button state) on open(), so
+## the map always reflects where you are + what's reachable. Its `travel_requested` signal is
+## routed to Main, the SINGLE mutation point, which performs the real enter_mine/enter_harbor.
+func _open_cartography() -> void:
+	if _cartography_screen == null:
+		_cartography_screen = CartographyScreenScript.new()
+		add_child(_cartography_screen)
+		_cartography_screen.setup(game)
+		_cartography_screen.connect("closed", Callable(self, "_on_cartography_closed"))
+		_cartography_screen.connect("travel_requested", Callable(self, "_on_cartography_travel"))
+	_cartography_screen.open()
+	_router.open_modal(ViewRouter.Modal.CARTOGRAPHY)
+
+func _on_cartography_closed() -> void:
+	if _cartography_screen != null:
+		_cartography_screen.visible = false
+	_router.close_modal()
+
+## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
+## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
+## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
+## TownScreen expedition uses (state_changed → _on_town_changed) so we don't duplicate the
+## board-pool swap / hazard-flag / pearl-placement logic. On a failed launch (guards trip),
+## the map simply closed — nothing mutated.
+func _on_cartography_travel(zone_id: String) -> void:
+	# Close the map first so the biome swap + any queued story beat surface over the board.
+	_on_cartography_closed()
+	var res: Dictionary = {}
+	match zone_id:
+		"mine":
+			res = game.enter_mine()
+		"harbor":
+			res = game.enter_harbor()
+		_:
+			return
+	if bool(res.get("ok", false)):
+		# Reuse Main's existing biome-change path (the one the TownScreen routes through):
+		# re-pool + regenerate the board onto the new biome, set the hazard/pearl flags, refresh
+		# every affected HUD surface, and save. No duplicated biome-swap logic here.
+		_on_town_changed()
+
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 
 ## Present the FRONT of game.story.beat_queue in the beat modal, lazily creating + wiring
@@ -1089,6 +1160,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_chronicle()
 		ViewRouter.Modal.TOWNSFOLK:
 			_open_townsfolk()
+		ViewRouter.Modal.CARTOGRAPHY:
+			_open_cartography()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1114,6 +1187,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _townsfolk_screen != null and _townsfolk_screen.visible:
 				_townsfolk_screen.visible = false
+				_router.close_modal()
+			elif _cartography_screen != null and _cartography_screen.visible:
+				_cartography_screen.visible = false
 				_router.close_modal()
 	return true
 
