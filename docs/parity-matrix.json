@@ -101,7 +101,7 @@
       "godot_status": "full",
       "target_milestone": "DONE",
       "verified_by": ["run_rats_tests.gd"],
-      "note": "RAT tiles seed farm pool once town2_complete; Ratcatcher + Master Ratcatcher. Note: RAT has no PNG (flat placeholder) -> art fed in M7."
+      "note": "RAT tiles seed farm pool once town2_complete; Ratcatcher + Master Ratcatcher. Rat tile art authored and fed (M7a, run_assets_tests — 40 checks)."
     },
     {
       "id": "system-rubble",
@@ -111,7 +111,7 @@
       "godot_status": "full",
       "target_milestone": "DONE",
       "verified_by": ["run_rubble_tests.gd"],
-      "note": "RUBBLE seeds mine pool; cleared by STONE chains sweeping 8-adjacent rubble. No PNG yet (flat placeholder) -> art fed in M7."
+      "note": "RUBBLE seeds mine pool; cleared by STONE chains sweeping 8-adjacent rubble. Rubble tile art authored and fed (M7a, run_assets_tests — 40 checks)."
     },
     {
       "id": "system-save-load",
@@ -292,7 +292,7 @@
       "godot_status": "partial",
       "target_milestone": "M7",
       "verified_by": ["run_rats_tests.gd", "golden:board-farm-fire-rats"],
-      "note": "Rats fully ported; fire/wolves absent. Hazard visual overlays + missing tile art come in M7."
+      "note": "Rats fully ported; fire/wolves absent. Rat tile art now fed (M7a); fire/wolves overlays remain absent."
     },
     {
       "id": "system-mine-hazards",
@@ -302,7 +302,7 @@
       "godot_status": "partial",
       "target_milestone": "M7",
       "verified_by": ["run_rubble_tests.gd", "golden:board-mine-hazards"],
-      "note": "Rubble (cave-in) ported; gas-vent/lava/mole absent. Hazard overlays + missing tile art come in M7."
+      "note": "Rubble (cave-in) ported; gas-vent/lava/mole absent. Rubble tile art now fed (M7a); gas-vent/lava/mole remain absent."
     },
     {
       "id": "system-tutorial",
@@ -624,7 +624,7 @@
       "godot_status": "partial",
       "target_milestone": "M6",
       "verified_by": ["run_town_layout_tests.gd", "run_townmap_tests.gd", "run_town_map_tests.gd", "e2e:town-build", "golden:town-home-built-out"],
-      "note": "Spatial town map ported from src/townLayout.ts (TownLayout.gd) and rendered (TownMap.gd); reachable in-game via TownMapScreen with real GameState (plots from tier, built buildings as placeholder houses). View-only — pan/zoom + clickable plots (M6d) and e2e/golden land with M-infra."
+      "note": "Spatial town map ported from src/townLayout.ts (TownLayout.gd) and rendered (TownMap.gd); reachable in-game via TownMapScreen with real GameState (plots from tier, built buildings as placeholder houses). Plots are now clickable (M6d): clicking an empty plot opens the build picker (lists buildings + costs, live can_build gating); clicking a built plot demolishes — reusing GameState.build/demolish; 53-check run_townmap_tests. Pan/zoom and per-plot spatial placement remain pending."
     },
     {
       "id": "view-board",
@@ -906,7 +906,7 @@
       "godot_status": "partial",
       "target_milestone": "M7",
       "verified_by": ["run_visual_tests.gd", "golden:board-farm-fire-rats"],
-      "note": "Farm with fire and rat hazards; rat art + fire system overlays (M7)."
+      "note": "Farm with fire and rat hazards; rat tile art now fed (M7a). Fire system + overlay infra still pending M-infra visual suite for the golden itself."
     },
     {
       "id": "golden-board-farm-tool-rake",
@@ -966,7 +966,7 @@
       "godot_status": "partial",
       "target_milestone": "M7",
       "verified_by": ["run_visual_tests.gd", "golden:board-mine-hazards"],
-      "note": "Mine with cave-in/gas-vent/lava hazards; rubble art + hazard overlays (M7)."
+      "note": "Mine with cave-in/gas-vent/lava hazards; rubble tile art now fed (M7a). Gas-vent/lava overlays + M-infra visual suite still pending for the golden itself."
     },
     {
       "id": "golden-board-fish-idle-high-tide",
