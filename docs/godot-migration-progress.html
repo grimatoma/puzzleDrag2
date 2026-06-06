@@ -187,7 +187,7 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3c-economy</code></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-05 · Branch <code>claude/godot-migration-m3d-orders</code></p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
@@ -226,8 +226,10 @@
           tile category enters the refill pool <i>only</i> because a spawner <b>building</b> (Lumber Camp, Coop, Garden) put it
           there, plots are scarce, and demolish frees a plot and drops its category. <b>M3c</b> now closes the loop with the
           <b>refining + market economy</b>: a <b>Bakery</b> refiner bakes raw goods into bread (3&nbsp;flour&nbsp;+&nbsp;1&nbsp;eggs → 1&nbsp;bread)
-          via station-gated recipes, and a cap-aware <b>Market</b> sells goods for coins and buys them back. It renders as a playable
-          board with placeholder art and a live economy + settlement + buildings HUD. Headless tests and a Web-export job are wired
+          via station-gated recipes, and a cap-aware <b>Market</b> sells goods for coins and buys them back. <b>M3d</b> adds the
+          <b>Orders system</b> — the Direction spec's coin sink: an NPC requests a quantity of a resource you can produce, and filling
+          the order pays <b>3× the raw Market price</b>, so delivering goods beats selling them. It renders as a playable
+          board with placeholder art and a live economy + settlement + buildings + orders HUD. Headless tests and a Web-export job are wired
           into CI. The Phaser version at the repo root is untouched and still fully playable.</div>
 
         <div class="progress-wrap">
@@ -239,12 +241,12 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3f)</span> <b>~50% · 3 of 6 sub-parts (M3a, M3b, M3c done)</b></div>
-          <div class="bar"><span style="width:50%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;3 — content &amp; progression (M3a…M3g)</span> <b>~57% · 4 of 7 sub-parts (M3a, M3b, M3c, M3d done)</b></div>
+          <div class="bar"><span style="width:57%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~50%</b></div>
-          <div class="bar"><span style="width:50%"></span></div>
+          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~55%</b></div>
+          <div class="bar"><span style="width:55%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -271,7 +273,7 @@
         </div>
         <div class="ms-row">
           <div class="num amber">M3</div>
-          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3f. <b>M3a — Camp→City tier ladder — done</b>; <b>M3b — buildings/plots/spawners/demolish — done</b>; <b>M3c — refining + market economy — done</b>; M3d orders + town UI, M3e expedition→Town 2, M3f capstone boss + Town 3 to come (the Direction spec)</div></div>
+          <div><div class="t">Content &amp; progression <span class="pill warn">in progress</span></div><div class="d">Built as sub-PRs M3a…M3g (re-scoped from 6→7 sub-parts when Orders and the Town UI were split). <b>M3a — Camp→City tier ladder — done</b>; <b>M3b — buildings/plots/spawners/demolish — done</b>; <b>M3c — refining + market economy — done</b>; <b>M3d — orders system — done</b>; M3e Town UI screen, M3f expedition→Town 2, M3g capstone boss + Town 3 to come (the Direction spec)</div></div>
           <span class="pill warn">partial</span>
         </div>
         <div class="ms-row">
@@ -287,21 +289,24 @@
       </section>
 
       <section id="session-summary">
-        <h2>Current focus — M3d (orders + town UI, after the M3c economy)</h2>
+        <h2>Current focus — M3e (Town UI screen, after the M3d orders system)</h2>
         <p>With the foundational board (M1, merged as PR #930), the run-economy layer (M2, done on
           <code>claude/godot-migration-m2</code>), the Camp→City tier ladder (M3a, done on
-          <code>claude/godot-migration-m3a-tiers</code>), and the buildings/plots/spawners layer (M3b, done on
-          <code>claude/godot-migration-m3b-buildings</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
-          Direction slice — continues as a sequence of sub-PRs. <b>M3c (refining + market economy)</b> just landed on
-          <code>claude/godot-migration-m3c-economy</code>: raw goods now refine at a Bakery into bread, and the refined economy is
-          spent and earned at the Market. Next up is <b>M3d</b> — Orders + the Godot town UI.</p>
+          <code>claude/godot-migration-m3a-tiers</code>), the buildings/plots/spawners layer (M3b, done on
+          <code>claude/godot-migration-m3b-buildings</code>), and the refining + market economy (M3c, done on
+          <code>claude/godot-migration-m3c-economy</code>) all landed and verified on Godot 4.6.2, <b>M3</b> — the Town&nbsp;1→2→3
+          Direction slice — continues as a sequence of sub-PRs (re-scoped from 6→7 when Orders and the Town UI were split for
+          reviewability). <b>M3d (the Orders system)</b> just landed on
+          <code>claude/godot-migration-m3d-orders</code>: an NPC now requests a quantity of a resource you can produce, and filling
+          the order pays 3× the raw Market price — the Direction spec's coin sink. Next up is <b>M3e</b> — the Godot Town UI screen.</p>
         <div class="grid">
           <div class="card"><h3>M1 — playable board <span class="pill ok">merged</span></h3><p><code>Constants.gd</code> + <code>BoardLogic.gd</code> + <code>Tile</code>/<code>Board</code>/<code>Main</code> scenes: a drag-chain → collapse → refill 6×6 board with HUD, tests, and CI. Merged via PR #930.</p></div>
           <div class="card"><h3>M2 — game economy <span class="pill ok">done</span></h3><p>New <code>GameState.gd</code> ports the fractional <code>resourceProgress</code> accumulator exactly (remainder carries across chains); <code>SaveManager.gd</code> adds versioned save/load with a discard-don't-migrate policy; the HUD now shows coins, turn, and a collected tally.</p></div>
-          <div class="card amber"><h3>M3a — Camp→City tier ladder <span class="pill ok">done</span></h3><p><code>TownConfig.gd</code> holds the five-tier farm ladder (Camp 200/3 → City 600/11) as data; <code>Settlement.gd</code> is the mutable tier cursor; <code>GameState</code> gains <code>can_tier_up</code>/<code>try_tier_up</code> (exact-cost deduction) and clamps every credit to <code>settlement.cap()</code>. A 69-check town suite covers it; a temporary T-key affordance drives the ladder until the M3d town UI ships.</p></div>
-          <div class="card amber"><h3>M3b — buildings + spawners + demolish <span class="pill ok">done</span></h3><p><code>BuildingConfig.gd</code> holds the Town-1 spawner catalog (Lumber Camp → trees, Coop → birds, Garden → veg); <code>GameState</code> gains a <code>buildings</code> list with <code>can_build</code>/<code>build</code>/<code>demolish</code> and an <code>active_tile_pool()</code> that <code>Board</code> draws from, so building a spawner makes its category start appearing as the board refills. The tier-up costs were revised to be gating-aware (deadlock-free). A 91-check building suite covers it; temporary 1/2/3/4/5/6 build/demolish keys drive it until the M3d town UI ships.</p></div>
-          <div class="card amber"><h3>M3c — refining + market economy <span class="pill ok">done</span></h3><p><code>RecipeConfig.gd</code> holds the station-gated recipe catalog (bread = 3 flour + 1 eggs at the Bakery); <code>MarketConfig.gd</code> holds the SELL/BUY price tables; <code>BuildingConfig.gd</code> gains a building <code>kind</code> and the Bakery refiner; <code>GameState</code> gains <code>can_craft</code>/<code>craft</code>, <code>sell</code>, and a cap-aware <code>buy</code>, with refiners guarded out of the board pool. A 136-check economy suite covers it; temporary B (bake) and G (sell) keys drive it until the M3d Market/Bakery UI ships.</p></div>
-          <div class="card"><h3>Next — M3d orders + town UI</h3><p>Orders that pay coins, plus the Godot town screen — plots, build/demolish, the real tier-up button and build menu replacing the temporary keys, and the Market/Bakery UI replacing the B/G keys; board↔town navigation. Then M3e expedition→Town 2, M3f capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along with M3e.</p></div>
+          <div class="card amber"><h3>M3a — Camp→City tier ladder <span class="pill ok">done</span></h3><p><code>TownConfig.gd</code> holds the five-tier farm ladder (Camp 200/3 → City 600/11) as data; <code>Settlement.gd</code> is the mutable tier cursor; <code>GameState</code> gains <code>can_tier_up</code>/<code>try_tier_up</code> (exact-cost deduction) and clamps every credit to <code>settlement.cap()</code>. A 69-check town suite covers it; a temporary T-key affordance drives the ladder until the M3e Town UI ships.</p></div>
+          <div class="card amber"><h3>M3b — buildings + spawners + demolish <span class="pill ok">done</span></h3><p><code>BuildingConfig.gd</code> holds the Town-1 spawner catalog (Lumber Camp → trees, Coop → birds, Garden → veg); <code>GameState</code> gains a <code>buildings</code> list with <code>can_build</code>/<code>build</code>/<code>demolish</code> and an <code>active_tile_pool()</code> that <code>Board</code> draws from, so building a spawner makes its category start appearing as the board refills. The tier-up costs were revised to be gating-aware (deadlock-free). A 91-check building suite covers it; temporary 1/2/3/4/5/6 build/demolish keys drive it until the M3e Town UI ships.</p></div>
+          <div class="card amber"><h3>M3c — refining + market economy <span class="pill ok">done</span></h3><p><code>RecipeConfig.gd</code> holds the station-gated recipe catalog (bread = 3 flour + 1 eggs at the Bakery); <code>MarketConfig.gd</code> holds the SELL/BUY price tables; <code>BuildingConfig.gd</code> gains a building <code>kind</code> and the Bakery refiner; <code>GameState</code> gains <code>can_craft</code>/<code>craft</code>, <code>sell</code>, and a cap-aware <code>buy</code>, with refiners guarded out of the board pool. A 136-check economy suite covers it; temporary B (bake) and G (sell) keys drive it until the Market/Bakery UI ships.</p></div>
+          <div class="card amber"><h3>M3d — orders system <span class="pill ok">done</span></h3><p><code>OrderConfig.gd</code> holds the order tuning (<code>MAX_ORDERS=3</code>, qty 3–8, <code>REWARD_MULT=3</code>); <code>GameState</code> gains an <code>orders</code> list, a seeded <code>rng</code>, <code>orderable_resources()</code>, and <code>generate_order</code>/<code>refill_orders</code>/<code>can_fill_order</code>/<code>fill_order</code> (deduct the qty, credit the <b>uncapped</b> reward = <code>sell_price × qty × 3</code>, then refill). Orders persist and are sanitised on load. A 121-check orders suite covers it; a temporary F key fills the first fillable order until the M3e Town UI ships the order buttons.</p></div>
+          <div class="card"><h3>Next — M3e Town UI screen</h3><p>The real Godot town Control panel — plots, build/demolish, the tier-up button and build menu replacing the temporary keys, the Market/Bakery UI replacing the B/G keys, and order buttons replacing the F key; board↔town navigation. Then M3f expedition→Town 2, M3g capstone boss + Town 3. Cross-collection (Decision&nbsp;#7) rides along with M3f.</p></div>
         </div>
       </section>
 
@@ -427,10 +432,14 @@
       <section id="m3-checklist">
         <h2>Milestone 3 — checklist</h2>
         <p>The content &amp; progression milestone — the locked <b>Direction</b> spec's Town&nbsp;1 → Town&nbsp;2 (+capstone boss)
-          → Town&nbsp;3 vertical slice. It ships as a sequence of sub-PRs (<b>M3a…M3f</b>). <b>M3a — the Camp→City tier ladder</b>
+          → Town&nbsp;3 vertical slice. It ships as a sequence of sub-PRs (<b>M3a…M3g</b>). <b>M3a — the Camp→City tier ladder</b>
           (branch <code>claude/godot-migration-m3a-tiers</code>), <b>M3b — buildings + plots + spawners + demolish</b> (branch
-          <code>claude/godot-migration-m3b-buildings</code>), and <b>M3c — refining + market economy</b> (branch
-          <code>claude/godot-migration-m3c-economy</code>) <b>are all done and merge-ready</b>; the rest are sequenced below.</p>
+          <code>claude/godot-migration-m3b-buildings</code>), <b>M3c — refining + market economy</b> (branch
+          <code>claude/godot-migration-m3c-economy</code>), and <b>M3d — the orders system</b> (branch
+          <code>claude/godot-migration-m3d-orders</code>) <b>are all done and merge-ready</b>; the rest are sequenced below.</p>
+        <div class="box amber"><b>Re-scoped 6 → 7 sub-parts.</b> M3 originally planned its sixth part as "M3d orders + town UI". When
+          Orders landed it was split into <b>M3d (Orders)</b> and <b>M3e (the Town UI screen)</b> so each is independently reviewable
+          and verifiable — making the slice <b>M3a…M3g</b> (seven parts). The progress bars and counts above reflect 4 of 7 done.</div>
         <div class="legend">
           <span>✓ done &amp; verified</span><span>◐ partial</span><span>○ not started</span>
         </div>
@@ -446,7 +455,7 @@
           <li class="done">Storage cap enforced at the credit site
             <span class="note"><code>credit_chain</code> now clamps every resource to <code>settlement.cap()</code> (Camp 200 … City 600). Central and simple — see Decision&nbsp;#12.</span></li>
           <li class="done">HUD settlement line + temporary T-key tier-up affordance
-            <span class="note"><code>Main.gd</code> shows "Camp · cap 200 · 3 plots" plus a "▲ Press T to advance to &lt;next&gt;" prompt when affordable. The <b>T-key</b> is a temporary affordance (Decision&nbsp;#13) until the M3d town UI ships the real button. Title bumped to "puzzleDrag2 · Godot M3".</span></li>
+            <span class="note"><code>Main.gd</code> shows "Camp · cap 200 · 3 plots" plus a "▲ Press T to advance to &lt;next&gt;" prompt when affordable. The <b>T-key</b> is a temporary affordance (Decision&nbsp;#13) until the M3e Town UI ships the real button. Title bumped to "puzzleDrag2 · Godot M3".</span></li>
           <li class="done">Town test suite — 69 checks
             <span class="note"><code>tests/run_town_tests.gd</code>: ladder table values for all 5 tiers, affordability gating, exact-cost deduction, surplus/non-cost goods preserved, partial-funds failure leaves inventory untouched, max-tier behaviour, the cap clamp, and a tier-3 save/load round-trip. CI runs it as its own step.</span></li>
         </ul>
@@ -464,7 +473,7 @@
           <li class="done">Tier-up costs revised to be gating-aware (deadlock-free)
             <span class="note"><code>TownConfig.gd</code> ladder costs rewritten so every cost references only resources producible at or below the tier it gates (→Hamlet <code>{hay_bundle:12, flour:6}</code>, →Village <code>{plank:8, hay_bundle:16, flour:8}</code>, →Town <code>{eggs:8, soup:6, plank:10}</code>, →City <code>{soup:10, eggs:12, plank:14}</code>). The M3a first-pass costs would deadlock once the pool is gated (plank needs Lumber Camp, which only unlocks AT Hamlet). See Decision&nbsp;#16.</span></li>
           <li class="done">HUD buildings line + temporary 1/2/3/4/5/6 build/demolish keys
-            <span class="note"><code>Main.gd</code> shows a buildings line ("Plots 3/7 · Lumber Camp, Coop, Garden"); temporary keys <b>1/2/3 build</b> and <b>4/5/6 demolish</b> (Decision&nbsp;#18) drive it until the M3d town build menu ships; the board is re-pooled and the game saved on every change.</span></li>
+            <span class="note"><code>Main.gd</code> shows a buildings line ("Plots 3/7 · Lumber Camp, Coop, Garden"); temporary keys <b>1/2/3 build</b> and <b>4/5/6 demolish</b> (Decision&nbsp;#18) drive it until the M3e Town build menu ships; the board is re-pooled and the game saved on every change.</span></li>
           <li class="done">Building test suite — 91 checks
             <span class="note"><code>tests/run_building_tests.gd</code>: catalog values, tier/plot/cost gating, exact-cost build, the plot cap, demolish/free + no-refund, pool/category derivation, save-load filtering of bogus ids, and a full Camp→City <b>no-deadlock progression walk</b> (builds each spawner and tiers up at each step). <code>run_town_tests.gd</code> updated to the revised costs. <b>M3c updated it for the Bakery refiner (now 91 checks).</b> CI runs it as its own step.</span></li>
         </ul>
@@ -485,19 +494,35 @@
             <span class="note"><code>tests/run_economy_tests.gd</code>: recipe catalog, craft gating + exact deduction, the refiner-not-in-pool guard, market sell/buy math, cap-clipped buy, a refined-good save/load round-trip, and a bake-then-sell integration. <code>run_building_tests.gd</code> updated for the Bakery (now 91 checks). CI runs the new economy suite as its own step.</span></li>
         </ul>
 
-        <h3>M3d…M3f — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <h3>M3d — Orders system <span class="pill ok">done</span></h3>
         <ul class="check">
-          <li class="todo">M3d — Orders + Town UI in Godot
-            <span class="note">Orders that pay coins; the town screen: plots, build/demolish, the real tier-up button replacing the T-key affordance, the build menu replacing the 1/2/3 keys, and the Market/Bakery UI replacing the M3c B/G keys; board↔town navigation. <b>Next.</b></span></li>
-          <li class="todo">M3e — Expedition → Town 2 (mine)
-            <span class="note">The food gate (Kitchen→supplies), mine tiles + hazards.</span></li>
-          <li class="todo">M3f — Capstone boss (end of Town 2) + Town 3
+          <li class="done">Order generation tuning as data + static helpers
+            <span class="note"><code>OrderConfig.gd</code> (<code>class_name OrderConfig extends Node</code>, stateless): generation tuning — <code>MAX_ORDERS=3</code>, qty range 3–8, <code>REWARD_MULT=3</code> — and <code>reward_for(resource, qty)</code> = <code>sell_price × qty × 3</code> (floored at 1). PC2-aligned first-pass and tunable, same spirit as the tier-cost / market first passes (Decisions&nbsp;#14, #20).</span></li>
+          <li class="done">Orders owned by <code>GameState</code> with a seeded RNG
+            <span class="note"><code>GameState</code> gains an <code>orders</code> Array of <code>{resource, qty, reward}</code> and a seeded <code>rng</code> (<code>seed_orders</code> for reproducible tests). <code>orderable_resources()</code> returns the two staples plus each placed building's resource, so a generated order is always fillable in principle.</span></li>
+          <li class="done">Generate / refill / fill order, with the 3× reward
+            <span class="note"><code>generate_order</code>, <code>refill_orders</code> (tops up to <code>MAX_ORDERS</code>, idempotent), <code>can_fill_order</code>, and <code>fill_order</code> — deducts the qty, credits the <b>uncapped</b> reward, removes the order, and refills; never mutates on failure (reasons <code>bad_index</code> / <code>insufficient</code>). Filling an order beats selling the same goods at the Market — see Decision&nbsp;#22.</span></li>
+          <li class="done">Orders persisted + sanitised on load
+            <span class="note">Orders round-trip through <code>SaveManager</code> (deep-copied); malformed entries are dropped on load, with no auto-refill on a loaded save.</span></li>
+          <li class="done">HUD orders line + temporary F-key fill
+            <span class="note"><code>Main.gd</code> shows an orders HUD line and refills on load (rng seeded 1337 for deterministic running-game orders); temporary key <b>F</b> fills the first fillable order (Decision&nbsp;#13 spirit). The real order buttons arrive with the M3e Town UI.</span></li>
+          <li class="done">Orders test suite — 121 checks
+            <span class="note"><code>tests/run_orders_tests.gd</code>: reward math, orderable-resource derivation, generate-order invariants (run ~20×), refill idempotence, fill deduct/pay/refill, insufficient / bad-index no-ops, the market-beating 3× reward, save/load + malformed-entry filtering, and that coins are uncapped. CI runs it as its own step.</span></li>
+        </ul>
+
+        <h3>M3e…M3g — sequenced sub-PRs <span class="pill idle">todo</span></h3>
+        <ul class="check">
+          <li class="todo">M3e — Town UI screen in Godot
+            <span class="note">The real Control panel: plots, build/demolish, the tier-up button replacing the T-key affordance, the build menu replacing the 1/2/3 keys, the Market/Bakery UI replacing the M3c B/G keys, and order buttons replacing the M3d F key; board↔town navigation. <b>Next.</b></span></li>
+          <li class="todo">M3f — Expedition → Town 2 (mine)
+            <span class="note">The food gate (Kitchen→supplies), mine tiles + hazards. Cross-collection (Decision&nbsp;#7) rides along here.</span></li>
+          <li class="todo">M3g — Capstone boss (end of Town 2) + Town 3
             <span class="note">Capstone boss encounter, then Town 3 with the rats hazard + Ratcatcher buildings.</span></li>
         </ul>
       </section>
 
       <section id="m3-files">
-        <h2>What landed in M3a + M3b + M3c (files)</h2>
+        <h2>What landed in M3a + M3b + M3c + M3d (files)</h2>
         <h3>M3a — tier ladder</h3>
         <table>
           <thead><tr><th>File</th><th>Role</th></tr></thead>
@@ -533,6 +558,17 @@
             <tr><td><code>godot/scenes/Main.gd</code></td><td>Temporary <b>B</b> (bake bread) + <b>G</b> (sell 1 hay_bundle) demo keys and a Bakery hint in the HUD; the real Market/Bakery UI is M3d</td></tr>
             <tr><td><code>godot/tests/run_economy_tests.gd</code></td><td><b>New.</b> Headless RecipeConfig + MarketConfig + craft/sell/buy tests (136 checks): recipe catalog, craft gating + exact deduction, refiner-not-in-pool guard, market sell/buy math, cap-clipped buy, refined-good save/load round-trip, and a bake-then-sell integration</td></tr>
             <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the economy-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
+          </tbody>
+        </table>
+        <h3>M3d — orders system</h3>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>godot/scripts/OrderConfig.gd</code></td><td><b>New.</b> <code>class_name OrderConfig extends Node</code> (stateless) — order generation tuning (<code>MAX_ORDERS=3</code>, qty 3–8, <code>REWARD_MULT=3</code>) + <code>reward_for(resource, qty)</code> = <code>sell_price × qty × 3</code> (floored at 1). PC2-aligned first-pass, tunable</td></tr>
+            <tr><td><code>godot/scripts/GameState.gd</code></td><td>Adds the <code>orders</code> list + a seeded <code>rng</code> (<code>seed_orders</code>), <code>orderable_resources()</code>, and <code>generate_order</code>/<code>refill_orders</code> (idempotent)/<code>can_fill_order</code>/<code>fill_order</code> (deduct qty, credit the <b>uncapped</b> reward, remove + refill; never mutates on failure); orders persisted (deep-copied) + sanitised on load</td></tr>
+            <tr><td><code>godot/scenes/Main.gd</code></td><td>Orders HUD line + a refill on load (rng seeded 1337 for deterministic running-game orders); temporary key <b>F</b> fills the first fillable order — the real order buttons arrive with the M3e Town UI</td></tr>
+            <tr><td><code>godot/tests/run_orders_tests.gd</code></td><td><b>New.</b> Headless OrderConfig + orders tests (121 checks): reward math, orderable-resource derivation, generate-order invariants (~20×), refill idempotence, fill deduct/pay/refill, insufficient / bad-index no-ops, the market-beating 3× reward, save/load + malformed-entry filtering, uncapped coins</td></tr>
+            <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the orders-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
           </tbody>
         </table>
       </section>
@@ -634,7 +670,7 @@
             global cap this is the least machinery.</p>
         </div>
         <div class="card amber">
-          <h3>13 · Temporary T-key tier-up affordance until the M3d town UI</h3>
+          <h3>13 · Temporary T-key tier-up affordance until the M3e Town UI</h3>
           <p>The real tier-up button belongs to the Godot town screen, which is a later sub-PR (<b>M3d</b>). Rather than block the
             ladder on that UI, M3a drives the town-center upgrade with a keyboard <b>T</b> key so the whole Camp→City progression is
             exercisable and demoable today (and the 69-check suite can assert it). It is flagged temporary both in
@@ -677,10 +713,10 @@
           <p>The Direction lists the refund policy — and whether a progression-required building should be non-demolishable — as
             open questions. M3b takes the simplest stance: <code>demolish</code> frees the building's plot and drops its category
             from the pool, but <b>returns no resources</b>. It is flagged temporary; the refund/lock policy is decided when the
-            M3d town UI makes demolish a deliberate player action rather than a dev key.</p>
+            M3e Town UI makes demolish a deliberate player action rather than a dev key.</p>
         </div>
         <div class="card amber">
-          <h3>18 · Temporary 1/2/3/4/5/6 build/demolish keys until the M3d town UI</h3>
+          <h3>18 · Temporary 1/2/3/4/5/6 build/demolish keys until the M3e Town UI</h3>
           <p>The real build/demolish menu belongs to the Godot town screen (<b>M3d</b>). Rather than block the buildings mechanic on
             that UI, M3b drives it with keyboard keys — <b>1/2/3 build</b> the three Town-1 spawners, <b>4/5/6 demolish</b> them —
             so the whole build → re-pool → category-spawns loop is exercisable and demoable today (and the 90-check suite can assert
@@ -719,6 +755,26 @@
             <code>is_spawner</code> so a placed Bakery never seeds a blank tile/category onto the board. Same building list,
             two roles — the dynamic pool stays exactly the placed spawners.</p>
         </div>
+
+        <h3>M3d decisions</h3>
+
+        <div class="card">
+          <h3>22 · Orders pay 3× the Market price</h3>
+          <p>Filling an order beats selling the same goods at the Market: an order's reward is
+            <code>sell_price × qty × 3</code> (<code>REWARD_MULT = 3</code> in <code>OrderConfig.gd</code>), so delivering goods to an
+            order is the preferred coin sink — exactly the Direction spec's intent. The reward is <b>uncapped</b>: only inventory
+            resources hit the settlement storage cap (Decision&nbsp;#12); coins, like sell income, do not. The multiplier and qty
+            range are PC2-aligned first-pass values living as data in <code>OrderConfig</code>, tunable in the same spirit as the
+            tier-cost and Market first passes (Decisions&nbsp;#14, #20).</p>
+        </div>
+        <div class="card">
+          <h3>23 · Orders are always fillable-in-principle</h3>
+          <p>A generated order only ever requests a resource in <code>orderable_resources()</code> — the two staples plus each
+            placed building's resource — so the player can never be handed an order for a good they have no way to produce.
+            <code>generate_order</code> draws from that set (seeded by the <code>GameState</code> <code>rng</code> for reproducible
+            tests), and <code>refill_orders</code> tops the board up to <code>MAX_ORDERS</code> idempotently. The orders suite asserts
+            this invariant across ~20 generated orders.</p>
+        </div>
       </section>
 
     </div>
@@ -728,8 +784,8 @@
 
       <section id="evidence">
         <h2>Verification evidence</h2>
-        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All six test scripts
-          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_scene_smoke</code> 11)
+        <div class="box tip"><b>Everything below was run on the local Godot 4.6.2 binary.</b> All seven test scripts
+          (<code>run_tests</code> 18 + <code>run_state_tests</code> 42 + <code>run_town_tests</code> 69 + <code>run_building_tests</code> 91 + <code>run_economy_tests</code> 136 + <code>run_orders_tests</code> 121 + <code>run_scene_smoke</code> 11)
           exit <code>0</code>; the screenshots are real frames rendered by the scene (NVIDIA GL Compatibility).</div>
 
         <h3>Rendered board — M1 (visual proof)</h3>
@@ -759,6 +815,11 @@
         <h3>Refining + market — M3c (refined goods earn coins)</h3>
         <div class="shots">
           <figure><img src="assets/godot/m3c-economy.png" alt="M3c Village with Lumber Camp + Garden + Bakery placed: 'Plots 3/7', a '🍞 B to bake bread' hint, the board spawning trees/veg/staples, 'Coins: 80', status 'Baked 3 bread (flour+eggs) · sold 2 soup at Market', and a Collected line showing bread x3 alongside the drawn-down raw inputs"><figcaption>A Village with Lumber Camp + Garden + <b>Bakery</b> placed — "Plots 3/7", a "🍞 B to bake bread" hint, the board spawning trees/veg/staples, "Coins: 80", and status "Baked 3 bread (flour+eggs) · sold 2 soup at Market". The Collected line shows <b>bread ×3</b> (a refined good) alongside the raw inputs drawn down. Proves the Bakery refines bread via <code>craft</code> and the Market credits coins via <code>sell</code> — the full refine→spend loop wired end-to-end through <code>GameState</code>.</figcaption></figure>
+        </div>
+
+        <h3>Orders — M3d (the coin sink; filling beats selling)</h3>
+        <div class="shots">
+          <figure><img src="assets/godot/m3d-orders.png" alt="M3d Village with Lumber Camp + Coop + Garden placed: the HUD shows 'Orders: 8×eggs → 288c · 8×plank → 120c · 8×flour → 48c 📦 F to fill', a just-filled 'Filled order: 4×eggs → +144 coins', and Coins 169"><figcaption>A Village with Lumber Camp + Coop + Garden — the HUD orders line "Orders: 8×eggs → 288c · 8×plank → 120c · 8×flour → 48c 📦 F to fill", a just-filled "Filled order: 4×eggs → +144 coins", and "Coins 169". Each reward is <b>3× the raw Market price</b> (eggs sell 12 → an 8×eggs order pays 12×8×3 = 288c), so delivering goods beats selling them. Proves <code>fill_order</code> deducts the qty, credits the uncapped 3× reward, and refills — the Direction spec's coin sink wired end-to-end through <code>GameState</code>.</figcaption></figure>
         </div>
 
         <h3>Headless test output</h3>
@@ -864,6 +925,25 @@
 ──────────────────────────────────────────────────
 136 checks, 0 failure(s)        <span class="c"># exit 0</span>
 
+<span class="c">$ godot --headless --path godot --script res://tests/run_orders_tests.gd</span>
+── OrderConfig + orders tests ─────────────────────
+  <span class="g">PASS</span>  reward_for = sell_price × qty × 3 (8×eggs @ sell 12 -> 288)
+  <span class="g">PASS</span>  reward floored at 1 for a zero-priced resource
+  <span class="g">PASS</span>  orderable_resources = staples + each placed building's resource
+  <span class="g">PASS</span>  generate_order only requests an orderable resource (×20)
+  <span class="g">PASS</span>  generate_order qty within [3,8], reward = 3× market (×20)
+  <span class="g">PASS</span>  refill_orders tops up to MAX_ORDERS (3)
+  <span class="g">PASS</span>  refill_orders is idempotent when already full
+  <span class="g">PASS</span>  fill_order deducts the qty, pays the reward, removes + refills
+  <span class="g">PASS</span>  fill_order reward beats selling the same goods at the Market (3×)
+  <span class="g">PASS</span>  fill_order insufficient inventory -> no mutation (reason insufficient)
+  <span class="g">PASS</span>  fill_order bad index -> no mutation (reason bad_index)
+  <span class="g">PASS</span>  order coins are uncapped (exceed settlement.cap())
+  <span class="g">PASS</span>  orders survive save/load; malformed entries dropped, no auto-refill
+  <span class="c">…  (108 further reward / generate / refill / fill / persistence checks)</span>
+──────────────────────────────────────────────────
+121 checks, 0 failure(s)        <span class="c"># exit 0</span>
+
 <span class="c">$ godot --headless --path godot --script res://tests/run_scene_smoke.gd</span>
 ── Scene smoke (Main + Board wiring) ──────────────
   <span class="g">PASS</span>  Main.tscn loads
@@ -900,6 +980,7 @@ godot --headless --path godot --script res://tests/run_state_tests.gd <span clas
 godot --headless --path godot --script res://tests/run_town_tests.gd  <span class="c"># TownConfig + Settlement + tier-up tests (69)</span>
 godot --headless --path godot --script res://tests/run_building_tests.gd <span class="c"># BuildingConfig + build/demolish + pool tests (91)</span>
 godot --headless --path godot --script res://tests/run_economy_tests.gd <span class="c"># RecipeConfig + MarketConfig + craft/sell/buy tests (136)</span>
+godot --headless --path godot --script res://tests/run_orders_tests.gd <span class="c"># OrderConfig + orders tests (121)</span>
 godot --headless --path godot --script res://tests/run_scene_smoke.gd <span class="c"># scene smoke (11)</span>
 godot --path godot                                                    <span class="c"># play it (windowed)</span>
 godot --path godot --script res://tools/screenshot.gd -- out.png    <span class="c"># render a frame</span></code></pre>
@@ -913,20 +994,21 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, M3a, M3b &amp; M3c</h3>
+        <h3>Done — M1, M2, M3a, M3b, M3c &amp; M3d</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
           <li class="done">M3a — the Camp→City tier ladder — built and verified on <code>claude/godot-migration-m3a-tiers</code>: <code>TownConfig</code> + <code>Settlement</code>, <code>can_tier_up</code>/<code>try_tier_up</code>, the cap clamp, HUD settlement line + temporary T-key affordance, 69-check town suite, CI step.</li>
           <li class="done">M3b — buildings + plots + building-gated spawners + demolish — built and verified on <code>claude/godot-migration-m3b-buildings</code>: <code>BuildingConfig</code> (Lumber Camp/Coop/Garden), <code>GameState</code> build/demolish + <code>active_tile_pool()</code>, the dynamic <code>Board</code> pool, the gating-aware tier-cost revision, buildings HUD + temporary 1/2/3/4/5/6 keys, 90-check building suite, CI step.</li>
           <li class="done">M3c — refining + market economy — built and verified on <code>claude/godot-migration-m3c-economy</code>: <code>RecipeConfig</code> (bread at the Bakery), <code>MarketConfig</code> (SELL/BUY tables), the Bakery refiner + building <code>kind</code>, <code>GameState</code> <code>craft</code>/<code>sell</code>/cap-aware <code>buy</code>, B/G demo keys, 136-check economy suite + the building suite bumped to 91, CI step.</li>
+          <li class="done">M3d — orders system — built and verified on <code>claude/godot-migration-m3d-orders</code>: <code>OrderConfig</code> (<code>MAX_ORDERS=3</code>, qty 3–8, 3× reward), <code>GameState</code> <code>orders</code> + seeded <code>rng</code> + <code>orderable_resources</code>/<code>generate_order</code>/<code>refill_orders</code>/<code>fill_order</code> (uncapped 3× reward, persisted + sanitised on load), a temporary F-key fill, a 121-check orders suite, CI step. <b>M3 re-scoped 6 → 7 sub-parts (Orders and the Town UI split).</b></li>
         </ul>
 
-        <h3>Then M3d…M3f — the rest of the Direction vertical slice</h3>
+        <h3>Then M3e…M3g — the rest of the Direction vertical slice</h3>
         <div class="log">
-          <div class="entry"><div class="date">M3d · next</div><h3>Orders + Town UI in Godot</h3><p>Orders that pay coins; the town screen — plots, build/demolish (the <b>real build menu replacing the temporary 1/2/3 keys</b>, Decision&nbsp;#18), the <b>real tier-up button replacing the temporary T-key affordance</b> (Decision&nbsp;#13), and the <b>Market/Bakery UI replacing the M3c B/G keys</b> (Decisions&nbsp;#19–#20); board↔town navigation. The demolish refund/lock policy (Decision&nbsp;#17) is settled here.</p></div>
-          <div class="entry"><div class="date">M3e</div><h3>Expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies), mine tiles + hazards; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
-          <div class="entry"><div class="date">M3f</div><h3>Capstone boss + Town 3</h3><p>The end-of-Town-2 capstone boss (boss <code>minChain</code> raises the chain floor), then Town 3 with the rats hazard + Ratcatcher buildings.</p></div>
+          <div class="entry"><div class="date">M3e · next</div><h3>Town UI screen in Godot</h3><p>The real town Control panel — plots, build/demolish (the <b>real build menu replacing the temporary 1/2/3 keys</b>, Decision&nbsp;#18), the <b>real tier-up button replacing the temporary T-key affordance</b> (Decision&nbsp;#13), the <b>Market/Bakery UI replacing the M3c B/G keys</b> (Decisions&nbsp;#19–#20), and <b>order buttons replacing the M3d F key</b> (Decisions&nbsp;#22–#23); board↔town navigation. The demolish refund/lock policy (Decision&nbsp;#17) is settled here.</p></div>
+          <div class="entry"><div class="date">M3f</div><h3>Expedition → Town 2 (mine)</h3><p>The food gate (Kitchen→supplies), mine tiles + hazards; cross-collection (Decision&nbsp;#7) rides along here.</p></div>
+          <div class="entry"><div class="date">M3g</div><h3>Capstone boss + Town 3</h3><p>The end-of-Town-2 capstone boss (boss <code>minChain</code> raises the chain floor), then Town 3 with the rats hazard + Ratcatcher buildings.</p></div>
         </div>
 
         <h3>Carried-over M1/M2 polish (not blockers)</h3>
