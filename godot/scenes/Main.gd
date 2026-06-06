@@ -57,6 +57,7 @@ var _last_res: String = ""
 var _last_threshold: int = 0
 
 var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
+var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 # A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
@@ -93,6 +94,9 @@ func _ready() -> void:
 	# against the loaded state, not zero, and doesn't fire a spurious sound.
 	_audio = Audio.new()
 	add_child(_audio)
+	# M4f: apply the restored mute preference so a saved "muted" choice takes effect on
+	# launch (the settings/menu modal flips it; GameState persists it).
+	_audio.set_muted(game.audio_muted)
 	_last_tier = game.settlement.tier
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
@@ -361,6 +365,26 @@ func _build_hud() -> void:
 	town_btn.offset_top = 18
 	town_btn.connect("pressed", Callable(self, "_open_town"))
 	root.add_child(town_btn)
+
+	# M4f — always-visible "☰" menu button (settings/new-game), pinned top-RIGHT so it
+	# clears the floating Town button + the board drag area. Same parchment-pill look as
+	# the Town button. Opens the MenuScreen modal.
+	var menu_btn := Button.new()
+	menu_btn.text = "☰"
+	menu_btn.add_theme_font_size_override("font_size", 22)
+	menu_btn.add_theme_color_override("font_color", Palette.INK)
+	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	menu_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	menu_btn.add_theme_stylebox_override("normal", _parchment_box(Palette.PARCHMENT))
+	menu_btn.add_theme_stylebox_override("hover", _parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.add_theme_stylebox_override("pressed", _parchment_box(Palette.DIM))
+	menu_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	menu_btn.offset_right = -18
+	menu_btn.offset_top = 18
+	menu_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from the right edge
+	menu_btn.connect("pressed", Callable(self, "_open_menu"))
+	root.add_child(menu_btn)
 
 ## M4a (optional) — the Cinzel display serif used by the original game for headings.
 ## Loads the variable TTF from res://assets/fonts/Cinzel-Regular.ttf and returns a
@@ -669,6 +693,50 @@ func _open_town() -> void:
 func _on_town_closed() -> void:
 	if _town_screen != null:
 		_town_screen.visible = false
+
+# ── Menu / settings (M4f) ─────────────────────────────────────────────────────
+
+## Open the settings/menu modal, lazily creating + wiring it on first use. The screen
+## emits intent signals; Main owns the mute flip + save + restart (single source of
+## truth), mirroring how the Town screen routes "Shoo rats" back to Main.
+func _open_menu() -> void:
+	if _menu_screen == null:
+		_menu_screen = MenuScreen.new()
+		add_child(_menu_screen)
+		_menu_screen.setup(game)
+		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
+		_menu_screen.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
+		_menu_screen.connect("new_game", Callable(self, "_on_new_game"))
+	_menu_screen.open()
+
+func _on_menu_closed() -> void:
+	if _menu_screen != null:
+		_menu_screen.visible = false
+
+## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
+## accounting point): toggle the persisted preference, mute/unmute the Audio service,
+## save, then re-sync the menu's Sound label. A soft "pop" gives un-mute feedback.
+func _on_toggle_sound() -> void:
+	game.audio_muted = not game.audio_muted
+	if _audio != null:
+		_audio.set_muted(game.audio_muted)
+		# Audible confirmation only when we just turned sound BACK ON (a muted pop is
+		# silent anyway).
+		if not game.audio_muted:
+			_audio.play("pop")
+	SaveManager.save(game)
+	if _menu_screen != null:
+		_menu_screen.refresh_sound_label()
+
+## M4f — the New Game button emits `new_game`; Main wipes the save and restarts from a
+## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which
+## calls SaveManager.load_state() — now returning a fresh GameState since the save was
+## cleared (the cleanest reset: every system re-initialises from scratch).
+func _on_new_game() -> void:
+	if _menu_screen != null:
+		_menu_screen.close()
+	SaveManager.clear()
+	get_tree().reload_current_scene()
 
 ## A town action mutated `game`: re-pool the board from the ACTIVE biome, refresh
 ## every HUD label, save. The Town screen's Expedition section can flip the biome
