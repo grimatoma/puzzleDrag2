@@ -169,10 +169,10 @@
       "feature_or_screen": "Tools (axe/bomb/rake/shovel + 20+ others)",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M8",
-      "verified_by": ["run_tools_tests.gd", "e2e:tools", "golden:board-farm-tool-rake"],
-      "note": "No tool items, no tool-use action, no tool powers. LOGIC FIRST: ToolConfig.gd + GameState.use_tool before any palette UI."
+      "verified_by": ["run_tools_tests.gd", "run_tool_board_tests.gd", "e2e:tools", "golden:board-farm-tool-rake"],
+      "note": "ToolConfig catalog (10 tools) + pure ToolEffects + GameState tool API (charges/arm-fire/credit via credit_chain) + live-board apply with tap-targeting + ToolPalette HUD + minimal starter grant. Full 59-tool catalog, passive abilities, and the magic/portal influence economy are still pending."
     },
     {
       "id": "system-board-animations",
@@ -282,7 +282,7 @@
       "godot_status": "absent",
       "target_milestone": "M8",
       "verified_by": ["run_tools_tests.gd", "e2e:tools", "golden:board-farm-fertilizer-active"],
-      "note": "No ability/power system. Magic tools (golden apple, philosophers_stone) with fill_bias/tap-target/instant powers, ported with M8 tools."
+      "note": "Active tool powers (area_blast, clear_row/col/cross/component, transform, clear_random_n) are ported in M8a–M8d for 10 representative tools. PASSIVE abilities system and the magic-tool/portal influence economy (fill_bias, auto-apply without board selection) remain absent."
     },
     {
       "id": "system-farm-hazards",
@@ -513,7 +513,7 @@
       "godot_status": "absent",
       "target_milestone": "M8",
       "verified_by": ["run_tools_tests.gd", "e2e:tools"],
-      "note": "Magic tools that auto-apply without board selection; ported with M8 tools/tool-powers."
+      "note": "Base tool use + ToolPalette HUD exist (M8a–M8d). The portal influence economy (fill_bias, auto-apply magic tools without board selection) and the portal/magic-tool concept itself remain absent."
     },
     {
       "id": "slice-quests",
@@ -754,7 +754,7 @@
       "godot_status": "absent",
       "target_milestone": "M8",
       "verified_by": ["run_tools_tests.gd", "golden:board-farm-tool-rake"],
-      "note": "Magic tools; ported with M8 tools/tool-powers."
+      "note": "Base tool use + ToolPalette HUD exist (M8a–M8d). The portal influence economy and auto-apply magic-tool surface remain absent."
     },
     {
       "id": "view-quests",
@@ -916,7 +916,7 @@
       "godot_status": "partial",
       "target_milestone": "M8",
       "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-rake"],
-      "note": "Farm with rake tool active; depends on M8 tool palette."
+      "note": "Farm with rake tool active; tool logic + ToolPalette HUD now exist (M8a–M8d, rake is in the catalog). The visual golden itself awaits the M-infra visual suite."
     },
     {
       "id": "golden-board-farm-tool-bomb",
@@ -926,7 +926,7 @@
       "godot_status": "partial",
       "target_milestone": "M8",
       "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-bomb"],
-      "note": "Farm with bomb tool active; depends on M8 tool palette."
+      "note": "Farm with bomb tool active; tool logic + ToolPalette HUD now exist (M8a–M8d, bomb is in the catalog and in the starter grant). The visual golden itself awaits the M-infra visual suite."
     },
     {
       "id": "golden-board-farm-tool-sickle",
@@ -936,7 +936,7 @@
       "godot_status": "partial",
       "target_milestone": "M8",
       "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-sickle"],
-      "note": "Farm with sickle tool active; depends on M8 tool palette."
+      "note": "Farm with sickle tool active; tool logic + ToolPalette HUD now exist (M8a–M8d, sickle is in the catalog). The visual golden itself awaits the M-infra visual suite."
     },
     {
       "id": "golden-board-farm-fertilizer-active",
