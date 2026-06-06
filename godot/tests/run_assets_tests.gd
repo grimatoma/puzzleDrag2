@@ -28,6 +28,7 @@ var _failures: int = 0
 func _initialize() -> void:
 	print("\n── Asset pipeline tests ──────────────────────────")
 	_test_v1_pngs_present()
+	_test_hazard_tiles_have_art()
 	_test_v2_grass_animates()
 	_test_v1_tile_is_static()
 	_test_placeholder_fallback()
@@ -60,6 +61,26 @@ func _test_v1_pngs_present() -> void:
 		var path: String = "res://assets/tiles/%s.png" % key
 		_check(ResourceLoader.exists(path), "v1 PNG present + imported: %s" % key)
 		_check(load(path) is Texture2D, "v1 PNG loads as Texture2D: %s" % key)
+
+# ── Stage 2: hazard tiles (M7a) ──────────────────────────────────────────────
+
+## M7a: the two board hazard tiles (RAT on the farm, RUBBLE in the mine) ship a
+## committed v1 PNG, so they render real art instead of the flat-grey Stage-1
+## placeholder square (the dominant "looks broken" signal). Each must resolve to
+## a non-null v1 Texture2D and must NOT fall back to the placeholder path.
+func _test_hazard_tiles_have_art() -> void:
+	for t in [T.RAT, T.RUBBLE]:
+		var key: String = Constants.string_key(t)
+		var path: String = "res://assets/tiles/%s.png" % key
+		_check(ResourceLoader.exists(path), "v1 PNG present + imported: %s" % key)
+		_check(load(path) is Texture2D, "v1 PNG loads as Texture2D: %s" % key)
+		var tile := Tile.new()
+		tile.setup(t, 96.0)
+		root.add_child(tile)
+		_check(_anim_child(tile) == null, "%s renders static (no AnimatedSprite2D)" % key)
+		_check(tile._tex != null,
+			"%s resolves to a real v1 texture (NOT the placeholder)" % key)
+		tile.free()
 
 # ── Stage 3: v2 animated tile ────────────────────────────────────────────────
 
