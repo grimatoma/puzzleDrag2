@@ -183,6 +183,21 @@
 <body>
 <div class="page">
 
+  <!-- SUPERSEDED-BY banner: the live status source of truth is now the parity matrix. -->
+  <div role="note" style="
+      border:2px solid var(--accent2); border-left-width:7px;
+      background:linear-gradient(135deg, color-mix(in srgb,var(--accent2) 12%,var(--paper)), var(--paper));
+      border-radius:12px; padding:.85rem 1.15rem; margin:0 0 1.4rem;
+      box-shadow:var(--shadow); font:400 .95rem/1.55 var(--sans); color:var(--ink);">
+    <strong style="font-family:var(--serif); font-size:1.05rem; color:var(--accent2);">📒 Narrative archive — not the live status.</strong><br>
+    This page is now a <strong>narrative archive</strong> of the migration. The single live, queryable
+    <strong>source of truth for Godot-vs-React parity is the parity matrix</strong>:
+    <a href="godot-parity-matrix.html" style="font-weight:700;">docs/godot-parity-matrix.html</a>
+    (generated from <code style="font:.85em var(--mono);background:var(--code);padding:.06rem .34rem;border-radius:4px;">docs/parity-matrix.json</code>,
+    CI-validated). Check there first for what is ported / partial / absent and which milestone owns each surface;
+    keep reading below only for the historical record of how the slice was built.
+  </div>
+
   <header class="hero">
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the

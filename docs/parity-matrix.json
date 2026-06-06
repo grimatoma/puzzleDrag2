@@ -1,0 +1,1734 @@
+{
+  "$comment": "Source of truth for Godot-vs-React parity. Rendered to docs/godot-parity-matrix.html by tools/build-parity-matrix.mjs. Validated by tools/check-parity-matrix.mjs (CI). One row per React surface.",
+  "generated_from": "audit wndlmekjg + plan the-current-state-of-deep-crystal.md",
+  "milestones": [
+    {"id": "DONE", "title": "Already ported (logic + slice UI)"},
+    {"id": "M5", "title": "UI Foundation: Theme + scenes + router + signal bus"},
+    {"id": "M6", "title": "Spatial town building-placement map"},
+    {"id": "M7", "title": "Effects/juice + tile-art feed"},
+    {"id": "M-infra", "title": "Testing parity: GdUnit4 + e2e + visual golden-diff"},
+    {"id": "M8", "title": "Tools + tool-powers"},
+    {"id": "M9", "title": "Seasons/calendar/boons + weather"},
+    {"id": "M10", "title": "Long-tail content (cartography/townsfolk/achievements/story/tile-collection/fish)"},
+    {"id": "M11", "title": "Desktop + mobile export hardening"}
+  ],
+  "rows": [
+    {
+      "id": "system-board-chain",
+      "feature_or_screen": "Board chain mechanic (drag, 8-way adjacency, min-chain, boss bar)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_tests.gd", "run_scene_smoke.gd"],
+      "note": "is_valid_chain/has_valid_chain ported from src/game/chain.ts; boss min_chain raises the bar."
+    },
+    {
+      "id": "system-collapse-refill",
+      "feature_or_screen": "Collapse / refill pipeline",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_tests.gd", "run_scene_smoke.gd"],
+      "note": "Pure collapse()+refill() (weighted pool) plus animated visual collapse/pop-in; reshuffles dead boards."
+    },
+    {
+      "id": "system-economy-accumulator",
+      "feature_or_screen": "Economy: coins / inventory / fractional progress accumulator",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_economy_tests.gd", "run_state_tests.gd"],
+      "note": "credit_chain reproduces React resourceProgress carry-over exactly; storage cap enforced. Coins simplified (chain_len/2)."
+    },
+    {
+      "id": "system-tier-ladder",
+      "feature_or_screen": "Settlement tier ladder (Camp -> City)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_town_tests.gd", "run_state_tests.gd"],
+      "note": "5-tier ladder with caps/plots/unlocks and deadlock-free escalating costs; can_tier_up/try_tier_up wired + tested."
+    },
+    {
+      "id": "system-market",
+      "feature_or_screen": "Market (sell / buy)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_economy_tests.gd"],
+      "note": "sell/buy with cap discipline + markup (sink not arbitrage); buy logic tested but TownScreen is sell-only (no UI surface)."
+    },
+    {
+      "id": "system-orders",
+      "feature_or_screen": "NPC orders (coin sink)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_orders_tests.gd"],
+      "note": "Seeded RNG generation, refill to MAX_ORDERS, fill_order with reward > market incentive; wired to TownScreen."
+    },
+    {
+      "id": "system-mine",
+      "feature_or_screen": "Mine expedition (Town 2)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_mine_tests.gd"],
+      "note": "enter_mine converts supplies->turns, mine pool swaps board, soft-fail on turn exhaustion, leave_mine. Single shared inventory."
+    },
+    {
+      "id": "system-boss",
+      "feature_or_screen": "Capstone boss (Frostmaw)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_boss_tests.gd"],
+      "note": "start_boss gating (City + mine mastery), raises min_chain, damage_boss by chain length, defeat sets town2_complete. One boss."
+    },
+    {
+      "id": "system-rats",
+      "feature_or_screen": "Rats hazard (Town 3)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_rats_tests.gd"],
+      "note": "RAT tiles seed farm pool once town2_complete; Ratcatcher + Master Ratcatcher. Note: RAT has no PNG (flat placeholder) -> art fed in M7."
+    },
+    {
+      "id": "system-rubble",
+      "feature_or_screen": "Rubble hazard (mine cave-ins)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_rubble_tests.gd"],
+      "note": "RUBBLE seeds mine pool; cleared by STONE chains sweeping 8-adjacent rubble. No PNG yet (flat placeholder) -> art fed in M7."
+    },
+    {
+      "id": "system-save-load",
+      "feature_or_screen": "Save / load",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_state_tests.gd"],
+      "note": "Versioned JSON to user://save.json, mismatched versions discarded; from_dict defensively parsed. Round-trip tested."
+    },
+    {
+      "id": "system-audio",
+      "feature_or_screen": "Audio / SFX",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_audio_tests.gd"],
+      "note": "Synthesizes every SFX as 16-bit PCM AudioStreamWAV, ported 1:1 from src/audio/index.ts. Pooled players, mute pref persisted."
+    },
+    {
+      "id": "system-inventory-ledger",
+      "feature_or_screen": "Inventory ledger",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_inventory_tests.gd"],
+      "note": "Read-only grouped ledger (Farm/Refined/Mine/Other) with counts, sell prices, line + total value. Pure compute helpers tested."
+    },
+    {
+      "id": "system-buildings-logic",
+      "feature_or_screen": "Buildings / spawners / plots (logic)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_building_tests.gd", "run_town_ui_tests.gd"],
+      "note": "build/demolish/plot-gating works as LOGIC (spawner adds tile category to refill pool). Spatial placement map is the M6 gap; catalog is a 7-building subset."
+    },
+    {
+      "id": "system-town-list-ui",
+      "feature_or_screen": "Town list UI (build/sell/fill button rows)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "full",
+      "target_milestone": "DONE",
+      "verified_by": ["run_town_ui_tests.gd"],
+      "note": "TownScreen.gd list-modal of build/refine/market/orders/expedition rows; every button registered under a stable key for tests. Spatial map is M6."
+    },
+
+    {
+      "id": "system-tools",
+      "feature_or_screen": "Tools (axe/bomb/rake/shovel + 20+ others)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M8",
+      "verified_by": ["run_tools_tests.gd", "e2e:tools", "golden:board-farm-tool-rake"],
+      "note": "No tool items, no tool-use action, no tool powers. LOGIC FIRST: ToolConfig.gd + GameState.use_tool before any palette UI."
+    },
+    {
+      "id": "system-board-animations",
+      "feature_or_screen": "Board animations & effects",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_assets_tests.gd", "golden:board-farm-chain-7"],
+      "note": "Tween juice exists (fly-to-coins chip, pop-in, chain glow); lacks GPUParticles, cascade/refill tweening, seasonal tint, floaters."
+    },
+    {
+      "id": "system-seasons-calendar",
+      "feature_or_screen": "Seasons & calendar",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "e2e:season", "golden:run-summary"],
+      "note": "Intentionally dropped: turn is a monotonic counter. No seasonal boons, tint, or recap modal yet."
+    },
+    {
+      "id": "system-story-beats",
+      "feature_or_screen": "Story beats & narrative",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-prompt"],
+      "note": "No beat progression, narrative modals, choice system, or chronicle view."
+    },
+    {
+      "id": "system-cartography-zones",
+      "feature_or_screen": "Cartography & zones",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
+      "note": "No map render, no zone switching, no settlement founding, no road network. The mine is a board-pool swap, not a zone."
+    },
+    {
+      "id": "system-townsfolk-npcs",
+      "feature_or_screen": "Townsfolk & NPCs",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
+      "note": "No NPC roster, bonding, dialog, or order multipliers; orders are anonymous."
+    },
+    {
+      "id": "system-achievements",
+      "feature_or_screen": "Achievements & trophies",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "No counter tracking or trophy/collection UI."
+    },
+    {
+      "id": "system-chronicle",
+      "feature_or_screen": "Chronicle & story timeline",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
+      "note": "No timeline of completed story beats."
+    },
+    {
+      "id": "system-tile-collection",
+      "feature_or_screen": "Tile collection browser",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-farm-grass"],
+      "note": "77 tile PNGs on disk but only ~17 wired; no catalog/discovery/research UI."
+    },
+    {
+      "id": "system-crafting-stations",
+      "feature_or_screen": "Crafting stations (Bakery/Forge/Larder)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_economy_tests.gd", "golden:crafting-bakery"],
+      "note": "Basic recipe listing in TownScreen (2 recipes: Bakery/Kitchen); no rich station UI, no tier-gating UI. Logic is sound."
+    },
+    {
+      "id": "system-daily-rewards",
+      "feature_or_screen": "Daily rewards",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_daily_rewards_tests.gd"],
+      "note": "No once-per-day login bonus or progressive reward tiers."
+    },
+    {
+      "id": "system-abilities-tool-powers",
+      "feature_or_screen": "Abilities & tool powers",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M8",
+      "verified_by": ["run_tools_tests.gd", "e2e:tools", "golden:board-farm-fertilizer-active"],
+      "note": "No ability/power system. Magic tools (golden apple, philosophers_stone) with fill_bias/tap-target/instant powers, ported with M8 tools."
+    },
+    {
+      "id": "system-farm-hazards",
+      "feature_or_screen": "Farm hazards (Fire/Rats/Wolves)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_rats_tests.gd", "golden:board-farm-fire-rats"],
+      "note": "Rats fully ported; fire/wolves absent. Hazard visual overlays + missing tile art come in M7."
+    },
+    {
+      "id": "system-mine-hazards",
+      "feature_or_screen": "Mine hazards (Cave-in/Gas Vent/Lava/Mole)",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_rubble_tests.gd", "golden:board-mine-hazards"],
+      "note": "Rubble (cave-in) ported; gas-vent/lava/mole absent. Hazard overlays + missing tile art come in M7."
+    },
+    {
+      "id": "system-tutorial",
+      "feature_or_screen": "Tutorial & onboarding",
+      "category": "system",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["golden:tutorial-center"],
+      "note": "No multi-step tutorial modal teaching chain/tools/tier-up/orders."
+    },
+
+    {
+      "id": "slice-achievements",
+      "feature_or_screen": "achievements slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_achievements_tests.gd"],
+      "note": "Trophy/collection tracker for gameplay milestones."
+    },
+    {
+      "id": "slice-almanac",
+      "feature_or_screen": "almanac slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_quests_tests.gd"],
+      "note": "Quest reference (now merged into quests view)."
+    },
+    {
+      "id": "slice-boons",
+      "feature_or_screen": "boons slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:boons-farm"],
+      "note": "Season modifiers and powerups."
+    },
+    {
+      "id": "slice-boss",
+      "feature_or_screen": "boss slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "DONE",
+      "verified_by": ["run_boss_tests.gd"],
+      "note": "Boss encounter system ported (one boss, Frostmaw); modal confirmation re-skin handled by M5/M9."
+    },
+    {
+      "id": "slice-bosses",
+      "feature_or_screen": "bosses slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_boss_tests.gd", "golden:townsfolk-bosses"],
+      "note": "Boss gallery/information view; only the single ported boss exists. Roster view lands with townsfolk in M10."
+    },
+    {
+      "id": "slice-cartography",
+      "feature_or_screen": "cartography slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
+      "note": "Multi-zone world map with settlement founding."
+    },
+    {
+      "id": "slice-castle",
+      "feature_or_screen": "castle slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-castle"],
+      "note": "Settlement tier progression building (the tier LADDER itself is ported; this is the castle surface)."
+    },
+    {
+      "id": "slice-charter",
+      "feature_or_screen": "charter slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_charter_tests.gd", "golden:charter-terms"],
+      "note": "Charter terms and covenant system."
+    },
+    {
+      "id": "slice-chronicle",
+      "feature_or_screen": "chronicle slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
+      "note": "Story timeline and completed narrative beats."
+    },
+    {
+      "id": "slice-crafting",
+      "feature_or_screen": "crafting slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_economy_tests.gd", "golden:crafting-bakery"],
+      "note": "Recipe system; Godot has 2 recipes (bakery/kitchen). Full station set + rich UI lands in M10."
+    },
+    {
+      "id": "slice-decorations",
+      "feature_or_screen": "decorations slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_decorations_tests.gd"],
+      "note": "Building decorations and cosmetics."
+    },
+    {
+      "id": "slice-farm",
+      "feature_or_screen": "farm slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_tests.gd", "golden:board-farm-idle"],
+      "note": "Farm biome board ported; tile effects/art + farm-specific juice land in M7."
+    },
+    {
+      "id": "slice-festivals",
+      "feature_or_screen": "festivals slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd"],
+      "note": "Seasonal events modal."
+    },
+    {
+      "id": "slice-fish",
+      "feature_or_screen": "fish slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_fish_tests.gd", "golden:board-fish-idle-high-tide"],
+      "note": "Harbor/fishing biome board mechanics (tides, pearl capture)."
+    },
+    {
+      "id": "slice-inventory",
+      "feature_or_screen": "inventory slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_inventory_tests.gd", "golden:inventory-grid-all"],
+      "note": "Inventory ledger ported; grid/list/search re-skin onto Theme+scenes lands in M5."
+    },
+    {
+      "id": "slice-market",
+      "feature_or_screen": "market slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M6",
+      "verified_by": ["run_economy_tests.gd", "golden:town-market-news"],
+      "note": "Market trades ported (sell+buy tested); buy UI surface + price drift land with the town surfaces in M6."
+    },
+    {
+      "id": "slice-mine",
+      "feature_or_screen": "mine slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_mine_tests.gd", "golden:board-mine-hazards"],
+      "note": "Mine expedition + rubble ported; full hazard set + tile art land in M7."
+    },
+    {
+      "id": "slice-npcs",
+      "feature_or_screen": "npcs slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
+      "note": "NPC roster, bonding, and dialog system."
+    },
+    {
+      "id": "slice-orders",
+      "feature_or_screen": "orders slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_orders_tests.gd", "golden:orders-mixed"],
+      "note": "Orders logic + TownScreen section ported; re-skin onto Theme+scenes lands in M5."
+    },
+    {
+      "id": "slice-portal",
+      "feature_or_screen": "portal slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M8",
+      "verified_by": ["run_tools_tests.gd", "e2e:tools"],
+      "note": "Magic tools that auto-apply without board selection; ported with M8 tools/tool-powers."
+    },
+    {
+      "id": "slice-quests",
+      "feature_or_screen": "quests slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_quests_tests.gd", "golden:quests-daily-mixed"],
+      "note": "Daily and almanac quest tracking."
+    },
+    {
+      "id": "slice-runsummary",
+      "feature_or_screen": "runSummary slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:run-summary"],
+      "note": "Season end recap and statistics modal."
+    },
+    {
+      "id": "slice-settings",
+      "feature_or_screen": "settings slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_menu_tests.gd", "golden:shell-menu-settings"],
+      "note": "Options/mute pref ported in MenuScreen; re-skin onto Theme+scenes lands in M5."
+    },
+    {
+      "id": "slice-story",
+      "feature_or_screen": "story slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-choices"],
+      "note": "Narrative beats and choice system."
+    },
+    {
+      "id": "slice-tilecollection",
+      "feature_or_screen": "tileCollection slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-farm-grass"],
+      "note": "Collectible tile browser and discovery."
+    },
+    {
+      "id": "slice-townsfolk",
+      "feature_or_screen": "townsfolk slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-quests"],
+      "note": "NPC roster view with bonding tiers."
+    },
+    {
+      "id": "slice-tutorial",
+      "feature_or_screen": "tutorial slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["golden:tutorial-center"],
+      "note": "Onboarding tutorial modal."
+    },
+    {
+      "id": "slice-wiki",
+      "feature_or_screen": "wiki slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_wiki_tests.gd"],
+      "note": "Recipe reference and crafting wiki."
+    },
+    {
+      "id": "slice-workers",
+      "feature_or_screen": "workers slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
+      "note": "Settlement worker system and effects."
+    },
+    {
+      "id": "slice-zones",
+      "feature_or_screen": "zones slice",
+      "category": "slice",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
+      "note": "Multi-biome system; Godot mine is a board-pool swap, not a true zone. Full zone model lands in M10."
+    },
+
+    {
+      "id": "view-town",
+      "feature_or_screen": "town view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_layout_tests.gd", "e2e:town-build", "golden:town-home-built-out"],
+      "note": "Spatial town building-placement map with roads/river/trees. Godot has a button-row list, not a map."
+    },
+    {
+      "id": "view-board",
+      "feature_or_screen": "board view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_scene_smoke.gd", "golden:board-farm-idle"],
+      "note": "Main puzzle board gameplay; renders but lacks tile art + effects until M7."
+    },
+    {
+      "id": "view-achievements",
+      "feature_or_screen": "achievements view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "Trophy and collection tracking."
+    },
+    {
+      "id": "view-boons",
+      "feature_or_screen": "boons view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:boons-farm"],
+      "note": "Season modifiers view."
+    },
+    {
+      "id": "view-bosses",
+      "feature_or_screen": "bosses view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_boss_tests.gd", "golden:townsfolk-bosses"],
+      "note": "Boss gallery; only the single ported boss exists."
+    },
+    {
+      "id": "view-cartography",
+      "feature_or_screen": "cartography view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
+      "note": "World map and zone navigation."
+    },
+    {
+      "id": "view-castle",
+      "feature_or_screen": "castle view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-castle"],
+      "note": "Settlement tier advancement view."
+    },
+    {
+      "id": "view-charter",
+      "feature_or_screen": "charter view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_charter_tests.gd", "golden:charter-terms"],
+      "note": "Charter terms view."
+    },
+    {
+      "id": "view-chronicle",
+      "feature_or_screen": "chronicle view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
+      "note": "Story timeline."
+    },
+    {
+      "id": "view-crafting",
+      "feature_or_screen": "crafting view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_economy_tests.gd", "golden:crafting-bakery"],
+      "note": "Recipe crafting interface; basic listing today, rich station UI in M10."
+    },
+    {
+      "id": "view-decorations",
+      "feature_or_screen": "decorations view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_decorations_tests.gd"],
+      "note": "Building decorations management."
+    },
+    {
+      "id": "view-inventory",
+      "feature_or_screen": "inventory view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_inventory_tests.gd", "golden:inventory-grid-all"],
+      "note": "Resource inventory and search; re-skin onto Theme+scenes in M5."
+    },
+    {
+      "id": "view-orders",
+      "feature_or_screen": "orders view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_orders_tests.gd", "golden:orders-mixed"],
+      "note": "NPC trade orders; re-skin onto Theme+scenes in M5."
+    },
+    {
+      "id": "view-portal",
+      "feature_or_screen": "portal view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M8",
+      "verified_by": ["run_tools_tests.gd", "golden:board-farm-tool-rake"],
+      "note": "Magic tools; ported with M8 tools/tool-powers."
+    },
+    {
+      "id": "view-quests",
+      "feature_or_screen": "quests view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_quests_tests.gd", "golden:quests-almanac-mixed"],
+      "note": "Daily and almanac quests."
+    },
+    {
+      "id": "view-tilecollection",
+      "feature_or_screen": "tileCollection view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-mining-stone"],
+      "note": "Collectible tile browser."
+    },
+    {
+      "id": "view-townsfolk",
+      "feature_or_screen": "townsfolk view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
+      "note": "NPC roster and bonding."
+    },
+    {
+      "id": "view-recipewiki",
+      "feature_or_screen": "recipeWiki view",
+      "category": "view",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_wiki_tests.gd"],
+      "note": "Recipe reference wiki."
+    },
+
+    {
+      "id": "modal-menu",
+      "feature_or_screen": "menu modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_menu_tests.gd", "golden:shell-menu-main"],
+      "note": "MenuScreen ported; re-skin onto ModalShell + router in M5."
+    },
+    {
+      "id": "modal-boss",
+      "feature_or_screen": "boss modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M9",
+      "verified_by": ["run_boss_tests.gd", "golden:boss-modal"],
+      "note": "Boss confirmation ported; weather/run-summary polish in M9."
+    },
+    {
+      "id": "modal-tutorial",
+      "feature_or_screen": "tutorial modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["golden:tutorial-center"],
+      "note": "Onboarding tutorial overlay."
+    },
+    {
+      "id": "modal-debug",
+      "feature_or_screen": "debug modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["golden:shell-debug-modal"],
+      "note": "Debug panel; pairs with the test/deep-link harness in M-infra."
+    },
+    {
+      "id": "modal-festivals",
+      "feature_or_screen": "festivals modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd"],
+      "note": "Seasonal events modal."
+    },
+    {
+      "id": "modal-runsummary",
+      "feature_or_screen": "runSummary modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:run-summary"],
+      "note": "Season end summary modal."
+    },
+    {
+      "id": "modal-leaveboard",
+      "feature_or_screen": "leaveBoard modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M5",
+      "verified_by": ["run_router_tests.gd", "golden:shell-leave-board-confirm"],
+      "note": "Leave-board confirmation; wired through the M5 router/ModalShell."
+    },
+    {
+      "id": "modal-season",
+      "feature_or_screen": "season modal",
+      "category": "modal",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd"],
+      "note": "Season transition prompt."
+    },
+
+    {
+      "id": "golden-board-farm-idle",
+      "feature_or_screen": "board-farm-idle",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-idle"],
+      "note": "Farm biome board at start; needs tile art feed (M7)."
+    },
+    {
+      "id": "golden-board-farm-chain-7",
+      "feature_or_screen": "board-farm-chain-7",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-chain-7"],
+      "note": "Farm with 7-tile chain highlight; tile art + chain-glow polish (M7)."
+    },
+    {
+      "id": "golden-board-farm-fire-rats",
+      "feature_or_screen": "board-farm-fire-rats",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-fire-rats"],
+      "note": "Farm with fire and rat hazards; rat art + fire system overlays (M7)."
+    },
+    {
+      "id": "golden-board-farm-tool-rake",
+      "feature_or_screen": "board-farm-tool-rake",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M8",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-rake"],
+      "note": "Farm with rake tool active; depends on M8 tool palette."
+    },
+    {
+      "id": "golden-board-farm-tool-bomb",
+      "feature_or_screen": "board-farm-tool-bomb",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M8",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-bomb"],
+      "note": "Farm with bomb tool active; depends on M8 tool palette."
+    },
+    {
+      "id": "golden-board-farm-tool-sickle",
+      "feature_or_screen": "board-farm-tool-sickle",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M8",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-tool-sickle"],
+      "note": "Farm with sickle tool active; depends on M8 tool palette."
+    },
+    {
+      "id": "golden-board-farm-fertilizer-active",
+      "feature_or_screen": "board-farm-fertilizer-active",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M8",
+      "verified_by": ["run_visual_tests.gd", "golden:board-farm-fertilizer-active"],
+      "note": "Farm with fertilizer effect; depends on M8 tool-powers."
+    },
+    {
+      "id": "golden-board-mine-idle",
+      "feature_or_screen": "board-mine-idle",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_visual_tests.gd", "golden:board-mine-idle"],
+      "note": "Mine biome board at start; needs mine tile art feed (M7)."
+    },
+    {
+      "id": "golden-board-mine-hazards",
+      "feature_or_screen": "board-mine-hazards",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M7",
+      "verified_by": ["run_visual_tests.gd", "golden:board-mine-hazards"],
+      "note": "Mine with cave-in/gas-vent/lava hazards; rubble art + hazard overlays (M7)."
+    },
+    {
+      "id": "golden-board-fish-idle-high-tide",
+      "feature_or_screen": "board-fish-idle-high-tide",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_fish_tests.gd", "golden:board-fish-idle-high-tide"],
+      "note": "Harbor biome at high tide; depends on M10 fish biome."
+    },
+    {
+      "id": "golden-board-fish-pearl-low-tide",
+      "feature_or_screen": "board-fish-pearl-low-tide",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_fish_tests.gd", "golden:board-fish-pearl-low-tide"],
+      "note": "Harbor with pearl mechanic at low tide; depends on M10 fish biome."
+    },
+    {
+      "id": "golden-board-boss-active",
+      "feature_or_screen": "board-boss-active",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M9",
+      "verified_by": ["run_visual_tests.gd", "golden:board-boss-active"],
+      "note": "Boss encounter active on board; weather polish lands with M9."
+    },
+    {
+      "id": "golden-board-boss-minimized",
+      "feature_or_screen": "board-boss-minimized",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M9",
+      "verified_by": ["run_visual_tests.gd", "golden:board-boss-minimized"],
+      "note": "Boss encounter minimized; weather polish lands with M9."
+    },
+    {
+      "id": "golden-board-boss-weather",
+      "feature_or_screen": "board-boss-weather",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M9",
+      "verified_by": ["run_visual_tests.gd", "golden:board-boss-weather"],
+      "note": "Boss with weather effects; depends on M9 weather GPUParticles."
+    },
+    {
+      "id": "golden-town-home-fresh",
+      "feature_or_screen": "town-home-fresh",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_layout_tests.gd", "golden:town-home-fresh"],
+      "note": "Town at start (no buildings); depends on M6 spatial town map."
+    },
+    {
+      "id": "golden-town-home-built-out",
+      "feature_or_screen": "town-home-built-out",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_layout_tests.gd", "e2e:town-build", "golden:town-home-built-out"],
+      "note": "Town with multiple buildings placed; depends on M6 spatial town map."
+    },
+    {
+      "id": "golden-town-building-tooltip",
+      "feature_or_screen": "town-building-tooltip",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_ui_tests.gd", "golden:town-building-tooltip"],
+      "note": "Building placement tooltip; depends on M6 Plot/BuildingTooltip scenes."
+    },
+    {
+      "id": "golden-town-placement-mode",
+      "feature_or_screen": "town-placement-mode",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_ui_tests.gd", "golden:town-placement-mode"],
+      "note": "Building placement mode active; depends on M6."
+    },
+    {
+      "id": "golden-town-build-picker-ready",
+      "feature_or_screen": "town-build-picker-ready",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_ui_tests.gd", "golden:town-build-picker-ready"],
+      "note": "Building picker ready to build; depends on M6 BuildPicker scene."
+    },
+    {
+      "id": "golden-town-build-picker-locked",
+      "feature_or_screen": "town-build-picker-locked",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_ui_tests.gd", "golden:town-build-picker-locked"],
+      "note": "Building picker with locked buildings; depends on M6."
+    },
+    {
+      "id": "golden-town-found-biome-picker",
+      "feature_or_screen": "town-found-biome-picker",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:town-found-biome-picker"],
+      "note": "Biome selection for new settlement; depends on M10 cartography founding."
+    },
+    {
+      "id": "golden-town-unfounded-blocked",
+      "feature_or_screen": "town-unfounded-blocked",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:town-unfounded-blocked"],
+      "note": "Blocked unfounded zone; depends on M10 cartography."
+    },
+    {
+      "id": "golden-town-market-news",
+      "feature_or_screen": "town-market-news",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_ui_tests.gd", "golden:town-market-news"],
+      "note": "Town market news/prices; market BUY surface wired into the M6 town."
+    },
+    {
+      "id": "golden-town-harbor-settlement",
+      "feature_or_screen": "town-harbor-settlement",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_fish_tests.gd", "golden:town-harbor-settlement"],
+      "note": "Harbor zone settlement view; depends on M10 fish/zones."
+    },
+    {
+      "id": "golden-town-mine-settlement",
+      "feature_or_screen": "town-mine-settlement",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:town-mine-settlement"],
+      "note": "Mine zone settlement view; depends on M10 zones."
+    },
+    {
+      "id": "golden-inventory-grid-all",
+      "feature_or_screen": "inventory-grid-all",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:inventory-grid-all"],
+      "note": "Inventory grid view; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-inventory-list-mode",
+      "feature_or_screen": "inventory-list-mode",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:inventory-list-mode"],
+      "note": "Inventory list view; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-inventory-search-empty",
+      "feature_or_screen": "inventory-search-empty",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:inventory-search-empty"],
+      "note": "Inventory search with no results; search UI added in M5 re-skin."
+    },
+    {
+      "id": "golden-inventory-mid-progress",
+      "feature_or_screen": "inventory-mid-progress",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:inventory-mid-progress"],
+      "note": "Inventory with some resources; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-inventory-full-with-progress",
+      "feature_or_screen": "inventory-full-with-progress",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:inventory-full-with-progress"],
+      "note": "Inventory nearly full; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-crafting-bakery",
+      "feature_or_screen": "crafting-bakery",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_visual_tests.gd", "golden:crafting-bakery"],
+      "note": "Bakery crafting station recipes; rich station UI in M10."
+    },
+    {
+      "id": "golden-crafting-locked-station",
+      "feature_or_screen": "crafting-locked-station",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M10",
+      "verified_by": ["run_visual_tests.gd", "golden:crafting-locked-station"],
+      "note": "Locked crafting station; tier-gating UI in M10."
+    },
+    {
+      "id": "golden-map-current-home",
+      "feature_or_screen": "map-current-home",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-current-home"],
+      "note": "Map showing current home zone; depends on M10 cartography."
+    },
+    {
+      "id": "golden-map-empty-panel",
+      "feature_or_screen": "map-empty-panel",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-empty-panel"],
+      "note": "Map with no zone selected; depends on M10 cartography."
+    },
+    {
+      "id": "golden-map-capital-locked",
+      "feature_or_screen": "map-capital-locked",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-capital-locked"],
+      "note": "Map with capital zone locked; depends on M10 cartography."
+    },
+    {
+      "id": "golden-map-founder-picker",
+      "feature_or_screen": "map-founder-picker",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-founder-picker"],
+      "note": "Map founder selection modal; depends on M10 founding logic."
+    },
+    {
+      "id": "golden-map-ready-road",
+      "feature_or_screen": "map-ready-road",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-ready-road"],
+      "note": "Map showing road ready to build; depends on M10 road network."
+    },
+    {
+      "id": "golden-map-founded-complete",
+      "feature_or_screen": "map-founded-complete",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-founded-complete"],
+      "note": "Map with founded settlement complete; depends on M10 cartography."
+    },
+    {
+      "id": "golden-map-keeper-choice",
+      "feature_or_screen": "map-keeper-choice",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:map-keeper-choice"],
+      "note": "Map with keeper trial choice; depends on M10 cartography + story."
+    },
+    {
+      "id": "golden-orders-mixed",
+      "feature_or_screen": "orders-mixed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:orders-mixed"],
+      "note": "Orders view with mixed filled/unfilled; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-boons-farm",
+      "feature_or_screen": "boons-farm",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:boons-farm"],
+      "note": "Boons selection for farm; depends on M9 boons."
+    },
+    {
+      "id": "golden-boss-modal",
+      "feature_or_screen": "boss-modal",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M9",
+      "verified_by": ["run_visual_tests.gd", "golden:boss-modal"],
+      "note": "Boss encounter modal; re-skin/weather polish in M9."
+    },
+    {
+      "id": "golden-charter-terms",
+      "feature_or_screen": "charter-terms",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_charter_tests.gd", "golden:charter-terms"],
+      "note": "Charter terms list; depends on M10 charter."
+    },
+    {
+      "id": "golden-charter-term-dialog",
+      "feature_or_screen": "charter-term-dialog",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_charter_tests.gd", "golden:charter-term-dialog"],
+      "note": "Charter term detail dialog; depends on M10 charter."
+    },
+    {
+      "id": "golden-chronicle-empty",
+      "feature_or_screen": "chronicle-empty",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:chronicle-empty"],
+      "note": "Chronicle with no story beats; depends on M10 story/chronicle."
+    },
+    {
+      "id": "golden-chronicle-progressed",
+      "feature_or_screen": "chronicle-progressed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:chronicle-progressed"],
+      "note": "Chronicle with story progress; depends on M10 story/chronicle."
+    },
+    {
+      "id": "golden-achievements-trophies-mixed",
+      "feature_or_screen": "achievements-trophies-mixed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_achievements_tests.gd", "golden:achievements-trophies-mixed"],
+      "note": "Achievements trophy tab; depends on M10 achievements."
+    },
+    {
+      "id": "golden-achievements-collection-mixed",
+      "feature_or_screen": "achievements-collection-mixed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_achievements_tests.gd", "golden:achievements-collection-mixed"],
+      "note": "Achievements collection tab; depends on M10 achievements."
+    },
+    {
+      "id": "golden-tiles-farm-grass",
+      "feature_or_screen": "tiles-farm-grass",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-farm-grass"],
+      "note": "Tile collection farm grass entry; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-mining-stone",
+      "feature_or_screen": "tiles-mining-stone",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-mining-stone"],
+      "note": "Tile collection mining stone entry; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-water-fish",
+      "feature_or_screen": "tiles-water-fish",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-water-fish"],
+      "note": "Tile collection water fish entry; depends on M10 tile-collection + fish."
+    },
+    {
+      "id": "golden-tiles-hazards",
+      "feature_or_screen": "tiles-hazards",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-hazards"],
+      "note": "Tile collection hazards entries; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-activate-grass-spiky",
+      "feature_or_screen": "tiles-activate-grass-spiky",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-activate-grass-spiky"],
+      "note": "Tile collection activation state; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-buy-clover",
+      "feature_or_screen": "tiles-buy-clover",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-buy-clover"],
+      "note": "Tile collection buy with coins; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-free-moves-chip",
+      "feature_or_screen": "tiles-free-moves-chip",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-free-moves-chip"],
+      "note": "Tile collection free moves chip; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-tiles-research-progress",
+      "feature_or_screen": "tiles-research-progress",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:tiles-research-progress"],
+      "note": "Tile collection research progress; depends on M10 tile-collection."
+    },
+    {
+      "id": "golden-entry-mine-locked",
+      "feature_or_screen": "entry-mine-locked",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:entry-mine-locked"],
+      "note": "Mine entry locked; entry-cost surface lands with M10 zones."
+    },
+    {
+      "id": "golden-entry-mine-provision-empty",
+      "feature_or_screen": "entry-mine-provision-empty",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_cartography_tests.gd", "golden:entry-mine-provision-empty"],
+      "note": "Mine entry with no provisions; entry surface lands with M10 zones."
+    },
+    {
+      "id": "golden-quests-daily-mixed",
+      "feature_or_screen": "quests-daily-mixed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_quests_tests.gd", "golden:quests-daily-mixed"],
+      "note": "Daily quests view; depends on M10 quests."
+    },
+    {
+      "id": "golden-quests-almanac-mixed",
+      "feature_or_screen": "quests-almanac-mixed",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_quests_tests.gd", "golden:quests-almanac-mixed"],
+      "note": "Almanac quests view; depends on M10 quests."
+    },
+    {
+      "id": "golden-run-summary",
+      "feature_or_screen": "run-summary",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M9",
+      "verified_by": ["run_seasons_tests.gd", "golden:run-summary"],
+      "note": "Season end summary modal; depends on M9 seasons/runSummary."
+    },
+    {
+      "id": "golden-shell-town-fresh",
+      "feature_or_screen": "shell-town-fresh",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M6",
+      "verified_by": ["run_town_layout_tests.gd", "golden:shell-town-fresh"],
+      "note": "Town view from shell; depends on M6 spatial town map."
+    },
+    {
+      "id": "golden-shell-menu-main",
+      "feature_or_screen": "shell-menu-main",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:shell-menu-main"],
+      "note": "Settings menu main tab; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-shell-menu-settings",
+      "feature_or_screen": "shell-menu-settings",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "partial",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:shell-menu-settings"],
+      "note": "Settings menu options tab; re-skin golden recaptured in M5."
+    },
+    {
+      "id": "golden-shell-debug-modal",
+      "feature_or_screen": "shell-debug-modal",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["run_visual_tests.gd", "golden:shell-debug-modal"],
+      "note": "Debug panel modal; pairs with the deep-link/test harness in M-infra."
+    },
+    {
+      "id": "golden-shell-leave-board-confirm",
+      "feature_or_screen": "shell-leave-board-confirm",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:shell-leave-board-confirm"],
+      "note": "Leave board confirmation; wired through the M5 router/ModalShell."
+    },
+    {
+      "id": "golden-shell-toast-bubble",
+      "feature_or_screen": "shell-toast-bubble",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M5",
+      "verified_by": ["run_visual_tests.gd", "golden:shell-toast-bubble"],
+      "note": "Toast notification; toast component lands with the M5 UI vocabulary."
+    },
+    {
+      "id": "golden-tutorial-corner",
+      "feature_or_screen": "tutorial-corner",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["golden:tutorial-corner"],
+      "note": "Tutorial in corner; depends on M10 tutorial."
+    },
+    {
+      "id": "golden-tutorial-center",
+      "feature_or_screen": "tutorial-center",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["golden:tutorial-center"],
+      "note": "Tutorial centered modal; depends on M10 tutorial."
+    },
+    {
+      "id": "golden-start-farming-default",
+      "feature_or_screen": "start-farming-default",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:start-farming-default"],
+      "note": "Start farming with default board; start-flow/tile-chooser lands with M10."
+    },
+    {
+      "id": "golden-start-farming-tile-chooser",
+      "feature_or_screen": "start-farming-tile-chooser",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_tile_collection_tests.gd", "golden:start-farming-tile-chooser"],
+      "note": "Start farming with tile selection; depends on M10 tile-collection/start flow."
+    },
+    {
+      "id": "golden-story-bar",
+      "feature_or_screen": "story-bar",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-bar"],
+      "note": "Story bar on board; depends on M10 story."
+    },
+    {
+      "id": "golden-story-prompt",
+      "feature_or_screen": "story-prompt",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-prompt"],
+      "note": "Story prompt modal; depends on M10 story."
+    },
+    {
+      "id": "golden-story-choices",
+      "feature_or_screen": "story-choices",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-choices"],
+      "note": "Story with choice options; depends on M10 story choice system."
+    },
+    {
+      "id": "golden-story-win",
+      "feature_or_screen": "story-win",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_story_tests.gd", "golden:story-win"],
+      "note": "Story win condition; depends on M10 story."
+    },
+    {
+      "id": "golden-townsfolk-bosses",
+      "feature_or_screen": "townsfolk-bosses",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-bosses"],
+      "note": "Townsfolk bosses tab; depends on M10 townsfolk."
+    },
+    {
+      "id": "golden-townsfolk-workers",
+      "feature_or_screen": "townsfolk-workers",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-workers"],
+      "note": "Townsfolk workers tab; depends on M10 townsfolk/workers."
+    },
+    {
+      "id": "golden-townsfolk-castle",
+      "feature_or_screen": "townsfolk-castle",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-castle"],
+      "note": "Townsfolk castle connections; depends on M10 townsfolk."
+    },
+    {
+      "id": "golden-townsfolk-quests",
+      "feature_or_screen": "townsfolk-quests",
+      "category": "golden",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M10",
+      "verified_by": ["run_townsfolk_tests.gd", "golden:townsfolk-quests"],
+      "note": "Townsfolk quests connections; depends on M10 townsfolk/quests."
+    },
+
+    {
+      "id": "infra-gdunit4",
+      "feature_or_screen": "GdUnit4 adoption (auto-discovery + parallel unit suites)",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["gdunit4:suite-green", "ci:godot-ci.yml"],
+      "note": "Adopt GdUnit4 + gdUnit GitHub action; migrate the 17 monolithic run_*.gd runners one class per system, kept as a compatibility harness until migrated."
+    },
+    {
+      "id": "infra-e2e-input-sim",
+      "feature_or_screen": "E2E input-sim DSL (InputEvent + scene-state harness)",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["e2e:smoke", "e2e:navigation", "e2e:chain", "e2e:town-build"],
+      "note": "No input simulation today. Build an InputEventMouseButton/Key + scene-state DSL beside run_slice_e2e.gd; port ~5 Playwright specs."
+    },
+    {
+      "id": "infra-visual-regression",
+      "feature_or_screen": "Visual golden-diff suite (run_visual_tests.gd + __goldens__ diff)",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["run_visual_tests.gd", "golden:__goldens__-diff"],
+      "note": "Generalize tools/screenshot.gd into a scenario x viewport matrix capturing PNGs under godot/tests/visual/__goldens__/{scenario}/{vp}.png with pixelwise diff."
+    },
+    {
+      "id": "infra-web-export-smoke",
+      "feature_or_screen": "Post-export web smoke (serve godot/dist + Playwright)",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["ci:web-smoke", "e2e:smoke-web"],
+      "note": "Closes the 'export succeeds but untested' gap: serve godot/dist after Web export and run a Playwright smoke spec against it."
+    },
+    {
+      "id": "infra-parity-matrix-check",
+      "feature_or_screen": "Parity-matrix CI validation check",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M-infra",
+      "verified_by": ["check-parity-matrix.mjs", "ci:godot-ci.yml"],
+      "note": "Parses docs/parity-matrix.json and fails if any 'full' row names a run_*.gd suite that does not exist on disk. Built in this PR; wired into godot-ci.yml in M-infra."
+    },
+
+    {
+      "id": "infra-desktop-framing",
+      "feature_or_screen": "Desktop/HiDPI framing + responsive sizing",
+      "category": "infra",
+      "react_has": true,
+      "godot_status": "absent",
+      "target_milestone": "M11",
+      "verified_by": ["run_visual_tests.gd", "golden:hidpi", "ci:web-export"],
+      "note": "project.godot desktop default size + content-scale/aspect; responsive breakpoints reusing the M5 Theme/scenes; second (desktop) viewport in the visual matrix."
+    }
+  ]
+}
