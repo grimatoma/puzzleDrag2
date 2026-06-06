@@ -70,7 +70,7 @@ func _build_hud() -> void:
 	bg_layer.layer = -1
 	add_child(bg_layer)
 	var bg := ColorRect.new()
-	bg.color = Color(0.063, 0.078, 0.055)             # deep earthy background
+	bg.color = Palette.FRAME_BG                        # warm parchment app frame
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg_layer.add_child(bg)
@@ -84,10 +84,14 @@ func _build_hud() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE   # never eat board drags
 	layer.add_child(root)
 
+	var heading_font: Font = _heading_font()   # Cinzel (bold) when present, else null
+
 	var title := Label.new()
 	title.text = "puzzleDrag2 · Godot M3"
-	title.add_theme_font_size_override("font_size", 30)
-	title.add_theme_color_override("font_color", Color(0.83, 0.90, 0.74))
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Palette.INK)
+	if heading_font != null:
+		title.add_theme_font_override("font", heading_font)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 18
@@ -97,7 +101,7 @@ func _build_hud() -> void:
 	_chain_label = Label.new()
 	_chain_label.text = "Drag 3+ matching tiles"
 	_chain_label.add_theme_font_size_override("font_size", 22)
-	_chain_label.add_theme_color_override("font_color", Color(0.89, 0.76, 0.29))
+	_chain_label.add_theme_color_override("font_color", Palette.EMBER)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_chain_label.offset_top = 60
@@ -107,7 +111,7 @@ func _build_hud() -> void:
 	_status_label = Label.new()
 	_status_label.text = ""
 	_status_label.add_theme_font_size_override("font_size", 20)
-	_status_label.add_theme_color_override("font_color", Color(0.65, 0.84, 0.55))
+	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_status_label.offset_top = -150
@@ -119,7 +123,7 @@ func _build_hud() -> void:
 	_totals_label = Label.new()
 	_totals_label.text = "Collected: —"
 	_totals_label.add_theme_font_size_override("font_size", 20)
-	_totals_label.add_theme_color_override("font_color", Color(0.93, 0.95, 0.88))
+	_totals_label.add_theme_color_override("font_color", Palette.INK)
 	_totals_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_totals_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_totals_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -132,7 +136,7 @@ func _build_hud() -> void:
 	_meta_label = Label.new()
 	_meta_label.text = "Coins: 0   ·   Turn: 0"
 	_meta_label.add_theme_font_size_override("font_size", 20)
-	_meta_label.add_theme_color_override("font_color", Color(0.91, 0.78, 0.44))
+	_meta_label.add_theme_color_override("font_color", Palette.EMBER)
 	_meta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_meta_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_meta_label.offset_top = 96
@@ -142,7 +146,7 @@ func _build_hud() -> void:
 	_settlement_label = Label.new()
 	_settlement_label.text = "Camp · cap 200 · 3 plots"
 	_settlement_label.add_theme_font_size_override("font_size", 18)
-	_settlement_label.add_theme_color_override("font_color", Color(0.74, 0.86, 0.62))
+	_settlement_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_settlement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_settlement_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_settlement_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -155,7 +159,7 @@ func _build_hud() -> void:
 	_buildings_label = Label.new()
 	_buildings_label.text = "Plots 0/3 · (no buildings)"
 	_buildings_label.add_theme_font_size_override("font_size", 18)
-	_buildings_label.add_theme_color_override("font_color", Color(0.70, 0.82, 0.92))
+	_buildings_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_buildings_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_buildings_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_buildings_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -168,7 +172,7 @@ func _build_hud() -> void:
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
 	_orders_label.add_theme_font_size_override("font_size", 18)
-	_orders_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.62))
+	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_orders_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_orders_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -182,7 +186,7 @@ func _build_hud() -> void:
 	_biome_label = Label.new()
 	_biome_label.text = "Farm"
 	_biome_label.add_theme_font_size_override("font_size", 18)
-	_biome_label.add_theme_color_override("font_color", Color(0.78, 0.80, 0.84))
+	_biome_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_biome_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_biome_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_biome_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -198,7 +202,8 @@ func _build_hud() -> void:
 	_boss_label = Label.new()
 	_boss_label.text = ""
 	_boss_label.add_theme_font_size_override("font_size", 18)
-	_boss_label.add_theme_color_override("font_color", Color(0.62, 0.82, 0.95))
+	# Cool slate-blue threat tone that still reads on the light parchment.
+	_boss_label.add_theme_color_override("font_color", Color(0.20, 0.36, 0.52))
 	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_boss_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_boss_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -214,7 +219,8 @@ func _build_hud() -> void:
 	_rats_label = Label.new()
 	_rats_label.text = ""
 	_rats_label.add_theme_font_size_override("font_size", 18)
-	_rats_label.add_theme_color_override("font_color", Color(0.86, 0.62, 0.46))
+	# Warm rust so the vermin warning stands apart from the cool boss line.
+	_rats_label.add_theme_color_override("font_color", Palette.EMBER)
 	_rats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_rats_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -231,11 +237,64 @@ func _build_hud() -> void:
 	var town_btn := Button.new()
 	town_btn.text = "🏠 Town"
 	town_btn.add_theme_font_size_override("font_size", 20)
+	town_btn.add_theme_color_override("font_color", Palette.INK)
+	town_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	town_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	# Parchment chip: warm fill, iron border, soft rounded corners — the cozy
+	# journal look. Hover/pressed states lighten/darken the same parchment.
+	var normal := _parchment_box(Palette.PARCHMENT)
+	var hover := _parchment_box(Palette.PARCHMENT_SOFT)
+	var pressed := _parchment_box(Palette.DIM)
+	town_btn.add_theme_stylebox_override("normal", normal)
+	town_btn.add_theme_stylebox_override("hover", hover)
+	town_btn.add_theme_stylebox_override("pressed", pressed)
+	town_btn.add_theme_stylebox_override("focus", _parchment_box(Palette.PARCHMENT_SOFT))
 	town_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	town_btn.offset_left = 18
 	town_btn.offset_top = 18
 	town_btn.connect("pressed", Callable(self, "_open_town"))
 	root.add_child(town_btn)
+
+## M4a (optional) — the Cinzel display serif used by the original game for headings.
+## Loads the variable TTF from res://assets/fonts/Cinzel-Regular.ttf and returns a
+## BOLD FontVariation of it. Returns null when the asset isn't imported/present, so
+## the caller falls back to the default font (the parchment look does NOT depend on
+## the font landing). Cached after the first build.
+static var _heading_font_cache: Font = null
+static var _heading_font_tried: bool = false
+func _heading_font() -> Font:
+	if _heading_font_tried:
+		return _heading_font_cache
+	_heading_font_tried = true
+	var path := "res://assets/fonts/Cinzel-Regular.ttf"
+	if ResourceLoader.exists(path):
+		var base := load(path)
+		if base is FontFile:
+			var fv := FontVariation.new()
+			fv.base_font = base
+			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
+			_heading_font_cache = fv
+	return _heading_font_cache
+
+## A reusable parchment StyleBoxFlat: warm fill, 2px iron border, rounded corners,
+## comfortable padding. Used to skin HUD buttons in the journal aesthetic.
+func _parchment_box(fill: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = Palette.IRON
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 7
+	sb.content_margin_bottom = 7
+	return sb
 
 # ── Town screen ─────────────────────────────────────────────────────────────
 

@@ -46,9 +46,46 @@ var clear_rats_on_grass: bool = false
 var _dragging := false
 var _path: Array = []                  ## Array[Vector2i] of dragged cells
 
+## M4a — the orange/gold chain-path overlay. A sibling of the tile nodes (shares
+## Board-local space) but drawn ON TOP via a high z_index. Created once in _ready
+## and DELIBERATELY preserved across _build_tiles rebuilds (which free only Tiles),
+## so its reference survives every collapse/refill.
+var _chain_overlay: ChainOverlay
+
+## M4a — padding (px) of the field-tinted card drawn behind the tiles by _draw().
+const FRAME_PAD := 10.0
+
 func _ready() -> void:
 	rng.randomize()
+	_chain_overlay = ChainOverlay.new()
+	_chain_overlay.z_index = 100        # above every tile node
+	add_child(_chain_overlay)
 	setup_new_board()
+
+# ── parchment-game framing (M4a) ─────────────────────────────────────────────
+
+## Draw a rounded, field-tinted card with a soft drop shadow BEHIND the tiles.
+## A CanvasItem renders itself before its children, so this frame sits under every
+## Tile node automatically. Re-run on layout/board changes via queue_redraw().
+func _draw() -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.FIELD
+	sb.corner_radius_top_left = 16
+	sb.corner_radius_top_right = 16
+	sb.corner_radius_bottom_left = 16
+	sb.corner_radius_bottom_right = 16
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Palette.FIELD_EDGE
+	sb.shadow_size = 10
+	sb.shadow_color = Color(0, 0, 0, 0.25)
+	sb.shadow_offset = Vector2(0, 4)
+	var rect := Rect2(
+		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
+		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
+	draw_style_box(sb, rect)
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 
@@ -83,8 +120,11 @@ func _ensure_live_board() -> void:
 		guard += 1
 
 func _build_tiles() -> void:
+	# Free ONLY Tile nodes — the chain overlay (a sibling Node2D) must survive the
+	# collapse/refill churn so its reference stays stable across moves.
 	for child in get_children():
-		child.queue_free()
+		if child is Tile:
+			child.queue_free()
 	tiles = []
 	for r in Constants.ROWS:
 		var row: Array = []
@@ -93,6 +133,7 @@ func _build_tiles() -> void:
 			t.position = _cell_center(c, r)
 			row.append(t)
 		tiles.append(row)
+	queue_redraw()   # field card depends on board_origin / size
 
 func _make_tile(t: int) -> Tile:
 	var node := Tile.new()
@@ -134,6 +175,7 @@ func layout_for(viewport: Vector2) -> void:
 			if t != null:
 				t.set_size_px(tile_size)
 				t.position = _cell_center(c, r)
+	queue_redraw()   # tile_size changed → reframe the field card
 
 func board_pixel_size() -> Vector2:
 	return Vector2(Constants.COLS * tile_size, Constants.ROWS * tile_size)
@@ -166,6 +208,7 @@ func _begin_drag(cell: Vector2i) -> void:
 	_dragging = true
 	_path = [cell]
 	_set_highlight(cell, true)
+	_update_chain_overlay()
 	chain_changed.emit(1)
 
 func _extend_drag(cell: Vector2i) -> void:
@@ -178,6 +221,7 @@ func _extend_drag(cell: Vector2i) -> void:
 	if _path.size() >= 2 and cell == _path[-2]:
 		_set_highlight(last, false)
 		_path.pop_back()
+		_update_chain_overlay()
 		chain_changed.emit(_path.size())
 		return
 	if _path.has(cell):
@@ -189,6 +233,7 @@ func _extend_drag(cell: Vector2i) -> void:
 		return
 	_path.append(cell)
 	_set_highlight(cell, true)
+	_update_chain_overlay()
 	chain_changed.emit(_path.size())
 
 func _finish_drag() -> void:
@@ -197,9 +242,22 @@ func _finish_drag() -> void:
 		_set_highlight(cell, false)
 	_path = []
 	_dragging = false
+	_update_chain_overlay()                # clears the path line + nodes
 	chain_changed.emit(0)
 	if BoardLogic.is_valid_chain(grid, path, min_chain):
 		_resolve(path)
+
+## M4a — recompute the overlay's Board-local points from `_path` (each cell's
+## centre) and push them to the chain overlay, flagged valid when the chain has
+## reached the resolve threshold. Called on every path mutation; an empty path
+## clears the overlay. Guarded so it's a no-op before the overlay exists.
+func _update_chain_overlay() -> void:
+	if _chain_overlay == null:
+		return
+	var points: Array = []
+	for cell in _path:
+		points.append(_cell_center(cell.x, cell.y))
+	_chain_overlay.set_path(points, _path.size() >= min_chain, tile_size)
 
 func _set_highlight(cell: Vector2i, on: bool) -> void:
 	var t: Tile = tiles[cell.y][cell.x]
