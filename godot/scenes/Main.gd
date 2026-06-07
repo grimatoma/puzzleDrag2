@@ -102,6 +102,11 @@ var _tutorial_modal                      ## CanvasLayer (TutorialModalScript), l
 ## register it as a global (mirrors AchievementsScreen / RecipeWiki / TileCollection).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
 var _castle_screen                       ## CanvasLayer (CastleScreenScript), lazily created
+## Decorations screen — build repeatable ornaments that GRANT the Influence currency.
+## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
+## as a global (mirrors CastleScreen / AchievementsScreen / RecipeWiki / TileCollection).
+const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
+var _decorations_screen                  ## CanvasLayer (DecorationsScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -679,6 +684,26 @@ func _build_hud() -> void:
 	castle_btn.connect("pressed", Callable(self, "_open_castle"))
 	root.add_child(castle_btn)
 
+	# Decorations — always-visible "🌷" button, pinned top-LEFT just under the 🏰 castle
+	# button (offset_top 432, ~38px tall) so the eleven buttons stack without overlapping
+	# and all clear the centred board drag area. Same parchment-pill look. Opens the
+	# DecorationsScreen (build ornaments → grant Influence).
+	var decorations_btn := Button.new()
+	decorations_btn.text = "🌷"
+	decorations_btn.add_theme_font_size_override("font_size", 20)
+	decorations_btn.add_theme_color_override("font_color", Palette.INK)
+	decorations_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	decorations_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	decorations_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	decorations_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	decorations_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	decorations_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	decorations_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	decorations_btn.offset_left = 18
+	decorations_btn.offset_top = 478
+	decorations_btn.connect("pressed", Callable(self, "_open_decorations"))
+	root.add_child(decorations_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1170,6 +1195,34 @@ func _on_castle_closed() -> void:
 	_refresh_totals()
 	_refresh_chain_progress()
 
+# ── Decorations screen ───────────────────────────────────────────────────────
+
+## Open the decorations modal, lazily creating + wiring it on first use (mirrors
+## _open_castle). The screen mutates GameState in place (build_decoration deducts coins +
+## cost items and grants influence) and re-renders itself, so it only emits `closed`, routed
+## to a hide handler. open() re-reads the live influence + inventory each time, so the cards
+## always reflect current affordability + built counts.
+func _open_decorations() -> void:
+	if _decorations_screen == null:
+		_decorations_screen = DecorationsScreenScript.new()
+		add_child(_decorations_screen)
+		_decorations_screen.setup(game)
+		_decorations_screen.connect("closed", Callable(self, "_on_decorations_closed"))
+	_decorations_screen.open()
+	_router.open_modal(ViewRouter.Modal.DECORATIONS)
+
+## The decorations screen was closed: hide it, reset the router, and persist (a build mutated
+## coins + inventory + influence) + refresh the stockpile HUD so the spent coins/resources
+## disappear from the on-board totals immediately. Mirrors _on_castle_closed.
+func _on_decorations_closed() -> void:
+	if _decorations_screen != null:
+		_decorations_screen.visible = false
+	_router.close_modal()
+	# A build deducted coins + inventory (and granted influence); persist + refresh HUD.
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 
 ## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
@@ -1314,6 +1367,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_tutorial()
 		ViewRouter.Modal.CASTLE:
 			_open_castle()
+		ViewRouter.Modal.DECORATIONS:
+			_open_decorations()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1353,6 +1408,10 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a contribution is persisted + the
 				# stockpile HUD refreshed (it also hides + resets the router).
 				_on_castle_closed()
+			elif _decorations_screen != null and _decorations_screen.visible:
+				# Route through the close handler so a build is persisted + the stockpile
+				# HUD refreshed (it also hides + resets the router).
+				_on_decorations_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
