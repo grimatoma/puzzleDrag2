@@ -2230,13 +2230,13 @@
       "feature_or_screen": "Post-export web smoke (serve godot/dist + Playwright)",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M-infra",
       "verified_by": [
         "ci:web-smoke",
         "e2e:smoke-web"
       ],
-      "note": "Closes the 'export succeeds but untested' gap: serve godot/dist after Web export and run a Playwright smoke spec against it. CI now auto-discovers and runs all 36 run_*.gd suites; web-export smoke is still absent."
+      "note": "Closes the 'export succeeds but untested' gap. tools/serve-godot-dist.mjs serves the Web export with correct MIME; tests/godot-web/boot.spec.ts boots it in headless Chromium and asserts the engine reaches _ready (a web-only JavaScriptBridge beacon window.__hearthGodotReady), a live <canvas> with a GL context, and zero uncaught page errors. Wired as a hard gate in the godot-web-export CI job (npm ci + playwright). Verified locally: boots in ~2s, smoke green; headless GDScript sweep unaffected (beacon guarded by OS.has_feature('web'))."
     },
     {
       "id": "infra-parity-matrix-check",

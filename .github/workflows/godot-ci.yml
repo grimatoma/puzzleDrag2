@@ -17,6 +17,9 @@ on:
       - 'docs/parity-matrix.json'
       - 'tools/check-parity-matrix.mjs'
       - 'tools/build-parity-matrix.mjs'
+      - 'tools/serve-godot-dist.mjs'
+      - 'playwright.godot-web.config.js'
+      - 'tests/godot-web/**'
   pull_request:
     branches: [main]
     paths:
@@ -25,6 +28,9 @@ on:
       - 'docs/parity-matrix.json'
       - 'tools/check-parity-matrix.mjs'
       - 'tools/build-parity-matrix.mjs'
+      - 'tools/serve-godot-dist.mjs'
+      - 'playwright.godot-web.config.js'
+      - 'tests/godot-web/**'
 
 env:
   GODOT_VERSION: '4.6.2'
@@ -111,6 +117,24 @@ jobs:
           test -f godot/dist/index.wasm
           echo "Web export contents:"
           ls -la godot/dist
+
+      # Boot the just-exported build in headless Chromium and assert it actually
+      # initializes (WASM + pck load, the main scene's _ready runs). This is a
+      # REAL gate — a boot failure (wasm trap / JS exception / never-ready) fails
+      # CI. Reuses godot/dist/ from the export step above; serves it via
+      # tools/serve-godot-dist.mjs (Playwright's webServer launches it).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Web-boot smoke (headless Chromium)
+        run: npx playwright test -c playwright.godot-web.config.js
 
       - uses: actions/upload-artifact@v4
         with:
