@@ -228,6 +228,73 @@ func contribute_to_castle(id: String, n: int) -> Dictionary:
 	castle_contributed[id] = castle_contributed_for(id) + amount
 	return {"ok": true, "id": id, "amount": amount, "contributed": castle_contributed[id]}
 
+# ── Decorations + Influence (ADDITIVE — ported from src/features/decorations) ────
+## Influence — a NEW currency granted by building decorations. Decorations GRANT it; the
+## Portal feature (ported next) will SPEND it. Uncapped (like coins / runes); starts at 0.
+## Persisted defensively in to_dict / from_dict (a save written before decorations existed
+## loads with 0). SAVE_VERSION is NOT bumped — like every prior additive field.
+var influence: int = 0
+## Built decoration counts, keyed by DecorationConfig id (String) → count built (int).
+## Decorations are REPEATABLE, so this just tracks how many of each you've built (for the
+## UI's ×N badge). SIMPLIFICATION: the React model is per-LOCATION
+## (built[location].decorations); the port has no multi-location built model, so this is a
+## FLAT GLOBAL dict (faithful enough — the costs/grants are identical, only the per-location
+## split is dropped). Initialised empty; persisted + defensively restored (int-coerced,
+## real ids only). SAVE_VERSION is NOT bumped.
+var decorations: Dictionary = {}
+
+## How many of decoration `id` have been built (0 when none / unknown id).
+func decoration_count(id: String) -> int:
+	return int(decorations.get(id, 0))
+
+## True when decoration `id` can be built RIGHT NOW: it's a real decoration AND the
+## inventory covers its coins cost plus every resource item in its cost. Mirrors the React
+## canAfford gate (index.tsx).
+func can_afford_decoration(id: String) -> bool:
+	if not DecorationConfig.has_decoration(id):
+		return false
+	var cost: Dictionary = DecorationConfig.cost(id)
+	if coins < int(cost.get("coins", 0)):
+		return false
+	for k in cost.keys():
+		if String(k) == "coins":
+			continue
+		if int(inventory.get(k, 0)) < int(cost[k]):
+			return false
+	return true
+
+## Build decoration `id`: deduct the coins + each cost item from inventory (floored at 0,
+## key erased at 0 — the same write pattern as contribute_to_castle / craft / fill_order),
+## bump decorations[id], and add the decoration's influence grant to `influence`. Mirrors
+## the React BUILD_DECORATION reducer (slice.ts). Returns {ok:true, id, influence} with the
+## NEW running influence total on success. On failure returns {ok:false, reason} WITHOUT
+## mutating; reason is the FIRST guard that trips: "unknown" → "cant_afford".
+func build_decoration(id: String) -> Dictionary:
+	if not DecorationConfig.has_decoration(id):
+		return {"ok": false, "reason": "unknown"}
+	var cost: Dictionary = DecorationConfig.cost(id)
+	var coin_cost: int = int(cost.get("coins", 0))
+	if coins < coin_cost:
+		return {"ok": false, "reason": "cant_afford"}
+	for k in cost.keys():
+		if String(k) == "coins":
+			continue
+		if int(inventory.get(k, 0)) < int(cost[k]):
+			return {"ok": false, "reason": "cant_afford"}
+	# All guards passed — commit: deduct coins, then each cost item.
+	coins -= coin_cost
+	for k in cost.keys():
+		if String(k) == "coins":
+			continue
+		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(cost[k]))
+		if remaining == 0:
+			inventory.erase(k)
+		else:
+			inventory[k] = remaining
+	decorations[id] = decoration_count(id) + 1
+	influence += DecorationConfig.influence(id)
+	return {"ok": true, "id": id, "influence": influence}
+
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
 ## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
 ## A missing key reads as 0 (no charges). This is the persisted half of the tool
@@ -1516,6 +1583,11 @@ func to_dict() -> Dictionary:
 		# before the castle existed loads with all needs at 0 (from_dict defensive
 		# default), so the economy is unchanged.
 		"castle_contributed": castle_contributed.duplicate(),
+		# Decorations + Influence (ADDITIVE): the new Influence currency + per-decoration
+		# built counts. SAVE_VERSION is NOT bumped — a save written before decorations
+		# existed loads with influence 0 + an empty decorations dict (from_dict defaults).
+		"influence": influence,
+		"decorations": decorations.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1736,4 +1808,16 @@ static func from_dict(d: Dictionary) -> GameState:
 			var cid := String(k)
 			if CastleConfig.has_need(cid):
 				s.castle_contributed[cid] = clampi(int(castle_d[k]), 0, CastleConfig.need_target(cid))
+	# Restore Influence + decorations (ADDITIVE). Missing keys (any save written before
+	# decorations existed) → influence 0 + an empty decorations dict (the defaults the new
+	# GameState already carries). Influence is coerced to int + floored at 0; decoration
+	# counts are int-coerced, floored at 0, and kept ONLY for REAL decoration ids so a
+	# corrupt/stale save can never seed a phantom decoration. SAVE_VERSION is NOT bumped.
+	s.influence = maxi(0, int(d.get("influence", 0)))
+	var dec_d: Variant = d.get("decorations", null)
+	if dec_d is Dictionary:
+		for k in dec_d:
+			var did := String(k)
+			if DecorationConfig.has_decoration(did):
+				s.decorations[did] = maxi(0, int(dec_d[k]))
 	return s
