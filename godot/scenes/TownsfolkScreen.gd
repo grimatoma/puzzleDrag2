@@ -165,8 +165,12 @@ func _build_shell() -> void:
 
 	# Re-fit the scroll height to its content whenever the viewport resizes so the card
 	# stays content-sized + capped to the viewport.
-	get_viewport().size_changed.connect(func() -> void:
-		UiKit.fit_scroll_height(_scroll, _body))
+	# get_viewport() is null while the screen is built off-tree (tests construct it with
+	# .new()+setup() before add_child); guard so the resize hook wires only when in-tree.
+	var vp := get_viewport()
+	if vp != null:
+		vp.size_changed.connect(func() -> void:
+			UiKit.fit_scroll_height(_scroll, _body))
 
 # ── render ─────────────────────────────────────────────────────────────────────────────
 
