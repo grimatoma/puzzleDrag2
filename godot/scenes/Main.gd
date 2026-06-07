@@ -97,6 +97,11 @@ var _recipe_wiki_screen                  ## CanvasLayer (RecipeWikiScreenScript)
 ## --import pass to register it as a global (mirrors all the other lazily-created modals).
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
 var _tutorial_modal                      ## CanvasLayer (TutorialModalScript), lazily created
+## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way
+## sink). Loaded via preload (NO class_name) so the port never needs an --import pass to
+## register it as a global (mirrors AchievementsScreen / RecipeWiki / TileCollection).
+const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
+var _castle_screen                       ## CanvasLayer (CastleScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -654,6 +659,26 @@ func _build_hud() -> void:
 	recipes_btn.connect("pressed", Callable(self, "_open_recipes"))
 	root.add_child(recipes_btn)
 
+	# Castle — always-visible "🏰" castle button, pinned top-LEFT just under the
+	# 🍳 recipe-wiki button (offset_top 386, ~38px tall) so the ten buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the CastleScreen resource-contribution screen.
+	var castle_btn := Button.new()
+	castle_btn.text = "🏰"
+	castle_btn.add_theme_font_size_override("font_size", 20)
+	castle_btn.add_theme_color_override("font_color", Palette.INK)
+	castle_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	castle_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	castle_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	castle_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	castle_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	castle_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	castle_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	castle_btn.offset_left = 18
+	castle_btn.offset_top = 432
+	castle_btn.connect("pressed", Callable(self, "_open_castle"))
+	root.add_child(castle_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1117,6 +1142,34 @@ func _on_recipes_closed() -> void:
 		_recipe_wiki_screen.visible = false
 	_router.close_modal()
 
+# ── Castle contributions screen ──────────────────────────────────────────────
+
+## Open the castle contributions modal, lazily creating + wiring it on first use
+## (mirrors _open_recipes). The screen mutates GameState in place (contribute_to_castle
+## deducts inventory + bumps the contributed counter) and re-renders itself, so it only
+## emits `closed`, routed to a hide handler. open() re-reads the live contributions +
+## inventory each time, so the needs list always reflects current progress.
+func _open_castle() -> void:
+	if _castle_screen == null:
+		_castle_screen = CastleScreenScript.new()
+		add_child(_castle_screen)
+		_castle_screen.setup(game)
+		_castle_screen.connect("closed", Callable(self, "_on_castle_closed"))
+	_castle_screen.open()
+	_router.open_modal(ViewRouter.Modal.CASTLE)
+
+## The castle screen was closed: hide it, reset the router, and persist (a contribution
+## mutated inventory + the contributed totals) + refresh the stockpile HUD so the
+## donated resources disappear from the on-board totals immediately.
+func _on_castle_closed() -> void:
+	if _castle_screen != null:
+		_castle_screen.visible = false
+	_router.close_modal()
+	# A contribution deducted from inventory; persist + refresh the affected HUD surfaces.
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 
 ## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
@@ -1259,6 +1312,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_recipes()
 		ViewRouter.Modal.TUTORIAL:
 			_open_tutorial()
+		ViewRouter.Modal.CASTLE:
+			_open_castle()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1294,6 +1349,10 @@ func apply_deeplink(id: String) -> bool:
 			elif _tutorial_modal != null and _tutorial_modal.visible:
 				_tutorial_modal.visible = false
 				_router.close_modal()
+			elif _castle_screen != null and _castle_screen.visible:
+				# Route through the close handler so a contribution is persisted + the
+				# stockpile HUD refreshed (it also hides + resets the router).
+				_on_castle_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
