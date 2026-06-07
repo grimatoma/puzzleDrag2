@@ -508,13 +508,14 @@
       "feature_or_screen": "castle slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
+        "run_castle_tests.gd",
         "run_townsfolk_tests.gd",
         "golden:townsfolk-castle"
       ],
-      "note": "Settlement tier progression building (the tier LADDER itself is ported; this is the castle surface)."
+      "note": "CastleConfig (3 needs: soup 53 / meat 47 / coal→tile_mine_coal 43, verbatim from React data.ts) + GameState.contribute_to_castle — a one-way inventory sink that clamps to available (never over-contributes past target or on-hand) and persists defensively in to_dict/from_dict. Faithful port of src/features/castle/slice.ts; the React castle-as-tier-progression rework noted in data.ts is deferred."
     },
     {
       "id": "slice-charter",
@@ -901,13 +902,14 @@
       "feature_or_screen": "castle view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
+        "run_castle_tests.gd",
         "run_townsfolk_tests.gd",
         "golden:townsfolk-castle"
       ],
-      "note": "Settlement tier advancement view."
+      "note": "CastleScreen — parchment modal (mirrors AchievementsScreen) listing the 3 Castle needs, each with a contributed/target progress bar, a 'Have: N' line, and Contribute 1 / All(N) buttons wired to game.contribute_to_castle (buttons disabled at 0-on-hand or when the need is met). Reachable via the 🏰 HUD button + deep-link 'castle'/'keep'. Faithful port of src/features/castle/index.tsx."
     },
     {
       "id": "view-charter",
