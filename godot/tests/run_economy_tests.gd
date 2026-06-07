@@ -192,7 +192,7 @@ func _test_refiner_not_in_pool() -> void:
 	# A built Bakery must NOT touch the board pool or categories.
 	var pool := g.active_tile_pool()
 	_check(not pool.has(Constants.EMPTY), "active_tile_pool has no EMPTY after building a Bakery")
-	_check(pool == Constants.STAPLE_POOL, "pool still equals the staples-only pool (Bakery adds nothing)")
+	_check(pool == Constants.FARM_POOL, "pool still equals the full farm pool (Bakery adds nothing)")
 	var cats := g.active_categories()
 	_check(cats == ["grass", "grain"], "active_categories unchanged by the Bakery (no blank entry)")
 	_check(not cats.has(""), "no empty-string category leaked in from the refiner")

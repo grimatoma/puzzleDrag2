@@ -369,9 +369,9 @@ func _test_capture_pearl() -> void:
 # ── active_biome_pool (farm / mine / harbor) ───────────────────────────────────
 
 func _test_active_biome_pool() -> void:
-	# On the farm → the staple pool (no spawners), NOT the fish pool.
+	# On the farm → the full farm variety pool, NOT the fish pool.
 	var farm := GameState.new()
-	_check(farm.active_biome_pool() == Constants.STAPLE_POOL, "farm pool is the staple pool")
+	_check(farm.active_biome_pool() == Constants.FARM_POOL, "farm pool is the full farm pool")
 	_check(not farm.active_biome_pool().has(T.FISH_SARDINE), "farm pool has no fish")
 
 	# In the mine → mine pool + rubble (unaffected by fish).
@@ -491,4 +491,4 @@ func _test_additive_farm_regression() -> void:
 	_check(int(r.get("units", -1)) == 1, "6 GRASS → 1 hay_bundle (unchanged)")
 	_check(g.qty("hay_bundle") == 1, "hay_bundle landed in inventory (unchanged)")
 	# Adding the harbor did not perturb the farm pool.
-	_check(g.active_biome_pool() == Constants.STAPLE_POOL, "farm pool still the staple pool")
+	_check(g.active_biome_pool() == Constants.FARM_POOL, "farm pool still the full farm pool")

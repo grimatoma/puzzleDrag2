@@ -99,13 +99,13 @@ func _test_rats_enabled_and_pool() -> void:
 	var pool: Array = g.active_tile_pool()
 	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
 		"farm pool now has exactly RAT_POOL_SLOTS (%d) rats" % Constants.RAT_POOL_SLOTS)
-	# Staples are still present alongside the rats.
-	_check(_count(pool, T.GRASS) == _count(Constants.STAPLE_POOL, T.GRASS),
-		"staple grass slots unchanged by the rat seeding")
-	_check(_count(pool, T.WHEAT) == _count(Constants.STAPLE_POOL, T.WHEAT),
-		"staple wheat slots unchanged by the rat seeding")
-	_check(pool.size() == Constants.STAPLE_POOL.size() + Constants.RAT_POOL_SLOTS,
-		"farm pool = staples + RAT_POOL_SLOTS (no other additions)")
+	# The full farm variety is still present alongside the rats.
+	_check(_count(pool, T.GRASS) == _count(Constants.FARM_POOL, T.GRASS),
+		"farm grass slots unchanged by the rat seeding")
+	_check(_count(pool, T.WHEAT) == _count(Constants.FARM_POOL, T.WHEAT),
+		"farm wheat slots unchanged by the rat seeding")
+	_check(pool.size() == Constants.FARM_POOL.size() + Constants.RAT_POOL_SLOTS,
+		"farm pool = full variety + RAT_POOL_SLOTS (no other additions)")
 
 	# Mine pool is unaffected — rats are a farm-only hazard.
 	var m := GameState.new()
@@ -149,8 +149,8 @@ func _test_building_gating() -> void:
 	# A built Ratcatcher adds NOTHING to the pool beyond the rat slots (no tile/category).
 	var pool: Array = g.active_tile_pool()
 	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
-		"built Ratcatcher leaves the pool at staples + RAT_POOL_SLOTS")
-	_check(pool.size() == Constants.STAPLE_POOL.size() + Constants.RAT_POOL_SLOTS,
+		"built Ratcatcher leaves the pool at full variety + RAT_POOL_SLOTS")
+	_check(pool.size() == Constants.FARM_POOL.size() + Constants.RAT_POOL_SLOTS,
 		"hazard buildings contribute no extra pool tiles")
 	_check(not g.active_categories().has("rat"),
 		"hazard buildings add no 'rat' (or any) board CATEGORY via active_categories")

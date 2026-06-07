@@ -29,7 +29,7 @@ func _initialize() -> void:
 	print("\n── Asset pipeline tests ──────────────────────────")
 	_test_v1_pngs_present()
 	_test_hazard_tiles_have_art()
-	_test_v2_grass_animates()
+	_test_grass_uses_v1_export()
 	_test_v1_tile_is_static()
 	_test_placeholder_fallback()
 	print("──────────────────────────────────────────────────")
@@ -82,22 +82,21 @@ func _test_hazard_tiles_have_art() -> void:
 			"%s resolves to a real v1 texture (NOT the placeholder)" % key)
 		tile.free()
 
-# ── Stage 3: v2 animated tile ────────────────────────────────────────────────
+# ── Stage 3 loader / grass uses the v1 export ─────────────────────────────────
+# Grass previously shipped a v2 SpriteFrames fixture (a cream-tile tuft) that did
+# NOT match the React/Phaser grass. It was dropped so grass renders its v1 PNG
+# export (flat green stalks) like every other farm tile — a full art match. The
+# 3-tier loader in Tile.gd is intact for future REAL v2 art (a tile with a v2
+# .tres still animates; none ship today).
 
-func _test_v2_grass_animates() -> void:
-	_check(ResourceLoader.exists("res://assets/tiles/v2/tile_grass_grass.tres"),
-		"v2 SpriteFrames present for GRASS")
+func _test_grass_uses_v1_export() -> void:
+	_check(not ResourceLoader.exists("res://assets/tiles/v2/tile_grass_grass.tres"),
+		"no v2 grass fixture ships (grass uses the v1 export to match React)")
 	var tile := Tile.new()
 	tile.setup(T.GRASS, 96.0)
 	root.add_child(tile)
-	var anim := _anim_child(tile)
-	_check(anim != null, "GRASS resolves to a v2 AnimatedSprite2D (v2 beats v1)")
-	if anim != null and anim.sprite_frames != null:
-		var sf := anim.sprite_frames
-		_check(sf.has_animation(&"idle"), "v2 GRASS has an 'idle' animation")
-		_check(sf.get_frame_count(&"idle") == 8, "v2 GRASS 'idle' has 8 frames")
-		_check(sf.get_animation_loop(&"idle"), "v2 GRASS 'idle' loops")
-	_check(tile._tex == null, "v2 tile does not also carry a v1 flat texture")
+	_check(_anim_child(tile) == null, "GRASS renders static from its v1 PNG (no AnimatedSprite2D)")
+	_check(tile._tex != null, "GRASS resolves to its v1 export texture (NOT the placeholder)")
 	tile.free()
 
 # ── Stage 2 vs 3: a v1-only tile stays static ────────────────────────────────
