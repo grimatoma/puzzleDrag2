@@ -17,6 +17,14 @@
 # The committed goldens live under tests/visual/__goldens__/<platform>/ and are kept.
 tests/visual/__captures__/
 
+# GdUnit4 run artifacts (per-run XML/HTML reports + adapter cache). The suites
+# live under test/; the addon under addons/gdUnit4/ — both are committed. The
+# generated reports/ and config caches are not.
+reports/
+.gdunit4_testadapter/
+gdUnitRunner.cfg
+GdUnitRunner.cfg
+
 # Editor-local overrides.
 override.cfg
 
