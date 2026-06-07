@@ -412,6 +412,37 @@ var achievements_unlocked: Dictionary = {}
 ## seenResources / seenBuildings maps, generalised to one map keyed by counter.
 var _distinct_seen: Dictionary = {}
 
+# ── Quests + Almanac (ADDITIVE — ported from src/features/quests + almanac) ──────
+## The DETERMINISTIC 6-slot quest system + the almanac XP/tier track, ported from the
+## React quests/almanac slices as a roll/tick/claim layer wired ADDITIVELY into the
+## existing event sites (credit_chain → collect + chain ticks, fill_order → order tick,
+## craft → craft tick, use_tool_on_grid → tool tick). See QuestConfig / AlmanacConfig
+## for the ported, port-reachable catalog + pure logic. ADDITIVE GUARANTEE: with no
+## quests rolled (an empty `quests`) every tick site is a no-op loop over [], so the
+## economy is byte-identical to the pre-quests build and every existing suite stays
+## green. Quests are only rolled when ensure_quests() / reroll_quests() is called (the
+## UI / Main does this) — a bare GameState.new() carries an empty quest list.
+##
+## The seed string mirrors React's `${saveSeed}|${year}|${season}` — the port has no
+## calendar, so `quest_day` folds year+season into one monotonic int and `quest_seed`
+## is the stable per-save seed (default a fixed string so rolls are deterministic +
+## headless-testable; a real save could randomise it once at creation, but a fixed
+## default keeps determinism contracts simple). reroll_quests() bumps quest_day and
+## re-rolls (the port's faithful analogue of React's CLOSE_SEASON reroll, minus seasons).
+var quests: Array = []                  ## the rolled quest dicts (QuestConfig shape); [] until rolled
+var quest_day: int = 0                  ## monotonic roll index (folds React year+season); bumped by reroll
+var quest_seed: String = "hearthwood"   ## the stable per-save seed string (React saveSeed analogue)
+## Almanac XP/tier track. xp accumulates (uncapped); level is derived from xp via
+## AlmanacConfig.level_for_xp (kept cached so the UI/curve reads cheaply and matches
+## React's stored almanac.level). almanac_claimed is the Array of claimed tier ints.
+## almanac_structural latches the React `structural` reward flags (startingExtraScythe /
+## extraBlueprintSlot / goldSeal / extraTurn) as plain recorded honours (flag -> true) —
+## faithful to React (which also just latches them); NO fake UI pretends they DO anything.
+var almanac_xp: int = 0
+var almanac_level: int = 1
+var almanac_claimed: Array = []
+var almanac_structural: Dictionary = {}
+
 # ── Story engine (beats / flags / triggers / choices) ─────────────────────────
 ## Persisted story progress, ported from the React story slice (src/story.ts +
 ## src/state/storyEffects.ts) as a beat/flag/trigger/choice engine scoped to the
@@ -593,6 +624,15 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# inventory.hay_bundle, act2_quarry_foothold on inventory.block, …) can fire off
 	# the now-updated inventory snapshot. The summary below is UNCHANGED — only enqueue.
 	post_story_event({"type": "chain", "resource": resource, "units": units})
+	# ── Quests (ADDITIVE, after the economy is fully credited) ───────────────────
+	# A resolved chain ticks two quest events: COLLECT (keyed by the chained tile's
+	# STRING key, amount = chain length — matching React's collect tick on the tile key
+	# with amount=gained) and CHAIN (length = chain_len, for the chain-length quests).
+	# With an empty quest board both are no-op loops over []. The summary above is
+	# UNCHANGED. NOTE: a hazard tile (RAT/RUBBLE) has STRING key "rat"/"rubble" — no
+	# collect template targets those keys, so the collect tick simply matches nothing.
+	_tick_quests({"type": "collect", "key": Constants.string_key(tile_type), "amount": chain_len})
+	_tick_quests({"type": "chain", "length": chain_len})
 	return {
 		"resource": resource,
 		"units": units,
@@ -784,6 +824,10 @@ func craft(recipe_id: String) -> Dictionary:
 	var output: String = RecipeConfig.recipe_output(recipe_id)
 	var qty_out: int = RecipeConfig.recipe_qty(recipe_id)
 	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, settlement.cap())
+	# Quests (ADDITIVE): one craft ticks the CRAFT quest event, keyed by the recipe's
+	# OUTPUT key (matching React's craft tick on the crafted item), count = qty produced.
+	# No-op loop over [] with an empty quest board.
+	_tick_quests({"type": "craft", "item": output, "count": qty_out})
 	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id}
 
 # ── Market (sell / buy for coins) ─────────────────────────────────────────────
@@ -938,6 +982,9 @@ func fill_order(index: int) -> Dictionary:
 	# Story engine (ADDITIVE, after the order is committed): post an "order_fulfilled"
 	# event so act1_first_order can fire. The success result below is UNCHANGED.
 	post_story_event({"type": "order_fulfilled"})
+	# Quests (ADDITIVE): one fulfilled order ticks the ORDER quest event (+1 to any
+	# order-category quest). No-op loop over [] with an empty quest board.
+	_tick_quests({"type": "order"})
 	# The result's `reward` reports the ACTUAL coins paid (payout) so callers/UI show
 	# what was credited; `npc` is carried for the same reason.
 	return {"ok": true, "reward": payout, "resource": resource, "qty": qty, "npc": npc}
@@ -1430,6 +1477,11 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 	# If this was the armed tap tool, disarm it now that it has fired.
 	if pending_tool == id:
 		pending_tool = ""
+	# Quests (ADDITIVE): a successful tool use ticks the TOOL quest event (+1 to any
+	# tool-category quest matching this tool id). No-op loop over [] with an empty board.
+	# Wired here (the single committed-use site) so every tool fired through GameState
+	# counts, regardless of the (later M8c) caller's collapse/refill pipeline.
+	_tick_quests({"type": "tool", "tool": id})
 	return {"ok": true, "reason": "", "grid": new_grid, "collected": collected}
 
 # ── Story engine (beats / flags / triggers / choices) ─────────────────────────
@@ -1531,6 +1583,117 @@ func _credit_resource(resource: String, amount: int) -> void:
 		inventory.erase(resource)
 		return
 	inventory[resource] = mini(total, settlement.cap())
+
+# ── Quests + Almanac (ported from src/features/quests + almanac) ─────────────────
+
+## Ensure the quest board is populated: if `quests` is empty, roll a fresh set from
+## (quest_seed, quest_day). Idempotent — a non-empty board is left untouched (so this
+## is safe to call on every load / screen open without clobbering progress). Returns
+## the live `quests` array. Mirrors the React initial roll (a fresh save rolls once;
+## a loaded save keeps its saved quests). NOT called by GameState.new() — the economy
+## stays additive (an un-rolled GameState has [] quests and every tick is a no-op).
+func ensure_quests() -> Array:
+	if quests.is_empty():
+		quests = QuestConfig.roll_quests(quest_seed, quest_day)
+	return quests
+
+## Re-roll the quest board: bump quest_day and roll a fresh set from the new
+## (quest_seed, quest_day) seed. The port's faithful analogue of React's CLOSE_SEASON
+## reroll (minus the calendar). Returns the new `quests` array. Always re-rolls (unlike
+## ensure_quests, which only fills an empty board).
+func reroll_quests() -> Array:
+	quest_day += 1
+	quests = QuestConfig.roll_quests(quest_seed, quest_day)
+	return quests
+
+## Tick every quest with one event Dictionary (QuestConfig event shape), replacing each
+## quest with its progressed copy. A claimed quest / non-matching quest is unchanged
+## (QuestConfig.tick_quest returns the same dict). With an empty board this is a no-op
+## loop over [] — which is what keeps the quest layer additive at every wired event site.
+func _tick_quests(event: Dictionary) -> void:
+	if quests.is_empty():
+		return
+	for i in quests.size():
+		quests[i] = QuestConfig.tick_quest(quests[i], event)
+
+## Claim a completed quest by id: credit its coin reward + award its almanac XP (20),
+## mark it claimed. Mirrors React claimQuest + the slice's awardXp wiring. Returns
+## {ok:true, coins, xp, level} on success (coins/xp granted, the resulting almanac
+## level). On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST
+## guard that trips: "unknown" (no such quest) → "claimed" (already claimed) →
+## "incomplete" (progress < target).
+func claim_quest(quest_id: String) -> Dictionary:
+	var idx: int = -1
+	for i in quests.size():
+		if String(quests[i].get("id", "")) == quest_id:
+			idx = i
+			break
+	if idx < 0:
+		return {"ok": false, "reason": "unknown"}
+	var q: Dictionary = quests[idx]
+	if bool(q.get("claimed", false)):
+		return {"ok": false, "reason": "claimed"}
+	if int(q.get("progress", 0)) < int(q.get("target", 0)):
+		return {"ok": false, "reason": "incomplete"}
+	# Commit: credit coins (uncapped, like order rewards), mark claimed, then award XP.
+	var reward: Dictionary = q.get("reward", {})
+	var coin_gain: int = int(reward.get("coins", 0))
+	coins += coin_gain
+	var marked: Dictionary = q.duplicate(true)
+	marked["claimed"] = true
+	quests[idx] = marked
+	var xp_gain: int = int(reward.get("xp", QuestConfig.QUEST_CLAIM_XP))
+	award_xp(xp_gain)
+	return {"ok": true, "coins": coin_gain, "xp": xp_gain, "level": almanac_level}
+
+## Award `amount` almanac XP (clamped to >= 0 added), recomputing the cached level via
+## AlmanacConfig.level_for_xp. Mirrors React awardXp (xp += amount; level = max(1,
+## floor(xp/150)+1)). Returns the new level if this gain crossed into a higher level,
+## else 0 (the port's "no level-up" sentinel — React returned null). A non-positive
+## amount is a no-op that still returns 0.
+func award_xp(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	var prev: int = almanac_level
+	almanac_xp += amount
+	almanac_level = AlmanacConfig.level_for_xp(almanac_xp)
+	return almanac_level if almanac_level > prev else 0
+
+## Claim almanac tier `tier`: gated by AlmanacConfig.can_claim_tier (tier exists, not
+## already claimed, level high enough). On success grant the tier's reward — coins +
+## runes directly, tools through the M8b grant_tool path (every mapped tool id is a real
+## ToolConfig member), and latch any `structural` flag into almanac_structural — then
+## record the tier as claimed. Returns {ok:true, tier, reward} on success. On failure
+## returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "unknown" (no such tier) → "claimed" (already claimed) → "locked" (level too low).
+func claim_almanac_tier(tier: int) -> Dictionary:
+	if not AlmanacConfig.has_tier(tier):
+		return {"ok": false, "reason": "unknown"}
+	if almanac_claimed.has(tier):
+		return {"ok": false, "reason": "claimed"}
+	var def: Dictionary = AlmanacConfig.tier_def(tier)
+	if almanac_level < int(def.get("level", 1)):
+		return {"ok": false, "reason": "locked"}
+	# Commit the grant. Coins + runes are uncapped currencies.
+	var reward: Dictionary = def.get("reward", {})
+	var coin_gain: int = int(reward.get("coins", 0))
+	if coin_gain > 0:
+		coins += coin_gain
+	var rune_gain: int = int(reward.get("runes", 0))
+	if rune_gain > 0:
+		runes += rune_gain
+	var tools_reward: Dictionary = reward.get("tools", {})
+	for id in tools_reward.keys():
+		grant_tool(String(id), int(tools_reward[id]))
+	var structural: String = String(reward.get("structural", ""))
+	if structural != "":
+		almanac_structural[structural] = true
+	almanac_claimed.append(tier)
+	return {"ok": true, "tier": tier, "reward": reward.duplicate(true)}
+
+## True when structural honour `flag` has been latched by a claimed almanac tier.
+func has_almanac_structural(flag: String) -> bool:
+	return bool(almanac_structural.get(flag, false))
 
 # ── Achievements (M10) ─────────────────────────────────────────────────────────
 
@@ -1676,6 +1839,19 @@ func to_dict() -> Dictionary:
 		# written before the portal existed loads with portal_built = false (from_dict default),
 		# so the economy is unchanged.
 		"portal_built": portal_built,
+		# Quests + Almanac (ADDITIVE): the rolled quest board (deep-copied — each quest is a
+		# Dictionary), the roll bookkeeping (quest_day + quest_seed), and the almanac track
+		# (xp / level / claimed tiers / latched structural honours). SAVE_VERSION is NOT bumped
+		# — a save written before quests existed loads with an empty board (quests []), day 0,
+		# the default seed, and a fresh almanac (0 xp / level 1 / nothing claimed) via from_dict's
+		# defensive defaults, so the economy is unchanged.
+		"quests": quests.duplicate(true),
+		"quest_day": quest_day,
+		"quest_seed": quest_seed,
+		"almanac_xp": almanac_xp,
+		"almanac_level": almanac_level,
+		"almanac_claimed": almanac_claimed.duplicate(),
+		"almanac_structural": almanac_structural.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1913,4 +2089,63 @@ static func from_dict(d: Dictionary) -> GameState:
 	# gate stays closed until the player builds it. Coerced to a plain bool. SAVE_VERSION is
 	# NOT bumped.
 	s.portal_built = bool(d.get("portal_built", false))
+	# Restore Quests + Almanac (ADDITIVE). Missing keys (any save written before quests
+	# existed) → an empty quest board, day 0, the default seed, and a fresh almanac (the
+	# defaults the new GameState already carries), so old saves load with no quests rolled
+	# and the economy unchanged. Each saved quest is kept only if WELL-FORMED (a Dictionary
+	# with a String id and int target/progress, target > 0); malformed rows are dropped so
+	# a corrupt save can never desync the board. Almanac xp is int-coerced + floored at 0;
+	# the level is RECOMPUTED from the restored xp (never trusted from the save) so a corrupt
+	# saved level can't desync the curve; claimed tiers keep only REAL int tier ids,
+	# de-duplicated; structural honours keep only truthy flags. SAVE_VERSION is NOT bumped.
+	var qd: Variant = d.get("quests", [])
+	if qd is Array:
+		for q in qd:
+			if not (q is Dictionary):
+				continue
+			var qid: Variant = (q as Dictionary).get("id", null)
+			if not (qid is String) or String(qid) == "":
+				continue
+			var target: int = int((q as Dictionary).get("target", 0))
+			if target <= 0:
+				continue
+			var rebuilt: Dictionary = {
+				"id": String(qid),
+				"template": String((q as Dictionary).get("template", "")),
+				"category": String((q as Dictionary).get("category", "")),
+				"key": String((q as Dictionary).get("key", "")),
+				"item": String((q as Dictionary).get("item", "")),
+				"tool": String((q as Dictionary).get("tool", "")),
+				"min_length": int((q as Dictionary).get("min_length", -1)),
+				"target": target,
+				"progress": clampi(int((q as Dictionary).get("progress", 0)), 0, target),
+				"claimed": bool((q as Dictionary).get("claimed", false)),
+			}
+			var rwd: Variant = (q as Dictionary).get("reward", {})
+			if rwd is Dictionary:
+				rebuilt["reward"] = {
+					"coins": maxi(0, int((rwd as Dictionary).get("coins", 0))),
+					"xp": maxi(0, int((rwd as Dictionary).get("xp", QuestConfig.QUEST_CLAIM_XP))),
+				}
+			else:
+				rebuilt["reward"] = {"coins": 0, "xp": QuestConfig.QUEST_CLAIM_XP}
+			s.quests.append(rebuilt)
+	s.quest_day = maxi(0, int(d.get("quest_day", 0)))
+	var qseed: Variant = d.get("quest_seed", "hearthwood")
+	if qseed is String and String(qseed) != "":
+		s.quest_seed = String(qseed)
+	s.almanac_xp = maxi(0, int(d.get("almanac_xp", 0)))
+	# Level is DERIVED from the restored xp, not trusted from the save (defensive).
+	s.almanac_level = AlmanacConfig.level_for_xp(s.almanac_xp)
+	var claimed_d: Variant = d.get("almanac_claimed", [])
+	if claimed_d is Array:
+		for t in claimed_d:
+			var ti: int = int(t)
+			if AlmanacConfig.has_tier(ti) and not s.almanac_claimed.has(ti):
+				s.almanac_claimed.append(ti)
+	var struct_d: Variant = d.get("almanac_structural", {})
+	if struct_d is Dictionary:
+		for k in struct_d:
+			if bool(struct_d[k]):
+				s.almanac_structural[String(k)] = true
 	return s

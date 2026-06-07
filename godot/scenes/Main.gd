@@ -117,6 +117,12 @@ var _portal_screen                       ## CanvasLayer (PortalScreenScript), la
 ## pass to register it (mirrors PortalScreen / DecorationsScreen / CastleScreen).
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
 var _charter_screen                      ## CanvasLayer (CharterScreenScript), lazily created
+## Quests screen — the deterministic 6-slot quest board + the almanac XP/tier track (claim
+## quests for coins + XP; claim almanac tiers for coins/runes/tools). Loaded via preload
+## (NO class_name) so the port never needs an --import pass to register it (mirrors
+## CharterScreen / PortalScreen / DecorationsScreen).
+const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
+var _quests_screen                       ## CanvasLayer (QuestsScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -756,6 +762,28 @@ func _build_hud() -> void:
 	charter_btn.connect("pressed", Callable(self, "_open_charter"))
 	root.add_child(charter_btn)
 
+	# Quests — always-visible "📋" button, pinned top-LEFT just under the ⚖️ charter
+	# button (offset_top 570, ~38px tall → 616 is the next free slot) so the buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the QuestsScreen (claim deterministic quests + almanac tiers). 📋 is an
+	# UNUSED emoji in the HUD strip (📜 was already taken by the chronicle button).
+	var quests_btn := Button.new()
+	quests_btn.text = "📋"
+	quests_btn.add_theme_font_size_override("font_size", 20)
+	quests_btn.add_theme_color_override("font_color", Palette.INK)
+	quests_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	quests_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	quests_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	quests_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	quests_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	quests_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	quests_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	quests_btn.offset_left = 18
+	quests_btn.offset_top = 616
+	quests_btn.tooltip_text = "Quests"
+	quests_btn.connect("pressed", Callable(self, "_open_quests"))
+	root.add_child(quests_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1324,6 +1352,32 @@ func _on_charter_closed() -> void:
 		_charter_screen.visible = false
 	_router.close_modal()
 
+# ── Quests + Almanac ───────────────────────────────────────────────────────────
+
+## Open the Quests screen, lazily creating + wiring it on first use. setup()/open() roll
+## the quest board (idempotent) and re-read the live quest + almanac state, so the screen
+## always reflects current progress + claim availability.
+func _open_quests() -> void:
+	if _quests_screen == null:
+		_quests_screen = QuestsScreenScript.new()
+		add_child(_quests_screen)
+		_quests_screen.setup(game)
+		_quests_screen.connect("closed", Callable(self, "_on_quests_closed"))
+	_quests_screen.open()
+	_router.open_modal(ViewRouter.Modal.QUESTS)
+
+## The Quests screen was closed: hide it, reset the router, and persist (a claim spent /
+## granted coins + XP + tools + runes + advanced the almanac) + refresh the stockpile HUD
+## so the credited coins surface on the on-board totals immediately. Mirrors _on_portal_closed.
+func _on_quests_closed() -> void:
+	if _quests_screen != null:
+		_quests_screen.visible = false
+	_router.close_modal()
+	# A quest/tier claim credited coins/runes/tools + advanced the almanac; persist + refresh HUD.
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 
 ## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
@@ -1474,6 +1528,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_portal()
 		ViewRouter.Modal.CHARTER:
 			_open_charter()
+		ViewRouter.Modal.QUESTS:
+			_open_quests()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1525,6 +1581,10 @@ func apply_deeplink(id: String) -> bool:
 				# Charter is read-only — the close handler just hides + resets the router
 				# (no save needed, nothing changed).
 				_on_charter_closed()
+			elif _quests_screen != null and _quests_screen.visible:
+				# Route through the close handler so a claim is persisted + the stockpile
+				# HUD refreshed (it also hides + resets the router).
+				_on_quests_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
