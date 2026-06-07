@@ -224,16 +224,16 @@
     <h1>Godot Migration — Progress Tracker</h1>
     <p class="sub">Living status for porting puzzleDrag2 from React + Phaser 3 to Godot 4. Companion to the
       <a href="godot-migration-plan.html">strategy &amp; roadmap</a>; this page records what is actually built, verified, and decided.</p>
-    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · M3 slice complete · <b>M4 in progress — M4a parchment identity + M4b HUD + M4c Town re-skin + M4d audio + M4e board juice + M4f settings/menu modal + M4g Inventory screen done</b></p>
+    <p class="meta">Started 2026-06-05 · Last updated 2026-06-06 · <b>Finished slice — M1–M11 + the long-tail; parity 27% → 54% over in-scope rows (44 full / 86 partial / 31 absent / 10 dropped). Residual is dropped / parked / externally-blocked / polish.</b> See the <a href="#finish">Finish (M5–M11)</a> tab.</p>
     <div class="chips">
       <span class="chip">Godot 4.6.2</span>
       <span class="chip">GDScript</span>
-      <span class="chip">M1 merged</span>
-      <span class="chip">M2 done</span>
-      <span class="chip">M3 complete</span>
-      <span class="chip amber">M4 in progress</span>
-      <span class="chip">CI wired</span>
-      <span class="chip">tests green</span>
+      <span class="chip">M1–M4 done</span>
+      <span class="chip">M5–M11 done</span>
+      <span class="chip">long-tail done</span>
+      <span class="chip">parity 54%</span>
+      <span class="chip">CI green</span>
+      <span class="chip amber">mobile export blocked</span>
     </div>
   </header>
 
@@ -243,6 +243,7 @@
     <button class="tab" role="tab" data-tab="m2">M2 detail</button>
     <button class="tab" role="tab" data-tab="m3">M3 detail</button>
     <button class="tab" role="tab" data-tab="m4">M4 detail</button>
+    <button class="tab" role="tab" data-tab="finish">Finish (M5–M11)</button>
     <button class="tab" role="tab" data-tab="decisions">Decisions</button>
     <button class="tab" role="tab" data-tab="verify">Verification</button>
     <button class="tab" role="tab" data-tab="next">Next &amp; risks</button>
@@ -255,7 +256,17 @@
 
       <section id="at-a-glance">
         <h2>At a glance</h2>
-        <div class="box tip"><b>Where we are.</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) is under way</span>: its first six parts, <span style="color:var(--accent2)">M4a — the parchment visual identity</span>, <span style="color:var(--accent2)">M4b — the HUD top-bar + stockpile/chain-progress</span>, <span style="color:var(--accent2)">M4c — the Town-screen parchment re-skin</span>, <span style="color:var(--accent2)">M4d — the synthesized audio/SFX</span>, <span style="color:var(--accent2)">M4e — the board juice (reward fly-to-coins + tile spawn scale-in)</span>, and <span style="color:var(--accent2)">M4f — the parchment settings/menu modal (mute toggle + New Game)</span>, are done — so the core look + sound + menu parity is essentially met.</b> The Godot 4.6 project at
+        <div class="box tip"><b>Where we are <span style="color:var(--accent)">(finished slice — 2026-06-06)</span>.</b> The port has since been driven to its
+          <b>defined finish line</b>: a "finishing" session shipped <b>11 verified PRs (#993–#1003)</b> that lifted Godot-vs-React parity
+          from <b>27% → 54%</b> over in-scope rows (<b>44 full / 86 partial / 31 absent / 10 dropped</b>) — closing the self-contained
+          long-tail (quests/almanac, daily-rewards, M5 UI polish, debug overlay), standing up the full <b>M-infra backbone</b> (visual
+          golden-diff, web-export smoke, GdUnit4, parity-matrix CI), and landing <b>M11 desktop framing</b>. "Finished" is honest, not
+          literal — what remains is <b>dropped</b> (seasons, removed from React itself), <b>parked</b> (the full multi-settlement model),
+          <b>externally blocked</b> (mobile-store export), or <b>polish</b> (GPUParticle effects, the v2 tile-art feed, the full 59-tool
+          catalog). The <b><a href="#finish">Finish (M5–M11)</a></b> tab has the full breakdown + screenshots; the live source of truth is
+          the <a href="godot-parity-matrix.html">parity matrix</a>. The historical M1–M4 narrative below is preserved as the archive.
+          <hr style="border:none; border-top:1px solid var(--line); margin:.7rem 0;">
+          <b>Where we were (M1–M4).</b> <b>M1, M2 and M3 are all complete — the full Town&nbsp;1 → Town&nbsp;2 (+★ capstone boss) → Town&nbsp;3 introductory vertical slice plays end-to-end in Godot — and <span style="color:var(--accent2)">M4 (UX/UI parity) is under way</span>: its first six parts, <span style="color:var(--accent2)">M4a — the parchment visual identity</span>, <span style="color:var(--accent2)">M4b — the HUD top-bar + stockpile/chain-progress</span>, <span style="color:var(--accent2)">M4c — the Town-screen parchment re-skin</span>, <span style="color:var(--accent2)">M4d — the synthesized audio/SFX</span>, <span style="color:var(--accent2)">M4e — the board juice (reward fly-to-coins + tile spawn scale-in)</span>, and <span style="color:var(--accent2)">M4f — the parchment settings/menu modal (mute toggle + New Game)</span>, are done — so the core look + sound + menu parity is essentially met.</b> The Godot 4.6 project at
           <code>godot/</code> ports the core puzzle mechanic (drag-chain → collapse → refill → resource credit) <i>and</i> the
           run-economy layer on top of it: a <code>GameState</code> with the exact fractional <code>resourceProgress</code>
           accumulator (remainder carries across chains), inventory + coins + turn, and versioned save/load that discards
@@ -289,12 +300,16 @@
           <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (multi-PR)</span> <b>~75% · M4a parchment identity + M4b HUD + M4c Town re-skin + M4d audio + M4e board juice + M4f settings/menu modal + M4g Inventory screen done</b></div>
-          <div class="bar"><span style="width:75%"></span></div>
+          <div class="progress-label"><span>Milestone&nbsp;4 — UX/UI parity (multi-PR)</span> <b>100% · parchment identity + HUD + Town re-skin + audio + board juice + settings/menu + Inventory done</b></div>
+          <div class="bar"><span style="width:100%"></span></div>
         </div>
         <div class="progress-wrap">
-          <div class="progress-label"><span>Overall migration (PR-B → M5)</span> <b>~85%</b></div>
-          <div class="bar"><span style="width:85%"></span></div>
+          <div class="progress-label"><span>Phase&nbsp;2 — M5–M11 parity arc + M-infra + long-tail</span> <b>done · M5/M6/M10/M-infra/M11-desktop done · M7/M8 partial · M9 dropped</b></div>
+          <div class="bar"><span style="width:100%"></span></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Godot-vs-React parity (in-scope rows)</span> <b>54% · 44 full / 86 partial / 31 absent (10 dropped, excluded)</b></div>
+          <div class="bar"><span style="width:54%"></span></div>
         </div>
 
         <h3>Milestone board</h3>
@@ -996,6 +1011,86 @@
             <tr><td><code>.github/workflows/godot-ci.yml</code></td><td>Adds the inventory-suite step (runs after the <code>--import</code> pass that registers the new <code>class_name</code> globals)</td></tr>
           </tbody>
         </table>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ FINISH (M5–M11 + long-tail) -->
+    <div class="panel" id="finish" role="tabpanel" aria-label="Finish (M5–M11 and the long-tail)">
+
+      <section id="finish-overview">
+        <h2>Finishing the migration — M5–M11 + the long-tail (parity 27% → 54%)</h2>
+        <div class="box tip"><b>The migration has been driven to its defined finish line.</b> A focused "finishing" session shipped
+          <b>11 verified PRs (#993–#1003)</b> — one system per PR, each coded by a subagent, then re-run on the local Godot&nbsp;4.6.2
+          binary (headless suites + a screenshot review) and merged. The work lifted the parity matrix from <b>27% → 54%</b> over
+          in-scope rows: it closed the remaining self-contained long-tail (quests/almanac, daily-rewards, the M5 UI polish, a debug
+          overlay), stood up the full <b>M-infra backbone</b> (visual golden-diff, web-export smoke, GdUnit4, parity-matrix CI — all
+          green), and landed <b>M11 desktop framing</b>. The matrix now reads <b>44 full / 86 partial / 31 absent / 10 dropped</b>
+          (the live source of truth is <a href="godot-parity-matrix.html">godot-parity-matrix.html</a>). "Finished" is honest, not
+          literal: see the end-state breakdown below — there is <b>no buildable in-scope work left</b>, and what remains is dropped,
+          parked, externally-blocked, or polish.</div>
+
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Godot-vs-React parity (in-scope rows)</span> <b>54% · 44 full / 86 partial / 31 absent (10 dropped, excluded)</b></div>
+          <div class="bar"><span style="width:54%"></span></div>
+        </div>
+
+        <h3>The 11 finishing PRs (#993–#1003)</h3>
+        <table>
+          <thead><tr><th>PR</th><th>System</th><th>What landed</th></tr></thead>
+          <tbody>
+            <tr><td><code>#993</code></td><td>Charter</td><td>The Hollow Pact charter as a read-only reflection of run state.</td></tr>
+            <tr><td><code>#994</code></td><td>Quests + Almanac</td><td>A deterministic seeded <b>6-quest</b> roll + tick and a <b>10-tier almanac XP track</b>, surfaced in a <code>QuestsScreen</code>; <b>265 checks</b>.</td></tr>
+            <tr><td><code>#995</code></td><td>Daily Rewards <span class="pill ok">full</span></td><td>A <b>1..30 login-streak ladder</b> + <code>GameState.login_tick</code> + a <code>DailyStreakModal</code>.</td></tr>
+            <tr><td><code>#996</code></td><td>Seasons reconciled</td><td>Seasons recorded as a new <b>"dropped"</b> matrix status (the React calendar-season cycle was removed in Phase 7); dropped rows are excluded from the parity denominator.</td></tr>
+            <tr><td><code>#997</code></td><td>Visual golden-diff suite</td><td><code>run_visual_tests.gd</code> — scenario×viewport, platform-tagged goldens, tolerant pixel-diff + render-smoke fallback, skipped under <code>--headless</code>; an xvfb CI render-smoke job.</td></tr>
+            <tr><td><code>#998</code></td><td>Web-export smoke <span class="pill ok">full</span></td><td>Serve <code>godot/dist</code> + Playwright boots the WASM build and asserts the engine reaches <code>_ready</code> via a web-only JavaScriptBridge beacon — a <b>hard CI gate</b>.</td></tr>
+            <tr><td><code>#999</code></td><td>GdUnit4 adopted</td><td><b>v6.1.3</b> vendored addon + <b>5 suites / 46 tests</b> via <code>GdUnitCmdTool</code> as a CI gate; the 45 legacy <code>run_*.gd</code> kept as the compat harness.</td></tr>
+            <tr><td><code>#1000</code></td><td>Desktop framing (M11) <span class="pill ok">full</span></td><td>A resizable + HiDPI window (<b>540×960</b> default, runtime <b>360×640</b> min-size); a <b>1280×800</b> desktop viewport added to the visual matrix.</td></tr>
+            <tr><td><code>#1001</code></td><td>M5 UI polish</td><td>A leave-board confirm modal + a toast + inventory search.</td></tr>
+            <tr><td><code>#1002</code></td><td>Debug modal</td><td>A deeplink-only dev overlay: a live state readout + a <b>19-button</b> jump grid + real quick-grants.</td></tr>
+            <tr><td><code>#1003</code></td><td>Visual scenario expansion</td><td><b>8 new scenarios</b> → <b>10 golden rows</b> flipped to full.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="box ok"><b>The defined end-state — what "finished" means.</b> "Finished" honestly means <b>no buildable in-scope work
+          remains</b>, not literally 100% full. The residual is dropped by design, Direction-parked, externally blocked, or polish:
+          <ul style="margin:.5rem 0 0;">
+            <li><b>Done.</b> The whole Town&nbsp;1 → Town&nbsp;2 → Town&nbsp;3 <b>Direction slice</b> + the self-contained long-tail
+              (quests/almanac, daily-rewards, tools + active powers, achievements, story/chronicle, NPCs/townsfolk, workers,
+              cartography view, fish/harbor, tile-collection, castle, decorations, portal, charter, tutorial, recipe-wiki,
+              leave-board/toast/search, debug) + the full <b>M-infra backbone</b> (visual golden-diff, web-export smoke, GdUnit4,
+              parity-matrix CI) + <b>M11 desktop framing</b>.</li>
+            <li><b>Dropped (out of scope by design).</b> Seasons / boons / festivals / run-summary — the calendar-season cycle was
+              removed from React itself, so there is nothing to reach parity with.</li>
+            <li><b>Parked (Direction defers to Town&nbsp;4+ / harbor / finale).</b> The full multi-settlement model — founding,
+              per-zone inventory, the 11-node map, mine/harbor settlements.</li>
+            <li><b>Externally blocked.</b> Mobile-app store export — needs a Mac + Apple/Google signing + paid store accounts.</li>
+            <li><b>Honest partials (core done, embellishment remains).</b> The M7 <code>GPUParticle</code> weather/cascade effects +
+              the v2 animated tile-art feed (1/77 tiles fed); the full <b>59-tool catalog</b> (10 ported); a richer crafting-station
+              UI; per-plot spatial placement; tile discovery / research / buy.</li>
+          </ul>
+        </div>
+
+        <h3>Finishing screenshots</h3>
+        <p>Real frames rendered by the live scene on the local Godot 4.6.2 binary during each PR's screenshot review. Click any shot to enlarge.</p>
+        <div class="shots">
+          <figure><img src="assets/godot/m-finish-quests.png" alt="Quests screen: six quest cards each with a title, a progress bar, and a claim button — a deterministic seeded daily roll over the port's real event counters"><figcaption><b>Quests + Almanac (#994).</b> The <code>QuestsScreen</code> — six quest cards from the deterministic seeded daily roll, each with a progress bar and a claim button, feeding the 10-tier almanac XP track. 265 checks.</figcaption></figure>
+          <figure><img src="assets/godot/m-finish-daily.png" alt="Daily Reward modal showing Day 14 of the 30-day login-streak ladder, granting 300 coins plus 1 rune"><figcaption><b>Daily Rewards (#995) — full.</b> The <code>DailyStreakModal</code> at Day&nbsp;14 of the 1..30 login-streak ladder, granting 300◉ + 1 rune; driven by <code>GameState.login_tick</code>.</figcaption></figure>
+          <figure><img src="assets/godot/m-finish-leaveboard.png" alt="Leave-the-mine confirm modal: a parchment dialog asking the player to confirm leaving the board, with confirm and cancel buttons"><figcaption><b>M5 UI polish (#1001).</b> The leave-board confirm modal — part of the polish pass that also added a toast and inventory search.</figcaption></figure>
+          <figure><img src="assets/godot/m-finish-debug.png" alt="Debug dev overlay: a live GameState readout panel beside a 19-button jump grid for navigating to every screen, plus quick-grant buttons"><figcaption><b>Debug modal (#1002).</b> The deeplink-only dev overlay — a live state readout, a 19-button jump grid to every screen, and real quick-grants.</figcaption></figure>
+          <figure><img src="assets/godot/m-finish-town-built-out.png" alt="Spatial town map with placed buildings: lots arranged around a plaza connected by roads, a river with bridges, labeled buildings on built plots, and the farm board inset"><figcaption><b>Spatial town map (M6) — built out.</b> The deterministic seeded-PRNG layout rendered with placed buildings on its plots, the river/bridges/plaza, and the board inset — the "town is a button list" gap closed.</figcaption></figure>
+          <figure><img src="assets/godot/m-finish-desktop.png" alt="The puzzle board framed at the 1280x800 desktop viewport: the parchment HUD and field-tinted board centered with desktop margins, proving the resizable HiDPI desktop window"><figcaption><b>Desktop framing (M11 · #1000) — full.</b> The board framed at the new 1280×800 desktop viewport (resizable + HiDPI window, 540×960 default / 360×640 runtime min-size), now part of the visual matrix.</figcaption></figure>
+        </div>
+
+        <h3>Verification</h3>
+        <ul class="check">
+          <li class="done">11 PRs (#993–#1003), <b>one verified system per PR</b> — subagent codes it, the local Godot 4.6.2 binary re-runs the headless suites + a screenshot review, then merge.</li>
+          <li class="done">Parity matrix lifted <b>27% → 54%</b> over in-scope rows (<b>44 full / 86 partial / 31 absent / 10 dropped</b>) — validated by the parity-matrix CI check.</li>
+          <li class="done">The full <b>M-infra backbone</b> is green: visual golden-diff (#997), the web-export smoke hard gate (#998), GdUnit4 v6.1.3 / 5 suites / 46 tests (#999), and the parity-matrix CI check.</li>
+          <li class="done"><b>M11 desktop framing</b> (#1000) shipped and added to the visual matrix; mobile-store export remains externally blocked (not a codebase gap).</li>
+          <li class="partial">Honest partials documented (not regressions): M7 <code>GPUParticle</code> effects + the v2 tile-art feed, the full 59-tool catalog, richer crafting-station UI, per-plot placement, tile discovery/research/buy.</li>
+        </ul>
       </section>
 
     </div>
@@ -1785,7 +1880,16 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="next-steps">
         <h2>Next steps</h2>
-        <h3>Done — M1, M2, the full M3 slice (M3a–M3h) + the M3i mine hazard, M4a, M4b, M4c, M4d, M4e, M4f &amp; M4g</h3>
+        <div class="box ok"><b>No buildable in-scope work remains (2026-06-06).</b> The migration has reached its defined finish line — the
+          Town&nbsp;1→2→3 slice, the self-contained long-tail, the full M-infra backbone, and M11 desktop framing all shipped
+          (11 finishing PRs #993–#1003; parity <b>27% → 54%</b>). The residual is <b>not</b> a queue of in-scope tasks: it is
+          <b>dropped</b> (seasons — removed from React), <b>parked</b> (the full multi-settlement model — Direction defers it to
+          Town&nbsp;4+/harbor/finale), <b>externally blocked</b> (mobile-store export — Mac + Apple/Google signing + store accounts),
+          or <b>honest polish</b> (GPUParticle weather effects, the v2 animated tile-art feed, the full 59-tool catalog, a richer
+          crafting-station UI, per-plot spatial placement). See the <a href="#finish">Finish (M5–M11)</a> tab for the full breakdown,
+          and the <a href="godot-parity-matrix.html">parity matrix</a> for live status. The forward-looking notes below are kept as the
+          historical record of how the slice was finished.</div>
+        <h3>Done — M1, M2, the full M3 slice (M3a–M3h) + the M3i mine hazard, M4a–M4g, Phase 2 (M5–M11) + the long-tail</h3>
         <ul class="check">
           <li class="done">M1 PR opened (#930), <b>Godot CI green in the cloud</b>, and <b>merged to <code>main</code></b> — base playable board.</li>
           <li class="done">M2 game economy built and verified on <code>claude/godot-migration-m2</code> — carry-over <code>GameState</code>, versioned <code>SaveManager</code>, economy HUD, 42-check state suite, CI step.</li>
@@ -1808,9 +1912,10 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <li class="done"><b>M4g — dedicated Inventory screen</b>: the port's first <b>dedicated Inventory screen</b> (the HUD had only a cramped stockpile strip). <code>InventoryScreen.gd</code> (<code>class_name InventoryScreen extends CanvasLayer</code>) is a parchment ledger modeled on the Menu/Town screens, backed by <b>real</b> <code>GameState</code> + <code>MarketConfig</code> data (no placeholder rows): owned resources (count&gt;0) grouped into <b>Farm goods / Refined / Mine / Other</b> (unknowns → Other), sorted; each row name · ×count · sell-each · line-value (gold; "—" for non-sellable); a footer of total stockpile value + "{kinds} kinds · {units} items"; pure helpers <code>total_value</code>/<code>kinds</code>/<code>total_units</code>/<code>group_of</code>. <code>Main.gd</code> adds a top-left "📦 Items" pill (under "🏠 Town") that opens it, lazily created like the Town/Menu panels; a 43-check <code>run_inventory_tests</code> suite, CI step. <b>With M4a–M4g the core UX/UI parity goal is essentially met (look + sound + menu + inventory)</b> — and the parity ceiling for ported systems is reached: screens for unported systems (cartography/townsfolk/achievements) are deliberately excluded (no fakes). Headless inventory + scene-smoke + state + town-UI + audio + e2e all green. Screenshot <code>m4g-inventory.png</code>.</li>
         </ul>
 
-        <h3>Next — finish M4 (UX/UI parity), then M5 (mobile)</h3>
-        <!-- M4g done; next the M4 long tail (tooltips, more board animations) — then the parity ceiling for ported systems is reached (no fakes for unported cartography/townsfolk/achievements) -->
+        <h3>Build log — how the slice was finished (Phase 2 + the finishing session)</h3>
+        <!-- Slice finished: Phase 2 (M5–M11) + the long-tail landed; the residual is dropped/parked/blocked/polish (see the Finish tab) -->
         <div class="log">
+          <div class="entry"><div class="date">2026-06-06 · finish</div><h3>Finishing session — 11 PRs (#993–#1003), parity 27% → 54%</h3><p>The migration was driven to its <b>defined finish line</b> in one focused session: 11 verified PRs (one system each, subagent-coded then re-run on the local Godot 4.6.2 binary + a screenshot review, then merged). <b>#993</b> Charter (Hollow Pact read-only reflection); <b>#994</b> Quests + Almanac (deterministic seeded 6-quest roll + tick, a 10-tier almanac XP track, <code>QuestsScreen</code>; 265 checks); <b>#995</b> Daily Rewards (1..30 login-streak ladder + <code>GameState.login_tick</code> + <code>DailyStreakModal</code> — full); <b>#996</b> Seasons reconciled as a new <b>"dropped"</b> matrix status (the React calendar-season cycle was removed in Phase 7; dropped rows are excluded from the denominator); <b>#997</b> the visual golden-diff suite (<code>run_visual_tests.gd</code> — scenario×viewport, platform-tagged goldens, tolerant pixel-diff + render-smoke fallback, skipped under <code>--headless</code>; xvfb CI render-smoke job); <b>#998</b> the web-export smoke (serve <code>godot/dist</code> + Playwright boots the WASM build, asserts the engine reaches <code>_ready</code> via a web-only JavaScriptBridge beacon — a hard CI gate; full); <b>#999</b> GdUnit4 v6.1.3 adopted (vendored addon + 5 suites / 46 tests via <code>GdUnitCmdTool</code> as a CI gate; the 45 legacy <code>run_*.gd</code> kept as the compat harness); <b>#1000</b> M11 desktop framing (resizable + HiDPI window, 540×960 default, runtime 360×640 min-size; a 1280×800 desktop viewport added to the visual matrix — full); <b>#1001</b> M5 UI polish (leave-board confirm modal + toast + inventory search); <b>#1002</b> the debug modal (deeplink-only dev overlay — live state readout + a 19-button jump grid + real quick-grants); <b>#1003</b> visual scenario expansion (8 new scenarios → 10 golden rows flipped to full). The matrix now reads <b>44 full / 86 partial / 31 absent / 10 dropped</b>. See the <a href="#finish">Finish (M5–M11)</a> tab for the screenshots + end-state breakdown.</p></div>
           <div class="entry"><div class="date">2026-06-06</div><h3>Tracking reconcile + M-infra — tile-collection browser, CI auto-runs all 36 suites + parity-matrix check job, real-InputEvent e2e harness</h3><p>Parity-matrix rows updated to reflect work that shipped but was never flipped from <code>absent</code>. <b>Rows flipped:</b> <code>system-tile-collection</code> absent → <b>partial</b> (23-tile grouped gallery, 📖 HUD button + deep-link; discovery/research deferred); <code>slice-tilecollection</code> absent → <b>partial</b>; <code>view-tilecollection</code> absent → <b>partial</b>; <code>infra-e2e-input-sim</code> absent → <b>partial</b> (real-InputEvent harness <code>run_e2e_input.gd</code> drives the live Main — HUD button clicks open screens, seeded board drag resolves a 3-chain; ~3 Playwright flows ported); <code>infra-parity-matrix-check</code> absent → <b>full</b> (<code>check-parity-matrix.mjs</code> wired into <code>godot-ci.yml</code> as a <code>parity-matrix-check</code> job); <code>system-abilities-tool-powers</code> absent → <b>partial</b> (active tool powers from M8 now correctly reflected; passive abilities + portal influence economy remain absent). CI now <b>auto-discovers and runs all 36 <code>run_*.gd</code> suites</b> (was a hardcoded ~17-suite subset). <code>check-parity-matrix.mjs</code> exits 0 (171 rows, 16 full, all suite refs verified on disk). Screenshot <code>tile-collection.png</code> captured and added to the verify gallery.</p></div>
           <div class="entry"><div class="date">2026-06-06</div><h3>Cartography world map — 3-zone view + travel-to-expedition entry</h3><p>PR #984 shipped a minimal additive world-map screen (<code>CartographyScreen</code> + <code>CartographyConfig</code>). The screen visualises the three zones — home, mine, and harbor — as nodes connected by roads, with a "you are here" marker driven by <code>active_biome</code>. Travel rows below the map launch the existing <code>enter_mine</code> / <code>enter_harbor</code> expeditions, gated on <code>town2_complete</code>. <b>No new GameState</b>: the screen is an alternate entry point to the expeditions that already exist; inventory, biome switching, and turn accounting are all unchanged. Reachable via a "🧭" HUD button + <code>apply_deeplink("cartography")</code> or <code>apply_deeplink("world")</code>. <b>Additive and honest:</b> settlement founding, per-zone inventory, discovery gating, player-built road-building, and the full 11-node map are deliberately deferred (Direction-parked; multi-settlement refactor not yet scoped). <code>run_cartography_tests</code> — <b>62 checks</b>. Screenshot <code>cartography.png</code> captured: 3 zone nodes + roads + travel rows.</p></div>
           <div class="entry"><div class="date">2026-06-06</div><h3>Fish / harbor biome (tides + pearl capture) — the 3rd playable biome</h3><p>Two PRs (#981 + #982) shipped the full harbor biome. <b>Fish logic (#981)</b>: 6 fish tiles (sardine, mackerel, clam, oyster, kelp, giant-pearl) + a <b>tide cycle</b> — every 3 turns the tide flips between high and low, swapping the bottom-row spawn pool. <b>Giant-pearl capture</b>: a chain of ≥2 fish tiles 8-adjacent to the pearl awards +1 rune. <code>enter_harbor</code> expedition: supplies convert to turns (mirrors the mine), the board switches to the harbor fish pool, and the player leaves with what they caught. A <code>runes</code> reward currency is introduced. Fully <b>additive</b>: when the harbor is inactive, the farm economy is identical; all prior tests stayed green unedited. <code>run_fish_tests</code> — 198 checks. <b>Fish board + entry (#982)</b>: live board tide bottom-row mutation, pearl placement and degrade, adjacency-based pearl capture wired into the board chain-resolve path, and "Enter/Leave the harbor" in TownScreen's Expedition section (gated on <code>town2_complete</code>). <code>run_fish_board_tests</code> — 41 checks. Screenshot captured: <code>fish-harbor.png</code> (the harbor board — water tint, fish tiles + giant pearl, catch stockpile). The port now has <b>three playable biomes: farm / mine / harbor</b>. Full cartography-gated zone entry (true multi-zone world map) remains deferred.</p></div>
@@ -1829,16 +1934,16 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
           <div class="entry"><div class="date">M4e · done</div><h3>Board juice — reward fly-to-coins + tile spawn scale-in</h3><p>Cosmetic "juice" matching the original's reward feedback. <code>Main.gd</code> grows a top <code>_fx_layer</code> (<code>CanvasLayer</code> 2) and a <code>_spawn_reward_chip()</code> that flies a parchment chip from the board center to the coin pill on each resolved chain (gold "+N resource" when a unit drops, else ember "+N 🪙"; a ~700ms eased swoop + scale-down + fade, auto-freed) plus a coin-pill bounce, wired into <code>_on_chain_resolved</code> after the credit; <code>Board.gd</code> pops refilled tiles in (scale 0.5 → 1 with a <code>TRANS_BACK</code> overshoot). This is the original's <code>rewardTrajectory</code> (board animations are tween-driven in code, no <code>AnimationPlayer</code>/<code>.tscn</code> — Decision&nbsp;#33). <b>Cosmetic only — no logic change</b>; the scene-smoke + e2e + town-UI + audio suites stay green.</p></div>
           <div class="entry"><div class="date">M4f · done</div><h3>Settings / menu modal — mute toggle + new game</h3><p>A parchment settings/menu modal gives the M4d audio a mute control + a standard in-game menu. <code>MenuScreen.gd</code> (<code>class_name MenuScreen extends CanvasLayer</code>, layer 4) is modeled on the re-skinned TownScreen (warm brown scrim, an iron-bordered parchment card + drop shadow, a Cinzel "☰ Menu" title) with three pill buttons — <b>Sound: On/Off</b>, <b>New Game</b>, <b>Close</b> — emitting <code>toggle_sound</code>/<code>new_game</code>/<code>closed</code>. <code>GameState.gd</code> gains a persisted <code>audio_muted</code> preference; <code>Main.gd</code> adds a top-right "☰" pill that opens the menu, flips + persists the mute and applies it to the <code>_audio</code> service, clears the save + <code>reload_current_scene()</code> on New Game, and applies the saved mute on launch. A 37-check <code>run_menu_tests</code> suite runs in CI. <b>With M4a–M4f the core UX/UI parity goal is essentially met (look + sound + menu).</b></p></div>
           <div class="entry"><div class="date">M4g · done</div><h3>Dedicated Inventory screen — a grouped, valued ledger</h3><p>The port's first <b>dedicated Inventory screen</b> (the HUD had only a cramped stockpile strip). <code>InventoryScreen.gd</code> (<code>class_name InventoryScreen extends CanvasLayer</code>) is a parchment modal modeled on the Menu/Town screens, backed by <b>real</b> <code>GameState</code> + <code>MarketConfig</code> data (no placeholder rows): owned resources (count&gt;0) grouped into <b>Farm goods / Refined / Mine / Other</b> (unknowns → Other), sorted; each row name · ×count · sell-each · line-value (gold; "—" for non-sellable); a footer of total stockpile value + "{kinds} kinds · {units} items"; pure helpers <code>total_value</code>/<code>kinds</code>/<code>total_units</code>/<code>group_of</code>. <code>Main.gd</code> adds a "📦 Items" pill that opens it. A 43-check <code>run_inventory_tests</code> suite runs in CI. <b>With M4a–M4g the core look + sound + menu + inventory parity is done</b> — and the parity ceiling for ported systems is reached: screens for unported systems (cartography/townsfolk/achievements) are deliberately excluded (the repo's no-fakes rule).</p></div>
-          <div class="entry"><div class="date">M4 long tail · next</div><h3>Tooltips + more animations (the last real-system polish)</h3><p>What remains in M4: hover <b>tooltips</b> (the last real-system UI polish), and <b>more board animations</b> (a golden upgrade burst, staggered collapse timing, per the original <code>src/config/boardAnimations</code>) — plus the deferred content/balance debt above. The core look + sound + menu + inventory parity is done; this is the long-tail polish. <b>Beyond that, further screen parity is bounded by which systems the port has ported</b> — dedicated cartography/townsfolk/achievements screens are out of scope until those systems exist (building their UI would mean fake data).</p></div>
-          <div class="entry"><div class="date">M5</div><h3>Mobile app (externally gated)</h3><p>iOS + Android export and store submission. <b>External blocker</b> outside the codebase: iOS needs a Mac + Xcode, and both stores need paid developer accounts with signing/provisioning. The Android path (Linux-friendly) can go first; iOS waits on Mac + an Apple Developer account.</p></div>
+          <div class="entry"><div class="date">M7 · partial</div><h3>Residual board-effects polish (not in-scope work)</h3><p>The "looks broken" signal is gone (hazard tile art + the M4e board juice), and the M4 long-tail screens all shipped through Phase 2. What honestly <b>remains is embellishment, not a queue of in-scope tasks</b>: the M7 <code>GPUParticle</code> weather/cascade effects pass and the v2 animated tile-art feed (the 3-tier pipeline is a proven drop-in, but only 1/77 tiles is fed — the rest await the external PixelLab/Ludo.ai art), plus the full 59-tool catalog (10 ported), a richer crafting-station UI, and per-plot spatial placement. None blocks the finished slice.</p></div>
+          <div class="entry"><div class="date">M11 · desktop done / mobile blocked</div><h3>Desktop framing shipped; mobile-store export externally blocked</h3><p><b>M11 desktop framing landed (#1000)</b> — a resizable + HiDPI window (540×960 default, 360×640 runtime min-size) with a 1280×800 desktop viewport in the visual matrix; the Web + desktop export presets are validated. <b>Mobile-store export remains externally blocked</b> (outside the codebase): iOS <code>.ipa</code> needs a Mac + Xcode + an Apple Developer account; Android <code>.aab</code> + Play submission needs signing/provisioning + a paid store account; safe-areas/notches can only be tuned on-device. The build targets are validated here — submission waits on those accounts.</p></div>
         </div>
 
-        <h3>Carried-over M1/M2 polish (not blockers)</h3>
+        <h3>Carried-over M1/M2 polish</h3>
         <ul class="check">
-          <li class="todo">Add a <b>Playwright-on-export smoke</b>: serve the Web build, assert the canvas boots and a chain can be dragged.</li>
-          <li class="todo">Vendor <b>GdUnit4</b> and re-home the three runners into it (keep the lightweight runners as a fast pre-check, or retire them).</li>
-          <li class="todo">Add the <b>session-start hook</b> that fetches the Godot headless binary in the Claude cloud container (per plan §workflow).</li>
-          <li class="todo">Touch-test on a real <b>Android browser</b> early — surface safe-area / gesture issues well before M5.</li>
+          <li class="done"><b>Playwright-on-export smoke</b> — <b>done (#998)</b>: serve <code>godot/dist</code> + Playwright boots the WASM build and asserts the engine reaches <code>_ready</code> via a web-only JavaScriptBridge beacon (a hard CI gate).</li>
+          <li class="done">Vendor <b>GdUnit4</b> — <b>done (#999)</b>: GdUnit4 v6.1.3 vendored + 5 suites / 46 tests via <code>GdUnitCmdTool</code> as a CI gate; the 45 legacy <code>run_*.gd</code> runners kept as the compat harness (the fast pre-check).</li>
+          <li class="todo">Add the <b>session-start hook</b> that fetches the Godot headless binary in the Claude cloud container (per plan §workflow) — dev-tooling nicety, not a blocker.</li>
+          <li class="todo">Touch-test on a real <b>Android browser</b> — part of the externally-blocked mobile-store track (needs on-device tuning).</li>
         </ul>
 
         <div class="box amber"><b>Optional precursor — PR-B.</b> The plan recommends aligning the Phaser <code>constants.ts</code> to the PC2 balance baseline, since those numbers copy straight into <code>Constants.gd</code> — most relevant now that M3 expands the tile set and balance surface. It is pure data work, can be done in the Phaser repo independently, and is <i>not</i> a blocker for continuing the Godot build with current values.</div>
@@ -1861,13 +1966,15 @@ godot --path godot --script res://tools/screenshot.gd -- out.png    <span class=
 
       <section id="roadmap-pointer">
         <div class="box amber">
-          <b>Roadmap ahead — M5 → M11 parity arc.</b>
-          This archive covers <strong>Phase 1</strong> (M1–M4, shipped) plus the early re-baseline work.
-          The forward plan — the M5→M11 parity arc, infra milestones, and per-surface ownership — lives in the
+          <b>Roadmap — the parity arc is finished.</b>
+          This archive now covers <strong>Phase 1</strong> (M1–M4, shipped) <strong>and Phase 2</strong> (the M5–M11 parity arc + M-infra + the long-tail) — driven to the
+          <b>defined finish line</b> (parity 27% → 54%; see the <a href="#finish">Finish (M5–M11)</a> tab).
+          The roadmap with the per-milestone statuses and per-surface ownership lives in the
           <a href="godot-migration-plan.html"><strong>roadmap</strong></a>
-          (<code>docs/godot-migration-plan.html</code>).
-          No empty milestone sections are pre-built here; each milestone adds its own shots-row and log entry
-          to this archive when it lands (see the going-forward convention in the banner above).
+          (<code>docs/godot-migration-plan.html</code>); the live, queryable status is the
+          <a href="godot-parity-matrix.html"><strong>parity matrix</strong></a>.
+          The residual (dropped / parked / externally-blocked / polish) is not a buildable in-scope queue — it would add its own
+          shots-row and log entry here only if it ever ships.
         </div>
       </section>
 
