@@ -111,6 +111,19 @@ static func modal_id(m: int) -> String:
 		Modal.DEBUG:        return "debug"
 		_:               return ""
 
+## Parse a browser `location.hash` ("#/inventory", "#inventory", "#/", "") into a
+## deep-link id string. Strips the leading "#"/"/" decoration, then validates the
+## remainder against resolve(); anything empty or unknown falls back to "board" (the
+## root view) so junk in the address bar can never wedge the nav. Pure + static so
+## the web History bridge in Main and the headless tests share one parser.
+static func id_from_hash(hash: String) -> String:
+	var raw := hash.strip_edges().lstrip("#/")
+	if raw == "":
+		return "board"
+	if bool(resolve(raw).get("ok", false)):
+		return raw
+	return "board"
+
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
 	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug"])

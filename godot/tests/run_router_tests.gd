@@ -105,6 +105,17 @@ func _initialize() -> void:
 	_check(ViewRouter.modal_id(ViewRouter.Modal.MENU)      == "menu",      "modal_id(MENU) == 'menu'")
 	_check(ViewRouter.modal_id(ViewRouter.Modal.INVENTORY) == "inventory", "modal_id(INVENTORY) == 'inventory'")
 
+	# id_from_hash() — the web Back/Forward bridge's hash parser (pure + static).
+	_check(ViewRouter.id_from_hash("#/inventory") == "inventory", "id_from_hash('#/inventory') == 'inventory'")
+	_check(ViewRouter.id_from_hash("#inventory")  == "inventory", "id_from_hash('#inventory') == 'inventory' (no slash)")
+	_check(ViewRouter.id_from_hash("#/town")      == "town",      "id_from_hash('#/town') == 'town'")
+	_check(ViewRouter.id_from_hash("#/items")     == "items",     "id_from_hash keeps the 'items' alias verbatim")
+	_check(ViewRouter.id_from_hash("")            == "board",     "id_from_hash('') falls back to 'board'")
+	_check(ViewRouter.id_from_hash("#/")          == "board",     "id_from_hash('#/') falls back to 'board'")
+	_check(ViewRouter.id_from_hash("#/board")     == "board",     "id_from_hash('#/board') == 'board'")
+	_check(ViewRouter.id_from_hash("#/garbage")   == "board",     "id_from_hash(unknown id) falls back to 'board'")
+	_check(ViewRouter.id_from_hash("  #/menu  ")  == "menu",      "id_from_hash trims surrounding whitespace")
+
 	# known_ids() contains the canonical set
 	var ids := ViewRouter.known_ids()
 	_check(ids.has(""),          "known_ids() contains ''")
