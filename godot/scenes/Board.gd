@@ -104,18 +104,22 @@ func _ready() -> void:
 ## Tile node automatically. Re-run on layout/board changes via queue_redraw().
 func _draw() -> void:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Palette.FIELD
+	# Light parchment field with a thin moss-green frame — matches the React board,
+	# which floats the pastel tile cards on a cream board (the gaps between tiles read
+	# CREAM, not green) inside a soft green edge. The old solid-green fill made the
+	# whole board read dark/heavy and muddied the tiles' per-type pastel backgrounds.
+	sb.bg_color = Palette.PARCHMENT
 	sb.corner_radius_top_left = 16
 	sb.corner_radius_top_right = 16
 	sb.corner_radius_bottom_left = 16
 	sb.corner_radius_bottom_right = 16
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.border_color = Palette.FIELD_EDGE
+	sb.border_width_left = 3
+	sb.border_width_top = 3
+	sb.border_width_right = 3
+	sb.border_width_bottom = 3
+	sb.border_color = Palette.FIELD
 	sb.shadow_size = 10
-	sb.shadow_color = Color(0, 0, 0, 0.25)
+	sb.shadow_color = Color(0, 0, 0, 0.18)
 	sb.shadow_offset = Vector2(0, 4)
 	var rect := Rect2(
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
