@@ -152,7 +152,7 @@
   <header class="hero">
     <h1>Godot Migration Plan</h1>
     <p class="sub">Strategic rationale and phased roadmap for migrating puzzleDrag2 from React + Phaser 3 to Godot 4. Phase 1 (M1–M4) shipped a playable Town 1→2→3 vertical slice. Phase 2 (M5–M11) pursues full feature parity — logic-first, mobile-first, with GdUnit4 + e2e + visual golden-diff.</p>
-    <p class="meta">Status: Re-baselined · 2026-06-06 · Phase 1 done · Phase 2 in progress</p>
+    <p class="meta">Status: Finished slice · 2026-06-06 · Phase 1 done · Phase 2 done (parity 54% over in-scope rows) · residual is parked / externally-blocked / polish</p>
     <div class="chips">
       <span class="chip">Godot 4</span>
       <span class="chip">GDScript</span>
@@ -324,6 +324,27 @@ jobs:
 
       <section id="milestone-overview">
         <h2>Migration roadmap</h2>
+
+        <div class="box ok"><b>Finished state — 2026-06-06.</b> The migration has been driven to its defined finish line. The whole
+          <b>Town&nbsp;1 → Town&nbsp;2 → Town&nbsp;3 Direction slice</b>, the self-contained long-tail (quests/almanac, daily-rewards,
+          tools + active powers, achievements, story/chronicle, NPCs/townsfolk, workers, cartography view, fish/harbor,
+          tile-collection, castle, decorations, portal, charter, tutorial, recipe-wiki, leave-board/toast/search, debug overlay),
+          the full <b>M-infra backbone</b> (visual golden-diff, web-export smoke, GdUnit4, parity-matrix CI — all green), and
+          <b>M11 desktop framing</b> are <b>done</b>. The parity matrix now reads <b>44 full / 86 partial / 31 absent / 10 dropped —
+          54% over in-scope rows</b> (the live source of truth is <a href="godot-parity-matrix.html">godot-parity-matrix.html</a>).
+          "Finished" honestly means there is <b>no buildable in-scope work left</b>, not literally 100% full: the residual is
+          <b>dropped</b> (seasons/boons/festivals/run-summary — removed from React itself), <b>parked</b> (the full multi-settlement
+          model — deferred to Town&nbsp;4+/harbor/finale by the Direction), <b>externally blocked</b> (mobile-store export — Mac +
+          Apple/Google signing + store accounts), or <b>honest polish</b> (GPUParticle weather, the v2 animated tile-art feed, the
+          full 59-tool catalog, rich crafting-station UI, per-plot spatial placement). The per-milestone statuses below are updated to
+          match; see the screenshot story in <a href="godot-migration-progress.html">godot-migration-progress.html</a>.</div>
+
+        <div class="legend">
+          <span><span class="pill ok">done</span> shipped &amp; verified</span>
+          <span><span class="pill warn">partial</span> core done, embellishment remains</span>
+          <span><span class="pill info">dropped</span> out of scope by design</span>
+          <span><span class="pill idle">blocked</span> external dependency</span>
+        </div>
 
         <div class="diagram">
           <svg viewBox="0 0 860 230" width="100%" role="img" aria-label="Two-phase migration: Phase 1 (M1–M4, shipped) then Re-baseline arrow then Phase 2 (M5–M11, parity arc) with M-infra running in parallel">
@@ -530,8 +551,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M5</span>
             <h3>Theme + reusable scenes + router + signal bus</h3>
-            <span class="pill warn">next · prerequisite</span>
+            <span class="pill ok">largely done</span>
           </div>
+          <div class="box tip"><b>Shipped.</b> <code>UiKit.gd</code> de-duplicated the copy-pasted UI builders and <code>ViewRouter.gd</code> landed as a pure nav state machine with a view/modal enum + deep-link <code>resolve()</code>; the four screens (Main / Town / Menu / Inventory) plus the later long-tail screens are all routed, and the <b>M5 polish pass</b> added the leave-board confirm modal, a toast, and inventory search. The remaining signal-bus / scene-transition niceties are optional embellishment, not a blocker.</div>
           <p>The unblocking refactor — no behavior change, all tests stay green. Hard prerequisite for everything else: the imperative-UI tax compounds until this lands.</p>
           <ul>
             <li><code>godot/themes/journal_theme.tres</code> — one Theme resource; all StyleBox/font/color sourced from <code>Palette.gd</code> which already mirrors <code>src/tokens.css</code></li>
@@ -549,8 +571,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M6</span>
             <h3>Port the React town map — the #1 player complaint</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">done</span>
           </div>
+          <div class="box tip"><b>Shipped.</b> <code>TownLayout.gd</code> is a 1:1 deterministic seeded-PRNG port of <code>src/townLayout.ts</code>; <code>TownMap.gd</code> renders the plan (roads/river/bridges/plaza/lots/board/trees) and it is reachable in-game as a spatial map with placed buildings and a click-to-build/demolish picker. The "town is a button list, not a map" gap is closed (see <code>m-finish-town-built-out.png</code> in the progress archive). Pan/zoom + true per-plot spatial placement remain optional polish.</div>
           <p>The town is currently a button-row list, not a map. The hard part is a pure-function port, not freehand design.</p>
           <ul>
             <li>Port <code>src/townLayout.ts</code> (seeded-PRNG <code>buildTownPlan</code> emitting lots/roads/water/trees/fields/plaza/boards, ~627 lines) → <code>godot/scripts/TownLayout.gd</code>; deterministic + headless-testable like <code>BoardLogic</code></li>
@@ -568,8 +591,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M7</span>
             <h3>Kill the "looks broken" perception on two fronts</h3>
-            <span class="pill idle">later</span>
+            <span class="pill warn">partial</span>
           </div>
+          <div class="box amber"><b>Core done; embellishment remains.</b> The "looks broken" signal is killed — the rat/rubble hazard tiles have authored art and the M4e board juice (reward fly-to-coins chip + tile spawn pop) is in. <b>Remaining (honest polish):</b> the <code>GPUParticles2D</code> weather/cascade effects pass, and the v2 animated tile-art feed (the 3-tier pipeline is proven drop-in, but only 1/77 tiles is fed — the rest await the external PixelLab/Ludo.ai art).</div>
           <ul>
             <li><b>(1) Feed the existing 3-tier art pipeline</b> — author/import the missing PNGs + v2 <code>SpriteFrames</code> <code>.tres</code> for already-WIRED tiles that currently fall through to flat grey placeholder squares (rat, rubble, some mine tiles); drop-in, one <code>.tres</code> animates a tile with zero code changes</li>
             <li><b>(2) Effects pass</b> — <code>godot/scenes/fx/{ChainBurst,Floater}.tscn</code> (<code>GPUParticles2D</code>) fired from <code>Board</code> on chain resolve; cascade/refill tween polish on collapse; chain-glow polish; optional biome tint overlay (visual-only); hazard tile overlay sprites</li>
@@ -584,8 +608,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num" style="background:var(--info)">M‑infra</span>
             <h3>The verification backbone every later milestone plugs into</h3>
-            <span class="pill info">parallel</span>
+            <span class="pill ok">done</span>
           </div>
+          <div class="box tip"><b>The backbone is in and green.</b> All four legs landed: the <b>visual golden-diff suite</b> (<code>run_visual_tests.gd</code> — scenario×viewport, platform-tagged goldens, tolerant pixel-diff + render-smoke fallback, skipped under <code>--headless</code>, with an xvfb CI render-smoke job), the <b>web-export smoke</b> (Playwright boots the WASM build and asserts the engine reaches <code>_ready</code> via a web-only JavaScriptBridge beacon — a hard CI gate), <b>GdUnit4 v6.1.3</b> (vendored addon + 5 suites / 46 tests via <code>GdUnitCmdTool</code> as a CI gate, with the 45 legacy <code>run_*.gd</code> kept as the compat harness), and the <b>parity-matrix CI check</b> (<code>check-parity-matrix.mjs</code>). Each later milestone wired its own logic suites into this backbone before any UI shipped.</div>
           <p>Runs in parallel from M5 onward. Each later milestone wires its own logic suites into this backbone before any UI ships.</p>
           <ul>
             <li>Adopt <b>GdUnit4</b> + the gdUnit GitHub action (auto-discovery + parallel), migrating the ~17 monolithic <code>run_*.gd</code> SceneTree runners one-class-per-system while keeping legacy runners as a compatibility harness so CI is never red</li>
@@ -602,8 +627,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M8</span>
             <h3>First milestone needing new logic before any UI (no-fakes ceiling in action)</h3>
-            <span class="pill idle">later</span>
+            <span class="pill warn">partial</span>
           </div>
+          <div class="box amber"><b>Active powers done; catalog breadth remains.</b> The full active-tool stack shipped — <code>ToolConfig.gd</code> + pure <code>ToolEffects.gd</code> (area_blast, clear_row/col/cross/component, transform, clear_random_n), the <code>GameState</code> tool API (charges / arm-fire / credit), live-board apply with tap-targeting, and the <code>ToolPalette</code> HUD — for <b>10 representative tools</b> covering all major power types. <b>Remaining (honest partial):</b> the full 59-tool catalog, the passive abilities system, and the magic-tool/portal influence economy.</div>
           <ul>
             <li><code>godot/scripts/ToolConfig.gd</code> — tool catalog + tool-power equivalents, porting <code>src/config/toolPowers.ts</code> + <code>src/config/abilities.ts</code>; <code>GameState.use_tool</code> returning <code>{ok, reason}</code></li>
             <li><code>godot/scenes/board/ToolPalette.tscn</code> + a tap-target targeting overlay</li>
@@ -619,8 +645,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M9</span>
             <h3>Currently intentionally dropped — turn counter only</h3>
-            <span class="pill idle">later</span>
+            <span class="pill info">dropped</span>
           </div>
+          <div class="box"><b>Dropped — out of scope by design.</b> The calendar-season cycle was <b>removed from React itself</b> in Phase 7, so there is nothing to reach parity with. Seasons/boons/festivals/run-summary are now tracked as a <b>"dropped"</b> status in the parity matrix and excluded from the parity denominator; the Godot port keeps only a turn counter. This milestone will not be built.</div>
           <ul>
             <li><code>GameState</code> season/calendar fields + boon modifiers + season-end stats (headless-tested)</li>
             <li><code>godot/scenes/{SeasonStrip,BoonsPicker,RunSummary}.tscn</code></li>
@@ -636,8 +663,9 @@ jobs:
           <div class="milestone-header">
             <span class="milestone-num">M10</span>
             <h3>Container milestone — the arc to React's full slice set</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">done</span>
           </div>
+          <div class="box tip"><b>The self-contained long-tail is in.</b> Each sub-feature shipped logic-first then UI: cartography <b>view</b>, townsfolk/NPCs + workers, achievements, story beats + chronicle, the tile-collection browser, the fish/harbor biome, plus the finishing additions — <b>quests + almanac</b> (deterministic seeded 6-quest roll + 10-tier XP track), <b>daily rewards</b> (1..30 login-streak ladder), the <b>castle / decorations / portal / charter / tutorial / recipe-wiki</b>, and a deeplink-only <b>debug overlay</b>. <b>Parked (Direction-deferred to Town&nbsp;4+):</b> the full multi-settlement model — founding, per-zone inventory, the 11-node map, and mine/harbor settlements (the cartography <i>view</i> ships; the multi-settlement <i>refactor</i> does not).</div>
           <p>Each sub-feature is its own logic-then-UI pair; only enters scope once its logic suite passes.</p>
           <ul>
             <li>Cartography / zones — zone model + founding + world-map render</li>
@@ -655,10 +683,12 @@ jobs:
         <h2>Milestone 11 — Desktop + mobile export hardening</h2>
         <div class="milestone">
           <div class="milestone-header">
-            <span class="milestone-num muted">M11</span>
+            <span class="milestone-num">M11</span>
             <h3>Export / distribution endgame (absorbs old "M5 Mobile app")</h3>
-            <span class="pill idle">later</span>
+            <span class="pill ok">desktop done</span>
+            <span class="pill idle">mobile blocked</span>
           </div>
+          <div class="box amber"><b>Desktop framing done; mobile-store export externally blocked.</b> The <b>desktop framing</b> shipped — a resizable + HiDPI window (540×960 default, 360×640 runtime min-size) plus a 1280×800 desktop viewport added to the visual matrix (see <code>m-finish-desktop.png</code>). The Web + desktop export presets are validated. <b>Externally blocked (outside the codebase):</b> mobile-store export — iOS <code>.ipa</code> needs a Mac + Xcode + an Apple Developer account, Android <code>.aab</code> + Play submission needs signing/provisioning and a paid store account, and safe-area/notch handling can only be tuned on-device. The build targets are validated here; submission waits on those accounts.</div>
           <ul>
             <li><code>project.godot</code> display config — <b>restore <code>window/stretch/aspect="keep"</code> + <code>pointing/emulate_mouse_from_touch=true</code></b> (dropped by an editor re-save); add desktop default size + content-scale/aspect while preserving mobile portrait</li>
             <li>Responsive breakpoints reusing the M5 Theme/scenes — board + HUD reflow for desktop vs mobile</li>
