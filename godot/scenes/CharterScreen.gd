@@ -189,7 +189,7 @@ func _build_shell() -> void:
 	tabs.add_child(all_btn)
 	_tab_buttons["all"] = all_btn
 
-	var scroll := ScrollContainer.new()
+	var scroll := UiKit.make_vscroll()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -574,7 +574,7 @@ func _sync_detail_panel() -> void:
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_detail_body.add_child(empty)
 	else:
-		var list_scroll := ScrollContainer.new()
+		var list_scroll := UiKit.make_vscroll()
 		list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
