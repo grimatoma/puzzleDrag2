@@ -19,6 +19,10 @@ var size_px: float = 96.0
 var _selected: bool = false
 var _tex: Texture2D = null               ## v1 PNG; null when v2 or placeholder
 var _anim: AnimatedSprite2D = null       ## present only for v2 (animated) tiles
+## Selection "lift + pulse" tween (see set_selected). Kept so we can kill it the
+## instant the tile is deselected/collapsed, before the resolve pop tween touches
+## scale — two live tweens on `scale` would otherwise fight.
+var _sel_tween: Tween = null
 
 ## Loaded visuals shared across all tiles, keyed by Constants.Tile. The board
 ## churns tile nodes hard on every collapse/refill, so caching keeps that path
@@ -95,11 +99,26 @@ func set_size_px(s: float) -> void:
 	_scale_anim()
 	queue_redraw()
 
-## Track whether this tile is part of an in-progress chain. M4b: this no longer
-## paints anything (the ChainOverlay path is the selection feedback now), but the
-## method + state are kept so the board's _set_highlight callers don't break.
+## Track whether this tile is part of an in-progress chain and give it a tactile
+## "alive" reaction while selected — a gentle lift + slow pulse (the React board
+## lifts/pulses chained tiles; the ChainOverlay only draws the orange path + node
+## discs ON TOP, so the tiles themselves never reacted). On select we loop a soft
+## 1.0↔1.09 scale pulse; on deselect we kill it and snap back to 1.0 IMMEDIATELY
+## (no revert tween) so the Board's collapse/pop tweens — which also drive `scale`
+## — start from a clean baseline and never fight a lingering selection tween.
 func set_selected(on: bool) -> void:
 	_selected = on
+	if _sel_tween != null and _sel_tween.is_valid():
+		_sel_tween.kill()
+	_sel_tween = null
+	if on:
+		_sel_tween = create_tween().set_loops()
+		_sel_tween.tween_property(self, "scale", Vector2(1.09, 1.09), 0.28) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_sel_tween.tween_property(self, "scale", Vector2.ONE, 0.28) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		scale = Vector2.ONE
 
 func _draw() -> void:
 	if tile_type == Constants.EMPTY:
