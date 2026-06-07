@@ -1155,13 +1155,13 @@
       "feature_or_screen": "board-farm-idle",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M7",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:board-farm-idle"
       ],
-      "note": "Farm biome board at start; needs tile art feed (M7)."
+      "note": "Farm board renders + committed golden (run_visual_tests.gd scenario board-farm-idle, 0% pixel-diff). Tile art is the v1 procedural set; v2 animated art feed is the remaining M7 polish."
     },
     {
       "id": "golden-board-farm-chain-7",
@@ -1481,13 +1481,13 @@
       "feature_or_screen": "inventory-grid-all",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:inventory-grid-all"
       ],
-      "note": "Inventory grid view; re-skin golden recaptured in M5."
+      "note": "Inventory ledger renders + committed golden (run_visual_tests.gd scenario inventory, 0% pixel-diff)."
     },
     {
       "id": "golden-inventory-list-mode",
@@ -1572,13 +1572,14 @@
       "feature_or_screen": "map-current-home",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_cartography_tests.gd",
         "golden:map-current-home"
       ],
-      "note": "CartographyScreen renders the 3-zone map with the current home zone marked (screenshot cartography.png captured). Visual golden diff awaits M-infra visual suite."
+      "note": "World map renders the 3-zone map with current-home marker + committed golden (run_visual_tests.gd scenario cartography, 0% pixel-diff)."
     },
     {
       "id": "golden-map-empty-panel",
@@ -1663,13 +1664,13 @@
       "feature_or_screen": "orders-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:orders-mixed"
       ],
-      "note": "Orders view with mixed filled/unfilled; re-skin golden recaptured in M5."
+      "note": "Town orders section renders + committed golden (run_visual_tests.gd scenario orders, 0% pixel-diff)."
     },
     {
       "id": "golden-boons-farm",
@@ -1702,13 +1703,14 @@
       "feature_or_screen": "charter-terms",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_charter_tests.gd",
         "golden:charter-terms"
       ],
-      "note": "Charter terms list; depends on M10 charter."
+      "note": "Charter terms screen renders + committed golden (run_visual_tests.gd scenario charter, seeded flags, 0% pixel-diff)."
     },
     {
       "id": "golden-charter-term-dialog",
@@ -1741,26 +1743,28 @@
       "feature_or_screen": "chronicle-progressed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_story_ui_tests.gd",
         "golden:chronicle-progressed"
       ],
-      "note": "ChronicleScreen.gd now renders the timeline of fired beats grouped by Act. Screenshot story-chronicle.png captured (8/13 chapters across Acts 1–3). Visual golden diff awaits M-infra visual suite."
+      "note": "Chronicle timeline renders + committed golden (run_visual_tests.gd scenario chronicle, seeded beats, 0% pixel-diff)."
     },
     {
       "id": "golden-achievements-trophies-mixed",
       "feature_or_screen": "achievements-trophies-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_achievements_view_tests.gd",
         "golden:achievements-trophies-mixed"
       ],
-      "note": "Trophy screen renders (screenshot m10-achievements.png captured: 6/19 unlocked, gold full bars + moss partials + rewards incl. +Bomb). Visual golden itself awaits the M-infra visual suite."
+      "note": "Trophy screen renders + committed golden (run_visual_tests.gd scenario achievements, seeded unlocks, 0% pixel-diff)."
     },
     {
       "id": "golden-achievements-collection-mixed",
@@ -1793,13 +1797,14 @@
       "feature_or_screen": "tiles-mining-stone",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_tile_collection_tests.gd",
         "golden:tiles-mining-stone"
       ],
-      "note": "Tile collection mining stone entry; depends on M10 tile-collection."
+      "note": "Tile-collection gallery renders + committed golden (run_visual_tests.gd scenario tiles, 0% pixel-diff)."
     },
     {
       "id": "golden-tiles-water-fish",
@@ -1910,13 +1915,14 @@
       "feature_or_screen": "quests-daily-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_quests_tests.gd",
         "golden:quests-daily-mixed"
       ],
-      "note": "Quests tab renders (screenshot quests.png captured: 6 quests with mixed complete/claimable + in-progress states, gold/green progress bars). Visual golden diff awaits M-infra visual suite."
+      "note": "Quests tab renders the 6 quests with mixed states + committed golden (run_visual_tests.gd scenario quests, 0% pixel-diff)."
     },
     {
       "id": "golden-quests-almanac-mixed",
@@ -1962,13 +1968,13 @@
       "feature_or_screen": "shell-menu-main",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:shell-menu-main"
       ],
-      "note": "Settings menu main tab; re-skin golden recaptured in M5."
+      "note": "Settings menu renders + committed golden (run_visual_tests.gd scenario menu, 0% pixel-diff)."
     },
     {
       "id": "golden-shell-menu-settings",
@@ -2039,12 +2045,13 @@
       "feature_or_screen": "tutorial-center",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "golden:tutorial-center"
       ],
-      "note": "Tutorial centered modal; depends on M10 tutorial."
+      "note": "Tutorial onboarding modal renders + committed golden (run_visual_tests.gd scenario tutorial, 0% pixel-diff)."
     },
     {
       "id": "golden-start-farming-default",
@@ -2090,13 +2097,14 @@
       "feature_or_screen": "story-prompt",
       "category": "golden",
       "react_has": true,
-      "godot_status": "partial",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_story_ui_tests.gd",
         "golden:story-prompt"
       ],
-      "note": "Story beat modal now renders (StoryModal.gd — parchment dialog with title + speaker lines + Continue/choice buttons). Screenshot story-beat.png captured. Visual golden diff awaits M-infra visual suite."
+      "note": "Story beat modal renders + committed golden (run_visual_tests.gd scenario story-prompt, 0% pixel-diff)."
     },
     {
       "id": "golden-story-choices",
@@ -2209,13 +2217,13 @@
       "feature_or_screen": "Visual golden-diff suite (run_visual_tests.gd + __goldens__ diff)",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M-infra",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:__goldens__-diff"
       ],
-      "note": "Generalize tools/screenshot.gd into a scenario x viewport matrix capturing PNGs under godot/tests/visual/__goldens__/{scenario}/{vp}.png with pixelwise diff. CI now auto-discovers and runs all 36 run_*.gd suites; visual golden-diff suite itself is still absent."
+      "note": "Visual golden-diff suite shipped (run_visual_tests.gd): scenario×viewport (720×1280 portrait) capture of 19 surfaces, platform-tagged goldens under godot/tests/visual/__goldens__/<OS>/, tolerant pixel-diff (channelΔ>12 fails at >1% of pixels) with a render-smoke fallback where a platform golden is absent. Skips cleanly under --headless (keeps the CI sweep green); a best-effort xvfb 'godot-visual' CI job render-smokes on Linux. Windows goldens committed + 0% diff verified; Linux strict goldens deferred (committed on first stable CI render)."
     },
     {
       "id": "infra-web-export-smoke",

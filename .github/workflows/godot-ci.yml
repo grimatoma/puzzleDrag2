@@ -116,3 +116,43 @@ jobs:
         with:
           name: godot-web
           path: godot/dist/
+
+  godot-visual:
+    name: Visual regression (render-smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Best-effort render-smoke: the harness (godot/tests/run_visual_tests.gd) needs a real
+    # rendering backend, which the headless godot-tests job deliberately lacks (it skips the
+    # suite). Here we run it UNDER xvfb with the opengl3 driver so it actually renders. No
+    # Linux goldens are committed (pixel output diverges from the Windows/NVIDIA goldens under
+    # llvmpipe), so every scenario runs in RENDER-SMOKE mode — it proves each surface renders
+    # a non-blank 720×1280 frame on Linux. continue-on-error because GPU-less GitHub runners
+    # (xvfb + mesa/llvmpipe software GL) are an environment we can't fully validate from here;
+    # a flake must not block the PR. Promote to a hard gate once it's proven stable in CI.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot ${{ env.GODOT_VERSION }}
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: false
+
+      # Mesa software GL (llvmpipe) + xvfb so Godot's opengl3 driver has a framebuffer to
+      # draw into on a headless Linux runner.
+      - name: Install mesa + xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+
+      - name: Import project
+        run: godot --headless --path godot --import
+
+      # Run the visual harness with a virtual framebuffer + the opengl3 renderer. Without a
+      # committed Linux golden each scenario falls back to render-smoke (size + non-blank).
+      - name: Run visual regression (render-smoke under xvfb)
+        run: |
+          xvfb-run -a godot --path godot --rendering-driver opengl3 \
+            --script res://tests/run_visual_tests.gd
