@@ -261,6 +261,14 @@ func _ready() -> void:
 		# on screen is the story modal. _maybe_show_daily() no-ops while a story beat is showing
 		# (it's surfaced instead when the story queue fully drains in _on_story_advanced).
 		_maybe_show_daily()
+	# Web-boot readiness beacon (M-infra: web-export smoke). On an HTML5/WASM build the
+	# whole scene tree is now up (HUD + board built, save loaded, story/tutorial wired),
+	# so flip a window flag the Playwright smoke (tests/godot-web/boot.spec.ts) waits on
+	# to prove the engine actually booted past _ready. Guarded by OS.has_feature("web")
+	# so it's a COMPLETE no-op on desktop/headless — JavaScriptBridge isn't even touched
+	# there, leaving the headless GDScript sweep unaffected.
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__hearthGodotReady = true;", true)
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size

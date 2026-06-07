@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "test:godot-web": "playwright test -c playwright.godot-web.config.js",
     "test:e2e:install": "playwright install chromium",
     "ensure:visual-browser": "node tools/ensure-playwright-browser.mjs",
     "pretest:visual": "npm run ensure:visual-browser",
