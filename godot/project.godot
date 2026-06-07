@@ -21,6 +21,16 @@ window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
 window/handheld/orientation=1
+; M11 desktop-framing block. The base resolution stays 720×1280 (stretch scales it),
+; but on desktop the window OPENS smaller than the tall base so it fits a 1080p screen,
+; stays resizable, and is HiDPI-crisp. At non-9:16 window shapes stretch=keep pillarboxes
+; the portrait content centred. The window-size override is a 0.75× 9:16 (540×960); the
+; runtime minimum window size (360×640, a 9:16 floor) is applied in Main._ready() — Godot
+; 4.6 has no project setting for it (it's a Window.min_size API call).
+window/size/resizable=true
+window/size/window_width_override=540
+window/size/window_height_override=960
+window/dpi/allow_hidpi=true
 
 [input_devices]
 
