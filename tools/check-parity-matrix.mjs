@@ -48,11 +48,19 @@ function suiteName(entry) {
   return m ? m[1] : null;
 }
 
+// Allowed status values. "dropped" = intentionally out of scope (excluded from the
+// parity denominator in the renderer). Any other value is a typo / drift and fails.
+const ALLOWED_STATUS = new Set(["full", "partial", "absent", "dropped"]);
+
 const failures = [];
+const statusFailures = [];
 let fullRows = 0;
 let suiteRefsChecked = 0;
 
 for (const r of rows) {
+  if (!ALLOWED_STATUS.has(r.godot_status)) {
+    statusFailures.push({ id: r.id, status: r.godot_status });
+  }
   if (r.godot_status !== "full") continue;
   fullRows++;
   const verified = Array.isArray(r.verified_by) ? r.verified_by : [];
@@ -72,6 +80,16 @@ console.log("check-parity-matrix: validating docs/parity-matrix.json");
 console.log(`  rows checked:        ${rows.length}`);
 console.log(`  full rows validated: ${fullRows}`);
 console.log(`  suite refs checked:  ${suiteRefsChecked}`);
+
+if (statusFailures.length) {
+  console.error(
+    `\nFAIL: ${statusFailures.length} row(s) have an unknown godot_status (allowed: full, partial, absent, dropped):`
+  );
+  for (const f of statusFailures) {
+    console.error(`  - row "${f.id}" -> godot_status "${f.status}"`);
+  }
+  process.exit(1);
+}
 
 if (failures.length) {
   console.error(
