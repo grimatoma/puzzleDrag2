@@ -83,6 +83,13 @@ describe("accordionReducer", () => {
     const s = accordionReducer(closed, { type: "SELECT_IN_PLACE", key: "hay" });
     expect(s).toEqual({ displayedKey: "hay", isOpen: true, pendingKey: null });
   });
+
+  it("RESET fully clears displayedKey so a collapsed list item stops rendering expanded", () => {
+    // List view has no closing animation (no TRANSITION_END), so collapse must
+    // drop displayedKey directly — otherwise the item stays stuck expanded.
+    const open = { displayedKey: "grain", isOpen: true, pendingKey: "hay" };
+    expect(accordionReducer(open, { type: "RESET" })).toEqual(accordionInitialState);
+  });
 });
 
 // ── View mode storage ─────────────────────────────────────────────────────

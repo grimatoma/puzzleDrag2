@@ -103,7 +103,7 @@ interface AccordionState {
 }
 
 interface AccordionAction {
-  type: "SELECT" | "SELECT_IN_PLACE" | "OPEN" | "CLOSE" | "TRANSITION_END";
+  type: "SELECT" | "SELECT_IN_PLACE" | "OPEN" | "CLOSE" | "TRANSITION_END" | "RESET";
   key?: string;
 }
 
@@ -135,6 +135,12 @@ export function accordionReducer(state: AccordionState, action: AccordionAction)
       return { ...state, isOpen: true };
     case "CLOSE":
       return { ...state, isOpen: false, pendingKey: null };
+    // Fully clear the selection in one step. List view collapses instantly
+    // (no max-height animation, so no TRANSITION_END fires to finalize the
+    // close), so it needs to drop `displayedKey` directly instead of leaving
+    // a closed-but-still-displayed item stuck in its expanded render.
+    case "RESET":
+      return accordionInitialState;
     case "TRANSITION_END":
       if (state.isOpen) return state;
       return state.pendingKey
@@ -158,9 +164,10 @@ function useAccordion() {
   const select = useCallback((key: string) => dispatch({ type: "SELECT", key }), []);
   const selectInPlace = useCallback((key: string) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
   const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
+  const closeImmediate = useCallback(() => dispatch({ type: "RESET" }), []);
   const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
 
-  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, onClosed };
+  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, closeImmediate, onClosed };
 }
 
 // Memoized via primitive props + stable `onSelect` (see InventoryGrid). The
@@ -771,7 +778,7 @@ export function InventoryGrid({
               entry={entry}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onCollapse={() => accordion.selectInPlace(entry.key)}
+              onCollapse={accordion.closeImmediate}
               progressValue={progressValueFor(entry.key)}
               progressMax={progressMaxFor(entry.key)}
             />
