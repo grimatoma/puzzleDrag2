@@ -1021,12 +1021,23 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	sb.content_margin_top = 4
 	sb.content_margin_bottom = 4
 	box.add_theme_stylebox_override("panel", sb)
+	# React's stockpile chips are a compact icon + count. Show the same procedural icon
+	# when we have art for the key; fall back to the title-cased name when we don't, so
+	# board-only keys (rat, mysterious_ore, …) still read.
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 4)
+	box.add_child(row)
+	var icon := UiKit.make_icon(res, 26.0)
+	if icon != null:
+		row.add_child(icon)
 	var lbl := Label.new()
-	lbl.text = "%s  %d" % [res, count]
-	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
+	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", Palette.INK)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(lbl)
+	row.add_child(lbl)
 	return box
 
 ## Keep the chain-progress fill height matched to the track, remember the inner

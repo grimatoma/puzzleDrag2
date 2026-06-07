@@ -283,8 +283,13 @@ func _make_resource_row(res: String) -> PanelContainer:
 	row.add_theme_constant_override("separation", 10)
 	chip.add_child(row)
 
-	# Name — expands to push the count + value to the right edge.
-	var name_lbl := _make_label(res, COL_BODY)
+	# Icon — the same procedural art React shows, when we have it (text-only keys skip).
+	var icon := UiKit.make_icon(res, 34.0)
+	if icon != null:
+		row.add_child(icon)
+
+	# Name — title-cased ("hay_bundle" → "Hay Bundle"), expands to push count + value right.
+	var name_lbl := _make_label(UiKit.pretty_name(res), COL_BODY)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name_lbl)
 

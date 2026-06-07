@@ -36,6 +36,53 @@ static func heading_font() -> Font:
 			_heading_font_cache = fv
 	return _heading_font_cache
 
+# ── resource icons + names ──────────────────────────────────────────────────────
+
+## Cache of loaded resource/item icon textures, keyed by item key. `null` is cached
+## too (a key with no art) so a missing icon costs one ResourceLoader.exists() call,
+## not one per row per refresh.
+static var _icon_cache: Dictionary = {}
+
+## Load the procedural resource/item icon exported from the Phaser app
+## (res://assets/resources/<key>.png — flour, bread, eggs, plank, supplies, …),
+## returning the cached Texture2D or null when no art exists for that key. These are
+## the SAME canvas drawings React shows beside every inventory row / stockpile chip /
+## craft input / market line; board-TILE art ("tile_*") loads via Tile.gd instead.
+static func resource_icon(key: String) -> Texture2D:
+	if _icon_cache.has(key):
+		return _icon_cache[key]
+	var tex: Texture2D = null
+	var path := "res://assets/resources/%s.png" % key
+	if ResourceLoader.exists(path):
+		var loaded = load(path)
+		if loaded is Texture2D:
+			tex = loaded
+	_icon_cache[key] = tex
+	return tex
+
+## A square TextureRect for a resource icon at `px`, or null when no art exists — so
+## callers do `var ic := UiKit.make_icon(key); if ic: row.add_child(ic)` and silently
+## skip text-only keys rather than draw a broken rect. Smooth downscale (linear) from
+## the 90px source, keeps aspect, ignores mouse so drag/scroll passes through.
+static func make_icon(key: String, px: float = 30.0) -> TextureRect:
+	var tex := resource_icon(key)
+	if tex == null:
+		return null
+	var rect := TextureRect.new()
+	rect.texture = tex
+	rect.custom_minimum_size = Vector2(px, px)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+## Title-case an item key for display: "hay_bundle" → "Hay Bundle", "iron_bar" →
+## "Iron Bar". Godot's String.capitalize() handles the snake_case → Title Case split,
+## matching how React labels the same items.
+static func pretty_name(key: String) -> String:
+	return String(key).capitalize()
+
 # ── StyleBox builders ─────────────────────────────────────────────────────────
 
 ## Parchment StyleBoxFlat used by Main.gd HUD buttons: warm fill, 2 px iron
@@ -215,16 +262,53 @@ static func style_button(
 static func make_vscroll() -> ScrollContainer:
 	var scroll := SmoothScrollContainer.new()
 	scroll.allow_horizontal_scroll = false
-	# The addon detects its scrollable content child ONCE, in its own _ready(). Most
-	# screens here add the scroll to a LIVE parent before adding the content VBox
-	# (build order: add scroll → add vbox), so that one-time scan runs with no child
-	# yet and `content_node` stays null — the addon's _process then dereferences null
-	# (`content_node.size`) and spams "Invalid access … 'size' … on a base object of
-	# type 'Nil'". Re-point content_node at the first non-scrollbar Control child as
-	# it enters the tree; the null guard makes it a no-op once _ready has found it
-	# (the off-tree build order). `content_node` is the addon's public handle.
+	# The addon detects its scrollable content child in its own _ready() by grabbing the
+	# FIRST non-ScrollBar Control child — which can latch onto a stray (a decorative
+	# TextureRect, the addon's own stability Timer, a transient node) instead of the real
+	# content VBox. When that happens `content_node` is a ~0-height node, so
+	# `should_scroll_vertical()` returns false and the modal SILENTLY DOES NOT SCROLL even
+	# though the real content overflows the viewport (the "scrolling doesn't work at all"
+	# bug — it renders identically at rest, so it slips past a static screenshot review).
+	#
+	# Every call site here adds exactly ONE scrollable child and it is always a Container
+	# (VBoxContainer / GridContainer). So re-point `content_node` at any entering Container,
+	# OVERRIDING an earlier stray pick — strays (ScrollBar, Timer, TextureRect) are never
+	# Containers. The null-fallback keeps the off-tree build order working and prevents the
+	# `content_node.size` nil-deref the addon's _process would otherwise spam.
 	scroll.child_entered_tree.connect(func(node: Node) -> void:
-		if scroll.content_node == null and node is Control and not node is ScrollBar:
+		if node is Container:
+			scroll.content_node = node
+		elif scroll.content_node == null and node is Control and not node is ScrollBar:
 			scroll.content_node = node
 	)
 	return scroll
+
+## Size a modal's vertical ScrollContainer to its CONTENT height, capped to the viewport.
+## This is what makes a modal card adapt: a SHORT list yields a short card (centred in the
+## scrim with no empty parchment "dead space" below it), while a LONG list caps to the
+## screen and scrolls. Without it, a card pinned full-height shows its content hugging the
+## top and a large void beneath — the dominant "looks unfinished" signal across the screens.
+##
+## `content` is the scroll's child whose combined-minimum height we measure; pass null to
+## auto-detect it (the SmoothScrollContainer's `content_node`, else the first non-ScrollBar
+## Control child) so call sites stay uniform. `reserved_px` is the chrome around the scroll
+## (title/header + card padding + screen margins) so the WHOLE card still fits the viewport
+## with breathing room. Call AFTER (re)building content and again on viewport `size_changed`.
+## Safe with nulls / off-tree (no-op).
+static func fit_scroll_height(scroll: ScrollContainer, content: Control = null, reserved_px: float = 240.0) -> void:
+	if scroll == null or not scroll.is_inside_tree():
+		return
+	var c: Control = content
+	if c == null:
+		if "content_node" in scroll and scroll.content_node != null:
+			c = scroll.content_node
+		else:
+			for ch in scroll.get_children():
+				if ch is Control and not (ch is ScrollBar):
+					c = ch
+					break
+	if c == null:
+		return
+	var vp_h: float = scroll.get_viewport_rect().size.y
+	var avail: float = maxf(160.0, vp_h - reserved_px)
+	scroll.custom_minimum_size.y = minf(c.get_combined_minimum_size().y, avail)
