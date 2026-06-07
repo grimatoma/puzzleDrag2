@@ -112,6 +112,11 @@ var _decorations_screen                  ## CanvasLayer (DecorationsScreenScript
 ## as a global (mirrors DecorationsScreen / CastleScreen / RecipeWiki / TileCollection).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
 var _portal_screen                       ## CanvasLayer (PortalScreenScript), lazily created
+## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
+## choice_log + flags. Loaded via preload (NO class_name) so the port never needs an --import
+## pass to register it (mirrors PortalScreen / DecorationsScreen / CastleScreen).
+const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
+var _charter_screen                      ## CanvasLayer (CharterScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -730,6 +735,27 @@ func _build_hud() -> void:
 	portal_btn.connect("pressed", Callable(self, "_open_portal"))
 	root.add_child(portal_btn)
 
+	# The Charter — always-visible "⚖️" button, pinned top-LEFT just under the 🌀 portal
+	# button (offset_top 524, ~38px tall → 570 is the next free slot) so the buttons stack
+	# without overlapping and all clear the centred board drag area. Same parchment-pill
+	# look. Opens the CharterScreen (read-only Hollow-Pact reflection over the story state).
+	var charter_btn := Button.new()
+	charter_btn.text = "⚖️"
+	charter_btn.add_theme_font_size_override("font_size", 20)
+	charter_btn.add_theme_color_override("font_color", Palette.INK)
+	charter_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	charter_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	charter_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	charter_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	charter_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	charter_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	charter_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	charter_btn.offset_left = 18
+	charter_btn.offset_top = 570
+	charter_btn.tooltip_text = "The Charter"
+	charter_btn.connect("pressed", Callable(self, "_open_charter"))
+	root.add_child(charter_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1277,6 +1303,27 @@ func _on_portal_closed() -> void:
 	_refresh_totals()
 	_refresh_chain_progress()
 
+# ── Charter (read-only) ──────────────────────────────────────────────────────────
+
+## Open the Charter screen, lazily creating + wiring it on first use. The Charter is
+## READ-ONLY (it never mutates GameState), so open() just re-reads the live story state.
+func _open_charter() -> void:
+	if _charter_screen == null:
+		_charter_screen = CharterScreenScript.new()
+		add_child(_charter_screen)
+		_charter_screen.setup(game)
+		_charter_screen.connect("closed", Callable(self, "_on_charter_closed"))
+	_charter_screen.open()
+	_router.open_modal(ViewRouter.Modal.CHARTER)
+
+## The Charter screen was closed: hide it + reset the router. NO SaveManager.save — the
+## Charter is read-only, so nothing changed. (Unlike _on_portal_closed, there is no spend
+## to persist.)
+func _on_charter_closed() -> void:
+	if _charter_screen != null:
+		_charter_screen.visible = false
+	_router.close_modal()
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 
 ## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
@@ -1425,6 +1472,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_decorations()
 		ViewRouter.Modal.PORTAL:
 			_open_portal()
+		ViewRouter.Modal.CHARTER:
+			_open_charter()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1472,6 +1521,10 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a build/summon is persisted + the
 				# stockpile HUD refreshed (it also hides + resets the router).
 				_on_portal_closed()
+			elif _charter_screen != null and _charter_screen.visible:
+				# Charter is read-only — the close handler just hides + resets the router
+				# (no save needed, nothing changed).
+				_on_charter_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single

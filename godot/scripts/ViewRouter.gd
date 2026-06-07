@@ -12,7 +12,7 @@ class_name ViewRouter extends RefCounted
 ## what overlay (if any) is shown on top of it.
 
 enum View  { BOARD }
-enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL }
+enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER }
 
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
@@ -72,6 +72,8 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.DECORATIONS }
 		"portal", "summon":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.PORTAL }
+		"charter", "pact":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.CHARTER }
 		_:
 			return { "ok": false }
 
@@ -94,8 +96,9 @@ static func modal_id(m: int) -> String:
 		Modal.CASTLE:       return "castle"
 		Modal.DECORATIONS:  return "decorations"
 		Modal.PORTAL:       return "portal"
+		Modal.CHARTER:      return "charter"
 		_:               return ""
 
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon"])
+	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact"])
