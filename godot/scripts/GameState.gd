@@ -156,6 +156,19 @@ var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGE
 ## from the menu; persisted so the choice survives a reload. Defaults to "on".
 var audio_muted: bool = false
 
+# ── Tutorial onboarding ────────────────────────────────────────────────────────
+## Whether the player has completed (or skipped) the 6-step tutorial onboarding
+## modal. Persisted so the modal is shown only once. Main calls mark_tutorial_seen()
+## on the modal's `finished` signal; apply_deeplink("tutorial") opens it for replay
+## regardless of this flag. Defaults to false (show on first load). ADDITIVE —
+## SAVE_VERSION is NOT bumped: a save written before tutorial existed loads with
+## false (the default), triggering the tutorial once on upgrade.
+var tutorial_seen: bool = false
+
+## Mark the tutorial as seen (called by Main when the modal finishes or is skipped).
+func mark_tutorial_seen() -> void:
+	tutorial_seen = true
+
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
 ## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
 ## A missing key reads as 0 (no charges). This is the persisted half of the tool
@@ -1435,6 +1448,10 @@ func to_dict() -> Dictionary:
 		# every prior additive field, a save written before workers existed loads with
 		# all counts at 0 (from_dict defensive default), so the economy is unchanged.
 		"workers": workers.duplicate(),
+		# Tutorial onboarding (ADDITIVE): whether the 6-step tutorial modal has been
+		# seen/skipped. SAVE_VERSION is NOT bumped — a save written before tutorial
+		# existed loads with false (show once on upgrade). Defaults to false.
+		"tutorial_seen": tutorial_seen,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1641,4 +1658,7 @@ static func from_dict(d: Dictionary) -> GameState:
 			var wid := String(k)
 			if WorkerConfig.has_worker(wid):
 				s.workers[wid] = clampi(int(wk[k]), 0, WorkerConfig.max_count(wid))
+	# Restore tutorial_seen (ADDITIVE). Missing key (any save written before tutorial
+	# existed) → false (show the tutorial once on upgrade). Coerced to plain bool.
+	s.tutorial_seen = bool(d.get("tutorial_seen", false))
 	return s

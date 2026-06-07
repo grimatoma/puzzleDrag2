@@ -85,8 +85,16 @@ func _spawn_main():
 	for _i in 6:
 		await process_frame
 	_check(main.board != null, "Main created a Board")
-	# A fresh save can enqueue the story arrival beat; its scrim eats HUD clicks. Free
-	# the modal so the HUD buttons are the topmost input target for the click test.
+	# A fresh game now shows the tutorial onboarding modal FIRST (layer 6, full-rect
+	# MOUSE_FILTER_STOP scrim) and holds the story queue back until it finishes. That
+	# scrim would eat every HUD click + board drag, so free it for the input test.
+	if main._tutorial_modal != null:
+		main._tutorial_modal.free()
+		main._tutorial_modal = null
+		await process_frame
+	# A fresh save can also enqueue the story arrival beat; its scrim eats HUD clicks too.
+	# (With the tutorial shown first the queue isn't drained yet, so _story_modal is
+	# usually null here — but free it defensively in case a future load path drains it.)
 	if main._story_modal != null:
 		main._story_modal.free()
 		main._story_modal = null

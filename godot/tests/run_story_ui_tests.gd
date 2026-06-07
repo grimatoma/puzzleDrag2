@@ -203,12 +203,20 @@ func _initialize() -> void:
 	root.add_child(main)
 	await process_frame                          # let the deferred _ready run
 
+	# Tutorial onboarding now shows FIRST on a fresh game (tutorial_seen=false), and the
+	# story queue is held back until it finishes. Mirror a real new player: skip the
+	# tutorial, which fires _on_tutorial_finished → _drain_story_queue() and surfaces the
+	# arrival beat. (A returning player with tutorial_seen=true drains immediately in _ready.)
+	if main._tutorial_modal != null and main._tutorial_modal.visible:
+		_press(main._tutorial_modal, "skip")
+		await process_frame
+
 	_check(main.has_method("_drain_story_queue"), "Main has _drain_story_queue()")
 	_check(main.has_method("_open_chronicle"), "Main has _open_chronicle()")
 	_check(main.has_method("_on_chronicle_closed"), "Main has _on_chronicle_closed()")
 
-	# _ready calls start_story_session() + _drain_story_queue(), so the beat modal should
-	# already be presenting act1_arrival (the front of the queue).
+	# _ready calls start_story_session(); after the tutorial is dismissed the queue drains,
+	# so the beat modal should now be presenting act1_arrival (the front of the queue).
 	_check(main._story_modal != null, "_ready drained the queue → story modal created")
 	_check(main._story_modal != null and main._story_modal.visible, "story modal visible after _ready")
 	_check(main._story_modal != null and main._story_modal.current_beat_id() == "act1_arrival",
