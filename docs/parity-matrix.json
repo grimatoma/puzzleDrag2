@@ -2189,13 +2189,13 @@
       "feature_or_screen": "GdUnit4 adoption (auto-discovery + parallel unit suites)",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M-infra",
       "verified_by": [
         "gdunit4:suite-green",
         "ci:godot-ci.yml"
       ],
-      "note": "Adopt GdUnit4 + gdUnit GitHub action; migrate the 36 monolithic run_*.gd runners (CI now auto-discovers all 36 suites) one class per system, kept as a compatibility harness until migrated."
+      "note": "GdUnit4 v6.1.3 ADOPTED — addon vendored at godot/addons/gdUnit4/, a real starter suite under godot/test/ (5 GdUnitTestSuite classes / 46 test methods over BoardLogic, GameState economy, QuestConfig, AlmanacConfig, DailyRewardConfig, mirroring the proven run_*.gd assertions), run headless via GdUnitCmdTool as a HARD CI gate (godot-gdunit4 job, exits 0 only when all pass). The 45 legacy run_*.gd runners (~3500 checks) are INTENTIONALLY kept as the comprehensive compatibility harness; per-system migration to GdUnit4 classes is incremental. project.godot untouched (CLI runner needs no plugin registration)."
     },
     {
       "id": "infra-e2e-input-sim",
