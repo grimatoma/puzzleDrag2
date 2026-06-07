@@ -445,12 +445,12 @@
       "feature_or_screen": "almanac slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_quests_tests.gd"
       ],
-      "note": "Quest reference (now merged into quests view)."
+      "note": "Almanac XP/tier track ported (AlmanacConfig.gd — 150 XP/level curve, 10 tiers, level_for_xp/can_claim_tier) + GameState almanac_xp/level/claimed/structural with award_xp (+20 XP per quest claim) and claim_almanac_tier (gated on level; grants coins/runes/tools, latches structural honours). Shown as the Almanac tab in QuestsScreen. Verified headlessly by run_quests_tests.gd. Visual golden awaits M-infra."
     },
     {
       "id": "slice-boons",
@@ -690,13 +690,13 @@
       "feature_or_screen": "quests slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_quests_tests.gd",
         "golden:quests-daily-mixed"
       ],
-      "note": "Daily and almanac quest tracking."
+      "note": "Deterministic 6-quest system ported (QuestConfig.gd — FNV-1a→mulberry32 seeded roll from (quest_seed, quest_day), tick_quest for collect/craft/order/tool/chain, is_claimable) + GameState quests/quest_day/reroll_quests/claim_quest, additively ticked at credit_chain (collect+chain), fill_order (order), craft (craft), use_tool_on_grid (tool); claim grants coins + 20 almanac XP. Templates scoped to port-reachable keys/recipes/tools (23 of the React pool; unreachable items/tiles/tool-ids omitted). Verified headlessly by run_quests_tests.gd (265 checks). Visual golden awaits M-infra."
     },
     {
       "id": "slice-runsummary",
@@ -1004,13 +1004,13 @@
       "feature_or_screen": "quests view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_quests_tests.gd",
         "golden:quests-almanac-mixed"
       ],
-      "note": "Daily and almanac quests."
+      "note": "QuestsScreen.gd shipped — parchment modal with a Quests / Almanac tab toggle: the Quests tab lists the 6 rolled quests (label, coin + ✦XP reward, progress bar gold-when-complete / green-when-partial, Claim gated on completion); the Almanac tab shows the XP/level header + the 10-tier list with claim buttons gated on level. Reachable via the 📋 HUD button + apply_deeplink('quests'/'almanac'). Visual golden awaits M-infra."
     },
     {
       "id": "view-tilecollection",
@@ -1910,26 +1910,26 @@
       "feature_or_screen": "quests-daily-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_quests_tests.gd",
         "golden:quests-daily-mixed"
       ],
-      "note": "Daily quests view; depends on M10 quests."
+      "note": "Quests tab renders (screenshot quests.png captured: 6 quests with mixed complete/claimable + in-progress states, gold/green progress bars). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-quests-almanac-mixed",
       "feature_or_screen": "quests-almanac-mixed",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_quests_tests.gd",
         "golden:quests-almanac-mixed"
       ],
-      "note": "Almanac quests view; depends on M10 quests."
+      "note": "Almanac tab renders (XP/level header + 10-tier list with level-gated claims). Visual golden diff awaits M-infra visual suite."
     },
     {
       "id": "golden-run-summary",
