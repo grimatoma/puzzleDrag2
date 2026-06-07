@@ -1339,27 +1339,29 @@
       "feature_or_screen": "town-home-fresh",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M6",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_town_layout_tests.gd",
         "golden:town-home-fresh"
       ],
-      "note": "Town at start (no buildings); depends on M6 spatial town map."
+      "note": "Fresh spatial town map (no buildings) renders + committed golden (run_visual_tests.gd scenario town-map, 0% diff)."
     },
     {
       "id": "golden-town-home-built-out",
       "feature_or_screen": "town-home-built-out",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M6",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_town_layout_tests.gd",
         "e2e:town-build",
         "golden:town-home-built-out"
       ],
-      "note": "Town with multiple buildings placed; depends on M6 spatial town map."
+      "note": "Spatial town map with built buildings (lumber_camp/coop/garden houses placed on plots) renders + committed golden (run_visual_tests.gd scenario town-built-out, 0% diff)."
     },
     {
       "id": "golden-town-building-tooltip",
@@ -1392,13 +1394,14 @@
       "feature_or_screen": "town-build-picker-ready",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M6",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_town_ui_tests.gd",
         "golden:town-build-picker-ready"
       ],
-      "note": "Building picker ready to build; depends on M6 BuildPicker scene."
+      "note": "Build picker with enabled Build rows renders + committed golden (run_visual_tests.gd scenario town-build-picker, City tier + stocked, 0% diff)."
     },
     {
       "id": "golden-town-build-picker-locked",
@@ -1509,13 +1512,13 @@
       "feature_or_screen": "inventory-search-empty",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:inventory-search-empty"
       ],
-      "note": "Inventory search with no results; search UI added in M5 re-skin."
+      "note": "Inventory search empty-state ('No items match …') renders + committed golden (run_visual_tests.gd scenario inventory-search-empty, 0% diff)."
     },
     {
       "id": "golden-inventory-mid-progress",
@@ -1719,26 +1722,28 @@
       "feature_or_screen": "charter-term-dialog",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_charter_tests.gd",
         "golden:charter-term-dialog"
       ],
-      "note": "Charter term detail dialog; depends on M10 charter."
+      "note": "Charter term-detail overlay (description + 'Where it was tested') renders + committed golden (run_visual_tests.gd scenario charter-term-dialog, 0% diff)."
     },
     {
       "id": "golden-chronicle-empty",
       "feature_or_screen": "chronicle-empty",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_story_tests.gd",
         "golden:chronicle-empty"
       ],
-      "note": "Chronicle with no story beats; depends on M10 story/chronicle."
+      "note": "Empty chronicle (0/13 chapters, 'Your story begins…') renders + committed golden (run_visual_tests.gd scenario chronicle-empty, 0% diff)."
     },
     {
       "id": "golden-chronicle-progressed",
@@ -1957,13 +1962,14 @@
       "feature_or_screen": "shell-town-fresh",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M6",
       "verified_by": [
+        "run_visual_tests.gd",
         "run_town_layout_tests.gd",
         "golden:shell-town-fresh"
       ],
-      "note": "Town view from shell; depends on M6 spatial town map."
+      "note": "Town view (spatial village map) renders + committed golden (run_visual_tests.gd scenario town-map, 0% diff)."
     },
     {
       "id": "golden-shell-menu-main",
@@ -1996,39 +2002,39 @@
       "feature_or_screen": "shell-debug-modal",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M-infra",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:shell-debug-modal"
       ],
-      "note": "Debug panel modal; pairs with the deep-link/test harness in M-infra."
+      "note": "Debug modal renders the live state readout + jump grid + committed golden (run_visual_tests.gd scenario debug, 0% diff)."
     },
     {
       "id": "golden-shell-leave-board-confirm",
       "feature_or_screen": "shell-leave-board-confirm",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:shell-leave-board-confirm"
       ],
-      "note": "Leave board confirmation; wired through the M5 router/ModalShell."
+      "note": "Leave-board confirm renders + committed golden (run_visual_tests.gd scenario leaveboard, 0% diff)."
     },
     {
       "id": "golden-shell-toast-bubble",
       "feature_or_screen": "shell-toast-bubble",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:shell-toast-bubble"
       ],
-      "note": "Toast notification; toast component lands with the M5 UI vocabulary."
+      "note": "Toast bubble renders at full opacity + committed golden (run_visual_tests.gd scenario toast, fade-tween frozen for determinism, 0% diff)."
     },
     {
       "id": "golden-tutorial-corner",
