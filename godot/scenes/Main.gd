@@ -92,6 +92,11 @@ var _cartography_screen                  ## CanvasLayer (CartographyScreenScript
 ## (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk / Cartography).
 const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
 var _recipe_wiki_screen                  ## CanvasLayer (RecipeWikiScreenScript), lazily created
+## Tutorial onboarding modal — the 6-step welcome shown once to new players + replayable via
+## apply_deeplink("tutorial"). Loaded via preload (NO class_name) so the port never needs an
+## --import pass to register it as a global (mirrors all the other lazily-created modals).
+const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
+var _tutorial_modal                      ## CanvasLayer (TutorialModalScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -191,10 +196,18 @@ func _ready() -> void:
 	_refresh_rats()
 	_refresh_runes()
 	_refresh_chain_progress()
-	# Story UI: present any beats already queued (the arrival beat fired by
-	# start_story_session above, plus any threshold/flag beats a loaded save satisfied).
-	# The HUD + board are built now, so the beat modal layers cleanly above them.
-	_drain_story_queue()
+	# Tutorial onboarding: show the 6-step welcome modal on FIRST LOAD (tutorial_seen=false).
+	# ORDERING — the tutorial is shown FIRST (layer 6, above StoryModal's layer 5) so it
+	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
+	# finishes (via _on_tutorial_finished → _drain_story_queue). If the player has already
+	# seen the tutorial the queue is drained immediately as before.
+	if not game.tutorial_seen:
+		_open_tutorial()
+	else:
+		# Story UI: present any beats already queued (the arrival beat fired by
+		# start_story_session above, plus any threshold/flag beats a loaded save satisfied).
+		# The HUD + board are built now, so the beat modal layers cleanly above them.
+		_drain_story_queue()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -1104,6 +1117,41 @@ func _on_recipes_closed() -> void:
 		_recipe_wiki_screen.visible = false
 	_router.close_modal()
 
+# ── Tutorial onboarding ────────────────────────────────────────────────────────
+
+## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
+## Called automatically from _ready when game.tutorial_seen is false, and from
+## apply_deeplink("tutorial") for replay. On REPLAY (tutorial_seen=true) the modal
+## still emits `finished` → _on_tutorial_finished marks seen (idempotent) + saves.
+func _open_tutorial() -> void:
+	if _tutorial_modal == null:
+		_tutorial_modal = TutorialModalScript.new()
+		add_child(_tutorial_modal)
+		_tutorial_modal.setup(game)
+		_tutorial_modal.connect("finished", Callable(self, "_on_tutorial_finished"))
+		_tutorial_modal.connect("closed", Callable(self, "_on_tutorial_closed"))
+	_tutorial_modal.open()
+	_router.open_modal(ViewRouter.Modal.TUTORIAL)
+
+## The tutorial modal was dismissed (closed without finishing — defensive; normally
+## `finished` fires before `closed`). Mirror the story-modal closed path: hide + reset router.
+func _on_tutorial_closed() -> void:
+	if _tutorial_modal != null:
+		_tutorial_modal.visible = false
+	_router.close_modal()
+
+## The tutorial finished (player stepped through all 6 steps OR pressed Skip): mark
+## tutorial_seen, save, and drain the story queue — the story beats that were
+## held back while the tutorial was on screen now surface. This is the single exit
+## path that guarantees tutorial → story ordering (the queue is only drained here
+## when the tutorial was showing; a seen-tutorial load drains in _ready directly).
+func _on_tutorial_finished() -> void:
+	if game != null:
+		game.mark_tutorial_seen()
+		SaveManager.save(game)
+	# Surface any queued story beats now that the tutorial is out of the way.
+	_drain_story_queue()
+
 ## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
 ## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
 ## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
@@ -1209,6 +1257,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_cartography()
 		ViewRouter.Modal.RECIPES:
 			_open_recipes()
+		ViewRouter.Modal.TUTORIAL:
+			_open_tutorial()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1240,6 +1290,9 @@ func apply_deeplink(id: String) -> bool:
 				_router.close_modal()
 			elif _recipe_wiki_screen != null and _recipe_wiki_screen.visible:
 				_recipe_wiki_screen.visible = false
+				_router.close_modal()
+			elif _tutorial_modal != null and _tutorial_modal.visible:
+				_tutorial_modal.visible = false
 				_router.close_modal()
 	return true
 

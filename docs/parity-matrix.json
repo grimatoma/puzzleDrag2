@@ -419,12 +419,13 @@
       "feature_or_screen": "Tutorial & onboarding",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
+        "run_tutorial_tests.gd",
         "golden:tutorial-center"
       ],
-      "note": "No multi-step tutorial modal teaching chain/tools/tier-up/orders."
+      "note": "6-step onboarding modal (TutorialConfig + TutorialModal): shown once on first load (tutorial_seen flag persisted in GameState to_dict/from_dict), replayable via apply_deeplink('tutorial'). Sequenced before the story arrival beat so the two don't fight."
     },
     {
       "id": "slice-achievements",
@@ -767,12 +768,13 @@
       "feature_or_screen": "tutorial slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
+        "run_tutorial_tests.gd",
         "golden:tutorial-center"
       ],
-      "note": "Onboarding tutorial modal."
+      "note": "TutorialConfig.gd (6 steps: Welcome/Drag chains/Upgrades ★/Orders/Town/You're ready) + tutorial_seen flag in GameState. Steps wired into TutorialModal and tested headlessly via run_tutorial_tests.gd."
     },
     {
       "id": "slice-wiki",
@@ -1079,12 +1081,12 @@
       "feature_or_screen": "tutorial modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
-        "golden:tutorial-center"
+        "run_tutorial_tests.gd"
       ],
-      "note": "Onboarding tutorial overlay."
+      "note": "TutorialModal.gd (CanvasLayer, parchment card + scrim, Cinzel title, body, step indicator, Next/Got it!/Skip buttons). Shown once on first load, replayable via apply_deeplink('tutorial'). ViewRouter.Modal.TUTORIAL added."
     },
     {
       "id": "modal-debug",
