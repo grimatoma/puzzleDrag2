@@ -42,6 +42,7 @@ func _initialize() -> void:
 	for k in grant:
 		main.game.inventory[k] = grant[k]
 	main.game.coins = 5000
+	main.game.award_xp(380)        # → Lv 3, ~53% into the level (XP fill check)
 	main._refresh_totals()
 	main._refresh_meta()
 	for _i in range(12):

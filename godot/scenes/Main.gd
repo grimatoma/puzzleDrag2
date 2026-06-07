@@ -30,6 +30,9 @@ var _orders_label: Label                ## compact one-line orders readout above
 
 # Top-bar pill inner Labels (the PanelContainer wrappers hold them; we mutate text/visibility here).
 var _coin_pill: Label                   ## 🪙 N
+var _level_pill_box: PanelContainer     ## orange "Lv N" pill with an XP fill (React parity)
+var _level_label: Label                 ## "Lv N"
+var _level_xp_fill: ColorRect           ## brighter-orange XP progress fill behind the label
 var _tier_pill: Label                   ## tier name · plots used/total
 var _biome_pill: Label                  ## Farm / ⛏ Mine · N
 var _boss_pill_box: PanelContainer      ## boss pill wrapper (toggled visible)
@@ -181,6 +184,7 @@ var _tool_disarm_btn: Button            ## "✕ Disarm" (NOT in _tool_buttons �
 # each _open_* and cleared to "" by each _on_*_closed (and on the board). The secondary
 # screens that used to live in the left strip moved into the ☰ menu's "More" section.
 const NAV_HEIGHT := 76                   ## bottom-bar height (also the reserved layout gap)
+const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill (fill spans a fraction of this)
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
 var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
@@ -458,6 +462,10 @@ func _build_hud() -> void:
 	var coin_box := UiKit.make_pill("🪙 0", Palette.EMBER)
 	_coin_pill = coin_box.get_meta("label")
 	topbar_row.add_child(coin_box)
+
+	# Level pill — React's orange "Lv N" chip with an XP progress fill (almanac level).
+	_level_pill_box = _build_level_pill()
+	topbar_row.add_child(_level_pill_box)
 
 	var tier_box := UiKit.make_pill("Camp · 0/3", Palette.INK)
 	_tier_pill = tier_box.get_meta("label")
@@ -2574,6 +2582,59 @@ func _refresh_meta() -> void:
 	if _coin_pill == null or game == null:
 		return
 	_coin_pill.text = "🪙 %d" % game.coins
+	_refresh_level()
+
+## Build the orange "Lv N" almanac pill: a rounded ember chip holding a fixed-width inner
+## Control that stacks a brighter-orange XP fill (left-anchored, width = fraction into the
+## current level) behind a centred "Lv N" label — React's level chip in the top bar.
+func _build_level_pill() -> PanelContainer:
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.EMBER                 # orange XP track
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 3
+	sb.content_margin_right = 3
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	box.add_theme_stylebox_override("panel", sb)
+
+	var inner := Control.new()
+	inner.custom_minimum_size = Vector2(LEVEL_PILL_W, 22)
+	inner.clip_contents = true
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(inner)
+
+	_level_xp_fill = ColorRect.new()
+	_level_xp_fill.color = Palette.GOLD_BRIGHT  # brighter than the ember track
+	_level_xp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_xp_fill.position = Vector2.ZERO
+	_level_xp_fill.size = Vector2(0, 22)
+	inner.add_child(_level_xp_fill)
+
+	_level_label = Label.new()
+	_level_label.text = "Lv 1"
+	_level_label.add_theme_font_size_override("font_size", 14)
+	_level_label.add_theme_color_override("font_color", Palette.PARCHMENT)
+	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(_level_label)
+	return box
+
+## Update the level pill text + XP fill width from the almanac level/xp. The fill spans
+## the fraction of XP earned into the current level (xp % 150 of 150).
+func _refresh_level() -> void:
+	if _level_label == null or game == null:
+		return
+	_level_label.text = "Lv %d" % game.almanac_level
+	if _level_xp_fill != null:
+		var into: float = float(game.almanac_xp % AlmanacConfig.XP_PER_LEVEL) \
+			/ float(AlmanacConfig.XP_PER_LEVEL)
+		_level_xp_fill.size = Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22)
 
 ## M4b — the settlement tier + plots now live in the top-bar tier pill (e.g.
 ## "City · 2/11"); a "▲" prefix hints when a tier-up is affordable. KEEPS the name.
