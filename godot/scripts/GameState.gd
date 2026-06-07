@@ -169,6 +169,65 @@ var tutorial_seen: bool = false
 func mark_tutorial_seen() -> void:
 	tutorial_seen = true
 
+# ── Castle contributions (ADDITIVE — ported from src/features/castle) ───────────
+## The Castle is a ONE-WAY SINK: the player donates resources from the shared
+## `inventory` toward each CastleConfig need, and the donated total per need is tracked
+## here (need_id:String -> int contributed). There is no reset and no reward beyond the
+## contribution itself (REFERENCE §11). Initialised to every need at 0 via
+## _default_castle(); persisted defensively in to_dict / from_dict (a save written
+## before the castle existed loads all 0). Wired ADDITIVELY: nothing reads this map
+## except contribute_to_castle + the Castle screen, so the rest of the economy is
+## byte-identical. SAVE_VERSION is NOT bumped (defensive default for old saves).
+var castle_contributed: Dictionary = _default_castle()
+
+## Build the starting castle map: every CastleConfig need at 0 contributed.
+static func _default_castle() -> Dictionary:
+	var out: Dictionary = {}
+	for id in CastleConfig.NEED_IDS:
+		out[String(id)] = 0
+	return out
+
+## Total contributed toward Castle need `id` so far (0 when none / unknown id).
+func castle_contributed_for(id: String) -> int:
+	return int(castle_contributed.get(id, 0))
+
+## Units of `id` the player CAN still contribute right now: the smaller of what's
+## left toward the target (target - contributed) and what's on hand in inventory of
+## the need's resource. 0 for an unknown need, a met need, or an empty stockpile.
+func castle_contributable(id: String) -> int:
+	if not CastleConfig.has_need(id):
+		return 0
+	var remaining: int = maxi(0, CastleConfig.need_target(id) - castle_contributed_for(id))
+	var have: int = int(inventory.get(CastleConfig.need_resource(id), 0))
+	return mini(remaining, have)
+
+## Contribute `n` units toward Castle need `id`. CLAMPS to what's actually available
+## (castle_contributable) so a caller can never over-contribute past the target or
+## past what's in inventory — passing a huge `n` simply donates everything affordable.
+## On a positive effective amount: deduct that many of the need's resource from the
+## SHARED inventory (floored at 0, key erased at 0 — the same write pattern as
+## fill_order / craft) and bump the contributed counter. Returns
+## {ok:true, id, amount, contributed} with the AMOUNT actually donated and the new
+## running total. On a no-op (unknown need, 0 affordable, or n<=0) returns
+## {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "unknown" → "bad_amount" (n<=0) → "nothing" (0 affordable).
+func contribute_to_castle(id: String, n: int) -> Dictionary:
+	if not CastleConfig.has_need(id):
+		return {"ok": false, "reason": "unknown"}
+	if n <= 0:
+		return {"ok": false, "reason": "bad_amount"}
+	var amount: int = mini(n, castle_contributable(id))
+	if amount <= 0:
+		return {"ok": false, "reason": "nothing"}
+	var resource: String = CastleConfig.need_resource(id)
+	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - amount)
+	if remaining == 0:
+		inventory.erase(resource)
+	else:
+		inventory[resource] = remaining
+	castle_contributed[id] = castle_contributed_for(id) + amount
+	return {"ok": true, "id": id, "amount": amount, "contributed": castle_contributed[id]}
+
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
 ## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
 ## A missing key reads as 0 (no charges). This is the persisted half of the tool
@@ -1452,6 +1511,11 @@ func to_dict() -> Dictionary:
 		# seen/skipped. SAVE_VERSION is NOT bumped — a save written before tutorial
 		# existed loads with false (show once on upgrade). Defaults to false.
 		"tutorial_seen": tutorial_seen,
+		# Castle contributions (ADDITIVE): per-need donated totals (the one-way sink).
+		# SAVE_VERSION is NOT bumped — like every prior additive field, a save written
+		# before the castle existed loads with all needs at 0 (from_dict defensive
+		# default), so the economy is unchanged.
+		"castle_contributed": castle_contributed.duplicate(),
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1661,4 +1725,15 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore tutorial_seen (ADDITIVE). Missing key (any save written before tutorial
 	# existed) → false (show the tutorial once on upgrade). Coerced to plain bool.
 	s.tutorial_seen = bool(d.get("tutorial_seen", false))
+	# Restore Castle contributions (ADDITIVE). Missing key (any save written before the
+	# castle existed) → all needs at 0 (the _default_castle() the new GameState already
+	# carries). Each value is coerced to int (JSON yields floats), kept only for REAL
+	# need ids, floored at 0, and clamped to the need's target so a corrupt/over-large
+	# saved value can never push a need past its goal. SAVE_VERSION is NOT bumped.
+	var castle_d: Variant = d.get("castle_contributed", null)
+	if castle_d is Dictionary:
+		for k in castle_d:
+			var cid := String(k)
+			if CastleConfig.has_need(cid):
+				s.castle_contributed[cid] = clampi(int(castle_d[k]), 0, CastleConfig.need_target(cid))
 	return s
