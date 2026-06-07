@@ -246,11 +246,14 @@ func _ready() -> void:
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
-	# Rebuild whenever we're in the mine OR any spawner was placed (the staples-only
-	# board drawn in Board._ready would otherwise hide both).
 	board.set_tile_pool(game.active_biome_pool())
-	if game.is_in_mine() or game.is_in_harbor() or not game.buildings.is_empty():
-		board.setup_new_board()
+	# Always rebuild from the ACTIVE pool. Board._ready() builds a STAPLE-only board (its
+	# default tile_pool) BEFORE the real pool is known here; without this rebuild a fresh
+	# farm shows a monotone grass+wheat board instead of the full FARM_POOL variety (apples/
+	# carrots/trees/pigs/cows/…). The visual goldens already rebuild here (run_visual_tests
+	# calls board.setup_new_board() after _ready), so it was the LIVE game that was drifting.
+	# Mine/harbor/spawner saves reflect their pools immediately too.
+	board.setup_new_board()
 	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
 	board.set_min_chain(game.boss_min_chain())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.

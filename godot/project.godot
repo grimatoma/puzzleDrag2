@@ -15,11 +15,18 @@ config/icon="res://icon.svg"
 
 [display]
 
-; Mobile-first portrait window. Stretch keeps the board centred across devices.
+; Mobile-first portrait window. The 720×1280 base sets the 2D scale; stretch=expand
+; lets the logical viewport GROW past the base in whichever dimension the device is
+; larger (a wide/foldable screen gains width, a tall phone gains height) instead of
+; pillar/letter-boxing the portrait content. The HUD is edge-anchored (top-bar +
+; stockpile + bottom nav span the full width; the board stays centred), so it fills
+; the extra space gracefully — see Main._layout / Board.layout_for, which re-run on
+; every viewport size_changed. (Was "keep", which froze the content at 9:16 and left
+; black bars on anything wider — the "doesn't get wider on my foldable" report.)
 window/size/viewport_width=720
 window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/stretch/aspect="expand"
 window/handheld/orientation=1
 ; M11 desktop-framing block. The base resolution stays 720×1280 (stretch scales it),
 ; but on desktop the window OPENS smaller than the tall base so it fits a 1080p screen,
