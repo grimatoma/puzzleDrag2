@@ -28,9 +28,12 @@ const milestones = data.milestones ?? [];
 const rows = data.rows ?? [];
 
 const CATEGORIES = ["slice", "view", "modal", "system", "golden", "infra"];
-const STATUSES = ["full", "partial", "absent"];
-const STATUS_PILL = { full: "ok", partial: "warn", absent: "danger" };
-const STATUS_LABEL = { full: "full", partial: "partial", absent: "absent" };
+// "dropped" = intentionally NOT ported (the React feature was itself removed, or is
+// out of the port's scope). Dropped rows are excluded from the parity denominator —
+// they are not "incomplete", they are out of scope. See the seasons family.
+const STATUSES = ["full", "partial", "absent", "dropped"];
+const STATUS_PILL = { full: "ok", partial: "warn", absent: "danger", dropped: "idle" };
+const STATUS_LABEL = { full: "full", partial: "partial", absent: "absent", dropped: "dropped" };
 
 const milestoneTitle = Object.fromEntries(milestones.map((m) => [m.id, m.title]));
 // Stable milestone display order (any unknown ids appended in first-seen order).
@@ -43,7 +46,7 @@ function milestoneRank(id) {
 // --- rollups ----------------------------------------------------------------
 
 function blankCounts() {
-  return { full: 0, partial: 0, absent: 0, total: 0 };
+  return { full: 0, partial: 0, absent: 0, dropped: 0, total: 0 };
 }
 
 const totals = blankCounts();
@@ -66,9 +69,11 @@ for (const r of rows) {
   }
 }
 
-// "Parity %" — weight full as 1.0, partial as 0.5, absent as 0.
+// "Parity %" — weight full as 1.0, partial as 0.5, absent as 0. Dropped rows are
+// out of scope and excluded from the denominator (in-scope = total − dropped).
+const inScope = totals.total - totals.dropped;
 const parityScore = totals.full + totals.partial * 0.5;
-const parityPct = totals.total ? Math.round((parityScore / totals.total) * 100) : 0;
+const parityPct = inScope ? Math.round((parityScore / inScope) * 100) : 0;
 
 // --- html helpers -----------------------------------------------------------
 
@@ -127,7 +132,7 @@ function groupedTbody() {
       `<tr class="group" data-ms="${esc(m)}">` +
         `<td colspan="5"><span class="gms">${esc(m)}</span>` +
         `<span class="gtitle">${esc(milestoneTitle[m] || "")}</span>` +
-        `<span class="gcount">${c.full}/${c.total} full · ${c.partial} partial · ${c.absent} absent</span>` +
+        `<span class="gcount">${c.full}/${c.total} full · ${c.partial} partial · ${c.absent} absent${c.dropped ? " · " + c.dropped + " dropped" : ""}</span>` +
         `</td></tr>`
     );
     for (const r of group) out.push(rowHtml(r));
@@ -148,7 +153,7 @@ function statBar(c) {
       ? `<span class="seg ${cls}" style="flex:${n}" title="${cls}: ${n}"></span>`
       : "";
   return (
-    `<span class="bar">${seg(c.full, "full")}${seg(c.partial, "partial")}${seg(c.absent, "absent")}</span>`
+    `<span class="bar">${seg(c.full, "full")}${seg(c.partial, "partial")}${seg(c.absent, "absent")}${seg(c.dropped, "dropped")}</span>`
   );
 }
 
@@ -163,6 +168,7 @@ function categoryCards() {
       `<span class="s-full">${c.full} full</span>` +
       `<span class="s-partial">${c.partial} partial</span>` +
       `<span class="s-absent">${c.absent} absent</span>` +
+      (c.dropped ? `<span class="s-dropped">${c.dropped} dropped</span>` : "") +
       `</div></div>`
     );
   }).join("\n");
@@ -225,7 +231,7 @@ const html = `<!DOCTYPE html>
   .parity .totals b{font-family:var(--serif);}
   .progress{height:16px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--absent) 22%,#fff);
     border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(60,40,8,.12);display:flex;margin:.2rem 0 .2rem;}
-  .progress .pfull{background:var(--ok);} .progress .ppartial{background:var(--warn);}
+  .progress .pfull{background:var(--ok);} .progress .ppartial{background:var(--warn);} .progress .pabsent{background:var(--absent);}
   .plegend{font-size:.76rem;color:var(--muted);display:flex;gap:1rem;flex-wrap:wrap;margin-top:.4rem;}
   .plegend i{display:inline-block;width:.7rem;height:.7rem;border-radius:3px;margin-right:.3rem;vertical-align:-1px;}
 
@@ -235,9 +241,9 @@ const html = `<!DOCTYPE html>
   .statcard h3{font:700 1.05rem/1.2 var(--serif);margin:.1rem 0 .5rem;color:var(--ink);text-transform:capitalize;display:flex;justify-content:space-between;align-items:baseline;}
   .cardtotal{font:800 1.2rem var(--serif);color:var(--accent);}
   .bar{display:flex;height:9px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--idle) 18%,#fff);margin:.1rem 0 .5rem;}
-  .bar .seg.full{background:var(--ok);} .bar .seg.partial{background:var(--warn);} .bar .seg.absent{background:var(--absent);}
+  .bar .seg.full{background:var(--ok);} .bar .seg.partial{background:var(--warn);} .bar .seg.absent{background:var(--absent);} .bar .seg.dropped{background:var(--idle);}
   .statline{font-size:.74rem;display:flex;gap:.6rem;flex-wrap:wrap;color:var(--muted);}
-  .s-full{color:var(--ok);font-weight:600;} .s-partial{color:var(--warn);font-weight:600;} .s-absent{color:var(--absent);font-weight:600;}
+  .s-full{color:var(--ok);font-weight:600;} .s-partial{color:var(--warn);font-weight:600;} .s-absent{color:var(--absent);font-weight:600;} .s-dropped{color:var(--idle);font-weight:600;}
 
   /* controls */
   .controls{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:.7rem .9rem;box-shadow:var(--shadow);margin:0 0 1rem;}
@@ -316,16 +322,18 @@ const html = `<!DOCTYPE html>
         <div class="big">${parityPct}%</div>
       </div>
       <div style="flex:1;min-width:280px;">
-        <div class="totals"><b>${totals.total}</b> rows · <b style="color:var(--ok)">${totals.full}</b> full · <b style="color:var(--warn)">${totals.partial}</b> partial · <b style="color:var(--absent)">${totals.absent}</b> absent</div>
+        <div class="totals"><b>${totals.total}</b> rows · <b style="color:var(--ok)">${totals.full}</b> full · <b style="color:var(--warn)">${totals.partial}</b> partial · <b style="color:var(--absent)">${totals.absent}</b> absent${totals.dropped ? ` · <b style="color:var(--idle)">${totals.dropped}</b> dropped` : ""}</div>
         <div class="progress" role="img" aria-label="${parityPct}% parity">
           <div class="pfull" style="flex:${totals.full}"></div>
           <div class="ppartial" style="flex:${totals.partial}"></div>
+          <div class="pabsent" style="flex:${totals.absent}"></div>
         </div>
         <div class="plegend">
           <span><i style="background:var(--ok)"></i>full = logic + UI ported &amp; verified</span>
           <span><i style="background:var(--warn)"></i>partial = logic done / UI or art pending</span>
           <span><i style="background:var(--absent)"></i>absent = not started</span>
-          <span style="color:var(--muted)">(parity weights full 1.0, partial 0.5)</span>
+          <span><i style="background:var(--idle)"></i>dropped = intentionally out of scope (excluded from parity)</span>
+          <span style="color:var(--muted)">(parity weights full 1.0, partial 0.5, over in-scope rows)</span>
         </div>
       </div>
     </div>

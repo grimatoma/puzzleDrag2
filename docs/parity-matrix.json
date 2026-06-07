@@ -258,14 +258,14 @@
       "feature_or_screen": "Seasons & calendar",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "e2e:season",
         "golden:run-summary"
       ],
-      "note": "Intentionally dropped: turn is a monotonic counter. No seasonal boons, tint, or recap modal yet."
+      "note": "DROPPED (intentionally out of scope). The React calendar-season cycle was REMOVED in Phase 7 — SEASONS is pure visual metadata with no gameplay effect. The port keeps a monotonic turn counter. Not a parity gap."
     },
     {
       "id": "system-story-beats",
@@ -457,13 +457,13 @@
       "feature_or_screen": "boons slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:boons-farm"
       ],
-      "note": "Season modifiers and powerups."
+      "note": "DROPPED. Boons were the keeper-economy-coupled season modifiers; with the calendar-season cycle removed (Phase 7) and the keeper economy unported, there is nothing for boons to modify. Out of scope."
     },
     {
       "id": "slice-boss",
@@ -587,12 +587,12 @@
       "feature_or_screen": "festivals slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd"
       ],
-      "note": "Seasonal events modal."
+      "note": "DROPPED. Seasonal-events modal tied to the removed calendar-season cycle. Out of scope."
     },
     {
       "id": "slice-fish",
@@ -703,13 +703,13 @@
       "feature_or_screen": "runSummary slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:run-summary"
       ],
-      "note": "Season end recap and statistics modal."
+      "note": "DROPPED. The season-end recap needs a farm-session-end model the port deliberately does not have (no calendar seasons). Out of scope."
     },
     {
       "id": "slice-settings",
@@ -862,13 +862,13 @@
       "feature_or_screen": "boons view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:boons-farm"
       ],
-      "note": "Season modifiers view."
+      "note": "DROPPED. Season-modifiers view — see slice-boons. Out of scope."
     },
     {
       "id": "view-bosses",
@@ -1105,25 +1105,25 @@
       "feature_or_screen": "festivals modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd"
       ],
-      "note": "Seasonal events modal."
+      "note": "DROPPED. Seasonal-events modal — see slice-festivals. Out of scope."
     },
     {
       "id": "modal-runsummary",
       "feature_or_screen": "runSummary modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:run-summary"
       ],
-      "note": "Season end summary modal."
+      "note": "DROPPED. Season-end summary modal — see slice-runsummary. Out of scope."
     },
     {
       "id": "modal-leaveboard",
@@ -1143,12 +1143,12 @@
       "feature_or_screen": "season modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd"
       ],
-      "note": "Season transition prompt."
+      "note": "DROPPED. Season-transition prompt tied to the removed calendar-season cycle. Out of scope."
     },
     {
       "id": "golden-board-farm-idle",
@@ -1676,13 +1676,13 @@
       "feature_or_screen": "boons-farm",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:boons-farm"
       ],
-      "note": "Boons selection for farm; depends on M9 boons."
+      "note": "DROPPED. Golden for the dropped boons feature. Out of scope."
     },
     {
       "id": "golden-boss-modal",
@@ -1936,13 +1936,13 @@
       "feature_or_screen": "run-summary",
       "category": "golden",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "dropped",
       "target_milestone": "M9",
       "verified_by": [
         "run_seasons_tests.gd",
         "golden:run-summary"
       ],
-      "note": "Season end summary modal; depends on M9 seasons/runSummary."
+      "note": "DROPPED. Golden for the dropped season-end summary. Out of scope."
     },
     {
       "id": "golden-shell-town-fresh",
