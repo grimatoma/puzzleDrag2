@@ -134,6 +134,17 @@ var _charter_screen                      ## CanvasLayer (CharterScreenScript), l
 ## CharterScreen / PortalScreen / DecorationsScreen).
 const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
 var _quests_screen                       ## CanvasLayer (QuestsScreenScript), lazily created
+## M5-polish — leave-expedition confirm modal. Gates the HUD "🏠 Town" button when on an
+## expedition (active_biome != farm): tapping Town shows this confirm first; only Confirm
+## leaves. On the farm it never arms (Town opens directly). Loaded via preload (NO class_name)
+## so the port never needs an --import pass to register it (mirrors every other lazy modal).
+const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
+var _leaveboard_modal                    ## CanvasLayer (LeaveBoardModalScript), lazily created
+## M5-polish — transient toast bubble (auto-dismissing parchment notification). Built once in
+## _ready and reused for real one-off feedback (an order filled, a build done). Loaded via
+## preload (NO class_name) so the port never needs an --import pass to register it.
+const ToastScript := preload("res://scenes/Toast.gd")
+var _toast                               ## CanvasLayer (ToastScript), built once in _ready
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -199,6 +210,11 @@ func _ready() -> void:
 		game.grant_tool("scythe", 1)   # instant (clears 6 random tiles) — proves instant path
 	_build_hud()
 	_refresh_tools()   # M8d: populate the palette after the starter grant
+	# M5-polish — the transient toast bubble (built once, reused for real one-off feedback).
+	# Created here so its CanvasLayer (layer 3) sits above the HUD before any event fires.
+	_toast = ToastScript.new()
+	add_child(_toast)
+	_toast.setup()
 	board = Board.new()
 	add_child(board)
 	board.chain_changed.connect(_on_chain_changed)
@@ -541,7 +557,11 @@ func _build_hud() -> void:
 	town_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	town_btn.offset_left = 18
 	town_btn.offset_top = 18
-	town_btn.connect("pressed", Callable(self, "_open_town"))
+	# M5-polish — route the Town button through the leave-expedition GATE. On the farm
+	# this opens Town directly (no modal); on an expedition it shows the leave-confirm
+	# first (Confirm leaves + then opens Town; Cancel keeps you out fishing/mining). The
+	# DEEP-LINK + tests still call _open_town directly, so that path is untouched.
+	town_btn.connect("pressed", Callable(self, "_on_town_button"))
 	root.add_child(town_btn)
 
 	# M4f — always-visible "☰" menu button (settings/new-game), pinned top-RIGHT so it
@@ -1086,6 +1106,75 @@ func _make_chip_box() -> StyleBoxFlat:
 
 # ── Town screen ─────────────────────────────────────────────────────────────
 
+## M5-polish — the HUD "🏠 Town" button gate. On the FARM (active_biome == "farm") this
+## just opens Town as before. On an EXPEDITION it first shows the leave-confirm card; the
+## expedition isn't abandoned unless the player taps Confirm (which then opens Town). The
+## deep-link "town" + tests still call _open_town directly, so that path is unaffected — the
+## confirm only fronts the on-screen button press, which is the only place a player would
+## "head back to town" mid-expedition.
+func _on_town_button() -> void:
+	if game != null and game.active_biome != "farm":
+		_open_leaveboard()
+		return
+	_open_town()
+
+# ── Leave-expedition confirm (M5-polish) ──────────────────────────────────────
+
+## Present the leave-expedition confirm card, lazily creating + wiring it on first use.
+## arm() only shows the card while on an expedition (it's a no-op on the farm and returns
+## false — in which case we fall straight through to opening Town, so a stray call can never
+## strand the player). On Confirm the card leaves the expedition (in GameState) and emits
+## `confirmed`; on Cancel it just closes.
+func _open_leaveboard() -> void:
+	if _leaveboard_modal == null:
+		_leaveboard_modal = LeaveBoardModalScript.new()
+		add_child(_leaveboard_modal)
+		_leaveboard_modal.setup(game)
+		_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
+		_leaveboard_modal.connect("closed", Callable(self, "_on_leaveboard_closed"))
+	if _leaveboard_modal.arm():
+		_router.open_modal(ViewRouter.Modal.LEAVEBOARD)
+	else:
+		# On the farm there is nothing to leave — open Town directly (defensive: arm() only
+		# returns false off an expedition, so this keeps the button always responsive).
+		_open_town()
+
+## The player confirmed leaving — the modal already ran game.leave_mine()/leave_harbor(),
+## so run Main's existing biome-change refresh path (re-pool the board onto the farm, reset
+## hazard flags, refresh the HUD, save), surface a toast, then drop the player into Town.
+func _on_leaveboard_confirmed() -> void:
+	# Reuse the shared biome-change path (the one the TownScreen leave routes through): it
+	# re-pools + regenerates the board onto the farm and refreshes every affected surface.
+	_on_town_changed()
+	if _toast != null:
+		_toast.show_toast("Returned to the farm — your stores are intact.")
+	# The leave is done; the modal closed itself. Land the player in Town (their intent when
+	# they tapped the Town button) now that they're back on the farm board.
+	_open_town()
+
+## The leave-confirm card was dismissed (Cancel, or after Confirm closed it). Hide + reset
+## the router. NOTE: on Confirm, _on_leaveboard_confirmed already opened Town (which re-set
+## the router to TOWN); this fires AFTER that via the confirmed→close ordering, so guard the
+## router reset to only run when Town isn't the active modal (Cancel path).
+func _on_leaveboard_closed() -> void:
+	if _leaveboard_modal != null:
+		_leaveboard_modal.visible = false
+	if _router.current_modal() == ViewRouter.Modal.LEAVEBOARD:
+		_router.close_modal()
+
+# ── Toast (M5-polish) ─────────────────────────────────────────────────────────
+
+## Public helper — show a transient toast bubble with `text`. Safe to call before the toast
+## is built (it self-builds). The single entry point every real call site routes through.
+func show_toast(text: String) -> void:
+	if _toast == null:
+		_toast = ToastScript.new()
+		add_child(_toast)
+		_toast.setup()
+	_toast.show_toast(text)
+
+# ── Town screen (cont.) ───────────────────────────────────────────────────────
+
 ## Open the town panel, lazily creating + wiring it on first use.
 func _open_town() -> void:
 	if _town_screen == null:
@@ -1528,6 +1617,11 @@ func _on_cartography_travel(zone_id: String) -> void:
 		# re-pool + regenerate the board onto the new biome, set the hazard/pearl flags, refresh
 		# every affected HUD surface, and save. No duplicated biome-swap logic here.
 		_on_town_changed()
+		# M5-polish — confirm the launch with a transient toast (a REAL event: an expedition
+		# just began with a real turn budget). The turn count comes straight from the result.
+		var turns: int = int(res.get("turns", 0))
+		var where: String = "the mine" if zone_id == "mine" else "the harbor"
+		show_toast("Sailed out to %s — %d turns of supplies." % [where, turns])
 
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 
@@ -1590,6 +1684,12 @@ func _on_story_closed() -> void:
 ## Routes to the existing _open_* / close methods so all lazy-create and
 ## visibility logic remains in one place. Returns true if the id was known.
 func apply_deeplink(id: String) -> bool:
+	# M5-polish — "toast" is NOT a routed modal; it's a transient bubble. Handle it here
+	# (before the ViewRouter resolve) so the deep-link can PREVIEW a sample toast for QA /
+	# the sanity-capture without polluting the nav state machine.
+	if id == "toast":
+		show_toast("Order filled! +18 🪙")
+		return true
 	var intent: Dictionary = ViewRouter.resolve(id)
 	if not bool(intent.get("ok", false)):
 		return false
@@ -1632,6 +1732,19 @@ func apply_deeplink(id: String) -> bool:
 			# previews day 1's reward so the card is never blank.
 			var preview_day: int = game.daily_streak_day if game.daily_streak_day > 0 else 1
 			_open_daily(preview_day, DailyRewardConfig.reward_for_day(preview_day))
+		ViewRouter.Modal.LEAVEBOARD:
+			# Lazily create + wire the confirm card, then present it. When actually on an
+			# expedition, arm() shows the real biome-specific prompt; on the farm we PREVIEW
+			# (the mine prompt) so QA / the sanity-capture can see the card from any state.
+			if _leaveboard_modal == null:
+				_leaveboard_modal = LeaveBoardModalScript.new()
+				add_child(_leaveboard_modal)
+				_leaveboard_modal.setup(game)
+				_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
+				_leaveboard_modal.connect("closed", Callable(self, "_on_leaveboard_closed"))
+			if not _leaveboard_modal.arm():
+				_leaveboard_modal.preview("mine")
+			_router.open_modal(ViewRouter.Modal.LEAVEBOARD)
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1691,6 +1804,10 @@ func apply_deeplink(id: String) -> bool:
 				# Daily modal is display-only — the close handler just hides + resets the
 				# router (no save needed; the grant was already persisted in _ready).
 				_on_daily_closed()
+			elif _leaveboard_modal != null and _leaveboard_modal.visible:
+				# Leave-confirm card: route through close (Cancel semantics — nothing leaves;
+				# it hides + resets the router). Confirm has its own button on the card.
+				_on_leaveboard_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
