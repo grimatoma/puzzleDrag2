@@ -104,28 +104,33 @@ func _spawn_main():
 # ── 1. HUD button click flow ──────────────────────────────────────────────────
 
 func _test_hud_button_clicks(main) -> void:
-	print("\n── HUD button clicks (input → Button → screen) ─────")
+	print("\n── HUD bottom-nav tab clicks (input → Button → screen) ─────")
+	# The HUD is now a 5-tab BOTTOM nav (Town / Inventory / Craft / Map / Townsfolk)
+	# replacing the old left-strip emoji buttons. Each tab is a flat Button whose icon +
+	# label live in CHILD Labels (the Button's own .text is empty), so _find_button walks
+	# child-label text too. We exercise the Town tab (→ the spatial town map) and the
+	# Inventory tab (→ the inventory ledger) through the real input → Button → screen path.
 	var town_btn := _find_button(main, "Town")
-	_check(town_btn != null, "found the '🏠 Town' HUD button by walking the tree")
-	var items_btn := _find_button(main, "Items")
-	_check(items_btn != null, "found the '📦 Items' HUD button by walking the tree")
+	_check(town_btn != null, "found the 'Town' bottom-nav tab by walking the tree")
+	var inv_btn := _find_button(main, "Inventory")
+	_check(inv_btn != null, "found the 'Inventory' bottom-nav tab by walking the tree")
 
-	# Town button → _town_screen visible.
+	# Town tab → _townmap_screen visible (the Town tab opens the spatial town map).
 	if town_btn != null:
-		var path := await _click_button_opens(main, town_btn, func(): return main._town_screen)
-		_check(main._town_screen != null and main._town_screen.visible,
-			"clicking '🏠 Town' opened the Town screen (%s)" % path)
+		var path := await _click_button_opens(main, town_btn, func(): return main._townmap_screen)
+		_check(main._townmap_screen != null and main._townmap_screen.visible,
+			"clicking the 'Town' tab opened the town map (%s)" % path)
 		# Close it again (via the real input path would need a Close button; the router
 		# hide is enough here — the click flow is what we're proving).
-		if main._town_screen != null:
-			main._town_screen.visible = false
+		if main._townmap_screen != null:
+			main._townmap_screen.visible = false
 		await process_frame
 
-	# Items button → _inventory_screen visible.
-	if items_btn != null:
-		var path := await _click_button_opens(main, items_btn, func(): return main._inventory_screen)
+	# Inventory tab → _inventory_screen visible.
+	if inv_btn != null:
+		var path := await _click_button_opens(main, inv_btn, func(): return main._inventory_screen)
 		_check(main._inventory_screen != null and main._inventory_screen.visible,
-			"clicking '📦 Items' opened the Inventory screen (%s)" % path)
+			"clicking the 'Inventory' tab opened the Inventory screen (%s)" % path)
 		if main._inventory_screen != null:
 			main._inventory_screen.visible = false
 		await process_frame
@@ -198,18 +203,31 @@ func _gui_click(btn: Button) -> void:
 	if not (btn.button_pressed):
 		btn.pressed.emit()
 
-## Walk Main's HUD Control tree for a Button whose text contains `needle`.
+## Walk Main's HUD Control tree for a Button whose text — OR any descendant Label's text
+## (the bottom-nav tabs put their icon + label in child Labels, leaving the Button's own
+## .text empty) — contains `needle`.
 func _find_button(main, needle: String) -> Button:
 	return _find_button_in(main, needle)
 
 func _find_button_in(node: Node, needle: String) -> Button:
-	if node is Button and needle in (node as Button).text:
-		return node
+	if node is Button:
+		var btn := node as Button
+		if needle in btn.text or _label_in(btn, needle):
+			return btn
 	for child in node.get_children():
 		var found := _find_button_in(child, needle)
 		if found != null:
 			return found
 	return null
+
+## True when any descendant Label of `node` has text containing `needle`.
+func _label_in(node: Node, needle: String) -> bool:
+	if node is Label and needle in (node as Label).text:
+		return true
+	for child in node.get_children():
+		if _label_in(child, needle):
+			return true
+	return false
 
 # ── 2. Board drag flow ────────────────────────────────────────────────────────
 

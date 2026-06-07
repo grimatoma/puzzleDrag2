@@ -161,6 +161,19 @@ var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-fr
 var _tool_palette_box: PanelContainer   ## outer parchment card (hidden when no tools)
 var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each _refresh_tools()
 
+# ── Bottom navigation bar (matches the React 5-tab BottomNav) ──────────────────
+# A full-width paper bar pinned to the BOTTOM on its OWN CanvasLayer (so it never
+# gets covered by the board), holding five equal-width tab buttons (Town / Inventory
+# / Craft / Map / Townsfolk). Each tab routes to an existing _open_* method. The
+# active tab gets a 3px ember top underline + a faint highlight; _nav_current tracks
+# which (if any) screen is open so _refresh_nav() can restyle the five tabs. Set by
+# each _open_* and cleared to "" by each _on_*_closed (and on the board). The secondary
+# screens that used to live in the left strip moved into the ☰ menu's "More" section.
+const NAV_HEIGHT := 76                   ## bottom-bar height (also the reserved layout gap)
+var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
+var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
+var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
+
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 # A dedicated full-screen CanvasLayer (layer 2, ABOVE the HUD's layer 1) that hosts
 # the short-lived reward chips that fly from the board to the coin pill on every
@@ -335,7 +348,12 @@ func _layout_hud(vp: Vector2) -> void:
 		var margin: float = maxf(16.0, vp.x * 0.04)
 		_stockpile_box.offset_left = margin
 		_stockpile_box.offset_right = -margin
-		_stockpile_box.offset_top = vp.y * 0.74
+		# Sit below the board but ABOVE the bottom nav. Clamp the top so the card's
+		# (content-driven) height still has room to clear the nav on short viewports:
+		# reserve NAV_HEIGHT for the bar + ~150px for the card + an 8px gap.
+		var stock_top: float = vp.y * 0.74
+		var stock_ceiling: float = vp.y - float(NAV_HEIGHT) - 150.0 - 8.0
+		_stockpile_box.offset_top = minf(stock_top, maxf(0.0, stock_ceiling))
 
 # ── HUD ────────────────────────────────────────────────────────────────────
 
@@ -381,10 +399,11 @@ func _build_hud() -> void:
 
 	var topbar_margin := MarginContainer.new()
 	topbar_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Left margin clears the floating "🏠 Town" button (pinned top-left at offset 18,
-	# ≈135px wide) so the settlement title isn't clipped under it.
-	topbar_margin.add_theme_constant_override("margin_left", 168)
-	topbar_margin.add_theme_constant_override("margin_right", 18)
+	# The old left-strip "🏠 Town" floating button is gone (folded into the bottom nav),
+	# so the settlement title reclaims the left edge. The right margin clears the floating
+	# ☰ menu button (top-right, ≈50px wide).
+	topbar_margin.add_theme_constant_override("margin_left", 18)
+	topbar_margin.add_theme_constant_override("margin_right", 60)
 	topbar_margin.add_theme_constant_override("margin_top", 10)
 	topbar_margin.add_theme_constant_override("margin_bottom", 10)
 	_topbar.add_child(topbar_margin)
@@ -514,7 +533,8 @@ func _build_hud() -> void:
 	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_status_label.offset_top = -56
+	# Lifted by NAV_HEIGHT (76) so the feedback line sits ABOVE the bottom nav bar.
+	_status_label.offset_top = -56 - NAV_HEIGHT
 	_status_label.offset_left = -340
 	_status_label.offset_right = 340
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -529,7 +549,8 @@ func _build_hud() -> void:
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_orders_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_orders_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_orders_label.offset_top = -118
+	# Lifted by NAV_HEIGHT (76) so the orders readout sits ABOVE the bottom nav bar.
+	_orders_label.offset_top = -118 - NAV_HEIGHT
 	_orders_label.offset_left = 24
 	_orders_label.offset_right = -24
 	_orders_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -541,34 +562,13 @@ func _build_hud() -> void:
 	# ── D. Tool palette — vertical parchment strip pinned to the right edge ───
 	_build_tool_palette(root)
 
-	# Always-visible "🏠 Town" button — the REAL path into the town menu (the
-	# temporary T/1-6/B/G/F keys below stay only as a harmless dev fallback). It
-	# IS clickable (unlike every other HUD Control), so it must NOT use
-	# MOUSE_FILTER_IGNORE. Pinned top-left, away from the centred board drag area.
-	var town_btn := Button.new()
-	town_btn.text = "🏠 Town"
-	town_btn.add_theme_font_size_override("font_size", 20)
-	town_btn.add_theme_color_override("font_color", Palette.INK)
-	town_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	town_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	# Parchment chip: warm fill, iron border, soft rounded corners — the cozy
-	# journal look. Hover/pressed states lighten/darken the same parchment.
-	var normal := UiKit.parchment_box(Palette.PARCHMENT)
-	var hover := UiKit.parchment_box(Palette.PARCHMENT_SOFT)
-	var pressed := UiKit.parchment_box(Palette.DIM)
-	town_btn.add_theme_stylebox_override("normal", normal)
-	town_btn.add_theme_stylebox_override("hover", hover)
-	town_btn.add_theme_stylebox_override("pressed", pressed)
-	town_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	town_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	town_btn.offset_left = 18
-	town_btn.offset_top = 18
-	# M5-polish — route the Town button through the leave-expedition GATE. On the farm
-	# this opens Town directly (no modal); on an expedition it shows the leave-confirm
-	# first (Confirm leaves + then opens Town; Cancel keeps you out fishing/mining). The
-	# DEEP-LINK + tests still call _open_town directly, so that path is untouched.
-	town_btn.connect("pressed", Callable(self, "_on_town_button"))
-	root.add_child(town_btn)
+	# ── E. Bottom navigation bar — the 5-tab BOTTOM nav (matches the React original) ──
+	# Replaces the old left-edge strip of ~14 emoji buttons. Built on its OWN CanvasLayer
+	# (above the board) so it never gets covered. The five tabs (Town / Inventory / Craft /
+	# Map / Townsfolk) route to the existing _open_* methods; the remaining secondary
+	# screens (achievements, tiles, chronicle, castle, decorations, portal, charter,
+	# quests, recipes, daily, debug) moved into the ☰ menu's "More" section (MenuScreen).
+	_build_bottom_nav()
 
 	# M4f — always-visible "☰" menu button (settings/new-game), pinned top-RIGHT so it
 	# clears the floating Town button + the board drag area. Same parchment-pill look as
@@ -589,271 +589,6 @@ func _build_hud() -> void:
 	menu_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from the right edge
 	menu_btn.connect("pressed", Callable(self, "_open_menu"))
 	root.add_child(menu_btn)
-
-	# M4g — always-visible "📦 Items" button, pinned top-LEFT just under the "🏠 Town"
-	# button (which sits at offset_top 18, ≈38px tall) so the two stack without
-	# overlapping and both clear the centred board drag area. Same parchment-pill look.
-	# Opens the dedicated Inventory ledger modal (InventoryScreen).
-	var items_btn := Button.new()
-	items_btn.text = "📦 Items"
-	items_btn.add_theme_font_size_override("font_size", 20)
-	items_btn.add_theme_color_override("font_color", Palette.INK)
-	items_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	items_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	items_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	items_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	items_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	items_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	items_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	items_btn.offset_left = 18
-	items_btn.offset_top = 64
-	items_btn.connect("pressed", Callable(self, "_open_inventory"))
-	root.add_child(items_btn)
-
-	# M6c — always-visible Map button, pinned top-LEFT just under the Items button
-	# (offset_top 64, ~38px tall) so the three stack without overlapping and all
-	# clear the centred board drag area. Same parchment-pill look. Opens the spatial
-	# town-map modal (TownMapScreen).
-	var map_btn := Button.new()
-	map_btn.text = "🗺 Map"
-	map_btn.add_theme_font_size_override("font_size", 20)
-	map_btn.add_theme_color_override("font_color", Palette.INK)
-	map_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	map_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	map_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	map_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	map_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	map_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	map_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	map_btn.offset_left = 18
-	map_btn.offset_top = 110
-	map_btn.connect("pressed", Callable(self, "_open_townmap"))
-	root.add_child(map_btn)
-
-	# M10 — always-visible "🏆" trophy button, pinned top-LEFT just under the Map button
-	# (offset_top 110, ~38px tall) so the four buttons stack without overlapping and all
-	# clear the centred board drag area. Same parchment-pill look. Opens the achievements
-	# trophy modal (AchievementsScreen).
-	var ach_btn := Button.new()
-	ach_btn.text = "🏆"
-	ach_btn.add_theme_font_size_override("font_size", 20)
-	ach_btn.add_theme_color_override("font_color", Palette.INK)
-	ach_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	ach_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	ach_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	ach_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	ach_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	ach_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	ach_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	ach_btn.offset_left = 18
-	ach_btn.offset_top = 156
-	ach_btn.connect("pressed", Callable(self, "_open_achievements"))
-	root.add_child(ach_btn)
-
-	# M11 — always-visible "📖" tile-collection button, pinned top-LEFT just under the
-	# 🏆 achievements button (offset_top 156, ~38px tall) so the five buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the tile-collection browser modal (TileCollectionScreen).
-	var tiles_btn := Button.new()
-	tiles_btn.text = "📖"
-	tiles_btn.add_theme_font_size_override("font_size", 20)
-	tiles_btn.add_theme_color_override("font_color", Palette.INK)
-	tiles_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	tiles_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	tiles_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	tiles_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	tiles_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	tiles_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	tiles_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	tiles_btn.offset_left = 18
-	tiles_btn.offset_top = 202
-	tiles_btn.connect("pressed", Callable(self, "_open_tiles"))
-	root.add_child(tiles_btn)
-
-	# Story UI — always-visible "📜" chronicle button, pinned top-LEFT just under the
-	# 📖 tile-collection button (offset_top 202, ~38px tall) so the six buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the chronicle timeline modal (ChronicleScreen).
-	var chronicle_btn := Button.new()
-	chronicle_btn.text = "📜"
-	chronicle_btn.add_theme_font_size_override("font_size", 20)
-	chronicle_btn.add_theme_color_override("font_color", Palette.INK)
-	chronicle_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	chronicle_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	chronicle_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	chronicle_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	chronicle_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	chronicle_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	chronicle_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	chronicle_btn.offset_left = 18
-	chronicle_btn.offset_top = 248
-	chronicle_btn.connect("pressed", Callable(self, "_open_chronicle"))
-	root.add_child(chronicle_btn)
-
-	# Townsfolk — always-visible "👥" roster button, pinned top-LEFT just under the
-	# 📜 chronicle button (offset_top 248, ~38px tall) so the seven buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the TownsfolkScreen roster modal.
-	var folk_btn := Button.new()
-	folk_btn.text = "👥"
-	folk_btn.add_theme_font_size_override("font_size", 20)
-	folk_btn.add_theme_color_override("font_color", Palette.INK)
-	folk_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	folk_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	folk_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	folk_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	folk_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	folk_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	folk_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	folk_btn.offset_left = 18
-	folk_btn.offset_top = 294
-	folk_btn.connect("pressed", Callable(self, "_open_townsfolk"))
-	root.add_child(folk_btn)
-
-	# Cartography — always-visible "🧭" world-map button, pinned top-LEFT just under the
-	# 👥 townsfolk button (offset_top 294, ~38px tall) so the eight buttons stack without
-	# overlapping and all clear the centred board drag area. Same parchment-pill look.
-	# Opens the CartographyScreen world map (a DISTINCT icon + modal from the 🗺 town
-	# building map, which keeps the "map"→TOWNMAP routing).
-	var carto_btn := Button.new()
-	carto_btn.text = "🧭"
-	carto_btn.add_theme_font_size_override("font_size", 20)
-	carto_btn.add_theme_color_override("font_color", Palette.INK)
-	carto_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	carto_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	carto_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	carto_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	carto_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	carto_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	carto_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	carto_btn.offset_left = 18
-	carto_btn.offset_top = 340
-	carto_btn.connect("pressed", Callable(self, "_open_cartography"))
-	root.add_child(carto_btn)
-
-	# Recipe Wiki — always-visible "🍳" recipe-wiki button, pinned top-LEFT just under the
-	# 🧭 cartography button (offset_top 340, ~38px tall) so the nine buttons stack without
-	# overlapping and all clear the centred board drag area. Same parchment-pill look.
-	# Opens the RecipeWikiScreen read-only recipe reference.
-	var recipes_btn := Button.new()
-	recipes_btn.text = "🍳"
-	recipes_btn.add_theme_font_size_override("font_size", 20)
-	recipes_btn.add_theme_color_override("font_color", Palette.INK)
-	recipes_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	recipes_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	recipes_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	recipes_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	recipes_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	recipes_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	recipes_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	recipes_btn.offset_left = 18
-	recipes_btn.offset_top = 386
-	recipes_btn.connect("pressed", Callable(self, "_open_recipes"))
-	root.add_child(recipes_btn)
-
-	# Castle — always-visible "🏰" castle button, pinned top-LEFT just under the
-	# 🍳 recipe-wiki button (offset_top 386, ~38px tall) so the ten buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the CastleScreen resource-contribution screen.
-	var castle_btn := Button.new()
-	castle_btn.text = "🏰"
-	castle_btn.add_theme_font_size_override("font_size", 20)
-	castle_btn.add_theme_color_override("font_color", Palette.INK)
-	castle_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	castle_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	castle_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	castle_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	castle_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	castle_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	castle_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	castle_btn.offset_left = 18
-	castle_btn.offset_top = 432
-	castle_btn.connect("pressed", Callable(self, "_open_castle"))
-	root.add_child(castle_btn)
-
-	# Decorations — always-visible "🌷" button, pinned top-LEFT just under the 🏰 castle
-	# button (offset_top 432, ~38px tall) so the eleven buttons stack without overlapping
-	# and all clear the centred board drag area. Same parchment-pill look. Opens the
-	# DecorationsScreen (build ornaments → grant Influence).
-	var decorations_btn := Button.new()
-	decorations_btn.text = "🌷"
-	decorations_btn.add_theme_font_size_override("font_size", 20)
-	decorations_btn.add_theme_color_override("font_color", Palette.INK)
-	decorations_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	decorations_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	decorations_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	decorations_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	decorations_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	decorations_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	decorations_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	decorations_btn.offset_left = 18
-	decorations_btn.offset_top = 478
-	decorations_btn.connect("pressed", Callable(self, "_open_decorations"))
-	root.add_child(decorations_btn)
-
-	# Magic Portal — always-visible "🌀" button, pinned top-LEFT just under the 🌷 decorations
-	# button (offset_top 478, ~38px tall) so the twelve buttons stack without overlapping and
-	# all clear the centred board drag area. Same parchment-pill look. Opens the PortalScreen
-	# (build the portal with coins + runes → summon magic tools with the Influence currency).
-	var portal_btn := Button.new()
-	portal_btn.text = "🌀"
-	portal_btn.add_theme_font_size_override("font_size", 20)
-	portal_btn.add_theme_color_override("font_color", Palette.INK)
-	portal_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	portal_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	portal_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	portal_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	portal_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	portal_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	portal_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	portal_btn.offset_left = 18
-	portal_btn.offset_top = 524
-	portal_btn.tooltip_text = "Magic Portal"
-	portal_btn.connect("pressed", Callable(self, "_open_portal"))
-	root.add_child(portal_btn)
-
-	# The Charter — always-visible "⚖️" button, pinned top-LEFT just under the 🌀 portal
-	# button (offset_top 524, ~38px tall → 570 is the next free slot) so the buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the CharterScreen (read-only Hollow-Pact reflection over the story state).
-	var charter_btn := Button.new()
-	charter_btn.text = "⚖️"
-	charter_btn.add_theme_font_size_override("font_size", 20)
-	charter_btn.add_theme_color_override("font_color", Palette.INK)
-	charter_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	charter_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	charter_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	charter_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	charter_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	charter_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	charter_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	charter_btn.offset_left = 18
-	charter_btn.offset_top = 570
-	charter_btn.tooltip_text = "The Charter"
-	charter_btn.connect("pressed", Callable(self, "_open_charter"))
-	root.add_child(charter_btn)
-
-	# Quests — always-visible "📋" button, pinned top-LEFT just under the ⚖️ charter
-	# button (offset_top 570, ~38px tall → 616 is the next free slot) so the buttons stack
-	# without overlapping and all clear the centred board drag area. Same parchment-pill
-	# look. Opens the QuestsScreen (claim deterministic quests + almanac tiers). 📋 is an
-	# UNUSED emoji in the HUD strip (📜 was already taken by the chronicle button).
-	var quests_btn := Button.new()
-	quests_btn.text = "📋"
-	quests_btn.add_theme_font_size_override("font_size", 20)
-	quests_btn.add_theme_color_override("font_color", Palette.INK)
-	quests_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
-	quests_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
-	quests_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
-	quests_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	quests_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
-	quests_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
-	quests_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	quests_btn.offset_left = 18
-	quests_btn.offset_top = 616
-	quests_btn.tooltip_text = "Quests"
-	quests_btn.connect("pressed", Callable(self, "_open_quests"))
-	root.add_child(quests_btn)
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
@@ -984,6 +719,144 @@ func _refresh_tools() -> void:
 		)
 		col.add_child(btn)
 		_tool_buttons[id] = btn
+
+# ── Bottom navigation bar ─────────────────────────────────────────────────────
+
+## Build the 5-tab bottom nav (the React BottomNav port). A full-width paper bar
+## pinned PRESET_BOTTOM_WIDE on its OWN CanvasLayer (layer 1, like the HUD root, but
+## a dedicated layer so the board never covers it). The bar has a 2px iron top border
+## + a soft upward shadow; inside, an HBox of five equal-width tab Buttons. Each tab is
+## a flat Button (transparent normal box) over a centred VBox of an emoji icon Label +
+## a small text Label, plus a 3px ember ColorRect underline across its TOP edge (hidden
+## until active) and a faint ember highlight ColorRect behind it. Tabs route to the
+## existing _open_* methods; _refresh_nav() restyles them from _nav_current.
+func _build_bottom_nav() -> void:
+	_nav_layer = CanvasLayer.new()
+	_nav_layer.layer = 1
+	add_child(_nav_layer)
+
+	# Outer bar — a paper PanelContainer spanning the full width at the bottom.
+	var bar := PanelContainer.new()
+	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bar.offset_top = -NAV_HEIGHT
+	bar.add_theme_stylebox_override("panel", _nav_box())
+	_nav_layer.add_child(bar)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	bar.add_child(row)
+
+	# The five tabs, in React order. Each: {key, icon, label, opener method name}.
+	var specs := [
+		{"key": "town", "icon": "🏠", "label": "Town", "open": "_open_townmap"},
+		{"key": "inventory", "icon": "📦", "label": "Inventory", "open": "_open_inventory"},
+		{"key": "craft", "icon": "🔨", "label": "Craft", "open": "_open_town"},
+		{"key": "map", "icon": "🗺", "label": "Map", "open": "_open_cartography"},
+		{"key": "folk", "icon": "👥", "label": "Townsfolk", "open": "_open_townsfolk"},
+	]
+	for spec in specs:
+		row.add_child(_make_nav_tab(
+			String(spec["key"]), String(spec["icon"]), String(spec["label"]), String(spec["open"])))
+
+	_refresh_nav()
+
+## Build a single bottom-nav tab: an equal-width (SIZE_EXPAND_FILL) flat Button holding
+## a faint highlight ColorRect (active tint), a top ember underline ColorRect (active
+## marker), and a centred VBox of an icon Label + a text Label. Wires `pressed` to the
+## `opener` method on self. Registers the parts in _nav_tabs[key] for _refresh_nav().
+func _make_nav_tab(key: String, icon: String, label_text: String, opener: String) -> Button:
+	var btn := Button.new()
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.custom_minimum_size = Vector2(0, NAV_HEIGHT)
+	btn.clip_contents = true
+	# Flat, transparent button — the bar paper shows through; active state is drawn by
+	# the highlight + underline rects layered under/over the content.
+	var flat := StyleBoxEmpty.new()
+	btn.add_theme_stylebox_override("normal", flat)
+	btn.add_theme_stylebox_override("hover", flat)
+	btn.add_theme_stylebox_override("pressed", flat)
+	btn.add_theme_stylebox_override("focus", flat)
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.connect("pressed", Callable(self, opener))
+
+	# Faint ember highlight behind the content (shown only when active).
+	var highlight := ColorRect.new()
+	highlight.color = Color(Palette.EMBER.r, Palette.EMBER.g, Palette.EMBER.b, 0.10)
+	highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
+	highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	highlight.visible = false
+	btn.add_child(highlight)
+
+	# 3px ember underline across the TOP edge (the active marker).
+	var underline := ColorRect.new()
+	underline.color = Palette.EMBER
+	underline.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	underline.offset_top = 0
+	underline.offset_bottom = 3
+	underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	underline.visible = false
+	btn.add_child(underline)
+
+	# Centred icon + label.
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(center)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 2)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(vbox)
+
+	var icon_lbl := Label.new()
+	icon_lbl.text = icon
+	icon_lbl.add_theme_font_size_override("font_size", 22)
+	icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(icon_lbl)
+
+	var text_lbl := Label.new()
+	text_lbl.text = label_text
+	text_lbl.add_theme_font_size_override("font_size", 12)
+	text_lbl.add_theme_color_override("font_color", Palette.INK_MID)
+	text_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(text_lbl)
+
+	_nav_tabs[key] = {"button": btn, "underline": underline, "highlight": highlight, "label": text_lbl}
+	return btn
+
+## Restyle the five tabs from _nav_current: the active tab shows its ember underline +
+## faint highlight and inks its label; inactive tabs hide both and dim the label. Safe
+## to call before the nav is built (no-op) and on every _open_* / _on_*_closed.
+func _refresh_nav() -> void:
+	for key in _nav_tabs.keys():
+		var parts: Dictionary = _nav_tabs[key]
+		var active: bool = (key == _nav_current)
+		(parts["underline"] as ColorRect).visible = active
+		(parts["highlight"] as ColorRect).visible = active
+		(parts["label"] as Label).add_theme_color_override(
+			"font_color", Palette.INK if active else Palette.INK_MID)
+
+## Clear the active-tab marker (back on the board) and restyle the five tabs. Called
+## from every _on_*_closed and the apply_deeplink("board") close path so the nav never
+## shows a stale active tab once the player is back on the board.
+func _clear_nav() -> void:
+	_nav_current = ""
+	_refresh_nav()
+
+## The bottom-nav bar surface: a paper fill, a 2px iron TOP border, and a soft UPWARD
+## drop shadow so the bar reads as a raised tray over the board.
+func _nav_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PAPER
+	sb.border_color = Palette.IRON
+	sb.border_width_top = 2
+	sb.shadow_size = 8
+	sb.shadow_color = Color(0, 0, 0, 0.18)
+	sb.shadow_offset = Vector2(0, -3)
+	return sb
 
 ## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a
 ## "{res} {count}" Label (ink text). Used by _refresh_totals to populate the grid.
@@ -1194,11 +1067,15 @@ func _open_town() -> void:
 		_town_screen.connect("shoo_rats", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
+	# The TownScreen (build / refine / market / orders) is the "Craft" tab's target.
+	_nav_current = "craft"
+	_refresh_nav()
 
 func _on_town_closed() -> void:
 	if _town_screen != null:
 		_town_screen.visible = false
 	_router.close_modal()
+	_clear_nav()
 
 # ── Menu / settings (M4f) ─────────────────────────────────────────────────────
 
@@ -1213,6 +1090,10 @@ func _open_menu() -> void:
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
 		_menu_screen.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
 		_menu_screen.connect("new_game", Callable(self, "_on_new_game"))
+		# The "More" section's nav buttons route the secondary screens (achievements,
+		# chronicle, castle, …) through the SAME deep-link path the old left-strip buttons
+		# used — the menu emits navigate(id), Main opens it via apply_deeplink.
+		_menu_screen.connect("navigate", Callable(self, "_on_menu_navigate"))
 	_menu_screen.open()
 	_router.open_modal(ViewRouter.Modal.MENU)
 
@@ -1220,6 +1101,12 @@ func _on_menu_closed() -> void:
 	if _menu_screen != null:
 		_menu_screen.visible = false
 	_router.close_modal()
+
+## A "More" nav button in the menu was pressed — the menu already closed itself, so just
+## open the requested secondary screen via the shared deep-link path (the SAME route the
+## old left-strip HUD buttons used). Unknown ids are a no-op (apply_deeplink returns false).
+func _on_menu_navigate(deeplink_id: String) -> void:
+	apply_deeplink(deeplink_id)
 
 # ── Inventory ledger (M4g) ─────────────────────────────────────────────────────
 
@@ -1235,11 +1122,14 @@ func _open_inventory() -> void:
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
 	_inventory_screen.open()
 	_router.open_modal(ViewRouter.Modal.INVENTORY)
+	_nav_current = "inventory"
+	_refresh_nav()
 
 func _on_inventory_closed() -> void:
 	if _inventory_screen != null:
 		_inventory_screen.visible = false
 	_router.close_modal()
+	_clear_nav()
 
 # ── Town map (M6c) ──────────────────────────────────────────────────────────────
 
@@ -1259,11 +1149,15 @@ func _open_townmap() -> void:
 		_townmap_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
+	# The spatial town map (where buildings are placed) is the "Town" tab's target.
+	_nav_current = "town"
+	_refresh_nav()
 
 func _on_townmap_closed() -> void:
 	if _townmap_screen != null:
 		_townmap_screen.visible = false
 	_router.close_modal()
+	_clear_nav()
 
 # ── Achievements trophy screen (M10) ──────────────────────────────────────────────
 
@@ -1339,11 +1233,14 @@ func _open_townsfolk() -> void:
 		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
 	_townsfolk_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNSFOLK)
+	_nav_current = "folk"
+	_refresh_nav()
 
 func _on_townsfolk_closed() -> void:
 	if _townsfolk_screen != null:
 		_townsfolk_screen.visible = false
 	_router.close_modal()
+	_clear_nav()
 
 # ── Cartography world map (3-zone view + alternate expedition entry) ────────────
 
@@ -1361,11 +1258,15 @@ func _open_cartography() -> void:
 		_cartography_screen.connect("travel_requested", Callable(self, "_on_cartography_travel"))
 	_cartography_screen.open()
 	_router.open_modal(ViewRouter.Modal.CARTOGRAPHY)
+	# The cartography world map is the "Map" tab's target.
+	_nav_current = "map"
+	_refresh_nav()
 
 func _on_cartography_closed() -> void:
 	if _cartography_screen != null:
 		_cartography_screen.visible = false
 	_router.close_modal()
+	_clear_nav()
 
 # ── Recipe Wiki (read-only recipe reference) ─────────────────────────────────
 
@@ -1779,7 +1680,10 @@ func apply_deeplink(id: String) -> bool:
 		ViewRouter.Modal.DEBUG:
 			_open_debug()
 		_:
-			# NONE / board — close whatever is open
+			# NONE / board — close whatever is open. We're returning to the board, so
+			# clear the bottom-nav active-tab marker (several screens below are hidden
+			# inline here without routing through their _on_*_closed handler).
+			_clear_nav()
 			if _town_screen != null and _town_screen.visible:
 				_town_screen.visible = false
 				_router.close_modal()
