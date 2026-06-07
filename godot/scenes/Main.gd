@@ -97,6 +97,17 @@ var _recipe_wiki_screen                  ## CanvasLayer (RecipeWikiScreenScript)
 ## --import pass to register it as a global (mirrors all the other lazily-created modals).
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
 var _tutorial_modal                      ## CanvasLayer (TutorialModalScript), lazily created
+## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
+## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
+## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
+## as a global (mirrors TutorialModal / all the other lazily-created modals).
+const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
+var _daily_modal                         ## CanvasLayer (DailyStreakModalScript), lazily created
+## The pending daily-streak claim from this launch's login_tick, or {} when none. login_tick
+## fires EARLY in _ready (so the grant lands before any HUD refresh shows the coins/runes), but
+## the modal is held back until the tutorial + story queue are clear so the three don't fight —
+## _maybe_show_daily() consumes this once the way is clear. Shape: {day:int, reward:Dictionary}.
+var _pending_daily_claim: Dictionary = {}
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way
 ## sink). Loaded via preload (NO class_name) so the port never needs an --import pass to
 ## register it as a global (mirrors AchievementsScreen / RecipeWiki / TileCollection).
@@ -152,6 +163,18 @@ func _ready() -> void:
 	# modal that DRAINS story.beat_queue is presented at the END of _ready via
 	# _drain_story_queue() (the HUD must exist first so the modal layers above it).
 	game.start_story_session()
+	# Daily login-streak rewards: run one login tick for TODAY'S real calendar date
+	# (Time.get_date_string_from_system() yields "YYYY-MM-DD"). login_tick is idempotent
+	# per calendar day, so re-launching the same day grants nothing; a new day extends the
+	# streak (capped at 30) or resets it on a gap, GRANTING that day's reward (coins/runes/
+	# tool) immediately. We fire it HERE (before the HUD is built/refreshed) so the credited
+	# coins/runes are already on `game` when the totals first render, and STASH the claim so
+	# the reward MODAL is held back until the tutorial + story queue are clear (so the three
+	# don't fight) — _maybe_show_daily() surfaces it once the way is clear. Persist the grant.
+	var daily: Dictionary = game.login_tick(Time.get_date_string_from_system())
+	if bool(daily.get("claimed", false)):
+		_pending_daily_claim = {"day": int(daily.get("day", 0)), "reward": daily.get("reward", {})}
+		SaveManager.save(game)
 	# M8c — STARTER TOOL GRANT (the honest minimal source so tools are reachable now that
 	# they're wired into the live board). Grant a tiny starter set ONLY on a FRESH game:
 	# `game.tools.is_empty()` is true for a brand-new save (and for an old pre-M8b save
@@ -234,6 +257,10 @@ func _ready() -> void:
 		# start_story_session above, plus any threshold/flag beats a loaded save satisfied).
 		# The HUD + board are built now, so the beat modal layers cleanly above them.
 		_drain_story_queue()
+		# Daily reward: the tutorial was already seen, so the only thing that could still be
+		# on screen is the story modal. _maybe_show_daily() no-ops while a story beat is showing
+		# (it's surfaced instead when the story queue fully drains in _on_story_advanced).
+		_maybe_show_daily()
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -1412,6 +1439,54 @@ func _on_tutorial_finished() -> void:
 		SaveManager.save(game)
 	# Surface any queued story beats now that the tutorial is out of the way.
 	_drain_story_queue()
+	# Daily reward: surface it now if no story beat opened (queue empty); otherwise it is
+	# held back and surfaced when the story queue fully drains in _on_story_advanced.
+	_maybe_show_daily()
+
+# ── Daily login-streak reward modal ─────────────────────────────────────────────
+
+## Surface this launch's daily-streak reward modal IF there's a pending claim AND nothing
+## is in the way (no tutorial showing, no story beat showing). No-op otherwise — the call
+## sites (_ready, _on_tutorial_finished, _on_story_advanced) retry it as each blocker clears,
+## so the modal appears the moment the way is clear. Consumes _pending_daily_claim so it only
+## shows once. The reward was already granted by login_tick in _ready; this is display-only.
+func _maybe_show_daily() -> void:
+	if _pending_daily_claim.is_empty():
+		return
+	# Don't fight the tutorial or a story beat — retry once they're dismissed.
+	if _tutorial_modal != null and _tutorial_modal.visible:
+		return
+	if _story_modal != null and _story_modal.visible:
+		return
+	var claim: Dictionary = _pending_daily_claim
+	_pending_daily_claim = {}   # consume — show exactly once this launch
+	_open_daily(int(claim.get("day", 0)), claim.get("reward", {}))
+
+## Open the daily-streak modal showing `day` + `reward`, lazily creating + wiring it on first
+## use. The HUD coin/runes pills already reflect the granted reward (login_tick credited it
+## before the HUD rendered); this just presents the celebratory card.
+func _open_daily(day: int, reward: Dictionary) -> void:
+	if _daily_modal == null:
+		_daily_modal = DailyStreakModalScript.new()
+		add_child(_daily_modal)
+		_daily_modal.setup(game)
+		_daily_modal.connect("collected", Callable(self, "_on_daily_collected"))
+		_daily_modal.connect("closed", Callable(self, "_on_daily_closed"))
+	_daily_modal.open_for(day, reward)
+	_router.open_modal(ViewRouter.Modal.DAILY)
+
+## The player tapped Collect — the modal will close itself (emits closed). Refresh the HUD so
+## the credited coins/runes are visible immediately. NO grant here (login_tick already did it).
+func _on_daily_collected() -> void:
+	_refresh_meta()
+	_refresh_runes()
+
+## The daily-streak modal was closed: hide it + reset the router. NO SaveManager.save — the
+## grant was already persisted in _ready right after login_tick; closing the card changes nothing.
+func _on_daily_closed() -> void:
+	if _daily_modal != null:
+		_daily_modal.visible = false
+	_router.close_modal()
 
 ## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
 ## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
@@ -1483,6 +1558,9 @@ func _on_story_advanced() -> void:
 	_refresh_meta()
 	_refresh_chain_progress()
 	SaveManager.save(game)
+	# The story queue is now drained — if a daily-streak claim was held back behind the story
+	# beats this launch, surface its reward modal now (no-op when there was no claim).
+	_maybe_show_daily()
 
 ## The beat modal was force-closed (defensive — the modal has no explicit close button in
 ## normal flow, advancing handles dismissal). Mirror the advanced drain-complete path.
@@ -1530,6 +1608,12 @@ func apply_deeplink(id: String) -> bool:
 			_open_charter()
 		ViewRouter.Modal.QUESTS:
 			_open_quests()
+		ViewRouter.Modal.DAILY:
+			# On-demand (QA/testing): show the CURRENT streak day's reward WITHOUT re-granting
+			# (the grant only happens in login_tick on launch). A never-claimed streak (day 0)
+			# previews day 1's reward so the card is never blank.
+			var preview_day: int = game.daily_streak_day if game.daily_streak_day > 0 else 1
+			_open_daily(preview_day, DailyRewardConfig.reward_for_day(preview_day))
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1585,6 +1669,10 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a claim is persisted + the stockpile
 				# HUD refreshed (it also hides + resets the router).
 				_on_quests_closed()
+			elif _daily_modal != null and _daily_modal.visible:
+				# Daily modal is display-only — the close handler just hides + resets the
+				# router (no save needed; the grant was already persisted in _ready).
+				_on_daily_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single

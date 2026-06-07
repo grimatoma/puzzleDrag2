@@ -367,12 +367,12 @@
       "feature_or_screen": "Daily rewards",
       "category": "system",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M10",
       "verified_by": [
         "run_daily_rewards_tests.gd"
       ],
-      "note": "No once-per-day login bonus or progressive reward tiers."
+      "note": "Login-streak rewards ported faithfully (DailyRewardConfig.gd — the 1..30 reward ladder verbatim from React DAILY_REWARDS + reward_for_day with the {coins:25} default) + GameState.login_tick(today) reproducing the React LOGIN_TICK streak math EXACTLY (idempotent same-day, +1 consecutive capped at 30, gap-resets to 1; grants coins/runes/tools). Fires on load (real system date), surfaced via DailyStreakModal after tutorial/story clear; reachable on demand via apply_deeplink('daily'/'streak'). React tool ids remapped to real ToolConfig ids (basic→scythe/rare→bomb/shuffle→rake); day-30 tile unlock dropped (no triceratops tile — no fakes). run_daily_rewards_tests.gd: 103 checks."
     },
     {
       "id": "system-abilities-tool-powers",
