@@ -140,6 +140,12 @@ var _quests_screen                       ## CanvasLayer (QuestsScreenScript), la
 ## so the port never needs an --import pass to register it (mirrors every other lazy modal).
 const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
 var _leaveboard_modal                    ## CanvasLayer (LeaveBoardModalScript), lazily created
+## M-infra — developer DEBUG overlay (the React `debug` modal's port). A dev-only QA tool:
+## live state readout + a jump grid of every deep-link + quick-grant buttons. Reachable ONLY
+## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React). Loaded
+## via preload (NO class_name) so the port never needs an --import pass to register it.
+const DebugModalScript := preload("res://scenes/DebugModal.gd")
+var _debug_modal                         ## CanvasLayer (DebugModalScript), lazily created
 ## M5-polish — transient toast bubble (auto-dismissing parchment notification). Built once in
 ## _ready and reused for real one-off feedback (an order filled, a build done). Loaded via
 ## preload (NO class_name) so the port never needs an --import pass to register it.
@@ -1595,6 +1601,31 @@ func _on_daily_closed() -> void:
 		_daily_modal.visible = false
 	_router.close_modal()
 
+# ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
+
+## Open the developer DEBUG modal, lazily creating + wiring it on first use (mirrors
+## _open_menu). The modal gets a back-reference to `self` so its jump grid can route through
+## apply_deeplink and its quick-grants can refresh the HUD pills after a mutation. open()
+## re-reads the live GameState into the readout each time. NO permanent HUD button wires this
+## — it's deep-link-only (apply_deeplink("debug")), matching the hidden React debug modal.
+func _open_debug() -> void:
+	if _debug_modal == null:
+		_debug_modal = DebugModalScript.new()
+		add_child(_debug_modal)
+		_debug_modal.setup(game, self)
+		_debug_modal.connect("closed", Callable(self, "_on_debug_closed"))
+	_debug_modal.open()
+	_router.open_modal(ViewRouter.Modal.DEBUG)
+
+## The DEBUG modal was closed: hide it, reset the router, and persist — a quick-grant may have
+## mutated coins/runes/influence/tier (or rolled quests), so save so the change survives a reload.
+func _on_debug_closed() -> void:
+	if _debug_modal != null:
+		_debug_modal.visible = false
+	_router.close_modal()
+	if game != null:
+		SaveManager.save(game)
+
 ## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
 ## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
 ## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
@@ -1745,6 +1776,8 @@ func apply_deeplink(id: String) -> bool:
 			if not _leaveboard_modal.arm():
 				_leaveboard_modal.preview("mine")
 			_router.open_modal(ViewRouter.Modal.LEAVEBOARD)
+		ViewRouter.Modal.DEBUG:
+			_open_debug()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1808,6 +1841,10 @@ func apply_deeplink(id: String) -> bool:
 				# Leave-confirm card: route through close (Cancel semantics — nothing leaves;
 				# it hides + resets the router). Confirm has its own button on the card.
 				_on_leaveboard_closed()
+			elif _debug_modal != null and _debug_modal.visible:
+				# Debug overlay: route through the close handler so any quick-grant mutation
+				# is persisted (it also hides + resets the router).
+				_on_debug_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
