@@ -30,6 +30,9 @@ var _orders_label: Label                ## compact one-line orders readout above
 
 # Top-bar pill inner Labels (the PanelContainer wrappers hold them; we mutate text/visibility here).
 var _coin_pill: Label                   ## 🪙 N
+var _level_pill_box: PanelContainer     ## orange "Lv N" pill with an XP fill (React parity)
+var _level_label: Label                 ## "Lv N"
+var _level_xp_fill: ColorRect           ## brighter-orange XP progress fill behind the label
 var _tier_pill: Label                   ## tier name · plots used/total
 var _biome_pill: Label                  ## Farm / ⛏ Mine · N
 var _boss_pill_box: PanelContainer      ## boss pill wrapper (toggled visible)
@@ -181,6 +184,7 @@ var _tool_disarm_btn: Button            ## "✕ Disarm" (NOT in _tool_buttons �
 # each _open_* and cleared to "" by each _on_*_closed (and on the board). The secondary
 # screens that used to live in the left strip moved into the ☰ menu's "More" section.
 const NAV_HEIGHT := 76                   ## bottom-bar height (also the reserved layout gap)
+const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill (fill spans a fraction of this)
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
 var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
@@ -458,6 +462,10 @@ func _build_hud() -> void:
 	var coin_box := UiKit.make_pill("🪙 0", Palette.EMBER)
 	_coin_pill = coin_box.get_meta("label")
 	topbar_row.add_child(coin_box)
+
+	# Level pill — React's orange "Lv N" chip with an XP progress fill (almanac level).
+	_level_pill_box = _build_level_pill()
+	topbar_row.add_child(_level_pill_box)
 
 	var tier_box := UiKit.make_pill("Camp · 0/3", Palette.INK)
 	_tier_pill = tier_box.get_meta("label")
@@ -821,46 +829,102 @@ func _refresh_tools() -> void:
 
 	_tool_palette_box.visible = true
 
-	# A horizontal row of tool slots. A compact "Tools" heading sits at the left so the
-	# bar reads as a labelled toolbar without stealing much width.
+	# A centred horizontal strip of tool SLOTS — React's tool strip: each tool is an icon
+	# tile with a dark count chip in its corner, the armed one ember-highlighted. No
+	# "Tools" heading (React has none); the icons carry the meaning.
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tool_palette_box.add_child(row)
 
-	var heading_font: Font = UiKit.heading_font()
-	var heading_lbl := Label.new()
-	heading_lbl.text = "Tools"
-	heading_lbl.add_theme_font_size_override("font_size", 16)
-	heading_lbl.add_theme_color_override("font_color", Palette.INK_MID)
-	if heading_font != null:
-		heading_lbl.add_theme_font_override("font", heading_font)
-	heading_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(heading_lbl)
+	var armed_id: String = game.pending_tool if game != null else ""
 
 	for entry in owned:
 		var id: String = String(entry["id"])
 		var charges: int = int(entry["charges"])
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
+		var desc: String = String(cfg.get("desc", ""))
 		var is_tap: bool = ToolConfig.is_tap_target(id)
-		# Each slot: a rounded button showing the tool label + a "×N" count badge, plus a
-		# subtle "↗" tap affordance for tap-target tools. (Tests assert the label + "×N".)
-		var btn_text: String = "%s ×%d" % [label, charges]
-		if is_tap:
-			btn_text += " ↗"   # subtle tap affordance
+		var is_armed: bool = (id == armed_id and armed_id != "")
+
+		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
+		var slot := Control.new()
+		slot.custom_minimum_size = Vector2(54, 54)
+
 		var btn := Button.new()
-		btn.text = btn_text
-		btn.tooltip_text = ("Tap a tile to use" if is_tap else "Fires instantly over the board")
-		UiKit.style_button(btn, Palette.EMBER, 7, 16)
-		# Wire: click → use the tool → rebuild the palette.
+		btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+		var tex := UiKit.resource_icon(id)
+		if tex != null:
+			btn.icon = tex
+			btn.expand_icon = true
+		else:
+			btn.text = label                       # fallback for a tool with no art
+			btn.add_theme_font_size_override("font_size", 12)
+		# Tooltip carries the label + "×N" + the tool's description — the tests read
+		# tooltip_text (the button itself is now icon-only, no inline text).
+		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
+		# Parchment slot, ember-tinted + ember-bordered while this tool is armed.
+		var slot_fill: Color = Palette.PARCHMENT_SOFT
+		var slot_border: Color = Palette.IRON
+		if is_armed:
+			slot_fill = Color(Palette.EMBER, 0.22)
+			slot_border = Palette.EMBER
+		btn.add_theme_stylebox_override("normal", _tool_slot_box(slot_fill, slot_border))
+		btn.add_theme_stylebox_override("hover", _tool_slot_box(slot_fill.lightened(0.06), slot_border))
+		btn.add_theme_stylebox_override("pressed", _tool_slot_box(slot_fill.darkened(0.06), slot_border))
 		btn.pressed.connect(func():
 			use_tool(id)
 			_refresh_tools()
 		)
-		row.add_child(btn)
+		slot.add_child(btn)
+
+		# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
+		var badge := Label.new()
+		badge.text = str(charges)
+		badge.add_theme_font_size_override("font_size", 13)
+		badge.add_theme_color_override("font_color", Palette.PARCHMENT)
+		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		badge.add_theme_stylebox_override("normal", _tool_badge_box())
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.position = Vector2(36, -6)
+		slot.add_child(badge)
+
+		# A small "↗" tap affordance bottom-left for tap-target tools.
+		if is_tap:
+			var tap := Label.new()
+			tap.text = "↗"
+			tap.add_theme_font_size_override("font_size", 12)
+			tap.add_theme_color_override("font_color", Palette.INK_MID)
+			tap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			tap.position = Vector2(3, 34)
+			slot.add_child(tap)
+
+		row.add_child(slot)
 		_tool_buttons[id] = btn
+
+## A square parchment slot StyleBox for a tool icon button (10px radius, 2px border,
+## 6px padding); the fill/border vary so the armed tool reads ember-highlighted.
+func _tool_slot_box(fill: Color, border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = border
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(6)
+	return sb
+
+## A small dark rounded chip for the per-tool charge count, sitting on the slot corner.
+func _tool_badge_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.INK
+	sb.set_corner_radius_all(9)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	return sb
 
 # ── Bottom navigation bar ─────────────────────────────────────────────────────
 
@@ -1021,12 +1085,23 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	sb.content_margin_top = 4
 	sb.content_margin_bottom = 4
 	box.add_theme_stylebox_override("panel", sb)
+	# React's stockpile chips are a compact icon + count. Show the same procedural icon
+	# when we have art for the key; fall back to the title-cased name when we don't, so
+	# board-only keys (rat, mysterious_ore, …) still read.
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 4)
+	box.add_child(row)
+	var icon := UiKit.make_icon(res, 26.0)
+	if icon != null:
+		row.add_child(icon)
 	var lbl := Label.new()
-	lbl.text = "%s  %d" % [res, count]
-	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
+	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", Palette.INK)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(lbl)
+	row.add_child(lbl)
 	return box
 
 ## Keep the chain-progress fill height matched to the track, remember the inner
@@ -1048,20 +1123,29 @@ func _on_chain_track_resized() -> void:
 ## swoops toward the coin pill (an eased arc), scales down + fades over the back end
 ## of the flight, then frees itself. No-op (and never crashes) if the board or coin
 ## pill aren't present yet. One chip per resolved chain — they're cheap + auto-freed.
-func _spawn_reward_chip(text: String, color: Color) -> void:
+func _spawn_reward_chip(text: String, color: Color, icon_key: String = "") -> void:
 	if _fx_layer == null or board == null or _coin_pill == null:
 		return
 	# A tiny parchment pill (PanelContainer + Label) styled like the HUD chips, so the
-	# flying reward reads as a piece of the stockpile leaping toward the coin purse.
+	# flying reward reads as a piece of the stockpile leaping toward the coin purse. When
+	# an icon_key is given, the gathered good's icon rides along with the "+N" text.
 	var chip := PanelContainer.new()
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_theme_stylebox_override("panel", _make_chip_box())
+	var inner := HBoxContainer.new()
+	inner.add_theme_constant_override("separation", 4)
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(inner)
+	var icon := UiKit.make_icon(icon_key, 24.0) if icon_key != "" else null
+	if icon != null:
+		inner.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", 18)
 	lbl.add_theme_color_override("font_color", color)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_child(lbl)
+	inner.add_child(lbl)
 	_fx_layer.add_child(chip)
 	# Let the container compute its size so we can centre the pivot + start position.
 	chip.reset_size()
@@ -2017,7 +2101,8 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# "rewardTrajectory"). Show the produced resource when a whole unit landed
 	# (gold), else the coins this chain earned (ember) — coins are always gained.
 	if int(res.get("units", 0)) > 0:
-		_spawn_reward_chip("+%d %s" % [int(res["units"]), res["resource"]], Palette.GOLD)
+		var res_key: String = String(res["resource"])
+		_spawn_reward_chip("+%d %s" % [int(res["units"]), UiKit.pretty_name(res_key)], Palette.GOLD, res_key)
 	else:
 		_spawn_reward_chip("+%d 🪙" % int(res.get("coins_gain", 0)), Palette.EMBER)
 	# M4b: remember the resource + threshold this chain fed so the progress bar can
@@ -2507,6 +2592,59 @@ func _refresh_meta() -> void:
 	if _coin_pill == null or game == null:
 		return
 	_coin_pill.text = "🪙 %d" % game.coins
+	_refresh_level()
+
+## Build the orange "Lv N" almanac pill: a rounded ember chip holding a fixed-width inner
+## Control that stacks a brighter-orange XP fill (left-anchored, width = fraction into the
+## current level) behind a centred "Lv N" label — React's level chip in the top bar.
+func _build_level_pill() -> PanelContainer:
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.EMBER                 # orange XP track
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 3
+	sb.content_margin_right = 3
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	box.add_theme_stylebox_override("panel", sb)
+
+	var inner := Control.new()
+	inner.custom_minimum_size = Vector2(LEVEL_PILL_W, 22)
+	inner.clip_contents = true
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(inner)
+
+	_level_xp_fill = ColorRect.new()
+	_level_xp_fill.color = Palette.GOLD_BRIGHT  # brighter than the ember track
+	_level_xp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_xp_fill.position = Vector2.ZERO
+	_level_xp_fill.size = Vector2(0, 22)
+	inner.add_child(_level_xp_fill)
+
+	_level_label = Label.new()
+	_level_label.text = "Lv 1"
+	_level_label.add_theme_font_size_override("font_size", 14)
+	_level_label.add_theme_color_override("font_color", Palette.PARCHMENT)
+	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(_level_label)
+	return box
+
+## Update the level pill text + XP fill width from the almanac level/xp. The fill spans
+## the fraction of XP earned into the current level (xp % 150 of 150).
+func _refresh_level() -> void:
+	if _level_label == null or game == null:
+		return
+	_level_label.text = "Lv %d" % game.almanac_level
+	if _level_xp_fill != null:
+		var into: float = float(game.almanac_xp % AlmanacConfig.XP_PER_LEVEL) \
+			/ float(AlmanacConfig.XP_PER_LEVEL)
+		_level_xp_fill.size = Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22)
 
 ## M4b — the settlement tier + plots now live in the top-bar tier pill (e.g.
 ## "City · 2/11"); a "▲" prefix hints when a tier-up is affordable. KEEPS the name.

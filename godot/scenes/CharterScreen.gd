@@ -59,6 +59,10 @@ var _card_buttons: Dictionary = {}
 ## Static shell (built once in setup()); the body VBox is cleared + repopulated each
 ## refresh() so switching tabs / reopening always reflects the live story state.
 var _body: VBoxContainer
+## The body scroll — its height is clamped to its content (up to the viewport) via
+## UiKit.fit_scroll_height so a short tab yields a short centred card with no empty
+## parchment "dead space" beneath it.
+var _scroll: ScrollContainer
 var _built: bool = false
 
 ## The ribbon's turns-elapsed Label, refreshed each refresh().
@@ -120,17 +124,15 @@ func _build_shell() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	var center := Control.new()
+	# Centered card: a full-rect CenterContainer centres the parchment panel at the panel's
+	# own (content-driven) size, so a short tab yields a small card floating in the scrim —
+	# no full-height card with an empty void below.
+	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -48
 	panel.add_theme_stylebox_override("panel", _parchment_card_style())
 	center.add_child(panel)
 
@@ -189,16 +191,24 @@ func _build_shell() -> void:
 	tabs.add_child(all_btn)
 	_tab_buttons["all"] = all_btn
 
-	var scroll := UiKit.make_vscroll()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(scroll)
+	_scroll = UiKit.make_vscroll()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root_vbox.add_child(_scroll)
 
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
-	scroll.add_child(_body)
+	_scroll.add_child(_body)
+
+	# Re-fit the scroll height to its content whenever the viewport resizes so the card
+	# stays content-sized + capped to the viewport.
+	# get_viewport() is null while the screen is built off-tree (tests construct it with
+	# .new()+setup() before add_child); guard so the resize hook wires only when in-tree.
+	var vp := get_viewport()
+	if vp != null:
+		vp.size_changed.connect(func() -> void:
+			UiKit.fit_scroll_height(_scroll, _body))
 
 	# The term-detail overlay panel (built once, hidden until a card is opened).
 	_build_detail_panel()
@@ -303,6 +313,12 @@ func refresh() -> void:
 		_render_terms()
 	else:
 		_render_timeline()
+
+	# Clamp the scroll to the (now-built) tab body so the card sizes to content (also runs
+	# on every tab switch, since tab switching re-enters refresh()). A deferred re-fit
+	# catches min-sizes that settle one frame after the rows are added.
+	UiKit.fit_scroll_height(_scroll, _body)
+	UiKit.fit_scroll_height.call_deferred(_scroll, _body)
 
 	_sync_detail_panel()
 

@@ -332,9 +332,13 @@ func _build_refine_section() -> void:
 		row.add_theme_constant_override("separation", 10)
 		var inputs_text: String = _format_cost(RecipeConfig.recipe_inputs(id))
 		var station_name: String = BuildingConfig.building_name(RecipeConfig.recipe_station(id))
+		var out_key: String = RecipeConfig.recipe_output(id)
+		var out_icon := UiKit.make_icon(out_key, 30.0)
+		if out_icon != null:
+			row.add_child(out_icon)
 		var label := _make_label("%s: %s → %d×%s  @ %s" % [
 			RecipeConfig.recipe_name(id), inputs_text, RecipeConfig.recipe_qty(id),
-			RecipeConfig.recipe_output(id), station_name], COL_BODY)
+			UiKit.pretty_name(out_key), station_name], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
@@ -359,8 +363,11 @@ func _build_market_section() -> void:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
-		var label := _make_label("%s ×%d  (sell %d)" % [
-			res, owned, MarketConfig.sell_price(res)], COL_BODY)
+		var sell_icon := UiKit.make_icon(res, 30.0)
+		if sell_icon != null:
+			row.add_child(sell_icon)
+		var label := _make_label("%s ×%d  (sell %d🪙)" % [
+			UiKit.pretty_name(res), owned, MarketConfig.sell_price(res)], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
@@ -388,7 +395,10 @@ func _build_market_section() -> void:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
-		var label := _make_label("%s  (buy %d)" % [res, price], COL_BODY)
+		var buy_icon := UiKit.make_icon(res, 30.0)
+		if buy_icon != null:
+			row.add_child(buy_icon)
+		var label := _make_label("%s  (buy %d🪙)" % [UiKit.pretty_name(res), price], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
@@ -412,8 +422,11 @@ func _build_orders_section() -> void:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
-		var label := _make_label("Deliver %d×%s → +%dc" % [
-			int(order["qty"]), order["resource"], int(order["reward"])], COL_BODY)
+		var ord_icon := UiKit.make_icon(String(order["resource"]), 30.0)
+		if ord_icon != null:
+			row.add_child(ord_icon)
+		var label := _make_label("Deliver %d×%s → +%d🪙" % [
+			int(order["qty"]), UiKit.pretty_name(String(order["resource"])), int(order["reward"])], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 

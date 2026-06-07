@@ -287,15 +287,17 @@ func _test_tool_palette() -> void:
 	_check(main._tool_palette_box.visible, "M8d: palette visible after starter grant")
 	_check(main._tool_buttons.has("bomb"),   "M8d: _tool_buttons has 'bomb'")
 	_check(main._tool_buttons.has("scythe"), "M8d: _tool_buttons has 'scythe'")
-	# Labels must include the tool names + charge counts.
+	# The slots are now icon-only (matching React's tool strip); the tool name + charge
+	# count live in the tooltip (the icon carries the visual meaning, a dark corner chip
+	# shows the count). Assert the tooltip still carries name + "×N".
 	if main._tool_buttons.has("bomb"):
-		var lbl: String = main._tool_buttons["bomb"].text
-		_check("Bomb" in lbl, "M8d: bomb button label includes 'Bomb'")
-		_check("×1" in lbl,   "M8d: bomb button label includes '×1'")
+		var lbl: String = main._tool_buttons["bomb"].tooltip_text
+		_check("Bomb" in lbl, "M8d: bomb button tooltip includes 'Bomb'")
+		_check("×1" in lbl,   "M8d: bomb button tooltip includes '×1'")
 	if main._tool_buttons.has("scythe"):
-		var lbl: String = main._tool_buttons["scythe"].text
-		_check("Scythe" in lbl, "M8d: scythe button label includes 'Scythe'")
-		_check("×1" in lbl,     "M8d: scythe button label includes '×1'")
+		var lbl: String = main._tool_buttons["scythe"].tooltip_text
+		_check("Scythe" in lbl, "M8d: scythe button tooltip includes 'Scythe'")
+		_check("×1" in lbl,     "M8d: scythe button tooltip includes '×1'")
 
 	# ── 2. Pressing scythe button fires the instant tool, palette updates ────────
 	# Lay a board with GRASS tiles so scythe (clear_random_n 6) has tiles to clear.

@@ -26,6 +26,10 @@ var _action_buttons: Dictionary = {}
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the latest bond state.
 var _body: VBoxContainer
+## The roster scroll — its height is clamped to its content (up to the viewport) via
+## UiKit.fit_scroll_height so a short list yields a short centred card with no empty
+## parchment "dead space" beneath it.
+var _scroll: ScrollContainer
 var _built: bool = false
 
 ## The header "N townsfolk" line, rebuilt each refresh().
@@ -87,18 +91,15 @@ func _build_shell() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered panel.
-	var center := Control.new()
+	# Centered card: a full-rect CenterContainer centres the parchment panel at the
+	# panel's own (content-driven) size, so a short roster yields a small card floating
+	# in the scrim — no full-height card with an empty void below.
+	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -48
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL
 	style.set_corner_radius_all(16)
@@ -151,17 +152,25 @@ func _build_shell() -> void:
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
 
-	var scroll := UiKit.make_vscroll()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(scroll)
+	_scroll = UiKit.make_vscroll()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root_vbox.add_child(_scroll)
 
 	# The dynamic body — every NPC card hangs off this and is cleared + rebuilt each refresh().
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 12)
-	scroll.add_child(_body)
+	_scroll.add_child(_body)
+
+	# Re-fit the scroll height to its content whenever the viewport resizes so the card
+	# stays content-sized + capped to the viewport.
+	# get_viewport() is null while the screen is built off-tree (tests construct it with
+	# .new()+setup() before add_child); guard so the resize hook wires only when in-tree.
+	var vp := get_viewport()
+	if vp != null:
+		vp.size_changed.connect(func() -> void:
+			UiKit.fit_scroll_height(_scroll, _body))
 
 # ── render ─────────────────────────────────────────────────────────────────────────────
 
@@ -188,6 +197,11 @@ func refresh() -> void:
 		var card := _make_npc_card(id)
 		_body.add_child(card)
 		_cards[id] = card
+
+	# Clamp the scroll to the (now-built) roster so the card sizes to content. A deferred
+	# re-fit catches min-sizes that settle one frame after the cards are added.
+	UiKit.fit_scroll_height(_scroll, _body)
+	UiKit.fit_scroll_height.call_deferred(_scroll, _body)
 
 ## A single NPC card: a soft-parchment chip holding a top row (avatar swatch + name +
 ## role) over a bond bar with a band label. Layout mirrors AchievementsScreen trophy rows.
