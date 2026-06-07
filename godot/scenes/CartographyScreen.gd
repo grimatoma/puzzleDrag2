@@ -131,6 +131,9 @@ func _build_shell() -> void:
 
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Fill the card's full height so the map can expand into it (otherwise the map +
+	# three zone rows hug the top and leave a large empty parchment void below).
+	root_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 12)
 	width_cap.add_child(root_vbox)
 
@@ -157,11 +160,21 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
+	# Flavor subtitle under the title (parity with React's cartography lede).
+	var subtitle := Label.new()
+	subtitle.text = "Roads link the vale — chart your expeditions from here."
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", COL_MUTED)
+	root_vbox.add_child(subtitle)
+
 	# The map panel: a nested Control that paints the roads + node circles in its _draw.
 	# Wrapped in a parchment-soft card so it reads as a framed map within the journal.
 	var map_card := PanelContainer.new()
 	map_card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PAPER))
 	map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Grow the map to absorb the spare height (it keeps MAP_HEIGHT as a floor); the
+	# zone rows below stay at their natural height pinned under the expanded map.
+	map_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(map_card)
 
 	_map = _MapView.new()
