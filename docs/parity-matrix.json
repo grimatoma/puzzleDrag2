@@ -522,13 +522,13 @@
       "feature_or_screen": "charter slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_charter_tests.gd",
         "golden:charter-terms"
       ],
-      "note": "Charter terms and covenant system."
+      "note": "CharterConfig.gd — the six Hollow-Pact terms (id/roman/title/description carried VERBATIM from src/features/charter/index.tsx PACT_TERMS) + the read-only derivation ported EXACTLY from React: term_related_entries, derive_term_state (violation→honored→pending precedence), term_caption (singular/plural + the '|| 1' count floor), state_pill_tone/label, format_choice_entry. READ-ONLY: there is NO slice/mutation in React either — the Charter only reflects story.choice_log + story.flags. KEY REMAP: the React terms reference React-story beat/flag ids (act1_first_harvest, act2_bram_arrives, act3_festival/win, keeper_path_coexist/driveout, …) that DO NOT EXIST in the re-scoped Godot story arc; a verbatim port would render 6 terms that can never resolve (a dead feature). So each term's related_beats/honored_flags/violation_flags are remapped to the Godot StoryConfig's REAL ids (every id asserted to exist by run_charter_tests.gd — the anti-dead-feature guard). Term V (drive_out_bite) is the cleanest: the Godot keeper-path choice drives it (keeper_path_bound=honored / keeper_path_broken=violated), recorded against the frostmaw_aftermath beat. The brief's table listed keeper_choice_made/keeper_path_* as related BEATS, but those are FLAGS — term V's related beats are frostmaw_aftermath + act2_frostmaw_felled instead (documented in CharterConfig.gd's header). DEFERRED: the golden-charter-* visual row awaits the M-infra visual suite."
     },
     {
       "id": "slice-chronicle",
@@ -915,13 +915,13 @@
       "feature_or_screen": "charter view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_charter_tests.gd",
         "golden:charter-terms"
       ],
-      "note": "Charter terms view."
+      "note": "CharterScreen.gd — parchment modal (mirrors PortalScreen/DecorationsScreen) for the read-only Charter. A settlement ribbon ('Hearthwood Vale' + 'N turn(s) elapsed' from game.turn + a 'Hollow Pact' tag), a Terms/All-choices tab toggle, and the two tabs from src/features/charter/index.tsx: TERMS shows the 6 term cards (roman numeral + title + a derived caption + a state-coloured honored/violated/pending pill); clicking a card opens an in-screen DETAIL overlay (the term description + a 'Where it was tested' list of related choice-log entries, or the empty-state line). ALL CHOICES shows the choices TIMELINE (beat title + 'Act N' + the resolved choice label; Godot choice_log rows carry no ts/value so neither is rendered — faithful to the data the port records). Reachable via the '⚖️' HUD button + deep-link 'charter'/'pact'. Faithful port of the React view; the beat/flag GATES behind each term are remapped to the Godot story arc (see slice-charter). DEFERRED: the golden-charter-* visual row awaits the M-infra visual suite."
     },
     {
       "id": "view-chronicle",
