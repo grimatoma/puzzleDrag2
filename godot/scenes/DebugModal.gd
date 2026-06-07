@@ -198,7 +198,7 @@ func _build_shell() -> void:
 
 	# The three sections live inside a height-capped ScrollContainer so a tall jump
 	# grid + readout never run off a short viewport.
-	var scroll := ScrollContainer.new()
+	var scroll := UiKit.make_vscroll()
 	scroll.custom_minimum_size = Vector2(PANEL_MAX_WIDTH - 44, 460)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

@@ -39,6 +39,16 @@ window/size/window_width_override=540
 window/size/window_height_override=960
 window/dpi/allow_hidpi=true
 
+[gui]
+
+; SmoothScroll addon (res://addons/SmoothScroll/) — per its README, disable pixel
+; snapping so momentum/inertia scrolling interpolates content position smoothly
+; instead of quantizing it to whole pixels each frame (which shows as micro-jitter
+; during a flick). Godot's default is true; the addon ships this as false. Trade-off:
+; Control/text positions are no longer pixel-snapped, which can shift the visual
+; goldens — accepted for now, refresh goldens later.
+common/snap_controls_to_pixels=false
+
 [input_devices]
 
 ; Touch-first: treat touch as mouse so the same drag code serves both.

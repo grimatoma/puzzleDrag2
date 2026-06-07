@@ -164,7 +164,7 @@ func _build_shell() -> void:
 	tabs.add_child(almanac_btn)
 	_tab_buttons["almanac"] = almanac_btn
 
-	var scroll := ScrollContainer.new()
+	var scroll := UiKit.make_vscroll()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

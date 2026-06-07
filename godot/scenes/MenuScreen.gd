@@ -208,7 +208,7 @@ func _build_more_section(col: VBoxContainer) -> void:
 
 	# A height-capped scroller so all 11 entries are reachable without the card growing
 	# past the viewport. The list scrolls inside the fixed-height container.
-	var scroll := ScrollContainer.new()
+	var scroll := UiKit.make_vscroll()
 	scroll.custom_minimum_size = Vector2(0, 260)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

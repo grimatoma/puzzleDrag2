@@ -192,3 +192,39 @@ static func style_button(
 		btn.add_theme_color_override("font_disabled_color", Color(Palette.INK_MID, 0.5))
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
+
+# ── Scroll container ──────────────────────────────────────────────────────────
+
+## Build a vertical-only scroll container with momentum / touch-drag scrolling
+## (SpyrexDE's SmoothScroll addon, res://addons/SmoothScroll/).
+##
+## Every list/modal screen (Inventory, Town, Achievements, Chronicle, Quests,
+## Castle, Charter, Decorations, Portal, Townsfolk, Recipe-wiki, TileCollection,
+## the Menu "More" list, StoryModal, DebugModal) used a bare `ScrollContainer`.
+## SmoothScrollContainer EXTENDS ScrollContainer, so the return type stays
+## `ScrollContainer` and existing call-site property access (size_flags,
+## horizontal_scroll_mode, custom_minimum_size, …) is unchanged — the only new
+## behaviour is inertia + flick-to-scroll, which the mobile-first port wants on
+## every touch surface.
+##
+## Horizontal scrolling is disabled on BOTH axes-of-control: callers still set
+## the native `horizontal_scroll_mode = SCROLL_MODE_DISABLED`, and here we turn
+## off the addon's `allow_horizontal_scroll` so a vertical flick never imparts
+## sideways velocity. The addon's `override_mouse_filters` default (true) keeps
+## child buttons clickable while still allowing drag-to-scroll over them.
+static func make_vscroll() -> ScrollContainer:
+	var scroll := SmoothScrollContainer.new()
+	scroll.allow_horizontal_scroll = false
+	# The addon detects its scrollable content child ONCE, in its own _ready(). Most
+	# screens here add the scroll to a LIVE parent before adding the content VBox
+	# (build order: add scroll → add vbox), so that one-time scan runs with no child
+	# yet and `content_node` stays null — the addon's _process then dereferences null
+	# (`content_node.size`) and spams "Invalid access … 'size' … on a base object of
+	# type 'Nil'". Re-point content_node at the first non-scrollbar Control child as
+	# it enters the tree; the null guard makes it a no-op once _ready has found it
+	# (the off-tree build order). `content_node` is the addon's public handle.
+	scroll.child_entered_tree.connect(func(node: Node) -> void:
+		if scroll.content_node == null and node is Control and not node is ScrollBar:
+			scroll.content_node = node
+	)
+	return scroll

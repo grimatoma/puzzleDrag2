@@ -154,7 +154,7 @@ func _build_shell() -> void:
 	# propagate its child's minimum HEIGHT), so _render sizes the scroll's min height to its
 	# laid-out content each render, capped at LINES_MAX_H — short beats hug their dialogue,
 	# long beats scroll. The dynamic VBox inside is cleared + rebuilt each render.
-	_lines_scroll = ScrollContainer.new()
+	_lines_scroll = UiKit.make_vscroll()
 	_lines_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_lines_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_lines_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
