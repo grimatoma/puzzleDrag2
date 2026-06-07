@@ -108,8 +108,20 @@ func _check(cond: bool, msg: String) -> void:
 ## it rebuilds the board WITHOUT animation if the scene exposes that path, otherwise it's a
 ## harmless extra frame. Tweens are node-bound and not externally enumerable in Godot 4, so the
 ## reliable determinism guarantee comes from the fixed board seed + ample settle frames above.
-func _freeze_tweens(_main) -> void:
-	pass
+func _freeze_tweens(main) -> void:
+	# Pin any time-based, NON-frame-deterministic animation to a fixed end state so the
+	# captured frame is identical across process launches. The only such animation in the
+	# captured surfaces is the Toast's fade tween (FADE_IN→HOLD→FADE_OUT on _bubble.modulate.a):
+	# its alpha at the fixed settle-frame count drifts run-to-run (separate GPU/timer state),
+	# producing a multi-percent diff on the semi-transparent bubble. Kill the tween and pin the
+	# bubble to FULL opacity so the toast is deterministically, fully visible every run.
+	if main == null:
+		return
+	var toast = main._toast
+	if toast != null and toast.visible and toast._bubble != null:
+		if toast._tween != null and toast._tween.is_valid():
+			toast._tween.kill()
+		toast._bubble.modulate.a = 1.0
 
 func _dismiss_tutorial(main) -> void:
 	if main._tutorial_modal != null:
@@ -250,6 +262,93 @@ func _seed_story_prompt(main) -> void:
 	if main._story_modal != null:
 		main._story_modal.open_for("act1_arrival")
 
+# ── NEW (visual-expand) seed helpers ─────────────────────────────────────────────
+# Each drives REAL GameState the way the live game does, then leans on the matching
+# deeplink (and, where the screen needs a second interaction, a `post` Callable in the
+# scenario row — see _scenarios()) to land on the intended surface.
+
+func _seed_leaveboard(main) -> void:
+	# Put the player ON an expedition (the SAME mutation enter_mine() makes) so the HUD
+	# Town button's leave-confirm GATE arms for real. deeplink "leaveboard" then calls
+	# arm() (not preview()), rendering the biome-specific "Leave the mine?" confirm card.
+	var game: GameState = main.game
+	game.active_biome = "mine"
+	game.mine_turns_left = 6
+
+func _seed_debug(main) -> void:
+	# Seed real coins/runes/influence so the DEBUG readout shows non-zero values (the
+	# modal reads g.coins / g.runes / g.influence live via readout_lines). deeplink "debug".
+	var game: GameState = main.game
+	game.coins = 4200
+	game.runes = 18
+	game.influence = 350
+
+func _seed_inventory_search_empty(main) -> void:
+	# Seed a few owned goods so the ledger has rows, then (in the row's `post` step, after
+	# the inventory deeplink opens the screen) type a no-match query so the "No items match
+	# '…'" empty-state line renders — the distinct content for this golden.
+	var game: GameState = main.game
+	game.inventory = {"flour": 12, "plank": 8, "eggs": 5}
+
+func _seed_chronicle_empty(main) -> void:
+	# A FRESH game with NO fired beats → the chronicle's empty state ("Your story begins…").
+	# NOTE: _ready's start_story_session() fires the arrival beat IMMEDIATELY (post_story_event
+	# calls apply_beat, which sets flags[_fired_act1_arrival]=true the moment it's enqueued — not
+	# when it's presented). So clearing the queue alone isn't enough; we must also wipe the fired
+	# markers so fired_count() == 0. Reset the whole story state to a clean slate (flags + queue +
+	# choice_log) — the chronicle reads ONLY fired markers, so an empty flags dict yields 0 chapters.
+	_dismiss_story(main)
+	var game: GameState = main.game
+	game.story.flags = {}
+	game.story.choice_log = []
+	game.story.beat_queue.clear()
+
+func _seed_town_built_out(main) -> void:
+	# Build a few REAL buildings through game.build() (NOT a direct buildings = [...] poke):
+	# raise the tier so the spawners/refiner are unlocked, stock the inventory their costs
+	# need, then build. The town map then renders these as placed houses on the first lots.
+	var game: GameState = main.game
+	game.settlement.tier = TownConfig.TIER_VILLAGE   # unlocks Lumber Camp, Coop, Garden, Bakery
+	game.active_biome = "farm"
+	game.inventory = {"hay_bundle": 40, "flour": 40, "plank": 40, "eggs": 20}
+	game.build(BuildingConfig.LUMBER_CAMP)
+	game.build(BuildingConfig.COOP)
+	game.build(BuildingConfig.GARDEN)
+
+func _seed_town_build_picker(main) -> void:
+	# City tier (11 plots) + a generous inventory so the build-picker rows read as ENABLED
+	# (can_build true). The picker is opened in the row's `post` step after the townmap
+	# deeplink. Mirrors tools/m6d_capture.gd — the picker's "ready" state.
+	var game: GameState = main.game
+	game.settlement.tier = TownConfig.TIER_CITY
+	game.active_biome = "farm"
+	game.inventory = {"plank": 40, "flour": 40, "hay_bundle": 40, "eggs": 20}
+
+# ── NEW (visual-expand) post-deeplink interaction steps ──────────────────────────
+# These run AFTER apply_deeplink has opened the target screen (the deeplink builds +
+# shows the modal), so they can drive a second-level interaction the seed can't reach.
+
+func _post_inventory_search(main) -> void:
+	# Type a query that matches NO owned good so the "No items match '…'" line renders.
+	if main._inventory_screen != null and main._inventory_screen._search_field != null:
+		main._inventory_screen._search_field.text = "zzzzz"
+		main._inventory_screen._on_search_changed("zzzzz")
+
+func _post_charter_term(main) -> void:
+	# Open the FIRST term's detail overlay (the in-screen detail PanelContainer).
+	if main._charter_screen != null:
+		var terms: Array = CharterConfig.all()
+		if not terms.is_empty():
+			var first_id: String = String((terms[0] as Dictionary).get("id", ""))
+			main._charter_screen._on_open_term(first_id)
+
+func _post_town_build_picker(main) -> void:
+	# Open the build picker on the FIRST empty lot — exactly what a left click on an empty
+	# plot resolves to (lot index == built_count is the first un-built slot).
+	if main._townmap_screen != null and main._townmap_screen._map != null:
+		var first_empty: int = main._townmap_screen._map.built_count()
+		main._townmap_screen._open_build_picker_for_lot(first_empty)
+
 # ── Scenario table ─────────────────────────────────────────────────────────────────────────
 # Each row: { id, deeplink, seed: Callable(main) -> void }. `id` maps 1:1 to a parity-matrix
 # golden:<id> row. `deeplink` is fed to main.apply_deeplink (after seeding) — except the
@@ -276,6 +375,18 @@ func _scenarios() -> Array:
 		# tutorial + story-prompt: the seed drives the modal; do NOT dismiss the tutorial/story.
 		{"id": "tutorial",        "deeplink": "",            "seed": Callable(self, "_seed_tutorial"),     "post_dismiss_tutorial": false},
 		{"id": "story-prompt",    "deeplink": "",            "seed": Callable(self, "_seed_story_prompt"), "post_dismiss_tutorial": false},
+		# ── NEW (visual-expand) — modal/empty-state/built-out surfaces ──────────────────────
+		# Each renders a state whose screen already exists. Rows with a `post` Callable drive a
+		# SECOND interaction (search text / term detail / build picker) AFTER the deeplink opens
+		# the screen. All capture at the portrait viewport only (no desktop golden needed).
+		{"id": "leaveboard",             "deeplink": "leaveboard", "seed": Callable(self, "_seed_leaveboard"),            "post_dismiss_tutorial": true},
+		{"id": "toast",                  "deeplink": "toast",      "seed": Callable(self, "_seed_none"),                  "post_dismiss_tutorial": true},
+		{"id": "debug",                  "deeplink": "debug",      "seed": Callable(self, "_seed_debug"),                 "post_dismiss_tutorial": true},
+		{"id": "inventory-search-empty", "deeplink": "inventory",  "seed": Callable(self, "_seed_inventory_search_empty"), "post": Callable(self, "_post_inventory_search"),  "post_dismiss_tutorial": true},
+		{"id": "chronicle-empty",        "deeplink": "chronicle",  "seed": Callable(self, "_seed_chronicle_empty"),       "post_dismiss_tutorial": true},
+		{"id": "charter-term-dialog",    "deeplink": "charter",    "seed": Callable(self, "_seed_charter"),               "post": Callable(self, "_post_charter_term"),      "post_dismiss_tutorial": true},
+		{"id": "town-built-out",         "deeplink": "townmap",    "seed": Callable(self, "_seed_town_built_out"),        "post_dismiss_tutorial": true},
+		{"id": "town-build-picker",      "deeplink": "townmap",    "seed": Callable(self, "_seed_town_build_picker"),     "post": Callable(self, "_post_town_build_picker"), "post_dismiss_tutorial": true},
 	]
 
 # ── Capture pipeline ───────────────────────────────────────────────────────────────────────
@@ -318,6 +429,13 @@ func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 	var dl: String = String(scn.get("deeplink", ""))
 	if dl != "":
 		main.apply_deeplink(dl)
+
+	# Optional SECOND interaction, run AFTER the deeplink has opened/built the target screen
+	# (e.g. type a no-match search query, open a term-detail overlay, open the build picker).
+	# The screen node only exists once apply_deeplink has created it, so this must run here.
+	if scn.has("post"):
+		var post_cb: Callable = scn["post"]
+		post_cb.call(main)
 
 	# Re-layout against the pinned viewport and let everything settle (parchment styles,
 	# drop shadows, fonts, bars, tweens).
