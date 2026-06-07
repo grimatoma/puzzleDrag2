@@ -37,6 +37,12 @@ var _action_buttons: Dictionary = {}
 var _body: VBoxContainer
 var _built: bool = false
 
+## M5-polish — the live search query (lower-cased substring filter over resource names).
+## Empty string ("") means "no filter" — the full grouped ledger shows. The LineEdit at the
+## top of the card drives this via _on_search_changed; refresh() re-reads it each render.
+var _query: String = ""
+var _search_field: LineEdit             ## the search input (registered for headless tests)
+
 # ── group membership (per the Constants production families) ───────────────────
 # Ordered group definitions: each is [display name, Array of resource keys]. A
 # resource not in any of these lands in the trailing "Other" group so the ledger
@@ -168,6 +174,21 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
+	# M5-polish — a search field that filters the ledger rows by name (case-insensitive
+	# substring). Sits between the title and the grouped body. Typing re-renders the body
+	# live; clearing it restores the full grouped ledger. Styled like the parchment row chips.
+	_search_field = LineEdit.new()
+	_search_field.placeholder_text = "Search items…"
+	_search_field.clear_button_enabled = true
+	_search_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_search_field.add_theme_font_size_override("font_size", 18)
+	_search_field.add_theme_color_override("font_color", COL_BODY)
+	_search_field.add_theme_color_override("font_placeholder_color", COL_MUTED)
+	_search_field.add_theme_stylebox_override("normal", UiKit.row_box())
+	_search_field.add_theme_stylebox_override("focus", UiKit.row_box())
+	_search_field.connect("text_changed", Callable(self, "_on_search_changed"))
+	root_vbox.add_child(_search_field)
+
 	# The dynamic body — every group section + the footer hang off this and are
 	# cleared + rebuilt each refresh().
 	_body = VBoxContainer.new()
@@ -191,19 +212,32 @@ func refresh() -> void:
 		_body.remove_child(child)
 		child.queue_free()
 
+	# Group the owned resources, then apply the live search query (case-insensitive name
+	# substring). An empty query passes everything through unchanged.
 	var grouped: Dictionary = _grouped_owned()
 	var any: bool = false
+	var any_owned: bool = false
 	for group_name in GROUP_ORDER:
 		var keys: Array = grouped.get(group_name, [])
-		if keys.is_empty():
+		if not keys.is_empty():
+			any_owned = true
+		var shown: Array = _apply_query(keys)
+		if shown.is_empty():
 			continue
 		any = true
-		_build_group_section(group_name, keys)
+		_build_group_section(group_name, shown)
 
+	# Empty-state messaging: distinguish a genuinely empty stockpile from "nothing matches
+	# your search" so the player knows WHY the ledger is blank.
 	if not any:
-		var empty := _make_label(
-			"Your stockpile is empty — chain tiles to gather goods.", COL_MUTED)
-		_body.add_child(empty)
+		if any_owned and _query != "":
+			var no_match := _make_label(
+				"No items match '%s'." % _query, COL_MUTED)
+			_body.add_child(no_match)
+		else:
+			var empty := _make_label(
+				"Your stockpile is empty — chain tiles to gather goods.", COL_MUTED)
+			_body.add_child(empty)
 		return
 
 	_build_footer()
@@ -305,6 +339,33 @@ func _build_footer() -> void:
 		"%d kinds · %d items" % [kinds(), total_units()], COL_MUTED)
 	subline.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_body.add_child(subline)
+
+# ── search / filter (M5-polish) ────────────────────────────────────────────────
+
+## The search field changed — store the lower-cased, trimmed query and re-render the
+## body so the filter applies live. Wired to the LineEdit's `text_changed` signal.
+func _on_search_changed(text: String) -> void:
+	_query = text.strip_edges().to_lower()
+	refresh()
+
+## True when `res`'s name matches `query` as a case-insensitive substring. An empty/blank
+## query matches EVERYTHING (no filter). Pure + headless-testable — the single source of the
+## filter rule shared by the UI render path and the tests.
+static func matches_query(res: String, query: String) -> bool:
+	var q: String = query.strip_edges().to_lower()
+	if q == "":
+		return true
+	return res.to_lower().find(q) != -1
+
+## Filter a group's resource keys to those matching the current `_query`. Returns a new Array
+## (the input is never mutated) — used by refresh() to decide which rows to render and which
+## groups to omit when nothing in them matches.
+func _apply_query(keys: Array) -> Array:
+	var out: Array = []
+	for res in keys:
+		if matches_query(String(res), _query):
+			out.append(res)
+	return out
 
 # ── ledger math (pure helpers — usable + testable without rendering) ───────────
 

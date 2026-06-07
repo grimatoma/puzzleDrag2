@@ -1130,13 +1130,14 @@
       "feature_or_screen": "leaveBoard modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M5",
       "verified_by": [
+        "run_m5_polish_tests.gd",
         "run_router_tests.gd",
         "golden:shell-leave-board-confirm"
       ],
-      "note": "Leave-board confirmation; wired through the M5 router/ModalShell."
+      "note": "LeaveBoardModal.gd — a parchment confirm that arms ONLY when the player is in an expedition (active_biome != 'farm'); the 🏠 Town button routes through it, Confirm calls leave_mine/leave_harbor and re-pools the board onto the farm (farm flow unchanged, no modal). apply_deeplink('leaveboard'). Verified by run_m5_polish_tests.gd; golden captured in the visual suite."
     },
     {
       "id": "modal-season",
