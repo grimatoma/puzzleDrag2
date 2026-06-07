@@ -154,12 +154,23 @@ var _toast                               ## CanvasLayer (ToastScript), built onc
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
-# A vertical parchment strip pinned to the RIGHT edge of the screen (below the ☰
-# menu button) showing each owned tool with charges > 0 as a clickable button.
+# A HORIZONTAL parchment tool bar centred just below the chain-progress bar (above
+# the board) showing each owned tool with charges > 0 as a clickable slot button.
 # Clicking fires use_tool(id) then _refresh_tools() so the count or disappearance
 # reflects the spend immediately. Hidden completely when game.tools is empty.
 var _tool_palette_box: PanelContainer   ## outer parchment card (hidden when no tools)
 var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each _refresh_tools()
+
+# ── Tool-armed banner (the React "TOOL ARMED" card) ─────────────────────────────
+# A prominent full-width ember card shown ONLY while a TAP-target tool is armed.
+# Reads "⚡ Tool armed · ×N left", the tool name + description, a "Tap a tile on the
+# board" prompt, and a "✕ Disarm" button. Built once in _build_hud, populated by
+# use_tool(), hidden by _on_tool_target() and the Disarm button.
+var _tool_armed_box: PanelContainer     ## outer ember card (hidden unless armed)
+var _tool_armed_title: Label            ## "⚡ Tool armed · ×N left"
+var _tool_armed_name: Label             ## tool label (e.g. "Sickle")
+var _tool_armed_desc: Label             ## tool description
+var _tool_disarm_btn: Button            ## "✕ Disarm" (NOT in _tool_buttons — that's tool slots only)
 
 # ── Bottom navigation bar (matches the React 5-tab BottomNav) ──────────────────
 # A full-width paper bar pinned to the BOTTOM on its OWN CanvasLayer (so it never
@@ -347,6 +358,14 @@ func _layout_hud(vp: Vector2) -> void:
 		_chain_prog_box.offset_left = -cw / 2.0
 		_chain_prog_box.offset_right = cw / 2.0
 		_chain_prog_box.offset_top = 76.0
+	if _tool_palette_box != null:
+		# Centre the horizontal tool bar just below the chain-progress bar (~76–126) and
+		# above the board (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric
+		# max-width offset keeps it centred while letting it shrink on narrow viewports.
+		var tw: float = minf(560.0, vp.x - 32.0)
+		_tool_palette_box.offset_left = -tw / 2.0
+		_tool_palette_box.offset_right = tw / 2.0
+		_tool_palette_box.offset_top = 135.0
 	if _stockpile_box != null:
 		var margin: float = maxf(16.0, vp.x * 0.04)
 		_stockpile_box.offset_left = margin
@@ -518,14 +537,16 @@ func _build_hud() -> void:
 	# Keep the fill height + track width in sync when the track is resized.
 	_chain_prog_track.resized.connect(_on_chain_track_resized)
 
-	# ── chain prompt (kept) — sits just above the board, centered ─────────────
+	# ── chain prompt (kept) — a slim prompt just above the board, centered ────
+	# Moved DOWN (offset_top 230) + smaller (font 16) so it clears the new tool bar,
+	# which now sits in the band the old offset_top 124 occupied.
 	_chain_label = Label.new()
 	_chain_label.text = "Drag 3+ matching tiles"
-	_chain_label.add_theme_font_size_override("font_size", 22)
+	_chain_label.add_theme_font_size_override("font_size", 16)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_chain_label.offset_top = 124
+	_chain_label.offset_top = 230
 	_chain_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_chain_label)
 
@@ -562,8 +583,11 @@ func _build_hud() -> void:
 	# ── C. Stockpile chip panel — parchment card below the board ──────────────
 	_build_stockpile(root)
 
-	# ── D. Tool palette — vertical parchment strip pinned to the right edge ───
+	# ── D. Tool palette — horizontal parchment bar centred above the board ────
 	_build_tool_palette(root)
+
+	# ── D2. Tool-armed banner — ember card shown only while a tap-tool is armed ──
+	_build_tool_armed_banner(root)
 
 	# ── E. Bottom navigation bar — the 5-tab BOTTOM nav (matches the React original) ──
 	# Replaces the old left-edge strip of ~14 emoji buttons. Built on its OWN CanvasLayer
@@ -647,19 +671,129 @@ func _build_stockpile(root: Control) -> void:
 	_stockpile_grid.add_theme_constant_override("v_separation", 8)
 	col.add_child(_stockpile_grid)
 
-## M8d — build the ToolPalette container: a parchment card pinned to the RIGHT edge
-## of the board area, just below the ☰ menu button. It starts hidden (_refresh_tools
-## shows/hides it based on game.tools). The inner VBox gets rebuilt on each refresh.
+## M8d — build the ToolPalette container: a HORIZONTAL parchment bar anchored
+## CENTER_TOP (like the chain-progress bar) so it centres horizontally and gets
+## positioned each layout in _layout_hud. It starts hidden (_refresh_tools shows/
+## hides it based on game.tools). The inner HBox gets rebuilt on each refresh.
 func _build_tool_palette(root: Control) -> void:
 	_tool_palette_box = PanelContainer.new()
-	_tool_palette_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_tool_palette_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from right edge
+	_tool_palette_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_tool_palette_box.mouse_filter = Control.MOUSE_FILTER_IGNORE       # children override this
 	_tool_palette_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	_tool_palette_box.offset_right = -18   # inset from the right edge (mirrors ☰ button)
-	_tool_palette_box.offset_top = 64      # sit below the ☰ button (which is at offset_top 18)
+	_tool_palette_box.offset_top = 135    # just below the chain-progress bar; set in _layout_hud
 	_tool_palette_box.visible = false      # hidden until _refresh_tools sees tools in the bag
 	root.add_child(_tool_palette_box)
+
+## Build the "Tool armed" banner ONCE: a full-width ember card pinned TOP_WIDE just
+## below the top bar. It's only visible while a tap-target tool is armed (use_tool
+## populates + shows it; _on_tool_target / the Disarm button hide it), so it can
+## overlap the chain band underneath — the player is focused on tapping a tile.
+func _build_tool_armed_banner(root: Control) -> void:
+	_tool_armed_box = PanelContainer.new()
+	_tool_armed_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	# Sit just BELOW the top bar (≈60px tall) so the settlement title + pills stay
+	# visible; a small left/right gutter so it reads as an inset card. It can overlap
+	# the chain band beneath it — only shown while armed, when the player is tapping.
+	_tool_armed_box.offset_top = 70
+	_tool_armed_box.offset_left = 12
+	_tool_armed_box.offset_right = -12
+	_tool_armed_box.add_theme_stylebox_override("panel", _tool_armed_box_style())
+	_tool_armed_box.visible = false
+	root.add_child(_tool_armed_box)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	_tool_armed_box.add_child(margin)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	margin.add_child(col)
+
+	var heading_font: Font = UiKit.heading_font()
+
+	# Bold ember title line: "⚡ Tool armed · ×N left".
+	_tool_armed_title = Label.new()
+	_tool_armed_title.text = "⚡ Tool armed"
+	_tool_armed_title.add_theme_font_size_override("font_size", 20)
+	_tool_armed_title.add_theme_color_override("font_color", Palette.EMBER)
+	if heading_font != null:
+		_tool_armed_title.add_theme_font_override("font", heading_font)
+	col.add_child(_tool_armed_title)
+
+	# Tool name (e.g. "Sickle") in ink.
+	_tool_armed_name = Label.new()
+	_tool_armed_name.text = ""
+	_tool_armed_name.add_theme_font_size_override("font_size", 18)
+	_tool_armed_name.add_theme_color_override("font_color", Palette.INK)
+	if heading_font != null:
+		_tool_armed_name.add_theme_font_override("font", heading_font)
+	col.add_child(_tool_armed_name)
+
+	# Tool description — wraps across the full card width.
+	_tool_armed_desc = Label.new()
+	_tool_armed_desc.text = ""
+	_tool_armed_desc.add_theme_font_size_override("font_size", 14)
+	_tool_armed_desc.add_theme_color_override("font_color", Palette.INK_MID)
+	_tool_armed_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(_tool_armed_desc)
+
+	# Bottom row: a bold "TAP A TILE ON THE BOARD" prompt + a "✕ Disarm" button.
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 12)
+	col.add_child(bottom)
+
+	var prompt := Label.new()
+	prompt.text = "Tap a tile on the board"
+	prompt.add_theme_font_size_override("font_size", 15)
+	prompt.add_theme_color_override("font_color", Palette.EMBER)
+	prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom.add_child(prompt)
+
+	_tool_disarm_btn = Button.new()
+	_tool_disarm_btn.text = "✕ Disarm"
+	UiKit.style_button(_tool_disarm_btn, Palette.EMBER, 6, 15)
+	_tool_disarm_btn.pressed.connect(_disarm_tool)
+	bottom.add_child(_tool_disarm_btn)
+
+## Ember-accented card StyleBox for the armed banner: a soft ember-tinted fill with
+## a 2 px ember border + drop shadow so it reads as a hot "danger" banner (parity
+## with React's red TOOL ARMED card), distinct from the calm parchment HUD cards.
+func _tool_armed_box_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	# An opaque warm ember wash (ember blended ~22% over parchment) so the banner reads
+	# as a hot "danger" card even over the warm app frame, not a faint tint.
+	sb.bg_color = Palette.PARCHMENT.lerp(Palette.EMBER, 0.22)
+	sb.border_color = Palette.EMBER
+	sb.border_width_left = 3
+	sb.border_width_top = 3
+	sb.border_width_right = 3
+	sb.border_width_bottom = 3
+	sb.set_corner_radius_all(12)
+	sb.shadow_size = 10
+	sb.shadow_color = Color(Palette.EMBER, 0.30)
+	sb.shadow_offset = Vector2(0, 3)
+	return sb
+
+## Player-facing description for a tool id (ToolConfig has no desc field — these
+## mirror the React ITEMS[*].desc strings in src/constants.ts; scythe / stone_hammer
+## are Godot-only additions, so their copy is written to match the same voice).
+func _tool_description(id: String) -> String:
+	match id:
+		ToolConfig.BOMB:         return "Tap a tile — destroys a 3×3 area around it."
+		ToolConfig.RAKE:         return "Tap a tile — sweeps every connected tile of the same type and collects them."
+		ToolConfig.SICKLE:       return "Sweeps a single row in one stroke. Tap any tile to harvest that entire row."
+		ToolConfig.AUGER:        return "Tap a column — bores straight down, clearing every tile in it."
+		ToolConfig.BLAST_CHARGE: return "Tap a tile — clears its entire row and column in a cross-shaped blast."
+		ToolConfig.MAGNET:       return "Tap a tile — collapses every ore tile in a 3×3 area into stone for re-chaining."
+		ToolConfig.AXE:          return "Fells all tree tiles on the board instantly."
+		ToolConfig.SCYTHE:       return "Sweeps six random tiles off the board in one swing."
+		ToolConfig.STONE_HAMMER: return "Smashes every stone tile on the board into your stockpile."
+		ToolConfig.DRILL:        return "Bores every loose dirt tile in the mine into rough stone."
+		_:                       return ""
 
 ## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
 ## > 0 a styled Button is added labelled "{name} ×{charges}" (plus a "↗" tap hint
@@ -687,20 +821,23 @@ func _refresh_tools() -> void:
 
 	_tool_palette_box.visible = true
 
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
-	_tool_palette_box.add_child(col)
+	# A horizontal row of tool slots. A compact "Tools" heading sits at the left so the
+	# bar reads as a labelled toolbar without stealing much width.
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_tool_palette_box.add_child(row)
 
-	# Heading — "Tools" in Cinzel when available.
 	var heading_font: Font = UiKit.heading_font()
 	var heading_lbl := Label.new()
 	heading_lbl.text = "Tools"
-	heading_lbl.add_theme_font_size_override("font_size", 18)
-	heading_lbl.add_theme_color_override("font_color", Palette.INK)
+	heading_lbl.add_theme_font_size_override("font_size", 16)
+	heading_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	if heading_font != null:
 		heading_lbl.add_theme_font_override("font", heading_font)
+	heading_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	heading_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(heading_lbl)
+	row.add_child(heading_lbl)
 
 	for entry in owned:
 		var id: String = String(entry["id"])
@@ -708,19 +845,21 @@ func _refresh_tools() -> void:
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
 		var is_tap: bool = ToolConfig.is_tap_target(id)
+		# Each slot: a rounded button showing the tool label + a "×N" count badge, plus a
+		# subtle "↗" tap affordance for tap-target tools. (Tests assert the label + "×N".)
 		var btn_text: String = "%s ×%d" % [label, charges]
 		if is_tap:
 			btn_text += " ↗"   # subtle tap affordance
 		var btn := Button.new()
 		btn.text = btn_text
 		btn.tooltip_text = ("Tap a tile to use" if is_tap else "Fires instantly over the board")
-		UiKit.style_button(btn, Palette.EMBER, 6, 17)
+		UiKit.style_button(btn, Palette.EMBER, 7, 16)
 		# Wire: click → use the tool → rebuild the palette.
 		btn.pressed.connect(func():
 			use_tool(id)
 			_refresh_tools()
 		)
-		col.add_child(btn)
+		row.add_child(btn)
 		_tool_buttons[id] = btn
 
 # ── Bottom navigation bar ─────────────────────────────────────────────────────
@@ -2224,6 +2363,7 @@ func use_tool(id: String) -> bool:
 		game.arm_tool(id)
 		board.set_targeting(true)
 		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
+		_show_tool_armed_banner(id)
 		return true
 	# Instant tool — fire immediately over the whole board.
 	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
@@ -2250,7 +2390,37 @@ func _on_tool_target(cell: Vector2i) -> void:
 	# Always exit targeting + disarm so the board returns to normal chaining, even on a miss.
 	board.set_targeting(false)
 	game.clear_pending_tool()
+	_hide_tool_armed_banner()
 	_after_tool_used()
+
+## Populate + show the "Tool armed" banner for a just-armed tap-target tool: the
+## "⚡ Tool armed · ×N left" title (N = remaining charges, the one being armed
+## included since the charge isn't spent until the tap), the tool name, and its
+## description.
+func _show_tool_armed_banner(id: String) -> void:
+	if _tool_armed_box == null:
+		return
+	var charges: int = game.tool_count(id) if game != null else 0
+	_tool_armed_title.text = "⚡ Tool armed · ×%d left" % charges
+	_tool_armed_name.text = ToolConfig.tool_label(id)
+	_tool_armed_desc.text = _tool_description(id)
+	_tool_armed_box.visible = true
+
+## Hide the "Tool armed" banner (after the tap fires, or on Disarm).
+func _hide_tool_armed_banner() -> void:
+	if _tool_armed_box != null:
+		_tool_armed_box.visible = false
+
+## "✕ Disarm" handler: leave targeting mode, clear the pending tool, hide the banner,
+## and clear the status hint so the board returns to plain chaining.
+func _disarm_tool() -> void:
+	if board != null:
+		board.set_targeting(false)
+	if game != null:
+		game.clear_pending_tool()
+	_hide_tool_armed_banner()
+	if _status_label != null:
+		_status_label.text = ""
 
 ## Shared post-tool refresh: a tool can change inventory/coins/progress (credited via
 ## credit_chain inside use_tool_on_grid), so refresh the same HUD surfaces a resolved
