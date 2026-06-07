@@ -562,12 +562,12 @@
       "feature_or_screen": "decorations slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_decorations_tests.gd"
       ],
-      "note": "Building decorations and cosmetics."
+      "note": "DecorationConfig (8 decorations carried VERBATIM from src/features/decorations/data.ts: violet_bed/stone_lantern/apple_sapling/driftwood_arch/pearl_fountain/fishing_dock/cobble_well/smelter_brazier with their real coins+item costs and influence grants) + GameState.build_decoration / can_afford_decoration. Building deducts coins + each cost item from the shared inventory (floor/erase write pattern), bumps a per-decoration built count, and grants the new 'influence' currency (the Portal feature will spend it). influence + decorations persist defensively in to_dict/from_dict. Faithful port of src/features/decorations/slice.ts; the React per-LOCATION built model (built[loc].decorations) is simplified to a flat global decorations dict, and cost keys naming resources not yet produced in the port (berry/tile_fish_kelp/tile_fish_oyster) simply read as unaffordable."
     },
     {
       "id": "slice-farm",
@@ -955,12 +955,12 @@
       "feature_or_screen": "decorations view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M10",
       "verified_by": [
         "run_decorations_tests.gd"
       ],
-      "note": "Building decorations management."
+      "note": "DecorationsScreen — parchment modal (mirrors CastleScreen) with a '✨ N Influence' header and one card per decoration: name, cost chips (coins ◉ + each resource amount), a '+N ✨' influence grant, a '×N' built-count badge, and a Build button wired to game.build_decoration (disabled when unaffordable via can_afford_decoration). Reachable via the 🌷 HUD button + deep-link 'decorations'/'decor'. Faithful port of src/features/decorations/index.tsx."
     },
     {
       "id": "view-inventory",
