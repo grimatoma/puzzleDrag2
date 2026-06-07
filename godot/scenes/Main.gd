@@ -107,6 +107,11 @@ var _castle_screen                       ## CanvasLayer (CastleScreenScript), la
 ## as a global (mirrors CastleScreen / AchievementsScreen / RecipeWiki / TileCollection).
 const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
 var _decorations_screen                  ## CanvasLayer (DecorationsScreenScript), lazily created
+## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
+## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
+## as a global (mirrors DecorationsScreen / CastleScreen / RecipeWiki / TileCollection).
+const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
+var _portal_screen                       ## CanvasLayer (PortalScreenScript), lazily created
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
@@ -704,6 +709,27 @@ func _build_hud() -> void:
 	decorations_btn.connect("pressed", Callable(self, "_open_decorations"))
 	root.add_child(decorations_btn)
 
+	# Magic Portal — always-visible "🌀" button, pinned top-LEFT just under the 🌷 decorations
+	# button (offset_top 478, ~38px tall) so the twelve buttons stack without overlapping and
+	# all clear the centred board drag area. Same parchment-pill look. Opens the PortalScreen
+	# (build the portal with coins + runes → summon magic tools with the Influence currency).
+	var portal_btn := Button.new()
+	portal_btn.text = "🌀"
+	portal_btn.add_theme_font_size_override("font_size", 20)
+	portal_btn.add_theme_color_override("font_color", Palette.INK)
+	portal_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	portal_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	portal_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	portal_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	portal_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	portal_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	portal_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	portal_btn.offset_left = 18
+	portal_btn.offset_top = 524
+	portal_btn.tooltip_text = "Magic Portal"
+	portal_btn.connect("pressed", Callable(self, "_open_portal"))
+	root.add_child(portal_btn)
+
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
 # are now in UiKit (M5a). Call via UiKit.<fn>(...).
@@ -1223,6 +1249,34 @@ func _on_decorations_closed() -> void:
 	_refresh_totals()
 	_refresh_chain_progress()
 
+# ── Magic Portal screen ──────────────────────────────────────────────────────
+
+## Open the portal modal, lazily creating + wiring it on first use (mirrors _open_decorations).
+## The screen mutates GameState in place (build_portal deducts coins + runes; summon_magic_tool
+## deducts influence + bumps the tools dict) and re-renders itself, so it only emits `closed`,
+## routed to a hide handler. open() re-reads the live portal_built + influence + tool counts each
+## time, so the screen always reflects current build state + affordability.
+func _open_portal() -> void:
+	if _portal_screen == null:
+		_portal_screen = PortalScreenScript.new()
+		add_child(_portal_screen)
+		_portal_screen.setup(game)
+		_portal_screen.connect("closed", Callable(self, "_on_portal_closed"))
+	_portal_screen.open()
+	_router.open_modal(ViewRouter.Modal.PORTAL)
+
+## The portal screen was closed: hide it, reset the router, and persist (a build spent coins +
+## runes + set the flag; a summon spent influence + granted a tool) + refresh the stockpile HUD
+## so the spent coins disappear from the on-board totals immediately. Mirrors _on_decorations_closed.
+func _on_portal_closed() -> void:
+	if _portal_screen != null:
+		_portal_screen.visible = false
+	_router.close_modal()
+	# A build/summon deducted coins/runes/influence (and granted a tool); persist + refresh HUD.
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 
 ## Open the tutorial onboarding modal, lazily creating + wiring it on first use.
@@ -1369,6 +1423,8 @@ func apply_deeplink(id: String) -> bool:
 			_open_castle()
 		ViewRouter.Modal.DECORATIONS:
 			_open_decorations()
+		ViewRouter.Modal.PORTAL:
+			_open_portal()
 		_:
 			# NONE / board — close whatever is open
 			if _town_screen != null and _town_screen.visible:
@@ -1412,6 +1468,10 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a build is persisted + the stockpile
 				# HUD refreshed (it also hides + resets the router).
 				_on_decorations_closed()
+			elif _portal_screen != null and _portal_screen.visible:
+				# Route through the close handler so a build/summon is persisted + the
+				# stockpile HUD refreshed (it also hides + resets the router).
+				_on_portal_closed()
 	return true
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
