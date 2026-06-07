@@ -203,21 +203,23 @@ func _test_active_pool_and_categories() -> void:
 	var g := GameState.new()
 	_check(g.active_categories() == ["grass", "grain"], "fresh categories are the two staples")
 	var pool0 := g.active_tile_pool()
+	# Match React's FARM_TILE_POOL: the fresh board carries the FULL farm variety
+	# from turn 1 (grass/wheat/bird/carrot/apple/pansy/oak/pig/cow/horse), not a
+	# staples-only gated pool. Spawners BOOST a category's weight rather than unlock it.
 	_check(pool0.has(T.GRASS) and pool0.has(T.WHEAT), "fresh pool has both staples")
-	_check(not pool0.has(T.OAK), "fresh pool has no trees (OAK)")
+	_check(pool0.has(T.OAK) and pool0.has(T.PIG) and pool0.has(T.CARROT),
+		"fresh pool already has the full variety (trees/herd/veg) — matches React")
+	var oak_base := pool0.count(T.OAK)
 
-	# Build lumber_camp → trees category + OAK appears TWICE in the pool.
+	# Build lumber_camp → its tile (OAK) is appended TWICE, boosting tree frequency.
 	g.settlement.tier = TownConfig.TIER_HAMLET
 	_give_all(g, BC.building_cost(BC.LUMBER_CAMP))
 	_check(g.build(BC.LUMBER_CAMP)["ok"], "build lumber_camp for pool test")
 	_check(g.active_categories().has("trees"), "categories include 'trees' after lumber_camp")
 	var pool1 := g.active_tile_pool()
-	_check(pool1.has(T.OAK), "pool contains OAK after lumber_camp")
-	var oak_count := 0
-	for t in pool1:
-		if t == T.OAK:
-			oak_count += 1
-	_check(oak_count == 2, "OAK appears exactly twice (a moderate slice)")
+	_check(pool1.has(T.OAK), "pool still contains OAK after lumber_camp")
+	_check(pool1.count(T.OAK) == oak_base + 2,
+		"lumber_camp BOOSTS OAK weight by 2 (specialisation, not unlock)")
 	# Staples still present.
 	_check(pool1.has(T.GRASS) and pool1.has(T.WHEAT), "staples still in the pool after a build")
 

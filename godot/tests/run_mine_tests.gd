@@ -232,11 +232,11 @@ func _test_note_mine_turn() -> void:
 	_check(int(last.get("turns_left", -1)) == 0, "turns_left == 0 on exit")
 	_check(not g.is_in_mine(), "back on the farm after the last turn")
 	_check(g.active_biome == "farm", "active_biome reset to 'farm'")
-	# active_biome_pool now matches the farm pool again (no buildings → staple pool).
+	# active_biome_pool now matches the farm pool again (no buildings → full farm pool).
 	_check(g.active_biome_pool() == g.active_tile_pool(),
 		"active_biome_pool() falls back to the farm pool after exit")
-	_check(g.active_biome_pool() == Constants.STAPLE_POOL,
-		"farm pool is the staples-only pool (no spawners placed)")
+	_check(g.active_biome_pool() == Constants.FARM_POOL,
+		"farm pool is the full farm variety pool (no spawners placed)")
 	# Collected goods are KEPT (soft-fail).
 	_check(g.qty("block") == 1, "block gathered during the run survives the exit")
 

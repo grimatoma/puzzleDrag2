@@ -1314,12 +1314,15 @@ func active_categories() -> Array:
 			cats.append(cat)
 	return cats
 
-## Active weighted refill pool (Array[int] of Constants.Tile): the STAPLE_POOL
-## plus each placed SPAWNER's representative tile TWICE (a moderate slice). A
-## fresh, building-less game is staples-only. Refiners (Bakery) spawn no tile, so
-## they are skipped — appending their EMPTY tile would corrupt the board pool.
+## Active weighted refill pool (Array[int] of Constants.Tile): the FULL farm
+## variety (Constants.FARM_POOL — grass/wheat/bird/carrot/apple/pansy/oak/pig/cow/
+## horse, matching the React FARM_TILE_POOL so a fresh board is colourful from
+## turn 1) plus each placed SPAWNER's representative tile TWICE (a weight BOOST, so
+## building e.g. a Lumber Camp makes oak spawn MORE often — specialisation, not a
+## category unlock). Refiners (Bakery) spawn no tile, so they are skipped —
+## appending their EMPTY tile would corrupt the board pool.
 func active_tile_pool() -> Array:
-	var pool: Array = Constants.STAPLE_POOL.duplicate()
+	var pool: Array = Constants.FARM_POOL.duplicate()
 	for id in buildings:
 		if not BuildingConfig.is_spawner(id):
 			continue
