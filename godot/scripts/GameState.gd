@@ -295,6 +295,90 @@ func build_decoration(id: String) -> Dictionary:
 	influence += DecorationConfig.influence(id)
 	return {"ok": true, "id": id, "influence": influence}
 
+# ── Magic Portal (ADDITIVE — ported from src/features/portal) ───────────────────
+## Whether the Magic Portal town building has been built. The Portal is the gate that
+## unlocks SUMMONING magic tools (summon_magic_tool): it must be built before any summon
+## succeeds, mirroring React's `built.portal === true` check in the portal slice (the
+## React flag is set by building the Magic Portal town building at src/constants.ts:805,
+## cost 2000 coins + 5 runes — see build_portal below). Starts false.
+##
+## ARCHITECTURE NOTE: the Godot BuildingConfig is a narrow spawner/refiner/hazard catalog
+## with INVENTORY-paid costs; the Portal costs coins + RUNES (non-inventory currencies) and
+## does not fit that model, so it is NOT a BuildingConfig entry. Instead this flag + the
+## build_portal coins/runes gate live directly on GameState, faithfully mirroring React's
+## special-cased portal gate (src/state.ts:808 "Special gate: portal requires runes").
+##
+## Persisted defensively in to_dict / from_dict (a save written before the portal existed
+## loads with portal_built = false). SAVE_VERSION is NOT bumped — like every prior additive
+## field.
+var portal_built: bool = false
+
+## The Magic Portal's one-time build cost (coins + runes), carried from the React portal
+## building (src/constants.ts:805). Both are NON-inventory currencies on GameState.
+const PORTAL_COST_COINS: int = 2000
+const PORTAL_COST_RUNES: int = 5
+
+## True when the Magic Portal can be built RIGHT NOW: it isn't already built AND the player
+## has at least PORTAL_COST_COINS coins and PORTAL_COST_RUNES runes. Mirrors the React
+## affordability gate for the portal building.
+func can_build_portal() -> bool:
+	if portal_built:
+		return false
+	return coins >= PORTAL_COST_COINS and runes >= PORTAL_COST_RUNES
+
+## Build the Magic Portal: deduct PORTAL_COST_COINS coins + PORTAL_COST_RUNES runes (both
+## floored at 0) and set portal_built = true. Mirrors building the React portal town building
+## (coins + runes special gate). Returns {ok:true} on success. On failure returns
+## {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "already_built" → "cant_afford".
+func build_portal() -> Dictionary:
+	if portal_built:
+		return {"ok": false, "reason": "already_built"}
+	if coins < PORTAL_COST_COINS or runes < PORTAL_COST_RUNES:
+		return {"ok": false, "reason": "cant_afford"}
+	coins = maxi(0, coins - PORTAL_COST_COINS)
+	runes = maxi(0, runes - PORTAL_COST_RUNES)
+	portal_built = true
+	return {"ok": true}
+
+## True when magic tool `id` can be summoned RIGHT NOW: the Portal is built, `id` is a real
+## magic tool, AND the player has at least its Influence cost. Mirrors the React
+## SUMMON_MAGIC_TOOL guards (portal built + influence >= cost).
+func can_summon_magic_tool(id: String) -> bool:
+	if not portal_built:
+		return false
+	if not PortalConfig.has_tool(id):
+		return false
+	return influence >= PortalConfig.influence_cost(id)
+
+## Summon magic tool `id`: deduct its Influence cost (floored at 0) and add +1 to the tools
+## dict. Mirrors the React SUMMON_MAGIC_TOOL reducer EXACTLY: the count is written DIRECTLY
+## into `tools` (NOT via grant_tool, which would reject a magic-tool id since magic tools are
+## not ToolConfig members). tool_count(id) reads tools.get(id, 0) without a ToolConfig gate,
+## so a summoned magic tool's ×count surfaces correctly in the view. Returns
+## {ok:true, id, count, influence} (the new tool count + remaining influence) on success. On
+## failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "no_portal" → "unknown" → "cant_afford".
+##
+## SCOPE: this ports the summon ECONOMY only. The summoned magic tool's EFFECT
+## (tap_clear_type / undo_move / restore_turns / fill_bias / transform_tiles / reveal_tiles)
+## routes through the global tool-power system in React and is deferred to the Godot
+## tool-powers milestone (M8) — see PortalConfig's scope note. Summoning credits the count;
+## actually USING the magic tool's power is not wired here.
+func summon_magic_tool(id: String) -> Dictionary:
+	if not portal_built:
+		return {"ok": false, "reason": "no_portal"}
+	if not PortalConfig.has_tool(id):
+		return {"ok": false, "reason": "unknown"}
+	var cost: int = PortalConfig.influence_cost(id)
+	if influence < cost:
+		return {"ok": false, "reason": "cant_afford"}
+	influence = maxi(0, influence - cost)
+	# Write DIRECTLY into the tools dict (mirrors the React slice). grant_tool would reject
+	# this id (magic tools aren't ToolConfig members), so we bypass it deliberately.
+	tools[id] = int(tools.get(id, 0)) + 1
+	return {"ok": true, "id": id, "count": int(tools[id]), "influence": influence}
+
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
 ## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
 ## A missing key reads as 0 (no charges). This is the persisted half of the tool
@@ -1588,6 +1672,10 @@ func to_dict() -> Dictionary:
 		# existed loads with influence 0 + an empty decorations dict (from_dict defaults).
 		"influence": influence,
 		"decorations": decorations.duplicate(),
+		# Magic Portal (ADDITIVE): the build gate flag. SAVE_VERSION is NOT bumped — a save
+		# written before the portal existed loads with portal_built = false (from_dict default),
+		# so the economy is unchanged.
+		"portal_built": portal_built,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -1820,4 +1908,9 @@ static func from_dict(d: Dictionary) -> GameState:
 			var did := String(k)
 			if DecorationConfig.has_decoration(did):
 				s.decorations[did] = maxi(0, int(dec_d[k]))
+	# Restore the Magic Portal build flag (ADDITIVE). Missing key (any save written before the
+	# portal existed) → false (the default the new GameState already carries), so the summon
+	# gate stays closed until the player builds it. Coerced to a plain bool. SAVE_VERSION is
+	# NOT bumped.
+	s.portal_built = bool(d.get("portal_built", false))
 	return s

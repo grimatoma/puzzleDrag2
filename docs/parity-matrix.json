@@ -678,13 +678,12 @@
       "feature_or_screen": "portal slice",
       "category": "slice",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M8",
       "verified_by": [
-        "run_tools_tests.gd",
-        "e2e:tools"
+        "run_portal_tests.gd"
       ],
-      "note": "Base tool use + ToolPalette HUD exist (M8a–M8d). The portal influence economy (fill_bias, auto-apply magic tools without board selection) and the portal/magic-tool concept itself remain absent."
+      "note": "PortalConfig (the 10-magic-tool catalog carried VERBATIM from src/features/portal/data.ts: magic_wand/hourglass/magic_seed/magic_fertilizer/golden_apple/golden_carrot/golden_idol/golden_sheep/philosophers_stone/miners_hat with their real influence costs + effect text + each tool's captured React power metadata) + GameState.build_portal / summon_magic_tool. The summon ECONOMY + build gate are ported: build_portal pays the React portal building's special coins+runes cost (2000 coins + 5 runes) and sets a portal_built flag; summon_magic_tool gates on portal_built + influence >= cost, deducts influence, and writes +1 DIRECTLY into the tools dict (exactly as the React slice does — grant_tool would reject a non-ToolConfig magic-tool id). portal_built persists defensively in to_dict/from_dict. Faithful port of src/features/portal/slice.ts. DEFERRED: the magic-tool EFFECTS (tap_clear_type/undo_move/restore_turns/fill_bias/transform_tiles/reveal_tiles) route through the global tool-power system in React (applyToolPower / ITEMS[key].power) and land with the Godot tool-powers milestone (M8); the fill_bias magic_fertilizerCharges CHAIN_COLLECTED decay is part of that same M8 infra and is intentionally not ported."
     },
     {
       "id": "slice-quests",
@@ -993,13 +992,12 @@
       "feature_or_screen": "portal view",
       "category": "view",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "partial",
       "target_milestone": "M8",
       "verified_by": [
-        "run_tools_tests.gd",
-        "golden:board-farm-tool-rake"
+        "run_portal_tests.gd"
       ],
-      "note": "Base tool use + ToolPalette HUD exist (M8a–M8d). The portal influence economy and auto-apply magic-tool surface remain absent."
+      "note": "PortalScreen — parchment modal (mirrors DecorationsScreen) with two states. NOT built: an empty-state line + a 'Build Portal' button showing the one-time cost (2000 ◉ + 5 runes), disabled unless game.can_build_portal(), wired to game.build_portal(). BUILT: a '✨ Influence: N' header + one card per magic tool (name, effect text, a '×N' owned badge via game.tool_count, and a 'Summon (cost✨)' button wired to game.summon_magic_tool, disabled when game.influence < cost). Reachable via the 🌀 HUD button + deep-link 'portal'/'summon'. Faithful port of src/features/portal/index.tsx. DEFERRED: NO 'Use/Activate' button — the magic-tool effects route through the global tool-power system (M8), so a Use button would be a dead control; it is intentionally omitted (no fakes)."
     },
     {
       "id": "view-quests",
