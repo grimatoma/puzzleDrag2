@@ -821,46 +821,102 @@ func _refresh_tools() -> void:
 
 	_tool_palette_box.visible = true
 
-	# A horizontal row of tool slots. A compact "Tools" heading sits at the left so the
-	# bar reads as a labelled toolbar without stealing much width.
+	# A centred horizontal strip of tool SLOTS — React's tool strip: each tool is an icon
+	# tile with a dark count chip in its corner, the armed one ember-highlighted. No
+	# "Tools" heading (React has none); the icons carry the meaning.
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tool_palette_box.add_child(row)
 
-	var heading_font: Font = UiKit.heading_font()
-	var heading_lbl := Label.new()
-	heading_lbl.text = "Tools"
-	heading_lbl.add_theme_font_size_override("font_size", 16)
-	heading_lbl.add_theme_color_override("font_color", Palette.INK_MID)
-	if heading_font != null:
-		heading_lbl.add_theme_font_override("font", heading_font)
-	heading_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(heading_lbl)
+	var armed_id: String = game.pending_tool if game != null else ""
 
 	for entry in owned:
 		var id: String = String(entry["id"])
 		var charges: int = int(entry["charges"])
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
+		var desc: String = String(cfg.get("desc", ""))
 		var is_tap: bool = ToolConfig.is_tap_target(id)
-		# Each slot: a rounded button showing the tool label + a "×N" count badge, plus a
-		# subtle "↗" tap affordance for tap-target tools. (Tests assert the label + "×N".)
-		var btn_text: String = "%s ×%d" % [label, charges]
-		if is_tap:
-			btn_text += " ↗"   # subtle tap affordance
+		var is_armed: bool = (id == armed_id and armed_id != "")
+
+		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
+		var slot := Control.new()
+		slot.custom_minimum_size = Vector2(54, 54)
+
 		var btn := Button.new()
-		btn.text = btn_text
-		btn.tooltip_text = ("Tap a tile to use" if is_tap else "Fires instantly over the board")
-		UiKit.style_button(btn, Palette.EMBER, 7, 16)
-		# Wire: click → use the tool → rebuild the palette.
+		btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+		var tex := UiKit.resource_icon(id)
+		if tex != null:
+			btn.icon = tex
+			btn.expand_icon = true
+		else:
+			btn.text = label                       # fallback for a tool with no art
+			btn.add_theme_font_size_override("font_size", 12)
+		# Tooltip carries the label + "×N" + the tool's description — the tests read
+		# tooltip_text (the button itself is now icon-only, no inline text).
+		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
+		# Parchment slot, ember-tinted + ember-bordered while this tool is armed.
+		var slot_fill: Color = Palette.PARCHMENT_SOFT
+		var slot_border: Color = Palette.IRON
+		if is_armed:
+			slot_fill = Color(Palette.EMBER, 0.22)
+			slot_border = Palette.EMBER
+		btn.add_theme_stylebox_override("normal", _tool_slot_box(slot_fill, slot_border))
+		btn.add_theme_stylebox_override("hover", _tool_slot_box(slot_fill.lightened(0.06), slot_border))
+		btn.add_theme_stylebox_override("pressed", _tool_slot_box(slot_fill.darkened(0.06), slot_border))
 		btn.pressed.connect(func():
 			use_tool(id)
 			_refresh_tools()
 		)
-		row.add_child(btn)
+		slot.add_child(btn)
+
+		# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
+		var badge := Label.new()
+		badge.text = str(charges)
+		badge.add_theme_font_size_override("font_size", 13)
+		badge.add_theme_color_override("font_color", Palette.PARCHMENT)
+		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		badge.add_theme_stylebox_override("normal", _tool_badge_box())
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.position = Vector2(36, -6)
+		slot.add_child(badge)
+
+		# A small "↗" tap affordance bottom-left for tap-target tools.
+		if is_tap:
+			var tap := Label.new()
+			tap.text = "↗"
+			tap.add_theme_font_size_override("font_size", 12)
+			tap.add_theme_color_override("font_color", Palette.INK_MID)
+			tap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			tap.position = Vector2(3, 34)
+			slot.add_child(tap)
+
+		row.add_child(slot)
 		_tool_buttons[id] = btn
+
+## A square parchment slot StyleBox for a tool icon button (10px radius, 2px border,
+## 6px padding); the fill/border vary so the armed tool reads ember-highlighted.
+func _tool_slot_box(fill: Color, border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = border
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(6)
+	return sb
+
+## A small dark rounded chip for the per-tool charge count, sitting on the slot corner.
+func _tool_badge_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.INK
+	sb.set_corner_radius_all(9)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	return sb
 
 # ── Bottom navigation bar ─────────────────────────────────────────────────────
 
