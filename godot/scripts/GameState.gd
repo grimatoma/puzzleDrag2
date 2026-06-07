@@ -169,6 +169,73 @@ var tutorial_seen: bool = false
 func mark_tutorial_seen() -> void:
 	tutorial_seen = true
 
+# ── Daily login-streak rewards (ADDITIVE — ported from src/state.ts LOGIN_TICK) ──
+## The login-streak state: the calendar date (YYYY-MM-DD) of the LAST claim and the
+## current streak day (1..MAX_DAY). login_tick(today) advances/resets the streak and
+## grants the day's reward (DailyRewardConfig). Ported from the React LOGIN_TICK case
+## EXACTLY: idempotent same-day, +1 on a consecutive calendar day (capped at 30), and a
+## reset to day 1 on any other gap (incl. the very first claim). Defaults
+## (daily_last_claimed="" / daily_streak_day=0) mean a bare GameState.new() has claimed
+## nothing — so with no daily state nothing changes (login_tick is only fired by Main's
+## launch wiring, never by GameState.new()). ADDITIVE GUARANTEE: every existing suite that
+## builds a GameState.new() is unaffected; SAVE_VERSION is NOT bumped — a save written
+## before daily rewards existed loads with the defaults (from_dict defensive defaults).
+var daily_last_claimed: String = ""   ## YYYY-MM-DD of the last claim ("" = never claimed)
+var daily_streak_day: int = 0         ## current streak day (0 = no streak yet, else 1..MAX_DAY)
+
+## Run one login tick for the calendar date `today` (a "YYYY-MM-DD" STRING — pass the
+## date in, never read the system clock here, so tests are deterministic). Mirrors the
+## React LOGIN_TICK reducer EXACTLY:
+##   - IDEMPOTENT: if daily_last_claimed == today, return {claimed:false} WITHOUT mutating
+##     (re-launching the same day grants nothing — no double reward).
+##   - nextDay: no prior claim (daily_last_claimed == "") → 1; exactly 1 calendar day
+##     after the last claim → min(daily_streak_day + 1, MAX_DAY); any other gap → reset to 1.
+##   - GRANT the day's reward (DailyRewardConfig.reward_for_day): coins + runes directly
+##     (both uncapped, like order rewards), and a `tool` grant of `amount` (default 1)
+##     charges through the M8b grant_tool path (every mapped tool id is a real ToolConfig
+##     member). The React `unlockTile` grant is DROPPED (no port tile — see DailyRewardConfig).
+##   - Then set daily_last_claimed = today, daily_streak_day = nextDay.
+## Returns { claimed:bool, day:int, reward:Dictionary }. On the idempotent no-op,
+## `day` reports the unchanged current streak day and `reward` is {} (nothing granted).
+func login_tick(today: String) -> Dictionary:
+	# Idempotent: the same calendar day grants nothing (React `if (last === today) return state`).
+	if daily_last_claimed == today:
+		return {"claimed": false, "day": daily_streak_day, "reward": {}}
+	var next_day: int
+	if daily_last_claimed == "":
+		# No prior claim → start the streak at day 1.
+		next_day = 1
+	else:
+		# Diff in whole calendar days between the last claim and today. Both parsed as
+		# midnight UTC (the "T00:00:00" suffix) so the delta is a clean multiple of 86400.
+		var last_unix: int = int(Time.get_unix_time_from_datetime_string(daily_last_claimed + "T00:00:00"))
+		var today_unix: int = int(Time.get_unix_time_from_datetime_string(today + "T00:00:00"))
+		var diff_days: int = int(roundi(float(today_unix - last_unix) / 86400.0))
+		if diff_days == 1:
+			# Exactly one day later → extend the streak, capped at MAX_DAY.
+			next_day = mini(daily_streak_day + 1, DailyRewardConfig.MAX_DAY)
+		else:
+			# Any other gap (skipped a day, went backwards, far future) → reset to day 1.
+			next_day = 1
+	var reward: Dictionary = DailyRewardConfig.reward_for_day(next_day)
+	# Grant coins + runes (uncapped currencies).
+	var reward_coins: int = int(reward.get("coins", 0))
+	if reward_coins > 0:
+		coins += reward_coins
+	var reward_runes: int = int(reward.get("runes", 0))
+	if reward_runes > 0:
+		runes += reward_runes
+	# Grant the tool reward (if any) through the M8b grant_tool path — every mapped tool
+	# id is a real ToolConfig member, so grant_tool accepts it and stacks onto any existing
+	# charges. amount defaults to 1 (React `reward.amount ?? 1`).
+	var tool_id: String = String(reward.get("tool", ""))
+	if tool_id != "":
+		grant_tool(tool_id, int(reward.get("amount", 1)))
+	# Commit the new streak state.
+	daily_last_claimed = today
+	daily_streak_day = next_day
+	return {"claimed": true, "day": next_day, "reward": reward.duplicate(true)}
+
 # ── Castle contributions (ADDITIVE — ported from src/features/castle) ───────────
 ## The Castle is a ONE-WAY SINK: the player donates resources from the shared
 ## `inventory` toward each CastleConfig need, and the donated total per need is tracked
@@ -1825,6 +1892,12 @@ func to_dict() -> Dictionary:
 		# seen/skipped. SAVE_VERSION is NOT bumped — a save written before tutorial
 		# existed loads with false (show once on upgrade). Defaults to false.
 		"tutorial_seen": tutorial_seen,
+		# Daily login-streak rewards (ADDITIVE): the last-claimed calendar date + the
+		# current streak day. SAVE_VERSION is NOT bumped — a save written before daily
+		# rewards existed loads with "" / 0 (never claimed) via from_dict's defensive
+		# defaults, so the streak simply starts fresh on the next launch.
+		"daily_last_claimed": daily_last_claimed,
+		"daily_streak_day": daily_streak_day,
 		# Castle contributions (ADDITIVE): per-need donated totals (the one-way sink).
 		# SAVE_VERSION is NOT bumped — like every prior additive field, a save written
 		# before the castle existed loads with all needs at 0 (from_dict defensive
@@ -2061,6 +2134,20 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore tutorial_seen (ADDITIVE). Missing key (any save written before tutorial
 	# existed) → false (show the tutorial once on upgrade). Coerced to plain bool.
 	s.tutorial_seen = bool(d.get("tutorial_seen", false))
+	# Restore daily login-streak state (ADDITIVE). Missing keys (any save written before
+	# daily rewards existed) → "" / 0 (never claimed), the defaults the new GameState already
+	# carries, so old saves start a fresh streak on the next launch. The date is coerced to a
+	# String; the streak day is int-coerced, floored at 0, and clamped to MAX_DAY so a corrupt
+	# saved value can never push the streak past its cap. If the date is empty (or not a
+	# String) the day is forced to 0 too, so a "" date never carries a phantom streak day
+	# (mirrors the never-claimed invariant: daily_last_claimed=="" implies day 0).
+	# SAVE_VERSION is NOT bumped (additive default).
+	var dlc: Variant = d.get("daily_last_claimed", "")
+	s.daily_last_claimed = String(dlc) if dlc is String else ""
+	if s.daily_last_claimed == "":
+		s.daily_streak_day = 0
+	else:
+		s.daily_streak_day = clampi(int(d.get("daily_streak_day", 0)), 0, DailyRewardConfig.MAX_DAY)
 	# Restore Castle contributions (ADDITIVE). Missing key (any save written before the
 	# castle existed) → all needs at 0 (the _default_castle() the new GameState already
 	# carries). Each value is coerced to int (JSON yields floats), kept only for REAL
