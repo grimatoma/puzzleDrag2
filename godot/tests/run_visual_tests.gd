@@ -1,17 +1,24 @@
 extends SceneTree
 ## Visual regression harness — scenario × viewport golden-diff suite.
 ##
-## Renders each game surface at 720×1280 (the project's portrait viewport), captures a PNG,
-## and compares it to a committed golden under tests/visual/__goldens__/<platform>/<scenario>/
-## <viewport>.png (platform = OS.get_name(), e.g. "Windows" / "Linux"). This sidesteps the
-## cross-platform pixel divergence (Windows/NVIDIA vs Linux/llvmpipe) by tagging goldens per
-## platform.
+## Renders each game surface and compares it to a committed golden under
+## tests/visual/__goldens__/<platform>/<scenario>/<viewport>.png (platform = OS.get_name(),
+## e.g. "Windows" / "Linux"). This sidesteps the cross-platform pixel divergence (Windows/NVIDIA
+## vs Linux/llvmpipe) by tagging goldens per platform.
 ##
-## Modes:
+## VIEWPORTS (M11 desktop framing). The game is authored at 720×1280 (logical content size, kept
+## as content_scale_size for BOTH viewports so stretch=keep frames it). The suite captures two
+## window shapes:
+##   • portrait 720×1280 — native; window == content, no bars. Runs for ALL scenarios.
+##   • desktop  1280×800 — landscape; window ≠ content, so the portrait content PILLARBOXES
+##     centred. Runs for a representative subset (DESKTOP_SCENARIOS) where framing matters.
+## The per-viewport golden filename (portrait.png / desktop.png) lets both coexist per scenario.
+##
+## Modes (per scenario × viewport):
 ##   • Golden EXISTS for the current platform → tolerant per-pixel diff (channel delta > 12 ⇒
 ##     differing pixel; FAIL the scenario if differing pixels > 1.0% of total).
-##   • Golden MISSING for the current platform → render-smoke: assert the capture is exactly
-##     720×1280 AND not a uniform/blank frame (real content present). Counts as a real check.
+##   • Golden MISSING for the current platform → render-smoke: assert the capture is exactly the
+##     viewport's window size AND not a uniform/blank frame (real content present). A real check.
 ##
 ## Both modes contribute checks to the "N checks, M failure(s)" tally; exit 0 on all-pass.
 ##
@@ -24,14 +31,52 @@ extends SceneTree
 ##   godot --path godot --script res://tests/run_visual_tests.gd                # diff mode
 ##   godot --path godot --script res://tests/run_visual_tests.gd -- --update    # refresh goldens
 ##
-## On a real diff FAILURE the actual capture is written to tests/visual/__captures__/<scenario>.png
+## On a real diff FAILURE the capture is written to tests/visual/__captures__/<scenario>-<viewport>.png
 ## (with the differing-pixel %) so a human can inspect. Goldens are loaded via
 ## Image.load_from_file(globalize_path(...)) — NOT the resource importer — and tests/visual/
 ## carries a .gdignore so Godot never imports the PNGs (no .import sidecars).
 
 # ── Tuning ───────────────────────────────────────────────────────────────────────────────
-const VIEWPORT := Vector2i(720, 1280)
-const VIEWPORT_NAME := "portrait"
+# Logical content size — the base resolution the game is authored at. With stretch=keep this
+# is ALWAYS the content_scale_size regardless of the on-screen window shape; the engine then
+# letterboxes (portrait window) or pillarboxes (landscape window) the rendered result. Both
+# viewports below keep THIS as content_scale_size and only differ in the WINDOW (capture) size.
+const CONTENT_SIZE := Vector2i(720, 1280)
+
+# Viewports the suite renders at. Each row: { name, size: Vector2i (the WINDOW size we resize to) }.
+#   • portrait 720×1280 — the native authored size; window == content, no bars. Runs for ALL
+#     scenarios (full coverage, unchanged).
+#   • desktop 1280×800 — a LANDSCAPE desktop window. Window ≠ content, so stretch=keep frames
+#     the 720×1280 portrait content centred — the meaningful framing test. Runs for a
+#     representative subset (DESKTOP_SCENARIOS below) where framing matters.
+#
+# CAPTURE-SIZE NOTE. With stretch=keep + content_scale_mode=canvas_items, the root viewport's
+# render target (what root.get_texture() yields) is the LARGEST CONTENT_SIZE-aspect rect that
+# FITS the window — the engine pillarboxes by leaving the surrounding window area to the OS
+# compositor (the bars aren't in the root texture). So the captured frame is:
+#   portrait 1280-tall window → 720×1280 (window == fit, no shrink)
+#   desktop  800-tall window  → height-bound: 800 × round(720/1280*800) = 450×800 (a fitted 9:16)
+# This 9:16 capture IS the desktop-framed content as the player sees it centred in the window —
+# correctly scaled, aspect-preserved, no clipping/distortion. _capture_size() computes it so the
+# render-smoke size check (and the goldens) key on the real captured dimensions, not the window.
+const VIEWPORTS := [
+	{"name": "portrait", "size": Vector2i(720, 1280)},
+	{"name": "desktop", "size": Vector2i(1280, 800)},
+]
+
+## The captured-frame size for a given WINDOW size: CONTENT_SIZE scaled to FIT (keep-aspect)
+## inside the window — mirrors what stretch=keep/canvas_items renders into root.get_texture().
+func _capture_size(win_size: Vector2i) -> Vector2i:
+	var scale: float = minf(
+		float(win_size.x) / float(CONTENT_SIZE.x),
+		float(win_size.y) / float(CONTENT_SIZE.y))
+	return Vector2i(roundi(CONTENT_SIZE.x * scale), roundi(CONTENT_SIZE.y * scale))
+
+# Scenarios captured at the desktop (landscape) viewport — a representative subset spanning the
+# board, the town map, both world maps, the inventory ledger, and a centred modal, so desktop
+# pillarbox framing is proven across the surface shapes without re-shooting all 19 scenarios.
+const DESKTOP_SCENARIOS := ["board-farm-idle", "town-map", "cartography", "inventory", "menu"]
+
 const CHANNEL_TOLERANCE := 12        # per-channel delta above which a pixel is "different"
 const DIFF_FAIL_FRACTION := 0.01     # FAIL if differing pixels > 1.0% of total
 const SETTLE_FRAMES := 22            # frames to await after seeding/deeplink before capture
@@ -234,15 +279,20 @@ func _scenarios() -> Array:
 	]
 
 # ── Capture pipeline ───────────────────────────────────────────────────────────────────────
-## Build a fresh Main, resize to the portrait viewport, seed, deeplink, settle, capture. Frees
-## Main before returning so scenarios never stack. Returns the captured Image (or null on error).
-func _capture_scenario(scn: Dictionary) -> Image:
+## Build a fresh Main, size the WINDOW to `vp_size`, seed, deeplink, settle, capture. The
+## content_scale_size is ALWAYS pinned to CONTENT_SIZE (720×1280) so stretch=keep frames the
+## portrait content: at the portrait viewport window==content (no bars); at the desktop
+## (landscape) viewport window≠content so the content pillarboxes centred. Frees Main before
+## returning so scenarios never stack. Returns the captured Image (or null on error).
+func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 	SaveManager.clear()                                  # deterministic fresh game per scenario
 
-	# Pin the window/root viewport to the portrait size BEFORE instancing so the first layout
-	# already targets 720×1280.
-	DisplayServer.window_set_size(VIEWPORT)
-	root.set_content_scale_size(VIEWPORT)
+	# Pin the WINDOW to this viewport's size and the logical content to 720×1280 BEFORE
+	# instancing so the first layout already targets the right shape. Keeping content_scale_size
+	# at CONTENT_SIZE (NOT vp_size) is what makes the desktop viewport pillarbox instead of
+	# re-flowing the HUD — the deliverable is graceful framing, which stretch=keep provides.
+	DisplayServer.window_set_size(vp_size)
+	root.set_content_scale_size(CONTENT_SIZE)
 
 	var main = load("res://scenes/Main.tscn").instantiate()
 	root.add_child(main)
@@ -289,15 +339,17 @@ func _capture_scenario(scn: Dictionary) -> Image:
 	return img
 
 # ── Image comparison ───────────────────────────────────────────────────────────────────────
-func _golden_path(scn_id: String) -> String:
-	return "%s/%s/%s/%s.png" % [GOLDEN_ROOT, OS.get_name(), scn_id, VIEWPORT_NAME]
+## Golden slot for a scenario × viewport: <root>/<platform>/<scenario>/<viewport>.png. The
+## per-viewport filename is why portrait + desktop goldens coexist under one scenario dir.
+func _golden_path(scn_id: String, vp_name: String) -> String:
+	return "%s/%s/%s/%s.png" % [GOLDEN_ROOT, OS.get_name(), scn_id, vp_name]
 
-func _golden_exists(scn_id: String) -> bool:
-	return FileAccess.file_exists(_golden_path(scn_id))
+func _golden_exists(scn_id: String, vp_name: String) -> bool:
+	return FileAccess.file_exists(_golden_path(scn_id, vp_name))
 
 ## Load a golden via Image.load_from_file (globalized path) — never the resource importer.
-func _load_golden(scn_id: String) -> Image:
-	var abs := ProjectSettings.globalize_path(_golden_path(scn_id))
+func _load_golden(scn_id: String, vp_name: String) -> Image:
+	var abs := ProjectSettings.globalize_path(_golden_path(scn_id, vp_name))
 	return Image.load_from_file(abs)
 
 ## Ensure a directory exists for the given res:// path (creates recursively).
@@ -305,23 +357,23 @@ func _ensure_dir(res_path: String) -> void:
 	var abs := ProjectSettings.globalize_path(res_path)
 	DirAccess.make_dir_recursive_absolute(abs)
 
-## Write `img` to the per-platform golden slot for `scn_id`.
-func _write_golden(scn_id: String, img: Image) -> int:
+## Write `img` to the per-platform golden slot for `scn_id` × `vp_name`.
+func _write_golden(scn_id: String, vp_name: String, img: Image) -> int:
 	_ensure_dir("%s/%s/%s" % [GOLDEN_ROOT, OS.get_name(), scn_id])
-	var abs := ProjectSettings.globalize_path(_golden_path(scn_id))
+	var abs := ProjectSettings.globalize_path(_golden_path(scn_id, vp_name))
 	return img.save_png(abs)
 
-## Write a failing capture to __captures__/<scenario>.png for human inspection.
-func _write_capture(scn_id: String, img: Image) -> void:
+## Write a failing capture to __captures__/<scenario>-<viewport>.png for human inspection.
+func _write_capture(scn_id: String, vp_name: String, img: Image) -> void:
 	_ensure_dir(CAPTURE_ROOT)
-	var abs := ProjectSettings.globalize_path("%s/%s.png" % [CAPTURE_ROOT, scn_id])
+	var abs := ProjectSettings.globalize_path("%s/%s-%s.png" % [CAPTURE_ROOT, scn_id, vp_name])
 	img.save_png(abs)
 
-## Render-smoke heuristic: image is exactly the expected size AND has real content (not a
+## Render-smoke heuristic: image is exactly `expected` size AND has real content (not a
 ## uniform/near-uniform frame). "Has content" = at least SMOKE_MIN_DISTINCT distinct quantised
 ## colours sampled across the frame. Returns { size_ok, content_ok, distinct }.
-func _render_smoke(img: Image) -> Dictionary:
-	var size_ok: bool = img.get_width() == VIEWPORT.x and img.get_height() == VIEWPORT.y
+func _render_smoke(img: Image, expected: Vector2i) -> Dictionary:
+	var size_ok: bool = img.get_width() == expected.x and img.get_height() == expected.y
 	var seen := {}
 	# Sample on a stride so the scan stays cheap (~ every 6th px in each axis).
 	var step := 6
@@ -374,47 +426,61 @@ func _initialize() -> void:
 	_update_mode = user_args.has("--update")
 
 	print("\n── Visual regression harness ───────────────────────")
-	print("  platform=%s  viewport=%dx%d  mode=%s" % [
-		OS.get_name(), VIEWPORT.x, VIEWPORT.y, "UPDATE" if _update_mode else "DIFF"])
+	print("  platform=%s  content=%dx%d  viewports=%s  mode=%s" % [
+		OS.get_name(), CONTENT_SIZE.x, CONTENT_SIZE.y,
+		", ".join(VIEWPORTS.map(func(v): return "%s(%dx%d)" % [v["name"], v["size"].x, v["size"].y])),
+		"UPDATE" if _update_mode else "DIFF"])
 
-	for scn in _scenarios():
-		var scn_id: String = scn["id"]
-		var img := await _capture_scenario(scn)
+	# Iterate viewport (outer) × scenario (inner). portrait runs for ALL scenarios; desktop runs
+	# only for DESKTOP_SCENARIOS (the framing-representative subset) — so portrait coverage is
+	# unchanged and desktop adds a focused pillarbox check.
+	for vp in VIEWPORTS:
+		var vp_name: String = vp["name"]
+		var vp_size: Vector2i = vp["size"]
+		for scn in _scenarios():
+			var scn_id: String = scn["id"]
+			if vp_name == "desktop" and not DESKTOP_SCENARIOS.has(scn_id):
+				continue   # desktop viewport is a representative subset only
 
-		if img == null:
-			_check(false, "%s — capture produced a null image" % scn_id)
-			continue
+			var img := await _capture_scenario(scn, vp_size)
+			var tag := "%s/%s" % [scn_id, vp_name]   # scenario × viewport label in the tally
 
-		if _update_mode:
-			var werr := _write_golden(scn_id, img)
-			_check(werr == OK, "%s — wrote golden (%dx%d) err=%d" % [
-				scn_id, img.get_width(), img.get_height(), werr])
-			continue
-
-		if _golden_exists(scn_id):
-			# Tolerant pixel-diff against the committed golden for this platform.
-			var golden := _load_golden(scn_id)
-			if golden == null:
-				_check(false, "%s — golden failed to load from %s" % [scn_id, _golden_path(scn_id)])
+			if img == null:
+				_check(false, "%s — capture produced a null image" % tag)
 				continue
-			var res := _diff(golden, img)
-			if not bool(res["ok"]):
-				_write_capture(scn_id, img)
-			_check(bool(res["ok"]), "%s — pixel-diff %.3f%% (%d/%d px > tol %d) ≤ %.1f%%%s" % [
-				scn_id, float(res["diff_frac"]) * 100.0, int(res["diff_px"]), int(res["total"]),
-				CHANNEL_TOLERANCE, DIFF_FAIL_FRACTION * 100.0,
-				"" if bool(res["ok"]) else "  → wrote __captures__/%s.png" % scn_id])
-		else:
-			# No golden for this platform → render-smoke (size + non-blank content).
-			var smoke := _render_smoke(img)
-			var ok: bool = bool(smoke["size_ok"]) and bool(smoke["content_ok"])
-			if not ok:
-				_write_capture(scn_id, img)
-			_check(ok, "%s — render-smoke size=%s content=%s (%d distinct ≥ %d) [no %s golden]" % [
-				scn_id,
-				"OK" if bool(smoke["size_ok"]) else "BAD(%dx%d)" % [img.get_width(), img.get_height()],
-				"OK" if bool(smoke["content_ok"]) else "BLANK",
-				int(smoke["distinct"]), SMOKE_MIN_DISTINCT, OS.get_name()])
+
+			if _update_mode:
+				var werr := _write_golden(scn_id, vp_name, img)
+				_check(werr == OK, "%s — wrote golden (%dx%d) err=%d" % [
+					tag, img.get_width(), img.get_height(), werr])
+				continue
+
+			if _golden_exists(scn_id, vp_name):
+				# Tolerant pixel-diff against the committed golden for this platform × viewport.
+				var golden := _load_golden(scn_id, vp_name)
+				if golden == null:
+					_check(false, "%s — golden failed to load from %s" % [tag, _golden_path(scn_id, vp_name)])
+					continue
+				var res := _diff(golden, img)
+				if not bool(res["ok"]):
+					_write_capture(scn_id, vp_name, img)
+				_check(bool(res["ok"]), "%s — pixel-diff %.3f%% (%d/%d px > tol %d) ≤ %.1f%%%s" % [
+					tag, float(res["diff_frac"]) * 100.0, int(res["diff_px"]), int(res["total"]),
+					CHANNEL_TOLERANCE, DIFF_FAIL_FRACTION * 100.0,
+					"" if bool(res["ok"]) else "  → wrote __captures__/%s-%s.png" % [scn_id, vp_name]])
+			else:
+				# No golden for this platform × viewport → render-smoke (size + non-blank content).
+				# Expect the FITTED capture size (CONTENT_SIZE scaled into the window), not the raw
+				# window size — see the CAPTURE-SIZE NOTE on VIEWPORTS.
+				var smoke := _render_smoke(img, _capture_size(vp_size))
+				var ok: bool = bool(smoke["size_ok"]) and bool(smoke["content_ok"])
+				if not ok:
+					_write_capture(scn_id, vp_name, img)
+				_check(ok, "%s — render-smoke size=%s content=%s (%d distinct ≥ %d) [no %s golden]" % [
+					tag,
+					"OK" if bool(smoke["size_ok"]) else "BAD(%dx%d)" % [img.get_width(), img.get_height()],
+					"OK" if bool(smoke["content_ok"]) else "BLANK",
+					int(smoke["distinct"]), SMOKE_MIN_DISTINCT, OS.get_name()])
 
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])

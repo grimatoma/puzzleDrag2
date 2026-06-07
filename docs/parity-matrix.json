@@ -2256,14 +2256,14 @@
       "feature_or_screen": "Desktop/HiDPI framing + responsive sizing",
       "category": "infra",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M11",
       "verified_by": [
         "run_visual_tests.gd",
         "golden:hidpi",
         "ci:web-export"
       ],
-      "note": "project.godot desktop default size + content-scale/aspect; responsive breakpoints reusing the M5 Theme/scenes; second (desktop) viewport in the visual matrix."
+      "note": "Desktop framing shipped: project.godot adds a resizable, HiDPI-allowed window that opens at a desktop-friendly 540×960 (the base 720×1280 resolution is preserved; stretch=canvas_items/keep pillarboxes the portrait content at non-9:16 windows) + a runtime 360×640 min_size in Main._ready() (guarded non-headless/non-web). The hand-authored project.godot keys (aspect=keep, emulate_mouse_from_touch) are preserved (additions-only). run_visual_tests.gd now iterates viewports with a second 1280×800 'desktop' viewport (5 committed desktop goldens: board/town-map/cartography/inventory/menu, 0% diff) verifying the layout frames correctly on desktop. _layout() needed no change — get_viewport_rect() stays 720×1280 under stretch=keep, so the HUD/board centre with no clipping. Mobile-app store export (iOS/Android signing) remains externally blocked."
     }
   ]
 }

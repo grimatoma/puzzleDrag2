@@ -152,6 +152,16 @@ var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each
 var _fx_layer: CanvasLayer
 
 func _ready() -> void:
+	# M11 desktop-framing: enforce a minimum window size so the portrait HUD never
+	# collapses when the player shrinks a resizable desktop window. Godot 4.6 has no
+	# project setting for a minimum size (resizable + the window-size override ARE
+	# project.godot keys — see [display]), so the floor is applied here via the Window
+	# API. A 360×640 9:16 floor keeps the top-bar pills + board readable. Guarded to a
+	# real windowed display server so headless (the test sweep) and web are no-ops.
+	if DisplayServer.get_name() != "headless" and not OS.has_feature("web"):
+		var win := get_window()
+		if win != null:
+			win.min_size = Vector2i(360, 640)
 	game = SaveManager.load_state()
 	# Seed the order generator with a fixed int so the running game's orders (and
 	# screenshots) are deterministic, then top the order board up to MAX_ORDERS.
