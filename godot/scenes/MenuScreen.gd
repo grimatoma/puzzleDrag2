@@ -33,6 +33,29 @@ signal closed
 signal toggle_sound
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
 signal new_game
+## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
+## screen to open (e.g. "achievements", "chronicle", "debug"). Main closes the menu and
+## routes it through apply_deeplink — the SAME path the secondary screens used as left-strip
+## HUD buttons before they moved into this menu. The menu never opens screens itself.
+signal navigate(deeplink_id: String)
+
+## The "More" navigation entries — every secondary screen that used to be a left-strip HUD
+## button, now reachable from the menu. Each row: {icon, label, id (a ViewRouter deep-link)}.
+## The five primary screens (Town / Inventory / Craft / Map / Townsfolk) live on the bottom
+## nav and are intentionally NOT duplicated here.
+const MORE_ENTRIES := [
+	{"icon": "🏆", "label": "Achievements", "id": "achievements"},
+	{"icon": "📖", "label": "Tiles", "id": "tiles"},
+	{"icon": "📜", "label": "Chronicle", "id": "chronicle"},
+	{"icon": "🍳", "label": "Recipes", "id": "recipes"},
+	{"icon": "🏰", "label": "Castle", "id": "castle"},
+	{"icon": "🌷", "label": "Decorations", "id": "decorations"},
+	{"icon": "🌀", "label": "Portal", "id": "portal"},
+	{"icon": "⚖️", "label": "Charter", "id": "charter"},
+	{"icon": "📋", "label": "Quests", "id": "quests"},
+	{"icon": "🎁", "label": "Daily", "id": "daily"},
+	{"icon": "🐞", "label": "Debug", "id": "debug"},
+]
 
 ## action id → Button, for headless tests. Keys: "toggle_sound", "new_game", "close".
 var _action_buttons: Dictionary = {}
@@ -152,6 +175,12 @@ func _build_shell() -> void:
 	col.add_child(new_btn)
 	_action_buttons["new_game"] = new_btn
 
+	# ── "More" navigation section ─────────────────────────────────────────────
+	# The secondary screens that used to be left-strip HUD buttons. A small heading,
+	# then a scrolling list of labelled nav buttons. Each closes the menu + emits
+	# navigate(id); Main routes it through apply_deeplink. Registered as "nav:<id>".
+	_build_more_section(col)
+
 	# Close — dismiss the modal.
 	var close_btn := Button.new()
 	close_btn.text = "Close"
@@ -160,6 +189,53 @@ func _build_shell() -> void:
 	close_btn.connect("pressed", Callable(self, "close"))
 	col.add_child(close_btn)
 	_action_buttons["close"] = close_btn
+
+# ── "More" navigation section ───────────────────────────────────────────────────
+
+## Build the "More" section: a small heading + a height-capped ScrollContainer holding
+## one labelled nav Button per MORE_ENTRIES row. Each button closes the menu and emits
+## navigate(id) (Main routes it through apply_deeplink). Registered as "nav:<id>" in
+## `_action_buttons` so the headless test can find + fire any entry and assert it navigates.
+func _build_more_section(col: VBoxContainer) -> void:
+	var heading := Label.new()
+	heading.text = "More"
+	heading.add_theme_font_size_override("font_size", 18)
+	heading.add_theme_color_override("font_color", COL_TITLE)
+	var heading_font: Font = UiKit.heading_font()
+	if heading_font != null:
+		heading.add_theme_font_override("font", heading_font)
+	col.add_child(heading)
+
+	# A height-capped scroller so all 11 entries are reachable without the card growing
+	# past the viewport. The list scrolls inside the fixed-height container.
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 260)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+
+	for entry in MORE_ENTRIES:
+		var id: String = String(entry["id"])
+		var btn := Button.new()
+		btn.text = "%s  %s" % [String(entry["icon"]), String(entry["label"])]
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		UiKit.style_button(btn, Palette.MOSS, 8, 18)
+		btn.connect("pressed", Callable(self, "_on_nav_pressed").bind(id))
+		list.add_child(btn)
+		_action_buttons["nav:" + id] = btn
+
+## A "More" nav button was pressed: close the menu, then emit navigate(id) so Main opens
+## the target screen via apply_deeplink. Closing first means the opened screen layers cleanly
+## over the board, not over the (now-dismissed) menu.
+func _on_nav_pressed(id: String) -> void:
+	close()
+	emit_signal("navigate", id)
 
 # ── action handlers ───────────────────────────────────────────────────────────
 

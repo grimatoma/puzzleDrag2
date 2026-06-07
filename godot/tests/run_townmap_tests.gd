@@ -170,6 +170,37 @@ func _run_interaction() -> void:
 	_check(map != null, "TownMapScreen exposes its TownMap node")
 	_check(map.built_count() == 1, "map built_count() == 1 (lumber_camp on slot 0)")
 
+	# ── M-nav: the prominent "Build · N/N plots" button (matches React) ──────────
+	# A discoverable Build affordance, bottom-right, registered as "build_open". Its
+	# label reflects the live built/total plot counts, and pressing it opens the build
+	# picker (the SAME picker a click on an empty plot opens) — then an affordable Build
+	# in that picker actually grows game.buildings.
+	_check(screen._action_buttons.has("build_open"), "TownMapScreen registered a 'build_open' Build button")
+	var build_open_btn = screen._action_buttons["build_open"]
+	_check("Build" in build_open_btn.text, "Build button label reads 'Build …' (got '%s')" % build_open_btn.text)
+	_check("%d/%d" % [game.buildings.size(), max(1, game.settlement.plots())] in build_open_btn.text,
+		"Build button label shows the live built/total plot counts")
+	# Pressing the Build button opens the picker with ≥1 enabled build:<id>.
+	build_open_btn.emit_signal("pressed")
+	await process_frame
+	_check(screen._action_buttons.has("picker_close"), "pressing Build opened the build picker")
+	var build_via_btn: String = ""
+	for k in screen._action_buttons.keys():
+		if String(k).begins_with("build:") and not screen._action_buttons[k].disabled:
+			build_via_btn = String(k)
+			break
+	_check(build_via_btn != "", "Build-button picker has ≥1 ENABLED build:<id> (got '%s')" % build_via_btn)
+	var built_via_btn_before: int = game.buildings.size()
+	if build_via_btn != "":
+		screen._action_buttons[build_via_btn].emit_signal("pressed")
+		await process_frame
+	_check(game.buildings.size() == built_via_btn_before + 1,
+		"building via the prominent Build button grew game.buildings by 1 (%d → %d)"
+		% [built_via_btn_before, game.buildings.size()])
+	# Refresh re-labels the Build button with the new built count.
+	_check("%d/%d" % [game.buildings.size(), max(1, game.settlement.plots())] in build_open_btn.text,
+		"Build button label updated after the build (%s)" % build_open_btn.text)
+
 	# A click on the centre of slot 0 resolves to slot 0, which is BUILT.
 	var c0: Vector2 = map.lot_screen_center(0)
 	_check(map.lot_at_screen(c0) == 0, "click on slot 0 resolves to lot 0")

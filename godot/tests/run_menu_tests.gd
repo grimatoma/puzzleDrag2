@@ -24,6 +24,8 @@ var _failures: int = 0
 var _toggle_count: int = 0
 var _newgame_count: int = 0
 var _closed_count: int = 0
+var _navigate_count: int = 0
+var _navigate_last: String = ""
 
 func _check(cond: bool, msg: String) -> void:
 	_checks += 1
@@ -42,6 +44,10 @@ func _on_new_game() -> void:
 
 func _on_closed() -> void:
 	_closed_count += 1
+
+func _on_navigate(id: String) -> void:
+	_navigate_count += 1
+	_navigate_last = id
 
 ## Press the action button registered under `key`. Returns true if it existed.
 func _press(menu, key: String) -> bool:
@@ -83,11 +89,33 @@ func _initialize() -> void:
 	menu.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
 	menu.connect("new_game", Callable(self, "_on_new_game"))
 	menu.connect("closed", Callable(self, "_on_closed"))
+	menu.connect("navigate", Callable(self, "_on_navigate"))
 
 	_check(menu.visible, "menu is visible after open()")
 	_check(menu._action_buttons.has("toggle_sound"), "_action_buttons has 'toggle_sound'")
 	_check(menu._action_buttons.has("new_game"), "_action_buttons has 'new_game'")
 	_check(menu._action_buttons.has("close"), "_action_buttons has 'close'")
+
+	# ── "More" navigation section ──────────────────────────────────────────────
+	# Every secondary screen that moved out of the old left-strip HUD into the menu has
+	# a "nav:<id>" button. Spot-check a representative few, then prove pressing one
+	# CLOSES the menu and emits navigate(id) (Main routes that through apply_deeplink).
+	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "recipes", "daily", "debug"]:
+		_check(menu._action_buttons.has("nav:" + id), "_action_buttons has 'nav:%s'" % id)
+	# The five PRIMARY tabs (town/inventory/craft/map/townsfolk) live on the bottom nav
+	# and must NOT be duplicated in the menu's More list.
+	_check(not menu._action_buttons.has("nav:town"), "menu does NOT duplicate the Town tab")
+	_check(not menu._action_buttons.has("nav:inventory"), "menu does NOT duplicate the Inventory tab")
+
+	var before_nav := _navigate_count
+	var before_nav_closed := _closed_count
+	_check(_press(menu, "nav:chronicle"), "pressed the 'nav:chronicle' More button")
+	_check(_navigate_count == before_nav + 1, "navigate signal fired once")
+	_check(_navigate_last == "chronicle", "navigate carried the 'chronicle' deep-link id")
+	_check(_closed_count == before_nav_closed + 1, "pressing a More button also closed the menu")
+	_check(not menu.visible, "menu hidden after a More button is pressed")
+	# Re-open the menu for the remaining (toggle/new-game/close) checks below.
+	menu.open()
 
 	# Sound label reflects the (unmuted) game preference.
 	var sound_btn: Variant = menu._action_buttons.get("toggle_sound")
@@ -156,6 +184,18 @@ func _initialize() -> void:
 	_check(main._menu_screen != null, "_open_menu() lazily created the MenuScreen")
 	_check(main._menu_screen is MenuScreen, "_menu_screen is a MenuScreen")
 	_check(main._menu_screen.visible, "menu is visible after _open_menu()")
+
+	# Pressing a "More" nav button routes through Main: the menu closes + emits navigate,
+	# and Main opens the matching secondary screen via apply_deeplink (the SAME path the
+	# old left-strip HUD buttons used). Spot-check the Chronicle entry end-to-end.
+	main._menu_screen._action_buttons["nav:chronicle"].emit_signal("pressed")
+	await process_frame
+	_check(not main._menu_screen.visible, "menu closed after pressing a More nav button")
+	_check(main._chronicle_screen != null and main._chronicle_screen.visible,
+		"pressing 'nav:chronicle' opened the Chronicle screen via apply_deeplink")
+	_check(main._router.current_modal() == ViewRouter.Modal.CHRONICLE,
+		"_router.current_modal() == CHRONICLE after the More-nav deeplink")
+	SaveManager.clear()
 
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])

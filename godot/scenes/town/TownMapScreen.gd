@@ -68,6 +68,9 @@ var _built: bool = false
 var _map                         ## the TownMap renderer node (TownMap.gd Node2D)
 var _map_host: Control           ## full-rect Control the map is parented under
 var _last_plan: Dictionary = {}  ## the plan from the most recent refresh()
+## The prominent "Build · <built>/<plots> plots" button (bottom-right, matches React).
+## Opens the build picker for the first empty plot; its label is refreshed each render().
+var _build_btn: Button
 ## M6d — the currently-open interaction panel (build picker or demolish info), or
 ## null when none is open. A fresh CanvasLayer-child Control holding a scrim + card.
 var _panel: Control = null
@@ -156,6 +159,22 @@ func _build_shell() -> void:
 	overlay.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
+	# Prominent "Build · <built>/<plots> plots" button, bottom-right (matches React's
+	# TownGround build affordance). Opens the build picker for the first empty plot — the
+	# explicit, discoverable path to building (clicking a raw plot still works too). Its
+	# label is refreshed each render() from the live plot counts. Registered as "build_open".
+	_build_btn = Button.new()
+	_build_btn.text = "🔨 Build"
+	UiKit.style_button(_build_btn, Palette.MOSS, 8, 20, true)
+	_build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_build_btn.offset_right = -18
+	_build_btn.offset_bottom = -18
+	_build_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_build_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_build_btn.connect("pressed", Callable(self, "_on_build_button"))
+	overlay.add_child(_build_btn)
+	_action_buttons["build_open"] = _build_btn
+
 # ── render ────────────────────────────────────────────────────────────────────
 
 ## Rebuild the TownLayout plan from REAL GameState data and render it into the
@@ -171,6 +190,11 @@ func refresh() -> void:
 	_last_plan = plan
 	var vp: Vector2 = _viewport_size()
 	_map.render_plan(plan, vp.x, vp.y, built)
+	# Refresh the prominent Build button's label with the live built/total plot counts
+	# (matches React's "Build · N/N plots"). Disabled when every plot is already filled.
+	if _build_btn != null:
+		_build_btn.text = "🔨 Build · %d/%d plots" % [built.size(), plot_count]
+		_build_btn.disabled = game.plots_free() <= 0
 
 # Live viewport size, falling back to the portrait default when none is available
 # (e.g. a headless run with no window).
@@ -244,30 +268,67 @@ func _open_build_picker_for_lot(_lot: int) -> void:
 	if game.plots_free() <= 0:
 		card.add_child(_make_label("No free plots — demolish one first.", Palette.INK_MID))
 
-	for id in BuildingConfig.available_at_tier(game.settlement.tier):
+	# Nudge when NOTHING is buildable yet (early Camp tier has no unlocked buildings):
+	# tell the player how to unlock their first one, so the picker is never a dead end.
+	var any_now := false
+	for aid in BuildingConfig.available_at_tier(game.settlement.tier):
+		if not BuildingConfig.is_hazard_building(aid) and game.can_build(aid):
+			any_now = true
+			break
+	if not any_now and game.settlement.tier < TownConfig.MAX_TIER:
+		var hint := _make_label(
+			"Gather resources and tier up to %s (Craft tab) to unlock your first building." %
+				TownConfig.tier_name(game.settlement.tier + 1),
+			Palette.GOLD)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.add_child(hint)
+
+	# Show the FULL building roster with gating reasons (matching the React picker):
+	# tier-locked rows show "Requires <Tier>" + a lock; unlocked rows get a Build button
+	# (enabled when affordable, else a disabled "Need items"). The picker is never empty.
+	for id in BuildingConfig.ALL_BUILD_IDS:
 		# Skip rats-hazard buildings here (parity with TownScreen — they have their
 		# own gated section; the map picker offers the standard spawners/refiners).
 		if BuildingConfig.is_hazard_building(id):
 			continue
+		var req_tier: int = BuildingConfig.unlock_tier(id)
+		var tier_locked: bool = game.settlement.tier < req_tier
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
-		var cost_text: String = _format_cost(BuildingConfig.building_cost(id))
-		var label := _make_label("%s  (%s)" % [BuildingConfig.building_name(id), cost_text], Palette.INK)
+		var detail: String = ("Requires %s" % TownConfig.tier_name(req_tier)) if tier_locked \
+			else _format_cost(BuildingConfig.building_cost(id))
+		var label := _make_label(
+			"%s  —  %s" % [BuildingConfig.building_name(id), detail],
+			Palette.INK if not tier_locked else Palette.INK_MID)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
-		var build_btn := Button.new()
-		build_btn.text = "Build"
-		# can_build already gates on tier, free plot, and full cost in inventory.
-		build_btn.disabled = not game.can_build(id)
-		build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
-		build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
-		row.add_child(build_btn)
-		_action_buttons["build:" + id] = build_btn
+		if tier_locked:
+			# Locked by tier — a muted lock glyph instead of a Build control.
+			row.add_child(_make_label("🔒", Palette.INK_MID))
+		else:
+			var build_btn := Button.new()
+			var affordable: bool = game.can_build(id)
+			# can_build already gates on tier, free plot, and full cost in inventory.
+			build_btn.text = "Build" if affordable else "Need items"
+			build_btn.disabled = not affordable
+			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
+			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
+			row.add_child(build_btn)
+			_action_buttons["build:" + id] = build_btn
 
 		card.add_child(row)
+
+## The prominent "Build" button (bottom-right) was pressed: open the build picker for the
+## first EMPTY plot — exactly what a click on an empty lot resolves to (lot index ==
+## built_count is the first un-built slot). When every plot is full the picker still opens
+## and shows the "No free plots — demolish one first." hint (parity with the click path).
+func _on_build_button() -> void:
+	if game == null or _map == null:
+		return
+	_open_build_picker_for_lot(_map.built_count())
 
 ## Build `id` through the SAME GameState API as TownScreen, then dismiss the panel,
 ## re-render the map (so the new house shows), and emit state_changed on success.
