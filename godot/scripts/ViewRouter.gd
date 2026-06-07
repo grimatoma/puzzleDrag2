@@ -12,7 +12,7 @@ class_name ViewRouter extends RefCounted
 ## what overlay (if any) is shown on top of it.
 
 enum View  { BOARD }
-enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD }
+enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD, DEBUG }
 
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
@@ -80,6 +80,8 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.DAILY }
 		"leaveboard", "leave":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.LEAVEBOARD }
+		"debug":
+			return { "ok": true, "view": View.BOARD, "modal": Modal.DEBUG }
 		_:
 			return { "ok": false }
 
@@ -106,8 +108,9 @@ static func modal_id(m: int) -> String:
 		Modal.QUESTS:       return "quests"
 		Modal.DAILY:        return "daily"
 		Modal.LEAVEBOARD:   return "leaveboard"
+		Modal.DEBUG:        return "debug"
 		_:               return ""
 
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave"])
+	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug"])

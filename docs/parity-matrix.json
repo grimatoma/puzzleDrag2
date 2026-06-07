@@ -1093,12 +1093,13 @@
       "feature_or_screen": "debug modal",
       "category": "modal",
       "react_has": true,
-      "godot_status": "absent",
+      "godot_status": "full",
       "target_milestone": "M-infra",
       "verified_by": [
+        "run_debug_tests.gd",
         "golden:shell-debug-modal"
       ],
-      "note": "Debug panel; pairs with the test/deep-link harness in M-infra."
+      "note": "DebugModal.gd — a deeplink-only dev overlay (apply_deeplink('debug'), no permanent HUD button, matching the hidden React debug modal): a live STATE readout (coins/runes/influence/turn/tier/biome/town2/inventory/quests/almanac/streak), a JUMP-TO grid of 19 deduped deeplink buttons (the QA index of every screen), and quick-grant buttons backed by REAL methods (+coins/+runes/+influence, try_tier_up, reroll_quests, SaveManager.clear) that refresh the HUD. run_debug_tests.gd: 72 checks. Golden captured in the visual suite."
     },
     {
       "id": "modal-festivals",
