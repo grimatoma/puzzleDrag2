@@ -1123,20 +1123,29 @@ func _on_chain_track_resized() -> void:
 ## swoops toward the coin pill (an eased arc), scales down + fades over the back end
 ## of the flight, then frees itself. No-op (and never crashes) if the board or coin
 ## pill aren't present yet. One chip per resolved chain — they're cheap + auto-freed.
-func _spawn_reward_chip(text: String, color: Color) -> void:
+func _spawn_reward_chip(text: String, color: Color, icon_key: String = "") -> void:
 	if _fx_layer == null or board == null or _coin_pill == null:
 		return
 	# A tiny parchment pill (PanelContainer + Label) styled like the HUD chips, so the
-	# flying reward reads as a piece of the stockpile leaping toward the coin purse.
+	# flying reward reads as a piece of the stockpile leaping toward the coin purse. When
+	# an icon_key is given, the gathered good's icon rides along with the "+N" text.
 	var chip := PanelContainer.new()
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_theme_stylebox_override("panel", _make_chip_box())
+	var inner := HBoxContainer.new()
+	inner.add_theme_constant_override("separation", 4)
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(inner)
+	var icon := UiKit.make_icon(icon_key, 24.0) if icon_key != "" else null
+	if icon != null:
+		inner.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", 18)
 	lbl.add_theme_color_override("font_color", color)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_child(lbl)
+	inner.add_child(lbl)
 	_fx_layer.add_child(chip)
 	# Let the container compute its size so we can centre the pivot + start position.
 	chip.reset_size()
@@ -2092,7 +2101,8 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# "rewardTrajectory"). Show the produced resource when a whole unit landed
 	# (gold), else the coins this chain earned (ember) — coins are always gained.
 	if int(res.get("units", 0)) > 0:
-		_spawn_reward_chip("+%d %s" % [int(res["units"]), res["resource"]], Palette.GOLD)
+		var res_key: String = String(res["resource"])
+		_spawn_reward_chip("+%d %s" % [int(res["units"]), UiKit.pretty_name(res_key)], Palette.GOLD, res_key)
 	else:
 		_spawn_reward_chip("+%d 🪙" % int(res.get("coins_gain", 0)), Palette.EMBER)
 	# M4b: remember the resource + threshold this chain fed so the progress bar can
