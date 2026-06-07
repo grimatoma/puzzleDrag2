@@ -13,6 +13,10 @@
 /build/
 *.tmp
 
+# Visual regression: failing-capture debug artifacts (per-run, not committed).
+# The committed goldens live under tests/visual/__goldens__/<platform>/ and are kept.
+tests/visual/__captures__/
+
 # Editor-local overrides.
 override.cfg
 
