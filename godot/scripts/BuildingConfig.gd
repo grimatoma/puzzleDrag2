@@ -1,5 +1,5 @@
 class_name BuildingConfig
-extends Node
+extends RefCounted
 ## Town-1 spawner-building catalog — the "building-gated category spawners" from
 ## the locked Direction spec. Beyond a town's two STAPLE tiles (grass → hay_bundle,
 ## wheat/grain → flour), every other tile CATEGORY appears in the board refill pool

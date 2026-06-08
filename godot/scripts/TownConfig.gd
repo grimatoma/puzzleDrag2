@@ -1,5 +1,5 @@
 class_name TownConfig
-extends Node
+extends RefCounted
 ## Town-1 (Farm) tier ladder — the Camp→City rank progression every town climbs.
 ## Mirrors the locked "Direction" spec table: a single town-center upgrade that
 ## costs escalating local resources and (a) raises a storage cap, (b) adds

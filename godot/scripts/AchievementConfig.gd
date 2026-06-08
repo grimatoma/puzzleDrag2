@@ -1,5 +1,5 @@
 class_name AchievementConfig
-extends Node
+extends RefCounted
 ## Achievement CATALOG (M10 logic core) — the ported, port-reachable subset of the
 ## Phaser achievements (src/features/achievements/data.ts). Pure data + pure
 ## helpers; the counter-bump / unlock / reward logic lives in GameState

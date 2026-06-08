@@ -1,5 +1,5 @@
 class_name UiKit
-extends Node
+extends RefCounted
 ## Shared UI builder helpers — M5a extract.
 ##
 ## A stateless `class_name` global (NOT an autoload) that centralises the

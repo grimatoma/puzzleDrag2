@@ -1,5 +1,5 @@
 class_name OrderConfig
-extends Node
+extends RefCounted
 ## Order generation tuning — the Direction spec's order / coin-sink loop. An NPC
 ## requests a quantity of a resource; delivering it from inventory pays a coin
 ## reward that BEATS selling the same goods at the Market (the REWARD_MULT

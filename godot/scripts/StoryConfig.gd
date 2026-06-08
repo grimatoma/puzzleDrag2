@@ -1,5 +1,5 @@
 class_name StoryConfig
-extends Node
+extends RefCounted
 ## Story CATALOG (story-engine logic core) — the ported, port-reachable subset of the
 ## Phaser story beats (src/story.ts STORY_BEATS + SIDE_BEATS). Pure data + pure
 ## lookups; the condition/snapshot/fire/choice logic lives in StoryEngine (pure

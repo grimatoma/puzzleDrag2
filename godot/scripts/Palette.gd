@@ -1,5 +1,5 @@
 class_name Palette
-extends Node
+extends RefCounted
 ## The "leather-bound journal" parchment palette — ported from the React+Phaser
 ## game's design tokens (src/tokens.css). A stateless `class_name` global: every
 ## value is a `const Color`, reachable as `Palette.PARCHMENT` WITHOUT an instance

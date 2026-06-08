@@ -1,5 +1,5 @@
 class_name CartographyConfig
-extends Node
+extends RefCounted
 ## Pure data for the CARTOGRAPHY world map — a MINIMAL ADDITIVE port of the React
 ## game's `src/features/cartography/data.ts` (MAP_NODES + MAP_EDGES), trimmed to the
 ## THREE zones the Godot port actually plays today: the home village (the farm board),
