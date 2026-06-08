@@ -21,7 +21,9 @@ static var _heading_font_tried: bool = false
 
 ## Return a bold Cinzel FontVariation, or null if the font file isn't imported.
 ## The result is cached after the first call — every subsequent call returns
-## the same instance.
+## the same instance. The emoji fallback is attached so heading labels that carry
+## an emoji (modal titles like "🏆 Achievements") render the glyph instead of a
+## tofu box — Cinzel has no emoji coverage.
 static func heading_font() -> Font:
 	if _heading_font_tried:
 		return _heading_font_cache
@@ -33,10 +35,76 @@ static func heading_font() -> Font:
 			var fv := FontVariation.new()
 			fv.base_font = base
 			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
+			var emoji := emoji_font()
+			if emoji != null:
+				fv.fallbacks = [emoji]
 			_heading_font_cache = fv
 	return _heading_font_cache
 
+# ── emoji fallback font ────────────────────────────────────────────────────────
+
+## Cached Noto Emoji (monochrome, OFL) FontFile, or null if the asset isn't present.
+## Monochrome glyphs inherit the label's font_color, so they tint to the parchment
+## ink instead of clashing colour emoji — cohesive with the Cinzel/parchment look.
+static var _emoji_font_cache: Font = null
+static var _emoji_font_tried: bool = false
+
+## Load the bundled emoji font (res://assets/fonts/NotoEmoji.ttf). Bundled (not a
+## system font) so it renders identically on desktop AND the web export, where there
+## is no OS emoji font and every emoji would otherwise be a tofu box.
+static func emoji_font() -> Font:
+	if _emoji_font_tried:
+		return _emoji_font_cache
+	_emoji_font_tried = true
+	var path := "res://assets/fonts/NotoEmoji.ttf"
+	if ResourceLoader.exists(path):
+		var f = load(path)
+		if f is FontFile:
+			_emoji_font_cache = f
+	return _emoji_font_cache
+
+## Attach the bundled emoji font as a fallback on the ENGINE DEFAULT font so every
+## Label/Button that uses the inherited default font (the HUD pills, bottom-nav icons,
+## modal close buttons, status text — all of which carry emoji like 🪙🏠📦🔨🗺👥)
+## renders the glyph instead of a tofu box. Idempotent + null-safe; call once from
+## Main._ready. Base glyphs are unchanged (same default font), so body text is
+## pixel-identical — only previously-broken emoji start rendering.
+static func install_emoji_fallback() -> void:
+	var emoji := emoji_font()
+	if emoji == null:
+		return
+	var base: Font = ThemeDB.fallback_font
+	if base == null:
+		return
+	var fb: Array = base.fallbacks
+	if not fb.has(emoji):
+		fb.append(emoji)
+		base.fallbacks = fb
+
 # ── resource icons + names ──────────────────────────────────────────────────────
+
+# ── modal dismiss ────────────────────────────────────────────────────────────
+
+## Wire a modal's full-rect scrim `backdrop` so a click/tap on it (i.e. OUTSIDE the
+## centered card) dismisses the modal. This is the standard "tap outside to close"
+## affordance AND a reliable escape hatch: SmoothScroll swallows the FIRST click after
+## a wheel/drag scroll (its input handler calls set_input_as_handled on every event it
+## sees), so a just-scrolled long modal could otherwise eat the Close button's first
+## tap. The backdrop sits OUTSIDE the scroll, so its input is never affected. Idempotent.
+static func wire_backdrop_dismiss(backdrop: Control, on_dismiss: Callable) -> void:
+	if backdrop == null or not on_dismiss.is_valid():
+		return
+	if backdrop.has_meta("_dismiss_wired"):
+		return
+	backdrop.set_meta("_dismiss_wired", true)
+	backdrop.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
+			or (event is InputEventScreenTouch and event.pressed)
+		if tap:
+			on_dismiss.call()
+	)
+
+# ── resource icons + names ────────────────────────────────────────────────────────
 
 ## Cache of loaded resource/item icon textures, keyed by item key. `null` is cached
 ## too (a key with no art) so a missing icon costs one ResourceLoader.exists() call,

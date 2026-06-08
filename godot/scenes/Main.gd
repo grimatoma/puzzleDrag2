@@ -197,6 +197,18 @@ var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"
 var _fx_layer: CanvasLayer
 
 func _ready() -> void:
+	# Emoji fallback: attach the bundled Noto Emoji font to the engine default so the
+	# HUD pills (🪙), bottom-nav icons (🏠📦🔨🗺👥), modal titles (🏆📜🏰…) and status
+	# text render their glyphs instead of tofu boxes — Cinzel + the engine sans have no
+	# emoji coverage, and the web export has no OS emoji font to fall back on. Done first,
+	# before any Control is built, so every label picks it up.
+	UiKit.install_emoji_fallback()
+	# Closability: every modal screen is a CanvasLayer with a close() method + a full-rect
+	# scrim backdrop. Auto-wire "tap the scrim to close" on each as it's added (a reliable
+	# dismiss even when a just-scrolled list eats the Close button's first tap), and handle
+	# ESC / Android-back below in _unhandled_input. Connect BEFORE children are added so
+	# every overlay (now and future) is covered with no per-screen edits.
+	child_entered_tree.connect(_on_child_entered)
 	# M11 desktop-framing: enforce a minimum window size so the portrait HUD never
 	# collapses when the player shrinks a resizable desktop window. Godot 4.6 has no
 	# project setting for a minimum size (resizable + the window-size override ARE
@@ -1222,6 +1234,55 @@ func _on_town_button() -> void:
 		_open_leaveboard()
 		return
 	_open_town()
+
+# ── modal closability (tap-scrim / ESC / back) ────────────────────────────────
+
+## Every modal screen is a CanvasLayer with a close() method and a full-rect STOP scrim
+## backdrop (the first ColorRect child). When one is added, find that backdrop and wire a
+## tap on it to dismiss the modal. Deferred so the screen's _ready/_build_shell (which
+## creates the backdrop) has run. CanvasLayers without close() (HUD, nav, fx, toast) are
+## skipped, so this only ever touches real modals.
+func _on_child_entered(node: Node) -> void:
+	if node is CanvasLayer and node.has_method("close"):
+		call_deferred("_install_overlay_dismiss", node)
+
+func _install_overlay_dismiss(overlay) -> void:
+	if overlay == null or not is_instance_valid(overlay):
+		return
+	for child in overlay.get_children():
+		if child is ColorRect and (child as ColorRect).mouse_filter == Control.MOUSE_FILTER_STOP:
+			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
+			return
+
+## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
+## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
+func _close_top_overlay() -> bool:
+	var overlays := [
+		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _leaveboard_modal,
+		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
+		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
+		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
+		_charter_screen, _quests_screen,
+	]
+	var best = null
+	var best_layer := -2147483648
+	for o in overlays:
+		if o != null and is_instance_valid(o) and o.visible and o.has_method("close"):
+			var lyr: int = int(o.layer) if "layer" in o else 0
+			if lyr >= best_layer:
+				best_layer = lyr
+				best = o
+	if best != null:
+		best.close()
+		return true
+	return false
+
+## ESC (desktop) / Android-back map to ui_cancel — close the top modal if one is open so
+## the player can always back out of any screen, regardless of the Close button.
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if _close_top_overlay():
+			get_viewport().set_input_as_handled()
 
 # ── Leave-expedition confirm (M5-polish) ──────────────────────────────────────
 

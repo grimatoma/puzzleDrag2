@@ -25,8 +25,15 @@ signal cell_tapped(cell: Vector2i)
 ## Main own the economy.
 signal pearl_chain(cells: Array)
 
-const POP_TIME := 0.13
-const FALL_TIME := 0.22
+# Chain-resolve animation timing. The pipeline CASCADES (pop → settle → refill) the
+# way the React/Phaser original does, rather than firing every tween at t=0: the chained
+# tiles pop out in a staggered wave, then after FALL_DELAY the survivors collapse and
+# fresh tiles fall in. Without the stagger + delay the whole move resolved in one
+# ~0.13s blur and read as "no animation" (the reported regression).
+const POP_TIME := 0.18      ## per-tile pop-out (scale→0 + spin); ~React 180ms
+const POP_STAGGER := 0.025  ## extra delay per successive chained tile → a visible wave
+const FALL_DELAY := 0.16    ## collapse/refill hold-off so the pop reads before tiles fall
+const FALL_TIME := 0.24     ## collapse slide + refill pop-in duration
 
 var grid: Array = []
 var tiles: Array = []                  ## tiles[row][col] -> Tile node or null
@@ -432,18 +439,26 @@ func _resolve(path: Array) -> void:
 			if not removal.has(rubble_cell):
 				removal.append(rubble_cell)
 
-	# 1. Pop the collected tiles out (chain + any Master-Ratcatcher rats), then free.
+	# 1. Pop the collected tiles out in a STAGGERED wave (chain + any Master-Ratcatcher
+	#    rats): each successive tile pops POP_STAGGER later with a random spin, so the
+	#    chain visibly "unzips" instead of vanishing in one frame. Then free the node.
+	var pop_i := 0
 	for cell in removal:
 		var t: Tile = tiles[cell.y][cell.x]
 		tiles[cell.y][cell.x] = null
 		if t != null:
+			var d: float = pop_i * POP_STAGGER
+			var spin: float = rng.randf_range(-0.5, 0.5)
 			var tw := create_tween()
 			tw.set_parallel(true)
-			tw.tween_property(t, "scale", Vector2.ZERO, POP_TIME).set_ease(Tween.EASE_IN)
-			tw.tween_property(t, "rotation", 0.6, POP_TIME)
+			tw.tween_property(t, "scale", Vector2.ZERO, POP_TIME).set_ease(Tween.EASE_IN).set_delay(d)
+			tw.tween_property(t, "rotation", spin, POP_TIME).set_delay(d)
 			tw.chain().tween_callback(t.queue_free)
+			pop_i += 1
 
-	# 2. Collapse existing tile nodes downward, then 3. spawn new ones up top.
+	# 2. Collapse existing tile nodes downward, then 3. spawn new ones up top. Both phases
+	#    are held off by FALL_DELAY so the pop wave reads first — then survivors drop and
+	#    fresh tiles fall in (the React pop → settle → refill cascade).
 	for c in Constants.COLS:
 		var write := Constants.ROWS - 1
 		for r in range(Constants.ROWS - 1, -1, -1):
@@ -452,7 +467,7 @@ func _resolve(path: Array) -> void:
 				if write != r:
 					tiles[write][c] = t
 					tiles[r][c] = null
-					_slide_to(t, c, write)
+					_slide_to(t, c, write, FALL_DELAY, true)
 				write -= 1
 		# Fill rows 0..write (inclusive) with fresh tiles falling from above.
 		for r in range(write, -1, -1):
@@ -461,11 +476,11 @@ func _resolve(path: Array) -> void:
 			node.position = _cell_center(c, r) - Vector2(0, (write + 2) * tile_size)
 			tiles[r][c] = node
 			# M4e — fresh refill tiles POP in: start at half-scale and overshoot up to
-			# full scale (TRANS_BACK) alongside the existing fall. Collapsing tiles
-			# (handled above via _slide_to) keep scale 1 and just slide.
+			# full scale (TRANS_BACK) alongside the (delayed) fall. Collapsing tiles
+			# (handled above via _slide_to) keep scale 1 and get a small landing squash.
 			node.scale = Vector2(0.5, 0.5)
-			_slide_to(node, c, r)
-			_pop_in_scale(node)
+			_slide_to(node, c, r, FALL_DELAY, false)
+			_pop_in_scale(node, FALL_DELAY)
 
 	# Re-derive the logic grid from the visual layer, keep the board playable.
 	_sync_grid_from_tiles()
@@ -486,19 +501,26 @@ func _resolve(path: Array) -> void:
 
 	chain_resolved.emit(key, length)
 
-func _slide_to(t: Tile, c: int, r: int) -> void:
+## Slide a tile to cell (c,r) over FALL_TIME after an optional `delay` (used to hold the
+## collapse off until the pop wave reads). When `bounce` is set, a brief squash-and-settle
+## lands the tile with weight (the React _landingBounce) — used for collapsing survivors;
+## refill tiles get their bounce from the TRANS_BACK overshoot in _pop_in_scale instead.
+func _slide_to(t: Tile, c: int, r: int, delay: float = 0.0, bounce: bool = false) -> void:
 	var tw := create_tween()
 	tw.tween_property(t, "position", _cell_center(c, r), FALL_TIME) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT).set_delay(delay)
+	if bounce:
+		tw.chain().tween_property(t, "scale", Vector2(1.07, 0.93), 0.05)
+		tw.chain().tween_property(t, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_SINE)
 
 ## M4e — scale a freshly-spawned refill tile from its start scale (0.5) up to full
 ## with a slight overshoot (TRANS_BACK / EASE_OUT) over the fall, so new tiles "pop"
 ## in rather than just sliding. A separate tween from the position slide so neither
-## interferes with the other; both run over FALL_TIME.
-func _pop_in_scale(t: Tile) -> void:
+## interferes with the other; both run over FALL_TIME after the same `delay`.
+func _pop_in_scale(t: Tile, delay: float = 0.0) -> void:
 	var tw := create_tween()
 	tw.tween_property(t, "scale", Vector2.ONE, FALL_TIME) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(delay)
 
 func _sync_grid_from_tiles() -> void:
 	for r in Constants.ROWS:
