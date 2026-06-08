@@ -18,9 +18,9 @@ export function isFireHazardEnabled() {
 // localStorage flag, then a build-time default. globalThis.__HEARTH_DISABLE_DIALOGS__
 // can force on/off at runtime (e.g. via page.addInitScript in Playwright).
 //
-// Production builds (the GitHub Pages deploy) default to suppressed so the
-// public site doesn't pop story beats, season summaries, and NPC bubbles;
-// dev and test (Vite dev server, Vitest, Playwright) default to enabled.
+// Dialogs are suppressed by default in all environments (dev, test, and the
+// GitHub Pages deploy). Override via globalThis.__HEARTH_DISABLE_DIALOGS__ = false
+// or localStorage.setItem("hearth.disableDialogs", "0") to re-enable locally.
 /** Animated pixel-art concept GIFs for seven farm/grass tiles (docs review assets).
  *  Enable with `conceptTiles=1` in the URL — works in `location.search` or the hash
  *  query (`#/board?conceptTiles=1`). Stays on while navigating until `conceptTiles=0`. */
@@ -40,5 +40,5 @@ export function isDialogsDisabled() {
     // Ignore storage access failures and fall through to the default.
   }
 
-  return import.meta.env.PROD === true;
+  return true;
 }
