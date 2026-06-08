@@ -34,6 +34,11 @@ const SELL: Dictionary = {
 	"coke": 40,
 	"cut_gem": 60,
 	"dirt": 1,
+	# Full tile-catalog parity (new produced resources). Prices lifted from the web
+	# MARKET table (src/constants.ts): jam sell 5, copper_bar sell 8, gold_bar sell 16.
+	"jam": 5,
+	"copper_bar": 8,
+	"gold_bar": 16,
 }
 
 ## Coins paid per unit BOUGHT. A resource absent from this table is not buyable.
@@ -55,6 +60,11 @@ const BUY: Dictionary = {
 	"coke": 260,
 	"cut_gem": 600,
 	"dirt": 40,
+	# Full tile-catalog parity (new produced resources). Buy prices lifted from the web
+	# MARKET table (src/constants.ts): jam buy 90, copper_bar buy 120, gold_bar buy 240.
+	"jam": 90,
+	"copper_bar": 120,
+	"gold_bar": 240,
 }
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

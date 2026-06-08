@@ -44,7 +44,8 @@ var _cards: Dictionary = {}
 const CATEGORY_ORDER: Array = [
 	"grass", "grain", "birds", "veg", "fruit", "flower",
 	"trees", "herd", "cattle", "mount",
-	"stone", "iron", "coal", "dirt", "gem",
+	"stone", "iron", "copper", "coal", "dirt", "gem", "gold", "coin",
+	"fish", "fish_pearl",
 	"rat", "rubble",
 ]
 
@@ -396,13 +397,19 @@ static func _category_heading(cat: String) -> String:
 		return "Other"
 	# Special cases for multi-word-ish categories.
 	match cat:
-		"iron":   return "Iron"
-		"coal":   return "Coal"
-		"gem":    return "Gem"
-		"dirt":   return "Dirt"
-		"stone":  return "Stone"
-		"rat":    return "Rat (Hazard)"
-		"rubble": return "Rubble (Hazard)"
+		"iron":       return "Iron"
+		"copper":     return "Copper"
+		"coal":       return "Coal"
+		"gem":        return "Gem"
+		"gold":       return "Gold"
+		"coin":       return "Treasure"
+		"dirt":       return "Dirt"
+		"stone":      return "Stone"
+		"mount":      return "Mounts"
+		"fish":       return "Fish"
+		"fish_pearl": return "Giant Pearl"
+		"rat":        return "Rat (Hazard)"
+		"rubble":     return "Rubble (Hazard)"
 	# Default: title-case the id.
 	if cat.length() > 0:
 		return cat.substr(0, 1).to_upper() + cat.substr(1)
