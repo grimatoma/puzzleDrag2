@@ -121,12 +121,38 @@ const FRAME_PAD := 10.0
 ## before Main seeds it still reads as a calm green field (Spring's field colour).
 var _season_idx: int = 0
 
+## Resolve "juice" (the React feel the port lacked): a screen shake whose magnitude scales
+## with the chain length, an expanding flash ring + a collect spark burst at the chain head,
+## and an upgrade-burst flash when the chain spawns an upgrade tile. All are PURELY visual,
+## added as Board children (so they shake with the board), self-freeing, and skipped under
+## headless (no renderer) so the logic suites stay byte-identical.
+var _last_chain_center: Vector2 = Vector2.ZERO   ## chain head (for Main's floating gain text)
+var _shake_tween: Tween = null
+var _shake_base: Vector2 = Vector2.ZERO
+## A SEPARATE RNG for cosmetic FX (shake jitter) so the gameplay `rng` — which BoardLogic.refill
+## consumes and the tests seed — is never advanced by visual effects. Keeps refills decoupled
+## from whether/how long the board shook.
+var _fx_rng := RandomNumberGenerator.new()
+
+## M8c armed-tool feedback: while a tap-target tool is armed (set_targeting(true)) the board
+## frame pulses a hot red border (React's hwv-armed-pulse). Driven by _process — enabled only
+## while targeting so an idle board never processes.
+var _armed_phase: float = 0.0
+
 func _ready() -> void:
 	rng.randomize()
+	_fx_rng.randomize()
+	set_process(false)                  # only processes while a tap-tool is armed (armed pulse)
 	_chain_overlay = ChainOverlay.new()
 	_chain_overlay.z_index = 100        # above every tile node
 	add_child(_chain_overlay)
 	setup_new_board()
+
+## Pulse the armed-tool red frame while targeting (set_targeting toggles processing).
+func _process(delta: float) -> void:
+	if _targeting:
+		_armed_phase += delta
+		queue_redraw()
 
 # ── parchment-game framing (M4a) ─────────────────────────────────────────────
 
@@ -163,6 +189,14 @@ func _draw() -> void:
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
 	draw_style_box(sb, rect)
+
+	# M8c — while a tap-target tool is armed, pulse a hot red border around the field so the
+	# board reads as "hot / waiting for your tap" (the React armed-pulse on the board frame).
+	if _targeting:
+		var t: float = 0.5 + 0.5 * sin(_armed_phase * 5.2)
+		var red := Color(1.0, 0.22, 0.22, lerpf(0.45, 0.95, t))
+		var w: float = maxf(4.0, tile_size * 0.06)
+		draw_rect(rect, red, false, w)
 
 ## A2 — set the current farm season (0=Spring … 3=Winter) and redraw so the board card's
 ## field tint follows the season. Main calls this on load and whenever a resolved farm chain
@@ -337,6 +371,13 @@ func _rebuild_cell(c: int, r: int) -> void:
 ## Size the board to the viewport and reposition all tiles. Called by Main on
 ## first layout and on every viewport resize.
 func layout_for(viewport: Vector2) -> void:
+	# A resize relays out the board; cancel any in-flight resolve shake so its tween can't later
+	# snap the board back to the PRE-resize resting position (Main._layout sets the new resting
+	# position right after this call). The shake is purely cosmetic — dropping it on resize is
+	# correct and avoids the board being mis-parked until the next layout.
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+	_shake_tween = null
 	var avail_w := viewport.x * 0.94
 	var avail_h := viewport.y * 0.62
 	tile_size = floorf(minf(avail_w / Constants.COLS, avail_h / Constants.ROWS))
@@ -370,6 +411,11 @@ func _cell_from_local(p: Vector2) -> Vector2i:
 ## never set), but we clear any stray drag state defensively for safety.
 func set_targeting(on: bool) -> void:
 	_targeting = on
+	# Drive the armed-frame pulse only while targeting; clear it the moment we leave.
+	set_process(on)
+	if not on:
+		_armed_phase = 0.0
+	queue_redraw()
 	if on and _dragging:
 		# Defensive: if a drag were somehow in flight, cancel it cleanly so targeting
 		# starts from a known-idle state (no highlighted/overlaid path lingering).
@@ -454,7 +500,27 @@ func _update_chain_overlay() -> void:
 	var points: Array[Vector2] = []
 	for cell in _path:
 		points.append(_cell_center(cell.x, cell.y))
-	_chain_overlay.set_path(points, _path.size() >= min_chain, tile_size)
+	var n: int = _path.size()
+	var valid: bool = n >= min_chain
+	# Live escalation data for the overlay: the chain STAGE (path tint/thickness), the
+	# threshold (where stars sit) and how many upgrade tiles this chain will spawn (stars +
+	# head "×N" marker) plus that upgrade tile's thumbnail. We ASK the same upgrade_provider
+	# the resolve uses (GameState.upgrade_spawn against the home zone), so the marker matches
+	# exactly what the chain will produce — and shows nothing off the farm (provider returns 0).
+	var chain_tile: int = current_chain_tile()
+	var threshold: int = Constants.threshold_for(chain_tile)
+	var stage: int = 0
+	var upg_count: int = 0
+	var upg_tex: Texture2D = null
+	if threshold > 0 and threshold < Constants.NO_THRESHOLD:
+		stage = Constants.chain_stage_index(n, threshold)
+		if upgrade_provider.is_valid():
+			var up: Dictionary = upgrade_provider.call(chain_tile, n)
+			upg_count = int(up.get("count", 0))
+			var up_tile: int = int(up.get("tile", Constants.EMPTY))
+			if up_tile != Constants.EMPTY:
+				upg_tex = Tile.texture_for(up_tile)
+	_chain_overlay.set_path(points, valid, tile_size, stage, threshold, upg_count, upg_tex)
 
 func _set_highlight(cell: Vector2i, on: bool) -> void:
 	var t: Tile = tiles[cell.y][cell.x]
@@ -602,6 +668,11 @@ func _resolve(path: Array) -> void:
 			and Constants.category_of(key) == "fish":
 		pearl_chain_resolved.emit(path.duplicate())
 
+	# Resolve "juice": a length-scaled screen shake, an expanding flash ring + collect spark
+	# burst at the chain head, and (when this chain spawned an upgrade tile) an upgrade burst.
+	# Purely visual — _play_resolve_fx no-ops under headless so the logic suites are unaffected.
+	_play_resolve_fx(path, length, key, upgrade_at.size())
+
 	chain_resolved.emit(key, length)
 
 ## Slide a tile to cell (c,r) over FALL_TIME after an optional `delay` (used to hold the
@@ -670,3 +741,176 @@ func _adjacent_rubble_cells(path: Array) -> Array:
 				if not out.has(nb):
 					out.append(nb)
 	return out
+
+# ── resolve "juice" FX (the React feel) ──────────────────────────────────────
+# Screen shake (scaled by chain length), an expanding flash ring + a collect spark burst at
+# the chain head, an upgrade-burst flash, and a floating "+N" gain label. All are PURELY
+# visual: added as Board children (so they shake with the board), self-freeing, and gated by
+# _fx_enabled() so the headless logic suites never run them (no renderer, no tree-bound tweens).
+
+## True only when the board is live in a rendered tree — so the FX run in the game + the
+## non-headless visual harness but are skipped wholesale in the headless test runners.
+func _fx_enabled() -> bool:
+	return is_inside_tree() and DisplayServer.get_name() != "headless"
+
+## Fire the full resolve burst at the chain head. `upgrades` is how many upgrade tiles this
+## chain spawned (adds the upgrade flash). Stores the head centre for Main's floating gain text.
+func _play_resolve_fx(path: Array, length: int, key: int, upgrades: int) -> void:
+	if not _fx_enabled() or path.is_empty():
+		return
+	var head: Vector2i = path[-1]
+	_last_chain_center = _cell_center(head.x, head.y)
+	_shake_board(length)
+	_radial_flash(_last_chain_center, length)
+	_spark_burst(_last_chain_center, key, length)
+	if upgrades > 0:
+		_upgrade_burst(_last_chain_center)
+
+## Shake the whole board (it carries the tiles + overlay as children) with a magnitude +
+## duration that grow with the chain length, settling back to the layout position. React's
+## cameras.main.shake — here we wobble the Board node since the port uses no Camera2D.
+func _shake_board(length: int) -> void:
+	var mag: float = clampf(2.0 + float(length - 3) * 1.7, 0.0, 15.0)
+	if mag <= 0.5:
+		return
+	# If a shake is mid-flight, end it cleanly so `base` is the true resting (layout) position.
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+		position = _shake_base
+	_shake_base = position
+	var dur: float = clampf(0.16 + float(length - 3) * 0.045, 0.16, 0.5)
+	var steps: int = 6
+	var seg: float = dur / float(steps)
+	_shake_tween = create_tween()
+	for i in range(steps):
+		var falloff: float = 1.0 - float(i) / float(steps)
+		var off := Vector2(_fx_rng.randf_range(-mag, mag), _fx_rng.randf_range(-mag, mag)) * falloff
+		_shake_tween.tween_property(self, "position", _shake_base + off, seg).set_trans(Tween.TRANS_SINE)
+	_shake_tween.tween_property(self, "position", _shake_base, seg).set_trans(Tween.TRANS_SINE)
+
+## An expanding gold ring at `center` whose peak radius grows with the chain length, fading out.
+func _radial_flash(center: Vector2, length: int) -> void:
+	var ring := _RingFx.new()
+	ring.position = center
+	ring.z_index = 92
+	ring.color = Color(1.0, 0.89, 0.60)
+	ring.width = maxf(3.0, tile_size * 0.06)
+	add_child(ring)
+	var peak: float = tile_size * (0.5 + clampf(float(length - 3) * 0.16, 0.0, 1.1))
+	ring.play(tile_size * 0.12, peak, 0.46)
+
+## A bright filled disk flash at `center` — fires only when the chain spawned an upgrade tile.
+func _upgrade_burst(center: Vector2) -> void:
+	var disk := _RingFx.new()
+	disk.position = center
+	disk.z_index = 93
+	disk.filled = true
+	disk.color = Color(1.0, 0.96, 0.76)
+	disk.alpha = 0.55
+	add_child(disk)
+	disk.play(tile_size * 0.10, tile_size * 0.5, 0.36)
+
+## A short-lived collect spark burst at `center`, tinted by the chained resource's colour, with
+## a count that scales (gently) with the chain length. CPUParticles2D one-shot, self-freeing.
+func _spark_burst(center: Vector2, key: int, length: int) -> void:
+	var p := CPUParticles2D.new()
+	p.position = center
+	p.z_index = 95
+	p.texture = _dot_texture()
+	p.one_shot = true
+	p.explosiveness = 0.92
+	p.amount = clampi(8 + (length - 3) * 2, 8, 26)
+	p.lifetime = 0.55
+	p.direction = Vector2(0, -1)
+	p.spread = 180.0
+	p.gravity = Vector2(0, tile_size * 4.5)
+	p.initial_velocity_min = tile_size * 1.3
+	p.initial_velocity_max = tile_size * 2.8
+	p.scale_amount_min = 0.5
+	p.scale_amount_max = 1.4
+	p.color = Constants.color_for(key).lightened(0.12)
+	add_child(p)
+	p.emitting = true
+	p.finished.connect(p.queue_free)
+
+## A floating "+N resource ★×k" gain label that rises off the chain head and fades. Called by
+## Main from _on_chain_resolved (it knows the credited amount + star count), drawn from the head
+## centre _play_resolve_fx stashed. The React floatText above the chain endpoint.
+func play_gain_text(text: String, color: Color) -> void:
+	if not _fx_enabled() or text == "":
+		return
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30)))
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	lbl.add_theme_constant_override("outline_size", 5)
+	lbl.z_index = 110
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(lbl)
+	lbl.reset_size()
+	var start: Vector2 = _last_chain_center - lbl.size * 0.5 - Vector2(0, tile_size * 0.45)
+	lbl.position = start
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(lbl, "position", start - Vector2(0, tile_size * 1.25), 0.9) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(0.4)
+	tw.chain().tween_callback(lbl.queue_free)
+
+## A small soft white dot texture for the spark particles, built once + cached (CPUParticles2D
+## with no texture renders nothing). A radial alpha falloff so the sparks read as soft motes.
+static var _dot_tex: Texture2D = null
+static func _dot_texture() -> Texture2D:
+	if _dot_tex != null:
+		return _dot_tex
+	var sz: int = 8
+	var img := Image.create(sz, sz, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cen := Vector2(float(sz - 1) * 0.5, float(sz - 1) * 0.5)
+	for y in sz:
+		for x in sz:
+			var a: float = clampf(1.0 - Vector2(x, y).distance_to(cen) / (float(sz) * 0.5), 0.0, 1.0)
+			if a > 0.0:
+				img.set_pixel(x, y, Color(1, 1, 1, a))
+	_dot_tex = ImageTexture.create_from_image(img)
+	return _dot_tex
+
+## A reusable expanding ring / disk FX node: tweens its radius + alpha then self-frees. `filled`
+## switches between a stroked ring (radial flash) and a solid disk (upgrade burst).
+class _RingFx extends Node2D:
+	var radius: float = 8.0
+	var alpha: float = 0.6
+	var color: Color = Color(1, 0.9, 0.6)
+	var width: float = 5.0
+	var filled: bool = false
+
+	func _draw() -> void:
+		if alpha <= 0.0:
+			return
+		var c := color
+		c.a = alpha
+		if filled:
+			draw_circle(Vector2.ZERO, radius, c)
+		else:
+			draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, c, width, true)
+			draw_arc(Vector2.ZERO, radius * 0.95, 0.0, TAU, 48,
+				Color(1, 1, 1, alpha * 0.85), maxf(1.0, width * 0.4), true)
+
+	func _set_radius(r: float) -> void:
+		radius = r
+		queue_redraw()
+
+	func _set_alpha(a: float) -> void:
+		alpha = a
+		queue_redraw()
+
+	func play(start_r: float, end_r: float, dur: float) -> void:
+		radius = start_r
+		# Both the radius growth and the alpha fade drive their own queue_redraw via setters, so
+		# neither depends on the other still running to repaint (robust if the durations diverge).
+		var tw := create_tween()
+		tw.set_parallel(true)
+		tw.tween_method(_set_radius, start_r, end_r, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_method(_set_alpha, alpha, 0.0, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.chain().tween_callback(queue_free)

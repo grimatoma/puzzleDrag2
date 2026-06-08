@@ -1520,6 +1520,17 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_hud.spawn_reward_chip("+%d %s" % [int(res["units"]), UiKit.pretty_name(res_key)], Palette.GOLD, res_key)
 	else:
 		_hud.spawn_reward_chip("+%d 🪙" % int(res.get("coins_gain", 0)), Palette.EMBER)
+	# A floating "+N <resource> ★×k" gain label rises off the chain head (React's floatText) —
+	# only when a whole unit landed; coins-only chains rely on the flying coin chip above. The
+	# ★×k suffix shows how many upgrade tiles this farm chain spawned, so a long chain reads as
+	# a clear bonus right where it happened.
+	if int(res.get("units", 0)) > 0 and board != null:
+		var ftext: String = "+%d %s" % [int(res["units"]), UiKit.pretty_name(String(res["resource"]))]
+		if game.active_biome == "farm":
+			var up: Dictionary = _farm_upgrade_spawn(tile_type, length)
+			if int(up.get("count", 0)) > 0:
+				ftext += "  ★×%d" % int(up["count"])
+		board.play_gain_text(ftext, Palette.GOLD)
 	# M4b: remember the resource + threshold this chain fed so the progress bar can
 	# show fractional progress toward its next unit (RAT/empty-threshold chains
 	# produce nothing, so leave the bar on the previous resource).
