@@ -14,6 +14,12 @@ extends Node2D
 ## calls the small public interface — setup() / set_size_px() / set_selected() —
 ## and reads `tile_type`; it is unaware which stage produced the pixels.
 
+## The tile art is drawn slightly LARGER than the cell so the pastel card fills the cell
+## with only a small cream gap between neighbours — matching React's chunky, tightly-packed
+## tile cards. The exported PNGs carry a transparent margin + soft shadow, which at 1.0×
+## left the cards reading small/washed-out on the cream field; the overscan closes that gap.
+const TILE_OVERSCAN := 1.16
+
 var tile_type: int = Constants.EMPTY
 var size_px: float = 96.0
 var _selected: bool = false
@@ -134,17 +140,18 @@ func _draw() -> void:
 	# selection feedback the original game uses. set_selected() still tracks state (so
 	# callers don't break), but it no longer paints a competing ring on each tile.
 
-## v1 PNG: draw the exported tile texture filling the cell. The PNG carries its
-## own transparent margin + soft shadow, which forms the gap between tiles.
+## v1 PNG: draw the exported tile texture, OVERSCANNED so its pastel card fills the cell
+## (chunky React-style tile) leaving only a small cream gap from the PNG's own margin.
 func _draw_textured() -> void:
-	var rect := Rect2(-size_px / 2.0, -size_px / 2.0, size_px, size_px)
+	var s: float = size_px * TILE_OVERSCAN
+	var rect := Rect2(-s / 2.0, -s / 2.0, s, s)
 	draw_texture_rect(_tex, rect, false)
 
 ## Stage-1 fallback: the original procedural colored rounded square with a soft
-## top-highlight band for a little depth.
+## top-highlight band for a little depth. Sized to match the overscanned PNG cards so a
+## placeholder tile reads at the same chunky footprint as its arted neighbours.
 func _draw_placeholder() -> void:
-	var pad: float = size_px * 0.07
-	var s: float = size_px - pad * 2.0
+	var s: float = size_px * 0.98
 	var rect := Rect2(-s / 2.0, -s / 2.0, s, s)
 	var col: Color = Constants.color_for(tile_type)
 	draw_rect(rect, col, true)
