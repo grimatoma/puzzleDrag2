@@ -320,6 +320,12 @@ func _ready() -> void:
 	board.clear_pearl_on_fish_chain = game.is_in_harbor()
 	if game.is_in_harbor() and game.has_active_pearl():
 		board.place_pearl(Vector2i(int(game.fish_pearl.get("col", 0)), int(game.fish_pearl.get("row", 0))))
+	# A1b: install the upgrade-tile provider (the React core loop). The Board asks it on every
+	# resolve WHAT next-tier tiles to spawn; we answer via GameState.upgrade_spawn against the
+	# home zone — but ONLY on the farm biome (mine/harbor have no zone upgradeMap). Set once here;
+	# the closure re-reads game.active_biome each call, so it self-disables during an expedition
+	# and re-enables on return. Decoupled: the Board holds this Callable, never a GameState ref.
+	board.upgrade_provider = _farm_upgrade_spawn
 	# M4d: SFX service (owned by Main, not an autoload — see Audio.gd). Seed the
 	# change-trackers from the restored save so the FIRST town/biome event compares
 	# against the loaded state, not zero, and doesn't fire a spurious sound.
@@ -2464,6 +2470,17 @@ func _on_chain_changed(length: int) -> void:
 		_live_chain_len = length
 		_live_chain_tile = board.current_chain_tile() if board != null else Constants.EMPTY
 	_refresh_chain_progress()
+
+## A1b — the upgrade-tile provider the Board calls inside _resolve (board.upgrade_provider). Given
+## the chained tile type + chain length, answer {count, tile}: how many next-tier UPGRADE tiles to
+## spawn and which tile, from GameState.upgrade_spawn against the home zone. Gated on the FARM biome
+## — mine/harbor have no zone upgradeMap, so we return the empty {0, EMPTY} there and the Board
+## refills from the pool unchanged. Mirrors the React core loop (nextUpgradeTile + upgradeCountForChain):
+## chaining birds → PIG, grass/trees → PHEASANT, etc.; fruit → GOLD spawns no tile (coins only).
+func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
+	if game.active_biome != "farm":
+		return {"count": 0, "tile": Constants.EMPTY}
+	return GameState.upgrade_spawn(ZoneConfig.HOME_ZONE, tile_type, length)
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	var res: Dictionary = game.credit_chain(tile_type, length)

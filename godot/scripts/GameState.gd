@@ -1400,10 +1400,64 @@ const FARM_CATEGORY_TILE := {
 	"fruit": Constants.Tile.APPLE,
 }
 
+## The FULL home-farm category → representative TILE map — the complete inverse of the farm
+## slice of Constants.CATEGORY (every farm-playable category, NOT just the eligible base-spawn
+## six). DISTINCT from FARM_CATEGORY_TILE above, which is the BASE-SPAWN subset (the six
+## upgradeMap KEYS): this one ALSO covers the upgrade-only TARGET categories herd/cattle/mount
+## (and flower) → PIG/COW/HORSE (and PANSY). Those tiles must never BASE-SPAWN (FARM_CATEGORY_TILE
+## excludes them) yet they DO arrive as UPGRADE tiles — chaining birds→PIG (herd), the React
+## upgradeMap's whole point. upgrade_spawn() resolves its target tile through THIS map so an
+## upgrade target outside the eligible set still maps to a real tile, while base spawns stay
+## restricted to FARM_CATEGORY_TILE. (React: nextResourceForZone resolves the target zone-category
+## to its tile family regardless of base-spawn eligibility.)
+const FARM_CATEGORY_TO_TILE := {
+	"grass":  Constants.Tile.GRASS,
+	"grain":  Constants.Tile.WHEAT,
+	"trees":  Constants.Tile.OAK,
+	"birds":  Constants.Tile.PHEASANT,
+	"veg":    Constants.Tile.CARROT,
+	"fruit":  Constants.Tile.APPLE,
+	"flower": Constants.Tile.PANSY,
+	"herd":   Constants.Tile.PIG,
+	"cattle": Constants.Tile.COW,
+	"mount":  Constants.Tile.HORSE,
+}
+
 ## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
 ## not a category unlock (every eligible category already base-spawns season-weighted). Kept
 ## modest so a spawner specialises the board without swamping the season profile.
 const SPAWNER_BOOST_SLOTS: int = 6
+
+## How many UPGRADE TILES of the zone's next tier a resolved farm chain spawns, and WHICH tile —
+## the React core loop (src/GameScene.ts nextUpgradeTile + utils.ts upgradeCountForChain /
+## features/zones/data.ts nextResourceForZone). PURE + headless-testable (no node, no RNG): given
+## the zone, the SOURCE tile that was chained, and the chain length, returns
+##   { "count": int, "tile": int }
+## where `count` = floor(chain_len / threshold(source_tile)) (BoardLogic.upgrade_count) and `tile`
+## is the upgrade TARGET tile. Returns count 0 / tile EMPTY (so the chain just credits its normal
+## resources/coins, no upgrade tile) when:
+##   - the source tile has no real threshold (a hazard like RAT/RUBBLE → NO_THRESHOLD → count 0),
+##   - the chain is below threshold (floor → 0),
+##   - the zone's upgradeMap has NO redirect for the source category, OR
+##   - the redirect is the GOLD sentinel (ZoneConfig.GOLD — "coins, no tile"; e.g. fruit→GOLD).
+## The target tile is resolved through FARM_CATEGORY_TO_TILE (the FULL map) so upgrade-only targets
+## (herd→PIG, cattle→COW, mount→HORSE) map to real tiles even though they never base-spawn.
+## ONLY meaningful for the FARM (home zone) — the mine/harbor have no zone upgradeMap, so callers
+## apply this on the farm biome only (mine/harbor pass through unchanged).
+static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
+	var none := {"count": 0, "tile": Constants.EMPTY}
+	var threshold: int = Constants.threshold_for(source_tile)
+	var count: int = BoardLogic.upgrade_count(chain_len, threshold)
+	if count <= 0:
+		return none   # below threshold, or a hazard tile (NO_THRESHOLD)
+	var source_cat: String = Constants.category_of(source_tile)
+	var target_cat: String = ZoneConfig.upgrade_target(zone_id, source_cat)
+	# No redirect ("") or the GOLD sentinel → no upgrade tile (coins only, e.g. fruit→GOLD).
+	if target_cat == "" or target_cat == ZoneConfig.GOLD:
+		return none
+	if not FARM_CATEGORY_TO_TILE.has(target_cat):
+		return none   # defensive: a target category with no farm tile spawns nothing
+	return {"count": count, "tile": int(FARM_CATEGORY_TO_TILE[target_cat])}
 
 ## Active weighted refill pool (Array[int] of Constants.Tile) for the home FARM board:
 ## a ZONE-RESTRICTED, SEASON-WEIGHTED base pool — NOT the old flat full-variety FARM_POOL.
