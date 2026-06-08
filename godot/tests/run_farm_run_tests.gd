@@ -157,6 +157,13 @@ func _test_close_season() -> void:
 	_check(is_equal_approx(g.npc_bond("wren"), 5.9), "close_season decays wren bond 6.0 → 5.9")
 	# An NPC left at the Warm default (5.0, not > 5) is NOT decayed.
 	_check(is_equal_approx(g.npc_bond("mira"), 5.0), "close_season leaves a 5.0 bond untouched")
+	# Floor at 5.0: a bond of 5.05 (just above Warm) must decay to exactly 5.0, NOT 4.95.
+	var g2 := GameState.new()
+	g2.gain_bond("wren", 0.05)   # 5.0 → 5.05
+	_check(abs(g2.npc_bond("wren") - 5.05) < 0.0001, "(setup) wren bond set to 5.05")
+	g2.close_season()
+	var b_after: float = g2.npc_bond("wren")
+	_check(abs(b_after - 5.0) < 0.0001, "close_season floors 5.05 bond to exactly 5.0 (not 4.95)")
 
 # ── selection bias: chosen category gets SPAWNER_BOOST_SLOTS more slots ──────────
 

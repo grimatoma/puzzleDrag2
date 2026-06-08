@@ -1361,12 +1361,16 @@ func close_season() -> Dictionary:
 	active_biome = "farm"
 	return {"coins_granted": 25, "season_ended": season_ended}
 
-## Decay every NPC bond above Warm (5.0) by 0.1 (React decayBond, fired by CLOSE_SEASON).
-## Bonds at or below 5.0 are left untouched. gain() clamps to [0, 10].
+## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
+## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
+## are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
+## bleeding below the neutral baseline — gain() only clamps to [0, 10], so the
+## floor must be applied here.
 func _decay_npc_bonds() -> void:
 	for id in NpcConfig.all_ids():
-		if npcs_state.bond(id) > 5.0:
-			npcs_state.gain(id, -0.1)
+		var b: float = npcs_state.bond(id)
+		if b > 5.0:
+			npcs_state.gain(id, maxf(5.0, b - 0.1) - b)
 
 ## Reset the farm season cycle back to a fresh Spring (0 turns used). Called when starting a
 ## fresh farm session — there is no per-session "enter the farm" path in the port (the farm is
