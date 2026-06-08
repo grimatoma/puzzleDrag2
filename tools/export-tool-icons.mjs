@@ -37,6 +37,8 @@ const TOOL_KEYS = [
   "bird_cage", "scythe_full", "hoe", "iron_pick",
   "plough", "fruit_picker", "herders_crook", "milk_churn", "saddle",
   "coal_hammer", "gold_pick", "trimmer", "bee", "coal_transmuter",
+  // Tools PR2 — new powers (transform_random_n / reshuffle_board / clear_hazard).
+  "basic", "rare", "shuffle", "cat", "terrier",
 ];
 
 (async () => {

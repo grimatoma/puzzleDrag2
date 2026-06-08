@@ -201,6 +201,84 @@ static func transform_all(grid: Array, from_keys: Array, to_key: int) -> Diction
 				transformed += 1
 	return {"grid": out, "transformed": transformed}
 
+## Transform N random NON-HAZARD, non-empty cells to `to_key`. Returns
+##   { "grid": Array, "transformed": int }.
+## Deterministic for a given rng seed: candidate cells are gathered in a fixed
+## row-major order, shuffled by `rng`, and the first N are transformed. Hazard
+## (RAT / RUBBLE) and empty cells are NEVER candidates (a transform must not
+## quietly undo a hazard's lock). If fewer than N eligible cells exist, all of
+## them are transformed. Mirrors clear_random_n's selection style (React
+## resolveTransformKey / random-N transform), but remaps values instead of clearing.
+static func transform_random_n(grid: Array, count: int, to_key: int, rng: RandomNumberGenerator) -> Dictionary:
+	var out: Array = _clone(grid)
+	if count <= 0:
+		return {"grid": out, "transformed": 0}
+	# Gather candidates in deterministic row-major order (same as clear_random_n).
+	var candidates: Array = []
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			var v: int = out[r][c]
+			if v != Constants.EMPTY and not is_hazard(v):
+				candidates.append(Vector2i(c, r))
+	# Fisher–Yates shuffle driven by the supplied rng (deterministic given seed).
+	for i in range(candidates.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: Vector2i = candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = tmp
+	var take: int = min(count, candidates.size())
+	for k in take:
+		var p: Vector2i = candidates[k]
+		out[p.y][p.x] = to_key
+	return {"grid": out, "transformed": take}
+
+## Pure value-permutation of the board: collect every NON-EMPTY tile value (leaving
+## EMPTY cells as holes IN PLACE), Fisher–Yates shuffle the values with `rng`, and
+## write them back into the same non-empty cell positions (row-major). Returns
+##   { "grid": Array }.
+## No re-roll, no credit, no value changes — only positions move. EMPTY cells keep
+## their position (the multiset of non-empty values is unchanged). Hazards ARE shuffled
+## like any other tile (this is a reshuffle, not a clear/transform). Backs reshuffle_board.
+## NOTE: the result is not guaranteed to contain a legal chain — the caller (Board.
+## apply_external_grid) re-lands it through the existing has_valid_chain reshuffle guard.
+static func shuffle_tiles(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	var out: Array = _clone(grid)
+	# Collect non-empty values + their positions in row-major order.
+	var positions: Array = []
+	var values: Array = []
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			var v: int = out[r][c]
+			if v != Constants.EMPTY:
+				positions.append(Vector2i(c, r))
+				values.append(v)
+	# Fisher–Yates shuffle of the value list (deterministic given the rng seed).
+	for i in range(values.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: int = values[i]
+		values[i] = values[j]
+		values[j] = tmp
+	# Write the shuffled values back into the original non-empty positions.
+	for idx in positions.size():
+		var p: Vector2i = positions[idx]
+		out[p.y][p.x] = int(values[idx])
+	return {"grid": out}
+
+## Clear (set to EMPTY) every cell equal to `hazard_tile`. Returns
+##   { "grid": Array, "collected": Dictionary {} }.
+## This DELIBERATELY bypasses the HAZARD_LOCK for the named hazard — it is the one
+## power allowed to REMOVE a hazard from the board (React clear_hazard: cat/terrier
+## sweeping rats). No inventory credit is produced (hazards yield nothing), so
+## `collected` is always empty — callers credit nothing. Non-hazard cells and other
+## hazard kinds are left untouched.
+static func clear_hazard(grid: Array, hazard_tile: int) -> Dictionary:
+	var out: Array = _clone(grid)
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			if out[r][c] == hazard_tile:
+				out[r][c] = Constants.EMPTY
+	return {"grid": out, "collected": {}}
+
 ## Replace cells whose value is in `from_keys` within CHEBYSHEV `radius` of
 ## `center` with `to_key`. Returns { "grid", "transformed" }. HAZARD cells inside
 ## the radius are skipped. Backs transform_adjacent (magnet).

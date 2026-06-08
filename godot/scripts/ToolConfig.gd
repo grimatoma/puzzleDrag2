@@ -63,6 +63,16 @@ const GOLD_PICK: String = "gold_pick"
 const TRIMMER: String = "trimmer"
 const BEE: String = "bee"
 const COAL_TRANSMUTER: String = "coal_transmuter"
+# ── New board powers (Tools PR2) — transform_random_n / reshuffle_board / clear_hazard.
+# These are the FIRST tools to use these three ToolEffects primitives (PR1 only reused
+# the existing clear/transform/select powers). Targets use the REAL Godot tile/category
+# names; the spawn-target string ("biome_base"/"biome_rare") and hazard NAME ("rats")
+# are resolved to Constants.Tile values at dispatch (the TOOLS dict is a const).
+const SEEDPACK: String = "basic"
+const LOCKBOX: String = "rare"
+const RESHUFFLE_HORN: String = "shuffle"
+const CAT: String = "cat"
+const TERRIER: String = "terrier"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -233,6 +243,46 @@ const TOOLS: Dictionary = {
 		},
 		"tap_target": true,
 	},
+	# ── New board powers (Tools PR2) ───────────────────────────────────────────
+	# transform_random_n — re-seed N random board cells to a biome target. `to` is a
+	# spawn-target STRING ("biome_base"/"biome_rare", faithful to the web's
+	# resolveTransformKey for the farm biome) resolved at dispatch via _resolve_spawn_key.
+	SEEDPACK: {
+		"label": "Seedpack",
+		"power_id": "transform_random_n",
+		# 5 random cells → the farm base tile (GRASS) — sows easy-to-chain staples.
+		"params": {"count": 5, "to": "biome_base"},
+		"tap_target": false,
+	},
+	LOCKBOX: {
+		"label": "Lockbox",
+		"power_id": "transform_random_n",
+		# 3 random cells → the farm rare tile (FRUIT_BLACKBERRY) — seeds a high-value target.
+		"params": {"count": 3, "to": "biome_rare"},
+		"tap_target": false,
+	},
+	# reshuffle_board — pure value-permutation of the board (no re-roll, no credit).
+	RESHUFFLE_HORN: {
+		"label": "Reshuffle Horn",
+		"power_id": "reshuffle_board",
+		"params": {},
+		"tap_target": false,
+	},
+	# clear_hazard — remove a named hazard from the board (the one power allowed to). The
+	# hazard NAME ("rats") is resolved to Constants.Tile.RAT at dispatch via _resolve_hazard_key.
+	CAT: {
+		"label": "Cat",
+		"power_id": "clear_hazard",
+		"params": {"target": "rats"},
+		"tap_target": false,
+	},
+	TERRIER: {
+		"label": "Terrier",
+		"power_id": "clear_hazard",
+		# Same as Cat — the web's terrier tool also clears the rats hazard.
+		"params": {"target": "rats"},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -247,6 +297,8 @@ const TOOL_IDS: Array = [
 	FRUIT_PICKER, BIRD_CAGE, HERDERS_CROOK, MILK_CHURN, SADDLE,
 	# Tools PR1 — Mine ores.
 	IRON_PICK, COAL_HAMMER, GOLD_PICK, COAL_TRANSMUTER,
+	# Tools PR2 — new powers (transform_random_n / reshuffle_board / clear_hazard).
+	SEEDPACK, LOCKBOX, RESHUFFLE_HORN, CAT, TERRIER,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
@@ -303,6 +355,28 @@ static func tiles_in_categories(categories: Array) -> Array:
 	out.sort()
 	return out
 
+## Resolve a transform_random_n `to` target: either a literal Constants.Tile int, or
+## a biome spawn-target STRING. Faithful port of the web's resolveTransformKey for the
+## FARM biome: "biome_base" → GRASS (the farm staple), "biome_rare" → FRUIT_BLACKBERRY
+## (the farm rare). An int passes through unchanged. Unknown strings fall back to GRASS.
+static func _resolve_spawn_key(to) -> int:
+	if to is int:
+		return int(to)
+	match String(to):
+		"biome_base": return Constants.Tile.GRASS
+		"biome_rare": return Constants.Tile.FRUIT_BLACKBERRY
+		_:            return Constants.Tile.GRASS
+
+## Resolve a clear_hazard `target` to a Constants.Tile hazard value. "rats" → RAT.
+## A literal int passes through unchanged. Unknown names resolve to RAT (the only
+## hazard the port's clear_hazard tools target).
+static func _resolve_hazard_key(target) -> int:
+	if target is int:
+		return int(target)
+	match String(target):
+		"rats": return Constants.Tile.RAT
+		_:      return Constants.Tile.RAT
+
 # ── Dispatch (catalog params → ToolEffects primitive) ─────────────────────────
 
 ## Apply an INSTANT (non-tap) tool over the whole board. Returns the dispatched
@@ -347,6 +421,34 @@ static func apply_instant(grid: Array, id: String, rng: RandomNumberGenerator = 
 				from_keys,
 				int(params.get("to_key", Constants.EMPTY)),
 			)
+		"transform_random_n":
+			# Re-seed N random cells to a biome target. `to` may be a literal Tile int or a
+			# spawn-target string ("biome_base"/"biome_rare"), resolved here. Deterministic
+			# given a seeded rng (a fresh randomized one when omitted — same contract as
+			# clear_random_n).
+			var rt: RandomNumberGenerator = rng
+			if rt == null:
+				rt = RandomNumberGenerator.new()
+				rt.randomize()
+			return ToolEffects.transform_random_n(
+				grid,
+				int(params.get("count", 0)),
+				_resolve_spawn_key(params.get("to", Constants.Tile.GRASS)),
+				rt,
+			)
+		"reshuffle_board":
+			# Pure value-permutation of the board. Deterministic given a seeded rng (a fresh
+			# randomized one when omitted). The shuffled grid is re-landed through Board.
+			# apply_external_grid's has_valid_chain guard, so it can't strand the player.
+			var rs: RandomNumberGenerator = rng
+			if rs == null:
+				rs = RandomNumberGenerator.new()
+				rs.randomize()
+			return ToolEffects.shuffle_tiles(grid, rs)
+		"clear_hazard":
+			# Remove the named hazard from the board (bypasses the HAZARD_LOCK for it). Credits
+			# nothing (hazards yield nothing). `target` is a hazard name ("rats") → Tile.RAT.
+			return ToolEffects.clear_hazard(grid, _resolve_hazard_key(params.get("target", "rats")))
 		_:
 			return {}
 
