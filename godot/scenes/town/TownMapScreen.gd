@@ -312,43 +312,115 @@ func _open_build_picker_for_lot(_lot: int) -> void:
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_child(hint)
 
-	# Show the FULL building roster with gating reasons (matching the React picker):
-	# tier-locked rows show "Requires <Tier>" + a lock; unlocked rows get a Build button
-	# (enabled when affordable, else a disabled "Need items"). The picker is never empty.
+	# Show the FULL building roster as cards (matching the React picker): each card has the
+	# produced-good icon, name + description, the cost as resource chips, and a Build button
+	# (enabled when affordable, else a disabled "Need items"); tier-locked rows show
+	# "Requires <Tier>" + a 🔒 instead. The picker is never empty.
 	for id in BuildingConfig.ALL_BUILD_IDS:
-		# Skip rats-hazard buildings here (parity with TownScreen — they have their
-		# own gated section; the map picker offers the standard spawners/refiners).
+		# Skip rats-hazard buildings here (parity with TownScreen — they have their own
+		# gated section; the map picker offers the standard spawners/refiners).
 		if BuildingConfig.is_hazard_building(id):
 			continue
-		var req_tier: int = BuildingConfig.unlock_tier(id)
-		var tier_locked: bool = game.settlement.tier < req_tier
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 10)
-		var detail: String = ("Requires %s" % TownConfig.tier_name(req_tier)) if tier_locked \
-			else _format_cost(BuildingConfig.building_cost(id))
-		var label := _make_label(
-			"%s  —  %s" % [BuildingConfig.building_name(id), detail],
-			Palette.INK if not tier_locked else Palette.INK_MID)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
+		card.add_child(_make_build_row(id))
 
-		if tier_locked:
-			# Locked by tier — a muted lock glyph instead of a Build control.
-			row.add_child(_make_label("🔒", Palette.INK_MID))
-		else:
-			var build_btn := Button.new()
-			var affordable: bool = game.can_build(id)
-			# can_build already gates on tier, free plot, and full cost in inventory.
-			build_btn.text = "Build" if affordable else "Need items"
-			build_btn.disabled = not affordable
-			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
-			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
-			row.add_child(build_btn)
-			_action_buttons["build:" + id] = build_btn
+## One building card in the picker (React parity): the produced-good icon (the port has no
+## building art, so the building's output resource stands in — a Bakery shows bread), the
+## name (Cinzel) + one-line description, the cost as resource chips, and the action — a Build
+## button (enabled when game.can_build(id), else a disabled "Need items") for unlocked
+## buildings, or "Requires <Tier>" + a 🔒 when tier-locked. Build wiring + the
+## _action_buttons["build:<id>"] key are unchanged from the old flat rows.
+func _make_build_row(id: String) -> PanelContainer:
+	var info: Dictionary = BuildingConfig.BUILDINGS.get(id, {})
+	var req_tier: int = BuildingConfig.unlock_tier(id)
+	var tier_locked: bool = game.settlement.tier < req_tier
 
-		card.add_child(row)
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
+	chip.add_child(row)
+
+	# Icon — the produced good (bread/eggs/plank/…) as a building stand-in; 🏠 when none.
+	var res: String = String(info.get("resource", ""))
+	var icon: TextureRect = UiKit.make_icon(res, 34.0) if res != "" else null
+	if icon != null:
+		row.add_child(icon)
+	else:
+		var emoji := Label.new()
+		emoji.text = "🏠"
+		emoji.add_theme_font_size_override("font_size", 28)
+		emoji.add_theme_color_override("font_color", Palette.INK_MID if tier_locked else Palette.INK)
+		row.add_child(emoji)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 2)
+	row.add_child(col)
+
+	var name_lbl := Label.new()
+	name_lbl.text = BuildingConfig.building_name(id)
+	name_lbl.add_theme_font_size_override("font_size", 18)
+	name_lbl.add_theme_color_override("font_color", Palette.INK if not tier_locked else Palette.INK_MID)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		name_lbl.add_theme_font_override("font", hf)
+	col.add_child(name_lbl)
+
+	var desc: String = String(info.get("desc", ""))
+	if desc != "":
+		var desc_lbl := Label.new()
+		desc_lbl.text = desc
+		desc_lbl.add_theme_font_size_override("font_size", 12)
+		desc_lbl.add_theme_color_override("font_color", Palette.INK_MID)
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(desc_lbl)
+
+	if tier_locked:
+		col.add_child(_make_label("Requires %s" % TownConfig.tier_name(req_tier), Palette.INK_MID))
+	else:
+		col.add_child(_make_cost_chips(BuildingConfig.building_cost(id)))
+
+	# Action: 🔒 when tier-locked, else a Build / "Need items" button (same wiring as before).
+	if tier_locked:
+		var lock := Label.new()
+		lock.text = "🔒"
+		lock.add_theme_font_size_override("font_size", 20)
+		lock.add_theme_color_override("font_color", Palette.INK_MID)
+		row.add_child(lock)
+	else:
+		var build_btn := Button.new()
+		var affordable: bool = game.can_build(id)
+		build_btn.text = "Build" if affordable else "Need items"
+		build_btn.disabled = not affordable
+		build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+		UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
+		build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
+		row.add_child(build_btn)
+		_action_buttons["build:" + id] = build_btn
+
+	return chip
+
+## Render a cost Dictionary {resource:qty} as a row of icon+×N chips (matching the React
+## cost block); empty → a muted "free". Falls back to a text name when an icon is missing.
+func _make_cost_chips(cost: Dictionary) -> Control:
+	if cost.is_empty():
+		return _make_label("free", Palette.MOSS)
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	for k in cost.keys():
+		var one := HBoxContainer.new()
+		one.add_theme_constant_override("separation", 3)
+		var ic: TextureRect = UiKit.make_icon(String(k), 20.0)
+		if ic != null:
+			one.add_child(ic)
+		var lbl := Label.new()
+		lbl.text = ("×%d" % int(cost[k])) if ic != null else ("%s ×%d" % [UiKit.pretty_name(String(k)), int(cost[k])])
+		lbl.add_theme_font_size_override("font_size", 15)
+		lbl.add_theme_color_override("font_color", Palette.INK)
+		one.add_child(lbl)
+		box.add_child(one)
+	return box
 
 ## The prominent "Build" button (bottom-right) was pressed: open the build picker for the
 ## first EMPTY plot — exactly what a click on an empty lot resolves to (lot index ==
