@@ -204,7 +204,9 @@ func _test_sweep_keys_clear_all() -> void:
 	_check(int(res["collected"].get(T.GRASS, 0)) == 34, "sweep_keys collected 34 grass")
 
 func _test_sweep_keys_category() -> void:
-	# "trees" category == OAK only in the Godot tile set.
+	# "trees" category includes OAK (plus the full-catalog parity tree tiles added
+	# in #1047); the sweep grid below only places OAK, so the category just needs to
+	# contain OAK for clear_category to remove it.
 	var g := _full(T.GRASS)
 	g[1][1] = T.OAK
 	g[4][4] = T.OAK
@@ -212,7 +214,7 @@ func _test_sweep_keys_category() -> void:
 	var keys := ToolConfig.tiles_in_category("trees")
 	var res := ToolEffects.sweep_keys(g, keys)
 	var out: Array = res["grid"]
-	_check(keys.has(T.OAK) and keys.size() == 1, "tiles_in_category('trees') == [OAK]")
+	_check(keys.has(T.OAK), "tiles_in_category('trees') includes OAK")
 	_check(_count_of(out, T.OAK) == 0, "clear_category 'trees' removes all OAK")
 	_check(_count_of(out, T.WHEAT) == 1 and _count_of(out, T.GRASS) == 33,
 		"clear_category 'trees' leaves non-tree tiles intact")
