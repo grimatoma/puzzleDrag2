@@ -306,7 +306,7 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 	claim_btn.text = "CLAIMED" if claimed else "CLAIM"
 	claim_btn.disabled = not claimable
 	claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(claim_btn, Palette.MOSS if claimable else Palette.IRON, 6, 18)
+	UiKit.style_action_button(claim_btn, Palette.MOSS, 6, 18)
 	claim_btn.connect("pressed", Callable(self, "_on_claim_quest").bind(qid))
 	col.add_child(claim_btn)
 	_quest_buttons[qid] = claim_btn
@@ -431,7 +431,7 @@ func _make_tier_row(tier_def: Dictionary, level: int) -> PanelContainer:
 	claim_btn.text = "CLAIMED" if claimed else "CLAIM"
 	claim_btn.disabled = not claimable
 	claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(claim_btn, Palette.MOSS if claimable else Palette.IRON, 6, 18)
+	UiKit.style_action_button(claim_btn, Palette.MOSS, 6, 18)
 	claim_btn.connect("pressed", Callable(self, "_on_claim_tier").bind(tier))
 	col.add_child(claim_btn)
 	_tier_buttons[tier] = claim_btn

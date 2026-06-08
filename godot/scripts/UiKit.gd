@@ -308,6 +308,46 @@ static func style_button(
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
 
+## FILLED primary-action button (React parity): the NORMAL state is a SOLID accent fill
+## (green Craft, gold Sell, ember Enter, …) with contrast-picked text, so an enabled
+## action reads as a clear call-to-action instead of a passive parchment pill that looks
+## disabled. The disabled state stays muted parchment so enabled-vs-disabled is obvious.
+## Use this for positive primary actions; keep style_button() for Close/Cancel/secondary.
+static func style_action_button(btn: Button, accent: Color, padding_v: int = 6, with_font_size: int = 0) -> void:
+	var text := _contrast_text(accent)
+	btn.add_theme_stylebox_override("normal",   _action_box(accent, padding_v))
+	btn.add_theme_stylebox_override("hover",     _action_box(accent.lightened(0.10), padding_v))
+	btn.add_theme_stylebox_override("pressed",   _action_box(accent.darkened(0.12), padding_v))
+	btn.add_theme_stylebox_override("focus",     _action_box(accent.lightened(0.10), padding_v))
+	btn.add_theme_stylebox_override("disabled",  btn_box(Palette.DIM, padding_v))
+	btn.add_theme_color_override("font_color",          text)
+	btn.add_theme_color_override("font_hover_color",     text)
+	btn.add_theme_color_override("font_pressed_color",   text)
+	btn.add_theme_color_override("font_focus_color",     text)
+	btn.add_theme_color_override("font_disabled_color",  Color(Palette.INK_MID, 0.55))
+	if with_font_size > 0:
+		btn.add_theme_font_size_override("font_size", with_font_size)
+
+## StyleBox for a filled action button: solid accent fill, a slightly darker accent
+## border for definition, radius 8, snug margins.
+static func _action_box(fill: Color, padding_v: int) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = fill.darkened(0.22)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = padding_v
+	sb.content_margin_bottom = padding_v
+	return sb
+
+## Pick ink-dark or soft-parchment text for legibility on `bg` by perceived luminance —
+## light accents (gold/tan) get dark ink, dark accents (ember/moss/rose) get light text.
+static func _contrast_text(bg: Color) -> Color:
+	var lum := 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
+	return Palette.INK if lum > 0.62 else Palette.PARCHMENT_SOFT
+
 # ── Scroll container ──────────────────────────────────────────────────────────
 
 ## Build a vertical-only scroll container with momentum / touch-drag scrolling
@@ -349,7 +389,35 @@ static func make_vscroll() -> ScrollContainer:
 		elif scroll.content_node == null and node is Control and not node is ScrollBar:
 			scroll.content_node = node
 	)
+	# Theme the engine scrollbar to the parchment palette. The default Godot scrollbar is
+	# a pale-grey track + thumb that reads as raw engine chrome against the warm cards
+	# (flagged on every scroll modal). Replace it with a slim, semi-transparent ink thumb
+	# and an invisible track so it nearly disappears at rest like the React view. Done on
+	# `ready` so the bars exist (ScrollContainer creates them in its own _ready).
+	scroll.ready.connect(func() -> void:
+		_slim_scrollbar(scroll.get_v_scroll_bar())
+		_slim_scrollbar(scroll.get_h_scroll_bar())
+	)
 	return scroll
+
+## Restyle a ScrollBar to a slim, parchment-friendly thumb with an invisible track so it
+## reads as a subtle indicator rather than grey engine chrome.
+static func _slim_scrollbar(bar: ScrollBar) -> void:
+	if bar == null:
+		return
+	var grab := StyleBoxFlat.new()
+	grab.bg_color = Color(Palette.INK_MID, 0.38)
+	grab.set_corner_radius_all(4)
+	grab.content_margin_left = 4
+	grab.content_margin_right = 4
+	var grab_hi := grab.duplicate() as StyleBoxFlat
+	grab_hi.bg_color = Color(Palette.INK_MID, 0.6)
+	var empty := StyleBoxEmpty.new()
+	bar.add_theme_stylebox_override("scroll", empty)
+	bar.add_theme_stylebox_override("scroll_focus", empty)
+	bar.add_theme_stylebox_override("grabber", grab)
+	bar.add_theme_stylebox_override("grabber_highlight", grab_hi)
+	bar.add_theme_stylebox_override("grabber_pressed", grab_hi)
 
 ## Size a modal's vertical ScrollContainer to its CONTENT height, capped to the viewport.
 ## This is what makes a modal card adapt: a SHORT list yields a short card (centred in the

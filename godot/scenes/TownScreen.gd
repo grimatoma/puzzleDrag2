@@ -280,7 +280,7 @@ func _build_settlement_section() -> void:
 	var btn := Button.new()
 	btn.text = "Advance to %s — %s" % [next_name, cost_text]
 	btn.disabled = not game.can_tier_up()
-	UiKit.style_button(btn, Palette.EMBER, 6, 0, true)
+	UiKit.style_action_button(btn, Palette.EMBER, 6, 0)
 	btn.connect("pressed", Callable(self, "_do_tier_up"))
 	_settlement_body.add_child(btn)
 	_action_buttons["tierup"] = btn
@@ -318,7 +318,7 @@ func _build_buildings_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
+			UiKit.style_action_button(build_btn, Palette.MOSS, 6, 0)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
@@ -346,7 +346,7 @@ func _build_refine_section() -> void:
 		craft_btn.text = "Craft"
 		craft_btn.disabled = not game.can_craft(id)
 		craft_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(craft_btn, Palette.MOSS, 6, 0, true)
+		UiKit.style_action_button(craft_btn, Palette.MOSS, 6, 0)
 		craft_btn.connect("pressed", Callable(self, "_do_craft").bind(id))
 		row.add_child(craft_btn)
 		_action_buttons["craft:" + id] = craft_btn
@@ -374,7 +374,7 @@ func _build_market_section() -> void:
 		var sell_btn := Button.new()
 		sell_btn.text = "Sell 1"
 		sell_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(sell_btn, Palette.GOLD, 6, 0, true)
+		UiKit.style_action_button(sell_btn, Palette.GOLD, 6, 0)
 		sell_btn.connect("pressed", Callable(self, "_do_sell").bind(res))
 		row.add_child(sell_btn)
 		_action_buttons["sell:" + res] = sell_btn
@@ -406,7 +406,7 @@ func _build_market_section() -> void:
 		buy_btn.text = "Buy 1"
 		buy_btn.disabled = game.coins < price
 		buy_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(buy_btn, Palette.MOSS, 6, 0, true)
+		UiKit.style_action_button(buy_btn, Palette.MOSS, 6, 0)
 		buy_btn.connect("pressed", Callable(self, "_do_buy").bind(res))
 		row.add_child(buy_btn)
 		_action_buttons["buy:" + res] = buy_btn
@@ -434,7 +434,7 @@ func _build_orders_section() -> void:
 		fill_btn.text = "Fill"
 		fill_btn.disabled = not game.can_fill_order(i)
 		fill_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(fill_btn, Palette.GOLD, 6, 0, true)
+		UiKit.style_action_button(fill_btn, Palette.GOLD, 6, 0)
 		fill_btn.connect("pressed", Callable(self, "_do_fill").bind(i))
 		row.add_child(fill_btn)
 		_action_buttons["fill:" + str(i)] = fill_btn
@@ -480,7 +480,7 @@ func _build_expedition_section() -> void:
 	var enter_btn := Button.new()
 	enter_btn.text = "Enter the Mine (%d turns)" % supplies
 	enter_btn.disabled = not game.can_enter_mine()
-	UiKit.style_button(enter_btn, Palette.EMBER, 6, 0, true)
+	UiKit.style_action_button(enter_btn, Palette.EMBER, 6, 0)
 	enter_btn.connect("pressed", Callable(self, "_do_enter_mine"))
 	_expedition_body.add_child(enter_btn)
 	_action_buttons["enter_mine"] = enter_btn
@@ -497,7 +497,7 @@ func _build_expedition_section() -> void:
 	var enter_h_btn := Button.new()
 	enter_h_btn.text = "Enter the harbor (%d turns)" % supplies
 	enter_h_btn.disabled = not (game.can_enter_harbor() and game.town2_complete)
-	UiKit.style_button(enter_h_btn, Palette.EMBER, 6, 0, true)
+	UiKit.style_action_button(enter_h_btn, Palette.EMBER, 6, 0)
 	enter_h_btn.connect("pressed", Callable(self, "_do_enter_harbor"))
 	_expedition_body.add_child(enter_h_btn)
 	_action_buttons["enter_harbor"] = enter_h_btn
@@ -526,7 +526,7 @@ func _build_boss_section() -> void:
 	var challenge_btn := Button.new()
 	challenge_btn.text = "⚔ Challenge Frostmaw"
 	challenge_btn.disabled = not game.can_challenge_boss()
-	UiKit.style_button(challenge_btn, Palette.EMBER, 6, 0, true)
+	UiKit.style_action_button(challenge_btn, Palette.EMBER, 6, 0)
 	challenge_btn.connect("pressed", Callable(self, "_do_challenge_boss"))
 	_boss_body.add_child(challenge_btn)
 	_action_buttons["challenge_boss"] = challenge_btn
@@ -569,7 +569,7 @@ func _build_rats_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
+			UiKit.style_action_button(build_btn, Palette.MOSS, 6, 0)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
@@ -581,7 +581,7 @@ func _build_rats_section() -> void:
 	if game.can_shoo_rats():
 		var shoo_btn := Button.new()
 		shoo_btn.text = "Shoo rats (free move, %d left)" % game.ratcatcher_charges_left()
-		UiKit.style_button(shoo_btn, Palette.GOLD, 6, 0, true)
+		UiKit.style_action_button(shoo_btn, Palette.GOLD, 6, 0)
 		shoo_btn.connect("pressed", Callable(self, "_do_shoo_rats"))
 		_rats_body.add_child(shoo_btn)
 		_action_buttons["shoo_rats"] = shoo_btn
@@ -622,7 +622,7 @@ func _build_workers_section() -> void:
 		hire_btn.text = "Hire"
 		hire_btn.disabled = not game.can_hire_worker(id)
 		hire_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(hire_btn, Palette.MOSS, 6, 0, true)
+		UiKit.style_action_button(hire_btn, Palette.MOSS, 6, 0)
 		hire_btn.connect("pressed", Callable(self, "_do_hire").bind(id))
 		row.add_child(hire_btn)
 		_action_buttons["hire:" + id] = hire_btn

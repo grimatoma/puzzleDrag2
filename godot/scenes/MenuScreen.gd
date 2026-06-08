@@ -224,8 +224,10 @@ func _build_more_section(col: VBoxContainer) -> void:
 		var btn := Button.new()
 		btn.text = "%s  %s" % [String(entry["icon"]), String(entry["label"])]
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		UiKit.style_button(btn, Palette.MOSS, 8, 18)
+		# Centered + same font size as the top Sound/New Game/Close buttons so the whole
+		# menu reads as one uniform pill list (was left-aligned + smaller = a jarring two-tier look).
+		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UiKit.style_button(btn, Palette.MOSS, 8, 20)
 		btn.connect("pressed", Callable(self, "_on_nav_pressed").bind(id))
 		list.add_child(btn)
 		_action_buttons["nav:" + id] = btn
