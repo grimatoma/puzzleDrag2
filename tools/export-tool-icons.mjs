@@ -41,6 +41,9 @@ const TOOL_KEYS = [
   "basic", "rare", "shuffle", "cat", "terrier",
   // Tools PR2b — fill_bias spawn-bias tools (fertilizer/bird_feed/sapling).
   "fertilizer", "bird_feed", "sapling",
+  // Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
+  "golden_apple", "golden_carrot", "golden_idol", "golden_sheep", "philosophers_stone",
+  "magic_wand", "magic_seed", "magic_fertilizer",
 ];
 
 (async () => {

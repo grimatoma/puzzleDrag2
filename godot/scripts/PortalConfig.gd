@@ -21,14 +21,19 @@ extends RefCounted
 ## SCOPE (faithful, self-contained port). This config + GameState.summon_magic_tool +
 ## the PortalScreen port the Portal feature's REAL backing logic: the summon ECONOMY (pay
 ## Influence → own a magic tool) and the build gate (build the Portal with coins + runes).
-## The magic-tool EFFECTS themselves (tap_clear_type / undo_move / restore_turns /
-## fill_bias / transform_tiles / reveal_tiles) are NOT implemented here — in the React app
-## they route through the GLOBAL tool-power system (applyToolPower / ITEMS[key].power), which
-## in the Godot port is the SEPARATE "tool-powers" milestone (M8). The `power` block on each
-## entry below CAPTURES that React metadata (power id + params, carried VERBATIM from
-## src/constants.ts) for faithfulness + future M8 wiring, but nothing reads it yet. The
-## React slice's magic_fertilizerCharges / fill_bias CHAIN_COLLECTED decay is likewise part
-## of that M8 fill_bias infra and is intentionally NOT ported here.
+##
+## EFFECTS (Tools PR3 update). EIGHT of these magic tools are now WIRED + usable: their
+## effects are implemented as Godot-native ToolConfig members (transform_tiles / tap_clear_type
+## / restore_turns / fill_bias), so once summoned they appear in the tool rack and fire through
+## the normal GameState.use_tool_on_grid path — see ToolConfig (GOLDEN_APPLE/CARROT/IDOL/SHEEP,
+## PHILOSOPHERS_STONE, MAGIC_WAND, MAGIC_SEED, MAGIC_FERTILIZER). PortalConfig stays the summon
+## ECONOMY; ToolConfig provides the power. The `power` block on each entry below still captures
+## the original React metadata (power id + params, VERBATIM from src/constants.ts) for the Wiki.
+##
+## DEFERRED (still effect-less): `hourglass` (undo_move) needs a board/inventory SNAPSHOT
+## system, and `miners_hat` (reveal_tiles) needs a HIDDEN-TILE layer — neither mechanic exists
+## in the port yet, so these two remain summonable (the catalog surfaces them) but do nothing
+## until those milestones land. They are intentionally NOT ToolConfig members.
 ##
 ## Registered as a `class_name` global (like CastleConfig / DecorationConfig / WorkerConfig)
 ## so its const + static helpers are reachable WITHOUT a live autoload — headless tests run

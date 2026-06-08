@@ -179,17 +179,21 @@ func _initialize() -> void:
 	_check(gs.tool_count("magic_wand") == 2, "second summon → magic_wand count 2")
 	_check(gs.influence == 90, "influence deducted again (170 - 80 = 90)")
 
-	# The whole point: a magic-tool id is NOT a ToolConfig member, so grant_tool would reject
-	# it — summon_magic_tool must write DIRECTLY into the tools dict and tool_count must read it.
-	_check(not ToolConfig.has_tool("magic_wand"), "ToolConfig does NOT know 'magic_wand' (magic tools aren't ToolConfig)")
+	# Tools PR3: the 8 implementable magic tools (incl. magic_wand) are now REAL ToolConfig
+	# members, so once summoned they're usable through the normal rack/use path. But the two
+	# DEFERRED magic tools (hourglass/miners_hat) are still NOT ToolConfig members — and
+	# summon_magic_tool must write DIRECTLY into the tools dict (set_count, not grant_tool) so
+	# it works uniformly for BOTH the member tools AND the non-member deferred ones.
+	_check(ToolConfig.has_tool("magic_wand"), "magic_wand IS a ToolConfig member now (Tools PR3 — usable)")
+	_check(not ToolConfig.has_tool("hourglass"), "deferred 'hourglass' is NOT a ToolConfig member")
 	var gt := GameState.new()
 	gt.portal_built = true
-	gt.influence = 100
-	gt.grant_tool("magic_wand")                  # grant_tool REJECTS a non-ToolConfig id
-	_check(gt.tool_count("magic_wand") == 0, "grant_tool('magic_wand') is a no-op (not a ToolConfig tool)")
-	gt.summon_magic_tool("magic_wand")           # summon writes directly → works
-	_check(gt.tool_count("magic_wand") == 1, "summon_magic_tool writes the count directly (bypasses grant_tool)")
-	_check(int(gt.tools.get("magic_wand", -1)) == 1, "tools dict holds the magic tool count directly")
+	gt.influence = 200
+	gt.grant_tool("hourglass")                   # grant_tool REJECTS a non-ToolConfig id
+	_check(gt.tool_count("hourglass") == 0, "grant_tool('hourglass') is a no-op (not a ToolConfig tool)")
+	gt.summon_magic_tool("hourglass")            # summon writes directly via set_count → works
+	_check(gt.tool_count("hourglass") == 1, "summon_magic_tool writes the count directly (bypasses grant_tool)")
+	_check(int(gt.tools.get("hourglass", -1)) == 1, "tools dict holds the deferred magic tool count directly")
 
 	# ── 3. to_dict / from_dict round-trip + missing-key default ───────────────────
 	var snap: Dictionary = gs.to_dict()

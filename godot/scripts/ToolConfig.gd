@@ -80,6 +80,24 @@ const TERRIER: String = "terrier"
 const FERTILIZER: String = "fertilizer"
 const BIRD_FEED: String = "bird_feed"
 const SAPLING: String = "sapling"
+# ── Portal magic tools (Tools PR3) — the implementable summon-economy magic tools, now
+# REAL ToolConfig members so they flow through the existing rack + use_tool_on_grid +
+# apply_instant/apply_tap dispatch with NO special-casing. PortalConfig stays the summon
+# ECONOMY (influence cost + web power metadata); these provide the Godot-native POWER. The
+# five golden/philosophers tools reuse transform_tiles (from_category → to_key); magic_wand
+# uses the NEW tap_clear_type power; magic_seed the NEW restore_turns state power;
+# magic_fertilizer the already-wired fill_bias power. Targets/categories use REAL Godot
+# tile/category names, never invented ones. DEFERRED (NOT here): hourglass (undo_move — needs
+# a board/inventory snapshot) and miners_hat (reveal_tiles — needs a hidden-tile layer); they
+# stay summonable in PortalConfig but have no effect until those milestones land.
+const GOLDEN_APPLE: String = "golden_apple"
+const GOLDEN_CARROT: String = "golden_carrot"
+const GOLDEN_IDOL: String = "golden_idol"
+const GOLDEN_SHEEP: String = "golden_sheep"
+const PHILOSOPHERS_STONE: String = "philosophers_stone"
+const MAGIC_WAND: String = "magic_wand"
+const MAGIC_SEED: String = "magic_seed"
+const MAGIC_FERTILIZER: String = "magic_fertilizer"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -320,6 +338,69 @@ const TOOLS: Dictionary = {
 		"params": {"target": Constants.Tile.OAK, "turns": 1},
 		"tap_target": false,
 	},
+	# ── Portal magic tools (Tools PR3) ──────────────────────────────────────────
+	# Summoned at the Portal (PortalConfig is the influence economy); these are the
+	# Godot-native POWER entries so a summoned tool shows in the rack + is usable with
+	# no special-casing. The transform tools reuse transform_tiles via from_category.
+	GOLDEN_APPLE: {
+		"label": "Golden Apple",
+		"power_id": "transform_tiles",
+		# Every tree tile → apple-fruit (React: trees → tile_fruit_apple).
+		"params": {"from_category": "trees", "to_key": Constants.Tile.APPLE},
+		"tap_target": false,
+	},
+	GOLDEN_CARROT: {
+		"label": "Golden Carrot",
+		"power_id": "transform_tiles",
+		# Every grass tile → carrot (React: grass → tile_veg_carrot).
+		"params": {"from_category": "grass", "to_key": Constants.Tile.CARROT},
+		"tap_target": false,
+	},
+	GOLDEN_IDOL: {
+		"label": "Golden Idol",
+		"power_id": "transform_tiles",
+		# Every grass tile → cow (React: grass → tile_cattle_cow).
+		"params": {"from_category": "grass", "to_key": Constants.Tile.COW},
+		"tap_target": false,
+	},
+	GOLDEN_SHEEP: {
+		"label": "Golden Sheep",
+		"power_id": "transform_tiles",
+		# Every grass tile → sheep herd (React: grass → tile_herd_sheep).
+		"params": {"from_category": "grass", "to_key": Constants.Tile.HERD_SHEEP},
+		"tap_target": false,
+	},
+	PHILOSOPHERS_STONE: {
+		"label": "Philosopher's Stone",
+		"power_id": "transform_tiles",
+		# Every stone tile → gold (React: stone → tile_mine_gold).
+		"params": {"from_category": "stone", "to_key": Constants.Tile.GOLD},
+		"tap_target": false,
+	},
+	# Magic Wand — the FIRST tap_clear_type tool: tap a cell, sweep every tile of that key.
+	MAGIC_WAND: {
+		"label": "Magic Wand",
+		"power_id": "tap_clear_type",
+		"params": {},
+		"tap_target": true,
+	},
+	# Magic Seed — the FIRST restore_turns tool: a STATE power handled in
+	# GameState.use_tool_on_grid's early path (never touches the grid). Gives back `amount`
+	# farm turns before the next harvest boundary.
+	MAGIC_SEED: {
+		"label": "Magic Seed",
+		"power_id": "restore_turns",
+		"params": {"amount": 5},
+		"tap_target": false,
+	},
+	# Magic Fertilizer — reuses the already-wired fill_bias state power. 3 biased farm turns
+	# toward wheat (React: next 3 fills spawn grain).
+	MAGIC_FERTILIZER: {
+		"label": "Magic Fertilizer",
+		"power_id": "fill_bias",
+		"params": {"target": Constants.Tile.WHEAT, "turns": 3},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -338,6 +419,9 @@ const TOOL_IDS: Array = [
 	SEEDPACK, LOCKBOX, RESHUFFLE_HORN, CAT, TERRIER,
 	# Tools PR2b — fill_bias spawn-bias tools (fertilizer/bird_feed/sapling).
 	FERTILIZER, BIRD_FEED, SAPLING,
+	# Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
+	GOLDEN_APPLE, GOLDEN_CARROT, GOLDEN_IDOL, GOLDEN_SHEEP, PHILOSOPHERS_STONE,
+	MAGIC_WAND, MAGIC_SEED, MAGIC_FERTILIZER,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
@@ -511,6 +595,15 @@ static func apply_tap(grid: Array, id: String, cell: Vector2i) -> Dictionary:
 			return ToolEffects.sweep_cells(grid, ToolEffects.select_cross(grid, cell))
 		"clear_component":
 			return ToolEffects.sweep_cells(grid, ToolEffects.select_component(grid, cell))
+		"tap_clear_type":
+			# Magic Wand: read the tapped cell's key and sweep EVERY tile of that key off the
+			# board (credited like a chain via sweep_keys). Tapping an EMPTY or HAZARD cell is a
+			# no-op ({}) — no charge is burned (use_tool_on_grid treats an empty result as a
+			# no_effect failure that consumes nothing).
+			var k: int = grid[cell.y][cell.x]
+			if k == Constants.EMPTY or ToolEffects.is_hazard(k):
+				return {}
+			return ToolEffects.sweep_keys(grid, [k])
 		"transform_adjacent":
 			# Accept EITHER explicit `from_keys` (Array of ints — magnet) OR
 			# `from_categories` (Array of Strings — coal_transmuter) resolved here.
