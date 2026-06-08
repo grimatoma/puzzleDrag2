@@ -94,6 +94,21 @@ func gain_bond(id: String, amount: float) -> void:
 var active_biome: String = "farm"   ## "farm" | "mine" | "harbor" — which biome the board shows
 var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
 
+# ── Farm season cycle (A1, ported from src/features/zones + src/constants SEASONS) ──
+## The home farm is a PERSISTENT board that cycles four seasons (Spring→Summer→Autumn→
+## Winter) over a turn budget, then HARVESTS and wraps back to Spring. `farm_turns_used` is
+## the spent-turn counter WITHIN the current season cycle (0..budget); the budget itself is
+## ZoneConfig.base_turns("home") (the port plays only the home farm). The SEASON is derived
+## from these via Constants.season_index — see current_season_index / current_season_name
+## below. This is a SEPARATE counter from `turn` (the monotonic story/quest counter above) —
+## do NOT conflate them. note_farm_turn() ticks this after each FARM chain (parallel to
+## note_mine_turn / note_harbor_turn for the expeditions), advancing the season and harvesting
+## at the budget boundary (reset to Spring).
+##
+## ADDITIVE GUARANTEE: a save written before seasons existed loads farm_turns_used = 0 (the
+## from_dict defensive default) — a fresh Spring cycle. SAVE_VERSION is NOT bumped.
+var farm_turns_used: int = 0        ## spent farm turns within the current season cycle (0..budget)
+
 # ── Fish / Harbor expedition (M3j, ported from src/features/fish) ──────────────
 ## The harbor is the THIRD biome, MIRRORING the mine expedition (M3f) and SHARING the
 ## same single inventory (the catch — fish_fillet/sea_shells/pearls/fish_oil — lands in
@@ -1110,6 +1125,61 @@ func leave_mine() -> void:
 	active_biome = "farm"
 	mine_turns_left = 0
 
+# ── Farm season cycle (A1) ─────────────────────────────────────────────────────
+
+## The current farm season-cycle turn budget — ZoneConfig.base_turns for the home zone (the
+## port plays only the home farm). The season + the season-weighted pool both derive from
+## farm_turns_used / this budget.
+func farm_turn_budget() -> int:
+	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+
+## The current farm season index (0=Spring … 3=Winter), derived from farm_turns_used and the
+## turn budget via Constants.season_index. A fresh farm (0 turns used) is Spring.
+func current_season_index() -> int:
+	return Constants.season_index(farm_turns_used, farm_turn_budget())
+
+## The current farm season NAME ("Spring"…"Winter").
+func current_season_name() -> String:
+	return Constants.season_name(farm_turns_used, farm_turn_budget())
+
+## Spend one FARM turn — the season-cycle analogue of note_mine_turn / note_harbor_turn.
+## Call AFTER a FARM chain resolves (its resources are already credited via credit_chain).
+## Increments farm_turns_used; when it REACHES the turn budget the season cycle completes —
+## a HARVEST boundary: reset farm_turns_used to 0 (season wraps back to Spring) and report
+## {harvest:true, ...}. Otherwise report {harvest:false, ...}. Unlike the expeditions this
+## NEVER changes active_biome (the farm is the persistent home board); the harvest is a
+## season reset, not a return-to-town. The rich harvest-summary MODAL is a later PR — the
+## summary fields here (coins, runes, the season just ended, the turn budget) are exposed so
+## that PR can populate the modal without re-deriving them.
+## Returns { harvest:bool, season:String (the season that was active for this turn),
+##           turns_used:int (the new counter after the tick), budget:int, coins:int, runes:int }.
+func note_farm_turn() -> Dictionary:
+	var budget: int = farm_turn_budget()
+	# The season this turn belonged to is read BEFORE the increment (the player spent the turn
+	# under the pre-increment season).
+	var season: String = current_season_name()
+	farm_turns_used += 1
+	var harvest: bool = false
+	if budget > 0 and farm_turns_used >= budget:
+		# Season cycle complete → harvest boundary: wrap back to a fresh Spring cycle.
+		harvest = true
+		farm_turns_used = 0
+	return {
+		"harvest": harvest,
+		"season": season,
+		"turns_used": farm_turns_used,
+		"budget": budget,
+		"coins": coins,
+		"runes": runes,
+	}
+
+## Reset the farm season cycle back to a fresh Spring (0 turns used). Called when starting a
+## fresh farm session — there is no per-session "enter the farm" path in the port (the farm is
+## the persistent home board), so this is invoked only by an explicit new-game reset. Kept as a
+## named helper so a future "Start Farming" session entry (a later PR) has a single seam.
+func reset_farm_cycle() -> void:
+	farm_turns_used = 0
+
 ## The refill pool for the CURRENTLY active biome: the flat MINE_POOL (plus the rubble
 ## hazard) while mining, otherwise the farm's building-gated pool (active_tile_pool).
 ## The mine board is not building-gated this milestone (no mine spawners yet).
@@ -1314,24 +1384,75 @@ func active_categories() -> Array:
 			cats.append(cat)
 	return cats
 
-## Active weighted refill pool (Array[int] of Constants.Tile): the FULL farm
-## variety (Constants.FARM_POOL — grass/wheat/bird/carrot/apple/pansy/oak/pig/cow/
-## horse, matching the React FARM_TILE_POOL so a fresh board is colourful from
-## turn 1) plus each placed SPAWNER's representative tile TWICE (a weight BOOST, so
-## building e.g. a Lumber Camp makes oak spawn MORE often — specialisation, not a
-## category unlock). Refiners (Bakery) spawn no tile, so they are skipped —
-## appending their EMPTY tile would corrupt the board pool.
+## The single representative TILE for each ELIGIBLE home-farm category — the inverse of the
+## relevant slice of Constants.CATEGORY. The port has exactly ONE tile per farm category, so
+## this is a clean 1:1 map. Only the SIX eligible base-spawn categories (ZoneConfig.eligible_
+## categories("home")) are listed: grass/grain/trees/birds/veg/fruit. flower/herd/cattle/mount
+## are deliberately ABSENT so PANSY/PIG/COW/HORSE can never base-spawn on the home farm.
+const FARM_CATEGORY_TILE := {
+	"grass": Constants.Tile.GRASS,
+	"grain": Constants.Tile.WHEAT,
+	"trees": Constants.Tile.OAK,
+	"birds": Constants.Tile.PHEASANT,
+	"veg":   Constants.Tile.CARROT,
+	"fruit": Constants.Tile.APPLE,
+}
+
+## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
+## not a category unlock (every eligible category already base-spawns season-weighted). Kept
+## modest so a spawner specialises the board without swamping the season profile.
+const SPAWNER_BOOST_SLOTS: int = 6
+
+## Active weighted refill pool (Array[int] of Constants.Tile) for the home FARM board:
+## a ZONE-RESTRICTED, SEASON-WEIGHTED base pool — NOT the old flat full-variety FARM_POOL.
+##
+## A1 (bug fix): zone-1 used to base-spawn EVERY farm tile (incl. pansy/pig/cow/horse) from
+## turn 1. It must instead base-spawn ONLY the home zone's ELIGIBLE categories (grass/grain/
+## trees/birds/veg/fruit — the upgradeMap keys), weighted by the CURRENT SEASON's drop rates.
+## flower/herd/cattle/mount are NOT eligible, so PANSY/PIG/COW/HORSE never base-spawn here.
+##
+## Construction (DETERMINISTIC, no RNG — the RNG lives in BoardLogic.refill which samples this
+## pool): for each eligible category with a POSITIVE season weight, add round(weight*100) slots
+## of that category's tile (floored at 1 so any positive weight contributes at least one slot).
+## Spring (grass .38 …) yields a grass-dominant pool; Winter (trees .73) a tree-dominant one.
+##
+## Then layer the EXISTING semantics on top:
+##   - SPAWNER BOOST: each placed spawner whose category is eligible adds SPAWNER_BOOST_SLOTS
+##     extra slots of its tile (build a Lumber Camp → more oak). Refiners (Bakery, no category)
+##     and spawners for INELIGIBLE categories are skipped — a spawner can't smuggle an
+##     ineligible category back onto the home board.
+##   - RATS: once Town 2 is complete (rats_enabled) seed RAT_POOL_SLOTS rat tiles (unchanged).
+## The mine/harbor pools (active_biome_pool) are NOT seasonal and are untouched by this.
 func active_tile_pool() -> Array:
-	var pool: Array = Constants.FARM_POOL.duplicate()
+	var pool: Array = []
+	var season: String = current_season_name()
+	var drops: Dictionary = ZoneConfig.season_drops(ZoneConfig.HOME_ZONE, season)
+	# Base pool: season-weighted slots per eligible category. Iterate eligible_categories so
+	# the order is stable (the upgradeMap key order) and ineligible categories are impossible.
+	for cat in ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE):
+		if not FARM_CATEGORY_TILE.has(cat):
+			continue
+		var weight: float = float(drops.get(cat, 0.0))
+		if weight <= 0.0:
+			continue
+		var slots: int = maxi(1, int(round(weight * 100.0)))
+		var tile: int = int(FARM_CATEGORY_TILE[cat])
+		for _i in slots:
+			pool.append(tile)
+	# Spawner BOOST: extra slots for each placed spawner's ELIGIBLE category (a frequency
+	# boost, not a category unlock). Ineligible-category spawners + refiners are skipped.
 	for id in buildings:
 		if not BuildingConfig.is_spawner(id):
 			continue
-		var tile: int = BuildingConfig.building_tile(id)
-		pool.append(tile)
-		pool.append(tile)
-	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat
-	# tiles into the FARM pool (a recurring nuisance, not a takeover). Only the farm
-	# pool gets rats; the mine pool (active_biome_pool while mining) is untouched.
+		var bcat: String = BuildingConfig.building_category(id)
+		if not FARM_CATEGORY_TILE.has(bcat):
+			continue
+		var btile: int = BuildingConfig.building_tile(id)
+		for _i in SPAWNER_BOOST_SLOTS:
+			pool.append(btile)
+	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat tiles
+	# into the FARM pool (a recurring nuisance, not a takeover). Only the farm pool gets rats;
+	# the mine pool (active_biome_pool while mining) is untouched.
 	if rats_enabled():
 		for _i in Constants.RAT_POOL_SLOTS:
 			pool.append(Constants.Tile.RAT)
@@ -1865,6 +1986,10 @@ func to_dict() -> Dictionary:
 		"npcs": npcs.duplicate(true),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
+		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
+		# SAVE_VERSION is NOT bumped — a save written before seasons existed loads with 0
+		# (a fresh Spring cycle) via from_dict's defensive default.
+		"farm_turns_used": farm_turns_used,
 		# Fish / Harbor expedition (M3j, ADDITIVE). The tide cycle (fish_tide /
 		# fish_tide_turn), the live giant pearl (fish_pearl, deep-copied), the harbor
 		# turn budget, and the rune count. SAVE_VERSION is NOT bumped — like every prior
@@ -2045,6 +2170,15 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.active_biome = biome
 	s.mine_turns_left = turns
 	s.harbor_turns_left = harbor_turns
+	# Farm season cycle (A1, ADDITIVE). Restore the spent-turn counter defensively (missing →
+	# 0 = a fresh Spring cycle, the back-compat default for any pre-seasons save). Clamped to
+	# [0, budget-1]: a value AT or past the budget would imply an un-harvested boundary, so it
+	# is wrapped back into a clean Spring cycle (mirrors note_farm_turn's harvest reset).
+	var f_used: int = maxi(0, int(d.get("farm_turns_used", 0)))
+	var f_budget: int = s.farm_turn_budget()
+	if f_budget > 0 and f_used >= f_budget:
+		f_used = 0
+	s.farm_turns_used = f_used
 	var tide := String(d.get("fish_tide", "high"))
 	if tide != FishConfig.TIDE_HIGH and tide != FishConfig.TIDE_LOW:
 		tide = FishConfig.TIDE_HIGH

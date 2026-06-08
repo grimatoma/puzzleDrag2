@@ -321,7 +321,43 @@ const RAT_POOL_SLOTS: int = 2
 ## only 2 slots in a 10-slot MINE_POOL it never dominates the board.
 const RUBBLE_POOL_SLOTS: int = 2
 
+# ── Seasons (src/constants.ts:256 SEASONS + zones/data.ts seasonIndexInSession) ──
+## The farm board cycles four seasons over its turn budget (see GameState.farm_turns_used
+## + ZoneConfig.base_turns). Each season has a NAME and a LOOK palette (bg / fill / accent),
+## ported VERBATIM from the React SEASONS array as 0xRRGGBB ints. The look is consumed by the
+## season-bar UI (a later PR); this layer owns the palette, the names, and the index math.
+const SEASON_NAMES: Array = ["Spring", "Summer", "Autumn", "Winter"]
+
+## The four seasons, indexed 0..3 by season_index(). `bg`/`fill`/`accent` are 0xRRGGBB ints
+## (matching the React SEASONS.look hex values exactly) — convert with
+## Color.hex(0xFF000000 | v) when a Color is needed. `name` mirrors SEASON_NAMES[i].
+const SEASONS: Array = [
+	{"name": "Spring", "bg": 0x7dbd48, "fill": 0x8fd85a, "accent": 0x5daa35},
+	{"name": "Summer", "bg": 0x8fca45, "fill": 0xf6c342, "accent": 0xe3a92f},
+	{"name": "Autumn", "bg": 0xb77b3a, "fill": 0xd9792d, "accent": 0xa65722},
+	{"name": "Winter", "bg": 0x78aaca, "fill": 0x91d9ff, "accent": 0xd9f6ff},
+]
+
 # ── Static helpers (usable without an instance) ────────────────────────────
+
+## The season index (0=Spring … 3=Winter) for `turns_used` of a `turn_budget`-turn session.
+## Ported VERBATIM from src/features/zones/data.ts `seasonIndexInSession`: the budget is split
+## evenly across four seasons by REMAINING turns. A non-positive budget pins Spring (0).
+static func season_index(turns_used: int, turn_budget: int) -> int:
+	if turn_budget <= 0:
+		return 0
+	var remaining: int = maxi(0, turn_budget - turns_used)
+	if remaining > turn_budget * 0.75:
+		return 0   # Spring
+	if remaining > turn_budget * 0.50:
+		return 1   # Summer
+	if remaining > turn_budget * 0.25:
+		return 2   # Autumn
+	return 3       # Winter
+
+## The season NAME ("Spring"…"Winter") for `turns_used` of a `turn_budget`-turn session.
+static func season_name(turns_used: int, turn_budget: int) -> String:
+	return String(SEASON_NAMES[season_index(turns_used, turn_budget)])
 
 static func produced_resource(tile: int) -> String:
 	return PRODUCES.get(tile, "")

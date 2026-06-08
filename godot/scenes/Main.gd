@@ -2339,6 +2339,19 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 				board.degrade_pearl(pearl_cell)
 			_status_label.text = "%s  ·  🌊 %d harbor turn(s) left · %s tide" % [
 				_status_label.text, int(h_res.get("turns_left", 0)), game.fish_tide]
+	# A1: a chain resolved ON THE FARM spends one farm turn, advancing the SEASON cycle
+	# (parallel to the mine/harbor ticks above; note_farm_turn no-ops the biome — the farm is
+	# the persistent home board). The season-weighted refill pool changes as the season turns,
+	# so re-push the (now possibly different) farm pool onto the board so the NEXT refill draws
+	# the current season's weights. On a HARVEST boundary (cycle wrapped back to Spring) surface
+	# a brief status note — the rich harvest-summary modal is a later PR.
+	if game.active_biome == "farm" and not game.is_boss_active():
+		var farm_res: Dictionary = game.note_farm_turn()
+		board.set_tile_pool(game.active_tile_pool())
+		if bool(farm_res.get("harvest", false)):
+			_status_label.text = "Harvest! %s ends — a new year begins (Spring)." % String(farm_res.get("season", ""))
+			if _audio != null:
+				_audio.play("fanfare")
 	# M3g: a chain landed while the capstone boss is active damages it by the chain
 	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
 	# board's raised chain bar back to the base min and surface the win.

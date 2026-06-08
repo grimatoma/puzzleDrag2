@@ -232,11 +232,17 @@ func _test_note_mine_turn() -> void:
 	_check(int(last.get("turns_left", -1)) == 0, "turns_left == 0 on exit")
 	_check(not g.is_in_mine(), "back on the farm after the last turn")
 	_check(g.active_biome == "farm", "active_biome reset to 'farm'")
-	# active_biome_pool now matches the farm pool again (no buildings → full farm pool).
+	# active_biome_pool now falls back to the farm's season-weighted pool again (no buildings).
+	# A1: the farm pool is the season-weighted, zone-restricted active_tile_pool — assert that
+	# identity (it no longer equals the flat FARM_POOL) and that it excludes ineligible tiles.
 	_check(g.active_biome_pool() == g.active_tile_pool(),
 		"active_biome_pool() falls back to the farm pool after exit")
-	_check(g.active_biome_pool() == Constants.FARM_POOL,
-		"farm pool is the full farm variety pool (no spawners placed)")
+	var farm_pool: Array = g.active_biome_pool()
+	_check(farm_pool.has(T.GRASS) and farm_pool.has(T.WHEAT) and farm_pool.has(T.OAK),
+		"farm pool has the eligible Spring variety (grass/grain/trees)")
+	_check(not farm_pool.has(T.PANSY) and not farm_pool.has(T.PIG)
+		and not farm_pool.has(T.COW) and not farm_pool.has(T.HORSE),
+		"farm pool excludes the ineligible tiles (pansy/pig/cow/horse)")
 	# Collected goods are KEPT (soft-fail).
 	_check(g.qty("block") == 1, "block gathered during the run survives the exit")
 
