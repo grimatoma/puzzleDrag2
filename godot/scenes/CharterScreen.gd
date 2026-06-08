@@ -156,8 +156,7 @@ func _build_shell() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	# Fill the full-bleed page height so the scroll below expands into it (no empty void
@@ -559,8 +558,7 @@ func _build_detail_panel() -> void:
 	_detail_panel.visible = false
 	add_child(_detail_panel)
 
-	var cap := MarginContainer.new()
-	cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var cap := UiKit.make_width_cap()
 	_detail_panel.add_child(cap)
 
 	_detail_body = VBoxContainer.new()

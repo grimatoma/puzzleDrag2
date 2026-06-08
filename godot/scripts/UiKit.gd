@@ -24,6 +24,29 @@ const TOPBAR_RESERVE := 60
 ## nav shows through + stays tappable; floating overlay controls lift above it too.
 const NAV_RESERVE := 76
 
+## Max content width for full-bleed VIEW screens. Content FILLS below this; on wider
+## (desktop/foldable) windows it is capped + centred so rows/search bars don't stretch
+## edge-to-edge. Set to the portrait base width (720) so it NEVER bites the phone layout —
+## only wide windows get the centred column. The web caps line length the same way.
+const VIEW_MAX_WIDTH := 720
+
+## A full-width container that caps + centres its single child to `max_w` on wide viewports
+## (and fills on narrow ones). Godot Control has no native max-width, so this recomputes its
+## own left/right margins whenever it is resized. Add your content (the scroll/VBox) as its
+## child. Use this for full-bleed VIEW screens (NOT modals, which already centre a sized panel).
+static func make_width_cap(max_w: int = VIEW_MAX_WIDTH) -> MarginContainer:
+	var mc := MarginContainer.new()
+	mc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mc.set_meta("_cap_w", max_w)
+	mc.resized.connect(func() -> void:
+		var avail: float = mc.size.x
+		var side: int = int(maxf(0.0, (avail - float(mc.get_meta("_cap_w", VIEW_MAX_WIDTH))) / 2.0))
+		mc.add_theme_constant_override("margin_left", side)
+		mc.add_theme_constant_override("margin_right", side)
+	)
+	return mc
+
 # ── heading font ─────────────────────────────────────────────────────────────
 
 ## Cached Cinzel-Regular.ttf as a BOLD FontVariation.  Returns null when the
@@ -437,7 +460,11 @@ static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, pa
 ## sideways velocity. The addon's `override_mouse_filters` default (true) keeps
 ## child buttons clickable while still allowing drag-to-scroll over them.
 static func make_vscroll() -> ScrollContainer:
-	var scroll := SmoothScrollContainer.new()
+	# WheelClampScrollContainer is a SmoothScrollContainer that hard-stops MOUSE-WHEEL
+	# momentum at the top/bottom edge (no elastic overscroll) while leaving the springy
+	# overdrag intact for finger/content drags. See WheelClampScrollContainer.gd for why
+	# this lives in repo code rather than as an edit to the vendored addon.
+	var scroll := WheelClampScrollContainer.new()
 	scroll.allow_horizontal_scroll = false
 	# Scroll at 1× finger speed, not 2×. project.godot sets BOTH
 	# pointing/emulate_mouse_from_touch AND pointing/emulate_touch_from_mouse, so one

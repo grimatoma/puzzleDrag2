@@ -93,6 +93,73 @@ func _run() -> void:
 	town_map.set_hover_lot(-1)
 	town_map.queue_free()
 
+	# ── 2c-zoom. Mouse-wheel zoom: zoom_at(anchor) + cursor-anchoring ──────────
+	# zoom_at() drives the desktop wheel: it changes the user zoom and keeps the plan
+	# point under the cursor fixed (along the axis with room to pan), and clamps to
+	# [MIN_ZOOM, MAX_ZOOM]. The +/- buttons (zoom_in/out) keep their centre behaviour.
+	var zmap: Node2D = TownMapScript.new()
+	root.add_child(zmap)
+	zmap.render_plan(TownLayout.build_plan("home", 7, ["farm"]), 720.0, 1280.0, [])
+	await process_frame
+	_check(is_equal_approx(zmap._user_zoom, 1.0), "fresh map starts at fit zoom (1.0)")
+	_check(is_equal_approx(zmap._scale, zmap._fit_scale), "at fit, effective scale == fit scale")
+
+	# Wheel-up (factor > 1) zooms IN; the effective scale tracks the user zoom.
+	zmap.zoom_at(TownMapScript.ZOOM_STEP, Vector2(360.0, 640.0))
+	_check(zmap._user_zoom > 1.0, "zoom_at(>1) increased the user zoom (got %f)" % zmap._user_zoom)
+	_check(is_equal_approx(zmap._scale, zmap._fit_scale * zmap._user_zoom), "effective scale == fit * user zoom")
+
+	# Cursor-anchoring: offset the anchor along the axis that has room to pan (the axis
+	# that BOUND the fit — the other axis may be fully clamped near the fit), then assert
+	# the plan point under the cursor is preserved through another zoom step.
+	var ample_x: bool = (zmap._bb_w / zmap._view_w) >= (zmap._bb_h / zmap._view_h)
+	var anchor := Vector2(360.0, 640.0)
+	if ample_x:
+		anchor.x += 150.0
+	else:
+		anchor.y += 150.0
+	var before: Vector2 = (anchor - Vector2(zmap._ox, zmap._oy)) / zmap._scale
+	zmap.zoom_at(TownMapScript.ZOOM_STEP, anchor)
+	var after: Vector2 = (anchor - Vector2(zmap._ox, zmap._oy)) / zmap._scale
+	_check(before.distance_to(after) < 3.0,
+		"cursor-anchored zoom keeps the point under the cursor fixed (Δ=%.2f px)" % before.distance_to(after))
+
+	# Clamp at MAX_ZOOM no matter how many wheel-ups.
+	for _i in 12:
+		zmap.zoom_at(TownMapScript.ZOOM_STEP, anchor)
+	_check(zmap._user_zoom <= TownMapScript.MAX_ZOOM + 0.001,
+		"zoom clamped at MAX_ZOOM (got %f)" % zmap._user_zoom)
+
+	# recenter() resets to fit; a wheel-down at fit can't go below MIN_ZOOM.
+	zmap.recenter()
+	_check(is_equal_approx(zmap._user_zoom, 1.0), "recenter() resets the user zoom to 1.0")
+	zmap.zoom_at(1.0 / TownMapScript.ZOOM_STEP, anchor)
+	_check(zmap._user_zoom >= TownMapScript.MIN_ZOOM - 0.001,
+		"zoom clamped at MIN_ZOOM (got %f)" % zmap._user_zoom)
+	zmap.queue_free()
+
+	# ── 2c-wheel. The wheel events are WIRED through TownMapScreen.gui_input ────
+	var wscreen := TownMapScreen.new()
+	root.add_child(wscreen)
+	wscreen.setup(GameState.new())
+	wscreen.open()
+	await process_frame
+	var z0: float = wscreen._map._user_zoom
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_WHEEL_UP
+	up.pressed = true
+	up.position = Vector2(360.0, 500.0)
+	wscreen._on_map_gui_input(up)
+	_check(wscreen._map._user_zoom > z0, "wheel-up via gui_input zoomed the map in")
+	var z1: float = wscreen._map._user_zoom
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	down.pressed = true
+	down.position = Vector2(360.0, 500.0)
+	wscreen._on_map_gui_input(down)
+	_check(wscreen._map._user_zoom < z1, "wheel-down via gui_input zoomed the map out")
+	wscreen.queue_free()
+
 	# ── 2c. M6d interaction — build picker + demolish via TownMapScreen ────────
 	await _run_interaction()
 

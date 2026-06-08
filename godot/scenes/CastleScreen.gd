@@ -128,8 +128,7 @@ func _build_shell() -> void:
 	center.add_child(panel)
 
 	# Keep the panel from sprawling on wide viewports.
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	# A non-scrolling column: title row + header line pinned at the top, then a

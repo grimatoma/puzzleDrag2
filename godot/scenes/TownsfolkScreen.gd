@@ -135,8 +135,7 @@ func _build_shell() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	var root_vbox := VBoxContainer.new()
