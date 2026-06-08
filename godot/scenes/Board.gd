@@ -79,7 +79,7 @@ var clear_rubble_on_stone: bool = false
 var clear_pearl_on_fish_chain: bool = false
 
 var _dragging := false
-var _path: Array = []                  ## Array[Vector2i] of dragged cells
+var _path: Array[Vector2i] = []        ## dragged cells
 
 ## M8c — TAP-tool targeting mode. While true, a left-button PRESS reports the tapped
 ## cell via cell_tapped and does NOT start a drag (chains are suppressed); motion +
@@ -377,7 +377,7 @@ func _extend_drag(cell: Vector2i) -> void:
 	chain_changed.emit(_path.size())
 
 func _finish_drag() -> void:
-	var path: Array = _path.duplicate()
+	var path: Array[Vector2i] = _path.duplicate()
 	for cell in _path:
 		_set_highlight(cell, false)
 	_path = []
@@ -394,7 +394,7 @@ func _finish_drag() -> void:
 func _update_chain_overlay() -> void:
 	if _chain_overlay == null:
 		return
-	var points: Array = []
+	var points: Array[Vector2] = []
 	for cell in _path:
 		points.append(_cell_center(cell.x, cell.y))
 	_chain_overlay.set_path(points, _path.size() >= min_chain, tile_size)
