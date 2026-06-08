@@ -9,8 +9,8 @@ extends CanvasLayer
 ## Modelled on TownScreen / MenuScreen: same warm-brown scrim backdrop + centered
 ## parchment PanelContainer card (StyleBoxFlat parchment fill, iron border, rounded
 ## corners, soft drop shadow) → MarginContainer width-cap → ScrollContainer → VBox,
-## a Cinzel title, and the shared `_style_button` / `_btn_box` / `_heading_font`
-## helpers copied from those screens.
+## a Cinzel title, and the shared UiKit styling helpers (UiKit.heading_font /
+## UiKit.style_button / UiKit.row_box) — called on the UiKit namespace, not copied locally.
 ##
 ## READ-ONLY by design. This is a ledger, not a shop — there are NO sell/buy actions
 ## here (that's the Town Market). The only actionable control is "✕ Close". Every
