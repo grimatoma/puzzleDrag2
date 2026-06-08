@@ -56,9 +56,9 @@ var _cards: Dictionary = {}
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each refresh()
 ## so reopening always reflects the current portal_built / influence / tools state.
 var _body: VBoxContainer
-## The body scroll — its height is clamped to its content (up to the viewport) via
-## UiKit.fit_scroll_height so a short body yields a short centred card with no empty
-## parchment "dead space" beneath it.
+## The body scroll — expands to fill the full-bleed page height (SIZE_EXPAND_FILL, the B2
+## view pattern) so the body fills the view between the top bar and the bottom nav and
+## scrolls when it overflows.
 var _scroll: ScrollContainer
 var _built: bool = false
 
