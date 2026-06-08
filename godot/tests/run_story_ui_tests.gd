@@ -157,6 +157,13 @@ func _initialize() -> void:
 	_check(not chronicle._rows.has("act3_finish"), "unfired act3_finish has no card")
 	_check(chronicle._rows.size() == 3, "exactly 3 timeline cards rendered")
 
+	# The "View Charter" button exists and emits `view_charter` when pressed.
+	_check(chronicle._action_buttons.has("charter"), "chronicle has a 'View Charter' button")
+	var charter_emitted := [false]
+	chronicle.connect("view_charter", func(): charter_emitted[0] = true)
+	chronicle._action_buttons["charter"].emit_signal("pressed")
+	_check(charter_emitted[0], "'View Charter' button emits view_charter")
+
 	# A fresh, zero-fired GameState renders the empty state + "0 / N chapters".
 	var fresh_game := GameState.new()
 	var fresh_chron = ChronicleScreenScript.new()
@@ -214,6 +221,7 @@ func _initialize() -> void:
 	_check(main.has_method("_drain_story_queue"), "Main has _drain_story_queue()")
 	_check(main.has_method("_open_chronicle"), "Main has _open_chronicle()")
 	_check(main.has_method("_on_chronicle_closed"), "Main has _on_chronicle_closed()")
+	_check(main.has_method("_on_chronicle_view_charter"), "Main has _on_chronicle_view_charter()")
 
 	# _ready calls start_story_session(); after the tutorial is dismissed the queue drains,
 	# so the beat modal should now be presenting act1_arrival (the front of the queue).

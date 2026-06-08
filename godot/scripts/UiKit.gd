@@ -63,6 +63,31 @@ static func emoji_font() -> Font:
 			_emoji_font_cache = f
 	return _emoji_font_cache
 
+## Cached synthetic-italic FontVariation (the default body font sheared right). Godot's
+## bundled font has no italic face, so story/quote text gets a real slant via the font
+## variation transform. Cached on the class. Used for the Chronicle ledes + any quoted
+## flavour text that wants emphasis without a separate italic asset.
+static var _italic_font_cache: Font = null
+static var _italic_font_tried: bool = false
+
+## Return a synthetic-italic Font (default body font with a rightward shear), or null if
+## the engine default font is unavailable. Reuse across callers (the cache lives on the
+## class). The shear (~12°) slants glyph tops to the right like a true oblique.
+static func italic_font() -> Font:
+	if _italic_font_tried:
+		return _italic_font_cache
+	_italic_font_tried = true
+	var base: Font = ThemeDB.fallback_font
+	if base == null:
+		return null
+	var fv := FontVariation.new()
+	fv.base_font = base
+	# Transform2D(x_axis, y_axis, origin): a y_axis of (-0.21, 1) shears the glyphs so
+	# their TOP edge (negative y, above the baseline) shifts right — a standard oblique.
+	fv.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.21, 1), Vector2.ZERO)
+	_italic_font_cache = fv
+	return _italic_font_cache
+
 ## Attach the bundled emoji font as a fallback on the ENGINE DEFAULT font so every
 ## Label/Button that uses the inherited default font (the HUD pills, bottom-nav icons,
 ## modal close buttons, status text — all of which carry emoji like 🪙🏠📦🔨🗺👥)
