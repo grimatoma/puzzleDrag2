@@ -44,6 +44,10 @@ const GOLD: String = "gold"
 const ZONES := {
 	"home": {
 		"base_turns": 10,
+		# Entry cost for a bounded "Start Farming" run (React ZONES[].entryCost). The
+		# home zone costs 50 coins to start a farm run. React FARM/ENTER falls back to
+		# 50 when the field is absent (`zone.entryCost?.coins ?? 50`); we make it explicit.
+		"entry_cost": {"coins": 50},
 		"upgrade_map": {
 			"grass":  "birds",
 			"grain":  "veg",
@@ -95,6 +99,12 @@ static func zone(zone_id: String) -> Dictionary:
 ## (Constants.season_index treats a non-positive budget as "always Spring").
 static func base_turns(zone_id: String) -> int:
 	return int(zone(zone_id).get("base_turns", 0))
+
+## The coin cost to START a bounded farm run at `zone_id` (React ZONES[].entryCost.coins).
+## Reads entry_cost.coins; defaults to 0 for a zone with no entry cost / an unknown zone.
+static func entry_cost(zone_id: String) -> int:
+	var ec: Dictionary = zone(zone_id).get("entry_cost", {})
+	return int(ec.get("coins", 0))
 
 ## The ELIGIBLE base-spawn categories for `zone_id` — the KEYS of the upgrade map, in
 ## declaration order. These are the only categories that may base-spawn on the board (the
