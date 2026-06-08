@@ -198,7 +198,9 @@ func _build_shell() -> void:
 
 	# Empty-state label (lives in the body; shown when nothing has fired).
 	_empty_label = Label.new()
-	_empty_label.text = "The pages are still blank. Your journey has just begun."
+	# Two-line empty state (React parity): the flavor line + a secondary explanation of
+	# how the chronicle fills, so a fresh game's blank chronicle isn't a bare one-liner.
+	_empty_label.text = "The pages are still blank. Your journey has just begun.\n\nComplete story beats to record your legacy here."
 	_empty_label.add_theme_font_size_override("font_size", 18)
 	_empty_label.add_theme_color_override("font_color", COL_MUTED)
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
