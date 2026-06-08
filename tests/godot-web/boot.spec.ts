@@ -13,6 +13,16 @@ import { test, expect } from "@playwright/test";
 // simulate gameplay — input/economy/board behaviour is covered by the headless
 // GDScript suites under godot/tests/.
 
+// Keep the boot deterministic by suppressing the first-launch auto-modals (tutorial /
+// story / daily) — the canvas + readiness beacon are what this smoke asserts, not the
+// onboarding overlay. Mirrors the Phaser suite's __HEARTH_DISABLE_DIALOGS__; read by
+// Main.gd's _dialogs_disabled() at boot. Registered before goto so it runs before _ready.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__hearthDisableDialogs = true;
+  });
+});
+
 test("Godot Web build boots, renders a canvas, and does not crash", async ({ page }) => {
   // Capture every uncaught page error and console error during boot. A Godot wasm
   // trap or a JS exception in the engine glue surfaces as a pageerror; we fail on
