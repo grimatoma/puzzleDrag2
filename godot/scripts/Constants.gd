@@ -79,6 +79,84 @@ enum Tile {
 	# it out of the fish-spawn pools (it is conditionally seeded by the board slice, not
 	# weighted into FISH_POOL / the tide pools).
 	FISH_PEARL,
+	# ── Full tile-catalog parity (all 77 web tiles) — APPENDED (ordinals 23..78) so every
+	# existing farm/mine/hazard/fish ordinal above is UNCHANGED (GRASS==0 … FISH_PEARL==22;
+	# saves serialise via STRING_KEYS, so appending is the safe way to grow the catalog).
+	# These are CATALOG-ONLY variants: each shares its family's threshold + produced resource
+	# and only differs in art (res://assets/tiles/<key>.png). They appear in the Tile Collection
+	# screen (the full 77-tile catalog) but are NOT seeded into any board refill pool here — the
+	# BOARD keeps using the current default representative per category (active-variant selection
+	# is a separate follow-up). Grouped by category to mirror src/features/tileCollection/data.ts.
+	# Grass (→ hay_bundle, thr 6)
+	GRASS_MEADOW,
+	GRASS_SPIKY,
+	GRASS_HEATHER,
+	# Grain (→ flour, thr 6)
+	GRAIN_CORN,
+	GRAIN_BUCKWHEAT,
+	GRAIN_MANNA,
+	GRAIN_RICE,
+	# Vegetables (→ soup, thr 6)
+	VEG_EGGPLANT,
+	VEG_TURNIP,
+	VEG_BEET,
+	VEG_CUCUMBER,
+	VEG_SQUASH,
+	VEG_MUSHROOM,
+	VEG_PEPPER,
+	VEG_BROCCOLI,
+	# Fruit (→ pie, thr 7; blackberry → jam)
+	FRUIT_PEAR,
+	FRUIT_GOLDEN_APPLE,
+	FRUIT_BLACKBERRY,
+	FRUIT_RAMBUTAN,
+	FRUIT_STARFRUIT,
+	FRUIT_COCONUT,
+	FRUIT_LEMON,
+	FRUIT_JACKFRUIT,
+	# Flowers (→ honey, thr 10)
+	FLOWER_WATER_LILY,
+	# Trees (→ plank, thr 6)
+	TREE_BIRCH,
+	TREE_WILLOW,
+	TREE_FIR,
+	TREE_CYPRESS,
+	TREE_PALM,
+	# Birds (→ eggs, thr 6)
+	BIRD_TURKEY,
+	BIRD_CLOVER,
+	BIRD_MELON,
+	BIRD_CHICKEN,
+	BIRD_HEN,
+	BIRD_ROOSTER,
+	BIRD_WILD_GOOSE,
+	BIRD_GOOSE,
+	BIRD_PARROT,
+	BIRD_PHOENIX,
+	BIRD_DODO,
+	BIRD_PIG_IN_DISGUISE,
+	# Herd animals (→ meat, thr 5)
+	HERD_HOG,
+	HERD_BOAR,
+	HERD_WARTHOG,
+	HERD_SHEEP,
+	HERD_ALPACA,
+	HERD_GOAT,
+	HERD_RAM,
+	# Cattle (→ milk, thr 6)
+	CATTLE_LONGHORN,
+	CATTLE_TRICERATOPS,
+	# Mounts (→ horseshoe, thr 10)
+	MOUNT_DONKEY,
+	MOUNT_MOOSE,
+	MOUNT_MAMMOTH,
+	# Mine — copper (→ copper_bar, thr 6) + gold (→ gold_bar, thr 6).
+	COPPER_ORE,
+	GOLD,
+	# Treasure — golden coin tile. Like a hazard it produces NOTHING through the chain pipeline
+	# (the web pays coins directly via a tile ability not ported here), so it is deliberately
+	# ABSENT from PRODUCES/THRESHOLDS (threshold_for → NO_THRESHOLD, produced_resource → "").
+	COIN_GOLDEN,
 }
 
 const STRING_KEYS := {
@@ -111,6 +189,76 @@ const STRING_KEYS := {
 	Tile.FISH_OYSTER:   "tile_fish_oyster",
 	Tile.FISH_KELP:     "tile_fish_kelp",
 	Tile.FISH_PEARL:    "tile_special_giant_pearl",
+	# ── Full tile-catalog parity (all 77 web tiles). Each key matches its committed PNG
+	# under res://assets/tiles/<key>.png (verified against assets/tiles/manifest.json).
+	# Grass
+	Tile.GRASS_MEADOW:       "tile_grass_meadow",
+	Tile.GRASS_SPIKY:        "tile_grass_spiky",
+	Tile.GRASS_HEATHER:      "tile_grass_heather",
+	# Grain
+	Tile.GRAIN_CORN:         "tile_grain_corn",
+	Tile.GRAIN_BUCKWHEAT:    "tile_grain_buckwheat",
+	Tile.GRAIN_MANNA:        "tile_grain_manna",
+	Tile.GRAIN_RICE:         "tile_grain_rice",
+	# Vegetables
+	Tile.VEG_EGGPLANT:       "tile_veg_eggplant",
+	Tile.VEG_TURNIP:         "tile_veg_turnip",
+	Tile.VEG_BEET:           "tile_veg_beet",
+	Tile.VEG_CUCUMBER:       "tile_veg_cucumber",
+	Tile.VEG_SQUASH:         "tile_veg_squash",
+	Tile.VEG_MUSHROOM:       "tile_veg_mushroom",
+	Tile.VEG_PEPPER:         "tile_veg_pepper",
+	Tile.VEG_BROCCOLI:       "tile_veg_broccoli",
+	# Fruit
+	Tile.FRUIT_PEAR:         "tile_fruit_pear",
+	Tile.FRUIT_GOLDEN_APPLE: "tile_fruit_golden_apple",
+	Tile.FRUIT_BLACKBERRY:   "tile_fruit_blackberry",
+	Tile.FRUIT_RAMBUTAN:     "tile_fruit_rambutan",
+	Tile.FRUIT_STARFRUIT:    "tile_fruit_starfruit",
+	Tile.FRUIT_COCONUT:      "tile_fruit_coconut",
+	Tile.FRUIT_LEMON:        "tile_fruit_lemon",
+	Tile.FRUIT_JACKFRUIT:    "tile_fruit_jackfruit",
+	# Flowers
+	Tile.FLOWER_WATER_LILY:  "tile_flower_water_lily",
+	# Trees
+	Tile.TREE_BIRCH:         "tile_tree_birch",
+	Tile.TREE_WILLOW:        "tile_tree_willow",
+	Tile.TREE_FIR:           "tile_tree_fir",
+	Tile.TREE_CYPRESS:       "tile_tree_cypress",
+	Tile.TREE_PALM:          "tile_tree_palm",
+	# Birds
+	Tile.BIRD_TURKEY:        "tile_bird_turkey",
+	Tile.BIRD_CLOVER:        "tile_bird_clover",
+	Tile.BIRD_MELON:         "tile_bird_melon",
+	Tile.BIRD_CHICKEN:       "tile_bird_chicken",
+	Tile.BIRD_HEN:           "tile_bird_hen",
+	Tile.BIRD_ROOSTER:       "tile_bird_rooster",
+	Tile.BIRD_WILD_GOOSE:    "tile_bird_wild_goose",
+	Tile.BIRD_GOOSE:         "tile_bird_goose",
+	Tile.BIRD_PARROT:        "tile_bird_parrot",
+	Tile.BIRD_PHOENIX:       "tile_bird_phoenix",
+	Tile.BIRD_DODO:          "tile_bird_dodo",
+	Tile.BIRD_PIG_IN_DISGUISE: "tile_bird_pig_in_disguise",
+	# Herd animals
+	Tile.HERD_HOG:           "tile_herd_hog",
+	Tile.HERD_BOAR:          "tile_herd_boar",
+	Tile.HERD_WARTHOG:       "tile_herd_warthog",
+	Tile.HERD_SHEEP:         "tile_herd_sheep",
+	Tile.HERD_ALPACA:        "tile_herd_alpaca",
+	Tile.HERD_GOAT:          "tile_herd_goat",
+	Tile.HERD_RAM:           "tile_herd_ram",
+	# Cattle
+	Tile.CATTLE_LONGHORN:    "tile_cattle_longhorn",
+	Tile.CATTLE_TRICERATOPS: "tile_cattle_triceratops",
+	# Mounts
+	Tile.MOUNT_DONKEY:       "tile_mount_donkey",
+	Tile.MOUNT_MOOSE:        "tile_mount_moose",
+	Tile.MOUNT_MAMMOTH:      "tile_mount_mammoth",
+	# Mine — copper + gold
+	Tile.COPPER_ORE:         "tile_mine_copper_ore",
+	Tile.GOLD:               "tile_mine_gold",
+	# Treasure
+	Tile.COIN_GOLDEN:        "tile_coin_golden",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -154,6 +302,68 @@ const PRODUCES := {
 	# tile, deliberately ABSENT from THRESHOLDS (threshold_for → NO_THRESHOLD,
 	# produced_resource → ""), captured via GameState.try_capture_pearl for +1 Rune.
 	Tile.FISH_PEARL:    "",
+	# ── Full tile-catalog parity. Each catalog variant produces its family's resource,
+	# matching src/constants.ts TILE_FAMILY_RESOURCE (+ the blackberry → jam per-tile override).
+	Tile.GRASS_MEADOW:       "hay_bundle",
+	Tile.GRASS_SPIKY:        "hay_bundle",
+	Tile.GRASS_HEATHER:      "hay_bundle",
+	Tile.GRAIN_CORN:         "flour",
+	Tile.GRAIN_BUCKWHEAT:    "flour",
+	Tile.GRAIN_MANNA:        "flour",
+	Tile.GRAIN_RICE:         "flour",
+	Tile.VEG_EGGPLANT:       "soup",
+	Tile.VEG_TURNIP:         "soup",
+	Tile.VEG_BEET:           "soup",
+	Tile.VEG_CUCUMBER:       "soup",
+	Tile.VEG_SQUASH:         "soup",
+	Tile.VEG_MUSHROOM:       "soup",
+	Tile.VEG_PEPPER:         "soup",
+	Tile.VEG_BROCCOLI:       "soup",
+	Tile.FRUIT_PEAR:         "pie",
+	Tile.FRUIT_GOLDEN_APPLE: "pie",
+	# Blackberry → jam (the web sets tile_fruit_blackberry.next = "jam", a per-tile override
+	# off the fruit-family default of pie).
+	Tile.FRUIT_BLACKBERRY:   "jam",
+	Tile.FRUIT_RAMBUTAN:     "pie",
+	Tile.FRUIT_STARFRUIT:    "pie",
+	Tile.FRUIT_COCONUT:      "pie",
+	Tile.FRUIT_LEMON:        "pie",
+	Tile.FRUIT_JACKFRUIT:    "pie",
+	Tile.FLOWER_WATER_LILY:  "honey",
+	Tile.TREE_BIRCH:         "plank",
+	Tile.TREE_WILLOW:        "plank",
+	Tile.TREE_FIR:           "plank",
+	Tile.TREE_CYPRESS:       "plank",
+	Tile.TREE_PALM:          "plank",
+	Tile.BIRD_TURKEY:        "eggs",
+	Tile.BIRD_CLOVER:        "eggs",
+	Tile.BIRD_MELON:         "eggs",
+	Tile.BIRD_CHICKEN:       "eggs",
+	Tile.BIRD_HEN:           "eggs",
+	Tile.BIRD_ROOSTER:       "eggs",
+	Tile.BIRD_WILD_GOOSE:    "eggs",
+	Tile.BIRD_GOOSE:         "eggs",
+	Tile.BIRD_PARROT:        "eggs",
+	Tile.BIRD_PHOENIX:       "eggs",
+	Tile.BIRD_DODO:          "eggs",
+	Tile.BIRD_PIG_IN_DISGUISE: "eggs",
+	Tile.HERD_HOG:           "meat",
+	Tile.HERD_BOAR:          "meat",
+	Tile.HERD_WARTHOG:       "meat",
+	Tile.HERD_SHEEP:         "meat",
+	Tile.HERD_ALPACA:        "meat",
+	Tile.HERD_GOAT:          "meat",
+	Tile.HERD_RAM:           "meat",
+	Tile.CATTLE_LONGHORN:    "milk",
+	Tile.CATTLE_TRICERATOPS: "milk",
+	Tile.MOUNT_DONKEY:       "horseshoe",
+	Tile.MOUNT_MOOSE:        "horseshoe",
+	Tile.MOUNT_MAMMOTH:      "horseshoe",
+	Tile.COPPER_ORE:         "copper_bar",
+	Tile.GOLD:               "gold_bar",
+	# COIN_GOLDEN produces NOTHING through the chain pipeline — deliberately ABSENT (like
+	# RAT/RUBBLE/FISH_PEARL): produced_resource → "" and threshold_for → NO_THRESHOLD.
+	Tile.COIN_GOLDEN:        "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -183,6 +393,64 @@ const THRESHOLDS := {
 	Tile.FISH_CLAM:     5,
 	Tile.FISH_OYSTER:   5,
 	Tile.FISH_KELP:     6,
+	# ── Full tile-catalog parity. Per-family thresholds match src/constants.ts
+	# UPGRADE_THRESHOLDS: grass/grain/veg/trees/birds/cattle/copper/gold = 6, fruit = 7,
+	# flowers/mounts = 10, herd = 5. COIN_GOLDEN is deliberately ABSENT (no chain yield).
+	Tile.GRASS_MEADOW:       6,
+	Tile.GRASS_SPIKY:        6,
+	Tile.GRASS_HEATHER:      6,
+	Tile.GRAIN_CORN:         6,
+	Tile.GRAIN_BUCKWHEAT:    6,
+	Tile.GRAIN_MANNA:        6,
+	Tile.GRAIN_RICE:         6,
+	Tile.VEG_EGGPLANT:       6,
+	Tile.VEG_TURNIP:         6,
+	Tile.VEG_BEET:           6,
+	Tile.VEG_CUCUMBER:       6,
+	Tile.VEG_SQUASH:         6,
+	Tile.VEG_MUSHROOM:       6,
+	Tile.VEG_PEPPER:         6,
+	Tile.VEG_BROCCOLI:       6,
+	Tile.FRUIT_PEAR:         7,
+	Tile.FRUIT_GOLDEN_APPLE: 7,
+	Tile.FRUIT_BLACKBERRY:   7,
+	Tile.FRUIT_RAMBUTAN:     7,
+	Tile.FRUIT_STARFRUIT:    7,
+	Tile.FRUIT_COCONUT:      7,
+	Tile.FRUIT_LEMON:        7,
+	Tile.FRUIT_JACKFRUIT:    7,
+	Tile.FLOWER_WATER_LILY:  10,
+	Tile.TREE_BIRCH:         6,
+	Tile.TREE_WILLOW:        6,
+	Tile.TREE_FIR:           6,
+	Tile.TREE_CYPRESS:       6,
+	Tile.TREE_PALM:          6,
+	Tile.BIRD_TURKEY:        6,
+	Tile.BIRD_CLOVER:        6,
+	Tile.BIRD_MELON:         6,
+	Tile.BIRD_CHICKEN:       6,
+	Tile.BIRD_HEN:           6,
+	Tile.BIRD_ROOSTER:       6,
+	Tile.BIRD_WILD_GOOSE:    6,
+	Tile.BIRD_GOOSE:         6,
+	Tile.BIRD_PARROT:        6,
+	Tile.BIRD_PHOENIX:       6,
+	Tile.BIRD_DODO:          6,
+	Tile.BIRD_PIG_IN_DISGUISE: 6,
+	Tile.HERD_HOG:           5,
+	Tile.HERD_BOAR:          5,
+	Tile.HERD_WARTHOG:       5,
+	Tile.HERD_SHEEP:         5,
+	Tile.HERD_ALPACA:        5,
+	Tile.HERD_GOAT:          5,
+	Tile.HERD_RAM:           5,
+	Tile.CATTLE_LONGHORN:    6,
+	Tile.CATTLE_TRICERATOPS: 6,
+	Tile.MOUNT_DONKEY:       10,
+	Tile.MOUNT_MOOSE:        10,
+	Tile.MOUNT_MAMMOTH:      10,
+	Tile.COPPER_ORE:         6,
+	Tile.GOLD:               6,
 }
 
 ## Weighted spawn pool for the Farm biome (src/constants.ts:268-281).
@@ -305,6 +573,66 @@ const CATEGORY := {
 	# required fish tiles in its own capture chain, and so it never seeds into the fish
 	# spawn pools (the board slice conditionally places it instead).
 	Tile.FISH_PEARL:    "fish_pearl",
+	# ── Full tile-catalog parity. Catalog variants reuse the port's existing short category
+	# ids (the web's bird/vegetables/fruits/flowers/herd_animals/mounts map to the port's
+	# birds/veg/fruit/flower/herd/mount). Mine copper + gold get their OWN categories ("copper",
+	# "gold") and the golden coin a "coin" category — none seed into any board pool here.
+	Tile.GRASS_MEADOW:       "grass",
+	Tile.GRASS_SPIKY:        "grass",
+	Tile.GRASS_HEATHER:      "grass",
+	Tile.GRAIN_CORN:         "grain",
+	Tile.GRAIN_BUCKWHEAT:    "grain",
+	Tile.GRAIN_MANNA:        "grain",
+	Tile.GRAIN_RICE:         "grain",
+	Tile.VEG_EGGPLANT:       "veg",
+	Tile.VEG_TURNIP:         "veg",
+	Tile.VEG_BEET:           "veg",
+	Tile.VEG_CUCUMBER:       "veg",
+	Tile.VEG_SQUASH:         "veg",
+	Tile.VEG_MUSHROOM:       "veg",
+	Tile.VEG_PEPPER:         "veg",
+	Tile.VEG_BROCCOLI:       "veg",
+	Tile.FRUIT_PEAR:         "fruit",
+	Tile.FRUIT_GOLDEN_APPLE: "fruit",
+	Tile.FRUIT_BLACKBERRY:   "fruit",
+	Tile.FRUIT_RAMBUTAN:     "fruit",
+	Tile.FRUIT_STARFRUIT:    "fruit",
+	Tile.FRUIT_COCONUT:      "fruit",
+	Tile.FRUIT_LEMON:        "fruit",
+	Tile.FRUIT_JACKFRUIT:    "fruit",
+	Tile.FLOWER_WATER_LILY:  "flower",
+	Tile.TREE_BIRCH:         "trees",
+	Tile.TREE_WILLOW:        "trees",
+	Tile.TREE_FIR:           "trees",
+	Tile.TREE_CYPRESS:       "trees",
+	Tile.TREE_PALM:          "trees",
+	Tile.BIRD_TURKEY:        "birds",
+	Tile.BIRD_CLOVER:        "birds",
+	Tile.BIRD_MELON:         "birds",
+	Tile.BIRD_CHICKEN:       "birds",
+	Tile.BIRD_HEN:           "birds",
+	Tile.BIRD_ROOSTER:       "birds",
+	Tile.BIRD_WILD_GOOSE:    "birds",
+	Tile.BIRD_GOOSE:         "birds",
+	Tile.BIRD_PARROT:        "birds",
+	Tile.BIRD_PHOENIX:       "birds",
+	Tile.BIRD_DODO:          "birds",
+	Tile.BIRD_PIG_IN_DISGUISE: "birds",
+	Tile.HERD_HOG:           "herd",
+	Tile.HERD_BOAR:          "herd",
+	Tile.HERD_WARTHOG:       "herd",
+	Tile.HERD_SHEEP:         "herd",
+	Tile.HERD_ALPACA:        "herd",
+	Tile.HERD_GOAT:          "herd",
+	Tile.HERD_RAM:           "herd",
+	Tile.CATTLE_LONGHORN:    "cattle",
+	Tile.CATTLE_TRICERATOPS: "cattle",
+	Tile.MOUNT_DONKEY:       "mount",
+	Tile.MOUNT_MOOSE:        "mount",
+	Tile.MOUNT_MAMMOTH:      "mount",
+	Tile.COPPER_ORE:         "copper",
+	Tile.GOLD:               "gold",
+	Tile.COIN_GOLDEN:        "coin",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
@@ -485,4 +813,63 @@ static func color_for(tile: int) -> Color:
 		Tile.FISH_OYSTER:   return Color(0.62, 0.60, 0.56)
 		Tile.FISH_KELP:     return Color(0.24, 0.46, 0.36)
 		Tile.FISH_PEARL:    return Color(0.94, 0.93, 0.97)
+		# ── Full tile-catalog parity. Stage-1 fallback fills (the v1 PNGs ship for all of
+		# these, so these flat colors only render if a texture is missing). Hex values lifted
+		# from the web ITEMS `look.color` (src/constants.ts), converted to 0..1 RGB.
+		Tile.GRASS_MEADOW:       return Color8(0x7f, 0xb2, 0x4a)
+		Tile.GRASS_SPIKY:        return Color8(0x9b, 0xb5, 0x5a)
+		Tile.GRASS_HEATHER:      return Color8(0x7a, 0x4f, 0x8a)
+		Tile.GRAIN_CORN:         return Color8(0xf4, 0xc8, 0x4a)
+		Tile.GRAIN_BUCKWHEAT:    return Color8(0x9a, 0xb5, 0x48)
+		Tile.GRAIN_MANNA:        return Color8(0xf8, 0xe8, 0xc0)
+		Tile.GRAIN_RICE:         return Color8(0xc8, 0xd8, 0x78)
+		Tile.VEG_EGGPLANT:       return Color8(0x6b, 0x3a, 0x8a)
+		Tile.VEG_TURNIP:         return Color8(0xd8, 0x7a, 0xa0)
+		Tile.VEG_BEET:           return Color8(0x6b, 0x1a, 0x3a)
+		Tile.VEG_CUCUMBER:       return Color8(0x4f, 0x8c, 0x3a)
+		Tile.VEG_SQUASH:         return Color8(0xe6, 0xc1, 0x4a)
+		Tile.VEG_MUSHROOM:       return Color8(0xc6, 0x3a, 0x3a)
+		Tile.VEG_PEPPER:         return Color8(0xd8, 0x3a, 0x3a)
+		Tile.VEG_BROCCOLI:       return Color8(0x4a, 0x8a, 0x3a)
+		Tile.FRUIT_PEAR:         return Color8(0xbc, 0xc4, 0x36)
+		Tile.FRUIT_GOLDEN_APPLE: return Color8(0xf4, 0xc4, 0x30)
+		Tile.FRUIT_BLACKBERRY:   return Color8(0x3a, 0x1a, 0x4a)
+		Tile.FRUIT_RAMBUTAN:     return Color8(0xd8, 0x34, 0x4a)
+		Tile.FRUIT_STARFRUIT:    return Color8(0xe8, 0xc8, 0x3c)
+		Tile.FRUIT_COCONUT:      return Color8(0x5e, 0x3a, 0x14)
+		Tile.FRUIT_LEMON:        return Color8(0xf4, 0xd0, 0x30)
+		Tile.FRUIT_JACKFRUIT:    return Color8(0xa8, 0xa0, 0x40)
+		Tile.FLOWER_WATER_LILY:  return Color8(0xe8, 0x90, 0xc0)
+		Tile.TREE_BIRCH:         return Color8(0xa8, 0xc0, 0x38)
+		Tile.TREE_WILLOW:        return Color8(0x5a, 0x8a, 0x18)
+		Tile.TREE_FIR:           return Color8(0x2a, 0x50, 0x08)
+		Tile.TREE_CYPRESS:       return Color8(0x1a, 0x3a, 0x08)
+		Tile.TREE_PALM:          return Color8(0x5a, 0x8a, 0x18)
+		Tile.BIRD_TURKEY:        return Color8(0xb8, 0x74, 0x3a)
+		Tile.BIRD_CLOVER:        return Color8(0x6f, 0xa4, 0x50)
+		Tile.BIRD_MELON:         return Color8(0xb3, 0xd7, 0x70)
+		Tile.BIRD_CHICKEN:       return Color8(0xf0, 0xd8, 0xa0)
+		Tile.BIRD_HEN:           return Color8(0xa8, 0x68, 0x38)
+		Tile.BIRD_ROOSTER:       return Color8(0xd8, 0x18, 0x18)
+		Tile.BIRD_WILD_GOOSE:    return Color8(0xa8, 0x98, 0x78)
+		Tile.BIRD_GOOSE:         return Color8(0xff, 0xfc, 0xe8)
+		Tile.BIRD_PARROT:        return Color8(0xd8, 0x18, 0x18)
+		Tile.BIRD_PHOENIX:       return Color8(0xf8, 0xa0, 0x20)
+		Tile.BIRD_DODO:          return Color8(0xa8, 0x98, 0x78)
+		Tile.BIRD_PIG_IN_DISGUISE: return Color8(0xe8, 0x8a, 0x98)
+		Tile.HERD_HOG:           return Color8(0xa8, 0x78, 0x38)
+		Tile.HERD_BOAR:          return Color8(0x24, 0x14, 0x08)
+		Tile.HERD_WARTHOG:       return Color8(0x5a, 0x48, 0x28)
+		Tile.HERD_SHEEP:         return Color8(0xff, 0xfc, 0xe8)
+		Tile.HERD_ALPACA:        return Color8(0xf8, 0xe8, 0xc8)
+		Tile.HERD_GOAT:          return Color8(0xd8, 0xc0, 0x98)
+		Tile.HERD_RAM:           return Color8(0xa8, 0x78, 0x38)
+		Tile.CATTLE_LONGHORN:    return Color8(0xd8, 0x90, 0x48)
+		Tile.CATTLE_TRICERATOPS: return Color8(0x5a, 0x8a, 0x28)
+		Tile.MOUNT_DONKEY:       return Color8(0x8a, 0x84, 0x78)
+		Tile.MOUNT_MOOSE:        return Color8(0x5a, 0x38, 0x14)
+		Tile.MOUNT_MAMMOTH:      return Color8(0xa8, 0x78, 0x38)
+		Tile.COPPER_ORE:         return Color8(0xc9, 0x7f, 0x4f)
+		Tile.GOLD:               return Color8(0xff, 0xd3, 0x4c)
+		Tile.COIN_GOLDEN:        return Color8(0xff, 0xd3, 0x4c)
 		_:             return Color.MAGENTA
