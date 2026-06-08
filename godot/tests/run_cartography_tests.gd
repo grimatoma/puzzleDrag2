@@ -166,6 +166,11 @@ func _run() -> void:
 		"no enabled travel:mine button when locked")
 	_check(screen._action_buttons.get("travel:harbor", null) == null,
 		"no enabled travel:harbor button when locked")
+	# zone_state (map node tint + legend + road style): home is the lit hearth, the two
+	# expeditions read LOCKED (dashed waiting roads) while the boss is up.
+	_check(screen.zone_state("home") == "current", "zone_state('home') == 'current' on the farm")
+	_check(screen.zone_state("mine") == "locked", "zone_state('mine') == 'locked' (boss not down)")
+	_check(screen.zone_state("harbor") == "locked", "zone_state('harbor') == 'locked' (boss not down)")
 
 	# town2_complete TRUE + City tier + supplies + on the farm → both ENABLED.
 	main.game.town2_complete = true
@@ -180,6 +185,9 @@ func _run() -> void:
 	_check(screen._action_buttons.has("travel:harbor"), "enabled travel:harbor button registered")
 	_check(not screen._action_buttons["travel:mine"].disabled, "travel:mine button is enabled")
 	_check(not screen._action_buttons["travel:harbor"].disabled, "travel:harbor button is enabled")
+	# zone_state now reads the two expeditions as READY (gold-rimmed nodes, solid roads).
+	_check(screen.zone_state("mine") == "ready", "zone_state('mine') == 'ready' (boss down)")
+	_check(screen.zone_state("harbor") == "ready", "zone_state('harbor') == 'ready' (boss down)")
 
 	# ── 3d. pressing an enabled mine travel button enters the mine ─────────────
 	_check(not main.game.is_in_mine(), "not in the mine before travel")

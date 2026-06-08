@@ -69,6 +69,16 @@ const KIND_TINT := {
 	"harbor": Color8(0x4a, 0x8a, 0xaa),   # blue
 }
 
+# Warm cartography palette (a sandy aged-map field + warm roads), replacing the flat pale
+# page so the map reads as warm parchment territory.
+const MAP_FIELD := Color8(0xe9, 0xd9, 0xb4)        # warm sand field
+const MAP_FIELD_EDGE := Color8(0xcf, 0xb9, 0x8c)   # darker frame band for depth
+const ROAD_WALK := Color8(0xb0, 0x8a, 0x52)        # walkable road core (warm tan)
+const ROAD_DIRT := Color8(0x8a, 0x6a, 0x3a, 0xcc)  # walkable road underlay (dirt)
+const ROAD_WAIT := Color8(0xa1, 0x8a, 0x63)        # waiting road (muted, drawn dashed)
+const NODE_READY_RIM := Palette.GOLD               # "ready" zones get a gold rim
+const NODE_LOCKED := Color8(0x9a, 0x90, 0x7e)      # locked zones desaturate to muted grey
+
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
 ## Store `game`, build the static shell ONCE, then render. Safe to call again.
@@ -190,6 +200,10 @@ func _build_shell() -> void:
 	_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_card.add_child(_map)
 
+	# Legend — a wrapping row keying the node states (lit hearth / ready / locked) and the
+	# two road styles (a solid walkable road vs a dashed road still waiting to be opened).
+	root_vbox.add_child(_build_legend())
+
 	# The dynamic body — the per-zone travel rows hang off this, cleared + rebuilt each refresh.
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -298,6 +312,72 @@ func _configure_expedition_button(btn: Button, id: String, active_label: String,
 func _on_travel_pressed(id: String) -> void:
 	emit_signal("travel_requested", id)
 
+# ── legend ──────────────────────────────────────────────────────────────────────
+
+## A wrapping legend keying the three node states and the two road styles. Each item is a
+## tiny drawn swatch + a muted label; the swatches reuse the same colours the map draws.
+func _build_legend() -> Control:
+	var flow := HFlowContainer.new()
+	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	flow.add_theme_constant_override("h_separation", 14)
+	flow.add_theme_constant_override("v_separation", 4)
+	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for spec in [["current", "Lit hearth"], ["ready", "Ready"], ["locked", "Locked"],
+			["road", "Traveled"], ["road_wait", "Waiting"]]:
+		flow.add_child(_legend_item(String(spec[0]), String(spec[1])))
+	return flow
+
+## One legend item: a 22×16 drawn swatch + its label.
+func _legend_item(kind: String, label: String) -> HBoxContainer:
+	var item := HBoxContainer.new()
+	item.add_theme_constant_override("separation", 5)
+	item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sw := Control.new()
+	sw.custom_minimum_size = Vector2(22, 16)
+	sw.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sw.draw.connect(_draw_legend_swatch.bind(sw, kind))
+	item.add_child(sw)
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.add_theme_color_override("font_color", COL_MUTED)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	item.add_child(lbl)
+	return item
+
+## Paint one legend swatch (a node dot or a road line) onto its Control.
+func _draw_legend_swatch(sw: Control, kind: String) -> void:
+	var c := Vector2(11.0, sw.size.y * 0.5)
+	match kind:
+		"current":
+			sw.draw_arc(c, 7.0, 0.0, TAU, 24, Palette.GOLD_BRIGHT, 2.0, true)
+			sw.draw_circle(c, 4.5, KIND_TINT["home"])
+		"ready":
+			sw.draw_circle(c, 5.5, KIND_TINT["mine"])
+			sw.draw_arc(c, 5.5, 0.0, TAU, 24, NODE_READY_RIM, 2.0, true)
+		"locked":
+			sw.draw_circle(c, 5.5, NODE_LOCKED)
+			sw.draw_arc(c, 5.5, 0.0, TAU, 24, Palette.IRON, 1.5, true)
+		"road":
+			sw.draw_line(Vector2(1.0, c.y), Vector2(21.0, c.y), ROAD_WALK, 3.0, true)
+		"road_wait":
+			_draw_dashed_on(sw, Vector2(1.0, c.y), Vector2(21.0, c.y), ROAD_WAIT, 2.5, 4.0, 3.0)
+
+## Draw a dashed line on any CanvasItem `ci` (used by both the legend and the map). Walks
+## from `from` to `to` painting `dash`-long segments separated by `gap`.
+func _draw_dashed_on(ci: CanvasItem, from: Vector2, to: Vector2, col: Color, width: float, dash: float, gap: float) -> void:
+	var dir := to - from
+	var length := dir.length()
+	if length <= 0.0:
+		return
+	var unit := dir / length
+	var step := dash + gap
+	var d := 0.0
+	while d < length:
+		var seg_end := minf(d + dash, length)
+		ci.draw_line(from + unit * d, from + unit * seg_end, col, width, true)
+		d += step
+
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 
 ## The zone id the player is currently at, from GameState.active_biome.
@@ -324,6 +404,20 @@ func zone_is_travelable(id: String) -> bool:
 		_:
 			return false
 
+## Map-display state for a zone, driving the node tint, the legend, and the road style:
+##   "current" — the player is here (the lit hearth / "you are here" gold ring),
+##   "ready"   — unlocked + walkable (home is always reachable; an expedition once the
+##               capstone boss is down — town2_complete),
+##   "locked"  — not yet unlocked (the boss isn't defeated → a dashed "waiting" road).
+func zone_state(id: String) -> String:
+	if is_current(id):
+		return "current"
+	if id == "home":
+		return "ready"               # home is always walkable (end an expedition to return)
+	if game != null and game.town2_complete:
+		return "ready"
+	return "locked"
+
 # ── nested map view (the _draw painter) ────────────────────────────────────────
 ## A tiny Control whose _draw paints the world map: EDGES as roads, ZONES as labelled
 ## kind-tinted node circles fit from 0..100 layout space into the panel rect, and the
@@ -333,24 +427,48 @@ func zone_is_travelable(id: String) -> bool:
 class _MapView extends Control:
 	var screen   ## the owning CartographyScreen (for game + _node_centers)
 
-	# Fit 0..100 layout space into the panel rect with a uniform margin.
-	func _layout_point(x: float, y: float) -> Vector2:
-		var pad := 36.0
-		var w: float = maxf(1.0, size.x - 2.0 * pad)
-		var h: float = maxf(1.0, size.y - 2.0 * pad)
-		return Vector2(pad + (x / 100.0) * w, pad + (y / 100.0) * h)
+	## Fit the zones' bounding box into the panel rect (scaled + CENTRED to fill it), with a
+	## small inset so node labels don't clip the edges. This is what spreads the cluster out
+	## across the whole map instead of leaving it crammed in one corner with a big void.
+	func _fit_centers() -> Dictionary:
+		const PAD := 26.0
+		const INSET_X := 0.16    # keep nodes off the L/R edges so labels have room
+		const INSET_Y := 0.14
+		var minx := INF
+		var miny := INF
+		var maxx := -INF
+		var maxy := -INF
+		for z in CartographyConfig.all():
+			var x := float(z.get("x", 0.0))
+			var y := float(z.get("y", 0.0))
+			minx = minf(minx, x)
+			maxx = maxf(maxx, x)
+			miny = minf(miny, y)
+			maxy = maxf(maxy, y)
+		var spanx := maxf(1.0, maxx - minx)
+		var spany := maxf(1.0, maxy - miny)
+		var w := maxf(1.0, size.x - 2.0 * PAD)
+		var h := maxf(1.0, size.y - 2.0 * PAD)
+		var out: Dictionary = {}
+		for z in CartographyConfig.all():
+			var nx: float = (float(z.get("x", 0.0)) - minx) / spanx      # 0..1 across the bbox
+			var ny: float = (float(z.get("y", 0.0)) - miny) / spany
+			nx = INSET_X + nx * (1.0 - 2.0 * INSET_X)
+			ny = INSET_Y + ny * (1.0 - 2.0 * INSET_Y)
+			out[String(z.get("id", ""))] = Vector2(PAD + nx * w, PAD + ny * h)
+		return out
 
 	func _draw() -> void:
 		if screen == null:
 			return
-		# Map backdrop — a soft parchment field so the roads + nodes read clearly.
-		draw_rect(Rect2(Vector2.ZERO, size), Palette.PAPER, true)
+		# Warm aged-map field + a darker inner frame band for depth.
+		draw_rect(Rect2(Vector2.ZERO, size), screen.MAP_FIELD, true)
+		draw_rect(Rect2(Vector2.ONE * 1.5, size - Vector2.ONE * 3.0), screen.MAP_FIELD_EDGE, false, 5.0)
 
-		var centers: Dictionary = {}
-		for z in CartographyConfig.all():
-			centers[String(z.get("id", ""))] = _layout_point(float(z.get("x", 0.0)), float(z.get("y", 0.0)))
+		var centers := _fit_centers()
 
-		# Roads (drawn first, under the nodes). Dirt underlay + a lighter core.
+		# Roads (under the nodes). A SOLID walkable road when the destination is unlocked;
+		# a DASHED "waiting" road when it's still locked (boss not yet down).
 		for e in CartographyConfig.EDGES:
 			var a_id: String = String(e[0])
 			var b_id: String = String(e[1])
@@ -358,23 +476,31 @@ class _MapView extends Control:
 				continue
 			var a: Vector2 = centers[a_id]
 			var b: Vector2 = centers[b_id]
-			draw_line(a, b, Color8(0x8a, 0x6a, 0x3a, 0xcc), 7.0, true)   # dirt edge
-			draw_line(a, b, Color8(0xb0, 0x8a, 0x52), 3.5, true)         # road core
+			# Home is always reachable, so the NON-home endpoint sets the road state.
+			var dest: String = b_id if a_id == "home" else a_id
+			if screen.zone_state(dest) == "locked":
+				screen._draw_dashed_on(self, a, b, screen.ROAD_WAIT, 3.0, 9.0, 7.0)
+			else:
+				draw_line(a, b, screen.ROAD_DIRT, 7.0, true)    # dirt underlay
+				draw_line(a, b, screen.ROAD_WALK, 3.5, true)    # walkable core
 
 		var current_id: String = screen.current_zone_id()
 
-		# Nodes — a kind-tinted disc + iron rim, the current one wrapped in a gold ring;
-		# the icon + name drawn beneath. Record each centre on the parent screen.
+		# Nodes — a kind-tinted disc; the current one wrapped in a gold "you are here" ring,
+		# "ready" zones rimmed in gold, "locked" zones desaturated with an iron rim.
 		for z in CartographyConfig.all():
 			var id: String = String(z.get("id", ""))
 			var c: Vector2 = centers[id]
+			var state: String = screen.zone_state(id)
 			var tint: Color = screen.KIND_TINT.get(String(z.get("kind", "")), Palette.INK)
-			var r := 18.0
-			if id == current_id:
-				# Gold "you are here" ring behind the node.
+			if state == "locked":
+				tint = screen.NODE_LOCKED
+			var r := 20.0
+			if state == "current":
 				draw_arc(c, r + 7.0, 0.0, TAU, 48, Palette.GOLD_BRIGHT, 4.0, true)
 			draw_circle(c, r, tint)
-			draw_arc(c, r, 0.0, TAU, 48, Palette.IRON, 2.0, true)
+			var rim: Color = screen.NODE_READY_RIM if state == "ready" else Palette.IRON
+			draw_arc(c, r, 0.0, TAU, 48, rim, 2.5 if state == "ready" else 2.0, true)
 			# Icon glyph centred on the disc.
 			_draw_centered_text(String(z.get("icon", "")), c, 20, Palette.PARCHMENT)
 			# Name below the node (gold for the current zone).
