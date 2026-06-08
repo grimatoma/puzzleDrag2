@@ -401,7 +401,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var craft_btn := Button.new()
 	craft_btn.text = "Craft"
 	craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(craft_btn, Palette.MOSS, 8, 18)
+	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, 18)
 	craft_btn.disabled = not craftable
 	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
 	col.add_child(craft_btn)

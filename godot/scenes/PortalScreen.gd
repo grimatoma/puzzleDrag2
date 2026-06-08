@@ -259,7 +259,7 @@ func _render_build_state() -> void:
 	var build_btn := Button.new()
 	build_btn.text = "Build Portal"
 	build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(build_btn, Palette.MOSS, 6, 15, true)
+	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 15)
 	build_btn.disabled = not game.can_build_portal()
 	build_btn.connect("pressed", Callable(self, "_on_build_portal"))
 	bottom.add_child(build_btn)

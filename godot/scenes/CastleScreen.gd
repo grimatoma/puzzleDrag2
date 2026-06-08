@@ -307,7 +307,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 	var one_btn := Button.new()
 	one_btn.text = "Contribute 1"
 	one_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(one_btn, Palette.EMBER, 6, 15)
+	UiKit.style_action_button(one_btn, Palette.GO_GREEN, 6, 15)
 	one_btn.disabled = (have < 1) or complete
 	one_btn.connect("pressed", Callable(self, "_on_contribute").bind(id, 1))
 	bottom.add_child(one_btn)
@@ -317,7 +317,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 	var all_btn := Button.new()
 	all_btn.text = "All (%d)" % all_amount
 	all_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(all_btn, Palette.MOSS, 6, 15)
+	UiKit.style_action_button(all_btn, Palette.GO_GREEN, 6, 15)
 	all_btn.disabled = all_amount <= 0
 	all_btn.connect("pressed", Callable(self, "_on_contribute").bind(id, all_amount))
 	bottom.add_child(all_btn)

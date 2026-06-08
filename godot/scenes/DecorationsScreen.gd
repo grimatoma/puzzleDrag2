@@ -294,7 +294,7 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 	var build_btn := Button.new()
 	build_btn.text = "Build"
 	build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(build_btn, Palette.MOSS, 6, 15, true)
+	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 15)
 	build_btn.disabled = not affordable
 	build_btn.connect("pressed", Callable(self, "_on_build").bind(id))
 	bottom.add_child(build_btn)

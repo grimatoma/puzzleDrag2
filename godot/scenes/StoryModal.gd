@@ -208,7 +208,7 @@ func _render(beat_id: String) -> void:
 		var cont := Button.new()
 		cont.text = "Continue"
 		cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_button(cont, Palette.MOSS, 8, 20)
+		UiKit.style_action_button(cont, Palette.GO_GREEN, 8, 20)
 		cont.connect("pressed", Callable(self, "_on_continue"))
 		_buttons_box.add_child(cont)
 		_action_buttons["continue"] = cont

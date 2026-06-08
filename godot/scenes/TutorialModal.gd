@@ -167,7 +167,7 @@ func _build_shell() -> void:
 	_next_btn = Button.new()
 	_next_btn.text = "Next"
 	_next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_next_btn, Palette.MOSS, 10, 18)
+	UiKit.style_action_button(_next_btn, Palette.GO_GREEN, 10, 18)
 	_next_btn.connect("pressed", Callable(self, "_on_next"))
 	btn_row.add_child(_next_btn)
 	_action_buttons["next"] = _next_btn

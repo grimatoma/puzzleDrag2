@@ -161,7 +161,7 @@ func _build_shell() -> void:
 	_collect_btn = Button.new()
 	_collect_btn.text = "Collect"
 	_collect_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_collect_btn, Palette.MOSS, 10, 20)
+	UiKit.style_action_button(_collect_btn, Palette.GO_GREEN, 10, 20)
 	_collect_btn.connect("pressed", Callable(self, "_on_collect"))
 	col.add_child(_collect_btn)
 	_action_buttons["collect"] = _collect_btn

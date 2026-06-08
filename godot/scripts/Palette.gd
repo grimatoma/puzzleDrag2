@@ -28,7 +28,12 @@ const EMBER          := Color8(0xd6, 0x61, 0x2a)   ## #d6612a — ember
 const EMBER_SOFT     := Color8(0xff, 0x8b, 0x25)   ## #ff8b25 — ember soft
 const GOLD           := Color8(0xe2, 0xb2, 0x4a)   ## #e2b24a — gold
 const GOLD_BRIGHT    := Color8(0xff, 0xd2, 0x48)   ## #ffd248 — gold bright
-const MOSS           := Color8(0x6f, 0x8a, 0x3a)   ## #6f8a3a — moss (status)
+const MOSS           := Color8(0x6f, 0x8a, 0x3a)   ## #6f8a3a — moss (status text / bars)
+## Affirmative CTA fill — the vivid leaf-green React uses for its primary "go" buttons
+## (Claim / Build / Craft / Contribute / Continue). Ported VERBATIM from components.css
+## `.hl-btn--go { background:#5e8c1e }` — brighter + more saturated than the olive MOSS so
+## an enabled positive action reads as a clear call-to-action. White text via _contrast_text.
+const GO_GREEN       := Color8(0x5e, 0x8c, 0x1e)   ## #5e8c1e — affirmative CTA (React hl-btn--go)
 
 # ── Farm field (board background) ───────────────────────────────────────────
 ## A calm warm green for the board card, with a slightly darker inner edge.
