@@ -1233,6 +1233,18 @@ func _switch_primary_view(opener: String) -> void:
 			_cartography_screen, _townsfolk_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
+	# B2 — the SECONDARY screens (Achievements / Tile collection / Recipes / Chronicle /
+	# Castle / Charter / Decorations / Portal) are now full-brightness VIEWS too, opened from
+	# the ☰ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is
+	# up must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
+	# paint over the primary the nav just opened. Hide via `.visible = false` DIRECTLY — NOT
+	# `.close()` — for the same reason the primaries do: close() emits `closed` → `_on_*_closed`
+	# → `_router.close_modal()`, which would race the modal state the opener is about to set.
+	for screen in [_achievements_screen, _tile_collection_screen, _recipe_wiki_screen,
+			_chronicle_screen, _castle_screen, _charter_screen, _decorations_screen,
+			_portal_screen]:
+		if screen != null and is_instance_valid(screen) and screen.visible:
+			screen.visible = false
 	call(opener)
 
 ## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a

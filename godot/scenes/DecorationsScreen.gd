@@ -42,9 +42,9 @@ var _build_buttons: Dictionary = {}
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the current coins / inventory / influence state.
 var _body: VBoxContainer
-## The decoration list scroll — its height is clamped to its content (up to the viewport)
-## via UiKit.fit_scroll_height so a short list yields a short centred card with no empty
-## parchment "dead space" beneath it.
+## The decoration list scroll — a full-bleed VIEW page: it expands (SIZE_EXPAND_FILL) to
+## fill the page height between the persistent top bar + bottom nav, so the list scrolls
+## within the page rather than the card being content-sized + centred.
 var _scroll: ScrollContainer
 var _built: bool = false
 
@@ -92,34 +92,42 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Full-rect warm-brown scrim. MOUSE_FILTER_STOP so clicks behind it never reach the
-	# board while the decorations screen is open (matches the other modals).
+	# Opaque VIEW background (not a dim modal scrim). B2 promotes this menu sub-page to a
+	# full-brightness VIEW: it paints the warm app-frame parchment over the board (no longer
+	# dimmed behind), reserving UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD
+	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
+	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
+	# eats clicks in the band it covers.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered card: a full-rect CenterContainer centres the parchment panel at the panel's
-	# own (content-driven) size, so a short list yields a small card floating in the scrim —
-	# no full-height card with an empty void below. A width-cap keeps it tidy on wide viewports.
-	var center := CenterContainer.new()
+	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
+	# margins), reserving the top-bar band + bottom-nav strip; a width-cap MarginContainer keeps
+	# line length tidy on wide viewports.
+	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	# Parchment card — warm fill, iron border, rounded corners, generous padding, soft
-	# drop shadow so it floats over the warm scrim.
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
+	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -UiKit.NAV_RESERVE
+	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
+	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
+	# sub-page KEEPS its visible "✕ Close" (the legitimate back-to-board affordance).
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
 	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
@@ -129,9 +137,11 @@ func _build_shell() -> void:
 	panel.add_child(width_cap)
 
 	# A non-scrolling column: title row + Influence header pinned at the top, then a
-	# ScrollContainer that owns the decoration list.
+	# ScrollContainer that owns the decoration list. Fills the full-bleed page height so the
+	# scroll below expands into it (no empty void beneath a short decoration list).
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
@@ -169,6 +179,9 @@ func _build_shell() -> void:
 	_scroll = UiKit.make_vscroll()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Full-bleed view: the scroll takes the spare page height (no content-clamp / float-card
+	# sizing) so the decoration list fills the page and scrolls when it overflows.
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(_scroll)
 
 	# The dynamic body — every decoration card hangs off this and is cleared + rebuilt
@@ -177,15 +190,6 @@ func _build_shell() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 12)
 	_scroll.add_child(_body)
-
-	# Re-fit the scroll height to its content whenever the viewport resizes so the card
-	# stays content-sized + capped to the viewport.
-	# get_viewport() is null while the screen is built off-tree (tests construct it with
-	# .new()+setup() before add_child); guard so the resize hook wires only when in-tree.
-	var vp := get_viewport()
-	if vp != null:
-		vp.size_changed.connect(func() -> void:
-			UiKit.fit_scroll_height(_scroll, _body))
 
 # ── render ────────────────────────────────────────────────────────────────────
 
@@ -207,11 +211,6 @@ func refresh() -> void:
 		var card := _make_decoration_card(entry as Dictionary)
 		_body.add_child(card)
 		_cards[String((entry as Dictionary).get("id", ""))] = card
-
-	# Clamp the scroll to the (now-built) decoration list so the card sizes to content. A
-	# deferred re-fit catches min-sizes that settle one frame after the cards are added.
-	UiKit.fit_scroll_height(_scroll, _body)
-	UiKit.fit_scroll_height.call_deferred(_scroll, _body)
 
 ## A single decoration card: a soft-parchment chip holding a top line (name + ×count badge),
 ## a row of cost chips (coins ◉ + each resource amount), then a bottom line with the
