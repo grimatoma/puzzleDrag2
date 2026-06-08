@@ -287,6 +287,36 @@ func lot_at_screen(pos: Vector2) -> int:
 			return slot
 	return -1
 
+# Inverse-map a SCREEN-space point back to plan space, then return the `kind` String
+# ("farm"/"mine"/"fish") of the BOARD pad whose rect (cx±w/2, cy±h/2) contains it, or
+# "" when the point misses every board (or the plan is empty / the transform is
+# degenerate). Mirrors lot_at_screen() — screen = plan*s+o, so plan = (screen - o)/s —
+# so it agrees with the same fit/zoom/pan transform the map drew with. Used by
+# TownMapScreen to make the farm board pad a tappable "Start Farming" affordance.
+func board_at_screen(pos: Vector2) -> String:
+	if _plan.is_empty() or _scale <= 0.0:
+		return ""
+	var px: float = (pos.x - _ox) / _scale
+	var py: float = (pos.y - _oy) / _scale
+	for b in _plan.get("boards", []):
+		var bcx: float = float(b["cx"])
+		var bcy: float = float(b["cy"])
+		var hw: float = float(b["w"]) / 2.0
+		var hh: float = float(b["h"]) / 2.0
+		if px >= bcx - hw and px <= bcx + hw and py >= bcy - hh and py <= bcy + hh:
+			return String(b.get("kind", ""))
+	return ""
+
+# Screen-space centre of the board pad whose `kind` is `kind` ("farm"/"mine"/"fish"), or
+# Vector2.INF when no such board exists in the current plan. Exposed so a headless test can
+# compute a known board's centre and feed it back through board_at_screen without synthesising
+# real input events (mirrors lot_screen_center for lots).
+func board_screen_center(kind: String) -> Vector2:
+	for b in _plan.get("boards", []):
+		if String(b.get("kind", "")) == kind:
+			return _pxy(float(b["cx"]), float(b["cy"]))
+	return Vector2(INF, INF)
+
 # Screen-space centre of the build-slot lot at `slot` (the same ordinal used by
 # lot_at_screen / _draw_lot_pads). Returns Vector2.INF when the slot is out of
 # range. Exposed so a headless test can compute a known lot's centre and feed it
