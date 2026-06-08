@@ -306,10 +306,11 @@ const TOOLS: Dictionary = {
 	BIRD_FEED: {
 		"label": "Bird Feed",
 		"power_id": "fill_bias",
-		# Bias toward chickens. NOTE: BIRD_CHICKEN is an upgrade-only tile (not in the
-		# base farm pool), so this arms correctly but doubles 0 slots until the player has
-		# chickens on the board — faithful to the web's "only bias already-eligible tiles".
-		"params": {"target": Constants.Tile.BIRD_CHICKEN, "turns": 1},
+		# Bias toward the base bird. The web biases toward its base bird tile (chicken); the
+		# port's base bird is PHEASANT (FARM_CATEGORY_TILE["birds"]), so PHEASANT is the
+		# faithful target — it IS base-eligible, so the bias actually doubles bird slots
+		# (chicken is an unseeded catalog variant that never reaches the farm board).
+		"params": {"target": Constants.Tile.PHEASANT, "turns": 1},
 		"tap_target": false,
 	},
 	SAPLING: {

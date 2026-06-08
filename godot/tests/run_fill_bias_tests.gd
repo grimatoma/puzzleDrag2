@@ -17,14 +17,14 @@ extends SceneTree
 ##     sets fill_bias_target == WHEAT / fill_bias_turns == 1.
 ##   - bias doubling: active_tile_pool() WHEAT count is exactly 2× the unbiased baseline.
 ##   - expiry: note_farm_turn() decrements to 0 + clears the target; pool count returns to baseline.
-##   - bird_feed → BIRD_CHICKEN and sapling → OAK arm correctly (sapling verified end-to-end too).
+##   - bird_feed → PHEASANT and sapling → OAK arm + double their (base-eligible) slots.
 
 const T := Constants.Tile
 
 # Each fill_bias tool with its expected target Tile.
 const ADDED := {
 	"fertilizer": T.WHEAT,
-	"bird_feed":  T.BIRD_CHICKEN,
+	"bird_feed":  T.PHEASANT,
 	"sapling":    T.OAK,
 }
 
@@ -161,18 +161,23 @@ func _test_bias_expires_in_note_farm_turn() -> void:
 	var after := _count_pool(g.active_tile_pool(), T.WHEAT)
 	_check(after == baseline, "WHEAT pool count back to baseline after expiry (%d == %d)" % [after, baseline])
 
-# ── bird_feed → BIRD_CHICKEN and sapling → OAK arm correctly ───────────────────
+# ── bird_feed → PHEASANT (base bird) and sapling → OAK arm correctly ───────────
 
 func _test_bird_feed_and_sapling_arm() -> void:
-	# bird_feed: arms BIRD_CHICKEN. (BIRD_CHICKEN is an upgrade-only tile — not base-eligible —
-	# so it correctly doubles 0 slots in a fresh pool; we only assert the ARM here.)
+	# bird_feed: arms PHEASANT — the port's base bird tile (FARM_CATEGORY_TILE["birds"]).
+	# PHEASANT IS base-eligible, so the bias really doubles bird slots (not a no-op).
 	var gb := GameState.new()
+	gb.farm_turns_used = 0   # Spring — birds has positive weight
+	var birds_unbiased := _count_pool(gb.active_tile_pool(), T.PHEASANT)
 	gb.grant_tool("bird_feed", 1)
 	var rb := gb.use_tool_on_grid("bird_feed", _full(T.GRASS))
 	_check(bool(rb.get("ok", false)), "bird_feed use returns ok:true")
-	_check(gb.fill_bias_target == T.BIRD_CHICKEN, "bird_feed arms fill_bias_target to BIRD_CHICKEN")
+	_check(gb.fill_bias_target == T.PHEASANT, "bird_feed arms fill_bias_target to PHEASANT")
 	_check(gb.fill_bias_turns == 1, "bird_feed arms fill_bias_turns to 1")
 	_check(gb.tool_count("bird_feed") == 0, "bird_feed charge consumed")
+	var birds_biased := _count_pool(gb.active_tile_pool(), T.PHEASANT)
+	_check(birds_unbiased > 0 and birds_biased == birds_unbiased * 2,
+		"bird_feed doubles the PHEASANT slots in the pool (%d → %d)" % [birds_unbiased, birds_biased])
 	# sapling: arms OAK.
 	var gs := GameState.new()
 	gs.grant_tool("sapling", 1)
