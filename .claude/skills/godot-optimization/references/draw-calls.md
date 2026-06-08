@@ -81,6 +81,8 @@ Pack multiple sprites into a single atlas texture so all sprites sharing that at
 
 Stop processing and rendering objects that are off-screen.
 
+> **Shortcut — `VisibleOnScreenEnabler2D` / `VisibleOnScreenEnabler3D`:** these subclass the Notifier and do the wiring for you. Point `enable_node_path` at the node to gate (defaults to the parent); when its rect leaves the view the Enabler flips that node's `process_mode` off (use `enable_mode` to control pause behaviour) and restores it on re-entry — no signal code. Reach for the `Notifier` variants below only when you need custom enter/exit logic.
+
 ```gdscript
 # 2D — VisibleOnScreenNotifier2D pauses processing when the node leaves the viewport
 extends Sprite2D

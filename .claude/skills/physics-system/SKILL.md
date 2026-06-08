@@ -24,7 +24,7 @@ Four collision-object types (the last three extend `PhysicsBody2D`/`3D`):
 
 Every collision object needs at least one `CollisionShape2D`/`3D` (or `CollisionPolygon2D`/`3D`) child. **Jolt Physics is the default 3D engine since 4.4** (non-experimental from 4.6) — see Section 8. 2D always uses GodotPhysics.
 
-> **Critical rule:** NEVER scale collision shapes or physics bodies via `scale`. Use the shape's own size parameters (radius, extents, height) — scaled shapes produce incorrect collision results.
+> **Critical rule:** NEVER scale collision shapes or physics bodies via `scale`. Use the shape's own size parameters (radius, extents, height) — scaled shapes produce incorrect collision results. This includes the common **`scale.x = -1` sprite-flip trick**: negative scale on a parent propagates to its `CollisionShape2D` / `RayCast2D` / `Area2D` children, so physics resolves mirrored from the visible shapes while everything *looks* correct. Flip the sprite with `Sprite2D.flip_h` instead (see **2d-essentials**).
 
 ---
 
@@ -204,7 +204,7 @@ Smooths visual motion between physics ticks, eliminating "staircase" jitter when
 
 ### Core Rules
 
-1. **Move all game logic to `_physics_process()`** — transforms set outside physics ticks cause jitter
+1. **Move all game logic to `_physics_process()`** — it runs on a fixed, deterministic tick (default 60 Hz; Project Settings → Physics → Common → Physics Ticks per Second), so `move_and_slide()`, forces, and collisions behave identically at any frame rate. `_process()` runs once per *rendered* frame with a variable `delta`; moving bodies there makes physics frame-rate-dependent and causes jitter. Keep `_process()` for visuals, UI, and input polling only.
 2. **Tweens and AnimationPlayer** that move physics objects must use physics tick timing
 3. **Call `reset_physics_interpolation()`** after teleporting or initial placement to prevent "streaking"
 
@@ -259,6 +259,7 @@ Godot 4.5+ adds `apply_central_impulse()` / `apply_central_force()` for `RigidBo
 | **Tunneling** (fast objects pass through) | `continuous_cd = true` on RigidBody; thicken static colliders; raise tick rate (120–240 TPS) |
 | **Stacked objects wobble** | Raise tick rate; switch to Jolt (3D) for much better stacking |
 | **Scaled shapes don't collide** | Never use `scale` on bodies/shapes — set shape parameters directly (radius, extents). For shared shapes, `shape.duplicate()` to Make Unique |
+| **Hitbox / raycast on the wrong side after a flip** | A parent `scale.x = -1` flip mirrored the physics children silently. Flip `Sprite2D.flip_h` and mirror direction-dependent child positions by sign instead — never negative-scale a body (see **2d-essentials**) |
 | **Tile collision bumps** | 4.5+: `TileMapLayer` auto-merges via Physics Quadrant Size (default 16). Pre-4.5: manual composite colliders |
 | **CylinderShape3D unstable** | Use Jolt (fully supported), or substitute CapsuleShape3D/BoxShape3D with GodotPhysics |
 | **Physics spiral of death** | Engine can't finish in one frame — raise Max Physics Steps per Frame, reduce TPS, or cut body count |
@@ -270,7 +271,7 @@ Godot 4.5+ adds `apply_central_impulse()` / `apply_central_force()` for `RigidBo
 
 - [ ] Dynamic bodies use primitive collision shapes; concave shapes only on StaticBodies
 - [ ] Collision layers named in Project Settings; layer/mask set correctly per body
-- [ ] No `scale` on collision shapes or bodies — use shape size parameters directly
+- [ ] No `scale` on collision shapes or bodies (including the `scale.x = -1` sprite-flip trick) — use shape size parameters directly and `flip_h` for sprites
 - [ ] RigidBodies modify state via `_integrate_forces()`, not `_physics_process()`
 - [ ] RigidBodies needing contact signals set `contact_monitor = true` + `max_contacts_reported > 0`
 - [ ] Moving platforms use `AnimatableBody2D/3D` (not manually moved StaticBody)

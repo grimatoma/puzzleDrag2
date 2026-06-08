@@ -389,6 +389,7 @@ public override void _Ready()
 ## 7. Resource Management
 
 - [ ] `preload()` is used for resources known at edit time (scenes, textures, audio); `load()` is used for paths resolved at runtime
+- [ ] `preload()` is NOT used for large or rarely-used scenes on persistent/autoload scripts — a static preload pins them in memory for the whole session; use runtime `load()` and drop the reference when done
 - [ ] Large or level-specific resources loaded at runtime use `ResourceLoader.load_threaded_request()` to avoid frame stalls
 - [ ] Dynamically instantiated nodes are freed with `queue_free()`, not `free()`, to avoid use-after-free crashes
 
@@ -448,6 +449,7 @@ private void OnEnemyDied()
 | `call_deferred()` used everywhere | Defers are appropriate for cross-frame safety, not a general solution; overuse hides real design issues | Only defer when crossing physics/main thread boundaries or breaking a call cycle |
 | `set_physics_process(true)` called inside `_physics_process()` | Redundant call every frame; wastes CPU | Call once at the point you actually want to enable/disable processing |
 | Directly setting `position` on a `CharacterBody2D` | Bypasses collision; teleports the body and can cause tunnelling | Use `move_and_slide()` with `velocity`; only set `position`/`global_position` for intentional teleports |
+| Flipping a 2D node with `scale.x = -1` | Negative scale propagates to child `CollisionShape2D`/`RayCast2D`/`Area2D` — physics resolves mirrored while the visible shapes look fine | Use `Sprite2D`/`AnimatedSprite2D` `flip_h` for the texture; mirror direction-dependent child nodes by sign |
 
 ---
 

@@ -248,3 +248,31 @@ const IconTexture: Texture2D = preload("res://icon.svg")
 func _ready() -> void:
     $Sprite2D.texture = IconTexture
 ```
+
+#### preload pins memory for the script's lifetime
+
+`preload` (including `const X := preload(...)`) creates a **static reference** resolved when the script compiles. That reference — and the resource behind it — stays resident for as long as the script is loaded. On a persistent **autoload** or manager that never leaves the tree, a preloaded resource is effectively **never freed**, even when nothing is using it.
+
+```gdscript
+# TRAP — a persistent GameManager autoload preloads a huge scene.
+# The boss arena now sits in RAM for the entire session, used or not.
+const BOSS_ARENA: PackedScene = preload("res://levels/boss_arena.tscn")
+```
+
+- **`preload` small, frequently-instanced things** — bullets, hit sparks, pickups, icons. Keeping them resident is cheap and avoids per-spawn disk hits.
+- **`load()` large or rarely-used resources at runtime** — levels, cutscenes, boss arenas — and hold them in a member/local you can clear so reference counting frees them.
+
+```gdscript
+# RIGHT — load on demand; drop the reference to free it
+var _arena: PackedScene
+
+func enter_boss() -> void:
+    # or ResourceLoader.load_threaded_request(path) to avoid a frame stall
+    _arena = load("res://levels/boss_arena.tscn")
+    add_child(_arena.instantiate())
+
+func leave_boss() -> void:
+    _arena = null   # last reference gone → resource is freed
+```
+
+Symptom to watch: `Performance.MEMORY_STATIC` that never drops after you leave the area that needed the resource (see [memory-management.md](memory-management.md)).

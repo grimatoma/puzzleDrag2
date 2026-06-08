@@ -97,7 +97,7 @@ GD.Print($"FPS: {fps:F0} | Draw calls: {drawCalls:F0} | VRAM: {videoRam / 1_048_
 
 Every distinct mesh, sprite, or canvas item that cannot be batched with its neighbours costs one draw call. Reducing draw calls is one of the highest-leverage optimisations, especially on mobile — wrap 2D groups sharing a texture in `CanvasGroup`, keep unique-material count low, atlas sprites, and cull off-screen work.
 
-> See [references/draw-calls.md](references/draw-calls.md) for the full recipes (CanvasGroup batching constraints, shared shader-parameter materials, texture atlases, `VisibleOnScreenNotifier2D/3D` culling, and 3D LOD swapping).
+> See [references/draw-calls.md](references/draw-calls.md) for the full recipes (CanvasGroup batching constraints, shared shader-parameter materials, texture atlases, `VisibleOnScreenEnabler2D/3D` + `VisibleOnScreenNotifier2D/3D` culling, and 3D LOD swapping).
 
 ---
 
@@ -163,7 +163,7 @@ Work through this list before shipping or when investigating a performance compl
 - [ ] Draw call count is within target (≤500 mobile, ≤2 000 desktop).
 - [ ] 2D sprite groups that share a texture are wrapped in `CanvasGroup`.
 - [ ] Textures are atlas-packed where possible; duplicate materials are eliminated.
-- [ ] Off-screen nodes use `VisibleOnScreenNotifier2D/3D` to pause processing.
+- [ ] Off-screen nodes pause work — `VisibleOnScreenEnabler2D/3D` (auto-disables processing) or a `VisibleOnScreenNotifier2D/3D` + `set_process(false)`.
 - [ ] 3D meshes have LOD enabled via import settings or manual swap logic.
 
 **Physics**
