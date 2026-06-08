@@ -156,6 +156,19 @@ const ToastScript := preload("res://scenes/Toast.gd")
 var _toast                               ## CanvasLayer (ToastScript), built once in _ready
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
+# ── Browser Back/Forward (web export only) ──────────────────────────────────────
+# On an HTML5/WASM build the browser's Back/Forward buttons (and swipe-back on
+# mobile browsers) drive the SAME modal nav the in-game buttons use. Each opened
+# screen pushes a `#/<id>` history entry; closing one calls history.back(); the
+# browser's popstate is routed through apply_deeplink() so chrome + UI stay in sync.
+# We don't hook every _open_*/_on_*_closed path individually — instead _process
+# polls _router.current_modal() (every nav path already updates it) and mirrors the
+# net change to the URL each frame. A COMPLETE no-op on desktop/headless (guarded by
+# OS.has_feature("web") at setup, which leaves _history_ready false everywhere else).
+var _history_ready: bool = false                       ## true once the web History bridge is wired
+var _last_synced_modal: int = ViewRouter.Modal.NONE    ## last modal mirrored to the URL hash
+var _popstate_cb                                        ## retained JS callback (must outlive the listener)
+
 # ── M8d ToolPalette ────────────────────────────────────────────────────────────
 # A HORIZONTAL parchment tool bar centred just below the chain-progress bar (above
 # the board) showing each owned tool with charges > 0 as a clickable slot button.
@@ -331,6 +344,10 @@ func _ready() -> void:
 	# so it's a COMPLETE no-op on desktop/headless — JavaScriptBridge isn't even touched
 	# there, leaving the headless GDScript sweep unaffected.
 	if OS.has_feature("web"):
+		# Wire the browser Back/Forward buttons to the modal nav (see _setup_browser_history).
+		# Done before the readiness beacon so a deep-linked launch (#/inventory) is already
+		# being applied by the time the Playwright smoke sees __hearthGodotReady.
+		_setup_browser_history()
 		JavaScriptBridge.eval("window.__hearthGodotReady = true;", true)
 
 func _layout() -> void:
@@ -1976,6 +1993,79 @@ func apply_deeplink(id: String) -> bool:
 				# is persisted (it also hides + resets the router).
 				_on_debug_closed()
 	return true
+
+# ── Browser Back/Forward bridge (web export only) ───────────────────────────────
+
+## Wire the browser History API to the modal nav. Called from _ready ONLY on a web
+## build. Registers a popstate listener (Back/Forward → apply_deeplink), then collapses
+## the launch entry to the board with replaceState so the FIRST opened screen sits one
+## step above the board in history (Back from it lands on the board, not off the page).
+## If the page was opened on a deep link (#/inventory), that modal is applied deferred
+## so the HUD/board are laid out first. After this runs _process mirrors every nav
+## change to the URL via _sync_history.
+func _setup_browser_history() -> void:
+	if not OS.has_feature("web"):
+		return
+	# Retain the callback for the listener's lifetime — a local would be GC'd and the
+	# popstate handler would silently stop firing.
+	_popstate_cb = JavaScriptBridge.create_callback(_on_browser_popstate)
+	# NOTE: untyped on purpose — `JavaScriptObject` is only a registered class on web
+	# export templates, so a type annotation here would break headless/desktop parsing.
+	var window = JavaScriptBridge.get_interface("window")
+	if window != null:
+		window.addEventListener("popstate", _popstate_cb)
+	# Whatever id the page was launched with (deep link or none).
+	var initial_id: String = ViewRouter.id_from_hash(str(JavaScriptBridge.eval("window.location.hash", true)))
+	# Normalise the launch entry to the board so Back from the first modal is well-defined.
+	JavaScriptBridge.eval("history.replaceState({}, '', '#/board');", true)
+	_last_synced_modal = ViewRouter.Modal.NONE
+	_history_ready = true
+	# A deep-linked launch: open that modal once the scene is laid out. _sync_history then
+	# pushes it as a fresh entry above the board, so Back closes it cleanly.
+	if initial_id != "board":
+		_apply_initial_deeplink.call_deferred(initial_id)
+
+## Open the modal a deep-linked web launch (#/<id>) requested, after the first frame so
+## the HUD + board exist beneath it. Pure delegation to the shared nav path.
+func _apply_initial_deeplink(id: String) -> void:
+	apply_deeplink(id)
+
+## The browser fired popstate (Back/Forward, or a manual hash edit). Read the current
+## hash, map it to a deep-link id, and route it through the shared nav path. We stamp
+## _last_synced_modal so _sync_history doesn't then re-push an entry for a change the
+## browser itself just drove. Web-only; never reached on desktop/headless.
+func _on_browser_popstate(_args: Array) -> void:
+	if not _history_ready:
+		return
+	var id: String = ViewRouter.id_from_hash(str(JavaScriptBridge.eval("window.location.hash", true)))
+	apply_deeplink(id)
+	_last_synced_modal = _router.current_modal()
+
+## Per-frame (web only): mirror the live modal nav onto the browser URL/history. Opening
+## or switching screens pushes a `#/<id>` entry; closing a screen (→ board) calls
+## history.back() so we pop the entry we pushed instead of growing an endless
+## open/close chain — Back then behaves like the in-game ✕. When the URL already matches
+## (a popstate just drove the change) we do nothing.
+func _sync_history() -> void:
+	var cur: int = _router.current_modal()
+	if cur == _last_synced_modal:
+		return
+	var prev: int = _last_synced_modal
+	_last_synced_modal = cur
+	var id: String = ViewRouter.modal_id(cur)
+	# Already reflected in the URL (popstate-driven change) — don't double-push.
+	if ViewRouter.id_from_hash(str(JavaScriptBridge.eval("window.location.hash", true))) == id:
+		return
+	if cur == ViewRouter.Modal.NONE and prev != ViewRouter.Modal.NONE:
+		# Closed a screen from inside the game → behave like Back so history doesn't grow
+		# without bound. This fires popstate (→ board, already applied), a harmless no-op.
+		JavaScriptBridge.eval("history.back();", true)
+	else:
+		JavaScriptBridge.eval("history.pushState({}, '', '#/%s');" % id, true)
+
+func _process(_delta: float) -> void:
+	if _history_ready:
+		_sync_history()
 
 ## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
 ## accounting point): toggle the persisted preference, mute/unmute the Audio service,

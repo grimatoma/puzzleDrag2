@@ -68,6 +68,26 @@ godot --headless --path godot --export-release "Web" dist/index.html
 On Windows the binary used during development is
 `Godot_v4.6.2-stable_win64_console.exe` (console variant prints to stdout).
 
+## Web navigation (Back/Forward + deep links)
+
+On the **Web export only**, the browser's Back/Forward buttons (and mobile
+swipe-back) drive the screen/menu nav. Opening a screen pushes a `#/<id>` entry
+onto the browser history; closing it (or pressing Back) pops back to the board.
+The wiring lives in `scenes/Main.gd` (`_setup_browser_history` / `_sync_history`
+/ `_on_browser_popstate`) and is a complete no-op on desktop/headless. It mirrors
+`_router.current_modal()` (the `ViewRouter` nav state) onto `location.hash`, so:
+
+- **Deep links** — loading `…/godot/#/inventory` (or `#/town`, `#/map`,
+  `#/cartography`, …) opens that screen on launch. Ids are the canonical strings
+  from `ViewRouter.modal_id()`; aliases (`items`, `folk`, `world`, …) also resolve.
+  Unknown/empty hashes fall back to the board.
+- **Back/Forward** — each open is a history entry, so Back closes the current
+  screen and Forward reopens it, exactly like the in-game ✕.
+
+Pure id/hash parsing (`ViewRouter.id_from_hash`) is unit-tested in
+`tests/run_router_tests.gd`; the live browser round-trip is covered by the web
+smoke `tests/godot-web/back-forward.spec.ts` (`npm run test:godot-web`).
+
 ## Asset pipeline
 
 Tiles render through three stages (newest available wins), so each is a clean
