@@ -78,6 +78,14 @@ var _build_btn: Button
 ## null when none is open. A fresh CanvasLayer-child Control holding a scrim + card.
 var _panel: Control = null
 
+## Zoom/pan interaction state. A LEFT press records _press_pos; if the cursor then
+## moves past DRAG_THRESHOLD with the button held it becomes a drag-PAN (and the
+## release no longer resolves a lot click), so a tap still builds/demolishes but a
+## drag pans the map — the standard tap-vs-drag disambiguation.
+var _press_pos: Vector2 = Vector2.ZERO
+var _dragging: bool = false
+const DRAG_THRESHOLD := 8.0
+
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
 ## Store `game`, build the static shell ONCE, then render. Safe to call again
@@ -188,6 +196,58 @@ func _build_shell() -> void:
 	overlay.add_child(_build_btn)
 	_action_buttons["build_open"] = _build_btn
 
+	# Zoom / recenter controls, bottom-LEFT (matches React's TownGround map controls).
+	# A vertical stack of small round parchment buttons: ＋ zoom in, − zoom out, ⟳
+	# recenter (reset to the content-aware fit). They drive the live TownMap view
+	# transform (real zoom/pan — no fakes). Lifted above the reserved bottom-nav strip.
+	var zoom_box := VBoxContainer.new()
+	zoom_box.add_theme_constant_override("separation", 8)
+	zoom_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	zoom_box.offset_left = 18
+	zoom_box.offset_bottom = -18 - NAV_RESERVE
+	zoom_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	overlay.add_child(zoom_box)
+
+	var zoom_in_btn := _make_zoom_btn("＋")
+	zoom_in_btn.connect("pressed", Callable(self, "_on_zoom_in"))
+	zoom_box.add_child(zoom_in_btn)
+	_action_buttons["zoom_in"] = zoom_in_btn
+
+	var zoom_out_btn := _make_zoom_btn("−")
+	zoom_out_btn.connect("pressed", Callable(self, "_on_zoom_out"))
+	zoom_box.add_child(zoom_out_btn)
+	_action_buttons["zoom_out"] = zoom_out_btn
+
+	var recenter_btn := _make_zoom_btn("⟳")
+	recenter_btn.connect("pressed", Callable(self, "_on_recenter"))
+	zoom_box.add_child(recenter_btn)
+	_action_buttons["recenter"] = recenter_btn
+
+## A small (~46px) round parchment control button for the zoom/recenter stack.
+func _make_zoom_btn(glyph: String) -> Button:
+	var btn := Button.new()
+	btn.text = glyph
+	btn.custom_minimum_size = Vector2(46, 46)
+	UiKit.style_button(btn, Palette.EMBER, 8, 22)
+	# Fully-rounded so the controls read as circular map buttons (React parity).
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var sb: StyleBox = btn.get_theme_stylebox(state)
+		if sb is StyleBoxFlat:
+			(sb as StyleBoxFlat).set_corner_radius_all(999)
+	return btn
+
+func _on_zoom_in() -> void:
+	if _map != null:
+		_map.zoom_in()
+
+func _on_zoom_out() -> void:
+	if _map != null:
+		_map.zoom_out()
+
+func _on_recenter() -> void:
+	if _map != null:
+		_map.recenter()
+
 # ── render ────────────────────────────────────────────────────────────────────
 
 ## Rebuild the TownLayout plan from REAL GameState data and render it into the
@@ -237,27 +297,51 @@ func _map_render_size() -> Vector2:
 
 # ── M6d: interaction (click a plot → build / demolish) ────────────────────────
 
-## gui_input on the map host: a left click picks a build-slot lot and opens the
-## matching panel; mouse motion drives the TownMap hover highlight. The event
-## position is already LOCAL to _map_host (a full-rect Control whose top-left is the
-## viewport origin), which is the same screen space TownMap.render_plan fit into —
-## so it feeds straight into lot_at_screen/set_hover_lot with no extra transform.
+## gui_input on the map host. A bare TAP resolves a build-slot lot (build / demolish /
+## dismiss); a DRAG (button held + moved past DRAG_THRESHOLD) PANS the map instead and
+## suppresses the lot click on release; plain motion drives the hover highlight. The
+## event position is already LOCAL to _map_host (a full-rect Control whose top-left is
+## the viewport origin), which is the same screen space TownMap.render_plan fit into —
+## so it feeds straight into lot_at_screen/set_hover_lot/pan_by with no extra transform.
 func _on_map_gui_input(event: InputEvent) -> void:
 	if _map == null:
 		return
-	if event is InputEventMouseMotion:
-		_map.set_hover_lot(_map.lot_at_screen(event.position))
-		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var lot: int = _map.lot_at_screen(event.position)
-		if lot < 0:
-			# A click on empty ground (not on a lot) just dismisses any open panel.
-			_close_panel()
-			return
-		if lot < _map.built_count():
-			_open_info_for_lot(lot)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			# Begin a press: remember where, assume tap until it moves enough to be a drag.
+			_press_pos = event.position
+			_dragging = false
 		else:
-			_open_build_picker_for_lot(lot)
+			# Release: a tap (no drag) resolves the lot under the cursor.
+			if not _dragging:
+				_resolve_lot_click(event.position)
+			_dragging = false
+		return
+	if event is InputEventMouseMotion:
+		if (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			# Button held → once past the threshold this is a drag-pan, not a tap.
+			if not _dragging and event.position.distance_to(_press_pos) > DRAG_THRESHOLD:
+				_dragging = true
+				_map.set_hover_lot(-1)
+			if _dragging:
+				_map.pan_by(event.relative)
+			return
+		# No button held → hover highlight tracks the cursor.
+		_map.set_hover_lot(_map.lot_at_screen(event.position))
+
+## Resolve a TAP at screen `pos`: open the built-lot info card, the empty-lot build
+## picker, or (on bare ground) dismiss any open panel. Split out of _on_map_gui_input
+## so the tap path is shared and the drag path can skip it.
+func _resolve_lot_click(pos: Vector2) -> void:
+	var lot: int = _map.lot_at_screen(pos)
+	if lot < 0:
+		# A click on empty ground (not on a lot) just dismisses any open panel.
+		_close_panel()
+		return
+	if lot < _map.built_count():
+		_open_info_for_lot(lot)
+	else:
+		_open_build_picker_for_lot(lot)
 
 ## Open the BUILT-lot info card for build slot `lot`: shows the building's name and
 ## a Demolish button. `game.buildings[lot]` is the id rendered on that ordinal lot

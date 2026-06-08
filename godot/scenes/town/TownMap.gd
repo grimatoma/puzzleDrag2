@@ -80,6 +80,26 @@ var _ox: float = 0.0
 var _oy: float = 0.0
 var _view_w: float = 720.0
 var _view_h: float = 1280.0
+
+# ── M-parity: interactive zoom + pan ───────────────────────────────────────────
+# The base content-aware FIT is computed in render_plan and stored as _fit_*; the
+# EFFECTIVE transform (_scale/_ox/_oy used by _p/_pxy/lot_at_screen + _draw) is
+# derived from that base times a user zoom, then offset by a user pan — so the +/−
+# zoom buttons and drag-to-pan in TownMapScreen move BOTH the drawing and the
+# lot-click hit-test in lockstep (no separate math to drift). recenter() resets to
+# the pure fit. MIN_ZOOM == 1.0: the fit already shows the whole town, so zooming
+# OUT past it would just reveal empty grass — fit IS the most-zoomed-out view.
+const MIN_ZOOM := 1.0
+const MAX_ZOOM := 3.0
+const ZOOM_STEP := 1.35       # per +/− button press (multiplicative)
+const PAN_MARGIN := 48.0      # how far the content may pan past the viewport edge
+var _fit_scale: float = 1.0   # base fit scale (zoom 1.0)
+var _fit_ox: float = 0.0      # base fit x offset
+var _fit_oy: float = 0.0      # base fit y offset
+var _bb_w: float = 1.0        # content bbox size in PLAN space (for pan clamping)
+var _bb_h: float = 1.0
+var _user_zoom: float = 1.0   # 1.0 == fit; up to MAX_ZOOM
+var _pan: Vector2 = Vector2.ZERO  # screen-space pan offset (clamped)
 # M6c: built-building ids assigned to the first N lots (lot[i] is built iff
 # i < _built_ids.size()); empty otherwise. Set by render_plan.
 var _built_ids: Array = []
@@ -124,13 +144,70 @@ func render_plan(plan: Dictionary, view_w: float, view_h: float, built_ids: Arra
 	const PAD: float = 24.0  # screen-px breathing room around the fitted content
 
 	# Uniform fit so the wider of the two dims binds (both must fit); centre the
-	# scaled bbox in the viewport.
-	_scale = min((view_w - 2.0 * PAD) / bw, (view_h - 2.0 * PAD) / bh)
-	if _scale <= 0.0:
-		_scale = min(view_w / stage_w, view_h / stage_h)
-	_ox = (view_w - bw * _scale) / 2.0 - bb.x0 * _scale
-	_oy = (view_h - bh * _scale) / 2.0 - bb.y0 * _scale
+	# scaled bbox in the viewport. This is the BASE (zoom 1.0) transform — stored as
+	# _fit_* and combined with the user zoom/pan in _recompute_view().
+	_fit_scale = min((view_w - 2.0 * PAD) / bw, (view_h - 2.0 * PAD) / bh)
+	if _fit_scale <= 0.0:
+		_fit_scale = min(view_w / stage_w, view_h / stage_h)
+	_fit_ox = (view_w - bw * _fit_scale) / 2.0 - bb.x0 * _fit_scale
+	_fit_oy = (view_h - bh * _fit_scale) / 2.0 - bb.y0 * _fit_scale
+	_bb_w = bw
+	_bb_h = bh
+	_recompute_view()
+
+# ── zoom / pan / recenter (interactive view transform) ─────────────────────────
+
+## Recompute the EFFECTIVE transform (_scale/_ox/_oy) from the stored fit base, the
+## user zoom (about the viewport centre so zooming keeps the middle of town fixed),
+## and the clamped pan. Everything that draws or hit-tests reads _scale/_ox/_oy, so
+## this single function keeps the picture and the click math in agreement.
+func _recompute_view() -> void:
+	_user_zoom = clampf(_user_zoom, MIN_ZOOM, MAX_ZOOM)
+	_scale = _fit_scale * _user_zoom
+	# Zoom about the viewport centre: the point under the centre stays put as zoom
+	# changes (cx - (cx - fit_ox)*zoom), then the user pan shifts the whole map.
+	var cx: float = _view_w * 0.5
+	var cy: float = _view_h * 0.5
+	_clamp_pan()
+	_ox = cx - (cx - _fit_ox) * _user_zoom + _pan.x
+	_oy = cy - (cy - _fit_oy) * _user_zoom + _pan.y
 	queue_redraw()
+
+## Clamp the pan so the scaled content can't be dragged completely off-screen: the
+## allowed range each axis is half the overflow of the scaled content past the
+## viewport, plus a small margin. At zoom 1.0 the content fits, so the range is ~0
+## and pan stays centred (recenter territory).
+func _clamp_pan() -> void:
+	var content_w: float = _bb_w * _scale
+	var content_h: float = _bb_h * _scale
+	var range_x: float = maxf(0.0, (content_w - _view_w) * 0.5 + PAN_MARGIN)
+	var range_y: float = maxf(0.0, (content_h - _view_h) * 0.5 + PAN_MARGIN)
+	_pan.x = clampf(_pan.x, -range_x, range_x)
+	_pan.y = clampf(_pan.y, -range_y, range_y)
+
+## Zoom in/out one multiplicative step about the viewport centre.
+func zoom_in() -> void:
+	_user_zoom *= ZOOM_STEP
+	_recompute_view()
+
+func zoom_out() -> void:
+	_user_zoom /= ZOOM_STEP
+	_recompute_view()
+
+## Reset to the pure content-aware fit (zoom 1.0, no pan).
+func recenter() -> void:
+	_user_zoom = 1.0
+	_pan = Vector2.ZERO
+	_recompute_view()
+
+## Shift the map by a screen-space delta (drag-to-pan). No-op at fit (range ~0).
+func pan_by(delta: Vector2) -> void:
+	_pan += delta
+	_recompute_view()
+
+## True when the view is zoomed in past the fit (controls reflect this if needed).
+func is_zoomed() -> bool:
+	return _user_zoom > MIN_ZOOM + 0.001
 
 # Compute the bounding box (in plan space) of the STRUCTURAL town content that
 # should drive the fit: lots, boards, plaza, and trees. Roads and water are drawn
