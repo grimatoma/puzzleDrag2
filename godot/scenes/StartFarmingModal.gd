@@ -61,7 +61,6 @@ const COL_TITLE := Palette.INK
 const COL_BODY := Palette.INK_MID
 const COL_PANEL := Palette.PARCHMENT
 const PANEL_MAX_WIDTH := 460.0
-const HOME_ZONE := "home"
 
 ## React CATEGORY_GLYPH (the godot eligible set; default 🌱 for any id without a glyph).
 const CATEGORY_GLYPH := {
@@ -105,7 +104,7 @@ func _build_shell() -> void:
 
 	# Resolve the eligible categories + the home name from config (NOT viewport-dependent, so
 	# this is headless-safe). All categories start selected.
-	_categories = ZoneConfig.eligible_categories(HOME_ZONE)
+	_categories = ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE)
 	for c in _categories:
 		_selected[String(c)] = true
 
@@ -265,11 +264,11 @@ func _render() -> void:
 	if not _built:
 		return
 	var budget: int = preview_budget()
-	var base: int = ZoneConfig.base_turns(HOME_ZONE)
+	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
 	_budget_label.text = "Turns this run: %d" % budget
 	_budget_sub_label.text = "Base %d" % base
 
-	var cost: int = ZoneConfig.entry_cost(HOME_ZONE)
+	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
 	var coins: int = game.coins if game != null else 0
 	var can_afford: bool = coins >= cost
 	_cost_value_label.text = "%d 🪙" % cost
@@ -308,7 +307,7 @@ func selected_categories() -> Array:
 func preview_budget() -> int:
 	if game != null:
 		return game.farm_run_turn_budget(false)
-	return ZoneConfig.base_turns(HOME_ZONE)
+	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
 
 ## Build the selected-id list in declaration order (a fresh Array each call).
 func _selected_list() -> Array:
@@ -322,7 +321,7 @@ func _selected_list() -> Array:
 ## The home settlement display name from config ("Hearthwood Vale"), with a literal fallback
 ## if the config lookup ever comes back empty.
 func _home_name() -> String:
-	var z: Dictionary = CartographyConfig.by_id("home")
+	var z: Dictionary = CartographyConfig.by_id(ZoneConfig.HOME_ZONE)
 	var nm: String = String(z.get("name", ""))
 	return nm if nm != "" else "Hearthwood Vale"
 
@@ -331,9 +330,10 @@ func _glyph_for(cat: String) -> String:
 	return String(CATEGORY_GLYPH.get(cat, "🌱"))
 
 ## Style a category toggle by its selected state: a filled moss button when selected (a clear
-## "on the field"), a quiet parchment pill when dropped. Mirrors React's selected/unselected slot.
+## "on the field"), a quiet iron pill when dropped (matches the Cancel button accent).
+## Mirrors React's selected/unselected slot.
 func _style_category_button(btn: Button, selected: bool) -> void:
 	if selected:
 		UiKit.style_action_button(btn, Palette.GO_GREEN, 6, 0)
 	else:
-		UiKit.style_button(btn, Palette.EMBER, 6, 0)
+		UiKit.style_button(btn, Palette.IRON, 6, 0)
