@@ -22,6 +22,8 @@ signal nav_selected(key: String)
 signal tool_use_requested(id: String)
 ## The armed-banner "✕ Disarm" button was pressed — Main leaves targeting + clears the tool.
 signal disarm_requested
+## The floating ☰ top-right button was pressed — Main opens the MenuScreen (_open_menu).
+signal menu_requested
 
 # ── injected by Main before build() ──────────────────────────────────────────
 var game: GameState                    ## canonical run economy (inventory/coins/turn)
@@ -352,6 +354,29 @@ func _build_hud() -> void:
 	# screens (achievements, tiles, chronicle, castle, decorations, portal, charter,
 	# quests, recipes, daily, debug) moved into the ☰ menu's "More" section (MenuScreen).
 	_build_bottom_nav()
+
+	# ── F. Floating ☰ menu button (top-right) ──────────────────────────────────
+	# Always-visible menu button (settings / new game / the "More" secondary screens),
+	# pinned top-RIGHT clear of the board drag area. The top-bar already reserves a 60px
+	# right margin for it. Dropped in the Main→Hud extraction (its space was kept but its
+	# creation was lost) — restored here. Emits menu_requested; Main opens the MenuScreen.
+	var menu_btn := Button.new()
+	menu_btn.name = "MenuButton"
+	menu_btn.text = "☰"
+	menu_btn.add_theme_font_size_override("font_size", 22)
+	menu_btn.add_theme_color_override("font_color", Palette.INK)
+	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	menu_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	menu_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	menu_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	menu_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	menu_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	menu_btn.offset_right = -18
+	menu_btn.offset_top = 18
+	menu_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from the right edge
+	menu_btn.pressed.connect(func(): menu_requested.emit())
+	root.add_child(menu_btn)
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
