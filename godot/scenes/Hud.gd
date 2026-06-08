@@ -634,9 +634,16 @@ func _refresh_tools() -> void:
 
 	# A centred horizontal strip of tool SLOTS — React's tool strip: each tool is an icon
 	# tile with a dark count chip in its corner, the armed one ember-highlighted.
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	# A WRAPPING strip so every owned tool stays reachable no matter how many are owned
+	# or how narrow the window is. A flat HBox clipped tools past the card's right edge
+	# once the catalog grew (24 board tools); HFlowContainer flows left→right and wraps to
+	# a new line when the row is full, inheriting the card's bounded width from `col`.
+	# Stays a single centred line for the usual handful of tools.
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 8)
+	row.add_theme_constant_override("v_separation", 8)
+	row.alignment = FlowContainer.ALIGNMENT_CENTER
+	row.size_flags_horizontal = Control.SIZE_FILL
 	col.add_child(row)
 
 	var armed_id: String = game.pending_tool if game != null else ""

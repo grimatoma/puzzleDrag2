@@ -336,7 +336,8 @@ func _test_input_not_mutated() -> void:
 # ── ToolConfig: catalog + dispatch ───────────────────────────────────────────
 
 func _test_catalog_membership() -> void:
-	_check(ToolConfig.all_ids().size() == 10, "catalog has 10 tools")
+	# 10 original M8a tools + 14 catalog-parity tools added in Tools PR1.
+	_check(ToolConfig.all_ids().size() == 24, "catalog has 24 tools")
 	for id in ToolConfig.all_ids():
 		_check(ToolConfig.has_tool(id), "catalog id '%s' resolves to a tool" % id)
 	_check(not ToolConfig.has_tool("not_a_tool"), "unknown id is not a tool")
