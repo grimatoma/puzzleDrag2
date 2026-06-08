@@ -239,8 +239,13 @@ func _build_ribbon() -> PanelContainer:
 	row.add_theme_constant_override("separation", 10)
 	chip.add_child(row)
 
+	# Leading circular seal badge (React parity: the gold-soft rounded badge at the head of
+	# the SettlementRibbon).
+	row.add_child(_make_ribbon_badge())
+
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	col.add_theme_constant_override("separation", 2)
 	row.add_child(col)
 
@@ -274,6 +279,36 @@ func _turns_text() -> String:
 	var word: String = "turn" if n == 1 else "turns"
 	return "%d %s elapsed" % [n, word]
 
+## The ribbon's leading circular seal badge: a gold-soft disc with a faint gold ring and a
+## centred seal glyph (React's gold-soft pact badge at the head of the SettlementRibbon).
+func _make_ribbon_badge() -> Control:
+	var wrap := Control.new()
+	wrap.custom_minimum_size = Vector2(40, 40)
+	wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var disc := Panel.new()
+	disc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.GOLD, 0.18)        # gold-soft wash
+	sb.border_color = Color(Palette.GOLD, 0.55)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(999)
+	disc.add_theme_stylebox_override("panel", sb)
+	wrap.add_child(disc)
+
+	var glyph := Label.new()
+	glyph.text = "✦"                                # the Pact seal mark (engine-native glyph)
+	glyph.add_theme_font_size_override("font_size", 20)
+	glyph.add_theme_color_override("font_color", Palette.GOLD.darkened(0.1))
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(glyph)
+	return wrap
+
 # ── tab switching ──────────────────────────────────────────────────────────────
 
 func _on_tab(tab: String) -> void:
@@ -282,15 +317,11 @@ func _on_tab(tab: String) -> void:
 	_open_term_id = ""
 	refresh()
 
-## Tint the selected tab button (a clear selected/unselected pair). Selected = the
-## ember accent fill on the "normal" stylebox; unselected = the plain parchment.
+## Style the tab buttons: the SELECTED tab is a SOLID-GOLD segment (clear "you are here");
+## the unselected one is a plain parchment outline. Uses the shared segmented-control look.
 func _sync_tab_buttons() -> void:
 	for key in _tab_buttons.keys():
-		var btn: Button = _tab_buttons[key]
-		var selected: bool = (String(key) == _tab)
-		var fill: Color = Palette.DIM if selected else Palette.PARCHMENT
-		btn.add_theme_stylebox_override("normal", UiKit.btn_box(fill, 6))
-		btn.add_theme_color_override("font_color", COL_HEADER if selected else COL_BODY)
+		UiKit.style_segment(_tab_buttons[key], String(key) == _tab, Palette.GOLD)
 
 # ── render ────────────────────────────────────────────────────────────────────
 
@@ -405,16 +436,39 @@ func _make_term_card(term: Dictionary, log: Array, flags: Dictionary) -> PanelCo
 	_card_buttons[id] = opener
 	return chip
 
-## A small rounded pill in the state's tone with the state label (honored/violated/pending).
+## A small rounded pill in the state's SOFT tone with the state label. The saturated
+## CharterConfig tone is lightened into a soft pastel fill with a hue-matched soft border
+## and DARK ink text of the same hue (soft moss / iron / rose), so the pills read as quiet
+## status tints instead of loud saturated chips.
 func _make_state_pill(state: String) -> PanelContainer:
 	var tone: Color = CharterConfig.state_pill_tone(state)
 	var label: String = CharterConfig.state_pill_label(state)
-	# White-ish text on the coloured pill reads well on moss/rose; on the grey iron
-	# pending pill, dark ink reads better.
-	var fg: Color = COL_BODY if state == "pending" else Color(1, 1, 1)
-	var pill := UiKit.make_pill(label, fg, tone)
+	var bg: Color = tone.lightened(0.66)
+	var border: Color = tone.lightened(0.28)
+	var ink: Color = Palette.INK_MID if state == "pending" else tone.darkened(0.30)
+
+	var pill := PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_END
 	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
+	pill.add_theme_stylebox_override("panel", sb)
+
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", ink)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.add_child(lbl)
 	return pill
 
 ## ALL CHOICES tab: the timeline of every choice_log row, or an empty-state line.
