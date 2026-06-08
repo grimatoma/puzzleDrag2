@@ -233,6 +233,7 @@ func _ready() -> void:
 	_hud.nav_selected.connect(_on_nav_selected)
 	_hud.tool_use_requested.connect(_on_tool_use_requested)
 	_hud.disarm_requested.connect(_disarm_tool)
+	_hud.menu_requested.connect(_open_menu)
 	_refresh_tools()   # M8d: populate the palette after the starter grant
 	# M5-polish — the transient toast bubble (built once, reused for real one-off feedback).
 	# Created here so its CanvasLayer (layer 3) sits above the HUD before any event fires.
