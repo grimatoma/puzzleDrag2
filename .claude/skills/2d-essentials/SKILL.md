@@ -201,7 +201,54 @@ For pixel-art games, enable pixel snapping to prevent subpixel jitter:
 
 ---
 
-## 10. Implementation Checklist
+## 10. Flipping and Offsetting Sprites Without Breaking Physics
+
+Two `Node2D` transform shortcuts look right on screen but silently break physics. Both bite hardest once a node has collision or raycast children.
+
+### Never flip direction with negative scale
+
+Mirroring a character with `scale.x = -1` (or `scale.x *= -1`) renders correctly, but the negative scale **propagates to every child** — `CollisionShape2D`, `RayCast2D`, `Area2D`, hitbox `Marker2D`s. Collisions and raycasts then resolve mirrored/offset from where the still-correct-looking shapes appear, and nothing errors. Negative scale also defeats the single-shape broad-phase optimisation (see **physics-system**) and can break normal-mapped 2D lighting.
+
+Flip the **texture**, then mirror direction-dependent children explicitly by sign:
+
+```gdscript
+@onready var sprite: Sprite2D = $Sprite2D
+@onready var muzzle: Marker2D = $Muzzle          # child whose side must mirror
+@onready var hand_ray: RayCast2D = $HandRayCast
+
+var facing: int = 1   # 1 = right, -1 = left
+
+func set_facing(dir: int) -> void:
+    if dir == 0 or dir == facing:
+        return
+    facing = dir
+    sprite.flip_h = facing < 0                       # visual only — children untouched
+    muzzle.position.x = absf(muzzle.position.x) * facing
+    hand_ray.target_position.x = absf(hand_ray.target_position.x) * facing
+```
+
+`AnimatedSprite2D` has the same `flip_h` / `flip_v`. If many art nodes must flip together, parent only the **art** under a dedicated pivot and flip each sprite's `flip_h` — keep collision and raycast nodes out of any scaled subtree. (`Sprite2D.FlipH` in C#.)
+
+### Use `offset`, not `position`, to nudge the artwork
+
+Setting a node's `position` moves the node **and all its children** (spawn markers, colliders) in world space — a breathing bob or recoil applied to `position` drags the hitbox along with it. `Sprite2D.offset` / `AnimatedSprite2D.offset` shifts only the drawn texture and leaves every child node's world position intact.
+
+```gdscript
+var _t: float = 0.0
+
+func _process(delta: float) -> void:
+    _t += delta
+    # WRONG — children (collider, muzzle) bob with the body:
+    #   position.y = sin(_t * 4.0) * 2.0
+    # RIGHT — offset shifts only the texture:
+    $Sprite2D.offset.y = sin(_t * 4.0) * 2.0
+```
+
+Reserve `position` / `global_position` for the entity's true location; use `offset` (or the `centered` toggle) for visual-only alignment and juice. (`Sprite2D.Offset` in C#.)
+
+---
+
+## 11. Implementation Checklist
 
 - [ ] Background is a Sprite2D or ColorRect (not the default clear color) so it receives 2D lighting
 - [ ] TileSet is saved as an external `.tres` resource for reuse across levels
@@ -215,3 +262,5 @@ For pixel-art games, enable pixel snapping to prevent subpixel jitter:
 - [ ] `queue_redraw()` is called when custom drawing state changes
 - [ ] Collision shapes on tiles use the Physics Layer system, not manual CollisionShape2D nodes
 - [ ] Large transparent sprites are converted to MeshInstance2D on mobile/low-end targets
+- [ ] Characters are flipped with `Sprite2D`/`AnimatedSprite2D` `flip_h`, never `scale.x = -1` (negative scale corrupts child collision shapes and raycasts)
+- [ ] Visual-only nudges (bob, recoil, alignment) use the sprite's `offset`, not the node's `position`, so child colliders and markers stay put
