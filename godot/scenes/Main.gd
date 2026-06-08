@@ -354,7 +354,11 @@ func _ready() -> void:
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
 	# finishes (via _on_tutorial_finished → _drain_story_queue). If the player has already
 	# seen the tutorial the queue is drained immediately as before.
-	if not game.tutorial_seen:
+	if _dialogs_disabled():
+		# Web smoke / tests: suppress the first-launch auto-modals so the board comes up
+		# quiescent and the browser-history nav smoke is deterministic (see _dialogs_disabled).
+		pass
+	elif not game.tutorial_seen:
 		_open_tutorial()
 	else:
 		# Story UI: present any beats already queued (the arrival beat fired by
@@ -2240,6 +2244,20 @@ func apply_deeplink(id: String) -> bool:
 	return true
 
 # ── Browser Back/Forward bridge (web export only) ───────────────────────────────
+
+## Web smoke / test hook: returns true when the page was opened with
+## `window.__hearthDisableDialogs` set (before boot, via Playwright's addInitScript).
+## When set, _ready suppresses the first-launch auto-modals (tutorial / queued story
+## beats / daily reward) so the board comes up quiescent and the browser-history nav
+## smoke (tests/godot-web/back-forward.spec.ts) is deterministic — otherwise the
+## fresh-launch tutorial pushes "#/tutorial" and the launch-normalises-to-board check
+## never sees "#/board". Mirrors the Phaser suite's __HEARTH_DISABLE_DIALOGS__ flag.
+## Web-only: on desktop/headless JavaScriptBridge is never touched, so this is always
+## false and boot behaviour is completely unchanged.
+func _dialogs_disabled() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return bool(JavaScriptBridge.eval("!!window.__hearthDisableDialogs", true))
 
 ## Wire the browser History API to the modal nav. Called from _ready ONLY on a web
 ## build. Registers a popstate listener (Back/Forward → apply_deeplink), then collapses

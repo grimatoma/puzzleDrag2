@@ -16,6 +16,18 @@ import { test, expect } from "@playwright/test";
 
 const READY = () => (window as any).__hearthGodotReady === true;
 
+// Suppress the first-launch auto-modals (tutorial / queued story beats / daily reward) so
+// the board comes up quiescent and the history-hash assertions below are deterministic.
+// Without this, a fresh launch (no save) opens the tutorial, whose nav pushes "#/tutorial"
+// — the launch-normalises-to-board check would then never see "#/board". Mirrors the Phaser
+// suite's __HEARTH_DISABLE_DIALOGS__; read by Main.gd's _dialogs_disabled() at boot. Must be
+// registered before page.goto so it runs before the engine's _ready.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__hearthDisableDialogs = true;
+  });
+});
+
 test("Godot Web: launch normalizes the history entry to the board", async ({ page }) => {
   const pageErrors: Error[] = [];
   page.on("pageerror", (err) => pageErrors.push(err));

@@ -141,17 +141,35 @@ jobs:
       - name: Import project
         run: godot --headless --path godot --import
 
-      - name: Export Web build
+      # Godot 4.6.2's headless Web export reliably segfaults on engine SHUTDOWN
+      # (signal 11 in pthread_mutex_lock during teardown → exit 134), but ONLY
+      # AFTER it has finished writing the export output: the pack reaches
+      # "[ DONE ] savepack" and the wasm/js/html wrapper is written, then the
+      # crash happens while the engine is tearing itself down. This is a known
+      # Godot teardown crash, not an export failure (the headless godot-tests job
+      # does the same --import and passes), so we must NOT let the non-zero exit
+      # fail the job. Tolerate it here; success is gated on the artifacts actually
+      # existing (next step) + the Playwright boot smoke below, so a genuine
+      # export failure (missing/incomplete output, or a build that won't boot)
+      # still fails CI.
+      - name: Export Web build (tolerate known shutdown crash)
         run: |
           mkdir -p godot/dist
-          godot --headless --path godot --export-release "Web" dist/index.html
+          godot --headless --path godot --export-release "Web" dist/index.html || rc=$?
+          echo "godot export exited with code ${rc:-0} (non-zero = known 4.6.2 teardown segfault; gated on artifacts below)"
 
+      # The REAL export gate, evaluated independently of the export command's exit
+      # code: the load-bearing Web build files must all be on disk. If the crash
+      # had instead landed BEFORE the wrapper was written (i.e. an incomplete
+      # export), these tests fail and the job goes red as it should.
       - name: Sanity-check export output
         run: |
-          test -f godot/dist/index.html
-          test -f godot/dist/index.wasm
           echo "Web export contents:"
           ls -la godot/dist
+          test -f godot/dist/index.html
+          test -f godot/dist/index.js
+          test -f godot/dist/index.wasm
+          test -f godot/dist/index.pck
 
       # Boot the just-exported build in headless Chromium and assert it actually
       # initializes (WASM + pck load, the main scene's _ready runs). This is a
