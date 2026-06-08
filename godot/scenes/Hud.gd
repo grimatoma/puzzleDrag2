@@ -151,10 +151,14 @@ func _build_hud() -> void:
 	var topbar_margin := MarginContainer.new()
 	topbar_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# The old left-strip "🏠 Town" floating button is gone (folded into the bottom nav),
-	# so the settlement title reclaims the left edge. The right margin clears the floating
-	# ⚙ menu button (top-right, ≈50px wide).
+	# so the settlement title reclaims the left edge. The right margin must clear the
+	# floating ⚙ menu button (top-right): it sits at offset_right -18 and is ≈54px wide
+	# (glyph 22 + parchment_box 14+14 h-pad + 2+2 border), so its LEFT edge is ≈72px from
+	# the screen edge. A 60px margin let the right-most pill (biome) extend to 660px and
+	# tuck its last ~12px UNDER the ⚙ box — visible on every screen as a clipped "Farm"
+	# pill. 86px (= 72 footprint + ~14 gap) keeps the pill cluster clear of the ⚙.
 	topbar_margin.add_theme_constant_override("margin_left", 18)
-	topbar_margin.add_theme_constant_override("margin_right", 60)
+	topbar_margin.add_theme_constant_override("margin_right", 86)
 	topbar_margin.add_theme_constant_override("margin_top", 10)
 	topbar_margin.add_theme_constant_override("margin_bottom", 10)
 	_topbar.add_child(topbar_margin)
@@ -174,13 +178,14 @@ func _build_hud() -> void:
 		title.add_theme_font_override("font", heading_font)
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The title EXPANDs to fill the slack (left-aligned, so it reads the same as before) and
+	# CLIPS rather than overflow: when many pills are visible (a boss fight adds the boss/rats
+	# pills) the row could otherwise grow past the bar and shove the right-most pill under the
+	# ⚙. With clip_text the title yields its width to the pills first, so the pill cluster is
+	# never pushed off the edge — the title just truncates with an ellipsis in that rare case.
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.clip_text = true
 	topbar_row.add_child(title)
-
-	# Spacer pushes the pills to the right edge.
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	topbar_row.add_child(spacer)
 
 	# RIGHT — the pill cluster. coins (gold), tier (ink), biome (moss/ember), then
 	# the conditionally-visible boss + rats pills.

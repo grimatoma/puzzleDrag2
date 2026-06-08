@@ -272,7 +272,10 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 	for k in cost.keys():
 		if String(k) == "coins":
 			continue
-		chips.add_child(UiKit.make_pill("%d %s" % [int(cost[k]), String(k)], COL_BODY))
+		# Prettify the cost key (UiKit.pretty_name strips the "tile_<cat>_" noise from tile
+		# costs → "Grass"/"Stone"/"Kelp", and Title-cases resources → "Iron Bar") instead of
+		# leaking the raw key ("tile_grass_grass") into the chip.
+		chips.add_child(UiKit.make_pill("%d %s" % [int(cost[k]), UiKit.pretty_name(String(k))], COL_BODY))
 
 	# ── bottom line: "+N ✨" influence grant + Build button ──────────────────────
 	var bottom := HBoxContainer.new()

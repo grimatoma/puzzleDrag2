@@ -210,8 +210,23 @@ static func make_icon(key: String, px: float = 30.0) -> TextureRect:
 ## Title-case an item key for display: "hay_bundle" → "Hay Bundle", "iron_bar" →
 ## "Iron Bar". Godot's String.capitalize() handles the snake_case → Title Case split,
 ## matching how React labels the same items.
+##
+## TILE keys ("tile_grass_grass", "tile_mine_stone", "tile_fish_kelp") get the redundant
+## "tile_" prefix AND the leading category segment stripped first, so a tile used as a
+## crafting/cost input reads as a clean noun ("Grass", "Stone", "Kelp") instead of the raw
+## key — which previously leaked verbatim into the Decorations cost chips. Mirrors
+## TileCollectionScreen._derive_display_name; non-tile resource keys keep the plain path.
 static func pretty_name(key: String) -> String:
-	return String(key).capitalize()
+	var s := String(key)
+	if s.begins_with("tile_"):
+		s = s.substr(5)
+		var parts: Array = s.split("_")
+		const DROP_PREFIXES := ["grass", "grain", "bird", "veg", "fruit", "flower",
+			"tree", "herd", "cattle", "mount", "mine", "special", "fish"]
+		if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
+			parts.remove_at(0)
+		s = " ".join(parts)
+	return s.capitalize()
 
 # ── StyleBox builders ─────────────────────────────────────────────────────────
 
