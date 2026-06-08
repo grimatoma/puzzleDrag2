@@ -829,7 +829,7 @@
         "e2e:town-build",
         "golden:town-home-built-out"
       ],
-      "note": "Spatial town map ported from src/townLayout.ts (TownLayout.gd) and rendered (TownMap.gd); reachable in-game via TownMapScreen with real GameState (plots from tier, built buildings as placeholder houses). Plots are now clickable (M6d): clicking an empty plot opens the build picker (lists buildings + costs, live can_build gating); clicking a built plot demolishes — reusing GameState.build/demolish; 53-check run_townmap_tests. Pan/zoom and per-plot spatial placement remain pending."
+      "note": "Spatial town map ported from src/townLayout.ts (TownLayout.gd) and rendered (TownMap.gd); reachable in-game via TownMapScreen with real GameState (plots from tier, built buildings as placeholder houses). Plots are now clickable (M6d): clicking an empty plot opens the build picker (lists buildings + costs, live can_build gating); clicking a built plot demolishes — reusing GameState.build/demolish; 53-check run_townmap_tests. Pan/zoom shipped (#1030 — bottom-left +/-/recenter controls driving a real TownMap view transform + drag-to-pan with tap-vs-drag disambiguation; verified by run_townmap_tests + the _zoom_diag transform check). Per-plot spatial placement (a build landing on the exact clicked plot) remains pending — placement is still ordinal."
     },
     {
       "id": "view-board",
