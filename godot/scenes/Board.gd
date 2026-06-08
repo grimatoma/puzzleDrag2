@@ -97,6 +97,12 @@ var _chain_overlay: ChainOverlay
 ## M4a — padding (px) of the field-tinted card drawn behind the tiles by _draw().
 const FRAME_PAD := 10.0
 
+## A2 — the current farm season index (0=Spring … 3=Winter), driving the per-season field
+## tint of the board card's frame border in _draw(). Main pushes it via set_season() on load
+## and whenever a resolved farm chain turns the season. Defaults to Spring so a board built
+## before Main seeds it still reads as a calm green field (Spring's field colour).
+var _season_idx: int = 0
+
 func _ready() -> void:
 	rng.randomize()
 	_chain_overlay = ChainOverlay.new()
@@ -115,7 +121,14 @@ func _draw() -> void:
 	# which floats the pastel tile cards on a cream board (the gaps between tiles read
 	# CREAM, not green) inside a soft green edge. The old solid-green fill made the
 	# whole board read dark/heavy and muddied the tiles' per-type pastel backgrounds.
-	sb.bg_color = Palette.PARCHMENT
+	# A2 — gently tint the card per the CURRENT season (src/ui/puzzleBoard.tsx field gradient):
+	# the FILL stays a season-blended parchment (only ~22% toward the season's field tone so the
+	# tiles' own pastel backgrounds still read over it) and the BORDER takes the season's darker
+	# field-bottom tone. Spring reads close to the old calm green; Winter cools to a slate edge.
+	var field: Dictionary = _season_field()
+	var field_top: Color = field["top"]
+	var field_bot: Color = field["bot"]
+	sb.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
 	sb.corner_radius_top_left = 16
 	sb.corner_radius_top_right = 16
 	sb.corner_radius_bottom_left = 16
@@ -124,7 +137,7 @@ func _draw() -> void:
 	sb.border_width_top = 3
 	sb.border_width_right = 3
 	sb.border_width_bottom = 3
-	sb.border_color = Palette.FIELD
+	sb.border_color = field_bot
 	sb.shadow_size = 10
 	sb.shadow_color = Color(0, 0, 0, 0.18)
 	sb.shadow_offset = Vector2(0, 4)
@@ -132,6 +145,18 @@ func _draw() -> void:
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
 	draw_style_box(sb, rect)
+
+## A2 — set the current farm season (0=Spring … 3=Winter) and redraw so the board card's
+## field tint follows the season. Main calls this on load and whenever a resolved farm chain
+## turns the season. Clamped to a valid index; a no-op redraw when unchanged is fine (cheap).
+func set_season(idx: int) -> void:
+	_season_idx = clampi(idx, 0, Constants.SEASON_FIELD_COLORS.size() - 1)
+	queue_redraw()
+
+## The {top, bot} field gradient colours for the current season (Constants.SEASON_FIELD_COLORS,
+## ported from src/ui/puzzleBoard.tsx). Used by _draw to tint the board card per season.
+func _season_field() -> Dictionary:
+	return Constants.SEASON_FIELD_COLORS[_season_idx]
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 
@@ -149,6 +174,20 @@ func set_tile_pool(pool: Array) -> void:
 ## save restored mid-fight.
 func set_min_chain(n: int) -> void:
 	min_chain = maxi(2, n)
+
+## A3 — the Constants.Tile type of the CURRENTLY-DRAGGED chain (its anchor cell), or
+## Constants.EMPTY when no drag is in flight. The chain is single-type (every extend
+## must match _path[0]'s value), so the anchor's value identifies the whole chain. Main
+## reads this on `chain_changed` to colour the chain-progress bar by the live chain's
+## STAGE (Constants.chain_stage_index against the chained tile's threshold). Pure read —
+## never mutates the board.
+func current_chain_tile() -> int:
+	if _path.is_empty():
+		return Constants.EMPTY
+	var anchor: Vector2i = _path[0]
+	if not BoardLogic.in_bounds(anchor):
+		return Constants.EMPTY
+	return int(grid[anchor.y][anchor.x])
 
 func setup_new_board() -> void:
 	grid = BoardLogic.make_empty_grid()

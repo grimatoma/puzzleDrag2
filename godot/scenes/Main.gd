@@ -42,13 +42,32 @@ var _rats_pill: Label                   ## 🐀 N/5
 var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
 var _runes_pill: Label                  ## ᚱ N (harbor's premium reward)
 
+# A2 — Season bar (the React src/ui/seasonStrip.tsx port). A full-width seasonal progress
+# strip pinned ABOVE the chain-progress bar: four proportional gradient segments (Spring/
+# Summer/Autumn/Winter), a wagon marker at farm_turns_used/budget, and a right "N TURNS LEFT"
+# numeral panel. Loaded via preload (NO class_name) so the port never needs an --import pass.
+const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
+var _season_bar_box: PanelContainer     ## parchment wrapper holding the drawn strip
+var _season_bar                         ## Control (SeasonBarScript) — the drawn strip
+
 # Chain-progress bar.
 var _chain_prog_label: Label            ## "{res}: {progress}/{threshold}"
 var _chain_prog_track: Panel            ## DIM track behind the fill
 var _chain_prog_fill: Panel             ## MOSS→GOLD fill (width = ratio * track width)
 var _chain_prog_track_w: float = 0.0    ## current track inner width (recomputed on layout)
+## A3 — the escalating chain-STAGE banner ("BONUS!"/"DOUBLE!"/…) overlaid top-right on the
+## chain-progress track, shown only while a live chain has earned >= 1 upgrade (the React
+## CHAIN_STAGES.label). Hidden at stage 0 and whenever no chain is in flight.
+var _chain_stage_label: Label
+## A3 — live-drag chain tracking, used to colour the chain-progress bar by the chain's STAGE
+## (Constants.chain_stage_index) WHILE dragging. `_live_chain_len` is the current drag length
+## (0 = no drag); `_live_chain_tile` is the chained tile type (Constants.EMPTY when none). Both
+## are pushed by _on_chain_changed and cleared back to 0 / EMPTY when the drag ends.
+var _live_chain_len: int = 0
+var _live_chain_tile: int = Constants.EMPTY
 
 # Stockpile chip panel.
+var _stockpile_title: Label             ## "STOCKPILE · N kinds" header (React parity)
 var _stockpile_grid: GridContainer      ## 4-col grid of resource chips
 var _stockpile_empty: Label             ## muted "Stockpile empty" placeholder
 
@@ -102,6 +121,13 @@ var _daily_modal: DailyStreakModalScript   ## lazily created
 ## the modal is held back until the tutorial + story queue are clear so the three don't fight —
 ## _maybe_show_daily() consumes this once the way is clear. Shape: {day:int, reward:Dictionary}.
 var _pending_daily_claim: Dictionary = {}
+## A2 — harvest season-summary modal. Shown on a HARVEST boundary (note_farm_turn → harvest):
+## a parchment card recapping the season that just ended + the turn/economy snapshot, dismissed
+## by a single "Continue" (the farm continues — a fresh Spring cycle has already begun in state).
+## Informational only — it grants nothing. Loaded via preload (NO class_name) so the port never
+## needs an --import pass to register it (mirrors DailyStreakModal / every other lazy modal).
+const HarvestModalScript := preload("res://scenes/HarvestModal.gd")
+var _harvest_modal                       ## CanvasLayer (HarvestModalScript), lazily created
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way sink).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
 var _castle_screen: CastleScreenScript   ## lazily created
@@ -244,8 +270,15 @@ func _ready() -> void:
 	# PLACEHOLDER source — richer sources (crafting recipes, a portal/expedition reward)
 	# arrive in later milestones; M8d adds the ToolPalette UI to actually pick + use them.
 	if game.tools.is_empty():
+		# A3 — a small starter rack so the puzzle page reads as a populated TOOLS rack from
+		# the first run (the React fresh game grants a few visible tools: Scythe×2 + Seedpack +
+		# Lockbox). The port has no seedpack/lockbox, so grant the honest equivalent from REAL
+		# ToolConfig ids: Scythe×2 (instant — clears 6 random tiles), Bomb×1 (tap-target 3×3
+		# blast — proves targeting mode), Rake×1 (tap-target — sweeps a connected same-type
+		# patch). All three are wired tools (ToolConfig.SCYTHE / BOMB / RAKE).
+		game.grant_tool("scythe", 2)   # instant (clears 6 random tiles) — proves instant path
 		game.grant_tool("bomb", 1)     # tap-target (3x3 area blast) — proves targeting mode
-		game.grant_tool("scythe", 1)   # instant (clears 6 random tiles) — proves instant path
+		game.grant_tool("rake", 1)     # tap-target (clears a connected same-type patch)
 	_build_hud()
 	_refresh_tools()   # M8d: populate the palette after the starter grant
 	# M5-polish — the transient toast bubble (built once, reused for real one-off feedback).
@@ -312,6 +345,10 @@ func _ready() -> void:
 	_refresh_rats()
 	_refresh_runes()
 	_refresh_chain_progress()
+	# A2 — seed the season bar + the board's per-season field tint from the restored save so
+	# both reflect the current farm season immediately (not just after the first chain).
+	_refresh_season_bar()
+	board.set_season(game.current_season_index())
 	# Tutorial onboarding: show the 6-step welcome modal on FIRST LOAD (tutorial_seen=false).
 	# ORDERING — the tutorial is shown FIRST (layer 6, above StoryModal's layer 5) so it
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
@@ -365,19 +402,28 @@ func _layout_hud(vp: Vector2) -> void:
 		_topbar.offset_left = 0
 		_topbar.offset_right = 0
 		_topbar.offset_top = 0
+	# A2 — the season bar spans the full width within the HUD margins, just below the top bar.
+	# It's TOP_WIDE-anchored, so left/right OFFSETS (not size.x) inset it; clamp the inset like
+	# the stockpile card so it stays full-width but never touches the screen edges.
+	if _season_bar_box != null:
+		var sb_margin: float = maxf(12.0, vp.x * 0.03)
+		_season_bar_box.offset_left = sb_margin
+		_season_bar_box.offset_right = -sb_margin
+		_season_bar_box.offset_top = 66.0
 	if _chain_prog_box != null:
 		var cw: float = minf(520.0, vp.x - 32.0)
 		_chain_prog_box.offset_left = -cw / 2.0
 		_chain_prog_box.offset_right = cw / 2.0
-		_chain_prog_box.offset_top = 76.0
+		# Pushed below the season bar (top 66 + 52 strip + 6 frame ≈ 124).
+		_chain_prog_box.offset_top = 128.0
 	if _tool_palette_box != null:
-		# Centre the horizontal tool bar just below the chain-progress bar (~76–126) and
-		# above the board (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric
-		# max-width offset keeps it centred while letting it shrink on narrow viewports.
+		# Centre the horizontal tool bar just below the chain-progress bar and above the board
+		# (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric max-width offset keeps
+		# it centred while letting it shrink on narrow viewports.
 		var tw: float = minf(560.0, vp.x - 32.0)
 		_tool_palette_box.offset_left = -tw / 2.0
 		_tool_palette_box.offset_right = tw / 2.0
-		_tool_palette_box.offset_top = 135.0
+		_tool_palette_box.offset_top = 188.0
 	if _stockpile_box != null:
 		var margin: float = maxf(16.0, vp.x * 0.04)
 		_stockpile_box.offset_left = margin
@@ -503,7 +549,13 @@ func _build_hud() -> void:
 	_runes_pill_box.visible = false
 	topbar_row.add_child(_runes_pill_box)
 
-	# ── B. Chain-progress bar (just under the top-bar) ────────────────────────
+	# ── A2. Season bar — the full-width seasonal progress strip (above the chain bar) ──
+	# The React src/ui/seasonStrip.tsx port: four proportional gradient segments + a wagon
+	# marker + a right "N TURNS LEFT" numeral panel. Built once here, refreshed on every
+	# resolved farm chain (_refresh_season_bar) and repositioned in _layout_hud.
+	_build_season_bar(root)
+
+	# ── B. Chain-progress bar (just under the season bar) ─────────────────────
 	# A thin parchment pill holding a small label and a 2-color progress fill: a DIM
 	# track with a MOSS→GOLD foreground whose width tracks the fractional progress
 	# toward the next unit of the last-chained resource.
@@ -550,6 +602,25 @@ func _build_hud() -> void:
 	_chain_prog_fill.position = Vector2.ZERO
 	_chain_prog_fill.size = Vector2(0, 12)
 	_chain_prog_track.add_child(_chain_prog_fill)
+
+	# A3 — the chain-STAGE banner ("BONUS!"/"DOUBLE!"/…), overlaid top-right on the track and
+	# drawn ABOVE the fill (added after it). Hidden at stage 0 / when no chain is in flight;
+	# _refresh_chain_progress sets its text + colour from the live chain's stage. Anchored to
+	# the track's top-right with a small inset (React's `top-0.5 right-2` stage label).
+	_chain_stage_label = Label.new()
+	_chain_stage_label.text = ""
+	_chain_stage_label.add_theme_font_size_override("font_size", 11)
+	_chain_stage_label.add_theme_color_override("font_color", Palette.PARCHMENT)
+	_chain_stage_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	_chain_stage_label.add_theme_constant_override("outline_size", 3)
+	_chain_stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_chain_stage_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chain_stage_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_chain_stage_label.offset_right = -6
+	_chain_stage_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_stage_label.visible = false
+	_chain_prog_track.add_child(_chain_stage_label)
+
 	# Keep the fill height + track width in sync when the track is resized.
 	_chain_prog_track.resized.connect(_on_chain_track_resized)
 
@@ -649,8 +720,35 @@ func _topbar_box() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 3)
 	return sb
 
-## Build the stockpile card: a titled parchment card holding a 4-col grid of
-## resource chips (filled in _refresh_totals) plus a muted "empty" placeholder.
+## A2 — build the season bar: a slim parchment wrapper (TOP_WIDE, full width within HUD
+## margins) holding the drawn SeasonBar strip. The strip itself paints the four gradient
+## segments + wagon + numeral panel in its _draw; this just frames + positions it. Built
+## once here, repositioned each layout in _layout_hud, refreshed by _refresh_season_bar.
+func _build_season_bar(root: Control) -> void:
+	_season_bar_box = PanelContainer.new()
+	_season_bar_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_season_bar_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# A 3px parchment frame around the strip so it reads as a HUD card (the strip draws its
+	# own dark inner border + rounded look). content margins keep the strip off the frame edge.
+	var box := UiKit.card_box(Palette.PARCHMENT)
+	box.set_content_margin_all(3)
+	_season_bar_box.add_theme_stylebox_override("panel", box)
+	# Position is set in _layout_hud (just below the top bar); seed an offset so it never
+	# renders at the very top edge before the first layout.
+	_season_bar_box.offset_top = 70
+	root.add_child(_season_bar_box)
+
+	_season_bar = SeasonBarScript.new()
+	_season_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_season_bar_box.add_child(_season_bar)
+
+## Build the stockpile card: a titled parchment card whose header reads
+## "STOCKPILE · {distinctKinds} kinds" (React's IdleView PanelHeader port — left an
+## uppercase tracked title with a moss accent dot, right the live distinct-kind count)
+## above a 4-col grid of resource chips (filled in _refresh_totals), plus a styled empty
+## placeholder. There is NO real per-KINDS cap in the port (the settlement cap is a
+## per-resource QUANTITY cap, not a kinds limit), so the header shows just "N kinds" —
+## no invented "/12" denominator.
 func _build_stockpile(root: Control) -> void:
 	_stockpile_box = PanelContainer.new()
 	_stockpile_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -663,20 +761,51 @@ func _build_stockpile(root: Control) -> void:
 	col.add_theme_constant_override("separation", 8)
 	_stockpile_box.add_child(col)
 
-	var heading_font: Font = UiKit.heading_font()
-	var title := Label.new()
-	title.text = "Stockpile"
-	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", Palette.INK)
-	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(title)
+	# Header row — a small moss accent dot + uppercase tracked "STOCKPILE · N kinds" title
+	# (React PanelHeader). _refresh_totals rewrites the text from the live distinct-kind count.
+	var header := HBoxContainer.new()
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_theme_constant_override("separation", 6)
+	col.add_child(header)
 
+	var dot := Panel.new()
+	dot.custom_minimum_size = Vector2(8, 8)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dot_sb := StyleBoxFlat.new()
+	dot_sb.bg_color = Palette.MOSS
+	dot_sb.set_corner_radius_all(999)
+	dot.add_theme_stylebox_override("panel", dot_sb)
+	# Nudge the dot to vertical centre of the title baseline via a wrapping CenterContainer.
+	var dot_wrap := CenterContainer.new()
+	dot_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot_wrap.add_child(dot)
+	header.add_child(dot_wrap)
+
+	_stockpile_title = Label.new()
+	_stockpile_title.text = "STOCKPILE · 0 kinds"
+	_stockpile_title.add_theme_font_size_override("font_size", 14)
+	_stockpile_title.add_theme_color_override("font_color", Palette.INK)
+	_stockpile_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_stockpile_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(_stockpile_title)
+
+	# Empty state — a styled inset chip (parchment-soft pill) so a fresh, empty stockpile
+	# still reads as an intentional panel, not a bare cramped line.
 	_stockpile_empty = Label.new()
 	_stockpile_empty.text = "Stockpile empty"
-	_stockpile_empty.add_theme_font_size_override("font_size", 15)
+	_stockpile_empty.add_theme_font_size_override("font_size", 14)
 	_stockpile_empty.add_theme_color_override("font_color", Palette.INK_MID)
+	_stockpile_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var empty_sb := StyleBoxFlat.new()
+	empty_sb.bg_color = Palette.PARCHMENT_SOFT
+	empty_sb.border_color = Palette.IRON
+	empty_sb.set_border_width_all(1)
+	empty_sb.set_corner_radius_all(8)
+	empty_sb.content_margin_left = 12
+	empty_sb.content_margin_right = 12
+	empty_sb.content_margin_top = 8
+	empty_sb.content_margin_bottom = 8
+	_stockpile_empty.add_theme_stylebox_override("normal", empty_sb)
 	_stockpile_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_stockpile_empty)
 
@@ -837,13 +966,29 @@ func _refresh_tools() -> void:
 
 	_tool_palette_box.visible = true
 
+	# A3 — a small uppercase "TOOLS" caption above the slot strip so the rack reads clearly
+	# as a distinct TOOLS RACK (not the chain preview directly above it). The React board's
+	# tool strip sits in its own labelled panel region; the caption is the port's equivalent
+	# grouping cue. The icon slots below still carry the per-tool meaning.
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	_tool_palette_box.add_child(col)
+
+	var caption := Label.new()
+	caption.text = "TOOLS"
+	caption.add_theme_font_size_override("font_size", 11)
+	caption.add_theme_color_override("font_color", Palette.INK_MID)
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_constant_override("outline_size", 0)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(caption)
+
 	# A centred horizontal strip of tool SLOTS — React's tool strip: each tool is an icon
-	# tile with a dark count chip in its corner, the armed one ember-highlighted. No
-	# "Tools" heading (React has none); the icons carry the meaning.
+	# tile with a dark count chip in its corner, the armed one ember-highlighted.
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_tool_palette_box.add_child(row)
+	col.add_child(row)
 
 	var armed_id: String = game.pending_tool if game != null else ""
 
@@ -1272,7 +1417,7 @@ func _install_overlay_dismiss(overlay) -> void:
 ## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
 func _close_top_overlay() -> bool:
 	var overlays := [
-		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _leaveboard_modal,
+		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
@@ -1814,6 +1959,27 @@ func _on_daily_closed() -> void:
 		_daily_modal.visible = false
 	_router.close_modal()
 
+# ── Harvest season-summary modal (A2) ─────────────────────────────────────────
+
+## A2 — open the harvest season-summary modal with the note_farm_turn() summary dict (the
+## season that just ended + the turn budget + the coins/runes snapshot), lazily creating +
+## wiring it on first use (mirrors _open_daily). Informational ONLY — the modal grants nothing
+## (the fresh Spring cycle already began in state); "Continue" just dismisses it.
+func _open_harvest(summary: Dictionary) -> void:
+	if _harvest_modal == null:
+		_harvest_modal = HarvestModalScript.new()
+		add_child(_harvest_modal)
+		_harvest_modal.setup(game)
+		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
+	_harvest_modal.open_for(summary)
+
+## The harvest modal was dismissed (Continue or backdrop/ESC). Hide it — there is nothing to
+## persist (note_farm_turn already wrapped + saved the cycle in _on_chain_resolved) and no
+## router modal id, so this is purely a hide (the board is already on the fresh Spring cycle).
+func _on_harvest_closed() -> void:
+	if _harvest_modal != null:
+		_harvest_modal.visible = false
+
 # ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
 
 ## Open the developer DEBUG modal, lazily creating + wiring it on first use (mirrors
@@ -2247,6 +2413,17 @@ func _on_chain_changed(length: int) -> void:
 		_chain_label.text = "Drag 3+ matching tiles"
 	else:
 		_chain_label.text = "Chain: %d" % length
+	# A3 — track the LIVE drag (length + the chained tile type) so the chain-progress bar can
+	# colour its fill/accent by the chain's STAGE (Constants.chain_stage_index) and surface the
+	# stage banner ("BONUS!"/"DOUBLE!"/…) while dragging. A length of 0 ends the drag → clear
+	# back to no-chain so the bar reverts to its calm fractional-progress tint.
+	if length <= 0:
+		_live_chain_len = 0
+		_live_chain_tile = Constants.EMPTY
+	else:
+		_live_chain_len = length
+		_live_chain_tile = board.current_chain_tile() if board != null else Constants.EMPTY
+	_refresh_chain_progress()
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	var res: Dictionary = game.credit_chain(tile_type, length)
@@ -2318,6 +2495,26 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 				board.degrade_pearl(pearl_cell)
 			_status_label.text = "%s  ·  🌊 %d harbor turn(s) left · %s tide" % [
 				_status_label.text, int(h_res.get("turns_left", 0)), game.fish_tide]
+	# A1: a chain resolved ON THE FARM spends one farm turn, advancing the SEASON cycle
+	# (parallel to the mine/harbor ticks above; note_farm_turn no-ops the biome — the farm is
+	# the persistent home board). The season-weighted refill pool changes as the season turns,
+	# so re-push the (now possibly different) farm pool onto the board so the NEXT refill draws
+	# the current season's weights. On a HARVEST boundary (cycle wrapped back to Spring) surface
+	# a brief status note — the rich harvest-summary modal is a later PR.
+	if game.active_biome == "farm" and not game.is_boss_active():
+		var farm_res: Dictionary = game.note_farm_turn()
+		board.set_tile_pool(game.active_tile_pool())
+		# A2 — the season may have turned: re-tint the board field + slide the season-bar wagon.
+		board.set_season(game.current_season_index())
+		_refresh_season_bar()
+		if bool(farm_res.get("harvest", false)):
+			# A2 — a full year wrapped: surface the parchment harvest season-summary modal
+			# (informational only — the fresh Spring cycle has already begun in state). Keep a
+			# brief status note too so the feedback line still reads on the board behind it.
+			_status_label.text = "Harvest! %s ends — a new year begins (Spring)." % String(farm_res.get("season", ""))
+			if _audio != null:
+				_audio.play("fanfare")
+			_open_harvest(farm_res)
 	# M3g: a chain landed while the capstone boss is active damages it by the chain
 	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
 	# board's raised chain bar back to the base min and surface the win.
@@ -2733,6 +2930,12 @@ func _refresh_totals() -> void:
 			if int(game.inventory[key]) > 0:
 				keys.append(key)
 	keys.sort()
+	# A3 — header reflects the live distinct-kind count (the number of resource keys with a
+	# positive count). React's IdleView shows "{owned}/{total} kinds"; the port has no real
+	# kinds cap, so it shows just "STOCKPILE · N kinds" (singular-aware), no invented "/12".
+	if _stockpile_title != null:
+		var n_kinds: int = keys.size()
+		_stockpile_title.text = "STOCKPILE · %d %s" % [n_kinds, "kind" if n_kinds == 1 else "kinds"]
 	if keys.is_empty():
 		if _stockpile_empty != null:
 			_stockpile_empty.visible = true
@@ -2893,12 +3096,36 @@ func _refresh_runes() -> void:
 	_runes_pill.text = "ᚱ %d" % game.runes
 	_runes_pill_box.visible = true
 
-## M4b — refresh the chain-progress bar: label "{res}: {progress}/{threshold}" and a
-## MOSS→GOLD fill at progress/threshold. With nothing chained yet it shows a neutral
-## empty bar with "Chain tiles to gather". Mirrors GameState.progress.
+## A2 — push the live farm season state onto the season bar so its segments highlight, its
+## wagon marker slides, and its "N TURNS LEFT" numeral track the farm cycle. Reads the budget
+## + turns-used + season index straight off GameState (current_season_index, farm_turns_used,
+## farm_turn_budget). Called after a resolved farm chain advances the cycle and once on load.
+func _refresh_season_bar() -> void:
+	if _season_bar == null or game == null:
+		return
+	_season_bar.set_state(game.farm_turns_used, game.farm_turn_budget(), game.current_season_index())
+
+## M4b / A3 — refresh the chain-progress bar. While a LIVE chain is in flight (a drag long
+## enough to produce a real resource), the label reads "{res}: {length}/{threshold}" and the
+## fill is coloured by the chain's STAGE (Constants.chain_stage_index): the fill tracks the
+## progress WITHIN the current stage cycle (length % threshold) and the stage banner ("BONUS!"
+## /"DOUBLE!"/…) shows once earned >= 1. With NO chain in flight it falls back to the calm
+## MOSS→GOLD fractional progress toward the next unit (GameState.progress, the M4b behaviour),
+## and the stage banner is hidden. "Chain tiles to gather" when nothing has been chained yet.
 func _refresh_chain_progress() -> void:
 	if _chain_prog_label == null:
 		return
+	# LIVE chain — colour by stage against the chained tile's threshold.
+	if _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY:
+		var live_threshold: int = Constants.threshold_for(_live_chain_tile)
+		var live_res: String = Constants.produced_resource(_live_chain_tile)
+		if live_threshold > 0 and live_threshold < Constants.NO_THRESHOLD and live_res != "":
+			_chain_prog_label.text = "%s: %d/%d" % [live_res, _live_chain_len, live_threshold]
+			_apply_chain_progress_fill()
+			return
+		# A hazard tile (RAT/RUBBLE — no producer/threshold): leave the bar on its prior
+		# resting state but still drop the live tracking so the fill uses the fallback below.
+	# No live chain (or a hazard chain): the resting fractional-progress view.
 	if game == null or _last_res == "" or _last_threshold <= 0:
 		_chain_prog_label.text = "Chain tiles to gather"
 		_apply_chain_progress_fill()
@@ -2907,21 +3134,51 @@ func _refresh_chain_progress() -> void:
 	_chain_prog_label.text = "%s: %d/%d" % [_last_res, prog, _last_threshold]
 	_apply_chain_progress_fill()
 
-## Position + size + tint the chain-progress fill from the current ratio. The fill
-## goes MOSS at low progress and lerps toward GOLD as it approaches a full unit.
+## Position + size + tint the chain-progress fill. Two modes:
+##   LIVE chain → fill width = (length % threshold)/threshold (full at a stage boundary), tint
+##     blended from the STAGE gradient (top↔bot mid) with the stage `accent` as the border; the
+##     stage banner ("BONUS!"…) shows once earned >= 1 (Constants.chain_stage / CHAIN_STAGES).
+##   RESTING → fill width = progress/threshold, MOSS→GOLD lerp (the M4b look); banner hidden.
 func _apply_chain_progress_fill() -> void:
 	if _chain_prog_fill == null or _chain_prog_track == null:
 		return
-	var ratio: float = 0.0
-	if game != null and _last_res != "" and _last_threshold > 0:
-		ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
-	# Track inner width (inset for the 1px border on each side).
 	var inner_w: float = maxf(0.0, _chain_prog_track.size.x - 2.0)
 	if inner_w <= 0.0:
 		inner_w = _chain_prog_track_w
+	var fill_h: float = maxf(0.0, _chain_prog_track.size.y - 2.0)
 	_chain_prog_fill.position = Vector2(1, 1)
-	_chain_prog_fill.size = Vector2(inner_w * ratio, maxf(0.0, _chain_prog_track.size.y - 2.0))
-	var col: Color = Palette.MOSS.lerp(Palette.GOLD, ratio)
+
+	# LIVE-chain stage colouring.
+	if _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY:
+		var threshold: int = Constants.threshold_for(_live_chain_tile)
+		if threshold > 0 and threshold < Constants.NO_THRESHOLD:
+			var earned: int = Constants.chain_stage_index(_live_chain_len, threshold)
+			var stage: Dictionary = Constants.CHAIN_STAGES[earned]
+			# Progress within the CURRENT stage cycle: a full bar exactly at a stage boundary.
+			var into: int = _live_chain_len % threshold
+			var ratio: float = 1.0 if (_live_chain_len >= threshold and into == 0) else float(into) / float(threshold)
+			_chain_prog_fill.size = Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h)
+			var top: Color = Color(String(stage.get("top", "#f0c14b")))
+			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))
+			var accent: Color = Color(String(stage.get("accent", "#e07a3a")))
+			_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(top.lerp(bot, 0.5), accent))
+			# Stage banner: shown once an upgrade is earned (earned >= 1).
+			if _chain_stage_label != null:
+				var label: String = String(stage.get("label", ""))
+				_chain_stage_label.visible = earned >= 1 and label != ""
+				_chain_stage_label.text = label
+				_chain_stage_label.add_theme_color_override(
+					"font_color", Color8(0xff, 0xe7, 0xa0) if earned >= 4 else Palette.PARCHMENT)
+			return
+
+	# RESTING — the calm MOSS→GOLD fractional-progress fill (M4b), banner hidden.
+	if _chain_stage_label != null:
+		_chain_stage_label.visible = false
+	var rest_ratio: float = 0.0
+	if game != null and _last_res != "" and _last_threshold > 0:
+		rest_ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
+	_chain_prog_fill.size = Vector2(inner_w * rest_ratio, fill_h)
+	var col: Color = Palette.MOSS.lerp(Palette.GOLD, rest_ratio)
 	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(col, col))
 
 func _refresh_status() -> void:

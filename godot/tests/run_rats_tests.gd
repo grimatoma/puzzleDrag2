@@ -93,19 +93,23 @@ func _test_rats_enabled_and_pool() -> void:
 	_check(_count(fresh.active_tile_pool(), T.RAT) == 0, "fresh farm pool has no RAT")
 
 	# Turn rats on (Town 2 complete): rats_enabled true, pool gains exactly RAT_POOL_SLOTS rats.
+	# A1: the rat-free baseline is the season-weighted, zone-restricted base pool (a fresh farm
+	# WITHOUT rats), not the flat FARM_POOL. Rats ride on TOP of that base, adding only RAT slots.
+	var base := GameState.new()           # rats off, same fresh Spring base
+	var base_pool: Array = base.active_tile_pool()
 	var g := GameState.new()
 	g.town2_complete = true
 	_check(g.rats_enabled(), "town2_complete → rats_enabled true")
 	var pool: Array = g.active_tile_pool()
 	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
 		"farm pool now has exactly RAT_POOL_SLOTS (%d) rats" % Constants.RAT_POOL_SLOTS)
-	# The full farm variety is still present alongside the rats.
-	_check(_count(pool, T.GRASS) == _count(Constants.FARM_POOL, T.GRASS),
+	# The season-weighted base is unchanged alongside the rats.
+	_check(_count(pool, T.GRASS) == _count(base_pool, T.GRASS),
 		"farm grass slots unchanged by the rat seeding")
-	_check(_count(pool, T.WHEAT) == _count(Constants.FARM_POOL, T.WHEAT),
+	_check(_count(pool, T.WHEAT) == _count(base_pool, T.WHEAT),
 		"farm wheat slots unchanged by the rat seeding")
-	_check(pool.size() == Constants.FARM_POOL.size() + Constants.RAT_POOL_SLOTS,
-		"farm pool = full variety + RAT_POOL_SLOTS (no other additions)")
+	_check(pool.size() == base_pool.size() + Constants.RAT_POOL_SLOTS,
+		"farm pool = season base + RAT_POOL_SLOTS (no other additions)")
 
 	# Mine pool is unaffected — rats are a farm-only hazard.
 	var m := GameState.new()
@@ -147,10 +151,12 @@ func _test_building_gating() -> void:
 	_check(not BC.is_spawner(BC.RATCATCHER), "ratcatcher is NOT a spawner")
 	_check(not BC.is_refiner(BC.RATCATCHER), "ratcatcher is NOT a refiner")
 	# A built Ratcatcher adds NOTHING to the pool beyond the rat slots (no tile/category).
+	# A1: the rat-free baseline is the season-weighted base pool (no spawners), not FARM_POOL.
+	var base_pool: Array = GameState.new().active_tile_pool()
 	var pool: Array = g.active_tile_pool()
 	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
-		"built Ratcatcher leaves the pool at full variety + RAT_POOL_SLOTS")
-	_check(pool.size() == Constants.FARM_POOL.size() + Constants.RAT_POOL_SLOTS,
+		"built Ratcatcher leaves the pool at season base + RAT_POOL_SLOTS")
+	_check(pool.size() == base_pool.size() + Constants.RAT_POOL_SLOTS,
 		"hazard buildings contribute no extra pool tiles")
 	_check(not g.active_categories().has("rat"),
 		"hazard buildings add no 'rat' (or any) board CATEGORY via active_categories")

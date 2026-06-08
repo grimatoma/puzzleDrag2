@@ -192,7 +192,13 @@ func _test_refiner_not_in_pool() -> void:
 	# A built Bakery must NOT touch the board pool or categories.
 	var pool := g.active_tile_pool()
 	_check(not pool.has(Constants.EMPTY), "active_tile_pool has no EMPTY after building a Bakery")
-	_check(pool == Constants.FARM_POOL, "pool still equals the full farm pool (Bakery adds nothing)")
+	# A1: the farm pool is now the season-weighted, zone-restricted base pool (no longer the
+	# flat FARM_POOL). A refiner (Bakery, no category) adds NOTHING, so the pool equals what a
+	# fresh same-tier farm with no spawners would produce. Compare to that, not FARM_POOL.
+	var baseline := GameState.new()
+	baseline.settlement.tier = g.settlement.tier
+	_check(pool == baseline.active_tile_pool(),
+		"pool equals the spawner-less season pool (Bakery adds nothing)")
 	var cats := g.active_categories()
 	_check(cats == ["grass", "grain"], "active_categories unchanged by the Bakery (no blank entry)")
 	_check(not cats.has(""), "no empty-string category leaked in from the refiner")

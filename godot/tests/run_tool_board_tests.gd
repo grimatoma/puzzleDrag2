@@ -14,8 +14,8 @@ extends SceneTree
 ##   • Tap tool: use_tool ARMS it (board targeting + game armed); a tapped cell fires
 ##     it (3x3 cleared+resolved), consumes the charge, leaves targeting + disarms.
 ##   • Guard: use_tool with no charges → false, board untouched, not targeting.
-##   • Starter grant: a FRESH Main has the bomb/scythe starter set; a LOADED game with
-##     existing tools is NOT double-granted.
+##   • Starter grant: a FRESH Main has the scythe×2 + bomb×1 + rake×1 starter rack; a LOADED
+##     game with existing tools is NOT double-granted.
 ##   • Regression: chains still resolve when NOT targeting (the normal drag/resolve
 ##     path is unaffected by the targeting branch).
 
@@ -86,9 +86,11 @@ func _run() -> void:
 func _test_starter_grant_fresh_only() -> void:
 	var main = await _fresh_main()
 	_check(main.game != null, "fresh Main owns a GameState")
-	# A fresh game is granted the minimal starter set (bomb + scythe).
+	# A3 — a fresh game is granted the starter rack: scythe×2 + bomb×1 + rake×1 (all real
+	# ToolConfig ids; the honest port equivalent of the React fresh-game tool grant).
+	_check(main.game.tool_count("scythe") == 2, "fresh Main starter-granted 2 scythe")
 	_check(main.game.tool_count("bomb") == 1, "fresh Main starter-granted 1 bomb")
-	_check(main.game.tool_count("scythe") == 1, "fresh Main starter-granted 1 scythe")
+	_check(main.game.tool_count("rake") == 1, "fresh Main starter-granted 1 rake")
 	main.free()
 	await process_frame
 
@@ -105,6 +107,7 @@ func _test_starter_grant_fresh_only() -> void:
 	_check(loaded.game.tool_count("stone_hammer") == 2, "loaded game kept its saved stone_hammer charges")
 	_check(loaded.game.tool_count("bomb") == 0, "loaded game NOT double-granted a starter bomb")
 	_check(loaded.game.tool_count("scythe") == 0, "loaded game NOT double-granted a starter scythe")
+	_check(loaded.game.tool_count("rake") == 0, "loaded game NOT double-granted a starter rake")
 	loaded.free()
 	await process_frame
 	SaveManager.clear()
@@ -297,21 +300,29 @@ func _test_tool_palette() -> void:
 	if main._tool_buttons.has("scythe"):
 		var lbl: String = main._tool_buttons["scythe"].tooltip_text
 		_check("Scythe" in lbl, "M8d: scythe button tooltip includes 'Scythe'")
-		_check("×1" in lbl,     "M8d: scythe button tooltip includes '×1'")
+		# A3 — scythe is granted ×2 in the starter rack, so its tooltip reads "×2".
+		_check("×2" in lbl,     "M8d: scythe button tooltip includes '×2' (starter ×2)")
+	# A3 — the starter rack also includes a rake (tap tool); it should be in the palette.
+	_check(main._tool_buttons.has("rake"), "M8d: _tool_buttons has 'rake' (starter rake)")
 
 	# ── 2. Pressing scythe button fires the instant tool, palette updates ────────
 	# Lay a board with GRASS tiles so scythe (clear_random_n 6) has tiles to clear.
 	var board: Board = main.board
 	board.grid = _full(T.GRASS)
 	board._build_tiles()
-	# scythe is instant — pressing its button fires it now.
+	# scythe is instant — pressing its button fires it now. A3 — it starts at ×2, so the
+	# FIRST press spends one charge (2 → 1) and the button STAYS in the palette.
 	_check(main._tool_buttons.has("scythe"), "M8d: scythe button present before press")
 	main._tool_buttons["scythe"].pressed.emit()
-	# After the emit, _refresh_tools ran and the scythe (1 charge → 0) is removed.
+	_check(main.game.tool_count("scythe") == 1, "M8d: scythe charge 2 → 1 after first press")
+	_check(main._tool_buttons.has("scythe"), "M8d: scythe button still present at 1 charge")
+	# A SECOND press spends the last charge (1 → 0) and removes the button.
+	board.grid = _full(T.GRASS)
+	board._build_tiles()
+	main._tool_buttons["scythe"].pressed.emit()
 	_check(not main._tool_buttons.has("scythe"),
-		"M8d: scythe button removed from _tool_buttons after its charge was spent")
-	# Charge is gone.
-	_check(main.game.tool_count("scythe") == 0, "M8d: scythe charge 0 after button press")
+		"M8d: scythe button removed from _tool_buttons after its last charge was spent")
+	_check(main.game.tool_count("scythe") == 0, "M8d: scythe charge 0 after second press")
 
 	main.free()
 	await process_frame
