@@ -1533,6 +1533,7 @@ func _open_chronicle() -> void:
 		add_child(_chronicle_screen)
 		_chronicle_screen.setup(game)
 		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
+		_chronicle_screen.connect("view_charter", Callable(self, "_on_chronicle_view_charter"))
 	_chronicle_screen.open()
 	_router.open_modal(ViewRouter.Modal.CHRONICLE)
 
@@ -1540,6 +1541,13 @@ func _on_chronicle_closed() -> void:
 	if _chronicle_screen != null:
 		_chronicle_screen.visible = false
 	_router.close_modal()
+
+## "View Charter" from the Chronicle: hide the chronicle, then open the Charter screen
+## (React parity — the Chronicle header links straight to the Charter).
+func _on_chronicle_view_charter() -> void:
+	if _chronicle_screen != null:
+		_chronicle_screen.visible = false
+	_open_charter()
 
 # ── Townsfolk roster screen ────────────────────────────────────────────────────
 

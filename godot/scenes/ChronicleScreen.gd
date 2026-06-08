@@ -28,8 +28,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+signal view_charter   ## emitted by the "View Charter" button → Main routes to the Charter
 
-## action id → Button, for headless tests. Currently just "close".
+## action id → Button, for headless tests. "close" + "charter" (View Charter).
 var _action_buttons: Dictionary = {}
 
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
@@ -142,6 +143,16 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# "View Charter" — jumps to the Charter screen (React parity: the Chronicle header's
+	# tab-style link). Emits `view_charter`; Main hides the chronicle + opens the Charter.
+	var charter_btn := Button.new()
+	charter_btn.text = "View Charter"
+	charter_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_button(charter_btn, Palette.EMBER, 6, 16)
+	charter_btn.connect("pressed", Callable(self, "_on_view_charter"))
+	title_row.add_child(charter_btn)
+	_action_buttons["charter"] = charter_btn
+
 	var close_btn := Button.new()
 	close_btn.text = "✕ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -164,27 +175,47 @@ func _build_shell() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(scroll)
 
-	# The dynamic body — every Act sub-heading + timeline card hangs off this and is
-	# cleared + rebuilt each refresh().
+	# The dynamic body — every timeline entry hangs off this and is cleared + rebuilt each
+	# refresh(). Separation 0 so the per-entry rail segments touch into one continuous
+	# vertical timeline; each entry carries its own bottom margin for the inter-card gap.
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 12)
+	_body.add_theme_constant_override("separation", 0)
 	scroll.add_child(_body)
+
+	# Footer — "— THE RECORD OF YOUR IMPACT —" pinned at the BOTTOM of the card (the scroll
+	# above is EXPAND_FILL, so it pushes this footer down). Italic, faint, letter-spaced.
+	var footer := Label.new()
+	footer.text = "— THE RECORD OF YOUR IMPACT —"
+	footer.add_theme_font_size_override("font_size", 12)
+	footer.add_theme_color_override("font_color", Color(Palette.INK_MID, 0.7))
+	var italic: Font = UiKit.italic_font()
+	if italic != null:
+		footer.add_theme_font_override("font", italic)
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root_vbox.add_child(footer)
 
 	# Empty-state label (lives in the body; shown when nothing has fired).
 	_empty_label = Label.new()
-	_empty_label.text = "Your story begins…"
+	_empty_label.text = "The pages are still blank. Your journey has just begun."
 	_empty_label.add_theme_font_size_override("font_size", 18)
 	_empty_label.add_theme_color_override("font_color", COL_MUTED)
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+# ── navigation ──────────────────────────────────────────────────────────────────
+
+## "View Charter" pressed — ask Main to route to the Charter screen.
+func _on_view_charter() -> void:
+	emit_signal("view_charter")
+
 # ── render ────────────────────────────────────────────────────────────────────
 
 ## Clear the body and repopulate it from StoryConfig.all_beats(): the header count line,
-## then, for each Act that has a fired beat, an "Act N" sub-heading followed by a
-## timeline card per fired beat (in catalog order). A fresh game shows the empty state.
+## then one timeline entry per fired beat (in narrative order) on a continuous left rail.
+## A fresh game shows the empty state.
 func refresh() -> void:
 	if not _built or game == null:
 		return
@@ -208,83 +239,109 @@ func refresh() -> void:
 		return
 	_empty_label.visible = false
 
-	# Group fired beats by act (in catalog order within each act). all_beats() is already
-	# in narrative order, so a single pass keyed by act preserves ordering.
-	var by_act: Dictionary = {}      # act:int → Array of beat Dictionaries (fired, in order)
-	var act_order: Array = []        # acts in first-seen order
+	# Render fired beats as a single continuous vertical timeline (React parity): one
+	# entry per fired beat in narrative order, each carrying its own "Act N" label, title,
+	# and italic description card. all_beats() is already in narrative order.
 	for beat in StoryConfig.all_beats():
 		var id: String = String((beat as Dictionary).get("id", ""))
 		if not is_fired(id):
 			continue
-		var act: int = int((beat as Dictionary).get("act", 1))
-		if not by_act.has(act):
-			by_act[act] = []
-			act_order.append(act)
-		(by_act[act] as Array).append(beat)
+		var entry := _make_timeline_entry(beat as Dictionary)
+		_body.add_child(entry)
+		_rows[id] = entry
 
-	for act in act_order:
-		_build_act_section(act, by_act[act])
-
-## Build one Act section: an iron hairline, an ember Cinzel "Act N" sub-heading, then a
-## timeline card per fired beat (in catalog order).
-func _build_act_section(act: int, beats: Array) -> void:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.7)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	_body.add_child(rule)
-
-	var header := Label.new()
-	header.text = "Act %d" % act
-	header.add_theme_font_size_override("font_size", 22)
-	header.add_theme_color_override("font_color", COL_HEADER)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		header.add_theme_font_override("font", heading_font)
-	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body.add_child(header)
-
-	for beat in beats:
-		var card := _make_timeline_card(beat as Dictionary)
-		_body.add_child(card)
-		_rows[String((beat as Dictionary).get("id", ""))] = card
-
-## A single timeline card: a soft-parchment chip holding the beat title (gold) over its
-## lede — the first line's text (or the `body` field, defensively). Reuses the row_box
-## styling shared with the achievements rows.
-func _make_timeline_card(beat: Dictionary) -> PanelContainer:
+## A single timeline entry (React parity): an HBox of a left rail (a vertical line with a
+## circular ember node marker) and a content column — an "ACT N" eyebrow, the beat title,
+## and a soft-parchment card holding the beat's italic lede. The rail segments touch
+## across entries (body separation 0) to form one continuous timeline; each entry's
+## content carries a bottom margin for the inter-card gap.
+func _make_timeline_entry(beat: Dictionary) -> HBoxContainer:
+	var act: int = int(beat.get("act", 1))
 	var title: String = String(beat.get("title", String(beat.get("id", ""))))
 
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry := HBoxContainer.new()
+	entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	entry.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	entry.add_theme_constant_override("separation", 10)
+
+	entry.add_child(_make_rail())
+
+	# Bottom margin gives the gap between cards while the rail spans the full entry height.
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_bottom", 20)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	entry.add_child(margin)
 
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_theme_constant_override("separation", 4)
-	chip.add_child(col)
+	margin.add_child(col)
 
+	# "ACT N" eyebrow — ember, small, letter-spaced (uppercase like React's hl-section-label).
+	var act_lbl := Label.new()
+	act_lbl.text = "ACT %d" % act
+	act_lbl.add_theme_font_size_override("font_size", 12)
+	act_lbl.add_theme_color_override("font_color", COL_HEADER)
+	act_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(act_lbl)
+
+	# Title — serif (Cinzel), ink.
 	var title_lbl := Label.new()
 	title_lbl.text = title
-	title_lbl.add_theme_font_size_override("font_size", 19)
-	title_lbl.add_theme_color_override("font_color", COL_VALUE)
+	title_lbl.add_theme_font_size_override("font_size", 20)
+	title_lbl.add_theme_color_override("font_color", COL_TITLE)
+	var heading_font: Font = UiKit.heading_font()
+	if heading_font != null:
+		title_lbl.add_theme_font_override("font", heading_font)
 	title_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(title_lbl)
 
+	# Description card — a soft-parchment chip holding the beat's ITALIC lede.
 	var lede := _beat_lede(beat)
-	if lede != "":
-		var lede_lbl := Label.new()
-		lede_lbl.text = lede
-		lede_lbl.add_theme_font_size_override("font_size", 14)
-		lede_lbl.add_theme_color_override("font_color", COL_MUTED)
-		lede_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lede_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col.add_child(lede_lbl)
+	if lede == "":
+		lede = "A chapter was written in the history of the Vale."
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_theme_stylebox_override("panel", UiKit.row_box())
+	var lede_lbl := Label.new()
+	lede_lbl.text = lede
+	lede_lbl.add_theme_font_size_override("font_size", 14)
+	lede_lbl.add_theme_color_override("font_color", COL_MUTED)
+	var italic: Font = UiKit.italic_font()
+	if italic != null:
+		lede_lbl.add_theme_font_override("font", italic)
+	lede_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lede_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(lede_lbl)
+	col.add_child(card)
 
-	return chip
+	return entry
+
+## The left timeline RAIL for one entry: a fixed-width Control that draws a vertical line
+## down its centre (full height, so consecutive entries form a continuous rail) plus a
+## circular node marker near the top — a parchment-filled disc ringed in ember with an
+## ember centre dot, aligned with the "ACT N" eyebrow.
+func _make_rail() -> Control:
+	const RAIL_W := 34.0
+	const CX := 17.0
+	const DOT_Y := 13.0
+	var rail := Control.new()
+	rail.custom_minimum_size = Vector2(RAIL_W, 0)
+	rail.size_flags_vertical = Control.SIZE_FILL
+	rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rail.draw.connect(func() -> void:
+		rail.draw_line(Vector2(CX, 0.0), Vector2(CX, rail.size.y), Color(Palette.IRON, 0.85), 2.0)
+		rail.draw_circle(Vector2(CX, DOT_Y), 9.0, Palette.PARCHMENT_SOFT)
+		rail.draw_arc(Vector2(CX, DOT_Y), 9.0, 0.0, TAU, 28, Palette.EMBER, 2.0)
+		rail.draw_circle(Vector2(CX, DOT_Y), 3.5, Palette.EMBER)
+	)
+	# Re-paint when the entry height settles so the line spans the final content height.
+	rail.resized.connect(rail.queue_redraw)
+	return rail
 
 ## The card lede: the first line's text (defensively falling back to a `body` field, or
 ## "" when a beat has neither).
