@@ -58,6 +58,7 @@ npm run test:godot-web                                         # headless-Chromi
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
 | Canonical concept inventory | Game wiki at `/b/` (also reachable via "📖 Game Wiki" in the game menu) | Every concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) is a category page with an intro, a schema-generated field reference, and the full entity list; every entity is an article with a generated lede, an infobox (icon or live interactive game embed), properties, relations, and "what links here" backlinks. Narrative/planning pages live in-app under `src/balanceManager/content/pages/*.html`: a **locked-direction** group (Overview · **Direction** · Timeline · Balance baseline · Story) plus a separate **Parked / Future** group (Zones · Future) for designed-but-deferred ideas. **Direction** is the single canonical account of what's being built now (the Town&nbsp;1→Town&nbsp;2→Town&nbsp;3 slice); the old Progression/Zone-flow/Decisions pages were folded into it and deleted. Everything else is generated live from config + Zod schemas and flagged WIRED/PARTIAL/STUB/DOC-ONLY/PLANNED. Config is edited in source, not in the panel. Do not duplicate concept lists elsewhere — point at the wiki. |
+| Godot port (board logic, tile rendering, CI) | `godot/` — Godot 4.6 project at the repo root | `godot/README.md`, `docs/godot-migration-plan.html`, `docs/godot-migration-progress.html` |
 
 The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
 
@@ -85,6 +86,33 @@ npm run test:visual:all      # Run desktop + iPhone portrait visual matrix
 Every `test:visual*` script has a `pretest:visual*` hook that runs `tools/ensure-playwright-browser.mjs`. On restricted-network hosts (some sandboxes block `cdn.playwright.dev`), this bootstrap symlinks any pre-installed `/opt/pw-browsers/chromium_headless_shell-*` into the path the current Playwright revision expects, so visual tests work without a fresh download. No-op when the right browser is already present.
 
 Unit/integration tests live in `tests/` (22 phase-* files) and `src/__tests__/` (60+ files). `runSelfTests()` in `src/utils.js` is a thin smoke shim that delegates to `src/smokeTests.js` (`SMOKE_INVARIANTS`); it can still be invoked from the browser console after the game loads.
+
+## Godot fork (`godot/`)
+
+A **Godot 4.6** port of the game lives at `godot/` in the repo root, developed side-by-side with the React+Phaser version. It is a separate project (its own `project.godot`), not a Vite entry.
+
+**Key scripts (GDScript, `class_name` registered):**
+- `godot/scripts/Constants.gd` — board dims, Farm tile set, thresholds, placeholder colors (mirrors `src/constants.js`)
+- `godot/scripts/BoardLogic.gd` — pure rules: chain validation, collapse, refill, dead-board detection
+
+**Scenes:** `Main.tscn` (root) → `Board.gd` (6×6 grid, drag input, collect/collapse/refill) + `Tile.gd` (per-tile rendering with three-tier asset fallback) + HUD.
+
+**Asset pipeline — three-tier fallback (newest available wins):**
+1. `godot/assets/tiles/v2/<key>.tres` — animated `SpriteFrames` (PixelLab/Ludo.ai art, drop-in)
+2. `godot/assets/tiles/<key>.png` — flat PNGs exported from the Phaser runtime (`node tools/export-v1-tiles.mjs`)
+3. Procedural colored square via `Constants.color_for()` (always available, no committed asset needed)
+
+**Headless commands:**
+```bash
+godot --headless --path godot --import                              # build .godot/ cache
+godot --headless --path godot --script res://tests/run_tests.gd    # unit tests (BoardLogic)
+godot --headless --path godot --script res://tests/run_scene_smoke.gd  # scene wiring smoke
+godot --headless --path godot --export-release "Web" dist/index.html   # Web export (needs 4.6 templates)
+```
+
+**CI:** `.github/workflows/godot-ci.yml` runs the two test scripts and the Web export on every push touching `godot/**`. The Web export deploys to `/puzzleDrag2/godot/` alongside the Phaser game on GitHub Pages.
+
+**Migration docs:** `docs/godot-migration-plan.html` (strategy + asset pipeline spec) and `docs/godot-migration-progress.html` (live status and decisions). `godot/README.md` is the quick-start reference.
 
 ## Architecture
 
