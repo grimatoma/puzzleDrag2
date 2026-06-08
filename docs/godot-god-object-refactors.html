@@ -109,7 +109,7 @@
   <header class="hero">
     <h1>Godot God-Object Decomposition</h1>
     <p class="sub">Design &amp; implementation plan for the two large refactors deferred from the Godot-port best-practices review: extracting the HUD out of <code>Main.gd</code> (Track&nbsp;D) and splitting <code>GameState.gd</code> into composed domain objects (Track&nbsp;E).</p>
-    <p class="meta">Author: code-quality review follow-up · Status: Plan (not yet implemented) · 2026-06-08 · Godot 4.6.2 port under <code>godot/</code></p>
+    <p class="meta">Author: code-quality review follow-up · Status: Shipped — Track&nbsp;D #1046, Track&nbsp;E (Phase&nbsp;1) #1048 · 2026-06-08 · Godot 4.6.2 port under <code>godot/</code></p>
     <div class="chips">
       <span class="chip">Track D · HUD</span>
       <span class="chip">Track E · GameState</span>
@@ -132,7 +132,7 @@
 
       <section id="summary">
         <h2>Overview</h2>
-        <p>A best-practices review of the Godot port found the codebase healthy on Godot idioms (signals-up/calls-down, dependency injection, 100% function return types, disciplined tween cleanup) with the weaknesses concentrated in <strong>two god-object files</strong>. The mechanical fixes (base classes, signal names, screen typing, doc cleanups, hot-path typed collections) shipped in <a href="#shipped">PRs&nbsp;#1036 and #1037</a>. This document plans the two remaining structural refactors.</p>
+        <p>A best-practices review of the Godot port found the codebase healthy on Godot idioms (signals-up/calls-down, dependency injection, 100% function return types, disciplined tween cleanup) with the weaknesses concentrated in <strong>two god-object files</strong>. The mechanical fixes (base classes, signal names, screen typing, doc cleanups, hot-path typed collections) shipped in <a href="#shipped">PRs&nbsp;#1036 and #1037</a>. This document planned the two remaining structural refactors — <strong>both now shipped</strong> (Track&nbsp;D #1046; Track&nbsp;E Phase&nbsp;1 #1048) and kept here as the design record.</p>
         <div class="box tip"><b>TL;DR.</b> Both refactors are <em>behavior-preserving decompositions of working code</em>. Neither adds a feature. The whole point is to make the two largest files maintainable — so the bar is "the diff changes structure, not behavior," enforced by the headless test suite + a frozen save-format golden.</div>
         <div class="grid">
           <div class="card"><h3>Track D — HUD extraction</h3><p><code>Main.gd</code> is ~2950 lines; a large share is HUD: top-bar pills, the chain-progress bar, the stockpile panel, plus every <code>_refresh_*</code> and the <code>_layout</code> math. Move it into a dedicated <code>Hud</code> node, leaving <code>Main</code> as the orchestrator.</p></div>
@@ -156,7 +156,7 @@
         <h2>What already shipped (context)</h2>
         <p class="legend">
           <span><span class="pill ok">merged</span> in main</span>
-          <span><span class="pill info">planned</span> this doc</span>
+          <span><span class="pill idle">deferred</span> later phase</span>
         </p>
         <table>
           <thead><tr><th>Track</th><th>Change</th><th>Status</th></tr></thead>
@@ -166,8 +166,8 @@
             <tr><td>F</td><td>Type the 17 lazy screen/modal members via preloaded consts</td><td><span class="pill ok">merged</span> #1036</td></tr>
             <tr><td>G</td><td>Comment de-noise + 2 stale-doc fixes</td><td><span class="pill ok">merged</span> #1036</td></tr>
             <tr><td>C</td><td>Type <code>Board</code> hot-path collections (<code>Array[Vector2i]</code>/<code>[Vector2]</code>)</td><td><span class="pill ok">merged</span> #1037</td></tr>
-            <tr><td>D</td><td>Extract HUD from <code>Main.gd</code></td><td><span class="pill info">planned</span> here</td></tr>
-            <tr><td>E</td><td>Split <code>GameState.gd</code> into domain objects</td><td><span class="pill info">planned</span> here</td></tr>
+            <tr><td>D</td><td>Extract HUD from <code>Main.gd</code> into <code>Hud.gd</code></td><td><span class="pill ok">merged</span> #1046</td></tr>
+            <tr><td>E</td><td>Split <code>GameState.gd</code> into domain objects — Phase&nbsp;1 leaf pilots (<code>NpcState</code>/<code>ToolState</code>/<code>AchievementState</code>); Phase&nbsp;2/3 seams deferred per plan</td><td><span class="pill ok">merged</span> #1048</td></tr>
             <tr><td>#7/#8</td><td>gdUnit4 migration + export presets — <em>correctly deferred</em> (intentional dual-harness; export is M11-gated)</td><td><span class="pill idle">deferred</span></td></tr>
           </tbody>
         </table>
