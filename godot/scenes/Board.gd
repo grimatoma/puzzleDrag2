@@ -70,6 +70,24 @@ var clear_rats_on_grass: bool = false
 ## chain length nor credited (RUBBLE produces nothing).
 var clear_rubble_on_stone: bool = false
 
+## A1b (upgradeMap-driven upgrade tiles): an optional provider Main installs so a resolved
+## FARM chain spawns UPGRADE TILES of the zone's next tier during the SAME collapse/refill — the
+## React core loop (src/GameScene.ts nextUpgradeTile + the pendingUpgrades queue). Called inside
+## _resolve as `upgrade_provider.call(tile_type, length) -> {count:int, tile:int}` (the shape
+## GameState.upgrade_spawn returns): the Board injects `count` upgrade tiles of `tile` among the
+## freshly-spawned TOP refill cells (instead of pool draws). Keeping it a Callable — NOT a
+## GameState ref — preserves the Board/economy decoupling (the Board never reads game state; it
+## only asks an opaque function WHAT to spawn), exactly as it holds Main-set flags above. Unset
+## (the default null Callable) or returning count 0 means a plain pool refill — so the mine/harbor
+## (no zone upgradeMap) and any pre-A1b caller behave exactly as before.
+var upgrade_provider: Callable = Callable()
+
+## A1b — upgrade tiles queued for the CURRENT _resolve's refill: an Array of int tile types, one
+## entry per upgrade tile to place among the new top cells. Filled at the top of _resolve from
+## upgrade_provider and drained as the refill loop spawns top-row cells; always empty between
+## moves. A transient (never saved, never read by drag validation).
+var _pending_upgrades: Array = []
+
 ## M3j (harbor giant pearl): when true (exactly while on a harbor expedition), a resolved
 ## FISH-category chain of length >= Constants.REQUIRED_FISH_IN_CHAIN emits `pearl_chain_resolved` with
 ## its chained cells so Main can run GameState.capture_pearl_if_adjacent (a fish chain run
@@ -457,6 +475,21 @@ func _resolve(path: Array) -> void:
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
 
+	# A1b — UPGRADE TILES (the React core loop): ask the provider (if Main installed one)
+	# how many next-tier tiles this chain spawns and which tile. We compute it HERE, before
+	# the collapse/refill below, and stash them in _pending_upgrades so the refill loop seeds
+	# them into the freshly-spawned TOP cells (instead of pool draws) — the Godot analogue of
+	# the React pendingUpgrades queue filled before collapse. Off the farm (mine/harbor) Main
+	# leaves upgrade_provider unset, so this is a no-op and the refill is a plain pool draw.
+	_pending_upgrades = []
+	if upgrade_provider.is_valid():
+		var up: Dictionary = upgrade_provider.call(key, length)
+		var up_count: int = int(up.get("count", 0))
+		var up_tile: int = int(up.get("tile", Constants.EMPTY))
+		if up_count > 0 and up_tile != Constants.EMPTY:
+			for _i in up_count:
+				_pending_upgrades.append(up_tile)
+
 	# M3h (Master Ratcatcher): a resolved GRASS chain ALSO collects every rat that is
 	# 8-adjacent to a chained cell. These rat cells are appended to the SAME removal
 	# set the chain uses, so collapse+refill fills them just like the popped chain
@@ -498,6 +531,16 @@ func _resolve(path: Array) -> void:
 	# 2. Collapse existing tile nodes downward, then 3. spawn new ones up top. Both phases
 	#    are held off by FALL_DELAY so the pop wave reads first — then survivors drop and
 	#    fresh tiles fall in (the React pop → settle → refill cascade).
+	#
+	# A1b — UPGRADE INJECTION: collapse first (per column, recording each column's first
+	# refill row `write`), then choose, among ALL the freshly-vacated top slots across the
+	# whole board, which ones become UPGRADE tiles (the queued _pending_upgrades) vs plain
+	# pool draws. Choosing across the full set of refill slots (not biased to one column)
+	# keeps the upgrade tiles scattered, and using the seeded `rng` keeps placement
+	# deterministic for tests. The collapse phase is byte-for-byte the prior behaviour; only
+	# the refill VALUE per top slot changes (upgrade vs pool), never the cascade animation.
+	var refill_slots: Array = []          # Array[Vector2i(col,row)] of every cell to spawn fresh
+	var col_write: Array = []             # per-column first refill row (rows 0..col_write[c])
 	for c in Constants.COLS:
 		var write := Constants.ROWS - 1
 		for r in range(Constants.ROWS - 1, -1, -1):
@@ -508,9 +551,30 @@ func _resolve(path: Array) -> void:
 					tiles[r][c] = null
 					_slide_to(t, c, write, FALL_DELAY, true)
 				write -= 1
-		# Fill rows 0..write (inclusive) with fresh tiles falling from above.
+		col_write.append(write)
 		for r in range(write, -1, -1):
-			var ttype: int = tile_pool[rng.randi_range(0, tile_pool.size() - 1)]
+			refill_slots.append(Vector2i(c, r))
+
+	# Pick which refill slots get an upgrade tile. Draw distinct slots at random (seeded) so the
+	# upgrade tiles scatter across the new top cells; cap at the number of available slots (a
+	# count larger than the vacated cells is physically impossible to place — extras are dropped,
+	# matching that the board only has so many cells to refill this move).
+	var upgrade_at := {}                  # Vector2i -> upgrade tile type
+	var to_place: int = mini(_pending_upgrades.size(), refill_slots.size())
+	var slot_bag: Array = refill_slots.duplicate()
+	for i in to_place:
+		var pick: int = rng.randi_range(0, slot_bag.size() - 1)
+		upgrade_at[slot_bag[pick]] = int(_pending_upgrades[i])
+		slot_bag.remove_at(pick)
+	_pending_upgrades = []                # consumed
+
+	# Fill each column's vacated top rows: an UPGRADE tile where chosen, else a pool draw.
+	for c in Constants.COLS:
+		var write: int = int(col_write[c])
+		for r in range(write, -1, -1):
+			var cell := Vector2i(c, r)
+			var ttype: int = int(upgrade_at[cell]) if upgrade_at.has(cell) \
+				else int(tile_pool[rng.randi_range(0, tile_pool.size() - 1)])
 			var node := _make_tile(ttype)
 			node.position = _cell_center(c, r) - Vector2(0, (write + 2) * tile_size)
 			tiles[r][c] = node
