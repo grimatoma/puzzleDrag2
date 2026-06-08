@@ -1160,6 +1160,8 @@ func note_farm_turn() -> Dictionary:
 	var season: String = current_season_name()
 	farm_turns_used += 1
 	var harvest: bool = false
+	# `budget > 0` guard: a non-positive budget (corrupt save / test edge) is treated as
+	# "always Spring" (see Constants.season_index) and never harvests.
 	if budget > 0 and farm_turns_used >= budget:
 		# Season cycle complete → harvest boundary: wrap back to a fresh Spring cycle.
 		harvest = true
@@ -1456,6 +1458,11 @@ func active_tile_pool() -> Array:
 	if rats_enabled():
 		for _i in Constants.RAT_POOL_SLOTS:
 			pool.append(Constants.Tile.RAT)
+	# Safety net: every shipped season has a positive-weight eligible category, so the base
+	# pool is never empty today. Guard anyway so a future zone/season with an all-zero row can
+	# never hand BoardLogic.refill an empty pool (which would dead-lock the board).
+	if pool.is_empty():
+		pool.append(Constants.Tile.GRASS)
 	return pool
 
 # ── Capstone boss (M3g) ───────────────────────────────────────────────────────
