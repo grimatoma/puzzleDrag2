@@ -36,8 +36,19 @@ var _built: bool = false
 var _header_label: Label
 
 ## id:String → rendered PanelContainer card, rebuilt each refresh(). Lets tests fetch a
-## specific card (e.g. assert the name label or bond band text).
+## specific card (e.g. assert the name label or bond band text). On the Workers tab this
+## holds the NPC roster cards (the view-test contract); the Quests tab uses its own nodes.
 var _cards: Dictionary = {}
+
+## Current tab: "workers" (the named townsfolk roster) | "quests" (the active quest board).
+## Workers is the default so setup()+open() renders the roster the view test inspects.
+var _tab: String = TAB_WORKERS
+
+## "workers" / "quests" → the segmented toggle Button. Built once in the shell.
+var _tab_buttons: Dictionary = {}
+
+const TAB_WORKERS := "workers"
+const TAB_QUESTS := "quests"
 
 # ── palette tokens (matches other parchment screens) ──────────────────────────────────
 const COL_TITLE  := Palette.INK
@@ -154,13 +165,37 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
-	# Header line — "N townsfolk" (gold), rebuilt each refresh().
+	# Tab row: a Workers | Quests segmented toggle on the left, with the count
+	# ("N townsfolk" / "N quests") pushed to the right (React's FeaturePanel.Tabs row).
+	var tab_row := HBoxContainer.new()
+	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_row.add_theme_constant_override("separation", 6)
+	root_vbox.add_child(tab_row)
+
+	var workers_btn := Button.new()
+	workers_btn.text = "Workers"
+	workers_btn.add_theme_font_size_override("font_size", 16)
+	workers_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_WORKERS))
+	tab_row.add_child(workers_btn)
+	_tab_buttons[TAB_WORKERS] = workers_btn
+
+	var quests_btn := Button.new()
+	quests_btn.text = "Quests"
+	quests_btn.add_theme_font_size_override("font_size", 16)
+	quests_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_QUESTS))
+	tab_row.add_child(quests_btn)
+	_tab_buttons[TAB_QUESTS] = quests_btn
+
+	# Count line — "N townsfolk" / "N quests" (gold), right-aligned, rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	_header_label.add_theme_font_size_override("font_size", 15)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
+	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_vbox.add_child(_header_label)
+	tab_row.add_child(_header_label)
 
 	_scroll = UiKit.make_vscroll()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -184,35 +219,71 @@ func _build_shell() -> void:
 
 # ── render ─────────────────────────────────────────────────────────────────────────────
 
-## Clear the body and repopulate it from game.npcs.roster in NpcConfig.all_ids() order.
+## Clear the body and repopulate it for the active tab: the named townsfolk roster
+## (Workers) or the active quest board (Quests).
 func refresh() -> void:
 	if not _built or game == null:
 		return
+	_sync_tabs()
 	# Detach + free the previous body content.
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
 	_cards.clear()
 
-	# Build the ordered roster: all_ids() order, filtered to what's actually in the roster.
+	if _tab == TAB_QUESTS:
+		_render_quests()
+	else:
+		_render_workers()
+
+	# Clamp the scroll to the (now-built) content so the card sizes to it. A deferred re-fit
+	# catches min-sizes that settle one frame after the cards are added.
+	UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE)
+	UiKit.fit_scroll_height.call_deferred(_scroll, _body, 240.0 + NAV_RESERVE)
+
+## WORKERS tab — the named townsfolk roster (NpcConfig.all_ids() order). Each NPC gets a
+## card tracked in `_cards` (the view-test contract).
+func _render_workers() -> void:
 	var roster: Array = game.npcs.get("roster", NpcConfig.all_ids())
 	var ordered: Array = []
 	for id in NpcConfig.all_ids():
 		if roster.has(id):
 			ordered.append(String(id))
-
 	_header_label.text = "%d townsfolk" % ordered.size()
-
 	for id in ordered:
 		var card := _make_npc_card(id)
 		_body.add_child(card)
 		_cards[id] = card
 
-	# Clamp the scroll to the (now-built) roster so the card sizes to content. A deferred
-	# re-fit catches min-sizes that settle one frame after the cards are added. The extra
-	# NAV_RESERVE keeps a tall roster's card clear of the persistent bottom nav.
-	UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE)
-	UiKit.fit_scroll_height.call_deferred(_scroll, _body, 240.0 + NAV_RESERVE)
+## QUESTS tab — the active quest board (real game.quests; ensure_quests rolls them on first
+## view, idempotent). A compact card per quest: its label, a progress bar, and the reward.
+func _render_quests() -> void:
+	game.ensure_quests()
+	var quests: Array = game.quests
+	_header_label.text = "%d quest%s" % [quests.size(), "" if quests.size() == 1 else "s"]
+	if quests.is_empty():
+		var empty := Label.new()
+		empty.text = "No quests on the board yet."
+		empty.add_theme_font_size_override("font_size", 16)
+		empty.add_theme_color_override("font_color", COL_MUTED)
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_body.add_child(empty)
+		return
+	for q in quests:
+		_body.add_child(_make_quest_card(q as Dictionary))
+
+# ── tab switching ────────────────────────────────────────────────────────────
+
+func _on_tab(tab: String) -> void:
+	if tab == _tab:
+		return
+	_tab = tab
+	refresh()
+
+func _sync_tabs() -> void:
+	for key in _tab_buttons.keys():
+		UiKit.style_segment(_tab_buttons[key], String(key) == _tab)
 
 ## A single NPC card: a soft-parchment chip holding a top row (avatar swatch + name +
 ## role) over a bond bar with a band label. Layout mirrors AchievementsScreen trophy rows.
@@ -237,45 +308,14 @@ func _make_npc_card(id: String) -> PanelContainer:
 	col.add_theme_constant_override("separation", 6)
 	chip.add_child(col)
 
-	# ── top row: round avatar + name + role ────────────────────────────────────
+	# ── top row: framed portrait thumbnail + name + role ───────────────────────
 	var top := HBoxContainer.new()
 	top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_theme_constant_override("separation", 12)
 	col.add_child(top)
 
-	# Round color swatch/avatar (a Panel tinted with the NPC color, initial centered on it).
-	var avatar_wrap := Control.new()
-	avatar_wrap.custom_minimum_size = Vector2(44, 44)
-	avatar_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_child(avatar_wrap)
-
-	var avatar := Panel.new()
-	avatar.set_anchors_preset(Control.PRESET_FULL_RECT)
-	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var avatar_sb := StyleBoxFlat.new()
-	avatar_sb.bg_color = npc_color
-	avatar_sb.border_color = Color(npc_color.r * 0.7, npc_color.g * 0.7, npc_color.b * 0.7)
-	avatar_sb.set_border_width_all(2)
-	avatar_sb.set_corner_radius_all(999)   # fully round
-	avatar_sb.shadow_size = 4
-	avatar_sb.shadow_color = Color(0, 0, 0, 0.22)
-	avatar_sb.shadow_offset = Vector2(0, 2)
-	avatar.add_theme_stylebox_override("panel", avatar_sb)
-	avatar_wrap.add_child(avatar)
-
-	# First initial, centered over the swatch.
-	var initial := Label.new()
-	initial.text = npc_name.left(1).to_upper() if npc_name.length() > 0 else "?"
-	initial.add_theme_font_size_override("font_size", 20)
-	# Choose white or dark ink based on the swatch luminance so the letter is legible.
-	var lum: float = npc_color.r * 0.299 + npc_color.g * 0.587 + npc_color.b * 0.114
-	initial.add_theme_color_override("font_color", Color(1, 1, 1) if lum < 0.5 else Palette.INK)
-	initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	initial.set_anchors_preset(Control.PRESET_FULL_RECT)
-	initial.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	avatar_wrap.add_child(initial)
+	top.add_child(_make_portrait(npc_color, npc_name))
 
 	# Name + role column (expands to fill the remaining width).
 	var name_col := VBoxContainer.new()
@@ -347,6 +387,175 @@ func _make_npc_card(id: String) -> PanelContainer:
 	bar_col.add_child(band_lbl)
 
 	return chip
+
+# ── framed portrait thumbnail ─────────────────────────────────────────────────────────
+
+## A framed portrait thumbnail for an NPC: a rounded-square iron-framed tile tinted with
+## the NPC colour, a soft glossy top sheen, and the NPC's initial in the serif heading
+## font — reading as a framed portrait rather than a flat initial-on-a-circle.
+func _make_portrait(npc_color: Color, npc_name: String) -> Control:
+	var wrap := Control.new()
+	wrap.custom_minimum_size = Vector2(56, 56)
+	wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# The frame — rounded-square, NPC-tinted fill, iron border, soft drop shadow.
+	var frame := Panel.new()
+	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = npc_color
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(14)
+	sb.shadow_size = 5
+	sb.shadow_color = Color(0, 0, 0, 0.25)
+	sb.shadow_offset = Vector2(0, 2)
+	frame.add_theme_stylebox_override("panel", sb)
+	wrap.add_child(frame)
+
+	# Glossy top sheen — a translucent light band across the upper portion for a portrait
+	# "polish" so the tile reads as framed art, not a flat swatch.
+	var sheen := Panel.new()
+	sheen.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	sheen.offset_left = 5
+	sheen.offset_right = -5
+	sheen.offset_top = 5
+	sheen.offset_bottom = 23
+	sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sheen_sb := StyleBoxFlat.new()
+	sheen_sb.bg_color = Color(1, 1, 1, 0.16)
+	sheen_sb.set_corner_radius_all(10)
+	sheen.add_theme_stylebox_override("panel", sheen_sb)
+	wrap.add_child(sheen)
+
+	# The NPC's initial, centred, in the serif heading font.
+	var initial := Label.new()
+	initial.text = npc_name.left(1).to_upper() if npc_name.length() > 0 else "?"
+	initial.add_theme_font_size_override("font_size", 26)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		initial.add_theme_font_override("font", hf)
+	var lum: float = npc_color.r * 0.299 + npc_color.g * 0.587 + npc_color.b * 0.114
+	initial.add_theme_color_override("font_color", Color(1, 1, 1) if lum < 0.5 else Palette.INK)
+	initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	initial.set_anchors_preset(Control.PRESET_FULL_RECT)
+	initial.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(initial)
+
+	return wrap
+
+# ── Quests tab card ───────────────────────────────────────────────────────────────────
+
+## A compact quest card: the quest label, a progress bar (progress/target), and the reward.
+## Read-only overview — claiming a finished quest stays in the dedicated Quests screen.
+func _make_quest_card(q: Dictionary) -> PanelContainer:
+	var target: int = int(q.get("target", 0))
+	var progress: int = int(q.get("progress", 0))
+	var claimed: bool = bool(q.get("claimed", false))
+	var done: bool = progress >= target
+
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 5)
+	chip.add_child(col)
+
+	# Title row: label (expands) + a state badge (Claimed / Ready) or the reward.
+	var title_row := HBoxContainer.new()
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.add_theme_constant_override("separation", 8)
+	col.add_child(title_row)
+
+	var name_lbl := Label.new()
+	name_lbl.text = _quest_label(q)
+	name_lbl.add_theme_font_size_override("font_size", 16)
+	name_lbl.add_theme_color_override("font_color", COL_BODY)
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.add_child(name_lbl)
+
+	var badge := Label.new()
+	if claimed:
+		badge.text = "✓ Claimed"
+		badge.add_theme_color_override("font_color", Palette.MOSS)
+	elif done:
+		badge.text = "Ready"
+		badge.add_theme_color_override("font_color", COL_VALUE)
+	else:
+		badge.text = _quest_reward_text(q.get("reward", {}))
+		badge.add_theme_color_override("font_color", COL_VALUE)
+	badge.add_theme_font_size_override("font_size", 13)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.add_child(badge)
+
+	# Progress bar + count.
+	var bar_row := HBoxContainer.new()
+	bar_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_row.add_theme_constant_override("separation", 8)
+	col.add_child(bar_row)
+
+	var track := Panel.new()
+	track.custom_minimum_size = Vector2(0, 10)
+	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	track.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.DIM, Palette.IRON))
+	bar_row.add_child(track)
+
+	var ratio: float = 0.0
+	if target > 0:
+		ratio = clampf(float(progress) / float(target), 0.0, 1.0)
+	var fill_col: Color = Palette.MOSS if (done or claimed) else COL_VALUE
+	var fill := Panel.new()
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fill.add_theme_stylebox_override("panel", UiKit.bar_box(fill_col, fill_col))
+	fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	track.add_child(fill)
+	track.resized.connect(func():
+		var w: float = maxf(0.0, track.size.x - 2.0)
+		fill.position = Vector2(1, 1)
+		fill.size = Vector2(w * ratio, maxf(0.0, track.size.y - 2.0))
+	)
+
+	var prog_lbl := Label.new()
+	prog_lbl.text = "%d/%d" % [mini(progress, target), target]
+	prog_lbl.add_theme_font_size_override("font_size", 12)
+	prog_lbl.add_theme_color_override("font_color", COL_MUTED)
+	prog_lbl.custom_minimum_size = Vector2(44, 0)
+	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	prog_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_row.add_child(prog_lbl)
+
+	return chip
+
+## Quest display label (template label with {n} → target), mirroring QuestsScreen.
+func _quest_label(q: Dictionary) -> String:
+	var tpl: Dictionary = QuestConfig.template_by_id(String(q.get("template", "")))
+	var label: String = String(tpl.get("label", ""))
+	if label == "":
+		return "Quest: %s (%d)" % [String(q.get("category", "?")), int(q.get("target", 0))]
+	return label.replace("{n}", str(int(q.get("target", 0))))
+
+## Quest reward text: "+N 🪙  +M ✦" (coins + almanac XP), mirroring QuestsScreen.
+func _quest_reward_text(reward: Dictionary) -> String:
+	var parts: Array = []
+	var coins: int = int(reward.get("coins", 0))
+	if coins > 0:
+		parts.append("+%d 🪙" % coins)
+	var xp: int = int(reward.get("xp", 0))
+	if xp > 0:
+		parts.append("+%d ✦" % xp)
+	return "  ".join(parts) if not parts.is_empty() else "—"
 
 # ── colour helpers ──────────────────────────────────────────────────────────────────
 
