@@ -432,19 +432,23 @@ func can_summon_magic_tool(id: String) -> bool:
 	return influence >= PortalConfig.influence_cost(id)
 
 ## Summon magic tool `id`: deduct its Influence cost (floored at 0) and add +1 to the tools
-## dict. Mirrors the React SUMMON_MAGIC_TOOL reducer EXACTLY: the count is written DIRECTLY
-## into `tools` (NOT via grant_tool, which would reject a magic-tool id since magic tools are
-## not ToolConfig members). tool_count(id) reads tools.get(id, 0) without a ToolConfig gate,
-## so a summoned magic tool's ×count surfaces correctly in the view. Returns
-## {ok:true, id, count, influence} (the new tool count + remaining influence) on success. On
-## failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
-## "no_portal" → "unknown" → "cant_afford".
+## dict via ToolState.set_count. Mirrors the React SUMMON_MAGIC_TOOL reducer: the count is
+## written DIRECTLY into `tools` (set_count, NOT grant_tool) so summoning works for BOTH the
+## implementable magic tools (now real ToolConfig members — see below) AND the two deferred
+## ones (hourglass/miners_hat, still non-ToolConfig). tool_count(id) reads tools.get(id, 0)
+## without a ToolConfig gate, so a summoned magic tool's ×count surfaces correctly in the view.
+## Returns {ok:true, id, count, influence} (the new tool count + remaining influence) on
+## success. On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard
+## that trips: "no_portal" → "unknown" → "cant_afford".
 ##
-## SCOPE: this ports the summon ECONOMY only. The summoned magic tool's EFFECT
-## (tap_clear_type / undo_move / restore_turns / fill_bias / transform_tiles / reveal_tiles)
-## routes through the global tool-power system in React and is deferred to the Godot
-## tool-powers milestone (M8) — see PortalConfig's scope note. Summoning credits the count;
-## actually USING the magic tool's power is not wired here.
+## SCOPE: this ports the summon ECONOMY (pay Influence → own a magic tool). Eight magic tools
+## (golden_apple/carrot/idol/sheep, philosophers_stone, magic_wand, magic_seed,
+## magic_fertilizer) are now REAL ToolConfig members with Godot-native powers (transform_tiles /
+## tap_clear_type / restore_turns / fill_bias), so once summoned they show in the rack and are
+## USABLE through the normal use_tool_on_grid path with no special-casing. The remaining two —
+## hourglass (undo_move) and miners_hat (reveal_tiles) — stay summonable here but are NOT
+## ToolConfig members and have no effect yet: they await the board/inventory-SNAPSHOT and
+## HIDDEN-TILE milestones respectively (see PortalConfig's scope note).
 func summon_magic_tool(id: String) -> Dictionary:
 	if not portal_built:
 		return {"ok": false, "reason": "no_portal"}
@@ -455,8 +459,10 @@ func summon_magic_tool(id: String) -> Dictionary:
 		return {"ok": false, "reason": "cant_afford"}
 	influence = maxi(0, influence - cost)
 	# Write DIRECTLY into the tools dict via ToolState.set_count (mirrors the React slice).
-	# grant_tool would reject this id (magic tools aren't ToolConfig members), so we bypass
-	# the ToolConfig gate deliberately.
+	# set_count (NOT grant_tool) is used because it works uniformly for every PortalConfig id:
+	# the 8 implementable magic tools ARE ToolConfig members now (grant_tool would also accept
+	# them), but hourglass/miners_hat are still non-ToolConfig (grant_tool would reject those),
+	# so set_count keeps a single bypass-the-gate path for the whole catalog.
 	tool_state.set_count(id, tool_count(id) + 1)
 	return {"ok": true, "id": id, "count": tool_count(id), "influence": influence}
 
@@ -1744,12 +1750,23 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		return {"ok": false, "reason": "unknown", "grid": grid, "collected": {}}
 	if not has_tool_charges(id):
 		return {"ok": false, "reason": "no_charges", "grid": grid, "collected": {}}
-	# fill_bias tools (fertilizer/bird_feed/sapling) don't touch the grid — they arm a
-	# spawn bias that active_tile_pool() reads. Handle here, before the grid-dispatch path.
+	# fill_bias tools (fertilizer/bird_feed/sapling/magic_fertilizer) don't touch the grid —
+	# they arm a spawn bias that active_tile_pool() reads. Handle here, before the
+	# grid-dispatch path.
 	if ToolConfig.power_id(id) == "fill_bias":
 		var p: Dictionary = ToolConfig.get_tool(id).get("params", {})
 		fill_bias_target = int(p.get("target", Constants.EMPTY))
 		fill_bias_turns = maxi(1, int(p.get("turns", 1)))
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	# restore_turns (magic_seed) is also a STATE power — it never touches the grid. It gives
+	# back `amount` farm turns before the next harvest boundary by rewinding farm_turns_used
+	# (clamped at 0). Handle here, in the same early path as fill_bias.
+	if ToolConfig.power_id(id) == "restore_turns":
+		var rp: Dictionary = ToolConfig.get_tool(id).get("params", {})
+		var amount: int = int(rp.get("amount", 5))
+		farm_turns_used = maxi(0, farm_turns_used - amount)
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}

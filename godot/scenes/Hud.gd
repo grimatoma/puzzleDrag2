@@ -612,6 +612,15 @@ func _tool_description(id: String) -> String:
 		ToolConfig.SCYTHE:       return "Sweeps six random tiles off the board in one swing."
 		ToolConfig.STONE_HAMMER: return "Smashes every stone tile on the board into your stockpile."
 		ToolConfig.DRILL:        return "Bores every loose dirt tile in the mine into rough stone."
+		# Portal magic tools (summoned with Influence; mirror the React effect copy).
+		ToolConfig.GOLDEN_APPLE:       return "Transforms every tree tile on the board into apple-fruit tiles."
+		ToolConfig.GOLDEN_CARROT:      return "Transforms every grass tile on the board into carrot tiles."
+		ToolConfig.GOLDEN_IDOL:        return "Transforms every grass tile on the board into cattle (cow) tiles."
+		ToolConfig.GOLDEN_SHEEP:       return "Transforms every grass tile on the board into sheep herd tiles."
+		ToolConfig.PHILOSOPHERS_STONE: return "Transmutes every stone tile on the board into gold tiles."
+		ToolConfig.MAGIC_WAND:         return "Tap a tile — collects every tile of that type on the board."
+		ToolConfig.MAGIC_SEED:         return "Restores 5 farm turns before the next harvest. No board effect."
+		ToolConfig.MAGIC_FERTILIZER:   return "Biases the next 3 farm turns toward spawning wheat."
 		_:                       return ""
 
 ## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
