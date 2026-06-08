@@ -1012,7 +1012,10 @@ func _make_nav_tab(key: String, icon: String, label_text: String, opener: String
 	btn.add_theme_stylebox_override("pressed", flat)
 	btn.add_theme_stylebox_override("focus", flat)
 	btn.focus_mode = Control.FOCUS_NONE
-	btn.connect("pressed", Callable(self, opener))
+	# Route the tap through _switch_primary_view (NOT straight to `opener`) so opening one
+	# primary view first hides any other open one — no stacking. The opener name is bound as
+	# the argument; _switch_primary_view call()s it after closing siblings.
+	btn.connect("pressed", Callable(self, "_switch_primary_view").bind(opener))
 
 	# Faint ember highlight behind the content (shown only when active).
 	var highlight := ColorRect.new()
@@ -1092,6 +1095,21 @@ func _nav_box() -> StyleBoxFlat:
 	sb.shadow_color = Color(0, 0, 0, 0.18)
 	sb.shadow_offset = Vector2(0, -3)
 	return sb
+
+## Switch between the five persistent bottom-nav VIEWS without stacking them. Tapping a
+## nav tab routes here (NOT straight to the opener): we first hide any OTHER primary view
+## that's currently open by setting `.visible = false` DIRECTLY — deliberately NOT calling
+## `.close()`, because close() emits `closed` → `_on_*_closed` → `_clear_nav()`, which would
+## wipe the new tab's `_nav_current` after the opener just set it. Then we `call(opener)` to
+## open the target, which sets `_nav_current` + `_refresh_nav()` itself. The `_open_*`
+## methods stay usable directly (deep-links, tests) — only the nav-tab wiring goes through
+## here. Reopening the same view is a no-op switch (it just re-opens + re-highlights).
+func _switch_primary_view(opener: String) -> void:
+	for screen in [_town_screen, _inventory_screen, _townmap_screen,
+			_cartography_screen, _townsfolk_screen]:
+		if screen != null and is_instance_valid(screen) and screen.visible:
+			screen.visible = false
+	call(opener)
 
 ## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a
 ## "{res} {count}" Label (ink text). Used by _refresh_totals to populate the grid.
@@ -1584,6 +1602,9 @@ func _open_recipes() -> void:
 		add_child(_recipe_wiki_screen)
 		_recipe_wiki_screen.setup(game)
 		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
+		# Crafting from the wiki mutates inventory → re-render the HUD stockpile (same
+		# handler the Town/Townmap screens use after any state-changing action).
+		_recipe_wiki_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_recipe_wiki_screen.open()
 	_router.open_modal(ViewRouter.Modal.RECIPES)
 

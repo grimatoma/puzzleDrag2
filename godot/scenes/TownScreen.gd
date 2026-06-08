@@ -94,13 +94,15 @@ func _build_shell() -> void:
 	layer = 3                                  # above Main's HUD (layer 1)
 	visible = false
 
-	# Full-rect dim backdrop. MOUSE_FILTER_STOP so clicks behind it never reach
-	# the board while the menu is open (you're in the menu — that's intended).
-	# M4c: a warm brown-tinted scrim (not flat black) so the parchment panel reads
-	# as paper on a desk rather than a window punched out of darkness.
+	# Opaque VIEW background (not a dim modal scrim). This screen is one of the five
+	# persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
+	# board — reading as a view, not a modal punched out of darkness. Stops NAV_HEIGHT
+	# (76px) short of the bottom so the persistent nav bar (a LOWER CanvasLayer) shows
+	# through and stays tappable; MOUSE_FILTER_STOP eats clicks above that strip.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
@@ -113,10 +115,12 @@ func _build_shell() -> void:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	# Comfortable margins around the panel; the ScrollContainer handles overflow.
+	# offset_bottom clears the persistent bottom nav (76px) + a 12px gap so the card
+	# never overlaps the nav bar showing through below.
 	panel.offset_left = 24
 	panel.offset_right = -24
 	panel.offset_top = 48
-	panel.offset_bottom = -48
+	panel.offset_bottom = -88
 	panel.custom_minimum_size = Vector2(0, 0)
 	# M4c: parchment card — warm fill, iron border, rounded corners, generous
 	# content padding, and a soft drop shadow so it floats over the warm scrim.

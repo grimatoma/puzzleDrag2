@@ -1,63 +1,76 @@
 extends CanvasLayer
-## Recipe Wiki — a read-only reference of all craftable recipes, rendered as a
-## scrollable parchment card. Mirrors the AchievementsScreen / TileCollectionScreen
-## pattern exactly: extends CanvasLayer, setup(g)/open()/refresh(), signal closed,
-## _action_buttons["close"], parchment card + scrim + Cinzel title, a ScrollContainer
-## body cleared + rebuilt each refresh(). Data comes from RecipeConfig.RECIPE_IDS
-## and the static helpers (recipe_name, recipe_inputs, recipe_output, recipe_qty,
-## recipe_station) + BuildingConfig.building_name for the station display.
+## Recipe Wiki — an interactive crafting reference rendered as a parchment card.
+## Mirrors the AchievementsScreen / TownScreen pattern: extends CanvasLayer,
+## setup(g)/open()/refresh(), `closed` + `state_changed` signals, _action_buttons,
+## parchment card + scrim + Cinzel title.
+##
+## LAYOUT (React crafting-view parity): a STATION tab bar (one tab per real station —
+## the port's Bakery + Kitchen; no fake Larder/Forge/Workshop), a list of that
+## station's recipes as selectable rows with resource ICONS, and a SELECTED-RECIPE
+## detail card with per-input have/need chips + a green Craft button. Crafting calls
+## the real GameState.craft() and emits `state_changed` so Main refreshes the HUD.
 ##
 ## NO class_name on purpose — Main preloads this script
-## (preload("res://scenes/RecipeWikiScreen.gd")) so the port never needs an
-## --import pass to register a new global. Pure read-only: the only actionable
-## Control is "✕ Close"; everything else is MOUSE_FILTER_IGNORE.
+## (preload("res://scenes/RecipeWikiScreen.gd")) so the port never needs an --import.
 ##
-## Screen auto-grows as RecipeConfig.RECIPES grows — adding a new recipe to
-## RecipeConfig.RECIPE_IDS gives it a card here for free.
+## Data: RecipeConfig (RECIPE_IDS / recipe_name / recipe_inputs / recipe_output /
+## recipe_qty / recipe_station) + BuildingConfig.building_name + GameState
+## (inventory / can_craft / has_building / craft). The screen auto-grows as
+## RecipeConfig.RECIPES grows.
 
 var game: GameState
 
 signal closed
+signal state_changed   ## emitted after a successful craft so Main re-renders the HUD
 
-## action id → Button. Currently just "close".
+## action id → Button. "close" + (when a recipe is selected) "craft".
 var _action_buttons: Dictionary = {}
 
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
-## refresh() so reopening always reflects the current recipe catalog.
+## refresh() so reopening always reflects the current recipe catalog + live inventory.
 var _body: VBoxContainer
 var _built: bool = false
 
 ## Header label, rebuilt each refresh().
 var _header_label: Label
 
-## recipe_id:String → the rendered card PanelContainer, rebuilt each refresh().
-## Lets a test fetch a specific card (e.g. assert BREAD renders its inputs + station).
+## station building_id:String → its tab Button. Built once in the shell.
+var _station_buttons: Dictionary = {}
+
+## recipe_id:String → the rendered list-row PanelContainer for the ACTIVE station
+## (rebuilt each refresh()). Lets a test fetch a specific row.
 var _cards: Dictionary = {}
 
-# ── parchment palette (matches AchievementsScreen / TileCollectionScreen tokens) ──
+## The active station tab (a BuildingConfig id) + the currently selected recipe id.
+var _active_station: String = ""
+var _selected_recipe: String = ""
+
+# ── parchment palette (matches AchievementsScreen / TownScreen tokens) ──────────
 const COL_TITLE  := Palette.INK
 const COL_HEADER := Palette.EMBER
 const COL_BODY   := Palette.INK
 const COL_MUTED  := Palette.INK_MID
 const COL_VALUE  := Palette.GOLD
-const COL_INPUT  := Palette.MOSS    # ingredient tint — warm green
-const COL_OUTPUT := Palette.EMBER   # output tint — amber
 const COL_PANEL  := Palette.PARCHMENT
+## Warm rust tint for an under-stocked input chip (have < need) — reads "short" without
+## the harsh pure-red the parchment palette avoids.
+const COL_SHORT  := Color8(0xb0, 0x52, 0x3a)
 const PANEL_MAX_WIDTH := 560.0
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
-## Store `game`, build the static shell ONCE, then render. Safe to call again
-## (the shell is only built the first time).
+## Store `game`, build the static shell ONCE, then render. Safe to call again.
 func setup(g: GameState) -> void:
 	game = g
 	if not _built:
 		_build_shell()
 		_built = true
+	_ensure_selection()
 	refresh()
 
 func open() -> void:
 	visible = true
+	_ensure_selection()
 	refresh()
 
 func close() -> void:
@@ -91,8 +104,6 @@ func _build_shell() -> void:
 	panel.offset_right = -24
 	panel.offset_top = 48
 	panel.offset_bottom = -48
-	# Parchment card — warm fill, iron border, rounded corners, generous padding,
-	# soft drop shadow so it floats over the warm scrim.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
 	style.set_corner_radius_all(16)
@@ -110,8 +121,8 @@ func _build_shell() -> void:
 	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
 	panel.add_child(width_cap)
 
-	# A non-scrolling column: title row + header line pinned at the top, then a
-	# ScrollContainer that owns the (potentially long) recipe list.
+	# A non-scrolling column: title row + station tab row pinned at the top, then a
+	# ScrollContainer that owns the recipe list + selected-recipe detail card.
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 10)
@@ -140,13 +151,30 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
-	# Header line — "N recipes" (gold), rebuilt each refresh().
+	# Station tab row: one segmented tab per real station (Bakery / Kitchen), with the
+	# "N recipes" count pushed to the right.
+	var tab_row := HBoxContainer.new()
+	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_row.add_theme_constant_override("separation", 6)
+	root_vbox.add_child(tab_row)
+
+	for station_id in _stations():
+		var btn := Button.new()
+		btn.text = BuildingConfig.building_name(station_id)
+		btn.add_theme_font_size_override("font_size", 16)
+		btn.connect("pressed", Callable(self, "_on_station_tab").bind(station_id))
+		tab_row.add_child(btn)
+		_station_buttons[station_id] = btn
+
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	_header_label.add_theme_font_size_override("font_size", 15)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
+	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_vbox.add_child(_header_label)
+	tab_row.add_child(_header_label)
 
 	var scroll := UiKit.make_vscroll()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -160,14 +188,30 @@ func _build_shell() -> void:
 	_body.add_theme_constant_override("separation", 12)
 	scroll.add_child(_body)
 
+# ── selection state ────────────────────────────────────────────────────────────
+
+## Ensure `_active_station` + `_selected_recipe` name real, consistent values: default
+## the station to the first station, and the selected recipe to the first recipe of the
+## active station.
+func _ensure_selection() -> void:
+	var stations: Array = _stations()
+	if _active_station == "" or not stations.has(_active_station):
+		_active_station = String(stations[0]) if not stations.is_empty() else ""
+	var recipes: Array = RecipeConfig.recipes_for_station(_active_station)
+	if _selected_recipe == "" or not recipes.has(_selected_recipe):
+		_selected_recipe = String(recipes[0]) if not recipes.is_empty() else ""
+
 # ── render ────────────────────────────────────────────────────────────────────
 
-## Clear the body and repopulate it from RecipeConfig.RECIPE_IDS: the header count
-## line, then one card per recipe in stable RECIPE_IDS order. Every recipe gets
-## exactly one card (tracked in `_cards`).
+## Clear the body and repopulate it for the active station: a selectable row per recipe
+## (tracked in `_cards`), then the selected recipe's detail card with have/need chips +
+## the Craft button. The header reads the TOTAL recipe count (across all stations).
 func refresh() -> void:
 	if not _built:
 		return
+	_ensure_selection()
+	_sync_station_tabs()
+	_action_buttons.erase("craft")
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
@@ -176,39 +220,78 @@ func refresh() -> void:
 	var total: int = RecipeConfig.RECIPE_IDS.size()
 	_header_label.text = "%d recipe%s" % [total, "" if total == 1 else "s"]
 
+	for id in RecipeConfig.recipes_for_station(_active_station):
+		var row := _make_recipe_row(String(id))
+		_body.add_child(row)
+		_cards[String(id)] = row
+
+	if _selected_recipe != "":
+		_body.add_child(_make_detail_card(_selected_recipe))
+
+# ── station tabs ───────────────────────────────────────────────────────────────
+
+## The distinct stations across the recipe catalog, in RECIPE_IDS order. The port's
+## real stations (Bakery, Kitchen) — derived, so this auto-grows with new recipes.
+func _stations() -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
 	for id in RecipeConfig.RECIPE_IDS:
-		var card := _make_recipe_card(String(id))
-		_body.add_child(card)
-		_cards[String(id)] = card
+		var st: String = RecipeConfig.recipe_station(String(id))
+		if st != "" and not seen.has(st):
+			seen[st] = true
+			out.append(st)
+	return out
 
-## A single recipe card: a soft-parchment chip holding:
-##   • the recipe name in Cinzel (ember, large)
-##   • "at <Station name>" (muted, small)
-##   • the formula line: "input×n + input×n → output×qty" (colour-tinted)
-## Optionally tints input names green and the output name amber for quick scanning.
-func _make_recipe_card(id: String) -> PanelContainer:
-	var rec_name: String = RecipeConfig.recipe_name(id)
-	var station_id: String = RecipeConfig.recipe_station(id)
-	var station_label: String = BuildingConfig.building_name(station_id)
-	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
-	var output: String = RecipeConfig.recipe_output(id)
-	var qty: int = RecipeConfig.recipe_qty(id)
+func _on_station_tab(station_id: String) -> void:
+	if station_id == _active_station:
+		return
+	_active_station = station_id
+	_selected_recipe = ""    # re-default to the new station's first recipe
+	_ensure_selection()
+	refresh()
 
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+## Apply the segmented active/inactive look to the station tab buttons.
+func _sync_station_tabs() -> void:
+	for key in _station_buttons.keys():
+		UiKit.style_segment(_station_buttons[key], String(key) == _active_station)
+
+func _on_select_recipe(id: String) -> void:
+	if id == _selected_recipe:
+		return
+	_selected_recipe = id
+	refresh()
+
+# ── recipe list row (selectable, with icons) ────────────────────────────────────
+
+## One selectable recipe row: the recipe name (Cinzel) over an icon formula
+## ([flour]×3 [eggs]×1 → [bread]×1). The selected row reads with an ember border.
+func _make_recipe_row(id: String) -> PanelContainer:
+	var selected: bool = (id == _selected_recipe)
+	var row := PanelContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := UiKit.row_box()
+	if selected:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	row.add_theme_stylebox_override("panel", sb)
+	# Click anywhere on the row to select it.
+	row.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
+			or (event is InputEventScreenTouch and event.pressed)
+		if tap:
+			_on_select_recipe(id)
+	)
 
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_theme_constant_override("separation", 5)
-	chip.add_child(col)
+	row.add_child(col)
 
-	# ── Recipe name (Cinzel, ember) ────────────────────────────────────────────
 	var name_lbl := Label.new()
-	name_lbl.text = rec_name if rec_name != "" else id
-	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.text = RecipeConfig.recipe_name(id)
+	name_lbl.add_theme_font_size_override("font_size", 20)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -216,35 +299,191 @@ func _make_recipe_card(id: String) -> PanelContainer:
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_lbl)
 
-	# ── Station line ("at Bakery" / "at Kitchen") ─────────────────────────────
-	var station_lbl := Label.new()
-	var station_text: String = ("at %s" % station_label) if station_label != "" else ("at %s" % station_id)
-	station_lbl.text = station_text
-	station_lbl.add_theme_font_size_override("font_size", 14)
-	station_lbl.add_theme_color_override("font_color", COL_MUTED)
-	station_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(station_lbl)
+	# Icon formula: input icons + ×n, an arrow, then the output icon + ×qty.
+	var formula := HBoxContainer.new()
+	formula.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	formula.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	formula.add_theme_constant_override("separation", 4)
+	col.add_child(formula)
 
-	# ── Formula line ───────────────────────────────────────────────────────────
-	# "flour×3 + eggs×1 → bread×1" built from the recipe data. Rendered as a
-	# single-line RichTextLabel so we can tint input names green and output amber
-	# without extra nodes. Falls back to a plain Label in headless if RTL isn't ideal.
-	var formula: String = _build_formula(inputs, output, qty)
-	var formula_lbl := Label.new()
-	formula_lbl.text = formula
-	formula_lbl.add_theme_font_size_override("font_size", 17)
-	formula_lbl.add_theme_color_override("font_color", COL_BODY)
-	formula_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	formula_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(formula_lbl)
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
+	var first := true
+	for key in inputs.keys():
+		if not first:
+			formula.add_child(_plain("+", 16, COL_MUTED))
+		first = false
+		_add_icon_qty(formula, String(key), int(inputs[key]), COL_BODY)
+	formula.add_child(_plain("→", 18, COL_MUTED))
+	_add_icon_qty(formula, RecipeConfig.recipe_output(id), RecipeConfig.recipe_qty(id), COL_VALUE)
+
+	return row
+
+## Append an icon (if art exists) + a "×n" label to `box`. Falls back to the resource
+## name when there's no icon so the formula always reads.
+func _add_icon_qty(box: HBoxContainer, key: String, n: int, qty_col: Color) -> void:
+	var icon := UiKit.make_icon(key, 24)
+	if icon != null:
+		box.add_child(icon)
+	else:
+		box.add_child(_plain(UiKit.pretty_name(key), 15, COL_BODY))
+	box.add_child(_plain("×%d" % n, 16, qty_col))
+
+func _plain(text: String, size: int, col: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", size)
+	lbl.add_theme_color_override("font_color", col)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+# ── selected-recipe detail card (have/need chips + Craft) ───────────────────────
+
+## The detail card for the selected recipe: the output, an "at <Station>" line, a row
+## of per-input have/need chips (green when covered, rose when short), and a Craft
+## button (filled green when craftable, disabled with a reason otherwise).
+func _make_detail_card(id: String) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := UiKit.card_box(Palette.PARCHMENT_SOFT)
+	card.add_theme_stylebox_override("panel", sb)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	card.add_child(col)
+
+	# Output header: big icon + "Bread ×1" + the station line.
+	var head := HBoxContainer.new()
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_theme_constant_override("separation", 8)
+	col.add_child(head)
+
+	var out_icon := UiKit.make_icon(RecipeConfig.recipe_output(id), 40)
+	if out_icon != null:
+		out_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(out_icon)
+
+	var head_col := VBoxContainer.new()
+	head_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head_col.add_theme_constant_override("separation", 1)
+	head.add_child(head_col)
+
+	var out_name := Label.new()
+	out_name.text = "%s ×%d" % [RecipeConfig.recipe_name(id), RecipeConfig.recipe_qty(id)]
+	out_name.add_theme_font_size_override("font_size", 20)
+	out_name.add_theme_color_override("font_color", COL_HEADER)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		out_name.add_theme_font_override("font", hf)
+	head_col.add_child(out_name)
+
+	var station_id: String = RecipeConfig.recipe_station(id)
+	var station_lbl := Label.new()
+	station_lbl.text = "at %s" % BuildingConfig.building_name(station_id)
+	station_lbl.add_theme_font_size_override("font_size", 13)
+	station_lbl.add_theme_color_override("font_color", COL_MUTED)
+	head_col.add_child(station_lbl)
+
+	# Input chips — one per input: [icon] name  have/need (green when covered, rose short).
+	var chips := HFlowContainer.new()
+	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chips.add_theme_constant_override("h_separation", 6)
+	chips.add_theme_constant_override("v_separation", 6)
+	col.add_child(chips)
+
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
+	for key in inputs.keys():
+		chips.add_child(_input_chip(String(key), int(inputs[key])))
+
+	# Craft button — filled green when craftable, otherwise disabled with a reason.
+	var craftable: bool = game != null and game.can_craft(id)
+	var craft_btn := Button.new()
+	craft_btn.text = "Craft"
+	craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_action_button(craft_btn, Palette.MOSS, 8, 18)
+	craft_btn.disabled = not craftable
+	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
+	col.add_child(craft_btn)
+	_action_buttons["craft"] = craft_btn
+
+	# Reason line when not craftable (no station built / not enough inputs).
+	if not craftable:
+		var reason := Label.new()
+		reason.text = _craft_reason(id)
+		reason.add_theme_font_size_override("font_size", 12)
+		reason.add_theme_color_override("font_color", COL_MUTED)
+		reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		reason.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(reason)
+
+	return card
+
+## A single input chip: [icon] have/need, tinted green when the player has enough of
+## this input, rose when short. Reads live inventory.
+func _input_chip(key: String, need: int) -> PanelContainer:
+	var have: int = 0
+	if game != null:
+		have = int(game.inventory.get(key, 0))
+	var covered: bool = have >= need
+
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT
+	sb.border_color = Palette.MOSS if covered else COL_SHORT
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	chip.add_theme_stylebox_override("panel", sb)
+
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 5)
+	chip.add_child(row)
+
+	var icon := UiKit.make_icon(key, 22)
+	if icon != null:
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(icon)
+	else:
+		row.add_child(_plain(UiKit.pretty_name(key), 13, COL_BODY))
+
+	var count := Label.new()
+	count.text = "%d/%d" % [have, need]
+	count.add_theme_font_size_override("font_size", 14)
+	count.add_theme_color_override("font_color", Palette.MOSS if covered else COL_SHORT)
+	count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(count)
 
 	return chip
 
-# ── pure helpers ─────────────────────────────────────────────────────────────
+## Why `id` can't be crafted right now: station not built, or short on inputs.
+func _craft_reason(id: String) -> String:
+	if game == null:
+		return ""
+	var station_id: String = RecipeConfig.recipe_station(id)
+	if not game.has_building(station_id):
+		return "Build the %s to craft this." % BuildingConfig.building_name(station_id)
+	return "Not enough ingredients."
+
+## Craft the selected recipe via the real GameState path; on success refresh + tell
+## Main (state_changed) to re-render the HUD stockpile.
+func _on_craft(id: String) -> void:
+	if game == null:
+		return
+	var res: Dictionary = game.craft(id)
+	if bool(res.get("ok", false)):
+		emit_signal("state_changed")
+	refresh()
+
+# ── pure helpers (kept for the view tests) ─────────────────────────────────────
 
 ## Build the formula string: "flour×3 + eggs×1 → bread×1".
-## Inputs are iterated in insertion order (the dict is ordered in GDScript 4),
-## joined with " + ", then "→ output×qty" is appended.
 static func _build_formula(inputs: Dictionary, output: String, qty: int) -> String:
 	var parts: Array = []
 	for key in inputs.keys():

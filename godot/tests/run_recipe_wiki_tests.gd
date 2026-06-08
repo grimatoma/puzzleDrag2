@@ -70,7 +70,7 @@ func _initialize() -> void:
 	_check(f3.contains("—"), "_build_formula with empty inputs contains '—'")
 	_check(f3.contains("widget×2"), "_build_formula with empty inputs still shows output")
 
-	# ── 2. RecipeWikiScreen rendering ─────────────────────────────────────────
+	# ── 2. RecipeWikiScreen rendering (station tabs + selectable rows + detail) ──
 	var game := GameState.new()
 	var screen = RecipeWikiScreenScript.new()
 	root.add_child(screen)
@@ -82,70 +82,62 @@ func _initialize() -> void:
 	_check(screen.visible, "recipe wiki is visible after open()")
 	_check(screen._action_buttons.has("close"), "_action_buttons has 'close'")
 
-	# One card per RECIPE_IDS.
-	_check(screen._cards.size() == expected_count,
-		"one rendered card per recipe id (_cards.size() == %d)" % expected_count)
+	# Station tab bar: one tab per real station (Bakery + Kitchen).
+	_check(screen._station_buttons.has(BuildingConfig.BAKERY), "station tab for Bakery exists")
+	_check(screen._station_buttons.has(BuildingConfig.KITCHEN), "station tab for Kitchen exists")
 
-	# Every RECIPE_IDS entry has a card.
-	var all_have_cards := true
-	for id in RecipeConfig.RECIPE_IDS:
-		if not screen._cards.has(String(id)):
-			all_have_cards = false
-	_check(all_have_cards, "every RecipeConfig.RECIPE_IDS id has a rendered card in _cards")
-
-	# Header reads "N recipe(s)".
+	# Header reads the TOTAL recipe count (across stations).
 	_check(screen._header_label.text == "%d recipes" % expected_count,
 		"header reads '%d recipes'" % expected_count)
 
-	# BREAD card: verify the card exists and the visible formula + station labels are correct.
-	var bread_card = screen._cards.get(RecipeConfig.BREAD)
-	_check(bread_card != null, "BREAD card exists in _cards")
-	if bread_card != null:
-		# Walk the card's children to collect all label texts for assertions.
-		var all_texts: Array = _collect_label_texts(bread_card)
-		# Recipe name
-		var has_name := false
-		for t in all_texts:
-			if String(t).to_lower().contains("bread"):
-				has_name = true
-		_check(has_name, "BREAD card contains recipe name 'Bread'")
-		# Station
-		var has_station := false
-		for t in all_texts:
-			if String(t).to_lower().contains("bakery"):
-				has_station = true
-		_check(has_station, "BREAD card contains station 'Bakery'")
-		# Inputs — flour and eggs in the formula line
-		var has_flour := false
-		var has_eggs := false
-		for t in all_texts:
-			if String(t).contains("flour"):
-				has_flour = true
-			if String(t).contains("eggs"):
-				has_eggs = true
-		_check(has_flour, "BREAD card formula contains 'flour'")
-		_check(has_eggs, "BREAD card formula contains 'eggs'")
-		# Output — bread
-		var has_output := false
-		for t in all_texts:
-			if String(t).contains("bread×"):
-				has_output = true
-		_check(has_output, "BREAD card formula contains 'bread×' output")
+	# Default station = Bakery → BREAD shown + selected; SUPPLIES (Kitchen) not shown.
+	_check(screen._active_station == BuildingConfig.BAKERY, "default station is Bakery")
+	_check(screen._selected_recipe == RecipeConfig.BREAD, "default selected recipe is BREAD")
+	_check(screen._cards.has(RecipeConfig.BREAD), "BREAD row present on the Bakery tab")
+	_check(not screen._cards.has(RecipeConfig.SUPPLIES), "SUPPLIES row absent on the Bakery tab")
 
-	# SUPPLIES card: bread+flour → supplies at Kitchen
-	var sup_card = screen._cards.get(RecipeConfig.SUPPLIES)
-	_check(sup_card != null, "SUPPLIES card exists in _cards")
-	if sup_card != null:
-		var all_texts: Array = _collect_label_texts(sup_card)
-		var has_kitchen := false
-		var has_supplies := false
-		for t in all_texts:
-			if String(t).to_lower().contains("kitchen"):
-				has_kitchen = true
-			if String(t).to_lower().contains("supplies"):
-				has_supplies = true
-		_check(has_kitchen, "SUPPLIES card contains station 'Kitchen'")
-		_check(has_supplies, "SUPPLIES card contains 'supplies'")
+	# The detail card shows the recipe name + "at Bakery" station line.
+	var bakery_texts: Array = _collect_label_texts(screen._body)
+	var has_bread := false
+	var has_bakery := false
+	for t in bakery_texts:
+		if String(t).to_lower().contains("bread"): has_bread = true
+		if String(t).to_lower().contains("bakery"): has_bakery = true
+	_check(has_bread, "Bakery tab shows 'Bread'")
+	_check(has_bakery, "Bakery tab shows the 'at Bakery' station line")
+
+	# A fresh game can't craft (no Bakery built) → the Craft button is disabled.
+	_check(screen._action_buttons.has("craft"), "_action_buttons has 'craft' (detail card)")
+	_check(screen._action_buttons["craft"].disabled, "Craft disabled with no station / inputs")
+
+	# Switch to the Kitchen tab → SUPPLIES becomes the shown + selected recipe.
+	screen._on_station_tab(BuildingConfig.KITCHEN)
+	_check(screen._active_station == BuildingConfig.KITCHEN, "_on_station_tab(Kitchen) switches station")
+	_check(screen._selected_recipe == RecipeConfig.SUPPLIES, "Kitchen tab selects SUPPLIES")
+	_check(screen._cards.has(RecipeConfig.SUPPLIES), "SUPPLIES row present on the Kitchen tab")
+	_check(not screen._cards.has(RecipeConfig.BREAD), "BREAD row absent on the Kitchen tab")
+	var kitchen_texts: Array = _collect_label_texts(screen._body)
+	var has_kitchen := false
+	for t in kitchen_texts:
+		if String(t).to_lower().contains("kitchen"): has_kitchen = true
+	_check(has_kitchen, "Kitchen tab shows the 'at Kitchen' station line")
+
+	# ── Real craft flow: build the Bakery, stock flour+eggs, press Craft ─────────
+	screen._on_station_tab(BuildingConfig.BAKERY)
+	game.buildings.append(BuildingConfig.BAKERY)   # the same array game.build() appends to
+	game.inventory["flour"] = 6
+	game.inventory["eggs"] = 2
+	screen.refresh()
+	_check(game.can_craft(RecipeConfig.BREAD), "can_craft(BREAD) after building Bakery + stocking")
+	_check(not screen._action_buttons["craft"].disabled, "Craft enabled when craftable")
+	var bread_before := int(game.inventory.get("bread", 0))
+	var changed := [false]
+	screen.connect("state_changed", func(): changed[0] = true)
+	screen._action_buttons["craft"].emit_signal("pressed")
+	_check(int(game.inventory.get("bread", 0)) == bread_before + 1, "Craft produced +1 bread")
+	_check(int(game.inventory.get("flour", 0)) == 3, "Craft consumed 3 flour (6 → 3)")
+	_check(int(game.inventory.get("eggs", 0)) == 1, "Craft consumed 1 eggs (2 → 1)")
+	_check(changed[0], "Craft emitted state_changed")
 
 	# Close button fires `closed` and hides the modal.
 	var before_closed := _closed_count
@@ -221,9 +213,9 @@ func _initialize() -> void:
 	_check(main._router.current_modal() == ViewRouter.Modal.NONE,
 		"_router.current_modal() == NONE after apply_deeplink('board')")
 
-	# Render verification: the screen renders one card per RecipeConfig.RECIPE_IDS.
-	_check(main._recipe_wiki_screen._cards.size() == RecipeConfig.RECIPE_IDS.size(),
-		"Main's recipe wiki renders %d card(s) matching RECIPE_IDS" % RecipeConfig.RECIPE_IDS.size())
+	# Render verification: the screen renders at least the active station's recipe row(s).
+	_check(main._recipe_wiki_screen._cards.size() >= 1,
+		"Main's recipe wiki renders the active station's recipe row(s)")
 
 	SaveManager.clear()
 	print("──────────────────────────────────────────────────")

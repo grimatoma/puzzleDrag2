@@ -60,6 +60,9 @@ const TownMapScript := preload("res://scenes/town/TownMap.gd")
 # The seed zone for the layout (the home town). Deterministic per TownLayout.
 const ZONE_ID := "home"
 const FALLBACK_VIEW := Vector2(720, 1280)
+## Bottom strip (px) left to the persistent nav bar — the backdrop + _map_host stop this
+## far short of the bottom so the nav (a lower CanvasLayer) shows through + stays tappable.
+const NAV_RESERVE := 76
 ## A soft danger tone for the Demolish button (matches TownScreen.COL_DANGER).
 const COL_DANGER := Color("#b06a52")
 
@@ -101,11 +104,15 @@ func _build_shell() -> void:
 	layer = 4                                    # modal, above the HUD (layer 1)
 	visible = false
 
-	# Parchment backdrop — a warm full-rect fill so the map sits on paper, and a
-	# MOUSE_FILTER_STOP so clicks never reach the board behind the open map.
+	# Parchment backdrop — a warm full-rect fill so the map sits on paper. This screen is
+	# the "Town" tab — one of the five persistent bottom-nav VIEWS — so the backdrop stops
+	# NAV_HEIGHT (76px) short of the bottom, leaving the persistent nav bar (a LOWER
+	# CanvasLayer) visible + tappable. MOUSE_FILTER_STOP eats clicks above that strip so
+	# nothing leaks to the board behind the open map.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
@@ -114,8 +121,12 @@ func _build_shell() -> void:
 	# M6d: MOUSE_FILTER_STOP so it receives gui_input — left clicks pick a lot and
 	# mouse motion drives the hover highlight. (The backdrop below already eats any
 	# stray click so nothing leaks to the board behind the open map.)
+	# View-mode: stop NAV_HEIGHT (76px) short of the bottom so this STOP control never
+	# covers the persistent nav strip — taps there fall through to the nav buttons on the
+	# lower CanvasLayer. The map renders into this reserved rect (see _viewport_size).
 	_map_host = Control.new()
 	_map_host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map_host.offset_bottom = -76
 	_map_host.mouse_filter = Control.MOUSE_FILTER_STOP
 	_map_host.connect("gui_input", Callable(self, "_on_map_gui_input"))
 	add_child(_map_host)
@@ -168,7 +179,9 @@ func _build_shell() -> void:
 	UiKit.style_button(_build_btn, Palette.MOSS, 8, 20, true)
 	_build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_build_btn.offset_right = -18
-	_build_btn.offset_bottom = -18
+	# Lifted above the reserved bottom-nav strip (NAV_RESERVE 76 + an 18px gap) so the
+	# Build button never overlaps the persistent nav bar showing through below.
+	_build_btn.offset_bottom = -18 - NAV_RESERVE
 	_build_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_build_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_build_btn.connect("pressed", Callable(self, "_on_build_button"))
@@ -188,7 +201,11 @@ func refresh() -> void:
 	var board_kinds: Array = [game.active_biome]
 	var plan: Dictionary = TownLayout.build_plan(ZONE_ID, plot_count, board_kinds)
 	_last_plan = plan
-	var vp: Vector2 = _viewport_size()
+	# Fit the map into the map-HOST rect (viewport minus the reserved nav strip), not the
+	# raw viewport — so the content-aware fit AND the lot_at_screen click math both use the
+	# same space the host occupies. (event.position in _on_map_gui_input is local to
+	# _map_host, which is exactly this rect.)
+	var vp: Vector2 = _map_render_size()
 	_map.render_plan(plan, vp.x, vp.y, built)
 	# Refresh the prominent Build button's label with the live built/total plot counts
 	# (matches React's "Build · N/N plots"). Disabled when every plot is already filled.
@@ -205,6 +222,18 @@ func _viewport_size() -> Vector2:
 		if sz.x > 0.0 and sz.y > 0.0:
 			return sz
 	return FALLBACK_VIEW
+
+# The rect the map fits into: the map-host Control's real laid-out size when available,
+# else the viewport (or fallback) minus the reserved bottom nav strip. Using the host's
+# own size keeps the map fit and the lot-click hit-test (event.position is local to the
+# host) in exact agreement.
+func _map_render_size() -> Vector2:
+	if _map_host != null:
+		var hs: Vector2 = _map_host.size
+		if hs.x > 0.0 and hs.y > 0.0:
+			return hs
+	var vp: Vector2 = _viewport_size()
+	return Vector2(vp.x, maxf(1.0, vp.y - float(NAV_RESERVE)))
 
 # ── M6d: interaction (click a plot → build / demolish) ────────────────────────
 
