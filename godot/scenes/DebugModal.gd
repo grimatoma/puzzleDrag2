@@ -10,11 +10,15 @@ extends CanvasLayer
 ##   2. JUMP GRID — one button per deep-link in ViewRouter.known_ids() (aliases + dupes
 ##      skipped), each calling main.apply_deeplink(id). The debug modal thus doubles as
 ##      the QA index of every reachable surface.
-##   3. QUICK GRANTS — a few buttons that call REAL existing GameState / SaveManager
-##      mutations only (+500 coins, +5 runes, +100 influence, Tier up, Roll quests, Clear
-##      save). The button → method mapping is described by the PURE static `grant_specs()`
-##      so a test can assert every backing method genuinely exists (has_method). After a
-##      grant Main's HUD pills + this readout are refreshed via the `main` back-reference.
+##   3. QUICK GRANTS — buttons that call REAL existing GameState / SaveManager mutations
+##      only. The simple ones (+500 coins, +5 runes, +100 influence, Tier up, Roll quests,
+##      Clear save) plus the BULK QA grants ported from the React debug modal (src/features/
+##      debug): Max tier (jump the settlement straight to City), +100 each item (top every
+##      resource toward the cap — see all_resource_keys), +100 each tool (grant_tool over
+##      ToolConfig.TOOL_IDS), and Build all (force every BuildingConfig id into `buildings`).
+##      The button → method mapping is described by the PURE static `grant_specs()` so a test
+##      can assert every backing method genuinely exists (has_method). After a grant Main's
+##      HUD pills + this readout are refreshed via the `main` back-reference.
 ##
 ## DEEP-LINK ONLY. Like the React debug modal (which is hidden — not on the HUD), this is
 ## reachable solely via apply_deeplink("debug"); Main wires NO permanent HUD button for it.
@@ -86,19 +90,46 @@ static func readout_lines(g: GameState) -> PackedStringArray:
 ## Describe the quick-grant buttons. PURE — returns an Array of {id, label, target, method}
 ## dicts. `target` is "game" or "save" (which object owns `method`). Each entry's `method`
 ## is a REAL existing GameState / SaveManager method (the test asserts has_method on each).
-## "+500 coins" / "+5 runes" / "+100 influence" mutate fields directly so they list NO
-## method (the field write is always valid); they're still surfaced so the test can grant
-## via them and assert the delta. Listed methods: try_tier_up (Tier up), reroll_quests
-## (Roll quests), clear (Clear save).
+## Field-write grants ("+500 coins" / "+5 runes" / "+100 influence" / "Max tier") list NO
+## method (the write is always valid); they're still surfaced so the test can grant via them
+## and assert the delta. The bulk grants ("+100 each item" / "Build all") drive several real
+## mutations from apply_grant, so they name the REPRESENTATIVE backing method the test can
+## has_method-check (grant_tool / build). Listed methods: grant_tool (+100 each tool), build
+## (Build all), try_tier_up (Tier up), reroll_quests (Roll quests), clear (Clear save).
 static func grant_specs() -> Array:
 	return [
 		{"id": "coins500",  "label": "+500 coins",   "target": "game", "method": ""},
 		{"id": "runes5",    "label": "+5 runes",     "target": "game", "method": ""},
 		{"id": "influence100", "label": "+100 influence", "target": "game", "method": ""},
+		{"id": "maxtier",   "label": "⬆ Max tier",   "target": "game", "method": ""},
 		{"id": "tierup",    "label": "Tier up",      "target": "game", "method": "try_tier_up"},
 		{"id": "rollquests", "label": "Roll quests", "target": "game", "method": "reroll_quests"},
+		{"id": "fillitems", "label": "📦 +100 each item", "target": "game", "method": ""},
+		{"id": "filltools", "label": "🔧 +100 each tool", "target": "game", "method": "grant_tool"},
+		{"id": "buildall",  "label": "🏗 Build all",  "target": "game", "method": "build"},
 		{"id": "clearsave", "label": "Clear save",   "target": "save", "method": "clear"},
 	]
+
+## Every distinct INVENTORY resource key the run economy can hold — DERIVED from the live
+## config so it never drifts: the produced resource of every tile (Constants.PRODUCES; empty
+## hazard / coin / pearl entries skipped) plus every RecipeConfig output (bread / supplies).
+## PURE (no node access) so the "+100 each item" grant AND a headless test can both use it.
+static func all_resource_keys() -> PackedStringArray:
+	var seen: Dictionary = {}
+	var out: PackedStringArray = PackedStringArray()
+	for v in Constants.PRODUCES.values():
+		var key: String = String(v)
+		if key == "" or seen.has(key):
+			continue
+		seen[key] = true
+		out.append(key)
+	for rid in RecipeConfig.RECIPE_IDS:
+		var okey: String = RecipeConfig.recipe_output(rid)
+		if okey == "" or seen.has(okey):
+			continue
+		seen[okey] = true
+		out.append(okey)
+	return out
 
 ## The DEDUPED list of jump targets — one entry per DISTINCT modal so aliases ("items" vs
 ## "inventory", "world" vs "cartography", "" vs "board") collapse to a single button. PURE:
@@ -328,10 +359,31 @@ func apply_grant(id: String) -> Dictionary:
 			game.runes += 5
 		"influence100":
 			game.influence += 100
+		"maxtier":
+			# Jump the settlement straight to the top of the ladder (City) — the free
+			# debug analogue of "Tier up" (which still gates on the real cost).
+			game.settlement.tier = TownConfig.TIER_CITY
+			result = {"tier": game.settlement.tier}
 		"tierup":
 			result = game.try_tier_up()
 		"rollquests":
 			game.reroll_quests()
+		"fillitems":
+			# Top every resource toward the current tier's cap (mirrors React DEV/FILL_STORAGE).
+			var cap: int = game.settlement.cap()
+			for key in all_resource_keys():
+				game.inventory[key] = mini(int(game.inventory.get(key, 0)) + 100, cap)
+		"filltools":
+			# +100 charges of every tool via the real grant path (mirrors React DEV/FILL_TOOLS).
+			for tid in ToolConfig.TOOL_IDS:
+				game.grant_tool(tid, 100)
+		"buildall":
+			# Force every building into place, bypassing the tier/plot/cost/rats gates
+			# (mirrors React DEV/BUILD_ALL). Skips ids already built so it's idempotent.
+			for bid in BuildingConfig.ALL_BUILD_IDS:
+				if not game.has_building(bid):
+					game.buildings.append(bid)
+			result = {"buildings": game.buildings.size()}
 		"clearsave":
 			SaveManager.clear()
 	_refresh_main_hud()
@@ -344,6 +396,6 @@ func apply_grant(id: String) -> Dictionary:
 func _refresh_main_hud() -> void:
 	if main == null:
 		return
-	for m in ["_refresh_meta", "_refresh_runes", "_refresh_settlement", "_refresh_buildings", "_refresh_totals", "_refresh_chain_progress"]:
+	for m in ["_refresh_meta", "_refresh_runes", "_refresh_settlement", "_refresh_buildings", "_refresh_totals", "_refresh_chain_progress", "_refresh_tools", "_refresh_orders"]:
 		if main.has_method(m):
 			main.call(m)
