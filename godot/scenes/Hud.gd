@@ -1341,7 +1341,15 @@ func _refresh_chain_progress() -> void:
 		var live_threshold: int = Constants.threshold_for(_live_chain_tile)
 		var live_res: String = Constants.produced_resource(_live_chain_tile)
 		if live_threshold > 0 and live_threshold < Constants.NO_THRESHOLD and live_res != "":
-			_chain_prog_label.text = "%s: %d/%d" % [live_res, _live_chain_len, live_threshold]
+			# React's "1/6 +1" form: progress WITHIN the current stage cycle (length % threshold)
+			# plus the upgrades EARNED so far. The bar (and this counter) RESET each cycle, so the
+			# "+N" banner is what conveys a banked upgrade at a boundary (matches the fill below).
+			var earned: int = int(_live_chain_len / live_threshold)
+			var into: int = _live_chain_len % live_threshold
+			var txt: String = "%s  %d/%d" % [UiKit.pretty_name(live_res), into, live_threshold]
+			if earned > 0:
+				txt += "  +%d" % earned
+			_chain_prog_label.text = txt
 			_apply_chain_progress_fill()
 			return
 		# A hazard tile (RAT/RUBBLE — no producer/threshold): leave the bar on its prior
@@ -1375,9 +1383,11 @@ func _apply_chain_progress_fill() -> void:
 		if threshold > 0 and threshold < Constants.NO_THRESHOLD:
 			var earned: int = Constants.chain_stage_index(_live_chain_len, threshold)
 			var stage: Dictionary = Constants.CHAIN_STAGES[earned]
-			# Progress within the CURRENT stage cycle: a full bar exactly at a stage boundary.
+			# Progress within the CURRENT stage cycle — React resets the bar each cycle
+			# (length % threshold), so at an exact boundary the bar EMPTIES and the "+N" banner
+			# conveys the banked upgrade (rather than a full bar). Matches the label readout.
 			var into: int = _live_chain_len % threshold
-			var ratio: float = 1.0 if (_live_chain_len >= threshold and into == 0) else float(into) / float(threshold)
+			var ratio: float = float(into) / float(threshold)
 			_chain_prog_fill.size = Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h)
 			var top: Color = Color(String(stage.get("top", "#f0c14b")))
 			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))

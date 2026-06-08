@@ -77,6 +77,12 @@ static func _frames_for(t: int) -> SpriteFrames:
 	_frames_cache[t] = frames
 	return frames
 
+## Public accessor for a tile type's v1 thumbnail (or null) — reused by the ChainOverlay's
+## upgrade hover marker and the HUD chain-progress upgrade preview so they can show the actual
+## upgrade tile's art without duplicating the cached loader. Just wraps the cached _texture_for.
+static func texture_for(t: int) -> Texture2D:
+	return _texture_for(t)
+
 ## Stage 2: v1 flat PNG, or null to fall back to the Stage-1 placeholder.
 static func _texture_for(t: int) -> Texture2D:
 	if _tex_cache.has(t):
@@ -125,6 +131,17 @@ func set_selected(on: bool) -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	else:
 		scale = Vector2.ONE
+
+## Pin a selected tile to a fixed lifted scale and kill its pulse tween, so the
+## board-farm-chain visual golden captures the selection lift deterministically (the pulse
+## is otherwise mid-cycle at an arbitrary phase each run). Called by the visual harness's
+## freeze step; a no-op on an unselected tile.
+func freeze_selection() -> void:
+	if _sel_tween != null and _sel_tween.is_valid():
+		_sel_tween.kill()
+	_sel_tween = null
+	if _selected:
+		scale = Vector2(1.07, 1.07)
 
 func _draw() -> void:
 	if tile_type == Constants.EMPTY:
