@@ -83,16 +83,23 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Full-rect warm-brown scrim. MOUSE_FILTER_STOP so clicks behind it never reach
-	# the board while the wiki is open.
+	# Opaque VIEW background (not a dim modal scrim). B2 promotes this menu sub-page to a
+	# full-brightness VIEW: it paints the warm app-frame parchment over the board (no longer
+	# dimmed behind), reserving UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD
+	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
+	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
+	# eats clicks in the band it covers.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered panel: a full-rect Control holds a panel pinned with comfortable margins;
-	# a width-cap MarginContainer keeps it tidy on wide viewports.
+	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
+	# margins), reserving the top-bar band + bottom-nav strip; a width-cap MarginContainer keeps
+	# line length tidy on wide viewports.
 	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,19 +107,18 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -48
+	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
+	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -UiKit.NAV_RESERVE
+	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
+	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
+	# sub-page KEEPS its visible "✕ Close" (the legitimate back-to-board affordance).
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
 	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
