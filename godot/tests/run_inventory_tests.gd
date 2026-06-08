@@ -109,6 +109,75 @@ func _initialize() -> void:
 	_check(_closed_count == before_closed + 1, "closed signal fired once")
 	_check(not inv.visible, "inventory hidden after close")
 
+	# ── 1b. Category tabs + per-tab search (C1) ───────────────────────────────
+	# A game with resources AND owned tools so every tab + the search has real data.
+	var tabbed_game := GameState.new()
+	tabbed_game.inventory = {"hay_bundle": 12, "bread": 3, "block": 5}
+	tabbed_game.grant_tool("scythe", 2)
+	tabbed_game.grant_tool("bomb", 1)
+	tabbed_game.grant_tool("rake", 1)
+
+	var tab_inv := InventoryScreen.new()
+	root.add_child(tab_inv)
+	tab_inv.setup(tabbed_game)
+	await process_frame
+	tab_inv.open()
+
+	# Tab set — exactly All / Resources / Tools, in order, and the buttons are registered.
+	_check(tab_inv.tab_ids() == ["all", "resources", "tools"],
+		"tab_ids() == [all, resources, tools] (Items omitted — no port item kind)")
+	_check(tab_inv._tab_buttons.has("all") and tab_inv._tab_buttons.has("resources")
+		and tab_inv._tab_buttons.has("tools"), "_tab_buttons has all three tab buttons")
+	_check(tab_inv._tab == "all", "default tab is 'all'")
+
+	# Owned tools — the Tools tab data. owned_tool_ids lists every charged tool in
+	# ToolConfig order (scythe, bomb, rake all granted above).
+	var owned: Array = tab_inv.owned_tool_ids()
+	_check(owned.has("scythe") and owned.has("bomb") and owned.has("rake"),
+		"owned_tool_ids() lists the granted scythe/bomb/rake")
+	_check(owned.size() == 3, "owned_tool_ids() == 3 owned tools")
+	_check(tabbed_game.tool_count("scythe") == 2, "scythe charges == 2 (granted)")
+
+	# Switching to the Tools tab filters the body to tools only — visible_tool_ids drives it.
+	tab_inv.set_tab("tools")
+	_check(tab_inv._tab == "tools", "set_tab('tools') switched the active tab")
+	_check(tab_inv.visible_tool_ids().size() == 3, "Tools tab shows all 3 owned tools (no query)")
+	# The body rendered tool rows (header + 3 rows + rule + subline → > 3 children).
+	_check(tab_inv._body.get_child_count() > 3, "Tools tab populated the body with tool rows")
+
+	# Search filters WITHIN the active (Tools) tab — by name, so "bomb" leaves only Bomb.
+	tab_inv._on_search_changed("bomb")
+	_check(tab_inv.visible_tool_ids() == ["bomb"], "search 'bomb' filters Tools to [bomb]")
+	# A name-substring that no tool matches yields an empty set (and the no-match hint).
+	tab_inv._on_search_changed("zzz")
+	_check(tab_inv.visible_tool_ids().is_empty(), "search 'zzz' filters Tools to empty")
+	tab_inv._on_search_changed("")   # clear the query
+
+	# The Resources tab filters tools OUT (resource ledger only) and search filters within it.
+	tab_inv.set_tab("resources")
+	_check(tab_inv._tab == "resources", "set_tab('resources') switched the active tab")
+	tab_inv._on_search_changed("bread")
+	# group_of(bread) == Refined; the Refined group survives, Farm/Mine are filtered away.
+	_check(tab_inv._apply_query(["hay_bundle", "bread", "block"]) == ["bread"],
+		"search 'bread' filters resources to [bread] within Resources tab")
+	tab_inv._on_search_changed("")
+
+	# The All tab includes BOTH resources and tools — visible_tool_ids still non-empty there.
+	tab_inv.set_tab("all")
+	_check(tab_inv.visible_tool_ids().size() == 3, "All tab includes the 3 owned tools")
+	_check(tab_inv.kinds() == 3, "All tab resource ledger still counts 3 resource kinds")
+
+	# A game with NO tools — the Tools tab shows its empty state (no rows), not a crash.
+	var no_tools_game := GameState.new()
+	no_tools_game.inventory = {"flour": 4}
+	var nt_inv := InventoryScreen.new()
+	root.add_child(nt_inv)
+	nt_inv.setup(no_tools_game)
+	await process_frame
+	_check(nt_inv.owned_tool_ids().is_empty(), "no-tools game: owned_tool_ids() empty")
+	nt_inv.set_tab("tools")
+	_check(nt_inv._body.get_child_count() == 1, "no-tools Tools tab renders a single empty-state line")
+
 	# ── 2. Empty inventory — zeroed ledger + a non-erroring refresh ────────────
 	var empty_game := GameState.new()
 	var empty_inv := InventoryScreen.new()
