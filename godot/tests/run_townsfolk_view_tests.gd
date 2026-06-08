@@ -140,6 +140,26 @@ func _initialize() -> void:
 		_check(_find_label_with(wren_card, "1.00") != null,
 			"wren card contains multiplier '1.00' (Warm band)")
 
+	# ── Tabs: Workers (default, the roster) | Quests (the active quest board) ──────
+	_check(screen._tab_buttons.has("workers") and screen._tab_buttons.has("quests"),
+		"_tab_buttons has both 'workers' and 'quests'")
+	_check(screen._tab == "workers", "default tab is 'workers' (the roster)")
+
+	# Switch to the Quests tab — ensure_quests rolls the board, a card per quest, the header
+	# reads "N quests", and the NPC roster cards are gone from _cards.
+	screen._on_tab("quests")
+	_check(screen._tab == "quests", "_on_tab('quests') switches tab")
+	game.ensure_quests()
+	var quest_n: int = game.quests.size()
+	_check(quest_n > 0, "Quests tab rolled a non-empty quest board")
+	_check(screen._header_label.text == "%d quests" % quest_n, "Quests header reads 'N quests'")
+	_check(not screen._cards.has("mira"), "NPC cards cleared on the Quests tab")
+
+	# Switch back — the roster re-renders into _cards.
+	screen._on_tab("workers")
+	_check(screen._tab == "workers", "_on_tab('workers') restores the roster")
+	_check(screen._cards.has("mira") and screen._cards.has("bram"), "roster re-rendered after returning")
+
 	# Pressing Close fires `closed` and hides the modal.
 	var before_closed := _closed_count
 	_check(_press(screen, "close"), "pressed close button")
