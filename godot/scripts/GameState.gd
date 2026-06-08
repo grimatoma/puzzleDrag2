@@ -489,6 +489,14 @@ var pending_tool: String:
 	set(value):
 		tool_state.pending = value
 
+## fill_bias transient state (NOT persisted — a save/reload simply clears the bias). The
+## fill_bias tools (fertilizer/bird_feed/sapling) ARM a transient spawn bias that
+## active_tile_pool() reads: while armed it DOUBLES the target tile's already-eligible
+## slots so the NEXT farm fills favour it (faithful to the web's pool-doubling). Deliberately
+## absent from to_dict/from_dict — a per-session transient, exactly like pending_tool above.
+var fill_bias_target: int = Constants.EMPTY   ## armed bias target Tile, EMPTY when off
+var fill_bias_turns: int = 0                  ## remaining biased farm turns
+
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
 ## (src/features/achievements/data.ts), now lives in a composed AchievementState (the same
@@ -1186,6 +1194,11 @@ func note_farm_turn() -> Dictionary:
 	# under the pre-increment season).
 	var season: String = current_season_name()
 	farm_turns_used += 1
+	# fill_bias countdown: a biased farm turn was just spent; expire the bias when it runs out.
+	if fill_bias_turns > 0:
+		fill_bias_turns -= 1
+		if fill_bias_turns <= 0:
+			fill_bias_target = Constants.EMPTY
 	var harvest: bool = false
 	# `budget > 0` guard: a non-positive budget (corrupt save / test edge) is treated as
 	# "always Spring" (see Constants.season_index) and never harvests.
@@ -1539,6 +1552,17 @@ func active_tile_pool() -> Array:
 	if rats_enabled():
 		for _i in Constants.RAT_POOL_SLOTS:
 			pool.append(Constants.Tile.RAT)
+	# Fill bias: while armed, DOUBLE the target tile's slots already in the pool so the next
+	# fills favour it (faithful to the web's pool-doubling). Only doubles a tile that is ALREADY
+	# eligible — never injects an off-zone tile (preserves zone restriction). Pure read; the
+	# countdown decrements in note_farm_turn.
+	if fill_bias_turns > 0 and fill_bias_target != Constants.EMPTY:
+		var extra: int = 0
+		for t in pool:
+			if int(t) == fill_bias_target:
+				extra += 1
+		for _i in extra:
+			pool.append(fill_bias_target)
 	# Safety net: every shipped season has a positive-weight eligible category, so the base
 	# pool is never empty today. Guard anyway so a future zone/season with an all-zero row can
 	# never hand BoardLogic.refill an empty pool (which would dead-lock the board).
@@ -1720,6 +1744,15 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		return {"ok": false, "reason": "unknown", "grid": grid, "collected": {}}
 	if not has_tool_charges(id):
 		return {"ok": false, "reason": "no_charges", "grid": grid, "collected": {}}
+	# fill_bias tools (fertilizer/bird_feed/sapling) don't touch the grid — they arm a
+	# spawn bias that active_tile_pool() reads. Handle here, before the grid-dispatch path.
+	if ToolConfig.power_id(id) == "fill_bias":
+		var p: Dictionary = ToolConfig.get_tool(id).get("params", {})
+		fill_bias_target = int(p.get("target", Constants.EMPTY))
+		fill_bias_turns = maxi(1, int(p.get("turns", 1)))
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
 	var is_tap: bool = ToolConfig.is_tap_target(id)
 	if is_tap and not BoardLogic.in_bounds(cell):
 		return {"ok": false, "reason": "needs_target", "grid": grid, "collected": {}}

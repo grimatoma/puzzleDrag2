@@ -73,6 +73,13 @@ const LOCKBOX: String = "rare"
 const RESHUFFLE_HORN: String = "shuffle"
 const CAT: String = "cat"
 const TERRIER: String = "terrier"
+# ── fill_bias board tools (Tools PR2b) — the FIRST tools to use the fill_bias power. These
+# never touch the grid: GameState.use_tool_on_grid intercepts power_id=="fill_bias" BEFORE the
+# grid dispatch and ARMS a transient spawn bias (target Tile + turns) that active_tile_pool()
+# reads. `target` is a literal Constants.Tile value; `turns` is the biased-farm-turn lifetime.
+const FERTILIZER: String = "fertilizer"
+const BIRD_FEED: String = "bird_feed"
+const SAPLING: String = "sapling"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -283,6 +290,36 @@ const TOOLS: Dictionary = {
 		"params": {"target": "rats"},
 		"tap_target": false,
 	},
+	# ── fill_bias tools (Tools PR2b) ───────────────────────────────────────────
+	# No apply_instant case exists for fill_bias (apply_instant would return {} and is never
+	# reached): GameState.use_tool_on_grid handles power_id=="fill_bias" in its EARLY path,
+	# arming the bias from these params and consuming a charge. `target` is a literal
+	# Constants.Tile; `turns` the biased-farm-turn lifetime. Each doubles its target's
+	# already-eligible farm-pool slots while armed (never injects an off-zone tile).
+	FERTILIZER: {
+		"label": "Fertilizer",
+		"power_id": "fill_bias",
+		# Bias the next fills toward wheat (the grain staple).
+		"params": {"target": Constants.Tile.WHEAT, "turns": 1},
+		"tap_target": false,
+	},
+	BIRD_FEED: {
+		"label": "Bird Feed",
+		"power_id": "fill_bias",
+		# Bias toward the base bird. The web biases toward its base bird tile (chicken); the
+		# port's base bird is PHEASANT (FARM_CATEGORY_TILE["birds"]), so PHEASANT is the
+		# faithful target — it IS base-eligible, so the bias actually doubles bird slots
+		# (chicken is an unseeded catalog variant that never reaches the farm board).
+		"params": {"target": Constants.Tile.PHEASANT, "turns": 1},
+		"tap_target": false,
+	},
+	SAPLING: {
+		"label": "Sapling",
+		"power_id": "fill_bias",
+		# Bias toward oak (the trees staple).
+		"params": {"target": Constants.Tile.OAK, "turns": 1},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -299,6 +336,8 @@ const TOOL_IDS: Array = [
 	IRON_PICK, COAL_HAMMER, GOLD_PICK, COAL_TRANSMUTER,
 	# Tools PR2 — new powers (transform_random_n / reshuffle_board / clear_hazard).
 	SEEDPACK, LOCKBOX, RESHUFFLE_HORN, CAT, TERRIER,
+	# Tools PR2b — fill_bias spawn-bias tools (fertilizer/bird_feed/sapling).
+	FERTILIZER, BIRD_FEED, SAPLING,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
