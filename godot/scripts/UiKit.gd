@@ -348,6 +348,36 @@ static func _contrast_text(bg: Color) -> Color:
 	var lum := 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
 	return Palette.INK if lum > 0.62 else Palette.PARCHMENT_SOFT
 
+# ── Segmented tab toggle ────────────────────────────────────────────────────────
+
+## Apply the React segmented-control look to one tab Button (src/ui/primitives/TabBar.tsx
+## parity): the ACTIVE segment is a SOLID accent fill (ember by default) with
+## contrast-picked text — a clear "you are here" — while INACTIVE segments are a flat
+## parchment-soft pill with muted ink text. Used for the small two/three-way toggles
+## (Achievements Trophies|Collection, Townsfolk Workers|Quests). Pair the buttons in a
+## tight HBox; call this on each whenever the active tab changes.
+static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, padding_v: int = 6) -> void:
+	if active:
+		var box := _action_box(accent, padding_v)
+		var txt := _contrast_text(accent)
+		btn.add_theme_stylebox_override("normal",  box)
+		btn.add_theme_stylebox_override("hover",   _action_box(accent.lightened(0.08), padding_v))
+		btn.add_theme_stylebox_override("pressed", box)
+		btn.add_theme_stylebox_override("focus",   box)
+		btn.add_theme_color_override("font_color",         txt)
+		btn.add_theme_color_override("font_hover_color",   txt)
+		btn.add_theme_color_override("font_pressed_color", txt)
+		btn.add_theme_color_override("font_focus_color",   txt)
+	else:
+		btn.add_theme_stylebox_override("normal",  btn_box(Palette.PARCHMENT_SOFT, padding_v))
+		btn.add_theme_stylebox_override("hover",   btn_box(Palette.PARCHMENT, padding_v))
+		btn.add_theme_stylebox_override("pressed", btn_box(Palette.DIM, padding_v))
+		btn.add_theme_stylebox_override("focus",   btn_box(Palette.PARCHMENT, padding_v))
+		btn.add_theme_color_override("font_color",         Palette.INK_MID)
+		btn.add_theme_color_override("font_hover_color",   Palette.INK)
+		btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+		btn.add_theme_color_override("font_focus_color",   Palette.INK_MID)
+
 # ── Scroll container ──────────────────────────────────────────────────────────
 
 ## Build a vertical-only scroll container with momentum / touch-drag scrolling

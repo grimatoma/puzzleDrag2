@@ -1839,6 +1839,15 @@ func achievement_progress(counter: String) -> int:
 		return int((_distinct_seen[counter] as Dictionary).size())
 	return int(achievement_counters.get(counter, 0))
 
+## The set of distinct keys seen so far for a DISTINCT counter, as a {key:String -> true}
+## Dictionary (a defensive copy; empty for a counter never bumped via the distinct path).
+## Read-only accessor over `_distinct_seen` so the AchievementsScreen Collection tab can
+## light the exact resources the player has actually chained — real discovery data, not a
+## fabricated lifetime count the port doesn't track. `distinct_resources_chained` is the
+## counter behind the resource codex.
+func distinct_seen(counter: String) -> Dictionary:
+	return (_distinct_seen.get(counter, {}) as Dictionary).duplicate()
+
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
 	return {
