@@ -23,7 +23,7 @@ signal cell_tapped(cell: Vector2i)
 ## whether they sit next to the live pearl. The Board stays decoupled from GameState (it has
 ## no pearl ref) — exactly like chain_resolved / cell_tapped report WHAT happened and let
 ## Main own the economy.
-signal pearl_chain(cells: Array)
+signal pearl_chain_resolved(cells: Array)
 
 # Chain-resolve animation timing. The pipeline CASCADES (pop → settle → refill) the
 # way the React/Phaser original does, rather than firing every tween at t=0: the chained
@@ -497,7 +497,7 @@ func _resolve(path: Array) -> void:
 	# the pearl on its final turn), so checking capture ahead of the tick is the right order.
 	if clear_pearl_on_fish_chain and length >= Constants.REQUIRED_FISH_IN_CHAIN \
 			and Constants.category_of(key) == "fish":
-		pearl_chain.emit(path.duplicate())
+		pearl_chain_resolved.emit(path.duplicate())
 
 	chain_resolved.emit(key, length)
 

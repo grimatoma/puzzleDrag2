@@ -28,7 +28,7 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
-signal view_charter   ## emitted by the "View Charter" button → Main routes to the Charter
+signal charter_requested   ## emitted by the "View Charter" button → Main routes to the Charter
 
 ## action id → Button, for headless tests. "close" + "charter" (View Charter).
 var _action_buttons: Dictionary = {}
@@ -209,7 +209,7 @@ func _build_shell() -> void:
 
 ## "View Charter" pressed — ask Main to route to the Charter screen.
 func _on_view_charter() -> void:
-	emit_signal("view_charter")
+	emit_signal("charter_requested")
 
 # ── render ────────────────────────────────────────────────────────────────────
 

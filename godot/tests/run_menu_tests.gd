@@ -86,10 +86,10 @@ func _initialize() -> void:
 	menu.setup(game)
 	await process_frame
 	menu.open()
-	menu.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
-	menu.connect("new_game", Callable(self, "_on_new_game"))
+	menu.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+	menu.connect("new_game_requested", Callable(self, "_on_new_game"))
 	menu.connect("closed", Callable(self, "_on_closed"))
-	menu.connect("navigate", Callable(self, "_on_navigate"))
+	menu.connect("navigation_requested", Callable(self, "_on_navigate"))
 
 	_check(menu.visible, "menu is visible after open()")
 	_check(menu._action_buttons.has("toggle_sound"), "_action_buttons has 'toggle_sound'")

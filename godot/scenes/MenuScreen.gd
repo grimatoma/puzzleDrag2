@@ -30,14 +30,14 @@ signal closed
 ## Emitted when the Sound button is pressed — Main flips game.audio_muted, mutes the
 ## Audio service, saves, and calls back refresh_sound_label() (this screen never flips
 ## the flag itself, so the toggle is booked in ONE place — mirrors TownScreen.shoo_rats).
-signal toggle_sound
+signal sound_toggle_requested
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
-signal new_game
+signal new_game_requested
 ## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
 ## screen to open (e.g. "achievements", "chronicle", "debug"). Main closes the menu and
 ## routes it through apply_deeplink — the SAME path the secondary screens used as left-strip
 ## HUD buttons before they moved into this menu. The menu never opens screens itself.
-signal navigate(deeplink_id: String)
+signal navigation_requested(deeplink_id: String)
 
 ## The "More" navigation entries — every secondary screen that used to be a left-strip HUD
 ## button, now reachable from the menu. Each row: {icon, label, id (a ViewRouter deep-link)}.
@@ -247,18 +247,18 @@ func _build_more_section(col: VBoxContainer) -> void:
 ## over the board, not over the (now-dismissed) menu.
 func _on_nav_pressed(id: String) -> void:
 	close()
-	emit_signal("navigate", id)
+	emit_signal("navigation_requested", id)
 
 # ── action handlers ───────────────────────────────────────────────────────────
 
 ## The Sound button — emit `toggle_sound` and let Main own the actual mute flip + save
 ## + label re-sync (the single accounting point). This screen never touches the flag.
 func _on_sound_pressed() -> void:
-	emit_signal("toggle_sound")
+	emit_signal("sound_toggle_requested")
 
 ## New Game — emit `new_game`; Main wipes the save + restarts the run.
 func _on_new_game_pressed() -> void:
-	emit_signal("new_game")
+	emit_signal("new_game_requested")
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 # Note: heading_font(), btn_box(), style_button() have moved to UiKit (M5a).

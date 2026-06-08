@@ -31,7 +31,7 @@ signal state_changed   ## emitted after any action mutates `game`
 ## M3h — the "Shoo rats" button emits this instead of clearing the board itself
 ## (this screen has no board ref). Main connects it, spends the charge, and clears
 ## the board (the single accounting point for a shoo-move).
-signal shoo_rats
+signal shoo_rats_requested
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
@@ -874,7 +874,7 @@ func _do_shoo_rats() -> void:
 	# charge, clears the board, and calls back refresh() so the count/button update.
 	if not game.can_shoo_rats():
 		return
-	emit_signal("shoo_rats")
+	emit_signal("shoo_rats_requested")
 
 ## Shared tail: emit state_changed when the action succeeded, then always
 ## re-render so disabled affordances reflect the new state.

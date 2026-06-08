@@ -282,7 +282,7 @@ func _ready() -> void:
 	board.cell_tapped.connect(_on_tool_target)
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
 	# can ask GameState.capture_pearl_if_adjacent whether they sit next to the live pearl.
-	board.pearl_chain.connect(_on_pearl_chain)
+	board.pearl_chain_resolved.connect(_on_pearl_chain)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
@@ -1386,7 +1386,7 @@ func _open_town() -> void:
 		_town_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 		# M3h: the Town screen's "Shoo rats" button has no board ref, so it emits
 		# `shoo_rats` and Main does the actual clear (spending the charge in ONE place).
-		_town_screen.connect("shoo_rats", Callable(self, "_on_shoo_rats"))
+		_town_screen.connect("shoo_rats_requested", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
 	# The TownScreen (build / refine / market / orders) is the "Craft" tab's target.
@@ -1410,12 +1410,12 @@ func _open_menu() -> void:
 		add_child(_menu_screen)
 		_menu_screen.setup(game)
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
-		_menu_screen.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
-		_menu_screen.connect("new_game", Callable(self, "_on_new_game"))
+		_menu_screen.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+		_menu_screen.connect("new_game_requested", Callable(self, "_on_new_game"))
 		# The "More" section's nav buttons route the secondary screens (achievements,
 		# chronicle, castle, …) through the SAME deep-link path the old left-strip buttons
 		# used — the menu emits navigate(id), Main opens it via apply_deeplink.
-		_menu_screen.connect("navigate", Callable(self, "_on_menu_navigate"))
+		_menu_screen.connect("navigation_requested", Callable(self, "_on_menu_navigate"))
 	_menu_screen.open()
 	_router.open_modal(ViewRouter.Modal.MENU)
 
@@ -1533,7 +1533,7 @@ func _open_chronicle() -> void:
 		add_child(_chronicle_screen)
 		_chronicle_screen.setup(game)
 		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
-		_chronicle_screen.connect("view_charter", Callable(self, "_on_chronicle_view_charter"))
+		_chronicle_screen.connect("charter_requested", Callable(self, "_on_chronicle_view_charter"))
 	_chronicle_screen.open()
 	_router.open_modal(ViewRouter.Modal.CHRONICLE)
 

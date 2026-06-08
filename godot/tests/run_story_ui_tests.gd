@@ -160,7 +160,7 @@ func _initialize() -> void:
 	# The "View Charter" button exists and emits `view_charter` when pressed.
 	_check(chronicle._action_buttons.has("charter"), "chronicle has a 'View Charter' button")
 	var charter_emitted := [false]
-	chronicle.connect("view_charter", func(): charter_emitted[0] = true)
+	chronicle.connect("charter_requested", func(): charter_emitted[0] = true)
 	chronicle._action_buttons["charter"].emit_signal("pressed")
 	_check(charter_emitted[0], "'View Charter' button emits view_charter")
 
