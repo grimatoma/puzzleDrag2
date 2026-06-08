@@ -40,44 +40,42 @@ var orders: Array = []
 var rng := RandomNumberGenerator.new()
 
 # ── NPC roster + bonding (ADDITIVE — ported from src/features/npcs) ────────────
-## The 5-NPC roster and per-NPC bond (a float in [0, 10]). Every order is REQUESTED
-## by an NPC (generate_order picks one via the seeded `rng`); filling it pays a
+## The 5-NPC roster and per-NPC bond (a float in [0, 10]) now live in a composed
+## NpcState (the same pattern as `settlement` / `story`). Every order is REQUESTED by
+## an NPC (generate_order picks one via the seeded `rng`); filling it pays a
 ## bond-ADJUSTED reward (NpcConfig.reward_with_bond) and raises that NPC's bond by
-## BOND_GAIN_PER_FILL. The default bond is 5.0 (Warm, ×1.00), so a fresh order's
-## payout is IDENTICAL to the pre-bonding flat reward until a bond crosses into
-## Liked (≥7) or Sour (<5) — keeping this layer additive (the orders economy stays
-## green at the default bond). Roster = NpcConfig.all_ids(); bonds map id → float.
-## Persisted in to_dict / from_dict (defensive defaults for old saves).
-var npcs: Dictionary = {
-	"roster": NpcConfig.all_ids(),
-	"bonds": _default_bonds(),
-}
-## Bond gained each time an order from that NPC is filled (+0.3 per React bond.ts).
-const BOND_GAIN_PER_FILL: float = 0.3
-## Fallback NPC for an old save's order missing its `npc` field (defensive).
-const DEFAULT_ORDER_NPC: String = "wren"
+## BOND_GAIN_PER_FILL. The default bond is 5.0 (Warm, ×1.00), so a fresh order's payout
+## is IDENTICAL to the pre-bonding flat reward until a bond crosses into Liked (≥7) or
+## Sour (<5) — keeping this layer additive. Persisted as the flat top-level "npcs" key
+## (see to_dict / from_dict), byte-identical to before the extraction.
+var npcs_state := NpcState.new()
+## Bond gained each time an order from that NPC is filled (+0.3). Forwarded from
+## NpcState so `GameState.BOND_GAIN_PER_FILL` keeps resolving for callers.
+const BOND_GAIN_PER_FILL: float = NpcState.BOND_GAIN_PER_FILL
+## Fallback NPC for an old save's order missing its `npc` field (defensive). Forwarded
+## from NpcState so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
+const DEFAULT_ORDER_NPC: String = NpcState.DEFAULT_ORDER_NPC
 
-## Build the starting bonds map: every roster NPC at the Warm default (5.0).
-static func _default_bonds() -> Dictionary:
-	var out: Dictionary = {}
-	for id in NpcConfig.all_ids():
-		out[id] = 5.0
-	return out
+## The legacy flat {"roster": …, "bonds": …} view onto the composed NpcState — a LIVE
+## reference (NOT a copy), so the many readers that index `game.npcs["roster"]` /
+## mutate `game.npcs["bonds"] = …` keep working unchanged. Read-only property (no
+## setter): from_dict rebuilds the NpcState directly, and no caller reassigns `game.npcs`
+## wholesale (verified across the codebase) — they only read or mutate the returned dict.
+var npcs: Dictionary:
+	get:
+		return npcs_state.as_dict()
 
-## Current bond for `id` (0..10 float). A missing/unknown id reads as the Warm
-## default 5.0 so reward math never divides by a phantom band.
+## Current bond for `id` (0..10 float). Thin forwarder to NpcState.bond — a missing /
+## unknown id reads as the Warm default 5.0 so reward math never divides by a phantom
+## band. Call site (`game.npc_bond(id)`) is UNCHANGED.
 func npc_bond(id: String) -> float:
-	var bonds: Dictionary = npcs.get("bonds", {})
-	return float(bonds.get(id, 5.0))
+	return npcs_state.bond(id)
 
-## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. No-op for
-## an id not in the bonds map's keys EXCEPT it will seed a known roster id at the
-## default first. Stores a float.
+## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. Thin forwarder
+## to NpcState.gain — seeds a known id at the default first; stores a float. Call site
+## (`game.gain_bond(id, amt)`) is UNCHANGED.
 func gain_bond(id: String, amount: float) -> void:
-	var bonds: Dictionary = npcs.get("bonds", {})
-	var current: float = float(bonds.get(id, 5.0))
-	bonds[id] = clampf(current + amount, 0.0, 10.0)
-	npcs["bonds"] = bonds
+	npcs_state.gain(id, amount)
 
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
 ## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
@@ -998,7 +996,7 @@ func generate_order() -> Dictionary:
 	# alongside the unchanged `reward` field. `reward` STAYS the base so any
 	# order["reward"] reader is unaffected; fill_order computes the bond-adjusted
 	# PAYOUT from `base_reward` at fill time.
-	var roster: Array = npcs.get("roster", NpcConfig.all_ids())
+	var roster: Array = npcs_state.roster
 	if roster.is_empty():
 		roster = NpcConfig.all_ids()
 	var npc: String = String(roster[rng.randi_range(0, roster.size() - 1)])
@@ -2040,11 +2038,13 @@ func to_dict() -> Dictionary:
 		"settlement": settlement.to_dict(),
 		"buildings": buildings.duplicate(),
 		"orders": orders.duplicate(true),
-		# NPC bonding (ADDITIVE): the roster + per-NPC bonds (floats). Deep-copied so
-		# the snapshot is independent. Orders themselves carry their `npc`/`base_reward`
-		# inside the `orders` array above. SAVE_VERSION is NOT bumped — a save written
-		# before npcs existed loads the default roster/bonds (from_dict defensive default).
-		"npcs": npcs.duplicate(true),
+		# NPC bonding (ADDITIVE): the roster + per-NPC bonds (floats) from the composed
+		# NpcState, flattened back into the SAME top-level "npcs" key — a {roster, bonds}
+		# dict, deep-copied so the snapshot is independent. Byte-identical to the pre-split
+		# emission. Orders themselves carry their `npc`/`base_reward` inside the `orders`
+		# array above. SAVE_VERSION is NOT bumped — a save written before npcs existed loads
+		# the default roster/bonds (from_dict defensive default).
+		"npcs": npcs_state.to_dict(),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
 		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
@@ -2179,31 +2179,17 @@ static func from_dict(d: Dictionary) -> GameState:
 			if o_npc is String and NpcConfig.has(String(o_npc)):
 				rebuilt_order["npc"] = String(o_npc)
 			s.orders.append(rebuilt_order)
-	# Restore the NPC roster + bonds (ADDITIVE). Missing key (any save written before
-	# npcs existed) → the default roster (NpcConfig.all_ids) at the Warm default 5.0,
-	# so old saves load with neutral relationships. The roster keeps only REAL ids,
-	# de-duplicated; bonds keep only roster ids, coerced to float and clamped to
-	# [0, 10] (JSON yields floats; a corrupt out-of-range value can't break banding).
-	# Any roster id missing a saved bond defaults to 5.0. SAVE_VERSION is NOT bumped.
+	# Restore the NPC roster + bonds (ADDITIVE) into the composed NpcState from the SAME
+	# flat top-level "npcs" key. Missing key (any save written before npcs existed) →
+	# NpcState.from_dict({}) yields the default roster (NpcConfig.all_ids) at the Warm
+	# default 5.0, so old saves load with neutral relationships. The roster keeps only REAL
+	# ids, de-duplicated; bonds keep only roster ids, coerced to float and clamped to
+	# [0, 10] (a corrupt out-of-range value can't break banding); any roster id missing a
+	# saved bond defaults to 5.0 — all enforced inside NpcState.from_dict. SAVE_VERSION is
+	# NOT bumped.
 	var npcs_d: Variant = d.get("npcs", null)
 	if npcs_d is Dictionary:
-		var roster: Array = []
-		var raw_roster: Variant = npcs_d.get("roster", [])
-		if raw_roster is Array:
-			for rid in raw_roster:
-				var sid := String(rid)
-				if NpcConfig.has(sid) and not roster.has(sid):
-					roster.append(sid)
-		if roster.is_empty():
-			roster = NpcConfig.all_ids()
-		var bonds: Dictionary = {}
-		var raw_bonds: Variant = npcs_d.get("bonds", {})
-		for id in roster:
-			var v: float = 5.0
-			if raw_bonds is Dictionary and raw_bonds.has(id):
-				v = clampf(float(raw_bonds[id]), 0.0, 10.0)
-			bonds[id] = v
-		s.npcs = {"roster": roster, "bonds": bonds}
+		s.npcs_state = NpcState.from_dict(npcs_d)
 	# Restore the expedition state defensively (M3f / M3j). The biome must be one of the
 	# three known values (anything else falls back to "farm"); turns can't go negative;
 	# and a corrupt "mine"/"harbor"-with-no-turns save snaps back to the farm (turns 0)
