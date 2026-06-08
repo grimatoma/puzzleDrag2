@@ -105,6 +105,12 @@ var _pending_daily_claim: Dictionary = {}
 ## needs an --import pass to register it (mirrors DailyStreakModal / every other lazy modal).
 const HarvestModalScript := preload("res://scenes/HarvestModal.gd")
 var _harvest_modal                       ## CanvasLayer (HarvestModalScript), lazily created
+## Task C — "Start Farming" picker/confirm modal (the port's FARM/ENTER dialog). Opened from the
+## town-map farm-pad tap (and apply_deeplink "startfarming"/"farm"); on Start it calls
+## GameState.start_farm_run() and drops the player onto a fresh bounded board. Loaded via preload
+## (NO class_name) so the port never needs an --import pass to register it (mirrors every lazy modal).
+const StartFarmingModalScript := preload("res://scenes/StartFarmingModal.gd")
+var _startfarming_modal                  ## CanvasLayer (StartFarmingModalScript), lazily created
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way sink).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
 var _castle_screen: CastleScreenScript   ## lazily created
@@ -310,6 +316,22 @@ func _ready() -> void:
 	# both reflect the current farm season immediately (not just after the first chain).
 	_refresh_season_bar()
 	board.set_season(game.current_season_index())
+	# Task C — TOWN-IS-HOME launch gate (React's initial view:"town"). The puzzle board is only
+	# playable while a bounded farm RUN is live; with no run the player lives in the TOWN and the
+	# board is INERT.
+	#   • Run active (restored mid-run): the board is the playable surface → make it live and stay
+	#     on it (the season/board restore above already reflects the live run).
+	#   • No run: gate the board inert. THEN auto-open the town home — but ONLY for the real game
+	#     (windowed, dialogs enabled). Headless test runs (DisplayServer "headless") and the web
+	#     boot smoke (_dialogs_disabled) leave the board rendered-but-inert and do NOT auto-open
+	#     town, so the boot smoke + every Main-instantiating headless suite stay deterministic.
+	#     Placed BEFORE the tutorial/story/daily block so those auto-modals still layer on top.
+	if game.farm_run_active:
+		board.set_active(true)
+	else:
+		board.set_active(false)
+		if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
+			_open_townmap()
 	# Tutorial onboarding: show the 6-step welcome modal on FIRST LOAD (tutorial_seen=false).
 	# ORDERING — the tutorial is shown FIRST (layer 6, above StoryModal's layer 5) so it
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
@@ -463,6 +485,7 @@ func _install_overlay_dismiss(overlay) -> void:
 func _close_top_overlay() -> bool:
 	var overlays := [
 		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
+		_startfarming_modal,
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
@@ -642,6 +665,9 @@ func _open_townmap() -> void:
 		# is gone now it's a primary nav VIEW). Route it through the same board-return path as
 		# the deep-link: hide the view + clear the nav.
 		_townmap_screen.connect("board_requested", Callable(self, "_on_townmap_board_requested"))
+		# Task C: tapping the farm board pad opens the "Start Farming" picker (the FARM/ENTER
+		# dialog) — the player's entry point into a bounded run from the town home.
+		_townmap_screen.connect("start_farming_requested", Callable(self, "_open_startfarming"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
@@ -1028,12 +1054,110 @@ func _open_harvest(summary: Dictionary) -> void:
 		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
 	_harvest_modal.open_for(summary)
 
+## Task C — open the harvest modal in RUN-END mode (a bounded run reached its budget), lazily
+## creating + wiring it on first use (mirrors _open_harvest). The "Return to Town" CTA emits
+## return_to_town → _on_season_return; we connect that signal ONCE (guarded against the lazy-create
+## re-wiring it, and against a second run-end re-connecting) so close_season fires exactly once.
+func _open_harvest_run_end(summary: Dictionary) -> void:
+	if _harvest_modal == null:
+		_harvest_modal = HarvestModalScript.new()
+		add_child(_harvest_modal)
+		_harvest_modal.setup(game)
+		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
+	if not _harvest_modal.is_connected("return_to_town", Callable(self, "_on_season_return")):
+		_harvest_modal.connect("return_to_town", Callable(self, "_on_season_return"))
+	_harvest_modal.open_for_run_end(summary)
+
 ## The harvest modal was dismissed (Continue or backdrop/ESC). Hide it — there is nothing to
 ## persist (note_farm_turn already wrapped + saved the cycle in _on_chain_resolved) and no
 ## router modal id, so this is purely a hide (the board is already on the fresh Spring cycle).
 func _on_harvest_closed() -> void:
 	if _harvest_modal != null:
 		_harvest_modal.visible = false
+
+# ── Start Farming (Task C): open the picker, start the run, end the run ───────────
+
+## Open the "Start Farming" picker/confirm modal, lazily creating + wiring it on first use
+## (mirrors _open_leaveboard). The modal emits start_requested(selected, use_fertilizer) on Start
+## (→ _on_start_farming, which calls GameState.start_farm_run) and `closed` on Cancel/dismiss
+## (→ _on_startfarming_closed). Opened from the town-map farm-pad tap + apply_deeplink.
+func _open_startfarming() -> void:
+	if _startfarming_modal == null:
+		_startfarming_modal = StartFarmingModalScript.new()
+		add_child(_startfarming_modal)
+		_startfarming_modal.setup(game)
+		_startfarming_modal.connect("start_requested", Callable(self, "_on_start_farming"))
+		_startfarming_modal.connect("closed", Callable(self, "_on_startfarming_closed"))
+	_startfarming_modal.open()
+	_router.open_modal(ViewRouter.Modal.STARTFARMING)
+
+## The picker was dismissed (Cancel / backdrop / ESC). Hide it + reset the router. No special-case:
+## a Start press routes through _on_start_farming (which navigates), then the modal's own close()
+## also fires `closed` → here; resetting the router to NONE is harmless because _on_start_farming
+## already re-routed to the board via apply_deeplink("board").
+func _on_startfarming_closed() -> void:
+	if _startfarming_modal != null:
+		_startfarming_modal.visible = false
+	if _router.current_modal() == ViewRouter.Modal.STARTFARMING:
+		_router.close_modal()
+
+## The player confirmed Start on the picker. Start the bounded run (GameState.start_farm_run); on
+## a guard failure surface a toast and bail (no mutation happened). On success the run is live, so
+## drop the player onto a FRESH bounded board: close the town overlays + clear nav via the board
+## deep-link (which now lands on the board precisely BECAUSE farm_run_active is true), re-pool +
+## regenerate the board from the run's selection-biased pool, re-seed the season + boss bar, flip
+## the board active, refresh the run-aware HUD, and save.
+func _on_start_farming(selected: Array, use_fertilizer: bool) -> void:
+	var res: Dictionary = game.start_farm_run(selected, use_fertilizer)
+	if not bool(res.get("ok", false)):
+		show_toast(_start_farm_fail_text(String(res.get("reason", ""))))
+		return
+	# Run is now active → hide town overlays + clear nav (the board gate in apply_deeplink lets the
+	# board through because farm_run_active is true now). This also closes the picker overlay.
+	apply_deeplink("board")
+	board.set_tile_pool(game.active_tile_pool())
+	board.setup_new_board()
+	board.set_season(game.current_season_index())
+	board.set_min_chain(game.boss_min_chain())
+	board.set_active(true)
+	_refresh_season_bar()
+	_refresh_totals()
+	_refresh_meta()
+	_refresh_chain_progress()
+	SaveManager.save(game)
+
+## Map a start_farm_run failure reason to a player-facing toast string.
+func _start_farm_fail_text(reason: String) -> String:
+	match reason:
+		"no_coins":
+			return "Not enough coin to start."
+		"no_fertilizer":
+			return "No fertilizer on hand."
+		"already_running":
+			return "A farm run is already underway."
+		_:
+			return "Cannot start a run right now."
+
+## Task C — the bounded run ENDED (the run-end HarvestModal's "Return to Town" CTA fired). Close
+## the season in GameState (grants the +25 return bonus, decays bonds, rerolls quests, clears the
+## run + resets a fresh Spring on the farm board), make the board INERT again (town is home), re-
+## pool + regenerate the board, re-seed the season, refresh every run-aware surface, save, then
+## reopen the town. A confirming toast reports the return bonus.
+func _on_season_return() -> void:
+	var summary: Dictionary = game.close_season()
+	board.set_active(false)
+	board.set_tile_pool(game.active_tile_pool())
+	board.setup_new_board()
+	board.set_season(game.current_season_index())
+	_refresh_totals()
+	_refresh_meta()
+	_refresh_orders()
+	_refresh_season_bar()
+	_refresh_chain_progress()
+	SaveManager.save(game)
+	_open_townmap()
+	if _toast != null:
+		_toast.show_toast("Harvest complete — +%d 🪙 return bonus." % int(summary.get("coins_granted", 0)))
 
 # ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
 
@@ -1212,10 +1336,24 @@ func apply_deeplink(id: String) -> bool:
 			_router.open_modal(ViewRouter.Modal.LEAVEBOARD)
 		ViewRouter.Modal.DEBUG:
 			_open_debug()
+		ViewRouter.Modal.STARTFARMING:
+			_open_startfarming()
 		_:
 			# NONE / board — close whatever is open. We're returning to the board, so
 			# clear the bottom-nav active-tab marker (several screens below are hidden
 			# inline here without routing through their _on_*_closed handler).
+			# Task C — board RUN-GATE: the board is only reachable while a bounded farm run is
+			# live (town is home). With NO active run, redirect to the town home instead of
+			# landing on an inert board (mirrors React's view gate). _on_start_farming calls
+			# apply_deeplink("board") only AFTER start_farm_run set farm_run_active = true, so
+			# that path correctly falls through to the board below.
+			if game != null and not game.farm_run_active:
+				board.set_active(false)
+				_open_townmap()
+				return true
+			# A run IS active → the board is reachable; keep the existing hide-all-overlays
+			# behaviour and make the board live.
+			board.set_active(true)
 			_hud._clear_nav()
 			if _town_screen != null and _town_screen.visible:
 				_town_screen.visible = false
@@ -1586,10 +1724,19 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		# A2 — the season may have turned: re-tint the board field + slide the season-bar wagon.
 		board.set_season(game.current_season_index())
 		_refresh_season_bar()
-		if bool(farm_res.get("harvest", false)):
-			# A2 — a full year wrapped: surface the parchment harvest season-summary modal
-			# (informational only — the fresh Spring cycle has already begun in state). Keep a
-			# brief status note too so the feedback line still reads on the board behind it.
+		if bool(farm_res.get("ended", false)):
+			# Task C — the bounded RUN reached its budget: surface the run-end HarvestModal in
+			# "Return to Town" mode. Its CTA emits return_to_town → _on_season_return (close_season
+			# + back to town). This REPLACES the legacy informational path for a bounded run (the
+			# board is gated, so an always-on harvest wrap below is essentially unreachable now).
+			_status_label.text = "Harvest! %s ends — the run is complete." % String(farm_res.get("season", ""))
+			if _audio != null:
+				_audio.play("fanfare")
+			_open_harvest_run_end(farm_res)
+		elif bool(farm_res.get("harvest", false)):
+			# A2 — a full year wrapped on the LEGACY always-on cycle (no bounded run): surface the
+			# informational harvest season-summary modal (the fresh Spring cycle has already begun
+			# in state). Kept for the no-run wrap; essentially unreachable now the board is gated.
 			_status_label.text = "Harvest! %s ends — a new year begins (Spring)." % String(farm_res.get("season", ""))
 			if _audio != null:
 				_audio.play("fanfare")

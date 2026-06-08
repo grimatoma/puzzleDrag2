@@ -42,6 +42,7 @@ func _run() -> void:
 	await _test_modal()
 	await _test_board_at_screen()
 	await _test_screen_signal()
+	await _test_main_wiring()
 
 # ── 1. StartFarmingModal ───────────────────────────────────────────────────────
 
@@ -163,3 +164,55 @@ func _test_screen_signal() -> void:
 
 	screen.queue_free()
 	await process_frame
+
+# ── 4. Main wiring (Task C): start a run → live board; end a run → back to town ─────────────
+
+## Drive the Task C Main orchestration through its handler methods (no real input events): a
+## successful _on_start_farming makes the board LIVE with a run active and lands on the board
+## (router NONE); a failed start surfaces no run; and _on_season_return ends the run, makes the
+## board INERT again, and reopens the town home.
+func _test_main_wiring() -> void:
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	_check(packed != null, "Main.tscn loads")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+	# Fresh headless launch → no run → the board is gated INERT (town-is-home; headless does NOT
+	# auto-open town, so the board is rendered-but-inert).
+	_check(not main.game.farm_run_active, "fresh launch: no farm run active")
+	_check(not main.board.active, "fresh launch (no run): board is INERT")
+
+	# A FAILED start (no coin) surfaces no run and leaves the board inert.
+	main.game.coins = 0
+	main._on_start_farming([], false)
+	await process_frame
+	_check(not main.game.farm_run_active, "start with 0 coins → no run started")
+	_check(not main.board.active, "failed start leaves the board inert")
+
+	# A SUCCESSFUL start → run active, board live, lands on the board (router NONE), picker closed.
+	main.game.coins = 50
+	main._on_start_farming(["trees"], false)
+	await process_frame
+	_check(main.game.farm_run_active, "successful start → farm_run_active")
+	_check(main.board.active, "successful start → board is LIVE")
+	_check(main._router.current_modal() == ViewRouter.Modal.NONE,
+		"successful start lands on the board (router NONE)")
+	_check(main._startfarming_modal == null or not main._startfarming_modal.visible,
+		"successful start closed the picker modal")
+	_check(main.game.coins == 0, "successful start charged the 50-coin entry cost")
+
+	# End the run via the run-end return path → close_season clears the run, board goes inert,
+	# the town home reopens, and the +25 return bonus landed.
+	var coins_before: int = main.game.coins
+	main._on_season_return()
+	await process_frame
+	_check(not main.game.farm_run_active, "_on_season_return cleared the run")
+	_check(not main.board.active, "_on_season_return made the board INERT (back to town)")
+	_check(main.game.coins == coins_before + 25, "_on_season_return granted the +25 return bonus")
+	_check(main._townmap_screen != null and main._townmap_screen.visible,
+		"_on_season_return reopened the town home (town map visible)")
+
+	main.queue_free()
+	await process_frame
+	SaveManager.clear()

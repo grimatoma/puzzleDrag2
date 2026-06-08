@@ -196,6 +196,10 @@ func _initialize() -> void:
 	var main = packed.instantiate()
 	root.add_child(main)
 	await process_frame
+	# Task C — board RUN-GATE: a board return (apply_deeplink('board')) only reaches the board
+	# while a bounded farm run is live (town is home). Mark a run active so this suite's close-via-
+	# board idiom hides the overlay + resets the router instead of redirecting to the town home.
+	main.game.farm_run_active = true
 
 	_check(main.has_method("_open_tutorial"), "Main has _open_tutorial()")
 	_check(main.has_method("_on_tutorial_finished"), "Main has _on_tutorial_finished()")
@@ -228,6 +232,9 @@ func _initialize() -> void:
 	var main2 = packed.instantiate()
 	root.add_child(main2)
 	await process_frame
+	# Task C — board RUN-GATE: mark a run active so apply_deeplink('board') reaches the board
+	# (hides the overlay + resets the router) instead of redirecting to the town home.
+	main2.game.farm_run_active = true
 	_check(main2._tutorial_modal == null or not main2._tutorial_modal.visible,
 		"tutorial modal NOT shown on load when tutorial_seen=true")
 

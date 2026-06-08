@@ -134,7 +134,10 @@ func _run() -> void:
 	_check(main._router.current_modal() == ViewRouter.Modal.TOWNMAP,
 		"_router.current_modal() == TOWNMAP after apply_deeplink('map')")
 
-	# apply_deeplink("board") closes it; router resets to NONE.
+	# Task C — board RUN-GATE: the board is only reachable while a bounded farm run is live (town
+	# is home). Mark a run active so apply_deeplink("board") reaches the board (hides the town map,
+	# resets the router to NONE) instead of redirecting back to the town home.
+	main.game.farm_run_active = true
 	var ok_board: bool = main.apply_deeplink("board")
 	_check(ok_board, "apply_deeplink('board') returns true")
 	_check(not main._townmap_screen.visible, "_townmap_screen hidden after apply_deeplink('board')")

@@ -672,6 +672,10 @@ func _test_screen_and_router_and_main() -> void:
 	var main = packed.instantiate()
 	root.add_child(main)
 	await process_frame
+	# Task C — board RUN-GATE: a board return (apply_deeplink('board')) only reaches the board
+	# while a bounded farm run is live (town is home). Mark a run active so this suite's close-via-
+	# board idiom hides the overlay + resets the router instead of redirecting to the town home.
+	main.game.farm_run_active = true
 
 	_check(main.has_method("_open_quests"), "Main has _open_quests()")
 	_check(main.has_method("_on_quests_closed"), "Main has _on_quests_closed()")

@@ -308,6 +308,10 @@ func _initialize() -> void:
 	var main = packed.instantiate()
 	root.add_child(main)
 	await process_frame
+	# Task C — board RUN-GATE: a board return (apply_deeplink('board')) only reaches the board
+	# while a bounded farm run is live (town is home). Mark a run active so this suite's clear-to-
+	# board + close-via-board idioms hide overlays + reset the router instead of redirecting to town.
+	main.game.farm_run_active = true
 	_check(main.has_method("_open_daily"), "Main has _open_daily()")
 	_check(main.has_method("_maybe_show_daily"), "Main has _maybe_show_daily()")
 	# Fresh launch fires login_tick for today → a fresh claim, so a pending daily claim exists,

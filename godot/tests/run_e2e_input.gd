@@ -234,6 +234,11 @@ func _label_in(node: Node, needle: String) -> bool:
 func _test_board_drag(main) -> void:
 	print("\n── Board drag (input → _unhandled_input → resolve) ──")
 	var board: Board = main.board
+	# Task C — the board is INPUT-GATED: a press only starts a drag while a bounded farm run is
+	# live (board.active). A fresh launch with no run leaves the board inert (town is home), so we
+	# arm the live-board precondition the player would reach by Starting Farming before driving the
+	# drag. This is the correct new precondition — without it the gate correctly suppresses the chain.
+	board.set_active(true)
 	# Seed a deterministic grid with a GUARANTEED legal horizontal 3-chain of GRASS on
 	# the top row (cells (0,0),(1,0),(2,0)). The rest is an alternating no-match filler
 	# so no accidental longer chain or dead board interferes.
