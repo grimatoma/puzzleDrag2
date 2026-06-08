@@ -1,5 +1,5 @@
 class_name StoryEngine
-extends Node
+extends RefCounted
 ## Story ENGINE (logic core) — pure static functions: the condition evaluator, the
 ## fact-snapshot builder, beat selection, and the beat/choice appliers. Ports the
 ## pure slice of src/state/storyEffects.ts + src/config/progression/conditions.ts +

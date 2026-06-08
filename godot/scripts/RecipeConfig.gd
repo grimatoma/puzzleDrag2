@@ -1,5 +1,5 @@
 class_name RecipeConfig
-extends Node
+extends RefCounted
 ## Refining recipes — the "raw goods refine at buildings" loop from the locked
 ## Direction spec. A recipe consumes raw inventory inputs at a STATION building
 ## (a BuildingConfig id) and produces a refined good. M3c ships one recipe: the
