@@ -24,6 +24,29 @@ const TOPBAR_RESERVE := 60
 ## nav shows through + stays tappable; floating overlay controls lift above it too.
 const NAV_RESERVE := 76
 
+## Max content width for full-bleed VIEW screens. Content FILLS below this; on wider
+## (desktop/foldable) windows it is capped + centred so rows/search bars don't stretch
+## edge-to-edge. Set to the portrait base width (720) so it NEVER bites the phone layout —
+## only wide windows get the centred column. The web caps line length the same way.
+const VIEW_MAX_WIDTH := 720
+
+## A full-width container that caps + centres its single child to `max_w` on wide viewports
+## (and fills on narrow ones). Godot Control has no native max-width, so this recomputes its
+## own left/right margins whenever it is resized. Add your content (the scroll/VBox) as its
+## child. Use this for full-bleed VIEW screens (NOT modals, which already centre a sized panel).
+static func make_width_cap(max_w: int = VIEW_MAX_WIDTH) -> MarginContainer:
+	var mc := MarginContainer.new()
+	mc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mc.set_meta("_cap_w", max_w)
+	mc.resized.connect(func() -> void:
+		var avail: float = mc.size.x
+		var side: int = int(maxf(0.0, (avail - float(mc.get_meta("_cap_w", VIEW_MAX_WIDTH))) / 2.0))
+		mc.add_theme_constant_override("margin_left", side)
+		mc.add_theme_constant_override("margin_right", side)
+	)
+	return mc
+
 # ── heading font ─────────────────────────────────────────────────────────────
 
 ## Cached Cinzel-Regular.ttf as a BOLD FontVariation.  Returns null when the
