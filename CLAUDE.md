@@ -8,6 +8,40 @@ Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Ai
 
 Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
 
+**Two implementations live in this repo.** Everything above (and most of this file) is the **React+Phaser app at the repo root** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain). A **second, parallel Godot 4.6 port lives under `godot/`** — a from-scratch GDScript reimplementation of the same game, built side-by-side during an in-progress migration. It is a **completely separate codebase**: different language (GDScript, not TS/JS), different engine, its own tests, its own CI (`.github/workflows/godot-ci.yml`), its own deploy target (`/puzzleDrag2/godot/`). None of the `src/` / Vite / `npm` guidance applies inside `godot/`, and vice-versa. **Before acting on a request, work out which implementation it targets** — if the user says "Godot", or the symptom is on a `.gd`/`.tscn` surface, it's the port (see the next section), not `src/`.
+
+## Godot port (`godot/`)
+
+A Godot **4.6** (GL Compatibility renderer, mobile-first **portrait** 720×1280) reimplementation of the game. Strategy + live status: `docs/godot-migration-plan.html` and `docs/godot-migration-progress.html`; orientation doc: `godot/README.md` (accurate on the asset pipeline + web nav; its file-layout list is stale — trust the tree). The Web export is deployed alongside the Phaser game at `/puzzleDrag2/godot/` by `.github/workflows/deploy.yml`.
+
+**Architecture (no autoloads).** State and services are plain `class_name`-registered scripts, owned and wired by the root scene — there is no `[autoload]` section in `project.godot`.
+- `scenes/Main.gd` + `Main.tscn` — the single root scene (`Node2D`). Owns `game: GameState`, the `Board`, a `ViewRouter`, the `Audio` service, and builds the HUD/screens in code. The whole game is essentially one scene with `*Screen.gd` / `*Modal.gd` panels swapped in.
+- `scripts/GameState.gd` — canonical run economy (inventory, fractional chain `progress` carry-over, coins, turn, `Settlement`). The GDScript analogue of the React reducer's `resourceProgress` accumulator. `RefCounted`, instantiable in tests.
+- `scripts/ViewRouter.gd` — pure nav state machine (`View`/`Modal` enums), no Node/signals. Mirrors React's `src/router.js`. On the **Web export only**, `Main.gd` syncs it to `location.hash` for Back/Forward + `#/<id>` deep links.
+- `scripts/*Config.gd` — the data layer (`Constants`, `RecipeConfig`, `BossConfig`, `CartographyConfig`, `TownConfig`, …): the GDScript counterpart of `src/constants.js` + the feature configs. `BoardLogic.gd` holds the pure board rules (chain validation, collapse, refill).
+- `scripts/UiKit.gd` — shared UI factory (buttons, scroll containers, scrollbar theming). `Palette.gd` is the color source.
+- `scenes/*.gd` — one script per board element / screen / modal (`Board.gd`, `Tile.gd`, `InventoryScreen.gd`, `TownScreen.gd`, …).
+
+**Tiles render in 3 tiers** (`scenes/Tile.gd`, newest wins): v2 animated `SpriteFrames` (`assets/tiles/v2/<key>.tres`) → v1 flat PNG (`assets/tiles/<key>.png`, exported from the Phaser runtime via `node tools/export-v1-tiles.mjs`) → procedural `Palette` color square. So a tile with no committed art still renders.
+
+**Touch / input gotcha (the one that bit us).** `project.godot` enables **both** `pointing/emulate_mouse_from_touch` **and** `pointing/emulate_touch_from_mouse` ("treat touch as mouse so one drag path serves both"). The cost: one physical drag arrives as **two** events — a real `InputEventScreenDrag` *and* a synthesized `InputEventMouseMotion`. Any handler that reacts to both will **double-count** the gesture. This is exactly the "scroll moves at 2× my finger" bug — fixed by routing drags through the mouse path only (`drag_with_touch = false` in `UiKit.make_vscroll()`, the single factory every list/modal scroll goes through). When adding new drag/gesture handling in the port, listen to **one** event type, not both.
+
+**Commands** (need a Godot 4.6.2 binary on PATH; not the `npm` toolchain):
+```bash
+godot --path godot --editor                                   # open the editor
+godot --path godot                                            # play (windowed)
+godot --headless --path godot --import                        # build .godot/ cache + class registry (run first)
+godot --headless --path godot --script res://tests/run_tests.gd   # one headless suite
+# legacy headless runners: every godot/tests/run_*.gd prints "N checks, M failure(s)", exits 0/1
+# gdUnit4 starter suites live in godot/test/*Test.gd (vendored addons/gdUnit4/)
+godot --headless --path godot --export-release "Web" dist/index.html   # Web export (needs templates)
+npm run test:godot-web                                         # headless-Chromium web-boot smoke (tests/godot-web/)
+```
+
+**Tests + CI.** Two harnesses: `godot/tests/run_*.gd` (≈50 hand-rolled headless runners, the comprehensive set) and `godot/test/*Test.gd` (gdUnit4). `.github/workflows/godot-ci.yml` (triggered on `godot/**`) runs both, validates the parity matrix, does a Web export + headless-Chromium boot smoke, and a best-effort render-smoke under xvfb. It is **separate from `ci.yml`** (the Phaser lint/typecheck/test/build), so the two stacks never block each other.
+
+**Visual evidence.** `godot/tools/*_capture.gd` / `screenshot.gd` render screens to PNGs headlessly; goldens live in `godot/tests/visual/__goldens__`. (The repo-root `npm run test:visual` Playwright suite is the **Phaser** app's, not the port's.)
+
 ## Where to look
 
 | Task | First stop | See also |

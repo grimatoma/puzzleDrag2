@@ -439,6 +439,16 @@ static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, pa
 static func make_vscroll() -> ScrollContainer:
 	var scroll := SmoothScrollContainer.new()
 	scroll.allow_horizontal_scroll = false
+	# Scroll at 1× finger speed, not 2×. project.godot sets BOTH
+	# pointing/emulate_mouse_from_touch AND pointing/emulate_touch_from_mouse, so one
+	# physical drag arrives as TWO events: the real InputEventScreenDrag plus a
+	# synthesized InputEventMouseMotion (emulated from the touch). The addon's input
+	# handler accumulates `event.relative` for BOTH (drag_with_touch and drag_with_mouse
+	# both default true), double-counting every drag — the content travels twice as far
+	# as the finger. The port treats touch as mouse (emulate_mouse_from_touch), so route
+	# drags through the mouse path ONLY: touch still scrolls via its emulated mouse
+	# motion, but each gesture is counted exactly once.
+	scroll.drag_with_touch = false
 	# The addon detects its scrollable content child in its own _ready() by grabbing the
 	# FIRST non-ScrollBar Control child — which can latch onto a stray (a decorative
 	# TextureRect, the addon's own stability Timer, a transient node) instead of the real
