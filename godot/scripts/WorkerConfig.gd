@@ -1,5 +1,5 @@
 class_name WorkerConfig
-extends Node
+extends RefCounted
 ## Workers — hired-by-type units whose passive abilities shave tiles off a chain
 ## (threshold_reduce_category) or stretch a recipe (recipe_input_reduce). Ported
 ## from the React workers slice (src/features/workers/data.ts + aggregate.ts) as a

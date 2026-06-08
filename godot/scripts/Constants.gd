@@ -1,5 +1,5 @@
 class_name Constants
-extends Node
+extends RefCounted
 ## Game constants — mirrors the relevant slice of src/constants.ts (PC2 baseline).
 ##
 ## M1 scope: board dimensions, the Farm starting tile set, upgrade thresholds,

@@ -31,7 +31,7 @@ signal state_changed   ## emitted after any action mutates `game`
 ## M3h — the "Shoo rats" button emits this instead of clearing the board itself
 ## (this screen has no board ref). Main connects it, spends the charge, and clears
 ## the board (the single accounting point for a shoo-move).
-signal shoo_rats
+signal rats_shoo_requested
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
@@ -693,7 +693,7 @@ func _build_rats_section() -> void:
 	# until then the section header sits over an empty body. Once enabled it shows a
 	# status line, Build/Demolish rows for the two Ratcatcher buildings (gated by
 	# can_build, which requires City + rats_enabled), and — when a Ratcatcher with
-	# charges is placed — a "Shoo rats" button that emits `shoo_rats` for Main to act on.
+	# charges is placed — a "Shoo rats" button that emits `rats_shoo_requested` for Main to act on.
 	if not game.rats_enabled():
 		return
 
@@ -734,7 +734,7 @@ func _build_rats_section() -> void:
 		_rats_body.add_child(row)
 
 	# A free-shoo button only when a Ratcatcher is placed with charges left. It does
-	# NOT spend the charge here — it emits `shoo_rats` and Main owns the single spend.
+	# NOT spend the charge here — it emits `rats_shoo_requested` and Main owns the single spend.
 	if game.can_shoo_rats():
 		var shoo_btn := Button.new()
 		shoo_btn.text = "Shoo rats (free move, %d left)" % game.ratcatcher_charges_left()
@@ -870,11 +870,11 @@ func _do_fire(id: String) -> void:
 
 func _do_shoo_rats() -> void:
 	# M3h — this screen has no board ref and must NOT spend the charge (Main owns the
-	# single spend). Just gate on availability and emit `shoo_rats`; Main spends the
+	# single spend). Just gate on availability and emit `rats_shoo_requested`; Main spends the
 	# charge, clears the board, and calls back refresh() so the count/button update.
 	if not game.can_shoo_rats():
 		return
-	emit_signal("shoo_rats")
+	emit_signal("rats_shoo_requested")
 
 ## Shared tail: emit state_changed when the action succeeded, then always
 ## re-render so disabled affordances reflect the new state.

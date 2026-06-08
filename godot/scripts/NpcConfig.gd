@@ -1,5 +1,5 @@
 class_name NpcConfig
-extends Node
+extends RefCounted
 ## NPC roster + bonding model — ported from the React npcs feature
 ## (src/features/npcs/data.ts + bond.ts and src/constants.ts NPCS). Pure data +
 ## stateless helpers: the 5-NPC roster and the 0–10 bond → reward-multiplier band

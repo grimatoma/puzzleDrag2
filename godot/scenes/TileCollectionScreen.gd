@@ -274,6 +274,9 @@ func _make_tile_card(tile_val: int) -> PanelContainer:
 	# ── Art: TextureRect (v1 PNG) or colored placeholder ──────────────────────
 	var art_path: String = "res://assets/tiles/%s.png" % key
 	if key != "" and ResourceLoader.exists(art_path):
+		# load() is ResourceLoader-cached (CACHE_MODE_REUSE), so rebuilding chips on every
+		# refresh reuses the already-loaded Texture2D instead of re-reading the PNG from disk.
+		# (Tile._texture_for is int-keyed by tile type, so it doesn't fit this string-key path.)
 		var tex := load(art_path) as Texture2D
 		var art := TextureRect.new()
 		art.texture = tex
