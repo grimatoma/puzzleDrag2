@@ -112,6 +112,34 @@ func _initialize() -> void:
 	_check(screen.row_progress(nat_entry) == 2,
 		"row_progress(naturalist) == 2 distinct (delegates to achievement_progress)")
 
+	# ── Tabs + Collection (Trophies | Collection segmented toggle) ─────────────
+	_check(screen._tab_buttons.has("trophies") and screen._tab_buttons.has("collection"),
+		"_tab_buttons has both 'trophies' and 'collection'")
+	_check(screen._tab == "trophies", "default tab is 'trophies'")
+
+	# GameState.distinct_seen exposes the chained-resource set the codex lights up.
+	var seen: Dictionary = game.distinct_seen("distinct_resources_chained")
+	_check(seen.has("flour") and seen.has("eggs"),
+		"distinct_seen('distinct_resources_chained') == {flour, eggs}")
+	_check(game.distinct_seen("nonexistent_counter").is_empty(),
+		"distinct_seen(unknown counter) is empty")
+
+	# The collection roster is non-empty and discovered_count counts only chained
+	# resources within it (flour is a farm-roster resource → at least 1 discovered).
+	_check(screen.collection_total() > 0, "collection_total() > 0 (roster has resources)")
+	_check(screen.discovered_count() >= 1 and screen.discovered_count() <= screen.collection_total(),
+		"discovered_count() in [1, total] (flour chained)")
+
+	# Switching to the Collection tab re-renders: _tab flips, the count line reads
+	# "N / M discovered", and switching back restores the trophy rows.
+	screen._on_tab("collection")
+	_check(screen._tab == "collection", "_on_tab('collection') sets _tab")
+	_check(screen._header_label.text == "%d / %d discovered" % [screen.discovered_count(), screen.collection_total()],
+		"collection header reads 'N / M discovered'")
+	screen._on_tab("trophies")
+	_check(screen._tab == "trophies", "_on_tab('trophies') restores trophies tab")
+	_check(screen._rows.size() == catalog_size, "trophy rows re-rendered after returning to trophies tab")
+
 	# Pressing Close fires `closed` and hides the modal.
 	var before_closed := _closed_count
 	_check(_press(screen, "close"), "pressed close button")

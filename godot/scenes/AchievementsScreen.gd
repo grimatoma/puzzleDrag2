@@ -44,6 +44,18 @@ var _header_label: Label
 ## test fetch a specific row (e.g. assert first_steps reads unlocked).
 var _rows: Dictionary = {}
 
+## Current tab: "trophies" (the catalog grid) | "collection" (the resource codex).
+## Trophies is the default so setup()+open() renders the trophy rows the view test
+## inspects via `_rows`.
+var _tab: String = "trophies"
+
+## "trophies" / "collection" → the segmented toggle Button. Built once in the shell.
+var _tab_buttons: Dictionary = {}
+
+# ── the two tabs (React parity: Trophies | Collection) ───────────────────────────
+const TAB_TROPHIES := "trophies"
+const TAB_COLLECTION := "collection"
+
 # ── grouping (by the AchievementConfig counter families, for readable sections) ─
 # Ordered [display name, Array of counters]. Any catalog counter not listed here lands
 # in the trailing "More" group so the screen NEVER silently drops a trophy.
@@ -162,13 +174,39 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
-	# Header line — "N / total unlocked" (gold), rebuilt each refresh().
+	# Tab row: a Trophies | Collection segmented toggle on the left, with the
+	# "N / M unlocked" (or "discovered") count pushed to the right — mirroring React's
+	# FeaturePanel.Tabs row (the count sits on `ml-auto`).
+	var tab_row := HBoxContainer.new()
+	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_row.add_theme_constant_override("separation", 6)
+	root_vbox.add_child(tab_row)
+
+	var trophies_btn := Button.new()
+	trophies_btn.text = "Trophies"
+	trophies_btn.add_theme_font_size_override("font_size", 16)
+	trophies_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_TROPHIES))
+	tab_row.add_child(trophies_btn)
+	_tab_buttons[TAB_TROPHIES] = trophies_btn
+
+	var collection_btn := Button.new()
+	collection_btn.text = "Collection"
+	collection_btn.add_theme_font_size_override("font_size", 16)
+	collection_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_COLLECTION))
+	tab_row.add_child(collection_btn)
+	_tab_buttons[TAB_COLLECTION] = collection_btn
+
+	# Count line — "N / M unlocked" or "N / M discovered" (gold), rebuilt each refresh().
+	# Right-aligned via an expanding spacer label.
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	_header_label.add_theme_font_size_override("font_size", 15)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
+	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root_vbox.add_child(_header_label)
+	tab_row.add_child(_header_label)
 
 	var scroll := UiKit.make_vscroll()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -185,12 +223,13 @@ func _build_shell() -> void:
 
 # ── render ────────────────────────────────────────────────────────────────────
 
-## Clear the body and repopulate it from AchievementConfig.all(): the header count
-## line, then an ordered section (sub-heading + a row per achievement) for each
-## non-empty group. Every catalog entry gets exactly one row (tracked in `_rows`).
+## Clear the body and repopulate it for the current tab. Trophies renders the catalog
+## as 2-column grids of compact cards grouped by family (every entry tracked in `_rows`);
+## Collection renders the resource discovery codex. The count line reflects the tab.
 func refresh() -> void:
 	if not _built or game == null:
 		return
+	_sync_tabs()
 	# Detach + free the previous body content. The screen is read-only (only Close
 	# acts, and that hides), so a plain queue_free is safe — we never refresh mid-emit.
 	for child in _body.get_children():
@@ -198,8 +237,16 @@ func refresh() -> void:
 		child.queue_free()
 	_rows.clear()
 
-	_header_label.text = "%d / %d unlocked" % [unlocked_count(), total_count()]
+	if _tab == TAB_COLLECTION:
+		_header_label.text = "%d / %d discovered" % [discovered_count(), collection_total()]
+		_build_collection()
+	else:
+		_header_label.text = "%d / %d unlocked" % [unlocked_count(), total_count()]
+		_build_trophies()
 
+## TROPHIES tab — every non-empty group as a sub-heading + a 2-column grid of compact
+## cards. Every catalog entry gets exactly one card (tracked in `_rows`).
+func _build_trophies() -> void:
 	var grouped: Dictionary = _grouped_catalog()
 	# Render the known groups in order, then the trailing "More" catch-all.
 	for spec in GROUP_ORDER:
@@ -212,19 +259,25 @@ func refresh() -> void:
 	if not more.is_empty():
 		_build_group_section(GROUP_MORE, more)
 
-## Build one section: an iron hairline, an ember Cinzel sub-heading, then a trophy
-## row per entry (in catalog order).
-func _build_group_section(group_name: String, entries: Array) -> void:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.7)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	_body.add_child(rule)
+# ── tab switching ────────────────────────────────────────────────────────────
 
+func _on_tab(tab: String) -> void:
+	if tab == _tab:
+		return
+	_tab = tab
+	refresh()
+
+## Apply the segmented active/inactive look to the two toggle buttons.
+func _sync_tabs() -> void:
+	for key in _tab_buttons.keys():
+		UiKit.style_segment(_tab_buttons[key], String(key) == _tab)
+
+## Build one trophy section: an ember Cinzel sub-heading, then a 2-column GridContainer
+## of compact cards (in catalog order). Matches React's `grid grid-cols-2` per group.
+func _build_group_section(group_name: String, entries: Array) -> void:
 	var header := Label.new()
-	header.text = group_name
-	header.add_theme_font_size_override("font_size", 22)
+	header.text = group_name.to_upper()
+	header.add_theme_font_size_override("font_size", 16)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -232,86 +285,106 @@ func _build_group_section(group_name: String, entries: Array) -> void:
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(header)
 
-	for entry in entries:
-		var row := _make_trophy_row(entry as Dictionary)
-		_body.add_child(row)
-		_rows[String((entry as Dictionary).get("id", ""))] = row
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(grid)
 
-## A single trophy row: a soft-parchment chip holding a top line (icon + name +
-## reward) over the description + a progress bar with a current/threshold label.
-## Unlocked rows get a gold accent + a 🏆 icon; locked rows are muted with a 🔒 and
-## a dimmed bar.
-func _make_trophy_row(entry: Dictionary) -> PanelContainer:
+	for entry in entries:
+		var card := _make_trophy_card(entry as Dictionary)
+		grid.add_child(card)
+		_rows[String((entry as Dictionary).get("id", ""))] = card
+
+## A compact trophy CARD (2-column grid cell, React TrophyCard parity): icon + a
+## middle column (name + truncated desc + a thin progress bar with a current/threshold
+## count) + a right-aligned reward. Unlocked cards get a 🏆, a moss "done" accent + a
+## moss border; locked cards are muted with a 🔒, an ember reward and a soft iron border.
+func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 	var id: String = String(entry.get("id", ""))
 	var ach_name: String = String(entry.get("name", id))
 	var desc: String = String(entry.get("desc", ""))
-	var counter: String = String(entry.get("counter", ""))
 	var threshold: int = int(entry.get("threshold", 0))
 	var unlocked: bool = is_unlocked(id)
 	var current: int = row_progress(entry)
 
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
-	# Locked rows read dimmer overall (the whole chip is modulated down a touch).
-	if not unlocked:
-		chip.modulate = Color(1, 1, 1, 0.78)
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(0, 62)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_theme_stylebox_override("panel", _card_style(unlocked))
 
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 4)
-	chip.add_child(col)
-
-	# ── top line: icon + name (expands) + reward ──────────────────────────────
 	var top := HBoxContainer.new()
 	top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_theme_constant_override("separation", 8)
-	col.add_child(top)
+	top.add_theme_constant_override("separation", 7)
+	card.add_child(top)
 
+	# ── icon (trophy when unlocked, lock when not) ─────────────────────────────
 	var icon := Label.new()
 	icon.text = "🏆" if unlocked else "🔒"
-	icon.add_theme_font_size_override("font_size", 20)
+	icon.add_theme_font_size_override("font_size", 18)
+	icon.add_theme_color_override("font_color", Palette.GOLD if unlocked else COL_MUTED)
+	icon.custom_minimum_size = Vector2(22, 0)
+	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(icon)
 
+	# ── middle column: name+reward, desc, progress bar ─────────────────────────
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 2)
+	top.add_child(col)
+
+	var title_row := HBoxContainer.new()
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.add_theme_constant_override("separation", 4)
+	col.add_child(title_row)
+
 	var name_lbl := Label.new()
 	name_lbl.text = ach_name
-	name_lbl.add_theme_font_size_override("font_size", 19)
-	# Unlocked trophies get the gold accent; locked stay ink-muted.
-	name_lbl.add_theme_color_override("font_color", COL_VALUE if unlocked else COL_MUTED)
+	name_lbl.add_theme_font_size_override("font_size", 13)
+	name_lbl.add_theme_color_override("font_color", Palette.INK if unlocked else COL_MUTED)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.clip_text = true
+	name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_child(name_lbl)
+	title_row.add_child(name_lbl)
 
 	var reward_lbl := Label.new()
 	reward_lbl.text = _reward_text(entry.get("reward", {}))
-	reward_lbl.add_theme_font_size_override("font_size", 15)
-	reward_lbl.add_theme_color_override("font_color", COL_VALUE if unlocked else COL_MUTED)
+	reward_lbl.add_theme_font_size_override("font_size", 11)
+	reward_lbl.add_theme_color_override("font_color", Palette.MOSS if unlocked else Palette.EMBER)
+	reward_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
 	reward_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	reward_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_child(reward_lbl)
+	title_row.add_child(reward_lbl)
 
-	# ── description ───────────────────────────────────────────────────────────
+	# ── description (single line, ellipsised) ──────────────────────────────────
 	var desc_lbl := Label.new()
 	desc_lbl.text = desc
-	desc_lbl.add_theme_font_size_override("font_size", 14)
+	desc_lbl.add_theme_font_size_override("font_size", 11)
 	desc_lbl.add_theme_color_override("font_color", COL_MUTED)
-	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_lbl.clip_text = true
+	desc_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(desc_lbl)
 
-	# ── progress bar: a DIM track with a MOSS→GOLD fill + a "current/threshold"
-	#    label to its right. The fill is a child Control sized by the track resize. ─
+	# ── progress bar + current/threshold count ─────────────────────────────────
 	var bar_row := HBoxContainer.new()
 	bar_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar_row.add_theme_constant_override("separation", 8)
+	bar_row.add_theme_constant_override("separation", 6)
 	col.add_child(bar_row)
 
 	var track := Panel.new()
-	track.custom_minimum_size = Vector2(0, 12)
+	track.custom_minimum_size = Vector2(0, 7)
 	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -323,14 +396,11 @@ func _make_trophy_row(entry: Dictionary) -> PanelContainer:
 		ratio = clampf(float(current) / float(threshold), 0.0, 1.0)
 	var fill := Panel.new()
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Unlocked bars finish in gold; in-progress bars are moss.
-	var fill_col: Color = COL_VALUE if unlocked else Palette.MOSS
+	# Unlocked bars finish in moss (done); in-progress bars are gold.
+	var fill_col: Color = Palette.MOSS if unlocked else Palette.GOLD
 	fill.add_theme_stylebox_override("panel", UiKit.bar_box(fill_col, fill_col))
 	fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	track.add_child(fill)
-	# Size the fill once the track has a width: re-apply on every track resize so the
-	# proportion survives a viewport change. Seed an immediate size for the headless
-	# case where `resized` may not fire before a test inspects the tree.
 	track.resized.connect(func():
 		var w: float = maxf(0.0, track.size.x - 2.0)
 		fill.position = Vector2(1, 1)
@@ -339,12 +409,165 @@ func _make_trophy_row(entry: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d/%d" % [mini(current, threshold), threshold]
-	prog_lbl.add_theme_font_size_override("font_size", 13)
-	prog_lbl.add_theme_color_override("font_color", COL_BODY if unlocked else COL_MUTED)
-	prog_lbl.custom_minimum_size = Vector2(56, 0)
+	prog_lbl.add_theme_font_size_override("font_size", 10)
+	prog_lbl.add_theme_color_override("font_color", COL_MUTED)
+	prog_lbl.custom_minimum_size = Vector2(34, 0)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	prog_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_row.add_child(prog_lbl)
+
+	return card
+
+## Card StyleBox for a trophy cell: soft parchment fill, radius 10, snug padding. The
+## border reads the unlock state — moss-green when earned, soft iron when still locked.
+func _card_style(unlocked: bool) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.MOSS if unlocked else Color(Palette.IRON, 0.55)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	return sb
+
+# ── Collection tab (resource discovery codex — REAL distinct-chained data) ──────
+# A gallery of the farm + mine resources. A resource lights up (icon + name) once the
+# player has CHAINED it at least once (game.distinct_seen("distinct_resources_chained"));
+# undiscovered resources read as a muted "?" chip. This is real discovery data the port
+# already tracks for the Naturalist/Polymath trophies — no fabricated lifetime counts.
+
+## Resource keys produced by every tile in a pool, in first-seen order, de-duplicated and
+## skipping tiles that produce nothing (dirt / hazards).
+func _pool_resources(pool: Array) -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
+	for tile in pool:
+		var res: String = Constants.produced_resource(int(tile))
+		if res != "" and not seen.has(res):
+			seen[res] = true
+			out.append(res)
+	return out
+
+## The full collection roster (farm resources then mine resources), de-duplicated across
+## the two biomes so a resource shared by both is shown once under Farm.
+func _collection_roster() -> Dictionary:
+	var farm: Array = _pool_resources(Constants.FARM_POOL)
+	var mine: Array = []
+	var farm_set: Dictionary = {}
+	for r in farm:
+		farm_set[r] = true
+	for r in _pool_resources(Constants.MINE_POOL):
+		if not farm_set.has(r):
+			mine.append(r)
+	return {"farm": farm, "mine": mine}
+
+## How many distinct resources the player has chained (discovered).
+func discovered_count() -> int:
+	if game == null:
+		return 0
+	var roster: Dictionary = _collection_roster()
+	var discovered: Dictionary = game.distinct_seen("distinct_resources_chained")
+	var n: int = 0
+	for group in ["farm", "mine"]:
+		for res in (roster[group] as Array):
+			if discovered.has(res):
+				n += 1
+	return n
+
+## Total resources in the collection roster.
+func collection_total() -> int:
+	var roster: Dictionary = _collection_roster()
+	return (roster["farm"] as Array).size() + (roster["mine"] as Array).size()
+
+## Build the Collection tab body: a Farm section + a Mine section, each a wrapping row
+## of resource chips (discovered chips show the icon + name; undiscovered show "?").
+func _build_collection() -> void:
+	var roster: Dictionary = _collection_roster()
+	var discovered: Dictionary = game.distinct_seen("distinct_resources_chained")
+	for spec in [["Farm", roster["farm"]], ["Mine", roster["mine"]]]:
+		var group_name: String = String(spec[0])
+		var entries: Array = spec[1]
+		if entries.is_empty():
+			continue
+		var header := Label.new()
+		header.text = group_name.to_upper()
+		header.add_theme_font_size_override("font_size", 16)
+		header.add_theme_color_override("font_color", COL_HEADER)
+		var heading_font: Font = UiKit.heading_font()
+		if heading_font != null:
+			header.add_theme_font_override("font", heading_font)
+		header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_body.add_child(header)
+
+		var flow := HFlowContainer.new()
+		flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		flow.add_theme_constant_override("h_separation", 8)
+		flow.add_theme_constant_override("v_separation", 8)
+		flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_body.add_child(flow)
+		for res in entries:
+			flow.add_child(_make_resource_chip(String(res), discovered.has(res)))
+
+	# Footer — "Discovered N / M" (no fabricated lifetime total; the port doesn't track it).
+	var footer := Label.new()
+	footer.text = "Discovered %d / %d" % [discovered_count(), collection_total()]
+	footer.add_theme_font_size_override("font_size", 13)
+	footer.add_theme_color_override("font_color", COL_MUTED)
+	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(footer)
+
+## One resource chip: a small card with the resource icon (or a muted "?" when not yet
+## discovered) over its name (or "???"). Discovered chips read brighter with a moss border.
+func _make_resource_chip(res: String, discovered: bool) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.custom_minimum_size = Vector2(92, 104)
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT if discovered else Palette.DIM
+	sb.border_color = Palette.MOSS if discovered else Color(Palette.IRON, 0.5)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(12)
+	sb.set_content_margin_all(6)
+	chip.add_theme_stylebox_override("panel", sb)
+	if not discovered:
+		chip.modulate = Color(1, 1, 1, 0.7)
+
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 3)
+	chip.add_child(col)
+
+	var icon: Control = null
+	if discovered:
+		icon = UiKit.make_icon(res, 44)
+	if icon == null:
+		# No art (or undiscovered): a centered glyph — the resource initial when known,
+		# a "?" when not — so every chip has a visible mark.
+		var glyph := Label.new()
+		glyph.text = "?" if not discovered else UiKit.pretty_name(res).substr(0, 1)
+		glyph.add_theme_font_size_override("font_size", 26)
+		glyph.add_theme_color_override("font_color", COL_MUTED)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon = glyph
+	else:
+		(icon as Control).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(icon)
+
+	var name_lbl := Label.new()
+	name_lbl.text = UiKit.pretty_name(res) if discovered else "???"
+	name_lbl.add_theme_font_size_override("font_size", 10)
+	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else COL_MUTED)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.clip_text = true
+	name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_lbl)
 
 	return chip
 
