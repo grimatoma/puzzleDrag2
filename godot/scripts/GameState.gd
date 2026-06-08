@@ -1312,7 +1312,7 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 
 ## Keep only entries that are ELIGIBLE base-spawn categories for the home zone, capped at 8
 ## (React selectedTiles.slice(0, 8)). De-dup is NOT applied (React keeps the raw slice); the
-## active_tile_pool boost simply re-boosts a repeated category, which is harmless.
+## active_tile_pool boost simply re-boosts a repeated category, which harmlessly stacks the weight bias.
 func _sanitize_selection(arr: Array) -> Array:
 	var eligible: Array = ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE)
 	var out: Array = []
@@ -2457,22 +2457,37 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.farm_run_active = false
 		s.farm_run_used_fertilizer = false
 		s.farm_run_selected = []
-	# Farm season cycle (A1, ADDITIVE). Restore the spent-turn counter defensively (missing →
-	# 0 = a fresh Spring cycle, the back-compat default for any pre-seasons save). Clamped to
-	# [0, budget-1] against farm_turn_budget() — which is the PER-RUN budget while a run is live
-	# (restored above) or the legacy ZoneConfig budget otherwise. A value AT or past the budget
-	# would imply an un-harvested boundary, so it is wrapped back into a clean Spring cycle
-	# (mirrors note_farm_turn's harvest reset).
+	# Farm season cycle (A1, ADDITIVE). Restore the spent-turn counter and turns_left defensively.
+	# The two paths diverge based on whether a bounded run is active:
+	#
+	# RUN ACTIVE path: farm_turns_used is clamped to [0, budget] (NOT wrapped). The value AT
+	# budget is valid — it marks the "run ended, awaiting close_season" state that note_farm_turn
+	# intentionally leaves behind. Wrapping it to 0 would resurrect a fresh full-budget run the
+	# player already finished (losing the pending close_season +25/decay/reroll). farm_run_turns_left
+	# is restored from the SAVED field (clamped to [0, budget]) rather than re-derived, so an
+	# ended run (saved turns_left == 0) stays ended. If the saved turns_left is missing, fall back
+	# to max(0, budget - used) to handle saves written before the field existed.
+	#
+	# NO-RUN (legacy) path: byte-identical to the original — a value at or past the budget implies
+	# an un-harvested boundary and is wrapped to 0 (a clean Spring cycle, mirroring
+	# note_farm_turn's harvest reset). farm_run_turns_left is always 0 when no run is active.
 	var f_used: int = maxi(0, int(d.get("farm_turns_used", 0)))
 	var f_budget: int = s.farm_turn_budget()
-	if f_budget > 0 and f_used >= f_budget:
-		f_used = 0
-	s.farm_turns_used = f_used
-	# Keep farm_run_turns_left consistent with the restored counter: while a run is live it is
-	# max(0, budget - used) (the live invariant); with no run it's 0.
 	if s.farm_run_active:
-		s.farm_run_turns_left = maxi(0, s.farm_run_budget - s.farm_turns_used)
+		# Clamp to [0, budget] — budget itself is the valid "ended" sentinel.
+		s.farm_turns_used = clampi(f_used, 0, s.farm_run_budget)
+		# Restore turns_left from the saved field (trust the persisted value); fall back to
+		# deriving it only if the key is absent (pre-field saves).
+		var saved_turns_left: Variant = d.get("farm_run_turns_left", null)
+		if saved_turns_left != null:
+			s.farm_run_turns_left = clampi(int(saved_turns_left), 0, s.farm_run_budget)
+		else:
+			s.farm_run_turns_left = maxi(0, s.farm_run_budget - s.farm_turns_used)
 	else:
+		# Legacy no-run path: wrap at the boundary, turns_left stays 0.
+		if f_budget > 0 and f_used >= f_budget:
+			f_used = 0
+		s.farm_turns_used = f_used
 		s.farm_run_turns_left = 0
 	var tide := String(d.get("fish_tide", "high"))
 	if tide != FishConfig.TIDE_HIGH and tide != FishConfig.TIDE_LOW:

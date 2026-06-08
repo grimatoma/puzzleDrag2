@@ -28,6 +28,7 @@ func _initialize() -> void:
 	_test_close_season()
 	_test_selection_bias_boost()
 	_test_save_round_trip()
+	_test_save_round_trip_ended_run()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -212,3 +213,28 @@ func _test_save_round_trip() -> void:
 	_check(loaded.farm_run_used_fertilizer == false, "round-trip: farm_run_used_fertilizer false")
 	_check(loaded.farm_run_selected == ["trees", "grass"], "round-trip: farm_run_selected preserved")
 	_check(loaded.farm_turns_used == 2, "round-trip: farm_turns_used 2 (clamped against the run budget)")
+
+# ── save round-trip at the ended boundary: ended run stays ended ────────────────
+# Regression test: from_dict must NOT wrap farm_turns_used back to 0 and resurrect
+# a fresh full-budget run when the saved state is farm_run_active==true, farm_turns_used==budget,
+# farm_run_turns_left==0 (the "ended, awaiting close_season" sentinel).
+
+func _test_save_round_trip_ended_run() -> void:
+	var g := GameState.new()
+	g.coins = 50
+	_check(bool(g.start_farm_run([], false).get("ok", false)), "(setup) started a budget-10 run")
+	# Burn all 10 turns to reach the ended boundary.
+	for _i in range(10):
+		g.note_farm_turn()
+	# Verify the ended state before serialising.
+	_check(g.farm_run_active, "pre-serialise: farm_run_active still true after 10 ticks")
+	_check(g.farm_turns_used == 10, "pre-serialise: farm_turns_used == 10 (budget, NOT wrapped)")
+	_check(g.farm_run_turns_left == 0, "pre-serialise: farm_run_turns_left == 0 (run ended)")
+	# Serialise + restore.
+	var d := g.to_dict()
+	var g2 := GameState.from_dict(d)
+	# The restored run must STILL be ended — not a fresh full-budget run.
+	_check(g2.farm_run_active == true, "ended round-trip: farm_run_active still true")
+	_check(g2.farm_turns_used == 10, "ended round-trip: farm_turns_used == 10 (NOT wrapped to 0)")
+	_check(g2.farm_run_budget == 10, "ended round-trip: farm_run_budget == 10")
+	_check(g2.farm_run_turns_left == 0, "ended round-trip: farm_run_turns_left == 0 (still ended)")
