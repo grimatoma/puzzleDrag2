@@ -195,14 +195,13 @@ func _on_tab(tab: String) -> void:
 	_tab = tab
 	refresh()
 
-## Tint the selected tab button (a clear selected/unselected pair).
+## Apply the React segmented-tab look (active = solid ember fill, inactive = parchment
+## outline) via the shared UiKit.style_segment — the SAME toggle styling used by the
+## Achievements / Townsfolk / Charter tabs, so Quests|Almanac reads consistently
+## across the port instead of the old subtle DIM-fill pair.
 func _sync_tab_buttons() -> void:
 	for key in _tab_buttons.keys():
-		var btn: Button = _tab_buttons[key]
-		var selected: bool = (String(key) == _tab)
-		var fill: Color = Palette.DIM if selected else Palette.PARCHMENT
-		btn.add_theme_stylebox_override("normal", UiKit.btn_box(fill, 6))
-		btn.add_theme_color_override("font_color", COL_HEADER if selected else COL_BODY)
+		UiKit.style_segment(_tab_buttons[key], String(key) == _tab, Palette.EMBER, 6)
 
 # ── render ────────────────────────────────────────────────────────────────────
 
@@ -252,7 +251,15 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 
 	var chip := PanelContainer.new()
 	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	# React highlights a DONE/CLAIMED quest card with an ember border + glow
+	# (`completed ? !border-[#d6612a]`). Mirror it: a completed (claimable-or-claimed)
+	# row gets a 2px ember border so the actionable card stands out from the rest.
+	var chip_box: StyleBoxFlat = UiKit.row_box()
+	if claimable or claimed:
+		chip_box = chip_box.duplicate() as StyleBoxFlat
+		chip_box.border_color = Palette.EMBER
+		chip_box.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", chip_box)
 
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
