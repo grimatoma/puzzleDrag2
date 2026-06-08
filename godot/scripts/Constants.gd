@@ -359,6 +359,50 @@ static func season_index(turns_used: int, turn_budget: int) -> int:
 static func season_name(turns_used: int, turn_budget: int) -> String:
 	return String(SEASON_NAMES[season_index(turns_used, turn_budget)])
 
+# ── Season STRIP palette (src/ui/seasonStrip.tsx SEASON_PALETTES) ──────────────
+## The season-BAR look, ported VERBATIM from src/ui/seasonStrip.tsx `SEASON_PALETTES`.
+## DISTINCT from `SEASONS` above (that is the board-FIELD look; this is the HUD strip's
+## per-segment vertical gradient + its name-label colour). Each entry: `bg_top`/`bg_bot`
+## are the gradient stops (top→bottom) and `label` the uppercase season-name colour.
+const SEASON_STRIP_PALETTES: Array = [
+	{"name": "Spring", "bg_top": Color8(0xfd, 0xe7, 0xf0), "bg_bot": Color8(0xbf, 0xe3, 0xb3), "label": Color8(0x9a, 0x33, 0x58)},
+	{"name": "Summer", "bg_top": Color8(0xff, 0xe9, 0xa8), "bg_bot": Color8(0xf3, 0xb8, 0x50), "label": Color8(0x7a, 0x53, 0x20)},
+	{"name": "Autumn", "bg_top": Color8(0xff, 0xd9, 0xa8), "bg_bot": Color8(0xcd, 0x86, 0x4a), "label": Color8(0x8a, 0x3a, 0x14)},
+	{"name": "Winter", "bg_top": Color8(0xe5, 0xf0, 0xfa), "bg_bot": Color8(0x90, 0xb0, 0xc6), "label": Color8(0x1f, 0x3a, 0x5a)},
+]
+
+## The board-FIELD gradient colours per season (src/ui/puzzleBoard.tsx). Each entry is the
+## two-stop field tint the board card uses while that season is active. Subtle on purpose —
+## the board tiles' own pastel backgrounds should still read over it. `top`/`bot` mirror the
+## React field gradient stops; the port tints the board card's border/edge with these.
+const SEASON_FIELD_COLORS: Array = [
+	{"name": "Spring", "top": Color8(0xdb, 0xe6, 0xb5), "bot": Color8(0xb8, 0xcf, 0x8a)},
+	{"name": "Summer", "top": Color8(0xec, 0xdf, 0xb0), "bot": Color8(0xc7, 0xb8, 0x7a)},
+	{"name": "Autumn", "top": Color8(0xe8, 0xc8, 0x90), "bot": Color8(0xc8, 0xa4, 0x5a)},
+	{"name": "Winter", "top": Color8(0xdd, 0xe4, 0xea), "bot": Color8(0xb6, 0xc2, 0xcc)},
+]
+
+## Split a turn `budget` across the four seasons by FLOOR math so the per-season counts sum
+## EXACTLY to the budget. Ported VERBATIM from src/ui/seasonStrip.tsx `seasonTurnRanges`:
+## ends = [floor(S/4), floor(2S/4), floor(3S/4), S]; each season count = end - prevEnd.
+## Returns an Array of 4 Dictionaries { start:int, end:int, count:int } (one per season).
+## For S=10 → counts [2,3,2,3]; S=12 → [3,3,3,3]. A non-positive budget is clamped to 1.
+static func season_turn_ranges(turn_budget: int) -> Array:
+	var s: int = maxi(1, turn_budget)
+	var ends: Array = [
+		int(floor(float(s) / 4.0)),
+		int(floor(2.0 * float(s) / 4.0)),
+		int(floor(3.0 * float(s) / 4.0)),
+		s,
+	]
+	var out: Array = []
+	var prev: int = 0
+	for i in 4:
+		var end: int = int(ends[i])
+		out.append({"start": prev, "end": end, "count": end - prev})
+		prev = end
+	return out
+
 static func produced_resource(tile: int) -> String:
 	return PRODUCES.get(tile, "")
 

@@ -42,6 +42,14 @@ var _rats_pill: Label                   ## 🐀 N/5
 var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
 var _runes_pill: Label                  ## ᚱ N (harbor's premium reward)
 
+# A2 — Season bar (the React src/ui/seasonStrip.tsx port). A full-width seasonal progress
+# strip pinned ABOVE the chain-progress bar: four proportional gradient segments (Spring/
+# Summer/Autumn/Winter), a wagon marker at farm_turns_used/budget, and a right "N TURNS LEFT"
+# numeral panel. Loaded via preload (NO class_name) so the port never needs an --import pass.
+const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
+var _season_bar_box: PanelContainer     ## parchment wrapper holding the drawn strip
+var _season_bar                         ## Control (SeasonBarScript) — the drawn strip
+
 # Chain-progress bar.
 var _chain_prog_label: Label            ## "{res}: {progress}/{threshold}"
 var _chain_prog_track: Panel            ## DIM track behind the fill
@@ -111,6 +119,13 @@ var _daily_modal                         ## CanvasLayer (DailyStreakModalScript)
 ## the modal is held back until the tutorial + story queue are clear so the three don't fight —
 ## _maybe_show_daily() consumes this once the way is clear. Shape: {day:int, reward:Dictionary}.
 var _pending_daily_claim: Dictionary = {}
+## A2 — harvest season-summary modal. Shown on a HARVEST boundary (note_farm_turn → harvest):
+## a parchment card recapping the season that just ended + the turn/economy snapshot, dismissed
+## by a single "Continue" (the farm continues — a fresh Spring cycle has already begun in state).
+## Informational only — it grants nothing. Loaded via preload (NO class_name) so the port never
+## needs an --import pass to register it (mirrors DailyStreakModal / every other lazy modal).
+const HarvestModalScript := preload("res://scenes/HarvestModal.gd")
+var _harvest_modal                       ## CanvasLayer (HarvestModalScript), lazily created
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way
 ## sink). Loaded via preload (NO class_name) so the port never needs an --import pass to
 ## register it as a global (mirrors AchievementsScreen / RecipeWiki / TileCollection).
@@ -333,6 +348,10 @@ func _ready() -> void:
 	_refresh_rats()
 	_refresh_runes()
 	_refresh_chain_progress()
+	# A2 — seed the season bar + the board's per-season field tint from the restored save so
+	# both reflect the current farm season immediately (not just after the first chain).
+	_refresh_season_bar()
+	board.set_season(game.current_season_index())
 	# Tutorial onboarding: show the 6-step welcome modal on FIRST LOAD (tutorial_seen=false).
 	# ORDERING — the tutorial is shown FIRST (layer 6, above StoryModal's layer 5) so it
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
@@ -386,19 +405,28 @@ func _layout_hud(vp: Vector2) -> void:
 		_topbar.offset_left = 0
 		_topbar.offset_right = 0
 		_topbar.offset_top = 0
+	# A2 — the season bar spans the full width within the HUD margins, just below the top bar.
+	# It's TOP_WIDE-anchored, so left/right OFFSETS (not size.x) inset it; clamp the inset like
+	# the stockpile card so it stays full-width but never touches the screen edges.
+	if _season_bar_box != null:
+		var sb_margin: float = maxf(12.0, vp.x * 0.03)
+		_season_bar_box.offset_left = sb_margin
+		_season_bar_box.offset_right = -sb_margin
+		_season_bar_box.offset_top = 66.0
 	if _chain_prog_box != null:
 		var cw: float = minf(520.0, vp.x - 32.0)
 		_chain_prog_box.offset_left = -cw / 2.0
 		_chain_prog_box.offset_right = cw / 2.0
-		_chain_prog_box.offset_top = 76.0
+		# Pushed below the season bar (top 66 + 52 strip + 6 frame ≈ 124).
+		_chain_prog_box.offset_top = 128.0
 	if _tool_palette_box != null:
-		# Centre the horizontal tool bar just below the chain-progress bar (~76–126) and
-		# above the board (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric
-		# max-width offset keeps it centred while letting it shrink on narrow viewports.
+		# Centre the horizontal tool bar just below the chain-progress bar and above the board
+		# (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric max-width offset keeps
+		# it centred while letting it shrink on narrow viewports.
 		var tw: float = minf(560.0, vp.x - 32.0)
 		_tool_palette_box.offset_left = -tw / 2.0
 		_tool_palette_box.offset_right = tw / 2.0
-		_tool_palette_box.offset_top = 135.0
+		_tool_palette_box.offset_top = 188.0
 	if _stockpile_box != null:
 		var margin: float = maxf(16.0, vp.x * 0.04)
 		_stockpile_box.offset_left = margin
@@ -524,7 +552,13 @@ func _build_hud() -> void:
 	_runes_pill_box.visible = false
 	topbar_row.add_child(_runes_pill_box)
 
-	# ── B. Chain-progress bar (just under the top-bar) ────────────────────────
+	# ── A2. Season bar — the full-width seasonal progress strip (above the chain bar) ──
+	# The React src/ui/seasonStrip.tsx port: four proportional gradient segments + a wagon
+	# marker + a right "N TURNS LEFT" numeral panel. Built once here, refreshed on every
+	# resolved farm chain (_refresh_season_bar) and repositioned in _layout_hud.
+	_build_season_bar(root)
+
+	# ── B. Chain-progress bar (just under the season bar) ─────────────────────
 	# A thin parchment pill holding a small label and a 2-color progress fill: a DIM
 	# track with a MOSS→GOLD foreground whose width tracks the fractional progress
 	# toward the next unit of the last-chained resource.
@@ -669,6 +703,28 @@ func _topbar_box() -> StyleBoxFlat:
 	sb.shadow_color = Color(0, 0, 0, 0.18)
 	sb.shadow_offset = Vector2(0, 3)
 	return sb
+
+## A2 — build the season bar: a slim parchment wrapper (TOP_WIDE, full width within HUD
+## margins) holding the drawn SeasonBar strip. The strip itself paints the four gradient
+## segments + wagon + numeral panel in its _draw; this just frames + positions it. Built
+## once here, repositioned each layout in _layout_hud, refreshed by _refresh_season_bar.
+func _build_season_bar(root: Control) -> void:
+	_season_bar_box = PanelContainer.new()
+	_season_bar_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_season_bar_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# A 3px parchment frame around the strip so it reads as a HUD card (the strip draws its
+	# own dark inner border + rounded look). content margins keep the strip off the frame edge.
+	var box := UiKit.card_box(Palette.PARCHMENT)
+	box.set_content_margin_all(3)
+	_season_bar_box.add_theme_stylebox_override("panel", box)
+	# Position is set in _layout_hud (just below the top bar); seed an offset so it never
+	# renders at the very top edge before the first layout.
+	_season_bar_box.offset_top = 70
+	root.add_child(_season_bar_box)
+
+	_season_bar = SeasonBarScript.new()
+	_season_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_season_bar_box.add_child(_season_bar)
 
 ## Build the stockpile card: a titled parchment card holding a 4-col grid of
 ## resource chips (filled in _refresh_totals) plus a muted "empty" placeholder.
@@ -1293,7 +1349,7 @@ func _install_overlay_dismiss(overlay) -> void:
 ## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
 func _close_top_overlay() -> bool:
 	var overlays := [
-		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _leaveboard_modal,
+		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
@@ -1835,6 +1891,27 @@ func _on_daily_closed() -> void:
 		_daily_modal.visible = false
 	_router.close_modal()
 
+# ── Harvest season-summary modal (A2) ─────────────────────────────────────────
+
+## A2 — open the harvest season-summary modal with the note_farm_turn() summary dict (the
+## season that just ended + the turn budget + the coins/runes snapshot), lazily creating +
+## wiring it on first use (mirrors _open_daily). Informational ONLY — the modal grants nothing
+## (the fresh Spring cycle already began in state); "Continue" just dismisses it.
+func _open_harvest(summary: Dictionary) -> void:
+	if _harvest_modal == null:
+		_harvest_modal = HarvestModalScript.new()
+		add_child(_harvest_modal)
+		_harvest_modal.setup(game)
+		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
+	_harvest_modal.open_for(summary)
+
+## The harvest modal was dismissed (Continue or backdrop/ESC). Hide it — there is nothing to
+## persist (note_farm_turn already wrapped + saved the cycle in _on_chain_resolved) and no
+## router modal id, so this is purely a hide (the board is already on the fresh Spring cycle).
+func _on_harvest_closed() -> void:
+	if _harvest_modal != null:
+		_harvest_modal.visible = false
+
 # ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
 
 ## Open the developer DEBUG modal, lazily creating + wiring it on first use (mirrors
@@ -2348,10 +2425,17 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	if game.active_biome == "farm" and not game.is_boss_active():
 		var farm_res: Dictionary = game.note_farm_turn()
 		board.set_tile_pool(game.active_tile_pool())
+		# A2 — the season may have turned: re-tint the board field + slide the season-bar wagon.
+		board.set_season(game.current_season_index())
+		_refresh_season_bar()
 		if bool(farm_res.get("harvest", false)):
+			# A2 — a full year wrapped: surface the parchment harvest season-summary modal
+			# (informational only — the fresh Spring cycle has already begun in state). Keep a
+			# brief status note too so the feedback line still reads on the board behind it.
 			_status_label.text = "Harvest! %s ends — a new year begins (Spring)." % String(farm_res.get("season", ""))
 			if _audio != null:
 				_audio.play("fanfare")
+			_open_harvest(farm_res)
 	# M3g: a chain landed while the capstone boss is active damages it by the chain
 	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
 	# board's raised chain bar back to the base min and surface the win.
@@ -2926,6 +3010,15 @@ func _refresh_runes() -> void:
 		return
 	_runes_pill.text = "ᚱ %d" % game.runes
 	_runes_pill_box.visible = true
+
+## A2 — push the live farm season state onto the season bar so its segments highlight, its
+## wagon marker slides, and its "N TURNS LEFT" numeral track the farm cycle. Reads the budget
+## + turns-used + season index straight off GameState (current_season_index, farm_turns_used,
+## farm_turn_budget). Called after a resolved farm chain advances the cycle and once on load.
+func _refresh_season_bar() -> void:
+	if _season_bar == null or game == null:
+		return
+	_season_bar.set_state(game.farm_turns_used, game.farm_turn_budget(), game.current_season_index())
 
 ## M4b — refresh the chain-progress bar: label "{res}: {progress}/{threshold}" and a
 ## MOSS→GOLD fill at progress/threshold. With nothing chained yet it shows a neutral
