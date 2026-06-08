@@ -24,11 +24,23 @@ const BOND_GAIN_PER_FILL: float = 0.3
 ## Fallback NPC for an old save's order missing its `npc` field (defensive).
 const DEFAULT_ORDER_NPC: String = "wren"
 
-## The roster of NPC ids (NpcConfig.all_ids() order). Real ids only, de-duplicated.
-var roster: Array = NpcConfig.all_ids()
-## Per-NPC bond, id:String -> float in [0, 10]. Starts every roster NPC at the Warm
-## default 5.0 via _default_bonds().
-var bonds: Dictionary = _default_bonds()
+## The legacy flat {"roster": Array, "bonds": Dictionary} form IS the single backing store,
+## so GameState's `npcs` getter hands back THIS exact dict (a stable live reference). That
+## makes EVERY mutation pattern the pre-extraction plain `npcs` Dictionary supported write
+## straight through: in-place (`game.npcs["bonds"][id] = …`) AND wholesale-key reassignment
+## (`game.npcs["bonds"] = …`). `roster`/`bonds` below are live views into this dict.
+var data: Dictionary = {"roster": NpcConfig.all_ids(), "bonds": _default_bonds()}
+
+## Live view of the roster Array (reads route into `data`).
+var roster: Array:
+	get:
+		var r: Array = data["roster"]
+		return r
+## Live view of the bonds map (reads route into `data`).
+var bonds: Dictionary:
+	get:
+		var b: Dictionary = data["bonds"]
+		return b
 
 ## Build the starting bonds map: every roster NPC at the Warm default (5.0).
 static func _default_bonds() -> Dictionary:
@@ -37,29 +49,31 @@ static func _default_bonds() -> Dictionary:
 		out[id] = 5.0
 	return out
 
-## The legacy flat {"roster": …, "bonds": …} view — a LIVE reference to this object's
-## own roster/bonds (NOT a copy), so callers that mutate it (e.g.
-## `game.npcs["bonds"] = bonds`) write straight through to this state. GameState's
-## `npcs` property getter returns this.
+## The legacy flat {"roster": …, "bonds": …} view — the SAME live dict GameState persists,
+## so callers that mutate OR reassign keys on it (e.g. `game.npcs["bonds"] = bonds`) write
+## straight through to this state. GameState's `npcs` property getter returns this.
 func as_dict() -> Dictionary:
-	return {"roster": roster, "bonds": bonds}
+	return data
 
 ## Current bond for `id` (0..10 float). A missing/unknown id reads as the Warm default
 ## 5.0 so reward math never divides by a phantom band.
 func bond(id: String) -> float:
-	return float(bonds.get(id, 5.0))
+	var b: Dictionary = data["bonds"]
+	return float(b.get(id, 5.0))
 
 ## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. Seeds a known
 ## id at the default first. Stores a float.
 func gain(id: String, amount: float) -> void:
-	var current: float = float(bonds.get(id, 5.0))
-	bonds[id] = clampf(current + amount, 0.0, 10.0)
+	var b: Dictionary = data["bonds"]
+	b[id] = clampf(float(b.get(id, 5.0)) + amount, 0.0, 10.0)
 
 ## Plain-Dictionary snapshot for persistence — the SAME flat shape GameState emitted
 ## under the top-level "npcs" key before the extraction. Deep-copied so the snapshot is
 ## independent of this live state.
 func to_dict() -> Dictionary:
-	return {"roster": roster.duplicate(true), "bonds": bonds.duplicate(true)}
+	var r: Array = data["roster"]
+	var b: Dictionary = data["bonds"]
+	return {"roster": r.duplicate(true), "bonds": b.duplicate(true)}
 
 ## Rebuild from a snapshot, defensively. A missing/empty dict (any save written before
 ## npcs existed) yields the default roster (NpcConfig.all_ids) at the Warm default 5.0,
@@ -87,6 +101,5 @@ static func from_dict(d: Dictionary) -> NpcState:
 		if raw_bonds is Dictionary and raw_bonds.has(id):
 			v = clampf(float(raw_bonds[id]), 0.0, 10.0)
 		bonds[id] = v
-	s.roster = roster
-	s.bonds = bonds
+	s.data = {"roster": roster, "bonds": bonds}
 	return s
