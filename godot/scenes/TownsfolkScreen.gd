@@ -47,6 +47,10 @@ const COL_MUTED  := Palette.INK_MID
 const COL_VALUE  := Palette.GOLD
 const COL_PANEL  := Palette.PARCHMENT
 const PANEL_MAX_WIDTH := 560.0
+## Bottom strip (px) reserved for the persistent nav bar (a lower CanvasLayer): the
+## backdrop + centring region stop this far short of the bottom so the nav shows through
+## + stays tappable, and the scroll-height clamp leaves room for it.
+const NAV_RESERVE := 76
 
 # Bond-band → fill colour (tasteful Palette picks, matching the band mood).
 # Sour   — muted rose (warm red-pink, subdued, a step down from ember)
@@ -84,18 +88,24 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Full-rect warm-brown scrim (matches AchievementsScreen).
+	# Opaque VIEW background (not a dim modal scrim). The Townsfolk roster is one of the
+	# five persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
+	# board. Stops NAV_HEIGHT (76px) short of the bottom so the persistent nav bar (a LOWER
+	# CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks above it.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered card: a full-rect CenterContainer centres the parchment panel at the
-	# panel's own (content-driven) size, so a short roster yields a small card floating
-	# in the scrim — no full-height card with an empty void below.
+	# Centered card: a CenterContainer centres the parchment panel at the panel's own
+	# (content-driven) size, so a short roster yields a small card floating over the view —
+	# no full-height card with an empty void below. Its bottom stops NAV_RESERVE short so the
+	# card centres in the region ABOVE the persistent nav and never overlaps it.
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.offset_bottom = -NAV_RESERVE
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
@@ -170,7 +180,7 @@ func _build_shell() -> void:
 	var vp := get_viewport()
 	if vp != null:
 		vp.size_changed.connect(func() -> void:
-			UiKit.fit_scroll_height(_scroll, _body))
+			UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE))
 
 # ── render ─────────────────────────────────────────────────────────────────────────────
 
@@ -199,9 +209,10 @@ func refresh() -> void:
 		_cards[id] = card
 
 	# Clamp the scroll to the (now-built) roster so the card sizes to content. A deferred
-	# re-fit catches min-sizes that settle one frame after the cards are added.
-	UiKit.fit_scroll_height(_scroll, _body)
-	UiKit.fit_scroll_height.call_deferred(_scroll, _body)
+	# re-fit catches min-sizes that settle one frame after the cards are added. The extra
+	# NAV_RESERVE keeps a tall roster's card clear of the persistent bottom nav.
+	UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE)
+	UiKit.fit_scroll_height.call_deferred(_scroll, _body, 240.0 + NAV_RESERVE)
 
 ## A single NPC card: a soft-parchment chip holding a top row (avatar swatch + name +
 ## role) over a bond bar with a band label. Layout mirrors AchievementsScreen trophy rows.

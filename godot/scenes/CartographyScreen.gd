@@ -93,10 +93,15 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Full-rect warm-brown scrim (clicks behind it never reach the board).
+	# Opaque VIEW background (not a dim modal scrim). The world map is one of the five
+	# persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
+	# board. Stops NAV_HEIGHT (76px) short of the bottom so the persistent nav bar (a
+	# LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks
+	# above that strip.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
@@ -108,10 +113,11 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# offset_bottom clears the persistent bottom nav (76px) + a 12px gap.
 	panel.offset_left = 24
 	panel.offset_right = -24
 	panel.offset_top = 48
-	panel.offset_bottom = -48
+	panel.offset_bottom = -88
 	# Parchment card — warm fill, iron border, rounded corners, soft drop shadow.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL
