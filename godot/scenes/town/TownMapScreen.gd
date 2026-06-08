@@ -330,6 +330,17 @@ func _map_render_size() -> Vector2:
 func _on_map_gui_input(event: InputEvent) -> void:
 	if _map == null:
 		return
+	# Mouse-wheel zoom (desktop / browser): wheel-up zooms IN, wheel-down zooms OUT,
+	# anchored on the cursor so the point under the pointer stays put. The +/− buttons
+	# keep their zoom-about-centre behaviour. A wheel turn arrives as a button PRESS (plus
+	# a matching release) — act on the press only, and consume it so it never leaks to a pan.
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_map.zoom_at(TownMapScript.ZOOM_STEP, event.position)
+			return
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_map.zoom_at(1.0 / TownMapScript.ZOOM_STEP, event.position)
+			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			# Begin a press: remember where, assume tap until it moves enough to be a drag.
