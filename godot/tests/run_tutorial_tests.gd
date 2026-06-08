@@ -57,8 +57,8 @@ func _initialize() -> void:
 		"step 0 body is non-empty")
 	_check(String(steps[1].get("title", "")) == "Drag chains",
 		"step 1 title == 'Drag chains'")
-	_check(String(steps[2].get("title", "")) == "Upgrades ★",
-		"step 2 title == 'Upgrades ★'")
+	_check(String(steps[2].get("title", "")) == "Upgrades ⭐",
+		"step 2 title == 'Upgrades ⭐'")
 	_check(String(steps[3].get("title", "")) == "Orders",
 		"step 3 title == 'Orders'")
 	_check(String(steps[4].get("title", "")) == "Town",

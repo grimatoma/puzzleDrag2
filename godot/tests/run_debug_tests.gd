@@ -114,10 +114,26 @@ func _initialize() -> void:
 	_check(spec_ids.has("tierup"), "grant_specs has 'tierup'")
 	_check(spec_ids.has("rollquests"), "grant_specs has 'rollquests'")
 	_check(spec_ids.has("clearsave"), "grant_specs has 'clearsave'")
+	# Bulk QA grants ported from the React debug modal.
+	_check(spec_ids.has("maxtier"), "grant_specs has 'maxtier'")
+	_check(spec_ids.has("fillitems"), "grant_specs has 'fillitems'")
+	_check(spec_ids.has("filltools"), "grant_specs has 'filltools'")
+	_check(spec_ids.has("buildall"), "grant_specs has 'buildall'")
 	# The specific REAL methods.
 	_check(game.has_method("try_tier_up"), "GameState.try_tier_up exists (Tier up)")
 	_check(game.has_method("reroll_quests"), "GameState.reroll_quests exists (Roll quests)")
+	_check(game.has_method("grant_tool"), "GameState.grant_tool exists (+100 each tool)")
+	_check(game.has_method("build"), "GameState.build exists (Build all)")
 	_check(SaveManager.new().has_method("clear"), "SaveManager.clear exists (Clear save)")
+
+	# all_resource_keys — PURE, derived from live config, deduped, no hazard/coin blanks.
+	var res_keys: PackedStringArray = DebugModalScript.all_resource_keys()
+	_check(res_keys.size() >= 10, "all_resource_keys has >= 10 keys (got %d)" % res_keys.size())
+	_check(res_keys.has("hay_bundle"), "all_resource_keys includes farm staple 'hay_bundle'")
+	_check(res_keys.has("block"), "all_resource_keys includes mine good 'block'")
+	_check(res_keys.has("bread"), "all_resource_keys includes recipe output 'bread'")
+	_check(res_keys.has("supplies"), "all_resource_keys includes recipe output 'supplies'")
+	_check(not res_keys.has(""), "all_resource_keys drops the empty hazard/coin entries")
 
 	# ── 3. jump_targets — deduped, one per DISTINCT modal, no 'debug' ─────────
 	var jumps: PackedStringArray = DebugModalScript.jump_targets()
@@ -197,6 +213,42 @@ func _initialize() -> void:
 	var qday_before := game.quest_day
 	modal.apply_grant("rollquests")
 	_check(game.quest_day == qday_before + 1, "apply_grant('rollquests') bumps quest_day")
+
+	# ── Bulk QA grants ────────────────────────────────────────────────────────
+	# Max tier jumps the settlement straight to City.
+	modal.apply_grant("maxtier")
+	_check(game.settlement.tier == TownConfig.TIER_CITY, "apply_grant('maxtier') -> City tier")
+	_check(game.settlement.is_max_tier(), "apply_grant('maxtier') leaves the settlement maxed")
+
+	# +100 each item tops every resource toward the cap. hay_bundle starts at 0 here, so it
+	# lands at min(100, cap); at City the cap is well above 100, so it should read exactly 100.
+	modal.apply_grant("fillitems")
+	var hay := int(game.inventory.get("hay_bundle", 0))
+	_check(hay >= 100, "apply_grant('fillitems') grants hay_bundle >= 100 (got %d)" % hay)
+	var bread_qty := int(game.inventory.get("bread", 0))
+	_check(bread_qty >= 100, "apply_grant('fillitems') grants recipe-output bread >= 100 (got %d)" % bread_qty)
+
+	# +100 each tool grants 100 charges of every ToolConfig tool.
+	modal.apply_grant("filltools")
+	var all_tools_100 := true
+	for tid in ToolConfig.TOOL_IDS:
+		if game.tool_count(tid) < 100:
+			all_tools_100 = false
+	_check(all_tools_100, "apply_grant('filltools') grants >= 100 of every ToolConfig tool")
+
+	# Build all force-places every BuildingConfig id (bypassing tier/plot/cost/rats gates).
+	var build_res: Dictionary = modal.apply_grant("buildall")
+	var all_built := true
+	for bid in BuildingConfig.ALL_BUILD_IDS:
+		if not game.has_building(bid):
+			all_built = false
+	_check(all_built, "apply_grant('buildall') places every BuildingConfig id")
+	_check(int(build_res.get("buildings", 0)) >= BuildingConfig.ALL_BUILD_IDS.size(),
+		"apply_grant('buildall') reports the full building count")
+	# Idempotent: a second Build all does not duplicate any building.
+	var count_after_first := game.buildings.size()
+	modal.apply_grant("buildall")
+	_check(game.buildings.size() == count_after_first, "apply_grant('buildall') is idempotent (no dupes)")
 
 	# Readout re-renders after a grant (the coin label reflects the new total).
 	var coin_label_text := (modal._readout_labels[0] as Label).text

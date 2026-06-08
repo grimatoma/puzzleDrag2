@@ -12,7 +12,7 @@ extends RefCounted
 
 # ── shared layout reserves (B1) ──────────────────────────────────────────────────
 ## The height (px) of the persistent HUD top-bar band (settlement title + coin/level/
-## tier/biome pills + ☰ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
+## tier/biome pills + ⚙ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
 ## VIEWS reserves this strip at the TOP — its opaque view backdrop starts at this
 ## offset so the layer-1 top bar shows ABOVE the view (full-brightness, persistent
 ## chrome) instead of being painted over. Tuned so the view content sits flush UNDER
@@ -460,7 +460,11 @@ static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, pa
 ## sideways velocity. The addon's `override_mouse_filters` default (true) keeps
 ## child buttons clickable while still allowing drag-to-scroll over them.
 static func make_vscroll() -> ScrollContainer:
-	var scroll := SmoothScrollContainer.new()
+	# WheelClampScrollContainer is a SmoothScrollContainer that hard-stops MOUSE-WHEEL
+	# momentum at the top/bottom edge (no elastic overscroll) while leaving the springy
+	# overdrag intact for finger/content drags. See WheelClampScrollContainer.gd for why
+	# this lives in repo code rather than as an edit to the vendored addon.
+	var scroll := WheelClampScrollContainer.new()
 	scroll.allow_horizontal_scroll = false
 	# Scroll at 1× finger speed, not 2×. project.godot sets BOTH
 	# pointing/emulate_mouse_from_touch AND pointing/emulate_touch_from_mouse, so one

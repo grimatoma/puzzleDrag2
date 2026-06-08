@@ -13,7 +13,7 @@ extends CanvasLayer
 ##
 ## NO class_name on purpose — Main preloads this script (preload(".../AchievementsScreen.gd"))
 ## so the port never needs an --import pass to register a new global. Pure read-only:
-## the only actionable Control is "✕ Close"; everything else is MOUSE_FILTER_IGNORE.
+## the only actionable Control is "✖ Close"; everything else is MOUSE_FILTER_IGNORE.
 ##
 ## REAL DATA. The catalog comes from AchievementConfig.all(); per-row progress + the
 ## unlocked flag come straight from GameState (achievement_progress(counter) +
@@ -136,7 +136,7 @@ func _build_shell() -> void:
 	panel.offset_bottom = -UiKit.NAV_RESERVE
 	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
 	# shadow, so it reads as a full-brightness page under the persistent top bar. Unlike B1's
-	# PRIMARY views, this menu sub-page KEEPS its visible "✕ Close" (the legitimate back-to-board
+	# PRIMARY views, this menu sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board
 	# affordance — it's not a nav destination).
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
@@ -155,7 +155,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "🏆 Achievements" heading + a right-aligned "✕ Close" button.
+	# Title row: "🏆 Achievements" heading + a right-aligned "✖ Close" button.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -171,7 +171,7 @@ func _build_shell() -> void:
 	title_row.add_child(title)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
+	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
 	close_btn.connect("pressed", Callable(self, "close"))

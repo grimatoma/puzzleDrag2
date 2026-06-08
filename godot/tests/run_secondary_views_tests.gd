@@ -2,11 +2,11 @@ extends SceneTree
 ## B2 — layout invariants for the EIGHT promoted SECONDARY VIEWS (Achievements, Tile
 ## collection, Recipes, Chronicle, Castle, Charter, Decorations, Portal). Each was a
 ## semi-transparent SCRIM modal (a parchment card floating over a DIMMED board) reached
-## from the ☰ menu "More" section; B2 promotes them to full-brightness VIEWS: their opaque
+## from the ⚙ menu "More" section; B2 promotes them to full-brightness VIEWS: their opaque
 ## view backdrop now reserves UiKit.TOPBAR_RESERVE at the TOP (so the layer-1 HUD top bar
 ## shows above the view) and stops UiKit.NAV_RESERVE short of the bottom (so the persistent
 ## nav bar shows through), full-bleed content, and — UNLIKE the B1 PRIMARY views — they KEEP
-## a VISIBLE "✕ Close" button (these are menu sub-pages, Close is the legit back-to-board).
+## a VISIBLE "✖ Close" button (these are menu sub-pages, Close is the legit back-to-board).
 ##
 ## This suite asserts, for each of the eight screens:
 ##   • the view backdrop is an opaque ColorRect (FRAME_BG, alpha 1.0) with
@@ -153,7 +153,7 @@ func _run() -> void:
 	_check(main._inventory_screen != null and main._inventory_screen.visible,
 		"_switch_primary_view opens the target primary (Inventory) on top")
 
-	# The ☰ menu still opens each secondary correctly via the shared deep-link path, and
+	# The ⚙ menu still opens each secondary correctly via the shared deep-link path, and
 	# ESC/back (apply_deeplink('board')) still closes them.
 	for id in ["achievements", "tiles", "recipes", "chronicle", "castle", "charter",
 			"decorations", "portal"]:

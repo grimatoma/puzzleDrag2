@@ -1,10 +1,10 @@
 extends SceneTree
 ## B1 — layout invariants for the FIVE promoted PRIMARY nav VIEWS (Craft/Town, Inventory,
-## Town map, Cartography, Townsfolk). Each was a floating parchment card with a "✕ Close"
+## Town map, Cartography, Townsfolk). Each was a floating parchment card with a "✖ Close"
 ## button that painted over the persistent HUD top bar; B1 promotes them to full-brightness
 ## VIEWS: their opaque view backdrop now reserves UiKit.TOPBAR_RESERVE at the TOP (so the
 ## layer-1 HUD top bar shows above the view) and stops UiKit.NAV_RESERVE short of the bottom
-## (so the persistent nav bar shows through), with NO visible card "✕ Close" and a board-
+## (so the persistent nav bar shows through), with NO visible card "✖ Close" and a board-
 ## return affordance on the Town view.
 ##
 ## This suite asserts, for each of the five screens:
