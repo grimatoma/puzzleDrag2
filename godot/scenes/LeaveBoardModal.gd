@@ -192,7 +192,9 @@ func _build_shell() -> void:
 	_confirm_btn = Button.new()
 	_confirm_btn.text = "Leave"
 	_confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_confirm_btn, Palette.EMBER, 10, 18)
+	# Primary confirm — a FILLED ember button so it reads as the emphasized action (React
+	# gives the LEAVE confirm weight); "Stay" stays a quiet parchment/iron button.
+	UiKit.style_action_button(_confirm_btn, Palette.EMBER, 10, 18)
 	_confirm_btn.connect("pressed", Callable(self, "_on_confirm"))
 	btn_row.add_child(_confirm_btn)
 	_action_buttons["confirm"] = _confirm_btn
