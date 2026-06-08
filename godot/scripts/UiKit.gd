@@ -21,7 +21,9 @@ static var _heading_font_tried: bool = false
 
 ## Return a bold Cinzel FontVariation, or null if the font file isn't imported.
 ## The result is cached after the first call — every subsequent call returns
-## the same instance.
+## the same instance. The emoji fallback is attached so heading labels that carry
+## an emoji (modal titles like "🏆 Achievements") render the glyph instead of a
+## tofu box — Cinzel has no emoji coverage.
 static func heading_font() -> Font:
 	if _heading_font_tried:
 		return _heading_font_cache
@@ -33,10 +35,76 @@ static func heading_font() -> Font:
 			var fv := FontVariation.new()
 			fv.base_font = base
 			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
+			var emoji := emoji_font()
+			if emoji != null:
+				fv.fallbacks = [emoji]
 			_heading_font_cache = fv
 	return _heading_font_cache
 
+# ── emoji fallback font ────────────────────────────────────────────────────────
+
+## Cached Noto Emoji (monochrome, OFL) FontFile, or null if the asset isn't present.
+## Monochrome glyphs inherit the label's font_color, so they tint to the parchment
+## ink instead of clashing colour emoji — cohesive with the Cinzel/parchment look.
+static var _emoji_font_cache: Font = null
+static var _emoji_font_tried: bool = false
+
+## Load the bundled emoji font (res://assets/fonts/NotoEmoji.ttf). Bundled (not a
+## system font) so it renders identically on desktop AND the web export, where there
+## is no OS emoji font and every emoji would otherwise be a tofu box.
+static func emoji_font() -> Font:
+	if _emoji_font_tried:
+		return _emoji_font_cache
+	_emoji_font_tried = true
+	var path := "res://assets/fonts/NotoEmoji.ttf"
+	if ResourceLoader.exists(path):
+		var f = load(path)
+		if f is FontFile:
+			_emoji_font_cache = f
+	return _emoji_font_cache
+
+## Attach the bundled emoji font as a fallback on the ENGINE DEFAULT font so every
+## Label/Button that uses the inherited default font (the HUD pills, bottom-nav icons,
+## modal close buttons, status text — all of which carry emoji like 🪙🏠📦🔨🗺👥)
+## renders the glyph instead of a tofu box. Idempotent + null-safe; call once from
+## Main._ready. Base glyphs are unchanged (same default font), so body text is
+## pixel-identical — only previously-broken emoji start rendering.
+static func install_emoji_fallback() -> void:
+	var emoji := emoji_font()
+	if emoji == null:
+		return
+	var base: Font = ThemeDB.fallback_font
+	if base == null:
+		return
+	var fb: Array = base.fallbacks
+	if not fb.has(emoji):
+		fb.append(emoji)
+		base.fallbacks = fb
+
 # ── resource icons + names ──────────────────────────────────────────────────────
+
+# ── modal dismiss ────────────────────────────────────────────────────────────
+
+## Wire a modal's full-rect scrim `backdrop` so a click/tap on it (i.e. OUTSIDE the
+## centered card) dismisses the modal. This is the standard "tap outside to close"
+## affordance AND a reliable escape hatch: SmoothScroll swallows the FIRST click after
+## a wheel/drag scroll (its input handler calls set_input_as_handled on every event it
+## sees), so a just-scrolled long modal could otherwise eat the Close button's first
+## tap. The backdrop sits OUTSIDE the scroll, so its input is never affected. Idempotent.
+static func wire_backdrop_dismiss(backdrop: Control, on_dismiss: Callable) -> void:
+	if backdrop == null or not on_dismiss.is_valid():
+		return
+	if backdrop.has_meta("_dismiss_wired"):
+		return
+	backdrop.set_meta("_dismiss_wired", true)
+	backdrop.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
+			or (event is InputEventScreenTouch and event.pressed)
+		if tap:
+			on_dismiss.call()
+	)
+
+# ── resource icons + names ────────────────────────────────────────────────────────
 
 ## Cache of loaded resource/item icon textures, keyed by item key. `null` is cached
 ## too (a key with no art) so a missing icon costs one ResourceLoader.exists() call,
@@ -240,6 +308,46 @@ static func style_button(
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
 
+## FILLED primary-action button (React parity): the NORMAL state is a SOLID accent fill
+## (green Craft, gold Sell, ember Enter, …) with contrast-picked text, so an enabled
+## action reads as a clear call-to-action instead of a passive parchment pill that looks
+## disabled. The disabled state stays muted parchment so enabled-vs-disabled is obvious.
+## Use this for positive primary actions; keep style_button() for Close/Cancel/secondary.
+static func style_action_button(btn: Button, accent: Color, padding_v: int = 6, with_font_size: int = 0) -> void:
+	var text := _contrast_text(accent)
+	btn.add_theme_stylebox_override("normal",   _action_box(accent, padding_v))
+	btn.add_theme_stylebox_override("hover",     _action_box(accent.lightened(0.10), padding_v))
+	btn.add_theme_stylebox_override("pressed",   _action_box(accent.darkened(0.12), padding_v))
+	btn.add_theme_stylebox_override("focus",     _action_box(accent.lightened(0.10), padding_v))
+	btn.add_theme_stylebox_override("disabled",  btn_box(Palette.DIM, padding_v))
+	btn.add_theme_color_override("font_color",          text)
+	btn.add_theme_color_override("font_hover_color",     text)
+	btn.add_theme_color_override("font_pressed_color",   text)
+	btn.add_theme_color_override("font_focus_color",     text)
+	btn.add_theme_color_override("font_disabled_color",  Color(Palette.INK_MID, 0.55))
+	if with_font_size > 0:
+		btn.add_theme_font_size_override("font_size", with_font_size)
+
+## StyleBox for a filled action button: solid accent fill, a slightly darker accent
+## border for definition, radius 8, snug margins.
+static func _action_box(fill: Color, padding_v: int) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.border_color = fill.darkened(0.22)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = padding_v
+	sb.content_margin_bottom = padding_v
+	return sb
+
+## Pick ink-dark or soft-parchment text for legibility on `bg` by perceived luminance —
+## light accents (gold/tan) get dark ink, dark accents (ember/moss/rose) get light text.
+static func _contrast_text(bg: Color) -> Color:
+	var lum := 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
+	return Palette.INK if lum > 0.62 else Palette.PARCHMENT_SOFT
+
 # ── Scroll container ──────────────────────────────────────────────────────────
 
 ## Build a vertical-only scroll container with momentum / touch-drag scrolling
@@ -281,7 +389,35 @@ static func make_vscroll() -> ScrollContainer:
 		elif scroll.content_node == null and node is Control and not node is ScrollBar:
 			scroll.content_node = node
 	)
+	# Theme the engine scrollbar to the parchment palette. The default Godot scrollbar is
+	# a pale-grey track + thumb that reads as raw engine chrome against the warm cards
+	# (flagged on every scroll modal). Replace it with a slim, semi-transparent ink thumb
+	# and an invisible track so it nearly disappears at rest like the React view. Done on
+	# `ready` so the bars exist (ScrollContainer creates them in its own _ready).
+	scroll.ready.connect(func() -> void:
+		_slim_scrollbar(scroll.get_v_scroll_bar())
+		_slim_scrollbar(scroll.get_h_scroll_bar())
+	)
 	return scroll
+
+## Restyle a ScrollBar to a slim, parchment-friendly thumb with an invisible track so it
+## reads as a subtle indicator rather than grey engine chrome.
+static func _slim_scrollbar(bar: ScrollBar) -> void:
+	if bar == null:
+		return
+	var grab := StyleBoxFlat.new()
+	grab.bg_color = Color(Palette.INK_MID, 0.38)
+	grab.set_corner_radius_all(4)
+	grab.content_margin_left = 4
+	grab.content_margin_right = 4
+	var grab_hi := grab.duplicate() as StyleBoxFlat
+	grab_hi.bg_color = Color(Palette.INK_MID, 0.6)
+	var empty := StyleBoxEmpty.new()
+	bar.add_theme_stylebox_override("scroll", empty)
+	bar.add_theme_stylebox_override("scroll_focus", empty)
+	bar.add_theme_stylebox_override("grabber", grab)
+	bar.add_theme_stylebox_override("grabber_highlight", grab_hi)
+	bar.add_theme_stylebox_override("grabber_pressed", grab_hi)
 
 ## Size a modal's vertical ScrollContainer to its CONTENT height, capped to the viewport.
 ## This is what makes a modal card adapt: a SHORT list yields a short card (centred in the
