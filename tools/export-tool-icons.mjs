@@ -33,6 +33,10 @@ const SCENARIO = arg("scenario", "board-farm-idle");
 const TOOL_KEYS = [
   "bomb", "rake", "sickle", "auger", "blast_charge",
   "axe", "scythe", "stone_hammer", "drill", "magnet",
+  // Tools PR1 — catalog-parity board tools (reuse existing ToolEffects powers).
+  "bird_cage", "scythe_full", "hoe", "iron_pick",
+  "plough", "fruit_picker", "herders_crook", "milk_churn", "saddle",
+  "coal_hammer", "gold_pick", "trimmer", "bee", "coal_transmuter",
 ];
 
 (async () => {

@@ -46,6 +46,23 @@ const SCYTHE: String = "scythe"
 const STONE_HAMMER: String = "stone_hammer"
 const DRILL: String = "drill"
 const MAGNET: String = "magnet"
+# ── Catalog-parity board tools (Tools PR1) — all reuse an EXISTING ToolEffects
+# power; only the catalog params differ. Targets/categories use the REAL Godot
+# tile/category names (Constants.Tile / Constants.CATEGORY), never invented ones.
+const BIRD_CAGE: String = "bird_cage"
+const SCYTHE_FULL: String = "scythe_full"
+const HOE: String = "hoe"
+const IRON_PICK: String = "iron_pick"
+const PLOUGH: String = "plough"
+const FRUIT_PICKER: String = "fruit_picker"
+const HERDERS_CROOK: String = "herders_crook"
+const MILK_CHURN: String = "milk_churn"
+const SADDLE: String = "saddle"
+const COAL_HAMMER: String = "coal_hammer"
+const GOLD_PICK: String = "gold_pick"
+const TRIMMER: String = "trimmer"
+const BEE: String = "bee"
+const COAL_TRANSMUTER: String = "coal_transmuter"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -114,12 +131,122 @@ const TOOLS: Dictionary = {
 		"params": {"from_keys": [Constants.Tile.DIRT], "to_key": Constants.Tile.STONE},
 		"tap_target": false,
 	},
+	# ── Catalog-parity board tools (Tools PR1) ─────────────────────────────────
+	# All instant tools fire over the whole board; the tap-target one needs a cell.
+	# Params hold category strings / explicit Tile keys and are resolved at dispatch
+	# (the TOOLS dict is a const — it cannot call tiles_in_category itself).
+	#
+	# Farm — clear a single produce tile across the board (clear_all).
+	BIRD_CAGE: {
+		"label": "Bird Cage",
+		"power_id": "clear_all",
+		"params": {"target": Constants.Tile.BIRD_CHICKEN},
+		"tap_target": false,
+	},
+	SCYTHE_FULL: {
+		"label": "Scythe (full)",
+		"power_id": "clear_all",
+		"params": {"target": Constants.Tile.WHEAT},
+		"tap_target": false,
+	},
+	HOE: {
+		"label": "Hoe",
+		"power_id": "clear_all",
+		"params": {"target": Constants.Tile.CARROT},
+		"tap_target": false,
+	},
+	IRON_PICK: {
+		"label": "Iron Pick",
+		"power_id": "clear_all",
+		"params": {"target": Constants.Tile.IRON_ORE},
+		"tap_target": false,
+	},
+	# Farm/mine — clear a whole category (clear_category). PLOUGH unions two.
+	PLOUGH: {
+		"label": "Plough",
+		"power_id": "clear_category",
+		# Multi-category clear: grass + grain. Resolved (and unioned) at dispatch.
+		"params": {"categories": ["grass", "grain"]},
+		"tap_target": false,
+	},
+	FRUIT_PICKER: {
+		"label": "Fruit Picker",
+		"power_id": "clear_category",
+		"params": {"category": "fruit"},
+		"tap_target": false,
+	},
+	HERDERS_CROOK: {
+		"label": "Herder's Crook",
+		"power_id": "clear_category",
+		"params": {"category": "herd"},
+		"tap_target": false,
+	},
+	MILK_CHURN: {
+		"label": "Milk Churn",
+		"power_id": "clear_category",
+		"params": {"category": "cattle"},
+		"tap_target": false,
+	},
+	SADDLE: {
+		"label": "Saddle",
+		"power_id": "clear_category",
+		"params": {"category": "mount"},
+		"tap_target": false,
+	},
+	COAL_HAMMER: {
+		"label": "Coal Hammer",
+		"power_id": "clear_category",
+		"params": {"category": "coal"},
+		"tap_target": false,
+	},
+	GOLD_PICK: {
+		"label": "Gold Pick",
+		"power_id": "clear_category",
+		"params": {"category": "gold"},
+		"tap_target": false,
+	},
+	# Transform a whole category into another tile (transform_tiles via from_category).
+	TRIMMER: {
+		"label": "Trimmer",
+		"power_id": "transform_tiles",
+		# Trees → grass (clears the canopy back to open ground).
+		"params": {"from_category": "trees", "to_key": Constants.Tile.GRASS},
+		"tap_target": false,
+	},
+	BEE: {
+		"label": "Bee",
+		"power_id": "transform_tiles",
+		# Flowers → fruit (pollination): PANSY (flower) → APPLE (fruit).
+		"params": {"from_category": "flower", "to_key": Constants.Tile.APPLE},
+		"tap_target": false,
+	},
+	# Tap-target — transmute nearby mine ores into coal (transform_adjacent via from_categories).
+	COAL_TRANSMUTER: {
+		"label": "Coal Transmuter",
+		"power_id": "transform_adjacent",
+		# Real mine-ore tiles → COAL within radius 1. from_categories is resolved at
+		# dispatch (stone/iron/gold/gem/copper). COPPER_ORE exists in the Godot enum.
+		"params": {
+			"radius": 1,
+			"from_categories": ["stone", "iron", "gold", "gem", "copper"],
+			"to_key": Constants.Tile.COAL,
+		},
+		"tap_target": true,
+	},
 }
 
-## Stable display / iteration order for every tool id.
+## Stable display / iteration order for every tool id. Grouped by biome so the rack
+## reads sensibly: the original M8a set first, then the Tools-PR1 farm tools, then the
+## mine tools.
 const TOOL_IDS: Array = [
+	# Original M8a representative set (tap tools then instant).
 	BOMB, RAKE, SICKLE, AUGER, BLAST_CHARGE, MAGNET,
 	AXE, SCYTHE, STONE_HAMMER, DRILL,
+	# Tools PR1 — Farm produce / categories.
+	SCYTHE_FULL, HOE, PLOUGH, TRIMMER, BEE,
+	FRUIT_PICKER, BIRD_CAGE, HERDERS_CROOK, MILK_CHURN, SADDLE,
+	# Tools PR1 — Mine ores.
+	IRON_PICK, COAL_HAMMER, GOLD_PICK, COAL_TRANSMUTER,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
@@ -164,6 +291,18 @@ static func tiles_in_category(category: String) -> Array:
 	out.sort()
 	return out
 
+## Resolve the UNION of every Constants.Tile value across several category ids.
+## De-duplicated and sorted. Used by the multi-category clear (plough → grass+grain)
+## and by transform_adjacent's from_categories (coal_transmuter → the mine ores).
+static func tiles_in_categories(categories: Array) -> Array:
+	var seen: Dictionary = {}
+	for cat in categories:
+		for tile in tiles_in_category(String(cat)):
+			seen[int(tile)] = true
+	var out: Array = seen.keys()
+	out.sort()
+	return out
+
 # ── Dispatch (catalog params → ToolEffects primitive) ─────────────────────────
 
 ## Apply an INSTANT (non-tap) tool over the whole board. Returns the dispatched
@@ -180,7 +319,13 @@ static func apply_instant(grid: Array, id: String, rng: RandomNumberGenerator = 
 		"clear_all":
 			return ToolEffects.sweep_keys(grid, [int(params.get("target", Constants.EMPTY))])
 		"clear_category":
-			var keys: Array = tiles_in_category(String(params.get("category", "")))
+			# Accept EITHER a single `category` (String) OR `categories` (Array of
+			# Strings, unioned). The single-category path keeps axe working unchanged.
+			var keys: Array
+			if params.has("categories"):
+				keys = tiles_in_categories(params.get("categories", []))
+			else:
+				keys = tiles_in_category(String(params.get("category", "")))
 			return ToolEffects.sweep_keys(grid, keys)
 		"clear_random_n":
 			var r: RandomNumberGenerator = rng
@@ -189,9 +334,17 @@ static func apply_instant(grid: Array, id: String, rng: RandomNumberGenerator = 
 				r.randomize()
 			return ToolEffects.clear_random_n(grid, int(params.get("count", 6)), r)
 		"transform_tiles":
+			# Accept EITHER explicit `from_keys` (Array of ints — drill) OR a
+			# `from_category` (String) resolved at dispatch (trimmer / bee). drill's
+			# explicit-keys path is unchanged.
+			var from_keys: Array
+			if params.has("from_category"):
+				from_keys = tiles_in_category(String(params.get("from_category", "")))
+			else:
+				from_keys = params.get("from_keys", [])
 			return ToolEffects.transform_all(
 				grid,
-				params.get("from_keys", []),
+				from_keys,
 				int(params.get("to_key", Constants.EMPTY)),
 			)
 		_:
@@ -218,11 +371,19 @@ static func apply_tap(grid: Array, id: String, cell: Vector2i) -> Dictionary:
 		"clear_component":
 			return ToolEffects.sweep_cells(grid, ToolEffects.select_component(grid, cell))
 		"transform_adjacent":
+			# Accept EITHER explicit `from_keys` (Array of ints — magnet) OR
+			# `from_categories` (Array of Strings — coal_transmuter) resolved here.
+			# magnet's explicit-keys path is unchanged.
+			var from_keys: Array
+			if params.has("from_categories"):
+				from_keys = tiles_in_categories(params.get("from_categories", []))
+			else:
+				from_keys = params.get("from_keys", [])
 			return ToolEffects.transform_adjacent(
 				grid,
 				cell,
 				int(params.get("radius", 1)),
-				params.get("from_keys", []),
+				from_keys,
 				int(params.get("to_key", Constants.EMPTY)),
 			)
 		_:
