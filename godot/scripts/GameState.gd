@@ -40,44 +40,42 @@ var orders: Array = []
 var rng := RandomNumberGenerator.new()
 
 # ── NPC roster + bonding (ADDITIVE — ported from src/features/npcs) ────────────
-## The 5-NPC roster and per-NPC bond (a float in [0, 10]). Every order is REQUESTED
-## by an NPC (generate_order picks one via the seeded `rng`); filling it pays a
+## The 5-NPC roster and per-NPC bond (a float in [0, 10]) now live in a composed
+## NpcState (the same pattern as `settlement` / `story`). Every order is REQUESTED by
+## an NPC (generate_order picks one via the seeded `rng`); filling it pays a
 ## bond-ADJUSTED reward (NpcConfig.reward_with_bond) and raises that NPC's bond by
-## BOND_GAIN_PER_FILL. The default bond is 5.0 (Warm, ×1.00), so a fresh order's
-## payout is IDENTICAL to the pre-bonding flat reward until a bond crosses into
-## Liked (≥7) or Sour (<5) — keeping this layer additive (the orders economy stays
-## green at the default bond). Roster = NpcConfig.all_ids(); bonds map id → float.
-## Persisted in to_dict / from_dict (defensive defaults for old saves).
-var npcs: Dictionary = {
-	"roster": NpcConfig.all_ids(),
-	"bonds": _default_bonds(),
-}
-## Bond gained each time an order from that NPC is filled (+0.3 per React bond.ts).
-const BOND_GAIN_PER_FILL: float = 0.3
-## Fallback NPC for an old save's order missing its `npc` field (defensive).
-const DEFAULT_ORDER_NPC: String = "wren"
+## BOND_GAIN_PER_FILL. The default bond is 5.0 (Warm, ×1.00), so a fresh order's payout
+## is IDENTICAL to the pre-bonding flat reward until a bond crosses into Liked (≥7) or
+## Sour (<5) — keeping this layer additive. Persisted as the flat top-level "npcs" key
+## (see to_dict / from_dict), byte-identical to before the extraction.
+var npcs_state := NpcState.new()
+## Bond gained each time an order from that NPC is filled (+0.3). Forwarded from
+## NpcState so `GameState.BOND_GAIN_PER_FILL` keeps resolving for callers.
+const BOND_GAIN_PER_FILL: float = NpcState.BOND_GAIN_PER_FILL
+## Fallback NPC for an old save's order missing its `npc` field (defensive). Forwarded
+## from NpcState so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
+const DEFAULT_ORDER_NPC: String = NpcState.DEFAULT_ORDER_NPC
 
-## Build the starting bonds map: every roster NPC at the Warm default (5.0).
-static func _default_bonds() -> Dictionary:
-	var out: Dictionary = {}
-	for id in NpcConfig.all_ids():
-		out[id] = 5.0
-	return out
+## The legacy flat {"roster": …, "bonds": …} view onto the composed NpcState — a LIVE
+## reference (NOT a copy), so the many readers that index `game.npcs["roster"]` /
+## mutate `game.npcs["bonds"] = …` keep working unchanged. Read-only property (no
+## setter): from_dict rebuilds the NpcState directly, and no caller reassigns `game.npcs`
+## wholesale (verified across the codebase) — they only read or mutate the returned dict.
+var npcs: Dictionary:
+	get:
+		return npcs_state.as_dict()
 
-## Current bond for `id` (0..10 float). A missing/unknown id reads as the Warm
-## default 5.0 so reward math never divides by a phantom band.
+## Current bond for `id` (0..10 float). Thin forwarder to NpcState.bond — a missing /
+## unknown id reads as the Warm default 5.0 so reward math never divides by a phantom
+## band. Call site (`game.npc_bond(id)`) is UNCHANGED.
 func npc_bond(id: String) -> float:
-	var bonds: Dictionary = npcs.get("bonds", {})
-	return float(bonds.get(id, 5.0))
+	return npcs_state.bond(id)
 
-## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. No-op for
-## an id not in the bonds map's keys EXCEPT it will seed a known roster id at the
-## default first. Stores a float.
+## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. Thin forwarder
+## to NpcState.gain — seeds a known id at the default first; stores a float. Call site
+## (`game.gain_bond(id, amt)`) is UNCHANGED.
 func gain_bond(id: String, amount: float) -> void:
-	var bonds: Dictionary = npcs.get("bonds", {})
-	var current: float = float(bonds.get(id, 5.0))
-	bonds[id] = clampf(current + amount, 0.0, 10.0)
-	npcs["bonds"] = bonds
+	npcs_state.gain(id, amount)
 
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
 ## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
@@ -456,43 +454,72 @@ func summon_magic_tool(id: String) -> Dictionary:
 	if influence < cost:
 		return {"ok": false, "reason": "cant_afford"}
 	influence = maxi(0, influence - cost)
-	# Write DIRECTLY into the tools dict (mirrors the React slice). grant_tool would reject
-	# this id (magic tools aren't ToolConfig members), so we bypass it deliberately.
-	tools[id] = int(tools.get(id, 0)) + 1
-	return {"ok": true, "id": id, "count": int(tools[id]), "influence": influence}
+	# Write DIRECTLY into the tools dict via ToolState.set_count (mirrors the React slice).
+	# grant_tool would reject this id (magic tools aren't ToolConfig members), so we bypass
+	# the ToolConfig gate deliberately.
+	tool_state.set_count(id, tool_count(id) + 1)
+	return {"ok": true, "id": id, "count": tool_count(id), "influence": influence}
 
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
-## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
-## A missing key reads as 0 (no charges). This is the persisted half of the tool
-## system: tools are GRANTED (grant_tool), CONSUMED one charge per use
-## (use_tool_on_grid), and the key is ERASED when its count hits 0 so the dict stays
-## a clean "owned, usable" set. The pure board effects live in ToolEffects /
-## ToolConfig (M8a); this layer just owns the inventory + the credit/consume flow.
-var tools: Dictionary = {}
-## The armed TAP-target tool awaiting a board cell, or "" when nothing is armed.
-## TRANSIENT — deliberately NOT persisted (arm_tool / clear_pending_tool only):
-## arming is a momentary input mode the live Board (M8c) drives, not save state. A
-## reload always starts disarmed.
-var pending_tool: String = ""
+## Owned tool charges + the armed tap-target state now live in a composed ToolState (the
+## same pattern as `settlement` / `npcs_state`). Tools are GRANTED (grant_tool), CONSUMED
+## one charge per use (use_tool_on_grid), and the key is ERASED when its count hits 0 so
+## the dict stays a clean "owned, usable" set. The pure board effects live in ToolEffects /
+## ToolConfig (M8a); ToolState just owns the inventory + arm/disarm; the credit/quests
+## orchestration stays on GameState.use_tool_on_grid. Persisted as the flat top-level
+## "tools" key (see to_dict / from_dict), byte-identical to before the extraction.
+var tool_state := ToolState.new()
+
+## The legacy `tools` Dictionary view onto the composed ToolState — a LIVE reference (NOT
+## a copy), so the many readers that index / iterate / mutate `game.tools` (Main, the
+## Inventory screen, tests doing game.tools.clear() / .has() / .size()) keep working
+## unchanged. Read-only property (no setter): from_dict rebuilds the ToolState directly and
+## no caller reassigns `game.tools` wholesale (verified across the codebase).
+var tools: Dictionary:
+	get:
+		return tool_state.tools
+
+## The armed TAP-target tool awaiting a board cell, or "" when nothing is armed. TRANSIENT —
+## never persisted (a reload always starts disarmed). A read/write property forwarding to
+## ToolState.pending so external reads (`game.pending_tool`) AND any future write flow
+## through to the one source of truth; today only GameState's own arm/use/clear paths set it.
+var pending_tool: String:
+	get:
+		return tool_state.pending
+	set(value):
+		tool_state.pending = value
 
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
-## (src/features/achievements/data.ts) as a counter/threshold/reward layer wired
-## ADDITIVELY into the existing event sites (credit_chain / fill_order / build /
-## damage_boss). See AchievementConfig for the ported, port-reachable catalog.
-##
-## counter_name:String -> int running total. Bumped by bump_counter() at each event
-## site; a missing key reads as 0. Plain quantity/chain counters increment freely;
-## DISTINCT counters (see _distinct_seen) only increment on a newly-seen key.
-var achievement_counters: Dictionary = {}
-## achievement_id:String -> true for every UNLOCKED trophy. An id present here is
-## already earned: bump_counter never re-grants its reward (idempotent unlock).
-var achievements_unlocked: Dictionary = {}
+## (src/features/achievements/data.ts), now lives in a composed AchievementState (the same
+## pattern as `settlement` / `npcs_state` / `tool_state`). It owns the counters / unlocked
+## set / distinct-seen maps + the pure counter/threshold COUNTING and UNLOCK detection;
+## the side-effecting REWARD grant (coins +=, grant_tool) stays on GameState.bump_counter,
+## wired ADDITIVELY into the existing event sites (credit_chain / fill_order / build /
+## damage_boss). Persisted as the three flat top-level keys (achievement_counters /
+## achievements_unlocked / _distinct_seen), byte-identical to before the extraction.
+var achievement_state := AchievementState.new()
+
+## Live property views onto the composed AchievementState's three maps — read-only getters
+## returning the live Dictionaries, so every reader (AchievementsScreen,
+## g.achievement_counters.get(...), g._distinct_seen.get(...), tests) is unchanged.
+## from_dict rebuilds the AchievementState directly; no caller reassigns these wholesale.
+
+## counter_name:String -> int running total. A missing key reads as 0.
+var achievement_counters: Dictionary:
+	get:
+		return achievement_state.counters
+## achievement_id:String -> true for every UNLOCKED trophy. An id present here is already
+## earned: bump_counter never re-grants its reward (idempotent unlock).
+var achievements_unlocked: Dictionary:
+	get:
+		return achievement_state.unlocked
 ## counter_name:String -> {distinct_key:String -> true}. Backs the distinct counters
-## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the
-## FIRST time it is seen for that counter and never again. Mirrors the React
-## seenResources / seenBuildings maps, generalised to one map keyed by counter.
-var _distinct_seen: Dictionary = {}
+## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the FIRST
+## time it is seen for that counter and never again.
+var _distinct_seen: Dictionary:
+	get:
+		return achievement_state.distinct
 
 # ── Quests + Almanac (ADDITIVE — ported from src/features/quests + almanac) ──────
 ## The DETERMINISTIC 6-slot quest system + the almanac XP/tier track, ported from the
@@ -998,7 +1025,7 @@ func generate_order() -> Dictionary:
 	# alongside the unchanged `reward` field. `reward` STAYS the base so any
 	# order["reward"] reader is unaffected; fill_order computes the bond-adjusted
 	# PAYOUT from `base_reward` at fill time.
-	var roster: Array = npcs.get("roster", NpcConfig.all_ids())
+	var roster: Array = npcs_state.roster
 	if roster.is_empty():
 		roster = NpcConfig.all_ids()
 	var npc: String = String(roster[rng.randi_range(0, roster.size() - 1)])
@@ -1636,49 +1663,42 @@ func use_ratcatcher_charge() -> bool:
 
 # ── Tools (M8b) ───────────────────────────────────────────────────────────────
 
-## Grant `n` charges of tool `id`. No-op for an unknown id (ToolConfig doesn't know
-## it) or a non-positive `n`. Adds to any existing charges so granting the same tool
-## twice stacks. A fresh grant creates the key; the count is always kept > 0.
+## Grant `n` charges of tool `id`. Thin forwarder to ToolState.grant — no-op for an
+## unknown id (ToolConfig doesn't know it) or a non-positive `n`; stacks onto any existing
+## charges. Call site (`game.grant_tool(id, n)`) is UNCHANGED.
 func grant_tool(id: String, n: int = 1) -> void:
-	if n <= 0:
-		return
-	if not ToolConfig.has_tool(id):
-		return
-	tools[id] = int(tools.get(id, 0)) + n
+	tool_state.grant(id, n)
 
-## Remaining charges of tool `id` (0 when unowned / never granted).
+## Remaining charges of tool `id` (0 when unowned). Thin forwarder to ToolState.count.
 func tool_count(id: String) -> int:
-	return int(tools.get(id, 0))
+	return tool_state.count(id)
 
-## True when `id` has at least one charge owned (regardless of whether ToolConfig
-## still knows it — a count > 0 means it was validly granted).
+## True when `id` has at least one charge owned (regardless of whether ToolConfig still
+## knows it — a count > 0 means it was validly granted). Forwarder to ToolState.has_charges.
 func has_tool_charges(id: String) -> bool:
-	return tool_count(id) > 0
+	return tool_state.has_charges(id)
 
 ## True when `id` is a REAL tool (ToolConfig knows it) AND has at least one charge.
-## The gate use_tool_on_grid checks first.
+## The gate use_tool_on_grid checks first. Forwarder to ToolState.can_use.
 func can_use_tool(id: String) -> bool:
-	return ToolConfig.has_tool(id) and has_tool_charges(id)
+	return tool_state.can_use(id)
 
-## Arm a TAP-target tool so the next board cell fires it. Returns true on success
-## (the tool is a known tap tool with charges → pending_tool is set). Returns false
-## WITHOUT arming for an unknown tool, a NON-tap (instant) tool, or one with no
-## charges — instant tools fire immediately and never need arming.
+## Arm a TAP-target tool so the next board cell fires it. Returns true on success (the tool
+## is a known tap tool with charges → pending_tool is set). Returns false WITHOUT arming for
+## an unknown tool, a NON-tap (instant) tool, or one with no charges. Forwarder to
+## ToolState.arm. Call site (`game.arm_tool(id)`) is UNCHANGED.
 func arm_tool(id: String) -> bool:
-	if not can_use_tool(id):
-		return false
-	if not ToolConfig.is_tap_target(id):
-		return false
-	pending_tool = id
-	return true
+	return tool_state.arm(id)
 
-## True while a tap-target tool is armed and waiting for a board cell.
+## True while a tap-target tool is armed and waiting for a board cell. Forwarder to
+## ToolState.is_armed.
 func is_tool_armed() -> bool:
-	return pending_tool != ""
+	return tool_state.is_armed()
 
-## Disarm any pending tap-target tool (cancel the armed input mode).
+## Disarm any pending tap-target tool (cancel the armed input mode). Forwarder to
+## ToolState.disarm.
 func clear_pending_tool() -> void:
-	pending_tool = ""
+	tool_state.disarm()
 
 ## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
 ## Returns {ok, reason, grid, collected}:
@@ -1720,15 +1740,10 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 	var collected: Dictionary = res.get("collected", {})
 	for tile_value in collected.keys():
 		credit_chain(int(tile_value), int(collected[tile_value]))
-	# Consume one charge; erase the key at 0 so `tools` stays an owned-and-usable set.
-	var left: int = int(tools.get(id, 0)) - 1
-	if left <= 0:
-		tools.erase(id)
-	else:
-		tools[id] = left
-	# If this was the armed tap tool, disarm it now that it has fired.
-	if pending_tool == id:
-		pending_tool = ""
+	# Consume one charge (erase the key at 0 so `tools` stays an owned-and-usable set) and,
+	# if `id` was the armed tap tool, disarm it now that it has fired. ToolState.consume
+	# handles both.
+	tool_state.consume(id)
 	# Quests (ADDITIVE): a successful tool use ticks the TOOL quest event (+1 to any
 	# tool-category quest matching this tool id). No-op loop over [] with an empty board.
 	# Wired here (the single committed-use site) so every tool fired through GameState
@@ -1966,33 +1981,14 @@ func has_almanac_structural(flag: String) -> bool:
 ## what keeps load idempotent: from_dict restores achievements_unlocked, so a later
 ## bump skips already-unlocked rows and never double-grants.
 func bump_counter(counter: String, amount: int = 1, distinct_key = null) -> Array:
-	var prev: int = int(achievement_counters.get(counter, 0))
-	if distinct_key != null:
-		# Distinct counter: only the first sighting of this key bumps the count.
-		var seen: Dictionary = _distinct_seen.get(counter, {})
-		var key: String = String(distinct_key)
-		if key == "" or seen.has(key):
-			return []   # empty key or already counted → no change, nothing unlocks
-		seen[key] = true
-		_distinct_seen[counter] = seen
-		achievement_counters[counter] = prev + 1
-	else:
-		if amount == 0:
-			return []   # a zero bump can't cross a threshold
-		achievement_counters[counter] = prev + amount
-	var new_total: int = int(achievement_counters[counter])
-
-	# Mark + reward every achievement on this counter that just crossed its threshold.
-	var newly: Array = []
-	for a in AchievementConfig.for_counter(counter):
-		var id: String = String(a.get("id", ""))
-		if bool(achievements_unlocked.get(id, false)):
-			continue   # already earned — idempotent, never re-grant
-		var threshold: int = int(a.get("threshold", 0))
-		if prev < threshold and new_total >= threshold:
-			achievements_unlocked[id] = true
-			_grant_reward(a.get("reward", {}))
-			newly.append(a)
+	# AchievementState does the COUNTING + UNLOCK detection (incrementing, distinct-key
+	# tracking, marking each newly-crossed id unlocked) and returns the newly-unlocked
+	# achievement dicts. GameState owns the side-effecting REWARD grant below, so the
+	# coins/tools mutations stay here (not in the pure state object). Idempotence is intact:
+	# an already-unlocked id is never returned, so its reward is never re-granted.
+	var newly: Array = achievement_state.bump(counter, amount, distinct_key)
+	for a in newly:
+		_grant_reward(a.get("reward", {}))
 	return newly
 
 ## Grant an achievement reward dict ({"coins": N} and/or {"tools": {id: n}}). Coins
@@ -2017,9 +2013,7 @@ func _grant_reward(reward: Dictionary) -> void:
 ## `_distinct_seen` so a counter that has only ever been bumped via the distinct
 ## path still reads correctly even if `achievement_counters` were absent.
 func achievement_progress(counter: String) -> int:
-	if _distinct_seen.has(counter):
-		return int((_distinct_seen[counter] as Dictionary).size())
-	return int(achievement_counters.get(counter, 0))
+	return achievement_state.progress(counter)
 
 ## The set of distinct keys seen so far for a DISTINCT counter, as a {key:String -> true}
 ## Dictionary (a defensive copy; empty for a counter never bumped via the distinct path).
@@ -2028,7 +2022,7 @@ func achievement_progress(counter: String) -> int:
 ## fabricated lifetime count the port doesn't track. `distinct_resources_chained` is the
 ## counter behind the resource codex.
 func distinct_seen(counter: String) -> Dictionary:
-	return (_distinct_seen.get(counter, {}) as Dictionary).duplicate()
+	return achievement_state.distinct_seen(counter)
 
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
@@ -2040,11 +2034,13 @@ func to_dict() -> Dictionary:
 		"settlement": settlement.to_dict(),
 		"buildings": buildings.duplicate(),
 		"orders": orders.duplicate(true),
-		# NPC bonding (ADDITIVE): the roster + per-NPC bonds (floats). Deep-copied so
-		# the snapshot is independent. Orders themselves carry their `npc`/`base_reward`
-		# inside the `orders` array above. SAVE_VERSION is NOT bumped — a save written
-		# before npcs existed loads the default roster/bonds (from_dict defensive default).
-		"npcs": npcs.duplicate(true),
+		# NPC bonding (ADDITIVE): the roster + per-NPC bonds (floats) from the composed
+		# NpcState, flattened back into the SAME top-level "npcs" key — a {roster, bonds}
+		# dict, deep-copied so the snapshot is independent. Byte-identical to the pre-split
+		# emission. Orders themselves carry their `npc`/`base_reward` inside the `orders`
+		# array above. SAVE_VERSION is NOT bumped — a save written before npcs existed loads
+		# the default roster/bonds (from_dict defensive default).
+		"npcs": npcs_state.to_dict(),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
 		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
@@ -2066,16 +2062,19 @@ func to_dict() -> Dictionary:
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
 		"audio_muted": audio_muted,
-		# M8b: owned tool charges. pending_tool is TRANSIENT and intentionally NOT
-		# persisted (a reload always starts disarmed).
-		"tools": tools.duplicate(),
-		# M10: achievement counters, the unlocked set, and the distinct-seen maps.
-		# Persisting `achievements_unlocked` is what makes load NON-double-granting —
-		# a restored unlocked id is skipped by bump_counter, so its reward is never
-		# re-issued (the reward was already banked the run it was first earned).
-		"achievement_counters": achievement_counters.duplicate(),
-		"achievements_unlocked": achievements_unlocked.duplicate(),
-		"_distinct_seen": _distinct_seen.duplicate(true),
+		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
+		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
+		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
+		# Byte-identical to the pre-split emission.
+		"tools": tool_state.to_dict(),
+		# M10: achievement counters, the unlocked set, and the distinct-seen maps — from the
+		# composed AchievementState, flattened back into the SAME three top-level keys (NOT
+		# nested under one sub-object), byte-identical to the pre-split emission. Persisting
+		# `achievements_unlocked` is what makes load NON-double-granting — a restored unlocked
+		# id is skipped by bump_counter, so its reward is never re-issued.
+		"achievement_counters": achievement_state.counters.duplicate(),
+		"achievements_unlocked": achievement_state.unlocked.duplicate(),
+		"_distinct_seen": achievement_state.distinct.duplicate(true),
 		# Story engine: act + flags (incl. _fired_* markers) + choice_log + beat_queue.
 		# Persisting the fired markers is what makes one-time beats stay fired across a
 		# reload (post_story_event sees them and skips). SAVE_VERSION is NOT bumped —
@@ -2179,31 +2178,17 @@ static func from_dict(d: Dictionary) -> GameState:
 			if o_npc is String and NpcConfig.has(String(o_npc)):
 				rebuilt_order["npc"] = String(o_npc)
 			s.orders.append(rebuilt_order)
-	# Restore the NPC roster + bonds (ADDITIVE). Missing key (any save written before
-	# npcs existed) → the default roster (NpcConfig.all_ids) at the Warm default 5.0,
-	# so old saves load with neutral relationships. The roster keeps only REAL ids,
-	# de-duplicated; bonds keep only roster ids, coerced to float and clamped to
-	# [0, 10] (JSON yields floats; a corrupt out-of-range value can't break banding).
-	# Any roster id missing a saved bond defaults to 5.0. SAVE_VERSION is NOT bumped.
+	# Restore the NPC roster + bonds (ADDITIVE) into the composed NpcState from the SAME
+	# flat top-level "npcs" key. Missing key (any save written before npcs existed) →
+	# NpcState.from_dict({}) yields the default roster (NpcConfig.all_ids) at the Warm
+	# default 5.0, so old saves load with neutral relationships. The roster keeps only REAL
+	# ids, de-duplicated; bonds keep only roster ids, coerced to float and clamped to
+	# [0, 10] (a corrupt out-of-range value can't break banding); any roster id missing a
+	# saved bond defaults to 5.0 — all enforced inside NpcState.from_dict. SAVE_VERSION is
+	# NOT bumped.
 	var npcs_d: Variant = d.get("npcs", null)
 	if npcs_d is Dictionary:
-		var roster: Array = []
-		var raw_roster: Variant = npcs_d.get("roster", [])
-		if raw_roster is Array:
-			for rid in raw_roster:
-				var sid := String(rid)
-				if NpcConfig.has(sid) and not roster.has(sid):
-					roster.append(sid)
-		if roster.is_empty():
-			roster = NpcConfig.all_ids()
-		var bonds: Dictionary = {}
-		var raw_bonds: Variant = npcs_d.get("bonds", {})
-		for id in roster:
-			var v: float = 5.0
-			if raw_bonds is Dictionary and raw_bonds.has(id):
-				v = clampf(float(raw_bonds[id]), 0.0, 10.0)
-			bonds[id] = v
-		s.npcs = {"roster": roster, "bonds": bonds}
+		s.npcs_state = NpcState.from_dict(npcs_d)
 	# Restore the expedition state defensively (M3f / M3j). The biome must be one of the
 	# three known values (anything else falls back to "farm"); turns can't go negative;
 	# and a corrupt "mine"/"harbor"-with-no-turns save snaps back to the farm (turns 0)
@@ -2278,47 +2263,27 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
-	# Restore owned tool charges (M8b). Missing key (any save written before tools
-	# existed) → {} (no tools). Each value is coerced to int (JSON yields floats) and
-	# only positive counts are kept — a 0/negative or non-numeric entry is dropped so
-	# the loaded `tools` is always a clean owned-and-usable set. pending_tool is
-	# transient and never restored (a reload starts disarmed). SAVE_VERSION is NOT
-	# bumped: like every prior additive field (M3f/M3g/M3h/M4f), the defensive default
-	# means old v1 saves still load (a save with no tools == tools {}).
-	var tls: Variant = d.get("tools", {})
-	if tls is Dictionary:
-		for k in tls:
-			var n: int = int(tls[k])
-			if n > 0:
-				s.tools[String(k)] = n
-	# Restore achievements (M10). Missing keys (any pre-M10 save) → empty maps, so
-	# old saves load with zero progress. Counters coerce values to int (JSON yields
-	# floats); the unlocked map keeps only truthy entries; _distinct_seen rebuilds a
-	# {counter -> {key -> true}} shape, dropping malformed rows. SAVE_VERSION is NOT
-	# bumped — like every prior additive field, the defensive defaults keep old saves
-	# loading. Because the unlocked set is restored here, a subsequent bump_counter
-	# sees the id as already-unlocked and never re-grants its reward on load.
-	var counters: Variant = d.get("achievement_counters", {})
-	if counters is Dictionary:
-		for k in counters:
-			s.achievement_counters[String(k)] = int(counters[k])
-	var unlocked: Variant = d.get("achievements_unlocked", {})
-	if unlocked is Dictionary:
-		for k in unlocked:
-			if bool(unlocked[k]):
-				s.achievements_unlocked[String(k)] = true
-	var distinct: Variant = d.get("_distinct_seen", {})
-	if distinct is Dictionary:
-		for ckey in distinct:
-			var inner: Variant = distinct[ckey]
-			if not (inner is Dictionary):
-				continue
-			var seen: Dictionary = {}
-			for sk in inner:
-				if bool(inner[sk]):
-					seen[String(sk)] = true
-			if not seen.is_empty():
-				s._distinct_seen[String(ckey)] = seen
+	# Restore owned tool charges (M8b) into the composed ToolState from the SAME flat
+	# top-level "tools" key. Missing key (any save written before tools existed) →
+	# ToolState.from_dict({}) yields {} (no tools). Each value is coerced to int (JSON
+	# yields floats) and only positive counts are kept — a 0/negative or non-numeric entry
+	# is dropped so the loaded `tools` is always a clean owned-and-usable set; pending_tool
+	# is transient and never restored (a reload starts disarmed). All enforced inside
+	# ToolState.from_dict. SAVE_VERSION is NOT bumped — a save with no tools == tools {}.
+	s.tool_state = ToolState.from_dict(d.get("tools", {}))
+	# Restore achievements (M10) into the composed AchievementState from the SAME three flat
+	# top-level keys (achievement_counters / achievements_unlocked / _distinct_seen). Missing
+	# keys (any pre-M10 save) → empty maps, so old saves load with zero progress. Counters
+	# coerce values to int (JSON yields floats); the unlocked map keeps only truthy entries;
+	# distinct rebuilds a {counter -> {key -> true}} shape, dropping malformed rows — all
+	# enforced inside AchievementState.from_flat. SAVE_VERSION is NOT bumped. Because the
+	# unlocked set is restored, a subsequent bump_counter sees the id as already-unlocked and
+	# never re-grants its reward on load.
+	s.achievement_state = AchievementState.from_flat(
+		d.get("achievement_counters", {}),
+		d.get("achievements_unlocked", {}),
+		d.get("_distinct_seen", {}),
+	)
 	# Restore the story engine state (beats/flags/triggers/choices). Missing key (any
 	# save written before story existed) → a fresh act-1 StoryState via from_dict({}).
 	# StoryState.from_dict floors the act at 1, keeps only truthy flags (incl. fired
