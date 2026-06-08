@@ -5,7 +5,7 @@ extends SceneTree
 ##   1. InventoryScreen ledger math — total_value() sums count × MarketConfig.sell_price
 ##      over owned SELLABLE resources (non-sellable like `supplies` contribute 0);
 ##      kinds() / total_units() count distinct owned resources + total individual units;
-##      group_of(res) routes each resource to "Farm goods" / "Refined" / "Mine" / "Other".
+##      group_of(res) routes each resource to "Farm Goods" / "Refined" / "Mine" / "Other".
 ##   2. InventoryScreen wiring — the modal builds, exposes the "close" action button,
 ##      and pressing it fires `closed` + hides the modal. An empty inventory yields a
 ##      zeroed ledger and refresh() doesn't error.
@@ -67,9 +67,9 @@ func _initialize() -> void:
 	_check(inv._action_buttons.has("close"), "_action_buttons has 'close'")
 
 	# Grouping — one assertion per group + an unknown key routes to "Other".
-	_check(inv.group_of("hay_bundle") == "Farm goods", "group_of(hay_bundle) == 'Farm goods'")
-	_check(inv.group_of("flour") == "Farm goods", "group_of(flour) == 'Farm goods'")
-	_check(inv.group_of("horseshoe") == "Farm goods", "group_of(horseshoe) == 'Farm goods'")
+	_check(inv.group_of("hay_bundle") == "Farm Goods", "group_of(hay_bundle) == 'Farm Goods'")
+	_check(inv.group_of("flour") == "Farm Goods", "group_of(flour) == 'Farm Goods'")
+	_check(inv.group_of("horseshoe") == "Farm Goods", "group_of(horseshoe) == 'Farm Goods'")
 	_check(inv.group_of("bread") == "Refined", "group_of(bread) == 'Refined'")
 	_check(inv.group_of("supplies") == "Refined", "group_of(supplies) == 'Refined'")
 	_check(inv.group_of("block") == "Mine", "group_of(block) == 'Mine'")

@@ -58,10 +58,10 @@ const COL_MUTED  := Palette.INK_MID
 const COL_VALUE  := Palette.GOLD
 const COL_PANEL  := Palette.PARCHMENT
 const PANEL_MAX_WIDTH := 560.0
-## Bottom strip (px) reserved for the persistent nav bar (a lower CanvasLayer): the
-## backdrop + centring region stop this far short of the bottom so the nav shows through
-## + stays tappable, and the scroll-height clamp leaves room for it.
-const NAV_RESERVE := 76
+## Bottom strip (px) reserved for the persistent nav bar (a lower CanvasLayer): the view
+## backdrop stops this far short of the bottom so the nav shows through + stays tappable, and
+## the scroll-height clamp leaves room for it. Single source = UiKit.NAV_RESERVE.
+const NAV_RESERVE := UiKit.NAV_RESERVE
 
 # Bond-band → fill colour (tasteful Palette picks, matching the band mood).
 # Sour   — muted rose (warm red-pink, subdued, a step down from ember)
@@ -101,35 +101,37 @@ func _build_shell() -> void:
 
 	# Opaque VIEW background (not a dim modal scrim). The Townsfolk roster is one of the
 	# five persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
-	# board. Stops NAV_HEIGHT (76px) short of the bottom so the persistent nav bar (a LOWER
-	# CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks above it.
+	# board. It reserves UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD top
+	# bar shows ABOVE the view, and stops UiKit.NAV_RESERVE short of the bottom so the
+	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable;
+	# MOUSE_FILTER_STOP eats clicks in the band it covers.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered card: a CenterContainer centres the parchment panel at the panel's own
-	# (content-driven) size, so a short roster yields a small card floating over the view —
-	# no full-height card with an empty void below. Its bottom stops NAV_RESERVE short so the
-	# card centres in the region ABOVE the persistent nav and never overlaps it.
-	var center := CenterContainer.new()
+	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
+	# margins), reserving the top-bar band + bottom-nav strip. A width-cap MarginContainer
+	# (below) keeps line length tidy on wide viewports.
+	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.offset_bottom = -NAV_RESERVE
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
 	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -NAV_RESERVE
+	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
+	# shadow, so it reads as a full-brightness page under the persistent top bar.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
 	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
@@ -139,10 +141,16 @@ func _build_shell() -> void:
 
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Fill the full-bleed page height so the scroll list expands into it (no void below a short
+	# roster); the scroll below takes the spare height via SIZE_EXPAND_FILL.
+	root_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "👥 Townsfolk" heading + a right-aligned "✕ Close" button.
+	# Title row: "👥 Townsfolk" heading spanning the row. The visible "✕ Close" is GONE — a
+	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
+	# non-rendered close Button is still created + wired below so ESC/back, the "board"
+	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -157,12 +165,11 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
-	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# Tab row: a Workers | Quests segmented toggle on the left, with the count
@@ -200,6 +207,9 @@ func _build_shell() -> void:
 	_scroll = UiKit.make_vscroll()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Full-bleed view: the scroll takes the spare page height (no content-clamp / float-card
+	# sizing) so the roster fills the page and scrolls when it overflows.
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(_scroll)
 
 	# The dynamic body — every NPC card hangs off this and is cleared + rebuilt each refresh().
@@ -207,15 +217,6 @@ func _build_shell() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 12)
 	_scroll.add_child(_body)
-
-	# Re-fit the scroll height to its content whenever the viewport resizes so the card
-	# stays content-sized + capped to the viewport.
-	# get_viewport() is null while the screen is built off-tree (tests construct it with
-	# .new()+setup() before add_child); guard so the resize hook wires only when in-tree.
-	var vp := get_viewport()
-	if vp != null:
-		vp.size_changed.connect(func() -> void:
-			UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE))
 
 # ── render ─────────────────────────────────────────────────────────────────────────────
 
@@ -235,11 +236,6 @@ func refresh() -> void:
 		_render_quests()
 	else:
 		_render_workers()
-
-	# Clamp the scroll to the (now-built) content so the card sizes to it. A deferred re-fit
-	# catches min-sizes that settle one frame after the cards are added.
-	UiKit.fit_scroll_height(_scroll, _body, 240.0 + NAV_RESERVE)
-	UiKit.fit_scroll_height.call_deferred(_scroll, _body, 240.0 + NAV_RESERVE)
 
 ## WORKERS tab — the named townsfolk roster (NpcConfig.all_ids() order). Each NPC gets a
 ## card tracked in `_cards` (the view-test contract).
