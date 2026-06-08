@@ -491,22 +491,35 @@ var pending_tool: String:
 
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
-## (src/features/achievements/data.ts) as a counter/threshold/reward layer wired
-## ADDITIVELY into the existing event sites (credit_chain / fill_order / build /
-## damage_boss). See AchievementConfig for the ported, port-reachable catalog.
-##
-## counter_name:String -> int running total. Bumped by bump_counter() at each event
-## site; a missing key reads as 0. Plain quantity/chain counters increment freely;
-## DISTINCT counters (see _distinct_seen) only increment on a newly-seen key.
-var achievement_counters: Dictionary = {}
-## achievement_id:String -> true for every UNLOCKED trophy. An id present here is
-## already earned: bump_counter never re-grants its reward (idempotent unlock).
-var achievements_unlocked: Dictionary = {}
+## (src/features/achievements/data.ts), now lives in a composed AchievementState (the same
+## pattern as `settlement` / `npcs_state` / `tool_state`). It owns the counters / unlocked
+## set / distinct-seen maps + the pure counter/threshold COUNTING and UNLOCK detection;
+## the side-effecting REWARD grant (coins +=, grant_tool) stays on GameState.bump_counter,
+## wired ADDITIVELY into the existing event sites (credit_chain / fill_order / build /
+## damage_boss). Persisted as the three flat top-level keys (achievement_counters /
+## achievements_unlocked / _distinct_seen), byte-identical to before the extraction.
+var achievement_state := AchievementState.new()
+
+## Live property views onto the composed AchievementState's three maps — read-only getters
+## returning the live Dictionaries, so every reader (AchievementsScreen,
+## g.achievement_counters.get(...), g._distinct_seen.get(...), tests) is unchanged.
+## from_dict rebuilds the AchievementState directly; no caller reassigns these wholesale.
+
+## counter_name:String -> int running total. A missing key reads as 0.
+var achievement_counters: Dictionary:
+	get:
+		return achievement_state.counters
+## achievement_id:String -> true for every UNLOCKED trophy. An id present here is already
+## earned: bump_counter never re-grants its reward (idempotent unlock).
+var achievements_unlocked: Dictionary:
+	get:
+		return achievement_state.unlocked
 ## counter_name:String -> {distinct_key:String -> true}. Backs the distinct counters
-## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the
-## FIRST time it is seen for that counter and never again. Mirrors the React
-## seenResources / seenBuildings maps, generalised to one map keyed by counter.
-var _distinct_seen: Dictionary = {}
+## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the FIRST
+## time it is seen for that counter and never again.
+var _distinct_seen: Dictionary:
+	get:
+		return achievement_state.distinct
 
 # ── Quests + Almanac (ADDITIVE — ported from src/features/quests + almanac) ──────
 ## The DETERMINISTIC 6-slot quest system + the almanac XP/tier track, ported from the
@@ -1968,33 +1981,14 @@ func has_almanac_structural(flag: String) -> bool:
 ## what keeps load idempotent: from_dict restores achievements_unlocked, so a later
 ## bump skips already-unlocked rows and never double-grants.
 func bump_counter(counter: String, amount: int = 1, distinct_key = null) -> Array:
-	var prev: int = int(achievement_counters.get(counter, 0))
-	if distinct_key != null:
-		# Distinct counter: only the first sighting of this key bumps the count.
-		var seen: Dictionary = _distinct_seen.get(counter, {})
-		var key: String = String(distinct_key)
-		if key == "" or seen.has(key):
-			return []   # empty key or already counted → no change, nothing unlocks
-		seen[key] = true
-		_distinct_seen[counter] = seen
-		achievement_counters[counter] = prev + 1
-	else:
-		if amount == 0:
-			return []   # a zero bump can't cross a threshold
-		achievement_counters[counter] = prev + amount
-	var new_total: int = int(achievement_counters[counter])
-
-	# Mark + reward every achievement on this counter that just crossed its threshold.
-	var newly: Array = []
-	for a in AchievementConfig.for_counter(counter):
-		var id: String = String(a.get("id", ""))
-		if bool(achievements_unlocked.get(id, false)):
-			continue   # already earned — idempotent, never re-grant
-		var threshold: int = int(a.get("threshold", 0))
-		if prev < threshold and new_total >= threshold:
-			achievements_unlocked[id] = true
-			_grant_reward(a.get("reward", {}))
-			newly.append(a)
+	# AchievementState does the COUNTING + UNLOCK detection (incrementing, distinct-key
+	# tracking, marking each newly-crossed id unlocked) and returns the newly-unlocked
+	# achievement dicts. GameState owns the side-effecting REWARD grant below, so the
+	# coins/tools mutations stay here (not in the pure state object). Idempotence is intact:
+	# an already-unlocked id is never returned, so its reward is never re-granted.
+	var newly: Array = achievement_state.bump(counter, amount, distinct_key)
+	for a in newly:
+		_grant_reward(a.get("reward", {}))
 	return newly
 
 ## Grant an achievement reward dict ({"coins": N} and/or {"tools": {id: n}}). Coins
@@ -2019,9 +2013,7 @@ func _grant_reward(reward: Dictionary) -> void:
 ## `_distinct_seen` so a counter that has only ever been bumped via the distinct
 ## path still reads correctly even if `achievement_counters` were absent.
 func achievement_progress(counter: String) -> int:
-	if _distinct_seen.has(counter):
-		return int((_distinct_seen[counter] as Dictionary).size())
-	return int(achievement_counters.get(counter, 0))
+	return achievement_state.progress(counter)
 
 ## The set of distinct keys seen so far for a DISTINCT counter, as a {key:String -> true}
 ## Dictionary (a defensive copy; empty for a counter never bumped via the distinct path).
@@ -2030,7 +2022,7 @@ func achievement_progress(counter: String) -> int:
 ## fabricated lifetime count the port doesn't track. `distinct_resources_chained` is the
 ## counter behind the resource codex.
 func distinct_seen(counter: String) -> Dictionary:
-	return (_distinct_seen.get(counter, {}) as Dictionary).duplicate()
+	return achievement_state.distinct_seen(counter)
 
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
@@ -2075,13 +2067,14 @@ func to_dict() -> Dictionary:
 		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
 		# Byte-identical to the pre-split emission.
 		"tools": tool_state.to_dict(),
-		# M10: achievement counters, the unlocked set, and the distinct-seen maps.
-		# Persisting `achievements_unlocked` is what makes load NON-double-granting —
-		# a restored unlocked id is skipped by bump_counter, so its reward is never
-		# re-issued (the reward was already banked the run it was first earned).
-		"achievement_counters": achievement_counters.duplicate(),
-		"achievements_unlocked": achievements_unlocked.duplicate(),
-		"_distinct_seen": _distinct_seen.duplicate(true),
+		# M10: achievement counters, the unlocked set, and the distinct-seen maps — from the
+		# composed AchievementState, flattened back into the SAME three top-level keys (NOT
+		# nested under one sub-object), byte-identical to the pre-split emission. Persisting
+		# `achievements_unlocked` is what makes load NON-double-granting — a restored unlocked
+		# id is skipped by bump_counter, so its reward is never re-issued.
+		"achievement_counters": achievement_state.counters.duplicate(),
+		"achievements_unlocked": achievement_state.unlocked.duplicate(),
+		"_distinct_seen": achievement_state.distinct.duplicate(true),
 		# Story engine: act + flags (incl. _fired_* markers) + choice_log + beat_queue.
 		# Persisting the fired markers is what makes one-time beats stay fired across a
 		# reload (post_story_event sees them and skips). SAVE_VERSION is NOT bumped —
@@ -2278,34 +2271,19 @@ static func from_dict(d: Dictionary) -> GameState:
 	# is transient and never restored (a reload starts disarmed). All enforced inside
 	# ToolState.from_dict. SAVE_VERSION is NOT bumped — a save with no tools == tools {}.
 	s.tool_state = ToolState.from_dict(d.get("tools", {}))
-	# Restore achievements (M10). Missing keys (any pre-M10 save) → empty maps, so
-	# old saves load with zero progress. Counters coerce values to int (JSON yields
-	# floats); the unlocked map keeps only truthy entries; _distinct_seen rebuilds a
-	# {counter -> {key -> true}} shape, dropping malformed rows. SAVE_VERSION is NOT
-	# bumped — like every prior additive field, the defensive defaults keep old saves
-	# loading. Because the unlocked set is restored here, a subsequent bump_counter
-	# sees the id as already-unlocked and never re-grants its reward on load.
-	var counters: Variant = d.get("achievement_counters", {})
-	if counters is Dictionary:
-		for k in counters:
-			s.achievement_counters[String(k)] = int(counters[k])
-	var unlocked: Variant = d.get("achievements_unlocked", {})
-	if unlocked is Dictionary:
-		for k in unlocked:
-			if bool(unlocked[k]):
-				s.achievements_unlocked[String(k)] = true
-	var distinct: Variant = d.get("_distinct_seen", {})
-	if distinct is Dictionary:
-		for ckey in distinct:
-			var inner: Variant = distinct[ckey]
-			if not (inner is Dictionary):
-				continue
-			var seen: Dictionary = {}
-			for sk in inner:
-				if bool(inner[sk]):
-					seen[String(sk)] = true
-			if not seen.is_empty():
-				s._distinct_seen[String(ckey)] = seen
+	# Restore achievements (M10) into the composed AchievementState from the SAME three flat
+	# top-level keys (achievement_counters / achievements_unlocked / _distinct_seen). Missing
+	# keys (any pre-M10 save) → empty maps, so old saves load with zero progress. Counters
+	# coerce values to int (JSON yields floats); the unlocked map keeps only truthy entries;
+	# distinct rebuilds a {counter -> {key -> true}} shape, dropping malformed rows — all
+	# enforced inside AchievementState.from_flat. SAVE_VERSION is NOT bumped. Because the
+	# unlocked set is restored, a subsequent bump_counter sees the id as already-unlocked and
+	# never re-grants its reward on load.
+	s.achievement_state = AchievementState.from_flat(
+		d.get("achievement_counters", {}),
+		d.get("achievements_unlocked", {}),
+		d.get("_distinct_seen", {}),
+	)
 	# Restore the story engine state (beats/flags/triggers/choices). Missing key (any
 	# save written before story existed) → a fresh act-1 StoryState via from_dict({}).
 	# StoryState.from_dict floors the act at 1, keeps only truthy flags (incl. fired
