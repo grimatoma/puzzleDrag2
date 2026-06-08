@@ -146,9 +146,10 @@ func _build_shell() -> void:
 	col.add_theme_constant_override("separation", 16)
 	panel.add_child(col)
 
-	# Title — "☰ Menu" in the Cinzel display serif (parity with Main's headings).
+	# Title — "🔥 Hearthlands" in the Cinzel display serif (React parity — the menu
+	# card is branded with the game title, not a generic "Menu" label).
 	var title := Label.new()
-	title.text = "☰ Menu"
+	title.text = "🔥 Hearthlands"
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -156,6 +157,15 @@ func _build_shell() -> void:
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
 	col.add_child(title)
+
+	# Tagline — a small muted line directly under the title (React parity:
+	# "A puzzle of seasons and stews."), centered to match the title.
+	var tagline := Label.new()
+	tagline.text = "A puzzle of seasons and stews."
+	tagline.add_theme_font_size_override("font_size", 15)
+	tagline.add_theme_color_override("font_color", Palette.INK_MID)
+	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(tagline)
 
 	# Sound — toggles the SFX mute. Emits `toggle_sound`; Main flips the flag + saves.
 	_sound_btn = Button.new()

@@ -66,6 +66,16 @@ static func role(id: String) -> String:
 			return String(n["role"])
 	return ""
 
+## The roster avatar tint for `id` as a Color (the hex string in ROSTER parsed via
+## Godot 4's Color(hex) ctor — e.g. mira → Color("#d6612a")). Returns a neutral
+## muted ink for an unknown id so an order whose `npc` isn't a real roster member
+## still renders a sensible avatar instead of black/transparent.
+static func color(id: String) -> Color:
+	for n in NPCS:
+		if String(n["id"]) == id:
+			return Color(String(n["color"]))
+	return Color("#7a5e3f")   # Palette.INK_MID — neutral fallback
+
 ## The bond band {name, mult} for a bond value. Mirrors React bondBand: clamp the
 ## bond to [0, 10], floor it, clamp that to [1, 10], then find the covering band.
 ## Falls back to the first band (Sour) if somehow nothing matches.

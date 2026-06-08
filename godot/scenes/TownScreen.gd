@@ -68,6 +68,12 @@ const COL_PANEL := Palette.PARCHMENT
 ## A soft danger tone for destructive/exit actions (demolish / leave the mine).
 const COL_DANGER := Color("#b06a52")
 const PANEL_MAX_WIDTH := 620.0
+## Order-card surface (React parity): a faint moss-tinted parchment fill with a soft
+## moss border, so each NPC order reads as a green request card distinct from the
+## plain parchment rows of the other sections. Tints sit a touch warm of pure green
+## to stay cohesive with the leather-bound-journal palette.
+const ORDER_CARD_BG := Color(0.886, 0.910, 0.812)      ## #e2e8cf — faint moss parchment
+const ORDER_CARD_BORDER := Color(0.624, 0.706, 0.443)  ## #9fb471 — soft moss edge
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -422,28 +428,175 @@ func _build_orders_section() -> void:
 		_orders_body.add_child(_make_label("no orders", COL_MUTED))
 		return
 	for i in game.orders.size():
-		var order: Dictionary = game.orders[i]
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 10)
-		var ord_icon := UiKit.make_icon(String(order["resource"]), 30.0)
-		if ord_icon != null:
-			row.add_child(ord_icon)
-		var label := _make_label("Deliver %d×%s → +%d🪙" % [
-			int(order["qty"]), UiKit.pretty_name(String(order["resource"])), int(order["reward"])], COL_BODY)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
+		_orders_body.add_child(_build_order_card(i))
 
-		var fill_btn := Button.new()
-		fill_btn.text = "Fill"
-		fill_btn.disabled = not game.can_fill_order(i)
-		fill_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_action_button(fill_btn, Palette.GOLD, 6, 0)
-		fill_btn.connect("pressed", Callable(self, "_do_fill").bind(i))
-		row.add_child(fill_btn)
-		_action_buttons["fill:" + str(i)] = fill_btn
+## Build ONE NPC order card (React parity — src/features/orders): a soft-green
+## PanelContainer holding a round NPC avatar, the NPC name + role, the request line
+## with the resource icon, a have/need progress bar, a reward chip, and a wide
+## "Deliver" button. All data is REAL (the order Dictionary + NpcConfig + game.qty);
+## an order whose `npc` isn't a roster id falls back to a neutral "?" avatar with the
+## resource name as the header. The deliver button keeps the SAME wiring the flat row
+## had — `_action_buttons["fill:"+i]`, disabled = not can_fill_order, → _do_fill(i).
+func _build_order_card(i: int) -> PanelContainer:
+	var order: Dictionary = game.orders[i]
+	var res: String = String(order["resource"])
+	var qty: int = int(order["qty"])
+	var reward: int = int(order["reward"])
+	var npc_id: String = String(order.get("npc", ""))
+	var known: bool = NpcConfig.has(npc_id)
 
-		_orders_body.add_child(row)
+	# Resolve the requesting NPC (or a neutral fallback for an unknown id).
+	var npc_name: String = NpcConfig.display_name(npc_id) if known else UiKit.pretty_name(res)
+	var npc_role: String = NpcConfig.role(npc_id) if known else ""
+	var npc_color: Color = NpcConfig.color(npc_id) if known else COL_MUTED
+	var initial: String = npc_name.substr(0, 1).to_upper() if (known and not npc_name.is_empty()) else "?"
+
+	# ── Card shell: a soft faint-green parchment card, rounded + moss-bordered. ──
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = ORDER_CARD_BG
+	card_style.set_corner_radius_all(12)
+	card_style.set_content_margin_all(12)
+	card_style.border_color = ORDER_CARD_BORDER
+	card_style.set_border_width_all(1)
+	card.add_theme_stylebox_override("panel", card_style)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	card.add_child(col)
+
+	# ── Header row: [avatar] [name / role] (expand) [reward chip] ──────────────
+	var header := HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_theme_constant_override("separation", 10)
+	col.add_child(header)
+
+	header.add_child(_make_avatar(npc_color, initial))
+
+	var name_col := VBoxContainer.new()
+	name_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_col.add_theme_constant_override("separation", 1)
+	header.add_child(name_col)
+
+	var name_lbl := Label.new()
+	name_lbl.text = npc_name
+	name_lbl.add_theme_font_size_override("font_size", 20)
+	name_lbl.add_theme_color_override("font_color", COL_HEADER)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		name_lbl.add_theme_font_override("font", hf)
+	name_col.add_child(name_lbl)
+
+	if not npc_role.is_empty():
+		var role_lbl := Label.new()
+		role_lbl.text = npc_role
+		role_lbl.add_theme_font_size_override("font_size", 14)
+		role_lbl.add_theme_color_override("font_color", COL_MUTED)
+		name_col.add_child(role_lbl)
+
+	# Reward chip — gold, right-aligned in the header.
+	var chip := UiKit.make_pill("+%d🪙" % reward, Palette.GOLD, Palette.PARCHMENT_SOFT)
+	chip.size_flags_horizontal = Control.SIZE_SHRINK_END
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_child(chip)
+
+	# ── Request line: [icon] "Bring {qty}× {Pretty Resource}" ──────────────────
+	var req := HBoxContainer.new()
+	req.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	req.add_theme_constant_override("separation", 6)
+	col.add_child(req)
+	var req_icon := UiKit.make_icon(res, 28.0)
+	if req_icon != null:
+		req.add_child(req_icon)
+	var req_lbl := _make_label("Bring %d× %s" % [qty, UiKit.pretty_name(res)], COL_BODY)
+	req_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	req.add_child(req_lbl)
+
+	# ── have/need progress bar: DIM track + MOSS→GOLD fill + "{have}/{qty}". ───
+	var have: int = game.qty(res)
+	var ratio: float = clampf(float(have) / float(maxi(1, qty)), 0.0, 1.0)
+	var bar_row := HBoxContainer.new()
+	bar_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_row.add_theme_constant_override("separation", 8)
+	col.add_child(bar_row)
+
+	var track := Panel.new()
+	track.custom_minimum_size = Vector2(0, 12)
+	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	track.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.DIM, Palette.IRON))
+	bar_row.add_child(track)
+
+	# The fill is a child Control positioned inside the track; a full bar fills gold,
+	# any partial progress fills moss (mirrors Main's chain-progress fill).
+	var fill := Panel.new()
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fill_col: Color = Palette.GOLD if ratio >= 1.0 else Palette.MOSS
+	fill.add_theme_stylebox_override("panel", UiKit.bar_box(fill_col, fill_col))
+	fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	track.add_child(fill)
+	# Width is driven off the track's resolved size once it lays out (and on resize),
+	# inset 1px for the track's border — same idiom as Main._on_chain_track_resized.
+	track.resized.connect(func() -> void:
+		var w: float = maxf(0.0, track.size.x - 2.0)
+		var h: float = maxf(0.0, track.size.y - 2.0)
+		fill.position = Vector2(1, 1)
+		fill.size = Vector2(w * ratio, h)
+	)
+
+	var hn_lbl := Label.new()
+	hn_lbl.text = "%d/%d" % [have, qty]
+	hn_lbl.add_theme_font_size_override("font_size", 14)
+	hn_lbl.add_theme_color_override("font_color", COL_MUTED)
+	hn_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
+	hn_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar_row.add_child(hn_lbl)
+
+	# ── Deliver button (wide) — SAME wiring as the old flat row. ───────────────
+	var fill_btn := Button.new()
+	fill_btn.text = "Deliver"
+	fill_btn.disabled = not game.can_fill_order(i)
+	fill_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_action_button(fill_btn, Palette.MOSS, 8, 0)
+	fill_btn.connect("pressed", Callable(self, "_do_fill").bind(i))
+	col.add_child(fill_btn)
+	_action_buttons["fill:" + str(i)] = fill_btn
+
+	return card
+
+## A ~46px round NPC avatar: a PanelContainer with a fully-rounded StyleBoxFlat tinted
+## `bg` (the NPC's roster color), holding the name's `initial` centered in contrast-
+## picked text. Mirrors the React circular avatar in the orders feature.
+func _make_avatar(bg: Color, initial: String) -> PanelContainer:
+	var av := PanelContainer.new()
+	av.custom_minimum_size = Vector2(46, 46)
+	av.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	av.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(999)
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(1)
+	av.add_theme_stylebox_override("panel", sb)
+	var lbl := Label.new()
+	lbl.text = initial
+	lbl.add_theme_font_size_override("font_size", 22)
+	# Light/dark text picked for legibility on the avatar tint (parity with how
+	# UiKit's filled buttons pick contrasting label colors).
+	var lum: float = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
+	lbl.add_theme_color_override("font_color", Palette.INK if lum > 0.62 else Palette.PARCHMENT_SOFT)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		lbl.add_theme_font_override("font", hf)
+	av.add_child(lbl)
+	return av
 
 func _build_expedition_section() -> void:
 	# M3f — "the combination": spend Kitchen-made `supplies` as mine turns. While on
