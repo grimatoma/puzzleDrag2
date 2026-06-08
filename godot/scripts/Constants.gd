@@ -382,6 +382,21 @@ const SEASON_FIELD_COLORS: Array = [
 	{"name": "Winter", "top": Color8(0xdd, 0xe4, 0xea), "bot": Color8(0xb6, 0xc2, 0xcc)},
 ]
 
+# ── Chain-stage palette (src/ui/puzzleBoard.tsx CHAIN_STAGES) ──────────────────
+## The escalating chain-tier palette, ported VERBATIM from src/ui/puzzleBoard.tsx
+## `CHAIN_STAGES`. Index = upgrades EARNED (floor(chain_len / threshold)), clamped to
+## 0..4 by chain_stage_index(). Each entry: `top`/`bot` are the fill gradient stops
+## (top→bottom), `accent` the bar's glow/dot colour, and `label` the all-caps banner
+## ("BONUS!"/"DOUBLE!"/"TRIPLE!"/"FRENZY!") shown once earned >= 1 ("" at stage 0).
+## The hex strings match the React verbatim; convert with Color(hex) at the call site.
+const CHAIN_STAGES: Array = [
+	{"top": "#f0c14b", "bot": "#d97a2a", "accent": "#e07a3a", "label": ""},
+	{"top": "#a3d65a", "bot": "#6d9928", "accent": "#5e9a2a", "label": "BONUS!"},
+	{"top": "#7dc2e4", "bot": "#3a7eae", "accent": "#4082b5", "label": "DOUBLE!"},
+	{"top": "#d8a4f0", "bot": "#8a4ec9", "accent": "#9648c6", "label": "TRIPLE!"},
+	{"top": "#ffb04a", "bot": "#d62828", "accent": "#e62828", "label": "FRENZY!"},
+]
+
 ## Split a turn `budget` across the four seasons by FLOOR math so the per-season counts sum
 ## EXACTLY to the budget. Ported VERBATIM from src/ui/seasonStrip.tsx `seasonTurnRanges`:
 ## ends = [floor(S/4), floor(2S/4), floor(3S/4), S]; each season count = end - prevEnd.
@@ -408,6 +423,24 @@ static func produced_resource(tile: int) -> String:
 
 static func threshold_for(tile: int) -> int:
 	return THRESHOLDS.get(tile, NO_THRESHOLD)
+
+## The chain STAGE index (0..4) for a live chain of `chain_len` tiles against `threshold`,
+## ported from src/ui/puzzleBoard.tsx: `earned = floor(chain_len / threshold)`, then
+## `CHAIN_STAGES[min(earned, len-1)]`. A non-positive threshold (a hazard tile like RAT/
+## RUBBLE, threshold_for → NO_THRESHOLD won't hit this — callers pass a real producer's
+## threshold) or non-positive chain pins stage 0. Clamped to the last stage so a very long
+## chain caps at FRENZY!. Pure + headless-testable (no node construction).
+static func chain_stage_index(chain_len: int, threshold: int) -> int:
+	if threshold <= 0 or chain_len <= 0:
+		return 0
+	var earned: int = int(floor(float(chain_len) / float(threshold)))
+	return clampi(earned, 0, CHAIN_STAGES.size() - 1)
+
+## The CHAIN_STAGES entry (Dictionary {top, bot, accent, label}) for a chain of `chain_len`
+## against `threshold`. Convenience wrapper over chain_stage_index so the HUD can read the
+## stage's palette + label in one call.
+static func chain_stage(chain_len: int, threshold: int) -> Dictionary:
+	return CHAIN_STAGES[chain_stage_index(chain_len, threshold)]
 
 static func string_key(tile: int) -> String:
 	return STRING_KEYS.get(tile, "")

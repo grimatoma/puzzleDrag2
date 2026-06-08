@@ -175,6 +175,20 @@ func set_tile_pool(pool: Array) -> void:
 func set_min_chain(n: int) -> void:
 	min_chain = maxi(2, n)
 
+## A3 — the Constants.Tile type of the CURRENTLY-DRAGGED chain (its anchor cell), or
+## Constants.EMPTY when no drag is in flight. The chain is single-type (every extend
+## must match _path[0]'s value), so the anchor's value identifies the whole chain. Main
+## reads this on `chain_changed` to colour the chain-progress bar by the live chain's
+## STAGE (Constants.chain_stage_index against the chained tile's threshold). Pure read —
+## never mutates the board.
+func current_chain_tile() -> int:
+	if _path.is_empty():
+		return Constants.EMPTY
+	var anchor: Vector2i = _path[0]
+	if not BoardLogic.in_bounds(anchor):
+		return Constants.EMPTY
+	return int(grid[anchor.y][anchor.x])
+
 func setup_new_board() -> void:
 	grid = BoardLogic.make_empty_grid()
 	BoardLogic.refill(grid, rng, tile_pool)
