@@ -1,5 +1,5 @@
 class_name FishConfig
-extends Node
+extends RefCounted
 ## Fish / Harbor biome — pure helpers for the tide cycle + the giant-pearl rune
 ## capture. Ported from src/features/fish/slice.ts (tide pools) and
 ## src/features/fish/pearl.ts (the pearl-chain rule).

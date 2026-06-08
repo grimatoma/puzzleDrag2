@@ -86,10 +86,10 @@ func _initialize() -> void:
 	menu.setup(game)
 	await process_frame
 	menu.open()
-	menu.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
-	menu.connect("new_game", Callable(self, "_on_new_game"))
+	menu.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+	menu.connect("new_game_requested", Callable(self, "_on_new_game"))
 	menu.connect("closed", Callable(self, "_on_closed"))
-	menu.connect("navigate", Callable(self, "_on_navigate"))
+	menu.connect("navigation_requested", Callable(self, "_on_navigate"))
 
 	_check(menu.visible, "menu is visible after open()")
 	_check(menu._action_buttons.has("toggle_sound"), "_action_buttons has 'toggle_sound'")
@@ -99,7 +99,7 @@ func _initialize() -> void:
 	# ── "More" navigation section ──────────────────────────────────────────────
 	# Every secondary screen that moved out of the old left-strip HUD into the menu has
 	# a "nav:<id>" button. Spot-check a representative few, then prove pressing one
-	# CLOSES the menu and emits navigate(id) (Main routes that through apply_deeplink).
+	# CLOSES the menu and emits navigation_requested(id) (Main routes that through apply_deeplink).
 	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "recipes", "daily", "debug"]:
 		_check(menu._action_buttons.has("nav:" + id), "_action_buttons has 'nav:%s'" % id)
 	# The five PRIMARY tabs (town/inventory/craft/map/townsfolk) live on the bottom nav
@@ -122,7 +122,7 @@ func _initialize() -> void:
 	_check(sound_btn != null and sound_btn.text == "Sound: On",
 		"Sound button reads 'Sound: On' when not muted")
 
-	# Pressing the Sound button fires `toggle_sound` (and does NOT flip the flag here —
+	# Pressing the Sound button fires `sound_toggle_requested` (and does NOT flip the flag here —
 	# Main owns that).
 	var before_toggle := _toggle_count
 	_check(_press(menu, "toggle_sound"), "pressed toggle_sound button")
@@ -137,7 +137,7 @@ func _initialize() -> void:
 	menu.refresh_sound_label()
 	_check(sound_btn.text == "Sound: On", "refresh_sound_label() shows 'Sound: On' when unmuted")
 
-	# Pressing New Game fires `new_game`.
+	# Pressing New Game fires `new_game_requested`.
 	var before_new := _newgame_count
 	_check(_press(menu, "new_game"), "pressed new_game button")
 	_check(_newgame_count == before_new + 1, "new_game signal fired once")

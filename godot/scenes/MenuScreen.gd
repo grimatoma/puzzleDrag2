@@ -13,9 +13,9 @@ extends CanvasLayer
 ## title + three buttons.
 ##
 ## SINGLE SOURCE OF TRUTH. Like TownScreen's "Shoo rats", this screen does NOT own the
-## mute flip or the save: the Sound button emits `toggle_sound` and Main does the actual
+## mute flip or the save: the Sound button emits `sound_toggle_requested` and Main does the actual
 ## `game.audio_muted` flip + `Audio.set_muted` + save (one accounting point), then calls
-## back `refresh_sound_label()` so the button text re-syncs. New Game emits `new_game`;
+## back `refresh_sound_label()` so the button text re-syncs. New Game emits `new_game_requested`;
 ## Main owns clearing the save + restarting.
 ##
 ## Headless-test contract. Every actionable button is registered in `_action_buttons`
@@ -29,15 +29,15 @@ var _muted: bool = false
 signal closed
 ## Emitted when the Sound button is pressed — Main flips game.audio_muted, mutes the
 ## Audio service, saves, and calls back refresh_sound_label() (this screen never flips
-## the flag itself, so the toggle is booked in ONE place — mirrors TownScreen.shoo_rats).
-signal toggle_sound
+## the flag itself, so the toggle is booked in ONE place — mirrors TownScreen.rats_shoo_requested).
+signal sound_toggle_requested
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
-signal new_game
+signal new_game_requested
 ## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
 ## screen to open (e.g. "achievements", "chronicle", "debug"). Main closes the menu and
 ## routes it through apply_deeplink — the SAME path the secondary screens used as left-strip
 ## HUD buttons before they moved into this menu. The menu never opens screens itself.
-signal navigate(deeplink_id: String)
+signal navigation_requested(deeplink_id: String)
 
 ## The "More" navigation entries — every secondary screen that used to be a left-strip HUD
 ## button, now reachable from the menu. Each row: {icon, label, id (a ViewRouter deep-link)}.
@@ -167,7 +167,7 @@ func _build_shell() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(tagline)
 
-	# Sound — toggles the SFX mute. Emits `toggle_sound`; Main flips the flag + saves.
+	# Sound — toggles the SFX mute. Emits `sound_toggle_requested`; Main flips the flag + saves.
 	_sound_btn = Button.new()
 	_sound_btn.text = "Sound: On"
 	_sound_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -188,7 +188,7 @@ func _build_shell() -> void:
 	# ── "More" navigation section ─────────────────────────────────────────────
 	# The secondary screens that used to be left-strip HUD buttons. A small heading,
 	# then a scrolling list of labelled nav buttons. Each closes the menu + emits
-	# navigate(id); Main routes it through apply_deeplink. Registered as "nav:<id>".
+	# navigation_requested(id); Main routes it through apply_deeplink. Registered as "nav:<id>".
 	_build_more_section(col)
 
 	# Close — dismiss the modal.
@@ -204,7 +204,7 @@ func _build_shell() -> void:
 
 ## Build the "More" section: a small heading + a height-capped ScrollContainer holding
 ## one labelled nav Button per MORE_ENTRIES row. Each button closes the menu and emits
-## navigate(id) (Main routes it through apply_deeplink). Registered as "nav:<id>" in
+## navigation_requested(id) (Main routes it through apply_deeplink). Registered as "nav:<id>" in
 ## `_action_buttons` so the headless test can find + fire any entry and assert it navigates.
 func _build_more_section(col: VBoxContainer) -> void:
 	var heading := Label.new()
@@ -242,23 +242,23 @@ func _build_more_section(col: VBoxContainer) -> void:
 		list.add_child(btn)
 		_action_buttons["nav:" + id] = btn
 
-## A "More" nav button was pressed: close the menu, then emit navigate(id) so Main opens
+## A "More" nav button was pressed: close the menu, then emit navigation_requested(id) so Main opens
 ## the target screen via apply_deeplink. Closing first means the opened screen layers cleanly
 ## over the board, not over the (now-dismissed) menu.
 func _on_nav_pressed(id: String) -> void:
 	close()
-	emit_signal("navigate", id)
+	emit_signal("navigation_requested", id)
 
 # ── action handlers ───────────────────────────────────────────────────────────
 
-## The Sound button — emit `toggle_sound` and let Main own the actual mute flip + save
+## The Sound button — emit `sound_toggle_requested` and let Main own the actual mute flip + save
 ## + label re-sync (the single accounting point). This screen never touches the flag.
 func _on_sound_pressed() -> void:
-	emit_signal("toggle_sound")
+	emit_signal("sound_toggle_requested")
 
-## New Game — emit `new_game`; Main wipes the save + restarts the run.
+## New Game — emit `new_game_requested`; Main wipes the save + restarts the run.
 func _on_new_game_pressed() -> void:
-	emit_signal("new_game")
+	emit_signal("new_game_requested")
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 # Note: heading_font(), btn_box(), style_button() have moved to UiKit (M5a).

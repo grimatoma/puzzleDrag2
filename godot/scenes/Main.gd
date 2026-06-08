@@ -66,94 +66,73 @@ var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), 
 var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
 var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
 var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), lazily created
-## M10 — the achievements trophy modal, lazily created. Loaded via preload (the script
-## has NO class_name) so the port never needs an --import to register it as a global.
+# Secondary screens & modals. Each is typed via its preloaded script const (NOT a global
+# class_name) so the port never needs an --import pass to register it, and each is lazily
+# created on first open (assignment is always <Const>.new()).
+## M10 — the achievements trophy modal.
 const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
-var _achievements_screen                ## CanvasLayer (AchievementsScreenScript), lazily created
-## M11 — the tile-collection browser modal, lazily created. Loaded via preload (NO
-## class_name) so the port never needs an --import pass to register it as a global.
+var _achievements_screen: AchievementsScreenScript   ## lazily created
+## M11 — the tile-collection browser modal.
 const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
-var _tile_collection_screen             ## CanvasLayer (TileCollectionScreenScript), lazily created
-## Story UI — the beat presenter (drains game.story.beat_queue) + the chronicle timeline,
-## both lazily created. Loaded via preload (NO class_name) so the port never needs an
-## --import pass to register them as globals (mirrors AchievementsScreen / TileCollection).
+var _tile_collection_screen: TileCollectionScreenScript   ## lazily created
+## Story UI — the beat presenter (drains game.story.beat_queue) + the chronicle timeline.
 const StoryModalScript := preload("res://scenes/StoryModal.gd")
 const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
-var _story_modal                        ## CanvasLayer (StoryModalScript), lazily created
-var _chronicle_screen                   ## CanvasLayer (ChronicleScreenScript), lazily created
-## Townsfolk roster screen — NPC cards with bond bars, lazily created. Loaded via preload
-## (NO class_name) so the port never needs an --import pass to register it as a global.
+var _story_modal: StoryModalScript   ## lazily created
+var _chronicle_screen: ChronicleScreenScript   ## lazily created
+## Townsfolk roster screen — NPC cards with bond bars.
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
-var _townsfolk_screen                   ## CanvasLayer (TownsfolkScreenScript), lazily created
-## Cartography world-map screen — the 3-zone world view + alternate expedition entry, lazily
-## created. Loaded via preload (NO class_name) so the port never needs an --import pass to
-## register it as a global (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk).
+var _townsfolk_screen: TownsfolkScreenScript   ## lazily created
+## Cartography world-map screen — the 3-zone world view + alternate expedition entry.
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
-var _cartography_screen                  ## CanvasLayer (CartographyScreenScript), lazily created
-## Recipe wiki — read-only reference of all craftable recipes, lazily created. Loaded via
-## preload (NO class_name) so the port never needs an --import pass to register it as a global
-## (mirrors AchievementsScreen / TileCollection / Chronicle / Townsfolk / Cartography).
+var _cartography_screen: CartographyScreenScript   ## lazily created
+## Recipe wiki — read-only reference of all craftable recipes.
 const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
-var _recipe_wiki_screen                  ## CanvasLayer (RecipeWikiScreenScript), lazily created
+var _recipe_wiki_screen: RecipeWikiScreenScript   ## lazily created
 ## Tutorial onboarding modal — the 6-step welcome shown once to new players + replayable via
-## apply_deeplink("tutorial"). Loaded via preload (NO class_name) so the port never needs an
-## --import pass to register it as a global (mirrors all the other lazily-created modals).
+## apply_deeplink("tutorial").
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
-var _tutorial_modal                      ## CanvasLayer (TutorialModalScript), lazily created
+var _tutorial_modal: TutorialModalScript   ## lazily created
 ## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
 ## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
-## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
-## as a global (mirrors TutorialModal / all the other lazily-created modals).
 const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
-var _daily_modal                         ## CanvasLayer (DailyStreakModalScript), lazily created
+var _daily_modal: DailyStreakModalScript   ## lazily created
 ## The pending daily-streak claim from this launch's login_tick, or {} when none. login_tick
 ## fires EARLY in _ready (so the grant lands before any HUD refresh shows the coins/runes), but
 ## the modal is held back until the tutorial + story queue are clear so the three don't fight —
 ## _maybe_show_daily() consumes this once the way is clear. Shape: {day:int, reward:Dictionary}.
 var _pending_daily_claim: Dictionary = {}
-## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way
-## sink). Loaded via preload (NO class_name) so the port never needs an --import pass to
-## register it as a global (mirrors AchievementsScreen / RecipeWiki / TileCollection).
+## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way sink).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
-var _castle_screen                       ## CanvasLayer (CastleScreenScript), lazily created
+var _castle_screen: CastleScreenScript   ## lazily created
 ## Decorations screen — build repeatable ornaments that GRANT the Influence currency.
-## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
-## as a global (mirrors CastleScreen / AchievementsScreen / RecipeWiki / TileCollection).
 const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
-var _decorations_screen                  ## CanvasLayer (DecorationsScreenScript), lazily created
+var _decorations_screen: DecorationsScreenScript   ## lazily created
 ## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
-## Loaded via preload (NO class_name) so the port never needs an --import pass to register it
-## as a global (mirrors DecorationsScreen / CastleScreen / RecipeWiki / TileCollection).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
-var _portal_screen                       ## CanvasLayer (PortalScreenScript), lazily created
+var _portal_screen: PortalScreenScript   ## lazily created
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
-## choice_log + flags. Loaded via preload (NO class_name) so the port never needs an --import
-## pass to register it (mirrors PortalScreen / DecorationsScreen / CastleScreen).
+## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
-var _charter_screen                      ## CanvasLayer (CharterScreenScript), lazily created
+var _charter_screen: CharterScreenScript   ## lazily created
 ## Quests screen — the deterministic 6-slot quest board + the almanac XP/tier track (claim
-## quests for coins + XP; claim almanac tiers for coins/runes/tools). Loaded via preload
-## (NO class_name) so the port never needs an --import pass to register it (mirrors
-## CharterScreen / PortalScreen / DecorationsScreen).
+## quests for coins + XP; claim almanac tiers for coins/runes/tools).
 const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
-var _quests_screen                       ## CanvasLayer (QuestsScreenScript), lazily created
+var _quests_screen: QuestsScreenScript   ## lazily created
 ## M5-polish — leave-expedition confirm modal. Gates the HUD "🏠 Town" button when on an
 ## expedition (active_biome != farm): tapping Town shows this confirm first; only Confirm
-## leaves. On the farm it never arms (Town opens directly). Loaded via preload (NO class_name)
-## so the port never needs an --import pass to register it (mirrors every other lazy modal).
+## leaves. On the farm it never arms (Town opens directly).
 const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
-var _leaveboard_modal                    ## CanvasLayer (LeaveBoardModalScript), lazily created
+var _leaveboard_modal: LeaveBoardModalScript   ## lazily created
 ## M-infra — developer DEBUG overlay (the React `debug` modal's port). A dev-only QA tool:
 ## live state readout + a jump grid of every deep-link + quick-grant buttons. Reachable ONLY
-## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React). Loaded
-## via preload (NO class_name) so the port never needs an --import pass to register it.
+## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React).
 const DebugModalScript := preload("res://scenes/DebugModal.gd")
-var _debug_modal                         ## CanvasLayer (DebugModalScript), lazily created
+var _debug_modal: DebugModalScript   ## lazily created
 ## M5-polish — transient toast bubble (auto-dismissing parchment notification). Built once in
-## _ready and reused for real one-off feedback (an order filled, a build done). Loaded via
-## preload (NO class_name) so the port never needs an --import pass to register it.
+## _ready and reused for real one-off feedback (an order filled, a build done).
 const ToastScript := preload("res://scenes/Toast.gd")
-var _toast                               ## CanvasLayer (ToastScript), built once in _ready
+var _toast: ToastScript   ## built once in _ready
 var _router := ViewRouter.new()         ## M5b: nav state machine (pure, tree-free)
 
 # ── Browser Back/Forward (web export only) ──────────────────────────────────────
@@ -282,7 +261,7 @@ func _ready() -> void:
 	board.cell_tapped.connect(_on_tool_target)
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
 	# can ask GameState.capture_pearl_if_adjacent whether they sit next to the live pearl.
-	board.pearl_chain.connect(_on_pearl_chain)
+	board.pearl_chain_resolved.connect(_on_pearl_chain)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
@@ -1385,8 +1364,8 @@ func _open_town() -> void:
 		_town_screen.connect("closed", Callable(self, "_on_town_closed"))
 		_town_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 		# M3h: the Town screen's "Shoo rats" button has no board ref, so it emits
-		# `shoo_rats` and Main does the actual clear (spending the charge in ONE place).
-		_town_screen.connect("shoo_rats", Callable(self, "_on_shoo_rats"))
+		# `rats_shoo_requested` and Main does the actual clear (spending the charge in ONE place).
+		_town_screen.connect("rats_shoo_requested", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
 	# The TownScreen (build / refine / market / orders) is the "Craft" tab's target.
@@ -1410,12 +1389,12 @@ func _open_menu() -> void:
 		add_child(_menu_screen)
 		_menu_screen.setup(game)
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
-		_menu_screen.connect("toggle_sound", Callable(self, "_on_toggle_sound"))
-		_menu_screen.connect("new_game", Callable(self, "_on_new_game"))
+		_menu_screen.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+		_menu_screen.connect("new_game_requested", Callable(self, "_on_new_game"))
 		# The "More" section's nav buttons route the secondary screens (achievements,
 		# chronicle, castle, …) through the SAME deep-link path the old left-strip buttons
-		# used — the menu emits navigate(id), Main opens it via apply_deeplink.
-		_menu_screen.connect("navigate", Callable(self, "_on_menu_navigate"))
+		# used — the menu emits navigation_requested(id), Main opens it via apply_deeplink.
+		_menu_screen.connect("navigation_requested", Callable(self, "_on_menu_navigate"))
 	_menu_screen.open()
 	_router.open_modal(ViewRouter.Modal.MENU)
 
@@ -1533,7 +1512,7 @@ func _open_chronicle() -> void:
 		add_child(_chronicle_screen)
 		_chronicle_screen.setup(game)
 		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
-		_chronicle_screen.connect("view_charter", Callable(self, "_on_chronicle_view_charter"))
+		_chronicle_screen.connect("charter_view_requested", Callable(self, "_on_chronicle_view_charter"))
 	_chronicle_screen.open()
 	_router.open_modal(ViewRouter.Modal.CHRONICLE)
 
@@ -2157,7 +2136,7 @@ func _process(_delta: float) -> void:
 	if _history_ready:
 		_sync_history()
 
-## M4f — the Sound button emits `toggle_sound`; Main owns the actual flip (the single
+## M4f — the Sound button emits `sound_toggle_requested`; Main owns the actual flip (the single
 ## accounting point): toggle the persisted preference, mute/unmute the Audio service,
 ## save, then re-sync the menu's Sound label. A soft "pop" gives un-mute feedback.
 func _on_toggle_sound() -> void:
@@ -2172,7 +2151,7 @@ func _on_toggle_sound() -> void:
 	if _menu_screen != null:
 		_menu_screen.refresh_sound_label()
 
-## M4f — the New Game button emits `new_game`; Main wipes the save and restarts from a
+## M4f — the New Game button emits `new_game_requested`; Main wipes the save and restarts from a
 ## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which
 ## calls SaveManager.load_state() — now returning a fresh GameState since the save was
 ## cleared (the cleanest reset: every system re-initialises from scratch).
@@ -2584,7 +2563,7 @@ func _try_shoo_rats() -> void:
 	SaveManager.save(game)
 	get_viewport().set_input_as_handled()
 
-## M3h — the Town screen's "Shoo rats" button emits `shoo_rats`; Main owns the board,
+## M3h — the Town screen's "Shoo rats" button emits `rats_shoo_requested`; Main owns the board,
 ## so it spends the charge HERE (the single accounting point) and clears the board.
 ## Then refreshes the rats HUD, the Town screen (so its charge count + button state
 ## update), and saves.

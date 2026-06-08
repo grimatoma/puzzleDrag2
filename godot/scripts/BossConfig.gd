@@ -1,5 +1,5 @@
 class_name BossConfig
-extends Node
+extends RefCounted
 ## Capstone boss catalog — the Direction spec's dramatic close of Town 2. Frostmaw,
 ## the frost-wyrm at the mine's heart, is "the gate that proves you have mastered
 ## farm + mine before the slice opens up": an active boss RAISES the board's minimum

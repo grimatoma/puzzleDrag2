@@ -28,7 +28,7 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
-signal view_charter   ## emitted by the "View Charter" button → Main routes to the Charter
+signal charter_view_requested   ## emitted by the "View Charter" button → Main routes to the Charter
 
 ## action id → Button, for headless tests. "close" + "charter" (View Charter).
 var _action_buttons: Dictionary = {}
@@ -144,7 +144,7 @@ func _build_shell() -> void:
 	title_row.add_child(title)
 
 	# "View Charter" — jumps to the Charter screen (React parity: the Chronicle header's
-	# tab-style link). Emits `view_charter`; Main hides the chronicle + opens the Charter.
+	# tab-style link). Emits `charter_view_requested`; Main hides the chronicle + opens the Charter.
 	var charter_btn := Button.new()
 	charter_btn.text = "View Charter"
 	charter_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -211,7 +211,7 @@ func _build_shell() -> void:
 
 ## "View Charter" pressed — ask Main to route to the Charter screen.
 func _on_view_charter() -> void:
-	emit_signal("view_charter")
+	emit_signal("charter_view_requested")
 
 # ── render ────────────────────────────────────────────────────────────────────
 

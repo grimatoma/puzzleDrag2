@@ -1,5 +1,5 @@
 class_name MarketConfig
-extends Node
+extends RefCounted
 ## Market price tables — the sell/buy economy from the locked Direction spec
 ## ("the refined economy is spent to grow the town"). The Market lets the player
 ## sell collected resources for coins and buy resources back at a markup.

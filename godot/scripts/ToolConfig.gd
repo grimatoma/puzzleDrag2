@@ -1,5 +1,5 @@
 class_name ToolConfig
-extends Node
+extends RefCounted
 ## Tool CATALOG (M8a logic core) — the single source of truth for the
 ## representative tool set, ported from the Phaser tool / tool-power system
 ## (src/config/toolPowers.ts power ids + the tool items in src/constants.ts and
