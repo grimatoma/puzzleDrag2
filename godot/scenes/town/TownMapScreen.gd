@@ -176,7 +176,7 @@ func _build_shell() -> void:
 	# label is refreshed each render() from the live plot counts. Registered as "build_open".
 	_build_btn = Button.new()
 	_build_btn.text = "🔨 Build"
-	UiKit.style_button(_build_btn, Palette.MOSS, 8, 20, true)
+	UiKit.style_action_button(_build_btn, Palette.GO_GREEN, 8, 20)
 	_build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_build_btn.offset_right = -18
 	# Lifted above the reserved bottom-nav strip (NAV_RESERVE 76 + an 18px gap) so the
@@ -394,7 +394,7 @@ func _make_build_row(id: String) -> PanelContainer:
 		build_btn.text = "Build" if affordable else "Need items"
 		build_btn.disabled = not affordable
 		build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_button(build_btn, Palette.MOSS, 6, 0, true)
+		UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 0)
 		build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 		row.add_child(build_btn)
 		_action_buttons["build:" + id] = build_btn

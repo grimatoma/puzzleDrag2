@@ -328,7 +328,7 @@ func _build_buildings_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_action_button(build_btn, Palette.MOSS, 6, 0)
+			UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 0)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
@@ -356,7 +356,7 @@ func _build_refine_section() -> void:
 		craft_btn.text = "Craft"
 		craft_btn.disabled = not game.can_craft(id)
 		craft_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_action_button(craft_btn, Palette.MOSS, 6, 0)
+		UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 6, 0)
 		craft_btn.connect("pressed", Callable(self, "_do_craft").bind(id))
 		row.add_child(craft_btn)
 		_action_buttons["craft:" + id] = craft_btn
@@ -416,7 +416,7 @@ func _build_market_section() -> void:
 		buy_btn.text = "Buy 1"
 		buy_btn.disabled = game.coins < price
 		buy_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_action_button(buy_btn, Palette.MOSS, 6, 0)
+		UiKit.style_action_button(buy_btn, Palette.GO_GREEN, 6, 0)
 		buy_btn.connect("pressed", Callable(self, "_do_buy").bind(res))
 		row.add_child(buy_btn)
 		_action_buttons["buy:" + res] = buy_btn
@@ -561,7 +561,7 @@ func _build_order_card(i: int) -> PanelContainer:
 	fill_btn.text = "Deliver"
 	fill_btn.disabled = not game.can_fill_order(i)
 	fill_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(fill_btn, Palette.MOSS, 8, 0)
+	UiKit.style_action_button(fill_btn, Palette.GO_GREEN, 8, 0)
 	fill_btn.connect("pressed", Callable(self, "_do_fill").bind(i))
 	col.add_child(fill_btn)
 	_action_buttons["fill:" + str(i)] = fill_btn
@@ -726,7 +726,7 @@ func _build_rats_section() -> void:
 			build_btn.text = "Build"
 			build_btn.disabled = not game.can_build(id)
 			build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_action_button(build_btn, Palette.MOSS, 6, 0)
+			UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 0)
 			build_btn.connect("pressed", Callable(self, "_do_build").bind(id))
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
