@@ -454,24 +454,40 @@ func summon_magic_tool(id: String) -> Dictionary:
 	if influence < cost:
 		return {"ok": false, "reason": "cant_afford"}
 	influence = maxi(0, influence - cost)
-	# Write DIRECTLY into the tools dict (mirrors the React slice). grant_tool would reject
-	# this id (magic tools aren't ToolConfig members), so we bypass it deliberately.
-	tools[id] = int(tools.get(id, 0)) + 1
-	return {"ok": true, "id": id, "count": int(tools[id]), "influence": influence}
+	# Write DIRECTLY into the tools dict via ToolState.set_count (mirrors the React slice).
+	# grant_tool would reject this id (magic tools aren't ToolConfig members), so we bypass
+	# the ToolConfig gate deliberately.
+	tool_state.set_count(id, tool_count(id) + 1)
+	return {"ok": true, "id": id, "count": tool_count(id), "influence": influence}
 
 # ── Tools (M8b, the GameState-level tool API) ─────────────────────────────────
-## Owned tool charges, keyed by ToolConfig id (String) → remaining uses (int).
-## A missing key reads as 0 (no charges). This is the persisted half of the tool
-## system: tools are GRANTED (grant_tool), CONSUMED one charge per use
-## (use_tool_on_grid), and the key is ERASED when its count hits 0 so the dict stays
-## a clean "owned, usable" set. The pure board effects live in ToolEffects /
-## ToolConfig (M8a); this layer just owns the inventory + the credit/consume flow.
-var tools: Dictionary = {}
-## The armed TAP-target tool awaiting a board cell, or "" when nothing is armed.
-## TRANSIENT — deliberately NOT persisted (arm_tool / clear_pending_tool only):
-## arming is a momentary input mode the live Board (M8c) drives, not save state. A
-## reload always starts disarmed.
-var pending_tool: String = ""
+## Owned tool charges + the armed tap-target state now live in a composed ToolState (the
+## same pattern as `settlement` / `npcs_state`). Tools are GRANTED (grant_tool), CONSUMED
+## one charge per use (use_tool_on_grid), and the key is ERASED when its count hits 0 so
+## the dict stays a clean "owned, usable" set. The pure board effects live in ToolEffects /
+## ToolConfig (M8a); ToolState just owns the inventory + arm/disarm; the credit/quests
+## orchestration stays on GameState.use_tool_on_grid. Persisted as the flat top-level
+## "tools" key (see to_dict / from_dict), byte-identical to before the extraction.
+var tool_state := ToolState.new()
+
+## The legacy `tools` Dictionary view onto the composed ToolState — a LIVE reference (NOT
+## a copy), so the many readers that index / iterate / mutate `game.tools` (Main, the
+## Inventory screen, tests doing game.tools.clear() / .has() / .size()) keep working
+## unchanged. Read-only property (no setter): from_dict rebuilds the ToolState directly and
+## no caller reassigns `game.tools` wholesale (verified across the codebase).
+var tools: Dictionary:
+	get:
+		return tool_state.tools
+
+## The armed TAP-target tool awaiting a board cell, or "" when nothing is armed. TRANSIENT —
+## never persisted (a reload always starts disarmed). A read/write property forwarding to
+## ToolState.pending so external reads (`game.pending_tool`) AND any future write flow
+## through to the one source of truth; today only GameState's own arm/use/clear paths set it.
+var pending_tool: String:
+	get:
+		return tool_state.pending
+	set(value):
+		tool_state.pending = value
 
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
@@ -1634,49 +1650,42 @@ func use_ratcatcher_charge() -> bool:
 
 # ── Tools (M8b) ───────────────────────────────────────────────────────────────
 
-## Grant `n` charges of tool `id`. No-op for an unknown id (ToolConfig doesn't know
-## it) or a non-positive `n`. Adds to any existing charges so granting the same tool
-## twice stacks. A fresh grant creates the key; the count is always kept > 0.
+## Grant `n` charges of tool `id`. Thin forwarder to ToolState.grant — no-op for an
+## unknown id (ToolConfig doesn't know it) or a non-positive `n`; stacks onto any existing
+## charges. Call site (`game.grant_tool(id, n)`) is UNCHANGED.
 func grant_tool(id: String, n: int = 1) -> void:
-	if n <= 0:
-		return
-	if not ToolConfig.has_tool(id):
-		return
-	tools[id] = int(tools.get(id, 0)) + n
+	tool_state.grant(id, n)
 
-## Remaining charges of tool `id` (0 when unowned / never granted).
+## Remaining charges of tool `id` (0 when unowned). Thin forwarder to ToolState.count.
 func tool_count(id: String) -> int:
-	return int(tools.get(id, 0))
+	return tool_state.count(id)
 
-## True when `id` has at least one charge owned (regardless of whether ToolConfig
-## still knows it — a count > 0 means it was validly granted).
+## True when `id` has at least one charge owned (regardless of whether ToolConfig still
+## knows it — a count > 0 means it was validly granted). Forwarder to ToolState.has_charges.
 func has_tool_charges(id: String) -> bool:
-	return tool_count(id) > 0
+	return tool_state.has_charges(id)
 
 ## True when `id` is a REAL tool (ToolConfig knows it) AND has at least one charge.
-## The gate use_tool_on_grid checks first.
+## The gate use_tool_on_grid checks first. Forwarder to ToolState.can_use.
 func can_use_tool(id: String) -> bool:
-	return ToolConfig.has_tool(id) and has_tool_charges(id)
+	return tool_state.can_use(id)
 
-## Arm a TAP-target tool so the next board cell fires it. Returns true on success
-## (the tool is a known tap tool with charges → pending_tool is set). Returns false
-## WITHOUT arming for an unknown tool, a NON-tap (instant) tool, or one with no
-## charges — instant tools fire immediately and never need arming.
+## Arm a TAP-target tool so the next board cell fires it. Returns true on success (the tool
+## is a known tap tool with charges → pending_tool is set). Returns false WITHOUT arming for
+## an unknown tool, a NON-tap (instant) tool, or one with no charges. Forwarder to
+## ToolState.arm. Call site (`game.arm_tool(id)`) is UNCHANGED.
 func arm_tool(id: String) -> bool:
-	if not can_use_tool(id):
-		return false
-	if not ToolConfig.is_tap_target(id):
-		return false
-	pending_tool = id
-	return true
+	return tool_state.arm(id)
 
-## True while a tap-target tool is armed and waiting for a board cell.
+## True while a tap-target tool is armed and waiting for a board cell. Forwarder to
+## ToolState.is_armed.
 func is_tool_armed() -> bool:
-	return pending_tool != ""
+	return tool_state.is_armed()
 
-## Disarm any pending tap-target tool (cancel the armed input mode).
+## Disarm any pending tap-target tool (cancel the armed input mode). Forwarder to
+## ToolState.disarm.
 func clear_pending_tool() -> void:
-	pending_tool = ""
+	tool_state.disarm()
 
 ## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
 ## Returns {ok, reason, grid, collected}:
@@ -1718,15 +1727,10 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 	var collected: Dictionary = res.get("collected", {})
 	for tile_value in collected.keys():
 		credit_chain(int(tile_value), int(collected[tile_value]))
-	# Consume one charge; erase the key at 0 so `tools` stays an owned-and-usable set.
-	var left: int = int(tools.get(id, 0)) - 1
-	if left <= 0:
-		tools.erase(id)
-	else:
-		tools[id] = left
-	# If this was the armed tap tool, disarm it now that it has fired.
-	if pending_tool == id:
-		pending_tool = ""
+	# Consume one charge (erase the key at 0 so `tools` stays an owned-and-usable set) and,
+	# if `id` was the armed tap tool, disarm it now that it has fired. ToolState.consume
+	# handles both.
+	tool_state.consume(id)
 	# Quests (ADDITIVE): a successful tool use ticks the TOOL quest event (+1 to any
 	# tool-category quest matching this tool id). No-op loop over [] with an empty board.
 	# Wired here (the single committed-use site) so every tool fired through GameState
@@ -2066,9 +2070,11 @@ func to_dict() -> Dictionary:
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
 		"audio_muted": audio_muted,
-		# M8b: owned tool charges. pending_tool is TRANSIENT and intentionally NOT
-		# persisted (a reload always starts disarmed).
-		"tools": tools.duplicate(),
+		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
+		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
+		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
+		# Byte-identical to the pre-split emission.
+		"tools": tool_state.to_dict(),
 		# M10: achievement counters, the unlocked set, and the distinct-seen maps.
 		# Persisting `achievements_unlocked` is what makes load NON-double-granting —
 		# a restored unlocked id is skipped by bump_counter, so its reward is never
@@ -2264,19 +2270,14 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
-	# Restore owned tool charges (M8b). Missing key (any save written before tools
-	# existed) → {} (no tools). Each value is coerced to int (JSON yields floats) and
-	# only positive counts are kept — a 0/negative or non-numeric entry is dropped so
-	# the loaded `tools` is always a clean owned-and-usable set. pending_tool is
-	# transient and never restored (a reload starts disarmed). SAVE_VERSION is NOT
-	# bumped: like every prior additive field (M3f/M3g/M3h/M4f), the defensive default
-	# means old v1 saves still load (a save with no tools == tools {}).
-	var tls: Variant = d.get("tools", {})
-	if tls is Dictionary:
-		for k in tls:
-			var n: int = int(tls[k])
-			if n > 0:
-				s.tools[String(k)] = n
+	# Restore owned tool charges (M8b) into the composed ToolState from the SAME flat
+	# top-level "tools" key. Missing key (any save written before tools existed) →
+	# ToolState.from_dict({}) yields {} (no tools). Each value is coerced to int (JSON
+	# yields floats) and only positive counts are kept — a 0/negative or non-numeric entry
+	# is dropped so the loaded `tools` is always a clean owned-and-usable set; pending_tool
+	# is transient and never restored (a reload starts disarmed). All enforced inside
+	# ToolState.from_dict. SAVE_VERSION is NOT bumped — a save with no tools == tools {}.
+	s.tool_state = ToolState.from_dict(d.get("tools", {}))
 	# Restore achievements (M10). Missing keys (any pre-M10 save) → empty maps, so
 	# old saves load with zero progress. Counters coerce values to int (JSON yields
 	# floats); the unlocked map keeps only truthy entries; _distinct_seen rebuilds a
