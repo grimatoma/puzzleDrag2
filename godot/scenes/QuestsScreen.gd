@@ -121,7 +121,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "📋 Quests" heading + right-aligned "✕ Close".
+	# Title row: "📋 Quests" heading + right-aligned "✖ Close".
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -137,7 +137,7 @@ func _build_shell() -> void:
 	title_row.add_child(title)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
+	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
 	close_btn.connect("pressed", Callable(self, "close"))
@@ -329,7 +329,7 @@ func _quest_label(q: Dictionary) -> String:
 		return "Quest: %s (%d)" % [String(q.get("category", "?")), int(q.get("target", 0))]
 	return label.replace("{n}", str(int(q.get("target", 0))))
 
-## Format a quest reward dict: "+N 🪙  +M ✦" (coins + almanac XP).
+## Format a quest reward dict: "+N 🪙  +M ⭐" (coins + almanac XP).
 func _quest_reward_text(reward: Dictionary) -> String:
 	var parts: Array = []
 	var coins: int = int(reward.get("coins", 0))
@@ -337,7 +337,7 @@ func _quest_reward_text(reward: Dictionary) -> String:
 		parts.append("+%d 🪙" % coins)
 	var xp: int = int(reward.get("xp", 0))
 	if xp > 0:
-		parts.append("+%d ✦" % xp)
+		parts.append("+%d ⭐" % xp)
 	return "  ".join(parts) if not parts.is_empty() else "—"
 
 # ── ALMANAC tab ───────────────────────────────────────────────────────────────
@@ -351,7 +351,7 @@ func _render_almanac() -> void:
 
 	# Header line: level + XP-into-level / XP_PER_LEVEL.
 	var header := Label.new()
-	header.text = "Level %d  ·  %d / %d ✦ to next" % [level, into_level, AlmanacConfig.XP_PER_LEVEL]
+	header.text = "Level %d  ·  %d / %d ⭐ to next" % [level, into_level, AlmanacConfig.XP_PER_LEVEL]
 	header.add_theme_font_size_override("font_size", 18)
 	header.add_theme_color_override("font_color", COL_VALUE)
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -365,7 +365,7 @@ func _render_almanac() -> void:
 	_body.add_child(bar_row)
 	bar_row.add_child(_make_bar(into_level, AlmanacConfig.XP_PER_LEVEL, false))
 	var total_lbl := Label.new()
-	total_lbl.text = "%d ✦" % xp
+	total_lbl.text = "%d ⭐" % xp
 	total_lbl.add_theme_font_size_override("font_size", 13)
 	total_lbl.add_theme_color_override("font_color", COL_BODY)
 	total_lbl.custom_minimum_size = Vector2(64, 0)

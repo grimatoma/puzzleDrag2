@@ -389,7 +389,7 @@ func _switch_primary_view(opener: String) -> void:
 			screen.visible = false
 	# B2 — the SECONDARY screens (Achievements / Tile collection / Recipes / Chronicle /
 	# Castle / Charter / Decorations / Portal) are now full-brightness VIEWS too, opened from
-	# the ☰ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is
+	# the ⚙ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is
 	# up must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
 	# paint over the primary the nav just opened. Hide via `.visible = false` DIRECTLY — NOT
 	# `.close()` — for the same reason the primaries do: close() emits `closed` → `_on_*_closed`
@@ -638,7 +638,7 @@ func _open_townmap() -> void:
 		# spawner changes the board pool), so route its state_changed through the
 		# shared _on_town_changed re-pool/refresh path — same as the Town panel.
 		_townmap_screen.connect("state_changed", Callable(self, "_on_town_changed"))
-		# B1: the Town view's "▶ Board" overlay button returns to the board (the card "✕ Close"
+		# B1: the Town view's "▶ Board" overlay button returns to the board (the card "✖ Close"
 		# is gone now it's a primary nav VIEW). Route it through the same board-return path as
 		# the deep-link: hide the view + clear the nav.
 		_townmap_screen.connect("board_requested", Callable(self, "_on_townmap_board_requested"))
@@ -1348,7 +1348,7 @@ func _on_browser_popstate(_args: Array) -> void:
 ## Per-frame (web only): mirror the live modal nav onto the browser URL/history. Opening
 ## or switching screens pushes a `#/<id>` entry; closing a screen (→ board) calls
 ## history.back() so we pop the entry we pushed instead of growing an endless
-## open/close chain — Back then behaves like the in-game ✕. When the URL already matches
+## open/close chain — Back then behaves like the in-game ✖. When the URL already matches
 ## (a popstate just drove the change) we do nothing.
 func _sync_history() -> void:
 	var cur: int = _router.current_modal()
@@ -1913,7 +1913,7 @@ func _on_tool_target(cell: Vector2i) -> void:
 	_hud.hide_tool_armed_banner()
 	_after_tool_used()
 
-## "✕ Disarm" handler (the HUD emits disarm_requested → here): leave targeting mode, clear
+## "✖ Disarm" handler (the HUD emits disarm_requested → here): leave targeting mode, clear
 ## the pending tool, hide the banner, and clear the status hint so the board returns to plain
 ## chaining. The banner widget lives on the HUD now, so hide it via _hud.hide_tool_armed_banner.
 func _disarm_tool() -> void:

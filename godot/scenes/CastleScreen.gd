@@ -120,7 +120,7 @@ func _build_shell() -> void:
 	panel.offset_bottom = -UiKit.NAV_RESERVE
 	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
 	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
-	# sub-page KEEPS its visible "✕ Close" (the legitimate back-to-board affordance).
+	# sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board affordance).
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
 	style.set_content_margin_all(20)
@@ -141,7 +141,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "🏰 Castle" heading + right-aligned "✕ Close" button.
+	# Title row: "🏰 Castle" heading + right-aligned "✖ Close" button.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -157,7 +157,7 @@ func _build_shell() -> void:
 	title_row.add_child(title)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
+	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
 	close_btn.connect("pressed", Callable(self, "close"))
