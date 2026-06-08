@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## The Quests + Almanac screen, ported from the React quests feature
-## (src/features/quests/index.tsx). A parchment modal over a warm scrim with a two-tab
+## (src/features/quests/index.tsx). A full-brightness VIEW (opaque app-frame backdrop that
+## reserves the persistent top bar + bottom nav, like its sibling ⚙-menu sub-pages) with a two-tab
 ## toggle: QUESTS (the deterministic 6-slot board — each quest's label, a progress bar
 ## toward its target, and a Claim button enabled only when complete & unclaimed) and
 ## ALMANAC (the XP/tier track — the current XP + level, a progress bar into the next
@@ -8,8 +9,8 @@ extends CanvasLayer
 ## claimed). ACTIONABLE (unlike the read-only Charter): Claim buttons mutate GameState
 ## via game.claim_quest / game.claim_almanac_tier; Main persists + refreshes on close.
 ##
-## LAYOUT mirrors AchievementsScreen / CharterScreen EXACTLY (parchment card, iron
-## border, drop shadow, a Cinzel title, UiKit / Palette journal styling).
+## LAYOUT mirrors the other secondary VIEWS (AchievementsScreen / CharterScreen / Castle):
+## a full-bleed parchment page, a Cinzel title + ✖ Close, UiKit / Palette journal styling.
 ##
 ## NO class_name on purpose — Main preloads this script
 ## (preload("res://scenes/QuestsScreen.gd")) so the port never needs an --import pass to
@@ -90,11 +91,16 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Full-rect warm-brown scrim. MOUSE_FILTER_STOP so clicks behind it never reach the
-	# board while the screen is open (matches the other modals).
+	# Opaque VIEW backdrop (not a dim scrim) — B2 parity: this ⚙-menu sub-page is now a
+	# full-brightness VIEW like its siblings (Castle / Decorations / Portal / …), painting the
+	# warm app frame over the board and reserving UiKit.TOPBAR_RESERVE at the TOP (so the
+	# layer-1 HUD top bar shows above) + UiKit.NAV_RESERVE at the bottom (so the persistent nav
+	# bar shows through + stays tappable). MOUSE_FILTER_STOP eats clicks in the band it covers.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
+	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
@@ -105,11 +111,19 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -48
-	panel.add_theme_stylebox_override("panel", _parchment_card_style())
+	# Full-bleed: no L/R card margins; the backdrop reserves the top band so only a small inner
+	# pad is needed at the top; the bottom clears the persistent nav strip (B2 view parity).
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -UiKit.NAV_RESERVE
+	# Flat page fill (NOT a floating card) — parchment, no corner radius / border / drop shadow —
+	# so it reads as a full-brightness page under the persistent top bar. KEEPS its "✖ Close"
+	# (the legit menu sub-page back-to-board affordance).
+	var style := StyleBoxFlat.new()
+	style.bg_color = COL_PANEL
+	style.set_content_margin_all(20)
+	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
 	var width_cap := UiKit.make_width_cap()
@@ -173,20 +187,6 @@ func _build_shell() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	scroll.add_child(_body)
-
-## A parchment card StyleBoxFlat — the shared modal look (warm fill, iron border,
-## rounded, drop shadow).
-func _parchment_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	return style
 
 # ── tab switching ──────────────────────────────────────────────────────────────
 
