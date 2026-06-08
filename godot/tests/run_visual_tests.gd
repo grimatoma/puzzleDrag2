@@ -250,6 +250,18 @@ func _seed_daily(main) -> void:
 	game.daily_streak_day = 14
 	game.daily_last_claimed = "2026-06-06"
 
+func _seed_recipes(main) -> void:
+	# Build the Bakery + stock ingredients so the recipe detail card renders the RICH
+	# "Ready to craft" state — green Craft button + covered have/need chips — matching
+	# React's crafting-bakery golden (which shows a built, stocked Bakery). Without this
+	# a fresh Camp save shows "Station not built" + a disabled Craft, hiding the parity.
+	var game: GameState = main.game
+	if not game.buildings.has(BuildingConfig.BAKERY):
+		game.buildings.append(BuildingConfig.BAKERY)
+	game.inventory["flour"] = 12
+	game.inventory["eggs"] = 12
+	game.coins = 1200
+
 func _seed_tutorial(main) -> void:
 	# Tutorial: re-open the modal at step 0 (a fresh game auto-shows it; ensure it's up).
 	if main._tutorial_modal != null:
@@ -371,7 +383,7 @@ func _scenarios() -> Array:
 		{"id": "charter",         "deeplink": "charter",     "seed": Callable(self, "_seed_charter"),      "post_dismiss_tutorial": true},
 		{"id": "quests",          "deeplink": "quests",      "seed": Callable(self, "_seed_quests"),       "post_dismiss_tutorial": true},
 		{"id": "daily",           "deeplink": "daily",       "seed": Callable(self, "_seed_daily"),        "post_dismiss_tutorial": true},
-		{"id": "recipes",         "deeplink": "recipes",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "recipes",         "deeplink": "recipes",     "seed": Callable(self, "_seed_recipes"),      "post_dismiss_tutorial": true},
 		# tutorial + story-prompt: the seed drives the modal; do NOT dismiss the tutorial/story.
 		{"id": "tutorial",        "deeplink": "",            "seed": Callable(self, "_seed_tutorial"),     "post_dismiss_tutorial": false},
 		{"id": "story-prompt",    "deeplink": "",            "seed": Callable(self, "_seed_story_prompt"), "post_dismiss_tutorial": false},

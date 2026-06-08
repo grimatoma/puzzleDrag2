@@ -36,7 +36,9 @@ const RECIPES: Dictionary = {
 		"inputs": {"flour": 3, "eggs": 1},
 		"output": "bread",
 		"qty": 1,
-		"desc": "3 flour + 1 eggs → 1 bread (Bakery).",
+		# Flavor description carried VERBATIM from React ITEMS.bread.desc (src/constants.ts) —
+		# React's crafting view shows `recipe.desc || itemDef.desc` of the produced good.
+		"desc": "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery.",
 	},
 	SUPPLIES: {
 		"name": "Supplies",
@@ -44,7 +46,8 @@ const RECIPES: Dictionary = {
 		"inputs": {"bread": 1, "flour": 2},
 		"output": "supplies",
 		"qty": 1,
-		"desc": "1 bread + 2 flour → 1 supplies (Kitchen).",
+		# Flavor description carried VERBATIM from React ITEMS.supplies.desc (src/constants.ts).
+		"desc": "Travel rations packed at the Kitchen. Three supplies grant standard Mine entry.",
 	},
 }
 
@@ -78,6 +81,13 @@ static func recipe_qty(id: String) -> int:
 	if not is_recipe(id):
 		return 0
 	return int(RECIPES[id].get("qty", 0))
+
+## One-line flavor description of `id` (verbatim from the React produced-item desc),
+## shown in the RecipeWiki detail card. "" for unknown ids.
+static func recipe_desc(id: String) -> String:
+	if not is_recipe(id):
+		return ""
+	return String(RECIPES[id].get("desc", ""))
 
 ## BuildingConfig id of the station that crafts `id` ("" for unknown ids).
 static func recipe_station(id: String) -> String:

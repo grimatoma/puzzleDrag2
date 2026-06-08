@@ -316,6 +316,11 @@ func _make_recipe_row(id: String) -> PanelContainer:
 	formula.add_child(_plain("→", 18, COL_MUTED))
 	_add_icon_qty(formula, RecipeConfig.recipe_output(id), RecipeConfig.recipe_qty(id), COL_VALUE)
 
+	# Status subtitle on the row (React parity: each recipe card shows Ready / Missing inputs).
+	var st: Dictionary = _craft_status(id)
+	if String(st["text"]) != "":
+		col.add_child(_plain(String(st["text"]), 13, st["color"]))
+
 	return row
 
 ## Append an icon (if art exists) + a "×n" label to `box`. Falls back to the resource
@@ -385,6 +390,28 @@ func _make_detail_card(id: String) -> PanelContainer:
 	station_lbl.add_theme_color_override("font_color", COL_MUTED)
 	head_col.add_child(station_lbl)
 
+	# Status sub-line (React crafting-view parity): Ready to craft / Station not built /
+	# Missing inputs — coloured moss (ready) / muted (no station) / rose (short).
+	var status: Dictionary = _craft_status(id)
+	var status_lbl := Label.new()
+	status_lbl.text = String(status["text"])
+	status_lbl.add_theme_font_size_override("font_size", 14)
+	status_lbl.add_theme_color_override("font_color", status["color"])
+	status_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head_col.add_child(status_lbl)
+
+	# Flavor description of the produced good (verbatim React item desc) — React shows
+	# `recipe.desc || itemDef.desc` in the selected-recipe detail card.
+	var desc_text: String = RecipeConfig.recipe_desc(id)
+	if desc_text != "":
+		var desc_lbl := Label.new()
+		desc_lbl.text = desc_text
+		desc_lbl.add_theme_font_size_override("font_size", 13)
+		desc_lbl.add_theme_color_override("font_color", COL_BODY)
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(desc_lbl)
+
 	# Input chips — one per input: [icon] name  have/need (green when covered, rose short).
 	var chips := HFlowContainer.new()
 	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -407,17 +434,22 @@ func _make_detail_card(id: String) -> PanelContainer:
 	col.add_child(craft_btn)
 	_action_buttons["craft"] = craft_btn
 
-	# Reason line when not craftable (no station built / not enough inputs).
-	if not craftable:
-		var reason := Label.new()
-		reason.text = _craft_reason(id)
-		reason.add_theme_font_size_override("font_size", 12)
-		reason.add_theme_color_override("font_color", COL_MUTED)
-		reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		reason.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col.add_child(reason)
+	# (The not-craftable reason is now shown as the coloured status sub-line in the head.)
 
 	return card
+
+## {text:String, color:Color} craft status for the selected-recipe card + row badges
+## (React parity): "Ready to craft" (moss) when craftable, "Station not built" (muted)
+## when the station isn't built, else "Missing inputs" (rose).
+func _craft_status(id: String) -> Dictionary:
+	if game == null:
+		return {"text": "", "color": COL_MUTED}
+	var station_id: String = RecipeConfig.recipe_station(id)
+	if not game.has_building(station_id):
+		return {"text": "Station not built", "color": COL_MUTED}
+	if game.can_craft(id):
+		return {"text": "Ready to craft", "color": Palette.MOSS}
+	return {"text": "Missing inputs", "color": COL_SHORT}
 
 ## A single input chip: [icon] have/need, tinted green when the player has enough of
 ## this input, rose when short. Reads live inventory.
