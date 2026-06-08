@@ -151,7 +151,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 12)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "🧭 World Map" heading spanning the row. The visible "✕ Close" is GONE — a
+	# Title row: "🧭 World Map" heading spanning the row. The visible "✖ Close" is GONE — a
 	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
 	# non-rendered close Button is still created + wired below so ESC/back, the "board"
 	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.

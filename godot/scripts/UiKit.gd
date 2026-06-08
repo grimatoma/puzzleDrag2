@@ -12,7 +12,7 @@ extends RefCounted
 
 # ── shared layout reserves (B1) ──────────────────────────────────────────────────
 ## The height (px) of the persistent HUD top-bar band (settlement title + coin/level/
-## tier/biome pills + ☰ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
+## tier/biome pills + ⚙ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
 ## VIEWS reserves this strip at the TOP — its opaque view backdrop starts at this
 ## offset so the layer-1 top bar shows ABOVE the view (full-brightness, persistent
 ## chrome) instead of being painted over. Tuned so the view content sits flush UNDER

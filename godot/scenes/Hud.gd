@@ -20,9 +20,9 @@ signal nav_selected(key: String)
 ## A tool slot was tapped — Main runs the existing tool dispatch (use_tool) unchanged, then
 ## refreshes the palette.
 signal tool_use_requested(id: String)
-## The armed-banner "✕ Disarm" button was pressed — Main leaves targeting + clears the tool.
+## The armed-banner "✖ Disarm" button was pressed — Main leaves targeting + clears the tool.
 signal disarm_requested
-## The floating ☰ top-right button was pressed — Main opens the MenuScreen (_open_menu).
+## The floating ⚙ top-right button was pressed — Main opens the MenuScreen (_open_menu).
 signal menu_requested
 
 # ── injected by Main before build() ──────────────────────────────────────────
@@ -46,7 +46,7 @@ var _boss_pill: Label                   ## ⚔ Frostmaw HP/max
 var _rats_pill_box: PanelContainer      ## rats pill wrapper (toggled visible)
 var _rats_pill: Label                   ## 🐀 N/5
 var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
-var _runes_pill: Label                  ## ᚱ N (harbor's premium reward)
+var _runes_pill: Label                  ## 🔮 N (harbor's premium reward)
 
 # A2 — Season bar (the React src/ui/seasonStrip.tsx port). Loaded via preload (NO class_name).
 const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
@@ -89,7 +89,7 @@ var _tool_armed_box: PanelContainer     ## outer ember card (hidden unless armed
 var _tool_armed_title: Label            ## "⚡ Tool armed · ×N left"
 var _tool_armed_name: Label             ## tool label (e.g. "Sickle")
 var _tool_armed_desc: Label             ## tool description
-var _tool_disarm_btn: Button            ## "✕ Disarm" (NOT in _tool_buttons — that's tool slots only)
+var _tool_disarm_btn: Button            ## "✖ Disarm" (NOT in _tool_buttons — that's tool slots only)
 
 # ── Bottom navigation bar (matches the React 5-tab BottomNav) ──────────────────
 const NAV_HEIGHT := UiKit.NAV_RESERVE     ## bottom-bar height (also the reserved layout gap)
@@ -152,7 +152,7 @@ func _build_hud() -> void:
 	topbar_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# The old left-strip "🏠 Town" floating button is gone (folded into the bottom nav),
 	# so the settlement title reclaims the left edge. The right margin clears the floating
-	# ☰ menu button (top-right, ≈50px wide).
+	# ⚙ menu button (top-right, ≈50px wide).
 	topbar_margin.add_theme_constant_override("margin_left", 18)
 	topbar_margin.add_theme_constant_override("margin_right", 60)
 	topbar_margin.add_theme_constant_override("margin_top", 10)
@@ -215,7 +215,7 @@ func _build_hud() -> void:
 	# M3j — runes pill (the harbor's premium reward). A cool sea-teal; shown whenever the
 	# player owns at least one rune (captured a giant pearl). Hidden at 0 so it doesn't
 	# clutter the bar before the harbor arc.
-	_runes_pill_box = UiKit.make_pill("ᚱ 0", Color(0.18, 0.46, 0.50))
+	_runes_pill_box = UiKit.make_pill("🔮 0", Color(0.18, 0.46, 0.50))
 	_runes_pill = _runes_pill_box.get_meta("label")
 	_runes_pill_box.visible = false
 	topbar_row.add_child(_runes_pill_box)
@@ -352,17 +352,17 @@ func _build_hud() -> void:
 	# (above the board) so it never gets covered. The five tabs (Town / Inventory / Craft /
 	# Map / Townsfolk) route to the existing _open_* methods; the remaining secondary
 	# screens (achievements, tiles, chronicle, castle, decorations, portal, charter,
-	# quests, recipes, daily, debug) moved into the ☰ menu's "More" section (MenuScreen).
+	# quests, recipes, daily, debug) moved into the ⚙ menu's "More" section (MenuScreen).
 	_build_bottom_nav()
 
-	# ── F. Floating ☰ menu button (top-right) ──────────────────────────────────
+	# ── F. Floating ⚙ menu button (top-right) ──────────────────────────────────
 	# Always-visible menu button (settings / new game / the "More" secondary screens),
 	# pinned top-RIGHT clear of the board drag area. The top-bar already reserves a 60px
 	# right margin for it. Dropped in the Main→Hud extraction (its space was kept but its
 	# creation was lost) — restored here. Emits menu_requested; Main opens the MenuScreen.
 	var menu_btn := Button.new()
 	menu_btn.name = "MenuButton"
-	menu_btn.text = "☰"
+	menu_btn.text = "⚙"
 	menu_btn.add_theme_font_size_override("font_size", 22)
 	menu_btn.add_theme_color_override("font_color", Palette.INK)
 	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
@@ -559,7 +559,7 @@ func _build_tool_armed_banner(root: Control) -> void:
 	_tool_armed_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(_tool_armed_desc)
 
-	# Bottom row: a bold "TAP A TILE ON THE BOARD" prompt + a "✕ Disarm" button.
+	# Bottom row: a bold "TAP A TILE ON THE BOARD" prompt + a "✖ Disarm" button.
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 12)
 	col.add_child(bottom)
@@ -573,7 +573,7 @@ func _build_tool_armed_banner(root: Control) -> void:
 	bottom.add_child(prompt)
 
 	_tool_disarm_btn = Button.new()
-	_tool_disarm_btn.text = "✕ Disarm"
+	_tool_disarm_btn.text = "✖ Disarm"
 	UiKit.style_button(_tool_disarm_btn, Palette.EMBER, 6, 15)
 	_tool_disarm_btn.pressed.connect(func(): disarm_requested.emit())
 	bottom.add_child(_tool_disarm_btn)
@@ -1306,7 +1306,7 @@ func _refresh_rats() -> void:
 	_rats_pill_box.visible = true
 
 ## M3j — the runes pill (the harbor's premium reward). Shown only once the player owns at
-## least one rune (captured a giant pearl); reads "ᚱ N". Hidden at 0 so it stays out of the
+## least one rune (captured a giant pearl); reads "🔮 N". Hidden at 0 so it stays out of the
 ## bar before the harbor arc. Mirrors GameState.runes.
 func _refresh_runes() -> void:
 	if _runes_pill_box == null or _runes_pill == null or game == null:
@@ -1314,7 +1314,7 @@ func _refresh_runes() -> void:
 	if game.runes <= 0:
 		_runes_pill_box.visible = false
 		return
-	_runes_pill.text = "ᚱ %d" % game.runes
+	_runes_pill.text = "🔮 %d" % game.runes
 	_runes_pill_box.visible = true
 
 ## A2 — push the live farm season state onto the season bar so its segments highlight, its
