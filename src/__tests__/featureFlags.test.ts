@@ -13,23 +13,16 @@ describe("isDialogsDisabled", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns false by default in dev/test (dialogs on)", () => {
-    expect(isDialogsDisabled()).toBe(false);
-  });
-
-  it("returns true by default in production builds (dialogs off)", () => {
-    vi.stubEnv("PROD", true);
+  it("returns true by default in all environments (dialogs off)", () => {
     expect(isDialogsDisabled()).toBe(true);
   });
 
-  it("lets the global override re-enable dialogs in production", () => {
-    vi.stubEnv("PROD", true);
+  it("lets the global override re-enable dialogs", () => {
     globalThis.__HEARTH_DISABLE_DIALOGS__ = false;
     expect(isDialogsDisabled()).toBe(false);
   });
 
-  it("lets the localStorage flag re-enable dialogs in production", () => {
-    vi.stubEnv("PROD", true);
+  it("lets the localStorage flag re-enable dialogs", () => {
     localStorage.setItem("hearth.disableDialogs", "0");
     expect(isDialogsDisabled()).toBe(false);
   });
