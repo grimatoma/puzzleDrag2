@@ -102,17 +102,21 @@ func _build_shell() -> void:
 
 	# Opaque VIEW background (not a dim modal scrim). This screen is one of the five
 	# persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
-	# board — reading as a view, not a modal punched out of darkness. Stops NAV_HEIGHT
-	# (76px) short of the bottom so the persistent nav bar (a LOWER CanvasLayer) shows
-	# through and stays tappable; MOUSE_FILTER_STOP eats clicks above that strip.
+	# board — reading as a view, not a modal punched out of darkness. It reserves
+	# UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD top bar shows ABOVE the
+	# view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a
+	# LOWER CanvasLayer) shows through and stays tappable; MOUSE_FILTER_STOP eats clicks in
+	# the band it covers.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered panel: PanelContainer → MarginContainer → ScrollContainer → VBox.
+	# Full-bleed view content: PanelContainer → MarginContainer (width-cap) → ScrollContainer
+	# → VBox, pinned edge-to-edge (no card margins).
 	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -120,25 +124,18 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Comfortable margins around the panel; the ScrollContainer handles overflow.
-	# offset_bottom clears the persistent bottom nav (76px) + a 12px gap so the card
-	# never overlaps the nav bar showing through below.
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -88
+	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
+	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -UiKit.NAV_RESERVE
 	panel.custom_minimum_size = Vector2(0, 0)
-	# M4c: parchment card — warm fill, iron border, rounded corners, generous
-	# content padding, and a soft drop shadow so it floats over the warm scrim.
+	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
+	# shadow, so it reads as a full-brightness page under the persistent top bar.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                  # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
 	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
@@ -158,7 +155,10 @@ func _build_shell() -> void:
 	_root_vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(_root_vbox)
 
-	# Title row: "🏠 Town" heading + a right-aligned "✕ Close" button.
+	# Title row: "🏠 Town" heading spanning the row. The visible "✕ Close" is GONE — a primary
+	# nav VIEW is left via the bottom nav / ESC-back, not a card close button. A non-rendered
+	# close Button is still created + wired below so ESC/back, the "board" deep-link, and the
+	# headless tests (which press _action_buttons["close"]) keep working.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_root_vbox.add_child(title_row)
@@ -175,12 +175,11 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
-	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, COL_DANGER, 6, 0, true)
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# Section scaffolds: each is a labelled VBox header + a dynamic body VBox.

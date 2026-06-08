@@ -201,7 +201,7 @@ var _tool_disarm_btn: Button            ## "✕ Disarm" (NOT in _tool_buttons �
 # which (if any) screen is open so _refresh_nav() can restyle the five tabs. Set by
 # each _open_* and cleared to "" by each _on_*_closed (and on the board). The secondary
 # screens that used to live in the left strip moved into the ☰ menu's "More" section.
-const NAV_HEIGHT := 76                   ## bottom-bar height (also the reserved layout gap)
+const NAV_HEIGHT := UiKit.NAV_RESERVE     ## bottom-bar height (also the reserved layout gap); single source = UiKit.NAV_RESERVE
 const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill (fill spans a fraction of this)
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
 var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
@@ -1593,6 +1593,10 @@ func _open_townmap() -> void:
 		# spawner changes the board pool), so route its state_changed through the
 		# shared _on_town_changed re-pool/refresh path — same as the Town panel.
 		_townmap_screen.connect("state_changed", Callable(self, "_on_town_changed"))
+		# B1: the Town view's "▶ Board" overlay button returns to the board (the card "✕ Close"
+		# is gone now it's a primary nav VIEW). Route it through the same board-return path as
+		# the deep-link: hide the view + clear the nav.
+		_townmap_screen.connect("board_requested", Callable(self, "_on_townmap_board_requested"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
@@ -1604,6 +1608,12 @@ func _on_townmap_closed() -> void:
 		_townmap_screen.visible = false
 	_router.close_modal()
 	_clear_nav()
+
+## B1: the Town view's "▶ Board" overlay button was pressed — return to the board. Routes
+## through the same path as apply_deeplink("board"): hide the view + reset the router + clear
+## the active nav tab. (ESC/back returns to the board via _close_top_overlay → close() too.)
+func _on_townmap_board_requested() -> void:
+	apply_deeplink("board")
 
 # ── Achievements trophy screen (M10) ──────────────────────────────────────────────
 

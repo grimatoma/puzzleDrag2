@@ -50,7 +50,7 @@ var _search_field: LineEdit             ## the search input (registered for head
 #   Farm:    hay_bundle, flour, eggs, soup, pie, honey, plank, meat, milk, horseshoe
 #   Refined: bread, supplies
 #   Mine:    block, iron_bar, coke, cut_gem, dirt
-const GROUP_FARM := "Farm goods"
+const GROUP_FARM := "Farm Goods"
 const GROUP_REFINED := "Refined"
 const GROUP_MINE := "Mine"
 const GROUP_OTHER := "Other"
@@ -101,18 +101,22 @@ func _build_shell() -> void:
 
 	# Opaque VIEW background (not a dim modal scrim). The Inventory ledger is one of the
 	# five persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
-	# board — reading as a view, not a hole in darkness. Stops NAV_HEIGHT (76px) short of
-	# the bottom so the persistent nav bar (a LOWER CanvasLayer) shows through + stays
-	# tappable; MOUSE_FILTER_STOP eats clicks above that strip.
+	# board — reading as a view, not a hole in darkness. It reserves UiKit.TOPBAR_RESERVE at
+	# the TOP so the persistent layer-1 HUD top bar (settlement title + pills + ☰ menu) shows
+	# ABOVE the view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar
+	# (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks in
+	# the band it covers.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Centered panel: a full-rect Control holds a panel pinned with comfortable
-	# margins; a width-cap MarginContainer keeps it tidy on wide viewports.
+	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
+	# margins), reserving the top-bar band + bottom-nav strip; a width-cap MarginContainer
+	# keeps line length tidy on wide viewports (the web caps it too).
 	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -120,22 +124,17 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# offset_bottom clears the persistent bottom nav (76px) + a 12px gap.
-	panel.offset_left = 24
-	panel.offset_right = -24
-	panel.offset_top = 48
-	panel.offset_bottom = -88
-	# Parchment card — warm fill, iron border, rounded corners, generous content
-	# padding, and a soft drop shadow so it floats over the warm scrim.
+	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
+	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	panel.offset_bottom = -UiKit.NAV_RESERVE
+	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
+	# shadow, so it reads as a full-brightness page under the persistent top bar.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
 	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
@@ -155,7 +154,10 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(root_vbox)
 
-	# Title row: "📦 Inventory" heading + a right-aligned "✕ Close" button.
+	# Title row: "📦 Inventory" heading spanning the row. The visible "✕ Close" is GONE — a
+	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
+	# non-rendered close Button is still created + wired below so ESC/back, the "board"
+	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -170,12 +172,11 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
-	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# M5-polish — a search field that filters the ledger rows by name (case-insensitive
@@ -378,7 +379,7 @@ func _apply_query(keys: Array) -> Array:
 
 # ── ledger math (pure helpers — usable + testable without rendering) ───────────
 
-## Which group a resource belongs to: "Farm goods" / "Refined" / "Mine" for the
+## Which group a resource belongs to: "Farm Goods" / "Refined" / "Mine" for the
 ## known production families, else "Other" so nothing is ever dropped.
 func group_of(res: String) -> String:
 	if FARM_RESOURCES.has(res):

@@ -10,6 +10,20 @@ extends RefCounted
 ##
 ## Palette tokens are read from the `Palette` class_name global (Palette.gd).
 
+# ── shared layout reserves (B1) ──────────────────────────────────────────────────
+## The height (px) of the persistent HUD top-bar band (settlement title + coin/level/
+## tier/biome pills + ☰ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
+## VIEWS reserves this strip at the TOP — its opaque view backdrop starts at this
+## offset so the layer-1 top bar shows ABOVE the view (full-brightness, persistent
+## chrome) instead of being painted over. Tuned so the view content sits flush UNDER
+## the bar with no gap and no overlap (the bar is ~54–56px tall: title font 26 +
+## 10/10 margins + a 2px bottom border).
+const TOPBAR_RESERVE := 60
+## The height (px) of the persistent bottom-nav bar (a LOWER CanvasLayer, `NAV_HEIGHT`
+## in Main.gd). Each PRIMARY view's backdrop stops this far short of the bottom so the
+## nav shows through + stays tappable; floating overlay controls lift above it too.
+const NAV_RESERVE := 76
+
 # ── heading font ─────────────────────────────────────────────────────────────
 
 ## Cached Cinzel-Regular.ttf as a BOLD FontVariation.  Returns null when the

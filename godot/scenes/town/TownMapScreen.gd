@@ -49,6 +49,11 @@ signal closed
 ## M6d — emitted after a build/demolish mutates `game`, so Main can re-pool the
 ## board, save, and refresh its HUD (mirrors TownScreen.state_changed).
 signal state_changed
+## B1 — the explicit board-return affordance. The Town view has no card "✕ Close" anymore
+## (it's a primary nav VIEW), so a labelled "▶ Board" button on the overlay emits this; Main
+## hides the active view + clears the nav (apply_deeplink("board")). ESC/back still returns
+## to the board too — this is the discoverable, on-screen path.
+signal board_requested
 
 ## action id → Button, for headless tests. Static keys: "close". Panel keys are
 ## added/removed as panels open/close: "demolish" (built-lot card),
@@ -62,7 +67,8 @@ const ZONE_ID := "home"
 const FALLBACK_VIEW := Vector2(720, 1280)
 ## Bottom strip (px) left to the persistent nav bar — the backdrop + _map_host stop this
 ## far short of the bottom so the nav (a lower CanvasLayer) shows through + stays tappable.
-const NAV_RESERVE := 76
+## Single source = UiKit.NAV_RESERVE.
+const NAV_RESERVE := UiKit.NAV_RESERVE
 ## A soft danger tone for the Demolish button (matches TownScreen.COL_DANGER).
 const COL_DANGER := Color("#b06a52")
 
@@ -113,14 +119,16 @@ func _build_shell() -> void:
 	visible = false
 
 	# Parchment backdrop — a warm full-rect fill so the map sits on paper. This screen is
-	# the "Town" tab — one of the five persistent bottom-nav VIEWS — so the backdrop stops
-	# NAV_HEIGHT (76px) short of the bottom, leaving the persistent nav bar (a LOWER
-	# CanvasLayer) visible + tappable. MOUSE_FILTER_STOP eats clicks above that strip so
-	# nothing leaks to the board behind the open map.
+	# the "Town" tab — one of the five persistent bottom-nav VIEWS — so the backdrop reserves
+	# UiKit.TOPBAR_RESERVE at the TOP (revealing the persistent layer-1 HUD top bar above the
+	# map) and stops UiKit.NAV_RESERVE short of the bottom, leaving the persistent nav bar (a
+	# LOWER CanvasLayer) visible + tappable. MOUSE_FILTER_STOP eats clicks in the band it
+	# covers so nothing leaks to the board behind the open map.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.offset_bottom = -76                 # leave the bottom nav strip unpainted
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
+	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
@@ -129,12 +137,13 @@ func _build_shell() -> void:
 	# M6d: MOUSE_FILTER_STOP so it receives gui_input — left clicks pick a lot and
 	# mouse motion drives the hover highlight. (The backdrop below already eats any
 	# stray click so nothing leaks to the board behind the open map.)
-	# View-mode: stop NAV_HEIGHT (76px) short of the bottom so this STOP control never
-	# covers the persistent nav strip — taps there fall through to the nav buttons on the
-	# lower CanvasLayer. The map renders into this reserved rect (see _viewport_size).
+	# View-mode: reserve the top-bar band + the bottom nav strip so this STOP control never
+	# covers the persistent chrome — taps in those bands fall through to the HUD/nav on the
+	# lower CanvasLayers. The map renders into this reserved rect (see _map_render_size).
 	_map_host = Control.new()
 	_map_host.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_map_host.offset_bottom = -76
+	_map_host.offset_top = UiKit.TOPBAR_RESERVE
+	_map_host.offset_bottom = -NAV_RESERVE
 	_map_host.mouse_filter = Control.MOUSE_FILTER_STOP
 	_map_host.connect("gui_input", Callable(self, "_on_map_gui_input"))
 	add_child(_map_host)
@@ -142,14 +151,18 @@ func _build_shell() -> void:
 	_map = TownMapScript.new()
 	_map_host.add_child(_map)
 
-	# Floating UI layer over the map: a title pill (top-left) + a close button
-	# (top-right). A full-rect, click-through Control holds both.
+	# Floating UI layer over the map: a title pill (top-left) + the board-return button
+	# (top-right). A full-rect, click-through Control holds both. Top-anchored children are
+	# lowered past UiKit.TOPBAR_RESERVE so they sit OVER the map, clear of the persistent
+	# HUD top bar (which already shows the settlement name) revealed above the view.
 	var overlay := Control.new()
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(overlay)
+	## Top inset for the overlay's top-anchored controls — clears the persistent HUD top bar.
+	var overlay_top: float = float(UiKit.TOPBAR_RESERVE) + 18.0
 
-	# Title pill — the in-fiction settlement name, top-left.
+	# Title pill — the in-fiction settlement name, top-left (over the map, below the HUD bar).
 	var title := Label.new()
 	title.text = "🗺 Hearthwood Vale"
 	title.add_theme_font_size_override("font_size", 26)
@@ -162,20 +175,31 @@ func _build_shell() -> void:
 	title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	title_box.offset_left = 18
-	title_box.offset_top = 18
+	title_box.offset_top = overlay_top
 	title_box.add_child(title)
 	overlay.add_child(title_box)
 
-	# Close button — top-right, parchment pill (matches the other modals).
+	# Board-return button — top-right, a clear "▶ Board" affordance. The Town view is a
+	# primary nav VIEW with no card "✕ Close", so this is the discoverable on-screen path back
+	# to the board: it emits `board_requested`, which Main routes to hide the view + clear the
+	# nav (apply_deeplink("board")). ESC/back also returns to the board.
+	var board_btn := Button.new()
+	board_btn.text = "▶ Board"
+	UiKit.style_button(board_btn, Palette.EMBER, 6, 20)
+	board_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	board_btn.offset_right = -18
+	board_btn.offset_top = overlay_top
+	board_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	board_btn.connect("pressed", Callable(self, "_on_board_button"))
+	overlay.add_child(board_btn)
+	_action_buttons["board"] = board_btn
+
+	# Hidden close affordance — created + wired but NOT added to the overlay, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests
+	# (run_townmap_tests presses/checks _action_buttons["close"]).
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
-	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	close_btn.offset_right = -18
-	close_btn.offset_top = 18
-	close_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	overlay.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# Prominent "Build · <built>/<plots> plots" button, bottom-right (matches React's
@@ -284,16 +308,16 @@ func _viewport_size() -> Vector2:
 	return FALLBACK_VIEW
 
 # The rect the map fits into: the map-host Control's real laid-out size when available,
-# else the viewport (or fallback) minus the reserved bottom nav strip. Using the host's
-# own size keeps the map fit and the lot-click hit-test (event.position is local to the
-# host) in exact agreement.
+# else the viewport (or fallback) minus the reserved top-bar band AND bottom nav strip
+# (the host reserves both). Using the host's own size keeps the map fit and the lot-click
+# hit-test (event.position is local to the host) in exact agreement.
 func _map_render_size() -> Vector2:
 	if _map_host != null:
 		var hs: Vector2 = _map_host.size
 		if hs.x > 0.0 and hs.y > 0.0:
 			return hs
 	var vp: Vector2 = _viewport_size()
-	return Vector2(vp.x, maxf(1.0, vp.y - float(NAV_RESERVE)))
+	return Vector2(vp.x, maxf(1.0, vp.y - float(UiKit.TOPBAR_RESERVE) - float(NAV_RESERVE)))
 
 # ── M6d: interaction (click a plot → build / demolish) ────────────────────────
 
@@ -515,6 +539,13 @@ func _on_build_button() -> void:
 		return
 	_open_build_picker_for_lot(_map.built_count())
 
+## The "▶ Board" overlay button was pressed: dismiss any open panel and emit
+## `board_requested` so Main hides this view + clears the nav (returns to the board). This is
+## the discoverable on-screen board-return path now that the card "✕ Close" is gone.
+func _on_board_button() -> void:
+	_close_panel()
+	emit_signal("board_requested")
+
 ## Build `id` through the SAME GameState API as TownScreen, then dismiss the panel,
 ## re-render the map (so the new house shows), and emit state_changed on success.
 func _do_build(id: String) -> void:
@@ -536,18 +567,21 @@ func _do_demolish(id: String) -> void:
 # ── M6d: panel scaffolding (scrim + parchment card) ───────────────────────────
 
 ## Tear down the open interaction panel (if any) and drop its action buttons from
-## `_action_buttons` so tests + handlers never read a stale node. The "close" entry
-## is preserved (it's the static title-bar button, not part of a panel).
+## `_action_buttons` so tests + handlers never read a stale node. The STATIC overlay
+## entries (close, board, build_open, zoom_in/out, recenter) are preserved — only the
+## per-panel keys (demolish / build:<id> / picker_close) are dropped.
+const _STATIC_ACTION_KEYS := ["close", "board", "build_open", "zoom_in", "zoom_out", "recenter"]
 func _close_panel() -> void:
 	if _panel != null:
 		_panel.queue_free()
 		_panel = null
 	if _map != null:
 		_map.set_hover_lot(-1)
-	var keep: Variant = _action_buttons.get("close")
-	_action_buttons.clear()
-	if keep != null:
-		_action_buttons["close"] = keep
+	var kept: Dictionary = {}
+	for k in _STATIC_ACTION_KEYS:
+		if _action_buttons.has(k):
+			kept[k] = _action_buttons[k]
+	_action_buttons = kept
 
 ## Build a fresh panel: a translucent scrim (clicking it closes the panel) holding a
 ## centred parchment card with a title row (heading + ✕). Returns the card's content
