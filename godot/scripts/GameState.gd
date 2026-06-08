@@ -1275,7 +1275,7 @@ func try_capture_pearl(chain_keys: Array) -> Dictionary:
 ## contain the pearl AND fish tiles — that rule can't fire on the live board. The board
 ## therefore adapts it to the engine's existing ADJACENCY pattern (exactly like
 ## Board.clear_rubble_on_stone sweeping rubble 8-adjacent to a STONE chain): a same-key
-## fish chain run NEXT TO the pearl captures it. The Board only emits its `pearl_chain`
+## fish chain run NEXT TO the pearl captures it. The Board only emits its `pearl_chain_resolved`
 ## signal for a FISH-category chain of length >= REQUIRED_FISH_IN_CHAIN (it owns the grid +
 ## tile types), so the fish-category + length gates are enforced there; this method enforces
 ## the harbor / live-pearl / adjacency gates against GameState. try_capture_pearl stays as

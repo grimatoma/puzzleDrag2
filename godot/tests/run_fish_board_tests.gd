@@ -196,7 +196,7 @@ func _test_main_board_integration() -> void:
 	_check(all_low, "mutate_bottom_row reseeded the bottom row from the new (low) tide pool")
 
 	# PEARL CAPTURE on the live board: lay a fish chain 8-adjacent to the pearl and resolve.
-	# The Board emits pearl_chain (for any fish chain of length >= REQUIRED_FISH_IN_CHAIN) →
+	# The Board emits pearl_chain_resolved (for any fish chain of length >= REQUIRED_FISH_IN_CHAIN) →
 	# Main runs capture_pearl_if_adjacent → +1 rune + tile gone. The chain must still be >=
 	# MIN_CHAIN (3) to RESOLVE, so we use a 3-sardine path one of whose cells is adjacent to
 	# the pearl. First clear any pearl tile already on the board (the one placed on ENTRY at a

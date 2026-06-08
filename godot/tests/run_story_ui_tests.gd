@@ -157,12 +157,12 @@ func _initialize() -> void:
 	_check(not chronicle._rows.has("act3_finish"), "unfired act3_finish has no card")
 	_check(chronicle._rows.size() == 3, "exactly 3 timeline cards rendered")
 
-	# The "View Charter" button exists and emits `view_charter` when pressed.
+	# The "View Charter" button exists and emits `charter_view_requested` when pressed.
 	_check(chronicle._action_buttons.has("charter"), "chronicle has a 'View Charter' button")
 	var charter_emitted := [false]
-	chronicle.connect("view_charter", func(): charter_emitted[0] = true)
+	chronicle.connect("charter_view_requested", func(): charter_emitted[0] = true)
 	chronicle._action_buttons["charter"].emit_signal("pressed")
-	_check(charter_emitted[0], "'View Charter' button emits view_charter")
+	_check(charter_emitted[0], "'View Charter' button emits charter_view_requested")
 
 	# A fresh, zero-fired GameState renders the empty state + "0 / N chapters".
 	var fresh_game := GameState.new()
