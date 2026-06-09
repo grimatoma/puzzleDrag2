@@ -44,7 +44,7 @@ static func resolve(id: String) -> Dictionary:
 	match id:
 		"", "board":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.NONE }
-		"town":
+		"town", "ledger":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWN }
 		"menu":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.MENU }
@@ -62,7 +62,9 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWNSFOLK }
 		"cartography", "world":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.CARTOGRAPHY }
-		"recipes", "recipewiki":
+		"recipes", "recipewiki", "craft", "crafting":
+			# review-3 — "craft" now resolves to the CRAFTING UI (the RecipeWikiScreen), matching
+			# the 🔨 Craft bottom-nav tab. ("recipes"/"recipewiki" stay as aliases.)
 			return { "ok": true, "view": View.BOARD, "modal": Modal.RECIPES }
 		"tutorial":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TUTORIAL }
@@ -129,4 +131,4 @@ static func id_from_hash(hash: String) -> String:
 
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm"])
+	return PackedStringArray(["", "board", "town", "ledger", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "craft", "crafting", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm"])

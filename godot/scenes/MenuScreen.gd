@@ -41,13 +41,18 @@ signal navigation_requested(deeplink_id: String)
 
 ## The "More" navigation entries — every secondary screen that used to be a left-strip HUD
 ## button, now reachable from the menu. Each row: {icon, label, id (a ViewRouter deep-link)}.
-## The five primary screens (Town / Inventory / Craft / Map / Townsfolk) live on the bottom
-## nav and are intentionally NOT duplicated here.
+## The bottom-nav primary tabs (Town map / Inventory / Craft / Map / Townsfolk) are NOT
+## duplicated here — but the Town LEDGER ("town") IS, since review-3 freed the 🔨 Craft tab to
+## open the crafting UI instead of the ledger (the ledger is no longer reachable from the nav).
+## review-3 — "Market & Town" (the TownScreen ledger) heads the list: now that the 🔨 Craft
+## bottom-nav tab opens the dedicated crafting UI (RecipeWikiScreen), the town-management
+## ledger (settlement / buildings / refine / MARKET sell+buy / orders) lives here + on a
+## town-map button. "Recipes" was dropped — it's the same screen the Craft tab now opens.
 const MORE_ENTRIES := [
+	{"icon": "🏛", "label": "Market & Town", "id": "town"},
 	{"icon": "🏆", "label": "Achievements", "id": "achievements"},
 	{"icon": "📖", "label": "Tiles", "id": "tiles"},
 	{"icon": "📜", "label": "Chronicle", "id": "chronicle"},
-	{"icon": "🍳", "label": "Recipes", "id": "recipes"},
 	{"icon": "🏰", "label": "Castle", "id": "castle"},
 	{"icon": "🌷", "label": "Decorations", "id": "decorations"},
 	{"icon": "🌀", "label": "Portal", "id": "portal"},

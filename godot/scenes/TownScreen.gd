@@ -362,6 +362,11 @@ func _build_refine_section() -> void:
 		_refine_body.add_child(row)
 
 func _build_market_section() -> void:
+	# review-17 — a clear "Sell" sub-header so the sell rows read as their own group and the
+	# Buy group below it is obviously a separate, reachable section (the buy rows used to sit
+	# under a faint "— Buy —" line that was easy to miss below the sell fold).
+	_market_body.add_child(_make_subheader("⤴ Sell"))
+
 	var any_sell := false
 	for res in MarketConfig.sellable_resources():
 		var owned: int = game.qty(res)
@@ -393,10 +398,10 @@ func _build_market_section() -> void:
 		_market_body.add_child(_make_label("nothing to sell yet", COL_MUTED))
 
 	# ── Buy rows ─────────────────────────────────────────────────────────────
-	# A "Buy" subheading visually separates the sell rows from the buy rows.
-	var buy_header := _make_label("— Buy —", COL_MUTED)
-	buy_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_market_body.add_child(buy_header)
+	# review-17 — a prominent ember "Buy" sub-header (matching the "Sell" one above) makes the
+	# buy section obviously reachable, instead of the old faint centred "— Buy —" line that was
+	# easy to miss below the sell fold.
+	_market_body.add_child(_make_subheader("⤵ Buy"))
 
 	for res in MarketConfig.buyable_resources():
 		var price: int = MarketConfig.buy_price(res)
@@ -885,6 +890,19 @@ func _after(result: Dictionary) -> void:
 # Note: heading_font(), btn_box(), style_button() have moved to UiKit (M5a).
 # TownScreen calls UiKit.style_button(..., 6, 0, true) to preserve the
 # disabled-state override that TownScreen originally carried.
+
+## A bold ember sub-header (review-17): used inside a section to separate sub-groups (e.g.
+## the Market's Sell / Buy halves) so each is obviously its own reachable block. Smaller than
+## a top-level section header, in the Cinzel display face when available.
+func _make_subheader(text: String) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_color_override("font_color", COL_HEADER)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		lbl.add_theme_font_override("font", hf)
+	return lbl
 
 ## A wrapping body Label in the given color.
 func _make_label(text: String, color: Color) -> Label:

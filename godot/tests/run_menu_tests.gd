@@ -100,12 +100,15 @@ func _initialize() -> void:
 	# Every secondary screen that moved out of the old left-strip HUD into the menu has
 	# a "nav:<id>" button. Spot-check a representative few, then prove pressing one
 	# CLOSES the menu and emits navigation_requested(id) (Main routes that through apply_deeplink).
-	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "recipes", "daily", "debug"]:
+	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "daily", "debug"]:
 		_check(menu._action_buttons.has("nav:" + id), "_action_buttons has 'nav:%s'" % id)
-	# The five PRIMARY tabs (town/inventory/craft/map/townsfolk) live on the bottom nav
-	# and must NOT be duplicated in the menu's More list.
-	_check(not menu._action_buttons.has("nav:town"), "menu does NOT duplicate the Town tab")
+	# review-3 — the Town LEDGER ("Market & Town") is now a "More" entry: the 🔨 Craft bottom-nav
+	# tab opens the crafting UI, so the ledger moved off the nav into the menu (+ a town-map button).
+	_check(menu._action_buttons.has("nav:town"), "menu DOES surface the Town ledger ('nav:town')")
+	# The bottom-nav primary tabs (townmap/inventory/craft/map/townsfolk) are NOT duplicated.
 	_check(not menu._action_buttons.has("nav:inventory"), "menu does NOT duplicate the Inventory tab")
+	# "Recipes" was dropped — it's the SAME screen the Craft nav tab now opens (no menu dupe).
+	_check(not menu._action_buttons.has("nav:recipes"), "menu does NOT duplicate the crafting screen ('nav:recipes' dropped)")
 
 	var before_nav := _navigate_count
 	var before_nav_closed := _closed_count

@@ -1,11 +1,16 @@
 extends SceneTree
-## B1 — layout invariants for the FIVE promoted PRIMARY nav VIEWS (Craft/Town, Inventory,
-## Town map, Cartography, Townsfolk). Each was a floating parchment card with a "✖ Close"
-## button that painted over the persistent HUD top bar; B1 promotes them to full-brightness
-## VIEWS: their opaque view backdrop now reserves UiKit.TOPBAR_RESERVE at the TOP (so the
-## layer-1 HUD top bar shows above the view) and stops UiKit.NAV_RESERVE short of the bottom
-## (so the persistent nav bar shows through), with NO visible card "✖ Close" and a board-
-## return affordance on the Town view.
+## B1 — layout invariants for the PRIMARY nav VIEWS (Craft = the crafting screen, Inventory,
+## Town map, Cartography, Townsfolk + the relocated Town ledger). Each was a floating parchment
+## card with a "✖ Close" button that painted over the persistent HUD top bar; B1 promotes them
+## to full-brightness VIEWS: their opaque view backdrop now reserves UiKit.TOPBAR_RESERVE at the
+## TOP (so the layer-1 HUD top bar shows above the view) and stops UiKit.NAV_RESERVE short of the
+## bottom (so the persistent nav bar shows through), with NO visible card "✖ Close" and a board-
+## return affordance on the Town map view.
+##
+## review-3 — the 🔨 Craft bottom-nav tab now opens the CRAFTING screen (RecipeWikiScreen),
+## promoted to a B1 PRIMARY (hidden close), so it's asserted here. The Town ledger (TownScreen)
+## is no longer a nav tab (it moved to the ☰ menu + a town-map button) but stays a hidden-close
+## VIEW in this family, so it's still asserted.
 ##
 ## This suite asserts, for each of the five screens:
 ##   • the view backdrop is an opaque ColorRect with offset_top == UiKit.TOPBAR_RESERVE and
@@ -25,6 +30,7 @@ const TownScreenScript := preload("res://scenes/TownScreen.gd")
 const TownMapScreenScript := preload("res://scenes/town/TownMapScreen.gd")
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
+const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
 
 var _checks: int = 0
 var _failures: int = 0
@@ -91,14 +97,24 @@ func _run() -> void:
 	_assert_hidden_close(inv, "Inventory")
 	inv.queue_free()
 
-	# ── 2. Craft / Town panel view ────────────────────────────────────────────
+	# ── 2. Town ledger view (TownScreen — now menu/town-map routed, still a B1 view) ──
 	var town = TownScreenScript.new()
 	root.add_child(town)
 	town.setup(game)
 	await process_frame
-	_assert_backdrop(town, "Craft/Town")
-	_assert_hidden_close(town, "Craft/Town")
+	_assert_backdrop(town, "Town ledger")
+	_assert_hidden_close(town, "Town ledger")
 	town.queue_free()
+
+	# ── 2b. Craft view (RecipeWikiScreen — the 🔨 Craft bottom-nav tab's target) ──────
+	var craft = RecipeWikiScreenScript.new()
+	root.add_child(craft)
+	craft.setup(game)
+	await process_frame
+	_assert_backdrop(craft, "Craft")
+	_assert_hidden_close(craft, "Craft")
+	craft.queue_free()
+	await process_frame
 
 	# ── 3. Cartography (world map) view ────────────────────────────────────────
 	var carto = CartographyScreenScript.new()
@@ -147,5 +163,19 @@ func _run() -> void:
 		(board_btn as Button).emit_signal("pressed")
 		await process_frame
 	_check(emitted["v"], "TownMap: pressing 'board' emits board_requested")
+
+	# review-3 — the relocated Town ledger affordance: a visible "📋 Town Ledger" button that
+	# emits ledger_requested (Main routes it to apply_deeplink('town') → the TownScreen).
+	_check(townmap.has_signal("ledger_requested"), "TownMap: has a ledger_requested signal")
+	var ledger_btn: Variant = townmap._action_buttons.get("ledger")
+	_check(ledger_btn != null, "TownMap: _action_buttons has a 'ledger' button")
+	if ledger_btn != null:
+		_check((ledger_btn as Button).visible, "TownMap: the 'ledger' button IS visible (discoverable)")
+	var led_emitted := {"v": false}
+	townmap.connect("ledger_requested", func() -> void: led_emitted["v"] = true)
+	if ledger_btn != null:
+		(ledger_btn as Button).emit_signal("pressed")
+		await process_frame
+	_check(led_emitted["v"], "TownMap: pressing 'Town Ledger' emits ledger_requested")
 	townmap.queue_free()
 	await process_frame

@@ -425,18 +425,24 @@ func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
 ## methods stay usable directly (deep-links, tests) — only the nav-tab wiring goes through
 ## here. Reopening the same view is a no-op switch (it just re-opens + re-highlights).
 func _switch_primary_view(opener: String) -> void:
+	# T15/review-3 — the Craft tab now opens the crafting UI (RecipeWikiScreen), so it
+	# joins the PRIMARY views that must be hidden when ANOTHER primary tab is opened. The
+	# Town ledger (TownScreen) is no longer a nav-tab target (it moved to the ☰ menu + the
+	# town-map "📋 Town Ledger" button), but it stays in this hide list so a stray open of
+	# it (deep-link / menu) is dismissed when a primary nav tab is tapped.
 	for screen in [_town_screen, _inventory_screen, _townmap_screen,
-			_cartography_screen, _townsfolk_screen]:
+			_cartography_screen, _townsfolk_screen, _recipe_wiki_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
-	# B2 — the SECONDARY screens (Achievements / Tile collection / Recipes / Chronicle /
-	# Castle / Charter / Decorations / Portal / Quests) are now full-brightness VIEWS too, opened
-	# from the ⚙ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is
-	# up must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
+	# B2 — the SECONDARY screens (Achievements / Tile collection / Chronicle / Castle /
+	# Charter / Decorations / Portal / Quests) are full-brightness VIEWS too, opened from the
+	# ⚙ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is up
+	# must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
 	# paint over the primary the nav just opened. Hide via `.visible = false` DIRECTLY — NOT
 	# `.close()` — for the same reason the primaries do: close() emits `closed` → `_on_*_closed`
 	# → `_router.close_modal()`, which would race the modal state the opener is about to set.
-	for screen in [_achievements_screen, _tile_collection_screen, _recipe_wiki_screen,
+	# (RecipeWikiScreen moved OUT of this list — it's a primary now, hidden above.)
+	for screen in [_achievements_screen, _tile_collection_screen,
 			_chronicle_screen, _castle_screen, _charter_screen, _decorations_screen,
 			_portal_screen, _quests_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
@@ -450,10 +456,13 @@ func _switch_primary_view(opener: String) -> void:
 ## opening one primary view first hides any other open one. The opener then sets the active tab
 ## (_hud.set_nav_current + _hud._refresh_nav) itself. Unknown keys are a no-op.
 func _on_nav_selected(key: String) -> void:
+	# review-3 — the 🔨 Craft tab opens the dedicated CRAFTING UI (RecipeWikiScreen) now,
+	# not the town-management ledger (TownScreen). The ledger moved to the ☰ menu ("Market
+	# & Town") + the town-map "📋 Town Ledger" button.
 	var opener: String = {
 		"town": "_open_townmap",
 		"inventory": "_open_inventory",
-		"craft": "_open_town",
+		"craft": "_open_recipes",
 		"map": "_open_cartography",
 		"folk": "_open_townsfolk",
 	}.get(key, "")
@@ -632,9 +641,11 @@ func _open_town() -> void:
 		_town_screen.connect("rats_shoo_requested", Callable(self, "_on_shoo_rats"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
-	# The TownScreen (build / refine / market / orders) is the "Craft" tab's target.
-	_hud.set_nav_current("craft")
-	_hud._refresh_nav()
+	# review-3 — the TownScreen (settlement / buildings / refine / market / orders) is the TOWN
+	# LEDGER, reached from the ☰ menu ("Market & Town") + the town-map "📋 Town Ledger" button —
+	# NOT a bottom-nav primary tab anymore. So it no longer marks the "craft" tab active; like the
+	# other menu-routed views it leaves the nav marker as-is (it has its own back-to-board path).
+	_hud._clear_nav()
 
 func _on_town_closed() -> void:
 	if _town_screen != null:
@@ -719,6 +730,10 @@ func _open_townmap() -> void:
 		# Task C: tapping the farm board pad opens the "Start Farming" picker (the FARM/ENTER
 		# dialog) — the player's entry point into a bounded run from the town home.
 		_townmap_screen.connect("start_farming_requested", Callable(self, "_open_startfarming"))
+		# review-3: the "📋 Town Ledger" overlay button opens the TownScreen ledger. Route it
+		# through apply_deeplink("town") → _switch_primary_view("_open_town"), so the town MAP
+		# (a sibling primary) is hidden first and the ledger reads as a full-brightness view.
+		_townmap_screen.connect("ledger_requested", Callable(self, "_on_townmap_ledger_requested"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
@@ -736,6 +751,12 @@ func _on_townmap_closed() -> void:
 ## the active nav tab. (ESC/back returns to the board via _close_top_overlay → close() too.)
 func _on_townmap_board_requested() -> void:
 	apply_deeplink("board")
+
+## review-3: the Town map's "📋 Town Ledger" overlay button was pressed — open the TownScreen
+## ledger. Route through apply_deeplink("town") so _switch_primary_view hides the open town map
+## first (sibling primary) and the ledger comes up as a full-brightness view, not over the map.
+func _on_townmap_ledger_requested() -> void:
+	apply_deeplink("town")
 
 # ── Achievements trophy screen (M10) ──────────────────────────────────────────────
 
@@ -854,28 +875,32 @@ func _on_cartography_closed() -> void:
 	_router.close_modal()
 	_hud._clear_nav()
 
-# ── Recipe Wiki (read-only recipe reference) ─────────────────────────────────
+# ── Crafting UI (the 🔨 Craft primary view) ──────────────────────────────────
 
-## Open the recipe wiki modal, lazily creating + wiring it on first use (mirrors
-## _open_cartography). The screen is READ-ONLY — it only emits `closed`, routed to
-## a hide handler. open() re-renders from RecipeConfig.RECIPE_IDS each time, so the
-## wiki always reflects the current recipe catalog.
+## Open the crafting screen (RecipeWikiScreen — station tabs + recipe grid + have/need
+## detail card + Craft button), lazily creating + wiring it on first use. review-3 promoted
+## this from a ☰-menu SECONDARY to the 🔨 Craft PRIMARY nav VIEW: it sets the "craft" nav
+## marker (like _open_inventory/_open_townmap mark their tabs) so the bottom-nav highlights
+## Craft while it's up. Crafting mutates inventory → state_changed re-renders the HUD
+## stockpile (same handler the Town/Townmap screens use after any state-changing action).
 func _open_recipes() -> void:
 	if _recipe_wiki_screen == null:
 		_recipe_wiki_screen = RecipeWikiScreenScript.new()
 		add_child(_recipe_wiki_screen)
 		_recipe_wiki_screen.setup(game)
 		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
-		# Crafting from the wiki mutates inventory → re-render the HUD stockpile (same
-		# handler the Town/Townmap screens use after any state-changing action).
 		_recipe_wiki_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_recipe_wiki_screen.open()
 	_router.open_modal(ViewRouter.Modal.RECIPES)
+	# The crafting screen is the "Craft" tab's target — mark it active on the bottom nav.
+	_hud.set_nav_current("craft")
+	_hud._refresh_nav()
 
 func _on_recipes_closed() -> void:
 	if _recipe_wiki_screen != null:
 		_recipe_wiki_screen.visible = false
 	_router.close_modal()
+	_hud._clear_nav()
 
 # ── Castle contributions screen ──────────────────────────────────────────────
 
@@ -1359,6 +1384,9 @@ func apply_deeplink(id: String) -> bool:
 	# in-game nav tabs already do this (_on_nav_selected); apply_deeplink must match.
 	match int(intent.get("modal", ViewRouter.Modal.NONE)):
 		ViewRouter.Modal.TOWN:
+			# review-3 — the Town LEDGER is a menu-routed view now (not a bottom-nav primary), but
+			# it shares a layer with the primaries, so still route it through _switch_primary_view
+			# so opening it hides any open primary (and vice-versa) — no double-painting.
 			_switch_primary_view("_open_town")
 		ViewRouter.Modal.MENU:
 			_open_menu()
@@ -1377,7 +1405,9 @@ func apply_deeplink(id: String) -> bool:
 		ViewRouter.Modal.CARTOGRAPHY:
 			_switch_primary_view("_open_cartography")
 		ViewRouter.Modal.RECIPES:
-			_open_recipes()
+			# review-3 — the crafting screen is the 🔨 Craft PRIMARY view now, so route it through
+			# _switch_primary_view (hides any other open primary, sets the craft nav marker).
+			_switch_primary_view("_open_recipes")
 		ViewRouter.Modal.TUTORIAL:
 			_open_tutorial()
 		ViewRouter.Modal.CASTLE:
