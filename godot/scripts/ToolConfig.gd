@@ -15,6 +15,11 @@ extends RefCounted
 ##               to_key / count, depending on the power.
 ##   tap_target: bool — true if the tool needs a tapped cell (tap power); false if
 ##               it fires instantly over the whole board.
+##   desc:       String — player-facing description (the HUD tool rack tooltip + the
+##               armed-tool banner read this). Sourced BYTE-IDENTICAL from the React
+##               ITEMS[*].desc strings in src/constants.ts (matched by tool identity:
+##               Godot SCYTHE → React `clear` "Scythe"). Owning this here (rather than
+##               in Hud._tool_description) keeps display copy in the config catalog.
 ## }
 ##
 ## REACT-TILE-SET ADAPTATION (notes on remaps / omissions)
@@ -130,30 +135,35 @@ const TOOLS: Dictionary = {
 		"power_id": "area_blast",
 		"params": {"radius": 1},
 		"tap_target": true,
+		"desc": "Tap a tile — destroys a 3×3 area around it.",
 	},
 	RAKE: {
 		"label": "Rake",
 		"power_id": "clear_component",
 		"params": {},
 		"tap_target": true,
+		"desc": "Tap a tile — sweeps every 4-connected tile of the same type and collects them.",
 	},
 	SICKLE: {
 		"label": "Sickle",
 		"power_id": "clear_row",
 		"params": {"span": 1},
 		"tap_target": true,
+		"desc": "Sweeps a single row in one stroke. Tap any tile to harvest that entire row.",
 	},
 	AUGER: {
 		"label": "Auger",
 		"power_id": "clear_column",
 		"params": {"span": 1},
 		"tap_target": true,
+		"desc": "Tap a column — bores straight down, clearing every tile in it.",
 	},
 	BLAST_CHARGE: {
 		"label": "Blast Charge",
 		"power_id": "clear_cross",
 		"params": {},
 		"tap_target": true,
+		"desc": "Tap a tile — clears its entire row and column in a cross-shaped blast.",
 	},
 	MAGNET: {
 		"label": "Magnet",
@@ -161,6 +171,7 @@ const TOOLS: Dictionary = {
 		# Pull nearby iron ore into easy-to-chain stone.
 		"params": {"radius": 1, "from_keys": [Constants.Tile.IRON_ORE], "to_key": Constants.Tile.STONE},
 		"tap_target": true,
+		"desc": "Tap a tile — collapses every ore tile (coal/iron/gold/gem) in a 3×3 area into stone rubble for re-chaining.",
 	},
 	# ── Instant tools (fire over the whole board) ──────────────────────────────
 	AXE: {
@@ -169,18 +180,22 @@ const TOOLS: Dictionary = {
 		# "trees" is OAK in the Godot tile set; resolved to its keys at dispatch.
 		"params": {"category": "trees"},
 		"tap_target": false,
+		"desc": "Fells all tree tiles on the board instantly — every oak and related tree is swept into inventory.",
 	},
 	SCYTHE: {
 		"label": "Scythe",
 		"power_id": "clear_random_n",
 		"params": {"count": 6},
 		"tap_target": false,
+		# Godot SCYTHE maps to React `clear` ("Scythe").
+		"desc": "Clears six random tiles and harvests their basic resources.",
 	},
 	STONE_HAMMER: {
 		"label": "Stone Hammer",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.STONE},
 		"tap_target": false,
+		"desc": "Smashes every stone tile on the board — a fast way to feed the chain into block tier.",
 	},
 	DRILL: {
 		"label": "Drill",
@@ -188,6 +203,7 @@ const TOOLS: Dictionary = {
 		# Turn loose dirt into stone (React: special_dirt → tile_mine_stone).
 		"params": {"from_keys": [Constants.Tile.DIRT], "to_key": Constants.Tile.STONE},
 		"tap_target": false,
+		"desc": "A pneumatic drill — converts every special-dirt tile in the mine into rough stone tiles.",
 	},
 	# ── Catalog-parity board tools (Tools PR1) ─────────────────────────────────
 	# All instant tools fire over the whole board; the tap-target one needs a cell.
@@ -200,24 +216,28 @@ const TOOLS: Dictionary = {
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.BIRD_CHICKEN},
 		"tap_target": false,
+		"desc": "Sweeps all chicken tiles from the board — useful when bird tiles are flooding the farm.",
 	},
 	SCYTHE_FULL: {
 		"label": "Scythe (full)",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.WHEAT},
 		"tap_target": false,
+		"desc": "Harvests all wheat tiles at once, clearing the board for a fresh fill.",
 	},
 	HOE: {
 		"label": "Hoe",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.CARROT},
 		"tap_target": false,
+		"desc": "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll.",
 	},
 	IRON_PICK: {
 		"label": "Iron Pick",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.IRON_ORE},
 		"tap_target": false,
+		"desc": "Bites into iron ore veins — clears every iron ore tile so the chain can be re-spawned cleanly.",
 	},
 	# Farm/mine — clear a whole category (clear_category). PLOUGH unions two.
 	PLOUGH: {
@@ -226,42 +246,49 @@ const TOOLS: Dictionary = {
 		# Multi-category clear: grass + grain. Resolved (and unioned) at dispatch.
 		"params": {"categories": ["grass", "grain"]},
 		"tap_target": false,
+		"desc": "Two-furrow plough that harvests every grass AND grain tile in one pass.",
 	},
 	FRUIT_PICKER: {
 		"label": "Fruit Picker",
 		"power_id": "clear_category",
 		"params": {"category": "fruit"},
 		"tap_target": false,
+		"desc": "Long-handled basket that gathers every fruit tile on the board at once.",
 	},
 	HERDERS_CROOK: {
 		"label": "Herder's Crook",
 		"power_id": "clear_category",
 		"params": {"category": "herd"},
 		"tap_target": false,
+		"desc": "A shepherd's crook that rounds up every herd animal tile in one motion.",
 	},
 	MILK_CHURN: {
 		"label": "Milk Churn",
 		"power_id": "clear_category",
 		"params": {"category": "cattle"},
 		"tap_target": false,
+		"desc": "A heavy churn that calls all the cattle in — sweeps every cattle tile from the board.",
 	},
 	SADDLE: {
 		"label": "Saddle",
 		"power_id": "clear_category",
 		"params": {"category": "mount"},
 		"tap_target": false,
+		"desc": "A worn riding saddle — collects every mount tile on the board into your inventory.",
 	},
 	COAL_HAMMER: {
 		"label": "Coal Hammer",
 		"power_id": "clear_category",
 		"params": {"category": "coal"},
 		"tap_target": false,
+		"desc": "A short-handled hammer that breaks every coal tile loose in one sweep.",
 	},
 	GOLD_PICK: {
 		"label": "Gold Pick",
 		"power_id": "clear_category",
 		"params": {"category": "gold"},
 		"tap_target": false,
+		"desc": "A reinforced pick that strikes every gold tile from the board into your stockpile.",
 	},
 	# Transform a whole category into another tile (transform_tiles via from_category).
 	TRIMMER: {
@@ -270,6 +297,7 @@ const TOOLS: Dictionary = {
 		# Trees → grass (clears the canopy back to open ground).
 		"params": {"from_category": "trees", "to_key": Constants.Tile.GRASS},
 		"tap_target": false,
+		"desc": "Heavy garden shears — transforms every tree tile into grass so the chain can roll fresh.",
 	},
 	BEE: {
 		"label": "Bee",
@@ -277,6 +305,7 @@ const TOOLS: Dictionary = {
 		# Flowers → fruit (pollination): PANSY (flower) → APPLE (fruit).
 		"params": {"from_category": "flower", "to_key": Constants.Tile.APPLE},
 		"tap_target": false,
+		"desc": "A worker bee that pollinates every flower tile, ripening them into apple fruit tiles.",
 	},
 	# Tap-target — transmute nearby mine ores into coal (transform_adjacent via from_categories).
 	COAL_TRANSMUTER: {
@@ -290,6 +319,7 @@ const TOOLS: Dictionary = {
 			"to_key": Constants.Tile.COAL,
 		},
 		"tap_target": true,
+		"desc": "Tap a tile — transmutes stone and lesser ore in a 3×3 area into coal tiles, fueling the forge.",
 	},
 	# ── New board powers (Tools PR2) ───────────────────────────────────────────
 	# transform_random_n — re-seed N random board cells to a biome target. `to` is a
@@ -301,6 +331,7 @@ const TOOLS: Dictionary = {
 		# 5 random cells → the farm base tile (GRASS) — sows easy-to-chain staples.
 		"params": {"count": 5, "to": "biome_base"},
 		"tap_target": false,
+		"desc": "Plants five fresh basic-resource tiles in random spots on the board.",
 	},
 	LOCKBOX: {
 		"label": "Lockbox",
@@ -308,6 +339,7 @@ const TOOLS: Dictionary = {
 		# 3 random cells → the farm rare tile (FRUIT_BLACKBERRY) — seeds a high-value target.
 		"params": {"count": 3, "to": "biome_rare"},
 		"tap_target": false,
+		"desc": "Drops three rare-resource tiles onto the board.",
 	},
 	# reshuffle_board — pure value-permutation of the board (no re-roll, no credit).
 	RESHUFFLE_HORN: {
@@ -315,6 +347,7 @@ const TOOLS: Dictionary = {
 		"power_id": "reshuffle_board",
 		"params": {},
 		"tap_target": false,
+		"desc": "Reshuffles every tile on the board for a fresh layout.",
 	},
 	# clear_hazard — remove a named hazard from the board (the one power allowed to). The
 	# hazard NAME ("rats") is resolved to Constants.Tile.RAT at dispatch via _resolve_hazard_key.
@@ -323,6 +356,7 @@ const TOOLS: Dictionary = {
 		"power_id": "clear_hazard",
 		"params": {"target": "rats"},
 		"tap_target": false,
+		"desc": "Dispatches a mouser to clear all active rat hazards from the farm in one go.",
 	},
 	TERRIER: {
 		"label": "Terrier",
@@ -330,6 +364,7 @@ const TOOLS: Dictionary = {
 		# Same as Cat — the web's terrier tool also clears the rats hazard.
 		"params": {"target": "rats"},
 		"tap_target": false,
+		"desc": "A wiry rat-catcher — bolts through the board clearing every rat hazard from the farm.",
 	},
 	# ── fill_bias tools (Tools PR2b) ───────────────────────────────────────────
 	# No apply_instant case exists for fill_bias (apply_instant would return {} and is never
@@ -343,6 +378,7 @@ const TOOLS: Dictionary = {
 		# Bias the next fills toward wheat (the grain staple).
 		"params": {"target": Constants.Tile.WHEAT, "turns": 1},
 		"tap_target": false,
+		"desc": "Biases the next board fill toward grain tiles.",
 	},
 	BIRD_FEED: {
 		"label": "Bird Feed",
@@ -353,6 +389,7 @@ const TOOLS: Dictionary = {
 		# (chicken is an unseeded catalog variant that never reaches the farm board).
 		"params": {"target": Constants.Tile.PHEASANT, "turns": 1},
 		"tap_target": false,
+		"desc": "Scatters feed across the field so the next board fill is biased toward bird tiles.",
 	},
 	SAPLING: {
 		"label": "Sapling",
@@ -360,6 +397,7 @@ const TOOLS: Dictionary = {
 		# Bias toward oak (the trees staple).
 		"params": {"target": Constants.Tile.OAK, "turns": 1},
 		"tap_target": false,
+		"desc": "Plants a sapling that biases the next fill toward oak (and other tree) tiles.",
 	},
 	# ── Portal magic tools (Tools PR3) ──────────────────────────────────────────
 	# Summoned at the Portal (PortalConfig is the influence economy); these are the
@@ -371,6 +409,7 @@ const TOOLS: Dictionary = {
 		# Every tree tile → apple-fruit (React: trees → tile_fruit_apple).
 		"params": {"from_category": "trees", "to_key": Constants.Tile.APPLE},
 		"tap_target": false,
+		"desc": "A glowing apple — transforms every tree tile on the board into apple-fruit tiles.",
 	},
 	GOLDEN_CARROT: {
 		"label": "Golden Carrot",
@@ -378,6 +417,7 @@ const TOOLS: Dictionary = {
 		# Every grass tile → carrot (React: grass → tile_veg_carrot).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.CARROT},
 		"tap_target": false,
+		"desc": "A shimmering carrot — transforms every grass tile on the board into carrot vegetable tiles.",
 	},
 	GOLDEN_IDOL: {
 		"label": "Golden Idol",
@@ -385,6 +425,7 @@ const TOOLS: Dictionary = {
 		# Every grass tile → cow (React: grass → tile_cattle_cow).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.COW},
 		"tap_target": false,
+		"desc": "A small effigy — transforms every grass tile on the board into cattle (cow) tiles.",
 	},
 	GOLDEN_SHEEP: {
 		"label": "Golden Sheep",
@@ -392,6 +433,7 @@ const TOOLS: Dictionary = {
 		# Every grass tile → sheep herd (React: grass → tile_herd_sheep).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.HERD_SHEEP},
 		"tap_target": false,
+		"desc": "A radiant fleece — transforms every grass tile on the board into sheep herd tiles.",
 	},
 	PHILOSOPHERS_STONE: {
 		"label": "Philosopher's Stone",
@@ -399,6 +441,7 @@ const TOOLS: Dictionary = {
 		# Every stone tile → gold (React: stone → tile_mine_gold).
 		"params": {"from_category": "stone", "to_key": Constants.Tile.GOLD},
 		"tap_target": false,
+		"desc": "The mythic stone — transmutes every stone tile in the mine into gold tiles.",
 	},
 	# Magic Wand — the FIRST tap_clear_type tool: tap a cell, sweep every tile of that key.
 	MAGIC_WAND: {
@@ -406,6 +449,7 @@ const TOOLS: Dictionary = {
 		"power_id": "tap_clear_type",
 		"params": {},
 		"tap_target": true,
+		"desc": "Pick a tile type; collect every tile of that type on the board. No turn cost.",
 	},
 	# Magic Seed — the FIRST restore_turns tool: a STATE power handled in
 	# GameState.use_tool_on_grid's early path (never touches the grid). Gives back `amount`
@@ -415,6 +459,7 @@ const TOOLS: Dictionary = {
 		"power_id": "restore_turns",
 		"params": {"amount": 5},
 		"tap_target": false,
+		"desc": "Adds five turns to the current session.",
 	},
 	# Magic Fertilizer — reuses the already-wired fill_bias state power. 3 biased farm turns
 	# toward wheat (React: next 3 fills spawn grain).
@@ -423,6 +468,7 @@ const TOOLS: Dictionary = {
 		"power_id": "fill_bias",
 		"params": {"target": Constants.Tile.WHEAT, "turns": 3},
 		"tap_target": false,
+		"desc": "The next three board fills spawn grain in every cell.",
 	},
 	# ── Wolf-hazard tools (T14a) — STATE powers handled in GameState's early path (never reach
 	# apply_instant; they mutate hazards.wolves). Rifle drives off the whole pack; Hound scatters
@@ -432,12 +478,14 @@ const TOOLS: Dictionary = {
 		"power_id": "clear_wolves",
 		"params": {},
 		"tap_target": false,
+		"desc": "Drives off all active wolves permanently, ending the wolf hazard immediately.",
 	},
 	HOUND: {
 		"label": "Hound",
 		"power_id": "scatter_hazard",
 		"params": {},
 		"tap_target": false,
+		"desc": "Scares the wolves away for several turns, buying time to chain away their target tiles.",
 	},
 	# ── Mine-hazard tools (T14b) — STATE powers handled in GameState.use_tool_on_grid's early path
 	# (they mutate `mine_hazards` + the grid, never reaching apply_instant). Both are instant.
@@ -446,12 +494,14 @@ const TOOLS: Dictionary = {
 		"power_id": "water_pump",
 		"params": {},
 		"tap_target": false,
+		"desc": "Lava Damper — floods all lava cells on the mine board, converting them to stone rubble. PC2's water-collector Water Pump is deferred (no water tile family).",
 	},
 	EXPLOSIVES: {
 		"label": "Explosives",
 		"power_id": "explosives",
 		"params": {},
 		"tap_target": false,
+		"desc": "Clears every cave-in and mole hazard from the mine.",
 	},
 	# Miner's Hat (T24) — reveal_tiles STATE power: reveals every hidden boss cell (hide_resources /
 	# Mossback). Handled in GameState.use_tool_on_grid's early path (never reaches apply_instant).
@@ -460,6 +510,7 @@ const TOOLS: Dictionary = {
 		"power_id": "reveal_tiles",
 		"params": {},
 		"tap_target": false,
+		"desc": "A lamp-fronted hat — reveals every hidden ore tile (coal, iron, gold, gem). No effect until hidden-tile spawning ships.",
 	},
 }
 
@@ -516,6 +567,13 @@ static func tool_label(id: String) -> String:
 	if not has_tool(id):
 		return ""
 	return String(TOOLS[id].get("label", ""))
+
+## The player-facing description for `id` ("" for an unknown id). Sourced byte-identical
+## from the React ITEMS[*].desc strings; read by the HUD tool rack tooltip + armed banner.
+static func tool_desc(id: String) -> String:
+	if not has_tool(id):
+		return ""
+	return String(TOOLS[id].get("desc", ""))
 
 static func power_id(id: String) -> String:
 	if not has_tool(id):

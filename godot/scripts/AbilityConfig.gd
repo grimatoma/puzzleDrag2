@@ -183,3 +183,26 @@ static func is_tile_aggregator_trigger(id: String, inst_trigger: String = "") ->
 		return false
 	var t: String = inst_trigger if inst_trigger != "" else trigger_of(id)
 	return TILE_AGGREGATOR_TRIGGERS.has(t)
+
+## A one-line human-readable phrase for an ability `id` with its `params`, or "" for an
+## ability with no presentation template. The id→template map: which abilities surface a
+## tile-collection summary line and how each interpolates its params. React renders the
+## equivalent copy via the AbilitySummary component keyed on the SAME ability ids
+## (src/features/tileCollection/index.tsx); this is the GDScript counterpart.
+##
+## `target_label` is the already-display-formatted name for the pool_weight target tile
+## (the caller resolves it via the UI display-key helper — that name-derivation stays in
+## the UI layer; only the id→template logic lives here). Empty for non-pool_weight ids.
+static func phrase(id: String, params: Dictionary, target_label: String = "") -> String:
+	match id:
+		"free_moves":
+			return "+%d free moves each run" % int(params.get("count", 0))
+		"coin_bonus_flat":
+			return "+%d coins per chain" % int(params.get("amount", 0))
+		"coin_bonus_per_tile":
+			return "+%d coins per tile chained" % int(params.get("amount", 0))
+		"free_turn_if_chain":
+			return "Free turn on a chain of %d+" % int(params.get("minChain", 0))
+		"pool_weight":
+			return "+%d %s tiles on the board" % [int(params.get("amount", 0)), target_label]
+	return ""

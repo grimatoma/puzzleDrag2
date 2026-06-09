@@ -628,32 +628,6 @@ func _tool_armed_box_style() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 3)
 	return sb
 
-## Player-facing description for a tool id (ToolConfig has no desc field — these
-## mirror the React ITEMS[*].desc strings in src/constants.ts; scythe / stone_hammer
-## are Godot-only additions, so their copy is written to match the same voice).
-func _tool_description(id: String) -> String:
-	match id:
-		ToolConfig.BOMB:         return "Tap a tile — destroys a 3×3 area around it."
-		ToolConfig.RAKE:         return "Tap a tile — sweeps every connected tile of the same type and collects them."
-		ToolConfig.SICKLE:       return "Sweeps a single row in one stroke. Tap any tile to harvest that entire row."
-		ToolConfig.AUGER:        return "Tap a column — bores straight down, clearing every tile in it."
-		ToolConfig.BLAST_CHARGE: return "Tap a tile — clears its entire row and column in a cross-shaped blast."
-		ToolConfig.MAGNET:       return "Tap a tile — collapses every ore tile in a 3×3 area into stone for re-chaining."
-		ToolConfig.AXE:          return "Fells all tree tiles on the board instantly."
-		ToolConfig.SCYTHE:       return "Sweeps six random tiles off the board in one swing."
-		ToolConfig.STONE_HAMMER: return "Smashes every stone tile on the board into your stockpile."
-		ToolConfig.DRILL:        return "Bores every loose dirt tile in the mine into rough stone."
-		# Portal magic tools (summoned with Influence; mirror the React effect copy).
-		ToolConfig.GOLDEN_APPLE:       return "Transforms every tree tile on the board into apple-fruit tiles."
-		ToolConfig.GOLDEN_CARROT:      return "Transforms every grass tile on the board into carrot tiles."
-		ToolConfig.GOLDEN_IDOL:        return "Transforms every grass tile on the board into cattle (cow) tiles."
-		ToolConfig.GOLDEN_SHEEP:       return "Transforms every grass tile on the board into sheep herd tiles."
-		ToolConfig.PHILOSOPHERS_STONE: return "Transmutes every stone tile on the board into gold tiles."
-		ToolConfig.MAGIC_WAND:         return "Tap a tile — collects every tile of that type on the board."
-		ToolConfig.MAGIC_SEED:         return "Restores 5 farm turns before the next harvest. No board effect."
-		ToolConfig.MAGIC_FERTILIZER:   return "Biases the next 3 farm turns toward spawning wheat."
-		_:                       return ""
-
 ## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
 ## > 0 a styled Button is added labelled "{name} ×{charges}" (plus a "↗" tap hint
 ## for tap-target tools). Hidden completely when game.tools is empty (no phantom box).
@@ -1109,7 +1083,7 @@ func show_tool_armed_banner(id: String) -> void:
 	var charges: int = game.tool_count(id) if game != null else 0
 	_tool_armed_title.text = "⚡ Tool armed · ×%d left" % charges
 	_tool_armed_name.text = ToolConfig.tool_label(id)
-	_tool_armed_desc.text = _tool_description(id)
+	_tool_armed_desc.text = ToolConfig.tool_desc(id)
 	_tool_armed_box.visible = true
 
 ## Hide the "Tool armed" banner (after the tap fires, or on Disarm).

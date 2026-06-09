@@ -162,21 +162,14 @@ static func ability_summary(id: String) -> String:
 		return ""
 	return "✦ " + "  ·  ".join(parts)
 
+## Thin wrapper: the ability id→phrase TEMPLATE lives on AbilityConfig.phrase() (the owning
+## ability catalog); this resolves the pool_weight target's DISPLAY name here (UI-layer
+## name-derivation) and hands it to the catalog so the produced string is unchanged.
 static func _ability_phrase(ab: Dictionary) -> String:
 	var aid: String = String(ab.get("id", ""))
 	var params: Dictionary = ab.get("params", {})
-	match aid:
-		"free_moves":
-			return "+%d free moves each run" % int(params.get("count", 0))
-		"coin_bonus_flat":
-			return "+%d coins per chain" % int(params.get("amount", 0))
-		"coin_bonus_per_tile":
-			return "+%d coins per tile chained" % int(params.get("amount", 0))
-		"free_turn_if_chain":
-			return "Free turn on a chain of %d+" % int(params.get("minChain", 0))
-		"pool_weight":
-			return "+%d %s tiles on the board" % [int(params.get("amount", 0)), _display_key(String(params.get("target", "")))]
-	return ""
+	var target_label: String = _display_key(String(params.get("target", ""))) if aid == "pool_weight" else ""
+	return AbilityConfig.phrase(aid, params, target_label)
 
 ## Human-readable building name for a building id (falls back to the id). Mirrors React buildingName.
 static func _building_name(bid: String) -> String:
