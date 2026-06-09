@@ -123,12 +123,26 @@ func _initialize() -> void:
 	await process_frame
 	tab_inv.open()
 
-	# Tab set — exactly All / Resources / Tools, in order, and the buttons are registered.
-	_check(tab_inv.tab_ids() == ["all", "resources", "tools"],
-		"tab_ids() == [all, resources, tools] (Items omitted — no port item kind)")
+	# Tab set — All / Resources / Tools / Items, in order, and the buttons are registered.
+	# The Items tab surfaces the port's real special valuables (runes / influence).
+	_check(tab_inv.tab_ids() == ["all", "resources", "tools", "items"],
+		"tab_ids() == [all, resources, tools, items]")
 	_check(tab_inv._tab_buttons.has("all") and tab_inv._tab_buttons.has("resources")
-		and tab_inv._tab_buttons.has("tools"), "_tab_buttons has all three tab buttons")
+		and tab_inv._tab_buttons.has("tools") and tab_inv._tab_buttons.has("items"),
+		"_tab_buttons has all four tab buttons")
 	_check(tab_inv._tab == "all", "default tab is 'all'")
+
+	# View toggle (list ↔ grid) — present + defaults to list; switching re-renders.
+	_check(tab_inv._action_buttons.has("view_toggle"), "_action_buttons has 'view_toggle'")
+	_check(tab_inv.view_mode() == "list", "default view mode is 'list'")
+	tab_inv.set_view("grid")
+	_check(tab_inv.view_mode() == "grid", "set_view('grid') switched the view mode")
+	# The grid view renders a single GridContainer of chips for the active (All) tab.
+	var grid_kids := tab_inv._body.get_child_count()
+	_check(grid_kids >= 1, "grid view populated the body")
+	_check(not tab_inv._grid_entries().is_empty(), "grid view has chip entries on the All tab")
+	tab_inv.set_view("list")
+	_check(tab_inv.view_mode() == "list", "set_view('list') restored the list view")
 
 	# Owned tools — the Tools tab data. owned_tool_ids lists every charged tool in
 	# ToolConfig order (scythe, bomb, rake all granted above).
@@ -177,6 +191,44 @@ func _initialize() -> void:
 	_check(nt_inv.owned_tool_ids().is_empty(), "no-tools game: owned_tool_ids() empty")
 	nt_inv.set_tab("tools")
 	_check(nt_inv._body.get_child_count() == 1, "no-tools Tools tab renders a single empty-state line")
+
+	# ── 1c. Items tab (runes / influence special valuables) ───────────────────
+	# A game holding both special items — the Items tab lists them; All includes them too.
+	var item_game := GameState.new()
+	item_game.runes = 2
+	item_game.influence = 7
+	var item_inv := InventoryScreen.new()
+	root.add_child(item_inv)
+	item_inv.setup(item_game)
+	await process_frame
+	# item_count reads the real GameState counters.
+	_check(item_inv.item_count("runes") == 2, "item_count('runes') == 2 (game.runes)")
+	_check(item_inv.item_count("influence") == 7, "item_count('influence') == 7 (game.influence)")
+	# item_ids lists BOTH held items (ITEM_DEFS order: runes, influence).
+	_check(item_inv.item_ids() == ["runes", "influence"], "item_ids() lists both held items in order")
+	# Switching to the Items tab renders them (header + 2 rows → > 2 children).
+	item_inv.set_tab("items")
+	_check(item_inv._tab == "items", "set_tab('items') switched the active tab")
+	_check(item_inv.visible_item_ids().size() == 2, "Items tab shows both held items (no query)")
+	_check(item_inv._body.get_child_count() > 2, "Items tab populated the body with item rows")
+	# Search filters within the Items tab by name (or id) — "rune" leaves only runes.
+	item_inv._on_search_changed("rune")
+	_check(item_inv.visible_item_ids() == ["runes"], "search 'rune' filters Items to [runes]")
+	item_inv._on_search_changed("")
+	# The All tab includes the items alongside resources + tools.
+	item_inv.set_tab("all")
+	_check(item_inv.visible_item_ids().size() == 2, "All tab includes both special items")
+
+	# A game holding NO special items — the Items tab shows its empty state (one line), not a crash.
+	var no_item_game := GameState.new()
+	no_item_game.inventory = {"flour": 3}
+	var ni_inv := InventoryScreen.new()
+	root.add_child(ni_inv)
+	ni_inv.setup(no_item_game)
+	await process_frame
+	_check(ni_inv.item_ids().is_empty(), "no-items game: item_ids() empty (runes/influence 0)")
+	ni_inv.set_tab("items")
+	_check(ni_inv._body.get_child_count() == 1, "no-items Items tab renders a single empty-state line")
 
 	# ── 2. Empty inventory — zeroed ledger + a non-erroring refresh ────────────
 	var empty_game := GameState.new()

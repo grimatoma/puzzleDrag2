@@ -281,13 +281,10 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 	label_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(label_lbl)
 
-	var reward_lbl := Label.new()
-	reward_lbl.text = _quest_reward_text(reward)
-	reward_lbl.add_theme_font_size_override("font_size", 14)
-	reward_lbl.add_theme_color_override("font_color", COL_VALUE)
-	reward_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	reward_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_child(reward_lbl)
+	# Reward chip — a prominent gold badge carrying the reward's item icon (🪙 coins · ⭐ XP)
+	# + amounts, so the card's payoff reads at a glance (React parity — the quest card's reward
+	# pill). Heavier than the old plain right-aligned label.
+	top.add_child(_make_reward_chip(reward))
 
 	# ── progress bar + current/target label ─────────────────────────────────────
 	var bar_row := HBoxContainer.new()
@@ -308,15 +305,49 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 	bar_row.add_child(prog_lbl)
 
 	# ── Claim button (enabled only when claimable) ──────────────────────────────
+	# A LARGER green call-to-action (taller padding + bigger font + a comfortable min width)
+	# so a claimable quest's reward button has real weight, matching the React card.
 	var claim_btn := Button.new()
-	claim_btn.text = "CLAIMED" if claimed else "CLAIM"
+	claim_btn.text = "CLAIMED" if claimed else "✓ CLAIM"
 	claim_btn.disabled = not claimable
 	claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 6, 18)
+	claim_btn.custom_minimum_size = Vector2(140, 44)
+	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 10, 20)
 	claim_btn.connect("pressed", Callable(self, "_on_claim_quest").bind(qid))
 	col.add_child(claim_btn)
 	_quest_buttons[qid] = claim_btn
 
+	return chip
+
+## A reward chip — a soft gold-tinted pill carrying the coin glyph + amount and (when present)
+## the XP star + amount, so each quest's payoff reads as a badge instead of a faint right label.
+## Reward shape is {coins, xp}; missing/zero parts are omitted.
+func _make_reward_chip(reward: Dictionary) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.GOLD, 0.16)
+	sb.border_color = Color(Palette.GOLD, 0.6)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
+	chip.add_theme_stylebox_override("panel", sb)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
+
+	var lbl := Label.new()
+	lbl.text = _quest_reward_text(reward)
+	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.add_theme_color_override("font_color", COL_VALUE)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lbl)
 	return chip
 
 ## The display label for a quest: substitute the rolled target into the template's

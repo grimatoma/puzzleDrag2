@@ -87,6 +87,23 @@ func _test_modal() -> void:
 	_check(m._action_buttons.has("start") and not m._action_buttons["start"].disabled,
 		"coins == 50 (>= 50 cost) → Start button ENABLED")
 
+	# ── Zone-spawn info (review task 16): the season-drops "i" summary ──
+	# A fresh game is Spring; the summary names the season's top categories from ZoneConfig.
+	_check(m._current_season_name() == "Spring", "fresh game season is Spring")
+	var summary: String = m.season_spawn_summary()
+	# Spring's heaviest home-zone drop is grass (0.38) → "Grass 38%"; trees + grain also appear.
+	_check(summary.contains("Grass 38%"), "Spring spawn summary leads with 'Grass 38%' (got '%s')" % summary)
+	_check(summary.contains("Trees") and summary.contains("Grain"),
+		"Spring spawn summary lists Trees + Grain too")
+	# Categories with weight 0 this season (flower/herd/cattle/mount) are omitted.
+	_check(not summary.contains("Flower") and not summary.contains("Mount"),
+		"zero-weight categories are omitted from the spawn summary")
+	# The info card nodes exist + were filled on open().
+	_check(m._spawn_info_title != null and m._spawn_info_title.text.contains("Spring"),
+		"the spawn-info header names the current season")
+	_check(m._spawn_info_body != null and m._spawn_info_body.text == summary,
+		"the spawn-info body shows the season summary")
+
 	# ── CHOOSER: open the grass slot → pick a DISCOVERED variant → active updates ──
 	# Grass has a default base (tile_grass_grass) plus a 'default' heather? No — pick a known
 	# discovered sibling. tile_grass_heather is chain-method (locked); we need a DISCOVERED one.

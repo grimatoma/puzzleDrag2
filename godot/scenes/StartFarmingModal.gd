@@ -79,6 +79,8 @@ var _cost_value_label: Label
 var _start_btn: Button
 var _cancel_btn: Button
 var _slot_grid: GridContainer
+var _spawn_info_title: Label    ## "This season (Spring) spawns:" header
+var _spawn_info_body: Label     ## the ranked category-weight summary line
 
 # Fertilizer toggle row (T12) — built once, shown/hidden based on availability.
 var _fert_row: HBoxContainer = null
@@ -224,6 +226,11 @@ func _build_shell() -> void:
 		var cat: String = String(c)
 		_slot_grid.add_child(_build_slot(cat))
 
+	# Zone-spawn info (React's "i" season-drops affordance) — a compact card listing what the
+	# home zone spawns MOST this season (read from ZoneConfig.season_drops for the current
+	# season). It re-renders on open() as the season advances. Built once here, filled in _render.
+	_build_spawn_info(col)
+
 	# T12 — Fertilizer toggle (shown only when game has ≥1 fertilizer, hidden otherwise).
 	# Mirrors the React StartFarmingModal "Use Fertilizer — doubles turns (×2)" checkbox.
 	# The toggle is built once and visibility is updated in _render(); when hidden it has no
@@ -305,6 +312,41 @@ func _build_shell() -> void:
 
 	# The chooser sub-layer (built once, kept hidden until a slot opens it).
 	_build_chooser_layer()
+
+## Build the zone-spawn info card: a parchment-soft inset panel with a small "i" header naming
+## the current season + a ranked one-line summary of what the home zone spawns most heavily
+## (the React season-drops "i" affordance). Filled by _render() from ZoneConfig.season_drops.
+func _build_spawn_info(col: VBoxContainer) -> void:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Color(Palette.MOSS, 0.7)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(10)
+	card.add_theme_stylebox_override("panel", sb)
+	col.add_child(card)
+
+	var c := VBoxContainer.new()
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.add_theme_constant_override("separation", 2)
+	card.add_child(c)
+
+	_spawn_info_title = Label.new()
+	_spawn_info_title.text = "ⓘ What spawns this season"
+	_spawn_info_title.add_theme_font_size_override("font_size", 13)
+	_spawn_info_title.add_theme_color_override("font_color", Palette.MOSS)
+	_spawn_info_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(_spawn_info_title)
+
+	_spawn_info_body = Label.new()
+	_spawn_info_body.text = ""
+	_spawn_info_body.add_theme_font_size_override("font_size", 12)
+	_spawn_info_body.add_theme_color_override("font_color", Palette.INK_MID)
+	_spawn_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spawn_info_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(_spawn_info_body)
 
 ## Build one locked-on category SLOT: a parchment button with an icon area, the active variant
 ## name, the category label, and a "✎" change badge in the corner. Tapping it opens the chooser.
@@ -479,6 +521,12 @@ func _render() -> void:
 
 	_start_btn.text = "Start (%d 🪙)" % cost if can_afford else "Not enough coin"
 	_start_btn.disabled = not can_afford
+
+	# Zone-spawn info — name the current season + its ranked spawn summary.
+	if _spawn_info_title != null:
+		_spawn_info_title.text = "ⓘ %s spawns" % _current_season_name()
+	if _spawn_info_body != null:
+		_spawn_info_body.text = season_spawn_summary()
 
 ## Render one slot from the live active variant for its category.
 func _render_slot(cat: String) -> void:
@@ -716,6 +764,33 @@ func preview_budget() -> int:
 	if game != null:
 		return game.farm_run_turn_budget(_fertilizer_checked and game._has_fertilizer())
 	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+
+## The current farm season NAME the spawn-info reflects. Reads the live GameState season; a
+## fresh (no-run) game is Spring (turns_used 0). Falls back to "Spring" with no game.
+func _current_season_name() -> String:
+	if game == null:
+		return "Spring"
+	return game.current_season_name()
+
+## A ranked one-line summary of what the home zone spawns this season, read from
+## ZoneConfig.season_drops for the current season. Lists the eligible categories with a
+## positive weight, sorted by weight DESC, each as "Label NN%" (the weight is a 0..1 share).
+## Pure + headless-testable — the single source of the spawn-info copy.
+func season_spawn_summary() -> String:
+	var season: String = _current_season_name()
+	var drops: Dictionary = ZoneConfig.season_drops(ZoneConfig.HOME_ZONE, season)
+	if drops.is_empty():
+		return "No data for this season."
+	var rows: Array = []
+	for cat in drops.keys():
+		var w: float = float(drops[cat])
+		if w > 0.0:
+			rows.append({"cat": String(cat), "w": w})
+	rows.sort_custom(func(a, b): return float(a["w"]) > float(b["w"]))
+	var parts: Array = []
+	for r in rows:
+		parts.append("%s %d%%" % [_category_label(String(r["cat"])), int(round(float(r["w"]) * 100.0))])
+	return "  ·  ".join(parts)
 
 ## The home settlement display name from config, with a literal fallback.
 func _home_name() -> String:
