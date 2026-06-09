@@ -32,6 +32,7 @@ func _initialize() -> void:
 	_test_activate_zone_swaps_live_fields()
 	_test_per_zone_inventory_isolation()
 	_test_activate_zone_roundtrip()
+	_test_zone_board_template_is_live()
 	_test_completion_grants_token_once()
 	_test_three_tokens_unlock_old_capital()
 	_test_old_capital_gate_blocks_until_tokens()
@@ -211,6 +212,39 @@ func _test_activate_zone_roundtrip() -> void:
 	_check(int(g.inventory.get("soup", 0)) == 2, "orchard inventory round-trips intact")
 	_check(g.settlement.tier == TownConfig.TIER_CAMP, "orchard settlement tier round-trips (Camp)")
 	_check(g.farm_turns_used == 1, "orchard farm_turns_used round-trips (1)")
+
+## The live farm board follows the ACTIVE farm node (config dedup + per-zone board wiring): with no
+## explicit zone the board is home's TEMPERATE_FARM (budget 10, lean fruit), and travelling to the
+## orchard makes the live board ORCHARD_FARM (budget 12, fruit-heavy). Proves ZoneConfig is now a thin
+## forwarder over CartographyConfig AND that _active_farm_zone() drives the season pool + budget.
+## (_activate_zone does not gate on founding, so it's called directly here.)
+func _test_zone_board_template_is_live() -> void:
+	# Config forwarders resolve each node's own board template (home 10, orchard 12).
+	_check(ZoneConfig.base_turns("home") == 10, "ZoneConfig.base_turns('home') forwards to 10")
+	_check(ZoneConfig.base_turns("orchard") == 12, "ZoneConfig.base_turns('orchard') forwards to 12")
+	# Fresh game: home is the active zone, no run → home's TEMPERATE_FARM is live.
+	var g := GameState.new()
+	_check(g.map_current == "home", "fresh game's active zone is home")
+	_check(g.farm_turn_budget() == 10, "home farm_turn_budget == 10 (TEMPERATE_FARM)")
+	var home_fruit_tile: int = g._category_pool_tile("fruit")
+	var home_fruit: int = _count_tile(g.active_tile_pool(), home_fruit_tile)
+	# Travel to the orchard → the live board becomes ORCHARD_FARM (budget 12, Spring fruit 0.40).
+	g._activate_zone("orchard")
+	_check(g.farm_turn_budget() == 12, "orchard farm_turn_budget == 12 (ORCHARD_FARM)")
+	var orchard_fruit: int = _count_tile(g.active_tile_pool(), g._category_pool_tile("fruit"))
+	_check(orchard_fruit > home_fruit,
+		"orchard fruit-tile count (%d) > home (%d) — ORCHARD_FARM Spring fruit 0.40 vs home 0.04" % [orchard_fruit, home_fruit])
+	# Travel back home → the default-to-home budget is restored.
+	g._activate_zone("home")
+	_check(g.farm_turn_budget() == 10, "farm_turn_budget back to 10 after returning home (default-to-home)")
+
+## Count entries in `pool` equal to tile int `tile`.
+func _count_tile(pool: Array, tile: int) -> int:
+	var n: int = 0
+	for t in pool:
+		if int(t) == tile:
+			n += 1
+	return n
 
 func _test_completion_grants_token_once() -> void:
 	var g := GameState.new()

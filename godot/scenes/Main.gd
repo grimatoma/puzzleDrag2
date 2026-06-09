@@ -2013,7 +2013,7 @@ func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
 		return {"count": 0, "tile": Constants.EMPTY}
 	# T2: spawn the player's ACTIVE VARIANT of the upgrade target category (default == base
 	# tile, so an un-customised board is unchanged). Instance helper honours tile_active_by_category.
-	return game.upgrade_spawn_active(ZoneConfig.HOME_ZONE, tile_type, length)
+	return game.upgrade_spawn_active(game._active_farm_zone(), tile_type, length)
 
 ## T7/T9/T10 — stash the resolving chain's cells (Board emits this BEFORE chain_resolved). Used by
 ## _on_chain_resolved for the farm-hazard interactions (rat clear / fire extinguish / deadly cull).

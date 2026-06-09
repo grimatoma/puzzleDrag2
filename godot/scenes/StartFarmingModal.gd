@@ -51,7 +51,13 @@ var _action_buttons: Dictionary = {}
 ## True once _build_shell() has run.
 var _built: bool = false
 
-## The eligible category ids for the home zone, in declaration order (frozen at build).
+## The active farm node id this modal is previewing. Resolved from game._active_farm_zone() in
+## both setup() and open() (the modal instance is REUSED across zones, so a re-open at a different
+## active farm node rebuilds against it). Defaults to "home" so a no-game build is byte-identical.
+var _zone: String = "home"
+
+## The eligible category ids for the ACTIVE farm zone, in declaration order. (Re)built per open()
+## via _rebuild_slots() because the slot SET differs by zone (home/meadow 6; orchard 7 with "herd").
 var _categories: Array = []
 
 ## category id -> the slot's button node (so _render can restyle/relabel it).
@@ -73,6 +79,7 @@ var _fertilizer_checked: bool = false
 
 # Static shell nodes (text re-set each open()).
 var _title_label: Label
+var _intro_label: Label    ## "These N tile types..." line — count re-set per open() from _categories
 var _budget_label: Label
 var _budget_sub_label: Label
 var _cost_value_label: Label
@@ -119,14 +126,19 @@ const MAX_SLOTS := 8
 # ── lifecycle ──────────────────────────────────────────────────────────────────
 
 ## Store `game`, build the static shell ONCE. Safe to call again. Does NOT show the modal.
+## Resolves the active farm zone so the shell's slots build against the right node right away
+## (preserving the headless-test contract that slots exist immediately after setup()).
 func setup(g: GameState) -> void:
 	game = g
+	_zone = game._active_farm_zone() if game != null else "home"
 	if not _built:
 		_build_shell()
 		_built = true
 
 ## Re-render the live state (slots + budget + cost) and show the card.
 ## Resets the fertilizer toggle to unchecked each time the modal opens (a fresh choice per run).
+## Re-resolves the active farm zone (the instance is reused across zones) and rebuilds the slot set +
+## title + intro for it, then re-renders. For a home-only game this is byte-identical to the old path.
 func open() -> void:
 	if not _built:
 		return
@@ -134,6 +146,9 @@ func open() -> void:
 	_fertilizer_checked = false
 	if _fert_check != null:
 		_fert_check.button_pressed = false
+	_zone = game._active_farm_zone() if game != null else "home"
+	_rebuild_slots()
+	_refresh_header_text()
 	_render()
 	visible = true
 
@@ -147,8 +162,6 @@ func close() -> void:
 func _build_shell() -> void:
 	layer = 6
 	visible = false
-
-	_categories = ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE)
 
 	# Warm-brown scrim (Main._install_overlay_dismiss wires a tap to close()).
 	var backdrop := ColorRect.new()
@@ -184,9 +197,8 @@ func _build_shell() -> void:
 
 	var heading_font: Font = UiKit.heading_font()
 
-	# Title — "Start Farming — <home name>".
+	# Title — "Start Farming — <active node name>" (text filled by _refresh_header_text()).
 	_title_label = Label.new()
-	_title_label.text = "Start Farming — %s" % _home_name()
 	_title_label.add_theme_font_size_override("font_size", 26)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -196,15 +208,15 @@ func _build_shell() -> void:
 		_title_label.add_theme_font_override("font", heading_font)
 	col.add_child(_title_label)
 
-	# Intro line — React's mustPick === false copy: tap a slot to pick a variant.
-	var intro := Label.new()
-	intro.text = "These %d tile types will be on the field. Tap a slot to pick a variant." % _categories.size()
-	intro.add_theme_font_size_override("font_size", 13)
-	intro.add_theme_color_override("font_color", Palette.INK_MID)
-	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	intro.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(intro)
+	# Intro line — React's mustPick === false copy: tap a slot to pick a variant. The count is
+	# filled by _refresh_header_text() (here + on every open()) from the active zone's _categories.
+	_intro_label = Label.new()
+	_intro_label.add_theme_font_size_override("font_size", 13)
+	_intro_label.add_theme_color_override("font_color", Palette.INK_MID)
+	_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_intro_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_intro_label)
 
 	# Iron hairline under the header.
 	var rule := HSeparator.new()
@@ -214,7 +226,8 @@ func _build_shell() -> void:
 	rule.add_theme_stylebox_override("separator", line)
 	col.add_child(rule)
 
-	# The locked-on category SLOT grid (React's grid-cols-4 of TileSlot).
+	# The locked-on category SLOT grid (React's grid-cols-4 of TileSlot). Populated by
+	# _rebuild_slots() (here + on every open()) because the slot SET differs by active zone.
 	_slot_grid = GridContainer.new()
 	_slot_grid.columns = 4
 	_slot_grid.add_theme_constant_override("h_separation", 8)
@@ -222,9 +235,9 @@ func _build_shell() -> void:
 	_slot_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(_slot_grid)
 
-	for c in _categories:
-		var cat: String = String(c)
-		_slot_grid.add_child(_build_slot(cat))
+	# Build the slots + header text once so they exist right after setup() (the headless contract).
+	_rebuild_slots()
+	_refresh_header_text()
 
 	# Zone-spawn info (React's "i" season-drops affordance) — a compact card listing what the
 	# home zone spawns MOST this season (read from ZoneConfig.season_drops for the current
@@ -312,6 +325,39 @@ func _build_shell() -> void:
 
 	# The chooser sub-layer (built once, kept hidden until a slot opens it).
 	_build_chooser_layer()
+
+## (Re)build the per-category SLOT grid for the ACTIVE zone (`_zone`). The slot SET differs by zone
+## (home/meadow expose 6 categories; orchard 7 with "herd"), and the modal instance is REUSED across
+## zones, so the slots must be rebuilt every open(). Sets `_categories` from the zone's eligible
+## categories, frees the existing slot children, drops their per-slot registry/cache entries, then
+## repopulates from `_categories`. For a home-only game this reproduces the old single build exactly.
+func _rebuild_slots() -> void:
+	if _slot_grid == null:
+		return
+	# Drop the prior slots' registry keys + node caches before freeing the children.
+	for c in _categories:
+		_action_buttons.erase("slot_" + String(c))
+	_slot_buttons.clear()
+	_slot_icon_holders.clear()
+	_slot_name_labels.clear()
+	_slot_sub_labels.clear()
+	for child in _slot_grid.get_children():
+		_slot_grid.remove_child(child)
+		child.queue_free()
+	# The eligible categories for the active zone, in declaration order.
+	_categories = ZoneConfig.eligible_categories(_zone)
+	for c in _categories:
+		var cat: String = String(c)
+		_slot_grid.add_child(_build_slot(cat))
+
+## Set the title + intro copy from the active zone (`_zone`) and its `_categories` count. Called once
+## during the shell build and again on every open() so a re-open at a different active farm node
+## relabels. For home this is byte-identical to the old hardcoded "Hearthwood Vale" / 6-count copy.
+func _refresh_header_text() -> void:
+	if _title_label != null:
+		_title_label.text = "Start Farming — %s" % _zone_name()
+	if _intro_label != null:
+		_intro_label.text = "These %d tile types will be on the field. Tap a slot to pick a variant." % _categories.size()
 
 ## Build the zone-spawn info card: a parchment-soft inset panel with a small "i" header naming
 ## the current season + a ranked one-line summary of what the home zone spawns most heavily
@@ -506,14 +552,14 @@ func _render() -> void:
 			_fert_check.button_pressed = false
 
 	var budget: int = preview_budget()
-	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+	var base: int = ZoneConfig.base_turns(_zone)
 	_budget_label.text = "Turns this run: %d" % budget
 	if has_fert and _fertilizer_checked:
 		_budget_sub_label.text = "Base %d × 2 (fertilizer)" % base
 	else:
 		_budget_sub_label.text = "Base %d" % base
 
-	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
+	var cost: int = ZoneConfig.entry_cost(_zone)
 	var coins: int = game.coins if game != null else 0
 	var can_afford: bool = coins >= cost
 	_cost_value_label.text = "%d 🪙" % cost
@@ -753,7 +799,8 @@ func active_variant_for(cat: String) -> String:
 		return ""
 	return game.active_tile_id_for_category(cat)
 
-## The eligible/active category ids (home zone has all categories on). Returns a fresh Array.
+## The eligible/active category ids for the active zone (all categories are locked-on). Returns a
+## fresh Array — the zone-derived `_categories` (home/meadow 6; orchard 7 with "herd").
 func selected_categories() -> Array:
 	return _categories.duplicate()
 
@@ -763,7 +810,7 @@ func selected_categories() -> Array:
 func preview_budget() -> int:
 	if game != null:
 		return game.farm_run_turn_budget(_fertilizer_checked and game._has_fertilizer())
-	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+	return ZoneConfig.base_turns(_zone)
 
 ## The current farm season NAME the spawn-info reflects. Reads the live GameState season; a
 ## fresh (no-run) game is Spring (turns_used 0). Falls back to "Spring" with no game.
@@ -772,13 +819,13 @@ func _current_season_name() -> String:
 		return "Spring"
 	return game.current_season_name()
 
-## A ranked one-line summary of what the home zone spawns this season, read from
+## A ranked one-line summary of what the ACTIVE zone spawns this season, read from
 ## ZoneConfig.season_drops for the current season. Lists the eligible categories with a
 ## positive weight, sorted by weight DESC, each as "Label NN%" (the weight is a 0..1 share).
 ## Pure + headless-testable — the single source of the spawn-info copy.
 func season_spawn_summary() -> String:
 	var season: String = _current_season_name()
-	var drops: Dictionary = ZoneConfig.season_drops(ZoneConfig.HOME_ZONE, season)
+	var drops: Dictionary = ZoneConfig.season_drops(_zone, season)
 	if drops.is_empty():
 		return "No data for this season."
 	var rows: Array = []
@@ -792,9 +839,11 @@ func season_spawn_summary() -> String:
 		parts.append("%s %d%%" % [_category_label(String(r["cat"])), int(round(float(r["w"]) * 100.0))])
 	return "  ·  ".join(parts)
 
-## The home settlement display name from config, with a literal fallback.
-func _home_name() -> String:
-	var z: Dictionary = CartographyConfig.by_id(ZoneConfig.HOME_ZONE)
+## The ACTIVE zone's settlement display name from config (CartographyConfig.by_id(_zone).name),
+## with the home literal as a fallback. For _zone == "home" this is "Hearthwood Vale" — byte-identical
+## to the old _home_name(); for the orchard node it is "Wild Orchard".
+func _zone_name() -> String:
+	var z: Dictionary = CartographyConfig.by_id(_zone)
 	var nm: String = String(z.get("name", ""))
 	return nm if nm != "" else "Hearthwood Vale"
 
