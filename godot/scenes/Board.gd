@@ -78,6 +78,13 @@ var clear_rats_on_grass: bool = false
 ## chain length nor credited (RUBBLE produces nothing).
 var clear_rubble_on_stone: bool = false
 
+## T11 (Town 2 mine hazards): when true (exactly while on a mine expedition — Main sets it from
+## GameState.is_in_mine()), the drag path SKIPS hazard-BLOCKED cells (RUBBLE / LAVA) so a chain can
+## never be drawn through them — mirrors React's tileBlockedByHazard guard in the drag path
+## (src/features/mine/hazards.ts:157). GAS / MYSTERIOUS_ORE are CHAINABLE (chaining is their
+## counter), so they are NOT blocked. Off the mine this stays false and the drag path is unchanged.
+var block_mine_hazards: bool = false
+
 ## A1b (upgradeMap-driven upgrade tiles): an optional provider Main installs so a resolved
 ## FARM chain spawns UPGRADE TILES of the zone's next tier during the SAME collapse/refill — the
 ## React core loop (src/GameScene.ts nextUpgradeTile + the pendingUpgrades queue). Called inside
@@ -135,6 +142,12 @@ var _chain_overlay: ChainOverlay
 ## freed + rebuilt wholesale whenever the wolf set changes (refresh_wolves). Like the chain
 ## overlay these are siblings of the Tile nodes and survive _build_tiles (which frees only Tiles).
 var _wolf_markers: Array = []   ## Array of _WolfMarker Node2D
+
+## T11 — live mole-marker overlay node (the Giant Mole), or null when no mole. Like the wolf the
+## mole is an OVERLAY entity (NOT a grid cell — it roams ON TOP consuming adjacent tiles + hops), so
+## it rides as its own Node2D over the cell centre, freed + rebuilt whenever the mole moves
+## (refresh_mole). A sibling of the Tile nodes; survives _build_tiles (which frees only Tiles).
+var _mole_marker: Node2D = null
 
 ## M4a — padding (px) of the field-tinted card drawn behind the tiles by _draw().
 const FRAME_PAD := 10.0
@@ -418,6 +431,101 @@ func refresh_wolves(wolf_cells: Array) -> void:
 		add_child(marker)
 		_wolf_markers.append(marker)
 
+## T11 — adopt a grid AFTER a mine-hazard tick mutated it, then RE-STAMP the positional mine-hazard
+## tiles so the buried cave-in row (RUBBLE), the lava cells (LAVA), and the gas vent (GAS) stay
+## PINNED at their recorded cells across the collapse/refill (matching apply_hazard_state's farm
+## pattern — the hazard positions are authoritative state, not subject to gravity). `new_grid` is the
+## ticked grid (eaten/consumed cells already EMPTY; spread LAVA already written). The cave-in /
+## gas_vent / lava args come from GameState (active_cave_in / active_gas_vent / active_lava_cells);
+## `mole` is GameState.active_mole() ({} when none) — an OVERLAY, refreshed via refresh_mole. Flow:
+##   1. blank the recorded pinned cells (so collapse/refill treats them as holes),
+##   2. collapse + refill the holes from the pool,
+##   3. re-stamp RUBBLE (cave-in row) / LAVA / GAS at their recorded cells,
+##   4. guard a live board (preserving the pins), rebuild tiles, refresh the mole overlay.
+## Keeps `grid` (and the on-screen tiles) in lockstep with GameState.mine_hazards every tick.
+func apply_mine_hazard_state(new_grid: Array, cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array, mole: Dictionary) -> void:
+	if new_grid == null or new_grid.is_empty():
+		return
+	grid = new_grid
+	# 1. Blank every recorded pinned hazard cell so collapse/refill fills around them.
+	_blank_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+	# 2. Collapse survivors + refill the holes from the active pool.
+	BoardLogic.collapse(grid)
+	BoardLogic.refill(grid, rng, tile_pool)
+	# 3. Re-stamp the positional hazard tiles (authoritative).
+	_stamp_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+	# 4. Keep the board playable (preserving the pins), rebuild tiles, refresh the mole overlay.
+	_ensure_live_board_preserving_mine(cave_in, gas_vent, lava_cells)
+	_build_tiles()
+	refresh_mole(mole)
+
+## Blank every recorded mine-hazard cell to EMPTY (cave-in row of RUBBLE, gas-vent GAS cell, every
+## LAVA cell). Used before collapse/refill so the holes get filled, then re-stamped. Shared by
+## apply_mine_hazard_state + the live-board guard.
+func _blank_mine_hazard_cells(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	if not cave_in.is_empty():
+		var cr: int = int(cave_in.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				grid[cr][c] = Constants.EMPTY
+	if not gas_vent.is_empty():
+		var gr: int = int(gas_vent.get("row", -1)); var gc: int = int(gas_vent.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(gc, gr)):
+			grid[gr][gc] = Constants.EMPTY
+	for lc in lava_cells:
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(lcl, lr)):
+			grid[lr][lcl] = Constants.EMPTY
+
+## Re-stamp the positional mine-hazard tiles onto `grid` at their recorded cells (cave-in row →
+## RUBBLE, gas vent → GAS, each lava cell → LAVA). The mole is an OVERLAY (no grid stamp). Shared by
+## apply_mine_hazard_state + the live-board guard.
+func _stamp_mine_hazard_cells(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	if not cave_in.is_empty():
+		var cr: int = int(cave_in.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				grid[cr][c] = Constants.Tile.RUBBLE
+	if not gas_vent.is_empty():
+		var gr: int = int(gas_vent.get("row", -1)); var gc: int = int(gas_vent.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(gc, gr)):
+			grid[gr][gc] = Constants.Tile.GAS
+	for lc in lava_cells:
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(lcl, lr)):
+			grid[lr][lcl] = Constants.Tile.LAVA
+
+## A live-board guard that PRESERVES the recorded mine-hazard cells across a reshuffle (mirrors
+## _ensure_live_board_preserving_hazards for the farm). _ensure_live_board rebuilds the WHOLE grid
+## (losing the pinned cave-in/gas/lava), so when mine hazards are present we re-stamp them after any
+## reshuffle. Rare (the pool almost always lands a live board), but keeps the hazard tiles pinned.
+func _ensure_live_board_preserving_mine(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	var guard := 0
+	while not BoardLogic.has_valid_chain(grid) and guard < 64:
+		grid = BoardLogic.make_empty_grid()
+		BoardLogic.refill(grid, rng, tile_pool)
+		_stamp_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+		guard += 1
+
+## T11 — rebuild the mole-marker overlay from `mole` ({} when none, else {row,col,turns_remaining}).
+## Frees the existing marker and creates one Node2D marker at the cell centre. Called on every
+## mine-hazard tick + on load/biome flip. An empty dict clears the marker. Headless-safe (pure _draw).
+func refresh_mole(mole: Dictionary) -> void:
+	if _mole_marker != null and is_instance_valid(_mole_marker):
+		_mole_marker.queue_free()
+	_mole_marker = null
+	if mole.is_empty():
+		return
+	var mr: int = int(mole.get("row", -1)); var mc: int = int(mole.get("col", -1))
+	if not BoardLogic.in_bounds(Vector2i(mc, mr)):
+		return
+	var marker := _MoleMarker.new()
+	marker.radius = tile_size * 0.32
+	marker.position = _cell_center(mc, mr)
+	marker.z_index = 90   # above tiles, below the chain overlay (100) — same band as the wolf
+	add_child(marker)
+	_mole_marker = marker
+
 ## T9 — clear EVERY rat from the board + the count of cells to blank, used when a rat-chain or a
 ## deadly-pests cull or a Rifle removes specific rats. Given the cleared rat cells (Array of
 ## {row,col}), blank them, collapse + refill, re-stamp the REMAINING rats/fire, rebuild. Returns
@@ -602,6 +710,9 @@ func _begin_drag(cell: Vector2i) -> void:
 		return
 	if grid[cell.y][cell.x] == Constants.EMPTY:
 		return
+	# T11 — a chain can't START on a hazard-BLOCKED cell (RUBBLE / LAVA) in the mine.
+	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
+		return
 	_dragging = true
 	_path = [cell]
 	_set_highlight(cell, true)
@@ -622,6 +733,11 @@ func _extend_drag(cell: Vector2i) -> void:
 		chain_changed.emit(_path.size())
 		return
 	if _path.has(cell):
+		return
+	# T11 — never extend onto a hazard-BLOCKED cell (RUBBLE / LAVA) in the mine. (The same-type
+	# guard below already blocks most cases since a blocked tile can't be the anchor, but a buried
+	# cave-in row is many RUBBLE cells — this keeps the chain off them defensively.)
+	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
 		return
 	# Extend: must match the chain's type and be 8-way adjacent to the last cell.
 	if grid[cell.y][cell.x] != grid[_path[0].y][_path[0].x]:
@@ -1103,3 +1219,25 @@ class _WolfMarker extends Node2D:
 		if not scared:
 			draw_circle(Vector2(-radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))
 			draw_circle(Vector2(radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))
+
+## T11 — a mole-marker overlay: a round brown burrower with a pink snout, two paddle paws, and tiny
+## eyes, drawn over the cell the Giant Mole roams. Like the wolf the mole is NOT a grid tile (it
+## doesn't collapse), so it rides as its own Node2D over the board, consuming adjacent tiles + hopping.
+## Pure _draw (no textures) so it is headless-safe; the Board frees + rebuilds it whenever the mole moves.
+class _MoleMarker extends Node2D:
+	var radius: float = 24.0
+
+	func _draw() -> void:
+		var body := Color(0.42, 0.30, 0.20)        # earthy mole-brown
+		var snout := Color(0.86, 0.56, 0.58)       # pink nose
+		var paw := Color(0.34, 0.24, 0.16)         # darker digging paws
+		# Two big paddle paws flanking the body (digging claws).
+		draw_circle(Vector2(-radius * 0.7, radius * 0.35), radius * 0.32, paw)
+		draw_circle(Vector2(radius * 0.7, radius * 0.35), radius * 0.32, paw)
+		# Round body.
+		draw_circle(Vector2.ZERO, radius * 0.82, body)
+		# Pink snout at the bottom-front.
+		draw_circle(Vector2(0, radius * 0.42), radius * 0.30, snout)
+		# Two beady eyes.
+		draw_circle(Vector2(-radius * 0.26, -radius * 0.05), radius * 0.10, Color(0.10, 0.08, 0.08))
+		draw_circle(Vector2(radius * 0.26, -radius * 0.05), radius * 0.10, Color(0.10, 0.08, 0.08))

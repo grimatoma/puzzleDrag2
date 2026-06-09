@@ -339,8 +339,8 @@ func _test_catalog_membership() -> void:
 	# 10 original M8a tools + 14 catalog-parity tools (Tools PR1) + 5 new-power tools
 	# (Tools PR2: basic/rare/shuffle/cat/terrier) + 3 fill_bias tools (Tools PR2b:
 	# fertilizer/bird_feed/sapling) + 8 portal magic tools (Tools PR3) + 2 wolf-hazard tools
-	# (T14a: rifle/hound) = 42.
-	_check(ToolConfig.all_ids().size() == 42, "catalog has 42 tools")
+	# (T14a: rifle/hound) + 2 mine-hazard tools (T14b: water_pump/explosives) = 44.
+	_check(ToolConfig.all_ids().size() == 44, "catalog has 44 tools")
 	for id in ToolConfig.all_ids():
 		_check(ToolConfig.has_tool(id), "catalog id '%s' resolves to a tool" % id)
 	_check(not ToolConfig.has_tool("not_a_tool"), "unknown id is not a tool")

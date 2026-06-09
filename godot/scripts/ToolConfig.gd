@@ -105,6 +105,14 @@ const MAGIC_FERTILIZER: String = "magic_fertilizer"
 # (src/constants.ts WORKSHOP_RECIPES.rifle/hound) + the USE_TOOL rifle/hound handlers.
 const RIFLE: String = "rifle"
 const HOUND: String = "hound"
+# ── Mine-hazard tools (T14b) — STATE powers handled in GameState's early path (never reach
+# apply_instant; they mutate `mine_hazards` + the grid). Like the wolf tools they are instant (no
+# tapped cell). Ported from the React Workshop recipes (src/constants.ts rec_water_pump /
+# rec_explosives) + the USE_TOOL water_pump/explosives handlers (toolPowerRuntime.ts:349-358).
+#   WATER_PUMP — floods every LAVA cell → RUBBLE + clears the lava hazard (React "Lava Damper").
+#   EXPLOSIVES — clears the cave_in (un-buries its rubble row) + the mole hazard.
+const WATER_PUMP: String = "water_pump"
+const EXPLOSIVES: String = "explosives"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -423,6 +431,20 @@ const TOOLS: Dictionary = {
 		"params": {},
 		"tap_target": false,
 	},
+	# ── Mine-hazard tools (T14b) — STATE powers handled in GameState.use_tool_on_grid's early path
+	# (they mutate `mine_hazards` + the grid, never reaching apply_instant). Both are instant.
+	WATER_PUMP: {
+		"label": "Water Pump",
+		"power_id": "water_pump",
+		"params": {},
+		"tap_target": false,
+	},
+	EXPLOSIVES: {
+		"label": "Explosives",
+		"power_id": "explosives",
+		"params": {},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -446,6 +468,8 @@ const TOOL_IDS: Array = [
 	MAGIC_WAND, MAGIC_SEED, MAGIC_FERTILIZER,
 	# T14a — wolf-hazard tools (clear_wolves / scatter_hazard state powers).
 	RIFLE, HOUND,
+	# T14b — mine-hazard tools (water_pump / explosives state powers).
+	WATER_PUMP, EXPLOSIVES,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

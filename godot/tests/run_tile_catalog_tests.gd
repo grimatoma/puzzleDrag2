@@ -33,9 +33,12 @@ var _failures: int = 0
 ## PRODUCES/THRESHOLDS (hazards + the rune-capture pearl + the treasure coin).
 ## FIRE (T7) is the 3rd board-only HAZARD tile (rat/rubble/fire): no PRODUCES/THRESHOLDS, no
 ## committed PNG (it renders via the flat Constants.color_for fallback), no manifest key.
-const NO_YIELD_TILES: Array = [T.RAT, T.RUBBLE, T.FIRE, T.FISH_PEARL, T.COIN_GOLDEN]
+## LAVA / GAS / MYSTERIOUS_ORE (T11/T23) are the mine-hazard board-only tiles: no PRODUCES/
+## THRESHOLDS (LAVA/GAS are pure hazards; MYSTERIOUS_ORE is the rune-capture tile, captured not
+## chained), no committed PNG (flat-color fallback), no manifest key.
+const NO_YIELD_TILES: Array = [T.RAT, T.RUBBLE, T.FIRE, T.FISH_PEARL, T.COIN_GOLDEN, T.LAVA, T.GAS, T.MYSTERIOUS_ORE]
 ## Board-only hazard tiles that ship WITHOUT a committed PNG (flat-color fallback only).
-const FLAT_ONLY_TILES: Array = [T.FIRE]
+const FLAT_ONLY_TILES: Array = [T.FIRE, T.LAVA, T.GAS, T.MYSTERIOUS_ORE]
 
 ## Produced resources that are intentionally NOT market-traded but are still real
 ## (Kitchen-only intermediate + the harbor catch, which lands in shared inventory).
@@ -142,8 +145,8 @@ func _test_map_coverage() -> void:
 
 func _test_counts() -> void:
 	var total: int = Constants.STRING_KEYS.size()
-	# 77 web art tiles + RAT + RUBBLE + FIRE (T7) = 80 enum members.
-	_check(total == 80, "exactly 80 catalog tiles (77 web art tiles + RAT + RUBBLE + FIRE hazards); got %d" % total)
+	# 77 web art tiles + RAT + RUBBLE + FIRE (T7) + LAVA + GAS + MYSTERIOUS_ORE (T11/T23) = 83.
+	_check(total == 83, "exactly 83 catalog tiles (77 web art tiles + rat/rubble/fire + lava/gas/mysterious_ore hazards); got %d" % total)
 
 	var art_backed := 0
 	var art_missing := 0
@@ -155,23 +158,25 @@ func _test_counts() -> void:
 		elif not FLAT_ONLY_TILES.has(int(v)):
 			art_missing += 1
 			push_error("tile %s has no committed PNG at %s" % [key, path])
-	# RAT + RUBBLE use 'rat'/'rubble' PNGs; FIRE ships flat-color-only (no PNG by design), so 79 of
-	# the 80 tiles are art-backed and FIRE is the sole intentional flat-only tile.
-	_check(art_backed == 79, "79 tiles are art-backed (PNG exists); FIRE is flat-color only; got %d" % art_backed)
-	_check(art_missing == 0, "no UNEXPECTED tile is missing its PNG (FIRE is allowed flat-only)")
+	# RAT + RUBBLE use 'rat'/'rubble' PNGs; FIRE + LAVA + GAS + MYSTERIOUS_ORE ship flat-color-only
+	# (no PNG by design), so 79 of the 83 tiles are art-backed and the four flat-only tiles are the
+	# only intentional non-art tiles (FLAT_ONLY_TILES).
+	_check(art_backed == 79, "79 tiles are art-backed (PNG exists); fire/lava/gas/mysterious_ore are flat-color only; got %d" % art_backed)
+	_check(art_missing == 0, "no UNEXPECTED tile is missing its PNG (FLAT_ONLY_TILES are allowed flat-only)")
 
-	# Of the 80, exactly 77 use a canonical "tile_*"/special web art key (the manifest set);
-	# the 3 remaining are the board-only hazards ('rat'/'rubble'/'fire', not in the manifest).
+	# Of the 83, exactly 77 use a canonical "tile_*"/special web art key (the manifest set); the 6
+	# remaining are the board-only hazards ('rat'/'rubble'/'fire'/'lava'/'gas'/'mysterious_ore',
+	# not in the manifest).
 	var manifest_keys := 0
 	var hazard_keys := 0
 	for v in Constants.STRING_KEYS.keys():
 		var key: String = Constants.string_key(int(v))
-		if key == "rat" or key == "rubble" or key == "fire":
+		if key == "rat" or key == "rubble" or key == "fire" or key == "lava" or key == "gas" or key == "mysterious_ore":
 			hazard_keys += 1
 		else:
 			manifest_keys += 1
 	_check(manifest_keys == 77, "exactly 77 web-manifest art tiles in the catalog; got %d" % manifest_keys)
-	_check(hazard_keys == 3, "exactly 3 board-only hazard tiles (rat, rubble, fire); got %d" % hazard_keys)
+	_check(hazard_keys == 6, "exactly 6 board-only hazard tiles (rat, rubble, fire, lava, gas, mysterious_ore); got %d" % hazard_keys)
 
 # ── 4. color_for never returns the MAGENTA 'unknown' sentinel ─────────────────
 

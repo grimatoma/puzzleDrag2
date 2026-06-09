@@ -288,6 +288,11 @@ func _ready() -> void:
 	# chain clears adjacent rubble — no building needed). A save restored mid-expedition
 	# keeps it on.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11/T23: a save restored mid-expedition may carry live MINE hazards + a Mysterious Ore.
+	# Block hazard-chaining (RUBBLE/LAVA) in the mine, then re-stamp the cave-in row / lava / gas
+	# cells + the live ore onto the board and refresh the mole overlay so they show immediately.
+	board.block_mine_hazards = game.is_in_mine()
+	_restore_mine_hazards_onto_board()
 	# M3j: pearl capture is live exactly while on a harbor expedition (a fish chain next to
 	# the pearl grabs the Rune). A save restored mid-harbor keeps it on; place the live pearl
 	# back onto the board at its seeded cell so the rune target shows immediately.
@@ -1623,6 +1628,14 @@ func _on_town_changed() -> void:
 	board.set_tile_pool(game.active_biome_pool())
 	if game.is_in_mine() != was_mine:
 		board.setup_new_board()
+		# T23: on ENTRY to the mine, seed the session's single Mysterious Ore onto the freshly-built
+		# board so the rune target is visible (mirrors the harbor pearl seed on entry). enter_mine
+		# cleared any prior ore; spawn_mysterious_ore_on_fill is a no-op if one is somehow already live.
+		if game.is_in_mine():
+			var sp := game.spawn_mysterious_ore_on_fill(board.grid, board.rng)
+			if bool(sp.get("ok", false)):
+				board.grid = sp["grid"]
+				board._build_tiles()
 	# M3j: entering/leaving the harbor via the Town screen flips the biome — regenerate the
 	# board so fish tiles show NOW (mirrors the mine flip above). On ENTRY, place the live
 	# pearl onto the freshly-built board at its seeded cell so the rune target is visible.
@@ -1643,6 +1656,11 @@ func _on_town_changed() -> void:
 	# M3i: entering/leaving the mine via the Town screen flips whether STONE chains mine
 	# through rubble, so refresh that flag on every town action too.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11: entering/leaving the mine flips whether hazard-blocked cells (RUBBLE/LAVA) are unchainable
+	# — refresh that flag on every town action too. Off the mine it's simply false. Then re-stamp any
+	# live mine hazards + Mysterious Ore onto the (mine) board / clear the mole overlay off the mine.
+	board.block_mine_hazards = game.is_in_mine()
+	_restore_mine_hazards_onto_board()
 	# M3j: entering/leaving the harbor flips whether a fish chain next to the pearl captures
 	# it — refresh that flag on every town action too (off the harbor it is simply false).
 	board.clear_pearl_on_fish_chain = game.is_in_harbor()
@@ -1762,6 +1780,46 @@ func _restore_farm_hazards_onto_board() -> void:
 		board._build_tiles()
 	board.refresh_wolves(game.active_wolves())
 
+## T11/T23 — stamp the loaded MINE hazards + live Mysterious Ore onto the live board: place the
+## cave-in row (RUBBLE) / gas vent (GAS) / lava cells (LAVA) / mysterious ore (MYSTERIOUS_ORE) at
+## their recorded cells (overwriting whatever the fresh board built there) and rebuild the mole
+## overlay. Called on load (after the board is built) so a save restored mid-expedition shows its
+## mine hazards immediately. No-op off the mine / when nothing is active. Mirrors
+## _restore_farm_hazards_onto_board.
+func _restore_mine_hazards_onto_board() -> void:
+	if board == null or game == null:
+		return
+	if not game.is_in_mine():
+		board.refresh_mole({})
+		return
+	var changed := false
+	var cave: Dictionary = game.active_cave_in()
+	if not cave.is_empty():
+		var cr: int = int(cave.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				board.grid[cr][c] = Constants.Tile.RUBBLE
+			changed = true
+	var gas: Dictionary = game.active_gas_vent()
+	if not gas.is_empty():
+		var gr: int = int(gas.get("row", -1)); var gc: int = int(gas.get("col", -1))
+		if gr >= 0 and gr < Constants.ROWS and gc >= 0 and gc < Constants.COLS:
+			board.grid[gr][gc] = Constants.Tile.GAS
+			changed = true
+	for lc in game.active_lava_cells():
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if lr >= 0 and lr < Constants.ROWS and lcl >= 0 and lcl < Constants.COLS:
+			board.grid[lr][lcl] = Constants.Tile.LAVA
+			changed = true
+	if game.has_active_mysterious_ore():
+		var orr: int = int(game.mysterious_ore.get("row", -1)); var orc: int = int(game.mysterious_ore.get("col", -1))
+		if orr >= 0 and orr < Constants.ROWS and orc >= 0 and orc < Constants.COLS:
+			board.grid[orr][orc] = Constants.Tile.MYSTERIOUS_ORE
+			changed = true
+	if changed:
+		board._build_tiles()
+	board.refresh_mole(game.active_mole())
+
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# T9 — a RAT chain is a HAZARD CLEAR, not a normal harvest: chaining 3+ rats removes them for
 	# +5 coins each and spends NO turn / credits NO resource (mirrors src/state.ts:286-293's early
@@ -1803,6 +1861,37 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	if int(deadly.get("killed", 0)) > 0:
 		board.clear_hazard_cells(deadly.get("killed_cells", []), game.active_rats(), game.active_fire_cells(), game.active_wolves())
 		_status_label.text = "Pest culled! +%d 🪙" % int(deadly.get("coins_delta", 0))
+	# T11/T23 — MINE-hazard chain interactions (captured BEFORE the normal credit + the mine-turn
+	# tick below, mirroring the farm-hazard block). Three counters, all keyed off the snapshotted
+	# chained cells (their tile value read before the chain cleared them):
+	#   - STONE chain ADJACENT to the buried cave-in row → clear the cave-in (mine through it). The
+	#     chain still resolves as a normal STONE harvest (credited below); clearing the rubble row is
+	#     the side effect. The Board's clear_rubble_on_stone already swept the row's RUBBLE 8-adjacent
+	#     to the chain; this clears the cave_in STATE so it stops re-stamping.
+	#   - GAS chain (the chain ran through the gas cell) → disperse the vent (no turn cost). GAS
+	#     produces nothing, so credit_chain below yields 0 — the chain is otherwise a normal move.
+	#   - MYSTERIOUS_ORE chain with >= 2 DIRT → capture for +1 Rune. The ore produces nothing, so
+	#     credit_chain yields 0; the rune is the reward. Checked here (before the ore-tick in the
+	#     mine-turn block) so a final-turn capture still lands.
+	if game.is_in_mine():
+		if tile_type == Constants.Tile.STONE:
+			var cv := game.clear_cave_in_chain(_chain_cells)
+			if bool(cv.get("ok", false)):
+				_status_label.text = "Cave-in cleared! Tunnel reopened."
+				if _audio != null:
+					_audio.play("pop")
+		elif tile_type == Constants.Tile.GAS:
+			var dg := game.disperse_gas_chain(_chain_cells)
+			if bool(dg.get("ok", false)):
+				_status_label.text = "Gas dispersed — safe to mine."
+				if _audio != null:
+					_audio.play("pop")
+		elif tile_type == Constants.Tile.MYSTERIOUS_ORE:
+			var cap := game.try_capture_mysterious_ore(_chain_cells)
+			if bool(cap.get("captured", false)):
+				_status_label.text = "Mysterious Ore captured! +1 rune"
+				if _audio != null:
+					_audio.play("upgrade")
 	_chain_cells = []
 	var res: Dictionary = game.credit_chain(tile_type, length)
 	# M4d: a chain always lands a collect bleep; a whole unit (units > 0) adds the
@@ -1846,6 +1935,25 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# everything gathered, swap the board back to the farm pool, and regenerate.
 	if game.is_in_mine():
 		var turn_res: Dictionary = game.note_mine_turn()
+		# T11/T23 — after spending the mine turn (and only if the expedition is still live), tick +
+		# spawn the MINE HAZARDS for this turn (gas counts down / lava spreads / mole consumes+hops;
+		# the ore countdown ticks; a NEW hazard or ore may spawn). Mirrors the farm-hazard after-chain
+		# tick. A GAS-VENT EXPIRY costs an EXTRA mine turn (React _tickGasVent), spent via a second
+		# note_mine_turn — which can itself end the run. The ticked grid (eaten/spread/degraded cells)
+		# is landed via apply_mine_hazard_state, which collapses/refills + re-stamps the pinned cave-in
+		# row / lava / gas cells + the mole overlay. Skipped on the turn that EXITED the expedition.
+		if not bool(turn_res.get("exited", false)):
+			var mtick := game.tick_mine_hazards(board.grid, board.rng)
+			if bool(mtick.get("gas_cost_turn", false)):
+				turn_res = game.note_mine_turn()   # gas expiry costs an extra turn (may end the run)
+			if game.is_in_mine() and bool(mtick.get("changed", false)):
+				board.apply_mine_hazard_state(
+					mtick["grid"], game.active_cave_in(), game.active_gas_vent(),
+					game.active_lava_cells(), game.active_mole())
+			elif game.is_in_mine():
+				board.refresh_mole(game.active_mole())
+			if String(mtick.get("floater", "")) != "":
+				_status_label.text = String(mtick.get("floater", ""))
 		if bool(turn_res.get("exited", false)):
 			_status_label.text = "Expedition over — supplies spent. Back to the farm."
 			board.set_tile_pool(game.active_biome_pool())
@@ -1853,6 +1961,11 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# M3i: the expedition ended — back on the farm, so mining-through-rubble is
 			# off (there's no rubble on the farm board anyway; keep the flag honest).
 			board.clear_rubble_on_stone = game.is_in_mine()
+			# T11: off the mine - drop the hazard-block flag + clear the mole overlay so a stale
+			# mine hazard can never linger on the farm board (note_mine_turn's exit cleared the
+			# STATE; this clears the VIEW).
+			board.block_mine_hazards = game.is_in_mine()
+			board.refresh_mole({})
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
@@ -2250,6 +2363,23 @@ func use_tool(id: String) -> bool:
 				_audio.play("pop")
 			_after_tool_used()
 		return bool(rw.get("ok", false))
+	# T14b — mine-hazard tools (Water Pump / Explosives) mutate `mine_hazards` + the grid (lava→
+	# rubble / clear the cave-in rubble row + the mole). use_tool_on_grid returns the mutated grid;
+	# we land it via apply_mine_hazard_state (collapse/refill the freed cells + re-stamp the still-live
+	# cave-in/gas/lava pins + refresh the mole overlay), so a residual hazard stays pinned and the
+	# cleared one is gone. Skip when not in the mine (these tools are mine-only — a no-lava / no-cave-in
+	# board simply clears nothing, but we still land the unchanged grid harmlessly).
+	if pwr == "water_pump" or pwr == "explosives":
+		var rm: Dictionary = game.use_tool_on_grid(id, board.grid)
+		if bool(rm.get("ok", false)):
+			board.apply_mine_hazard_state(
+				rm["grid"], game.active_cave_in(), game.active_gas_vent(),
+				game.active_lava_cells(), game.active_mole())
+			_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+			if _audio != null:
+				_audio.play("pop")
+			_after_tool_used()
+		return bool(rm.get("ok", false))
 	# Instant tool — fire immediately over the whole board.
 	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
 	if bool(r.get("ok", false)):
@@ -2319,6 +2449,15 @@ func _enter_mine_visuals() -> void:
 	# biome flip that re-pools the board (the M demo key path), mirroring _ready /
 	# _on_town_changed.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11/T23: the dev-key mine entry flips the hazard-block flag + seeds the Mysterious Ore too
+	# (mirrors _on_town_changed's mine-flip path), so the keyboard fallback behaves like the real entry.
+	board.block_mine_hazards = game.is_in_mine()
+	if game.is_in_mine():
+		var sp := game.spawn_mysterious_ore_on_fill(board.grid, board.rng)
+		if bool(sp.get("ok", false)):
+			board.grid = sp["grid"]
+			board._build_tiles()
+	board.refresh_mole(game.active_mole())
 	# BUG C1 — the dev-key mine entry is a playable-board transition too, so follow the gate (the
 	# real entry path routes through _on_town_changed, which sets it; this keeps the keyboard
 	# fallback honest so the mine board it just built is actually chainable).

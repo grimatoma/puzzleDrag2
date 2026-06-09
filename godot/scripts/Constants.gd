@@ -165,6 +165,29 @@ enum Tile {
 	# (HazardLogic.try_extinguish_fire → +2 coins/tile). GATED OFF by default to match the live
 	# React game (FIRE_HAZARD_ENABLED false; isFireHazardEnabled() reads a tuning override).
 	FIRE,
+	# ── Mine hazards (T11, ported from src/features/mine/hazards.ts) — APPENDED so every existing
+	# ordinal above is UNCHANGED (saves serialise via STRING_KEYS). Three new board-only HAZARD/special
+	# tiles for the Town-2 mine expedition:
+	#   LAVA  — the Lava Flow hazard cell (MineHazardLogic.tick_mine_hazards spreads it to one random
+	#           orthogonal free cell each turn). BLOCKS chaining (MineHazardLogic.tile_blocked_by_hazard,
+	#           like RUBBLE) and produces NOTHING (deliberately ABSENT from PRODUCES/THRESHOLDS →
+	#           produced_resource "" + threshold_for NO_THRESHOLD). Cleared by the Water Pump tool
+	#           (turns lava → rubble). React key "lava" (hazards.ts:240 `key: "lava"`).
+	#   GAS   — the Gas Vent cloud cell. UNLIKE lava/rubble it is CHAINABLE (chaining through gas is
+	#           the counter — disperse_gas), so it is NOT in tile_blocked_by_hazard. Produces NOTHING.
+	#           A 3-turn countdown lives on GameState.mine_hazards.gas_vent; chaining the gas cell before
+	#           it expires disperses the vent, else it costs a turn on expiry. React models gas as a
+	#           per-cell `gas` overlay flag; the port models it as a single board GAS tile at the vent
+	#           cell (documented adaptation — the port has no per-cell overlay-flag layer).
+	#   MYSTERIOUS_ORE — the rune-capture tile (the mine's analogue of the harbor's FISH_PEARL). It is
+	#           CHAINABLE and produces NOTHING via the normal chain path (ABSENT from PRODUCES/THRESHOLDS);
+	#           a 5-turn countdown lives on GameState.mysterious_ore. Chaining it together with >= 2 DIRT
+	#           tiles before it expires grants +1 Rune (MineHazardLogic.is_mysterious_chain_valid); on
+	#           countdown expiry it degrades to plain DIRT (tile_special_dirt). React key "mysterious_ore"
+	#           (mysterious_ore.ts:58).
+	LAVA,
+	GAS,
+	MYSTERIOUS_ORE,
 }
 
 const STRING_KEYS := {
@@ -270,6 +293,13 @@ const STRING_KEYS := {
 	# Fire farm hazard (T7) — its own "fire" string key (mirrors the React board cell key
 	# "fire" that try_extinguish_fire matches on). No PNG ships; flat fallback fill.
 	Tile.FIRE:               "fire",
+	# Mine hazards (T11) — their own string keys, mirroring the React board-cell keys the
+	# mine-hazard logic matches on ("lava" hazards.ts:240, "mysterious_ore" mysterious_ore.ts:58).
+	# GAS has no React board-key (React uses a per-cell overlay flag); the port keys it "gas" for
+	# the single GAS tile it stamps at the vent cell. No PNGs ship; flat fallback fills.
+	Tile.LAVA:               "lava",
+	Tile.GAS:                "gas",
+	Tile.MYSTERIOUS_ORE:     "mysterious_ore",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -378,6 +408,13 @@ const PRODUCES := {
 	# COIN_GOLDEN produces NOTHING through the chain pipeline — deliberately ABSENT (like
 	# RAT/RUBBLE/FISH_PEARL): produced_resource → "" and threshold_for → NO_THRESHOLD.
 	Tile.COIN_GOLDEN:        "",
+	# Mine hazards (T11): LAVA / GAS / MYSTERIOUS_ORE all produce NOTHING via the normal chain
+	# pipeline (like RAT/RUBBLE/FIRE/FISH_PEARL). LAVA/GAS are pure hazards; MYSTERIOUS_ORE is the
+	# rune-capture tile (captured via GameState.try_capture_mysterious_ore, not credited as a chain).
+	# Deliberately absent from THRESHOLDS too (threshold_for → NO_THRESHOLD).
+	Tile.LAVA:               "",
+	Tile.GAS:                "",
+	Tile.MYSTERIOUS_ORE:     "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -654,6 +691,13 @@ const CATEGORY := {
 	# Fire farm hazard (T7) — its own "fire" category; never seeded into any board pool
 	# (HazardLogic places it positionally via the spawn roll, like rats/wolves).
 	Tile.FIRE:               "fire",
+	# Mine hazards (T11) — their own categories; none seed into any board pool (MineHazardLogic
+	# places them positionally via the spawn roll / countdown, like rats/wolves/fire). "dirt" is
+	# deliberately NOT reused for MYSTERIOUS_ORE — it is its own capture tile, kept out of the
+	# dirt-count its capture chain requires (mirrors FISH_PEARL's own "fish_pearl" category).
+	Tile.LAVA:               "lava",
+	Tile.GAS:                "gas",
+	Tile.MYSTERIOUS_ORE:     "mysterious_ore",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
@@ -703,6 +747,45 @@ const WOLF_SCARED_TURNS: int = 5
 ## rubble is a recurring nuisance the player mines through, not a board takeover — with
 ## only 2 slots in a 10-slot MINE_POOL it never dominates the board.
 const RUBBLE_POOL_SLOTS: int = 2
+
+# ── Mine hazards (T11, ported from src/features/mine/hazards.ts) ─────────────────
+## The mine-hazard SPAWN gate: a hazard rolls at MINE_HAZARD_BASE_RATE per board fill, ONLY in
+## the mine, NEVER with a boss active, and NEVER when another mine hazard is already active
+## (single-active cap). Mirrors React HAZARD_BASE_RATE (hazards.ts:13).
+const MINE_HAZARD_BASE_RATE: float = 0.05
+
+## Weighted pick over the four mine hazards (total 100). Mirrors the React HAZARDS pool weights
+## (hazards.ts: cave_in 25, gas_vent 40, lava 20, mole 15). Used by MineHazardLogic.roll_mine_hazard.
+const MINE_HAZARD_WEIGHTS: Dictionary = {
+	"cave_in":  25,
+	"gas_vent": 40,
+	"lava":     20,
+	"mole":     15,
+}
+
+## Stable iteration order for the mine-hazard weighted pick (so the seeded roll is deterministic —
+## a Dictionary's key order is insertion order in GDScript, but an explicit list is unambiguous).
+const MINE_HAZARD_IDS: Array = ["cave_in", "gas_vent", "lava", "mole"]
+
+## Gas Vent countdown (in mine turns) before the cloud expires. On expiry it COSTS A TURN and
+## clears (the "You cough through it." floater). Chaining the gas cell disperses it early. Mirrors
+## the React gas_vent durationTurns (hazards.ts:71 / spawn turnsRemaining 3).
+const GAS_VENT_TURNS: int = 3
+
+## Giant Mole cycle (in mine turns): while turnsRemaining > 0 the mole consumes one adjacent
+## non-consumed/non-rubble tile each turn; at 0 it HOPS to a random free adjacent cell and resets
+## to this. Mirrors the React mole turnsRemaining 3 (hazards.ts:101 / _tickMole).
+const MOLE_TURNS: int = 3
+
+# ── Mysterious Ore → Rune (T23, ported from src/features/mine/mysterious_ore.ts) ─
+## Countdown (in mine turns) on a freshly-spawned Mysterious Ore before it degrades to plain DIRT.
+## Chain it (with >= REQUIRED_DIRT_IN_CHAIN dirt) within this window to capture the Rune. Mirrors
+## React MYSTERIOUS_ORE_TURNS (mysterious_ore.ts:11).
+const MYSTERIOUS_ORE_TURNS: int = 5
+
+## How many DIRT tiles a Mysterious-Ore capture chain must ALSO contain (the ore itself does not
+## count) to grant a Rune. Mirrors React REQUIRED_DIRT_IN_CHAIN (mysterious_ore.ts:12).
+const REQUIRED_DIRT_IN_CHAIN: int = 2
 
 # ── Seasons (src/constants.ts:256 SEASONS + zones/data.ts seasonIndexInSession) ──
 ## The farm board cycles four seasons over its turn budget (see GameState.farm_turns_used
@@ -933,4 +1016,9 @@ static func color_for(tile: int) -> Color:
 		Tile.COIN_GOLDEN:        return Color8(0xff, 0xd3, 0x4c)
 		# Fire farm hazard (T7) — a hot orange-red flame fill. No PNG ships; flat fallback.
 		Tile.FIRE:               return Color8(0xe2, 0x5a, 0x1e)
+		# Mine hazards (T11) — flat fallback fills (no PNGs ship). LAVA a molten red-orange,
+		# GAS a sickly noxious green, MYSTERIOUS_ORE a glowing violet that reads as "special".
+		Tile.LAVA:               return Color8(0xd8, 0x3a, 0x12)
+		Tile.GAS:                return Color8(0x86, 0xb8, 0x4a)
+		Tile.MYSTERIOUS_ORE:     return Color8(0x9a, 0x5c, 0xd6)
 		_:             return Color.MAGENTA

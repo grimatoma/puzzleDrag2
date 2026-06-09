@@ -199,6 +199,28 @@ var hazards: Dictionary = HazardLogic.default_state()
 ## in normal play, matching the live React game). NOT persisted (a reload re-reads the default).
 var fire_hazard_force: bool = false
 
+# ── Mine HAZARDS live state (T11, ported from src/features/mine/hazards.ts) ──────
+## The live MINE-hazard state — the mine-side analogue of `hazards` above. Owns the cave_in (a
+## buried ROW), the gas_vent (cell + 3-turn countdown), the lava (spreading cells), and the mole
+## (overlay entity + 3-turn cycle). The single source of truth for all four mine hazards;
+## MineHazardLogic (pure) operates on this + the board grid, and note_mine_turn ticks/spawns into
+## it. Shape (see MineHazardLogic header):
+##   { "cave_in": {row} or {}, "gas_vent": {row,col,turns_remaining} or {}, "lava": {cells:[...]}
+##     or {}, "mole": {row,col,turns_remaining} or {} }
+## Seeded to MineHazardLogic.default_state() (all inactive). Persisted defensively (to_dict/from_dict
+## round-trip via MineHazardLogic.normalise). SAVE_VERSION is NOT bumped — a pre-mine-hazards save
+## loads with all mine hazards inactive. SINGLE-ACTIVE CAP mirrored in roll: only one at a time.
+## ONLY relevant while in the mine (active_biome == "mine"); on the farm/harbor it stays inactive.
+var mine_hazards: Dictionary = MineHazardLogic.default_state()
+
+# ── Mysterious Ore → Rune live state (T23, src/features/mine/mysterious_ore.ts) ──
+## The live Mysterious Ore, or {} when none active. Shape: { row:int, col:int, turns_left:int }.
+## One per mine session (the mine's analogue of the harbor's `fish_pearl`). Spawned on a mine
+## board fill (spawn_mysterious_ore), ticked by note_mine_turn (degrades to DIRT at 0), and captured
+## by chaining it with >= Constants.REQUIRED_DIRT_IN_CHAIN dirt (try_capture_mysterious_ore → +1
+## Rune). Persisted defensively (to_dict/from_dict). SAVE_VERSION is NOT bumped.
+var mysterious_ore: Dictionary = {}
+
 # ── Tile Collection: active variants + discovery + abilities ────────────────────────
 ## Ported from React's `state.tileCollection` slice (src/state/helpers.ts
 ## TileCollectionSlice + src/state.ts SET_ACTIVE_TILE / BUY_TILE / chain-discovery).
@@ -1479,6 +1501,10 @@ func enter_mine() -> Dictionary:
 	inventory.erase("supplies")
 	mine_turns_left = s
 	active_biome = "mine"
+	# T11/T23: a fresh expedition starts with NO mine hazards and NO mysterious ore active. They
+	# spawn during the run (roll_mine_hazard_on_fill / spawn_mysterious_ore_on_fill on a board fill).
+	mine_hazards = MineHazardLogic.default_state()
+	mysterious_ore = {}
 	return {"ok": true, "turns": s}
 
 ## Spend one mine turn. Call AFTER a mine chain resolves (the chain's resources are
@@ -1489,6 +1515,10 @@ func note_mine_turn() -> Dictionary:
 	mine_turns_left = maxi(0, mine_turns_left - 1)
 	if mine_turns_left == 0:
 		active_biome = "farm"
+		# T11/T23: the expedition is over — clear the mine hazards + any live ore so a stale hazard
+		# can never bleed onto the farm (mirrors leave_mine / the harbor pearl-clear on exit).
+		mine_hazards = MineHazardLogic.default_state()
+		mysterious_ore = {}
 		return {"exited": true, "turns_left": 0}
 	return {"exited": false, "turns_left": mine_turns_left}
 
@@ -1497,6 +1527,9 @@ func note_mine_turn() -> Dictionary:
 func leave_mine() -> void:
 	active_biome = "farm"
 	mine_turns_left = 0
+	# T11/T23: drop the mine hazards + live ore on early exit too (mirrors note_mine_turn's exit).
+	mine_hazards = MineHazardLogic.default_state()
+	mysterious_ore = {}
 
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
@@ -2374,6 +2407,192 @@ func scatter_all_wolves() -> int:
 	hazards = HazardLogic.scatter_wolves(hazards)
 	return n
 
+# ── Mine HAZARDS (T11) + Mysterious Ore (T23) ───────────────────────────────────
+## The mine-side analogue of the farm-hazard wrappers above. MineHazardLogic (pure) does the
+## roll/tick/clear math against `mine_hazards` + the board grid; GameState owns the live state and
+## the rune side-effect. ONLY relevant while in the mine (is_in_mine()).
+
+## Live cave_in dict ({} when none). The buried-row hazard; the Board stamps the row RUBBLE.
+func active_cave_in() -> Dictionary:
+	return MineHazardLogic.cave_in_of(mine_hazards)
+
+## Live gas_vent dict ({} when none). { row, col, turns_remaining }. The Board stamps a GAS tile.
+func active_gas_vent() -> Dictionary:
+	return MineHazardLogic.gas_vent_of(mine_hazards)
+
+## Live lava cells (Array of {row,col}); [] when none. The Board renders LAVA tiles at these cells.
+func active_lava_cells() -> Array:
+	return MineHazardLogic.lava_cells_of(mine_hazards)
+
+## Live mole dict ({} when none). { row, col, turns_remaining }. The mole is an OVERLAY entity
+## (NOT a grid cell) — the Board draws a marker at its cell (like a wolf).
+func active_mole() -> Dictionary:
+	return MineHazardLogic.mole_of(mine_hazards)
+
+## The Canary/Sapper hazard-spawn-reduce hook (gas_vent/cave_in veto probabilities). Returns {} for
+## now — the worker-ability aggregator that would populate Canary→gas_vent / Sapper→cave_in
+## (src/features/workers/aggregate.ts hazardSpawnReduce) is a LATER task, so no reduction is applied
+## yet (a faithful default: with those workers unmodelled, the React reduce map is empty too). When
+## the aggregator ships it overrides this to return e.g. { "gas_vent": 0.x, "cave_in": 0.y }.
+func mine_hazard_spawn_reduce() -> Dictionary:
+	return {}
+
+## Roll for a NEW mine hazard on a mine board fill (single-active capped, no boss). On a hit, write
+## the descriptor into `mine_hazards` and return it (so the caller can stamp the board); {} on a
+## miss. Mirrors roll_farm_hazard's GameState wrapper. NO-op (returns {}) off the mine.
+func roll_mine_hazard_on_fill(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {}
+	var spawn: Dictionary = MineHazardLogic.roll_mine_hazard(
+		mine_hazards, is_in_mine(), is_boss_active(), rng, mine_hazard_spawn_reduce())
+	if spawn.is_empty():
+		return {}
+	var id: String = String(spawn.get("id", ""))
+	match id:
+		"cave_in":
+			mine_hazards["cave_in"] = {"row": int(spawn.get("row", 0))}
+		"gas_vent":
+			mine_hazards["gas_vent"] = {
+				"row": int(spawn.get("row", 0)),
+				"col": int(spawn.get("col", 0)),
+				"turns_remaining": int(spawn.get("turns_remaining", Constants.GAS_VENT_TURNS)),
+			}
+		"lava":
+			mine_hazards["lava"] = {"cells": [{"row": int(spawn.get("row", 0)), "col": int(spawn.get("col", 0))}]}
+		"mole":
+			mine_hazards["mole"] = {
+				"row": int(spawn.get("row", 0)),
+				"col": int(spawn.get("col", 0)),
+				"turns_remaining": int(spawn.get("turns_remaining", Constants.MOLE_TURNS)),
+			}
+	return spawn
+
+## Tick + spawn every mine hazard for one resolved mine turn, against the live board `grid`.
+## Returns { grid:Array, changed:bool, gas_cost_turn:bool, floater:String, ore_expired:bool,
+##           ore_cell:Vector2i (the degraded ore cell when it just expired, else (-1,-1)) }.
+## Mutates `self.mine_hazards` + `self.mysterious_ore`. ORDER mirrors React tickHazards:
+## tick_mine_hazards (gas/lava/mole) → tick_mysterious_ore countdown → roll a NEW hazard. The ore is
+## spawned ONCE on mine ENTRY (NOT here), so the tick only ticks its countdown — never respawns it.
+## A gas-vent EXPIRY costs a turn (gas_cost_turn=true) — the caller spends an extra mine turn for it.
+## NO-op (returns the input grid, changed false) off the mine.
+func tick_mine_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {"grid": grid, "changed": false, "gas_cost_turn": false, "floater": "", "ore_expired": false, "ore_cell": Vector2i(-1, -1)}
+	var work: Array = grid
+	var changed: bool = false
+	# 1. Tick gas/lava/mole.
+	var tick: Dictionary = MineHazardLogic.tick_mine_hazards(work, mine_hazards, rng)
+	if tick["grid"] != work:
+		changed = true
+	work = tick["grid"]
+	mine_hazards = tick["mine_hazards"]
+	var gas_cost_turn: bool = bool(tick.get("gas_cost_turn", false))
+	var floater: String = String(tick.get("floater", ""))
+	# 2. Tick the Mysterious Ore countdown (degrades to DIRT at 0).
+	var ore_expired: bool = false
+	var ore_cell := Vector2i(-1, -1)
+	if not mysterious_ore.is_empty():
+		ore_cell = Vector2i(int(mysterious_ore.get("col", -1)), int(mysterious_ore.get("row", -1)))
+		var ot: Dictionary = MineHazardLogic.tick_mysterious_ore(work, mysterious_ore)
+		if ot["grid"] != work:
+			changed = true
+		work = ot["grid"]
+		mysterious_ore = ot["ore"]
+		ore_expired = bool(ot.get("expired", false))
+		if not ore_expired:
+			ore_cell = Vector2i(-1, -1)
+	# 3. Roll a NEW hazard (single-active capped — a no-op if one is live or the cap blocks it).
+	var spawn: Dictionary = roll_mine_hazard_on_fill(work, rng)
+	if not spawn.is_empty():
+		work = _stamp_mine_hazard_on_grid(work, spawn)
+		changed = true
+	# NOTE: the Mysterious Ore is spawned ONCE per session — on MINE ENTRY (React SET_BIOME →
+	# spawnMysteriousOre, src/state.ts:1252-1253), NOT on every tick. So the tick only TICKS the
+	# countdown (above); it never respawns the ore. Once captured or expired, no new ore appears that
+	# session — matching React (which sets mysteriousOre to null and never re-seeds until the next
+	# mine entry). Main seeds it on entry via spawn_mysterious_ore_on_fill.
+	return {
+		"grid": work, "changed": changed, "gas_cost_turn": gas_cost_turn, "floater": floater,
+		"ore_expired": ore_expired, "ore_cell": ore_cell,
+	}
+
+## Stamp a freshly-rolled hazard descriptor onto `grid` (a NEW grid). cave_in buries its whole row
+## as RUBBLE; gas_vent stamps a GAS cell; lava stamps a LAVA cell. The mole is an OVERLAY (no grid
+## cell), so it stamps nothing. Used by tick_mine_hazards after roll_mine_hazard_on_fill.
+func _stamp_mine_hazard_on_grid(grid: Array, spawn: Dictionary) -> Array:
+	var out: Array = []
+	for row in grid:
+		out.append((row as Array).duplicate())
+	match String(spawn.get("id", "")):
+		"cave_in":
+			var r: int = int(spawn.get("row", -1))
+			if r >= 0 and r < Constants.ROWS:
+				for c in Constants.COLS:
+					out[r][c] = Constants.Tile.RUBBLE
+		"gas_vent":
+			var gr: int = int(spawn.get("row", -1))
+			var gc: int = int(spawn.get("col", -1))
+			if gr >= 0 and gr < Constants.ROWS and gc >= 0 and gc < Constants.COLS:
+				out[gr][gc] = Constants.Tile.GAS
+		"lava":
+			var lr: int = int(spawn.get("row", -1))
+			var lc: int = int(spawn.get("col", -1))
+			if lr >= 0 and lr < Constants.ROWS and lc >= 0 and lc < Constants.COLS:
+				out[lr][lc] = Constants.Tile.LAVA
+		# "mole": overlay only — no grid stamp.
+	return out
+
+## Spawn a Mysterious Ore on the current mine board (one per session). Returns { ok, grid } — on
+## success `mysterious_ore` is set + the returned grid carries the stamped tile (the caller lands
+## it). NO-op off the mine / when one is already live. Used by Main on mine entry / board fill.
+func spawn_mysterious_ore_on_fill(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {"ok": false, "grid": grid}
+	var sp: Dictionary = MineHazardLogic.spawn_mysterious_ore(grid, mysterious_ore, is_in_mine(), rng)
+	if bool(sp.get("ok", false)):
+		mysterious_ore = sp["ore"]
+		return {"ok": true, "grid": sp["grid"]}
+	return {"ok": false, "grid": grid}
+
+## True while a Mysterious Ore is live (seeded with turns remaining).
+func has_active_mysterious_ore() -> bool:
+	return not mysterious_ore.is_empty() and int(mysterious_ore.get("turns_left", 0)) > 0
+
+## Attempt to clear the cave-in with a resolved STONE chain. `chain` is an Array of {row,col,tile}.
+## Returns { ok:bool }. On success `mine_hazards` clears the cave_in (the caller blanks the rubble
+## row on the board). Mirrors clear_rat_chain's wrapper shape. ok=false leaves state unchanged.
+func clear_cave_in_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = MineHazardLogic.clear_cave_in(mine_hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false}
+	mine_hazards = res["mine_hazards"]
+	return {"ok": true}
+
+## Attempt to disperse the gas vent with a resolved chain that ran through the GAS cell. `chain` is
+## an Array of {row,col,tile}. Returns { ok:bool }. On success `mine_hazards` clears the gas_vent
+## (NO turn cost — unlike expiry). ok=false leaves state unchanged.
+func disperse_gas_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = MineHazardLogic.disperse_gas(mine_hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false}
+	mine_hazards = res["mine_hazards"]
+	return {"ok": true}
+
+## Attempt to capture the Mysterious Ore with a resolved chain. `chain` is an Array of {row,col,tile}
+## (or {tile}). On a VALID capture (in the mine, with a live ore, the chain contains the ore tile +
+## >= Constants.REQUIRED_DIRT_IN_CHAIN dirt): grant +1 Rune, clear the ore (no double-grant), return
+## { captured:true, runes }. Otherwise { captured:false } WITHOUT mutating. Mirrors try_capture_pearl.
+func try_capture_mysterious_ore(chain: Array) -> Dictionary:
+	if not is_in_mine():
+		return {"captured": false}
+	if not has_active_mysterious_ore():
+		return {"captured": false}
+	if not MineHazardLogic.is_mysterious_chain_valid(chain):
+		return {"captured": false}
+	runes += 1
+	mysterious_ore = {}
+	return {"captured": true, "runes": runes}
+
 # ── Tools (M8b) ───────────────────────────────────────────────────────────────
 
 ## Grant `n` charges of tool `id`. Thin forwarder to ToolState.grant — no-op for an
@@ -2449,6 +2668,23 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	# T14b — mine-hazard tools (Water Pump / Explosives) are STATE powers that act on `mine_hazards`
+	# + the grid (lava→rubble / clear cave-in rubble + mole). Handle here, in the same early path as
+	# the wolf tools, BEFORE the grid-dispatch. They credit nothing (hazards yield nothing) and
+	# return the mutated grid so the caller lands it (collapse/refill the freed cells). Both consume
+	# a charge. Ported from React _applyWaterPump / _applyExplosives (toolPowerRuntime.ts:349-358).
+	if wolf_power == "water_pump":
+		var wp: Dictionary = MineHazardLogic.apply_water_pump(grid, mine_hazards)
+		mine_hazards = wp["mine_hazards"]
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": wp["grid"], "collected": {}}
+	if wolf_power == "explosives":
+		var ex: Dictionary = MineHazardLogic.apply_explosives(grid, mine_hazards)
+		mine_hazards = ex["mine_hazards"]
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": ex["grid"], "collected": {}}
 	# fill_bias tools (fertilizer/bird_feed/sapling/magic_fertilizer) don't touch the grid —
 	# they arm a spawn bias that active_tile_pool() reads. Handle here, before the
 	# grid-dispatch path.
@@ -2826,6 +3062,14 @@ func to_dict() -> Dictionary:
 		# of a missing key yields the default empty state). fire_hazard_force is TRANSIENT (a
 		# per-session test/tuning override) and intentionally NOT persisted.
 		"hazards": hazards.duplicate(true),
+		# Mine HAZARDS (T11, ADDITIVE): the live cave_in / gas_vent / lava / mole, deep-copied.
+		# SAVE_VERSION is NOT bumped — a pre-mine-hazards save loads with all mine hazards inactive
+		# (from_dict → MineHazardLogic.normalise of a missing key yields the default empty state).
+		"mine_hazards": mine_hazards.duplicate(true),
+		# Mysterious Ore → Rune (T23, ADDITIVE): the live ore { row, col, turns_left } (or {}),
+		# deep-copied. SAVE_VERSION is NOT bumped — a pre-ore save loads with no ore (from_dict
+		# default). Off the mine it's always {} (cleared on every mine exit).
+		"mysterious_ore": mysterious_ore.duplicate(true),
 		# Tile Collection (T2/T3/T5, ADDITIVE): the active variant per category, the discovered
 		# set, research progress, and banked free moves. Persisted only when the slice has been
 		# seeded (a bare GameState.new() that never touched the tile collection emits the seeded
@@ -3083,6 +3327,27 @@ static func from_dict(d: Dictionary) -> GameState:
 	# never strand a phantom hazard. A missing "hazards" key (any pre-hazards save) normalises to
 	# the default all-inactive state. fire_hazard_force stays false (transient, never persisted).
 	s.hazards = HazardLogic.normalise(d.get("hazards", {}))
+	# Restore the MINE HAZARDS state (T11). MineHazardLogic.normalise coerces ints (JSON yields
+	# floats), drops malformed entries, and bounds-checks every cell, so a corrupt/stale save can
+	# never strand a phantom mine hazard. A missing "mine_hazards" key (any pre-mine-hazards save)
+	# normalises to the default all-inactive state. Mine hazards exist only on a mine expedition, so
+	# a non-mine biome forces them inactive (a stale mine hazard can never bleed onto the farm).
+	if biome == "mine":
+		s.mine_hazards = MineHazardLogic.normalise(d.get("mine_hazards", {}))
+	else:
+		s.mine_hazards = MineHazardLogic.default_state()
+	# Restore the Mysterious Ore (T23). Kept only on a mine expedition with a live countdown — a
+	# stale ore from a non-mine save (or one whose countdown elapsed) is dropped (mirrors the
+	# harbor pearl restore guard).
+	var ore_d: Variant = d.get("mysterious_ore", {})
+	if biome == "mine" and ore_d is Dictionary and not (ore_d as Dictionary).is_empty():
+		var ore_turns: int = maxi(0, int((ore_d as Dictionary).get("turns_left", 0)))
+		if ore_turns > 0:
+			s.mysterious_ore = {
+				"row": int((ore_d as Dictionary).get("row", 0)),
+				"col": int((ore_d as Dictionary).get("col", 0)),
+				"turns_left": ore_turns,
+			}
 	# Restore the Tile Collection slice (T2/T3/T5). Mirrors React mergeLoadedState
 	# (src/state/helpers.ts:126-142): start from the FRESH default seed, then OVERLAY the
 	# saved sub-keys so any new catalog variant added since the save still gets its default
