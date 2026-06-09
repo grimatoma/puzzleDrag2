@@ -269,14 +269,21 @@ func _run() -> void:
 	_check(screen._node_centers.size() == 11, "_node_centers has 11 drawn centres (got %d)" % screen._node_centers.size())
 
 	# Select meadow → its detail panel + an enabled Travel button (adjacent, level1, affordable).
+	# Travel to a board node is founding-gated, so found meadow first to enable its Travel button.
 	main.game.coins = 1000
 	main.game.almanac_level = 5
+	main.game.settlements["meadow"] = {"founded": true, "biome": "prairie", "keeper_path": ""}
 	screen.select_node("meadow")
 	await process_frame
 	_check(screen.selected_node_id() == "meadow", "select_node('meadow') sticks")
-	_check(screen.node_is_travelable("meadow"), "meadow travelable from home")
+	_check(screen.node_is_travelable("meadow"), "founded meadow travelable from home")
 	_check(screen._action_buttons.has("travel:meadow"), "enabled travel:meadow button registered")
 	_check(not screen._action_buttons["travel:meadow"].disabled, "travel:meadow button enabled")
+	# An UNFOUNDED neighbour (orchard) is NOT travelable — its Travel button is disabled (found first).
+	screen.select_node("orchard")
+	await process_frame
+	_check(not screen.node_is_travelable("orchard"), "unfounded orchard NOT travelable")
+	_check(not screen._action_buttons.has("travel:orchard"), "no enabled travel button for unfounded orchard")
 
 	# Selecting the Old Capital → NO enabled travel button (token gate); the screen shows it locked.
 	screen.select_node("oldcapital")

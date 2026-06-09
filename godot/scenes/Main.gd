@@ -1342,6 +1342,8 @@ func _start_farm_fail_text(reason: String) -> String:
 			return "No fertilizer on hand."
 		"already_running":
 			return "A farm run is already underway."
+		"unfounded":
+			return "Found this settlement before you can farm it."
 		_:
 			return "Cannot start a run right now."
 
@@ -1426,6 +1428,8 @@ func _on_cartography_travel(node_id: String) -> void:
 			show_toast("That place is too dangerous yet — keep growing.")
 		elif reason == "unreachable":
 			show_toast("No road leads there from here.")
+		elif reason == "unfounded":
+			show_toast("Found a settlement here before you can travel out to it.")
 		SaveManager.save(game)
 		return
 

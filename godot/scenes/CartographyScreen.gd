@@ -367,6 +367,8 @@ func _block_label(reason: String, nid: String) -> String:
 			return "🔒 Requires Level %d" % CartographyConfig.level_req(nid)
 		"cost":
 			return "🔒 Needs %d coins" % CartographyConfig.entry_cost(nid)
+		"unfounded":
+			return "🔒 Found this settlement first"
 		_:
 			return "🔒 Locked"
 
