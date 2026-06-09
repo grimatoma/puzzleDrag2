@@ -681,8 +681,12 @@ func _build_expedition_section() -> void:
 	# behind town2_complete (the Frostmaw capstone) — matching how rats/Town-3 unlock. The
 	# button is disabled unless can_enter_harbor() AND town2_complete; the label shows the
 	# supplies cost (turns) and a hint when Town 2 isn't done yet.
+	# BUG FIX (Batch 9 A2): the gate copy hardcoded "Frostmaw", but the harbor is gated on
+	# town2_complete — which is set by defeating the CAPSTONE boss (the Town-2 close), not
+	# Frostmaw. Name the capstone via BossConfig (consistent with the "Town 2 complete — <X>
+	# defeated" line below that already uses BossConfig.boss_name(BossConfig.CAPSTONE)).
 	var harbor_gate_text: String = "Town 2 done" if game.town2_complete \
-		else "defeat Frostmaw to unlock"
+		else "defeat %s to unlock" % BossConfig.boss_name(BossConfig.CAPSTONE)
 	_expedition_body.add_child(_make_label(
 		"Harbor — Supplies: %d · %s" % [supplies, harbor_gate_text], COL_BODY))
 	var enter_h_btn := Button.new()
@@ -742,7 +746,7 @@ func _build_rats_section() -> void:
 	if game.has_ratcatcher():
 		_rats_body.add_child(_make_label(
 			"Shoo charges: %d/%d" % [
-				game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES], COL_MUTED))
+				game.ratcatcher_charges_left(), BuildingConfig.RATCATCHER_CHARGES], COL_MUTED))
 
 	for id in [BuildingConfig.RATCATCHER, BuildingConfig.MASTER_RATCATCHER]:
 		var row := HBoxContainer.new()

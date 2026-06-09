@@ -110,11 +110,44 @@ const ACHIEVEMENTS: Array = [
 	{"id": "fowler",        "name": "Fowler",           "desc": "Gather 50 birds across the yards",  "counter": "bird_chained",               "threshold": 50,  "reward": {"coins": 75}},
 ]
 
+# ── Trophy-screen grouping (catalog-owned, by counter family) ─────────────────
+## The readable SECTIONS the Achievements trophy screen renders the catalog under. This
+## classification tracks the counter set (which lives here in ACHIEVEMENTS), so it belongs
+## with the catalog rather than the UI. Ordered [display name, Array of counters]; any
+## catalog counter NOT listed here lands in the trailing GROUP_MORE ("More") group so the
+## screen NEVER silently drops a trophy. AchievementsScreen reads these via group_order() /
+## group_for() — the labels, the counter→group assignments, the order, and the "More"
+## catch-all are the single source of truth here.
+const GROUP_MORE := "More"
+const GROUP_ORDER: Array = [
+	["Chains",      ["chains_committed"]],
+	["Orders",      ["orders_fulfilled"]],
+	["Boss",        ["bosses_defeated"]],
+	["Collections", ["distinct_resources_chained", "distinct_buildings_built"]],
+	["Mine",        ["mine_chained"]],
+	["Harvest",     ["veg_chained", "fruit_chained", "flower_chained", "herd_chained",
+					 "cattle_chained", "mount_chained", "tree_chained"]],
+]
+
 # ── Static helpers (usable without an instance) ──────────────────────────────
 
 ## Every achievement entry in stable catalog order (a defensive copy).
 static func all() -> Array:
 	return ACHIEVEMENTS.duplicate(true)
+
+## The ordered trophy-section classification — [display name, Array of counters] in render
+## order — as a defensive copy (mutating the result must not corrupt the catalog table).
+## The screen iterates this for its section order/labels/membership, then appends GROUP_MORE.
+static func group_order() -> Array:
+	return GROUP_ORDER.duplicate(true)
+
+## The display-section name for a counter, or GROUP_MORE ("More") when the counter is in no
+## listed group. Drives the trailing "More" catch-all so no trophy is ever silently dropped.
+static func group_for(counter: String) -> String:
+	for spec in GROUP_ORDER:
+		if counter in (spec[1] as Array):
+			return String(spec[0])
+	return GROUP_MORE
 
 ## Every achievement whose `counter` matches `counter`, in catalog order (a
 ## defensive copy of each row). Empty Array for a counter nothing uses.

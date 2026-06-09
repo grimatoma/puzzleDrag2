@@ -48,6 +48,11 @@ const KITCHEN: String = "kitchen"
 ## Ratcatcher makes grass chains also clear rats adjacent to the chain.
 const RATCATCHER: String = "ratcatcher"
 const MASTER_RATCATCHER: String = "master_ratcatcher"
+## A placed Ratcatcher grants this many free "shoo" moves per run (the "5 free moves/year"
+## from the Direction; the port has no year/season calendar, so it's a flat per-run budget
+## the player spends down). The runtime spent-count lives on GameState (ratcatcher_charges_used);
+## only this tuning CONST lives here, with the building it belongs to.
+const RATCATCHER_CHARGES: int = 5
 ## T15 — the four NEW crafting-STATION refiners that complete the React six-station
 ## crafting catalog (Bakery + Kitchen already exist above). Like Bakery/Kitchen they
 ## are kind "refiner": no board category, no tile — they exist solely to unlock a
@@ -112,6 +117,10 @@ const OBSERVATORY: String = "observatory"
 ##                          contributes to the unified channels when BUILT (weight 1). [] for the
 ##                          spawner/refiner/hazard buildings that carry no ability. Ported VERBATIM
 ##                          from the React BUILDINGS `abilities` arrays (src/constants.ts).
+##   shape:       String  — the BuildingArt silhouette family drawn for this plot on the
+##                          spatial town map (scenes/town/BuildingArt.gd). One of
+##                          BuildingArt.KNOWN_SHAPES; "house" is the generic fallback. Owned here
+##                          (per-building art attribute) and read via BuildingArt.shape_of(id).
 const BUILDINGS: Dictionary = {
 	LUMBER_CAMP: {
 		"name": "Lumber Camp",
@@ -123,6 +132,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "plank",
 		"desc": "Adds tree tiles to the board — chain them for planks.",
 		"abilities": [],
+		"shape": "lumber",
 	},
 	COOP: {
 		"name": "Coop",
@@ -134,6 +144,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "eggs",
 		"desc": "Adds bird tiles to the board — chain them for eggs.",
 		"abilities": [],
+		"shape": "coop",
 	},
 	GARDEN: {
 		"name": "Garden",
@@ -145,6 +156,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "soup",
 		"desc": "Adds vegetable tiles to the board — chain them for soup.",
 		"abilities": [],
+		"shape": "garden",
 	},
 	BAKERY: {
 		"name": "Bakery",
@@ -156,6 +168,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "bread",
 		"desc": "Refines flour + eggs into bread.",
 		"abilities": [],
+		"shape": "cookhouse",
 	},
 	KITCHEN: {
 		"name": "Kitchen",
@@ -167,6 +180,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "supplies",
 		"desc": "Packs farm food into supplies for mine expeditions.",
 		"abilities": [],
+		"shape": "cookhouse",
 	},
 	# ── T15 crafting-station refiners (Workshop / Larder / Forge / Smokehouse) ──────
 	# kind "refiner" (like Bakery/Kitchen): no category, no tile — each only unlocks a
@@ -184,6 +198,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "tools",
 		"desc": "Crafts farm + mine TOOLS (rake, axe, rifle, drill, and more).",
 		"abilities": [],
+		"shape": "workshop",
 	},
 	LARDER: {
 		"name": "Larder",
@@ -196,6 +211,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "preserve",
 		"desc": "Preserves and bottles the harvest — jars, tinctures, and chowder.",
 		"abilities": [],
+		"shape": "cellar",
 	},
 	FORGE: {
 		"name": "Forge",
@@ -208,6 +224,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "iron_hinge",
 		"desc": "Smiths metal and stone goods — hinges, lanterns, rings, and crowns.",
 		"abilities": [],
+		"shape": "forge",
 	},
 	SMOKEHOUSE: {
 		"name": "Smokehouse",
@@ -221,6 +238,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "cured_meat",
 		"desc": "Salts and smokes meat into long-lasting cured rations.",
 		"abilities": [],
+		"shape": "smokehut",
 	},
 	# M3h — Town-3 rats hazard buildings (kind "hazard"): no category, no tile, no
 	# resource, so is_spawner / is_refiner both return false and they never feed the
@@ -236,6 +254,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "",
 		"desc": "Shoo rats off the board as a free move (no turn spent).",
 		"abilities": [],
+		"shape": "hut",
 	},
 	MASTER_RATCATCHER: {
 		"name": "Master Ratcatcher",
@@ -247,6 +266,7 @@ const BUILDINGS: Dictionary = {
 		"resource": "",
 		"desc": "Grass chains also clear rats adjacent to the chain.",
 		"abilities": [],
+		"shape": "hut",
 	},
 	# ── T17/T21 ability-bearing LANDMARKS (React BUILDINGS, src/constants.ts:760-903) ──
 	# kind "landmark": no board category, no recipe station, no rats path. cost is INVENTORY-paid
@@ -267,6 +287,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "recipe_input_reduce", "params": {"recipe": RecipeConfig.BREAD, "input": "flour", "amount": 1}},
 		],
+		"shape": "mill",
 	},
 	GRANARY: {
 		# React granary (constants.ts:766): turn_budget_bonus +1 AND inventory_cap_bonus +300.
@@ -282,6 +303,7 @@ const BUILDINGS: Dictionary = {
 			{"id": "turn_budget_bonus", "params": {"amount": 1}},
 			{"id": "inventory_cap_bonus", "params": {"amount": 300}},
 		],
+		"shape": "rotunda",
 	},
 	MINING_CAMP: {
 		# React mining_camp (constants.ts:782): turn_budget_bonus +1 (React applied it to the MINE
@@ -298,6 +320,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "turn_budget_bonus", "params": {"amount": 1}},
 		],
+		"shape": "mine",
 	},
 	POWDER_STORE: {
 		# React powder_store (constants.ts:801): grant_tool bomb ×2 at season end.
@@ -312,6 +335,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "grant_tool", "params": {"tool": "bomb", "amount": 2}, "trigger": "season_end"},
 		],
+		"shape": "bunker",
 	},
 	HOUSING: {
 		# React housing (constants.ts:806): worker_pool_step +1 at season end.
@@ -326,6 +350,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "worker_pool_step", "params": {"amount": 1}, "trigger": "season_end"},
 		],
+		"shape": "cottage",
 	},
 	HOUSING2: {
 		# React housing2 (constants.ts:813): worker_pool_step +1.
@@ -340,6 +365,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "worker_pool_step", "params": {"amount": 1}, "trigger": "season_end"},
 		],
+		"shape": "cottage",
 	},
 	HOUSING3: {
 		# React housing3 (constants.ts:820): worker_pool_step +1.
@@ -354,6 +380,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "worker_pool_step", "params": {"amount": 1}, "trigger": "season_end"},
 		],
+		"shape": "cottage",
 	},
 	SILO: {
 		# React silo (constants.ts:828): preserve_board farm at session end.
@@ -368,6 +395,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "preserve_board", "params": {"biome": "farm"}, "trigger": "session_end"},
 		],
+		"shape": "silo",
 	},
 	BARN: {
 		# React barn (constants.ts:835): preserve_board mine at session end.
@@ -382,6 +410,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "preserve_board", "params": {"biome": "mine"}, "trigger": "session_end"},
 		],
+		"shape": "barn",
 	},
 	SAWMILL: {
 		# React sawmill (constants.ts:870): bonus_yield tile_tree_oak +1 (extra plank per oak chain).
@@ -396,6 +425,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "bonus_yield", "params": {"target": "tile_tree_oak", "amount": 1}},
 		],
+		"shape": "sawmill",
 	},
 	STABLE: {
 		# React stable (constants.ts:879): bonus_yield tile_mount_horse +1 (extra horseshoe).
@@ -410,6 +440,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "bonus_yield", "params": {"target": "tile_mount_horse", "amount": 1}},
 		],
+		"shape": "stable",
 	},
 	APIARY: {
 		# React apiary (constants.ts:884): bonus_yield tile_flower_pansy +1 (extra honey).
@@ -424,6 +455,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "bonus_yield", "params": {"target": "tile_flower_pansy", "amount": 1}},
 		],
+		"shape": "skep",
 	},
 	CHAPEL: {
 		# React chapel (constants.ts:889): season_bonus coins +50 at season end.
@@ -438,6 +470,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "season_bonus", "params": {"resource": "coins", "amount": 50}, "trigger": "season_end"},
 		],
+		"shape": "chapel",
 	},
 	OBSERVATORY: {
 		# React observatory (constants.ts:898): threshold_reduce_category mine_gem -1. Port remaps
@@ -455,6 +488,7 @@ const BUILDINGS: Dictionary = {
 		"abilities": [
 			{"id": "threshold_reduce_category", "params": {"category": "gem", "amount": 1}},
 		],
+		"shape": "observatory",
 	},
 }
 
@@ -524,6 +558,16 @@ static func building_kind(id: String) -> String:
 		return ""
 	return String(BUILDINGS[id].get("kind", ""))
 
+## The BuildingArt silhouette family drawn for `id` on the spatial town map
+## (scenes/town/BuildingArt.gd, one of BuildingArt.KNOWN_SHAPES). Unknown ids — and any row
+## that ever lacks an explicit `shape` — fall back to "house", the generic always-draws
+## silhouette, preserving BuildingArt's original implicit fallback. The per-building art
+## attribute lives on the catalog row; BuildingArt.shape_for() reads it via this accessor.
+static func shape_of(id: String) -> String:
+	if not is_building(id):
+		return "house"
+	return String(BUILDINGS[id].get("shape", "house"))
+
 ## True when `id` is a board-category SPAWNER (Lumber Camp / Coop / Garden).
 static func is_spawner(id: String) -> bool:
 	return building_kind(id) == "spawner"
@@ -561,3 +605,14 @@ static func available_at_tier(tier: int) -> Array:
 		if unlock_tier(id) <= tier:
 			out.append(id)
 	return out
+
+## Short player-facing hint for a build() FAILURE reason (Batch 9 C6 — moved BYTE-IDENTICAL from
+## Main._build_hint so the build-failure copy lives beside the building catalog it describes).
+## Reasons mirror GameState.build()'s failure codes: exists / locked / no_plot / insufficient.
+static func build_hint(reason: String) -> String:
+	match reason:
+		"exists":       return "already built"
+		"locked":       return "need a higher tier"
+		"no_plot":      return "no free plot"
+		"insufficient": return "not enough resources"
+		_:              return "unavailable"

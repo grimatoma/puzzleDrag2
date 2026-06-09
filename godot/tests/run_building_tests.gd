@@ -226,14 +226,14 @@ func _test_active_pool_and_categories() -> void:
 		"fresh pool EXCLUDES the ineligible tiles (pansy/pig/cow/horse)")
 	var oak_base := pool0.count(T.OAK)
 
-	# Build lumber_camp → its tile (OAK) gets SPAWNER_BOOST_SLOTS extra slots, boosting trees.
+	# Build lumber_camp → its tile (OAK) gets ZoneConfig.SPAWNER_BOOST_SLOTS extra slots, boosting trees.
 	g.settlement.tier = TownConfig.TIER_HAMLET
 	_give_all(g, BC.building_cost(BC.LUMBER_CAMP))
 	_check(g.build(BC.LUMBER_CAMP)["ok"], "build lumber_camp for pool test")
 	_check(g.active_categories().has("trees"), "categories include 'trees' after lumber_camp")
 	var pool1 := g.active_tile_pool()
 	_check(pool1.has(T.OAK), "pool still contains OAK after lumber_camp")
-	_check(pool1.count(T.OAK) == oak_base + GameState.SPAWNER_BOOST_SLOTS,
+	_check(pool1.count(T.OAK) == oak_base + ZoneConfig.SPAWNER_BOOST_SLOTS,
 		"lumber_camp BOOSTS OAK weight by SPAWNER_BOOST_SLOTS (specialisation, not unlock)")
 	# Staples still present.
 	_check(pool1.has(T.GRASS) and pool1.has(T.WHEAT), "staples still in the pool after a build")

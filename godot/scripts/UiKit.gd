@@ -182,7 +182,9 @@ static func resource_icon(key: String) -> Texture2D:
 	if _icon_cache.has(key):
 		return _icon_cache[key]
 	var tex: Texture2D = null
-	var path := "res://assets/resources/%s.png" % key
+	# ResourceConfig.icon_basename(key) defaults to the key itself (the asset convention), so
+	# behaviour is identical for every current row; a catalog row may override the PNG basename.
+	var path := "res://assets/resources/%s.png" % ResourceConfig.icon_basename(key)
 	if ResourceLoader.exists(path):
 		var loaded = load(path)
 		if loaded is Texture2D:
@@ -218,14 +220,14 @@ static func make_icon(key: String, px: float = 30.0) -> TextureRect:
 ## TileCollectionScreen._derive_display_name; non-tile resource keys keep the plain path.
 static func pretty_name(key: String) -> String:
 	var s := String(key)
+	# Catalog resources/currencies get their CANONICAL React label ("bread" → "Bread Loaf",
+	# "fish_fillet" → "Fillet") — the single source of truth. Tools/unknowns fall through to the
+	# capitalize() path below; TILE keys use the shared TileCategoryConfig derivation (the ONE
+	# tile-key prefix-strip + title-case implementation, replacing the former inline DROP_PREFIXES).
+	if ResourceConfig.has(s):
+		return ResourceConfig.label(s)
 	if s.begins_with("tile_"):
-		s = s.substr(5)
-		var parts: Array = s.split("_")
-		const DROP_PREFIXES := ["grass", "grain", "bird", "veg", "fruit", "flower",
-			"tree", "herd", "cattle", "mount", "mine", "special", "fish"]
-		if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
-			parts.remove_at(0)
-		s = " ".join(parts)
+		return TileCategoryConfig.display_name_from_key(s)
 	return s.capitalize()
 
 # ── StyleBox builders ─────────────────────────────────────────────────────────

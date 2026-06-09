@@ -250,8 +250,8 @@ func _test_pool_spawner_boost() -> void:
 	g.inventory["flour"] = 50
 	_check(g.build(BuildingConfig.LUMBER_CAMP)["ok"], "(setup) built a Lumber Camp")
 	var boosted := _count(g.active_tile_pool(), T.OAK)
-	_check(boosted == oak_base + GameState.SPAWNER_BOOST_SLOTS,
-		"Lumber Camp BOOSTS OAK slots by SPAWNER_BOOST_SLOTS (%d)" % GameState.SPAWNER_BOOST_SLOTS)
+	_check(boosted == oak_base + ZoneConfig.SPAWNER_BOOST_SLOTS,
+		"Lumber Camp BOOSTS OAK slots by SPAWNER_BOOST_SLOTS (%d)" % ZoneConfig.SPAWNER_BOOST_SLOTS)
 	# The boost is a weight bump, not a category unlock: still no ineligible tiles.
 	var pool := g.active_tile_pool()
 	_check(_count(pool, T.PANSY) == 0 and _count(pool, T.PIG) == 0,

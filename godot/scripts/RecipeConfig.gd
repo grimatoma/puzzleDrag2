@@ -162,9 +162,13 @@ const RECIPES: Dictionary = {
 	GOLD_PICK:   {"name": "Gold Pick",   "station": BuildingConfig.WORKSHOP, "inputs": {"iron_bar": 2, "gold_bar": 1, "plank": 1}, "output": "gold_pick", "qty": 1, "tier": 3, "output_kind": KIND_TOOL, "desc": "Clears every gold tile on the board."},
 	MAGNET:      {"name": "Magnet",      "station": BuildingConfig.WORKSHOP, "inputs": {"iron_bar": 2, "coke": 1},         "output": "magnet",      "qty": 1, "tier": 3, "output_kind": KIND_TOOL, "desc": "Pulls nearby iron ore into easy-to-chain stone."},
 	COAL_TRANSMUTER:{"name": "Coal Transmuter","station": BuildingConfig.WORKSHOP, "inputs": {"iron_bar": 2, "coke": 2, "block": 1}, "output": "coal_transmuter", "qty": 1, "tier": 3, "output_kind": KIND_TOOL, "desc": "Transmutes nearby ores into coal."},
-	FISH_OIL_BOTTLED:{"name": "Fish Oil (Bottled)","station": BuildingConfig.WORKSHOP, "inputs": {"fish_oil": 1, "plank": 1}, "output": "fish_oil_bottled", "qty": 1, "tier": 1, "output_kind": KIND_GOOD, "desc": "Refined kelp-and-fish oil sealed in a corked plank flask, worth 80 coins."},
+	# GOOD recipe: its description is RESOURCE metadata, read from ResourceConfig.desc("fish_oil_bottled")
+	# via recipe_desc (the inline desc was relocated there). No inline `desc` here.
+	FISH_OIL_BOTTLED:{"name": "Fish Oil (Bottled)","station": BuildingConfig.WORKSHOP, "inputs": {"fish_oil": 1, "plank": 1}, "output": "fish_oil_bottled", "qty": 1, "tier": 1, "output_kind": KIND_GOOD},
 
 	# ── Bakery (GOODS) — src/constants.ts:946-948,961-962. ────────────────────────
+	# GOOD recipes below carry NO inline `desc` — the per-good flavor copy was relocated to
+	# ResourceConfig (the single source of truth), and recipe_desc reads it from there.
 	BREAD: {
 		"name": "Bread",
 		"station": BuildingConfig.BAKERY,
@@ -173,27 +177,25 @@ const RECIPES: Dictionary = {
 		"qty": 1,
 		"tier": 1,
 		"output_kind": KIND_GOOD,
-		# Flavor description carried VERBATIM from React ITEMS.bread.desc (src/constants.ts).
-		"desc": "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery.",
 	},
-	HONEYROLL:    {"name": "Honey Roll",    "station": BuildingConfig.BAKERY, "inputs": {"flour": 2, "eggs": 1, "jam": 1}, "output": "honeyroll",    "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A sweet honey roll glazed with jam, commanding 175 coins at market."},
-	HARVESTPIE:   {"name": "Harvest Pie",   "station": BuildingConfig.BAKERY, "inputs": {"flour": 2, "jam": 1, "eggs": 1}, "output": "harvestpie",   "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A hearty harvest pie filled with jam and egg, prized by townsfolk for 175 coins."},
-	FESTIVAL_LOAF:{"name": "Festival Loaf", "station": BuildingConfig.BAKERY, "inputs": {"flour": 3, "jam": 2, "eggs": 1}, "output": "festival_loaf","qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 2 expedition turns."},
-	WEDDING_PIE:  {"name": "Wedding Pie",   "station": BuildingConfig.BAKERY, "inputs": {"pie": 1, "honey": 1, "jam": 2}, "output": "wedding_pie",   "qty": 1, "tier": 3, "output_kind": KIND_GOOD, "desc": "A massive, multi-layered berry pie served at Hearthwood weddings. Each unit grants 3 expedition turns."},
+	HONEYROLL:    {"name": "Honey Roll",    "station": BuildingConfig.BAKERY, "inputs": {"flour": 2, "eggs": 1, "jam": 1}, "output": "honeyroll",    "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	HARVESTPIE:   {"name": "Harvest Pie",   "station": BuildingConfig.BAKERY, "inputs": {"flour": 2, "jam": 1, "eggs": 1}, "output": "harvestpie",   "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	FESTIVAL_LOAF:{"name": "Festival Loaf", "station": BuildingConfig.BAKERY, "inputs": {"flour": 3, "jam": 2, "eggs": 1}, "output": "festival_loaf","qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	WEDDING_PIE:  {"name": "Wedding Pie",   "station": BuildingConfig.BAKERY, "inputs": {"pie": 1, "honey": 1, "jam": 2}, "output": "wedding_pie",   "qty": 1, "tier": 3, "output_kind": KIND_GOOD},
 
 	# ── Larder (GOODS) — src/constants.ts:949-950,958. ────────────────────────────
-	PRESERVE: {"name": "Preserve Jar",   "station": BuildingConfig.LARDER, "inputs": {"jam": 2, "eggs": 1}, "output": "preserve", "qty": 1, "tier": 1, "output_kind": KIND_GOOD, "desc": "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder."},
-	TINCTURE: {"name": "Berry Tincture", "station": BuildingConfig.LARDER, "inputs": {"jam": 3},            "output": "tincture", "qty": 1, "tier": 1, "output_kind": KIND_GOOD, "desc": "A medicinal berry tincture used by Sister Liss, sold for 125 coins."},
-	CHOWDER:  {"name": "Chowder",        "station": BuildingConfig.LARDER, "inputs": {"fish_fillet": 2, "milk": 1, "soup": 1}, "output": "chowder", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins."},
+	PRESERVE: {"name": "Preserve Jar",   "station": BuildingConfig.LARDER, "inputs": {"jam": 2, "eggs": 1}, "output": "preserve", "qty": 1, "tier": 1, "output_kind": KIND_GOOD},
+	TINCTURE: {"name": "Berry Tincture", "station": BuildingConfig.LARDER, "inputs": {"jam": 3},            "output": "tincture", "qty": 1, "tier": 1, "output_kind": KIND_GOOD},
+	CHOWDER:  {"name": "Chowder",        "station": BuildingConfig.LARDER, "inputs": {"fish_fillet": 2, "milk": 1, "soup": 1}, "output": "chowder", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
 
 	# ── Forge (GOODS) — src/constants.ts:951-957. ─────────────────────────────────
-	IRON_HINGE: {"name": "Iron Hinge", "station": BuildingConfig.FORGE, "inputs": {"iron_bar": 2, "coke": 1}, "output": "iron_hinge", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A forged iron hinge used in building construction, worth 175 coins."},
-	COBBLEPATH: {"name": "Cobble Path", "station": BuildingConfig.FORGE, "inputs": {"block": 5, "plank": 2}, "output": "cobblepath", "qty": 1, "tier": 1, "output_kind": KIND_GOOD, "desc": "Laid cobblestones that pave trade paths, sold to caravans for 200 coins."},
-	LANTERN:    {"name": "Iron Lantern","station": BuildingConfig.FORGE, "inputs": {"iron_bar": 1, "coke": 1, "plank": 1}, "output": "lantern", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A wrought-iron lantern that lights the evening market, selling for 150 coins."},
-	GOLDRING:   {"name": "Gold Ring",  "station": BuildingConfig.FORGE, "inputs": {"gold_bar": 1, "iron_bar": 2}, "output": "goldring", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A gleaming gold ring favoured by merchants, commanding 225 coins at the forge."},
-	GEMCROWN:   {"name": "Gem Crown",  "station": BuildingConfig.FORGE, "inputs": {"cut_gem": 1, "gold_bar": 2}, "output": "gemcrown", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A jewelled crown set with cut gems — the Forge's most prestigious commission, worth 325 coins."},
-	IRONFRAME:  {"name": "Iron Frame", "station": BuildingConfig.FORGE, "inputs": {"plank": 2, "iron_bar": 1}, "output": "ironframe", "qty": 1, "tier": 3, "output_kind": KIND_GOOD, "desc": "A structural iron frame used in advanced buildings and caravan reinforcement, worth 275 coins."},
-	STONEWORK:  {"name": "Stonework",  "station": BuildingConfig.FORGE, "inputs": {"block": 2, "coke": 1}, "output": "stonework", "qty": 1, "tier": 3, "output_kind": KIND_GOOD, "desc": "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins."},
+	IRON_HINGE: {"name": "Iron Hinge", "station": BuildingConfig.FORGE, "inputs": {"iron_bar": 2, "coke": 1}, "output": "iron_hinge", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	COBBLEPATH: {"name": "Cobble Path", "station": BuildingConfig.FORGE, "inputs": {"block": 5, "plank": 2}, "output": "cobblepath", "qty": 1, "tier": 1, "output_kind": KIND_GOOD},
+	LANTERN:    {"name": "Iron Lantern","station": BuildingConfig.FORGE, "inputs": {"iron_bar": 1, "coke": 1, "plank": 1}, "output": "lantern", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	GOLDRING:   {"name": "Gold Ring",  "station": BuildingConfig.FORGE, "inputs": {"gold_bar": 1, "iron_bar": 2}, "output": "goldring", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	GEMCROWN:   {"name": "Gem Crown",  "station": BuildingConfig.FORGE, "inputs": {"cut_gem": 1, "gold_bar": 2}, "output": "gemcrown", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
+	IRONFRAME:  {"name": "Iron Frame", "station": BuildingConfig.FORGE, "inputs": {"plank": 2, "iron_bar": 1}, "output": "ironframe", "qty": 1, "tier": 3, "output_kind": KIND_GOOD},
+	STONEWORK:  {"name": "Stonework",  "station": BuildingConfig.FORGE, "inputs": {"block": 2, "coke": 1}, "output": "stonework", "qty": 1, "tier": 3, "output_kind": KIND_GOOD},
 
 	# ── Kitchen (GOODS) — src/constants.ts:963-964. ───────────────────────────────
 	# SUPPLIES keeps the EXISTING port inputs {bread:1, flour:2} (NOT React's {flour:5}) —
@@ -206,13 +208,11 @@ const RECIPES: Dictionary = {
 		"qty": 1,
 		"tier": 1,
 		"output_kind": KIND_GOOD,
-		# Flavor description carried VERBATIM from React ITEMS.supplies.desc (src/constants.ts).
-		"desc": "Travel rations packed at the Kitchen. Three supplies grant standard Mine entry.",
 	},
-	IRON_RATION: {"name": "Iron Ration", "station": BuildingConfig.KITCHEN, "inputs": {"flour": 5, "meat": 1, "iron_bar": 1}, "output": "iron_ration", "qty": 1, "tier": 2, "output_kind": KIND_GOOD, "desc": "A calorie-dense block of dried grain and fat. Each unit grants 4 expedition turns."},
+	IRON_RATION: {"name": "Iron Ration", "station": BuildingConfig.KITCHEN, "inputs": {"flour": 5, "meat": 1, "iron_bar": 1}, "output": "iron_ration", "qty": 1, "tier": 2, "output_kind": KIND_GOOD},
 
 	# ── Smokehouse (GOODS) — src/constants.ts:960. ────────────────────────────────
-	CURED_MEAT: {"name": "Cured Meat", "station": BuildingConfig.SMOKEHOUSE, "inputs": {"meat": 2, "coke": 1}, "output": "cured_meat", "qty": 1, "tier": 1, "output_kind": KIND_GOOD, "desc": "Salted and dried meat that lasts for weeks. Each unit grants 2 expedition turns."},
+	CURED_MEAT: {"name": "Cured Meat", "station": BuildingConfig.SMOKEHOUSE, "inputs": {"meat": 2, "coke": 1}, "output": "cured_meat", "qty": 1, "tier": 1, "output_kind": KIND_GOOD},
 }
 
 ## Stable display / iteration order for the recipes. Grouped by station so the wiki's
@@ -265,11 +265,20 @@ static func recipe_qty(id: String) -> int:
 		return 0
 	return int(RECIPES[id].get("qty", 0))
 
-## One-line flavor description of `id` (verbatim from the React produced-item desc),
-## shown in the RecipeWiki detail card. "" for unknown ids.
+## One-line flavor description of `id`, shown in the RecipeWiki detail card. "" for unknown ids.
+##
+## For a GOOD recipe the description is RESOURCE metadata, so it is read from ResourceConfig (the
+## single source of truth — the per-good copy was relocated there from inline RECIPES rows). For a
+## TOOL recipe the inline `desc` describes the tool's ACTION (e.g. "Fells every tree tile…"), not a
+## sellable good, and the output is a ToolConfig id with no ResourceConfig row — so the tool recipes
+## keep their own action `desc` on the RECIPES row.
 static func recipe_desc(id: String) -> String:
 	if not is_recipe(id):
 		return ""
+	if recipe_output_kind(id) == KIND_GOOD:
+		var good_desc: String = ResourceConfig.desc(recipe_output(id))
+		if good_desc != "":
+			return good_desc
 	return String(RECIPES[id].get("desc", ""))
 
 ## BuildingConfig id of the station that crafts `id` ("" for unknown ids).

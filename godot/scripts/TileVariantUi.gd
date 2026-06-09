@@ -12,36 +12,21 @@ extends RefCounted
 ## names use the same derivation as TileCollectionScreen._derive_display_name so a variant reads
 ## the same wherever it appears.
 
-## Category prefixes dropped when deriving a display name (mirrors
-## TileCollectionScreen._derive_display_name / UiKit.pretty_name DROP_PREFIXES).
-const DROP_PREFIXES := [
-	"grass", "grain", "bird", "veg", "fruit", "flower",
-	"tree", "herd", "cattle", "mount", "mine", "special", "fish", "coin",
-]
-
 ## Human-readable display name for a variant id ("tile_grass_meadow" → "Meadow Grass",
 ## "tile_mine_iron_ore" → "Ore"). Returns the catalog display_name via TileVariantConfig when
-## available (the React displayName, verbatim); falls back to a title-case derivation for
-## non-catalog ids (hazards). Mirrors React displayName.
+## available (the React displayName, verbatim); falls back to the SHARED TileCategoryConfig
+## derivation for non-catalog ids (hazards) — the ONE tile-key prefix-strip + title-case
+## implementation. NOTE: this fallback only fires for NON-catalog ids; "coin" used to sit in this
+## script's local DROP_PREFIXES purely as dead weight (every coin tile is a catalog tile resolved
+## above), so the shared list intentionally omits it. Mirrors React displayName.
 static func display_name(id: String) -> String:
 	if id == "":
 		return ""
 	# Prefer the catalog display_name (set for all 75 catalog variants).
 	if TileVariantConfig.is_tile(id):
 		return TileVariantConfig.display_name(id)
-	# Non-catalog (rat, rubble, fish_pearl): fall back to title-case derivation.
-	var s: String = id
-	if s.begins_with("tile_"):
-		s = s.substr(5)
-	var parts: Array = s.split("_")
-	if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
-		parts.remove_at(0)
-	var words: Array = []
-	for p in parts:
-		var ps: String = String(p)
-		if ps.length() > 0:
-			words.append(ps.substr(0, 1).to_upper() + ps.substr(1))
-	return " ".join(words)
+	# Non-catalog (rat, rubble, fish_pearl): fall back to the shared title-case derivation.
+	return TileCategoryConfig.display_name_from_key(id)
 
 ## The player-facing description for a variant id. Returns the catalog description when
 ## available (the React description, verbatim), or "" for non-catalog ids.
@@ -162,21 +147,14 @@ static func ability_summary(id: String) -> String:
 		return ""
 	return "✦ " + "  ·  ".join(parts)
 
+## Thin wrapper: the ability id→phrase TEMPLATE lives on AbilityConfig.phrase() (the owning
+## ability catalog); this resolves the pool_weight target's DISPLAY name here (UI-layer
+## name-derivation) and hands it to the catalog so the produced string is unchanged.
 static func _ability_phrase(ab: Dictionary) -> String:
 	var aid: String = String(ab.get("id", ""))
 	var params: Dictionary = ab.get("params", {})
-	match aid:
-		"free_moves":
-			return "+%d free moves each run" % int(params.get("count", 0))
-		"coin_bonus_flat":
-			return "+%d coins per chain" % int(params.get("amount", 0))
-		"coin_bonus_per_tile":
-			return "+%d coins per tile chained" % int(params.get("amount", 0))
-		"free_turn_if_chain":
-			return "Free turn on a chain of %d+" % int(params.get("minChain", 0))
-		"pool_weight":
-			return "+%d %s tiles on the board" % [int(params.get("amount", 0)), _display_key(String(params.get("target", "")))]
-	return ""
+	var target_label: String = _display_key(String(params.get("target", ""))) if aid == "pool_weight" else ""
+	return AbilityConfig.phrase(aid, params, target_label)
 
 ## Human-readable building name for a building id (falls back to the id). Mirrors React buildingName.
 static func _building_name(bid: String) -> String:

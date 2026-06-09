@@ -174,7 +174,7 @@ func _test_ratcatcher_charges() -> void:
 	# With a Ratcatcher: 5 charges, spend them down to 0.
 	var g := _city_rats_state({"plank": 50, "hay_bundle": 50})
 	_check(g.build(BC.RATCATCHER)["ok"], "(setup) built the Ratcatcher")
-	_check(GameState.RATCATCHER_CHARGES == 5, "RATCATCHER_CHARGES is 5")
+	_check(BuildingConfig.RATCATCHER_CHARGES == 5, "BuildingConfig.RATCATCHER_CHARGES is 5")
 	_check(g.ratcatcher_charges_left() == 5, "fresh Ratcatcher has 5 charges")
 	_check(g.can_shoo_rats(), "can_shoo_rats true with charges")
 	for i in 5:

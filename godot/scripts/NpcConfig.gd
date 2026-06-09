@@ -59,6 +59,26 @@ const GIFT_LOVES: float = 0.5
 const GIFT_LIKES: float = 0.3
 const GIFT_NEUTRAL: float = 0.15
 
+## Bond-economy tuning — the canonical home for the scattered bond magic numbers
+## (React src/features/npcs/bond.ts + data.ts). NpcState / GameState reference these by
+## name instead of repeating the literals.
+##   DEFAULT_BOND        the "Warm" starting bond (×1.00) AND the decay floor. A fresh
+##                       order pays IDENTICALLY to the flat reward at this bond.
+##   BOND_MIN / BOND_MAX the clamp range every bond mutation respects (React bond is [0, 10]).
+const DEFAULT_BOND: float = 5.0
+const BOND_MIN: float = 0.0
+const BOND_MAX: float = 10.0
+## Bond gained each time an order from that NPC is filled (+0.3 per React bond.ts).
+const BOND_GAIN_PER_FILL: float = 0.3
+## Fallback NPC for an old save's order missing its `npc` field (defensive; React falls
+## back to the scout). Used by GameState.generate_order / NpcState consumers.
+const DEFAULT_ORDER_NPC: String = "wren"
+## Per-season bond decay step for bonds above Warm (React decayBond: `Math.max(5, b - 0.1)`).
+const BOND_DECAY_STEP: float = 0.1
+## Run-summary "significant move" threshold — a per-NPC bond delta below this is dropped
+## from the run recap (React diffBonds, runSummary slice.ts: |d| >= 0.05).
+const BOND_DELTA_EPSILON: float = 0.05
+
 ## Bond → reward-multiplier bands (React BOND_BANDS, bond.ts). The floored bond is
 ## clamped to [1, 10] before banding (a 0 reads as Sour, like React). Each band is
 ## {lo, hi, name, mult}; the table covers 1..10 with no gaps.
@@ -70,6 +90,11 @@ const BOND_BANDS: Array = [
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
+
+## Clamp a bond value into the canonical [BOND_MIN, BOND_MAX] range. Every bond write
+## (NpcState.gain / from_dict, bond_band) routes through this so the range lives in one place.
+static func clamp_bond(b: float) -> float:
+	return clampf(b, BOND_MIN, BOND_MAX)
 
 ## Every NPC id, in roster order.
 static func all_ids() -> Array:
@@ -153,7 +178,7 @@ static func gift_delta(tier: String) -> float:
 ## bond to [0, 10], floor it, clamp that to [1, 10], then find the covering band.
 ## Falls back to the first band (Sour) if somehow nothing matches.
 static func bond_band(bond: float) -> Dictionary:
-	var clamped: float = clampf(bond, 0.0, 10.0)
+	var clamped: float = clamp_bond(bond)
 	var b: int = clampi(int(floor(clamped)), 1, 10)
 	for band in BOND_BANDS:
 		if b >= int(band["lo"]) and b <= int(band["hi"]):

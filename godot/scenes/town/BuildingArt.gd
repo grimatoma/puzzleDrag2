@@ -15,11 +15,13 @@ extends RefCounted
 ## diamond footprints — but give each family its own massing, roof shape, accents, and
 ## palette. Drawing is delegated BACK to the TownMap (the `canvas` arg) so every shape
 ## flows through the SAME _pxy()/_s() fit transform the rest of the map uses; this
-## script owns only the id→shape mapping, the per-family palette, and the per-shape
-## geometry. It is a stateless `class_name` global (like Palette / Constants) so the
-## mapping is testable headlessly without a live scene tree.
+## script owns the per-family palette and the per-shape geometry. The per-building
+## id→shape attribute now lives on the BuildingConfig catalog ROW (its `shape` field,
+## read via BuildingConfig.shape_of) — only non-row aliases (the Portal special-case)
+## keep a tiny local map here (SHAPE_ALIASES). It is a stateless `class_name` global
+## (like Palette / Constants) so the mapping is testable headlessly without a live scene tree.
 ##
-## SHAPE FAMILY MAP (building_id → silhouette):
+## SHAPE FAMILY MAP (building_id → silhouette) — the `shape` field on each BuildingConfig row:
 ##   lumber_camp ........ lumber  (log-pile lean-to + stacked logs)
 ##   coop ............... coop    (low animal pen + nesting bird)
 ##   garden ............. garden  (crop beds + plant rows)
@@ -96,44 +98,28 @@ const ANIMAL := Color("8a6a4a")             # horse / bird body
 const FOLIAGE := Color("4a7a32")
 const FOLIAGE_HI := Color("6a9a48")
 
-## building_id → shape-family key. Unknown ids fall back to "house" so a built lot
-## ALWAYS draws something (the placeholder-fallback guarantee). Kept as a plain
-## Dictionary const so the mapping is trivially testable.
-const SHAPE_BY_ID := {
-	"lumber_camp": "lumber",
-	"coop": "coop",
-	"garden": "garden",
-	"bakery": "cookhouse",
-	"kitchen": "cookhouse",
-	"larder": "cellar",
-	"smokehouse": "smokehut",
-	"workshop": "workshop",
-	"forge": "forge",
-	"mill": "mill",
-	"granary": "rotunda",
-	"silo": "silo",
-	"barn": "barn",
-	"sawmill": "sawmill",
-	"stable": "stable",
-	"apiary": "skep",
-	"chapel": "chapel",
-	"observatory": "observatory",
-	"powder_store": "bunker",
-	"mining_camp": "mine",
-	"housing": "cottage",
-	"housing2": "cottage",
-	"housing3": "cottage",
-	"ratcatcher": "hut",
-	"master_ratcatcher": "hut",
+## NON-ROW alias → shape-family key. The per-building shape now lives on the BuildingConfig
+## catalog ROW (read via BuildingConfig.shape_of); this tiny map only covers shape keys that
+## are queried but are NOT real BuildingConfig rows, so shape_for() still resolves them. Today
+## that is just the Portal: the Magic Portal is a GameState special-case building (coins+runes,
+## see GameState.build_portal), NOT a BuildingConfig entry, yet draw_building() is exercised with
+## both "magic_portal" and the bare "portal" alias — both must keep drawing the glowing arch.
+## All other ids (lumber_camp, coop, mill, granary, housing/2/3, …) are real BuildingConfig rows
+## and carry their `shape` there.
+const SHAPE_ALIASES := {
 	"magic_portal": "portal",
 	"portal": "portal",
 }
 
-## Resolve a building id to its shape-family key. Unknown ids → "house" (the generic
-## fallback drawer), so every id resolves to a real drawer and a built lot always
-## draws SOMETHING. Static so a headless test can assert the mapping without a scene.
+## Resolve a building id to its shape-family key. A non-row alias (magic_portal/portal) wins
+## first; otherwise the shape comes from the BuildingConfig catalog row (BuildingConfig.shape_of),
+## which itself falls back to "house" (the generic always-draws drawer) for unknown ids — so every
+## id resolves to a real drawer and a built lot always draws SOMETHING. Static so a headless test
+## can assert the mapping without a scene.
 static func shape_for(id: String) -> String:
-	return String(SHAPE_BY_ID.get(id, "house"))
+	if SHAPE_ALIASES.has(id):
+		return String(SHAPE_ALIASES[id])
+	return BuildingConfig.shape_of(id)
 
 ## Every shape-family key that has a dedicated drawer in this module (plus the
 ## "house" fallback). Exposed so a test can assert shape_for() never returns a key

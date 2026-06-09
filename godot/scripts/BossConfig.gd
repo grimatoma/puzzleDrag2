@@ -50,10 +50,29 @@ const CAPSTONE: String = STORM
 ## How many turns a boss challenge runs (one season). Ported from BOSS_WINDOW_TURNS (data.ts:98).
 const BOSS_WINDOW_TURNS: int = 10
 
+## Mine-mastery UNLOCK gate (a Godot-port challenge prerequisite, alongside the City tier and an
+## in-season boss): the player must have banked at least MINE_MASTERY_THRESHOLD combined units of
+## the refined mine goods named in MINE_MASTERY_GOODS (block + iron_bar). Owned by BossConfig so the
+## threshold + goods list live in ONE place — both can_challenge_boss and start_boss read this helper
+## rather than duplicating the literal `qty("block") + qty("iron_bar") < 12` comparison.
+const MINE_MASTERY_THRESHOLD: int = 12
+const MINE_MASTERY_GOODS: Array = ["block", "iron_bar"]
+
+## True when the banked refined-mine goods MEET the mine-mastery gate (combined >= threshold).
+## `block_qty` / `iron_qty` are the player's current quantities of the two MINE_MASTERY_GOODS, in
+## that order. The boss gates invert this (gate FAILS when NOT met) — keeping the exact same
+## `< MINE_MASTERY_THRESHOLD` comparison they used inline.
+static func mine_mastery_met(block_qty: int, iron_qty: int) -> bool:
+	return block_qty + iron_qty >= MINE_MASTERY_THRESHOLD
+
 ## Boss catalog keyed by id. Each entry:
 ##   name:                 String     — display name
 ##   season:               String     — the farm season this boss belongs to ("winter"/"spring"/…)
-##   target:               Dictionary — { "resource": String, "amount": int }
+##   target:               Dictionary — { "resource": String, "amount": int, "label": String }
+##                                       `label` is the short HUD-pill label for the target
+##                                       resource/tile (e.g. "Oak"/"Hay"/"Iron"); read via
+##                                       target_label(). The owning attribute for a boss target's
+##                                       short name lives on the target here, not in the HUD.
 ##   modifier:             Dictionary — { "type": String, "params": Dictionary }
 ##   desc:                 String     — flavour description
 ##   modifier_desc:        String     — player-facing modifier explanation
@@ -61,7 +80,7 @@ const BOSSES: Dictionary = {
 	FROSTMAW: {
 		"name": "Frostmaw",
 		"season": "winter",
-		"target": {"resource": "tile_tree_oak", "amount": 30},
+		"target": {"resource": "tile_tree_oak", "amount": 30, "label": "Oak"},
 		"modifier": {"type": "freeze_columns", "params": {"n": 2}},
 		"desc": "A frozen titan stirs in the deep winter wood, its icy breath threatening to snuff out every hearth in the vale. Gather logs quickly before the cold claims the village.",
 		"modifier_desc": "Two columns on the board are frozen solid and cannot be chained until thawed.",
@@ -69,7 +88,7 @@ const BOSSES: Dictionary = {
 	QUAGMIRE: {
 		"name": "Quagmire",
 		"season": "spring",
-		"target": {"resource": "tile_grass_grass", "amount": 50},
+		"target": {"resource": "tile_grass_grass", "amount": 50, "label": "Hay"},
 		"modifier": {"type": "respawn_boost", "params": {"boost": ["tile_tree_oak", "tile_grass_grass"], "factor": 1.5}},
 		"desc": "A boggy creature has swallowed the lower fields, turning fertile soil to mud. Only a bountiful hay harvest can drain its hold on the spring meadows.",
 		"modifier_desc": "Log and hay tiles respawn at 1.5× their normal rate, flooding the board with resources.",
@@ -77,7 +96,7 @@ const BOSSES: Dictionary = {
 	EMBER_DRAKE: {
 		"name": "Ember Drake",
 		"season": "summer",
-		"target": {"resource": "iron_bar", "amount": 3},
+		"target": {"resource": "iron_bar", "amount": 3, "label": "Iron"},
 		"modifier": {"type": "heat_tiles", "params": {"spawnPerTurn": 1, "burnAfter": 2}},
 		"desc": "Scales of cinder and breath of smelting flame — the Ember Drake demands a tribute of forged iron before the summer heat destroys your crops. Prove your craft at the forge.",
 		"modifier_desc": "One heat tile spawns each turn; any resource left on a heat tile for 2 turns is burned away.",
@@ -85,7 +104,7 @@ const BOSSES: Dictionary = {
 	OLD_STONEFACE: {
 		"name": "Old Stoneface",
 		"season": "autumn",
-		"target": {"resource": "tile_mine_stone", "amount": 20},
+		"target": {"resource": "tile_mine_stone", "amount": 20, "label": "Stone"},
 		"modifier": {"type": "rubble_blocks", "params": {"count": 4}},
 		"desc": "An ancient golem has sealed the mountain pass with its bulk, blocking the autumn trade caravans. Quarry enough stone to prove your worth and earn passage through.",
 		"modifier_desc": "Four rubble tiles block random board positions; they cannot be chained and must be cleared by adjacent stone chains.",
@@ -93,7 +112,7 @@ const BOSSES: Dictionary = {
 	MOSSBACK: {
 		"name": "Mossback",
 		"season": "spring",
-		"target": {"resource": "tile_fruit_blackberry", "amount": 30},
+		"target": {"resource": "tile_fruit_blackberry", "amount": 30, "label": "Berry"},
 		"modifier": {"type": "hide_resources", "params": {"hidden": 4}},
 		"desc": "A mossy titan lurks in the spring glades, concealing its weakness beneath layers of overgrowth. Harvest enough blackberries to expose it and drive it from the vale.",
 		"modifier_desc": "Four resource tiles are hidden face-down on the board and only reveal themselves when included in a chain.",
@@ -101,7 +120,7 @@ const BOSSES: Dictionary = {
 	STORM: {
 		"name": "The Storm",
 		"season": "summer",
-		"target": {"resource": "fish_fillet", "amount": 6},
+		"target": {"resource": "fish_fillet", "amount": 6, "label": "Fish"},
 		"modifier": {"type": "min_chain", "params": {"length": 4}},
 		"desc": "A black squall rolls in over Saltspray Harbor — every short cast tears free of the line. Only steady, deliberate pulls bring fillets through the chop.",
 		"modifier_desc": "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.",
@@ -161,6 +180,21 @@ static func target_resource(id: String) -> String:
 ## The target AMOUNT for `id` (0 for unknown).
 static func target_amount(id: String) -> int:
 	return int(boss_target(id).get("amount", 0))
+
+## A short human label for a boss target resource/tile KEY (e.g. "tile_tree_oak" → "Oak",
+## "iron_bar" → "Iron", "fish_fillet" → "Fish") — the HUD boss-pill label. Keyed by the
+## target resource, not the boss id, so the HUD can label its `boss_target_resource` directly.
+## Each of the six bosses carries the label on its `target.label`; this scans for the matching
+## target resource and returns that label. An unrecognised key falls back to a tidied form of
+## the key (`res.trim_prefix("tile_").capitalize()`) — byte-identical to the old HUD fallback.
+static func target_label(res: String) -> String:
+	for id in BOSS_IDS:
+		var t: Dictionary = BOSSES[id].get("target", {})
+		if String(t.get("resource", "")) == res:
+			var lbl: String = String(t.get("label", ""))
+			if lbl != "":
+				return lbl
+	return res.trim_prefix("tile_").capitalize()
 
 ## The modifier { "type": String, "params": Dictionary } for `id` (a COPY), or {} for unknown.
 static func boss_modifier(id: String) -> Dictionary:

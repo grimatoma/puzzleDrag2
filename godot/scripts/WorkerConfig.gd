@@ -37,6 +37,13 @@ const BAKER: String = "baker"
 const KIND_THRESHOLD_REDUCE_CATEGORY: String = "threshold_reduce_category"
 const KIND_RECIPE_INPUT_REDUCE: String = "recipe_input_reduce"
 
+## A threshold can NEVER be reduced below this floor — so stacking enough workers of a
+## category can't collapse the threshold to 0/1 and "explode" the unit math (a chain of 3
+## would otherwise mint absurd quantities). Mirrors a sane minimum chain length; at 0 workers
+## the reduction is 0 so this floor is never even reached. (Relocated from GameState — worker
+## tuning belongs with the worker config.)
+const WORKER_MIN_THRESHOLD: int = 2
+
 ## Worker catalog keyed by id. Each entry:
 ##   id:         String      — stable worker id (matches the key)
 ##   name:       String      — display name

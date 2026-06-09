@@ -247,8 +247,13 @@ static func tier_of(id: String) -> int:
 	return int(CATALOG.get(id, {}).get("tier", 0))
 
 ## The player-facing display name for catalog `id`. Returns the catalog `display_name` when
-## present; falls back to a title-cased derivation of the id (strips "tile_" + leading category
-## segment) so non-catalog ids (hazards) still get a readable name. Mirrors React displayName.
+## present; otherwise falls back to the SHARED TileCategoryConfig.display_name_from_key derivation
+## (strips "tile_" + a leading category segment, then title-cases) so non-catalog ids (hazards)
+## still get a readable name. The fallback is the SINGLE shared tile-key derivation — the former
+## inline `_DROP`/title-case copy (the 4th duplicate) was folded into the helper, dropping the
+## stray "coin" prefix the shared list deliberately excludes. (No live caller reaches the fallback:
+## the only consumer, TileVariantUi.display_name, guards on is_tile() and so always hits the
+## catalog branch above.) Mirrors React displayName.
 static func display_name(id: String) -> String:
 	if id == "":
 		return ""
@@ -257,21 +262,8 @@ static func display_name(id: String) -> String:
 		var dn: String = String(def["display_name"])
 		if dn != "":
 			return dn
-	# Fallback: title-case derivation (same rules as TileCollectionScreen._derive_display_name).
-	var s: String = id
-	if s.begins_with("tile_"):
-		s = s.substr(5)
-	const _DROP := ["grass", "grain", "bird", "veg", "fruit", "flower",
-		"tree", "herd", "cattle", "mount", "mine", "special", "fish", "coin"]
-	var parts: Array = s.split("_")
-	if parts.size() >= 2 and _DROP.has(String(parts[0])):
-		parts.remove_at(0)
-	var words: Array = []
-	for p in parts:
-		var ps: String = String(p)
-		if ps.length() > 0:
-			words.append(ps.substr(0, 1).to_upper() + ps.substr(1))
-	return " ".join(words)
+	# Fallback (non-catalog ids only): the one shared title-case derivation.
+	return TileCategoryConfig.display_name_from_key(id)
 
 ## The player-facing description for catalog `id`. Returns the catalog `description` string when
 ## present, or "" for non-catalog ids. Mirrors React description.

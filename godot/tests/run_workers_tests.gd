@@ -193,7 +193,7 @@ func _test_threshold_floor() -> void:
 	_check(g.worker_threshold_reduction(T.WHEAT) == 10, "10 farmers → reduction 10")
 	var r := g.credit_chain(T.WHEAT, 6)
 	_check(int(r["units"]) == 3, "floor: wheat n=6 at eff_threshold 2 yields 3 units (floored, not exploded)")
-	_check(GameState.WORKER_MIN_THRESHOLD == 2, "WORKER_MIN_THRESHOLD is 2")
+	_check(WorkerConfig.WORKER_MIN_THRESHOLD == 2, "WorkerConfig.WORKER_MIN_THRESHOLD is 2")
 
 # ── hire_worker ────────────────────────────────────────────────────────────────
 

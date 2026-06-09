@@ -54,24 +54,11 @@ var _selected_tab: String = "farm"
 var _selected_tile_id: String = ""
 
 # ── families ────────────────────────────────────────────────────────────────────
-## Top-level family tabs (React SUB_CATEGORIES) → a label. Order is the tab order.
-const FAMILIES: Array = ["farm", "mining", "water", "hazards", "uncategorized"]
-const FAMILY_LABEL := {
-	"farm": "Farm",
-	"mining": "Mining",
-	"water": "Water",
-	"hazards": "Hazards",
-	"uncategorized": "Other",
-}
-## Godot category id → family (React CATEGORY_TO_SUBCATEGORY translated to godot ids).
-const CATEGORY_TO_FAMILY := {
-	"grass": "farm", "grain": "farm", "birds": "farm", "veg": "farm", "fruit": "farm",
-	"flower": "farm", "trees": "farm", "herd": "farm", "cattle": "farm", "mount": "farm",
-	"stone": "mining", "iron": "mining", "copper": "mining", "coal": "mining",
-	"dirt": "mining", "gem": "mining", "gold": "mining", "coin": "mining",
-	"fish": "water", "fish_pearl": "water",
-	"rat": "hazards", "rubble": "hazards",
-}
+## Top-level family tabs (React SUB_CATEGORIES), in tab order — now owned by TileCategoryConfig
+## (the FAMILIES order + per-family labels live in ONE place). Kept as local aliases so the rest
+## of this scene reads unchanged. The category→family mapping is TileCategoryConfig.family().
+const FAMILIES: Array = TileCategoryConfig.FAMILIES
+const FAMILY_LABEL := TileCategoryConfig.FAMILY_LABEL
 
 # ── parchment palette ─────────────────────────────────────────────────────────
 const COL_TITLE  := Palette.INK
@@ -256,7 +243,7 @@ func _tiles_in_family(family: String) -> Array:
 	var out: Array = []
 	for tile_val in Constants.STRING_KEYS.keys():
 		var cat: String = Constants.category_of(int(tile_val))
-		var fam: String = String(CATEGORY_TO_FAMILY.get(cat, "uncategorized"))
+		var fam: String = TileCategoryConfig.family(cat)
 		if fam == family:
 			out.append(int(tile_val))
 	return out
@@ -450,7 +437,7 @@ func _on_tab(family: String) -> void:
 	# Keep the selected tile only if it still belongs to this tab; else clear it.
 	if _selected_tile_id != "":
 		var t: int = _tile_for_id(_selected_tile_id)
-		var fam: String = String(CATEGORY_TO_FAMILY.get(Constants.category_of(t), "uncategorized"))
+		var fam: String = TileCategoryConfig.family(Constants.category_of(t))
 		if fam != family:
 			_selected_tile_id = ""
 	refresh()
@@ -503,23 +490,10 @@ func _is_active(tile_val: int, id: String) -> bool:
 	var cat: String = Constants.category_of(tile_val)
 	return game.active_tile_id_for_category(cat) == id
 
-## Convert a category id to a title-cased heading (mirrors the old _category_heading specials).
+## Convert a category id to a title-cased heading. Forwards to TileCategoryConfig.heading()
+## (the single source of the heading specials + "" → "Other" + the title-case fallback).
 static func _category_heading(cat: String) -> String:
-	if cat == "":
-		return "Other"
-	match cat:
-		"veg":        return "Vegetables"
-		"fruit":      return "Fruits"
-		"flower":     return "Flowers"
-		"herd":       return "Herd Animals"
-		"mount":      return "Mounts"
-		"coin":       return "Treasure"
-		"fish_pearl": return "Giant Pearl"
-		"rat":        return "Rat (Hazard)"
-		"rubble":     return "Rubble (Hazard)"
-	if cat.length() > 0:
-		return cat.substr(0, 1).to_upper() + cat.substr(1)
-	return cat
+	return TileCategoryConfig.heading(cat)
 
 # ── public accessors (headless-test contract) ───────────────────────────────────
 
@@ -543,24 +517,13 @@ static func tile_count() -> int:
 static func display_name_for(tile_val: int) -> String:
 	return _derive_display_name(Constants.string_key(tile_val))
 
-## Derive a human-readable display name from a tile STRING_KEY. KEPT (the existing suite unit-
-## tests this directly) — strips "tile_" + a leading redundant category segment, title-cases.
+## Derive a human-readable display name from a tile STRING_KEY. KEPT as a thin forwarder (the
+## existing suite unit-tests display_name_for, which routes here) — the ONE derivation now lives
+## on TileCategoryConfig.display_name_from_key. This screen has NO catalog-display_name precedence
+## (unlike TileVariantUi.display_name): it derives every grid/detail label straight from this strip.
+## Two label deltas vs. the pre-dedup local DROP_PREFIXES (which lacked "fish" AND "coin"):
+##   • the five fish tiles now read "Sardine"/"Mackerel"/"Clam"/"Oyster"/"Kelp" (was "Fish Sardine"/…)
+##     — an intentional improvement, matching UiKit + the TileVariantConfig catalog;
+##   • "tile_coin_golden" is UNCHANGED ("Coin Golden") — the shared list omits "coin" on purpose.
 static func _derive_display_name(key: String) -> String:
-	if key == "":
-		return ""
-	var s: String = key
-	if s.begins_with("tile_"):
-		s = s.substr(5)
-	var parts: Array = s.split("_")
-	const DROP_PREFIXES := [
-		"grass", "grain", "bird", "veg", "fruit", "flower",
-		"tree", "herd", "cattle", "mount", "mine", "special",
-	]
-	if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
-		parts.remove_at(0)
-	var words: Array = []
-	for p in parts:
-		var ps: String = String(p)
-		if ps.length() > 0:
-			words.append(ps.substr(0, 1).to_upper() + ps.substr(1))
-	return " ".join(words)
+	return TileCategoryConfig.display_name_from_key(key)

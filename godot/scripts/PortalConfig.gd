@@ -40,6 +40,13 @@ extends RefCounted
 ## so its const + static helpers are reachable WITHOUT a live autoload — headless tests run
 ## before the scene tree exists. Stateless: never instantiated.
 
+## The Magic Portal's one-time BUILD cost (coins + runes), carried from the React portal
+## building (src/constants.ts:805). Both are NON-inventory currencies on GameState; this is
+## the cost to ERECT the portal, distinct from the per-tool Influence summon costs above.
+## (Relocated from GameState — feature-domain tuning belongs with the feature's config.)
+const BUILD_COST_COINS: int = 2000
+const BUILD_COST_RUNES: int = 5
+
 ## The ported magic tools, in stable display order. Each entry:
 ##   id:             String     — stable tool id (matches React MAGIC_TOOLS id + ITEMS key)
 ##   name:           String     — display name

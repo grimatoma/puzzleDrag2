@@ -50,11 +50,12 @@ var rng := RandomNumberGenerator.new()
 ## (see to_dict / from_dict), byte-identical to before the extraction.
 var npcs_state := NpcState.new()
 ## Bond gained each time an order from that NPC is filled (+0.3). Forwarded from
-## NpcState so `GameState.BOND_GAIN_PER_FILL` keeps resolving for callers.
-const BOND_GAIN_PER_FILL: float = NpcState.BOND_GAIN_PER_FILL
+## NpcConfig (the canonical bond-economy home) so `GameState.BOND_GAIN_PER_FILL` keeps
+## resolving for callers.
+const BOND_GAIN_PER_FILL: float = NpcConfig.BOND_GAIN_PER_FILL
 ## Fallback NPC for an old save's order missing its `npc` field (defensive). Forwarded
-## from NpcState so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
-const DEFAULT_ORDER_NPC: String = NpcState.DEFAULT_ORDER_NPC
+## from NpcConfig so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
+const DEFAULT_ORDER_NPC: String = NpcConfig.DEFAULT_ORDER_NPC
 
 ## The legacy flat {"roster": …, "bonds": …} view onto the composed NpcState — a LIVE
 ## reference (NOT a copy), so the many readers that index `game.npcs["roster"]` /
@@ -333,11 +334,11 @@ var town2_complete: bool = false          ## set true when the CAPSTONE boss is 
 ## the farm pool. RAT produces nothing, so chaining rats wastes a move — that's the
 ## hazard. The Ratcatcher (free "shoo" moves) and Master Ratcatcher (grass chains
 ## also clear adjacent rats) are the Town-3 answer (BuildingConfig hazard buildings).
-## The "5 free moves/year" from the Direction maps to RATCATCHER_CHARGES (there is no
-## year/season calendar in the port — see the turn-counter note above — so the
-## charges are a flat per-run budget the player spends down).
-const RATCATCHER_CHARGES: int = 5
-var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
+## The "5 free moves/year" from the Direction maps to BuildingConfig.RATCATCHER_CHARGES (there
+## is no year/season calendar in the port — see the turn-counter note above — so the charges
+## are a flat per-run budget the player spends down). The CONST now lives on BuildingConfig
+## (with the building it belongs to); only the spent-count below is run STATE.
+var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..BuildingConfig.RATCATCHER_CHARGES)
 
 # ── Farm HAZARDS live state (T7/T8/T9, ported from src/features/farm) ───────────
 ## The live farm-hazard state — the GDScript analogue of React's `state.hazards`. Owns the
@@ -852,31 +853,30 @@ func boon_effect_mult(effect_type: String) -> float:
 ## field.
 var portal_built: bool = false
 
-## The Magic Portal's one-time build cost (coins + runes), carried from the React portal
-## building (src/constants.ts:805). Both are NON-inventory currencies on GameState.
-const PORTAL_COST_COINS: int = 2000
-const PORTAL_COST_RUNES: int = 5
+## The Magic Portal's one-time build cost (coins + runes) now lives on PortalConfig
+## (BUILD_COST_COINS / BUILD_COST_RUNES) — feature tuning belongs with the feature's config.
+## Both are NON-inventory currencies on GameState.
 
 ## True when the Magic Portal can be built RIGHT NOW: it isn't already built AND the player
-## has at least PORTAL_COST_COINS coins and PORTAL_COST_RUNES runes. Mirrors the React
-## affordability gate for the portal building.
+## has at least PortalConfig.BUILD_COST_COINS coins and BUILD_COST_RUNES runes. Mirrors the
+## React affordability gate for the portal building.
 func can_build_portal() -> bool:
 	if portal_built:
 		return false
-	return coins >= PORTAL_COST_COINS and runes >= PORTAL_COST_RUNES
+	return coins >= PortalConfig.BUILD_COST_COINS and runes >= PortalConfig.BUILD_COST_RUNES
 
-## Build the Magic Portal: deduct PORTAL_COST_COINS coins + PORTAL_COST_RUNES runes (both
-## floored at 0) and set portal_built = true. Mirrors building the React portal town building
-## (coins + runes special gate). Returns {ok:true} on success. On failure returns
+## Build the Magic Portal: deduct PortalConfig.BUILD_COST_COINS coins + BUILD_COST_RUNES runes
+## (both floored at 0) and set portal_built = true. Mirrors building the React portal town
+## building (coins + runes special gate). Returns {ok:true} on success. On failure returns
 ## {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
 ## "already_built" → "cant_afford".
 func build_portal() -> Dictionary:
 	if portal_built:
 		return {"ok": false, "reason": "already_built"}
-	if coins < PORTAL_COST_COINS or runes < PORTAL_COST_RUNES:
+	if coins < PortalConfig.BUILD_COST_COINS or runes < PortalConfig.BUILD_COST_RUNES:
 		return {"ok": false, "reason": "cant_afford"}
-	coins = maxi(0, coins - PORTAL_COST_COINS)
-	runes = maxi(0, runes - PORTAL_COST_RUNES)
+	coins = maxi(0, coins - PortalConfig.BUILD_COST_COINS)
+	runes = maxi(0, runes - PortalConfig.BUILD_COST_RUNES)
 	portal_built = true
 	return {"ok": true}
 
@@ -1044,11 +1044,9 @@ var story := StoryState.new()
 ## to_dict / from_dict (a save written before workers existed loads all 0).
 var workers: Dictionary = _default_workers()
 
-## A threshold can NEVER be reduced below this floor — so stacking enough workers
-## of a category can't collapse the threshold to 0/1 and "explode" the unit math
-## (a chain of 3 would otherwise mint absurd quantities). Mirrors a sane minimum
-## chain length; at 0 workers the reduction is 0 so this floor is never even reached.
-const WORKER_MIN_THRESHOLD: int = 2
+## The minimum-threshold floor (so stacking workers can't collapse a threshold to 0/1 and
+## "explode" the unit math) now lives on WorkerConfig.WORKER_MIN_THRESHOLD — worker tuning
+## belongs with the worker config.
 
 ## Build the starting workers map: every WorkerConfig id at 0 hires.
 static func _default_workers() -> Dictionary:
@@ -1292,7 +1290,7 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
 		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
 		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
-		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+		threshold = maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -1326,7 +1324,9 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# per-chain path), so there is NO double-count. Both are 0 for a fresh game → byte-identical.
 	var agg_ch: Dictionary = compute_ability_channels()
 	var agg_coin_bonus: int = int(agg_ch["coin_bonus_flat"]) + int(agg_ch["coin_bonus_per_tile"]) * chain_len
-	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
+	# M2 placeholder coin formula (Constants.CHAIN_COIN_MIN / CHAIN_COIN_DIVISOR) — the React
+	# per-tile `value` economy is deferred to M3. Integer division is deliberate; do NOT change.
+	var coins_gain: int = maxi(Constants.CHAIN_COIN_MIN, chain_len / Constants.CHAIN_COIN_DIVISOR) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
 	# T31 (ADDITIVE): owned Coexist/DriveOut BOONS that grant coin_gain_mult multiply the chain's
 	# coin reward (React boon coin_gain_mult applied to the chain-collected coins). boon_effect_mult
 	# returns 1.0 for a fresh game (no boons owned) → coins_gain unchanged → byte-identical. Floored
@@ -1987,7 +1987,9 @@ func buy(resource: String, qty: int) -> Dictionary:
 ## appends each placed building's produced resource (plank/eggs/soup/bread),
 ## deduplicated, in a stable order. A built Bakery adds "bread".
 func orderable_resources() -> Array:
-	var out: Array = ["hay_bundle", "flour"]
+	# Seed with the home-zone staples (ZoneConfig.HOME_STAPLE_RESOURCES); duplicate so the appends
+	# below never mutate the shared const.
+	var out: Array = ZoneConfig.HOME_STAPLE_RESOURCES.duplicate()
 	for id in buildings:
 		var res: String = BuildingConfig.building_resource(id)
 		if res != "" and not out.has(res):
@@ -2882,16 +2884,17 @@ func _reset_run_telemetry(_fert: bool) -> void:
 		run_bonds_at_start[String(id)] = npcs_state.bond(id)
 
 ## T30 — the rounded NPC bond DELTAS over the run: { npc_id -> round1(end - start) } for every NPC
-## whose bond moved by at least 0.05 since run start. Mirrors React diffBonds (runSummary slice.ts:64-75):
-## round to one decimal, drop near-zero moves. Reads the LIVE bonds vs run_bonds_at_start.
+## whose bond moved by at least NpcConfig.BOND_DELTA_EPSILON since run start. Mirrors React diffBonds
+## (runSummary slice.ts:64-75): round to one decimal, drop near-zero moves. Reads the LIVE bonds vs
+## run_bonds_at_start.
 func run_bond_deltas() -> Dictionary:
 	var out: Dictionary = {}
 	for id in NpcConfig.all_ids():
 		var sid: String = String(id)
-		var start_bond: float = float(run_bonds_at_start.get(sid, 5.0))
+		var start_bond: float = float(run_bonds_at_start.get(sid, NpcConfig.DEFAULT_BOND))
 		var end_bond: float = npcs_state.bond(sid)
 		var d: float = end_bond - start_bond
-		if absf(d) >= 0.05:
+		if absf(d) >= NpcConfig.BOND_DELTA_EPSILON:
 			out[sid] = roundf(d * 10.0) / 10.0
 	return out
 
@@ -3063,16 +3066,16 @@ func close_season() -> Dictionary:
 		"market_event": market_event.duplicate(true),   # T16: event for the new season (or {})
 	}
 
-## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
-## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
-## are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
-## bleeding below the neutral baseline — gain() only clamps to [0, 10], so the
+## Decay every NPC bond strictly above Warm (NpcConfig.DEFAULT_BOND) by BOND_DECAY_STEP,
+## floored at the Warm default (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds
+## at or below Warm are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
+## bleeding below the neutral baseline — gain() only clamps to [BOND_MIN, BOND_MAX], so the
 ## floor must be applied here.
 func _decay_npc_bonds() -> void:
 	for id in NpcConfig.all_ids():
 		var b: float = npcs_state.bond(id)
-		if b > 5.0:
-			npcs_state.gain(id, maxf(5.0, b - 0.1) - b)
+		if b > NpcConfig.DEFAULT_BOND:
+			npcs_state.gain(id, maxf(NpcConfig.DEFAULT_BOND, b - NpcConfig.BOND_DECAY_STEP) - b)
 
 ## Reset the farm season cycle back to a fresh Spring (0 turns used). Called when starting a
 ## fresh farm session — there is no per-session "enter the farm" path in the port (the farm is
@@ -3278,7 +3281,9 @@ func capture_pearl_if_adjacent(chain_cells: Array) -> Dictionary:
 ## Refiners (Bakery) have no category and contribute nothing — the empty-string
 ## filter already guards them, but is_spawner makes the intent explicit.
 func active_categories() -> Array:
-	var cats: Array = ["grass", "grain"]
+	# Seed with the home-zone base categories (ZoneConfig.HOME_BASE_CATEGORIES); duplicate so the
+	# appends below never mutate the shared const.
+	var cats: Array = ZoneConfig.HOME_BASE_CATEGORIES.duplicate()
 	for id in buildings:
 		if not BuildingConfig.is_spawner(id):
 			continue
@@ -3287,47 +3292,50 @@ func active_categories() -> Array:
 			cats.append(cat)
 	return cats
 
-## The single representative TILE for each ELIGIBLE home-farm category — the inverse of the
-## relevant slice of Constants.CATEGORY. The port has exactly ONE tile per farm category, so
-## this is a clean 1:1 map. Only the SIX eligible base-spawn categories (ZoneConfig.eligible_
-## categories("home")) are listed: grass/grain/trees/birds/veg/fruit. flower/herd/cattle/mount
-## are deliberately ABSENT so PANSY/PIG/COW/HORSE can never base-spawn on the home farm.
-const FARM_CATEGORY_TILE := {
-	"grass": Constants.Tile.GRASS,
-	"grain": Constants.Tile.WHEAT,
-	"trees": Constants.Tile.OAK,
-	"birds": Constants.Tile.PHEASANT,
-	"veg":   Constants.Tile.CARROT,
-	"fruit": Constants.Tile.APPLE,
-}
+## The ordered FARM categories whose representative tile each map carries. SOURCE of the key
+## ORDER for the two maps below (byte-identical to the former hand-written const order):
+##   • FARM_FULL_CATEGORIES — the FULL set (10): the complete farm slice of Constants.CATEGORY.
+##   • FARM_BASE_SPAWN_CATEGORIES — the eligible base-spawn SUBSET (6): grass/grain/trees/birds/
+##     veg/fruit. The four upgrade-only targets (flower/herd/cattle/mount) are DELIBERATELY
+##     excluded so PANSY/PIG/COW/HORSE never base-spawn on the home farm.
+const FARM_FULL_CATEGORIES: Array = ["grass", "grain", "trees", "birds", "veg", "fruit", "flower", "herd", "cattle", "mount"]
+const FARM_BASE_SPAWN_CATEGORIES: Array = ["grass", "grain", "trees", "birds", "veg", "fruit"]
 
-## The FULL home-farm category → representative TILE map — the complete inverse of the farm
-## slice of Constants.CATEGORY (every farm-playable category, NOT just the eligible base-spawn
-## six). DISTINCT from FARM_CATEGORY_TILE above, which is the BASE-SPAWN subset (the six
-## upgradeMap KEYS): this one ALSO covers the upgrade-only TARGET categories herd/cattle/mount
-## (and flower) → PIG/COW/HORSE (and PANSY). Those tiles must never BASE-SPAWN (FARM_CATEGORY_TILE
-## excludes them) yet they DO arrive as UPGRADE tiles — chaining birds→PIG (herd), the React
-## upgradeMap's whole point. upgrade_spawn() resolves its target tile through THIS map so an
-## upgrade target outside the eligible set still maps to a real tile, while base spawns stay
-## restricted to FARM_CATEGORY_TILE. (React: nextResourceForZone resolves the target zone-category
-## to its tile family regardless of base-spawn eligibility.)
-const FARM_CATEGORY_TO_TILE := {
-	"grass":  Constants.Tile.GRASS,
-	"grain":  Constants.Tile.WHEAT,
-	"trees":  Constants.Tile.OAK,
-	"birds":  Constants.Tile.PHEASANT,
-	"veg":    Constants.Tile.CARROT,
-	"fruit":  Constants.Tile.APPLE,
-	"flower": Constants.Tile.PANSY,
-	"herd":   Constants.Tile.PIG,
-	"cattle": Constants.Tile.COW,
-	"mount":  Constants.Tile.HORSE,
-}
+## The single representative TILE for each ELIGIBLE home-farm category — the BASE-SPAWN subset.
+## DERIVED from TileCategoryConfig.representative_tile (the single source of which tile each
+## category maps to), keyed by the FARM_BASE_SPAWN_CATEGORIES order so the map is byte-identical
+## to the former hand-written const: grass→GRASS, grain→WHEAT, trees→OAK, birds→PHEASANT,
+## veg→CARROT, fruit→APPLE. flower/herd/cattle/mount are ABSENT (never base-spawn).
+## A `static var` (not a `const`) because GDScript const-expressions can't call a function; built
+## once at class load and never mutated, so it reads exactly like the old const for every consumer.
+static var FARM_CATEGORY_TILE: Dictionary = _build_farm_category_tiles(FARM_BASE_SPAWN_CATEGORIES)
 
-## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
-## not a category unlock (every eligible category already base-spawns season-weighted). Kept
-## modest so a spawner specialises the board without swamping the season profile.
-const SPAWNER_BOOST_SLOTS: int = 6
+## The FULL home-farm category → representative TILE map — every farm-playable category, NOT just
+## the eligible base-spawn six. DISTINCT from FARM_CATEGORY_TILE above (the base-spawn subset):
+## this one ALSO covers the upgrade-only TARGET categories herd/cattle/mount (and flower) →
+## PIG/COW/HORSE (and PANSY). Those tiles must never BASE-SPAWN (FARM_CATEGORY_TILE excludes them)
+## yet they DO arrive as UPGRADE tiles — chaining birds→PIG (herd), the React upgradeMap's whole
+## point. upgrade_spawn() resolves its target tile through THIS map so an upgrade target outside the
+## eligible set still maps to a real tile, while base spawns stay restricted to FARM_CATEGORY_TILE.
+## DERIVED from TileCategoryConfig.representative_tile (single source), keyed by FARM_FULL_CATEGORIES
+## order — byte-identical to the former hand-written const.
+static var FARM_CATEGORY_TO_TILE: Dictionary = _build_farm_category_tiles(FARM_FULL_CATEGORIES)
+
+## Build a { category → representative Constants.Tile } map for `cats`, reading each tile from
+## TileCategoryConfig.representative_tile (so the tile a category maps to lives in ONE place). The
+## key ORDER follows `cats`. Asserts the config has a real tile for every requested farm category
+## (a misfiled/absent farm category would silently break the board pool, so fail loud at load).
+static func _build_farm_category_tiles(cats: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for c in cats:
+		var cat: String = String(c)
+		var tile: int = TileCategoryConfig.representative_tile(cat)
+		assert(tile != Constants.EMPTY, "TileCategoryConfig has no representative tile for farm category '%s'" % cat)
+		out[cat] = tile
+	return out
+
+## The per-spawner board-pool boost (extra weight slots a placed spawner adds for its category)
+## now lives on ZoneConfig.SPAWNER_BOOST_SLOTS — board/zone-pool tuning belongs with the zone config.
 
 ## How many UPGRADE TILES of the zone's next tier a resolved farm chain spawns, and WHICH tile —
 ## the React core loop (src/GameScene.ts nextUpgradeTile + utils.ts upgradeCountForChain /
@@ -3406,7 +3414,7 @@ func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> 
 ## Spring (grass .38 …) yields a grass-dominant pool; Winter (trees .73) a tree-dominant one.
 ##
 ## Then layer the EXISTING semantics on top:
-##   - SPAWNER BOOST: each placed spawner whose category is eligible adds SPAWNER_BOOST_SLOTS
+##   - SPAWNER BOOST: each placed spawner whose category is eligible adds ZoneConfig.SPAWNER_BOOST_SLOTS
 ##     extra slots of its tile (build a Lumber Camp → more oak). Refiners (Bakery, no category)
 ##     and spawners for INELIGIBLE categories are skipped — a spawner can't smuggle an
 ##     ineligible category back onto the home board.
@@ -3455,7 +3463,7 @@ func active_tile_pool() -> Array:
 		# tile, so an un-customised board is unchanged). The boost is a frequency bump on the
 		# tile that actually spawns for that category.
 		var btile: int = _category_pool_tile(bcat)
-		for _i in SPAWNER_BOOST_SLOTS:
+		for _i in ZoneConfig.SPAWNER_BOOST_SLOTS:
 			pool.append(btile)
 	# T6: the React home categories are LOCKED ON and the player picks a VARIANT per category;
 	# there is no soft category-selection boost. The old farm_run_selected soft-boost block (the
@@ -3598,7 +3606,9 @@ func can_challenge_boss() -> bool:
 		return false
 	if settlement.tier < TownConfig.TIER_CITY:
 		return false
-	if qty("block") + qty("iron_bar") < 12:
+	# Mine-mastery gate (≥ BossConfig.MINE_MASTERY_THRESHOLD combined refined goods). Threshold +
+	# goods keys are owned by BossConfig.MINE_MASTERY_GOODS so this check isn't duplicated inline.
+	if not BossConfig.mine_mastery_met(qty(BossConfig.MINE_MASTERY_GOODS[0]), qty(BossConfig.MINE_MASTERY_GOODS[1])):
 		return false
 	if pending_boss_id() == "":
 		return false
@@ -3619,7 +3629,8 @@ func start_boss(rng_in: RandomNumberGenerator = null) -> Dictionary:
 		return {"ok": false, "reason": "in_fight"}
 	if settlement.tier < TownConfig.TIER_CITY:
 		return {"ok": false, "reason": "locked"}
-	if qty("block") + qty("iron_bar") < 12:
+	# Mine-mastery gate — same BossConfig threshold + goods as can_challenge_boss (single source).
+	if not BossConfig.mine_mastery_met(qty(BossConfig.MINE_MASTERY_GOODS[0]), qty(BossConfig.MINE_MASTERY_GOODS[1])):
 		return {"ok": false, "reason": "not_ready"}
 	var id: String = pending_boss_id()
 	if id == "":
@@ -3696,11 +3707,17 @@ func note_boss_chain(tile_type: int, chain_len: int, units: int) -> Dictionary:
 func note_boss_craft(recipe_key: String) -> Dictionary:
 	if not is_boss_active():
 		return {"active": false}
-	if boss_target_resource != "iron_bar":
+	# Only the iron_bar-target boss (Ember Drake) counts a craft. The target resource id is owned by
+	# BossConfig (the Ember Drake's target field), not hardcoded here. The same concept drives the
+	# recipe-INPUT check below: React ticks only when the recipe CONSUMES the boss target resource
+	# (`recipe.inputs?.[ResourceKey.IronBar]`, boss/slice.ts:226-239), so the input key is the boss
+	# target — routed through ember_target so there is a single source for the resource id.
+	var ember_target: String = BossConfig.target_resource(BossConfig.EMBER_DRAKE)
+	if boss_target_resource != ember_target:
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
 	if not RecipeConfig.is_recipe(recipe_key):
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
-	if int(RecipeConfig.recipe_inputs(recipe_key).get("iron_bar", 0)) <= 0:
+	if int(RecipeConfig.recipe_inputs(recipe_key).get(ember_target, 0)) <= 0:
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
 	boss_progress = mini(boss_target_amount, boss_progress + 1)
 	if boss_progress >= boss_target_amount:
@@ -3855,7 +3872,7 @@ func has_master_ratcatcher() -> bool:
 func ratcatcher_charges_left() -> int:
 	if not has_ratcatcher():
 		return 0
-	return maxi(0, RATCATCHER_CHARGES - ratcatcher_charges_used)
+	return maxi(0, BuildingConfig.RATCATCHER_CHARGES - ratcatcher_charges_used)
 
 ## True when a Ratcatcher is placed AND at least one shoo-move remains.
 func can_shoo_rats() -> bool:
@@ -5112,7 +5129,7 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.boss_modifier_state = (saved_mod as Dictionary).duplicate(true) if saved_mod is Dictionary else {}
 	# Restore the Town-3 rats state (M3h). Charges-used is clamped to >= 0 (a
 	# corrupt negative can't grant phantom shoo-moves). It is NOT clamped to
-	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
+	# BuildingConfig.RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
 	# Restore the farm HAZARDS state (T7/T8/T9). HazardLogic.normalise coerces ints (JSON yields
@@ -5353,7 +5370,7 @@ static func from_dict(d: Dictionary) -> GameState:
 static func new_game() -> GameState:
 	var g := GameState.new()
 	# React parity: src/state/init.ts:71 — coins: 150
-	g.coins = 150
+	g.coins = Constants.STARTING_COINS
 	# T16: seed the market deterministically from the current time (a fresh game gets
 	# a unique seed so each run has a distinct price history). market_season starts at 0.
 	g.market_seed = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF

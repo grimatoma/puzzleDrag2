@@ -84,6 +84,11 @@ var _stockpile_chips: Dictionary = {}
 ## InventoryScreen ledger groups (real GameState.inventory keys — no invented goods). Any owned
 ## resource NOT in the roster (a mine/expedition good carried back) is appended after the roster so
 ## nothing owned is ever hidden.
+##
+## Kept as an explicit ORDERED list (NOT derived from ResourceConfig) so the chip order stays
+## byte-identical to React's `BIOMES.farm.resources.slice(0,12)`. Every key here is a ResourceConfig
+## resource (mostly the "farm" family, plus the "refined" bread + the reconciled "farm" jam); each
+## chip's display name comes from ResourceConfig.label() via UiKit.pretty_name.
 const STOCKPILE_ROSTER: Array = [
 	"hay_bundle", "flour", "bread", "eggs", "milk", "meat",
 	"soup", "pie", "honey", "jam", "plank", "horseshoe",
@@ -330,7 +335,7 @@ func _build_hud() -> void:
 	# Moved DOWN (offset_top 230) + smaller (font 16) so it clears the new tool bar,
 	# which now sits in the band the old offset_top 124 occupied.
 	_chain_label = Label.new()
-	_chain_label.text = "Drag 3+ matching tiles"
+	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
 	_chain_label.add_theme_font_size_override("font_size", 16)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -622,32 +627,6 @@ func _tool_armed_box_style() -> StyleBoxFlat:
 	sb.shadow_color = Color(Palette.EMBER, 0.30)
 	sb.shadow_offset = Vector2(0, 3)
 	return sb
-
-## Player-facing description for a tool id (ToolConfig has no desc field — these
-## mirror the React ITEMS[*].desc strings in src/constants.ts; scythe / stone_hammer
-## are Godot-only additions, so their copy is written to match the same voice).
-func _tool_description(id: String) -> String:
-	match id:
-		ToolConfig.BOMB:         return "Tap a tile — destroys a 3×3 area around it."
-		ToolConfig.RAKE:         return "Tap a tile — sweeps every connected tile of the same type and collects them."
-		ToolConfig.SICKLE:       return "Sweeps a single row in one stroke. Tap any tile to harvest that entire row."
-		ToolConfig.AUGER:        return "Tap a column — bores straight down, clearing every tile in it."
-		ToolConfig.BLAST_CHARGE: return "Tap a tile — clears its entire row and column in a cross-shaped blast."
-		ToolConfig.MAGNET:       return "Tap a tile — collapses every ore tile in a 3×3 area into stone for re-chaining."
-		ToolConfig.AXE:          return "Fells all tree tiles on the board instantly."
-		ToolConfig.SCYTHE:       return "Sweeps six random tiles off the board in one swing."
-		ToolConfig.STONE_HAMMER: return "Smashes every stone tile on the board into your stockpile."
-		ToolConfig.DRILL:        return "Bores every loose dirt tile in the mine into rough stone."
-		# Portal magic tools (summoned with Influence; mirror the React effect copy).
-		ToolConfig.GOLDEN_APPLE:       return "Transforms every tree tile on the board into apple-fruit tiles."
-		ToolConfig.GOLDEN_CARROT:      return "Transforms every grass tile on the board into carrot tiles."
-		ToolConfig.GOLDEN_IDOL:        return "Transforms every grass tile on the board into cattle (cow) tiles."
-		ToolConfig.GOLDEN_SHEEP:       return "Transforms every grass tile on the board into sheep herd tiles."
-		ToolConfig.PHILOSOPHERS_STONE: return "Transmutes every stone tile on the board into gold tiles."
-		ToolConfig.MAGIC_WAND:         return "Tap a tile — collects every tile of that type on the board."
-		ToolConfig.MAGIC_SEED:         return "Restores 5 farm turns before the next harvest. No board effect."
-		ToolConfig.MAGIC_FERTILIZER:   return "Biases the next 3 farm turns toward spawning wheat."
-		_:                       return ""
 
 ## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
 ## > 0 a styled Button is added labelled "{name} ×{charges}" (plus a "↗" tap hint
@@ -1104,7 +1083,7 @@ func show_tool_armed_banner(id: String) -> void:
 	var charges: int = game.tool_count(id) if game != null else 0
 	_tool_armed_title.text = "⚡ Tool armed · ×%d left" % charges
 	_tool_armed_name.text = ToolConfig.tool_label(id)
-	_tool_armed_desc.text = _tool_description(id)
+	_tool_armed_desc.text = ToolConfig.tool_desc(id)
 	_tool_armed_box.visible = true
 
 ## Hide the "Tool armed" banner (after the tap fires, or on Disarm).
@@ -1367,18 +1346,11 @@ func _refresh_boss() -> void:
 		_boss_pill_box.visible = false
 
 ## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",
-## "iron_bar" → "Iron", "fish_fillet" → "Fish"). Falls back to a tidied form of the key.
+## "iron_bar" → "Iron", "fish_fillet" → "Fish"). The label now lives on each boss's
+## target definition in BossConfig (target.label); this is a thin delegate so the call
+## site stays terse and the mapping has a single owner.
 func _boss_target_label(res: String) -> String:
-	match res:
-		"tile_tree_oak": return "Oak"
-		"tile_grass_grass": return "Hay"
-		"tile_mine_stone": return "Stone"
-		"tile_fruit_blackberry": return "Berry"
-		"iron_bar": return "Iron"
-		"fish_fillet": return "Fish"
-		_:
-			var s: String = res.trim_prefix("tile_")
-			return s.capitalize()
+	return BossConfig.target_label(res)
 
 ## M3h/M4b: the Town-3 rats hazard now lives in the top-bar rats pill, shown only
 ## once rats are a live threat (Town 2 done). With a Ratcatcher it reads "🐀 N/5"
@@ -1390,7 +1362,7 @@ func _refresh_rats() -> void:
 		_rats_pill_box.visible = false
 		return
 	if game.has_ratcatcher():
-		_rats_pill.text = "🐀 %d/%d" % [game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES]
+		_rats_pill.text = "🐀 %d/%d" % [game.ratcatcher_charges_left(), BuildingConfig.RATCATCHER_CHARGES]
 	else:
 		_rats_pill.text = "🐀 active"
 	_rats_pill_box.visible = true
