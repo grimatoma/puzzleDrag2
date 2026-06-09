@@ -17,6 +17,50 @@ enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICL
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
 
+# ── Single source of truth: Modal → its deep-link ids ──────────────────────────
+## ONE table the three id↔Modal helpers (resolve / modal_id / known_ids) derive from,
+## so there is no hand-maintained alias list to drift out of sync. Each entry maps a
+## Modal enum value to an ORDERED Array of its deep-link id strings:
+##   - element [0] is the CANONICAL id (what modal_id() returns),
+##   - any later element is an accepted alias resolve() also honours.
+##
+## ORDER MATTERS. known_ids() flattens this table in iteration order, and that order is
+## load-bearing: DebugModal.jump_targets() walks known_ids() and keeps the FIRST id that
+## resolves to each modal, so the canonical id must precede its aliases AND the entries
+## must stay in Modal-enum order (NONE → … → KEEPER) — exactly the legacy hand-written
+## known_ids() sequence. The Dictionary literal preserves insertion order in GDScript,
+## so listing the modals in enum order below reproduces the old order byte-for-byte.
+const MODAL_IDS: Dictionary = {
+	Modal.NONE:         ["", "board"],
+	Modal.TOWN:         ["town", "ledger"],
+	Modal.MENU:         ["menu"],
+	Modal.INVENTORY:    ["inventory", "items"],
+	Modal.TOWNMAP:      ["map", "townmap"],
+	Modal.ACHIEVEMENTS: ["achievements", "trophies"],
+	Modal.TILES:        ["tiles", "collection"],
+	Modal.CHRONICLE:    ["chronicle", "story"],
+	Modal.TOWNSFOLK:    ["townsfolk", "folk"],
+	Modal.CARTOGRAPHY:  ["cartography", "world"],
+	# review-3 — "craft"/"crafting" resolve to the CRAFTING UI (the RecipeWikiScreen),
+	# matching the 🔨 Craft bottom-nav tab. ("recipes"/"recipewiki" stay as aliases.)
+	Modal.RECIPES:      ["recipes", "recipewiki", "craft", "crafting"],
+	Modal.TUTORIAL:     ["tutorial"],
+	Modal.CASTLE:       ["castle", "keep"],
+	Modal.DECORATIONS:  ["decorations", "decor"],
+	Modal.PORTAL:       ["portal", "summon"],
+	Modal.CHARTER:      ["charter", "pact"],
+	Modal.QUESTS:       ["quests", "almanac"],
+	Modal.DAILY:        ["daily", "streak"],
+	Modal.LEAVEBOARD:   ["leaveboard", "leave"],
+	Modal.DEBUG:        ["debug"],
+	Modal.STARTFARMING: ["startfarming", "farm"],
+	# T31 — the Boons catalog screen (the ✨ Boons town entry). ("boon" is an alias.)
+	Modal.BOONS:        ["boons", "boon"],
+	# T31 — the keeper-encounter modal. Normally auto-triggered off a town/build event;
+	# this deep-link lets QA / the sanity-capture preview the encounter.
+	Modal.KEEPER:       ["keeper"],
+}
+
 # ── Instance state machine ────────────────────────────────────────────────────
 
 ## Set the active modal. Pass Modal.NONE to close without calling close_modal().
@@ -41,89 +85,26 @@ func current_modal() -> int:
 ## Returns { "ok": true, "view": View.*, "modal": Modal.* } on success,
 ## or       { "ok": false }                                  on unknown id.
 static func resolve(id: String) -> Dictionary:
-	match id:
-		"", "board":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.NONE }
-		"town", "ledger":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWN }
-		"menu":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.MENU }
-		"inventory", "items":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.INVENTORY }
-		"map", "townmap":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWNMAP }
-		"achievements", "trophies":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.ACHIEVEMENTS }
-		"tiles", "collection":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.TILES }
-		"chronicle", "story":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.CHRONICLE }
-		"townsfolk", "folk":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWNSFOLK }
-		"cartography", "world":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.CARTOGRAPHY }
-		"recipes", "recipewiki", "craft", "crafting":
-			# review-3 — "craft" now resolves to the CRAFTING UI (the RecipeWikiScreen), matching
-			# the 🔨 Craft bottom-nav tab. ("recipes"/"recipewiki" stay as aliases.)
-			return { "ok": true, "view": View.BOARD, "modal": Modal.RECIPES }
-		"tutorial":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.TUTORIAL }
-		"castle", "keep":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.CASTLE }
-		"decorations", "decor":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.DECORATIONS }
-		"portal", "summon":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.PORTAL }
-		"charter", "pact":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.CHARTER }
-		"quests", "almanac":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.QUESTS }
-		"daily", "streak":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.DAILY }
-		"leaveboard", "leave":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.LEAVEBOARD }
-		"debug":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.DEBUG }
-		"startfarming", "farm":
-			return { "ok": true, "view": View.BOARD, "modal": Modal.STARTFARMING }
-		"boons", "boon":
-			# T31 — the Boons catalog screen (the ✨ Boons town entry). ("boon" is an alias.)
-			return { "ok": true, "view": View.BOARD, "modal": Modal.BOONS }
-		"keeper":
-			# T31 — the keeper-encounter modal. Normally auto-triggered off a town/build event;
-			# this deep-link lets QA / the sanity-capture preview the encounter.
-			return { "ok": true, "view": View.BOARD, "modal": Modal.KEEPER }
-		_:
-			return { "ok": false }
+	# Look the id up across the single MODAL_IDS table — any id in any Modal's list
+	# (canonical or alias; "" / "board" map to Modal.NONE) yields that Modal. Unknown
+	# id → { "ok": false }, byte-identical to the legacy match's default branch.
+	for m in MODAL_IDS:
+		if id in (MODAL_IDS[m] as Array):
+			return { "ok": true, "view": View.BOARD, "modal": int(m) }
+	return { "ok": false }
 
 ## Inverse of the modal component of resolve() — map a Modal.* value back to
-## its canonical string id. Useful for harness round-tripping and logging.
+## its canonical string id (element [0] of its MODAL_IDS list). Useful for harness
+## round-tripping and logging. An unmapped Modal value → "" (matches the legacy default).
 static func modal_id(m: int) -> String:
-	match m:
-		Modal.NONE:      return "board"
-		Modal.TOWN:      return "town"
-		Modal.MENU:      return "menu"
-		Modal.INVENTORY: return "inventory"
-		Modal.TOWNMAP:   return "map"
-		Modal.ACHIEVEMENTS: return "achievements"
-		Modal.TILES:        return "tiles"
-		Modal.CHRONICLE:    return "chronicle"
-		Modal.TOWNSFOLK:    return "townsfolk"
-		Modal.CARTOGRAPHY:  return "cartography"
-		Modal.RECIPES:      return "recipes"
-		Modal.TUTORIAL:     return "tutorial"
-		Modal.CASTLE:       return "castle"
-		Modal.DECORATIONS:  return "decorations"
-		Modal.PORTAL:       return "portal"
-		Modal.CHARTER:      return "charter"
-		Modal.QUESTS:       return "quests"
-		Modal.DAILY:        return "daily"
-		Modal.LEAVEBOARD:   return "leaveboard"
-		Modal.DEBUG:        return "debug"
-		Modal.STARTFARMING: return "startfarming"
-		Modal.BOONS:        return "boons"
-		Modal.KEEPER:       return "keeper"
-		_:               return ""
+	var ids: Array = MODAL_IDS.get(m, [])
+	if ids.is_empty():
+		return ""
+	# Modal.NONE's canonical id is "board" (its list is ["", "board"], so element [1]);
+	# every other modal's canonical id is element [0].
+	if m == Modal.NONE:
+		return "board"
+	return String(ids[0])
 
 ## Parse a browser `location.hash` ("#/inventory", "#inventory", "#/", "") into a
 ## deep-link id string. Strips the leading "#"/"/" decoration, then validates the
@@ -138,6 +119,13 @@ static func id_from_hash(hash: String) -> String:
 		return raw
 	return "board"
 
-## All valid deep-link ids (the full set accepted by resolve()).
+## All valid deep-link ids (the full set accepted by resolve()), flattened from the
+## single MODAL_IDS table in Modal-enum order with each modal's canonical id before its
+## aliases. The order is load-bearing — DebugModal.jump_targets() relies on it (see the
+## MODAL_IDS doc comment) — and matches the legacy hand-written list byte-for-byte.
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "ledger", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "craft", "crafting", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm", "boons", "boon", "keeper"])
+	var out: PackedStringArray = PackedStringArray()
+	for m in MODAL_IDS:
+		for id in (MODAL_IDS[m] as Array):
+			out.append(String(id))
+	return out

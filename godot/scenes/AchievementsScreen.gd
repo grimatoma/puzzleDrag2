@@ -57,18 +57,14 @@ const TAB_TROPHIES := "trophies"
 const TAB_COLLECTION := "collection"
 
 # ── grouping (by the AchievementConfig counter families, for readable sections) ─
-# Ordered [display name, Array of counters]. Any catalog counter not listed here lands
-# in the trailing "More" group so the screen NEVER silently drops a trophy.
-const GROUP_ORDER: Array = [
-	["Chains",      ["chains_committed"]],
-	["Orders",      ["orders_fulfilled"]],
-	["Boss",        ["bosses_defeated"]],
-	["Collections", ["distinct_resources_chained", "distinct_buildings_built"]],
-	["Mine",        ["mine_chained"]],
-	["Harvest",     ["veg_chained", "fruit_chained", "flower_chained", "herd_chained",
-					 "cattle_chained", "mount_chained", "tree_chained"]],
-]
-const GROUP_MORE := "More"
+# The trophy-section classification now LIVES with the catalog in AchievementConfig
+# (GROUP_ORDER / group_order() / group_for() — labels, counter→group assignments, order,
+# and the trailing "More" catch-all are owned there, since they track the counter set).
+# The screen references those rather than maintaining a parallel copy: GROUP_MORE const-
+# aliases the config's const (a compile-time constant), and the ordered section list is
+# fetched via group_order() (a static fn, so it can't be const-aliased) at render time.
+# Membership / order / labels stay byte-identical to the former local table.
+const GROUP_MORE := AchievementConfig.GROUP_MORE
 
 # ── parchment palette (matches InventoryScreen / TownScreen journal tokens) ──────
 const COL_TITLE := Palette.INK
@@ -252,8 +248,8 @@ func refresh() -> void:
 ## cards. Every catalog entry gets exactly one card (tracked in `_rows`).
 func _build_trophies() -> void:
 	var grouped: Dictionary = _grouped_catalog()
-	# Render the known groups in order, then the trailing "More" catch-all.
-	for spec in GROUP_ORDER:
+	# Render the known groups in order (from AchievementConfig), then the trailing "More".
+	for spec in AchievementConfig.group_order():
 		var name: String = String(spec[0])
 		var entries: Array = grouped.get(name, [])
 		if entries.is_empty():
@@ -625,19 +621,13 @@ func row_progress(entry: Dictionary) -> int:
 	return game.achievement_progress(String(entry.get("counter", "")))
 
 ## group display name → Array of catalog entries (in catalog order) for that group.
-## Entries whose counter isn't in any GROUP_ORDER family land under "More".
+## Entries whose counter isn't in any AchievementConfig group family land under "More".
 func _grouped_catalog() -> Dictionary:
-	# Build a counter → group-name lookup from GROUP_ORDER.
-	var counter_to_group: Dictionary = {}
-	for spec in GROUP_ORDER:
-		var gname: String = String(spec[0])
-		for c in (spec[1] as Array):
-			counter_to_group[String(c)] = gname
-
 	var out: Dictionary = {}
 	for entry in AchievementConfig.all():
 		var counter: String = String((entry as Dictionary).get("counter", ""))
-		var gname: String = String(counter_to_group.get(counter, GROUP_MORE))
+		# AchievementConfig owns the classification: a counter in no listed group → GROUP_MORE.
+		var gname: String = AchievementConfig.group_for(counter)
 		if not out.has(gname):
 			out[gname] = []
 		(out[gname] as Array).append(entry)
