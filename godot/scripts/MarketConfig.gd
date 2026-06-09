@@ -1,14 +1,36 @@
 class_name MarketConfig
 extends RefCounted
-## Market price tables — the sell/buy economy from the locked Direction spec
-## ("the refined economy is spent to grow the town"). The Market lets the player
-## sell collected resources for coins and buy resources back at a markup.
+## Market price tables + dynamic price drift — the sell/buy economy from the
+## locked Direction spec ("the refined economy is spent to grow the town").
+## The Market lets the player sell collected resources for coins and buy
+## resources back at a markup.
 ##
 ## Prices are PC2-derived FIRST-PASS values lifted from the game's Balance
 ## baseline page (the source-of-truth for tuning). SELL is the coins-per-unit a
 ## player earns; BUY is the coins-per-unit a player pays — buy prices carry a
 ## markup over sell so the Market is a sink, not an arbitrage loop. They are
 ## tunable: edit SELL / BUY.
+##
+## T16: Dynamic pricing (ported from src/market.ts).
+##   • MARKET_EVENTS — 4 seasonal economic events with per-resource multipliers.
+##   • rand(seed, season, salt) — deterministic 32-bit hash → [0, 1). Exact
+##     bit-math port of the React implementation.
+##   • pick_market_event(seed, season) → event dict or {} (40% chance).
+##   • drift_prices(seed, season, event) → {key:{buy,sell}} drifted table.
+##
+## RESOURCE REMAP (T16 adaptation): React's event mults target TILE keys
+## (tile_tree_oak, tile_grass_grass, tile_grain_wheat, tile_mine_iron_ore,
+## tile_mine_gem) because React's inventory holds tile counts. The Godot port
+## sells RESOURCES (disjoint tile/resource invariant — see CLAUDE.md), so the
+## mults are remapped to the produced resources:
+##   tile_tree_oak      → plank        (oak → plank)
+##   tile_grass_grass   → hay_bundle   (grass → hay_bundle)
+##   tile_grain_wheat   → flour        (wheat → flour)
+##   tile_mine_iron_ore → iron_bar     (ore → bar)
+##   tile_mine_gem      → cut_gem      (raw gem → cut gem)
+## Same labels, descriptions, and ×multipliers; only the keys change.
+## "Sell raw board tiles" is NOT portable and is skipped — the port's inventory
+## has no tile counts (the disjoint tile/resource invariant).
 ##
 ## Registered as a `class_name` global (like BuildingConfig / Constants) so its
 ## consts and helpers are reachable WITHOUT a live autoload — headless tests run
@@ -122,13 +144,120 @@ const BUY: Dictionary = {
 	"fish_oil_bottled": 600,
 }
 
+# ── T16: Market events (src/market.ts MARKET_EVENTS) ─────────────────────────
+## The 4 seasonal economic events. Each entry is a Dictionary:
+##   { "id", "label", "desc", "mults": {resource_key: float} }
+##
+## RESOURCE REMAP (see file header): React keys are TILE keys; port keys are the
+## produced RESOURCE keys. E.g. tile_tree_oak → plank, tile_grass_grass →
+## hay_bundle, tile_grain_wheat → flour, tile_mine_iron_ore → iron_bar,
+## tile_mine_gem → cut_gem.
+const MARKET_EVENTS: Array = [
+	{
+		"id": "wood_shortage",
+		"label": "Wood Shortage",
+		"desc": "Timber supplies are low. Planks are worth double!",
+		# React: { tile_tree_oak: 2, plank: 2 } — oak (tile) remapped to plank (resource);
+		# the plank×2 entry is retained (it was already a resource key in React).
+		"mults": { "plank": 2.0 },
+	},
+	{
+		"id": "bumper_crop",
+		"label": "Bumper Crop",
+		"desc": "The fields are overflowing. Hay and Flour prices have crashed.",
+		# React: { tile_grass_grass: 0.5, tile_grain_wheat: 0.5 }
+		# → hay_bundle and flour (the produced resources).
+		"mults": { "hay_bundle": 0.5, "flour": 0.5 },
+	},
+	{
+		"id": "iron_rush",
+		"label": "Iron Rush",
+		"desc": "The King's army is buying iron. Ingot prices are soaring!",
+		# React: { tile_mine_iron_ore: 2.5 } → iron_bar (smelted bar).
+		"mults": { "iron_bar": 2.5 },
+	},
+	{
+		"id": "gem_fever",
+		"label": "Gem Fever",
+		"desc": "A rich merchant is in town. Gems are trading at a premium.",
+		# React: { tile_mine_gem: 1.8 } → cut_gem.
+		"mults": { "cut_gem": 1.8 },
+	},
+]
+
+# ── T16: Deterministic 32-bit hash → [0, 1) ───────────────────────────────────
+## Port of src/market.ts `rand(seed, season, salt)`.
+## GDScript uses 64-bit integers by default; every intermediate result is masked
+## with `& 0xFFFFFFFF` to emulate JavaScript's unsigned-right-shift (>>>) and
+## keep the 32-bit unsigned domain, then divided by 2^32 to land in [0, 1).
+static func rand(seed: int, season: int, salt: int) -> float:
+	var x: int = (seed ^ (season * 73856093) ^ (salt * 19349663)) & 0xFFFFFFFF
+	x = ((x ^ ((x >> 16) & 0xFFFF)) * 0x85ebca6b) & 0xFFFFFFFF
+	x = ((x ^ ((x >> 13) & 0x0007FFFF)) * 0xc2b2ae35) & 0xFFFFFFFF
+	x = (x ^ ((x >> 16) & 0xFFFF)) & 0xFFFFFFFF
+	return float(x) / 4294967296.0
+
+# ── T16: Pick a market event for (seed, season) ───────────────────────────────
+## Port of src/market.ts `pickMarketEvent(seed, season)`.
+## 40% chance of an event (roll ≤ 0.40); otherwise returns {}.
+## Event index = floor(rand(..., 888) × 4), picking one of the 4 MARKET_EVENTS.
+## Returns the full event dict (id/label/desc/mults) or {} when no event.
+static func pick_market_event(seed: int, season: int) -> Dictionary:
+	var roll: float = rand(seed, season, 999)
+	if roll > 0.40:
+		return {}
+	var idx: int = int(floor(rand(seed, season, 888) * float(MARKET_EVENTS.size())))
+	idx = clampi(idx, 0, MARKET_EVENTS.size() - 1)
+	return (MARKET_EVENTS[idx] as Dictionary).duplicate(true)
+
+# ── T16: Compute drifted prices for a season ─────────────────────────────────
+## Port of src/market.ts `driftPrices(seed, season, event)`.
+## Iterates SELL/BUY in stable key order (SELL drives the keys — every sellable
+## resource has a base sell; BUY provides the base buy for buyable resources).
+## Per key:
+##   buyMul  = 0.85 + rand(seed, season, salt++) × 0.30   → [0.85, 1.15)
+##   sellMul = 0.85 + rand(seed, season, salt++) × 0.30
+##   if event and event.mults has this key → ×= event.mults[key]
+##   buy  = max(1, round(base_buy  × buyMul))
+##   sell = max(0, round(base_sell × sellMul))
+## Returns { resource_key: { "buy": int, "sell": int } } for every key in SELL.
+## Keys NOT in SELL have no entry (they're not market-traded). Keys in SELL but
+## not in BUY get base_buy = 0 (no buy price — e.g. if a sell-only good is added
+## later), but the sell drift still applies.
+## `event` may be {} (no event) — safe to pass pick_market_event's output directly.
+static func drift_prices(seed: int, season: int, event: Dictionary = {}) -> Dictionary:
+	var out: Dictionary = {}
+	var salt: int = 0
+	# Use SELL.keys() as the canonical key order (all market-tradeable resources).
+	for k in SELL.keys():
+		var base_sell: int = int(SELL.get(k, 0))
+		var base_buy: int = int(BUY.get(k, 0))
+		var buy_mul: float = 0.85 + rand(seed, season, salt) * 0.30
+		salt += 1
+		var sell_mul: float = 0.85 + rand(seed, season, salt) * 0.30
+		salt += 1
+		# Apply event multiplier (only when the event targets this resource key).
+		var mults: Dictionary = (event.get("mults", {}) as Dictionary)
+		if mults.has(k):
+			var m: float = float(mults[k])
+			buy_mul *= m
+			sell_mul *= m
+		var drifted_buy: int = maxi(1, int(round(float(base_buy) * buy_mul)))
+		var drifted_sell: int = maxi(0, int(round(float(base_sell) * sell_mul)))
+		out[k] = { "buy": drifted_buy, "sell": drifted_sell }
+	return out
+
 # ── Static helpers (usable without an instance) ──────────────────────────────
 
 ## Coins earned per unit when selling `res` (0 when not sellable).
+## Falls back to the FLAT BASE price — callers that have live `market_prices`
+## should read `game.live_sell_price(res)` instead for the drifted price.
 static func sell_price(res: String) -> int:
 	return int(SELL.get(res, 0))
 
 ## Coins paid per unit when buying `res` (0 when not buyable).
+## Falls back to the FLAT BASE price — callers that have live `market_prices`
+## should read `game.live_buy_price(res)` instead for the drifted price.
 static func buy_price(res: String) -> int:
 	return int(BUY.get(res, 0))
 

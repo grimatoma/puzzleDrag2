@@ -334,6 +334,60 @@ func login_tick(today: String) -> Dictionary:
 	daily_streak_day = next_day
 	return {"claimed": true, "day": next_day, "reward": reward.duplicate(true)}
 
+# ── T16: Dynamic market state (ported from src/market.ts) ───────────────────────
+## The live drifted price table and current seasonal event. Re-rolled on new_game
+## and at every close_season() (the season boundary — parallel to React's
+## CLOSE_SEASON reroll). Seeded deterministically from `market_seed` so the same
+## seed always produces the same prices for a given season index.
+##
+## ADDITIVE GUARANTEE: a save written before T16 existed loads with market_seed = 0
+## and market_season = 0 (from_dict defensive defaults), which seeds the prices
+## exactly as if new_game() had been called with those values — a reasonable fresh
+## season. sell() / buy() fall back to base prices when market_prices is empty, so
+## old saves are byte-identical until prices are recomputed. SAVE_VERSION is NOT
+## bumped.
+##
+## Shape:
+##   market_seed   — int, randomised once at new_game and persisted. Deterministic:
+##                   same seed + same season always yields the same drift.
+##   market_season — int, monotonically incremented by each close_season() call.
+##                   Mirrors React's `season` argument to driftPrices.
+##   market_prices — { resource:String → { "buy":int, "sell":int } }. The drifted
+##                   price for every market-tradeable resource this season. Derived:
+##                   NOT persisted — recomputed from market_seed + market_season on
+##                   new_game, load, and close_season.
+##   market_event  — the active event dict ({ id, label, desc, mults }) or {} when
+##                   no event this season. Derived alongside market_prices.
+var market_seed: int = 0          ## stable per-save seed; randomised at new_game
+var market_season: int = 0        ## monotonic season index; bumped by close_season
+## Derived live price table — not persisted, recomputed from seed+season.
+var market_prices: Dictionary = {}
+## Derived current event — not persisted, recomputed from seed+season.
+var market_event: Dictionary = {}
+
+## Recompute market_prices and market_event from market_seed and market_season.
+## Call on new_game, from_dict, and close_season. Pure (no side effects beyond
+## the two derived fields).
+func _recompute_market() -> void:
+	market_event = MarketConfig.pick_market_event(market_seed, market_season)
+	market_prices = MarketConfig.drift_prices(market_seed, market_season, market_event)
+
+## Live drifted SELL price for `res` (coins earned when selling 1 unit). Falls
+## back to the flat base when no drifted price is available.
+func live_sell_price(res: String) -> int:
+	var p: Variant = market_prices.get(res, null)
+	if p is Dictionary:
+		return int((p as Dictionary).get("sell", MarketConfig.sell_price(res)))
+	return MarketConfig.sell_price(res)
+
+## Live drifted BUY price for `res` (coins paid when buying 1 unit). Falls back
+## to the flat base when no drifted price is available.
+func live_buy_price(res: String) -> int:
+	var p: Variant = market_prices.get(res, null)
+	if p is Dictionary:
+		return int((p as Dictionary).get("buy", MarketConfig.buy_price(res)))
+	return MarketConfig.buy_price(res)
+
 # ── Castle contributions (ADDITIVE — ported from src/features/castle) ───────────
 ## The Castle is a ONE-WAY SINK: the player donates resources from the shared
 ## `inventory` toward each CastleConfig need, and the donated total per need is tracked
@@ -1516,7 +1570,8 @@ func sell(resource: String, qty: int) -> Dictionary:
 		inventory.erase(resource)
 	else:
 		inventory[resource] = remaining
-	var coins_gain: int = MarketConfig.sell_price(resource) * qty
+	# T16: use the LIVE drifted sell price (falls back to base when market_prices is empty).
+	var coins_gain: int = live_sell_price(resource) * qty
 	coins += coins_gain
 	return {"ok": true, "coins_gain": coins_gain, "resource": resource, "qty": qty}
 
@@ -1535,7 +1590,8 @@ func buy(resource: String, qty: int) -> Dictionary:
 		return {"ok": false, "reason": "bad_qty"}
 	if not MarketConfig.can_buy(resource):
 		return {"ok": false, "reason": "not_buyable"}
-	var price: int = MarketConfig.buy_price(resource)
+	# T16: use the LIVE drifted buy price (falls back to base when market_prices is empty).
+	var price: int = live_buy_price(resource)
 	# Affordability is checked against the FULL requested qty first: if the player
 	# can't pay for what they asked for, the order is rejected outright.
 	if coins < price * qty:
@@ -1971,6 +2027,9 @@ func close_season() -> Dictionary:
 	var preserved: Array = agg["board_preserve_biomes"].keys()
 	_decay_npc_bonds()
 	reroll_quests()
+	# T16: advance the market season and re-roll prices (parallel to React CLOSE_SEASON).
+	market_season += 1
+	_recompute_market()
 	# Clear the run + reset the farm to a fresh Spring on the home board.
 	farm_run_active = false
 	farm_run_budget = 0
@@ -1987,6 +2046,7 @@ func close_season() -> Dictionary:
 		"tools_granted": tools_granted,
 		"preserved_biomes": preserved,
 		"pool_step": pool_step,   # T20 seam: reported, no hiring-pool primitive to apply it to yet
+		"market_event": market_event.duplicate(true),   # T16: event for the new season (or {})
 	}
 
 ## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
@@ -3502,6 +3562,12 @@ func to_dict() -> Dictionary:
 		"almanac_level": almanac_level,
 		"almanac_claimed": almanac_claimed.duplicate(),
 		"almanac_structural": almanac_structural.duplicate(),
+		# T16 dynamic market (ADDITIVE): persist only the seed + season index; the
+		# derived price table and event are recomputed by from_dict → _recompute_market.
+		# A save written before T16 existed loads with 0/0 defaults → a deterministic
+		# season-0 price set. SAVE_VERSION is NOT bumped.
+		"market_seed": market_seed,
+		"market_season": market_season,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -3881,6 +3947,15 @@ static func from_dict(d: Dictionary) -> GameState:
 		for k in struct_d:
 			if bool(struct_d[k]):
 				s.almanac_structural[String(k)] = true
+	# T16: Restore dynamic market state (ADDITIVE). Missing keys (any save written before
+	# T16 existed) → 0/0 defaults (seed 0, season 0) — a deterministic but non-random
+	# season-0 price set. Both values are int-coerced + floored at 0; market_seed is
+	# kept unsigned (masked to 0x7FFFFFFF so it stays positive in GDScript's signed
+	# int domain). market_prices and market_event are derived — recomputed from the
+	# restored seed + season by _recompute_market(). SAVE_VERSION is NOT bumped.
+	s.market_seed = maxi(0, int(d.get("market_seed", 0))) & 0x7FFFFFFF
+	s.market_season = maxi(0, int(d.get("market_season", 0)))
+	s._recompute_market()
 	return s
 
 # ── Fresh-game factory (React-parity starting economy) ──────────────────────
@@ -3898,4 +3973,9 @@ static func new_game() -> GameState:
 	var g := GameState.new()
 	# React parity: src/state/init.ts:71 — coins: 150
 	g.coins = 150
+	# T16: seed the market deterministically from the current time (a fresh game gets
+	# a unique seed so each run has a distinct price history). market_season starts at 0.
+	g.market_seed = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF
+	g.market_season = 0
+	g._recompute_market()
 	return g

@@ -362,6 +362,30 @@ func _build_refine_section() -> void:
 		_refine_body.add_child(row)
 
 func _build_market_section() -> void:
+	# T16: Event banner — show when a seasonal market event is active.
+	var ev: Dictionary = game.market_event
+	if not ev.is_empty():
+		var ev_label: String = String(ev.get("label", ""))
+		var ev_desc: String = String(ev.get("desc", ""))
+		var banner := PanelContainer.new()
+		banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var banner_style := StyleBoxFlat.new()
+		banner_style.bg_color = Color(0.95, 0.88, 0.50, 0.90)   # warm amber
+		banner_style.set_corner_radius_all(8)
+		banner_style.set_content_margin_all(10)
+		banner.add_theme_stylebox_override("panel", banner_style)
+		var banner_vbox := VBoxContainer.new()
+		var ev_title := _make_label("⚡ %s" % ev_label, COL_HEADER)
+		ev_title.add_theme_font_size_override("font_size", 14)
+		ev_title.add_theme_color_override("font_color", Palette.EMBER)
+		banner_vbox.add_child(ev_title)
+		if ev_desc != "":
+			var ev_body := _make_label(ev_desc, COL_BODY)
+			ev_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+			banner_vbox.add_child(ev_body)
+		banner.add_child(banner_vbox)
+		_market_body.add_child(banner)
+
 	# review-17 — a clear "Sell" sub-header so the sell rows read as their own group and the
 	# Buy group below it is obviously a separate, reachable section (the buy rows used to sit
 	# under a faint "— Buy —" line that was easy to miss below the sell fold).
@@ -379,8 +403,10 @@ func _build_market_section() -> void:
 		var sell_icon := UiKit.make_icon(res, 30.0)
 		if sell_icon != null:
 			row.add_child(sell_icon)
+		# T16: show the LIVE drifted sell price (falls back to base with no drift).
+		var live_sell: int = game.live_sell_price(res)
 		var label := _make_label("%s ×%d  (sell %d🪙)" % [
-			UiKit.pretty_name(res), owned, MarketConfig.sell_price(res)], COL_BODY)
+			UiKit.pretty_name(res), owned, live_sell], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
@@ -404,7 +430,8 @@ func _build_market_section() -> void:
 	_market_body.add_child(_make_subheader("⤵ Buy"))
 
 	for res in MarketConfig.buyable_resources():
-		var price: int = MarketConfig.buy_price(res)
+		# T16: show the LIVE drifted buy price (falls back to base with no drift).
+		var price: int = game.live_buy_price(res)
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
