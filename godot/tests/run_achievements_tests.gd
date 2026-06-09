@@ -307,20 +307,27 @@ func _test_integration_fill_order_path() -> void:
 		"trusted_friend unlocked via fill_order")
 
 func _test_integration_boss_defeat_path() -> void:
-	# Only a DEFEAT bumps bosses_defeated through the wired damage_boss path.
+	# T24: only a DEFEAT (target met / a win resolution) bumps bosses_defeated through the wired
+	# note_boss_chain → _resolve_boss path. Arm a frostmaw fight by hand (catalog target 30 oak).
 	var g := GameState.new()
 	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 5
+	g.boss_season = "winter"
+	g.boss_year = 1
+	g.boss_turns_remaining = BossConfig.BOSS_WINDOW_TURNS
+	g.boss_target_resource = "tile_tree_oak"
+	g.boss_target_amount = 30
 	var coins_before := g.coins
-	var r1 := g.damage_boss(2)   # 5 - 2 = 3, NOT defeated
-	_check(not bool(r1.get("defeated", false)), "non-fatal hit does not defeat")
+	# A short oak chain (under the target) makes progress but does NOT defeat → no bump.
+	var r1 := g.note_boss_chain(Constants.Tile.OAK, 5, 0)
+	_check(not bool(r1.get("defeated", false)), "under-target chain does not defeat")
 	_check(int(g.achievement_counters.get("bosses_defeated", 0)) == 0,
-		"a non-fatal hit does NOT bump bosses_defeated")
-	var r2 := g.damage_boss(10)  # over-kill → defeated
-	_check(bool(r2.get("defeated", false)), "the fatal hit defeats the boss")
+		"an under-target chain does NOT bump bosses_defeated")
+	# A big oak chain meeting the target wins → bumps bosses_defeated + first_blood.
+	var r2 := g.note_boss_chain(Constants.Tile.OAK, 30, 0)
+	_check(bool(r2.get("defeated", false)), "meeting the target defeats the boss")
 	_check(int(g.achievement_counters.get("bosses_defeated", 0)) == 1,
 		"the DEFEAT bumps bosses_defeated to 1 via the wired path")
 	_check(bool(g.achievements_unlocked.get("first_blood", false)),
 		"first_blood unlocked on boss defeat")
-	# first_blood grants +200 coins ON TOP of the boss reward already credited by damage_boss.
+	# first_blood grants +200 coins ON TOP of the boss reward already credited on the win.
 	_check(g.coins >= coins_before + 200, "first_blood's +200 coin reward is granted")

@@ -23,6 +23,16 @@ const TILE_OVERSCAN := 1.16
 var tile_type: int = Constants.EMPTY
 var size_px: float = 96.0
 var _selected: bool = false
+## T24 (seasonal boss modifiers) — per-cell overlay flags pushed by the Board from the live boss
+## modifier_state. A FROZEN tile (a frozen-column cell) is dimmed with an icy tint; a HIDDEN tile
+## (hide_resources) is drawn FACE-DOWN (a cover card over the art) until it's chained/revealed; a
+## HEAT tile (heat_tiles) gets a warm ember glow. All three are purely cosmetic — the chain GATE
+## lives in Board via BossModifierLogic.cell_chainable — and default off so a non-boss tile draws
+## exactly as before. _draw() reads them after the body so the overlay sits on top of the art.
+var _boss_frozen: bool = false
+var _boss_hidden: bool = false
+var _boss_heat: bool = false
+var _boss_rubble: bool = false
 var _tex: Texture2D = null               ## v1 PNG; null when v2 or placeholder
 var _anim: AnimatedSprite2D = null       ## present only for v2 (animated) tiles
 ## Selection "lift + pulse" tween (see set_selected). Kept so we can kill it the
@@ -143,8 +153,35 @@ func freeze_selection() -> void:
 	if _selected:
 		scale = Vector2(1.07, 1.07)
 
+## T24 — push the boss-modifier overlay flags for this cell (frozen column / face-down hidden /
+## heat). Redraws when anything changed. The Board calls this after _build_tiles + on every boss
+## refresh from the live modifier_state. A v2 AnimatedSprite2D body draws under _draw(), so the
+## overlay (painted in _draw) sits on top of it too; a hidden tile additionally hides the anim node.
+func set_boss_overlay(frozen: bool, hidden: bool, heat: bool, rubble: bool = false) -> void:
+	if frozen == _boss_frozen and hidden == _boss_hidden and heat == _boss_heat and rubble == _boss_rubble:
+		return
+	_boss_frozen = frozen
+	_boss_hidden = hidden
+	_boss_heat = heat
+	_boss_rubble = rubble
+	# A hidden / rubble tile's art is concealed — hide the v2 anim node (the _draw cover sits over a
+	# v1/placeholder body), so a face-down hidden / blocked rubble tile reads as a cover card
+	# regardless of asset tier.
+	if _anim != null:
+		_anim.visible = not (hidden or rubble)
+	queue_redraw()
+
 func _draw() -> void:
 	if tile_type == Constants.EMPTY:
+		return
+	# T24 — a HIDDEN boss tile is drawn FACE-DOWN: a cover card hides the art entirely until the
+	# tile is chained/revealed. A RUBBLE boss cell (rubble_blocks) is drawn as a rocky block cover.
+	# Both replace the body (no art leaks through) and are unchainable (gated in Board).
+	if _boss_hidden:
+		_draw_cover(Color(0.24, 0.27, 0.33), "?", Color(0.78, 0.82, 0.9, 0.85))
+		return
+	if _boss_rubble:
+		_draw_cover(Color(0.42, 0.39, 0.35), "▲", Color(0.86, 0.83, 0.78, 0.9))
 		return
 	# The body comes from the AnimatedSprite2D child (v2); otherwise draw it here.
 	if _anim == null:
@@ -152,10 +189,47 @@ func _draw() -> void:
 			_draw_textured()
 		else:
 			_draw_placeholder()
+	# T24 — boss-modifier overlays painted ON TOP of the body: a frozen-column cell gets an icy
+	# blue veil + frost frame; a heat cell gets a warm ember glow ring. Both purely cosmetic.
+	if _boss_frozen:
+		_draw_frozen_overlay()
+	if _boss_heat:
+		_draw_heat_overlay()
 	# M4b — the per-tile white selection ring is intentionally NOT drawn anymore: the
 	# ChainOverlay (M4a) renders the orange/gold chain PATH, which is the headline
 	# selection feedback the original game uses. set_selected() still tracks state (so
 	# callers don't break), but it no longer paints a competing ring on each tile.
+
+## T24 — a cover card (used for a HIDDEN face-down tile + a RUBBLE block): a muted `cover`-coloured
+## card with a soft frame + a centred glyph. Sized like the placeholder card so it reads at the same
+## chunky footprint as its neighbours.
+func _draw_cover(cover: Color, glyph: String, glyph_color: Color) -> void:
+	var s: float = size_px * 0.98
+	var rect := Rect2(-s / 2.0, -s / 2.0, s, s)
+	draw_rect(rect, cover, true)
+	var hi := Rect2(rect.position, Vector2(rect.size.x, rect.size.y * 0.34))
+	draw_rect(hi, cover.lightened(0.12), true)
+	draw_rect(rect, cover.darkened(0.30), false, maxf(2.0, size_px * 0.03))
+	var fnt := ThemeDB.fallback_font
+	var fs: int = int(size_px * 0.5)
+	var tw: float = fnt.get_string_size(glyph, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
+	draw_string(fnt, Vector2(-tw / 2.0, fs * 0.36), glyph, HORIZONTAL_ALIGNMENT_CENTER, -1, fs, glyph_color)
+
+## T24 — icy veil + frost frame over a FROZEN-column tile (a translucent blue wash so the art still
+## reads faintly through the ice, signalling "frozen — can't chain").
+func _draw_frozen_overlay() -> void:
+	var s: float = size_px * TILE_OVERSCAN
+	var rect := Rect2(-s / 2.0, -s / 2.0, s, s)
+	draw_rect(rect, Color(0.62, 0.80, 0.95, 0.42), true)
+	draw_rect(rect, Color(0.80, 0.92, 1.0, 0.85), false, maxf(2.0, size_px * 0.045))
+
+## T24 — warm ember glow ring over a HEAT tile (an orange edge so the player sees which tiles will
+## burn an item if left too long).
+func _draw_heat_overlay() -> void:
+	var s: float = size_px * TILE_OVERSCAN
+	var rect := Rect2(-s / 2.0, -s / 2.0, s, s)
+	draw_rect(rect, Color(1.0, 0.42, 0.12, 0.22), true)
+	draw_rect(rect, Color(1.0, 0.55, 0.18, 0.9), false, maxf(2.0, size_px * 0.05))
 
 ## v1 PNG: draw the exported tile texture, OVERSCANNED so its pastel card fills the cell
 ## (chunky React-style tile) leaving only a small cream gap from the PNG's own margin.

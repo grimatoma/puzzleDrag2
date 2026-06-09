@@ -201,15 +201,33 @@ var fish_pearl: Dictionary = {}
 ## (try_capture_pearl). Uncapped (like coins); persisted defensively.
 var runes: int = 0
 
-# ── Capstone boss (M3g, the Town-2 close) ─────────────────────────────────────
-## The Direction's "capstone boss" (Frostmaw): the gate that proves farm + mine
-## mastery before Town 2 opens up. While a boss is active it RAISES the board's
-## minimum chain length (boss_min_chain); you defeat it by landing chains against
-## its HP. Defeating it sets town2_complete, which a later milestone consumes to
-## unlock Town 3. See BossConfig for the catalog.
-var boss_active: String = ""        ## "" when no fight in progress, else a boss id
-var boss_hp: int = 0                ## remaining HP of the active boss
-var town2_complete: bool = false    ## set true when the capstone boss is defeated
+# ── Seasonal bosses (T24, the Town-2 close) — TIMED RESOURCE-TARGET model ──────
+## REWRITTEN from the single HP-attrition Frostmaw fight to React's 6 seasonal bosses as
+## TIMED RESOURCE-TARGET challenges (src/features/bosses/data.ts + modifiers.ts + boss/slice.ts).
+## A boss asks for a target quantity of a resource/tile within BOSS_WINDOW_TURNS turns under a
+## board MODIFIER; meet the target before the window expires to win (coins scaled by year +
+## overshoot margin, +1 Rune). The CAPSTONE boss (storm) still gates Town 2: beating it sets
+## town2_complete, which a later milestone consumes to unlock Town 3. See BossConfig +
+## BossModifierLogic for the catalog + the pure modifier rules.
+##
+## All 6 bosses are REACHABLE: a challenge spawns the CURRENT farm-season's boss (start_boss),
+## and `town2_complete` only blocks RE-challenging the capstone — the other five can be fought
+## any number of times (each season's boss is encounterable). The reward `year` is tracked per
+## instance (defaults to 1 — the port has no calendar; see boss_year below).
+##
+## boss_active replaces the old boss_active/boss_hp pair. The richer per-fight state lives in the
+## BossInstance fields below; boss_active just names the live boss ("" when idle). town2_complete
+## is unchanged (the Town-2 gate). The board MODIFIER overlay lives in boss_modifier_state, the
+## GDScript analogue of React's boss.modifierState (rendered/gated by Board, ticked by Main).
+var boss_active: String = ""              ## "" when no challenge in progress, else a boss id
+var boss_season: String = ""              ## the boss's season (cached from BossConfig at spawn)
+var boss_year: int = 1                    ## the run year used for the reward formula (>=1; default 1)
+var boss_turns_remaining: int = 0         ## window turns left (BOSS_WINDOW_TURNS at spawn → 0)
+var boss_progress: int = 0                ## units of the target gathered so far in the window
+var boss_target_resource: String = ""     ## the target resource/tile KEY (cached from BossConfig)
+var boss_target_amount: int = 0           ## the target quantity (cached from BossConfig)
+var boss_modifier_state: Dictionary = {}  ## the live board-modifier overlay (BossModifierLogic bag)
+var town2_complete: bool = false          ## set true when the CAPSTONE boss is defeated
 
 # ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
 ## SIMPLIFICATION (M3h, consistent with the M3f single-shared-inventory note): per
@@ -626,14 +644,14 @@ func can_summon_magic_tool(id: String) -> bool:
 ## success. On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard
 ## that trips: "no_portal" → "unknown" → "cant_afford".
 ##
-## SCOPE: this ports the summon ECONOMY (pay Influence → own a magic tool). Eight magic tools
-## (golden_apple/carrot/idol/sheep, philosophers_stone, magic_wand, magic_seed,
-## magic_fertilizer) are now REAL ToolConfig members with Godot-native powers (transform_tiles /
-## tap_clear_type / restore_turns / fill_bias), so once summoned they show in the rack and are
-## USABLE through the normal use_tool_on_grid path with no special-casing. The remaining two —
-## hourglass (undo_move) and miners_hat (reveal_tiles) — stay summonable here but are NOT
-## ToolConfig members and have no effect yet: they await the board/inventory-SNAPSHOT and
-## HIDDEN-TILE milestones respectively (see PortalConfig's scope note).
+## SCOPE: this ports the summon ECONOMY (pay Influence → own a magic tool). NINE magic tools
+## (golden_apple/carrot/idol/sheep, philosophers_stone, magic_wand, magic_seed, magic_fertilizer,
+## and — as of T24 — miners_hat) are now REAL ToolConfig members with Godot-native powers
+## (transform_tiles / tap_clear_type / restore_turns / fill_bias / reveal_tiles), so once summoned
+## they show in the rack and are USABLE through the normal use_tool_on_grid path with no
+## special-casing. miners_hat's reveal_tiles reveals hidden boss cells (the hide_resources layer it
+## awaited now exists). Only hourglass (undo_move) stays summonable-but-effect-less — it awaits the
+## board/inventory-SNAPSHOT milestone and is NOT a ToolConfig member (see PortalConfig's scope note).
 func summon_magic_tool(id: String) -> Dictionary:
 	if not portal_built:
 		return {"ok": false, "reason": "no_portal"}
@@ -645,9 +663,9 @@ func summon_magic_tool(id: String) -> Dictionary:
 	influence = maxi(0, influence - cost)
 	# Write DIRECTLY into the tools dict via ToolState.set_count (mirrors the React slice).
 	# set_count (NOT grant_tool) is used because it works uniformly for every PortalConfig id:
-	# the 8 implementable magic tools ARE ToolConfig members now (grant_tool would also accept
-	# them), but hourglass/miners_hat are still non-ToolConfig (grant_tool would reject those),
-	# so set_count keeps a single bypass-the-gate path for the whole catalog.
+	# the 9 implementable magic tools ARE ToolConfig members now (grant_tool would also accept
+	# them), but hourglass is still non-ToolConfig (grant_tool would reject it), so set_count keeps
+	# a single bypass-the-gate path for the whole catalog.
 	tool_state.set_count(id, tool_count(id) + 1)
 	return {"ok": true, "id": id, "count": tool_count(id), "influence": influence}
 
@@ -1596,7 +1614,12 @@ func craft(recipe_id: String) -> Dictionary:
 	# OUTPUT key (matching React's craft tick on the crafted item), count = qty produced.
 	# No-op loop over [] with an empty quest board.
 	_tick_quests({"type": "craft", "item": output, "count": qty_out})
-	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id, "kind": kind}
+	# T24 boss (ADDITIVE): an iron_bar-target boss (Ember Drake) advances +1 per recipe that
+	# CONSUMES iron_bar (note_boss_craft — the React CRAFTING/CRAFT_RECIPE boss branch). A no-op
+	# off that boss / with no boss. note_boss_craft auto-resolves the fight on the unit that meets
+	# the target; the caller's state_changed → _on_town_changed refresh re-syncs the board/HUD.
+	var boss_craft: Dictionary = note_boss_craft(recipe_id)
+	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id, "kind": kind, "boss": boss_craft}
 
 # ── Market (sell / buy for coins) ─────────────────────────────────────────────
 
@@ -2644,83 +2667,271 @@ func active_tile_pool() -> Array:
 		pool.append(Constants.Tile.GRASS)
 	return pool
 
-# ── Capstone boss (M3g) ───────────────────────────────────────────────────────
+# ── Seasonal bosses (T24, timed resource-target model) ─────────────────────────
 
-## True while a boss fight is in progress.
+## True while a boss challenge is in progress.
 func is_boss_active() -> bool:
 	return boss_active != ""
 
-## True when the capstone boss CAN be challenged right now: Town 2 isn't already
-## done, no fight is in progress, the settlement has reached City (the boss is the
-## City-tier gate), and you've "mastered the mine" — at least 12 combined refined
-## mine goods (block + iron_bar) banked. Guards are ordered so start_boss can report
-## the FIRST failing reason.
+## The boss that a NEW challenge would spawn right now: the CURRENT farm season's boss. The port
+## has no calendar, so the boss season is derived from the live farm season (current_season_name
+## → lowercase). Spring has TWO bosses (quagmire/mossback) and summer two (ember_drake/storm);
+## the season picker returns the FIRST in BOSS_IDS order, but pending_boss honours a still-undone
+## CAPSTONE: while town2 isn't complete and the season is summer, the capstone (storm) is offered
+## so the Town-2 gate is reachable; otherwise the season's first boss is offered. Returns "" only
+## if the season maps to no boss (never today — all four seasons have one).
+func pending_boss_id() -> String:
+	var season: String = current_season_name().to_lower()
+	# Capstone reachability: if Town 2 isn't done and we're in the capstone's season, offer it.
+	if not town2_complete and BossConfig.boss_season(BossConfig.CAPSTONE) == season:
+		return BossConfig.CAPSTONE
+	return BossConfig.boss_for_season(season)
+
+## True when a boss CAN be challenged right now: no challenge is already in progress, the
+## settlement has reached City (the boss is the City-tier gate), you've "mastered the mine" — at
+## least 12 combined refined mine goods (block + iron_bar) banked — and the current season maps to
+## a boss. Unlike the old single-capstone gate, this does NOT block once town2_complete: the five
+## non-capstone bosses stay re-challengeable; only RE-fighting the capstone is blocked (see
+## start_boss's "capstone_done" guard). Guards are ordered so start_boss reports the FIRST failure.
 func can_challenge_boss() -> bool:
-	if town2_complete:
-		return false
 	if is_boss_active():
 		return false
 	if settlement.tier < TownConfig.TIER_CITY:
 		return false
 	if qty("block") + qty("iron_bar") < 12:
 		return false
+	if pending_boss_id() == "":
+		return false
+	# The capstone, once defeated, can't be re-challenged (its only purpose is the Town-2 gate).
+	if pending_boss_id() == BossConfig.CAPSTONE and town2_complete:
+		return false
 	return true
 
-## Begin the capstone boss fight. On failure returns {ok:false, reason} (the FIRST
-## guard that trips, in order: "already_done" → "in_fight" → "locked" → "not_ready")
-## WITHOUT mutating. On success: arm Frostmaw at full HP and return
-## {ok:true, name, hp, min_chain}.
-func start_boss() -> Dictionary:
-	if town2_complete:
-		return {"ok": false, "reason": "already_done"}
+## Begin the CURRENT season's boss challenge (the boss pending_boss_id() names). On failure returns
+## {ok:false, reason} (the FIRST guard that trips: "in_fight" → "locked" → "not_ready" →
+## "no_boss" → "capstone_done") WITHOUT mutating. On success: arm the boss at full window, apply its
+## board MODIFIER to a fresh modifier_state (against the live board dims), and return
+## {ok:true, id, name, target_resource, target_amount, turns_remaining, min_chain, modifier_desc}.
+## `rng` seeds the modifier's cell/column picks (a fresh RandomNumberGenerator by default; tests pass
+## a seeded one for determinism).
+func start_boss(rng_in: RandomNumberGenerator = null) -> Dictionary:
 	if is_boss_active():
 		return {"ok": false, "reason": "in_fight"}
 	if settlement.tier < TownConfig.TIER_CITY:
 		return {"ok": false, "reason": "locked"}
 	if qty("block") + qty("iron_bar") < 12:
 		return {"ok": false, "reason": "not_ready"}
-	boss_active = BossConfig.FROSTMAW
-	boss_hp = BossConfig.boss_hp(BossConfig.FROSTMAW)
+	var id: String = pending_boss_id()
+	if id == "":
+		return {"ok": false, "reason": "no_boss"}
+	if id == BossConfig.CAPSTONE and town2_complete:
+		return {"ok": false, "reason": "capstone_done"}
+	var seeded_rng: RandomNumberGenerator = rng_in if rng_in != null else RandomNumberGenerator.new()
+	if rng_in == null:
+		seeded_rng.randomize()
+	boss_active = id
+	boss_season = BossConfig.boss_season(id)
+	boss_turns_remaining = BossConfig.BOSS_WINDOW_TURNS
+	boss_progress = 0
+	boss_target_resource = BossConfig.target_resource(id)
+	boss_target_amount = BossConfig.target_amount(id)
+	# Apply the board MODIFIER to a fresh modifier_state (the overlay Board renders/gates).
+	boss_modifier_state = BossModifierLogic.apply_to_fresh_grid(
+		BossConfig.boss_modifier(id), Constants.ROWS, Constants.COLS, seeded_rng)
 	return {
 		"ok": true,
-		"name": BossConfig.boss_name(BossConfig.FROSTMAW),
-		"hp": boss_hp,
-		"min_chain": BossConfig.boss_min_chain(BossConfig.FROSTMAW),
+		"id": id,
+		"name": BossConfig.boss_name(id),
+		"target_resource": boss_target_resource,
+		"target_amount": boss_target_amount,
+		"turns_remaining": boss_turns_remaining,
+		"min_chain": BossConfig.boss_min_chain(id),
+		"modifier_desc": BossConfig.modifier_desc(id),
 	}
 
-## Minimum chain length the BOARD must demand right now: the active boss's raised
-## bar while fighting, else the base Constants.MIN_CHAIN.
+## Minimum chain length the BOARD must demand right now: the active boss's raised bar (storm's
+## min_chain modifier → 4) while a challenge is live, else the base Constants.MIN_CHAIN.
 func boss_min_chain() -> int:
 	if is_boss_active():
 		return BossConfig.boss_min_chain(boss_active)
 	return Constants.MIN_CHAIN
 
-## Apply one resolved chain of length `chain_len` as boss damage. With no boss
-## active returns {active:false} (and changes nothing). Otherwise subtracts the
-## chain length from HP (clamped at 0). When HP hits 0 the boss is DEFEATED: mark
-## Town 2 complete, credit the reward coins, clear the fight, and return
-## {active:true, defeated:true, reward, name}. Otherwise returns
-## {active:true, defeated:false, hp:<remaining>}.
-func damage_boss(chain_len: int) -> Dictionary:
+## Advance boss PROGRESS for one resolved chain. `tile_type` is the chained Tile enum, `chain_len`
+## the tiles in the chain, `units` the resource units the chain produced (credit_chain's result).
+## PROGRESS COUNTING (faithful to React's CHAIN_COLLECTED boss branch, boss/slice.ts:200-224):
+##   - TILE-key target (tile_tree_oak / tile_grass_grass / tile_mine_stone / tile_fruit_blackberry):
+##     count CHAINED TILES of that type — add `chain_len` when the chained tile's STRING key matches
+##     the target. (For min_chain bosses a chain shorter than the bar never reaches here — it isn't a
+##     valid chain — so the storm "short chains yield nothing" rule is enforced by the board gate.)
+##   - RESOURCE target (iron_bar / fish_fillet): count UNITS PRODUCED — add `units` when the chain's
+##     produced resource matches the target. (iron_bar is also produced by crafting; see
+##     note_boss_craft for the craft path.)
+## Progress is clamped to the target amount. With no boss active this is a no-op returning
+## {active:false}. On the chain that MEETS the target the boss is RESOLVED (a win) via _resolve_boss
+## and the result carries {defeated:true, ...}; otherwise {active:true, defeated:false, progress, ...}.
+func note_boss_chain(tile_type: int, chain_len: int, units: int) -> Dictionary:
 	if not is_boss_active():
 		return {"active": false}
-	boss_hp = maxi(0, boss_hp - chain_len)
-	if boss_hp == 0:
-		var r: int = BossConfig.boss_reward(boss_active)
-		var nm: String = BossConfig.boss_name(boss_active)
-		town2_complete = true
-		coins += r
-		boss_active = ""
-		# M10 achievements (ADDITIVE): only a DEFEAT bumps bosses_defeated (+1). A
-		# non-fatal hit falls through to the {defeated:false} return below and never
-		# touches the counter.
+	var added: int = 0
+	var target: String = boss_target_resource
+	if Constants.string_key(tile_type) == target:
+		# Tile-key target: count chained tiles of that type.
+		added = chain_len
+	elif Constants.produced_resource(tile_type) == target:
+		# Resource target: count units produced of that resource.
+		added = units
+	if added > 0:
+		boss_progress = mini(boss_target_amount, boss_progress + added)
+		if boss_progress >= boss_target_amount:
+			return _resolve_boss()
+	return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+
+## Advance boss PROGRESS for a crafted recipe (the iron_bar craft path). Mirrors React's
+## CRAFTING/CRAFT_RECIPE boss branch (boss/slice.ts:226-239): only an iron_bar-target boss counts,
+## and only a recipe that CONSUMES iron_bar as an INPUT ticks +1 toward the target (the Ember Drake
+## demands forged iron be SPENT — `recipe.inputs?.[ResourceKey.IronBar]` in React). A non-iron_bar
+## boss, no boss, or a recipe that doesn't take iron_bar is a no-op. Returns the same shape as
+## note_boss_chain (resolves on the unit that meets the target). NOTE: iron_bar PRODUCED by chaining
+## iron-ore tiles also counts via note_boss_chain's resource-target path — both feed the same fight.
+func note_boss_craft(recipe_key: String) -> Dictionary:
+	if not is_boss_active():
+		return {"active": false}
+	if boss_target_resource != "iron_bar":
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	if not RecipeConfig.is_recipe(recipe_key):
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	if int(RecipeConfig.recipe_inputs(recipe_key).get("iron_bar", 0)) <= 0:
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	boss_progress = mini(boss_target_amount, boss_progress + 1)
+	if boss_progress >= boss_target_amount:
+		return _resolve_boss()
+	return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+
+## TICK one boss-window turn — call AFTER a chain resolves while a boss is active. Mirrors React's
+## CLOSE_SEASON boss branch (boss/slice.ts:241-263): tick the modifier (heat ages + burns), then
+## decrement the window; if the window hits 0 with the target unmet the challenge RESOLVES as a LOSS.
+## When the target is already met the chain-resolve path already resolved it (note_boss_chain), so
+## this only ever closes out a LOSS or ticks the heat/window. `grid` (the live board) and `rng` drive
+## the heat spawn/burn. Returns:
+##   no boss              → {active:false}
+##   target already met   → {active:false} (resolved by the chain that met it)
+##   window survived      → {active:true, defeated:false, turns_remaining, burned, spawned_heat}
+##   window expired (loss)→ the _resolve_boss loss result {active:true, defeated:false, ...resolved}
+func tick_boss_turn(rng: RandomNumberGenerator) -> Dictionary:
+	if not is_boss_active():
+		return {"active": false}
+	var burned: int = 0
+	var spawned: Array = []
+	var mtype: String = BossConfig.modifier_type(boss_active)
+	if mtype == BossModifierLogic.HEAT_TILES:
+		var params: Dictionary = BossConfig.boss_modifier(boss_active).get("params", {})
+		var burn_after: int = int(params.get("burnAfter", 2))
+		# Tick the existing heat (age + burn) FIRST, then spawn this turn's new heat tile.
+		burned = BossModifierLogic.tick_heat(boss_modifier_state, burn_after, inventory, rng)
+		spawned = BossModifierLogic.spawn_heat(
+			boss_modifier_state, Constants.ROWS, Constants.COLS, int(params.get("spawnPerTurn", 1)), rng)
+	boss_turns_remaining = maxi(0, boss_turns_remaining - 1)
+	if boss_turns_remaining <= 0 and boss_progress < boss_target_amount:
+		# Window expired before the target — resolve as a LOSS.
+		var loss := _resolve_boss()
+		loss["burned"] = burned
+		loss["spawned_heat"] = spawned
+		return loss
+	return {
+		"active": true, "defeated": false,
+		"turns_remaining": boss_turns_remaining,
+		"burned": burned, "spawned_heat": spawned,
+	}
+
+## Resolve the active boss (target met = win, else loss). Grants the reward on a win
+## (BossConfig.boss_reward: year+margin-scaled coins + 1 rune), clears the challenge + modifier
+## overlay, and — on a CAPSTONE win — sets town2_complete (preserving the M3g Town-2 gate). On any
+## DEFEAT (win) bumps the bosses_defeated achievement counter + posts the boss_defeated story event
+## (unchanged from the old model). Returns
+##   {active:true, defeated:bool, id, name, reward_coins, reward_runes, progress, target}.
+func _resolve_boss() -> Dictionary:
+	var id: String = boss_active
+	var nm: String = BossConfig.boss_name(id)
+	var reward: Dictionary = BossConfig.boss_reward(id, boss_progress, boss_year)
+	var defeated: bool = bool(reward.get("defeated", false))
+	var rc: int = int(reward.get("coins", 0))
+	var rr: int = int(reward.get("runes", 0))
+	var prog: int = boss_progress
+	var tgt: int = boss_target_amount
+	# Clear the live challenge + modifier overlay (BossModifierLogic.clear strips everything).
+	boss_modifier_state = BossModifierLogic.clear(boss_modifier_state)
+	boss_active = ""
+	boss_season = ""
+	boss_turns_remaining = 0
+	boss_progress = 0
+	boss_target_resource = ""
+	boss_target_amount = 0
+	if defeated:
+		coins += rc
+		runes += rr
+		# CAPSTONE win sets the Town-2 gate (preserving the M3g progression).
+		if id == BossConfig.CAPSTONE:
+			town2_complete = true
+		# M10 achievements (ADDITIVE): only a DEFEAT bumps bosses_defeated (+1).
 		bump_counter("bosses_defeated")
-		# Story engine (ADDITIVE, only on a DEFEAT): post a "boss_defeated" event so
-		# act2_frostmaw_felled fires (and queues its choice aftermath). The defeat result
-		# below is UNCHANGED. A non-fatal hit falls through and posts nothing.
+		# Story engine (ADDITIVE, only on a DEFEAT): post a "boss_defeated" event.
 		post_story_event({"type": "boss_defeated"})
-		return {"active": true, "defeated": true, "reward": r, "name": nm}
-	return {"active": true, "defeated": false, "hp": boss_hp}
+	return {
+		"active": true, "defeated": defeated, "id": id, "name": nm,
+		"reward_coins": rc, "reward_runes": rr, "progress": prog, "target": tgt,
+	}
+
+## True when the cell (row,col) may be CHAINED under the active boss modifier (frozen column /
+## rubble / hidden block it). With no boss active everything is chainable. Thin GameState forwarder
+## so the Board can gate drags without reaching into modifier_state directly.
+func boss_cell_chainable(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return true
+	return BossModifierLogic.cell_chainable(boss_modifier_state, row, col)
+
+## True when (row,col) is a HIDDEN (face-down) boss cell — Board draws the cover; reveal_tiles
+## (Miner's Hat) and a chain that includes it both reveal it.
+func boss_cell_hidden(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return false
+	return BossModifierLogic.cell_hidden(boss_modifier_state, row, col)
+
+## True when (row,col) carries a boss HEAT marker — Board draws the heat glow.
+func boss_cell_heat(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return false
+	return BossModifierLogic.cell_heat(boss_modifier_state, row, col)
+
+## The respawn-boost spawn-bias map { tile_key -> factor } for the active boss (empty for a
+## non-respawn_boost boss / no boss). Board's refill weighting reads this to over-spawn the boosted
+## tiles (the GDScript analogue of React's boss.spawnBias).
+func boss_spawn_bias() -> Dictionary:
+	if not is_boss_active():
+		return {}
+	return BossModifierLogic.spawn_bias(boss_modifier_state)
+
+## Reveal the active boss's hidden cells. `cells` (an Array of {row,col} or Vector2i) reveals just
+## those that are hidden (a chain reveal); pass [] to reveal ALL (Miner's Hat). Returns the list of
+## {row,col} cells that WERE hidden (so the caller can rebuild those board tiles). A no-op (returns
+## []) with no boss or no hidden layer.
+func reveal_boss_hidden(cells: Array = []) -> Array:
+	if not is_boss_active():
+		return []
+	if cells.is_empty():
+		return BossModifierLogic.reveal_all(boss_modifier_state)
+	var revealed: Array = []
+	for cell in cells:
+		var row: int
+		var col: int
+		if cell is Vector2i:
+			row = cell.y
+			col = cell.x
+		else:
+			row = int((cell as Dictionary).get("row", -1))
+			col = int((cell as Dictionary).get("col", -1))
+		if BossModifierLogic.reveal_cell(boss_modifier_state, row, col):
+			revealed.append({"row": row, "col": col})
+	return revealed
 
 # ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
 
@@ -3228,6 +3439,16 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	# reveal_tiles (Miner's Hat, T24) — a STATE power: reveal every HIDDEN boss cell (hide_resources /
+	# Mossback). Never touches the grid (the cells keep their tiles; only the modifier_state hidden
+	# layer is cleared). The caller refreshes the board overlay after the use so the cover lifts. Off a
+	# hide_resources boss it reveals nothing (a harmless no-op that still consumes a charge — matching
+	# every other instant tool). Returns the revealed cells so the caller can rebuild just those tiles.
+	if ToolConfig.power_id(id) == "reveal_tiles":
+		var revealed: Array = reveal_boss_hidden([])
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}, "revealed": revealed}
 	var is_tap: bool = ToolConfig.is_tap_target(id)
 	if is_tap and not BoardLogic.in_bounds(cell):
 		return {"ok": false, "reason": "needs_target", "grid": grid, "collected": {}}
@@ -3575,8 +3796,18 @@ func to_dict() -> Dictionary:
 		"fish_tide_turn": fish_tide_turn,
 		"fish_pearl": fish_pearl.duplicate(true),
 		"runes": runes,
+		# Seasonal boss (T24): the live BossInstance — id + season + year + the timed-window
+		# fields + the target + the modifier overlay (deep-copied). Replaces the old boss_hp.
+		# SAVE_VERSION is NOT bumped — a save written under the old HP model loads with the boss
+		# sanitised to idle (from_dict ignores the stale boss_hp key); town2_complete is preserved.
 		"boss_active": boss_active,
-		"boss_hp": boss_hp,
+		"boss_season": boss_season,
+		"boss_year": boss_year,
+		"boss_turns_remaining": boss_turns_remaining,
+		"boss_progress": boss_progress,
+		"boss_target_resource": boss_target_resource,
+		"boss_target_amount": boss_target_amount,
+		"boss_modifier_state": boss_modifier_state.duplicate(true),
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
 		# Farm HAZARDS (T7/T8/T9, ADDITIVE): the live positional rats / fire cells / wolves +
@@ -3833,19 +4064,39 @@ static func from_dict(d: Dictionary) -> GameState:
 				"turns_left": pturns,
 			}
 	s.runes = maxi(0, int(d.get("runes", 0)))
-	# Restore the capstone-boss state defensively (M3g). Keep boss_active only if it
-	# names a REAL boss (a bogus id → "" = no fight); HP can't go negative; and a
-	# "no fight" state ("") snaps HP to 0 so a stale save can't strand a phantom
-	# fight with leftover HP. town2_complete is coerced to a plain bool.
+	# Restore the seasonal-boss state defensively (T24). Keep boss_active only if it names a REAL
+	# boss (a bogus id — or a stale old-model HP save with no valid id — → "" = idle). When idle,
+	# every per-fight field snaps to its rest value so a corrupt save can't strand a phantom
+	# challenge. When live, the window / progress / target / modifier overlay restore (clamped >= 0,
+	# the modifier_state shape coerced via apply-shape defaults). The old `boss_hp` key is simply
+	# ignored (this model has no HP). town2_complete is coerced to a plain bool (the Town-2 gate is
+	# preserved across the model change).
 	var saved_boss := String(d.get("boss_active", ""))
 	if not BossConfig.is_boss(saved_boss):
 		saved_boss = ""
-	var bhp: int = maxi(0, int(d.get("boss_hp", 0)))
-	if saved_boss == "":
-		bhp = 0
 	s.boss_active = saved_boss
-	s.boss_hp = bhp
 	s.town2_complete = bool(d.get("town2_complete", false))
+	if saved_boss == "":
+		# Idle: rest every per-fight field (defensive against a partial/corrupt save).
+		s.boss_season = ""
+		s.boss_year = 1
+		s.boss_turns_remaining = 0
+		s.boss_progress = 0
+		s.boss_target_resource = ""
+		s.boss_target_amount = 0
+		s.boss_modifier_state = {}
+	else:
+		# Live: restore the window/progress/target + the modifier overlay. Cache the season/target
+		# from the CATALOG when the save omits them (an old or partial save), so they're always
+		# consistent with the boss id. boss_year defaults to 1 (the port has no calendar).
+		s.boss_season = String(d.get("boss_season", BossConfig.boss_season(saved_boss)))
+		s.boss_year = maxi(1, int(d.get("boss_year", 1)))
+		s.boss_turns_remaining = maxi(0, int(d.get("boss_turns_remaining", BossConfig.BOSS_WINDOW_TURNS)))
+		s.boss_progress = maxi(0, int(d.get("boss_progress", 0)))
+		s.boss_target_resource = String(d.get("boss_target_resource", BossConfig.target_resource(saved_boss)))
+		s.boss_target_amount = maxi(0, int(d.get("boss_target_amount", BossConfig.target_amount(saved_boss))))
+		var saved_mod = d.get("boss_modifier_state", {})
+		s.boss_modifier_state = (saved_mod as Dictionary).duplicate(true) if saved_mod is Dictionary else {}
 	# Restore the Town-3 rats state (M3h). Charges-used is clamped to >= 0 (a
 	# corrupt negative can't grant phantom shoo-moves). It is NOT clamped to
 	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining

@@ -113,6 +113,13 @@ const HOUND: String = "hound"
 #   EXPLOSIVES — clears the cave_in (un-buries its rubble row) + the mole hazard.
 const WATER_PUMP: String = "water_pump"
 const EXPLOSIVES: String = "explosives"
+# ── Miner's Hat (T24) — the reveal_tiles STATE power, NOW WIRED. Previously deferred (PortalConfig
+# noted "needs a HIDDEN-TILE layer"); the seasonal boss `hide_resources` modifier (Mossback) IS that
+# layer, so miners_hat is now a real ToolConfig member: a STATE power handled in
+# GameState.use_tool_on_grid's early path that reveals every HIDDEN boss cell (never touches the grid
+# beyond the reveal). Off a hide_resources boss it's a harmless no-op (no hidden cells). Still
+# summonable through the Portal (PortalConfig keeps the influence cost + the web power metadata).
+const MINERS_HAT: String = "miners_hat"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -445,6 +452,14 @@ const TOOLS: Dictionary = {
 		"params": {},
 		"tap_target": false,
 	},
+	# Miner's Hat (T24) — reveal_tiles STATE power: reveals every hidden boss cell (hide_resources /
+	# Mossback). Handled in GameState.use_tool_on_grid's early path (never reaches apply_instant).
+	MINERS_HAT: {
+		"label": "Miner's Hat",
+		"power_id": "reveal_tiles",
+		"params": {},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -470,6 +485,8 @@ const TOOL_IDS: Array = [
 	RIFLE, HOUND,
 	# T14b — mine-hazard tools (water_pump / explosives state powers).
 	WATER_PUMP, EXPLOSIVES,
+	# T24 — Miner's Hat (reveal_tiles state power; reveals hidden boss cells).
+	MINERS_HAT,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

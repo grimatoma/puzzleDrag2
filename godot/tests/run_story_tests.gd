@@ -63,6 +63,19 @@ func _check(cond: bool, msg: String) -> void:
 func _fresh_story() -> Dictionary:
 	return {"act": 1, "flags": {}, "choice_log": [], "beat_queue": []}
 
+## T24 — drive a FROSTMAW boss DEFEAT (a win) so the boss_defeated story event posts. Arms the
+## frostmaw fight by hand (target 30 oak) and meets the target with one chain. The story-engine hooks
+## (act2_frostmaw_felled etc.) fire on the post_story_event({"type":"boss_defeated"}) that
+## _resolve_boss emits on any win. Returns the win result dict.
+func _defeat_frostmaw(g: GameState) -> Dictionary:
+	g.boss_active = BossConfig.FROSTMAW
+	g.boss_season = "winter"
+	g.boss_year = 1
+	g.boss_turns_remaining = BossConfig.BOSS_WINDOW_TURNS
+	g.boss_target_resource = "tile_tree_oak"
+	g.boss_target_amount = 30
+	return g.note_boss_chain(Constants.Tile.OAK, 30, 0)   # meets the target → win
+
 # ── StoryConfig (catalog) ─────────────────────────────────────────────────────
 
 func _test_config_loads() -> void:
@@ -289,9 +302,7 @@ func _test_gs_resolve_choice_credits_grants() -> void:
 	# Drive a boss defeat so frostmaw_aftermath is queued, then resolve a choice and
 	# confirm GameState credits the grant.
 	var g := GameState.new()
-	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 3
-	g.damage_boss(5)   # DEFEAT → posts boss_defeated → fires act2_frostmaw_felled (+queues aftermath)
+	_defeat_frostmaw(g)   # DEFEAT → posts boss_defeated → fires act2_frostmaw_felled (+queues aftermath)
 	_check(g.story.is_fired("act2_frostmaw_felled"), "boss defeat fires act2_frostmaw_felled via the wired path")
 	_check(g.story.beat_queue.has("frostmaw_aftermath"), "the aftermath choice beat is queued")
 	var coins_before := g.coins
@@ -301,9 +312,7 @@ func _test_gs_resolve_choice_credits_grants() -> void:
 	_check(g.story.has_flag("keeper_path_bound"), "the choice sets keeper_path_bound on the GameState story")
 	# The 'break' path credits a resource (use a fresh defeat).
 	var g2 := GameState.new()
-	g2.boss_active = BossConfig.FROSTMAW
-	g2.boss_hp = 1
-	g2.damage_boss(1)
+	_defeat_frostmaw(g2)
 	var block_before := g2.qty("block")
 	g2.resolve_story_choice("frostmaw_aftermath", "break")
 	_check(g2.qty("block") == block_before + 25, "the 'break' choice credits +25 block (cap path)")
@@ -326,9 +335,7 @@ func _test_gs_boss_defeat_event_fires_and_cascades() -> void:
 	# A boss defeat fires act2_frostmaw_felled AND cascades to act3_rats (which gates on
 	# flag.frostmaw_felled, now set in the same post_story_event loop).
 	var g := GameState.new()
-	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 2
-	g.damage_boss(10)
+	_defeat_frostmaw(g)
 	_check(g.story.is_fired("act2_frostmaw_felled"), "boss defeat fires the wyrm beat")
 	_check(g.story.is_fired("act3_rats"), "the same boss_defeated event CASCADES to fire act3_rats")
 	_check(g.story.has_flag("rats_arrived"), "act3_rats sets rats_arrived")
@@ -365,14 +372,13 @@ func _test_gs_order_event_fires_beat() -> void:
 func _test_gs_beats_do_not_autogrant() -> void:
 	# CRITICAL: firing beats (no choices resolved) must NOT add resources/coins beyond the
 	# normal economy. A boss defeat credits its boss reward + first_blood achievement, but
-	# the STORY beat that fires must add nothing. Compare a defeat WITHOUT the story engine
-	# to the actual run by re-deriving: boss reward 500 + first_blood 200 = 700.
+	# the STORY beat that fires must add nothing. Re-derive: a frostmaw win at exactly the target
+	# (progress 30, year 1) pays boss_reward 200 + first_blood 200 = 400.
 	var g := GameState.new()
-	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 1
 	var coins_before := g.coins
-	g.damage_boss(1)   # fires act2_frostmaw_felled + cascades act3_rats — neither grants
-	var expected := coins_before + BossConfig.boss_reward(BossConfig.FROSTMAW) + 200  # +first_blood
+	_defeat_frostmaw(g)   # fires act2_frostmaw_felled + cascades act3_rats — neither grants
+	var boss_pay: int = int(BossConfig.boss_reward(BossConfig.FROSTMAW, 30, 1)["coins"])
+	var expected := coins_before + boss_pay + 200  # +first_blood
 	_check(g.coins == expected,
 		"boss-defeat coins == boss reward + first_blood ONLY (story beats add nothing): got %d, want %d" % [g.coins, expected])
 	# And a plain chain that fires a threshold beat adds no extra coins beyond the chain payout.
@@ -390,9 +396,7 @@ func _test_gs_save_load_round_trips_story() -> void:
 	g.start_story_session()                       # fires arrival (flag + marker + queue)
 	g.inventory["hay_bundle"] = 20
 	g.credit_chain(T.GRASS, 6)                     # crosses 20+ hay → fires light_hearth
-	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 1
-	g.damage_boss(1)                               # fires wyrm + cascades rats; queues aftermath
+	_defeat_frostmaw(g)                            # fires wyrm + cascades rats; queues aftermath
 	g.resolve_story_choice("frostmaw_aftermath", "bind")  # logs a choice
 	var d := g.to_dict()
 	_check(d.has("story"), "to_dict includes the story snapshot")

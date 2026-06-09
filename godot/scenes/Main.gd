@@ -275,8 +275,13 @@ func _ready() -> void:
 	# calls board.setup_new_board() after _ready), so it was the LIVE game that was drifting.
 	# Mine/harbor/spawner saves reflect their pools immediately too.
 	board.setup_new_board()
-	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
+	# T24: if the save was restored mid-fight, keep the boss's raised chain bar, re-apply the boss
+	# modifier overlay (frozen/rubble/hidden/heat), and re-pool the board with the boss's (boosted)
+	# refill pool so the fight resumes exactly where it left off.
 	board.set_min_chain(game.boss_min_chain())
+	if game.is_boss_active():
+		board.set_boss_modifier_state(game.boss_modifier_state)
+		board.set_tile_pool(_boss_refill_pool())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
 	# T7/T8/T9: a save restored mid-run may carry live farm hazards. Re-stamp the positional
@@ -639,6 +644,10 @@ func _open_town() -> void:
 		# M3h: the Town screen's "Shoo rats" button has no board ref, so it emits
 		# `rats_shoo_requested` and Main does the actual clear (spending the charge in ONE place).
 		_town_screen.connect("rats_shoo_requested", Callable(self, "_on_shoo_rats"))
+		# T24: the Town screen's "Challenge <Boss>" button has no board ref, so it emits
+		# `boss_challenge_requested` and Main runs the board-wiring boss start (the single point
+		# that arms the modifier overlay + boosted pool + raised chain bar).
+		_town_screen.connect("boss_challenge_requested", Callable(self, "_on_boss_challenge_requested"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
 	# review-3 — the TownScreen (settlement / buildings / refine / market / orders) is the TOWN
@@ -1657,7 +1666,9 @@ func _board_should_be_active() -> bool:
 func _on_town_changed() -> void:
 	var was_mine: bool = _board_pool_is_mine()
 	var was_harbor: bool = _board_pool_is_harbor()
-	board.set_tile_pool(game.active_biome_pool())
+	# T24 — while a boss is active the board uses the boss refill pool (respawn_boost weighting); a
+	# plain biome re-pool here would drop that bias. Pick the boss pool when fighting, else the biome pool.
+	board.set_tile_pool(_boss_refill_pool() if game.is_boss_active() else game.active_biome_pool())
 	if game.is_in_mine() != was_mine:
 		board.setup_new_board()
 		# T23: on ENTRY to the mine, seed the session's single Mysterious Ore onto the freshly-built
@@ -1675,9 +1686,10 @@ func _on_town_changed() -> void:
 		board.setup_new_board()
 		if game.is_in_harbor() and game.has_active_pearl():
 			board.place_pearl(Vector2i(int(game.fish_pearl.get("col", 0)), int(game.fish_pearl.get("row", 0))))
-	# M3g: starting the boss fight from the Town menu must raise the board's chain bar
-	# immediately (and dropping back to no-fight restores the base min).
+	# T24: keep the board's chain bar + the boss modifier overlay in sync with the boss state on
+	# every town action (the bar drops back to base + the overlay clears when no fight is live).
 	board.set_min_chain(game.boss_min_chain())
+	board.set_boss_modifier_state(game.boss_modifier_state if game.is_boss_active() else {})
 	# M3h: a Master Ratcatcher purchase (or demolish) flips whether grass chains sweep
 	# adjacent rats, so refresh the board flag whenever a town action lands.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
@@ -1924,6 +1936,12 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 				_status_label.text = "Mysterious Ore captured! +1 rune"
 				if _audio != null:
 					_audio.play("upgrade")
+	# T24 (boss hide_resources): a chain that INCLUDES a hidden boss cell REVEALS it (React: a
+	# hidden tile reveals when chained). Reveal BEFORE clearing _chain_cells so the modifier_state's
+	# hidden list is updated; the board overlay is refreshed in the boss block below. A no-op off a
+	# hide_resources boss (no hidden cells to match).
+	if game.is_boss_active():
+		game.reveal_boss_hidden(_chain_cells)
 	_chain_cells = []
 	var res: Dictionary = game.credit_chain(tile_type, length)
 	# M4d: a chain always lands a collect bleep; a whole unit (units > 0) adds the
@@ -2085,24 +2103,23 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 				board.apply_hazard_state(tick["grid"], game.active_rats(), game.active_fire_cells(), game.active_wolves())
 			else:
 				board.refresh_wolves(game.active_wolves())
-	# M3g: a chain landed while the capstone boss is active damages it by the chain
-	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
-	# board's raised chain bar back to the base min and surface the win.
+	# T24: a chain landed while a seasonal boss is active. First advance PROGRESS toward the
+	# target (note_boss_chain counts chained TILES of a tile-key target, or UNITS PRODUCED of a
+	# resource target). If the chain MET the target the boss resolves as a WIN inside note_boss_chain;
+	# otherwise we TICK the window (tick_boss_turn — ages/spawns heat, decrements the turn budget, and
+	# resolves as a LOSS if the window expired). Either resolution clears the challenge + the board
+	# modifier overlay and drops the raised chain bar — all handled in _apply_boss_resolution.
 	if game.is_boss_active():
-		var boss_res: Dictionary = game.damage_boss(length)
-		if bool(boss_res.get("defeated", false)):
-			_status_label.text = "%s defeated! Town 2 complete — +%d coins." % [
-				boss_res.get("name", "Boss"), int(boss_res.get("reward", 0))]
-			board.set_min_chain(Constants.MIN_CHAIN)
-			# M4d: the boss is down — triumphant arpeggio.
-			if _audio != null:
-				_audio.play("fanfare")
-		else:
-			_status_label.text = "%s  ·  ⚔ boss HP %d" % [
-				_status_label.text, int(boss_res.get("hp", 0))]
-			# M4d: a non-killing hit — a soft thud.
-			if _audio != null:
-				_audio.play("pop")
+		var boss_res: Dictionary = game.note_boss_chain(tile_type, length, int(res.get("units", 0)))
+		# If the chain didn't already resolve the fight, tick one window turn (heat + countdown).
+		if bool(boss_res.get("active", false)) and not bool(boss_res.get("defeated", false)) and game.is_boss_active():
+			var tick_res: Dictionary = game.tick_boss_turn(board.rng)
+			if int(tick_res.get("burned", 0)) > 0:
+				_status_label.text = "Ember Drake burns %d resource(s)!" % int(tick_res["burned"])
+			# A LOSS resolution leaves is_boss_active() false — fold it in as the result to surface.
+			if not game.is_boss_active():
+				boss_res = tick_res
+		_apply_boss_resolution(boss_res)
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -2296,28 +2313,105 @@ func _try_enter_mine() -> void:
 		SaveManager.save(game)
 	get_viewport().set_input_as_handled()
 
-## TEMP M3g demo: challenge the capstone boss (Frostmaw) from the keyboard. The REAL
-## entry is the Town screen's Boss section ("⚔ Challenge Frostmaw") — this key is a
-## harmless dev fallback so the boss fight stays exercisable. Arms the boss, raises
-## the board's chain bar, then refreshes the boss HUD + saves.
+## TEMP T24 demo: challenge the CURRENT season's seasonal boss from the keyboard. The REAL entry is
+## the Town screen's Boss section ("⚔ Challenge <Boss>") — this key is a harmless dev fallback so the
+## fight stays exercisable. Routes through the shared _enter_boss_fight so the dev key + the real
+## Town path arm the modifier overlay + the (boosted) refill pool + the chain bar identically.
 func _try_challenge_boss() -> void:
 	if not game.can_challenge_boss():
 		_status_label.text = "Can't challenge the boss (need City + 12 mine goods)"
 		get_viewport().set_input_as_handled()
 		return
-	var res: Dictionary = game.start_boss()
+	var res: Dictionary = _enter_boss_fight()
 	if bool(res.get("ok", false)):
-		board.set_min_chain(game.boss_min_chain())
-		# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so with no run
-		# the board would be inert and the fight unplayable. The dev-key boss start is a playable-
-		# board transition too (the real path routes through _on_town_changed); follow the gate so
-		# the board is live for the fight.
-		board.set_active(_board_should_be_active())
-		_status_label.text = "Frostmaw appears! Chains of 4+."
-		_refresh_boss()
-		_refresh_meta()
-		SaveManager.save(game)
+		_status_label.text = "%s appears! %s" % [
+			String(res.get("name", "Boss")), BossConfig.modifier_desc(game.boss_active)]
 	get_viewport().set_input_as_handled()
+
+## Shared boss-start path (T24) — called by the dev key + the Town screen's Challenge button. Starts
+## the current-season boss (GameState.start_boss applies its modifier to a fresh modifier_state),
+## then wires the BOARD for the fight: push the modifier overlay (frozen/rubble/hidden/heat), the
+## (respawn_boost-weighted) refill pool, the raised chain bar (storm → 4), make the board LIVE (the
+## fight is on the farm board), and refresh the HUD + save. Returns GameState.start_boss's result so
+## the caller can surface the boss + reason. A no-op (returns that result) when start_boss fails.
+func _enter_boss_fight() -> Dictionary:
+	var res: Dictionary = game.start_boss()
+	if not bool(res.get("ok", false)):
+		return res
+	# Push the live modifier overlay + the (boosted) refill pool onto the board.
+	board.set_boss_modifier_state(game.boss_modifier_state)
+	board.set_tile_pool(_boss_refill_pool())
+	board.set_min_chain(game.boss_min_chain())
+	# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so the board must be
+	# made LIVE for the fight (the gate follows boss state via _board_should_be_active()).
+	board.set_active(_board_should_be_active())
+	if _audio != null:
+		_audio.play("tier_up")
+	_refresh_boss()
+	_refresh_meta()
+	SaveManager.save(game)
+	return res
+
+## T24 — the farm refill pool while a boss is active, with respawn_boost weighting folded in. For a
+## respawn_boost boss (quagmire) the boosted tile KEYS (tile_tree_oak / tile_grass_grass) get EXTRA
+## pool slots scaled by the factor (1.5× → +1 copy per existing slot, rounded), over-spawning them —
+## the GDScript analogue of React's boss.spawnBias feeding fillBoard. Every other boss returns the
+## plain active farm pool (no bias). Mirrors the fill_bias pool-doubling pattern.
+func _boss_refill_pool() -> Array:
+	var pool: Array = game.active_tile_pool()
+	var bias: Dictionary = game.boss_spawn_bias()
+	if bias.is_empty():
+		return pool
+	var boosted: Array = pool.duplicate()
+	for key in bias.keys():
+		var tile: int = Constants.tile_for_string_key(String(key))
+		if tile == Constants.EMPTY:
+			continue
+		var factor: float = float(bias[key])
+		# Count this tile's existing slots, then add (factor-1)× more (rounded) so it over-spawns.
+		var existing: int = pool.count(tile)
+		var extra: int = int(round(float(existing) * maxf(0.0, factor - 1.0)))
+		for _i in extra:
+			boosted.append(tile)
+	return boosted
+
+## T24 — surface a boss resolution (win or loss) OR refresh the live overlay after an unresolved
+## chain. `res` is the note_boss_chain / tick_boss_turn / _resolve_boss result.
+##   • Resolved (boss no longer active): drop the raised chain bar, clear the board modifier overlay,
+##     re-pool the board to the plain farm pool, lower the board gate if no run is live, and surface
+##     the WIN (reward coins + rune; "Town 2 complete" on the capstone) or the LOSS via toast+status.
+##   • Unresolved (still active): just re-push the (possibly changed — heat aged/spawned, a hidden
+##     cell revealed) modifier overlay + the boss pill, so the board reflects the new state.
+func _apply_boss_resolution(res: Dictionary) -> void:
+	if game.is_boss_active():
+		# Still fighting — refresh the overlay (heat/ hidden may have changed) + the pill.
+		board.set_boss_modifier_state(game.boss_modifier_state)
+		_refresh_boss()
+		return
+	# Resolved — restore the board to a no-boss state.
+	board.set_min_chain(Constants.MIN_CHAIN)
+	board.set_boss_modifier_state({})
+	board.set_tile_pool(game.active_tile_pool())
+	board.set_active(_board_should_be_active())
+	if bool(res.get("defeated", false)):
+		var coins_won: int = int(res.get("reward_coins", 0))
+		var runes_won: int = int(res.get("reward_runes", 0))
+		var nm: String = String(res.get("name", "Boss"))
+		var msg: String = "%s defeated! +%d 🪙 +%d ✦" % [nm, coins_won, runes_won]
+		if String(res.get("id", "")) == BossConfig.CAPSTONE:
+			msg += " — Town 2 complete!"
+		_status_label.text = msg
+		show_toast(msg)
+		if _audio != null:
+			_audio.play("fanfare")
+	else:
+		var fmsg: String = "%s endures — the challenge fades (%d/%d). Better luck next season." % [
+			String(res.get("name", "Boss")), int(res.get("progress", 0)), int(res.get("target", 0))]
+		_status_label.text = fmsg
+		show_toast(fmsg)
+		if _audio != null:
+			_audio.play("pop")
+	_refresh_boss()
 
 ## TEMP M3h demo: shoo all rats off the board from the keyboard. The REAL entry is the
 ## Town screen's "Shoo rats" button (which routes through `_on_shoo_rats`). Spends one
@@ -2352,6 +2446,22 @@ func _on_shoo_rats() -> void:
 	if _town_screen != null:
 		_town_screen.refresh()
 	SaveManager.save(game)
+
+## T24 — the Town screen's "Challenge <Boss>" button emits `boss_challenge_requested`; Main owns
+## the board, so it runs the board-wiring boss start HERE (the single point that arms the modifier
+## overlay + boosted pool + raised chain bar), then refreshes the Town screen so its boss section
+## re-renders into the "fighting" state.
+func _on_boss_challenge_requested() -> void:
+	if not game.can_challenge_boss():
+		return
+	var res: Dictionary = _enter_boss_fight()
+	if bool(res.get("ok", false)):
+		_status_label.text = "%s appears! %s" % [
+			String(res.get("name", "Boss")), BossConfig.modifier_desc(game.boss_active)]
+		# Close the Town menu so the player lands on the playable board for the fight.
+		if _town_screen != null:
+			_town_screen.refresh()
+		_on_town_closed()
 
 # ── Tools on the live board (M8c) ─────────────────────────────────────────────
 # The tested tool API (GameState.use_tool_on_grid + ToolConfig + ToolEffects) is wired

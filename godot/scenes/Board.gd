@@ -111,6 +111,18 @@ var _pending_upgrades: Array = []
 ## clear_rubble_on_stone — it only ever fires in the harbor; farm/mine are untouched.
 var clear_pearl_on_fish_chain: bool = false
 
+## T24 (seasonal boss board modifiers): the live boss modifier_state overlay (the
+## BossModifierLogic bag — frozen_columns / rubble / hidden / heat / boost+factor), or {} when no
+## boss is active. Main pushes it via set_boss_modifier_state() on boss start, every boss turn tick,
+## and on resolve (cleared to {}). The Board reads it through the pure BossModifierLogic statics to:
+##   • GATE drags — frozen-column / rubble / hidden cells are unchainable (cell_chainable),
+##   • RENDER overlays — frozen columns dimmed, hidden cells face-down, heat cells glowing (drawn
+##     by Tile via the per-cell flags pushed in _build_tiles / _refresh_boss_overlays),
+##   • REVEAL a hidden cell when it's chained (Main calls reveal on the chained cells).
+## Empty {} (no boss) leaves every cell chainable + un-overlaid, so the board is byte-identical
+## off a boss — mirrors how block_mine_hazards / clear_rubble_on_stone gate only when set.
+var boss_modifier_state: Dictionary = {}
+
 var _dragging := false
 var _path: Array[Vector2i] = []        ## dragged cells
 
@@ -264,6 +276,33 @@ func set_tile_pool(pool: Array) -> void:
 func set_min_chain(n: int) -> void:
 	min_chain = maxi(2, n)
 
+## T24 — adopt the live boss modifier_state overlay (a copy is stored) and refresh the per-tile
+## overlay visuals. Main calls this on boss start, every boss-turn tick (heat ages/spawns), on a
+## hidden-cell reveal, and on resolve (passing {} to clear). An empty {} leaves every cell
+## chainable + un-overlaid (the no-boss baseline). The chain GATE reads boss_modifier_state directly
+## in _begin_drag/_extend_drag, so it follows along the moment this is set.
+func set_boss_modifier_state(state: Dictionary) -> void:
+	boss_modifier_state = state.duplicate(true) if state != null else {}
+	_refresh_boss_overlays()
+
+## T24 — push the frozen / hidden / heat overlay flags from boss_modifier_state onto every live Tile
+## node. Called from set_boss_modifier_state + after every _build_tiles (so a board rebuild — biome
+## flip, hidden-reveal rebuild, etc. — re-applies the overlay). Guarded so it's a no-op before tiles
+## are built. With an empty modifier_state every tile is cleared (all flags false).
+func _refresh_boss_overlays() -> void:
+	if tiles.is_empty():
+		return
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			var t: Tile = tiles[r][c]
+			if t == null:
+				continue
+			t.set_boss_overlay(
+				BossModifierLogic.cell_frozen(boss_modifier_state, c),
+				BossModifierLogic.cell_hidden(boss_modifier_state, r, c),
+				BossModifierLogic.cell_heat(boss_modifier_state, r, c),
+				BossModifierLogic.cell_rubble(boss_modifier_state, r, c))
+
 ## A3 — the Constants.Tile type of the CURRENTLY-DRAGGED chain (its anchor cell), or
 ## Constants.EMPTY when no drag is in flight. The chain is single-type (every extend
 ## must match _path[0]'s value), so the anchor's value identifies the whole chain. Main
@@ -307,6 +346,10 @@ func _build_tiles() -> void:
 			t.position = _cell_center(c, r)
 			row.append(t)
 		tiles.append(row)
+	# T24 — re-apply any live boss-modifier overlay onto the freshly-built tiles (a board rebuild
+	# — biome flip, hidden-reveal rebuild — would otherwise drop the frozen/hidden/heat/rubble
+	# visuals). A no-op with an empty modifier_state (no boss).
+	_refresh_boss_overlays()
 	queue_redraw()   # field card depends on board_origin / size
 
 func _make_tile(t: int) -> Tile:
@@ -713,6 +756,9 @@ func _begin_drag(cell: Vector2i) -> void:
 	# T11 — a chain can't START on a hazard-BLOCKED cell (RUBBLE / LAVA) in the mine.
 	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
 		return
+	# T24 — a chain can't START on a boss-blocked cell (frozen column / rubble / hidden).
+	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
+		return
 	_dragging = true
 	_path = [cell]
 	_set_highlight(cell, true)
@@ -738,6 +784,9 @@ func _extend_drag(cell: Vector2i) -> void:
 	# guard below already blocks most cases since a blocked tile can't be the anchor, but a buried
 	# cave-in row is many RUBBLE cells — this keeps the chain off them defensively.)
 	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
+		return
+	# T24 — never extend onto a boss-blocked cell (frozen column / rubble / hidden).
+	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
 		return
 	# Extend: must match the chain's type and be 8-way adjacent to the last cell.
 	if grid[cell.y][cell.x] != grid[_path[0].y][_path[0].x]:

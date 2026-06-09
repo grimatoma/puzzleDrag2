@@ -32,6 +32,10 @@ signal state_changed   ## emitted after any action mutates `game`
 ## (this screen has no board ref). Main connects it, spends the charge, and clears
 ## the board (the single accounting point for a shoo-move).
 signal rats_shoo_requested
+## T24 — the "Challenge <Boss>" button emits this instead of starting the fight itself (this
+## screen has no board ref). Main connects it, calls _enter_boss_fight (which arms the boss +
+## the board modifier overlay + the boosted refill pool + the chain bar), and refreshes.
+signal boss_challenge_requested
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
@@ -690,28 +694,35 @@ func _build_expedition_section() -> void:
 	_action_buttons["enter_harbor"] = enter_h_btn
 
 func _build_boss_section() -> void:
-	# M3g — the capstone boss (Frostmaw), the Town-2 close. You don't fight from a
-	# button here: an active boss raises the BOARD's chain bar, so you damage it by
-	# chaining on the board. While fighting we show its HP + a hint to go chain; once
-	# Town 2 is done we show the win mark; otherwise a challenge row gated by
-	# can_challenge_boss() (City tier + mine mastery).
+	# T24 — the seasonal boss (the Town-2 close + the rotation). You don't fight from a button
+	# here: an active boss applies a board MODIFIER + asks for a resource target within a turn
+	# window, so you progress it by chaining on the board. While fighting we show the target /
+	# progress / turns + the modifier + a hint to go chain; once Town 2 is done (the CAPSTONE
+	# beaten) we show the win mark; otherwise a challenge row for the CURRENT season's boss, gated
+	# by can_challenge_boss() (City tier + mine mastery + a season boss available).
 	if game.is_boss_active():
 		_boss_body.add_child(_make_label(
-			"⚔ Fighting %s — HP %d" % [
-				BossConfig.boss_name(game.boss_active), game.boss_hp], COL_BODY))
-		_boss_body.add_child(_make_label(
-			"Close this menu and chain 4+ tiles to damage it.", COL_MUTED))
+			"⚔ %s — %d/%d %s · %d turns left" % [
+				BossConfig.boss_name(game.boss_active), game.boss_progress, game.boss_target_amount,
+				UiKit.pretty_name(game.boss_target_resource), game.boss_turns_remaining], COL_BODY))
+		_boss_body.add_child(_make_label(BossConfig.modifier_desc(game.boss_active), COL_MUTED))
+		_boss_body.add_child(_make_label("Close this menu and chain on the board to make progress.", COL_MUTED))
 		return
 
 	if game.town2_complete:
 		_boss_body.add_child(_make_label(
-			"✔ Town 2 complete — Frostmaw defeated.", COL_BODY))
-		return
+			"✔ Town 2 complete — %s defeated." % BossConfig.boss_name(BossConfig.CAPSTONE), COL_BODY))
+		# The five non-capstone bosses stay challengeable per season even after Town 2.
 
+	var pending: String = game.pending_boss_id()
+	if pending == "":
+		if not game.town2_complete:
+			_boss_body.add_child(_make_label("No boss stirs this season.", COL_MUTED))
+		return
 	_boss_body.add_child(_make_label(
-		"Capstone: %s" % BossConfig.boss_desc(BossConfig.FROSTMAW), COL_BODY))
+		"This season: %s — %s" % [BossConfig.boss_name(pending), BossConfig.boss_desc(pending)], COL_BODY))
 	var challenge_btn := Button.new()
-	challenge_btn.text = "⚔ Challenge Frostmaw"
+	challenge_btn.text = "⚔ Challenge %s" % BossConfig.boss_name(pending)
 	challenge_btn.disabled = not game.can_challenge_boss()
 	UiKit.style_action_button(challenge_btn, Palette.EMBER, 6, 0)
 	challenge_btn.connect("pressed", Callable(self, "_do_challenge_boss"))
@@ -829,9 +840,13 @@ func _do_leave_harbor() -> void:
 	refresh()
 
 func _do_challenge_boss() -> void:
-	# start_boss() returns the standard {ok, reason|...} dict, so _after handles it.
-	# Main's _on_town_changed reacts to state_changed by raising the board's chain bar.
-	_after(game.start_boss())
+	# T24 — this screen has no board ref + the boss fight needs the board wired (modifier overlay,
+	# boosted pool, raised chain bar). So gate on availability, then emit `boss_challenge_requested`;
+	# Main owns the board and runs _enter_boss_fight (which calls start_boss + wires the board), then
+	# calls back refresh() so the boss section re-renders.
+	if not game.can_challenge_boss():
+		return
+	emit_signal("boss_challenge_requested")
 
 # T20: _do_hire / _do_fire moved to scenes/TownsfolkScreen.gd (the Workers tab).
 

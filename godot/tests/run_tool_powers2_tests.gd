@@ -102,8 +102,8 @@ func _multiset(grid: Array) -> Dictionary:
 # ── membership + catalog shape ──────────────────────────────────────────────
 
 func _test_membership_and_shape() -> void:
-	# 24 from PR0+PR1, +5 here = 29, +3 fill_bias (PR2b) = 32, +8 magic (PR3) = 40, +2 T14a = 42, +2 T14b = 44; no dupes.
-	_check(ToolConfig.all_ids().size() == 44, "catalog has 44 tools (24 prior + 5 PR2 + 3 PR2b + 8 PR3 + 2 T14a rifle/hound + 2 T14b water_pump/explosives)")
+	# 24 from PR0+PR1, +5 here = 29, +3 fill_bias (PR2b) = 32, +8 magic (PR3) = 40, +2 T14a = 42, +2 T14b = 44, +1 T24 miners_hat = 45; no dupes.
+	_check(ToolConfig.all_ids().size() == 45, "catalog has 45 tools (24 prior + 5 PR2 + 3 PR2b + 8 PR3 + 2 T14a rifle/hound + 2 T14b water_pump/explosives + 1 T24 miners_hat)")
 	var seen := {}
 	var dup := false
 	for id in ToolConfig.all_ids():

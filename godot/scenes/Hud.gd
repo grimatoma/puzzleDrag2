@@ -1307,18 +1307,39 @@ func _refresh_biome() -> void:
 		_biome_pill.text = "Farm"
 		_biome_pill.add_theme_color_override("font_color", Palette.MOSS)
 
-## M3g/M4b: the capstone boss now lives in the top-bar boss pill, shown only while a
-## fight is active ("⚔ <name> cur/max"). Hidden otherwise. Mirrors GameState.
+## T24/M4b: the seasonal boss now lives in the top-bar boss pill as a PROGRESS / TURNS readout,
+## shown only while a challenge is active. The label reads "⚔ <Target> <progress>/<target> · Nt"
+## (e.g. "⚔ Oak 12/30 · 6t"), where <Target> is a short label for the target resource. Hidden
+## otherwise. The full modifier description shows in Main's boss banner; this pill is the at-a-glance
+## status. Mirrors GameState's BossInstance fields.
 func _refresh_boss() -> void:
 	if _boss_pill_box == null or _boss_pill == null or game == null:
 		return
 	if game.is_boss_active():
-		var max_hp: int = BossConfig.boss_hp(game.boss_active)
-		_boss_pill.text = "⚔ %s %d/%d" % [
-			BossConfig.boss_name(game.boss_active), game.boss_hp, max_hp]
+		_boss_pill.text = "⚔ %s %d/%d · %dt" % [
+			_boss_target_label(game.boss_target_resource),
+			game.boss_progress, game.boss_target_amount, game.boss_turns_remaining]
+		# The full modifier explanation is the pill's tooltip (hover) — the at-a-glance banner.
+		var tip: String = "%s — %s" % [BossConfig.boss_name(game.boss_active), BossConfig.modifier_desc(game.boss_active)]
+		_boss_pill_box.tooltip_text = tip
+		_boss_pill.tooltip_text = tip
 		_boss_pill_box.visible = true
 	else:
 		_boss_pill_box.visible = false
+
+## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",
+## "iron_bar" → "Iron", "fish_fillet" → "Fish"). Falls back to a tidied form of the key.
+func _boss_target_label(res: String) -> String:
+	match res:
+		"tile_tree_oak": return "Oak"
+		"tile_grass_grass": return "Hay"
+		"tile_mine_stone": return "Stone"
+		"tile_fruit_blackberry": return "Berry"
+		"iron_bar": return "Iron"
+		"fish_fillet": return "Fish"
+		_:
+			var s: String = res.trim_prefix("tile_")
+			return s.capitalize()
 
 ## M3h/M4b: the Town-3 rats hazard now lives in the top-bar rats pill, shown only
 ## once rats are a live threat (Town 2 done). With a Ratcatcher it reads "🐀 N/5"

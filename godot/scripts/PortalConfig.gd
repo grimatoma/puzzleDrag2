@@ -30,10 +30,11 @@ extends RefCounted
 ## ECONOMY; ToolConfig provides the power. The `power` block on each entry below still captures
 ## the original React metadata (power id + params, VERBATIM from src/constants.ts) for the Wiki.
 ##
-## DEFERRED (still effect-less): `hourglass` (undo_move) needs a board/inventory SNAPSHOT
-## system, and `miners_hat` (reveal_tiles) needs a HIDDEN-TILE layer — neither mechanic exists
-## in the port yet, so these two remain summonable (the catalog surfaces them) but do nothing
-## until those milestones land. They are intentionally NOT ToolConfig members.
+## EFFECTS (T24 update). `miners_hat` (reveal_tiles) is NOW WIRED — the seasonal-boss `hide_resources`
+## modifier (Mossback) added the HIDDEN-TILE layer it needed, so miners_hat is a real ToolConfig member
+## whose reveal_tiles STATE power reveals every hidden boss cell. Only `hourglass` (undo_move) stays
+## DEFERRED — it needs a board/inventory SNAPSHOT system that doesn't exist yet — so it remains
+## summonable (the catalog surfaces it) but effect-less, and is intentionally NOT a ToolConfig member.
 ##
 ## Registered as a `class_name` global (like CastleConfig / DecorationConfig / WorkerConfig)
 ## so its const + static helpers are reachable WITHOUT a live autoload — headless tests run

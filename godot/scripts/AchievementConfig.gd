@@ -36,9 +36,11 @@ extends RefCounted
 ##   tool-reward tiers grant a REAL port tool — the Bomb — via the M8b grant_tool path.
 ##   Coin rewards are carried over verbatim.
 ##
-##   OMITTED as UNREACHABLE in the port (no event can complete them):
-##     - champion (defeat 4 bosses): the port has ONE boss (Frostmaw). bosses_defeated
-##       tops out at 1, so a threshold-4 trophy would never complete → omitted.
+##   OMITTED (not yet ported — could be added now):
+##     - champion (defeat 4 bosses): historically omitted when the port had ONE boss. As of T24 the
+##       port has SIX seasonal bosses (re-challengeable per season), so bosses_defeated is no longer
+##       capped at 1 and a threshold-4 trophy IS now reachable. Left out of THIS task's scope (adding
+##       it would change the achievements suite); a future achievements pass can re-add it.
 ##     - supply_chain (convert 10 grain → supplies): there is no "supplies_converted"
 ##       event site — supplies are produced by the Kitchen RecipeConfig output, not a
 ##       distinct counter the port tracks → omitted.
