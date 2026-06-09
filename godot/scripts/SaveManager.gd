@@ -7,7 +7,14 @@ extends RefCounted
 ## persisted shape changes and old saves start fresh).
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 1
+## Bumped 1→2 because the persisted GameState shape changed: six new farm_run_*
+## fields were added in the Task C farm-run lifecycle (farm_run_active,
+## farm_run_budget, farm_run_turns_left, farm_run_zone, farm_run_used_fertilizer,
+## farm_run_selected). Mismatched (old v1) saves are intentionally discarded on
+## load — the player starts fresh, which with no active run means the town home
+## screen. No forward-migration logic is needed; discard-on-mismatch is the
+## intended policy (mirrors React's SAVE_SCHEMA_VERSION approach).
+const SAVE_VERSION := 2
 
 ## Serialise `state` to SAVE_PATH. Returns true on success; on failure pushes a
 ## warning and returns false.
