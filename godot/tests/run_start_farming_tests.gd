@@ -45,6 +45,8 @@ func _run() -> void:
 	await _test_main_wiring()
 	await _test_expedition_input_gate()
 	await _test_run_end_dismiss()
+	await _test_apply_deeplink_board_gate()
+	await _test_natural_expedition_exit_gate()
 
 # ── 1. StartFarmingModal ───────────────────────────────────────────────────────
 
@@ -339,5 +341,90 @@ func _test_run_end_dismiss() -> void:
 	_check(not main2.board.active, "I1 (CTA): the board is INERT after the CTA return")
 
 	main2.queue_free()
+	await process_frame
+	SaveManager.clear()
+
+# ── 7. BUG C1 Hole A: apply_deeplink("board") respects the full gate ──────────
+## apply_deeplink("board") must NOT re-inert a live mine/harbor/boss board (it used
+## to gate on farm_run_active ONLY, so an expedition was bounced to the town map).
+## Conversely, with no run/expedition/boss it must redirect to the town home (gate
+## stays false).
+func _test_apply_deeplink_board_gate() -> void:
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+
+	# ── 7a. While IN THE MINE: apply_deeplink("board") keeps the board LIVE ──────
+	main.game.settlement.tier = TownConfig.TIER_CITY
+	main.game.inventory["supplies"] = 3
+	var mine_res: Dictionary = main.game.enter_mine()
+	_check(bool(mine_res.get("ok", false)), "Hole A setup: enter_mine() succeeded")
+	main._on_town_changed()
+	await process_frame
+	_check(main.board.active, "Hole A setup: board is LIVE in the mine")
+
+	# Now navigate away (open inventory) then call apply_deeplink("board") — must NOT
+	# bounce to town (the pre-fix bug) and must keep the board LIVE.
+	main.apply_deeplink("inventory")
+	await process_frame
+	main.apply_deeplink("board")
+	await process_frame
+	_check(main.board.active,
+		"Hole A: apply_deeplink('board') while in mine keeps board LIVE (not bounced)")
+
+	# ── 7b. With NO run/expedition/boss: apply_deeplink("board") stays inert ──────
+	main.game.leave_mine()
+	main._on_town_changed()
+	await process_frame
+	_check(not main.board.active, "Hole A setup: board INERT after leaving mine, no run")
+	main.apply_deeplink("board")
+	await process_frame
+	_check(not main.board.active,
+		"Hole A: apply_deeplink('board') with no run stays INERT (redirect to town)")
+	_check(main._townmap_screen != null and main._townmap_screen.visible,
+		"Hole A: the redirect landed on the town home")
+
+	main.queue_free()
+	await process_frame
+	SaveManager.clear()
+
+# ── 8. BUG C1 Hole B: natural mine exit lowers the board gate ─────────────────
+## When a mine expedition naturally expires (last turn consumed via _on_chain_resolved),
+## note_mine_turn() flips active_biome back to "farm" and the exit branch re-pools +
+## regenerates the farm board — but previously NEVER lowered the gate, leaving an idle
+## farm board LIVE. Drives the REAL _on_chain_resolved path.
+func _test_natural_expedition_exit_gate() -> void:
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+
+	# Enter mine with exactly 1 supply → 1 mine turn (so the NEXT chain resolves exits).
+	main.game.settlement.tier = TownConfig.TIER_CITY
+	main.game.inventory["supplies"] = 1
+	var mine_res: Dictionary = main.game.enter_mine()
+	_check(bool(mine_res.get("ok", false)), "Hole B setup: enter_mine() with 1 supply succeeded")
+	main._on_town_changed()
+	await process_frame
+	_check(main.board.active, "Hole B setup: board LIVE during the mine expedition")
+	_check(main.game.mine_turns_left == 1, "Hole B setup: exactly 1 mine turn remaining")
+
+	# Resolve one chain → note_mine_turn() hits 0 → expedition exits → farm board regenerates.
+	# Use a STONE chain (mine tile) to exercise the mine credit path; length 1 is enough to tick.
+	main._on_chain_resolved(Constants.Tile.STONE, 1)
+	await process_frame
+
+	# The expedition must be over and the gate must be lowered.
+	_check(main.game.active_biome == "farm",
+		"Hole B: after natural mine exit active_biome == 'farm'")
+	_check(not main.game.farm_run_active,
+		"Hole B: after natural mine exit farm_run_active == false")
+	_check(not main.board.active,
+		"Hole B: after natural mine exit board is INERT (gate lowered)")
+
+	main.queue_free()
 	await process_frame
 	SaveManager.clear()

@@ -1395,18 +1395,18 @@ func apply_deeplink(id: String) -> bool:
 			# NONE / board — close whatever is open. We're returning to the board, so
 			# clear the bottom-nav active-tab marker (several screens below are hidden
 			# inline here without routing through their _on_*_closed handler).
-			# Task C — board RUN-GATE: the board is only reachable while a bounded farm run is
-			# live (town is home). With NO active run, redirect to the town home instead of
-			# landing on an inert board (mirrors React's view gate). _on_start_farming calls
-			# apply_deeplink("board") only AFTER start_farm_run set farm_run_active = true, so
-			# that path correctly falls through to the board below.
-			if game != null and not game.farm_run_active:
+			# Task C / BUG C1 — board PLAYABILITY GATE: the board is reachable while a
+			# bounded farm run is live, OR on a non-farm expedition (mine/harbor), OR
+			# during a boss fight (town is home only when none of those are true).
+			# _on_start_farming calls apply_deeplink("board") only AFTER start_farm_run
+			# set farm_run_active = true, so that path correctly falls through below.
+			if game != null and not _board_should_be_active():
 				board.set_active(false)
 				_open_townmap()
 				return true
-			# A run IS active → the board is reachable; keep the existing hide-all-overlays
-			# behaviour and make the board live.
-			board.set_active(true)
+			# The board IS playable → keep the existing hide-all-overlays behaviour and
+			# set the gate consistently via the helper (covers all three live cases).
+			board.set_active(_board_should_be_active())
 			_hud._clear_nav()
 			if _town_screen != null and _town_screen.visible:
 				_town_screen.visible = false
@@ -1748,6 +1748,10 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# M3i: the expedition ended — back on the farm, so mining-through-rubble is
 			# off (there's no rubble on the farm board anyway; keep the flag honest).
 			board.clear_rubble_on_stone = game.is_in_mine()
+			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
+			# _board_should_be_active() returns false (no run, farm biome, no boss)
+			# → the board becomes the inert town-home backdrop as expected.
+			board.set_active(_board_should_be_active())
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
@@ -1770,6 +1774,10 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			board.setup_new_board()
 			# The harbor ended — back on the farm, so the pearl-capture flag is off.
 			board.clear_pearl_on_fish_chain = game.is_in_harbor()
+			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
+			# _board_should_be_active() returns false (no run, farm biome, no boss)
+			# → the board becomes the inert town-home backdrop as expected.
+			board.set_active(_board_should_be_active())
 		else:
 			# TIDE FLIP — the surface catch changed with the water; reseed the bottom row.
 			if bool(h_res.get("tide_flipped", false)):
