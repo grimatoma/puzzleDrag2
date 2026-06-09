@@ -3,9 +3,16 @@ extends RefCounted
 ## Inventory RESOURCE catalog — the single source of truth for every NON-TILE good the
 ## port carries in GameState.inventory, PLUS the two scalar currencies (runes / influence)
 ## surfaced as inventory "items". Before this catalog these ~40 resource keys lived as bare
-## strings whose label/value/desc were reconstructed ad-hoc (UiKit.pretty_name's capitalize(),
-## MarketConfig.SELL, inline RecipeConfig descs); this consolidates that metadata so every
-## consumer derives from ONE place.
+## strings whose label/desc were reconstructed ad-hoc (UiKit.pretty_name's capitalize(),
+## inline RecipeConfig descs); this consolidates that metadata so every consumer derives
+## from ONE place.
+##
+## NOT a pricing source. This catalog does NOT consolidate MarketConfig — sell/buy prices
+## still flow exclusively from MarketConfig.SELL / MarketConfig.BUY, which remain the
+## authoritative, independently-valued market prices. The `value` field here is parity data
+## only (React ITEMS[key].value, intrinsic worth) and is currently consumed by NO pricing
+## path; it is intentionally DISTINCT from MarketConfig and may diverge (e.g. bread `value`
+## = 125 but MarketConfig.SELL bread = 5).
 ##
 ## SCOPE — the UNION of every resource key the port already references:
 ##   • Constants.PRODUCES non-empty values (tile chain outputs: hay_bundle … gold_bar)
@@ -36,7 +43,9 @@ extends RefCounted
 ##   key    — the id (== the inventory key)
 ##   label  — display name (React ITEMS[key].label; currencies hand-named)
 ##   kind   — "resource" for goods, "item" for the runes/influence currencies
-##   value  — sell/market value, int (React ITEMS[key].value; 0 for currencies)
+##   value  — intrinsic worth, int — React ITEMS[key].value (parity data; 0 for currencies).
+##            NOT a market price: sell/buy still come from MarketConfig.SELL / .BUY, and no
+##            pricing path reads this field today (see the "NOT a pricing source" note above).
 ##   desc   — flavor text ("" when the React row has none)
 ##   family — "farm" | "refined" | "mine" | "other"
 ##   glyph  — only the "item" currencies carry one (runes 🔮, influence ◈); "" otherwise

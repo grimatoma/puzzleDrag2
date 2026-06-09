@@ -50,6 +50,7 @@ func _initialize() -> void:
 	_test_display_name_parity_all_tiles()
 	_test_representative_tiles()
 	_test_plural_alias()
+	_test_tile_variant_display_name_dedup()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -295,3 +296,44 @@ func _test_plural_alias() -> void:
 	_check(TCC.family("herd_animals") == "farm", "family('herd_animals') == 'farm'")
 	_check(TCC.representative_tile("mounts") == Constants.Tile.HORSE,
 		"representative_tile('mounts') resolves to HORSE")
+
+# ── 9. TileVariantConfig.display_name — catalog-first intact + fallback folded into the
+#       shared helper (the former 4th _DROP/title-case copy removed; no "coin" prefix). ──
+
+func _test_tile_variant_display_name_dedup() -> void:
+	var TVC := TileVariantConfig
+	# (a) Catalog-FIRST path is intact: for a catalog tile id, display_name returns the catalog
+	# display_name — NOT the prefix-strip — so the fallback never runs for any real input. Pick a
+	# tile whose catalog name DIFFERS from a bare strip ("Meadow Grass" vs the strip's "Meadow"),
+	# so this can only pass if the catalog branch wins.
+	_check(TVC.display_name("tile_grass_meadow") == "Meadow Grass",
+		"TileVariantConfig.display_name('tile_grass_meadow') == catalog 'Meadow Grass' (catalog-first, not the 'grass'-stripped 'Meadow')")
+	_check(TVC.display_name("tile_grass_grass") == "Grass",
+		"TileVariantConfig.display_name('tile_grass_grass') == catalog 'Grass'")
+	_check(TVC.display_name("tile_mine_iron_ore") == "Ore",
+		"TileVariantConfig.display_name('tile_mine_iron_ore') == catalog 'Ore' (catalog-first)")
+	# Every catalog id resolves to its catalog display_name (the fallback is unreachable for catalog ids).
+	var dn_mismatch: Array = []
+	for id in TVC.CATALOG.keys():
+		var sid: String = String(id)
+		var catalog_dn: String = String((TVC.CATALOG[sid] as Dictionary).get("display_name", ""))
+		if catalog_dn != "" and TVC.display_name(sid) != catalog_dn:
+			dn_mismatch.append(sid)
+	_check(dn_mismatch.is_empty(),
+		"every catalog id returns its catalog display_name via TileVariantConfig.display_name (mismatches: %s)" % str(dn_mismatch))
+
+	# (b) The (currently-unreached) NON-catalog fallback now routes through the ONE shared helper —
+	# TileCategoryConfig.display_name_from_key — byte-for-byte. Use ids that are NOT catalog tiles.
+	for nc in ["rat", "rubble", "fish_pearl", "xyz_widget"]:
+		_check(not TVC.is_tile(nc), "%s is a non-catalog id (exercises the fallback)" % nc)
+		_check(TVC.display_name(nc) == TCC.display_name_from_key(nc),
+			"non-catalog fallback '%s' routes through TileCategoryConfig.display_name_from_key" % nc)
+
+	# (c) The 4th _DROP copy is gone and carries no stray "coin": the source no longer declares an
+	# inline _DROP const, and no fallback path re-introduces a "coin" prefix strip. Proven via a
+	# coin-shaped non-catalog id — if a local "coin" list still existed it would strip to "Golden";
+	# routed through the shared helper (which excludes "coin") it stays "Coin Golden".
+	_check(not TVC.is_tile("coin_golden"),
+		"'coin_golden' (sans tile_ prefix) is a non-catalog id")
+	_check(TVC.display_name("coin_golden") == TCC.display_name_from_key("coin_golden"),
+		"coin-shaped fallback id matches the shared helper (no stray 'coin' strip in TileVariantConfig)")
