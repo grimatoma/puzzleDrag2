@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Birch — Seasons in Motion (32px test)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#161a14; --bg2:#1b2017; --ink:#eef3e6; --muted:#bfccae; --faint:#8a9a78; --line:#3a4a2e;
+    --accent:#8fbe4e; --accent2:#e0991f; --accent4:#6fa3b0;
+    --serif:"Fraunces",Georgia,serif; --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+    --spring1:#bfe08a;--spring2:#9fcf5a; --summer1:#ffe9a0;--summer2:#9bce63;
+    --autumn1:#f0c489;--autumn2:#e0991f; --winter1:#dbe6ef;--winter2:#bccad6; --neutral1:#cdd8c0;--neutral2:#9fb38a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;color:var(--ink);font:400 16px/1.6 var(--sans);
+    background:radial-gradient(1100px 560px at 80% -10%,rgba(143,190,78,.13),transparent 60%),
+      radial-gradient(900px 520px at -8% 4%,rgba(111,163,176,.12),transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2));
+    background-attachment:fixed;}
+  .page{max-width:960px;margin:0 auto;padding:2.4rem 22px 5rem;}
+  .kicker{font:600 12px/1 var(--mono);letter-spacing:.26em;text-transform:uppercase;color:var(--accent);margin:0 0 .7rem;}
+  h1{font:800 clamp(2.1rem,5vw,3.4rem)/1.05 var(--serif);letter-spacing:-.015em;margin:0;
+    background:linear-gradient(94deg,#9fcf5a,#e0991f 55%,#6fa3b0);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:var(--muted);max-width:64ch;margin:1rem 0 0;font-size:1.06rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:1.2rem 0 0;}
+  .chip{font:600 11px/1 var(--mono);letter-spacing:.04em;padding:.4rem .7rem;border-radius:999px;background:rgba(42,51,31,.6);color:var(--muted);border:1px solid var(--line);}
+  section{margin:2.4rem 0 0;}
+  h2{font:800 1.5rem/1.1 var(--serif);margin:0 0 .3rem;color:var(--ink);}
+  h2 .n{font:600 .6em var(--mono);color:var(--accent);margin-right:.5em;}
+  .lead{color:var(--muted);margin:.2rem 0 1.2rem;max-width:72ch;font-size:.96rem;}
+
+  img.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
+  .tile{position:relative;border-radius:22%;display:grid;place-items:center;overflow:hidden;
+    background:linear-gradient(160deg,var(--t1,var(--neutral1)),var(--t2,var(--neutral2)));
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.45),inset 0 -10px 18px -10px rgba(0,0,0,.3),0 7px 18px -7px rgba(0,0,0,.55);}
+  .tile::after{content:"";position:absolute;inset:6%;border-radius:18%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.22);pointer-events:none;}
+  .spring{--t1:var(--spring1);--t2:var(--spring2);} .summer{--t1:var(--summer1);--t2:var(--summer2);}
+  .autumn{--t1:var(--autumn1);--t2:var(--autumn2);} .winter{--t1:var(--winter1);--t2:var(--winter2);}
+
+  /* hero cycle */
+  .hero{display:flex;gap:1.8rem;align-items:center;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(34,42,29,.6),rgba(27,32,23,.45));border:1px solid var(--line);border-radius:16px;padding:1.6rem;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .hero .tile{width:232px;height:232px;flex:none;}
+  .hero .blurb{max-width:46ch;}
+  .hero .blurb p{color:var(--muted);font-size:.96rem;margin:.5rem 0;}
+
+  .row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+  @media(max-width:760px){.row{grid-template-columns:repeat(2,1fr);}}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:.6rem;
+    background:linear-gradient(180deg,rgba(43,52,31,.55),rgba(30,37,22,.4));border:1px solid var(--line);border-radius:12px;padding:1rem .8rem;}
+  .cell .tile{width:160px;height:160px;}
+  .cap{font:600 11px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);text-align:center;}
+  .cap b{display:block;font-family:var(--serif);font-size:1.05rem;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:700;margin-bottom:.15rem;}
+  .arrow{color:var(--accent2);}
+
+  .note{background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:4px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 9px 9px 0;margin:1.2rem 0 0;}
+  .note p{margin:.3rem 0;color:var(--muted);font-size:.92rem;}
+  code{background:#2a331f;padding:.06rem .35rem;border-radius:5px;font:.85em var(--mono);color:#dceeb6;}
+  footer{margin-top:3rem;color:var(--faint);font-size:.85rem;border-top:1px dashed var(--line);padding-top:1.2rem;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kicker">Pixel-art exploration · 32&nbsp;px test · concept only</p>
+  <h1>Birch — Seasons in Motion</h1>
+  <p class="sub">A single 32&times;32 birch tile: one core tree carried through all four seasons, each with its own idle
+    loop, plus transition animations that morph each season's resting frame directly into the next — so the whole year
+    plays as one continuous loop.</p>
+  <div class="chips">
+    <span class="chip">32&times;32 native</span><span class="chip">4 seasons</span>
+    <span class="chip">4 idle loops · PixelLab v3</span><span class="chip">4 transitions</span>
+    <span class="chip">one continuous cycle</span>
+  </div>
+
+  <section>
+    <h2><span class="n">01</span>The full year, looping</h2>
+    <p class="lead">Idle&nbsp;(spring) → spring→summer → idle&nbsp;(summer) → summer→autumn → … Each transition ends exactly on
+      the next season's base frame, which is where that season's idle rests, so the seams are seamless.</p>
+    <div class="hero">
+      <div class="tile"><img class="px" width="200" height="200" src="assets/seasonal-tiles/birch/birch-cycle-32.gif" alt="Birch full-year cycle"></div>
+      <div class="blurb">
+        <p>Shown at <strong>~6&times;</strong> (32&nbsp;px source). The trunk stays rooted; the canopy sways during each
+          idle, then morphs into the next season — green fills in for spring, deepens for summer, turns gold for
+          autumn, drops to bare snowy branches for winter, then buds again.</p>
+        <p style="color:var(--faint);font-size:.85rem;">Both the idle loops <em>and</em> the season-to-season transitions
+          are generated by the PixelLab MCP — the transitions use v3 interpolation toward each next season.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>Four idle loops</h2>
+    <p class="lead">The same birch in each season — a gentle breeze in the canopy, trunk rooted. Native 32&nbsp;px, shown 5&times;.</p>
+    <div class="row">
+      <div class="cell"><div class="tile spring"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-spring-32.gif" alt="Spring idle"></div><div class="cap"><b>Spring</b>fresh green · blossom</div></div>
+      <div class="cell"><div class="tile summer"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-summer-32.gif" alt="Summer idle"></div><div class="cap"><b>Summer</b>full green canopy</div></div>
+      <div class="cell"><div class="tile autumn"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-autumn-32.gif" alt="Autumn idle"></div><div class="cap"><b>Autumn</b>golden canopy</div></div>
+      <div class="cell"><div class="tile winter"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-winter-32.gif" alt="Winter idle"></div><div class="cap"><b>Winter</b>bare · snow</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Season transitions</h2>
+    <p class="lead">Each clip morphs one season's base directly into the next, for the cohesive flow used in the cycle above.</p>
+    <div class="row">
+      <div class="cell"><div class="tile spring"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-trans-spring-summer-32.gif" alt="Spring to summer"></div><div class="cap">Spring <span class="arrow">→</span> Summer</div></div>
+      <div class="cell"><div class="tile summer"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-trans-summer-autumn-32.gif" alt="Summer to autumn"></div><div class="cap">Summer <span class="arrow">→</span> Autumn</div></div>
+      <div class="cell"><div class="tile autumn"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-trans-autumn-winter-32.gif" alt="Autumn to winter"></div><div class="cap">Autumn <span class="arrow">→</span> Winter</div></div>
+      <div class="cell"><div class="tile winter"><img class="px" width="160" height="160" src="assets/seasonal-tiles/birch/birch-trans-winter-spring-32.gif" alt="Winter to spring"></div><div class="cap">Winter <span class="arrow">→</span> Spring</div></div>
+    </div>
+    <div class="note">
+      <p><b style="font-family:var(--serif);color:var(--ink);">How it was made.</b> One 32&nbsp;px birch base
+        (<code>create_map_object</code>) → spring/autumn/winter as edited <code>states</code> of it (same core tree) → a
+        PixelLab <code>v3</code> idle loop on each. The transitions are true PixelLab <code>v3</code> interpolations toward
+        each next season's frame (the tree visibly morphs &mdash; leaves colouring, falling, budding), chained with the idle
+        loops into the full-year cycle.</p>
+      <p style="color:var(--faint);">Concept only — not wired into the game. This is the single-tile 32&nbsp;px test before
+        scaling to more tiles / sizes.</p>
+    </div>
+  </section>
+
+  <footer>Birch seasonal animation test · 32&times;32 looping GIFs under <code>assets/seasonal-tiles/birch/</code> · generated with the PixelLab pixel-art MCP.</footer>
+
+</div>
+</body>
+</html>
