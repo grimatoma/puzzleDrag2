@@ -134,6 +134,11 @@ var _boons_screen: BoonsScreenScript   ## lazily created
 ## deeplink for QA).
 const KeeperModalScript := preload("res://scenes/KeeperModal.gd")
 var _keeper_modal: KeeperModalScript   ## lazily created
+## T22 — Founder picker modal: appears when founding a discovered, unfounded settlement node on
+## the world map; the player picks the settlement's biome. Opened from CartographyScreen's
+## `found_requested` signal.
+const FounderModalScript := preload("res://scenes/FounderModal.gd")
+var _founder_modal: FounderModalScript   ## lazily created
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
 ## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
@@ -534,7 +539,7 @@ func _overlay_list() -> Array:
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
-		_charter_screen, _quests_screen, _boons_screen, _keeper_modal,
+		_charter_screen, _quests_screen, _boons_screen, _keeper_modal, _founder_modal,
 	]
 
 ## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
@@ -893,6 +898,7 @@ func _open_cartography() -> void:
 		_cartography_screen.setup(game)
 		_cartography_screen.connect("closed", Callable(self, "_on_cartography_closed"))
 		_cartography_screen.connect("travel_requested", Callable(self, "_on_cartography_travel"))
+		_cartography_screen.connect("found_requested", Callable(self, "_on_cartography_found"))
 	_cartography_screen.open()
 	_router.open_modal(ViewRouter.Modal.CARTOGRAPHY)
 	# The cartography world map is the "Map" tab's target.
@@ -1468,10 +1474,53 @@ func _on_cartography_travel(node_id: String) -> void:
 			show_toast("🎪 The Drifter's Fair rolls through — come back when the wagons settle.")
 		"event":
 			show_toast("🎲 You meet a stranger at the Crossroads…")
+		"capital":
+			# T22 FINALE — reaching the Old Capital is "The Long Return"'s end. travel_block_reason
+			# only let us here once all three Hearth-Tokens are held, so this fires exactly once the
+			# kingdom is whole. The narrative finale is a celebratory toast (the React Old-Capital
+			# finale is itself a TBD stub); the unlock + arrival is the real, earned milestone.
+			show_toast("🏛 The Old Capital opens. Three Hearth-Tokens carried home — the Long Return is complete.")
 		_:
 			pass
 	_refresh_meta()
 	SaveManager.save(game)
+
+# ── T22 founder flow ──────────────────────────────────────────────────────────
+
+## The CartographyScreen's "Found Settlement" button was pressed for a discovered, unfounded
+## settlement node. Open the founder biome picker over the map; the picker calls the real
+## game.found_settlement on a choice and emits `founded` back to _on_founded.
+func _on_cartography_found(node_id: String) -> void:
+	_open_founder(node_id)
+
+## Open the founder picker for `zone_id`, lazily creating + wiring it on first use.
+func _open_founder(zone_id: String) -> void:
+	if _founder_modal == null:
+		_founder_modal = FounderModalScript.new()
+		add_child(_founder_modal)
+		_founder_modal.setup(game)
+		_founder_modal.connect("founded", Callable(self, "_on_founded"))
+		_founder_modal.connect("closed", Callable(self, "_on_founder_closed"))
+	_founder_modal.open_for(zone_id)
+
+## A settlement was founded (the picker called game.found_settlement → coins paid, the founding
+## recorded, the zone archive seeded, any earned Hearth-Token folded). Persist, re-render the still-
+## open world map so the node now reads "✓ Founded", and surface a toast.
+func _on_founded(zone: String, biome: String) -> void:
+	if _founder_modal != null:
+		_founder_modal.visible = false
+	var node_name: String = String(CartographyConfig.by_id(zone).get("name", zone))
+	var biome_def: Dictionary = CartographyConfig.biome_def(CartographyConfig.settlement_type_for_zone(zone), biome)
+	var biome_name: String = String(biome_def.get("name", biome))
+	show_toast("Founded %s — a %s settlement. Travel there to build it up." % [node_name, biome_name])
+	if _cartography_screen != null and _cartography_screen.visible:
+		_cartography_screen.refresh()
+	_refresh_meta()
+	SaveManager.save(game)
+
+func _on_founder_closed() -> void:
+	if _founder_modal != null:
+		_founder_modal.visible = false
 
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 

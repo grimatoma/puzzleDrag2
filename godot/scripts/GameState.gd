@@ -172,6 +172,40 @@ var map_current: String = "home"
 ## _seed_map_state() in _init so a bare GameState is always navigable.
 var map_node_state: Dictionary = {}
 
+# ── T22: Multi-settlement founding + per-zone state (ACTIVE-ZONE-VIEW + ARCHIVE model) ──
+## The locked Direction keys inventory / progress / buildings / settlement PER founded zone, with
+## a founder flow, and three Hearth-Tokens (one per completed settlement TYPE) that unlock the Old
+## Capital finale. Porting React's nested-map shape (inventory[zoneId], built[zoneId], …) would
+## break the hundreds of FLAT `inventory[res]` / `qty()` / `buildings` accesses across this whole
+## codebase. Instead this is an ACTIVE-ZONE-VIEW + ARCHIVE model:
+##   • The flat `inventory` / `progress` / `buildings` / `settlement` / `farm_turns_used` fields
+##     are the LIVE view of the CURRENTLY-ACTIVE zone (`map_current`, default "home").
+##   • `zone_archives` holds the SNAPSHOTTED state of every NON-active founded zone.
+##   • `_activate_zone(id)` snapshots the live fields into zone_archives[old], then loads
+##     zone_archives[id] (or fresh defaults) into the live fields + sets map_current.
+## A fresh game never leaves home, so the live fields behave EXACTLY as before — every existing
+## suite stays byte-identical. Founding / archives / tokens are purely ADDITIVE.
+##
+## coins / tools / workers / runes / npcs / achievements / story / quests / almanac / boons /
+## embers / core_ingots / market / heirlooms stay GLOBAL (NOT per-zone) — mirroring React's
+## src/state/zoneInventory.ts ("coins, tools, workers, level, knowledge stay global").
+
+## Per-founded-zone founding record: { zone_id:String -> { founded:bool, biome:String,
+## keeper_path:String } }. Home is IMPLICITLY founded (is_settlement_founded special-cases it),
+## so a fresh game's map is EMPTY — exactly like React's state.settlements (home never recorded).
+var settlements: Dictionary = {}
+
+## Snapshotted state of every NON-active founded zone: { zone_id:String -> { inventory, progress,
+## buildings, settlement (tier dict), farm_turns_used } }. The ACTIVE zone's state lives in the
+## live flat fields, NOT here. Empty for a home-only game (home is the active zone, never archived).
+var zone_archives: Dictionary = {}
+
+## The Hearth-Tokens held (GLOBAL): { token_id:String -> 1 } where token_id is one of
+## CartographyConfig.HEARTH_TOKEN_FOR_TYPE values (heirloomSeed / pactIron / tidesingerPearl).
+## A completed settlement of a type grants its token ONCE; holding all three opens the Old Capital.
+## React state.heirlooms (data.ts:541-554 grantEarnedHearthTokens). Empty for a fresh game.
+var heirlooms: Dictionary = {}
+
 # ── Farm season cycle (A1, ported from src/features/zones + src/constants SEASONS) ──
 ## The home farm is a PERSISTENT board that cycles four seasons (Spring→Summer→Autumn→
 ## Winter) over a turn budget, then HARVESTS and wraps back to Spring. `farm_turns_used` is
@@ -725,6 +759,15 @@ func give_keeper_reward(type: String, path: String) -> Dictionary:
 		var ci: int = KeeperConfig.driveout_core_ingots(type)
 		core_ingots += ci
 		result["core_ingots"] = ci
+	# T22 (ADDITIVE): record the resolved path on the ACTIVE founded zone's record (React's per-zone
+	# settlement.keeperPath). home is implicit, so only a recorded (non-home) founded zone carries it;
+	# the kingdom-wide type flag (set above) is the authoritative gate either way.
+	if settlements.has(map_current) and settlement_type_for_zone(map_current) == type:
+		(settlements[map_current] as Dictionary)["keeper_path"] = path
+	# T22 (ADDITIVE): resolving the keeper is the OTHER gating step for settlement completion — fold
+	# the Hearth-Token grant now (mirrors React's grantEarnedHearthTokens fold after KEEPER/CONFRONT,
+	# state.ts). Grants a token only when the active settlement is also built-up enough.
+	grant_earned_hearth_tokens()
 	# T29 (story engine, ADDITIVE — after the keeper flag is set + the currency granted): post a
 	# "keeper_resolved" event so act1_keeper_trial can fire. The beat gates on the keeper_<type>_<path>
 	# flag (already set above), so it would fire on the very next event regardless; posting here makes
@@ -1686,6 +1729,10 @@ func plots_free() -> int:
 func can_build(id: String) -> bool:
 	if not BuildingConfig.is_building(id):
 		return false
+	# T22 founding GATE (React BUILD, state.ts:797): can't build at a zone that isn't founded.
+	# home is always founded → no-op for the home-only game.
+	if not is_settlement_founded(map_current):
+		return false
 	if has_building(id):
 		return false
 	if settlement.tier < BuildingConfig.unlock_tier(id):
@@ -1710,6 +1757,10 @@ func can_build(id: String) -> bool:
 func build(id: String) -> Dictionary:
 	if not BuildingConfig.is_building(id):
 		return {"ok": false, "reason": "unknown"}
+	# T22 founding GATE (React BUILD, state.ts:797): can't build at an unfounded zone (home exempt).
+	# Reported with "unfounded" so Main can prompt the founder flow.
+	if not is_settlement_founded(map_current):
+		return {"ok": false, "reason": "unfounded"}
 	if has_building(id):
 		return {"ok": false, "reason": "exists"}
 	if settlement.tier < BuildingConfig.unlock_tier(id):
@@ -1747,6 +1798,11 @@ func build(id: String) -> Dictionary:
 	# event so build-gated beats (act1_lumber_raised on event.id=="lumber_camp",
 	# act2_kitchen on "kitchen") can fire. The success result below is UNCHANGED.
 	post_story_event({"type": "building_built", "id": id})
+	# T22 (ADDITIVE, after the build): a build may have pushed the ACTIVE settlement past its keeper
+	# threshold — but a settlement only COMPLETES once its keeper is RESOLVED, so this grants a token
+	# only when both hold. Mirrors React's grantEarnedHearthTokens fold after BUILD (state.ts:889).
+	# A fresh / unresolved game grants nothing → economy unchanged.
+	grant_earned_hearth_tokens()
 	return {"ok": true, "id": id, "name": BuildingConfig.building_name(id)}
 
 ## Remove spawner `id`, freeing its plot and dropping its category from the pool.
@@ -2164,11 +2220,16 @@ func player_level() -> int:
 func _seed_map_state() -> void:
 	if not map_node_state.is_empty():
 		return
-	map_current = "home"
+	# T22: preserve an already-set active zone (a bare GameState has map_current "home", so the
+	# fresh-game path is byte-identical; but a zone activated BEFORE any map reader ran — e.g. via
+	# _activate_zone in a headless flow — must not be clobbered back to home). The current node is
+	# marked visited; home stays at least visited (the React invariant); neighbours of both are
+	# discovered.
+	if map_current == "" or not CartographyConfig.has_node(map_current):
+		map_current = "home"
 	map_node_state = {"home": "visited"}
-	for nid in CartographyConfig.neighbors_of("home"):
-		if not map_node_state.has(nid):
-			map_node_state[nid] = "discovered"
+	map_node_state[map_current] = "visited"
+	_recompute_discovered()
 
 ## The travel-state string for `node_id`: "visited" | "discovered" | "hidden". A node absent
 ## from map_node_state reads as hidden. Seeds the default state on first read so a bare
@@ -2207,9 +2268,11 @@ func travel_block_reason(node_id: String) -> String:
 		return "unknown"
 	if node_id == map_current:
 		return "here"
-	# The Old Capital is gated on three Hearth-Tokens. That currency does not exist in the port
-	# yet (T22 territory), so the node can never be entered — surfaced honestly, never faked.
-	if CartographyConfig.requires_hearth_tokens(node_id):
+	# The Old Capital is gated on the three Hearth-Tokens (T22). Until all three are held the node
+	# can't be entered ("needs_tokens"); once the player holds all three it UNLOCKS and falls
+	# through to the normal adjacency/level/cost gate below (reaching it is the finale). React
+	# isOldCapitalUnlocked (data.ts:524-528).
+	if CartographyConfig.requires_hearth_tokens(node_id) and not is_old_capital_unlocked():
 		return "needs_tokens"
 	# Fast-travel: any already-visited node, from anywhere (no adjacency/level/cost).
 	if map_visited(node_id):
@@ -2269,16 +2332,28 @@ func travel_to(node_id: String) -> Dictionary:
 		"ok": true, "node": node_id, "kind": kind, "board_kind": board_kind,
 		"entered": false, "first_visit": first_visit, "launch": {},
 	}
+	# T22 founding GATE: a BOARD node that isn't founded can't be ENTERED — the marker moves (the
+	# player is "at" the place on the map) but no board launches. Home is always founded, so the
+	# home-only game never sees this; meadow/orchard/quarry/etc. must be founded first. Surfaced
+	# honestly via result.launch.reason so Main can prompt the founder flow.
+	if board_kind != "" and not is_settlement_founded(node_id):
+		result["launch"] = {"ok": false, "reason": "unfounded"}
+		return result
 	match board_kind:
 		"farm":
-			# The farm is the persistent home board — entering it just makes the farm active
-			# (mirrors leave_mine/leave_harbor's snap-back). No supplies are spent.
+			# T22: a FARM settlement (home / meadow / orchard) is a persistent board with its OWN
+			# per-zone inventory / buildings / settlement tier. Activate it (snapshot the outgoing
+			# zone, load this one's archive) so the live fields ARE this zone's. A no-op when it's
+			# already the active zone — so the home-only game's live fields stay byte-identical.
+			_activate_zone(node_id)
 			active_biome = "farm"
 			result["entered"] = true
 		"mine":
-			# Launch the mine expedition the REAL way (supplies → turns). enter_mine guards on
-			# being on the farm + City tier + supplies; on failure the marker still moved (the
-			# player is "at" the quarry on the map) but no board change happened.
+			# A mine expedition launches FROM the active (home) settlement, spending ITS supplies.
+			# (The port models mine/harbor as expeditions, not lived-in settlements — the per-zone
+			# split that matters is the persistent FARM boards above.) enter_mine guards on being
+			# on the farm + City tier + supplies; on failure the marker still moved but no board
+			# change happened.
 			var mres: Dictionary = enter_mine()
 			result["launch"] = mres
 			result["entered"] = bool(mres.get("ok", false))
@@ -2290,6 +2365,303 @@ func travel_to(node_id: String) -> Dictionary:
 			# event / festival / boss / capital — no board; Main handles the activity on `kind`.
 			pass
 	return result
+
+# ── T22: Multi-settlement founding + Hearth-Tokens + active-zone-view ──────────────
+
+## The settlement TYPE for `zone_id` ("farm" | "mine" | "harbor"), or "" when it isn't a
+## settlement. Thin forwarder to CartographyConfig (React settlementTypeForZone).
+func settlement_type_for_zone(zone_id: String) -> String:
+	return CartographyConfig.settlement_type_for_zone(zone_id)
+
+## True when `zone_id` has been founded. Home is ALWAYS founded (implicit, never recorded), so
+## a fresh game answers true only for "home". FAITHFUL to React isSettlementFounded (data.ts:395).
+func is_settlement_founded(zone_id: String) -> bool:
+	if zone_id == "home":
+		return true
+	var rec: Variant = settlements.get(zone_id, null)
+	return rec is Dictionary and bool((rec as Dictionary).get("founded", false))
+
+## Number of zones the player has founded (home is implicit, NOT counted here — it matches React
+## foundedSettlementCount, which counts only state.settlements entries; home is never recorded).
+## Used by the founding-cost growth formula, where k = the count BEFORE home is added (so the
+## first PAID founding sees k=1 once home is folded in — see settlement_founding_cost).
+func founded_settlement_count() -> int:
+	var n: int = 0
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary and bool((rec as Dictionary).get("founded", false)):
+			n += 1
+	# Home is implicitly founded but never recorded in `settlements`; fold it in so the cost
+	# growth (base × growth^(k-1)) matches React, where home IS counted (home is in its map).
+	return n + 1
+
+## Coin cost to found the NEXT settlement. The k-th founding (k = current founded count) costs
+## round(base × growth^(k-1)). With home counted, the 2nd settlement is k=1 → base (300); the
+## 3rd is k=2 → base×1.7; etc. FAITHFUL to React settlementFoundingCost (data.ts:405-408).
+func settlement_founding_cost() -> int:
+	var k: int = maxi(1, founded_settlement_count())
+	return int(round(float(CartographyConfig.FOUNDING_BASE_COINS) * pow(CartographyConfig.FOUNDING_GROWTH, k - 1)))
+
+## A settlement is COMPLETE once (1) it's built up enough to draw its keeper AND (2) its keeper has
+## been resolved. FAITHFUL to React settlementCompleted (data.ts:419-437). The port keys keeper
+## resolution by TYPE (story flags, KeeperConfig), so a settlement of a given type completes once
+## its built count meets the keeper's appears_after_buildings threshold AND that type's keeper is
+## resolved. Reads the zone's built count from the ACTIVE live fields when `zone_id` is the active
+## zone, else from its archive. A zone with no keeper type (non-settlement node) can't complete.
+func settlement_completed(zone_id: String) -> bool:
+	if not is_settlement_founded(zone_id):
+		return false
+	var type: String = settlement_type_for_zone(zone_id)
+	if type == "" or not KeeperConfig.has_keeper(type):
+		return false
+	var built_count: int = _zone_building_count(zone_id)
+	if built_count < KeeperConfig.appears_after_buildings(type):
+		return false
+	# Keeper gate: the type's keeper must be resolved (React's per-zone keeperPath; the port keys
+	# by type — see keeper_resolved). Without this a built-up-but-unresolved settlement never
+	# completes, so its Hearth-Token isn't granted (matching React's keeper gate).
+	return keeper_resolved(type)
+
+## The number of placed buildings at `zone_id`: the live `buildings` array when it's the active
+## zone, else the archived snapshot's buildings. (React builtCountAt — the port's `buildings` is a
+## flat spawner array, so its size IS the built count; no _plots/decorations bookkeeping to skip.)
+func _zone_building_count(zone_id: String) -> int:
+	if zone_id == map_current:
+		return buildings.size()
+	var arc: Variant = zone_archives.get(zone_id, null)
+	if arc is Dictionary:
+		var blds: Variant = (arc as Dictionary).get("buildings", [])
+		if blds is Array:
+			return (blds as Array).size()
+	return 0
+
+## Count of zones that are both founded AND completed (React completedSettlementCount, data.ts:440).
+func completed_settlement_count() -> int:
+	var n: int = 0
+	# Founded non-home zones recorded in `settlements`.
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary and bool((rec as Dictionary).get("founded", false)) and settlement_completed(zid):
+			n += 1
+	# Home is implicitly founded; count it when complete (React counts home — it's in its map).
+	if settlement_completed("home"):
+		n += 1
+	return n
+
+## FOUND_SETTLEMENT (React state.ts:709-735). Found `zone_id` with biome `biome_id`. Guards (the
+## FIRST that trips is reported), in React's order:
+##   "unknown"      — no such map node.
+##   "founded"      — already founded.
+##   "needs_prior"  — a prior settlement must be COMPLETE before founding the next (home exempt —
+##                    but home is always founded, so this only ever gates settlement #2+).
+##   "not_settlement" — the node has no settlement type (event/festival/boss/capital).
+##   "cant_afford"  — not enough GLOBAL coins for settlement_founding_cost().
+## On success: deduct the coins, record settlements[zone_id] = {founded, biome, keeper_path:""},
+## SEED a fresh empty zone archive for it, fold any earned Hearth-Tokens, and return
+## {ok:true, zone, biome, cost}. Does NOT activate the zone (travel does that).
+func found_settlement(zone_id: String, biome_id: String = "") -> Dictionary:
+	if not CartographyConfig.has_node(zone_id):
+		return {"ok": false, "reason": "unknown"}
+	if is_settlement_founded(zone_id):
+		return {"ok": false, "reason": "founded"}
+	# Progression gate (React data: completedSettlementCount(state) < 1): finish your first
+	# settlement before founding the next. home is auto-founded, so the first time this gate is
+	# faced is founding settlement #2 — the player needs home (or another zone) complete first.
+	if completed_settlement_count() < 1:
+		return {"ok": false, "reason": "needs_prior"}
+	var type: String = settlement_type_for_zone(zone_id)
+	if type == "":
+		return {"ok": false, "reason": "not_settlement"}
+	var cost: int = settlement_founding_cost()
+	if coins < cost:
+		return {"ok": false, "reason": "cant_afford"}
+	# React resolveBiomeChoice: the picker passes the chosen id; a missing/unknown choice falls
+	# back to the type's first biome.
+	var biome: Dictionary = CartographyConfig.resolve_biome_choice(type, biome_id)
+	if biome.is_empty():
+		return {"ok": false, "reason": "not_settlement"}
+	# Commit: pay coins, record the founding, seed a fresh empty archive for the new zone.
+	coins -= cost
+	var chosen: String = String(biome.get("id", ""))
+	settlements[zone_id] = {"founded": true, "biome": chosen, "keeper_path": ""}
+	zone_archives[zone_id] = _fresh_zone_archive()
+	# A completed settlement may already grant a token (e.g. home completed before founding #2) —
+	# fold earned tokens after the founding so the Old-Capital unlock stays current.
+	grant_earned_hearth_tokens()
+	return {"ok": true, "zone": zone_id, "biome": chosen, "cost": cost}
+
+## A fresh, empty per-zone archive (a zone that has never been played): empty inventory / progress /
+## buildings, a Camp-tier settlement, 0 spent farm turns. The shape mirrors what _snapshot_live_zone
+## writes, so _load_zone_into_live can read either interchangeably.
+func _fresh_zone_archive() -> Dictionary:
+	return {
+		"inventory": {},
+		"progress": {},
+		"buildings": [],
+		"settlement": Settlement.new().to_dict(),
+		"farm_turns_used": 0,
+	}
+
+## Snapshot the LIVE per-zone fields (the currently-active zone's inventory / progress / buildings /
+## settlement / farm_turns_used) into a plain archive dict. Deep-copies so the archive is
+## independent of subsequent live mutation.
+func _snapshot_live_zone() -> Dictionary:
+	return {
+		"inventory": inventory.duplicate(true),
+		"progress": progress.duplicate(true),
+		"buildings": buildings.duplicate(),
+		"settlement": settlement.to_dict(),
+		"farm_turns_used": farm_turns_used,
+	}
+
+## Load an archive dict (from zone_archives or _fresh_zone_archive) INTO the live per-zone fields.
+## Defensive: missing keys fall back to fresh defaults; buildings keep only real, de-duplicated
+## ids; the settlement tier is rebuilt via Settlement.from_dict (clamps a corrupt tier).
+func _load_zone_into_live(arc: Dictionary) -> void:
+	var inv: Variant = arc.get("inventory", {})
+	inventory = (inv as Dictionary).duplicate(true) if inv is Dictionary else {}
+	var prog: Variant = arc.get("progress", {})
+	progress = (prog as Dictionary).duplicate(true) if prog is Dictionary else {}
+	var blds: Variant = arc.get("buildings", [])
+	buildings = []
+	if blds is Array:
+		for id in blds:
+			var sid: String = String(id)
+			if BuildingConfig.is_building(sid) and not buildings.has(sid):
+				buildings.append(sid)
+	var st: Variant = arc.get("settlement", {})
+	settlement = Settlement.from_dict(st) if st is Dictionary else Settlement.new()
+	farm_turns_used = maxi(0, int(arc.get("farm_turns_used", 0)))
+	# The board pool / ability cache are derived from buildings + the active tile set — invalidate
+	# so the next read rebuilds for the newly-active zone's spawners.
+	_invalidate_ability_channels()
+
+## Activate `zone_id` as the live zone: snapshot the current live fields into the OLD zone's
+## archive, then load `zone_id`'s archive (or a fresh one) into the live fields and set map_current.
+## A no-op when `zone_id` is ALREADY the active zone (so a fresh home-only game that never travels
+## off home never touches the archives — the live fields stay byte-identical). Coins / tools /
+## workers / runes / etc. are GLOBAL and untouched. Returns true when the active zone changed.
+func _activate_zone(zone_id: String) -> bool:
+	if zone_id == map_current:
+		return false
+	# Snapshot the OUTGOING zone's live state into its archive.
+	zone_archives[map_current] = _snapshot_live_zone()
+	# Load the INCOMING zone (its archive, or a fresh one if it's never been played).
+	var arc: Variant = zone_archives.get(zone_id, null)
+	if arc is Dictionary:
+		_load_zone_into_live(arc as Dictionary)
+		# It's now the live zone — drop its archive copy so the live fields are the single source
+		# of truth (re-snapshotted on the next activation away).
+		zone_archives.erase(zone_id)
+	else:
+		_load_zone_into_live(_fresh_zone_archive())
+	map_current = zone_id
+	# Keep the travel state consistent: the active zone is always at least VISITED (you're standing
+	# on it). Only touch an already-seeded map (a bare unseeded map stays lazily seeded by the first
+	# map reader, preserving the fresh-game path).
+	if not map_node_state.is_empty():
+		map_node_state[zone_id] = "visited"
+		_recompute_discovered()
+	return true
+
+## The chosen biome id for `zone_id` (or DEFAULT_HOME_BIOME for home), else "". React
+## settlementBiomeId (data.ts:581-587).
+func settlement_biome_id(zone_id: String) -> String:
+	var rec: Variant = settlements.get(zone_id, null)
+	if rec is Dictionary:
+		var b: String = String((rec as Dictionary).get("biome", ""))
+		if b != "":
+			return b
+	return CartographyConfig.DEFAULT_HOME_BIOME if zone_id == "home" else ""
+
+## The Hearth-Token id for settlement TYPE `type` (heirloomSeed / pactIron / tidesingerPearl), or
+## "" for an unknown type. React HEARTH_TOKEN_FOR_TYPE.
+func hearth_token_for_type(type: String) -> String:
+	return String(CartographyConfig.HEARTH_TOKEN_FOR_TYPE.get(type, ""))
+
+## How many of the three Hearth-Tokens the player holds (0–3). React hearthTokenCount (data.ts:531).
+func hearth_token_count() -> int:
+	var n: int = 0
+	for tok in CartographyConfig.HEARTH_TOKEN_FOR_TYPE.values():
+		if int(heirlooms.get(tok, 0)) >= 1:
+			n += 1
+	return n
+
+## All three Hearth-Tokens collected → the Old Capital is reachable. React isOldCapitalUnlocked
+## (data.ts:524-528).
+func is_old_capital_unlocked() -> bool:
+	return hearth_token_count() >= 3
+
+## Grant the Hearth-Token for every founded + completed settlement TYPE, ONCE each (idempotent —
+## never removes one). FAITHFUL to React grantEarnedHearthTokens (data.ts:541-554). Returns the
+## list of token ids NEWLY granted by this call (empty when nothing changed), so a caller can
+## surface a "you earned a token / the Capital opens" message.
+func grant_earned_hearth_tokens() -> Array:
+	var newly: Array = []
+	# Every founded zone (the recorded non-home ones + the implicit home).
+	var zone_ids: Array = settlements.keys().duplicate()
+	if not zone_ids.has("home"):
+		zone_ids.append("home")
+	for zone_id in zone_ids:
+		if not is_settlement_founded(zone_id) or not settlement_completed(zone_id):
+			continue
+		var type: String = settlement_type_for_zone(zone_id)
+		var tok: String = hearth_token_for_type(type)
+		if tok == "" or int(heirlooms.get(tok, 0)) >= 1:
+			continue
+		heirlooms[tok] = 1
+		newly.append(tok)
+	return newly
+
+## Deep-copy the founding records for persistence (each {founded, biome, keeper_path}).
+func _settlements_to_dict() -> Dictionary:
+	var out: Dictionary = {}
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary:
+			out[String(zid)] = (rec as Dictionary).duplicate(true)
+	return out
+
+## Deep-copy the per-zone archives for persistence (each {inventory, progress, buildings,
+## settlement, farm_turns_used}). The ACTIVE zone is NOT here (it's in the live fields).
+func _zone_archives_to_dict() -> Dictionary:
+	var out: Dictionary = {}
+	for zid in zone_archives.keys():
+		var arc: Variant = zone_archives[zid]
+		if arc is Dictionary:
+			out[String(zid)] = (arc as Dictionary).duplicate(true)
+	return out
+
+## Well-form a saved per-zone archive defensively (used by from_dict): inventory/progress values
+## int-coerced (JSON yields floats); buildings keep only real, de-duplicated ids; the settlement
+## tier rebuilt via Settlement.from_dict (clamps a corrupt tier); farm_turns_used floored at 0.
+func _sanitize_zone_archive(arc: Dictionary) -> Dictionary:
+	var inv: Dictionary = {}
+	var raw_inv: Variant = arc.get("inventory", {})
+	if raw_inv is Dictionary:
+		for k in (raw_inv as Dictionary).keys():
+			inv[String(k)] = int((raw_inv as Dictionary)[k])
+	var prog: Dictionary = {}
+	var raw_prog: Variant = arc.get("progress", {})
+	if raw_prog is Dictionary:
+		for k in (raw_prog as Dictionary).keys():
+			prog[String(k)] = int((raw_prog as Dictionary)[k])
+	var blds: Array = []
+	var raw_blds: Variant = arc.get("buildings", [])
+	if raw_blds is Array:
+		for id in (raw_blds as Array):
+			var sid := String(id)
+			if BuildingConfig.is_building(sid) and not blds.has(sid):
+				blds.append(sid)
+	var settle_dict: Variant = arc.get("settlement", {})
+	var settle_clean: Dictionary = Settlement.from_dict(settle_dict).to_dict() if settle_dict is Dictionary else Settlement.new().to_dict()
+	return {
+		"inventory": inv,
+		"progress": prog,
+		"buildings": blds,
+		"settlement": settle_clean,
+		"farm_turns_used": maxi(0, int(arc.get("farm_turns_used", 0))),
+	}
 
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
@@ -2432,6 +2804,10 @@ func note_farm_turn() -> Dictionary:
 func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	if farm_run_active:
 		return {"ok": false, "reason": "already_running"}
+	# T22 founding GATE (React FARM/ENTER): can't start a run at an unfounded zone. The run plays
+	# the ACTIVE zone (map_current); home is always founded → no-op for the home-only game.
+	if not is_settlement_founded(map_current):
+		return {"ok": false, "reason": "unfounded"}
 	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
 	if coins < cost:
 		return {"ok": false, "reason": "no_coins"}
@@ -4273,6 +4649,16 @@ func to_dict() -> Dictionary:
 		# discovered) via from_dict's defensive default.
 		"map_current": map_current,
 		"map_node_state": map_node_state.duplicate(),
+		# T22 Multi-settlement model (ADDITIVE): the founding records, the per-zone archives of the
+		# NON-active zones, and the global Hearth-Tokens. SAVE_VERSION is NOT bumped — a save written
+		# before T22 existed has none of these keys, so from_dict loads it as a home-only game with
+		# everything in the live fields, archives empty, no tokens (unchanged). The ACTIVE zone's
+		# inventory/buildings/settlement/progress live in the flat top-level keys above (they are the
+		# live view); zone_archives holds only the OTHER founded zones. map_current (above) is the
+		# active zone id.
+		"settlements": _settlements_to_dict(),
+		"zone_archives": _zone_archives_to_dict(),
+		"heirlooms": heirlooms.duplicate(),
 		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
 		# SAVE_VERSION is NOT bumped — a save written before seasons existed loads with 0
 		# (a fresh Spring cycle) via from_dict's defensive default.
@@ -4535,6 +4921,49 @@ static func from_dict(d: Dictionary) -> GameState:
 	if not CartographyConfig.has_node(mc) or String(s.map_node_state.get(mc, "hidden")) == "hidden":
 		mc = "home"
 	s.map_current = mc
+	# T22 Multi-settlement model (ADDITIVE). Restore the founding records, the per-zone archives,
+	# and the global Hearth-Tokens defensively. Missing keys (any pre-T22 save) → empty maps, so the
+	# save loads as a home-only game: everything lives in the flat fields restored above (the ACTIVE
+	# zone = map_current), archives empty, no tokens (unchanged). All defensive:
+	#   • settlements: keep only entries naming a REAL map node, with founded coerced to bool, biome
+	#     to String, keeper_path to a known path ("coexist"/"driveout") or "".
+	#   • zone_archives: keep only entries naming a REAL node; well-form each archive's
+	#     inventory/progress (int-coerced) + buildings (real, de-duplicated ids) + settlement tier +
+	#     farm_turns_used. The ACTIVE zone is NEVER archived (its state is the live fields) — drop it
+	#     if a corrupt save put it there.
+	#   • heirlooms: keep only the three known token ids, each as 1 when truthy.
+	var settle_raw: Variant = d.get("settlements", {})
+	if settle_raw is Dictionary:
+		for k in (settle_raw as Dictionary).keys():
+			var zid := String(k)
+			if not CartographyConfig.has_node(zid):
+				continue
+			var rec: Variant = (settle_raw as Dictionary)[k]
+			if not (rec is Dictionary):
+				continue
+			var kp := String((rec as Dictionary).get("keeper_path", ""))
+			if kp != "coexist" and kp != "driveout":
+				kp = ""
+			s.settlements[zid] = {
+				"founded": bool((rec as Dictionary).get("founded", false)),
+				"biome": String((rec as Dictionary).get("biome", "")),
+				"keeper_path": kp,
+			}
+	var arch_raw: Variant = d.get("zone_archives", {})
+	if arch_raw is Dictionary:
+		for k in (arch_raw as Dictionary).keys():
+			var zid2 := String(k)
+			if not CartographyConfig.has_node(zid2) or zid2 == s.map_current:
+				continue   # unknown node, or the active zone (its state is the live fields)
+			var arc: Variant = (arch_raw as Dictionary)[k]
+			if not (arc is Dictionary):
+				continue
+			s.zone_archives[zid2] = s._sanitize_zone_archive(arc as Dictionary)
+	var heir_raw: Variant = d.get("heirlooms", {})
+	if heir_raw is Dictionary:
+		for tok in CartographyConfig.HEARTH_TOKEN_FOR_TYPE.values():
+			if int((heir_raw as Dictionary).get(tok, 0)) >= 1:
+				s.heirlooms[String(tok)] = 1
 	# Bounded farm RUN (Task A, ADDITIVE). Restore the six run fields defensively (missing →
 	# defaults = no run, the back-compat state for any pre-run save). Restored BEFORE the
 	# farm_turns_used clamp below so farm_turn_budget() reflects the per-run budget while a run

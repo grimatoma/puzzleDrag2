@@ -31,6 +31,10 @@ signal closed
 ## Emitted when an ENABLED Travel/Enter button is pressed. Argument is the node id. Main is the
 ## single mutation point: it calls game.travel_to(id) + runs the biome/boss/toast follow-up.
 signal travel_requested(node_id)
+## T22 — emitted when the "Found Settlement" button is pressed for a discovered, unfounded
+## settlement node. Argument is the node id. Main is the single mutation point: it opens the
+## founder biome picker, then calls game.found_settlement(id, biome).
+signal found_requested(node_id)
 
 ## action id → Button, for headless tests. Keys: "close", and "travel:<selected_id>" when the
 ## selected node is travelable RIGHT NOW.
@@ -215,9 +219,9 @@ func _rebuild_detail() -> void:
 		_detail_body.remove_child(child)
 		child.queue_free()
 	_action_buttons.erase("travel:" + _selected)
-	# Drop any stale travel:* keys from a previous selection.
+	# Drop any stale travel:* / found:* keys from a previous selection.
 	for k in _action_buttons.keys():
-		if String(k).begins_with("travel:"):
+		if String(k).begins_with("travel:") or String(k).begins_with("found:"):
 			_action_buttons.erase(k)
 
 	var node: Dictionary = CartographyConfig.by_id(_selected)
@@ -297,6 +301,13 @@ func _rebuild_detail() -> void:
 		dl.add_theme_color_override("font_color", Palette.EMBER)
 		_detail_body.add_child(dl)
 
+	# T22 — Founding affordance: a discovered/visited, UNFOUNDED settlement node (farm/mine/harbor)
+	# shows the per-zone settlement status + a "Found Settlement" button (or a muted reason). A
+	# FOUNDED settlement shows its biome + completion status. home is always founded (never shown
+	# as foundable). Non-settlement nodes (event/festival/boss/capital) skip this block entirely.
+	if game != null and CartographyConfig.settlement_type_for_zone(nid) != "" and state != "hidden":
+		_detail_body.add_child(_make_settlement_section(nid))
+
 	# The Travel/Enter button (or a disabled reason hint).
 	_detail_body.add_child(_make_travel_button(nid, kind, state))
 
@@ -361,6 +372,58 @@ func _block_label(reason: String, nid: String) -> String:
 
 func _on_travel_pressed(nid: String) -> void:
 	emit_signal("travel_requested", nid)
+
+# ── T22 founding section ─────────────────────────────────────────────────────────
+
+## The settlement status + founding affordance for a settlement node `nid`. A FOUNDED settlement
+## shows its biome name + a "✓ Founded" / "★ Complete" status. An UNFOUNDED one shows the founding
+## cost + a "Found Settlement" button when the player can found it now (prior settlement complete +
+## affordable), else a muted reason. home is reported as always-founded. Reads everything live from
+## GameState — never mutates; the button emits `found_requested(nid)`.
+func _make_settlement_section(nid: String) -> Control:
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 4)
+	var type: String = CartographyConfig.settlement_type_for_zone(nid)
+
+	if game.is_settlement_founded(nid):
+		# Founded — show its biome + completion status.
+		var biome_id: String = game.settlement_biome_id(nid)
+		var biome: Dictionary = CartographyConfig.biome_def(type, biome_id)
+		var biome_label: String = "%s %s" % [String(biome.get("icon", "")), String(biome.get("name", biome_id))] if not biome.is_empty() else biome_id
+		var done: bool = game.settlement_completed(nid)
+		var status := Label.new()
+		status.text = ("★ Complete · %s settlement" % biome_label) if done else ("✓ Founded · %s settlement" % biome_label)
+		status.add_theme_font_size_override("font_size", 13)
+		status.add_theme_color_override("font_color", COL_VALUE if done else COL_HEADER)
+		box.add_child(status)
+		return box
+
+	# Unfounded settlement — show the cost + a Found button (or a muted reason).
+	var cost: int = game.settlement_founding_cost()
+	var can_pay: bool = game.coins >= cost
+	var prior_done: bool = game.completed_settlement_count() >= 1
+	var btn := Button.new()
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if not prior_done:
+		btn.text = "🔒 Complete a settlement first"
+		btn.disabled = true
+		UiKit.style_button(btn, Palette.IRON, 8, 16, true)
+	elif not can_pay:
+		btn.text = "🔒 Found Settlement (%d 🪙)" % cost
+		btn.disabled = true
+		UiKit.style_button(btn, Palette.IRON, 8, 16, true)
+	else:
+		btn.text = "🪙 Found Settlement (%d)" % cost
+		btn.disabled = false
+		UiKit.style_action_button(btn, Palette.EMBER, 8, 16)
+		btn.connect("pressed", Callable(self, "_on_found_pressed").bind(nid))
+		_action_buttons["found:" + nid] = btn
+	box.add_child(btn)
+	return box
+
+func _on_found_pressed(nid: String) -> void:
+	emit_signal("found_requested", nid)
 
 # ── legend ──────────────────────────────────────────────────────────────────────
 

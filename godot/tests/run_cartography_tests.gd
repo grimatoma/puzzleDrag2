@@ -123,6 +123,10 @@ func _run() -> void:
 	# crossroads is level 2 and adjacent to meadow (after we visit meadow). First visit meadow.
 	g.coins = 1000
 	g.almanac_level = 1
+	# T22: a board node must be FOUNDED before its board can be entered. Mark meadow founded here
+	# (the founding-flow guards are covered by run_settlements_tests.gd); without this, travel moves
+	# the marker but the founding gate blocks board entry.
+	g.settlements["meadow"] = {"founded": true, "biome": "prairie", "keeper_path": ""}
 	var r_meadow := g.travel_to("meadow")
 	_check(bool(r_meadow.get("ok", false)), "travel_to('meadow') ok (adjacent, level 1, affordable)")
 	_check(g.map_current == "meadow", "map_current == meadow after travel")
@@ -148,6 +152,8 @@ func _run() -> void:
 	g.coins = 500
 
 	# Per-node board entry: quarry is a MINE node → enter_mine path. Needs City tier + supplies.
+	# T22: also found it first (board entry is founding-gated; founding flow covered elsewhere).
+	g.settlements["quarry"] = {"founded": true, "biome": "mountain", "keeper_path": ""}
 	g.settlement.tier = TownConfig.TIER_CITY
 	g.inventory = {"supplies": 6}
 	var r_quarry := g.travel_to("quarry")
@@ -177,6 +183,8 @@ func _run() -> void:
 	_check(g.map_current == "home", "fast-travelled home")
 	g.inventory = {"supplies": 4}
 	g.active_biome = "farm"
+	# T22: found the harbor first (board entry is founding-gated; founding flow covered elsewhere).
+	g.settlements["harbor"] = {"founded": true, "biome": "coastal", "keeper_path": ""}
 	var r_harbor := g.travel_to("harbor")
 	_check(bool(r_harbor.get("ok", false)), "travel_to('harbor') ok (adjacent to home)")
 	_check(g.is_in_harbor(), "active_biome == harbor after travelling to the harbor (fish board entry)")
@@ -284,11 +292,16 @@ func _run() -> void:
 	main.game.coins = 1000
 	main.game.almanac_level = 5
 	main.game.active_biome = "farm"
-	main.game.settlement.tier = TownConfig.TIER_CITY
-	main.game.inventory = {"supplies": 5}
+	# T22: found the board nodes we'll enter (board entry is founding-gated). Travelling to the
+	# founded farm node `meadow` ACTIVATES it (the live fields become meadow's), so set the
+	# supplies + City tier AFTER arriving — they belong to the zone the expedition launches from.
+	main.game.settlements["meadow"] = {"founded": true, "biome": "prairie", "keeper_path": ""}
+	main.game.settlements["quarry"] = {"founded": true, "biome": "mountain", "keeper_path": ""}
 	main.game.travel_to("meadow")
 	main.game.travel_to("crossroads")
 	main.game.active_biome = "farm"   # back on the farm so enter_mine's guard passes
+	main.game.settlement.tier = TownConfig.TIER_CITY
+	main.game.inventory = {"supplies": 5}
 	screen.open()
 	screen.select_node("quarry")
 	await process_frame

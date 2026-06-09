@@ -1331,7 +1331,19 @@ func _refresh_biome() -> void:
 		_biome_pill.text = "🌊 Harbor · %s · %d" % [game.fish_tide, game.harbor_turns_left]
 		_biome_pill.add_theme_color_override("font_color", Color(0.18, 0.46, 0.50))
 	else:
-		_biome_pill.text = "Farm"
+		# T22 multi-settlement: on the farm, surface WHICH settlement you're at. At home it reads
+		# "Farm" (byte-identical to before — the home-only game never changes). At a FOUNDED non-home
+		# farm settlement (meadow / orchard) it names the place + its biome so the player knows where
+		# they're standing.
+		var here := String(game.map_current)
+		if here != "" and here != "home" and CartographyConfig.has_node(here) and game.is_settlement_founded(here):
+			var node_name := String(CartographyConfig.by_id(here).get("name", here))
+			var biome_id := game.settlement_biome_id(here)
+			var bdef := CartographyConfig.biome_def("farm", biome_id)
+			var icon := String(bdef.get("icon", "🌾"))
+			_biome_pill.text = "%s %s" % [icon, node_name]
+		else:
+			_biome_pill.text = "Farm"
 		_biome_pill.add_theme_color_override("font_color", Palette.MOSS)
 
 ## T24/M4b: the seasonal boss now lives in the top-bar boss pill as a PROGRESS / TURNS readout,

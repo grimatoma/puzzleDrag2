@@ -306,14 +306,84 @@ const NODE_LORE: Dictionary = {
 	},
 }
 
-## The three Hearth-Tokens that gate the Old Capital (lore.ts:94-119). The Hearth-Token
-## CURRENCY does not exist in the port yet (T22 territory) — these names back the detail
-## panel's "why locked" copy ONLY; the node stays locked with the reason shown, never faked.
+## The three Hearth-Tokens that gate the Old Capital (lore.ts:94-119). The detail-panel "why
+## locked" copy reads these names; T22 wired the CURRENCY (GameState.heirlooms) behind them.
 const HEARTH_TOKENS: Array = [
 	{ "id": "seed", "name": "Heirloom Seed", "glyph": "🌱", "source": "any completed farm" },
 	{ "id": "iron", "name": "Pact-Iron", "glyph": "⚙", "source": "any completed mine" },
 	{ "id": "pearl", "name": "Tidesinger's Pearl", "glyph": "◯", "source": "any completed harbor" },
 ]
+
+# ── Settlement founding + biomes (T22, ported from src/features/zones/data.ts + constants.ts) ──
+
+## Coin cost of the FIRST founding (the 2nd settlement; home is free). The k-th founding costs
+## base × growth^(k-1). FAITHFUL to React SETTLEMENT_FOUNDING_BASE_COINS / _GROWTH (data.ts:379-380).
+const FOUNDING_BASE_COINS: int = 300
+const FOUNDING_GROWTH: float = 1.7
+
+## The Hearth-Token id granted by a completed settlement of each TYPE. FAITHFUL to React
+## HEARTH_TOKEN_FOR_TYPE (data.ts:517-521): farm → heirloomSeed, mine → pactIron, harbor →
+## tidesingerPearl. Collecting all three opens the Old Capital.
+const HEARTH_TOKEN_FOR_TYPE: Dictionary = {
+	"farm": "heirloomSeed",
+	"mine": "pactIron",
+	"harbor": "tidesingerPearl",
+}
+
+## The biome picked at FOUNDING, keyed by settlement TYPE — FAITHFUL VERBATIM port of React
+## SETTLEMENT_BIOMES (src/constants.ts:184-203). Each fixes the settlement's two hazards + a
+## descriptive resource bonus. The `bonus` is descriptive (not yet a spawn multiplier), matching
+## the React DEFERRED note.
+const SETTLEMENT_BIOMES: Dictionary = {
+	"farm": [
+		{ "id": "prairie",  "name": "Prairie",  "icon": "🌾", "hazards": ["fire", "locusts"],    "bonus": "grain yield" },
+		{ "id": "forest",   "name": "Forest",   "icon": "🌲", "hazards": ["wolves", "fungus"],   "bonus": "wood & herbs" },
+		{ "id": "marsh",    "name": "Marsh",    "icon": "🪷", "hazards": ["poison", "flooding"], "bonus": "rare herbs" },
+		{ "id": "highland", "name": "Highland", "icon": "⛰️", "hazards": ["frost", "rockslide"], "bonus": "livestock & hardy crops" },
+	],
+	"mine": [
+		{ "id": "mountain",  "name": "Mountain",  "icon": "🏔️", "hazards": ["cave_in", "gas_pocket"], "bonus": "iron & stone" },
+		{ "id": "tundra",    "name": "Tundra",    "icon": "❄️", "hazards": ["frost", "ice_spike"],     "bonus": "gems" },
+		{ "id": "volcanic",  "name": "Volcanic",  "icon": "🌋", "hazards": ["lava", "ash_cloud"],      "bonus": "rare metals" },
+		{ "id": "deep_cave", "name": "Deep Cave", "icon": "🦇", "hazards": ["bats", "sinkhole"],       "bonus": "crystals & runes" },
+	],
+	"harbor": [
+		{ "id": "coastal",  "name": "Coastal",  "icon": "🌊", "hazards": ["storm", "shark"],         "bonus": "standard fish" },
+		{ "id": "coral",    "name": "Coral",    "icon": "🪸", "hazards": ["jellyfish", "riptide"],   "bonus": "pearls" },
+		{ "id": "arctic",   "name": "Arctic",   "icon": "🧊", "hazards": ["iceberg", "frostbite"],   "bonus": "exotic catches" },
+		{ "id": "tropical", "name": "Tropical", "icon": "🏝️", "hazards": ["cyclone", "sea_monster"], "bonus": "spices & trade goods" },
+	],
+}
+
+## Home's implicit biome (it's pre-founded, never goes through the picker). React DEFAULT_HOME_BIOME
+## (src/constants.ts:205) is "prairie".
+const DEFAULT_HOME_BIOME: String = "prairie"
+
+## The biome options for founding a settlement of `type` (a COPY; [] for an unknown type).
+## React biomesForType (data.ts:575-578).
+static func biomes_for_type(type: String) -> Array:
+	var list: Variant = SETTLEMENT_BIOMES.get(type, [])
+	return (list as Array).duplicate(true) if list is Array else []
+
+## Pick a biome for `type`: the one matching `wanted`, else the first option, else {}. FAITHFUL
+## to React resolveBiomeChoice (data.ts:606-610) — the founder picker passes the chosen id; a
+## missing/unknown choice falls back to the type's first biome.
+static func resolve_biome_choice(type: String, wanted: String) -> Dictionary:
+	var list: Array = biomes_for_type(type)
+	if list.is_empty():
+		return {}
+	for b in list:
+		if String((b as Dictionary).get("id", "")) == wanted:
+			return (b as Dictionary)
+	return (list[0] as Dictionary)
+
+## The full biome def ({id, name, icon, hazards, bonus}) for biome `biome_id` of settlement
+## `type`, or {} when none matches.
+static func biome_def(type: String, biome_id: String) -> Dictionary:
+	for b in biomes_for_type(type):
+		if String((b as Dictionary).get("id", "")) == biome_id:
+			return (b as Dictionary)
+	return {}
 
 # ── helpers (pure, usable + testable without a scene tree) ─────────────────────
 
@@ -427,6 +497,26 @@ static func lore_for(node_id: String) -> Dictionary:
 ## True when `node_id` is gated behind the three Hearth-Tokens (the Old Capital).
 static func requires_hearth_tokens(node_id: String) -> bool:
 	return bool(by_id(node_id).get("requires_hearth_tokens", false))
+
+## The world-map KIND of `node_id` ("home" | "farm" | "mine" | "fish" | "event" | "festival" |
+## "boss" | "capital"), or "" when unknown. (React MapNode.kind.)
+static func kind_of(node_id: String) -> String:
+	return String(by_id(node_id).get("kind", ""))
+
+## The SETTLEMENT TYPE for `node_id` — "farm" | "mine" | "harbor" — or "" when the node isn't a
+## settlement (event / festival / boss / capital). FAITHFUL port of React's settlementTypeForZone
+## (src/features/zones/data.ts:509-515): a home/farm node → "farm"; a mine node → "mine"; a fish
+## node → "harbor". This is the keeper TYPE the node founds, and the Hearth-Token type it yields.
+static func settlement_type_for_zone(node_id: String) -> String:
+	match kind_of(node_id):
+		"home", "farm":
+			return "farm"
+		"mine":
+			return "mine"
+		"fish":
+			return "harbor"
+		_:
+			return ""
 
 ## Map a GameState.active_biome value back to the node id the player is "at" on the world map.
 ## This is a fallback for a save written before the travel state existed (or any time the
