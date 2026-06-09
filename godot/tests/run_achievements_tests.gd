@@ -34,6 +34,7 @@ func _initialize() -> void:
 	_test_integration_credit_chain_path()
 	_test_integration_fill_order_path()
 	_test_integration_boss_defeat_path()
+	_test_champion_unlock_and_reward()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -331,3 +332,35 @@ func _test_integration_boss_defeat_path() -> void:
 		"first_blood unlocked on boss defeat")
 	# first_blood grants +200 coins ON TOP of the boss reward already credited on the win.
 	_check(g.coins >= coins_before + 200, "first_blood's +200 coin reward is granted")
+
+func _test_champion_unlock_and_reward() -> void:
+	# T24: with SIX re-challengeable seasonal bosses, bosses_defeated is no longer capped at
+	# 1, so champion (threshold 4) is reachable. Drive the counter directly to verify the
+	# threshold-4 crossing unlocks champion and grants its reward through the real grant_tool
+	# path — mirroring _test_tool_reward_grants_real_tool, but for the boss counter.
+	var g := GameState.new()
+	# Three defeats: first_blood (threshold 1) is earned; champion stays locked; no tool yet.
+	for _i in 3:
+		g.bump_counter("bosses_defeated")
+	_check(bool(g.achievements_unlocked.get("first_blood", false)),
+		"first_blood unlocked by the first boss defeat")
+	_check(not bool(g.achievements_unlocked.get("champion", false)),
+		"champion still locked at 3 boss defeats")
+	_check(g.tool_count("magic_wand") == 0, "no magic_wand granted before champion unlocks")
+	# The 4th defeat crosses champion's threshold.
+	var coins_before := g.coins
+	var newly := g.bump_counter("bosses_defeated")     # 4th
+	_check(bool(g.achievements_unlocked.get("champion", false)),
+		"champion unlocks at the 4th boss defeat")
+	_check(newly.size() == 1 and String(newly[0]["id"]) == "champion",
+		"the 4th bump returns [champion] only")
+	# React's reward is carried over verbatim: {tools:{magic_wand:1}}. magic_wand is a real
+	# ToolConfig member, so it routes through grant_tool exactly like master_angler's reward
+	# (a tool-only reward — no coin component).
+	_check(g.tool_count("magic_wand") == 1,
+		"champion grants 1 charge of magic_wand via grant_tool")
+	_check(g.coins == coins_before, "champion's tool-only reward grants no coins")
+	# Idempotent: a 5th defeat re-grants nothing (the unlocked set blocks a re-grant).
+	var newly5 := g.bump_counter("bosses_defeated")    # 5th
+	_check(newly5.is_empty(), "no new unlock on the 5th boss defeat")
+	_check(g.tool_count("magic_wand") == 1, "champion does not re-grant magic_wand")
