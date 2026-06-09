@@ -3280,42 +3280,47 @@ func active_categories() -> Array:
 			cats.append(cat)
 	return cats
 
-## The single representative TILE for each ELIGIBLE home-farm category — the inverse of the
-## relevant slice of Constants.CATEGORY. The port has exactly ONE tile per farm category, so
-## this is a clean 1:1 map. Only the SIX eligible base-spawn categories (ZoneConfig.eligible_
-## categories("home")) are listed: grass/grain/trees/birds/veg/fruit. flower/herd/cattle/mount
-## are deliberately ABSENT so PANSY/PIG/COW/HORSE can never base-spawn on the home farm.
-const FARM_CATEGORY_TILE := {
-	"grass": Constants.Tile.GRASS,
-	"grain": Constants.Tile.WHEAT,
-	"trees": Constants.Tile.OAK,
-	"birds": Constants.Tile.PHEASANT,
-	"veg":   Constants.Tile.CARROT,
-	"fruit": Constants.Tile.APPLE,
-}
+## The ordered FARM categories whose representative tile each map carries. SOURCE of the key
+## ORDER for the two maps below (byte-identical to the former hand-written const order):
+##   • FARM_FULL_CATEGORIES — the FULL set (10): the complete farm slice of Constants.CATEGORY.
+##   • FARM_BASE_SPAWN_CATEGORIES — the eligible base-spawn SUBSET (6): grass/grain/trees/birds/
+##     veg/fruit. The four upgrade-only targets (flower/herd/cattle/mount) are DELIBERATELY
+##     excluded so PANSY/PIG/COW/HORSE never base-spawn on the home farm.
+const FARM_FULL_CATEGORIES: Array = ["grass", "grain", "trees", "birds", "veg", "fruit", "flower", "herd", "cattle", "mount"]
+const FARM_BASE_SPAWN_CATEGORIES: Array = ["grass", "grain", "trees", "birds", "veg", "fruit"]
 
-## The FULL home-farm category → representative TILE map — the complete inverse of the farm
-## slice of Constants.CATEGORY (every farm-playable category, NOT just the eligible base-spawn
-## six). DISTINCT from FARM_CATEGORY_TILE above, which is the BASE-SPAWN subset (the six
-## upgradeMap KEYS): this one ALSO covers the upgrade-only TARGET categories herd/cattle/mount
-## (and flower) → PIG/COW/HORSE (and PANSY). Those tiles must never BASE-SPAWN (FARM_CATEGORY_TILE
-## excludes them) yet they DO arrive as UPGRADE tiles — chaining birds→PIG (herd), the React
-## upgradeMap's whole point. upgrade_spawn() resolves its target tile through THIS map so an
-## upgrade target outside the eligible set still maps to a real tile, while base spawns stay
-## restricted to FARM_CATEGORY_TILE. (React: nextResourceForZone resolves the target zone-category
-## to its tile family regardless of base-spawn eligibility.)
-const FARM_CATEGORY_TO_TILE := {
-	"grass":  Constants.Tile.GRASS,
-	"grain":  Constants.Tile.WHEAT,
-	"trees":  Constants.Tile.OAK,
-	"birds":  Constants.Tile.PHEASANT,
-	"veg":    Constants.Tile.CARROT,
-	"fruit":  Constants.Tile.APPLE,
-	"flower": Constants.Tile.PANSY,
-	"herd":   Constants.Tile.PIG,
-	"cattle": Constants.Tile.COW,
-	"mount":  Constants.Tile.HORSE,
-}
+## The single representative TILE for each ELIGIBLE home-farm category — the BASE-SPAWN subset.
+## DERIVED from TileCategoryConfig.representative_tile (the single source of which tile each
+## category maps to), keyed by the FARM_BASE_SPAWN_CATEGORIES order so the map is byte-identical
+## to the former hand-written const: grass→GRASS, grain→WHEAT, trees→OAK, birds→PHEASANT,
+## veg→CARROT, fruit→APPLE. flower/herd/cattle/mount are ABSENT (never base-spawn).
+## A `static var` (not a `const`) because GDScript const-expressions can't call a function; built
+## once at class load and never mutated, so it reads exactly like the old const for every consumer.
+static var FARM_CATEGORY_TILE: Dictionary = _build_farm_category_tiles(FARM_BASE_SPAWN_CATEGORIES)
+
+## The FULL home-farm category → representative TILE map — every farm-playable category, NOT just
+## the eligible base-spawn six. DISTINCT from FARM_CATEGORY_TILE above (the base-spawn subset):
+## this one ALSO covers the upgrade-only TARGET categories herd/cattle/mount (and flower) →
+## PIG/COW/HORSE (and PANSY). Those tiles must never BASE-SPAWN (FARM_CATEGORY_TILE excludes them)
+## yet they DO arrive as UPGRADE tiles — chaining birds→PIG (herd), the React upgradeMap's whole
+## point. upgrade_spawn() resolves its target tile through THIS map so an upgrade target outside the
+## eligible set still maps to a real tile, while base spawns stay restricted to FARM_CATEGORY_TILE.
+## DERIVED from TileCategoryConfig.representative_tile (single source), keyed by FARM_FULL_CATEGORIES
+## order — byte-identical to the former hand-written const.
+static var FARM_CATEGORY_TO_TILE: Dictionary = _build_farm_category_tiles(FARM_FULL_CATEGORIES)
+
+## Build a { category → representative Constants.Tile } map for `cats`, reading each tile from
+## TileCategoryConfig.representative_tile (so the tile a category maps to lives in ONE place). The
+## key ORDER follows `cats`. Asserts the config has a real tile for every requested farm category
+## (a misfiled/absent farm category would silently break the board pool, so fail loud at load).
+static func _build_farm_category_tiles(cats: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for c in cats:
+		var cat: String = String(c)
+		var tile: int = TileCategoryConfig.representative_tile(cat)
+		assert(tile != Constants.EMPTY, "TileCategoryConfig has no representative tile for farm category '%s'" % cat)
+		out[cat] = tile
+	return out
 
 ## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
 ## not a category unlock (every eligible category already base-spawns season-weighted). Kept

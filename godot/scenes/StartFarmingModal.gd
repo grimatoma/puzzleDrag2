@@ -106,20 +106,6 @@ const PANEL_MAX_WIDTH := 480.0
 const SLOT_ICON_PX: int = 52
 const ROW_ICON_PX: int = 40
 
-## React CATEGORY_GLYPH fallback (used when a category has no active variant art).
-const CATEGORY_GLYPH := {
-	"grass": "🌿",
-	"grain": "🌾",
-	"trees": "🌳",
-	"birds": "🐦",
-	"veg": "🥕",
-	"fruit": "🍎",
-	"flower": "🌸",
-	"herd": "🐖",
-	"cattle": "🐄",
-	"mount": "🐎",
-}
-
 ## The most slots the picker ever shows (React MAX_SLOTS). The home zone has <= 8.
 const MAX_SLOTS := 8
 
@@ -590,7 +576,7 @@ func _render_slot(cat: String) -> void:
 		holder.add_child(icon)
 	else:
 		var glyph := Label.new()
-		glyph.text = String(CATEGORY_GLYPH.get(cat, "•"))
+		glyph.text = TileCategoryConfig.glyph_or(cat, "•")
 		glyph.add_theme_font_size_override("font_size", 30)
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(glyph)
@@ -867,22 +853,11 @@ func _chip(text: String) -> Control:
 	c.add_child(lbl)
 	return c
 
-## A human title-cased category label ("veg" → "Vegetables" etc., mirroring React CATEGORY_LABEL).
+## A human title-cased category label ("veg" → "Vegetables" etc.). Forwards to
+## TileCategoryConfig.label() (the single source of the farm-category labels + the title-case
+## fallback for an unknown id). Byte-identical to the former inline match for every category.
 func _category_label(cat: String) -> String:
-	match cat:
-		"grass":  return "Grass"
-		"grain":  return "Grain"
-		"trees":  return "Trees"
-		"birds":  return "Birds"
-		"veg":    return "Vegetables"
-		"fruit":  return "Fruits"
-		"flower": return "Flowers"
-		"herd":   return "Herd Animals"
-		"cattle": return "Cattle"
-		"mount":  return "Mounts"
-	if cat.length() > 0:
-		return cat.substr(0, 1).to_upper() + cat.substr(1)
-	return cat
+	return TileCategoryConfig.label(cat)
 
 ## The display name for a variant id (shared derivation).
 func _variant_name(id: String) -> String:

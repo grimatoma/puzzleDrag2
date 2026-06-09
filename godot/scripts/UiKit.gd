@@ -221,18 +221,13 @@ static func make_icon(key: String, px: float = 30.0) -> TextureRect:
 static func pretty_name(key: String) -> String:
 	var s := String(key)
 	# Catalog resources/currencies get their CANONICAL React label ("bread" → "Bread Loaf",
-	# "fish_fillet" → "Fillet") — the single source of truth. Tiles/tools/unknowns fall through
-	# to the existing tile-prefix-strip + capitalize() path below (untouched).
+	# "fish_fillet" → "Fillet") — the single source of truth. Tools/unknowns fall through to the
+	# capitalize() path below; TILE keys use the shared TileCategoryConfig derivation (the ONE
+	# tile-key prefix-strip + title-case implementation, replacing the former inline DROP_PREFIXES).
 	if ResourceConfig.has(s):
 		return ResourceConfig.label(s)
 	if s.begins_with("tile_"):
-		s = s.substr(5)
-		var parts: Array = s.split("_")
-		const DROP_PREFIXES := ["grass", "grain", "bird", "veg", "fruit", "flower",
-			"tree", "herd", "cattle", "mount", "mine", "special", "fish"]
-		if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
-			parts.remove_at(0)
-		s = " ".join(parts)
+		return TileCategoryConfig.display_name_from_key(s)
 	return s.capitalize()
 
 # ── StyleBox builders ─────────────────────────────────────────────────────────
