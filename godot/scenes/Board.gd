@@ -17,12 +17,12 @@ signal chain_resolved(tile_type: int, length: int)
 ## the tool — it only reports WHICH cell was tapped; Main owns the GameState ref and
 ## applies the tool (mirrors how chain_resolved keeps the Board decoupled from economy).
 signal cell_tapped(cell: Vector2i)
-## M3j (harbor pearl capture) — fired when clear_pearl_on_fish_chain is set and a resolved
-## chain is a FISH-category tile of length >= Constants.REQUIRED_FISH_IN_CHAIN. Carries the
-## chained cells (Array[Vector2i]) so Main can ask GameState.capture_pearl_if_adjacent
-## whether they sit next to the live pearl. The Board stays decoupled from GameState (it has
-## no pearl ref) — exactly like chain_resolved / cell_tapped report WHAT happened and let
-## Main own the economy.
+## T25 (harbor in-chain pearl capture) — fired when clear_pearl_on_fish_chain is set and a
+## resolved chain CONTAINS the FISH_PEARL tile. Carries the chained cells as Array[{row,col,tile}]
+## (the same shape as chain_cells_resolved — tile value BEFORE the chain cleared them) so Main
+## can pass the tile keys to GameState.try_capture_pearl (the React rule: chain contains pearl +
+## ≥ REQUIRED_FISH_IN_CHAIN other fish tiles). Emitted BEFORE chain_resolved. The Board stays
+## decoupled from GameState — it just reports WHAT was chained; Main owns the economy.
 signal pearl_chain_resolved(cells: Array)
 ## T7/T9/T10 (farm hazards) — fired on EVERY resolved chain, carrying the chained CELLS as an
 ## Array of { row:int, col:int, tile:int } (the tile value BEFORE the chain cleared it). Main uses
@@ -103,12 +103,16 @@ var upgrade_provider: Callable = Callable()
 ## moves. A transient (never saved, never read by drag validation).
 var _pending_upgrades: Array = []
 
-## M3j (harbor giant pearl): when true (exactly while on a harbor expedition), a resolved
-## FISH-category chain of length >= Constants.REQUIRED_FISH_IN_CHAIN emits `pearl_chain_resolved` with
-## its chained cells so Main can run GameState.capture_pearl_if_adjacent (a fish chain run
-## 8-adjacent to the live pearl captures it for a Rune). Main sets this from
-## GameState.is_in_harbor() after load and on every board re-pool. Mirrors
-## clear_rubble_on_stone — it only ever fires in the harbor; farm/mine are untouched.
+## T25 (fish pearl in-chain capture — replaces adjacency rule): when true (exactly while
+## on a harbor expedition), FISH_PEARL is JOINABLE into a fish-category chain just like
+## MYSTERIOUS_ORE is joinable into a DIRT chain (T23). `_cell_can_extend_chain` treats a
+## FISH_PEARL cell as compatible with a fish-anchor chain and vice-versa, so the player can
+## drag through the pearl + ≥ REQUIRED_FISH_IN_CHAIN fish tiles in ONE chain. On resolve,
+## the chain key reported to Main via chain_resolved is the FISH anchor type (not FISH_PEARL),
+## and _chain_cells carries all chained tiles including the FISH_PEARL cell, so
+## Main._on_chain_resolved can detect the pearl and call GameState.try_capture_pearl.
+## Set by Main from GameState.is_in_harbor() after load and on every board re-pool. Off the
+## harbor this stays false and the drag path is byte-identical to any other biome.
 var clear_pearl_on_fish_chain: bool = false
 
 ## T24 (seasonal boss board modifiers): the live boss modifier_state overlay (the
@@ -759,6 +763,12 @@ func _begin_drag(cell: Vector2i) -> void:
 	# T24 — a chain can't START on a boss-blocked cell (frozen column / rubble / hidden).
 	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
 		return
+	# T25 — the giant pearl is NOT a valid drag ANCHOR (you drag fish tiles into it, not
+	# start a chain on the pearl). If the player presses directly on the pearl tile, reject
+	# the start so the drag stays anchored on a fish tile. The pearl CAN still join via
+	# _extend_drag when the chain drags over it (see _cell_can_extend_chain).
+	if clear_pearl_on_fish_chain and grid[cell.y][cell.x] == Constants.Tile.FISH_PEARL:
+		return
 	_dragging = true
 	_path = [cell]
 	_set_highlight(cell, true)
@@ -788,8 +798,10 @@ func _extend_drag(cell: Vector2i) -> void:
 	# T24 — never extend onto a boss-blocked cell (frozen column / rubble / hidden).
 	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
 		return
-	# Extend: must match the chain's type and be 8-way adjacent to the last cell.
-	if grid[cell.y][cell.x] != grid[_path[0].y][_path[0].x]:
+	# Extend: must be compatible with the chain's anchor type and 8-way adjacent to the last cell.
+	# T25 — _cell_can_extend_chain handles the normal same-type case PLUS the special case where
+	# FISH_PEARL can join a fish-category chain (and a fish tile can follow the pearl in the chain).
+	if not _cell_can_extend_chain(cell, int(grid[_path[0].y][_path[0].x])):
 		return
 	if maxi(absi(cell.x - last.x), absi(cell.y - last.y)) != 1:
 		return
@@ -806,7 +818,14 @@ func _finish_drag() -> void:
 	_dragging = false
 	_update_chain_overlay()                # clears the path line + nodes
 	chain_changed.emit(0)
-	if BoardLogic.is_valid_chain(grid, path, min_chain):
+	# T25 — for harbor mixed chains (fish + FISH_PEARL), use the pearl-aware validator;
+	# for all other chains the standard same-type validator.
+	var valid: bool
+	if clear_pearl_on_fish_chain:
+		valid = _is_valid_chain_pearl_aware(grid, path, min_chain)
+	else:
+		valid = BoardLogic.is_valid_chain(grid, path, min_chain)
+	if valid:
 		_resolve(path)
 
 ## M4a — recompute the overlay's Board-local points from `_path` (each cell's
@@ -850,13 +869,24 @@ func _set_highlight(cell: Vector2i, on: bool) -> void:
 
 ## Validate-and-resolve a path. Returns true if it was a legal chain. Exposed
 ## so headless smoke tests can drive a move without synthesising input events.
+## T25 — uses the pearl-aware validator when in the harbor (clear_pearl_on_fish_chain),
+## so test paths that include FISH_PEARL mixed with fish tiles resolve correctly.
 func try_resolve(path: Array) -> bool:
-	if not BoardLogic.is_valid_chain(grid, path, min_chain):
+	var valid: bool
+	if clear_pearl_on_fish_chain:
+		valid = _is_valid_chain_pearl_aware(grid, path, min_chain)
+	else:
+		valid = BoardLogic.is_valid_chain(grid, path, min_chain)
+	if not valid:
 		return false
 	_resolve(path)
 	return true
 
 func _resolve(path: Array) -> void:
+	# T25 — for a harbor mixed chain (fish + FISH_PEARL), the anchor is always a fish tile
+	# (FISH_PEARL can't anchor — _begin_drag rejects it). `key` is the anchor tile type; the
+	# pearl cell in the path is reported via _chain_cells so Main can detect it. For counting
+	# purposes (`length`) the full path size is used — the pearl takes a slot, matching React.
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
 
@@ -984,17 +1014,21 @@ func _resolve(path: Array) -> void:
 	if not BoardLogic.has_valid_chain(grid):
 		setup_new_board()
 
-	# M3j (harbor): a resolved FISH-category chain long enough to count toward a pearl
-	# capture reports its cells so Main can run GameState.capture_pearl_if_adjacent (a fish
-	# chain 8-adjacent to the live pearl grabs the Rune). Only fires while on the harbor
-	# (clear_pearl_on_fish_chain) — farm/mine resolves never emit it. We pass the ORIGINAL
-	# chain cells (`path`), not the rubble/rat-swept `removal` set, so Main checks adjacency
-	# against exactly what the player chained. Emitted BEFORE chain_resolved so the capture
-	# is attempted FIRST — _on_chain_resolved then ticks note_harbor_turn (which could expire
-	# the pearl on its final turn), so checking capture ahead of the tick is the right order.
-	if clear_pearl_on_fish_chain and length >= Constants.REQUIRED_FISH_IN_CHAIN \
-			and Constants.category_of(key) == "fish":
-		pearl_chain_resolved.emit(path.duplicate())
+	# T25 (harbor in-chain pearl capture): emit pearl_chain_resolved when the resolved
+	# chain CONTAINS the pearl tile (any cell in chain_cells had tile FISH_PEARL) so that
+	# Main can call try_capture_pearl with the chain's tile keys — the React rule.
+	# This REPLACES the old adjacency-based path (a fish chain run 8-adjacent to the pearl)
+	# with the faithful React rule: the chain must INCLUDE the pearl tile + enough fish.
+	# Emitted BEFORE chain_resolved so the capture fires before the harbor turn ticks
+	# (a final-turn chain can still capture). Only while on the harbor (clear_pearl_on_fish_chain).
+	if clear_pearl_on_fish_chain:
+		var has_pearl_in_chain: bool = false
+		for cc in chain_cells:
+			if int(cc.get("tile", Constants.EMPTY)) == Constants.Tile.FISH_PEARL:
+				has_pearl_in_chain = true
+				break
+		if has_pearl_in_chain:
+			pearl_chain_resolved.emit(chain_cells.duplicate())
 
 	# Resolve "juice": a length-scaled screen shake, an expanding flash ring + collect spark
 	# burst at the chain head, and (when this chain spawned an upgrade tile) an upgrade burst.
@@ -1029,6 +1063,63 @@ func _sync_grid_from_tiles() -> void:
 		for c in Constants.COLS:
 			var t: Tile = tiles[r][c]
 			grid[r][c] = t.tile_type if t != null else Constants.EMPTY
+
+## T25 — Pearl-aware chain validator for harbor boards. Mirrors BoardLogic.is_valid_chain
+## but accepts FISH_PEARL tiles mixed with fish-category tiles in the same chain (as React
+## allows). The anchor is the FIRST cell; all subsequent cells must satisfy
+## _cell_can_extend_chain (same type OR fish↔pearl when harbor). Adjacency + no-revisit
+## rules are identical to the standard validator. Used by try_resolve + _finish_drag when
+## clear_pearl_on_fish_chain is true; farm/mine chains still use the strict same-type validator.
+func _is_valid_chain_pearl_aware(g: Array, path: Array, mc: int = Constants.MIN_CHAIN) -> bool:
+	if path.size() < mc:
+		return false
+	var first: Vector2i = path[0]
+	if not BoardLogic.in_bounds(first):
+		return false
+	var anchor_tile: int = int(g[first.y][first.x])
+	if anchor_tile == Constants.EMPTY:
+		return false
+	# T25 — skip validation if anchor is FISH_PEARL (drag should never start on it, but
+	# be defensive). A chain anchored on FISH_PEARL has no fish companion to count.
+	if anchor_tile == Constants.Tile.FISH_PEARL:
+		return false
+	var seen := {}
+	for i in path.size():
+		var cell: Vector2i = path[i]
+		if not BoardLogic.in_bounds(cell):
+			return false
+		# Each cell must be compatible with the anchor (same type or fish↔pearl).
+		if not _cell_can_extend_chain(cell, anchor_tile):
+			return false
+		if seen.has(cell):
+			return false
+		seen[cell] = true
+		if i > 0:
+			var prev: Vector2i = path[i - 1]
+			if maxi(absi(cell.x - prev.x), absi(cell.y - prev.y)) != 1:
+				return false
+	return true
+
+## T25 — True when the tile at `cell` is compatible with a chain whose anchor tile type
+## is `anchor_tile`. In the normal same-type case both tiles match. The special case: when
+## `clear_pearl_on_fish_chain` is on (harbor only), FISH_PEARL is compatible with any
+## fish-category anchor and any fish tile is compatible with a FISH_PEARL anchor — so the
+## player can drag through the pearl together with fish tiles in one mixed chain, mirroring
+## React's in-chain pearl rule (src/features/fish/pearl.ts:122-128). Off the harbor this is
+## always false for cross-type combos (byte-identical to the prior same-type check).
+func _cell_can_extend_chain(cell: Vector2i, anchor_tile: int) -> bool:
+	var candidate: int = int(grid[cell.y][cell.x])
+	if candidate == anchor_tile:
+		return true
+	# T25 — harbor pearl join: FISH_PEARL can extend a fish chain; a fish tile can extend a
+	# FISH_PEARL-anchored chain (the anchor should never be FISH_PEARL since _begin_drag
+	# rejects starting on it, but handle it symmetrically for robustness).
+	if clear_pearl_on_fish_chain:
+		if candidate == Constants.Tile.FISH_PEARL and FishConfig.is_fish_tile(anchor_tile):
+			return true
+		if FishConfig.is_fish_tile(candidate) and anchor_tile == Constants.Tile.FISH_PEARL:
+			return true
+	return false
 
 ## M3h — every distinct RAT cell that is 8-adjacent (king move) to any cell in
 ## `path`. Used by _resolve when the Master Ratcatcher is active so a grass chain

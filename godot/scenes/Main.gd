@@ -2140,21 +2140,33 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# beat immediately. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
 
-## M3j — the Board reports a fish chain long enough to count toward a pearl capture. Ask
-## GameState whether those cells sit 8-adjacent to the live pearl; on a capture, grant the
-## rune (GameState already did, returning {captured, runes}), remove the on-board pearl tile
-## by degrading its cell to kelp, surface a status hint, and play the upgrade sparkle. Fires
-## BEFORE _on_chain_resolved (see Board._resolve emit order), so it runs before the harbor
-## turn ticks — a final-turn chain can still capture. The HUD refresh + save happen in
-## _on_chain_resolved, which runs immediately after.
+## T25 — the Board reports a resolved harbor chain that CONTAINS the FISH_PEARL tile.
+## `cells` is an Array[{row,col,tile}] (the same shape as chain_cells_resolved). Extract
+## the tile keys from the cells and call GameState.try_capture_pearl — the React rule:
+## chain contains pearl + >= REQUIRED_FISH_IN_CHAIN other fish tiles → +1 Rune, pearl
+## cleared. The pearl cell is already known from its position in the cells array, so we
+## degrade its board tile (revert to kelp) on a successful capture. Fires BEFORE
+## _on_chain_resolved (Board emits pearl_chain_resolved before chain_resolved) so the
+## capture runs before the harbor turn ticks — a final-turn chain can still capture.
+## The HUD refresh + save happen in _on_chain_resolved, which runs immediately after.
+##
+## This REPLACES the old adjacency-based _capture_pearl_if_adjacent path (T25 fix):
+## the live board now uses the React in-chain rule via try_capture_pearl, not adjacency.
 func _on_pearl_chain(cells: Array) -> void:
 	if game == null or board == null:
 		return
-	# Snapshot the pearl cell before capture clears fish_pearl, so we can degrade its tile.
+	# Snapshot the pearl cell from the chain cells before capture clears fish_pearl,
+	# so we can degrade its tile on the board.
 	var pearl_cell := Vector2i(-1, -1)
-	if game.has_active_pearl():
-		pearl_cell = Vector2i(int(game.fish_pearl.get("col", -1)), int(game.fish_pearl.get("row", -1)))
-	var cap: Dictionary = game.capture_pearl_if_adjacent(cells)
+	for cc in cells:
+		if int(cc.get("tile", Constants.EMPTY)) == Constants.Tile.FISH_PEARL:
+			pearl_cell = Vector2i(int(cc.get("col", -1)), int(cc.get("row", -1)))
+			break
+	# Build chain keys (int tile ordinals) from the cell array and call the React rule.
+	var chain_keys: Array = []
+	for cc in cells:
+		chain_keys.append(int(cc.get("tile", Constants.EMPTY)))
+	var cap: Dictionary = game.try_capture_pearl(chain_keys)
 	if not bool(cap.get("captured", false)):
 		return
 	# Remove the on-board pearl tile (it's been captured) by reverting its cell to kelp.
