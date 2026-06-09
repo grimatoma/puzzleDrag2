@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Build docs/birch64-aseprite.html — a self-contained v1-vs-v2 showcase.
-All tiles/animations are base64-inlined (small 64px assets, CSS-upscaled with
-image-rendering:pixelated) so the page works from file:// or any server with no
-external requests."""
-import os, base64
+"""Build docs/birch-tree-64.html — a v1-vs-v2 birch showcase.
+
+Images are REFERENCED by relative path, never base64-inlined — the HTML stays a
+few KB so it is cheap to read/edit/diff. Assets live in
+docs/assets/birch64-aseprite/out/ and resolve relative to docs/birch-tree-64.html.
+(Supersedes the old inlined birch64-concept/_build_page.py output at this path.)"""
+import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-O = os.path.join(HERE, "out")
 DOCS = os.path.abspath(os.path.join(HERE, "..", ".."))   # repo docs/
-OUT_HTML = os.path.join(DOCS, "birch64-aseprite.html")
+OUT_HTML = os.path.join(DOCS, "birch-tree-64.html")
+REL = "assets/birch64-aseprite/out"                      # relative to docs/birch-tree-64.html
 
 SEASONS = [("spring", "Spring"), ("summer", "Summer"), ("autumn", "Autumn"), ("winter", "Winter")]
 TRANS = [
@@ -18,17 +20,12 @@ TRANS = [
 ]
 
 
-def b64(path, mime):
-    with open(path, "rb") as f:
-        return f"data:{mime};base64," + base64.b64encode(f.read()).decode()
-
-
 def png(name):
-    return b64(os.path.join(O, name), "image/png")
+    return f"{REL}/{name}"
 
 
 def gif(name):
-    return b64(os.path.join(O, name), "image/gif")
+    return f"{REL}/{name}"
 
 
 # ---- assemble inlined assets ----
@@ -195,7 +192,7 @@ HTML = f"""<!doctype html>
   </section>
 
   <footer>
-    64×64 transparent · procedural renderer <code>docs/assets/birch64-aseprite/_gen_v2.py</code> · v1 assembled in Aseprite (editable <code>.aseprite</code> sources in <code>out/</code>)
+    64×64 transparent tiles · images referenced from <code>docs/assets/birch64-aseprite/out/</code> (not inlined) · renderers <code>_gen.py</code> (v1) / <code>_gen_v2.py</code> (v2) · page rebuilt by <code>_build_doc.py</code>
   </footer>
 </div>
 </body>
