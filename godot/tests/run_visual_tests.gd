@@ -136,6 +136,28 @@ func _dismiss_story(main) -> void:
 func _seed_none(_main) -> void:
 	pass
 
+## Task E — board-farm-idle now needs an ACTIVE bounded farm run so the playing board + season
+## bar render exactly as the pre-feature golden did. The HUD season bar is HIDDEN when
+## `not game.farm_run_active` (a deliberate feature change), so without a live run the captured
+## board frame would LOSE the season strip and the board would gate inert (town-home backdrop).
+## Marking a fresh run active (turn 0/10, the legacy home budget) reproduces the prior season-bar
+## state EXACTLY (fresh Spring, empty progress) and flips the board playable. We then drive the
+## REAL wired refresh paths (apply_deeplink("board") flips the board active + hides the auto-opened
+## town overlay; _refresh_season_bar re-shows the strip) so the rendered frame matches the golden.
+func _seed_board_farm_run(main) -> void:
+	var game: GameState = main.game
+	game.farm_run_active = true
+	game.farm_run_budget = 10
+	game.farm_run_turns_left = 10
+	game.farm_run_zone = "home"
+	game.farm_turns_used = 0
+	game.active_biome = "farm"
+	# Flip the board to its live/playable state and dismiss the idle-farm town overlay that
+	# _ready auto-opened (now reachable because farm_run_active is true), then re-show the season
+	# bar the run just armed. These are the same real paths the live game runs on run-start.
+	main.apply_deeplink("board")
+	main._refresh_season_bar()
+
 func _seed_achievements(main) -> void:
 	# Mirrors tools/m10ach_capture.gd — drive a realistic mix of unlocked + mid-progress
 	# trophies through the real wired paths.
@@ -336,6 +358,42 @@ func _seed_town_build_picker(main) -> void:
 	game.active_biome = "farm"
 	game.inventory = {"plank": 40, "flour": 40, "hay_bundle": 40, "eggs": 20}
 
+## Task E — the "Start Farming" picker modal over the idle town home. Seed enough coins that the
+## entry cost (50) is comfortably affordable, so the cost reads green + the Start CTA is ENABLED
+## ("Start (50 🪙)") — the rich, actionable state. The `startfarming` deeplink opens the modal the
+## way the live town-pad tap does (Main._open_startfarming lazily builds + wires + opens it).
+func _seed_startfarming_modal(main) -> void:
+	var game: GameState = main.game
+	game.coins = 320
+	game.active_biome = "farm"
+
+## Task E — the run-end "Harvest Complete / Return to Town" HarvestModal (open_for_run_end). Mirror
+## the live note_farm_turn() ended-boundary summary: the run just spent its 10-turn budget over a
+## Winter close with a realistic coin/rune stockpile, so the recap + the "+25 🪙 return bonus" line
+## render. Open the modal directly via the SAME _open_harvest_run_end path the live run-end uses (it
+## lazily builds + wires the modal, then calls open_for_run_end). The summary carries no explicit
+## coins_granted — the modal defaults the bonus line to SEASON_END_BONUS_COINS, matching the live flow.
+func _seed_harvest_run_end(main) -> void:
+	var game: GameState = main.game
+	# Put the run in its ended-but-unclosed state so the modal reads off a coherent live GameState
+	# (the live run-end surfaces the modal BEFORE close_season runs — see Main._game_chain_resolved).
+	game.farm_run_active = true
+	game.farm_run_budget = 10
+	game.farm_run_turns_left = 0
+	game.farm_turns_used = 10
+	game.active_biome = "farm"
+	game.coins = 184
+	main._open_harvest_run_end({
+		"harvest": true,
+		"ended": true,
+		"season": "Winter",
+		"turns_used": 10,
+		"turns_left": 0,
+		"budget": 10,
+		"coins": game.coins,
+		"runes": game.runes,
+	})
+
 # ── NEW (visual-expand) post-deeplink interaction steps ──────────────────────────
 # These run AFTER apply_deeplink has opened the target screen (the deeplink builds +
 # shows the modal), so they can drive a second-level interaction the seed can't reach.
@@ -367,7 +425,7 @@ func _post_town_build_picker(main) -> void:
 # tutorial/story-prompt scenarios where the seed itself drives the modal.
 func _scenarios() -> Array:
 	return [
-		{"id": "board-farm-idle", "deeplink": "",            "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "board-farm-idle", "deeplink": "",            "seed": Callable(self, "_seed_board_farm_run"), "post_dismiss_tutorial": true},
 		{"id": "town-map",        "deeplink": "townmap",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "inventory",       "deeplink": "inventory",   "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "orders",          "deeplink": "town",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
@@ -399,6 +457,11 @@ func _scenarios() -> Array:
 		{"id": "charter-term-dialog",    "deeplink": "charter",    "seed": Callable(self, "_seed_charter"),               "post": Callable(self, "_post_charter_term"),      "post_dismiss_tutorial": true},
 		{"id": "town-built-out",         "deeplink": "townmap",    "seed": Callable(self, "_seed_town_built_out"),        "post_dismiss_tutorial": true},
 		{"id": "town-build-picker",      "deeplink": "townmap",    "seed": Callable(self, "_seed_town_build_picker"),     "post": Callable(self, "_post_town_build_picker"), "post_dismiss_tutorial": true},
+		# ── Task E (farm-run feature) — the two NEW scenario goldens (portrait only) ─────────
+		# start-farming-modal: the bounded-run picker over the town home (cost/picker/budget).
+		# harvest-run-end: the run-end "Return to Town" HarvestModal with the +25 return bonus.
+		{"id": "start-farming-modal",    "deeplink": "startfarming", "seed": Callable(self, "_seed_startfarming_modal"), "post_dismiss_tutorial": true},
+		{"id": "harvest-run-end",        "deeplink": "",             "seed": Callable(self, "_seed_harvest_run_end"),   "post_dismiss_tutorial": true},
 	]
 
 # ── Capture pipeline ───────────────────────────────────────────────────────────────────────

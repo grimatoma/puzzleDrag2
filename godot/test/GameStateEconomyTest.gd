@@ -78,6 +78,45 @@ func test_coins_and_turn_increment() -> void:
 	assert_int(g.coins).is_equal(5 + 25)
 	assert_int(g.turn).is_equal(2)
 
+func test_start_farm_run_deducts_entry_cost() -> void:
+	# Starting a bounded farm run pays the home zone's coin entry cost (50) and arms the
+	# six run fields: a fresh 10-turn budget (no fertilizer), the run marked active.
+	var cost: int = ZoneConfig.entry_cost("home")
+	var g := GameState.new()
+	g.coins = 80                                   # comfortably above the 50 entry cost
+	var res := g.start_farm_run([], false)
+	assert_bool(bool(res["ok"])).is_true()
+	assert_int(g.coins).is_equal(80 - cost)        # decreased by EXACTLY the entry cost
+	assert_bool(g.farm_run_active).is_true()
+	assert_int(g.farm_run_budget).is_equal(10)
+	assert_int(g.farm_run_turns_left).is_equal(10)
+	# Too poor → rejected with reason "no_coins" and NO mutation of coins / run state.
+	var poor := GameState.new()
+	poor.coins = cost - 1                           # one coin short
+	var res2 := poor.start_farm_run([], false)
+	assert_bool(bool(res2["ok"])).is_false()
+	assert_str(String(res2["reason"])).is_equal("no_coins")
+	assert_int(poor.coins).is_equal(cost - 1)      # untouched
+	assert_bool(poor.farm_run_active).is_false()
+
+func test_close_season_grants_return_bonus() -> void:
+	# Closing an active run grants the season-end bonus (25 coins), clears the run, and
+	# resets the season counter. A SECOND close (no active run) is an idempotent no-op.
+	var g := GameState.new()
+	g.coins = 100
+	g.start_farm_run([], false)                     # spends the 50 entry cost
+	var coins_before_close: int = g.coins
+	var res := g.close_season()
+	assert_int(int(res["coins_granted"])).is_equal(Constants.SEASON_END_BONUS_COINS)
+	assert_int(g.coins).is_equal(coins_before_close + Constants.SEASON_END_BONUS_COINS)
+	assert_bool(g.farm_run_active).is_false()
+	assert_int(g.farm_turns_used).is_equal(0)
+	# Idempotency: with no active run, a second close grants nothing and does not mutate coins.
+	var coins_after_first: int = g.coins
+	var res2 := g.close_season()
+	assert_int(int(res2["coins_granted"])).is_equal(0)
+	assert_int(g.coins).is_equal(coins_after_first)
+
 func test_to_dict_round_trip_and_detachment() -> void:
 	# to_dict()/from_dict() preserves inventory, progress, coins, turn; the dict
 	# snapshot is detached from later mutations of the source state.
