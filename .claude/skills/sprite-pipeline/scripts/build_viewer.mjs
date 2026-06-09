@@ -14,14 +14,16 @@
 //
 // Defaults target this Godot game:
 //   --sets  godot/assets/tiles/v2/sets        (one subdir per set, each with manifest.json)
-//   --out   godot/assets/tiles/v2/_viewer     (built site; lives under the same v2/ tree so it
+//   --out   godot/assets/tiles/v2/pixelGen    (built site; lives under the same v2/ tree so it
 //                                              can reference generated assets by RELATIVE path)
 //
 // The out dir sits beside `sets/` under v2/, so every asset path in data.json is written relative
 // to <out> (e.g. `../sets/birch/previews/tile_tree_birch_autumn.gif`) and resolves when served.
+// Serve v2/ (e.g. the `pixelGen` launch config: http.server --directory godot/assets/tiles/v2) and
+// open http://localhost:8100/pixelGen/ — off the game port so the service worker can't hijack it.
 //
 // Idempotent + non-destructive: re-running just refreshes data.json + the template copy. Do NOT
-// commit the built _viewer/ output — it is a generated artifact.
+// commit the built pixelGen/ output — it is a generated artifact (.gitignore covers it).
 
 import fs from "node:fs";
 import path from "node:path";
@@ -33,7 +35,7 @@ const VIEWER_SRC = path.resolve(HERE, "..", "viewer");
 
 // ── arg parsing ────────────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const out = { sets: "godot/assets/tiles/v2/sets", out: "godot/assets/tiles/v2/_viewer" };
+  const out = { sets: "godot/assets/tiles/v2/sets", out: "godot/assets/tiles/v2/pixelGen" };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--sets") out.sets = argv[++i];
@@ -236,7 +238,7 @@ function main() {
   copyTree(VIEWER_SRC, outDir);
 
   console.log(
-    `sprite-viewer: ${sets.length} set(s), ${totals.total} asset(s) ` +
+    `pixelGen: ${sets.length} set(s), ${totals.total} asset(s) ` +
       `(${totals.generated} generated, ${totals.pending} pending, ${totals.approved} approved)`
   );
   console.log(`  data.json + viewer template -> ${outDir}`);

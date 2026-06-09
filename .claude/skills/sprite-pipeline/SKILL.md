@@ -38,6 +38,17 @@ This is the **orchestrator**. The craft and motion knowledge live in sibling ski
    siblings in as **priors** so new members stay continuous. **When to read:**
    `references/manifest-schema.md` — the directory layout, gap-fill, and every field.
 
+## Starting a run — list tiles → proposal → run (intake)
+
+The front door. When the user names sprites they want made ("5 new crop tiles: wheat, corn, …")
+and no manifest covers it yet, **interview them, write the config, and rebuild the pixelGen viewer
+as the proposal** — every requested asset shows as a *pending placeholder* with its prompt. **No
+art is generated and no credits are spent** until they review and say "run it". This authoring step
+sits **before Stage 1** (which then diffs the manifest you wrote against disk). Skip it when a
+manifest already covers the request — go straight to Stage 1 gap-fill. **When to read:**
+`references/intake.md` — the interview questions, how to write the manifest, building the proposal,
+and the approval gate.
+
 ## The five stages
 
 ```
@@ -104,17 +115,19 @@ Run the gates per asset; don't batch a whole set through one gate and lose per-a
 
 ## The viewer loop (closing the loop)
 
-A static review **viewer** (built by `scripts/build_viewer.mjs` into `viewer/`) renders the set's
-keyframes, idle GIFs, and transitions on one page so you can eyeball cohesion across the whole
-family and confirm the idles/transitions read right in context — the human-facing end of the G4
-montage check. *(Viewer + builder are created by the QA-loop task; see "Status".)* Iterate:
-**build → montage (G4) → viewer → tune storyboard/params → re-animate** until the family reads as
-one set.
+A static review **viewer** (built by `scripts/build_viewer.mjs` into `pixelGen/`, served at
+**http://localhost:8100/pixelGen/** via the `pixelGen` launch config) renders the set's keyframes,
+idle GIFs, and transitions on one page so you can eyeball cohesion across the whole family and
+confirm the idles/transitions read right in context — the human-facing end of the G4 montage check.
+It doubles as the **intake proposal surface** (all-pending before a run; the same cards fill with art
+after). Iterate: **build → montage (G4) → viewer → tune storyboard/params → re-animate** until the
+family reads as one set.
 
 ## Bundled files — when to read each
 
 | File | When to read |
 |------|--------------|
+| `references/intake.md` | **Intake** — the interview that turns "make me N tiles" into a manifest + the pixelGen proposal, before any spend. |
 | `references/reference-assets-spec.md` | Stage 0 — what references to supply; every `_style-spec.json` field + how it's extracted. |
 | `references/manifest-schema.md` | Stage 1 — set directory layout, idempotent gap-fill, every manifest field. |
 | `references/aseprite-execution.md` | Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe, conformance helpers, Windows/path gotchas. |
@@ -122,15 +135,18 @@ one set.
 | `assets/style-spec.template.json` | Stage 0 — blank style-spec to copy to `<assets>/_style-spec.json`. |
 | `assets/manifest.template.json` | Stage 1 — blank per-set manifest to copy to `<assets>/sets/<set>/manifest.json`. |
 | `assets/storyboard.template.md` | **Stage 3 / G3** — copy + fill per idle/transition; critique it before the expensive animate. |
-| `assets/builder-prompt.md` | Per-asset builder instruction (the build half of the loop). *(QA-loop task.)* |
-| `assets/critique-prompt.md` | The gate scoring rubric (the critique half of the loop). *(QA-loop task.)* |
+| `assets/builder-prompt.md` | Per-asset builder instruction (the build half of the loop). |
+| `assets/critique-prompt.md` | The gate scoring rubric (the critique half of the loop). |
 | `scripts/assemble_tres.gd` | Stage 5 — pack `frames/<id>/NN.png` into a v2 SpriteFrames `.tres`. |
 | `scripts/montage.py` | G2/G4 — upscale a still or montage frames for review (Pillow only). |
-| `scripts/build_viewer.mjs` | Build the review viewer. *(QA-loop task.)* |
-| `viewer/` | The built review page. *(QA-loop task.)* |
+| `scripts/build_viewer.mjs` | Build the review viewer / intake proposal into `pixelGen/` (default out). |
+| `viewer/` | The review-page template (index.html + css + js) the builder copies into `pixelGen/`. |
 
-## Status (forward references)
+## Status
 
-`assets/builder-prompt.md`, `assets/critique-prompt.md`, `scripts/build_viewer.mjs`, and `viewer/`
-are produced by the **QA-loop task** that follows this one; the paths above are their final
-locations and resolve once that task lands. Everything else in the table exists now.
+Every file in the table above exists now — intake, the builder/critique gate prompts, the
+`build_viewer.mjs` viewer + its `viewer/` template, and the integration scripts. This game's
+committed inputs are `godot/assets/tiles/v2/_style-spec.json` and `sets/birch/manifest.json`. No
+art has been generated yet, so the **first real run** (which spends PixelLab credits + Aseprite
+ops) is user-initiated: start with intake (or, for birch, jump to Stage 1 gap-fill) and approve the
+pixelGen proposal before the spend.
