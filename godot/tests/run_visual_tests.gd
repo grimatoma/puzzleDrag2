@@ -519,6 +519,13 @@ func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 	# re-flowing the HUD — the deliverable is graceful framing, which stretch=keep provides.
 	DisplayServer.window_set_size(vp_size)
 	root.set_content_scale_size(CONTENT_SIZE)
+	# Block until the window's real framebuffer reaches the expected size before building the scene,
+	# so the whole layout + settle + capture runs at the correct size. The FIRST scenario of a run
+	# otherwise races a cold-start resize that the OS clamps SHORT (the renderable client area comes
+	# up 720×1175 instead of 720×1280) → a spurious 100% size-mismatch diff (the long-standing
+	# board-farm-idle/portrait flake). _await_capture_size re-asserts the size + polls the actual
+	# captured dimensions until they settle (see there).
+	await _await_capture_size(vp_size)
 
 	var main = load("res://scenes/Main.tscn").instantiate()
 	root.add_child(main)
@@ -563,6 +570,9 @@ func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 	_freeze_tweens(main)
 	await process_frame
 
+	# Belt-and-braces: if the framebuffer still hasn't reached vp_size (a slow first-scenario
+	# resize), wait a little longer so the capture matches the golden's dimensions.
+	await _await_capture_size(vp_size)
 	var img := root.get_texture().get_image()
 
 	# Tear down so the next scenario starts clean.
@@ -570,6 +580,28 @@ func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 	await process_frame
 
 	return img
+
+## Await until the actual CAPTURED framebuffer reaches the expected size for this viewport
+## (CONTENT_SIZE fitted to the window — see _capture_size). Window resizes apply asynchronously,
+## and crucially DisplayServer.window_get_size() reports the REQUESTED size BEFORE the renderable
+## client area has actually grown — so polling it gives a false "settled". The first scenario of a
+## run otherwise captures a short frame (e.g. 720×1175 instead of 720×1280) → a spurious 100%
+## size-mismatch diff (the long-standing board-farm-idle/portrait flake). Polling the real
+## get_image() size is authoritative. Capped at ~150 frames so a genuinely unreachable size can't
+## hang the suite — it just proceeds and any true mismatch surfaces as a normal diff.
+func _await_capture_size(vp_size: Vector2i) -> void:
+	var want: Vector2i = _capture_size(vp_size)
+	for _i in range(150):
+		if root.get_texture().get_image().get_size() == want:
+			return
+		# Re-ASSERT the window size periodically, not just wait: on a cold start the very first
+		# resize gets clamped by the OS (the renderable client area comes up short — 720×1175 vs
+		# the requested 1280), and only a SUBSEQUENT window_set_size call (once the window is fully
+		# realized) actually grows it. Re-issuing the request every few frames lifts that clamp.
+		if _i % 8 == 0:
+			DisplayServer.window_set_position(Vector2i.ZERO)
+			DisplayServer.window_set_size(vp_size)
+		await process_frame
 
 # ── Image comparison ───────────────────────────────────────────────────────────────────────
 ## Golden slot for a scenario × viewport: <root>/<platform>/<scenario>/<viewport>.png. The
