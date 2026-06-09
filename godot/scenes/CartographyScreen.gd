@@ -343,32 +343,15 @@ func _make_travel_button(nid: String, kind: String, _state: String) -> Button:
 
 ## The button verb for a travelable node, by kind: Enter the board for a board node, the activity
 ## verb for a non-board node, or plain "Travel" elsewhere. Fast-travel (already visited) reads
-## "Travel to <name>" so it's clear it's a free hop.
+## "Travel to <name>" so it's clear it's a free hop. (Batch 9 C5: the verb table now lives in
+## CartographyConfig — this resolves the fast/visited flag and delegates.)
 func _travel_verb(kind: String, nid: String) -> String:
-	var fast: bool = game.map_visited(nid)
-	match kind:
-		"home":   return "Return to the Hearth" if fast else "Travel home"
-		"farm":   return "Farm here" if not fast else "Travel to the fields"
-		"mine":   return "⛏ Descend the mine" if not fast else "⛏ Return to the mine"
-		"fish":   return "⚓ Sail the harbor" if not fast else "⚓ Return to the harbor"
-		"boss":   return "⚔ Face the Pit"
-		"festival": return "🎪 Visit the fair"
-		"event":  return "🎲 Walk the Crossroads"
-		_:        return "Travel"
+	return CartographyConfig.travel_verb(kind, game.map_visited(nid))
 
-## A short muted reason label for a blocked travel button.
+## A short muted reason label for a blocked travel button. (Batch 9 C5: the reason→label table
+## now lives in CartographyConfig beside the gate data it reads.)
 func _block_label(reason: String, nid: String) -> String:
-	match reason:
-		"needs_tokens":
-			return "🔒 Needs the 3 Hearth-Tokens"
-		"unreachable":
-			return "🔒 No road from here yet"
-		"level":
-			return "🔒 Requires Level %d" % CartographyConfig.level_req(nid)
-		"cost":
-			return "🔒 Needs %d coins" % CartographyConfig.entry_cost(nid)
-		_:
-			return "🔒 Locked"
+	return CartographyConfig.block_label(reason, nid)
 
 func _on_travel_pressed(nid: String) -> void:
 	emit_signal("travel_requested", nid)

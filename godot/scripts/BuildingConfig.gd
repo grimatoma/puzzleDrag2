@@ -605,3 +605,14 @@ static func available_at_tier(tier: int) -> Array:
 		if unlock_tier(id) <= tier:
 			out.append(id)
 	return out
+
+## Short player-facing hint for a build() FAILURE reason (Batch 9 C6 — moved BYTE-IDENTICAL from
+## Main._build_hint so the build-failure copy lives beside the building catalog it describes).
+## Reasons mirror GameState.build()'s failure codes: exists / locked / no_plot / insufficient.
+static func build_hint(reason: String) -> String:
+	match reason:
+		"exists":       return "already built"
+		"locked":       return "need a higher tier"
+		"no_plot":      return "no free plot"
+		"insufficient": return "not enough resources"
+		_:              return "unavailable"

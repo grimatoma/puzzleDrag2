@@ -335,7 +335,7 @@ func _build_hud() -> void:
 	# Moved DOWN (offset_top 230) + smaller (font 16) so it clears the new tool bar,
 	# which now sits in the band the old offset_top 124 occupied.
 	_chain_label = Label.new()
-	_chain_label.text = "Drag 3+ matching tiles"
+	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
 	_chain_label.add_theme_font_size_override("font_size", 16)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

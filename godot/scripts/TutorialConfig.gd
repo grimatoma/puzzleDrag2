@@ -9,6 +9,11 @@ extends RefCounted
 ## hint for consumers; the Godot TutorialModal always shows as a centered modal
 ## regardless, so callers may ignore it.
 
+## The narrating NPC — Wren the Scout (the React tutorial guide). A real NpcConfig roster member
+## (no fake). Lives here (Batch 9 D8) beside the tutorial STEPS it narrates, rather than as a
+## modal-local const, so the speaker id is data the modal reads.
+const TUTORIAL_NPC: String = "wren"
+
 ## The 6 onboarding steps, faithful to the React source.
 const STEPS: Array = [
 	{

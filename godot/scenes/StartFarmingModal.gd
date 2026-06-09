@@ -106,8 +106,10 @@ const PANEL_MAX_WIDTH := 480.0
 const SLOT_ICON_PX: int = 52
 const ROW_ICON_PX: int = 40
 
-## The most slots the picker ever shows (React MAX_SLOTS). The home zone has <= 8.
-const MAX_SLOTS := 8
+## The most slots the picker ever shows (React MAX_SLOTS). The home zone has <= 8. (Batch 9 D7:
+## the cap now lives in Constants.MAX_FARM_SLOTS so it's a shared, drift-resistant value — this
+## modal-local alias keeps the existing name pointing at the single source of truth.)
+const MAX_SLOTS := Constants.MAX_FARM_SLOTS
 
 # ── lifecycle ──────────────────────────────────────────────────────────────────
 

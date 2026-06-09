@@ -34,6 +34,28 @@ const CHAIN_COIN_DIVISOR: int = 2
 ## Sentinel for an empty grid cell.
 const EMPTY: int = -1
 
+## The most slots the Start-Farming picker ever shows (the home zone has <= 8). Named here (Batch 9
+## D7) instead of a modal-local const so the picker cap is a shared, drift-resistant value. Mirrors
+## the React MAX_SLOTS.
+const MAX_FARM_SLOTS: int = 8
+
+## The most resource-tally chips the run-end HarvestModal shows (top N by quantity). Named here
+## (Batch 9 D9) instead of an inline `8` so the cap reads by name. Mirrors React's ResourceTally
+## "top 8 shown".
+const HARVEST_TALLY_MAX: int = 8
+
+## The starter tool rack granted ONCE on a fresh game (Main._ready, only when game.tools.is_empty()).
+## A small visible set so the puzzle page reads as a populated TOOLS rack from the first run, using
+## REAL ToolConfig ids: Scythe×2 (instant — clears 6 random tiles), Bomb×1 (tap-target 3×3 blast),
+## Rake×1 (tap-target — sweeps a connected same-type patch). Ordered { "id", "count" } rows so the
+## grant order is data, not three inline calls. The honest equivalent of the React fresh-game grant
+## (Scythe×2 + Seedpack + Lockbox); the port has no seedpack/lockbox so it grants the wired tools.
+const STARTER_TOOLS: Array = [
+	{ "id": "scythe", "count": 2 },   # instant (clears 6 random tiles) — proves instant path
+	{ "id": "bomb", "count": 1 },     # tap-target (3x3 area blast) — proves targeting mode
+	{ "id": "rake", "count": 1 },     # tap-target (clears a connected same-type patch)
+]
+
 # ── Tile types — Farm biome starting set (src/constants.ts FARM pool) ───────
 ## GDScript enums are int-backed. STRING_KEYS maps each value back to the
 ## canonical Phaser tile key, used for save serialisation and (asset-pipeline
@@ -1047,3 +1069,19 @@ static func color_for(tile: int) -> Color:
 		Tile.GAS:                return Color8(0x86, 0xb8, 0x4a)
 		Tile.MYSTERIOUS_ORE:     return Color8(0x9a, 0x5c, 0xd6)
 		_:             return Color.MAGENTA
+
+## Map a start_farm_run() FAILURE reason to a player-facing toast string (Batch 9 C6 — moved
+## BYTE-IDENTICAL from Main._start_farm_fail_text). These are RUN-ECONOMY failures (no coins for
+## the entry cost / no fertilizer entry item / a run already underway), so the copy lives in
+## Constants beside the run-economy values (STARTING_COINS, etc.) rather than a view. Reasons
+## mirror GameState.start_farm_run()'s failure codes.
+static func start_farm_fail_text(reason: String) -> String:
+	match reason:
+		"no_coins":
+			return "Not enough coin to start."
+		"no_fertilizer":
+			return "No fertilizer on hand."
+		"already_running":
+			return "A farm run is already underway."
+		_:
+			return "Cannot start a run right now."

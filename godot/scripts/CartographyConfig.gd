@@ -530,3 +530,36 @@ static func current_id(active_biome: String) -> String:
 			return "harbor"
 		_:
 			return "home"
+
+# ── Travel-button copy (Batch 9 C5 — moved BYTE-IDENTICAL from CartographyScreen) ────────────────
+
+## The button verb for a TRAVELABLE node, by kind: enter-the-board for a board node, the activity
+## verb for a non-board node, or plain "Travel" elsewhere. `fast` is true when the node was already
+## VISITED (game.map_visited) — a free hop reads "Travel to <name>" so it's clear it's a free trip.
+## Moved verbatim from CartographyScreen._travel_verb so the per-kind verbs live with the node data.
+static func travel_verb(kind: String, fast: bool) -> String:
+	match kind:
+		"home":   return "Return to the Hearth" if fast else "Travel home"
+		"farm":   return "Farm here" if not fast else "Travel to the fields"
+		"mine":   return "⛏ Descend the mine" if not fast else "⛏ Return to the mine"
+		"fish":   return "⚓ Sail the harbor" if not fast else "⚓ Return to the harbor"
+		"boss":   return "⚔ Face the Pit"
+		"festival": return "🎪 Visit the fair"
+		"event":  return "🎲 Walk the Crossroads"
+		_:        return "Travel"
+
+## A short muted reason label for a BLOCKED travel button. `node_id` supplies the level / cost
+## interpolations (level_req / entry_cost). Moved verbatim from CartographyScreen._block_label so
+## the "why locked" copy lives beside the gate data it reads.
+static func block_label(reason: String, node_id: String) -> String:
+	match reason:
+		"needs_tokens":
+			return "🔒 Needs the 3 Hearth-Tokens"
+		"unreachable":
+			return "🔒 No road from here yet"
+		"level":
+			return "🔒 Requires Level %d" % level_req(node_id)
+		"cost":
+			return "🔒 Needs %d coins" % entry_cost(node_id)
+		_:
+			return "🔒 Locked"

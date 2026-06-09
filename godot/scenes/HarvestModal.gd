@@ -421,7 +421,8 @@ func _resource_tally(resources: Dictionary) -> Control:
 		entries.append([String(k), int(resources[k])])
 	entries.sort_custom(func(a, b): return int(a[1]) > int(b[1]))
 	var chips: Array = []
-	for i in mini(8, entries.size()):
+	# Batch 9 D9: the "top N shown" cap is Constants.HARVEST_TALLY_MAX (was an inline 8).
+	for i in mini(Constants.HARVEST_TALLY_MAX, entries.size()):
 		chips.append("%s x%d" % [UiKit.pretty_name(String(entries[i][0])), int(entries[i][1])])
 	return _chip_flow(chips, COL_BODY)
 

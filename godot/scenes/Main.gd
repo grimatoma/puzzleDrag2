@@ -240,12 +240,10 @@ func _ready() -> void:
 		# A3 — a small starter rack so the puzzle page reads as a populated TOOLS rack from
 		# the first run (the React fresh game grants a few visible tools: Scythe×2 + Seedpack +
 		# Lockbox). The port has no seedpack/lockbox, so grant the honest equivalent from REAL
-		# ToolConfig ids: Scythe×2 (instant — clears 6 random tiles), Bomb×1 (tap-target 3×3
-		# blast — proves targeting mode), Rake×1 (tap-target — sweeps a connected same-type
-		# patch). All three are wired tools (ToolConfig.SCYTHE / BOMB / RAKE).
-		game.grant_tool("scythe", 2)   # instant (clears 6 random tiles) — proves instant path
-		game.grant_tool("bomb", 1)     # tap-target (3x3 area blast) — proves targeting mode
-		game.grant_tool("rake", 1)     # tap-target (clears a connected same-type patch)
+		# ToolConfig ids. The tools/counts/order live in Constants.STARTER_TOOLS (Batch 9 B) so
+		# the grant is data, not three inline calls — loop over it preserving the exact set/order.
+		for t in Constants.STARTER_TOOLS:
+			game.grant_tool(String(t["id"]), int(t["count"]))
 	# Build the extracted HUD at the SAME point _build_hud() used to run, so the child
 	# CanvasLayer ordering (bg=-1, HUD=1, fx=2, nav) — and thus the on-screen compositing —
 	# is byte-identical. `board` is injected just below (after it's created); the HUD only
@@ -1333,17 +1331,10 @@ func _on_start_farming(selected: Array, use_fertilizer: bool) -> void:
 	_refresh_chain_progress()
 	SaveManager.save(game)
 
-## Map a start_farm_run failure reason to a player-facing toast string.
+## Map a start_farm_run failure reason to a player-facing toast string. (Batch 9 C6: the
+## reason→toast table now lives in Constants beside the run-economy values — thin delegate.)
 func _start_farm_fail_text(reason: String) -> String:
-	match reason:
-		"no_coins":
-			return "Not enough coin to start."
-		"no_fertilizer":
-			return "No fertilizer on hand."
-		"already_running":
-			return "A farm run is already underway."
-		_:
-			return "Cannot start a run right now."
+	return Constants.start_farm_fail_text(reason)
 
 ## Task C — the bounded run ENDED (the run-end HarvestModal's "Return to Town" CTA fired). Close
 ## the season in GameState (grants the +25 return bonus, decays bonds, rerolls quests, clears the
@@ -1988,7 +1979,11 @@ func _on_chain_changed(length: int) -> void:
 		_audio.play("chain_start")
 	_prev_chain_len = length
 	if length <= 0:
-		_chain_label.text = "Drag 3+ matching tiles"
+		# BUG FIX (Batch 9 A4): the prompt baked the minimum chain length as a literal "3". A boss
+		# (storm's min_chain modifier) can raise the effective minimum to 4, so the hint must read
+		# the LIVE minimum — game.boss_min_chain() returns the boss-raised bar when a challenge is
+		# active, else Constants.MIN_CHAIN.
+		_chain_label.text = "Drag %d+ matching tiles" % game.boss_min_chain()
 	else:
 		_chain_label.text = "Chain: %d" % length
 	# A3 — track the LIVE drag (length + the chained tile type) so the chain-progress bar can
@@ -2334,9 +2329,18 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		var boss_res: Dictionary = game.note_boss_chain(tile_type, length, int(res.get("units", 0)))
 		# If the chain didn't already resolve the fight, tick one window turn (heat + countdown).
 		if bool(boss_res.get("active", false)) and not bool(boss_res.get("defeated", false)) and game.is_boss_active():
+			# A1 (edge-case): capture the boss name BEFORE ticking. tick_boss_turn can resolve a
+			# same-tick LOSS and clear game.boss_active to "" before returning, which would leave
+			# the burn line below reading an empty name. Snapshot it now while it's still set.
+			var boss_nm: String = BossConfig.boss_name(game.boss_active)
 			var tick_res: Dictionary = game.tick_boss_turn(board.rng)
 			if int(tick_res.get("burned", 0)) > 0:
-				_status_label.text = "Ember Drake burns %d resource(s)!" % int(tick_res["burned"])
+				# BUG FIX (Batch 9 A1): the burn line hardcoded "Ember Drake". The burn is the
+				# heat_tiles modifier (today exclusively Ember Drake's), but the message must name
+				# whatever boss is actually burning — source the name from the LIVE boss id
+				# (game.boss_active) via BossConfig rather than a literal.
+				_status_label.text = "%s burns %d resource(s)!" % [
+					boss_nm, int(tick_res["burned"])]
 			# A LOSS resolution leaves is_boss_active() false — fold it in as the result to surface.
 			if not game.is_boss_active():
 				boss_res = tick_res
@@ -2552,7 +2556,10 @@ func _try_enter_mine() -> void:
 ## Town path arm the modifier overlay + the (boosted) refill pool + the chain bar identically.
 func _try_challenge_boss() -> void:
 	if not game.can_challenge_boss():
-		_status_label.text = "Can't challenge the boss (need City + 12 mine goods)"
+		# BUG FIX (Batch 9 A3): the threshold was a baked "12". Batch 4 named it
+		# BossConfig.MINE_MASTERY_THRESHOLD — interpolate it so the prose can never drift from
+		# the gate it describes (can_challenge_boss reads the same const).
+		_status_label.text = "Can't challenge the boss (need City + %d mine goods)" % BossConfig.MINE_MASTERY_THRESHOLD
 		get_viewport().set_input_as_handled()
 		return
 	var res: Dictionary = _enter_boss_fight()
@@ -2852,11 +2859,7 @@ func _apply_pool_change() -> void:
 	_refresh_settlement()
 	_refresh_totals()
 
-## Short player-facing hint for a build() failure reason.
+## Short player-facing hint for a build() failure reason. (Batch 9 C6: the reason→hint table
+## now lives in BuildingConfig beside the building catalog — this is a thin delegate.)
 func _build_hint(reason: String) -> String:
-	match reason:
-		"exists":       return "already built"
-		"locked":       return "need a higher tier"
-		"no_plot":      return "no free plot"
-		"insufficient": return "not enough resources"
-		_:              return "unavailable"
+	return BuildingConfig.build_hint(reason)

@@ -50,8 +50,10 @@ var _dots: Array = []             ## page-dot Panels (one per step) — the • 
 var _npc_name_label: Label        ## the speaker name beside the avatar ("Wren")
 
 ## The narrating NPC — Wren the Scout (the React tutorial guide). Its roster colour tints the
-## avatar circle. A real NpcConfig roster member (no fake).
-const TUTORIAL_NPC := "wren"
+## avatar circle. A real NpcConfig roster member (no fake). (Batch 9 D8: the speaker id now lives
+## in TutorialConfig.TUTORIAL_NPC beside the tutorial steps — this modal-local alias keeps the
+## existing name pointing at the single source of truth.)
+const TUTORIAL_NPC := TutorialConfig.TUTORIAL_NPC
 var _npc_name: String = ""        ## the resolved display name (headless contract)
 
 # Palette mirrors (StoryModal / MenuScreen tokens).
