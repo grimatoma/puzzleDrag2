@@ -42,7 +42,7 @@ This is a *curated* list, not a link dump — each entry says who it's by, what 
   https://www.slynyrd.com/blog/2018/6/15/pixelblog-6-light-and-shadow
 
 ### Pixel Parmesan — craft articles *(free)*
-- **By:** Jenna ("Pixel Parmesan").
+- **By:** "Pixel Parmesan" (handle @thisislux).
 - **Best for:** clear, opinionated articles on **dithering** and **banding** (when to use them,
   when *not* to) and other craft pitfalls. The dithering article in particular is a go-to for
   understanding transitional vs textural dithering.
