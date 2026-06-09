@@ -1369,7 +1369,7 @@ func _refresh_rats() -> void:
 		_rats_pill_box.visible = false
 		return
 	if game.has_ratcatcher():
-		_rats_pill.text = "🐀 %d/%d" % [game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES]
+		_rats_pill.text = "🐀 %d/%d" % [game.ratcatcher_charges_left(), BuildingConfig.RATCATCHER_CHARGES]
 	else:
 		_rats_pill.text = "🐀 active"
 	_rats_pill_box.visible = true

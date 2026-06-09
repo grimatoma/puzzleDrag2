@@ -211,8 +211,8 @@ func _test_magic_fertilizer_arms_fill_bias() -> void:
 func _test_summon_then_use_roundtrip() -> void:
 	var g := GameState.new()
 	# Build the portal (coins + runes), then bank enough influence to summon.
-	g.coins = GameState.PORTAL_COST_COINS
-	g.runes = GameState.PORTAL_COST_RUNES
+	g.coins = PortalConfig.BUILD_COST_COINS
+	g.runes = PortalConfig.BUILD_COST_RUNES
 	_check(bool(g.build_portal().get("ok", false)), "portal built for the summon round-trip")
 	g.influence = PortalConfig.influence_cost("philosophers_stone")
 	var sres := g.summon_magic_tool("philosophers_stone")

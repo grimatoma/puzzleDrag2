@@ -36,6 +36,12 @@ const HOME_ZONE: String = "home"
 const HOME_STAPLE_RESOURCES: Array = ["hay_bundle", "flour"]
 const HOME_BASE_CATEGORIES: Array = ["grass", "grain"]
 
+## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
+## not a category unlock (every eligible category already base-spawns season-weighted). Kept
+## modest so a spawner specialises the board without swamping the season profile. (Relocated
+## from GameState — board/zone-pool tuning belongs with the zone config.)
+const SPAWNER_BOOST_SLOTS: int = 6
+
 # ── helpers (thin static forwarders to CartographyConfig; node id == zone id) ──
 
 ## True when `zone_id` names a real cartography node (forwards to CartographyConfig.has_node).

@@ -246,8 +246,8 @@ func _render_build_state() -> void:
 	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chips.add_theme_constant_override("separation", 6)
 	col.add_child(chips)
-	chips.add_child(UiKit.make_pill("%d ◉" % GameState.PORTAL_COST_COINS, COL_VALUE))
-	chips.add_child(UiKit.make_pill("%d runes" % GameState.PORTAL_COST_RUNES, COL_INFLUENCE))
+	chips.add_child(UiKit.make_pill("%d ◉" % PortalConfig.BUILD_COST_COINS, COL_VALUE))
+	chips.add_child(UiKit.make_pill("%d runes" % PortalConfig.BUILD_COST_RUNES, COL_INFLUENCE))
 
 	var bottom := HBoxContainer.new()
 	bottom.size_flags_horizontal = Control.SIZE_EXPAND_FILL

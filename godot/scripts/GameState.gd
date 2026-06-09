@@ -333,11 +333,11 @@ var town2_complete: bool = false          ## set true when the CAPSTONE boss is 
 ## the farm pool. RAT produces nothing, so chaining rats wastes a move — that's the
 ## hazard. The Ratcatcher (free "shoo" moves) and Master Ratcatcher (grass chains
 ## also clear adjacent rats) are the Town-3 answer (BuildingConfig hazard buildings).
-## The "5 free moves/year" from the Direction maps to RATCATCHER_CHARGES (there is no
-## year/season calendar in the port — see the turn-counter note above — so the
-## charges are a flat per-run budget the player spends down).
-const RATCATCHER_CHARGES: int = 5
-var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
+## The "5 free moves/year" from the Direction maps to BuildingConfig.RATCATCHER_CHARGES (there
+## is no year/season calendar in the port — see the turn-counter note above — so the charges
+## are a flat per-run budget the player spends down). The CONST now lives on BuildingConfig
+## (with the building it belongs to); only the spent-count below is run STATE.
+var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..BuildingConfig.RATCATCHER_CHARGES)
 
 # ── Farm HAZARDS live state (T7/T8/T9, ported from src/features/farm) ───────────
 ## The live farm-hazard state — the GDScript analogue of React's `state.hazards`. Owns the
@@ -852,31 +852,30 @@ func boon_effect_mult(effect_type: String) -> float:
 ## field.
 var portal_built: bool = false
 
-## The Magic Portal's one-time build cost (coins + runes), carried from the React portal
-## building (src/constants.ts:805). Both are NON-inventory currencies on GameState.
-const PORTAL_COST_COINS: int = 2000
-const PORTAL_COST_RUNES: int = 5
+## The Magic Portal's one-time build cost (coins + runes) now lives on PortalConfig
+## (BUILD_COST_COINS / BUILD_COST_RUNES) — feature tuning belongs with the feature's config.
+## Both are NON-inventory currencies on GameState.
 
 ## True when the Magic Portal can be built RIGHT NOW: it isn't already built AND the player
-## has at least PORTAL_COST_COINS coins and PORTAL_COST_RUNES runes. Mirrors the React
-## affordability gate for the portal building.
+## has at least PortalConfig.BUILD_COST_COINS coins and BUILD_COST_RUNES runes. Mirrors the
+## React affordability gate for the portal building.
 func can_build_portal() -> bool:
 	if portal_built:
 		return false
-	return coins >= PORTAL_COST_COINS and runes >= PORTAL_COST_RUNES
+	return coins >= PortalConfig.BUILD_COST_COINS and runes >= PortalConfig.BUILD_COST_RUNES
 
-## Build the Magic Portal: deduct PORTAL_COST_COINS coins + PORTAL_COST_RUNES runes (both
-## floored at 0) and set portal_built = true. Mirrors building the React portal town building
-## (coins + runes special gate). Returns {ok:true} on success. On failure returns
+## Build the Magic Portal: deduct PortalConfig.BUILD_COST_COINS coins + BUILD_COST_RUNES runes
+## (both floored at 0) and set portal_built = true. Mirrors building the React portal town
+## building (coins + runes special gate). Returns {ok:true} on success. On failure returns
 ## {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
 ## "already_built" → "cant_afford".
 func build_portal() -> Dictionary:
 	if portal_built:
 		return {"ok": false, "reason": "already_built"}
-	if coins < PORTAL_COST_COINS or runes < PORTAL_COST_RUNES:
+	if coins < PortalConfig.BUILD_COST_COINS or runes < PortalConfig.BUILD_COST_RUNES:
 		return {"ok": false, "reason": "cant_afford"}
-	coins = maxi(0, coins - PORTAL_COST_COINS)
-	runes = maxi(0, runes - PORTAL_COST_RUNES)
+	coins = maxi(0, coins - PortalConfig.BUILD_COST_COINS)
+	runes = maxi(0, runes - PortalConfig.BUILD_COST_RUNES)
 	portal_built = true
 	return {"ok": true}
 
@@ -1044,11 +1043,9 @@ var story := StoryState.new()
 ## to_dict / from_dict (a save written before workers existed loads all 0).
 var workers: Dictionary = _default_workers()
 
-## A threshold can NEVER be reduced below this floor — so stacking enough workers
-## of a category can't collapse the threshold to 0/1 and "explode" the unit math
-## (a chain of 3 would otherwise mint absurd quantities). Mirrors a sane minimum
-## chain length; at 0 workers the reduction is 0 so this floor is never even reached.
-const WORKER_MIN_THRESHOLD: int = 2
+## The minimum-threshold floor (so stacking workers can't collapse a threshold to 0/1 and
+## "explode" the unit math) now lives on WorkerConfig.WORKER_MIN_THRESHOLD — worker tuning
+## belongs with the worker config.
 
 ## Build the starting workers map: every WorkerConfig id at 0 hires.
 static func _default_workers() -> Dictionary:
@@ -1292,7 +1289,7 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
 		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
 		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
-		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+		threshold = maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -3328,10 +3325,8 @@ static func _build_farm_category_tiles(cats: Array) -> Dictionary:
 		out[cat] = tile
 	return out
 
-## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
-## not a category unlock (every eligible category already base-spawns season-weighted). Kept
-## modest so a spawner specialises the board without swamping the season profile.
-const SPAWNER_BOOST_SLOTS: int = 6
+## The per-spawner board-pool boost (extra weight slots a placed spawner adds for its category)
+## now lives on ZoneConfig.SPAWNER_BOOST_SLOTS — board/zone-pool tuning belongs with the zone config.
 
 ## How many UPGRADE TILES of the zone's next tier a resolved farm chain spawns, and WHICH tile —
 ## the React core loop (src/GameScene.ts nextUpgradeTile + utils.ts upgradeCountForChain /
@@ -3410,7 +3405,7 @@ func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> 
 ## Spring (grass .38 …) yields a grass-dominant pool; Winter (trees .73) a tree-dominant one.
 ##
 ## Then layer the EXISTING semantics on top:
-##   - SPAWNER BOOST: each placed spawner whose category is eligible adds SPAWNER_BOOST_SLOTS
+##   - SPAWNER BOOST: each placed spawner whose category is eligible adds ZoneConfig.SPAWNER_BOOST_SLOTS
 ##     extra slots of its tile (build a Lumber Camp → more oak). Refiners (Bakery, no category)
 ##     and spawners for INELIGIBLE categories are skipped — a spawner can't smuggle an
 ##     ineligible category back onto the home board.
@@ -3459,7 +3454,7 @@ func active_tile_pool() -> Array:
 		# tile, so an un-customised board is unchanged). The boost is a frequency bump on the
 		# tile that actually spawns for that category.
 		var btile: int = _category_pool_tile(bcat)
-		for _i in SPAWNER_BOOST_SLOTS:
+		for _i in ZoneConfig.SPAWNER_BOOST_SLOTS:
 			pool.append(btile)
 	# T6: the React home categories are LOCKED ON and the player picks a VARIANT per category;
 	# there is no soft category-selection boost. The old farm_run_selected soft-boost block (the
@@ -3868,7 +3863,7 @@ func has_master_ratcatcher() -> bool:
 func ratcatcher_charges_left() -> int:
 	if not has_ratcatcher():
 		return 0
-	return maxi(0, RATCATCHER_CHARGES - ratcatcher_charges_used)
+	return maxi(0, BuildingConfig.RATCATCHER_CHARGES - ratcatcher_charges_used)
 
 ## True when a Ratcatcher is placed AND at least one shoo-move remains.
 func can_shoo_rats() -> bool:
@@ -5118,7 +5113,7 @@ static func from_dict(d: Dictionary) -> GameState:
 		s.boss_modifier_state = (saved_mod as Dictionary).duplicate(true) if saved_mod is Dictionary else {}
 	# Restore the Town-3 rats state (M3h). Charges-used is clamped to >= 0 (a
 	# corrupt negative can't grant phantom shoo-moves). It is NOT clamped to
-	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
+	# BuildingConfig.RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
 	# Restore the farm HAZARDS state (T7/T8/T9). HazardLogic.normalise coerces ints (JSON yields

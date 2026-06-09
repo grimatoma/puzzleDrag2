@@ -48,6 +48,11 @@ const KITCHEN: String = "kitchen"
 ## Ratcatcher makes grass chains also clear rats adjacent to the chain.
 const RATCATCHER: String = "ratcatcher"
 const MASTER_RATCATCHER: String = "master_ratcatcher"
+## A placed Ratcatcher grants this many free "shoo" moves per run (the "5 free moves/year"
+## from the Direction; the port has no year/season calendar, so it's a flat per-run budget
+## the player spends down). The runtime spent-count lives on GameState (ratcatcher_charges_used);
+## only this tuning CONST lives here, with the building it belongs to.
+const RATCATCHER_CHARGES: int = 5
 ## T15 — the four NEW crafting-STATION refiners that complete the React six-station
 ## crafting catalog (Bakery + Kitchen already exist above). Like Bakery/Kitchen they
 ## are kind "refiner": no board category, no tile — they exist solely to unlock a

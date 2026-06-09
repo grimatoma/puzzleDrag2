@@ -742,7 +742,7 @@ func _build_rats_section() -> void:
 	if game.has_ratcatcher():
 		_rats_body.add_child(_make_label(
 			"Shoo charges: %d/%d" % [
-				game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES], COL_MUTED))
+				game.ratcatcher_charges_left(), BuildingConfig.RATCATCHER_CHARGES], COL_MUTED))
 
 	for id in [BuildingConfig.RATCATCHER, BuildingConfig.MASTER_RATCATCHER]:
 		var row := HBoxContainer.new()
