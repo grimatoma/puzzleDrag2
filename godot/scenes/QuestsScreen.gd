@@ -469,7 +469,11 @@ func _tier_reward_text(reward: Dictionary) -> String:
 			parts.append("+ %s" % label)
 	var structural: String = String(reward.get("structural", ""))
 	if structural != "":
-		parts.append("+ %s" % structural)
+		# Prettify the camelCase perk id for display — Godot's capitalize() splits camelCase
+		# (and snake_case) into Title Case, so "startingExtraScythe" → "Starting Extra Scythe",
+		# "extraBlueprintSlot" → "Extra Blueprint Slot", "goldSeal" → "Gold Seal" — instead of
+		# leaking the raw identifier into the almanac reward tag.
+		parts.append("+ %s" % structural.capitalize())
 	return "  ".join(parts) if not parts.is_empty() else "—"
 
 # ── claim handlers ──────────────────────────────────────────────────────────────
