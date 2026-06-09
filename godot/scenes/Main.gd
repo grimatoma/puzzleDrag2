@@ -828,16 +828,18 @@ func _on_chronicle_view_charter() -> void:
 
 # ── Townsfolk roster screen ────────────────────────────────────────────────────
 
-## Open the townsfolk roster modal, lazily creating + wiring it on first use (mirrors
-## _open_chronicle). The screen is READ-ONLY — it only emits `closed`, routed to a
-## hide handler. open() re-reads game.npcs bonds each time, so the roster always
-## reflects the current bond state.
+## Open the townsfolk modal, lazily creating + wiring it on first use (mirrors
+## _open_chronicle). The screen emits `closed` (routed to a hide handler) and `state_changed`
+## (a gift given / worker hired-or-fired — routed to the shared _on_town_changed funnel so the
+## save + HUD totals update). open() re-reads game.npcs each time, so the roster always
+## reflects the current bond + worker state.
 func _open_townsfolk() -> void:
 	if _townsfolk_screen == null:
 		_townsfolk_screen = TownsfolkScreenScript.new()
 		add_child(_townsfolk_screen)
 		_townsfolk_screen.setup(game)
 		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
+		_townsfolk_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_townsfolk_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNSFOLK)
 	_hud.set_nav_current("folk")

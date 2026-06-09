@@ -77,6 +77,52 @@ func npc_bond(id: String) -> float:
 func gain_bond(id: String, amount: float) -> void:
 	npcs_state.gain(id, amount)
 
+## True when NPC `npc_id` may receive a gift right now: it's a real NPC, the player holds
+## at least 1 of `resource`, and this NPC hasn't already been gifted THIS season (the
+## once-per-season cooldown). The season is the current farm season index (0..3).
+func can_gift(npc_id: String, resource: String) -> bool:
+	if not NpcConfig.has(npc_id):
+		return false
+	if int(inventory.get(resource, 0)) <= 0:
+		return false
+	return npcs_state.can_gift(npc_id, current_season_index())
+
+## GIVE_GIFT (T18, ported from React state.ts GIVE_GIFT + applyGift, src/features/npcs/bond.ts).
+## Give NPC `npc_id` one unit of inventory `resource`: consume 1 of the resource, bump that
+## NPC's bond by the preference-tier delta (loved +0.5, liked +0.3, neutral +0.15), clamp the
+## bond to [0, 10], and set the per-season cooldown so the NPC can't be gifted again until a
+## new season. Guards (the FIRST that trips is reported): unknown NPC → "unknown"; no stock of
+## the resource → "no_stock"; already gifted this season → "cooldown". On success returns
+## {ok:true, npc, resource, tier, delta, bond} (bond = the new bond after the gift); on failure
+## {ok:false, reason} WITHOUT mutating. Mirrors React: the gift is silently rejected on cooldown
+## / empty inventory; the bond rises by the tier delta and is clamped.
+func give_gift(npc_id: String, resource: String) -> Dictionary:
+	if not NpcConfig.has(npc_id):
+		return {"ok": false, "reason": "unknown"}
+	if int(inventory.get(resource, 0)) <= 0:
+		return {"ok": false, "reason": "no_stock"}
+	var season: int = current_season_index()
+	if not npcs_state.can_gift(npc_id, season):
+		return {"ok": false, "reason": "cooldown"}
+	var tier: String = NpcConfig.gift_tier(npc_id, resource)
+	var delta: float = NpcConfig.gift_delta(tier)
+	# Consume one unit of the resource (erase the key when it hits 0).
+	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - 1)
+	if remaining == 0:
+		inventory.erase(resource)
+	else:
+		inventory[resource] = remaining
+	gain_bond(npc_id, delta)
+	npcs_state.mark_gifted(npc_id, season)
+	return {
+		"ok": true,
+		"npc": npc_id,
+		"resource": resource,
+		"tier": tier,
+		"delta": delta,
+		"bond": npc_bond(npc_id),
+	}
+
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
 ## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
 ## resources per-settlement, but for this milestone mine goods (block/iron_bar/
@@ -1627,36 +1673,93 @@ func orderable_resources() -> Array:
 			out.append(res)
 	return out
 
-## Roll a single fresh order from the current orderable resources — a uniform
-## resource pick, a qty in [MIN_QTY, MAX_QTY], and the matching reward. Pure: does
-## NOT mutate `orders`.
-func generate_order() -> Dictionary:
-	var pool: Array = orderable_resources()
-	var resource: String = String(pool[rng.randi_range(0, pool.size() - 1)])
-	var qty: int = rng.randi_range(OrderConfig.MIN_QTY, OrderConfig.MAX_QTY)
-	var reward: int = OrderConfig.reward_for(resource, qty)
-	# ADDITIVE (NPC bonding): pick the requesting NPC via the SAME seeded `rng` so
-	# generation stays reproducible, and carry `base_reward` (== the rolled reward)
-	# alongside the unchanged `reward` field. `reward` STAYS the base so any
-	# order["reward"] reader is unaffected; fill_order computes the bond-adjusted
-	# PAYOUT from `base_reward` at fill time.
+## Roll a single fresh order (T19 value-scaled + crafted-good pool). Optional
+## `exclude_npcs` / `exclude_keys` arrays let the caller forbid an NPC or a resource/good
+## already requested by another slot, so the 3-order board never duplicates an NPC or a
+## requested key (React makeOrder's excludeNpcs / excludeOrderKeys, src/state/helpers.ts).
+##
+## CRAFTED-GOOD POOL (React level >= 3, 30%). At almanac level CRAFTED_ORDER_LEVEL+ a roll
+## has a CRAFTED_ORDER_CHANCE chance of being a crafted-GOOD order (round(value×qty×1.5),
+## qty 1-3); otherwise it's a value-scaled RESOURCE order (max(20, value×qty×6), level-
+## scaled qty). The requesting NPC is picked from the roster (minus exclusions). Carries
+## `base_reward` (== the rolled reward) alongside `reward`; fill_order pays the bond-adjusted
+## PAYOUT from `base_reward`. Also carries `kind` ("resource" | "crafted") for the UI.
+## Pure: does NOT mutate `orders`. All randomness flows through the seeded `rng` so a
+## given seed reproduces the same board (incl. crafted/resource choice + npc).
+func generate_order(exclude_npcs: Array = [], exclude_keys: Array = []) -> Dictionary:
+	var level: int = almanac_level
+	# Crafted-good order? Only at level CRAFTED_ORDER_LEVEL+, CRAFTED_ORDER_CHANCE of the time,
+	# and only when a crafted-good is actually available + not excluded.
+	var use_crafted: bool = false
+	if level >= OrderConfig.CRAFTED_ORDER_LEVEL and rng.randf() < OrderConfig.CRAFTED_ORDER_CHANCE:
+		use_crafted = true
+
+	var key: String
+	var qty: int
+	var reward: int
+	var kind: String
+	if use_crafted:
+		var crafted_pool: Array = OrderConfig.crafted_order_pool()
+		var crafted_pick: Array = _filter_pool(crafted_pool, exclude_keys)
+		if crafted_pick.is_empty():
+			# No distinct crafted good available — fall back to a resource order.
+			use_crafted = false
+		else:
+			key = String(crafted_pick[rng.randi_range(0, crafted_pick.size() - 1)])
+			qty = OrderConfig.crafted_qty(rng.randf())
+			reward = OrderConfig.crafted_reward_for(key, qty)
+			kind = "crafted"
+	if not use_crafted:
+		var pool: Array = orderable_resources()
+		var resource_pick: Array = _filter_pool(pool, exclude_keys)
+		# If every orderable resource is already requested, allow a repeat (never deadlock).
+		if resource_pick.is_empty():
+			resource_pick = pool
+		key = String(resource_pick[rng.randi_range(0, resource_pick.size() - 1)])
+		var value: int = MarketConfig.sell_price(key)
+		qty = OrderConfig.qty_for(value, level, rng.randf())
+		reward = OrderConfig.reward_for(key, qty)
+		kind = "resource"
+
+	# Pick the requesting NPC (excluding any already used), via the SAME seeded `rng`.
 	var roster: Array = npcs_state.roster
 	if roster.is_empty():
 		roster = NpcConfig.all_ids()
-	var npc: String = String(roster[rng.randi_range(0, roster.size() - 1)])
+	var npc_pick: Array = _filter_pool(roster, exclude_npcs)
+	if npc_pick.is_empty():
+		npc_pick = roster   # more orders than NPCs — allow a repeat rather than deadlock
+	var npc: String = String(npc_pick[rng.randi_range(0, npc_pick.size() - 1)])
 	return {
-		"resource": resource,
+		"resource": key,
 		"qty": qty,
 		"reward": reward,
 		"npc": npc,
 		"base_reward": reward,
+		"kind": kind,
 	}
 
-## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls.
-## Idempotent once full. Call after load and after each fill.
+## Return `pool` with every entry present in `exclude` removed (preserving order).
+func _filter_pool(pool: Array, exclude: Array) -> Array:
+	if exclude.is_empty():
+		return pool.duplicate()
+	var out: Array = []
+	for e in pool:
+		if not exclude.has(e):
+			out.append(e)
+	return out
+
+## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls,
+## forbidding any NPC or requested resource/good already on the board so the 3 slots
+## never duplicate (React's excludeNpcs / excludeOrderKeys accumulation). Idempotent
+## once full. Call after load and after each fill.
 func refill_orders() -> void:
 	while orders.size() < OrderConfig.MAX_ORDERS:
-		orders.append(generate_order())
+		var used_npcs: Array = []
+		var used_keys: Array = []
+		for o in orders:
+			used_npcs.append(String((o as Dictionary).get("npc", "")))
+			used_keys.append(String((o as Dictionary).get("resource", "")))
+		orders.append(generate_order(used_npcs, used_keys))
 
 ## True when `index` is a real order AND inventory holds enough to fill it.
 func can_fill_order(index: int) -> bool:
