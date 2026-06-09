@@ -6,7 +6,7 @@ extends CanvasLayer
 ##
 ## NO class_name on purpose — Main preloads this script so the port never needs an
 ## --import pass to register a new global. Pure read-only: the only actionable Control
-## is "✕ Close"; everything else is MOUSE_FILTER_IGNORE.
+## is "✖ Close"; everything else is MOUSE_FILTER_IGNORE.
 ##
 ## REAL DATA: the roster comes from game.npcs.roster (in NpcConfig.all_ids() order);
 ## names/roles/colors from NpcConfig; bond floats from game.npc_bond(id). Nothing faked.
@@ -135,8 +135,7 @@ func _build_shell() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	var root_vbox := VBoxContainer.new()
@@ -147,7 +146,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "👥 Townsfolk" heading spanning the row. The visible "✕ Close" is GONE — a
+	# Title row: "👥 Townsfolk" heading spanning the row. The visible "✖ Close" is GONE — a
 	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
 	# non-rendered close Button is still created + wired below so ESC/back, the "board"
 	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
@@ -480,7 +479,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 
 	var badge := Label.new()
 	if claimed:
-		badge.text = "✓ Claimed"
+		badge.text = "✔ Claimed"
 		badge.add_theme_color_override("font_color", Palette.MOSS)
 	elif done:
 		badge.text = "Ready"
@@ -542,7 +541,7 @@ func _quest_label(q: Dictionary) -> String:
 		return "Quest: %s (%d)" % [String(q.get("category", "?")), int(q.get("target", 0))]
 	return label.replace("{n}", str(int(q.get("target", 0))))
 
-## Quest reward text: "+N 🪙  +M ✦" (coins + almanac XP), mirroring QuestsScreen.
+## Quest reward text: "+N 🪙  +M ⭐" (coins + almanac XP), mirroring QuestsScreen.
 func _quest_reward_text(reward: Dictionary) -> String:
 	var parts: Array = []
 	var coins: int = int(reward.get("coins", 0))
@@ -550,7 +549,7 @@ func _quest_reward_text(reward: Dictionary) -> String:
 		parts.append("+%d 🪙" % coins)
 	var xp: int = int(reward.get("xp", 0))
 	if xp > 0:
-		parts.append("+%d ✦" % xp)
+		parts.append("+%d ⭐" % xp)
 	return "  ".join(parts) if not parts.is_empty() else "—"
 
 # ── colour helpers ──────────────────────────────────────────────────────────────────

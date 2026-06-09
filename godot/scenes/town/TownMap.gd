@@ -194,6 +194,36 @@ func zoom_out() -> void:
 	_user_zoom /= ZOOM_STEP
 	_recompute_view()
 
+## Zoom by a multiplicative `factor` about a SCREEN-space anchor (typically the mouse
+## cursor) — the desktop mouse-wheel path. Unlike zoom_in/zoom_out (which zoom about the
+## viewport centre for the +/− buttons), this keeps the plan point currently under
+## `anchor` fixed on screen: record that point, apply the clamped zoom, then nudge the pan
+## so the same point lands back under the cursor. The pan is still clamped by
+## _recompute_view, so near the fit (where there's no room to pan) the anchor may drift
+## toward centre — by design, since panning into empty grass is disallowed.
+func zoom_at(factor: float, anchor: Vector2) -> void:
+	if _scale <= 0.0:
+		return
+	var new_zoom: float = clampf(_user_zoom * factor, MIN_ZOOM, MAX_ZOOM)
+	if is_equal_approx(new_zoom, _user_zoom):
+		return
+	# Plan-space point under the cursor BEFORE the zoom (using the live transform).
+	var plan_x: float = (anchor.x - _ox) / _scale
+	var plan_y: float = (anchor.y - _oy) / _scale
+	_user_zoom = new_zoom
+	# Where that plan point WOULD land with the new zoom but the OLD pan (the centre-based
+	# offset _recompute_view will use, before our nudge) — then add a pan so it returns to
+	# `anchor`. After this _pan, _recompute_view yields _ox = anchor.x - plan_x*new_scale, so
+	# screen(plan_x) == anchor.x (and likewise y), modulo the pan clamp.
+	var new_scale: float = _fit_scale * _user_zoom
+	var cx: float = _view_w * 0.5
+	var cy: float = _view_h * 0.5
+	var base_ox: float = cx - (cx - _fit_ox) * _user_zoom + _pan.x
+	var base_oy: float = cy - (cy - _fit_oy) * _user_zoom + _pan.y
+	_pan.x += anchor.x - (plan_x * new_scale + base_ox)
+	_pan.y += anchor.y - (plan_y * new_scale + base_oy)
+	_recompute_view()
+
 ## Reset to the pure content-aware fit (zoom 1.0, no pan).
 func recenter() -> void:
 	_user_zoom = 1.0

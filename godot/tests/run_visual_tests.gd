@@ -75,7 +75,7 @@ func _capture_size(win_size: Vector2i) -> Vector2i:
 # Scenarios captured at the desktop (landscape) viewport — a representative subset spanning the
 # board, the town map, both world maps, the inventory ledger, and a centred modal, so desktop
 # pillarbox framing is proven across the surface shapes without re-shooting all 19 scenarios.
-const DESKTOP_SCENARIOS := ["board-farm-idle", "town-map", "cartography", "inventory", "menu"]
+const DESKTOP_SCENARIOS := ["board-farm-idle", "board-farm-chain", "town-map", "cartography", "inventory", "menu"]
 
 const CHANNEL_TOLERANCE := 12        # per-channel delta above which a pixel is "different"
 const DIFF_FAIL_FRACTION := 0.01     # FAIL if differing pixels > 1.0% of total
@@ -122,6 +122,16 @@ func _freeze_tweens(main) -> void:
 		if toast._tween != null and toast._tween.is_valid():
 			toast._tween.kill()
 		toast._bubble.modulate.a = 1.0
+	# Pin the chain drag visuals (the ChainOverlay's sway/pulse phase + each selected tile's
+	# lift pulse) to a fixed state so the board-farm-chain golden is identical every run. No-op
+	# when no chain is held (overlay has no points; no tile is selected).
+	if main.board != null:
+		if main.board._chain_overlay != null:
+			main.board._chain_overlay.freeze()
+		for row in main.board.tiles:
+			for t in row:
+				if t != null:
+					t.freeze_selection()
 
 func _dismiss_tutorial(main) -> void:
 	if main._tutorial_modal != null:
@@ -412,6 +422,29 @@ func _post_charter_term(main) -> void:
 			var first_id: String = String((terms[0] as Dictionary).get("id", ""))
 			main._charter_screen._on_open_term(first_id)
 
+func _post_farm_chain(main) -> void:
+	# Drive a live 7-tile GRASS drag (6 across the top row, then one down into the second row) so
+	# the golden matches React's board-farm-chain-7 reference: the glowing stage-tinted path, the
+	# upgrade STAR at the 6-tile threshold boundary, the "×N" upgrade hover marker on the 7th (head)
+	# cell, the lifted selected tiles, and the HUD "1/6 +1" live readout. Forces the top two rows
+	# to GRASS first (a clean run that matches what the live game does).
+	var board = main.board
+	if board == null:
+		return
+	for c in Constants.COLS:
+		board.grid[0][c] = Constants.Tile.GRASS
+		if Constants.ROWS > 1:
+			board.grid[1][c] = Constants.Tile.GRASS
+	board._build_tiles()
+	board._begin_drag(Vector2i(0, 0))
+	for c in range(1, Constants.COLS):
+		board._extend_drag(Vector2i(c, 0))
+	# 7th tile: drop into the second row below the last top-row cell (8-adjacent), so the chain
+	# crosses the 6-tile threshold (1 upgrade earned) and the head sits on a different cell than
+	# the star — exactly React's chain-of-7 state.
+	if Constants.ROWS > 1:
+		board._extend_drag(Vector2i(Constants.COLS - 1, 1))
+
 func _post_town_build_picker(main) -> void:
 	# Open the build picker on the FIRST empty lot — exactly what a left click on an empty
 	# plot resolves to (lot index == built_count is the first un-built slot).
@@ -425,7 +458,14 @@ func _post_town_build_picker(main) -> void:
 # tutorial/story-prompt scenarios where the seed itself drives the modal.
 func _scenarios() -> Array:
 	return [
+		# board-farm-idle / -chain now seed an ACTIVE farm run so the HUD season bar renders (it is
+		# hidden when no run is active — see Hud._refresh_season_bar). The board tiles are the same
+		# pinned-RNG layout either way; only the season-bar visibility depends on the run.
 		{"id": "board-farm-idle", "deeplink": "",            "seed": Callable(self, "_seed_board_farm_run"), "post_dismiss_tutorial": true},
+		# The board mid-DRAG: stage-tinted chain path + upgrade star + "×N" hover marker + lifted
+		# tiles + the live HUD chain readout. The `post` step drives the drag; _freeze_tweens pins
+		# the overlay/selection animation so the capture is deterministic.
+		{"id": "board-farm-chain", "deeplink": "",           "seed": Callable(self, "_seed_board_farm_run"), "post": Callable(self, "_post_farm_chain"), "post_dismiss_tutorial": true},
 		{"id": "town-map",        "deeplink": "townmap",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "inventory",       "deeplink": "inventory",   "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "orders",          "deeplink": "town",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},

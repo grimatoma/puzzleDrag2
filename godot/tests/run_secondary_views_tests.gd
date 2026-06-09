@@ -1,12 +1,12 @@
 extends SceneTree
-## B2 — layout invariants for the EIGHT promoted SECONDARY VIEWS (Achievements, Tile
-## collection, Recipes, Chronicle, Castle, Charter, Decorations, Portal). Each was a
+## B2 — layout invariants for the NINE promoted SECONDARY VIEWS (Achievements, Tile
+## collection, Recipes, Chronicle, Castle, Charter, Decorations, Portal, Quests). Each was a
 ## semi-transparent SCRIM modal (a parchment card floating over a DIMMED board) reached
-## from the ☰ menu "More" section; B2 promotes them to full-brightness VIEWS: their opaque
+## from the ⚙ menu "More" section; B2 promotes them to full-brightness VIEWS: their opaque
 ## view backdrop now reserves UiKit.TOPBAR_RESERVE at the TOP (so the layer-1 HUD top bar
 ## shows above the view) and stops UiKit.NAV_RESERVE short of the bottom (so the persistent
 ## nav bar shows through), full-bleed content, and — UNLIKE the B1 PRIMARY views — they KEEP
-## a VISIBLE "✕ Close" button (these are menu sub-pages, Close is the legit back-to-board).
+## a VISIBLE "✖ Close" button (these are menu sub-pages, Close is the legit back-to-board).
 ##
 ## This suite asserts, for each of the eight screens:
 ##   • the view backdrop is an opaque ColorRect (FRAME_BG, alpha 1.0) with
@@ -29,6 +29,7 @@ const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
 const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
+const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
 
 var _checks: int = 0
 var _failures: int = 0
@@ -113,6 +114,7 @@ func _run() -> void:
 	await _assert_screen(CharterScreenScript.new(), "Charter")
 	await _assert_screen(DecorationsScreenScript.new(), "Decorations")
 	await _assert_screen(PortalScreenScript.new(), "Portal")
+	await _assert_screen(QuestsScreenScript.new(), "Quests")
 
 	# ── 2. Main integration — a nav-tab switch hides an open secondary view ─────
 	# Opening a secondary (Achievements) then switching to a PRIMARY (Town) via the bottom-nav
@@ -157,10 +159,10 @@ func _run() -> void:
 	_check(main._inventory_screen != null and main._inventory_screen.visible,
 		"_switch_primary_view opens the target primary (Inventory) on top")
 
-	# The ☰ menu still opens each secondary correctly via the shared deep-link path, and
+	# The ⚙ menu still opens each secondary correctly via the shared deep-link path, and
 	# ESC/back (apply_deeplink('board')) still closes them.
 	for id in ["achievements", "tiles", "recipes", "chronicle", "castle", "charter",
-			"decorations", "portal"]:
+			"decorations", "portal", "quests"]:
 		var opened: bool = main.apply_deeplink(id)
 		_check(opened, "apply_deeplink('%s') opens the secondary" % id)
 		var back: bool = main.apply_deeplink("board")

@@ -130,7 +130,7 @@ func _build_shell() -> void:
 	# Opaque VIEW background (not a dim modal scrim). The Inventory ledger is one of the
 	# five persistent bottom-nav VIEWS, so it paints the warm app-frame parchment over the
 	# board — reading as a view, not a hole in darkness. It reserves UiKit.TOPBAR_RESERVE at
-	# the TOP so the persistent layer-1 HUD top bar (settlement title + pills + ☰ menu) shows
+	# the TOP so the persistent layer-1 HUD top bar (settlement title + pills + ⚙ menu) shows
 	# ABOVE the view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar
 	# (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks in
 	# the band it covers.
@@ -167,8 +167,7 @@ func _build_shell() -> void:
 	center.add_child(panel)
 
 	# Keep the panel from sprawling on wide viewports.
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	var scroll := UiKit.make_vscroll()
@@ -182,7 +181,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(root_vbox)
 
-	# Title row: "📦 Inventory" heading spanning the row. The visible "✕ Close" is GONE — a
+	# Title row: "📦 Inventory" heading spanning the row. The visible "✖ Close" is GONE — a
 	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
 	# non-rendered close Button is still created + wired below so ESC/back, the "board"
 	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.

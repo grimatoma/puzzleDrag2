@@ -9,7 +9,7 @@ extends CanvasLayer
 ## LAYOUT (mirrors PortalScreen / DecorationsScreen EXACTLY):
 ##   • full-rect warm-brown scrim (clicks behind it never reach the board)
 ##   • a centered parchment PanelContainer (iron border, rounded, drop shadow)
-##   • a title row: "⚖️ The Charter" (Cinzel heading) + "✕ Close"
+##   • a title row: "⚖️ The Charter" (Cinzel heading) + "✖ Close"
 ##   • a settlement RIBBON line: "Hearthwood Vale" + "{turn} turn(s) elapsed" + "Hollow Pact"
 ##   • a two-tab toggle: "Terms" / "All choices" (a selected/unselected button pair)
 ##   • a ScrollContainer owning the dynamic body, rebuilt each refresh():
@@ -148,7 +148,7 @@ func _build_shell() -> void:
 	panel.offset_bottom = -UiKit.NAV_RESERVE
 	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
 	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
-	# sub-page KEEPS its visible "✕ Close" (the legitimate back-to-board affordance). The
+	# sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board affordance). The
 	# term-DETAIL overlay still uses the floating-card _parchment_card_style().
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
@@ -156,8 +156,7 @@ func _build_shell() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	# Fill the full-bleed page height so the scroll below expands into it (no empty void
@@ -168,7 +167,7 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "⚖️ The Charter" heading + right-aligned "✕ Close".
+	# Title row: "⚖️ The Charter" heading + right-aligned "✖ Close".
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -184,7 +183,7 @@ func _build_shell() -> void:
 	title_row.add_child(title)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕ Close"
+	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
 	close_btn.connect("pressed", Callable(self, "close"))
@@ -316,7 +315,7 @@ func _make_ribbon_badge() -> Control:
 	wrap.add_child(disc)
 
 	var glyph := Label.new()
-	glyph.text = "✦"                                # the Pact seal mark (engine-native glyph)
+	glyph.text = "⭐"                                # the Pact seal mark (covered by the NotoEmoji fallback)
 	glyph.add_theme_font_size_override("font_size", 20)
 	glyph.add_theme_color_override("font_color", Palette.GOLD.darkened(0.1))
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -559,8 +558,7 @@ func _build_detail_panel() -> void:
 	_detail_panel.visible = false
 	add_child(_detail_panel)
 
-	var cap := MarginContainer.new()
-	cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var cap := UiKit.make_width_cap()
 	_detail_panel.add_child(cap)
 
 	_detail_body = VBoxContainer.new()
@@ -616,7 +614,7 @@ func _sync_detail_panel() -> void:
 	head.add_child(head_lbl)
 
 	var dclose := Button.new()
-	dclose.text = "✕"
+	dclose.text = "✖"
 	dclose.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(dclose, Palette.EMBER, 6, 18)
 	dclose.connect("pressed", Callable(self, "_on_detail_close"))

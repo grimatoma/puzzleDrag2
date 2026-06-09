@@ -12,7 +12,7 @@ extends RefCounted
 
 # ── shared layout reserves (B1) ──────────────────────────────────────────────────
 ## The height (px) of the persistent HUD top-bar band (settlement title + coin/level/
-## tier/biome pills + ☰ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
+## tier/biome pills + ⚙ menu) on CanvasLayer layer 1. Each of the five PRIMARY nav
 ## VIEWS reserves this strip at the TOP — its opaque view backdrop starts at this
 ## offset so the layer-1 top bar shows ABOVE the view (full-brightness, persistent
 ## chrome) instead of being painted over. Tuned so the view content sits flush UNDER
@@ -23,6 +23,29 @@ const TOPBAR_RESERVE := 60
 ## in Main.gd). Each PRIMARY view's backdrop stops this far short of the bottom so the
 ## nav shows through + stays tappable; floating overlay controls lift above it too.
 const NAV_RESERVE := 76
+
+## Max content width for full-bleed VIEW screens. Content FILLS below this; on wider
+## (desktop/foldable) windows it is capped + centred so rows/search bars don't stretch
+## edge-to-edge. Set to the portrait base width (720) so it NEVER bites the phone layout —
+## only wide windows get the centred column. The web caps line length the same way.
+const VIEW_MAX_WIDTH := 720
+
+## A full-width container that caps + centres its single child to `max_w` on wide viewports
+## (and fills on narrow ones). Godot Control has no native max-width, so this recomputes its
+## own left/right margins whenever it is resized. Add your content (the scroll/VBox) as its
+## child. Use this for full-bleed VIEW screens (NOT modals, which already centre a sized panel).
+static func make_width_cap(max_w: int = VIEW_MAX_WIDTH) -> MarginContainer:
+	var mc := MarginContainer.new()
+	mc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mc.set_meta("_cap_w", max_w)
+	mc.resized.connect(func() -> void:
+		var avail: float = mc.size.x
+		var side: int = int(maxf(0.0, (avail - float(mc.get_meta("_cap_w", VIEW_MAX_WIDTH))) / 2.0))
+		mc.add_theme_constant_override("margin_left", side)
+		mc.add_theme_constant_override("margin_right", side)
+	)
+	return mc
 
 # ── heading font ─────────────────────────────────────────────────────────────
 
@@ -187,8 +210,23 @@ static func make_icon(key: String, px: float = 30.0) -> TextureRect:
 ## Title-case an item key for display: "hay_bundle" → "Hay Bundle", "iron_bar" →
 ## "Iron Bar". Godot's String.capitalize() handles the snake_case → Title Case split,
 ## matching how React labels the same items.
+##
+## TILE keys ("tile_grass_grass", "tile_mine_stone", "tile_fish_kelp") get the redundant
+## "tile_" prefix AND the leading category segment stripped first, so a tile used as a
+## crafting/cost input reads as a clean noun ("Grass", "Stone", "Kelp") instead of the raw
+## key — which previously leaked verbatim into the Decorations cost chips. Mirrors
+## TileCollectionScreen._derive_display_name; non-tile resource keys keep the plain path.
 static func pretty_name(key: String) -> String:
-	return String(key).capitalize()
+	var s := String(key)
+	if s.begins_with("tile_"):
+		s = s.substr(5)
+		var parts: Array = s.split("_")
+		const DROP_PREFIXES := ["grass", "grain", "bird", "veg", "fruit", "flower",
+			"tree", "herd", "cattle", "mount", "mine", "special", "fish"]
+		if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
+			parts.remove_at(0)
+		s = " ".join(parts)
+	return s.capitalize()
 
 # ── StyleBox builders ─────────────────────────────────────────────────────────
 
@@ -437,7 +475,11 @@ static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, pa
 ## sideways velocity. The addon's `override_mouse_filters` default (true) keeps
 ## child buttons clickable while still allowing drag-to-scroll over them.
 static func make_vscroll() -> ScrollContainer:
-	var scroll := SmoothScrollContainer.new()
+	# WheelClampScrollContainer is a SmoothScrollContainer that hard-stops MOUSE-WHEEL
+	# momentum at the top/bottom edge (no elastic overscroll) while leaving the springy
+	# overdrag intact for finger/content drags. See WheelClampScrollContainer.gd for why
+	# this lives in repo code rather than as an edit to the vendored addon.
+	var scroll := WheelClampScrollContainer.new()
 	scroll.allow_horizontal_scroll = false
 	# Scroll at 1× finger speed, not 2×. project.godot sets BOTH
 	# pointing/emulate_mouse_from_touch AND pointing/emulate_touch_from_mouse, so one

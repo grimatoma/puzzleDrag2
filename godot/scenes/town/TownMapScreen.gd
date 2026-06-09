@@ -19,7 +19,7 @@ extends CanvasLayer
 ## LAYOUT. A parchment backdrop fills the screen; the TownMap (a Node2D) is added
 ## under a full-rect Control and render_plan()'d at the live viewport size so the
 ## content-aware fit fills the portrait viewport. A floating title pill ("🗺
-## Hearthwood Vale") and a "✕ Close" button sit on top, styled via UiKit.
+## Hearthwood Vale") and a "✖ Close" button sit on top, styled via UiKit.
 ##
 ## M6d — INTERACTIVE plots. The map host Control now captures gui_input: a left
 ## click is mapped to a build-slot lot via TownMap.lot_at_screen(). A click on a
@@ -49,7 +49,7 @@ signal closed
 ## M6d — emitted after a build/demolish mutates `game`, so Main can re-pool the
 ## board, save, and refresh its HUD (mirrors TownScreen.state_changed).
 signal state_changed
-## B1 — the explicit board-return affordance. The Town view has no card "✕ Close" anymore
+## B1 — the explicit board-return affordance. The Town view has no card "✖ Close" anymore
 ## (it's a primary nav VIEW), so a labelled "▶ Board" button on the overlay emits this; Main
 ## hides the active view + clears the nav (apply_deeplink("board")). ESC/back still returns
 ## to the board too — this is the discoverable, on-screen path.
@@ -184,7 +184,7 @@ func _build_shell() -> void:
 	overlay.add_child(title_box)
 
 	# Board-return button — top-right, a clear "▶ Board" affordance. The Town view is a
-	# primary nav VIEW with no card "✕ Close", so this is the discoverable on-screen path back
+	# primary nav VIEW with no card "✖ Close", so this is the discoverable on-screen path back
 	# to the board: it emits `board_requested`, which Main routes to hide the view + clear the
 	# nav (apply_deeplink("board")). ESC/back also returns to the board.
 	var board_btn := Button.new()
@@ -334,6 +334,17 @@ func _map_render_size() -> Vector2:
 func _on_map_gui_input(event: InputEvent) -> void:
 	if _map == null:
 		return
+	# Mouse-wheel zoom (desktop / browser): wheel-up zooms IN, wheel-down zooms OUT,
+	# anchored on the cursor so the point under the pointer stays put. The +/− buttons
+	# keep their zoom-about-centre behaviour. A wheel turn arrives as a button PRESS (plus
+	# a matching release) — act on the press only, and consume it so it never leaks to a pan.
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_map.zoom_at(TownMapScript.ZOOM_STEP, event.position)
+			return
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_map.zoom_at(1.0 / TownMapScript.ZOOM_STEP, event.position)
+			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			# Begin a press: remember where, assume tap until it moves enough to be a drag.
@@ -551,7 +562,7 @@ func _on_build_button() -> void:
 
 ## The "▶ Board" overlay button was pressed: dismiss any open panel and emit
 ## `board_requested` so Main hides this view + clears the nav (returns to the board). This is
-## the discoverable on-screen board-return path now that the card "✕ Close" is gone.
+## the discoverable on-screen board-return path now that the card "✖ Close" is gone.
 func _on_board_button() -> void:
 	_close_panel()
 	emit_signal("board_requested")
@@ -594,7 +605,7 @@ func _close_panel() -> void:
 	_action_buttons = kept
 
 ## Build a fresh panel: a translucent scrim (clicking it closes the panel) holding a
-## centred parchment card with a title row (heading + ✕). Returns the card's content
+## centred parchment card with a title row (heading + ✖). Returns the card's content
 ## VBox for the caller to fill. Any previously-open panel is torn down first.
 func _begin_panel(title_text: String) -> VBoxContainer:
 	_close_panel()
@@ -627,7 +638,7 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	body.add_theme_constant_override("separation", 10)
 	card.add_child(body)
 
-	# Title row: heading + a ✕ close affordance (registered as "picker_close").
+	# Title row: heading + a ✖ close affordance (registered as "picker_close").
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_theme_constant_override("separation", 12)
@@ -642,7 +653,7 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	title_row.add_child(title)
 
 	var x_btn := Button.new()
-	x_btn.text = "✕"
+	x_btn.text = "✖"
 	x_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_button(x_btn, Palette.EMBER, 6, 0, true)
 	x_btn.connect("pressed", Callable(self, "_close_panel"))

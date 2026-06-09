@@ -2,7 +2,7 @@ extends SceneTree
 ## Dev utility: open and render the M4f settings/menu modal. Run NON-headless so the
 ## GPU draws the parchment card, iron border, drop shadow, and pill-styled buttons:
 ##   godot --path godot --script res://tools/m4f_capture.gd -- <dir>
-## Writes <dir>/m4f-menu.png — the centered parchment "☰ Menu" modal over the warm
+## Writes <dir>/m4f-menu.png — the centered parchment "⚙ Menu" modal over the warm
 ## scrim, with the Sound / New Game / Close pill buttons. Migration evidence.
 
 func _save(path: String) -> void:

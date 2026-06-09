@@ -165,21 +165,21 @@ func _initialize() -> void:
 	_check(main.game.audio_muted == false, "fresh Main game starts unmuted")
 	_check(main._audio.muted == false, "Audio service starts unmuted to match the save")
 
-	# ── Regression guard: the floating ☰ menu button exists AND opens the menu ──
+	# ── Regression guard: the floating ⚙ menu button exists AND opens the menu ──
 	# The Main→Hud extraction once dropped this button (its top-bar space stayed
 	# reserved, but its creation was lost), leaving the board with no visible way to
 	# open the menu. Assert the node is present and that pressing it routes
 	# menu_requested → Main._open_menu.
 	var menu_button := main.find_child("MenuButton", true, false)
-	_check(menu_button != null, "HUD has the floating ☰ MenuButton")
-	_check(menu_button is Button and menu_button.text == "☰", "MenuButton is a ☰ Button")
+	_check(menu_button != null, "HUD has the floating ⚙ MenuButton")
+	_check(menu_button is Button and menu_button.text == "⚙", "MenuButton is a ⚙ Button")
 	if main._menu_screen != null:
 		main._menu_screen.visible = false
 	if menu_button != null:
 		menu_button.emit_signal("pressed")
 		await process_frame
 		_check(main._menu_screen != null and main._menu_screen.visible,
-			"pressing the ☰ button opened the MenuScreen (menu_requested → _open_menu)")
+			"pressing the ⚙ button opened the MenuScreen (menu_requested → _open_menu)")
 		main._menu_screen.visible = false
 
 	# Calling _on_toggle_sound() directly flips BOTH the persisted flag and the service.

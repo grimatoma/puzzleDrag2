@@ -140,8 +140,7 @@ func _build_shell() -> void:
 	center.add_child(panel)
 
 	# Keep the panel from sprawling on wide viewports.
-	var width_cap := MarginContainer.new()
-	width_cap.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
+	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
 	var scroll := UiKit.make_vscroll()
@@ -155,7 +154,7 @@ func _build_shell() -> void:
 	_root_vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(_root_vbox)
 
-	# Title row: "🏠 Town" heading spanning the row. The visible "✕ Close" is GONE — a primary
+	# Title row: "🏠 Town" heading spanning the row. The visible "✖ Close" is GONE — a primary
 	# nav VIEW is left via the bottom nav / ESC-back, not a card close button. A non-rendered
 	# close Button is still created + wired below so ESC/back, the "board" deep-link, and the
 	# headless tests (which press _action_buttons["close"]) keep working.
@@ -674,7 +673,7 @@ func _build_boss_section() -> void:
 
 	if game.town2_complete:
 		_boss_body.add_child(_make_label(
-			"✓ Town 2 complete — Frostmaw defeated.", COL_BODY))
+			"✔ Town 2 complete — Frostmaw defeated.", COL_BODY))
 		return
 
 	_boss_body.add_child(_make_label(

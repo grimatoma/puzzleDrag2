@@ -25,7 +25,7 @@ const STEPS: Array = [
 	},
 	{
 		"id": "upgrades",
-		"title": "Upgrades ★",
+		"title": "Upgrades ⭐",
 		"body": "Every 3rd tile in your chain upgrades to the next tier. Long chains snowball — try chains of 6+.",
 		"anchor": "center",
 	},

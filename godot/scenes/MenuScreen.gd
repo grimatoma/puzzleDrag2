@@ -1,7 +1,7 @@
 class_name MenuScreen
 extends CanvasLayer
 ## M4f — the settings / menu modal. A small parchment modal, built ENTIRELY in code
-## (like Main's HUD + TownScreen — no .tscn editing), opened from the HUD "☰" button.
+## (like Main's HUD + TownScreen — no .tscn editing), opened from the HUD "⚙" button.
 ## It surfaces the three settings actions the player needs:
 ##
 ##   Sound      — toggle the SFX mute (M4d's Audio service exposed no UI until now)
