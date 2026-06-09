@@ -42,6 +42,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _test_modal()
+	await _test_modal_orchard_preview()
 	await _test_board_at_screen()
 	await _test_screen_signal()
 	await _test_main_wiring()
@@ -180,6 +181,49 @@ func _test_modal() -> void:
 	_check("Not enough coin" in m2._action_buttons["start"].text,
 		"unaffordable Start label reads 'Not enough coin' (got '%s')" % m2._action_buttons["start"].text)
 	m2.queue_free()
+	await process_frame
+
+# ── 1b. StartFarmingModal at the ORCHARD (per-node board-template preview) ──────
+
+## The modal PREVIEWS the ACTIVE farm zone, not a hardcoded home. Standing on the orchard node
+## (board template ORCHARD_FARM: 7 categories incl. "herd", base 12, fruit-heavy Spring) the modal's
+## slot set, budget, and season summary must follow the orchard — proving _zone resolves through
+## game._active_farm_zone() rather than HOME_ZONE.
+func _test_modal_orchard_preview() -> void:
+	var game := GameState.new()
+	game.map_current = "orchard"  # standing on the orchard farm node, no run active
+	_check(game._active_farm_zone() == "orchard",
+		"orchard: _active_farm_zone() resolves to 'orchard' (map_current, no run)")
+
+	var m = StartFarmingModalScript.new()
+	m.setup(game)
+	root.add_child(m)
+	m.open()
+	await process_frame
+
+	# Slot set follows the orchard's 7 eligible categories (incl. "herd"), not home's 6.
+	var orchard_cats: Array = ZoneConfig.eligible_categories("orchard")
+	_check(m.selected_categories() == orchard_cats,
+		"orchard: selected_categories() == ZoneConfig.eligible_categories('orchard') (%s)" % str(orchard_cats))
+	_check(orchard_cats.has("herd"),
+		"orchard: the eligible set CONTAINS 'herd' (home/meadow lacks it)")
+	_check(m._action_buttons.has("slot_herd"),
+		"orchard: a 'slot_herd' button was registered (the orchard-only category slot)")
+
+	# Budget follows the orchard base (12), no fertilizer.
+	_check(m.preview_budget() == 12,
+		"orchard: preview_budget() == 12 (orchard base, no fertilizer); got %d" % m.preview_budget())
+
+	# The season summary is the orchard's fruit-heavy Spring — distinct from the home summary.
+	var home_game := GameState.new()  # a fresh home game for the comparison summary
+	var hm = StartFarmingModalScript.new()
+	hm.setup(home_game)
+	var home_summary: String = hm.season_spawn_summary()
+	var orchard_summary: String = m.season_spawn_summary()
+	_check(orchard_summary != home_summary,
+		"orchard: season_spawn_summary() differs from the home summary (orchard is fruit-heavy)")
+	hm.queue_free()
+	m.queue_free()
 	await process_frame
 
 # ── 2. TownMap.board_at_screen ─────────────────────────────────────────────────

@@ -210,7 +210,8 @@ var heirlooms: Dictionary = {}
 ## The home farm is a PERSISTENT board that cycles four seasons (Spring→Summer→Autumn→
 ## Winter) over a turn budget, then HARVESTS and wraps back to Spring. `farm_turns_used` is
 ## the spent-turn counter WITHIN the current season cycle (0..budget); the budget itself is
-## ZoneConfig.base_turns("home") (the port plays only the home farm). The SEASON is derived
+## ZoneConfig.base_turns(_active_farm_zone()) — the live farm board follows the ACTIVE farm node,
+## defaulting to home for a home-only game. The SEASON is derived
 ## from these via Constants.season_index — see current_season_index / current_season_name
 ## below. This is a SEPARATE counter from `turn` (the monotonic story/quest counter above) —
 ## do NOT conflate them. note_farm_turn() ticks this after each FARM chain (parallel to
@@ -228,14 +229,15 @@ var farm_turns_used: int = 0        ## spent farm turns within the current seaso
 ## of the always-on, infinitely-wrapping season cycle above.
 ##
 ## ADDITIVE GUARANTEE: a bare GameState.new() has farm_run_active = false, so
-## farm_turn_budget() falls back to the legacy ZoneConfig.base_turns("home") (10) and
-## note_farm_turn() keeps its legacy infinite-wrap behaviour. Every existing suite that
+## farm_turn_budget() falls back to the ACTIVE farm node's base_turns via _active_farm_zone()
+## (home → 10 for a home-only game) and note_farm_turn() keeps its legacy infinite-wrap
+## behaviour. Every existing suite that
 ## never starts a run is byte-identical. The six fields restore defensively in from_dict;
 ## SAVE_VERSION is bumped by a SEPARATE later task (this is the logic foundation only).
 var farm_run_active: bool = false       ## a bounded run is in progress
 var farm_run_budget: int = 0            ## this run's total turn budget (fertilizer-aware)
 var farm_run_turns_left: int = 0        ## turns remaining in this run (0 when the run ends)
-var farm_run_zone: String = "home"      ## the zone the run is playing (only "home" today)
+var farm_run_zone: String = "home"      ## the active farm node the run is playing (defaults to home)
 var farm_run_used_fertilizer: bool = false  ## whether this run consumed fertilizer (×2 budget)
 var farm_run_selected: Array = []       ## chosen tile categories (spawn-bias boost; max 8)
 
@@ -2670,16 +2672,28 @@ func _sanitize_zone_archive(arc: Dictionary) -> Dictionary:
 
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
+## Resolve the world-map node whose FARM board is currently live: the bounded-run zone while a run
+## is active, else map_current when standing on a farm node, else home. Defaults to ZoneConfig.HOME_ZONE
+## so a home-only game (never travelled off home, no run) is BYTE-IDENTICAL to the old hardcoded
+## HOME_ZONE — only when the active farm node is a DIFFERENT farm template (e.g. orchard) does the
+## live board follow it.
+func _active_farm_zone() -> String:
+	if farm_run_active and CartographyConfig.board_biome(farm_run_zone) == "farm":
+		return farm_run_zone
+	if CartographyConfig.board_biome(map_current) == "farm":
+		return map_current
+	return ZoneConfig.HOME_ZONE
+
 ## The current farm season-cycle turn budget. While a bounded RUN is live (farm_run_active
 ## with a positive farm_run_budget), this returns the PER-RUN budget — which routes the
 ## fertilizer-aware budget through every season helper (current_season_index/name, SeasonBar,
-## the season-weighted pool) for free. With no run it falls back to the legacy
-## ZoneConfig.base_turns for the home zone (10), so the always-on season cycle + every
-## existing suite stay byte-identical.
+## the season-weighted pool) for free. With no run it falls back to the ACTIVE farm node's
+## base_turns (the live board follows _active_farm_zone, defaulting to home → 10), so the
+## always-on home season cycle + every existing suite stay byte-identical.
 func farm_turn_budget() -> int:
 	if farm_run_active and farm_run_budget > 0:
 		return farm_run_budget
-	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+	return ZoneConfig.base_turns(_active_farm_zone())
 
 ## Compute the turn budget for a NEW bounded run with `use_fertilizer`. Mirrors React's
 ## turnBudgetForZone: max(1, floor((baseTurns + additive) * multiplier)). With base 10 this
@@ -2693,7 +2707,7 @@ func farm_turn_budget() -> int:
 ##      GameState.almanac_structural (the GDScript analogue of React's tools dict booleans).
 ##      0 for a fresh game (flag not yet granted) → byte-identical.
 func farm_run_turn_budget(use_fertilizer: bool) -> int:
-	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+	var base: int = ZoneConfig.base_turns(_active_farm_zone())
 	# T17/T21: the unified aggregate's turn_budget_bonus channel (the Granary / Mining Camp +1).
 	# Mirrors React turnBudgetForZone's additive (src/features/zones/data.ts:174-175): base + bonus,
 	# then ×multiplier. 0 for a fresh game (no such building) → byte-identical to the old budget.
@@ -2813,7 +2827,7 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	# the ACTIVE zone (map_current); home is always founded → no-op for the home-only game.
 	if not is_settlement_founded(map_current):
 		return {"ok": false, "reason": "unfounded"}
-	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
+	var cost: int = ZoneConfig.entry_cost(map_current)
 	if coins < cost:
 		return {"ok": false, "reason": "no_coins"}
 	# Fertilizer ×2 (T12): _has_fertilizer() now reflects the real tool count (wired).
@@ -2828,7 +2842,7 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 		_consume_fertilizer()
 	var budget: int = farm_run_turn_budget(fert)
 	farm_run_active = true
-	farm_run_zone = ZoneConfig.HOME_ZONE
+	farm_run_zone = map_current
 	farm_run_budget = budget
 	farm_run_turns_left = budget
 	farm_run_used_fertilizer = fert
@@ -2907,11 +2921,13 @@ func build_run_summary() -> Dictionary:
 		"beats": beats,
 	}
 
-## Keep only entries that are ELIGIBLE base-spawn categories for the home zone, capped at 8
+## Keep only entries that are ELIGIBLE base-spawn categories for the ACTIVE farm zone, capped at 8
 ## (React selectedTiles.slice(0, 8)). De-dup is NOT applied (React keeps the raw slice); the
 ## active_tile_pool boost simply re-boosts a repeated category, which harmlessly stacks the weight bias.
+## Called from start_farm_run AFTER map_current/farm_run_zone are set, so _active_farm_zone() resolves
+## the active node (home → byte-identical to the old hardcoded HOME_ZONE; orchard → its 7 categories).
 func _sanitize_selection(arr: Array) -> Array:
-	var eligible: Array = ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE)
+	var eligible: Array = ZoneConfig.eligible_categories(_active_farm_zone())
 	var out: Array = []
 	for entry in arr:
 		var cat: String = String(entry)
@@ -3403,10 +3419,11 @@ func _category_pool_tile(cat: String) -> int:
 func active_tile_pool() -> Array:
 	var pool: Array = []
 	var season: String = current_season_name()
-	var drops: Dictionary = ZoneConfig.season_drops(ZoneConfig.HOME_ZONE, season)
+	var fzone: String = _active_farm_zone()
+	var drops: Dictionary = ZoneConfig.season_drops(fzone, season)
 	# Base pool: season-weighted slots per eligible category. Iterate eligible_categories so
 	# the order is stable (the upgradeMap key order) and ineligible categories are impossible.
-	for cat in ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE):
+	for cat in ZoneConfig.eligible_categories(fzone):
 		if not FARM_CATEGORY_TILE.has(cat):
 			continue
 		var weight: float = float(drops.get(cat, 0.0))
@@ -4988,7 +5005,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.farm_run_active = bool(d.get("farm_run_active", false))
 	s.farm_run_budget = maxi(0, int(d.get("farm_run_budget", 0)))
 	var run_zone := String(d.get("farm_run_zone", "home"))
-	s.farm_run_zone = run_zone if ZoneConfig.has_zone(run_zone) else "home"
+	s.farm_run_zone = run_zone if CartographyConfig.board_biome(run_zone) == "farm" else "home"
 	s.farm_run_used_fertilizer = bool(d.get("farm_run_used_fertilizer", false))
 	var sel_raw: Variant = d.get("farm_run_selected", [])
 	s.farm_run_selected = s._sanitize_selection(sel_raw) if sel_raw is Array else []
