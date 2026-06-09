@@ -1,13 +1,52 @@
-# Pixel-art craft — designing the image like a pro
+---
+name: pixel-art-craft
+description: >-
+  Use when designing or improving the STATIC craft of a pixel-art sprite, tile, or icon —
+  its color, palette, shading, and edges — independent of any motion. Triggers: making pixel
+  art look professional / cleaner / less flat / less amateur, building or hue-shifting a color
+  ramp (cool shadows, warm highlights), choosing a light direction, fixing pillow-shading,
+  fixing banding, anti-aliasing a jaggy edge, cleaning up clusters / jaggies / orphan pixels,
+  dithering to stretch a palette, adding a solid outline or selective outline (selout),
+  deciding canvas resolution / how much detail to draw, or diagnosing why a sprite reads as
+  muddy, plasticky, flat, noisy, or "off." Use it when drawing a strong static frame before
+  animation, or to critique a still. For motion / animation of a sprite, see the
+  pixel-art-animation skill instead.
+---
 
-Motion can't save a weak sprite. Before you animate, the **static frame** has to read as
-deliberate, professional pixel art. This file is the design-side craft — palette, light,
-edges, outlines — distilled from the artists the field actually learns from (Pedro
-Medeiros/Saint11, SLYNYRD/Raymond Schlitter, Derek Yu, Pixel Parmesan, 2dwillneverdie).
-Sources at the bottom.
+# Pixel-Art Craft — designing the still image like a pro
+
+The design-side craft of pixel art: **palette, light, edges, outlines** — the choices that
+separate deliberate, professional pixel art from a flat fill. This skill is distilled from
+the artists the field actually learns from (Pedro Medeiros/Saint11, SLYNYRD/Raymond
+Schlitter, Derek Yu, Pixel Parmesan, 2dwillneverdie). Sources at the bottom.
 
 The single highest-leverage rule: **draw a strong frame 0 first** — palette + light + real
-detail — and only animate once it already looks good standing still.
+detail — and make it look good standing still before anything moves.
+
+This skill is the **still-craft** half of a pair. For making a sprite genuinely *move*
+(organic bends, articulation, the 12 animation principles, looping), see the
+**pixel-art-animation** skill. In the **sprite-pipeline** workflow, this craft powers the
+base/keyframe art and is the rubric for the still-critique pass; pixel-art-animation owns the
+motion-critique pass.
+
+## When to use
+
+- You have (or are about to draw) a static sprite/tile/icon and want it to read as
+  professional, not amateur.
+- A sprite looks **muddy, plasticky, flat, soft, noisy, or "off"** and you need to diagnose why.
+- You're choosing a **palette / ramp**, a **light direction**, or how much **detail** to draw.
+- You need to **anti-alias**, kill **banding**, clean up **jaggies/clusters**, **dither**, or
+  add an **outline / selout**.
+- You're drawing the **strong static frame 0** before animating (then hand off motion to
+  pixel-art-animation).
+
+When the work is *motion* (sway, peck, swim, glow-pulse, looping GIFs), that's the
+**pixel-art-animation** skill — not this one.
+
+> The `ramp()`, `lit()`, `sphere_t()`, `dither()`, and `outline()` helpers referenced below
+> ship in the procedural starter `assets/anim_starter.py` inside the **pixel-art-animation**
+> skill. They are a convenient reference implementation of this craft; the principles here are
+> tool-agnostic and apply whether you draw by hand, in Aseprite, or in code.
 
 ## Contents
 1. [Color: build ramps, and hue-shift them](#1-color-build-ramps-and-hue-shift-them)
@@ -45,9 +84,9 @@ work is **hue shifting**: the hue rotates along the ramp instead of staying fixe
 - **Keep the whole palette small and share ramps** between materials (a desaturated copy of
   one ramp covers neutrals/grays). A little color goes a long way.
 
-`assets/anim_starter.py` ships **`ramp(base, n)`** which does all of this from a single
-mid-tone — cool-shifted shadows, warm-shifted highlights, mid-peaked saturation,
-desaturated near white. Prefer it over hand-listing hex codes:
+The pixel-art-animation starter ships **`ramp(base, n)`** which does all of this from a
+single mid-tone — cool-shifted shadows, warm-shifted highlights, mid-peaked saturation,
+desaturated near white. Prefer a generated ramp over hand-listing hex codes:
 
 ```python
 GREEN = ramp("#5c9c2e", 5)     # -> 5 hue-shifted steps, cool root .. warm tip

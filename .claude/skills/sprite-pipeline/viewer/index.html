@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sprite set review</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="viewer.css" />
+  </head>
+  <body>
+    <header class="page-head">
+      <div class="page-head__inner">
+        <div class="page-head__title">
+          <h1>Sprite set review</h1>
+          <p class="tagline">
+            Eyeball the family for cohesion, comment per asset, copy the notes to drive the next
+            pass.
+          </p>
+        </div>
+        <div class="page-head__meta">
+          <div id="totals" class="totals" aria-live="polite"></div>
+          <div class="legend" aria-hidden="true">
+            <span class="legend__item"><span class="dot dot--approved"></span>approved</span>
+            <span class="legend__item"><span class="dot dot--generated"></span>generated</span>
+            <span class="legend__item"><span class="dot dot--pending"></span>pending</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="app">
+      <!-- sets render here -->
+      <p id="loading" class="loading">Loading <code>data.json</code>…</p>
+    </main>
+
+    <!-- Page-level review notes + copy-out. -->
+    <section class="page-notes" aria-label="Review notes">
+      <div class="page-notes__inner">
+        <label class="page-notes__label" for="page-comment">Overall notes (whole review)</label>
+        <textarea
+          id="page-comment"
+          class="comment page-notes__field"
+          rows="3"
+          placeholder="Cross-set observations — cohesion, palette drift across sets, what to prioritize next pass…"
+        ></textarea>
+      </div>
+    </section>
+
+    <!-- Sticky action bar. -->
+    <div class="actionbar">
+      <div class="actionbar__inner">
+        <span id="comment-count" class="actionbar__count">0 comments</span>
+        <div class="actionbar__buttons">
+          <button id="clear-comments" class="btn btn--ghost" type="button">Clear all</button>
+          <button id="copy-comments" class="btn btn--primary" type="button">
+            Copy comments
+          </button>
+        </div>
+        <span id="copy-status" class="actionbar__status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <!-- Card template (cloned per asset by viewer.js). -->
+    <template id="card-tpl">
+      <article class="card">
+        <div class="card__media">
+          <!-- <img> / placeholder injected here -->
+        </div>
+        <div class="card__body">
+          <div class="card__head">
+            <span class="card__kind"></span>
+            <span class="badge"></span>
+          </div>
+          <h3 class="card__id"></h3>
+          <p class="card__desc"></p>
+          <textarea
+            class="comment card__comment"
+            rows="2"
+            placeholder="Note for this asset…"
+          ></textarea>
+        </div>
+      </article>
+    </template>
+
+    <script src="viewer.js" defer></script>
+  </body>
+</html>
