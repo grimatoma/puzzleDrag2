@@ -24,10 +24,12 @@ extends RefCounted
 ## GameState emitted under the top-level "npcs" key before the extraction. to_dict()
 ## returns exactly that; from_dict() rebuilds it (defensively for old saves).
 
-## Bond gained each time an order from that NPC is filled (+0.3 per React bond.ts).
-const BOND_GAIN_PER_FILL: float = 0.3
-## Fallback NPC for an old save's order missing its `npc` field (defensive).
-const DEFAULT_ORDER_NPC: String = "wren"
+## Bond-economy tuning now lives in NpcConfig (the canonical bond-model home). Referenced
+## by name here and forwarded by GameState so callers keep resolving the values:
+##   NpcConfig.BOND_GAIN_PER_FILL  bond gained per filled order (+0.3, React bond.ts)
+##   NpcConfig.DEFAULT_ORDER_NPC   fallback NPC for an old save's order missing its `npc`
+##   NpcConfig.DEFAULT_BOND        the Warm default / clamp baseline (5.0)
+##   NpcConfig.BOND_MIN / BOND_MAX the [0, 10] clamp range (via NpcConfig.clamp_bond)
 
 ## The legacy flat {"roster": Array, "bonds": Dictionary} form IS the single backing store,
 ## so GameState's `npcs` getter hands back THIS exact dict (a stable live reference). That
@@ -55,11 +57,11 @@ var gift_cooldown: Dictionary:
 		var c: Dictionary = data["giftCooldown"]
 		return c
 
-## Build the starting bonds map: every roster NPC at the Warm default (5.0).
+## Build the starting bonds map: every roster NPC at the Warm default (NpcConfig.DEFAULT_BOND).
 static func _default_bonds() -> Dictionary:
 	var out: Dictionary = {}
 	for id in NpcConfig.all_ids():
-		out[id] = 5.0
+		out[id] = NpcConfig.DEFAULT_BOND
 	return out
 
 ## The legacy flat {"roster": …, "bonds": …} view — the SAME live dict GameState persists,
@@ -69,16 +71,16 @@ func as_dict() -> Dictionary:
 	return data
 
 ## Current bond for `id` (0..10 float). A missing/unknown id reads as the Warm default
-## 5.0 so reward math never divides by a phantom band.
+## (NpcConfig.DEFAULT_BOND) so reward math never divides by a phantom band.
 func bond(id: String) -> float:
 	var b: Dictionary = data["bonds"]
-	return float(b.get(id, 5.0))
+	return float(b.get(id, NpcConfig.DEFAULT_BOND))
 
-## Adjust `id`'s bond by `amount` (may be negative), clamped to [0, 10]. Seeds a known
-## id at the default first. Stores a float.
+## Adjust `id`'s bond by `amount` (may be negative), clamped to [BOND_MIN, BOND_MAX]. Seeds
+## a known id at the default first. Stores a float.
 func gain(id: String, amount: float) -> void:
 	var b: Dictionary = data["bonds"]
-	b[id] = clampf(float(b.get(id, 5.0)) + amount, 0.0, 10.0)
+	b[id] = NpcConfig.clamp_bond(float(b.get(id, NpcConfig.DEFAULT_BOND)) + amount)
 
 ## True when `id` may receive a gift in `season` — i.e. its last-gifted season is NOT the
 ## current one (React: blocked while giftCooldown[id] === state.season). A never-gifted NPC
@@ -100,11 +102,11 @@ func to_dict() -> Dictionary:
 	return {"roster": r.duplicate(true), "bonds": b.duplicate(true), "giftCooldown": c.duplicate(true)}
 
 ## Rebuild from a snapshot, defensively. A missing/empty dict (any save written before
-## npcs existed) yields the default roster (NpcConfig.all_ids) at the Warm default 5.0,
-## so old saves load with neutral relationships. The roster keeps only REAL ids,
-## de-duplicated; bonds keep only roster ids, coerced to float and clamped to [0, 10]
-## (JSON yields floats; a corrupt out-of-range value can't break banding). Any roster id
-## missing a saved bond defaults to 5.0. The gift-cooldown map is restored defensively too:
+## npcs existed) yields the default roster (NpcConfig.all_ids) at the Warm default
+## (NpcConfig.DEFAULT_BOND), so old saves load with neutral relationships. The roster keeps
+## only REAL ids, de-duplicated; bonds keep only roster ids, coerced to float and clamped to
+## [BOND_MIN, BOND_MAX] (JSON yields floats; a corrupt out-of-range value can't break
+## banding). Any roster id missing a saved bond defaults to the Warm default. The gift-cooldown map is restored defensively too:
 ## only roster ids survive, each coerced to an int season; a missing key (old save) yields
 ## an empty cooldown map so every NPC is giftable on load.
 static func from_dict(d: Dictionary) -> NpcState:
@@ -123,9 +125,9 @@ static func from_dict(d: Dictionary) -> NpcState:
 	var bonds: Dictionary = {}
 	var raw_bonds: Variant = d.get("bonds", {})
 	for id in roster:
-		var v: float = 5.0
+		var v: float = NpcConfig.DEFAULT_BOND
 		if raw_bonds is Dictionary and raw_bonds.has(id):
-			v = clampf(float(raw_bonds[id]), 0.0, 10.0)
+			v = NpcConfig.clamp_bond(float(raw_bonds[id]))
 		bonds[id] = v
 	var cooldown: Dictionary = {}
 	var raw_cd: Variant = d.get("giftCooldown", {})

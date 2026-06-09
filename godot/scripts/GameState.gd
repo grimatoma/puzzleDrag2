@@ -50,11 +50,12 @@ var rng := RandomNumberGenerator.new()
 ## (see to_dict / from_dict), byte-identical to before the extraction.
 var npcs_state := NpcState.new()
 ## Bond gained each time an order from that NPC is filled (+0.3). Forwarded from
-## NpcState so `GameState.BOND_GAIN_PER_FILL` keeps resolving for callers.
-const BOND_GAIN_PER_FILL: float = NpcState.BOND_GAIN_PER_FILL
+## NpcConfig (the canonical bond-economy home) so `GameState.BOND_GAIN_PER_FILL` keeps
+## resolving for callers.
+const BOND_GAIN_PER_FILL: float = NpcConfig.BOND_GAIN_PER_FILL
 ## Fallback NPC for an old save's order missing its `npc` field (defensive). Forwarded
-## from NpcState so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
-const DEFAULT_ORDER_NPC: String = NpcState.DEFAULT_ORDER_NPC
+## from NpcConfig so `GameState.DEFAULT_ORDER_NPC` keeps resolving for callers.
+const DEFAULT_ORDER_NPC: String = NpcConfig.DEFAULT_ORDER_NPC
 
 ## The legacy flat {"roster": …, "bonds": …} view onto the composed NpcState — a LIVE
 ## reference (NOT a copy), so the many readers that index `game.npcs["roster"]` /
@@ -2876,16 +2877,17 @@ func _reset_run_telemetry(_fert: bool) -> void:
 		run_bonds_at_start[String(id)] = npcs_state.bond(id)
 
 ## T30 — the rounded NPC bond DELTAS over the run: { npc_id -> round1(end - start) } for every NPC
-## whose bond moved by at least 0.05 since run start. Mirrors React diffBonds (runSummary slice.ts:64-75):
-## round to one decimal, drop near-zero moves. Reads the LIVE bonds vs run_bonds_at_start.
+## whose bond moved by at least NpcConfig.BOND_DELTA_EPSILON since run start. Mirrors React diffBonds
+## (runSummary slice.ts:64-75): round to one decimal, drop near-zero moves. Reads the LIVE bonds vs
+## run_bonds_at_start.
 func run_bond_deltas() -> Dictionary:
 	var out: Dictionary = {}
 	for id in NpcConfig.all_ids():
 		var sid: String = String(id)
-		var start_bond: float = float(run_bonds_at_start.get(sid, 5.0))
+		var start_bond: float = float(run_bonds_at_start.get(sid, NpcConfig.DEFAULT_BOND))
 		var end_bond: float = npcs_state.bond(sid)
 		var d: float = end_bond - start_bond
-		if absf(d) >= 0.05:
+		if absf(d) >= NpcConfig.BOND_DELTA_EPSILON:
 			out[sid] = roundf(d * 10.0) / 10.0
 	return out
 
@@ -3057,16 +3059,16 @@ func close_season() -> Dictionary:
 		"market_event": market_event.duplicate(true),   # T16: event for the new season (or {})
 	}
 
-## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
-## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
-## are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
-## bleeding below the neutral baseline — gain() only clamps to [0, 10], so the
+## Decay every NPC bond strictly above Warm (NpcConfig.DEFAULT_BOND) by BOND_DECAY_STEP,
+## floored at the Warm default (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds
+## at or below Warm are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
+## bleeding below the neutral baseline — gain() only clamps to [BOND_MIN, BOND_MAX], so the
 ## floor must be applied here.
 func _decay_npc_bonds() -> void:
 	for id in NpcConfig.all_ids():
 		var b: float = npcs_state.bond(id)
-		if b > 5.0:
-			npcs_state.gain(id, maxf(5.0, b - 0.1) - b)
+		if b > NpcConfig.DEFAULT_BOND:
+			npcs_state.gain(id, maxf(NpcConfig.DEFAULT_BOND, b - NpcConfig.BOND_DECAY_STEP) - b)
 
 ## Reset the farm season cycle back to a fresh Spring (0 turns used). Called when starting a
 ## fresh farm session — there is no per-session "enter the farm" path in the port (the farm is
