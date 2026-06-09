@@ -84,6 +84,11 @@ var _stockpile_chips: Dictionary = {}
 ## InventoryScreen ledger groups (real GameState.inventory keys — no invented goods). Any owned
 ## resource NOT in the roster (a mine/expedition good carried back) is appended after the roster so
 ## nothing owned is ever hidden.
+##
+## Kept as an explicit ORDERED list (NOT derived from ResourceConfig) so the chip order stays
+## byte-identical to React's `BIOMES.farm.resources.slice(0,12)`. Every key here is a ResourceConfig
+## resource (mostly the "farm" family, plus the "refined" bread + the reconciled "farm" jam); each
+## chip's display name comes from ResourceConfig.label() via UiKit.pretty_name.
 const STOCKPILE_ROSTER: Array = [
 	"hay_bundle", "flour", "bread", "eggs", "milk", "meat",
 	"soup", "pie", "honey", "jam", "plank", "horseshoe",

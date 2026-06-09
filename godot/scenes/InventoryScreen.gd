@@ -90,30 +90,40 @@ var _view: String = VIEW_LIST
 var _view_btn: Button                   ## the ⊞/≣ view-toggle Button (registered for tests)
 
 ## The port's special "Items" — non-resource, non-tool valuables surfaced as inventory items.
-## Each: [id, glyph, label, getter-field]. REAL GameState scalar counters; nothing invented.
-const ITEM_DEFS: Array = [
-	["runes", "🔮", "Runes"],
-	["influence", "◈", "Influence"],
-]
+## REAL GameState scalar counters; nothing invented. ITEM_IDS is the stable id list + render order;
+## the glyph + label for each are DERIVED from the ResourceConfig kind:"item" rows (the single
+## source of truth — was a hardcoded [id, glyph, label] literal here). item_count() still binds each
+## id to its GameState scalar field (game.runes / game.influence) — that's logic, not metadata.
+const ITEM_IDS: Array = ["runes", "influence"]
 
-# ── group membership (per the Constants production families) ───────────────────
-# Ordered group definitions: each is [display name, Array of resource keys]. A
-# resource not in any of these lands in the trailing "Other" group so the ledger
-# NEVER silently drops an owned good. Mirrors the CLAUDE-listed port resources:
-#   Farm:    hay_bundle, flour, eggs, soup, pie, honey, plank, meat, milk, horseshoe
-#   Refined: bread, supplies
-#   Mine:    block, iron_bar, coke, cut_gem, dirt
+## The rendered [id, glyph, label] rows, populated from ResourceConfig in ITEM_IDS order. A
+## function (not a const) because the metadata now lives in the catalog. Callers + the headless
+## item tests iterate this exactly as they did the old ITEM_DEFS const.
+func _item_defs() -> Array:
+	var out: Array = []
+	for id in ITEM_IDS:
+		out.append([id, ResourceConfig.glyph(id), ResourceConfig.label(id)])
+	return out
+
+# ── group membership (derived from ResourceConfig.family) ───────────────────────
+# Each owned resource is bucketed into one of these four ledger sections by its
+# ResourceConfig family id ("farm"/"refined"/"mine"/"other"). A resource whose family is
+# unknown (or "other") lands in the trailing "Other" group so the ledger NEVER silently
+# drops an owned good. The catalog reproduces today's exact grouping, with ONE deliberate
+# reconciliation: `jam` is family "farm" (it was in the Hud STOCKPILE_ROSTER but missing
+# from the old hardcoded FARM list, so it used to fall into "Other"). See ResourceConfig.gd.
 const GROUP_FARM := "Farm Goods"
 const GROUP_REFINED := "Refined"
 const GROUP_MINE := "Mine"
 const GROUP_OTHER := "Other"
 
-const FARM_RESOURCES: Array = [
-	"hay_bundle", "flour", "eggs", "soup", "pie",
-	"honey", "plank", "meat", "milk", "horseshoe",
-]
-const REFINED_RESOURCES: Array = ["bread", "supplies"]
-const MINE_RESOURCES: Array = ["block", "iron_bar", "coke", "cut_gem", "dirt"]
+## ResourceConfig family id → display group name. Anything not here (incl. ResourceConfig
+## FAMILY_OTHER and any uncatalogued key) maps to GROUP_OTHER via group_of().
+const FAMILY_TO_GROUP: Dictionary = {
+	ResourceConfig.FAMILY_FARM: GROUP_FARM,
+	ResourceConfig.FAMILY_REFINED: GROUP_REFINED,
+	ResourceConfig.FAMILY_MINE: GROUP_MINE,
+}
 
 ## The render order of the groups. "Other" is last so unknown keys trail the knowns.
 const GROUP_ORDER: Array = [GROUP_FARM, GROUP_REFINED, GROUP_MINE, GROUP_OTHER]
@@ -441,7 +451,7 @@ func _grid_entries() -> Array:
 			out.append({"key": id, "glyph": "", "label": _tool_name(String(id)),
 				"count": game.tool_count(String(id))})
 	if want_items:
-		for entry in ITEM_DEFS:
+		for entry in _item_defs():
 			var id: String = String(entry[0])
 			if not visible_item_ids().has(id):
 				continue
@@ -813,7 +823,7 @@ func tab_ids() -> Array:
 
 ## The ITEM_DEFS row for `id`, or {glyph,label} fallbacks for an unknown id.
 func _item_def(id: String) -> Dictionary:
-	for entry in ITEM_DEFS:
+	for entry in _item_defs():
 		if String(entry[0]) == id:
 			return {"glyph": String(entry[1]), "label": String(entry[2])}
 	return {"glyph": "•", "label": UiKit.pretty_name(id)}
@@ -830,7 +840,7 @@ func item_count(id: String) -> int:
 ## Every special item id the player HOLDS (count > 0), in ITEM_DEFS order. REAL GameState data.
 func item_ids() -> Array:
 	var out: Array = []
-	for entry in ITEM_DEFS:
+	for entry in _item_defs():
 		var id: String = String(entry[0])
 		if item_count(id) > 0:
 			out.append(id)
@@ -883,16 +893,11 @@ func visible_tool_ids() -> Array:
 
 # ── ledger math (pure helpers — usable + testable without rendering) ───────────
 
-## Which group a resource belongs to: "Farm Goods" / "Refined" / "Mine" for the
-## known production families, else "Other" so nothing is ever dropped.
+## Which group a resource belongs to: "Farm Goods" / "Refined" / "Mine" for the known
+## production families (derived from ResourceConfig.family), else "Other" so nothing is ever
+## dropped (covers ResourceConfig FAMILY_OTHER AND any uncatalogued key).
 func group_of(res: String) -> String:
-	if FARM_RESOURCES.has(res):
-		return GROUP_FARM
-	if REFINED_RESOURCES.has(res):
-		return GROUP_REFINED
-	if MINE_RESOURCES.has(res):
-		return GROUP_MINE
-	return GROUP_OTHER
+	return String(FAMILY_TO_GROUP.get(ResourceConfig.family(res), GROUP_OTHER))
 
 ## Distinct owned resource kinds (count > 0).
 func kinds() -> int:
