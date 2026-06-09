@@ -56,6 +56,7 @@ const MORE_ENTRIES := [
 	{"icon": "🏰", "label": "Castle", "id": "castle"},
 	{"icon": "🌷", "label": "Decorations", "id": "decorations"},
 	{"icon": "🌀", "label": "Portal", "id": "portal"},
+	{"icon": "✨", "label": "Boons", "id": "boons"},
 	{"icon": "⚖️", "label": "Charter", "id": "charter"},
 	{"icon": "📋", "label": "Quests", "id": "quests"},
 	{"icon": "🎁", "label": "Daily", "id": "daily"},

@@ -106,6 +106,10 @@ func give_gift(npc_id: String, resource: String) -> Dictionary:
 		return {"ok": false, "reason": "cooldown"}
 	var tier: String = NpcConfig.gift_tier(npc_id, resource)
 	var delta: float = NpcConfig.gift_delta(tier)
+	# T31 (ADDITIVE): owned BOONS that grant bond_gain_mult scale the bond rise from this gift
+	# (React boon bond_gain_mult applied to bond gains from gifts/orders). 1.0 for a fresh game
+	# (no boons owned) → delta unchanged → byte-identical gift behaviour.
+	delta *= boon_effect_mult(BoonConfig.BOND_GAIN_MULT)
 	# Consume one unit of the resource (erase the key when it hits 0).
 	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - 1)
 	if remaining == 0:
@@ -577,6 +581,149 @@ func build_decoration(id: String) -> Dictionary:
 	decorations[id] = decoration_count(id) + 1
 	influence += DecorationConfig.influence(id)
 	return {"ok": true, "id": id, "influence": influence}
+
+# ── Keepers + Boons (T31 — ADDITIVE, ported from src/keepers.ts + src/features/boons) ──
+## The keeper economy: a settlement's biome KEEPER appears once the settlement is built up,
+## and the player chooses a path — Coexist (→ Embers) or Drive Out (→ Core Ingots) — which
+## unlocks per-path BOONS (permanent perks) bought with those currencies.
+##
+## CURRENCIES (both uncapped, like coins/runes/influence; persisted defensively):
+##   embers       — granted by the Coexist path; spends on coexist boons.
+##   core_ingots  — granted by the Drive Out path; spends on driveout boons.
+## boons          — the { boon_id -> true } owned-boon map (the GDScript analogue of
+##                  React's state.boons). Owned boons' multipliers COMPOSE.
+##
+## KEEPER RESOLUTION reuses the existing story-flags map (story.flags): resolving settlement
+## `type` on `path` sets the `keeper_<type>_<path>` flag (KeeperConfig.flag_for). A keeper is
+## "resolved" once ANY keeper_<type>_* flag is set for that type — the choice is FINAL per
+## settlement, granted once (give_keeper_reward guards on it).
+##
+## ADDITIVE GUARANTEE: a fresh game has embers/core_ingots = 0 and an empty boons map, so
+## boon_effect_mult returns 1.0 for every channel — the credit_chain coins + the NPC bond-gain
+## sites are byte-identical to the pre-T31 economy. No keeper is resolved until a settlement is
+## built up. SAVE_VERSION is NOT bumped — old saves load with 0/0/{}.
+var embers: int = 0          ## Coexist currency (uncapped); granted by give_keeper_reward(coexist)
+var core_ingots: int = 0     ## Drive Out currency (uncapped); granted by give_keeper_reward(driveout)
+var boons: Dictionary = {}   ## owned boons: { boon_id:String -> true }
+
+## True when settlement `type`'s keeper has already been resolved (any keeper_<type>_* flag set).
+## The choice is final per settlement, so this guards give_keeper_reward from double-granting and
+## the encounter trigger from re-firing. (React: the per-zone settlement.keeperPath / flag check.)
+func keeper_resolved(type: String) -> bool:
+	if not KeeperConfig.has_keeper(type):
+		return false
+	for k in story.flags.keys():
+		var ks: String = String(k)
+		if ks.begins_with("keeper_%s_" % type) and bool(story.flags[k]):
+			return true
+	return false
+
+## The resolved path ("coexist" | "driveout") for settlement `type`, or "" when unresolved.
+func keeper_path_for(type: String) -> String:
+	for path in ["coexist", "driveout"]:
+		if bool(story.flags.get(KeeperConfig.flag_for(type, path), false)):
+			return path
+	return ""
+
+## True when settlement `type`'s keeper ENCOUNTER should fire RIGHT NOW: it's a real keeper type,
+## it isn't already resolved, AND the (home) settlement has built at least the keeper's
+## `appears_after_buildings` count. Mirrors React's keeperReadyFor gate (built-building threshold).
+## SCOPE: the port has one active settlement (the home FARM = the Deer-Spirit), so the built count
+## comes from `buildings.size()` (the home settlement's built spawners). The mine/harbor keepers are
+## ported + forward-compatible — this gate answers true for them once those become settlements with
+## their own built counts (a later task, T22); today only "farm" is reachable.
+func keeper_encounter_ready(type: String) -> bool:
+	if not KeeperConfig.has_keeper(type):
+		return false
+	if keeper_resolved(type):
+		return false
+	return buildings.size() >= KeeperConfig.appears_after_buildings(type)
+
+## GIVE_KEEPER_REWARD (T31 — the port's faithful collapse of React's KEEPER/CONFRONT →
+## startKeeperTrial / KEEPER/APPEASE → finalizeKeeperPath into a DIRECT choice; see KeeperConfig's
+## scope note). Resolve settlement `type` on `path` ∈ {coexist, driveout}: set the
+## `keeper_<type>_<path>` story flag and grant the path's currency (5 Embers for coexist, 5 Core
+## Ingots for driveout — from KeeperConfig). FINAL + once-per-type: a second call for an already-
+## resolved type is a no-op (no double grant). Guards (FIRST that trips reported): unknown type →
+## "unknown"; bad path → "bad_path"; not yet encounter-ready → "not_ready"; already resolved →
+## "resolved". On success returns {ok:true, type, path, flag, embers?|core_ingots?} with the amount
+## granted; on failure {ok:false, reason} WITHOUT mutating.
+func give_keeper_reward(type: String, path: String) -> Dictionary:
+	if not KeeperConfig.has_keeper(type):
+		return {"ok": false, "reason": "unknown"}
+	if not KeeperConfig.is_path(path):
+		return {"ok": false, "reason": "bad_path"}
+	# Already resolved (final) → no-op, no double grant.
+	if keeper_resolved(type):
+		return {"ok": false, "reason": "resolved"}
+	# Must be encounter-ready (built-building threshold met).
+	if buildings.size() < KeeperConfig.appears_after_buildings(type):
+		return {"ok": false, "reason": "not_ready"}
+	# Commit: set the path flag (kingdom-wide, path-gated for boon visibility) + grant the currency.
+	var flag: String = KeeperConfig.flag_for(type, path)
+	story.flags[flag] = true
+	var result: Dictionary = {"ok": true, "type": type, "path": path, "flag": flag}
+	if path == "coexist":
+		var e: int = KeeperConfig.coexist_embers(type)
+		embers += e
+		result["embers"] = e
+	else:
+		var ci: int = KeeperConfig.driveout_core_ingots(type)
+		core_ingots += ci
+		result["core_ingots"] = ci
+	return result
+
+# ── Boon purchase + effects (T31 — ported from src/features/boons/slice.ts BOON/PURCHASE) ──
+
+## True when boon `id` is UNLOCKED right now: its catalog PATH flag is set by ANY resolved keeper
+## (kingdom-wide, path-gated). Thin forwarder to BoonConfig.boon_id_is_unlocked over story.flags.
+func boon_unlocked(id: String) -> bool:
+	return BoonConfig.boon_id_is_unlocked(story.flags, id)
+
+## True when boon `id` is owned (purchased).
+func has_boon(id: String) -> bool:
+	return bool(boons.get(id, false))
+
+## True when boon `id` can be PURCHASED right now (mirrors the BOON/PURCHASE guards, in order):
+## it's a real boon, not already owned, its path is unlocked, AND its cost is affordable from the
+## current embers / core_ingots.
+func can_purchase_boon(id: String) -> bool:
+	var boon: Dictionary = BoonConfig.boon_by_id(id)
+	if boon.is_empty():
+		return false
+	if has_boon(id):
+		return false
+	if not BoonConfig.boon_is_unlocked(story.flags, boon):
+		return false
+	return BoonConfig.can_afford(embers, core_ingots, boon)
+
+## PURCHASE_BOON (BOON/PURCHASE parity, src/features/boons/slice.ts). Buy boon `id`: gated on
+## unlocked + affordable + not-owned → deduct the cost (embers and/or core_ingots, floored at 0)
+## and mark it owned. Returns {ok:true, id, embers, core_ingots} (the new balances) on success; on
+## failure {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "unknown" → "owned" → "locked" → "cant_afford".
+func purchase_boon(id: String) -> Dictionary:
+	var boon: Dictionary = BoonConfig.boon_by_id(id)
+	if boon.is_empty():
+		return {"ok": false, "reason": "unknown"}
+	if has_boon(id):
+		return {"ok": false, "reason": "owned"}
+	if not BoonConfig.boon_is_unlocked(story.flags, boon):
+		return {"ok": false, "reason": "locked"}
+	if not BoonConfig.can_afford(embers, core_ingots, boon):
+		return {"ok": false, "reason": "cant_afford"}
+	var cost: Dictionary = boon.get("cost", {})
+	embers = maxi(0, embers - int(cost.get("embers", 0)))
+	core_ingots = maxi(0, core_ingots - int(cost.get("core_ingots", 0)))
+	boons[id] = true
+	return {"ok": true, "id": id, "embers": embers, "core_ingots": core_ingots}
+
+## The composed multiplier from OWNED boons whose effect.type matches `effect_type`. Defaults to
+## 1.0 (no owned boon of that channel) — so a fresh game leaves every wired site byte-identical.
+## Thin forwarder to BoonConfig.boon_effect_mult over the owned `boons` map. The two channels are
+## "coin_gain_mult" (credit_chain coins) and "bond_gain_mult" (NPC bond gains).
+func boon_effect_mult(effect_type: String) -> float:
+	return BoonConfig.boon_effect_mult(boons, effect_type)
 
 # ── Magic Portal (ADDITIVE — ported from src/features/portal) ───────────────────
 ## Whether the Magic Portal town building has been built. The Portal is the gate that
@@ -1071,6 +1218,13 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var agg_ch: Dictionary = compute_ability_channels()
 	var agg_coin_bonus: int = int(agg_ch["coin_bonus_flat"]) + int(agg_ch["coin_bonus_per_tile"]) * chain_len
 	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
+	# T31 (ADDITIVE): owned Coexist/DriveOut BOONS that grant coin_gain_mult multiply the chain's
+	# coin reward (React boon coin_gain_mult applied to the chain-collected coins). boon_effect_mult
+	# returns 1.0 for a fresh game (no boons owned) → coins_gain unchanged → byte-identical. Floored
+	# back to int so coins stay whole; the result is the final credited gain (reported below).
+	var coin_mult: float = boon_effect_mult(BoonConfig.COIN_GAIN_MULT)
+	if coin_mult != 1.0:
+		coins_gain = int(floor(float(coins_gain) * coin_mult))
 	coins += coins_gain
 	turn += 1
 	# ── T3 + T5: Tile Collection chain folding (ADDITIVE, after the economy is credited) ──
@@ -1824,7 +1978,10 @@ func fill_order(index: int) -> Dictionary:
 	# cap, so a big-reward order can push coins arbitrarily high.
 	coins += payout
 	# Filling an order warms the relationship: +BOND_GAIN_PER_FILL, clamped to 10.
-	gain_bond(npc, BOND_GAIN_PER_FILL)
+	# T31 (ADDITIVE): owned BOONS that grant bond_gain_mult scale this order-fill bond gain
+	# (React boon bond_gain_mult applied to bond gains from gifts/orders). 1.0 for a fresh game
+	# (no boons owned) → +BOND_GAIN_PER_FILL unchanged → byte-identical order behaviour.
+	gain_bond(npc, BOND_GAIN_PER_FILL * boon_effect_mult(BoonConfig.BOND_GAIN_MULT))
 	orders.remove_at(index)
 	refill_orders()
 	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
@@ -3883,6 +4040,14 @@ func to_dict() -> Dictionary:
 		# written before the portal existed loads with portal_built = false (from_dict default),
 		# so the economy is unchanged.
 		"portal_built": portal_built,
+		# Keepers + Boons (T31, ADDITIVE): the two keeper currencies + the owned-boon map. The
+		# keeper-resolution path flags live in `story.flags` (persisted via the "story" key above),
+		# so they round-trip for free. SAVE_VERSION is NOT bumped — a save written before T31 existed
+		# loads with embers/core_ingots 0 + an empty boons map (from_dict defaults), so every boon
+		# multiplier is 1.0 and the economy is unchanged.
+		"embers": embers,
+		"core_ingots": core_ingots,
+		"boons": boons.duplicate(),
 		# Quests + Almanac (ADDITIVE): the rolled quest board (deep-copied — each quest is a
 		# Dictionary), the roll bookkeeping (quest_day + quest_seed), and the almanac track
 		# (xp / level / claimed tiers / latched structural honours). SAVE_VERSION is NOT bumped
@@ -4242,6 +4407,20 @@ static func from_dict(d: Dictionary) -> GameState:
 	# gate stays closed until the player builds it. Coerced to a plain bool. SAVE_VERSION is
 	# NOT bumped.
 	s.portal_built = bool(d.get("portal_built", false))
+	# Restore Keepers + Boons (T31, ADDITIVE). Missing keys (any save written before T31 existed)
+	# → embers/core_ingots 0 + an empty boons map (the defaults the new GameState already carries),
+	# so every boon multiplier is 1.0 and the economy is unchanged. Both currencies are int-coerced
+	# (JSON yields floats) + floored at 0; the boons map keeps ONLY truthy entries for REAL boon ids
+	# so a corrupt/stale save can never seed a phantom (and thus mult-affecting) boon. The keeper
+	# path flags ride along in `story.flags` (restored above). SAVE_VERSION is NOT bumped.
+	s.embers = maxi(0, int(d.get("embers", 0)))
+	s.core_ingots = maxi(0, int(d.get("core_ingots", 0)))
+	var boons_d: Variant = d.get("boons", null)
+	if boons_d is Dictionary:
+		for k in boons_d:
+			var bid := String(k)
+			if BoonConfig.has_boon(bid) and bool(boons_d[k]):
+				s.boons[bid] = true
 	# Restore Quests + Almanac (ADDITIVE). Missing keys (any save written before quests
 	# existed) → an empty quest board, day 0, the default seed, and a fresh almanac (the
 	# defaults the new GameState already carries), so old saves load with no quests rolled

@@ -63,6 +63,9 @@ signal start_farming_requested
 ## (settlement / buildings / refine / market sell+buy / orders) is reached from here + the ☰
 ## menu. Main routes this through apply_deeplink("town") to open the TownScreen.
 signal ledger_requested
+## T31 — emitted when the player taps the "✨ Boons" overlay button. Main routes this through
+## apply_deeplink("boons") to open the BoonsScreen (the keeper-perk catalogs).
+signal boons_requested
 
 ## action id → Button, for headless tests. Static keys: "close". Panel keys are
 ## added/removed as panels open/close: "demolish" (built-lot card),
@@ -217,6 +220,20 @@ func _build_shell() -> void:
 	ledger_btn.connect("pressed", Callable(self, "_on_ledger_button"))
 	overlay.add_child(ledger_btn)
 	_action_buttons["ledger"] = ledger_btn
+
+	# T31 — "✨ Boons" button, top-left under the Town Ledger button. The discoverable on-map path
+	# to the keeper-perk catalogs (Coexist / Drive Out boons bought with Embers / Core Ingots).
+	# Emits `boons_requested`; Main routes it through apply_deeplink("boons"). Registered as "boons".
+	var boons_btn := Button.new()
+	boons_btn.text = "✨ Boons"
+	UiKit.style_button(boons_btn, Palette.EMBER, 6, 18)
+	boons_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	boons_btn.offset_left = 18
+	# Sit just below the Town Ledger button (overlay_top + the pill + ledger row heights).
+	boons_btn.offset_top = overlay_top + 100.0
+	boons_btn.connect("pressed", Callable(self, "_on_boons_button"))
+	overlay.add_child(boons_btn)
+	_action_buttons["boons"] = boons_btn
 
 	# Hidden close affordance — created + wired but NOT added to the overlay, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests
@@ -594,6 +611,12 @@ func _on_ledger_button() -> void:
 	_close_panel()
 	emit_signal("ledger_requested")
 
+## T31 — the "✨ Boons" overlay button was pressed: dismiss any open panel and emit
+## `boons_requested` so Main opens the BoonsScreen via apply_deeplink("boons").
+func _on_boons_button() -> void:
+	_close_panel()
+	emit_signal("boons_requested")
+
 ## Build `id` through the SAME GameState API as TownScreen, then dismiss the panel,
 ## re-render the map (so the new house shows), and emit state_changed on success.
 func _do_build(id: String) -> void:
@@ -618,7 +641,7 @@ func _do_demolish(id: String) -> void:
 ## `_action_buttons` so tests + handlers never read a stale node. The STATIC overlay
 ## entries (close, board, build_open, zoom_in/out, recenter) are preserved — only the
 ## per-panel keys (demolish / build:<id> / picker_close) are dropped.
-const _STATIC_ACTION_KEYS := ["close", "board", "ledger", "build_open", "zoom_in", "zoom_out", "recenter"]
+const _STATIC_ACTION_KEYS := ["close", "board", "ledger", "boons", "build_open", "zoom_in", "zoom_out", "recenter"]
 func _close_panel() -> void:
 	if _panel != null:
 		_panel.queue_free()

@@ -124,6 +124,16 @@ var _decorations_screen: DecorationsScreenScript   ## lazily created
 ## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
 var _portal_screen: PortalScreenScript   ## lazily created
+## T31 — Boons screen: the keeper-perk catalogs (Coexist/Drive Out boons bought with
+## Embers / Core Ingots). Reachable from the ☰ menu, the town-map "✨ Boons" button, and the
+## `boons` deeplink.
+const BoonsScreenScript := preload("res://scenes/BoonsScreen.gd")
+var _boons_screen: BoonsScreenScript   ## lazily created
+## T31 — Keeper encounter modal: appears when a settlement is built up; the FINAL Coexist /
+## Drive Out choice. Auto-triggered off a town/build event (and replayable via the `keeper`
+## deeplink for QA).
+const KeeperModalScript := preload("res://scenes/KeeperModal.gd")
+var _keeper_modal: KeeperModalScript   ## lazily created
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
 ## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
@@ -449,7 +459,7 @@ func _switch_primary_view(opener: String) -> void:
 	# (RecipeWikiScreen moved OUT of this list — it's a primary now, hidden above.)
 	for screen in [_achievements_screen, _tile_collection_screen,
 			_chronicle_screen, _castle_screen, _charter_screen, _decorations_screen,
-			_portal_screen, _quests_screen]:
+			_portal_screen, _quests_screen, _boons_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
 	call(opener)
@@ -524,7 +534,7 @@ func _overlay_list() -> Array:
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
-		_charter_screen, _quests_screen,
+		_charter_screen, _quests_screen, _boons_screen, _keeper_modal,
 	]
 
 ## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
@@ -743,6 +753,9 @@ func _open_townmap() -> void:
 		# through apply_deeplink("town") → _switch_primary_view("_open_town"), so the town MAP
 		# (a sibling primary) is hidden first and the ledger reads as a full-brightness view.
 		_townmap_screen.connect("ledger_requested", Callable(self, "_on_townmap_ledger_requested"))
+		# T31: the "✨ Boons" overlay button opens the BoonsScreen (keeper-perk catalogs). Route
+		# through apply_deeplink("boons") so it opens as a full-brightness view over the board.
+		_townmap_screen.connect("boons_requested", Callable(self, "_on_townmap_boons_requested"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
@@ -766,6 +779,11 @@ func _on_townmap_board_requested() -> void:
 ## first (sibling primary) and the ledger comes up as a full-brightness view, not over the map.
 func _on_townmap_ledger_requested() -> void:
 	apply_deeplink("town")
+
+## T31: the Town map's "✨ Boons" overlay button was pressed — open the BoonsScreen via
+## apply_deeplink("boons") (a full-brightness view over the board).
+func _on_townmap_boons_requested() -> void:
+	apply_deeplink("boons")
 
 # ── Achievements trophy screen (M10) ──────────────────────────────────────────────
 
@@ -996,6 +1014,83 @@ func _on_portal_closed() -> void:
 	SaveManager.save(game)
 	_refresh_totals()
 	_refresh_chain_progress()
+
+# ── T31: Boons + Keeper encounter ──────────────────────────────────────────────────
+
+## Open the Boons catalog screen, lazily creating + wiring it on first use (mirrors
+## _open_portal). The screen mutates GameState in place (purchase_boon deducts Embers /
+## Core Ingots + marks owned); its `closed` is routed to a hide+persist handler. open()
+## re-reads the live balances + owned set each time.
+func _open_boons() -> void:
+	if _boons_screen == null:
+		_boons_screen = BoonsScreenScript.new()
+		add_child(_boons_screen)
+		_boons_screen.setup(game)
+		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
+	_boons_screen.open()
+	_router.open_modal(ViewRouter.Modal.BOONS)
+
+## The boons screen was closed: hide it, reset the router, and persist (a claim spent Embers /
+## Core Ingots + marked a boon owned) + refresh the stockpile HUD. Mirrors _on_portal_closed.
+func _on_boons_closed() -> void:
+	if _boons_screen != null:
+		_boons_screen.visible = false
+	_router.close_modal()
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
+## Present the keeper encounter for settlement `type` ("farm" today), lazily creating + wiring
+## the modal on first use. The modal makes the FINAL Coexist / Drive Out choice via the real
+## game.give_keeper_reward(); its `resolved` signal routes to _on_keeper_resolved (save + refresh
+## + a toast). Used by the auto-trigger in _on_town_changed and the `keeper` deeplink.
+func _open_keeper(type: String) -> void:
+	if _keeper_modal == null:
+		_keeper_modal = KeeperModalScript.new()
+		add_child(_keeper_modal)
+		_keeper_modal.setup(game)
+		_keeper_modal.connect("resolved", Callable(self, "_on_keeper_resolved"))
+		_keeper_modal.connect("closed", Callable(self, "_on_keeper_closed"))
+	_keeper_modal.open_for(type)
+	_router.open_modal(ViewRouter.Modal.KEEPER)
+
+## The keeper encounter resolved (a path was chosen + the player Continued): hide the modal,
+## reset the router, persist (give_keeper_reward set the path flag + granted the currency), and
+## refresh the HUD. A toast confirms the outcome + nudges toward the now-unlocked Boons.
+func _on_keeper_resolved(type: String, path: String) -> void:
+	_router.close_modal()
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+	var keeper_name: String = KeeperConfig.keeper_name(type)
+	if path == "coexist":
+		show_toast("%s stays. +%d ✨ Embers — spend them in ✨ Boons." % [keeper_name, KeeperConfig.coexist_embers(type)])
+	else:
+		show_toast("%s withdraws. +%d ⬡ Core Ingots — spend them in ✨ Boons." % [keeper_name, KeeperConfig.driveout_core_ingots(type)])
+
+## The keeper modal was force-closed (defensive — the normal flow resolves via a choice +
+## Continue). Just reset the router so nav stays consistent.
+func _on_keeper_closed() -> void:
+	if _router.current_modal() == ViewRouter.Modal.KEEPER:
+		_router.close_modal()
+
+## T31 — fire the keeper encounter when the (home) settlement is built up and its keeper
+## isn't resolved yet. Called from _on_town_changed (the single town-action funnel) AFTER the
+## board/HUD refresh + save. SCOPE: the port has one active settlement (the home FARM = the
+## Deer-Spirit), so only "farm" is checked today; the mine/harbor keepers are ported +
+## forward-compatible and will be wired off their settlements in a later task (T22). Guarded so
+## it never interrupts an already-open keeper modal (or a story beat showing on top).
+func _maybe_trigger_keeper() -> void:
+	if game == null:
+		return
+	# Don't stack the encounter on top of an already-open keeper modal or a story beat.
+	if _keeper_modal != null and _keeper_modal.visible:
+		return
+	if _story_modal != null and _story_modal.visible:
+		return
+	if not game.keeper_encounter_ready("farm"):
+		return
+	_open_keeper("farm")
 
 # ── Charter (read-only) ──────────────────────────────────────────────────────────
 
@@ -1427,6 +1522,12 @@ func apply_deeplink(id: String) -> bool:
 			_open_decorations()
 		ViewRouter.Modal.PORTAL:
 			_open_portal()
+		ViewRouter.Modal.BOONS:
+			_open_boons()
+		ViewRouter.Modal.KEEPER:
+			# QA / preview path: open the FARM keeper encounter on demand (the normal path is the
+			# auto-trigger in _on_town_changed). Opens for "farm" — the one reachable settlement.
+			_open_keeper("farm")
 		ViewRouter.Modal.CHARTER:
 			_open_charter()
 		ViewRouter.Modal.QUESTS:
@@ -1516,6 +1617,14 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a build/summon is persisted + the
 				# stockpile HUD refreshed (it also hides + resets the router).
 				_on_portal_closed()
+			elif _boons_screen != null and _boons_screen.visible:
+				# Route through the close handler so a claim is persisted + the stockpile
+				# HUD refreshed (it also hides + resets the router).
+				_on_boons_closed()
+			elif _keeper_modal != null and _keeper_modal.visible:
+				# A keeper encounter open on top of the board: hide it (resets the router).
+				_keeper_modal.visible = false
+				_router.close_modal()
 			elif _charter_screen != null and _charter_screen.visible:
 				# Charter is read-only — the close handler just hides + resets the router
 				# (no save needed, nothing changed).
@@ -1745,6 +1854,10 @@ func _on_town_changed() -> void:
 	# The Town/Map modal closed back to the board before this fires, so surface any queued
 	# beat now. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
+	# T31 — a town action may have built the settlement up past its keeper's threshold (a
+	# `build`); fire the keeper encounter now if it's ready + unresolved. No-op when not ready,
+	# already resolved, or a keeper/story modal is already showing.
+	_maybe_trigger_keeper()
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
 ## biome flip before we overwrite the pool. Compares against Constants.MINE_POOL.
