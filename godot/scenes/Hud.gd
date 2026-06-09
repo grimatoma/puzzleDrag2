@@ -47,6 +47,8 @@ var _rats_pill_box: PanelContainer      ## rats pill wrapper (toggled visible)
 var _rats_pill: Label                   ## 🐀 N/5
 var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
 var _runes_pill: Label                  ## 🔮 N (harbor's premium reward)
+var _free_moves_pill_box: PanelContainer ## tile-variant free-moves pill wrapper (toggled visible)
+var _free_moves_pill: Label             ## 👟 N — banked free moves from tile abilities
 
 # A2 — Season bar (the React src/ui/seasonStrip.tsx port). Loaded via preload (NO class_name).
 const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
@@ -224,6 +226,14 @@ func _build_hud() -> void:
 	_runes_pill = _runes_pill_box.get_meta("label")
 	_runes_pill_box.visible = false
 	topbar_row.add_child(_runes_pill_box)
+
+	# Free-moves pill — banked free moves granted by tile-variant abilities (React's free-moves
+	# count). A cool moss-green; shown only when game.free_moves() > 0 so it stays out of the bar
+	# until a free-moves tile (Palm / Clover / Melon / Turkey) has banked one this run.
+	_free_moves_pill_box = UiKit.make_pill("👟 0", Palette.GO_GREEN)
+	_free_moves_pill = _free_moves_pill_box.get_meta("label")
+	_free_moves_pill_box.visible = false
+	topbar_row.add_child(_free_moves_pill_box)
 
 	# ── A2. Season bar — the full-width seasonal progress strip (above the chain bar) ──
 	# The React src/ui/seasonStrip.tsx port: four proportional gradient segments + a wagon
@@ -1181,6 +1191,21 @@ func _refresh_meta() -> void:
 		return
 	_coin_pill.text = "🪙 %d" % game.coins
 	_refresh_level()
+	_refresh_free_moves()
+
+## Tile-variant free-moves readout. Shows "👟 N" whenever the player has banked free moves from a
+## tile ability (game.free_moves() > 0); HIDDEN at 0 so it never disturbs the bar / visual goldens
+## on a fresh board. Mirrors React's free-moves count in the HUD. Refreshed via _refresh_meta on
+## every live update (coins/turn/state change).
+func _refresh_free_moves() -> void:
+	if _free_moves_pill_box == null or _free_moves_pill == null or game == null:
+		return
+	var n: int = game.free_moves()
+	if n <= 0:
+		_free_moves_pill_box.visible = false
+		return
+	_free_moves_pill.text = "👟 %d" % n
+	_free_moves_pill_box.visible = true
 
 ## Build the orange "Lv N" almanac pill: a rounded ember chip holding a fixed-width inner
 ## Control that stacks a brighter-orange XP fill (left-anchored, width = fraction into the

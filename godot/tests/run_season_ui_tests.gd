@@ -31,6 +31,7 @@ func _initialize() -> void:
 	_test_field_colors()
 	_test_harvest_recap_line()
 	await _test_season_bar_run_gated()
+	await _test_free_moves_readout()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -180,6 +181,39 @@ func _test_season_bar_run_gated() -> void:
 	if hud._season_bar_box != null:
 		_check(hud._season_bar_box.visible,
 			"run active → the season bar is SHOWN")
+
+	hud.queue_free()
+	await process_frame
+
+# ── Free-moves HUD readout: hidden at 0, shown as "👟 N" once banked ─────────────
+
+## The tile-variant free-moves pill reads game.free_moves(): HIDDEN when 0 (so it never disturbs
+## the bar / visual goldens on a fresh board), shown as "👟 N" once a free-moves tile ability has
+## banked moves. Builds the real Hud node headlessly and asserts the pill toggles via _refresh_meta.
+func _test_free_moves_readout() -> void:
+	var game := GameState.new()
+	game.coins = 250
+	var hud = HudScript.new()
+	hud.game = game
+	root.add_child(hud)
+	hud.build()
+	await process_frame
+
+	_check(hud._free_moves_pill_box != null, "HUD built a free-moves pill box")
+	# Fresh game (0 free moves) → the pill is HIDDEN.
+	hud._refresh_meta()
+	if hud._free_moves_pill_box != null:
+		_check(not hud._free_moves_pill_box.visible, "0 free moves → the readout is HIDDEN")
+
+	# Bank free moves the real way: discover+activate Clover (free_moves 2), chain it.
+	_check(game.buy_tile("tile_bird_clover"), "(setup) buy Clover")
+	_check(game.set_active_tile("flower", "tile_bird_clover"), "(setup) activate Clover")
+	game.credit_chain(Constants.Tile.BIRD_CLOVER, 3)
+	_check(game.free_moves() == 2, "(setup) one clover chain banked 2 free moves")
+	hud._refresh_meta()
+	if hud._free_moves_pill_box != null:
+		_check(hud._free_moves_pill_box.visible, "free moves > 0 → the readout is SHOWN")
+		_check(hud._free_moves_pill.text == "👟 2", "the readout reads '👟 2' (got '%s')" % hud._free_moves_pill.text)
 
 	hud.queue_free()
 	await process_frame
