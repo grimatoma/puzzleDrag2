@@ -19,11 +19,17 @@ const DROP_PREFIXES := [
 	"tree", "herd", "cattle", "mount", "mine", "special", "fish", "coin",
 ]
 
-## Human-readable display name for a variant id ("tile_grass_meadow" → "Meadow",
-## "tile_mine_iron_ore" → "Iron Ore"). Same rules as TileCollectionScreen._derive_display_name.
+## Human-readable display name for a variant id ("tile_grass_meadow" → "Meadow Grass",
+## "tile_mine_iron_ore" → "Ore"). Returns the catalog display_name via TileVariantConfig when
+## available (the React displayName, verbatim); falls back to a title-case derivation for
+## non-catalog ids (hazards). Mirrors React displayName.
 static func display_name(id: String) -> String:
 	if id == "":
 		return ""
+	# Prefer the catalog display_name (set for all 75 catalog variants).
+	if TileVariantConfig.is_tile(id):
+		return TileVariantConfig.display_name(id)
+	# Non-catalog (rat, rubble, fish_pearl): fall back to title-case derivation.
 	var s: String = id
 	if s.begins_with("tile_"):
 		s = s.substr(5)
@@ -36,6 +42,11 @@ static func display_name(id: String) -> String:
 		if ps.length() > 0:
 			words.append(ps.substr(0, 1).to_upper() + ps.substr(1))
 	return " ".join(words)
+
+## The player-facing description for a variant id. Returns the catalog description when
+## available (the React description, verbatim), or "" for non-catalog ids.
+static func description(id: String) -> String:
+	return TileVariantConfig.description(id)
 
 ## A square TextureRect for a board tile's art (res://assets/tiles/<key>.png), or null when no
 ## PNG exists for that tile — callers fall back to a colored square / category glyph. Mirrors the

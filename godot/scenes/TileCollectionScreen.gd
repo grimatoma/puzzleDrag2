@@ -411,6 +411,18 @@ func _rebuild_detail() -> void:
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_detail_body.add_child(status)
 
+	# Description (player-facing flavour text from the React catalog).
+	if TileVariantConfig.is_tile(id):
+		var desc_text: String = TVU.description(id)
+		if desc_text != "":
+			var desc := Label.new()
+			desc.text = desc_text
+			desc.add_theme_font_size_override("font_size", 13)
+			desc.add_theme_color_override("font_color", COL_BODY)
+			desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_detail_body.add_child(desc)
+
 	# Action button (mirrors getTileDetailViewModel). Non-catalog hazards have no action.
 	if TileVariantConfig.is_tile(id):
 		var act: Dictionary = TVU.detail_action(game, id, category)

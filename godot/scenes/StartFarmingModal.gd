@@ -548,6 +548,19 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 		act.add_theme_color_override("font_color", Palette.GO_GREEN)
 		name_row.add_child(act)
 
+	# Description (first sentence of the React catalog description — the variant's summary).
+	var desc_full: String = TVU.description(id)
+	if desc_full != "":
+		# Show only the first sentence (up to the first ".") as the compact summary line.
+		var dot_pos: int = desc_full.find(".")
+		var desc_line: String = (desc_full.substr(0, dot_pos + 1) if dot_pos >= 0 else desc_full)
+		var desc_lbl := Label.new()
+		desc_lbl.text = desc_line
+		desc_lbl.add_theme_font_size_override("font_size", 11)
+		desc_lbl.add_theme_color_override("font_color", Palette.INK_MID)
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.add_child(desc_lbl)
+
 	# Status line (mirrors React effects.ts statusFor).
 	var status := Label.new()
 	status.text = _status_for(id)
