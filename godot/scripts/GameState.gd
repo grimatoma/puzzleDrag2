@@ -2293,6 +2293,13 @@ func travel_block_reason(node_id: String) -> String:
 		return "level"
 	if coins < CartographyConfig.entry_cost(node_id):
 		return "cost"
+	# A foundable settlement node (farm/mine/harbor) must be FOUNDED before you can travel to it —
+	# you UNLOCK a new zone by founding it (the discovery action), and only then can you set out.
+	# Home is always founded, so it's never blocked. Checked AFTER reachability/level/cost so a
+	# distant or unaffordable node still reports those first (matching the screen's lock hints), and
+	# this is the gate that keeps the marker from ever stranding on an un-settled board node.
+	if CartographyConfig.settlement_type_for_zone(node_id) != "" and not is_settlement_founded(node_id):
+		return "unfounded"
 	return ""
 
 ## True when `node_id` can be travelled to RIGHT NOW (travel_block_reason == "").
@@ -2341,10 +2348,10 @@ func travel_to(node_id: String) -> Dictionary:
 		"ok": true, "node": node_id, "kind": kind, "board_kind": board_kind,
 		"entered": false, "first_visit": first_visit, "launch": {},
 	}
-	# T22 founding GATE: a BOARD node that isn't founded can't be ENTERED — the marker moves (the
-	# player is "at" the place on the map) but no board launches. Home is always founded, so the
-	# home-only game never sees this; meadow/orchard/quarry/etc. must be founded first. Surfaced
-	# honestly via result.launch.reason so Main can prompt the founder flow.
+	# Founding GATE (defensive): a BOARD node must be founded before its board can be entered. This is
+	# now blocked UPSTREAM by travel_block_reason ("unfounded"), so a normal travel_to never reaches
+	# here for an unfounded node — the marker doesn't move and no entry cost is charged. Kept as a
+	# belt-and-suspenders guard in case travel_to is ever called past the gate (home is always founded).
 	if board_kind != "" and not is_settlement_founded(node_id):
 		result["launch"] = {"ok": false, "reason": "unfounded"}
 		return result
@@ -4997,6 +5004,13 @@ static func from_dict(d: Dictionary) -> GameState:
 				"biome": String((rec as Dictionary).get("biome", "")),
 				"keeper_path": kp,
 			}
+	# Un-strand a save left on an UNFOUNDED board node. A pre-fix build let the marker move onto a
+	# farm/mine/harbor node you hadn't founded yet (without activating it — the live fields stayed
+	# the home zone's), leaving the player unable to start a run there. Now that founding gates
+	# travel, standing on an un-settled board node is unreachable, so snap the active node back to
+	# home (always founded) once settlements are known. A legitimately-founded node is left as-is.
+	if CartographyConfig.settlement_type_for_zone(s.map_current) != "" and not s.is_settlement_founded(s.map_current):
+		s.map_current = "home"
 	var arch_raw: Variant = d.get("zone_archives", {})
 	if arch_raw is Dictionary:
 		for k in (arch_raw as Dictionary).keys():

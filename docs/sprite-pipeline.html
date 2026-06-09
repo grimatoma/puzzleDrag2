@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprite Pipeline — generate &amp; animate a cohesive set, gap-filled and gated</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     THEME — warm/earthy, matches the farming game + the pixel-art subject.
+     Terracotta/amber dominant, pine-green accent, dark ink on warm cream.
+     ════════════════════════════════════════════════════════════════ */
+  :root{
+    --ink:#2b211a; --muted:#7a6a58; --line:#e6dcc9; --bg:#faf5ec;
+    --paper:#fffdf7; --code:#f1e9d8;
+    --accent:#bb4d20;       /* terracotta — dominant */
+    --accent2:#3f7350;      /* pine green — secondary */
+    --gold:#c8860d;         /* harvest gold — tertiary accent */
+    --shadow:0 1px 2px rgba(60,38,12,.07), 0 6px 22px -11px rgba(60,38,12,.26);
+    /* status ramp for chips / pills / SVG */
+    --ok:#3f7350; --warn:#c8860d; --info:#1f6f8b; --danger:#b5341f; --idle:#9a8c78;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 82% -8%, color-mix(in srgb,var(--accent) 11%,transparent), transparent 60%),
+      radial-gradient(1000px 480px at -10% 3%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      radial-gradient(900px 500px at 50% 120%, color-mix(in srgb,var(--gold) 7%,transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #f3ead8 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#7c5418;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.5 var(--mono);color:#4a3a26;}
+  pre code{background:none;padding:0;color:inherit;}
+  .mono{font-family:var(--mono);}
+
+  .page{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  /* hero */
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.5rem 1.6rem 1.2rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,transparent), color-mix(in srgb,var(--accent2) 7%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero .kicker{font:700 .76rem/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 .5rem;}
+  header.hero h1{font:800 2.8rem/1.06 var(--serif);letter-spacing:-.016em;margin:.05rem 0 .4rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.06rem;margin:.2rem 0 .8rem;max-width:70ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .75rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.77rem;font-weight:600;padding:.2rem .62rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  /* ── Horizontal section tabs ── */
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(60,38,12,.30);}
+
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.9rem/1.14 var(--serif);letter-spacing:-.012em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.28rem;color:var(--ink);}
+  section + section h2{margin-top:2.5rem;}
+  h3{font:600 1.24rem/1.25 var(--serif);margin-top:1.6rem;color:var(--ink);}
+  .lede{font-size:1.04rem;color:#4a3c2e;}
+  p,li{margin:.45rem 0;}
+  ol li,ul li{margin:.3rem 0;}
+
+  /* tables */
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.88rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.5rem .68rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 55%,#fff);}
+  td.n,th.n{text-align:center;font-family:var(--mono);font-weight:600;width:2.6rem;}
+
+  /* callouts */
+  .box{background:color-mix(in srgb,var(--accent2) 7%,#fff);border-left:4px solid var(--accent2);padding:.78rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--gold) 10%,#fff);border-left-color:var(--gold);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box.spend{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box b{font-family:var(--serif);}
+
+  /* status pills + legend */
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;white-space:nowrap;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .pill.cheap{background:var(--accent2);} .pill.spend{background:var(--danger);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.9rem;flex-wrap:wrap;align-items:center;}
+
+  /* cards + responsive grid */
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.8rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card.green{border-left-color:var(--accent2);}
+  .card.gold{border-left-color:var(--gold);}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(60,38,12,.09),0 12px 30px -12px rgba(60,38,12,.32);}
+  .card h3{margin-top:.2rem;}
+  .card h3 .num{font-family:var(--mono);color:var(--accent);font-weight:600;margin-right:.4rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));}
+
+  /* diagram */
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.1rem;margin:1.2rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+  .diagram .cap{font-size:.78rem;color:var(--muted);margin:.2rem 0 .9rem;font-style:italic;}
+  svg text{font-family:"IBM Plex Sans",sans-serif;}
+
+  /* filter bar */
+  .filterbar{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 .2rem;align-items:center;}
+  .filterbar .lbl{font-size:.8rem;color:var(--muted);margin-right:.2rem;}
+  .filterbar button{font:600 .8rem/1 var(--sans);padding:.34rem .65rem;border:1px solid var(--line);background:var(--paper);border-radius:7px;cursor:pointer;color:var(--ink);transition:background .14s,color .14s,border-color .14s;}
+  .filterbar button:hover{border-color:var(--accent);color:var(--accent);}
+  .filterbar button.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* details */
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.5rem 0;color:var(--ink);}
+  details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:.4rem;}
+
+  /* page-load reveal */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  /* edge cases — not optional */
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs,.filterbar{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ▸▸ HERO -->
+  <header class="hero">
+    <p class="kicker">Asset Pipeline · Reusable Skill Suite</p>
+    <h1>Sprite Pipeline</h1>
+    <p class="sub">Generate and animate a <b>cohesive family</b> of pixel-art game sprites from two durable inputs — gap-filled, quality-gated, and integrated into the Godot v2 tile slot. Cheap critique reviews bracket the two operations that actually cost: generation and animation.</p>
+    <p class="meta">Scope: framework overview · 2026-06-09 · lives in <code>.claude/skills/sprite-pipeline/</code> · docs drift from code — trust <code>SKILL.md</code></p>
+    <div class="chips">
+      <span class="chip">pixel art</span>
+      <span class="chip">5 stages · 4 gates</span>
+      <span class="chip">PixelLab → Aseprite → Godot</span>
+      <span class="chip">idempotent gap-fill</span>
+      <span class="chip">intake → proposal</span>
+      <span class="chip">review viewer</span>
+    </div>
+  </header>
+
+  <!-- ▸▸ TABS -->
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview &amp; flow</button>
+    <button class="tab" role="tab" data-tab="gates">Gates &amp; cost</button>
+    <button class="tab" role="tab" data-tab="inputs">The two inputs</button>
+    <button class="tab" role="tab" data-tab="build">Build, loop &amp; status</button>
+  </nav>
+
+  <main>
+
+    <!-- ══════════════════ PANEL 1 — OVERVIEW & FLOW ══════════════════ -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview and flow">
+
+      <section id="summary">
+        <h2>What this is</h2>
+        <p class="lede">A reusable pipeline for producing a <b>growable family</b> of game sprites/tiles on a locked look. You hand it two durable inputs; it generates only what is <b>missing</b> and animates it, with <b>four cheap critique gates bracketing the two expensive operations</b> so a bad asset is caught on paper — not after you have spent generation credits and frame-by-frame effort.</p>
+        <div class="box tip"><b>TL;DR.</b> Two inputs in (a style spec from reference art + a co-located set manifest), a cohesive animated tile family out. Stage&nbsp;0–5 carry the work; gates G1–G4 keep cost down by rejecting off-style work <em>before</em> the spend. PixelLab generates stills, Aseprite is the only animation executor, Godot consumes the result.</div>
+      </section>
+
+      <section id="problem">
+        <h2>The problem it solves</h2>
+        <p>The goal is to <b>mass-produce cohesive, professional pixel-art assets</b> — tiles, items, characters — with consistent quality and a loop you can keep adding to. The craft pieces already existed, but they did not compose into a pipeline. Three gaps stood out:</p>
+        <div class="grid">
+          <div class="card"><h3>No physics direction</h3><p>Aseprite animates well when hand-directed frame by frame, but on its own it does not follow physics — you hand-describe all 16 frames of leaves falling or snow piling. There was no systematized motion-direction layer.</p></div>
+          <div class="card green"><h3>No cohesion anchor</h3><p>Strong static-art and motion skills existed, but nothing forced every asset onto one palette, light direction, and silhouette. A set drifts without a single contract to score each member against.</p></div>
+          <div class="card gold"><h3>No review surface</h3><p>No way to eyeball a whole set at once — gaps included — comment on it, and route those notes back into the work. The backlog was invisible and feedback was hand-typed.</p></div>
+        </div>
+        <p>The fix is a pipeline that takes <b>reference assets defining a look</b> plus <b>a co-located set manifest declaring a cohesive, growable group</b>, generates only what is missing, brackets the expensive steps with cheap critique gates, and exposes a review viewer where you eyeball every set (gaps included) and copy comments back to seed the next pass.</p>
+      </section>
+
+      <section id="stages">
+        <h2>The five stages</h2>
+        <p>References distil into a style spec once (Stage&nbsp;0). From there each run plans the set against what is already on disk (Stage&nbsp;1), generates the missing base stills (Stage&nbsp;2), storyboards the physics of each motion (Stage&nbsp;3), animates those storyboards (Stage&nbsp;4), and packs the frames into the engine (Stage&nbsp;5).</p>
+        <table>
+          <thead><tr><th class="n">#</th><th>Stage</th><th>What happens</th><th>Tool</th></tr></thead>
+          <tbody>
+            <tr><td class="n">0</td><td><b>Extract style spec</b></td><td>Read references; pull canvas + palette ramps + hue-shift; transcribe light / outline / perspective / fps into <code>_style-spec.json</code>.</td><td>Aseprite <span class="mono">analyze_reference</span> / <span class="mono">get_palette</span></td></tr>
+            <tr><td class="n">1</td><td><b>Plan the set</b></td><td>Diff the manifest's <code>keyframes</code>/<code>idles</code>/<code>transitions</code> against files on disk; <b>only the gaps proceed</b>. Gather sibling priors.</td><td>— (read <code>manifest.json</code>)</td></tr>
+            <tr><td class="n">2</td><td><b>Generate keyframe stills</b> <span class="pill spend">spend</span></td><td>For each missing keyframe, generate the base still; priors = sibling set assets for continuity.</td><td><b>PixelLab</b> or hand</td></tr>
+            <tr><td class="n">3</td><td><b>Physics storyboard</b></td><td>For each idle/transition, fill the storyboard template: frame count, fps, per-frame forces + pixel-level change.</td><td>pixel-art-animation skill</td></tr>
+            <tr><td class="n">4</td><td><b>Animate</b> <span class="pill spend">spend</span></td><td>Execute the storyboard into per-frame PNGs + a preview GIF.</td><td><b>Aseprite only</b></td></tr>
+            <tr><td class="n">5</td><td><b>Integrate &amp; verify</b></td><td>Pack frames → v2 <code>.tres</code>; import; verify in-engine.</td><td><span class="mono">assemble_tres.gd</span> + Godot</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="flow">
+        <h2>Pipeline flow</h2>
+        <p>References (the look) and the manifest (the work) feed Stage&nbsp;0/1. Gates <b>G1–G4</b> sit immediately around the two <span style="color:var(--danger);font-weight:700;">spend</span> steps. A reject loops back to fix that one step; an accept advances. After integration the viewer surfaces the whole set, and copied comments edit the manifest to drive the next idempotent pass.</p>
+        <div class="diagram">
+          <p class="cap">Five stages, four gates. Red blocks are the expensive operations; the dashed return is the human feedback loop through the viewer.</p>
+          <svg viewBox="0 0 980 430" width="100%" role="img" aria-label="Sprite pipeline flowchart: reference assets and a set manifest feed style-spec extraction and set planning; gate 1 critiques the prompt before PixelLab generation; gate 2 critiques the still before storyboarding; gate 3 critiques the storyboard before Aseprite animation; gate 4 montage-reviews the frames before Godot integration; the viewer routes comments back into the manifest.">
+            <defs>
+              <marker id="arr" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+              <marker id="arrG" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker>
+              <marker id="arrR" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--danger)"/></marker>
+            </defs>
+            <g font-size="13" font-weight="600">
+              <!-- inputs -->
+              <rect x="14" y="40" width="170" height="56" rx="10" fill="color-mix(in srgb,var(--gold) 15%,#fff)" stroke="var(--gold)"/>
+              <text x="99" y="63" text-anchor="middle" fill="var(--ink)">Reference assets</text>
+              <text x="99" y="80" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">define the LOOK</text>
+              <rect x="14" y="150" width="170" height="56" rx="10" fill="color-mix(in srgb,var(--gold) 15%,#fff)" stroke="var(--gold)"/>
+              <text x="99" y="173" text-anchor="middle" fill="var(--ink)">Set manifest (JSON)</text>
+              <text x="99" y="190" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">declares the WORK</text>
+
+              <!-- stage 0 / 1 -->
+              <rect x="232" y="40" width="150" height="56" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="307" y="63" text-anchor="middle" fill="var(--ink)">0 · Style spec</text>
+              <text x="307" y="80" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">palette·dims·light·fps</text>
+              <rect x="232" y="150" width="150" height="56" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="307" y="173" text-anchor="middle" fill="var(--ink)">1 · Plan set</text>
+              <text x="307" y="190" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">diff → only GAPS</text>
+
+              <!-- G1 -->
+              <path d="M430 178 l34 -22 l34 22 l-34 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+              <text x="464" y="182" text-anchor="middle" fill="var(--ink)" font-size="12">G1</text>
+              <!-- GEN -->
+              <rect x="540" y="150" width="150" height="56" rx="10" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
+              <text x="615" y="170" text-anchor="middle" fill="var(--ink)">2 · Generate</text>
+              <text x="615" y="186" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">PixelLab stills</text>
+              <text x="615" y="200" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="700">$ EXPENSIVE</text>
+              <!-- G2 -->
+              <path d="M738 178 l34 -22 l34 22 l-34 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+              <text x="772" y="182" text-anchor="middle" fill="var(--ink)" font-size="12">G2</text>
+
+              <!-- row 2: storyboard / G3 / animate / G4 -->
+              <rect x="540" y="270" width="150" height="56" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="615" y="293" text-anchor="middle" fill="var(--ink)">3 · Storyboard</text>
+              <text x="615" y="310" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">physics per motion</text>
+              <path d="M452 298 l32 -22 l32 22 l-32 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+              <text x="484" y="302" text-anchor="middle" fill="var(--ink)" font-size="12">G3</text>
+              <rect x="214" y="270" width="170" height="56" rx="10" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
+              <text x="299" y="290" text-anchor="middle" fill="var(--ink)">4 · Animate</text>
+              <text x="299" y="306" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">Aseprite frames</text>
+              <text x="299" y="320" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="700">$$ MOST EXPENSIVE</text>
+              <path d="M146 298 l32 -22 l32 22 l-32 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+              <text x="178" y="302" text-anchor="middle" fill="var(--ink)" font-size="12">G4</text>
+
+              <!-- row 3: integrate / viewer -->
+              <rect x="14" y="270" width="120" height="56" rx="10" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)"/>
+              <text x="74" y="293" text-anchor="middle" fill="var(--ink)">5 · Godot</text>
+              <text x="74" y="310" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">v2 .tres</text>
+              <rect x="14" y="368" width="370" height="48" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="199" y="389" text-anchor="middle" fill="var(--ink)">Review viewer · all sets + gaps as placeholders</text>
+              <text x="199" y="405" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">comment anywhere · copy comments to clipboard</text>
+
+              <!-- arrows: inputs -> 0/1 -->
+              <line x1="184" y1="68" x2="230" y2="68" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="184" y1="178" x2="230" y2="178" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="307" y1="96" x2="307" y2="148" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <!-- 1 -> G1 -> GEN -> G2 -->
+              <line x1="382" y1="178" x2="428" y2="178" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <line x1="498" y1="178" x2="538" y2="178" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <line x1="690" y1="178" x2="736" y2="178" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <!-- G2 down to storyboard -->
+              <path d="M772 200 L772 240 L690 240 L690 268" fill="none" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <!-- storyboard left edge(x540) -> G3 right tip(x516) ; G3 left tip(x452) -> animate right edge(x384) -->
+              <line x1="540" y1="298" x2="518" y2="298" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <line x1="452" y1="298" x2="386" y2="298" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
+              <!-- animate abuts G4 (adjacent); G4 left tip(x146) -> integrate right edge(x134) -->
+              <line x1="146" y1="298" x2="136" y2="298" stroke="var(--ok)" stroke-width="2" marker-end="url(#arr)"/>
+              <!-- integrate -> viewer -->
+              <line x1="74" y1="326" x2="74" y2="366" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <!-- viewer feedback dashed back to manifest -->
+              <path d="M384 392 L470 392 L470 226 L99 226 L99 208" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr)"/>
+              <text x="284" y="218" text-anchor="middle" fill="var(--accent)" font-size="11" font-weight="600">paste comments → edit manifest</text>
+            </g>
+          </svg>
+        </div>
+        <p class="legend">
+          <span><span class="pill spend">spend</span> expensive operation</span>
+          <span><span class="pill cheap">G·</span> cheap critique gate</span>
+          <span><span class="pill ok">→</span> integrate / verify</span>
+          <span style="color:var(--accent);">▦ dashed = human feedback loop</span>
+        </p>
+        <p>The same flow is described as an order-of-operations handshake between an orchestrator, a cheap critic, the generator, the Aseprite builder, and the engine. The critic is consulted four times — once on each side of each spend — and never gates a whole set in one pass: each missing asset is scored on its own so per-asset rejects are not lost.</p>
+      </section>
+
+    </div>
+
+    <!-- ══════════════════ PANEL 2 — GATES & COST ══════════════════ -->
+    <div class="panel" id="gates" role="tabpanel" aria-label="Gates and cost model">
+
+      <section id="cost-model">
+        <h2>The cost model</h2>
+        <p class="lede">Generation (Stage&nbsp;2) and animation (Stage&nbsp;4) are the costly steps — credits and frame-by-frame effort. A <b>critique gate sits on each side of each</b>, so a reject costs a prompt, not a build.</p>
+        <div class="box spend"><b>Why this shape.</b> The two expensive operations are bracketed: <b>G1 → generate → G2</b> and <b>G3 → animate → G4</b>. G2 and G3 straddle the generation→animation boundary; G1 and G4 are the outer cheap checks. A miss on a <em>locked</em> spec field (off-palette, wrong light) at G1/G2, or a "slide pretending to be motion" at G3/G4, is a <b>reject</b> — fix and re-run that step only.</div>
+        <div class="diagram">
+          <p class="cap">One critic, four firing points. The cheap diamonds bracket each red spend box — a reject rewinds one step, never the whole set.</p>
+          <svg viewBox="0 0 980 200" width="100%" role="img" aria-label="Cost model: gate 1 brackets generation on the left and gate 2 on the right; gate 3 brackets animation on the left and gate 4 on the right; each gate is a cheap review, each bracketed box is an expensive operation.">
+            <defs>
+              <marker id="arr2" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+            </defs>
+            <g font-size="13" font-weight="600">
+              <!-- brackets labels -->
+              <text x="250" y="28" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="700" letter-spacing=".04em">GENERATION — $ EXPENSIVE</text>
+              <text x="730" y="28" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="700" letter-spacing=".04em">ANIMATION — $$ MOST EXPENSIVE</text>
+              <line x1="60" y1="40" x2="440" y2="40" stroke="var(--line)" stroke-width="2"/>
+              <line x1="540" y1="40" x2="920" y2="40" stroke="var(--line)" stroke-width="2"/>
+
+              <!-- G1 -->
+              <path d="M120 92 l40 -28 l40 28 l-40 28 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="160" y="90" text-anchor="middle" fill="var(--ink)">G1</text>
+              <text x="160" y="106" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">prompt</text>
+              <text x="160" y="150" text-anchor="middle" fill="var(--accent2)" font-size="11" font-weight="600">cheap · before</text>
+              <!-- GEN box -->
+              <rect x="230" y="68" width="100" height="48" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)" stroke-width="1.5"/>
+              <text x="280" y="89" text-anchor="middle" fill="var(--ink)" font-size="12">GENERATE</text>
+              <text x="280" y="104" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">PixelLab</text>
+              <!-- G2 -->
+              <path d="M360 92 l40 -28 l40 28 l-40 28 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="400" y="90" text-anchor="middle" fill="var(--ink)">G2</text>
+              <text x="400" y="106" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">still</text>
+              <text x="400" y="150" text-anchor="middle" fill="var(--accent2)" font-size="11" font-weight="600">cheap · after</text>
+
+              <!-- G3 -->
+              <path d="M600 92 l40 -28 l40 28 l-40 28 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="640" y="90" text-anchor="middle" fill="var(--ink)">G3</text>
+              <text x="640" y="106" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">storyboard</text>
+              <text x="640" y="150" text-anchor="middle" fill="var(--accent2)" font-size="11" font-weight="600">cheap · before</text>
+              <!-- ANIM box -->
+              <rect x="710" y="68" width="100" height="48" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)" stroke-width="1.5"/>
+              <text x="760" y="89" text-anchor="middle" fill="var(--ink)" font-size="12">ANIMATE</text>
+              <text x="760" y="104" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">Aseprite</text>
+              <!-- G4 -->
+              <path d="M840 92 l40 -28 l40 28 l-40 28 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="880" y="90" text-anchor="middle" fill="var(--ink)">G4</text>
+              <text x="880" y="106" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">montage</text>
+              <text x="880" y="150" text-anchor="middle" fill="var(--accent2)" font-size="11" font-weight="600">cheap · after</text>
+
+              <!-- connectors -->
+              <line x1="200" y1="92" x2="228" y2="92" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+              <line x1="330" y1="92" x2="358" y2="92" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+              <line x1="440" y1="92" x2="598" y2="92" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr2)"/>
+              <text x="519" y="84" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">storyboard</text>
+              <line x1="680" y1="92" x2="708" y2="92" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+              <line x1="810" y1="92" x2="838" y2="92" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section id="gate-table">
+        <h2>The four gates</h2>
+        <p>One critique sub-agent, four firing points — each a cheap review immediately before or after an expensive operation. The rubric comes from the relevant craft skill: still quality from <code>pixel-art-craft</code>, motion soundness from <code>pixel-art-animation</code>.</p>
+        <p class="legend">
+          <span><span class="pill cheap">cheap</span> a prompt, not a build</span>
+          <span><span class="pill spend">guards</span> the costly step next to it</span>
+        </p>
+        <div class="filterbar">
+          <span class="lbl">Filter:</span>
+          <button class="on" data-filter="all">All</button>
+          <button data-filter="before">Before spend</button>
+          <button data-filter="after">After spend</button>
+        </div>
+        <table id="gate-status-table">
+          <thead><tr><th class="n">Gate</th><th>Fires</th><th>Critiques</th><th>Guards</th><th>Rubric</th></tr></thead>
+          <tbody>
+            <tr data-status="before"><td class="n">G1</td><td>before generate</td><td>the <b>prompt</b> + manifest entry vs the style spec (subject, framing, palette intent); priors chosen</td><td>keyframe generation (credits/time)</td><td>pixel-art-craft</td></tr>
+            <tr data-status="after"><td class="n">G2</td><td>after generate,<br>before animate</td><td>the <b>still</b> vs the style spec — palette adherence, light dir, outline, silhouette</td><td><b>animation</b> (the big spend)</td><td>pixel-art-craft</td></tr>
+            <tr data-status="before"><td class="n">G3</td><td>before animate</td><td>the <b>storyboard</b> — forces named, arcs not slides, staggered, eased, frame budget right, loop closes</td><td>animation <b>build</b> (many ops)</td><td>pixel-art-animation</td></tr>
+            <tr data-status="after"><td class="n">G4</td><td>after animate</td><td>a <b>montage</b> of the frames — does the shape re-form? tip lag? phases? loops clean &amp; on-style?</td><td>re-do + integration</td><td>pixel-art-animation</td></tr>
+          </tbody>
+        </table>
+        <div class="box tip"><b>The reject rule.</b> A miss on a <em>locked</em> spec field (off-palette, wrong light) at G1/G2, or a slide pretending to be motion at G3/G4, is a reject — you fix and re-run <em>that step only</em>, never the whole set. The actual gate prompts live in <code>assets/builder-prompt.md</code> (the per-asset build instruction) and <code>assets/critique-prompt.md</code> (the scoring rubric).</div>
+      </section>
+
+      <section id="builder-loop">
+        <h2>The builder → critique loop (and how to batch)</h2>
+        <p>Each gap asset is produced by a <b>builder → critique</b> pair:</p>
+        <ol>
+          <li><b>Builder</b> does one step for one asset (generate this still / animate this storyboard) and reports what it produced.</li>
+          <li><b>Critique</b> scores that output against the relevant rubric (the gate above) and returns <b>accept</b> or <b>reject + reasons</b>.</li>
+          <li>On reject, re-run the builder with the critique's notes; on accept, advance.</li>
+        </ol>
+        <div class="box"><b>Batching a set = fan out one builder→critique pair per gap asset.</b> Because each asset is independent (its only shared context is the style spec + priors, both on disk), the gaps can be worked in parallel — one sub-agent pair per missing keyframe/idle/transition — then reconciled. Run the gates <em>per asset</em>; don't batch a whole set through one gate and lose per-asset rejects.</div>
+      </section>
+
+      <section id="routing">
+        <h2>Tool routing — what executes what</h2>
+        <p>The hard rule: <b>Aseprite is the only animation executor.</b> Pillow is review glue and nothing else; it never makes art.</p>
+        <div class="grid two">
+          <div class="card"><h3>Base stills → PixelLab</h3><p>Async AI generation (create → poll <code>get_*</code> → download; check credits first; do the object review→select step), <em>or</em> a hand-drawn/edited still. Never Pillow.</p></div>
+          <div class="card green"><h3>All animation → Aseprite</h3><p>Via the <code>mcp__plugin_pixel-plugin_aseprite__*</code> tools, following the frame-assembly recipe. The <b>only</b> animation executor — no procedural Pillow frame generation, ever.</p></div>
+          <div class="card gold"><h3>Pillow → review glue only</h3><p><code>scripts/montage.py</code> upscales a still and lays frames into a montage for the G2/G4 eyeball checks. That is its entire sanctioned role.</p></div>
+          <div class="card"><h3>Godot → assemble &amp; verify</h3><p><code>scripts/assemble_tres.gd</code> packs frame PNGs into the v2 <code>SpriteFrames</code> the engine loads as the idle loop.</p></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ══════════════════ PANEL 3 — THE TWO INPUTS ══════════════════ -->
+    <div class="panel" id="inputs" role="tabpanel" aria-label="The two inputs">
+
+      <section id="inputs-intro">
+        <h2>The two inputs</h2>
+        <p class="lede">You hand the pipeline two durable inputs. One fixes the <b>look</b> (reference assets → a style spec); the other declares the <b>work</b> (a co-located, idempotent set manifest). Swap the inputs and the same pipeline produces a different look / set.</p>
+        <div class="grid two">
+          <div class="card green"><h3>1 · Reference assets → a style spec</h3><p>A small set of hero exemplars + a locked palette + an art-direction note, distilled <b>once</b> into <code>&lt;assets&gt;/_style-spec.json</code> (canvas, ramps, light, outline, project FPS). This is the <b>cohesion anchor</b>: every still and every animation is scored against it. For an existing game, the shipped tiles <em>are</em> the references.</p></div>
+          <div class="card"><h3>2 · A co-located set manifest</h3><p>One <code>manifest.json</code> per set, living beside its output, declaring the group's <code>keyframes</code> + per-keyframe <code>idles</code> + <code>transitions</code>. It is <b>idempotent</b>: re-running diffs declared ids against files on disk and builds only the gaps, feeding existing siblings in as <b>priors</b> so new members stay continuous.</p></div>
+        </div>
+      </section>
+
+      <section id="style-spec">
+        <h2>Input 1 — the style spec</h2>
+        <p>The look contract. Extracted at Stage&nbsp;0 with Aseprite's <code>analyze_reference</code> / <code>get_palette</code> / <code>analyze_palette_harmonies</code>, then transcribed into a JSON the whole pipeline reads. It is the single thing every gate scores against. Two values are <b>project-wide</b> and define how the whole family animates: <code>animation.fps</code> and <code>animation.framesDefault</code>.</p>
+        <details>
+          <summary>Worked example — <code>_style-spec.json</code> (canvas · palette ramps · light · outline · animation)</summary>
+          <pre><code>{
+  "canvas": { "width": 90, "height": 90, "safeArea": 6, "background": "transparent" },
+  "palette": {
+    "source": "references/palette.gpl",
+    "ramps": [
+      { "name": "foliage-green", "hexes": ["#1c3a1e","#2f5d2a","#4d8a35","#79b94a","#b7e06a"] },
+      { "name": "bark-brown",    "hexes": ["#2a1c18","#4a3326","#6f4a31","#9a6c43","#c79a63"] },
+      { "name": "neutral-gray",  "hexes": ["#1b1c22","#3a3c46","#5c5f6c","#888c9a","#c2c6d2"] }
+    ],
+    "shadowHueShiftDeg": -20,
+    "highlightHueShiftDeg": 20
+  },
+  "light":   { "direction": "upper-left", "elevationDeg": 55, "contrast": "medium" },
+  "outline": { "rule": "selective", "color": "#1b1410" },
+  "shadow":  { "type": "soft-drop", "color": "#0000003b", "offset": {"x":2,"y":3}, "blur": 2 },
+  "perspective": "three-quarter-topdown",
+  "dither":  { "policy": "minimal" },
+  "animation": { "fps": 10, "framesDefault": 8, "cadence": "on-twos", "loop": true, "idleAnimationName": "idle" }
+}</code></pre>
+        </details>
+        <p>What references to supply (hero exemplars simple→detailed, a locked palette, ≥1 animation exemplar, an art-direction note, optionally an on-style / off-style pair) and how each spec field is extracted is the subject of <code>references/reference-assets-spec.md</code>.</p>
+      </section>
+
+      <section id="manifest">
+        <h2>Input 2 — the set manifest</h2>
+        <p>A <b>set</b> is a cohesive, growable group of sprites — every season of one tree, all the fish, every variant of one crop. The manifest lives <b>beside the output it describes</b> at <code>&lt;assets&gt;/sets/&lt;set&gt;/manifest.json</code> and is the <b>durable source of truth</b> for that group.</p>
+
+        <h3>Idempotent gap-fill</h3>
+        <p>On every run the pipeline reads the declared <code>keyframes</code>/<code>idles</code>/<code>transitions</code>, diffs them against files present under the set directory, <b>generates only the missing artifacts</b>, and feeds the existing siblings in as <b>priors</b> so a new member inherits the set's silhouette, palette, and detail density. Re-running is therefore cheap and non-destructive — a <b>gap-fill</b>, not a rebuild. To deliberately regenerate one asset, delete its files and re-run.</p>
+
+        <h3>basePrompt &amp; priors — cohesion at two levels</h3>
+        <div class="grid two">
+          <div class="card"><h3>basePrompt</h3><p>Optional set-level string <b>prepended</b> to each keyframe's <code>prompt</code> (<code>basePrompt + ", " + keyframe.prompt</code>). Carries the shared description — subject, family, framing, shadow — so per-keyframe prompts only say what makes that variant distinct. Cohesion at the <b>prompt</b> level.</p></div>
+          <div class="card green"><h3>priors</h3><p>Paths to already-generated sibling assets passed as visual context when gap-filling. The new member inherits the family's silhouette and palette rather than drifting. Cohesion at the <b>pixel</b> level.</p></div>
+        </div>
+
+        <h3>Worked example — the birch set</h3>
+        <p>This is the canonical manifest: the <code>birch</code> tree set at <code>godot/assets/tiles/v2/sets/birch/manifest.json</code>. It conforms to a style spec two directories up, uses two already-shipped sibling tiles <b>three</b> directories up as priors (the tiles sit in <code>godot/assets/tiles/</code>, one level above the <code>v2/</code> tree), inherits the project FPS (<code>fps: null</code>), tags each keyframe with <code>"group": "seasons"</code> so the viewer buckets them, and declares four seasonal keyframes plus the idles and seasonal transitions between them.</p>
+        <pre><code>{
+  "set": "birch",
+  "styleSpec": "../../_style-spec.json",
+  "priors": ["../../../tile_tree_oak.png", "../../../tile_tree_fir.png"],
+  "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
+  "fps": null,
+  "framesDefault": 8,
+  "keyframes": [
+    { "id": "tile_tree_birch_spring", "group": "seasons", "generator": "pixellab", "prompt": "fresh green canopy" },
+    { "id": "tile_tree_birch_summer", "group": "seasons", "generator": "pixellab", "prompt": "full deep-green canopy" },
+    { "id": "tile_tree_birch_autumn", "group": "seasons", "generator": "pixellab", "prompt": "gold/amber canopy" },
+    { "id": "tile_tree_birch_winter", "group": "seasons", "generator": "pixellab", "prompt": "bare branches, snow on limbs" }
+  ],
+  "idles": [
+    { "for": "tile_tree_birch_autumn", "frames": 8, "motion": "sway + occasional falling leaf" },
+    { "for": "tile_tree_birch_winter", "frames": 6, "motion": "bare-branch sway + snow glint" }
+  ],
+  "transitions": [
+    { "from": "tile_tree_birch_summer", "to": "tile_tree_birch_autumn", "frames": 16,
+      "physics": "chlorophyll fade->gold; first leaves loosen" },
+    { "from": "tile_tree_birch_autumn", "to": "tile_tree_birch_winter", "frames": 20,
+      "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground" },
+    { "from": "tile_tree_birch_winter", "to": "tile_tree_birch_spring", "frames": 16,
+      "physics": "snow melts top-down (drips); buds->green" }
+  ]
+}</code></pre>
+        <p>Reading it: only the <b>missing</b> seasonal keyframes are generated on a given run; each new one is conditioned on <code>tile_tree_oak.png</code> / <code>tile_tree_fir.png</code> plus the already-generated birch siblings. The <b>autumn → winter</b> transition is the richest brief — staggered leaf-fall at terminal velocity, snow accumulating bottom-up — and that <code>physics</code> string is exactly the motion plan the Aseprite animator executes.</p>
+        <div class="box warn"><b>Growable.</b> Append a <code>raining</code> keyframe + idle and re-run — only the new entries generate, primed by the existing birch assets. The backlog grows by editing one JSON file. Full field reference: <code>references/manifest-schema.md</code>.</div>
+
+        <h3>Per-set directory layout</h3>
+        <p>Everything a set produces is written into the same directory, so the manifest and its outputs travel together:</p>
+        <pre><code>&lt;assets&gt;/sets/&lt;set&gt;/
+  manifest.json              # the durable source of truth
+  keyframes/&lt;id&gt;.png         # one base still per keyframe (PixelLab output)
+  storyboards/&lt;id&gt;.md        # per-asset shot notes / motion plan
+  frames/&lt;id&gt;/NN.png         # exploded animation frames (00.png, 01.png, …)
+  previews/&lt;id&gt;.gif          # a looping preview GIF per animated id
+  &lt;key&gt;.tres                 # built SpriteFrames the engine loads (idle loop)</code></pre>
+      </section>
+
+    </div>
+
+    <!-- ══════════════════ PANEL 4 — BUILD, LOOP & STATUS ══════════════════ -->
+    <div class="panel" id="build" role="tabpanel" aria-label="Build, loop and status">
+
+      <section id="generic-split">
+        <h2>Generic vs per-project</h2>
+        <p class="lede">The <b>process is reusable on any game.</b> Only the style spec, manifests, generated assets, and review comments are per-game. The physics of motion is generic — leaves fall the same way in every game — so it ships in the skills, not the instance.</p>
+        <table>
+          <thead><tr><th>Concern</th><th>Generic (ships in the skills — reusable on any game)</th><th>Per-project instance (this game)</th></tr></thead>
+          <tbody>
+            <tr><td>Process spine</td><td><code>sprite-pipeline</code> SKILL.md, sub-agent prompts, templates</td><td>—</td></tr>
+            <tr><td>Static-art craft</td><td><code>pixel-art-craft</code> skill</td><td>—</td></tr>
+            <tr><td>Motion craft + physics</td><td><code>pixel-art-animation</code> skill (<code>physics-of-motion.md</code>)</td><td>—</td></tr>
+            <tr><td>Look contract</td><td><code>style-spec.template.json</code> (schema + defaults)</td><td><code>_style-spec.json</code> (filled from your refs)</td></tr>
+            <tr><td>Asset declaration</td><td>manifest schema + <code>manifest.template.json</code></td><td><code>sets/&lt;set&gt;/manifest.json</code> (co-located)</td></tr>
+            <tr><td>Direction</td><td><code>storyboard.template.md</code></td><td>filled storyboards per transition</td></tr>
+            <tr><td>Review surface</td><td>viewer template + <code>build_viewer.mjs</code></td><td><code>pixelGen/</code> output + your copied comments</td></tr>
+            <tr><td>Output</td><td>—</td><td><code>godot/assets/tiles/v2/sets/*</code> + <code>.tres</code></td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>Executor discipline.</b> <b>Aseprite is the only animation executor.</b> <b>Pillow is review-glue only</b> (<code>montage.py</code> upscale + frame montage) — it never produces art. The craft skills and templates are project-agnostic; copy the skill folders into another repo to carry the pipeline forward, then supply that game's references + manifests.</div>
+      </section>
+
+      <section id="starting">
+        <h2>Starting a run — list tiles → proposal → run</h2>
+        <p class="lede">You don't hand-author the manifest. You <b>start a Claude Code session and name the sprites you want</b> ("5 new crop tiles: wheat, corn, pumpkin, …"); the <code>sprite-pipeline</code> skill interviews you, writes the config, and rebuilds the pixelGen viewer as a <b>proposal you review before anything is spent</b>. This is the <b>intake</b> front door — it sits before Stage&nbsp;1.</p>
+        <div class="diagram">
+          <p class="cap">The intake front door: a few questions become a manifest + an all-pending pixelGen proposal. Generation only starts after you approve — the same cards then fill with art.</p>
+          <svg viewBox="0 0 940 96" width="100%" role="img" aria-label="Intake flow: you list the tiles; Claude interviews you; writes the manifest config; rebuilds the pixelGen viewer as an all-pending proposal; you review and approve; only then does the run spend credits and fill the same cards with art.">
+            <defs><marker id="arrI" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker></defs>
+            <g font-size="12.5" font-weight="600">
+              <rect x="6"   y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
+              <text x="72"  y="50" text-anchor="middle" fill="var(--ink)">List the tiles</text>
+              <text x="72"  y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">in your prompt</text>
+              <rect x="170" y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="236" y="50" text-anchor="middle" fill="var(--ink)">Interview</text>
+              <text x="236" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">set · anim · priors</text>
+              <rect x="334" y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="400" y="50" text-anchor="middle" fill="var(--ink)">Write manifest</text>
+              <text x="400" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">the config</text>
+              <rect x="498" y="30" width="150" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="573" y="50" text-anchor="middle" fill="var(--ink)">pixelGen proposal</text>
+              <text x="573" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">all-pending · review</text>
+              <rect x="680" y="30" width="120" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
+              <text x="740" y="50" text-anchor="middle" fill="var(--ink)">Approve</text>
+              <text x="740" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">"run it"</text>
+              <rect x="832" y="30" width="102" height="44" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
+              <text x="883" y="50" text-anchor="middle" fill="var(--ink)" font-size="12">Run</text>
+              <text x="883" y="65" text-anchor="middle" fill="var(--danger)" font-size="9.5" font-weight="700">$ spend</text>
+              <line x1="138" y1="52" x2="168" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="302" y1="52" x2="332" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="466" y1="52" x2="496" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="648" y1="52" x2="678" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="800" y1="52" x2="830" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+            </g>
+          </svg>
+        </div>
+        <div class="box spend"><b>No spend until you approve.</b> Intake produces the manifest + the pixelGen proposal only — it never generates art. You review the proposal (placeholder cards with each tile's prompt/motion note), tweak prompts or comment, and re-build until it reads right. Only when you say <b>"run it"</b> does the builder→critique loop start spending PixelLab credits + Aseprite ops. The full interview + approval protocol lives in <code>.claude/skills/sprite-pipeline/references/intake.md</code>.</div>
+        <p>Already have a manifest that covers what you want? <b>Skip intake</b> — the run goes straight to Stage&nbsp;1 gap-fill, and the proposal is just rebuilding pixelGen against the existing manifest (e.g. the committed <code>birch</code> set, whose nine assets all show as pending until its first run).</p>
+      </section>
+
+      <section id="viewer">
+        <h2>The review viewer loop</h2>
+        <p>A static review viewer (built by <code>scripts/build_viewer.mjs</code> into <code>pixelGen/</code>, served at <code>http://localhost:8100/pixelGen/</code>) renders the set's keyframes, idle GIFs, and transitions on one page so you can eyeball cohesion across the whole family — the human-facing end of the G4 montage check. It is also the <b>intake proposal surface</b> (all-pending before a run; the same cards fill with art after), where the backlog lives and where corrections re-enter the pipeline.</p>
+        <div class="diagram">
+          <p class="cap">The loop closes through the viewer: build → montage (G4) → eyeball → comment → copy → paste into Claude Code → idempotent re-run fills exactly those items.</p>
+          <svg viewBox="0 0 920 130" width="100%" role="img" aria-label="Viewer loop: build the viewer, montage-review, eyeball the set, comment, copy comments to clipboard, paste into Claude Code which edits the manifest, and the idempotent re-run fills only the changed items.">
+            <defs>
+              <marker id="arr3" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-size="12.5" font-weight="600">
+              <rect x="10"  y="48" width="150" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="85"  y="74" text-anchor="middle" fill="var(--ink)">Build viewer</text>
+              <rect x="200" y="48" width="170" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="285" y="68" text-anchor="middle" fill="var(--ink)">Eyeball set + gaps</text>
+              <text x="285" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">placeholders for pending</text>
+              <rect x="410" y="48" width="160" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="490" y="68" text-anchor="middle" fill="var(--ink)">Comment + copy</text>
+              <text x="490" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">localStorage → clipboard</text>
+              <rect x="610" y="48" width="150" height="42" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="685" y="68" text-anchor="middle" fill="var(--ink)">Paste → Claude</text>
+              <text x="685" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">edits manifest</text>
+              <rect x="800" y="48" width="110" height="42" rx="9" fill="color-mix(in srgb,var(--ok) 13%,#fff)" stroke="var(--ok)"/>
+              <text x="855" y="68" text-anchor="middle" fill="var(--ink)">Re-run</text>
+              <text x="855" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">gap-fill only</text>
+              <line x1="160" y1="69" x2="198" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <line x1="370" y1="69" x2="408" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <line x1="570" y1="69" x2="608" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <line x1="760" y1="69" x2="798" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <path d="M855 90 L855 112 L85 112 L85 92" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr3)"/>
+            </g>
+          </svg>
+        </div>
+        <ul>
+          <li><b>Renders every set</b> — keyframe cards (grouped, e.g. the four seasons), idle players, and transition players (looping GIFs), with a status badge per asset.</li>
+          <li><b>Gaps are visible</b> — anything declared in a manifest but not yet on disk shows a <b>placeholder card</b> with its id + intended prompt, so the backlog <em>is</em> the page.</li>
+          <li><b>Comment anywhere</b> — per-asset notes and free page-level comments, stored in <code>localStorage</code>.</li>
+          <li><b>Copy comments</b> — one button concatenates all notes (each tagged with its asset id) into a paste-ready block and copies it to the clipboard. Paste it into <b>Claude Code</b> to drive the next pass; because the manifest is idempotent, it regenerates exactly those items.</li>
+        </ul>
+        <div class="box warn"><b>Serve off the game port.</b> The game's service worker hijacks the Vite preview, so the viewer is served on a non-game port — the <code>pixelGen</code> entry in <code>.claude/launch.json</code> runs <code>http.server&nbsp;--directory&nbsp;godot/assets/tiles/v2</code> on <code>:8100</code>, so the page lives at <b><code>http://localhost:8100/pixelGen/</code></b> (with <code>docs-static</code> on <code>:8099</code>). The built <code>pixelGen/</code> dir is a generated artifact — <code>.gitignore</code> covers it; don't commit it.</div>
+      </section>
+
+      <section id="where">
+        <h2>Where it lives</h2>
+        <p>Three sibling skills carry the knowledge; the orchestrator calls the other two:</p>
+        <div class="grid">
+          <div class="card"><h3>sprite-pipeline</h3><p>The <b>orchestrator spine</b> — the 5-stage flow, the two inputs, tool routing, the 4-gate cost model, the builder→critique loop, and the viewer loop. <code>.claude/skills/sprite-pipeline/</code></p></div>
+          <div class="card green"><h3>pixel-art-craft</h3><p>The <b>still-image rubric</b> — palette, hue-shifted ramps, light/shading (no pillow-shading), anti-aliasing, outlines. Powers keyframe art and the <b>G1/G2</b> critiques.</p></div>
+          <div class="card gold"><h3>pixel-art-animation</h3><p>The <b>motion craft</b> — the 12 principles, motion patterns, and the new <code>physics-of-motion.md</code> direction layer. Owns the storyboard and the <b>G3/G4</b> critiques.</p></div>
+        </div>
+        <p>Output lands in the game's tile tree: generated assets in <code>godot/assets/tiles/v2/sets/&lt;set&gt;/</code>, the built loop in the v2 <code>.tres</code> slot that <code>godot/scenes/Tile.gd</code> resolves (animated <code>SpriteFrames</code> → static PNG → procedural color — newest wins). The locked look for this game is committed at <code>godot/assets/tiles/v2/_style-spec.json</code>.</p>
+        <details>
+          <summary>Bundled files in the orchestrator skill — when to read each</summary>
+          <table>
+            <thead><tr><th>File</th><th>When to read</th></tr></thead>
+            <tbody>
+              <tr><td><code>references/reference-assets-spec.md</code></td><td>Stage 0 — what references to supply; every <code>_style-spec.json</code> field + how it's extracted.</td></tr>
+              <tr><td><code>references/manifest-schema.md</code></td><td>Stage 1 — set directory layout, idempotent gap-fill, every manifest field.</td></tr>
+              <tr><td><code>references/aseprite-execution.md</code></td><td>Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe, conformance helpers, Windows/path gotchas.</td></tr>
+              <tr><td><code>references/godot-integration.md</code></td><td>Stage 5 — set layout, frames→<code>.tres</code>, the engine-path decision, import/verify gotchas.</td></tr>
+              <tr><td><code>assets/style-spec.template.json</code></td><td>Stage 0 — blank style-spec to copy to <code>_style-spec.json</code>.</td></tr>
+              <tr><td><code>assets/manifest.template.json</code></td><td>Stage 1 — blank per-set manifest to copy.</td></tr>
+              <tr><td><code>assets/storyboard.template.md</code></td><td>Stage 3 / G3 — copy + fill per idle/transition; critique it before the expensive animate.</td></tr>
+              <tr><td><code>assets/builder-prompt.md</code></td><td>Per-asset builder instruction (the build half of the loop).</td></tr>
+              <tr><td><code>assets/critique-prompt.md</code></td><td>The gate scoring rubric (the critique half of the loop).</td></tr>
+              <tr><td><code>scripts/assemble_tres.gd</code></td><td>Stage 5 — pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code>.</td></tr>
+              <tr><td><code>scripts/montage.py</code></td><td>G2/G4 — upscale a still or montage frames for review (Pillow only).</td></tr>
+              <tr><td><code>scripts/build_viewer.mjs</code></td><td>Build the review viewer / intake proposal into <code>pixelGen/</code> (default out).</td></tr>
+              <tr><td><code>viewer/</code></td><td>The review-page template (index.html + viewer.css + viewer.js).</td></tr>
+            </tbody>
+          </table>
+        </details>
+      </section>
+
+      <section id="status">
+        <h2>Status &amp; next step</h2>
+        <p class="legend">
+          <span><span class="pill ok">built</span> exists now</span>
+          <span><span class="pill warn">next</span> user-initiated</span>
+        </p>
+        <table>
+          <thead><tr><th>Piece</th><th>State</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Orchestrator + craft/motion skills</td><td><span class="pill ok">built</span></td><td><code>sprite-pipeline</code>, <code>pixel-art-craft</code>, <code>pixel-art-animation</code> all in place.</td></tr>
+            <tr><td>Templates + references + scripts</td><td><span class="pill ok">built</span></td><td>Style-spec / manifest / storyboard templates, all reference docs, <code>assemble_tres.gd</code> · <code>montage.py</code> · <code>build_viewer.mjs</code>.</td></tr>
+            <tr><td>Builder + critique prompts, viewer</td><td><span class="pill ok">built</span></td><td>The 4-gate prompts and the static review viewer (<code>index.html</code> + css + js) all land.</td></tr>
+            <tr><td>Project config</td><td><span class="pill ok">built</span></td><td>This game's <code>_style-spec.json</code> committed; the <code>pixelGen</code> launch config serves the viewer at <code>http://localhost:8100/pixelGen/</code>.</td></tr>
+            <tr><td>Birch set manifest</td><td><span class="pill ok">built</span></td><td><code>sets/birch/manifest.json</code> authored (4 keyframes, 2 idles, 3 transitions) — its outputs are still all gaps.</td></tr>
+            <tr><td>First real generation run (birch)</td><td><span class="pill warn">next</span></td><td>User-initiated — it spends PixelLab credits, so it is not run automatically.</td></tr>
+          </tbody>
+        </table>
+        <div class="box tip"><b>Bottom line.</b> The framework is built end-to-end: two inputs, five stages, four gates, the builder→critique loop, the integration scripts, and the review viewer all exist, validated structurally on the birch set. The <b>first real generation run</b> — producing the four birch season keyframes and animating them — is <b>user-initiated</b> because it spends PixelLab credits. Trust <code>.claude/skills/sprite-pipeline/SKILL.md</code> over this overview where they ever diverge.</div>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Section tabs: show one logical panel at a time; deep-linkable by panel id or section id.
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+
+  // Table filter: toggle gate rows by data-status.
+  (function(){
+    var bar = document.querySelector('.filterbar');
+    if(!bar) return;
+    bar.addEventListener('click', function(e){
+      var btn = e.target.closest('button'); if(!btn) return;
+      bar.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var f = btn.dataset.filter;
+      document.querySelectorAll('#gate-status-table tbody tr').forEach(function(tr){
+        tr.style.display = (f === 'all' || tr.dataset.status === f) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+</body>
+</html>

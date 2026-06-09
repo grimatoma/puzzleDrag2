@@ -1417,6 +1417,8 @@ func _on_cartography_travel(node_id: String) -> void:
 			show_toast("That place is too dangerous yet — keep growing.")
 		elif reason == "unreachable":
 			show_toast("No road leads there from here.")
+		elif reason == "unfounded":
+			show_toast("Found a settlement here before you can travel out to it.")
 		SaveManager.save(game)
 		return
 

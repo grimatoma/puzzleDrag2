@@ -1083,5 +1083,7 @@ static func start_farm_fail_text(reason: String) -> String:
 			return "No fertilizer on hand."
 		"already_running":
 			return "A farm run is already underway."
+		"unfounded":
+			return "Found this settlement before you can farm it."
 		_:
 			return "Cannot start a run right now."

@@ -1,0 +1,57 @@
+{
+  "canvas": {
+    "width": 90,
+    "height": 90,
+    "safeArea": 6,
+    "background": "transparent"
+  },
+  "palette": {
+    "source": "references/palette.gpl",
+    "ramps": [
+      {
+        "name": "foliage-green",
+        "hexes": ["#1c3a1e", "#2f5d2a", "#4d8a35", "#79b94a", "#b7e06a"]
+      },
+      {
+        "name": "bark-brown",
+        "hexes": ["#2a1c18", "#4a3326", "#6f4a31", "#9a6c43", "#c79a63"]
+      },
+      {
+        "name": "neutral-gray",
+        "hexes": ["#1b1c22", "#3a3c46", "#5c5f6c", "#888c9a", "#c2c6d2"]
+      }
+    ],
+    "shadowHueShiftDeg": -20,
+    "highlightHueShiftDeg": 20
+  },
+  "light": {
+    "direction": "upper-left",
+    "elevationDeg": 55,
+    "contrast": "medium"
+  },
+  "outline": {
+    "rule": "selective",
+    "color": "#1b1410"
+  },
+  "shadow": {
+    "type": "soft-drop",
+    "color": "#0000003b",
+    "offset": { "x": 2, "y": 3 },
+    "blur": 2
+  },
+  "perspective": "three-quarter-topdown",
+  "dither": {
+    "policy": "minimal"
+  },
+  "animation": {
+    "fps": 10,
+    "framesDefault": 8,
+    "cadence": "on-twos",
+    "loop": true,
+    "idleAnimationName": "idle"
+  },
+  "references": [
+    "references/hero-01.aseprite",
+    "references/hero-02.png"
+  ]
+}

@@ -311,15 +311,35 @@ func _test_farm_founding_gate() -> void:
 func _test_travel_founding_gate_board_node() -> void:
 	var g := GameState.new()
 	g.coins = 5000
-	# Travel to meadow (adjacent to home, affordable) — the marker moves but, because meadow is not
-	# founded, no board enters; the launch reason is "unfounded".
+	# You can't TRAVEL to a board zone you haven't unlocked (founded) yet. Meadow is adjacent,
+	# level-1, and affordable, but UNFOUNDED — so the gate refuses the trip: the marker stays put
+	# and no entry cost is charged (this is what stops the player stranding on an un-settled node).
+	_check(not g.can_travel_to("meadow"), "can't travel to an UNFOUNDED board node (meadow)")
+	_check(g.travel_block_reason("meadow") == "unfounded", "meadow blocked: unfounded")
+	var before_coins := g.coins
 	var res := g.travel_to("meadow")
-	_check(res.get("ok", false), "travel to an adjacent unfounded board node succeeds (marker moves)")
-	_check(not res.get("entered", false), "an unfounded board node does NOT enter its board")
-	_check(res.get("launch", {}).get("reason", "") == "unfounded", "travel to an unfounded board node reports launch 'unfounded'")
-	_check(g.map_current == "meadow", "the marker still moved to meadow")
-	# The active zone did NOT switch (no archive load for an unfounded zone).
-	_check(not g.zone_archives.has("home"), "no archive swap happens for an unfounded board node")
+	_check(not res.get("ok", false), "travel_to an unfounded board node is REFUSED (ok:false)")
+	_check(String(res.get("reason", "")) == "unfounded", "refused travel reports reason 'unfounded'")
+	_check(g.map_current == "home", "the marker did NOT move (still home) — no stranding")
+	_check(g.coins == before_coins, "no entry cost charged for a refused travel (coins unchanged)")
+	# Founding meadow (the unlock / discovery action) opens travel to it. The founding-flow guards
+	# (needs_prior, cost) are covered by the founding tests; here we just record the founding.
+	g.settlements["meadow"] = {"founded": true, "biome": "prairie", "keeper_path": ""}
+	_check(g.can_travel_to("meadow"), "founding meadow UNLOCKS travel to it")
+	var res2 := g.travel_to("meadow")
+	_check(bool(res2.get("ok", false)), "travel_to a FOUNDED board node succeeds")
+	_check(bool(res2.get("entered", false)) and g.active_biome == "farm", "founded farm node enters its board")
+	_check(g.map_current == "meadow", "marker moved to the founded meadow")
+	_check(g.coins == before_coins - CartographyConfig.entry_cost("meadow"), "founded travel charges the entry cost")
+
+	# A pre-fix save stranded ON an unfounded board node is recovered on load: the active node snaps
+	# back to home (always founded) so the player can farm again instead of being stuck off-grid.
+	var stranded := GameState.new()
+	stranded._seed_map_state()
+	stranded.map_current = "orchard"                  # an unfounded farm node (pre-fix could land here)
+	stranded.map_node_state["orchard"] = "visited"
+	var loaded := GameState.from_dict(stranded.to_dict())
+	_check(loaded.map_current == "home", "a save stranded on an unfounded board node loads back at home")
 
 func _test_save_load_full_model() -> void:
 	var g := GameState.new()

@@ -561,5 +561,7 @@ static func block_label(reason: String, node_id: String) -> String:
 			return "🔒 Requires Level %d" % level_req(node_id)
 		"cost":
 			return "🔒 Needs %d coins" % entry_cost(node_id)
+		"unfounded":
+			return "🔒 Found this settlement first"
 		_:
 			return "🔒 Locked"
