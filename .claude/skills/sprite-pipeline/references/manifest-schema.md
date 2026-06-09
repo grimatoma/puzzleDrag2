@@ -11,7 +11,7 @@ already-generated siblings as **priors** so new members stay continuous with the
 shipped. You can therefore grow a set incrementally — add a keyframe, re-run, and only the new
 asset is produced.
 
-`../../assets/manifest.template.json` is a blank, project-agnostic copy of this schema to start
+`assets/manifest.template.json` is a blank, project-agnostic copy of this schema to start
 from. This doc is the reference for what every field means.
 
 ---
