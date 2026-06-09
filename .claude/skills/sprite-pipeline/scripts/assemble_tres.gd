@@ -14,8 +14,15 @@ extends SceneTree
 ## Tile.gd resolves it at res://assets/tiles/v2/<key>.tres and plays "idle"; if the animation
 ## name or loop flag is wrong the tile silently falls back to the v1 PNG, so keep them as-is.
 ##
+## ── Install: copy this into the Godot project's tools/ before running ─────────────────────
+## Godot runs `--script` from inside the project's res:// tree, so this skill file must first be
+## copied into the project alongside the existing tools (e.g. godot/tools/make_v2_grass.gd):
+##   cp .claude/skills/sprite-pipeline/scripts/assemble_tres.gd godot/tools/assemble_tres.gd
+## Then invoke it as res://tools/assemble_tres.gd. (The copy is a real-generation-time step; it
+## is not committed by the config-only setup pass.)
+##
 ## ── Run (frames must already be imported; see the caveat below) ───────────────────────────
-##   godot --headless --path godot --script res://addons/sprite-pipeline/assemble_tres.gd -- \
+##   godot --headless --path godot --script res://tools/assemble_tres.gd -- \
 ##       res://assets/tiles/v2/sets/birch/frames/tile_tree_birch_autumn \
 ##       res://assets/tiles/v2/sets/birch/tile_tree_birch_autumn.tres \
 ##       10 idle

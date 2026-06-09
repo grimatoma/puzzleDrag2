@@ -1,0 +1,23 @@
+{
+  "set": "birch",
+  "styleSpec": "../../_style-spec.json",
+  "priors": ["../../../tile_tree_oak.png", "../../../tile_tree_fir.png"],
+  "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
+  "fps": null,
+  "framesDefault": 8,
+  "keyframes": [
+    { "id": "tile_tree_birch_spring", "group": "seasons", "generator": "pixellab", "prompt": "fresh green canopy" },
+    { "id": "tile_tree_birch_summer", "group": "seasons", "generator": "pixellab", "prompt": "full deep-green canopy" },
+    { "id": "tile_tree_birch_autumn", "group": "seasons", "generator": "pixellab", "prompt": "gold/amber canopy" },
+    { "id": "tile_tree_birch_winter", "group": "seasons", "generator": "pixellab", "prompt": "bare branches, snow on limbs" }
+  ],
+  "idles": [
+    { "for": "tile_tree_birch_autumn", "frames": 8, "motion": "sway + occasional falling leaf" },
+    { "for": "tile_tree_birch_winter", "frames": 6, "motion": "bare-branch sway + snow glint" }
+  ],
+  "transitions": [
+    { "from": "tile_tree_birch_summer", "to": "tile_tree_birch_autumn", "frames": 16, "physics": "chlorophyll fade->gold; first leaves loosen" },
+    { "from": "tile_tree_birch_autumn", "to": "tile_tree_birch_winter", "frames": 20, "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground" },
+    { "from": "tile_tree_birch_winter", "to": "tile_tree_birch_spring", "frames": 16, "physics": "snow melts top-down (drips); buds->green" }
+  ]
+}

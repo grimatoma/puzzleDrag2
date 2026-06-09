@@ -41,11 +41,21 @@ shape `scenes/Tile.gd` expects for an animated tile:
 Tile.gd resolves the v2 tier at **`res://assets/tiles/v2/<key>.tres`**, builds an
 `AnimatedSprite2D`, and calls `play(&"idle")` (it checks `has_animation(&"idle")`). If the
 animation name or loop flag is wrong, the tile silently falls back to its v1 PNG — so those two
-fields are load-bearing; `assemble_tres.gd` sets them for you. Run it AFTER the frame PNGs are
-imported:
+fields are load-bearing; `assemble_tres.gd` sets them for you.
+
+**Install step (one-time, copy into the project).** Godot runs `--script` from inside the
+project's `res://` tree, so the skill's `scripts/assemble_tres.gd` must first be **copied into the
+Godot project** — drop it in `godot/tools/` alongside the existing `make_v2_grass.gd`:
 
 ```bash
-godot --headless --path godot --script res://addons/sprite-pipeline/assemble_tres.gd -- \
+cp .claude/skills/sprite-pipeline/scripts/assemble_tres.gd godot/tools/assemble_tres.gd
+```
+
+(This copy happens at real-generation time; the config-only setup pass does not commit it.) Then,
+AFTER the frame PNGs are imported, invoke the copy at `res://tools/assemble_tres.gd`:
+
+```bash
+godot --headless --path godot --script res://tools/assemble_tres.gd -- \
     res://assets/tiles/v2/sets/<set>/frames/<id> \
     res://assets/tiles/v2/sets/<set>/<key>.tres \
     10 idle

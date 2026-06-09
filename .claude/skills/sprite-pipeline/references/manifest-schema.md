@@ -93,8 +93,10 @@ keyframe is free to restate anything from the base to countermand it.
 | `framesDefault` | number | Default frame count for this set's idles/transitions when an item doesn't specify its own `frames`. |
 | `keyframes[]` | object[] | The base stills that define each member. Each: `{ id, generator, prompt }`. |
 | `keyframes[].id` | string | Unique, stable id — also the on-disk filename stem and (for the rendered loop) the `.tres` key. |
+| `keyframes[].group` | string | **Optional.** A label the review viewer **groups keyframes by** (e.g. `"seasons"`). Purely presentational — it buckets cards in `build_viewer.mjs`'s output; it does **not** affect generation, gap-fill, or the `.tres`. Omit it and the keyframe still renders fine (ungrouped). |
 | `keyframes[].generator` | `"pixellab"` \| `"aseprite"` | Which executor produces the base still. **PixelLab** generates from a prompt; **Aseprite** is used when the still is authored/edited directly. (Animation is always executed in Aseprite regardless.) |
 | `keyframes[].prompt` | string | What makes this variant distinct. Combined with `basePrompt`. |
+| `<any row>.approved` | boolean | **Optional**, valid on **any** keyframe / idle / transition row. When `true`, the review viewer surfaces an **"approved"** badge for that asset (sign-off bookkeeping after Gate-4). Defaults to absent/`false`; it never gates generation and a plain manifest with no `approved` keys renders fine. |
 | `idles[]` | object[] | The looping idle animation for a keyframe. Each: `{ for, frames?, motion }`. |
 | `idles[].for` | string | The keyframe `id` this idle animates. |
 | `idles[].frames` | number | Optional. Frame count for this idle; **overrides `framesDefault`**. |
@@ -112,24 +114,28 @@ a set `fps` overrides the project FPS only when non-null.
 
 ## Canonical example
 
-This is the canonical shape of a manifest — the `birch` tree set. It conforms to a style spec two
-directories up, uses two already-shipped sibling tiles as priors, inherits the project FPS
-(`fps: null`), and declares four seasonal keyframes plus the idles and seasonal transitions
-between them:
+This is the canonical shape of a manifest — the `birch` tree set, living at
+`godot/assets/tiles/v2/sets/birch/manifest.json`. It conforms to a style spec two directories up
+(`../../_style-spec.json`), uses two already-shipped sibling tiles **three** directories up as
+priors (`../../../tile_tree_oak.png` — the tiles sit in `godot/assets/tiles/`, one level **above**
+the `v2/` tree, so the relative path climbs out of `sets/<set>/` *and* out of `v2/`), inherits the
+project FPS (`fps: null`), tags each keyframe with `"group": "seasons"` so the review viewer buckets
+them together, and declares four seasonal keyframes plus the idles and seasonal transitions between
+them:
 
 ```json
 {
   "set": "birch",
   "styleSpec": "../../_style-spec.json",
-  "priors": ["../../tile_tree_oak.png", "../../tile_tree_fir.png"],
+  "priors": ["../../../tile_tree_oak.png", "../../../tile_tree_fir.png"],
   "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
   "fps": null,
   "framesDefault": 8,
   "keyframes": [
-    { "id": "tile_tree_birch_spring", "generator": "pixellab", "prompt": "fresh green canopy" },
-    { "id": "tile_tree_birch_summer", "generator": "pixellab", "prompt": "full deep-green canopy" },
-    { "id": "tile_tree_birch_autumn", "generator": "pixellab", "prompt": "gold/amber canopy" },
-    { "id": "tile_tree_birch_winter", "generator": "pixellab", "prompt": "bare branches, snow on limbs" }
+    { "id": "tile_tree_birch_spring", "group": "seasons", "generator": "pixellab", "prompt": "fresh green canopy" },
+    { "id": "tile_tree_birch_summer", "group": "seasons", "generator": "pixellab", "prompt": "full deep-green canopy" },
+    { "id": "tile_tree_birch_autumn", "group": "seasons", "generator": "pixellab", "prompt": "gold/amber canopy" },
+    { "id": "tile_tree_birch_winter", "group": "seasons", "generator": "pixellab", "prompt": "bare branches, snow on limbs" }
   ],
   "idles": [
     { "for": "tile_tree_birch_autumn", "frames": 8, "motion": "sway + occasional falling leaf" },
