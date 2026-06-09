@@ -1346,18 +1346,11 @@ func _refresh_boss() -> void:
 		_boss_pill_box.visible = false
 
 ## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",
-## "iron_bar" → "Iron", "fish_fillet" → "Fish"). Falls back to a tidied form of the key.
+## "iron_bar" → "Iron", "fish_fillet" → "Fish"). The label now lives on each boss's
+## target definition in BossConfig (target.label); this is a thin delegate so the call
+## site stays terse and the mapping has a single owner.
 func _boss_target_label(res: String) -> String:
-	match res:
-		"tile_tree_oak": return "Oak"
-		"tile_grass_grass": return "Hay"
-		"tile_mine_stone": return "Stone"
-		"tile_fruit_blackberry": return "Berry"
-		"iron_bar": return "Iron"
-		"fish_fillet": return "Fish"
-		_:
-			var s: String = res.trim_prefix("tile_")
-			return s.capitalize()
+	return BossConfig.target_label(res)
 
 ## M3h/M4b: the Town-3 rats hazard now lives in the top-bar rats pill, shown only
 ## once rats are a live threat (Town 2 done). With a Ratcatcher it reads "🐀 N/5"
