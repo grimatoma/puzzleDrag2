@@ -21,71 +21,117 @@
         <div class="page-head__title">
           <h1>Sprite set review</h1>
           <p class="tagline">
-            Eyeball the family for cohesion, comment per asset, copy the notes to drive the next
-            pass.
+            Eyeball each item's masters, children &amp; animations for cohesion. Approve, select, or
+            regenerate candidates — the human gate that drives the next pass.
           </p>
         </div>
         <div class="page-head__meta">
           <div id="totals" class="totals" aria-live="polite"></div>
+          <div id="live" class="live" aria-live="polite" title="Auto-refreshes from data.json"></div>
           <div class="legend" aria-hidden="true">
             <span class="legend__item"><span class="dot dot--approved"></span>approved</span>
-            <span class="legend__item"><span class="dot dot--generated"></span>generated</span>
+            <span class="legend__item"><span class="dot dot--review"></span>review</span>
             <span class="legend__item"><span class="dot dot--pending"></span>pending</span>
           </div>
         </div>
       </div>
     </header>
 
+    <!-- Banner shown when /api/* control-server POSTs fail (server not running). -->
+    <div id="server-banner" class="server-banner" role="status" aria-live="polite" hidden></div>
+
     <main id="app">
-      <!-- sets render here -->
+      <!-- items render here -->
       <p id="loading" class="loading">Loading <code>data.json</code>…</p>
     </main>
 
-    <!-- Page-level review notes + copy-out. -->
-    <section class="page-notes" aria-label="Review notes">
-      <div class="page-notes__inner">
-        <label class="page-notes__label" for="page-comment">Overall notes (whole review)</label>
-        <textarea
-          id="page-comment"
-          class="comment page-notes__field"
-          rows="3"
-          placeholder="Cross-set observations — cohesion, palette drift across sets, what to prioritize next pass…"
-        ></textarea>
-      </div>
-    </section>
+    <!-- ── templates (cloned by viewer.js) ─────────────────────────────────────────────────── -->
 
-    <!-- Sticky action bar. -->
-    <div class="actionbar">
-      <div class="actionbar__inner">
-        <span id="comment-count" class="actionbar__count">0 comments</span>
-        <div class="actionbar__buttons">
-          <button id="clear-comments" class="btn btn--ghost" type="button">Clear all</button>
-          <button id="copy-comments" class="btn btn--primary" type="button">
-            Copy comments
-          </button>
+    <!-- One ITEM: header + its keys + its animations. -->
+    <template id="item-tpl">
+      <section class="item">
+        <div class="item__head">
+          <h2 class="item__id"></h2>
+          <p class="item__prompt"></p>
         </div>
-        <span id="copy-status" class="actionbar__status" role="status" aria-live="polite"></span>
-      </div>
-    </div>
+        <div class="item__keys"></div>
+        <div class="item__anims"></div>
+      </section>
+    </template>
 
-    <!-- Card template (cloned per asset by viewer.js). -->
-    <template id="card-tpl">
-      <article class="card">
+    <!-- One KEY card (master / child): approved image + status + collapsible candidates + controls. -->
+    <template id="key-tpl">
+      <article class="card card--key">
         <div class="card__media">
           <!-- <img> / placeholder injected here -->
         </div>
         <div class="card__body">
           <div class="card__head">
-            <span class="card__kind"></span>
+            <span class="card__role"></span>
             <span class="badge"></span>
           </div>
           <h3 class="card__id"></h3>
           <p class="card__desc"></p>
+
+          <details class="cands">
+            <summary class="cands__summary">Candidates (<span class="cands__n">0</span>)</summary>
+            <div class="cands__grid"></div>
+            <div class="cands__regen">
+              <button class="btn btn--ghost btn--sm regen-btn" type="button" disabled>
+                Regenerate selected
+              </button>
+              <span class="cands__regen-hint">tick candidates above to regenerate them</span>
+            </div>
+          </details>
+
+          <div class="card__controls">
+            <button class="btn btn--primary btn--sm approve-btn" type="button">Approve</button>
+            <span class="card__controls-note" role="status" aria-live="polite"></span>
+          </div>
+
           <textarea
             class="comment card__comment"
             rows="2"
-            placeholder="Note for this asset…"
+            placeholder="Note for this key…"
           ></textarea>
+        </div>
+      </article>
+    </template>
+
+    <!-- One CANDIDATE thumbnail inside the collapsible section. -->
+    <template id="cand-tpl">
+      <div class="cand">
+        <label class="cand__pick">
+          <input type="checkbox" class="cand__check" />
+          <span class="cand__thumb">
+            <!-- <img> / placeholder injected here -->
+          </span>
+        </label>
+        <div class="cand__meta">
+          <div class="cand__row">
+            <span class="cand__idx"></span>
+            <span class="badge badge--cand"></span>
+          </div>
+          <div class="cand__llm"></div>
+          <p class="cand__reason"></p>
+          <button class="btn btn--ghost btn--xs select-btn" type="button">Select</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- One ANIMATION card (idle / transition): GIF + meta. -->
+    <template id="anim-tpl">
+      <article class="card card--anim">
+        <div class="card__media">
+          <!-- <img> (gif) / poster / placeholder injected here -->
+        </div>
+        <div class="card__body">
+          <div class="card__head">
+            <span class="card__role"></span>
+            <span class="badge"></span>
+          </div>
+          <h3 class="card__id"></h3>
+          <p class="card__desc"></p>
         </div>
       </article>
     </template>
