@@ -458,7 +458,13 @@ function main() {
     process.exit(1);
   }
 
-  const data = emit(pipelinePath, baseDir, outDir, { copyTemplate: true });
+  let data;
+  try {
+    data = emit(pipelinePath, baseDir, outDir, { copyTemplate: true });
+  } catch (err) {
+    console.error(`pipeline.json unreadable: ${err.message}`);
+    process.exit(1);
+  }
   const t = data.totals;
   console.log(
     `pixelGen: ${t.items} item(s), ${t.keyframes} keyframe(s), ${t.animations} animation(s) ` +

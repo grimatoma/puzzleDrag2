@@ -123,8 +123,9 @@ The pipeline reconciles `pipeline.json` against itself by **shape** — the nest
 derivation, so there is **no `master:true` flag and no `derivesFrom` pointer**. On each run it
 diffs and acts:
 
-1. A **`master`** with **fewer than `settings.candidates`** non-failed candidates → **generate** the
-   remaining seeds for it.
+1. A **`master`** that is **not yet approved** (`selected` is `null`) and has **fewer than
+   `settings.candidates`** non-failed candidates → **generate** the remaining seeds for it. An
+   **approved** keyframe is "full" — accumulation stops once a candidate is chosen.
 2. A **`child`** with **no candidates** *and* an **approved master** (master `selected` is non-null)
    → **generate** it, conditioned on the approved master.
 3. An **`animation`** whose referenced keyframes are **approved** and whose `status` is `"pending"`
