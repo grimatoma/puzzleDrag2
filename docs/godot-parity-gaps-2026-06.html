@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot Port — Parity Gap Review &amp; Task List</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#2b2218; --muted:#7c6a52; --line:#e3d6bd; --bg:#f4ecd8;
+    --paper:#fffaf1; --code:#efe4cc;
+    --accent:#9a3a2a;       /* ember / terracotta */
+    --accent2:#5e8c1e;      /* leaf green */
+    --gold:#b8860b;
+    --shadow:0 1px 2px rgba(60,40,16,.08), 0 6px 20px -10px rgba(60,40,16,.28);
+    --ok:#5e8c1e; --warn:#c5631a; --info:#1d6f8b; --danger:#9a2b1f; --idle:#9a8c72;
+    --serif:"Cinzel",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.62 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 82% -8%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #ece0c4 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.82em var(--mono);color:#6a4a22;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;}
+  .page{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.5rem 1.6rem 1.2rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,transparent), color-mix(in srgb,var(--accent2) 8%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:900 2.5rem/1.08 var(--serif);letter-spacing:.01em;margin:.1rem 0 .4rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.05rem;margin:.2rem 0 .75rem;max-width:70ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;font-family:var(--mono);}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.76rem;font-weight:600;padding:.2rem .62rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:600 .96rem/1 var(--serif);letter-spacing:.01em;padding:.62rem 1.05rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(60,40,16,.32);}
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:700 1.7rem/1.15 var(--serif);letter-spacing:.005em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.3rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.18rem/1.3 var(--serif);margin-top:1.5rem;color:var(--accent);}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.86rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 10%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 55%,#fff);}
+  td code{white-space:nowrap;}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 8%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.7rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;text-transform:uppercase;letter-spacing:.03em;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);} .pill.gold{background:var(--gold);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.75rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(60,40,16,.10),0 12px 28px -12px rgba(60,40,16,.32);}
+  .card.danger{border-left-color:var(--danger);} .card.warn{border-left-color:var(--warn);} .card.ok{border-left-color:var(--ok);}
+  .card h3{margin-top:.2rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+
+  .filterbar{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 .2rem;align-items:center;}
+  .filterbar .lbl{font-size:.8rem;color:var(--muted);margin-right:.2rem;}
+  .filterbar button{font:600 .8rem/1 var(--sans);padding:.34rem .65rem;border:1px solid var(--line);background:var(--paper);border-radius:7px;cursor:pointer;color:var(--ink);transition:background .14s,color .14s,border-color .14s;}
+  .filterbar button:hover{border-color:var(--accent);color:var(--accent);}
+  .filterbar button.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1rem/1.3 var(--serif);padding:.45rem 0;color:var(--ink);}
+
+  .tid{font:600 .8rem var(--mono);color:var(--accent);white-space:nowrap;}
+  .kpi{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0;}
+  .kpi .box2{flex:1;min-width:150px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;box-shadow:var(--shadow);}
+  .kpi .n{font:900 1.8rem/1 var(--serif);color:var(--accent);}
+  .kpi .l{font-size:.78rem;color:var(--muted);margin-top:.2rem;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:1.9rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .7rem;font-size:.85rem;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs,.filterbar{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Godot Port — Parity Gap Review</h1>
+    <p class="sub">A feature-by-feature audit of the <code>godot/</code> port against the React+Phaser source (<code>src/</code>), grounded in live play-testing of the running Godot build. The headline finding is the farm tile selector; the rest is a prioritised task list of every functional gap found.</p>
+    <p class="meta">Reviewer: Claude · 2026-06-08 · Godot 4.6.2 build, mobile-portrait 720×1280 · scope: gameplay logic &amp; player-facing behaviour, not cosmetics</p>
+    <div class="chips">
+      <span class="chip">32 React slices</span>
+      <span class="chip">live-tested</span>
+      <span class="chip">32 tasks</span>
+      <span class="chip">7 bugs · 16 missing · 9 parked</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="tiles">Tile System ★</button>
+    <button class="tab" role="tab" data-tab="farm">Farm &amp; Hazards</button>
+    <button class="tab" role="tab" data-tab="town">Town &amp; Economy</button>
+    <button class="tab" role="tab" data-tab="expeditions">Expeditions &amp; Meta</button>
+    <button class="tab" role="tab" data-tab="tasklist">Task List</button>
+  </nav>
+
+  <main>
+
+    <!-- ════════════════ OVERVIEW ════════════════ -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+      <section id="summary">
+        <h2>Overview</h2>
+        <p>The Godot port is <b>far more complete than "barebones."</b> The Town 1→2→3 slice plays end-to-end, every nav surface renders cleanly, and most progression systems (quests, almanac, achievements, daily rewards, story engine, tutorial, NPC bonds, workers, castle, decorations, portal, charter) are <em>faithful logic ports</em>. The gaps cluster in a handful of deep systems.</p>
+
+        <div class="box tip"><b>TL;DR.</b> The user-reported bug is real and it is the <b>#1 priority</b>: the Godot "Start Farming" picker lets you <b>toggle whole tile categories on/off</b>, but the original locks the home categories <b>ON</b> and each slot is a picker for <b>which specific tile variant</b> (Grass vs Meadow vs Spiky…) is active. Behind that single screen sits an entire missing subsystem — <b>active-tile-per-category + tile discovery/research/buy</b> — which is also why the 79-tile collection is a read-only gallery you can't actually use.</p></div>
+
+        <div class="kpi">
+          <div class="box2"><div class="n">1</div><div class="l">headline bug (tile selector) → 6 sub-tasks</div></div>
+          <div class="box2"><div class="n">2 / ~46</div><div class="l">recipes ported · no Workshop / tool-crafting</div></div>
+          <div class="box2"><div class="n">1 / 6</div><div class="l">bosses ported (Frostmaw only)</div></div>
+          <div class="box2"><div class="n">2 / ~7</div><div class="l">farm+mine hazards ported (rats·rubble)</div></div>
+          <div class="box2"><div class="n">3 / 11</div><div class="l">cartography map nodes</div></div>
+        </div>
+      </section>
+
+      <section id="how">
+        <h2>How this was tested</h2>
+        <p>I ran the real Godot 4.6.2 binary and captured every nav surface from a fresh save and a granted (City-tier, all-buildings) save, then read the pixels myself. I also started live bounded farm runs and dumped <code>active_tile_pool()</code> to verify board behaviour, and ran three parallel read-only code comparisons across all 32 React feature slices vs their Godot equivalents. Findings below cite real <code>file:line</code> on both sides.</p>
+        <div class="box"><b>Live-verified, not matrix-trusted.</b> Two things I confirmed by running the game that a code skim would miss: (1) selecting only <code>[grass, grain]</code> in Start Farming does <em>not</em> restrict the board — the dumped pool still contained all six category tiles, the selection only appends a +6 weight boost; (2) the Craft (TownScreen) renders fully <em>once the town map is hidden</em>, proving the empty-looking deep-link capture is the nav/layering issue in <a href="#t28">T28</a>, not a broken screen.</div>
+      </section>
+
+      <section id="reading">
+        <h2>How to read the tasks</h2>
+        <p class="legend">
+          <span><span class="pill danger">bug</span> wrong behaviour a player hits — fix</span>
+          <span><span class="pill warn">missing</span> a real mechanic/content not ported — port for parity</span>
+          <span><span class="pill idle">parked</span> intentionally deferred by design — note, low priority</span>
+        </p>
+        <p class="legend">
+          <span>Severity: <span class="pill danger">high</span> core / very visible</span>
+          <span><span class="pill warn">med</span> meaningful</span>
+          <span><span class="pill idle">low</span> minor / polish</span>
+        </p>
+        <p>The <a href="#tasklist">Task List</a> tab is the filterable master table of all 32 tasks. The four middle tabs explain each cluster with the React-vs-Godot detail and code references.</p>
+        <div class="box warn"><b>A caveat on "parked".</b> Many gaps are explicitly deferred in code comments / migration docs (multi-settlement, the 11-node map, mine hazards "arrive with the boss milestone"). I've marked those <span class="pill idle">parked</span> — they're not regressions, but they <em>are</em> real differences from the live web game, so they're listed for completeness. The owner decides which parked items to pull forward.</div>
+      </section>
+    </div>
+
+    <!-- ════════════════ TILE SYSTEM ════════════════ -->
+    <div class="panel" id="tiles" role="tabpanel" aria-label="Tile System">
+      <section id="tile-headline">
+        <h2>★ The farm tile selector (the reported bug)</h2>
+        <p>This is one screen with four distinct defects stacked behind it. The screen is <code>godot/scenes/StartFarmingModal.gd</code>, claiming to mirror <code>src/features/zones/StartFarmingModal.tsx</code>.</p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 880 250" width="100%" role="img" aria-label="React vs Godot start-farming behaviour">
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13">
+              <text x="220" y="22" text-anchor="middle" font-weight="700" fill="#5e8c1e" font-size="15">React — variant PICKER (correct)</text>
+              <rect x="40" y="36" width="360" height="180" rx="10" fill="color-mix(in srgb,#5e8c1e 8%,#fff)" stroke="#5e8c1e"/>
+              <text x="60" y="62" fill="#2b2218">Categories are LOCKED ON (home = 6 ≤ 8)</text>
+              <text x="60" y="86" fill="#2b2218">Each slot shows the ACTIVE tile variant…</text>
+              <rect x="60" y="98" width="86" height="58" rx="8" fill="#fff" stroke="#8c7656"/>
+              <text x="103" y="120" text-anchor="middle" font-size="22">🌿</text>
+              <text x="103" y="142" text-anchor="middle" font-size="11">Meadow ✎</text>
+              <text x="160" y="120" fill="#2b2218" font-size="12">tap ✎ →</text>
+              <rect x="225" y="98" width="155" height="58" rx="8" fill="#fff" stroke="#5e8c1e"/>
+              <text x="302" y="118" text-anchor="middle" font-size="11">Choose Grass tile</text>
+              <text x="302" y="135" text-anchor="middle" font-size="10">Grass·Meadow·Spiky·Heather</text>
+              <text x="302" y="150" text-anchor="middle" font-size="9" fill="#7c6a52">SET_ACTIVE_TILE</text>
+              <text x="60" y="186" fill="#2b2218" font-size="12">selectedTiles = HARD filter on the board pool</text>
+              <text x="60" y="206" fill="#2b2218" font-size="12">backed by tileCollection.activeByCategory</text>
+
+              <text x="660" y="22" text-anchor="middle" font-weight="700" fill="#9a2b1f" font-size="15">Godot — on/off TOGGLE (wrong)</text>
+              <rect x="480" y="36" width="360" height="180" rx="10" fill="color-mix(in srgb,#9a2b1f 7%,#fff)" stroke="#9a2b1f"/>
+              <text x="500" y="62" fill="#2b2218">"Tap to include or drop one"</text>
+              <rect x="500" y="78" width="74" height="46" rx="8" fill="#5e8c1e" stroke="#5e8c1e"/>
+              <text x="537" y="100" text-anchor="middle" font-size="18">🌿</text>
+              <text x="537" y="116" text-anchor="middle" font-size="10" fill="#fff">Grass</text>
+              <rect x="584" y="78" width="74" height="46" rx="8" fill="#dbcfb6" stroke="#8c7656"/>
+              <text x="621" y="100" text-anchor="middle" font-size="18">🌾</text>
+              <text x="621" y="116" text-anchor="middle" font-size="10">Grain (off)</text>
+              <text x="500" y="150" fill="#2b2218" font-size="12">No variant picker · no active tile</text>
+              <text x="500" y="172" fill="#2b2218" font-size="12">"off" is a SOFT weight nudge, not a filter</text>
+              <text x="500" y="194" fill="#9a2b1f" font-size="12">→ dropped categories still spawn</text>
+            </g>
+          </svg>
+        </div>
+
+        <h3>T1 · Replace category toggles with per-category variant pickers <span class="tid">[high · bug]</span></h3>
+        <p>React: when a zone exposes ≤8 categories (<code>mustPick === false</code>, home = 6), every slot is <b>locked ON</b> (<code>StartFarmingModal.tsx:286-289,354-363</code>) and tapping a slot opens <code>TileChooserPopup</code> to pick a <em>variant</em> within that category. Godot builds <code>toggle_mode=true</code> buttons that turn the category on/off (<code>StartFarmingModal.gd:184-196,283-288</code>); there is no variant picker and no "✎ change" affordance. Rebuild the modal as a locked-on grid of variant slots with a chooser popup.</p>
+
+        <h3>T2 · Add active-tile-per-category state + board substitution <span class="tid">[high · missing]</span></h3>
+        <p>The whole substrate is absent. React keeps <code>state.tileCollection.activeByCategory</code> (category→tileId), set by <code>SET_ACTIVE_TILE</code> (<code>src/state.ts:1349-1369</code>); the board pool substitutes the active variant for the category's base key (<code>tileCollection/effects.ts getActivePool</code>) and upgrade-tile resolution honours it (<code>zones/data.ts nextResourceForZone:303-310</code>). Godot has no <code>activeByCategory</code>, no <code>SET_ACTIVE_TILE</code>; the pool hard-codes one representative tile per category via <code>FARM_CATEGORY_TILE</code> (<code>GameState.gd:1598-1605</code>). Add the state, the setter, and wire it into <code>active_tile_pool()</code> + <code>upgrade_spawn</code>.</p>
+
+        <h3>T3 · Tile discovery / research / buy economy <span class="tid">[high · missing]</span></h3>
+        <p>React unlocks variants via five methods — <code>default</code>, <code>chain</code>, <code>research</code>, <code>buy</code> (<code>BUY_TILE</code>), <code>building</code>, <code>daily</code> (<code>tileCollection/effects.ts</code>, <code>state.ts:191-218,1396-1413</code>). None exists in Godot — <code>TileCollectionScreen.gd:13-15</code> states discovery/research/buy "is a LATER milestone … NOT ported," so the gallery is read-only. Without this, the entire variant-unlock progression (and the point of T1/T2's chooser) is missing.</p>
+
+        <div class="box warn"><b>T1–T3 are one feature.</b> Shipping the picker (T1) without the active-tile state (T2) and an unlock economy (T3) just renders a chooser with one option per category. Treat them as a single milestone, smallest-first: T2 state → T1 UI (chooser over <em>discovered</em> variants, default-discovered set seeded) → T3 unlock methods.</div>
+
+        <h3>T4 · Tile categorisation data bug: Clover &amp; Melon mis-filed under Birds <span class="tid">[med · bug]</span></h3>
+        <p>Visible in the Tile Collection: "Clover" and "Melon" appear under <b>Birds</b> producing <b>eggs</b>. But React authors them <code>category:"flowers"</code> and <code>category:"fruits"</code> (<code>tileCollection/data.ts:126,135</code>) — they only carry a <em>legacy</em> <code>tile_bird_</code> id prefix. Godot took the prefix at face value: <code>CATEGORY[BIRD_CLOVER]="birds"</code>, produces <code>"eggs"</code> (<code>Constants.gd:610-611,339-340</code>). Re-file by authored category and fix the produced resource; the collection groups by <code>Constants.category_of()</code>, so fix it there.</p>
+
+        <h3>T5 · Per-tile abilities not ported <span class="tid">[med · missing]</span></h3>
+        <p>React variants carry abilities expanded into effects (<code>data.ts:686-694</code>): Turkey/Clover/Melon/Palm grant <code>free_moves</code>, Golden Apple/Coin grant coin bonuses, Pig grants <code>free_turn_if_chain</code>; the <code>freeMoves</code> accumulator is consumed in the reducer and shown in the HUD. Godot has no tile-ability/effects system (<code>TileCollectionScreen.gd:13</code>). This is what makes choosing a variant <em>matter</em> — without it, variants are cosmetic.</p>
+
+        <h3>T6 · "Off" categories still spawn (soft boost ≠ hard filter) <span class="tid">[med · bug]</span></h3>
+        <p>Even taking the toggle at face value, it barely works. <code>GameState.gd:1713-1723</code> documents the "DOCUMENTED DIVERGENCE from React: there selectedTiles is a hard FILTER … the port reframes it as a soft weight BOOST." I confirmed live: <code>start_farm_run(["grass","grain"])</code> still produced a pool containing tile ids <code>0,1,6,2,3,4</code> (all six categories) — only +6 grass/wheat were appended. So dropping a category does almost nothing. Resolving T1 (variant pick, no drop) makes this moot; if any drop affordance survives, make it a real filter.</p>
+      </section>
+    </div>
+
+    <!-- ════════════════ FARM & HAZARDS ════════════════ -->
+    <div class="panel" id="farm" role="tabpanel" aria-label="Farm and Hazards">
+      <section id="hazards">
+        <h2>Hazards</h2>
+        <p>React farm hazards = <b>rats, fire, wolves</b>; React mine hazards = <b>cave_in, gas_vent, lava, mole</b>. Godot ships only <b>rats</b> (farm) and <b>rubble</b> (mine), and the rats it has behave differently.</p>
+
+        <div class="grid">
+          <div class="card danger"><h3>T7 · Fire <span class="tid">[high · missing]</span></h3><p>React: spawns 4%/fill, spreads 50%/turn to adjacent cells burning resources (cap 3), extinguished by chaining fire tiles for +2 coins each (<code>farm/hazards.ts:40-167,232-251</code>). No <code>fire</code> in <code>godot/</code> at all.</p></div>
+          <div class="card danger"><h3>T8 · Wolves <span class="tid">[high · missing]</span></h3><p>React: spawn 6%/fill when eggs&gt;30 or turkey&gt;5, eat adjacent bird tiles each turn, scared 5 turns by a Hound or cleared by a Rifle (<code>hazards.ts:43-49,102-116,174-224</code>). No wolf logic in Godot.</p></div>
+          <div class="card warn"><h3>T9 · Rats are inert, not pests <span class="tid">[high · bug]</span></h3><p>React rats <em>tick and eat</em> an adjacent plant tile/turn, spawn on grass&gt;50 &amp; wheat&gt;50, and clear by chaining 3+ rats → +5 coins each (<code>farm/rats.ts</code>). Godot rats are inert pool tiles producing nothing, seeded flat when Town 2 is done, cleared only by Ratcatcher buildings (<code>Constants.gd:284-287</code>, <code>GameState.gd:1727-1729</code>). Port the real lifecycle.</p></div>
+          <div class="card warn"><h3>T10 · Rat-interaction tile tags <span class="tid">[med · missing]</span></h3><p><code>attracts_rats</code> (Manna/Jackfruit), <code>deadly_pests</code> (Cypress/Beet/Phoenix exterminate adjacent rats), <code>avoids_rats</code> (not eaten) — no tag system in Godot. Coupled to T5/T9.</p></div>
+          <div class="card warn"><h3>T11 · Mine hazards 4→1 <span class="tid">[med · parked]</span></h3><p>React's cave_in / gas_vent / lava / mole (weighted roll, timers, spreading, row-burial) reduce to one static <b>rubble</b> tile cleared by a stone chain (<code>mine/hazards.ts</code> vs <code>Constants.gd:51-58</code>). <code>GameState.gd:85</code> defers mine hazards "to a later milestone."</p></div>
+        </div>
+      </section>
+
+      <section id="farm-rules">
+        <h2>Seasons, fertilizer &amp; tools</h2>
+        <div class="card ok"><h3>Seasons — at parity (no task) <span class="tid">[verified]</span></h3><p>Contrary to an older note, per-season tile-drop weights <em>do</em> differ per season: <code>active_tile_pool()</code> reads <code>ZoneConfig.season_drops()</code> (<code>GameState.gd:1686-1746</code>), a verbatim port of React's <code>seasonDrops</code>. The season bar is functional. <b>One minor caveat (T13).</b></p></div>
+
+        <h3>T12 · Fertilizer entry-item &amp; turn-budget bonuses stubbed <span class="tid">[med · missing]</span></h3>
+        <p>React's modal offers "Use Fertilizer — doubles turns" consuming <code>state.tools.fertilizer</code>, and <code>turnBudgetForZone</code> adds worker/building turn bonuses + <code>tools.extraTurn</code> (<code>zones/data.ts:173-196</code>). Godot keeps the ×2 <em>formula</em> tested but <code>_has_fertilizer()</code> is always false (<code>GameState.gd:1328-1333</code>) so the checkbox is omitted, and the budget is base-turns-only (no building/worker extension). The fill-bias <em>tool</em> path is wired; the run-entry item is not.</p>
+
+        <h3>T13 · SEASON_POOL_MODS additive deltas not ported <span class="tid">[low · missing]</span></h3>
+        <p>React applies a second seasonal layer on top of <code>seasonDrops</code>: <code>SEASON_POOL_MODS</code> (Spring +1 blackberry, Autumn +2 oak, Winter +1 stone −1 grass) via <code>applySeasonPoolMods</code> (<code>constants.ts:1123-1128</code>, <code>poolMath.ts:16-31</code>). Godot relies solely on the percentage table. Minor spawn-frequency divergence.</p>
+
+        <h3>T14 · Hazard/utility tool gaps <span class="tid">[med · missing/parked]</span></h3>
+        <p>The Godot catalog is broad (40 wired) but misses: <code>scatter_hazard</code> (timed 5-turn scare / Hound — no timed-scare primitive), <code>water_pump</code> (lava→rubble), <code>explosives</code> (mole + cave-in), and the deferred <code>undo_move</code> (Hourglass, needs a board snapshot) + <code>reveal_tiles</code> (Miner's Hat, needs a hidden-tile layer). Most are blocked on the missing hazards (T7/T8/T11), so they land <em>with</em> those mechanics.</p>
+      </section>
+    </div>
+
+    <!-- ════════════════ TOWN & ECONOMY ════════════════ -->
+    <div class="panel" id="town" role="tabpanel" aria-label="Town and Economy">
+      <section id="econ">
+        <h2>Crafting, market &amp; buildings</h2>
+
+        <h3>T15 · Crafting catalog ~2 of ~46; no Workshop / tool-crafting <span class="tid">[high · missing]</span></h3>
+        <p>Godot ships exactly two recipes — <code>bread</code>, <code>supplies</code> (<code>RecipeConfig.gd:32-52</code>) — across two stations (Bakery, Kitchen). React has ~46 recipes across <b>5 stations</b> (<code>constants.ts:905-965</code>): ~30 <b>Workshop</b> tool recipes (rake, axe, sickle, rifle, drill, gold_pick…), Bakery goods, Larder, Forge, Kitchen, Smokehouse. <b>The port has no Workshop, so there is no in-game tool crafting at all</b> — tools only arrive via daily-reward grants / portal summons. Recipe tier/level gating is also dropped.</p>
+
+        <h3>T16 · Market: no drift, no events, no tile-selling <span class="tid">[high · missing]</span></h3>
+        <p>React's market drifts every price ±15%/season and rolls seasonal events (Wood Shortage ×2, Bumper Crop ×0.5, Iron Rush ×2.5…), re-rolled on <code>CLOSE_SEASON</code> (<code>src/market.ts</code>). Godot uses flat static price tables (<code>MarketConfig.gd:18-68</code>) — no drift, no events, no seasonal re-roll (explicitly listed un-ported in <code>GameState.gd:1342</code>). React also sells raw board tiles + fish goods (~36 goods); Godot sells ~18 bare resources, no tile keys. The whole price-timing layer is gone.</p>
+
+        <h3>T17 · Buildings: ~30 ability-bearing landmarks → 7 spawner/refiner/hazard <span class="tid">[high · missing]</span></h3>
+        <p>React <code>BUILDINGS</code> (<code>constants.ts:760-903</code>) is a ~30-entry catalog of landmarks, many carrying gameplay abilities (turn_budget_bonus, inventory_cap_bonus, bonus_yield, season_bonus, grant_tool, preserve_board, threshold_reduce). Godot <code>BuildingConfig.gd:65-140</code> is a 7-building model: 3 spawners, 2 refiners, 2 hazard buildings. <b>None of React's ability-bearing buildings exist</b> — no Granary cap, Sawmill/Stable yield, Chapel coins, Powder Store tools, Silo/Barn board-preserve, Housing worker-pool, Observatory threshold. The building→economy effect layer is essentially un-ported.</p>
+      </section>
+
+      <section id="social">
+        <h2>NPCs, orders, workers &amp; settlements</h2>
+
+        <h3>T18 · NPC gift system absent <span class="tid">[med · missing]</span></h3>
+        <p>React NPCs accept gifts with tiered preferences (<code>loves</code>/<code>likes</code> → +0.5/+0.3/+0.15 bond, once-per-season cooldown, <code>GIVE_GIFT</code> — <code>npcs/data.ts:20-26</code>, <code>bond.ts</code>, <code>state.ts:1415-1431</code>). Godot has no gift mechanic, no preferences, no cooldown; bonds move only via order fills (+0.3) and season decay. A whole interaction loop is removed. (Bond bands/decay themselves are a faithful port — not a gap.)</p>
+
+        <h3>T19 · Orders: flat reward, no crafted orders, no level scaling <span class="tid">[med · missing]</span></h3>
+        <p>Godot reward = <code>sell_price × qty × 3</code> then bond-adjusted (<code>OrderConfig.gd:24-31</code>). React uses value-scaled curves (resource <code>max(20, need×value×6)</code>, crafted <code>need×value×1.5</code>), a 30%-chance crafted-good order pool (level 3+), and level-scaled quantities (<code>state/helpers.ts:180-290</code>). Godot orders only ever request raw resources at flat qty, and <code>generate_order</code> can duplicate an NPC/resource across the 3 slots (no exclusion, <code>GameState.gd:1050-1070</code>).</p>
+
+        <h3>T20 · "Workers" tab shows NPC bonds, not the hire system <span class="tid">[low · bug]</span></h3>
+        <p>The Townsfolk screen's <b>Workers</b> tab renders the NPC roster + bond bars (<code>TownsfolkScreen.gd:174-182</code>), while the actual hire-by-type worker system (Farmer/Lumberjack/Miner/Baker) lives on the Craft/TownScreen. React keeps NPCs and hired workers as distinct concepts. A naming/feature collision that will confuse players looking for hiring. (The hire system itself <em>is</em> wired — not a gap.)</p>
+
+        <h3>T21 · Worker/building/tile ability-aggregation engine missing <span class="tid">[med · parked]</span></h3>
+        <p>React folds workers + buildings + active tiles into one aggregator (<code>workers/aggregate.ts:135-167</code>) feeding many channels (bonusYield, seasonBonus, hazardSpawnReduce, hazardCoinMultiplier, chainRedirect, poolWeight, freeMoves, seasonEndTools, boardPreserve). Godot implements only two worker channels (threshold-reduce-category, recipe-input-reduce). The passive-ability layer is the connective tissue for T5/T12/T17 — worth building once those land.</p>
+
+        <h3>T22 · Multi-settlement founding + per-zone inventory <span class="tid">[high · parked]</span></h3>
+        <p>React keys inventory &amp; resourceProgress <em>per settlement zone</em> (<code>state/zoneInventory.ts</code>), with a founder-picker and independent stockpiles. Godot uses a single shared global inventory and one <code>Settlement</code> climbing one tier ladder (<code>GameState.gd:80-92</code>) — no founding, no per-zone buckets, no multi-town. Explicitly deferred by the Direction spec; "Town 2/3" today is the same farm board gaining the mine biome + rats. Large; owner-gated.</p>
+
+        <div class="box tip"><b>Faithful / not gaps (verified).</b> Castle (3 needs + contribute), Decorations (8, correct costs/influence), Portal (8/10 tools live, 2 documented-deferred), Charter (read-only, remapped gates), hire-by-type Workers, NPC bond bands/decay, and the Camp→City tier ladder are all real and wired. The tier ladder is a deliberate port-original redesign (React gates buildings by player <em>level</em>; Godot by <em>tier</em> + plot cost), not a bug.</div>
+      </section>
+    </div>
+
+    <!-- ════════════════ EXPEDITIONS & META ════════════════ -->
+    <div class="panel" id="expeditions" role="tabpanel" aria-label="Expeditions and Meta">
+      <section id="biomes">
+        <h2>Expeditions &amp; bosses</h2>
+
+        <h3>T23 · Mine Mysterious-Ore → Rune loop absent <span class="tid">[high · missing]</span></h3>
+        <p>React's signature mine reward: one Mysterious Ore spawns with a 5-turn countdown; chain it with ≥2 Dirt for +1 Rune, else it degrades (<code>mine/mysterious_ore.ts:35-103</code>). Godot has no mysterious-ore primitive at all — the mine's only rune source is gone; runes come solely from the harbor pearl. Not flagged as parked.</p>
+
+        <h3>T24 · Bosses: 1 of 6, and a different fight entirely <span class="tid">[high · missing]</span></h3>
+        <p>React ships 6 seasonal bosses (<code>bosses/data.ts:23-78</code>) as a <em>timed resource-target</em> challenge (gather N of a resource in a 10-turn window, reward scaled by overshoot) with 6 board modifiers (freeze_columns, respawn_boost, heat_tiles, rubble_blocks, hide_resources, min_chain). Godot has only Frostmaw, as an <em>HP-attrition</em> grind (each chain subtracts its length from HP 40, flat 500-coin reward, no rune/gem/XP), and ports only the <code>min_chain</code> raise (<code>GameState.gd:1794-1824</code>) — even Frostmaw's own <code>freeze_columns:2</code> is dropped. The capstone framing is intentional, but the mechanic + modifiers are a substantive divergence.</p>
+
+        <h3>T25 · Fish pearl-capture rule changed <span class="tid">[med · bug]</span></h3>
+        <p>React: the chain must <em>contain the pearl tile</em> + ≥2 other fish (<code>fish/pearl.ts:122-128</code>). Godot ships a faithful <code>try_capture_pearl</code> but the <b>live board uses <code>capture_pearl_if_adjacent</code></b> (a fish chain ≥2 run 8-adjacent to the pearl, <code>GameState.gd:1559-1577</code>) because the pearl is a non-chainable placed tile. Behaviourally divergent — you never chain the pearl itself. Documented deviation; decide whether to make the pearl chainable to match React, or keep adjacency intentionally.</p>
+
+        <h3>T26 · Cartography: 11-node travel map → 3-node router <span class="tid">[high · parked]</span></h3>
+        <p>React's <code>MAP_NODES</code> = 11 zones / 14 edges with per-node entry cost, level gates, dangers, distinct board templates, and a real travel state machine (visited/discovered/hidden, fast-travel, adjacency gating) (<code>cartography/data.ts,slice.ts</code>). Godot has 3 nodes (home/mine/harbor), 2 edges, no travel mechanic — the screen just routes a tap into <code>enter_mine</code>/<code>enter_harbor</code> (<code>CartographyConfig.gd:28-48</code>). Explicitly a trimmed "flavor view"; tied to T22.</p>
+
+        <h3>T27 · Fish achievements omitted on a stale reason <span class="tid">[low · bug]</span></h3>
+        <p><code>AchievementConfig.gd:45-46</code> drops <code>first_catch</code>/<code>tide_runner</code>/<code>master_angler</code> "because the port has NO harbor / fish biome" — but the port <em>does</em> have a working harbor. The three trophies are reachable; they're unreachable only because <code>fish_chained</code> isn't bumped at <code>credit_chain</code>. Cheap fix: wire the counter, re-add the trophies.</p>
+      </section>
+
+      <section id="meta">
+        <h2>Meta, story &amp; UX</h2>
+
+        <h3>T28 · Deep-link to a primary view leaves the town map on top <span class="tid">[low · bug]</span></h3>
+        <p>The in-game nav tabs route through <code>_switch_primary_view</code> (hides sibling views), but the deep-link path (<code>apply_deeplink</code>) and direct opens do <em>not</em>. I verified: after <code>_open_town()</code>, both <code>_townmap_screen.visible</code> and <code>_town_screen.visible</code> are <code>true</code>, and the map (higher canvas layer) renders over the Craft screen. Affects hash deep-links and browser back/forward on the web export, and any QA capture via deep-link. Fix: have <code>apply_deeplink</code> for the 5 primary views go through <code>_switch_primary_view</code> (or hide the map) like the nav tabs do.</p>
+
+        <h3>T29 · Story/chronicle content trimmed <span class="tid">[med · missing]</span></h3>
+        <p>React = 15 main + 10 side beats, ~29 flags; Godot = 14 beats, 15 flags, with branching reduced to one beat (<code>frostmaw_aftermath</code>) (<code>StoryConfig.gd</code>). The engine/condition-evaluator/choice machinery is a faithful port; omissions are gated on absent systems (NPC arrivals, bonds, keepers, festivals, the <code>mira_letter</code> arc). Will fill in as T18/T22/etc. land.</p>
+
+        <h3>T30 · Run summary simplified <span class="tid">[low · missing]</span></h3>
+        <p>React <code>runSummary</code> tracks biggest-chain, bond deltas, beats-triggered, per-resource gains, supplies consumed. Godot's <code>HarvestModal</code> recaps the season + a turn/economy snapshot + return bonus only (<code>HarvestModal.gd</code>). Also: <code>close_season</code> deliberately omits market drift, the <code>session_ended</code> beat, season-end tool grants, board-preserve, and freeMoves reset (<code>GameState.gd:1340-1348</code>).</p>
+
+        <h3>T31 · Boons absent; achievements/almanac deltas <span class="tid">[low · parked]</span></h3>
+        <p>The Boons slice (ember/coreIngot purchases) has no Godot equivalent; Festivals are stubbed both sides (parity). Achievements roster is 27→19 (omissions unreachable in the port); the four Almanac "structural perks" (extraTurn, goldSeal…) are inert flags — but they're inert in React too, so this is parity, not regression.</p>
+
+        <h3>T32 · Verify season bar renders during a live run <span class="tid">[low · verify]</span></h3>
+        <p>My synthetic board capture (run started via <code>start_farm_run</code> directly) did not visibly show the season strip; the season logic is wired, so this is most likely a HUD-refresh timing artifact in my capture rather than a real bug. Quick check: start a run via the in-game Start-Farming flow and confirm <code>SeasonBar</code> is visible.</p>
+      </section>
+    </div>
+
+    <!-- ════════════════ TASK LIST ════════════════ -->
+    <div class="panel" id="tasklist" role="tabpanel" aria-label="Task List">
+      <section id="master">
+        <h2>Master task list</h2>
+        <p class="legend">
+          <span><span class="pill danger">high</span></span>
+          <span><span class="pill warn">med</span></span>
+          <span><span class="pill idle">low</span></span>
+          <span>· type — <span class="pill danger">bug</span> / <span class="pill warn">missing</span> / <span class="pill idle">parked</span></span>
+        </p>
+        <div class="filterbar">
+          <span class="lbl">Filter severity:</span>
+          <button class="on" data-filter="all">All</button>
+          <button data-filter="high">High</button>
+          <button data-filter="med">Med</button>
+          <button data-filter="low">Low</button>
+        </div>
+        <table id="status-table">
+          <thead><tr><th>ID</th><th>Task</th><th>Area</th><th>Sev</th><th>Type</th></tr></thead>
+          <tbody>
+            <tr data-status="high"><td><a href="#t1" class="tid">T1</a></td><td>Start-Farming: locked-on per-category <b>variant pickers</b>, not on/off toggles</td><td>Tiles</td><td><span class="pill danger">high</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="high"><td><a href="#t2" class="tid">T2</a></td><td>Active-tile-per-category state + board substitution (<code>SET_ACTIVE_TILE</code>)</td><td>Tiles</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t3" class="tid">T3</a></td><td>Tile discovery / research / buy unlock economy</td><td>Tiles</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t4" class="tid">T4</a></td><td>Clover→flowers, Melon→fruits (mis-filed under Birds, wrong produced resource)</td><td>Tiles</td><td><span class="pill warn">med</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="med"><td><a href="#t5" class="tid">T5</a></td><td>Per-tile abilities (free_moves, coin_bonus, free_turn_if_chain, honey…)</td><td>Tiles</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t6" class="tid">T6</a></td><td>Category selection is a soft weight boost, not a hard filter</td><td>Tiles</td><td><span class="pill warn">med</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="high"><td><a href="#t7" class="tid">T7</a></td><td>Fire hazard (spawn / spread / extinguish-by-chain)</td><td>Hazards</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t8" class="tid">T8</a></td><td>Wolves hazard (eat birds, Hound/Rifle counterplay)</td><td>Hazards</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t9" class="tid">T9</a></td><td>Rats are inert tiles — port tick-and-eat + chain-3 coin reward + spawn gate</td><td>Hazards</td><td><span class="pill danger">high</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="med"><td><a href="#t10" class="tid">T10</a></td><td>Rat-interaction tile tags (attracts/deadly/avoids)</td><td>Hazards</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t11" class="tid">T11</a></td><td>Mine hazards cave_in / gas_vent / lava / mole (4→1)</td><td>Hazards</td><td><span class="pill warn">med</span></td><td><span class="pill idle">parked</span></td></tr>
+            <tr data-status="med"><td><a href="#t12" class="tid">T12</a></td><td>Fertilizer entry-item + building/worker turn-budget bonuses</td><td>Farm</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="low"><td><a href="#t13" class="tid">T13</a></td><td>SEASON_POOL_MODS additive seasonal deltas</td><td>Farm</td><td><span class="pill idle">low</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t14" class="tid">T14</a></td><td>Tools: scatter_hazard / water_pump / explosives / undo / reveal</td><td>Tools</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t15" class="tid">T15</a></td><td>Crafting ~2/46 recipes; no Workshop → no tool-crafting</td><td>Economy</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t16" class="tid">T16</a></td><td>Market: price drift + seasonal events + tile-selling</td><td>Economy</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t17" class="tid">T17</a></td><td>Buildings: ~30 ability-bearing landmarks → 7; effect layer un-ported</td><td>Economy</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t18" class="tid">T18</a></td><td>NPC gift system (loves/likes, cooldown, GIVE_GIFT)</td><td>Social</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t19" class="tid">T19</a></td><td>Orders: value-scaled reward, crafted orders, level scaling, no dupes</td><td>Social</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="low"><td><a href="#t20" class="tid">T20</a></td><td>"Workers" tab shows NPC bonds, not the hire system</td><td>Social</td><td><span class="pill idle">low</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="med"><td><a href="#t21" class="tid">T21</a></td><td>Worker/building/tile ability-aggregation engine</td><td>Economy</td><td><span class="pill warn">med</span></td><td><span class="pill idle">parked</span></td></tr>
+            <tr data-status="high"><td><a href="#t22" class="tid">T22</a></td><td>Multi-settlement founding + per-zone inventory</td><td>World</td><td><span class="pill danger">high</span></td><td><span class="pill idle">parked</span></td></tr>
+            <tr data-status="high"><td><a href="#t23" class="tid">T23</a></td><td>Mine Mysterious-Ore → Rune countdown loop</td><td>Mine</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="high"><td><a href="#t24" class="tid">T24</a></td><td>Bosses 1/6 + timed-resource mechanic + board modifiers</td><td>Boss</td><td><span class="pill danger">high</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="med"><td><a href="#t25" class="tid">T25</a></td><td>Fish pearl-capture rule (in-chain vs adjacency)</td><td>Fish</td><td><span class="pill warn">med</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="high"><td><a href="#t26" class="tid">T26</a></td><td>Cartography 11-node travel map (→ 3-node router)</td><td>World</td><td><span class="pill danger">high</span></td><td><span class="pill idle">parked</span></td></tr>
+            <tr data-status="low"><td><a href="#t27" class="tid">T27</a></td><td>Wire fish_chained → re-add 3 fish achievements (stale "no harbor")</td><td>Meta</td><td><span class="pill idle">low</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="low"><td><a href="#t28" class="tid">T28</a></td><td>Deep-link to a primary view doesn't hide the town map (layering)</td><td>UX</td><td><span class="pill idle">low</span></td><td><span class="pill danger">bug</span></td></tr>
+            <tr data-status="med"><td><a href="#t29" class="tid">T29</a></td><td>Story/chronicle beats + branching trimmed (gated on absent systems)</td><td>Meta</td><td><span class="pill warn">med</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="low"><td><a href="#t30" class="tid">T30</a></td><td>Run-summary rich recap + close_season side-effects</td><td>Meta</td><td><span class="pill idle">low</span></td><td><span class="pill warn">missing</span></td></tr>
+            <tr data-status="low"><td><a href="#t31" class="tid">T31</a></td><td>Boons absent; festivals/almanac-perks parity notes</td><td>Meta</td><td><span class="pill idle">low</span></td><td><span class="pill idle">parked</span></td></tr>
+            <tr data-status="low"><td><a href="#t32" class="tid">T32</a></td><td>Verify season bar renders during a live run</td><td>Farm</td><td><span class="pill idle">low</span></td><td><span class="pill danger">bug</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="sequencing">
+        <h2>Suggested sequencing</h2>
+        <div class="grid">
+          <div class="card danger"><h3>1 · The reported bug (one milestone)</h3><p><a href="#t2">T2</a> active-tile state → <a href="#t1">T1</a> variant-picker UI → <a href="#t3">T3</a> unlock economy, plus the cheap data fix <a href="#t4">T4</a>. This is what the user is looking at; do it first and whole.</p></div>
+          <div class="card warn"><h3>2 · Quick correctness wins</h3><p><a href="#t27">T27</a> (wire one counter), <a href="#t28">T28</a> (deep-link hides map), <a href="#t20">T20</a> (Workers-tab label), <a href="#t32">T32</a> (verify). Small, isolated, high signal-to-effort.</p></div>
+          <div class="card"><h3>3 · Farm depth</h3><p>Hazards <a href="#t9">T9</a>/<a href="#t7">T7</a>/<a href="#t8">T8</a> + their tools <a href="#t14">T14</a>; then <a href="#t5">T5</a> tile abilities + <a href="#t23">T23</a> mysterious ore. Makes the board interesting again.</p></div>
+          <div class="card"><h3>4 · Economy &amp; content</h3><p><a href="#t15">T15</a> recipes/Workshop, <a href="#t16">T16</a> market, <a href="#t17">T17</a> buildings, <a href="#t19">T19</a>/<a href="#t18">T18</a> social. Larger; sequence behind the ability engine <a href="#t21">T21</a>.</p></div>
+          <div class="card idle"><h3>5 · Owner-gated / parked</h3><p><a href="#t22">T22</a> multi-settlement, <a href="#t26">T26</a> full world map, <a href="#t24">T24</a> boss roster/mechanic. Big scope; needs a design call before building.</p></div>
+        </div>
+        <div class="box"><b>Note on "no-fakes."</b> The port deliberately omits UI for systems it hasn't ported (to avoid fake controls). Each task above should port the <em>real</em> mechanic end-to-end, not a stub — consistent with the repo's engineering rules.</div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+    function resolve(id){
+      for(var i=0;i<panels.length;i++){
+        if(panels[i].id===id) return {panel:panels[i],section:null};
+        var sec = id && panels[i].querySelector('#'+(window.CSS&&CSS.escape?CSS.escape(id):id));
+        if(sec) return {panel:panels[i],section:sec};
+      }
+      return null;
+    }
+    function activate(id,push,scrollToSection){
+      var hit = resolve(id) || {panel:panels[0],section:null};
+      panels.forEach(function(p){p.classList.toggle('active',p===hit.panel);});
+      tabs.forEach(function(t){var on=t.getAttribute('data-tab')===hit.panel.id;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false');});
+      if(scrollToSection&&hit.section) hit.section.scrollIntoView({block:'start'}); else window.scrollTo(0,0);
+      if(push){var h='#'+id; if(location.hash!==h) history.pushState(null,'',h);}
+    }
+    tabs.forEach(function(t){t.addEventListener('click',function(){activate(t.getAttribute('data-tab'),true,false);});});
+    document.addEventListener('click',function(e){
+      var a=e.target.closest('a[href^="#"]'); if(!a) return;
+      var id=a.getAttribute('href').slice(1);
+      if(resolve(id)){e.preventDefault();activate(id,true,true);}
+    });
+    window.addEventListener('popstate',function(){activate((location.hash||'').slice(1),false,true);});
+    activate((location.hash||'').slice(1),false,true);
+  })();
+  (function(){
+    var bar=document.querySelector('.filterbar'); if(!bar) return;
+    bar.addEventListener('click',function(e){
+      var btn=e.target.closest('button'); if(!btn) return;
+      bar.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      var f=btn.dataset.filter;
+      document.querySelectorAll('#status-table tbody tr').forEach(function(tr){
+        tr.style.display=(f==='all'||tr.dataset.status===f)?'':'none';
+      });
+    });
+  })();
+</script>
+</body>
+</html>
