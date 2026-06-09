@@ -1335,15 +1335,19 @@ func apply_deeplink(id: String) -> bool:
 	var intent: Dictionary = ViewRouter.resolve(id)
 	if not bool(intent.get("ok", false)):
 		return false
+	# T28 — the 5 PRIMARY views must route through _switch_primary_view so opening one
+	# via deep-link / browser back-forward hides any other open primary (esp. the town
+	# map, a higher canvas layer that would otherwise paint over the opened view). The
+	# in-game nav tabs already do this (_on_nav_selected); apply_deeplink must match.
 	match int(intent.get("modal", ViewRouter.Modal.NONE)):
 		ViewRouter.Modal.TOWN:
-			_open_town()
+			_switch_primary_view("_open_town")
 		ViewRouter.Modal.MENU:
 			_open_menu()
 		ViewRouter.Modal.INVENTORY:
-			_open_inventory()
+			_switch_primary_view("_open_inventory")
 		ViewRouter.Modal.TOWNMAP:
-			_open_townmap()
+			_switch_primary_view("_open_townmap")
 		ViewRouter.Modal.ACHIEVEMENTS:
 			_open_achievements()
 		ViewRouter.Modal.TILES:
@@ -1351,9 +1355,9 @@ func apply_deeplink(id: String) -> bool:
 		ViewRouter.Modal.CHRONICLE:
 			_open_chronicle()
 		ViewRouter.Modal.TOWNSFOLK:
-			_open_townsfolk()
+			_switch_primary_view("_open_townsfolk")
 		ViewRouter.Modal.CARTOGRAPHY:
-			_open_cartography()
+			_switch_primary_view("_open_cartography")
 		ViewRouter.Modal.RECIPES:
 			_open_recipes()
 		ViewRouter.Modal.TUTORIAL:

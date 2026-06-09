@@ -61,17 +61,18 @@ func _give_all(g: GameState, cost: Dictionary) -> void:
 
 func _test_config_loads() -> void:
 	var all := AC.all()
-	_check(all.size() == 19, "catalog has the 19 ported achievements")
+	_check(all.size() == 23, "catalog has the 23 ported achievements (incl. fish + fowler)")
 	# Spot-check expected ids are present.
 	for id in ["first_steps", "patient_hands", "tireless", "trusted_friend",
 			"village_voice", "first_blood", "naturalist", "polymath",
 			"town_planner", "first_strike", "deep_digger", "mine_master",
 			"forester", "veg_patron", "orchard_friend", "pollinator",
-			"herder", "dairyman", "stable_hand"]:
+			"herder", "dairyman", "stable_hand",
+			"first_catch", "tide_runner", "master_angler", "fowler"]:
 		_check(AC.has_achievement(id), "catalog includes '%s'" % id)
-	# And that the UNREACHABLE React ids were OMITTED (no fakes).
-	for omitted in ["champion", "supply_chain", "first_catch", "tide_runner",
-			"master_angler", "fowler", "powerful_keep", "ability_artisan"]:
+	# And that the still-UNREACHABLE React ids stay OMITTED (no fakes). first_catch/
+	# tide_runner/master_angler/fowler are now REACHABLE (working harbor + birds) → re-added.
+	for omitted in ["champion", "supply_chain", "powerful_keep", "ability_artisan"]:
 		_check(not AC.has_achievement(omitted), "unreachable '%s' is OMITTED" % omitted)
 
 	# all() / get_achievement return defensive copies (mutating must not corrupt).
@@ -88,7 +89,8 @@ func _test_for_counter() -> void:
 	_check(bosses.size() == 1, "for_counter(bosses_defeated) → 1 (first_blood only; champion omitted)")
 	var mine := AC.for_counter("mine_chained")
 	_check(mine.size() == 3, "for_counter(mine_chained) → 3")
-	_check(AC.for_counter("fish_chained").is_empty(), "for_counter(fish_chained) → empty (no harbor)")
+	_check(AC.for_counter("fish_chained").size() == 3, "for_counter(fish_chained) → 3 (first_catch/tide_runner/master_angler)")
+	_check(AC.for_counter("bird_chained").size() == 1, "for_counter(bird_chained) → 1 (fowler)")
 
 func _test_counter_for_category() -> void:
 	_check(AC.counter_for_category("trees") == "tree_chained", "trees → tree_chained")
@@ -98,7 +100,8 @@ func _test_counter_for_category() -> void:
 	_check(AC.counter_for_category("gem") == "mine_chained", "gem → mine_chained")
 	_check(AC.counter_for_category("grass") == "", "grass (staple) → no counter")
 	_check(AC.counter_for_category("rat") == "", "rat (hazard) → no counter")
-	_check(AC.counter_for_category("birds") == "", "birds → no counter (fowler omitted from this slice)")
+	_check(AC.counter_for_category("birds") == "bird_chained", "birds → bird_chained (fowler)")
+	_check(AC.counter_for_category("fish") == "fish_chained", "fish → fish_chained (harbor)")
 
 # ── bump_counter: unlocks, rewards, idempotence ───────────────────────────────
 

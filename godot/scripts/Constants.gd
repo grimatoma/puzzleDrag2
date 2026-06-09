@@ -336,8 +336,11 @@ const PRODUCES := {
 	Tile.TREE_CYPRESS:       "plank",
 	Tile.TREE_PALM:          "plank",
 	Tile.BIRD_TURKEY:        "eggs",
-	Tile.BIRD_CLOVER:        "eggs",
-	Tile.BIRD_MELON:         "eggs",
+	# Clover/Melon carry a legacy tile_bird_ id prefix but the web authors them as
+	# flowers/fruits (tileCollection/data.ts:126,135) → they produce the FLOWER/FRUIT
+	# family resource (honey/pie), NOT eggs. Re-filed to category flower/fruit below.
+	Tile.BIRD_CLOVER:        "honey",
+	Tile.BIRD_MELON:         "pie",
 	Tile.BIRD_CHICKEN:       "eggs",
 	Tile.BIRD_HEN:           "eggs",
 	Tile.BIRD_ROOSTER:       "eggs",
@@ -426,8 +429,10 @@ const THRESHOLDS := {
 	Tile.TREE_CYPRESS:       6,
 	Tile.TREE_PALM:          6,
 	Tile.BIRD_TURKEY:        6,
-	Tile.BIRD_CLOVER:        6,
-	Tile.BIRD_MELON:         6,
+	# Clover = flower family (threshold 10), Melon = fruit family (threshold 7) — see
+	# the produced-resource + category re-file (web authors them flowers/fruits).
+	Tile.BIRD_CLOVER:        10,
+	Tile.BIRD_MELON:         7,
 	Tile.BIRD_CHICKEN:       6,
 	Tile.BIRD_HEN:           6,
 	Tile.BIRD_ROOSTER:       6,
@@ -607,8 +612,10 @@ const CATEGORY := {
 	Tile.TREE_CYPRESS:       "trees",
 	Tile.TREE_PALM:          "trees",
 	Tile.BIRD_TURKEY:        "birds",
-	Tile.BIRD_CLOVER:        "birds",
-	Tile.BIRD_MELON:         "birds",
+	# Re-filed: the web authors Clover as a flower and Melon as a fruit
+	# (tileCollection/data.ts:126,135); only the legacy id keeps the bird_ prefix.
+	Tile.BIRD_CLOVER:        "flower",
+	Tile.BIRD_MELON:         "fruit",
 	Tile.BIRD_CHICKEN:       "birds",
 	Tile.BIRD_HEN:           "birds",
 	Tile.BIRD_ROOSTER:       "birds",
