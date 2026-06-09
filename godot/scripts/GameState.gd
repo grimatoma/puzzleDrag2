@@ -2679,3 +2679,20 @@ static func from_dict(d: Dictionary) -> GameState:
 			if bool(struct_d[k]):
 				s.almanac_structural[String(k)] = true
 	return s
+
+# ── Fresh-game factory (React-parity starting economy) ──────────────────────
+## Create a brand-new game with the React-parity starting economy.
+## The bare `GameState.new()` starts at 0 coins (field default); this factory
+## seeds the coins React grants a fresh player so the entry cost gate
+## (start_farm_run costs 50 coins) is immediately affordable.
+##
+## React source: src/state/init.ts:71 — `coins: 150`
+##
+## DESIGN NOTE: Do NOT change the `var coins: int = 0` field default — the test
+## suites all build `GameState.new()` and rely on the 0-coins baseline.
+## Instead, every genuine "brand-new game" creation must go through this factory.
+static func new_game() -> GameState:
+	var g := GameState.new()
+	# React parity: src/state/init.ts:71 — coins: 150
+	g.coins = 150
+	return g

@@ -22,6 +22,8 @@ func _initialize() -> void:
 	_test_high_threshold_wrap()
 	_test_round_trip_dict()
 	_test_save_manager_round_trip()
+	_test_new_game_factory()
+	_test_new_game_can_start_farming()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -134,8 +136,10 @@ func _test_round_trip_dict() -> void:
 func _test_save_manager_round_trip() -> void:
 	SaveManager.clear()                        # isolation: start from no save
 	var fresh := SaveManager.load_state()
-	_check(fresh.inventory.is_empty() and fresh.coins == 0 and fresh.turn == 0,
-		"load_state() with no file returns a fresh empty state")
+	# load_state() on a missing save returns GameState.new_game() — which seeds
+	# 150 coins (React-parity starting economy). inventory and turn are still 0.
+	_check(fresh.inventory.is_empty() and fresh.coins == 150 and fresh.turn == 0,
+		"load_state() with no file returns a fresh new_game() (150 coins, empty inventory)")
 
 	var s := GameState.new()
 	s.credit_chain(T.GRASS, 13)                # hay_bundle 2 units, progress 1
@@ -153,5 +157,34 @@ func _test_save_manager_round_trip() -> void:
 
 	SaveManager.clear()
 	var after_clear := SaveManager.load_state()
-	_check(after_clear.inventory.is_empty() and after_clear.coins == 0 and after_clear.turn == 0,
-		"after clear() load_state() returns a fresh empty state")
+	# After clearing the save, load_state() returns new_game() — 150 coins, empty inventory.
+	_check(after_clear.inventory.is_empty() and after_clear.coins == 150 and after_clear.turn == 0,
+		"after clear() load_state() returns a fresh new_game() (150 coins)")
+
+# ── GameState.new_game() factory tests ─────────────────────────────────────
+
+func _test_new_game_factory() -> void:
+	# new_game() seeds React-parity starting coins (src/state/init.ts:71 — coins: 150).
+	var g := GameState.new_game()
+	_check(g.coins == 150, "new_game().coins == 150 (React-parity starting economy)")
+	_check(g.turn == 0, "new_game() starts at turn 0")
+	_check(g.inventory.is_empty(), "new_game() starts with empty inventory")
+	# The bare default must NOT be changed — test suites rely on coins == 0 baseline.
+	var bare := GameState.new()
+	_check(bare.coins == 0, "GameState.new().coins == 0 (field default unchanged)")
+	# load_state() on a missing save must also return 150 coins.
+	SaveManager.clear()
+	var loaded := SaveManager.load_state()
+	_check(loaded.coins == 150,
+		"SaveManager.load_state() (no-save branch) returns new_game() with 150 coins")
+
+func _test_new_game_can_start_farming() -> void:
+	# With 150 starting coins, start_farm_run (50-coin entry) must succeed on a fresh
+	# new_game() — the player must not be locked out of the core loop on first launch.
+	var g := GameState.new_game()
+	var entry_cost := ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)  # 50
+	_check(g.coins >= entry_cost,
+		"new_game() has enough coins (%d) to pay the farm entry cost (%d)" % [g.coins, entry_cost])
+	var result := g.start_farm_run([], false)
+	_check(result.get("ok", false) == true,
+		"start_farm_run([], false) succeeds on a fresh new_game() (150 >= 50 entry cost)")

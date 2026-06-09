@@ -29,27 +29,28 @@ static func save(state: GameState) -> bool:
 	f.close()
 	return true
 
-## Load the saved run economy. Returns a fresh GameState when no save exists,
-## the file can't be read/parsed, or the version doesn't match (mismatched saves
-## are discarded — the React SAVE_SCHEMA_VERSION policy).
+## Load the saved run economy. Returns a fresh GameState (via GameState.new_game(),
+## which seeds the React-parity starting coins) when no save exists, the file
+## can't be read/parsed, or the version doesn't match (mismatched saves are
+## discarded — the React SAVE_SCHEMA_VERSION policy).
 static func load_state() -> GameState:
 	if not FileAccess.file_exists(SAVE_PATH):
-		return GameState.new()
+		return GameState.new_game()
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if f == null:
 		push_warning("SaveManager: could not open %s for reading (err %d)"
 			% [SAVE_PATH, FileAccess.get_open_error()])
-		return GameState.new()
+		return GameState.new_game()
 	var text := f.get_as_text()
 	f.close()
 	var parsed: Variant = JSON.parse_string(text)
 	if not (parsed is Dictionary):
-		return GameState.new()
+		return GameState.new_game()
 	if int(parsed.get("version", -1)) != SAVE_VERSION:
-		return GameState.new()
+		return GameState.new_game()
 	var state_dict: Variant = parsed.get("state", {})
 	if not (state_dict is Dictionary):
-		return GameState.new()
+		return GameState.new_game()
 	return GameState.from_dict(state_dict)
 
 ## Delete the save file if present. No-op when there is nothing to remove.
