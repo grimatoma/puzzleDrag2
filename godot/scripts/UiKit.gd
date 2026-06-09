@@ -28,7 +28,7 @@ const NAV_RESERVE := 76
 ## (desktop/foldable) windows it is capped + centred so rows/search bars don't stretch
 ## edge-to-edge. Set to the portrait base width (720) so it NEVER bites the phone layout —
 ## only wide windows get the centred column. The web caps line length the same way.
-const VIEW_MAX_WIDTH := 720
+const VIEW_MAX_WIDTH := 960
 
 ## A full-width container that caps + centres its single child to `max_w` on wide viewports
 ## (and fills on narrow ones). Godot Control has no native max-width, so this recomputes its
