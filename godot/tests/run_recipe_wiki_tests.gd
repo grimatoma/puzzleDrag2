@@ -82,9 +82,21 @@ func _initialize() -> void:
 	_check(screen.visible, "recipe wiki is visible after open()")
 	_check(screen._action_buttons.has("close"), "_action_buttons has 'close'")
 
-	# Station tab bar: one tab per real station (Bakery + Kitchen).
+	# Station tab bar: one tab per real station. T15 grew this from Bakery+Kitchen to all
+	# six crafting stations (Bakery, Kitchen, Workshop, Larder, Forge, Smokehouse).
 	_check(screen._station_buttons.has(BuildingConfig.BAKERY), "station tab for Bakery exists")
 	_check(screen._station_buttons.has(BuildingConfig.KITCHEN), "station tab for Kitchen exists")
+	_check(screen._station_buttons.has(BuildingConfig.WORKSHOP), "station tab for Workshop exists")
+	_check(screen._station_buttons.has(BuildingConfig.LARDER), "station tab for Larder exists")
+	_check(screen._station_buttons.has(BuildingConfig.FORGE), "station tab for Forge exists")
+	_check(screen._station_buttons.has(BuildingConfig.SMOKEHOUSE), "station tab for Smokehouse exists")
+
+	# Switching to the Workshop tab renders its tool recipes (e.g. the Rake row).
+	screen._on_station_tab(BuildingConfig.WORKSHOP)
+	_check(screen._active_station == BuildingConfig.WORKSHOP, "_on_station_tab(Workshop) switches station")
+	_check(screen._cards.has(RecipeConfig.RAKE), "Workshop tab renders the Rake (tool) recipe row")
+	_check(screen._cards.size() >= 1, "Workshop tab renders at least one recipe row")
+	screen._on_station_tab(BuildingConfig.BAKERY)   # restore the default station for the checks below
 
 	# Header reads the TOTAL recipe count (across stations).
 	_check(screen._header_label.text == "%d recipes" % expected_count,

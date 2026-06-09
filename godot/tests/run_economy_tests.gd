@@ -66,9 +66,13 @@ func _state_with_bakery(extra: Dictionary = {}) -> GameState:
 # ── RecipeConfig ──────────────────────────────────────────────────────────────
 
 func _test_recipe_config() -> void:
-	# M3f added the Kitchen's SUPPLIES recipe, so the catalog now holds two recipes
-	# (bread first, supplies second). Bread's own attributes are still asserted below.
-	_check(RC.RECIPE_IDS == [RC.BREAD, RC.SUPPLIES], "two recipes in the catalog (bread, supplies)")
+	# T15 expanded the catalog to the full React six-station crafting set (~46 recipes).
+	# RECIPE_IDS still LEADS with bread then supplies (the Bakery/Kitchen recipes come
+	# first so the wiki's default station stays the Bakery + BREAD), but it is no longer
+	# just those two. Assert the catalog grew and still leads with bread, supplies.
+	_check(RC.RECIPE_IDS.size() >= 46, "full crafting catalog has >= 46 recipes (got %d)" % RC.RECIPE_IDS.size())
+	_check(RC.RECIPE_IDS[0] == RC.BREAD and RC.RECIPE_IDS.has(RC.SUPPLIES),
+		"RECIPE_IDS leads with BREAD and still contains SUPPLIES")
 	_check(RC.is_recipe(RC.BREAD), "bread is a real recipe")
 	_check(not RC.is_recipe("nope"), "'nope' is not a recipe")
 
@@ -77,9 +81,18 @@ func _test_recipe_config() -> void:
 	_check(RC.recipe_inputs(RC.BREAD) == {"flour": 3, "eggs": 1}, "bread inputs are flour 3 + eggs 1")
 	_check(RC.recipe_output(RC.BREAD) == "bread", "bread output is 'bread'")
 	_check(RC.recipe_qty(RC.BREAD) == 1, "bread qty is 1")
+	# BREAD/SUPPLIES are GOOD recipes (output banked to inventory), not tool recipes.
+	_check(RC.recipe_output_kind(RC.BREAD) == RC.KIND_GOOD, "bread is a GOOD recipe")
+	_check(not RC.is_tool_recipe(RC.SUPPLIES), "supplies is a GOOD recipe")
+	# SUPPLIES keeps its EXISTING port inputs ({bread:1, flour:2}), NOT React's {flour:5}.
+	_check(RC.recipe_inputs(RC.SUPPLIES) == {"bread": 1, "flour": 2},
+		"supplies keeps its port inputs (bread 1 + flour 2)")
 
-	# recipes_for_station maps the Bakery to its single recipe.
-	_check(RC.recipes_for_station(BC.BAKERY) == [RC.BREAD], "recipes_for_station(bakery) == [bread]")
+	# recipes_for_station now maps the Bakery to its FIVE recipes (bread first).
+	var bakery_recipes: Array = RC.recipes_for_station(BC.BAKERY)
+	_check(bakery_recipes[0] == RC.BREAD, "recipes_for_station(bakery) leads with bread")
+	_check(bakery_recipes.has(RC.HONEYROLL) and bakery_recipes.has(RC.WEDDING_PIE),
+		"recipes_for_station(bakery) includes the other Bakery goods")
 	_check(RC.recipes_for_station(BC.LUMBER_CAMP) == [], "spawner has no recipes")
 	_check(RC.recipes_for_station("nope") == [], "unknown station has no recipes")
 

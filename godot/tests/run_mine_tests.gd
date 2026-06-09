@@ -326,5 +326,9 @@ func _test_building_recipe_catalogs() -> void:
 	_check(RC.recipe_station(RC.SUPPLIES) == BC.KITCHEN, "supplies station is the Kitchen")
 	_check(RC.recipe_inputs(RC.SUPPLIES) == {"bread": 1, "flour": 2}, "supplies inputs are bread 1 + flour 2")
 	_check(RC.recipe_output(RC.SUPPLIES) == "supplies", "supplies output is 'supplies'")
-	_check(RC.recipes_for_station(BC.KITCHEN) == [RC.SUPPLIES], "recipes_for_station(kitchen) == [supplies]")
-	_check(RC.recipes_for_station(BC.BAKERY) == [RC.BREAD], "Bakery still maps to [bread] only")
+	# T15: the Kitchen now also crafts the iron_ration; the Bakery now crafts five goods.
+	# SUPPLIES still leads the Kitchen list and BREAD still leads the Bakery list.
+	var kitchen_recipes: Array = RC.recipes_for_station(BC.KITCHEN)
+	_check(kitchen_recipes[0] == RC.SUPPLIES and kitchen_recipes.has(RC.IRON_RATION),
+		"recipes_for_station(kitchen) leads with supplies + includes iron_ration")
+	_check(RC.recipes_for_station(BC.BAKERY)[0] == RC.BREAD, "Bakery still leads with bread")

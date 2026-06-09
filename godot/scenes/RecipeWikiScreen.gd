@@ -452,6 +452,11 @@ func _craft_status(id: String) -> Dictionary:
 	var station_id: String = RecipeConfig.recipe_station(id)
 	if not game.has_building(station_id):
 		return {"text": "Station not built", "color": COL_MUTED}
+	# T15: a built station whose recipe is still tier-locked reads "Requires <Tier>"
+	# (the craft is gated on settlement tier, not inputs). Tier-1 recipes never trip this.
+	var min_tier: int = RecipeConfig.recipe_min_settlement_tier(id)
+	if game.settlement.tier < min_tier:
+		return {"text": "Requires %s" % TownConfig.tier_name(min_tier), "color": COL_MUTED}
 	if game.can_craft(id):
 		return {"text": "Ready to craft", "color": Palette.MOSS}
 	return {"text": "Missing inputs", "color": COL_SHORT}

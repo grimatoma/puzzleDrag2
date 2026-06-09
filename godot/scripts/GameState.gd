@@ -1410,12 +1410,19 @@ func demolish(id: String) -> Dictionary:
 
 # ── Refining (recipe crafting at refiner buildings) ───────────────────────────
 
-## True when `recipe_id` exists, its station building is built, AND inventory
-## covers every input at the required quantity.
+## True when `recipe_id` exists, its station building is built, the settlement tier
+## clears the recipe's tier gate, AND inventory covers every input at the required
+## quantity.
 func can_craft(recipe_id: String) -> bool:
 	if not RecipeConfig.is_recipe(recipe_id):
 		return false
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
+		return false
+	# T15: recipe-level tier gate. React tiers (1/2/3) map to a minimum settlement tier
+	# (RecipeConfig.RECIPE_TIER_MIN_SETTLEMENT). Tier-1 recipes map to Camp, so this is a
+	# no-op for BREAD/SUPPLIES (both React tier 1) at the default Camp tier — they stay
+	# craftable exactly as before. Higher-tier recipes need a more advanced town.
+	if settlement.tier < RecipeConfig.recipe_min_settlement_tier(recipe_id):
 		return false
 	# Workers (ADDITIVE): mirror craft()'s effective inputs so the gate matches what
 	# craft will actually deduct. At 0 bakers this equals RecipeConfig.recipe_inputs.
@@ -1444,16 +1451,21 @@ func _effective_recipe_inputs(recipe_id: String) -> Dictionary:
 			inputs[k] = maxi(1, int(inputs[k]) - reduction)
 	return inputs
 
-## Craft `recipe_id`: deduct every input (floored at 0), add the recipe's output
-## quantity to inventory (clamped to the settlement cap), and return
-## {ok:true, output, qty, recipe} on success. On failure returns {ok:false, reason}
-## WITHOUT mutating; reason is the FIRST guard that trips, in order:
-## "unknown" → "no_station" → "insufficient".
+## Craft `recipe_id`: deduct every input (floored at 0), then ROUTE the output by its
+## kind — a GOOD is added to inventory (clamped to the settlement cap); a TOOL is granted
+## as a tool charge (grant_tool). Returns {ok:true, output, qty, recipe, kind} on success.
+## On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that
+## trips, in order: "unknown" → "no_station" → "locked" → "insufficient".
 func craft(recipe_id: String) -> Dictionary:
 	if not RecipeConfig.is_recipe(recipe_id):
 		return {"ok": false, "reason": "unknown"}
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
 		return {"ok": false, "reason": "no_station"}
+	# T15: recipe-level tier gate (same gate as can_craft). Reported "locked" — the recipe
+	# exists and its station is built, but the town isn't advanced enough yet. Tier-1
+	# recipes (BREAD/SUPPLIES) map to Camp so this never trips for them.
+	if settlement.tier < RecipeConfig.recipe_min_settlement_tier(recipe_id):
+		return {"ok": false, "reason": "locked"}
 	# Workers (ADDITIVE): recipe_input_reduce workers (the Baker) shave inputs off the
 	# matching recipe. _effective_recipe_inputs floors each reduced input at 1, and the
 	# reduction is 0 when no Baker is hired — so at 0 bakers the inputs are byte-identical
@@ -1463,7 +1475,7 @@ func craft(recipe_id: String) -> Dictionary:
 	for k in inputs.keys():
 		if int(inventory.get(k, 0)) < int(inputs[k]):
 			return {"ok": false, "reason": "insufficient"}
-	# All guards passed — commit: deduct inputs, then add the output (cap-clamped).
+	# All guards passed — commit: deduct inputs, then route the output.
 	for k in inputs.keys():
 		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(inputs[k]))
 		if remaining == 0:
@@ -1472,12 +1484,19 @@ func craft(recipe_id: String) -> Dictionary:
 			inventory[k] = remaining
 	var output: String = RecipeConfig.recipe_output(recipe_id)
 	var qty_out: int = RecipeConfig.recipe_qty(recipe_id)
-	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, effective_cap())
+	var kind: String = RecipeConfig.recipe_output_kind(recipe_id)
+	# Route by output kind. TOOL recipes (the Workshop) grant a tool charge — the in-game
+	# source of tools that previously only came from grants/the Portal. GOOD recipes bank
+	# the good (cap-clamped). BREAD/SUPPLIES are KIND_GOOD, so their path is unchanged.
+	if kind == RecipeConfig.KIND_TOOL:
+		grant_tool(output, qty_out)
+	else:
+		inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, effective_cap())
 	# Quests (ADDITIVE): one craft ticks the CRAFT quest event, keyed by the recipe's
 	# OUTPUT key (matching React's craft tick on the crafted item), count = qty produced.
 	# No-op loop over [] with an empty quest board.
 	_tick_quests({"type": "craft", "item": output, "count": qty_out})
-	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id}
+	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id, "kind": kind}
 
 # ── Market (sell / buy for coins) ─────────────────────────────────────────────
 

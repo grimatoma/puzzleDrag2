@@ -39,6 +39,38 @@ const SELL: Dictionary = {
 	"jam": 5,
 	"copper_bar": 8,
 	"gold_bar": 16,
+	# ── T15 crafted-good sell prices ───────────────────────────────────────────
+	# Every NEW craftable GOOD from the full crafting catalog is sellable (a craftable
+	# good you can't sell would be only half-real). Values are lifted VERBATIM from the
+	# web MARKET table (src/constants.ts:1043-1056) where it lists a pair; the Bakery/
+	# Larder/Forge goods that the web prices only via ITEMS[key].value (src/constants.ts:
+	# 559-575) use that value as the sell price (buy is the value × ~4, the port's markup).
+	# These scale with input cost, matching the React economy.
+	# Bakery (value-priced; honeyroll/harvestpie 175, festival_loaf 60, wedding_pie 180).
+	"honeyroll": 175,
+	"harvestpie": 175,
+	"festival_loaf": 60,
+	"wedding_pie": 180,
+	# Larder (preserve/tincture value-priced; chowder from the MARKET table sell 280).
+	"preserve": 100,
+	"tincture": 125,
+	"chowder": 280,
+	# Forge (all value-priced).
+	"iron_hinge": 175,
+	"cobblepath": 200,
+	"lantern": 150,
+	"goldring": 225,
+	"gemcrown": 325,
+	"ironframe": 275,
+	"stonework": 300,
+	# Kitchen (iron_ration from the MARKET table sell 120). SUPPLIES stays UNSELLABLE —
+	# it is a Kitchen-only intermediate spent as mine turns (deliberately absent here).
+	"iron_ration": 120,
+	# Smokehouse (cured_meat from the MARKET table sell 45).
+	"cured_meat": 45,
+	# Workshop GOOD (fish_oil_bottled from the MARKET table sell 80; the rest of the
+	# Workshop catalog outputs TOOLS, which are not market-traded).
+	"fish_oil_bottled": 80,
 }
 
 ## Coins paid per unit BOUGHT. A resource absent from this table is not buyable.
@@ -65,6 +97,29 @@ const BUY: Dictionary = {
 	"jam": 90,
 	"copper_bar": 120,
 	"gold_bar": 240,
+	# ── T15 crafted-good buy prices ────────────────────────────────────────────
+	# Pair every NEW sellable crafted good with a buy price so the Market stays a sink
+	# (buy > sell). Web MARKET-table pairs (chowder 2400, iron_ration 1200, cured_meat 400,
+	# festival_loaf 600, wedding_pie 1800, fish_oil_bottled 600) are lifted verbatim; the
+	# value-priced goods use sell × 4 (the port's standard markup). SUPPLIES stays UNBUYABLE
+	# (Kitchen-only intermediate, deliberately absent).
+	"honeyroll": 700,
+	"harvestpie": 700,
+	"festival_loaf": 600,
+	"wedding_pie": 1800,
+	"preserve": 400,
+	"tincture": 500,
+	"chowder": 2400,
+	"iron_hinge": 700,
+	"cobblepath": 800,
+	"lantern": 600,
+	"goldring": 900,
+	"gemcrown": 1300,
+	"ironframe": 1100,
+	"stonework": 1200,
+	"iron_ration": 1200,
+	"cured_meat": 400,
+	"fish_oil_bottled": 600,
 }
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

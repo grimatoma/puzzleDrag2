@@ -48,6 +48,23 @@ const KITCHEN: String = "kitchen"
 ## Ratcatcher makes grass chains also clear rats adjacent to the chain.
 const RATCATCHER: String = "ratcatcher"
 const MASTER_RATCATCHER: String = "master_ratcatcher"
+## T15 — the four NEW crafting-STATION refiners that complete the React six-station
+## crafting catalog (Bakery + Kitchen already exist above). Like Bakery/Kitchen they
+## are kind "refiner": no board category, no tile — they exist solely to unlock a
+## RecipeConfig station. Each gates behind a settlement tier whose resources its recipes
+## need (deadlock-free), and its OWN cost references only resources producible at/below
+## that tier:
+##   Workshop   — TOOLS (rake / axe / rifle / drill / …). Direction: "Workshop + farm
+##                tools" unlocks at Town (TIER_TOWN). The in-game source of craftable tools.
+##   Larder     — preserved GOODS (preserve / tincture / chowder). React lv 2 (early).
+##                Village-tier (jam comes from blackberry, a Garden-era farm good).
+##   Forge      — metal/stone GOODS (iron_hinge / lantern / goldring / …). React lv 8.
+##                Town-tier (its recipes need iron_bar / coke / gold_bar — mine goods).
+##   Smokehouse — cured GOODS (cured_meat from meat + coke). Town-tier (coke is a mine good).
+const WORKSHOP: String = "workshop"
+const LARDER: String = "larder"
+const FORGE: String = "forge"
+const SMOKEHOUSE: String = "smokehouse"
 
 ## T17/T21 — the ~30 ABILITY-BEARING buildings ported from the React BUILDINGS catalog
 ## (src/constants.ts:760-903). A FOURTH kind, "landmark": neither a board-pool spawner nor a
@@ -149,6 +166,60 @@ const BUILDINGS: Dictionary = {
 		"tile": Constants.EMPTY,
 		"resource": "supplies",
 		"desc": "Packs farm food into supplies for mine expeditions.",
+		"abilities": [],
+	},
+	# ── T15 crafting-station refiners (Workshop / Larder / Forge / Smokehouse) ──────
+	# kind "refiner" (like Bakery/Kitchen): no category, no tile — each only unlocks a
+	# RecipeConfig station. `resource` names the family of goods/tools it crafts (for the
+	# build picker blurb). Costs are deadlock-free at the unlock tier.
+	WORKSHOP: {
+		"name": "Workshop",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_TOWN,
+		# Plank + block + iron_bar are all producible by Town (Lumber Camp planks, mine
+		# blocks/iron from the Town-2 expedition feeding the shared inventory).
+		"cost": {"plank": 12, "block": 8, "iron_bar": 2},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "tools",
+		"desc": "Crafts farm + mine TOOLS (rake, axe, rifle, drill, and more).",
+		"abilities": [],
+	},
+	LARDER: {
+		"name": "Larder",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_VILLAGE,
+		# Planks (Lumber Camp at Hamlet) + farm staples — payable at Village.
+		"cost": {"plank": 6, "hay_bundle": 8},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "preserve",
+		"desc": "Preserves and bottles the harvest — jars, tinctures, and chowder.",
+		"abilities": [],
+	},
+	FORGE: {
+		"name": "Forge",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_TOWN,
+		# Block + iron_bar (mine goods available once Town's expedition is running).
+		"cost": {"block": 12, "iron_bar": 4},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "iron_hinge",
+		"desc": "Smiths metal and stone goods — hinges, lanterns, rings, and crowns.",
+		"abilities": [],
+	},
+	SMOKEHOUSE: {
+		"name": "Smokehouse",
+		"kind": "refiner",
+		"unlock_tier": TownConfig.TIER_TOWN,
+		# Plank + block — Town-tier, deadlock-free (its cured_meat recipe needs coke,
+		# a mine good, but the BUILDING cost itself stays on cheap producible goods).
+		"cost": {"plank": 10, "block": 6},
+		"category": "",
+		"tile": Constants.EMPTY,
+		"resource": "cured_meat",
+		"desc": "Salts and smokes meat into long-lasting cured rations.",
 		"abilities": [],
 	},
 	# M3h — Town-3 rats hazard buildings (kind "hazard"): no category, no tile, no
@@ -401,6 +472,9 @@ const ALL_BUILD_IDS: Array = [
 	MILL, GRANARY, MINING_CAMP, POWDER_STORE,
 	HOUSING, HOUSING2, HOUSING3,
 	SILO, BARN, SAWMILL, STABLE, APIARY, CHAPEL, OBSERVATORY,
+	# T15 crafting-station refiners (appended so they surface in the build picker after
+	# the landmarks; the "first seven" slice in run_economy_tests stays unaffected).
+	WORKSHOP, LARDER, FORGE, SMOKEHOUSE,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
