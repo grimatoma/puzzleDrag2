@@ -17,6 +17,20 @@ const ROWS: int = 6
 const TILE_SIZE: int = 74          ## base tile size in px (responsive at runtime)
 const MIN_CHAIN: int = 3           ## default minimum chain length (a boss may raise it)
 
+## Coins a brand-new game starts with (React src/state/init.ts:71 — `coins: 150`).
+## Seeded by GameState.new_game() so the entry-cost gate (start_farm_run costs 50) is
+## immediately affordable. The `var coins: int = 0` field default is intentionally left at
+## 0 — only new_game() applies this baseline (the test suites build GameState.new() at 0).
+const STARTING_COINS: int = 150
+
+## Per-chain coin economy — M2 PLACEHOLDER. The React per-tile `value` coin economy is
+## deferred to M3; until then each resolved chain earns floor(chain_len / divisor) coins,
+## floored to at least the minimum. Kept as named consts so the formula reads by name and the
+## integer-division semantics stay byte-identical (do NOT switch to per-item value — that's M3).
+## Used by GameState.credit_chain: maxi(CHAIN_COIN_MIN, chain_len / CHAIN_COIN_DIVISOR) + bonuses.
+const CHAIN_COIN_MIN: int = 1
+const CHAIN_COIN_DIVISOR: int = 2
+
 ## Sentinel for an empty grid cell.
 const EMPTY: int = -1
 

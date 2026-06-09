@@ -50,6 +50,21 @@ const CAPSTONE: String = STORM
 ## How many turns a boss challenge runs (one season). Ported from BOSS_WINDOW_TURNS (data.ts:98).
 const BOSS_WINDOW_TURNS: int = 10
 
+## Mine-mastery UNLOCK gate (a Godot-port challenge prerequisite, alongside the City tier and an
+## in-season boss): the player must have banked at least MINE_MASTERY_THRESHOLD combined units of
+## the refined mine goods named in MINE_MASTERY_GOODS (block + iron_bar). Owned by BossConfig so the
+## threshold + goods list live in ONE place — both can_challenge_boss and start_boss read this helper
+## rather than duplicating the literal `qty("block") + qty("iron_bar") < 12` comparison.
+const MINE_MASTERY_THRESHOLD: int = 12
+const MINE_MASTERY_GOODS: Array = ["block", "iron_bar"]
+
+## True when the banked refined-mine goods MEET the mine-mastery gate (combined >= threshold).
+## `block_qty` / `iron_qty` are the player's current quantities of the two MINE_MASTERY_GOODS, in
+## that order. The boss gates invert this (gate FAILS when NOT met) — keeping the exact same
+## `< MINE_MASTERY_THRESHOLD` comparison they used inline.
+static func mine_mastery_met(block_qty: int, iron_qty: int) -> bool:
+	return block_qty + iron_qty >= MINE_MASTERY_THRESHOLD
+
 ## Boss catalog keyed by id. Each entry:
 ##   name:                 String     — display name
 ##   season:               String     — the farm season this boss belongs to ("winter"/"spring"/…)

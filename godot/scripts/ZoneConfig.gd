@@ -25,6 +25,17 @@ const GOLD: String = "gold"
 ## travels off home) pass this; CartographyConfig's "home" node owns the actual board template.
 const HOME_ZONE: String = "home"
 
+## The always-available home-zone STAPLE seeds — the two staples a Town-1 game always provides
+## regardless of which buildings are placed, kept here so both GameState seed sites agree on one
+## list rather than inlining the literals:
+##   • HOME_STAPLE_RESOURCES — the producible staple RESOURCES that seed orderable_resources
+##     (hay_bundle ← grass, flour ← grain). Buildings append their produced resource after these.
+##   • HOME_BASE_CATEGORIES — the staple CATEGORIES that seed active_categories (grass, grain).
+##     Placed spawners append their category after these.
+## These mirror Constants.STAPLE_TILES (Tile.GRASS/Tile.WHEAT): grass→hay_bundle, grain→flour.
+const HOME_STAPLE_RESOURCES: Array = ["hay_bundle", "flour"]
+const HOME_BASE_CATEGORIES: Array = ["grass", "grain"]
+
 # ── helpers (thin static forwarders to CartographyConfig; node id == zone id) ──
 
 ## True when `zone_id` names a real cartography node (forwards to CartographyConfig.has_node).

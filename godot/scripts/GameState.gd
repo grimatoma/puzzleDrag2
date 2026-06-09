@@ -1326,7 +1326,9 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# per-chain path), so there is NO double-count. Both are 0 for a fresh game → byte-identical.
 	var agg_ch: Dictionary = compute_ability_channels()
 	var agg_coin_bonus: int = int(agg_ch["coin_bonus_flat"]) + int(agg_ch["coin_bonus_per_tile"]) * chain_len
-	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
+	# M2 placeholder coin formula (Constants.CHAIN_COIN_MIN / CHAIN_COIN_DIVISOR) — the React
+	# per-tile `value` economy is deferred to M3. Integer division is deliberate; do NOT change.
+	var coins_gain: int = maxi(Constants.CHAIN_COIN_MIN, chain_len / Constants.CHAIN_COIN_DIVISOR) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
 	# T31 (ADDITIVE): owned Coexist/DriveOut BOONS that grant coin_gain_mult multiply the chain's
 	# coin reward (React boon coin_gain_mult applied to the chain-collected coins). boon_effect_mult
 	# returns 1.0 for a fresh game (no boons owned) → coins_gain unchanged → byte-identical. Floored
@@ -1987,7 +1989,9 @@ func buy(resource: String, qty: int) -> Dictionary:
 ## appends each placed building's produced resource (plank/eggs/soup/bread),
 ## deduplicated, in a stable order. A built Bakery adds "bread".
 func orderable_resources() -> Array:
-	var out: Array = ["hay_bundle", "flour"]
+	# Seed with the home-zone staples (ZoneConfig.HOME_STAPLE_RESOURCES); duplicate so the appends
+	# below never mutate the shared const.
+	var out: Array = ZoneConfig.HOME_STAPLE_RESOURCES.duplicate()
 	for id in buildings:
 		var res: String = BuildingConfig.building_resource(id)
 		if res != "" and not out.has(res):
@@ -3271,7 +3275,9 @@ func capture_pearl_if_adjacent(chain_cells: Array) -> Dictionary:
 ## Refiners (Bakery) have no category and contribute nothing — the empty-string
 ## filter already guards them, but is_spawner makes the intent explicit.
 func active_categories() -> Array:
-	var cats: Array = ["grass", "grain"]
+	# Seed with the home-zone base categories (ZoneConfig.HOME_BASE_CATEGORIES); duplicate so the
+	# appends below never mutate the shared const.
+	var cats: Array = ZoneConfig.HOME_BASE_CATEGORIES.duplicate()
 	for id in buildings:
 		if not BuildingConfig.is_spawner(id):
 			continue
@@ -3596,7 +3602,9 @@ func can_challenge_boss() -> bool:
 		return false
 	if settlement.tier < TownConfig.TIER_CITY:
 		return false
-	if qty("block") + qty("iron_bar") < 12:
+	# Mine-mastery gate (≥ BossConfig.MINE_MASTERY_THRESHOLD combined refined goods). Threshold +
+	# goods keys are owned by BossConfig.MINE_MASTERY_GOODS so this check isn't duplicated inline.
+	if not BossConfig.mine_mastery_met(qty(BossConfig.MINE_MASTERY_GOODS[0]), qty(BossConfig.MINE_MASTERY_GOODS[1])):
 		return false
 	if pending_boss_id() == "":
 		return false
@@ -3617,7 +3625,8 @@ func start_boss(rng_in: RandomNumberGenerator = null) -> Dictionary:
 		return {"ok": false, "reason": "in_fight"}
 	if settlement.tier < TownConfig.TIER_CITY:
 		return {"ok": false, "reason": "locked"}
-	if qty("block") + qty("iron_bar") < 12:
+	# Mine-mastery gate — same BossConfig threshold + goods as can_challenge_boss (single source).
+	if not BossConfig.mine_mastery_met(qty(BossConfig.MINE_MASTERY_GOODS[0]), qty(BossConfig.MINE_MASTERY_GOODS[1])):
 		return {"ok": false, "reason": "not_ready"}
 	var id: String = pending_boss_id()
 	if id == "":
@@ -3694,11 +3703,17 @@ func note_boss_chain(tile_type: int, chain_len: int, units: int) -> Dictionary:
 func note_boss_craft(recipe_key: String) -> Dictionary:
 	if not is_boss_active():
 		return {"active": false}
-	if boss_target_resource != "iron_bar":
+	# Only the iron_bar-target boss (Ember Drake) counts a craft. The target resource id is owned by
+	# BossConfig (the Ember Drake's target field), not hardcoded here. The same concept drives the
+	# recipe-INPUT check below: React ticks only when the recipe CONSUMES the boss target resource
+	# (`recipe.inputs?.[ResourceKey.IronBar]`, boss/slice.ts:226-239), so the input key is the boss
+	# target — routed through ember_target so there is a single source for the resource id.
+	var ember_target: String = BossConfig.target_resource(BossConfig.EMBER_DRAKE)
+	if boss_target_resource != ember_target:
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
 	if not RecipeConfig.is_recipe(recipe_key):
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
-	if int(RecipeConfig.recipe_inputs(recipe_key).get("iron_bar", 0)) <= 0:
+	if int(RecipeConfig.recipe_inputs(recipe_key).get(ember_target, 0)) <= 0:
 		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
 	boss_progress = mini(boss_target_amount, boss_progress + 1)
 	if boss_progress >= boss_target_amount:
@@ -5344,7 +5359,7 @@ static func from_dict(d: Dictionary) -> GameState:
 static func new_game() -> GameState:
 	var g := GameState.new()
 	# React parity: src/state/init.ts:71 — coins: 150
-	g.coins = 150
+	g.coins = Constants.STARTING_COINS
 	# T16: seed the market deterministically from the current time (a fresh game gets
 	# a unique seed so each run has a distinct price history). market_season starts at 0.
 	g.market_seed = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF
