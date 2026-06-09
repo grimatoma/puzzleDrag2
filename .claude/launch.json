@@ -14,9 +14,9 @@
       "port": 8099
     },
     {
-      "name": "sprite-viewer",
+      "name": "pixelGen",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8100"],
+      "runtimeArgs": ["-m", "http.server", "8100", "--directory", "godot/assets/tiles/v2"],
       "port": 8100
     }
   ]

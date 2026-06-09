@@ -156,6 +156,7 @@
       <span class="chip">5 stages · 4 gates</span>
       <span class="chip">PixelLab → Aseprite → Godot</span>
       <span class="chip">idempotent gap-fill</span>
+      <span class="chip">intake → proposal</span>
       <span class="chip">review viewer</span>
     </div>
   </header>
@@ -524,16 +525,54 @@
             <tr><td>Look contract</td><td><code>style-spec.template.json</code> (schema + defaults)</td><td><code>_style-spec.json</code> (filled from your refs)</td></tr>
             <tr><td>Asset declaration</td><td>manifest schema + <code>manifest.template.json</code></td><td><code>sets/&lt;set&gt;/manifest.json</code> (co-located)</td></tr>
             <tr><td>Direction</td><td><code>storyboard.template.md</code></td><td>filled storyboards per transition</td></tr>
-            <tr><td>Review surface</td><td>viewer template + <code>build_viewer.mjs</code></td><td><code>_viewer/</code> output + your copied comments</td></tr>
+            <tr><td>Review surface</td><td>viewer template + <code>build_viewer.mjs</code></td><td><code>pixelGen/</code> output + your copied comments</td></tr>
             <tr><td>Output</td><td>—</td><td><code>godot/assets/tiles/v2/sets/*</code> + <code>.tres</code></td></tr>
           </tbody>
         </table>
         <div class="box"><b>Executor discipline.</b> <b>Aseprite is the only animation executor.</b> <b>Pillow is review-glue only</b> (<code>montage.py</code> upscale + frame montage) — it never produces art. The craft skills and templates are project-agnostic; copy the skill folders into another repo to carry the pipeline forward, then supply that game's references + manifests.</div>
       </section>
 
+      <section id="starting">
+        <h2>Starting a run — list tiles → proposal → run</h2>
+        <p class="lede">You don't hand-author the manifest. You <b>start a Claude Code session and name the sprites you want</b> ("5 new crop tiles: wheat, corn, pumpkin, …"); the <code>sprite-pipeline</code> skill interviews you, writes the config, and rebuilds the pixelGen viewer as a <b>proposal you review before anything is spent</b>. This is the <b>intake</b> front door — it sits before Stage&nbsp;1.</p>
+        <div class="diagram">
+          <p class="cap">The intake front door: a few questions become a manifest + an all-pending pixelGen proposal. Generation only starts after you approve — the same cards then fill with art.</p>
+          <svg viewBox="0 0 940 96" width="100%" role="img" aria-label="Intake flow: you list the tiles; Claude interviews you; writes the manifest config; rebuilds the pixelGen viewer as an all-pending proposal; you review and approve; only then does the run spend credits and fill the same cards with art.">
+            <defs><marker id="arrI" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker></defs>
+            <g font-size="12.5" font-weight="600">
+              <rect x="6"   y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
+              <text x="72"  y="50" text-anchor="middle" fill="var(--ink)">List the tiles</text>
+              <text x="72"  y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">in your prompt</text>
+              <rect x="170" y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="236" y="50" text-anchor="middle" fill="var(--ink)">Interview</text>
+              <text x="236" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">set · anim · priors</text>
+              <rect x="334" y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="400" y="50" text-anchor="middle" fill="var(--ink)">Write manifest</text>
+              <text x="400" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">the config</text>
+              <rect x="498" y="30" width="150" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="573" y="50" text-anchor="middle" fill="var(--ink)">pixelGen proposal</text>
+              <text x="573" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">all-pending · review</text>
+              <rect x="680" y="30" width="120" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
+              <text x="740" y="50" text-anchor="middle" fill="var(--ink)">Approve</text>
+              <text x="740" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">"run it"</text>
+              <rect x="832" y="30" width="102" height="44" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
+              <text x="883" y="50" text-anchor="middle" fill="var(--ink)" font-size="12">Run</text>
+              <text x="883" y="65" text-anchor="middle" fill="var(--danger)" font-size="9.5" font-weight="700">$ spend</text>
+              <line x1="138" y1="52" x2="168" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="302" y1="52" x2="332" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="466" y1="52" x2="496" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="648" y1="52" x2="678" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+              <line x1="800" y1="52" x2="830" y2="52" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrI)"/>
+            </g>
+          </svg>
+        </div>
+        <div class="box spend"><b>No spend until you approve.</b> Intake produces the manifest + the pixelGen proposal only — it never generates art. You review the proposal (placeholder cards with each tile's prompt/motion note), tweak prompts or comment, and re-build until it reads right. Only when you say <b>"run it"</b> does the builder→critique loop start spending PixelLab credits + Aseprite ops. The full interview + approval protocol lives in <code>.claude/skills/sprite-pipeline/references/intake.md</code>.</div>
+        <p>Already have a manifest that covers what you want? <b>Skip intake</b> — the run goes straight to Stage&nbsp;1 gap-fill, and the proposal is just rebuilding pixelGen against the existing manifest (e.g. the committed <code>birch</code> set, whose nine assets all show as pending until its first run).</p>
+      </section>
+
       <section id="viewer">
         <h2>The review viewer loop</h2>
-        <p>A static review viewer (built by <code>scripts/build_viewer.mjs</code> into <code>_viewer/</code>) renders the set's keyframes, idle GIFs, and transitions on one page so you can eyeball cohesion across the whole family — the human-facing end of the G4 montage check. It is also where the backlog lives and where corrections re-enter the pipeline.</p>
+        <p>A static review viewer (built by <code>scripts/build_viewer.mjs</code> into <code>pixelGen/</code>, served at <code>http://localhost:8100/pixelGen/</code>) renders the set's keyframes, idle GIFs, and transitions on one page so you can eyeball cohesion across the whole family — the human-facing end of the G4 montage check. It is also the <b>intake proposal surface</b> (all-pending before a run; the same cards fill with art after), where the backlog lives and where corrections re-enter the pipeline.</p>
         <div class="diagram">
           <p class="cap">The loop closes through the viewer: build → montage (G4) → eyeball → comment → copy → paste into Claude Code → idempotent re-run fills exactly those items.</p>
           <svg viewBox="0 0 920 130" width="100%" role="img" aria-label="Viewer loop: build the viewer, montage-review, eyeball the set, comment, copy comments to clipboard, paste into Claude Code which edits the manifest, and the idempotent re-run fills only the changed items.">
@@ -569,7 +608,7 @@
           <li><b>Comment anywhere</b> — per-asset notes and free page-level comments, stored in <code>localStorage</code>.</li>
           <li><b>Copy comments</b> — one button concatenates all notes (each tagged with its asset id) into a paste-ready block and copies it to the clipboard. Paste it into <b>Claude Code</b> to drive the next pass; because the manifest is idempotent, it regenerates exactly those items.</li>
         </ul>
-        <div class="box warn"><b>Serve off the game port.</b> The game's service worker hijacks the Vite preview, so the viewer is served on a non-game port — the <code>sprite-viewer</code> entry in <code>.claude/launch.json</code> serves <code>_viewer/</code> on <code>:8100</code> (with <code>docs-static</code> on <code>:8099</code>). The built <code>_viewer/</code> is a generated artifact — don't commit it.</div>
+        <div class="box warn"><b>Serve off the game port.</b> The game's service worker hijacks the Vite preview, so the viewer is served on a non-game port — the <code>pixelGen</code> entry in <code>.claude/launch.json</code> runs <code>http.server&nbsp;--directory&nbsp;godot/assets/tiles/v2</code> on <code>:8100</code>, so the page lives at <b><code>http://localhost:8100/pixelGen/</code></b> (with <code>docs-static</code> on <code>:8099</code>). The built <code>pixelGen/</code> dir is a generated artifact — <code>.gitignore</code> covers it; don't commit it.</div>
       </section>
 
       <section id="where">
@@ -597,7 +636,7 @@
               <tr><td><code>assets/critique-prompt.md</code></td><td>The gate scoring rubric (the critique half of the loop).</td></tr>
               <tr><td><code>scripts/assemble_tres.gd</code></td><td>Stage 5 — pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code>.</td></tr>
               <tr><td><code>scripts/montage.py</code></td><td>G2/G4 — upscale a still or montage frames for review (Pillow only).</td></tr>
-              <tr><td><code>scripts/build_viewer.mjs</code></td><td>Build the review viewer into <code>_viewer/</code>.</td></tr>
+              <tr><td><code>scripts/build_viewer.mjs</code></td><td>Build the review viewer / intake proposal into <code>pixelGen/</code> (default out).</td></tr>
               <tr><td><code>viewer/</code></td><td>The review-page template (index.html + viewer.css + viewer.js).</td></tr>
             </tbody>
           </table>
@@ -616,7 +655,7 @@
             <tr><td>Orchestrator + craft/motion skills</td><td><span class="pill ok">built</span></td><td><code>sprite-pipeline</code>, <code>pixel-art-craft</code>, <code>pixel-art-animation</code> all in place.</td></tr>
             <tr><td>Templates + references + scripts</td><td><span class="pill ok">built</span></td><td>Style-spec / manifest / storyboard templates, all reference docs, <code>assemble_tres.gd</code> · <code>montage.py</code> · <code>build_viewer.mjs</code>.</td></tr>
             <tr><td>Builder + critique prompts, viewer</td><td><span class="pill ok">built</span></td><td>The 4-gate prompts and the static review viewer (<code>index.html</code> + css + js) all land.</td></tr>
-            <tr><td>Project config</td><td><span class="pill ok">built</span></td><td>This game's <code>_style-spec.json</code> committed; <code>.claude/launch.json</code> serves the viewer on <code>:8100</code>.</td></tr>
+            <tr><td>Project config</td><td><span class="pill ok">built</span></td><td>This game's <code>_style-spec.json</code> committed; the <code>pixelGen</code> launch config serves the viewer at <code>http://localhost:8100/pixelGen/</code>.</td></tr>
             <tr><td>Birch set manifest</td><td><span class="pill ok">built</span></td><td><code>sets/birch/manifest.json</code> authored (4 keyframes, 2 idles, 3 transitions) — its outputs are still all gaps.</td></tr>
             <tr><td>First real generation run (birch)</td><td><span class="pill warn">next</span></td><td>User-initiated — it spends PixelLab credits, so it is not run automatically.</td></tr>
           </tbody>
