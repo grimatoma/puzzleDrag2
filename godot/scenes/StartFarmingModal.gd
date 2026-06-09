@@ -24,11 +24,13 @@ extends CanvasLayer
 ##     "slot_<cat>"      — one per eligible category; opens the chooser for that category
 ##     "choose_<tileid>" — picks a discovered variant (present ONLY while a chooser is open)
 ##     "buy_<tileid>"    — buys a locked buy-variant (present ONLY while a chooser is open)
+##     "use_fertilizer"  — the T12 fertilizer CheckBox (ONLY present when game has ≥1 fert
+##                         in its tool inventory; hidden + ignored when absent)
 ##     "start"           — confirm; disabled when coins < entry cost
 ##     "cancel"          — dismiss
 ##   Helpers: active_variant_for(cat) -> String (the active variant id for a category),
 ##     open_chooser(cat), chooser_open_for() -> String ("" when no chooser is open),
-##     preview_budget() -> int, selected_categories() -> Array (the eligible/active set).
+##     preview_budget() -> int (reflects toggle state), selected_categories() -> Array.
 ##   Tests build with `.new()` + setup(game) BEFORE add_child, so the shell must build WITHOUT a
 ##   live viewport (CenterContainer, no get_viewport() during build).
 
@@ -38,8 +40,8 @@ var game: GameState
 ## preloaded as a const so no class_name / --import is needed.
 const TVU := preload("res://scripts/TileVariantUi.gd")
 
-## Emitted on Start: the chosen category ids + the fertilizer flag (always false — see NO-FAKE).
-## Always followed by `closed` (Start closes the card).
+## Emitted on Start: the chosen category ids + the fertilizer flag (true only when the player
+## has ≥1 fertilizer AND the toggle is checked). Always followed by `closed`.
 signal start_requested(selected: Array, use_fertilizer: bool)
 signal closed
 
@@ -64,6 +66,11 @@ var _slot_sub_labels: Dictionary = {}
 ## The category whose chooser is open ("" when none).
 var _chooser_cat: String = ""
 
+## Whether the fertilizer toggle is checked (T12). Only relevant when the player has ≥1
+## fertilizer; the toggle row is hidden otherwise so _fertilizer_checked effectively stays
+## false for players with none, keeping the budget unchanged.
+var _fertilizer_checked: bool = false
+
 # Static shell nodes (text re-set each open()).
 var _title_label: Label
 var _budget_label: Label
@@ -72,6 +79,10 @@ var _cost_value_label: Label
 var _start_btn: Button
 var _cancel_btn: Button
 var _slot_grid: GridContainer
+
+# Fertilizer toggle row (T12) — built once, shown/hidden based on availability.
+var _fert_row: HBoxContainer = null
+var _fert_check: CheckBox = null
 
 # Chooser sub-layer (built lazily on first open).
 var _chooser_layer: CanvasLayer
@@ -113,10 +124,14 @@ func setup(g: GameState) -> void:
 		_built = true
 
 ## Re-render the live state (slots + budget + cost) and show the card.
+## Resets the fertilizer toggle to unchecked each time the modal opens (a fresh choice per run).
 func open() -> void:
 	if not _built:
 		return
 	_close_chooser()
+	_fertilizer_checked = false
+	if _fert_check != null:
+		_fert_check.button_pressed = false
 	_render()
 	visible = true
 
@@ -209,10 +224,31 @@ func _build_shell() -> void:
 		var cat: String = String(c)
 		_slot_grid.add_child(_build_slot(cat))
 
-	# NO-FAKE: React's modal has a "Use Fertilizer — doubles turns" checkbox; the Godot port
-	# has NO fertilizer/fill-bias primitive (start_farm_run rejects use_fertilizer == true), so
-	# the toggle is OMITTED and the emitted use_fertilizer is hard-wired false. The ×2 formula
-	# stays wired+tested in GameState (farm_run_turn_budget(true) == 20); only AVAILABILITY is stubbed.
+	# T12 — Fertilizer toggle (shown only when game has ≥1 fertilizer, hidden otherwise).
+	# Mirrors the React StartFarmingModal "Use Fertilizer — doubles turns (×2)" checkbox.
+	# The toggle is built once and visibility is updated in _render(); when hidden it has no
+	# effect on the emitted use_fertilizer flag.
+	_fert_row = HBoxContainer.new()
+	_fert_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_fert_row.add_theme_constant_override("separation", 8)
+	_fert_row.visible = false  # hidden until fertilizer is available
+
+	_fert_check = CheckBox.new()
+	_fert_check.text = ""
+	_fert_check.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fert_check.connect("toggled", Callable(self, "_on_fert_toggled"))
+	_fert_row.add_child(_fert_check)
+	_action_buttons["use_fertilizer"] = _fert_check
+
+	var fert_lbl := Label.new()
+	fert_lbl.text = "Use Fertilizer — doubles turns (×2)"
+	fert_lbl.add_theme_font_size_override("font_size", 14)
+	fert_lbl.add_theme_color_override("font_color", Palette.MOSS)
+	fert_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fert_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	fert_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fert_row.add_child(fert_lbl)
+	col.add_child(_fert_row)
 
 	# Turn-budget preview card.
 	var budget_card := PanelContainer.new()
@@ -408,18 +444,32 @@ func _build_chooser_layer() -> void:
 
 # ── render ─────────────────────────────────────────────────────────────────────
 
-## Re-render the live preview: each slot's active variant (icon + name), the turn budget, the
-## cost number + its affordability tint, and the Start button label + enabled state.
+## Re-render the live preview: each slot's active variant (icon + name), the fertilizer
+## toggle visibility + budget preview, the cost row, and the Start button label + state.
 func _render() -> void:
 	if not _built:
 		return
 	for c in _categories:
 		_render_slot(String(c))
 
+	# T12: show the fertilizer toggle only when the player has ≥1 fertilizer. When the row
+	# becomes hidden also uncheck it (reset the transient state — mirrors React's pattern of
+	# only passing use_fertilizer when the checkbox is checked AND available).
+	var has_fert: bool = game != null and game._has_fertilizer()
+	if _fert_row != null:
+		_fert_row.visible = has_fert
+	if not has_fert and _fertilizer_checked:
+		_fertilizer_checked = false
+		if _fert_check != null:
+			_fert_check.button_pressed = false
+
 	var budget: int = preview_budget()
 	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
 	_budget_label.text = "Turns this run: %d" % budget
-	_budget_sub_label.text = "Base %d" % base
+	if has_fert and _fertilizer_checked:
+		_budget_sub_label.text = "Base %d × 2 (fertilizer)" % base
+	else:
+		_budget_sub_label.text = "Base %d" % base
 
 	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
 	var coins: int = game.coins if game != null else 0
@@ -631,10 +681,18 @@ func _on_buy(cat: String, id: String) -> void:
 	_rebuild_chooser_rows(cat)
 	_render()  # update the affordability tint on the Start row / cost too
 
-## Start — emit the active category ids (use_fertilizer always false) then close.
+## Start — emit the active category ids and the fertilizer flag (true only when the toggle
+## is checked AND the player actually has a fertilizer). The GameState.start_farm_run guard
+## will reject a true flag with no fertilizer anyway, but we double-check here for safety.
 func _on_start() -> void:
-	emit_signal("start_requested", selected_categories(), false)
+	var use_fert: bool = _fertilizer_checked and game != null and game._has_fertilizer()
+	emit_signal("start_requested", selected_categories(), use_fert)
 	close()
+
+## T12: fertilizer toggle toggled — update the state flag and re-render the budget preview.
+func _on_fert_toggled(checked: bool) -> void:
+	_fertilizer_checked = checked
+	_render()
 
 func _on_cancel() -> void:
 	close()
@@ -651,10 +709,12 @@ func active_variant_for(cat: String) -> String:
 func selected_categories() -> Array:
 	return _categories.duplicate()
 
-## The turn budget the preview shows — game.farm_run_turn_budget(false), or the zone base.
+## The turn budget the preview shows, reflecting the current fertilizer toggle state.
+## When fertilizer is available and the toggle is on → farm_run_turn_budget(true) (×2);
+## otherwise farm_run_turn_budget(false) (base). Falls back to the zone base with no game.
 func preview_budget() -> int:
 	if game != null:
-		return game.farm_run_turn_budget(false)
+		return game.farm_run_turn_budget(_fertilizer_checked and game._has_fertilizer())
 	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
 
 ## The home settlement display name from config, with a literal fallback.

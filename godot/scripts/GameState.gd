@@ -1719,12 +1719,26 @@ func farm_turn_budget() -> int:
 ## Compute the turn budget for a NEW bounded run with `use_fertilizer`. Mirrors React's
 ## turnBudgetForZone: max(1, floor((baseTurns + additive) * multiplier)). With base 10 this
 ## is 10 (no fertilizer) or 20 (fertilizer ×2). PURE — does NOT mutate run state.
+##
+## Additive breakdown (mirrors turnBudgetAdditiveBonusForZone, data.ts:173-177):
+##   1. turn_budget_bonus from the unified ability aggregate (Granary / Mining Camp +1 each).
+##      Already wired (T17/T21). 0 for a fresh game → byte-identical.
+##   2. +1 if the Almanac tier-8 "extraTurn" structural flag has been latched (T12).
+##      Mirrors React `if (state.tools?.extraTurn) bonus += 1` — the flag lives in
+##      GameState.almanac_structural (the GDScript analogue of React's tools dict booleans).
+##      0 for a fresh game (flag not yet granted) → byte-identical.
 func farm_run_turn_budget(use_fertilizer: bool) -> int:
 	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
 	# T17/T21: the unified aggregate's turn_budget_bonus channel (the Granary / Mining Camp +1).
 	# Mirrors React turnBudgetForZone's additive (src/features/zones/data.ts:174-175): base + bonus,
 	# then ×multiplier. 0 for a fresh game (no such building) → byte-identical to the old budget.
 	var additive: int = int(compute_ability_channels()["turn_budget_bonus"])
+	# T12: the Almanac "extraTurn" structural flag (+1 additive). Mirrors React
+	# turnBudgetAdditiveBonusForZone (data.ts:176): `if (state.tools?.extraTurn) bonus += 1`.
+	# In the port the flag lives in almanac_structural (line ~648), the GDScript analogue of
+	# React's tools dict bool flags (see AlmanacConfig.gd header).
+	if bool(almanac_structural.get("extraTurn", false)):
+		additive += 1
 	var mult: int = 2 if use_fertilizer else 1
 	return maxi(1, int(floor(float(base + additive) * float(mult))))
 
@@ -1833,9 +1847,9 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
 	if coins < cost:
 		return {"ok": false, "reason": "no_coins"}
-	# Fertilizer ×2: the port has NO fertilizer primitive yet (_has_fertilizer() is false), so a
-	# request for it is honestly REJECTED rather than silently downgraded. The ×2 formula stays
-	# wired + tested via farm_run_turn_budget; only the AVAILABILITY is stubbed.
+	# Fertilizer ×2 (T12): _has_fertilizer() now reflects the real tool count (wired).
+	# Requesting fertilizer with 0 charges is REJECTED honestly (no_fertilizer). On success one
+	# charge is consumed via _consume_fertilizer() and the ×2 budget is applied.
 	var fert: bool = use_fertilizer and _has_fertilizer()
 	if use_fertilizer and not fert:
 		return {"ok": false, "reason": "no_fertilizer"}
@@ -1869,12 +1883,23 @@ func _sanitize_selection(arr: Array) -> Array:
 	return out
 
 ## Whether the player has a fertilizer to spend on a ×2 run budget.
+## Mirrors React `state.tools?.fertilizer > 0` (src/features/zones/data.ts:turnBudgetForZone).
+## Fertilizer is a real ToolConfig member — it is earned via the Workshop recipe
+## rec_fertilizer (hay_bundle + dirt). Until crafting is ported the count starts at 0; the
+## toggle stays hidden and the budget is unchanged. A test helper (grant_test_fertilizer) can
+## grant one to exercise the wiring without crafting.
 func _has_fertilizer() -> bool:
-	return false  # NO-FAKE: no fertilizer/fill-bias-budget primitive in the port yet.
+	return tool_count(ToolConfig.FERTILIZER) > 0
 
-## Consume one fertilizer (the ×2 turn-budget item).
+## Consume one fertilizer (the ×2 turn-budget item). Mirrors React's consumption of
+## state.tools.fertilizer inside the FARM/ENTER reducer.
 func _consume_fertilizer() -> void:
-	pass  # NO-FAKE: no fertilizer primitive to decrement yet (see _has_fertilizer).
+	tool_state.consume(ToolConfig.FERTILIZER)
+
+## TEST HELPER — grant `n` fertilizer charges. NOT used in production paths; only for
+## headless test suites that need to exercise the fertilizer flow without a Workshop.
+func grant_test_fertilizer(n: int = 1) -> void:
+	grant_tool(ToolConfig.FERTILIZER, n)
 
 ## End the active farm run and return to town (the port's CLOSE_SEASON). Grants the
 ## season-end bonus coins, decays NPC bonds above Warm, re-rolls the quest board, then clears
@@ -2367,6 +2392,58 @@ func active_tile_pool() -> Array:
 				continue
 			for _i in extra_slots:
 				pool.append(pw_tile)
+	# T13 — SEASON_POOL_MODS (additive seasonal spawn deltas).
+	# Mirrors React SEASON_POOL_MODS (src/constants.ts:1123-1128) + applySeasonPoolMods
+	# (src/features/farm/poolMath.ts:16-31). Applied AFTER the base weighting + spawner boost
+	# + pool_weights, BEFORE fill_bias — exactly the React layer order.
+	#
+	# For each delta in the season's mod table:
+	#   delta > 0 → push that many copies of the target tile (adds slots, even if the tile
+	#               is not currently in the pool — allows zero-base tiles to appear; the
+	#               safety-net GRASS fallback below still prevents an all-empty pool).
+	#               IMPLEMENTATION NOTE: React's applySeasonPoolMods pushes freely; the
+	#               React pool always already contains the target (it's an eligible category
+	#               tile + its weight is > 0 in that season except for Winter stone which is
+	#               a mine tile — see the Winter +1 stone note below). We apply the same push-
+	#               freely strategy here; unreachable tiles (mine tiles on the farm) will be
+	#               pushed but the SAFETY NET is a GRASS fallback if the pool empties, not a
+	#               tile-guard. In practice the Winter +1 tile_mine_stone resolves to STONE;
+	#               STONE is a mine tile and would never appear under normal farm play, but it
+	#               faithfully mirrors React. If a future milestone excludes mine tiles from the
+	#               farm pool, revisit this delta.
+	#   delta < 0 → remove up to |delta| copies, but ONLY while at least 2 copies remain
+	#               (never drive a tile to 0 — mirrors React's `workerPool.filter(x=>x===k).length > 1`
+	#               guard). Silently skips if the tile is absent or already at 1 copy.
+	var spm: Dictionary = ZoneConfig.season_pool_mods(season)
+	for key_v in spm.keys():
+		var key: String = String(key_v)
+		var delta: int = int(spm[key])
+		if delta == 0:
+			continue
+		var tile_val: int = Constants.tile_for_string_key(key)
+		if tile_val == Constants.EMPTY:
+			continue  # unknown tile key — silently skip (future-proofed against catalog gaps)
+		if delta > 0:
+			for _i in delta:
+				pool.append(tile_val)
+		else:
+			# delta < 0: remove up to |delta| slots, never the last copy.
+			var to_remove: int = -delta
+			while to_remove > 0:
+				var current_count: int = 0
+				for t in pool:
+					if int(t) == tile_val:
+						current_count += 1
+				if current_count <= 1:
+					break  # at 0 or 1 — stop, never drive below 1 (or from nothing)
+				var last_idx: int = -1
+				for i in range(pool.size() - 1, -1, -1):
+					if int(pool[i]) == tile_val:
+						last_idx = i
+						break
+				if last_idx >= 0:
+					pool.remove_at(last_idx)
+				to_remove -= 1
 	# Fill bias: while armed, DOUBLE the target tile's slots already in the pool so the next
 	# fills favour it (faithful to the web's pool-doubling). Only doubles a tile that is ALREADY
 	# eligible — never injects an off-zone tile (preserves zone restriction). Pure read; the
