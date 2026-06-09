@@ -1,0 +1,5 @@
+# Intermediate per-frame renders — reproducible via `python _gen.py frames` / `_gen_v2.py frames`
+frames/
+frames_v2/
+# Scratch review/verify montages (underscore-prefixed PNGs)
+_*.png
