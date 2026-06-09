@@ -878,13 +878,14 @@ func _on_townsfolk_closed() -> void:
 	_router.close_modal()
 	_hud._clear_nav()
 
-# ── Cartography world map (3-zone view + alternate expedition entry) ────────────
+# ── Cartography world map (T26: the 11-node illustrated travel map) ─────────────
 
-## Open the cartography world-map modal, lazily creating + wiring it on first use (mirrors
-## _open_townsfolk). The screen re-reads the live GameState (active_biome → current zone,
-## town2_complete / can_enter_mine / can_enter_harbor → travel-button state) on open(), so
-## the map always reflects where you are + what's reachable. Its `travel_requested` signal is
-## routed to Main, the SINGLE mutation point, which performs the real enter_mine/enter_harbor.
+## Open the cartography world-map view, lazily creating + wiring it on first use (mirrors
+## _open_townsfolk). The screen re-reads the live GameState travel state (map_current → current
+## node, map_node_state → per-node pin style, travel_block_reason / coins / player_level →
+## the detail-panel Travel button) on open(), so the map always reflects where you are + what's
+## reachable. Its `travel_requested` signal is routed to Main, the SINGLE mutation point, which
+## runs game.travel_to + the biome/boss/toast follow-up.
 func _open_cartography() -> void:
 	if _cartography_screen == null:
 		_cartography_screen = CartographyScreenScript.new()
@@ -1392,33 +1393,85 @@ func _on_debug_closed() -> void:
 	if game != null:
 		SaveManager.save(game)
 
-## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
-## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
-## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
-## TownScreen expedition uses (state_changed → _on_town_changed) so we don't duplicate the
-## board-pool swap / hazard-flag / pearl-placement logic. On a failed launch (guards trip),
-## the map simply closed — nothing mutated.
-func _on_cartography_travel(zone_id: String) -> void:
-	# Close the map first so the biome swap + any queued story beat surface over the board.
+## The world map requested travel to a NODE (only ENABLED Travel/Enter buttons emit this).
+## Main owns GameState mutation: run game.travel_to(node_id) — the single travel entry that pays
+## the entry cost, marks the node visited, discovers neighbours, and (for a BOARD node) launches
+## the matching board the REAL way (enter_mine / enter_harbor / farm-active). On a BOARD entry we
+## then run the SAME biome-change refresh path the TownScreen expedition uses (_on_town_changed)
+## so we never duplicate the board-pool swap / hazard-flag / pearl-placement logic. NON-board
+## nodes (event / festival / boss / capital) move the marker, then Main acts on the node KIND:
+##   • boss     → the boss challenge (the real _enter_boss_fight path) when eligible, else a hint.
+##   • festival → a flavour toast (the festival mini-economy is deferred; honest, not faked).
+##   • event    → a Crossroads flavour toast (the React event bubble's analogue).
+##   • capital  → unreachable here (travel_to blocks it on the missing Hearth-Token currency).
+## A blocked travel (guards trip) leaves everything unmutated; the map simply closed.
+func _on_cartography_travel(node_id: String) -> void:
+	var res: Dictionary = game.travel_to(node_id)
+	if not bool(res.get("ok", false)):
+		# Blocked — re-render the (still-open) map so the unchanged state shows, and surface why.
+		if _cartography_screen != null and _cartography_screen.visible:
+			_cartography_screen.refresh()
+		var reason := String(res.get("reason", ""))
+		if reason == "needs_tokens":
+			show_toast("The Old Capital waits on the three Hearth-Tokens.")
+		elif reason == "cost":
+			show_toast("Not enough coins for that journey.")
+		elif reason == "level":
+			show_toast("That place is too dangerous yet — keep growing.")
+		elif reason == "unreachable":
+			show_toast("No road leads there from here.")
+		SaveManager.save(game)
+		return
+
+	# Travel succeeded — the marker moved (+ entry cost paid + discoveries). Close the map so the
+	# board / boss / toast surfaces over it.
 	_on_cartography_closed()
-	var res: Dictionary = {}
-	match zone_id:
-		"mine":
-			res = game.enter_mine()
-		"harbor":
-			res = game.enter_harbor()
-		_:
-			return
-	if bool(res.get("ok", false)):
-		# Reuse Main's existing biome-change path (the one the TownScreen routes through):
-		# re-pool + regenerate the board onto the new biome, set the hazard/pearl flags, refresh
-		# every affected HUD surface, and save. No duplicated biome-swap logic here.
+	var kind := String(res.get("kind", ""))
+
+	if String(res.get("board_kind", "")) != "":
+		# A BOARD node (farm / mine / fish). Reuse Main's biome-change path to re-pool + regenerate
+		# the board onto the new biome, set the hazard/pearl flags, refresh every HUD surface, save.
 		_on_town_changed()
-		# M5-polish — confirm the launch with a transient toast (a REAL event: an expedition
-		# just began with a real turn budget). The turn count comes straight from the result.
-		var turns: int = int(res.get("turns", 0))
-		var where: String = "the mine" if zone_id == "mine" else "the harbor"
-		show_toast("Sailed out to %s — %d turns of supplies." % [where, turns])
+		var node_name := String(CartographyConfig.by_id(node_id).get("name", node_id))
+		if bool(res.get("entered", false)):
+			match String(res.get("board_kind", "")):
+				"mine":
+					show_toast("Set out to %s — %d turns of supplies." % [node_name, int(res.get("launch", {}).get("turns", 0))])
+				"fish":
+					show_toast("Sailed out to %s — %d turns of supplies." % [node_name, int(res.get("launch", {}).get("turns", 0))])
+				_:
+					show_toast("Travelled to %s." % node_name)
+		else:
+			# The marker moved but the expedition couldn't launch (its own guard tripped — usually
+			# no supplies or not on the farm). Surface the launch reason honestly.
+			var lreason := String(res.get("launch", {}).get("reason", ""))
+			var hint := "Need supplies to set out." if lreason == "no_supplies" else (
+				"Defeat the boss to unlock expeditions." if lreason == "locked" else
+				"Return to the farm before setting out.")
+			show_toast("Arrived at %s — %s" % [node_name, hint])
+		SaveManager.save(game)
+		return
+
+	# A NON-board node — act on the kind.
+	match kind:
+		"boss":
+			# The Pit → the real boss challenge when eligible; else a hint (nothing faked).
+			if game.can_challenge_boss():
+				var bres: Dictionary = _enter_boss_fight()
+				if bool(bres.get("ok", false)):
+					show_toast("⚔ %s rises in the Pit!" % String(bres.get("name", "A boss")))
+				else:
+					show_toast("The Pit is quiet for now.")
+			else:
+				show_toast("You aren't ready to face the Pit yet.")
+		"festival":
+			show_toast("🎪 The Drifter's Fair rolls through — come back when the wagons settle.")
+		"event":
+			show_toast("🎲 You meet a stranger at the Crossroads…")
+		_:
+			pass
+	_refresh_meta()
+	SaveManager.save(game)
 
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 

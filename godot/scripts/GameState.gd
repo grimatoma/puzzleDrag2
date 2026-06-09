@@ -148,6 +148,30 @@ func give_gift(npc_id: String, resource: String) -> Dictionary:
 var active_biome: String = "farm"   ## "farm" | "mine" | "harbor" — which biome the board shows
 var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
 
+# ── T26: Cartography travel state (ported from src/features/cartography/slice.ts) ──
+## The 11-node world-map travel state machine. `map_current` is the node the player is "at"
+## (default "home"); `map_node_state` maps every visited/discovered node id → its state string
+## ("visited" | "discovered"); a node absent from the dict is HIDDEN. Mirrors React's
+## mapCurrent + mapVisited/mapDiscovered (slice.ts:13-20), collapsed into one {id → state} dict
+## (hidden = not present, so the dict only holds discovered ∪ visited).
+##
+## Discovery rules (slice.ts:43-110): home starts VISITED, its neighbours DISCOVERED. You may
+## FIRST-travel only to a node adjacent to a VISITED node, meeting its level + paying its coin
+## entry cost; arriving marks it visited and discovers its neighbours. You may FAST-travel to
+## any already-VISITED node from anywhere (no adjacency / level / cost). travel_to() is the
+## single mutation entry; it routes BOARD nodes (farm/mine/fish) into the matching expedition
+## board so the world map is the real way to start a run. NON-board nodes (event/festival/boss/
+## capital) are handled by Main on the {ok:true, kind} result — travel_to only moves the marker.
+##
+## ADDITIVE GUARANTEE: a save written before the travel state existed loads with the default seed
+## (home visited, neighbours discovered) via the from_dict defensive default; SAVE_VERSION is NOT
+## bumped. The default seed is applied in _ready of GameState (init below) so a bare new() is also
+## seeded — see _seed_map_state.
+var map_current: String = "home"
+## node id (String) → "visited" | "discovered". A node not present is hidden. Seeded by
+## _seed_map_state() in _init so a bare GameState is always navigable.
+var map_node_state: Dictionary = {}
+
 # ── Farm season cycle (A1, ported from src/features/zones + src/constants SEASONS) ──
 ## The home farm is a PERSISTENT board that cycles four seasons (Spring→Summer→Autumn→
 ## Winter) over a turn budget, then HARVESTS and wraps back to Spring. `farm_turns_used` is
@@ -2124,6 +2148,149 @@ func leave_mine() -> void:
 	mine_hazards = MineHazardLogic.default_state()
 	mysterious_ore = {}
 
+# ── T26: Cartography travel state machine (ported from src/features/cartography/slice.ts) ──
+
+## The player-level used for map node level gates. The port has no React `state.level`; its
+## closest analogue is the Almanac track level (almanac_level), so the world-map level gate
+## reads it (React slice.ts:72 `state.level || 1`). Floored at 1.
+func player_level() -> int:
+	return maxi(1, almanac_level)
+
+## Seed the default map travel state: home VISITED, its neighbours DISCOVERED, every other node
+## HIDDEN. map_current = "home". Idempotent — only seeds when the dict is empty, so a loaded
+## save (which restores its own state) is never clobbered. Called from from_dict (and lazily
+## from any travel reader) so a bare GameState is always navigable. Mirrors React's initial
+## (slice.ts:13-20): mapCurrent 'home', visited ['home'], discovered ['home', meadow, orchard].
+func _seed_map_state() -> void:
+	if not map_node_state.is_empty():
+		return
+	map_current = "home"
+	map_node_state = {"home": "visited"}
+	for nid in CartographyConfig.neighbors_of("home"):
+		if not map_node_state.has(nid):
+			map_node_state[nid] = "discovered"
+
+## The travel-state string for `node_id`: "visited" | "discovered" | "hidden". A node absent
+## from map_node_state reads as hidden. Seeds the default state on first read so a bare
+## GameState answers correctly.
+func map_status(node_id: String) -> String:
+	if map_node_state.is_empty():
+		_seed_map_state()
+	return String(map_node_state.get(node_id, "hidden"))
+
+## True when the player has visited `node_id` at least once (fast-travel eligible).
+func map_visited(node_id: String) -> bool:
+	return map_status(node_id) == "visited"
+
+## Recompute the DISCOVERED ring around the visited set: every neighbour of a visited node that
+## isn't already visited becomes discovered. Visited entries are preserved. Mirrors React's
+## recomputeDiscovered (slice.ts:43-49).
+func _recompute_discovered() -> void:
+	for nid in map_node_state.keys():
+		if String(map_node_state[nid]) == "visited":
+			for nb in CartographyConfig.neighbors_of(nid):
+				if not map_node_state.has(nb):
+					map_node_state[nb] = "discovered"
+
+## Why-can't-I-travel reason for `node_id`, or "" when travel IS allowed. Mirrors React's
+## adjacency-from-visited + level + entry-cost gate (slice.ts:62-79) plus the Hearth-Token gate
+## (the Old Capital, which has no token currency in the port → always "needs_tokens").
+##   - "unknown"      — no such node.
+##   - "here"         — already the current node.
+##   - "needs_tokens" — the Old Capital (gated on the 3 Hearth-Tokens, which don't exist yet).
+##   - ""             — already visited → fast-travel always allowed (skips the gates below).
+##   - "unreachable"  — first-visit, not adjacent to the current node.
+##   - "level"        — first-visit, player level below the node's level requirement.
+##   - "cost"         — first-visit, not enough coins for the entry cost.
+func travel_block_reason(node_id: String) -> String:
+	if not CartographyConfig.has_node(node_id):
+		return "unknown"
+	if node_id == map_current:
+		return "here"
+	# The Old Capital is gated on three Hearth-Tokens. That currency does not exist in the port
+	# yet (T22 territory), so the node can never be entered — surfaced honestly, never faked.
+	if CartographyConfig.requires_hearth_tokens(node_id):
+		return "needs_tokens"
+	# Fast-travel: any already-visited node, from anywhere (no adjacency/level/cost).
+	if map_visited(node_id):
+		return ""
+	# First visit: must be adjacent to the CURRENT node, meet the level req, and afford the cost.
+	if not CartographyConfig.is_adjacent(map_current, node_id):
+		return "unreachable"
+	if CartographyConfig.level_req(node_id) > player_level():
+		return "level"
+	if coins < CartographyConfig.entry_cost(node_id):
+		return "cost"
+	return ""
+
+## True when `node_id` can be travelled to RIGHT NOW (travel_block_reason == "").
+func can_travel_to(node_id: String) -> bool:
+	return travel_block_reason(node_id) == ""
+
+## Travel to `node_id`. On a blocked travel returns {ok:false, reason} (the travel_block_reason)
+## WITHOUT mutating. On success:
+##   1. Pay the coin entry cost on a FIRST visit (fast-travel to a visited node is free).
+##   2. Mark the node VISITED + discover its neighbours, set map_current.
+##   3. For a BOARD node (farm/mine/fish) ENTER the matching board: a farm node sets
+##      active_biome "farm" (the persistent home board — no turn budget consumed); a mine node
+##      launches the mine expedition (supplies → mine turns) via enter_mine; a fish node launches
+##      the harbor expedition via enter_harbor. A board launch that fails its OWN guards (no
+##      supplies, etc.) still completes the travel (the marker moves) but reports the launch
+##      result so Main can surface it.
+##   4. NON-board nodes (event/festival/boss/capital) only move the marker — Main acts on `kind`.
+## Returns {ok:true, node, kind, board_kind, entered:bool, first_visit:bool, launch:Dictionary}.
+## `entered` is true when the board biome actually changed; `launch` is the enter_mine/enter_harbor
+## result for an expedition node (empty for farm/non-board).
+func travel_to(node_id: String) -> Dictionary:
+	if map_node_state.is_empty():
+		_seed_map_state()
+	var reason: String = travel_block_reason(node_id)
+	if reason != "":
+		return {"ok": false, "reason": reason}
+
+	var node: Dictionary = CartographyConfig.by_id(node_id)
+	var first_visit: bool = not map_visited(node_id)
+
+	# 1. Entry cost (first visit only — fast-travel is free).
+	if first_visit:
+		var cost: int = CartographyConfig.entry_cost(node_id)
+		if cost > 0:
+			coins -= cost   # guarded by travel_block_reason's "cost" check above
+
+	# 2. Mark visited + discover neighbours + move the marker.
+	map_node_state[node_id] = "visited"
+	_recompute_discovered()
+	map_current = node_id
+
+	# 3/4. Enter the node's board (board nodes) or just report the kind (non-board nodes).
+	var kind: String = String(node.get("kind", ""))
+	var board_kind: String = String(node.get("board_kind", ""))
+	var result := {
+		"ok": true, "node": node_id, "kind": kind, "board_kind": board_kind,
+		"entered": false, "first_visit": first_visit, "launch": {},
+	}
+	match board_kind:
+		"farm":
+			# The farm is the persistent home board — entering it just makes the farm active
+			# (mirrors leave_mine/leave_harbor's snap-back). No supplies are spent.
+			active_biome = "farm"
+			result["entered"] = true
+		"mine":
+			# Launch the mine expedition the REAL way (supplies → turns). enter_mine guards on
+			# being on the farm + City tier + supplies; on failure the marker still moved (the
+			# player is "at" the quarry on the map) but no board change happened.
+			var mres: Dictionary = enter_mine()
+			result["launch"] = mres
+			result["entered"] = bool(mres.get("ok", false))
+		"fish":
+			var hres: Dictionary = enter_harbor()
+			result["launch"] = hres
+			result["entered"] = bool(hres.get("ok", false))
+		_:
+			# event / festival / boss / capital — no board; Main handles the activity on `kind`.
+			pass
+	return result
+
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
 ## The current farm season-cycle turn budget. While a bounded RUN is live (farm_run_active
@@ -4078,6 +4245,11 @@ func distinct_seen(counter: String) -> Dictionary:
 
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
+	# T26: ensure the cartography travel state carries its canonical seed (home visited,
+	# neighbours discovered) so a never-touched GameState round-trips byte-for-byte. Lazy +
+	# idempotent — _seed_map_state only fills an EMPTY dict, mirroring the tile-collection slice's
+	# _ensure_tile_collection lazy-seed in to_dict.
+	_seed_map_state()
 	return {
 		"inventory": inventory.duplicate(),
 		"progress": progress.duplicate(),
@@ -4095,6 +4267,12 @@ func to_dict() -> Dictionary:
 		"npcs": npcs_state.to_dict(),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
+		# T26 Cartography travel state (ADDITIVE): the current world-map node + the per-node
+		# travel state ({id → "visited"|"discovered"}). SAVE_VERSION is NOT bumped — a save written
+		# before the travel state existed restores the default seed (home visited, neighbours
+		# discovered) via from_dict's defensive default.
+		"map_current": map_current,
+		"map_node_state": map_node_state.duplicate(),
 		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
 		# SAVE_VERSION is NOT bumped — a save written before seasons existed loads with 0
 		# (a fresh Spring cycle) via from_dict's defensive default.
@@ -4327,6 +4505,36 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.active_biome = biome
 	s.mine_turns_left = turns
 	s.harbor_turns_left = harbor_turns
+	# T26 Cartography travel state (ADDITIVE). Restore the per-node travel state + the current
+	# node defensively: keep only entries naming a REAL node with a known state ("visited" |
+	# "discovered"); a stale/bogus id or state is dropped. After restoring, re-derive the
+	# discovered ring (so a save that recorded only the visited set still shows the right
+	# discoveries) and ENSURE home is at least visited (the invariant React's initial guarantees;
+	# a save with no map state — any pre-T26 save — yields {} here, then _seed_map_state re-seeds
+	# the home-visited / neighbours-discovered default). map_current must be a real node that is
+	# at least discovered, else it falls back to "home".
+	var mns_raw: Variant = d.get("map_node_state", {})
+	var restored_state: Dictionary = {}
+	if mns_raw is Dictionary:
+		for k in (mns_raw as Dictionary).keys():
+			var nid := String(k)
+			var st := String((mns_raw as Dictionary)[k])
+			if CartographyConfig.has_node(nid) and (st == "visited" or st == "discovered"):
+				restored_state[nid] = st
+	s.map_node_state = restored_state
+	if s.map_node_state.is_empty():
+		# Pre-T26 save (or a fully corrupt one) → re-seed the home-visited default.
+		s._seed_map_state()
+	else:
+		# Guarantee the home invariant + re-derive the discovered ring from the visited set.
+		if String(s.map_node_state.get("home", "")) != "visited":
+			s.map_node_state["home"] = "visited"
+		s._recompute_discovered()
+	var mc := String(d.get("map_current", "home"))
+	# The current node must be a real node that's at least discovered; else snap to home.
+	if not CartographyConfig.has_node(mc) or String(s.map_node_state.get(mc, "hidden")) == "hidden":
+		mc = "home"
+	s.map_current = mc
 	# Bounded farm RUN (Task A, ADDITIVE). Restore the six run fields defensively (missing →
 	# defaults = no run, the back-compat state for any pre-run save). Restored BEFORE the
 	# farm_turns_used clamp below so farm_turn_budget() reflects the per-run budget while a run
