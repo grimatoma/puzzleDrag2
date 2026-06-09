@@ -118,13 +118,19 @@ func give_gift(npc_id: String, resource: String) -> Dictionary:
 		inventory[resource] = remaining
 	gain_bond(npc_id, delta)
 	npcs_state.mark_gifted(npc_id, season)
+	var new_bond: float = npc_bond(npc_id)
+	# T29 (story engine, ADDITIVE — after the gift is committed): post a "gift_given" event so
+	# side_first_gift (event.type == gift_given) and side_bond_liked (event.bond >= 7) can fire.
+	# event.bond is the NEW bond after this gift (the Liked-band gate reads it). Beats NEVER
+	# auto-grant, so this cannot change the economy. The success result below is UNCHANGED.
+	post_story_event({"type": "gift_given", "npc": npc_id, "resource": resource, "bond": new_bond})
 	return {
 		"ok": true,
 		"npc": npc_id,
 		"resource": resource,
 		"tier": tier,
 		"delta": delta,
-		"bond": npc_bond(npc_id),
+		"bond": new_bond,
 	}
 
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
@@ -174,6 +180,30 @@ var farm_run_turns_left: int = 0        ## turns remaining in this run (0 when t
 var farm_run_zone: String = "home"      ## the zone the run is playing (only "home" today)
 var farm_run_used_fertilizer: bool = false  ## whether this run consumed fertilizer (×2 budget)
 var farm_run_selected: Array = []       ## chosen tile categories (spawn-bias boost; max 8)
+
+# ── T30: Run TELEMETRY (the rich run-summary recap, ported from src/features/runSummary) ────────
+## The per-run accumulator the rich HarvestModal dashboard reads. RESET at start_farm_run (a fresh
+## run), ACCUMULATED during the run (credit_chain ticks chains/longest/best-moment/resources/coins/
+## upgrades; enter_mine/enter_harbor record supplies consumed; post_story_event records fired beats;
+## a bond snapshot at run-start backs the bond-delta), and SNAPSHOTTED at close_season (build_run_summary
+## packs the live fields + the bond deltas into the dashboard dict). Mirrors the React RunSummary
+## fields (slice.ts): chainsPlayed, biggestChain {count,key,coinGain,upgrades,gained}, totalUpgrades,
+## totalCoinGain, resourcesGained, bondsAtStart/bondDeltas, beatsTriggered, suppliesConsumed,
+## fertilizerUsed.
+##
+## TRANSIENT — like pending_tool / fill_bias, this is NOT persisted (to_dict/from_dict skip it): a
+## run summary only matters between start_farm_run and the run-end modal, and a reload mid-run simply
+## starts the recap fresh. SAVE_VERSION is NOT bumped. A bare GameState.new() has farm_run_active ==
+## false so nothing accumulates; every existing suite is byte-identical.
+var run_chains_played: int = 0          ## resolved chains this run (every credit_chain on the farm)
+var run_longest_chain: int = 0          ## the longest single chain length this run (best-moment count)
+var run_best_chain: Dictionary = {}     ## the best moment: {count, key, coin_gain, upgrades, gained} (the LONGEST chain)
+var run_total_upgrades: int = 0         ## upgrade tiles spawned this run (units produced by chains)
+var run_total_coins: int = 0            ## coins gained from chains this run (sum of credit_chain coins_gain)
+var run_resources_gained: Dictionary = {}   ## resource_key:String -> units gained this run (chain produce)
+var run_bonds_at_start: Dictionary = {}      ## npc_id:String -> bond at run start (backs the bond delta)
+var run_beats_fired: Array = []         ## ordered ids of story beats that fired DURING this run (dedup)
+var run_supplies_consumed: Dictionary = {}   ## resource_key:String -> units spent to start expeditions this run
 
 # ── Fish / Harbor expedition (M3j, ported from src/features/fish) ──────────────
 ## The harbor is the THIRD biome, MIRRORING the mine expedition (M3f) and SHARING the
@@ -671,6 +701,11 @@ func give_keeper_reward(type: String, path: String) -> Dictionary:
 		var ci: int = KeeperConfig.driveout_core_ingots(type)
 		core_ingots += ci
 		result["core_ingots"] = ci
+	# T29 (story engine, ADDITIVE — after the keeper flag is set + the currency granted): post a
+	# "keeper_resolved" event so act1_keeper_trial can fire. The beat gates on the keeper_<type>_<path>
+	# flag (already set above), so it would fire on the very next event regardless; posting here makes
+	# it fire IMMEDIATELY at the resolution. Beats NEVER auto-grant, so this cannot change the economy.
+	post_story_event({"type": "keeper_resolved", "keeper_type": type, "path": path})
 	return result
 
 # ── Boon purchase + effects (T31 — ported from src/features/boons/slice.ts BOON/PURCHASE) ──
@@ -1276,6 +1311,28 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# collect template targets those keys, so the collect tick simply matches nothing.
 	_tick_quests({"type": "collect", "key": Constants.string_key(tile_type), "amount": chain_len})
 	_tick_quests({"type": "chain", "length": chain_len})
+	# ── T30 run telemetry (ADDITIVE, after the economy is fully credited) ────────
+	# Accumulate ONLY while a bounded run is live (React runSummary only ticks between FARM/ENTER and
+	# CLOSE_SEASON). Mirrors the React CHAIN_COLLECTED accumulation (runSummary slice.ts:130-172):
+	# +1 chain, +produced units to resourcesGained[resource] + totalUpgrades, +coins to totalCoinGain,
+	# and a longest-chain "best moment" snapshot (the LONGEST chain by length, with its key + reward).
+	if farm_run_active:
+		var produced: int = total_units   # units + bonus_units actually banked
+		run_chains_played += 1
+		run_total_upgrades += produced
+		run_total_coins += coins_gain
+		if produced > 0 and resource != "":
+			run_resources_gained[resource] = int(run_resources_gained.get(resource, 0)) + produced
+		# Best moment = the LONGEST single chain (React: length > biggest.count). Ties keep the first.
+		if chain_len > run_longest_chain:
+			run_longest_chain = chain_len
+			run_best_chain = {
+				"count": chain_len,
+				"key": Constants.string_key(tile_type),
+				"coin_gain": coins_gain,
+				"upgrades": produced,
+				"gained": produced,
+			}
 	return {
 		"resource": resource,
 		"units": units,
@@ -1987,8 +2044,11 @@ func fill_order(index: int) -> Dictionary:
 	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
 	bump_counter("orders_fulfilled")
 	# Story engine (ADDITIVE, after the order is committed): post an "order_fulfilled"
-	# event so act1_first_order can fire. The success result below is UNCHANGED.
-	post_story_event({"type": "order_fulfilled"})
+	# event so act1_first_order can fire. T29: also carry the requesting NPC's NEW bond
+	# (after the +BOND_GAIN_PER_FILL warm) on event.bond so side_bond_liked can fire when an
+	# order fill pushes a villager into Liked (>= 7) — the same fact give_gift posts. The
+	# success result below is UNCHANGED.
+	post_story_event({"type": "order_fulfilled", "npc": npc, "bond": npc_bond(npc)})
 	# Quests (ADDITIVE): one fulfilled order ticks the ORDER quest event (+1 to any
 	# order-category quest). No-op loop over [] with an empty quest board.
 	_tick_quests({"type": "order"})
@@ -2029,6 +2089,9 @@ func enter_mine() -> Dictionary:
 		return {"ok": false, "reason": "no_supplies"}
 	var s: int = qty("supplies")
 	inventory.erase("supplies")
+	# T30: record the supplies spent on this expedition for the run-summary dashboard (React
+	# EXPEDITION/DEPART supply). Accumulates across expeditions launched since the last run start.
+	run_supplies_consumed["supplies"] = int(run_supplies_consumed.get("supplies", 0)) + s
 	mine_turns_left = s
 	active_biome = "mine"
 	# T11/T23: a fresh expedition starts with NO mine hazards and NO mysterious ore active. They
@@ -2224,7 +2287,77 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	farm_run_selected = _sanitize_selection(selected_tiles)
 	farm_turns_used = 0
 	active_biome = "farm"
+	# T30: reset the run telemetry to a fresh accumulator + snapshot the start-of-run bonds (the
+	# baseline the bond-delta is measured against). Mirrors React startFreshRun (runSummary slice.ts).
+	_reset_run_telemetry(fert)
 	return {"ok": true, "reason": "", "budget": budget}
+
+## T30 — reset the run-telemetry accumulator for a NEW run and snapshot the start-of-run NPC bonds.
+## Called from start_farm_run. The dashboard's "Fertilizer" chip reads farm_run_used_fertilizer
+## (the existing run field), so no separate flag is tracked here. bonds_at_start is a per-NPC
+## snapshot so close_season can compute the rounded bond DELTA (React diffBonds). Only touches the
+## telemetry fields. The `_fert` arg is accepted for call-site symmetry but unused (the run field
+## already carries it).
+func _reset_run_telemetry(_fert: bool) -> void:
+	run_chains_played = 0
+	run_longest_chain = 0
+	run_best_chain = {}
+	run_total_upgrades = 0
+	run_total_coins = 0
+	run_resources_gained = {}
+	run_beats_fired = []
+	run_supplies_consumed = {}
+	# Snapshot every roster NPC's bond at run start (the bond-delta baseline).
+	run_bonds_at_start = {}
+	for id in NpcConfig.all_ids():
+		run_bonds_at_start[String(id)] = npcs_state.bond(id)
+
+## T30 — the rounded NPC bond DELTAS over the run: { npc_id -> round1(end - start) } for every NPC
+## whose bond moved by at least 0.05 since run start. Mirrors React diffBonds (runSummary slice.ts:64-75):
+## round to one decimal, drop near-zero moves. Reads the LIVE bonds vs run_bonds_at_start.
+func run_bond_deltas() -> Dictionary:
+	var out: Dictionary = {}
+	for id in NpcConfig.all_ids():
+		var sid: String = String(id)
+		var start_bond: float = float(run_bonds_at_start.get(sid, 5.0))
+		var end_bond: float = npcs_state.bond(sid)
+		var d: float = end_bond - start_bond
+		if absf(d) >= 0.05:
+			out[sid] = roundf(d * 10.0) / 10.0
+	return out
+
+## T30 — build the rich run-summary DASHBOARD dict the HarvestModal renders at run end. Packs the
+## live telemetry fields + the computed bond deltas + the story-beat TITLES (resolved from
+## StoryConfig) into one self-contained dict. Mirrors the React RunSummary state shape the dashboard
+## reads (runSummary index.tsx). Pure: reads state, never mutates. Safe to call any time (returns a
+## zeroed dict when no run accumulated).
+##   {
+##     biome, zone, turns_budget, fertilizer_used,
+##     chains_played, longest_chain, best_chain:{count,key,coin_gain,upgrades,gained} (or {}),
+##     total_upgrades, total_coins, resources_gained:{}, bond_deltas:{}, supplies_consumed:{},
+##     beats:[{id,title}]
+##   }
+func build_run_summary() -> Dictionary:
+	var beats: Array = []
+	for bid in run_beats_fired:
+		var beat: Dictionary = StoryConfig.beat_by_id(String(bid))
+		var title: String = String(beat.get("title", "")) if not beat.is_empty() else ""
+		beats.append({"id": String(bid), "title": title})
+	return {
+		"biome": farm_run_zone,
+		"zone": farm_run_zone,
+		"turns_budget": farm_run_budget,
+		"fertilizer_used": farm_run_used_fertilizer,
+		"chains_played": run_chains_played,
+		"longest_chain": run_longest_chain,
+		"best_chain": run_best_chain.duplicate(true),
+		"total_upgrades": run_total_upgrades,
+		"total_coins": run_total_coins,
+		"resources_gained": run_resources_gained.duplicate(true),
+		"bond_deltas": run_bond_deltas(),
+		"supplies_consumed": run_supplies_consumed.duplicate(true),
+		"beats": beats,
+	}
 
 ## Keep only entries that are ELIGIBLE base-spawn categories for the home zone, capped at 8
 ## (React selectedTiles.slice(0, 8)). De-dup is NOT applied (React keeps the raw slice); the
@@ -2264,15 +2397,20 @@ func grant_test_fertilizer(n: int = 1) -> void:
 ## the run + resets the farm to a fresh Spring on the farm biome. Returns
 ## {coins_granted:int, season_ended:String} (the season name BEFORE the reset).
 ##
-## NO-FAKE OMISSIONS — React CLOSE_SEASON (src/state.ts) ALSO does the following, none of which
-## have a port primitive yet and so are deliberately NOT ported here:
-##   - market drift (pickMarketEvent / driftPrices / the market season counter + bubble)
-##   - the `session_ended` story beat trigger
-##   - worker/building season-end tool grants (seasonEndTools) + season_bonus coins channel
-##   - board preserve / Silo+Barn savedField snapshotting
-##   - NPC gift-cooldown reset, tileCollection freeMoves reset, fillBias/magicFertilizer clears
-## Only the bonus coins, bond decay, and quest reroll have real port primitives — those are
-## ported faithfully; the rest are documented seams for a later milestone.
+## WIRED (the React CLOSE_SEASON parity set the port now covers):
+##   - bonus coins (flat SEASON_END_BONUS_COINS + the season_bonus channel) + bond decay + quest reroll
+##   - market drift (T16): market_season++ + _recompute_market (pickMarketEvent / driftPrices)
+##   - worker/building season-end tool grants (season_end_tools channel → grant_tool)
+##   - (T30) the `session_ended` story-beat trigger (post_story_event cascade — fires any threshold/
+##     flag beat that became ready during the run, e.g. act3_finish)
+##   - (T30) board-preserve DECISION (Silo/Barn board_preserve_biomes): reported as `preserve_board`
+##     so Main keeps the grid instead of regenerating when the active biome is preserved
+##   - (T30) tileCollection freeMoves reset + fill-bias clear (tile_free_moves = 0; bias cleared)
+## STILL A SEAM (no port primitive yet, deliberately NOT faked):
+##   - the per-biome savedField GRID SNAPSHOT itself (preserve_board signals the intent; the actual
+##     grid retention is the board slice's job in Main)
+##   - season_end_pool_step (no growable townsfolk hiring pool to step — T20 seam)
+##   - NPC gift-cooldown reset (the port's cooldown is keyed by season index, so it self-clears)
 func close_season() -> Dictionary:
 	# BUG I1 — IDEMPOTENT guard. close_season is reachable from BOTH run-end exit paths (the CTA's
 	# return_to_town and a scrim/ESC dismiss that completes the return in _on_harvest_closed), and a
@@ -2308,11 +2446,31 @@ func close_season() -> Dictionary:
 	#   in the result for the caller/board to honour; close_season itself does not snapshot the grid.
 	#   This is a documented seam, faithful to "the channel is wired" — the consumer (board) is later.
 	var preserved: Array = agg["board_preserve_biomes"].keys()
+	# T30: BOARD-PRESERVE decision. The Silo/Barn board_preserve_biomes channel names the biomes whose
+	# field is kept across the season boundary instead of regenerating (React savedField restore). The
+	# port has no per-biome saved-field snapshot primitive, but the DECISION is pure: if the run's
+	# active biome is in the preserved set, the caller (Main) keeps the existing board grid rather than
+	# calling setup_new_board(). Computed BEFORE the run fields are cleared (active_biome is still the
+	# run's biome here) and surfaced in the result as `preserve_board` for Main to honour.
+	var preserve_board: bool = preserved.has(active_biome) or preserved.has(farm_run_zone)
+	# T30: the session_ended / close_season STORY beat. Posting BEFORE the run is cleared (so any beat
+	# that fires is still captured by run_beats_fired) lets the engine fire any beat that became ready
+	# during the run but whose triggering event never arrived (e.g. act3_finish, gated on flags +
+	# inventory.block >= 50). No port beat gates on session_ended TODAY, so this is inert for the
+	# current catalog — but it is the faithful close-season cascade seam (React CLOSE_SEASON posts
+	# session_ended) and fires threshold/flag beats at the boundary. Beats NEVER auto-grant.
+	post_story_event({"type": "session_ended", "season": season_ended})
 	_decay_npc_bonds()
 	reroll_quests()
 	# T16: advance the market season and re-roll prices (parallel to React CLOSE_SEASON).
 	market_season += 1
 	_recompute_market()
+	# T30: freeMoves reset at season end. React CLOSE_SEASON zeroes the banked tileCollection free
+	# moves (and the fill-bias) so a fresh run doesn't inherit last run's banked moves. Clear both
+	# the banked free moves and the transient fill-bias here (the bias is also per-session transient).
+	tile_free_moves = 0
+	fill_bias_target = Constants.EMPTY
+	fill_bias_turns = 0
 	# Clear the run + reset the farm to a fresh Spring on the home board.
 	farm_run_active = false
 	farm_run_budget = 0
@@ -2321,13 +2479,15 @@ func close_season() -> Dictionary:
 	farm_run_selected = []
 	farm_turns_used = 0
 	active_biome = "farm"
-	# Result reports the FULL coins granted (flat + season_bonus), the tools granted, and the
-	# preserved biomes — all empty/zero-bonus for a fresh game (coins_granted == SEASON_END_BONUS_COINS).
+	# Result reports the FULL coins granted (flat + season_bonus), the tools granted, the preserved
+	# biomes + the preserve-board decision — all empty/zero-bonus for a fresh game (coins_granted ==
+	# SEASON_END_BONUS_COINS, preserve_board == false).
 	return {
 		"coins_granted": Constants.SEASON_END_BONUS_COINS + bonus_coins,
 		"season_ended": season_ended,
 		"tools_granted": tools_granted,
 		"preserved_biomes": preserved,
+		"preserve_board": preserve_board,   # T30: keep the board grid this season (Silo/Barn) vs regen
 		"pool_step": pool_step,   # T20 seam: reported, no hiring-pool primitive to apply it to yet
 		"market_event": market_event.duplicate(true),   # T16: event for the new season (or {})
 	}
@@ -2411,6 +2571,8 @@ func enter_harbor() -> Dictionary:
 		return {"ok": false, "reason": "no_supplies"}
 	var s: int = qty("supplies")
 	inventory.erase("supplies")
+	# T30: record the supplies spent on this voyage for the run-summary dashboard (mirrors enter_mine).
+	run_supplies_consumed["supplies"] = int(run_supplies_consumed.get("supplies", 0)) + s
 	harbor_turns_left = s
 	active_biome = "harbor"
 	# Reset the tide cycle for a fresh session: high tide, 0 spent turns.
@@ -3670,6 +3832,10 @@ func post_story_event(event: Dictionary) -> Array:
 		if qb != "" and StoryConfig.has_beat(qb):
 			_enqueue_beat(qb)
 		fired.append(beat_id)
+		# T30: record beats that fire DURING a live run for the run-summary "Story beats" block
+		# (React runSummary STORY/BEAT_FIRED, slice.ts:178-189). Dedup; only while a run is active.
+		if farm_run_active and not run_beats_fired.has(beat_id):
+			run_beats_fired.append(beat_id)
 	return fired
 
 ## Resolve a player CHOICE on a queued beat. Applies the chosen outcome's flags to

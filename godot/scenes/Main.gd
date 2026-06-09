@@ -1347,7 +1347,13 @@ func _on_season_return() -> void:
 	var summary: Dictionary = game.close_season()
 	board.set_active(false)
 	board.set_tile_pool(game.active_tile_pool())
-	board.setup_new_board()
+	# T30 — board-preserve: when close_season reports preserve_board (a Silo/Barn
+	# board_preserve_biomes channel covering the run's biome), KEEP the existing board grid across
+	# the season boundary instead of regenerating it (React savedField restore). Only regenerate
+	# when the run's biome is NOT preserved. preserve_board is false for a fresh game (no such
+	# building), so the default path is unchanged (setup_new_board, byte-identical to before).
+	if not bool(summary.get("preserve_board", false)):
+		board.setup_new_board()
 	board.set_season(game.current_season_index())
 	# MINOR M1 — reset the board's min-chain bar to the current (no-boss) baseline so a raised boss
 	# chain requirement can never persist onto the fresh town board after the run closes.
