@@ -5,9 +5,9 @@ description: >-
   (organic bending, articulation, character motion) rather than a rigid pixel-shift that
   just slides a region side to side. Triggers: animating a sprite/tile/icon, a looping
   pixel-art GIF, motion like sway / peck / swim / bob / sparkle / glow / open-close, asking
-  why an animation "looks like it's just sliding around" / "isn't really animated" / "looks
-  mechanical or robotic," wanting motion that keeps an existing sprite's detail, needing a
-  seamless loop, or deciding which parts move vs stay rigid.
+  why an animation "looks like it's just sliding around" / "isn't really animated", wanting
+  motion that keeps an existing sprite's detail, needing a seamless loop, or deciding which
+  parts move vs stay rigid.
   Covers "animate the shape, don't slide it," the 12 animation principles on sprites, pixel
   motion techniques (sub-pixel, smears, color cycling), a motion-pattern catalog (bend,
   articulation, pendulum, traveling wave, pulse/glow, overlays), looping, the montage
@@ -142,6 +142,16 @@ Full treatment — each principle in pixel terms, key-pose libraries (walk/idle/
 table mapping every principle to a starter helper — is in
 **`references/animation-principles.md`**.
 
+For staging motion that obeys **real-world forces** — leaves vs snow vs rock falling, snow
+piling bottom-up, a gust's build→peak→release, a dropped object's squash-and-settle, melt/wither,
+fire/smoke/ripples — read **`references/physics-of-motion.md`**. It names the dominant force first,
+then turns it into a **frame-by-frame staging recipe** (spawn stagger, terminal velocity,
+accumulation order, where pixels appear/move/vanish), and ends with a fully storyboarded birch
+**autumn→winter** transition. Read it whenever a motion should "follow physics and the world" and
+a plain bend/slide isn't selling it. For a curated, link-verified **reading list** of pro
+pixel-art + animation resources (Saint11, SLYNYRD, the *Animator's Survival Kit*, *Illusion of
+Life*, and more), see **`references/learning-resources.md`**.
+
 ## Design the image first — then animate it
 
 Motion can't save a weak sprite. Draw a strong **static frame 0** before animating: a
@@ -227,5 +237,13 @@ end up shipping the mechanical slide.
 - `references/motion-patterns.md` — full code recipes for every motion pattern (bend,
   articulation, pendulum/settle, traveling wave, pulse/glow, glint, overlays, hinge,
   breathing) with the "make it organic" notes.
+- `references/physics-of-motion.md` — turning **real-world forces** into **frame-by-frame
+  staging**: a catalog (falling/flutter, accumulation, gusts, momentum/settle, growth/melt/
+  wither, fire/ember/smoke, water/ripple/drip) that names the force, the principles it invokes,
+  and how to distribute it across N pixel frames — plus a fully storyboarded birch autumn→winter
+  transition. Read it when motion must obey physics, not just bend.
+- `references/learning-resources.md` — a curated, link-verified reading list of professional
+  pixel-art + animation resources (static craft, animation, palettes/tools), each tagged with
+  which skill it supports.
 - `scripts/preview_frames.py` — the upscale + frame-montage review tool. Use it every
   iteration.
