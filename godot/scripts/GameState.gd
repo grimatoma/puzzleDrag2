@@ -1348,7 +1348,7 @@ func _consume_fertilizer() -> void:
 ## ported faithfully; the rest are documented seams for a later milestone.
 func close_season() -> Dictionary:
 	var season_ended: String = current_season_name()
-	coins += 25  # PORT: SEASON_END_BONUS_COINS (React SEASON_END_BONUS_COINS).
+	coins += Constants.SEASON_END_BONUS_COINS  # PORT: React SEASON_END_BONUS_COINS (src/state.ts).
 	_decay_npc_bonds()
 	reroll_quests()
 	# Clear the run + reset the farm to a fresh Spring on the home board.
@@ -1359,7 +1359,7 @@ func close_season() -> Dictionary:
 	farm_run_selected = []
 	farm_turns_used = 0
 	active_biome = "farm"
-	return {"coins_granted": 25, "season_ended": season_ended}
+	return {"coins_granted": Constants.SEASON_END_BONUS_COINS, "season_ended": season_ended}
 
 ## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
 ## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0

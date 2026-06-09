@@ -480,10 +480,11 @@ func _install_overlay_dismiss(overlay) -> void:
 			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
 			return
 
-## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
-## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
-func _close_top_overlay() -> bool:
-	var overlays := [
+## Every closable modal overlay, in ONE place. Both `_close_top_overlay` (ESC/back) and
+## `_other_overlay_visible` (the launch-modal settle, FIX 1) iterate this so they can never
+## drift apart. Includes nulls / not-yet-built screens — callers guard with is_instance_valid.
+func _overlay_list() -> Array:
+	return [
 		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
 		_startfarming_modal,
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
@@ -491,9 +492,13 @@ func _close_top_overlay() -> bool:
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
 		_charter_screen, _quests_screen,
 	]
+
+## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
+## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
+func _close_top_overlay() -> bool:
 	var best = null
 	var best_layer := -2147483648
-	for o in overlays:
+	for o in _overlay_list():
 		if o != null and is_instance_valid(o) and o.visible and o.has_method("close"):
 			var lyr: int = int(o.layer) if "layer" in o else 0
 			if lyr >= best_layer:
@@ -503,6 +508,32 @@ func _close_top_overlay() -> bool:
 		best.close()
 		return true
 	return false
+
+## True if ANY closable overlay other than `except_screen` is currently visible. Used by the
+## launch-modal settle (FIX 1): when a launch/secondary modal closes, we only re-assert the town
+## home if nothing else still owns the screen. Iterates the SAME list as `_close_top_overlay`.
+func _other_overlay_visible(except_screen) -> bool:
+	for o in _overlay_list():
+		if o == except_screen:
+			continue
+		if o != null and is_instance_valid(o) and o.visible and o.has_method("close"):
+			return true
+	return false
+
+## When a launch/secondary modal closes while the player is idle in the TOWN HOME (no active
+## run, town map is the visible base, and no OTHER overlay is still on top), re-assert TOWNMAP so
+## the router (and the web URL) match the visible screen. Otherwise fall back to close_modal()
+## (board is the base during a run; or another overlay still owns the router).
+func _settle_close_to_home_or_board() -> void:
+	if game != null and not game.farm_run_active \
+			and _townmap_screen != null and is_instance_valid(_townmap_screen) and _townmap_screen.visible \
+			and not _other_overlay_visible(_townmap_screen):
+		_router.open_modal(ViewRouter.Modal.TOWNMAP)
+		if _hud != null:
+			_hud.set_nav_current("town")
+			_hud._refresh_nav()
+	else:
+		_router.close_modal()
 
 ## ESC (desktop) / Android-back map to ui_cancel — close the top modal if one is open so
 ## the player can always back out of any screen, regardless of the Close button.
@@ -974,11 +1005,15 @@ func _open_tutorial() -> void:
 	_router.open_modal(ViewRouter.Modal.TUTORIAL)
 
 ## The tutorial modal was dismissed (closed without finishing — defensive; normally
-## `finished` fires before `closed`). Mirror the story-modal closed path: hide + reset router.
+## `finished` fires before `closed`). Hide it, then settle the router: on a no-run launch the
+## town map is still the visible home, so _settle_close_to_home_or_board re-asserts TOWNMAP
+## (FIX 1) rather than leaving the router at NONE while the town shows. If the daily modal is
+## still open on top (it's opened in _on_tutorial_finished), the settle falls back to
+## close_modal() — the daily's own close handler settles to TOWNMAP later.
 func _on_tutorial_closed() -> void:
 	if _tutorial_modal != null:
 		_tutorial_modal.visible = false
-	_router.close_modal()
+	_settle_close_to_home_or_board()
 
 ## The tutorial finished (player stepped through all 6 steps OR pressed Skip): mark
 ## tutorial_seen, save, and drain the story queue — the story beats that were
@@ -1033,12 +1068,14 @@ func _on_daily_collected() -> void:
 	_refresh_meta()
 	_refresh_runes()
 
-## The daily-streak modal was closed: hide it + reset the router. NO SaveManager.save — the
+## The daily-streak modal was closed: hide it, then settle the router. On a no-run launch the
+## daily is the LAST auto-modal over the town home, so _settle_close_to_home_or_board re-asserts
+## TOWNMAP (FIX 1) so the router (and web URL) match the visible town. NO SaveManager.save — the
 ## grant was already persisted in _ready right after login_tick; closing the card changes nothing.
 func _on_daily_closed() -> void:
 	if _daily_modal != null:
 		_daily_modal.visible = false
-	_router.close_modal()
+	_settle_close_to_home_or_board()
 
 # ── Harvest season-summary modal (A2) ─────────────────────────────────────────
 
@@ -1104,22 +1141,22 @@ func _on_startfarming_closed() -> void:
 ## The player confirmed Start on the picker. Start the bounded run (GameState.start_farm_run); on
 ## a guard failure surface a toast and bail (no mutation happened). On success the run is live, so
 ## drop the player onto a FRESH bounded board: close the town overlays + clear nav via the board
-## deep-link (which now lands on the board precisely BECAUSE farm_run_active is true), re-pool +
-## regenerate the board from the run's selection-biased pool, re-seed the season + boss bar, flip
-## the board active, refresh the run-aware HUD, and save.
+## deep-link (which now lands on the board — and flips it active — precisely BECAUSE farm_run_active
+## is true), re-pool + regenerate the board from the run's selection-biased pool, re-seed the
+## season + boss bar, refresh the run-aware HUD, and save.
 func _on_start_farming(selected: Array, use_fertilizer: bool) -> void:
 	var res: Dictionary = game.start_farm_run(selected, use_fertilizer)
 	if not bool(res.get("ok", false)):
 		show_toast(_start_farm_fail_text(String(res.get("reason", ""))))
 		return
 	# Run is now active → hide town overlays + clear nav (the board gate in apply_deeplink lets the
-	# board through because farm_run_active is true now). This also closes the picker overlay.
+	# board through because farm_run_active is true now, AND flips the board active). This also
+	# closes the picker overlay.
 	apply_deeplink("board")
 	board.set_tile_pool(game.active_tile_pool())
 	board.setup_new_board()
 	board.set_season(game.current_season_index())
 	board.set_min_chain(game.boss_min_chain())
-	board.set_active(true)
 	_refresh_season_bar()
 	_refresh_totals()
 	_refresh_meta()
@@ -1156,8 +1193,7 @@ func _on_season_return() -> void:
 	_refresh_chain_progress()
 	SaveManager.save(game)
 	_open_townmap()
-	if _toast != null:
-		_toast.show_toast("Harvest complete — +%d 🪙 return bonus." % int(summary.get("coins_granted", 0)))
+	show_toast("Harvest complete — +%d 🪙 return bonus." % int(summary.get("coins_granted", 0)))
 
 # ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
 

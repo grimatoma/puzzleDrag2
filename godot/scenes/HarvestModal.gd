@@ -1,9 +1,14 @@
 extends CanvasLayer
-## The HARVEST season-summary modal (A2) — a parchment card shown when the farm season cycle
-## completes (GameState.note_farm_turn returns {harvest:true}). It recaps the season that just
-## ended + the turn/economy snapshot and is dismissed by a single "Continue" (the farm
-## continues — a fresh Spring cycle has ALREADY begun in state). Mirrors the React parchment
-## dialogs (title-cased heading, warm scrim, UiKit-styled CTA) and the DailyStreakModal pattern.
+## The HARVEST modal — a parchment card with two modes:
+##   • LEGACY season-summary (A2, open_for): shown when the always-on farm season cycle completes
+##     (GameState.note_farm_turn returns {harvest:true}). It recaps the season that just ended +
+##     the turn/economy snapshot and is dismissed by a single "Continue" (the farm continues — a
+##     fresh Spring cycle has ALREADY begun in state).
+##   • RUN-END "Return to Town" (Task C, open_for_run_end): shown when a bounded farm RUN reaches
+##     its turn budget. It adds a "+N 🪙 return bonus" recap line and the CTA reads "Return to
+##     Town" + emits return_to_town (Main wires that to close_season() + reopening the town).
+## Mirrors the React parchment dialogs (title-cased heading, warm scrim, UiKit-styled CTA) and the
+## DailyStreakModal pattern.
 ##
 ## SINGLE SOURCE OF TRUTH. The modal NEVER grants anything — it is purely informational (no
 ## economy change). note_farm_turn already wrapped the cycle + Main already saved; "Continue"
@@ -13,9 +18,10 @@ extends CanvasLayer
 ## never needs --import to register it as a global (mirrors DailyStreakModal / StoryModal).
 ##
 ## HEADLESS-TEST CONTRACT
-##   Every actionable button is in `_action_buttons` (key "continue"). `_title_label`,
-##   `_season_label`, and `_recap_label` are the rendered Labels a test can assert. The pure
-##   helper recap_line(summary) builds the recap string without a tree.
+##   Every actionable button is in `_action_buttons` — key "continue" (legacy season-summary) and
+##   key "return_town" (run-end "Return to Town" CTA). `_title_label`, `_season_label`, and
+##   `_recap_label` are the rendered Labels a test can assert. The pure helper recap_line(summary)
+##   builds the recap string without a tree.
 
 var game: GameState
 
@@ -210,7 +216,7 @@ func _render() -> void:
 	_season_label.text = "%s harvested" % season
 	_recap_label.text = recap_line(_summary)
 	if _run_end_mode:
-		var bonus: int = int(_summary.get("coins_granted", 25))
+		var bonus: int = int(_summary.get("coins_granted", Constants.SEASON_END_BONUS_COINS))
 		_bonus_label.text = "+%d 🪙 return bonus" % bonus
 		_bonus_label.visible = true
 		_continue_btn.text = "Return to Town"
