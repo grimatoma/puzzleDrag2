@@ -1,0 +1,22 @@
+{
+  "set": "<set>",
+  "styleSpec": "../../_style-spec.json",
+  "priors": [
+    "../../<sibling_asset_a>.png",
+    "../../<sibling_asset_b>.png"
+  ],
+  "basePrompt": "<one-line description of the whole group; matches the reference set, three-quarter top-down, soft drop shadow>",
+  "fps": null,
+  "framesDefault": 8,
+  "keyframes": [
+    { "id": "<set>_<variantA>", "generator": "pixellab", "prompt": "<what makes variant A distinct>" },
+    { "id": "<set>_<variantB>", "generator": "pixellab", "prompt": "<what makes variant B distinct>" },
+    { "id": "<set>_<variantC>", "generator": "pixellab", "prompt": "<what makes variant C distinct>" }
+  ],
+  "idles": [
+    { "for": "<set>_<variantA>", "frames": 8, "motion": "<idle motion, e.g. gentle sway>" }
+  ],
+  "transitions": [
+    { "from": "<set>_<variantA>", "to": "<set>_<variantB>", "frames": 16, "physics": "<how A physically becomes B over the tween>" }
+  ]
+}
