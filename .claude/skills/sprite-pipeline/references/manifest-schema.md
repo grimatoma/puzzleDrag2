@@ -31,10 +31,10 @@ in `pipeline.json` — **all of them, including failures**, each with a `status`
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `styleSpec` | string | **Relative path** (from `pipeline.json`) to the project style spec (`_style-spec.json`) every item conforms to — palette ramps, light, outline, perspective, project FPS, etc. (see `reference-assets-spec.md`). |
+| `styleSpec` | string | **Relative path** (from `pipeline.json`) to the project style spec (`_style-spec.json`) every item conforms to — palette ramps, light, outline, perspective, etc. (see `reference-assets-spec.md`). **`settings.fps` / `settings.canvas` here supersede the style spec's `animation.fps` / `canvas` as the pipeline defaults.** |
 | `canvas` | `{ width, height, safeArea }` | **Default** sprite dimensions in px. The 32px tile size lives here, **not** in the style spec (whose `canvas` is the game's native 90×90). An item may **override** `canvas` for itself. |
 | `fps` | number | **Default** animation playback rate. An item may **override** `fps` for itself. |
-| `candidates` | `1 \| 2 \| 4` | Seeds requested per generation step — the target number of candidates a `master` or `child` should accumulate before it's considered full. **Global**, not per-item. |
+| `candidates` | `1 \| 2 \| 4` | Seeds requested per generation step — the target candidate count a `master` or `child` accumulates before it's full (PixelLab batch sizes; `3` is not supported). **Global**, not per-item. |
 | `humanApproval` | boolean | Require the human gate at cost events (each spend pauses for sign-off). **Global**. |
 | `autonomous` | boolean | `true` → skip the human gate; the LLM self-audit (`llm` verdict) decides what to approve. **Global**. Mutually exclusive in spirit with `humanApproval` — set one. |
 
@@ -57,7 +57,7 @@ structural" below.
 | `canvas` | `{ width, height, safeArea }` | **Optional** per-item override of `settings.canvas`. |
 | `fps` | number | **Optional** per-item override of `settings.fps`. |
 | `master` | object | The base sprite the family derives from (see below). |
-| `children[]` | object[] | Variants generated **from** the approved master (same shape as a master, minus `for`/`from`/`to`). |
+| `children[]` | object[] | Variants generated **from** the approved master (same shape as a `master`: `{ id, prompt, selected, candidates }`). |
 | `animations[]` | object[] | Idle loops and transition tweens over the master/children (see below). |
 
 A **lone image** with no children and no animations is simply an item that has only a `master` (and
@@ -85,6 +85,21 @@ an empty `children` / `animations`). The hierarchy is optional depth, not a requ
 > **Never delete `failed`/`rejected` candidates.** They are kept inline as the audit trail and so
 > gap-fill can re-seed only the slots that need it.
 
+Example of a keyframe still awaiting approval, with a failed seed kept inline (note `selected: null`
+and the `reason`):
+
+```jsonc
+{
+  "id": "tile_veg_pumpkin", "prompt": "deep orange ripe pumpkin",
+  "selected": null,                                   // nothing approved yet
+  "candidates": [
+    { "idx": 0, "path": "items/pumpkin/tile_veg_pumpkin/00.png", "status": "generated", "llm": "pass" },
+    { "idx": 1, "path": "items/pumpkin/tile_veg_pumpkin/01.png", "status": "failed", "llm": "fail",
+      "reason": "off-palette: rind went brown, off the wheat-gold ramp" }
+  ]
+}
+```
+
 ### `animations[]` entry
 
 Two kinds, discriminated by `kind`:
@@ -94,7 +109,7 @@ Two kinds, discriminated by `kind`:
 | `kind` | `idle \| transition` | both | Idle loop vs. tween between two keyframes. |
 | `for` | string | `idle` | The keyframe `id` this idle animates. |
 | `from` / `to` | string | `transition` | The start / end keyframe ids of the tween. |
-| `frames` | int | both | Frame count. Idles are short; transitions are usually longer. |
+| `frames` | int | both | **Optional** frame count. When omitted, falls back to the style spec's `animation.framesDefault` (default 8). Idles are short; transitions are usually longer. |
 | `motion` | string | `idle` | Plain-language idle-motion brief (e.g. `"sway + occasional falling leaf"`). Drives the animator. |
 | `physics` | string | `transition` | Plain-language brief of the **physical** change driving the tween — what moves/melts/falls/fades and in what order. The motion plan the animator executes. |
 | `status` | `pending \| generated` | both | `pending` = not animated yet (gap-fill will animate once its keys are approved); `generated` = the GIF/frames exist. |
