@@ -1,70 +1,90 @@
 extends CanvasLayer
-## M11 — Tile Collection browser. A read-only parchment modal over a warm scrim that
-## renders ALL 17 WIRED tiles (Constants.STRING_KEYS) as a scrollable gallery grouped by
-## category. Each tile card shows:
-##   • the tile ART — a TextureRect loading res://assets/tiles/<key>.png (v1 PNG); if the
-##     PNG is absent, a small colored placeholder rect via Constants.color_for(tile).
-##   • a display name derived from the STRING_KEY (strip "tile_", drop the category
-##     prefix, replace underscores with spaces, Title Case).
-##   • the category label (e.g. "Grass", "Grain", …).
-##   • "Produces: <resource>" from Constants.PRODUCES; hazards with "" show
-##     "Hazard — no yield".
+## The Tile Collection browser — the GDScript port of the React tiles-wiki browser
+## (src/features/tileCollection, getCategoryViewModel / getTileDetailViewModel). A full-
+## brightness VIEW (opaque parchment over the board, reserving the top-bar + bottom-nav bands)
+## with FAMILY TABS (Farm / Mining / Water / Hazards / Uncategorized), a grid of the tiles in
+## the selected family, and a DETAIL PANEL for a tapped tile showing its tier, description,
+## abilities, produced resource, an unlock STATUS line, and an ACTION button.
 ##
-## Tile discovery / research / buy / tile abilities are a LATER milestone — the React
-## codebase's discovery/ability economy is NOT ported. This browser shows WHAT is in
-## play, not how to unlock or spend tiles. A footer note says so explicitly.
+## The action set mirrors React getTileDetailViewModel exactly:
+##   discovered → "Activate" (set_active_tile; disabled + "Active" when already active)
+##   buy        → "Buy N🪙"  (buy_tile; disabled when coins < cost)
+##   research   → "Research P / Goal" (disabled, informational)
+##   chain      → "Chain N <res>"     (disabled, informational)
+##   daily      → "Day N reward"      (disabled, informational)
+##   building   → "Build the <name>"  (disabled, informational)
 ##
-## NO class_name on purpose — Main preloads this script
-## (preload("res://scenes/TileCollectionScreen.gd")) so the port never needs an
-## --import pass to register a new global. Modelled EXACTLY on AchievementsScreen.gd:
-## `extends CanvasLayer`, setup(g)/open()/refresh(), signal closed, _action_buttons["close"],
-## parchment card + scrim + Cinzel title, ScrollContainer+VBoxContainer body, category
-## sub-headings, UiKit/Palette styling.
+## NO class_name — Main preloads this script so the port never needs an --import pass. Keeps the
+## existing open/close/`closed`/`_action_buttons["close"]` contract, the opaque view shell
+## (TOPBAR_RESERVE top + NAV_RESERVE bottom), UiKit.make_vscroll, and the width cap.
+##
+## HEADLESS-TEST CONTRACT
+##   `_action_buttons` keys: "close", "tab_<family>" (one per family), "tile_<id>" (select a
+##     tile for the detail panel — id is the catalog string id, or the tile's string_key for
+##     non-catalog hazards), "detail_action" (the detail action button, present only while a
+##     tile is selected and it has an action).
+##   `_cards`: tile-enum-int → the rendered grid card Control for tiles in the CURRENT tab.
+##   Helpers: selected_tab() -> String, selected_tile_id() -> String ("" when none),
+##     detail_action_label() -> String, tile_count() (static), display_name_for(tile) (static).
 
 var game: GameState
 
 signal closed
 
-## action id → Button. Currently just "close".
+## Shared tile-variant UI helpers (display name, tile-art icon, status string, action, abilities).
+const TVU := preload("res://scripts/TileVariantUi.gd")
+
+## action id → Button ("close", "tab_<family>", "tile_<id>", "detail_action").
 var _action_buttons: Dictionary = {}
 
-## Static shell built once in setup(); body cleared + repopulated each refresh().
-var _body: VBoxContainer
-var _built: bool = false
-
-## Header label "N tiles in play", rebuilt each refresh().
-var _header_label: Label
-
-## tile enum int → the rendered card Control, rebuilt each refresh().
-## Lets tests assert the card count and inspect specific tile cards.
+## tile enum int → its rendered grid card Control (current tab only). Rebuilt per tab.
 var _cards: Dictionary = {}
 
-## All category ids in display order. Derived from the tile enum order so new tiles
-## appended to the enum automatically land in the right section.
-const CATEGORY_ORDER: Array = [
-	"grass", "grain", "birds", "veg", "fruit", "flower",
-	"trees", "herd", "cattle", "mount",
-	"stone", "iron", "copper", "coal", "dirt", "gem", "gold", "coin",
-	"fish", "fish_pearl",
-	"rat", "rubble",
-]
+## Static shell built once; the grid + detail repopulate on tab/tile change.
+var _built: bool = false
+var _header_label: Label
+var _tabs_row: HBoxContainer
+var _grid: GridContainer
+var _detail_panel: PanelContainer
+var _detail_body: VBoxContainer
+var _grid_scroll: ScrollContainer
 
-# ── parchment palette (matches AchievementsScreen / InventoryScreen tokens) ──────
+## The currently-selected family tab and tile.
+var _selected_tab: String = "farm"
+var _selected_tile_id: String = ""
+
+# ── families ────────────────────────────────────────────────────────────────────
+## Top-level family tabs (React SUB_CATEGORIES) → a label. Order is the tab order.
+const FAMILIES: Array = ["farm", "mining", "water", "hazards", "uncategorized"]
+const FAMILY_LABEL := {
+	"farm": "Farm",
+	"mining": "Mining",
+	"water": "Water",
+	"hazards": "Hazards",
+	"uncategorized": "Other",
+}
+## Godot category id → family (React CATEGORY_TO_SUBCATEGORY translated to godot ids).
+const CATEGORY_TO_FAMILY := {
+	"grass": "farm", "grain": "farm", "birds": "farm", "veg": "farm", "fruit": "farm",
+	"flower": "farm", "trees": "farm", "herd": "farm", "cattle": "farm", "mount": "farm",
+	"stone": "mining", "iron": "mining", "copper": "mining", "coal": "mining",
+	"dirt": "mining", "gem": "mining", "gold": "mining", "coin": "mining",
+	"fish": "water", "fish_pearl": "water",
+	"rat": "hazards", "rubble": "hazards",
+}
+
+# ── parchment palette ─────────────────────────────────────────────────────────
 const COL_TITLE  := Palette.INK
 const COL_HEADER := Palette.EMBER
 const COL_BODY   := Palette.INK
 const COL_MUTED  := Palette.INK_MID
 const COL_VALUE  := Palette.GOLD
 const COL_PANEL  := Palette.PARCHMENT
-const PANEL_MAX_WIDTH := 600.0
-
-## Tile art size in the card (px). 56px reads cleanly at 720 wide with a 2-col grid.
-const ART_SIZE: int = 56
+const ART_SIZE: int = 48
+const DETAIL_ART: int = 72
 
 # ── lifecycle ──────────────────────────────────────────────────────────────────
 
-## Store `game`, build the static shell ONCE, then render. Safe to call again
-## (the shell is only built the first time).
 func setup(g: GameState) -> void:
 	game = g
 	if not _built:
@@ -83,26 +103,18 @@ func close() -> void:
 # ── static shell ───────────────────────────────────────────────────────────────
 
 func _build_shell() -> void:
-	layer = 4                                   # modal, above the HUD (layer 1)
+	layer = 4
 	visible = false
 
-	# Opaque VIEW background (not a dim modal scrim). B2 promotes this menu sub-page to a
-	# full-brightness VIEW: it paints the warm app-frame parchment over the board (no longer
-	# dimmed behind), reserving UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD
-	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
-	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
-	# eats clicks in the band it covers.
+	# Opaque VIEW background reserving the persistent top bar (top) + bottom nav (bottom).
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
-	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
-	# margins), reserving the top-bar band + bottom-nav strip; a width-cap MarginContainer keeps
-	# line length tidy on wide viewports.
 	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -110,33 +122,25 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
-	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
 	panel.offset_left = 0
 	panel.offset_right = 0
 	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
 	panel.offset_bottom = -UiKit.NAV_RESERVE
-	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
-	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
-	# sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board affordance).
 	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
+	style.bg_color = COL_PANEL
 	style.set_content_margin_all(20)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	# Keep the panel from sprawling on wide viewports.
 	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
-	# A non-scrolling column: title row + header line pinned at top, then a
-	# ScrollContainer that owns the (potentially long) tile gallery.
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "📖 Tiles" heading + right-aligned "✖ Close" button.
+	# Title row: "📖 Tile Collection" + "✖ Close".
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -159,7 +163,7 @@ func _build_shell() -> void:
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
-	# Header line — "N tiles in play" (gold), rebuilt each refresh().
+	# Header line — "N tiles in play" (kept for the existing test + a clear count).
 	_header_label = Label.new()
 	_header_label.text = ""
 	_header_label.add_theme_font_size_override("font_size", 18)
@@ -167,259 +171,396 @@ func _build_shell() -> void:
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
 
-	var scroll := UiKit.make_vscroll()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(scroll)
+	# Family tab row (React TabBar — UiKit.style_segment).
+	_tabs_row = HBoxContainer.new()
+	_tabs_row.add_theme_constant_override("separation", 6)
+	root_vbox.add_child(_tabs_row)
+	for fam in FAMILIES:
+		var tb := Button.new()
+		tb.text = String(FAMILY_LABEL.get(fam, fam))
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.connect("pressed", Callable(self, "_on_tab").bind(String(fam)))
+		_tabs_row.add_child(tb)
+		_action_buttons["tab_" + String(fam)] = tb
 
-	# Dynamic body — cleared + rebuilt each refresh().
-	_body = VBoxContainer.new()
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 12)
-	scroll.add_child(_body)
+	# Body: a horizontal split — the tile GRID (scroll) on the left, the DETAIL panel on the
+	# right. On a portrait phone the detail panel sits BELOW (a VBox), so use a VBox of
+	# [grid-scroll | detail] which reads top-to-bottom and keeps the width cap tidy.
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 10)
+	root_vbox.add_child(body)
+
+	_grid_scroll = UiKit.make_vscroll()
+	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_grid_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(_grid_scroll)
+
+	_grid = GridContainer.new()
+	_grid.columns = 3
+	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid.add_theme_constant_override("h_separation", 8)
+	_grid.add_theme_constant_override("v_separation", 8)
+	_grid_scroll.add_child(_grid)
+
+	# Detail panel — a parchment card below the grid (rebuilt per selected tile).
+	_detail_panel = PanelContainer.new()
+	_detail_panel.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
+	_detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(_detail_panel)
+
+	_detail_body = VBoxContainer.new()
+	_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail_body.add_theme_constant_override("separation", 6)
+	_detail_panel.add_child(_detail_body)
 
 # ── render ─────────────────────────────────────────────────────────────────────
 
-## Clear the body and repopulate it from Constants.STRING_KEYS: the header count line,
-## then a section (sub-heading + a 2-col grid of tile cards) per category. Every tile
-## in STRING_KEYS gets exactly one card (tracked in `_cards`).
+## Re-render the header, tab styling, the tile grid for the selected tab, and the detail panel.
 func refresh() -> void:
 	if not _built:
 		return
-	for child in _body.get_children():
-		_body.remove_child(child)
+	_header_label.text = "%d tiles in play" % Constants.STRING_KEYS.size()
+	_style_tabs()
+	_rebuild_grid()
+	_rebuild_detail()
+
+## Style the family tabs by the active one (React segmented control).
+func _style_tabs() -> void:
+	for fam in FAMILIES:
+		var btn: Button = _action_buttons.get("tab_" + String(fam))
+		if btn != null:
+			UiKit.style_segment(btn, String(fam) == _selected_tab, Palette.EMBER, 6)
+
+## Rebuild the tile grid for the selected family. One card per tile in that family, tracked in
+## `_cards` keyed by the tile enum int.
+func _rebuild_grid() -> void:
+	for child in _grid.get_children():
+		_grid.remove_child(child)
 		child.queue_free()
 	_cards.clear()
+	# Drop stale per-tile select buttons from the registry.
+	for k in _action_buttons.keys():
+		if String(k).begins_with("tile_"):
+			_action_buttons.erase(k)
 
-	var total: int = Constants.STRING_KEYS.size()
-	_header_label.text = "%d tiles in play" % total
-
-	# Group tile enum values by their category id.
-	var cat_to_tiles: Dictionary = {}
-	for tile_val in Constants.STRING_KEYS.keys():
-		var cat: String = Constants.category_of(int(tile_val))
-		if not cat_to_tiles.has(cat):
-			cat_to_tiles[cat] = []
-		(cat_to_tiles[cat] as Array).append(int(tile_val))
-
-	# Render in CATEGORY_ORDER (any category not listed still renders at the end).
-	var rendered_cats: Array = []
-	for cat in CATEGORY_ORDER:
-		if cat_to_tiles.has(cat) and not (cat_to_tiles[cat] as Array).is_empty():
-			_build_category_section(cat, cat_to_tiles[cat] as Array)
-			rendered_cats.append(cat)
-	# Trailing catch-all for any unknown categories not in CATEGORY_ORDER.
-	for cat in cat_to_tiles.keys():
-		if not rendered_cats.has(cat):
-			_build_category_section(cat, cat_to_tiles[cat] as Array)
-
-	# Footer note: honest about deferred mechanics.
-	_build_footer()
-
-## Build one category section: an iron hairline, an ember Cinzel sub-heading, then a
-## 2-column grid of tile cards.
-func _build_category_section(cat: String, tiles: Array) -> void:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.7)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	_body.add_child(rule)
-
-	var header := Label.new()
-	header.text = _category_heading(cat)
-	header.add_theme_font_size_override("font_size", 22)
-	header.add_theme_color_override("font_color", COL_HEADER)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		header.add_theme_font_override("font", heading_font)
-	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body.add_child(header)
-
-	# 2-column grid of tile cards.
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	_body.add_child(grid)
-
-	for tile_val in tiles:
-		var card := _make_tile_card(int(tile_val))
-		grid.add_child(card)
+	for tile_val in _tiles_in_family(_selected_tab):
+		var card := _make_grid_card(int(tile_val))
+		_grid.add_child(card)
 		_cards[int(tile_val)] = card
 
-## A single tile card: a soft-parchment chip holding an HBox of [art | info column].
-## Art: a TextureRect (~ART_SIZEpx) loading the v1 PNG, or a colored placeholder rect.
-## Info column: display name (bold ink), category label (muted), "Produces: X" (gold/muted).
-func _make_tile_card(tile_val: int) -> PanelContainer:
-	var key: String = Constants.string_key(tile_val)
-	var display_name: String = _derive_display_name(key)
-	var cat_label: String = _category_heading(Constants.category_of(tile_val))
-	var produces: String = Constants.produced_resource(tile_val)
-	var produces_text: String
-	if produces == "":
-		produces_text = "Hazard — no yield"
+## The tile enum values belonging to a family, in Constants.STRING_KEYS (enum) order.
+func _tiles_in_family(family: String) -> Array:
+	var out: Array = []
+	for tile_val in Constants.STRING_KEYS.keys():
+		var cat: String = Constants.category_of(int(tile_val))
+		var fam: String = String(CATEGORY_TO_FAMILY.get(cat, "uncategorized"))
+		if fam == family:
+			out.append(int(tile_val))
+	return out
+
+## A single tile grid card: a parchment chip with the tile art, its display name, and a small
+## lock/active marker. Tapping it selects the tile for the detail panel. Registered as
+## "tile_<id>" where id is the catalog string id (or the tile string_key for non-catalog tiles).
+func _make_grid_card(tile_val: int) -> Control:
+	var id: String = _id_for_tile(tile_val)
+	var display_name: String = display_name_for(tile_val)
+	var discovered: bool = _is_discovered(id)
+	var active: bool = _is_active(tile_val, id)
+
+	var btn := Button.new()
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.custom_minimum_size = Vector2(0, 96)
+	var selected: bool = (id == _selected_tile_id and id != "")
+	UiKit.style_button(btn, Palette.EMBER, 6, 0)
+	if selected:
+		# Highlight the selected card with a green action box.
+		UiKit.style_action_button(btn, Palette.GO_GREEN, 6, 0)
+	btn.connect("pressed", Callable(self, "_on_tile").bind(tile_val))
+	_action_buttons["tile_" + id] = btn
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 2)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(vbox)
+
+	var icon_holder := CenterContainer.new()
+	icon_holder.custom_minimum_size = Vector2(0, ART_SIZE)
+	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon := TVU.make_tile_icon(tile_val, ART_SIZE)
+	if icon != null:
+		if not discovered:
+			icon.modulate = Color(1, 1, 1, 0.45)
+		icon_holder.add_child(icon)
 	else:
-		produces_text = "Produces: %s" % produces
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
-
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
-
-	# ── Art: TextureRect (v1 PNG) or colored placeholder ──────────────────────
-	var art_path: String = "res://assets/tiles/%s.png" % key
-	if key != "" and ResourceLoader.exists(art_path):
-		# load() is ResourceLoader-cached (CACHE_MODE_REUSE), so rebuilding chips on every
-		# refresh reuses the already-loaded Texture2D instead of re-reading the PNG from disk.
-		# (Tile._texture_for is int-keyed by tile type, so it doesn't fit this string-key path.)
-		var tex := load(art_path) as Texture2D
-		var art := TextureRect.new()
-		art.texture = tex
-		art.custom_minimum_size = Vector2(ART_SIZE, ART_SIZE)
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		art.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(art)
-	else:
-		# Colored placeholder: a small colored rect sized to ART_SIZE × ART_SIZE.
-		var placeholder := ColorRect.new()
-		placeholder.custom_minimum_size = Vector2(ART_SIZE, ART_SIZE)
-		placeholder.color = Constants.color_for(tile_val)
-		placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(placeholder)
-
-	# ── Info column ────────────────────────────────────────────────────────────
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_theme_constant_override("separation", 3)
-	row.add_child(info)
+		var ph := ColorRect.new()
+		ph.custom_minimum_size = Vector2(ART_SIZE, ART_SIZE)
+		ph.color = Constants.color_for(tile_val)
+		ph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_holder.add_child(ph)
+	vbox.add_child(icon_holder)
 
 	var name_lbl := Label.new()
-	name_lbl.text = display_name
-	name_lbl.add_theme_font_size_override("font_size", 18)
-	name_lbl.add_theme_color_override("font_color", COL_BODY)
+	# Marker prefix: ● for the active variant, 🔒 for an undiscovered tile.
+	var marker: String = ""
+	if active:
+		marker = "● "
+	elif not discovered and id != "":
+		marker = "🔒 "
+	name_lbl.text = marker + display_name
+	name_lbl.add_theme_font_size_override("font_size", 12)
+	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else Palette.INK_MID)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_child(name_lbl)
+	vbox.add_child(name_lbl)
 
-	var cat_lbl := Label.new()
-	cat_lbl.text = cat_label
-	cat_lbl.add_theme_font_size_override("font_size", 13)
-	cat_lbl.add_theme_color_override("font_color", COL_MUTED)
-	cat_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_child(cat_lbl)
+	return btn
 
-	var prod_lbl := Label.new()
-	prod_lbl.text = produces_text
-	prod_lbl.add_theme_font_size_override("font_size", 14)
-	prod_lbl.add_theme_color_override("font_color",
-		COL_MUTED if produces == "" else COL_VALUE)
-	prod_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_child(prod_lbl)
+## Rebuild the detail panel for the selected tile (or a "tap a tile" placeholder).
+func _rebuild_detail() -> void:
+	for child in _detail_body.get_children():
+		_detail_body.remove_child(child)
+		child.queue_free()
+	_action_buttons.erase("detail_action")
 
-	return chip
+	if _selected_tile_id == "":
+		var hint := Label.new()
+		hint.text = "Tap a tile above to see its details."
+		hint.add_theme_font_size_override("font_size", 14)
+		hint.add_theme_color_override("font_color", COL_MUTED)
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_detail_body.add_child(hint)
+		return
 
-## Footer row: honest note about deferred mechanics.
-func _build_footer() -> void:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.4)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	_body.add_child(rule)
+	var id: String = _selected_tile_id
+	var tile_val: int = _tile_for_id(id)
+	var category: String = Constants.category_of(tile_val) if tile_val != Constants.EMPTY else ""
 
-	var note := Label.new()
-	note.text = "Tile discovery, research, buy, and tile abilities are a later milestone — not yet ported from the React build."
-	note.add_theme_font_size_override("font_size", 13)
-	note.add_theme_color_override("font_color", COL_MUTED)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body.add_child(note)
+	# Header: art + name + tier.
+	var head := HBoxContainer.new()
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_theme_constant_override("separation", 12)
+	_detail_body.add_child(head)
 
-# ── display-name derivation ────────────────────────────────────────────────────
+	var art_holder := CenterContainer.new()
+	art_holder.custom_minimum_size = Vector2(DETAIL_ART, DETAIL_ART)
+	art_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art := TVU.make_tile_icon(tile_val, DETAIL_ART)
+	if art != null:
+		art_holder.add_child(art)
+	else:
+		var ph := ColorRect.new()
+		ph.custom_minimum_size = Vector2(DETAIL_ART, DETAIL_ART)
+		ph.color = Constants.color_for(tile_val)
+		art_holder.add_child(ph)
+	head.add_child(art_holder)
 
-## Derive a human-readable display name from a tile STRING_KEY.
-## Rules (applied in order):
-##   1. Strip a leading "tile_" prefix.
-##   2. Split on "_".
-##   3. If there are ≥2 segments and the first segment matches a known category
-##      prefix (e.g. "grass", "grain", "bird", "veg", …), drop ONLY the first segment
-##      when it is a redundant category label (i.e. the remaining segments already
-##      uniquely name the tile). Category prefixes to drop:
-##        grass, grain, bird, veg, fruit, flower, tree, herd, cattle, mount, mine, special
-##   4. Replace underscores in remaining segments with spaces.
-##   5. Title-case each word.
-##
-## Examples:
-##   "tile_grass_grass"   → strip "tile_" → "grass_grass" → segments ["grass","grass"]
-##                          → drop first (cat prefix "grass") → ["grass"] → "Grass"
-##   "tile_grain_wheat"   → "grain_wheat" → ["grain","wheat"] → drop "grain" → "Wheat"
-##   "tile_mine_iron_ore" → "mine_iron_ore" → ["mine","iron","ore"] → drop "mine" → "Iron Ore"
-##   "tile_bird_pheasant" → "bird_pheasant" → ["bird","pheasant"] → drop "bird" → "Pheasant"
-##   "tile_special_dirt"  → "special_dirt" → ["special","dirt"] → drop "special" → "Dirt"
-##   "rat"                → no "tile_" → ["rat"] → "Rat"
-##   "rubble"             → ["rubble"] → "Rubble"
+	var head_col := VBoxContainer.new()
+	head_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head_col.add_theme_constant_override("separation", 3)
+	head.add_child(head_col)
+
+	var name_lbl := Label.new()
+	name_lbl.text = display_name_for(tile_val)
+	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.add_theme_color_override("font_color", COL_HEADER)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		name_lbl.add_theme_font_override("font", hf)
+	head_col.add_child(name_lbl)
+
+	var meta := Label.new()
+	var tier: int = TileVariantConfig.tier_of(id) if TileVariantConfig.is_tile(id) else 0
+	var cat_label: String = _category_heading(category)
+	meta.text = "%s · Tier %d" % [cat_label, tier]
+	meta.add_theme_font_size_override("font_size", 12)
+	meta.add_theme_color_override("font_color", COL_MUTED)
+	head_col.add_child(meta)
+
+	# Produced resource.
+	var produces: String = Constants.produced_resource(tile_val)
+	var prod := Label.new()
+	prod.text = ("Hazard — no yield" if produces == "" else "Produces: %s" % UiKit.pretty_name(produces))
+	prod.add_theme_font_size_override("font_size", 14)
+	prod.add_theme_color_override("font_color", COL_MUTED if produces == "" else COL_VALUE)
+	_detail_body.add_child(prod)
+
+	# Abilities (human-readable).
+	if TileVariantConfig.is_tile(id):
+		var ab_text: String = TVU.ability_summary(id)
+		if ab_text != "":
+			var ab := Label.new()
+			ab.text = ab_text
+			ab.add_theme_font_size_override("font_size", 13)
+			ab.add_theme_color_override("font_color", Palette.MOSS)
+			ab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_detail_body.add_child(ab)
+
+	# Status line.
+	var status := Label.new()
+	status.text = (TVU.status_for(game, id) if TileVariantConfig.is_tile(id)
+		else "Board hazard — not a collectible tile variant.")
+	status.add_theme_font_size_override("font_size", 13)
+	status.add_theme_color_override("font_color", COL_MUTED)
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_detail_body.add_child(status)
+
+	# Description (player-facing flavour text from the React catalog).
+	if TileVariantConfig.is_tile(id):
+		var desc_text: String = TVU.description(id)
+		if desc_text != "":
+			var desc := Label.new()
+			desc.text = desc_text
+			desc.add_theme_font_size_override("font_size", 13)
+			desc.add_theme_color_override("font_color", COL_BODY)
+			desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_detail_body.add_child(desc)
+
+	# Action button (mirrors getTileDetailViewModel). Non-catalog hazards have no action.
+	if TileVariantConfig.is_tile(id):
+		var act: Dictionary = TVU.detail_action(game, id, category)
+		var action: String = String(act.get("action", ""))
+		if action != "":
+			var btn := Button.new()
+			btn.text = String(act.get("label", ""))
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var disabled: bool = bool(act.get("disabled", true))
+			btn.disabled = disabled
+			var accent: Color = Palette.IRON
+			match action:
+				"activate": accent = Palette.GO_GREEN
+				"buy":      accent = Palette.GOLD
+				_:          accent = Palette.IRON
+			UiKit.style_action_button(btn, accent, 8, 15)
+			btn.connect("pressed", Callable(self, "_on_detail_action").bind(id, action, category))
+			_detail_body.add_child(btn)
+			_action_buttons["detail_action"] = btn
+
+# ── action handlers ────────────────────────────────────────────────────────────
+
+func _on_tab(family: String) -> void:
+	_selected_tab = family
+	# Keep the selected tile only if it still belongs to this tab; else clear it.
+	if _selected_tile_id != "":
+		var t: int = _tile_for_id(_selected_tile_id)
+		var fam: String = String(CATEGORY_TO_FAMILY.get(Constants.category_of(t), "uncategorized"))
+		if fam != family:
+			_selected_tile_id = ""
+	refresh()
+
+func _on_tile(tile_val: int) -> void:
+	_selected_tile_id = _id_for_tile(tile_val)
+	_rebuild_grid()   # restyle the selected card
+	_rebuild_detail()
+
+## The detail ACTION fired: "activate" sets the active variant, "buy" purchases it. Both then
+## re-render so the grid markers + detail action label update. Informational actions (research/
+## chain/daily/building) are disabled so they never reach here.
+func _on_detail_action(id: String, action: String, category: String) -> void:
+	if game == null:
+		return
+	match action:
+		"activate":
+			game.set_active_tile(category, id)
+		"buy":
+			game.buy_tile(id)
+	refresh()
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+## The catalog string id for a tile enum, or its string_key for non-catalog tiles (rat/rubble).
+func _id_for_tile(tile_val: int) -> String:
+	var cid: String = TileVariantConfig.id_for_tile(tile_val)
+	if cid != "":
+		return cid
+	return Constants.string_key(tile_val)
+
+## The tile enum for a string id (a catalog id, or a bare string_key for hazards).
+func _tile_for_id(id: String) -> int:
+	if TileVariantConfig.is_tile(id):
+		return TileVariantConfig.tile_for(id)
+	# Non-catalog: scan STRING_KEYS for a match.
+	for tile_val in Constants.STRING_KEYS.keys():
+		if Constants.string_key(int(tile_val)) == id:
+			return int(tile_val)
+	return Constants.EMPTY
+
+func _is_discovered(id: String) -> bool:
+	if not TileVariantConfig.is_tile(id):
+		return true   # non-catalog board tiles (hazards) are always "in play"
+	return game != null and game.is_tile_discovered(id)
+
+func _is_active(tile_val: int, id: String) -> bool:
+	if not TileVariantConfig.is_tile(id) or game == null:
+		return false
+	var cat: String = Constants.category_of(tile_val)
+	return game.active_tile_id_for_category(cat) == id
+
+## Convert a category id to a title-cased heading (mirrors the old _category_heading specials).
+static func _category_heading(cat: String) -> String:
+	if cat == "":
+		return "Other"
+	match cat:
+		"veg":        return "Vegetables"
+		"fruit":      return "Fruits"
+		"flower":     return "Flowers"
+		"herd":       return "Herd Animals"
+		"mount":      return "Mounts"
+		"coin":       return "Treasure"
+		"fish_pearl": return "Giant Pearl"
+		"rat":        return "Rat (Hazard)"
+		"rubble":     return "Rubble (Hazard)"
+	if cat.length() > 0:
+		return cat.substr(0, 1).to_upper() + cat.substr(1)
+	return cat
+
+# ── public accessors (headless-test contract) ───────────────────────────────────
+
+func selected_tab() -> String:
+	return _selected_tab
+
+func selected_tile_id() -> String:
+	return _selected_tile_id
+
+func detail_action_label() -> String:
+	var btn: Button = _action_buttons.get("detail_action")
+	return btn.text if btn != null else ""
+
+# ── static helpers (kept from the original; used by tests) ──────────────────────
+
+## Total number of wired tiles (= Constants.STRING_KEYS.size()).
+static func tile_count() -> int:
+	return Constants.STRING_KEYS.size()
+
+## Display name for a tile enum value (shared derivation via the tile's string_key).
+static func display_name_for(tile_val: int) -> String:
+	return _derive_display_name(Constants.string_key(tile_val))
+
+## Derive a human-readable display name from a tile STRING_KEY. KEPT (the existing suite unit-
+## tests this directly) — strips "tile_" + a leading redundant category segment, title-cases.
 static func _derive_display_name(key: String) -> String:
 	if key == "":
 		return ""
 	var s: String = key
 	if s.begins_with("tile_"):
-		s = s.substr(5)   # strip "tile_"
+		s = s.substr(5)
 	var parts: Array = s.split("_")
-	# Category prefixes that should be dropped when leading (they add no info).
 	const DROP_PREFIXES := [
 		"grass", "grain", "bird", "veg", "fruit", "flower",
 		"tree", "herd", "cattle", "mount", "mine", "special",
 	]
 	if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
 		parts.remove_at(0)
-	# Title-case each remaining word and join with spaces.
 	var words: Array = []
 	for p in parts:
 		var ps: String = String(p)
 		if ps.length() > 0:
 			words.append(ps.substr(0, 1).to_upper() + ps.substr(1))
 	return " ".join(words)
-
-## Convert a category id ("grass", "iron", …) to a title-cased heading string.
-static func _category_heading(cat: String) -> String:
-	if cat == "":
-		return "Other"
-	# Special cases for multi-word-ish categories.
-	match cat:
-		"iron":       return "Iron"
-		"copper":     return "Copper"
-		"coal":       return "Coal"
-		"gem":        return "Gem"
-		"gold":       return "Gold"
-		"coin":       return "Treasure"
-		"dirt":       return "Dirt"
-		"stone":      return "Stone"
-		"mount":      return "Mounts"
-		"fish":       return "Fish"
-		"fish_pearl": return "Giant Pearl"
-		"rat":        return "Rat (Hazard)"
-		"rubble":     return "Rubble (Hazard)"
-	# Default: title-case the id.
-	if cat.length() > 0:
-		return cat.substr(0, 1).to_upper() + cat.substr(1)
-	return cat
-
-# ── pure helpers (usable + testable without rendering) ────────────────────────
-
-## Total number of wired tiles (= Constants.STRING_KEYS.size()).
-static func tile_count() -> int:
-	return Constants.STRING_KEYS.size()
-
-## Display name for a tile enum value. Delegates to _derive_display_name via string_key.
-static func display_name_for(tile_val: int) -> String:
-	return _derive_display_name(Constants.string_key(tile_val))

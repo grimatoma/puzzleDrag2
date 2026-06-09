@@ -131,3 +131,29 @@ static func season_drops(zone_id: String, season_name: String) -> Dictionary:
 static func upgrade_target(zone_id: String, source_cat: String) -> String:
 	var um: Dictionary = zone(zone_id).get("upgrade_map", {})
 	return String(um.get(source_cat, ""))
+
+# ── T13 — SEASON_POOL_MODS (additive spawn deltas) ────────────────────────────
+## Additive per-season spawn deltas applied ON TOP of seasonDrops, mirroring React's
+## SEASON_POOL_MODS (src/constants.ts:1123-1128) and applySeasonPoolMods
+## (src/features/farm/poolMath.ts:16-31).
+##
+## Each entry is:  season_name → { "tile_string_key": delta_int }
+##   delta > 0 → add that many EXTRA slots of that tile to the pool (push N copies).
+##   delta < 0 → remove up to |delta| slots (but NEVER the last — keeps count ≥ 1 per tile).
+##
+## These are tile STRING KEYS (matching Constants.TILE_KEY_TO_TILE), not category names —
+## they map to specific variants, faithfully mirroring the React table.
+##
+## Scope: FARM pool only (applied by GameState.active_tile_pool after the base weighting).
+## Keys outside the current active pool are silently skipped (can't add an off-zone tile).
+const SEASON_POOL_MODS: Dictionary = {
+	"Spring": { "tile_fruit_blackberry": 1 },
+	"Summer": { "tile_grain_wheat":      1 },
+	"Autumn": { "tile_tree_oak":         2 },
+	"Winter": { "tile_mine_stone":       1, "tile_grass_grass": -1 },
+}
+
+## Return the additive deltas for `season_name` (a fresh copy; {} for an unknown season).
+## Keys are tile string keys (tile_grass_grass, …); values are signed integers.
+static func season_pool_mods(season_name: String) -> Dictionary:
+	return SEASON_POOL_MODS.get(season_name, {}).duplicate()

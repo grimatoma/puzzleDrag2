@@ -93,14 +93,25 @@ func _test_building_config_values() -> void:
 
 func _test_available_at_tier() -> void:
 	_check(BC.available_at_tier(1) == [], "no buildings available at Camp (tier 1)")
-	_check(BC.available_at_tier(2) == [BC.LUMBER_CAMP], "only lumber_camp at Hamlet (tier 2)")
+	# T17/T21: Hamlet (tier 2) now offers lumber_camp PLUS the Hamlet-tier landmarks (Mill, Granary).
+	var at2: Array = BC.available_at_tier(2)
+	_check(at2.has(BC.LUMBER_CAMP), "lumber_camp available at Hamlet (tier 2)")
+	_check(at2.has(BC.MILL) and at2.has(BC.GRANARY), "Hamlet landmarks (Mill, Granary) available at tier 2")
+	_check(not at2.has(BC.COOP) and not at2.has(BC.BAKERY), "Village-tier buildings NOT offered at Hamlet")
 	var at3: Array = BC.available_at_tier(3)
 	_check(at3.has(BC.LUMBER_CAMP) and at3.has(BC.COOP) and at3.has(BC.GARDEN),
 		"all three spawners available at Village (tier 3)")
-	# M3c: available_at_tier now iterates ALL_BUILD_IDS, so the Bakery (refiner) is
-	# offered at Village too — four buildable ids, not three.
+	# M3c: available_at_tier iterates ALL_BUILD_IDS, so the Bakery (refiner) is offered at Village.
 	_check(at3.has(BC.BAKERY), "Bakery (refiner) also available at Village (tier 3)")
-	_check(at3.size() == 4, "exactly four buildings available at Village")
+	# T17/T21: Village-tier landmarks (Housing×3, Silo, Sawmill, Apiary) are offered too.
+	_check(at3.has(BC.HOUSING) and at3.has(BC.SILO) and at3.has(BC.SAWMILL) and at3.has(BC.APIARY),
+		"Village-tier landmarks available at tier 3")
+	# Every available id must actually be unlock_tier <= 3 (no leak of a higher-tier building).
+	var all_le_3: bool = true
+	for id in at3:
+		if BC.unlock_tier(id) > 3:
+			all_le_3 = false
+	_check(all_le_3, "available_at_tier(3) only returns buildings with unlock_tier <= 3")
 
 func _test_cost_returns_copy() -> void:
 	# Mutating a returned cost must not mutate the const catalog.

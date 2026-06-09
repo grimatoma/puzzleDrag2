@@ -47,6 +47,8 @@ var _rats_pill_box: PanelContainer      ## rats pill wrapper (toggled visible)
 var _rats_pill: Label                   ## 🐀 N/5
 var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled visible)
 var _runes_pill: Label                  ## 🔮 N (harbor's premium reward)
+var _free_moves_pill_box: PanelContainer ## tile-variant free-moves pill wrapper (toggled visible)
+var _free_moves_pill: Label             ## 👟 N — banked free moves from tile abilities
 
 # A2 — Season bar (the React src/ui/seasonStrip.tsx port). Loaded via preload (NO class_name).
 const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
@@ -67,9 +69,25 @@ var _live_chain_len: int = 0
 var _live_chain_tile: int = Constants.EMPTY
 
 # Stockpile chip panel.
-var _stockpile_title: Label             ## "STOCKPILE · N kinds" header (React parity)
+var _stockpile_title: Label             ## "STOCKPILE" header label (React PanelHeader left)
+var _stockpile_kinds: Label             ## "N/M KINDS" header count (React PanelHeader right)
 var _stockpile_grid: GridContainer      ## 4-col grid of resource chips
-var _stockpile_empty: Label             ## muted "Stockpile empty" placeholder
+## res key -> its chip PanelContainer, rebuilt each _refresh_totals(). Headless-test contract:
+## a chip is present per ROSTER resource (dimmed when 0) PLUS any extra owned resource.
+var _stockpile_chips: Dictionary = {}
+
+## The farm stockpile ROSTER — the core farm goods the panel always shows as chips (React's
+## "first 12 resources of the biome", `BIOMES[biome].resources.slice(0,12)` in puzzleBoard.tsx
+## IdleView). Empty roster goods render DIMMED rather than absent so the grid reads as a stable
+## panel, and the header's "owned/total KINDS" denominator is this roster's size (React's
+## `${ownedCount}/${list.length} kinds`). These are the SAME farm + refined resource families the
+## InventoryScreen ledger groups (real GameState.inventory keys — no invented goods). Any owned
+## resource NOT in the roster (a mine/expedition good carried back) is appended after the roster so
+## nothing owned is ever hidden.
+const STOCKPILE_ROSTER: Array = [
+	"hay_bundle", "flour", "bread", "eggs", "milk", "meat",
+	"soup", "pie", "honey", "jam", "plank", "horseshoe",
+]
 
 # Top-bar / stockpile container refs, repositioned in _layout_hud().
 var _topbar: PanelContainer
@@ -224,6 +242,14 @@ func _build_hud() -> void:
 	_runes_pill = _runes_pill_box.get_meta("label")
 	_runes_pill_box.visible = false
 	topbar_row.add_child(_runes_pill_box)
+
+	# Free-moves pill — banked free moves granted by tile-variant abilities (React's free-moves
+	# count). A cool moss-green; shown only when game.free_moves() > 0 so it stays out of the bar
+	# until a free-moves tile (Palm / Clover / Melon / Turkey) has banked one this run.
+	_free_moves_pill_box = UiKit.make_pill("👟 0", Palette.GO_GREEN)
+	_free_moves_pill = _free_moves_pill_box.get_meta("label")
+	_free_moves_pill_box.visible = false
+	topbar_row.add_child(_free_moves_pill_box)
 
 	# ── A2. Season bar — the full-width seasonal progress strip (above the chain bar) ──
 	# The React src/ui/seasonStrip.tsx port: four proportional gradient segments + a wagon
@@ -460,34 +486,29 @@ func _build_stockpile(root: Control) -> void:
 	dot_wrap.add_child(dot)
 	header.add_child(dot_wrap)
 
+	# React PanelHeader: an uppercase tracked "STOCKPILE" title on the LEFT (expands) and a
+	# muted "{owned}/{total} KINDS" count on the RIGHT — the at-a-glance "how full is the
+	# stockpile" readout (puzzleBoard.tsx IdleView).
 	_stockpile_title = Label.new()
-	_stockpile_title.text = "STOCKPILE · 0 kinds"
+	_stockpile_title.text = "STOCKPILE"
 	_stockpile_title.add_theme_font_size_override("font_size", 14)
 	_stockpile_title.add_theme_color_override("font_color", Palette.INK)
 	_stockpile_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_stockpile_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stockpile_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(_stockpile_title)
 
-	# Empty state — a styled inset chip (parchment-soft pill) so a fresh, empty stockpile
-	# still reads as an intentional panel, not a bare cramped line.
-	_stockpile_empty = Label.new()
-	_stockpile_empty.text = "Stockpile empty"
-	_stockpile_empty.add_theme_font_size_override("font_size", 14)
-	_stockpile_empty.add_theme_color_override("font_color", Palette.INK_MID)
-	_stockpile_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var empty_sb := StyleBoxFlat.new()
-	empty_sb.bg_color = Palette.PARCHMENT_SOFT
-	empty_sb.border_color = Palette.IRON
-	empty_sb.set_border_width_all(1)
-	empty_sb.set_corner_radius_all(8)
-	empty_sb.content_margin_left = 12
-	empty_sb.content_margin_right = 12
-	empty_sb.content_margin_top = 8
-	empty_sb.content_margin_bottom = 8
-	_stockpile_empty.add_theme_stylebox_override("normal", empty_sb)
-	_stockpile_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(_stockpile_empty)
+	_stockpile_kinds = Label.new()
+	_stockpile_kinds.text = "0/%d KINDS" % STOCKPILE_ROSTER.size()
+	_stockpile_kinds.add_theme_font_size_override("font_size", 13)
+	_stockpile_kinds.add_theme_color_override("font_color", Palette.MOSS)
+	_stockpile_kinds.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_stockpile_kinds.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_stockpile_kinds.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(_stockpile_kinds)
 
+	# The grid always renders the full farm roster (empty goods dimmed), so a fresh stockpile
+	# already reads as an intentional panel — no separate "empty" placeholder line is needed.
 	_stockpile_grid = GridContainer.new()
 	_stockpile_grid.columns = 4
 	_stockpile_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -919,14 +940,22 @@ func _nav_box() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, -3)
 	return sb
 
-## A single stockpile chip: a small soft-parchment rounded PanelContainer holding a
-## "{res} {count}" Label (ink text). Used by _refresh_totals to populate the grid.
+## A single stockpile chip: a small rounded PanelContainer holding the resource icon +
+## its count (React puzzleBoard.tsx IdleView chip). An OWNED chip is soft-parchment with an
+## iron border + ink count; an EMPTY (count 0) roster chip renders DIMMED with a transparent
+## border + muted count, so the panel always shows the full roster grid but the unfilled goods
+## read as faint placeholders (React `empty ? opacity .55 / transparent border`). The icon shows
+## when we have art for the key; otherwise the title-cased name is the fallback so board-only
+## keys (rat, mysterious_ore, …) still read.
 func _make_stock_chip(res: String, count: int) -> PanelContainer:
+	var empty: bool = count <= 0
 	var box := PanelContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.modulate = Color(1, 1, 1, 0.55) if empty else Color.WHITE
+	box.tooltip_text = "%s: %d" % [UiKit.pretty_name(res), count]
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Palette.PARCHMENT_SOFT
-	sb.border_color = Palette.IRON
+	sb.bg_color = Color(Palette.PARCHMENT_SOFT, 0.35) if empty else Palette.PARCHMENT_SOFT
+	sb.border_color = Color(Palette.IRON, 0.0) if empty else Palette.IRON
 	sb.border_width_left = 1
 	sb.border_width_top = 1
 	sb.border_width_right = 1
@@ -941,8 +970,7 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	sb.content_margin_bottom = 4
 	box.add_theme_stylebox_override("panel", sb)
 	# React's stockpile chips are a compact icon + count. Show the same procedural icon
-	# when we have art for the key; fall back to the title-cased name when we don't, so
-	# board-only keys (rat, mysterious_ore, …) still read.
+	# when we have art for the key; fall back to the title-cased name when we don't.
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 4)
@@ -953,7 +981,7 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	var lbl := Label.new()
 	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
 	lbl.add_theme_font_size_override("font_size", 16)
-	lbl.add_theme_color_override("font_color", Palette.INK)
+	lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(lbl)
@@ -1147,31 +1175,40 @@ func _layout_hud(vp: Vector2) -> void:
 func _refresh_totals() -> void:
 	if _stockpile_grid == null:
 		return
-	# Clear the previous chips.
+	# Clear the previous chips + the registry.
 	for child in _stockpile_grid.get_children():
 		child.queue_free()
-	var keys: Array = []
+	_stockpile_chips.clear()
+
+	# Build the chip order: every ROSTER resource (always shown — dimmed at 0), then any OWNED
+	# resource NOT in the roster (a mine/expedition good carried back), sorted, so nothing owned
+	# is ever hidden. Mirrors React's fixed biome roster + the player's actual counts.
+	var roster_owned: int = 0
+	var order: Array = []
+	for res in STOCKPILE_ROSTER:
+		order.append(String(res))
+	var extras: Array = []
 	if game != null:
 		for key in game.inventory:
-			if int(game.inventory[key]) > 0:
-				keys.append(key)
-	keys.sort()
-	# A3 — header reflects the live distinct-kind count (the number of resource keys with a
-	# positive count). React's IdleView shows "{owned}/{total} kinds"; the port has no real
-	# kinds cap, so it shows just "STOCKPILE · N kinds" (singular-aware), no invented "/12".
-	if _stockpile_title != null:
-		var n_kinds: int = keys.size()
-		_stockpile_title.text = "STOCKPILE · %d %s" % [n_kinds, "kind" if n_kinds == 1 else "kinds"]
-	if keys.is_empty():
-		if _stockpile_empty != null:
-			_stockpile_empty.visible = true
-		_stockpile_grid.visible = false
-		return
-	if _stockpile_empty != null:
-		_stockpile_empty.visible = false
+			var k := String(key)
+			if int(game.inventory[key]) > 0 and not STOCKPILE_ROSTER.has(k):
+				extras.append(k)
+	extras.sort()
+	order.append_array(extras)
+
+	for res in order:
+		var count: int = int(game.inventory.get(res, 0)) if game != null else 0
+		if STOCKPILE_ROSTER.has(res) and count > 0:
+			roster_owned += 1
+		var chip := _make_stock_chip(res, count)
+		_stockpile_grid.add_child(chip)
+		_stockpile_chips[res] = chip
+
+	# React PanelHeader: left "STOCKPILE", right "{owned}/{total} KINDS" — owned roster goods
+	# over the roster size (the denominator is the fixed roster, like React's `list.length`).
+	if _stockpile_kinds != null:
+		_stockpile_kinds.text = "%d/%d KINDS" % [roster_owned, STOCKPILE_ROSTER.size()]
 	_stockpile_grid.visible = true
-	for key in keys:
-		_stockpile_grid.add_child(_make_stock_chip(String(key), int(game.inventory[key])))
 
 ## M4b — coins now live in the top-bar coin pill (the old _meta_label is gone). The
 ## per-run turn counter is no longer surfaced (it was debug noise); the pill shows
@@ -1181,6 +1218,21 @@ func _refresh_meta() -> void:
 		return
 	_coin_pill.text = "🪙 %d" % game.coins
 	_refresh_level()
+	_refresh_free_moves()
+
+## Tile-variant free-moves readout. Shows "👟 N" whenever the player has banked free moves from a
+## tile ability (game.free_moves() > 0); HIDDEN at 0 so it never disturbs the bar / visual goldens
+## on a fresh board. Mirrors React's free-moves count in the HUD. Refreshed via _refresh_meta on
+## every live update (coins/turn/state change).
+func _refresh_free_moves() -> void:
+	if _free_moves_pill_box == null or _free_moves_pill == null or game == null:
+		return
+	var n: int = game.free_moves()
+	if n <= 0:
+		_free_moves_pill_box.visible = false
+		return
+	_free_moves_pill.text = "👟 %d" % n
+	_free_moves_pill_box.visible = true
 
 ## Build the orange "Lv N" almanac pill: a rounded ember chip holding a fixed-width inner
 ## Control that stacks a brighter-orange XP fill (left-anchored, width = fraction into the
@@ -1279,21 +1331,54 @@ func _refresh_biome() -> void:
 		_biome_pill.text = "🌊 Harbor · %s · %d" % [game.fish_tide, game.harbor_turns_left]
 		_biome_pill.add_theme_color_override("font_color", Color(0.18, 0.46, 0.50))
 	else:
-		_biome_pill.text = "Farm"
+		# T22 multi-settlement: on the farm, surface WHICH settlement you're at. At home it reads
+		# "Farm" (byte-identical to before — the home-only game never changes). At a FOUNDED non-home
+		# farm settlement (meadow / orchard) it names the place + its biome so the player knows where
+		# they're standing.
+		var here := String(game.map_current)
+		if here != "" and here != "home" and CartographyConfig.has_node(here) and game.is_settlement_founded(here):
+			var node_name := String(CartographyConfig.by_id(here).get("name", here))
+			var biome_id := game.settlement_biome_id(here)
+			var bdef := CartographyConfig.biome_def("farm", biome_id)
+			var icon := String(bdef.get("icon", "🌾"))
+			_biome_pill.text = "%s %s" % [icon, node_name]
+		else:
+			_biome_pill.text = "Farm"
 		_biome_pill.add_theme_color_override("font_color", Palette.MOSS)
 
-## M3g/M4b: the capstone boss now lives in the top-bar boss pill, shown only while a
-## fight is active ("⚔ <name> cur/max"). Hidden otherwise. Mirrors GameState.
+## T24/M4b: the seasonal boss now lives in the top-bar boss pill as a PROGRESS / TURNS readout,
+## shown only while a challenge is active. The label reads "⚔ <Target> <progress>/<target> · Nt"
+## (e.g. "⚔ Oak 12/30 · 6t"), where <Target> is a short label for the target resource. Hidden
+## otherwise. The full modifier description shows in Main's boss banner; this pill is the at-a-glance
+## status. Mirrors GameState's BossInstance fields.
 func _refresh_boss() -> void:
 	if _boss_pill_box == null or _boss_pill == null or game == null:
 		return
 	if game.is_boss_active():
-		var max_hp: int = BossConfig.boss_hp(game.boss_active)
-		_boss_pill.text = "⚔ %s %d/%d" % [
-			BossConfig.boss_name(game.boss_active), game.boss_hp, max_hp]
+		_boss_pill.text = "⚔ %s %d/%d · %dt" % [
+			_boss_target_label(game.boss_target_resource),
+			game.boss_progress, game.boss_target_amount, game.boss_turns_remaining]
+		# The full modifier explanation is the pill's tooltip (hover) — the at-a-glance banner.
+		var tip: String = "%s — %s" % [BossConfig.boss_name(game.boss_active), BossConfig.modifier_desc(game.boss_active)]
+		_boss_pill_box.tooltip_text = tip
+		_boss_pill.tooltip_text = tip
 		_boss_pill_box.visible = true
 	else:
 		_boss_pill_box.visible = false
+
+## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",
+## "iron_bar" → "Iron", "fish_fillet" → "Fish"). Falls back to a tidied form of the key.
+func _boss_target_label(res: String) -> String:
+	match res:
+		"tile_tree_oak": return "Oak"
+		"tile_grass_grass": return "Hay"
+		"tile_mine_stone": return "Stone"
+		"tile_fruit_blackberry": return "Berry"
+		"iron_bar": return "Iron"
+		"fish_fillet": return "Fish"
+		_:
+			var s: String = res.trim_prefix("tile_")
+			return s.capitalize()
 
 ## M3h/M4b: the Town-3 rats hazard now lives in the top-bar rats pill, shown only
 ## once rats are a live threat (Town 2 done). With a Ratcatcher it reads "🐀 N/5"

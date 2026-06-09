@@ -77,6 +77,62 @@ func npc_bond(id: String) -> float:
 func gain_bond(id: String, amount: float) -> void:
 	npcs_state.gain(id, amount)
 
+## True when NPC `npc_id` may receive a gift right now: it's a real NPC, the player holds
+## at least 1 of `resource`, and this NPC hasn't already been gifted THIS season (the
+## once-per-season cooldown). The season is the current farm season index (0..3).
+func can_gift(npc_id: String, resource: String) -> bool:
+	if not NpcConfig.has(npc_id):
+		return false
+	if int(inventory.get(resource, 0)) <= 0:
+		return false
+	return npcs_state.can_gift(npc_id, current_season_index())
+
+## GIVE_GIFT (T18, ported from React state.ts GIVE_GIFT + applyGift, src/features/npcs/bond.ts).
+## Give NPC `npc_id` one unit of inventory `resource`: consume 1 of the resource, bump that
+## NPC's bond by the preference-tier delta (loved +0.5, liked +0.3, neutral +0.15), clamp the
+## bond to [0, 10], and set the per-season cooldown so the NPC can't be gifted again until a
+## new season. Guards (the FIRST that trips is reported): unknown NPC → "unknown"; no stock of
+## the resource → "no_stock"; already gifted this season → "cooldown". On success returns
+## {ok:true, npc, resource, tier, delta, bond} (bond = the new bond after the gift); on failure
+## {ok:false, reason} WITHOUT mutating. Mirrors React: the gift is silently rejected on cooldown
+## / empty inventory; the bond rises by the tier delta and is clamped.
+func give_gift(npc_id: String, resource: String) -> Dictionary:
+	if not NpcConfig.has(npc_id):
+		return {"ok": false, "reason": "unknown"}
+	if int(inventory.get(resource, 0)) <= 0:
+		return {"ok": false, "reason": "no_stock"}
+	var season: int = current_season_index()
+	if not npcs_state.can_gift(npc_id, season):
+		return {"ok": false, "reason": "cooldown"}
+	var tier: String = NpcConfig.gift_tier(npc_id, resource)
+	var delta: float = NpcConfig.gift_delta(tier)
+	# T31 (ADDITIVE): owned BOONS that grant bond_gain_mult scale the bond rise from this gift
+	# (React boon bond_gain_mult applied to bond gains from gifts/orders). 1.0 for a fresh game
+	# (no boons owned) → delta unchanged → byte-identical gift behaviour.
+	delta *= boon_effect_mult(BoonConfig.BOND_GAIN_MULT)
+	# Consume one unit of the resource (erase the key when it hits 0).
+	var remaining: int = maxi(0, int(inventory.get(resource, 0)) - 1)
+	if remaining == 0:
+		inventory.erase(resource)
+	else:
+		inventory[resource] = remaining
+	gain_bond(npc_id, delta)
+	npcs_state.mark_gifted(npc_id, season)
+	var new_bond: float = npc_bond(npc_id)
+	# T29 (story engine, ADDITIVE — after the gift is committed): post a "gift_given" event so
+	# side_first_gift (event.type == gift_given) and side_bond_liked (event.bond >= 7) can fire.
+	# event.bond is the NEW bond after this gift (the Liked-band gate reads it). Beats NEVER
+	# auto-grant, so this cannot change the economy. The success result below is UNCHANGED.
+	post_story_event({"type": "gift_given", "npc": npc_id, "resource": resource, "bond": new_bond})
+	return {
+		"ok": true,
+		"npc": npc_id,
+		"resource": resource,
+		"tier": tier,
+		"delta": delta,
+		"bond": new_bond,
+	}
+
 # ── Expedition / biome (M3f, the Town-2 mine) ─────────────────────────────────
 ## SIMPLIFICATION (M3f): a SINGLE SHARED inventory. The locked Direction makes
 ## resources per-settlement, but for this milestone mine goods (block/iron_bar/
@@ -91,6 +147,64 @@ func gain_bond(id: String, amount: float) -> void:
 ## out the run ends and everything gathered is kept (it's already in `inventory`).
 var active_biome: String = "farm"   ## "farm" | "mine" | "harbor" — which biome the board shows
 var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 on the farm)
+
+# ── T26: Cartography travel state (ported from src/features/cartography/slice.ts) ──
+## The 11-node world-map travel state machine. `map_current` is the node the player is "at"
+## (default "home"); `map_node_state` maps every visited/discovered node id → its state string
+## ("visited" | "discovered"); a node absent from the dict is HIDDEN. Mirrors React's
+## mapCurrent + mapVisited/mapDiscovered (slice.ts:13-20), collapsed into one {id → state} dict
+## (hidden = not present, so the dict only holds discovered ∪ visited).
+##
+## Discovery rules (slice.ts:43-110): home starts VISITED, its neighbours DISCOVERED. You may
+## FIRST-travel only to a node adjacent to a VISITED node, meeting its level + paying its coin
+## entry cost; arriving marks it visited and discovers its neighbours. You may FAST-travel to
+## any already-VISITED node from anywhere (no adjacency / level / cost). travel_to() is the
+## single mutation entry; it routes BOARD nodes (farm/mine/fish) into the matching expedition
+## board so the world map is the real way to start a run. NON-board nodes (event/festival/boss/
+## capital) are handled by Main on the {ok:true, kind} result — travel_to only moves the marker.
+##
+## ADDITIVE GUARANTEE: a save written before the travel state existed loads with the default seed
+## (home visited, neighbours discovered) via the from_dict defensive default; SAVE_VERSION is NOT
+## bumped. The default seed is applied in _ready of GameState (init below) so a bare new() is also
+## seeded — see _seed_map_state.
+var map_current: String = "home"
+## node id (String) → "visited" | "discovered". A node not present is hidden. Seeded by
+## _seed_map_state() in _init so a bare GameState is always navigable.
+var map_node_state: Dictionary = {}
+
+# ── T22: Multi-settlement founding + per-zone state (ACTIVE-ZONE-VIEW + ARCHIVE model) ──
+## The locked Direction keys inventory / progress / buildings / settlement PER founded zone, with
+## a founder flow, and three Hearth-Tokens (one per completed settlement TYPE) that unlock the Old
+## Capital finale. Porting React's nested-map shape (inventory[zoneId], built[zoneId], …) would
+## break the hundreds of FLAT `inventory[res]` / `qty()` / `buildings` accesses across this whole
+## codebase. Instead this is an ACTIVE-ZONE-VIEW + ARCHIVE model:
+##   • The flat `inventory` / `progress` / `buildings` / `settlement` / `farm_turns_used` fields
+##     are the LIVE view of the CURRENTLY-ACTIVE zone (`map_current`, default "home").
+##   • `zone_archives` holds the SNAPSHOTTED state of every NON-active founded zone.
+##   • `_activate_zone(id)` snapshots the live fields into zone_archives[old], then loads
+##     zone_archives[id] (or fresh defaults) into the live fields + sets map_current.
+## A fresh game never leaves home, so the live fields behave EXACTLY as before — every existing
+## suite stays byte-identical. Founding / archives / tokens are purely ADDITIVE.
+##
+## coins / tools / workers / runes / npcs / achievements / story / quests / almanac / boons /
+## embers / core_ingots / market / heirlooms stay GLOBAL (NOT per-zone) — mirroring React's
+## src/state/zoneInventory.ts ("coins, tools, workers, level, knowledge stay global").
+
+## Per-founded-zone founding record: { zone_id:String -> { founded:bool, biome:String,
+## keeper_path:String } }. Home is IMPLICITLY founded (is_settlement_founded special-cases it),
+## so a fresh game's map is EMPTY — exactly like React's state.settlements (home never recorded).
+var settlements: Dictionary = {}
+
+## Snapshotted state of every NON-active founded zone: { zone_id:String -> { inventory, progress,
+## buildings, settlement (tier dict), farm_turns_used } }. The ACTIVE zone's state lives in the
+## live flat fields, NOT here. Empty for a home-only game (home is the active zone, never archived).
+var zone_archives: Dictionary = {}
+
+## The Hearth-Tokens held (GLOBAL): { token_id:String -> 1 } where token_id is one of
+## CartographyConfig.HEARTH_TOKEN_FOR_TYPE values (heirloomSeed / pactIron / tidesingerPearl).
+## A completed settlement of a type grants its token ONCE; holding all three opens the Old Capital.
+## React state.heirlooms (data.ts:541-554 grantEarnedHearthTokens). Empty for a fresh game.
+var heirlooms: Dictionary = {}
 
 # ── Farm season cycle (A1, ported from src/features/zones + src/constants SEASONS) ──
 ## The home farm is a PERSISTENT board that cycles four seasons (Spring→Summer→Autumn→
@@ -125,6 +239,30 @@ var farm_run_zone: String = "home"      ## the zone the run is playing (only "ho
 var farm_run_used_fertilizer: bool = false  ## whether this run consumed fertilizer (×2 budget)
 var farm_run_selected: Array = []       ## chosen tile categories (spawn-bias boost; max 8)
 
+# ── T30: Run TELEMETRY (the rich run-summary recap, ported from src/features/runSummary) ────────
+## The per-run accumulator the rich HarvestModal dashboard reads. RESET at start_farm_run (a fresh
+## run), ACCUMULATED during the run (credit_chain ticks chains/longest/best-moment/resources/coins/
+## upgrades; enter_mine/enter_harbor record supplies consumed; post_story_event records fired beats;
+## a bond snapshot at run-start backs the bond-delta), and SNAPSHOTTED at close_season (build_run_summary
+## packs the live fields + the bond deltas into the dashboard dict). Mirrors the React RunSummary
+## fields (slice.ts): chainsPlayed, biggestChain {count,key,coinGain,upgrades,gained}, totalUpgrades,
+## totalCoinGain, resourcesGained, bondsAtStart/bondDeltas, beatsTriggered, suppliesConsumed,
+## fertilizerUsed.
+##
+## TRANSIENT — like pending_tool / fill_bias, this is NOT persisted (to_dict/from_dict skip it): a
+## run summary only matters between start_farm_run and the run-end modal, and a reload mid-run simply
+## starts the recap fresh. SAVE_VERSION is NOT bumped. A bare GameState.new() has farm_run_active ==
+## false so nothing accumulates; every existing suite is byte-identical.
+var run_chains_played: int = 0          ## resolved chains this run (every credit_chain on the farm)
+var run_longest_chain: int = 0          ## the longest single chain length this run (best-moment count)
+var run_best_chain: Dictionary = {}     ## the best moment: {count, key, coin_gain, upgrades, gained} (the LONGEST chain)
+var run_total_upgrades: int = 0         ## upgrade tiles spawned this run (units produced by chains)
+var run_total_coins: int = 0            ## coins gained from chains this run (sum of credit_chain coins_gain)
+var run_resources_gained: Dictionary = {}   ## resource_key:String -> units gained this run (chain produce)
+var run_bonds_at_start: Dictionary = {}      ## npc_id:String -> bond at run start (backs the bond delta)
+var run_beats_fired: Array = []         ## ordered ids of story beats that fired DURING this run (dedup)
+var run_supplies_consumed: Dictionary = {}   ## resource_key:String -> units spent to start expeditions this run
+
 # ── Fish / Harbor expedition (M3j, ported from src/features/fish) ──────────────
 ## The harbor is the THIRD biome, MIRRORING the mine expedition (M3f) and SHARING the
 ## same single inventory (the catch — fish_fillet/sea_shells/pearls/fish_oil — lands in
@@ -155,15 +293,33 @@ var fish_pearl: Dictionary = {}
 ## (try_capture_pearl). Uncapped (like coins); persisted defensively.
 var runes: int = 0
 
-# ── Capstone boss (M3g, the Town-2 close) ─────────────────────────────────────
-## The Direction's "capstone boss" (Frostmaw): the gate that proves farm + mine
-## mastery before Town 2 opens up. While a boss is active it RAISES the board's
-## minimum chain length (boss_min_chain); you defeat it by landing chains against
-## its HP. Defeating it sets town2_complete, which a later milestone consumes to
-## unlock Town 3. See BossConfig for the catalog.
-var boss_active: String = ""        ## "" when no fight in progress, else a boss id
-var boss_hp: int = 0                ## remaining HP of the active boss
-var town2_complete: bool = false    ## set true when the capstone boss is defeated
+# ── Seasonal bosses (T24, the Town-2 close) — TIMED RESOURCE-TARGET model ──────
+## REWRITTEN from the single HP-attrition Frostmaw fight to React's 6 seasonal bosses as
+## TIMED RESOURCE-TARGET challenges (src/features/bosses/data.ts + modifiers.ts + boss/slice.ts).
+## A boss asks for a target quantity of a resource/tile within BOSS_WINDOW_TURNS turns under a
+## board MODIFIER; meet the target before the window expires to win (coins scaled by year +
+## overshoot margin, +1 Rune). The CAPSTONE boss (storm) still gates Town 2: beating it sets
+## town2_complete, which a later milestone consumes to unlock Town 3. See BossConfig +
+## BossModifierLogic for the catalog + the pure modifier rules.
+##
+## All 6 bosses are REACHABLE: a challenge spawns the CURRENT farm-season's boss (start_boss),
+## and `town2_complete` only blocks RE-challenging the capstone — the other five can be fought
+## any number of times (each season's boss is encounterable). The reward `year` is tracked per
+## instance (defaults to 1 — the port has no calendar; see boss_year below).
+##
+## boss_active replaces the old boss_active/boss_hp pair. The richer per-fight state lives in the
+## BossInstance fields below; boss_active just names the live boss ("" when idle). town2_complete
+## is unchanged (the Town-2 gate). The board MODIFIER overlay lives in boss_modifier_state, the
+## GDScript analogue of React's boss.modifierState (rendered/gated by Board, ticked by Main).
+var boss_active: String = ""              ## "" when no challenge in progress, else a boss id
+var boss_season: String = ""              ## the boss's season (cached from BossConfig at spawn)
+var boss_year: int = 1                    ## the run year used for the reward formula (>=1; default 1)
+var boss_turns_remaining: int = 0         ## window turns left (BOSS_WINDOW_TURNS at spawn → 0)
+var boss_progress: int = 0                ## units of the target gathered so far in the window
+var boss_target_resource: String = ""     ## the target resource/tile KEY (cached from BossConfig)
+var boss_target_amount: int = 0           ## the target quantity (cached from BossConfig)
+var boss_modifier_state: Dictionary = {}  ## the live board-modifier overlay (BossModifierLogic bag)
+var town2_complete: bool = false          ## set true when the CAPSTONE boss is defeated
 
 # ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
 ## SIMPLIFICATION (M3h, consistent with the M3f single-shared-inventory note): per
@@ -180,6 +336,73 @@ var town2_complete: bool = false    ## set true when the capstone boss is defeat
 ## charges are a flat per-run budget the player spends down).
 const RATCATCHER_CHARGES: int = 5
 var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
+
+# ── Farm HAZARDS live state (T7/T8/T9, ported from src/features/farm) ───────────
+## The live farm-hazard state — the GDScript analogue of React's `state.hazards`. Owns the
+## POSITIONAL rats (each a {row,col,age}), the fire cells, and the wolves (each {row,col,scared}
+## plus a scared countdown). The single source of truth for all three farm hazards; HazardLogic
+## (pure) operates on this + the board grid, and note_farm_turn ticks/spawns into it. Shape:
+##   { "rats": Array[{row,col,age}], "fire": {cells:[...]} or {}, "wolves": {list:[...],
+##     scared_turns:int} or {} }
+## Seeded to HazardLogic.default_state() (all inactive). Persisted defensively (to_dict/from_dict
+## round-trip via HazardLogic.normalise). SAVE_VERSION is NOT bumped — a pre-hazards save loads
+## with all hazards inactive. SINGLE-ACTIVE CAP mirrored in roll: only one of rats/fire/wolves at
+## a time.
+var hazards: Dictionary = HazardLogic.default_state()
+
+## Per-session FORCE-ON override for the fire hazard (tests + a future tuning toggle). When false
+## the gate falls back to the build-time Constants.FIRE_HAZARD_ENABLED (false → fire never spawns
+## in normal play, matching the live React game). NOT persisted (a reload re-reads the default).
+var fire_hazard_force: bool = false
+
+# ── Mine HAZARDS live state (T11, ported from src/features/mine/hazards.ts) ──────
+## The live MINE-hazard state — the mine-side analogue of `hazards` above. Owns the cave_in (a
+## buried ROW), the gas_vent (cell + 3-turn countdown), the lava (spreading cells), and the mole
+## (overlay entity + 3-turn cycle). The single source of truth for all four mine hazards;
+## MineHazardLogic (pure) operates on this + the board grid, and note_mine_turn ticks/spawns into
+## it. Shape (see MineHazardLogic header):
+##   { "cave_in": {row} or {}, "gas_vent": {row,col,turns_remaining} or {}, "lava": {cells:[...]}
+##     or {}, "mole": {row,col,turns_remaining} or {} }
+## Seeded to MineHazardLogic.default_state() (all inactive). Persisted defensively (to_dict/from_dict
+## round-trip via MineHazardLogic.normalise). SAVE_VERSION is NOT bumped — a pre-mine-hazards save
+## loads with all mine hazards inactive. SINGLE-ACTIVE CAP mirrored in roll: only one at a time.
+## ONLY relevant while in the mine (active_biome == "mine"); on the farm/harbor it stays inactive.
+var mine_hazards: Dictionary = MineHazardLogic.default_state()
+
+# ── Mysterious Ore → Rune live state (T23, src/features/mine/mysterious_ore.ts) ──
+## The live Mysterious Ore, or {} when none active. Shape: { row:int, col:int, turns_left:int }.
+## One per mine session (the mine's analogue of the harbor's `fish_pearl`). Spawned on a mine
+## board fill (spawn_mysterious_ore), ticked by note_mine_turn (degrades to DIRT at 0), and captured
+## by chaining it with >= Constants.REQUIRED_DIRT_IN_CHAIN dirt (try_capture_mysterious_ore → +1
+## Rune). Persisted defensively (to_dict/from_dict). SAVE_VERSION is NOT bumped.
+var mysterious_ore: Dictionary = {}
+
+# ── Tile Collection: active variants + discovery + abilities ────────────────────────
+## Ported from React's `state.tileCollection` slice (src/state/helpers.ts
+## TileCollectionSlice + src/state.ts SET_ACTIVE_TILE / BUY_TILE / chain-discovery).
+## The data layer is TileVariantConfig (the catalog). This is the live PLAYER STATE:
+##   tile_active_by_category — { category:String -> active variant id:String }. The chosen
+##     board variant for each category; default = the category's base tile (the React
+##     activeByCategory map, seeded from TileVariantConfig.default_active_by_category).
+##     active_tile_pool / upgrade_spawn substitute this variant's Tile enum for the
+##     category's base tile.
+##   tile_discovered — { variant id:String -> true }. The set of unlocked variants. Seeded
+##     with every `default`-method tile + the port base tiles (default_discovered). Grows
+##     via chain / research / buy / building / daily discovery.
+##   tile_research_progress — { variant id:String -> int }. Accrued research toward a
+##     `research`-method variant's researchAmount; at the cap the variant is discovered.
+##   tile_free_moves — int. Banked free moves granted by the active tiles' free_moves /
+##     free_turn_if_chain abilities (accrued per chain in credit_chain); consumed by
+##     note_farm_turn BEFORE a turn is spent (React boardTurnPatch, src/state.ts:147-160).
+##
+## SEEDED LAZILY: a bare GameState.new() starts these empty and seeds them on first read
+## (see _ensure_tile_collection). This keeps the field defaults trivially round-trip-safe
+## and lets from_dict overlay a saved slice over the fresh seed (mirrors React mergeLoadedState).
+var tile_active_by_category: Dictionary = {}
+var tile_discovered: Dictionary = {}
+var tile_research_progress: Dictionary = {}
+var tile_free_moves: int = 0
+var _tile_collection_seeded: bool = false
 
 # ── Settings (M4f) ────────────────────────────────────────────────────────────
 ## Player audio preference, surfaced by the settings/menu modal (MenuScreen). Main
@@ -222,9 +445,9 @@ var daily_streak_day: int = 0         ## current streak day (0 = no streak yet, 
 ##   - nextDay: no prior claim (daily_last_claimed == "") → 1; exactly 1 calendar day
 ##     after the last claim → min(daily_streak_day + 1, MAX_DAY); any other gap → reset to 1.
 ##   - GRANT the day's reward (DailyRewardConfig.reward_for_day): coins + runes directly
-##     (both uncapped, like order rewards), and a `tool` grant of `amount` (default 1)
-##     charges through the M8b grant_tool path (every mapped tool id is a real ToolConfig
-##     member). The React `unlockTile` grant is DROPPED (no port tile — see DailyRewardConfig).
+##     (both uncapped, like order rewards), a `tool` grant of `amount` (default 1) through the
+##     M8b grant_tool path, and an `unlock_tile` grant (the React `unlockTile` / `daily`
+##     discovery method — day 30 discovers Triceratops, a real TileVariantConfig variant).
 ##   - Then set daily_last_claimed = today, daily_streak_day = nextDay.
 ## Returns { claimed:bool, day:int, reward:Dictionary }. On the idempotent no-op,
 ## `day` reports the unchanged current streak day and `reward` is {} (nothing granted).
@@ -262,10 +485,69 @@ func login_tick(today: String) -> Dictionary:
 	var tool_id: String = String(reward.get("tool", ""))
 	if tool_id != "":
 		grant_tool(tool_id, int(reward.get("amount", 1)))
+	# Grant the `unlock_tile` reward (the React `unlockTile` path, src/state.ts daily) — this is
+	# the `daily` tile-discovery method (day 30 → Triceratops, a real TileVariantConfig variant).
+	var unlock_tile: String = String(reward.get("unlock_tile", ""))
+	if unlock_tile != "":
+		discover_tile(unlock_tile)
 	# Commit the new streak state.
 	daily_last_claimed = today
 	daily_streak_day = next_day
 	return {"claimed": true, "day": next_day, "reward": reward.duplicate(true)}
+
+# ── T16: Dynamic market state (ported from src/market.ts) ───────────────────────
+## The live drifted price table and current seasonal event. Re-rolled on new_game
+## and at every close_season() (the season boundary — parallel to React's
+## CLOSE_SEASON reroll). Seeded deterministically from `market_seed` so the same
+## seed always produces the same prices for a given season index.
+##
+## ADDITIVE GUARANTEE: a save written before T16 existed loads with market_seed = 0
+## and market_season = 0 (from_dict defensive defaults), which seeds the prices
+## exactly as if new_game() had been called with those values — a reasonable fresh
+## season. sell() / buy() fall back to base prices when market_prices is empty, so
+## old saves are byte-identical until prices are recomputed. SAVE_VERSION is NOT
+## bumped.
+##
+## Shape:
+##   market_seed   — int, randomised once at new_game and persisted. Deterministic:
+##                   same seed + same season always yields the same drift.
+##   market_season — int, monotonically incremented by each close_season() call.
+##                   Mirrors React's `season` argument to driftPrices.
+##   market_prices — { resource:String → { "buy":int, "sell":int } }. The drifted
+##                   price for every market-tradeable resource this season. Derived:
+##                   NOT persisted — recomputed from market_seed + market_season on
+##                   new_game, load, and close_season.
+##   market_event  — the active event dict ({ id, label, desc, mults }) or {} when
+##                   no event this season. Derived alongside market_prices.
+var market_seed: int = 0          ## stable per-save seed; randomised at new_game
+var market_season: int = 0        ## monotonic season index; bumped by close_season
+## Derived live price table — not persisted, recomputed from seed+season.
+var market_prices: Dictionary = {}
+## Derived current event — not persisted, recomputed from seed+season.
+var market_event: Dictionary = {}
+
+## Recompute market_prices and market_event from market_seed and market_season.
+## Call on new_game, from_dict, and close_season. Pure (no side effects beyond
+## the two derived fields).
+func _recompute_market() -> void:
+	market_event = MarketConfig.pick_market_event(market_seed, market_season)
+	market_prices = MarketConfig.drift_prices(market_seed, market_season, market_event)
+
+## Live drifted SELL price for `res` (coins earned when selling 1 unit). Falls
+## back to the flat base when no drifted price is available.
+func live_sell_price(res: String) -> int:
+	var p: Variant = market_prices.get(res, null)
+	if p is Dictionary:
+		return int((p as Dictionary).get("sell", MarketConfig.sell_price(res)))
+	return MarketConfig.sell_price(res)
+
+## Live drifted BUY price for `res` (coins paid when buying 1 unit). Falls back
+## to the flat base when no drifted price is available.
+func live_buy_price(res: String) -> int:
+	var p: Variant = market_prices.get(res, null)
+	if p is Dictionary:
+		return int((p as Dictionary).get("buy", MarketConfig.buy_price(res)))
+	return MarketConfig.buy_price(res)
 
 # ── Castle contributions (ADDITIVE — ported from src/features/castle) ───────────
 ## The Castle is a ONE-WAY SINK: the player donates resources from the shared
@@ -393,6 +675,163 @@ func build_decoration(id: String) -> Dictionary:
 	influence += DecorationConfig.influence(id)
 	return {"ok": true, "id": id, "influence": influence}
 
+# ── Keepers + Boons (T31 — ADDITIVE, ported from src/keepers.ts + src/features/boons) ──
+## The keeper economy: a settlement's biome KEEPER appears once the settlement is built up,
+## and the player chooses a path — Coexist (→ Embers) or Drive Out (→ Core Ingots) — which
+## unlocks per-path BOONS (permanent perks) bought with those currencies.
+##
+## CURRENCIES (both uncapped, like coins/runes/influence; persisted defensively):
+##   embers       — granted by the Coexist path; spends on coexist boons.
+##   core_ingots  — granted by the Drive Out path; spends on driveout boons.
+## boons          — the { boon_id -> true } owned-boon map (the GDScript analogue of
+##                  React's state.boons). Owned boons' multipliers COMPOSE.
+##
+## KEEPER RESOLUTION reuses the existing story-flags map (story.flags): resolving settlement
+## `type` on `path` sets the `keeper_<type>_<path>` flag (KeeperConfig.flag_for). A keeper is
+## "resolved" once ANY keeper_<type>_* flag is set for that type — the choice is FINAL per
+## settlement, granted once (give_keeper_reward guards on it).
+##
+## ADDITIVE GUARANTEE: a fresh game has embers/core_ingots = 0 and an empty boons map, so
+## boon_effect_mult returns 1.0 for every channel — the credit_chain coins + the NPC bond-gain
+## sites are byte-identical to the pre-T31 economy. No keeper is resolved until a settlement is
+## built up. SAVE_VERSION is NOT bumped — old saves load with 0/0/{}.
+var embers: int = 0          ## Coexist currency (uncapped); granted by give_keeper_reward(coexist)
+var core_ingots: int = 0     ## Drive Out currency (uncapped); granted by give_keeper_reward(driveout)
+var boons: Dictionary = {}   ## owned boons: { boon_id:String -> true }
+
+## True when settlement `type`'s keeper has already been resolved (any keeper_<type>_* flag set).
+## The choice is final per settlement, so this guards give_keeper_reward from double-granting and
+## the encounter trigger from re-firing. (React: the per-zone settlement.keeperPath / flag check.)
+func keeper_resolved(type: String) -> bool:
+	if not KeeperConfig.has_keeper(type):
+		return false
+	for k in story.flags.keys():
+		var ks: String = String(k)
+		if ks.begins_with("keeper_%s_" % type) and bool(story.flags[k]):
+			return true
+	return false
+
+## The resolved path ("coexist" | "driveout") for settlement `type`, or "" when unresolved.
+func keeper_path_for(type: String) -> String:
+	for path in ["coexist", "driveout"]:
+		if bool(story.flags.get(KeeperConfig.flag_for(type, path), false)):
+			return path
+	return ""
+
+## True when settlement `type`'s keeper ENCOUNTER should fire RIGHT NOW: it's a real keeper type,
+## it isn't already resolved, AND the (home) settlement has built at least the keeper's
+## `appears_after_buildings` count. Mirrors React's keeperReadyFor gate (built-building threshold).
+## SCOPE: the port has one active settlement (the home FARM = the Deer-Spirit), so the built count
+## comes from `buildings.size()` (the home settlement's built spawners). The mine/harbor keepers are
+## ported + forward-compatible — this gate answers true for them once those become settlements with
+## their own built counts (a later task, T22); today only "farm" is reachable.
+func keeper_encounter_ready(type: String) -> bool:
+	if not KeeperConfig.has_keeper(type):
+		return false
+	if keeper_resolved(type):
+		return false
+	return buildings.size() >= KeeperConfig.appears_after_buildings(type)
+
+## GIVE_KEEPER_REWARD (T31 — the port's faithful collapse of React's KEEPER/CONFRONT →
+## startKeeperTrial / KEEPER/APPEASE → finalizeKeeperPath into a DIRECT choice; see KeeperConfig's
+## scope note). Resolve settlement `type` on `path` ∈ {coexist, driveout}: set the
+## `keeper_<type>_<path>` story flag and grant the path's currency (5 Embers for coexist, 5 Core
+## Ingots for driveout — from KeeperConfig). FINAL + once-per-type: a second call for an already-
+## resolved type is a no-op (no double grant). Guards (FIRST that trips reported): unknown type →
+## "unknown"; bad path → "bad_path"; not yet encounter-ready → "not_ready"; already resolved →
+## "resolved". On success returns {ok:true, type, path, flag, embers?|core_ingots?} with the amount
+## granted; on failure {ok:false, reason} WITHOUT mutating.
+func give_keeper_reward(type: String, path: String) -> Dictionary:
+	if not KeeperConfig.has_keeper(type):
+		return {"ok": false, "reason": "unknown"}
+	if not KeeperConfig.is_path(path):
+		return {"ok": false, "reason": "bad_path"}
+	# Already resolved (final) → no-op, no double grant.
+	if keeper_resolved(type):
+		return {"ok": false, "reason": "resolved"}
+	# Must be encounter-ready (built-building threshold met).
+	if buildings.size() < KeeperConfig.appears_after_buildings(type):
+		return {"ok": false, "reason": "not_ready"}
+	# Commit: set the path flag (kingdom-wide, path-gated for boon visibility) + grant the currency.
+	var flag: String = KeeperConfig.flag_for(type, path)
+	story.flags[flag] = true
+	var result: Dictionary = {"ok": true, "type": type, "path": path, "flag": flag}
+	if path == "coexist":
+		var e: int = KeeperConfig.coexist_embers(type)
+		embers += e
+		result["embers"] = e
+	else:
+		var ci: int = KeeperConfig.driveout_core_ingots(type)
+		core_ingots += ci
+		result["core_ingots"] = ci
+	# T22 (ADDITIVE): record the resolved path on the ACTIVE founded zone's record (React's per-zone
+	# settlement.keeperPath). home is implicit, so only a recorded (non-home) founded zone carries it;
+	# the kingdom-wide type flag (set above) is the authoritative gate either way.
+	if settlements.has(map_current) and settlement_type_for_zone(map_current) == type:
+		(settlements[map_current] as Dictionary)["keeper_path"] = path
+	# T22 (ADDITIVE): resolving the keeper is the OTHER gating step for settlement completion — fold
+	# the Hearth-Token grant now (mirrors React's grantEarnedHearthTokens fold after KEEPER/CONFRONT,
+	# state.ts). Grants a token only when the active settlement is also built-up enough.
+	grant_earned_hearth_tokens()
+	# T29 (story engine, ADDITIVE — after the keeper flag is set + the currency granted): post a
+	# "keeper_resolved" event so act1_keeper_trial can fire. The beat gates on the keeper_<type>_<path>
+	# flag (already set above), so it would fire on the very next event regardless; posting here makes
+	# it fire IMMEDIATELY at the resolution. Beats NEVER auto-grant, so this cannot change the economy.
+	post_story_event({"type": "keeper_resolved", "keeper_type": type, "path": path})
+	return result
+
+# ── Boon purchase + effects (T31 — ported from src/features/boons/slice.ts BOON/PURCHASE) ──
+
+## True when boon `id` is UNLOCKED right now: its catalog PATH flag is set by ANY resolved keeper
+## (kingdom-wide, path-gated). Thin forwarder to BoonConfig.boon_id_is_unlocked over story.flags.
+func boon_unlocked(id: String) -> bool:
+	return BoonConfig.boon_id_is_unlocked(story.flags, id)
+
+## True when boon `id` is owned (purchased).
+func has_boon(id: String) -> bool:
+	return bool(boons.get(id, false))
+
+## True when boon `id` can be PURCHASED right now (mirrors the BOON/PURCHASE guards, in order):
+## it's a real boon, not already owned, its path is unlocked, AND its cost is affordable from the
+## current embers / core_ingots.
+func can_purchase_boon(id: String) -> bool:
+	var boon: Dictionary = BoonConfig.boon_by_id(id)
+	if boon.is_empty():
+		return false
+	if has_boon(id):
+		return false
+	if not BoonConfig.boon_is_unlocked(story.flags, boon):
+		return false
+	return BoonConfig.can_afford(embers, core_ingots, boon)
+
+## PURCHASE_BOON (BOON/PURCHASE parity, src/features/boons/slice.ts). Buy boon `id`: gated on
+## unlocked + affordable + not-owned → deduct the cost (embers and/or core_ingots, floored at 0)
+## and mark it owned. Returns {ok:true, id, embers, core_ingots} (the new balances) on success; on
+## failure {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that trips:
+## "unknown" → "owned" → "locked" → "cant_afford".
+func purchase_boon(id: String) -> Dictionary:
+	var boon: Dictionary = BoonConfig.boon_by_id(id)
+	if boon.is_empty():
+		return {"ok": false, "reason": "unknown"}
+	if has_boon(id):
+		return {"ok": false, "reason": "owned"}
+	if not BoonConfig.boon_is_unlocked(story.flags, boon):
+		return {"ok": false, "reason": "locked"}
+	if not BoonConfig.can_afford(embers, core_ingots, boon):
+		return {"ok": false, "reason": "cant_afford"}
+	var cost: Dictionary = boon.get("cost", {})
+	embers = maxi(0, embers - int(cost.get("embers", 0)))
+	core_ingots = maxi(0, core_ingots - int(cost.get("core_ingots", 0)))
+	boons[id] = true
+	return {"ok": true, "id": id, "embers": embers, "core_ingots": core_ingots}
+
+## The composed multiplier from OWNED boons whose effect.type matches `effect_type`. Defaults to
+## 1.0 (no owned boon of that channel) — so a fresh game leaves every wired site byte-identical.
+## Thin forwarder to BoonConfig.boon_effect_mult over the owned `boons` map. The two channels are
+## "coin_gain_mult" (credit_chain coins) and "bond_gain_mult" (NPC bond gains).
+func boon_effect_mult(effect_type: String) -> float:
+	return BoonConfig.boon_effect_mult(boons, effect_type)
+
 # ── Magic Portal (ADDITIVE — ported from src/features/portal) ───────────────────
 ## Whether the Magic Portal town building has been built. The Portal is the gate that
 ## unlocks SUMMONING magic tools (summon_magic_tool): it must be built before any summon
@@ -459,14 +898,14 @@ func can_summon_magic_tool(id: String) -> bool:
 ## success. On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard
 ## that trips: "no_portal" → "unknown" → "cant_afford".
 ##
-## SCOPE: this ports the summon ECONOMY (pay Influence → own a magic tool). Eight magic tools
-## (golden_apple/carrot/idol/sheep, philosophers_stone, magic_wand, magic_seed,
-## magic_fertilizer) are now REAL ToolConfig members with Godot-native powers (transform_tiles /
-## tap_clear_type / restore_turns / fill_bias), so once summoned they show in the rack and are
-## USABLE through the normal use_tool_on_grid path with no special-casing. The remaining two —
-## hourglass (undo_move) and miners_hat (reveal_tiles) — stay summonable here but are NOT
-## ToolConfig members and have no effect yet: they await the board/inventory-SNAPSHOT and
-## HIDDEN-TILE milestones respectively (see PortalConfig's scope note).
+## SCOPE: this ports the summon ECONOMY (pay Influence → own a magic tool). NINE magic tools
+## (golden_apple/carrot/idol/sheep, philosophers_stone, magic_wand, magic_seed, magic_fertilizer,
+## and — as of T24 — miners_hat) are now REAL ToolConfig members with Godot-native powers
+## (transform_tiles / tap_clear_type / restore_turns / fill_bias / reveal_tiles), so once summoned
+## they show in the rack and are USABLE through the normal use_tool_on_grid path with no
+## special-casing. miners_hat's reveal_tiles reveals hidden boss cells (the hide_resources layer it
+## awaited now exists). Only hourglass (undo_move) stays summonable-but-effect-less — it awaits the
+## board/inventory-SNAPSHOT milestone and is NOT a ToolConfig member (see PortalConfig's scope note).
 func summon_magic_tool(id: String) -> Dictionary:
 	if not portal_built:
 		return {"ok": false, "reason": "no_portal"}
@@ -478,9 +917,9 @@ func summon_magic_tool(id: String) -> Dictionary:
 	influence = maxi(0, influence - cost)
 	# Write DIRECTLY into the tools dict via ToolState.set_count (mirrors the React slice).
 	# set_count (NOT grant_tool) is used because it works uniformly for every PortalConfig id:
-	# the 8 implementable magic tools ARE ToolConfig members now (grant_tool would also accept
-	# them), but hourglass/miners_hat are still non-ToolConfig (grant_tool would reject those),
-	# so set_count keeps a single bypass-the-gate path for the whole catalog.
+	# the 9 implementable magic tools ARE ToolConfig members now (grant_tool would also accept
+	# them), but hourglass is still non-ToolConfig (grant_tool would reject it), so set_count keeps
+	# a single bypass-the-gate path for the whole catalog.
 	tool_state.set_count(id, tool_count(id) + 1)
 	return {"ok": true, "id": id, "count": tool_count(id), "influence": influence}
 
@@ -616,6 +1055,114 @@ static func _default_workers() -> Dictionary:
 		out[id] = 0
 	return out
 
+# ── Unified ability channels (T17/T21 — AbilityAggregate) ──────────────────────
+## Cached aggregated ability channels. The GDScript analogue of React's
+## computeAggregatedAbilities (src/features/workers/aggregate.ts): folds every BUILT building's
+## abilities (weight 1) and every ACTIVE+DISCOVERED tile's PASSIVE/on_board_fill abilities
+## (weight 1) into the unified channel object (AbilityAggregate.empty_channels()). NULL until
+## first read; invalidated (set to {}) on any source change — build / demolish / hire / fire /
+## set_active_tile — and lazily recomputed by compute_ability_channels().
+##
+## WORKERS ARE NOT FED HERE (deliberate, to avoid DOUBLE-COUNTING): the two worker ability kinds
+## (threshold_reduce_category, recipe_input_reduce) are already wired through the dedicated
+## worker_threshold_reduction → credit_chain and worker_recipe_input_reduction → craft paths.
+## Feeding workers into this aggregate AND reading threshold_reduce / recipe_input_reduce from it
+## at those sites would apply the worker reduction twice. Workers carry no OTHER channel today
+## (WorkerConfig), so excluding them costs nothing — the unified aggregate covers buildings + tiles
+## for every channel, and the additive credit_chain/craft sites layer worker + aggregate together.
+## hire/fire still invalidate the cache (harmless + future-proof if a worker gains a non-overlapping
+## ability that SHOULD aggregate).
+##
+## NO-OP DEFAULT: a fresh game has no ability buildings built and default-active tiles whose passive
+## abilities are empty, so this returns AbilityAggregate.empty_channels() — every channel zero/empty,
+## leaving every wired economy site byte-identical. TRANSIENT cache: never persisted.
+var _ability_channels_cache: Variant = null
+
+## Drop the cached channels so the next compute_ability_channels() rebuilds. Called from every
+## source-mutating path (build / demolish / hire / fire / set_active_tile).
+func _invalidate_ability_channels() -> void:
+	_ability_channels_cache = null
+
+## The aggregated ability channels for the CURRENT sources (built buildings + active discovered
+## tiles), cached until a source changes. Mirrors computeAggregatedAbilities
+## (src/features/workers/aggregate.ts): build the source list, fold via AbilityAggregate. Every
+## consumer (credit_chain, close_season, craft, the cap / turn-budget / hazard sites) reads the
+## channel it needs off the returned Dictionary.
+func compute_ability_channels() -> Dictionary:
+	if _ability_channels_cache != null:
+		return _ability_channels_cache
+	var sources: Array = []
+	# Buildings: every BUILT building with abilities, weight 1 (builtBuildingSources, aggregate.ts:90).
+	for id in buildings:
+		var bab: Array = BuildingConfig.abilities(id)
+		if bab.is_empty():
+			continue
+		sources.append({"kind": "building", "source_id": id, "abilities": bab, "weight": 1.0})
+	# Active+discovered tiles: PASSIVE / on_board_fill abilities only (discoveredTileSources,
+	# aggregate.ts:115-132). Chain-time tile abilities (free_moves / coin) are read per-chain off the
+	# chained tile (accrue_chain_abilities / chain_coin_bonus) — feeding them here would DOUBLE-COUNT.
+	for src in _active_tile_ability_sources():
+		sources.append(src)
+	# species_by_category context for threshold_reduce_category expansion: every category → the tiles
+	# in it with their produced resource as base_resource (the React speciesByCategory analogue).
+	var ctx: Dictionary = {"species_by_category": _species_by_category()}
+	_ability_channels_cache = AbilityAggregate.aggregate_abilities(sources, ctx)
+	return _ability_channels_cache
+
+## Source descriptors for every tile variant that is currently ACTIVE in its category AND
+## discovered, restricted to PASSIVE / on_board_fill abilities (the tile aggregator triggers).
+## Mirrors discoveredTileSources (src/features/workers/aggregate.ts:115-132). weight 1 per tile.
+func _active_tile_ability_sources() -> Array:
+	_ensure_tile_collection()
+	var out: Array = []
+	for cat in tile_active_by_category.keys():
+		var tile_id: String = String(tile_active_by_category.get(cat, ""))
+		if tile_id == "":
+			continue
+		if not bool(tile_discovered.get(tile_id, false)):
+			continue
+		var all_ab: Array = TileVariantConfig.abilities_of(tile_id)
+		if all_ab.is_empty():
+			continue
+		var passive: Array = []
+		for inst in all_ab:
+			var aid: String = String((inst as Dictionary).get("id", ""))
+			if aid == "":
+				continue
+			var inst_trigger: String = String((inst as Dictionary).get("trigger", ""))
+			if AbilityConfig.is_tile_aggregator_trigger(aid, inst_trigger):
+				passive.append(inst)
+		if passive.is_empty():
+			continue
+		out.append({"kind": "tile", "source_id": tile_id, "abilities": passive, "weight": 1.0})
+	return out
+
+## category -> Array[{ "base_resource": String }] for threshold_reduce_category expansion. The
+## GDScript analogue of TILE_TYPES_BY_CATEGORY (src/features/tileCollection/data.ts) reduced to the
+## one field the aggregator needs: each tile's produced resource keyed under its category. Built from
+## Constants.category_of + Constants.produced_resource over every catalog Tile (deduped per resource
+## so a category contributes each producible resource once).
+func _species_by_category() -> Dictionary:
+	var out: Dictionary = {}
+	for tile in Constants.PRODUCES.keys():
+		var cat: String = Constants.category_of(int(tile))
+		if cat == "":
+			continue
+		var res: String = Constants.produced_resource(int(tile))
+		if res == "":
+			continue
+		if not out.has(cat):
+			out[cat] = []
+		# De-dup by base_resource within the category.
+		var seen: bool = false
+		for sp in out[cat]:
+			if String((sp as Dictionary).get("base_resource", "")) == res:
+				seen = true
+				break
+		if not seen:
+			out[cat].append({"base_resource": res})
+	return out
+
 ## Hired count of worker `id` (0 when none hired / unknown id).
 func worker_count(id: String) -> int:
 	return int(workers.get(id, 0))
@@ -667,6 +1214,10 @@ func hire_worker(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	workers[id] = worker_count(id) + 1
+	# T17/T21: invalidate the unified-ability cache (harmless today — workers are excluded from
+	# the aggregate to avoid double-counting their threshold/recipe channels — but keeps the cache
+	# correct if a worker ever gains a non-overlapping aggregator ability).
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id, "count": worker_count(id), "cost": cost}
 
 ## Fire one worker of `id`: decrement the count by 1 (floored at 0). NO refund —
@@ -679,6 +1230,8 @@ func fire_worker(id: String) -> Dictionary:
 	if worker_count(id) <= 0:
 		return {"ok": false, "reason": "none"}
 	workers[id] = worker_count(id) - 1
+	# T17/T21: invalidate the unified-ability cache (see hire_worker note).
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id, "count": worker_count(id)}
 
 ## Total threshold reduction applied to a chain of `tile_type`: the SUM over every
@@ -730,7 +1283,14 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# units. The floor only ever applies to a REAL (positive) threshold — the
 	# NO_THRESHOLD sentinel branch below (threshold <= 0, hazards) is untouched.
 	if threshold > 0:
-		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type))
+		# T17/T21 (ADDITIVE): the unified aggregate's threshold_reduce channel (BUILDINGS + TILES —
+		# e.g. Observatory threshold_reduce_category gem -1, keyed by produced resource) stacks ON TOP
+		# of the worker reduction. It is keyed by RESOURCE (the React effectiveThresholds key), so look
+		# it up by this chain's produced `resource`. EMPTY for a fresh game → 0 → eff_threshold
+		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
+		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
+		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
+		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -739,16 +1299,65 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	else:
 		# Defensive: a non-positive threshold never yields units; progress carries.
 		progress[resource] = new_progress
-	if units > 0:
-		# Enforce the settlement storage cap: a resource can never exceed the
-		# current tier's per-resource cap (Camp 200 … City 600).
-		var capped: int = mini(int(inventory.get(resource, 0)) + units, settlement.cap())
+	# T17/T21 (ADDITIVE): bonus_yield channel — extra copies of the produced resource when a chain
+	# producing it is collected (React GameScene bonusYields[res.key], src/GameScene.ts:1777-1788).
+	# React keys bonus_yield by the chained TILE key (tile_tree_oak, …), so look it up by this tile's
+	# string key. EMPTY for a fresh game → 0 extra. The bonus is added alongside the threshold units
+	# and clamped together to the settlement cap (matching React's wouldGain = gained + bonus, capped).
+	var bonus_units: int = int(round(float(compute_ability_channels()["bonus_yield"].get(Constants.string_key(tile_type), 0.0))))
+	var total_units: int = units + bonus_units
+	if total_units > 0:
+		# Enforce the EFFECTIVE storage cap: tier cap + the Granary's inventory_cap_bonus
+		# (effective_cap == settlement.cap() for a fresh game). A resource can never exceed it.
+		var capped: int = mini(int(inventory.get(resource, 0)) + total_units, effective_cap())
 		inventory[resource] = capped
 	# Coins simplified for M2 — the React per-tile `value` economy is deferred to
 	# M3. Each resolved chain earns at least 1 coin, scaling with chain length.
-	var coins_gain: int = maxi(1, chain_len / 2)
+	# T5: PLUS the chained variant's coin abilities (coin_bonus_flat / coin_bonus_per_tile),
+	# matching the React coin-hook bonus (src/state.ts:393-398: coinHookBonus added to the
+	# base chain coins). chain_coin_bonus is 0 for a tile with no coin ability.
+	# chain_coin_bonus is the chained TILE's own coin abilities (the per-chain tile path, T5).
+	# T17/T21 (ADDITIVE): PLUS the aggregate's coin_bonus channels from BUILDINGS (coinHookBonus =
+	# coinBonusFlat + coinBonusPerTile * chain, src/state.ts:393-398). Buildings feed every ability
+	# regardless of trigger (only TILES are trigger-filtered into the aggregate), so building coin
+	# abilities surface here; the chained tile's coin abilities are NOT in this aggregate (they're the
+	# per-chain path), so there is NO double-count. Both are 0 for a fresh game → byte-identical.
+	var agg_ch: Dictionary = compute_ability_channels()
+	var agg_coin_bonus: int = int(agg_ch["coin_bonus_flat"]) + int(agg_ch["coin_bonus_per_tile"]) * chain_len
+	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
+	# T31 (ADDITIVE): owned Coexist/DriveOut BOONS that grant coin_gain_mult multiply the chain's
+	# coin reward (React boon coin_gain_mult applied to the chain-collected coins). boon_effect_mult
+	# returns 1.0 for a fresh game (no boons owned) → coins_gain unchanged → byte-identical. Floored
+	# back to int so coins stay whole; the result is the final credited gain (reported below).
+	var coin_mult: float = boon_effect_mult(BoonConfig.COIN_GAIN_MULT)
+	if coin_mult != 1.0:
+		coins_gain = int(floor(float(coins_gain) * coin_mult))
 	coins += coins_gain
 	turn += 1
+	# ── T3 + T5: Tile Collection chain folding (ADDITIVE, after the economy is credited) ──
+	# Ported from applyTileCollectionChainEffects (src/state.ts:168-223). The chained tile's
+	# KEY (the React CHAIN_COLLECTED `key`) is the variant's own string id — for a board tile
+	# baseResource == id, so the chain/research discovery keys off the chained tile's id.
+	# A hazard tile (RAT/RUBBLE/COPPER_ORE) has no catalog id → "" → both folds are no-ops.
+	var chained_id: String = TileVariantConfig.id_for_tile(tile_type)
+	if chained_id != "":
+		_discover_from_chain(chained_id, chain_len)
+	# Per-tile FREE-MOVES ability accrual (free_moves + free_turn_if_chain). Accrued PER
+	# CHAIN from the chained variant's abilities, exactly like the React reducer reads
+	# TILE_TYPES_MAP[key].effects at the CHAIN_COLLECTED site (src/state.ts:208-216).
+	accrue_chain_abilities(tile_type, chain_len)
+	# T17/T21: BUILDING free_moves channel (on_chain_collect — a building granting N free moves per
+	# chain). The chained TILE's free_moves are the per-chain path above (accrue_chain_abilities); the
+	# building free_moves come from the unified aggregate (buildings feed every ability, tiles only
+	# their passive ones — so the chained tile is NOT in this aggregate's free_moves → no double-count).
+	# 0 for a fresh game (no free_moves building). free_moves_if_chain (also a building channel) grants
+	# 1 extra when chain_len >= min_chain.
+	var agg_fm: Dictionary = compute_ability_channels()
+	if int(agg_fm["free_moves"]) > 0:
+		tile_free_moves += int(agg_fm["free_moves"])
+	var fmic: Dictionary = agg_fm["free_moves_if_chain"]
+	if not fmic.is_empty() and chain_len >= int(fmic.get("min_chain", 0)):
+		tile_free_moves += int(fmic.get("count", 1))
 	# ── M10 achievements (ADDITIVE, after the economy is fully credited) ─────────
 	# Every resolved chain is one chain (bump by 1). The produced resource feeds the
 	# distinct counter (only first sighting counts; "" for a hazard tile is ignored by
@@ -774,9 +1383,32 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# collect template targets those keys, so the collect tick simply matches nothing.
 	_tick_quests({"type": "collect", "key": Constants.string_key(tile_type), "amount": chain_len})
 	_tick_quests({"type": "chain", "length": chain_len})
+	# ── T30 run telemetry (ADDITIVE, after the economy is fully credited) ────────
+	# Accumulate ONLY while a bounded run is live (React runSummary only ticks between FARM/ENTER and
+	# CLOSE_SEASON). Mirrors the React CHAIN_COLLECTED accumulation (runSummary slice.ts:130-172):
+	# +1 chain, +produced units to resourcesGained[resource] + totalUpgrades, +coins to totalCoinGain,
+	# and a longest-chain "best moment" snapshot (the LONGEST chain by length, with its key + reward).
+	if farm_run_active:
+		var produced: int = total_units   # units + bonus_units actually banked
+		run_chains_played += 1
+		run_total_upgrades += produced
+		run_total_coins += coins_gain
+		if produced > 0 and resource != "":
+			run_resources_gained[resource] = int(run_resources_gained.get(resource, 0)) + produced
+		# Best moment = the LONGEST single chain (React: length > biggest.count). Ties keep the first.
+		if chain_len > run_longest_chain:
+			run_longest_chain = chain_len
+			run_best_chain = {
+				"count": chain_len,
+				"key": Constants.string_key(tile_type),
+				"coin_gain": coins_gain,
+				"upgrades": produced,
+				"gained": produced,
+			}
 	return {
 		"resource": resource,
 		"units": units,
+		"bonus_units": bonus_units,   # T17/T21 bonus_yield extra copies (0 without a yield building)
 		"coins_gain": coins_gain,
 		"length": chain_len,
 		"tile_type": tile_type,
@@ -785,6 +1417,267 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 ## Collected whole-unit count of a resource (0 when never collected).
 func qty(resource: String) -> int:
 	return int(inventory.get(resource, 0))
+
+## The EFFECTIVE per-resource inventory cap: the settlement tier cap PLUS the unified aggregate's
+## inventory_cap_bonus channel (the Granary's +300). Mirrors React currentCap (src/utils.ts:166-173):
+## base cap + inventoryCapBonus when the channel is positive. inventory_cap_bonus is 0 for a fresh
+## game (no Granary), so this == settlement.cap() and every cap-clamped write is byte-identical.
+## Every resource-STORE site (credit_chain / craft / buy) clamps to this rather than the raw tier cap.
+func effective_cap() -> int:
+	return settlement.cap() + int(compute_ability_channels()["inventory_cap_bonus"])
+
+# ── Tile Collection: active variants + discovery + abilities ────────────────────────
+## The GDScript analogue of the React `tileCollection` reducer actions (SET_ACTIVE_TILE /
+## BUY_TILE / chain+research+building discovery) and the per-tile-ability accrual the
+## CHAIN_COLLECTED site does (src/state.ts applyTileCollectionChainEffects). TileVariantConfig
+## is the pure data layer; this is the live mutation + query surface the board/HUD/UI use.
+
+## Seed the tile-collection slice on first use (idempotent). Mirrors React's
+## defaultTileCollectionSlice (src/state/helpers.ts:104-119): every `default`-method tile
+## (plus the port base tiles) starts DISCOVERED, and each category's active variant is its
+## base tile. Lazy so a bare GameState.new() round-trips trivially and from_dict can overlay.
+func _ensure_tile_collection() -> void:
+	if _tile_collection_seeded:
+		return
+	_tile_collection_seeded = true
+	# Default active variant per category = the base tile (React activeByCategory seed).
+	if tile_active_by_category.is_empty():
+		tile_active_by_category = TileVariantConfig.default_active_by_category().duplicate()
+	# Discovered set = every default-method tile + the port base tiles.
+	if tile_discovered.is_empty():
+		for id in TileVariantConfig.default_discovered():
+			tile_discovered[id] = true
+
+## True when tile variant `id` is discovered (unlocked). Seeds the slice on first read.
+func is_tile_discovered(id: String) -> bool:
+	_ensure_tile_collection()
+	return bool(tile_discovered.get(id, false))
+
+## The active variant TILE (Constants.Tile enum) for category `cat`. Defaults to the
+## category's base tile; falls back to Constants.EMPTY for an unknown category. Mirrors
+## the React activeByCategory lookup + getActivePool substitution (effects.ts:118-148).
+func active_tile_for_category(cat: String) -> int:
+	_ensure_tile_collection()
+	var id: String = String(tile_active_by_category.get(cat, ""))
+	if id == "" or not TileVariantConfig.is_tile(id):
+		return Constants.EMPTY
+	return TileVariantConfig.tile_for(id)
+
+## The active variant string id for category `cat` ("" when none/unknown).
+func active_tile_id_for_category(cat: String) -> String:
+	_ensure_tile_collection()
+	return String(tile_active_by_category.get(cat, ""))
+
+## SET_ACTIVE_TILE (src/state.ts:1349-1369). Set the active variant for `cat` to variant
+## `tile_id`. Guards (mirroring React, in order): unknown variant → false; the variant's
+## category must equal `cat` → false; the variant must be DISCOVERED → false; already
+## active → true (no-op). On success the variant becomes the category's board tile. Returns
+## true when the active variant is `tile_id` after the call.
+func set_active_tile(cat: String, tile_id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(tile_id):
+		return false
+	var def: Dictionary = TileVariantConfig.by_id(tile_id)
+	if String(def.get("category", "")) != cat:
+		return false                                    # cross-category
+	if not bool(tile_discovered.get(tile_id, false)):
+		return false                                    # undiscovered
+	tile_active_by_category[cat] = tile_id
+	# T17/T21: the active variant for a category changed — its passive abilities may differ, so
+	# drop the unified-ability cache (a tile's passive/on_board_fill abilities feed the aggregate).
+	_invalidate_ability_channels()
+	return true
+
+## BUY_TILE (src/state.ts:1396-1413). If `tile_id` is a `buy`-method variant, not already
+## discovered, and coins cover its coinCost: spend the coins, mark it discovered, return
+## true. Otherwise no mutation, return false. (React folds the buy into discovered ONLY —
+## it does NOT auto-activate; the player activates separately via SET_ACTIVE_TILE.)
+func buy_tile(tile_id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(tile_id):
+		return false
+	var d: Dictionary = TileVariantConfig.discovery_of(tile_id)
+	if String(d.get("method", "")) != "buy":
+		return false
+	if bool(tile_discovered.get(tile_id, false)):
+		return false                                    # already discovered
+	var cost: int = int(d.get("coinCost", 0))
+	if coins < cost:
+		return false
+	coins -= cost
+	tile_discovered[tile_id] = true
+	return true
+
+## Mark variant `id` discovered directly (the TILE_DISCOVERED reducer + daily-reward
+## unlockTile path, src/state.ts:1307-1318/1371-1382). No cost, no method check — used by
+## reward grants. Returns true when this call newly discovered it (false if unknown/already).
+func discover_tile(id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(id):
+		return false
+	if bool(tile_discovered.get(id, false)):
+		return false
+	tile_discovered[id] = true
+	return true
+
+## Accrue `amount` research toward `research`-method variant `id`; at >= researchAmount the
+## variant is discovered. Mirrors the research branch of applyTileCollectionChainEffects
+## (src/state.ts:191-206): progress is CAPPED at researchAmount; crossing the cap discovers
+## the variant. Returns true when this call newly discovered it.
+func research_tile(id: String, amount: int) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(id):
+		return false
+	var d: Dictionary = TileVariantConfig.discovery_of(id)
+	if String(d.get("method", "")) != "research":
+		return false
+	if bool(tile_discovered.get(id, false)):
+		return false
+	var goal: int = int(d.get("researchAmount", 0))
+	var cur: int = int(tile_research_progress.get(id, 0))
+	var next: int = cur + maxi(0, amount)
+	tile_research_progress[id] = mini(next, goal)
+	if next >= goal:
+		tile_discovered[id] = true
+		return true
+	return false
+
+## The abilities of the chained tile (the active variant in play). Mirrors React reading
+## TILE_TYPES_MAP[key].effects/abilities for the chained tile key (src/state.ts:208-216,
+## 393-396). Returns the variant's abilities Array ([] for a tile with no catalog entry,
+## e.g. RAT/RUBBLE/COPPER_ORE).
+func tile_abilities(tile_type: int) -> Array:
+	var id: String = TileVariantConfig.id_for_tile(tile_type)
+	if id == "":
+		return []
+	return TileVariantConfig.abilities_of(id)
+
+## The abilities of the currently active variant for category `cat` ([] for none).
+func active_tile_abilities(cat: String) -> Array:
+	var tile: int = active_tile_for_category(cat)
+	if tile == Constants.EMPTY:
+		return []
+	return tile_abilities(tile)
+
+## Banked free moves available to spend (the HUD reads this; note_farm_turn consumes it).
+func free_moves() -> int:
+	_ensure_tile_collection()
+	return tile_free_moves
+
+## Per-tile ability accrual for a resolved chain of `tile_type` (the chained variant) of
+## length `chain_len`. Ported from applyTileCollectionChainEffects (src/state.ts:208-216):
+## the chained tile's free_moves ability adds its count; its free_turn_if_chain ability
+## adds 1 when `chain_len >= minChain`. Both accrue PER CHAIN (NOT seeded per season — the
+## React reducer reads the chained tile's effects at the CHAIN_COLLECTED site, every chain).
+## Returns the number of free moves this chain granted (also added to tile_free_moves).
+##
+## NOTE on WHEN (the data.ts descriptions SAY "per season", but the reducer GRANTS per
+## chain — implementation wins, per the brief). coin abilities are credited inside
+## credit_chain's coin math, not here.
+func accrue_chain_abilities(tile_type: int, chain_len: int) -> int:
+	_ensure_tile_collection()
+	var granted: int = 0
+	for ab in tile_abilities(tile_type):
+		var aid: String = String((ab as Dictionary).get("id", ""))
+		var params: Dictionary = (ab as Dictionary).get("params", {})
+		match aid:
+			"free_moves":
+				granted += maxi(0, int(params.get("count", 0)))
+			"free_turn_if_chain":
+				var min_chain: int = int(params.get("minChain", 0))
+				if min_chain > 1 and chain_len >= min_chain:
+					granted += 1
+			_:
+				pass   # pool_weight is inert in production (see TileVariantConfig header);
+				# coin_bonus_* are applied in credit_chain's coin math, not here.
+	tile_free_moves += granted
+	return granted
+
+## The flat + per-tile coin bonus a chain of `tile_type`/`chain_len` earns from the chained
+## variant's coin abilities. Ported from src/state.ts:393-396:
+##   coinHookBonus = coinBonusFlat + coinBonusPerTile * effectiveChain
+## Returns the extra coins (0 when the chained tile has no coin ability).
+func chain_coin_bonus(tile_type: int, chain_len: int) -> int:
+	var flat: int = 0
+	var per_tile: int = 0
+	for ab in tile_abilities(tile_type):
+		var aid: String = String((ab as Dictionary).get("id", ""))
+		var params: Dictionary = (ab as Dictionary).get("params", {})
+		match aid:
+			"coin_bonus_flat":
+				flat += maxi(0, int(params.get("amount", 0)))
+			"coin_bonus_per_tile":
+				per_tile += maxi(0, int(params.get("amount", 0)))
+			_:
+				pass
+	return flat + per_tile * chain_len
+
+## Fold chain-method + research-method discovery for a resolved chain of `resource_key`
+## (the chained tile's key) of length `chain_len`. Ported from applyTileCollectionChainEffects
+## (src/state.ts:176-206): chain-method variants keyed off this resource discover when the
+## chain is long enough; research-method variants keyed off it accrue progress (capped),
+## discovering at the goal. A newly-discovered variant whose category has NO active variant
+## yet becomes that category's active variant (React: activeByCategory[cat] ??= id). Returns
+## an Array[String] of the variant ids newly discovered by this chain (in discovery order).
+func _discover_from_chain(resource_key: String, chain_len: int) -> Array:
+	_ensure_tile_collection()
+	var newly: Array = []
+	# Chain-method discovery (TileVariantConfig.discover_from_chain is the pure helper).
+	for id in TileVariantConfig.discover_from_chain(tile_discovered, resource_key, chain_len):
+		tile_discovered[id] = true
+		newly.append(id)
+		var cat: String = String(TileVariantConfig.by_id(id).get("category", ""))
+		if cat != "" and String(tile_active_by_category.get(cat, "")) == "":
+			tile_active_by_category[cat] = id
+	# Research-method discovery: accrue toward any research variant keyed off this resource.
+	for id in TileVariantConfig.all():
+		var d: Dictionary = TileVariantConfig.discovery_of(id)
+		if String(d.get("method", "")) != "research":
+			continue
+		if String(d.get("researchOf", "")) != resource_key:
+			continue
+		if bool(tile_discovered.get(id, false)):
+			continue
+		var goal: int = int(d.get("researchAmount", 0))
+		var cur: int = int(tile_research_progress.get(id, 0))
+		var nxt: int = cur + chain_len
+		tile_research_progress[id] = mini(nxt, goal)
+		if nxt >= goal:
+			tile_discovered[id] = true
+			newly.append(id)
+			var rcat: String = String(d.get("category", TileVariantConfig.by_id(id).get("category", "")))
+			rcat = String(TileVariantConfig.by_id(id).get("category", ""))
+			if rcat != "" and String(tile_active_by_category.get(rcat, "")) == "":
+				tile_active_by_category[rcat] = id
+	return newly
+
+## Fold building-method discovery for the building `building_id` the player just built.
+## Ported from discoverTileTypesFromBuilding + its fold in the BUILD reducer
+## (src/state.ts:859-873). A newly-discovered variant whose category has no active variant
+## becomes that category's active variant. Returns the Array[String] of newly-discovered ids.
+func _discover_from_building(building_id: String) -> Array:
+	_ensure_tile_collection()
+	var newly: Array = []
+	for id in TileVariantConfig.discover_from_building(tile_discovered, building_id):
+		tile_discovered[id] = true
+		newly.append(id)
+		var cat: String = String(TileVariantConfig.by_id(id).get("category", ""))
+		if cat != "" and String(tile_active_by_category.get(cat, "")) == "":
+			tile_active_by_category[cat] = id
+	return newly
+
+## Save helpers: ensure the slice is seeded, then return an independent copy for to_dict.
+func _tile_collection_dict_active() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_active_by_category.duplicate()
+
+func _tile_collection_dict_discovered() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_discovered.duplicate()
+
+func _tile_collection_dict_research() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_research_progress.duplicate()
 
 # ── Town tier ladder ────────────────────────────────────────────────────────
 
@@ -841,6 +1734,10 @@ func plots_free() -> int:
 func can_build(id: String) -> bool:
 	if not BuildingConfig.is_building(id):
 		return false
+	# T22 founding GATE (React BUILD, state.ts:797): can't build at a zone that isn't founded.
+	# home is always founded → no-op for the home-only game.
+	if not is_settlement_founded(map_current):
+		return false
 	if has_building(id):
 		return false
 	if settlement.tier < BuildingConfig.unlock_tier(id):
@@ -865,6 +1762,10 @@ func can_build(id: String) -> bool:
 func build(id: String) -> Dictionary:
 	if not BuildingConfig.is_building(id):
 		return {"ok": false, "reason": "unknown"}
+	# T22 founding GATE (React BUILD, state.ts:797): can't build at an unfounded zone (home exempt).
+	# Reported with "unfounded" so Main can prompt the founder flow.
+	if not is_settlement_founded(map_current):
+		return {"ok": false, "reason": "unfounded"}
 	if has_building(id):
 		return {"ok": false, "reason": "exists"}
 	if settlement.tier < BuildingConfig.unlock_tier(id):
@@ -887,6 +1788,13 @@ func build(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	buildings.append(id)
+	# T17/T21: a built building changes the unified ability sources — drop the cache so the
+	# next compute_ability_channels rebuilds with this building's abilities folded in.
+	_invalidate_ability_channels()
+	# T3: building-method tile discovery (ADDITIVE, after the build is committed). Mirrors the
+	# React BUILD reducer's discoverTileTypesFromBuilding fold (src/state.ts:859-873): owning
+	# the building discovers its `building`-method variants (e.g. the Kitchen → Broccoli).
+	_discover_from_building(id)
 	# M10 achievements (ADDITIVE): a DISTINCT building id → +1 on the first build of
 	# each id (build() already rejects a re-build of an existing id, but the distinct
 	# guard makes the counter robust even if a future caller demolishes + rebuilds).
@@ -895,6 +1803,11 @@ func build(id: String) -> Dictionary:
 	# event so build-gated beats (act1_lumber_raised on event.id=="lumber_camp",
 	# act2_kitchen on "kitchen") can fire. The success result below is UNCHANGED.
 	post_story_event({"type": "building_built", "id": id})
+	# T22 (ADDITIVE, after the build): a build may have pushed the ACTIVE settlement past its keeper
+	# threshold — but a settlement only COMPLETES once its keeper is RESOLVED, so this grants a token
+	# only when both hold. Mirrors React's grantEarnedHearthTokens fold after BUILD (state.ts:889).
+	# A fresh / unresolved game grants nothing → economy unchanged.
+	grant_earned_hearth_tokens()
 	return {"ok": true, "id": id, "name": BuildingConfig.building_name(id)}
 
 ## Remove spawner `id`, freeing its plot and dropping its category from the pool.
@@ -905,16 +1818,25 @@ func demolish(id: String) -> Dictionary:
 	if not has_building(id):
 		return {"ok": false, "reason": "not_built"}
 	buildings.erase(id)
+	# T17/T21: removing a building changes the ability sources — drop the cache.
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id}
 
 # ── Refining (recipe crafting at refiner buildings) ───────────────────────────
 
-## True when `recipe_id` exists, its station building is built, AND inventory
-## covers every input at the required quantity.
+## True when `recipe_id` exists, its station building is built, the settlement tier
+## clears the recipe's tier gate, AND inventory covers every input at the required
+## quantity.
 func can_craft(recipe_id: String) -> bool:
 	if not RecipeConfig.is_recipe(recipe_id):
 		return false
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
+		return false
+	# T15: recipe-level tier gate. React tiers (1/2/3) map to a minimum settlement tier
+	# (RecipeConfig.RECIPE_TIER_MIN_SETTLEMENT). Tier-1 recipes map to Camp, so this is a
+	# no-op for BREAD/SUPPLIES (both React tier 1) at the default Camp tier — they stay
+	# craftable exactly as before. Higher-tier recipes need a more advanced town.
+	if settlement.tier < RecipeConfig.recipe_min_settlement_tier(recipe_id):
 		return false
 	# Workers (ADDITIVE): mirror craft()'s effective inputs so the gate matches what
 	# craft will actually deduct. At 0 bakers this equals RecipeConfig.recipe_inputs.
@@ -930,22 +1852,34 @@ func can_craft(recipe_id: String) -> bool:
 ## At 0 matching workers the reduction is 0, so this returns the base inputs verbatim.
 func _effective_recipe_inputs(recipe_id: String) -> Dictionary:
 	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	# T17/T21: BUILDING recipe_input_reduce (the Mill on bread/flour) stacks ON TOP of the worker
+	# reduction (the Baker), both on the same React recipe_input_reduce channel (src/state.ts). The
+	# aggregate's contribution is keyed { recipe -> { input -> amount } }; EMPTY for a fresh game →
+	# only the worker reduction applies (and that's 0 too) → inputs byte-identical to the base recipe.
+	# Workers are NOT in this aggregate (dedicated path) so there is no double-count. Floored at 1.
+	var agg_recipe: Dictionary = compute_ability_channels()["recipe_input_reduce"].get(recipe_id, {})
 	for k in inputs.keys():
 		var reduction: int = worker_recipe_input_reduction(recipe_id, String(k))
+		reduction += int(floor(float(agg_recipe.get(String(k), 0.0))))
 		if reduction > 0:
 			inputs[k] = maxi(1, int(inputs[k]) - reduction)
 	return inputs
 
-## Craft `recipe_id`: deduct every input (floored at 0), add the recipe's output
-## quantity to inventory (clamped to the settlement cap), and return
-## {ok:true, output, qty, recipe} on success. On failure returns {ok:false, reason}
-## WITHOUT mutating; reason is the FIRST guard that trips, in order:
-## "unknown" → "no_station" → "insufficient".
+## Craft `recipe_id`: deduct every input (floored at 0), then ROUTE the output by its
+## kind — a GOOD is added to inventory (clamped to the settlement cap); a TOOL is granted
+## as a tool charge (grant_tool). Returns {ok:true, output, qty, recipe, kind} on success.
+## On failure returns {ok:false, reason} WITHOUT mutating; reason is the FIRST guard that
+## trips, in order: "unknown" → "no_station" → "locked" → "insufficient".
 func craft(recipe_id: String) -> Dictionary:
 	if not RecipeConfig.is_recipe(recipe_id):
 		return {"ok": false, "reason": "unknown"}
 	if not has_building(RecipeConfig.recipe_station(recipe_id)):
 		return {"ok": false, "reason": "no_station"}
+	# T15: recipe-level tier gate (same gate as can_craft). Reported "locked" — the recipe
+	# exists and its station is built, but the town isn't advanced enough yet. Tier-1
+	# recipes (BREAD/SUPPLIES) map to Camp so this never trips for them.
+	if settlement.tier < RecipeConfig.recipe_min_settlement_tier(recipe_id):
+		return {"ok": false, "reason": "locked"}
 	# Workers (ADDITIVE): recipe_input_reduce workers (the Baker) shave inputs off the
 	# matching recipe. _effective_recipe_inputs floors each reduced input at 1, and the
 	# reduction is 0 when no Baker is hired — so at 0 bakers the inputs are byte-identical
@@ -955,7 +1889,7 @@ func craft(recipe_id: String) -> Dictionary:
 	for k in inputs.keys():
 		if int(inventory.get(k, 0)) < int(inputs[k]):
 			return {"ok": false, "reason": "insufficient"}
-	# All guards passed — commit: deduct inputs, then add the output (cap-clamped).
+	# All guards passed — commit: deduct inputs, then route the output.
 	for k in inputs.keys():
 		var remaining: int = maxi(0, int(inventory.get(k, 0)) - int(inputs[k]))
 		if remaining == 0:
@@ -964,12 +1898,24 @@ func craft(recipe_id: String) -> Dictionary:
 			inventory[k] = remaining
 	var output: String = RecipeConfig.recipe_output(recipe_id)
 	var qty_out: int = RecipeConfig.recipe_qty(recipe_id)
-	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, settlement.cap())
+	var kind: String = RecipeConfig.recipe_output_kind(recipe_id)
+	# Route by output kind. TOOL recipes (the Workshop) grant a tool charge — the in-game
+	# source of tools that previously only came from grants/the Portal. GOOD recipes bank
+	# the good (cap-clamped). BREAD/SUPPLIES are KIND_GOOD, so their path is unchanged.
+	if kind == RecipeConfig.KIND_TOOL:
+		grant_tool(output, qty_out)
+	else:
+		inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, effective_cap())
 	# Quests (ADDITIVE): one craft ticks the CRAFT quest event, keyed by the recipe's
 	# OUTPUT key (matching React's craft tick on the crafted item), count = qty produced.
 	# No-op loop over [] with an empty quest board.
 	_tick_quests({"type": "craft", "item": output, "count": qty_out})
-	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id}
+	# T24 boss (ADDITIVE): an iron_bar-target boss (Ember Drake) advances +1 per recipe that
+	# CONSUMES iron_bar (note_boss_craft — the React CRAFTING/CRAFT_RECIPE boss branch). A no-op
+	# off that boss / with no boss. note_boss_craft auto-resolves the fight on the unit that meets
+	# the target; the caller's state_changed → _on_town_changed refresh re-syncs the board/HUD.
+	var boss_craft: Dictionary = note_boss_craft(recipe_id)
+	return {"ok": true, "output": output, "qty": qty_out, "recipe": recipe_id, "kind": kind, "boss": boss_craft}
 
 # ── Market (sell / buy for coins) ─────────────────────────────────────────────
 
@@ -989,7 +1935,8 @@ func sell(resource: String, qty: int) -> Dictionary:
 		inventory.erase(resource)
 	else:
 		inventory[resource] = remaining
-	var coins_gain: int = MarketConfig.sell_price(resource) * qty
+	# T16: use the LIVE drifted sell price (falls back to base when market_prices is empty).
+	var coins_gain: int = live_sell_price(resource) * qty
 	coins += coins_gain
 	return {"ok": true, "coins_gain": coins_gain, "resource": resource, "qty": qty}
 
@@ -1008,14 +1955,15 @@ func buy(resource: String, qty: int) -> Dictionary:
 		return {"ok": false, "reason": "bad_qty"}
 	if not MarketConfig.can_buy(resource):
 		return {"ok": false, "reason": "not_buyable"}
-	var price: int = MarketConfig.buy_price(resource)
+	# T16: use the LIVE drifted buy price (falls back to base when market_prices is empty).
+	var price: int = live_buy_price(resource)
 	# Affordability is checked against the FULL requested qty first: if the player
 	# can't pay for what they asked for, the order is rejected outright.
 	if coins < price * qty:
 		return {"ok": false, "reason": "cant_afford"}
-	# Cap discipline: only buy (and only charge for) what actually fits in storage.
+	# Cap discipline: only buy (and only charge for) what actually fits in storage (effective cap).
 	var current: int = int(inventory.get(resource, 0))
-	var room: int = maxi(0, settlement.cap() - current)
+	var room: int = maxi(0, effective_cap() - current)
 	var actual: int = mini(qty, room)
 	if actual == 0:
 		return {"ok": false, "reason": "cap_full"}
@@ -1044,36 +1992,93 @@ func orderable_resources() -> Array:
 			out.append(res)
 	return out
 
-## Roll a single fresh order from the current orderable resources — a uniform
-## resource pick, a qty in [MIN_QTY, MAX_QTY], and the matching reward. Pure: does
-## NOT mutate `orders`.
-func generate_order() -> Dictionary:
-	var pool: Array = orderable_resources()
-	var resource: String = String(pool[rng.randi_range(0, pool.size() - 1)])
-	var qty: int = rng.randi_range(OrderConfig.MIN_QTY, OrderConfig.MAX_QTY)
-	var reward: int = OrderConfig.reward_for(resource, qty)
-	# ADDITIVE (NPC bonding): pick the requesting NPC via the SAME seeded `rng` so
-	# generation stays reproducible, and carry `base_reward` (== the rolled reward)
-	# alongside the unchanged `reward` field. `reward` STAYS the base so any
-	# order["reward"] reader is unaffected; fill_order computes the bond-adjusted
-	# PAYOUT from `base_reward` at fill time.
+## Roll a single fresh order (T19 value-scaled + crafted-good pool). Optional
+## `exclude_npcs` / `exclude_keys` arrays let the caller forbid an NPC or a resource/good
+## already requested by another slot, so the 3-order board never duplicates an NPC or a
+## requested key (React makeOrder's excludeNpcs / excludeOrderKeys, src/state/helpers.ts).
+##
+## CRAFTED-GOOD POOL (React level >= 3, 30%). At almanac level CRAFTED_ORDER_LEVEL+ a roll
+## has a CRAFTED_ORDER_CHANCE chance of being a crafted-GOOD order (round(value×qty×1.5),
+## qty 1-3); otherwise it's a value-scaled RESOURCE order (max(20, value×qty×6), level-
+## scaled qty). The requesting NPC is picked from the roster (minus exclusions). Carries
+## `base_reward` (== the rolled reward) alongside `reward`; fill_order pays the bond-adjusted
+## PAYOUT from `base_reward`. Also carries `kind` ("resource" | "crafted") for the UI.
+## Pure: does NOT mutate `orders`. All randomness flows through the seeded `rng` so a
+## given seed reproduces the same board (incl. crafted/resource choice + npc).
+func generate_order(exclude_npcs: Array = [], exclude_keys: Array = []) -> Dictionary:
+	var level: int = almanac_level
+	# Crafted-good order? Only at level CRAFTED_ORDER_LEVEL+, CRAFTED_ORDER_CHANCE of the time,
+	# and only when a crafted-good is actually available + not excluded.
+	var use_crafted: bool = false
+	if level >= OrderConfig.CRAFTED_ORDER_LEVEL and rng.randf() < OrderConfig.CRAFTED_ORDER_CHANCE:
+		use_crafted = true
+
+	var key: String
+	var qty: int
+	var reward: int
+	var kind: String
+	if use_crafted:
+		var crafted_pool: Array = OrderConfig.crafted_order_pool()
+		var crafted_pick: Array = _filter_pool(crafted_pool, exclude_keys)
+		if crafted_pick.is_empty():
+			# No distinct crafted good available — fall back to a resource order.
+			use_crafted = false
+		else:
+			key = String(crafted_pick[rng.randi_range(0, crafted_pick.size() - 1)])
+			qty = OrderConfig.crafted_qty(rng.randf())
+			reward = OrderConfig.crafted_reward_for(key, qty)
+			kind = "crafted"
+	if not use_crafted:
+		var pool: Array = orderable_resources()
+		var resource_pick: Array = _filter_pool(pool, exclude_keys)
+		# If every orderable resource is already requested, allow a repeat (never deadlock).
+		if resource_pick.is_empty():
+			resource_pick = pool
+		key = String(resource_pick[rng.randi_range(0, resource_pick.size() - 1)])
+		var value: int = MarketConfig.sell_price(key)
+		qty = OrderConfig.qty_for(value, level, rng.randf())
+		reward = OrderConfig.reward_for(key, qty)
+		kind = "resource"
+
+	# Pick the requesting NPC (excluding any already used), via the SAME seeded `rng`.
 	var roster: Array = npcs_state.roster
 	if roster.is_empty():
 		roster = NpcConfig.all_ids()
-	var npc: String = String(roster[rng.randi_range(0, roster.size() - 1)])
+	var npc_pick: Array = _filter_pool(roster, exclude_npcs)
+	if npc_pick.is_empty():
+		npc_pick = roster   # more orders than NPCs — allow a repeat rather than deadlock
+	var npc: String = String(npc_pick[rng.randi_range(0, npc_pick.size() - 1)])
 	return {
-		"resource": resource,
+		"resource": key,
 		"qty": qty,
 		"reward": reward,
 		"npc": npc,
 		"base_reward": reward,
+		"kind": kind,
 	}
 
-## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls.
-## Idempotent once full. Call after load and after each fill.
+## Return `pool` with every entry present in `exclude` removed (preserving order).
+func _filter_pool(pool: Array, exclude: Array) -> Array:
+	if exclude.is_empty():
+		return pool.duplicate()
+	var out: Array = []
+	for e in pool:
+		if not exclude.has(e):
+			out.append(e)
+	return out
+
+## Top the order board back up to OrderConfig.MAX_ORDERS by appending fresh rolls,
+## forbidding any NPC or requested resource/good already on the board so the 3 slots
+## never duplicate (React's excludeNpcs / excludeOrderKeys accumulation). Idempotent
+## once full. Call after load and after each fill.
 func refill_orders() -> void:
 	while orders.size() < OrderConfig.MAX_ORDERS:
-		orders.append(generate_order())
+		var used_npcs: Array = []
+		var used_keys: Array = []
+		for o in orders:
+			used_npcs.append(String((o as Dictionary).get("npc", "")))
+			used_keys.append(String((o as Dictionary).get("resource", "")))
+		orders.append(generate_order(used_npcs, used_keys))
 
 ## True when `index` is a real order AND inventory holds enough to fill it.
 func can_fill_order(index: int) -> bool:
@@ -1115,14 +2120,20 @@ func fill_order(index: int) -> Dictionary:
 	# cap, so a big-reward order can push coins arbitrarily high.
 	coins += payout
 	# Filling an order warms the relationship: +BOND_GAIN_PER_FILL, clamped to 10.
-	gain_bond(npc, BOND_GAIN_PER_FILL)
+	# T31 (ADDITIVE): owned BOONS that grant bond_gain_mult scale this order-fill bond gain
+	# (React boon bond_gain_mult applied to bond gains from gifts/orders). 1.0 for a fresh game
+	# (no boons owned) → +BOND_GAIN_PER_FILL unchanged → byte-identical order behaviour.
+	gain_bond(npc, BOND_GAIN_PER_FILL * boon_effect_mult(BoonConfig.BOND_GAIN_MULT))
 	orders.remove_at(index)
 	refill_orders()
 	# M10 achievements (ADDITIVE): one fulfilled order → +1 on orders_fulfilled.
 	bump_counter("orders_fulfilled")
 	# Story engine (ADDITIVE, after the order is committed): post an "order_fulfilled"
-	# event so act1_first_order can fire. The success result below is UNCHANGED.
-	post_story_event({"type": "order_fulfilled"})
+	# event so act1_first_order can fire. T29: also carry the requesting NPC's NEW bond
+	# (after the +BOND_GAIN_PER_FILL warm) on event.bond so side_bond_liked can fire when an
+	# order fill pushes a villager into Liked (>= 7) — the same fact give_gift posts. The
+	# success result below is UNCHANGED.
+	post_story_event({"type": "order_fulfilled", "npc": npc, "bond": npc_bond(npc)})
 	# Quests (ADDITIVE): one fulfilled order ticks the ORDER quest event (+1 to any
 	# order-category quest). No-op loop over [] with an empty quest board.
 	_tick_quests({"type": "order"})
@@ -1163,8 +2174,15 @@ func enter_mine() -> Dictionary:
 		return {"ok": false, "reason": "no_supplies"}
 	var s: int = qty("supplies")
 	inventory.erase("supplies")
+	# T30: record the supplies spent on this expedition for the run-summary dashboard (React
+	# EXPEDITION/DEPART supply). Accumulates across expeditions launched since the last run start.
+	run_supplies_consumed["supplies"] = int(run_supplies_consumed.get("supplies", 0)) + s
 	mine_turns_left = s
 	active_biome = "mine"
+	# T11/T23: a fresh expedition starts with NO mine hazards and NO mysterious ore active. They
+	# spawn during the run (roll_mine_hazard_on_fill / spawn_mysterious_ore_on_fill on a board fill).
+	mine_hazards = MineHazardLogic.default_state()
+	mysterious_ore = {}
 	return {"ok": true, "turns": s}
 
 ## Spend one mine turn. Call AFTER a mine chain resolves (the chain's resources are
@@ -1175,6 +2193,10 @@ func note_mine_turn() -> Dictionary:
 	mine_turns_left = maxi(0, mine_turns_left - 1)
 	if mine_turns_left == 0:
 		active_biome = "farm"
+		# T11/T23: the expedition is over — clear the mine hazards + any live ore so a stale hazard
+		# can never bleed onto the farm (mirrors leave_mine / the harbor pearl-clear on exit).
+		mine_hazards = MineHazardLogic.default_state()
+		mysterious_ore = {}
 		return {"exited": true, "turns_left": 0}
 	return {"exited": false, "turns_left": mine_turns_left}
 
@@ -1183,6 +2205,468 @@ func note_mine_turn() -> Dictionary:
 func leave_mine() -> void:
 	active_biome = "farm"
 	mine_turns_left = 0
+	# T11/T23: drop the mine hazards + live ore on early exit too (mirrors note_mine_turn's exit).
+	mine_hazards = MineHazardLogic.default_state()
+	mysterious_ore = {}
+
+# ── T26: Cartography travel state machine (ported from src/features/cartography/slice.ts) ──
+
+## The player-level used for map node level gates. The port has no React `state.level`; its
+## closest analogue is the Almanac track level (almanac_level), so the world-map level gate
+## reads it (React slice.ts:72 `state.level || 1`). Floored at 1.
+func player_level() -> int:
+	return maxi(1, almanac_level)
+
+## Seed the default map travel state: home VISITED, its neighbours DISCOVERED, every other node
+## HIDDEN. map_current = "home". Idempotent — only seeds when the dict is empty, so a loaded
+## save (which restores its own state) is never clobbered. Called from from_dict (and lazily
+## from any travel reader) so a bare GameState is always navigable. Mirrors React's initial
+## (slice.ts:13-20): mapCurrent 'home', visited ['home'], discovered ['home', meadow, orchard].
+func _seed_map_state() -> void:
+	if not map_node_state.is_empty():
+		return
+	# T22: preserve an already-set active zone (a bare GameState has map_current "home", so the
+	# fresh-game path is byte-identical; but a zone activated BEFORE any map reader ran — e.g. via
+	# _activate_zone in a headless flow — must not be clobbered back to home). The current node is
+	# marked visited; home stays at least visited (the React invariant); neighbours of both are
+	# discovered.
+	if map_current == "" or not CartographyConfig.has_node(map_current):
+		map_current = "home"
+	map_node_state = {"home": "visited"}
+	map_node_state[map_current] = "visited"
+	_recompute_discovered()
+
+## The travel-state string for `node_id`: "visited" | "discovered" | "hidden". A node absent
+## from map_node_state reads as hidden. Seeds the default state on first read so a bare
+## GameState answers correctly.
+func map_status(node_id: String) -> String:
+	if map_node_state.is_empty():
+		_seed_map_state()
+	return String(map_node_state.get(node_id, "hidden"))
+
+## True when the player has visited `node_id` at least once (fast-travel eligible).
+func map_visited(node_id: String) -> bool:
+	return map_status(node_id) == "visited"
+
+## Recompute the DISCOVERED ring around the visited set: every neighbour of a visited node that
+## isn't already visited becomes discovered. Visited entries are preserved. Mirrors React's
+## recomputeDiscovered (slice.ts:43-49).
+func _recompute_discovered() -> void:
+	for nid in map_node_state.keys():
+		if String(map_node_state[nid]) == "visited":
+			for nb in CartographyConfig.neighbors_of(nid):
+				if not map_node_state.has(nb):
+					map_node_state[nb] = "discovered"
+
+## Why-can't-I-travel reason for `node_id`, or "" when travel IS allowed. Mirrors React's
+## adjacency-from-visited + level + entry-cost gate (slice.ts:62-79) plus the Hearth-Token gate
+## (the Old Capital, which has no token currency in the port → always "needs_tokens").
+##   - "unknown"      — no such node.
+##   - "here"         — already the current node.
+##   - "needs_tokens" — the Old Capital (gated on the 3 Hearth-Tokens, which don't exist yet).
+##   - ""             — already visited → fast-travel always allowed (skips the gates below).
+##   - "unreachable"  — first-visit, not adjacent to the current node.
+##   - "level"        — first-visit, player level below the node's level requirement.
+##   - "cost"         — first-visit, not enough coins for the entry cost.
+func travel_block_reason(node_id: String) -> String:
+	if not CartographyConfig.has_node(node_id):
+		return "unknown"
+	if node_id == map_current:
+		return "here"
+	# The Old Capital is gated on the three Hearth-Tokens (T22). Until all three are held the node
+	# can't be entered ("needs_tokens"); once the player holds all three it UNLOCKS and falls
+	# through to the normal adjacency/level/cost gate below (reaching it is the finale). React
+	# isOldCapitalUnlocked (data.ts:524-528).
+	if CartographyConfig.requires_hearth_tokens(node_id) and not is_old_capital_unlocked():
+		return "needs_tokens"
+	# Fast-travel: any already-visited node, from anywhere (no adjacency/level/cost).
+	if map_visited(node_id):
+		return ""
+	# First visit: must be adjacent to the CURRENT node, meet the level req, and afford the cost.
+	if not CartographyConfig.is_adjacent(map_current, node_id):
+		return "unreachable"
+	if CartographyConfig.level_req(node_id) > player_level():
+		return "level"
+	if coins < CartographyConfig.entry_cost(node_id):
+		return "cost"
+	return ""
+
+## True when `node_id` can be travelled to RIGHT NOW (travel_block_reason == "").
+func can_travel_to(node_id: String) -> bool:
+	return travel_block_reason(node_id) == ""
+
+## Travel to `node_id`. On a blocked travel returns {ok:false, reason} (the travel_block_reason)
+## WITHOUT mutating. On success:
+##   1. Pay the coin entry cost on a FIRST visit (fast-travel to a visited node is free).
+##   2. Mark the node VISITED + discover its neighbours, set map_current.
+##   3. For a BOARD node (farm/mine/fish) ENTER the matching board: a farm node sets
+##      active_biome "farm" (the persistent home board — no turn budget consumed); a mine node
+##      launches the mine expedition (supplies → mine turns) via enter_mine; a fish node launches
+##      the harbor expedition via enter_harbor. A board launch that fails its OWN guards (no
+##      supplies, etc.) still completes the travel (the marker moves) but reports the launch
+##      result so Main can surface it.
+##   4. NON-board nodes (event/festival/boss/capital) only move the marker — Main acts on `kind`.
+## Returns {ok:true, node, kind, board_kind, entered:bool, first_visit:bool, launch:Dictionary}.
+## `entered` is true when the board biome actually changed; `launch` is the enter_mine/enter_harbor
+## result for an expedition node (empty for farm/non-board).
+func travel_to(node_id: String) -> Dictionary:
+	if map_node_state.is_empty():
+		_seed_map_state()
+	var reason: String = travel_block_reason(node_id)
+	if reason != "":
+		return {"ok": false, "reason": reason}
+
+	var node: Dictionary = CartographyConfig.by_id(node_id)
+	var first_visit: bool = not map_visited(node_id)
+
+	# 1. Entry cost (first visit only — fast-travel is free).
+	if first_visit:
+		var cost: int = CartographyConfig.entry_cost(node_id)
+		if cost > 0:
+			coins -= cost   # guarded by travel_block_reason's "cost" check above
+
+	# 2. Mark visited + discover neighbours + move the marker.
+	map_node_state[node_id] = "visited"
+	_recompute_discovered()
+	map_current = node_id
+
+	# 3/4. Enter the node's board (board nodes) or just report the kind (non-board nodes).
+	var kind: String = String(node.get("kind", ""))
+	var board_kind: String = String(node.get("board_kind", ""))
+	var result := {
+		"ok": true, "node": node_id, "kind": kind, "board_kind": board_kind,
+		"entered": false, "first_visit": first_visit, "launch": {},
+	}
+	# T22 founding GATE: a BOARD node that isn't founded can't be ENTERED — the marker moves (the
+	# player is "at" the place on the map) but no board launches. Home is always founded, so the
+	# home-only game never sees this; meadow/orchard/quarry/etc. must be founded first. Surfaced
+	# honestly via result.launch.reason so Main can prompt the founder flow.
+	if board_kind != "" and not is_settlement_founded(node_id):
+		result["launch"] = {"ok": false, "reason": "unfounded"}
+		return result
+	match board_kind:
+		"farm":
+			# T22: a FARM settlement (home / meadow / orchard) is a persistent board with its OWN
+			# per-zone inventory / buildings / settlement tier. Activate it (snapshot the outgoing
+			# zone, load this one's archive) so the live fields ARE this zone's. A no-op when it's
+			# already the active zone — so the home-only game's live fields stay byte-identical.
+			_activate_zone(node_id)
+			active_biome = "farm"
+			result["entered"] = true
+		"mine":
+			# A mine expedition launches FROM the active (home) settlement, spending ITS supplies.
+			# (The port models mine/harbor as expeditions, not lived-in settlements — the per-zone
+			# split that matters is the persistent FARM boards above.) enter_mine guards on being
+			# on the farm + City tier + supplies; on failure the marker still moved but no board
+			# change happened.
+			var mres: Dictionary = enter_mine()
+			result["launch"] = mres
+			result["entered"] = bool(mres.get("ok", false))
+		"fish":
+			var hres: Dictionary = enter_harbor()
+			result["launch"] = hres
+			result["entered"] = bool(hres.get("ok", false))
+		_:
+			# event / festival / boss / capital — no board; Main handles the activity on `kind`.
+			pass
+	return result
+
+# ── T22: Multi-settlement founding + Hearth-Tokens + active-zone-view ──────────────
+
+## The settlement TYPE for `zone_id` ("farm" | "mine" | "harbor"), or "" when it isn't a
+## settlement. Thin forwarder to CartographyConfig (React settlementTypeForZone).
+func settlement_type_for_zone(zone_id: String) -> String:
+	return CartographyConfig.settlement_type_for_zone(zone_id)
+
+## True when `zone_id` has been founded. Home is ALWAYS founded (implicit, never recorded), so
+## a fresh game answers true only for "home". FAITHFUL to React isSettlementFounded (data.ts:395).
+func is_settlement_founded(zone_id: String) -> bool:
+	if zone_id == "home":
+		return true
+	var rec: Variant = settlements.get(zone_id, null)
+	return rec is Dictionary and bool((rec as Dictionary).get("founded", false))
+
+## Number of zones the player has founded (home is implicit, NOT counted here — it matches React
+## foundedSettlementCount, which counts only state.settlements entries; home is never recorded).
+## Used by the founding-cost growth formula, where k = the count BEFORE home is added (so the
+## first PAID founding sees k=1 once home is folded in — see settlement_founding_cost).
+func founded_settlement_count() -> int:
+	var n: int = 0
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary and bool((rec as Dictionary).get("founded", false)):
+			n += 1
+	# Home is implicitly founded but never recorded in `settlements`; fold it in so the cost
+	# growth (base × growth^(k-1)) matches React, where home IS counted (home is in its map).
+	return n + 1
+
+## Coin cost to found the NEXT settlement. The k-th founding (k = current founded count) costs
+## round(base × growth^(k-1)). With home counted, the 2nd settlement is k=1 → base (300); the
+## 3rd is k=2 → base×1.7; etc. FAITHFUL to React settlementFoundingCost (data.ts:405-408).
+func settlement_founding_cost() -> int:
+	var k: int = maxi(1, founded_settlement_count())
+	return int(round(float(CartographyConfig.FOUNDING_BASE_COINS) * pow(CartographyConfig.FOUNDING_GROWTH, k - 1)))
+
+## A settlement is COMPLETE once (1) it's built up enough to draw its keeper AND (2) its keeper has
+## been resolved. FAITHFUL to React settlementCompleted (data.ts:419-437). The port keys keeper
+## resolution by TYPE (story flags, KeeperConfig), so a settlement of a given type completes once
+## its built count meets the keeper's appears_after_buildings threshold AND that type's keeper is
+## resolved. Reads the zone's built count from the ACTIVE live fields when `zone_id` is the active
+## zone, else from its archive. A zone with no keeper type (non-settlement node) can't complete.
+func settlement_completed(zone_id: String) -> bool:
+	if not is_settlement_founded(zone_id):
+		return false
+	var type: String = settlement_type_for_zone(zone_id)
+	if type == "" or not KeeperConfig.has_keeper(type):
+		return false
+	var built_count: int = _zone_building_count(zone_id)
+	if built_count < KeeperConfig.appears_after_buildings(type):
+		return false
+	# Keeper gate: the type's keeper must be resolved (React's per-zone keeperPath; the port keys
+	# by type — see keeper_resolved). Without this a built-up-but-unresolved settlement never
+	# completes, so its Hearth-Token isn't granted (matching React's keeper gate).
+	return keeper_resolved(type)
+
+## The number of placed buildings at `zone_id`: the live `buildings` array when it's the active
+## zone, else the archived snapshot's buildings. (React builtCountAt — the port's `buildings` is a
+## flat spawner array, so its size IS the built count; no _plots/decorations bookkeeping to skip.)
+func _zone_building_count(zone_id: String) -> int:
+	if zone_id == map_current:
+		return buildings.size()
+	var arc: Variant = zone_archives.get(zone_id, null)
+	if arc is Dictionary:
+		var blds: Variant = (arc as Dictionary).get("buildings", [])
+		if blds is Array:
+			return (blds as Array).size()
+	return 0
+
+## Count of zones that are both founded AND completed (React completedSettlementCount, data.ts:440).
+func completed_settlement_count() -> int:
+	var n: int = 0
+	# Founded non-home zones recorded in `settlements`.
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary and bool((rec as Dictionary).get("founded", false)) and settlement_completed(zid):
+			n += 1
+	# Home is implicitly founded; count it when complete (React counts home — it's in its map).
+	if settlement_completed("home"):
+		n += 1
+	return n
+
+## FOUND_SETTLEMENT (React state.ts:709-735). Found `zone_id` with biome `biome_id`. Guards (the
+## FIRST that trips is reported), in React's order:
+##   "unknown"      — no such map node.
+##   "founded"      — already founded.
+##   "needs_prior"  — a prior settlement must be COMPLETE before founding the next (home exempt —
+##                    but home is always founded, so this only ever gates settlement #2+).
+##   "not_settlement" — the node has no settlement type (event/festival/boss/capital).
+##   "cant_afford"  — not enough GLOBAL coins for settlement_founding_cost().
+## On success: deduct the coins, record settlements[zone_id] = {founded, biome, keeper_path:""},
+## SEED a fresh empty zone archive for it, fold any earned Hearth-Tokens, and return
+## {ok:true, zone, biome, cost}. Does NOT activate the zone (travel does that).
+func found_settlement(zone_id: String, biome_id: String = "") -> Dictionary:
+	if not CartographyConfig.has_node(zone_id):
+		return {"ok": false, "reason": "unknown"}
+	if is_settlement_founded(zone_id):
+		return {"ok": false, "reason": "founded"}
+	# Progression gate (React data: completedSettlementCount(state) < 1): finish your first
+	# settlement before founding the next. home is auto-founded, so the first time this gate is
+	# faced is founding settlement #2 — the player needs home (or another zone) complete first.
+	if completed_settlement_count() < 1:
+		return {"ok": false, "reason": "needs_prior"}
+	var type: String = settlement_type_for_zone(zone_id)
+	if type == "":
+		return {"ok": false, "reason": "not_settlement"}
+	var cost: int = settlement_founding_cost()
+	if coins < cost:
+		return {"ok": false, "reason": "cant_afford"}
+	# React resolveBiomeChoice: the picker passes the chosen id; a missing/unknown choice falls
+	# back to the type's first biome.
+	var biome: Dictionary = CartographyConfig.resolve_biome_choice(type, biome_id)
+	if biome.is_empty():
+		return {"ok": false, "reason": "not_settlement"}
+	# Commit: pay coins, record the founding, seed a fresh empty archive for the new zone.
+	coins -= cost
+	var chosen: String = String(biome.get("id", ""))
+	settlements[zone_id] = {"founded": true, "biome": chosen, "keeper_path": ""}
+	zone_archives[zone_id] = _fresh_zone_archive()
+	# A completed settlement may already grant a token (e.g. home completed before founding #2) —
+	# fold earned tokens after the founding so the Old-Capital unlock stays current.
+	grant_earned_hearth_tokens()
+	return {"ok": true, "zone": zone_id, "biome": chosen, "cost": cost}
+
+## A fresh, empty per-zone archive (a zone that has never been played): empty inventory / progress /
+## buildings, a Camp-tier settlement, 0 spent farm turns. The shape mirrors what _snapshot_live_zone
+## writes, so _load_zone_into_live can read either interchangeably.
+func _fresh_zone_archive() -> Dictionary:
+	return {
+		"inventory": {},
+		"progress": {},
+		"buildings": [],
+		"settlement": Settlement.new().to_dict(),
+		"farm_turns_used": 0,
+	}
+
+## Snapshot the LIVE per-zone fields (the currently-active zone's inventory / progress / buildings /
+## settlement / farm_turns_used) into a plain archive dict. Deep-copies so the archive is
+## independent of subsequent live mutation.
+func _snapshot_live_zone() -> Dictionary:
+	return {
+		"inventory": inventory.duplicate(true),
+		"progress": progress.duplicate(true),
+		"buildings": buildings.duplicate(),
+		"settlement": settlement.to_dict(),
+		"farm_turns_used": farm_turns_used,
+	}
+
+## Load an archive dict (from zone_archives or _fresh_zone_archive) INTO the live per-zone fields.
+## Defensive: missing keys fall back to fresh defaults; buildings keep only real, de-duplicated
+## ids; the settlement tier is rebuilt via Settlement.from_dict (clamps a corrupt tier).
+func _load_zone_into_live(arc: Dictionary) -> void:
+	var inv: Variant = arc.get("inventory", {})
+	inventory = (inv as Dictionary).duplicate(true) if inv is Dictionary else {}
+	var prog: Variant = arc.get("progress", {})
+	progress = (prog as Dictionary).duplicate(true) if prog is Dictionary else {}
+	var blds: Variant = arc.get("buildings", [])
+	buildings = []
+	if blds is Array:
+		for id in blds:
+			var sid: String = String(id)
+			if BuildingConfig.is_building(sid) and not buildings.has(sid):
+				buildings.append(sid)
+	var st: Variant = arc.get("settlement", {})
+	settlement = Settlement.from_dict(st) if st is Dictionary else Settlement.new()
+	farm_turns_used = maxi(0, int(arc.get("farm_turns_used", 0)))
+	# The board pool / ability cache are derived from buildings + the active tile set — invalidate
+	# so the next read rebuilds for the newly-active zone's spawners.
+	_invalidate_ability_channels()
+
+## Activate `zone_id` as the live zone: snapshot the current live fields into the OLD zone's
+## archive, then load `zone_id`'s archive (or a fresh one) into the live fields and set map_current.
+## A no-op when `zone_id` is ALREADY the active zone (so a fresh home-only game that never travels
+## off home never touches the archives — the live fields stay byte-identical). Coins / tools /
+## workers / runes / etc. are GLOBAL and untouched. Returns true when the active zone changed.
+func _activate_zone(zone_id: String) -> bool:
+	if zone_id == map_current:
+		return false
+	# Snapshot the OUTGOING zone's live state into its archive.
+	zone_archives[map_current] = _snapshot_live_zone()
+	# Load the INCOMING zone (its archive, or a fresh one if it's never been played).
+	var arc: Variant = zone_archives.get(zone_id, null)
+	if arc is Dictionary:
+		_load_zone_into_live(arc as Dictionary)
+		# It's now the live zone — drop its archive copy so the live fields are the single source
+		# of truth (re-snapshotted on the next activation away).
+		zone_archives.erase(zone_id)
+	else:
+		_load_zone_into_live(_fresh_zone_archive())
+	map_current = zone_id
+	# Keep the travel state consistent: the active zone is always at least VISITED (you're standing
+	# on it). Only touch an already-seeded map (a bare unseeded map stays lazily seeded by the first
+	# map reader, preserving the fresh-game path).
+	if not map_node_state.is_empty():
+		map_node_state[zone_id] = "visited"
+		_recompute_discovered()
+	return true
+
+## The chosen biome id for `zone_id` (or DEFAULT_HOME_BIOME for home), else "". React
+## settlementBiomeId (data.ts:581-587).
+func settlement_biome_id(zone_id: String) -> String:
+	var rec: Variant = settlements.get(zone_id, null)
+	if rec is Dictionary:
+		var b: String = String((rec as Dictionary).get("biome", ""))
+		if b != "":
+			return b
+	return CartographyConfig.DEFAULT_HOME_BIOME if zone_id == "home" else ""
+
+## The Hearth-Token id for settlement TYPE `type` (heirloomSeed / pactIron / tidesingerPearl), or
+## "" for an unknown type. React HEARTH_TOKEN_FOR_TYPE.
+func hearth_token_for_type(type: String) -> String:
+	return String(CartographyConfig.HEARTH_TOKEN_FOR_TYPE.get(type, ""))
+
+## How many of the three Hearth-Tokens the player holds (0–3). React hearthTokenCount (data.ts:531).
+func hearth_token_count() -> int:
+	var n: int = 0
+	for tok in CartographyConfig.HEARTH_TOKEN_FOR_TYPE.values():
+		if int(heirlooms.get(tok, 0)) >= 1:
+			n += 1
+	return n
+
+## All three Hearth-Tokens collected → the Old Capital is reachable. React isOldCapitalUnlocked
+## (data.ts:524-528).
+func is_old_capital_unlocked() -> bool:
+	return hearth_token_count() >= 3
+
+## Grant the Hearth-Token for every founded + completed settlement TYPE, ONCE each (idempotent —
+## never removes one). FAITHFUL to React grantEarnedHearthTokens (data.ts:541-554). Returns the
+## list of token ids NEWLY granted by this call (empty when nothing changed), so a caller can
+## surface a "you earned a token / the Capital opens" message.
+func grant_earned_hearth_tokens() -> Array:
+	var newly: Array = []
+	# Every founded zone (the recorded non-home ones + the implicit home).
+	var zone_ids: Array = settlements.keys().duplicate()
+	if not zone_ids.has("home"):
+		zone_ids.append("home")
+	for zone_id in zone_ids:
+		if not is_settlement_founded(zone_id) or not settlement_completed(zone_id):
+			continue
+		var type: String = settlement_type_for_zone(zone_id)
+		var tok: String = hearth_token_for_type(type)
+		if tok == "" or int(heirlooms.get(tok, 0)) >= 1:
+			continue
+		heirlooms[tok] = 1
+		newly.append(tok)
+	return newly
+
+## Deep-copy the founding records for persistence (each {founded, biome, keeper_path}).
+func _settlements_to_dict() -> Dictionary:
+	var out: Dictionary = {}
+	for zid in settlements.keys():
+		var rec: Variant = settlements[zid]
+		if rec is Dictionary:
+			out[String(zid)] = (rec as Dictionary).duplicate(true)
+	return out
+
+## Deep-copy the per-zone archives for persistence (each {inventory, progress, buildings,
+## settlement, farm_turns_used}). The ACTIVE zone is NOT here (it's in the live fields).
+func _zone_archives_to_dict() -> Dictionary:
+	var out: Dictionary = {}
+	for zid in zone_archives.keys():
+		var arc: Variant = zone_archives[zid]
+		if arc is Dictionary:
+			out[String(zid)] = (arc as Dictionary).duplicate(true)
+	return out
+
+## Well-form a saved per-zone archive defensively (used by from_dict): inventory/progress values
+## int-coerced (JSON yields floats); buildings keep only real, de-duplicated ids; the settlement
+## tier rebuilt via Settlement.from_dict (clamps a corrupt tier); farm_turns_used floored at 0.
+func _sanitize_zone_archive(arc: Dictionary) -> Dictionary:
+	var inv: Dictionary = {}
+	var raw_inv: Variant = arc.get("inventory", {})
+	if raw_inv is Dictionary:
+		for k in (raw_inv as Dictionary).keys():
+			inv[String(k)] = int((raw_inv as Dictionary)[k])
+	var prog: Dictionary = {}
+	var raw_prog: Variant = arc.get("progress", {})
+	if raw_prog is Dictionary:
+		for k in (raw_prog as Dictionary).keys():
+			prog[String(k)] = int((raw_prog as Dictionary)[k])
+	var blds: Array = []
+	var raw_blds: Variant = arc.get("buildings", [])
+	if raw_blds is Array:
+		for id in (raw_blds as Array):
+			var sid := String(id)
+			if BuildingConfig.is_building(sid) and not blds.has(sid):
+				blds.append(sid)
+	var settle_dict: Variant = arc.get("settlement", {})
+	var settle_clean: Dictionary = Settlement.from_dict(settle_dict).to_dict() if settle_dict is Dictionary else Settlement.new().to_dict()
+	return {
+		"inventory": inv,
+		"progress": prog,
+		"buildings": blds,
+		"settlement": settle_clean,
+		"farm_turns_used": maxi(0, int(arc.get("farm_turns_used", 0))),
+	}
 
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
@@ -1200,9 +2684,26 @@ func farm_turn_budget() -> int:
 ## Compute the turn budget for a NEW bounded run with `use_fertilizer`. Mirrors React's
 ## turnBudgetForZone: max(1, floor((baseTurns + additive) * multiplier)). With base 10 this
 ## is 10 (no fertilizer) or 20 (fertilizer ×2). PURE — does NOT mutate run state.
+##
+## Additive breakdown (mirrors turnBudgetAdditiveBonusForZone, data.ts:173-177):
+##   1. turn_budget_bonus from the unified ability aggregate (Granary / Mining Camp +1 each).
+##      Already wired (T17/T21). 0 for a fresh game → byte-identical.
+##   2. +1 if the Almanac tier-8 "extraTurn" structural flag has been latched (T12).
+##      Mirrors React `if (state.tools?.extraTurn) bonus += 1` — the flag lives in
+##      GameState.almanac_structural (the GDScript analogue of React's tools dict booleans).
+##      0 for a fresh game (flag not yet granted) → byte-identical.
 func farm_run_turn_budget(use_fertilizer: bool) -> int:
 	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
-	var additive: int = 0   # SEAM: the port has no turnBudgetBonus/extraTurn channel yet.
+	# T17/T21: the unified aggregate's turn_budget_bonus channel (the Granary / Mining Camp +1).
+	# Mirrors React turnBudgetForZone's additive (src/features/zones/data.ts:174-175): base + bonus,
+	# then ×multiplier. 0 for a fresh game (no such building) → byte-identical to the old budget.
+	var additive: int = int(compute_ability_channels()["turn_budget_bonus"])
+	# T12: the Almanac "extraTurn" structural flag (+1 additive). Mirrors React
+	# turnBudgetAdditiveBonusForZone (data.ts:176): `if (state.tools?.extraTurn) bonus += 1`.
+	# In the port the flag lives in almanac_structural (line ~648), the GDScript analogue of
+	# React's tools dict bool flags (see AlmanacConfig.gd header).
+	if bool(almanac_structural.get("extraTurn", false)):
+		additive += 1
 	var mult: int = 2 if use_fertilizer else 1
 	return maxi(1, int(floor(float(base + additive) * float(mult))))
 
@@ -1236,6 +2737,27 @@ func note_farm_turn() -> Dictionary:
 	# The season this turn belonged to is read BEFORE the increment (the player spent the turn
 	# under the pre-increment season).
 	var season: String = current_season_name()
+	# T5: a banked FREE MOVE is spent INSTEAD of a real farm turn (no season advance, no
+	# budget tick). Ported from React boardTurnPatch (src/state.ts:147-160): when freeMoves
+	# > 0 the move consumes a free move and returns without incrementing turnsUsed / ticking
+	# the run budget. Mirrors the React semantics exactly — the chain's resources are already
+	# credited (credit_chain ran first); this only governs whether a TURN is spent.
+	_ensure_tile_collection()
+	if tile_free_moves > 0:
+		tile_free_moves -= 1
+		# fill_bias is a per-TURN countdown; a free move does NOT spend a biased turn (React
+		# boardTurnPatch leaves the rest of the turn economy untouched on the free-move path).
+		return {
+			"harvest": false,
+			"ended": false,
+			"free_move": true,
+			"season": season,
+			"turns_used": farm_turns_used,
+			"turns_left": farm_run_turns_left,
+			"budget": budget,
+			"coins": coins,
+			"runes": runes,
+		}
 	farm_turns_used += 1
 	# fill_bias countdown: a biased farm turn was just spent; expire the bias when it runs out.
 	if fill_bias_turns > 0:
@@ -1264,6 +2786,7 @@ func note_farm_turn() -> Dictionary:
 	return {
 		"harvest": harvest,
 		"ended": ended,
+		"free_move": false,
 		"season": season,
 		"turns_used": farm_turns_used,
 		"turns_left": farm_run_turns_left,
@@ -1286,12 +2809,16 @@ func note_farm_turn() -> Dictionary:
 func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	if farm_run_active:
 		return {"ok": false, "reason": "already_running"}
+	# T22 founding GATE (React FARM/ENTER): can't start a run at an unfounded zone. The run plays
+	# the ACTIVE zone (map_current); home is always founded → no-op for the home-only game.
+	if not is_settlement_founded(map_current):
+		return {"ok": false, "reason": "unfounded"}
 	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
 	if coins < cost:
 		return {"ok": false, "reason": "no_coins"}
-	# Fertilizer ×2: the port has NO fertilizer primitive yet (_has_fertilizer() is false), so a
-	# request for it is honestly REJECTED rather than silently downgraded. The ×2 formula stays
-	# wired + tested via farm_run_turn_budget; only the AVAILABILITY is stubbed.
+	# Fertilizer ×2 (T12): _has_fertilizer() now reflects the real tool count (wired).
+	# Requesting fertilizer with 0 charges is REJECTED honestly (no_fertilizer). On success one
+	# charge is consumed via _consume_fertilizer() and the ×2 budget is applied.
 	var fert: bool = use_fertilizer and _has_fertilizer()
 	if use_fertilizer and not fert:
 		return {"ok": false, "reason": "no_fertilizer"}
@@ -1308,7 +2835,77 @@ func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
 	farm_run_selected = _sanitize_selection(selected_tiles)
 	farm_turns_used = 0
 	active_biome = "farm"
+	# T30: reset the run telemetry to a fresh accumulator + snapshot the start-of-run bonds (the
+	# baseline the bond-delta is measured against). Mirrors React startFreshRun (runSummary slice.ts).
+	_reset_run_telemetry(fert)
 	return {"ok": true, "reason": "", "budget": budget}
+
+## T30 — reset the run-telemetry accumulator for a NEW run and snapshot the start-of-run NPC bonds.
+## Called from start_farm_run. The dashboard's "Fertilizer" chip reads farm_run_used_fertilizer
+## (the existing run field), so no separate flag is tracked here. bonds_at_start is a per-NPC
+## snapshot so close_season can compute the rounded bond DELTA (React diffBonds). Only touches the
+## telemetry fields. The `_fert` arg is accepted for call-site symmetry but unused (the run field
+## already carries it).
+func _reset_run_telemetry(_fert: bool) -> void:
+	run_chains_played = 0
+	run_longest_chain = 0
+	run_best_chain = {}
+	run_total_upgrades = 0
+	run_total_coins = 0
+	run_resources_gained = {}
+	run_beats_fired = []
+	run_supplies_consumed = {}
+	# Snapshot every roster NPC's bond at run start (the bond-delta baseline).
+	run_bonds_at_start = {}
+	for id in NpcConfig.all_ids():
+		run_bonds_at_start[String(id)] = npcs_state.bond(id)
+
+## T30 — the rounded NPC bond DELTAS over the run: { npc_id -> round1(end - start) } for every NPC
+## whose bond moved by at least 0.05 since run start. Mirrors React diffBonds (runSummary slice.ts:64-75):
+## round to one decimal, drop near-zero moves. Reads the LIVE bonds vs run_bonds_at_start.
+func run_bond_deltas() -> Dictionary:
+	var out: Dictionary = {}
+	for id in NpcConfig.all_ids():
+		var sid: String = String(id)
+		var start_bond: float = float(run_bonds_at_start.get(sid, 5.0))
+		var end_bond: float = npcs_state.bond(sid)
+		var d: float = end_bond - start_bond
+		if absf(d) >= 0.05:
+			out[sid] = roundf(d * 10.0) / 10.0
+	return out
+
+## T30 — build the rich run-summary DASHBOARD dict the HarvestModal renders at run end. Packs the
+## live telemetry fields + the computed bond deltas + the story-beat TITLES (resolved from
+## StoryConfig) into one self-contained dict. Mirrors the React RunSummary state shape the dashboard
+## reads (runSummary index.tsx). Pure: reads state, never mutates. Safe to call any time (returns a
+## zeroed dict when no run accumulated).
+##   {
+##     biome, zone, turns_budget, fertilizer_used,
+##     chains_played, longest_chain, best_chain:{count,key,coin_gain,upgrades,gained} (or {}),
+##     total_upgrades, total_coins, resources_gained:{}, bond_deltas:{}, supplies_consumed:{},
+##     beats:[{id,title}]
+##   }
+func build_run_summary() -> Dictionary:
+	var beats: Array = []
+	for bid in run_beats_fired:
+		var beat: Dictionary = StoryConfig.beat_by_id(String(bid))
+		var title: String = String(beat.get("title", "")) if not beat.is_empty() else ""
+		beats.append({"id": String(bid), "title": title})
+	return {
+		"biome": farm_run_zone,
+		"zone": farm_run_zone,
+		"turns_budget": farm_run_budget,
+		"fertilizer_used": farm_run_used_fertilizer,
+		"chains_played": run_chains_played,
+		"longest_chain": run_longest_chain,
+		"best_chain": run_best_chain.duplicate(true),
+		"total_upgrades": run_total_upgrades,
+		"total_coins": run_total_coins,
+		"resources_gained": run_resources_gained.duplicate(true),
+		"bond_deltas": run_bond_deltas(),
+		"supplies_consumed": run_supplies_consumed.duplicate(true),
+		"beats": beats,
+	}
 
 ## Keep only entries that are ELIGIBLE base-spawn categories for the home zone, capped at 8
 ## (React selectedTiles.slice(0, 8)). De-dup is NOT applied (React keeps the raw slice); the
@@ -1325,27 +2922,43 @@ func _sanitize_selection(arr: Array) -> Array:
 	return out
 
 ## Whether the player has a fertilizer to spend on a ×2 run budget.
+## Mirrors React `state.tools?.fertilizer > 0` (src/features/zones/data.ts:turnBudgetForZone).
+## Fertilizer is a real ToolConfig member — it is earned via the Workshop recipe
+## rec_fertilizer (hay_bundle + dirt). Until crafting is ported the count starts at 0; the
+## toggle stays hidden and the budget is unchanged. A test helper (grant_test_fertilizer) can
+## grant one to exercise the wiring without crafting.
 func _has_fertilizer() -> bool:
-	return false  # NO-FAKE: no fertilizer/fill-bias-budget primitive in the port yet.
+	return tool_count(ToolConfig.FERTILIZER) > 0
 
-## Consume one fertilizer (the ×2 turn-budget item).
+## Consume one fertilizer (the ×2 turn-budget item). Mirrors React's consumption of
+## state.tools.fertilizer inside the FARM/ENTER reducer.
 func _consume_fertilizer() -> void:
-	pass  # NO-FAKE: no fertilizer primitive to decrement yet (see _has_fertilizer).
+	tool_state.consume(ToolConfig.FERTILIZER)
+
+## TEST HELPER — grant `n` fertilizer charges. NOT used in production paths; only for
+## headless test suites that need to exercise the fertilizer flow without a Workshop.
+func grant_test_fertilizer(n: int = 1) -> void:
+	grant_tool(ToolConfig.FERTILIZER, n)
 
 ## End the active farm run and return to town (the port's CLOSE_SEASON). Grants the
 ## season-end bonus coins, decays NPC bonds above Warm, re-rolls the quest board, then clears
 ## the run + resets the farm to a fresh Spring on the farm biome. Returns
 ## {coins_granted:int, season_ended:String} (the season name BEFORE the reset).
 ##
-## NO-FAKE OMISSIONS — React CLOSE_SEASON (src/state.ts) ALSO does the following, none of which
-## have a port primitive yet and so are deliberately NOT ported here:
-##   - market drift (pickMarketEvent / driftPrices / the market season counter + bubble)
-##   - the `session_ended` story beat trigger
-##   - worker/building season-end tool grants (seasonEndTools) + season_bonus coins channel
-##   - board preserve / Silo+Barn savedField snapshotting
-##   - NPC gift-cooldown reset, tileCollection freeMoves reset, fillBias/magicFertilizer clears
-## Only the bonus coins, bond decay, and quest reroll have real port primitives — those are
-## ported faithfully; the rest are documented seams for a later milestone.
+## WIRED (the React CLOSE_SEASON parity set the port now covers):
+##   - bonus coins (flat SEASON_END_BONUS_COINS + the season_bonus channel) + bond decay + quest reroll
+##   - market drift (T16): market_season++ + _recompute_market (pickMarketEvent / driftPrices)
+##   - worker/building season-end tool grants (season_end_tools channel → grant_tool)
+##   - (T30) the `session_ended` story-beat trigger (post_story_event cascade — fires any threshold/
+##     flag beat that became ready during the run, e.g. act3_finish)
+##   - (T30) board-preserve DECISION (Silo/Barn board_preserve_biomes): reported as `preserve_board`
+##     so Main keeps the grid instead of regenerating when the active biome is preserved
+##   - (T30) tileCollection freeMoves reset + fill-bias clear (tile_free_moves = 0; bias cleared)
+## STILL A SEAM (no port primitive yet, deliberately NOT faked):
+##   - the per-biome savedField GRID SNAPSHOT itself (preserve_board signals the intent; the actual
+##     grid retention is the board slice's job in Main)
+##   - season_end_pool_step (no growable townsfolk hiring pool to step — T20 seam)
+##   - NPC gift-cooldown reset (the port's cooldown is keyed by season index, so it self-clears)
 func close_season() -> Dictionary:
 	# BUG I1 — IDEMPOTENT guard. close_season is reachable from BOTH run-end exit paths (the CTA's
 	# return_to_town and a scrim/ESC dismiss that completes the return in _on_harvest_closed), and a
@@ -1355,9 +2968,57 @@ func close_season() -> Dictionary:
 	if not farm_run_active:
 		return {"coins_granted": 0, "season_ended": ""}
 	var season_ended: String = current_season_name()
-	coins += Constants.SEASON_END_BONUS_COINS  # PORT: React SEASON_END_BONUS_COINS (src/state.ts).
+	# T17/T21: the unified aggregate's SEASON-END channels (mirrors the React CLOSE_SEASON site,
+	# src/state.ts:916-971). All three default to empty for a fresh game (no such building), so the
+	# grant is byte-identical to the old "+25 only" close.
+	var agg: Dictionary = compute_ability_channels()
+	#   season_bonus coins (Chapel +50) — added ALONGSIDE the flat SEASON_END_BONUS_COINS (rounded,
+	#   matching React bonusCoins = round(seasonBonus.coins)).
+	var bonus_coins: int = int(round(float(agg["season_bonus"].get("coins", 0.0))))
+	coins += Constants.SEASON_END_BONUS_COINS + bonus_coins  # PORT: SEASON_END_BONUS_COINS (src/state.ts).
+	#   season_end_tools (grant_tool — Powder Store bomb ×2): grant each tool through the M8b
+	#   grant_tool path (every mapped tool id is a real ToolConfig member). 0 tools for a fresh game.
+	var tools_granted: Dictionary = {}
+	for tool_id in agg["season_end_tools"].keys():
+		var n: int = int(agg["season_end_tools"][tool_id])
+		if n > 0:
+			grant_tool(String(tool_id), n)
+			tools_granted[String(tool_id)] = n
+	#   season_end_pool_step (worker_pool_step — Housing Block): the port hires workers by TYPE up to a
+	#   per-type max_count (WorkerConfig), with NO growable townsfolk "hiring pool" to step (React grows
+	#   workers.poolSize). The channel is aggregated + reported below for the future Townsfolk hire pool
+	#   (T20), but there is no pool primitive to bump yet — a documented seam, NOT a fake.
+	var pool_step: int = int(agg["season_end_pool_step"])
+	#   board_preserve_biomes (Silo/Barn): the port has no per-biome saved-field snapshot primitive
+	#   yet (the React savedField restore is a board-slice concern), so the PRESERVED set is reported
+	#   in the result for the caller/board to honour; close_season itself does not snapshot the grid.
+	#   This is a documented seam, faithful to "the channel is wired" — the consumer (board) is later.
+	var preserved: Array = agg["board_preserve_biomes"].keys()
+	# T30: BOARD-PRESERVE decision. The Silo/Barn board_preserve_biomes channel names the biomes whose
+	# field is kept across the season boundary instead of regenerating (React savedField restore). The
+	# port has no per-biome saved-field snapshot primitive, but the DECISION is pure: if the run's
+	# active biome is in the preserved set, the caller (Main) keeps the existing board grid rather than
+	# calling setup_new_board(). Computed BEFORE the run fields are cleared (active_biome is still the
+	# run's biome here) and surfaced in the result as `preserve_board` for Main to honour.
+	var preserve_board: bool = preserved.has(active_biome) or preserved.has(farm_run_zone)
+	# T30: the session_ended / close_season STORY beat. Posting BEFORE the run is cleared (so any beat
+	# that fires is still captured by run_beats_fired) lets the engine fire any beat that became ready
+	# during the run but whose triggering event never arrived (e.g. act3_finish, gated on flags +
+	# inventory.block >= 50). No port beat gates on session_ended TODAY, so this is inert for the
+	# current catalog — but it is the faithful close-season cascade seam (React CLOSE_SEASON posts
+	# session_ended) and fires threshold/flag beats at the boundary. Beats NEVER auto-grant.
+	post_story_event({"type": "session_ended", "season": season_ended})
 	_decay_npc_bonds()
 	reroll_quests()
+	# T16: advance the market season and re-roll prices (parallel to React CLOSE_SEASON).
+	market_season += 1
+	_recompute_market()
+	# T30: freeMoves reset at season end. React CLOSE_SEASON zeroes the banked tileCollection free
+	# moves (and the fill-bias) so a fresh run doesn't inherit last run's banked moves. Clear both
+	# the banked free moves and the transient fill-bias here (the bias is also per-session transient).
+	tile_free_moves = 0
+	fill_bias_target = Constants.EMPTY
+	fill_bias_turns = 0
 	# Clear the run + reset the farm to a fresh Spring on the home board.
 	farm_run_active = false
 	farm_run_budget = 0
@@ -1366,7 +3027,18 @@ func close_season() -> Dictionary:
 	farm_run_selected = []
 	farm_turns_used = 0
 	active_biome = "farm"
-	return {"coins_granted": Constants.SEASON_END_BONUS_COINS, "season_ended": season_ended}
+	# Result reports the FULL coins granted (flat + season_bonus), the tools granted, the preserved
+	# biomes + the preserve-board decision — all empty/zero-bonus for a fresh game (coins_granted ==
+	# SEASON_END_BONUS_COINS, preserve_board == false).
+	return {
+		"coins_granted": Constants.SEASON_END_BONUS_COINS + bonus_coins,
+		"season_ended": season_ended,
+		"tools_granted": tools_granted,
+		"preserved_biomes": preserved,
+		"preserve_board": preserve_board,   # T30: keep the board grid this season (Silo/Barn) vs regen
+		"pool_step": pool_step,   # T20 seam: reported, no hiring-pool primitive to apply it to yet
+		"market_event": market_event.duplicate(true),   # T16: event for the new season (or {})
+	}
 
 ## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
 ## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
@@ -1447,6 +3119,8 @@ func enter_harbor() -> Dictionary:
 		return {"ok": false, "reason": "no_supplies"}
 	var s: int = qty("supplies")
 	inventory.erase("supplies")
+	# T30: record the supplies spent on this voyage for the run-summary dashboard (mirrors enter_mine).
+	run_supplies_consumed["supplies"] = int(run_supplies_consumed.get("supplies", 0)) + s
 	harbor_turns_left = s
 	active_biome = "harbor"
 	# Reset the tide cycle for a fresh session: high tide, 0 spent turns.
@@ -1663,6 +3337,38 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 		return none   # defensive: a target category with no farm tile spawns nothing
 	return {"count": count, "tile": int(FARM_CATEGORY_TO_TILE[target_cat])}
 
+## INSTANCE upgrade spawn (T2). Identical to the static upgrade_spawn but resolves the
+## upgrade TARGET tile through the player's ACTIVE VARIANT for the target category instead of
+## the static base tile — mirroring React nextResourceForZone honouring the active variant
+## (src/features/zones/data.ts:303-310). Default active == base tile, so for a fresh game
+## this returns the SAME tile as the static helper. Use this from the live board (Main.gd)
+## so an upgrade chain spawns the player's chosen variant of the target category.
+func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
+	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len)
+	if int(res.get("count", 0)) <= 0:
+		return res   # below threshold / GOLD sentinel / hazard — no tile to substitute
+	# T17/T21: chain_redirect_category channel (a worker ability — src/config/abilitiesAggregate.ts
+	# chain_redirect). A chain in the SOURCE tile's category, long enough to meet the redirect's
+	# effective threshold, spawns the upgrade from the TARGET category instead of the source's native
+	# upgrade. EMPTY for a fresh game (no chain_redirect source) → the native upgrade target is used.
+	var source_cat: String = Constants.category_of(source_tile)
+	var redirects: Dictionary = compute_ability_channels()["chain_redirect"]
+	var redirect: Dictionary = redirects.get(source_cat, {})
+	if not redirect.is_empty() and float(chain_len) >= float(redirect.get("threshold", INF)):
+		var to_cat: String = String(redirect.get("to_category", ""))
+		if to_cat != "" and FARM_CATEGORY_TO_TILE.has(to_cat):
+			res = res.duplicate()
+			res["tile"] = int(FARM_CATEGORY_TO_TILE[to_cat])
+	# Resolve the target category from the (possibly redirected) result tile, then swap in its
+	# active variant (default == base tile, so a fresh game is byte-identical).
+	var base_tile: int = int(res["tile"])
+	var target_cat: String = Constants.category_of(base_tile)
+	var active: int = active_tile_for_category(target_cat)
+	if active != Constants.EMPTY:
+		res = res.duplicate()
+		res["tile"] = active
+	return res
+
 ## Active weighted refill pool (Array[int] of Constants.Tile) for the home FARM board:
 ## a ZONE-RESTRICTED, SEASON-WEIGHTED base pool — NOT the old flat full-variety FARM_POOL.
 ##
@@ -1683,6 +3389,17 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 ##     ineligible category back onto the home board.
 ##   - RATS: once Town 2 is complete (rats_enabled) seed RAT_POOL_SLOTS rat tiles (unchanged).
 ## The mine/harbor pools (active_biome_pool) are NOT seasonal and are untouched by this.
+## The TILE a category contributes to the live board pool: its ACTIVE VARIANT when one is
+## set + discovered, else the category's base spawn tile (FARM_CATEGORY_TILE). T2 — mirrors
+## React getActivePool's per-slot substitution (effects.ts:124-134): a category's pool slots
+## resolve to its active variant id. The base-tile fallback guarantees a fresh game (default
+## active == base) produces a pool byte-identical to the pre-variant one.
+func _category_pool_tile(cat: String) -> int:
+	var active: int = active_tile_for_category(cat)
+	if active != Constants.EMPTY:
+		return active
+	return int(FARM_CATEGORY_TILE.get(cat, Constants.EMPTY))
+
 func active_tile_pool() -> Array:
 	var pool: Array = []
 	var season: String = current_season_name()
@@ -1696,7 +3413,10 @@ func active_tile_pool() -> Array:
 		if weight <= 0.0:
 			continue
 		var slots: int = maxi(1, int(round(weight * 100.0)))
-		var tile: int = int(FARM_CATEGORY_TILE[cat])
+		# T2: substitute the ACTIVE VARIANT for this category (default = the base tile, so a
+		# fresh game is byte-identical to the pre-variant pool). Mirrors React getActivePool
+		# (effects.ts:118-148): each pool slot's category resolves to its active variant id.
+		var tile: int = _category_pool_tile(cat)
 		for _i in slots:
 			pool.append(tile)
 	# Spawner BOOST: extra slots for each placed spawner's ELIGIBLE category (a frequency
@@ -1707,26 +3427,95 @@ func active_tile_pool() -> Array:
 		var bcat: String = BuildingConfig.building_category(id)
 		if not FARM_CATEGORY_TILE.has(bcat):
 			continue
-		var btile: int = BuildingConfig.building_tile(id)
+		# T2: a spawner boosts its category's ACTIVE VARIANT (default = the spawner's base
+		# tile, so an un-customised board is unchanged). The boost is a frequency bump on the
+		# tile that actually spawns for that category.
+		var btile: int = _category_pool_tile(bcat)
 		for _i in SPAWNER_BOOST_SLOTS:
 			pool.append(btile)
-	# Farm-run SELECTION boost: while a bounded run is live, each chosen category gets the same
-	# SPAWNER_BOOST_SLOTS weight bump as a spawner. DOCUMENTED DIVERGENCE from React: there
-	# selectedTiles is a hard FILTER on what can spawn; the port instead reframes it as a soft
-	# weight BOOST reusing the spawner mechanism, so off-selection eligible tiles still appear
-	# (just less often) and the board can never dead-lock from an over-narrow selection. Only
-	# eligible categories survive _sanitize_selection, so this can never smuggle an off-zone tile.
-	if farm_run_active and not farm_run_selected.is_empty():
-		for cat in farm_run_selected:
-			if FARM_CATEGORY_TILE.has(cat):
-				for _i in SPAWNER_BOOST_SLOTS:
-					pool.append(int(FARM_CATEGORY_TILE[cat]))
-	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat tiles
-	# into the FARM pool (a recurring nuisance, not a takeover). Only the farm pool gets rats;
-	# the mine pool (active_biome_pool while mining) is untouched.
-	if rats_enabled():
-		for _i in Constants.RAT_POOL_SLOTS:
-			pool.append(Constants.Tile.RAT)
+	# T6: the React home categories are LOCKED ON and the player picks a VARIANT per category;
+	# there is no soft category-selection boost. The old farm_run_selected soft-boost block (the
+	# documented divergence) is REMOVED — the run config is now the per-category variant choices
+	# (tile_active_by_category), substituted above. farm_run_selected stays a vestigial field
+	# (still emitted by StartFarmingModal + round-tripped) but no longer biases the pool.
+	# T9: rats are NO LONGER seeded into the refill pool. The faithful React model (HazardLogic)
+	# spawns rats POSITIONALLY via roll_rat_spawn on each board fill and they EAT adjacent plants
+	# each turn (src/features/farm/rats.ts) — they are not a random pool draw. The legacy
+	# RAT_POOL_SLOTS seeding is removed here; rats_enabled() now only gates whether the positional
+	# spawn roll runs (see note_farm_turn / Main's fill-spawn wiring). The mine pool is untouched.
+	# T17/T21: effective_pool_weights channel (the React getActivePool weight bonus — pool_weight
+	# ability from a building/tile/worker). Each entry is { target -> int extra slots }; the target
+	# is a TILE string key (tile_tree_oak, …). Add that many slots of the resolved tile, but ONLY
+	# when the tile is ALREADY in the pool (eligible for the home zone) — exactly like the spawner
+	# boost and fill-bias, never smuggling an off-zone tile onto the board. EMPTY for a fresh game
+	# (no pool_weight source — tile pool_weight is inert in production per TileVariantConfig) → the
+	# pool is unchanged. Resolved via Constants string-key reverse lookup.
+	var pool_weights: Dictionary = compute_ability_channels()["effective_pool_weights"]
+	if not pool_weights.is_empty():
+		for target_key in pool_weights.keys():
+			var extra_slots: int = int(pool_weights[target_key])
+			if extra_slots <= 0:
+				continue
+			var pw_tile: int = Constants.tile_for_string_key(String(target_key))
+			if pw_tile == Constants.EMPTY:
+				continue
+			# Only boost a tile already present in the pool (eligible) — preserves zone restriction.
+			if not pool.has(pw_tile):
+				continue
+			for _i in extra_slots:
+				pool.append(pw_tile)
+	# T13 — SEASON_POOL_MODS (additive seasonal spawn deltas).
+	# Mirrors React SEASON_POOL_MODS (src/constants.ts:1123-1128) + applySeasonPoolMods
+	# (src/features/farm/poolMath.ts:16-31). Applied AFTER the base weighting + spawner boost
+	# + pool_weights, BEFORE fill_bias — exactly the React layer order.
+	#
+	# For each delta in the season's mod table:
+	#   delta > 0 → push that many copies of the target tile (adds slots, even if the tile
+	#               is not currently in the pool — allows zero-base tiles to appear; the
+	#               safety-net GRASS fallback below still prevents an all-empty pool).
+	#               IMPLEMENTATION NOTE: React's applySeasonPoolMods pushes freely; the
+	#               React pool always already contains the target (it's an eligible category
+	#               tile + its weight is > 0 in that season except for Winter stone which is
+	#               a mine tile — see the Winter +1 stone note below). We apply the same push-
+	#               freely strategy here; unreachable tiles (mine tiles on the farm) will be
+	#               pushed but the SAFETY NET is a GRASS fallback if the pool empties, not a
+	#               tile-guard. In practice the Winter +1 tile_mine_stone resolves to STONE;
+	#               STONE is a mine tile and would never appear under normal farm play, but it
+	#               faithfully mirrors React. If a future milestone excludes mine tiles from the
+	#               farm pool, revisit this delta.
+	#   delta < 0 → remove up to |delta| copies, but ONLY while at least 2 copies remain
+	#               (never drive a tile to 0 — mirrors React's `workerPool.filter(x=>x===k).length > 1`
+	#               guard). Silently skips if the tile is absent or already at 1 copy.
+	var spm: Dictionary = ZoneConfig.season_pool_mods(season)
+	for key_v in spm.keys():
+		var key: String = String(key_v)
+		var delta: int = int(spm[key])
+		if delta == 0:
+			continue
+		var tile_val: int = Constants.tile_for_string_key(key)
+		if tile_val == Constants.EMPTY:
+			continue  # unknown tile key — silently skip (future-proofed against catalog gaps)
+		if delta > 0:
+			for _i in delta:
+				pool.append(tile_val)
+		else:
+			# delta < 0: remove up to |delta| slots, never the last copy.
+			var to_remove: int = -delta
+			while to_remove > 0:
+				var current_count: int = 0
+				for t in pool:
+					if int(t) == tile_val:
+						current_count += 1
+				if current_count <= 1:
+					break  # at 0 or 1 — stop, never drive below 1 (or from nothing)
+				var last_idx: int = -1
+				for i in range(pool.size() - 1, -1, -1):
+					if int(pool[i]) == tile_val:
+						last_idx = i
+						break
+				if last_idx >= 0:
+					pool.remove_at(last_idx)
+				to_remove -= 1
 	# Fill bias: while armed, DOUBLE the target tile's slots already in the pool so the next
 	# fills favour it (faithful to the web's pool-doubling). Only doubles a tile that is ALREADY
 	# eligible — never injects an off-zone tile (preserves zone restriction). Pure read; the
@@ -1745,83 +3534,280 @@ func active_tile_pool() -> Array:
 		pool.append(Constants.Tile.GRASS)
 	return pool
 
-# ── Capstone boss (M3g) ───────────────────────────────────────────────────────
+# ── Seasonal bosses (T24, timed resource-target model) ─────────────────────────
 
-## True while a boss fight is in progress.
+## True while a boss challenge is in progress.
 func is_boss_active() -> bool:
 	return boss_active != ""
 
-## True when the capstone boss CAN be challenged right now: Town 2 isn't already
-## done, no fight is in progress, the settlement has reached City (the boss is the
-## City-tier gate), and you've "mastered the mine" — at least 12 combined refined
-## mine goods (block + iron_bar) banked. Guards are ordered so start_boss can report
-## the FIRST failing reason.
+## The boss that a NEW challenge would spawn right now: the CURRENT farm season's boss. The port
+## has no calendar, so the boss season is derived from the live farm season (current_season_name
+## → lowercase). Spring has TWO bosses (quagmire/mossback) and summer two (ember_drake/storm);
+## the season picker returns the FIRST in BOSS_IDS order, but pending_boss honours a still-undone
+## CAPSTONE: while town2 isn't complete and the season is summer, the capstone (storm) is offered
+## so the Town-2 gate is reachable; otherwise the season's first boss is offered. Returns "" only
+## if the season maps to no boss (never today — all four seasons have one).
+func pending_boss_id() -> String:
+	var season: String = current_season_name().to_lower()
+	# Capstone reachability: if Town 2 isn't done and we're in the capstone's season, offer it.
+	if not town2_complete and BossConfig.boss_season(BossConfig.CAPSTONE) == season:
+		return BossConfig.CAPSTONE
+	# A season can hold TWO bosses (spring quagmire/mossback; summer ember_drake/storm). ROTATE
+	# through the season's roster by how many bosses you've already defeated so BOTH become
+	# reachable across successive challenges — without this, boss_for_season's first-in-order pick
+	# meant mossback (and post-capstone ember_drake) could never spawn. Mirrors React reaching
+	# every boss via YEAR_BOSS_ROTATION rather than a fixed season→boss map.
+	var roster: Array = BossConfig.season_roster(season)
+	if roster.is_empty():
+		return ""
+	var idx: int = int(achievement_counters.get("bosses_defeated", 0)) % roster.size()
+	return String(roster[idx])
+
+## True when a boss CAN be challenged right now: no challenge is already in progress, the
+## settlement has reached City (the boss is the City-tier gate), you've "mastered the mine" — at
+## least 12 combined refined mine goods (block + iron_bar) banked — and the current season maps to
+## a boss. Unlike the old single-capstone gate, this does NOT block once town2_complete: the five
+## non-capstone bosses stay re-challengeable; only RE-fighting the capstone is blocked (see
+## start_boss's "capstone_done" guard). Guards are ordered so start_boss reports the FIRST failure.
 func can_challenge_boss() -> bool:
-	if town2_complete:
-		return false
 	if is_boss_active():
 		return false
 	if settlement.tier < TownConfig.TIER_CITY:
 		return false
 	if qty("block") + qty("iron_bar") < 12:
 		return false
+	if pending_boss_id() == "":
+		return false
+	# The capstone, once defeated, can't be re-challenged (its only purpose is the Town-2 gate).
+	if pending_boss_id() == BossConfig.CAPSTONE and town2_complete:
+		return false
 	return true
 
-## Begin the capstone boss fight. On failure returns {ok:false, reason} (the FIRST
-## guard that trips, in order: "already_done" → "in_fight" → "locked" → "not_ready")
-## WITHOUT mutating. On success: arm Frostmaw at full HP and return
-## {ok:true, name, hp, min_chain}.
-func start_boss() -> Dictionary:
-	if town2_complete:
-		return {"ok": false, "reason": "already_done"}
+## Begin the CURRENT season's boss challenge (the boss pending_boss_id() names). On failure returns
+## {ok:false, reason} (the FIRST guard that trips: "in_fight" → "locked" → "not_ready" →
+## "no_boss" → "capstone_done") WITHOUT mutating. On success: arm the boss at full window, apply its
+## board MODIFIER to a fresh modifier_state (against the live board dims), and return
+## {ok:true, id, name, target_resource, target_amount, turns_remaining, min_chain, modifier_desc}.
+## `rng` seeds the modifier's cell/column picks (a fresh RandomNumberGenerator by default; tests pass
+## a seeded one for determinism).
+func start_boss(rng_in: RandomNumberGenerator = null) -> Dictionary:
 	if is_boss_active():
 		return {"ok": false, "reason": "in_fight"}
 	if settlement.tier < TownConfig.TIER_CITY:
 		return {"ok": false, "reason": "locked"}
 	if qty("block") + qty("iron_bar") < 12:
 		return {"ok": false, "reason": "not_ready"}
-	boss_active = BossConfig.FROSTMAW
-	boss_hp = BossConfig.boss_hp(BossConfig.FROSTMAW)
+	var id: String = pending_boss_id()
+	if id == "":
+		return {"ok": false, "reason": "no_boss"}
+	if id == BossConfig.CAPSTONE and town2_complete:
+		return {"ok": false, "reason": "capstone_done"}
+	var seeded_rng: RandomNumberGenerator = rng_in if rng_in != null else RandomNumberGenerator.new()
+	if rng_in == null:
+		seeded_rng.randomize()
+	boss_active = id
+	boss_season = BossConfig.boss_season(id)
+	boss_turns_remaining = BossConfig.BOSS_WINDOW_TURNS
+	boss_progress = 0
+	boss_target_resource = BossConfig.target_resource(id)
+	boss_target_amount = BossConfig.target_amount(id)
+	# Apply the board MODIFIER to a fresh modifier_state (the overlay Board renders/gates).
+	boss_modifier_state = BossModifierLogic.apply_to_fresh_grid(
+		BossConfig.boss_modifier(id), Constants.ROWS, Constants.COLS, seeded_rng)
 	return {
 		"ok": true,
-		"name": BossConfig.boss_name(BossConfig.FROSTMAW),
-		"hp": boss_hp,
-		"min_chain": BossConfig.boss_min_chain(BossConfig.FROSTMAW),
+		"id": id,
+		"name": BossConfig.boss_name(id),
+		"target_resource": boss_target_resource,
+		"target_amount": boss_target_amount,
+		"turns_remaining": boss_turns_remaining,
+		"min_chain": BossConfig.boss_min_chain(id),
+		"modifier_desc": BossConfig.modifier_desc(id),
 	}
 
-## Minimum chain length the BOARD must demand right now: the active boss's raised
-## bar while fighting, else the base Constants.MIN_CHAIN.
+## Minimum chain length the BOARD must demand right now: the active boss's raised bar (storm's
+## min_chain modifier → 4) while a challenge is live, else the base Constants.MIN_CHAIN.
 func boss_min_chain() -> int:
 	if is_boss_active():
 		return BossConfig.boss_min_chain(boss_active)
 	return Constants.MIN_CHAIN
 
-## Apply one resolved chain of length `chain_len` as boss damage. With no boss
-## active returns {active:false} (and changes nothing). Otherwise subtracts the
-## chain length from HP (clamped at 0). When HP hits 0 the boss is DEFEATED: mark
-## Town 2 complete, credit the reward coins, clear the fight, and return
-## {active:true, defeated:true, reward, name}. Otherwise returns
-## {active:true, defeated:false, hp:<remaining>}.
-func damage_boss(chain_len: int) -> Dictionary:
+## Advance boss PROGRESS for one resolved chain. `tile_type` is the chained Tile enum, `chain_len`
+## the tiles in the chain, `units` the resource units the chain produced (credit_chain's result).
+## PROGRESS COUNTING (faithful to React's CHAIN_COLLECTED boss branch, boss/slice.ts:200-224):
+##   - TILE-key target (tile_tree_oak / tile_grass_grass / tile_mine_stone / tile_fruit_blackberry):
+##     count CHAINED TILES of that type — add `chain_len` when the chained tile's STRING key matches
+##     the target. (For min_chain bosses a chain shorter than the bar never reaches here — it isn't a
+##     valid chain — so the storm "short chains yield nothing" rule is enforced by the board gate.)
+##   - RESOURCE target (iron_bar / fish_fillet): count UNITS PRODUCED — add `units` when the chain's
+##     produced resource matches the target. (iron_bar is also produced by crafting; see
+##     note_boss_craft for the craft path.)
+## Progress is clamped to the target amount. With no boss active this is a no-op returning
+## {active:false}. On the chain that MEETS the target the boss is RESOLVED (a win) via _resolve_boss
+## and the result carries {defeated:true, ...}; otherwise {active:true, defeated:false, progress, ...}.
+func note_boss_chain(tile_type: int, chain_len: int, units: int) -> Dictionary:
 	if not is_boss_active():
 		return {"active": false}
-	boss_hp = maxi(0, boss_hp - chain_len)
-	if boss_hp == 0:
-		var r: int = BossConfig.boss_reward(boss_active)
-		var nm: String = BossConfig.boss_name(boss_active)
-		town2_complete = true
-		coins += r
-		boss_active = ""
-		# M10 achievements (ADDITIVE): only a DEFEAT bumps bosses_defeated (+1). A
-		# non-fatal hit falls through to the {defeated:false} return below and never
-		# touches the counter.
+	var added: int = 0
+	var target: String = boss_target_resource
+	if Constants.string_key(tile_type) == target:
+		# Tile-key target: count chained tiles of that type.
+		added = chain_len
+	elif Constants.produced_resource(tile_type) == target:
+		# Resource target: count units produced of that resource.
+		added = units
+	if added > 0:
+		boss_progress = mini(boss_target_amount, boss_progress + added)
+		if boss_progress >= boss_target_amount:
+			return _resolve_boss()
+	return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+
+## Advance boss PROGRESS for a crafted recipe (the iron_bar craft path). Mirrors React's
+## CRAFTING/CRAFT_RECIPE boss branch (boss/slice.ts:226-239): only an iron_bar-target boss counts,
+## and only a recipe that CONSUMES iron_bar as an INPUT ticks +1 toward the target (the Ember Drake
+## demands forged iron be SPENT — `recipe.inputs?.[ResourceKey.IronBar]` in React). A non-iron_bar
+## boss, no boss, or a recipe that doesn't take iron_bar is a no-op. Returns the same shape as
+## note_boss_chain (resolves on the unit that meets the target). NOTE: iron_bar PRODUCED by chaining
+## iron-ore tiles also counts via note_boss_chain's resource-target path — both feed the same fight.
+func note_boss_craft(recipe_key: String) -> Dictionary:
+	if not is_boss_active():
+		return {"active": false}
+	if boss_target_resource != "iron_bar":
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	if not RecipeConfig.is_recipe(recipe_key):
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	if int(RecipeConfig.recipe_inputs(recipe_key).get("iron_bar", 0)) <= 0:
+		return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+	boss_progress = mini(boss_target_amount, boss_progress + 1)
+	if boss_progress >= boss_target_amount:
+		return _resolve_boss()
+	return {"active": true, "defeated": false, "progress": boss_progress, "target": boss_target_amount}
+
+## TICK one boss-window turn — call AFTER a chain resolves while a boss is active. Mirrors React's
+## CLOSE_SEASON boss branch (boss/slice.ts:241-263): tick the modifier (heat ages + burns), then
+## decrement the window; if the window hits 0 with the target unmet the challenge RESOLVES as a LOSS.
+## When the target is already met the chain-resolve path already resolved it (note_boss_chain), so
+## this only ever closes out a LOSS or ticks the heat/window. `grid` (the live board) and `rng` drive
+## the heat spawn/burn. Returns:
+##   no boss              → {active:false}
+##   target already met   → {active:false} (resolved by the chain that met it)
+##   window survived      → {active:true, defeated:false, turns_remaining, burned, spawned_heat}
+##   window expired (loss)→ the _resolve_boss loss result {active:true, defeated:false, ...resolved}
+func tick_boss_turn(rng: RandomNumberGenerator) -> Dictionary:
+	if not is_boss_active():
+		return {"active": false}
+	var burned: int = 0
+	var spawned: Array = []
+	var mtype: String = BossConfig.modifier_type(boss_active)
+	if mtype == BossModifierLogic.HEAT_TILES:
+		var params: Dictionary = BossConfig.boss_modifier(boss_active).get("params", {})
+		var burn_after: int = int(params.get("burnAfter", 2))
+		# Tick the existing heat (age + burn) FIRST, then spawn this turn's new heat tile.
+		burned = BossModifierLogic.tick_heat(boss_modifier_state, burn_after, inventory, rng)
+		spawned = BossModifierLogic.spawn_heat(
+			boss_modifier_state, Constants.ROWS, Constants.COLS, int(params.get("spawnPerTurn", 1)), rng)
+	boss_turns_remaining = maxi(0, boss_turns_remaining - 1)
+	if boss_turns_remaining <= 0 and boss_progress < boss_target_amount:
+		# Window expired before the target — resolve as a LOSS.
+		var loss := _resolve_boss()
+		loss["burned"] = burned
+		loss["spawned_heat"] = spawned
+		return loss
+	return {
+		"active": true, "defeated": false,
+		"turns_remaining": boss_turns_remaining,
+		"burned": burned, "spawned_heat": spawned,
+	}
+
+## Resolve the active boss (target met = win, else loss). Grants the reward on a win
+## (BossConfig.boss_reward: year+margin-scaled coins + 1 rune), clears the challenge + modifier
+## overlay, and — on a CAPSTONE win — sets town2_complete (preserving the M3g Town-2 gate). On any
+## DEFEAT (win) bumps the bosses_defeated achievement counter + posts the boss_defeated story event
+## (unchanged from the old model). Returns
+##   {active:true, defeated:bool, id, name, reward_coins, reward_runes, progress, target}.
+func _resolve_boss() -> Dictionary:
+	var id: String = boss_active
+	var nm: String = BossConfig.boss_name(id)
+	var reward: Dictionary = BossConfig.boss_reward(id, boss_progress, boss_year)
+	var defeated: bool = bool(reward.get("defeated", false))
+	var rc: int = int(reward.get("coins", 0))
+	var rr: int = int(reward.get("runes", 0))
+	var prog: int = boss_progress
+	var tgt: int = boss_target_amount
+	# Clear the live challenge + modifier overlay (BossModifierLogic.clear strips everything).
+	boss_modifier_state = BossModifierLogic.clear(boss_modifier_state)
+	boss_active = ""
+	boss_season = ""
+	boss_turns_remaining = 0
+	boss_progress = 0
+	boss_target_resource = ""
+	boss_target_amount = 0
+	if defeated:
+		coins += rc
+		runes += rr
+		# CAPSTONE win sets the Town-2 gate (preserving the M3g progression).
+		if id == BossConfig.CAPSTONE:
+			town2_complete = true
+		# M10 achievements (ADDITIVE): only a DEFEAT bumps bosses_defeated (+1).
 		bump_counter("bosses_defeated")
-		# Story engine (ADDITIVE, only on a DEFEAT): post a "boss_defeated" event so
-		# act2_frostmaw_felled fires (and queues its choice aftermath). The defeat result
-		# below is UNCHANGED. A non-fatal hit falls through and posts nothing.
+		# Story engine (ADDITIVE, only on a DEFEAT): post a "boss_defeated" event.
 		post_story_event({"type": "boss_defeated"})
-		return {"active": true, "defeated": true, "reward": r, "name": nm}
-	return {"active": true, "defeated": false, "hp": boss_hp}
+	return {
+		"active": true, "defeated": defeated, "id": id, "name": nm,
+		"reward_coins": rc, "reward_runes": rr, "progress": prog, "target": tgt,
+	}
+
+## True when the cell (row,col) may be CHAINED under the active boss modifier (frozen column /
+## rubble / hidden block it). With no boss active everything is chainable. Thin GameState forwarder
+## so the Board can gate drags without reaching into modifier_state directly.
+func boss_cell_chainable(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return true
+	return BossModifierLogic.cell_chainable(boss_modifier_state, row, col)
+
+## True when (row,col) is a HIDDEN (face-down) boss cell — Board draws the cover; reveal_tiles
+## (Miner's Hat) and a chain that includes it both reveal it.
+func boss_cell_hidden(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return false
+	return BossModifierLogic.cell_hidden(boss_modifier_state, row, col)
+
+## True when (row,col) carries a boss HEAT marker — Board draws the heat glow.
+func boss_cell_heat(row: int, col: int) -> bool:
+	if not is_boss_active():
+		return false
+	return BossModifierLogic.cell_heat(boss_modifier_state, row, col)
+
+## The respawn-boost spawn-bias map { tile_key -> factor } for the active boss (empty for a
+## non-respawn_boost boss / no boss). Board's refill weighting reads this to over-spawn the boosted
+## tiles (the GDScript analogue of React's boss.spawnBias).
+func boss_spawn_bias() -> Dictionary:
+	if not is_boss_active():
+		return {}
+	return BossModifierLogic.spawn_bias(boss_modifier_state)
+
+## Reveal the active boss's hidden cells. `cells` (an Array of {row,col} or Vector2i) reveals just
+## those that are hidden (a chain reveal); pass [] to reveal ALL (Miner's Hat). Returns the list of
+## {row,col} cells that WERE hidden (so the caller can rebuild those board tiles). A no-op (returns
+## []) with no boss or no hidden layer.
+func reveal_boss_hidden(cells: Array = []) -> Array:
+	if not is_boss_active():
+		return []
+	if cells.is_empty():
+		return BossModifierLogic.reveal_all(boss_modifier_state)
+	var revealed: Array = []
+	for cell in cells:
+		var row: int
+		var col: int
+		if cell is Vector2i:
+			row = cell.y
+			col = cell.x
+		else:
+			row = int((cell as Dictionary).get("row", -1))
+			col = int((cell as Dictionary).get("col", -1))
+		if BossModifierLogic.reveal_cell(boss_modifier_state, row, col):
+			revealed.append({"row": row, "col": col})
+	return revealed
 
 # ── Town 3 rats hazard (M3h) ──────────────────────────────────────────────────
 
@@ -1859,6 +3845,363 @@ func use_ratcatcher_charge() -> bool:
 		return false
 	ratcatcher_charges_used += 1
 	return true
+
+# ── Farm HAZARDS — turn ticks, spawn rolls, chain clears (T7/T8/T9) ─────────────
+## The GameState surface over the pure HazardLogic. GameState owns the live `hazards` dict; the
+## board GRID is owned by the Board, so these methods take the grid in + return the new grid out
+## (Main threads it back through the board's collapse/refill). Mirrors the React reducer's
+## CHAIN_COLLECTED hazard block (src/state.ts:485-517): after a farm chain, tick_fire →
+## tick_wolves → roll_farm_hazard → tick_rats → roll_rat_spawn, then the eaten/burned cells
+## collapse + refill on the board.
+
+## True when fire CAN spawn right now: the per-session force-on override OR the build-time
+## Constants.FIRE_HAZARD_ENABLED (default false → fire is COMPLETE + TESTED but never spawns in
+## normal play, matching React's isFireHazardEnabled() default-off). Mirrors featureFlags.ts.
+func fire_hazard_enabled() -> bool:
+	return fire_hazard_force or Constants.FIRE_HAZARD_ENABLED
+
+## True when ANY farm hazard (rats / fire / wolves) is currently active (single-active cap read).
+func any_farm_hazard_active() -> bool:
+	return HazardLogic.any_hazard_active(hazards)
+
+## Live positional rats (Array of {row,col,age}); [] when none. The board renders RAT tiles at
+## these cells (Main keeps the grid in sync); the HUD reads the count.
+func active_rats() -> Array:
+	return HazardLogic.rats_of(hazards)
+
+## Live wolves (Array of {row,col,scared}); [] when none. Wolves are OVERLAY entities (NOT grid
+## cells) — the Board draws a marker at each cell.
+func active_wolves() -> Array:
+	return HazardLogic.wolves_list_of(hazards)
+
+## Live fire cells (Array of {row,col}); [] when none. The board renders FIRE tiles at these cells.
+func active_fire_cells() -> Array:
+	return HazardLogic.fire_cells_of(hazards)
+
+## Tick + spawn every farm hazard for one resolved farm turn, against the live board `grid`.
+## Returns { grid:Array, changed:bool } — the (possibly mutated) grid the caller lands on the
+## board, and whether any cell was blanked (so Main knows to collapse+refill). Mutates `self.hazards`.
+## ORDER mirrors React (src/state.ts:487-507): tick_fire → tick_wolves → roll_farm_hazard (fire/
+## wolf spawn) → tick_rats → roll_rat_spawn. Rats spawn only when rats_enabled() (Town 2 done) and
+## the inventory gate passes; fire only when fire_hazard_enabled(); wolves when birds-rich. The
+## single-active cap lives inside roll_farm_hazard + the rat-spawn cap.
+func tick_farm_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	var work: Array = grid
+	var changed: bool = false
+	# 1. Fire spreads (burns an adjacent cell). Only ticks when fire is active.
+	var fr: Dictionary = HazardLogic.tick_fire(work, hazards, rng)
+	if fr["grid"] != work:
+		changed = true
+	work = fr["grid"]
+	hazards = fr["hazards"]
+	# 2. Wolves tick (scared countdown + eat an adjacent bird).
+	var wr: Dictionary = HazardLogic.tick_wolves(work, hazards)
+	if wr["grid"] != work:
+		changed = true
+	work = wr["grid"]
+	hazards = wr["hazards"]
+	# 3. Roll a NEW fire/wolf spawn (single-active capped, fire gated by fire_hazard_enabled()).
+	var eggs: int = qty("eggs")
+	var turkey: int = qty("turkey")   # no dedicated turkey resource in the port → 0; eggs drives it
+	# T17/T21: feed the unified hazard_spawn_reduce channel into the fire/wolf roll (replaces the
+	# old no-reduce call). EMPTY for a fresh game → no veto → byte-identical.
+	var farm_reduce: Dictionary = farm_hazard_spawn_reduce()
+	var spawn: Dictionary = HazardLogic.roll_farm_hazard(work, hazards, fire_hazard_enabled(), eggs, turkey, rng, farm_reduce)
+	if not spawn.is_empty():
+		if String(spawn.get("kind", "")) == "fire":
+			hazards["fire"] = {"cells": spawn.get("cells", [])}
+			# Mark the new fire cell on the board so it renders + can be chained.
+			for c in spawn.get("cells", []):
+				var fr2: int = int(c.get("row", 0))
+				var fc2: int = int(c.get("col", 0))
+				if fr2 >= 0 and fr2 < Constants.ROWS and fc2 >= 0 and fc2 < Constants.COLS:
+					work[fr2][fc2] = Constants.Tile.FIRE
+					changed = true
+		elif String(spawn.get("kind", "")) == "wolf":
+			# Wolves are OVERLAY entities — they do NOT occupy a grid cell (the board draws a
+			# marker). So no grid mutation here; just record the wolf.
+			hazards["wolves"] = {
+				"list": [{"row": int(spawn.get("row", 0)), "col": int(spawn.get("col", 0)), "scared": false}],
+				"scared_turns": 0,
+			}
+	# 4. Rats tick (each eats an adjacent plant). Only when rats are present.
+	var rr: Dictionary = HazardLogic.tick_rats(work, hazards)
+	if rr["grid"] != work:
+		changed = true
+	work = rr["grid"]
+	hazards = rr["hazards"]
+	# 5. Roll a NEW rat spawn (Town 2 done + inventory gate + cap + attracts_rats bump). Rats ARE
+	#    grid cells — mark the spawned cell as RAT so it renders + can be chained.
+	if rats_enabled():
+		# T17/T21: feed the unified hazard_spawn_reduce channel into the rat-spawn roll (a "rats"
+		# entry can veto). EMPTY for a fresh game → no veto → byte-identical.
+		var rat: Dictionary = HazardLogic.roll_rat_spawn(work, hazards, qty("hay_bundle"), qty("flour"), rng, farm_hazard_spawn_reduce())
+		if not rat.is_empty():
+			var rrow: int = int(rat.get("row", 0))
+			var rcol: int = int(rat.get("col", 0))
+			if rrow >= 0 and rrow < Constants.ROWS and rcol >= 0 and rcol < Constants.COLS:
+				var list: Array = HazardLogic.rats_of(hazards).duplicate(true)
+				list.append({"row": rrow, "col": rcol, "age": 0})
+				hazards["rats"] = list
+				work[rrow][rcol] = Constants.Tile.RAT
+				changed = true
+	return {"grid": work, "changed": changed}
+
+## Resolve a chain that ran through RAT tiles. `chain` is an Array of {row,col,tile}. Returns
+## { ok, coins_delta, cleared } and credits the coins. ok:false means the chain was NOT a valid
+## 3+-rat clear (the caller must reject it — chaining 2 rats / a mixed chain wastes the move). On
+## success the rats are removed from `hazards`; the caller blanks those cells on the board.
+## Mirrors src/state.ts:286-293 (tryClearRatChain) — chaining rats yields coins, no resources.
+func clear_rat_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_clear_rat_chain(hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false, "coins_delta": 0, "cleared": 0}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	# T17/T21: hazard_coin_multiplier channel for "rats" (the Ratcatcher worker / any future
+	# rats-coin-multiplier source, src/features/farm/rats.ts:141-146). multiplier is 1.0 for a
+	# fresh game (no such source) → delta unchanged → byte-identical. Floored to an int (coins are int).
+	var mult: float = float(compute_ability_channels()["hazard_coin_multiplier"].get("rats", 1.0))
+	if mult != 1.0:
+		delta = int(floor(float(delta) * mult))
+	coins += delta
+	return {"ok": true, "coins_delta": delta, "cleared": int(res.get("cleared", 0))}
+
+## Apply a deadly_pests cull for a resolved chain (Cypress/Beet/Phoenix kill adjacent rats).
+## `chain` is an Array of {row,col,tile}. Returns { killed:int, coins_delta, killed_cells } and
+## credits the coins. No-op (killed 0) when the chain has no deadly tile or no adjacent rats.
+## Mirrors src/state.ts:297 (tryDeadlyPestsKill) — captured + applied alongside the normal chain.
+func deadly_pests_kill(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_deadly_pests_kill(hazards, chain)
+	var killed: int = int(res.get("killed", 0))
+	if killed <= 0:
+		return {"killed": 0, "coins_delta": 0, "killed_cells": []}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	coins += delta
+	return {"killed": killed, "coins_delta": delta, "killed_cells": res.get("killed_cells", [])}
+
+## Extinguish fire tiles in a resolved chain. `chain` is an Array of {row,col}. Returns
+## { ok, coins_delta, extinguished } and credits the coins. ok:false when the chain held no fire.
+## Mirrors src/state.ts:299 (tryExtinguishFire) — +2 coins per fire tile cleared.
+func extinguish_fire_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_extinguish_fire(hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false, "coins_delta": 0, "extinguished": 0}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	coins += delta
+	return {"ok": true, "coins_delta": delta, "extinguished": int(res.get("extinguished", 0))}
+
+## Clear ALL wolves (the Rifle tool). Mutates `hazards`; returns the count removed.
+func clear_all_wolves() -> int:
+	var n: int = HazardLogic.wolves_list_of(hazards).size()
+	hazards = HazardLogic.clear_wolves(hazards)
+	return n
+
+## Scatter all wolves for WOLF_SCARED_TURNS turns (the Hound tool). Mutates `hazards`; returns the
+## count scattered.
+func scatter_all_wolves() -> int:
+	var n: int = HazardLogic.wolves_list_of(hazards).size()
+	hazards = HazardLogic.scatter_wolves(hazards)
+	return n
+
+# ── Mine HAZARDS (T11) + Mysterious Ore (T23) ───────────────────────────────────
+## The mine-side analogue of the farm-hazard wrappers above. MineHazardLogic (pure) does the
+## roll/tick/clear math against `mine_hazards` + the board grid; GameState owns the live state and
+## the rune side-effect. ONLY relevant while in the mine (is_in_mine()).
+
+## Live cave_in dict ({} when none). The buried-row hazard; the Board stamps the row RUBBLE.
+func active_cave_in() -> Dictionary:
+	return MineHazardLogic.cave_in_of(mine_hazards)
+
+## Live gas_vent dict ({} when none). { row, col, turns_remaining }. The Board stamps a GAS tile.
+func active_gas_vent() -> Dictionary:
+	return MineHazardLogic.gas_vent_of(mine_hazards)
+
+## Live lava cells (Array of {row,col}); [] when none. The Board renders LAVA tiles at these cells.
+func active_lava_cells() -> Array:
+	return MineHazardLogic.lava_cells_of(mine_hazards)
+
+## Live mole dict ({} when none). { row, col, turns_remaining }. The mole is an OVERLAY entity
+## (NOT a grid cell) — the Board draws a marker at its cell (like a wolf).
+func active_mole() -> Dictionary:
+	return MineHazardLogic.mole_of(mine_hazards)
+
+## The Canary/Sapper hazard-spawn-reduce hook (gas_vent/cave_in veto probabilities). Returns {} for
+## now — the worker-ability aggregator that would populate Canary→gas_vent / Sapper→cave_in
+## (src/features/workers/aggregate.ts hazardSpawnReduce) is a LATER task, so no reduction is applied
+## yet (a faithful default: with those workers unmodelled, the React reduce map is empty too). When
+## the aggregator ships it overrides this to return e.g. { "gas_vent": 0.x, "cave_in": 0.y }.
+## The FARM-side hazard_spawn_reduce channel (the analogue of mine_hazard_spawn_reduce). Feeds the
+## fire / wolf / rats veto in HazardLogic.roll_farm_hazard / roll_rat_spawn. EMPTY for a fresh game
+## (no hazard_spawn_reduce building/worker) → no veto → the farm hazard rolls are byte-identical.
+func farm_hazard_spawn_reduce() -> Dictionary:
+	return compute_ability_channels()["hazard_spawn_reduce"].duplicate()
+
+func mine_hazard_spawn_reduce() -> Dictionary:
+	# T17/T21: the unified aggregate's hazard_spawn_reduce channel (hazard_id -> veto prob [0,1]).
+	# MineHazardLogic.roll_mine_hazard already consumes a `reduce` dict (Canary→gas_vent /
+	# Sapper→cave_in, src/features/mine/hazards.ts:143-148); this now feeds it the live channel
+	# instead of {}. EMPTY for a fresh game (no hazard_spawn_reduce building/worker) → no veto →
+	# the mine hazard roll is byte-identical. Returned as a plain {hazard:prob} Dictionary.
+	return compute_ability_channels()["hazard_spawn_reduce"].duplicate()
+
+## Roll for a NEW mine hazard on a mine board fill (single-active capped, no boss). On a hit, write
+## the descriptor into `mine_hazards` and return it (so the caller can stamp the board); {} on a
+## miss. Mirrors roll_farm_hazard's GameState wrapper. NO-op (returns {}) off the mine.
+func roll_mine_hazard_on_fill(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {}
+	var spawn: Dictionary = MineHazardLogic.roll_mine_hazard(
+		mine_hazards, is_in_mine(), is_boss_active(), rng, mine_hazard_spawn_reduce())
+	if spawn.is_empty():
+		return {}
+	var id: String = String(spawn.get("id", ""))
+	match id:
+		"cave_in":
+			mine_hazards["cave_in"] = {"row": int(spawn.get("row", 0))}
+		"gas_vent":
+			mine_hazards["gas_vent"] = {
+				"row": int(spawn.get("row", 0)),
+				"col": int(spawn.get("col", 0)),
+				"turns_remaining": int(spawn.get("turns_remaining", Constants.GAS_VENT_TURNS)),
+			}
+		"lava":
+			mine_hazards["lava"] = {"cells": [{"row": int(spawn.get("row", 0)), "col": int(spawn.get("col", 0))}]}
+		"mole":
+			mine_hazards["mole"] = {
+				"row": int(spawn.get("row", 0)),
+				"col": int(spawn.get("col", 0)),
+				"turns_remaining": int(spawn.get("turns_remaining", Constants.MOLE_TURNS)),
+			}
+	return spawn
+
+## Tick + spawn every mine hazard for one resolved mine turn, against the live board `grid`.
+## Returns { grid:Array, changed:bool, gas_cost_turn:bool, floater:String, ore_expired:bool,
+##           ore_cell:Vector2i (the degraded ore cell when it just expired, else (-1,-1)) }.
+## Mutates `self.mine_hazards` + `self.mysterious_ore`. ORDER mirrors React tickHazards:
+## tick_mine_hazards (gas/lava/mole) → tick_mysterious_ore countdown → roll a NEW hazard. The ore is
+## spawned ONCE on mine ENTRY (NOT here), so the tick only ticks its countdown — never respawns it.
+## A gas-vent EXPIRY costs a turn (gas_cost_turn=true) — the caller spends an extra mine turn for it.
+## NO-op (returns the input grid, changed false) off the mine.
+func tick_mine_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {"grid": grid, "changed": false, "gas_cost_turn": false, "floater": "", "ore_expired": false, "ore_cell": Vector2i(-1, -1)}
+	var work: Array = grid
+	var changed: bool = false
+	# 1. Tick gas/lava/mole.
+	var tick: Dictionary = MineHazardLogic.tick_mine_hazards(work, mine_hazards, rng)
+	if tick["grid"] != work:
+		changed = true
+	work = tick["grid"]
+	mine_hazards = tick["mine_hazards"]
+	var gas_cost_turn: bool = bool(tick.get("gas_cost_turn", false))
+	var floater: String = String(tick.get("floater", ""))
+	# 2. Tick the Mysterious Ore countdown (degrades to DIRT at 0).
+	var ore_expired: bool = false
+	var ore_cell := Vector2i(-1, -1)
+	if not mysterious_ore.is_empty():
+		ore_cell = Vector2i(int(mysterious_ore.get("col", -1)), int(mysterious_ore.get("row", -1)))
+		var ot: Dictionary = MineHazardLogic.tick_mysterious_ore(work, mysterious_ore)
+		if ot["grid"] != work:
+			changed = true
+		work = ot["grid"]
+		mysterious_ore = ot["ore"]
+		ore_expired = bool(ot.get("expired", false))
+		if not ore_expired:
+			ore_cell = Vector2i(-1, -1)
+	# 3. Roll a NEW hazard (single-active capped — a no-op if one is live or the cap blocks it).
+	var spawn: Dictionary = roll_mine_hazard_on_fill(work, rng)
+	if not spawn.is_empty():
+		work = _stamp_mine_hazard_on_grid(work, spawn)
+		changed = true
+	# NOTE: the Mysterious Ore is spawned ONCE per session — on MINE ENTRY (React SET_BIOME →
+	# spawnMysteriousOre, src/state.ts:1252-1253), NOT on every tick. So the tick only TICKS the
+	# countdown (above); it never respawns the ore. Once captured or expired, no new ore appears that
+	# session — matching React (which sets mysteriousOre to null and never re-seeds until the next
+	# mine entry). Main seeds it on entry via spawn_mysterious_ore_on_fill.
+	return {
+		"grid": work, "changed": changed, "gas_cost_turn": gas_cost_turn, "floater": floater,
+		"ore_expired": ore_expired, "ore_cell": ore_cell,
+	}
+
+## Stamp a freshly-rolled hazard descriptor onto `grid` (a NEW grid). cave_in buries its whole row
+## as RUBBLE; gas_vent stamps a GAS cell; lava stamps a LAVA cell. The mole is an OVERLAY (no grid
+## cell), so it stamps nothing. Used by tick_mine_hazards after roll_mine_hazard_on_fill.
+func _stamp_mine_hazard_on_grid(grid: Array, spawn: Dictionary) -> Array:
+	var out: Array = []
+	for row in grid:
+		out.append((row as Array).duplicate())
+	match String(spawn.get("id", "")):
+		"cave_in":
+			var r: int = int(spawn.get("row", -1))
+			if r >= 0 and r < Constants.ROWS:
+				for c in Constants.COLS:
+					out[r][c] = Constants.Tile.RUBBLE
+		"gas_vent":
+			var gr: int = int(spawn.get("row", -1))
+			var gc: int = int(spawn.get("col", -1))
+			if gr >= 0 and gr < Constants.ROWS and gc >= 0 and gc < Constants.COLS:
+				out[gr][gc] = Constants.Tile.GAS
+		"lava":
+			var lr: int = int(spawn.get("row", -1))
+			var lc: int = int(spawn.get("col", -1))
+			if lr >= 0 and lr < Constants.ROWS and lc >= 0 and lc < Constants.COLS:
+				out[lr][lc] = Constants.Tile.LAVA
+		# "mole": overlay only — no grid stamp.
+	return out
+
+## Spawn a Mysterious Ore on the current mine board (one per session). Returns { ok, grid } — on
+## success `mysterious_ore` is set + the returned grid carries the stamped tile (the caller lands
+## it). NO-op off the mine / when one is already live. Used by Main on mine entry / board fill.
+func spawn_mysterious_ore_on_fill(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if not is_in_mine():
+		return {"ok": false, "grid": grid}
+	var sp: Dictionary = MineHazardLogic.spawn_mysterious_ore(grid, mysterious_ore, is_in_mine(), rng)
+	if bool(sp.get("ok", false)):
+		mysterious_ore = sp["ore"]
+		return {"ok": true, "grid": sp["grid"]}
+	return {"ok": false, "grid": grid}
+
+## True while a Mysterious Ore is live (seeded with turns remaining).
+func has_active_mysterious_ore() -> bool:
+	return not mysterious_ore.is_empty() and int(mysterious_ore.get("turns_left", 0)) > 0
+
+## Attempt to clear the cave-in with a resolved STONE chain. `chain` is an Array of {row,col,tile}.
+## Returns { ok:bool }. On success `mine_hazards` clears the cave_in (the caller blanks the rubble
+## row on the board). Mirrors clear_rat_chain's wrapper shape. ok=false leaves state unchanged.
+func clear_cave_in_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = MineHazardLogic.clear_cave_in(mine_hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false}
+	mine_hazards = res["mine_hazards"]
+	return {"ok": true}
+
+## Attempt to disperse the gas vent with a resolved chain that ran through the GAS cell. `chain` is
+## an Array of {row,col,tile}. Returns { ok:bool }. On success `mine_hazards` clears the gas_vent
+## (NO turn cost — unlike expiry). ok=false leaves state unchanged.
+func disperse_gas_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = MineHazardLogic.disperse_gas(mine_hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false}
+	mine_hazards = res["mine_hazards"]
+	return {"ok": true}
+
+## Attempt to capture the Mysterious Ore with a resolved chain. `chain` is an Array of {row,col,tile}
+## (or {tile}). On a VALID capture (in the mine, with a live ore, the chain contains the ore tile +
+## >= Constants.REQUIRED_DIRT_IN_CHAIN dirt): grant +1 Rune, clear the ore (no double-grant), return
+## { captured:true, runes }. Otherwise { captured:false } WITHOUT mutating. Mirrors try_capture_pearl.
+func try_capture_mysterious_ore(chain: Array) -> Dictionary:
+	if not is_in_mine():
+		return {"captured": false}
+	if not has_active_mysterious_ore():
+		return {"captured": false}
+	if not MineHazardLogic.is_mysterious_chain_valid(chain):
+		return {"captured": false}
+	runes += 1
+	mysterious_ore = {}
+	return {"captured": true, "runes": runes}
 
 # ── Tools (M8b) ───────────────────────────────────────────────────────────────
 
@@ -1919,6 +4262,39 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		return {"ok": false, "reason": "unknown", "grid": grid, "collected": {}}
 	if not has_tool_charges(id):
 		return {"ok": false, "reason": "no_charges", "grid": grid, "collected": {}}
+	# T14a — wolf-hazard tools (Rifle / Hound) are STATE powers: they act on `hazards`, not the
+	# grid (wolves are OVERLAY entities, not grid cells). Handle here, in the same early path as
+	# fill_bias / restore_turns, BEFORE the grid dispatch. clear_wolves (Rifle) removes every wolf;
+	# scatter_wolves (Hound) scares them for WOLF_SCARED_TURNS turns. Both consume a charge.
+	# Mirrors React's USE_TOOL rifle/hound handlers (no turn cost; just mutate hazards.wolves).
+	var wolf_power: String = ToolConfig.power_id(id)
+	if wolf_power == "clear_wolves":
+		clear_all_wolves()
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	if wolf_power == "scatter_hazard":
+		scatter_all_wolves()
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	# T14b — mine-hazard tools (Water Pump / Explosives) are STATE powers that act on `mine_hazards`
+	# + the grid (lava→rubble / clear cave-in rubble + mole). Handle here, in the same early path as
+	# the wolf tools, BEFORE the grid-dispatch. They credit nothing (hazards yield nothing) and
+	# return the mutated grid so the caller lands it (collapse/refill the freed cells). Both consume
+	# a charge. Ported from React _applyWaterPump / _applyExplosives (toolPowerRuntime.ts:349-358).
+	if wolf_power == "water_pump":
+		var wp: Dictionary = MineHazardLogic.apply_water_pump(grid, mine_hazards)
+		mine_hazards = wp["mine_hazards"]
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": wp["grid"], "collected": {}}
+	if wolf_power == "explosives":
+		var ex: Dictionary = MineHazardLogic.apply_explosives(grid, mine_hazards)
+		mine_hazards = ex["mine_hazards"]
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": ex["grid"], "collected": {}}
 	# fill_bias tools (fertilizer/bird_feed/sapling/magic_fertilizer) don't touch the grid —
 	# they arm a spawn bias that active_tile_pool() reads. Handle here, before the
 	# grid-dispatch path.
@@ -1939,6 +4315,16 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	# reveal_tiles (Miner's Hat, T24) — a STATE power: reveal every HIDDEN boss cell (hide_resources /
+	# Mossback). Never touches the grid (the cells keep their tiles; only the modifier_state hidden
+	# layer is cleared). The caller refreshes the board overlay after the use so the cover lifts. Off a
+	# hide_resources boss it reveals nothing (a harmless no-op that still consumes a charge — matching
+	# every other instant tool). Returns the revealed cells so the caller can rebuild just those tiles.
+	if ToolConfig.power_id(id) == "reveal_tiles":
+		var revealed: Array = reveal_boss_hidden([])
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}, "revealed": revealed}
 	var is_tap: bool = ToolConfig.is_tap_target(id)
 	if is_tap and not BoardLogic.in_bounds(cell):
 		return {"ok": false, "reason": "needs_target", "grid": grid, "collected": {}}
@@ -2003,6 +4389,10 @@ func post_story_event(event: Dictionary) -> Array:
 		if qb != "" and StoryConfig.has_beat(qb):
 			_enqueue_beat(qb)
 		fired.append(beat_id)
+		# T30: record beats that fire DURING a live run for the run-summary "Story beats" block
+		# (React runSummary STORY/BEAT_FIRED, slice.ts:178-189). Dedup; only while a run is active.
+		if farm_run_active and not run_beats_fired.has(beat_id):
+			run_beats_fired.append(beat_id)
 	return fired
 
 ## Resolve a player CHOICE on a queued beat. Applies the chosen outcome's flags to
@@ -2245,6 +4635,11 @@ func distinct_seen(counter: String) -> Dictionary:
 
 ## Plain-Dictionary snapshot for persistence.
 func to_dict() -> Dictionary:
+	# T26: ensure the cartography travel state carries its canonical seed (home visited,
+	# neighbours discovered) so a never-touched GameState round-trips byte-for-byte. Lazy +
+	# idempotent — _seed_map_state only fills an EMPTY dict, mirroring the tile-collection slice's
+	# _ensure_tile_collection lazy-seed in to_dict.
+	_seed_map_state()
 	return {
 		"inventory": inventory.duplicate(),
 		"progress": progress.duplicate(),
@@ -2262,6 +4657,22 @@ func to_dict() -> Dictionary:
 		"npcs": npcs_state.to_dict(),
 		"active_biome": active_biome,
 		"mine_turns_left": mine_turns_left,
+		# T26 Cartography travel state (ADDITIVE): the current world-map node + the per-node
+		# travel state ({id → "visited"|"discovered"}). SAVE_VERSION is NOT bumped — a save written
+		# before the travel state existed restores the default seed (home visited, neighbours
+		# discovered) via from_dict's defensive default.
+		"map_current": map_current,
+		"map_node_state": map_node_state.duplicate(),
+		# T22 Multi-settlement model (ADDITIVE): the founding records, the per-zone archives of the
+		# NON-active zones, and the global Hearth-Tokens. SAVE_VERSION is NOT bumped — a save written
+		# before T22 existed has none of these keys, so from_dict loads it as a home-only game with
+		# everything in the live fields, archives empty, no tokens (unchanged). The ACTIVE zone's
+		# inventory/buildings/settlement/progress live in the flat top-level keys above (they are the
+		# live view); zone_archives holds only the OTHER founded zones. map_current (above) is the
+		# active zone id.
+		"settlements": _settlements_to_dict(),
+		"zone_archives": _zone_archives_to_dict(),
+		"heirlooms": heirlooms.duplicate(),
 		# Farm season cycle (A1, ADDITIVE): spent turns within the current season cycle.
 		# SAVE_VERSION is NOT bumped — a save written before seasons existed loads with 0
 		# (a fresh Spring cycle) via from_dict's defensive default.
@@ -2286,10 +4697,45 @@ func to_dict() -> Dictionary:
 		"fish_tide_turn": fish_tide_turn,
 		"fish_pearl": fish_pearl.duplicate(true),
 		"runes": runes,
+		# Seasonal boss (T24): the live BossInstance — id + season + year + the timed-window
+		# fields + the target + the modifier overlay (deep-copied). Replaces the old boss_hp.
+		# SAVE_VERSION is NOT bumped — a save written under the old HP model loads with the boss
+		# sanitised to idle (from_dict ignores the stale boss_hp key); town2_complete is preserved.
 		"boss_active": boss_active,
-		"boss_hp": boss_hp,
+		"boss_season": boss_season,
+		"boss_year": boss_year,
+		"boss_turns_remaining": boss_turns_remaining,
+		"boss_progress": boss_progress,
+		"boss_target_resource": boss_target_resource,
+		"boss_target_amount": boss_target_amount,
+		"boss_modifier_state": boss_modifier_state.duplicate(true),
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
+		# Farm HAZARDS (T7/T8/T9, ADDITIVE): the live positional rats / fire cells / wolves +
+		# scared countdown, deep-copied. SAVE_VERSION is NOT bumped — a save written before the
+		# hazards model existed loads with all hazards inactive (from_dict → HazardLogic.normalise
+		# of a missing key yields the default empty state). fire_hazard_force is TRANSIENT (a
+		# per-session test/tuning override) and intentionally NOT persisted.
+		"hazards": hazards.duplicate(true),
+		# Mine HAZARDS (T11, ADDITIVE): the live cave_in / gas_vent / lava / mole, deep-copied.
+		# SAVE_VERSION is NOT bumped — a pre-mine-hazards save loads with all mine hazards inactive
+		# (from_dict → MineHazardLogic.normalise of a missing key yields the default empty state).
+		"mine_hazards": mine_hazards.duplicate(true),
+		# Mysterious Ore → Rune (T23, ADDITIVE): the live ore { row, col, turns_left } (or {}),
+		# deep-copied. SAVE_VERSION is NOT bumped — a pre-ore save loads with no ore (from_dict
+		# default). Off the mine it's always {} (cleared on every mine exit).
+		"mysterious_ore": mysterious_ore.duplicate(true),
+		# Tile Collection (T2/T3/T5, ADDITIVE): the active variant per category, the discovered
+		# set, research progress, and banked free moves. Persisted only when the slice has been
+		# seeded (a bare GameState.new() that never touched the tile collection emits the seeded
+		# defaults the first time to_dict reads it — _ensure_tile_collection makes this lazy +
+		# idempotent). SAVE_VERSION is NOT bumped — a save written before tile variants existed
+		# loads with the fresh seed (from_dict overlays the saved slice over default seeds,
+		# mirroring React mergeLoadedState, src/state/helpers.ts:126-142).
+		"tile_active_by_category": _tile_collection_dict_active(),
+		"tile_discovered": _tile_collection_dict_discovered(),
+		"tile_research_progress": _tile_collection_dict_research(),
+		"tile_free_moves": free_moves(),
 		"audio_muted": audio_muted,
 		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
 		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
@@ -2338,6 +4784,14 @@ func to_dict() -> Dictionary:
 		# written before the portal existed loads with portal_built = false (from_dict default),
 		# so the economy is unchanged.
 		"portal_built": portal_built,
+		# Keepers + Boons (T31, ADDITIVE): the two keeper currencies + the owned-boon map. The
+		# keeper-resolution path flags live in `story.flags` (persisted via the "story" key above),
+		# so they round-trip for free. SAVE_VERSION is NOT bumped — a save written before T31 existed
+		# loads with embers/core_ingots 0 + an empty boons map (from_dict defaults), so every boon
+		# multiplier is 1.0 and the economy is unchanged.
+		"embers": embers,
+		"core_ingots": core_ingots,
+		"boons": boons.duplicate(),
 		# Quests + Almanac (ADDITIVE): the rolled quest board (deep-copied — each quest is a
 		# Dictionary), the roll bookkeeping (quest_day + quest_seed), and the almanac track
 		# (xp / level / claimed tiers / latched structural honours). SAVE_VERSION is NOT bumped
@@ -2351,6 +4805,12 @@ func to_dict() -> Dictionary:
 		"almanac_level": almanac_level,
 		"almanac_claimed": almanac_claimed.duplicate(),
 		"almanac_structural": almanac_structural.duplicate(),
+		# T16 dynamic market (ADDITIVE): persist only the seed + season index; the
+		# derived price table and event are recomputed by from_dict → _recompute_market.
+		# A save written before T16 existed loads with 0/0 defaults → a deterministic
+		# season-0 price set. SAVE_VERSION is NOT bumped.
+		"market_seed": market_seed,
+		"market_season": market_season,
 	}
 
 ## Rebuild from a snapshot, defensively: missing keys fall back to defaults and
@@ -2445,6 +4905,79 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.active_biome = biome
 	s.mine_turns_left = turns
 	s.harbor_turns_left = harbor_turns
+	# T26 Cartography travel state (ADDITIVE). Restore the per-node travel state + the current
+	# node defensively: keep only entries naming a REAL node with a known state ("visited" |
+	# "discovered"); a stale/bogus id or state is dropped. After restoring, re-derive the
+	# discovered ring (so a save that recorded only the visited set still shows the right
+	# discoveries) and ENSURE home is at least visited (the invariant React's initial guarantees;
+	# a save with no map state — any pre-T26 save — yields {} here, then _seed_map_state re-seeds
+	# the home-visited / neighbours-discovered default). map_current must be a real node that is
+	# at least discovered, else it falls back to "home".
+	var mns_raw: Variant = d.get("map_node_state", {})
+	var restored_state: Dictionary = {}
+	if mns_raw is Dictionary:
+		for k in (mns_raw as Dictionary).keys():
+			var nid := String(k)
+			var st := String((mns_raw as Dictionary)[k])
+			if CartographyConfig.has_node(nid) and (st == "visited" or st == "discovered"):
+				restored_state[nid] = st
+	s.map_node_state = restored_state
+	if s.map_node_state.is_empty():
+		# Pre-T26 save (or a fully corrupt one) → re-seed the home-visited default.
+		s._seed_map_state()
+	else:
+		# Guarantee the home invariant + re-derive the discovered ring from the visited set.
+		if String(s.map_node_state.get("home", "")) != "visited":
+			s.map_node_state["home"] = "visited"
+		s._recompute_discovered()
+	var mc := String(d.get("map_current", "home"))
+	# The current node must be a real node that's at least discovered; else snap to home.
+	if not CartographyConfig.has_node(mc) or String(s.map_node_state.get(mc, "hidden")) == "hidden":
+		mc = "home"
+	s.map_current = mc
+	# T22 Multi-settlement model (ADDITIVE). Restore the founding records, the per-zone archives,
+	# and the global Hearth-Tokens defensively. Missing keys (any pre-T22 save) → empty maps, so the
+	# save loads as a home-only game: everything lives in the flat fields restored above (the ACTIVE
+	# zone = map_current), archives empty, no tokens (unchanged). All defensive:
+	#   • settlements: keep only entries naming a REAL map node, with founded coerced to bool, biome
+	#     to String, keeper_path to a known path ("coexist"/"driveout") or "".
+	#   • zone_archives: keep only entries naming a REAL node; well-form each archive's
+	#     inventory/progress (int-coerced) + buildings (real, de-duplicated ids) + settlement tier +
+	#     farm_turns_used. The ACTIVE zone is NEVER archived (its state is the live fields) — drop it
+	#     if a corrupt save put it there.
+	#   • heirlooms: keep only the three known token ids, each as 1 when truthy.
+	var settle_raw: Variant = d.get("settlements", {})
+	if settle_raw is Dictionary:
+		for k in (settle_raw as Dictionary).keys():
+			var zid := String(k)
+			if not CartographyConfig.has_node(zid):
+				continue
+			var rec: Variant = (settle_raw as Dictionary)[k]
+			if not (rec is Dictionary):
+				continue
+			var kp := String((rec as Dictionary).get("keeper_path", ""))
+			if kp != "coexist" and kp != "driveout":
+				kp = ""
+			s.settlements[zid] = {
+				"founded": bool((rec as Dictionary).get("founded", false)),
+				"biome": String((rec as Dictionary).get("biome", "")),
+				"keeper_path": kp,
+			}
+	var arch_raw: Variant = d.get("zone_archives", {})
+	if arch_raw is Dictionary:
+		for k in (arch_raw as Dictionary).keys():
+			var zid2 := String(k)
+			if not CartographyConfig.has_node(zid2) or zid2 == s.map_current:
+				continue   # unknown node, or the active zone (its state is the live fields)
+			var arc: Variant = (arch_raw as Dictionary)[k]
+			if not (arc is Dictionary):
+				continue
+			s.zone_archives[zid2] = s._sanitize_zone_archive(arc as Dictionary)
+	var heir_raw: Variant = d.get("heirlooms", {})
+	if heir_raw is Dictionary:
+		for tok in CartographyConfig.HEARTH_TOKEN_FOR_TYPE.values():
+			if int((heir_raw as Dictionary).get(tok, 0)) >= 1:
+				s.heirlooms[String(tok)] = 1
 	# Bounded farm RUN (Task A, ADDITIVE). Restore the six run fields defensively (missing →
 	# defaults = no run, the back-compat state for any pre-run save). Restored BEFORE the
 	# farm_turns_used clamp below so farm_turn_budget() reflects the per-run budget while a run
@@ -2513,24 +5046,96 @@ static func from_dict(d: Dictionary) -> GameState:
 				"turns_left": pturns,
 			}
 	s.runes = maxi(0, int(d.get("runes", 0)))
-	# Restore the capstone-boss state defensively (M3g). Keep boss_active only if it
-	# names a REAL boss (a bogus id → "" = no fight); HP can't go negative; and a
-	# "no fight" state ("") snaps HP to 0 so a stale save can't strand a phantom
-	# fight with leftover HP. town2_complete is coerced to a plain bool.
+	# Restore the seasonal-boss state defensively (T24). Keep boss_active only if it names a REAL
+	# boss (a bogus id — or a stale old-model HP save with no valid id — → "" = idle). When idle,
+	# every per-fight field snaps to its rest value so a corrupt save can't strand a phantom
+	# challenge. When live, the window / progress / target / modifier overlay restore (clamped >= 0,
+	# the modifier_state shape coerced via apply-shape defaults). The old `boss_hp` key is simply
+	# ignored (this model has no HP). town2_complete is coerced to a plain bool (the Town-2 gate is
+	# preserved across the model change).
 	var saved_boss := String(d.get("boss_active", ""))
 	if not BossConfig.is_boss(saved_boss):
 		saved_boss = ""
-	var bhp: int = maxi(0, int(d.get("boss_hp", 0)))
-	if saved_boss == "":
-		bhp = 0
 	s.boss_active = saved_boss
-	s.boss_hp = bhp
 	s.town2_complete = bool(d.get("town2_complete", false))
+	if saved_boss == "":
+		# Idle: rest every per-fight field (defensive against a partial/corrupt save).
+		s.boss_season = ""
+		s.boss_year = 1
+		s.boss_turns_remaining = 0
+		s.boss_progress = 0
+		s.boss_target_resource = ""
+		s.boss_target_amount = 0
+		s.boss_modifier_state = {}
+	else:
+		# Live: restore the window/progress/target + the modifier overlay. Cache the season/target
+		# from the CATALOG when the save omits them (an old or partial save), so they're always
+		# consistent with the boss id. boss_year defaults to 1 (the port has no calendar).
+		s.boss_season = String(d.get("boss_season", BossConfig.boss_season(saved_boss)))
+		s.boss_year = maxi(1, int(d.get("boss_year", 1)))
+		s.boss_turns_remaining = maxi(0, int(d.get("boss_turns_remaining", BossConfig.BOSS_WINDOW_TURNS)))
+		s.boss_progress = maxi(0, int(d.get("boss_progress", 0)))
+		s.boss_target_resource = String(d.get("boss_target_resource", BossConfig.target_resource(saved_boss)))
+		s.boss_target_amount = maxi(0, int(d.get("boss_target_amount", BossConfig.target_amount(saved_boss))))
+		var saved_mod = d.get("boss_modifier_state", {})
+		s.boss_modifier_state = (saved_mod as Dictionary).duplicate(true) if saved_mod is Dictionary else {}
 	# Restore the Town-3 rats state (M3h). Charges-used is clamped to >= 0 (a
 	# corrupt negative can't grant phantom shoo-moves). It is NOT clamped to
 	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
+	# Restore the farm HAZARDS state (T7/T8/T9). HazardLogic.normalise coerces ints (JSON yields
+	# floats), drops malformed entries, and clamps to the active caps, so a corrupt/stale save can
+	# never strand a phantom hazard. A missing "hazards" key (any pre-hazards save) normalises to
+	# the default all-inactive state. fire_hazard_force stays false (transient, never persisted).
+	s.hazards = HazardLogic.normalise(d.get("hazards", {}))
+	# Restore the MINE HAZARDS state (T11). MineHazardLogic.normalise coerces ints (JSON yields
+	# floats), drops malformed entries, and bounds-checks every cell, so a corrupt/stale save can
+	# never strand a phantom mine hazard. A missing "mine_hazards" key (any pre-mine-hazards save)
+	# normalises to the default all-inactive state. Mine hazards exist only on a mine expedition, so
+	# a non-mine biome forces them inactive (a stale mine hazard can never bleed onto the farm).
+	if biome == "mine":
+		s.mine_hazards = MineHazardLogic.normalise(d.get("mine_hazards", {}))
+	else:
+		s.mine_hazards = MineHazardLogic.default_state()
+	# Restore the Mysterious Ore (T23). Kept only on a mine expedition with a live countdown — a
+	# stale ore from a non-mine save (or one whose countdown elapsed) is dropped (mirrors the
+	# harbor pearl restore guard).
+	var ore_d: Variant = d.get("mysterious_ore", {})
+	if biome == "mine" and ore_d is Dictionary and not (ore_d as Dictionary).is_empty():
+		var ore_turns: int = maxi(0, int((ore_d as Dictionary).get("turns_left", 0)))
+		if ore_turns > 0:
+			s.mysterious_ore = {
+				"row": int((ore_d as Dictionary).get("row", 0)),
+				"col": int((ore_d as Dictionary).get("col", 0)),
+				"turns_left": ore_turns,
+			}
+	# Restore the Tile Collection slice (T2/T3/T5). Mirrors React mergeLoadedState
+	# (src/state/helpers.ts:126-142): start from the FRESH default seed, then OVERLAY the
+	# saved sub-keys so any new catalog variant added since the save still gets its default
+	# (a save can never lose a freshly-added default tile). Only known catalog ids are kept
+	# (a stale/bogus id is dropped); research progress is clamped to its variant's goal.
+	s._ensure_tile_collection()   # seed defaults first
+	var ta: Variant = d.get("tile_active_by_category", {})
+	if ta is Dictionary:
+		for cat in (ta as Dictionary).keys():
+			var vid := String((ta as Dictionary)[cat])
+			# Keep the saved active variant only when it's a real catalog tile of THAT category.
+			if TileVariantConfig.is_tile(vid) and String(TileVariantConfig.by_id(vid).get("category", "")) == String(cat):
+				s.tile_active_by_category[String(cat)] = vid
+	var td: Variant = d.get("tile_discovered", {})
+	if td is Dictionary:
+		for id in (td as Dictionary).keys():
+			if TileVariantConfig.is_tile(String(id)) and bool((td as Dictionary)[id]):
+				s.tile_discovered[String(id)] = true
+	var tr: Variant = d.get("tile_research_progress", {})
+	if tr is Dictionary:
+		for id in (tr as Dictionary).keys():
+			if not TileVariantConfig.is_tile(String(id)):
+				continue
+			var goal: int = int(TileVariantConfig.discovery_of(String(id)).get("researchAmount", 0))
+			s.tile_research_progress[String(id)] = clampi(int((tr as Dictionary)[id]), 0, maxi(0, goal))
+	s.tile_free_moves = maxi(0, int(d.get("tile_free_moves", 0)))
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
@@ -2619,6 +5224,20 @@ static func from_dict(d: Dictionary) -> GameState:
 	# gate stays closed until the player builds it. Coerced to a plain bool. SAVE_VERSION is
 	# NOT bumped.
 	s.portal_built = bool(d.get("portal_built", false))
+	# Restore Keepers + Boons (T31, ADDITIVE). Missing keys (any save written before T31 existed)
+	# → embers/core_ingots 0 + an empty boons map (the defaults the new GameState already carries),
+	# so every boon multiplier is 1.0 and the economy is unchanged. Both currencies are int-coerced
+	# (JSON yields floats) + floored at 0; the boons map keeps ONLY truthy entries for REAL boon ids
+	# so a corrupt/stale save can never seed a phantom (and thus mult-affecting) boon. The keeper
+	# path flags ride along in `story.flags` (restored above). SAVE_VERSION is NOT bumped.
+	s.embers = maxi(0, int(d.get("embers", 0)))
+	s.core_ingots = maxi(0, int(d.get("core_ingots", 0)))
+	var boons_d: Variant = d.get("boons", null)
+	if boons_d is Dictionary:
+		for k in boons_d:
+			var bid := String(k)
+			if BoonConfig.has_boon(bid) and bool(boons_d[k]):
+				s.boons[bid] = true
 	# Restore Quests + Almanac (ADDITIVE). Missing keys (any save written before quests
 	# existed) → an empty quest board, day 0, the default seed, and a fresh almanac (the
 	# defaults the new GameState already carries), so old saves load with no quests rolled
@@ -2678,6 +5297,15 @@ static func from_dict(d: Dictionary) -> GameState:
 		for k in struct_d:
 			if bool(struct_d[k]):
 				s.almanac_structural[String(k)] = true
+	# T16: Restore dynamic market state (ADDITIVE). Missing keys (any save written before
+	# T16 existed) → 0/0 defaults (seed 0, season 0) — a deterministic but non-random
+	# season-0 price set. Both values are int-coerced + floored at 0; market_seed is
+	# kept unsigned (masked to 0x7FFFFFFF so it stays positive in GDScript's signed
+	# int domain). market_prices and market_event are derived — recomputed from the
+	# restored seed + season by _recompute_market(). SAVE_VERSION is NOT bumped.
+	s.market_seed = maxi(0, int(d.get("market_seed", 0))) & 0x7FFFFFFF
+	s.market_season = maxi(0, int(d.get("market_season", 0)))
+	s._recompute_market()
 	return s
 
 # ── Fresh-game factory (React-parity starting economy) ──────────────────────
@@ -2695,4 +5323,9 @@ static func new_game() -> GameState:
 	var g := GameState.new()
 	# React parity: src/state/init.ts:71 — coins: 150
 	g.coins = 150
+	# T16: seed the market deterministically from the current time (a fresh game gets
+	# a unique seed so each run has a distinct price history). market_season starts at 0.
+	g.market_seed = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF
+	g.market_season = 0
+	g._recompute_market()
 	return g

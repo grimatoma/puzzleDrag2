@@ -43,6 +43,10 @@ func set_state(turns_used: int, budget: int, season_idx: int) -> void:
 func turns_left() -> int:
 	return maxi(0, _budget - _turns_used)
 
+## The current season NAME ("Spring"…"Winter") — the highlighted segment. Headless-testable.
+func season_name() -> String:
+	return String(Constants.SEASON_NAMES[clampi(_season_idx, 0, 3)])
+
 func _draw() -> void:
 	var w: float = size.x
 	var h: float = size.y
@@ -70,6 +74,13 @@ func _draw() -> void:
 			draw_line(Vector2(x + sw, 0.0), Vector2(x + sw, h), Color(BORDER, 0.55), 1.5)
 		# Uppercase season NAME centred at the bottom, dimmed when not the active season.
 		_draw_label(String(pal["name"]).to_upper(), Rect2(x, 0.0, sw, h), pal["label"], i == _season_idx)
+		# ACTIVE-season highlight (React parity: the current season segment reads brighter +
+		# ringed). A 2px label-tinted ring inset just inside the segment, plus a faint top glow
+		# band, so the live season clearly stands out from the dimmed siblings.
+		if i == _season_idx and sw > 4.0:
+			var glow := Rect2(x + 1.0, 0.0, sw - 2.0, 4.0)
+			_draw_vgradient(glow, Color(pal["label"], 0.30), Color(pal["label"], 0.0))
+			draw_rect(Rect2(x + 1.0, 1.0, sw - 2.0, h - 2.0), Color(pal["label"], 0.75), false, 2.0)
 		x += sw
 
 	# ── 2. the progress wagon (a clean glyph marker) ──────────────────────────
@@ -135,29 +146,37 @@ func _draw_wagon(cx: float, h: float) -> void:
 		draw_circle(wc, 2.6, hub)
 		draw_circle(wc, 0.9, iron)
 
-## The right numeral panel: a soft-parchment plate with an iron left border showing the big
-## remaining count over a small "TURNS LEFT" caption — the React NumeralPanel. Reads in the
-## active season's label colour so it harmonises with the strip.
+## The right numeral PILL: a soft-parchment plate (inset to read as a rounded pill) with an
+## iron left divider, showing the BIG remaining count over a tracked "TURNS LEFT" caption —
+## the React NumeralPanel, made bolder. Reads in the active season's label colour so it
+## harmonises with the strip.
 func _draw_numeral_panel(rect: Rect2) -> void:
 	var pal: Dictionary = Constants.SEASON_STRIP_PALETTES[_season_idx]
 	var num_col: Color = pal["label"]
-	# Plate fill (a near-white wash of the season's top colour) + iron left border.
+	# Plate fill (a near-white wash of the season's top colour) + iron left divider.
 	draw_rect(rect, (pal["bg_top"] as Color).lerp(Color.WHITE, 0.45))
 	draw_line(rect.position, rect.position + Vector2(0.0, rect.size.y), Color(BORDER, 0.7), 1.5)
+	# An inset pill plate (a season-tinted fill ringed by the label colour) so the count reads
+	# as a prominent badge, not just floating text on the wash.
+	var pill := Rect2(rect.position.x + 4.0, 5.0, rect.size.x - 8.0, rect.size.y - 22.0)
+	draw_rect(pill, Color(num_col, 0.12))
+	draw_rect(pill, Color(num_col, 0.55), false, 1.5)
 
 	var font: Font = ThemeDB.fallback_font
 	var num_text: String = str(turns_left())
-	var num_fs: int = 22
+	var num_fs: int = 24
 	var num_w: float = font.get_string_size(num_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, num_fs).x
 	var num_pos := Vector2(
-		rect.position.x + (rect.size.x - num_w) / 2.0,
-		rect.position.y + rect.size.y / 2.0 + 3.0)
+		pill.position.x + (pill.size.x - num_w) / 2.0,
+		pill.position.y + pill.size.y / 2.0 + 8.0)
+	# Draw twice (a 1px offset) for a faux-bold weight on the bundled (non-bold) font.
 	draw_string(font, num_pos, num_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, num_fs, num_col)
+	draw_string(font, num_pos + Vector2(0.6, 0.0), num_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, num_fs, num_col)
 
 	var cap := "TURNS LEFT"
-	var cap_fs: int = 7
+	var cap_fs: int = 8
 	var cap_w: float = font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1.0, cap_fs).x
 	var cap_pos := Vector2(
 		rect.position.x + (rect.size.x - cap_w) / 2.0,
-		rect.position.y + rect.size.y - 6.0)
-	draw_string(font, cap_pos, cap, HORIZONTAL_ALIGNMENT_LEFT, -1.0, cap_fs, Color(num_col, 0.85))
+		rect.position.y + rect.size.y - 5.0)
+	draw_string(font, cap_pos, cap, HORIZONTAL_ALIGNMENT_LEFT, -1.0, cap_fs, Color(num_col, 0.9))

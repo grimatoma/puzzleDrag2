@@ -95,6 +95,20 @@ func _initialize() -> void:
 	_check(bool(d_items.get("ok", false)), "resolve('items') ok")
 	_check(int(d_items.get("modal", -1)) == ViewRouter.Modal.INVENTORY, "resolve('items') modal == INVENTORY")
 
+	# review-3 — "craft"/"crafting" resolve to the CRAFTING UI (RecipeWikiScreen = RECIPES modal),
+	# matching the 🔨 Craft bottom-nav tab. The ledger ("town"/"ledger") is its own TOWN modal.
+	var d_craft := ViewRouter.resolve("craft")
+	_check(bool(d_craft.get("ok", false)), "resolve('craft') ok")
+	_check(int(d_craft.get("modal", -1)) == ViewRouter.Modal.RECIPES,
+		"resolve('craft') modal == RECIPES (crafting UI)")
+	var d_crafting := ViewRouter.resolve("crafting")
+	_check(int(d_crafting.get("modal", -1)) == ViewRouter.Modal.RECIPES,
+		"resolve('crafting') modal == RECIPES (alias)")
+	var d_ledger := ViewRouter.resolve("ledger")
+	_check(bool(d_ledger.get("ok", false)), "resolve('ledger') ok")
+	_check(int(d_ledger.get("modal", -1)) == ViewRouter.Modal.TOWN,
+		"resolve('ledger') modal == TOWN (town ledger, alias of 'town')")
+
 	# Unknown id → not-ok
 	var d_bad := ViewRouter.resolve("unknown_xyz")
 	_check(not bool(d_bad.get("ok", true)), "resolve(unknown) returns ok=false")
@@ -121,6 +135,9 @@ func _initialize() -> void:
 	_check(ids.has(""),          "known_ids() contains ''")
 	_check(ids.has("board"),     "known_ids() contains 'board'")
 	_check(ids.has("town"),      "known_ids() contains 'town'")
+	_check(ids.has("ledger"),    "known_ids() contains 'ledger'")
+	_check(ids.has("craft"),     "known_ids() contains 'craft'")
+	_check(ids.has("crafting"),  "known_ids() contains 'crafting'")
 	_check(ids.has("menu"),      "known_ids() contains 'menu'")
 	_check(ids.has("inventory"), "known_ids() contains 'inventory'")
 	_check(ids.has("items"),     "known_ids() contains 'items'")
@@ -151,6 +168,35 @@ func _initialize() -> void:
 	_check(main._town_screen.visible, "_town_screen is visible after deeplink")
 	_check(main._router.current_modal() == ViewRouter.Modal.TOWN,
 		"_router.current_modal() == TOWN after apply_deeplink('town')")
+
+	# ── review-3 — the 🔨 Craft nav tab opens the CRAFTING UI, NOT the Town ledger ──
+	# Simulate tapping the bottom-nav "craft" tab (the path the HUD emits → _on_nav_selected).
+	# It must open the RecipeWikiScreen crafting screen (RECIPES modal) and NOT the TownScreen.
+	main._on_nav_selected("craft")
+	await process_frame
+	_check(main._recipe_wiki_screen != null and main._recipe_wiki_screen.visible,
+		"craft nav tap opens the crafting screen (RecipeWikiScreen)")
+	_check(main._router.current_modal() == ViewRouter.Modal.RECIPES,
+		"craft nav tap → _router.current_modal() == RECIPES (crafting UI, not TOWN)")
+	_check(main._town_screen == null or not main._town_screen.visible,
+		"craft nav tap does NOT open the Town ledger (TownScreen hidden)")
+
+	# The Town ledger is still reachable via the deep-link (the ☰ menu + town-map button route here).
+	main.apply_deeplink("town")
+	await process_frame
+	_check(main._town_screen != null and main._town_screen.visible,
+		"Town ledger reachable via apply_deeplink('town') after the craft re-route")
+	_check(not main._recipe_wiki_screen.visible,
+		"opening the Town ledger (a sibling primary) hides the crafting screen")
+	# The town-map "📋 Town Ledger" button emits ledger_requested → Main opens the TownScreen.
+	main.apply_deeplink("map")
+	await process_frame
+	main._townmap_screen.emit_signal("ledger_requested")
+	await process_frame
+	_check(main._town_screen != null and main._town_screen.visible,
+		"town-map 'Town Ledger' button (ledger_requested) opens the TownScreen")
+	_check(main._townmap_screen == null or not main._townmap_screen.visible,
+		"opening the ledger from the map hides the town map (sibling primary)")
 
 	# Task C — board RUN-GATE. The board is only reachable while a bounded farm run is live (town
 	# is home). With NO run active, apply_deeplink("board") redirects to the town home (and leaves

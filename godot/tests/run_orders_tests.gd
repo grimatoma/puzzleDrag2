@@ -24,10 +24,16 @@ var _failures: int = 0
 func _initialize() -> void:
 	print("\n── Orders (coin-sink) tests ───────────────────────")
 	_test_reward_for()
+	_test_value_scaled_reward()
+	_test_qty_scaling()
+	_test_crafted_pool()
 	_test_orderable_resources()
 	_test_generate_order()
+	_test_no_dupe_slots()
+	_test_crafted_pool_gating()
 	_test_refill_orders()
 	_test_fill_order()
+	_test_fill_bond_multiplier()
 	_test_fill_beats_market()
 	_test_save_round_trip()
 	_test_coins_uncapped()
@@ -57,17 +63,74 @@ func _give_all(g: GameState, cost: Dictionary) -> void:
 
 func _test_reward_for() -> void:
 	_check(OC.MAX_ORDERS == 3, "MAX_ORDERS is 3")
-	_check(OC.MIN_QTY == 3 and OC.MAX_QTY == 8, "qty range is [3, 8]")
-	_check(OC.REWARD_MULT == 3, "REWARD_MULT is 3")
+	_check(OC.REWARD_MULT == 6, "REWARD_MULT is 6 (T19 value-scaled)")
+	_check(OC.MIN_RESOURCE_REWARD == 20, "MIN_RESOURCE_REWARD floor is 20")
+	_check(is_equal_approx(OC.CRAFTED_REWARD_MULT, 1.5), "CRAFTED_REWARD_MULT is 1.5")
+	_check(OC.CRAFTED_ORDER_LEVEL == 3, "crafted-good orders gate at level 3")
+	_check(is_equal_approx(OC.CRAFTED_ORDER_CHANCE, 0.30), "crafted-good order chance is 0.30")
 
-	var expected_eggs: int = MC.sell_price("eggs") * 5 * OC.REWARD_MULT
+	# Resource reward = max(20, sell_price × qty × 6). eggs sell_price 12 → 12×5×6 = 360.
+	var expected_eggs: int = max(20, MC.sell_price("eggs") * 5 * OC.REWARD_MULT)
 	_check(OC.reward_for("eggs", 5) == expected_eggs,
-		"reward_for(eggs, 5) == sell_price(eggs)×5×3 (%d)" % expected_eggs)
-	_check(OC.reward_for("flour", 3) == MC.sell_price("flour") * 3 * 3,
-		"reward_for(flour, 3) == sell_price(flour)×3×3")
-	# A zero-Market-price resource still floors the reward at 1.
+		"reward_for(eggs, 5) == max(20, sell_price(eggs)×5×6) (%d)" % expected_eggs)
+	# A cheap resource is FLOORED at 20: hay_bundle sell_price 1 × 3 × 6 = 18 → floored to 20.
+	_check(MC.sell_price("hay_bundle") == 1, "(precondition) hay_bundle sell_price is 1")
+	_check(OC.reward_for("hay_bundle", 3) == 20,
+		"reward_for(hay_bundle, 3) floors at 20 (1×3×6=18 < 20)")
+	# A zero-Market-price resource still pays the 20 floor.
 	_check(MC.sell_price("rock") == 0, "(precondition) rock has no Market price")
-	_check(OC.reward_for("rock", 5) == 1, "reward floors at 1 for a zero-price resource")
+	_check(OC.reward_for("rock", 5) == 20, "reward floors at 20 for a zero-price resource")
+
+# ── T19: value-scaled reward (resource + crafted) ─────────────────────────────
+
+func _test_value_scaled_reward() -> void:
+	# Resource: max(20, value × qty × 6). soup sell_price 20 → 20×3×6 = 360.
+	_check(OC.reward_for("soup", 3) == 20 * 3 * 6, "soup×3 resource reward = value×qty×6 (360)")
+	# Crafted: round(value × qty × 1.5). honeyroll sell_price 175 → round(175×2×1.5) = 525.
+	_check(MC.sell_price("honeyroll") == 175, "(precondition) honeyroll sell_price 175")
+	_check(OC.crafted_reward_for("honeyroll", 2) == int(round(175.0 * 2.0 * 1.5)),
+		"honeyroll×2 crafted reward = round(value×qty×1.5) (525)")
+	# An unpriced crafted good still floors at 1.
+	_check(OC.crafted_reward_for("nonesuch", 3) == 1, "crafted reward floors at 1 for an unpriced good")
+	# Crucially the resource ×6 beats a raw market sale (×1) for the SAME goods (the sink incentive).
+	_check(OC.reward_for("eggs", 5) > MC.sell_price("eggs") * 5, "resource order ×6 beats raw market sale")
+
+# ── T19: level-scaled quantity ────────────────────────────────────────────────
+
+func _test_qty_scaling() -> void:
+	# qty_for(value, level, roll_small) = baseNeed + floor(roll×4) + floor(level/3)×2.
+	# A cheap resource (value < 3) has baseNeed 8; a valuable one baseNeed 4.
+	_check(OC.qty_for(1, 1, 0.0) == 8, "cheap resource (value 1) baseNeed 8 at level 1, roll 0")
+	_check(OC.qty_for(20, 1, 0.0) == 4, "valuable resource (value 20) baseNeed 4 at level 1, roll 0")
+	# Level ramp: +2 per 3 levels. At level 6 → +4.
+	_check(OC.qty_for(20, 6, 0.0) == 4 + 4, "valuable resource at level 6 → baseNeed 4 + level ramp 4")
+	# The random spread adds 0..3.
+	_check(OC.qty_for(20, 1, 0.99) == 4 + 3, "roll 0.99 adds the full +3 spread")
+	# Crafted qty is 1..3.
+	_check(OC.crafted_qty(0.0) == 1, "crafted_qty(0.0) == 1")
+	_check(OC.crafted_qty(0.99) == 3, "crafted_qty(0.99) == 3")
+
+# ── T19: crafted-good order pool ──────────────────────────────────────────────
+
+func _test_crafted_pool() -> void:
+	var pool: Array = OC.crafted_order_pool()
+	_check(not pool.is_empty(), "crafted_order_pool is non-empty")
+	# Every entry is a Market-sellable crafted GOOD (bread is the staple crafted good).
+	_check(pool.has("bread"), "crafted pool includes 'bread' (a KIND_GOOD recipe output)")
+	var all_sellable := true
+	var all_goods := true
+	var seen: Dictionary = {}
+	var dupes := false
+	for g in pool:
+		if not MC.can_sell(String(g)):
+			all_sellable = false
+		if seen.has(g):
+			dupes = true
+		seen[g] = true
+	_check(all_sellable, "every crafted-pool entry is Market-sellable")
+	_check(not dupes, "crafted pool has no duplicates")
+	# Tools (KIND_TOOL outputs) are excluded — 'axe' is a tool recipe, not in the pool.
+	_check(not pool.has("axe"), "crafted pool excludes tool outputs (axe)")
 
 # ── orderable_resources ───────────────────────────────────────────────────────
 
@@ -109,17 +172,101 @@ func _test_orderable_resources() -> void:
 func _test_generate_order() -> void:
 	var g := GameState.new()
 	g.seed_orders(12345)
+	# A fresh GameState is at almanac_level 1 (< CRAFTED_ORDER_LEVEL), so EVERY order is a
+	# value-scaled RESOURCE order — kind == "resource", reward == reward_for(resource, qty).
+	_check(g.almanac_level < OC.CRAFTED_ORDER_LEVEL, "(precondition) fresh almanac_level below crafted gate")
 	var pool: Array = g.orderable_resources()
 	for i in 20:
 		var o: Dictionary = g.generate_order()
 		_check(o["resource"] in pool, "generate_order #%d resource is orderable" % i)
+		_check(String(o.get("kind", "")) == "resource",
+			"generate_order #%d is a resource order at level 1" % i)
 		var q: int = int(o["qty"])
-		_check(q >= OC.MIN_QTY and q <= OC.MAX_QTY,
-			"generate_order #%d qty %d in [%d, %d]" % [i, q, OC.MIN_QTY, OC.MAX_QTY])
+		_check(q > 0, "generate_order #%d qty %d is positive" % [i, q])
 		_check(int(o["reward"]) == OC.reward_for(String(o["resource"]), q),
-			"generate_order #%d reward matches reward_for" % i)
+			"generate_order #%d reward matches value-scaled reward_for" % i)
+		_check(int(o["base_reward"]) == int(o["reward"]), "generate_order #%d base_reward == reward" % i)
 	# Pure: generate_order must NOT mutate the orders array.
 	_check(g.orders.is_empty(), "generate_order did not mutate orders")
+
+# ── T19: the 3-order board never duplicates an NPC or a requested resource ─────
+
+func _test_no_dupe_slots() -> void:
+	# refill_orders accumulates exclusions, so across MANY seeded boards the 3 slots never
+	# share an NPC, and never a requested resource/good WHEN enough distinct keys exist.
+	# A fresh GameState has only 2 orderable resources (hay_bundle, flour) for 3 slots, so a
+	# resource repeat is unavoidable there (React has the same constraint with a tiny pool) —
+	# the no-dupe guarantee is best-effort and only firm once the pool is big enough. Build out
+	# production so >= MAX_ORDERS distinct orderable resources exist, then assert no key dupes.
+	var any_npc_dupe := false
+	var any_key_dupe := false
+	for seed in [1, 2, 3, 7, 11, 42, 99, 100, 256, 1000]:
+		var g := GameState.new()
+		# Give a large orderable pool: Village tier + a Coop (eggs) + Bakery (bread) so the set is
+		# {hay_bundle, flour, eggs, bread} — 4 distinct keys for 3 slots.
+		g.settlement.tier = TownConfig.TIER_VILLAGE
+		_give_all(g, BC.building_cost(BC.COOP))
+		g.build(BC.COOP)
+		_give_all(g, BC.building_cost(BC.BAKERY))
+		g.build(BC.BAKERY)
+		_check(g.orderable_resources().size() >= OC.MAX_ORDERS,
+			"seed %d has >= MAX_ORDERS distinct orderable resources" % seed)
+		g.seed_orders(seed)
+		g.refill_orders()
+		_check(g.orders.size() == OC.MAX_ORDERS, "seed %d filled to MAX_ORDERS" % seed)
+		var npcs: Dictionary = {}
+		var keys: Dictionary = {}
+		for o in g.orders:
+			var npc := String((o as Dictionary).get("npc", ""))
+			var key := String((o as Dictionary).get("resource", ""))
+			if npcs.has(npc):
+				any_npc_dupe = true
+			if keys.has(key):
+				any_key_dupe = true
+			npcs[npc] = true
+			keys[key] = true
+	_check(not any_npc_dupe, "no NPC is requested by two order slots (across 10 seeded boards)")
+	_check(not any_key_dupe, "no resource/good is requested by two order slots when the pool is large enough")
+
+	# And the NPC no-dupe ALWAYS holds even with the tiny fresh pool (5 NPCs >= 3 slots).
+	var fresh_npc_dupe := false
+	for seed in [5, 50, 500]:
+		var gf := GameState.new()
+		gf.seed_orders(seed)
+		gf.refill_orders()
+		var seen: Dictionary = {}
+		for o in gf.orders:
+			var npc := String((o as Dictionary).get("npc", ""))
+			if seen.has(npc):
+				fresh_npc_dupe = true
+			seen[npc] = true
+	_check(not fresh_npc_dupe, "NPC no-dupe holds even on a fresh tiny-pool board")
+
+# ── T19: crafted-good orders are gated to level 3+ ─────────────────────────────
+
+func _test_crafted_pool_gating() -> void:
+	# At level 1 (below the gate) NO order is ever crafted, across many rolls.
+	var g1 := GameState.new()
+	g1.almanac_level = 1
+	g1.seed_orders(555)
+	var any_crafted_low := false
+	for i in 60:
+		if String(g1.generate_order().get("kind", "")) == "crafted":
+			any_crafted_low = true
+	_check(not any_crafted_low, "no crafted order below level 3 (60 rolls)")
+
+	# At level 5 (above the gate) crafted orders DO appear (30% chance) across many rolls.
+	var g2 := GameState.new()
+	g2.almanac_level = 5
+	g2.seed_orders(777)
+	var crafted_count := 0
+	for i in 200:
+		if String(g2.generate_order().get("kind", "")) == "crafted":
+			crafted_count += 1
+	_check(crafted_count > 0, "crafted orders appear at level 5 (%d/200 rolls were crafted)" % crafted_count)
+	# Roughly the 30% rate (loose bounds so the seeded run isn't brittle).
+	_check(crafted_count > 20 and crafted_count < 100,
+		"crafted rate is roughly 30%% (%d/200, expect ~60)" % crafted_count)
 
 # ── refill_orders ─────────────────────────────────────────────────────────────
 
@@ -183,6 +330,23 @@ func _test_fill_order() -> void:
 	_check(not bool(bad["ok"]), "fill at out-of-range index fails")
 	_check(bad.get("reason", "") == "bad_index", "reason is 'bad_index'")
 	_check(g3.coins == 5 and g3.orders.size() == 1, "no mutation on bad_index")
+
+# ── T19: the bond multiplier still applies on fill ────────────────────────────
+
+func _test_fill_bond_multiplier() -> void:
+	# A KNOWN order from a Liked NPC (bond 8 → ×1.15). The payout must be the bond-adjusted
+	# base, proving the value-scaled order layer still routes through the bond multiplier.
+	var g := GameState.new()
+	g.gain_bond("mira", 3.0)   # 5.0 → 8.0 (Liked, ×1.15)
+	_check(g.npc_bond("mira") == 8.0, "(setup) mira bond pushed to 8.0 (Liked)")
+	g.orders = [{"resource": "flour", "qty": 4, "reward": 200, "base_reward": 200, "npc": "mira", "kind": "resource"}]
+	g.inventory["flour"] = 4
+	g.coins = 0
+	var res: Dictionary = g.fill_order(0)
+	_check(bool(res["ok"]), "fill from a Liked NPC succeeds")
+	_check(int(res["reward"]) == int(round(200.0 * 1.15)),
+		"Liked payout == round(base 200 × 1.15) == 230 (bond multiplier still applies)")
+	_check(g.coins == 230, "coins credited the bond-adjusted payout")
 
 # ── filling pays more than the raw Market ─────────────────────────────────────
 

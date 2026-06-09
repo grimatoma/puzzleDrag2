@@ -87,9 +87,10 @@ const SAPLING: String = "sapling"
 # five golden/philosophers tools reuse transform_tiles (from_category → to_key); magic_wand
 # uses the NEW tap_clear_type power; magic_seed the NEW restore_turns state power;
 # magic_fertilizer the already-wired fill_bias power. Targets/categories use REAL Godot
-# tile/category names, never invented ones. DEFERRED (NOT here): hourglass (undo_move — needs
-# a board/inventory snapshot) and miners_hat (reveal_tiles — needs a hidden-tile layer); they
-# stay summonable in PortalConfig but have no effect until those milestones land.
+# tile/category names, never invented ones. miners_hat (reveal_tiles) is now WIRED — the boss
+# hide_resources modifier added the hidden-tile layer it reveals (T24). DEFERRED (NOT here):
+# only hourglass (undo_move — needs a board/inventory snapshot); it stays summonable in
+# PortalConfig but has no effect until that primitive lands.
 const GOLDEN_APPLE: String = "golden_apple"
 const GOLDEN_CARROT: String = "golden_carrot"
 const GOLDEN_IDOL: String = "golden_idol"
@@ -98,6 +99,28 @@ const PHILOSOPHERS_STONE: String = "philosophers_stone"
 const MAGIC_WAND: String = "magic_wand"
 const MAGIC_SEED: String = "magic_seed"
 const MAGIC_FERTILIZER: String = "magic_fertilizer"
+# ── Wolf-hazard tools (T14a) — the FIRST tools to use the clear_wolves / scatter_hazard STATE
+# powers. Like fill_bias / restore_turns these NEVER touch the grid: wolves are OVERLAY entities
+# (not grid cells), so GameState.use_tool_on_grid intercepts these power ids in its EARLY path and
+# mutates `hazards.wolves` (clear all / scare for 5 turns). Ported from the React Workshop recipes
+# (src/constants.ts WORKSHOP_RECIPES.rifle/hound) + the USE_TOOL rifle/hound handlers.
+const RIFLE: String = "rifle"
+const HOUND: String = "hound"
+# ── Mine-hazard tools (T14b) — STATE powers handled in GameState's early path (never reach
+# apply_instant; they mutate `mine_hazards` + the grid). Like the wolf tools they are instant (no
+# tapped cell). Ported from the React Workshop recipes (src/constants.ts rec_water_pump /
+# rec_explosives) + the USE_TOOL water_pump/explosives handlers (toolPowerRuntime.ts:349-358).
+#   WATER_PUMP — floods every LAVA cell → RUBBLE + clears the lava hazard (React "Lava Damper").
+#   EXPLOSIVES — clears the cave_in (un-buries its rubble row) + the mole hazard.
+const WATER_PUMP: String = "water_pump"
+const EXPLOSIVES: String = "explosives"
+# ── Miner's Hat (T24) — the reveal_tiles STATE power, NOW WIRED. Previously deferred (PortalConfig
+# noted "needs a HIDDEN-TILE layer"); the seasonal boss `hide_resources` modifier (Mossback) IS that
+# layer, so miners_hat is now a real ToolConfig member: a STATE power handled in
+# GameState.use_tool_on_grid's early path that reveals every HIDDEN boss cell (never touches the grid
+# beyond the reveal). Off a hide_resources boss it's a harmless no-op (no hidden cells). Still
+# summonable through the Portal (PortalConfig keeps the influence cost + the web power metadata).
+const MINERS_HAT: String = "miners_hat"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -401,6 +424,43 @@ const TOOLS: Dictionary = {
 		"params": {"target": Constants.Tile.WHEAT, "turns": 3},
 		"tap_target": false,
 	},
+	# ── Wolf-hazard tools (T14a) — STATE powers handled in GameState's early path (never reach
+	# apply_instant; they mutate hazards.wolves). Rifle drives off the whole pack; Hound scatters
+	# them (scared 5 turns). Both are instant (no tapped cell). Ported from React rifle/hound.
+	RIFLE: {
+		"label": "Rifle",
+		"power_id": "clear_wolves",
+		"params": {},
+		"tap_target": false,
+	},
+	HOUND: {
+		"label": "Hound",
+		"power_id": "scatter_hazard",
+		"params": {},
+		"tap_target": false,
+	},
+	# ── Mine-hazard tools (T14b) — STATE powers handled in GameState.use_tool_on_grid's early path
+	# (they mutate `mine_hazards` + the grid, never reaching apply_instant). Both are instant.
+	WATER_PUMP: {
+		"label": "Water Pump",
+		"power_id": "water_pump",
+		"params": {},
+		"tap_target": false,
+	},
+	EXPLOSIVES: {
+		"label": "Explosives",
+		"power_id": "explosives",
+		"params": {},
+		"tap_target": false,
+	},
+	# Miner's Hat (T24) — reveal_tiles STATE power: reveals every hidden boss cell (hide_resources /
+	# Mossback). Handled in GameState.use_tool_on_grid's early path (never reaches apply_instant).
+	MINERS_HAT: {
+		"label": "Miner's Hat",
+		"power_id": "reveal_tiles",
+		"params": {},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -422,6 +482,12 @@ const TOOL_IDS: Array = [
 	# Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
 	GOLDEN_APPLE, GOLDEN_CARROT, GOLDEN_IDOL, GOLDEN_SHEEP, PHILOSOPHERS_STONE,
 	MAGIC_WAND, MAGIC_SEED, MAGIC_FERTILIZER,
+	# T14a — wolf-hazard tools (clear_wolves / scatter_hazard state powers).
+	RIFLE, HOUND,
+	# T14b — mine-hazard tools (water_pump / explosives state powers).
+	WATER_PUMP, EXPLOSIVES,
+	# T24 — Miner's Hat (reveal_tiles state power; reveals hidden boss cells).
+	MINERS_HAT,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

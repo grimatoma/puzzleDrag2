@@ -16,8 +16,10 @@ extends CanvasLayer
 ##   Every actionable button is in `_action_buttons`:
 ##     "next"  — the Next / "Got it!" button (advances to the next step or finishes)
 ##     "skip"  — the Skip button (finishes immediately)
-##   `_step_label` and `_body_label` are the rendered Labels for the test to assert.
-##   `_indicator_label` is the "Step k / N" indicator Label.
+##   `_title_label` and `_body_label` are the rendered Labels for the test to assert.
+##   `_indicator_label` is the "Step k / N" indicator Label (kept for the existing tests).
+##   `_dots` is the Array of page-dot Panels (one per step); `_dot_active_index()` returns the
+##   filled dot's index. `_npc_name` is the speaker shown beside the Wren avatar.
 ##
 ## NO class_name — preloaded by Main (const TutorialModalScript := preload(...))
 ## so the port never needs --import to register it as a global.
@@ -41,9 +43,16 @@ var _built: bool = false
 # Static shell nodes rebuilt each open().
 var _title_label: Label           ## step title (Cinzel serif)
 var _body_label: Label            ## step body text
-var _indicator_label: Label       ## "Step k / N"
+var _indicator_label: Label       ## "Step k / N" (kept for the existing tests + a11y)
 var _next_btn: Button             ## "Next" / "Got it!" button
 var _skip_btn: Button             ## "Skip" button
+var _dots: Array = []             ## page-dot Panels (one per step) — the • ● indicator
+var _npc_name_label: Label        ## the speaker name beside the avatar ("Wren")
+
+## The narrating NPC — Wren the Scout (the React tutorial guide). Its roster colour tints the
+## avatar circle. A real NpcConfig roster member (no fake).
+const TUTORIAL_NPC := "wren"
+var _npc_name: String = ""        ## the resolved display name (headless contract)
 
 # Palette mirrors (StoryModal / MenuScreen tokens).
 const COL_TITLE := Palette.INK
@@ -111,6 +120,42 @@ func _build_shell() -> void:
 	col.add_theme_constant_override("separation", 16)
 	panel.add_child(col)
 
+	# Speaker row — the Wren avatar (a roster-coloured circle with her initial) + her name, so
+	# the onboarding reads as Wren the Scout guiding the player (React parity). The avatar uses
+	# the SAME NpcConfig roster tint the order/NPC screens use elsewhere.
+	_npc_name = NpcConfig.display_name(TUTORIAL_NPC)
+	if _npc_name == "":
+		_npc_name = "Wren"
+	var speaker_row := HBoxContainer.new()
+	speaker_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	speaker_row.add_theme_constant_override("separation", 10)
+	col.add_child(speaker_row)
+
+	speaker_row.add_child(_build_avatar(TUTORIAL_NPC, 44))
+
+	var name_col := VBoxContainer.new()
+	name_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	name_col.add_theme_constant_override("separation", 0)
+	speaker_row.add_child(name_col)
+
+	_npc_name_label = Label.new()
+	_npc_name_label.text = _npc_name
+	_npc_name_label.add_theme_font_size_override("font_size", 18)
+	_npc_name_label.add_theme_color_override("font_color", COL_TITLE)
+	var name_font: Font = UiKit.heading_font()
+	if name_font != null:
+		_npc_name_label.add_theme_font_override("font", name_font)
+	_npc_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_col.add_child(_npc_name_label)
+
+	var role_lbl := Label.new()
+	role_lbl.text = NpcConfig.role(TUTORIAL_NPC)
+	role_lbl.add_theme_font_size_override("font_size", 12)
+	role_lbl.add_theme_color_override("font_color", Palette.INK_MID)
+	role_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_col.add_child(role_lbl)
+
 	# Title — Cinzel display serif, large, centred.
 	_title_label = Label.new()
 	_title_label.text = ""
@@ -141,10 +186,27 @@ func _build_shell() -> void:
 	_body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_body_label)
 
-	# Step indicator — "Step k / N" in a small muted label.
+	# Page-DOT indicator — one dot per step, the current step filled (●) + the rest hollow (•),
+	# centred (React parity, replacing the bare "Step k/N" text as the primary cue). Built once;
+	# _render_step re-tints them. The "Step k / N" text label is KEPT below as an a11y caption
+	# (and the existing tutorial test reads it).
+	var dots_row := HBoxContainer.new()
+	dots_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	dots_row.add_theme_constant_override("separation", 8)
+	dots_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(dots_row)
+	_dots.clear()
+	for _i in TutorialConfig.count():
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(9, 9)
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dots_row.add_child(dot)
+		_dots.append(dot)
+
+	# Step indicator — "Step k / N" in a small muted caption beneath the dots.
 	_indicator_label = Label.new()
 	_indicator_label.text = ""
-	_indicator_label.add_theme_font_size_override("font_size", 14)
+	_indicator_label.add_theme_font_size_override("font_size", 12)
 	_indicator_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_indicator_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_indicator_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -174,7 +236,7 @@ func _build_shell() -> void:
 
 # ── render ─────────────────────────────────────────────────────────────────────
 
-## Render the current step's content and update the Next button label.
+## Render the current step's content and update the Next button label + page dots.
 func _render_step() -> void:
 	if not _built:
 		return
@@ -186,6 +248,62 @@ func _render_step() -> void:
 	_body_label.text = String(step.get("body", ""))
 	_indicator_label.text = "Step %d / %d" % [idx + 1, total]
 	_next_btn.text = "Got it!" if idx == total - 1 else "Next"
+	_render_dots(idx)
+
+## Re-tint the page dots: the current step's dot is a FILLED ember pill (slightly wider), the
+## rest are small hollow muted dots. Mirrors the React • ● page indicator.
+func _render_dots(active: int) -> void:
+	for i in _dots.size():
+		var dot: Panel = _dots[i]
+		var on: bool = (i == active)
+		var sb := StyleBoxFlat.new()
+		sb.set_corner_radius_all(999)
+		if on:
+			sb.bg_color = Palette.EMBER
+		else:
+			sb.bg_color = Color(Palette.INK_MID, 0.35)
+		dot.add_theme_stylebox_override("panel", sb)
+		# The active dot is a touch wider so it reads as the "you are here" pip.
+		dot.custom_minimum_size = Vector2(16 if on else 9, 9)
+
+## The index of the currently-filled page dot (headless contract). -1 if dots aren't built.
+func _dot_active_index() -> int:
+	return clampi(_current_step, 0, _dots.size() - 1) if not _dots.is_empty() else -1
+
+## Build a circular NPC avatar: a roster-tinted circle (NpcConfig.color) with a soft ring + the
+## NPC's initial in contrast ink. Sized `px`. A drawn portrait stand-in (the port has no NPC art),
+## using the SAME roster tint the order/townsfolk screens use — a real roster member, no fake.
+func _build_avatar(npc_id: String, px: int) -> Control:
+	var tint: Color = NpcConfig.color(npc_id)
+	var nm: String = NpcConfig.display_name(npc_id)
+	var initial: String = nm.substr(0, 1).to_upper() if nm != "" else "?"
+
+	var holder := PanelContainer.new()
+	holder.custom_minimum_size = Vector2(px, px)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = tint
+	sb.set_corner_radius_all(999)
+	sb.border_color = Palette.PARCHMENT
+	sb.set_border_width_all(2)
+	sb.shadow_size = 4
+	sb.shadow_color = Color(0, 0, 0, 0.20)
+	sb.shadow_offset = Vector2(0, 2)
+	holder.add_theme_stylebox_override("panel", sb)
+
+	var letter := Label.new()
+	letter.text = initial
+	letter.add_theme_font_size_override("font_size", int(px * 0.5))
+	# Light text on the (typically dark) roster tints; a heading font for weight when present.
+	letter.add_theme_color_override("font_color", Palette.PARCHMENT)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		letter.add_theme_font_override("font", hf)
+	letter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	letter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	letter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(letter)
+	return holder
 
 # ── action handlers ────────────────────────────────────────────────────────────
 

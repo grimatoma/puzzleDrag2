@@ -16,6 +16,10 @@ var _last_tier: int = 0                ## settlement tier → detect a tier-up
 var _last_coins: int = 0               ## coin balance → tell sell/buy from build/craft
 var _last_in_mine: bool = false        ## biome flag → detect entering the mine
 var _last_in_harbor: bool = false      ## biome flag → detect entering the harbor (M3j)
+## T7/T9/T10 — the cells of the chain currently resolving (Array of {row,col,tile}), stashed by
+## _on_chain_cells (Board emits chain_cells_resolved BEFORE chain_resolved) so _on_chain_resolved
+## can run the farm-hazard interactions. Cleared after each resolve.
+var _chain_cells: Array = []
 
 # ── M4b HUD: extracted into Hud.gd (this Track-D refactor) ────────────────────
 # The whole HUD presentation surface — the parchment top-bar of pills, the season bar,
@@ -120,6 +124,21 @@ var _decorations_screen: DecorationsScreenScript   ## lazily created
 ## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
 var _portal_screen: PortalScreenScript   ## lazily created
+## T31 — Boons screen: the keeper-perk catalogs (Coexist/Drive Out boons bought with
+## Embers / Core Ingots). Reachable from the ☰ menu, the town-map "✨ Boons" button, and the
+## `boons` deeplink.
+const BoonsScreenScript := preload("res://scenes/BoonsScreen.gd")
+var _boons_screen: BoonsScreenScript   ## lazily created
+## T31 — Keeper encounter modal: appears when a settlement is built up; the FINAL Coexist /
+## Drive Out choice. Auto-triggered off a town/build event (and replayable via the `keeper`
+## deeplink for QA).
+const KeeperModalScript := preload("res://scenes/KeeperModal.gd")
+var _keeper_modal: KeeperModalScript   ## lazily created
+## T22 — Founder picker modal: appears when founding a discovered, unfounded settlement node on
+## the world map; the player picks the settlement's biome. Opened from CartographyScreen's
+## `found_requested` signal.
+const FounderModalScript := preload("res://scenes/FounderModal.gd")
+var _founder_modal: FounderModalScript   ## lazily created
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
 ## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
@@ -256,6 +275,10 @@ func _ready() -> void:
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
 	# can ask GameState.capture_pearl_if_adjacent whether they sit next to the live pearl.
 	board.pearl_chain_resolved.connect(_on_pearl_chain)
+	# T7/T9/T10 — every resolved chain reports its cells so we can run the farm-hazard
+	# interactions (rat-chain clear, fire extinguish, deadly_pests cull). Connected BEFORE
+	# chain_resolved fires (Board emits cells first), so _on_chain_resolved sees the stashed cells.
+	board.chain_cells_resolved.connect(_on_chain_cells)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
@@ -267,14 +290,29 @@ func _ready() -> void:
 	# calls board.setup_new_board() after _ready), so it was the LIVE game that was drifting.
 	# Mine/harbor/spawner saves reflect their pools immediately too.
 	board.setup_new_board()
-	# M3g: if the save was restored mid-fight, keep the boss's raised chain bar.
+	# T24: if the save was restored mid-fight, keep the boss's raised chain bar, re-apply the boss
+	# modifier overlay (frozen/rubble/hidden/heat), and re-pool the board with the boss's (boosted)
+	# refill pool so the fight resumes exactly where it left off.
 	board.set_min_chain(game.boss_min_chain())
+	if game.is_boss_active():
+		board.set_boss_modifier_state(game.boss_modifier_state)
+		board.set_tile_pool(_boss_refill_pool())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# T7/T8/T9: a save restored mid-run may carry live farm hazards. Re-stamp the positional
+	# RAT/FIRE tiles onto the freshly-built board at their recorded cells and rebuild the wolf
+	# overlays, so the hazards show immediately on load (they are authoritative state, not pool
+	# draws). On the farm only; a mine/harbor save has no farm hazards active.
+	_restore_farm_hazards_onto_board()
 	# M3i: mining through rubble is active exactly while on a mine expedition (a STONE
 	# chain clears adjacent rubble — no building needed). A save restored mid-expedition
 	# keeps it on.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11/T23: a save restored mid-expedition may carry live MINE hazards + a Mysterious Ore.
+	# Block hazard-chaining (RUBBLE/LAVA) in the mine, then re-stamp the cave-in row / lava / gas
+	# cells + the live ore onto the board and refresh the mole overlay so they show immediately.
+	board.block_mine_hazards = game.is_in_mine()
+	_restore_mine_hazards_onto_board()
 	# M3j: pearl capture is live exactly while on a harbor expedition (a fish chain next to
 	# the pearl grabs the Rune). A save restored mid-harbor keeps it on; place the live pearl
 	# back onto the board at its seeded cell so the rune target shows immediately.
@@ -407,20 +445,26 @@ func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
 ## methods stay usable directly (deep-links, tests) — only the nav-tab wiring goes through
 ## here. Reopening the same view is a no-op switch (it just re-opens + re-highlights).
 func _switch_primary_view(opener: String) -> void:
+	# T15/review-3 — the Craft tab now opens the crafting UI (RecipeWikiScreen), so it
+	# joins the PRIMARY views that must be hidden when ANOTHER primary tab is opened. The
+	# Town ledger (TownScreen) is no longer a nav-tab target (it moved to the ☰ menu + the
+	# town-map "📋 Town Ledger" button), but it stays in this hide list so a stray open of
+	# it (deep-link / menu) is dismissed when a primary nav tab is tapped.
 	for screen in [_town_screen, _inventory_screen, _townmap_screen,
-			_cartography_screen, _townsfolk_screen]:
+			_cartography_screen, _townsfolk_screen, _recipe_wiki_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
-	# B2 — the SECONDARY screens (Achievements / Tile collection / Recipes / Chronicle /
-	# Castle / Charter / Decorations / Portal / Quests) are now full-brightness VIEWS too, opened
-	# from the ⚙ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is
-	# up must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
+	# B2 — the SECONDARY screens (Achievements / Tile collection / Chronicle / Castle /
+	# Charter / Decorations / Portal / Quests) are full-brightness VIEWS too, opened from the
+	# ⚙ menu's "More" section. Tapping a bottom-nav PRIMARY tab while a secondary view is up
+	# must dismiss it first, otherwise the secondary (a HIGHER layer-4 CanvasLayer) would
 	# paint over the primary the nav just opened. Hide via `.visible = false` DIRECTLY — NOT
 	# `.close()` — for the same reason the primaries do: close() emits `closed` → `_on_*_closed`
 	# → `_router.close_modal()`, which would race the modal state the opener is about to set.
-	for screen in [_achievements_screen, _tile_collection_screen, _recipe_wiki_screen,
+	# (RecipeWikiScreen moved OUT of this list — it's a primary now, hidden above.)
+	for screen in [_achievements_screen, _tile_collection_screen,
 			_chronicle_screen, _castle_screen, _charter_screen, _decorations_screen,
-			_portal_screen, _quests_screen]:
+			_portal_screen, _quests_screen, _boons_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
 	call(opener)
@@ -432,10 +476,13 @@ func _switch_primary_view(opener: String) -> void:
 ## opening one primary view first hides any other open one. The opener then sets the active tab
 ## (_hud.set_nav_current + _hud._refresh_nav) itself. Unknown keys are a no-op.
 func _on_nav_selected(key: String) -> void:
+	# review-3 — the 🔨 Craft tab opens the dedicated CRAFTING UI (RecipeWikiScreen) now,
+	# not the town-management ledger (TownScreen). The ledger moved to the ☰ menu ("Market
+	# & Town") + the town-map "📋 Town Ledger" button.
 	var opener: String = {
 		"town": "_open_townmap",
 		"inventory": "_open_inventory",
-		"craft": "_open_town",
+		"craft": "_open_recipes",
 		"map": "_open_cartography",
 		"folk": "_open_townsfolk",
 	}.get(key, "")
@@ -492,7 +539,7 @@ func _overlay_list() -> Array:
 		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
 		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
 		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
-		_charter_screen, _quests_screen,
+		_charter_screen, _quests_screen, _boons_screen, _keeper_modal, _founder_modal,
 	]
 
 ## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
@@ -612,11 +659,17 @@ func _open_town() -> void:
 		# M3h: the Town screen's "Shoo rats" button has no board ref, so it emits
 		# `rats_shoo_requested` and Main does the actual clear (spending the charge in ONE place).
 		_town_screen.connect("rats_shoo_requested", Callable(self, "_on_shoo_rats"))
+		# T24: the Town screen's "Challenge <Boss>" button has no board ref, so it emits
+		# `boss_challenge_requested` and Main runs the board-wiring boss start (the single point
+		# that arms the modifier overlay + boosted pool + raised chain bar).
+		_town_screen.connect("boss_challenge_requested", Callable(self, "_on_boss_challenge_requested"))
 	_town_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWN)
-	# The TownScreen (build / refine / market / orders) is the "Craft" tab's target.
-	_hud.set_nav_current("craft")
-	_hud._refresh_nav()
+	# review-3 — the TownScreen (settlement / buildings / refine / market / orders) is the TOWN
+	# LEDGER, reached from the ☰ menu ("Market & Town") + the town-map "📋 Town Ledger" button —
+	# NOT a bottom-nav primary tab anymore. So it no longer marks the "craft" tab active; like the
+	# other menu-routed views it leaves the nav marker as-is (it has its own back-to-board path).
+	_hud._clear_nav()
 
 func _on_town_closed() -> void:
 	if _town_screen != null:
@@ -701,6 +754,13 @@ func _open_townmap() -> void:
 		# Task C: tapping the farm board pad opens the "Start Farming" picker (the FARM/ENTER
 		# dialog) — the player's entry point into a bounded run from the town home.
 		_townmap_screen.connect("start_farming_requested", Callable(self, "_open_startfarming"))
+		# review-3: the "📋 Town Ledger" overlay button opens the TownScreen ledger. Route it
+		# through apply_deeplink("town") → _switch_primary_view("_open_town"), so the town MAP
+		# (a sibling primary) is hidden first and the ledger reads as a full-brightness view.
+		_townmap_screen.connect("ledger_requested", Callable(self, "_on_townmap_ledger_requested"))
+		# T31: the "✨ Boons" overlay button opens the BoonsScreen (keeper-perk catalogs). Route
+		# through apply_deeplink("boons") so it opens as a full-brightness view over the board.
+		_townmap_screen.connect("boons_requested", Callable(self, "_on_townmap_boons_requested"))
 	_townmap_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
@@ -718,6 +778,17 @@ func _on_townmap_closed() -> void:
 ## the active nav tab. (ESC/back returns to the board via _close_top_overlay → close() too.)
 func _on_townmap_board_requested() -> void:
 	apply_deeplink("board")
+
+## review-3: the Town map's "📋 Town Ledger" overlay button was pressed — open the TownScreen
+## ledger. Route through apply_deeplink("town") so _switch_primary_view hides the open town map
+## first (sibling primary) and the ledger comes up as a full-brightness view, not over the map.
+func _on_townmap_ledger_requested() -> void:
+	apply_deeplink("town")
+
+## T31: the Town map's "✨ Boons" overlay button was pressed — open the BoonsScreen via
+## apply_deeplink("boons") (a full-brightness view over the board).
+func _on_townmap_boons_requested() -> void:
+	apply_deeplink("boons")
 
 # ── Achievements trophy screen (M10) ──────────────────────────────────────────────
 
@@ -789,16 +860,18 @@ func _on_chronicle_view_charter() -> void:
 
 # ── Townsfolk roster screen ────────────────────────────────────────────────────
 
-## Open the townsfolk roster modal, lazily creating + wiring it on first use (mirrors
-## _open_chronicle). The screen is READ-ONLY — it only emits `closed`, routed to a
-## hide handler. open() re-reads game.npcs bonds each time, so the roster always
-## reflects the current bond state.
+## Open the townsfolk modal, lazily creating + wiring it on first use (mirrors
+## _open_chronicle). The screen emits `closed` (routed to a hide handler) and `state_changed`
+## (a gift given / worker hired-or-fired — routed to the shared _on_town_changed funnel so the
+## save + HUD totals update). open() re-reads game.npcs each time, so the roster always
+## reflects the current bond + worker state.
 func _open_townsfolk() -> void:
 	if _townsfolk_screen == null:
 		_townsfolk_screen = TownsfolkScreenScript.new()
 		add_child(_townsfolk_screen)
 		_townsfolk_screen.setup(game)
 		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
+		_townsfolk_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_townsfolk_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNSFOLK)
 	_hud.set_nav_current("folk")
@@ -810,13 +883,14 @@ func _on_townsfolk_closed() -> void:
 	_router.close_modal()
 	_hud._clear_nav()
 
-# ── Cartography world map (3-zone view + alternate expedition entry) ────────────
+# ── Cartography world map (T26: the 11-node illustrated travel map) ─────────────
 
-## Open the cartography world-map modal, lazily creating + wiring it on first use (mirrors
-## _open_townsfolk). The screen re-reads the live GameState (active_biome → current zone,
-## town2_complete / can_enter_mine / can_enter_harbor → travel-button state) on open(), so
-## the map always reflects where you are + what's reachable. Its `travel_requested` signal is
-## routed to Main, the SINGLE mutation point, which performs the real enter_mine/enter_harbor.
+## Open the cartography world-map view, lazily creating + wiring it on first use (mirrors
+## _open_townsfolk). The screen re-reads the live GameState travel state (map_current → current
+## node, map_node_state → per-node pin style, travel_block_reason / coins / player_level →
+## the detail-panel Travel button) on open(), so the map always reflects where you are + what's
+## reachable. Its `travel_requested` signal is routed to Main, the SINGLE mutation point, which
+## runs game.travel_to + the biome/boss/toast follow-up.
 func _open_cartography() -> void:
 	if _cartography_screen == null:
 		_cartography_screen = CartographyScreenScript.new()
@@ -824,6 +898,7 @@ func _open_cartography() -> void:
 		_cartography_screen.setup(game)
 		_cartography_screen.connect("closed", Callable(self, "_on_cartography_closed"))
 		_cartography_screen.connect("travel_requested", Callable(self, "_on_cartography_travel"))
+		_cartography_screen.connect("found_requested", Callable(self, "_on_cartography_found"))
 	_cartography_screen.open()
 	_router.open_modal(ViewRouter.Modal.CARTOGRAPHY)
 	# The cartography world map is the "Map" tab's target.
@@ -836,28 +911,32 @@ func _on_cartography_closed() -> void:
 	_router.close_modal()
 	_hud._clear_nav()
 
-# ── Recipe Wiki (read-only recipe reference) ─────────────────────────────────
+# ── Crafting UI (the 🔨 Craft primary view) ──────────────────────────────────
 
-## Open the recipe wiki modal, lazily creating + wiring it on first use (mirrors
-## _open_cartography). The screen is READ-ONLY — it only emits `closed`, routed to
-## a hide handler. open() re-renders from RecipeConfig.RECIPE_IDS each time, so the
-## wiki always reflects the current recipe catalog.
+## Open the crafting screen (RecipeWikiScreen — station tabs + recipe grid + have/need
+## detail card + Craft button), lazily creating + wiring it on first use. review-3 promoted
+## this from a ☰-menu SECONDARY to the 🔨 Craft PRIMARY nav VIEW: it sets the "craft" nav
+## marker (like _open_inventory/_open_townmap mark their tabs) so the bottom-nav highlights
+## Craft while it's up. Crafting mutates inventory → state_changed re-renders the HUD
+## stockpile (same handler the Town/Townmap screens use after any state-changing action).
 func _open_recipes() -> void:
 	if _recipe_wiki_screen == null:
 		_recipe_wiki_screen = RecipeWikiScreenScript.new()
 		add_child(_recipe_wiki_screen)
 		_recipe_wiki_screen.setup(game)
 		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
-		# Crafting from the wiki mutates inventory → re-render the HUD stockpile (same
-		# handler the Town/Townmap screens use after any state-changing action).
 		_recipe_wiki_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_recipe_wiki_screen.open()
 	_router.open_modal(ViewRouter.Modal.RECIPES)
+	# The crafting screen is the "Craft" tab's target — mark it active on the bottom nav.
+	_hud.set_nav_current("craft")
+	_hud._refresh_nav()
 
 func _on_recipes_closed() -> void:
 	if _recipe_wiki_screen != null:
 		_recipe_wiki_screen.visible = false
 	_router.close_modal()
+	_hud._clear_nav()
 
 # ── Castle contributions screen ──────────────────────────────────────────────
 
@@ -942,6 +1021,83 @@ func _on_portal_closed() -> void:
 	SaveManager.save(game)
 	_refresh_totals()
 	_refresh_chain_progress()
+
+# ── T31: Boons + Keeper encounter ──────────────────────────────────────────────────
+
+## Open the Boons catalog screen, lazily creating + wiring it on first use (mirrors
+## _open_portal). The screen mutates GameState in place (purchase_boon deducts Embers /
+## Core Ingots + marks owned); its `closed` is routed to a hide+persist handler. open()
+## re-reads the live balances + owned set each time.
+func _open_boons() -> void:
+	if _boons_screen == null:
+		_boons_screen = BoonsScreenScript.new()
+		add_child(_boons_screen)
+		_boons_screen.setup(game)
+		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
+	_boons_screen.open()
+	_router.open_modal(ViewRouter.Modal.BOONS)
+
+## The boons screen was closed: hide it, reset the router, and persist (a claim spent Embers /
+## Core Ingots + marked a boon owned) + refresh the stockpile HUD. Mirrors _on_portal_closed.
+func _on_boons_closed() -> void:
+	if _boons_screen != null:
+		_boons_screen.visible = false
+	_router.close_modal()
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+
+## Present the keeper encounter for settlement `type` ("farm" today), lazily creating + wiring
+## the modal on first use. The modal makes the FINAL Coexist / Drive Out choice via the real
+## game.give_keeper_reward(); its `resolved` signal routes to _on_keeper_resolved (save + refresh
+## + a toast). Used by the auto-trigger in _on_town_changed and the `keeper` deeplink.
+func _open_keeper(type: String) -> void:
+	if _keeper_modal == null:
+		_keeper_modal = KeeperModalScript.new()
+		add_child(_keeper_modal)
+		_keeper_modal.setup(game)
+		_keeper_modal.connect("resolved", Callable(self, "_on_keeper_resolved"))
+		_keeper_modal.connect("closed", Callable(self, "_on_keeper_closed"))
+	_keeper_modal.open_for(type)
+	_router.open_modal(ViewRouter.Modal.KEEPER)
+
+## The keeper encounter resolved (a path was chosen + the player Continued): hide the modal,
+## reset the router, persist (give_keeper_reward set the path flag + granted the currency), and
+## refresh the HUD. A toast confirms the outcome + nudges toward the now-unlocked Boons.
+func _on_keeper_resolved(type: String, path: String) -> void:
+	_router.close_modal()
+	SaveManager.save(game)
+	_refresh_totals()
+	_refresh_chain_progress()
+	var keeper_name: String = KeeperConfig.keeper_name(type)
+	if path == "coexist":
+		show_toast("%s stays. +%d ✨ Embers — spend them in ✨ Boons." % [keeper_name, KeeperConfig.coexist_embers(type)])
+	else:
+		show_toast("%s withdraws. +%d ⬡ Core Ingots — spend them in ✨ Boons." % [keeper_name, KeeperConfig.driveout_core_ingots(type)])
+
+## The keeper modal was force-closed (defensive — the normal flow resolves via a choice +
+## Continue). Just reset the router so nav stays consistent.
+func _on_keeper_closed() -> void:
+	if _router.current_modal() == ViewRouter.Modal.KEEPER:
+		_router.close_modal()
+
+## T31 — fire the keeper encounter when the (home) settlement is built up and its keeper
+## isn't resolved yet. Called from _on_town_changed (the single town-action funnel) AFTER the
+## board/HUD refresh + save. SCOPE: the port has one active settlement (the home FARM = the
+## Deer-Spirit), so only "farm" is checked today; the mine/harbor keepers are ported +
+## forward-compatible and will be wired off their settlements in a later task (T22). Guarded so
+## it never interrupts an already-open keeper modal (or a story beat showing on top).
+func _maybe_trigger_keeper() -> void:
+	if game == null:
+		return
+	# Don't stack the encounter on top of an already-open keeper modal or a story beat.
+	if _keeper_modal != null and _keeper_modal.visible:
+		return
+	if _story_modal != null and _story_modal.visible:
+		return
+	if not game.keeper_encounter_ready("farm"):
+		return
+	_open_keeper("farm")
 
 # ── Charter (read-only) ──────────────────────────────────────────────────────────
 
@@ -1198,7 +1354,13 @@ func _on_season_return() -> void:
 	var summary: Dictionary = game.close_season()
 	board.set_active(false)
 	board.set_tile_pool(game.active_tile_pool())
-	board.setup_new_board()
+	# T30 — board-preserve: when close_season reports preserve_board (a Silo/Barn
+	# board_preserve_biomes channel covering the run's biome), KEEP the existing board grid across
+	# the season boundary instead of regenerating it (React savedField restore). Only regenerate
+	# when the run's biome is NOT preserved. preserve_board is false for a fresh game (no such
+	# building), so the default path is unchanged (setup_new_board, byte-identical to before).
+	if not bool(summary.get("preserve_board", false)):
+		board.setup_new_board()
 	board.set_season(game.current_season_index())
 	# MINOR M1 — reset the board's min-chain bar to the current (no-boss) baseline so a raised boss
 	# chain requirement can never persist onto the fresh town board after the run closes.
@@ -1237,33 +1399,128 @@ func _on_debug_closed() -> void:
 	if game != null:
 		SaveManager.save(game)
 
-## The world map requested travel to a zone (only ENABLED expedition buttons emit this).
-## Main owns GameState mutation: close the map, launch the matching expedition the REAL way
-## (game.enter_mine() / game.enter_harbor()), then run the SAME biome-change refresh path the
-## TownScreen expedition uses (state_changed → _on_town_changed) so we don't duplicate the
-## board-pool swap / hazard-flag / pearl-placement logic. On a failed launch (guards trip),
-## the map simply closed — nothing mutated.
-func _on_cartography_travel(zone_id: String) -> void:
-	# Close the map first so the biome swap + any queued story beat surface over the board.
+## The world map requested travel to a NODE (only ENABLED Travel/Enter buttons emit this).
+## Main owns GameState mutation: run game.travel_to(node_id) — the single travel entry that pays
+## the entry cost, marks the node visited, discovers neighbours, and (for a BOARD node) launches
+## the matching board the REAL way (enter_mine / enter_harbor / farm-active). On a BOARD entry we
+## then run the SAME biome-change refresh path the TownScreen expedition uses (_on_town_changed)
+## so we never duplicate the board-pool swap / hazard-flag / pearl-placement logic. NON-board
+## nodes (event / festival / boss / capital) move the marker, then Main acts on the node KIND:
+##   • boss     → the boss challenge (the real _enter_boss_fight path) when eligible, else a hint.
+##   • festival → a flavour toast (the festival mini-economy is deferred; honest, not faked).
+##   • event    → a Crossroads flavour toast (the React event bubble's analogue).
+##   • capital  → unreachable here (travel_to blocks it on the missing Hearth-Token currency).
+## A blocked travel (guards trip) leaves everything unmutated; the map simply closed.
+func _on_cartography_travel(node_id: String) -> void:
+	var res: Dictionary = game.travel_to(node_id)
+	if not bool(res.get("ok", false)):
+		# Blocked — re-render the (still-open) map so the unchanged state shows, and surface why.
+		if _cartography_screen != null and _cartography_screen.visible:
+			_cartography_screen.refresh()
+		var reason := String(res.get("reason", ""))
+		if reason == "needs_tokens":
+			show_toast("The Old Capital waits on the three Hearth-Tokens.")
+		elif reason == "cost":
+			show_toast("Not enough coins for that journey.")
+		elif reason == "level":
+			show_toast("That place is too dangerous yet — keep growing.")
+		elif reason == "unreachable":
+			show_toast("No road leads there from here.")
+		SaveManager.save(game)
+		return
+
+	# Travel succeeded — the marker moved (+ entry cost paid + discoveries). Close the map so the
+	# board / boss / toast surfaces over it.
 	_on_cartography_closed()
-	var res: Dictionary = {}
-	match zone_id:
-		"mine":
-			res = game.enter_mine()
-		"harbor":
-			res = game.enter_harbor()
-		_:
-			return
-	if bool(res.get("ok", false)):
-		# Reuse Main's existing biome-change path (the one the TownScreen routes through):
-		# re-pool + regenerate the board onto the new biome, set the hazard/pearl flags, refresh
-		# every affected HUD surface, and save. No duplicated biome-swap logic here.
+	var kind := String(res.get("kind", ""))
+
+	if String(res.get("board_kind", "")) != "":
+		# A BOARD node (farm / mine / fish). Reuse Main's biome-change path to re-pool + regenerate
+		# the board onto the new biome, set the hazard/pearl flags, refresh every HUD surface, save.
 		_on_town_changed()
-		# M5-polish — confirm the launch with a transient toast (a REAL event: an expedition
-		# just began with a real turn budget). The turn count comes straight from the result.
-		var turns: int = int(res.get("turns", 0))
-		var where: String = "the mine" if zone_id == "mine" else "the harbor"
-		show_toast("Sailed out to %s — %d turns of supplies." % [where, turns])
+		var node_name := String(CartographyConfig.by_id(node_id).get("name", node_id))
+		if bool(res.get("entered", false)):
+			match String(res.get("board_kind", "")):
+				"mine":
+					show_toast("Set out to %s — %d turns of supplies." % [node_name, int(res.get("launch", {}).get("turns", 0))])
+				"fish":
+					show_toast("Sailed out to %s — %d turns of supplies." % [node_name, int(res.get("launch", {}).get("turns", 0))])
+				_:
+					show_toast("Travelled to %s." % node_name)
+		else:
+			# The marker moved but the expedition couldn't launch (its own guard tripped — usually
+			# no supplies or not on the farm). Surface the launch reason honestly.
+			var lreason := String(res.get("launch", {}).get("reason", ""))
+			var hint := "Need supplies to set out." if lreason == "no_supplies" else (
+				"Defeat the boss to unlock expeditions." if lreason == "locked" else
+				"Return to the farm before setting out.")
+			show_toast("Arrived at %s — %s" % [node_name, hint])
+		SaveManager.save(game)
+		return
+
+	# A NON-board node — act on the kind.
+	match kind:
+		"boss":
+			# The Pit → the real boss challenge when eligible; else a hint (nothing faked).
+			if game.can_challenge_boss():
+				var bres: Dictionary = _enter_boss_fight()
+				if bool(bres.get("ok", false)):
+					show_toast("⚔ %s rises in the Pit!" % String(bres.get("name", "A boss")))
+				else:
+					show_toast("The Pit is quiet for now.")
+			else:
+				show_toast("You aren't ready to face the Pit yet.")
+		"festival":
+			show_toast("🎪 The Drifter's Fair rolls through — come back when the wagons settle.")
+		"event":
+			show_toast("🎲 You meet a stranger at the Crossroads…")
+		"capital":
+			# T22 FINALE — reaching the Old Capital is "The Long Return"'s end. travel_block_reason
+			# only let us here once all three Hearth-Tokens are held, so this fires exactly once the
+			# kingdom is whole. The narrative finale is a celebratory toast (the React Old-Capital
+			# finale is itself a TBD stub); the unlock + arrival is the real, earned milestone.
+			show_toast("🏛 The Old Capital opens. Three Hearth-Tokens carried home — the Long Return is complete.")
+		_:
+			pass
+	_refresh_meta()
+	SaveManager.save(game)
+
+# ── T22 founder flow ──────────────────────────────────────────────────────────
+
+## The CartographyScreen's "Found Settlement" button was pressed for a discovered, unfounded
+## settlement node. Open the founder biome picker over the map; the picker calls the real
+## game.found_settlement on a choice and emits `founded` back to _on_founded.
+func _on_cartography_found(node_id: String) -> void:
+	_open_founder(node_id)
+
+## Open the founder picker for `zone_id`, lazily creating + wiring it on first use.
+func _open_founder(zone_id: String) -> void:
+	if _founder_modal == null:
+		_founder_modal = FounderModalScript.new()
+		add_child(_founder_modal)
+		_founder_modal.setup(game)
+		_founder_modal.connect("founded", Callable(self, "_on_founded"))
+		_founder_modal.connect("closed", Callable(self, "_on_founder_closed"))
+	_founder_modal.open_for(zone_id)
+
+## A settlement was founded (the picker called game.found_settlement → coins paid, the founding
+## recorded, the zone archive seeded, any earned Hearth-Token folded). Persist, re-render the still-
+## open world map so the node now reads "✓ Founded", and surface a toast.
+func _on_founded(zone: String, biome: String) -> void:
+	if _founder_modal != null:
+		_founder_modal.visible = false
+	var node_name: String = String(CartographyConfig.by_id(zone).get("name", zone))
+	var biome_def: Dictionary = CartographyConfig.biome_def(CartographyConfig.settlement_type_for_zone(zone), biome)
+	var biome_name: String = String(biome_def.get("name", biome))
+	show_toast("Founded %s — a %s settlement. Travel there to build it up." % [node_name, biome_name])
+	if _cartography_screen != null and _cartography_screen.visible:
+		_cartography_screen.refresh()
+	_refresh_meta()
+	SaveManager.save(game)
+
+func _on_founder_closed() -> void:
+	if _founder_modal != null:
+		_founder_modal.visible = false
 
 # ── Story beat queue (story UI) ────────────────────────────────────────────────
 
@@ -1335,15 +1592,22 @@ func apply_deeplink(id: String) -> bool:
 	var intent: Dictionary = ViewRouter.resolve(id)
 	if not bool(intent.get("ok", false)):
 		return false
+	# T28 — the 5 PRIMARY views must route through _switch_primary_view so opening one
+	# via deep-link / browser back-forward hides any other open primary (esp. the town
+	# map, a higher canvas layer that would otherwise paint over the opened view). The
+	# in-game nav tabs already do this (_on_nav_selected); apply_deeplink must match.
 	match int(intent.get("modal", ViewRouter.Modal.NONE)):
 		ViewRouter.Modal.TOWN:
-			_open_town()
+			# review-3 — the Town LEDGER is a menu-routed view now (not a bottom-nav primary), but
+			# it shares a layer with the primaries, so still route it through _switch_primary_view
+			# so opening it hides any open primary (and vice-versa) — no double-painting.
+			_switch_primary_view("_open_town")
 		ViewRouter.Modal.MENU:
 			_open_menu()
 		ViewRouter.Modal.INVENTORY:
-			_open_inventory()
+			_switch_primary_view("_open_inventory")
 		ViewRouter.Modal.TOWNMAP:
-			_open_townmap()
+			_switch_primary_view("_open_townmap")
 		ViewRouter.Modal.ACHIEVEMENTS:
 			_open_achievements()
 		ViewRouter.Modal.TILES:
@@ -1351,11 +1615,13 @@ func apply_deeplink(id: String) -> bool:
 		ViewRouter.Modal.CHRONICLE:
 			_open_chronicle()
 		ViewRouter.Modal.TOWNSFOLK:
-			_open_townsfolk()
+			_switch_primary_view("_open_townsfolk")
 		ViewRouter.Modal.CARTOGRAPHY:
-			_open_cartography()
+			_switch_primary_view("_open_cartography")
 		ViewRouter.Modal.RECIPES:
-			_open_recipes()
+			# review-3 — the crafting screen is the 🔨 Craft PRIMARY view now, so route it through
+			# _switch_primary_view (hides any other open primary, sets the craft nav marker).
+			_switch_primary_view("_open_recipes")
 		ViewRouter.Modal.TUTORIAL:
 			_open_tutorial()
 		ViewRouter.Modal.CASTLE:
@@ -1364,6 +1630,12 @@ func apply_deeplink(id: String) -> bool:
 			_open_decorations()
 		ViewRouter.Modal.PORTAL:
 			_open_portal()
+		ViewRouter.Modal.BOONS:
+			_open_boons()
+		ViewRouter.Modal.KEEPER:
+			# QA / preview path: open the FARM keeper encounter on demand (the normal path is the
+			# auto-trigger in _on_town_changed). Opens for "farm" — the one reachable settlement.
+			_open_keeper("farm")
 		ViewRouter.Modal.CHARTER:
 			_open_charter()
 		ViewRouter.Modal.QUESTS:
@@ -1453,6 +1725,14 @@ func apply_deeplink(id: String) -> bool:
 				# Route through the close handler so a build/summon is persisted + the
 				# stockpile HUD refreshed (it also hides + resets the router).
 				_on_portal_closed()
+			elif _boons_screen != null and _boons_screen.visible:
+				# Route through the close handler so a claim is persisted + the stockpile
+				# HUD refreshed (it also hides + resets the router).
+				_on_boons_closed()
+			elif _keeper_modal != null and _keeper_modal.visible:
+				# A keeper encounter open on top of the board: hide it (resets the router).
+				_keeper_modal.visible = false
+				_router.close_modal()
 			elif _charter_screen != null and _charter_screen.visible:
 				# Charter is read-only — the close handler just hides + resets the router
 				# (no save needed, nothing changed).
@@ -1603,9 +1883,19 @@ func _board_should_be_active() -> bool:
 func _on_town_changed() -> void:
 	var was_mine: bool = _board_pool_is_mine()
 	var was_harbor: bool = _board_pool_is_harbor()
-	board.set_tile_pool(game.active_biome_pool())
+	# T24 — while a boss is active the board uses the boss refill pool (respawn_boost weighting); a
+	# plain biome re-pool here would drop that bias. Pick the boss pool when fighting, else the biome pool.
+	board.set_tile_pool(_boss_refill_pool() if game.is_boss_active() else game.active_biome_pool())
 	if game.is_in_mine() != was_mine:
 		board.setup_new_board()
+		# T23: on ENTRY to the mine, seed the session's single Mysterious Ore onto the freshly-built
+		# board so the rune target is visible (mirrors the harbor pearl seed on entry). enter_mine
+		# cleared any prior ore; spawn_mysterious_ore_on_fill is a no-op if one is somehow already live.
+		if game.is_in_mine():
+			var sp := game.spawn_mysterious_ore_on_fill(board.grid, board.rng)
+			if bool(sp.get("ok", false)):
+				board.grid = sp["grid"]
+				board._build_tiles()
 	# M3j: entering/leaving the harbor via the Town screen flips the biome — regenerate the
 	# board so fish tiles show NOW (mirrors the mine flip above). On ENTRY, place the live
 	# pearl onto the freshly-built board at its seeded cell so the rune target is visible.
@@ -1613,15 +1903,25 @@ func _on_town_changed() -> void:
 		board.setup_new_board()
 		if game.is_in_harbor() and game.has_active_pearl():
 			board.place_pearl(Vector2i(int(game.fish_pearl.get("col", 0)), int(game.fish_pearl.get("row", 0))))
-	# M3g: starting the boss fight from the Town menu must raise the board's chain bar
-	# immediately (and dropping back to no-fight restores the base min).
+	# T24: keep the board's chain bar + the boss modifier overlay in sync with the boss state on
+	# every town action (the bar drops back to base + the overlay clears when no fight is live).
 	board.set_min_chain(game.boss_min_chain())
+	board.set_boss_modifier_state(game.boss_modifier_state if game.is_boss_active() else {})
 	# M3h: a Master Ratcatcher purchase (or demolish) flips whether grass chains sweep
 	# adjacent rats, so refresh the board flag whenever a town action lands.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# T7/T8/T9: a town action that re-pooled/regenerated the board (mine/harbor flip) wiped the
+	# positional hazard tiles + wolf overlays. Re-stamp the farm hazards onto the (farm) board, or
+	# clear the wolf markers when off the farm. Keeps the hazards consistent across town visits.
+	_restore_farm_hazards_onto_board()
 	# M3i: entering/leaving the mine via the Town screen flips whether STONE chains mine
 	# through rubble, so refresh that flag on every town action too.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11: entering/leaving the mine flips whether hazard-blocked cells (RUBBLE/LAVA) are unchainable
+	# — refresh that flag on every town action too. Off the mine it's simply false. Then re-stamp any
+	# live mine hazards + Mysterious Ore onto the (mine) board / clear the mole overlay off the mine.
+	board.block_mine_hazards = game.is_in_mine()
+	_restore_mine_hazards_onto_board()
 	# M3j: entering/leaving the harbor flips whether a fish chain next to the pearl captures
 	# it — refresh that flag on every town action too (off the harbor it is simply false).
 	board.clear_pearl_on_fish_chain = game.is_in_harbor()
@@ -1662,6 +1962,10 @@ func _on_town_changed() -> void:
 	# The Town/Map modal closed back to the board before this fires, so surface any queued
 	# beat now. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
+	# T31 — a town action may have built the settlement up past its keeper's threshold (a
+	# `build`); fire the keeper encounter now if it's ready + unresolved. No-op when not ready,
+	# already resolved, or a keeper/story modal is already showing.
+	_maybe_trigger_keeper()
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
 ## biome flip before we overwrite the pool. Compares against Constants.MINE_POOL.
@@ -1707,9 +2011,159 @@ func _on_chain_changed(length: int) -> void:
 func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
 	if game.active_biome != "farm":
 		return {"count": 0, "tile": Constants.EMPTY}
-	return GameState.upgrade_spawn(ZoneConfig.HOME_ZONE, tile_type, length)
+	# T2: spawn the player's ACTIVE VARIANT of the upgrade target category (default == base
+	# tile, so an un-customised board is unchanged). Instance helper honours tile_active_by_category.
+	return game.upgrade_spawn_active(ZoneConfig.HOME_ZONE, tile_type, length)
+
+## T7/T9/T10 — stash the resolving chain's cells (Board emits this BEFORE chain_resolved). Used by
+## _on_chain_resolved for the farm-hazard interactions (rat clear / fire extinguish / deadly cull).
+func _on_chain_cells(cells: Array) -> void:
+	_chain_cells = cells
+
+## T7/T8/T9 — stamp the loaded farm hazards onto the live board: place RAT / FIRE tiles at their
+## recorded cells (overwriting whatever the fresh board built there) and rebuild the wolf-marker
+## overlays. Called on load (after the board is built) so a save restored mid-run shows its
+## hazards immediately. No-op off the farm / when no hazards are active.
+func _restore_farm_hazards_onto_board() -> void:
+	if board == null or game == null:
+		return
+	if game.active_biome != "farm":
+		board.refresh_wolves([])
+		return
+	var changed := false
+	for rc in game.active_rats():
+		var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+		if rr >= 0 and rr < Constants.ROWS and rcl >= 0 and rcl < Constants.COLS:
+			board.grid[rr][rcl] = Constants.Tile.RAT
+			changed = true
+	for fc in game.active_fire_cells():
+		var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+		if fr >= 0 and fr < Constants.ROWS and fcl >= 0 and fcl < Constants.COLS:
+			board.grid[fr][fcl] = Constants.Tile.FIRE
+			changed = true
+	if changed:
+		board._build_tiles()
+	board.refresh_wolves(game.active_wolves())
+
+## T11/T23 — stamp the loaded MINE hazards + live Mysterious Ore onto the live board: place the
+## cave-in row (RUBBLE) / gas vent (GAS) / lava cells (LAVA) / mysterious ore (MYSTERIOUS_ORE) at
+## their recorded cells (overwriting whatever the fresh board built there) and rebuild the mole
+## overlay. Called on load (after the board is built) so a save restored mid-expedition shows its
+## mine hazards immediately. No-op off the mine / when nothing is active. Mirrors
+## _restore_farm_hazards_onto_board.
+func _restore_mine_hazards_onto_board() -> void:
+	if board == null or game == null:
+		return
+	if not game.is_in_mine():
+		board.refresh_mole({})
+		return
+	var changed := false
+	var cave: Dictionary = game.active_cave_in()
+	if not cave.is_empty():
+		var cr: int = int(cave.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				board.grid[cr][c] = Constants.Tile.RUBBLE
+			changed = true
+	var gas: Dictionary = game.active_gas_vent()
+	if not gas.is_empty():
+		var gr: int = int(gas.get("row", -1)); var gc: int = int(gas.get("col", -1))
+		if gr >= 0 and gr < Constants.ROWS and gc >= 0 and gc < Constants.COLS:
+			board.grid[gr][gc] = Constants.Tile.GAS
+			changed = true
+	for lc in game.active_lava_cells():
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if lr >= 0 and lr < Constants.ROWS and lcl >= 0 and lcl < Constants.COLS:
+			board.grid[lr][lcl] = Constants.Tile.LAVA
+			changed = true
+	if game.has_active_mysterious_ore():
+		var orr: int = int(game.mysterious_ore.get("row", -1)); var orc: int = int(game.mysterious_ore.get("col", -1))
+		if orr >= 0 and orr < Constants.ROWS and orc >= 0 and orc < Constants.COLS:
+			board.grid[orr][orc] = Constants.Tile.MYSTERIOUS_ORE
+			changed = true
+	if changed:
+		board._build_tiles()
+	board.refresh_mole(game.active_mole())
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
+	# T9 — a RAT chain is a HAZARD CLEAR, not a normal harvest: chaining 3+ rats removes them for
+	# +5 coins each and spends NO turn / credits NO resource (mirrors src/state.ts:286-293's early
+	# return). The Board already cleared + refilled the chained cells; here we just book the coins +
+	# remove the rats from hazards, then refresh + save and RETURN (skipping the normal credit /
+	# farm-turn / season / boss path below). A chain < 3 rats can't reach here (min_chain rejects it).
+	if tile_type == Constants.Tile.RAT:
+		var rc := game.clear_rat_chain(_chain_cells)
+		_chain_cells = []
+		if bool(rc.get("ok", false)):
+			_status_label.text = "Pest cleared! +%d 🪙" % int(rc.get("coins_delta", 0))
+			if _audio != null:
+				_audio.play("pop")
+			# Wolves are overlays; rats/fire are grid tiles already gone — just refresh the wolf
+			# markers from the (unchanged) wolf set so they survive the board rebuild.
+			board.refresh_wolves(game.active_wolves())
+		_refresh_totals()
+		_refresh_meta()
+		_refresh_rats()
+		_refresh_chain_progress()
+		SaveManager.save(game)
+		return
+	# T7 — a FIRE chain EXTINGUISHES the fire for +2 coins/tile. Fire produces nothing, so the
+	# normal credit_chain below yields 0 resources; we add the extinguish coins on top and let the
+	# chain otherwise resolve as a (resource-less) farm move (a turn IS spent — fire extinguishing
+	# is a real move, matching React's normal-resolution-plus-patch model).
+	if tile_type == Constants.Tile.FIRE:
+		var ex := game.extinguish_fire_chain(_chain_cells)
+		if bool(ex.get("ok", false)):
+			_status_label.text = "Fire out! +%d 🪙" % int(ex.get("coins_delta", 0))
+			if _audio != null:
+				_audio.play("pop")
+	# T10 — deadly_pests cull: a NORMAL chain that contains a Cypress/Beet/Phoenix tile
+	# exterminates every rat adjacent to the chain (+5 coins/rat). Captured here, BEFORE the normal
+	# credit, so the chain still resolves as its own harvest (mirrors src/state.ts:297). The Board
+	# already blanked the chained cells; the culled rats are removed from hazards + their cells will
+	# be re-synced when the hazard tick / refresh runs. We blank the culled rat cells on the board.
+	var deadly := game.deadly_pests_kill(_chain_cells)
+	if int(deadly.get("killed", 0)) > 0:
+		board.clear_hazard_cells(deadly.get("killed_cells", []), game.active_rats(), game.active_fire_cells(), game.active_wolves())
+		_status_label.text = "Pest culled! +%d 🪙" % int(deadly.get("coins_delta", 0))
+	# T11/T23 — MINE-hazard chain interactions (captured BEFORE the normal credit + the mine-turn
+	# tick below, mirroring the farm-hazard block). Three counters, all keyed off the snapshotted
+	# chained cells (their tile value read before the chain cleared them):
+	#   - STONE chain ADJACENT to the buried cave-in row → clear the cave-in (mine through it). The
+	#     chain still resolves as a normal STONE harvest (credited below); clearing the rubble row is
+	#     the side effect. The Board's clear_rubble_on_stone already swept the row's RUBBLE 8-adjacent
+	#     to the chain; this clears the cave_in STATE so it stops re-stamping.
+	#   - GAS chain (the chain ran through the gas cell) → disperse the vent (no turn cost). GAS
+	#     produces nothing, so credit_chain below yields 0 — the chain is otherwise a normal move.
+	#   - MYSTERIOUS_ORE chain with >= 2 DIRT → capture for +1 Rune. The ore produces nothing, so
+	#     credit_chain yields 0; the rune is the reward. Checked here (before the ore-tick in the
+	#     mine-turn block) so a final-turn capture still lands.
+	if game.is_in_mine():
+		if tile_type == Constants.Tile.STONE:
+			var cv := game.clear_cave_in_chain(_chain_cells)
+			if bool(cv.get("ok", false)):
+				_status_label.text = "Cave-in cleared! Tunnel reopened."
+				if _audio != null:
+					_audio.play("pop")
+		elif tile_type == Constants.Tile.GAS:
+			var dg := game.disperse_gas_chain(_chain_cells)
+			if bool(dg.get("ok", false)):
+				_status_label.text = "Gas dispersed — safe to mine."
+				if _audio != null:
+					_audio.play("pop")
+		elif tile_type == Constants.Tile.MYSTERIOUS_ORE:
+			var cap := game.try_capture_mysterious_ore(_chain_cells)
+			if bool(cap.get("captured", false)):
+				_status_label.text = "Mysterious Ore captured! +1 rune"
+				if _audio != null:
+					_audio.play("upgrade")
+	# T24 (boss hide_resources): a chain that INCLUDES a hidden boss cell REVEALS it (React: a
+	# hidden tile reveals when chained). Reveal BEFORE clearing _chain_cells so the modifier_state's
+	# hidden list is updated; the board overlay is refreshed in the boss block below. A no-op off a
+	# hide_resources boss (no hidden cells to match).
+	if game.is_boss_active():
+		game.reveal_boss_hidden(_chain_cells)
+	_chain_cells = []
 	var res: Dictionary = game.credit_chain(tile_type, length)
 	# M4d: a chain always lands a collect bleep; a whole unit (units > 0) adds the
 	# sparkle "upgrade" over it.
@@ -1752,6 +2206,25 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# everything gathered, swap the board back to the farm pool, and regenerate.
 	if game.is_in_mine():
 		var turn_res: Dictionary = game.note_mine_turn()
+		# T11/T23 — after spending the mine turn (and only if the expedition is still live), tick +
+		# spawn the MINE HAZARDS for this turn (gas counts down / lava spreads / mole consumes+hops;
+		# the ore countdown ticks; a NEW hazard or ore may spawn). Mirrors the farm-hazard after-chain
+		# tick. A GAS-VENT EXPIRY costs an EXTRA mine turn (React _tickGasVent), spent via a second
+		# note_mine_turn — which can itself end the run. The ticked grid (eaten/spread/degraded cells)
+		# is landed via apply_mine_hazard_state, which collapses/refills + re-stamps the pinned cave-in
+		# row / lava / gas cells + the mole overlay. Skipped on the turn that EXITED the expedition.
+		if not bool(turn_res.get("exited", false)):
+			var mtick := game.tick_mine_hazards(board.grid, board.rng)
+			if bool(mtick.get("gas_cost_turn", false)):
+				turn_res = game.note_mine_turn()   # gas expiry costs an extra turn (may end the run)
+			if game.is_in_mine() and bool(mtick.get("changed", false)):
+				board.apply_mine_hazard_state(
+					mtick["grid"], game.active_cave_in(), game.active_gas_vent(),
+					game.active_lava_cells(), game.active_mole())
+			elif game.is_in_mine():
+				board.refresh_mole(game.active_mole())
+			if String(mtick.get("floater", "")) != "":
+				_status_label.text = String(mtick.get("floater", ""))
 		if bool(turn_res.get("exited", false)):
 			_status_label.text = "Expedition over — supplies spent. Back to the farm."
 			board.set_tile_pool(game.active_biome_pool())
@@ -1759,6 +2232,11 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# M3i: the expedition ended — back on the farm, so mining-through-rubble is
 			# off (there's no rubble on the farm board anyway; keep the flag honest).
 			board.clear_rubble_on_stone = game.is_in_mine()
+			# T11: off the mine - drop the hazard-block flag + clear the mole overlay so a stale
+			# mine hazard can never linger on the farm board (note_mine_turn's exit cleared the
+			# STATE; this clears the VIEW).
+			board.block_mine_hazards = game.is_in_mine()
+			board.refresh_mole({})
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
@@ -1832,24 +2310,37 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			if _audio != null:
 				_audio.play("fanfare")
 			_open_harvest(farm_res)
-	# M3g: a chain landed while the capstone boss is active damages it by the chain
-	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
-	# board's raised chain bar back to the base min and surface the win.
+		# T7/T8/T9 — FARM HAZARDS tick + spawn for this farm turn (rats eat plants, fire spreads,
+		# wolves eat birds; then a new fire/wolf/rat may spawn). Mirrors src/state.ts:485-507's
+		# after-chain hazard block. We tick against the LIVE board grid; tick_farm_hazards mutates
+		# game.hazards and returns the (possibly blanked) grid, which we land via apply_hazard_state
+		# (collapse + refill the eaten/burned cells, re-stamp the pinned RAT/FIRE tiles, refresh the
+		# wolf overlays). Only runs while the bounded run is live (a free move / ended run skips it
+		# — note_farm_turn's free_move path doesn't tick the season either) and not on the
+		# inert town board. A no-change tick still refreshes the wolf overlays cheaply.
+		if not bool(farm_res.get("free_move", false)) and not bool(farm_res.get("ended", false)):
+			var tick := game.tick_farm_hazards(board.grid, board.rng)
+			if bool(tick.get("changed", false)):
+				board.apply_hazard_state(tick["grid"], game.active_rats(), game.active_fire_cells(), game.active_wolves())
+			else:
+				board.refresh_wolves(game.active_wolves())
+	# T24: a chain landed while a seasonal boss is active. First advance PROGRESS toward the
+	# target (note_boss_chain counts chained TILES of a tile-key target, or UNITS PRODUCED of a
+	# resource target). If the chain MET the target the boss resolves as a WIN inside note_boss_chain;
+	# otherwise we TICK the window (tick_boss_turn — ages/spawns heat, decrements the turn budget, and
+	# resolves as a LOSS if the window expired). Either resolution clears the challenge + the board
+	# modifier overlay and drops the raised chain bar — all handled in _apply_boss_resolution.
 	if game.is_boss_active():
-		var boss_res: Dictionary = game.damage_boss(length)
-		if bool(boss_res.get("defeated", false)):
-			_status_label.text = "%s defeated! Town 2 complete — +%d coins." % [
-				boss_res.get("name", "Boss"), int(boss_res.get("reward", 0))]
-			board.set_min_chain(Constants.MIN_CHAIN)
-			# M4d: the boss is down — triumphant arpeggio.
-			if _audio != null:
-				_audio.play("fanfare")
-		else:
-			_status_label.text = "%s  ·  ⚔ boss HP %d" % [
-				_status_label.text, int(boss_res.get("hp", 0))]
-			# M4d: a non-killing hit — a soft thud.
-			if _audio != null:
-				_audio.play("pop")
+		var boss_res: Dictionary = game.note_boss_chain(tile_type, length, int(res.get("units", 0)))
+		# If the chain didn't already resolve the fight, tick one window turn (heat + countdown).
+		if bool(boss_res.get("active", false)) and not bool(boss_res.get("defeated", false)) and game.is_boss_active():
+			var tick_res: Dictionary = game.tick_boss_turn(board.rng)
+			if int(tick_res.get("burned", 0)) > 0:
+				_status_label.text = "Ember Drake burns %d resource(s)!" % int(tick_res["burned"])
+			# A LOSS resolution leaves is_boss_active() false — fold it in as the result to surface.
+			if not game.is_boss_active():
+				boss_res = tick_res
+		_apply_boss_resolution(boss_res)
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -1870,21 +2361,33 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	# beat immediately. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
 
-## M3j — the Board reports a fish chain long enough to count toward a pearl capture. Ask
-## GameState whether those cells sit 8-adjacent to the live pearl; on a capture, grant the
-## rune (GameState already did, returning {captured, runes}), remove the on-board pearl tile
-## by degrading its cell to kelp, surface a status hint, and play the upgrade sparkle. Fires
-## BEFORE _on_chain_resolved (see Board._resolve emit order), so it runs before the harbor
-## turn ticks — a final-turn chain can still capture. The HUD refresh + save happen in
-## _on_chain_resolved, which runs immediately after.
+## T25 — the Board reports a resolved harbor chain that CONTAINS the FISH_PEARL tile.
+## `cells` is an Array[{row,col,tile}] (the same shape as chain_cells_resolved). Extract
+## the tile keys from the cells and call GameState.try_capture_pearl — the React rule:
+## chain contains pearl + >= REQUIRED_FISH_IN_CHAIN other fish tiles → +1 Rune, pearl
+## cleared. The pearl cell is already known from its position in the cells array, so we
+## degrade its board tile (revert to kelp) on a successful capture. Fires BEFORE
+## _on_chain_resolved (Board emits pearl_chain_resolved before chain_resolved) so the
+## capture runs before the harbor turn ticks — a final-turn chain can still capture.
+## The HUD refresh + save happen in _on_chain_resolved, which runs immediately after.
+##
+## This REPLACES the old adjacency-based _capture_pearl_if_adjacent path (T25 fix):
+## the live board now uses the React in-chain rule via try_capture_pearl, not adjacency.
 func _on_pearl_chain(cells: Array) -> void:
 	if game == null or board == null:
 		return
-	# Snapshot the pearl cell before capture clears fish_pearl, so we can degrade its tile.
+	# Snapshot the pearl cell from the chain cells before capture clears fish_pearl,
+	# so we can degrade its tile on the board.
 	var pearl_cell := Vector2i(-1, -1)
-	if game.has_active_pearl():
-		pearl_cell = Vector2i(int(game.fish_pearl.get("col", -1)), int(game.fish_pearl.get("row", -1)))
-	var cap: Dictionary = game.capture_pearl_if_adjacent(cells)
+	for cc in cells:
+		if int(cc.get("tile", Constants.EMPTY)) == Constants.Tile.FISH_PEARL:
+			pearl_cell = Vector2i(int(cc.get("col", -1)), int(cc.get("row", -1)))
+			break
+	# Build chain keys (int tile ordinals) from the cell array and call the React rule.
+	var chain_keys: Array = []
+	for cc in cells:
+		chain_keys.append(int(cc.get("tile", Constants.EMPTY)))
+	var cap: Dictionary = game.try_capture_pearl(chain_keys)
 	if not bool(cap.get("captured", false)):
 		return
 	# Remove the on-board pearl tile (it's been captured) by reverting its cell to kelp.
@@ -2043,28 +2546,105 @@ func _try_enter_mine() -> void:
 		SaveManager.save(game)
 	get_viewport().set_input_as_handled()
 
-## TEMP M3g demo: challenge the capstone boss (Frostmaw) from the keyboard. The REAL
-## entry is the Town screen's Boss section ("⚔ Challenge Frostmaw") — this key is a
-## harmless dev fallback so the boss fight stays exercisable. Arms the boss, raises
-## the board's chain bar, then refreshes the boss HUD + saves.
+## TEMP T24 demo: challenge the CURRENT season's seasonal boss from the keyboard. The REAL entry is
+## the Town screen's Boss section ("⚔ Challenge <Boss>") — this key is a harmless dev fallback so the
+## fight stays exercisable. Routes through the shared _enter_boss_fight so the dev key + the real
+## Town path arm the modifier overlay + the (boosted) refill pool + the chain bar identically.
 func _try_challenge_boss() -> void:
 	if not game.can_challenge_boss():
 		_status_label.text = "Can't challenge the boss (need City + 12 mine goods)"
 		get_viewport().set_input_as_handled()
 		return
-	var res: Dictionary = game.start_boss()
+	var res: Dictionary = _enter_boss_fight()
 	if bool(res.get("ok", false)):
-		board.set_min_chain(game.boss_min_chain())
-		# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so with no run
-		# the board would be inert and the fight unplayable. The dev-key boss start is a playable-
-		# board transition too (the real path routes through _on_town_changed); follow the gate so
-		# the board is live for the fight.
-		board.set_active(_board_should_be_active())
-		_status_label.text = "Frostmaw appears! Chains of 4+."
-		_refresh_boss()
-		_refresh_meta()
-		SaveManager.save(game)
+		_status_label.text = "%s appears! %s" % [
+			String(res.get("name", "Boss")), BossConfig.modifier_desc(game.boss_active)]
 	get_viewport().set_input_as_handled()
+
+## Shared boss-start path (T24) — called by the dev key + the Town screen's Challenge button. Starts
+## the current-season boss (GameState.start_boss applies its modifier to a fresh modifier_state),
+## then wires the BOARD for the fight: push the modifier overlay (frozen/rubble/hidden/heat), the
+## (respawn_boost-weighted) refill pool, the raised chain bar (storm → 4), make the board LIVE (the
+## fight is on the farm board), and refresh the HUD + save. Returns GameState.start_boss's result so
+## the caller can surface the boss + reason. A no-op (returns that result) when start_boss fails.
+func _enter_boss_fight() -> Dictionary:
+	var res: Dictionary = game.start_boss()
+	if not bool(res.get("ok", false)):
+		return res
+	# Push the live modifier overlay + the (boosted) refill pool onto the board.
+	board.set_boss_modifier_state(game.boss_modifier_state)
+	board.set_tile_pool(_boss_refill_pool())
+	board.set_min_chain(game.boss_min_chain())
+	# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so the board must be
+	# made LIVE for the fight (the gate follows boss state via _board_should_be_active()).
+	board.set_active(_board_should_be_active())
+	if _audio != null:
+		_audio.play("tier_up")
+	_refresh_boss()
+	_refresh_meta()
+	SaveManager.save(game)
+	return res
+
+## T24 — the farm refill pool while a boss is active, with respawn_boost weighting folded in. For a
+## respawn_boost boss (quagmire) the boosted tile KEYS (tile_tree_oak / tile_grass_grass) get EXTRA
+## pool slots scaled by the factor (1.5× → +1 copy per existing slot, rounded), over-spawning them —
+## the GDScript analogue of React's boss.spawnBias feeding fillBoard. Every other boss returns the
+## plain active farm pool (no bias). Mirrors the fill_bias pool-doubling pattern.
+func _boss_refill_pool() -> Array:
+	var pool: Array = game.active_tile_pool()
+	var bias: Dictionary = game.boss_spawn_bias()
+	if bias.is_empty():
+		return pool
+	var boosted: Array = pool.duplicate()
+	for key in bias.keys():
+		var tile: int = Constants.tile_for_string_key(String(key))
+		if tile == Constants.EMPTY:
+			continue
+		var factor: float = float(bias[key])
+		# Count this tile's existing slots, then add (factor-1)× more (rounded) so it over-spawns.
+		var existing: int = pool.count(tile)
+		var extra: int = int(round(float(existing) * maxf(0.0, factor - 1.0)))
+		for _i in extra:
+			boosted.append(tile)
+	return boosted
+
+## T24 — surface a boss resolution (win or loss) OR refresh the live overlay after an unresolved
+## chain. `res` is the note_boss_chain / tick_boss_turn / _resolve_boss result.
+##   • Resolved (boss no longer active): drop the raised chain bar, clear the board modifier overlay,
+##     re-pool the board to the plain farm pool, lower the board gate if no run is live, and surface
+##     the WIN (reward coins + rune; "Town 2 complete" on the capstone) or the LOSS via toast+status.
+##   • Unresolved (still active): just re-push the (possibly changed — heat aged/spawned, a hidden
+##     cell revealed) modifier overlay + the boss pill, so the board reflects the new state.
+func _apply_boss_resolution(res: Dictionary) -> void:
+	if game.is_boss_active():
+		# Still fighting — refresh the overlay (heat/ hidden may have changed) + the pill.
+		board.set_boss_modifier_state(game.boss_modifier_state)
+		_refresh_boss()
+		return
+	# Resolved — restore the board to a no-boss state.
+	board.set_min_chain(Constants.MIN_CHAIN)
+	board.set_boss_modifier_state({})
+	board.set_tile_pool(game.active_tile_pool())
+	board.set_active(_board_should_be_active())
+	if bool(res.get("defeated", false)):
+		var coins_won: int = int(res.get("reward_coins", 0))
+		var runes_won: int = int(res.get("reward_runes", 0))
+		var nm: String = String(res.get("name", "Boss"))
+		var msg: String = "%s defeated! +%d 🪙 +%d ✦" % [nm, coins_won, runes_won]
+		if String(res.get("id", "")) == BossConfig.CAPSTONE:
+			msg += " — Town 2 complete!"
+		_status_label.text = msg
+		show_toast(msg)
+		if _audio != null:
+			_audio.play("fanfare")
+	else:
+		var fmsg: String = "%s endures — the challenge fades (%d/%d). Better luck next season." % [
+			String(res.get("name", "Boss")), int(res.get("progress", 0)), int(res.get("target", 0))]
+		_status_label.text = fmsg
+		show_toast(fmsg)
+		if _audio != null:
+			_audio.play("pop")
+	_refresh_boss()
 
 ## TEMP M3h demo: shoo all rats off the board from the keyboard. The REAL entry is the
 ## Town screen's "Shoo rats" button (which routes through `_on_shoo_rats`). Spends one
@@ -2100,6 +2680,22 @@ func _on_shoo_rats() -> void:
 		_town_screen.refresh()
 	SaveManager.save(game)
 
+## T24 — the Town screen's "Challenge <Boss>" button emits `boss_challenge_requested`; Main owns
+## the board, so it runs the board-wiring boss start HERE (the single point that arms the modifier
+## overlay + boosted pool + raised chain bar), then refreshes the Town screen so its boss section
+## re-renders into the "fighting" state.
+func _on_boss_challenge_requested() -> void:
+	if not game.can_challenge_boss():
+		return
+	var res: Dictionary = _enter_boss_fight()
+	if bool(res.get("ok", false)):
+		_status_label.text = "%s appears! %s" % [
+			String(res.get("name", "Boss")), BossConfig.modifier_desc(game.boss_active)]
+		# Close the Town menu so the player lands on the playable board for the fight.
+		if _town_screen != null:
+			_town_screen.refresh()
+		_on_town_closed()
+
 # ── Tools on the live board (M8c) ─────────────────────────────────────────────
 # The tested tool API (GameState.use_tool_on_grid + ToolConfig + ToolEffects) is wired
 # into the LIVE board here. Main owns the GameState ref and the Board; the Board stays
@@ -2128,6 +2724,37 @@ func use_tool(id: String) -> bool:
 		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
 		_hud.show_tool_armed_banner(id)
 		return true
+	# T14a — wolf-hazard tools (Rifle / Hound) act on the wolf OVERLAYS, not the grid: skip the
+	# board collapse/refill (apply_external_grid would needlessly re-roll an unchanged board) and
+	# just refresh the wolf markers. use_tool_on_grid already cleared/scattered the wolves + spent
+	# the charge in its early path.
+	var pwr: String = ToolConfig.power_id(id)
+	if pwr == "clear_wolves" or pwr == "scatter_hazard":
+		var rw: Dictionary = game.use_tool_on_grid(id, board.grid)
+		if bool(rw.get("ok", false)):
+			board.refresh_wolves(game.active_wolves())
+			_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+			if _audio != null:
+				_audio.play("pop")
+			_after_tool_used()
+		return bool(rw.get("ok", false))
+	# T14b — mine-hazard tools (Water Pump / Explosives) mutate `mine_hazards` + the grid (lava→
+	# rubble / clear the cave-in rubble row + the mole). use_tool_on_grid returns the mutated grid;
+	# we land it via apply_mine_hazard_state (collapse/refill the freed cells + re-stamp the still-live
+	# cave-in/gas/lava pins + refresh the mole overlay), so a residual hazard stays pinned and the
+	# cleared one is gone. Skip when not in the mine (these tools are mine-only — a no-lava / no-cave-in
+	# board simply clears nothing, but we still land the unchanged grid harmlessly).
+	if pwr == "water_pump" or pwr == "explosives":
+		var rm: Dictionary = game.use_tool_on_grid(id, board.grid)
+		if bool(rm.get("ok", false)):
+			board.apply_mine_hazard_state(
+				rm["grid"], game.active_cave_in(), game.active_gas_vent(),
+				game.active_lava_cells(), game.active_mole())
+			_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+			if _audio != null:
+				_audio.play("pop")
+			_after_tool_used()
+		return bool(rm.get("ok", false))
 	# Instant tool — fire immediately over the whole board.
 	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
 	if bool(r.get("ok", false)):
@@ -2197,6 +2824,15 @@ func _enter_mine_visuals() -> void:
 	# biome flip that re-pools the board (the M demo key path), mirroring _ready /
 	# _on_town_changed.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# T11/T23: the dev-key mine entry flips the hazard-block flag + seeds the Mysterious Ore too
+	# (mirrors _on_town_changed's mine-flip path), so the keyboard fallback behaves like the real entry.
+	board.block_mine_hazards = game.is_in_mine()
+	if game.is_in_mine():
+		var sp := game.spawn_mysterious_ore_on_fill(board.grid, board.rng)
+		if bool(sp.get("ok", false)):
+			board.grid = sp["grid"]
+			board._build_tiles()
+	board.refresh_mole(game.active_mole())
 	# BUG C1 — the dev-key mine entry is a playable-board transition too, so follow the gate (the
 	# real entry path routes through _on_town_changed, which sets it; this keeps the keyboard
 	# fallback honest so the mine board it just built is actually chainable).

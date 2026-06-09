@@ -12,7 +12,7 @@ class_name ViewRouter extends RefCounted
 ## what overlay (if any) is shown on top of it.
 
 enum View  { BOARD }
-enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD, DEBUG, STARTFARMING }
+enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD, DEBUG, STARTFARMING, BOONS, KEEPER }
 
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
@@ -44,7 +44,7 @@ static func resolve(id: String) -> Dictionary:
 	match id:
 		"", "board":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.NONE }
-		"town":
+		"town", "ledger":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWN }
 		"menu":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.MENU }
@@ -62,7 +62,9 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TOWNSFOLK }
 		"cartography", "world":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.CARTOGRAPHY }
-		"recipes", "recipewiki":
+		"recipes", "recipewiki", "craft", "crafting":
+			# review-3 — "craft" now resolves to the CRAFTING UI (the RecipeWikiScreen), matching
+			# the 🔨 Craft bottom-nav tab. ("recipes"/"recipewiki" stay as aliases.)
 			return { "ok": true, "view": View.BOARD, "modal": Modal.RECIPES }
 		"tutorial":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.TUTORIAL }
@@ -84,6 +86,13 @@ static func resolve(id: String) -> Dictionary:
 			return { "ok": true, "view": View.BOARD, "modal": Modal.DEBUG }
 		"startfarming", "farm":
 			return { "ok": true, "view": View.BOARD, "modal": Modal.STARTFARMING }
+		"boons", "boon":
+			# T31 — the Boons catalog screen (the ✨ Boons town entry). ("boon" is an alias.)
+			return { "ok": true, "view": View.BOARD, "modal": Modal.BOONS }
+		"keeper":
+			# T31 — the keeper-encounter modal. Normally auto-triggered off a town/build event;
+			# this deep-link lets QA / the sanity-capture preview the encounter.
+			return { "ok": true, "view": View.BOARD, "modal": Modal.KEEPER }
 		_:
 			return { "ok": false }
 
@@ -112,6 +121,8 @@ static func modal_id(m: int) -> String:
 		Modal.LEAVEBOARD:   return "leaveboard"
 		Modal.DEBUG:        return "debug"
 		Modal.STARTFARMING: return "startfarming"
+		Modal.BOONS:        return "boons"
+		Modal.KEEPER:       return "keeper"
 		_:               return ""
 
 ## Parse a browser `location.hash` ("#/inventory", "#inventory", "#/", "") into a
@@ -129,4 +140,4 @@ static func id_from_hash(hash: String) -> String:
 
 ## All valid deep-link ids (the full set accepted by resolve()).
 static func known_ids() -> PackedStringArray:
-	return PackedStringArray(["", "board", "town", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm"])
+	return PackedStringArray(["", "board", "town", "ledger", "menu", "inventory", "items", "map", "townmap", "achievements", "trophies", "tiles", "collection", "chronicle", "story", "townsfolk", "folk", "cartography", "world", "recipes", "recipewiki", "craft", "crafting", "tutorial", "castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests", "almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm", "boons", "boon", "keeper"])

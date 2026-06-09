@@ -1,14 +1,18 @@
 extends SceneTree
-## B2 — layout invariants for the NINE promoted SECONDARY VIEWS (Achievements, Tile
-## collection, Recipes, Chronicle, Castle, Charter, Decorations, Portal, Quests). Each was a
-## semi-transparent SCRIM modal (a parchment card floating over a DIMMED board) reached
-## from the ⚙ menu "More" section; B2 promotes them to full-brightness VIEWS: their opaque
-## view backdrop now reserves UiKit.TOPBAR_RESERVE at the TOP (so the layer-1 HUD top bar
-## shows above the view) and stops UiKit.NAV_RESERVE short of the bottom (so the persistent
-## nav bar shows through), full-bleed content, and — UNLIKE the B1 PRIMARY views — they KEEP
-## a VISIBLE "✖ Close" button (these are menu sub-pages, Close is the legit back-to-board).
+## B2 — layout invariants for the promoted SECONDARY VIEWS (Achievements, Tile collection,
+## Chronicle, Castle, Charter, Decorations, Portal, Quests). Each was a semi-transparent SCRIM
+## modal (a parchment card floating over a DIMMED board) reached from the ⚙ menu "More"
+## section; B2 promotes them to full-brightness VIEWS: their opaque view backdrop now reserves
+## UiKit.TOPBAR_RESERVE at the TOP (so the layer-1 HUD top bar shows above the view) and stops
+## UiKit.NAV_RESERVE short of the bottom (so the persistent nav bar shows through), full-bleed
+## content, and — UNLIKE the B1 PRIMARY views — they KEEP a VISIBLE "✖ Close" button (these
+## are menu sub-pages, Close is the legit back-to-board).
 ##
-## This suite asserts, for each of the eight screens:
+## NOTE (review-3): the Recipe wiki (now the 🔨 Craft screen) is NO LONGER a secondary view —
+## it was promoted to a B1 PRIMARY (hidden close, asserted in run_primary_views_tests.gd), so it
+## was removed from this suite.
+##
+## This suite asserts, for each of the screens:
 ##   • the view backdrop is an opaque ColorRect (FRAME_BG, alpha 1.0) with
 ##     offset_top == UiKit.TOPBAR_RESERVE and offset_bottom == -UiKit.NAV_RESERVE,
 ##   • a "close" Button is registered in _action_buttons AND is VISIBLE (the menu sub-page
@@ -23,7 +27,6 @@ extends SceneTree
 
 const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
 const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
-const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
 const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
@@ -108,7 +111,6 @@ func _run() -> void:
 	# ── 1. Each secondary screen, in isolation ─────────────────────────────────
 	await _assert_screen(AchievementsScreenScript.new(), "Achievements")
 	await _assert_screen(TileCollectionScreenScript.new(), "Tile collection")
-	await _assert_screen(RecipeWikiScreenScript.new(), "Recipes")
 	await _assert_screen(ChronicleScreenScript.new(), "Chronicle")
 	await _assert_screen(CastleScreenScript.new(), "Castle")
 	await _assert_screen(CharterScreenScript.new(), "Charter")
@@ -161,7 +163,7 @@ func _run() -> void:
 
 	# The ⚙ menu still opens each secondary correctly via the shared deep-link path, and
 	# ESC/back (apply_deeplink('board')) still closes them.
-	for id in ["achievements", "tiles", "recipes", "chronicle", "castle", "charter",
+	for id in ["achievements", "tiles", "chronicle", "castle", "charter",
 			"decorations", "portal", "quests"]:
 		var opened: bool = main.apply_deeplink(id)
 		_check(opened, "apply_deeplink('%s') opens the secondary" % id)

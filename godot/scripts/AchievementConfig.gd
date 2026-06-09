@@ -36,20 +36,21 @@ extends RefCounted
 ##   tool-reward tiers grant a REAL port tool — the Bomb — via the M8b grant_tool path.
 ##   Coin rewards are carried over verbatim.
 ##
-##   OMITTED as UNREACHABLE in the port (no event can complete them):
-##     - champion (defeat 4 bosses): the port has ONE boss (Frostmaw). bosses_defeated
-##       tops out at 1, so a threshold-4 trophy would never complete → omitted.
+##   OMITTED (genuinely unreachable in the port):
 ##     - supply_chain (convert 10 grain → supplies): there is no "supplies_converted"
 ##       event site — supplies are produced by the Kitchen RecipeConfig output, not a
 ##       distinct counter the port tracks → omitted.
-##     - first_catch / tide_runner / master_angler (fish_chained): the port has NO
-##       harbor / fish biome and no "fish" category → omitted.
-##     - fowler (bird_chained): the port DOES have a "birds" category (PHEASANT), so it
-##       is technically reachable, but it is outside this representative slice's named
-##       category set (tree/veg/fruit/flower/herd/cattle/mount/mine) → omitted for scope,
-##       not for reachability.
 ##     - powerful_keep / ability_artisan (building/ability triggers): the port has no
 ##       unified abilities pipeline / ability-trigger event → omitted.
+##
+##   RE-ADDED (the older "omitted" reasons were STALE — these ARE reachable in the port):
+##     - first_catch / tide_runner / master_angler (fish_chained): the port HAS a working
+##       harbor / fish biome; fish_chained bumps at credit_chain via counter_for_category.
+##       master_angler grants magic_wand (a real ToolConfig member, summonable elsewhere).
+##     - fowler (bird_chained): the port has a "birds" category (pheasant/turkey/…);
+##       bird_chained bumps at credit_chain.
+##     - champion (defeat 4 bosses): the port ships 6 re-challengeable seasonal bosses (T24),
+##       so bosses_defeated is no longer capped at 1 → threshold-4 is reachable.
 
 # ── Reward tool used for the two ex-magic-wand/magic-seed tiers ────────────────
 ## The real port tool granted where React granted magic_wand / magic_seed (which
@@ -75,6 +76,9 @@ const ACHIEVEMENTS: Array = [
 
 	# ── bosses_defeated (a damage_boss that DEFEATS → +1) ──────────────────────
 	{"id": "first_blood",   "name": "First Blood",   "desc": "Defeat your first seasonal boss",      "counter": "bosses_defeated",            "threshold": 1,   "reward": {"coins": 200}},
+	# champion: reachable now that the port ships 6 re-challengeable seasonal bosses (T24).
+	# React grants magic_wand (a real ToolConfig member).
+	{"id": "champion",      "name": "Champion",      "desc": "Defeat 4 seasonal bosses",             "counter": "bosses_defeated",            "threshold": 4,   "reward": {"tools": {"magic_wand": 1}}},
 
 	# ── distinct_resources_chained (distinct produced resource → +1) ───────────
 	{"id": "naturalist",    "name": "Naturalist",    "desc": "Chain 8 different resource types",      "counter": "distinct_resources_chained", "threshold": 8,   "reward": {"coins": 75}},
@@ -96,6 +100,14 @@ const ACHIEVEMENTS: Array = [
 	{"id": "dairyman",      "name": "Dairyman",         "desc": "Drive 30 cattle into the shed",     "counter": "cattle_chained",             "threshold": 30,  "reward": {"coins": 60}},
 	{"id": "stable_hand",   "name": "Stable Hand",      "desc": "Lead 30 mounts through the stables", "counter": "mount_chained",             "threshold": 30,  "reward": {"coins": 60}},
 	{"id": "forester",      "name": "Forester",         "desc": "Fell 50 trees",                     "counter": "tree_chained",               "threshold": 50,  "reward": {"coins": 75}},
+
+	# ── fish_chained (harbor fish chains → +chain_len) — the port HAS a working harbor ─
+	{"id": "first_catch",   "name": "First Catch",      "desc": "Land your first fish chain at the harbor", "counter": "fish_chained",        "threshold": 1,   "reward": {"coins": 25}},
+	{"id": "tide_runner",   "name": "Tide Runner",      "desc": "Harvest 50 fish across the harbor", "counter": "fish_chained",               "threshold": 50,  "reward": {"coins": 75}},
+	{"id": "master_angler", "name": "Master Angler",    "desc": "Haul in 200 fish across the harbor","counter": "fish_chained",               "threshold": 200, "reward": {"tools": {"magic_wand": 1}}},
+
+	# ── bird_chained (bird-yard chains → +chain_len) — the port HAS birds (pheasant…) ──
+	{"id": "fowler",        "name": "Fowler",           "desc": "Gather 50 birds across the yards",  "counter": "bird_chained",               "threshold": 50,  "reward": {"coins": 75}},
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────
@@ -151,5 +163,13 @@ static func counter_for_category(category: String) -> String:
 		"stone", "iron", "coal", "gold", "gem":
 			# The five mine categories sum into one "mine_chained" counter.
 			return "mine_chained"
+		"fish":
+			# The five harbor fish categories sum into one "fish_chained" counter
+			# (the port has a working harbor — first_catch/tide_runner/master_angler).
+			return "fish_chained"
+		"birds":
+			# Bird-yard chains feed the "bird_chained" counter (fowler). Note Clover/Melon
+			# are re-filed to flower/fruit, so only true birds (pheasant/turkey/…) count.
+			return "bird_chained"
 		_:
 			return ""

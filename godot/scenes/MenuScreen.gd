@@ -25,6 +25,7 @@ extends CanvasLayer
 
 var game: GameState
 var _muted: bool = false
+var _fullscreen: bool = false               ## tracks the windowed/fullscreen display state
 
 signal closed
 ## Emitted when the Sound button is pressed — Main flips game.audio_muted, mutes the
@@ -41,27 +42,35 @@ signal navigation_requested(deeplink_id: String)
 
 ## The "More" navigation entries — every secondary screen that used to be a left-strip HUD
 ## button, now reachable from the menu. Each row: {icon, label, id (a ViewRouter deep-link)}.
-## The five primary screens (Town / Inventory / Craft / Map / Townsfolk) live on the bottom
-## nav and are intentionally NOT duplicated here.
+## The bottom-nav primary tabs (Town map / Inventory / Craft / Map / Townsfolk) are NOT
+## duplicated here — but the Town LEDGER ("town") IS, since review-3 freed the 🔨 Craft tab to
+## open the crafting UI instead of the ledger (the ledger is no longer reachable from the nav).
+## review-3 — "Market & Town" (the TownScreen ledger) heads the list: now that the 🔨 Craft
+## bottom-nav tab opens the dedicated crafting UI (RecipeWikiScreen), the town-management
+## ledger (settlement / buildings / refine / MARKET sell+buy / orders) lives here + on a
+## town-map button. "Recipes" was dropped — it's the same screen the Craft tab now opens.
 const MORE_ENTRIES := [
+	{"icon": "🏛", "label": "Market & Town", "id": "town"},
 	{"icon": "🏆", "label": "Achievements", "id": "achievements"},
 	{"icon": "📖", "label": "Tiles", "id": "tiles"},
 	{"icon": "📜", "label": "Chronicle", "id": "chronicle"},
-	{"icon": "🍳", "label": "Recipes", "id": "recipes"},
 	{"icon": "🏰", "label": "Castle", "id": "castle"},
 	{"icon": "🌷", "label": "Decorations", "id": "decorations"},
 	{"icon": "🌀", "label": "Portal", "id": "portal"},
+	{"icon": "✨", "label": "Boons", "id": "boons"},
 	{"icon": "⚖️", "label": "Charter", "id": "charter"},
 	{"icon": "📋", "label": "Quests", "id": "quests"},
 	{"icon": "🎁", "label": "Daily", "id": "daily"},
 	{"icon": "🐞", "label": "Debug", "id": "debug"},
 ]
 
-## action id → Button, for headless tests. Keys: "toggle_sound", "new_game", "close".
+## action id → Button, for headless tests. Keys: "toggle_sound", "toggle_fullscreen",
+## "show_tutorial", "new_game", "close", and one "nav:<id>" per More entry.
 var _action_buttons: Dictionary = {}
 
 ## Static shell, built once in setup().
 var _sound_btn: Button
+var _fullscreen_btn: Button
 var _built: bool = false
 
 # ── parchment palette (matches Main's HUD / TownScreen journal tokens) ──────────
@@ -81,10 +90,12 @@ func setup(g: GameState) -> void:
 		_build_shell()
 		_built = true
 	refresh_sound_label()
+	refresh_fullscreen_label()
 
 func open() -> void:
 	visible = true
 	refresh_sound_label()
+	refresh_fullscreen_label()
 
 func close() -> void:
 	visible = false
@@ -167,6 +178,17 @@ func _build_shell() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(tagline)
 
+	# ── Settings submenu ──────────────────────────────────────────────────────
+	# Group the display/audio preferences under a small "Settings" heading (React parity:
+	# the menu's Settings tab). Sound mute + a Go Fullscreen toggle.
+	var settings_heading := Label.new()
+	settings_heading.text = "Settings"
+	settings_heading.add_theme_font_size_override("font_size", 18)
+	settings_heading.add_theme_color_override("font_color", COL_TITLE)
+	if heading_font != null:
+		settings_heading.add_theme_font_override("font", heading_font)
+	col.add_child(settings_heading)
+
 	# Sound — toggles the SFX mute. Emits `sound_toggle_requested`; Main flips the flag + saves.
 	_sound_btn = Button.new()
 	_sound_btn.text = "Sound: On"
@@ -175,6 +197,28 @@ func _build_shell() -> void:
 	_sound_btn.connect("pressed", Callable(self, "_on_sound_pressed"))
 	col.add_child(_sound_btn)
 	_action_buttons["toggle_sound"] = _sound_btn
+
+	# Fullscreen — toggles the OS window between windowed + fullscreen via DisplayServer.
+	# Purely a display preference (no game state), so the screen owns it directly. On the
+	# headless test path there is no real window; the toggle is still wired + labelled.
+	_fullscreen_btn = Button.new()
+	_fullscreen_btn.text = "Go Fullscreen"
+	_fullscreen_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_button(_fullscreen_btn, Palette.MOSS, 8, 20)
+	_fullscreen_btn.connect("pressed", Callable(self, "_on_fullscreen_pressed"))
+	col.add_child(_fullscreen_btn)
+	_action_buttons["toggle_fullscreen"] = _fullscreen_btn
+
+	# Show Tutorial — re-opens the 6-step onboarding (replay). Closes the menu + emits
+	# navigation_requested("tutorial"); Main routes it through apply_deeplink("tutorial"), the
+	# SAME path that opens the tutorial modal for a fresh game.
+	var tutorial_btn := Button.new()
+	tutorial_btn.text = "📖 Show Tutorial"
+	tutorial_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_button(tutorial_btn, Palette.MOSS, 8, 20)
+	tutorial_btn.connect("pressed", Callable(self, "_on_show_tutorial_pressed"))
+	col.add_child(tutorial_btn)
+	_action_buttons["show_tutorial"] = tutorial_btn
 
 	# New Game — wipes the save + restarts. Danger accent (destructive).
 	var new_btn := Button.new()
@@ -190,6 +234,13 @@ func _build_shell() -> void:
 	# then a scrolling list of labelled nav buttons. Each closes the menu + emits
 	# navigation_requested(id); Main routes it through apply_deeplink. Registered as "nav:<id>".
 	_build_more_section(col)
+
+	# ── About card ─────────────────────────────────────────────────────────────
+	# A small parchment-soft card with the game title, tagline, and a credits/version line
+	# (React parity: the menu's About panel). SKIP a "Game Wiki" entry — the standalone Godot
+	# port ships no wiki (the React Dev Panel wiki is not part of the export), so there is no
+	# real screen to open; adding one would be a dead link (no fake).
+	_build_about_card(col)
 
 	# Close — dismiss the modal.
 	var close_btn := Button.new()
@@ -249,12 +300,83 @@ func _on_nav_pressed(id: String) -> void:
 	close()
 	emit_signal("navigation_requested", id)
 
+# ── About card ────────────────────────────────────────────────────────────────
+
+## Build the About card: a parchment-soft inset panel with the game title, tagline, and a
+## one-line credits/version footer. Pure presentation — no actions.
+func _build_about_card(col: VBoxContainer) -> void:
+	var about := PanelContainer.new()
+	about.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(12)
+	about.add_theme_stylebox_override("panel", sb)
+	col.add_child(about)
+
+	var acol := VBoxContainer.new()
+	acol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	acol.add_theme_constant_override("separation", 4)
+	about.add_child(acol)
+
+	var heading_font: Font = UiKit.heading_font()
+
+	var about_title := Label.new()
+	about_title.text = "About"
+	about_title.add_theme_font_size_override("font_size", 16)
+	about_title.add_theme_color_override("font_color", COL_TITLE)
+	if heading_font != null:
+		about_title.add_theme_font_override("font", heading_font)
+	acol.add_child(about_title)
+
+	var name_lbl := Label.new()
+	name_lbl.text = "Hearthlands — a puzzle of seasons and stews."
+	name_lbl.add_theme_font_size_override("font_size", 14)
+	name_lbl.add_theme_color_override("font_color", Palette.INK)
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	acol.add_child(name_lbl)
+
+	var credits := Label.new()
+	credits.text = "Godot 4.6 port · chain tiles, restore the vale, build the town."
+	credits.add_theme_font_size_override("font_size", 12)
+	credits.add_theme_color_override("font_color", Palette.INK_MID)
+	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	acol.add_child(credits)
+
 # ── action handlers ───────────────────────────────────────────────────────────
 
 ## The Sound button — emit `sound_toggle_requested` and let Main own the actual mute flip + save
 ## + label re-sync (the single accounting point). This screen never touches the flag.
 func _on_sound_pressed() -> void:
 	emit_signal("sound_toggle_requested")
+
+## The Fullscreen button — flip the OS window between windowed + fullscreen via DisplayServer.
+## A display-only preference (no game state, nothing persisted), so the screen owns it directly.
+## DisplayServer is null-safe headless; the label still re-syncs from the (windowed) mode.
+func _on_fullscreen_pressed() -> void:
+	_fullscreen = not _fullscreen
+	if _fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	refresh_fullscreen_label()
+
+## Re-sync the Fullscreen button text from the live window mode: "Exit Fullscreen" when the
+## window is fullscreen/exclusive, "Go Fullscreen" otherwise.
+func refresh_fullscreen_label() -> void:
+	var mode := DisplayServer.window_get_mode()
+	_fullscreen = (mode == DisplayServer.WINDOW_MODE_FULLSCREEN
+		or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	if _fullscreen_btn != null:
+		_fullscreen_btn.text = "Exit Fullscreen" if _fullscreen else "Go Fullscreen"
+
+## Show Tutorial — close the menu + emit navigation_requested("tutorial"); Main re-opens the
+## tutorial via apply_deeplink("tutorial") (the replay path).
+func _on_show_tutorial_pressed() -> void:
+	close()
+	emit_signal("navigation_requested", "tutorial")
 
 ## New Game — emit `new_game_requested`; Main wipes the save + restarts the run.
 func _on_new_game_pressed() -> void:

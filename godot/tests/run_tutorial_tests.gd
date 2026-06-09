@@ -89,6 +89,16 @@ func _initialize() -> void:
 	_check(modal._action_buttons.has("next"), "_action_buttons has 'next'")
 	_check(modal._action_buttons.has("skip"), "_action_buttons has 'skip'")
 
+	# ── Tutorial polish: Wren avatar + page-dot indicator (review task 15) ────
+	# The narrator is Wren the Scout (a real NpcConfig roster member — no fake).
+	_check(modal._npc_name == "Wren", "tutorial narrator is Wren (NpcConfig roster name)")
+	_check(modal._npc_name_label != null and modal._npc_name_label.text == "Wren",
+		"the speaker label shows 'Wren'")
+	# One page dot per step, the current step's dot filled.
+	_check(modal._dots.size() == TutorialConfig.count(),
+		"one page dot per tutorial step (%d)" % TutorialConfig.count())
+	_check(modal._dot_active_index() == 0, "the filled page dot is at step 0 after open()")
+
 	# Step 0: title + body rendered correctly.
 	_check(modal._title_label.text == String(steps[0].get("title", "")),
 		"step 0 title rendered in _title_label")
@@ -101,11 +111,13 @@ func _initialize() -> void:
 		"next button text is 'Next' at step 0")
 
 	# ── 3. Stepping Next through all steps ──────────────────────────────────
-	# Steps 1–4: Next advances; not the last step → button stays "Next".
+	# Steps 1–4: Next advances; not the last step → button stays "Next". The filled page dot
+	# tracks the current step too.
 	for i in range(1, 5):
 		_check(_press(modal, "next"), "pressed next at step %d → %d" % [i - 1, i])
 		_check(modal._indicator_label.text == "Step %d / 6" % [i + 1],
 			"indicator reads 'Step %d / 6' after %d advances" % [i + 1, i])
+		_check(modal._dot_active_index() == i, "the filled page dot advanced to step index %d" % i)
 
 	# Now at step 5 (index 4, 0-based) — one more Next brings us to step 6 (index 5).
 	_check(_press(modal, "next"), "pressed next to reach step 6")

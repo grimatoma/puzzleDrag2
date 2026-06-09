@@ -80,11 +80,28 @@ func _initialize() -> void:
 	screen.connect("closed", Callable(self, "_on_closed"))
 
 	_check(screen.visible, "recipe wiki is visible after open()")
+	# review-3 — the crafting screen is a B1 PRIMARY view now (the 🔨 Craft nav target): the
+	# "close" Button stays registered (ESC/back/deep-link/tests rely on it) but is NOT visible
+	# (no card "✖ Close" — the view is left via the bottom nav / ESC-back).
 	_check(screen._action_buttons.has("close"), "_action_buttons has 'close'")
+	_check(not screen._action_buttons["close"].visible,
+		"the 'close' button is NOT visible (primary view — card close dropped)")
 
-	# Station tab bar: one tab per real station (Bakery + Kitchen).
+	# Station tab bar: one tab per real station. T15 grew this from Bakery+Kitchen to all
+	# six crafting stations (Bakery, Kitchen, Workshop, Larder, Forge, Smokehouse).
 	_check(screen._station_buttons.has(BuildingConfig.BAKERY), "station tab for Bakery exists")
 	_check(screen._station_buttons.has(BuildingConfig.KITCHEN), "station tab for Kitchen exists")
+	_check(screen._station_buttons.has(BuildingConfig.WORKSHOP), "station tab for Workshop exists")
+	_check(screen._station_buttons.has(BuildingConfig.LARDER), "station tab for Larder exists")
+	_check(screen._station_buttons.has(BuildingConfig.FORGE), "station tab for Forge exists")
+	_check(screen._station_buttons.has(BuildingConfig.SMOKEHOUSE), "station tab for Smokehouse exists")
+
+	# Switching to the Workshop tab renders its tool recipes (e.g. the Rake row).
+	screen._on_station_tab(BuildingConfig.WORKSHOP)
+	_check(screen._active_station == BuildingConfig.WORKSHOP, "_on_station_tab(Workshop) switches station")
+	_check(screen._cards.has(RecipeConfig.RAKE), "Workshop tab renders the Rake (tool) recipe row")
+	_check(screen._cards.size() >= 1, "Workshop tab renders at least one recipe row")
+	screen._on_station_tab(BuildingConfig.BAKERY)   # restore the default station for the checks below
 
 	# Header reads the TOTAL recipe count (across stations).
 	_check(screen._header_label.text == "%d recipes" % expected_count,
@@ -130,6 +147,21 @@ func _initialize() -> void:
 	screen.refresh()
 	_check(game.can_craft(RecipeConfig.BREAD), "can_craft(BREAD) after building Bakery + stocking")
 	_check(not screen._action_buttons["craft"].disabled, "Craft enabled when craftable")
+
+	# review-3 — the detail card shows per-input have/need chips ("flour 6/3", "eggs 2/1") and a
+	# "Ready to craft" status line when craftable. Assert the have/need text is rendered.
+	var detail_texts: Array = _collect_label_texts(screen._body)
+	var has_flour_haveneed := false
+	var has_eggs_haveneed := false
+	var has_ready := false
+	for t in detail_texts:
+		var s := String(t)
+		if s == "6/3": has_flour_haveneed = true        # flour have/need chip
+		if s == "2/1": has_eggs_haveneed = true          # eggs have/need chip
+		if s.to_lower().contains("ready to craft"): has_ready = true
+	_check(has_flour_haveneed, "detail card shows the flour have/need chip '6/3'")
+	_check(has_eggs_haveneed, "detail card shows the eggs have/need chip '2/1'")
+	_check(has_ready, "detail card shows the 'Ready to craft' status when craftable")
 	var bread_before := int(game.inventory.get("bread", 0))
 	var changed := [false]
 	screen.connect("state_changed", func(): changed[0] = true)
@@ -195,6 +227,20 @@ func _initialize() -> void:
 	_check(main._recipe_wiki_screen.visible, "recipe wiki visible after _open_recipes()")
 	_check(main._router.current_modal() == ViewRouter.Modal.RECIPES,
 		"_router.current_modal() == RECIPES after _open_recipes()")
+	# review-3 — as the 🔨 Craft PRIMARY view it marks the "craft" bottom-nav tab active.
+	_check(main._hud._nav_current == "craft",
+		"_open_recipes() marks the 'craft' nav tab active (it's the Craft primary view)")
+
+	# review-3 — tapping the bottom-nav "craft" tab opens THIS crafting screen, not the Town
+	# ledger (TownScreen). Close first, then drive the nav handler the HUD emits.
+	main.apply_deeplink("board")
+	main._on_nav_selected("craft")
+	_check(main._recipe_wiki_screen.visible,
+		"craft nav tap opens the crafting screen (RecipeWikiScreen)")
+	_check(main._town_screen == null or not main._town_screen.visible,
+		"craft nav tap does NOT open the Town ledger")
+	_check(main._router.current_modal() == ViewRouter.Modal.RECIPES,
+		"craft nav tap → router == RECIPES (crafting UI)")
 
 	# A second open reuses the SAME screen (no duplicate child).
 	var first_ref = main._recipe_wiki_screen

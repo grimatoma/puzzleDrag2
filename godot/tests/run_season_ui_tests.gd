@@ -16,6 +16,7 @@ extends SceneTree
 
 const HarvestModal := preload("res://scenes/HarvestModal.gd")
 const HudScript := preload("res://scenes/Hud.gd")
+const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
 
 var _checks: int = 0
 var _failures: int = 0
@@ -31,6 +32,9 @@ func _initialize() -> void:
 	_test_field_colors()
 	_test_harvest_recap_line()
 	await _test_season_bar_run_gated()
+	await _test_free_moves_readout()
+	await _test_stockpile_panel()
+	_test_season_bar_name()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -183,3 +187,98 @@ func _test_season_bar_run_gated() -> void:
 
 	hud.queue_free()
 	await process_frame
+
+# ── Free-moves HUD readout: hidden at 0, shown as "👟 N" once banked ─────────────
+
+## The tile-variant free-moves pill reads game.free_moves(): HIDDEN when 0 (so it never disturbs
+## the bar / visual goldens on a fresh board), shown as "👟 N" once a free-moves tile ability has
+## banked moves. Builds the real Hud node headlessly and asserts the pill toggles via _refresh_meta.
+func _test_free_moves_readout() -> void:
+	var game := GameState.new()
+	game.coins = 250
+	var hud = HudScript.new()
+	hud.game = game
+	root.add_child(hud)
+	hud.build()
+	await process_frame
+
+	_check(hud._free_moves_pill_box != null, "HUD built a free-moves pill box")
+	# Fresh game (0 free moves) → the pill is HIDDEN.
+	hud._refresh_meta()
+	if hud._free_moves_pill_box != null:
+		_check(not hud._free_moves_pill_box.visible, "0 free moves → the readout is HIDDEN")
+
+	# Bank free moves the real way: discover+activate Clover (free_moves 2), chain it.
+	_check(game.buy_tile("tile_bird_clover"), "(setup) buy Clover")
+	_check(game.set_active_tile("flower", "tile_bird_clover"), "(setup) activate Clover")
+	game.credit_chain(Constants.Tile.BIRD_CLOVER, 3)
+	_check(game.free_moves() == 2, "(setup) one clover chain banked 2 free moves")
+	hud._refresh_meta()
+	if hud._free_moves_pill_box != null:
+		_check(hud._free_moves_pill_box.visible, "free moves > 0 → the readout is SHOWN")
+		_check(hud._free_moves_pill.text == "👟 2", "the readout reads '👟 2' (got '%s')" % hud._free_moves_pill.text)
+
+	hud.queue_free()
+	await process_frame
+
+# ── Stockpile panel: roster chips + "N/M KINDS" header (review task 6) ─────────────
+
+## The board stockpile is a prominent titled panel: a 4-col chip grid of the fixed farm ROSTER
+## (empty goods dimmed) with an "{owned}/{total} KINDS" header. Builds the real Hud node headlessly
+## and asserts the roster grid + header track the live inventory via _refresh_totals.
+func _test_stockpile_panel() -> void:
+	var game := GameState.new()
+	var hud = HudScript.new()
+	hud.game = game
+	root.add_child(hud)
+	hud.build()
+	await process_frame
+
+	_check(hud._stockpile_grid != null, "HUD built a stockpile grid")
+	_check(hud._stockpile_kinds != null, "HUD built a stockpile KINDS header")
+	var roster_n: int = hud.STOCKPILE_ROSTER.size()
+
+	# Fresh inventory: every roster chip renders (dimmed), header reads "0/N KINDS".
+	hud._refresh_totals()
+	_check(hud._stockpile_chips.size() == roster_n,
+		"empty stockpile renders all %d roster chips (dimmed)" % roster_n)
+	_check(hud._stockpile_kinds.text == "0/%d KINDS" % roster_n,
+		"header reads '0/%d KINDS' on an empty stockpile (got '%s')" % [roster_n, hud._stockpile_kinds.text])
+
+	# Own two roster goods → header counts them; the chips for those keys exist.
+	game.inventory = {"flour": 5, "bread": 2}
+	hud._refresh_totals()
+	_check(hud._stockpile_kinds.text == "2/%d KINDS" % roster_n,
+		"header reads '2/%d KINDS' after owning flour + bread (got '%s')" % [roster_n, hud._stockpile_kinds.text])
+	_check(hud._stockpile_chips.has("flour") and hud._stockpile_chips.has("bread"),
+		"the owned roster goods have chips")
+
+	# An OWNED non-roster good (a mine resource) is appended as an extra chip beyond the roster.
+	game.inventory = {"flour": 5, "block": 3}
+	hud._refresh_totals()
+	_check(hud._stockpile_chips.has("block"), "an owned non-roster good (block) gets an extra chip")
+	_check(hud._stockpile_chips.size() == roster_n + 1,
+		"roster chips + 1 extra for the non-roster good (got %d)" % hud._stockpile_chips.size())
+	# Only the owned ROSTER good (flour) counts toward the KINDS header; block is an extra.
+	_check(hud._stockpile_kinds.text == "1/%d KINDS" % roster_n,
+		"header counts only owned ROSTER goods (1/%d), not the extra (got '%s')" % [roster_n, hud._stockpile_kinds.text])
+
+	hud.queue_free()
+	await process_frame
+
+# ── Season bar: season_name() reports the highlighted segment (review task 11) ─────
+
+## The season strip exposes season_name() (the highlighted segment) for the prominent 4-season
+## header. Drives a SeasonBar directly with set_state and asserts the name tracks the index.
+func _test_season_bar_name() -> void:
+	var bar = SeasonBarScript.new()
+	bar.set_state(0, 10, 0)
+	_check(bar.season_name() == "Spring", "season_name() == 'Spring' at index 0")
+	bar.set_state(0, 10, 2)
+	_check(bar.season_name() == "Autumn", "season_name() == 'Autumn' at index 2")
+	bar.set_state(0, 10, 3)
+	_check(bar.season_name() == "Winter", "season_name() == 'Winter' at index 3")
+	_check(bar.turns_left() == 10, "turns_left() == budget when 0 turns used")
+	bar.set_state(4, 10, 1)
+	_check(bar.turns_left() == 6, "turns_left() == 6 after 4 of 10 used")
+	bar.free()

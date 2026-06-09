@@ -96,16 +96,38 @@ func _initialize() -> void:
 	_check(menu._action_buttons.has("new_game"), "_action_buttons has 'new_game'")
 	_check(menu._action_buttons.has("close"), "_action_buttons has 'close'")
 
+	# ── Settings submenu: a Fullscreen toggle + a Show Tutorial entry (review tasks 13/14) ──
+	_check(menu._action_buttons.has("toggle_fullscreen"), "_action_buttons has 'toggle_fullscreen'")
+	_check(menu._action_buttons.has("show_tutorial"), "_action_buttons has 'show_tutorial'")
+	# The fullscreen button labels the windowed state on the headless (windowed) test path.
+	var fs_btn: Variant = menu._action_buttons.get("toggle_fullscreen")
+	_check(fs_btn != null and fs_btn.text == "Go Fullscreen",
+		"Fullscreen button reads 'Go Fullscreen' while windowed")
+	# Pressing Show Tutorial closes the menu + emits navigation_requested('tutorial') (Main
+	# re-opens the tutorial via apply_deeplink — the replay path).
+	var before_tut_nav := _navigate_count
+	var before_tut_closed := _closed_count
+	_check(_press(menu, "show_tutorial"), "pressed the 'show_tutorial' button")
+	_check(_navigate_count == before_tut_nav + 1, "Show Tutorial fired navigate once")
+	_check(_navigate_last == "tutorial", "Show Tutorial carried the 'tutorial' deep-link id")
+	_check(_closed_count == before_tut_closed + 1, "Show Tutorial also closed the menu")
+	menu.open()   # re-open for the remaining checks
+	# SKIP "Game Wiki" — the standalone port ships no wiki screen (no fake dead link).
+	_check(not menu._action_buttons.has("nav:wiki"), "menu does NOT add a (non-existent) Game Wiki entry")
+
 	# ── "More" navigation section ──────────────────────────────────────────────
 	# Every secondary screen that moved out of the old left-strip HUD into the menu has
 	# a "nav:<id>" button. Spot-check a representative few, then prove pressing one
 	# CLOSES the menu and emits navigation_requested(id) (Main routes that through apply_deeplink).
-	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "recipes", "daily", "debug"]:
+	for id in ["achievements", "chronicle", "castle", "decorations", "portal", "charter", "quests", "tiles", "daily", "debug"]:
 		_check(menu._action_buttons.has("nav:" + id), "_action_buttons has 'nav:%s'" % id)
-	# The five PRIMARY tabs (town/inventory/craft/map/townsfolk) live on the bottom nav
-	# and must NOT be duplicated in the menu's More list.
-	_check(not menu._action_buttons.has("nav:town"), "menu does NOT duplicate the Town tab")
+	# review-3 — the Town LEDGER ("Market & Town") is now a "More" entry: the 🔨 Craft bottom-nav
+	# tab opens the crafting UI, so the ledger moved off the nav into the menu (+ a town-map button).
+	_check(menu._action_buttons.has("nav:town"), "menu DOES surface the Town ledger ('nav:town')")
+	# The bottom-nav primary tabs (townmap/inventory/craft/map/townsfolk) are NOT duplicated.
 	_check(not menu._action_buttons.has("nav:inventory"), "menu does NOT duplicate the Inventory tab")
+	# "Recipes" was dropped — it's the SAME screen the Craft nav tab now opens (no menu dupe).
+	_check(not menu._action_buttons.has("nav:recipes"), "menu does NOT duplicate the crafting screen ('nav:recipes' dropped)")
 
 	var before_nav := _navigate_count
 	var before_nav_closed := _closed_count

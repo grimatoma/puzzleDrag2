@@ -83,12 +83,12 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Opaque VIEW background (not a dim modal scrim). B2 promotes this menu sub-page to a
-	# full-brightness VIEW: it paints the warm app-frame parchment over the board (no longer
-	# dimmed behind), reserving UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD
-	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
-	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
-	# eats clicks in the band it covers.
+	# Opaque VIEW background (not a dim modal scrim). review-3 promotes this from a ☰-menu
+	# SECONDARY sub-page to the 🔨 Craft PRIMARY nav VIEW (B1 family): it paints the warm
+	# app-frame parchment over the board (no longer dimmed behind), reserving UiKit.TOPBAR_RESERVE
+	# at the TOP so the persistent layer-1 HUD top bar shows ABOVE the view, and stopping
+	# UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a LOWER CanvasLayer) shows
+	# through + stays tappable; MOUSE_FILTER_STOP eats clicks in the band it covers.
 	var backdrop := ColorRect.new()
 	backdrop.color = Palette.FRAME_BG
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -114,8 +114,8 @@ func _build_shell() -> void:
 	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
 	panel.offset_bottom = -UiKit.NAV_RESERVE
 	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
-	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
-	# sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board affordance).
+	# shadow, so it reads as a full-brightness page under the persistent top bar. As a B1
+	# PRIMARY view it has NO visible card "✖ Close" — it's left via the bottom nav / ESC-back.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
 	style.set_content_margin_all(20)
@@ -133,13 +133,16 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "📜 Recipes" heading + right-aligned "✖ Close" button.
+	# Title row: "🔨 Craft" heading spanning the row. As a primary nav VIEW (like Town /
+	# Inventory) there is NO visible card "✖ Close" — the view is left via the bottom nav or
+	# ESC-back. A non-rendered close Button is still created + wired below so ESC/back, the
+	# "board" deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
 
 	var title := Label.new()
-	title.text = "📜 Recipes"
+	title.text = "🔨 Craft"
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
@@ -148,12 +151,11 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
 	var close_btn := Button.new()
-	close_btn.text = "✖ Close"
-	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# Station tab row: one segmented tab per real station (Bakery / Kitchen), with the
@@ -452,6 +454,11 @@ func _craft_status(id: String) -> Dictionary:
 	var station_id: String = RecipeConfig.recipe_station(id)
 	if not game.has_building(station_id):
 		return {"text": "Station not built", "color": COL_MUTED}
+	# T15: a built station whose recipe is still tier-locked reads "Requires <Tier>"
+	# (the craft is gated on settlement tier, not inputs). Tier-1 recipes never trip this.
+	var min_tier: int = RecipeConfig.recipe_min_settlement_tier(id)
+	if game.settlement.tier < min_tier:
+		return {"text": "Requires %s" % TownConfig.tier_name(min_tier), "color": COL_MUTED}
 	if game.can_craft(id):
 		return {"text": "Ready to craft", "color": Palette.MOSS}
 	return {"text": "Missing inputs", "color": COL_SHORT}

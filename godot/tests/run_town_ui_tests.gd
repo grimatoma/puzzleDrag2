@@ -207,40 +207,18 @@ func _initialize() -> void:
 	_check(missing_buy_btns.is_empty(),
 		"all buyable resources have buy:<res> buttons (missing: %s)" % str(missing_buy_btns))
 
-	# ── Workers: hire a Farmer ─
-	# The Workers section lists every WorkerConfig type with a hire:<id> button.
-	# Give the player coins + the farmer's resource cost, then press hire and assert
-	# the count rose and coins fell by the ramped cost.
+	# ── T20: the Workers (hire-by-type) section MOVED off the Town screen ─
+	# Hiring now lives on the Townsfolk screen's Workers tab (run_townsfolk_view_tests.gd
+	# covers the hire/fire flow there). TownScreen must NOT render any hire:/fire: buttons —
+	# this prevents the double-hire UI confusion the restructure was meant to remove.
 	game.coins = 1000
 	game.inventory["hay_bundle"] = int(game.inventory.get("hay_bundle", 0)) + 10
 	town.refresh()
-	_check(town._action_buttons.has("hire:" + WorkerConfig.FARMER),
-		"Workers section has a hire:farmer button")
+	var any_hire_btn := false
 	for wid in WorkerConfig.all_ids():
-		_check(town._action_buttons.has("hire:" + wid),
-			"Workers section has a hire button for %s" % wid)
-	var hire_btn: Variant = town._action_buttons.get("hire:" + WorkerConfig.FARMER)
-	_check(hire_btn != null and not hire_btn.disabled,
-		"hire:farmer enabled (affordable)")
-	var farmers_before: int = game.worker_count(WorkerConfig.FARMER)
-	var coins_before_hire: int = game.coins
-	var hire_cost: int = game.worker_hire_coins(WorkerConfig.FARMER)
-	var changes_before_hire := _changes
-	_check(_press(town, "hire:" + WorkerConfig.FARMER), "pressed hire:farmer")
-	_check(game.worker_count(WorkerConfig.FARMER) == farmers_before + 1,
-		"farmer count rose by 1 after hire")
-	_check(game.coins == coins_before_hire - hire_cost,
-		"coins fell by the ramped hire cost (%d)" % hire_cost)
-	_check(_changes == changes_before_hire + 1, "state_changed fired once on hire")
-	# A hired worker exposes a Fire button.
-	_check(town._action_buttons.has("fire:" + WorkerConfig.FARMER),
-		"row now shows fire:farmer after hiring")
-
-	# ── Workers: fire the Farmer ─
-	var farmers_pre_fire: int = game.worker_count(WorkerConfig.FARMER)
-	_check(_press(town, "fire:" + WorkerConfig.FARMER), "pressed fire:farmer")
-	_check(game.worker_count(WorkerConfig.FARMER) == farmers_pre_fire - 1,
-		"farmer count fell by 1 after fire")
+		if town._action_buttons.has("hire:" + String(wid)) or town._action_buttons.has("fire:" + String(wid)):
+			any_hire_btn = true
+	_check(not any_hire_btn, "TownScreen renders NO worker hire/fire buttons (moved to the Townsfolk Workers tab)")
 
 	# ── Expedition: enter / leave the HARBOR (M3j) ─────────────────────────────
 	# The harbor enter row is gated by can_enter_harbor() AND town2_complete (the Town-3

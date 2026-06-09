@@ -1,17 +1,17 @@
 extends SceneTree
-## Headless tests for the M3j fish / harbor BOARD layer — the visible slice over the
-## already-landed, tested fish biome LOGIC (run_fish_tests.gd). Two halves:
+## Headless tests for the T25 fish / harbor BOARD layer — the in-chain pearl-capture rule.
+## Two halves:
 ##
-##   1. GameState.capture_pearl_if_adjacent — the board-side pearl-capture rule. The port's
-##      is_valid_chain requires an ALL-SAME-KEY chain, so React's "the chain CONTAINS the
-##      pearl + 2 fish" can't fire on the live board; the board adapts it (like
-##      Board.clear_rubble_on_stone) to ADJACENCY: a same-key fish chain of length
-##      >= REQUIRED_FISH_IN_CHAIN run 8-adjacent to the live pearl captures it for a Rune.
+##   1. Pearl in-chain capture rule tests:
+##      - Board._is_valid_chain_pearl_aware / _cell_can_extend_chain: FISH_PEARL can join a
+##        fish chain; a purely-adjacent-but-not-in-chain path does NOT capture.
+##      - GameState.try_capture_pearl with chain keys from the board (int ordinals).
+##      - The DEPRECATED adjacency rule (capture_pearl_if_adjacent) is tested as still
+##        present but NOT the live path: the live board only uses try_capture_pearl.
 ##
-##   2. A Main + Board INTEGRATION drive: enter the harbor (with supplies + town2_complete),
-##      assert the board re-pools onto the fish pool + the pearl tile is placed, resolve a
-##      harbor fish chain (turns decrement), flip the tide (bottom row mutates), capture the
-##      pearl by chaining a fish run beside it (+1 rune), and leave (farm pool restored).
+##   2. A Main + Board INTEGRATION drive: enter the harbor, assert board re-pools + pearl
+##      placed, resolve a harbor chain that CONTAINS the pearl + fish (in-chain capture →
+##      +1 rune, tile cleared), flip the tide, and leave (farm pool restored).
 ##
 ## Run from the godot/ project root:
 ##   godot --headless --script res://tests/run_fish_board_tests.gd
@@ -28,6 +28,7 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	print("\n── Fish / harbor BOARD tests ──────────────────────")
+	_test_pearl_in_chain_rule()
 	_test_capture_pearl_if_adjacent()
 	await _test_main_board_integration()
 	print("──────────────────────────────────────────────────")
@@ -65,7 +66,105 @@ func _grid_count(grid: Array, tile: int) -> int:
 				n += 1
 	return n
 
-# ── GameState.capture_pearl_if_adjacent ────────────────────────────────────────
+# ── T25: pearl IN-CHAIN capture rule (the React rule, the live path) ─────────────
+
+## True when the tile at `cell` is compatible with a chain anchored on `anchor_tile`
+## in a harbor-mode board (clear_pearl_on_fish_chain = true). Mirrors Board._cell_can_extend_chain.
+func _chain_compat(cell_tile: int, anchor_tile: int) -> bool:
+	if cell_tile == anchor_tile:
+		return true
+	if cell_tile == Constants.Tile.FISH_PEARL and FishConfig.is_fish_tile(anchor_tile):
+		return true
+	if FishConfig.is_fish_tile(cell_tile) and anchor_tile == Constants.Tile.FISH_PEARL:
+		return true
+	return false
+
+func _test_pearl_in_chain_rule() -> void:
+	# ── FishConfig.is_pearl_chain_valid with int ordinals (what the Board passes) ──
+	var T := Constants.Tile
+	# pearl + 2 fish ordinals → valid.
+	_check(FishConfig.is_pearl_chain_valid([T.FISH_PEARL, T.FISH_SARDINE, T.FISH_MACKEREL]),
+		"T25: pearl + 2 fish (int ordinals) is a valid capture chain")
+	# pearl + 1 fish → invalid.
+	_check(not FishConfig.is_pearl_chain_valid([T.FISH_PEARL, T.FISH_SARDINE]),
+		"T25: pearl + 1 fish → invalid (need >= 2)")
+	# pearl alone → invalid.
+	_check(not FishConfig.is_pearl_chain_valid([T.FISH_PEARL]),
+		"T25: pearl alone → invalid")
+	# 3 fish but NO pearl → invalid.
+	_check(not FishConfig.is_pearl_chain_valid([T.FISH_SARDINE, T.FISH_SARDINE, T.FISH_SARDINE]),
+		"T25: 3 fish with no pearl → invalid")
+	# pearl + 3 fish → valid (more than required).
+	_check(FishConfig.is_pearl_chain_valid([T.FISH_PEARL, T.FISH_SARDINE, T.FISH_CLAM, T.FISH_KELP]),
+		"T25: pearl + 3 fish → valid")
+
+	# ── chain-compatibility predicate (mirrors Board._cell_can_extend_chain) ──
+	_check(_chain_compat(T.FISH_SARDINE, T.FISH_SARDINE),
+		"T25: same fish type is compatible (normal case)")
+	_check(_chain_compat(T.FISH_PEARL, T.FISH_SARDINE),
+		"T25: FISH_PEARL is compatible with a fish anchor")
+	# Different fish types (e.g. sardine vs mackerel) are NOT cross-compatible with each other —
+	# the board's same-type chain rule still applies between fish tiles. Only FISH_PEARL is the
+	# special tile that joins across types. Chains of sardines are sardine-only, etc.
+	_check(not _chain_compat(T.FISH_SARDINE, T.FISH_MACKEREL),
+		"T25: different fish types are NOT cross-compatible (chain is still same-type for fish)")
+	_check(not _chain_compat(T.FISH_PEARL, T.GRASS),
+		"T25: FISH_PEARL is NOT compatible with a non-fish anchor")
+	_check(not _chain_compat(T.GRASS, T.FISH_SARDINE),
+		"T25: grass is NOT compatible with a fish anchor")
+
+	# ── try_capture_pearl with int keys (what the live board now passes) ──
+	var g := _harbor_state(8, Vector2i(2, 2))
+	_check(g.runes == 0, "(setup) 0 runes before in-chain capture")
+	_check(g.has_active_pearl(), "(setup) pearl is live")
+	# Build chain keys from int ordinals: pearl + 2 sardines → valid.
+	var valid_chain: Array = [T.FISH_PEARL, T.FISH_SARDINE, T.FISH_SARDINE]
+	var cap := g.try_capture_pearl(valid_chain)
+	_check(bool(cap.get("captured", false)),
+		"T25: try_capture_pearl with pearl + 2 fish (ints) → captured")
+	_check(g.runes == 1, "T25: +1 rune granted on in-chain capture")
+	_check(g.fish_pearl.is_empty(), "T25: pearl cleared after in-chain capture")
+
+	# A purely-adjacent fish chain that does NOT contain the pearl → NOT captured.
+	var g2 := _harbor_state(8, Vector2i(2, 2))
+	var adjacent_only_chain: Array = [T.FISH_SARDINE, T.FISH_SARDINE, T.FISH_SARDINE]
+	var no_cap := g2.try_capture_pearl(adjacent_only_chain)
+	_check(not bool(no_cap.get("captured", false)),
+		"T25: chain without the pearl (even if adjacent) → NOT captured (old divergence gone)")
+	_check(g2.runes == 0,
+		"T25: no rune for an adjacent-but-not-containing chain")
+	_check(g2.has_active_pearl(),
+		"T25: pearl still live — adjacency alone is NOT enough")
+
+	# ── Board._is_valid_chain_pearl_aware: mixed fish+pearl chain validates ──
+	var board := Board.new()
+	board.clear_pearl_on_fish_chain = true
+	board.tile_size = 96.0
+	# Build a tiny 6×6 grid: fill with sardines, place a pearl at (2,2).
+	var grid: Array = []
+	for r in Constants.ROWS:
+		var row: Array = []
+		for c in Constants.COLS:
+			row.append(T.FISH_SARDINE)
+		grid.append(row)
+	grid[2][2] = T.FISH_PEARL
+	board.grid = grid
+	# Path: (0,1)→(1,1)→(2,1)→(2,2) anchored on FISH_SARDINE, extends to pearl at (2,2).
+	var mixed_path: Array = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(2, 2)]
+	_check(board._is_valid_chain_pearl_aware(grid, mixed_path, 3),
+		"T25: board mixed fish+pearl path validates (length 4, anchor=sardine, pearl at end)")
+	# Path that does NOT contain the pearl → validates as a normal fish chain (no mixed needed).
+	var pure_fish_path: Array = [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)]
+	_check(board._is_valid_chain_pearl_aware(grid, pure_fish_path, 3),
+		"T25: pure fish path also validates (no pearl required)")
+	# Path anchored on FISH_PEARL → invalid (pearl must not anchor).
+	grid[0][0] = T.FISH_PEARL
+	var pearl_anchor: Array = [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2)]
+	_check(not board._is_valid_chain_pearl_aware(grid, pearl_anchor, 3),
+		"T25: FISH_PEARL-anchored chain is invalid (pearl must not anchor)")
+	board.queue_free()
+
+# ── GameState.capture_pearl_if_adjacent (DEPRECATED live path, kept for backward compat) ──
 
 func _test_capture_pearl_if_adjacent() -> void:
 	# Pearl at (col 2, row 2). A 2-cell fish chain 8-adjacent to it → captures + rune.
@@ -195,13 +294,12 @@ func _test_main_board_integration() -> void:
 			break
 	_check(all_low, "mutate_bottom_row reseeded the bottom row from the new (low) tide pool")
 
-	# PEARL CAPTURE on the live board: lay a fish chain 8-adjacent to the pearl and resolve.
-	# The Board emits pearl_chain_resolved (for any fish chain of length >= REQUIRED_FISH_IN_CHAIN) →
-	# Main runs capture_pearl_if_adjacent → +1 rune + tile gone. The chain must still be >=
-	# MIN_CHAIN (3) to RESOLVE, so we use a 3-sardine path one of whose cells is adjacent to
-	# the pearl. First clear any pearl tile already on the board (the one placed on ENTRY at a
-	# random seed cell — gameplay only ever has one, but this test re-positions it for a
-	# deterministic adjacency), then place a fresh pearl at a known interior cell.
+	# T25 PEARL CAPTURE on the live board: resolve a chain that CONTAINS the pearl tile +
+	# >= REQUIRED_FISH_IN_CHAIN fish tiles — the React in-chain rule.
+	# The Board now emits pearl_chain_resolved only when the chain contains FISH_PEARL (not
+	# merely adjacent to it). Main's _on_pearl_chain calls try_capture_pearl with the chain
+	# keys → +1 rune + tile degraded to kelp. The chain must be >= MIN_CHAIN (3) to RESOLVE.
+	# First clear any pearl tile on the board (from random seed), reposition it at a known cell.
 	for _r in Constants.ROWS:
 		for _c in Constants.COLS:
 			if board.grid[_r][_c] == T.FISH_PEARL:
@@ -209,18 +307,38 @@ func _test_main_board_integration() -> void:
 	game.fish_pearl = {"row": 2, "col": 2, "turns_left": Constants.PEARL_TURNS}
 	board.place_pearl(Vector2i(2, 2))
 	await process_frame
-	# Chain three sardines at (0,1),(1,1),(1,2): both (1,1) and (1,2) are 8-adjacent to the
-	# pearl at (2,2), and the path is a valid 8-connected 3-chain (>= MIN_CHAIN).
-	board.grid[1][0] = T.FISH_SARDINE
-	board.grid[1][1] = T.FISH_SARDINE
+	# Chain: sardine (0,2) → sardine (1,2) → FISH_PEARL (2,2). Length 3 = MIN_CHAIN.
+	# The anchor is FISH_SARDINE at (0,2); the pearl at (2,2) joins via _cell_can_extend_chain.
+	board.grid[2][0] = T.FISH_SARDINE
 	board.grid[2][1] = T.FISH_SARDINE
+	# grid[2][2] is already FISH_PEARL from place_pearl above.
 	board._build_tiles()
 	var runes_before: int = game.runes
-	board.try_resolve([Vector2i(0, 1), Vector2i(1, 1), Vector2i(1, 2)])
+	board.try_resolve([Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2)])
 	await process_frame
-	_check(game.runes == runes_before + 1, "an adjacent fish chain captured the pearl (+1 rune)")
-	_check(not game.has_active_pearl(), "the pearl is cleared after the on-board capture")
-	_check(_grid_count(board.grid, T.FISH_PEARL) == 0, "the pearl tile is removed from the board")
+	_check(game.runes == runes_before + 1,
+		"T25: in-chain capture (fish+pearl chain) grants +1 rune")
+	_check(not game.has_active_pearl(),
+		"T25: pearl is cleared after the in-chain capture")
+	_check(_grid_count(board.grid, T.FISH_PEARL) == 0,
+		"T25: pearl tile removed from the board after the in-chain capture")
+
+	# T25 verify: a pure-fish chain that does NOT contain the pearl does NOT capture.
+	game.fish_pearl = {"row": 3, "col": 3, "turns_left": Constants.PEARL_TURNS}
+	board.place_pearl(Vector2i(3, 3))
+	await process_frame
+	var runes_before2: int = game.runes
+	# Chain: three sardines at row 0 (far from the pearl at (3,3)) — no pearl in chain.
+	board.grid[0][0] = T.FISH_SARDINE
+	board.grid[0][1] = T.FISH_SARDINE
+	board.grid[0][2] = T.FISH_SARDINE
+	board._build_tiles()
+	board.try_resolve([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	await process_frame
+	_check(game.runes == runes_before2,
+		"T25: pure fish chain (no pearl in chain) does NOT capture the pearl")
+	_check(game.has_active_pearl(),
+		"T25: pearl still live after a fish-only chain")
 
 	# LEAVE the harbor → board restored to the farm pool (mirrors the mine-leave path).
 	game.leave_harbor()
