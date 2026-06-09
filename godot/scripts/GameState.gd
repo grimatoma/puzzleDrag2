@@ -107,6 +107,24 @@ var mine_turns_left: int = 0        ## remaining mine turns this expedition (0 o
 ## from_dict defensive default) — a fresh Spring cycle. SAVE_VERSION is NOT bumped.
 var farm_turns_used: int = 0        ## spent farm turns within the current season cycle (0..budget)
 
+# ── Bounded farm RUN (Task A, ported from React FARM/ENTER + CLOSE_SEASON) ─────
+## React's "Start Farming" lifecycle: you pay an entry cost from town, play a BOUNDED
+## number of turns (the per-run, fertilizer-aware budget), then the run ENDS and you
+## return to town with a season-end bonus (close_season). This is the bounded analogue
+## of the always-on, infinitely-wrapping season cycle above.
+##
+## ADDITIVE GUARANTEE: a bare GameState.new() has farm_run_active = false, so
+## farm_turn_budget() falls back to the legacy ZoneConfig.base_turns("home") (10) and
+## note_farm_turn() keeps its legacy infinite-wrap behaviour. Every existing suite that
+## never starts a run is byte-identical. The six fields restore defensively in from_dict;
+## SAVE_VERSION is bumped by a SEPARATE later task (this is the logic foundation only).
+var farm_run_active: bool = false       ## a bounded run is in progress
+var farm_run_budget: int = 0            ## this run's total turn budget (fertilizer-aware)
+var farm_run_turns_left: int = 0        ## turns remaining in this run (0 when the run ends)
+var farm_run_zone: String = "home"      ## the zone the run is playing (only "home" today)
+var farm_run_used_fertilizer: bool = false  ## whether this run consumed fertilizer (×2 budget)
+var farm_run_selected: Array = []       ## chosen tile categories (spawn-bias boost; max 8)
+
 # ── Fish / Harbor expedition (M3j, ported from src/features/fish) ──────────────
 ## The harbor is the THIRD biome, MIRRORING the mine expedition (M3f) and SHARING the
 ## same single inventory (the catch — fish_fillet/sea_shells/pearls/fish_oil — lands in
@@ -1168,11 +1186,25 @@ func leave_mine() -> void:
 
 # ── Farm season cycle (A1) ─────────────────────────────────────────────────────
 
-## The current farm season-cycle turn budget — ZoneConfig.base_turns for the home zone (the
-## port plays only the home farm). The season + the season-weighted pool both derive from
-## farm_turns_used / this budget.
+## The current farm season-cycle turn budget. While a bounded RUN is live (farm_run_active
+## with a positive farm_run_budget), this returns the PER-RUN budget — which routes the
+## fertilizer-aware budget through every season helper (current_season_index/name, SeasonBar,
+## the season-weighted pool) for free. With no run it falls back to the legacy
+## ZoneConfig.base_turns for the home zone (10), so the always-on season cycle + every
+## existing suite stay byte-identical.
 func farm_turn_budget() -> int:
+	if farm_run_active and farm_run_budget > 0:
+		return farm_run_budget
 	return ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+
+## Compute the turn budget for a NEW bounded run with `use_fertilizer`. Mirrors React's
+## turnBudgetForZone: max(1, floor((baseTurns + additive) * multiplier)). With base 10 this
+## is 10 (no fertilizer) or 20 (fertilizer ×2). PURE — does NOT mutate run state.
+func farm_run_turn_budget(use_fertilizer: bool) -> int:
+	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
+	var additive: int = 0   # SEAM: the port has no turnBudgetBonus/extraTurn channel yet.
+	var mult: int = 2 if use_fertilizer else 1
+	return maxi(1, int(floor(float(base + additive) * float(mult))))
 
 ## The current farm season index (0=Spring … 3=Winter), derived from farm_turns_used and the
 ## turn budget via Constants.season_index. A fresh farm (0 turns used) is Spring.
@@ -1185,15 +1217,20 @@ func current_season_name() -> String:
 
 ## Spend one FARM turn — the season-cycle analogue of note_mine_turn / note_harbor_turn.
 ## Call AFTER a FARM chain resolves (its resources are already credited via credit_chain).
-## Increments farm_turns_used; when it REACHES the turn budget the season cycle completes —
-## a HARVEST boundary: reset farm_turns_used to 0 (season wraps back to Spring) and report
-## {harvest:true, ...}. Otherwise report {harvest:false, ...}. Unlike the expeditions this
-## NEVER changes active_biome (the farm is the persistent home board); the harvest is a
-## season reset, not a return-to-town. The rich harvest-summary MODAL is a later PR — the
-## summary fields here (coins, runes, the season just ended, the turn budget) are exposed so
-## that PR can populate the modal without re-deriving them.
-## Returns { harvest:bool, season:String (the season that was active for this turn),
-##           turns_used:int (the new counter after the tick), budget:int, coins:int, runes:int }.
+## Increments farm_turns_used. Behaviour at the budget boundary depends on whether a bounded
+## RUN is live:
+##   - RUN ACTIVE: the boundary ENDS the run (ended=true, farm_run_turns_left=0). It does NOT
+##     wrap farm_turns_used — close_season() resets it (and clears the run) when the player
+##     returns to town. While below the boundary, farm_run_turns_left counts down toward 0.
+##   - NO RUN (legacy always-on cycle): the boundary is a HARVEST that wraps farm_turns_used
+##     back to 0 (a fresh Spring cycle), exactly as before. ended stays false.
+## Unlike the expeditions this NEVER changes active_biome here (the farm is the persistent home
+## board; a run end is acknowledged by the caller, who shows the summary + calls close_season).
+## The summary fields (coins, runes, the season just ended, the turn budget) are exposed so a
+## later harvest/run-end modal can populate without re-deriving them.
+## Returns { harvest:bool, ended:bool, season:String (the season that was active for this turn),
+##           turns_used:int (the new counter after the tick), turns_left:int,
+##           budget:int, coins:int, runes:int }.
 func note_farm_turn() -> Dictionary:
 	var budget: int = farm_turn_budget()
 	# The season this turn belonged to is read BEFORE the increment (the player spent the turn
@@ -1206,20 +1243,141 @@ func note_farm_turn() -> Dictionary:
 		if fill_bias_turns <= 0:
 			fill_bias_target = Constants.EMPTY
 	var harvest: bool = false
+	var ended: bool = false
 	# `budget > 0` guard: a non-positive budget (corrupt save / test edge) is treated as
 	# "always Spring" (see Constants.season_index) and never harvests.
 	if budget > 0 and farm_turns_used >= budget:
-		# Season cycle complete → harvest boundary: wrap back to a fresh Spring cycle.
 		harvest = true
-		farm_turns_used = 0
+		if farm_run_active:
+			# Bounded run reached its budget → the run ENDS. Do NOT wrap farm_turns_used here
+			# (close_season resets it when the player returns to town); just zero the remaining
+			# turns and flag the end so the caller can route to the summary + town.
+			ended = true
+			farm_run_turns_left = 0
+		else:
+			# Legacy always-on cycle: harvest boundary wraps back to a fresh Spring cycle.
+			farm_turns_used = 0
+	elif farm_run_active:
+		# Live run, below the boundary: count the remaining turns down. The invariant while a
+		# run is live is farm_run_turns_left == max(0, farm_turn_budget() - farm_turns_used).
+		farm_run_turns_left = maxi(0, farm_run_turns_left - 1)
 	return {
 		"harvest": harvest,
+		"ended": ended,
 		"season": season,
 		"turns_used": farm_turns_used,
+		"turns_left": farm_run_turns_left,
 		"budget": budget,
 		"coins": coins,
 		"runes": runes,
 	}
+
+# ── Bounded farm run lifecycle (Task A, React FARM/ENTER + CLOSE_SEASON) ────────
+
+## Start a bounded farm run (the port's FARM/ENTER). Pays the zone's coin entry cost,
+## optionally consumes a fertilizer for a ×2 turn budget, sets the run state, and resets the
+## season counter to a fresh Spring. PURE-GUARD ordering mirrors React: no mutation happens
+## until every guard passes.
+##   - already running        → {ok:false, reason:"already_running"}  (no mutation)
+##   - not enough coins        → {ok:false, reason:"no_coins"}         (no mutation)
+##   - fertilizer asked for but none available → {ok:false, reason:"no_fertilizer"} (no mutation)
+## On success: coins -= entry cost; (fertilizer consumed if used); the six run fields set;
+## farm_turns_used = 0; active_biome = "farm". Returns {ok:true, reason:"", budget:int}.
+func start_farm_run(selected_tiles: Array, use_fertilizer: bool) -> Dictionary:
+	if farm_run_active:
+		return {"ok": false, "reason": "already_running"}
+	var cost: int = ZoneConfig.entry_cost(ZoneConfig.HOME_ZONE)
+	if coins < cost:
+		return {"ok": false, "reason": "no_coins"}
+	# Fertilizer ×2: the port has NO fertilizer primitive yet (_has_fertilizer() is false), so a
+	# request for it is honestly REJECTED rather than silently downgraded. The ×2 formula stays
+	# wired + tested via farm_run_turn_budget; only the AVAILABILITY is stubbed.
+	var fert: bool = use_fertilizer and _has_fertilizer()
+	if use_fertilizer and not fert:
+		return {"ok": false, "reason": "no_fertilizer"}
+	# Commit: every guard passed.
+	coins -= cost
+	if fert:
+		_consume_fertilizer()
+	var budget: int = farm_run_turn_budget(fert)
+	farm_run_active = true
+	farm_run_zone = ZoneConfig.HOME_ZONE
+	farm_run_budget = budget
+	farm_run_turns_left = budget
+	farm_run_used_fertilizer = fert
+	farm_run_selected = _sanitize_selection(selected_tiles)
+	farm_turns_used = 0
+	active_biome = "farm"
+	return {"ok": true, "reason": "", "budget": budget}
+
+## Keep only entries that are ELIGIBLE base-spawn categories for the home zone, capped at 8
+## (React selectedTiles.slice(0, 8)). De-dup is NOT applied (React keeps the raw slice); the
+## active_tile_pool boost simply re-boosts a repeated category, which harmlessly stacks the weight bias.
+func _sanitize_selection(arr: Array) -> Array:
+	var eligible: Array = ZoneConfig.eligible_categories(ZoneConfig.HOME_ZONE)
+	var out: Array = []
+	for entry in arr:
+		var cat: String = String(entry)
+		if eligible.has(cat):
+			out.append(cat)
+		if out.size() >= 8:
+			break
+	return out
+
+## Whether the player has a fertilizer to spend on a ×2 run budget.
+func _has_fertilizer() -> bool:
+	return false  # NO-FAKE: no fertilizer/fill-bias-budget primitive in the port yet.
+
+## Consume one fertilizer (the ×2 turn-budget item).
+func _consume_fertilizer() -> void:
+	pass  # NO-FAKE: no fertilizer primitive to decrement yet (see _has_fertilizer).
+
+## End the active farm run and return to town (the port's CLOSE_SEASON). Grants the
+## season-end bonus coins, decays NPC bonds above Warm, re-rolls the quest board, then clears
+## the run + resets the farm to a fresh Spring on the farm biome. Returns
+## {coins_granted:int, season_ended:String} (the season name BEFORE the reset).
+##
+## NO-FAKE OMISSIONS — React CLOSE_SEASON (src/state.ts) ALSO does the following, none of which
+## have a port primitive yet and so are deliberately NOT ported here:
+##   - market drift (pickMarketEvent / driftPrices / the market season counter + bubble)
+##   - the `session_ended` story beat trigger
+##   - worker/building season-end tool grants (seasonEndTools) + season_bonus coins channel
+##   - board preserve / Silo+Barn savedField snapshotting
+##   - NPC gift-cooldown reset, tileCollection freeMoves reset, fillBias/magicFertilizer clears
+## Only the bonus coins, bond decay, and quest reroll have real port primitives — those are
+## ported faithfully; the rest are documented seams for a later milestone.
+func close_season() -> Dictionary:
+	# BUG I1 — IDEMPOTENT guard. close_season is reachable from BOTH run-end exit paths (the CTA's
+	# return_to_town and a scrim/ESC dismiss that completes the return in _on_harvest_closed), and a
+	# stray double-call must never double-grant. With no active run there is nothing to close: return
+	# a zero result WITHOUT touching coins/bonds/quests/run fields. This makes "grant +25 exactly once
+	# per run end" hold no matter the dismiss ordering.
+	if not farm_run_active:
+		return {"coins_granted": 0, "season_ended": ""}
+	var season_ended: String = current_season_name()
+	coins += Constants.SEASON_END_BONUS_COINS  # PORT: React SEASON_END_BONUS_COINS (src/state.ts).
+	_decay_npc_bonds()
+	reroll_quests()
+	# Clear the run + reset the farm to a fresh Spring on the home board.
+	farm_run_active = false
+	farm_run_budget = 0
+	farm_run_turns_left = 0
+	farm_run_used_fertilizer = false
+	farm_run_selected = []
+	farm_turns_used = 0
+	active_biome = "farm"
+	return {"coins_granted": Constants.SEASON_END_BONUS_COINS, "season_ended": season_ended}
+
+## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
+## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
+## are left untouched. The floor prevents a near-Warm bond (e.g. 5.05) from
+## bleeding below the neutral baseline — gain() only clamps to [0, 10], so the
+## floor must be applied here.
+func _decay_npc_bonds() -> void:
+	for id in NpcConfig.all_ids():
+		var b: float = npcs_state.bond(id)
+		if b > 5.0:
+			npcs_state.gain(id, maxf(5.0, b - 0.1) - b)
 
 ## Reset the farm season cycle back to a fresh Spring (0 turns used). Called when starting a
 ## fresh farm session — there is no per-session "enter the farm" path in the port (the farm is
@@ -1552,6 +1710,17 @@ func active_tile_pool() -> Array:
 		var btile: int = BuildingConfig.building_tile(id)
 		for _i in SPAWNER_BOOST_SLOTS:
 			pool.append(btile)
+	# Farm-run SELECTION boost: while a bounded run is live, each chosen category gets the same
+	# SPAWNER_BOOST_SLOTS weight bump as a spawner. DOCUMENTED DIVERGENCE from React: there
+	# selectedTiles is a hard FILTER on what can spawn; the port instead reframes it as a soft
+	# weight BOOST reusing the spawner mechanism, so off-selection eligible tiles still appear
+	# (just less often) and the board can never dead-lock from an over-narrow selection. Only
+	# eligible categories survive _sanitize_selection, so this can never smuggle an off-zone tile.
+	if farm_run_active and not farm_run_selected.is_empty():
+		for cat in farm_run_selected:
+			if FARM_CATEGORY_TILE.has(cat):
+				for _i in SPAWNER_BOOST_SLOTS:
+					pool.append(int(FARM_CATEGORY_TILE[cat]))
 	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat tiles
 	# into the FARM pool (a recurring nuisance, not a takeover). Only the farm pool gets rats;
 	# the mine pool (active_biome_pool while mining) is untouched.
@@ -2097,6 +2266,16 @@ func to_dict() -> Dictionary:
 		# SAVE_VERSION is NOT bumped — a save written before seasons existed loads with 0
 		# (a fresh Spring cycle) via from_dict's defensive default.
 		"farm_turns_used": farm_turns_used,
+		# Bounded farm RUN (Task A): the run-active flag + its budget / remaining turns /
+		# zone / fertilizer flag / chosen categories. ADDITIVE — a save written before runs
+		# existed restores defaults (no run) via from_dict's defensive guards. The SAVE_VERSION
+		# bump for these is a SEPARATE later task; this is the logic + persistence wiring only.
+		"farm_run_active": farm_run_active,
+		"farm_run_budget": farm_run_budget,
+		"farm_run_turns_left": farm_run_turns_left,
+		"farm_run_zone": farm_run_zone,
+		"farm_run_used_fertilizer": farm_run_used_fertilizer,
+		"farm_run_selected": farm_run_selected.duplicate(),
 		# Fish / Harbor expedition (M3j, ADDITIVE). The tide cycle (fish_tide /
 		# fish_tide_turn), the live giant pearl (fish_pearl, deep-copied), the harbor
 		# turn budget, and the rune count. SAVE_VERSION is NOT bumped — like every prior
@@ -2266,15 +2445,57 @@ static func from_dict(d: Dictionary) -> GameState:
 	s.active_biome = biome
 	s.mine_turns_left = turns
 	s.harbor_turns_left = harbor_turns
-	# Farm season cycle (A1, ADDITIVE). Restore the spent-turn counter defensively (missing →
-	# 0 = a fresh Spring cycle, the back-compat default for any pre-seasons save). Clamped to
-	# [0, budget-1]: a value AT or past the budget would imply an un-harvested boundary, so it
-	# is wrapped back into a clean Spring cycle (mirrors note_farm_turn's harvest reset).
+	# Bounded farm RUN (Task A, ADDITIVE). Restore the six run fields defensively (missing →
+	# defaults = no run, the back-compat state for any pre-run save). Restored BEFORE the
+	# farm_turns_used clamp below so farm_turn_budget() reflects the per-run budget while a run
+	# is live. The zone must be a real ported zone (else fall back to home); the selection keeps
+	# only eligible categories (capped at 8 via _sanitize_selection); the budget can't go
+	# negative. A run flagged active but with a non-positive budget is treated as no run (a
+	# corrupt save can't strand a turn-less run).
+	s.farm_run_active = bool(d.get("farm_run_active", false))
+	s.farm_run_budget = maxi(0, int(d.get("farm_run_budget", 0)))
+	var run_zone := String(d.get("farm_run_zone", "home"))
+	s.farm_run_zone = run_zone if ZoneConfig.has_zone(run_zone) else "home"
+	s.farm_run_used_fertilizer = bool(d.get("farm_run_used_fertilizer", false))
+	var sel_raw: Variant = d.get("farm_run_selected", [])
+	s.farm_run_selected = s._sanitize_selection(sel_raw) if sel_raw is Array else []
+	if s.farm_run_active and s.farm_run_budget <= 0:
+		# A run with no budget is incoherent — drop it back to "no run".
+		s.farm_run_active = false
+		s.farm_run_used_fertilizer = false
+		s.farm_run_selected = []
+	# Farm season cycle (A1, ADDITIVE). Restore the spent-turn counter and turns_left defensively.
+	# The two paths diverge based on whether a bounded run is active:
+	#
+	# RUN ACTIVE path: farm_turns_used is clamped to [0, budget] (NOT wrapped). The value AT
+	# budget is valid — it marks the "run ended, awaiting close_season" state that note_farm_turn
+	# intentionally leaves behind. Wrapping it to 0 would resurrect a fresh full-budget run the
+	# player already finished (losing the pending close_season +25/decay/reroll). farm_run_turns_left
+	# is restored from the SAVED field (clamped to [0, budget]) rather than re-derived, so an
+	# ended run (saved turns_left == 0) stays ended. If the saved turns_left is missing, fall back
+	# to max(0, budget - used) to handle saves written before the field existed.
+	#
+	# NO-RUN (legacy) path: byte-identical to the original — a value at or past the budget implies
+	# an un-harvested boundary and is wrapped to 0 (a clean Spring cycle, mirroring
+	# note_farm_turn's harvest reset). farm_run_turns_left is always 0 when no run is active.
 	var f_used: int = maxi(0, int(d.get("farm_turns_used", 0)))
 	var f_budget: int = s.farm_turn_budget()
-	if f_budget > 0 and f_used >= f_budget:
-		f_used = 0
-	s.farm_turns_used = f_used
+	if s.farm_run_active:
+		# Clamp to [0, budget] — budget itself is the valid "ended" sentinel.
+		s.farm_turns_used = clampi(f_used, 0, s.farm_run_budget)
+		# Restore turns_left from the saved field (trust the persisted value); fall back to
+		# deriving it only if the key is absent (pre-field saves).
+		var saved_turns_left: Variant = d.get("farm_run_turns_left", null)
+		if saved_turns_left != null:
+			s.farm_run_turns_left = clampi(int(saved_turns_left), 0, s.farm_run_budget)
+		else:
+			s.farm_run_turns_left = maxi(0, s.farm_run_budget - s.farm_turns_used)
+	else:
+		# Legacy no-run path: wrap at the boundary, turns_left stays 0.
+		if f_budget > 0 and f_used >= f_budget:
+			f_used = 0
+		s.farm_turns_used = f_used
+		s.farm_run_turns_left = 0
 	var tide := String(d.get("fish_tide", "high"))
 	if tide != FishConfig.TIDE_HIGH and tide != FishConfig.TIDE_LOW:
 		tide = FishConfig.TIDE_HIGH
@@ -2458,3 +2679,20 @@ static func from_dict(d: Dictionary) -> GameState:
 			if bool(struct_d[k]):
 				s.almanac_structural[String(k)] = true
 	return s
+
+# ── Fresh-game factory (React-parity starting economy) ──────────────────────
+## Create a brand-new game with the React-parity starting economy.
+## The bare `GameState.new()` starts at 0 coins (field default); this factory
+## seeds the coins React grants a fresh player so the entry cost gate
+## (start_farm_run costs 50 coins) is immediately affordable.
+##
+## React source: src/state/init.ts:71 — `coins: 150`
+##
+## DESIGN NOTE: Do NOT change the `var coins: int = 0` field default — the test
+## suites all build `GameState.new()` and rely on the 0-coins baseline.
+## Instead, every genuine "brand-new game" creation must go through this factory.
+static func new_game() -> GameState:
+	var g := GameState.new()
+	# React parity: src/state/init.ts:71 — coins: 150
+	g.coins = 150
+	return g

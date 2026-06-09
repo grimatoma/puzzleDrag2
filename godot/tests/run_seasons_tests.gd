@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_test_zone_config_home()
 	_test_game_state_season_cycle()
 	_test_note_farm_turn_advances_and_harvests()
+	_test_note_farm_turn_run_active_ends()
 	_test_pool_is_zone_restricted_spring()
 	_test_pool_season_weighting()
 	_test_pool_spawner_boost()
@@ -144,28 +145,53 @@ func _test_game_state_season_cycle() -> void:
 	g.farm_turns_used = 9
 	_check(g.current_season_name() == "Winter", "used 9 of 10 → Winter")
 
-# ── note_farm_turn advances + harvests at the budget ───────────────────────────
+# ── note_farm_turn advances + harvests at the budget (LEGACY: no run active) ───
 
 func _test_note_farm_turn_advances_and_harvests() -> void:
+	# This covers the LEGACY always-on season cycle — NO bounded run is active (a bare
+	# GameState.new()), so the budget boundary WRAPS farm_turns_used back to 0 (ended stays
+	# false). The bounded-run variant (end, no wrap) is in _test_note_farm_turn_run_active_ends.
 	var g := GameState.new()
+	_check(not g.farm_run_active, "(setup) no bounded run active (legacy cycle)")
 	# Tick to the brink of the budget; never a harvest until the boundary, and the biome
 	# never changes (the farm is the persistent home board, unlike the expeditions).
 	for i in 9:
 		var r := g.note_farm_turn()
 		_check(not bool(r.get("harvest", true)), "farm turn #%d is NOT a harvest" % (i + 1))
+		_check(not bool(r.get("ended", true)), "farm turn #%d is NOT a run end (no run)" % (i + 1))
 		_check(g.active_biome == "farm", "farm biome unchanged after turn #%d" % (i + 1))
 	_check(g.farm_turns_used == 9, "9 turns used after 9 ticks")
 	_check(g.current_season_name() == "Winter", "in Winter just before the harvest")
-	# The 10th turn REACHES the budget → harvest: wrap back to a fresh Spring (0 used).
+	# The 10th turn REACHES the budget → harvest: with NO run active, WRAP back to a fresh
+	# Spring (0 used) and ended stays false.
 	var h := g.note_farm_turn()
 	_check(bool(h.get("harvest", false)), "10th farm turn IS a harvest (reached the budget)")
+	_check(not bool(h.get("ended", true)), "with NO run active, the boundary does NOT end a run")
 	_check(String(h.get("season", "")) == "Winter", "the harvested season was Winter")
-	_check(g.farm_turns_used == 0, "harvest wraps farm_turns_used back to 0")
+	_check(g.farm_turns_used == 0, "with NO run active, harvest wraps farm_turns_used back to 0")
 	_check(g.current_season_name() == "Spring", "post-harvest season is Spring again")
 	_check(g.active_biome == "farm", "harvest does NOT leave the farm (no return-to-town)")
 	# The summary carries the budget + economy snapshot for the later harvest modal.
 	_check(int(h.get("budget", -1)) == 10, "harvest summary carries the turn budget")
 	_check(h.has("coins") and h.has("runes"), "harvest summary carries coins + runes fields")
+
+# ── note_farm_turn ENDS a bounded run at the budget (no wrap) ───────────────────
+
+func _test_note_farm_turn_run_active_ends() -> void:
+	# With a bounded RUN active, the budget boundary ENDS the run (ended=true) and does NOT
+	# wrap farm_turns_used — the opposite of the legacy cycle above. close_season is what
+	# resets the counter when the player returns to town.
+	var g := GameState.new()
+	g.coins = 50
+	_check(bool(g.start_farm_run([], false).get("ok", false)), "(setup) started a budget-10 run")
+	for i in 9:
+		var r := g.note_farm_turn()
+		_check(not bool(r.get("ended", true)), "run tick #%d is NOT a run end" % (i + 1))
+	var h := g.note_farm_turn()
+	_check(bool(h.get("ended", false)), "10th run tick ENDS the run (ended == true)")
+	_check(bool(h.get("harvest", false)), "10th run tick is also a harvest boundary")
+	_check(g.farm_turns_used == 10, "a run-active boundary does NOT wrap farm_turns_used (still 10)")
+	_check(g.farm_run_turns_left == 0, "run end zeroes farm_run_turns_left")
 
 # ── the headline bug fix: zone-restricted Spring pool ──────────────────────────
 

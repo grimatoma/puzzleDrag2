@@ -656,6 +656,10 @@ const RUBBLE_POOL_SLOTS: int = 2
 ## season-bar UI (a later PR); this layer owns the palette, the names, and the index math.
 const SEASON_NAMES: Array = ["Spring", "Summer", "Autumn", "Winter"]
 
+## Coins granted when a bounded farm run's season is closed out (GameState.close_season).
+## Mirrors React's SEASON_END_BONUS_COINS (src/state.ts).
+const SEASON_END_BONUS_COINS: int = 25
+
 ## The four seasons, indexed 0..3 by season_index(). `bg`/`fill`/`accent` are 0xRRGGBB ints
 ## (matching the React SEASONS.look hex values exactly) — convert with
 ## Color.hex(0xFF000000 | v) when a Color is needed. `name` mirrors SEASON_NAMES[i].

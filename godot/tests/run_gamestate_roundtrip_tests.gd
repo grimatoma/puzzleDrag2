@@ -25,6 +25,8 @@ var _failures: int = 0
 func _initialize() -> void:
 	print("\n── GameState save round-trip golden ───────────────")
 	_test_midrun_round_trip()
+	_test_farm_run_midrun_round_trip()
+	_test_farm_run_ended_round_trip()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -88,6 +90,8 @@ func _test_midrun_round_trip() -> void:
 	for key in [
 		"inventory", "progress", "coins", "turn", "settlement", "buildings", "orders",
 		"npcs", "active_biome", "mine_turns_left", "farm_turns_used",
+		"farm_run_active", "farm_run_budget", "farm_run_turns_left", "farm_run_zone",
+		"farm_run_used_fertilizer", "farm_run_selected",
 		"harbor_turns_left", "fish_tide", "fish_tide_turn", "fish_pearl", "runes",
 		"boss_active", "boss_hp", "town2_complete", "ratcatcher_charges_used",
 		"audio_muted", "tools", "achievement_counters", "achievements_unlocked",
@@ -140,3 +144,68 @@ func _test_midrun_round_trip() -> void:
 	# (2) BYTE-FOR-BYTE: re-snapshotting the rebuilt state yields the identical dict.
 	var d2: Dictionary = gs2.to_dict()
 	_check(d == d2, "gs.to_dict() == gs2.to_dict() (flat save round-trips byte-for-byte)")
+
+# ── farm_run_* field round-trip coverage (Task D) ────────────────────────────
+
+## Mid-run state: all six farm_run_* fields set to non-default values and verified to
+## survive to_dict() → from_dict() field-for-field.
+func _test_farm_run_midrun_round_trip() -> void:
+	var gs := GameState.new()
+	# Synthesise a mid-run state directly (bypassing start_farm_run's affordability
+	# gate so this test is dependency-free). Mirror the six run fields from Task A.
+	gs.farm_run_active = true
+	gs.farm_run_budget = 10
+	gs.farm_run_turns_left = 6
+	gs.farm_run_zone = "home"
+	gs.farm_run_used_fertilizer = false
+	# Use a known-valid category from Constants so _sanitize_selection keeps it.
+	gs.farm_run_selected = ["grass"]
+	# farm_turns_used must be consistent with a run in progress (< budget).
+	gs.farm_turns_used = 4
+
+	var d: Dictionary = gs.to_dict()
+	# Verify the six keys are present at the TOP LEVEL of the save dict.
+	_check(d.has("farm_run_active"),         "mid-run: to_dict emits farm_run_active")
+	_check(d.has("farm_run_budget"),         "mid-run: to_dict emits farm_run_budget")
+	_check(d.has("farm_run_turns_left"),     "mid-run: to_dict emits farm_run_turns_left")
+	_check(d.has("farm_run_zone"),           "mid-run: to_dict emits farm_run_zone")
+	_check(d.has("farm_run_used_fertilizer"),"mid-run: to_dict emits farm_run_used_fertilizer")
+	_check(d.has("farm_run_selected"),       "mid-run: to_dict emits farm_run_selected")
+
+	var gs2: GameState = GameState.from_dict(d)
+	# Field-by-field: all six survive the round-trip.
+	_check(gs2.farm_run_active == true,             "mid-run: round-trip preserves farm_run_active=true")
+	_check(gs2.farm_run_budget == 10,               "mid-run: round-trip preserves farm_run_budget=10")
+	_check(gs2.farm_run_turns_left == 6,            "mid-run: round-trip preserves farm_run_turns_left=6")
+	_check(gs2.farm_run_zone == "home",             "mid-run: round-trip preserves farm_run_zone=home")
+	_check(gs2.farm_run_used_fertilizer == false,   "mid-run: round-trip preserves farm_run_used_fertilizer=false")
+	_check(gs2.farm_run_selected == ["grass"],      "mid-run: round-trip preserves farm_run_selected")
+	# farm_turns_used survives (it is the canonical spent-turn counter for the run).
+	_check(gs2.farm_turns_used == 4,                "mid-run: round-trip preserves farm_turns_used=4")
+
+## Ended-boundary state: run still flagged active but turns_left==0 (the "awaiting
+## close_season" sentinel). Verifies that from_dict does NOT resurrect a finished run
+## back to a full-budget run — it must stay ended.
+func _test_farm_run_ended_round_trip() -> void:
+	var gs := GameState.new()
+	gs.farm_run_active = true
+	gs.farm_run_budget = 10
+	gs.farm_run_turns_left = 0        # run is over (all turns spent)
+	gs.farm_run_zone = "home"
+	gs.farm_run_used_fertilizer = true
+	# Use valid eligible categories from ZoneConfig HOME_ZONE upgrade_map keys.
+	gs.farm_run_selected = ["grain", "grass"]
+	gs.farm_turns_used = 10           # at the boundary (== budget)
+
+	var d: Dictionary = gs.to_dict()
+	var gs2: GameState = GameState.from_dict(d)
+
+	# The run must stay active (it's in the close_season limbo, not discarded).
+	_check(gs2.farm_run_active == true,             "ended: round-trip preserves farm_run_active=true")
+	_check(gs2.farm_run_budget == 10,               "ended: round-trip preserves farm_run_budget=10")
+	# turns_left must stay 0 — from_dict must NOT resurrect to a fresh full-budget run.
+	_check(gs2.farm_run_turns_left == 0,            "ended: round-trip preserves farm_run_turns_left=0 (not resurrected)")
+	_check(gs2.farm_run_zone == "home",             "ended: round-trip preserves farm_run_zone=home")
+	_check(gs2.farm_run_used_fertilizer == true,    "ended: round-trip preserves farm_run_used_fertilizer=true")
+	_check(gs2.farm_run_selected == ["grain", "grass"], "ended: round-trip preserves farm_run_selected")
+	_check(gs2.farm_turns_used == 10,               "ended: round-trip preserves farm_turns_used=10 (boundary sentinel)")

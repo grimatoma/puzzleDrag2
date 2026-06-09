@@ -152,13 +152,27 @@ func _initialize() -> void:
 	_check(main._router.current_modal() == ViewRouter.Modal.TOWN,
 		"_router.current_modal() == TOWN after apply_deeplink('town')")
 
-	# apply_deeplink("board") → closes the open modal; router resets to NONE
+	# Task C — board RUN-GATE. The board is only reachable while a bounded farm run is live (town
+	# is home). With NO run active, apply_deeplink("board") redirects to the town home (and leaves
+	# the board inert) rather than landing on an empty board, so it routes to TOWNMAP, not NONE.
+	main.game.farm_run_active = false
+	var ok_board_no_run: bool = main.apply_deeplink("board")
+	_check(ok_board_no_run, "apply_deeplink('board') returns true even with no run")
+	_check(main._router.current_modal() == ViewRouter.Modal.TOWNMAP,
+		"no run: apply_deeplink('board') redirects to the town home (TOWNMAP)")
+	_check(not main.board.active, "no run: the board is left INERT (board.active == false)")
+
+	# With a run ACTIVE, apply_deeplink("board") reaches the board: closes the open modal, resets
+	# the router to NONE, and flips the board live.
+	main.game.farm_run_active = true
+	main._open_town()   # re-open a modal so the board return has something to close
 	var ok_board: bool = main.apply_deeplink("board")
 	_check(ok_board, "apply_deeplink('board') returns true")
 	_check(main._router.current_modal() == ViewRouter.Modal.NONE,
-		"_router.current_modal() == NONE after apply_deeplink('board')")
+		"run active: _router.current_modal() == NONE after apply_deeplink('board')")
 	_check(main._town_screen == null or not main._town_screen.visible,
-		"_town_screen hidden after apply_deeplink('board')")
+		"run active: _town_screen hidden after apply_deeplink('board')")
+	_check(main.board.active, "run active: the board is LIVE (board.active == true)")
 
 	# apply_deeplink with an unknown id returns false
 	var ok_bad: bool = main.apply_deeplink("totally_unknown")

@@ -54,6 +54,10 @@ signal state_changed
 ## hides the active view + clears the nav (apply_deeplink("board")). ESC/back still returns
 ## to the board too — this is the discoverable, on-screen path.
 signal board_requested
+## Emitted when the player TAPS the farm board pad on the map — the on-map "Start Farming"
+## affordance (parity with React tapping the farm board to open the FARM/ENTER dialog). Main
+## (Task C) wires this to open the StartFarmingModal; NOT connected here.
+signal start_farming_requested
 
 ## action id → Button, for headless tests. Static keys: "close". Panel keys are
 ## added/removed as panels open/close: "demolish" (built-lot card),
@@ -368,6 +372,12 @@ func _on_map_gui_input(event: InputEvent) -> void:
 ## picker, or (on bare ground) dismiss any open panel. Split out of _on_map_gui_input
 ## so the tap path is shared and the drag path can skip it.
 func _resolve_lot_click(pos: Vector2) -> void:
+	# A tap on the FARM board pad opens the "Start Farming" flow — checked BEFORE the lot
+	# hit-test so the farm board is its own affordance (the lots/build path is untouched).
+	# Main (Task C) wires start_farming_requested to the StartFarmingModal.
+	if _map.board_at_screen(pos) == "farm":
+		emit_signal("start_farming_requested")
+		return
 	var lot: int = _map.lot_at_screen(pos)
 	if lot < 0:
 		# A click on empty ground (not on a lot) just dismisses any open panel.

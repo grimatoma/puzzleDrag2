@@ -1,9 +1,14 @@
 extends CanvasLayer
-## The HARVEST season-summary modal (A2) — a parchment card shown when the farm season cycle
-## completes (GameState.note_farm_turn returns {harvest:true}). It recaps the season that just
-## ended + the turn/economy snapshot and is dismissed by a single "Continue" (the farm
-## continues — a fresh Spring cycle has ALREADY begun in state). Mirrors the React parchment
-## dialogs (title-cased heading, warm scrim, UiKit-styled CTA) and the DailyStreakModal pattern.
+## The HARVEST modal — a parchment card with two modes:
+##   • LEGACY season-summary (A2, open_for): shown when the always-on farm season cycle completes
+##     (GameState.note_farm_turn returns {harvest:true}). It recaps the season that just ended +
+##     the turn/economy snapshot and is dismissed by a single "Continue" (the farm continues — a
+##     fresh Spring cycle has ALREADY begun in state).
+##   • RUN-END "Return to Town" (Task C, open_for_run_end): shown when a bounded farm RUN reaches
+##     its turn budget. It adds a "+N 🪙 return bonus" recap line and the CTA reads "Return to
+##     Town" + emits return_to_town (Main wires that to close_season() + reopening the town).
+## Mirrors the React parchment dialogs (title-cased heading, warm scrim, UiKit-styled CTA) and the
+## DailyStreakModal pattern.
 ##
 ## SINGLE SOURCE OF TRUTH. The modal NEVER grants anything — it is purely informational (no
 ## economy change). note_farm_turn already wrapped the cycle + Main already saved; "Continue"
@@ -13,16 +18,26 @@ extends CanvasLayer
 ## never needs --import to register it as a global (mirrors DailyStreakModal / StoryModal).
 ##
 ## HEADLESS-TEST CONTRACT
-##   Every actionable button is in `_action_buttons` (key "continue"). `_title_label`,
-##   `_season_label`, and `_recap_label` are the rendered Labels a test can assert. The pure
-##   helper recap_line(summary) builds the recap string without a tree.
+##   Every actionable button is in `_action_buttons` — key "continue" (legacy season-summary) and
+##   key "return_town" (run-end "Return to Town" CTA). `_title_label`, `_season_label`, and
+##   `_recap_label` are the rendered Labels a test can assert. The pure helper recap_line(summary)
+##   builds the recap string without a tree.
 
 var game: GameState
 
 signal closed
+## Task C — emitted by the RUN-END "Return to Town" CTA (open_for_run_end mode). Main wires this
+## to close_season() + reopening the town. The legacy informational open_for() "Continue" path
+## does NOT emit it (it just dismisses — the always-on cycle already wrapped a fresh Spring).
+signal return_to_town
 
-## Stable button registry for headless tests. Keys: "continue".
+## Stable button registry for headless tests. Keys: "continue", "return_town".
 var _action_buttons: Dictionary = {}
+
+## Task C — true while the modal is showing a bounded-RUN end (open_for_run_end): the recap gains
+## a return-bonus line and the CTA reads "Return to Town" + emits return_to_town. False for the
+## legacy informational season recap (open_for, "Continue" dismiss). Set per open_*; read by _render.
+var _run_end_mode: bool = false
 
 ## True once _build_shell() has run (safe to call setup() again).
 var _built: bool = false
@@ -35,7 +50,8 @@ var _summary: Dictionary = {}
 var _title_label: Label            ## "Harvest — {Season} ends" (Cinzel serif, title-cased)
 var _season_label: Label           ## the prominent season name that just ended (gold)
 var _recap_label: Label            ## the recap line (turns + coins/runes snapshot)
-var _continue_btn: Button          ## the single dismiss action
+var _bonus_label: Label            ## Task C — the "+N 🪙 return bonus" line (run-end mode only)
+var _continue_btn: Button          ## the single dismiss action (legacy "Continue" / run-end "Return to Town")
 
 # Palette mirrors (DailyStreakModal / StoryModal tokens).
 const COL_TITLE := Palette.INK
@@ -53,10 +69,26 @@ func setup(g: GameState) -> void:
 		_build_shell()
 		_built = true
 
-## Render `summary` (the note_farm_turn() dict) and show the modal.
+## Render `summary` (the note_farm_turn() dict) and show the modal in the LEGACY informational
+## season-recap mode (a single "Continue" dismiss; nothing is granted — the always-on cycle has
+## already wrapped a fresh Spring). Unchanged for the no-run case.
 func open_for(summary: Dictionary) -> void:
 	if not _built:
 		return
+	_run_end_mode = false
+	_summary = summary.duplicate(true)
+	_render()
+	visible = true
+
+## Task C — render the bounded-RUN end summary and show the modal in RUN-END mode: the same recap
+## PLUS a "+N 🪙 return bonus" line, and the primary CTA reads "Return to Town" (emitting
+## return_to_town → Main runs close_season() + reopens the town). `summary` is the note_farm_turn()
+## dict at the ended boundary; the return-bonus number defaults to 25 (SEASON_END_BONUS_COINS) when
+## the dict carries no explicit "coins_granted" (note_farm_turn does not — close_season grants it).
+func open_for_run_end(summary: Dictionary) -> void:
+	if not _built:
+		return
+	_run_end_mode = true
 	_summary = summary.duplicate(true)
 	_render()
 	visible = true
@@ -147,18 +179,35 @@ func _build_shell() -> void:
 	_recap_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_recap_label)
 
-	# Continue — the single dismiss action (nothing is granted; the cycle already wrapped).
+	# Task C — the return-bonus line, shown ONLY in run-end mode (hidden for the legacy recap).
+	# Gold to echo the coin reward; text + visibility are set in _render.
+	_bonus_label = Label.new()
+	_bonus_label.text = ""
+	_bonus_label.add_theme_font_size_override("font_size", 17)
+	_bonus_label.add_theme_color_override("font_color", Palette.GOLD)
+	_bonus_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bonus_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bonus_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bonus_label.visible = false
+	col.add_child(_bonus_label)
+
+	# The single primary CTA. Legacy mode → "Continue" (dismiss). Run-end mode → "Return to Town"
+	# (emit return_to_town then close). The label + which handler fires are set in _render per mode;
+	# the button is registered under BOTH keys so the existing "continue" test contract holds AND
+	# run-end tests can find it via "return_town".
 	_continue_btn = Button.new()
 	_continue_btn.text = "Continue"
 	_continue_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.style_action_button(_continue_btn, Palette.GO_GREEN, 10, 20)
-	_continue_btn.connect("pressed", Callable(self, "_on_continue"))
+	_continue_btn.connect("pressed", Callable(self, "_on_primary_cta"))
 	col.add_child(_continue_btn)
 	_action_buttons["continue"] = _continue_btn
+	_action_buttons["return_town"] = _continue_btn
 
 # ── render ─────────────────────────────────────────────────────────────────────
 
-## Render the current summary into the labels.
+## Render the current summary into the labels. In RUN-END mode the return-bonus line is shown and
+## the CTA reads "Return to Town"; otherwise the legacy "Continue" recap is shown.
 func _render() -> void:
 	if not _built:
 		return
@@ -166,6 +215,14 @@ func _render() -> void:
 	_title_label.text = "Harvest — %s ends" % season
 	_season_label.text = "%s harvested" % season
 	_recap_label.text = recap_line(_summary)
+	if _run_end_mode:
+		var bonus: int = int(_summary.get("coins_granted", Constants.SEASON_END_BONUS_COINS))
+		_bonus_label.text = "+%d 🪙 return bonus" % bonus
+		_bonus_label.visible = true
+		_continue_btn.text = "Return to Town"
+	else:
+		_bonus_label.visible = false
+		_continue_btn.text = "Continue"
 
 ## A player-facing recap of a harvest summary dict ({season, budget, coins, runes}). Reads
 ## "A full year of {budget} turns is in. Your stores: N coins · N runes." — informational only.
@@ -183,8 +240,12 @@ static func recap_line(summary: Dictionary) -> String:
 
 # ── action handlers ────────────────────────────────────────────────────────────
 
-## Continue — dismiss the card (the fresh Spring cycle already began; nothing to grant).
-func _on_continue() -> void:
+## The primary CTA was pressed. RUN-END mode → emit return_to_town (Main runs close_season() +
+## reopens the town) THEN close. LEGACY mode → just dismiss (the fresh Spring cycle already began;
+## nothing to grant). Emitting before close() keeps the "closed" signal firing last in both modes.
+func _on_primary_cta() -> void:
+	if _run_end_mode:
+		emit_signal("return_to_town")
 	close()
 
 # ── pure helpers (testable without rendering internals) ────────────────────────

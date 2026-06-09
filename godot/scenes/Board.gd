@@ -99,6 +99,15 @@ var clear_pearl_on_fish_chain: bool = false
 var _dragging := false
 var _path: Array[Vector2i] = []        ## dragged cells
 
+## Task C — chain-input GATE. When false the board is INERT: a left-press never starts a drag
+## (chains can't be drawn), mirroring React's "town is home" model where the board is only
+## playable while a bounded farm RUN is active. Main flips this on (set_active(true)) when a run
+## starts / a save restored mid-run is loaded, and off (set_active(false)) on launch with no run,
+## on return to town, and on the deep-link board-gate redirect. Defaults to true so a board built
+## before Main seeds it (and every existing direct-resolve test path) behaves exactly as before —
+## the gate only affects the INPUT path (_unhandled_input), never try_resolve/_resolve.
+var active: bool = true
+
 ## M8c — TAP-tool targeting mode. While true, a left-button PRESS reports the tapped
 ## cell via cell_tapped and does NOT start a drag (chains are suppressed); motion +
 ## release do nothing. Main flips this on (set_targeting(true)) when it arms a
@@ -426,9 +435,30 @@ func set_targeting(on: bool) -> void:
 		_update_chain_overlay()
 		chain_changed.emit(0)
 
+## Task C — set the chain-input gate. `on == false` makes the board INERT (no drag can start);
+## `on == true` restores live chain input. When turning OFF, defensively cancel any in-flight
+## drag (clear the highlighted path + overlay) so a half-drawn chain can never persist into the
+## inert state — mirrors the drag-cancel branch in set_targeting().
+func set_active(on: bool) -> void:
+	active = on
+	if not on and _dragging:
+		for cell in _path:
+			_set_highlight(cell, false)
+		_path = []
+		_dragging = false
+		_update_chain_overlay()
+		chain_changed.emit(0)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			# Task C — chain-input GATE: when the board is inert (no active farm run), a press
+			# never starts a drag, so the board is unplayable in town. Returning here BEFORE
+			# _begin_drag means _dragging is never set, so the motion + release branches below
+			# stay inert too (a release with no active drag is already a no-op). When active this
+			# guard is skipped and the press behaves exactly as before.
+			if not active:
+				return
 			# M8c — when a tap-target tool is armed (targeting mode), a press reports the
 			# tapped cell to Main and returns early WITHOUT starting a drag, so the armed
 			# tool fires on that cell instead of beginning a chain. Motion/release below

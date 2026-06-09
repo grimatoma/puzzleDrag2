@@ -15,6 +15,7 @@ extends SceneTree
 ## instantiated, so this stays a pure headless test.
 
 const HarvestModal := preload("res://scenes/HarvestModal.gd")
+const HudScript := preload("res://scenes/Hud.gd")
 
 var _checks: int = 0
 var _failures: int = 0
@@ -29,6 +30,7 @@ func _initialize() -> void:
 	_test_strip_palettes()
 	_test_field_colors()
 	_test_harvest_recap_line()
+	await _test_season_bar_run_gated()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -149,3 +151,35 @@ func _test_harvest_recap_line() -> void:
 	_check(line2.contains("1 rune") and not line2.contains("1 runes"), "recap_line uses singular 'rune' for 1")
 	var s3 := {"season": "Autumn", "budget": 10, "coins": 5, "runes": 3}
 	_check(HarvestModal.recap_line(s3).contains("3 runes"), "recap_line uses plural 'runes' for 3")
+
+# ── Season-bar RUN-GATE (Task C): hidden with no run, shown once a run is live ─────────────
+
+## The season bar tracks a bounded farm RUN; the HUD hides it when no run is active (the player is
+## in the town home) and shows it once a run starts. Builds the real Hud node headlessly (it is a
+## plain Node loaded via preload) and asserts _season_bar_box.visible toggles with farm_run_active.
+func _test_season_bar_run_gated() -> void:
+	var game := GameState.new()
+	var hud = HudScript.new()
+	hud.game = game
+	root.add_child(hud)
+	hud.build()
+	await process_frame
+
+	# No run active (a fresh GameState) → the season-bar box is hidden.
+	game.farm_run_active = false
+	hud._refresh_season_bar()
+	_check(hud._season_bar_box != null, "HUD built a season-bar box")
+	if hud._season_bar_box != null:
+		_check(not hud._season_bar_box.visible,
+			"no run active → the season bar is HIDDEN")
+
+	# Start a real run → the season bar is shown.
+	game.coins = 50
+	_check(bool(game.start_farm_run([], false).get("ok", false)), "(setup) started a farm run")
+	hud._refresh_season_bar()
+	if hud._season_bar_box != null:
+		_check(hud._season_bar_box.visible,
+			"run active → the season bar is SHOWN")
+
+	hud.queue_free()
+	await process_frame

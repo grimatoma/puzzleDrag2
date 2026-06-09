@@ -1329,6 +1329,15 @@ func _refresh_runes() -> void:
 func _refresh_season_bar() -> void:
 	if _season_bar == null or game == null:
 		return
+	# Task C — the season bar tracks a bounded farm RUN; with NO run active the player is in the
+	# town home and the run-turn strip is meaningless, so hide it. It re-shows automatically the
+	# next refresh once a run starts (Main calls _refresh_season_bar() on start). Toggle the
+	# parchment wrapper box (the bar node lives inside it) so the whole strip hides cleanly.
+	var run_active: bool = game.farm_run_active
+	if _season_bar_box != null:
+		_season_bar_box.visible = run_active
+	if not run_active:
+		return
 	_season_bar.set_state(game.farm_turns_used, game.farm_turn_budget(), game.current_season_index())
 
 ## M4b / A3 — refresh the chain-progress bar. While a LIVE chain is in flight (a drag long
