@@ -181,6 +181,33 @@ var town2_complete: bool = false    ## set true when the capstone boss is defeat
 const RATCATCHER_CHARGES: int = 5
 var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
 
+# ── Tile Collection: active variants + discovery + abilities ────────────────────────
+## Ported from React's `state.tileCollection` slice (src/state/helpers.ts
+## TileCollectionSlice + src/state.ts SET_ACTIVE_TILE / BUY_TILE / chain-discovery).
+## The data layer is TileVariantConfig (the catalog). This is the live PLAYER STATE:
+##   tile_active_by_category — { category:String -> active variant id:String }. The chosen
+##     board variant for each category; default = the category's base tile (the React
+##     activeByCategory map, seeded from TileVariantConfig.default_active_by_category).
+##     active_tile_pool / upgrade_spawn substitute this variant's Tile enum for the
+##     category's base tile.
+##   tile_discovered — { variant id:String -> true }. The set of unlocked variants. Seeded
+##     with every `default`-method tile + the port base tiles (default_discovered). Grows
+##     via chain / research / buy / building / daily discovery.
+##   tile_research_progress — { variant id:String -> int }. Accrued research toward a
+##     `research`-method variant's researchAmount; at the cap the variant is discovered.
+##   tile_free_moves — int. Banked free moves granted by the active tiles' free_moves /
+##     free_turn_if_chain abilities (accrued per chain in credit_chain); consumed by
+##     note_farm_turn BEFORE a turn is spent (React boardTurnPatch, src/state.ts:147-160).
+##
+## SEEDED LAZILY: a bare GameState.new() starts these empty and seeds them on first read
+## (see _ensure_tile_collection). This keeps the field defaults trivially round-trip-safe
+## and lets from_dict overlay a saved slice over the fresh seed (mirrors React mergeLoadedState).
+var tile_active_by_category: Dictionary = {}
+var tile_discovered: Dictionary = {}
+var tile_research_progress: Dictionary = {}
+var tile_free_moves: int = 0
+var _tile_collection_seeded: bool = false
+
 # ── Settings (M4f) ────────────────────────────────────────────────────────────
 ## Player audio preference, surfaced by the settings/menu modal (MenuScreen). Main
 ## applies it to the owned Audio service on launch (Audio.set_muted) and toggles it
@@ -746,9 +773,24 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 		inventory[resource] = capped
 	# Coins simplified for M2 — the React per-tile `value` economy is deferred to
 	# M3. Each resolved chain earns at least 1 coin, scaling with chain length.
-	var coins_gain: int = maxi(1, chain_len / 2)
+	# T5: PLUS the chained variant's coin abilities (coin_bonus_flat / coin_bonus_per_tile),
+	# matching the React coin-hook bonus (src/state.ts:393-398: coinHookBonus added to the
+	# base chain coins). chain_coin_bonus is 0 for a tile with no coin ability.
+	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len)
 	coins += coins_gain
 	turn += 1
+	# ── T3 + T5: Tile Collection chain folding (ADDITIVE, after the economy is credited) ──
+	# Ported from applyTileCollectionChainEffects (src/state.ts:168-223). The chained tile's
+	# KEY (the React CHAIN_COLLECTED `key`) is the variant's own string id — for a board tile
+	# baseResource == id, so the chain/research discovery keys off the chained tile's id.
+	# A hazard tile (RAT/RUBBLE/COPPER_ORE) has no catalog id → "" → both folds are no-ops.
+	var chained_id: String = TileVariantConfig.id_for_tile(tile_type)
+	if chained_id != "":
+		_discover_from_chain(chained_id, chain_len)
+	# Per-tile FREE-MOVES ability accrual (free_moves + free_turn_if_chain). Accrued PER
+	# CHAIN from the chained variant's abilities, exactly like the React reducer reads
+	# TILE_TYPES_MAP[key].effects at the CHAIN_COLLECTED site (src/state.ts:208-216).
+	accrue_chain_abilities(tile_type, chain_len)
 	# ── M10 achievements (ADDITIVE, after the economy is fully credited) ─────────
 	# Every resolved chain is one chain (bump by 1). The produced resource feeds the
 	# distinct counter (only first sighting counts; "" for a hazard tile is ignored by
@@ -785,6 +827,256 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 ## Collected whole-unit count of a resource (0 when never collected).
 func qty(resource: String) -> int:
 	return int(inventory.get(resource, 0))
+
+# ── Tile Collection: active variants + discovery + abilities ────────────────────────
+## The GDScript analogue of the React `tileCollection` reducer actions (SET_ACTIVE_TILE /
+## BUY_TILE / chain+research+building discovery) and the per-tile-ability accrual the
+## CHAIN_COLLECTED site does (src/state.ts applyTileCollectionChainEffects). TileVariantConfig
+## is the pure data layer; this is the live mutation + query surface the board/HUD/UI use.
+
+## Seed the tile-collection slice on first use (idempotent). Mirrors React's
+## defaultTileCollectionSlice (src/state/helpers.ts:104-119): every `default`-method tile
+## (plus the port base tiles) starts DISCOVERED, and each category's active variant is its
+## base tile. Lazy so a bare GameState.new() round-trips trivially and from_dict can overlay.
+func _ensure_tile_collection() -> void:
+	if _tile_collection_seeded:
+		return
+	_tile_collection_seeded = true
+	# Default active variant per category = the base tile (React activeByCategory seed).
+	if tile_active_by_category.is_empty():
+		tile_active_by_category = TileVariantConfig.default_active_by_category().duplicate()
+	# Discovered set = every default-method tile + the port base tiles.
+	if tile_discovered.is_empty():
+		for id in TileVariantConfig.default_discovered():
+			tile_discovered[id] = true
+
+## True when tile variant `id` is discovered (unlocked). Seeds the slice on first read.
+func is_tile_discovered(id: String) -> bool:
+	_ensure_tile_collection()
+	return bool(tile_discovered.get(id, false))
+
+## The active variant TILE (Constants.Tile enum) for category `cat`. Defaults to the
+## category's base tile; falls back to Constants.EMPTY for an unknown category. Mirrors
+## the React activeByCategory lookup + getActivePool substitution (effects.ts:118-148).
+func active_tile_for_category(cat: String) -> int:
+	_ensure_tile_collection()
+	var id: String = String(tile_active_by_category.get(cat, ""))
+	if id == "" or not TileVariantConfig.is_tile(id):
+		return Constants.EMPTY
+	return TileVariantConfig.tile_for(id)
+
+## The active variant string id for category `cat` ("" when none/unknown).
+func active_tile_id_for_category(cat: String) -> String:
+	_ensure_tile_collection()
+	return String(tile_active_by_category.get(cat, ""))
+
+## SET_ACTIVE_TILE (src/state.ts:1349-1369). Set the active variant for `cat` to variant
+## `tile_id`. Guards (mirroring React, in order): unknown variant → false; the variant's
+## category must equal `cat` → false; the variant must be DISCOVERED → false; already
+## active → true (no-op). On success the variant becomes the category's board tile. Returns
+## true when the active variant is `tile_id` after the call.
+func set_active_tile(cat: String, tile_id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(tile_id):
+		return false
+	var def: Dictionary = TileVariantConfig.by_id(tile_id)
+	if String(def.get("category", "")) != cat:
+		return false                                    # cross-category
+	if not bool(tile_discovered.get(tile_id, false)):
+		return false                                    # undiscovered
+	tile_active_by_category[cat] = tile_id
+	return true
+
+## BUY_TILE (src/state.ts:1396-1413). If `tile_id` is a `buy`-method variant, not already
+## discovered, and coins cover its coinCost: spend the coins, mark it discovered, return
+## true. Otherwise no mutation, return false. (React folds the buy into discovered ONLY —
+## it does NOT auto-activate; the player activates separately via SET_ACTIVE_TILE.)
+func buy_tile(tile_id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(tile_id):
+		return false
+	var d: Dictionary = TileVariantConfig.discovery_of(tile_id)
+	if String(d.get("method", "")) != "buy":
+		return false
+	if bool(tile_discovered.get(tile_id, false)):
+		return false                                    # already discovered
+	var cost: int = int(d.get("coinCost", 0))
+	if coins < cost:
+		return false
+	coins -= cost
+	tile_discovered[tile_id] = true
+	return true
+
+## Mark variant `id` discovered directly (the TILE_DISCOVERED reducer + daily-reward
+## unlockTile path, src/state.ts:1307-1318/1371-1382). No cost, no method check — used by
+## reward grants. Returns true when this call newly discovered it (false if unknown/already).
+func discover_tile(id: String) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(id):
+		return false
+	if bool(tile_discovered.get(id, false)):
+		return false
+	tile_discovered[id] = true
+	return true
+
+## Accrue `amount` research toward `research`-method variant `id`; at >= researchAmount the
+## variant is discovered. Mirrors the research branch of applyTileCollectionChainEffects
+## (src/state.ts:191-206): progress is CAPPED at researchAmount; crossing the cap discovers
+## the variant. Returns true when this call newly discovered it.
+func research_tile(id: String, amount: int) -> bool:
+	_ensure_tile_collection()
+	if not TileVariantConfig.is_tile(id):
+		return false
+	var d: Dictionary = TileVariantConfig.discovery_of(id)
+	if String(d.get("method", "")) != "research":
+		return false
+	if bool(tile_discovered.get(id, false)):
+		return false
+	var goal: int = int(d.get("researchAmount", 0))
+	var cur: int = int(tile_research_progress.get(id, 0))
+	var next: int = cur + maxi(0, amount)
+	tile_research_progress[id] = mini(next, goal)
+	if next >= goal:
+		tile_discovered[id] = true
+		return true
+	return false
+
+## The abilities of the chained tile (the active variant in play). Mirrors React reading
+## TILE_TYPES_MAP[key].effects/abilities for the chained tile key (src/state.ts:208-216,
+## 393-396). Returns the variant's abilities Array ([] for a tile with no catalog entry,
+## e.g. RAT/RUBBLE/COPPER_ORE).
+func tile_abilities(tile_type: int) -> Array:
+	var id: String = TileVariantConfig.id_for_tile(tile_type)
+	if id == "":
+		return []
+	return TileVariantConfig.abilities_of(id)
+
+## The abilities of the currently active variant for category `cat` ([] for none).
+func active_tile_abilities(cat: String) -> Array:
+	var tile: int = active_tile_for_category(cat)
+	if tile == Constants.EMPTY:
+		return []
+	return tile_abilities(tile)
+
+## Banked free moves available to spend (the HUD reads this; note_farm_turn consumes it).
+func free_moves() -> int:
+	_ensure_tile_collection()
+	return tile_free_moves
+
+## Per-tile ability accrual for a resolved chain of `tile_type` (the chained variant) of
+## length `chain_len`. Ported from applyTileCollectionChainEffects (src/state.ts:208-216):
+## the chained tile's free_moves ability adds its count; its free_turn_if_chain ability
+## adds 1 when `chain_len >= minChain`. Both accrue PER CHAIN (NOT seeded per season — the
+## React reducer reads the chained tile's effects at the CHAIN_COLLECTED site, every chain).
+## Returns the number of free moves this chain granted (also added to tile_free_moves).
+##
+## NOTE on WHEN (the data.ts descriptions SAY "per season", but the reducer GRANTS per
+## chain — implementation wins, per the brief). coin abilities are credited inside
+## credit_chain's coin math, not here.
+func accrue_chain_abilities(tile_type: int, chain_len: int) -> int:
+	_ensure_tile_collection()
+	var granted: int = 0
+	for ab in tile_abilities(tile_type):
+		var aid: String = String((ab as Dictionary).get("id", ""))
+		var params: Dictionary = (ab as Dictionary).get("params", {})
+		match aid:
+			"free_moves":
+				granted += maxi(0, int(params.get("count", 0)))
+			"free_turn_if_chain":
+				var min_chain: int = int(params.get("minChain", 0))
+				if min_chain > 1 and chain_len >= min_chain:
+					granted += 1
+			_:
+				pass   # pool_weight is inert in production (see TileVariantConfig header);
+				# coin_bonus_* are applied in credit_chain's coin math, not here.
+	tile_free_moves += granted
+	return granted
+
+## The flat + per-tile coin bonus a chain of `tile_type`/`chain_len` earns from the chained
+## variant's coin abilities. Ported from src/state.ts:393-396:
+##   coinHookBonus = coinBonusFlat + coinBonusPerTile * effectiveChain
+## Returns the extra coins (0 when the chained tile has no coin ability).
+func chain_coin_bonus(tile_type: int, chain_len: int) -> int:
+	var flat: int = 0
+	var per_tile: int = 0
+	for ab in tile_abilities(tile_type):
+		var aid: String = String((ab as Dictionary).get("id", ""))
+		var params: Dictionary = (ab as Dictionary).get("params", {})
+		match aid:
+			"coin_bonus_flat":
+				flat += maxi(0, int(params.get("amount", 0)))
+			"coin_bonus_per_tile":
+				per_tile += maxi(0, int(params.get("amount", 0)))
+			_:
+				pass
+	return flat + per_tile * chain_len
+
+## Fold chain-method + research-method discovery for a resolved chain of `resource_key`
+## (the chained tile's key) of length `chain_len`. Ported from applyTileCollectionChainEffects
+## (src/state.ts:176-206): chain-method variants keyed off this resource discover when the
+## chain is long enough; research-method variants keyed off it accrue progress (capped),
+## discovering at the goal. A newly-discovered variant whose category has NO active variant
+## yet becomes that category's active variant (React: activeByCategory[cat] ??= id). Returns
+## an Array[String] of the variant ids newly discovered by this chain (in discovery order).
+func _discover_from_chain(resource_key: String, chain_len: int) -> Array:
+	_ensure_tile_collection()
+	var newly: Array = []
+	# Chain-method discovery (TileVariantConfig.discover_from_chain is the pure helper).
+	for id in TileVariantConfig.discover_from_chain(tile_discovered, resource_key, chain_len):
+		tile_discovered[id] = true
+		newly.append(id)
+		var cat: String = String(TileVariantConfig.by_id(id).get("category", ""))
+		if cat != "" and String(tile_active_by_category.get(cat, "")) == "":
+			tile_active_by_category[cat] = id
+	# Research-method discovery: accrue toward any research variant keyed off this resource.
+	for id in TileVariantConfig.all():
+		var d: Dictionary = TileVariantConfig.discovery_of(id)
+		if String(d.get("method", "")) != "research":
+			continue
+		if String(d.get("researchOf", "")) != resource_key:
+			continue
+		if bool(tile_discovered.get(id, false)):
+			continue
+		var goal: int = int(d.get("researchAmount", 0))
+		var cur: int = int(tile_research_progress.get(id, 0))
+		var nxt: int = cur + chain_len
+		tile_research_progress[id] = mini(nxt, goal)
+		if nxt >= goal:
+			tile_discovered[id] = true
+			newly.append(id)
+			var rcat: String = String(d.get("category", TileVariantConfig.by_id(id).get("category", "")))
+			rcat = String(TileVariantConfig.by_id(id).get("category", ""))
+			if rcat != "" and String(tile_active_by_category.get(rcat, "")) == "":
+				tile_active_by_category[rcat] = id
+	return newly
+
+## Fold building-method discovery for the building `building_id` the player just built.
+## Ported from discoverTileTypesFromBuilding + its fold in the BUILD reducer
+## (src/state.ts:859-873). A newly-discovered variant whose category has no active variant
+## becomes that category's active variant. Returns the Array[String] of newly-discovered ids.
+func _discover_from_building(building_id: String) -> Array:
+	_ensure_tile_collection()
+	var newly: Array = []
+	for id in TileVariantConfig.discover_from_building(tile_discovered, building_id):
+		tile_discovered[id] = true
+		newly.append(id)
+		var cat: String = String(TileVariantConfig.by_id(id).get("category", ""))
+		if cat != "" and String(tile_active_by_category.get(cat, "")) == "":
+			tile_active_by_category[cat] = id
+	return newly
+
+## Save helpers: ensure the slice is seeded, then return an independent copy for to_dict.
+func _tile_collection_dict_active() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_active_by_category.duplicate()
+
+func _tile_collection_dict_discovered() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_discovered.duplicate()
+
+func _tile_collection_dict_research() -> Dictionary:
+	_ensure_tile_collection()
+	return tile_research_progress.duplicate()
 
 # ── Town tier ladder ────────────────────────────────────────────────────────
 
@@ -887,6 +1179,10 @@ func build(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	buildings.append(id)
+	# T3: building-method tile discovery (ADDITIVE, after the build is committed). Mirrors the
+	# React BUILD reducer's discoverTileTypesFromBuilding fold (src/state.ts:859-873): owning
+	# the building discovers its `building`-method variants (e.g. the Kitchen → Broccoli).
+	_discover_from_building(id)
 	# M10 achievements (ADDITIVE): a DISTINCT building id → +1 on the first build of
 	# each id (build() already rejects a re-build of an existing id, but the distinct
 	# guard makes the counter robust even if a future caller demolishes + rebuilds).
@@ -1236,6 +1532,27 @@ func note_farm_turn() -> Dictionary:
 	# The season this turn belonged to is read BEFORE the increment (the player spent the turn
 	# under the pre-increment season).
 	var season: String = current_season_name()
+	# T5: a banked FREE MOVE is spent INSTEAD of a real farm turn (no season advance, no
+	# budget tick). Ported from React boardTurnPatch (src/state.ts:147-160): when freeMoves
+	# > 0 the move consumes a free move and returns without incrementing turnsUsed / ticking
+	# the run budget. Mirrors the React semantics exactly — the chain's resources are already
+	# credited (credit_chain ran first); this only governs whether a TURN is spent.
+	_ensure_tile_collection()
+	if tile_free_moves > 0:
+		tile_free_moves -= 1
+		# fill_bias is a per-TURN countdown; a free move does NOT spend a biased turn (React
+		# boardTurnPatch leaves the rest of the turn economy untouched on the free-move path).
+		return {
+			"harvest": false,
+			"ended": false,
+			"free_move": true,
+			"season": season,
+			"turns_used": farm_turns_used,
+			"turns_left": farm_run_turns_left,
+			"budget": budget,
+			"coins": coins,
+			"runes": runes,
+		}
 	farm_turns_used += 1
 	# fill_bias countdown: a biased farm turn was just spent; expire the bias when it runs out.
 	if fill_bias_turns > 0:
@@ -1264,6 +1581,7 @@ func note_farm_turn() -> Dictionary:
 	return {
 		"harvest": harvest,
 		"ended": ended,
+		"free_move": false,
 		"season": season,
 		"turns_used": farm_turns_used,
 		"turns_left": farm_run_turns_left,
@@ -1663,6 +1981,25 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 		return none   # defensive: a target category with no farm tile spawns nothing
 	return {"count": count, "tile": int(FARM_CATEGORY_TO_TILE[target_cat])}
 
+## INSTANCE upgrade spawn (T2). Identical to the static upgrade_spawn but resolves the
+## upgrade TARGET tile through the player's ACTIVE VARIANT for the target category instead of
+## the static base tile — mirroring React nextResourceForZone honouring the active variant
+## (src/features/zones/data.ts:303-310). Default active == base tile, so for a fresh game
+## this returns the SAME tile as the static helper. Use this from the live board (Main.gd)
+## so an upgrade chain spawns the player's chosen variant of the target category.
+func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
+	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len)
+	if int(res.get("count", 0)) <= 0:
+		return res   # below threshold / GOLD sentinel / hazard — no tile to substitute
+	# Resolve the target category from the static result's tile, then swap in its active variant.
+	var base_tile: int = int(res["tile"])
+	var target_cat: String = Constants.category_of(base_tile)
+	var active: int = active_tile_for_category(target_cat)
+	if active != Constants.EMPTY:
+		res = res.duplicate()
+		res["tile"] = active
+	return res
+
 ## Active weighted refill pool (Array[int] of Constants.Tile) for the home FARM board:
 ## a ZONE-RESTRICTED, SEASON-WEIGHTED base pool — NOT the old flat full-variety FARM_POOL.
 ##
@@ -1683,6 +2020,17 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 ##     ineligible category back onto the home board.
 ##   - RATS: once Town 2 is complete (rats_enabled) seed RAT_POOL_SLOTS rat tiles (unchanged).
 ## The mine/harbor pools (active_biome_pool) are NOT seasonal and are untouched by this.
+## The TILE a category contributes to the live board pool: its ACTIVE VARIANT when one is
+## set + discovered, else the category's base spawn tile (FARM_CATEGORY_TILE). T2 — mirrors
+## React getActivePool's per-slot substitution (effects.ts:124-134): a category's pool slots
+## resolve to its active variant id. The base-tile fallback guarantees a fresh game (default
+## active == base) produces a pool byte-identical to the pre-variant one.
+func _category_pool_tile(cat: String) -> int:
+	var active: int = active_tile_for_category(cat)
+	if active != Constants.EMPTY:
+		return active
+	return int(FARM_CATEGORY_TILE.get(cat, Constants.EMPTY))
+
 func active_tile_pool() -> Array:
 	var pool: Array = []
 	var season: String = current_season_name()
@@ -1696,7 +2044,10 @@ func active_tile_pool() -> Array:
 		if weight <= 0.0:
 			continue
 		var slots: int = maxi(1, int(round(weight * 100.0)))
-		var tile: int = int(FARM_CATEGORY_TILE[cat])
+		# T2: substitute the ACTIVE VARIANT for this category (default = the base tile, so a
+		# fresh game is byte-identical to the pre-variant pool). Mirrors React getActivePool
+		# (effects.ts:118-148): each pool slot's category resolves to its active variant id.
+		var tile: int = _category_pool_tile(cat)
 		for _i in slots:
 			pool.append(tile)
 	# Spawner BOOST: extra slots for each placed spawner's ELIGIBLE category (a frequency
@@ -1707,20 +2058,17 @@ func active_tile_pool() -> Array:
 		var bcat: String = BuildingConfig.building_category(id)
 		if not FARM_CATEGORY_TILE.has(bcat):
 			continue
-		var btile: int = BuildingConfig.building_tile(id)
+		# T2: a spawner boosts its category's ACTIVE VARIANT (default = the spawner's base
+		# tile, so an un-customised board is unchanged). The boost is a frequency bump on the
+		# tile that actually spawns for that category.
+		var btile: int = _category_pool_tile(bcat)
 		for _i in SPAWNER_BOOST_SLOTS:
 			pool.append(btile)
-	# Farm-run SELECTION boost: while a bounded run is live, each chosen category gets the same
-	# SPAWNER_BOOST_SLOTS weight bump as a spawner. DOCUMENTED DIVERGENCE from React: there
-	# selectedTiles is a hard FILTER on what can spawn; the port instead reframes it as a soft
-	# weight BOOST reusing the spawner mechanism, so off-selection eligible tiles still appear
-	# (just less often) and the board can never dead-lock from an over-narrow selection. Only
-	# eligible categories survive _sanitize_selection, so this can never smuggle an off-zone tile.
-	if farm_run_active and not farm_run_selected.is_empty():
-		for cat in farm_run_selected:
-			if FARM_CATEGORY_TILE.has(cat):
-				for _i in SPAWNER_BOOST_SLOTS:
-					pool.append(int(FARM_CATEGORY_TILE[cat]))
+	# T6: the React home categories are LOCKED ON and the player picks a VARIANT per category;
+	# there is no soft category-selection boost. The old farm_run_selected soft-boost block (the
+	# documented divergence) is REMOVED — the run config is now the per-category variant choices
+	# (tile_active_by_category), substituted above. farm_run_selected stays a vestigial field
+	# (still emitted by StartFarmingModal + round-tripped) but no longer biases the pool.
 	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat tiles
 	# into the FARM pool (a recurring nuisance, not a takeover). Only the farm pool gets rats;
 	# the mine pool (active_biome_pool while mining) is untouched.
@@ -2290,6 +2638,17 @@ func to_dict() -> Dictionary:
 		"boss_hp": boss_hp,
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
+		# Tile Collection (T2/T3/T5, ADDITIVE): the active variant per category, the discovered
+		# set, research progress, and banked free moves. Persisted only when the slice has been
+		# seeded (a bare GameState.new() that never touched the tile collection emits the seeded
+		# defaults the first time to_dict reads it — _ensure_tile_collection makes this lazy +
+		# idempotent). SAVE_VERSION is NOT bumped — a save written before tile variants existed
+		# loads with the fresh seed (from_dict overlays the saved slice over default seeds,
+		# mirroring React mergeLoadedState, src/state/helpers.ts:126-142).
+		"tile_active_by_category": _tile_collection_dict_active(),
+		"tile_discovered": _tile_collection_dict_discovered(),
+		"tile_research_progress": _tile_collection_dict_research(),
+		"tile_free_moves": free_moves(),
 		"audio_muted": audio_muted,
 		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
 		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
@@ -2531,6 +2890,32 @@ static func from_dict(d: Dictionary) -> GameState:
 	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
+	# Restore the Tile Collection slice (T2/T3/T5). Mirrors React mergeLoadedState
+	# (src/state/helpers.ts:126-142): start from the FRESH default seed, then OVERLAY the
+	# saved sub-keys so any new catalog variant added since the save still gets its default
+	# (a save can never lose a freshly-added default tile). Only known catalog ids are kept
+	# (a stale/bogus id is dropped); research progress is clamped to its variant's goal.
+	s._ensure_tile_collection()   # seed defaults first
+	var ta: Variant = d.get("tile_active_by_category", {})
+	if ta is Dictionary:
+		for cat in (ta as Dictionary).keys():
+			var vid := String((ta as Dictionary)[cat])
+			# Keep the saved active variant only when it's a real catalog tile of THAT category.
+			if TileVariantConfig.is_tile(vid) and String(TileVariantConfig.by_id(vid).get("category", "")) == String(cat):
+				s.tile_active_by_category[String(cat)] = vid
+	var td: Variant = d.get("tile_discovered", {})
+	if td is Dictionary:
+		for id in (td as Dictionary).keys():
+			if TileVariantConfig.is_tile(String(id)) and bool((td as Dictionary)[id]):
+				s.tile_discovered[String(id)] = true
+	var tr: Variant = d.get("tile_research_progress", {})
+	if tr is Dictionary:
+		for id in (tr as Dictionary).keys():
+			if not TileVariantConfig.is_tile(String(id)):
+				continue
+			var goal: int = int(TileVariantConfig.discovery_of(String(id)).get("researchAmount", 0))
+			s.tile_research_progress[String(id)] = clampi(int((tr as Dictionary)[id]), 0, maxi(0, goal))
+	s.tile_free_moves = maxi(0, int(d.get("tile_free_moves", 0)))
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))

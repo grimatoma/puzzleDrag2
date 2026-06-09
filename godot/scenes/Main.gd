@@ -1711,7 +1711,9 @@ func _on_chain_changed(length: int) -> void:
 func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
 	if game.active_biome != "farm":
 		return {"count": 0, "tile": Constants.EMPTY}
-	return GameState.upgrade_spawn(ZoneConfig.HOME_ZONE, tile_type, length)
+	# T2: spawn the player's ACTIVE VARIANT of the upgrade target category (default == base
+	# tile, so an un-customised board is unchanged). Instance helper honours tile_active_by_category.
+	return game.upgrade_spawn_active(ZoneConfig.HOME_ZONE, tile_type, length)
 
 func _on_chain_resolved(tile_type: int, length: int) -> void:
 	var res: Dictionary = game.credit_chain(tile_type, length)
