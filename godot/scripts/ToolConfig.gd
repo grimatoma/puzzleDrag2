@@ -98,6 +98,13 @@ const PHILOSOPHERS_STONE: String = "philosophers_stone"
 const MAGIC_WAND: String = "magic_wand"
 const MAGIC_SEED: String = "magic_seed"
 const MAGIC_FERTILIZER: String = "magic_fertilizer"
+# ── Wolf-hazard tools (T14a) — the FIRST tools to use the clear_wolves / scatter_hazard STATE
+# powers. Like fill_bias / restore_turns these NEVER touch the grid: wolves are OVERLAY entities
+# (not grid cells), so GameState.use_tool_on_grid intercepts these power ids in its EARLY path and
+# mutates `hazards.wolves` (clear all / scare for 5 turns). Ported from the React Workshop recipes
+# (src/constants.ts WORKSHOP_RECIPES.rifle/hound) + the USE_TOOL rifle/hound handlers.
+const RIFLE: String = "rifle"
+const HOUND: String = "hound"
 
 ## Tool catalog keyed by id. See the header for the field contract.
 const TOOLS: Dictionary = {
@@ -401,6 +408,21 @@ const TOOLS: Dictionary = {
 		"params": {"target": Constants.Tile.WHEAT, "turns": 3},
 		"tap_target": false,
 	},
+	# ── Wolf-hazard tools (T14a) — STATE powers handled in GameState's early path (never reach
+	# apply_instant; they mutate hazards.wolves). Rifle drives off the whole pack; Hound scatters
+	# them (scared 5 turns). Both are instant (no tapped cell). Ported from React rifle/hound.
+	RIFLE: {
+		"label": "Rifle",
+		"power_id": "clear_wolves",
+		"params": {},
+		"tap_target": false,
+	},
+	HOUND: {
+		"label": "Hound",
+		"power_id": "scatter_hazard",
+		"params": {},
+		"tap_target": false,
+	},
 }
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
@@ -422,6 +444,8 @@ const TOOL_IDS: Array = [
 	# Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
 	GOLDEN_APPLE, GOLDEN_CARROT, GOLDEN_IDOL, GOLDEN_SHEEP, PHILOSOPHERS_STONE,
 	MAGIC_WAND, MAGIC_SEED, MAGIC_FERTILIZER,
+	# T14a — wolf-hazard tools (clear_wolves / scatter_hazard state powers).
+	RIFLE, HOUND,
 ]
 
 # ── Static helpers (usable without an instance) ──────────────────────────────

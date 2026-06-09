@@ -230,7 +230,15 @@ func _run_slice() -> void:
 
 	# ── 13. Rats hazard + Ratcatcher (Town 3 lesson). ────────────────────────
 	_check(g.rats_enabled(), "13. rats are enabled once Town 2 is complete")
-	_check(g.active_tile_pool().has(T.RAT), "13. RAT tiles now seed into the farm pool")
+	# T9: rats are POSITIONAL now (spawn-roll per fill + eat plants), NOT pool-seeded — the farm
+	# pool stays rat-free. A chain through 3+ rats clears them for coins (clear_rat_chain).
+	_check(not g.active_tile_pool().has(T.RAT), "13. T9: RAT tiles are NOT seeded into the farm pool")
+	g.hazards["rats"] = [{"row": 0, "col": 0, "age": 0}, {"row": 0, "col": 1, "age": 0}, {"row": 0, "col": 2, "age": 0}]
+	var coins_pre_rats: int = g.coins
+	var rat_clear: Dictionary = g.clear_rat_chain([
+		{"row": 0, "col": 0, "tile": T.RAT}, {"row": 0, "col": 1, "tile": T.RAT}, {"row": 0, "col": 2, "tile": T.RAT}])
+	_check(bool(rat_clear.get("ok", false)) and g.coins == coins_pre_rats + 15,
+		"13. chaining 3 rats clears them for +15 coins")
 	_ensure(g, BLD.building_cost(BLD.RATCATCHER))   # {plank:6, hay_bundle:8}
 	_check(g.can_build(BLD.RATCATCHER), "13. can build the Ratcatcher (rats enabled)")
 	_check(bool(g.build(BLD.RATCATCHER).get("ok", false)), "13. build(RATCATCHER) ok")

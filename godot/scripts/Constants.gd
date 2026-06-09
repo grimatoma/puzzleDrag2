@@ -157,6 +157,14 @@ enum Tile {
 	# (the web pays coins directly via a tile ability not ported here), so it is deliberately
 	# ABSENT from PRODUCES/THRESHOLDS (threshold_for → NO_THRESHOLD, produced_resource → "").
 	COIN_GOLDEN,
+	# ── Fire farm hazard (T7, ported from src/features/farm/hazards.ts) — APPENDED so every
+	# existing ordinal above is UNCHANGED (saves serialise via STRING_KEYS). FIRE is a board-only
+	# HAZARD tile (like RAT/RUBBLE): it produces NOTHING (deliberately ABSENT from PRODUCES/
+	# THRESHOLDS → produced_resource "" + threshold_for NO_THRESHOLD). Fire SPREADS to an
+	# adjacent free cell each turn (HazardLogic.tick_fire) and is cleared by chaining FIRE tiles
+	# (HazardLogic.try_extinguish_fire → +2 coins/tile). GATED OFF by default to match the live
+	# React game (FIRE_HAZARD_ENABLED false; isFireHazardEnabled() reads a tuning override).
+	FIRE,
 }
 
 const STRING_KEYS := {
@@ -259,6 +267,9 @@ const STRING_KEYS := {
 	Tile.GOLD:               "tile_mine_gold",
 	# Treasure
 	Tile.COIN_GOLDEN:        "tile_coin_golden",
+	# Fire farm hazard (T7) — its own "fire" string key (mirrors the React board cell key
+	# "fire" that try_extinguish_fire matches on). No PNG ships; flat fallback fill.
+	Tile.FIRE:               "fire",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -640,15 +651,52 @@ const CATEGORY := {
 	Tile.COPPER_ORE:         "copper",
 	Tile.GOLD:               "gold",
 	Tile.COIN_GOLDEN:        "coin",
+	# Fire farm hazard (T7) — its own "fire" category; never seeded into any board pool
+	# (HazardLogic places it positionally via the spawn roll, like rats/wolves).
+	Tile.FIRE:               "fire",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
 const NO_THRESHOLD: int = 1 << 30
 
-## Rats hazard (M3h, Town 3). How many RAT tiles seed into the FARM refill pool
-## while rats are active (GameState.rats_enabled / active_tile_pool). Kept low so
-## rats are a recurring nuisance the player has to manage, not a board takeover.
+## Rats hazard (M3h, Town 3). LEGACY pool-seed count — retained as a NAMED constant only
+## for back-compat (run_rats_tests references it). The faithful T9 rat model (HazardLogic)
+## NO LONGER seeds rats into the refill pool: rats spawn POSITIONALLY via roll_rat_spawn and
+## eat plants each turn (src/features/farm/rats.ts). active_tile_pool() no longer reads this.
 const RAT_POOL_SLOTS: int = 2
+
+# ── Farm hazards (T7/T8/T9, ported from src/features/farm/rats.ts + hazards.ts +
+# attractsRats.ts) ──────────────────────────────────────────────────────────────
+## Rat spawn gate: react inv.tile_grass_grass / tile_grain_wheat > 50. The Godot
+## inventory is RESOURCE-keyed (no tile-key counts), so the faithful analogue uses the
+## grass/wheat PRODUCE staples: qty("hay_bundle") > 50 AND qty("flour") > 50 (documented
+## adaptation). 10% spawn chance per board fill, cap 4 active. (rats.ts:54-83 / RAT_SPAWN_THRESHOLDS)
+const RAT_SPAWN_HAY_THRESHOLD: int = 50
+const RAT_SPAWN_FLOUR_THRESHOLD: int = 50
+const RAT_SPAWN_RATE: float = 0.10
+const RAT_MAX_ACTIVE: int = 4
+## +5 coins per rat cleared by a chain-3 (rats.ts RAT_CLEAR_REWARD_PER).
+const RAT_CLEAR_REWARD_PER: int = 5
+## attracts_rats per-tile spawn-rate bump (Manna/Jackfruit), capped at 1.0 (attractsRats.ts).
+const ATTRACT_RATE_BONUS: float = 0.05
+
+## Fire hazard (hazards.ts): 4% spawn/fill, 50% spread/turn, cap 3 cells, +2 coins/tile extinguished.
+const FIRE_SPAWN_RATE: float = 0.04
+const FIRE_SPREAD_RATE: float = 0.50
+const FIRE_MAX_CELLS: int = 3
+const FIRE_EXTINGUISH_REWARD_PER: int = 2
+## Fire is GATED OFF by default to match the live React game (FIRE_HAZARD_ENABLED false +
+## isFireHazardEnabled() tuning override, default off). GameState.fire_hazard_enabled() reads
+## this; tests force-enable it on a GameState instance via fire_hazard_force.
+const FIRE_HAZARD_ENABLED: bool = false
+
+## Wolves hazard (hazards.ts): 6% spawn/fill when birds-rich (eggs > 30 OR turkey > 5), cap 2.
+## Scattered wolves stay scared for 5 turns; non-scared wolves eat one adjacent bird tile/turn.
+const WOLF_SPAWN_RATE: float = 0.06
+const WOLF_MAX_ACTIVE: int = 2
+const WOLF_SPAWN_EGGS_THRESHOLD: int = 30
+const WOLF_SPAWN_TURKEY_THRESHOLD: int = 5
+const WOLF_SCARED_TURNS: int = 5
 
 ## Rubble mine hazard (M3i, Town 2 expedition). How many RUBBLE tiles seed into the
 ## MINE refill pool while on an expedition (GameState.active_biome_pool). Kept low so
@@ -883,4 +931,6 @@ static func color_for(tile: int) -> Color:
 		Tile.COPPER_ORE:         return Color8(0xc9, 0x7f, 0x4f)
 		Tile.GOLD:               return Color8(0xff, 0xd3, 0x4c)
 		Tile.COIN_GOLDEN:        return Color8(0xff, 0xd3, 0x4c)
+		# Fire farm hazard (T7) — a hot orange-red flame fill. No PNG ships; flat fallback.
+		Tile.FIRE:               return Color8(0xe2, 0x5a, 0x1e)
 		_:             return Color.MAGENTA

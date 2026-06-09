@@ -24,6 +24,14 @@ signal cell_tapped(cell: Vector2i)
 ## no pearl ref) — exactly like chain_resolved / cell_tapped report WHAT happened and let
 ## Main own the economy.
 signal pearl_chain_resolved(cells: Array)
+## T7/T9/T10 (farm hazards) — fired on EVERY resolved chain, carrying the chained CELLS as an
+## Array of { row:int, col:int, tile:int } (the tile value BEFORE the chain cleared it). Main uses
+## this to detect a RAT chain (clear → coins, no credit), a FIRE chain (extinguish → coins), and a
+## deadly_pests chain (Cypress/Beet/Phoenix → cull adjacent rats). Emitted BEFORE chain_resolved so
+## Main can decide whether the chain is a hazard-clear (RAT) and SUPPRESS the normal credit. The
+## cells are the ORIGINAL drag path (not the rat/rubble-swept removal set), so adjacency is checked
+## against exactly what the player chained — mirrors pearl_chain_resolved's contract.
+signal chain_cells_resolved(cells: Array)
 
 # Chain-resolve animation timing. The pipeline CASCADES (pop → settle → refill) the
 # way the React/Phaser original does, rather than firing every tween at t=0: the chained
@@ -120,6 +128,13 @@ var _targeting := false
 ## and DELIBERATELY preserved across _build_tiles rebuilds (which free only Tiles),
 ## so its reference survives every collapse/refill.
 var _chain_overlay: ChainOverlay
+
+## T8 — live wolf-marker overlay nodes (one per wolf), keyed by cell Vector2i. Wolves are
+## OVERLAY entities, NOT grid cells (they don't occupy/collapse a board cell — they roam ON TOP
+## eating adjacent birds), so they are drawn as their own Node2D markers over the cell centre,
+## freed + rebuilt wholesale whenever the wolf set changes (refresh_wolves). Like the chain
+## overlay these are siblings of the Tile nodes and survive _build_tiles (which frees only Tiles).
+var _wolf_markers: Array = []   ## Array of _WolfMarker Node2D
 
 ## M4a — padding (px) of the field-tinted card drawn behind the tiles by _draw().
 const FRAME_PAD := 10.0
@@ -322,6 +337,115 @@ func apply_external_grid(new_grid: Array) -> void:
 	BoardLogic.refill(grid, rng, tile_pool)
 	_ensure_live_board()
 	_build_tiles()
+
+## T7/T9 — adopt a grid AFTER a farm-hazard tick mutated it, then RE-STAMP the positional hazard
+## tiles so rats/fire stay PINNED at their recorded cells (matching React's fillBoard fire-overlay:
+## the hazard positions are authoritative state, not subject to gravity). `new_grid` is the ticked
+## grid (eaten/burned cells already EMPTY; spawned RAT/FIRE already written). `rat_cells` /
+## `fire_cells` are Arrays of {row,col} (GameState.active_rats() / active_fire_cells()). Flow:
+##   1. blank the recorded hazard cells (so collapse/refill treats them as holes to fill),
+##   2. collapse + refill the holes from the pool (the eaten/burned + hazard cells all refill),
+##   3. re-stamp RAT / FIRE at their recorded cells (overwrite whatever filled there),
+##   4. guard a live board, rebuild the visual tile layer, then refresh the wolf overlays.
+## Keeps `grid` (and the on-screen tiles) in lockstep with GameState.hazards every tick.
+func apply_hazard_state(new_grid: Array, rat_cells: Array, fire_cells: Array, wolf_cells: Array) -> void:
+	if new_grid == null or new_grid.is_empty():
+		return
+	grid = new_grid
+	# 1. Blank every recorded hazard cell so collapse/refill fills around them, then we re-stamp.
+	for rc in rat_cells:
+		var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+			grid[rr][rcl] = Constants.EMPTY
+	for fc in fire_cells:
+		var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+			grid[fr][fcl] = Constants.EMPTY
+	# 2. Collapse survivors down + refill the holes from the active pool.
+	BoardLogic.collapse(grid)
+	BoardLogic.refill(grid, rng, tile_pool)
+	# 3. Re-stamp the positional hazard tiles at their recorded cells (authoritative).
+	for rc in rat_cells:
+		var rr2: int = int(rc.get("row", -1)); var rcl2: int = int(rc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(rcl2, rr2)):
+			grid[rr2][rcl2] = Constants.Tile.RAT
+	for fc in fire_cells:
+		var fr2: int = int(fc.get("row", -1)); var fcl2: int = int(fc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(fcl2, fr2)):
+			grid[fr2][fcl2] = Constants.Tile.FIRE
+	# 4. Keep the board playable, rebuild tiles, refresh wolf overlays.
+	_ensure_live_board_preserving_hazards(rat_cells, fire_cells)
+	_build_tiles()
+	refresh_wolves(wolf_cells)
+
+## A live-board guard that PRESERVES recorded hazard cells across a reshuffle. _ensure_live_board
+## rebuilds the WHOLE grid (losing the pinned RAT/FIRE), so when hazards are present we re-stamp
+## them after any reshuffle. Rare (the pool almost always lands a live board), but keeps the
+## hazard tiles from vanishing on the unlucky reshuffle.
+func _ensure_live_board_preserving_hazards(rat_cells: Array, fire_cells: Array) -> void:
+	var guard := 0
+	while not BoardLogic.has_valid_chain(grid) and guard < 64:
+		grid = BoardLogic.make_empty_grid()
+		BoardLogic.refill(grid, rng, tile_pool)
+		for rc in rat_cells:
+			var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+				grid[rr][rcl] = Constants.Tile.RAT
+		for fc in fire_cells:
+			var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+				grid[fr][fcl] = Constants.Tile.FIRE
+		guard += 1
+
+## T8 — rebuild the wolf-marker overlay from `wolf_cells` (Array of {row,col,scared}). Frees the
+## existing markers and creates one Node2D marker per wolf at the cell centre. A scared wolf reads
+## dimmer (it won't eat this turn). Called on every hazard tick + on load/biome flip. An empty
+## list clears all markers. Headless-safe: markers are pure Node2D _draw (no textures).
+func refresh_wolves(wolf_cells: Array) -> void:
+	for m in _wolf_markers:
+		if is_instance_valid(m):
+			m.queue_free()
+	_wolf_markers = []
+	for w in wolf_cells:
+		var wr: int = int(w.get("row", -1)); var wc: int = int(w.get("col", -1))
+		if not BoardLogic.in_bounds(Vector2i(wc, wr)):
+			continue
+		var marker := _WolfMarker.new()
+		marker.scared = bool(w.get("scared", false))
+		marker.radius = tile_size * 0.32
+		marker.position = _cell_center(wc, wr)
+		marker.z_index = 90   # above tiles, below the chain overlay (100)
+		add_child(marker)
+		_wolf_markers.append(marker)
+
+## T9 — clear EVERY rat from the board + the count of cells to blank, used when a rat-chain or a
+## deadly-pests cull or a Rifle removes specific rats. Given the cleared rat cells (Array of
+## {row,col}), blank them, collapse + refill, re-stamp the REMAINING rats/fire, rebuild. Returns
+## the number of cells cleared. Distinct from clear_all_rats (the Ratcatcher shoo, which clears
+## the whole board's rats) — this clears a SPECIFIC set after a chain/cull.
+func clear_hazard_cells(cleared_cells: Array, remaining_rats: Array, remaining_fire: Array, wolf_cells: Array) -> int:
+	var n := 0
+	for cell in cleared_cells:
+		var cr: int = int(cell.get("row", -1)); var cc: int = int(cell.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(cc, cr)):
+			grid[cr][cc] = Constants.EMPTY
+			n += 1
+	if n > 0:
+		BoardLogic.collapse(grid)
+		BoardLogic.refill(grid, rng, tile_pool)
+		# Re-stamp the survivors so they stay pinned.
+		for rc in remaining_rats:
+			var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+				grid[rr][rcl] = Constants.Tile.RAT
+		for fc in remaining_fire:
+			var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+				grid[fr][fcl] = Constants.Tile.FIRE
+		_ensure_live_board_preserving_hazards(remaining_rats, remaining_fire)
+		_build_tiles()
+	refresh_wolves(wolf_cells)
+	return n
 
 # ── harbor (M3j): tide mutation + giant-pearl placement ──────────────────────
 # These act only while Main has flipped the harbor on (it sets clear_pearl_on_fish_chain
@@ -570,6 +694,15 @@ func try_resolve(path: Array) -> bool:
 func _resolve(path: Array) -> void:
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
+
+	# T7/T9/T10 — snapshot the chained cells (row/col + their tile value, read BEFORE the chain
+	# clears them) so Main can run the farm-hazard interactions: a RAT chain clears for coins, a
+	# FIRE chain extinguishes, and a deadly_pests chain (Cypress/Beet/Phoenix) culls adjacent rats.
+	# Emitted before chain_resolved so Main can suppress the normal credit for a pure-hazard chain.
+	var chain_cells: Array = []
+	for cell in path:
+		chain_cells.append({"row": int(cell.y), "col": int(cell.x), "tile": int(grid[cell.y][cell.x])})
+	chain_cells_resolved.emit(chain_cells)
 
 	# A1b — UPGRADE TILES (the React core loop): ask the provider (if Main installed one)
 	# how many next-tier tiles this chain spawns and which tile. We compute it HERE, before
@@ -944,3 +1077,29 @@ class _RingFx extends Node2D:
 		tw.tween_method(_set_radius, start_r, end_r, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.tween_method(_set_alpha, alpha, 0.0, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.chain().tween_callback(queue_free)
+
+## T8 — a wolf-marker overlay: a dark snout-ringed disk with two ears + a fang glint, drawn over
+## the cell a wolf roams. Wolves are NOT grid tiles (they don't collapse), so they ride as their
+## own Node2D over the board. A SCARED wolf reads dimmer (it won't eat this turn). Pure _draw (no
+## textures) so it is headless-safe; the Board frees + rebuilds these whenever the wolf set changes.
+class _WolfMarker extends Node2D:
+	var radius: float = 24.0
+	var scared: bool = false
+
+	func _draw() -> void:
+		var body := Color(0.30, 0.30, 0.34) if not scared else Color(0.55, 0.55, 0.60, 0.65)
+		var snout := Color(0.18, 0.18, 0.22) if not scared else Color(0.40, 0.40, 0.46, 0.6)
+		# Two ears (triangles) poking up from the head.
+		var ear_l := PackedVector2Array([
+			Vector2(-radius * 0.6, -radius * 0.5), Vector2(-radius * 0.2, -radius * 1.1), Vector2(-radius * 0.05, -radius * 0.45)])
+		var ear_r := PackedVector2Array([
+			Vector2(radius * 0.6, -radius * 0.5), Vector2(radius * 0.2, -radius * 1.1), Vector2(radius * 0.05, -radius * 0.45)])
+		draw_colored_polygon(ear_l, body)
+		draw_colored_polygon(ear_r, body)
+		# Head + muzzle.
+		draw_circle(Vector2.ZERO, radius * 0.8, body)
+		draw_circle(Vector2(0, radius * 0.25), radius * 0.42, snout)
+		# Two eye glints (skip when scared — eyes shut/averted).
+		if not scared:
+			draw_circle(Vector2(-radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))
+			draw_circle(Vector2(radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))

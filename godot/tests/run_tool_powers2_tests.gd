@@ -103,7 +103,7 @@ func _multiset(grid: Array) -> Dictionary:
 
 func _test_membership_and_shape() -> void:
 	# 24 from PR0+PR1, +5 here = 29, +3 fill_bias (PR2b) = 32, +8 magic (PR3) = 40; TOOL_IDS has no dupes.
-	_check(ToolConfig.all_ids().size() == 40, "catalog has 40 tools (24 prior + 5 PR2 + 3 PR2b + 8 PR3)")
+	_check(ToolConfig.all_ids().size() == 42, "catalog has 42 tools (24 prior + 5 PR2 + 3 PR2b + 8 PR3 + 2 T14a rifle/hound)")
 	var seen := {}
 	var dup := false
 	for id in ToolConfig.all_ids():

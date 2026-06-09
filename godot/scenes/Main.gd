@@ -16,6 +16,10 @@ var _last_tier: int = 0                ## settlement tier → detect a tier-up
 var _last_coins: int = 0               ## coin balance → tell sell/buy from build/craft
 var _last_in_mine: bool = false        ## biome flag → detect entering the mine
 var _last_in_harbor: bool = false      ## biome flag → detect entering the harbor (M3j)
+## T7/T9/T10 — the cells of the chain currently resolving (Array of {row,col,tile}), stashed by
+## _on_chain_cells (Board emits chain_cells_resolved BEFORE chain_resolved) so _on_chain_resolved
+## can run the farm-hazard interactions. Cleared after each resolve.
+var _chain_cells: Array = []
 
 # ── M4b HUD: extracted into Hud.gd (this Track-D refactor) ────────────────────
 # The whole HUD presentation surface — the parchment top-bar of pills, the season bar,
@@ -256,6 +260,10 @@ func _ready() -> void:
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
 	# can ask GameState.capture_pearl_if_adjacent whether they sit next to the live pearl.
 	board.pearl_chain_resolved.connect(_on_pearl_chain)
+	# T7/T9/T10 — every resolved chain reports its cells so we can run the farm-hazard
+	# interactions (rat-chain clear, fire extinguish, deadly_pests cull). Connected BEFORE
+	# chain_resolved fires (Board emits cells first), so _on_chain_resolved sees the stashed cells.
+	board.chain_cells_resolved.connect(_on_chain_cells)
 	# Seed the board's refill pool from the restored save's ACTIVE BIOME (M3f): if
 	# the save was mid-expedition, active_biome_pool() returns the mine pool and we
 	# rebuild so mine tiles show immediately; otherwise it's the farm spawner pool.
@@ -271,6 +279,11 @@ func _ready() -> void:
 	board.set_min_chain(game.boss_min_chain())
 	# M3h: a restored Master Ratcatcher makes grass chains clear adjacent rats.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# T7/T8/T9: a save restored mid-run may carry live farm hazards. Re-stamp the positional
+	# RAT/FIRE tiles onto the freshly-built board at their recorded cells and rebuild the wolf
+	# overlays, so the hazards show immediately on load (they are authoritative state, not pool
+	# draws). On the farm only; a mine/harbor save has no farm hazards active.
+	_restore_farm_hazards_onto_board()
 	# M3i: mining through rubble is active exactly while on a mine expedition (a STONE
 	# chain clears adjacent rubble — no building needed). A save restored mid-expedition
 	# keeps it on.
@@ -1623,6 +1636,10 @@ func _on_town_changed() -> void:
 	# M3h: a Master Ratcatcher purchase (or demolish) flips whether grass chains sweep
 	# adjacent rats, so refresh the board flag whenever a town action lands.
 	board.clear_rats_on_grass = game.has_master_ratcatcher()
+	# T7/T8/T9: a town action that re-pooled/regenerated the board (mine/harbor flip) wiped the
+	# positional hazard tiles + wolf overlays. Re-stamp the farm hazards onto the (farm) board, or
+	# clear the wolf markers when off the farm. Keeps the hazards consistent across town visits.
+	_restore_farm_hazards_onto_board()
 	# M3i: entering/leaving the mine via the Town screen flips whether STONE chains mine
 	# through rubble, so refresh that flag on every town action too.
 	board.clear_rubble_on_stone = game.is_in_mine()
@@ -1715,7 +1732,78 @@ func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
 	# tile, so an un-customised board is unchanged). Instance helper honours tile_active_by_category.
 	return game.upgrade_spawn_active(ZoneConfig.HOME_ZONE, tile_type, length)
 
+## T7/T9/T10 — stash the resolving chain's cells (Board emits this BEFORE chain_resolved). Used by
+## _on_chain_resolved for the farm-hazard interactions (rat clear / fire extinguish / deadly cull).
+func _on_chain_cells(cells: Array) -> void:
+	_chain_cells = cells
+
+## T7/T8/T9 — stamp the loaded farm hazards onto the live board: place RAT / FIRE tiles at their
+## recorded cells (overwriting whatever the fresh board built there) and rebuild the wolf-marker
+## overlays. Called on load (after the board is built) so a save restored mid-run shows its
+## hazards immediately. No-op off the farm / when no hazards are active.
+func _restore_farm_hazards_onto_board() -> void:
+	if board == null or game == null:
+		return
+	if game.active_biome != "farm":
+		board.refresh_wolves([])
+		return
+	var changed := false
+	for rc in game.active_rats():
+		var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+		if rr >= 0 and rr < Constants.ROWS and rcl >= 0 and rcl < Constants.COLS:
+			board.grid[rr][rcl] = Constants.Tile.RAT
+			changed = true
+	for fc in game.active_fire_cells():
+		var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+		if fr >= 0 and fr < Constants.ROWS and fcl >= 0 and fcl < Constants.COLS:
+			board.grid[fr][fcl] = Constants.Tile.FIRE
+			changed = true
+	if changed:
+		board._build_tiles()
+	board.refresh_wolves(game.active_wolves())
+
 func _on_chain_resolved(tile_type: int, length: int) -> void:
+	# T9 — a RAT chain is a HAZARD CLEAR, not a normal harvest: chaining 3+ rats removes them for
+	# +5 coins each and spends NO turn / credits NO resource (mirrors src/state.ts:286-293's early
+	# return). The Board already cleared + refilled the chained cells; here we just book the coins +
+	# remove the rats from hazards, then refresh + save and RETURN (skipping the normal credit /
+	# farm-turn / season / boss path below). A chain < 3 rats can't reach here (min_chain rejects it).
+	if tile_type == Constants.Tile.RAT:
+		var rc := game.clear_rat_chain(_chain_cells)
+		_chain_cells = []
+		if bool(rc.get("ok", false)):
+			_status_label.text = "Pest cleared! +%d 🪙" % int(rc.get("coins_delta", 0))
+			if _audio != null:
+				_audio.play("pop")
+			# Wolves are overlays; rats/fire are grid tiles already gone — just refresh the wolf
+			# markers from the (unchanged) wolf set so they survive the board rebuild.
+			board.refresh_wolves(game.active_wolves())
+		_refresh_totals()
+		_refresh_meta()
+		_refresh_rats()
+		_refresh_chain_progress()
+		SaveManager.save(game)
+		return
+	# T7 — a FIRE chain EXTINGUISHES the fire for +2 coins/tile. Fire produces nothing, so the
+	# normal credit_chain below yields 0 resources; we add the extinguish coins on top and let the
+	# chain otherwise resolve as a (resource-less) farm move (a turn IS spent — fire extinguishing
+	# is a real move, matching React's normal-resolution-plus-patch model).
+	if tile_type == Constants.Tile.FIRE:
+		var ex := game.extinguish_fire_chain(_chain_cells)
+		if bool(ex.get("ok", false)):
+			_status_label.text = "Fire out! +%d 🪙" % int(ex.get("coins_delta", 0))
+			if _audio != null:
+				_audio.play("pop")
+	# T10 — deadly_pests cull: a NORMAL chain that contains a Cypress/Beet/Phoenix tile
+	# exterminates every rat adjacent to the chain (+5 coins/rat). Captured here, BEFORE the normal
+	# credit, so the chain still resolves as its own harvest (mirrors src/state.ts:297). The Board
+	# already blanked the chained cells; the culled rats are removed from hazards + their cells will
+	# be re-synced when the hazard tick / refresh runs. We blank the culled rat cells on the board.
+	var deadly := game.deadly_pests_kill(_chain_cells)
+	if int(deadly.get("killed", 0)) > 0:
+		board.clear_hazard_cells(deadly.get("killed_cells", []), game.active_rats(), game.active_fire_cells(), game.active_wolves())
+		_status_label.text = "Pest culled! +%d 🪙" % int(deadly.get("coins_delta", 0))
+	_chain_cells = []
 	var res: Dictionary = game.credit_chain(tile_type, length)
 	# M4d: a chain always lands a collect bleep; a whole unit (units > 0) adds the
 	# sparkle "upgrade" over it.
@@ -1838,6 +1926,20 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			if _audio != null:
 				_audio.play("fanfare")
 			_open_harvest(farm_res)
+		# T7/T8/T9 — FARM HAZARDS tick + spawn for this farm turn (rats eat plants, fire spreads,
+		# wolves eat birds; then a new fire/wolf/rat may spawn). Mirrors src/state.ts:485-507's
+		# after-chain hazard block. We tick against the LIVE board grid; tick_farm_hazards mutates
+		# game.hazards and returns the (possibly blanked) grid, which we land via apply_hazard_state
+		# (collapse + refill the eaten/burned cells, re-stamp the pinned RAT/FIRE tiles, refresh the
+		# wolf overlays). Only runs while the bounded run is live (a free move / ended run skips it
+		# — note_farm_turn's free_move path doesn't tick the season either) and not on the
+		# inert town board. A no-change tick still refreshes the wolf overlays cheaply.
+		if not bool(farm_res.get("free_move", false)) and not bool(farm_res.get("ended", false)):
+			var tick := game.tick_farm_hazards(board.grid, board.rng)
+			if bool(tick.get("changed", false)):
+				board.apply_hazard_state(tick["grid"], game.active_rats(), game.active_fire_cells(), game.active_wolves())
+			else:
+				board.refresh_wolves(game.active_wolves())
 	# M3g: a chain landed while the capstone boss is active damages it by the chain
 	# length. On the killing blow the boss is defeated → Town 2 complete: drop the
 	# board's raised chain bar back to the base min and surface the win.
@@ -2134,6 +2236,20 @@ func use_tool(id: String) -> bool:
 		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
 		_hud.show_tool_armed_banner(id)
 		return true
+	# T14a — wolf-hazard tools (Rifle / Hound) act on the wolf OVERLAYS, not the grid: skip the
+	# board collapse/refill (apply_external_grid would needlessly re-roll an unchanged board) and
+	# just refresh the wolf markers. use_tool_on_grid already cleared/scattered the wolves + spent
+	# the charge in its early path.
+	var pwr: String = ToolConfig.power_id(id)
+	if pwr == "clear_wolves" or pwr == "scatter_hazard":
+		var rw: Dictionary = game.use_tool_on_grid(id, board.grid)
+		if bool(rw.get("ok", false)):
+			board.refresh_wolves(game.active_wolves())
+			_status_label.text = "Used %s" % ToolConfig.tool_label(id)
+			if _audio != null:
+				_audio.play("pop")
+			_after_tool_used()
+		return bool(rw.get("ok", false))
 	# Instant tool — fire immediately over the whole board.
 	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
 	if bool(r.get("ok", false)):

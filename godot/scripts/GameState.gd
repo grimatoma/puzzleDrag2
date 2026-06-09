@@ -181,6 +181,24 @@ var town2_complete: bool = false    ## set true when the capstone boss is defeat
 const RATCATCHER_CHARGES: int = 5
 var ratcatcher_charges_used: int = 0   ## shoo-moves spent (0..RATCATCHER_CHARGES)
 
+# ── Farm HAZARDS live state (T7/T8/T9, ported from src/features/farm) ───────────
+## The live farm-hazard state — the GDScript analogue of React's `state.hazards`. Owns the
+## POSITIONAL rats (each a {row,col,age}), the fire cells, and the wolves (each {row,col,scared}
+## plus a scared countdown). The single source of truth for all three farm hazards; HazardLogic
+## (pure) operates on this + the board grid, and note_farm_turn ticks/spawns into it. Shape:
+##   { "rats": Array[{row,col,age}], "fire": {cells:[...]} or {}, "wolves": {list:[...],
+##     scared_turns:int} or {} }
+## Seeded to HazardLogic.default_state() (all inactive). Persisted defensively (to_dict/from_dict
+## round-trip via HazardLogic.normalise). SAVE_VERSION is NOT bumped — a pre-hazards save loads
+## with all hazards inactive. SINGLE-ACTIVE CAP mirrored in roll: only one of rats/fire/wolves at
+## a time.
+var hazards: Dictionary = HazardLogic.default_state()
+
+## Per-session FORCE-ON override for the fire hazard (tests + a future tuning toggle). When false
+## the gate falls back to the build-time Constants.FIRE_HAZARD_ENABLED (false → fire never spawns
+## in normal play, matching the live React game). NOT persisted (a reload re-reads the default).
+var fire_hazard_force: bool = false
+
 # ── Tile Collection: active variants + discovery + abilities ────────────────────────
 ## Ported from React's `state.tileCollection` slice (src/state/helpers.ts
 ## TileCollectionSlice + src/state.ts SET_ACTIVE_TILE / BUY_TILE / chain-discovery).
@@ -2069,12 +2087,11 @@ func active_tile_pool() -> Array:
 	# documented divergence) is REMOVED — the run config is now the per-category variant choices
 	# (tile_active_by_category), substituted above. farm_run_selected stays a vestigial field
 	# (still emitted by StartFarmingModal + round-tripped) but no longer biases the pool.
-	# M3h: once Town 2 is complete the rats hazard is live — seed RAT_POOL_SLOTS rat tiles
-	# into the FARM pool (a recurring nuisance, not a takeover). Only the farm pool gets rats;
-	# the mine pool (active_biome_pool while mining) is untouched.
-	if rats_enabled():
-		for _i in Constants.RAT_POOL_SLOTS:
-			pool.append(Constants.Tile.RAT)
+	# T9: rats are NO LONGER seeded into the refill pool. The faithful React model (HazardLogic)
+	# spawns rats POSITIONALLY via roll_rat_spawn on each board fill and they EAT adjacent plants
+	# each turn (src/features/farm/rats.ts) — they are not a random pool draw. The legacy
+	# RAT_POOL_SLOTS seeding is removed here; rats_enabled() now only gates whether the positional
+	# spawn roll runs (see note_farm_turn / Main's fill-spawn wiring). The mine pool is untouched.
 	# Fill bias: while armed, DOUBLE the target tile's slots already in the pool so the next
 	# fills favour it (faithful to the web's pool-doubling). Only doubles a tile that is ALREADY
 	# eligible — never injects an off-zone tile (preserves zone restriction). Pure read; the
@@ -2208,6 +2225,155 @@ func use_ratcatcher_charge() -> bool:
 	ratcatcher_charges_used += 1
 	return true
 
+# ── Farm HAZARDS — turn ticks, spawn rolls, chain clears (T7/T8/T9) ─────────────
+## The GameState surface over the pure HazardLogic. GameState owns the live `hazards` dict; the
+## board GRID is owned by the Board, so these methods take the grid in + return the new grid out
+## (Main threads it back through the board's collapse/refill). Mirrors the React reducer's
+## CHAIN_COLLECTED hazard block (src/state.ts:485-517): after a farm chain, tick_fire →
+## tick_wolves → roll_farm_hazard → tick_rats → roll_rat_spawn, then the eaten/burned cells
+## collapse + refill on the board.
+
+## True when fire CAN spawn right now: the per-session force-on override OR the build-time
+## Constants.FIRE_HAZARD_ENABLED (default false → fire is COMPLETE + TESTED but never spawns in
+## normal play, matching React's isFireHazardEnabled() default-off). Mirrors featureFlags.ts.
+func fire_hazard_enabled() -> bool:
+	return fire_hazard_force or Constants.FIRE_HAZARD_ENABLED
+
+## True when ANY farm hazard (rats / fire / wolves) is currently active (single-active cap read).
+func any_farm_hazard_active() -> bool:
+	return HazardLogic.any_hazard_active(hazards)
+
+## Live positional rats (Array of {row,col,age}); [] when none. The board renders RAT tiles at
+## these cells (Main keeps the grid in sync); the HUD reads the count.
+func active_rats() -> Array:
+	return HazardLogic.rats_of(hazards)
+
+## Live wolves (Array of {row,col,scared}); [] when none. Wolves are OVERLAY entities (NOT grid
+## cells) — the Board draws a marker at each cell.
+func active_wolves() -> Array:
+	return HazardLogic.wolves_list_of(hazards)
+
+## Live fire cells (Array of {row,col}); [] when none. The board renders FIRE tiles at these cells.
+func active_fire_cells() -> Array:
+	return HazardLogic.fire_cells_of(hazards)
+
+## Tick + spawn every farm hazard for one resolved farm turn, against the live board `grid`.
+## Returns { grid:Array, changed:bool } — the (possibly mutated) grid the caller lands on the
+## board, and whether any cell was blanked (so Main knows to collapse+refill). Mutates `self.hazards`.
+## ORDER mirrors React (src/state.ts:487-507): tick_fire → tick_wolves → roll_farm_hazard (fire/
+## wolf spawn) → tick_rats → roll_rat_spawn. Rats spawn only when rats_enabled() (Town 2 done) and
+## the inventory gate passes; fire only when fire_hazard_enabled(); wolves when birds-rich. The
+## single-active cap lives inside roll_farm_hazard + the rat-spawn cap.
+func tick_farm_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
+	var work: Array = grid
+	var changed: bool = false
+	# 1. Fire spreads (burns an adjacent cell). Only ticks when fire is active.
+	var fr: Dictionary = HazardLogic.tick_fire(work, hazards, rng)
+	if fr["grid"] != work:
+		changed = true
+	work = fr["grid"]
+	hazards = fr["hazards"]
+	# 2. Wolves tick (scared countdown + eat an adjacent bird).
+	var wr: Dictionary = HazardLogic.tick_wolves(work, hazards)
+	if wr["grid"] != work:
+		changed = true
+	work = wr["grid"]
+	hazards = wr["hazards"]
+	# 3. Roll a NEW fire/wolf spawn (single-active capped, fire gated by fire_hazard_enabled()).
+	var eggs: int = qty("eggs")
+	var turkey: int = qty("turkey")   # no dedicated turkey resource in the port → 0; eggs drives it
+	var spawn: Dictionary = HazardLogic.roll_farm_hazard(work, hazards, fire_hazard_enabled(), eggs, turkey, rng)
+	if not spawn.is_empty():
+		if String(spawn.get("kind", "")) == "fire":
+			hazards["fire"] = {"cells": spawn.get("cells", [])}
+			# Mark the new fire cell on the board so it renders + can be chained.
+			for c in spawn.get("cells", []):
+				var fr2: int = int(c.get("row", 0))
+				var fc2: int = int(c.get("col", 0))
+				if fr2 >= 0 and fr2 < Constants.ROWS and fc2 >= 0 and fc2 < Constants.COLS:
+					work[fr2][fc2] = Constants.Tile.FIRE
+					changed = true
+		elif String(spawn.get("kind", "")) == "wolf":
+			# Wolves are OVERLAY entities — they do NOT occupy a grid cell (the board draws a
+			# marker). So no grid mutation here; just record the wolf.
+			hazards["wolves"] = {
+				"list": [{"row": int(spawn.get("row", 0)), "col": int(spawn.get("col", 0)), "scared": false}],
+				"scared_turns": 0,
+			}
+	# 4. Rats tick (each eats an adjacent plant). Only when rats are present.
+	var rr: Dictionary = HazardLogic.tick_rats(work, hazards)
+	if rr["grid"] != work:
+		changed = true
+	work = rr["grid"]
+	hazards = rr["hazards"]
+	# 5. Roll a NEW rat spawn (Town 2 done + inventory gate + cap + attracts_rats bump). Rats ARE
+	#    grid cells — mark the spawned cell as RAT so it renders + can be chained.
+	if rats_enabled():
+		var rat: Dictionary = HazardLogic.roll_rat_spawn(work, hazards, qty("hay_bundle"), qty("flour"), rng)
+		if not rat.is_empty():
+			var rrow: int = int(rat.get("row", 0))
+			var rcol: int = int(rat.get("col", 0))
+			if rrow >= 0 and rrow < Constants.ROWS and rcol >= 0 and rcol < Constants.COLS:
+				var list: Array = HazardLogic.rats_of(hazards).duplicate(true)
+				list.append({"row": rrow, "col": rcol, "age": 0})
+				hazards["rats"] = list
+				work[rrow][rcol] = Constants.Tile.RAT
+				changed = true
+	return {"grid": work, "changed": changed}
+
+## Resolve a chain that ran through RAT tiles. `chain` is an Array of {row,col,tile}. Returns
+## { ok, coins_delta, cleared } and credits the coins. ok:false means the chain was NOT a valid
+## 3+-rat clear (the caller must reject it — chaining 2 rats / a mixed chain wastes the move). On
+## success the rats are removed from `hazards`; the caller blanks those cells on the board.
+## Mirrors src/state.ts:286-293 (tryClearRatChain) — chaining rats yields coins, no resources.
+func clear_rat_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_clear_rat_chain(hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false, "coins_delta": 0, "cleared": 0}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	coins += delta
+	return {"ok": true, "coins_delta": delta, "cleared": int(res.get("cleared", 0))}
+
+## Apply a deadly_pests cull for a resolved chain (Cypress/Beet/Phoenix kill adjacent rats).
+## `chain` is an Array of {row,col,tile}. Returns { killed:int, coins_delta, killed_cells } and
+## credits the coins. No-op (killed 0) when the chain has no deadly tile or no adjacent rats.
+## Mirrors src/state.ts:297 (tryDeadlyPestsKill) — captured + applied alongside the normal chain.
+func deadly_pests_kill(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_deadly_pests_kill(hazards, chain)
+	var killed: int = int(res.get("killed", 0))
+	if killed <= 0:
+		return {"killed": 0, "coins_delta": 0, "killed_cells": []}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	coins += delta
+	return {"killed": killed, "coins_delta": delta, "killed_cells": res.get("killed_cells", [])}
+
+## Extinguish fire tiles in a resolved chain. `chain` is an Array of {row,col}. Returns
+## { ok, coins_delta, extinguished } and credits the coins. ok:false when the chain held no fire.
+## Mirrors src/state.ts:299 (tryExtinguishFire) — +2 coins per fire tile cleared.
+func extinguish_fire_chain(chain: Array) -> Dictionary:
+	var res: Dictionary = HazardLogic.try_extinguish_fire(hazards, chain)
+	if not bool(res.get("ok", false)):
+		return {"ok": false, "coins_delta": 0, "extinguished": 0}
+	hazards = res["hazards"]
+	var delta: int = int(res.get("coins_delta", 0))
+	coins += delta
+	return {"ok": true, "coins_delta": delta, "extinguished": int(res.get("extinguished", 0))}
+
+## Clear ALL wolves (the Rifle tool). Mutates `hazards`; returns the count removed.
+func clear_all_wolves() -> int:
+	var n: int = HazardLogic.wolves_list_of(hazards).size()
+	hazards = HazardLogic.clear_wolves(hazards)
+	return n
+
+## Scatter all wolves for WOLF_SCARED_TURNS turns (the Hound tool). Mutates `hazards`; returns the
+## count scattered.
+func scatter_all_wolves() -> int:
+	var n: int = HazardLogic.wolves_list_of(hazards).size()
+	hazards = HazardLogic.scatter_wolves(hazards)
+	return n
+
 # ── Tools (M8b) ───────────────────────────────────────────────────────────────
 
 ## Grant `n` charges of tool `id`. Thin forwarder to ToolState.grant — no-op for an
@@ -2267,6 +2433,22 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		return {"ok": false, "reason": "unknown", "grid": grid, "collected": {}}
 	if not has_tool_charges(id):
 		return {"ok": false, "reason": "no_charges", "grid": grid, "collected": {}}
+	# T14a — wolf-hazard tools (Rifle / Hound) are STATE powers: they act on `hazards`, not the
+	# grid (wolves are OVERLAY entities, not grid cells). Handle here, in the same early path as
+	# fill_bias / restore_turns, BEFORE the grid dispatch. clear_wolves (Rifle) removes every wolf;
+	# scatter_wolves (Hound) scares them for WOLF_SCARED_TURNS turns. Both consume a charge.
+	# Mirrors React's USE_TOOL rifle/hound handlers (no turn cost; just mutate hazards.wolves).
+	var wolf_power: String = ToolConfig.power_id(id)
+	if wolf_power == "clear_wolves":
+		clear_all_wolves()
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
+	if wolf_power == "scatter_hazard":
+		scatter_all_wolves()
+		tool_state.consume(id)
+		_tick_quests({"type": "tool", "tool": id})
+		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
 	# fill_bias tools (fertilizer/bird_feed/sapling/magic_fertilizer) don't touch the grid —
 	# they arm a spawn bias that active_tile_pool() reads. Handle here, before the
 	# grid-dispatch path.
@@ -2638,6 +2820,12 @@ func to_dict() -> Dictionary:
 		"boss_hp": boss_hp,
 		"town2_complete": town2_complete,
 		"ratcatcher_charges_used": ratcatcher_charges_used,
+		# Farm HAZARDS (T7/T8/T9, ADDITIVE): the live positional rats / fire cells / wolves +
+		# scared countdown, deep-copied. SAVE_VERSION is NOT bumped — a save written before the
+		# hazards model existed loads with all hazards inactive (from_dict → HazardLogic.normalise
+		# of a missing key yields the default empty state). fire_hazard_force is TRANSIENT (a
+		# per-session test/tuning override) and intentionally NOT persisted.
+		"hazards": hazards.duplicate(true),
 		# Tile Collection (T2/T3/T5, ADDITIVE): the active variant per category, the discovered
 		# set, research progress, and banked free moves. Persisted only when the slice has been
 		# seeded (a bare GameState.new() that never touched the tile collection emits the seeded
@@ -2890,6 +3078,11 @@ static func from_dict(d: Dictionary) -> GameState:
 	# RATCATCHER_CHARGES here — ratcatcher_charges_left() already floors the remaining
 	# count at 0, so an over-large saved value simply reads as "no charges left".
 	s.ratcatcher_charges_used = maxi(0, int(d.get("ratcatcher_charges_used", 0)))
+	# Restore the farm HAZARDS state (T7/T8/T9). HazardLogic.normalise coerces ints (JSON yields
+	# floats), drops malformed entries, and clamps to the active caps, so a corrupt/stale save can
+	# never strand a phantom hazard. A missing "hazards" key (any pre-hazards save) normalises to
+	# the default all-inactive state. fire_hazard_force stays false (transient, never persisted).
+	s.hazards = HazardLogic.normalise(d.get("hazards", {}))
 	# Restore the Tile Collection slice (T2/T3/T5). Mirrors React mergeLoadedState
 	# (src/state/helpers.ts:126-142): start from the FRESH default seed, then OVERLAY the
 	# saved sub-keys so any new catalog variant added since the save still gets its default
