@@ -43,6 +43,8 @@ func _run() -> void:
 	await _test_board_at_screen()
 	await _test_screen_signal()
 	await _test_main_wiring()
+	await _test_expedition_input_gate()
+	await _test_run_end_dismiss()
 
 # ── 1. StartFarmingModal ───────────────────────────────────────────────────────
 
@@ -214,5 +216,128 @@ func _test_main_wiring() -> void:
 		"_on_season_return reopened the town home (town map visible)")
 
 	main.queue_free()
+	await process_frame
+	SaveManager.clear()
+
+# ── 5. BUG C1: the expedition / boss input gate ────────────────────────────────
+
+## A non-farm expedition (mine/harbor) and a boss fight are PLAYABLE board sessions even with
+## NO farm run active — the board must be LIVE for them. Regression for BUG C1, where the gate
+## only checked farm_run_active so entering the mine / starting a boss left the board INERT and
+## the expedition/fight unplayable. Drives the REAL wiring: game.enter_mine() + main._on_town_changed()
+## (exactly what the TownScreen state_changed / cartography travel path calls).
+func _test_expedition_input_gate() -> void:
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+	# Fresh launch, no run → board INERT (the town-is-home baseline).
+	_check(not main.game.farm_run_active, "C1 setup: fresh launch has no farm run")
+	_check(not main.board.active, "C1: fresh launch (no run) → board INERT")
+
+	# Enter the MINE the real way (City tier + supplies), then run the town-changed funnel.
+	main.game.settlement.tier = TownConfig.TIER_CITY
+	main.game.inventory["supplies"] = 3
+	var mine_res: Dictionary = main.game.enter_mine()
+	_check(bool(mine_res.get("ok", false)), "C1 setup: enter_mine() succeeded at City + supplies")
+	main._on_town_changed()
+	await process_frame
+	_check(main.game.is_in_mine(), "C1: is_in_mine() true after entering")
+	_check(main.board.active, "C1: entering the mine (no run) makes the board LIVE")
+
+	# Leave the mine the real way → back on the farm with no run → board INERT again.
+	main.game.leave_mine()
+	main._on_town_changed()
+	await process_frame
+	_check(not main.game.is_in_mine(), "C1: left the mine (back on the farm)")
+	_check(not main.board.active, "C1: leaving the mine with no run makes the board INERT again")
+
+	# BOSS: fought ON the farm board (active_biome stays 'farm'), so the gate must go live for it.
+	# Meet the boss gate (City + 12 combined mine goods), start the fight, run the funnel.
+	main.game.inventory["block"] = 12
+	var boss_res: Dictionary = main.game.start_boss()
+	_check(bool(boss_res.get("ok", false)), "C1 setup: start_boss() succeeded (City + 12 mine goods)")
+	_check(main.game.is_boss_active(), "C1 setup: boss is active")
+	_check(main.game.active_biome == "farm", "C1 setup: the boss is fought on the farm board")
+	main._on_town_changed()
+	await process_frame
+	_check(main.board.active, "C1: a boss fight on the farm (no run) makes the board LIVE")
+
+	main.queue_free()
+	await process_frame
+	SaveManager.clear()
+
+# ── 6. BUG I1: dismissing the run-end modal completes the return (no exploit) ───
+
+## The run-end "Harvest Complete" modal must complete the return-to-town (close_season → +25,
+## run cleared, board inert) NO MATTER how it is dismissed — including a scrim-tap / ESC that
+## fires only `closed` (NOT the "Return to Town" CTA's return_to_town). Regression for BUG I1,
+## where a dismiss bypassed close_season, leaving the run live + the board active → unlimited
+## re-harvest. Also confirms the CTA path grants exactly +25 once (no double-grant via the
+## idempotent close_season guard).
+func _test_run_end_dismiss() -> void:
+	# ── 6a. DISMISS (not the CTA) still completes the return ──
+	SaveManager.clear()
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	var main = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+	main.game.coins = 50
+	main._on_start_farming(["trees"], false)
+	await process_frame
+	_check(main.game.farm_run_active, "I1 setup: run started")
+	_check(main.board.active, "I1 setup: board live during the run")
+
+	# Park the run one farm turn short of its budget, then resolve ONE benign farm chain so the
+	# NEXT note_farm_turn() crosses the boundary → the run ENDS and the run-end modal opens.
+	main.game.farm_turns_used = main.game.farm_run_budget - 1
+	main._on_chain_resolved(Constants.Tile.GRASS, 1)
+	await process_frame
+	_check(main.game.farm_run_active and main.game.farm_run_turns_left == 0,
+		"I1: a chain at the budget ends the run (ended-but-unclosed: active && 0 turns left)")
+	_check(not main.board.active, "I1: the board goes INERT the instant the run ends")
+	_check(main._harvest_modal != null and main._harvest_modal.visible,
+		"I1: the run-end HarvestModal opened")
+
+	var coins_before: int = main.game.coins
+	# DISMISS via the modal's own close() — the scrim/ESC path — NOT the Return-to-Town CTA.
+	main._harvest_modal.close()
+	await process_frame
+	_check(not main.game.farm_run_active, "I1: a DISMISS completed the return (run cleared)")
+	_check(main.game.farm_run_turns_left == 0, "I1: turns_left stays 0 after the return")
+	_check(main.game.coins == coins_before + 25, "I1: a DISMISS granted the +25 close_season bonus")
+	_check(not main.board.active, "I1: the board stays INERT after the dismiss-return")
+	_check(main._townmap_screen != null and main._townmap_screen.visible,
+		"I1: the dismiss-return reopened the town home")
+
+	main.queue_free()
+	await process_frame
+	SaveManager.clear()
+
+	# ── 6b. CTA "Return to Town" grants EXACTLY +25 once (no double-grant) ──
+	var main2 = packed.instantiate()
+	root.add_child(main2)
+	await process_frame
+	main2.game.coins = 50
+	main2._on_start_farming(["trees"], false)
+	await process_frame
+	main2.game.farm_turns_used = main2.game.farm_run_budget - 1
+	main2._on_chain_resolved(Constants.Tile.GRASS, 1)
+	await process_frame
+	_check(main2._harvest_modal != null and main2._harvest_modal.visible,
+		"I1 (CTA): the run-end modal opened")
+	var coins_before2: int = main2.game.coins
+	# Press the run-end CTA. It emits return_to_town (→ _on_season_return → close_season grants +25
+	# and clears the run), THEN close() → closed → _on_harvest_closed sees the run already cleared
+	# (farm_run_active == false) → hide only, NO second return. Net: exactly one +25.
+	main2._harvest_modal._action_buttons["return_town"].emit_signal("pressed")
+	await process_frame
+	_check(not main2.game.farm_run_active, "I1 (CTA): the CTA cleared the run")
+	_check(main2.game.coins == coins_before2 + 25,
+		"I1 (CTA): the CTA granted EXACTLY +25 (no double-grant via idempotent close_season)")
+	_check(not main2.board.active, "I1 (CTA): the board is INERT after the CTA return")
+
+	main2.queue_free()
 	await process_frame
 	SaveManager.clear()

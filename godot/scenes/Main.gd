@@ -317,19 +317,21 @@ func _ready() -> void:
 	_refresh_season_bar()
 	board.set_season(game.current_season_index())
 	# Task C — TOWN-IS-HOME launch gate (React's initial view:"town"). The puzzle board is only
-	# playable while a bounded farm RUN is live; with no run the player lives in the TOWN and the
-	# board is INERT.
-	#   • Run active (restored mid-run): the board is the playable surface → make it live and stay
-	#     on it (the season/board restore above already reflects the live run).
-	#   • No run: gate the board inert. THEN auto-open the town home — but ONLY for the real game
-	#     (windowed, dialogs enabled). Headless test runs (DisplayServer "headless") and the web
-	#     boot smoke (_dialogs_disabled) leave the board rendered-but-inert and do NOT auto-open
-	#     town, so the boot smoke + every Main-instantiating headless suite stay deterministic.
-	#     Placed BEFORE the tutorial/story/daily block so those auto-modals still layer on top.
-	if game.farm_run_active:
-		board.set_active(true)
-	else:
-		board.set_active(false)
+	# playable while a bounded farm RUN is live, OR while the player is on a non-farm expedition
+	# (mine/harbor), OR while a boss fight is active; otherwise (idle on the farm with no run) the
+	# board is the INERT town-home backdrop. BUG C1 — the old gate only checked farm_run_active, so
+	# a save restored mid-mine (active_biome="mine", no run) or mid-boss came up INERT and unplayable;
+	# _board_should_be_active() covers all three cases.
+	#   • Board live (run / expedition / boss): make it the playable surface and stay on it.
+	#   • Truly idle on the farm: gate the board inert. THEN auto-open the town home — but ONLY for
+	#     the real game (windowed, dialogs enabled). Headless test runs (DisplayServer "headless")
+	#     and the web boot smoke (_dialogs_disabled) leave the board rendered-but-inert and do NOT
+	#     auto-open town, so the boot smoke + every Main-instantiating headless suite stay
+	#     deterministic. Placed BEFORE the tutorial/story/daily block so those auto-modals still
+	#     layer on top.
+	var board_live := _board_should_be_active()
+	board.set_active(board_live)
+	if not board_live:
 		if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
 			_open_townmap()
 	# Tutorial onboarding: show the 6-step welcome modal on FIRST LOAD (tutorial_seen=false).
@@ -1105,12 +1107,24 @@ func _open_harvest_run_end(summary: Dictionary) -> void:
 		_harvest_modal.connect("return_to_town", Callable(self, "_on_season_return"))
 	_harvest_modal.open_for_run_end(summary)
 
-## The harvest modal was dismissed (Continue or backdrop/ESC). Hide it — there is nothing to
-## persist (note_farm_turn already wrapped + saved the cycle in _on_chain_resolved) and no
-## router modal id, so this is purely a hide (the board is already on the fresh Spring cycle).
+## The harvest modal was dismissed. Two cases:
+##   • RUN-END dismiss (BUG I1): a bounded run reached its budget and the run-end modal was
+##     dismissed by ANY means — the "Return to Town" CTA (which already ran close_season via
+##     return_to_town → _on_season_return, so the run is cleared by the time we get here) OR a
+##     scrim-tap / ESC (which only fires `closed`, NOT return_to_town). If the run is STILL in its
+##     ended-but-unclosed state (farm_run_active && farm_run_turns_left == 0), the dismiss was a
+##     bypass: complete the return ourselves via _on_season_return so close_season runs exactly
+##     once (the +25 grant + bond decay + quest reroll + run clear). close_season is idempotent, so
+##     the CTA path — where it already ran — does NOT double-grant (this branch is skipped because
+##     farm_run_active is already false). Either way the modal is hidden below.
+##   • LEGACY informational harvest (no run) or an already-closed run: nothing to persist
+##     (note_farm_turn already wrapped + saved the cycle), so this is purely a hide.
 func _on_harvest_closed() -> void:
 	if _harvest_modal != null:
 		_harvest_modal.visible = false
+	if game != null and game.farm_run_active and game.farm_run_turns_left == 0:
+		# A run-end dismiss bypassed the return CTA → complete the return so close_season runs.
+		_on_season_return()
 
 # ── Start Farming (Task C): open the picker, start the run, end the run ───────────
 
@@ -1186,6 +1200,9 @@ func _on_season_return() -> void:
 	board.set_tile_pool(game.active_tile_pool())
 	board.setup_new_board()
 	board.set_season(game.current_season_index())
+	# MINOR M1 — reset the board's min-chain bar to the current (no-boss) baseline so a raised boss
+	# chain requirement can never persist onto the fresh town board after the run closes.
+	board.set_min_chain(game.boss_min_chain())
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_orders()
@@ -1570,6 +1587,14 @@ func _on_new_game() -> void:
 	SaveManager.clear()
 	get_tree().reload_current_scene()
 
+## The board accepts chain input when a bounded farm run is live, OR the player is on a
+## non-farm expedition biome (mine/harbor), OR a boss fight is active. Otherwise (idle on the
+## farm with no run) the board is the inert TOWN-HOME backdrop.
+func _board_should_be_active() -> bool:
+	if game == null:
+		return false
+	return game.farm_run_active or game.active_biome != "farm" or game.is_boss_active()
+
 ## A town action mutated `game`: re-pool the board from the ACTIVE biome, refresh
 ## every HUD label, save. The Town screen's Expedition section can flip the biome
 ## (enter/leave the mine), so detect a biome change and regenerate the board with
@@ -1600,6 +1625,12 @@ func _on_town_changed() -> void:
 	# M3j: entering/leaving the harbor flips whether a fish chain next to the pearl captures
 	# it — refresh that flag on every town action too (off the harbor it is simply false).
 	board.clear_pearl_on_fish_chain = game.is_in_harbor()
+	# BUG C1 — the chain-input GATE follows the biome/run/boss state on EVERY town action. This is
+	# the single funnel for all playable-board transitions (mine/harbor entry via TownScreen or
+	# cartography, boss start, leave-expedition return): entering the mine/harbor or starting a boss
+	# makes the board LIVE, and returning to the farm with no run makes it INERT again. Set AFTER
+	# the board has been re-pooled/regenerated above so the live board is the correct biome.
+	board.set_active(_board_should_be_active())
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -1768,6 +1799,11 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			_status_label.text = "Harvest! %s ends — the run is complete." % String(farm_res.get("season", ""))
 			if _audio != null:
 				_audio.play("fanfare")
+			# BUG I1 — make the board INERT the instant the run ends, BEFORE opening the modal,
+			# so the player can't keep chaining (and re-popping the modal) no matter HOW the modal
+			# is dismissed. The run is still in its ended-but-unclosed state here (farm_run_active
+			# is true, farm_run_turns_left == 0); close_season runs only on the return path.
+			board.set_active(false)
 			_open_harvest_run_end(farm_res)
 		elif bool(farm_res.get("harvest", false)):
 			# A2 — a full year wrapped on the LEGACY always-on cycle (no bounded run): surface the
@@ -2000,6 +2036,11 @@ func _try_challenge_boss() -> void:
 	var res: Dictionary = game.start_boss()
 	if bool(res.get("ok", false)):
 		board.set_min_chain(game.boss_min_chain())
+		# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so with no run
+		# the board would be inert and the fight unplayable. The dev-key boss start is a playable-
+		# board transition too (the real path routes through _on_town_changed); follow the gate so
+		# the board is live for the fight.
+		board.set_active(_board_should_be_active())
 		_status_label.text = "Frostmaw appears! Chains of 4+."
 		_refresh_boss()
 		_refresh_meta()
@@ -2137,6 +2178,10 @@ func _enter_mine_visuals() -> void:
 	# biome flip that re-pools the board (the M demo key path), mirroring _ready /
 	# _on_town_changed.
 	board.clear_rubble_on_stone = game.is_in_mine()
+	# BUG C1 — the dev-key mine entry is a playable-board transition too, so follow the gate (the
+	# real entry path routes through _on_town_changed, which sets it; this keeps the keyboard
+	# fallback honest so the mine board it just built is actually chainable).
+	board.set_active(_board_should_be_active())
 	# M4d: low, slow whoosh on the biome flip INTO the mine (keyboard M path). Keep
 	# the tracker in sync so _on_town_changed doesn't re-whoosh on its next refresh.
 	if _audio != null and game.is_in_mine() and not _last_in_mine:

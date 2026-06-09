@@ -1347,6 +1347,13 @@ func _consume_fertilizer() -> void:
 ## Only the bonus coins, bond decay, and quest reroll have real port primitives — those are
 ## ported faithfully; the rest are documented seams for a later milestone.
 func close_season() -> Dictionary:
+	# BUG I1 — IDEMPOTENT guard. close_season is reachable from BOTH run-end exit paths (the CTA's
+	# return_to_town and a scrim/ESC dismiss that completes the return in _on_harvest_closed), and a
+	# stray double-call must never double-grant. With no active run there is nothing to close: return
+	# a zero result WITHOUT touching coins/bonds/quests/run fields. This makes "grant +25 exactly once
+	# per run end" hold no matter the dismiss ordering.
+	if not farm_run_active:
+		return {"coins_granted": 0, "season_ended": ""}
 	var season_ended: String = current_season_name()
 	coins += Constants.SEASON_END_BONUS_COINS  # PORT: React SEASON_END_BONUS_COINS (src/state.ts).
 	_decay_npc_bonds()

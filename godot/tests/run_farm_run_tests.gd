@@ -159,7 +159,11 @@ func _test_close_season() -> void:
 	# An NPC left at the Warm default (5.0, not > 5) is NOT decayed.
 	_check(is_equal_approx(g.npc_bond("mira"), 5.0), "close_season leaves a 5.0 bond untouched")
 	# Floor at 5.0: a bond of 5.05 (just above Warm) must decay to exactly 5.0, NOT 4.95.
+	# close_season is now IDEMPOTENT (BUG I1) — it only does its work when a run is active — so a
+	# run must be live for the decay to run (mirrors the real invocation: a run ends, then closes).
 	var g2 := GameState.new()
+	g2.coins = 50
+	_check(bool(g2.start_farm_run([], false).get("ok", false)), "(setup) g2 started a run")
 	g2.gain_bond("wren", 0.05)   # 5.0 → 5.05
 	_check(abs(g2.npc_bond("wren") - 5.05) < 0.0001, "(setup) wren bond set to 5.05")
 	g2.close_season()
