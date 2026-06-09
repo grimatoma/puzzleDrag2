@@ -74,7 +74,7 @@ const relUrl = (fromDir, toPath) => path.relative(fromDir, toPath).split(path.se
 // relative asset paths the viewer needs. `outDir` is where data.json lands (paths are relative
 // to it). An asset is `generated` when its primary file exists; `pending` (placeholder) when the
 // id is declared but absent; `approved` only if the manifest row opts in (`approved: true`) —
-// approval isn't part of the manifest schema yet, so it's surfaced if present but never invented.
+// `approved` is an optional manifest field (see manifest-schema.md), surfaced if present, never invented.
 
 function statusFor(present, declaredApproved) {
   if (!present) return "pending";
