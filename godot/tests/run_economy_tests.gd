@@ -118,21 +118,27 @@ func _test_building_kinds() -> void:
 	_check(BC.building_tile(BC.BAKERY) == Constants.EMPTY, "bakery has no tile (EMPTY)")
 	_check(BC.building_resource(BC.BAKERY) == "bread", "bakery resource is bread")
 
-	# available_at_tier now iterates ALL_BUILD_IDS, so the Bakery is offered. M3f
-	# appended the Kitchen (refiner) after the Bakery; M3h appended the two rats-
-	# hazard buildings (Ratcatcher, Master Ratcatcher) after the Kitchen — seven total.
-	_check(BC.ALL_BUILD_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY, BC.KITCHEN,
+	# available_at_tier iterates ALL_BUILD_IDS. The original seven (spawners + refiners + rats hazard)
+	# lead the list in their stable order; T17/T21 APPENDED the ability-bearing landmarks after them.
+	# Assert the seven-id PREFIX is unchanged (so the original ordering contract still holds) rather
+	# than the exact full list (which now also carries the landmarks).
+	var first_seven: Array = BC.ALL_BUILD_IDS.slice(0, 7)
+	_check(first_seven == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN, BC.BAKERY, BC.KITCHEN,
 			BC.RATCATCHER, BC.MASTER_RATCATCHER],
-		"ALL_BUILD_IDS is the seven buildings in stable order")
+		"ALL_BUILD_IDS leads with the original seven buildings in stable order")
+	_check(BC.ALL_BUILD_IDS.has(BC.MILL) and BC.ALL_BUILD_IDS.has(BC.OBSERVATORY),
+		"ALL_BUILD_IDS also carries the T17/T21 ability landmarks")
 	_check(BC.SPAWNER_IDS == [BC.LUMBER_CAMP, BC.COOP, BC.GARDEN],
 		"SPAWNER_IDS stays the three spawners only")
-	# At Village (tier 3) the Kitchen (Town-tier) is NOT yet offered, so the Bakery
-	# is the fourth — the count here is unchanged by M3f (Kitchen needs tier 4).
+	# At Village (tier 3) the Kitchen (Town-tier) is NOT yet offered, but the three spawners + Bakery
+	# ARE — plus the Hamlet/Village landmarks. Assert membership + the no-Kitchen gate, not a count.
 	var at3: Array = BC.available_at_tier(3)
 	_check(at3.has(BC.BAKERY), "available_at_tier(3) includes the Bakery")
-	_check(at3.size() == 4, "all four pre-Kitchen buildings available at Village (tier 3)")
+	_check(at3.has(BC.LUMBER_CAMP) and at3.has(BC.COOP) and at3.has(BC.GARDEN),
+		"available_at_tier(3) includes all three spawners")
 	_check(not BC.available_at_tier(2).has(BC.BAKERY), "Bakery NOT offered at Hamlet (tier 2)")
 	_check(not at3.has(BC.KITCHEN), "Kitchen NOT offered at Village — it's a Town-tier building")
+	_check(not at3.has(BC.OBSERVATORY), "Observatory (City-tier) NOT offered at Village")
 
 	# Bakery is gated at Village: it can't be built at Hamlet even if affordable.
 	var g := GameState.new()

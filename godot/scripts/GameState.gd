@@ -683,6 +683,114 @@ static func _default_workers() -> Dictionary:
 		out[id] = 0
 	return out
 
+# ── Unified ability channels (T17/T21 — AbilityAggregate) ──────────────────────
+## Cached aggregated ability channels. The GDScript analogue of React's
+## computeAggregatedAbilities (src/features/workers/aggregate.ts): folds every BUILT building's
+## abilities (weight 1) and every ACTIVE+DISCOVERED tile's PASSIVE/on_board_fill abilities
+## (weight 1) into the unified channel object (AbilityAggregate.empty_channels()). NULL until
+## first read; invalidated (set to {}) on any source change — build / demolish / hire / fire /
+## set_active_tile — and lazily recomputed by compute_ability_channels().
+##
+## WORKERS ARE NOT FED HERE (deliberate, to avoid DOUBLE-COUNTING): the two worker ability kinds
+## (threshold_reduce_category, recipe_input_reduce) are already wired through the dedicated
+## worker_threshold_reduction → credit_chain and worker_recipe_input_reduction → craft paths.
+## Feeding workers into this aggregate AND reading threshold_reduce / recipe_input_reduce from it
+## at those sites would apply the worker reduction twice. Workers carry no OTHER channel today
+## (WorkerConfig), so excluding them costs nothing — the unified aggregate covers buildings + tiles
+## for every channel, and the additive credit_chain/craft sites layer worker + aggregate together.
+## hire/fire still invalidate the cache (harmless + future-proof if a worker gains a non-overlapping
+## ability that SHOULD aggregate).
+##
+## NO-OP DEFAULT: a fresh game has no ability buildings built and default-active tiles whose passive
+## abilities are empty, so this returns AbilityAggregate.empty_channels() — every channel zero/empty,
+## leaving every wired economy site byte-identical. TRANSIENT cache: never persisted.
+var _ability_channels_cache: Variant = null
+
+## Drop the cached channels so the next compute_ability_channels() rebuilds. Called from every
+## source-mutating path (build / demolish / hire / fire / set_active_tile).
+func _invalidate_ability_channels() -> void:
+	_ability_channels_cache = null
+
+## The aggregated ability channels for the CURRENT sources (built buildings + active discovered
+## tiles), cached until a source changes. Mirrors computeAggregatedAbilities
+## (src/features/workers/aggregate.ts): build the source list, fold via AbilityAggregate. Every
+## consumer (credit_chain, close_season, craft, the cap / turn-budget / hazard sites) reads the
+## channel it needs off the returned Dictionary.
+func compute_ability_channels() -> Dictionary:
+	if _ability_channels_cache != null:
+		return _ability_channels_cache
+	var sources: Array = []
+	# Buildings: every BUILT building with abilities, weight 1 (builtBuildingSources, aggregate.ts:90).
+	for id in buildings:
+		var bab: Array = BuildingConfig.abilities(id)
+		if bab.is_empty():
+			continue
+		sources.append({"kind": "building", "source_id": id, "abilities": bab, "weight": 1.0})
+	# Active+discovered tiles: PASSIVE / on_board_fill abilities only (discoveredTileSources,
+	# aggregate.ts:115-132). Chain-time tile abilities (free_moves / coin) are read per-chain off the
+	# chained tile (accrue_chain_abilities / chain_coin_bonus) — feeding them here would DOUBLE-COUNT.
+	for src in _active_tile_ability_sources():
+		sources.append(src)
+	# species_by_category context for threshold_reduce_category expansion: every category → the tiles
+	# in it with their produced resource as base_resource (the React speciesByCategory analogue).
+	var ctx: Dictionary = {"species_by_category": _species_by_category()}
+	_ability_channels_cache = AbilityAggregate.aggregate_abilities(sources, ctx)
+	return _ability_channels_cache
+
+## Source descriptors for every tile variant that is currently ACTIVE in its category AND
+## discovered, restricted to PASSIVE / on_board_fill abilities (the tile aggregator triggers).
+## Mirrors discoveredTileSources (src/features/workers/aggregate.ts:115-132). weight 1 per tile.
+func _active_tile_ability_sources() -> Array:
+	_ensure_tile_collection()
+	var out: Array = []
+	for cat in tile_active_by_category.keys():
+		var tile_id: String = String(tile_active_by_category.get(cat, ""))
+		if tile_id == "":
+			continue
+		if not bool(tile_discovered.get(tile_id, false)):
+			continue
+		var all_ab: Array = TileVariantConfig.abilities_of(tile_id)
+		if all_ab.is_empty():
+			continue
+		var passive: Array = []
+		for inst in all_ab:
+			var aid: String = String((inst as Dictionary).get("id", ""))
+			if aid == "":
+				continue
+			var inst_trigger: String = String((inst as Dictionary).get("trigger", ""))
+			if AbilityConfig.is_tile_aggregator_trigger(aid, inst_trigger):
+				passive.append(inst)
+		if passive.is_empty():
+			continue
+		out.append({"kind": "tile", "source_id": tile_id, "abilities": passive, "weight": 1.0})
+	return out
+
+## category -> Array[{ "base_resource": String }] for threshold_reduce_category expansion. The
+## GDScript analogue of TILE_TYPES_BY_CATEGORY (src/features/tileCollection/data.ts) reduced to the
+## one field the aggregator needs: each tile's produced resource keyed under its category. Built from
+## Constants.category_of + Constants.produced_resource over every catalog Tile (deduped per resource
+## so a category contributes each producible resource once).
+func _species_by_category() -> Dictionary:
+	var out: Dictionary = {}
+	for tile in Constants.PRODUCES.keys():
+		var cat: String = Constants.category_of(int(tile))
+		if cat == "":
+			continue
+		var res: String = Constants.produced_resource(int(tile))
+		if res == "":
+			continue
+		if not out.has(cat):
+			out[cat] = []
+		# De-dup by base_resource within the category.
+		var seen: bool = false
+		for sp in out[cat]:
+			if String((sp as Dictionary).get("base_resource", "")) == res:
+				seen = true
+				break
+		if not seen:
+			out[cat].append({"base_resource": res})
+	return out
+
 ## Hired count of worker `id` (0 when none hired / unknown id).
 func worker_count(id: String) -> int:
 	return int(workers.get(id, 0))
@@ -734,6 +842,10 @@ func hire_worker(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	workers[id] = worker_count(id) + 1
+	# T17/T21: invalidate the unified-ability cache (harmless today — workers are excluded from
+	# the aggregate to avoid double-counting their threshold/recipe channels — but keeps the cache
+	# correct if a worker ever gains a non-overlapping aggregator ability).
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id, "count": worker_count(id), "cost": cost}
 
 ## Fire one worker of `id`: decrement the count by 1 (floored at 0). NO refund —
@@ -746,6 +858,8 @@ func fire_worker(id: String) -> Dictionary:
 	if worker_count(id) <= 0:
 		return {"ok": false, "reason": "none"}
 	workers[id] = worker_count(id) - 1
+	# T17/T21: invalidate the unified-ability cache (see hire_worker note).
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id, "count": worker_count(id)}
 
 ## Total threshold reduction applied to a chain of `tile_type`: the SUM over every
@@ -797,7 +911,14 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# units. The floor only ever applies to a REAL (positive) threshold — the
 	# NO_THRESHOLD sentinel branch below (threshold <= 0, hazards) is untouched.
 	if threshold > 0:
-		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type))
+		# T17/T21 (ADDITIVE): the unified aggregate's threshold_reduce channel (BUILDINGS + TILES —
+		# e.g. Observatory threshold_reduce_category gem -1, keyed by produced resource) stacks ON TOP
+		# of the worker reduction. It is keyed by RESOURCE (the React effectiveThresholds key), so look
+		# it up by this chain's produced `resource`. EMPTY for a fresh game → 0 → eff_threshold
+		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
+		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
+		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
+		threshold = maxi(WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -806,17 +927,32 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	else:
 		# Defensive: a non-positive threshold never yields units; progress carries.
 		progress[resource] = new_progress
-	if units > 0:
-		# Enforce the settlement storage cap: a resource can never exceed the
-		# current tier's per-resource cap (Camp 200 … City 600).
-		var capped: int = mini(int(inventory.get(resource, 0)) + units, settlement.cap())
+	# T17/T21 (ADDITIVE): bonus_yield channel — extra copies of the produced resource when a chain
+	# producing it is collected (React GameScene bonusYields[res.key], src/GameScene.ts:1777-1788).
+	# React keys bonus_yield by the chained TILE key (tile_tree_oak, …), so look it up by this tile's
+	# string key. EMPTY for a fresh game → 0 extra. The bonus is added alongside the threshold units
+	# and clamped together to the settlement cap (matching React's wouldGain = gained + bonus, capped).
+	var bonus_units: int = int(round(float(compute_ability_channels()["bonus_yield"].get(Constants.string_key(tile_type), 0.0))))
+	var total_units: int = units + bonus_units
+	if total_units > 0:
+		# Enforce the EFFECTIVE storage cap: tier cap + the Granary's inventory_cap_bonus
+		# (effective_cap == settlement.cap() for a fresh game). A resource can never exceed it.
+		var capped: int = mini(int(inventory.get(resource, 0)) + total_units, effective_cap())
 		inventory[resource] = capped
 	# Coins simplified for M2 — the React per-tile `value` economy is deferred to
 	# M3. Each resolved chain earns at least 1 coin, scaling with chain length.
 	# T5: PLUS the chained variant's coin abilities (coin_bonus_flat / coin_bonus_per_tile),
 	# matching the React coin-hook bonus (src/state.ts:393-398: coinHookBonus added to the
 	# base chain coins). chain_coin_bonus is 0 for a tile with no coin ability.
-	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len)
+	# chain_coin_bonus is the chained TILE's own coin abilities (the per-chain tile path, T5).
+	# T17/T21 (ADDITIVE): PLUS the aggregate's coin_bonus channels from BUILDINGS (coinHookBonus =
+	# coinBonusFlat + coinBonusPerTile * chain, src/state.ts:393-398). Buildings feed every ability
+	# regardless of trigger (only TILES are trigger-filtered into the aggregate), so building coin
+	# abilities surface here; the chained tile's coin abilities are NOT in this aggregate (they're the
+	# per-chain path), so there is NO double-count. Both are 0 for a fresh game → byte-identical.
+	var agg_ch: Dictionary = compute_ability_channels()
+	var agg_coin_bonus: int = int(agg_ch["coin_bonus_flat"]) + int(agg_ch["coin_bonus_per_tile"]) * chain_len
+	var coins_gain: int = maxi(1, chain_len / 2) + chain_coin_bonus(tile_type, chain_len) + agg_coin_bonus
 	coins += coins_gain
 	turn += 1
 	# ── T3 + T5: Tile Collection chain folding (ADDITIVE, after the economy is credited) ──
@@ -831,6 +967,18 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	# CHAIN from the chained variant's abilities, exactly like the React reducer reads
 	# TILE_TYPES_MAP[key].effects at the CHAIN_COLLECTED site (src/state.ts:208-216).
 	accrue_chain_abilities(tile_type, chain_len)
+	# T17/T21: BUILDING free_moves channel (on_chain_collect — a building granting N free moves per
+	# chain). The chained TILE's free_moves are the per-chain path above (accrue_chain_abilities); the
+	# building free_moves come from the unified aggregate (buildings feed every ability, tiles only
+	# their passive ones — so the chained tile is NOT in this aggregate's free_moves → no double-count).
+	# 0 for a fresh game (no free_moves building). free_moves_if_chain (also a building channel) grants
+	# 1 extra when chain_len >= min_chain.
+	var agg_fm: Dictionary = compute_ability_channels()
+	if int(agg_fm["free_moves"]) > 0:
+		tile_free_moves += int(agg_fm["free_moves"])
+	var fmic: Dictionary = agg_fm["free_moves_if_chain"]
+	if not fmic.is_empty() and chain_len >= int(fmic.get("min_chain", 0)):
+		tile_free_moves += int(fmic.get("count", 1))
 	# ── M10 achievements (ADDITIVE, after the economy is fully credited) ─────────
 	# Every resolved chain is one chain (bump by 1). The produced resource feeds the
 	# distinct counter (only first sighting counts; "" for a hazard tile is ignored by
@@ -859,6 +1007,7 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	return {
 		"resource": resource,
 		"units": units,
+		"bonus_units": bonus_units,   # T17/T21 bonus_yield extra copies (0 without a yield building)
 		"coins_gain": coins_gain,
 		"length": chain_len,
 		"tile_type": tile_type,
@@ -867,6 +1016,14 @@ func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 ## Collected whole-unit count of a resource (0 when never collected).
 func qty(resource: String) -> int:
 	return int(inventory.get(resource, 0))
+
+## The EFFECTIVE per-resource inventory cap: the settlement tier cap PLUS the unified aggregate's
+## inventory_cap_bonus channel (the Granary's +300). Mirrors React currentCap (src/utils.ts:166-173):
+## base cap + inventoryCapBonus when the channel is positive. inventory_cap_bonus is 0 for a fresh
+## game (no Granary), so this == settlement.cap() and every cap-clamped write is byte-identical.
+## Every resource-STORE site (credit_chain / craft / buy) clamps to this rather than the raw tier cap.
+func effective_cap() -> int:
+	return settlement.cap() + int(compute_ability_channels()["inventory_cap_bonus"])
 
 # ── Tile Collection: active variants + discovery + abilities ────────────────────────
 ## The GDScript analogue of the React `tileCollection` reducer actions (SET_ACTIVE_TILE /
@@ -925,6 +1082,9 @@ func set_active_tile(cat: String, tile_id: String) -> bool:
 	if not bool(tile_discovered.get(tile_id, false)):
 		return false                                    # undiscovered
 	tile_active_by_category[cat] = tile_id
+	# T17/T21: the active variant for a category changed — its passive abilities may differ, so
+	# drop the unified-ability cache (a tile's passive/on_board_fill abilities feed the aggregate).
+	_invalidate_ability_channels()
 	return true
 
 ## BUY_TILE (src/state.ts:1396-1413). If `tile_id` is a `buy`-method variant, not already
@@ -1219,6 +1379,9 @@ func build(id: String) -> Dictionary:
 		else:
 			inventory[k] = remaining
 	buildings.append(id)
+	# T17/T21: a built building changes the unified ability sources — drop the cache so the
+	# next compute_ability_channels rebuilds with this building's abilities folded in.
+	_invalidate_ability_channels()
 	# T3: building-method tile discovery (ADDITIVE, after the build is committed). Mirrors the
 	# React BUILD reducer's discoverTileTypesFromBuilding fold (src/state.ts:859-873): owning
 	# the building discovers its `building`-method variants (e.g. the Kitchen → Broccoli).
@@ -1241,6 +1404,8 @@ func demolish(id: String) -> Dictionary:
 	if not has_building(id):
 		return {"ok": false, "reason": "not_built"}
 	buildings.erase(id)
+	# T17/T21: removing a building changes the ability sources — drop the cache.
+	_invalidate_ability_channels()
 	return {"ok": true, "id": id}
 
 # ── Refining (recipe crafting at refiner buildings) ───────────────────────────
@@ -1266,8 +1431,15 @@ func can_craft(recipe_id: String) -> bool:
 ## At 0 matching workers the reduction is 0, so this returns the base inputs verbatim.
 func _effective_recipe_inputs(recipe_id: String) -> Dictionary:
 	var inputs: Dictionary = RecipeConfig.recipe_inputs(recipe_id)
+	# T17/T21: BUILDING recipe_input_reduce (the Mill on bread/flour) stacks ON TOP of the worker
+	# reduction (the Baker), both on the same React recipe_input_reduce channel (src/state.ts). The
+	# aggregate's contribution is keyed { recipe -> { input -> amount } }; EMPTY for a fresh game →
+	# only the worker reduction applies (and that's 0 too) → inputs byte-identical to the base recipe.
+	# Workers are NOT in this aggregate (dedicated path) so there is no double-count. Floored at 1.
+	var agg_recipe: Dictionary = compute_ability_channels()["recipe_input_reduce"].get(recipe_id, {})
 	for k in inputs.keys():
 		var reduction: int = worker_recipe_input_reduction(recipe_id, String(k))
+		reduction += int(floor(float(agg_recipe.get(String(k), 0.0))))
 		if reduction > 0:
 			inputs[k] = maxi(1, int(inputs[k]) - reduction)
 	return inputs
@@ -1300,7 +1472,7 @@ func craft(recipe_id: String) -> Dictionary:
 			inventory[k] = remaining
 	var output: String = RecipeConfig.recipe_output(recipe_id)
 	var qty_out: int = RecipeConfig.recipe_qty(recipe_id)
-	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, settlement.cap())
+	inventory[output] = mini(int(inventory.get(output, 0)) + qty_out, effective_cap())
 	# Quests (ADDITIVE): one craft ticks the CRAFT quest event, keyed by the recipe's
 	# OUTPUT key (matching React's craft tick on the crafted item), count = qty produced.
 	# No-op loop over [] with an empty quest board.
@@ -1349,9 +1521,9 @@ func buy(resource: String, qty: int) -> Dictionary:
 	# can't pay for what they asked for, the order is rejected outright.
 	if coins < price * qty:
 		return {"ok": false, "reason": "cant_afford"}
-	# Cap discipline: only buy (and only charge for) what actually fits in storage.
+	# Cap discipline: only buy (and only charge for) what actually fits in storage (effective cap).
 	var current: int = int(inventory.get(resource, 0))
-	var room: int = maxi(0, settlement.cap() - current)
+	var room: int = maxi(0, effective_cap() - current)
 	var actual: int = mini(qty, room)
 	if actual == 0:
 		return {"ok": false, "reason": "cap_full"}
@@ -1549,7 +1721,10 @@ func farm_turn_budget() -> int:
 ## is 10 (no fertilizer) or 20 (fertilizer ×2). PURE — does NOT mutate run state.
 func farm_run_turn_budget(use_fertilizer: bool) -> int:
 	var base: int = ZoneConfig.base_turns(ZoneConfig.HOME_ZONE)
-	var additive: int = 0   # SEAM: the port has no turnBudgetBonus/extraTurn channel yet.
+	# T17/T21: the unified aggregate's turn_budget_bonus channel (the Granary / Mining Camp +1).
+	# Mirrors React turnBudgetForZone's additive (src/features/zones/data.ts:174-175): base + bonus,
+	# then ×multiplier. 0 for a fresh game (no such building) → byte-identical to the old budget.
+	var additive: int = int(compute_ability_channels()["turn_budget_bonus"])
 	var mult: int = 2 if use_fertilizer else 1
 	return maxi(1, int(floor(float(base + additive) * float(mult))))
 
@@ -1724,7 +1899,32 @@ func close_season() -> Dictionary:
 	if not farm_run_active:
 		return {"coins_granted": 0, "season_ended": ""}
 	var season_ended: String = current_season_name()
-	coins += Constants.SEASON_END_BONUS_COINS  # PORT: React SEASON_END_BONUS_COINS (src/state.ts).
+	# T17/T21: the unified aggregate's SEASON-END channels (mirrors the React CLOSE_SEASON site,
+	# src/state.ts:916-971). All three default to empty for a fresh game (no such building), so the
+	# grant is byte-identical to the old "+25 only" close.
+	var agg: Dictionary = compute_ability_channels()
+	#   season_bonus coins (Chapel +50) — added ALONGSIDE the flat SEASON_END_BONUS_COINS (rounded,
+	#   matching React bonusCoins = round(seasonBonus.coins)).
+	var bonus_coins: int = int(round(float(agg["season_bonus"].get("coins", 0.0))))
+	coins += Constants.SEASON_END_BONUS_COINS + bonus_coins  # PORT: SEASON_END_BONUS_COINS (src/state.ts).
+	#   season_end_tools (grant_tool — Powder Store bomb ×2): grant each tool through the M8b
+	#   grant_tool path (every mapped tool id is a real ToolConfig member). 0 tools for a fresh game.
+	var tools_granted: Dictionary = {}
+	for tool_id in agg["season_end_tools"].keys():
+		var n: int = int(agg["season_end_tools"][tool_id])
+		if n > 0:
+			grant_tool(String(tool_id), n)
+			tools_granted[String(tool_id)] = n
+	#   season_end_pool_step (worker_pool_step — Housing Block): the port hires workers by TYPE up to a
+	#   per-type max_count (WorkerConfig), with NO growable townsfolk "hiring pool" to step (React grows
+	#   workers.poolSize). The channel is aggregated + reported below for the future Townsfolk hire pool
+	#   (T20), but there is no pool primitive to bump yet — a documented seam, NOT a fake.
+	var pool_step: int = int(agg["season_end_pool_step"])
+	#   board_preserve_biomes (Silo/Barn): the port has no per-biome saved-field snapshot primitive
+	#   yet (the React savedField restore is a board-slice concern), so the PRESERVED set is reported
+	#   in the result for the caller/board to honour; close_season itself does not snapshot the grid.
+	#   This is a documented seam, faithful to "the channel is wired" — the consumer (board) is later.
+	var preserved: Array = agg["board_preserve_biomes"].keys()
 	_decay_npc_bonds()
 	reroll_quests()
 	# Clear the run + reset the farm to a fresh Spring on the home board.
@@ -1735,7 +1935,15 @@ func close_season() -> Dictionary:
 	farm_run_selected = []
 	farm_turns_used = 0
 	active_biome = "farm"
-	return {"coins_granted": Constants.SEASON_END_BONUS_COINS, "season_ended": season_ended}
+	# Result reports the FULL coins granted (flat + season_bonus), the tools granted, and the
+	# preserved biomes — all empty/zero-bonus for a fresh game (coins_granted == SEASON_END_BONUS_COINS).
+	return {
+		"coins_granted": Constants.SEASON_END_BONUS_COINS + bonus_coins,
+		"season_ended": season_ended,
+		"tools_granted": tools_granted,
+		"preserved_biomes": preserved,
+		"pool_step": pool_step,   # T20 seam: reported, no hiring-pool primitive to apply it to yet
+	}
 
 ## Decay every NPC bond strictly above Warm (5.0) by 0.1, floored at 5.0
 ## (mirrors React decayBond: `Math.max(5, bond - 0.1)`). Bonds at or below 5.0
@@ -2042,7 +2250,20 @@ func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> 
 	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len)
 	if int(res.get("count", 0)) <= 0:
 		return res   # below threshold / GOLD sentinel / hazard — no tile to substitute
-	# Resolve the target category from the static result's tile, then swap in its active variant.
+	# T17/T21: chain_redirect_category channel (a worker ability — src/config/abilitiesAggregate.ts
+	# chain_redirect). A chain in the SOURCE tile's category, long enough to meet the redirect's
+	# effective threshold, spawns the upgrade from the TARGET category instead of the source's native
+	# upgrade. EMPTY for a fresh game (no chain_redirect source) → the native upgrade target is used.
+	var source_cat: String = Constants.category_of(source_tile)
+	var redirects: Dictionary = compute_ability_channels()["chain_redirect"]
+	var redirect: Dictionary = redirects.get(source_cat, {})
+	if not redirect.is_empty() and float(chain_len) >= float(redirect.get("threshold", INF)):
+		var to_cat: String = String(redirect.get("to_category", ""))
+		if to_cat != "" and FARM_CATEGORY_TO_TILE.has(to_cat):
+			res = res.duplicate()
+			res["tile"] = int(FARM_CATEGORY_TO_TILE[to_cat])
+	# Resolve the target category from the (possibly redirected) result tile, then swap in its
+	# active variant (default == base tile, so a fresh game is byte-identical).
 	var base_tile: int = int(res["tile"])
 	var target_cat: String = Constants.category_of(base_tile)
 	var active: int = active_tile_for_category(target_cat)
@@ -2125,6 +2346,27 @@ func active_tile_pool() -> Array:
 	# each turn (src/features/farm/rats.ts) — they are not a random pool draw. The legacy
 	# RAT_POOL_SLOTS seeding is removed here; rats_enabled() now only gates whether the positional
 	# spawn roll runs (see note_farm_turn / Main's fill-spawn wiring). The mine pool is untouched.
+	# T17/T21: effective_pool_weights channel (the React getActivePool weight bonus — pool_weight
+	# ability from a building/tile/worker). Each entry is { target -> int extra slots }; the target
+	# is a TILE string key (tile_tree_oak, …). Add that many slots of the resolved tile, but ONLY
+	# when the tile is ALREADY in the pool (eligible for the home zone) — exactly like the spawner
+	# boost and fill-bias, never smuggling an off-zone tile onto the board. EMPTY for a fresh game
+	# (no pool_weight source — tile pool_weight is inert in production per TileVariantConfig) → the
+	# pool is unchanged. Resolved via Constants string-key reverse lookup.
+	var pool_weights: Dictionary = compute_ability_channels()["effective_pool_weights"]
+	if not pool_weights.is_empty():
+		for target_key in pool_weights.keys():
+			var extra_slots: int = int(pool_weights[target_key])
+			if extra_slots <= 0:
+				continue
+			var pw_tile: int = Constants.tile_for_string_key(String(target_key))
+			if pw_tile == Constants.EMPTY:
+				continue
+			# Only boost a tile already present in the pool (eligible) — preserves zone restriction.
+			if not pool.has(pw_tile):
+				continue
+			for _i in extra_slots:
+				pool.append(pw_tile)
 	# Fill bias: while armed, DOUBLE the target tile's slots already in the pool so the next
 	# fills favour it (faithful to the web's pool-doubling). Only doubles a tile that is ALREADY
 	# eligible — never injects an off-zone tile (preserves zone restriction). Pure read; the
@@ -2315,7 +2557,10 @@ func tick_farm_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
 	# 3. Roll a NEW fire/wolf spawn (single-active capped, fire gated by fire_hazard_enabled()).
 	var eggs: int = qty("eggs")
 	var turkey: int = qty("turkey")   # no dedicated turkey resource in the port → 0; eggs drives it
-	var spawn: Dictionary = HazardLogic.roll_farm_hazard(work, hazards, fire_hazard_enabled(), eggs, turkey, rng)
+	# T17/T21: feed the unified hazard_spawn_reduce channel into the fire/wolf roll (replaces the
+	# old no-reduce call). EMPTY for a fresh game → no veto → byte-identical.
+	var farm_reduce: Dictionary = farm_hazard_spawn_reduce()
+	var spawn: Dictionary = HazardLogic.roll_farm_hazard(work, hazards, fire_hazard_enabled(), eggs, turkey, rng, farm_reduce)
 	if not spawn.is_empty():
 		if String(spawn.get("kind", "")) == "fire":
 			hazards["fire"] = {"cells": spawn.get("cells", [])}
@@ -2342,7 +2587,9 @@ func tick_farm_hazards(grid: Array, rng: RandomNumberGenerator) -> Dictionary:
 	# 5. Roll a NEW rat spawn (Town 2 done + inventory gate + cap + attracts_rats bump). Rats ARE
 	#    grid cells — mark the spawned cell as RAT so it renders + can be chained.
 	if rats_enabled():
-		var rat: Dictionary = HazardLogic.roll_rat_spawn(work, hazards, qty("hay_bundle"), qty("flour"), rng)
+		# T17/T21: feed the unified hazard_spawn_reduce channel into the rat-spawn roll (a "rats"
+		# entry can veto). EMPTY for a fresh game → no veto → byte-identical.
+		var rat: Dictionary = HazardLogic.roll_rat_spawn(work, hazards, qty("hay_bundle"), qty("flour"), rng, farm_hazard_spawn_reduce())
 		if not rat.is_empty():
 			var rrow: int = int(rat.get("row", 0))
 			var rcol: int = int(rat.get("col", 0))
@@ -2365,6 +2612,12 @@ func clear_rat_chain(chain: Array) -> Dictionary:
 		return {"ok": false, "coins_delta": 0, "cleared": 0}
 	hazards = res["hazards"]
 	var delta: int = int(res.get("coins_delta", 0))
+	# T17/T21: hazard_coin_multiplier channel for "rats" (the Ratcatcher worker / any future
+	# rats-coin-multiplier source, src/features/farm/rats.ts:141-146). multiplier is 1.0 for a
+	# fresh game (no such source) → delta unchanged → byte-identical. Floored to an int (coins are int).
+	var mult: float = float(compute_ability_channels()["hazard_coin_multiplier"].get("rats", 1.0))
+	if mult != 1.0:
+		delta = int(floor(float(delta) * mult))
 	coins += delta
 	return {"ok": true, "coins_delta": delta, "cleared": int(res.get("cleared", 0))}
 
@@ -2434,8 +2687,19 @@ func active_mole() -> Dictionary:
 ## (src/features/workers/aggregate.ts hazardSpawnReduce) is a LATER task, so no reduction is applied
 ## yet (a faithful default: with those workers unmodelled, the React reduce map is empty too). When
 ## the aggregator ships it overrides this to return e.g. { "gas_vent": 0.x, "cave_in": 0.y }.
+## The FARM-side hazard_spawn_reduce channel (the analogue of mine_hazard_spawn_reduce). Feeds the
+## fire / wolf / rats veto in HazardLogic.roll_farm_hazard / roll_rat_spawn. EMPTY for a fresh game
+## (no hazard_spawn_reduce building/worker) → no veto → the farm hazard rolls are byte-identical.
+func farm_hazard_spawn_reduce() -> Dictionary:
+	return compute_ability_channels()["hazard_spawn_reduce"].duplicate()
+
 func mine_hazard_spawn_reduce() -> Dictionary:
-	return {}
+	# T17/T21: the unified aggregate's hazard_spawn_reduce channel (hazard_id -> veto prob [0,1]).
+	# MineHazardLogic.roll_mine_hazard already consumes a `reduce` dict (Canary→gas_vent /
+	# Sapper→cave_in, src/features/mine/hazards.ts:143-148); this now feeds it the live channel
+	# instead of {}. EMPTY for a fresh game (no hazard_spawn_reduce building/worker) → no veto →
+	# the mine hazard roll is byte-identical. Returned as a plain {hazard:prob} Dictionary.
+	return compute_ability_channels()["hazard_spawn_reduce"].duplicate()
 
 ## Roll for a NEW mine hazard on a mine board fill (single-active capped, no boss). On a hit, write
 ## the descriptor into `mine_hazards` and return it (so the caller can stamp the board); {} on a

@@ -197,7 +197,10 @@ static func effective_rat_spawn_rate(base_rate: float, grid: Array) -> float:
 ##   - effective rate (base 10% + attracts_rats bump),
 ##   - then pick a random non-special, non-rat cell (up to 32 tries).
 ## `hay`/`flour` are the live inventory quantities (caller passes game.qty(...) so this stays pure).
-static func roll_rat_spawn(grid: Array, hazards: Dictionary, hay: int, flour: int, rng: RandomNumberGenerator) -> Dictionary:
+## `reduce` (T17/T21) maps a hazard id → veto probability [0,1] from the unified ability aggregator's
+## hazard_spawn_reduce channel; a "rats" entry runs a second roll that can VETO the spawn. Defaults to
+## {} (NO reduction) so a fresh game's rat-spawn roll is byte-identical to before the channel existed.
+static func roll_rat_spawn(grid: Array, hazards: Dictionary, hay: int, flour: int, rng: RandomNumberGenerator, reduce: Dictionary = {}) -> Dictionary:
 	if hay <= Constants.RAT_SPAWN_HAY_THRESHOLD:
 		return {}
 	if flour <= Constants.RAT_SPAWN_FLOUR_THRESHOLD:
@@ -207,6 +210,11 @@ static func roll_rat_spawn(grid: Array, hazards: Dictionary, hay: int, flour: in
 		return {}
 	var rate: float = effective_rat_spawn_rate(Constants.RAT_SPAWN_RATE, grid)
 	if rng.randf() >= rate:
+		return {}
+	# hazard_spawn_reduce veto (mirrors the mine Canary/Sapper second-roll, hazards.ts:143-148):
+	# a "rats" reduce entry can cancel the spawn. 0 / absent → never vetoes → byte-identical.
+	var rat_reduce: float = float(reduce.get("rats", 0.0))
+	if rat_reduce > 0.0 and rng.randf() < rat_reduce:
 		return {}
 	if grid.is_empty():
 		return {"row": 0, "col": 0, "age": 0}
@@ -351,13 +359,21 @@ static func try_deadly_pests_kill(hazards: Dictionary, chain: Array) -> Dictiona
 ## NO farm hazard (rats/fire/wolves) is currently active. Fire is gated by `fire_enabled` (the
 ## isFireHazardEnabled() analogue, default off). Wolves need birds-rich inventory (eggs > 30 OR
 ## turkey > 5) — passed in as `eggs`/`turkey` counts so this stays pure.
-static func roll_farm_hazard(grid: Array, hazards: Dictionary, fire_enabled: bool, eggs: int, turkey: int, rng: RandomNumberGenerator) -> Dictionary:
+## `reduce` (T17/T21) maps a hazard id → veto probability [0,1] from the unified ability aggregator's
+## hazard_spawn_reduce channel; a "fire" / "wolf" entry runs a second roll that can VETO that spawn
+## (the farm analogue of the mine Canary/Sapper veto). Defaults to {} (NO reduction) so a fresh game's
+## fire/wolf roll is byte-identical to before the channel existed.
+static func roll_farm_hazard(grid: Array, hazards: Dictionary, fire_enabled: bool, eggs: int, turkey: int, rng: RandomNumberGenerator, reduce: Dictionary = {}) -> Dictionary:
 	# Single-active cap (hazards.ts:87/103): any active hazard blocks a new spawn.
 	if any_hazard_active(hazards):
 		return {}
 	# Fire gate (hazards.ts:87-100) — only when enabled + under the cell cap.
 	if fire_enabled and fire_cells_of(hazards).size() < Constants.FIRE_MAX_CELLS:
 		if rng.randf() < Constants.FIRE_SPAWN_RATE:
+			# hazard_spawn_reduce veto for "fire" (0 / absent → never vetoes → byte-identical).
+			var fire_reduce: float = float(reduce.get("fire", 0.0))
+			if fire_reduce > 0.0 and rng.randf() < fire_reduce:
+				return {}
 			if grid.is_empty():
 				return {"kind": "fire", "cells": [{"row": 0, "col": 0}]}
 			var fr: int = int(floor(rng.randf() * float(Constants.ROWS)))
@@ -367,6 +383,10 @@ static func roll_farm_hazard(grid: Array, hazards: Dictionary, fire_enabled: boo
 	var bird_rich: bool = eggs > Constants.WOLF_SPAWN_EGGS_THRESHOLD or turkey > Constants.WOLF_SPAWN_TURKEY_THRESHOLD
 	if bird_rich and wolves_list_of(hazards).size() < Constants.WOLF_MAX_ACTIVE:
 		if rng.randf() < Constants.WOLF_SPAWN_RATE:
+			# hazard_spawn_reduce veto for "wolf" (0 / absent → never vetoes → byte-identical).
+			var wolf_reduce: float = float(reduce.get("wolf", 0.0))
+			if wolf_reduce > 0.0 and rng.randf() < wolf_reduce:
+				return {}
 			var wr: int = 0
 			var wc: int = 0
 			if not grid.is_empty():

@@ -915,6 +915,17 @@ static func chain_stage(chain_len: int, threshold: int) -> Dictionary:
 static func string_key(tile: int) -> String:
 	return STRING_KEYS.get(tile, "")
 
+## Reverse of string_key: the Tile enum whose canonical string key == `key` (EMPTY for unknown /
+## hazard-only keys). Linear scan over STRING_KEYS (small map). Used by the T17/T21 pool_weight
+## channel to resolve a target tile-key (tile_tree_oak, …) back to its Tile for pool-slot boosting.
+static func tile_for_string_key(key: String) -> int:
+	if key == "":
+		return EMPTY
+	for tile in STRING_KEYS.keys():
+		if String(STRING_KEYS[tile]) == key:
+			return int(tile)
+	return EMPTY
+
 ## Category id for a tile ("grass", "grain", "trees", …); "" for unknown tiles.
 static func category_of(tile: int) -> String:
 	return CATEGORY.get(tile, "")
