@@ -36,11 +36,7 @@ extends RefCounted
 ##   tool-reward tiers grant a REAL port tool — the Bomb — via the M8b grant_tool path.
 ##   Coin rewards are carried over verbatim.
 ##
-##   OMITTED (not yet ported — could be added now):
-##     - champion (defeat 4 bosses): historically omitted when the port had ONE boss. As of T24 the
-##       port has SIX seasonal bosses (re-challengeable per season), so bosses_defeated is no longer
-##       capped at 1 and a threshold-4 trophy IS now reachable. Left out of THIS task's scope (adding
-##       it would change the achievements suite); a future achievements pass can re-add it.
+##   OMITTED (genuinely unreachable in the port):
 ##     - supply_chain (convert 10 grain → supplies): there is no "supplies_converted"
 ##       event site — supplies are produced by the Kitchen RecipeConfig output, not a
 ##       distinct counter the port tracks → omitted.
@@ -53,6 +49,8 @@ extends RefCounted
 ##       master_angler grants magic_wand (a real ToolConfig member, summonable elsewhere).
 ##     - fowler (bird_chained): the port has a "birds" category (pheasant/turkey/…);
 ##       bird_chained bumps at credit_chain.
+##     - champion (defeat 4 bosses): the port ships 6 re-challengeable seasonal bosses (T24),
+##       so bosses_defeated is no longer capped at 1 → threshold-4 is reachable.
 
 # ── Reward tool used for the two ex-magic-wand/magic-seed tiers ────────────────
 ## The real port tool granted where React granted magic_wand / magic_seed (which
@@ -78,6 +76,9 @@ const ACHIEVEMENTS: Array = [
 
 	# ── bosses_defeated (a damage_boss that DEFEATS → +1) ──────────────────────
 	{"id": "first_blood",   "name": "First Blood",   "desc": "Defeat your first seasonal boss",      "counter": "bosses_defeated",            "threshold": 1,   "reward": {"coins": 200}},
+	# champion: reachable now that the port ships 6 re-challengeable seasonal bosses (T24).
+	# React grants magic_wand (a real ToolConfig member).
+	{"id": "champion",      "name": "Champion",      "desc": "Defeat 4 seasonal bosses",             "counter": "bosses_defeated",            "threshold": 4,   "reward": {"tools": {"magic_wand": 1}}},
 
 	# ── distinct_resources_chained (distinct produced resource → +1) ───────────
 	{"id": "naturalist",    "name": "Naturalist",    "desc": "Chain 8 different resource types",      "counter": "distinct_resources_chained", "threshold": 8,   "reward": {"coins": 75}},

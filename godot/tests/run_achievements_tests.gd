@@ -61,18 +61,18 @@ func _give_all(g: GameState, cost: Dictionary) -> void:
 
 func _test_config_loads() -> void:
 	var all := AC.all()
-	_check(all.size() == 23, "catalog has the 23 ported achievements (incl. fish + fowler)")
+	_check(all.size() == 24, "catalog has the 24 ported achievements (incl. fish + fowler + champion)")
 	# Spot-check expected ids are present.
 	for id in ["first_steps", "patient_hands", "tireless", "trusted_friend",
 			"village_voice", "first_blood", "naturalist", "polymath",
 			"town_planner", "first_strike", "deep_digger", "mine_master",
 			"forester", "veg_patron", "orchard_friend", "pollinator",
 			"herder", "dairyman", "stable_hand",
-			"first_catch", "tide_runner", "master_angler", "fowler"]:
+			"first_catch", "tide_runner", "master_angler", "fowler", "champion"]:
 		_check(AC.has_achievement(id), "catalog includes '%s'" % id)
-	# And that the still-UNREACHABLE React ids stay OMITTED (no fakes). first_catch/
-	# tide_runner/master_angler/fowler are now REACHABLE (working harbor + birds) → re-added.
-	for omitted in ["champion", "supply_chain", "powerful_keep", "ability_artisan"]:
+	# And that the still-UNREACHABLE React ids stay OMITTED (no fakes). first_catch/tide_runner/
+	# master_angler/fowler (harbor+birds) and champion (6 re-challengeable bosses, T24) are now reachable.
+	for omitted in ["supply_chain", "powerful_keep", "ability_artisan"]:
 		_check(not AC.has_achievement(omitted), "unreachable '%s' is OMITTED" % omitted)
 
 	# all() / get_achievement return defensive copies (mutating must not corrupt).
@@ -86,7 +86,7 @@ func _test_for_counter() -> void:
 	var orders := AC.for_counter("orders_fulfilled")
 	_check(orders.size() == 2, "for_counter(orders_fulfilled) → 2")
 	var bosses := AC.for_counter("bosses_defeated")
-	_check(bosses.size() == 1, "for_counter(bosses_defeated) → 1 (first_blood only; champion omitted)")
+	_check(bosses.size() == 2, "for_counter(bosses_defeated) → 2 (first_blood + champion)")
 	var mine := AC.for_counter("mine_chained")
 	_check(mine.size() == 3, "for_counter(mine_chained) → 3")
 	_check(AC.for_counter("fish_chained").size() == 3, "for_counter(fish_chained) → 3 (first_catch/tide_runner/master_angler)")
