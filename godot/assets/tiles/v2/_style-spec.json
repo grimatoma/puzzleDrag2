@@ -1,8 +1,8 @@
 {
   "canvas": {
-    "width": 90,
-    "height": 90,
-    "safeArea": 6,
+    "width": 32,
+    "height": 32,
+    "safeArea": 2,
     "background": "transparent"
   },
   "palette": {
