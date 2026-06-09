@@ -22,13 +22,10 @@ extends RefCounted
 ##          shuffle (day 7)  → ToolConfig.RAKE   ("rake")    — a real port board tool
 ##      Every tool id below is a real ToolConfig member, so GameState.grant_tool accepts it.
 ##
-##   2. DAY-30 unlockTile DROPPED. React day 30 also unlocks tile "tile_cattle_triceratops",
-##      which has NO port tile (the port's cattle category is `tile_cattle_cow` only — there
-##      is no triceratops tile in TileCollection / Constants). Granting a discovery for a
-##      non-existent tile would be a fake, so the unlockTile grant is DROPPED: day 30 grants
-##      just its 1000 coins + 3 runes. (React itself already gates the unlock behind
-##      `TILE_TYPES_MAP[reward.unlockTile]` existing, so dropping a missing tile is faithful
-##      to React's own guard — it would no-op there too.)
+##   2. DAY-30 unlockTile WIRED. React day 30 unlocks tile "tile_cattle_triceratops" — the port
+##      DOES carry this tile (TileVariantConfig + Constants.Tile.CATTLE_TRICERATOPS), so the
+##      reward includes `unlock_tile` and login_tick grants it via discover_tile(). This is the
+##      `daily` tile-discovery method (TileCollection surfaces "Day 30 reward" for it).
 ##
 ## REWARD LADDER (React day → port reward). Days 6 and any day past 30 fall through to
 ## the {coins:25} default (React leaves day 6 unlisted; the streak caps at 30).
@@ -68,7 +65,7 @@ const DAILY_REWARDS: Dictionary = {
 	27: {"coins": 300},
 	28: {"coins": 350},
 	29: {"coins": 400},
-	30: {"coins": 1000, "runes": 3},   # React unlockTile "tile_cattle_triceratops" DROPPED (no port tile)
+	30: {"coins": 1000, "runes": 3, "unlock_tile": "tile_cattle_triceratops"},   # React unlockTile — the port HAS this tile (TileVariantConfig), so the `daily` discovery method is reachable
 }
 
 ## The streak caps at this day — login_tick never advances currentDay past it. Mirrors

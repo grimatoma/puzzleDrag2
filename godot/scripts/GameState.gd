@@ -445,9 +445,9 @@ var daily_streak_day: int = 0         ## current streak day (0 = no streak yet, 
 ##   - nextDay: no prior claim (daily_last_claimed == "") → 1; exactly 1 calendar day
 ##     after the last claim → min(daily_streak_day + 1, MAX_DAY); any other gap → reset to 1.
 ##   - GRANT the day's reward (DailyRewardConfig.reward_for_day): coins + runes directly
-##     (both uncapped, like order rewards), and a `tool` grant of `amount` (default 1)
-##     charges through the M8b grant_tool path (every mapped tool id is a real ToolConfig
-##     member). The React `unlockTile` grant is DROPPED (no port tile — see DailyRewardConfig).
+##     (both uncapped, like order rewards), a `tool` grant of `amount` (default 1) through the
+##     M8b grant_tool path, and an `unlock_tile` grant (the React `unlockTile` / `daily`
+##     discovery method — day 30 discovers Triceratops, a real TileVariantConfig variant).
 ##   - Then set daily_last_claimed = today, daily_streak_day = nextDay.
 ## Returns { claimed:bool, day:int, reward:Dictionary }. On the idempotent no-op,
 ## `day` reports the unchanged current streak day and `reward` is {} (nothing granted).
@@ -485,6 +485,11 @@ func login_tick(today: String) -> Dictionary:
 	var tool_id: String = String(reward.get("tool", ""))
 	if tool_id != "":
 		grant_tool(tool_id, int(reward.get("amount", 1)))
+	# Grant the `unlock_tile` reward (the React `unlockTile` path, src/state.ts daily) — this is
+	# the `daily` tile-discovery method (day 30 → Triceratops, a real TileVariantConfig variant).
+	var unlock_tile: String = String(reward.get("unlock_tile", ""))
+	if unlock_tile != "":
+		discover_tile(unlock_tile)
 	# Commit the new streak state.
 	daily_last_claimed = today
 	daily_streak_day = next_day
@@ -3547,7 +3552,16 @@ func pending_boss_id() -> String:
 	# Capstone reachability: if Town 2 isn't done and we're in the capstone's season, offer it.
 	if not town2_complete and BossConfig.boss_season(BossConfig.CAPSTONE) == season:
 		return BossConfig.CAPSTONE
-	return BossConfig.boss_for_season(season)
+	# A season can hold TWO bosses (spring quagmire/mossback; summer ember_drake/storm). ROTATE
+	# through the season's roster by how many bosses you've already defeated so BOTH become
+	# reachable across successive challenges — without this, boss_for_season's first-in-order pick
+	# meant mossback (and post-capstone ember_drake) could never spawn. Mirrors React reaching
+	# every boss via YEAR_BOSS_ROTATION rather than a fixed season→boss map.
+	var roster: Array = BossConfig.season_roster(season)
+	if roster.is_empty():
+		return ""
+	var idx: int = int(achievement_counters.get("bosses_defeated", 0)) % roster.size()
+	return String(roster[idx])
 
 ## True when a boss CAN be challenged right now: no challenge is already in progress, the
 ## settlement has reached City (the boss is the City-tier gate), you've "mastered the mine" — at

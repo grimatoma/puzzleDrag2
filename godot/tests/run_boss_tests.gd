@@ -346,11 +346,17 @@ func _test_all_bosses_reachable() -> void:
 	# is the next spring offering. We assert the roster covers BOTH spring bosses.
 	_check(BOSS.season_roster("spring") == ["quagmire", "mossback"], "spring roster = [quagmire, mossback]")
 	_check(BOSS.season_roster("summer") == ["ember_drake", "storm"], "summer roster = [ember_drake, storm]")
-	# Spring + town2-done → quagmire (capstone is summer, so spring just offers its first boss).
+	# Spring + town2-done → quagmire on a fresh roster (0 bosses defeated → roster[0]).
 	var gs := _ready_state()
 	gs.town2_complete = true
 	_force_season(gs, "spring")
-	_check(gs.pending_boss_id() == "quagmire", "spring offers quagmire")
+	_check(gs.pending_boss_id() == "quagmire", "spring offers quagmire (0 defeated → roster[0])")
+	# ROTATION: after a spring boss is defeated, the season's OTHER boss (mossback) becomes the
+	# offering — so mossback is genuinely reachable via pending_boss_id, not just by force-spawn.
+	gs.bump_counter("bosses_defeated")   # 1 defeated → roster[1]
+	_check(gs.pending_boss_id() == "mossback", "after a defeat, spring offers mossback (roster rotation)")
+	gs.bump_counter("bosses_defeated")   # 2 → roster[0] again (cycles)
+	_check(gs.pending_boss_id() == "quagmire", "rotation cycles back to quagmire")
 	# mossback (hide_resources) IS startable directly via its catalog (reachability of the modifier).
 	var gm := _ready_state()
 	gm.start_boss(_rng())   # whatever season; just assert mossback's modifier applies when spawned

@@ -87,9 +87,10 @@ const SAPLING: String = "sapling"
 # five golden/philosophers tools reuse transform_tiles (from_category → to_key); magic_wand
 # uses the NEW tap_clear_type power; magic_seed the NEW restore_turns state power;
 # magic_fertilizer the already-wired fill_bias power. Targets/categories use REAL Godot
-# tile/category names, never invented ones. DEFERRED (NOT here): hourglass (undo_move — needs
-# a board/inventory snapshot) and miners_hat (reveal_tiles — needs a hidden-tile layer); they
-# stay summonable in PortalConfig but have no effect until those milestones land.
+# tile/category names, never invented ones. miners_hat (reveal_tiles) is now WIRED — the boss
+# hide_resources modifier added the hidden-tile layer it reveals (T24). DEFERRED (NOT here):
+# only hourglass (undo_move — needs a board/inventory snapshot); it stays summonable in
+# PortalConfig but has no effect until that primitive lands.
 const GOLDEN_APPLE: String = "golden_apple"
 const GOLDEN_CARROT: String = "golden_carrot"
 const GOLDEN_IDOL: String = "golden_idol"
