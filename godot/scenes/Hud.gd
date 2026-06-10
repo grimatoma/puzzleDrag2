@@ -1092,9 +1092,11 @@ func _refresh_tools() -> void:
 				owned.append({"id": id, "charges": charges})
 
 	# An inspected tool that is no longer owned (last charge spent) falls back to idle —
-	# unless it is somehow still armed (defensive; the armed view must stay reachable).
+	# unless it is somehow still armed (defensive; the armed view must stay reachable). A
+	# fill_bias tool spends its charge AT arm-time, so an armed fertilizer always reads 0
+	# charges — keep its inspect alive while the bias is live (React keeps the armed panel).
 	if _inspected_tool != "" and game != null and game.tool_count(_inspected_tool) <= 0 \
-			and game.pending_tool != _inspected_tool:
+			and game.pending_tool != _inspected_tool and not _is_armed_fill_bias(_inspected_tool):
 		_inspected_tool = ""
 
 	if owned.is_empty():
@@ -1124,7 +1126,10 @@ func _refresh_tools() -> void:
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
 		var desc: String = String(cfg.get("desc", ""))
-		var is_armed: bool = (id == armed_id and armed_id != "")
+		# Armed = the pending tap-tool OR the tool that armed a live fill_bias (fertilizer &c).
+		# The fill_bias slot stays highlighted regardless of what's inspected — React's
+		# `def.key === "fertilizer" && isFillBiasArmed(state)` lights the tile the same way.
+		var is_armed: bool = (id == armed_id and armed_id != "") or _is_armed_fill_bias(id)
 		var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
 
 		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
@@ -1181,26 +1186,38 @@ func _refresh_tools() -> void:
 	# (counts change with every use; the armed highlight follows game.pending_tool).
 	_update_action_state()
 
+## True when `id` is the tool that armed the live fill_bias — so its hotbar slot + the action
+## panel render ARMED. The port's analogue of React's `def.key === "fertilizer" &&
+## isFillBiasArmed(state)`, generalised to whichever fill_bias tool the player actually used.
+func _is_armed_fill_bias(id: String) -> bool:
+	return game != null and id != "" and game.armed_fill_bias_tool() == id
+
 ## A hotbar slot was tapped. First tap INSPECTS the tool (the action panel flips to its
 ## detail); a second tap on the already-inspected slot ACTIVATES it — arming a tap-target
-## tool, firing an instant one, or TOGGLING OFF an armed one (React dispatchUseTool's
-## isPending → CANCEL_TOOL). Tapping a different slot while another tool is armed
-## TRANSFERS the arming (React maybeTransferArming): the player already committed to
-## using a tool, so the new tap switches tools rather than dropping to nothing.
+## tool, firing an instant one, arming a fill_bias bias, or TOGGLING OFF an armed one (React
+## dispatchUseTool's isPending → CANCEL_TOOL, plus the fill_bias disarm+refund). Tapping a
+## different slot while ANOTHER tool is armed — a pending tap-tool OR a live fill_bias —
+## TRANSFERS the arming (React maybeTransferArming): the player already committed to using a
+## tool, so the new tap switches tools rather than dropping to nothing.
 func _on_tool_slot_tapped(id: String) -> void:
 	var armed_id: String = game.pending_tool if game != null else ""
-	if armed_id != "" and armed_id != id:
-		# Transfer: disarm the old tool, then activate the new one immediately.
+	var fb_id: String = game.armed_fill_bias_tool() if game != null else ""
+	# Some OTHER tool is already armed (pending tap-tool or a fill_bias bias) and we tapped a
+	# different slot → transfer (covers tap→tap, tap→fill_bias, fill_bias→tap, fill_bias→fill_bias).
+	var has_other_armed: bool = (armed_id != "" and armed_id != id) or (fb_id != "" and fb_id != id)
+	if has_other_armed:
+		# Disarm the old (tap clear OR fill_bias refund — Main._disarm_tool handles both), then
+		# activate the new one immediately. Re-set _inspected_tool AFTER the disarm, which clears it.
 		disarm_requested.emit()
 		_inspected_tool = id
 		tool_use_requested.emit(id)
 		_refresh_tools()
 		return
 	if _inspected_tool == id:
-		if armed_id == id:
-			disarm_requested.emit()        # tap-to-cancel an armed tool
+		if armed_id == id or fb_id == id:
+			disarm_requested.emit()        # tap-to-cancel an armed tap-tool / fill_bias
 		else:
-			tool_use_requested.emit(id)    # arm a tap tool / fire an instant one
+			tool_use_requested.emit(id)    # arm a tap tool / fire an instant one / arm fill_bias
 		_refresh_tools()
 		return
 	_inspected_tool = id
@@ -1212,7 +1229,9 @@ func _on_tool_action_pressed() -> void:
 	var id := _inspected_tool
 	if id == "":
 		return
-	if game != null and game.pending_tool == id:
+	# DISARM when this tool is armed — either the pending tap-tool or the live fill_bias bias
+	# (the latter refunds the charge via Main._disarm_tool). Otherwise the button ARMS / USES it.
+	if (game != null and game.pending_tool == id) or _is_armed_fill_bias(id):
 		disarm_requested.emit()
 	else:
 		tool_use_requested.emit(id)
@@ -1223,6 +1242,10 @@ func _on_tool_action_pressed() -> void:
 ## auto-inspect re-shows an armed tool immediately, so closing it is equally moot).
 func _on_tool_view_closed() -> void:
 	if game != null and game.pending_tool == _inspected_tool and _inspected_tool != "":
+		return
+	# An armed fill_bias keeps the panel too (DISARM is its way out) — closing it is a no-op,
+	# just like an armed tap-tool above.
+	if _is_armed_fill_bias(_inspected_tool):
 		return
 	_inspected_tool = ""
 	_update_action_state()
@@ -1582,9 +1605,11 @@ func _make_chip_box() -> StyleBoxFlat:
 
 # ── Tool-armed mode show/hide (called by Main's tool dispatch; KEPT names) ─────
 
-## A tap-target tool was just armed: auto-inspect it so the action panel flips to the
-## ARMED tool view (React useAutoInspectArmed). N in the header counts the remaining
-## charges, the one being armed included — the charge isn't spent until the tap.
+## A tap-target tool OR a fill_bias tool (fertilizer &c) was just armed: auto-inspect it so
+## the action panel flips to the ARMED tool view (React useAutoInspectArmed). N in the header
+## counts the remaining charges (for a tap-tool the one being armed is included — its charge
+## isn't spent until the tap; a fill_bias tool already spent its charge at arm-time, so it
+## reads its post-arm count).
 func show_tool_armed_banner(id: String) -> void:
 	if _action_tool == null:
 		return
@@ -1614,8 +1639,10 @@ func set_live_chain(length: int, tile: int) -> void:
 	_live_chain_tile = tile
 	# React: when a chain drag ends and no tool is ARMED, drop the inspect so the panel
 	# returns to the stockpile rather than a stale tool detail (prototype.tsx's
-	# "chainInfo goes null and no toolPending → setInspectedTool(null)").
-	if ended and _inspected_tool != "" and (game == null or game.pending_tool != _inspected_tool):
+	# "chainInfo goes null and no toolPending → setInspectedTool(null)"). An armed fill_bias
+	# (fertilizer &c) counts as armed too — its inspect survives a chain ending.
+	if ended and _inspected_tool != "" and (game == null or game.pending_tool != _inspected_tool) \
+			and not _is_armed_fill_bias(_inspected_tool):
 		_inspected_tool = ""
 	_update_action_state()
 
@@ -1643,7 +1670,10 @@ func _refresh_action_tool() -> void:
 		return
 	var id := _inspected_tool
 	var charges: int = game.tool_count(id) if game != null else 0
-	var armed: bool = game != null and game.pending_tool == id
+	# A fill_bias tool (fertilizer &c) is "armed" via the transient bias, never pending_tool —
+	# fold it into `armed` so the header/dot/icon-card read ARMED the same as a tap-tool.
+	var fb_armed: bool = _is_armed_fill_bias(id)
+	var armed: bool = (game != null and game.pending_tool == id) or fb_armed
 	var is_tap: bool = ToolConfig.is_tap_target(id)
 
 	var mode: String = "TOOL ARMED" if armed else ("TOOL READY" if is_tap else "TOOL INSPECT")
@@ -1670,6 +1700,17 @@ func _refresh_action_tool() -> void:
 			_tool_action_btn.text = "◎ ARM"
 			_style_cta(_tool_action_btn, Color("#eb9440"), Color("#7a3c12"), Color("#2c1408"))
 		_tool_action_btn.disabled = charges <= 0 and not armed
+	elif fb_armed:
+		# Armed fill_bias (fertilizer/bird_feed/sapling): a transient spawn bias is live, biasing
+		# the NEXT field toward its target tile. Mirror the tap-tool ARMED footer — hot-red wash +
+		# a DISARM button that refunds the spent charge (React's disarmFillBias).
+		_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("armed"))
+		var target_name: String = UiKit.pretty_name(Constants.string_key(game.fill_bias_target))
+		_tool_view_prompt.text = "Next field favours %s" % target_name
+		_tool_view_prompt.add_theme_color_override("font_color", Color("#9a1a1a"))
+		_tool_action_btn.text = "✕ DISARM"
+		_style_cta(_tool_action_btn, Color("#d05030"), Color("#5a1a08"), Color("#fff8e7"))
+		_tool_action_btn.disabled = false
 	else:
 		_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("instant"))
 		_tool_view_prompt.text = "Affects the whole board"

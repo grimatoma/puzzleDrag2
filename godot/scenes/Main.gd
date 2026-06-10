@@ -2911,6 +2911,19 @@ func use_tool(id: String) -> bool:
 				_audio.play("pop")
 			_after_tool_used()
 		return bool(rm.get("ok", false))
+	# fill_bias tools (fertilizer/bird_feed/sapling/magic_fertilizer) ARM a transient spawn
+	# bias — they never touch the grid (use_tool_on_grid returns it unchanged). Treat the
+	# armed bias like an armed tap-tool: auto-inspect it in the action panel + highlight its
+	# hotbar slot, with the panel's DISARM button as the refund affordance (React treats an
+	# armed fertilizer like an armed tool). Skip apply_external_grid — re-rolling an unchanged
+	# board would needlessly reshuffle it.
+	if pwr == "fill_bias":
+		var rfb: Dictionary = game.use_tool_on_grid(id, board.grid)
+		if bool(rfb.get("ok", false)):
+			_status_label.text = "Armed %s" % ToolConfig.tool_label(id)
+			_hud.show_tool_armed_banner(id)
+			_after_tool_used()
+		return bool(rfb.get("ok", false))
 	# Instant tool — fire immediately over the whole board.
 	var r: Dictionary = game.use_tool_on_grid(id, board.grid)
 	if bool(r.get("ok", false)):
@@ -2943,6 +2956,18 @@ func _on_tool_target(cell: Vector2i) -> void:
 ## the pending tool, hide the banner, and clear the status hint so the board returns to plain
 ## chaining. The banner widget lives on the HUD now, so hide it via _hud.hide_tool_armed_banner.
 func _disarm_tool() -> void:
+	# An armed fill_bias (fertilizer/bird_feed/sapling) has no board targeting to leave — it's a
+	# transient spawn bias. Disarming it REFUNDS the charge the arming spent (game.disarm_fill_bias,
+	# the React disarmFillBias path), then drops the panel inspect + re-shows the refunded slot.
+	if game != null and game.is_fill_bias_armed():
+		game.disarm_fill_bias()
+		if _hud != null:
+			_hud.hide_tool_armed_banner()
+			_hud._refresh_tools()   # the refund restored a charge → re-show the slot
+		if _status_label != null:
+			_status_label.text = ""
+		SaveManager.save(game)   # the refunded charge lives in the persisted tools dict
+		return
 	if board != null:
 		board.set_targeting(false)
 	if game != null:
