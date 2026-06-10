@@ -70,7 +70,7 @@ hand. Animation fields are seeded from the **animation exemplar (#3)**.
 
 | Field | Meaning | Derived from |
 |-------|---------|--------------|
-| `canvas.width` / `canvas.height` | Output tile dimensions in px (default **90×90** for this Godot tile game) | #1 via `analyze_reference` |
+| `canvas.width` / `canvas.height` | The references' native dimensions in px (**90×90** = the game's source art). **Note:** the pipeline's actual output size is `pipeline.json` `settings.canvas` (32px tile), which **supersedes** this field — this records the reference resolution, not the build target. | #1 via `analyze_reference` |
 | `canvas.safeArea` | Px inset kept clear of the edge so nothing important is clipped when composited on the board | #4 |
 | `canvas.background` | Always `"transparent"` — tiles composite over the board | #4 |
 | `palette.source` | Path to the palette file the ramps were taken from (provenance) | #2 |
@@ -86,8 +86,8 @@ hand. Animation fields are seeded from the **animation exemplar (#3)**.
 | `shadow.color` / `shadow.offset` / `shadow.blur` | Shadow tint (with alpha), pixel offset, and blur radius | #4 |
 | `perspective` | Camera framing: `"flat"`, `"three-quarter-topdown"` (default for this board), or `"side"` | #4 |
 | `dither.policy` | `"minimal"` (default), `"none"`, or `"selective"` — how much dithering is allowed for gradients/texture | #1, #4 |
-| `animation.fps` | **Project-wide** playback rate — one constant for the whole set so motion feels uniform. Default **10** | #3 |
-| `animation.framesDefault` | Default frame count for an idle when a manifest item doesn't override it. Default **8** | #3 |
+| `animation.fps` | Reference/default playback rate. **Superseded by `pipeline.json` `settings.fps`** (and any per-item `fps` override), which is the actual playback rate the build uses. Default **10** | #3 |
+| `animation.framesDefault` | Default frame count for an idle when an `animations[]` entry omits `frames`. Default **8** | #3 |
 | `animation.cadence` | Motion pacing, typically `"on-twos"` (hold each drawn frame two display frames) | #3 |
 | `animation.loop` | Whether idles loop seamlessly. Default `true` | #3 |
 | `animation.idleAnimationName` | The animation/tag name used for the looping idle (default `"idle"`); also the SpriteFrames default tag | #4 |
@@ -103,6 +103,12 @@ hand. Animation fields are seeded from the **animation exemplar (#3)**.
 - **Animation** — `animation.fps`, `cadence`, and `loop` set the Aseprite tag/timing defaults so
   every idle in the project plays at the same rate and loops cleanly.
 
-The style spec is **per-project and stored alongside the assets** (referenced from each set's
-`manifest.json` via its `styleSpec` field — see `manifest-schema.md`). Edit it in source; it is
-the single contract both generation and review agree on.
+The style spec is **per-project and stored alongside the assets** (referenced from the single
+`pipeline.json` via `settings.styleSpec` — see `manifest-schema.md`). Edit it in source; it is the
+single contract both generation and review agree on.
+
+> **`pipeline.json` settings supersede the style spec for `canvas` + `fps`.** `settings.canvas`
+> (the 32px tile size) and `settings.fps` in `pipeline.json` — plus any per-item `canvas`/`fps`
+> override — are the pipeline defaults and **win** over the style spec's `canvas` / `animation.fps`.
+> The style spec records the *reference* resolution and palette/light/outline contract; the build
+> size and playback rate come from `pipeline.json`.
