@@ -88,8 +88,8 @@ export function loadMerged(pipelinePath) {
 
 // ── atomic writers ───────────────────────────────────────────────────────────────────────────
 // Serialize, write to a temp file in the SAME directory, then rename over the target. Rename within a
-// dir is atomic on every OS we run on, so a reader never sees a half-written file. (Mirrors
-// serve_viewer.mjs's writePipelineAtomic idiom.)
+// dir is atomic on every OS we run on, so a reader never sees a half-written file. (This temp-file +
+// rename idiom is the canonical write path; serve_viewer/build_viewer call writePipeline/writeHistory.)
 function writeAtomic(targetPath, obj) {
   const text = JSON.stringify(obj, null, 2) + "\n";
   const dir = path.dirname(targetPath);
