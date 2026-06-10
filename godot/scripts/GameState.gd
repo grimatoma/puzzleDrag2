@@ -3380,9 +3380,17 @@ static func _build_farm_category_tiles(cats: Array) -> Dictionary:
 ## (herd→PIG, cattle→COW, mount→HORSE) map to real tiles even though they never base-spawn.
 ## ONLY meaningful for the FARM (home zone) — the mine/harbor have no zone upgradeMap, so callers
 ## apply this on the farm biome only (mine/harbor pass through unchanged).
-static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
+##
+## `threshold_override`: when >= 0, the per-chain threshold to divide by INSTEAD of the RAW
+## Constants.threshold_for(source_tile). The instance path (upgrade_spawn_active) passes the
+## EFFECTIVE (worker/ability-reduced) threshold so the spawned upgrade count matches what
+## credit_chain banks and the HUD's "+N" badge shows (React computes the same count from its
+## effectiveThresholds registry — src/GameScene.ts upgradeCountForChain). The static default
+## (-1) keeps the RAW threshold, so pure/headless callers and a fresh game (no workers/abilities →
+## effective == raw) stay byte-identical — the determinism contract holds.
+static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int, threshold_override: int = -1) -> Dictionary:
 	var none := {"count": 0, "tile": Constants.EMPTY}
-	var threshold: int = Constants.threshold_for(source_tile)
+	var threshold: int = threshold_override if threshold_override >= 0 else Constants.threshold_for(source_tile)
 	var count: int = BoardLogic.upgrade_count(chain_len, threshold)
 	if count <= 0:
 		return none   # below threshold, or a hazard tile (NO_THRESHOLD)
@@ -3402,7 +3410,12 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 ## this returns the SAME tile as the static helper. Use this from the live board (Main.gd)
 ## so an upgrade chain spawns the player's chosen variant of the target category.
 func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
-	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len)
+	# Spawn count uses the EFFECTIVE (worker/ability-reduced) threshold — the SAME value
+	# credit_chain banks units with and the HUD's "+N" badge reads (effective_threshold). A
+	# threshold-reduction worker therefore spawns as many upgrade tiles as it credits units,
+	# matching React (upgradeCountForChain over effectiveThresholds). Fresh game (no reductions)
+	# → effective == raw → byte-identical to the static helper.
+	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len, effective_threshold(source_tile))
 	if int(res.get("count", 0)) <= 0:
 		return res   # below threshold / GOLD sentinel / hazard — no tile to substitute
 	# T17/T21: chain_redirect_category channel (a worker ability — src/config/abilitiesAggregate.ts

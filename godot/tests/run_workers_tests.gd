@@ -28,6 +28,7 @@ func _initialize() -> void:
 	_test_hire_cost_ramp()
 	_test_threshold_reduction()
 	_test_credit_chain_baseline_vs_reduced()
+	_test_upgrade_spawn_reduced_threshold()
 	_test_threshold_floor()
 	_test_hire_worker()
 	_test_hire_affordability_and_max()
@@ -181,6 +182,44 @@ func _test_credit_chain_baseline_vs_reduced() -> void:
 	var ro := other.credit_chain(T.WHEAT, 4)
 	_check(int(ro["units"]) == int(rb["units"]) and int(other.progress.get("flour", 0)) == 4,
 		"lumberjacks (wrong category) leave the wheat chain identical to baseline")
+
+# ── upgrade_spawn uses the SAME reduced threshold credit_chain banks with ──────
+# A threshold-reduction worker must spawn as many UPGRADE tiles as it credits UNITS:
+# both go through GameState.effective_threshold. Before the fix upgrade_spawn divided by
+# the RAW Constants threshold, so a hired farmer credited extra grain units but the board
+# spawned FEWER upgrade tiles than the units (and fewer than the HUD's "+N" badge showed).
+# React keeps these in lockstep by counting upgrades over its effectiveThresholds registry
+# (src/GameScene.ts upgradeCountForChain); this asserts the port now does the same.
+func _test_upgrade_spawn_reduced_threshold() -> void:
+	var H := ZoneConfig.HOME_ZONE
+	# WHEAT (grain) raw threshold 5, upgrade target veg → CARROT. A 4-chain is below the raw
+	# threshold, so the baseline (0 farmers) credits 0 units AND spawns 0 upgrade tiles.
+	_check(int(GameState.new().credit_chain(T.WHEAT, 4)["units"]) == 0,
+		"0 farmers: 4-wheat → 0 units (raw thr 5)")
+	_check(int(GameState.new().upgrade_spawn_active(H, T.WHEAT, 4)["count"]) == 0,
+		"0 farmers: 4-wheat → 0 upgrade tiles (effective == raw)")
+
+	# 3 farmers → grain eff_threshold 5-3 = 2. The SAME 4-wheat chain credits 4/2 = 2 units AND
+	# spawns 2 CARROT upgrade tiles — the spawn count tracks the units (the parity the fix
+	# guarantees, and what the HUD's "+N" badge already reads off effective_threshold). A fresh
+	# instance for each call so credit_chain's mutations can't perturb the spawn computation.
+	var spawner := GameState.new()
+	spawner.workers[WC.FARMER] = 3
+	_check(spawner.effective_threshold(T.WHEAT) == 2, "3 farmers → wheat eff_threshold 2")
+	var up := spawner.upgrade_spawn_active(H, T.WHEAT, 4)
+	_check(int(up["tile"]) == T.CARROT, "3 farmers: the wheat upgrade tile is CARROT (grain→veg)")
+
+	var crediter := GameState.new()
+	crediter.workers[WC.FARMER] = 3
+	var units := int(crediter.credit_chain(T.WHEAT, 4)["units"])
+	_check(units == 2, "3 farmers: 4-wheat → 2 units credited")
+	_check(int(up["count"]) == units,
+		"3 farmers: upgrade-tile count (%d) == units credited (%d) — spawn ↔ credit ↔ HUD parity" % [int(up["count"]), units])
+
+	# The static RAW helper still under-counts (0) for the same chain — proving the instance
+	# path's effective threshold is what closed the gap, not a test fluke.
+	_check(int(GameState.upgrade_spawn(H, T.WHEAT, 4)["count"]) == 0,
+		"static raw upgrade_spawn still spawns 0 for the same 4-wheat chain (the regression)")
 
 # ── threshold floor ────────────────────────────────────────────────────────────
 
