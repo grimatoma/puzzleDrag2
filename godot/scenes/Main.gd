@@ -1204,6 +1204,11 @@ func _on_tutorial_finished() -> void:
 func _maybe_show_daily() -> void:
 	if _pending_daily_claim.is_empty():
 		return
+	# review-5 — same continuous suppression as _drain_story_queue (the reward itself was
+	# already granted by login_tick; only the celebratory card is suppressed). Without this
+	# the card popped mid-session the moment a story modal closed during scripted QA.
+	if _dialogs_disabled():
+		return
 	# Don't fight the tutorial or a story beat — retry once they're dismissed.
 	if _tutorial_modal != null and _tutorial_modal.visible:
 		return
@@ -1539,6 +1544,13 @@ func _on_founder_closed() -> void:
 ## the player dismisses it to return — no conflict, no suppression needed.
 func _drain_story_queue() -> void:
 	if game == null:
+		return
+	# review-5 — QA/test flag parity with React: isDialogsDisabled() suppresses story beats
+	# CONTINUOUSLY (render-time), not just at boot. Without this, a beat triggered mid-run
+	# (e.g. the arrival beat on the first chain) still popped over scripted QA sessions.
+	# Beats stay queued exactly like React's render-null path; players are unaffected
+	# (_dialogs_disabled is web-only and false unless the page set the hook before boot).
+	if _dialogs_disabled():
 		return
 	if game.story.beat_queue.is_empty():
 		return
