@@ -15,6 +15,10 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	print("\n── Story engine tests ─────────────────────────────")
+	# The keeper-beat test (_test_gs_keeper_event_fires_beat) drives give_keeper_reward, which is gated
+	# by the keeper feature flag (shipped default OFF). Force it ON for this run so the wired keeper →
+	# beat path is exercised (mirrors the fire tests setting fire_hazard_force).
+	KeeperConfig.enabled = true
 	# StoryConfig (catalog)
 	_test_config_loads()
 	# StoryEngine.evaluate_condition

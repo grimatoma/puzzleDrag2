@@ -2463,6 +2463,12 @@ func settlement_completed(zone_id: String) -> bool:
 	# Keeper gate: the type's keeper must be resolved (React's per-zone keeperPath; the port keys
 	# by type — see keeper_resolved). Without this a built-up-but-unresolved settlement never
 	# completes, so its Hearth-Token isn't granted (matching React's keeper gate).
+	# FEATURE FLAG: when the keeper system is DISABLED there is no keeper to resolve, so completion
+	# falls back to the building threshold alone. Otherwise no settlement could ever complete —
+	# blocking Hearth-Tokens AND founding settlement #2+ (found_settlement's needs_prior gate), a
+	# progression soft-lock. With keepers off, building up the settlement is the whole requirement.
+	if not KeeperConfig.is_enabled():
+		return true
 	return keeper_resolved(type)
 
 ## The number of placed buildings at `zone_id`: the live `buildings` array when it's the active

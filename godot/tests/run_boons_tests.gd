@@ -58,6 +58,13 @@ func _game_with_buildings(n: int) -> GameState:
 func _initialize() -> void:
 	print("\n── Boons + Keeper tests ───────────────────────────")
 
+	# Keepers ship DISABLED (KeeperConfig.enabled default false). This suite exercises the keeper
+	# system's ENABLED behaviour, so assert the shipped default once here, then force it ON for the
+	# run (the same shape as the fire-hazard tests, which set fire_hazard_force to exercise the
+	# default-off fire feature). §3b below flips it OFF again to check the off-contract, then restores.
+	_check(not KeeperConfig.is_enabled(), "shipped default: keeper system DISABLED")
+	KeeperConfig.enabled = true
+
 	# ── 1. KeeperConfig data ───────────────────────────────────────────────────────
 	_check(KeeperConfig.KEEPER_TYPES.size() == 3, "KeeperConfig has 3 keeper types")
 	_check(KeeperConfig.has_keeper("farm") and KeeperConfig.has_keeper("mine") and KeeperConfig.has_keeper("harbor"),
@@ -212,10 +219,10 @@ func _initialize() -> void:
 	_check(bool(gd.story.flags.get("keeper_farm_driveout", false)), "keeper_farm_driveout flag set")
 
 	# ── 3b. Feature flag (KeeperConfig.enabled) — the whole encounter system off-switch ──────────────
-	# Flip the flag OFF at runtime and assert the full off-contract, then reset so the auto-trigger /
-	# deeplink sections below run with the default ON. (Shipped default is ON; this is the only block
-	# that exercises the OFF path.) DISABLED here means: never encounter-ready, the grant is refused,
-	# and no currency is ever produced — so the dependent Boons economy simply has no source.
+	# Flip the flag OFF and assert the full off-contract, then restore it to ON (this run force-enabled
+	# keepers at the top, since the shipped default is OFF) so the auto-trigger / deeplink sections
+	# below keep working. DISABLED means: never encounter-ready, the grant is refused, and no currency
+	# is ever produced — so the dependent Boons economy simply has no source.
 	KeeperConfig.enabled = false
 	var gff := _game_with_buildings(4)
 	_check(not gff.keeper_encounter_ready("farm"), "flag OFF: keeper_encounter_ready('farm') false even at 4 buildings")
@@ -223,6 +230,11 @@ func _initialize() -> void:
 	_check(not bool(rff.get("ok", true)) and String(rff.get("reason", "")) == "disabled",
 		"flag OFF: give_keeper_reward refused with reason 'disabled'")
 	_check(gff.embers == 0 and gff.core_ingots == 0, "flag OFF: no Embers/Core Ingots granted")
+	# No soft-lock: with keepers off a built-up settlement still COMPLETES on the building threshold
+	# alone, so Hearth-Tokens are earned and founding settlement #2 is not blocked (the
+	# found_settlement needs_prior gate reads completed_settlement_count()).
+	_check(gff.settlement_completed("home"), "flag OFF: built-up home completes on buildings alone (no keeper)")
+	_check(gff.completed_settlement_count() >= 1, "flag OFF: completed_settlement_count >= 1 → founding #2 unblocked")
 	KeeperConfig.enabled = true
 	_check(KeeperConfig.is_enabled(), "flag reset back ON for the remaining checks")
 
