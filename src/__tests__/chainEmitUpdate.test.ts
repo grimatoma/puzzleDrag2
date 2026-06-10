@@ -116,6 +116,28 @@ describe("buildChainUpdatePayload", () => {
     });
   });
 
+  it("exposes the effective min chain so the HUD can show 'N more'", () => {
+    const payload = buildChainUpdatePayload({
+      path: [{ res: { key: "tile_grass_grass", label: "Grass" } }],
+      nextUpgradeTile: () => null,
+      effectiveThresholds: undefined,
+      effectiveMinChain: 5,
+    });
+    expect(payload.minChain).toBe(5);
+    expect(payload.valid).toBe(false);
+  });
+
+  it("keeps minChain in the empty-path payload", () => {
+    const payload = buildChainUpdatePayload({
+      path: [],
+      nextUpgradeTile: () => null,
+      effectiveThresholds: undefined,
+      effectiveMinChain: 3,
+    });
+    expect(payload.minChain).toBe(3);
+    expect(payload.valid).toBe(true);
+  });
+
   describe("nextTileProgress & upgrades logic", () => {
     it("populates nextTileProgress correctly when threshold > 0", () => {
       const payload = buildChainUpdatePayload({
