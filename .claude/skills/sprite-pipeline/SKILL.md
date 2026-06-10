@@ -22,31 +22,69 @@ This is the **orchestrator**. The craft and motion knowledge live in sibling ski
 - **pixel-art-craft** — the still-image rubric (palette, hue-shifted ramps, light, anti-aliasing,
   outlines). Powers keyframe art and is the rubric for the **G1/G2** still critiques.
 - **pixel-art-animation** — motion craft (arcs, follow-through, staggered release, the physics of
-  falling/accumulation/settle). Owns the **motion brief / storyboard** and the **G3/G4** motion critiques.
-- **pixellab** — the async AI generator (job → poll → download) used at **Stage 2 AND Stage 4**:
-  review-pack stills, derived object **states** (children), and **v3 animation** (on-model idles +
-  keyframe-to-keyframe **interpolation** for transitions).
+  falling/accumulation/settle). Owns the **storyboard** and the **G3/G4** motion critiques.
+- **pixellab** — an **optional** async AI generator used only at **Stage 2** as **one keyframe source**:
+  master review-pack stills + derived object **states**. Swappable / omittable (see "Keyframe sources").
 
-## The consistency contract (why the object flow is not optional)
+> **The split (read this first).** **Keyframes are stills; animation is hand-built in Aseprite.**
+> Stage 2 produces keyframe stills from a source you choose — **hand-authored in Aseprite (the
+> home-grown default) and/or PixelLab**, competing in one critique pool. Stage 4 motion — every idle
+> and every transition — is then authored frame-by-frame in Aseprite
+> (`references/aseprite-execution.md`). The pipeline does **not** use PixelLab's `animate`/v3 for
+> shipped motion, and it can run **entirely without PixelLab**.
 
-A family only reads as one family if every member is **derived from the same anchor image**, not
-re-rolled from text. The pipeline therefore runs on PixelLab's **object** workflow end-to-end:
+## The consistency contract (consistent keyframes → a hand-built tween can be cohesive)
 
-1. **Master** → `create-object` review pack (many seeds, one call). The approved pick is a
-   **persistent PixelLab object**; its id is recorded as the keyframe's `objectId`.
-2. **Child keyframe** (season/damage/growth variant) → `state` on the master's `objectId` — an
-   **image-conditioned edit** that keeps the master's size, position, silhouette, and identity and
-   changes only what the edit text names. Never a fresh text generation.
-3. **Idle** → `animate` (v3 text mode) on that keyframe's `objectId` — frame 0 **is** the keyframe,
-   so the loop is on-model by construction.
-4. **Transition** → `animate` with `--end <child keyframe png>` (v3 interpolation) — real AI
-   inbetweens whose first and last frames are **pixel-identical** to the two keyframes, so
-   idle → transition → idle chains seamlessly.
+Two requirements, where the first is what makes the second *possible*:
 
-The pre-object pipeline (text-only `create` per child + hand-built Aseprite tween between
-unrelated endpoints) produced the canonical failure: a winter pumpkin smaller than its autumn
-master with the stem flipped to the other side, and a birch "transition" that was a top-down
-reveal wipe of a structurally different tree. **Do not regress to text-only child generation.**
+1. **Keyframes of a family must be a real family — each variant DERIVED from the same anchor image,
+   not re-rolled from scratch.** A child (season/damage/growth variant) must keep the master's size,
+   position, silhouette, and identity, changing only what the variant names. There are **two ways to
+   get a derived child** (the pipeline is agnostic — see "Keyframe sources" below):
+   - **Hand (home-grown, default):** in Aseprite, `import_image` the approved **master PNG** and edit
+     it into the variant (recolor, add frost/snow, wither, damage). The master pixels are literally
+     the starting point, so size/silhouette/anchor are preserved by construction.
+   - **PixelLab (optional accelerator):** `state` on the master's `objectId` — an image-conditioned
+     AI edit. Same guarantee, AI-driven.
+   Either way: **never a fresh from-scratch generation of the child** (that's the size-jump/stem-flip
+   defect).
+2. **Aseprite animates between those consistent keyframes, by hand.** Because the `from` and `to`
+   keyframes share a size/silhouette/anchor, a hand-built tween has matching endpoints to work
+   between — so it can be a *real* staggered, arced motion instead of a fade.
+
+This is *why the earlier failures happened, and why they're now fixable ourselves*:
+
+- The winter pumpkin was a smaller body with the stem flipped — a **keyframe** defect (the child was
+  generated from scratch, not derived). Fixed by deriving the winter keyframe FROM the autumn master
+  (by hand in Aseprite, or via PixelLab `state`). ✔
+- The birch autumn→winter "just went top-down, not cohesive" — an **animation** defect. The original
+  Aseprite tween was incoherent **because its endpoints were two structurally different trees**, so
+  the only safe motion was a uniform top-down fade. Once the winter keyframe is derived from the
+  autumn master (shared trunk + canopy envelope), Aseprite stages a genuine leaf-clump-by-clump fall
+  that reveals the matching branch skeleton underneath. ✔
+
+So: **derive keyframes from a shared anchor (any source), then animate by hand in Aseprite.** Do not
+generate a child from scratch (breaks half 1); do not outsource the motion to PixelLab v3 (half 2 is
+hand-built Aseprite).
+
+## Keyframe sources — PixelLab is optional; hand-authored is the home-grown default
+
+Stage 2 is **source-pluggable**, and it's the one place the pipeline touches PixelLab — so it's the
+swap point. A keyframe accumulates a **single candidate pool**, and each candidate is tagged
+`source: hand | pixellab`:
+
+- **`hand` (home-grown):** authored/edited in Aseprite — a master drawn from scratch (or traced from
+  a sibling), a child edited from the approved master PNG. No AI, no credits. **The pipeline runs
+  fully without PixelLab on hand candidates alone.**
+- **`pixellab` (optional):** the `create-object` review pack (masters) / `state` (children) flow.
+  An accelerator for getting on-style seeds fast; never required.
+
+**Both sources compete in the same pool at the G2 gate** — montage them together and pick the best
+regardless of origin (e.g. author 2 hand candidates, generate 2 PixelLab candidates, choose the
+strongest of the four). The only PixelLab-specific bookkeeping is `objectId`/`reviewObjectId` on a
+`pixellab` candidate (the handle a PixelLab `state` child derives from); a `hand` keyframe has no
+`objectId` and derives its children by hand. Record a candidate's origin with
+`pipeline-patch.mjs record-candidate … --source hand|pixellab`.
 
 ## The two inputs
 
@@ -89,13 +127,13 @@ Godot project is a **separate, on-demand step that is not part of the pipeline**
 ```
                  G1                       G2          G3                       G4
  references → 0 ──┐         ┌─ 2 ─────────┐   3 ──────┐         ┌─ 4 ──────────┐
- manifest   → 1 ─ critique  │ GENERATE    │ critique  │ critique│ ANIMATE      │ critique → frames + GIF
-                  prompt    │ master pack │  still    │ motion  │ PixelLab v3  │ montage    (pipeline ends)
-                            │ + child     │           │ brief   │ (idle: text; │
-                            │ STATES      │           │         │ transition:  │
-                            │ (PixelLab   │           │         │ interpolate; │
-                            │  objects)   │           │         │ Aseprite =   │
-                            └─────────────┘           └─────────┘ polish/fallbk┘
+ manifest   → 1 ─ critique  │ KEYFRAMES   │ critique  │ critique│ ANIMATE      │ critique → frames + GIF
+                  prompt    │ hand (Asep) │  still    │ storybd │ (Aseprite,   │ montage    (pipeline ends)
+                            │  and/or     │ (compare  │         │  hand-built, │
+                            │ PixelLab    │  sources, │         │  per-frame;  │
+                            │ → 1 pool,   │  pick 1)  │         │  endpoints = │
+                            │ pick best   │           │         │  keyframes)  │
+                            └─────────────┘           └─────────┘──────────────┘
                                                                        ┊ separate, on-demand step ┊
                                                                        └→ node tools/update-godot-tiles.mjs
                                                                           → v2 .tres + in-engine verify
@@ -105,9 +143,9 @@ Godot project is a **separate, on-demand step that is not part of the pipeline**
 |---|-------|--------------|------|
 | **0** | Extract style spec | Read references; pull canvas + palette ramps + hue-shift; transcribe light/outline/perspective/fps. | Aseprite `analyze_reference` / `get_palette` / `analyze_palette_harmonies` |
 | **1** | Plan the set | Diff `pipeline.json`'s items (master/children/animations) by **shape** against themselves + files on disk; **only the gaps proceed**. Gather sibling priors. (`build_viewer.mjs --plan` prints the action list.) | — (read `pipeline.json`) |
-| **2** | Generate keyframes | **Master:** `create-object` review pack (one call → many seeds; `--style` = prior PNGs for real image conditioning) → G2 audits the pack montage → `select-frames` promotes the pick(s) → approve one, record its `objectId`. **Child:** `state` on the approved master's `objectId` (image-conditioned; identity/size/silhouette preserved) → G2 → approve, record `objectId`. **Expensive.** | **PixelLab object flow** (`scripts/pixellab.mjs create-object` / `select-frames` / `state`) or hand |
-| **3** | Motion brief | For each idle/transition, write the **motion brief** (the `animation_description` + frame count + expected phases) against the approved stills; full per-frame storyboard (`assets/storyboard.template.md`) only when Aseprite will execute. | pixel-art-animation skill |
-| **4** | Animate | **Idle:** `animate` v3 text mode on the keyframe's `objectId` (frame 0 == keyframe). **Transition:** `animate` v3 interpolation `--end <to-keyframe png>` (endpoints pixel-identical to both keyframes). Aseprite only for polish passes or motions v3 can't express. **The pipeline ends at frames + preview GIF. Expensive.** | **PixelLab v3** (`scripts/pixellab.mjs animate` / `fetch-anim`); Aseprite fallback (`references/aseprite-execution.md`) |
+| **2** | Generate keyframes (**source-pluggable**) | Build a candidate **pool** per keyframe from either/both sources, then G2 picks the best. **Hand (home-grown):** author a master in Aseprite (draw, or trace a sibling); derive a child by `import_image`-ing the approved master PNG and editing it. **PixelLab (optional):** `create-object` review pack → `select-frames`; child via `state` on the master's `objectId`. Record each with `pipeline-patch.mjs record-candidate … --source hand\|pixellab`. **Runs without PixelLab.** | **Aseprite** (hand) and/or **PixelLab** (`scripts/pixellab.mjs`) |
+| **3** | Storyboard | For each idle/transition, fill `assets/storyboard.template.md` **against the approved keyframe(s)**, citing real pixel coords: frame count, fps, per-frame force + easing + the concrete pixel-level change. For a transition, f0 = the `from` keyframe and fN = the `to` keyframe exactly. | pixel-art-animation skill |
+| **4** | Animate (**Aseprite, by hand**) | Author every frame in Aseprite per the storyboard — additive-overlay / flexing-base recipe, the two real keyframes locked as the transition endpoints. **No PixelLab v3.** Export `frames/<id>/NN.png` + `previews/<id>.gif`. **The pipeline ends here. Labor-intensive.** | **Aseprite** (`references/aseprite-execution.md`) |
 
 ### Updating Godot is a separate step (not a pipeline stage)
 
@@ -191,22 +229,23 @@ the approval signal) **and** its `objectId` is recorded (that's what `state` der
 reads candidate counts from the merged history view and enforces this structurally. See
 `references/manifest-schema.md` §"Gap-fill is structural".
 
-**`objectId` is the derivation handle.** Approving a candidate records its PixelLab object id onto
-the keyframe (`pipeline-patch.mjs approve` denormalizes it from the candidate, exactly like
-`selectedPath`). Child `state` calls and all `animate` calls take that id. PixelLab objects persist
-(unlike 8-hour map objects), so an approved family can keep deriving new members **months later**
-without regenerating the master — protect the ids; losing one means re-promoting a master.
+**`objectId` is the keyframe-derivation handle.** Approving a candidate records its PixelLab object
+id onto the keyframe (`pipeline-patch.mjs approve` denormalizes it from the candidate, exactly like
+`selectedPath`). Child `state` calls take that id (it's how a winter variant is derived from the
+autumn master). PixelLab objects persist (unlike 8-hour map objects), so an approved family can keep
+deriving new keyframes **months later** without regenerating the master — protect the ids; losing
+one means re-promoting a master. (Animation does **not** use `objectId` — Aseprite animates from the
+approved keyframe **PNGs**, not the PixelLab object.)
 
-### Motion brief comes *after* the still
+### Storyboard comes *after* the still
 
-Write the motion brief (Stage 3) **against the approved stills**, not before them. For a PixelLab
-animation the brief is the `animation_description` (+ frame count + the expected phases G4 will
-check); name the **forces and the order things change** ("tendrils wither first, frost creeps
-top-down, snow settles last") — interpolation follows the description's staging. For an
-Aseprite-executed animation, fill the full per-frame storyboard (`assets/storyboard.template.md`):
-`get_pixels` the real keyframe and **cite real coordinates** (citing a coordinate that turns out
-transparent bit us once on a winter-glint pixel). This is why Stage 3 sits *after* Stage 2 in the
-flow, even though both bracket the same generate→animate boundary.
+Write the storyboard (Stage 3) **against the approved keyframe(s)**, not before them — fill
+`assets/storyboard.template.md`: `get_pixels` (or Read) the real keyframe and **cite real
+coordinates** in the per-frame plan (citing a coordinate that turns out transparent bit us once on a
+winter-glint pixel). Name the **forces and the order things change** ("leaf clumps detach edge-first,
+flutter down on arcs; branches reveal; snow accumulates last"). For a **transition**, the storyboard
+locks **f0 = the `from` keyframe and the final frame = the `to` keyframe** (both imported as real
+cels), and plans only the inbetweens. This is why Stage 3 sits *after* Stage 2 in the flow.
 
 ## Tool routing (what executes what)
 
@@ -218,25 +257,31 @@ flow, even though both bracket the same generate→animate boundary.
 > `InputValidationError`. A param cheat-sheet for the common Aseprite tools is in
 > `references/aseprite-execution.md`.
 
-- **Master stills** — `pixellab.mjs create-object` (review pack; `--style` = prior PNGs ≤256px for
-  image conditioning) → G2 → `select-frames` → approve + record `objectId`. Check credits first
-  (`pixellab.mjs balance`). Hand-drawn/edited stills remain valid (no `objectId` → that keyframe
-  can't derive states or host v3 animations; its children/animations fall back to Aseprite).
-- **Child stills** — `pixellab.mjs state --object <master objectId>` per candidate. **Never a fresh
-  text-only generation** — that's the size-jump/stem-flip regression.
-- **Idles** — `pixellab.mjs animate --object <keyframe objectId> --name idle` (v3 text mode).
-- **Transitions** — `pixellab.mjs animate --object <from objectId> --end <to png> --name
-  <from>__to__<to>` (v3 interpolation; start defaults to the object's own frame).
-- **Aseprite** — the **polish + fallback** layer, via `mcp__plugin_pixel-plugin_aseprite__*`
-  (`references/aseprite-execution.md`): palette snap (`quantize_palette`) when a v3 frame drifts
-  off-ramp, surgical per-frame fixes, overlay effects v3 can't stage, and full animation assembly
-  when there's no `objectId` (hand-authored keyframes) or a motion v3 can't express. No procedural
-  Pillow frame generation, ever.
-- **Pillow** — review glue + mechanical conformance **only**: `scripts/montage.py` (G2/G4 review
-  sheets), `scripts/gif.py` (preview-GIF assembly from downloaded frames), and
-  `scripts/underlay.py` (pin an approved keyframe's static row band under every frame — the fix
-  for v3 dropping small base elements like a grass tuft; it re-applies approved pixels, it never
-  draws new ones). Pillow never generates art or motion.
+**Keyframes (Stage 2) — pick a source per candidate; both feed one G2 pool:**
+- **Hand (home-grown, no PixelLab) — masters:** author in Aseprite — `create_canvas` and draw with
+  the primitives + conformance helpers (`quantize_palette` to the locked ramps, `apply_shading`,
+  `apply_outline`), or `import_image` a sibling tile and edit it. Export to the keyframe dir, then
+  `pipeline-patch.mjs record-candidate … --source hand`.
+- **Hand — children:** `import_image` the **approved master PNG** onto a layer and edit it into the
+  variant (recolor, add frost/snow, wither). Same size/anchor by construction. Record `--source hand`.
+- **PixelLab (optional) — masters:** `pixellab.mjs create-object` (review pack; `--style` = prior
+  PNGs ≤256px for image conditioning) → `select-frames` → record `--source pixellab --object …`.
+  Check credits first (`pixellab.mjs balance`).
+- **PixelLab (optional) — children:** `pixellab.mjs state --object <master objectId>` (needs a
+  PixelLab master). **Never a from-scratch text generation of a child** — that's the
+  size-jump/stem-flip regression.
+- **Either way, G2 compares the whole pool and approves one** (`pipeline-patch.mjs approve`), which
+  records the winner's `source` on the keyframe.
+
+**Animation (Stage 4) — Aseprite, by hand:**
+- **Idles AND transitions** — authored frame-by-frame in Aseprite via
+  `mcp__plugin_pixel-plugin_aseprite__*`, following the additive-overlay / flexing-base recipe in
+  `references/aseprite-execution.md`. **Aseprite is the only animator — no PixelLab v3, no
+  procedural Pillow frame generation, ever.** A transition imports its two approved keyframes as the
+  locked first/last cels and hand-builds the inbetweens between them.
+- **Pillow** — review glue **only**: `scripts/montage.py` (G2/G4 review sheets) and `scripts/gif.py`
+  (assemble the preview GIF from the exported frames, if you don't use Aseprite's own gif export).
+  Pillow never generates art or motion.
 - **Godot** — the **separate, post-pipeline** update step (not a pipeline stage). Run
   `npm run godot:update-tiles` (`tools/update-godot-tiles.mjs`), which drives the whole
   frames→`.tres`+verify dance via the engine `scripts/integrate.mjs` (it calls
@@ -327,28 +372,30 @@ set.
 | `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) validates then **patches the three-file model in place**, writing only the file(s) the action owns (`select`/`comment` → `pipeline.json`; `regen` → `pipeline.history.json`; `approve` → both, history first). All load/validate/write via `manifest.mjs`. Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
 | `scripts/pipeline-patch.mjs` | **Three-file bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `show`. Writes the same split as the control server via `manifest.mjs` (candidate records → `pipeline.history.json`; `selected`/`selectedPath`, animation status/gif/storyboard, mode → `pipeline.json`), atomic temp+rename. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
 | `scripts/integrate.mjs` | The **Godot update engine** (a separate step, **not** a pipeline stage; exposed as `tools/update-godot-tiles.mjs` / `npm run godot:update-tiles`, which imports its `main`). Loads + schema-validates `pipeline.json` via `manifest.mjs` (REFUSES on invalid data; needs only the spec, not history) → `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (idles whose keyframe is approved via `selected !== null` + `status: generated`) or explicit `<framesDir> <outTres>` pairs; `--list` dry-runs the work list as JSON with no Godot binary. |
-| `scripts/pixellab.mjs` | The PixelLab client + importable module — **the consistency backbone**. `balance` checks credits. **Object flow:** `create-object` (review pack of candidate seeds; `--style a.png,b.png` = image conditioning on priors; downloads every `cand_NN.png`) → `select-frames --indices` (promote audited picks; each becomes a persistent object) → `state --object <id>` (derive a child keyframe from a master, identity-preserving) → `animate --object <id> --name <n>` (v3 motion: text mode for idles; `--start/--end <png>` interpolation for transitions; downloads `NN.png` frames) → `fetch-anim` / `fetch-frames` (resume/re-download without new spend) → `object --id` (raw `get_object`, debug). Legacy `create` (text-only map-object still) remains for one-offs. All image payloads are read/written as files — base64 never passes through the LLM. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). |
+| `scripts/pixellab.mjs` | The PixelLab **keyframe** client + importable module (Stage 2 only — keyframes; **not** animation). `balance` checks credits. **Object flow:** `create-object` (review pack of candidate seeds; `--style a.png,b.png` = image conditioning on priors; downloads every `cand_NN.png`) → `select-frames --indices` (promote audited picks; each becomes a persistent object) → `state --object <id>` (derive a child keyframe from a master, identity/size-preserving) → `fetch-frames` (resume/re-download) → `object --id` (raw `get_object`, debug). Legacy `create` (text-only map-object still) remains for one-offs. All image payloads are read/written as files — base64 never passes through the LLM. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). **Escape hatch (NOT the pipeline path):** an `animate`/`fetch-anim` v3 path exists for prototyping only — **the pipeline animates in Aseprite**; do not use it to produce shipped motion. |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |
 | `scripts/montage.py` | G2/G4 review glue (**Pillow only**): upscale a still (`--scale`) or montage a `frames/<id>/` folder or a GIF for Read-and-judge. |
-| `scripts/gif.py` | Preview-GIF assembly (**Pillow, review glue**): `frames/<id>/ --out previews/<id>.gif --fps 10`. PixelLab returns per-frame PNGs; this builds the looping preview the viewer shows. The frames stay the shipped artifact. |
-| `scripts/underlay.py` | Mechanical conformance fix (**Pillow, approved pixels only**): `frames/<id>/ --base <keyframe.png> --rows y0:y1 [--skip 0,...]` alpha-composites the keyframe's row band UNDER each frame in place. Use when v3 drops a static base element (grass tuft / ground shadow / mound) after frame 0 — two failed re-rolls means stop re-rolling and pin. Animation pixels stay on top; pin the smallest band that covers the dropped element. |
+| `scripts/gif.py` | Preview-GIF assembly (**Pillow, review glue**): `frames/<id>/ --out previews/<id>.gif --fps 10` — a convenience if you're not using Aseprite's own `export_sprite` gif. The exported frames stay the shipped artifact. |
 | `scripts/assemble_tres.gd` | Pack `frames/<id>/NN.png` (sorted) into a v2 SpriteFrames `.tres` — one looping `idle` animation at the project fps. Copied into `godot/tools/` and run as `res://tools/assemble_tres.gd`. |
 | `godot/tools/verify_sf.gd` | Verify a built `.tres` satisfies the v2 tile contract (one looping `idle` with N frames). Invoked by `integrate.mjs` as `res://tools/verify_sf.gd`. |
 
 ## Status
 
-The pipeline runs on the **PixelLab object flow** (2026-06-09 consistency rework) — intake, the
-builder/critique gate prompts, the `build_viewer.mjs` viewer + its `viewer/` template + the
-`serve_viewer.mjs` control server, the shared `manifest.mjs` seam, the `pipeline-patch.mjs`
-bookkeeping CLI (now recording PixelLab `objectId`s), the `pixellab.mjs` object-flow client
-(create-object / select-frames / state / animate / fetch-*), and the **separate** Godot update step
-— `tools/update-godot-tiles.mjs` (`npm run godot:update-tiles`) over the `integrate.mjs` engine
-(which calls `assemble_tres.gd` + `verify_sf.gd`). This game's committed inputs are
-`godot/assets/tiles/v2/_style-spec.json` and the three-file pipeline at `godot/assets/tiles/v2/` —
-`pipeline.json` (the `birch_tree` and `pumpkin` items, spec + state), `pipeline.history.json`
-(their candidate records), and `pipeline.schema.json` (the formal definition all scripts validate
-against). The pumpkin family is the object-flow reference output (state-derived winter, v3 idles,
-interpolated transition; endpoints pixel-identical to the keyframes). A fresh **first run on a new
-family** (which spends PixelLab credits) is user-initiated: start with intake (or, for an existing
-item, jump to Stage 1 gap-fill — `build_viewer.mjs --plan` shows what's pending) and approve the
-pixelGen proposal before the spend.
+**The split is locked: keyframes = source-pluggable stills (hand-authored Aseprite and/or PixelLab,
+compared in one G2 pool); animation = Aseprite (hand-built).** The pipeline **runs fully without
+PixelLab** — PixelLab is one optional keyframe source, swappable at Stage 2 (the only place it's
+touched). Each candidate carries `source: hand|pixellab`; the winner's source is recorded on the
+keyframe. Stage 4 animates **only in Aseprite** per `references/aseprite-execution.md` — every idle
+and transition authored frame-by-frame, with a transition's two approved keyframes locked as its
+first/last cels (PixelLab's `animate`/v3 is an out-of-pipeline escape hatch, not used for shipped
+motion). Supporting pieces: intake, the builder/critique gate prompts, the `build_viewer.mjs` viewer
++ `viewer/` template + `serve_viewer.mjs` control server, the shared `manifest.mjs` seam, the
+`pipeline-patch.mjs` bookkeeping CLI (records `source`/`objectId`), and the **separate** Godot update
+step — `tools/update-godot-tiles.mjs` (`npm run godot:update-tiles`) over `integrate.mjs`
+(`assemble_tres.gd` + `verify_sf.gd`). Committed inputs: `godot/assets/tiles/v2/_style-spec.json` +
+the three-file pipeline (`pipeline.json` / `pipeline.history.json` / `pipeline.schema.json`) with the
+`birch_tree` and `pumpkin` items. Reference output: **size/identity-consistent keyframes** (winter
+derived from the autumn master) with **Aseprite-built idles + transitions** whose endpoints are the
+two keyframes (so idle→transition→idle chains seamlessly). A fresh **first run on a new family**:
+intake (or Stage 1 gap-fill — `build_viewer.mjs --plan`), then author/generate keyframe candidates
+from your chosen source(s), pick the best at G2, and animate in Aseprite.

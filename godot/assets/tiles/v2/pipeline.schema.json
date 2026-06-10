@@ -13,12 +13,14 @@
       "additionalProperties": false
     },
     "candidate": {
+      "$comment": "A single keyframe candidate. `source` is its origin: `hand` (authored/edited in Aseprite, the home-grown path) or `pixellab` (AI review-pack / state). Candidates of BOTH sources share one pool per keyframe and compete at the G2 gate. `objectId`/`reviewObjectId` are PixelLab-only handles and absent on hand candidates.",
       "type": "object",
       "required": ["idx", "path", "status"],
       "properties": {
         "idx": { "type": "integer" },
         "path": { "type": "string" },
         "status": { "enum": ["requested", "generated", "failed", "rejected", "approved"] },
+        "source": { "enum": ["hand", "pixellab"] },
         "llm": { "enum": ["pass", "fail"] },
         "reason": { "type": "string" },
         "objectId": { "type": "string" },
@@ -34,6 +36,7 @@
         "prompt": { "type": "string" },
         "selected": { "type": ["integer", "null"] },
         "selectedPath": { "type": ["string", "null"] },
+        "source": { "enum": ["hand", "pixellab", null] },
         "objectId": { "type": ["string", "null"] },
         "comment": { "type": "string" }
       },

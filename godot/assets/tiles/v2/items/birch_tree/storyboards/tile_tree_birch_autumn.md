@@ -1,25 +1,21 @@
-# Motion brief — tile_tree_birch_autumn idle (PixelLab v3)
+# Storyboard — tile_tree_birch_autumn (idle, Aseprite)
 
-- **Kind:** idle (loop) · **frames requested:** 8 (v3 stores the reference frame → 9 on disk) · **fps:** 10
-- **Executor:** PixelLab v3 text mode on the approved master object (`pixellab.mjs animate
-  --name idle2`), frame 0 == the approved keyframe (pixel-identical, diff-verified).
-- **animation_description:** "very subtle idle: the three gold canopy clumps sway gently together
-  in a light breeze; the white trunk, the grass tuft and the ground shadow at the base stay
-  exactly as in the source frame in every frame; overall colors and brightness constant; no
-  elements appear or disappear"
+- **Kind:** idle (loop) · **frames:** 8 · **fps:** 10 (100 ms) · canvas 32×32 RGB
+- **Technique:** **flexing-base** canopy sway (the silhouette breathes) + the trunk/grass held rigid.
+- **Source:** `items/birch_tree/tile_tree_birch_autumn/03.png`.
 
-## Phases (what G4 checks)
+## Structure
+- Gold canopy ~x5–25 y2–18. Trunk x13–16 y19–30. Grass tuft x10–21 y27–30 (rigid).
 
-| Phase | Frames | Motion |
-|-------|--------|--------|
-| lean | 1–4 | canopy clumps flex as one mass, re-forming (arcs, not slides) |
-| return | 5–8 | clumps ease back through neutral; loop closes into f0 |
+## Layers
+1. `base` — the canopy, swayed. Import the keyframe on every frame, then on frames 2–8 nudge the canopy's **left and right outer columns** by ±1px (erase the outer edge column, redraw it shifted) so the canopy leans. Keep the trunk (x13–16) and grass (y27–30) pixels untouched on every frame.
+2. `fx` — one occasional falling gold leaf (optional, subtle): a 1–2px gold fleck that detaches near a canopy edge and falls on ~2 frames, once per loop.
 
-**Rigid:** trunk, grass tuft, ground shadow. **Constant:** palette + brightness; element count.
+## Per-frame sway (canopy outer ~3 columns each side: x5–8 and x22–25, rows y4–17)
+- f1 neutral (== keyframe) · f2 lean right (+1px x on the canopy mass edges) · f3 peak right · f4 ease back · f5 neutral · f6 lean left · f7 peak left · f8 ease back → loop.
+- Implement the lean by re-forming the edge columns (erase outer edge, redraw 1px inward/outward) — a gentle cantilever, tips (top of canopy) lead slightly more than the base of the canopy. **Re-form, don't translate the whole blob.**
+- Optional leaf: f3 spawn a gold fleck at ~(24,12), f4 at ~(25,16), gone f5.
 
-## History
+**Constants:** trunk, grass tuft, ground shadow, palette/brightness. **Loop:** f8→f1 seamless. Export `frames/tile_tree_birch_autumn/NN.png` (00–07) + GIF; tag `idle` forward 1–8.
 
-- v1 (`idle`, rejected at G4): canopy sway was good but the **grass tuft + ground shadow
-  disappeared after frame 0** — loop popped on every cycle. Lesson: v3 treats unmentioned
-  small elements as optional; pin them by name ("stay exactly as in the source frame").
-- v2 (`idle2`, approved): base elements held in all frames.
+> If the flexing-base sway proves fiddly, fall back to a **static base + a single drifting falling-leaf fx** (canopy held rigid) — a subtle but clean loop is better than a janky sway.
