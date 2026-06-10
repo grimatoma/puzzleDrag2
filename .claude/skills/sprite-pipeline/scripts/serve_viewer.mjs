@@ -78,6 +78,12 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const docRoot = resolve(args.root || join(repoRoot, "godot", "assets", "tiles", "v2"));
 const pipelinePath = resolve(args.pipeline || join(docRoot, "pipeline.json"));
+// The viewer we serve lives at <docRoot>/pixelGen — so the build_viewer (re)builds MUST target that
+// same dir. Without an explicit --out, build_viewer defaults to godot/assets/tiles/v2/pixelGen (cwd-
+// relative), which only coincides with docRoot in the default single-checkout case; serving a custom
+// --root/--pipeline (a fixture, another worktree) would otherwise rebuild the wrong pixelGen and the
+// page would never refresh. Pin it so static-serve and watch-rebuild always agree.
+const pixelGenOut = join(docRoot, "pixelGen");
 const port = args.port || Number(process.env.PORT) || 8100;
 // Captured once at boot so GET /api/health can report which pipeline.json this process is bound to and
 // how long it has been up — the trap is a stale server in the wrong worktree still answering requests.
@@ -551,9 +557,13 @@ server.on("error", (err) => {
 let watchChild = null;
 
 function startWatchChild() {
-  watchChild = spawn("node", [buildViewerPath, "--pipeline", pipelinePath, "--watch"], {
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+  watchChild = spawn(
+    "node",
+    [buildViewerPath, "--pipeline", pipelinePath, "--out", pixelGenOut, "--watch"],
+    {
+      stdio: ["ignore", "inherit", "inherit"],
+    }
+  );
   watchChild.on("exit", (code, signal) => {
     if (!shuttingDown) {
       console.error(`serve_viewer: build_viewer --watch exited (code=${code}, signal=${signal})`);
@@ -602,7 +612,9 @@ async function main() {
   // 1) one-shot build so data.json + the template are present before we serve.
   try {
     const { execFileSync } = await import("node:child_process");
-    execFileSync("node", [buildViewerPath, "--pipeline", pipelinePath], { stdio: "inherit" });
+    execFileSync("node", [buildViewerPath, "--pipeline", pipelinePath, "--out", pixelGenOut], {
+      stdio: "inherit",
+    });
   } catch (err) {
     console.error(`serve_viewer: initial build_viewer run failed: ${err.message}`);
     process.exit(1);
