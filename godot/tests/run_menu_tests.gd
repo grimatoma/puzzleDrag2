@@ -270,6 +270,45 @@ func _initialize() -> void:
 		"_router.current_modal() == CHRONICLE after the More-nav deeplink")
 	SaveManager.clear()
 
+	# ── Cached-overlay registry: invalidation guard ────────────────────────────
+	# The lazily-built overlay screens/modals live in ONE Dictionary (main._overlays);
+	# each `_*_screen` / `_*_modal` member is just a get-only accessor over it. Freeing +
+	# erasing every entry must therefore make each named accessor read null again, so the
+	# lazy `if _x == null` guard in _open_* rebuilds it fresh on the next open. This is the
+	# invariant a Text-Size / typography rebuild leans on (drop every cached overlay at the
+	# old scale, reopen at the new one), and it is exactly what the registry refactor buys:
+	# the close-list, the lazy guards, and the invalidation loop all iterate the SAME dict,
+	# so there is no hand-maintained per-member null block to forget. The HUD is NOT an
+	# overlay (it is not in the registry), so it must survive the sweep untouched.
+	main._open_inventory()
+	main._open_chronicle()
+	main._open_achievements()
+	await process_frame
+	_check(main._inventory_screen != null, "inventory overlay built + cached in _overlays")
+	_check(main._chronicle_screen != null, "chronicle overlay built + cached in _overlays")
+	_check(main._achievements_screen != null, "achievements overlay built + cached in _overlays")
+	_check(main._overlays.has("inventory") and main._overlays.has("chronicle") and main._overlays.has("achievements"),
+		"_overlays registry holds every opened overlay (single source of truth)")
+	var hud_before = main._hud
+	# The documented one-loop invalidation: free + "null" every cached overlay in one pass.
+	# keys() is a snapshot, so erasing while iterating it is safe.
+	for k in main._overlays.keys():
+		if is_instance_valid(main._overlays[k]):
+			main._overlays[k].queue_free()
+		main._overlays.erase(k)
+	await process_frame
+	_check(main._overlays.is_empty(), "registry empty after the one-loop invalidation")
+	_check(main._inventory_screen == null, "inventory accessor reads null after invalidation (member auto-nulled)")
+	_check(main._chronicle_screen == null, "chronicle accessor reads null after invalidation (member auto-nulled)")
+	_check(main._achievements_screen == null, "achievements accessor reads null after invalidation (member auto-nulled)")
+	_check(main._hud != null and main._hud == hud_before, "HUD survived the overlay invalidation (not in the registry)")
+	# The lazy guard rebuilds a FRESH instance on the next open — no freed-node reuse.
+	main._open_inventory()
+	await process_frame
+	_check(main._inventory_screen != null, "re-opening rebuilds the inventory overlay after invalidation")
+	_check(main._overlays.has("inventory"), "rebuilt overlay re-registered in _overlays")
+	SaveManager.clear()
+
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
