@@ -118,8 +118,10 @@ var _tool_disarm_btn: Button            ## "✖ Disarm" (NOT in _tool_buttons �
 const NAV_HEIGHT := UiKit.NAV_RESERVE     ## bottom-bar height (also the reserved layout gap)
 const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
-var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
+var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label, icon}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
+var _nav_prev_active: String = ""        ## last ANIMATED active tab — _refresh_nav only plays the
+                                         ## activation motion on a real change, not on every refresh
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 var _fx_layer: CanvasLayer
@@ -128,6 +130,17 @@ var _fx_layer: CanvasLayer
 ## the old _build_hud ran, so z-order/layer ordering is identical.
 func build() -> void:
 	_build_hud()
+
+## One-shot launch flourish: the persistent chrome reveals in a quick stagger — the
+## top bar drops in, the bottom nav rises, the stockpile card and tool palette follow.
+## Main calls this once at the end of _ready (after the first _layout pass). A no-op
+## headless / with UiFx disabled, so tests and the boot smoke see the settled HUD.
+func play_intro() -> void:
+	UiFx.intro_drop(_topbar, -26.0, 0.42, 0.0)
+	if _nav_layer != null and _nav_layer.get_child_count() > 0:
+		UiFx.intro_drop(_nav_layer.get_child(0) as Control, 30.0, 0.42, 0.07)
+	UiFx.intro_drop(_stockpile_box, 24.0, 0.4, 0.14)
+	UiFx.intro_drop(_tool_palette_box, -18.0, 0.4, 0.2)
 
 # ── HUD ────────────────────────────────────────────────────────────────────
 
@@ -412,6 +425,10 @@ func _build_hud() -> void:
 	menu_btn.offset_top = 18
 	menu_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from the right edge
 	menu_btn.pressed.connect(func(): menu_requested.emit())
+	# Shared press feedback + a quarter-turn gear spin on press (a small mechanical
+	# flourish that sells the "settings cog" affordance).
+	UiFx.attach_press_feedback(menu_btn)
+	UiFx.attach_press_spin(menu_btn)
 	root.add_child(menu_btn)
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
@@ -804,7 +821,9 @@ func _build_bottom_nav() -> void:
 		{"key": "town", "icon": "🏠", "label": "Town"},
 		{"key": "inventory", "icon": "📦", "label": "Inventory"},
 		{"key": "craft", "icon": "🔨", "label": "Craft"},
-		{"key": "map", "icon": "🗺", "label": "Map"},
+		# 🧭 (compass), not 🗺: the map emoji's colour glyph is a pale washed-out beige
+		# that all but vanishes against the paper nav bar; the compass reads crisply at 22px.
+		{"key": "map", "icon": "🧭", "label": "Map"},
 		{"key": "folk", "icon": "👥", "label": "Townsfolk"},
 	]
 	for spec in specs:
@@ -879,7 +898,8 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 	text_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(text_lbl)
 
-	_nav_tabs[key] = {"button": btn, "underline": underline, "highlight": highlight, "label": text_lbl}
+	_nav_tabs[key] = {"button": btn, "underline": underline, "highlight": highlight,
+		"label": text_lbl, "icon": icon_lbl}
 	return btn
 
 ## Restyle the five tabs from _nav_current: the active tab shows its ember underline +
@@ -893,6 +913,16 @@ func _refresh_nav() -> void:
 		(parts["highlight"] as ColorRect).visible = active
 		(parts["label"] as Label).add_theme_color_override(
 			"font_color", Palette.INK if active else Palette.INK_MID)
+		# Activation motion (UiFx): play the underline-grow + highlight-fade + icon-pop
+		# only on a REAL tab change (not on every refresh of an already-active tab);
+		# rest every inactive tab so an interrupted activation never leaves it half-scaled.
+		# The static visible/colour state above is already final, so headless runs are
+		# byte-identical with motion disabled.
+		if active and key != _nav_prev_active:
+			UiFx.nav_tab_activate(parts["underline"], parts["highlight"], parts["icon"])
+		elif not active:
+			UiFx.nav_tab_rest(parts["underline"], parts["highlight"], parts["icon"])
+	_nav_prev_active = _nav_current
 
 ## Clear the active-tab marker (back on the board) and restyle the five tabs. Called
 ## from every _on_*_closed and the apply_deeplink("board") close path so the nav never
@@ -1195,7 +1225,11 @@ func _refresh_totals() -> void:
 func _refresh_meta() -> void:
 	if _coin_pill == null or game == null:
 		return
-	_coin_pill.text = "🪙 %d" % game.coins
+	# Count-up/down tick (UiFx) from the last shown balance — sells/buys/rewards read as
+	# the number rolling to its new value instead of teleporting. First refresh snaps.
+	var shown: int = int(_coin_pill.get_meta("_shown_coins", game.coins))
+	UiFx.count_to(_coin_pill, shown, game.coins, "🪙 %d")
+	_coin_pill.set_meta("_shown_coins", game.coins)
 	_refresh_level()
 	_refresh_free_moves()
 
@@ -1263,7 +1297,8 @@ func _refresh_level() -> void:
 	if _level_xp_fill != null:
 		var into: float = float(game.almanac_xp % AlmanacConfig.XP_PER_LEVEL) \
 			/ float(AlmanacConfig.XP_PER_LEVEL)
-		_level_xp_fill.size = Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22)
+		# Glide the XP fill to its new width (UiFx) so quest/almanac XP visibly flows in.
+		UiFx.resize_to(_level_xp_fill, Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22))
 
 ## M4b — the settlement tier + plots now live in the top-bar tier pill (e.g.
 ## "City · 2/11"); a "▲" prefix hints when a tier-up is affordable. KEEPS the name.
@@ -1274,6 +1309,10 @@ func _refresh_settlement() -> void:
 	var text: String = "%s · %d/%d" % [s.tier_name(), game.plots_used(), s.plots()]
 	if game.can_tier_up():
 		text = "▲ " + text
+		# An affordable advance is the run's headline action — breathe until taken.
+		UiFx.attach_attention_pulse(_tier_pill.get_parent() as Control)
+	else:
+		UiFx.clear_attention_pulse(_tier_pill.get_parent() as Control)
 	_tier_pill.text = text
 
 ## M4b — plots are shown inside the tier pill (used/total), so this just re-points at
@@ -1342,7 +1381,10 @@ func _refresh_boss() -> void:
 		_boss_pill_box.tooltip_text = tip
 		_boss_pill.tooltip_text = tip
 		_boss_pill_box.visible = true
+		# An active fight wants the eye — gentle looping breathe while the boss is live.
+		UiFx.attach_attention_pulse(_boss_pill_box)
 	else:
+		UiFx.clear_attention_pulse(_boss_pill_box)
 		_boss_pill_box.visible = false
 
 ## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",
@@ -1461,7 +1503,8 @@ func _apply_chain_progress_fill() -> void:
 			# conveys the banked upgrade (rather than a full bar). Matches the label readout.
 			var into: int = _live_chain_len % threshold
 			var ratio: float = float(into) / float(threshold)
-			_chain_prog_fill.size = Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h)
+			# Glide, don't step: rapid live-chain refreshes re-aim the in-flight tween.
+			UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h))
 			var top: Color = Color(String(stage.get("top", "#f0c14b")))
 			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))
 			var accent: Color = Color(String(stage.get("accent", "#e07a3a")))
@@ -1481,7 +1524,7 @@ func _apply_chain_progress_fill() -> void:
 	var rest_ratio: float = 0.0
 	if game != null and _last_res != "" and _last_threshold > 0:
 		rest_ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
-	_chain_prog_fill.size = Vector2(inner_w * rest_ratio, fill_h)
+	UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * rest_ratio, fill_h))
 	var col: Color = Palette.MOSS.lerp(Palette.GOLD, rest_ratio)
 	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(col, col))
 

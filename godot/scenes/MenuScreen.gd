@@ -118,10 +118,7 @@ func _build_shell() -> void:
 
 	# Full-rect dim backdrop. MOUSE_FILTER_STOP so clicks behind it never reach the
 	# board while the menu is open. A warm brown-tinted scrim (matches TownScreen).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Centered panel: a full-rect Control holds a centered PanelContainer so the
@@ -140,16 +137,9 @@ func _build_shell() -> void:
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
 	# Parchment card — warm fill, iron border, rounded corners, generous content
 	# padding, and a soft drop shadow so it floats over the warm scrim.
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(24)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	panel.add_theme_stylebox_override("panel", style)
+	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
+	# centred-card modal so radius/border/shadow can never drift again.
+	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(24))
 	center.add_child(panel)
 
 	var col := VBoxContainer.new()

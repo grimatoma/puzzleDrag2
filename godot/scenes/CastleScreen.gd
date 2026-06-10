@@ -30,6 +30,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a contribution mutates GameState — Main refreshes the always-visible
+## HUD (stockpile chips, pills) + persists, so the spend surfaces immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Currently just "close".
 var _action_buttons: Dictionary = {}
@@ -94,9 +97,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -168,6 +169,9 @@ func _build_shell() -> void:
 	_header_label.text = ""
 	_header_label.add_theme_font_size_override("font_size", 18)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
+	# Right-aligned — the shared status-count position (Craft "50 recipes", Townsfolk
+	# "5 townsfolk", Achievements "0 / 24 unlocked" all sit at the right edge).
+	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
 
@@ -331,6 +335,7 @@ func _on_contribute(id: String, amount: int) -> void:
 		return
 	game.contribute_to_castle(id, amount)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

@@ -152,10 +152,7 @@ func _build_shell() -> void:
 	visible = false
 
 	# Warm-brown scrim (Main._install_overlay_dismiss wires a tap to close()).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# CenterContainer centres the parchment card at its own min size (no viewport math).
@@ -166,16 +163,9 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(26)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	panel.add_theme_stylebox_override("panel", style)
+	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
+	# centred-card modal so radius/border/shadow can never drift again.
+	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(26))
 	center.add_child(panel)
 
 	var col := VBoxContainer.new()

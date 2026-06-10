@@ -30,6 +30,10 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a claim mutates GameState (quest or almanac tier) — Main refreshes the
+## always-visible HUD pills (coins/level) + persists, so the reward surfaces the moment
+## it's claimed, not when the screen closes.
+signal state_changed
 
 ## action id → Button, for headless tests. Always has "close".
 var _action_buttons: Dictionary = {}
@@ -96,9 +100,7 @@ func _build_shell() -> void:
 	# warm app frame over the board and reserving UiKit.TOPBAR_RESERVE at the TOP (so the
 	# layer-1 HUD top bar shows above) + UiKit.NAV_RESERVE at the bottom (so the persistent nav
 	# bar shows through + stays tappable). MOUSE_FILTER_STOP eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -514,12 +516,14 @@ func _on_claim_quest(quest_id: String) -> void:
 		return
 	game.claim_quest(quest_id)
 	refresh()
+	emit_signal("state_changed")
 
 func _on_claim_tier(tier: int) -> void:
 	if game == null:
 		return
 	game.claim_almanac_tier(tier)
 	refresh()
+	emit_signal("state_changed")
 
 # ── shared widgets ──────────────────────────────────────────────────────────────
 

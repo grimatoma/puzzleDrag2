@@ -358,6 +358,10 @@ func _ready() -> void:
 	# both reflect the current farm season immediately (not just after the first chain).
 	_refresh_season_bar()
 	board.set_season(game.current_season_index())
+	# Launch flourish — the persistent chrome (top bar / nav / stockpile / tools) reveals
+	# in a quick stagger. No-op headless / with UiFx disabled (tests + the boot smoke see
+	# the settled HUD), and the auto-modals below simply layer above it.
+	_hud.play_intro()
 	# Task C — TOWN-IS-HOME launch gate (React's initial view:"town"). The puzzle board is only
 	# playable while a bounded farm RUN is live, OR while the player is on a non-farm expedition
 	# (mine/harbor), OR while a boss fight is active; otherwise (idle on the farm with no run) the
@@ -554,6 +558,26 @@ func _on_child_entered(node: Node) -> void:
 func _install_overlay_dismiss(overlay) -> void:
 	if overlay == null or not is_instance_valid(overlay):
 		return
+	# Open transition (UiFx): every overlay fades/pops in whenever it becomes visible.
+	# Wired HERE — the one deferred install every screen/modal already passes through —
+	# so all ~25 overlays animate with the same timing and zero per-screen edits.
+	# visibility_changed fires on every visible flip; we animate only the false→true
+	# edge. The FIRST open happened just before this deferred install ran, so kick the
+	# animation manually when the overlay is already up (one frame late — imperceptible).
+	overlay.visibility_changed.connect(func() -> void:
+		if overlay.visible:
+			UiFx.animate_overlay_open(overlay)
+			# Quiet open-swish — the audible half of the overlay transition. Played here
+			# (the one central open path) so every screen/modal sounds the same.
+			if _audio != null:
+				_audio.play("swish")
+		else:
+			# The matching dismiss tick (close button, scrim tap, ESC, tab switch).
+			if _audio != null:
+				_audio.play("tap")
+	)
+	if overlay.visible:
+		UiFx.animate_overlay_open(overlay)
 	for child in overlay.get_children():
 		if child is ColorRect and (child as ColorRect).mouse_filter == Control.MOUSE_FILTER_STOP:
 			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
@@ -981,6 +1005,8 @@ func _open_castle() -> void:
 		add_child(_castle_screen)
 		_castle_screen.setup(game)
 		_castle_screen.connect("closed", Callable(self, "_on_castle_closed"))
+		# Contributions deduct inventory under the always-visible top bar — refresh + save NOW.
+		_castle_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_castle_screen.open()
 	_router.open_modal(ViewRouter.Modal.CASTLE)
 
@@ -1009,6 +1035,8 @@ func _open_decorations() -> void:
 		add_child(_decorations_screen)
 		_decorations_screen.setup(game)
 		_decorations_screen.connect("closed", Callable(self, "_on_decorations_closed"))
+		# Builds spend coins/items + grant Influence — refresh the visible HUD + save NOW.
+		_decorations_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_decorations_screen.open()
 	_router.open_modal(ViewRouter.Modal.DECORATIONS)
 
@@ -1037,6 +1065,9 @@ func _open_portal() -> void:
 		add_child(_portal_screen)
 		_portal_screen.setup(game)
 		_portal_screen.connect("closed", Callable(self, "_on_portal_closed"))
+		# Portal builds / summons spend coins/runes/influence + grant tools — refresh the
+		# visible HUD (incl. the tool palette) + save NOW.
+		_portal_screen.connect("state_changed", Callable(self, "_on_portal_changed"))
 	_portal_screen.open()
 	_router.open_modal(ViewRouter.Modal.PORTAL)
 
@@ -1064,6 +1095,8 @@ func _open_boons() -> void:
 		add_child(_boons_screen)
 		_boons_screen.setup(game)
 		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
+		# Boon purchases spend Embers / Core Ingots — refresh the visible HUD + save NOW.
+		_boons_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_boons_screen.open()
 	_router.open_modal(ViewRouter.Modal.BOONS)
 
@@ -1161,8 +1194,25 @@ func _open_quests() -> void:
 		add_child(_quests_screen)
 		_quests_screen.setup(game)
 		_quests_screen.connect("closed", Callable(self, "_on_quests_closed"))
+		# A claim grants coins/XP under the always-visible top bar — surface it NOW
+		# (coin tick + pill pulse + HUD refresh + save), not when the screen closes.
+		_quests_screen.connect("state_changed", Callable(self, "_on_quest_claimed"))
 	_quests_screen.open()
 	_router.open_modal(ViewRouter.Modal.QUESTS)
+
+## A portal build / magic-tool summon landed: run the shared funnel, then refresh the
+## tool palette too (a summon grants a tool charge the palette must show immediately).
+func _on_portal_changed() -> void:
+	_on_town_changed()
+	_refresh_tools()
+
+## A quest / almanac-tier claim landed: pulse the coin pill, then run the shared
+## post-mutation funnel — _on_town_changed refreshes every HUD surface (including the
+## coin/level pills), plays the coin chime via its own what-changed sound pick, saves.
+func _on_quest_claimed() -> void:
+	if _hud != null:
+		_hud.pulse_coin_pill()
+	_on_town_changed()
 
 ## The Quests screen was closed: hide it, reset the router, and persist (a claim spent /
 ## granted coins + XP + tools + runes + advanced the almanac) + refresh the stockpile HUD
@@ -1574,6 +1624,23 @@ func _on_founder_closed() -> void:
 ## _on_town_changed). The beat modal lives at the top layer (5), above the others, so even
 ## if a beat surfaces while a lower modal is technically still visible it reads on top and
 ## the player dismisses it to return — no conflict, no suppression needed.
+## Surface any newly-unlocked achievements as a toast + fanfare. GameState.bump_counter
+## queues each unlock (runtime-only); this drains the queue after a resolve / town action.
+## One toast covers a burst ("🏆 First Steps (+2 more)") since the toast channel shows one
+## bubble at a time. No-op when nothing is queued.
+func _drain_achievement_toasts() -> void:
+	if game == null or game.achievement_toast_queue.is_empty():
+		return
+	var first: Dictionary = game.achievement_toast_queue[0]
+	var extra: int = game.achievement_toast_queue.size() - 1
+	var text: String = "🏆 %s unlocked!" % String(first.get("name", "Achievement"))
+	if extra > 0:
+		text = "🏆 %s (+%d more)" % [String(first.get("name", "Achievement")), extra]
+	game.achievement_toast_queue.clear()
+	show_toast(text)
+	if _audio != null:
+		_audio.play("fanfare")
+
 func _drain_story_queue() -> void:
 	if game == null:
 		return
@@ -1851,6 +1918,9 @@ func _on_new_game() -> void:
 	if _menu_screen != null:
 		_menu_screen.close()
 	SaveManager.clear()
+	# Fade to black before the reload so the fresh start reads as a deliberate scene
+	# hand-off, not a hard cut. Instant (no fade) headless / with UiFx disabled.
+	await UiFx.fade_to_black(self)
 	get_tree().reload_current_scene()
 
 ## The board accepts chain input when a bounded farm run is live, OR the player is on a
@@ -1943,6 +2013,8 @@ func _on_town_changed() -> void:
 	_last_in_mine = game.is_in_mine()
 	_last_in_harbor = game.is_in_harbor()
 	SaveManager.save(game)
+	# Achievement unlock(s) from this action (an order fill, a build) → toast + fanfare.
+	_drain_achievement_toasts()
 	# Story UI: a town action posts events (tier_up → act1_hamlet / act2_city_expedition,
 	# building_built → act1_lumber_raised / act2_kitchen, order_fulfilled → act1_first_order).
 	# The Town/Map modal closed back to the board before this fires, so surface any queued
@@ -2161,6 +2233,11 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_audio.play("chain_collect")
 		if int(res.get("units", 0)) > 0:
 			_audio.play("upgrade")
+	# Impact accent (UiFx): a DOUBLE-stage-or-better chain (2+ whole units in one drag)
+	# lands with a short board shake scaled by how many units banked. Single-unit chains
+	# stay calm — the shake marks the standout pulls, not every harvest.
+	if int(res.get("units", 0)) >= 2:
+		UiFx.shake(board, minf(4.0 + 2.0 * float(int(res["units"])), 12.0))
 	# M4e: fly ONE reward chip from the board to the coin pill (the original's
 	# "rewardTrajectory"). Show the produced resource when a whole unit landed
 	# (gold), else the coins this chain earned (ember) — coins are always gained.
@@ -2355,6 +2432,9 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_runes()
 	_refresh_chain_progress()
 	SaveManager.save(game)
+	# Achievement unlock(s) from this chain → toast + fanfare (before the story modal so
+	# the bubble isn't instantly covered; it sits on layer 3 under the modal anyway).
+	_drain_achievement_toasts()
 	# Story UI: a chain can post events (chain threshold beats, a boss_defeated that queues
 	# the Frostmaw aftermath choice, a tier-up/order/build path) — surface any newly-queued
 	# beat immediately. No-op when nothing queued or a beat is already showing.

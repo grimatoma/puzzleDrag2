@@ -136,12 +136,9 @@ func _build_shell() -> void:
 	# map) and stops UiKit.NAV_RESERVE short of the bottom, leaving the persistent nav bar (a
 	# LOWER CanvasLayer) visible + tappable. MOUSE_FILTER_STOP eats clicks in the band it
 	# covers so nothing leaks to the board behind the open map.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
 	# Full-rect host Control that the TownMap (a Node2D) hangs under, so the map

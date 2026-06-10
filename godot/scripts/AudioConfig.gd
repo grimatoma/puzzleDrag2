@@ -60,6 +60,17 @@ const SFX: Dictionary = {
 	"whoosh": [
 		{"freq": 180.0, "freq_end": 90.0, "dur": 350, "type": "triangle", "gain": 0.08},
 	],
+	# ── Port-side UI navigation sounds (no React counterpart — the web app's menus are
+	# silent; the port gives nav a quiet voice). Deliberately very soft (gain ≤ 0.035)
+	# so they read as texture, not events.
+	# Feather-light tick for a nav-tab tap / overlay dismiss: 1000Hz → 760Hz, sine, 30ms.
+	"tap": [
+		{"freq": 1000.0, "freq_end": 760.0, "dur": 30, "type": "sine", "gain": 0.030},
+	],
+	# Soft rising swish for a screen/modal opening: 420Hz → 880Hz, sine, 90ms.
+	"swish": [
+		{"freq": 420.0, "freq_end": 880.0, "dur": 90, "type": "sine", "gain": 0.030},
+	],
 }
 
 # ── Static helpers (usable without an instance) ──────────────────────────────────

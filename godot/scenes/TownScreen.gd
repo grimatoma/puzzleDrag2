@@ -113,9 +113,7 @@ func _build_shell() -> void:
 	# view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a
 	# LOWER CanvasLayer) shows through and stays tappable; MOUSE_FILTER_STOP eats clicks in
 	# the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -335,7 +333,7 @@ func _build_buildings_section() -> void:
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
 
-		_buildings_body.add_child(row)
+		_buildings_body.add_child(_chip(row))
 
 func _build_refine_section() -> void:
 	for id in RecipeConfig.RECIPE_IDS:
@@ -363,7 +361,7 @@ func _build_refine_section() -> void:
 		row.add_child(craft_btn)
 		_action_buttons["craft:" + id] = craft_btn
 
-		_refine_body.add_child(row)
+		_refine_body.add_child(_chip(row))
 
 func _build_market_section() -> void:
 	# T16: Event banner — show when a seasonal market event is active.
@@ -422,7 +420,7 @@ func _build_market_section() -> void:
 		row.add_child(sell_btn)
 		_action_buttons["sell:" + res] = sell_btn
 
-		_market_body.add_child(row)
+		_market_body.add_child(_chip(row))
 
 	if not any_sell:
 		_market_body.add_child(_make_label("nothing to sell yet", COL_MUTED))
@@ -455,7 +453,7 @@ func _build_market_section() -> void:
 		row.add_child(buy_btn)
 		_action_buttons["buy:" + res] = buy_btn
 
-		_market_body.add_child(row)
+		_market_body.add_child(_chip(row))
 
 func _build_orders_section() -> void:
 	if game.orders.is_empty():
@@ -877,6 +875,16 @@ func _after(result: Dictionary) -> void:
 ## A bold ember sub-header (review-17): used inside a section to separate sub-groups (e.g.
 ## the Market's Sell / Buy halves) so each is obviously its own reachable block. Smaller than
 ## a top-level section header, in the Cinzel display face when available.
+## Wrap an action row in the shared ledger row chip (UiKit.row_box) so the Town
+## ledger's Buildings / Refine / Market rows read as carded entries — the same row
+## treatment the Inventory ledger uses — instead of bare text lines.
+func _chip(row: Control) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	chip.add_child(row)
+	return chip
+
 func _make_subheader(text: String) -> Label:
 	var lbl := Label.new()
 	lbl.text = text

@@ -41,6 +41,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a portal build / tool summon mutates GameState — Main refreshes the
+## always-visible HUD (coin pill, tool palette) + persists immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Always has "close"; has "build" while NOT built.
 var _action_buttons: Dictionary = {}
@@ -108,9 +111,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -371,6 +372,7 @@ func _on_build_portal() -> void:
 		return
 	game.build_portal()
 	refresh()
+	emit_signal("state_changed")
 
 ## A Summon button was pressed: summon `id` the REAL way (deducts influence, +1 to the tools
 ## dict), then re-render so the Influence header + ×count badge + button states reflect the
@@ -380,6 +382,7 @@ func _on_summon(id: String) -> void:
 		return
 	game.summon_magic_tool(id)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

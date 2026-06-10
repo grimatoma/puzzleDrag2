@@ -26,6 +26,11 @@ const TICK_COL := Color(0.227, 0.141, 0.071, 0.45)  ## tick divider tint (rgba 5
 var _turns_used: int = 0
 var _budget: int = 10
 var _season_idx: int = 0
+## The DRAWN wagon position (0..1) — glides toward the real progress on each set_state
+## so the wagon visibly rolls between turns instead of teleporting. Logical state
+## (_turns_used / turns_left()) is unaffected; headless/motion-off snaps.
+var _disp_progress: float = 0.0
+var _wagon_tween: Tween
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(0, STRIP_HEIGHT)
@@ -37,6 +42,20 @@ func set_state(turns_used: int, budget: int, season_idx: int) -> void:
 	_budget = maxi(1, budget)
 	_turns_used = clampi(turns_used, 0, _budget)
 	_season_idx = clampi(season_idx, 0, 3)
+	var target: float = clampf(float(_turns_used) / float(_budget), 0.0, 1.0)
+	if _wagon_tween != null and _wagon_tween.is_valid():
+		_wagon_tween.kill()
+	if not UiFx.is_active() or not is_inside_tree() or is_equal_approx(_disp_progress, target):
+		_disp_progress = target
+		queue_redraw()
+		return
+	# Roll the wagon to its new spot (a fresh cycle rolls it back home — also charming).
+	_wagon_tween = create_tween()
+	_wagon_tween.tween_method(func(v: float) -> void:
+		_disp_progress = v
+		queue_redraw(),
+		_disp_progress, target, 0.5) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	queue_redraw()
 
 ## Turns remaining in the whole cycle — the numeral the panel shows.
@@ -83,9 +102,8 @@ func _draw() -> void:
 			draw_rect(Rect2(x + 1.0, 1.0, sw - 2.0, h - 2.0), Color(pal["label"], 0.75), false, 2.0)
 		x += sw
 
-	# ── 2. the progress wagon (a clean glyph marker) ──────────────────────────
-	var progress: float = clampf(float(_turns_used) / total, 0.0, 1.0) if total > 0.0 else 0.0
-	_draw_wagon(seg_w * progress, h)
+	# ── 2. the progress wagon (a clean glyph marker; _disp_progress glides) ───
+	_draw_wagon(seg_w * _disp_progress, h)
 
 	# ── 3. right numeral panel — "N TURNS LEFT" ───────────────────────────────
 	_draw_numeral_panel(Rect2(seg_w, 0.0, NUMERAL_W, h))

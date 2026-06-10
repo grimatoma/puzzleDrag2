@@ -36,6 +36,7 @@ var _action_buttons: Dictionary = {}
 
 ## The index of the current step (0-based).
 var _current_step: int = 0
+var _last_rendered_step: int = -1   ## last step whose content was drawn — gates the swap fade
 
 ## True once _build_shell() has run (safe to call setup() again).
 var _built: bool = false
@@ -91,10 +92,7 @@ func _build_shell() -> void:
 	visible = false
 
 	# Warm-brown scrim (matches StoryModal / MenuScreen).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Full-rect CenterContainer centres the parchment card at its own min size.
@@ -105,16 +103,9 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(28)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	panel.add_theme_stylebox_override("panel", style)
+	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
+	# centred-card modal so radius/border/shadow can never drift again.
+	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(28))
 	center.add_child(panel)
 
 	var col := VBoxContainer.new()
@@ -251,6 +242,13 @@ func _render_step() -> void:
 	_indicator_label.text = "Step %d / %d" % [idx + 1, total]
 	_next_btn.text = "Got it!" if idx == total - 1 else "Next"
 	_render_dots(idx)
+	# Step-swap cue (UiFx): fade the swapped title/body in on a REAL step change (not the
+	# first render — the overlay open transition already covers that). Modulate-only, so
+	# container layout and the headless text reads are untouched.
+	if _last_rendered_step != -1 and _last_rendered_step != idx:
+		UiFx.content_fade(_title_label)
+		UiFx.content_fade(_body_label)
+	_last_rendered_step = idx
 
 ## Re-tint the page dots: the current step's dot is a FILLED ember pill (slightly wider), the
 ## rest are small hollow muted dots. Mirrors the React • ● page indicator.

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Headless tests for AudioConfig.gd — the SFX sound-design catalog moved out of the
 ## runtime audio service node (Audio.gd) in the config-migration batch. Verifies the
-## catalog has the expected 9 effects, that a couple of step param sets survived the
+## catalog has the expected 11 effects, that a couple of step param sets survived the
 ## move BYTE-IDENTICAL, and that the runtime Audio service still synthesizes a stream
 ## for every catalog name when reading from AudioConfig.SFX (the wiring guard — proves
 ## the move is behavior-preserving). Headless runs the DUMMY audio driver, so creating
@@ -17,6 +17,7 @@ extends SceneTree
 var _names: Array = [
 	"chain_start", "chain_collect", "upgrade", "tier_up",
 	"pop", "fanfare", "coin", "buzz", "whoosh",
+	"tap", "swish",   # port-side UI nav pair (no React counterpart)
 ]
 
 var _checks: int = 0
@@ -34,14 +35,15 @@ func _check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	print("\n── AudioConfig (SFX catalog) tests ────────────────")
 
-	# Catalog membership: exactly the expected 9 names, no more, no fewer.
-	_check(AudioConfig.SFX.size() == 9, "AudioConfig.SFX has 9 effects (got %d)" % AudioConfig.SFX.size())
+	# Catalog membership: exactly the expected 11 names, no more, no fewer
+	# (the original 9 React-parity effects + the port-side UI nav pair: tap, swish).
+	_check(AudioConfig.SFX.size() == 11, "AudioConfig.SFX has 11 effects (got %d)" % AudioConfig.SFX.size())
 	for name in _names:
 		_check(AudioConfig.SFX.has(name), "AudioConfig.SFX has '%s'" % name)
 		_check(AudioConfig.has(name), "AudioConfig.has('%s')" % name)
 	# names() returns the same set.
 	var ns: Array = AudioConfig.names()
-	_check(ns.size() == 9, "AudioConfig.names() returns 9 names (got %d)" % ns.size())
+	_check(ns.size() == 11, "AudioConfig.names() returns 11 names (got %d)" % ns.size())
 	var all_present: bool = true
 	for name in _names:
 		if not ns.has(name):

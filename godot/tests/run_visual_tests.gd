@@ -699,6 +699,10 @@ func _initialize() -> void:
 	var user_args := OS.get_cmdline_user_args()
 	_update_mode = user_args.has("--update")
 
+	# Pin UI motion OFF so every capture is the settled end-state, never a frame caught
+	# mid-fade/mid-pop (UiFx drives the overlay/nav transitions on rendering backends).
+	UiFx.enabled = false
+
 	print("\n── Visual regression harness ───────────────────────")
 	print("  platform=%s  content=%dx%d  viewports=%s  mode=%s" % [
 		OS.get_name(), CONTENT_SIZE.x, CONTENT_SIZE.y,
