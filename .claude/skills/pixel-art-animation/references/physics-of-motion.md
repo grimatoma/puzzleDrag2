@@ -475,6 +475,19 @@ bottom-up**? do the two falls **overlap**? is the settle **eased**?) — *then* 
 in Aseprite. That storyboard critique is the cheap gate that catches "it's just a crossfade"
 **before** the expensive frame-by-frame build.
 
+**Land the transition exactly — converge, then verify endpoint identity.** A one-way transition
+**holds the target still** on its last frame, so two things must be true or the loop-end "pops":
+1. **The final frame *is* the target still, pixel-for-pixel.** Author it by **importing the target
+   keyframe PNG** onto the last frame, not by hand-finishing the penultimate cel "close enough." Then
+   **diff them** to prove it (the sprite-pipeline's `scripts/pixels.mjs diff <lastFrame> <targetStill>`
+   should report **0 changed pixels**). If it's non-zero, your "winter" frame isn't the winter tile.
+2. **The penultimate frames *converge* to it.** Drive the accumulation/recolor so the second-to-last
+   authored frame is already within a handful of pixels of the target (diff it: a few px, not dozens).
+   If frame N−1 is far from the target, the cut to the held final frame jumps — the eye sees a snap.
+   Stage the settle (§ frames 18–20) so the form *eases into* the target rather than arriving late.
+This converge-then-verify step is cheap (two `pixels.mjs diff`s) and it's the difference between a
+transition that resolves cleanly and one that twitches on the last frame.
+
 ---
 
 ### Sources & grounding

@@ -72,6 +72,16 @@ flames, light) move; hard things (cobs, trunks, rock, shells' bodies) don't. The
 "alive" tiles often combine a **rigid body** with one or two **moving soft parts** plus an
 **overlay** (a glint, sparkle, bubble, falling leaf, drifting spore).
 
+**On a small or mostly-rigid tile, let the overlay carry the *readable* motion.** When the only soft
+part is small (a pumpkin's vine, a gem's one loose facet), its honest bend is ~1px — genuinely
+organic at 8× but **barely perceptible at 32px tile size**. Don't fix that by exaggerating the bend
+into a slide (that's the cardinal sin, and a heavy body shouldn't visibly flex anyway). Instead make
+the **overlay the primary read** — a travelling sheen across the rind, a glint sweep, a falling leaf,
+a drifting flake — and let the 1px part-bend be the *secondary* motion. The overlay moves a clearly
+visible distance frame-to-frame, so the tile reads as alive even though the body is (correctly)
+almost still. (This is why a glossy gem or a frosted fruit idles convincingly with **no deformation
+at all** — only the light moves.)
+
 ## Think in re-drawn frames, not translated regions
 
 At 32–64px, hand-keying organic bends across a dozen frames is exactly what produces the
@@ -181,6 +191,15 @@ then come back here for the motion.
   `transparency=0, disposal=2, loop=0` and a per-frame duration. (Recipe is in the starter's
   `save()`.) Ground rooted things with their own base (soil/feet) rather than a floating
   soft shadow — a hard shadow blob plus the outline pass looks wrong.
+- **An overlay needs value contrast against what it sits on, or the motion is invisible.** A moving
+  overlay (snow fleck, glint, sparkle, bubble, spore) only reads if it differs in *value* from the
+  pixels behind it. White snow flecks drifting down a **white** snow cap, or a pale glint over a pale
+  highlight, are near-invisible (light-on-light) — the element is there, but the motion doesn't read,
+  so the tile looks static. Fix it by **routing the overlay through higher-contrast zones** (drift
+  the flake down the dark side / over the saturated body, not the white cap) and/or giving it a
+  brighter core + a darker trailing pixel so it carries its own contrast — while staying on the
+  palette's ramp for that material. Check this on the montage: if you can't immediately spot the
+  moving element in each frame, it has no contrast where it is.
 - **Transparent background**, centered art, consistent anchor across frames (animate around
   a fixed root/pivot, don't let the whole sprite drift unless it's meant to).
 

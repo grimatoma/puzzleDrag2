@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-// sprite-pipeline — Godot integration CLI.
+// sprite-pipeline — Godot integration engine.
+//
+// This is the ENGINE for updating the Godot tile assets — it is intentionally NOT a stage of the
+// pixel/sprite pipeline. The pipeline (stages 0–4) produces the per-frame PNGs + preview GIFs and
+// stops there; pushing those frames into the Godot project is a separate, on-demand step. The
+// repo-level standalone entrypoint is `tools/update-godot-tiles.mjs` (`npm run godot:update-tiles`),
+// which imports `main` from here. You can also run this file directly.
 //
 // One command that owns the whole "frames -> v2 SpriteFrames .tres + in-engine verify" dance,
 // replacing ~5 hand-run steps and the import-sidecar gotcha that bit us. It:
@@ -30,7 +36,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import * as manifest from "./manifest.mjs";
 
@@ -460,4 +466,10 @@ function main() {
   console.log("integrate: done.");
 }
 
-main();
+export { main };
+
+// Run when invoked directly (`node integrate.mjs ...`); stay a no-op when imported as a module
+// (e.g. by tools/update-godot-tiles.mjs, which re-exports this entrypoint).
+const invokedDirectly =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) main();

@@ -1,9 +1,12 @@
-# Integrating frames into Godot (the v2 tile slot)
+# Updating Godot with the produced frames (the v2 tile slot)
 
-The last stage: the per-frame PNGs Aseprite exported (`references/aseprite-execution.md`) become a
-Godot **SpriteFrames `.tres`** that the game's tile system plays as the newest-wins **v2** tier.
-This doc covers the per-set directory layout, how frames become a `.tres` (and where Tile.gd looks
-for it), the engine-path decision, and the import gotchas that otherwise silently break the asset.
+A **separate, on-demand step — not a pipeline stage.** The pixel pipeline (stages 0–4) ends at the
+per-frame PNGs + preview GIF; this step takes those PNGs Aseprite exported
+(`references/aseprite-execution.md`) and turns them into a Godot **SpriteFrames `.tres`** that the
+game's tile system plays as the newest-wins **v2** tier. It is run by hand
+(`npm run godot:update-tiles`), **never as a side effect of the pipeline or the `npm` build**. This
+doc covers the per-set directory layout, how frames become a `.tres` (and where Tile.gd looks for
+it), the engine-path decision, and the import gotchas that otherwise silently break the asset.
 
 ---
 
@@ -35,17 +38,20 @@ directory scan), sees what exists by shape, and only builds the gaps.
 
 ---
 
-## The one-command path — `scripts/integrate.mjs`
+## The one-command path — `npm run godot:update-tiles`
 
-`scripts/integrate.mjs` owns the **whole** frames→`.tres`+verify dance, replacing ~5 hand-run steps
-and the import-sidecar gotcha. Run it after Aseprite has written the frame PNGs:
+The standalone repo-level entrypoint `tools/update-godot-tiles.mjs` (exposed as
+`npm run godot:update-tiles`) owns the **whole** frames→`.tres`+verify dance, replacing ~5 hand-run
+steps and the import-sidecar gotcha. It is a thin wrapper over the engine
+`.claude/skills/sprite-pipeline/scripts/integrate.mjs` (which still lives with this skill and stays
+the implementation). Run it after Aseprite has written the frame PNGs:
 
 ```bash
-node .claude/skills/sprite-pipeline/scripts/integrate.mjs            # work list from pipeline.json
-# or explicit pairs (relative to the v2 dir, or absolute):
-node .claude/skills/sprite-pipeline/scripts/integrate.mjs \
-    items/<itemId>/frames/<id>  items/<itemId>/<key>.tres
-# Godot binary: --godot <path>, else $GODOT_BIN, else `godot` on PATH.
+npm run godot:update-tiles                              # work list from pipeline.json
+# or explicit pairs (relative to the v2 dir, or absolute), and/or a Godot binary:
+npm run godot:update-tiles -- items/<itemId>/frames/<id>  items/<itemId>/<key>.tres
+node tools/update-godot-tiles.mjs --godot <path>        # else $GODOT_BIN, else `godot` on PATH
+# (running the engine directly still works: node .claude/skills/sprite-pipeline/scripts/integrate.mjs)
 ```
 
 In order, it:

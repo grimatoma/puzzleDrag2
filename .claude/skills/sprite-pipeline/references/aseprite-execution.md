@@ -35,6 +35,31 @@ below is identical.
 
 ---
 
+## Tool param cheat-sheet (load schemas first)
+
+The Aseprite tools are **deferred** — bulk-load their schemas with `ToolSearch "aseprite"` before
+the first call (a direct call without the schema fails `InputValidationError`). The params that bite
+(verified against the live server — don't guess these):
+
+| Tool | Key params (exact names) | Gotcha |
+|---|---|---|
+| `analyze_reference` | `reference_path`, `target_width`, `target_height`, `palette_size?` | it's `reference_path`, **not** `image_path`. Returns palette + brightness/edge maps. |
+| `create_canvas` | `width`, `height`, `color_mode` (`"rgb"`) | returns a **TEMP** path; `save_as` to your stable `_work/<id>.aseprite` immediately, then use that path everywhere. |
+| `save_as` | `sprite_path`, `output_path` | — |
+| `add_frame` | `sprite_path`, `duration_ms` | canvas starts with frame 1; call `add_frame`×(N−1). `duration_ms = round(1000/fps)`. |
+| `add_layer` | `sprite_path`, `layer_name` | — |
+| `import_image` | `sprite_path`, `image_path`, `layer_name`, `frame_number`, `position?{x,y}` | reuse one `layer_name` across frames to keep cels on one layer; `position` defaults to 0,0. |
+| `draw_pixels` | `sprite_path`, `layer_name`, `frame_number`, `pixels:[{x,y,color}]`, `use_palette?` | `color` is `#RRGGBB` or `#RRGGBBAA`; **alpha `00` erases** (see above). Batches many pixels per call. |
+| `get_pixels` | `sprite_path`, `layer_name`, `frame_number`, `x`, `y`, `width`, `height`, `cursor?` | paginated (page_size default 1000); read the base still's real coords before you storyboard over them. |
+| `create_tag` | `sprite_path`, `tag_name`, `from_frame`, `to_frame`, `direction` (`"forward"`) | name it the spec's idle tag (`"idle"`); 1-based inclusive. |
+| `export_sprite` | `sprite_path`, `output_path`, `format` (`png`/`gif`), `frame_number` | **`frame_number: 0` = ALL frames** (animated GIF); a positive N exports just that one frame → per-frame PNGs. |
+
+> **Forward-slash paths only** in every call (a Windows backslash makes the Go server throw
+> `invalid character 'U' in string escape code`). Only the tools named here (and the rest of
+> `mcp__plugin_pixel-plugin_aseprite__*`) exist — don't invent tool names.
+
+---
+
 ## The frame-assembly recipe
 
 The Aseprite MCP is a stateless CLI: each call re-opens the file, acts, and saves in place. So the
@@ -76,8 +101,10 @@ each frame to its own file:
   frame `i` in `0…N−1`. Two-digit zero-padded names (`00.png`, `01.png`, …) so they sort in order
   (`assemble_tres.gd` sorts by filename).
 
-Then hand off to `godot-integration.md`: run `scripts/integrate.mjs` (it imports the PNGs, packs via
-`assemble_tres.gd`, and verifies via `verify_sf.gd` — one command).
+That is where the **pixel pipeline ends** — at the exported frame PNGs + preview GIF. Getting them
+into the engine is a **separate, on-demand step** (see `godot-integration.md`): run
+`npm run godot:update-tiles` (it imports the PNGs, packs via `assemble_tres.gd`, and verifies via
+`verify_sf.gd` — one command), **not** as part of the pipeline run itself.
 
 ---
 
@@ -90,6 +117,23 @@ layers per sprite:
   frame** (`import_image`, one `layer_name`, explicit `frame_number`). The static foundation.
 - an **`fx` layer**: the motion, drawn per frame with `import_image` (a pre-rendered cel),
   `draw_pixels`, or `fill_area` — each call carrying an explicit `frame_number`.
+
+**Subtracting is part of "additive" — erase with alpha-`00`.** "Additive overlay" doesn't only mean
+*adding* pixels; re-forming a silhouette (a leaf detaching, canopy thinning, a vine tip flexing to a
+new position, frost replacing rind) means **removing** pixels too. The mechanic: `draw_pixels` with
+a fully-transparent color **`#00000000`** (`#RRGGBBAA` with alpha `00`) **sets that pixel
+transparent** — it erases. Two rules make it work:
+
+- **Erase on the BASE layer, not the `fx` layer.** The base is the bottom layer, so a transparent
+  pixel there reveals the canvas (true removal). Painting transparent on `fx` (which sits *above* the
+  base) does nothing visible — you just see the base pixel underneath. So to *move* or *remove* a
+  base-layer pixel (flex a vine tip, detach a clump, recolor rind for frost), edit the **base** layer
+  at that `frame_number`: erase the old pixels (`#00000000`) and draw the new ones. This is exactly
+  the **flexing-base** recipe below — re-forming the silhouette per frame without any selection op.
+- **It's still stateless / parallel-safe.** Each erase names its `frame_number` + `layer_name` like
+  any other `draw_pixels`; no hidden selection. (This is the additive analogue of "re-draw the form,
+  don't slide it" from the **pixel-art-animation** skill — you re-form by erase+redraw, never by
+  `move_selection`.)
 
 **The parallel-safety rule (why this is the default):** every call is **stateless** — it names the
 exact `frame_number` + `layer_name` it touches, so nothing depends on a hidden cursor or selection

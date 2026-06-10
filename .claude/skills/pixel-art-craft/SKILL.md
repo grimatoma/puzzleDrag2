@@ -93,6 +93,17 @@ GREEN = ramp("#5c9c2e", 5)     # -> 5 hue-shifted steps, cool root .. warm tip
 col   = lit(GREEN, t)          # t in [0,1] picks the shade
 ```
 
+**Adding a new material to an existing set — anchor the ramp to art you already have.** When a new
+subject needs a hue your locked palette doesn't cover (a pumpkin's orange in a set built for greens
+and browns), don't invent the ramp in a vacuum and don't generate off-palette and hope. **Sample the
+midtone from the closest existing sibling** — eyedrop it, or pull it with a palette tool
+(`get_palette` / `analyze_reference` if you have them) — then build the dark/light steps around that
+real anchor by the rules above (cool-shift the shadows, warm-shift + desaturate the highlights). A
+ramp whose midtone is lifted from a tile already in the family reads as *part of* the set instead of
+a one-off, because it shares the set's saturation level and value range. Lock the new ramp once it's
+in (in a managed set like the **sprite-pipeline** flow, append it to the style spec's `palette.ramps`
+so generation targets it and the critique scores against it).
+
 ## 2. Value, contrast & silhouette
 
 - **Value (light/dark) does most of the work** — more than hue. A piece reads in grayscale

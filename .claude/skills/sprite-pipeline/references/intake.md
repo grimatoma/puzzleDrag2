@@ -9,10 +9,16 @@ note. Nothing is generated and **no credits are spent** until the user reviews t
 says "run it".
 
 This sits **before Stage 1**: Stage 1 (plan the set) diffs `pipeline.json` against disk by shape.
-Intake is the front door; the five stages are the build.
+Intake is the front door; the four stages are the build. (Updating Godot with the produced frames
+is a separate, on-demand step after the build — `npm run godot:update-tiles` — not a pipeline stage.)
+
+> **Pre-flight once, before any tool call:** the Aseprite + PixelLab MCP tools are usually
+> **deferred** (schemas not loaded → a direct call fails `InputValidationError`). Bulk-load them up
+> front with `ToolSearch "aseprite"` and `ToolSearch "pixellab"` so every later call has its schema.
+> See SKILL.md §"Tool routing" and the cheat-sheet in `references/aseprite-execution.md`.
 
 ```
- user lists tiles ─▶ INTERVIEW ─▶ edit pipeline.json ─▶ rebuild pixelGen ─▶ user reviews ─▶ "run it" ─▶ Stage 1…5
+ user lists tiles ─▶ INTERVIEW ─▶ edit pipeline.json ─▶ rebuild pixelGen ─▶ user reviews ─▶ "run it" ─▶ Stage 1…4
                      (questions)   (settings + items[])  (the proposal doc)   (approve)        (the spend)
 ```
 
@@ -85,16 +91,20 @@ The proposal surface is the pixelGen viewer in **all-pending** state — no sepa
 node .claude/skills/sprite-pipeline/scripts/build_viewer.mjs   # default out: godot/assets/tiles/v2/pixelGen
 ```
 
-Then serve it (launch config `pixelGen`, or `python -m http.server 8100 --directory
-godot/assets/tiles/v2`) and point the user at **http://localhost:8100/pixelGen/**. Every requested
-asset renders as a placeholder card showing its id + prompt + motion/physics — that *is* the
-proposal. Post a short chat summary too (item id, N keyframes [master + children] / idles /
-transitions, the priors, and that the next step spends PixelLab credits).
+Then serve it and point the user at **http://localhost:8100/pixelGen/**. **Prefer the control server
+`node scripts/serve_viewer.mjs`** (background) over a plain static server: it spawns
+`build_viewer.mjs --watch`, so the page updates **live** as the run progresses (the static
+`python -m http.server 8100 --directory godot/assets/tiles/v2` only shows a snapshot). Start it here,
+at intake, and **leave it running for the whole session** so the same page is the proposal now and
+the live progress monitor during the build. Every requested asset renders as a placeholder card
+showing its id + prompt + motion/physics — that *is* the proposal. Post a short chat summary too
+(item id, N keyframes [master + children] / idles / transitions, the priors, and that the next step
+spends PixelLab credits).
 
 ## The approval gate
 
 **Stop here and wait.** Intake produces config + the proposal view only — it never generates art.
 The user reviews pixelGen, tweaks prompts (edit `pipeline.json`) or comments, and re-builds until the
-plan reads right. Only when they explicitly approve ("run it") do you proceed to Stage 1 → 5, where
+plan reads right. Only when they explicitly approve ("run it") do you proceed to Stage 1 → 4, where
 generation and animation spend PixelLab credits + Aseprite ops. After the run, the **same** pixelGen
 cards fill with real art — proposal and output share one surface.

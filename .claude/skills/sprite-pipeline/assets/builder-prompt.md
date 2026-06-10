@@ -28,8 +28,14 @@ into siblings.
   `animation.fps` / `canvas`.** Every pixel you ship is scored against the spec (see
   `references/reference-assets-spec.md`).
 - **Priors** — the item's `priors[]` plus any already-approved siblings (the keyframes' selected
-  candidate PNGs). Pass these as visual context so your asset inherits the family's
-  silhouette / palette / detail density and stays continuous.
+  candidate PNGs). How priors are actually used depends on the asset kind:
+  - **Still via PixelLab** — `pixellab.mjs create` is **text-only** (no image conditioning), so
+    priors **cannot be fed in as an image**. Instead: open the prior(s) yourself, and let them shape
+    the **prompt wording** (name the shared material, palette, silhouette, detail density) — then
+    rely on the **G2 critique** to reject any candidate that drifts off the family. Continuity for
+    generated stills is *prompt-described + gate-enforced*, not image-conditioned.
+  - **Still by hand / Aseprite, or any animation** — priors are used **directly**: `import_image`
+    the approved sibling/keyframe and build over it. Here the visual prior really is the foundation.
 - **(Animation only) the filled storyboard** — `storyboards/<id>.md` (from
   `assets/storyboard.template.md`), which has **passed its Gate-3 critique** and was written
   **against the already-generated keyframe still** (it cites real pixel coordinates). It is your
@@ -50,8 +56,11 @@ Route by kind. **Stills** may be generated or hand-authored; **all animation is 
    on its item's already-**approved** `master` (derive from it, don't reinvent the silhouette).
 2. Generate `settings.candidates` seed(s):
    - **PixelLab** — the **pixellab** skill or `scripts/pixellab.mjs` (`create --desc … --out …`):
-     async create → poll → download; **check credits first** (`pixellab.mjs balance`). Pass the
-     priors for continuity. Each seed is one candidate `idx` → `NN.png`.
+     async create → poll → download; **check credits first** (`pixellab.mjs balance`). `create` is
+     **text-only** — bake the priors' shared material/palette/silhouette into the **`--desc` text**
+     (you can't pass a prior image), and lean on G2 to catch drift. A **child** keyframe's prompt
+     should explicitly restate the master's shape ("the same round ribbed pumpkin … now frosted")
+     since it can't see the approved master either. Each seed is one candidate `idx` → `NN.png`.
    - **Aseprite** — author/edit the still directly with the Aseprite draw primitives.
 3. Lift it onto the family look with the conformance helpers in `aseprite-execution.md`:
    `quantize_palette` (snap to the locked ramps — the #1 cohesion failure is palette drift),
@@ -86,10 +95,12 @@ SKILL "Running agents concurrently"): every call is stateless — addressed by a
 5. Export: `export_sprite` png per frame (`frame_number: i`, two-digit names) →
    `frames/<id>/NN.png` (`00.png`, `01.png`, …); then `export_sprite` gif `frame_number: 0`
    (all frames) → `previews/<id>.gif`.
-6. **Assemble the `.tres`** via `scripts/integrate.mjs` (it imports, verifies the `.png.import`
-   sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one command). See
-   `references/godot-integration.md`. If the Godot binary or `--import` is blocked in your sandbox,
-   **stop at the frames + GIF**, say so, and hand back — the orchestrator runs `integrate.mjs`.
+6. The pipeline **ends at the frames + GIF**. Assembling the `.tres` is a **separate, on-demand
+   step** (`npm run godot:update-tiles` → `tools/update-godot-tiles.mjs`, which imports, verifies the
+   `.png.import` sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one
+   command). See `references/godot-integration.md`. As a builder you should **stop at the frames +
+   GIF**, say so, and hand back — the orchestrator runs the Godot update step out of band (and it's
+   blocked anyway in a sandbox without a Godot binary).
 
 **The subtle-idle tradeoff.** A static imported base means the silhouette itself never breathes — the
 overlay does all the moving. That's perfect for a falling leaf / glint / drifting snow over a still

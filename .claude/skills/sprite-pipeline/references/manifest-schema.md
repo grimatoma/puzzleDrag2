@@ -86,7 +86,7 @@ structural" below.
 |-------|------|---------|
 | `id` | string | Stable item id (e.g. `birch_tree`). Names the family; with the new layout it's also the `items/<id>/…` output directory stem, and the **first key** in the history sidecar (`history["<id>"]`). |
 | `basePrompt` | string | Optional. Prepended to every `master`/`child` `prompt` before generation — the description shared by the whole family (subject, framing, shadow), so each member's `prompt` only states what makes it distinct. By convention the effective prompt is `basePrompt + ", " + prompt`. |
-| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets fed in as visual priors for cohesion when generating new members. Usually other tiles in the same family. |
+| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets used as the cohesion reference for new members. Usually other tiles in the same family. **Note:** for PixelLab-generated stills these inform the **prompt wording + the G2 gate** (PixelLab `create` is text-only — it can't take a prior image); for hand/Aseprite stills and all animation they're used **directly** (`import_image`). |
 | `canvas` | `{ width, height, safeArea }` | **Optional** per-item override of `settings.canvas`. |
 | `fps` | number | **Optional** per-item override of `settings.fps`. |
 | `master` | object | The base sprite the family derives from (see below). |
@@ -128,6 +128,19 @@ Two kinds, discriminated by `kind`. Unchanged by the split — animations live e
 | `physics` | string | `transition` | Plain-language brief of the **physical** change driving the tween — what moves/melts/falls/fades and in what order. The motion plan the animator executes. |
 | `status` | `pending \| generated` | both | `pending` = not animated yet (gap-fill will animate once its keys are approved); `generated` = the GIF/frames exist. |
 | `gif` | string | both | **Relative path** (from `pipeline.json`) to the looping preview GIF, once generated. |
+| `storyboard` | string | both | **Optional relative path** (from `pipeline.json`) to the filled storyboard `.md` for this animation, once written (Stage 3). Set it via `pipeline-patch.mjs animate-done … <storyboardPath>`. See the note below — the storyboard's *full text* is a file, not embedded here. |
+
+> **Where the storyboards and prompts live (a common question).** Two different things, two
+> different homes:
+> - **Image prompts are IN this config.** The effective generation prompt is the item's
+>   `basePrompt` + the keyframe's `prompt`, concatenated. Those fields are the durable record of what
+>   was asked for — they live in `pipeline.json`.
+> - **The motion brief is in this config; the full storyboard is a FILE.** Each animation carries a
+>   one-line `motion`/`physics` brief here (the durable summary), but the **full per-frame storyboard
+>   table** is a separate committed Markdown file at `items/<itemId>/storyboards/<animId>.md` — too
+>   large and too Markdown-shaped to embed in JSON (it would be unmergeable and unreadable inline).
+>   The optional `storyboard` field above is the **pointer** from the config to that file, so the
+>   relationship is tracked rather than relying on the filename convention alone.
 
 The schema enforces, via `oneOf`, that an animation is either an **idle** (has `for`) **or** a
 **transition** (has `from` + `to`) — exactly one shape.
