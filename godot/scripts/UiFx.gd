@@ -58,9 +58,11 @@ static func is_active() -> bool:
 ## in-flight open tween first and is a complete no-op headless / when disabled (the
 ## overlay just appears at full opacity, exactly as before this kit existed).
 ##
-## Awaits ONE frame before tweening so first-open layout has resolved (pivot_offset
-## needs real sizes); the initial transparent state is snapped immediately so there is
-## no one-frame flash of the unanimated overlay.
+## The tween starts IMMEDIATELY (snap + tween in the same processing step) so the
+## fade is in progress when the first frame renders — avoiding the one-frame blank
+## parchment backdrop flash. The await that follows is only to correct scale pivots
+## once layout sizes are available; if the overlay is closed during the await the
+## tween is killed and state is restored.
 static func animate_overlay_open(overlay: CanvasLayer) -> void:
 	if overlay == null or not overlay.is_inside_tree():
 		return
@@ -85,27 +87,18 @@ static func animate_overlay_open(overlay: CanvasLayer) -> void:
 	# translucent modal scrims fade in as scrims should.
 	if scrim != null and (scrim as ColorRect).color.a >= 0.999:
 		scrim = null
-	# Kill a previous open tween (a rapid re-open mid-animation) and snap targets
-	# transparent NOW so the pre-tween frame doesn't flash the finished overlay.
+	# Kill a previous open tween (a rapid re-open mid-animation), snap targets
+	# transparent, and start the tween in the SAME processing step. Starting before
+	# any await means the tween is already running when the first frame renders, so
+	# the frame shows the fade in progress rather than a blank parchment backdrop.
 	_kill_meta_tween(overlay, "_uifx_open_tween")
 	if scrim != null:
 		scrim.modulate.a = 0.0
 	for c in cards:
-		(c as Control).modulate.a = 0.0
-	# One frame so container layout resolves (sizes → correct pivots on first open).
-	var tree := overlay.get_tree()
-	if tree != null:
-		await tree.process_frame
-	if not is_instance_valid(overlay) or not overlay.is_inside_tree():
-		return
-	if not overlay.visible:
-		# Closed again during the awaited frame — restore the resting state instantly.
-		if scrim != null and is_instance_valid(scrim):
-			scrim.modulate.a = 1.0
-		for c in cards:
-			if is_instance_valid(c):
-				(c as Control).modulate.a = 1.0
-		return
+		var ctl := c as Control
+		ctl.pivot_offset = ctl.size / 2.0   # best guess; corrected after layout below
+		ctl.scale = Vector2(CARD_SCALE_FROM, CARD_SCALE_FROM)
+		ctl.modulate.a = 0.0
 	var tween := overlay.create_tween()
 	tween.set_parallel(true)
 	overlay.set_meta("_uifx_open_tween", tween)
@@ -116,12 +109,32 @@ static func animate_overlay_open(overlay: CanvasLayer) -> void:
 		if not is_instance_valid(c):
 			continue
 		var ctl := c as Control
-		ctl.pivot_offset = ctl.size / 2.0
-		ctl.scale = Vector2(CARD_SCALE_FROM, CARD_SCALE_FROM)
 		tween.tween_property(ctl, "modulate:a", 1.0, CARD_IN) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.tween_property(ctl, "scale", Vector2.ONE, CARD_IN) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# One frame so container layout resolves — then correct the pivot to the true centre.
+	# (The tween already runs with the best-guess pivot; the correction lands mid-animation
+	# but the scale is so subtle (6%) that the pivot shift is imperceptible.)
+	var tree := overlay.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(overlay) or not overlay.is_inside_tree():
+		return
+	if not overlay.visible:
+		# Closed during the awaited frame — kill the tween and restore resting state.
+		_kill_meta_tween(overlay, "_uifx_open_tween")
+		if scrim != null and is_instance_valid(scrim):
+			scrim.modulate.a = 1.0
+		for c in cards:
+			if is_instance_valid(c):
+				(c as Control).modulate.a = 1.0
+				(c as Control).scale = Vector2.ONE
+		return
+	# Correct pivots now that layout has resolved.
+	for c in cards:
+		if is_instance_valid(c):
+			(c as Control).pivot_offset = (c as Control).size / 2.0
 
 # ── bottom-nav tab activation ─────────────────────────────────────────────────
 
