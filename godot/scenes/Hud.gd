@@ -157,9 +157,55 @@ var _menu_btn: Button                   ## floating ⚙ button — vertically ce
 var _last_res: String = ""
 var _last_threshold: int = 0
 
-# ── M8d ToolPalette ────────────────────────────────────────────────────────────
-var _tool_palette_box: PanelContainer   ## outer parchment card (hidden when no tools)
-var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each _refresh_tools()
+# ── M8d ToolPalette → React PuzzleHotbar (preset slots + dropdown) ──────────────
+var _tool_palette_box: PanelContainer   ## the dark-wood HOTBAR rail (hidden when no tools)
+## {tool_id: Button} — rebuilt on each _refresh_tools(). Contains EVERY owned+relevant tool's
+## button (the DROPDOWN grid lists them all), so the test contract "_tool_buttons.has(id)" for
+## every owned+visible tool holds even though the rail only shows the pinned subset. A pinned
+## slot's own button is keyed separately in _hotbar_slot_buttons.
+var _tool_buttons: Dictionary = {}
+## {tool_id: Button} for the PINNED hotbar-rail slots only (drives the rail's armed/inspect tint).
+var _hotbar_slot_buttons: Dictionary = {}
+var _hotbar_row: HBoxContainer          ## the left strip of pinned slots inside the rail
+var _chevron_btn: Button                ## the rail's right-edge dropdown toggle (gold ▾ / inverted ▴)
+## How many pinned slots the rail shows — React useMaxFitPins shrinks the cap on narrow
+## viewports. Recomputed in _layout_hud from the rail's usable width; default 5 (React's
+## DEFAULT_PIN_KEYS length) until the first layout.
+var _hotbar_max_fit: int = 5
+
+# ── Tool DROPDOWN (React PuzzleToolModal) — floats over the board, no full backdrop ──
+var _dropdown_layer: CanvasLayer        ## dedicated layer above the HUD (so it floats over the board)
+var _dropdown_open: bool = false
+var _dropdown_card: PanelContainer      ## the dark dropdown card (detail header + scroll grid)
+var _dropdown_grid: GridContainer       ## the scrollable grid of ALL available tools
+var _dropdown_backdrop: Control         ## click-blocker behind the card (taps close the dropdown)
+var _dropdown_selected: String = ""     ## the tool selected in the dropdown's detail header
+var _dropdown_hint: Label               ## the instruction / "Drop here to unpin" line
+# Detail-header widgets (rebuilt content, persistent nodes).
+var _dd_icon: TextureRect
+var _dd_name: Label
+var _dd_count: Label
+var _dd_desc: Label
+var _dd_pinned_tag: Label
+var _dd_use_btn: Button
+
+# ── Drag-to-pin (React useToolDrag) ────────────────────────────────────────────
+# Long-press (220ms) OR a 6px move promotes a press to a drag. Drag dropdown→slot = pin;
+# drag slot→dropdown = unpin. GOTCHA: project.godot enables BOTH emulate_mouse_from_touch
+# AND emulate_touch_from_mouse, so one physical drag arrives as TWO events. We listen to the
+# MOUSE path ONLY (InputEventMouseButton / InputEventMouseMotion) and IGNORE ScreenTouch /
+# ScreenDrag — exactly why UiKit.make_vscroll sets drag_with_touch = false.
+const DRAG_LONGPRESS_MS: float = 0.220
+const DRAG_THRESHOLD_PX: float = 6.0
+var _press_active: bool = false         ## a press is being tracked (not yet a drag)
+var _press_tool: String = ""
+var _press_from_hotbar: bool = false
+var _press_start: Vector2 = Vector2.ZERO
+var _press_elapsed: float = 0.0
+var _drag_active: bool = false          ## a real drag is in flight (ghost follows the pointer)
+var _drag_tool: String = ""
+var _drag_from_hotbar: bool = false
+var _drag_ghost: Control                ## the floating ~1.1x tool ghost (in _dropdown_layer)
 
 # ── Tool view (React ToolView) — the TOOL state of the action panel ───────────
 # Replaces the old full-width "Tool armed" overlay banner: the same information now
@@ -186,6 +232,37 @@ const HOTBAR_TOP := 130.0                ## tool hotbar rail top
 const HOTBAR_H := 78.0                   ## tool hotbar rail height (single slot row)
 const PANEL_TOP := 216.0                 ## action panel top
 const PANEL_H := 208.0                   ## action panel FIXED height (all three states)
+
+# ── Landscape two-column layout (React BoardLayout @media landscape) ───────────
+## When the viewport is comfortably wider than tall, the board page reflows from the
+## portrait stack (hotbar → panel → board) to React's two-column landscape template
+## (grid-template-areas: "panel board" / "tools board"): the ACTION PANEL pins top-left,
+## a persistent TOOLS area (the dropdown card, reused as React's PuzzleToolGrid) sits
+## under it, and the BOARD fills the whole right column. The compact hotbar rail is
+## HIDDEN in landscape (React: [data-area="hotbar"]{display:none}).
+##
+## Trigger threshold: aspect >= 1.2 (vp.x >= vp.y * 1.2). The project stretches with
+## aspect="expand", so the logical viewport HEIGHT is pinned to the 1280 base and only
+## the WIDTH grows — a real landscape window (e.g. 1280×720) yields a logical viewport
+## ~2275×1280 (aspect ~1.78). 1.2 is a clean margin above square (1.0) so a near-square
+## window (a foldable mid-fold, ~1.0–1.1) does NOT thrash between layouts, while every
+## genuine landscape device clears it. This mirrors React's `(orientation: landscape) and
+## (min-width: 500px)` guard (by the time vp.x > vp.y here, vp.x is already > 1280).
+const LANDSCAPE_ASPECT := 1.2
+## Left-column width = clamp(vp.x * LANDSCAPE_LEFT_FRAC, LANDSCAPE_LEFT_MIN, vp.x - board floor).
+## Mirrors React's `grid-template-columns: minmax(360px, 44%) minmax(0, 1fr)`.
+const LANDSCAPE_LEFT_FRAC := 0.44
+const LANDSCAPE_LEFT_MIN := 360.0
+## Y where the left column (action panel) starts in landscape — below the full-width
+## top bar + season bar (the season strip stays full-width on top in both orientations).
+const LANDSCAPE_CONTENT_TOP := 130.0
+## Minimum logical width reserved for the board column so the left column can never eat
+## the whole viewport on an oddly-narrow landscape window.
+const LANDSCAPE_BOARD_MIN_W := 480.0
+## True once a landscape relayout has docked the tools dropdown as a persistent left panel.
+## Drives _close_dropdown / the chevron / the backdrop so the docked panel never behaves
+## like the transient portrait modal. Reset to false by the portrait relayout.
+var _dropdown_docked: bool = false
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
 var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label, icon}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
@@ -1036,8 +1113,9 @@ func _style_cta(btn: Button, fill: Color, border: Color, ink: Color) -> void:
 
 ## Build the tool HOTBAR container (React PuzzleHotbar): a dark wood rail pinned
 ## TOP_WIDE between the season bar and the action panel (_layout_hud sets the band).
-## Starts hidden (_refresh_tools shows it once the player owns tools); the inner slot
-## strip is rebuilt on each refresh. KEEPS the _tool_palette_box name (test contract).
+## Holds a left strip of PRESET (pinned) slots + a right-edge chevron that toggles the tool
+## DROPDOWN. Starts hidden (_refresh_tools shows it once the player owns tools); the slot strip
+## is rebuilt on each refresh. KEEPS the _tool_palette_box name (test contract).
 func _build_tool_palette(root: Control) -> void:
 	_tool_palette_box = PanelContainer.new()
 	_tool_palette_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -1045,6 +1123,40 @@ func _build_tool_palette(root: Control) -> void:
 	_tool_palette_box.offset_top = 130    # repositioned each layout in _layout_hud
 	_tool_palette_box.visible = false      # hidden until _refresh_tools sees tools in the bag
 	root.add_child(_tool_palette_box)
+
+	# Rail row: [ pinned-slot strip (expands) ][ chevron ]. The strip is rebuilt every refresh.
+	var rail := HBoxContainer.new()
+	rail.add_theme_constant_override("separation", 8)
+	_tool_palette_box.add_child(rail)
+
+	_hotbar_row = HBoxContainer.new()
+	_hotbar_row.add_theme_constant_override("separation", 8)
+	_hotbar_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hotbar_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	rail.add_child(_hotbar_row)
+
+	# Chevron — bright gold (closed) / inverted deep-brown (open), like React's PuzzleHotbar
+	# open button. Toggles the dropdown.
+	_chevron_btn = Button.new()
+	_chevron_btn.text = "▾"
+	_chevron_btn.focus_mode = Control.FOCUS_NONE
+	_chevron_btn.custom_minimum_size = Vector2(48, 52)
+	_chevron_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	UiKit.set_font_size(_chevron_btn, Typography.Role.HEADING)
+	_chevron_btn.tooltip_text = "Open tools"
+	_chevron_btn.pressed.connect(_toggle_dropdown)
+	UiFx.attach_press_feedback(_chevron_btn)
+	rail.add_child(_chevron_btn)
+	_style_chevron()
+
+	# The floating dropdown lives on its OWN CanvasLayer above the HUD so it draws OVER the
+	# board (React: the modal floats over the board with no full-screen backdrop). Built once,
+	# hidden until the chevron opens it.
+	_build_tool_dropdown()
+
+	# _process only runs while a slot press / drag is being tracked (the long-press timer +
+	# ghost follow) — keep it OFF at rest.
+	set_process(false)
 
 ## The hotbar rail surface: dark wood with a near-black bottom border (React's
 ## linear-gradient(#6b4a26,#54391d) rail), rounded like a HUD card.
@@ -1063,33 +1175,55 @@ func _hotbar_box() -> StyleBoxFlat:
 	sb.content_margin_bottom = 6
 	return sb
 
-## Rebuild the tool HOTBAR from game.tools (React PuzzleHotbar): one square slot per
-## owned tool — its icon + a dark count badge — the ARMED tool red-edged on a bright
-## fill, the INSPECTED tool gold-edged. A tap INSPECTS the tool in the action panel;
-## tapping the already-inspected slot ACTIVATES it (the port's timing-free version of
-## React's two-tap inspect→activate). Hidden completely when no tools are owned.
-## Registers every button in _tool_buttons keyed by id (test contract).
+## Owned tools (charges > 0) RELEVANT to the active board, in stable ToolConfig order. React
+## shows only the tools usable on the current biome (src/ui/puzzleToolFilter.ts visiblePuzzleTools
+## → isToolVisibleOnPuzzleBoard); the port mirrors BOTH halves of that filter via the SHARED
+## ToolConfig.is_tool_visible_on_board (NEVER reimplemented here — both the hotbar AND the
+## dropdown read this one filter):
+##   1. board-kind — a mine-only tool (e.g. water_pump) never clutters the farm hotbar, and
+##      vice-versa; "all"-kind tools (bomb / reshuffle horn / magic wand) show on every board.
+##   2. hazard-spawnability — a hazard-only tool (Cat/Terrier, Rifle/Hound, Water Pump,
+##      Explosives) shows only when at least one hazard it counters CAN spawn on this board
+##      (game.spawnable_hazards()), so the player can pre-arm before it appears but the strip
+##      stays uncluttered when that hazard is impossible here.
+## Each entry is {id, charges}. The SAME filter decides whether a pinned slot is "available".
+func _available_tools() -> Array:
+	var out: Array = []
+	if game == null:
+		return out
+	var biome: String = game.active_biome
+	var spawnable: Array = game.spawnable_hazards()
+	for id in ToolConfig.TOOL_IDS:
+		var charges: int = game.tool_count(id)
+		if charges > 0 and ToolConfig.is_tool_visible_on_board(id, biome, spawnable):
+			out.append({"id": id, "charges": charges})
+	return out
+
+## True when tool `id` is OWNED and passes the relevance filter for the active board — the exact
+## same gate _available_tools applies (reuses ToolConfig.is_tool_visible_on_board, never a copy).
+## A pinned-but-unavailable tool renders as a greyed/empty slot.
+func _tool_available(id: String) -> bool:
+	if game == null or id == "" or not ToolConfig.has_tool(id):
+		return false
+	return game.tool_count(id) > 0 \
+		and ToolConfig.is_tool_visible_on_board(id, game.active_biome, game.spawnable_hazards())
+
+## Rebuild the tool HOTBAR (React PuzzleHotbar) + the tool DROPDOWN (React PuzzleToolModal):
+##   • the rail shows the PINNED preset slots (game.get_hotbar_pins(), capped to _hotbar_max_fit)
+##     — a pinned+available tool is interactive (icon + count badge, armed/inspect tint); a
+##     pinned-but-unavailable id or an empty pin renders a dashed placeholder;
+##   • the dropdown grid lists EVERY available tool (owned + relevance-filtered).
+## A tap INSPECTS the tool in the action panel; tapping the already-inspected slot ACTIVATES it
+## (the port's timing-free version of React's two-tap inspect→activate). The rail is hidden
+## entirely when no tools are available. Registers every AVAILABLE tool's dropdown button in
+## _tool_buttons keyed by id (test contract: _tool_buttons.has(id) for every owned+visible tool).
 func _refresh_tools() -> void:
 	if _tool_palette_box == null:
 		return
-	# Clear previous buttons + the registry.
-	for child in _tool_palette_box.get_children():
-		child.queue_free()
 	_tool_buttons.clear()
+	_hotbar_slot_buttons.clear()
 
-	# Collect owned tools (charges > 0) in stable ToolConfig order, filtered to those
-	# RELEVANT to the active board. React shows only the tools usable on the current biome
-	# (src/ui/puzzleToolFilter.ts visiblePuzzleTools → isToolVisibleOnPuzzleBoard); the port
-	# mirrors the board-kind half of that filter via ToolConfig.is_tool_visible_on_board, so
-	# a mine-only tool (e.g. water_pump) never clutters the farm hotbar, and vice-versa.
-	# "all"-kind tools (bomb / reshuffle horn / magic wand / magic seed) show on every board.
-	var owned: Array = []
-	if game != null:
-		var biome: String = game.active_biome
-		for id in ToolConfig.TOOL_IDS:
-			var charges: int = game.tool_count(id)
-			if charges > 0 and ToolConfig.is_tool_visible_on_board(id, biome):
-				owned.append({"id": id, "charges": charges})
+	var owned: Array = _available_tools()
 
 	# An inspected tool that is no longer owned (last charge spent) falls back to idle —
 	# unless it is somehow still armed (defensive; the armed view must stay reachable). A
@@ -1101,90 +1235,750 @@ func _refresh_tools() -> void:
 
 	if owned.is_empty():
 		_tool_palette_box.visible = false
+		_close_dropdown(true)                      # nothing to show — fold the dropdown away
+		_dropdown_docked = false                   # an empty bag undocks; a regrant re-docks via relayout
 		_update_action_state()
 		return
 
-	_tool_palette_box.visible = true
-
-	# A single-row rail (React's fixed-height hotbar). Horizontal scroll (no bar) keeps
-	# every slot reachable when many tools are owned WITHOUT the rail growing taller —
-	# the action panel below is FIXED, so a wrapping rail would overlap it.
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_tool_palette_box.add_child(scroll)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	scroll.add_child(row)
-
-	var armed_id: String = game.pending_tool if game != null else ""
-
-	for entry in owned:
-		var id: String = String(entry["id"])
-		var charges: int = int(entry["charges"])
-		var cfg: Dictionary = ToolConfig.get_tool(id)
-		var label: String = String(cfg.get("label", id))
-		var desc: String = String(cfg.get("desc", ""))
-		# Armed = the pending tap-tool OR the tool that armed a live fill_bias (fertilizer &c).
-		# The fill_bias slot stays highlighted regardless of what's inspected — React's
-		# `def.key === "fertilizer" && isFillBiasArmed(state)` lights the tile the same way.
-		var is_armed: bool = (id == armed_id and armed_id != "") or _is_armed_fill_bias(id)
-		var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
-
-		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
-		var slot := Control.new()
-		slot.custom_minimum_size = Vector2(56, 58)
-
-		var btn := Button.new()
-		btn.set_anchors_preset(Control.PRESET_FULL_RECT)
-		btn.focus_mode = Control.FOCUS_NONE
-		var tex := UiKit.resource_icon(id)
-		if tex != null:
-			btn.icon = tex
-			btn.expand_icon = true
-		else:
-			btn.text = label                       # fallback for a tool with no art
-			UiKit.set_font_size(btn, Typography.Role.META)
-		# Tooltip carries the label + "×N" + the tool's description — the tests read
-		# tooltip_text (the button itself is icon-only; the action panel shows the text).
-		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
-		# React ToolTile palette on the dark rail: armed = bright parchment + gold edge;
-		# inspected = warm tint + soft gold edge; rest = faint parchment wash.
-		var slot_fill: Color = Color("#f6e3bf", 0.18)
-		var slot_border: Color = Color("#c8a05a", 0.40)
-		if is_armed:
-			slot_fill = Color("#fdf3e3")
-			slot_border = Color("#f0c14b")
-		elif is_inspected:
-			slot_fill = Color("#f6e3bf", 0.55)
-			slot_border = Color("#f0c14b", 0.60)
-		btn.add_theme_stylebox_override("normal", _tool_slot_box(slot_fill, slot_border))
-		btn.add_theme_stylebox_override("hover", _tool_slot_box(slot_fill.lightened(0.06), slot_border))
-		btn.add_theme_stylebox_override("pressed", _tool_slot_box(slot_fill.darkened(0.06), slot_border))
-		btn.pressed.connect(func():
-			_on_tool_slot_tapped(id)
-		)
-		slot.add_child(btn)
-
-		# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
-		var badge := Label.new()
-		badge.text = str(charges)
-		UiKit.set_font_size(badge, Typography.Role.BODY)
-		badge.add_theme_color_override("font_color", Palette.PARCHMENT)
-		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		badge.add_theme_stylebox_override("normal", _tool_badge_box())
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.position = Vector2(38, -6)
-		slot.add_child(badge)
-
-		row.add_child(slot)
-		_tool_buttons[id] = btn
+	# The compact hotbar rail is HIDDEN while the tools dropdown is docked (landscape) — only the
+	# portrait relayout shows it. Re-showing it here would briefly pop the rail back over the
+	# board on a mid-landscape tool grant.
+	_tool_palette_box.visible = not _dropdown_docked
+	_rebuild_hotbar_slots(owned)
+	_rebuild_dropdown_grid(owned)
+	# Keep the docked tools panel visible after a mid-game tool grant (it may have been hidden
+	# while the bag was empty); the next relayout re-pins it, but show it now so it never blinks.
+	if _dropdown_docked and _dropdown_layer != null:
+		_dropdown_open = true
+		_dropdown_layer.visible = true
 
 	# The slot highlights are state-derived — keep the panel's TOOL view content current
 	# (counts change with every use; the armed highlight follows game.pending_tool).
 	_update_action_state()
+
+## Rebuild the PINNED slot strip in the rail from game.get_hotbar_pins(), capped at
+## _hotbar_max_fit (React useMaxFitPins). Slot i renders pins[i]: an available pinned tool is an
+## interactive icon slot (count badge + armed/inspect tint); an empty pin OR a pinned-but-
+## unavailable id renders a dashed placeholder. `owned` (the available set) is used to fast-test
+## availability + look up the live charge count.
+func _rebuild_hotbar_slots(owned: Array) -> void:
+	for child in _hotbar_row.get_children():
+		child.queue_free()
+
+	var charge_by_id: Dictionary = {}
+	for entry in owned:
+		charge_by_id[String(entry["id"])] = int(entry["charges"])
+
+	var pins: Array = game.get_hotbar_pins() if game != null else []
+	var armed_id: String = game.pending_tool if game != null else ""
+	var slot_count: int = maxi(1, _hotbar_max_fit)
+	for i in range(slot_count):
+		var id: String = String(pins[i]) if i < pins.size() else ""
+		if id != "" and charge_by_id.has(id):
+			# A pinned, AVAILABLE tool — a live interactive slot.
+			var charges: int = int(charge_by_id[id])
+			var is_armed: bool = (id == armed_id and armed_id != "") or _is_armed_fill_bias(id)
+			var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
+			var slot := _make_tool_slot(id, charges, is_armed, is_inspected, i, true)
+			_hotbar_row.add_child(slot)
+		else:
+			# Empty pin OR a pinned-but-unavailable tool → a dashed placeholder (React's empty
+			# slot, which also accepts a drop from the dropdown).
+			_hotbar_row.add_child(_make_empty_slot(i))
+
+## Rebuild the DROPDOWN's scrollable grid of EVERY available tool + refresh its detail header.
+## Registers each tool's grid button in _tool_buttons keyed by id (the test contract — the grid
+## lists ALL owned+visible tools even though the rail shows only the pinned subset).
+func _rebuild_dropdown_grid(owned: Array) -> void:
+	if _dropdown_grid == null:
+		return
+	for child in _dropdown_grid.get_children():
+		child.queue_free()
+
+	var armed_id: String = game.pending_tool if game != null else ""
+	for entry in owned:
+		var id: String = String(entry["id"])
+		var charges: int = int(entry["charges"])
+		var is_armed: bool = (id == armed_id and armed_id != "") or _is_armed_fill_bias(id)
+		var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
+		var slot := _make_tool_slot(id, charges, is_armed, is_inspected, -1, false)
+		_dropdown_grid.add_child(slot)
+
+	# Keep the dropdown's detail header pointed at a sensible tool (the inspected one, else the
+	# selected one, else the first available) and re-render it.
+	if _dropdown_selected == "" or not _id_in_owned(_dropdown_selected, owned):
+		_dropdown_selected = _inspected_tool if _id_in_owned(_inspected_tool, owned) \
+			else (String(owned[0]["id"]) if not owned.is_empty() else "")
+	_refresh_dropdown_detail(owned)
+
+func _id_in_owned(id: String, owned: Array) -> bool:
+	if id == "":
+		return false
+	for entry in owned:
+		if String(entry["id"]) == id:
+			return true
+	return false
+
+## Build a single square tool slot: a full-rect icon Button + a corner count badge, armed/inspect
+## tinted. `slot_index` >= 0 marks a HOTBAR slot (drag-out to unpin); `from_hotbar` true also
+## registers the slot in _hotbar_slot_buttons. The button taps run the two-tap inspect/arm flow;
+## a long-press / move begins a drag (React useToolDrag). Dropdown buttons (from_hotbar false)
+## are the canonical _tool_buttons[id] entries.
+func _make_tool_slot(id: String, charges: int, is_armed: bool, is_inspected: bool,
+		slot_index: int, from_hotbar: bool) -> Control:
+	var cfg: Dictionary = ToolConfig.get_tool(id)
+	var label: String = String(cfg.get("label", id))
+	var desc: String = String(cfg.get("desc", ""))
+
+	var slot := Control.new()
+	slot.custom_minimum_size = Vector2(56, 58)
+
+	var btn := Button.new()
+	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+	btn.focus_mode = Control.FOCUS_NONE
+	var tex := UiKit.resource_icon(id)
+	if tex != null:
+		btn.icon = tex
+		btn.expand_icon = true
+	else:
+		btn.text = label                       # fallback for a tool with no art
+		UiKit.set_font_size(btn, Typography.Role.META)
+	btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
+	# React ToolTile palette: armed = bright parchment + gold edge; inspected = warm tint +
+	# soft gold edge; rest = faint parchment wash.
+	var slot_fill: Color = Color("#f6e3bf", 0.18)
+	var slot_border: Color = Color("#c8a05a", 0.40)
+	if is_armed:
+		slot_fill = Color("#fdf3e3")
+		slot_border = Color("#f0c14b")
+	elif is_inspected:
+		slot_fill = Color("#f6e3bf", 0.55)
+		slot_border = Color("#f0c14b", 0.60)
+	btn.add_theme_stylebox_override("normal", _tool_slot_box(slot_fill, slot_border))
+	btn.add_theme_stylebox_override("hover", _tool_slot_box(slot_fill.lightened(0.06), slot_border))
+	btn.add_theme_stylebox_override("pressed", _tool_slot_box(slot_fill.darkened(0.06), slot_border))
+	btn.pressed.connect(func() -> void: _on_tool_slot_tapped(id))
+	# Drag-to-pin: a press on the slot may promote to a drag (gui_input → mouse path only).
+	btn.gui_input.connect(func(ev: InputEvent) -> void: _slot_gui_input(ev, id, from_hotbar, slot_index, btn))
+	slot.add_child(btn)
+
+	# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
+	var badge := Label.new()
+	badge.text = str(charges)
+	UiKit.set_font_size(badge, Typography.Role.BODY)
+	badge.add_theme_color_override("font_color", Palette.PARCHMENT)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_theme_stylebox_override("normal", _tool_badge_box())
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.position = Vector2(38, -6)
+	slot.add_child(badge)
+
+	# Hide the slot's icon button while it is the one being DRAGGED (the ghost stands in for it),
+	# mirroring React's `dragging` prop dimming the source tile.
+	if _drag_active and _drag_tool == id and _drag_from_hotbar == from_hotbar:
+		btn.modulate = Color(1, 1, 1, 0.25)
+
+	if from_hotbar:
+		_hotbar_slot_buttons[id] = btn
+	else:
+		_tool_buttons[id] = btn          # the dropdown grid is the canonical id→button registry
+	return slot
+
+## A dashed empty hotbar slot (React's placeholder). `slot_index` marks it as a drop target for
+## a dropdown→hotbar pin drag.
+func _make_empty_slot(slot_index: int) -> Control:
+	var slot := Panel.new()
+	slot.custom_minimum_size = Vector2(56, 58)
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.set_meta("hotbar_slot_index", slot_index)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	sb.border_color = Color("#f0c14b", 0.55)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(11)
+	# A faint highlight while a dropdown drag is in flight (React's drop-hint).
+	if _drag_active and not _drag_from_hotbar:
+		sb.bg_color = Color("#f0c14b", 0.18)
+	slot.add_theme_stylebox_override("panel", sb)
+	return slot
+
+# ── Tool DROPDOWN (React PuzzleToolModal) ──────────────────────────────────────
+
+## Restyle the rail's chevron: bright gold when CLOSED (▾), inverted deep-brown when OPEN (▴),
+## mirroring React's PuzzleHotbar open-button colour flip.
+func _style_chevron() -> void:
+	if _chevron_btn == null:
+		return
+	_chevron_btn.text = "▴" if _dropdown_open else "▾"
+	_chevron_btn.tooltip_text = "Close tools" if _dropdown_open else "Open tools"
+	var face := StyleBoxFlat.new()
+	face.set_corner_radius_all(10)
+	face.set_border_width_all(2)
+	face.border_color = Color("#2a1a08")
+	face.set_content_margin_all(4)
+	var ink: Color
+	if _dropdown_open:
+		face.bg_color = Color("#2e1d0c")
+		ink = Color("#f0c14b")
+	else:
+		face.bg_color = Color("#e7b455")
+		ink = Color("#3a2412")
+	_chevron_btn.add_theme_stylebox_override("normal", face)
+	_chevron_btn.add_theme_stylebox_override("hover", face)
+	_chevron_btn.add_theme_stylebox_override("pressed", face)
+	_chevron_btn.add_theme_stylebox_override("focus", face)
+	_chevron_btn.add_theme_color_override("font_color", ink)
+	_chevron_btn.add_theme_color_override("font_hover_color", ink)
+	_chevron_btn.add_theme_color_override("font_pressed_color", ink)
+
+## Build the floating tool dropdown ONCE: a dedicated CanvasLayer (layer 1, above the HUD root)
+## holding a click-blocker backdrop (taps close, but NO dark dim — React floats over the board)
+## + the dark dropdown card (detail header + a scrollable grid of every available tool). Hidden
+## until the chevron opens it. _layout_hud positions the card below the hotbar each layout.
+func _build_tool_dropdown() -> void:
+	_dropdown_layer = CanvasLayer.new()
+	_dropdown_layer.layer = 1
+	_dropdown_layer.visible = false
+	add_child(_dropdown_layer)
+
+	# Click-blocker BELOW the hotbar (React's top:100% backdrop): a transparent Control that
+	# swallows taps over the board (so a tap under the dropdown can't fall through to the board
+	# canvas) and closes the dropdown. It starts at the rail's bottom edge so the rail + chevron
+	# stay clickable while the dropdown is open (positioned in _position_dropdown).
+	_dropdown_backdrop = Control.new()
+	_dropdown_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dropdown_backdrop.offset_top = HOTBAR_TOP + HOTBAR_H
+	_dropdown_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dropdown_backdrop.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
+			_close_dropdown())
+	_dropdown_layer.add_child(_dropdown_backdrop)
+
+	# The dropdown card — anchored TOP_WIDE; _layout_hud pins its top just below the hotbar.
+	_dropdown_card = PanelContainer.new()
+	_dropdown_card.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_dropdown_card.add_theme_stylebox_override("panel", _dropdown_card_box())
+	_dropdown_layer.add_child(_dropdown_card)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	_dropdown_card.add_child(col)
+
+	# Detail header (selected tool icon / name / count / desc + ARM/USE button + close).
+	col.add_child(_build_dropdown_detail())
+
+	# Instruction line.
+	var hint_pad := MarginContainer.new()
+	hint_pad.add_theme_constant_override("margin_left", 12)
+	hint_pad.add_theme_constant_override("margin_right", 12)
+	hint_pad.add_theme_constant_override("margin_top", 6)
+	hint_pad.add_theme_constant_override("margin_bottom", 2)
+	col.add_child(hint_pad)
+	_dropdown_hint = Label.new()
+	_dropdown_hint.text = "Long-press a tool and drag it up to pin · double-tap to use"
+	UiKit.set_font_size(_dropdown_hint, Typography.Role.CAPTION)
+	_dropdown_hint.add_theme_color_override("font_color", Color("#caa97a"))
+	_dropdown_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint_pad.add_child(_dropdown_hint)
+
+	# Scrollable grid of every available tool.
+	var scroll := UiKit.make_vscroll()
+	scroll.custom_minimum_size = Vector2(0, 210)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(scroll)
+
+	var grid_pad := MarginContainer.new()
+	grid_pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid_pad.add_theme_constant_override("margin_left", 12)
+	grid_pad.add_theme_constant_override("margin_right", 12)
+	grid_pad.add_theme_constant_override("margin_top", 4)
+	grid_pad.add_theme_constant_override("margin_bottom", 12)
+	scroll.add_child(grid_pad)
+
+	_dropdown_grid = GridContainer.new()
+	_dropdown_grid.columns = 5
+	_dropdown_grid.add_theme_constant_override("h_separation", 10)
+	_dropdown_grid.add_theme_constant_override("v_separation", 10)
+	grid_pad.add_child(_dropdown_grid)
+
+## The dropdown card surface: a dark wood gradient-feel fill with a gold border + soft shadow
+## (React's #4a2e14→#362210 card), rounded only at the bottom (it hangs off the hotbar).
+func _dropdown_card_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("#3f2812")
+	sb.border_color = Color("#8a6428")
+	sb.set_border_width_all(2)
+	sb.border_width_top = 0
+	sb.corner_radius_bottom_left = 16
+	sb.corner_radius_bottom_right = 16
+	sb.shadow_size = 12
+	sb.shadow_color = Color(0, 0, 0, 0.45)
+	sb.shadow_offset = Vector2(0, 6)
+	return sb
+
+## Build the dropdown's detail header (React PuzzleToolModal header): a parchment strip with a
+## "TOOL DETAIL · pinned" caption + close ✕, then the selected tool's icon card, name, "×N left",
+## description, and the ARM / USE button. Returns the header container; the mutable widgets are
+## stored on the _dd_* fields and re-rendered by _refresh_dropdown_detail.
+func _build_dropdown_detail() -> Control:
+	var wrap := PanelContainer.new()
+	var head_box := StyleBoxFlat.new()
+	head_box.bg_color = Color("#f6e3bf")
+	head_box.border_color = Color("#8a6428")
+	head_box.border_width_bottom = 1
+	head_box.set_content_margin_all(0)
+	wrap.add_theme_stylebox_override("panel", head_box)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	wrap.add_child(col)
+
+	# Caption row: dot + "TOOL DETAIL" + optional "· pinned" + close ✕.
+	var cap_pad := MarginContainer.new()
+	cap_pad.add_theme_constant_override("margin_left", 12)
+	cap_pad.add_theme_constant_override("margin_right", 10)
+	cap_pad.add_theme_constant_override("margin_top", 7)
+	cap_pad.add_theme_constant_override("margin_bottom", 2)
+	col.add_child(cap_pad)
+	var cap_row := HBoxContainer.new()
+	cap_row.add_theme_constant_override("separation", 6)
+	cap_pad.add_child(cap_row)
+
+	var cap := Label.new()
+	cap.text = "TOOL DETAIL"
+	UiKit.set_font_size(cap, Typography.Role.CAPTION)
+	cap.add_theme_color_override("font_color", Color("#7a5520"))
+	cap.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	cap_row.add_child(cap)
+
+	_dd_pinned_tag = Label.new()
+	_dd_pinned_tag.text = "· pinned"
+	UiKit.set_font_size(_dd_pinned_tag, Typography.Role.CAPTION)
+	_dd_pinned_tag.add_theme_color_override("font_color", Color("#8a6a47"))
+	_dd_pinned_tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_dd_pinned_tag.visible = false
+	cap_row.add_child(_dd_pinned_tag)
+
+	var cap_spacer := Control.new()
+	cap_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cap_row.add_child(cap_spacer)
+
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(28, 26)
+	close.focus_mode = Control.FOCUS_NONE
+	UiKit.style_button(close, Color("#8a6428"), 0, Typography.size(Typography.Role.BODY))
+	close.pressed.connect(_close_dropdown)
+	cap_row.add_child(close)
+
+	# Body row: icon card + name/count/desc column + the ARM/USE button.
+	var body_pad := MarginContainer.new()
+	body_pad.add_theme_constant_override("margin_left", 12)
+	body_pad.add_theme_constant_override("margin_right", 12)
+	body_pad.add_theme_constant_override("margin_top", 2)
+	body_pad.add_theme_constant_override("margin_bottom", 10)
+	col.add_child(body_pad)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	body_pad.add_child(body)
+
+	var icon_box := PanelContainer.new()
+	icon_box.custom_minimum_size = Vector2(60, 60)
+	icon_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon_box.add_theme_stylebox_override("panel", _tool_icon_box_style(false))
+	body.add_child(icon_box)
+	var icon_center := CenterContainer.new()
+	icon_box.add_child(icon_center)
+	_dd_icon = TextureRect.new()
+	_dd_icon.custom_minimum_size = Vector2(40, 40)
+	_dd_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_dd_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_dd_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	icon_center.add_child(_dd_icon)
+
+	var txt := VBoxContainer.new()
+	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	txt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	txt.add_theme_constant_override("separation", 2)
+	body.add_child(txt)
+
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 8)
+	txt.add_child(name_row)
+	var heading_font: Font = UiKit.heading_font()
+	_dd_name = Label.new()
+	UiKit.set_font_size(_dd_name, Typography.Role.SUBHEAD)
+	_dd_name.add_theme_color_override("font_color", Color("#3a2412"))
+	if heading_font != null:
+		_dd_name.add_theme_font_override("font", heading_font)
+	name_row.add_child(_dd_name)
+	_dd_count = Label.new()
+	UiKit.set_font_size(_dd_count, Typography.Role.CAPTION)
+	_dd_count.add_theme_color_override("font_color", Color("#7a5520"))
+	_dd_count.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	name_row.add_child(_dd_count)
+
+	_dd_desc = Label.new()
+	UiKit.set_font_size(_dd_desc, Typography.Role.BODY)
+	_dd_desc.add_theme_color_override("font_color", Color("#5b3a1e"))
+	_dd_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dd_desc.max_lines_visible = 2
+	_dd_desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	txt.add_child(_dd_desc)
+
+	_dd_use_btn = Button.new()
+	_dd_use_btn.focus_mode = Control.FOCUS_NONE
+	_dd_use_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_dd_use_btn.pressed.connect(_on_dropdown_use_pressed)
+	body.add_child(_dd_use_btn)
+
+	return wrap
+
+## Re-render the dropdown detail header from _dropdown_selected (React PuzzleToolModal detail):
+## icon, name, "×N left", description, the pinned tag, and the ARM (tap tool) / ✓ USE (instant)
+## button. A no-op when the dropdown isn't built. `owned` supplies the live charge count.
+func _refresh_dropdown_detail(owned: Array) -> void:
+	if _dd_name == null:
+		return
+	var id := _dropdown_selected
+	if id == "" or not ToolConfig.has_tool(id):
+		_dd_name.text = "No tools available"
+		_dd_desc.text = "Craft tools at the workshop or portal."
+		_dd_count.text = ""
+		_dd_icon.texture = null
+		_dd_use_btn.visible = false
+		_dd_pinned_tag.visible = false
+		return
+	var charges: int = 0
+	for entry in owned:
+		if String(entry["id"]) == id:
+			charges = int(entry["charges"])
+			break
+	_dd_name.text = ToolConfig.tool_label(id)
+	_dd_desc.text = ToolConfig.tool_desc(id)
+	_dd_count.text = "× %d LEFT" % charges
+	_dd_icon.texture = UiKit.resource_icon(id)
+	var pins: Array = game.get_hotbar_pins() if game != null else []
+	_dd_pinned_tag.visible = pins.has(id)
+	_dd_use_btn.visible = true
+	var is_tap: bool = ToolConfig.is_tap_target(id)
+	var armed: bool = (game != null and game.pending_tool == id) or _is_armed_fill_bias(id)
+	if armed:
+		_dd_use_btn.text = "✕ DISARM"
+		_style_cta(_dd_use_btn, Color("#d05030"), Color("#5a1a08"), Color("#fff8e7"))
+	elif is_tap:
+		_dd_use_btn.text = "ARM"
+		_style_cta(_dd_use_btn, Color("#eb9440"), Color("#7a3c12"), Color("#2c1408"))
+	else:
+		_dd_use_btn.text = "✓ USE"
+		_style_cta(_dd_use_btn, Color("#6aa338"), Color("#3a5a12"), Color("#0c2e10"))
+	_dd_use_btn.disabled = charges <= 0 and not armed
+
+## The dropdown detail's ARM / USE / DISARM button: routes the selected tool through the SAME
+## two-tap activate as a slot's second tap. An instant tool fires + closes the dropdown; an
+## armable tool arms and keeps the dropdown context (the player can still see the board).
+func _on_dropdown_use_pressed() -> void:
+	var id := _dropdown_selected
+	if id == "" or not ToolConfig.has_tool(id):
+		return
+	# Inspect it first (so the action panel + slot state follow), then activate via the same
+	# arm/use/disarm path the slot's second tap uses.
+	_inspected_tool = id
+	if (game != null and game.pending_tool == id) or _is_armed_fill_bias(id):
+		disarm_requested.emit()
+	else:
+		tool_use_requested.emit(id)
+		# Instant tools fire-and-clear → fold the dropdown away so the board is visible.
+		if not ToolConfig.is_tap_target(id):
+			_close_dropdown()
+	_refresh_tools()
+
+## Public: is the floating tool dropdown currently open? (Main reads this on ESC/Back.)
+func is_tool_dropdown_open() -> bool:
+	return _dropdown_open
+
+## Public: close the tool dropdown (Main calls this on ESC/Back).
+func close_tool_dropdown() -> void:
+	_close_dropdown()
+
+## Toggle the dropdown open/closed (the chevron press).
+func _toggle_dropdown() -> void:
+	if _dropdown_open:
+		_close_dropdown()
+	else:
+		_open_dropdown()
+
+## Open the tool dropdown — show the floating card over the board, refresh its grid + detail,
+## and flip the chevron. A no-op if there are no tools (the rail is hidden then).
+func _open_dropdown() -> void:
+	if _dropdown_layer == null or not _tool_palette_box.visible:
+		return
+	_dropdown_open = true
+	_dropdown_layer.visible = true
+	_style_chevron()
+	# Seed the detail selection from whatever is inspected (else first available).
+	var owned: Array = _available_tools()
+	if not _id_in_owned(_dropdown_selected, owned):
+		_dropdown_selected = _inspected_tool if _id_in_owned(_inspected_tool, owned) \
+			else (String(owned[0]["id"]) if not owned.is_empty() else "")
+	_rebuild_dropdown_grid(owned)
+	_position_dropdown(get_viewport().get_visible_rect().size if get_viewport() != null else Vector2(720, 1280))
+	# Drop-in flourish (no-op headless / with UiFx disabled).
+	UiFx.intro_drop(_dropdown_card, -16.0, 0.22, 0.0)
+
+## Close the tool dropdown (chevron, backdrop tap, ESC, no-tools). While DOCKED (the
+## landscape persistent tools panel) a plain close is a NO-OP — the panel is permanent, not
+## a transient modal — unless `force` is set (the no-tools teardown empties the bag, so the
+## docked panel must hide too).
+func _close_dropdown(force: bool = false) -> void:
+	if _dropdown_docked and not force:
+		return
+	if not _dropdown_open:
+		return
+	_dropdown_open = false
+	if _dropdown_layer != null:
+		_dropdown_layer.visible = false
+	_style_chevron()
+
+## Position the floating dropdown card directly below the hotbar rail, within the HUD band
+## margins, matching the rail's left/right edges.
+func _position_dropdown(vp: Vector2) -> void:
+	if _dropdown_card == null or _tool_palette_box == null:
+		return
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
+	_dropdown_card.offset_left = band_margin
+	_dropdown_card.offset_right = -band_margin
+	_dropdown_card.offset_top = HOTBAR_TOP + HOTBAR_H - 2.0   # hang off the rail's bottom edge
+	_dropdown_card.offset_bottom = 0.0   # TOP_WIDE default — content-driven height
+
+## DOCK the tools dropdown as a persistent LEFT-column panel (landscape). The card is pinned
+## into [left..right] × [top..top+height] (NOT hanging off the rail), the click-blocker backdrop
+## is disabled (it must NOT cover the board — the board is interactive to the RIGHT), and the
+## dropdown is force-opened. Idempotent: safe to call every landscape relayout.
+func _dock_dropdown(vp: Vector2, left: float, right: float, top: float, height: float) -> void:
+	if _dropdown_layer == null or _dropdown_card == null:
+		return
+	_dropdown_docked = true
+	# Only show the docked tools panel when there ARE tools (mirror the rail's empty-bag hide).
+	var owned: Array = _available_tools()
+	var has_tools: bool = not owned.is_empty()
+	_dropdown_open = has_tools
+	_dropdown_layer.visible = has_tools
+	if not has_tools:
+		return
+	# Keep the dropdown grid + detail current (the rail path that usually does this is hidden).
+	if not _id_in_owned(_dropdown_selected, owned):
+		_dropdown_selected = _inspected_tool if _id_in_owned(_inspected_tool, owned) \
+			else (String(owned[0]["id"]) if not owned.is_empty() else "")
+	_rebuild_dropdown_grid(owned)
+	# The backdrop normally swallows board taps under the floating modal; docked, it must not
+	# block the board (which sits to the side), so make it inert.
+	if _dropdown_backdrop != null:
+		_dropdown_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Pin the card into the left column with a fixed height (TOP_WIDE anchors: offset_right is
+	# measured from the RIGHT edge, so right_edge = vp.x + offset_right; a positive offset_bottom
+	# gives it an explicit height instead of content-driven).
+	_dropdown_card.offset_left = left
+	_dropdown_card.offset_right = right - vp.x
+	_dropdown_card.offset_top = top
+	_dropdown_card.offset_bottom = top + height
+	_style_chevron()
+
+## UNDOCK the tools dropdown back to the transient portrait modal: re-enable the backdrop's
+## board-tap-block, reset the card to content-driven height, and close it (the rail owns the
+## open/close again). Called by the portrait relayout when leaving landscape.
+func _undock_dropdown() -> void:
+	_dropdown_docked = false
+	if _dropdown_backdrop != null:
+		_dropdown_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	if _dropdown_card != null:
+		_dropdown_card.offset_bottom = 0.0
+	_dropdown_open = false
+	if _dropdown_layer != null:
+		_dropdown_layer.visible = false
+	_style_chevron()
+
+# ── Drag-to-pin (React useToolDrag — MOUSE-path only, see the gotcha note up top) ──
+
+## A slot's gui_input. project.godot emits BOTH a touch event AND a synthesized mouse event for
+## one physical drag, so we react to the MOUSE path ONLY (button press/release + motion) and
+## IGNORE InputEventScreenTouch / InputEventScreenDrag — otherwise the gesture double-fires.
+func _slot_gui_input(ev: InputEvent, id: String, from_hotbar: bool, slot_index: int, src: Control) -> void:
+	if ev is InputEventScreenTouch or ev is InputEventScreenDrag:
+		return   # GOTCHA: ignore the touch path; the emulated MOUSE events below cover it
+	if ev is InputEventMouseButton:
+		var mb := ev as InputEventMouseButton
+		if mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mb.pressed:
+			_press_active = true
+			_press_tool = id
+			_press_from_hotbar = from_hotbar
+			_press_start = mb.global_position
+			_press_elapsed = 0.0
+			set_process(true)
+		else:
+			# Release — finish any drag in flight; otherwise let the Button's `pressed` tap fire.
+			if _drag_active:
+				_finish_drag(mb.global_position)
+			_press_active = false
+			set_process(_drag_active)
+	elif ev is InputEventMouseMotion and _press_active:
+		var mm := ev as InputEventMouseMotion
+		if not _drag_active and _press_start.distance_to(mm.global_position) > DRAG_THRESHOLD_PX:
+			_begin_drag(mm.global_position)
+		if _drag_active:
+			_update_drag(mm.global_position)
+
+## Per-frame: drive the long-press timer (220ms with no move → promote the press to a drag) and,
+## once dragging, follow the global mouse + detect the release OUTSIDE the source button (the
+## button's gui_input stops delivering events once the pointer leaves it). Only runs while a
+## press/drag is being tracked (set_process gated). MOUSE path only (the gotcha): we poll the
+## viewport mouse position + Input.is_mouse_button_pressed, never the touch screen.
+func _process(delta: float) -> void:
+	var mp := get_viewport().get_mouse_position() if get_viewport() != null else _press_start
+	if _drag_active:
+		_update_drag(mp)
+		# Release detected anywhere on screen → resolve the drop.
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_finish_drag(mp)
+		return
+	if _press_active:
+		# A release before the drag ever started: stop tracking (the Button's `pressed` tap fires).
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_press_active = false
+			set_process(false)
+			return
+		_press_elapsed += delta
+		if _press_elapsed >= DRAG_LONGPRESS_MS:
+			_begin_drag(mp)
+	else:
+		set_process(false)
+
+## Promote the tracked press to a real DRAG: spawn the ~1.1x floating ghost, dim the source slot,
+## and (if it came from the dropdown) make sure the dropdown is open so a hotbar drop target
+## exists. Rebuilds the slots so the drop hints / source dimming render.
+func _begin_drag(pos: Vector2) -> void:
+	if _press_tool == "" or _drag_active:
+		return
+	_drag_active = true
+	_drag_tool = _press_tool
+	_drag_from_hotbar = _press_from_hotbar
+	_spawn_drag_ghost(_drag_tool, pos)
+	# Refresh so the source slot dims + empty slots show their drop hint, and the dropdown hint
+	# flips to "Drop here to unpin" while dragging a pinned tool.
+	_refresh_drag_hints()
+	set_process(true)
+
+## Move the floating ghost to follow the pointer.
+func _update_drag(pos: Vector2) -> void:
+	if _drag_ghost != null and is_instance_valid(_drag_ghost):
+		_drag_ghost.global_position = pos - _drag_ghost.size * 0.5
+
+## Resolve a drag drop (React useToolDrag finish): a DROPDOWN-origin drag onto a hotbar slot
+## PINS the tool there (or into the first empty slot if dropped on the rail generally); a
+## HOTBAR-origin drag onto the dropdown grid UNPINS it. Anything else is a no-op (an accidental
+## drag off the hotbar never silently loses a pin). Persists + rebuilds on any change.
+func _finish_drag(pos: Vector2) -> void:
+	var tool := _drag_tool
+	var from_hotbar := _drag_from_hotbar
+	_clear_drag_ghost()
+	_drag_active = false
+	_drag_tool = ""
+	_press_active = false
+	set_process(false)
+	if tool == "" or game == null:
+		_refresh_tools()
+		return
+	var changed := false
+	if from_hotbar:
+		# Hotbar-origin: only valid drop is the dropdown grid → unpin.
+		if _point_in_control(_dropdown_grid, pos) or _point_in_control(_dropdown_card, pos):
+			changed = game.unpin_hotbar_tool(tool)
+	else:
+		# Dropdown-origin: a hotbar slot (or the rail generally) → pin.
+		var slot_idx: int = _hotbar_slot_at(pos)
+		if slot_idx >= 0:
+			changed = game.set_hotbar_pin(slot_idx, tool)
+		elif _point_in_control(_tool_palette_box, pos):
+			# Dropped on the rail (between slots) → first empty slot, else the last visible slot.
+			var target: int = _first_empty_hotbar_slot()
+			changed = game.set_hotbar_pin(target, tool)
+	if changed and _hud_save_enabled():
+		SaveManager.save(game)
+	_refresh_tools()
+
+## Refresh the slots/grid + dropdown hint to reflect a drag in flight (drop hints + source
+## dimming). Lighter than a full _refresh_tools but reuses it for correctness.
+func _refresh_drag_hints() -> void:
+	if _dropdown_hint != null:
+		_dropdown_hint.text = "Drop here to unpin from the hotbar" if _drag_from_hotbar \
+			else "Long-press a tool and drag it up to pin · double-tap to use"
+	_refresh_tools()
+
+## The index of the hotbar slot under `pos` (-1 if none). Walks _hotbar_row's children — a live
+## slot's icon button OR an empty placeholder Panel (which carries the index in its meta).
+func _hotbar_slot_at(pos: Vector2) -> int:
+	if _hotbar_row == null:
+		return -1
+	var i: int = 0
+	for child in _hotbar_row.get_children():
+		var ctrl := child as Control
+		if ctrl != null and _point_in_control(ctrl, pos):
+			return i
+		i += 1
+	return -1
+
+## First empty hotbar slot index within the visible cap, else the last visible slot (React's
+## firstEmpty>=0 ? firstEmpty : maxFitPins-1).
+func _first_empty_hotbar_slot() -> int:
+	var pins: Array = game.get_hotbar_pins() if game != null else []
+	var cap: int = maxi(1, _hotbar_max_fit)
+	for i in range(cap):
+		var id: String = String(pins[i]) if i < pins.size() else ""
+		if id == "" or not _tool_available(id):
+			return i
+	return cap - 1
+
+## True when global `pos` falls inside Control `c` (and it's a valid, visible node).
+func _point_in_control(c: Control, pos: Vector2) -> bool:
+	if c == null or not is_instance_valid(c) or not c.is_visible_in_tree():
+		return false
+	return c.get_global_rect().has_point(pos)
+
+## Spawn the floating drag ghost (a ~1.1x tool icon following the pointer), on the dropdown
+## layer so it draws above everything. No-op for a tool with no art (falls back to a coloured
+## square so the drag is still visible).
+func _spawn_drag_ghost(id: String, pos: Vector2) -> void:
+	_clear_drag_ghost()
+	if _dropdown_layer == null:
+		return
+	var ghost := TextureRect.new()
+	ghost.custom_minimum_size = Vector2(56, 56)
+	ghost.size = Vector2(56, 56)
+	ghost.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ghost.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ghost.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	ghost.texture = UiKit.resource_icon(id)
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.modulate = Color(1, 1, 1, 0.92)
+	ghost.scale = Vector2(1.1, 1.1)
+	ghost.pivot_offset = ghost.size * 0.5
+	ghost.z_index = 1000
+	_dropdown_layer.add_child(ghost)
+	_drag_ghost = ghost
+	_update_drag(pos)
+
+func _clear_drag_ghost() -> void:
+	if _drag_ghost != null and is_instance_valid(_drag_ghost):
+		_drag_ghost.queue_free()
+	_drag_ghost = null
+
+## True when persistence is wired (a tree + a real save target). Headless tests drive the HUD
+## without a SaveManager round-trip; guard so a pin change there never errors.
+func _hud_save_enabled() -> bool:
+	return game != null and is_inside_tree()
 
 ## True when `id` is the tool that armed the live fill_bias — so its hotbar slot + the action
 ## panel render ARMED. The port's analogue of React's `def.key === "fertilizer" &&
@@ -1200,6 +1994,8 @@ func _is_armed_fill_bias(id: String) -> bool:
 ## TRANSFERS the arming (React maybeTransferArming): the player already committed to using a
 ## tool, so the new tap switches tools rather than dropping to nothing.
 func _on_tool_slot_tapped(id: String) -> void:
+	# Keep the dropdown's detail header pointed at the tool the player is acting on.
+	_dropdown_selected = id
 	var armed_id: String = game.pending_tool if game != null else ""
 	var fb_id: String = game.armed_fill_bias_tool() if game != null else ""
 	# Some OTHER tool is already armed (pending tap-tool or a fill_bias bias) and we tapped a
@@ -1721,16 +2517,48 @@ func _refresh_action_tool() -> void:
 
 # ── HUD layout (pinned by Main's _layout) ─────────────────────────────────────
 
-## Y where the BOARD band starts — Main._layout places the board's top edge here,
-## below the action panel and the chain hint line.
+## True when the board page should use the two-column LANDSCAPE template (React's
+## @media (orientation: landscape) and (min-width: 500px)): the viewport is comfortably
+## wider than tall. See LANDSCAPE_ASPECT for the threshold + why it's 1.2 not 1.0.
+func is_landscape(vp: Vector2) -> bool:
+	return vp.y > 0.0 and vp.x >= vp.y * LANDSCAPE_ASPECT
+
+## Left-column width in landscape (React's `minmax(360px, 44%)`, floored so the board
+## column keeps at least LANDSCAPE_BOARD_MIN_W). Shared by the HUD relayout and Main's
+## board placement so the two columns never overlap.
+func landscape_left_w(vp: Vector2) -> float:
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
+	var want: float = vp.x * LANDSCAPE_LEFT_FRAC
+	# Cap so the board column keeps its floor: left + gaps + board >= viewport.
+	var max_left: float = vp.x - LANDSCAPE_BOARD_MIN_W - 3.0 * band_margin
+	return clampf(want, LANDSCAPE_LEFT_MIN, maxf(LANDSCAPE_LEFT_MIN, max_left))
+
+## The board column's RECT in landscape {origin, size} — the right column to the side of
+## the left tools/panel column, below the full-width top bar + season bar, above the
+## bottom nav. Main reads this to place + size the board so it fills the right column.
+func landscape_board_rect(vp: Vector2) -> Dictionary:
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
+	var left_w: float = landscape_left_w(vp)
+	var col_x: float = band_margin + left_w + band_margin
+	var col_w: float = vp.x - col_x - band_margin
+	var col_top: float = LANDSCAPE_CONTENT_TOP
+	var col_bottom: float = vp.y - float(UiKit.NAV_RESERVE) - 8.0
+	return {
+		"x": col_x, "y": col_top,
+		"w": maxf(0.0, col_w), "h": maxf(0.0, col_bottom - col_top),
+	}
+
+## Y where the BOARD band starts in PORTRAIT — Main._layout places the board's top edge
+## here, below the action panel and the chain hint line. (Landscape uses
+## landscape_board_rect() instead.)
 func board_top() -> float:
 	return PANEL_TOP + PANEL_H + 30.0
 
-## Pin the width-anchored HUD containers to the current viewport. The board page is a
-## FIXED vertical stack (the React BoardLayout portrait template): top bar → season bar
-## → tool hotbar → action panel → chain hint → board (Main._layout reads board_top()) —
-## constant bands, so no card can ever float over the board again (the old stockpile
-## card at vp.y*0.74 buried the bottom tile row).
+## Pin the width-anchored HUD containers to the current viewport. Dispatches by orientation:
+## PORTRAIT keeps the React BoardLayout portrait stack (top bar → season bar → tool hotbar →
+## action panel → chain hint → board); LANDSCAPE reflows to React's two-column template
+## (panel + tools on the LEFT, board on the RIGHT). The top bar + season bar stay full-width
+## on top in BOTH (they're the shared HUD header).
 func _layout_hud(vp: Vector2) -> void:
 	# The top-bar is PRESET_TOP_WIDE (anchors left=0..right=1), so zero L/R offsets
 	# already make it span the full viewport width — don't set size.x (that fights
@@ -1744,17 +2572,45 @@ func _layout_hud(vp: Vector2) -> void:
 	# pass, so measuring immediately would centre against stale sizes.
 	_align_menu_btn.call_deferred()
 	var band_margin: float = maxf(12.0, vp.x * 0.03)
-	# A2 — the season bar spans the full width within the HUD margins, just below the top bar.
+	# A2 — the season bar spans the full width within the HUD margins, just below the top bar
+	# (shared header — full-width on top in both orientations).
 	if _season_bar_box != null:
 		_season_bar_box.offset_left = band_margin
 		_season_bar_box.offset_right = -band_margin
 		_season_bar_box.offset_top = 66.0
+	if is_landscape(vp):
+		_layout_hud_landscape(vp)
+	else:
+		_layout_hud_portrait(vp)
+
+## PORTRAIT relayout (the React BoardLayout portrait stack — unchanged behaviour). The tool
+## hotbar rail is shown; the dropdown is the transient floating modal under it.
+func _layout_hud_portrait(vp: Vector2) -> void:
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
+	# Leaving landscape: undock the tools dropdown (back to the transient portrait modal) and
+	# restore the hotbar rail. The chain hint (hidden in landscape) is re-pinned below.
+	if _dropdown_docked:
+		_undock_dropdown()
+	if _chain_label != null:
+		_chain_label.visible = true
 	# Tool hotbar — a fixed-height rail under the season bar (React's hotbar area).
 	if _tool_palette_box != null:
+		# Visibility is owned by _refresh_tools (hidden when no tools) — only re-show the rail
+		# if there ARE tools, so an empty bag stays hidden after returning from landscape.
+		if not _available_tools().is_empty():
+			_tool_palette_box.visible = true
 		_tool_palette_box.offset_left = band_margin
 		_tool_palette_box.offset_right = -band_margin
 		_tool_palette_box.offset_top = HOTBAR_TOP
 		_tool_palette_box.offset_bottom = HOTBAR_TOP + HOTBAR_H
+		# React useMaxFitPins: shrink the pinned-slot cap on narrow viewports so the rail never
+		# overflows. Rail usable width = band width − chevron(48) − separations/padding(~32).
+		# Each slot is 56 wide + 8 gap → N <= (usable + 8) / (56 + 8).
+		var rail_w: float = (vp.x - 2.0 * band_margin) - 48.0 - 32.0
+		var fit: int = int(floor((rail_w + 8.0) / 64.0))
+		_hotbar_max_fit = clampi(fit, 1, GameState.MAX_HOTBAR_PINS)
+		# Keep the dropdown card aligned under the rail.
+		_position_dropdown(vp)
 	# Action panel — the fixed state-swapping card between the hotbar and the board.
 	if _action_panel != null:
 		_action_panel.offset_left = band_margin
@@ -1764,6 +2620,34 @@ func _layout_hud(vp: Vector2) -> void:
 	# Chain hint — the slim prompt in the gap between the panel and the board.
 	if _chain_label != null:
 		_chain_label.offset_top = PANEL_TOP + PANEL_H + 7.0
+
+## LANDSCAPE relayout (React BoardLayout @media landscape: "panel board" / "tools board").
+## The action panel pins top-LEFT; the tools dropdown is DOCKED as a persistent panel under
+## it (reusing React's PuzzleToolGrid content); the compact hotbar rail is HIDDEN; the board
+## (placed by Main via landscape_board_rect) fills the whole right column.
+func _layout_hud_landscape(vp: Vector2) -> void:
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
+	var left_w: float = landscape_left_w(vp)
+	var left_left: float = band_margin
+	var left_right: float = band_margin + left_w
+	# Hide the compact hotbar rail (React: [data-area="hotbar"]{display:none}).
+	if _tool_palette_box != null:
+		_tool_palette_box.visible = false
+	# Hide the portrait chain hint (the board sits to the RIGHT now, not below the panel —
+	# there is no gap-between-panel-and-board for the hint to live in).
+	if _chain_label != null:
+		_chain_label.visible = false
+	# Action panel — top of the LEFT column, fixed height (state-swap can't reflow it).
+	if _action_panel != null:
+		_action_panel.offset_left = left_left
+		_action_panel.offset_right = left_right - vp.x   # right offset is from the RIGHT edge
+		_action_panel.offset_top = LANDSCAPE_CONTENT_TOP
+		_action_panel.offset_bottom = LANDSCAPE_CONTENT_TOP + PANEL_H
+	# Tools area — DOCK the dropdown card as a persistent panel filling the rest of the left
+	# column, below the action panel, down to the bottom nav (React's [data-area="tools"]).
+	var tools_top: float = LANDSCAPE_CONTENT_TOP + PANEL_H + 12.0
+	var tools_bottom: float = vp.y - float(UiKit.NAV_RESERVE) - 8.0
+	_dock_dropdown(vp, left_left, left_right, tools_top, maxf(80.0, tools_bottom - tools_top))
 
 ## Centre the floating ⚙ button vertically within the top bar's band. The old fixed
 ## offset_top 18 left the gear hanging below the pill row (the "misaligned gear" on the
@@ -2107,21 +2991,26 @@ func _refresh_chain_progress() -> void:
 	var carried: int = int(game.progress.get(res, 0)) if (game != null and res != "") else 0
 	if has_threshold:
 		var combined: int = carried + length
-		var looped: bool = combined >= threshold
+		# `>` not `>=`: an EXACT completion (combined == threshold) is a *full* bar, not a
+		# reset. The old `>=` sent the boundary into the reset branch below, which rendered
+		# an empty "0/6 +1" — reading as incomplete the instant the unit was actually earned.
+		var looped: bool = combined > threshold
 		var cycles: int = combined / threshold
 		var remainder: int = combined % threshold
 		_chain_prog_fill.add_theme_stylebox_override("panel", _bar_fill_box(stage_top, stage_bot))
 		if looped:
 			# Past the threshold the bar RESETS: a full "old" brown base (only while the
-			# overflow is non-zero — an exact boundary shows an empty bar + the "+N") and
-			# the overflow stage fill growing again from the left.
+			# overflow is non-zero) and the overflow stage fill growing again from the left.
+			# An exact higher multiple (remainder == 0, e.g. a single 12-chain at thr 6)
+			# lands ON a boundary: show a FULL bar + "+N", never a deceptively empty one.
+			var on_boundary: bool = remainder == 0
+			var shown: int = threshold if on_boundary else remainder
 			_chain_fill_carried.visible = remainder > 0
 			_chain_fill_carried.position = Vector2(2, 2)
 			_chain_fill_carried.size = Vector2(inner_w, inner_h)
 			_chain_prog_fill.position = Vector2(2, 2)
-			_chain_prog_fill.size = Vector2(inner_w * float(remainder) / float(threshold), inner_h)
-			_chain_prog_label.text = ("%d/%d +%d" % [remainder, threshold, cycles]) if cycles > 0 \
-				else ("%d/%d" % [remainder, threshold])
+			_chain_prog_fill.size = Vector2(inner_w * float(shown) / float(threshold), inner_h)
+			_chain_prog_label.text = "%d/%d +%d" % [shown, threshold, cycles]
 		else:
 			var carried_w: float = inner_w * float(carried) / float(threshold)
 			_chain_fill_carried.visible = carried > 0

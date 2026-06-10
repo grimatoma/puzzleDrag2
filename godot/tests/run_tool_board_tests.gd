@@ -401,15 +401,40 @@ func _test_tool_board_kind_filter() -> void:
 	_check(ToolConfig.board_kind_for_biome("harbor") == "fish", "harbor biome maps to the 'fish' board")
 	_check(ToolConfig.board_kind_for_biome("mine") == "mine", "mine biome maps to the 'mine' board")
 	_check(ToolConfig.board_kind_for_biome("farm") == "farm", "farm biome maps to the 'farm' board")
-	# A mine tool is hidden on the farm board, visible on the mine board; an "all" tool shows on both.
-	_check(not ToolConfig.is_tool_visible_on_board("water_pump", "farm"),
-		"water_pump is NOT board-visible on the farm")
-	_check(ToolConfig.is_tool_visible_on_board("water_pump", "mine"),
-		"water_pump IS board-visible on the mine")
+	# A mine tool is hidden on the farm board; an "all" tool shows on both. The mine spawnable
+	# set is passed so the hazard half of the filter sees lava (water_pump's target).
+	var mine_haz: Array = ["cave_in", "gas_vent", "lava", "mole"]
+	_check(not ToolConfig.is_tool_visible_on_board("water_pump", "farm", mine_haz),
+		"water_pump is NOT board-visible on the farm (wrong board)")
+	_check(ToolConfig.is_tool_visible_on_board("water_pump", "mine", mine_haz),
+		"water_pump IS board-visible on the mine (lava spawnable)")
 	_check(ToolConfig.is_tool_visible_on_board("bomb", "farm"), "bomb ('all') is board-visible on the farm")
 	_check(ToolConfig.is_tool_visible_on_board("bomb", "mine"), "bomb ('all') is board-visible on the mine")
 	_check(not ToolConfig.is_tool_visible_on_board("scythe", "mine"),
 		"scythe ('farm') is NOT board-visible on the mine")
+
+	# Hazard half of the filter (React puzzleToolFilter.ts): a hazard-only tool needs at least one
+	# of its targets in `spawnable`. A general tool (empty hazard_targets) ignores spawnable.
+	_check(ToolConfig.tool_hazard_targets("water_pump") == ["lava"], "water_pump counters ['lava']")
+	_check(ToolConfig.tool_hazard_targets("explosives") == ["cave_in", "mole"],
+		"explosives counters ['cave_in','mole']")
+	_check(ToolConfig.tool_hazard_targets("cat") == ["rats"], "cat counters ['rats']")
+	_check(ToolConfig.tool_hazard_targets("rifle") == ["wolves"], "rifle counters ['wolves']")
+	_check(ToolConfig.tool_hazard_targets("hound") == ["wolves"], "hound counters ['wolves']")
+	_check(ToolConfig.tool_hazard_targets("bomb").is_empty(), "bomb is a general tool (no hazard targets)")
+	_check(ToolConfig.tool_hazard_targets("miners_hat").is_empty(),
+		"miners_hat is NOT a hazard counter (reveal_tiles)")
+	# water_pump on the mine but lava NOT spawnable → hidden (the core hazard gate).
+	_check(not ToolConfig.is_tool_visible_on_board("water_pump", "mine", ["cave_in", "mole"]),
+		"water_pump is HIDDEN on a mine board where lava can't spawn")
+	# explosives needs only ONE of its two targets present.
+	_check(ToolConfig.is_tool_visible_on_board("explosives", "mine", ["mole"]),
+		"explosives SHOWS when only mole (one of its targets) is spawnable")
+	# cat (rats) hidden on a farm board where rats aren't spawnable yet (pre-Town-2).
+	_check(not ToolConfig.is_tool_visible_on_board("cat", "farm", ["wolves"]),
+		"cat is HIDDEN on a farm board where rats can't spawn")
+	_check(ToolConfig.is_tool_visible_on_board("cat", "farm", ["rats", "wolves"]),
+		"cat SHOWS on a farm board where rats can spawn")
 
 	# 2. Live HUD: grant a mine-only tool on a fresh FARM Main — it must NOT join the hotbar,
 	# while the farm/all starter tools still do. This is the core regression the task asks for.
@@ -435,6 +460,36 @@ func _test_tool_board_kind_filter() -> void:
 		"farm-only rake is HIDDEN on the mine board (board-kind filter)")
 
 	main.free()
+	await process_frame
+	SaveManager.clear()
+
+	# 4. Hazard-spawnability half (the OTHER React filter): on a FRESH farm Main (pre-Town-2),
+	# rats can't spawn yet but wolves can. So Cat (rats counter) is HIDDEN while Rifle (wolves
+	# counter) SHOWS — even though both are farm tools and both are owned.
+	var m2 = await _fresh_main()
+	_check(m2.game.active_biome == "farm", "fresh Main starts on the farm board")
+	_check(not m2.game.rats_enabled(), "fresh Main has not finished Town 2 (rats disabled)")
+	m2.game.grant_tool("cat", 1)
+	m2.game.grant_tool("rifle", 1)
+	m2.game.grant_tool("water_pump", 1)
+	m2._refresh_tools()
+	_check(m2.game.spawnable_hazards().has("wolves"), "wolves ARE spawnable on the farm board")
+	_check(not m2.game.spawnable_hazards().has("rats"), "rats are NOT spawnable pre-Town-2")
+	_check(m2._tool_buttons.has("rifle"),
+		"Rifle (wolves counter) SHOWS on the farm — wolves are spawnable")
+	_check(not m2._tool_buttons.has("cat"),
+		"Cat (rats counter) is HIDDEN on the farm pre-Town-2 — rats can't spawn yet")
+	_check(not m2._tool_buttons.has("water_pump"),
+		"mine-only water_pump still hidden on the farm (board-kind)")
+
+	# Finish Town 2 → rats become spawnable → Cat now SHOWS.
+	m2.game.town2_complete = true
+	m2._refresh_tools()
+	_check(m2.game.spawnable_hazards().has("rats"), "rats ARE spawnable once Town 2 is complete")
+	_check(m2._tool_buttons.has("cat"),
+		"Cat (rats counter) SHOWS on the farm once rats can spawn (Town 2 done)")
+
+	m2.free()
 	await process_frame
 	SaveManager.clear()
 

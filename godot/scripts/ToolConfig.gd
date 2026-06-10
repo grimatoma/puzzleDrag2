@@ -21,8 +21,19 @@ extends RefCounted
 ##               → ToolEntry.boardKind, filtered by src/ui/puzzleToolFilter.ts). One of
 ##               "all" (board-agnostic — shown everywhere) | "farm" | "mine" | "fish".
 ##               Mirrors the React boardKind values tool-for-tool; the harbor biome is
-##               React's "fish" board. (Hazard-spawnability gating — the OTHER half of
-##               the React filter — is not modelled here; this is the board-kind column.)
+##               React's "fish" board.
+##   hazard_targets: Array[String] — the hazard ids this tool COUNTERS (and ONLY
+##               counters), so the HUD hides a hazard-only tool when that hazard cannot
+##               spawn on the current board (React parity: src/ui/puzzleToolFilter.ts
+##               toolCounterHazardTargets → isToolVisibleOnPuzzleBoard's hazard gate).
+##               EMPTY for a general-purpose tool (always shown once its board_kind
+##               matches). The strings are the Godot runtime hazard ids the spawn system
+##               uses — "rats", "wolves", "fire", "lava", "cave_in", "mole", "gas_vent"
+##               (matched to GameState.spawnable_hazards()). Mapping mirrors React's
+##               toolCounterHazardTargets: clear_hazard/scatter_hazard → params.target's
+##               hazard; the Godot-native clear_wolves → ["wolves"]; water_pump → ["lava"];
+##               explosives → ["cave_in", "mole"]. reveal_tiles (miners_hat) is NOT a
+##               hazard counter (it reveals hidden boss cells) → [].
 ##   desc:       String — player-facing description (the HUD tool rack tooltip + the
 ##               armed-tool banner read this). Sourced BYTE-IDENTICAL from the React
 ##               ITEMS[*].desc strings in src/constants.ts (matched by tool identity:
@@ -392,6 +403,7 @@ const TOOLS: Dictionary = {
 		"power_id": "clear_hazard",
 		"params": {"target": "rats"},
 		"tap_target": false,
+		"hazard_targets": ["rats"],
 		"desc": "Dispatches a mouser to clear all active rat hazards from the farm in one go.",
 	},
 	TERRIER: {
@@ -401,6 +413,7 @@ const TOOLS: Dictionary = {
 		# Same as Cat — the web's terrier tool also clears the rats hazard.
 		"params": {"target": "rats"},
 		"tap_target": false,
+		"hazard_targets": ["rats"],
 		"desc": "A wiry rat-catcher — bolts through the board clearing every rat hazard from the farm.",
 	},
 	# ── fill_bias tools (Tools PR2b) ───────────────────────────────────────────
@@ -527,6 +540,9 @@ const TOOLS: Dictionary = {
 		"power_id": "clear_wolves",
 		"params": {},
 		"tap_target": false,
+		# React `rifle` is clear_hazard{target:"wolves"}; the port routes it through the
+		# Godot-native clear_wolves power, but it counters the SAME hazard → ["wolves"].
+		"hazard_targets": ["wolves"],
 		"desc": "Drives off all active wolves permanently, ending the wolf hazard immediately.",
 	},
 	HOUND: {
@@ -535,6 +551,9 @@ const TOOLS: Dictionary = {
 		"power_id": "scatter_hazard",
 		"params": {},
 		"tap_target": false,
+		# React `hound` is scatter_hazard{target:"wolves"}; the port's scatter_hazard scares
+		# wolves (the only scatter target) → ["wolves"].
+		"hazard_targets": ["wolves"],
 		"desc": "Scares the wolves away for several turns, buying time to chain away their target tiles.",
 	},
 	# ── Mine-hazard tools (T14b) — STATE powers handled in GameState.use_tool_on_grid's early path
@@ -545,6 +564,8 @@ const TOOLS: Dictionary = {
 		"power_id": "water_pump",
 		"params": {},
 		"tap_target": false,
+		# React water_pump → ["lava"] (floods lava cells → rubble).
+		"hazard_targets": ["lava"],
 		"desc": "Lava Damper — floods all lava cells on the mine board, converting them to stone rubble. PC2's water-collector Water Pump is deferred (no water tile family).",
 	},
 	EXPLOSIVES: {
@@ -553,6 +574,8 @@ const TOOLS: Dictionary = {
 		"power_id": "explosives",
 		"params": {},
 		"tap_target": false,
+		# React explosives → ["cave_in", "mole"] (clears both mine hazards).
+		"hazard_targets": ["cave_in", "mole"],
 		"desc": "Clears every cave-in and mole hazard from the mine.",
 	},
 	# Miner's Hat (T24) — reveal_tiles STATE power: reveals every hidden boss cell (hide_resources /
@@ -566,6 +589,15 @@ const TOOLS: Dictionary = {
 		"desc": "A lamp-fronted hat — reveals every hidden ore tile (coal, iron, gold, gem). No effect until hidden-tile spawning ships.",
 	},
 }
+
+## Default HOTBAR pins (React src/ui/toolRegistry.ts DEFAULT_PIN_KEYS = ["clear","basic",
+## "rare","shuffle","bomb"]) — the tools the board hotbar seeds its preset slots with on a
+## fresh game (before the player drags their own). The React keys map to the Godot ids:
+##   clear → SCYTHE ("clear_random_n" Scythe), basic → SEEDPACK, rare → LOCKBOX,
+##   shuffle → RESHUFFLE_HORN, bomb → BOMB.
+## Read by GameState (seeds hotbar_pins when empty) + Hud (the hotbar fallback). Kept here in
+## the catalog, NOT inlined in the HUD, mirroring how the React default lives in toolRegistry.
+const DEFAULT_PIN_KEYS: Array = [SCYTHE, SEEDPACK, LOCKBOX, RESHUFFLE_HORN, BOMB]
 
 ## Stable display / iteration order for every tool id. Grouped by biome so the rack
 ## reads sensibly: the original M8a set first, then the Tools-PR1 farm tools, then the
@@ -661,15 +693,42 @@ static func tool_board_kind(id: String) -> String:
 		return BOARD_KIND_ALL
 	return String(TOOLS[id].get("board_kind", BOARD_KIND_ALL))
 
-## True when a tool should appear on the hotbar for `biome`'s board: a board-agnostic tool
-## ("all") shows everywhere; otherwise its board_kind must match the active biome's board.
-## Mirrors React's isToolVisibleOnPuzzleBoard board-kind check (the hazard-spawnability half
-## of that filter is not modelled in the port).
-static func is_tool_visible_on_board(id: String, biome: String) -> bool:
+## The hazard ids a tool COUNTERS — and only counters — so the HUD can hide a hazard-only
+## tool when none of its targets can spawn on the current board. EMPTY for a general tool
+## (always shown). An unknown id is treated as general ([]). Mirrors React's
+## toolCounterHazardTargets (src/ui/puzzleToolFilter.ts): a tool with no hazard target is
+## board-wide; a hazard tool is gated by spawnability.
+static func tool_hazard_targets(id: String) -> Array:
+	if not has_tool(id):
+		return []
+	var raw: Variant = TOOLS[id].get("hazard_targets", [])
+	if raw is Array:
+		var out: Array = []
+		for h in (raw as Array):
+			out.append(String(h))
+		return out
+	return []
+
+## True when a tool should appear on the hotbar for `biome`'s board. Mirrors React's
+## isToolVisibleOnPuzzleBoard: (1) the board-kind gate — a board-agnostic tool ("all") shows
+## everywhere; otherwise its board_kind must match the active biome's board; (2) the hazard
+## gate — a tool that ONLY counters specific hazards (hazard_targets non-empty) shows only when
+## at least one of its targets is in `spawnable` (the hazard ids that CAN spawn on the current
+## board, from GameState.spawnable_hazards()). `spawnable` is passed in (the catalog is pure /
+## state-free); callers that only need the board-kind half may pass an empty Array — then a
+## hazard tool is hidden (no spawnable hazard), which is the safe default. A general tool
+## (empty hazard_targets) ignores `spawnable` entirely.
+static func is_tool_visible_on_board(id: String, biome: String, spawnable: Array = []) -> bool:
 	var kind: String = tool_board_kind(id)
-	if kind == BOARD_KIND_ALL:
+	if kind != BOARD_KIND_ALL and kind != board_kind_for_biome(biome):
+		return false
+	var targets: Array = tool_hazard_targets(id)
+	if targets.is_empty():
 		return true
-	return kind == board_kind_for_biome(biome)
+	for t in targets:
+		if spawnable.has(t):
+			return true
+	return false
 
 ## Resolve every Constants.Tile value belonging to a category id (e.g. "trees").
 ## Returns Array[int] in Tile-enum order. Used by clear_category (axe).

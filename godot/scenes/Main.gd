@@ -483,14 +483,26 @@ func _build_hud_node() -> void:
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
-	# The board sits in the FIXED band below the HUD's action panel (the React
-	# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top()
-	# is the band's top edge; the Board sizes its tiles to what remains above the
-	# status/orders strip + bottom nav.
-	board.board_top_px = _hud.board_top()
-	board.layout_for(vp)
-	var bw: Vector2 = board.board_pixel_size()
-	board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
+	if _hud.is_landscape(vp):
+		# LANDSCAPE (React BoardLayout @media landscape: "panel board" / "tools board"):
+		# the panel + tools dock to the LEFT column; the board fills the RIGHT column. The
+		# Board sizes its tiles to that column's width × height, then we centre it within it.
+		var rect: Dictionary = _hud.landscape_board_rect(vp)
+		board.board_top_px = float(rect["y"])
+		board.layout_for_rect(float(rect["w"]), float(rect["h"]))
+		var bw_l: Vector2 = board.board_pixel_size()
+		board.position = Vector2(
+			float(rect["x"]) + (float(rect["w"]) - bw_l.x) / 2.0,
+			float(rect["y"]) + (float(rect["h"]) - bw_l.y) / 2.0)
+	else:
+		# PORTRAIT — the board sits in the FIXED band below the HUD's action panel (the React
+		# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top() is the
+		# band's top edge; the Board sizes its tiles to what remains above the status/orders
+		# strip + bottom nav.
+		board.board_top_px = _hud.board_top()
+		board.layout_for(vp)
+		var bw: Vector2 = board.board_pixel_size()
+		board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
 	_hud._layout_hud(vp)
 	_hud._refresh_status()
 	# The chain-progress track width tracks the box width, so re-measure + redraw
@@ -696,6 +708,12 @@ func _settle_close_to_home_or_board() -> void:
 ## the player can always back out of any screen, regardless of the Close button.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		# The board tool dropdown (Hud) floats over the board rather than being a modal overlay,
+		# so close it first on Back/ESC before falling through to the overlay stack.
+		if _hud != null and is_instance_valid(_hud) and _hud.is_tool_dropdown_open():
+			_hud.close_tool_dropdown()
+			get_viewport().set_input_as_handled()
+			return
 		if _close_top_overlay():
 			get_viewport().set_input_as_handled()
 
@@ -865,8 +883,9 @@ func _open_townmap() -> void:
 		# the deep-link: hide the view + clear the nav.
 		_townmap_screen.connect("board_requested", Callable(self, "_on_townmap_board_requested"))
 		# Task C: tapping the farm board pad opens the "Start Farming" picker (the FARM/ENTER
-		# dialog) — the player's entry point into a bounded run from the town home.
-		_townmap_screen.connect("start_farming_requested", Callable(self, "_open_startfarming"))
+		# dialog) — the player's entry point into a bounded run from the town home. When a run
+		# is ALREADY live this resumes the board instead (see _on_townmap_start_farming).
+		_townmap_screen.connect("start_farming_requested", Callable(self, "_on_townmap_start_farming"))
 		# review-3: the "📋 Town Ledger" overlay button opens the TownScreen ledger. Route it
 		# through apply_deeplink("town") → _switch_primary_view("_open_town"), so the town MAP
 		# (a sibling primary) is hidden first and the ledger reads as a full-brightness view.
@@ -1223,6 +1242,13 @@ func _on_keeper_closed() -> void:
 func _maybe_trigger_keeper() -> void:
 	if game == null:
 		return
+	# QA/test flag parity with the sibling auto-modals (tutorial / story / daily / splash all
+	# honour this): isDialogsDisabled() suppresses the keeper encounter CONTINUOUSLY, not just
+	# at boot. Without this the keeper was the one auto-popup that still interrupted a scripted
+	# session with the flag set. The encounter stays ELIGIBLE (keeper_encounter_ready is
+	# unchanged) and fires the moment the flag is cleared. Web-only; false in normal play.
+	if _dialogs_disabled():
+		return
 	# Don't stack the encounter on top of an already-open keeper modal or a story beat.
 	if _keeper_modal != null and _keeper_modal.visible:
 		return
@@ -1451,6 +1477,16 @@ func _on_harvest_closed() -> void:
 ## (mirrors _open_leaveboard). The modal emits start_requested(selected, use_fertilizer) on Start
 ## (→ _on_start_farming, which calls GameState.start_farm_run) and `closed` on Cancel/dismiss
 ## (→ _on_startfarming_closed). Opened from the town-map farm-pad tap + apply_deeplink.
+## The farm pad on the town map was tapped. If a bounded run / non-farm expedition / boss
+## board is ALREADY live, RESUME it (the board deep-link) instead of opening the Start-Farming
+## picker — a second start_farm_run would fail with `already_running` and dump the player back
+## to town (the modal closes over the still-open town map). Mirrors _on_townmap_board_requested.
+func _on_townmap_start_farming() -> void:
+	if game != null and _board_should_be_active():
+		apply_deeplink("board")
+		return
+	_open_startfarming()
+
 func _open_startfarming() -> void:
 	if _startfarming_modal == null:
 		_startfarming_modal = StartFarmingModalScript.new()
@@ -1494,6 +1530,12 @@ func _on_start_farming(selected: Array, use_fertilizer: bool) -> void:
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_chain_progress()
+	# WEB BOUNCE FIX: we jumped straight to the board from a STACKED overlay state (town map
+	# #/map  ➜  picker #/startfarming). _sync_history's close-to-board step issues a single
+	# history.back(), which would pop #/startfarming and land on the still-present #/map — a
+	# popstate then reopens the town map ("blink, then bounce back to town"). Collapse the URL
+	# to #/board now so that back() never fires into a stale modal entry.
+	_normalize_history_to_board()
 	SaveManager.save(game)
 
 ## Map a start_farm_run failure reason to a player-facing toast string. (Batch 9 C6: the
@@ -1960,6 +2002,18 @@ func _sync_history() -> void:
 		JavaScriptBridge.eval("history.back();", true)
 	else:
 		JavaScriptBridge.eval("history.pushState({}, '', '#/%s');" % id, true)
+
+## Collapse the web history/URL straight to #/board, bypassing _sync_history's fragile
+## "close one screen → history.back()" step. Used when the game jumps to the board from a
+## state where MORE THAN ONE overlay was pushed (town map → start-farming picker → Start):
+## a single back() would land on the intermediate #/map and bounce the player back to town.
+## replaceState fires no popstate, and stamping _last_synced_modal = NONE means the next
+## _sync_history sees no change and issues no back(). Web-only (no-op until _history_ready).
+func _normalize_history_to_board() -> void:
+	if not _history_ready:
+		return
+	JavaScriptBridge.eval("history.replaceState({}, '', '#/board');", true)
+	_last_synced_modal = ViewRouter.Modal.NONE
 
 func _process(_delta: float) -> void:
 	if _history_ready:

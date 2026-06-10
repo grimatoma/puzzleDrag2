@@ -743,6 +743,27 @@ func layout_for(viewport: Vector2) -> void:
 				t.position = _cell_center(c, r)
 	queue_redraw()   # tile_size changed → reframe the field card
 
+## Size the board to an EXPLICIT width × height budget (the landscape right COLUMN), instead
+## of deriving the budget from the viewport + the portrait bottom-chrome reserve. Used by
+## Main._layout in landscape, where the board fills the column beside the tools/panel column
+## rather than the band below the action panel. Same tile-fit math as layout_for (the larger
+## of fit-to-width / fit-to-height wins, floored to whole px), just with the column's own
+## avail_w / avail_h. Mirrors layout_for's shake-cancel + per-tile reposition.
+func layout_for_rect(avail_w: float, avail_h: float) -> void:
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+	_shake_tween = null
+	var w_budget := maxf(float(Constants.COLS) * 20.0, avail_w)
+	var h_budget := maxf(float(Constants.ROWS) * 20.0, avail_h)
+	tile_size = floorf(minf(w_budget / Constants.COLS, h_budget / Constants.ROWS))
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			var t: Tile = tiles[r][c]
+			if t != null:
+				t.set_size_px(tile_size)
+				t.position = _cell_center(c, r)
+	queue_redraw()
+
 func board_pixel_size() -> Vector2:
 	return Vector2(Constants.COLS * tile_size, Constants.ROWS * tile_size)
 
