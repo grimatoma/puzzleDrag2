@@ -588,6 +588,9 @@ export class GameScene extends Phaser.Scene {
     if (this.boardX !== prevX || this.boardY !== prevY || this.tileSize !== prevSize) {
       this.repositionTiles();
     }
+    // Repaint the hazard vignette at the new canvas dimensions (it paints
+    // once per state change now, so resize must re-trigger it).
+    this._updateHazardAtmosphere();
   }
 
   repositionTiles() {
