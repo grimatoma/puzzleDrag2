@@ -1882,6 +1882,9 @@ func _on_new_game() -> void:
 	if _menu_screen != null:
 		_menu_screen.close()
 	SaveManager.clear()
+	# Fade to black before the reload so the fresh start reads as a deliberate scene
+	# hand-off, not a hard cut. Instant (no fade) headless / with UiFx disabled.
+	await UiFx.fade_to_black(self)
 	get_tree().reload_current_scene()
 
 ## The board accepts chain input when a bounded farm run is live, OR the player is on a

@@ -38,6 +38,11 @@ const RELEASE_TIME := 0.12      ## button release spring-back time
 static func _active() -> bool:
 	return enabled and DisplayServer.get_name() != "headless"
 
+## Public probe for continuous, self-driven effects (a _process-driven pulse) so they
+## can idle when motion is off — the same gate every one-shot helper here uses.
+static func is_active() -> bool:
+	return _active()
+
 # ── overlay open transition ───────────────────────────────────────────────────
 
 ## Animate a screen/modal CanvasLayer in: the scrim/backdrop (the first
@@ -272,6 +277,32 @@ static func resize_to(ctl: Control, target: Vector2, dur: float = 0.18) -> void:
 	ctl.set_meta("_uifx_size", t)
 	t.tween_property(ctl, "size", target, dur) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+# ── full-screen fade (scene hand-off) ─────────────────────────────────────────
+
+## Fade the whole screen to black over `dur` — awaitable, for a deliberate scene
+## hand-off (New Game restart). Spawns a one-shot top CanvasLayer + ColorRect under
+## `owner`; the caller is expected to tear the tree down right after (scene reload),
+## so the layer is never reclaimed manually. Returns immediately when inactive
+## (headless/disabled) so test paths reload with zero delay.
+static func fade_to_black(owner_node: Node, dur: float = 0.32) -> void:
+	if owner_node == null or not is_instance_valid(owner_node) or not owner_node.is_inside_tree():
+		return
+	if not _active():
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	owner_node.add_child(layer)
+	var black := ColorRect.new()
+	black.color = Color(0, 0, 0, 1)
+	black.modulate.a = 0.0
+	black.set_anchors_preset(Control.PRESET_FULL_RECT)
+	black.mouse_filter = Control.MOUSE_FILTER_STOP   # swallow input during the hand-off
+	layer.add_child(black)
+	var t := black.create_tween()
+	t.tween_property(black, "modulate:a", 1.0, dur) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	await t.finished
 
 # ── impact shake ──────────────────────────────────────────────────────────────
 

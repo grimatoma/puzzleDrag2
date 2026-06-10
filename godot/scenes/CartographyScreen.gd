@@ -547,6 +547,16 @@ func _humanize_list(items: Array) -> Array:
 ## `screen.game` + CartographyConfig — no state of its own.
 class _MapView extends Control:
 	var screen   ## the owning CartographyScreen
+	## Drives the "you are here" ring pulse. Advances (and repaints) only while the map
+	## is on screen AND UI motion is on (UiFx.is_active() — false headless + in the
+	## visual harness, so captures stay deterministic at the t=0 ring).
+	var _pulse_t: float = 0.0
+
+	func _process(delta: float) -> void:
+		if not UiFx.is_active() or not is_visible_in_tree():
+			return
+		_pulse_t += delta
+		queue_redraw()
 
 	## Fit the 0..100 layout bbox into the panel rect (scaled + centred), with a small inset so
 	## node labels don't clip the edges.
@@ -646,8 +656,11 @@ class _MapView extends Control:
 					draw_arc(c, r, 0.0, TAU, 40, Palette.GOLD, 2.0, true)
 					_draw_centered_text(String(n.get("icon", "")), c, 16, Palette.PARCHMENT)
 				"current":
-					# Filled + a bright gold "you are here" ring.
-					draw_arc(c, r + 6.0, 0.0, TAU, 48, Palette.GOLD_BRIGHT, 3.5, true)
+					# Filled + a bright gold "you are here" ring that BREATHES (radius +0..3px,
+					# alpha easing off as it grows) while motion is on; static at rest/t=0.
+					var pulse := (sin(_pulse_t * 2.6) + 1.0) * 0.5
+					draw_arc(c, r + 6.0 + pulse * 3.0, 0.0, TAU, 48,
+						Color(Palette.GOLD_BRIGHT, 1.0 - pulse * 0.45), 3.5, true)
 					draw_circle(c, r, tint)
 					draw_arc(c, r, 0.0, TAU, 40, Palette.GOLD_BRIGHT, 2.0, true)
 					_draw_centered_text(String(n.get("icon", "")), c, 16, Palette.PARCHMENT)
