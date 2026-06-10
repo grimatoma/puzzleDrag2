@@ -463,51 +463,54 @@ func _post_town_build_picker(main) -> void:
 # golden:<id> row. `deeplink` is fed to main.apply_deeplink (after seeding) — except the
 # tutorial/story-prompt scenarios where the seed itself drives the modal.
 func _scenarios() -> Array:
+	# Every row carries an `expect` string — a one-line human description of what the golden should
+	# show. It is printed per scenario in the run output (so the suite self-documents) and is the
+	# canonical "what we expect to see" for a reviewer re-baselining the goldens.
 	return [
 		# board-farm-idle / -chain now seed an ACTIVE farm run so the HUD season bar renders (it is
 		# hidden when no run is active — see Hud._refresh_season_bar). The board tiles are the same
 		# pinned-RNG layout either way; only the season-bar visibility depends on the run.
-		{"id": "board-farm-idle", "deeplink": "",            "seed": Callable(self, "_seed_board_farm_run"), "post_dismiss_tutorial": true},
+		{"id": "board-farm-idle", "expect": "Active farm run: 6x6 farm board, HUD season strip (fresh Spring, 10 turns), 'Chain tiles to gather' hint, empty stockpile.", "deeplink": "",            "seed": Callable(self, "_seed_board_farm_run"), "post_dismiss_tutorial": true},
 		# The board mid-DRAG: stage-tinted chain path + upgrade star + "×N" hover marker + lifted
 		# tiles + the live HUD chain readout. The `post` step drives the drag; _freeze_tweens pins
 		# the overlay/selection animation so the capture is deterministic.
-		{"id": "board-farm-chain", "deeplink": "",           "seed": Callable(self, "_seed_board_farm_run"), "post": Callable(self, "_post_farm_chain"), "post_dismiss_tutorial": true},
-		{"id": "town-map",        "deeplink": "townmap",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
-		{"id": "inventory",       "deeplink": "inventory",   "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
-		{"id": "orders",          "deeplink": "town",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
-		{"id": "menu",            "deeplink": "menu",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
-		{"id": "achievements",    "deeplink": "achievements","seed": Callable(self, "_seed_achievements"), "post_dismiss_tutorial": true},
-		{"id": "tiles",           "deeplink": "tiles",       "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
-		{"id": "chronicle",       "deeplink": "chronicle",   "seed": Callable(self, "_seed_chronicle"),    "post_dismiss_tutorial": true},
-		{"id": "townsfolk",       "deeplink": "townsfolk",   "seed": Callable(self, "_seed_townsfolk"),    "post_dismiss_tutorial": true},
-		{"id": "cartography",     "deeplink": "cartography", "seed": Callable(self, "_seed_cartography"),  "post_dismiss_tutorial": true},
-		{"id": "castle",          "deeplink": "castle",      "seed": Callable(self, "_seed_castle"),       "post_dismiss_tutorial": true},
-		{"id": "decorations",     "deeplink": "decorations", "seed": Callable(self, "_seed_decorations"),  "post_dismiss_tutorial": true},
-		{"id": "portal",          "deeplink": "portal",      "seed": Callable(self, "_seed_portal"),       "post_dismiss_tutorial": true},
-		{"id": "charter",         "deeplink": "charter",     "seed": Callable(self, "_seed_charter"),      "post_dismiss_tutorial": true},
-		{"id": "quests",          "deeplink": "quests",      "seed": Callable(self, "_seed_quests"),       "post_dismiss_tutorial": true},
-		{"id": "daily",           "deeplink": "daily",       "seed": Callable(self, "_seed_daily"),        "post_dismiss_tutorial": true},
-		{"id": "recipes",         "deeplink": "recipes",     "seed": Callable(self, "_seed_recipes"),      "post_dismiss_tutorial": true},
+		{"id": "board-farm-chain", "expect": "Mid-drag 7-tile grass chain: glowing path, upgrade STAR at the 6-tile threshold, 'x1' marker on the head cell, HUD 'Hay Bundle 1/6 +1'.", "deeplink": "",           "seed": Callable(self, "_seed_board_farm_run"), "post": Callable(self, "_post_farm_chain"), "post_dismiss_tutorial": true},
+		{"id": "town-map",        "expect": "Settlement map for a fresh save: laid-out plots (empty), river + bridges, central plaza, 'Build 0/3 plots'.", "deeplink": "townmap",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "inventory",       "expect": "Inventory ledger for a fresh save: the ledger chrome with an empty / zero-count state.", "deeplink": "inventory",   "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "orders",          "expect": "Town/orders ledger (carded) for a fresh save; cost labels are human-readable (not raw keys).", "deeplink": "town",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "menu",            "expect": "The game menu modal (Settings / Wiki / New Game) over a dimmed backdrop.", "deeplink": "menu",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "achievements",    "expect": "Achievements with a mix of unlocked + mid-progress trophies and progress bars.", "deeplink": "achievements","seed": Callable(self, "_seed_achievements"), "post_dismiss_tutorial": true},
+		{"id": "tiles",           "expect": "Tile collection: family tabs + a grid of tile cards (icon + name) + a detail panel whose 'Produces:' line shows a human label, with tiles in their correct categories.", "deeplink": "tiles",       "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
+		{"id": "chronicle",       "expect": "Chronicle timeline showing ~8 fired story beats across acts 1-3.", "deeplink": "chronicle",   "seed": Callable(self, "_seed_chronicle"),    "post_dismiss_tutorial": true},
+		{"id": "townsfolk",       "expect": "Townsfolk roster with NPC bonds at varied levels (Mira 8, Bram 3), readable NPC names.", "deeplink": "townsfolk",   "seed": Callable(self, "_seed_townsfolk"),    "post_dismiss_tutorial": true},
+		{"id": "cartography",     "expect": "World map at City tier (Town 2 complete): node graph with mine + harbor travel buttons ENABLED.", "deeplink": "cartography", "seed": Callable(self, "_seed_cartography"),  "post_dismiss_tutorial": true},
+		{"id": "castle",          "expect": "Castle contribution screen: partial contributions (soup/meat/coal) with progress + on-hand inventory.", "deeplink": "castle",      "seed": Callable(self, "_seed_castle"),       "post_dismiss_tutorial": true},
+		{"id": "decorations",     "expect": "Decorations shop: 5000 coins, violet_bed x2 + stone_lantern built, cost chips with human labels (not raw keys).", "deeplink": "decorations", "seed": Callable(self, "_seed_decorations"),  "post_dismiss_tutorial": true},
+		{"id": "portal",          "expect": "Magic Portal: built, influence 150, Magic Wand + Miner's Hat summoned; summon options with influence costs.", "deeplink": "portal",      "seed": Callable(self, "_seed_portal"),       "post_dismiss_tutorial": true},
+		{"id": "charter",         "expect": "Charter Terms tab: term cards with met/unmet status from the seeded flags + choice log.", "deeplink": "charter",     "seed": Callable(self, "_seed_charter"),      "post_dismiss_tutorial": true},
+		{"id": "quests",          "expect": "Quests: 6 rolled quests (a couple complete, one half-done), XP/level + coins.", "deeplink": "quests",      "seed": Callable(self, "_seed_quests"),       "post_dismiss_tutorial": true},
+		{"id": "daily",           "expect": "Daily-reward streak at day 14 with a reward card + claim CTA.", "deeplink": "daily",       "seed": Callable(self, "_seed_daily"),        "post_dismiss_tutorial": true},
+		{"id": "recipes",         "expect": "Bakery recipe in the 'Ready to craft' state: green Craft button + covered have/need ingredient chips (human labels).", "deeplink": "recipes",     "seed": Callable(self, "_seed_recipes"),      "post_dismiss_tutorial": true},
 		# tutorial + story-prompt: the seed drives the modal; do NOT dismiss the tutorial/story.
-		{"id": "tutorial",        "deeplink": "",            "seed": Callable(self, "_seed_tutorial"),     "post_dismiss_tutorial": false},
-		{"id": "story-prompt",    "deeplink": "",            "seed": Callable(self, "_seed_story_prompt"), "post_dismiss_tutorial": false},
+		{"id": "tutorial",        "expect": "First-load tutorial modal at step 0 with intro copy + Next CTA over a dimmed backdrop.", "deeplink": "",            "seed": Callable(self, "_seed_tutorial"),     "post_dismiss_tutorial": false},
+		{"id": "story-prompt",    "expect": "Story modal presenting the act1_arrival beat: title, narrative text, and Skip/Next choice buttons over a dimmed board.", "deeplink": "",            "seed": Callable(self, "_seed_story_prompt"), "post_dismiss_tutorial": false},
 		# ── NEW (visual-expand) — modal/empty-state/built-out surfaces ──────────────────────
 		# Each renders a state whose screen already exists. Rows with a `post` Callable drive a
 		# SECOND interaction (search text / term detail / build picker) AFTER the deeplink opens
 		# the screen. All capture at the portrait viewport only (no desktop golden needed).
-		{"id": "leaveboard",             "deeplink": "leaveboard", "seed": Callable(self, "_seed_leaveboard"),            "post_dismiss_tutorial": true},
-		{"id": "toast",                  "deeplink": "toast",      "seed": Callable(self, "_seed_none"),                  "post_dismiss_tutorial": true},
-		{"id": "debug",                  "deeplink": "debug",      "seed": Callable(self, "_seed_debug"),                 "post_dismiss_tutorial": true},
-		{"id": "inventory-search-empty", "deeplink": "inventory",  "seed": Callable(self, "_seed_inventory_search_empty"), "post": Callable(self, "_post_inventory_search"),  "post_dismiss_tutorial": true},
-		{"id": "chronicle-empty",        "deeplink": "chronicle",  "seed": Callable(self, "_seed_chronicle_empty"),       "post_dismiss_tutorial": true},
-		{"id": "charter-term-dialog",    "deeplink": "charter",    "seed": Callable(self, "_seed_charter"),               "post": Callable(self, "_post_charter_term"),      "post_dismiss_tutorial": true},
-		{"id": "town-built-out",         "deeplink": "townmap",    "seed": Callable(self, "_seed_town_built_out"),        "post_dismiss_tutorial": true},
-		{"id": "town-build-picker",      "deeplink": "townmap",    "seed": Callable(self, "_seed_town_build_picker"),     "post": Callable(self, "_post_town_build_picker"), "post_dismiss_tutorial": true},
+		{"id": "leaveboard",             "expect": "'Leave the mine?' confirm card (on a mine expedition) with Stay/Leave buttons over a dimmed board.", "deeplink": "leaveboard", "seed": Callable(self, "_seed_leaveboard"),            "post_dismiss_tutorial": true},
+		{"id": "toast",                  "expect": "A toast notification bubble pinned fully opaque over a screen.", "deeplink": "toast",      "seed": Callable(self, "_seed_none"),                  "post_dismiss_tutorial": true},
+		{"id": "debug",                  "expect": "Debug modal with live readouts reflecting the seed: coins 4200, runes 18, influence 350.", "deeplink": "debug",      "seed": Callable(self, "_seed_debug"),                 "post_dismiss_tutorial": true},
+		{"id": "inventory-search-empty", "expect": "Inventory with a no-match search ('zzzzz') showing the \"No items match\" empty-state line.", "deeplink": "inventory",  "seed": Callable(self, "_seed_inventory_search_empty"), "post": Callable(self, "_post_inventory_search"),  "post_dismiss_tutorial": true},
+		{"id": "chronicle-empty",        "expect": "Chronicle empty state (fresh game, 0 fired beats): 'Your story begins...'.", "deeplink": "chronicle",  "seed": Callable(self, "_seed_chronicle_empty"),       "post_dismiss_tutorial": true},
+		{"id": "charter-term-dialog",    "expect": "Charter with the first term's detail overlay open (in-screen detail panel).", "deeplink": "charter",    "seed": Callable(self, "_seed_charter"),               "post": Callable(self, "_post_charter_term"),      "post_dismiss_tutorial": true},
+		{"id": "town-built-out",         "expect": "Village-tier town map with Lumber Camp / Coop / Garden placed as houses (labels are human names), remaining lots empty, 'Build 3/7 plots'.", "deeplink": "townmap",    "seed": Callable(self, "_seed_town_built_out"),        "post_dismiss_tutorial": true},
+		{"id": "town-build-picker",      "expect": "City-tier town map with the build picker open on the first empty lot; build rows ENABLED (costs covered).", "deeplink": "townmap",    "seed": Callable(self, "_seed_town_build_picker"),     "post": Callable(self, "_post_town_build_picker"), "post_dismiss_tutorial": true},
 		# ── Task E (farm-run feature) — the two NEW scenario goldens (portrait only) ─────────
 		# start-farming-modal: the bounded-run picker over the town home (cost/picker/budget).
 		# harvest-run-end: the run-end "Return to Town" HarvestModal with the +25 return bonus.
-		{"id": "start-farming-modal",    "deeplink": "startfarming", "seed": Callable(self, "_seed_startfarming_modal"), "post_dismiss_tutorial": true},
-		{"id": "harvest-run-end",        "deeplink": "",             "seed": Callable(self, "_seed_harvest_run_end"),   "post_dismiss_tutorial": true},
+		{"id": "start-farming-modal",    "expect": "Start-Farming picker over the town home: entry cost 50 affordable (green) + enabled 'Start (50 coin)' CTA.", "deeplink": "startfarming", "seed": Callable(self, "_seed_startfarming_modal"), "post_dismiss_tutorial": true},
+		{"id": "harvest-run-end",        "expect": "Run-end 'Harvest Complete / Return to Town' modal: Winter, 10/10 turns, '+25 coin return bonus' line.", "deeplink": "",             "seed": Callable(self, "_seed_harvest_run_end"),   "post_dismiss_tutorial": true},
 	]
 
 # ── Capture pipeline ───────────────────────────────────────────────────────────────────────
@@ -731,7 +734,10 @@ func _initialize() -> void:
 			if vp_name == "desktop" and not DESKTOP_SCENARIOS.has(scn_id):
 				continue   # desktop viewport is a representative subset only
 
-			var img := await _capture_scenario(scn, vp_size)
+				if vp_name == "portrait":
+					print("  - %s : %s" % [scn_id, String(scn.get("expect", "(no expect set)"))])
+
+				var img := await _capture_scenario(scn, vp_size)
 			var tag := "%s/%s" % [scn_id, vp_name]   # scenario × viewport label in the tally
 
 			if img == null:

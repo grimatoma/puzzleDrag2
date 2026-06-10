@@ -7,10 +7,14 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function installDeterminism(page) {
-  await page.addInitScript(({ fixedNow }) => {
+async function installDeterminism(page, scenario) {
+  const disableDialogs = !scenario?.enableDialogs;
+  await page.addInitScript(({ fixedNow, disableDialogs }) => {
     window.__HEARTH_VISUAL_TESTING__ = true;
-    window.__HEARTH_DISABLE_DIALOGS__ = true; // Suppress auto-triggered dialogs/story beats
+    // Most scenarios suppress auto-triggered dialogs/story beats. Scenarios whose payload
+    // IS a dialog (story beats, toast bubbles) set `enableDialogs` so the gated modal renders
+    // instead of capturing an empty town — see VisualScenario.enableDialogs in matrix.ts.
+    window.__HEARTH_DISABLE_DIALOGS__ = disableDialogs;
     let seed = 123456789;
     Math.random = () => {
       seed = (1664525 * seed + 1013904223) >>> 0;
@@ -19,7 +23,7 @@ async function installDeterminism(page) {
     Date.now = () => fixedNow;
     window.localStorage.clear();
     window.localStorage.setItem("hearth.tutorial.seen", "1");
-  }, { fixedNow: VISUAL_FIXED_NOW });
+  }, { fixedNow: VISUAL_FIXED_NOW, disableDialogs });
 }
 
 async function waitForVisualReady(page, scenario) {
@@ -90,7 +94,7 @@ for (const scenario of VISUAL_SCENARIOS) {
       consoleErrors.push(text);
     });
 
-    await installDeterminism(page);
+    await installDeterminism(page, scenario);
     await page.goto(`./?visual=${encodeURIComponent(scenario.id)}`);
     await waitForVisualReady(page, scenario);
 

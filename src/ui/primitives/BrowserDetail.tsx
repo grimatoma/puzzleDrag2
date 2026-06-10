@@ -2,6 +2,8 @@ import AutoFitText from "./AutoFitText.jsx";
 import Button from "./Button.jsx";
 import { CostChip, RequirementChip } from "./Chip.jsx";
 import ProgressTrack from "./ProgressTrack.jsx";
+import { getItem } from "../../constants.js";
+import { iconLabel } from "../../textures/iconRegistry.js";
 
 function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -191,6 +193,26 @@ interface AbilityEffects {
   freeMovesIfChain?: { minChain?: number };
 }
 
+/**
+ * Resolve a catalog key (resource / tile / tile-variant / recipe) to a human label for
+ * player-facing ability copy. Mirrors `labelFor` in Inventory.tsx (iconLabel → ITEMS.label),
+ * with a final humanizing fallback so a tile-variant id that lives outside ITEMS
+ * (e.g. "tile_grass_meadow") never leaks its raw snake_case key into the summary.
+ */
+function humanizeKey(key: string): string {
+  return String(key)
+    .replace(/^tile_[a-z0-9]+_/, "")
+    .replace(/^tile_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+function abilityLabel(key: unknown): string {
+  const k = String(key ?? "").trim();
+  if (!k) return "";
+  return iconLabel(k) || getItem(k)?.label || humanizeKey(k);
+}
+
 export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: AbilitySpec[] | unknown; effects?: AbilityEffects; empty?: React.ReactNode }) {
   const rows: string[] = [];
   if (Array.isArray(abilities)) {
@@ -202,19 +224,19 @@ export function AbilitySummary({ abilities, effects, empty = "No special bonus."
           break;
         case "pool_weight":
         case "pool_weight_legacy":
-          rows.push(`Boosts ${p.target ?? "spawn"} by ${p.amount ?? 1}`);
+          rows.push(`Boosts ${abilityLabel(p.target) || "spawn"} by ${p.amount ?? 1}`);
           break;
         case "threshold_reduce":
-          rows.push(`Reduces ${p.target ?? "a chain"} by ${p.amount ?? 1}`);
+          rows.push(`Reduces ${abilityLabel(p.target) || "a chain"} by ${p.amount ?? 1}`);
           break;
         case "threshold_reduce_category":
-          rows.push(`Reduces ${p.category ?? "category"} chains by ${p.amount ?? 1}`);
+          rows.push(`Reduces ${p.category ? humanizeKey(String(p.category)) : "category"} chains by ${p.amount ?? 1}`);
           break;
         case "recipe_input_reduce":
-          rows.push(`Reduces ${p.recipe ?? "recipe"} ${p.input ?? "input"} by ${p.amount ?? 1}`);
+          rows.push(`Reduces ${abilityLabel(p.recipe) || "recipe"} ${abilityLabel(p.input) || "input"} by ${p.amount ?? 1}`);
           break;
         case "season_bonus":
-          rows.push(`Season bonus: ${p.amount ?? 0} ${p.resource ?? "coins"}`);
+          rows.push(`Season bonus: ${p.amount ?? 0} ${abilityLabel(p.resource) || "coins"}`);
           break;
         default:
           if (ab?.id) rows.push(ab.id.replaceAll("_", " "));
