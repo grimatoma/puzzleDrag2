@@ -232,6 +232,13 @@ const ACTIONS = {
     if (!cand) return { error: { code: 400, msg: `idx out of range: ${body.idx}` } };
     key.selected = body.idx;
     key.selectedPath = typeof cand.path === "string" ? cand.path : null;
+    // Denormalize the winner's source + PixelLab object id onto the keyframe, identically to
+    // pipeline-patch.mjs's `approve` — so a browser approve and a CLI approve produce the SAME write.
+    // Without this, approving a different idx in the viewer would leave a stale source/objectId from a
+    // prior selection (the handle a PixelLab `state` child would later derive from). reject-all clears
+    // them; approve must keep them in sync.
+    key.source = typeof cand.source === "string" ? cand.source : cand.objectId ? "pixellab" : "hand";
+    key.objectId = typeof cand.objectId === "string" ? cand.objectId : null;
     cand.status = "approved";
     return { dirty: { pipeline: true, history: true } };
   },
