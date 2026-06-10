@@ -12,6 +12,14 @@ config/description="Godot 4 port of the React+Phaser drag-chain puzzle. Mobile-f
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
+; Engine boot splash — the same pixel-art title vista SplashScreen.gd presents
+; (authored by tools/gen_splash.py), shown by the engine itself while the main
+; scene loads, so launch goes art → animated splash with no flash of grey.
+; use_filter=false keeps the x4-nearest pixels crisp; bg matches the art's
+; vignette indigo (#0e1024) for any letterboxed edge.
+boot_splash/bg_color=Color(0.054902, 0.062745, 0.141176, 1)
+boot_splash/image="res://assets/splash/splash.png"
+boot_splash/use_filter=false
 
 [display]
 

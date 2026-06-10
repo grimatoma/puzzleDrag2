@@ -93,6 +93,12 @@ var _recipe_wiki_screen: RecipeWikiScreenScript   ## lazily created
 ## apply_deeplink("tutorial").
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
 var _tutorial_modal: TutorialModalScript   ## lazily created
+## Launch splash — the Hearthlands pixel-art title card (cottage-at-dusk vista, pulsing
+## window glow) shown over everything at boot. Self-dismissing (tap / key / auto after a
+## few seconds); frees itself and fires `finished`. Loaded via preload (NO class_name) so
+## the port never needs an --import pass to register it (mirrors every lazy modal).
+const SplashScreenScript := preload("res://scenes/SplashScreen.gd")
+var _splash                              ## CanvasLayer (SplashScreenScript), live only during launch
 ## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
 ## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
 const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
@@ -390,6 +396,16 @@ func _ready() -> void:
 		# on screen is the story modal. _maybe_show_daily() no-ops while a story beat is showing
 		# (it's surfaced instead when the story queue fully drains in _on_story_advanced).
 		_maybe_show_daily()
+	# Launch splash — the pixel-art Hearthlands title card (layer 12) laid over whatever
+	# _ready just staged (town home / tutorial / story beat), revealed as it fades out.
+	# Real interactive runs only: headless suites and the dialog-suppressed web boot smoke
+	# skip it (the same gate as the auto-open town home above), so every test boot stays
+	# deterministic and the Playwright readiness beacon below is never delayed behind art.
+	if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
+		_splash = SplashScreenScript.new()
+		add_child(_splash)
+		_splash.setup()
+		_splash.finished.connect(func() -> void: _splash = null)
 	# Web-boot readiness beacon (M-infra: web-export smoke). On an HTML5/WASM build the
 	# whole scene tree is now up (HUD + board built, save loaded, story/tutorial wired),
 	# so flip a window flag the Playwright smoke (tests/godot-web/boot.spec.ts) waits on
