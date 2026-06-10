@@ -210,6 +210,33 @@ static func attach_press_spin(btn: BaseButton) -> void:
 		t.tween_callback(func() -> void: btn.rotation = 0.0)
 	)
 
+# ── launch intro ──────────────────────────────────────────────────────────────
+
+## One-shot launch reveal for a piece of persistent chrome: the control fades in while
+## sliding from `dy` px away (negative = drops in from above, positive = rises from
+## below), after `delay` seconds — stagger several for the app-launch flourish. Awaits
+## one frame so the first layout pass has placed the control; a headless/disabled run
+## changes nothing (the control just sits where layout put it).
+static func intro_drop(ctl: Control, dy: float, dur: float = 0.4, delay: float = 0.0) -> void:
+	if ctl == null or not is_instance_valid(ctl) or not _active():
+		return
+	ctl.modulate.a = 0.0
+	var tree := ctl.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(ctl) or not ctl.is_inside_tree():
+		return
+	var rest := ctl.position
+	ctl.position = rest + Vector2(0, dy)
+	var t := ctl.create_tween()
+	if delay > 0.0:
+		t.tween_interval(delay)
+	t.set_parallel(true)
+	t.tween_property(ctl, "position", rest, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	t.tween_property(ctl, "modulate:a", 1.0, dur * 0.8) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
 # ── HUD value transitions ─────────────────────────────────────────────────────
 
 ## Animate a Label's numeric readout from `from` to `to`, formatting each frame with

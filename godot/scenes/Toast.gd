@@ -35,6 +35,10 @@ var _tween: Tween                 ## the active fade tween (killed + replaced ea
 const FADE_IN := 0.18
 const HOLD := 2.2
 const FADE_OUT := 0.45
+# Geometry: the bubble's resting offset_top (above the stockpile card) and how far
+# below it the slide-in starts.
+const REST_TOP := -150.0
+const RISE_PX := 12.0
 
 # ── lifecycle ──────────────────────────────────────────────────────────────────
 
@@ -62,7 +66,7 @@ func _build_shell() -> void:
 	_bubble = PanelContainer.new()
 	_bubble.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_bubble.grow_vertical = Control.GROW_DIRECTION_BEGIN   # grow UP from the bottom anchor
-	_bubble.offset_top = -150                              # sit above the stockpile card
+	_bubble.offset_top = REST_TOP                          # sit above the stockpile card
 	_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bubble.custom_minimum_size = Vector2(0, 0)
 	_bubble.add_theme_stylebox_override("panel", _bubble_box())
@@ -123,12 +127,23 @@ func show_toast(text: String) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 	# Set the starting alpha BEFORE the tween so a synchronous read sees a faded-in bubble
-	# start point; the tween then animates modulate.a in → hold → out.
+	# start point; the tween then animates modulate.a in → hold → out. The bubble also
+	# RISES ~12px into its resting spot while fading in (offset_top is reset each call so
+	# a replaced mid-flight toast can't drift), then drops back out on the fade.
 	_bubble.modulate.a = 0.0
+	_bubble.offset_top = REST_TOP + RISE_PX
 	_tween = create_tween()
+	_tween.set_parallel(true)
 	_tween.tween_property(_bubble, "modulate:a", 1.0, FADE_IN)
+	_tween.tween_property(_bubble, "offset_top", REST_TOP, FADE_IN * 1.6) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_tween.set_parallel(false)
 	_tween.tween_interval(HOLD)
+	_tween.set_parallel(true)
 	_tween.tween_property(_bubble, "modulate:a", 0.0, FADE_OUT)
+	_tween.tween_property(_bubble, "offset_top", REST_TOP + RISE_PX * 0.5, FADE_OUT) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_tween.set_parallel(false)
 	_tween.tween_callback(Callable(self, "_on_fade_done"))
 
 ## Hide the toast immediately, killing any running fade. Used by tests + when a modal
@@ -140,12 +155,14 @@ func dismiss() -> void:
 	visible = false
 	if _bubble != null:
 		_bubble.modulate.a = 1.0
+		_bubble.offset_top = REST_TOP
 
 ## Fade-out finished — hide the bubble (the tween already drove alpha to 0).
 func _on_fade_done() -> void:
 	visible = false
 	if _bubble != null:
 		_bubble.modulate.a = 1.0   # reset for the next show_toast
+		_bubble.offset_top = REST_TOP
 
 # ── pure helpers (testable without rendering internals) ────────────────────────
 

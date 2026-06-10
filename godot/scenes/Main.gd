@@ -352,6 +352,10 @@ func _ready() -> void:
 	# both reflect the current farm season immediately (not just after the first chain).
 	_refresh_season_bar()
 	board.set_season(game.current_season_index())
+	# Launch flourish — the persistent chrome (top bar / nav / stockpile / tools) reveals
+	# in a quick stagger. No-op headless / with UiFx disabled (tests + the boot smoke see
+	# the settled HUD), and the auto-modals below simply layer above it.
+	_hud.play_intro()
 	# Task C — TOWN-IS-HOME launch gate (React's initial view:"town"). The puzzle board is only
 	# playable while a bounded farm RUN is live, OR while the player is on a non-farm expedition
 	# (mine/harbor), OR while a boss fight is active; otherwise (idle on the farm with no run) the

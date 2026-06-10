@@ -131,6 +131,17 @@ var _fx_layer: CanvasLayer
 func build() -> void:
 	_build_hud()
 
+## One-shot launch flourish: the persistent chrome reveals in a quick stagger — the
+## top bar drops in, the bottom nav rises, the stockpile card and tool palette follow.
+## Main calls this once at the end of _ready (after the first _layout pass). A no-op
+## headless / with UiFx disabled, so tests and the boot smoke see the settled HUD.
+func play_intro() -> void:
+	UiFx.intro_drop(_topbar, -26.0, 0.42, 0.0)
+	if _nav_layer != null and _nav_layer.get_child_count() > 0:
+		UiFx.intro_drop(_nav_layer.get_child(0) as Control, 30.0, 0.42, 0.07)
+	UiFx.intro_drop(_stockpile_box, 24.0, 0.4, 0.14)
+	UiFx.intro_drop(_tool_palette_box, -18.0, 0.4, 0.2)
+
 # ── HUD ────────────────────────────────────────────────────────────────────
 
 func _build_hud() -> void:
