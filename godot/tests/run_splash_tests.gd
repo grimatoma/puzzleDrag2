@@ -47,6 +47,23 @@ func _test_assets() -> void:
 		if tex is Texture2D:
 			_check((tex as Texture2D).get_size() == Vector2(720, 1280),
 				"splash asset is 720x1280 (x4-nearest of the 180x320 native canvas): %s" % path)
+	# The ENGINE/web-loader boot splash must be the aspect-agnostic medallion,
+	# drawn centred at natural size — a full-bleed portrait image here letterboxes
+	# into a "portrait strip" on wide screens and then jumps to full width when
+	# SplashScreen.gd takes over (the launch-width bug).
+	var boot_path := "res://assets/splash/splash_boot.png"
+	_check(ResourceLoader.exists(boot_path), "boot medallion present + imported: %s" % boot_path)
+	var boot = load(boot_path)
+	_check(boot is Texture2D, "boot medallion loads as Texture2D")
+	if boot is Texture2D:
+		_check((boot as Texture2D).get_size() == Vector2(400, 400),
+			"boot medallion is 400x400 (x4-nearest of the 100x100 native canvas)")
+	_check(String(ProjectSettings.get_setting("application/boot_splash/image")) == boot_path,
+		"project boot_splash/image points at the medallion (NOT the portrait scene)")
+	# 0 = Disabled: drawn centred at natural size. Any stretching mode would
+	# contain-fit on the web loader and recreate the portrait-strip jump.
+	_check(int(ProjectSettings.get_setting("application/boot_splash/stretch_mode")) == 0,
+		"boot_splash/stretch_mode is Disabled (centred at natural size, any aspect)")
 
 # ── setup() shell contract ───────────────────────────────────────────────────
 
