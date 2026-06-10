@@ -207,7 +207,7 @@ func _build_shell() -> void:
 	# Title — "🛠 Debug" in the Cinzel display serif.
 	var title := Label.new()
 	title.text = "🛠 Debug"
-	title.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if heading_font != null:
@@ -249,7 +249,7 @@ func _build_shell() -> void:
 		var jbtn := Button.new()
 		jbtn.text = id
 		jbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_button(jbtn, Palette.EMBER, 4, 14)
+		UiKit.style_button(jbtn, Palette.EMBER, 4, Typography.size(Typography.Role.CAPTION))
 		# Capture the id; route the jump through Main.apply_deeplink (single nav path).
 		var jump_id: String = id
 		jbtn.pressed.connect(func(): _on_jump(jump_id))
@@ -270,7 +270,7 @@ func _build_shell() -> void:
 		gbtn.text = String(spec["label"])
 		gbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var accent: Color = COL_DANGER if gid == "clearsave" else Palette.MOSS
-		UiKit.style_button(gbtn, accent, 6, 15)
+		UiKit.style_button(gbtn, accent, 6, Typography.size(Typography.Role.LABEL))
 		gbtn.pressed.connect(func(): apply_grant(gid))
 		grant_grid.add_child(gbtn)
 		_action_buttons["grant:%s" % gid] = gbtn
@@ -280,7 +280,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "Close"
 	close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(close_btn, Palette.EMBER, 8, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	col.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -298,7 +298,7 @@ func _rule() -> HSeparator:
 func _section_header(text: String, heading_font: Font) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", COL_TITLE)
 	if heading_font != null:
 		lbl.add_theme_font_override("font", heading_font)
@@ -319,7 +319,7 @@ func refresh_readout() -> void:
 		_readout_labels.clear()
 		for _i in lines.size():
 			var lbl := Label.new()
-			lbl.add_theme_font_size_override("font_size", 15)
+			UiKit.set_font_size(lbl, Typography.Role.LABEL)
 			lbl.add_theme_color_override("font_color", COL_BODY)
 			_readout_col.add_child(lbl)
 			_readout_labels.append(lbl)

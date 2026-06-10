@@ -140,7 +140,7 @@ func _build_shell() -> void:
 	# Title + flavour lede.
 	var title := Label.new()
 	title.text = "🧭 World Map"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -149,7 +149,7 @@ func _build_shell() -> void:
 
 	var subtitle := Label.new()
 	subtitle.text = "Chart the Long Return — tap a place to read it, then travel its road."
-	subtitle.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(subtitle, Typography.Role.LABEL)
 	subtitle.add_theme_color_override("font_color", COL_MUTED)
 	root_vbox.add_child(subtitle)
 
@@ -237,14 +237,14 @@ func _rebuild_detail() -> void:
 
 	var icon_lbl := Label.new()
 	icon_lbl.text = String(node.get("icon", ""))
-	icon_lbl.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(icon_lbl, Typography.Role.TITLE)
 	icon_lbl.add_theme_color_override("font_color", CartographyConfig.NODE_COLORS.get(kind, COL_BODY))
 	head.add_child(icon_lbl)
 
 	var name_lbl := Label.new()
 	var nm: String = String(node.get("name", nid))
 	name_lbl.text = ("◉ %s" % nm) if is_current(nid) else nm
-	name_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(name_lbl, Typography.Role.HEADING)
 	name_lbl.add_theme_color_override("font_color", COL_VALUE if is_current(nid) else COL_TITLE)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(name_lbl)
@@ -254,7 +254,7 @@ func _rebuild_detail() -> void:
 	if not lore.is_empty():
 		var sub := Label.new()
 		sub.text = String(lore.get("subtitle", ""))
-		sub.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(sub, Typography.Role.BODY)
 		sub.add_theme_color_override("font_color", COL_HEADER)
 		_detail_body.add_child(sub)
 
@@ -268,7 +268,7 @@ func _rebuild_detail() -> void:
 	else:
 		meta_parts.append("free")
 	meta.text = "  ·  ".join(meta_parts)
-	meta.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(meta, Typography.Role.BODY)
 	meta.add_theme_color_override("font_color", COL_MUTED)
 	_detail_body.add_child(meta)
 
@@ -276,7 +276,7 @@ func _rebuild_detail() -> void:
 	var desc := Label.new()
 	desc.text = String(node.get("description", ""))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(desc, Typography.Role.LABEL)
 	desc.add_theme_color_override("font_color", COL_BODY)
 	_detail_body.add_child(desc)
 
@@ -284,9 +284,9 @@ func _rebuild_detail() -> void:
 	if not lore.is_empty():
 		var quote := Label.new()
 		var speaker: String = String(lore.get("speaker", ""))
-		quote.text = "“%s”%s" % [String(lore.get("epitaph", "")), ("  — " + speaker) if speaker != "" else ""]
+		quote.text = "\"%s\"%s" % [String(lore.get("epitaph", "")), ("  — " + speaker) if speaker != "" else ""]
 		quote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		quote.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(quote, Typography.Role.BODY)
 		quote.add_theme_color_override("font_color", COL_MUTED)
 		_detail_body.add_child(quote)
 
@@ -295,7 +295,7 @@ func _rebuild_detail() -> void:
 	if not dangers.is_empty():
 		var dl := Label.new()
 		dl.text = "⚠ Dangers: " + ", ".join(_humanize_list(dangers))
-		dl.add_theme_font_size_override("font_size", 12)
+		UiKit.set_font_size(dl, Typography.Role.META)
 		dl.add_theme_color_override("font_color", Palette.EMBER)
 		_detail_body.add_child(dl)
 
@@ -321,14 +321,14 @@ func _make_travel_button(nid: String, kind: String, _state: String) -> Button:
 	if reason == "here":
 		btn.text = "You are here"
 		btn.disabled = true
-		UiKit.style_button(btn, Palette.EMBER, 8, 16, true)
+		UiKit.style_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD), true)
 		return btn
 
 	if reason == "":
 		# Travelable now — a positive call-to-action.
 		btn.text = _travel_verb(kind, nid)
 		btn.disabled = false
-		UiKit.style_action_button(btn, _accent_for(kind), 8, 16)
+		UiKit.style_action_button(btn, _accent_for(kind), 8, Typography.size(Typography.Role.SUBHEAD))
 		btn.connect("pressed", Callable(self, "_on_travel_pressed").bind(nid))
 		_action_buttons["travel:" + nid] = btn
 		return btn
@@ -336,7 +336,7 @@ func _make_travel_button(nid: String, kind: String, _state: String) -> Button:
 	# Blocked — show why, disabled.
 	btn.text = _block_label(reason, nid)
 	btn.disabled = true
-	UiKit.style_button(btn, Palette.IRON, 8, 16, true)
+	UiKit.style_button(btn, Palette.IRON, 8, Typography.size(Typography.Role.SUBHEAD), true)
 	return btn
 
 ## The button verb for a travelable node, by kind: Enter the board for a board node, the activity
@@ -375,7 +375,7 @@ func _make_settlement_section(nid: String) -> Control:
 		var done: bool = game.settlement_completed(nid)
 		var status := Label.new()
 		status.text = ("★ Complete · %s settlement" % biome_label) if done else ("✓ Founded · %s settlement" % biome_label)
-		status.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(status, Typography.Role.BODY)
 		status.add_theme_color_override("font_color", COL_VALUE if done else COL_HEADER)
 		box.add_child(status)
 		return box
@@ -389,15 +389,15 @@ func _make_settlement_section(nid: String) -> Control:
 	if not prior_done:
 		btn.text = "🔒 Complete a settlement first"
 		btn.disabled = true
-		UiKit.style_button(btn, Palette.IRON, 8, 16, true)
+		UiKit.style_button(btn, Palette.IRON, 8, Typography.size(Typography.Role.SUBHEAD), true)
 	elif not can_pay:
 		btn.text = "🔒 Found Settlement (%d 🪙)" % cost
 		btn.disabled = true
-		UiKit.style_button(btn, Palette.IRON, 8, 16, true)
+		UiKit.style_button(btn, Palette.IRON, 8, Typography.size(Typography.Role.SUBHEAD), true)
 	else:
 		btn.text = "🪙 Found Settlement (%d)" % cost
 		btn.disabled = false
-		UiKit.style_action_button(btn, Palette.EMBER, 8, 16)
+		UiKit.style_action_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 		btn.connect("pressed", Callable(self, "_on_found_pressed").bind(nid))
 		_action_buttons["found:" + nid] = btn
 	box.add_child(btn)
@@ -430,7 +430,7 @@ func _legend_item(kind: String, label: String) -> HBoxContainer:
 	item.add_child(sw)
 	var lbl := Label.new()
 	lbl.text = label
-	lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(lbl, Typography.Role.META)
 	lbl.add_theme_color_override("font_color", COL_MUTED)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	item.add_child(lbl)

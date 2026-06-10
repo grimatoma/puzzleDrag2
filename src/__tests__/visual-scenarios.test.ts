@@ -10,7 +10,10 @@ import { KNOWN_VIEWS, parseHash } from "../router.js";
 import { CATEGORIES, SUB_CATEGORIES, TILE_TYPES } from "../features/tileCollection/data.js";
 import { buildManifestFromGoldens, readManifest, validateManifest } from "../../tests/visual/manifestTools.mjs";
 
-const INTERNAL_VISUAL_VIEWS = new Set(["boons", "charter"]);
+// Views reachable via a scenario's `view` field (no hash). castle/bosses are feature views the
+// matrix targets directly (they are no longer townsfolk tabs); town is used by boss-modal, which
+// pairs view:"town" with modal:"boss" (a #/town hash would clobber the modal back to null).
+const INTERNAL_VISUAL_VIEWS = new Set(["boons", "charter", "castle", "bosses", "town"]);
 
 function findChain(grid, key, length) {
   const rows = grid?.length ?? 0;

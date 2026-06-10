@@ -145,7 +145,7 @@ func _build_shell() -> void:
 	# Title — Cinzel display serif, centred, title-cased ("Harvest — Winter ends").
 	_title_label = Label.new()
 	_title_label.text = "Harvest"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -165,7 +165,7 @@ func _build_shell() -> void:
 	# The prominent season name that just ended, in the gold accent.
 	_season_label = Label.new()
 	_season_label.text = ""
-	_season_label.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(_season_label, Typography.Role.DISPLAY)
 	_season_label.add_theme_color_override("font_color", Palette.GOLD)
 	_season_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_season_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -176,7 +176,7 @@ func _build_shell() -> void:
 	# Recap line — turns spent + the coins/runes snapshot, wrapping.
 	_recap_label = Label.new()
 	_recap_label.text = ""
-	_recap_label.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(_recap_label, Typography.Role.SUBHEAD)
 	_recap_label.add_theme_color_override("font_color", COL_BODY)
 	_recap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_recap_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -187,7 +187,7 @@ func _build_shell() -> void:
 	# Gold to echo the coin reward; text + visibility are set in _render.
 	_bonus_label = Label.new()
 	_bonus_label.text = ""
-	_bonus_label.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(_bonus_label, Typography.Role.SUBHEAD)
 	_bonus_label.add_theme_color_override("font_color", Palette.GOLD)
 	_bonus_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bonus_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -220,7 +220,7 @@ func _build_shell() -> void:
 	_continue_btn = Button.new()
 	_continue_btn.text = "Continue"
 	_continue_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(_continue_btn, Palette.GO_GREEN, 10, 20)
+	UiKit.style_action_button(_continue_btn, Palette.GO_GREEN, 10, Typography.size(Typography.Role.SUBHEAD))
 	_continue_btn.connect("pressed", Callable(self, "_on_primary_cta"))
 	col.add_child(_continue_btn)
 	_action_buttons["continue"] = _continue_btn
@@ -342,7 +342,7 @@ func _render_dashboard() -> void:
 func _section_label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text.to_upper()
-	l.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(l, Typography.Role.META)
 	l.add_theme_color_override("font_color", Color(Palette.INK_MID, 0.95))
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
@@ -364,14 +364,14 @@ func _metric_cell(caption: String, value: String, value_col: Color, align_right:
 	cell.add_theme_constant_override("separation", 2)
 	var cap := Label.new()
 	cap.text = caption.to_upper()
-	cap.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(cap, Typography.Role.CAPTION)
 	cap.add_theme_color_override("font_color", Color(Palette.INK_MID, 0.9))
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if align_right else HORIZONTAL_ALIGNMENT_LEFT
 	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(cap)
 	var val := Label.new()
 	val.text = value
-	val.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(val, Typography.Role.HEADING)
 	val.add_theme_color_override("font_color", value_col)
 	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if align_right else HORIZONTAL_ALIGNMENT_LEFT
 	val.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -391,7 +391,7 @@ func _best_moment_card(best: Dictionary) -> PanelContainer:
 	col.add_child(_section_label("Best moment"))
 	var headline := Label.new()
 	headline.text = best_moment_line(best)
-	headline.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(headline, Typography.Role.SUBHEAD)
 	headline.add_theme_color_override("font_color", COL_TITLE)
 	headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	headline.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -424,7 +424,7 @@ func _bond_row(npc: String, delta: float) -> HBoxContainer:
 	row.add_theme_constant_override("separation", 8)
 	var name_lbl := Label.new()
 	name_lbl.text = NpcConfig.display_name(npc)
-	name_lbl.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
 	name_lbl.add_theme_color_override("font_color", COL_TITLE)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -455,7 +455,7 @@ func _chip(text: String, accent: Color) -> PanelContainer:
 	pc.add_theme_stylebox_override("panel", sb)
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(l, Typography.Role.BODY)
 	l.add_theme_color_override("font_color", COL_TITLE)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pc.add_child(l)

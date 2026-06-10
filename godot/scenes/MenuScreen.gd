@@ -36,6 +36,10 @@ signal sound_toggle_requested
 ## applies it to the UiFx motion kit, saves, and calls back refresh_motion_label()
 ## (same single-accounting-point pattern as the Sound toggle).
 signal motion_toggle_requested
+## Emitted when the Text Size button is pressed — Main cycles game.text_size_index,
+## sets Typography.scale, saves, re-applies the scale to live UI, and calls back
+## refresh_text_size_label() (same single-accounting-point pattern as the toggles).
+signal text_size_cycle_requested
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
 signal new_game_requested
 ## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
@@ -65,8 +69,8 @@ const MORE_ENTRIES := [
 	{"icon": "⚖️", "label": "Charter", "id": "charter"},
 	{"icon": "📋", "label": "Quests", "id": "quests"},
 	{"icon": "🎁", "label": "Daily", "id": "daily"},
-	{"icon": "🐞", "label": "Debug", "id": "debug"},
 ]
+## Note: "debug" is NOT listed here — it gets a dedicated button at the top of the scroll.
 
 ## action id → Button, for headless tests. Keys: "toggle_sound", "toggle_fullscreen",
 ## "show_tutorial", "new_game", "close", and one "nav:<id>" per More entry.
@@ -76,6 +80,7 @@ var _action_buttons: Dictionary = {}
 var _sound_btn: Button
 var _fullscreen_btn: Button
 var _motion_btn: Button
+var _text_size_btn: Button
 var _built: bool = false
 
 # ── parchment palette (matches Main's HUD / TownScreen journal tokens) ──────────
@@ -97,12 +102,14 @@ func setup(g: GameState) -> void:
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
+	refresh_text_size_label()
 
 func open() -> void:
 	visible = true
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
+	refresh_text_size_label()
 
 func close() -> void:
 	visible = false
@@ -158,7 +165,7 @@ func _build_shell() -> void:
 	# card is branded with the game title, not a generic "Menu" label).
 	var title := Label.new()
 	title.text = "🔥 Hearthlands"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var heading_font: Font = UiKit.heading_font()
@@ -166,139 +173,142 @@ func _build_shell() -> void:
 		title.add_theme_font_override("font", heading_font)
 	col.add_child(title)
 
-	# Tagline — a small muted line directly under the title (React parity:
-	# "A puzzle of seasons and stews."), centered to match the title.
+	# Tagline — centered under the title.
 	var tagline := Label.new()
 	tagline.text = "A puzzle of seasons and stews."
-	tagline.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(tagline, Typography.Role.LABEL)
 	tagline.add_theme_color_override("font_color", Palette.INK_MID)
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(tagline)
 
-	# ── Settings submenu ──────────────────────────────────────────────────────
-	# Group the display/audio preferences under a small "Settings" heading (React parity:
-	# the menu's Settings tab). Sound mute + a Go Fullscreen toggle.
+	# ── Single scrollable section ─────────────────────────────────────────────
+	# All menu content (debug, settings, more, about) lives inside one scroll so
+	# the full list is reachable on small viewports without nested scrollers.
+	# Height cap keeps the panel within the 720×1280 viewport with room for the HUD.
+	var scroll := UiKit.make_vscroll()
+	scroll.custom_minimum_size = Vector2(0, 580)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(scroll)
+
+	var sc := VBoxContainer.new()
+	sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_theme_constant_override("separation", 8)
+	scroll.add_child(sc)
+
+	# ── Debug button — at the top so it's always the first thing visible ──────
+	var debug_btn := Button.new()
+	debug_btn.text = "🐞  Debug"
+	debug_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	debug_btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiKit.style_button(debug_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
+	debug_btn.connect("pressed", Callable(self, "_on_nav_pressed").bind("debug"))
+	sc.add_child(debug_btn)
+	_action_buttons["nav:debug"] = debug_btn
+
+	sc.add_child(HSeparator.new())
+
+	# ── Settings ──────────────────────────────────────────────────────────────
 	var settings_heading := Label.new()
 	settings_heading.text = "Settings"
-	settings_heading.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(settings_heading, Typography.Role.SUBHEAD)
 	settings_heading.add_theme_color_override("font_color", COL_TITLE)
 	if heading_font != null:
 		settings_heading.add_theme_font_override("font", heading_font)
-	col.add_child(settings_heading)
+	sc.add_child(settings_heading)
 
 	# Sound — toggles the SFX mute. Emits `sound_toggle_requested`; Main flips the flag + saves.
 	_sound_btn = Button.new()
 	_sound_btn.text = "Sound: On"
 	_sound_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_sound_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_sound_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_sound_btn.connect("pressed", Callable(self, "_on_sound_pressed"))
-	col.add_child(_sound_btn)
+	sc.add_child(_sound_btn)
 	_action_buttons["toggle_sound"] = _sound_btn
 
-	# Fullscreen — toggles the OS window between windowed + fullscreen via DisplayServer.
-	# Purely a display preference (no game state), so the screen owns it directly. On the
-	# headless test path there is no real window; the toggle is still wired + labelled.
 	_fullscreen_btn = Button.new()
 	_fullscreen_btn.text = "Go Fullscreen"
 	_fullscreen_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_fullscreen_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_fullscreen_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_fullscreen_btn.connect("pressed", Callable(self, "_on_fullscreen_pressed"))
-	col.add_child(_fullscreen_btn)
+	sc.add_child(_fullscreen_btn)
 	_action_buttons["toggle_fullscreen"] = _fullscreen_btn
 
-	# Reduce Motion — accessibility toggle for the UiFx motion kit (overlay transitions,
-	# nav animation, press feedback, pulses). Emits `motion_toggle_requested`; Main flips
-	# the persisted flag + applies it to UiFx (the single accounting point).
+	# Reduce Motion — accessibility toggle for the UiFx motion kit.
 	_motion_btn = Button.new()
 	_motion_btn.text = "Reduce Motion: Off"
 	_motion_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_motion_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_motion_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_motion_btn.connect("pressed", Callable(self, "_on_motion_pressed"))
-	col.add_child(_motion_btn)
+	sc.add_child(_motion_btn)
 	_action_buttons["toggle_motion"] = _motion_btn
 
-	# Show Tutorial — re-opens the 6-step onboarding (replay). Closes the menu + emits
-	# navigation_requested("tutorial"); Main routes it through apply_deeplink("tutorial"), the
-	# SAME path that opens the tutorial modal for a fresh game.
+	# Text Size — accessibility cycle (Normal → Large → Larger).
+	_text_size_btn = Button.new()
+	_text_size_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_button(_text_size_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
+	_text_size_btn.connect("pressed", Callable(self, "_on_text_size_pressed"))
+	sc.add_child(_text_size_btn)
+	_action_buttons["cycle_text_size"] = _text_size_btn
+	refresh_text_size_label()
+
+	# Show Tutorial — re-opens the 6-step onboarding (replay).
 	var tutorial_btn := Button.new()
 	tutorial_btn.text = "📖 Show Tutorial"
 	tutorial_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(tutorial_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(tutorial_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	tutorial_btn.connect("pressed", Callable(self, "_on_show_tutorial_pressed"))
-	col.add_child(tutorial_btn)
+	sc.add_child(tutorial_btn)
 	_action_buttons["show_tutorial"] = tutorial_btn
 
 	# New Game — wipes the save + restarts. Danger accent (destructive).
 	var new_btn := Button.new()
 	new_btn.text = "New Game"
 	new_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(new_btn, COL_DANGER, 8, 20)
+	UiKit.style_button(new_btn, COL_DANGER, 8, Typography.size(Typography.Role.SUBHEAD))
 	new_btn.connect("pressed", Callable(self, "_on_new_game_pressed"))
-	col.add_child(new_btn)
+	sc.add_child(new_btn)
 	_action_buttons["new_game"] = new_btn
 
-	# ── "More" navigation section ─────────────────────────────────────────────
-	# The secondary screens that used to be left-strip HUD buttons. A small heading,
-	# then a scrolling list of labelled nav buttons. Each closes the menu + emits
-	# navigation_requested(id); Main routes it through apply_deeplink. Registered as "nav:<id>".
-	_build_more_section(col)
+	# ── "More" navigation section and About card ──────────────────────────────
+	_build_more_section(sc)
+	_build_about_card(sc)
 
-	# ── About card ─────────────────────────────────────────────────────────────
-	# A small parchment-soft card with the game title, tagline, and a credits/version line
-	# (React parity: the menu's About panel). SKIP a "Game Wiki" entry — the standalone Godot
-	# port ships no wiki (the React Dev Panel wiki is not part of the export), so there is no
-	# real screen to open; adding one would be a dead link (no fake).
-	_build_about_card(col)
-
-	# Close — dismiss the modal.
+	# ── Close — outside the scroll, always visible at the bottom ──────────────
 	var close_btn := Button.new()
 	close_btn.text = "Close"
 	close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(close_btn, Palette.EMBER, 8, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	col.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 # ── "More" navigation section ───────────────────────────────────────────────────
 
-## Build the "More" section: a small heading + a height-capped ScrollContainer holding
-## one labelled nav Button per MORE_ENTRIES row. Each button closes the menu and emits
-## navigation_requested(id) (Main routes it through apply_deeplink). Registered as "nav:<id>" in
-## `_action_buttons` so the headless test can find + fire any entry and assert it navigates.
-func _build_more_section(col: VBoxContainer) -> void:
+## Build the "More" section: a separator, heading, and one nav Button per MORE_ENTRIES row.
+## Adds directly to `parent` (the shared scroll content VBoxContainer) — no nested scroll.
+## Each button closes the menu and emits navigation_requested(id). Registered as "nav:<id>".
+func _build_more_section(parent: VBoxContainer) -> void:
+	parent.add_child(HSeparator.new())
+
 	var heading := Label.new()
 	heading.text = "More"
-	heading.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(heading, Typography.Role.SUBHEAD)
 	heading.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		heading.add_theme_font_override("font", heading_font)
-	col.add_child(heading)
-
-	# A height-capped scroller so all 11 entries are reachable without the card growing
-	# past the viewport. The list scrolls inside the fixed-height container.
-	var scroll := UiKit.make_vscroll()
-	scroll.custom_minimum_size = Vector2(0, 260)
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	col.add_child(scroll)
-
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 8)
-	scroll.add_child(list)
+	parent.add_child(heading)
 
 	for entry in MORE_ENTRIES:
 		var id: String = String(entry["id"])
 		var btn := Button.new()
 		btn.text = "%s  %s" % [String(entry["icon"]), String(entry["label"])]
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# Centered + same font size as the top Sound/New Game/Close buttons so the whole
-		# menu reads as one uniform pill list (was left-aligned + smaller = a jarring two-tier look).
 		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		UiKit.style_button(btn, Palette.MOSS, 8, 20)
+		UiKit.style_button(btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 		btn.connect("pressed", Callable(self, "_on_nav_pressed").bind(id))
-		list.add_child(btn)
+		parent.add_child(btn)
 		_action_buttons["nav:" + id] = btn
 
 ## A "More" nav button was pressed: close the menu, then emit navigation_requested(id) so Main opens
@@ -312,7 +322,7 @@ func _on_nav_pressed(id: String) -> void:
 
 ## Build the About card: a parchment-soft inset panel with the game title, tagline, and a
 ## one-line credits/version footer. Pure presentation — no actions.
-func _build_about_card(col: VBoxContainer) -> void:
+func _build_about_card(parent: VBoxContainer) -> void:
 	var about := PanelContainer.new()
 	about.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := StyleBoxFlat.new()
@@ -322,7 +332,7 @@ func _build_about_card(col: VBoxContainer) -> void:
 	sb.set_corner_radius_all(10)
 	sb.set_content_margin_all(12)
 	about.add_theme_stylebox_override("panel", sb)
-	col.add_child(about)
+	parent.add_child(about)
 
 	var acol := VBoxContainer.new()
 	acol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -333,7 +343,7 @@ func _build_about_card(col: VBoxContainer) -> void:
 
 	var about_title := Label.new()
 	about_title.text = "About"
-	about_title.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(about_title, Typography.Role.SUBHEAD)
 	about_title.add_theme_color_override("font_color", COL_TITLE)
 	if heading_font != null:
 		about_title.add_theme_font_override("font", heading_font)
@@ -341,14 +351,14 @@ func _build_about_card(col: VBoxContainer) -> void:
 
 	var name_lbl := Label.new()
 	name_lbl.text = "Hearthlands — a puzzle of seasons and stews."
-	name_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
 	name_lbl.add_theme_color_override("font_color", Palette.INK)
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acol.add_child(name_lbl)
 
 	var credits := Label.new()
 	credits.text = "Godot 4.6 port · chain tiles, restore the vale, build the town."
-	credits.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(credits, Typography.Role.META)
 	credits.add_theme_color_override("font_color", Palette.INK_MID)
 	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acol.add_child(credits)
@@ -371,6 +381,19 @@ func _on_motion_pressed() -> void:
 func refresh_motion_label() -> void:
 	if _motion_btn != null and game != null:
 		_motion_btn.text = "Reduce Motion: %s" % ("On" if game.reduce_motion else "Off")
+
+## The Text Size button — emit `text_size_cycle_requested`; Main owns the index cycle +
+## Typography.scale set + save + live re-apply + label re-sync. This screen never touches
+## the index itself (single accounting point — mirrors the Sound/Reduce Motion toggles).
+func _on_text_size_pressed() -> void:
+	emit_signal("text_size_cycle_requested")
+
+## Re-sync the Text Size button text from the persisted index: "Text Size: Normal" /
+## "Large" / "Larger" (the matching TEXT_SIZE_LABELS entry). Called by Main after it cycles
+## the index, and on open/setup so a restored preference shows correctly.
+func refresh_text_size_label() -> void:
+	if _text_size_btn != null and game != null:
+		_text_size_btn.text = "Text Size: %s" % Typography.TEXT_SIZE_LABELS[game.text_size_index]
 
 ## The Fullscreen button — flip the OS window between windowed + fullscreen via DisplayServer.
 ## A display-only preference (no game state, nothing persisted), so the screen owns it directly.

@@ -109,7 +109,7 @@ func _build_shell() -> void:
 	# Title — Cinzel display serif, centred.
 	_title_label = Label.new()
 	_title_label.text = "Daily Reward"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -129,7 +129,7 @@ func _build_shell() -> void:
 	# "Day N" — the prominent streak-day line, in the gold accent.
 	_day_label = Label.new()
 	_day_label.text = "Day 1"
-	_day_label.add_theme_font_size_override("font_size", 34)
+	UiKit.set_font_size(_day_label, Typography.Role.STREAK_DAY)
 	_day_label.add_theme_color_override("font_color", Palette.GOLD)
 	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -140,7 +140,7 @@ func _build_shell() -> void:
 	# Reward summary — the day's coins / runes / tool grant, wrapping.
 	_reward_label = Label.new()
 	_reward_label.text = ""
-	_reward_label.add_theme_font_size_override("font_size", 19)
+	UiKit.set_font_size(_reward_label, Typography.Role.SUBHEAD)
 	_reward_label.add_theme_color_override("font_color", COL_BODY)
 	_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -151,7 +151,7 @@ func _build_shell() -> void:
 	_collect_btn = Button.new()
 	_collect_btn.text = "Collect"
 	_collect_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(_collect_btn, Palette.GO_GREEN, 10, 20)
+	UiKit.style_action_button(_collect_btn, Palette.GO_GREEN, 10, Typography.size(Typography.Role.SUBHEAD))
 	_collect_btn.connect("pressed", Callable(self, "_on_collect"))
 	col.add_child(_collect_btn)
 	_action_buttons["collect"] = _collect_btn

@@ -160,7 +160,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🌀 Magic Portal"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -171,7 +171,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -217,7 +217,7 @@ func refresh() -> void:
 func _render_build_state() -> void:
 	var msg := Label.new()
 	msg.text = "Build the Magic Portal to unlock summoning."
-	msg.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(msg, Typography.Role.SUBHEAD)
 	msg.add_theme_color_override("font_color", COL_MUTED)
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -236,7 +236,7 @@ func _render_build_state() -> void:
 
 	var cost_lbl := Label.new()
 	cost_lbl.text = "Cost"
-	cost_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(cost_lbl, Typography.Role.LABEL)
 	cost_lbl.add_theme_color_override("font_color", COL_BODY)
 	cost_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(cost_lbl)
@@ -263,7 +263,7 @@ func _render_build_state() -> void:
 	var build_btn := Button.new()
 	build_btn.text = "Build Portal"
 	build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 15)
+	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 	build_btn.disabled = not game.can_build_portal()
 	build_btn.connect("pressed", Callable(self, "_on_build_portal"))
 	bottom.add_child(build_btn)
@@ -273,7 +273,7 @@ func _render_build_state() -> void:
 func _render_summon_state() -> void:
 	_header_label = Label.new()
 	_header_label.text = "✨ Influence: %d" % game.influence
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_INFLUENCE)
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(_header_label)
@@ -313,7 +313,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = name_str
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -326,7 +326,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	if count > 0:
 		var count_lbl := Label.new()
 		count_lbl.text = "×%d" % count
-		count_lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(count_lbl, Typography.Role.LABEL)
 		count_lbl.add_theme_color_override("font_color", COL_MUTED)
 		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -335,7 +335,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	# ── effect text ───────────────────────────────────────────────────────────
 	var effect_lbl := Label.new()
 	effect_lbl.text = effect_str
-	effect_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(effect_lbl, Typography.Role.BODY)
 	effect_lbl.add_theme_color_override("font_color", COL_MUTED)
 	effect_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	effect_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -356,7 +356,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	var summon_btn := Button.new()
 	summon_btn.text = "Summon (%d✨)" % cost
 	summon_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(summon_btn, COL_INFLUENCE, 6, 15, true)
+	UiKit.style_button(summon_btn, COL_INFLUENCE, 6, Typography.size(Typography.Role.LABEL), true)
 	summon_btn.disabled = not affordable
 	summon_btn.connect("pressed", Callable(self, "_on_summon").bind(id))
 	bottom.add_child(summon_btn)

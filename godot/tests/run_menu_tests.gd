@@ -2,14 +2,20 @@ extends SceneTree
 ## Headless tests for the M4f settings/menu modal (scenes/MenuScreen.gd + its wiring
 ## into scenes/Main.gd). Three layers:
 ##
-##   1. GameState persistence — audio_muted defaults false, round-trips through
-##      SaveManager.save → load_state, and appears in to_dict().
-##   2. MenuScreen wiring — the modal builds, exposes the three action buttons, and
-##      emitting `pressed` on them fires the right intent signal (toggle_sound /
-##      closed). The screen emits signals; Main owns the mute flip, so the test just
-##      verifies the buttons exist + the signals fire.
+##   1. GameState persistence — audio_muted / reduce_motion / text_size_index default,
+##      round-trip through SaveManager.save → load_state, appear in to_dict(), and are
+##      legacy-safe (an old save without the field loads at the default; an out-of-range
+##      text_size_index clamps into Typography.TEXT_SCALES).
+##   2. MenuScreen wiring — the modal builds, exposes its action buttons, and emitting
+##      `pressed` on them fires the right intent signal (toggle_sound / toggle_motion /
+##      cycle_text_size / closed). The screen emits signals; Main owns the state flips, so
+##      the test verifies the buttons exist, the signals fire, and the screen does NOT
+##      mutate game state itself.
 ##   3. Main integration — the real Main scene wires the menu handlers; calling
-##      _on_toggle_sound() directly flips game.audio_muted AND mutes the Audio service.
+##      _on_toggle_sound() flips game.audio_muted AND mutes the Audio service, and
+##      _on_cycle_text_size() advances+wraps text_size_index, sets Typography.scale, and
+##      persists. A final invalidation guard proves _reapply_text_scale() frees AND nulls
+##      every cached overlay screen so they rebuild at the new scale.
 ##
 ## Same dependency-free harness as tests/run_town_ui_tests.gd; `class_name` globals are
 ## aliased with `var` (not const — a class_name ref isn't a constant expression in 4.6).
@@ -23,6 +29,7 @@ var _failures: int = 0
 # Signal counters (MenuScreen layer).
 var _toggle_count: int = 0
 var _motion_toggle_count: int = 0
+var _text_size_count: int = 0
 var _newgame_count: int = 0
 var _closed_count: int = 0
 var _navigate_count: int = 0
@@ -42,6 +49,9 @@ func _on_toggle_sound() -> void:
 
 func _on_toggle_motion() -> void:
 	_motion_toggle_count += 1
+
+func _on_cycle_text_size() -> void:
+	_text_size_count += 1
 
 func _on_new_game() -> void:
 	_newgame_count += 1
@@ -95,6 +105,24 @@ func _initialize() -> void:
 	SaveManager.clear()
 	_check(legacy.reduce_motion == false, "from_dict() with no reduce_motion defaults to false")
 
+	# Text Size preference: index defaults 0 (Normal), serialized, round-trips, legacy-safe,
+	# and an out-of-range index from a hand-edited/foreign save clamps into TEXT_SCALES.
+	var t0 := GameState.new()
+	_check(t0.text_size_index == 0, "text_size_index defaults to 0 (Normal)")
+	_check(t0.to_dict().has("text_size_index"), "to_dict() contains the text_size_index key")
+	_check(int(t0.to_dict()["text_size_index"]) == 0, "to_dict() text_size_index == 0 by default")
+	t0.text_size_index = 1
+	SaveManager.clear()
+	SaveManager.save(t0)
+	var t1: GameState = SaveManager.load_state()
+	_check(t1.text_size_index == 1, "text_size_index survives save → load_state (1)")
+	SaveManager.clear()
+	_check(legacy.text_size_index == 0, "from_dict() with no text_size_index defaults to 0 (legacy-safe)")
+	# An out-of-range stored index clamps to the last valid TEXT_SCALES slot (not a crash/OOB).
+	var t_oob: GameState = GameState.from_dict({"text_size_index": 99})
+	_check(t_oob.text_size_index == Typography.TEXT_SCALES.size() - 1,
+		"from_dict() clamps an out-of-range text_size_index to TEXT_SCALES.size()-1 (2)")
+
 	# ── 2. MenuScreen wiring ──────────────────────────────────────────────────
 	var game := GameState.new()
 	var menu := MenuScreen.new()
@@ -104,6 +132,7 @@ func _initialize() -> void:
 	menu.open()
 	menu.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
 	menu.connect("motion_toggle_requested", Callable(self, "_on_toggle_motion"))
+	menu.connect("text_size_cycle_requested", Callable(self, "_on_cycle_text_size"))
 	menu.connect("new_game_requested", Callable(self, "_on_new_game"))
 	menu.connect("closed", Callable(self, "_on_closed"))
 	menu.connect("navigation_requested", Callable(self, "_on_navigate"))
@@ -177,6 +206,23 @@ func _initialize() -> void:
 	_check(motion_btn.text == "Reduce Motion: On", "refresh_motion_label() reads 'On' when reduced")
 	game.reduce_motion = false
 	menu.refresh_motion_label()
+
+	# Text Size cycle: registered, labelled "Normal" at index 0, and pressing it fires
+	# `text_size_cycle_requested` WITHOUT changing the index here (Main owns the flip).
+	_check(menu._action_buttons.has("cycle_text_size"), "_action_buttons has 'cycle_text_size'")
+	var text_size_btn: Variant = menu._action_buttons.get("cycle_text_size")
+	_check(text_size_btn != null and text_size_btn.text == "Text Size: Normal",
+		"Text Size button reads 'Text Size: Normal' at index 0")
+	var before_text_size := _text_size_count
+	_check(_press(menu, "cycle_text_size"), "pressed the 'cycle_text_size' button")
+	_check(_text_size_count == before_text_size + 1, "text_size_cycle_requested fired once")
+	_check(game.text_size_index == 0, "MenuScreen did NOT change text_size_index itself (Main owns it)")
+	# Label re-syncs from an externally-set index (the Main callback path).
+	game.text_size_index = 1
+	menu.refresh_text_size_label()
+	_check(text_size_btn.text == "Text Size: Large", "refresh_text_size_label() reads 'Large' at index 1")
+	game.text_size_index = 0
+	menu.refresh_text_size_label()
 
 	# Pressing the Sound button fires `sound_toggle_requested` (and does NOT flip the flag here —
 	# Main owns that).
@@ -270,38 +316,56 @@ func _initialize() -> void:
 		"_router.current_modal() == CHRONICLE after the More-nav deeplink")
 	SaveManager.clear()
 
-	# ── Cached-overlay registry: invalidation guard ────────────────────────────
-	# The lazily-built overlay screens/modals live in ONE Dictionary (main._overlays);
-	# each `_*_screen` / `_*_modal` member is just a get-only accessor over it. Freeing +
-	# erasing every entry must therefore make each named accessor read null again, so the
-	# lazy `if _x == null` guard in _open_* rebuilds it fresh on the next open. This is the
-	# invariant a Text-Size / typography rebuild leans on (drop every cached overlay at the
-	# old scale, reopen at the new one), and it is exactly what the registry refactor buys:
-	# the close-list, the lazy guards, and the invalidation loop all iterate the SAME dict,
-	# so there is no hand-maintained per-member null block to forget. The HUD is NOT an
-	# overlay (it is not in the registry), so it must survive the sweep untouched.
+	# ── Text Size: Main owns the cycle (mirrors the _on_toggle_sound integration above) ──
+	# Calling _on_cycle_text_size() directly advances the persisted index (with wrap),
+	# sets the global Typography.scale to the matching multiplier, and persists each change.
+	_check(main.has_method("_on_cycle_text_size"), "Main has _on_cycle_text_size()")
+	_check(main.game.text_size_index == 0, "fresh Main game starts at text_size_index 0")
+	main._on_cycle_text_size()
+	_check(main.game.text_size_index == 1, "_on_cycle_text_size() advanced index 0 → 1")
+	_check(Typography.scale == Typography.TEXT_SCALES[1], "Typography.scale == TEXT_SCALES[1] after first cycle")
+	var after_1: GameState = SaveManager.load_state()
+	_check(after_1.text_size_index == 1, "_on_cycle_text_size() persisted index 1 to the save")
+	main._on_cycle_text_size()
+	_check(main.game.text_size_index == 2, "_on_cycle_text_size() advanced index 1 → 2")
+	_check(Typography.scale == Typography.TEXT_SCALES[2], "Typography.scale == TEXT_SCALES[2] after second cycle")
+	main._on_cycle_text_size()
+	_check(main.game.text_size_index == 0, "_on_cycle_text_size() wrapped index 2 → 0")
+	_check(Typography.scale == Typography.TEXT_SCALES[0], "Typography.scale == TEXT_SCALES[0] after wrap")
+	var after_wrap: GameState = SaveManager.load_state()
+	_check(after_wrap.text_size_index == 0, "_on_cycle_text_size() persisted the wrapped index 0")
+	SaveManager.clear()
+
+	# ── Invalidation guard (review Issue 2 + the cached-overlay registry refactor) ─────────
+	# _reapply_text_scale() frees AND "nulls" every cached overlay EXCEPT the open menu, so each
+	# rebuilds fresh at the new scale on its next open. Overlays now live in ONE Dictionary
+	# (main._overlays) behind get-only member accessors, so the freed-but-not-nulled regression this
+	# guards against is structurally impossible: invalidation erases the registry key and the accessor
+	# reads an absent key back as null. Open a few secondary screens (the menu is already cached +
+	# hidden from the nav press above), run the REAL _reapply_text_scale(), then assert the opened
+	# overlays are gone from the registry AND read null, the OPEN MENU was preserved (freeing it
+	# mid-callback would crash), and the HUD was rebuilt live. A reopen proves the lazy rebuild.
+	_check(main._overlays.has("menu"), "menu is cached in _overlays before the rebuild (open/hidden)")
 	main._open_inventory()
 	main._open_chronicle()
 	main._open_achievements()
 	await process_frame
-	_check(main._inventory_screen != null, "inventory overlay built + cached in _overlays")
-	_check(main._chronicle_screen != null, "chronicle overlay built + cached in _overlays")
-	_check(main._achievements_screen != null, "achievements overlay built + cached in _overlays")
+	_check(main._inventory_screen != null, "inventory screen is non-null after _open_inventory()")
+	_check(main._chronicle_screen != null, "chronicle screen is non-null after _open_chronicle()")
+	_check(main._achievements_screen != null, "achievements screen is non-null after _open_achievements()")
 	_check(main._overlays.has("inventory") and main._overlays.has("chronicle") and main._overlays.has("achievements"),
 		"_overlays registry holds every opened overlay (single source of truth)")
-	var hud_before = main._hud
-	# The documented one-loop invalidation: free + "null" every cached overlay in one pass.
-	# keys() is a snapshot, so erasing while iterating it is safe.
-	for k in main._overlays.keys():
-		if is_instance_valid(main._overlays[k]):
-			main._overlays[k].queue_free()
-		main._overlays.erase(k)
+	main._reapply_text_scale()
 	await process_frame
-	_check(main._overlays.is_empty(), "registry empty after the one-loop invalidation")
-	_check(main._inventory_screen == null, "inventory accessor reads null after invalidation (member auto-nulled)")
-	_check(main._chronicle_screen == null, "chronicle accessor reads null after invalidation (member auto-nulled)")
-	_check(main._achievements_screen == null, "achievements accessor reads null after invalidation (member auto-nulled)")
-	_check(main._hud != null and main._hud == hud_before, "HUD survived the overlay invalidation (not in the registry)")
+	# Registry shape: the opened overlays were freed AND erased (accessors auto-null); the menu stayed.
+	_check(not main._overlays.has("inventory"), "_reapply_text_scale() erased inventory from _overlays")
+	_check(not main._overlays.has("chronicle"), "_reapply_text_scale() erased chronicle from _overlays")
+	_check(not main._overlays.has("achievements"), "_reapply_text_scale() erased achievements from _overlays")
+	_check(main._inventory_screen == null, "_reapply_text_scale() nulled _inventory_screen (accessor reads erased key)")
+	_check(main._chronicle_screen == null, "_reapply_text_scale() nulled _chronicle_screen (accessor reads erased key)")
+	_check(main._achievements_screen == null, "_reapply_text_scale() nulled _achievements_screen (accessor reads erased key)")
+	_check(main._overlays.has("menu") and main._menu_screen != null, "the OPEN menu was preserved across the rebuild")
+	_check(main._hud != null, "_reapply_text_scale() left a live HUD (rebuilt, not dead)")
 	# The lazy guard rebuilds a FRESH instance on the next open — no freed-node reuse.
 	main._open_inventory()
 	await process_frame
@@ -309,6 +373,9 @@ func _initialize() -> void:
 	_check(main._overlays.has("inventory"), "rebuilt overlay re-registered in _overlays")
 	SaveManager.clear()
 
+	# Hygiene: this suite mutated the global Typography.scale via _on_cycle_text_size — reset it
+	# to the Normal default so the static var doesn't leak into any later-loaded suite.
+	Typography.scale = 1.0
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)

@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_test_season_turn_ranges_nonpositive()
 	_test_strip_palettes()
 	_test_field_colors()
+	_test_biome_accents()
 	_test_harvest_recap_line()
 	await _test_season_bar_run_gated()
 	await _test_free_moves_readout()
@@ -138,6 +139,16 @@ func _test_field_colors() -> void:
 	var winter: Dictionary = Constants.SEASON_FIELD_COLORS[3]
 	_check((winter["top"] as Color).is_equal_approx(Color8(0xdd, 0xe4, 0xea)), "Winter field top == #dde4ea")
 	_check((winter["bot"] as Color).is_equal_approx(Color8(0xb6, 0xc2, 0xcc)), "Winter field bot == #b6c2cc")
+
+# ── board TOP-edge biome accent (verbatim src BIOMES[*].palette.bg hex) ─────────
+
+func _test_biome_accents() -> void:
+	# The three playable biomes each map to their React palette.bg; biome_accent() resolves by name
+	# and an unknown biome falls back to the farm green (the home board).
+	_check(Constants.biome_accent("farm").is_equal_approx(Color8(0x7f, 0xa8, 0x48)), "farm accent == #7fa848")
+	_check(Constants.biome_accent("mine").is_equal_approx(Color8(0x6a, 0x7d, 0x92)), "mine accent == #6a7d92")
+	_check(Constants.biome_accent("harbor").is_equal_approx(Color8(0x4a, 0x8a, 0xa8)), "harbor accent == #4a8aa8")
+	_check(Constants.biome_accent("nope").is_equal_approx(Color8(0x7f, 0xa8, 0x48)), "unknown biome falls back to farm green")
 
 # ── HarvestModal.recap_line (pure recap string) ────────────────────────────────
 

@@ -154,6 +154,13 @@ static func italic_font() -> Font:
 	_italic_font_cache = fv
 	return _italic_font_cache
 
+## Set a node's font_size from a Typography role at the current text scale. Works on any
+## Control with a "font_size" theme item (Label / Button / RichTextLabel). The single
+## chokepoint for sizing text — call sites read UiKit.set_font_size(lbl, Typography.Role.BODY).
+static func set_font_size(node: Control, role: int) -> void:
+	if node != null:
+		node.add_theme_font_size_override("font_size", Typography.size(role))
+
 ## Attach the bundled emoji font as a fallback on the ENGINE DEFAULT font so every
 ## Label/Button that uses the inherited default font (the HUD pills, bottom-nav icons,
 ## modal close buttons, status text — all of which carry emoji like 🪙🏠📦🔨🗺👥)
@@ -474,7 +481,7 @@ static func make_pill(text: String, fg: Color, bg := Palette.PARCHMENT) -> Panel
 	box.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", fg)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE

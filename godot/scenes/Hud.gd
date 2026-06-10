@@ -277,7 +277,7 @@ func _build_hud() -> void:
 	# heading). Replaces the old "puzzleDrag2 · Godot M3" debug title.
 	var title := Label.new()
 	title.text = "Hearthwood Vale"
-	title.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
@@ -350,7 +350,7 @@ func _build_hud() -> void:
 	# "what do I do" affordance; _layout_hud pins it just above the board.)
 	_chain_label = Label.new()
 	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
-	_chain_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_chain_label, Typography.Role.LABEL)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -361,7 +361,7 @@ func _build_hud() -> void:
 	# ── status (kept) — action feedback in the strip between the board and the nav ──
 	_status_label = Label.new()
 	_status_label.text = ""
-	_status_label.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(_status_label, Typography.Role.SUBHEAD)
 	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -377,7 +377,7 @@ func _build_hud() -> void:
 	# ── orders — compact one-line readout in the upper half of the bottom strip ──
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
-	_orders_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_orders_label, Typography.Role.LABEL)
 	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_orders_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -413,7 +413,7 @@ func _build_hud() -> void:
 	var menu_btn := Button.new()
 	menu_btn.name = "MenuButton"
 	menu_btn.text = "⚙"
-	menu_btn.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(menu_btn, Typography.Role.HEADING)
 	menu_btn.add_theme_color_override("font_color", Palette.INK)
 	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
 	menu_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
@@ -543,7 +543,7 @@ func _panel_header(left_text: String) -> Dictionary:
 
 	var left := Label.new()
 	left.text = left_text
-	left.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(left, Typography.Role.BODY)
 	left.add_theme_color_override("font_color", Palette.INK)
 	left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -552,7 +552,7 @@ func _panel_header(left_text: String) -> Dictionary:
 
 	var right := Label.new()
 	right.text = ""
-	right.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(right, Typography.Role.META)
 	right.add_theme_color_override("font_color", Palette.INK_MID)
 	right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	right.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -676,7 +676,7 @@ func _build_chain_view() -> VBoxContainer:
 	# Big centred counter ("3/6", "2+4/6", "1/6 +1", "×4") — KEPT name (_chain_prog_label).
 	_chain_prog_label = Label.new()
 	_chain_prog_label.text = ""
-	_chain_prog_label.add_theme_font_size_override("font_size", 27)
+	UiKit.set_font_size(_chain_prog_label, Typography.Role.TITLE)
 	_chain_prog_label.add_theme_color_override("font_color", Color("#fff8e7"))
 	_chain_prog_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
 	_chain_prog_label.add_theme_constant_override("outline_size", 5)
@@ -690,7 +690,7 @@ func _build_chain_view() -> VBoxContainer:
 	# the fills. Hidden at stage 0; _refresh_chain_progress drives text/colour/pop.
 	_chain_stage_label = Label.new()
 	_chain_stage_label.text = ""
-	_chain_stage_label.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(_chain_stage_label, Typography.Role.META)
 	_chain_stage_label.add_theme_color_override("font_color", Palette.PARCHMENT)
 	_chain_stage_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	_chain_stage_label.add_theme_constant_override("outline_size", 4)
@@ -736,7 +736,7 @@ func _build_chain_view() -> VBoxContainer:
 	res_holder.add_child(_chain_earn_badge)
 	_chain_earn_label = Label.new()
 	_chain_earn_label.text = "+1"
-	_chain_earn_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_chain_earn_label, Typography.Role.LABEL)
 	_chain_earn_label.add_theme_color_override("font_color", Color("#fff8e7"))
 	_chain_earn_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.4))
 	_chain_earn_label.add_theme_constant_override("outline_size", 2)
@@ -768,7 +768,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	var upg_caption := Label.new()
 	upg_caption.text = "UPGRADE TO"
-	upg_caption.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(upg_caption, Typography.Role.CAPTION)
 	upg_caption.add_theme_color_override("font_color", Palette.INK_MID)
 	upg_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	upg_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -784,7 +784,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	_chain_upg_name = Label.new()
 	_chain_upg_name.text = ""
-	_chain_upg_name.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_name, Typography.Role.BODY)
 	_chain_upg_name.add_theme_color_override("font_color", Palette.INK)
 	_chain_upg_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_chain_upg_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -812,7 +812,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	_chain_upg_count = Label.new()
 	_chain_upg_count.text = ""
-	_chain_upg_count.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_count, Typography.Role.BODY)
 	_chain_upg_count.add_theme_color_override("font_color", Color("#7a3c12"))
 	_chain_upg_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_chain_upg_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -820,7 +820,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	var arrow := Label.new()
 	arrow.text = "→"
-	arrow.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(arrow, Typography.Role.BODY)
 	arrow.add_theme_color_override("font_color", Palette.INK_MID)
 	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -831,7 +831,7 @@ func _build_chain_view() -> VBoxContainer:
 	foot.add_child(_chain_upg_plus)
 	_chain_upg_plus_lbl = Label.new()
 	_chain_upg_plus_lbl.text = "+1"
-	_chain_upg_plus_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_plus_lbl, Typography.Role.BODY)
 	_chain_upg_plus_lbl.add_theme_color_override("font_color", Color("#3d5d18"))
 	_chain_upg_plus_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chain_upg_plus.add_child(_chain_upg_plus_lbl)
@@ -893,7 +893,7 @@ func _build_tool_view() -> VBoxContainer:
 	close.text = "✕"
 	close.custom_minimum_size = Vector2(30, 26)
 	close.focus_mode = Control.FOCUS_NONE
-	UiKit.style_button(close, Palette.EMBER, 0, 13)
+	UiKit.style_button(close, Palette.EMBER, 0, Typography.size(Typography.Role.BODY))
 	close.pressed.connect(_on_tool_view_closed)
 	header["row"].add_child(close)
 
@@ -933,7 +933,7 @@ func _build_tool_view() -> VBoxContainer:
 	var heading_font: Font = UiKit.heading_font()
 	_tool_armed_name = Label.new()
 	_tool_armed_name.text = ""
-	_tool_armed_name.add_theme_font_size_override("font_size", 19)
+	UiKit.set_font_size(_tool_armed_name, Typography.Role.SUBHEAD)
 	_tool_armed_name.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		_tool_armed_name.add_theme_font_override("font", heading_font)
@@ -941,7 +941,7 @@ func _build_tool_view() -> VBoxContainer:
 
 	_tool_armed_desc = Label.new()
 	_tool_armed_desc.text = ""
-	_tool_armed_desc.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_tool_armed_desc, Typography.Role.BODY)
 	_tool_armed_desc.add_theme_color_override("font_color", Palette.INK_MID)
 	_tool_armed_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_tool_armed_desc.max_lines_visible = 2
@@ -960,7 +960,7 @@ func _build_tool_view() -> VBoxContainer:
 
 	_tool_view_prompt = Label.new()
 	_tool_view_prompt.text = ""
-	_tool_view_prompt.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_tool_view_prompt, Typography.Role.BODY)
 	_tool_view_prompt.add_theme_color_override("font_color", Color("#7a3c12"))
 	_tool_view_prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_tool_view_prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1031,7 +1031,7 @@ func _style_cta(btn: Button, fill: Color, border: Color, ink: Color) -> void:
 	btn.add_theme_color_override("font_hover_color", ink)
 	btn.add_theme_color_override("font_pressed_color", ink)
 	btn.add_theme_color_override("font_disabled_color", Color(ink, 0.6))
-	btn.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(btn, Typography.Role.BODY)
 	UiFx.attach_press_feedback(btn)
 
 ## Build the tool HOTBAR container (React PuzzleHotbar): a dark wood rail pinned
@@ -1092,9 +1092,11 @@ func _refresh_tools() -> void:
 				owned.append({"id": id, "charges": charges})
 
 	# An inspected tool that is no longer owned (last charge spent) falls back to idle —
-	# unless it is somehow still armed (defensive; the armed view must stay reachable).
+	# unless it is somehow still armed (defensive; the armed view must stay reachable). A
+	# fill_bias tool spends its charge AT arm-time, so an armed fertilizer always reads 0
+	# charges — keep its inspect alive while the bias is live (React keeps the armed panel).
 	if _inspected_tool != "" and game != null and game.tool_count(_inspected_tool) <= 0 \
-			and game.pending_tool != _inspected_tool:
+			and game.pending_tool != _inspected_tool and not _is_armed_fill_bias(_inspected_tool):
 		_inspected_tool = ""
 
 	if owned.is_empty():
@@ -1124,7 +1126,10 @@ func _refresh_tools() -> void:
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
 		var desc: String = String(cfg.get("desc", ""))
-		var is_armed: bool = (id == armed_id and armed_id != "")
+		# Armed = the pending tap-tool OR the tool that armed a live fill_bias (fertilizer &c).
+		# The fill_bias slot stays highlighted regardless of what's inspected — React's
+		# `def.key === "fertilizer" && isFillBiasArmed(state)` lights the tile the same way.
+		var is_armed: bool = (id == armed_id and armed_id != "") or _is_armed_fill_bias(id)
 		var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
 
 		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
@@ -1140,7 +1145,7 @@ func _refresh_tools() -> void:
 			btn.expand_icon = true
 		else:
 			btn.text = label                       # fallback for a tool with no art
-			btn.add_theme_font_size_override("font_size", 12)
+			UiKit.set_font_size(btn, Typography.Role.META)
 		# Tooltip carries the label + "×N" + the tool's description — the tests read
 		# tooltip_text (the button itself is icon-only; the action panel shows the text).
 		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
@@ -1165,7 +1170,7 @@ func _refresh_tools() -> void:
 		# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
 		var badge := Label.new()
 		badge.text = str(charges)
-		badge.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(badge, Typography.Role.BODY)
 		badge.add_theme_color_override("font_color", Palette.PARCHMENT)
 		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1181,26 +1186,38 @@ func _refresh_tools() -> void:
 	# (counts change with every use; the armed highlight follows game.pending_tool).
 	_update_action_state()
 
+## True when `id` is the tool that armed the live fill_bias — so its hotbar slot + the action
+## panel render ARMED. The port's analogue of React's `def.key === "fertilizer" &&
+## isFillBiasArmed(state)`, generalised to whichever fill_bias tool the player actually used.
+func _is_armed_fill_bias(id: String) -> bool:
+	return game != null and id != "" and game.armed_fill_bias_tool() == id
+
 ## A hotbar slot was tapped. First tap INSPECTS the tool (the action panel flips to its
 ## detail); a second tap on the already-inspected slot ACTIVATES it — arming a tap-target
-## tool, firing an instant one, or TOGGLING OFF an armed one (React dispatchUseTool's
-## isPending → CANCEL_TOOL). Tapping a different slot while another tool is armed
-## TRANSFERS the arming (React maybeTransferArming): the player already committed to
-## using a tool, so the new tap switches tools rather than dropping to nothing.
+## tool, firing an instant one, arming a fill_bias bias, or TOGGLING OFF an armed one (React
+## dispatchUseTool's isPending → CANCEL_TOOL, plus the fill_bias disarm+refund). Tapping a
+## different slot while ANOTHER tool is armed — a pending tap-tool OR a live fill_bias —
+## TRANSFERS the arming (React maybeTransferArming): the player already committed to using a
+## tool, so the new tap switches tools rather than dropping to nothing.
 func _on_tool_slot_tapped(id: String) -> void:
 	var armed_id: String = game.pending_tool if game != null else ""
-	if armed_id != "" and armed_id != id:
-		# Transfer: disarm the old tool, then activate the new one immediately.
+	var fb_id: String = game.armed_fill_bias_tool() if game != null else ""
+	# Some OTHER tool is already armed (pending tap-tool or a fill_bias bias) and we tapped a
+	# different slot → transfer (covers tap→tap, tap→fill_bias, fill_bias→tap, fill_bias→fill_bias).
+	var has_other_armed: bool = (armed_id != "" and armed_id != id) or (fb_id != "" and fb_id != id)
+	if has_other_armed:
+		# Disarm the old (tap clear OR fill_bias refund — Main._disarm_tool handles both), then
+		# activate the new one immediately. Re-set _inspected_tool AFTER the disarm, which clears it.
 		disarm_requested.emit()
 		_inspected_tool = id
 		tool_use_requested.emit(id)
 		_refresh_tools()
 		return
 	if _inspected_tool == id:
-		if armed_id == id:
-			disarm_requested.emit()        # tap-to-cancel an armed tool
+		if armed_id == id or fb_id == id:
+			disarm_requested.emit()        # tap-to-cancel an armed tap-tool / fill_bias
 		else:
-			tool_use_requested.emit(id)    # arm a tap tool / fire an instant one
+			tool_use_requested.emit(id)    # arm a tap tool / fire an instant one / arm fill_bias
 		_refresh_tools()
 		return
 	_inspected_tool = id
@@ -1212,7 +1229,9 @@ func _on_tool_action_pressed() -> void:
 	var id := _inspected_tool
 	if id == "":
 		return
-	if game != null and game.pending_tool == id:
+	# DISARM when this tool is armed — either the pending tap-tool or the live fill_bias bias
+	# (the latter refunds the charge via Main._disarm_tool). Otherwise the button ARMS / USES it.
+	if (game != null and game.pending_tool == id) or _is_armed_fill_bias(id):
 		disarm_requested.emit()
 	else:
 		tool_use_requested.emit(id)
@@ -1223,6 +1242,10 @@ func _on_tool_action_pressed() -> void:
 ## auto-inspect re-shows an armed tool immediately, so closing it is equally moot).
 func _on_tool_view_closed() -> void:
 	if game != null and game.pending_tool == _inspected_tool and _inspected_tool != "":
+		return
+	# An armed fill_bias keeps the panel too (DISARM is its way out) — closing it is a no-op,
+	# just like an armed tap-tool above.
+	if _is_armed_fill_bias(_inspected_tool):
 		return
 	_inspected_tool = ""
 	_update_action_state()
@@ -1345,7 +1368,7 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 
 	var icon_lbl := Label.new()
 	icon_lbl.text = icon
-	icon_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(icon_lbl, Typography.Role.HEADING)
 	# Explicit ink tint — REQUIRED for contrast. The bundled NotoEmoji fallback is
 	# MONOCHROME, so these glyphs render in the Label's font_color; without an override
 	# that's the theme default (near-white), which vanishes on the paper nav bar.
@@ -1356,7 +1379,7 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 
 	var text_lbl := Label.new()
 	text_lbl.text = label_text
-	text_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(text_lbl, Typography.Role.META)
 	text_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	text_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1471,7 +1494,7 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 		row.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
-	lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1512,7 +1535,7 @@ func spawn_reward_chip(text: String, color: Color, icon_key: String = "") -> voi
 		inner.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1582,9 +1605,11 @@ func _make_chip_box() -> StyleBoxFlat:
 
 # ── Tool-armed mode show/hide (called by Main's tool dispatch; KEPT names) ─────
 
-## A tap-target tool was just armed: auto-inspect it so the action panel flips to the
-## ARMED tool view (React useAutoInspectArmed). N in the header counts the remaining
-## charges, the one being armed included — the charge isn't spent until the tap.
+## A tap-target tool OR a fill_bias tool (fertilizer &c) was just armed: auto-inspect it so
+## the action panel flips to the ARMED tool view (React useAutoInspectArmed). N in the header
+## counts the remaining charges (for a tap-tool the one being armed is included — its charge
+## isn't spent until the tap; a fill_bias tool already spent its charge at arm-time, so it
+## reads its post-arm count).
 func show_tool_armed_banner(id: String) -> void:
 	if _action_tool == null:
 		return
@@ -1614,8 +1639,10 @@ func set_live_chain(length: int, tile: int) -> void:
 	_live_chain_tile = tile
 	# React: when a chain drag ends and no tool is ARMED, drop the inspect so the panel
 	# returns to the stockpile rather than a stale tool detail (prototype.tsx's
-	# "chainInfo goes null and no toolPending → setInspectedTool(null)").
-	if ended and _inspected_tool != "" and (game == null or game.pending_tool != _inspected_tool):
+	# "chainInfo goes null and no toolPending → setInspectedTool(null)"). An armed fill_bias
+	# (fertilizer &c) counts as armed too — its inspect survives a chain ending.
+	if ended and _inspected_tool != "" and (game == null or game.pending_tool != _inspected_tool) \
+			and not _is_armed_fill_bias(_inspected_tool):
 		_inspected_tool = ""
 	_update_action_state()
 
@@ -1643,7 +1670,10 @@ func _refresh_action_tool() -> void:
 		return
 	var id := _inspected_tool
 	var charges: int = game.tool_count(id) if game != null else 0
-	var armed: bool = game != null and game.pending_tool == id
+	# A fill_bias tool (fertilizer &c) is "armed" via the transient bias, never pending_tool —
+	# fold it into `armed` so the header/dot/icon-card read ARMED the same as a tap-tool.
+	var fb_armed: bool = _is_armed_fill_bias(id)
+	var armed: bool = (game != null and game.pending_tool == id) or fb_armed
 	var is_tap: bool = ToolConfig.is_tap_target(id)
 
 	var mode: String = "TOOL ARMED" if armed else ("TOOL READY" if is_tap else "TOOL INSPECT")
@@ -1670,6 +1700,17 @@ func _refresh_action_tool() -> void:
 			_tool_action_btn.text = "◎ ARM"
 			_style_cta(_tool_action_btn, Color("#eb9440"), Color("#7a3c12"), Color("#2c1408"))
 		_tool_action_btn.disabled = charges <= 0 and not armed
+	elif fb_armed:
+		# Armed fill_bias (fertilizer/bird_feed/sapling): a transient spawn bias is live, biasing
+		# the NEXT field toward its target tile. Mirror the tap-tool ARMED footer — hot-red wash +
+		# a DISARM button that refunds the spent charge (React's disarmFillBias).
+		_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("armed"))
+		var target_name: String = UiKit.pretty_name(Constants.string_key(game.fill_bias_target))
+		_tool_view_prompt.text = "Next field favours %s" % target_name
+		_tool_view_prompt.add_theme_color_override("font_color", Color("#9a1a1a"))
+		_tool_action_btn.text = "✕ DISARM"
+		_style_cta(_tool_action_btn, Color("#d05030"), Color("#5a1a08"), Color("#fff8e7"))
+		_tool_action_btn.disabled = false
 	else:
 		_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("instant"))
 		_tool_view_prompt.text = "Affects the whole board"
@@ -1850,7 +1891,7 @@ func _build_level_pill() -> PanelContainer:
 
 	_level_label = Label.new()
 	_level_label.text = "Lv 1"
-	_level_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_level_label, Typography.Role.LABEL)
 	_level_label.add_theme_color_override("font_color", Palette.PARCHMENT)
 	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
