@@ -953,6 +953,17 @@ func summon_magic_tool(id: String) -> Dictionary:
 ## "tools" key (see to_dict / from_dict), byte-identical to before the extraction.
 var tool_state := ToolState.new()
 
+## Board HOTBAR preset pins (React usePinnedTools, localStorage "hearthwood:hotbar-pins").
+## A POSITIONAL array of tool ids (or "" for an empty slot) — slot i shows whatever id sits at
+## hotbar_pins[i], capped at MAX_HOTBAR_PINS. The player drags tools from the board's tool
+## dropdown into these slots to preset them. Seeded from ToolConfig.DEFAULT_PIN_KEYS the first
+## time it's read empty (get_hotbar_pins). PERSISTED (additive — to_dict/from_dict; SAVE_VERSION
+## is NOT bumped, the React-parity discard-on-mismatch policy needs no migration for a defaulted
+## array). Placement never duplicates a tool across slots (set_hotbar_pin clears any other slot
+## holding the same id), mirroring React placeAt's move semantics.
+const MAX_HOTBAR_PINS: int = 8
+var hotbar_pins: Array = []
+
 ## The legacy `tools` Dictionary view onto the composed ToolState — a LIVE reference (NOT
 ## a copy), so the many readers that index / iterate / mutate `game.tools` (Main, the
 ## Inventory screen, tests doing game.tools.clear() / .has() / .size()) keep working
@@ -3962,6 +3973,69 @@ func use_ratcatcher_charge() -> bool:
 func fire_hazard_enabled() -> bool:
 	return fire_hazard_force or Constants.FIRE_HAZARD_ENABLED
 
+## The world-map zone id the CURRENT board is playing (so spawnable_hazards / future zone-gated
+## systems can read the right node's data). The farm board follows _active_farm_zone() (a run's
+## farm node, else the active farm node, default home); the mine / harbor boards play map_current
+## (the node travelled to). Mirrors React's `state.activeZone ?? state.mapCurrent ?? "home"`.
+func current_board_zone() -> String:
+	if active_biome == "farm":
+		return _active_farm_zone()
+	return map_current if map_current != "" else "home"
+
+## The runtime hazard ids that CAN spawn on the CURRENT board (NOT the ones currently active — a
+## tool must be visible BEFORE its hazard appears so the player can pre-arm). Feeds the HUD
+## hazard-tool filter (Hud._refresh_tools → ToolConfig.is_tool_visible_on_board) so a hazard-only
+## tool (Cat/Terrier, Rifle/Hound, Water Pump, Explosives) is hidden when its hazard can't occur
+## on this biome/zone. Mirrors React's getSpawnableHazardIds (src/ui/puzzleToolFilter.ts).
+##
+## ANCHORED ON THE BIOME, not the zone-dangers list, because the port's hazard ROLLS are
+## biome-gated, not zone-gated: HazardLogic.roll_farm_hazard fires on ANY farm board (fire gated
+## by fire_hazard_enabled(), wolves by a birds-rich inventory, NOT by the zone); HazardLogic.
+## roll_rat_spawn fires on ANY farm board once rats_enabled(); MineHazardLogic.roll_mine_hazard
+## rolls ALL FOUR mine hazards on ANY mine board (it never reads dangers). So the genuinely-
+## spawnable set follows active_biome + the feature gates — using the (flavor) zone-dangers list
+## alone would wrongly HIDE a tool for a hazard that actually rolls (e.g. lava on the Black Forge,
+## whose dangers list is empty). The zone-dangers labels are still UNIONED in (the config-data
+## path, via CartographyConfig) so any future zone-gated spawn that lists an implemented hazard
+## still contributes it. React divergence noted: React gates purely on the zone/biome hazard list.
+func spawnable_hazards() -> Array:
+	var seen: Dictionary = {}
+	match active_biome:
+		"farm":
+			# Wolves roll on any farm board (birds-driven, no zone gate) → always pre-armable.
+			seen["wolves"] = true
+			# Rats once Town 2 is done (rats_enabled), matching roll_rat_spawn's gate.
+			if rats_enabled():
+				seen["rats"] = true
+			# Fire only when the feature flag / per-session force is on (default off).
+			if fire_hazard_enabled():
+				seen["fire"] = true
+		"mine":
+			# roll_mine_hazard rolls every MINE_HAZARD_ID on any mine board (no zone gate).
+			for id in Constants.MINE_HAZARD_IDS:
+				seen[String(id)] = true
+		_:
+			# harbor / non-board biome — no hazard system rolls here.
+			pass
+	# Config-data path: union any IMPLEMENTED hazard the current zone EXPLICITLY lists (founded
+	# settlement biome's hazards, else the node's dangers), mapped label → runtime spawn id. A
+	# no-op for the stock data (the biome already covers it), but it honors the per-zone catalog.
+	var zone: String = current_board_zone()
+	var labels: Array
+	var biome_id: String = settlement_biome_id(zone)
+	var stype: String = settlement_type_for_zone(zone)
+	var bdef: Dictionary = CartographyConfig.biome_def(stype, biome_id) if biome_id != "" else {}
+	if bdef.has("hazards") and bdef["hazards"] is Array:
+		labels = (bdef["hazards"] as Array)
+	else:
+		labels = CartographyConfig.dangers_of(zone)
+	for sid in CartographyConfig.hazard_labels_to_spawn_ids(labels):
+		seen[String(sid)] = true
+	# Fire is hard-gated by the feature flag even if a zone/biome lists it (React parity).
+	if not fire_hazard_enabled():
+		seen.erase("fire")
+	return seen.keys()
+
 ## True when ANY farm hazard (rats / fire / wolves) is currently active (single-active cap read).
 func any_farm_hazard_active() -> bool:
 	return HazardLogic.any_hazard_active(hazards)
@@ -4370,6 +4444,81 @@ func disarm_fill_bias() -> bool:
 	if refund_id != "" and ToolConfig.has_tool(refund_id):
 		grant_tool(refund_id, 1)
 	return true
+
+# ── Board HOTBAR pins (React usePinnedTools port) ─────────────────────────────
+## The current hotbar pins, normalised to a clean positional array of tool ids ("" = empty
+## slot). LAZY-SEEDS from ToolConfig.DEFAULT_PIN_KEYS when the stored array is empty (a fresh
+## game or a save written before pins existed) — the React readStoredPins falls back to
+## DEFAULT_PINS the same way. Only REAL ToolConfig ids survive; an unknown/dropped id reads as
+## an empty slot (React maps unknown keys to null). Trimmed to MAX_HOTBAR_PINS. Returns a COPY
+## (callers must go through set_hotbar_pin/clear_hotbar_pin to mutate).
+func get_hotbar_pins() -> Array:
+	if hotbar_pins.is_empty():
+		hotbar_pins = _default_hotbar_pins()
+	return _normalise_hotbar_pins(hotbar_pins)
+
+## The seeded default pins (ToolConfig.DEFAULT_PIN_KEYS, validated + capped) — used when the
+## stored array is empty.
+func _default_hotbar_pins() -> Array:
+	return _normalise_hotbar_pins(ToolConfig.DEFAULT_PIN_KEYS)
+
+## Coerce an arbitrary array into a clean positional pin array: each entry is a real ToolConfig
+## id or "" (empty slot), trimmed to MAX_HOTBAR_PINS. Mirrors React readStoredPins' map(unknown
+## → null).slice(0, MAX_PINS).
+func _normalise_hotbar_pins(src: Array) -> Array:
+	var out: Array = []
+	for raw in src:
+		if out.size() >= MAX_HOTBAR_PINS:
+			break
+		var id := String(raw)
+		out.append(id if ToolConfig.has_tool(id) else "")
+	return out
+
+## Place tool `id` at slot `index` (React placeAt move semantics): the tool is removed from any
+## OTHER slot it occupied (never duplicated across slots), and the array grows to cover the slot.
+## Trimmed to MAX_HOTBAR_PINS. An unknown id is a no-op. Returns true when a placement happened.
+func set_hotbar_pin(index: int, id: String) -> bool:
+	if not ToolConfig.has_tool(id):
+		return false
+	if index < 0 or index >= MAX_HOTBAR_PINS:
+		return false
+	var pins: Array = get_hotbar_pins()
+	# Grow to cover `index` (empty slots in between), mirroring React's Array.from({length}).
+	while pins.size() <= index:
+		pins.append("")
+	# Move semantics: drop the id from any other slot before placing it.
+	for i in range(pins.size()):
+		if i != index and String(pins[i]) == id:
+			pins[i] = ""
+	pins[index] = id
+	hotbar_pins = _normalise_hotbar_pins(pins)
+	return true
+
+## Clear slot `index` (unpin whatever sits there). React's remove() unpins by KEY, but the HUD
+## drag-out targets a SLOT, so this is the slot-indexed analogue. A null/out-of-range slot is a
+## no-op. Returns true when a slot was actually cleared.
+func clear_hotbar_pin(index: int) -> bool:
+	var pins: Array = get_hotbar_pins()
+	if index < 0 or index >= pins.size():
+		return false
+	if String(pins[index]) == "":
+		return false
+	pins[index] = ""
+	hotbar_pins = _normalise_hotbar_pins(pins)
+	return true
+
+## Unpin tool `id` from EVERY slot it occupies (React usePinnedTools.remove — unpin by key).
+## Returns true when at least one slot was cleared.
+func unpin_hotbar_tool(id: String) -> bool:
+	var pins: Array = get_hotbar_pins()
+	var changed := false
+	for i in range(pins.size()):
+		if String(pins[i]) == id:
+			pins[i] = ""
+			changed = true
+	if changed:
+		hotbar_pins = _normalise_hotbar_pins(pins)
+	return changed
 
 ## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
 ## Returns {ok, reason, grid, collected}:
@@ -4878,6 +5027,12 @@ func to_dict() -> Dictionary:
 		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
 		# Byte-identical to the pre-split emission.
 		"tools": tool_state.to_dict(),
+		# Board HOTBAR pins (React usePinnedTools, persisted to localStorage in the web; here a
+		# top-level array). ADDITIVE — SAVE_VERSION is NOT bumped: a save written before pins
+		# existed has no "hotbar_pins" key, so from_dict lazy-seeds the DEFAULT_PIN_KEYS on first
+		# read (exactly the React readStoredPins fallback). Emit a NORMALISED copy (real ids + ""
+		# for empty slots) so the persisted shape is always clean.
+		"hotbar_pins": _normalise_hotbar_pins(hotbar_pins).duplicate(),
 		# M10: achievement counters, the unlocked set, and the distinct-seen maps — from the
 		# composed AchievementState, flattened back into the SAME three top-level keys (NOT
 		# nested under one sub-object), byte-identical to the pre-split emission. Persisting
@@ -5295,6 +5450,14 @@ static func from_dict(d: Dictionary) -> GameState:
 	# is transient and never restored (a reload starts disarmed). All enforced inside
 	# ToolState.from_dict. SAVE_VERSION is NOT bumped — a save with no tools == tools {}.
 	s.tool_state = ToolState.from_dict(d.get("tools", {}))
+	# Restore the board HOTBAR pins (ADDITIVE). Missing key (any save written before pins
+	# existed) → [] → get_hotbar_pins() lazy-seeds DEFAULT_PIN_KEYS on first read (React
+	# readStoredPins fallback). Each entry is normalised to a real ToolConfig id or "" (an
+	# unknown/dropped id becomes an empty slot — React maps unknown keys to null), and the array
+	# is capped at MAX_HOTBAR_PINS. SAVE_VERSION is NOT bumped.
+	var hp: Variant = d.get("hotbar_pins", null)
+	if hp is Array:
+		s.hotbar_pins = s._normalise_hotbar_pins(hp)
 	# Restore achievements (M10) into the composed AchievementState from the SAME three flat
 	# top-level keys (achievement_counters / achievements_unlocked / _distinct_seen). Missing
 	# keys (any pre-M10 save) → empty maps, so old saves load with zero progress. Counters
