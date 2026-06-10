@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { play, setEnabled, unlock } from './index.js';
+import { createToolSoundTracker } from './toolSounds.js';
 import type { GameState } from "../types/state.js";
 
 /** Subset of GameState fields read by the audio hook. */
@@ -7,6 +8,8 @@ type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" |
   lastChainLength?: number;
   built?: Record<string, unknown>;
   craftedTotals?: Record<string, number>;
+  toolPending?: string | null;
+  tools?: Record<string, number | boolean | undefined>;
   fish?: { tide?: string } | null;
   settings?: {
     sfxOn?: boolean;
@@ -30,6 +33,7 @@ export function useAudio(state: AudioGameState | null | undefined): void {
 
   // Track previous state to detect changes
   const prev = useRef<AudioGameState>(state ?? {});
+  const toolTracker = useRef(createToolSoundTracker());
   useEffect(() => {
     const p: AudioGameState = prev.current ?? {};
     const s: AudioGameState = state ?? {};
@@ -69,6 +73,19 @@ export function useAudio(state: AudioGameState | null | undefined): void {
     const prevCrafted = Object.values(p.craftedTotals ?? {}).reduce((a: number, v: number) => a + v, 0);
     const newCrafted = Object.values(s.craftedTotals ?? {}).reduce((a: number, v: number) => a + v, 0);
     if (newCrafted > prevCrafted) play('upgrade');
+
+    // Tool armed / fired — classified from toolPending + charge-count transitions
+    const toolEvent = toolTracker.current(
+      { toolPending: p.toolPending, tools: p.tools },
+      { toolPending: s.toolPending, tools: s.tools },
+    );
+    if (toolEvent === 'armed') play('toolArmed');
+    if (toolEvent === 'fired') {
+      play('toolFired');
+      if (s?.settings?.hapticsOn && navigator.vibrate) {
+        try { navigator.vibrate(30); } catch { /* unsupported */ }
+      }
+    }
 
     // Fish biome — tide flip (state.fish.tide changes)
     if (s.fish?.tide && p.fish?.tide && s.fish.tide !== p.fish.tide) {

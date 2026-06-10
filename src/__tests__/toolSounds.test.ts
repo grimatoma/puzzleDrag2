@@ -1,0 +1,48 @@
+import { describe, it, expect } from "vitest";
+import { createToolSoundTracker } from "../audio/toolSounds.js";
+
+const snap = (toolPending: string | null, tools: Record<string, number>) => ({ toolPending, tools });
+
+describe("createToolSoundTracker", () => {
+  it("reports 'armed' when a tap-target tool arms (no charge spent yet)", () => {
+    const step = createToolSoundTracker();
+    expect(step(snap(null, { bomb: 2 }), snap("bomb", { bomb: 2 }))).toBe("armed");
+  });
+
+  it("reports 'fired' when a tap-target tool fires (charge spent on clear)", () => {
+    const step = createToolSoundTracker();
+    step(snap(null, { bomb: 2 }), snap("bomb", { bomb: 2 }));
+    expect(step(snap("bomb", { bomb: 2 }), snap(null, { bomb: 1 }))).toBe("fired");
+  });
+
+  it("stays silent when a tap-target arm is cancelled (no count change)", () => {
+    const step = createToolSoundTracker();
+    step(snap(null, { bomb: 2 }), snap("bomb", { bomb: 2 }));
+    expect(step(snap("bomb", { bomb: 2 }), snap(null, { bomb: 2 }))).toBeNull();
+  });
+
+  it("reports 'fired' for an instant tool (charge spent at arm, none on clear)", () => {
+    const step = createToolSoundTracker();
+    expect(step(snap(null, { axe: 3 }), snap("axe", { axe: 2 }))).toBe("armed");
+    expect(step(snap("axe", { axe: 2 }), snap(null, { axe: 2 }))).toBe("fired");
+  });
+
+  it("stays silent when an instant arm is cancelled (charge refunded)", () => {
+    const step = createToolSoundTracker();
+    step(snap(null, { axe: 3 }), snap("axe", { axe: 2 }));
+    expect(step(snap("axe", { axe: 2 }), snap(null, { axe: 3 }))).toBeNull();
+  });
+
+  it("reports 'armed' again when arming transfers to a different tool", () => {
+    const step = createToolSoundTracker();
+    step(snap(null, { bomb: 2, rake: 1 }), snap("bomb", { bomb: 2, rake: 1 }));
+    expect(step(snap("bomb", { bomb: 2, rake: 1 }), snap("rake", { bomb: 2, rake: 1 }))).toBe("armed");
+  });
+
+  it("returns null for no-op transitions", () => {
+    const step = createToolSoundTracker();
+    expect(step(snap(null, {}), snap(null, {}))).toBeNull();
+    step(snap(null, { bomb: 1 }), snap("bomb", { bomb: 1 }));
+    expect(step(snap("bomb", { bomb: 1 }), snap("bomb", { bomb: 1 }))).toBeNull();
+  });
+});
