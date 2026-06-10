@@ -27,8 +27,19 @@
 //   node pipeline-patch.mjs set-mode          (autonomous | gated)
 //   node pipeline-patch.mjs run-state         <idle|running|waiting|done> ["<detail>"]
 //   node pipeline-patch.mjs clear-comment     <item> <keyOrSelector>
+//   node pipeline-patch.mjs preset-save       <name> [--desc "<text>"] [--idle-frames <N>] [--transition-frames <N>]
+//   node pipeline-patch.mjs preset-list
+//   node pipeline-patch.mjs preset-show       <name>
+//   node pipeline-patch.mjs preset-apply      <name>
 //   node pipeline-patch.mjs await-review      [--timeout <seconds>] [--interval <seconds>]
 //   node pipeline-patch.mjs show              [item]
+//
+// Presets are reusable bundles of generation settings (canvas/fps/candidates/humanApproval + advisory
+// idle/transition frame-count defaults) stored at `pipeline.presets[<name>]` so the intake interview
+// can offer "reuse preset <name>?" instead of re-asking. `preset-save` captures the current `settings`;
+// `preset-apply` copies a preset's canvas/fps/candidates/humanApproval BACK into `settings` (the
+// advisory idle/transition frame counts are consumed by intake when drafting animations, never written
+// into `settings`). `preset-list`/`preset-show` are read-only.
 //
 // Human-gate plumbing: `run-state` broadcasts the orchestrator's current stage to the viewer (e.g.
 // "Stage 2: generating grass candidates (2/4)"). `await-review` is the blocking gate — it sets
@@ -383,6 +394,120 @@ function cmdClearComment(args) {
     : `no comment on ${kindLabel} ${itemId}/${keyOrSelector} (already clear)`);
 }
 
+// ── presets (reusable generation-setting bundles) ───────────────────────────────────
+// Presets live at PIPELINE top level (`presets: { "<name>": { description?, canvas?, fps?,
+// candidates?, humanApproval?, idleFrames?, transitionFrames? } }`) so the intake interview can offer
+// a saved bundle instead of re-asking canvas/fps/candidates/etc. each time the user adds tiles.
+// `idleFrames`/`transitionFrames` are ADVISORY defaults the intake uses when drafting new
+// `animations[]` — they are NOT `settings` fields, so preset-apply never writes them into `settings`.
+
+// preset-save: capture the CURRENT global `settings` (canvas, fps, candidates, humanApproval) into
+// presets[name], plus the optional description/idleFrames/transitionFrames. Overwrites a same-named
+// preset. "Save what I just configured so I can reuse it." Pipeline only.
+function cmdPresetSave(args) {
+  const positional = [];
+  let desc = null;
+  let idleFrames = null;
+  let transitionFrames = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--desc") {
+      desc = args[++i];
+      if (desc === undefined) die("--desc requires a <text>");
+    } else if (args[i] === "--idle-frames") {
+      idleFrames = Number(args[++i]);
+      if (!Number.isInteger(idleFrames)) die("--idle-frames requires an integer");
+    } else if (args[i] === "--transition-frames") {
+      transitionFrames = Number(args[++i]);
+      if (!Number.isInteger(transitionFrames)) die("--transition-frames requires an integer");
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  const [name] = positional;
+  if (!name) die('preset-save <name> [--desc "<text>"] [--idle-frames <N>] [--transition-frames <N>]');
+  const { pipeline } = loadAll();
+  const s = pipeline.settings || {};
+  const preset = {};
+  if (desc) preset.description = desc;
+  if (s.canvas && typeof s.canvas === "object") preset.canvas = s.canvas;
+  if (typeof s.fps === "number") preset.fps = s.fps;
+  if (s.candidates === 1 || s.candidates === 2 || s.candidates === 4) preset.candidates = s.candidates;
+  if (typeof s.humanApproval === "boolean") preset.humanApproval = s.humanApproval;
+  if (idleFrames !== null) preset.idleFrames = idleFrames;
+  if (transitionFrames !== null) preset.transitionFrames = transitionFrames;
+  pipeline.presets = pipeline.presets || {};
+  pipeline.presets[name] = preset;
+  manifest.writePipeline(PIPELINE_JSON, pipeline);
+  const canvasStr = preset.canvas ? `${preset.canvas.width}x${preset.canvas.height}` : "—";
+  console.log(`saved preset "${name}" (canvas=${canvasStr} fps=${preset.fps ?? "—"} candidates=${preset.candidates ?? "—"} humanApproval=${preset.humanApproval ?? "—"}${idleFrames !== null ? ` idleFrames=${idleFrames}` : ""}${transitionFrames !== null ? ` transitionFrames=${transitionFrames}` : ""})`);
+}
+
+// preset-list: one line per preset — name, description, and a settings summary. Read-only.
+function cmdPresetList() {
+  const { pipeline } = loadAll();
+  const presets = pipeline.presets && typeof pipeline.presets === "object" ? pipeline.presets : {};
+  const names = Object.keys(presets);
+  if (!names.length) {
+    console.log("no presets saved (save one with `preset-save <name>`)");
+    return;
+  }
+  for (const name of names) {
+    const p = presets[name] || {};
+    const canvasStr = p.canvas ? `${p.canvas.width}x${p.canvas.height}` : "—";
+    const summary = `canvas=${canvasStr} fps=${p.fps ?? "—"} candidates=${p.candidates ?? "—"} humanApproval=${p.humanApproval ?? "—"} idleFrames=${p.idleFrames ?? "—"} transitionFrames=${p.transitionFrames ?? "—"}`;
+    console.log(`${name}${p.description ? ` — ${p.description}` : ""}\n  ${summary}`);
+  }
+}
+
+// preset-show: dump one preset's full JSON. Read-only. Dies if absent.
+function cmdPresetShow(args) {
+  const [name] = args;
+  if (!name) die("preset-show <name>");
+  const { pipeline } = loadAll();
+  const presets = pipeline.presets && typeof pipeline.presets === "object" ? pipeline.presets : {};
+  if (!presets[name]) {
+    die(`no preset "${name}" (have: ${Object.keys(presets).join(", ") || "none"})`);
+  }
+  console.log(JSON.stringify(presets[name], null, 2));
+}
+
+// preset-apply: copy the preset's canvas/fps/candidates/humanApproval into the global `settings` (only
+// the fields the preset defines; leave others). idleFrames/transitionFrames are advisory intake
+// defaults — NOT settings fields — so they are intentionally NOT written. Dies if the preset is absent.
+function cmdPresetApply(args) {
+  const [name] = args;
+  if (!name) die("preset-apply <name>");
+  const { pipeline } = loadAll();
+  const presets = pipeline.presets && typeof pipeline.presets === "object" ? pipeline.presets : {};
+  const preset = presets[name];
+  if (!preset) {
+    die(`no preset "${name}" (have: ${Object.keys(presets).join(", ") || "none"})`);
+  }
+  pipeline.settings = pipeline.settings || {};
+  const applied = [];
+  if (preset.canvas && typeof preset.canvas === "object") {
+    pipeline.settings.canvas = preset.canvas;
+    applied.push(`canvas=${preset.canvas.width}x${preset.canvas.height}`);
+  }
+  if (typeof preset.fps === "number") {
+    pipeline.settings.fps = preset.fps;
+    applied.push(`fps=${preset.fps}`);
+  }
+  if (preset.candidates === 1 || preset.candidates === 2 || preset.candidates === 4) {
+    pipeline.settings.candidates = preset.candidates;
+    applied.push(`candidates=${preset.candidates}`);
+  }
+  if (typeof preset.humanApproval === "boolean") {
+    pipeline.settings.humanApproval = preset.humanApproval;
+    applied.push(`humanApproval=${preset.humanApproval}`);
+  }
+  manifest.writePipeline(PIPELINE_JSON, pipeline);
+  const advisory = [];
+  if (Number.isInteger(preset.idleFrames)) advisory.push(`idleFrames=${preset.idleFrames}`);
+  if (Number.isInteger(preset.transitionFrames)) advisory.push(`transitionFrames=${preset.transitionFrames}`);
+  console.log(`applied preset "${name}" -> settings (${applied.join(" ") || "nothing to apply"})${advisory.length ? `; advisory intake defaults (not written to settings): ${advisory.join(" ")}` : ""}`);
+}
+
 // ── await-review (the blocking human gate) ──────────────────────────────────────────
 // Snapshot the review-relevant state: per keyframe {selected, comment, prompt}, per history candidate
 // {status, reason}, per animation {status, comment} — keyed `<itemId>/<keyId-or-selector>` (ids never
@@ -604,6 +729,11 @@ const USAGE = `Usage:
   node pipeline-patch.mjs set-mode         (autonomous | gated)
   node pipeline-patch.mjs run-state        (idle | running | waiting | done) ["<detail>"]
   node pipeline-patch.mjs clear-comment    <item> <keyOrSelector>           consume human feedback (keyframe id, else animation selector)
+  node pipeline-patch.mjs preset-save      <name> [--desc "<text>"] [--idle-frames <N>] [--transition-frames <N>]
+                                           capture the current settings into presets[name] for reuse
+  node pipeline-patch.mjs preset-list                                       list saved presets (read-only)
+  node pipeline-patch.mjs preset-show      <name>                          print one preset's full JSON (read-only)
+  node pipeline-patch.mjs preset-apply     <name>                          copy a preset's settings into the global settings
   node pipeline-patch.mjs await-review     [--timeout <seconds>] [--interval <seconds>]
                                            block until the viewer resumes; prints AWAIT_REVIEW_RESULT <json>
                                            (defaults: timeout 3600, interval 2; exit 3 + partial diff on timeout)
@@ -643,6 +773,10 @@ function main() {
     case "set-mode": return cmdSetMode(args);
     case "run-state": return cmdRunState(args);
     case "clear-comment": return cmdClearComment(args);
+    case "preset-save": return cmdPresetSave(args);
+    case "preset-list": return cmdPresetList(args);
+    case "preset-show": return cmdPresetShow(args);
+    case "preset-apply": return cmdPresetApply(args);
     case "await-review": return cmdAwaitReview(args);
     case "show": return cmdShow(args);
     case undefined:

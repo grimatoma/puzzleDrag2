@@ -50,13 +50,20 @@ gracefully; gap-fill and candidate review do not.
 ```jsonc
 {
   "settings": { … },   // global generation settings (one object)
-  "items":    [ … ]    // hierarchical items, one per master + its family
+  "items":    [ … ],   // hierarchical items, one per master + its family
+  "runState": { … },   // OPTIONAL — orchestrator progress broadcast for the viewer banner (see below)
+  "presets":  { … }    // OPTIONAL — named reusable generation-setting bundles for intake (see below)
 }
 ```
 
 This is what humans/agents edit and what gap-fill diffs **by shape**. It carries the *spec* (prompts,
 hierarchy, animations) and the *current choice* per keyframe (`selected` + `selectedPath`). It does
-**not** carry candidates — those live in the history sidecar.
+**not** carry candidates — those live in the history sidecar. The optional `runState`
+(`{ status: idle|running|waiting|done, detail?, updatedAt? }`) is the orchestrator's progress broadcast
+the viewer banner reads — written by `pipeline-patch.mjs run-state` / `await-review`, never edited by
+hand; gap-fill ignores it. (`settings.reviewState` — the `reviewing`↔`resume` pause/resume handshake —
+is likewise machine-managed by `await-review` + the viewer's resume button, absent outside a review
+wait.)
 
 ---
 
@@ -73,6 +80,73 @@ hierarchy, animations) and the *current choice* per keyframe (`selected` + `sele
 
 **Override scope.** Only `canvas` and `fps` are per-item-overridable. `candidates`,
 `humanApproval`, `autonomous`, and `styleSpec` are **always global** — there is no per-item form.
+
+---
+
+## `presets` (optional, top-level map)
+
+`pipeline.presets` is an **optional** map of named, reusable **generation-setting bundles** the intake
+interview offers so the user doesn't re-specify canvas/fps/candidates/etc. each time they add tiles. It
+sits at the top level of `pipeline.json` (sibling of `settings`/`items`), keyed by preset name:
+
+```jsonc
+{
+  "settings": { … },
+  "items":    [ … ],
+  "presets": {
+    "farm-tile": {
+      "description": "32px farm tiles, gated",
+      "canvas": { "width": 32, "height": 32, "safeArea": 2 },
+      "fps": 10,
+      "candidates": 4,
+      "humanApproval": true,
+      "idleFrames": 8,
+      "transitionFrames": 20
+    }
+  }
+}
+```
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `description` | string | **Optional.** Human-readable note shown by `preset-list`. |
+| `canvas` | `{ width, height, safeArea }` | **Optional.** Default sprite dimensions this preset applies to `settings.canvas`. |
+| `fps` | number | **Optional.** Default playback rate applied to `settings.fps`. |
+| `candidates` | `1 \| 2 \| 4` | **Optional.** Default seeds-per-step applied to `settings.candidates`. |
+| `humanApproval` | boolean | **Optional.** Default gate flag applied to `settings.humanApproval`. |
+| `idleFrames` | int | **Optional, ADVISORY.** Default idle frame count the intake uses when drafting an `animations[]` idle. **Not** a `settings` field — `preset-apply` never writes it into `settings`. |
+| `transitionFrames` | int | **Optional, ADVISORY.** Default transition frame count for new `animations[]` transitions. Advisory like `idleFrames`. |
+
+**The four `pipeline-patch.mjs` preset commands manage this map** (all go through the same atomic
+`manifest.mjs` write seam, so a saved/applied preset always leaves `pipeline.json` schema-valid):
+
+| Command | What it does |
+|---------|--------------|
+| `preset-save <name> [--desc "<text>"] [--idle-frames <N>] [--transition-frames <N>]` | Capture the **current** global `settings` (canvas/fps/candidates/humanApproval) into `presets[name]`, plus the optional description / advisory frame counts. Overwrites a same-named preset — "save what I just configured so I can reuse it." |
+| `preset-list` | One line per preset — name, description, and a settings summary. Read-only. |
+| `preset-show <name>` | Print one preset's full JSON. Read-only; dies if absent. |
+| `preset-apply <name>` | Copy the preset's `canvas`/`fps`/`candidates`/`humanApproval` **into** the global `settings` (only the fields the preset defines). `idleFrames`/`transitionFrames` are **advisory intake defaults** consumed when drafting animations — they are **not** written into `settings`. Dies if absent. |
+
+Presets are an **opt-in convenience for intake** (see `intake.md` §"Offer a preset first") — they do
+**not** change the build; the live `settings` block is still the single source of truth a run reads.
+
+---
+
+## `runState` (optional, top-level) + `settings.reviewState` — the human-gate handshake
+
+Two **machine-managed** fields wire the orchestrator's headless run to the browser viewer at a
+human-approval gate. **Don't hand-edit either** — `pipeline-patch.mjs` and the control server own them.
+
+| Field | Where | Type | Meaning |
+|-------|-------|------|---------|
+| `runState` | top level | `{ status, detail?, updatedAt? }` | The orchestrator's progress broadcast, shown in the viewer's run-state banner. `status` is `idle \| running \| waiting \| done`; `detail` is a free-text stage note (e.g. `"Stage 2: generating tile_corn candidates (2/4)"`). Written by `pipeline-patch.mjs run-state <status> ["detail"]` (and `await-review`, which sets `waiting`). |
+| `reviewState` | `settings` | `reviewing \| resume` | The pause/resume handshake. `await-review` sets `reviewing` and blocks; the viewer's **"Done reviewing — resume run"** button (POST `/api/resume`) flips it to `resume`; `await-review` consumes it (deletes the key) and returns. **Absent** outside a review wait. |
+
+The full gate protocol — broadcast `run-state waiting`, block on `await-review`, consume the
+`AWAIT_REVIEW_RESULT` diff (regenerate rejects, `clear-comment` acted-on feedback), resume — is in
+**SKILL.md §"The viewer-driven human gate"**. The build's `build_viewer.mjs` derives an `awaitingHuman`
+flag from these (`reviewState === "reviewing"` or `runState.status === "waiting"`) so the viewer floats
+the keyframes needing a decision to the top and shows the resume bar.
 
 ---
 
@@ -128,9 +202,10 @@ Two kinds, discriminated by `kind`. Unchanged by the split — animations live e
 | `frames` | int | both | **Optional** frame count. When omitted, falls back to the style spec's `animation.framesDefault` (default 8). Idles are short; transitions are usually longer. |
 | `motion` | string | `idle` | Plain-language idle-motion brief (e.g. `"sway + occasional falling leaf"`). Drives the animator. |
 | `physics` | string | `transition` | Plain-language brief of the **physical** change driving the tween — what moves/melts/falls/fades and in what order. The motion plan the animator executes. |
-| `status` | `pending \| generated` | both | `pending` = not animated yet (gap-fill will animate once its keys are approved); `generated` = the GIF/frames exist. |
+| `status` | `pending \| generated \| rejected` | both | `pending` = not animated yet (gap-fill will animate once its keys are approved); `generated` = the GIF/frames exist; `rejected` = a human rejected the built animation in the viewer (`anim-reject`), so gap-fill **re-animates** it — `build_viewer.mjs --plan` re-emits it as `{ action: "animate", redo: true }`. |
 | `gif` | string | both | **Relative path** (from `pipeline.json`) to the looping preview GIF, once generated. |
 | `storyboard` | string | both | **Optional relative path** (from `pipeline.json`) to the filled storyboard `.md` for this animation, once written (Stage 3). Set it via `pipeline-patch.mjs animate-done … <storyboardPath>`. See the note below — the storyboard's *full text* is a file, not embedded here. |
+| `comment` | string | both | **Optional** free-text review note left on the animation in the viewer (`anim-comment`). The orchestrator clears it once consumed (`pipeline-patch.mjs clear-comment <item> <selector>`), which drops the viewer's "feedback pending" chip. |
 
 > **Where the storyboards and prompts live (a common question).** Two different things, two
 > different homes:
