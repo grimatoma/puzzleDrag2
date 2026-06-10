@@ -106,6 +106,7 @@ func setup(g: GameState) -> void:
 
 func open() -> void:
 	visible = true
+	move_to_front()  # ensure menu renders above other same-layer modals (e.g. open inventory)
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
@@ -189,6 +190,10 @@ func _build_shell() -> void:
 	scroll.custom_minimum_size = Vector2(0, 580)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# Mobile tap tolerance: without a deadzone, even a 1-pixel finger wobble scrolls the content
+	# before the release event fires, moving the button out from under the touch point so
+	# pressed never emits. 10px is standard mobile slop — intentional drags still scroll freely.
+	scroll.scroll_deadzone = 10
 	col.add_child(scroll)
 
 	var sc := VBoxContainer.new()
