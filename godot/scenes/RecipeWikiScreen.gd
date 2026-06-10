@@ -239,9 +239,65 @@ func _sync_station_tabs() -> void:
 
 ## Toggle the expansion for `entry_key` (a recipe id): tapping the expanded row collapses
 ## it, tapping another moves the expansion. Public — headless tests drive it directly.
+##
+## In the LIST view this animates IN PLACE — only the two affected rows change: the newly tapped
+## row is rebuilt expanded and unrolls open (UiFx.expand_section) while the previously open row
+## rolls shut (UiFx.collapse_section) and drops its details. The untouched rows never rebuild, so
+## the list reflows smoothly instead of snapping. The GRID view has no expandable rows, so it
+## falls back to a plain refresh().
 func toggle_expand(entry_key: String) -> void:
-	_expanded = "" if _expanded == entry_key else entry_key
-	refresh()
+	if not _built or _view != VIEW_LIST:
+		_expanded = "" if _expanded == entry_key else entry_key
+		refresh()
+		return
+	var old_key: String = _expanded
+	var new_key: String = "" if _expanded == entry_key else entry_key
+	_expanded = new_key
+	# The previously open row's Craft button is going away; the new row re-registers its own.
+	_action_buttons.erase("craft")
+	if old_key != "" and old_key != new_key:
+		_collapse_row_inplace(old_key)
+	if new_key != "":
+		_expand_row_inplace(new_key)
+
+## Rebuild `id`'s collapsed row as an EXPANDED one in place (so its summary status + detail chips
+## read the live craft state), swapping the node at the same list position, then unroll the new
+## details open.
+func _expand_row_inplace(id: String) -> void:
+	var old_chip: Variant = _cards.get(id)
+	if old_chip == null or not is_instance_valid(old_chip) or not (old_chip as Node).is_inside_tree():
+		refresh()   # row not currently rendered — fall back to a full rebuild
+		return
+	var idx: int = (old_chip as Node).get_index()
+	_body.remove_child(old_chip)
+	(old_chip as Node).queue_free()
+	var new_chip := _make_recipe_row(id)
+	_body.add_child(new_chip)
+	_body.move_child(new_chip, idx)
+	_cards[id] = new_chip
+	var wrap: Variant = new_chip.get_meta("_details_wrap", null)
+	if wrap != null:
+		UiFx.expand_section(wrap as Control)
+
+## Roll `id`'s expanded row shut: recolour its border to the collapsed look and animate its
+## details section closed, freeing it when the collapse finishes. The summary row (which the
+## toggle did not change) stays put — only the inline details collapse away.
+func _collapse_row_inplace(id: String) -> void:
+	var chip: Variant = _cards.get(id)
+	if chip == null or not is_instance_valid(chip):
+		return
+	UiKit.style_chip_expanded(chip as PanelContainer, false)
+	var node := chip as Node
+	if not node.has_meta("_details_wrap"):
+		return
+	var wrap: Variant = node.get_meta("_details_wrap")
+	node.remove_meta("_details_wrap")
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var w := wrap as Control
+	UiFx.collapse_section(w, func() -> void:
+		if is_instance_valid(w):
+			w.queue_free())
 
 ## The currently expanded recipe id ("" when none). Headless contract.
 func expanded_key() -> String:
@@ -307,40 +363,49 @@ func _make_recipe_row(id: String) -> PanelContainer:
 		qty_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(qty_lbl)
 
-	# Expanded inline details: station eyebrow, optional description, input chips, Craft button.
+	# Expanded inline details — begin_expand_details builds them inside a height-animatable
+	# collapsible (stashed on the chip as "_details_wrap") so the tap-to-expand toggle can unroll
+	# it open and roll the previously-open row shut. On a plain refresh() it just sits at its
+	# content height; toggle_expand is what drives UiFx.expand_section / collapse_section.
 	if _expanded == id:
 		var details := UiKit.begin_expand_details(col)
-
-		var station_id: String = RecipeConfig.recipe_station(id)
-		UiKit.add_expand_eyebrow(details, "Recipe · %s" % BuildingConfig.building_name(station_id), COL_HEADER)
-
-		var desc_text: String = RecipeConfig.recipe_desc(id)
-		if desc_text != "":
-			details.add_child(UiKit.make_expand_body_text(desc_text, COL_MUTED))
-
-		# Input chips — have/need, green when covered, rose when short.
-		var chips := HFlowContainer.new()
-		chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		chips.add_theme_constant_override("h_separation", 6)
-		chips.add_theme_constant_override("v_separation", 6)
-		details.add_child(chips)
-
-		var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
-		for key in inputs.keys():
-			chips.add_child(_input_chip(String(key), int(inputs[key])))
-
-		# Craft button.
-		var craftable: bool = game != null and game.can_craft(id)
-		var craft_btn := Button.new()
-		craft_btn.text = "Craft"
-		craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
-		craft_btn.disabled = not craftable
-		craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
-		details.add_child(craft_btn)
-		_action_buttons["craft"] = craft_btn
+		_populate_recipe_details(details, id)
 
 	return chip
+
+## Fill an expanded recipe row's details VBox: the station eyebrow, optional description, the
+## per-input have/need chips, and the Craft button. Shared by the refresh() build path and the
+## in-place animated expand (so both always read the LIVE craft state). Registers the Craft
+## button under _action_buttons["craft"] (the headless contract).
+func _populate_recipe_details(details: VBoxContainer, id: String) -> void:
+	var station_id: String = RecipeConfig.recipe_station(id)
+	UiKit.add_expand_eyebrow(details, "Recipe · %s" % BuildingConfig.building_name(station_id), COL_HEADER)
+
+	var desc_text: String = RecipeConfig.recipe_desc(id)
+	if desc_text != "":
+		details.add_child(UiKit.make_expand_body_text(desc_text, COL_MUTED))
+
+	# Input chips — have/need, green when covered, rose when short.
+	var chips := HFlowContainer.new()
+	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chips.add_theme_constant_override("h_separation", 6)
+	chips.add_theme_constant_override("v_separation", 6)
+	details.add_child(chips)
+
+	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
+	for key in inputs.keys():
+		chips.add_child(_input_chip(String(key), int(inputs[key])))
+
+	# Craft button.
+	var craftable: bool = game != null and game.can_craft(id)
+	var craft_btn := Button.new()
+	craft_btn.text = "Craft"
+	craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
+	craft_btn.disabled = not craftable
+	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
+	details.add_child(craft_btn)
+	_action_buttons["craft"] = craft_btn
 
 # ── grid view ──────────────────────────────────────────────────────────────────
 

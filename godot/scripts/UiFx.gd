@@ -38,6 +38,8 @@ const ICON_POP_SCALE := 1.18    ## nav icon pop peak scale
 const PRESS_TIME := 0.06        ## button press-down shrink time
 const PRESS_SCALE := 0.95       ## button press-down scale
 const RELEASE_TIME := 0.12      ## button release spring-back time
+const SECTION_OPEN := 0.22      ## accordion details height-grow (expand)
+const SECTION_CLOSE := 0.17     ## accordion details height-collapse (close)
 
 ## True when animations should actually play. Headless display servers (the unit-test
 ## sweep) get the end state instantly.
@@ -205,6 +207,84 @@ static func content_fade(ctl: Control, dur: float = 0.22) -> void:
 	ctl.set_meta("_uifx_fade", t)
 	t.tween_property(ctl, "modulate:a", 1.0, dur) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+# ── accordion height open / close ─────────────────────────────────────────────
+#
+# Height-animate a UiKit.make_collapsible() wrapper open or closed — the "a detail row
+# unrolls open while the previous one rolls shut" motion. Both helpers OWN the wrapper's
+# `custom_minimum_size.y` for the duration (the `_anim` meta tells make_collapsible's own
+# sync to stand down so it doesn't fight the tween), pairing the height glide with a gentle
+# content fade. Headless / Reduce Motion is a complete no-op: the wrapper just sits at its
+# settled height (expand_section ensures full height + opacity; collapse_section fires its
+# done callback immediately so the caller frees the section with no delay).
+
+## Grow a freshly-built collapsible `wrap` from 0 → its content's natural height. Snaps to a
+## collapsed state IN THE SAME FRAME it is called (no flash of the full section), then waits one
+## frame for layout so the content's true height is known before tweening it open.
+static func expand_section(wrap: Control, dur: float = SECTION_OPEN) -> void:
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var inner: Control = wrap.get_meta("_inner", null) as Control
+	if inner == null:
+		return
+	if not _active() or not wrap.is_inside_tree():
+		# Rest state: full height + opaque (make_collapsible's sync already sized it).
+		inner.modulate.a = 1.0
+		if not wrap.has_meta("_anim"):
+			wrap.custom_minimum_size.y = inner.get_combined_minimum_size().y
+		return
+	# Snap collapsed NOW (before any frame is drawn) so the section never flashes at full height.
+	_kill_meta_tween(wrap, "_uifx_section")
+	wrap.set_meta("_anim", true)
+	wrap.custom_minimum_size.y = 0.0
+	inner.modulate.a = 0.0
+	# One frame so the inner content lays out against its real width → true min height.
+	var tree := wrap.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(wrap) or not wrap.is_inside_tree() or not is_instance_valid(inner):
+		return
+	var target: float = inner.get_combined_minimum_size().y
+	var t := wrap.create_tween()
+	wrap.set_meta("_uifx_section", t)
+	t.set_parallel(true)
+	t.tween_property(wrap, "custom_minimum_size:y", target, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	t.tween_property(inner, "modulate:a", 1.0, dur * 0.9) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.chain().tween_callback(func() -> void:
+		# Hand height management back to make_collapsible's sync (content is settled).
+		if is_instance_valid(wrap):
+			wrap.remove_meta("_anim"))
+
+## Shrink a collapsible `wrap` from its current height → 0, fading the content out, then invoke
+## `on_done` (where the caller frees the section). Headless / disabled calls `on_done` at once.
+static func collapse_section(wrap: Control, on_done: Callable = Callable(), dur: float = SECTION_CLOSE) -> void:
+	if wrap == null or not is_instance_valid(wrap):
+		if on_done.is_valid():
+			on_done.call()
+		return
+	if not _active() or not wrap.is_inside_tree():
+		if on_done.is_valid():
+			on_done.call()
+		return
+	var inner: Control = wrap.get_meta("_inner", null) as Control
+	_kill_meta_tween(wrap, "_uifx_section")
+	wrap.set_meta("_anim", true)
+	# Seed the start height (a section sitting at content-min reports 0 custom_minimum until now).
+	if wrap.custom_minimum_size.y <= 0.0 and inner != null:
+		wrap.custom_minimum_size.y = inner.get_combined_minimum_size().y
+	var t := wrap.create_tween()
+	wrap.set_meta("_uifx_section", t)
+	t.set_parallel(true)
+	t.tween_property(wrap, "custom_minimum_size:y", 0.0, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	if inner != null and is_instance_valid(inner):
+		t.tween_property(inner, "modulate:a", 0.0, dur * 0.9) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	t.chain().tween_callback(func() -> void:
+		if on_done.is_valid():
+			on_done.call())
 
 # ── text reveal (typewriter) ──────────────────────────────────────────────────
 
