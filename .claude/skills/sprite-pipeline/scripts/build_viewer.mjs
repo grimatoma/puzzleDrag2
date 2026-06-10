@@ -103,6 +103,74 @@ function assetUrl(rel, baseDir, outDir) {
   return relUrl(outDir, abs);
 }
 
+// True when the URL emitted for `abs` would resolve OUTSIDE the out dir (a leading ".." escape). The
+// control server's static root is the out dir's parent (v2/), so any url that climbs above the out dir
+// AND above v2/ — e.g. a prior at `../tile_tree_oak.png` resolving to `<v2>/../tile_tree_oak.png` —
+// 404s when served. We detect that by relativizing against outDir and checking the leading segment.
+function escapesOutDir(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return false;
+  const abs = path.resolve(baseDir, rel);
+  const r = relUrl(outDir, abs); // POSIX-relative from outDir
+  // Servable when it stays at/below outDir (no leading "..") OR climbs exactly one level (to v2/, the
+  // docRoot) — `../sets/...`, `../items/...` are fine. Two-or-more "../" climbs above v2/ → unservable.
+  return r.startsWith("../../");
+}
+
+// Copy a prior file that lives ABOVE the docRoot into `<outDir>/_priors/<basename>` so the viewer can
+// load it (the static server's root is the out dir's PARENT, v2/, so a `../../foo.png` url escapes it).
+// Returns the servable url (`_priors/<basename>`) on success, or null when the source is missing / the
+// copy fails. Idempotent: re-copies on each build (cheap, keeps the snapshot fresh). `_priors/` lands
+// under the already-gitignored pixelGen/ out dir, so nothing leaks into git.
+function copyPriorIntoOut(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return null;
+  const abs = path.resolve(baseDir, rel);
+  if (!isFile(abs)) return null;
+  try {
+    const priorsDir = path.join(outDir, "_priors");
+    fs.mkdirSync(priorsDir, { recursive: true });
+    const base = path.basename(abs);
+    fs.copyFileSync(abs, path.join(priorsDir, base));
+    return "_priors/" + base;
+  } catch {
+    return null;
+  }
+}
+
+// Resolve an item `prior` to a servable url. When the file sits under the out dir / v2 docRoot the
+// normal relative url works; when it escapes (the common `../tile_*.png` case) we copy it into
+// `_priors/` and return that url instead. Returns null when the file is missing on disk.
+function priorUrl(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return null;
+  const abs = path.resolve(baseDir, rel);
+  if (!isFile(abs)) return null;
+  if (escapesOutDir(rel, baseDir, outDir)) return copyPriorIntoOut(rel, baseDir, outDir);
+  return relUrl(outDir, abs);
+}
+
+// The per-frame PNG urls backing an animation's gif, for the viewer's frame scrubber. By convention the
+// frames live beside the gif: a gif at `items/<x>/previews/<id>.gif` has its frames at
+// `items/<x>/frames/<id>/NN.png` (zero-padded). We derive the frames dir from the gif path (swap the
+// `previews` segment for `frames`, drop the `.gif` extension off the basename), list its *.png files
+// SORTED (lexical = chronological for NN.png names; `.png.import` Godot sidecars are excluded since they
+// don't end in `.png`), and map each to an `assetUrl`. Returns [] when the gif is missing/blank or the
+// frames dir doesn't exist. Defensive: any fs error yields [].
+function frameUrls(gifRel, baseDir, outDir) {
+  if (typeof gifRel !== "string" || gifRel === "") return [];
+  try {
+    const gifAbs = path.resolve(baseDir, gifRel);
+    const base = path.basename(gifAbs, ".gif"); // drop the .gif extension
+    const framesDir = path.join(path.dirname(path.dirname(gifAbs)), "frames", base);
+    if (!isDir(framesDir)) return [];
+    const pngs = fs
+      .readdirSync(framesDir)
+      .filter((f) => f.toLowerCase().endsWith(".png"))
+      .sort();
+    return pngs.map((f) => assetUrl(relUrl(baseDir, path.join(framesDir, f)), baseDir, outDir)).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 // ── projection: pipeline.json -> data.json shape ─────────────────────────────────────────────
 const num = (v, dflt = null) => (typeof v === "number" ? v : dflt);
 const str = (v, dflt = "") => (typeof v === "string" ? v : dflt);
@@ -147,7 +215,10 @@ function projectKey(entry, role, basePrompt, baseDir, outDir) {
   else if (candidates.length > 0) status = "review";
   else status = "pending";
 
-  return { id, role, prompt, selected, approvedUrl, status, candidates };
+  // Human feedback left in the viewer (cleared by the orchestrator once consumed); null when absent.
+  const comment = typeof entry.comment === "string" ? entry.comment : null;
+
+  return { id, role, prompt, selected, approvedUrl, status, comment, candidates };
 }
 
 // Build the projected item, returning both the item object and a key-id -> projected-key map (used
@@ -178,6 +249,9 @@ function projectItem(item, settings, baseDir, outDir) {
     const frames = num(a.frames, null);
     const status = str(a.status, "pending");
     const gifUrl = assetUrl(a.gif, baseDir, outDir);
+    // Human feedback on the built animation + the per-frame scrubber urls (both null/[] when absent).
+    const comment = typeof a.comment === "string" ? a.comment : null;
+    const frameUrlsList = frameUrls(a.gif, baseDir, outDir);
 
     if (kind === "idle") {
       const forId = str(a.for);
@@ -190,6 +264,8 @@ function projectItem(item, settings, baseDir, outDir) {
         motion: str(a.motion),
         status,
         gifUrl,
+        frameUrls: frameUrlsList,
+        comment,
         posterUrl: k ? k.approvedUrl : null,
       });
     } else if (kind === "transition") {
@@ -206,16 +282,30 @@ function projectItem(item, settings, baseDir, outDir) {
         physics: str(a.physics),
         status,
         gifUrl,
+        frameUrls: frameUrlsList,
+        comment,
         posterFromUrl: kFrom ? kFrom.approvedUrl : null,
         posterToUrl: kTo ? kTo.approvedUrl : null,
       });
     }
   }
 
+  // Prior reference art the family was scored against (item.priors). Resolve each to a {path, url} —
+  // `path` is the verbatim pipeline-relative string (for display), `url` is a SERVABLE path: priors
+  // that escape the docRoot (the common `../tile_*.png`, which lives ABOVE v2/) are copied into
+  // `<out>/_priors/` and the url points there; in-tree priors keep their normal relative url. `url` is
+  // null when the file is missing on disk.
+  const priors = [];
+  for (const rel of Array.isArray(item.priors) ? item.priors : []) {
+    if (typeof rel !== "string" || rel === "") continue;
+    priors.push({ path: rel, url: priorUrl(rel, baseDir, outDir) });
+  }
+
   const projected = {
     id: str(item.id),
     basePrompt,
     canvas,
+    priors,
     keys,
     animations,
   };
@@ -238,7 +328,16 @@ function buildData(pipeline, baseDir, outDir) {
   };
 
   const items = [];
-  const totals = { items: 0, keyframes: 0, animations: 0, approved: 0, pending: 0, generated: 0 };
+  const totals = {
+    items: 0,
+    keyframes: 0,
+    animations: 0,
+    approved: 0,
+    pending: 0,
+    generated: 0,
+    rejected: 0,
+    needsReview: 0,
+  };
 
   for (const item of Array.isArray(pipeline.items) ? pipeline.items : []) {
     if (!item || typeof item !== "object") continue;
@@ -251,15 +350,36 @@ function buildData(pipeline, baseDir, outDir) {
     for (const k of projected.keys) {
       if (k.status === "approved") totals.approved += 1;
       else if (k.status === "pending") totals.pending += 1;
+      // "needs you": candidates exist but none is chosen yet — the human must pick or reject-all.
+      else if (k.status === "review") totals.needsReview += 1;
     }
     for (const a of projected.animations) {
       if (a.status === "generated") totals.generated += 1;
+      // A human rejected the built animation in the viewer — the planner will re-animate it.
+      else if (a.status === "rejected") totals.rejected += 1;
     }
   }
+
+  // Surface the human-gate state top-level so the viewer can render a banner without digging into
+  // settings: `runState` is the orchestrator's progress broadcast, `reviewState` the pause/resume
+  // handshake (kept OUT of the whitelisted `settings` projection on purpose), and `awaitingHuman` a
+  // convenience boolean the viewer keys its "you're up" UI off of. `presets` passes through the named
+  // generation bundles so the viewer can offer them.
+  const reviewState =
+    pipeline.settings && typeof pipeline.settings === "object" && typeof pipeline.settings.reviewState === "string"
+      ? pipeline.settings.reviewState
+      : null;
+  const runState = pipeline.runState && typeof pipeline.runState === "object" ? pipeline.runState : null;
+  const awaitingHuman = reviewState === "reviewing" || (runState != null && runState.status === "waiting");
+  const presets = pipeline.presets && typeof pipeline.presets === "object" ? pipeline.presets : null;
 
   return {
     generatedAt: new Date().toISOString(),
     settings,
+    runState,
+    reviewState,
+    awaitingHuman,
+    presets,
     totals,
     items,
   };
@@ -335,7 +455,10 @@ function buildPlan(pipeline) {
       }
     }
 
-    // Rule 3: animation whose referenced keyframes are approved and whose status is pending.
+    // Rule 3: animation whose referenced keyframes are approved and which still needs work — either
+    // `pending` (never built) OR `rejected` (a human rejected the built animation in the viewer, so it
+    // must be re-done). A rejected animation carries `redo: true` so the orchestrator knows to replace
+    // the existing gif rather than treat it as a first build.
     const keyById = new Map();
     if (master) keyById.set(str(master.id), master);
     for (const child of Array.isArray(item.children) ? item.children : []) {
@@ -343,7 +466,8 @@ function buildPlan(pipeline) {
     }
     for (const a of Array.isArray(item.animations) ? item.animations : []) {
       if (!a || typeof a !== "object") continue;
-      if (str(a.status, "pending") !== "pending") continue;
+      const animStatus = str(a.status, "pending");
+      if (animStatus !== "pending" && animStatus !== "rejected") continue;
       let refIds;
       let animId;
       if (a.kind === "idle") {
@@ -357,7 +481,9 @@ function buildPlan(pipeline) {
       }
       const allApproved = refIds.every((id) => isApproved(keyById.get(id)));
       if (allApproved) {
-        actions.push({ action: "animate", itemId, animation: animId });
+        const act = { action: "animate", itemId, animation: animId };
+        if (animStatus === "rejected") act.redo = true;
+        actions.push(act);
       }
     }
   }

@@ -15,12 +15,19 @@
 //      write goes through the shared `manifest.mjs` seam.
 //
 //   Which file each action dirties:
-//     select   → pipeline.json only          (sets key.selected + key.selectedPath, kept paired)
-//     approve  → pipeline.json + history.json (sets key.selected + key.selectedPath; candidate→approved)
-//     regen    → history.json only           (each flagged candidate → failed + reason)
-//     comment  → pipeline.json only          (sets key.comment)
-//   When both are dirty (approve) we write history FIRST, then pipeline, so the watcher's rebuild
-//   always ends on a consistent pair.
+//     select      → pipeline.json only          (sets key.selected + key.selectedPath, kept paired)
+//     approve     → pipeline.json + history.json (sets key.selected + key.selectedPath; candidate→approved)
+//     regen       → history.json only           (each flagged candidate → failed + reason)
+//     comment     → pipeline.json only          (sets key.comment)
+//     reject-all  → pipeline.json + history.json (every candidate → failed; clears the keyframe)
+//     prompt      → pipeline.json only          (overwrites key.prompt — edit a prompt from the viewer)
+//     resume      → pipeline.json only          (settings.reviewState = "resume" — the await-review handshake)
+//     anim-reject → pipeline.json only          (anim.status = "rejected"; the planner re-animates)
+//     anim-comment→ pipeline.json only          (sets anim.comment)
+//   When both are dirty (approve, reject-all) we write history FIRST, then pipeline, so the watcher's
+//   rebuild always ends on a consistent pair. Keyframe actions locate the target via itemId+keyId
+//   (resolveTarget); the anim-* actions locate it via itemId+animId (resolveAnim) — animations are NOT
+//   addressed by keyId.
 //
 // data.json freshness: on startup we run one build, then spawn `build_viewer.mjs --watch` as a
 // child so any change to pipeline.json/pipeline.history.json — including our own patches —
@@ -71,7 +78,16 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const docRoot = resolve(args.root || join(repoRoot, "godot", "assets", "tiles", "v2"));
 const pipelinePath = resolve(args.pipeline || join(docRoot, "pipeline.json"));
+// The viewer we serve lives at <docRoot>/pixelGen — so the build_viewer (re)builds MUST target that
+// same dir. Without an explicit --out, build_viewer defaults to godot/assets/tiles/v2/pixelGen (cwd-
+// relative), which only coincides with docRoot in the default single-checkout case; serving a custom
+// --root/--pipeline (a fixture, another worktree) would otherwise rebuild the wrong pixelGen and the
+// page would never refresh. Pin it so static-serve and watch-rebuild always agree.
+const pixelGenOut = join(docRoot, "pixelGen");
 const port = args.port || Number(process.env.PORT) || 8100;
+// Captured once at boot so GET /api/health can report which pipeline.json this process is bound to and
+// how long it has been up — the trap is a stale server in the wrong worktree still answering requests.
+const startedAt = new Date().toISOString();
 
 // MIME map — covers the viewer shell (.html/.css/.js/.json), the generated art (.png/.gif), and the
 // odd .svg/.ico. Anything else falls back to octet-stream.
@@ -154,6 +170,39 @@ function candidateAt(histCands, idx) {
   return histCands.find((c) => c && c.idx === idx) || null;
 }
 
+// Find an animation within an item by its CANONICAL VIEWER ID — the same id build_viewer/viewer emit:
+// an idle is `${a.for}__idle`, a transition is `${a.from}__to__${a.to}`. Animations are NOT keyed by a
+// keyframe id (an idle's `a.for` collides with a keyframe id), so the anim-* endpoints address them by
+// this composite id instead. Returns the animation object (aliasing into `pipeline`) or null.
+function findAnimById(item, animId) {
+  const anims = Array.isArray(item.animations) ? item.animations : [];
+  return (
+    anims.find((a) => {
+      if (!a || typeof a !== "object") return false;
+      if (a.kind === "idle") return `${a.for}__idle` === animId;
+      if (a.kind === "transition") return `${a.from}__to__${a.to}` === animId;
+      return false;
+    }) || null
+  );
+}
+
+// Resolve { item, anim } from a body's itemId/animId (the animation path — distinct from resolveTarget,
+// which is keyframe-only). `anim` aliases into `pipeline`, so mutating it and writing pipeline persists.
+// Returns { error: {code,msg} } on a miss.
+function resolveAnim(pipeline, body) {
+  if (typeof body.itemId !== "string" || body.itemId === "") {
+    return { error: { code: 400, msg: "missing or invalid itemId" } };
+  }
+  if (typeof body.animId !== "string" || body.animId === "") {
+    return { error: { code: 400, msg: "missing or invalid animId" } };
+  }
+  const item = findItem(pipeline, body.itemId);
+  if (!item) return { error: { code: 404, msg: `item not found: ${body.itemId}` } };
+  const anim = findAnimById(item, body.animId);
+  if (!anim) return { error: { code: 404, msg: `animation not found: ${body.animId}` } };
+  return { item, anim };
+}
+
 // ── the four patch actions ────────────────────────────────────────────────────────────────────
 // Each receives { key, histCands, body } and either returns { error } on a validation miss, or
 // mutates the file(s) it owns in place and returns a `dirty` map naming which file(s) changed:
@@ -183,6 +232,13 @@ const ACTIONS = {
     if (!cand) return { error: { code: 400, msg: `idx out of range: ${body.idx}` } };
     key.selected = body.idx;
     key.selectedPath = typeof cand.path === "string" ? cand.path : null;
+    // Denormalize the winner's source + PixelLab object id onto the keyframe, identically to
+    // pipeline-patch.mjs's `approve` — so a browser approve and a CLI approve produce the SAME write.
+    // Without this, approving a different idx in the viewer would leave a stale source/objectId from a
+    // prior selection (the handle a PixelLab `state` child would later derive from). reject-all clears
+    // them; approve must keep them in sync.
+    key.source = typeof cand.source === "string" ? cand.source : cand.objectId ? "pixellab" : "hand";
+    key.objectId = typeof cand.objectId === "string" ? cand.objectId : null;
     cand.status = "approved";
     return { dirty: { pipeline: true, history: true } };
   },
@@ -211,6 +267,64 @@ const ACTIONS = {
   comment({ key, body }) {
     if (body.comment == null) return { error: { code: 400, msg: "missing comment" } };
     key.comment = String(body.comment);
+    return { dirty: { pipeline: true, history: false } };
+  },
+
+  // "none of these are good — regenerate fresh": every candidate → failed (mirrors pipeline-patch's
+  // reject-all). `failed` (unlike terminal `rejected`) is RE-SEEDED by build_viewer's gap-fill planner,
+  // so the whole batch retries. Then clear the keyframe's selection state. History FIRST, then pipeline.
+  "reject-all"({ key, histCands, body }) {
+    if (histCands.length === 0) {
+      return { error: { code: 400, msg: "no candidates to reject" } };
+    }
+    const reason = body.reason != null ? String(body.reason) : "human: rejected all";
+    for (const cand of histCands) {
+      cand.status = "failed";
+      cand.reason = reason;
+    }
+    key.selected = null;
+    key.selectedPath = null;
+    key.source = null;
+    key.objectId = null;
+    return { dirty: { pipeline: true, history: true } };
+  },
+
+  // edit the keyframe's prompt from the viewer (instead of hand-editing pipeline.json). Pipeline only.
+  prompt({ key, body }) {
+    if (typeof body.prompt !== "string") {
+      return { error: { code: 400, msg: "prompt must be a string" } };
+    }
+    key.prompt = String(body.prompt);
+    return { dirty: { pipeline: true, history: false } };
+  },
+};
+
+// ── handshake / animation actions ──────────────────────────────────────────────────────────────
+// `resume` is keyframe-addressed in the request shape but operates on settings, so it takes `pipeline`.
+// The anim-* actions take the resolved `anim` (via resolveAnim) instead of a keyframe. All three are
+// pipeline-only. They live in their own table because the dispatch passes them a different context.
+const PIPELINE_ACTIONS = {
+  // flip settings.reviewState = "resume" — the handshake pipeline-patch await-review polls for. The
+  // viewer POSTs this when the human clicks "Resume". (settings always exists, but guard defensively.)
+  resume({ pipeline }) {
+    pipeline.settings = pipeline.settings || {};
+    pipeline.settings.reviewState = "resume";
+    return { dirty: { pipeline: true, history: false } };
+  },
+};
+
+const ANIM_ACTIONS = {
+  // a human rejected the built animation in the viewer → status "rejected". build_viewer's gap-fill
+  // planner re-emits it as work to redo (rule 3, redo:true). Pipeline only.
+  "anim-reject"({ anim }) {
+    anim.status = "rejected";
+    return { dirty: { pipeline: true, history: false } };
+  },
+
+  // attach / overwrite a free-text review comment on the animation (pipeline only).
+  "anim-comment"({ anim, body }) {
+    if (body.comment == null) return { error: { code: 400, msg: "missing comment" } };
+    anim.comment = String(body.comment);
     return { dirty: { pipeline: true, history: false } };
   },
 };
@@ -256,11 +370,21 @@ async function handleApi(req, res, action) {
     sendText(res, 405, "405 Method Not Allowed");
     return;
   }
-  const fn = ACTIONS[action];
-  if (!fn) {
+  // Three dispatch tables, picked by action name: keyframe actions (resolveTarget → {key,histCands}),
+  // animation actions (resolveAnim → {anim}), and pipeline-level actions (no resolve — operate on
+  // pipeline directly, e.g. the resume handshake).
+  const kind = ACTIONS[action]
+    ? "keyframe"
+    : ANIM_ACTIONS[action]
+      ? "anim"
+      : PIPELINE_ACTIONS[action]
+        ? "pipeline"
+        : null;
+  if (!kind) {
     sendText(res, 404, `404 Unknown action: ${action}`);
     return;
   }
+  const fn = ACTIONS[action] || ANIM_ACTIONS[action] || PIPELINE_ACTIONS[action];
 
   const read = await readBody(req);
   if (!read.ok) {
@@ -302,13 +426,26 @@ async function handleApi(req, res, action) {
     return;
   }
 
-  const target = resolveTarget(pipeline, history, body);
-  if (target.error) {
-    sendText(res, target.error.code, `${target.error.code} ${target.error.msg}`);
-    return;
+  // Resolve the target along the path this action's table requires, then call it. Keyframe actions get
+  // {key, histCands}; animation actions get {anim}; pipeline-level actions get just {pipeline}.
+  let result;
+  if (kind === "anim") {
+    const target = resolveAnim(pipeline, body);
+    if (target.error) {
+      sendText(res, target.error.code, `${target.error.code} ${target.error.msg}`);
+      return;
+    }
+    result = fn({ anim: target.anim, body });
+  } else if (kind === "pipeline") {
+    result = fn({ pipeline, body });
+  } else {
+    const target = resolveTarget(pipeline, history, body);
+    if (target.error) {
+      sendText(res, target.error.code, `${target.error.code} ${target.error.msg}`);
+      return;
+    }
+    result = fn({ key: target.key, histCands: target.histCands, body });
   }
-
-  const result = fn({ key: target.key, histCands: target.histCands, body });
   if (result.error) {
     sendText(res, result.error.code, `${result.error.code} ${result.error.msg}`);
     return;
@@ -330,8 +467,10 @@ async function handleApi(req, res, action) {
     return;
   }
 
-  // The spawned --watch child rebuilds data.json; the viewer re-polls. Nothing more to do here.
-  sendJson(res, 200, { ok: true, action, itemId: body.itemId, keyId: body.keyId });
+  // The spawned --watch child rebuilds data.json; the viewer re-polls. Nothing more to do here. Echo
+  // back whichever id the action addressed (keyId for keyframe actions, animId for animation actions);
+  // JSON.stringify drops the undefined one, so pipeline-level actions like resume carry neither.
+  sendJson(res, 200, { ok: true, action, itemId: body.itemId, keyId: body.keyId, animId: body.animId });
 }
 
 // ── static GET/HEAD handler ────────────────────────────────────────────────────────────────────
@@ -387,6 +526,13 @@ const server = createServer((req, res) => {
   // /api/* → POST patch endpoints; everything else → static GET/HEAD.
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     const action = pathname.replace(/^\/api\/?/, "");
+    // GET /api/health — a cheap liveness probe that reports WHICH pipeline.json this server is bound to
+    // (the stale-server / wrong-worktree trap) + its port and boot time. Handled here, before the POST
+    // dispatch, so it never falls through to a patch action or the static handler.
+    if (action === "health" && req.method === "GET") {
+      sendJson(res, 200, { ok: true, pipelinePath, port, startedAt });
+      return;
+    }
     handleApi(req, res, action).catch((err) => {
       // Never let an unexpected throw crash the process or hang the socket.
       try {
@@ -418,9 +564,13 @@ server.on("error", (err) => {
 let watchChild = null;
 
 function startWatchChild() {
-  watchChild = spawn("node", [buildViewerPath, "--pipeline", pipelinePath, "--watch"], {
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+  watchChild = spawn(
+    "node",
+    [buildViewerPath, "--pipeline", pipelinePath, "--out", pixelGenOut, "--watch"],
+    {
+      stdio: ["ignore", "inherit", "inherit"],
+    }
+  );
   watchChild.on("exit", (code, signal) => {
     if (!shuttingDown) {
       console.error(`serve_viewer: build_viewer --watch exited (code=${code}, signal=${signal})`);
@@ -469,7 +619,9 @@ async function main() {
   // 1) one-shot build so data.json + the template are present before we serve.
   try {
     const { execFileSync } = await import("node:child_process");
-    execFileSync("node", [buildViewerPath, "--pipeline", pipelinePath], { stdio: "inherit" });
+    execFileSync("node", [buildViewerPath, "--pipeline", pipelinePath, "--out", pixelGenOut], {
+      stdio: "inherit",
+    });
   } catch (err) {
     console.error(`serve_viewer: initial build_viewer run failed: ${err.message}`);
     process.exit(1);

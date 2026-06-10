@@ -115,8 +115,24 @@ rebuild the pixelGen viewer as the proposal** — every requested asset shows as
 placeholder* with its prompt. **No art is generated and no credits are spent** until they review and
 say "run it". This authoring step sits **before Stage 1** (which then diffs the `pipeline.json` you
 wrote against itself + disk). Skip it when an item already covers the request — go straight to
-Stage 1 gap-fill. **When to read:** `references/intake.md` — the interview questions, how to write
-the `items[]` entry, building the proposal, and the approval gate.
+Stage 1 gap-fill.
+
+**The interview ASKS — it never silently assumes the defining parameters.** Explicitly ask the user
+(batched `AskUserQuestion`, 2–4 per call, parallel calls fine) for, at minimum: **resolution / canvas
+size** (e.g. 32×32 — do not silently default to 32), **frame rate (fps)**, **which keyframes** (the
+master + exactly which children/variants — seasons? damage states? growth stages? — enumerated, not
+assumed), **which animations** (which keyframes get a looping idle, which pairs get a transition),
+**candidates per step** (1/2/4), and **human-gated vs autonomous**. A "default if unanswered" is a
+*fallback only when the user declines*, not the assumed-silent path.
+
+**Offer reusable presets so the user skips re-specifying.** At the start of intake run
+`pipeline-patch.mjs preset-list`; if a saved preset fits, offer "reuse preset `<name>`?" (→
+`preset-apply <name>`) so they don't re-answer canvas/fps/candidates each time. After configuring a new
+family, offer to `preset-save <name>` the chosen settings for next time. Presets are an opt-in
+convenience — they do **not** license silently assuming settings (still ASK per the paragraph above).
+
+**When to read:** `references/intake.md` — the (asking) interview questions, the preset offer, how to
+write the `items[]` entry, building the proposal, and the approval gate.
 
 ## The four stages
 
@@ -147,11 +163,16 @@ Godot project is a **separate, on-demand step that is not part of the pipeline**
 | **3** | Storyboard | For each idle/transition, fill `assets/storyboard.template.md` **against the approved keyframe(s)**, citing real pixel coords: frame count, fps, per-frame force + easing + the concrete pixel-level change. For a transition, f0 = the `from` keyframe and fN = the `to` keyframe exactly. | pixel-art-animation skill |
 | **4** | Animate (**Aseprite, by hand**) | Author every frame in Aseprite per the storyboard — additive-overlay / flexing-base recipe, the two real keyframes locked as the transition endpoints. **No PixelLab v3.** Export `frames/<id>/NN.png` + `previews/<id>.gif`. **The pipeline ends here. Labor-intensive.** | **Aseprite** (`references/aseprite-execution.md`) |
 
-### Updating Godot is a separate step (not a pipeline stage)
+### Publishing to the game is a separate MANUAL session (the pipeline never does it)
 
-Getting the produced frames into the engine — pack frames → v2 `.tres`, import, verify in-engine —
-is **decoupled from the pixel pipeline** and run on demand, **never as a side effect of the
-pipeline or the `npm` build**:
+**The pixel pipeline ends at the produced frames + preview GIF. It never renders into the game.**
+Getting the produced frames into the engine — pack frames → v2 `.tres`, import, verify in-engine — is
+a **deliberate, out-of-scope step the USER runs by hand in a separate session**, **never automatically
+by a pipeline run, and never as a side effect of the `npm` build**. This is by design, not a TODO the
+pipeline should close: a run hands back frames + GIF and stops. Do **not** invoke
+`npm run godot:update-tiles` (or `integrate.mjs`) as part of a pipeline run — leave in-game publishing
+to the user. The how-to below (and `references/godot-integration.md`) is the reference for when the
+**user** chooses to publish; the pipeline itself never triggers it.
 
 ```bash
 npm run godot:update-tiles            # work list from pipeline.json (approved + generated idles)
@@ -201,11 +222,15 @@ the animate stage — so a bad asset never burns the next batch of credits. The 
    record those as the history candidates — the unpromoted seeds die with the review pack.
    Regenerate **only the failed subset** (gap-fill rule 4 re-seeds just those `idx`s) — passing
    candidates are kept.
-3. **Optional human-approval gate.** When `settings.humanApproval` is true (and `autonomous` false),
-   pause for sign-off in the **pixelGen viewer** — the human picks/approves a candidate, which the
-   control server writes back across the split: `selected` + `selectedPath` to `pipeline.json`, and the
-   candidate's `status: "approved"` to `pipeline.history.json`. When `settings.autonomous` is true the
-   gate is skipped and the LLM verdict decides what to approve. In the autonomous path, **record the
+3. **Optional human-approval gate (the viewer-driven closed loop).** When `settings.humanApproval` is
+   true (and `autonomous` false), the orchestrator **blocks on `pipeline-patch.mjs await-review`** while
+   the human reviews in the **pixelGen viewer**. The human drives the *whole* gate from the browser —
+   approve/select a candidate, "Reject all", comment, edit a prompt, reject/comment an animation — then
+   clicks **"Done reviewing — resume run"**, which unblocks `await-review`. **The human no longer types
+   anything in chat.** The full handshake is in §"The viewer-driven human gate" below. The control
+   server writes each decision back across the split: `selected` + `selectedPath` to `pipeline.json`,
+   the candidate's `status: "approved"` to `pipeline.history.json`. When `settings.autonomous` is true
+   the gate is skipped and the LLM verdict decides what to approve. In the autonomous path, **record the
    verdict with `scripts/pipeline-patch.mjs`** (`record-candidate` for each seed, then
    `approve`/`reject "<reason>"`) rather than hand-editing the JSON — it writes the same split as the
    control server (candidate records to `pipeline.history.json`, `selected`/`selectedPath` to
@@ -218,6 +243,53 @@ the animate stage — so a bad asset never burns the next batch of credits. The 
 
 Each gated event is its own batch with its own audit + (optional) human approval, so the next spend
 only happens against assets that already passed.
+
+### The viewer-driven human gate (the closed loop — no chat needed)
+
+At a human-approval checkpoint the orchestrator runs a **closed loop driven entirely from the
+browser**. The human never has to switch to chat and type "I approved, continue" — the pixelGen viewer
+is the *whole* gate surface, and a single blocking CLI call (`await-review`) waits for the human to
+finish. The protocol:
+
+1. **Broadcast progress as you go.** Before each gated spend, set the viewer's run-state banner so the
+   human sees what's happening:
+   ```bash
+   pipeline-patch.mjs run-state running "Stage 2: generating tile_corn candidates (2/4)"
+   ```
+   (`run-state` is `idle | running | waiting | done` + an optional free-text detail.)
+2. **At the gate, mark `waiting` and BLOCK on `await-review`.**
+   ```bash
+   pipeline-patch.mjs run-state waiting "review 3 keyframes"
+   pipeline-patch.mjs await-review            # ← blocks until the human resumes
+   ```
+   `await-review` flips `settings.reviewState = "reviewing"`, polls both data files (narrating each
+   decision as it lands), and **does not return** until the viewer sets `reviewState = "resume"`. The
+   human reviews in pixelGen — approving/selecting candidates, "Reject all" on a bad pool, commenting,
+   editing a prompt, rejecting/commenting an animation — then clicks **"Done reviewing — resume run"**
+   (the sticky resume bar POSTs `/api/resume`). `await-review` then unblocks and prints a
+   machine-readable diff on the `AWAIT_REVIEW_RESULT <json>` line:
+   `{ approved, rejectedAll, failedCandidates, comments, animations, promptEdits }`.
+   (Defaults: timeout 3600 s, poll 2 s; on timeout it prints the partial diff and exits 3.)
+3. **Consume the `AWAIT_REVIEW_RESULT` diff:**
+   - **`approved`** keyframes → proceed (their `selected`/`selectedPath` are already written).
+   - **`rejectedAll`** keyframes and **rejected `animations`** → re-run gap-fill. `build_viewer.mjs
+     --plan` re-emits a rejected animation as `{ action: "animate", redo: true }` and re-seeds the
+     `failed` candidates of a reject-all'd pool, so regenerate against the plan.
+   - **`comments`** (keyframe or animation) → **act on the feedback, then clear it** so the viewer's
+     "feedback pending" chip clears. This is the comment-consume contract — **read → act → clear**:
+     ```bash
+     pipeline-patch.mjs clear-comment <item> <keyframeId>          # a keyframe comment
+     pipeline-patch.mjs clear-comment <item> <for>__idle          # an idle's comment (selector)
+     pipeline-patch.mjs clear-comment <item> <from>__to__<to>     # a transition's comment (selector)
+     ```
+   - **`promptEdits`** → the new prompt is already in `pipeline.json`; regenerate that keyframe against
+     it (no extra step to read it — just re-generate).
+4. **Resume the run.** Broadcast `run-state running …` again and continue to the next gated event. At
+   the very end, `pipeline-patch.mjs run-state done`.
+
+So the gate is: `run-state waiting` → `await-review` (blocks) → human clicks **resume** in the browser
+→ consume the diff (regenerate rejects, act-then-`clear-comment` feedback) → `run-state running`.
+Nothing in chat.
 
 ### Master → children hierarchy
 
@@ -324,33 +396,66 @@ The pipeline is built to fan builders out wide:
 
 ## The viewer loop (closing the loop)
 
-> **Start the control server FIRST, at the top of a run — not at the end.** Before any spend, launch
-> `node scripts/serve_viewer.mjs` (background) and point the human at **http://localhost:8100/pixelGen/**.
-> Its `build_viewer.mjs --watch` child re-emits `data.json` whenever `pipeline.json` changes, so when
-> you record progress through `pipeline-patch.mjs` (candidates generated → approved → animations
-> done) the page **updates live** and the human can watch the family fill in as it's built. Running it
-> only at the end defeats the purpose — the viewer is a *progress monitor*, not just a final report.
-> (Leave it running for the whole session; it also serves the intake proposal and the G4/human gate.)
+> **Start the control server FIRST, at the top of a run — not at the end.** Before any spend, launch it
+> in the background with **`npm run pixelgen:serve`** (the alias for
+> `node scripts/serve_viewer.mjs`; siblings: `pixelgen:build`, `pixelgen:plan`, `pixelgen:show`) and
+> point the human at **http://localhost:8100/pixelGen/**. Its `build_viewer.mjs --watch` child re-emits
+> `data.json` whenever `pipeline.json` changes, so as you record progress through `pipeline-patch.mjs`
+> (candidates generated → approved → animations done) the page **updates live** and the human watches
+> the family fill in. Running it only at the end defeats the purpose — the viewer is a *progress
+> monitor*, not just a final report. (Leave it running the whole session; it also serves the intake
+> proposal and the await-review human gate.)
 
-A static review **viewer** (built by `scripts/build_viewer.mjs` into `pixelGen/`, served at
-**http://localhost:8100/pixelGen/** via the `pixelGen` launch config / `scripts/serve_viewer.mjs`)
-renders the set's keyframes, candidate seeds, idle GIFs, and transitions on one page so you can
-eyeball cohesion across the whole family and confirm the idles/transitions read right in context —
-the human-facing end of the G4 montage check **and the human-approval gate**. The control server
-(`serve_viewer.mjs`) accepts the viewer's select/approve/regen/comment decisions and **patches the
-three-file model in place**, splitting each patch by what it owns: `select`/`comment` and the
-preference half of `approve` write `pipeline.json` (`selected`/`selectedPath`/`comment`); `regen` and
-the record half of `approve` write `pipeline.history.json` (candidate `status`/`reason`). Its spawned
-`build_viewer.mjs --watch` child re-emits `data.json` so the page re-polls live. It doubles as the
-**intake proposal surface** (all-pending before a run; the same cards fill with art after). Iterate:
-**build → montage (G4) → viewer → tune storyboard/params → re-animate** until the family reads as one
-set.
+> **Health-check before you rely on a running server (the stale-server trap).** A server left running
+> from another worktree/checkout serves the **wrong** `pipeline.json` and holds port 8100, so a new run
+> can't bind it. Before trusting it, hit the liveness probe:
+> ```bash
+> curl -s localhost:8100/api/health     # → {"ok":true,"pipelinePath":"…","port":8100,"startedAt":"…"}
+> ```
+> If `pipelinePath` is **not** this worktree's `godot/assets/tiles/v2/pipeline.json`, the server is
+> stale — kill the old node process and restart with `npm run pixelgen:serve`.
+
+The review **viewer** (built by `scripts/build_viewer.mjs` into `pixelGen/`, served at
+**http://localhost:8100/pixelGen/** via `npm run pixelgen:serve` / `scripts/serve_viewer.mjs`) renders
+the set's keyframes, candidate seeds, idle GIFs, and transitions on one page so you can eyeball
+cohesion across the whole family and confirm the idles/transitions read right in context — the
+human-facing end of the G4 montage check **and the await-review human gate**. The control server
+(`serve_viewer.mjs`) accepts the viewer's decisions over POST `/api/{select, approve, regen, comment,
+reject-all, prompt, resume, anim-reject, anim-comment}` (+ `GET /api/health`) and **patches the
+three-file model in place**, splitting each patch by what it owns: `select`/`comment`/`prompt`/the
+preference half of `approve`/`reject-all`'s selection-clear/`resume`/`anim-*` write `pipeline.json`;
+`regen` and the record half of `approve`/`reject-all` write `pipeline.history.json` (candidate
+`status`/`reason`). Its spawned `build_viewer.mjs --watch` child re-emits `data.json` so the page
+re-polls live. It doubles as the **intake proposal surface** (all-pending before a run; the same cards
+fill with art after).
+
+**What the viewer can now do (the gate is the whole browser surface):**
+- **One-click Approve / Select** on each candidate (writes `selected`/`selectedPath` + history).
+- **"Reject all"** on a keyframe — every candidate → `failed` (re-seeded by gap-fill), selection
+  cleared.
+- **Animation Reject + comment** controls (an `anim-reject` flips the GIF to `rejected` → gap-fill
+  re-animates it `redo:true`).
+- **Comment round-trip** on keyframes and animations, with a **"feedback pending"** chip that clears
+  once the orchestrator `clear-comment`s the consumed note.
+- **Editable keyframe prompt** in place (no hand-editing `pipeline.json`).
+- **Frame scrubber** on each animation, and a **click-to-zoom overlay** with a **3×3 board tiling** so
+  you can judge a tile in context.
+- A **priors strip** per item (the family/cohesion references).
+- **Needs-you highlighting + float-to-top** so the keyframes awaiting your decision surface first.
+- A **run-state banner** (the orchestrator's progress) and a sticky **"Done reviewing — resume run"**
+  bar that POSTs `/api/resume` to unblock `await-review`.
+- **Read-only mode:** if no control server is reachable (e.g. a published static snapshot), the page
+  says so calmly — *"Read-only — no control server. Decisions and comments won't be saved."* — and
+  hides the write affordances rather than silently dropping clicks.
+
+Iterate: **build → montage (G4) → viewer → tune storyboard/params → re-animate** until the family reads
+as one set.
 
 ## Bundled files — when to read each
 
 | File | When to read |
 |------|--------------|
-| `references/intake.md` | **Intake** — the interview that turns "make me N tiles" into a `pipeline.json` `items[]` entry + the pixelGen proposal, before any spend. |
+| `references/intake.md` | **Intake** — the interview (which **asks** canvas/fps/keyframes/animations/candidates/gate, never silently assumes them; offers reusable presets) that turns "make me N tiles" into a `pipeline.json` `items[]` entry + the pixelGen proposal, before any spend. |
 | `references/reference-assets-spec.md` | Stage 0 — what references to supply; every `_style-spec.json` field + how it's extracted. |
 | `references/manifest-schema.md` | Stage 1 — the three-file model (`pipeline.json` spec + state / `pipeline.history.json` candidate-log sidecar / `pipeline.schema.json` formal definition), the `manifest.mjs` seam + merged view + degraded mode, structural gap-fill, every field. |
 | `references/aseprite-execution.md` | Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe (additive-overlay + flexing-base), conformance helpers, Windows/path gotchas. |
@@ -368,9 +473,9 @@ set.
 | Script | What it does |
 |--------|--------------|
 | `scripts/manifest.mjs` | The shared three-file seam every other script imports: `loadPipeline`/`loadHistory`/`loadSchema`, `loadMerged`/`mergeInto` (splice candidates back onto keyframes for the projection/plan code), `writePipeline`/`writeHistory` (atomic temp+rename), `validate`/`validateDoc` (against `pipeline.schema.json`), `historyPath`/`schemaPath`. Validate the **on-disk** docs, never the merged shape. |
-| `scripts/build_viewer.mjs` | Reads + schema-validates `pipeline.json` **and** `pipeline.history.json` via `manifest.mjs` (REFUSES on invalid data; missing sidecar → degraded mode, approved art from `selectedPath`), emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change (watches both data files); `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) off the merged view as JSON without building. |
-| `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) validates then **patches the three-file model in place**, writing only the file(s) the action owns (`select`/`comment` → `pipeline.json`; `regen` → `pipeline.history.json`; `approve` → both, history first). All load/validate/write via `manifest.mjs`. Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
-| `scripts/pipeline-patch.mjs` | **Three-file bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `show`. Writes the same split as the control server via `manifest.mjs` (candidate records → `pipeline.history.json`; `selected`/`selectedPath`, animation status/gif/storyboard, mode → `pipeline.json`), atomic temp+rename. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
+| `scripts/build_viewer.mjs` | Reads + schema-validates `pipeline.json` **and** `pipeline.history.json` via `manifest.mjs` (REFUSES on invalid data; missing sidecar → degraded mode, approved art from `selectedPath`), emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). Also surfaces the orchestrator's `runState` + the `reviewState`-derived `awaitingHuman` flag the viewer's banner/resume-bar read. `--watch` re-emits `data.json` on change (watches both data files); `--plan` (alias `npm run pixelgen:plan`) prints the structural gap-fill action list off the merged view as JSON without building — `generate-master` / `generate-child` / `animate` (a viewer-rejected animation re-emits as `{ action: "animate", redo: true }`) / `reseed` (re-seeds the `failed` candidates a "Reject all" left behind). |
+| `scripts/serve_viewer.mjs` | The pixelGen **control server** (`npm run pixelgen:serve`): static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` — `select` / `approve` / `regen` / `comment` / `reject-all` / `prompt` / `resume` / `anim-reject` / `anim-comment` — validates then **patches the three-file model in place**, writing only the file(s) the action owns (preference/comment/prompt/resume/anim-* → `pipeline.json`; `regen` → `pipeline.history.json`; `approve`/`reject-all` → both, history first). `GET /api/health` → `{ok, pipelinePath, port, startedAt}` (the stale-server check). All load/validate/write via `manifest.mjs`. Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
+| `scripts/pipeline-patch.mjs` | **Three-file bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `reject-all "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `run-state <status> ["detail"]` / `clear-comment <item> <keyOrSelector>` / `await-review [--timeout N] [--interval N]` / `preset-save\|preset-list\|preset-show\|preset-apply` / `show`. `run-state` + `await-review` drive the **viewer human gate** (broadcast progress, then BLOCK until the human clicks resume, printing `AWAIT_REVIEW_RESULT <json>`); `clear-comment` consumes acted-on feedback; the `preset-*` commands manage reusable generation-setting bundles for intake. Writes the same split as the control server via `manifest.mjs` (candidate records → `pipeline.history.json`; `selected`/`selectedPath`, animation status/gif/storyboard, mode, run-state, presets → `pipeline.json`), atomic temp+rename. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
 | `scripts/integrate.mjs` | The **Godot update engine** (a separate step, **not** a pipeline stage; exposed as `tools/update-godot-tiles.mjs` / `npm run godot:update-tiles`, which imports its `main`). Loads + schema-validates `pipeline.json` via `manifest.mjs` (REFUSES on invalid data; needs only the spec, not history) → `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (idles whose keyframe is approved via `selected !== null` + `status: generated`) or explicit `<framesDir> <outTres>` pairs; `--list` dry-runs the work list as JSON with no Godot binary. |
 | `scripts/pixellab.mjs` | The PixelLab **keyframe** client + importable module (Stage 2 only — keyframes; **not** animation). `balance` checks credits. **Object flow:** `create-object` (review pack of candidate seeds; `--style a.png,b.png` = image conditioning on priors; downloads every `cand_NN.png`) → `select-frames --indices` (promote audited picks; each becomes a persistent object) → `state --object <id>` (derive a child keyframe from a master, identity/size-preserving) → `fetch-frames` (resume/re-download) → `object --id` (raw `get_object`, debug). Legacy `create` (text-only map-object still) remains for one-offs. All image payloads are read/written as files — base64 never passes through the LLM. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). **Escape hatch (NOT the pipeline path):** an `animate`/`fetch-anim` v3 path exists for prototyping only — **the pipeline animates in Aseprite**; do not use it to produce shipped motion. |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |
