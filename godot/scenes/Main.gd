@@ -274,6 +274,9 @@ func _ready() -> void:
 	_hud.board = board   # the HUD reads board only for the reward-chip fly-from start point
 	board.chain_changed.connect(_on_chain_changed)
 	board.chain_resolved.connect(_on_chain_resolved)
+	# A too-short drag (2+ cells but under the chain minimum) gives denied feedback —
+	# the buzz + a tiny board nudge — so the min-chain rule teaches itself.
+	board.chain_rejected.connect(_on_chain_rejected)
 	# M8c — a tapped cell while a tap-target tool is armed fires the armed tool on it.
 	board.cell_tapped.connect(_on_tool_target)
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
@@ -473,6 +476,15 @@ func _refresh_runes() -> void: if _hud: _hud._refresh_runes()
 func _refresh_season_bar() -> void: if _hud: _hud._refresh_season_bar()
 func _refresh_chain_progress() -> void: if _hud: _hud._refresh_chain_progress()
 func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
+
+## A real drag attempt fell short of the chain minimum: denied buzz + a small board
+## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake) + a status hint.
+func _on_chain_rejected(length: int) -> void:
+	if _audio != null:
+		_audio.play("buzz")
+	UiFx.shake(board, 3.0, 0.22)
+	if _status_label != null:
+		_status_label.text = "Chain of %d — need %d or more." % [length, board.min_chain]
 
 ## Switch between the five persistent bottom-nav VIEWS without stacking them. Tapping a
 ## nav tab routes here (NOT straight to the opener): we first hide any OTHER primary view
