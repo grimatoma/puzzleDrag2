@@ -46,6 +46,7 @@ func _initialize() -> void:
 func _run() -> void:
 	await _test_states_and_chain_math()
 	await _test_tool_flow()
+	await _test_fill_bias_flow()
 	await _test_geometry()
 
 ## A full 6x6 grid where every cell holds `tile`.
@@ -205,6 +206,82 @@ func _test_tool_flow() -> void:
 	_check(not main.game.is_tool_armed(), "the panel DISARM button disarms")
 	_check(not board._targeting, "the board leaves targeting mode on disarm")
 	_check(hud._action_idle.visible, "panel returns to IDLE after disarm")
+
+	main.free()
+	await process_frame
+	SaveManager.clear()
+
+## Fill-bias (fertilizer &c) is armed via the transient bias, NOT pending_tool, so the action
+## panel + hotbar must surface it through the SAME armed affordances as a tap-tool (React
+## treats an armed fertilizer like an armed tool). Asserts: inspect → arm flips the panel to
+## the ARMED fill_bias view with a DISARM button + a lit hotbar slot; the armed view survives
+## a chain ending; DISARM refunds the spent charge and returns to IDLE; and tapping ANOTHER
+## tool while a fill_bias is armed TRANSFERS the arming (disarm+refund the old, arm the new).
+func _test_fill_bias_flow() -> void:
+	var main = await _fresh_main()
+	var hud = main._hud
+	var board = main.board
+	board.set_active(true)
+	board.grid = _full(T.GRASS)
+	board._build_tiles()
+
+	# Own one fertilizer (a fill_bias tool) + one bomb (a tap tool, for the transfer check).
+	main.game.grant_tool("fertilizer", 1)
+	main.game.grant_tool("bomb", 1)
+	hud._refresh_tools()
+	_check(hud._tool_buttons.has("fertilizer"), "the fertilizer hotbar slot is built")
+
+	# ── inspect the fill_bias tool: TOOL view in INSPECT mode (instant "USE NOW", not armed) ──
+	hud._on_tool_slot_tapped("fertilizer")
+	_check(hud._action_tool.visible, "tapping the fertilizer slot flips the panel to TOOL")
+	_check("TOOL INSPECT" in hud._tool_armed_title.text,
+		"un-armed fill_bias header reads TOOL INSPECT (got '%s')" % hud._tool_armed_title.text)
+	_check(hud._tool_action_btn.text == "✓ USE NOW", "un-armed fill_bias footer offers USE NOW")
+	_check(not main.game.is_fill_bias_armed(), "inspecting does not arm the bias")
+	_check(not hud._is_armed_fill_bias("fertilizer"), "fertilizer slot not yet armed-highlighted")
+
+	# ── arm via a second slot tap: the bias ARMS, the panel flips to the DISARM affordance ──
+	hud._on_tool_slot_tapped("fertilizer")
+	_check(main.game.is_fill_bias_armed(), "the second tap arms the fill_bias")
+	_check(main.game.fill_bias_target == T.WHEAT, "fertilizer arms the bias to WHEAT")
+	_check(main.game.tool_count("fertilizer") == 0, "arming spent the fertilizer charge (1 → 0)")
+	_check(hud._action_tool.visible, "the panel stays on TOOL for the armed bias")
+	_check("TOOL ARMED" in hud._tool_armed_title.text,
+		"armed fill_bias header reads TOOL ARMED (got '%s')" % hud._tool_armed_title.text)
+	_check(hud._tool_action_btn.text == "✕ DISARM", "armed fill_bias footer offers DISARM")
+	_check(hud._is_armed_fill_bias("fertilizer"),
+		"the fertilizer slot is armed-highlighted (drives the hotbar slot highlight)")
+	_check(main.game.armed_fill_bias_tool() == "fertilizer",
+		"the armed-bias tool id resolves to fertilizer")
+
+	# ── the armed fill_bias SURVIVES a chain ending (armed ≠ plain inspect) ──
+	_drag_top_row(board, 2)
+	board._finish_drag()                          # too short — nothing resolves
+	for _i in 2:
+		await process_frame
+	_check(hud._action_tool.visible and "ARMED" in hud._tool_armed_title.text,
+		"the armed fill_bias view survives a chain ending")
+
+	# ── DISARM via the panel button: the charge is REFUNDED, panel back to IDLE ──
+	hud._on_tool_action_pressed()                 # ✕ DISARM → Main._disarm_tool (refund path)
+	_check(not main.game.is_fill_bias_armed(), "the panel DISARM button disarms the bias")
+	_check(main.game.fill_bias_target == Constants.EMPTY, "the bias target is cleared on disarm")
+	_check(main.game.tool_count("fertilizer") == 1, "DISARM refunds the spent charge (0 → 1)")
+	_check(hud._action_idle.visible, "panel returns to IDLE after the fill_bias disarms")
+
+	# ── TRANSFER: tapping bomb while the fill_bias is armed disarms+refunds it, arms bomb ──
+	hud._on_tool_slot_tapped("fertilizer")        # inspect …
+	hud._on_tool_slot_tapped("fertilizer")        # … then arm the bias again
+	_check(main.game.is_fill_bias_armed() and main.game.tool_count("fertilizer") == 0,
+		"(setup) fill_bias re-armed for the transfer check")
+	hud._on_tool_slot_tapped("bomb")              # tap a DIFFERENT tool → transfer the arming
+	_check(not main.game.is_fill_bias_armed(),
+		"tapping another tool disarms the fill_bias (React maybeTransferArming)")
+	_check(main.game.tool_count("fertilizer") == 1, "the transfer refunds the fill_bias charge")
+	_check(main.game.pending_tool == "bomb" and main.game.is_tool_armed(),
+		"the transfer arms the newly-tapped tap-tool (bomb)")
+	_check(hud._action_tool.visible and "ARMED" in hud._tool_armed_title.text,
+		"the panel now shows the bomb armed (transfer complete)")
 
 	main.free()
 	await process_frame

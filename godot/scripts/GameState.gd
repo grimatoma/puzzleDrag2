@@ -973,6 +973,13 @@ var pending_tool: String:
 ## absent from to_dict/from_dict — a per-session transient, exactly like pending_tool above.
 var fill_bias_target: int = Constants.EMPTY   ## armed bias target Tile, EMPTY when off
 var fill_bias_turns: int = 0                  ## remaining biased farm turns
+## Id of the tool that armed the live bias ("" when off). The board never shows a fill_bias
+## tool as a pending tap-tool, so the HUD reads this to highlight EXACTLY the slot the player
+## armed — fertilizer/bird_feed/sapling/magic_fertilizer all funnel into the SAME transient
+## bias and fertilizer + magic_fertilizer share WHEAT, so a target → tool reverse map is
+## ambiguous. Refund on disarm hands the charge back to this tool. Transient like the bias
+## itself (to_dict/from_dict skip it; a save/reload simply clears it).
+var fill_bias_tool: String = ""
 
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
@@ -2814,6 +2821,7 @@ func note_farm_turn() -> Dictionary:
 		fill_bias_turns -= 1
 		if fill_bias_turns <= 0:
 			fill_bias_target = Constants.EMPTY
+			fill_bias_tool = ""
 	var harvest: bool = false
 	var ended: bool = false
 	# `budget > 0` guard: a non-positive budget (corrupt save / test edge) is treated as
@@ -3072,6 +3080,7 @@ func close_season() -> Dictionary:
 	tile_free_moves = 0
 	fill_bias_target = Constants.EMPTY
 	fill_bias_turns = 0
+	fill_bias_tool = ""
 	# Clear the run + reset the farm to a fresh Spring on the home board.
 	farm_run_active = false
 	farm_run_budget = 0
@@ -4310,6 +4319,33 @@ func is_tool_armed() -> bool:
 func clear_pending_tool() -> void:
 	tool_state.disarm()
 
+## True while a fill_bias spawn bias is armed (the React `isFillBiasArmed` predicate). A
+## fill_bias tool (fertilizer/bird_feed/sapling/magic_fertilizer) never enters the board's
+## pending-tap mode, so this is the SECOND armed-mode the HUD must surface alongside
+## is_tool_armed() — without it an armed fertilizer shows no panel state or hotbar highlight.
+func is_fill_bias_armed() -> bool:
+	return fill_bias_turns > 0 and fill_bias_target != Constants.EMPTY
+
+## The id of the tool that armed the live fill_bias ("" when none). Lets the HUD highlight the
+## exact slot the player armed (see fill_bias_tool — target → tool would be ambiguous).
+func armed_fill_bias_tool() -> String:
+	return fill_bias_tool if is_fill_bias_armed() else ""
+
+## Disarm a live fill_bias and REFUND the charge the arming spent (React `disarmFillBias`,
+## the web's "re-dispatch USE_TOOL fertilizer = disarm + refund" toggle). Clears the transient
+## bias and hands one charge back to the tool that armed it. Returns true when a bias was
+## disarmed, false when none was armed.
+func disarm_fill_bias() -> bool:
+	if not is_fill_bias_armed():
+		return false
+	var refund_id: String = fill_bias_tool
+	fill_bias_target = Constants.EMPTY
+	fill_bias_turns = 0
+	fill_bias_tool = ""
+	if refund_id != "" and ToolConfig.has_tool(refund_id):
+		grant_tool(refund_id, 1)
+	return true
+
 ## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
 ## Returns {ok, reason, grid, collected}:
 ##   - ok=false leaves the grid/inventory/charges UNCHANGED and names the FIRST guard
@@ -4370,6 +4406,7 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		var p: Dictionary = ToolConfig.get_tool(id).get("params", {})
 		fill_bias_target = int(p.get("target", Constants.EMPTY))
 		fill_bias_turns = maxi(1, int(p.get("turns", 1)))
+		fill_bias_tool = id
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
