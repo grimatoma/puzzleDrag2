@@ -564,6 +564,10 @@ func _switch_primary_view(opener: String) -> void:
 ## opening one primary view first hides any other open one. The opener then sets the active tab
 ## (_hud.set_nav_current + _hud._refresh_nav) itself. Unknown keys are a no-op.
 func _on_nav_selected(key: String) -> void:
+	# Tapping the already-active tab is a no-op — avoids a blink caused by _switch_primary_view
+	# hiding all primaries (including the current one) before re-opening it.
+	if key == _hud._nav_current:
+		return
 	# review-3 — the 🔨 Craft tab opens the dedicated CRAFTING UI (RecipeWikiScreen) now,
 	# not the town-management ledger (TownScreen). The ledger moved to the ☰ menu ("Market
 	# & Town") + the town-map "📋 Town Ledger" button.
