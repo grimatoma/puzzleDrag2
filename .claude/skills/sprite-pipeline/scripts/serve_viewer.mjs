@@ -15,7 +15,7 @@
 //      write goes through the shared `manifest.mjs` seam.
 //
 //   Which file each action dirties:
-//     select   → pipeline.json only          (sets key.selected)
+//     select   → pipeline.json only          (sets key.selected + key.selectedPath, kept paired)
 //     approve  → pipeline.json + history.json (sets key.selected + key.selectedPath; candidate→approved)
 //     regen    → history.json only           (each flagged candidate → failed + reason)
 //     comment  → pipeline.json only          (sets key.comment)
@@ -161,13 +161,18 @@ function candidateAt(histCands, idx) {
 // The handler writes ONLY the files flagged dirty (history first, then pipeline). `key` lives in the
 // loaded pipeline; `histCands` aliases into the loaded history, so mutations there persist on write.
 const ACTIONS = {
-  // preference only — set key.selected in pipeline. No history change.
+  // preference only — set key.selected (and the paired key.selectedPath) in pipeline. No history
+  // change: select expresses a preference, it does not commit a candidate, so no status flips.
+  // selectedPath is DEFINED as "the path of the candidate at idx `selected`", so it must move with
+  // `selected` or it goes stale (e.g. approve@0 then select@2 would leave selectedPath on cand 0).
   select({ key, histCands, body }) {
     if (!Number.isInteger(body.idx)) return { error: { code: 400, msg: "idx must be an integer" } };
-    if (!candidateAt(histCands, body.idx)) {
+    const cand = candidateAt(histCands, body.idx);
+    if (!cand) {
       return { error: { code: 400, msg: `idx out of range: ${body.idx}` } };
     }
     key.selected = body.idx;
+    key.selectedPath = typeof cand.path === "string" ? cand.path : null;
     return { dirty: { pipeline: true, history: false } };
   },
 
@@ -289,11 +294,11 @@ async function handleApi(req, res, action) {
       ...manifest.validateDoc(history, schema, "historyDoc"),
     ];
     if (errs.length) {
-      sendText(res, 500, `500 invalid pipeline data: ${errs.join("; ")}`);
+      sendText(res, 500, `500 invalid pipeline/history data: ${errs.join("; ")}`);
       return;
     }
   } catch (err) {
-    sendText(res, 500, `500 pipeline data unreadable: ${err.message}`);
+    sendText(res, 500, `500 pipeline/history/schema unreadable: ${err.message}`);
     return;
   }
 
@@ -311,7 +316,11 @@ async function handleApi(req, res, action) {
 
   // Write ONLY the files the action dirtied. When both changed (approve), write history FIRST then
   // pipeline so the watcher's rebuild always ends on a consistent pair (selectedPath ↔ approved
-  // status). The `histCands` array aliases into `history`, so its mutations are already reflected.
+  // status). A --watch rebuild that races in BETWEEN the two writes is harmless: build_viewer derives
+  // keyframe status from pipeline.selected (still the prior selection at that instant), so the interim
+  // data.json just shows the old selection — never a crash or a dangling path — and the following
+  // pipeline write + re-rebuild reconciles it. The `histCands` array aliases into `history`, so its
+  // mutations are already reflected.
   const dirty = result.dirty || {};
   try {
     if (dirty.history) manifest.writeHistory(pipelinePath, history);
