@@ -5,6 +5,14 @@
 > build"): directing the motion on paper catches "it's just a sliding crossfade" before you've
 > spent the effort authoring cels in Aseprite. Replace every `<…>` and delete the example block
 > at the bottom (or keep it as a guide).
+>
+> **Write this storyboard AGAINST the already-generated keyframe still — not before it.** The
+> still exists by the time you storyboard (Stage 3 runs after Stage 2). **`get_pixels` the real
+> approved keyframe first** and cite **real coordinates** in the per-frame plan — only reference
+> pixels that actually exist. (A storyboard that named a winter-glint coordinate which turned out
+> transparent bit us once: the glint had nothing to land on.) `scripts/pixels.mjs`
+> gives the opaque-pixel feature map so you can confirm a coordinate is non-transparent before you
+> cite it.
 
 ## Header
 - **Asset / set id:** `<id>` (e.g. `birch`)

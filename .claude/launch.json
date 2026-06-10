@@ -15,6 +15,12 @@
     },
     {
       "name": "pixelGen",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/skills/sprite-pipeline/scripts/serve_viewer.mjs"],
+      "port": 8100
+    },
+    {
+      "name": "pixelGen-static",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8100", "--directory", "godot/assets/tiles/v2"],
       "port": 8100

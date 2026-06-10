@@ -1,26 +1,31 @@
 #!/usr/bin/env node
 // sprite-pipeline — build the static review viewer.
 //
-// Scans the per-set directories (each `sets/<set>/manifest.json` + its outputs), works out which
-// declared keyframes / idles / transitions are present on disk vs still pending, and emits a
-// self-contained review site into <out>/: a `data.json` (the scan result) plus a copy of the
-// `viewer/` template (index.html + viewer.css + viewer.js). Open <out>/index.html (served — the
-// page fetches data.json) to eyeball the whole family, comment per asset, and copy the comments
-// out to drive the next pass.
+// Reads the single source of truth `godot/assets/tiles/v2/pipeline.json` (global settings + a flat
+// list of hierarchical items, each a master + children + animations, candidates inline) and emits a
+// browser-facing projection into <out>/: a `data.json` plus a copy of the `viewer/` template
+// (index.html + viewer.css + viewer.js). Open <out>/index.html (served — the page fetches data.json)
+// to eyeball the whole family.
 //
 // Node built-ins only (fs, path, url) — no npm deps, no build step.
 //
-//   node build_viewer.mjs [--sets <dir>] [--out <dir>]
+//   node build_viewer.mjs [--pipeline <file>] [--out <dir>] [--plan] [--watch]
 //
 // Defaults target this Godot game:
-//   --sets  godot/assets/tiles/v2/sets        (one subdir per set, each with manifest.json)
-//   --out   godot/assets/tiles/v2/pixelGen    (built site; lives under the same v2/ tree so it
-//                                              can reference generated assets by RELATIVE path)
+//   --pipeline  godot/assets/tiles/v2/pipeline.json   (the source of truth)
+//   --out       godot/assets/tiles/v2/pixelGen        (built site; lives under the same v2/ tree so
+//                                                      it can reference generated assets by RELATIVE
+//                                                      path)
 //
-// The out dir sits beside `sets/` under v2/, so every asset path in data.json is written relative
-// to <out> (e.g. `../sets/birch/previews/tile_tree_birch_autumn.gif`) and resolves when served.
-// Serve v2/ (e.g. the `pixelGen` launch config: http.server --directory godot/assets/tiles/v2) and
-// open http://localhost:8100/pixelGen/ — off the game port so the service worker can't hijack it.
+// Paths inside pipeline.json (candidate `path`, animation `gif`, item `priors`, `styleSpec`) are
+// relative to pipeline.json's own dir (v2/). We resolve them against that dir, then rewrite to a
+// path relative to <out> (e.g. `../sets/birch/previews/...`) so they resolve when served. A URL is
+// emitted only when the underlying file exists on disk; otherwise it is null.
+//
+// Flags:
+//   --plan   print a JSON array of structural gap-fill actions (no data.json, no template copy).
+//   --watch  after the initial build, watch pipeline.json + the v2 asset tree and re-emit data.json
+//            on change (debounced). Runs until killed.
 //
 // Idempotent + non-destructive: re-running just refreshes data.json + the template copy. Do NOT
 // commit the built pixelGen/ output — it is a generated artifact (.gitignore covers it).
@@ -35,13 +40,25 @@ const VIEWER_SRC = path.resolve(HERE, "..", "viewer");
 
 // ── arg parsing ────────────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const out = { sets: "godot/assets/tiles/v2/sets", out: "godot/assets/tiles/v2/pixelGen" };
+  const out = {
+    pipeline: "godot/assets/tiles/v2/pipeline.json",
+    out: "godot/assets/tiles/v2/pixelGen",
+    plan: false,
+    watch: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--sets") out.sets = argv[++i];
+    if (a === "--pipeline") out.pipeline = argv[++i];
     else if (a === "--out") out.out = argv[++i];
+    // `--sets` is accepted for back-compat but is informational only: the input is now
+    // pipeline.json (default beside the v2 tree). Prefer the explicit --pipeline.
+    else if (a === "--sets") out.sets = argv[++i];
+    else if (a === "--plan") out.plan = true;
+    else if (a === "--watch") out.watch = true;
     else if (a === "--help" || a === "-h") {
-      console.log("usage: node build_viewer.mjs [--sets <dir>] [--out <dir>]");
+      console.log(
+        "usage: node build_viewer.mjs [--pipeline <file>] [--out <dir>] [--plan] [--watch]"
+      );
       process.exit(0);
     } else {
       console.error(`unknown arg: ${a}`);
@@ -71,110 +88,268 @@ const readJson = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
 // POSIX-style relative path (forward slashes) so it works as a URL when served, on any OS.
 const relUrl = (fromDir, toPath) => path.relative(fromDir, toPath).split(path.sep).join("/");
 
-// ── per-set scan ───────────────────────────────────────────────────────────────────────────
-// Read one manifest and resolve every declared id to {present-on-disk | pending}, plus the
-// relative asset paths the viewer needs. `outDir` is where data.json lands (paths are relative
-// to it). An asset is `generated` when its primary file exists; `pending` (placeholder) when the
-// id is declared but absent; `approved` only if the manifest row opts in (`approved: true`) —
-// `approved` is an optional manifest field (see manifest-schema.md), surfaced if present, never invented.
-
-function statusFor(present, declaredApproved) {
-  if (!present) return "pending";
-  return declaredApproved ? "approved" : "generated";
+// Resolve a pipeline-relative path to a URL relative to the out dir, but only if the file exists.
+// `baseDir` is pipeline.json's own dir (paths in the file are relative to it). Returns null when the
+// path is missing/blank or the file isn't on disk.
+function assetUrl(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return null;
+  const abs = path.resolve(baseDir, rel);
+  if (!isFile(abs)) return null;
+  return relUrl(outDir, abs);
 }
 
-function scanSet(setDir, outDir) {
-  const manifestPath = path.join(setDir, "manifest.json");
-  let manifest;
-  try {
-    manifest = readJson(manifestPath);
-  } catch (err) {
-    return { set: path.basename(setDir), error: `manifest unreadable: ${err.message}`, assets: [] };
+// ── projection: pipeline.json -> data.json shape ─────────────────────────────────────────────
+const num = (v, dflt = null) => (typeof v === "number" ? v : dflt);
+const str = (v, dflt = "") => (typeof v === "string" ? v : dflt);
+
+// Project one master/child keyframe entry into the flattened `keys[]` row.
+function projectKey(entry, role, basePrompt, baseDir, outDir) {
+  const id = str(entry.id);
+  const ownPrompt = str(entry.prompt);
+  const prompt = basePrompt && ownPrompt ? `${basePrompt}, ${ownPrompt}` : basePrompt || ownPrompt;
+
+  const rawCands = Array.isArray(entry.candidates) ? entry.candidates : [];
+  const candidates = rawCands.map((c) => ({
+    idx: num(c.idx, null),
+    url: assetUrl(c.path, baseDir, outDir),
+    status: str(c.status, "generated"),
+    llm: typeof c.llm === "string" ? c.llm : null,
+    reason: typeof c.reason === "string" ? c.reason : null,
+  }));
+
+  const selected =
+    typeof entry.selected === "number" && Number.isFinite(entry.selected) ? entry.selected : null;
+
+  // The approved candidate's url, looked up by idx === selected (fall back to array position).
+  let approvedUrl = null;
+  if (selected !== null) {
+    const sel = candidates.find((c) => c.idx === selected) ?? candidates[selected] ?? null;
+    approvedUrl = sel ? sel.url : null;
   }
 
-  const setName = typeof manifest.set === "string" ? manifest.set : path.basename(setDir);
-  const keyframesDir = path.join(setDir, "keyframes");
-  const previewsDir = path.join(setDir, "previews");
+  // Derived status: approved (a candidate is selected) / review (candidates exist, none chosen) /
+  // pending (no candidates yet).
+  let status;
+  if (selected !== null) status = "approved";
+  else if (candidates.length > 0) status = "review";
+  else status = "pending";
 
-  // keyframe id -> its still path on disk (or null). Used both for keyframe cards and as the
-  // poster still for the idle that animates that keyframe.
-  const keyframePng = (id) => {
-    const p = path.join(keyframesDir, `${id}.png`);
-    return isFile(p) ? p : null;
+  return { id, role, prompt, selected, approvedUrl, status, candidates };
+}
+
+// Build the projected item, returning both the item object and a key-id -> projected-key map (used
+// to resolve animation poster urls).
+function projectItem(item, settings, baseDir, outDir) {
+  const basePrompt = str(item.basePrompt);
+  const canvas = item.canvas && typeof item.canvas === "object" ? item.canvas : settings.canvas;
+
+  const keys = [];
+  const byId = new Map();
+
+  if (item.master && typeof item.master === "object") {
+    const k = projectKey(item.master, "master", basePrompt, baseDir, outDir);
+    keys.push(k);
+    byId.set(k.id, k);
+  }
+  for (const child of Array.isArray(item.children) ? item.children : []) {
+    if (!child || typeof child !== "object") continue;
+    const k = projectKey(child, "child", basePrompt, baseDir, outDir);
+    keys.push(k);
+    byId.set(k.id, k);
+  }
+
+  const animations = [];
+  for (const a of Array.isArray(item.animations) ? item.animations : []) {
+    if (!a || typeof a !== "object") continue;
+    const kind = str(a.kind);
+    const frames = num(a.frames, null);
+    const status = str(a.status, "pending");
+    const gifUrl = assetUrl(a.gif, baseDir, outDir);
+
+    if (kind === "idle") {
+      const forId = str(a.for);
+      const k = byId.get(forId);
+      animations.push({
+        id: `${forId}__idle`,
+        kind: "idle",
+        for: forId,
+        frames,
+        motion: str(a.motion),
+        status,
+        gifUrl,
+        posterUrl: k ? k.approvedUrl : null,
+      });
+    } else if (kind === "transition") {
+      const fromId = str(a.from);
+      const toId = str(a.to);
+      const kFrom = byId.get(fromId);
+      const kTo = byId.get(toId);
+      animations.push({
+        id: `${fromId}__to__${toId}`,
+        kind: "transition",
+        from: fromId,
+        to: toId,
+        frames,
+        physics: str(a.physics),
+        status,
+        gifUrl,
+        posterFromUrl: kFrom ? kFrom.approvedUrl : null,
+        posterToUrl: kTo ? kTo.approvedUrl : null,
+      });
+    }
+  }
+
+  const projected = {
+    id: str(item.id),
+    basePrompt,
+    canvas,
+    keys,
+    animations,
   };
-  const previewGif = (id) => {
-    const p = path.join(previewsDir, `${id}.gif`);
-    return isFile(p) ? p : null;
+  return { projected, byId };
+}
+
+// Build the full data.json projection object from the parsed pipeline + its base dir.
+function buildData(pipeline, baseDir, outDir) {
+  const rawSettings =
+    pipeline.settings && typeof pipeline.settings === "object" ? pipeline.settings : {};
+  const settings = {
+    canvas:
+      rawSettings.canvas && typeof rawSettings.canvas === "object"
+        ? rawSettings.canvas
+        : { width: 32, height: 32, safeArea: 2 },
+    fps: num(rawSettings.fps, 10),
+    candidates: num(rawSettings.candidates, 4),
+    humanApproval: rawSettings.humanApproval === true,
+    autonomous: rawSettings.autonomous === true,
   };
 
-  const assets = [];
+  const items = [];
+  const totals = { items: 0, keyframes: 0, animations: 0, approved: 0, pending: 0, generated: 0 };
 
-  // Keyframes — a base still per declared id.
-  for (const kf of Array.isArray(manifest.keyframes) ? manifest.keyframes : []) {
-    if (!kf || typeof kf.id !== "string") continue;
-    const png = keyframePng(kf.id);
-    const basePrompt = typeof manifest.basePrompt === "string" ? manifest.basePrompt : "";
-    const ownPrompt = typeof kf.prompt === "string" ? kf.prompt : "";
-    const prompt = basePrompt && ownPrompt ? `${basePrompt}, ${ownPrompt}` : basePrompt || ownPrompt;
-    assets.push({
-      id: kf.id,
-      kind: "keyframe",
-      status: statusFor(!!png, kf.approved === true),
-      group: typeof kf.group === "string" ? kf.group : null,
-      generator: typeof kf.generator === "string" ? kf.generator : null,
-      prompt,
-      png: png ? relUrl(outDir, png) : null,
-    });
+  for (const item of Array.isArray(pipeline.items) ? pipeline.items : []) {
+    if (!item || typeof item !== "object") continue;
+    const { projected } = projectItem(item, settings, baseDir, outDir);
+    items.push(projected);
+
+    totals.items += 1;
+    totals.keyframes += projected.keys.length;
+    totals.animations += projected.animations.length;
+    for (const k of projected.keys) {
+      if (k.status === "approved") totals.approved += 1;
+      else if (k.status === "pending") totals.pending += 1;
+    }
+    for (const a of projected.animations) {
+      if (a.status === "generated") totals.generated += 1;
+    }
   }
 
-  // Idles — a looping animation for a keyframe; previews/<for>.gif, poster = the keyframe still.
-  for (const idle of Array.isArray(manifest.idles) ? manifest.idles : []) {
-    if (!idle || typeof idle.for !== "string") continue;
-    const gif = previewGif(idle.for);
-    const poster = keyframePng(idle.for);
-    assets.push({
-      id: `${idle.for}__idle`,
-      kind: "idle",
-      for: idle.for,
-      status: statusFor(!!gif, idle.approved === true),
-      frames: typeof idle.frames === "number" ? idle.frames : null,
-      motion: typeof idle.motion === "string" ? idle.motion : "",
-      gif: gif ? relUrl(outDir, gif) : null,
-      poster: poster ? relUrl(outDir, poster) : null,
-    });
+  return {
+    generatedAt: new Date().toISOString(),
+    settings,
+    totals,
+    items,
+  };
+}
+
+// ── structural gap-fill plan (manifest-schema.md §"Gap-fill is structural") ───────────────────
+// Diffs pipeline.json against itself by SHAPE to decide the next actions. Operates on the raw
+// pipeline (not the projection) so it can see candidate `status` and counts directly.
+function buildPlan(pipeline) {
+  const rawSettings =
+    pipeline.settings && typeof pipeline.settings === "object" ? pipeline.settings : {};
+  const targetCandidates = num(rawSettings.candidates, 4);
+  const actions = [];
+
+  const isApproved = (entry) =>
+    entry &&
+    typeof entry === "object" &&
+    typeof entry.selected === "number" &&
+    entry.selected !== null;
+  const cands = (entry) => (entry && Array.isArray(entry.candidates) ? entry.candidates : []);
+  const nonFailedCount = (entry) => cands(entry).filter((c) => c && c.status !== "failed").length;
+
+  for (const item of Array.isArray(pipeline.items) ? pipeline.items : []) {
+    if (!item || typeof item !== "object") continue;
+    const itemId = str(item.id);
+    const master = item.master && typeof item.master === "object" ? item.master : null;
+    const masterApproved = isApproved(master);
+
+    // Rule 1: a master still being chosen (not yet approved) with fewer than `candidates` non-failed
+    // candidates -> generate the remainder. An APPROVED master is full: a candidate has been picked,
+    // so we stop accumulating seeds (this is why the migrated birch yields no action).
+    if (master && !masterApproved) {
+      const have = nonFailedCount(master);
+      if (have < targetCandidates) {
+        actions.push({
+          action: "generate-master",
+          itemId,
+          keyId: str(master.id),
+          count: targetCandidates - have,
+        });
+      }
+    }
+    // Rule 4 (master): re-seed each failed candidate (regardless of approval — a failed seed left a
+    // gap on disk that should be regenerated).
+    if (master) {
+      for (const c of cands(master)) {
+        if (c && c.status === "failed") {
+          actions.push({ action: "reseed", itemId, keyId: str(master.id), idx: num(c.idx, null) });
+        }
+      }
+    }
+
+    // Rule 2: child with no candidates AND an approved master -> generate it.
+    // Rule 4 (child): re-seed each failed candidate.
+    for (const child of Array.isArray(item.children) ? item.children : []) {
+      if (!child || typeof child !== "object") continue;
+      const childId = str(child.id);
+      if (cands(child).length === 0) {
+        if (masterApproved) {
+          actions.push({
+            action: "generate-child",
+            itemId,
+            keyId: childId,
+            count: targetCandidates,
+          });
+        }
+      } else {
+        for (const c of cands(child)) {
+          if (c && c.status === "failed") {
+            actions.push({ action: "reseed", itemId, keyId: childId, idx: num(c.idx, null) });
+          }
+        }
+      }
+    }
+
+    // Rule 3: animation whose referenced keyframes are approved and whose status is pending.
+    const keyById = new Map();
+    if (master) keyById.set(str(master.id), master);
+    for (const child of Array.isArray(item.children) ? item.children : []) {
+      if (child && typeof child === "object") keyById.set(str(child.id), child);
+    }
+    for (const a of Array.isArray(item.animations) ? item.animations : []) {
+      if (!a || typeof a !== "object") continue;
+      if (str(a.status, "pending") !== "pending") continue;
+      let refIds;
+      let animId;
+      if (a.kind === "idle") {
+        refIds = [str(a.for)];
+        animId = `${str(a.for)}__idle`;
+      } else if (a.kind === "transition") {
+        refIds = [str(a.from), str(a.to)];
+        animId = `${str(a.from)}__to__${str(a.to)}`;
+      } else {
+        continue;
+      }
+      const allApproved = refIds.every((id) => isApproved(keyById.get(id)));
+      if (allApproved) {
+        actions.push({ action: "animate", itemId, animation: animId });
+      }
+    }
   }
 
-  // Transitions — a tween from one keyframe to another; previews/<from>__to__<to>.gif.
-  for (const tr of Array.isArray(manifest.transitions) ? manifest.transitions : []) {
-    if (!tr || typeof tr.from !== "string" || typeof tr.to !== "string") continue;
-    const transId = `${tr.from}__to__${tr.to}`;
-    const gif = previewGif(transId);
-    const posterFrom = keyframePng(tr.from);
-    const posterTo = keyframePng(tr.to);
-    assets.push({
-      id: transId,
-      kind: "transition",
-      from: tr.from,
-      to: tr.to,
-      status: statusFor(!!gif, tr.approved === true),
-      frames: typeof tr.frames === "number" ? tr.frames : null,
-      physics: typeof tr.physics === "string" ? tr.physics : "",
-      gif: gif ? relUrl(outDir, gif) : null,
-      posterFrom: posterFrom ? relUrl(outDir, posterFrom) : null,
-      posterTo: posterTo ? relUrl(outDir, posterTo) : null,
-    });
-  }
-
-  const counts = assets.reduce(
-    (acc, a) => {
-      acc[a.status] = (acc[a.status] || 0) + 1;
-      acc.total += 1;
-      return acc;
-    },
-    { total: 0, generated: 0, pending: 0, approved: 0 }
-  );
-
-  return { set: setName, dir: relUrl(outDir, setDir), styleSpec: manifest.styleSpec || null, counts, assets };
+  return actions;
 }
 
 // ── template copy (no recursion needed; viewer/ is flat, but handle subdirs defensively) ─────
@@ -188,61 +363,117 @@ function copyTree(srcDir, dstDir) {
   }
 }
 
+// ── build (emit data.json + copy template) ───────────────────────────────────────────────────
+function emit(pipelinePath, baseDir, outDir, { copyTemplate } = { copyTemplate: true }) {
+  const pipeline = readJson(pipelinePath);
+  const data = buildData(pipeline, baseDir, outDir);
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "data.json"), JSON.stringify(data, null, 2) + "\n");
+  if (copyTemplate) copyTree(VIEWER_SRC, outDir);
+  return data;
+}
+
+// ── watch ──────────────────────────────────────────────────────────────────────────────────
+// Watch pipeline.json + the v2 asset tree; debounce; re-emit data.json. fs.watch recursive is
+// supported on Windows + macOS; on Linux we fall back to a non-recursive watch on the tree root
+// (still catches pipeline.json edits, the common case).
+function startWatch(pipelinePath, baseDir, outDir) {
+  let timer = null;
+  const rebuild = () => {
+    timer = null;
+    try {
+      const data = emit(pipelinePath, baseDir, outDir, { copyTemplate: false });
+      console.log(`rebuilt data.json (${data.totals.items} items)`);
+    } catch (err) {
+      console.error(`watch rebuild failed: ${err.message}`);
+    }
+  };
+  const schedule = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(rebuild, 200);
+  };
+
+  const watchers = [];
+  // The pipeline.json file itself.
+  try {
+    watchers.push(fs.watch(pipelinePath, schedule));
+  } catch (err) {
+    console.error(`could not watch ${pipelinePath}: ${err.message}`);
+  }
+  // The v2 asset tree (recursive where supported).
+  try {
+    watchers.push(fs.watch(baseDir, { recursive: true }, schedule));
+  } catch {
+    // Recursive watch unsupported on this platform — watch the dir root non-recursively.
+    try {
+      watchers.push(fs.watch(baseDir, schedule));
+    } catch (err) {
+      console.error(`could not watch ${baseDir}: ${err.message}`);
+    }
+  }
+
+  console.log(`watching ${relUrl(process.cwd(), pipelinePath)} + asset tree — Ctrl-C to stop`);
+  const close = () => {
+    for (const w of watchers) {
+      try {
+        w.close();
+      } catch {
+        /* ignore */
+      }
+    }
+    process.exit(0);
+  };
+  process.on("SIGINT", close);
+  process.on("SIGTERM", close);
+}
+
 // ── main ───────────────────────────────────────────────────────────────────────────────────
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const setsDir = path.resolve(args.sets);
+  const pipelinePath = path.resolve(args.pipeline);
   const outDir = path.resolve(args.out);
+  const baseDir = path.dirname(pipelinePath);
 
-  if (!isDir(setsDir)) {
-    console.error(`--sets dir not found: ${setsDir}`);
+  if (!isFile(pipelinePath)) {
+    console.error(`--pipeline file not found: ${pipelinePath}`);
     process.exit(1);
   }
+
+  // --plan: just print the structural gap-fill actions; emit nothing.
+  if (args.plan) {
+    let pipeline;
+    try {
+      pipeline = readJson(pipelinePath);
+    } catch (err) {
+      console.error(`pipeline.json unreadable: ${err.message}`);
+      process.exit(1);
+    }
+    const plan = buildPlan(pipeline);
+    console.log(JSON.stringify(plan, null, 2));
+    return;
+  }
+
   if (!isDir(VIEWER_SRC)) {
     console.error(`viewer template not found beside script: ${VIEWER_SRC}`);
     process.exit(1);
   }
 
-  // One section per set: any immediate subdir that has a manifest.json.
-  const setDirs = fs
-    .readdirSync(setsDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => path.join(setsDir, e.name))
-    .filter((d) => isFile(path.join(d, "manifest.json")))
-    .sort();
-
-  fs.mkdirSync(outDir, { recursive: true });
-  const sets = setDirs.map((d) => scanSet(d, outDir));
-
-  const totals = sets.reduce(
-    (acc, s) => {
-      if (s.counts) {
-        acc.generated += s.counts.generated;
-        acc.pending += s.counts.pending;
-        acc.approved += s.counts.approved;
-        acc.total += s.counts.total;
-      }
-      return acc;
-    },
-    { generated: 0, pending: 0, approved: 0, total: 0 }
-  );
-
-  const data = {
-    generatedAt: new Date().toISOString(),
-    setsRoot: relUrl(outDir, setsDir),
-    totals,
-    sets,
-  };
-
-  fs.writeFileSync(path.join(outDir, "data.json"), JSON.stringify(data, null, 2) + "\n");
-  copyTree(VIEWER_SRC, outDir);
-
+  let data;
+  try {
+    data = emit(pipelinePath, baseDir, outDir, { copyTemplate: true });
+  } catch (err) {
+    console.error(`pipeline.json unreadable: ${err.message}`);
+    process.exit(1);
+  }
+  const t = data.totals;
   console.log(
-    `pixelGen: ${sets.length} set(s), ${totals.total} asset(s) ` +
-      `(${totals.generated} generated, ${totals.pending} pending, ${totals.approved} approved)`
+    `pixelGen: ${t.items} item(s), ${t.keyframes} keyframe(s), ${t.animations} animation(s) ` +
+      `(${t.approved} approved, ${t.pending} pending keyframes, ${t.generated} animations generated)`
   );
   console.log(`  data.json + viewer template -> ${outDir}`);
   console.log(`  serve the out dir's parent and open ${path.join(outDir, "index.html")}`);
+
+  if (args.watch) startWatch(pipelinePath, baseDir, outDir);
 }
 
 main();

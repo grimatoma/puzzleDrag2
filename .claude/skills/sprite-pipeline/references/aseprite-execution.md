@@ -16,11 +16,15 @@ filled `assets/storyboard.template.md` into the per-frame PNGs + preview GIF the
 
 You arrive here with:
 - a **storyboard** (`storyboards/<id>.md`, from `assets/storyboard.template.md`) that has passed
-  the Gate-3 critique — frame count `N`, fps, per-frame motion;
-- the **keyframe still(s)** (`keyframes/<id>.png`), and for a transition, both endpoints;
-- the **style spec** (`<assets>/_style-spec.json`) for canvas size, palette ramps, fps.
+  the Gate-3 critique and was written **against the generated still** — frame count `N`, fps,
+  per-frame motion citing real coordinates;
+- the **approved keyframe still(s)** (the selected candidate PNG), and for a transition, both
+  endpoints;
+- the **style spec** (`<assets>/_style-spec.json`) for palette ramps — but **canvas size + fps come
+  from `pipeline.json` `settings` (or per-item overrides), which supersede the style spec's
+  `canvas` / `animation.fps`**.
 
-You leave with, written into the set directory (see `godot-integration.md` for the full layout):
+You leave with, written into the output directory (see `godot-integration.md` for the full layout):
 - `frames/<id>/NN.png` — one PNG per animation frame (`00.png`, `01.png`, …), the Godot input;
 - `previews/<id>.gif` — a looping preview GIF (the Gate-4 montage / viewer input);
 - optionally a horizontal sprite-sheet PNG (+ its `.json` sidecar) for quick inspection.
@@ -36,17 +40,21 @@ below is identical.
 The Aseprite MCP is a stateless CLI: each call re-opens the file, acts, and saves in place. So the
 **first** thing is to give the sprite a stable path; everything after operates on that path.
 
-1. **`create_canvas`** — width/height from `_style-spec.json` (`canvas.width`×`canvas.height`,
-   default 90×90), RGB color mode (preserves RGBA/transparency). It opens at a **temp path**.
-2. **`save_as`** — immediately save to a STABLE working path, e.g.
-   `…/sets/<set>/_work/<id>.aseprite`. From here on, pass that path to every call.
+1. **`create_canvas`** — width/height from `pipeline.json` `settings.canvas` (the 32px tile size;
+   it supersedes the style spec's `canvas`), RGB color mode (preserves RGBA/transparency). It opens
+   at a **temp path**.
+2. **`save_as`** — immediately save to a STABLE working path you **own** (never shared with a
+   sibling builder), e.g. `…/items/<itemId>/_work/<id>.aseprite` (legacy birch used
+   `…/sets/birch/_work/<id>.aseprite`). From here on, pass that path to every call.
 3. **`add_frame` × (N−1)** — the canvas starts with frame 1; add the rest. Each `add_frame` takes a
    `duration_ms` (= `round(1000 / fps)`, e.g. 100 ms at 10 fps). Consecutive calls append in order
    (frame 2, 3, … N).
 4. **`import_image` × N** — map each source PNG to its frame (`frame_number` 1…N), reusing the same
    `layer_name` across frames so they land as cels on one layer. *Or* skip this and **draw
    directly** per frame with `draw_pixels` / `draw_line` / `draw_circle` / `draw_rectangle` /
-   `fill_area` / `draw_with_dither`.
+   `fill_area` / `draw_with_dither`. **Default to the additive-overlay pattern** (below): import the
+   base still on a base layer at every frame, then add motion on a separate `fx` layer — each call
+   carrying an explicit `frame_number` + `layer_name`, **no selection ops**.
 5. **`set_frame_duration`** — override timing on specific frames for **endpoint holds** (a
    transition holds its first and last frame a beat; an idle's extremes get a slow-out beat). This
    is the storyboard's "held" easing made literal.
@@ -68,7 +76,45 @@ each frame to its own file:
   frame `i` in `0…N−1`. Two-digit zero-padded names (`00.png`, `01.png`, …) so they sort in order
   (`assemble_tres.gd` sorts by filename).
 
-Then hand off to `godot-integration.md`: import the PNGs, run `assemble_tres.gd`, get the `.tres`.
+Then hand off to `godot-integration.md`: run `scripts/integrate.mjs` (it imports the PNGs, packs via
+`assemble_tres.gd`, and verifies via `verify_sf.gd` — one command).
+
+---
+
+## Additive overlay — the default, parallel-safe method
+
+Build motion by **adding explicit pixels per frame**, never by selecting and moving a region. Two
+layers per sprite:
+
+- a **base layer** (`tree` by convention): the approved keyframe still, **imported onto every
+  frame** (`import_image`, one `layer_name`, explicit `frame_number`). The static foundation.
+- an **`fx` layer**: the motion, drawn per frame with `import_image` (a pre-rendered cel),
+  `draw_pixels`, or `fill_area` — each call carrying an explicit `frame_number`.
+
+**The parallel-safety rule (why this is the default):** every call is **stateless** — it names the
+exact `frame_number` + `layer_name` it touches, so nothing depends on a hidden cursor or selection
+carried between calls. That is what lets the orchestrator fan **one builder per gap animation out in
+parallel**, each owning its own `_work/<id>.aseprite` file. **Never** use
+`select_rectangle` / `move_selection` / `select_all` / `deselect` / `copy_selection` /
+`cut_selection` / `paste_clipboard` in a pipeline animation: they rely on an implicit selection
+state (which breaks parallel-safety) and they *slide a region* instead of *re-forming the shape*
+(the cardinal animation sin the gates reject).
+
+### Flexing-base recipe (livelier idles)
+
+A static imported base means the silhouette never breathes — fine for a falling leaf / glint /
+drifting snow over a still tree, but a *whole-canopy sway* reads flat. To make the silhouette itself
+move, **pre-render 2–3 base poses** (e.g. canopy leaned left / neutral / right) as separate stills,
+then **cycle them across the frames** on the base layer:
+
+1. Produce the 2–3 pose PNGs (draw or generate them as variants of the approved keyframe).
+2. On the base layer, `import_image` the appropriate pose to **each** `frame_number` (e.g.
+   neutral → left → neutral → right → neutral for a sway loop), so the base breathes frame to frame.
+3. Add the `fx`-layer overlay (leaf, glint, snow) on top exactly as in the static case.
+
+This is **still additive** — each pose is imported to an explicit `frame_number`; **no selection
+ops** — so it stays parallel-safe and stateless. The tradeoff is the extra base-pose art; reach for
+it only when a static base reads dead.
 
 ---
 

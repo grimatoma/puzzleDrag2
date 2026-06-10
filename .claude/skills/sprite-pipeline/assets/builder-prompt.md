@@ -11,63 +11,94 @@ into siblings.
 
 ## Inputs the orchestrator gives you
 
-- **Set directory** — `<assets>/sets/<set>/` (for this game, `godot/assets/tiles/v2/sets/<set>/`).
-  Everything you read and write lives under here.
-- **The manifest** — `<set>/manifest.json`. Find your asset in it: a `keyframes[]` row
-  (`{ id, generator, prompt }`), an `idles[]` row (`{ for, frames?, motion }`), or a
-  `transitions[]` row (`{ from, to, frames?, physics }`). Honour `basePrompt`, `fps`,
-  `framesDefault`, and the `frames` precedence (item `frames` → `framesDefault` → spec
-  `animation.framesDefault`).
-- **The style spec** — the `manifest.styleSpec` path (`<assets>/_style-spec.json`). This is the
+- **Output directory** — where your asset's files live. New generation uses
+  `godot/assets/tiles/v2/items/<itemId>/…`; legacy birch art lives under
+  `godot/assets/tiles/v2/sets/birch/…`. The orchestrator hands you the concrete paths.
+- **The pipeline config** — the single `godot/assets/tiles/v2/pipeline.json` (the source of truth;
+  see `references/manifest-schema.md`). Find your asset in the relevant `items[]` entry: a
+  `master`/`children[]` keyframe (`{ id, prompt, selected, candidates }`) or an `animations[]` row
+  (`{ kind: "idle", for, frames?, motion }` or `{ kind: "transition", from, to, frames?, physics }`).
+  Honour the item `basePrompt`, the per-item or global `fps`/`canvas`, and the `frames` precedence
+  (animation `frames` → spec `animation.framesDefault`).
+- **The style spec** — the `settings.styleSpec` path (`<assets>/_style-spec.json`). This is the
   **cohesion contract**: canvas dims, locked palette ramps + hue-shift, light direction, outline
-  rule, shadow, perspective, dither policy, project FPS/cadence/loop. Every pixel you ship is
-  scored against it (see `references/reference-assets-spec.md`).
-- **Priors** — `manifest.priors[]` plus any already-generated siblings in this set
-  (`keyframes/*.png`). Pass these as visual context so your asset inherits the family's
+  rule, shadow, perspective, dither policy, project FPS/cadence/loop. **`settings.fps` /
+  `settings.canvas` in `pipeline.json` are the pipeline defaults and supersede the style spec's
+  `animation.fps` / `canvas`.** Every pixel you ship is scored against the spec (see
+  `references/reference-assets-spec.md`).
+- **Priors** — the item's `priors[]` plus any already-approved siblings (the keyframes' selected
+  candidate PNGs). Pass these as visual context so your asset inherits the family's
   silhouette / palette / detail density and stays continuous.
 - **(Animation only) the filled storyboard** — `storyboards/<id>.md` (from
-  `assets/storyboard.template.md`), which has **passed its Gate-3 critique**. It is your shot
-  list: frame count `N`, fps, per-frame force + easing + the concrete pixel-level change. You
+  `assets/storyboard.template.md`), which has **passed its Gate-3 critique** and was written
+  **against the already-generated keyframe still** (it cites real pixel coordinates). It is your
+  shot list: frame count `N`, fps, per-frame force + easing + the concrete pixel-level change. You
   execute it; you do not re-improvise the motion.
-- **Your asset kind + id** — `keyframe` / `idle` / `transition`, and the id (the on-disk
-  filename stem, unique and stable within the set).
+- **Your asset kind + id** — `keyframe` (master or child) / `idle` / `transition`, and the id (the
+  on-disk filename stem, unique and stable within the item).
 
 ## What you produce (by kind)
 
 Route by kind. **Stills** may be generated or hand-authored; **all animation is Aseprite**
 (`references/aseprite-execution.md`) — never procedural Pillow.
 
-### Keyframe still → `keyframes/<id>.png`
+### Keyframe still → the candidate PNG(s) (`items/<itemId>/<id>/NN.png`)
 1. Build the effective prompt: `basePrompt + ", " + keyframe.prompt` (the keyframe may restate
    base fields to countermand them). Bake the style spec into it — canvas size, the palette
-   ramps, light direction, outline rule, shadow, perspective.
-2. Generate per `keyframe.generator`:
-   - `"pixellab"` — the **pixellab** skill (async: create → poll `get_*` → download; **check
-     credits first**; do the object review→select step). Pass the priors for continuity.
-   - `"aseprite"` — author/edit the still directly with the Aseprite draw primitives.
+   ramps, light direction, outline rule, shadow, perspective. A **child** keyframe is conditioned
+   on its item's already-**approved** `master` (derive from it, don't reinvent the silhouette).
+2. Generate `settings.candidates` seed(s):
+   - **PixelLab** — the **pixellab** skill or `scripts/pixellab.mjs` (`create --desc … --out …`):
+     async create → poll → download; **check credits first** (`pixellab.mjs balance`). Pass the
+     priors for continuity. Each seed is one candidate `idx` → `NN.png`.
+   - **Aseprite** — author/edit the still directly with the Aseprite draw primitives.
 3. Lift it onto the family look with the conformance helpers in `aseprite-execution.md`:
    `quantize_palette` (snap to the locked ramps — the #1 cohesion failure is palette drift),
    `apply_shading` / `apply_auto_shading` (one-light form shading, not flat fills),
    `suggest_antialiasing` + `apply_outline` (the spec's `outline.rule`). Respect the safe-area
    inset; keep the background transparent.
-4. Save the cleaned still to `keyframes/<id>.png`.
+4. Save the cleaned candidate still to its `NN.png` (the orchestrator records it inline in
+   `pipeline.json`; the human/LLM gate picks which `idx` is approved).
 
 ### Idle / transition → `frames/<id>/NN.png` + `previews/<id>.gif` (+ assembled `<key>.tres`)
+
+**Default method: the additive-overlay technique (parallel-safe + stateless).** Build motion as
+**explicit pixels added per frame**, never by selecting and moving a region. This is the default
+because it is what lets the orchestrator fan **one builder per gap animation out in parallel** (see
+SKILL "Running agents concurrently"): every call is stateless — addressed by an explicit
+`frame_number` + `layer_name`, so no hidden cursor/selection carries between calls.
+
 1. Follow the **frame-assembly recipe** in `references/aseprite-execution.md` exactly:
-   `create_canvas` → `save_as` to a stable `_work/<id>.aseprite` path → `add_frame`×(N−1) with
-   `duration_ms = round(1000/fps)` → realise each frame (import per-frame cels you drew, or draw
-   directly with the primitives) per the **storyboard's pixel-level column** →
-   `set_frame_duration` for endpoint/extreme holds → `create_tag` over `1…N` forward, named the
+   `create_canvas` → `save_as` to a stable `_work/<id>.aseprite` path (your own file — never shared
+   with a sibling builder) → `add_frame`×(N−1) with `duration_ms = round(1000/fps)`.
+2. **Import the approved base still onto a `tree` (base) layer at every frame** (`import_image`,
+   reusing one `layer_name`, explicit `frame_number` per frame). This is the static foundation.
+3. **Draw the motion as additive pixels on a separate `fx` layer**, per the **storyboard's
+   pixel-level column** — `import_image` (a pre-rendered cel), `draw_pixels`, or `fill_area`, each
+   with an explicit `frame_number`. **Never** `select_rectangle` / `move_selection` / `copy` /
+   `cut` / `paste` — those depend on a hidden selection state and break parallel-safety (and slide
+   regions instead of re-forming them).
+4. `set_frame_duration` for endpoint/extreme holds → `create_tag` over `1…N` forward, named the
    spec's `animation.idleAnimationName` (`"idle"`).
-2. Export: `export_sprite` png per frame (`frame_number: i`, two-digit names) →
+5. Export: `export_sprite` png per frame (`frame_number: i`, two-digit names) →
    `frames/<id>/NN.png` (`00.png`, `01.png`, …); then `export_sprite` gif `frame_number: 0`
    (all frames) → `previews/<id>.gif`.
-3. **Assemble the `.tres`** so the set is engine-ready: import the frame PNGs, then run
-   `scripts/assemble_tres.gd` (`<frames_dir> <out_tres> [fps] [anim_name]`) to pack
-   `frames/<id>/` → `<key>.tres` with the `"idle"` animation + `loop = true` + project FPS. See
-   `references/godot-integration.md` (note the `--import` → `git checkout project.godot`
-   two-phase gotcha). If the Godot binary or `--import` is blocked in your sandbox, **stop at the
-   frames + GIF**, say so, and hand back — the orchestrator packs/verifies.
+6. **Assemble the `.tres`** via `scripts/integrate.mjs` (it imports, verifies the `.png.import`
+   sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one command). See
+   `references/godot-integration.md`. If the Godot binary or `--import` is blocked in your sandbox,
+   **stop at the frames + GIF**, say so, and hand back — the orchestrator runs `integrate.mjs`.
+
+**The subtle-idle tradeoff.** A static imported base means the silhouette itself never breathes — the
+overlay does all the moving. That's perfect for a falling leaf / glint / drifting snow over a still
+tree, but a *whole-canopy sway* can read flat. For livelier idles, opt into the **flexing-base
+recipe**: pre-render **2–3 base poses** (e.g. canopy leaned left / neutral / right) as extra base
+cels and **cycle them** across frames so the silhouette breathes, then add the overlay on top. It's
+still additive (each pose is imported to an explicit `frame_number`; no selection ops), so it stays
+parallel-safe. See `references/aseprite-execution.md`.
+
+> `scripts/pixels.mjs` gives you the **opaque-pixel feature map** of the base still —
+> which pixels are non-transparent and what differs between two stills — so your overlay lands on
+> pixels that actually exist (don't draw a glint on a transparent coordinate).
 
 > Use **forward-slash paths** in every Aseprite call — a Windows backslash makes the Go server
 > throw `invalid character 'U' in string escape code`. Same-message calls run sequentially, so
@@ -116,12 +147,13 @@ Don't trust that it animated; look.
 ## Report back
 
 Report concisely:
-- **Asset** — set, id, kind.
-- **Files written** — exact relative paths (`keyframes/<id>.png`, or `frames/<id>/NN.png` count +
-  `previews/<id>.gif` + whether `<key>.tres` was assembled).
-- **Decisions** — for a still: generator used, palette ramps you snapped to, any prompt
-  adjustments. For animation: frame count + fps, the dominant forces you staged, what re-forms
-  vs holds, and the montage observation.
+- **Asset** — item id, keyframe/animation id, kind.
+- **Files written** — exact relative paths (the candidate `NN.png`(s), or `frames/<id>/NN.png` count
+  + `previews/<id>.gif` + whether `<key>.tres` was assembled).
+- **Decisions** — for a still: generator used (PixelLab / Aseprite), candidate count, palette ramps
+  you snapped to, any prompt adjustments. For animation: frame count + fps, base method
+  (static-base vs flexing-base), the dominant forces you staged, what re-forms vs holds, and the
+  montage observation.
 - **Status** — one of:
   - `built` — produced and passes your self-review; ready for the critique gate.
   - `built-needs-pack` — frames + GIF done but `.tres` assembly/verify is blocked in your
@@ -139,6 +171,10 @@ Report concisely:
   only to *fix* a flaw you can name, and say so.
 - **Aseprite is the only animator.** No procedural Pillow frame generation, ever. Pillow is
   review glue (`montage.py`) only.
+- **Additive overlay, never selection ops.** Build motion by adding explicit pixels per
+  `frame_number` on an `fx` layer over the imported base. **No `select_rectangle` /
+  `move_selection` / `copy` / `cut` / `paste`** — they break parallel-safety and slide regions
+  instead of re-forming them. (Flexing-base poses are imported per-frame; still no selection ops.)
 - **Never fake the output.** If you can't generate the still or build the frames, hand back
   `blocked` with the reason — do not ship a placeholder or a slid crossfade as if it were real
   motion.

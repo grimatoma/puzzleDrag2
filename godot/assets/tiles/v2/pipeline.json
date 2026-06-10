@@ -1,0 +1,72 @@
+{
+  "settings": {
+    "styleSpec": "_style-spec.json",
+    "canvas": { "width": 32, "height": 32, "safeArea": 2 },
+    "fps": 10,
+    "candidates": 4,
+    "humanApproval": true,
+    "autonomous": false
+  },
+  "items": [
+    {
+      "id": "birch_tree",
+      "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
+      "priors": ["../tile_tree_oak.png", "../tile_tree_fir.png"],
+      "master": {
+        "id": "tile_tree_birch_autumn",
+        "prompt": "gold/amber canopy",
+        "selected": 0,
+        "candidates": [
+          {
+            "idx": 0,
+            "path": "sets/birch/keyframes/tile_tree_birch_autumn.png",
+            "status": "approved",
+            "llm": "pass"
+          }
+        ]
+      },
+      "children": [
+        {
+          "id": "tile_tree_birch_winter",
+          "prompt": "bare branches, snow on limbs",
+          "selected": 0,
+          "candidates": [
+            {
+              "idx": 0,
+              "path": "sets/birch/keyframes/tile_tree_birch_winter.png",
+              "status": "approved",
+              "llm": "pass"
+            }
+          ]
+        }
+      ],
+      "animations": [
+        {
+          "kind": "idle",
+          "for": "tile_tree_birch_autumn",
+          "frames": 8,
+          "motion": "sway + occasional falling leaf",
+          "status": "generated",
+          "gif": "sets/birch/previews/tile_tree_birch_autumn.gif"
+        },
+        {
+          "kind": "idle",
+          "for": "tile_tree_birch_winter",
+          "frames": 6,
+          "motion": "bare-branch sway + snow glint",
+          "status": "generated",
+          "gif": "sets/birch/previews/tile_tree_birch_winter.gif"
+        },
+        {
+          "kind": "transition",
+          "from": "tile_tree_birch_autumn",
+          "to": "tile_tree_birch_winter",
+          "frames": 20,
+          "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground",
+          "status": "generated",
+          "gif": "sets/birch/previews/tile_tree_birch_autumn__to__tile_tree_birch_winter.gif"
+        }
+      ]
+    }
+  ]
+}

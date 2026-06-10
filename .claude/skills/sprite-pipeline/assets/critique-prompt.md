@@ -16,24 +16,26 @@ The gates bracket the two expensive operations (Stage 2 generate, Stage 4 animat
 ## Inputs the orchestrator gives you
 
 - **`gate`** — `G1` | `G2` | `G3` | `G4`. This selects your checklist below.
-- **Set directory + asset id** — `<assets>/sets/<set>/` and the id under review.
-- **The style spec** — `manifest.styleSpec` (`<assets>/_style-spec.json`): the locked contract
-  you score against (canvas, palette ramps + hue-shift, light, outline, shadow, perspective,
-  dither, fps/cadence/loop). See `references/reference-assets-spec.md`.
-- **The manifest row** — the `keyframes`/`idles`/`transitions` entry (prompt / motion / physics,
-  frame budget after precedence).
+- **Output directory + asset id** — the item's `items/<itemId>/` tree (legacy birch is under
+  `sets/birch/`) and the id under review.
+- **The style spec** — `pipeline.json` `settings.styleSpec` (`<assets>/_style-spec.json`): the
+  locked contract you score against (palette ramps + hue-shift, light, outline, shadow, perspective,
+  dither). **Canvas size + fps come from `pipeline.json` `settings`/per-item overrides**, which
+  supersede the style spec. See `references/reference-assets-spec.md`.
+- **The pipeline row** — the `master`/`children[]` keyframe or `animations[]` entry in `pipeline.json`
+  (prompt / motion / physics, frame budget after precedence).
 - **The artifact for this gate** (read it directly — see "Independent verification"):
-  - G1 → the prompt text / manifest entry (no art yet).
-  - G2 → the generated still `keyframes/<id>.png`.
-  - G3 → the filled storyboard `storyboards/<id>.md`.
+  - G1 → the prompt text / pipeline entry (no art yet).
+  - G2 → the generated candidate still(s) `items/<itemId>/<id>/NN.png`.
+  - G3 → the filled storyboard `storyboards/<id>.md` (written against the generated still).
   - G4 → the frames `frames/<id>/NN.png` + `previews/<id>.gif`.
-- **Priors / references** — `manifest.priors[]` and the spec's `references[]`, so you can judge
+- **Priors / references** — the item's `priors[]` and the spec's `references[]`, so you can judge
   cohesion against what already shipped.
 
 ## Independent verification (do not trust the builder)
 
 Form your own evidence; the builder's self-report is a claim, not proof.
-- **G2** — **upscale and Read the still.** Run `scripts/montage.py keyframes/<id>.png --scale 8`
+- **G2** — **upscale and Read the still.** Run `scripts/montage.py items/<itemId>/<id>/00.png --scale 8`
   and Read the output PNG. You cannot judge palette / light / AA from the raw 90px file or from
   the builder's description. Sample colors against the spec's ramps.
 - **G4** — **upscale + montage + Read, mandatory.** Run `scripts/montage.py frames/<id>/`
@@ -76,7 +78,7 @@ Form your own evidence; the builder's self-report is a claim, not proof.
    sideways translation dressed up as motion. This is the gate's whole reason to exist.
 4. **Stagger + overlap** — multiple elements release out of phase; phases blend into one
    continuous event.
-5. **Frame budget + fps** — frame count and fps match the spec/manifest (after `frames`
+5. **Frame budget + fps** — frame count and fps match the spec / `pipeline.json` (after `frames`
    precedence); enough frames for the move to read, not so many it drags.
 6. **Rigid stays rigid; impacts settle; loop closes** — planted parts hold; landings
    squash/overshoot/settle; (idle) frame N → frame 0 seamlessly, or (transition) holds the final
