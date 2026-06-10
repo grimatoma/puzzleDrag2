@@ -193,6 +193,14 @@ The pipeline is built to fan builders out wide:
 
 ## The viewer loop (closing the loop)
 
+> **Start the control server FIRST, at the top of a run — not at the end.** Before any spend, launch
+> `node scripts/serve_viewer.mjs` (background) and point the human at **http://localhost:8100/pixelGen/**.
+> Its `build_viewer.mjs --watch` child re-emits `data.json` whenever `pipeline.json` changes, so when
+> you record progress through `pipeline-patch.mjs` (candidates generated → approved → animations
+> done) the page **updates live** and the human can watch the family fill in as it's built. Running it
+> only at the end defeats the purpose — the viewer is a *progress monitor*, not just a final report.
+> (Leave it running for the whole session; it also serves the intake proposal and the G4/human gate.)
+
 A static review **viewer** (built by `scripts/build_viewer.mjs` into `pixelGen/`, served at
 **http://localhost:8100/pixelGen/** via the `pixelGen` launch config / `scripts/serve_viewer.mjs`)
 renders the set's keyframes, candidate seeds, idle GIFs, and transitions on one page so you can
@@ -226,7 +234,7 @@ re-animate** until the family reads as one set.
 |--------|--------------|
 | `scripts/build_viewer.mjs` | Reads `pipeline.json`, emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change; `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) as JSON without building. |
 | `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) **patches `pipeline.json` in place** (atomic temp+rename). Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
-| `scripts/pipeline-patch.mjs` | **`pipeline.json` bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif>` / `set-mode autonomous\|gated` / `show`. Atomic temp+rename write, preserves 2-space format. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
+| `scripts/pipeline-patch.mjs` | **`pipeline.json` bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `show`. Atomic temp+rename write, preserves 2-space format. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
 | `scripts/integrate.mjs` | One-command Godot integration: `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (approved+generated idles) or explicit `<framesDir> <outTres>` pairs. |
 | `scripts/pixellab.mjs` | PixelLab still client + importable module: `balance` checks credits; `create` runs the async **create → poll → download** loop and saves a PNG. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |

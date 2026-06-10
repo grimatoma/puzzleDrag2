@@ -114,6 +114,19 @@ Two kinds, discriminated by `kind`:
 | `physics` | string | `transition` | Plain-language brief of the **physical** change driving the tween — what moves/melts/falls/fades and in what order. The motion plan the animator executes. |
 | `status` | `pending \| generated` | both | `pending` = not animated yet (gap-fill will animate once its keys are approved); `generated` = the GIF/frames exist. |
 | `gif` | string | both | **Relative path** (from `pipeline.json`) to the looping preview GIF, once generated. |
+| `storyboard` | string | both | **Optional relative path** (from `pipeline.json`) to the filled storyboard `.md` for this animation, once written (Stage 3). Set it via `pipeline-patch.mjs animate-done … <storyboardPath>`. See the note below — the storyboard's *full text* is a file, not embedded here. |
+
+> **Where the storyboards and prompts live (a common question).** Two different things, two
+> different homes:
+> - **Image prompts are IN this config.** The effective generation prompt is the item's
+>   `basePrompt` + the keyframe's `prompt`, concatenated. Those fields are the durable record of what
+>   was asked for — they live in `pipeline.json`.
+> - **The motion brief is in this config; the full storyboard is a FILE.** Each animation carries a
+>   one-line `motion`/`physics` brief here (the durable summary), but the **full per-frame storyboard
+>   table** is a separate committed Markdown file at `items/<itemId>/storyboards/<animId>.md` — too
+>   large and too Markdown-shaped to embed in JSON (it would be unmergeable and unreadable inline).
+>   The optional `storyboard` field above is the **pointer** from the config to that file, so the
+>   relationship is tracked rather than relying on the filename convention alone.
 
 ---
 

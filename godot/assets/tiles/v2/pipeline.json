@@ -1,7 +1,11 @@
 {
   "settings": {
     "styleSpec": "_style-spec.json",
-    "canvas": { "width": 32, "height": 32, "safeArea": 2 },
+    "canvas": {
+      "width": 32,
+      "height": 32,
+      "safeArea": 2
+    },
     "fps": 10,
     "candidates": 4,
     "humanApproval": true,
@@ -11,7 +15,10 @@
     {
       "id": "birch_tree",
       "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
-      "priors": ["../tile_tree_oak.png", "../tile_tree_fir.png"],
+      "priors": [
+        "../tile_tree_oak.png",
+        "../tile_tree_fir.png"
+      ],
       "master": {
         "id": "tile_tree_birch_autumn",
         "prompt": "gold/amber canopy",
@@ -71,7 +78,10 @@
     {
       "id": "pumpkin",
       "basePrompt": "single plump garden pumpkin on a leafy curling vine, game tile, matches reference set, three-quarter top-down, lit from upper-left, selective dark outline, soft drop shadow",
-      "priors": ["../tile_veg_squash.png", "../tile_veg_carrot.png"],
+      "priors": [
+        "../tile_veg_squash.png",
+        "../tile_veg_carrot.png"
+      ],
       "master": {
         "id": "tile_veg_pumpkin_autumn",
         "prompt": "ripe deep-orange ribbed pumpkin, dark green curling vine with two leaves, stubby brown stem",
@@ -149,7 +159,8 @@
           "frames": 8,
           "motion": "vine-leaf flutter in a light breeze + a slow passing sheen glint across the rind; pumpkin body holds rigid",
           "status": "generated",
-          "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn.gif"
+          "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn.gif",
+          "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_autumn.md"
         },
         {
           "kind": "idle",
@@ -157,7 +168,8 @@
           "frames": 6,
           "motion": "sparse snow flecks drift down + cold glint on the frost cap; pumpkin and mound hold rigid",
           "status": "generated",
-          "gif": "items/pumpkin/previews/tile_veg_pumpkin_winter.gif"
+          "gif": "items/pumpkin/previews/tile_veg_pumpkin_winter.gif",
+          "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_winter.md"
         },
         {
           "kind": "transition",
@@ -166,7 +178,8 @@
           "frames": 20,
           "physics": "vine leaves wilt, curl and detach (staggered, terminal-velocity fall with x-wobble); rind pales as frost creeps top-down; snow falls slower than leaves and accumulates bottom-up on the ground mound, then surface-first on the pumpkin crown; holds final winter frame",
           "status": "generated",
-          "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter.gif"
+          "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter.gif",
+          "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter.md"
         }
       ]
     }

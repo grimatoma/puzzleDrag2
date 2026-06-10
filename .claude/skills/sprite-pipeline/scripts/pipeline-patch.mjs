@@ -12,7 +12,7 @@
 //   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm]
 //   node pipeline-patch.mjs approve          <item> <key> <idx>
 //   node pipeline-patch.mjs reject           <item> <key> <idx> "<reason>"
-//   node pipeline-patch.mjs animate-done      <item> <selector> <gifPath>
+//   node pipeline-patch.mjs animate-done      <item> <selector> <gifPath> [storyboardPath]
 //   node pipeline-patch.mjs set-mode          (autonomous | gated)
 //   node pipeline-patch.mjs show              [item]
 //
@@ -149,14 +149,15 @@ function cmdReject(args) {
 }
 
 function cmdAnimateDone(args) {
-  const [itemId, selector, gif] = args;
-  if (!itemId || !selector || !gif) die("animate-done <item> <selector> <gifPath>");
+  const [itemId, selector, gif, storyboard] = args;
+  if (!itemId || !selector || !gif) die("animate-done <item> <selector> <gifPath> [storyboardPath]");
   const data = load();
   const anim = findAnimation(findItem(data, itemId), selector);
   anim.status = "generated";
   anim.gif = gif;
+  if (storyboard) anim.storyboard = storyboard;
   save(data);
-  console.log(`animation ${itemId}/${selector} -> generated, gif=${gif}`);
+  console.log(`animation ${itemId}/${selector} -> generated, gif=${gif}${storyboard ? `, storyboard=${storyboard}` : ""}`);
 }
 
 function cmdSetMode(args) {
@@ -198,7 +199,7 @@ const USAGE = `Usage:
   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm]
   node pipeline-patch.mjs approve          <item> <key> <idx>
   node pipeline-patch.mjs reject           <item> <key> <idx> "<reason>"
-  node pipeline-patch.mjs animate-done     <item> <selector> <gifPath>
+  node pipeline-patch.mjs animate-done     <item> <selector> <gifPath> [storyboardPath]
   node pipeline-patch.mjs set-mode         (autonomous | gated)
   node pipeline-patch.mjs show             [item]`;
 
