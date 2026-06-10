@@ -79,6 +79,7 @@ func _run() -> void:
 	await _test_use_guard_no_charges()
 	await _test_chain_resolves_when_not_targeting()
 	await _test_tool_palette()
+	await _test_tool_board_kind_filter()
 	SaveManager.clear()
 
 # ── starter grant (fresh-only, no double-grant) ──────────────────────────────
@@ -380,6 +381,60 @@ func _test_tool_palette() -> void:
 	_check(not main3._tool_palette_box.visible, "M8d: palette hidden when game.tools empty")
 	_check(main3._tool_buttons.is_empty(),      "M8d: _tool_buttons empty when no tools")
 	main3.free()
+	await process_frame
+	SaveManager.clear()
+
+# ── Board-kind filter: only tools relevant to the active board show on the hotbar ──────
+# React parity: src/ui/puzzleToolFilter.ts visiblePuzzleTools limits the strip to tools
+# whose ToolEntry.boardKind matches the active board (or "all"). The port mirrors the
+# board-kind half via ToolConfig.is_tool_visible_on_board, read by Hud._refresh_tools.
+
+func _test_tool_board_kind_filter() -> void:
+	print("\n── Hotbar board-kind filter ───────────────────────")
+
+	# 1. Pure ToolConfig accessors (no scene needed) — the new board_kind column + helpers.
+	_check(ToolConfig.tool_board_kind("water_pump") == "mine", "water_pump board_kind is 'mine'")
+	_check(ToolConfig.tool_board_kind("scythe") == "farm", "scythe board_kind is 'farm'")
+	_check(ToolConfig.tool_board_kind("bomb") == "all", "bomb board_kind is 'all'")
+	_check(ToolConfig.tool_board_kind("not_a_tool") == "all", "unknown id board_kind falls back to 'all'")
+	# The harbor biome IS React's "fish" board (getPuzzleBoardKind).
+	_check(ToolConfig.board_kind_for_biome("harbor") == "fish", "harbor biome maps to the 'fish' board")
+	_check(ToolConfig.board_kind_for_biome("mine") == "mine", "mine biome maps to the 'mine' board")
+	_check(ToolConfig.board_kind_for_biome("farm") == "farm", "farm biome maps to the 'farm' board")
+	# A mine tool is hidden on the farm board, visible on the mine board; an "all" tool shows on both.
+	_check(not ToolConfig.is_tool_visible_on_board("water_pump", "farm"),
+		"water_pump is NOT board-visible on the farm")
+	_check(ToolConfig.is_tool_visible_on_board("water_pump", "mine"),
+		"water_pump IS board-visible on the mine")
+	_check(ToolConfig.is_tool_visible_on_board("bomb", "farm"), "bomb ('all') is board-visible on the farm")
+	_check(ToolConfig.is_tool_visible_on_board("bomb", "mine"), "bomb ('all') is board-visible on the mine")
+	_check(not ToolConfig.is_tool_visible_on_board("scythe", "mine"),
+		"scythe ('farm') is NOT board-visible on the mine")
+
+	# 2. Live HUD: grant a mine-only tool on a fresh FARM Main — it must NOT join the hotbar,
+	# while the farm/all starter tools still do. This is the core regression the task asks for.
+	var main = await _fresh_main()
+	_check(main.game.active_biome == "farm", "fresh Main starts on the farm board")
+	main.game.grant_tool("water_pump", 1)
+	main._refresh_tools()
+	_check(main._tool_buttons.has("scythe"), "farm starter scythe shows on the farm hotbar")
+	_check(main._tool_buttons.has("bomb"),   "board-agnostic bomb shows on the farm hotbar")
+	_check(main._tool_buttons.has("rake"),   "farm starter rake shows on the farm hotbar")
+	_check(not main._tool_buttons.has("water_pump"),
+		"mine-only water_pump is HIDDEN on the farm board (board-kind filter)")
+
+	# 3. Flip the active board to the mine: water_pump + bomb now show; the farm-only scythe/rake hide.
+	main.game.active_biome = "mine"
+	main._refresh_tools()
+	_check(main._tool_buttons.has("water_pump"),
+		"mine-only water_pump SHOWS once the active board is the mine")
+	_check(main._tool_buttons.has("bomb"), "board-agnostic bomb still shows on the mine board")
+	_check(not main._tool_buttons.has("scythe"),
+		"farm-only scythe is HIDDEN on the mine board (board-kind filter)")
+	_check(not main._tool_buttons.has("rake"),
+		"farm-only rake is HIDDEN on the mine board (board-kind filter)")
+
+	main.free()
 	await process_frame
 	SaveManager.clear()
 

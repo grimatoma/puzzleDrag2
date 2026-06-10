@@ -1077,12 +1077,18 @@ func _refresh_tools() -> void:
 		child.queue_free()
 	_tool_buttons.clear()
 
-	# Collect owned tools (charges > 0) in stable ToolConfig order.
+	# Collect owned tools (charges > 0) in stable ToolConfig order, filtered to those
+	# RELEVANT to the active board. React shows only the tools usable on the current biome
+	# (src/ui/puzzleToolFilter.ts visiblePuzzleTools → isToolVisibleOnPuzzleBoard); the port
+	# mirrors the board-kind half of that filter via ToolConfig.is_tool_visible_on_board, so
+	# a mine-only tool (e.g. water_pump) never clutters the farm hotbar, and vice-versa.
+	# "all"-kind tools (bomb / reshuffle horn / magic wand / magic seed) show on every board.
 	var owned: Array = []
 	if game != null:
+		var biome: String = game.active_biome
 		for id in ToolConfig.TOOL_IDS:
 			var charges: int = game.tool_count(id)
-			if charges > 0:
+			if charges > 0 and ToolConfig.is_tool_visible_on_board(id, biome):
 				owned.append({"id": id, "charges": charges})
 
 	# An inspected tool that is no longer owned (last charge spent) falls back to idle —
