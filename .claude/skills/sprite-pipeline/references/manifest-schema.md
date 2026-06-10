@@ -75,7 +75,7 @@ wait.)
 | `canvas` | `{ width, height, safeArea }` | **Default** sprite dimensions in px. The 32px tile size lives here, **not** in the style spec (whose `canvas` is the game's native 90×90). An item may **override** `canvas` for itself. |
 | `fps` | number | **Default** animation playback rate. An item may **override** `fps` for itself. |
 | `candidates` | `1 \| 2 \| 4` | Seeds requested per generation step — the target candidate count a `master` or `child` accumulates before it's full (PixelLab batch sizes; `3` is not supported). **Global**, not per-item. |
-| `humanApproval` | boolean | Require the human gate at cost events (each spend pauses for sign-off). **Global**. |
+| `humanApproval` | boolean | Require the human gate at cost events (each spend pauses for the viewer-driven gate — `await-review` blocks until the reviewer clicks "resume"). **Global**. |
 | `autonomous` | boolean | `true` → skip the human gate; the LLM self-audit (`llm` verdict) decides what to approve. **Global**. Mutually exclusive in spirit with `humanApproval` — set one. |
 
 **Override scope.** Only `canvas` and `fps` are per-item-overridable. `candidates`,

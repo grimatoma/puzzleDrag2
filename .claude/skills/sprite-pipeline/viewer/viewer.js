@@ -50,10 +50,8 @@
   var lastGeneratedAt = null; // last rendered data.generatedAt — re-render only when it changes
   var lastFetchedAt = 0; // wall-clock of the last successful data.json fetch (for "updated Ns ago")
   var lastTotals = null; // totals from last render (for the live indicator text)
-  var lastAwaiting = false; // awaitingHuman from the last render (drives sort + resume bar)
   var pollTimer = null;
   var serverMode = "unknown"; // "live" (control server up) | "readonly" (no server) | "unknown"
-  var lastZoom = null; // {src, animated, caption, scale} for the currently-open zoom (survives re-render)
 
   // ── localStorage helpers (degrade gracefully if unavailable) ───────────────────────────────
   function lsGet(key) {
@@ -236,7 +234,6 @@
   // ── zoom overlay (large integer-zoom sprite + a 3×3 board-tiled preview) ─────────────────────
   function openZoom(info) {
     // info: { src, animated, caption, scale }
-    lastZoom = info;
     var scale = info.scale || 7;
     els.zoomCaption.textContent = info.caption || "";
 
@@ -267,7 +264,6 @@
     if (els.zoomClose) els.zoomClose.focus();
   }
   function closeZoom() {
-    lastZoom = null;
     els.zoom.hidden = true;
     document.body.classList.remove("zoom-open");
   }
@@ -810,7 +806,6 @@
 
   function renderResumeBar(data, needsCount) {
     var awaiting = !!data.awaitingHuman;
-    lastAwaiting = awaiting;
     if (!awaiting) {
       els.resumeBar.hidden = true;
       document.body.classList.remove("has-resume-bar");

@@ -177,29 +177,27 @@ def _hex(rgb):
 
 
 def _read_palette_file(path):
-    """Read a Lospec .hex (one hex per line) or GIMP .gpl palette -> [(r,g,b), ...]."""
+    """Read a Lospec .hex (one hex per line, with or without a leading '#') or a GIMP .gpl
+    palette -> [(r,g,b), ...]. Lospec's canonical .hex export has NO '#' prefix, so a bare
+    3/6-digit hex token is accepted too."""
     if not os.path.isfile(path):
         _fail(f"palette file not found: {path}")
     cols = []
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         for raw in fh:
             line = raw.strip()
-            if not line or line.startswith("#") and len(line) not in (4, 7):
-                # GPL comment / header lines start with '#', 'GIMP', 'Name:', 'Columns:'
-                if not (line.startswith("#") and len(line) in (4, 7)):
-                    continue
-            if line.lower().startswith(("gimp", "name:", "columns:")):
+            # Skip blanks and GPL header lines ('GIMP Palette', 'Name:', 'Columns:').
+            if not line or line.lower().startswith(("gimp", "name:", "columns:")):
                 continue
-            if line.startswith("#") and len(line) in (4, 7):
-                h = line.lstrip("#")
-                if len(h) == 3:
-                    h = "".join(c * 2 for c in h)
-                try:
-                    cols.append((int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)))
-                except ValueError:
-                    pass
+            # A hex color, bare or '#'-prefixed (a GPL '#' comment is longer and fails the
+            # 3/6-digit check below, so it falls through and is dropped by the triple branch).
+            token = line.lstrip("#")
+            if len(token) in (3, 6) and all(c in "0123456789abcdefABCDEF" for c in token):
+                if len(token) == 3:
+                    token = "".join(c * 2 for c in token)
+                cols.append((int(token[0:2], 16), int(token[2:4], 16), int(token[4:6], 16)))
                 continue
-            # GPL "r g b   name" triple
+            # GPL "r g b   name" triple.
             parts = line.split()
             if len(parts) >= 3 and all(p.isdigit() for p in parts[:3]):
                 cols.append((int(parts[0]), int(parts[1]), int(parts[2])))
