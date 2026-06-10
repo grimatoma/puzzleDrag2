@@ -100,7 +100,7 @@ func _build_shell() -> void:
 	# Title — "Found <Node Name>", Cinzel display serif, centred.
 	_title_label = Label.new()
 	_title_label.text = ""
-	_title_label.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -113,7 +113,7 @@ func _build_shell() -> void:
 	# Cost + type line, centred + muted.
 	_subtitle_label = Label.new()
 	_subtitle_label.text = ""
-	_subtitle_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_subtitle_label, Typography.Role.LABEL)
 	_subtitle_label.add_theme_color_override("font_color", COL_SUBTITLE)
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -129,7 +129,7 @@ func _build_shell() -> void:
 
 	var hint := Label.new()
 	hint.text = "Choose this settlement's land — it fixes the hazards you'll face and what it yields."
-	hint.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(hint, Typography.Role.BODY)
 	hint.add_theme_color_override("font_color", COL_BODY)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -150,7 +150,7 @@ func _build_shell() -> void:
 	var cancel := Button.new()
 	cancel.text = "Not yet"
 	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(cancel, Palette.IRON, 8, 16, true)
+	UiKit.style_button(cancel, Palette.IRON, 8, Typography.size(Typography.Role.SUBHEAD), true)
 	cancel.connect("pressed", Callable(self, "close"))
 	col.add_child(cancel)
 	_action_buttons["cancel"] = cancel
@@ -197,11 +197,11 @@ func _make_biome_button(biome: Dictionary, can_pay: bool) -> Button:
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if can_pay:
-		UiKit.style_action_button(btn, Palette.GO_GREEN, 8, 15)
+		UiKit.style_action_button(btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.LABEL))
 		btn.connect("pressed", Callable(self, "_on_pick_biome").bind(bid))
 	else:
 		btn.disabled = true
-		UiKit.style_button(btn, Palette.IRON, 8, 15, true)
+		UiKit.style_button(btn, Palette.IRON, 8, Typography.size(Typography.Role.LABEL), true)
 	_action_buttons["biome:" + bid] = btn
 	return btn
 

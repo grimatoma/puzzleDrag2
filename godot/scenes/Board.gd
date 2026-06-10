@@ -1273,7 +1273,7 @@ func play_gain_text(text: String, color: Color) -> void:
 		return
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30)))
+	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30) * Typography.scale))
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	lbl.add_theme_constant_override("outline_size", 5)

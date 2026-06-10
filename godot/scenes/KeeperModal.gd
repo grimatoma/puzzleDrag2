@@ -113,7 +113,7 @@ func _build_shell() -> void:
 	# Keeper icon — a big emoji, centred.
 	_icon_label = Label.new()
 	_icon_label.text = ""
-	_icon_label.add_theme_font_size_override("font_size", 54)
+	UiKit.set_font_size(_icon_label, Typography.Role.KEEPER_ICON)
 	_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_icon_label)
@@ -121,7 +121,7 @@ func _build_shell() -> void:
 	# Keeper name (Cinzel display serif), centred.
 	_title_label = Label.new()
 	_title_label.text = ""
-	_title_label.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(_title_label, Typography.Role.DISPLAY)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -134,7 +134,7 @@ func _build_shell() -> void:
 	# Keeper title / role, centred + muted.
 	_subtitle_label = Label.new()
 	_subtitle_label.text = ""
-	_subtitle_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_subtitle_label, Typography.Role.LABEL)
 	_subtitle_label.add_theme_color_override("font_color", COL_SUBTITLE)
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -207,7 +207,7 @@ func _render_intro(keeper: Dictionary) -> void:
 	coexist_btn.text = coexist_label
 	coexist_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	coexist_btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiKit.style_action_button(coexist_btn, Palette.GO_GREEN, 8, 17)
+	UiKit.style_action_button(coexist_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	coexist_btn.connect("pressed", Callable(self, "_on_choose").bind("coexist"))
 	_buttons_box.add_child(coexist_btn)
 	_action_buttons["coexist"] = coexist_btn
@@ -218,7 +218,7 @@ func _render_intro(keeper: Dictionary) -> void:
 	driveout_btn.text = driveout_label
 	driveout_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	driveout_btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiKit.style_button(driveout_btn, Palette.EMBER, 8, 17)
+	UiKit.style_button(driveout_btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 	driveout_btn.connect("pressed", Callable(self, "_on_choose").bind("driveout"))
 	_buttons_box.add_child(driveout_btn)
 	_action_buttons["driveout"] = driveout_btn
@@ -236,7 +236,7 @@ func _render_pitch() -> void:
 		reward_text = "⬡ +%d Core Ingots" % KeeperConfig.driveout_core_ingots(_type)
 	var reward_lbl := Label.new()
 	reward_lbl.text = reward_text
-	reward_lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(reward_lbl, Typography.Role.SUBHEAD)
 	reward_lbl.add_theme_color_override("font_color", Palette.GOLD)
 	reward_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	reward_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -245,7 +245,7 @@ func _render_pitch() -> void:
 	var cont := Button.new()
 	cont.text = "Continue"
 	cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(cont, Palette.GO_GREEN, 8, 20)
+	UiKit.style_action_button(cont, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	cont.connect("pressed", Callable(self, "_on_continue"))
 	_buttons_box.add_child(cont)
 	_action_buttons["continue"] = cont
@@ -255,7 +255,7 @@ func _render_pitch() -> void:
 func _make_line_row(text: String) -> Control:
 	var body := Label.new()
 	body.text = text
-	body.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(body, Typography.Role.SUBHEAD)
 	body.add_theme_color_override("font_color", COL_BODY)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE

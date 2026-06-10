@@ -121,7 +121,7 @@ func _build_shell() -> void:
 	# Title — the beat title in the Cinzel display serif (parity with Main's headings).
 	_title_label = Label.new()
 	_title_label.text = ""
-	_title_label.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(_title_label, Typography.Role.DISPLAY)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -203,7 +203,7 @@ func _render(beat_id: String) -> void:
 		var cont := Button.new()
 		cont.text = "Continue"
 		cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_action_button(cont, Palette.GO_GREEN, 8, 20)
+		UiKit.style_action_button(cont, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 		cont.connect("pressed", Callable(self, "_on_continue"))
 		_buttons_box.add_child(cont)
 		_action_buttons["continue"] = cont
@@ -216,7 +216,7 @@ func _render(beat_id: String) -> void:
 			btn.text = label
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			UiKit.style_button(btn, Palette.EMBER, 8, 18)
+			UiKit.style_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 			# bind the choice id so the handler resolves THIS choice on the current beat.
 			btn.connect("pressed", Callable(self, "_on_choice").bind(cid))
 			_buttons_box.add_child(btn)
@@ -248,7 +248,7 @@ func _make_line_row(speaker: String, text: String) -> Control:
 	if speaker != "":
 		var spk := Label.new()
 		spk.text = speaker
-		spk.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(spk, Typography.Role.SUBHEAD)
 		spk.add_theme_color_override("font_color", COL_SPEAKER)
 		var heading_font: Font = UiKit.heading_font()
 		if heading_font != null:
@@ -258,7 +258,7 @@ func _make_line_row(speaker: String, text: String) -> Control:
 
 	var body := Label.new()
 	body.text = text
-	body.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(body, Typography.Role.HEADING)  # promoted: speaker=SUBHEAD, body one tier up
 	# Narration (no speaker) reads in the muted tone; spoken lines in full ink.
 	body.add_theme_color_override("font_color", COL_BODY if speaker != "" else COL_NARRATION)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -134,7 +134,7 @@ func _build_shell() -> void:
 
 	_npc_name_label = Label.new()
 	_npc_name_label.text = _npc_name
-	_npc_name_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_npc_name_label, Typography.Role.SUBHEAD)
 	_npc_name_label.add_theme_color_override("font_color", COL_TITLE)
 	var name_font: Font = UiKit.heading_font()
 	if name_font != null:
@@ -144,7 +144,7 @@ func _build_shell() -> void:
 
 	var role_lbl := Label.new()
 	role_lbl.text = NpcConfig.role(TUTORIAL_NPC)
-	role_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(role_lbl, Typography.Role.META)
 	role_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	role_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_col.add_child(role_lbl)
@@ -152,7 +152,7 @@ func _build_shell() -> void:
 	# Title — Cinzel display serif, large, centred.
 	_title_label = Label.new()
 	_title_label.text = ""
-	_title_label.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -173,7 +173,7 @@ func _build_shell() -> void:
 	# Body text — muted ink colour, wrapping.
 	_body_label = Label.new()
 	_body_label.text = ""
-	_body_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_body_label, Typography.Role.SUBHEAD)
 	_body_label.add_theme_color_override("font_color", COL_BODY)
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -199,7 +199,7 @@ func _build_shell() -> void:
 	# Step indicator — "Step k / N" in a small muted caption beneath the dots.
 	_indicator_label = Label.new()
 	_indicator_label.text = ""
-	_indicator_label.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(_indicator_label, Typography.Role.META)
 	_indicator_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_indicator_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_indicator_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -214,7 +214,7 @@ func _build_shell() -> void:
 	_skip_btn = Button.new()
 	_skip_btn.text = "Skip"
 	_skip_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_skip_btn, Palette.IRON, 10, 18)
+	UiKit.style_button(_skip_btn, Palette.IRON, 10, Typography.size(Typography.Role.SUBHEAD))
 	_skip_btn.connect("pressed", Callable(self, "_on_skip"))
 	btn_row.add_child(_skip_btn)
 	_action_buttons["skip"] = _skip_btn
@@ -222,7 +222,7 @@ func _build_shell() -> void:
 	_next_btn = Button.new()
 	_next_btn.text = "Next"
 	_next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(_next_btn, Palette.GO_GREEN, 10, 18)
+	UiKit.style_action_button(_next_btn, Palette.GO_GREEN, 10, Typography.size(Typography.Role.SUBHEAD))
 	_next_btn.connect("pressed", Callable(self, "_on_next"))
 	btn_row.add_child(_next_btn)
 	_action_buttons["next"] = _next_btn
@@ -293,7 +293,7 @@ func _build_avatar(npc_id: String, px: int) -> Control:
 
 	var letter := Label.new()
 	letter.text = initial
-	letter.add_theme_font_size_override("font_size", int(px * 0.5))
+	letter.add_theme_font_size_override("font_size", int(px * 0.5 * Typography.scale))
 	# Light text on the (typically dark) roster tints; a heading font for weight when present.
 	letter.add_theme_color_override("font_color", Palette.PARCHMENT)
 	var hf: Font = UiKit.heading_font()
