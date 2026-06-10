@@ -35,6 +35,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a boon purchase mutates GameState (Embers / Core Ingots spent) — Main
+## refreshes the always-visible HUD + persists immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Always has "close".
 var _action_buttons: Dictionary = {}
@@ -331,6 +334,7 @@ func _on_claim(id: String) -> void:
 		return
 	game.purchase_boon(id)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

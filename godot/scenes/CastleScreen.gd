@@ -30,6 +30,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a contribution mutates GameState — Main refreshes the always-visible
+## HUD (stockpile chips, pills) + persists, so the spend surfaces immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Currently just "close".
 var _action_buttons: Dictionary = {}
@@ -332,6 +335,7 @@ func _on_contribute(id: String, amount: int) -> void:
 		return
 	game.contribute_to_castle(id, amount)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

@@ -973,6 +973,8 @@ func _open_castle() -> void:
 		add_child(_castle_screen)
 		_castle_screen.setup(game)
 		_castle_screen.connect("closed", Callable(self, "_on_castle_closed"))
+		# Contributions deduct inventory under the always-visible top bar — refresh + save NOW.
+		_castle_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_castle_screen.open()
 	_router.open_modal(ViewRouter.Modal.CASTLE)
 
@@ -1001,6 +1003,8 @@ func _open_decorations() -> void:
 		add_child(_decorations_screen)
 		_decorations_screen.setup(game)
 		_decorations_screen.connect("closed", Callable(self, "_on_decorations_closed"))
+		# Builds spend coins/items + grant Influence — refresh the visible HUD + save NOW.
+		_decorations_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_decorations_screen.open()
 	_router.open_modal(ViewRouter.Modal.DECORATIONS)
 
@@ -1029,6 +1033,9 @@ func _open_portal() -> void:
 		add_child(_portal_screen)
 		_portal_screen.setup(game)
 		_portal_screen.connect("closed", Callable(self, "_on_portal_closed"))
+		# Portal builds / summons spend coins/runes/influence + grant tools — refresh the
+		# visible HUD (incl. the tool palette) + save NOW.
+		_portal_screen.connect("state_changed", Callable(self, "_on_portal_changed"))
 	_portal_screen.open()
 	_router.open_modal(ViewRouter.Modal.PORTAL)
 
@@ -1056,6 +1063,8 @@ func _open_boons() -> void:
 		add_child(_boons_screen)
 		_boons_screen.setup(game)
 		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
+		# Boon purchases spend Embers / Core Ingots — refresh the visible HUD + save NOW.
+		_boons_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_boons_screen.open()
 	_router.open_modal(ViewRouter.Modal.BOONS)
 
@@ -1153,8 +1162,25 @@ func _open_quests() -> void:
 		add_child(_quests_screen)
 		_quests_screen.setup(game)
 		_quests_screen.connect("closed", Callable(self, "_on_quests_closed"))
+		# A claim grants coins/XP under the always-visible top bar — surface it NOW
+		# (coin tick + pill pulse + HUD refresh + save), not when the screen closes.
+		_quests_screen.connect("state_changed", Callable(self, "_on_quest_claimed"))
 	_quests_screen.open()
 	_router.open_modal(ViewRouter.Modal.QUESTS)
+
+## A portal build / magic-tool summon landed: run the shared funnel, then refresh the
+## tool palette too (a summon grants a tool charge the palette must show immediately).
+func _on_portal_changed() -> void:
+	_on_town_changed()
+	_refresh_tools()
+
+## A quest / almanac-tier claim landed: pulse the coin pill, then run the shared
+## post-mutation funnel — _on_town_changed refreshes every HUD surface (including the
+## coin/level pills), plays the coin chime via its own what-changed sound pick, saves.
+func _on_quest_claimed() -> void:
+	if _hud != null:
+		_hud.pulse_coin_pill()
+	_on_town_changed()
 
 ## The Quests screen was closed: hide it, reset the router, and persist (a claim spent /
 ## granted coins + XP + tools + runes + advanced the almanac) + refresh the stockpile HUD

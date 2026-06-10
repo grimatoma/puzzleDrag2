@@ -31,6 +31,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a decoration build mutates GameState (coins + items spent, Influence
+## granted) — Main refreshes the always-visible HUD + persists immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Currently just "close".
 var _action_buttons: Dictionary = {}
@@ -309,6 +312,7 @@ func _on_build(id: String) -> void:
 		return
 	game.build_decoration(id)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 
