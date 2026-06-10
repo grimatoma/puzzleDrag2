@@ -181,7 +181,7 @@ func _build_shell() -> void:
 	# Title pill — the in-fiction settlement name, top-left (over the map, below the HUD bar).
 	var title := Label.new()
 	title.text = "🗺 Hearthwood Vale"
-	title.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -201,7 +201,7 @@ func _build_shell() -> void:
 	# nav (apply_deeplink("board")). ESC/back also returns to the board.
 	var board_btn := Button.new()
 	board_btn.text = "▶ Board"
-	UiKit.style_button(board_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(board_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	board_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	board_btn.offset_right = -18
 	board_btn.offset_top = overlay_top
@@ -217,7 +217,7 @@ func _build_shell() -> void:
 	# `ledger_requested`; Main routes it through apply_deeplink("town"). Registered as "ledger".
 	var ledger_btn := Button.new()
 	ledger_btn.text = "📋 Town Ledger"
-	UiKit.style_button(ledger_btn, Palette.GOLD, 6, 18)
+	UiKit.style_button(ledger_btn, Palette.GOLD, 6, Typography.size(Typography.Role.SUBHEAD))
 	ledger_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	ledger_btn.offset_left = 18
 	# Sit just below the title pill (overlay_top + the pill's rough height + a gap).
@@ -231,7 +231,7 @@ func _build_shell() -> void:
 	# Emits `boons_requested`; Main routes it through apply_deeplink("boons"). Registered as "boons".
 	var boons_btn := Button.new()
 	boons_btn.text = "✨ Boons"
-	UiKit.style_button(boons_btn, Palette.EMBER, 6, 18)
+	UiKit.style_button(boons_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	boons_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	boons_btn.offset_left = 18
 	# Sit just below the Town Ledger button (overlay_top + the pill + ledger row heights).
@@ -254,7 +254,7 @@ func _build_shell() -> void:
 	# label is refreshed each render() from the live plot counts. Registered as "build_open".
 	_build_btn = Button.new()
 	_build_btn.text = "🔨 Build"
-	UiKit.style_action_button(_build_btn, Palette.GO_GREEN, 8, 20)
+	UiKit.style_action_button(_build_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	_build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_build_btn.offset_right = -18
 	# Lifted above the reserved bottom-nav strip (NAV_RESERVE 76 + an 18px gap) so the
@@ -298,7 +298,7 @@ func _make_zoom_btn(glyph: String) -> Button:
 	var btn := Button.new()
 	btn.text = glyph
 	btn.custom_minimum_size = Vector2(46, 46)
-	UiKit.style_button(btn, Palette.EMBER, 8, 22)
+	UiKit.style_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.HEADING))
 	# Fully-rounded so the controls read as circular map buttons (React parity).
 	for state in ["normal", "hover", "pressed", "focus"]:
 		var sb: StyleBox = btn.get_theme_stylebox(state)
@@ -527,7 +527,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	else:
 		var emoji := Label.new()
 		emoji.text = "🏠"
-		emoji.add_theme_font_size_override("font_size", 28)
+		UiKit.set_font_size(emoji, Typography.Role.TITLE)
 		emoji.add_theme_color_override("font_color", Palette.INK_MID if tier_locked else Palette.INK)
 		row.add_child(emoji)
 
@@ -538,7 +538,7 @@ func _make_build_row(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = BuildingConfig.building_name(id)
-	name_lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if not tier_locked else Palette.INK_MID)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -549,7 +549,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	if desc != "":
 		var desc_lbl := Label.new()
 		desc_lbl.text = desc
-		desc_lbl.add_theme_font_size_override("font_size", 12)
+		UiKit.set_font_size(desc_lbl, Typography.Role.META)
 		desc_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(desc_lbl)
@@ -563,7 +563,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	if tier_locked:
 		var lock := Label.new()
 		lock.text = "🔒"
-		lock.add_theme_font_size_override("font_size", 20)
+		UiKit.set_font_size(lock, Typography.Role.SUBHEAD)
 		lock.add_theme_color_override("font_color", Palette.INK_MID)
 		row.add_child(lock)
 	else:
@@ -594,7 +594,7 @@ func _make_cost_chips(cost: Dictionary) -> Control:
 			one.add_child(ic)
 		var lbl := Label.new()
 		lbl.text = ("×%d" % int(cost[k])) if ic != null else ("%s ×%d" % [UiKit.pretty_name(String(k)), int(cost[k])])
-		lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(lbl, Typography.Role.LABEL)
 		lbl.add_theme_color_override("font_color", Palette.INK)
 		one.add_child(lbl)
 		box.add_child(one)
@@ -712,7 +712,7 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	title_row.add_theme_constant_override("separation", 12)
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 24)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -766,7 +766,7 @@ func _on_scrim_input(event: InputEvent) -> void:
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return lbl

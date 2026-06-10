@@ -137,7 +137,7 @@ func _build_shell() -> void:
 	# Title — Cinzel display serif, centred.
 	_title_label = Label.new()
 	_title_label.text = "Leave the expedition?"
-	_title_label.add_theme_font_size_override("font_size", 27)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -158,7 +158,7 @@ func _build_shell() -> void:
 	# Body — the reassurance line (everything gathered is banked already).
 	_body_label = Label.new()
 	_body_label.text = ""
-	_body_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_body_label, Typography.Role.SUBHEAD)
 	_body_label.add_theme_color_override("font_color", COL_BODY)
 	_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -174,7 +174,7 @@ func _build_shell() -> void:
 	_cancel_btn = Button.new()
 	_cancel_btn.text = "Stay"
 	_cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_cancel_btn, Palette.IRON, 10, 18)
+	UiKit.style_button(_cancel_btn, Palette.IRON, 10, Typography.size(Typography.Role.SUBHEAD))
 	_cancel_btn.connect("pressed", Callable(self, "_on_cancel"))
 	btn_row.add_child(_cancel_btn)
 	_action_buttons["cancel"] = _cancel_btn
@@ -184,7 +184,7 @@ func _build_shell() -> void:
 	_confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Primary confirm — a FILLED ember button so it reads as the emphasized action (React
 	# gives the LEAVE confirm weight); "Stay" stays a quiet parchment/iron button.
-	UiKit.style_action_button(_confirm_btn, Palette.EMBER, 10, 18)
+	UiKit.style_action_button(_confirm_btn, Palette.EMBER, 10, Typography.size(Typography.Role.SUBHEAD))
 	_confirm_btn.connect("pressed", Callable(self, "_on_confirm"))
 	btn_row.add_child(_confirm_btn)
 	_action_buttons["confirm"] = _confirm_btn

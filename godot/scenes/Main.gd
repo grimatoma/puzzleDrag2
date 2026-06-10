@@ -216,6 +216,12 @@ func _ready() -> void:
 	# screenshots) are deterministic, then top the order board up to MAX_ORDERS.
 	game.seed_orders(1337)
 	game.refill_orders()
+	# Apply the restored "Text Size" accessibility preference to the Typography scale BEFORE
+	# the HUD (and, later, every screen) is built, so the whole UI lays out at the chosen
+	# scale on launch. Typography.scale is the global font multiplier every UiKit.set_font_size
+	# / Typography.size() call reads; setting it here (vs after the HUD build like UiFx.reduced)
+	# is what makes a "Larger" save come up large on the first frame, not after a re-open.
+	Typography.scale = Typography.TEXT_SCALES[game.text_size_index]
 	# Story engine: post the session-start event so the arrival beat (and any beats whose
 	# thresholds/flags a loaded save already satisfies) fire and enqueue. Posting here (vs
 	# auto-calling in GameState.new()) keeps headless economy suites unaffected. The beat
@@ -254,17 +260,10 @@ func _ready() -> void:
 	# Build the extracted HUD at the SAME point _build_hud() used to run, so the child
 	# CanvasLayer ordering (bg=-1, HUD=1, fx=2, nav) — and thus the on-screen compositing —
 	# is byte-identical. `board` is injected just below (after it's created); the HUD only
-	# reads it at runtime (the reward-chip fly-from start), never at build.
-	_hud = HudScript.new()
-	_hud.game = game
-	add_child(_hud)
-	_hud.build()
-	# Up-calls: the HUD emits intents; Main does the routing / tool dispatch exactly as before.
-	_hud.nav_selected.connect(_on_nav_selected)
-	_hud.tool_use_requested.connect(_on_tool_use_requested)
-	_hud.disarm_requested.connect(_disarm_tool)
-	_hud.menu_requested.connect(_open_menu)
-	_refresh_tools()   # M8d: populate the palette after the starter grant
+	# reads it at runtime (the reward-chip fly-from start), never at build. Construction +
+	# signal wiring + the post-build tool refresh live in _build_hud_node() so the Text Size
+	# live re-scale can rebuild the (already-visible) HUD at the new scale identically.
+	_build_hud_node()
 	# M5-polish — the transient toast bubble (built once, reused for real one-off feedback).
 	# Created here so its CanvasLayer (layer 3) sits above the HUD before any event fires.
 	_toast = ToastScript.new()
@@ -359,21 +358,10 @@ func _ready() -> void:
 	_last_buildings_count = game.buildings.size()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
-	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats).
-	_refresh_totals()
-	_refresh_meta()
-	_refresh_settlement()
-	_refresh_buildings()
-	_refresh_orders()
-	_refresh_biome()
-	_refresh_boss()
-	_refresh_rats()
-	_refresh_runes()
-	_refresh_chain_progress()
-	# A2 — seed the season bar + the board's per-season field tint from the restored save so
-	# both reflect the current farm season immediately (not just after the first chain).
-	_refresh_season_bar()
-	board.set_season(game.current_season_index())
+	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats),
+	# plus the season bar + the board's per-season field tint, via the shared post-build sweep so
+	# this path and the Text Size rebuild path can't drift.
+	_refresh_hud_all()
 	# Launch flourish — the persistent chrome (top bar / nav / stockpile / tools) reveals
 	# in a quick stagger. No-op headless / with UiFx disabled (tests + the boot smoke see
 	# the settled HUD), and the auto-modals below simply layer above it.
@@ -454,6 +442,44 @@ func _maybe_show_splash() -> void:
 	add_child(_splash)
 	_splash.setup()
 	_splash.finished.connect(func() -> void: _splash = null)
+
+## Re-push current game state into the (freshly built) HUD: totals, meta, settlement,
+## buildings, orders, biome, boss, rats, runes, chain progress, season bar, status, and
+## the board's season tint. Called from _ready (post-build) and on a Text Size rebuild,
+## so the two paths can't drift. Every call is idempotent, so it's safe even where _ready
+## already touched status via _layout().
+func _refresh_hud_all() -> void:
+	_refresh_totals(); _refresh_meta(); _refresh_settlement(); _refresh_buildings()
+	_refresh_orders(); _refresh_biome(); _refresh_boss(); _refresh_rats()
+	_refresh_runes(); _refresh_chain_progress(); _refresh_season_bar()
+	if _hud != null and is_instance_valid(_hud):
+		_hud._refresh_status()
+	if board != null and is_instance_valid(board) and game != null:
+		board.set_season(game.current_season_index())
+
+## Build (or rebuild) the HUD node and wire ALL its intent signals + the post-build tool
+## refresh, EXACTLY as _ready did inline. Extracted so the Text Size live re-scale can free
+## the old HUD and rebuild it at the new Typography.scale with no drift. On the FIRST call
+## (from _ready) `board` is null (it's created + injected just after); on a REBUILD `board`
+## already exists, so we re-inject it here. Both signal-wiring sets are identical — every
+## signal _ready connected on the HUD is reproduced here, or a rebuilt HUD would be inert.
+func _build_hud_node() -> void:
+	if _hud != null and is_instance_valid(_hud):
+		_hud.queue_free()
+	_hud = HudScript.new()
+	_hud.game = game
+	add_child(_hud)
+	_hud.build()
+	# Up-calls: the HUD emits intents; Main does the routing / tool dispatch exactly as before.
+	_hud.nav_selected.connect(_on_nav_selected)
+	_hud.tool_use_requested.connect(_on_tool_use_requested)
+	_hud.disarm_requested.connect(_disarm_tool)
+	_hud.menu_requested.connect(_open_menu)
+	# Re-inject board on a rebuild (it already exists then); on the first _ready call board is
+	# still null and gets injected at its creation site just below the _build_hud_node() call.
+	if board != null and is_instance_valid(board):
+		_hud.board = board
+	_refresh_tools()   # M8d: populate the palette after the starter grant (and on every rebuild)
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -772,6 +798,7 @@ func _open_menu() -> void:
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
 		_menu_screen.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
 		_menu_screen.connect("motion_toggle_requested", Callable(self, "_on_toggle_motion"))
+		_menu_screen.connect("text_size_cycle_requested", Callable(self, "_on_cycle_text_size"))
 		_menu_screen.connect("new_game_requested", Callable(self, "_on_new_game"))
 		# The "More" section's nav buttons route the secondary screens (achievements,
 		# chronicle, castle, …) through the SAME deep-link path the old left-strip buttons
@@ -1963,6 +1990,72 @@ func _on_toggle_motion() -> void:
 	SaveManager.save(game)
 	if _menu_screen != null:
 		_menu_screen.refresh_motion_label()
+
+## The Text Size button emits `text_size_cycle_requested`; Main owns the cycle (the single
+## accounting point): advance the persisted index (Normal → Large → Larger → Normal), set the
+## global Typography.scale, save, re-apply the scale to the live UI, then re-sync the menu label.
+func _on_cycle_text_size() -> void:
+	game.text_size_index = (game.text_size_index + 1) % Typography.TEXT_SCALES.size()
+	Typography.scale = Typography.TEXT_SCALES[game.text_size_index]
+	SaveManager.save(game)
+	_reapply_text_scale()
+	if _menu_screen != null:
+		_menu_screen.refresh_text_size_label()
+
+## Re-apply the new Typography.scale to the LIVE UI. Already-built labels don't reflow when the
+## scale changes, so we (1) rebuild the always-visible HUD in place at the new scale, and (2)
+## invalidate every lazily-cached secondary screen/modal so the next open rebuilds it fresh at
+## the new scale. The MENU stays untouched — it is open during this callback, so freeing it
+## mid-signal would crash; its body rebuilds on the next open, and its button label is refreshed
+## live by the caller (refresh_text_size_label) — enough immediate feedback alongside the HUD reflow.
+func _reapply_text_scale() -> void:
+	# Preserve the active bottom-nav tab across the rebuild — a fresh HUD resets _nav_current to
+	# "" (board), so capture it and restore it below so the highlighted tab doesn't reset.
+	var prev_nav: String = ""
+	if _hud != null and is_instance_valid(_hud):
+		prev_nav = _hud._nav_current
+	# (1) Rebuild the live HUD in place at the new scale, then re-run the SAME post-build state
+	# refreshes + layout _ready does, so the fresh HUD reflects current game state (not blanks).
+	_build_hud_node()
+	var vp: Vector2 = get_viewport_rect().size
+	_hud._layout_hud(vp)
+	# Shared post-build sweep (totals … season bar + status + board season tint) — same call _ready
+	# uses, so the two rebuild paths stay in lockstep.
+	_refresh_hud_all()
+	# Site-specific extra: restore the active bottom-nav tab captured above (a fresh HUD reset it).
+	_hud.set_nav_current(prev_nav)
+	_hud._refresh_nav()
+	# (2) Invalidate cached screens/modals (EXCEPT the open menu) so each rebuilds at the new scale
+	# on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild. The
+	# list values are freed for safety, but we must also null each member explicitly (nulling a
+	# local array slot would NOT null the member), so the lazy guards actually re-trigger.
+	for o in _overlay_list():
+		if o != null and o != _menu_screen and is_instance_valid(o) and o.has_method("queue_free"):
+			o.queue_free()
+	_town_screen = null
+	_inventory_screen = null
+	_townmap_screen = null
+	_achievements_screen = null
+	_tile_collection_screen = null
+	_chronicle_screen = null
+	_townsfolk_screen = null
+	_cartography_screen = null
+	_recipe_wiki_screen = null
+	_castle_screen = null
+	_decorations_screen = null
+	_portal_screen = null
+	_charter_screen = null
+	_quests_screen = null
+	_boons_screen = null
+	_keeper_modal = null
+	_founder_modal = null
+	_story_modal = null
+	_tutorial_modal = null
+	_daily_modal = null
+	_harvest_modal = null
+	_leaveboard_modal = null
+	_startfarming_modal = null
+	_debug_modal = null
 
 ## M4f — the New Game button emits `new_game_requested`; Main wipes the save and restarts from a
 ## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which

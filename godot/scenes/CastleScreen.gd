@@ -148,7 +148,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🏰 Castle"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -159,7 +159,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -167,7 +167,7 @@ func _build_shell() -> void:
 	# Header line — "N / M needs met" (gold), rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	# Right-aligned — the shared status-count position (Craft "50 recipes", Townsfolk
 	# "5 townsfolk", Achievements "0 / 24 unlocked" all sit at the right edge).
@@ -248,7 +248,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = label
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_VALUE if complete else COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -259,7 +259,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d / %d" % [contributed, target]
-	prog_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(prog_lbl, Typography.Role.SUBHEAD)
 	prog_lbl.add_theme_color_override("font_color", COL_BODY)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	prog_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -299,7 +299,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 
 	var have_lbl := Label.new()
 	have_lbl.text = "Have: %d" % have
-	have_lbl.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(have_lbl, Typography.Role.LABEL)
 	have_lbl.add_theme_color_override("font_color", COL_MUTED)
 	have_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	have_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -309,7 +309,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 	var one_btn := Button.new()
 	one_btn.text = "Contribute 1"
 	one_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(one_btn, Palette.GO_GREEN, 6, 15)
+	UiKit.style_action_button(one_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 	one_btn.disabled = (have < 1) or complete
 	one_btn.connect("pressed", Callable(self, "_on_contribute").bind(id, 1))
 	bottom.add_child(one_btn)
@@ -319,7 +319,7 @@ func _make_need_card(entry: Dictionary) -> PanelContainer:
 	var all_btn := Button.new()
 	all_btn.text = "All (%d)" % all_amount
 	all_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(all_btn, Palette.GO_GREEN, 6, 15)
+	UiKit.style_action_button(all_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 	all_btn.disabled = all_amount <= 0
 	all_btn.connect("pressed", Callable(self, "_on_contribute").bind(id, all_amount))
 	bottom.add_child(all_btn)

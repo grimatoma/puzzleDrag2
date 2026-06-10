@@ -151,12 +151,12 @@ func _build_shell() -> void:
 	_title_label = _make_text(TITLE, 64, Color8(0xff, 0xd2, 0x48))   # Palette.GOLD_BRIGHT
 	_title_label.anchor_top = 0.17
 	_title_label.anchor_bottom = 0.17
-	_subtitle_label = _make_text(SUBTITLE, 22, Color8(0xe9, 0xdf, 0xc6))   # Palette.DIM
+	_subtitle_label = _make_text(SUBTITLE, Typography.size(Typography.Role.HEADING), Color8(0xe9, 0xdf, 0xc6))   # Palette.DIM
 	_subtitle_label.anchor_top = 0.245
 	_subtitle_label.anchor_bottom = 0.245
 
 	# Tap hint — bottom band (the art darkens there so it reads), gently blinking.
-	_hint_label = _make_text(HINT, 26, Color8(0xf6, 0xef, 0xe0))   # Palette.PARCHMENT
+	_hint_label = _make_text(HINT, Typography.size(Typography.Role.TITLE), Color8(0xf6, 0xef, 0xe0))   # Palette.PARCHMENT
 	_hint_label.anchor_top = 0.92
 	_hint_label.anchor_bottom = 0.92
 	var blink := create_tween().set_loops()

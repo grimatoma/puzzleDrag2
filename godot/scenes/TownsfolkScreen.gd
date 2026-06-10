@@ -176,7 +176,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "👥 Townsfolk"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -202,21 +202,21 @@ func _build_shell() -> void:
 
 	var bonds_btn := Button.new()
 	bonds_btn.text = "Bonds"
-	bonds_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(bonds_btn, Typography.Role.SUBHEAD)
 	bonds_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_BONDS))
 	tab_row.add_child(bonds_btn)
 	_tab_buttons[TAB_BONDS] = bonds_btn
 
 	var workers_btn := Button.new()
 	workers_btn.text = "Workers"
-	workers_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(workers_btn, Typography.Role.SUBHEAD)
 	workers_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_WORKERS))
 	tab_row.add_child(workers_btn)
 	_tab_buttons[TAB_WORKERS] = workers_btn
 
 	var quests_btn := Button.new()
 	quests_btn.text = "Quests"
-	quests_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(quests_btn, Typography.Role.SUBHEAD)
 	quests_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_QUESTS))
 	tab_row.add_child(quests_btn)
 	_tab_buttons[TAB_QUESTS] = quests_btn
@@ -224,7 +224,7 @@ func _build_shell() -> void:
 	# Count line — "N townsfolk" / "N quests" (gold), right-aligned, rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -311,7 +311,7 @@ func _render_quests() -> void:
 	if quests.is_empty():
 		var empty := Label.new()
 		empty.text = "No quests on the board yet."
-		empty.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(empty, Typography.Role.SUBHEAD)
 		empty.add_theme_color_override("font_color", COL_MUTED)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -373,7 +373,7 @@ func _make_npc_card(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = npc_name
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -383,7 +383,7 @@ func _make_npc_card(id: String) -> PanelContainer:
 
 	var role_lbl := Label.new()
 	role_lbl.text = npc_role
-	role_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(role_lbl, Typography.Role.LABEL)
 	role_lbl.add_theme_color_override("font_color", COL_MUTED)
 	role_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_col.add_child(role_lbl)
@@ -428,7 +428,7 @@ func _make_npc_card(id: String) -> PanelContainer:
 	# Band label: "<band name> · bond X.X/10 · ×<mult> orders"
 	var band_lbl := Label.new()
 	band_lbl.text = "%s · bond %.1f/10 · ×%.2f orders" % [band_name, bond, mult]
-	band_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(band_lbl, Typography.Role.BODY)
 	band_lbl.add_theme_color_override("font_color", fill_color)
 	band_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_col.add_child(band_lbl)
@@ -463,7 +463,7 @@ func _make_gift_row(id: String) -> Control:
 			hint.text = "🎁 Gifted this season"
 		else:
 			hint.text = "🎁 No favoured goods in stock"
-		hint.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(hint, Typography.Role.BODY)
 		hint.add_theme_color_override("font_color", COL_MUTED)
 		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(hint)
@@ -480,7 +480,7 @@ func _make_gift_row(id: String) -> Control:
 
 	var picker := OptionButton.new()
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	picker.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(picker, Typography.Role.BODY)
 	for i in options.size():
 		var o: Dictionary = options[i]
 		# "flour ×2 — loves +0.5"
@@ -496,7 +496,7 @@ func _make_gift_row(id: String) -> Control:
 
 	var give_btn := Button.new()
 	give_btn.text = "Give"
-	give_btn.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(give_btn, Typography.Role.BODY)
 	give_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	UiKit.style_action_button(give_btn, Palette.GOLD, 6, 0)
 	give_btn.connect("pressed", Callable(self, "_do_gift").bind(id))
@@ -555,7 +555,7 @@ func _make_worker_card(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = "%s ×%d/%d" % [WorkerConfig.worker_name(id), count, maxc]
-	name_lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -564,7 +564,7 @@ func _make_worker_card(id: String) -> PanelContainer:
 
 	var effect_lbl := Label.new()
 	effect_lbl.text = "%s  (%s)" % [_worker_effect_summary(id), _format_worker_cost(WorkerConfig.hire_cost_at(id, count))]
-	effect_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(effect_lbl, Typography.Role.BODY)
 	effect_lbl.add_theme_color_override("font_color", COL_MUTED)
 	effect_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(effect_lbl)
@@ -581,7 +581,7 @@ func _make_worker_card(id: String) -> PanelContainer:
 	if count > 0:
 		var fire_btn := Button.new()
 		fire_btn.text = "Fire"
-		fire_btn.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(fire_btn, Typography.Role.BODY)
 		UiKit.style_action_button(fire_btn, Palette.EMBER, 6, 0)
 		fire_btn.connect("pressed", Callable(self, "_do_fire").bind(id))
 		btn_row.add_child(fire_btn)
@@ -589,7 +589,7 @@ func _make_worker_card(id: String) -> PanelContainer:
 
 	var hire_btn := Button.new()
 	hire_btn.text = "Hire"
-	hire_btn.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(hire_btn, Typography.Role.BODY)
 	hire_btn.disabled = not game.can_hire_worker(id)
 	UiKit.style_action_button(hire_btn, Palette.MOSS, 6, 0)
 	hire_btn.connect("pressed", Callable(self, "_do_hire").bind(id))
@@ -673,7 +673,7 @@ func _make_portrait(npc_color: Color, npc_name: String) -> Control:
 	# The NPC's initial, centred, in the serif heading font.
 	var initial := Label.new()
 	initial.text = npc_name.left(1).to_upper() if npc_name.length() > 0 else "?"
-	initial.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(initial, Typography.Role.TITLE)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
 		initial.add_theme_font_override("font", hf)
@@ -716,7 +716,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = _quest_label(q)
-	name_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -733,7 +733,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 	else:
 		badge.text = _quest_reward_text(q.get("reward", {}))
 		badge.add_theme_color_override("font_color", COL_VALUE)
-	badge.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(badge, Typography.Role.BODY)
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_row.add_child(badge)
@@ -770,7 +770,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d/%d" % [mini(progress, target), target]
-	prog_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(prog_lbl, Typography.Role.META)
 	prog_lbl.add_theme_color_override("font_color", COL_MUTED)
 	prog_lbl.custom_minimum_size = Vector2(44, 0)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

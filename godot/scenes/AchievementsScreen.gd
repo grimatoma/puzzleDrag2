@@ -156,7 +156,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🏆 Achievements"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -167,7 +167,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -182,14 +182,14 @@ func _build_shell() -> void:
 
 	var trophies_btn := Button.new()
 	trophies_btn.text = "Trophies"
-	trophies_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(trophies_btn, Typography.Role.SUBHEAD)
 	trophies_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_TROPHIES))
 	tab_row.add_child(trophies_btn)
 	_tab_buttons[TAB_TROPHIES] = trophies_btn
 
 	var collection_btn := Button.new()
 	collection_btn.text = "Collection"
-	collection_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(collection_btn, Typography.Role.SUBHEAD)
 	collection_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_COLLECTION))
 	tab_row.add_child(collection_btn)
 	_tab_buttons[TAB_COLLECTION] = collection_btn
@@ -198,7 +198,7 @@ func _build_shell() -> void:
 	# Right-aligned via an expanding spacer label.
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -275,7 +275,7 @@ func _sync_tabs() -> void:
 func _build_group_section(group_name: String, entries: Array) -> void:
 	var header := Label.new()
 	header.text = group_name.to_upper()
-	header.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(header, Typography.Role.SUBHEAD)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -323,7 +323,7 @@ func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 	# ── icon (trophy when unlocked, lock when not) ─────────────────────────────
 	var icon := Label.new()
 	icon.text = "🏆" if unlocked else "🔒"
-	icon.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(icon, Typography.Role.SUBHEAD)
 	icon.add_theme_color_override("font_color", Palette.GOLD if unlocked else COL_MUTED)
 	icon.custom_minimum_size = Vector2(22, 0)
 	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -347,7 +347,7 @@ func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = ach_name
-	name_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(name_lbl, Typography.Role.BODY)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if unlocked else COL_MUTED)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.clip_text = true
@@ -357,7 +357,7 @@ func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 
 	var reward_lbl := Label.new()
 	reward_lbl.text = _reward_text(entry.get("reward", {}))
-	reward_lbl.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(reward_lbl, Typography.Role.CAPTION)
 	reward_lbl.add_theme_color_override("font_color", Palette.MOSS if unlocked else Palette.EMBER)
 	reward_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
 	reward_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -367,7 +367,7 @@ func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 	# ── description (single line, ellipsised) ──────────────────────────────────
 	var desc_lbl := Label.new()
 	desc_lbl.text = desc
-	desc_lbl.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(desc_lbl, Typography.Role.CAPTION)
 	desc_lbl.add_theme_color_override("font_color", COL_MUTED)
 	desc_lbl.clip_text = true
 	desc_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -407,7 +407,7 @@ func _make_trophy_card(entry: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d/%d" % [mini(current, threshold), threshold]
-	prog_lbl.add_theme_font_size_override("font_size", 10)
+	UiKit.set_font_size(prog_lbl, Typography.Role.CAPTION)
 	prog_lbl.add_theme_color_override("font_color", COL_MUTED)
 	prog_lbl.custom_minimum_size = Vector2(34, 0)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -491,7 +491,7 @@ func _build_collection() -> void:
 			continue
 		var header := Label.new()
 		header.text = group_name.to_upper()
-		header.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(header, Typography.Role.SUBHEAD)
 		header.add_theme_color_override("font_color", COL_HEADER)
 		var heading_font: Font = UiKit.heading_font()
 		if heading_font != null:
@@ -511,7 +511,7 @@ func _build_collection() -> void:
 	# Footer — "Discovered N / M" (no fabricated lifetime total; the port doesn't track it).
 	var footer := Label.new()
 	footer.text = "Discovered %d / %d" % [discovered_count(), collection_total()]
-	footer.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(footer, Typography.Role.BODY)
 	footer.add_theme_color_override("font_color", COL_MUTED)
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(footer)
@@ -547,7 +547,7 @@ func _make_resource_chip(res: String, discovered: bool) -> PanelContainer:
 		# a "?" when not — so every chip has a visible mark.
 		var glyph := Label.new()
 		glyph.text = "?" if not discovered else UiKit.pretty_name(res).substr(0, 1)
-		glyph.add_theme_font_size_override("font_size", 26)
+		UiKit.set_font_size(glyph, Typography.Role.TITLE)
 		glyph.add_theme_color_override("font_color", COL_MUTED)
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -558,7 +558,7 @@ func _make_resource_chip(res: String, discovered: bool) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = UiKit.pretty_name(res) if discovered else "???"
-	name_lbl.add_theme_font_size_override("font_size", 10)
+	UiKit.set_font_size(name_lbl, Typography.Role.CAPTION)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else COL_MUTED)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL

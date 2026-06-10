@@ -234,7 +234,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "📦 Inventory"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -247,7 +247,7 @@ func _build_shell() -> void:
 	_view_btn = Button.new()
 	_view_btn.text = "⊞ Grid"
 	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(_view_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
 	title_row.add_child(_view_btn)
 	_action_buttons["view_toggle"] = _view_btn
@@ -272,7 +272,7 @@ func _build_shell() -> void:
 		var tab_id: String = String(def[0])
 		var tab_btn := Button.new()
 		tab_btn.text = String(def[1])
-		tab_btn.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(tab_btn, Typography.Role.SUBHEAD)
 		tab_btn.connect("pressed", Callable(self, "_on_tab").bind(tab_id))
 		tab_row.add_child(tab_btn)
 		_tab_buttons[tab_id] = tab_btn
@@ -284,7 +284,7 @@ func _build_shell() -> void:
 	_search_field.placeholder_text = "Search inventory…"
 	_search_field.clear_button_enabled = true
 	_search_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_search_field.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_search_field, Typography.Role.SUBHEAD)
 	_search_field.add_theme_color_override("font_color", COL_BODY)
 	_search_field.add_theme_color_override("font_placeholder_color", COL_MUTED)
 	_search_field.add_theme_stylebox_override("normal", UiKit.row_box())
@@ -496,14 +496,14 @@ func _make_grid_chip(entry: Dictionary) -> PanelContainer:
 	elif String(entry.get("glyph", "")) != "":
 		var glyph := Label.new()
 		glyph.text = String(entry["glyph"])
-		glyph.add_theme_font_size_override("font_size", 28)
+		UiKit.set_font_size(glyph, Typography.Role.TITLE)
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(glyph)
 
 	var name_lbl := Label.new()
 	name_lbl.text = String(entry.get("label", ""))
-	name_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(name_lbl, Typography.Role.BODY)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -512,7 +512,7 @@ func _make_grid_chip(entry: Dictionary) -> PanelContainer:
 
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % int(entry.get("count", 0))
-	count_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_VALUE)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -532,7 +532,7 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 
 	var header := Label.new()
 	header.text = group_name
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -574,7 +574,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 	# Count — prominent ink, right-aligned in its own fixed column.
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % count
-	count_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_BODY)
 	count_lbl.custom_minimum_size = Vector2(64, 0)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -583,7 +583,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 
 	# Value — sell-each + the line value (count × sell), gold. Sellable goods only.
 	var value_lbl := Label.new()
-	value_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(value_lbl, Typography.Role.SUBHEAD)
 	value_lbl.add_theme_color_override("font_color", COL_VALUE)
 	value_lbl.custom_minimum_size = Vector2(150, 0)
 	value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -610,7 +610,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 		if MarketConfig.can_sell(res):
 			var sell_btn := Button.new()
 			sell_btn.text = "Sell 1 · +%d🪙" % game.live_sell_price(res)
-			UiKit.style_action_button(sell_btn, Palette.MOSS, 6, 14)
+			UiKit.style_action_button(sell_btn, Palette.MOSS, 6, Typography.size(Typography.Role.LABEL))
 			sell_btn.disabled = count <= 0
 			sell_btn.connect("pressed", Callable(self, "_on_sell").bind(res))
 			actions.add_child(sell_btn)
@@ -619,7 +619,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 			var buy_btn := Button.new()
 			var price: int = game.live_buy_price(res)
 			buy_btn.text = "Buy 1 · %d🪙" % price
-			UiKit.style_action_button(buy_btn, Palette.GOLD, 6, 14)
+			UiKit.style_action_button(buy_btn, Palette.GOLD, 6, Typography.size(Typography.Role.LABEL))
 			buy_btn.disabled = game.coins < price
 			buy_btn.connect("pressed", Callable(self, "_on_buy").bind(res))
 			actions.add_child(buy_btn)
@@ -644,7 +644,7 @@ func _build_tool_section(tool_ids: Array) -> void:
 
 	var header := Label.new()
 	header.text = "Tools"
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -684,7 +684,7 @@ func _make_tool_row(id: String) -> PanelContainer:
 	# Charges — prominent ink, right-aligned (mirrors the resource count column).
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % charges
-	count_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_BODY)
 	count_lbl.custom_minimum_size = Vector2(64, 0)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -716,7 +716,7 @@ func _build_item_section(ids: Array) -> void:
 
 	var header := Label.new()
 	header.text = "Items"
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -745,7 +745,7 @@ func _make_item_row(id: String) -> PanelContainer:
 	# Glyph badge (these items have no procedural PNG art — they're scalar valuables).
 	var glyph := Label.new()
 	glyph.text = String(def.get("glyph", "•"))
-	glyph.add_theme_font_size_override("font_size", 28)
+	UiKit.set_font_size(glyph, Typography.Role.TITLE)
 	glyph.custom_minimum_size = Vector2(34, 34)
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -758,7 +758,7 @@ func _make_item_row(id: String) -> PanelContainer:
 
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % count
-	count_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_BODY)
 	count_lbl.custom_minimum_size = Vector2(64, 0)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -829,7 +829,7 @@ func _begin_details(col: VBoxContainer) -> VBoxContainer:
 func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
 	var lbl := Label.new()
 	lbl.text = text.to_upper()
-	lbl.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(lbl, Typography.Role.CAPTION)
 	lbl.add_theme_color_override("font_color", COL_HEADER)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	details.add_child(lbl)
@@ -838,7 +838,7 @@ func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
 func _make_detail_text(text: String) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(lbl, Typography.Role.LABEL)
 	lbl.add_theme_color_override("font_color", COL_MUTED)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -883,7 +883,7 @@ func _build_footer() -> void:
 
 	var total := Label.new()
 	total.text = "Total stockpile value: %d 🪙" % total_value()
-	total.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(total, Typography.Role.HEADING)
 	total.add_theme_color_override("font_color", COL_VALUE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -1114,7 +1114,7 @@ func _grouped_owned() -> Dictionary:
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE

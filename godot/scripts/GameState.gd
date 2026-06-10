@@ -418,6 +418,12 @@ var audio_muted: bool = false
 ## it from the menu; persisted so the choice survives a reload. Defaults to motion ON.
 var reduce_motion: bool = false
 
+## Player "Text Size" accessibility preference: an index into Typography.TEXT_SCALES
+## (0=Normal, 1=Large, 2=Larger). Main sets Typography.scale from this on launch (before
+## the HUD builds) and cycles it from the menu; persisted so the choice survives a reload.
+## Legacy-safe default 0 (Normal) — a save written before this field existed loads at Normal.
+var text_size_index: int = 0
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 ## Whether the player has completed (or skipped) the 6-step tutorial onboarding
 ## modal. Persisted so the modal is shown only once. Main calls mark_tutorial_seen()
@@ -4860,6 +4866,7 @@ func to_dict() -> Dictionary:
 		"tile_free_moves": free_moves(),
 		"audio_muted": audio_muted,
 		"reduce_motion": reduce_motion,
+		"text_size_index": text_size_index,
 		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
 		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
 		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
@@ -5270,6 +5277,10 @@ static func from_dict(d: Dictionary) -> GameState:
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
 	s.reduce_motion = bool(d.get("reduce_motion", false))
+	# Restore the Text Size index (M-typography). clampi guards against an out-of-range
+	# saved value (e.g. a save written when TEXT_SCALES had more entries); defaults to 0
+	# (Normal) for any save written before this field existed.
+	s.text_size_index = clampi(int(d.get("text_size_index", 0)), 0, Typography.TEXT_SCALES.size() - 1)
 	# Restore owned tool charges (M8b) into the composed ToolState from the SAME flat
 	# top-level "tools" key. Missing key (any save written before tools existed) →
 	# ToolState.from_dict({}) yields {} (no tools). Each value is coerced to int (JSON

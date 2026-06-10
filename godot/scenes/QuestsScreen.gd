@@ -143,7 +143,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "📋 Quests"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -154,7 +154,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -167,14 +167,14 @@ func _build_shell() -> void:
 
 	var quests_btn := Button.new()
 	quests_btn.text = "Quests"
-	UiKit.style_button(quests_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(quests_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	quests_btn.connect("pressed", Callable(self, "_on_tab").bind("quests"))
 	tabs.add_child(quests_btn)
 	_tab_buttons["quests"] = quests_btn
 
 	var almanac_btn := Button.new()
 	almanac_btn.text = "Almanac"
-	UiKit.style_button(almanac_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(almanac_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	almanac_btn.connect("pressed", Callable(self, "_on_tab").bind("almanac"))
 	tabs.add_child(almanac_btn)
 	_tab_buttons["almanac"] = almanac_btn
@@ -276,7 +276,7 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 
 	var label_lbl := Label.new()
 	label_lbl.text = _quest_label(q)
-	label_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(label_lbl, Typography.Role.SUBHEAD)
 	label_lbl.add_theme_color_override("font_color", COL_BODY)
 	label_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -299,7 +299,7 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d/%d" % [mini(progress, target), target]
-	prog_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(prog_lbl, Typography.Role.BODY)
 	prog_lbl.add_theme_color_override("font_color", COL_BODY)
 	prog_lbl.custom_minimum_size = Vector2(56, 0)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -314,7 +314,7 @@ func _make_quest_row(q: Dictionary) -> PanelContainer:
 	claim_btn.disabled = not claimable
 	claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	claim_btn.custom_minimum_size = Vector2(140, 44)
-	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 10, 20)
+	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 10, Typography.size(Typography.Role.SUBHEAD))
 	claim_btn.connect("pressed", Callable(self, "_on_claim_quest").bind(qid))
 	col.add_child(claim_btn)
 	_quest_buttons[qid] = claim_btn
@@ -345,7 +345,7 @@ func _make_reward_chip(reward: Dictionary) -> PanelContainer:
 
 	var lbl := Label.new()
 	lbl.text = _quest_reward_text(reward)
-	lbl.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(lbl, Typography.Role.LABEL)
 	lbl.add_theme_color_override("font_color", COL_VALUE)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -384,7 +384,7 @@ func _render_almanac() -> void:
 	# Header line: level + XP-into-level / XP_PER_LEVEL.
 	var header := Label.new()
 	header.text = "Level %d  ·  %d / %d ⭐ to next" % [level, into_level, AlmanacConfig.XP_PER_LEVEL]
-	header.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(header, Typography.Role.SUBHEAD)
 	header.add_theme_color_override("font_color", COL_VALUE)
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(header)
@@ -398,7 +398,7 @@ func _render_almanac() -> void:
 	bar_row.add_child(_make_bar(into_level, AlmanacConfig.XP_PER_LEVEL, false))
 	var total_lbl := Label.new()
 	total_lbl.text = "%d ⭐" % xp
-	total_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(total_lbl, Typography.Role.BODY)
 	total_lbl.add_theme_color_override("font_color", COL_BODY)
 	total_lbl.custom_minimum_size = Vector2(64, 0)
 	total_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -437,7 +437,7 @@ func _make_tier_row(tier_def: Dictionary, level: int) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = "Tier %d — %s" % [tier, String(tier_def.get("name", ""))]
-	name_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_VALUE if claimed else COL_BODY)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -445,14 +445,14 @@ func _make_tier_row(tier_def: Dictionary, level: int) -> PanelContainer:
 
 	var req_lbl := Label.new()
 	req_lbl.text = "Lv %d" % req_level
-	req_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(req_lbl, Typography.Role.META)
 	req_lbl.add_theme_color_override("font_color", COL_MUTED)
 	req_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(req_lbl)
 
 	var reward_lbl := Label.new()
 	reward_lbl.text = _tier_reward_text(tier_def.get("reward", {}))
-	reward_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(reward_lbl, Typography.Role.BODY)
 	reward_lbl.add_theme_color_override("font_color", COL_VALUE if (claimed or claimable) else COL_MUTED)
 	reward_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	reward_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -460,7 +460,7 @@ func _make_tier_row(tier_def: Dictionary, level: int) -> PanelContainer:
 
 	var desc_lbl := Label.new()
 	desc_lbl.text = String(tier_def.get("description", ""))
-	desc_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(desc_lbl, Typography.Role.META)
 	desc_lbl.add_theme_color_override("font_color", COL_MUTED)
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -470,7 +470,7 @@ func _make_tier_row(tier_def: Dictionary, level: int) -> PanelContainer:
 	claim_btn.text = "CLAIMED" if claimed else "CLAIM"
 	claim_btn.disabled = not claimable
 	claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 6, 18)
+	UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.SUBHEAD))
 	claim_btn.connect("pressed", Callable(self, "_on_claim_tier").bind(tier))
 	col.add_child(claim_btn)
 	_tier_buttons[tier] = claim_btn
@@ -555,7 +555,7 @@ func _make_bar(value: int, maxv: int, done: bool) -> Panel:
 func _empty_label(text: String) -> Label:
 	var empty := Label.new()
 	empty.text = text
-	empty.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(empty, Typography.Role.LABEL)
 	empty.add_theme_color_override("font_color", COL_MUTED)
 	empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

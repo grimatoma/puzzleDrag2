@@ -277,7 +277,7 @@ func _build_hud() -> void:
 	# heading). Replaces the old "puzzleDrag2 · Godot M3" debug title.
 	var title := Label.new()
 	title.text = "Hearthwood Vale"
-	title.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
@@ -350,7 +350,7 @@ func _build_hud() -> void:
 	# "what do I do" affordance; _layout_hud pins it just above the board.)
 	_chain_label = Label.new()
 	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
-	_chain_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_chain_label, Typography.Role.LABEL)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -361,7 +361,7 @@ func _build_hud() -> void:
 	# ── status (kept) — action feedback in the strip between the board and the nav ──
 	_status_label = Label.new()
 	_status_label.text = ""
-	_status_label.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(_status_label, Typography.Role.SUBHEAD)
 	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -377,7 +377,7 @@ func _build_hud() -> void:
 	# ── orders — compact one-line readout in the upper half of the bottom strip ──
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
-	_orders_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_orders_label, Typography.Role.LABEL)
 	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_orders_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -413,7 +413,7 @@ func _build_hud() -> void:
 	var menu_btn := Button.new()
 	menu_btn.name = "MenuButton"
 	menu_btn.text = "⚙"
-	menu_btn.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(menu_btn, Typography.Role.HEADING)
 	menu_btn.add_theme_color_override("font_color", Palette.INK)
 	menu_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
 	menu_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
@@ -543,7 +543,7 @@ func _panel_header(left_text: String) -> Dictionary:
 
 	var left := Label.new()
 	left.text = left_text
-	left.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(left, Typography.Role.BODY)
 	left.add_theme_color_override("font_color", Palette.INK)
 	left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -552,7 +552,7 @@ func _panel_header(left_text: String) -> Dictionary:
 
 	var right := Label.new()
 	right.text = ""
-	right.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(right, Typography.Role.META)
 	right.add_theme_color_override("font_color", Palette.INK_MID)
 	right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	right.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -676,7 +676,7 @@ func _build_chain_view() -> VBoxContainer:
 	# Big centred counter ("3/6", "2+4/6", "1/6 +1", "×4") — KEPT name (_chain_prog_label).
 	_chain_prog_label = Label.new()
 	_chain_prog_label.text = ""
-	_chain_prog_label.add_theme_font_size_override("font_size", 27)
+	UiKit.set_font_size(_chain_prog_label, Typography.Role.TITLE)
 	_chain_prog_label.add_theme_color_override("font_color", Color("#fff8e7"))
 	_chain_prog_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
 	_chain_prog_label.add_theme_constant_override("outline_size", 5)
@@ -690,7 +690,7 @@ func _build_chain_view() -> VBoxContainer:
 	# the fills. Hidden at stage 0; _refresh_chain_progress drives text/colour/pop.
 	_chain_stage_label = Label.new()
 	_chain_stage_label.text = ""
-	_chain_stage_label.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(_chain_stage_label, Typography.Role.META)
 	_chain_stage_label.add_theme_color_override("font_color", Palette.PARCHMENT)
 	_chain_stage_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	_chain_stage_label.add_theme_constant_override("outline_size", 4)
@@ -736,7 +736,7 @@ func _build_chain_view() -> VBoxContainer:
 	res_holder.add_child(_chain_earn_badge)
 	_chain_earn_label = Label.new()
 	_chain_earn_label.text = "+1"
-	_chain_earn_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_chain_earn_label, Typography.Role.LABEL)
 	_chain_earn_label.add_theme_color_override("font_color", Color("#fff8e7"))
 	_chain_earn_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.4))
 	_chain_earn_label.add_theme_constant_override("outline_size", 2)
@@ -768,7 +768,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	var upg_caption := Label.new()
 	upg_caption.text = "UPGRADE TO"
-	upg_caption.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(upg_caption, Typography.Role.CAPTION)
 	upg_caption.add_theme_color_override("font_color", Palette.INK_MID)
 	upg_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	upg_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -784,7 +784,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	_chain_upg_name = Label.new()
 	_chain_upg_name.text = ""
-	_chain_upg_name.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_name, Typography.Role.BODY)
 	_chain_upg_name.add_theme_color_override("font_color", Palette.INK)
 	_chain_upg_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_chain_upg_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -812,7 +812,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	_chain_upg_count = Label.new()
 	_chain_upg_count.text = ""
-	_chain_upg_count.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_count, Typography.Role.BODY)
 	_chain_upg_count.add_theme_color_override("font_color", Color("#7a3c12"))
 	_chain_upg_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_chain_upg_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -820,7 +820,7 @@ func _build_chain_view() -> VBoxContainer:
 
 	var arrow := Label.new()
 	arrow.text = "→"
-	arrow.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(arrow, Typography.Role.BODY)
 	arrow.add_theme_color_override("font_color", Palette.INK_MID)
 	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -831,7 +831,7 @@ func _build_chain_view() -> VBoxContainer:
 	foot.add_child(_chain_upg_plus)
 	_chain_upg_plus_lbl = Label.new()
 	_chain_upg_plus_lbl.text = "+1"
-	_chain_upg_plus_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_chain_upg_plus_lbl, Typography.Role.BODY)
 	_chain_upg_plus_lbl.add_theme_color_override("font_color", Color("#3d5d18"))
 	_chain_upg_plus_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chain_upg_plus.add_child(_chain_upg_plus_lbl)
@@ -893,7 +893,7 @@ func _build_tool_view() -> VBoxContainer:
 	close.text = "✕"
 	close.custom_minimum_size = Vector2(30, 26)
 	close.focus_mode = Control.FOCUS_NONE
-	UiKit.style_button(close, Palette.EMBER, 0, 13)
+	UiKit.style_button(close, Palette.EMBER, 0, Typography.size(Typography.Role.BODY))
 	close.pressed.connect(_on_tool_view_closed)
 	header["row"].add_child(close)
 
@@ -933,7 +933,7 @@ func _build_tool_view() -> VBoxContainer:
 	var heading_font: Font = UiKit.heading_font()
 	_tool_armed_name = Label.new()
 	_tool_armed_name.text = ""
-	_tool_armed_name.add_theme_font_size_override("font_size", 19)
+	UiKit.set_font_size(_tool_armed_name, Typography.Role.SUBHEAD)
 	_tool_armed_name.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		_tool_armed_name.add_theme_font_override("font", heading_font)
@@ -941,7 +941,7 @@ func _build_tool_view() -> VBoxContainer:
 
 	_tool_armed_desc = Label.new()
 	_tool_armed_desc.text = ""
-	_tool_armed_desc.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_tool_armed_desc, Typography.Role.BODY)
 	_tool_armed_desc.add_theme_color_override("font_color", Palette.INK_MID)
 	_tool_armed_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_tool_armed_desc.max_lines_visible = 2
@@ -960,7 +960,7 @@ func _build_tool_view() -> VBoxContainer:
 
 	_tool_view_prompt = Label.new()
 	_tool_view_prompt.text = ""
-	_tool_view_prompt.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_tool_view_prompt, Typography.Role.BODY)
 	_tool_view_prompt.add_theme_color_override("font_color", Color("#7a3c12"))
 	_tool_view_prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_tool_view_prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1031,7 +1031,7 @@ func _style_cta(btn: Button, fill: Color, border: Color, ink: Color) -> void:
 	btn.add_theme_color_override("font_hover_color", ink)
 	btn.add_theme_color_override("font_pressed_color", ink)
 	btn.add_theme_color_override("font_disabled_color", Color(ink, 0.6))
-	btn.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(btn, Typography.Role.BODY)
 	UiFx.attach_press_feedback(btn)
 
 ## Build the tool HOTBAR container (React PuzzleHotbar): a dark wood rail pinned
@@ -1145,7 +1145,7 @@ func _refresh_tools() -> void:
 			btn.expand_icon = true
 		else:
 			btn.text = label                       # fallback for a tool with no art
-			btn.add_theme_font_size_override("font_size", 12)
+			UiKit.set_font_size(btn, Typography.Role.META)
 		# Tooltip carries the label + "×N" + the tool's description — the tests read
 		# tooltip_text (the button itself is icon-only; the action panel shows the text).
 		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
@@ -1170,7 +1170,7 @@ func _refresh_tools() -> void:
 		# Count chip — a small dark rounded badge overhanging the slot's top-right corner.
 		var badge := Label.new()
 		badge.text = str(charges)
-		badge.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(badge, Typography.Role.BODY)
 		badge.add_theme_color_override("font_color", Palette.PARCHMENT)
 		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1368,7 +1368,7 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 
 	var icon_lbl := Label.new()
 	icon_lbl.text = icon
-	icon_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(icon_lbl, Typography.Role.HEADING)
 	# Explicit ink tint — REQUIRED for contrast. The bundled NotoEmoji fallback is
 	# MONOCHROME, so these glyphs render in the Label's font_color; without an override
 	# that's the theme default (near-white), which vanishes on the paper nav bar.
@@ -1379,7 +1379,7 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 
 	var text_lbl := Label.new()
 	text_lbl.text = label_text
-	text_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(text_lbl, Typography.Role.META)
 	text_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	text_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1494,7 +1494,7 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 		row.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
-	lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1535,7 +1535,7 @@ func spawn_reward_chip(text: String, color: Color, icon_key: String = "") -> voi
 		inner.add_child(icon)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1891,7 +1891,7 @@ func _build_level_pill() -> PanelContainer:
 
 	_level_label = Label.new()
 	_level_label.text = "Lv 1"
-	_level_label.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(_level_label, Typography.Role.LABEL)
 	_level_label.add_theme_color_override("font_color", Palette.PARCHMENT)
 	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

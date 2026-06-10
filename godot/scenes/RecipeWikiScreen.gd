@@ -141,7 +141,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🔨 Craft"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -166,14 +166,14 @@ func _build_shell() -> void:
 	for station_id in _stations():
 		var btn := Button.new()
 		btn.text = BuildingConfig.building_name(station_id)
-		btn.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(btn, Typography.Role.SUBHEAD)
 		btn.connect("pressed", Callable(self, "_on_station_tab").bind(station_id))
 		tab_row.add_child(btn)
 		_station_buttons[station_id] = btn
 
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -308,7 +308,7 @@ func _make_recipe_row(id: String) -> PanelContainer:
 		var glyph := Label.new()
 		var g: String = ResourceConfig.glyph(output)
 		glyph.text = g if g != "" else "🍲"
-		glyph.add_theme_font_size_override("font_size", 30)
+		UiKit.set_font_size(glyph, Typography.Role.DISPLAY)
 		glyph.add_theme_color_override("font_color", COL_BODY)
 		glyph.custom_minimum_size = Vector2(44, 44)
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -325,7 +325,7 @@ func _make_recipe_row(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = RecipeConfig.recipe_name(id)
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -336,12 +336,12 @@ func _make_recipe_row(id: String) -> PanelContainer:
 	# Status subtitle (React parity: Ready / Missing inputs / Station not built).
 	var st: Dictionary = _craft_status(id)
 	if String(st["text"]) != "":
-		col.add_child(_plain(String(st["text"]), 13, st["color"]))
+		col.add_child(_plain(String(st["text"]), Typography.size(Typography.Role.BODY), st["color"]))
 
 	# Output qty, right-aligned (only said once — the detail card spells out the inputs).
 	var qty: int = RecipeConfig.recipe_qty(id)
 	if qty > 1:
-		hbox.add_child(_plain("×%d" % qty, 16, COL_VALUE))
+		hbox.add_child(_plain("×%d" % qty, Typography.size(Typography.Role.SUBHEAD), COL_VALUE))
 
 	return row
 
@@ -388,7 +388,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 		var head_glyph := Label.new()
 		var hg: String = ResourceConfig.glyph(RecipeConfig.recipe_output(id))
 		head_glyph.text = hg if hg != "" else "🍲"
-		head_glyph.add_theme_font_size_override("font_size", 28)
+		UiKit.set_font_size(head_glyph, Typography.Role.TITLE)
 		head_glyph.add_theme_color_override("font_color", COL_BODY)
 		head_glyph.custom_minimum_size = Vector2(40, 40)
 		head_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -403,7 +403,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 
 	var out_name := Label.new()
 	out_name.text = "%s ×%d" % [RecipeConfig.recipe_name(id), RecipeConfig.recipe_qty(id)]
-	out_name.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(out_name, Typography.Role.SUBHEAD)
 	out_name.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -413,7 +413,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var station_id: String = RecipeConfig.recipe_station(id)
 	var station_lbl := Label.new()
 	station_lbl.text = "at %s" % BuildingConfig.building_name(station_id)
-	station_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(station_lbl, Typography.Role.BODY)
 	station_lbl.add_theme_color_override("font_color", COL_MUTED)
 	head_col.add_child(station_lbl)
 
@@ -422,7 +422,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var status: Dictionary = _craft_status(id)
 	var status_lbl := Label.new()
 	status_lbl.text = String(status["text"])
-	status_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(status_lbl, Typography.Role.LABEL)
 	status_lbl.add_theme_color_override("font_color", status["color"])
 	status_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head_col.add_child(status_lbl)
@@ -433,7 +433,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	if desc_text != "":
 		var desc_lbl := Label.new()
 		desc_lbl.text = desc_text
-		desc_lbl.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(desc_lbl, Typography.Role.BODY)
 		desc_lbl.add_theme_color_override("font_color", COL_BODY)
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -455,7 +455,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var craft_btn := Button.new()
 	craft_btn.text = "Craft"
 	craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, 18)
+	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	craft_btn.disabled = not craftable
 	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
 	col.add_child(craft_btn)
@@ -514,11 +514,11 @@ func _input_chip(key: String, need: int) -> PanelContainer:
 		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(icon)
 	else:
-		row.add_child(_plain(UiKit.pretty_name(key), 13, COL_BODY))
+		row.add_child(_plain(UiKit.pretty_name(key), Typography.size(Typography.Role.BODY), COL_BODY))
 
 	var count := Label.new()
 	count.text = "%d/%d" % [have, need]
-	count.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(count, Typography.Role.LABEL)
 	count.add_theme_color_override("font_color", Palette.MOSS if covered else COL_SHORT)
 	count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	count.mouse_filter = Control.MOUSE_FILTER_IGNORE

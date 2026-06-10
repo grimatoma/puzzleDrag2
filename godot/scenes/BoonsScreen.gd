@@ -133,7 +133,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "✨ Boons"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -144,7 +144,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -152,7 +152,7 @@ func _build_shell() -> void:
 	# Currency header — "✨ Embers: N · ⬡ Core Ingots: N", rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_EMBERS)
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
@@ -196,7 +196,7 @@ func refresh() -> void:
 	if not any_unlocked:
 		var hint := Label.new()
 		hint.text = "Build up a settlement to meet its keeper. Choose to Coexist or Drive Out — then spend the Embers or Core Ingots you earn on the boons below."
-		hint.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(hint, Typography.Role.LABEL)
 		hint.add_theme_color_override("font_color", COL_MUTED)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -212,7 +212,7 @@ func refresh() -> void:
 func _render_path_group(path: String, heading_text: String, accent: Color) -> void:
 	var heading := Label.new()
 	heading.text = heading_text
-	heading.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(heading, Typography.Role.SUBHEAD)
 	heading.add_theme_color_override("font_color", accent)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -267,7 +267,7 @@ func _make_boon_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = name_str
-	name_lbl.add_theme_font_size_override("font_size", 19)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY if (unlocked or owned) else COL_MUTED)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -282,7 +282,7 @@ func _make_boon_card(entry: Dictionary) -> PanelContainer:
 	# ── description / effect text ────────────────────────────────────────────────
 	var desc_lbl := Label.new()
 	desc_lbl.text = desc_str
-	desc_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(desc_lbl, Typography.Role.BODY)
 	desc_lbl.add_theme_color_override("font_color", COL_MUTED)
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -302,14 +302,14 @@ func _make_boon_card(entry: Dictionary) -> PanelContainer:
 	if owned:
 		var owned_lbl := Label.new()
 		owned_lbl.text = "✓ Owned"
-		owned_lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(owned_lbl, Typography.Role.LABEL)
 		owned_lbl.add_theme_color_override("font_color", Palette.MOSS)
 		owned_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bottom.add_child(owned_lbl)
 	elif not unlocked:
 		var lock_lbl := Label.new()
 		lock_lbl.text = "🔒 Locked"
-		lock_lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(lock_lbl, Typography.Role.LABEL)
 		lock_lbl.add_theme_color_override("font_color", COL_MUTED)
 		lock_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bottom.add_child(lock_lbl)
@@ -318,7 +318,7 @@ func _make_boon_card(entry: Dictionary) -> PanelContainer:
 		var claim_btn := Button.new()
 		claim_btn.text = "Claim"
 		claim_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 6, 15)
+		UiKit.style_action_button(claim_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 		claim_btn.disabled = not purchasable
 		claim_btn.connect("pressed", Callable(self, "_on_claim").bind(id))
 		bottom.add_child(claim_btn)

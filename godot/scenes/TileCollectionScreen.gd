@@ -132,7 +132,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "📖 Tile Collection"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -143,7 +143,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -151,7 +151,7 @@ func _build_shell() -> void:
 	# Header line — "N tiles in play" (kept for the existing test + a clear count).
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
@@ -297,7 +297,7 @@ func _make_grid_card(tile_val: int) -> Control:
 	elif not discovered and id != "":
 		marker = "🔒 "
 	name_lbl.text = marker + display_name
-	name_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(name_lbl, Typography.Role.META)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else Palette.INK_MID)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -316,7 +316,7 @@ func _rebuild_detail() -> void:
 	if _selected_tile_id == "":
 		var hint := Label.new()
 		hint.text = "Tap a tile above to see its details."
-		hint.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(hint, Typography.Role.LABEL)
 		hint.add_theme_color_override("font_color", COL_MUTED)
 		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -353,7 +353,7 @@ func _rebuild_detail() -> void:
 
 	var name_lbl := Label.new()
 	name_lbl.text = display_name_for(tile_val)
-	name_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(name_lbl, Typography.Role.HEADING)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -364,7 +364,7 @@ func _rebuild_detail() -> void:
 	var tier: int = TileVariantConfig.tier_of(id) if TileVariantConfig.is_tile(id) else 0
 	var cat_label: String = _category_heading(category)
 	meta.text = "%s · Tier %d" % [cat_label, tier]
-	meta.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(meta, Typography.Role.META)
 	meta.add_theme_color_override("font_color", COL_MUTED)
 	head_col.add_child(meta)
 
@@ -372,7 +372,7 @@ func _rebuild_detail() -> void:
 	var produces: String = Constants.produced_resource(tile_val)
 	var prod := Label.new()
 	prod.text = ("Hazard — no yield" if produces == "" else "Produces: %s" % UiKit.pretty_name(produces))
-	prod.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(prod, Typography.Role.LABEL)
 	prod.add_theme_color_override("font_color", COL_MUTED if produces == "" else COL_VALUE)
 	_detail_body.add_child(prod)
 
@@ -382,7 +382,7 @@ func _rebuild_detail() -> void:
 		if ab_text != "":
 			var ab := Label.new()
 			ab.text = ab_text
-			ab.add_theme_font_size_override("font_size", 13)
+			UiKit.set_font_size(ab, Typography.Role.BODY)
 			ab.add_theme_color_override("font_color", Palette.MOSS)
 			ab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_detail_body.add_child(ab)
@@ -391,7 +391,7 @@ func _rebuild_detail() -> void:
 	var status := Label.new()
 	status.text = (TVU.status_for(game, id) if TileVariantConfig.is_tile(id)
 		else "Board hazard — not a collectible tile variant.")
-	status.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(status, Typography.Role.BODY)
 	status.add_theme_color_override("font_color", COL_MUTED)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_detail_body.add_child(status)
@@ -402,7 +402,7 @@ func _rebuild_detail() -> void:
 		if desc_text != "":
 			var desc := Label.new()
 			desc.text = desc_text
-			desc.add_theme_font_size_override("font_size", 13)
+			UiKit.set_font_size(desc, Typography.Role.BODY)
 			desc.add_theme_color_override("font_color", COL_BODY)
 			desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -423,7 +423,7 @@ func _rebuild_detail() -> void:
 				"activate": accent = Palette.GO_GREEN
 				"buy":      accent = Palette.GOLD
 				_:          accent = Palette.IRON
-			UiKit.style_action_button(btn, accent, 8, 15)
+			UiKit.style_action_button(btn, accent, 8, Typography.size(Typography.Role.LABEL))
 			btn.connect("pressed", Callable(self, "_on_detail_action").bind(id, action, category))
 			_detail_body.add_child(btn)
 			_action_buttons["detail_action"] = btn
