@@ -791,6 +791,9 @@ func _open_inventory() -> void:
 		add_child(_inventory_screen)
 		_inventory_screen.setup(game)
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
+		# C2 — an expanded ledger row's Sell/Buy mutates coins + inventory; route through the
+		# shared state-changed path (refresh the HUD pills + save), same as the Town screens.
+		_inventory_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_inventory_screen.open()
 	_router.open_modal(ViewRouter.Modal.INVENTORY)
 	_hud.set_nav_current("inventory")
@@ -847,7 +850,14 @@ func _on_townmap_closed() -> void:
 ## B1: the Town view's "▶ Board" overlay button was pressed — return to the board. Routes
 ## through the same path as apply_deeplink("board"): hide the view + reset the router + clear
 ## the active nav tab. (ESC/back returns to the board via _close_top_overlay → close() too.)
+## When the board is IDLE-GATED (no live run / expedition / boss), apply_deeplink("board")
+## would bounce straight back to this town map — the button would read as dead ("the board
+## never launches"). A press then means "play": open the Start Farming picker instead, the
+## one action that actually launches a board.
 func _on_townmap_board_requested() -> void:
+	if game != null and not _board_should_be_active():
+		_open_startfarming()
+		return
 	apply_deeplink("board")
 
 ## review-3: the Town map's "📋 Town Ledger" overlay button was pressed — open the TownScreen

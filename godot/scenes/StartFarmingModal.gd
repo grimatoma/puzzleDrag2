@@ -382,8 +382,9 @@ func _build_slot(cat: String) -> Control:
 	var btn := Button.new()
 	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
 	btn.toggle_mode = false
-	# Slots are always ON in the home zone → styled like a selected/active variant.
-	UiKit.style_action_button(btn, Palette.GO_GREEN, 6, 0)
+	# Plain parchment slot — these are informational pickers (tap to change the variant),
+	# not CTAs, so the solid action green was misleading; the green stays on Start.
+	UiKit.style_button(btn, Palette.IRON, 6, 0)
 	btn.connect("pressed", Callable(self, "open_chooser").bind(cat))
 	wrap.add_child(btn)
 	_slot_buttons[cat] = btn
