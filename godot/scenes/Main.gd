@@ -333,6 +333,11 @@ func _ready() -> void:
 	# the closure re-reads game.active_biome each call, so it self-disables during an expedition
 	# and re-enables on return. Decoupled: the Board holds this Callable, never a GameState ref.
 	board.upgrade_provider = _farm_upgrade_spawn
+	# A2 — the board card's TOP-edge biome accent strip reads which biome we're on via this provider
+	# (same idiom as upgrade_provider: a Callable, never a GameState ref — the Board stays decoupled).
+	# It re-reads game.active_biome on every redraw, so the strip follows expedition entry/return on
+	# its own (the board already redraws on biome flips via setup_new_board) with no per-transition push.
+	board.biome_provider = _board_biome_id
 	# M4d: SFX service (owned by Main, not an autoload — see Audio.gd). Seed the
 	# change-trackers from the restored save so the FIRST town/biome event compares
 	# against the loaded state, not zero, and doesn't fire a spurious sound.
@@ -2138,6 +2143,12 @@ func _farm_upgrade_spawn(tile_type: int, length: int) -> Dictionary:
 	# T2: spawn the player's ACTIVE VARIANT of the upgrade target category (default == base
 	# tile, so an un-customised board is unchanged). Instance helper honours tile_active_by_category.
 	return game.upgrade_spawn_active(game._active_farm_zone(), tile_type, length)
+
+## A2 — the biome provider the Board's TOP-edge accent strip reads (installed in _ready). Returns
+## GameState.active_biome ("farm"/"mine"/"harbor"); the Board maps it to a colour via
+## Constants.biome_accent. A thin read-only accessor — never mutates state (mirrors _farm_upgrade_spawn).
+func _board_biome_id() -> String:
+	return game.active_biome
 
 ## T7/T9/T10 — stash the resolving chain's cells (Board emits this BEFORE chain_resolved). Used by
 ## _on_chain_resolved for the farm-hazard interactions (rat clear / fire extinguish / deadly cull).
