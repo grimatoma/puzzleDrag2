@@ -90,14 +90,14 @@ func _spawn_main():
 	# scrim would eat every HUD click + board drag, so free it for the input test.
 	if main._tutorial_modal != null:
 		main._tutorial_modal.free()
-		main._tutorial_modal = null
+		main._overlays.erase("tutorial")   # drop the cached entry (the accessor reads it back as null)
 		await process_frame
 	# A fresh save can also enqueue the story arrival beat; its scrim eats HUD clicks too.
 	# (With the tutorial shown first the queue isn't drained yet, so _story_modal is
 	# usually null here — but free it defensively in case a future load path drains it.)
 	if main._story_modal != null:
 		main._story_modal.free()
-		main._story_modal = null
+		main._overlays.erase("story")   # drop the cached entry (the accessor reads it back as null)
 		await process_frame
 	return main
 

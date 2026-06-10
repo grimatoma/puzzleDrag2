@@ -768,10 +768,10 @@ func _initialize() -> void:
 			if vp_name == "desktop" and not DESKTOP_SCENARIOS.has(scn_id):
 				continue   # desktop viewport is a representative subset only
 
-				if vp_name == "portrait":
-					print("  - %s : %s" % [scn_id, String(scn.get("expect", "(no expect set)"))])
+			if vp_name == "portrait":
+				print("  - %s : %s" % [scn_id, String(scn.get("expect", "(no expect set)"))])
 
-				var img := await _capture_scenario(scn, vp_size)
+			var img := await _capture_scenario(scn, vp_size)
 			var tag := "%s/%s" % [scn_id, vp_name]   # scenario × viewport label in the tally
 
 			if img == null:

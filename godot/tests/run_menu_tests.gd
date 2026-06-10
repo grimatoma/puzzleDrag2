@@ -336,10 +336,16 @@ func _initialize() -> void:
 	_check(after_wrap.text_size_index == 0, "_on_cycle_text_size() persisted the wrapped index 0")
 	SaveManager.clear()
 
-	# ── Invalidation guard (review Issue 2): _reapply_text_scale frees + NULLs cached overlays ──
-	# Lazily open a few cached secondary screens so their member vars are non-null, then prove
-	# _reapply_text_scale() invalidated (freed AND nulled) every one so they rebuild fresh at the
-	# new scale. Guards against a "freed-but-not-nulled" regression if a screen is added later.
+	# ── Invalidation guard (review Issue 2 + the cached-overlay registry refactor) ─────────
+	# _reapply_text_scale() frees AND "nulls" every cached overlay EXCEPT the open menu, so each
+	# rebuilds fresh at the new scale on its next open. Overlays now live in ONE Dictionary
+	# (main._overlays) behind get-only member accessors, so the freed-but-not-nulled regression this
+	# guards against is structurally impossible: invalidation erases the registry key and the accessor
+	# reads an absent key back as null. Open a few secondary screens (the menu is already cached +
+	# hidden from the nav press above), run the REAL _reapply_text_scale(), then assert the opened
+	# overlays are gone from the registry AND read null, the OPEN MENU was preserved (freeing it
+	# mid-callback would crash), and the HUD was rebuilt live. A reopen proves the lazy rebuild.
+	_check(main._overlays.has("menu"), "menu is cached in _overlays before the rebuild (open/hidden)")
 	main._open_inventory()
 	main._open_chronicle()
 	main._open_achievements()
@@ -347,17 +353,29 @@ func _initialize() -> void:
 	_check(main._inventory_screen != null, "inventory screen is non-null after _open_inventory()")
 	_check(main._chronicle_screen != null, "chronicle screen is non-null after _open_chronicle()")
 	_check(main._achievements_screen != null, "achievements screen is non-null after _open_achievements()")
+	_check(main._overlays.has("inventory") and main._overlays.has("chronicle") and main._overlays.has("achievements"),
+		"_overlays registry holds every opened overlay (single source of truth)")
 	main._reapply_text_scale()
-	_check(main._inventory_screen == null, "_reapply_text_scale() nulled _inventory_screen (invalidated)")
-	_check(main._chronicle_screen == null, "_reapply_text_scale() nulled _chronicle_screen (invalidated)")
-	_check(main._achievements_screen == null, "_reapply_text_scale() nulled _achievements_screen (invalidated)")
+	await process_frame
+	# Registry shape: the opened overlays were freed AND erased (accessors auto-null); the menu stayed.
+	_check(not main._overlays.has("inventory"), "_reapply_text_scale() erased inventory from _overlays")
+	_check(not main._overlays.has("chronicle"), "_reapply_text_scale() erased chronicle from _overlays")
+	_check(not main._overlays.has("achievements"), "_reapply_text_scale() erased achievements from _overlays")
+	_check(main._inventory_screen == null, "_reapply_text_scale() nulled _inventory_screen (accessor reads erased key)")
+	_check(main._chronicle_screen == null, "_reapply_text_scale() nulled _chronicle_screen (accessor reads erased key)")
+	_check(main._achievements_screen == null, "_reapply_text_scale() nulled _achievements_screen (accessor reads erased key)")
+	_check(main._overlays.has("menu") and main._menu_screen != null, "the OPEN menu was preserved across the rebuild")
 	_check(main._hud != null, "_reapply_text_scale() left a live HUD (rebuilt, not dead)")
+	# The lazy guard rebuilds a FRESH instance on the next open — no freed-node reuse.
+	main._open_inventory()
+	await process_frame
+	_check(main._inventory_screen != null, "re-opening rebuilds the inventory overlay after invalidation")
+	_check(main._overlays.has("inventory"), "rebuilt overlay re-registered in _overlays")
 	SaveManager.clear()
 
 	# Hygiene: this suite mutated the global Typography.scale via _on_cycle_text_size — reset it
 	# to the Normal default so the static var doesn't leak into any later-loaded suite.
 	Typography.scale = 1.0
-
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)

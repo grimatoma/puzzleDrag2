@@ -63,37 +63,68 @@ var _last_threshold: int:
 		if _hud:
 			_hud._last_threshold = value
 
-var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
-var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
-var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
-var _townmap_screen: TownMapScreen      ## the spatial town-map modal (M6c), lazily created
+## ── Cached overlay registry ──────────────────────────────────────────────────
+## The ONE place every lazily-built overlay screen/modal is cached. Each `_*_screen`
+## / `_*_modal` below is a get-only ACCESSOR that reads its node out of this dict by a
+## stable id — there is NO separate per-screen storage, so the cache lives in exactly
+## one structure. `_overlay_list()` (ESC/back close), the lazy `if _x == null` guards
+## in each `_open_*`, and any future text-scale / typography rebuild all iterate THIS
+## dict, so they can never drift out of lockstep: registering an overlay
+## (`_overlays["id"] = X.new()`) lands it in the close-list AND the rebuild for free,
+## and invalidation is a single loop —
+##   for k in _overlays.keys(): if is_instance_valid(_overlays[k]): _overlays[k].queue_free(); _overlays.erase(k)
+## which both frees the node and "nulls" the accessor (it reads the now-absent key as
+## null, so the lazy guard rebuilds it on next open). Get-only by design: an overlay can
+## ONLY be written through this dict, which is exactly what stops a newly-added member
+## from quietly becoming a fourth thing that has to be kept in sync.
+var _overlays: Dictionary = {}
+## the real on-screen Town panel (M3e), lazily created
+var _town_screen: TownScreen:
+	get: return _overlays.get("town") as TownScreen
+## the settings/menu modal (M4f), lazily created
+var _menu_screen: MenuScreen:
+	get: return _overlays.get("menu") as MenuScreen
+## the dedicated Inventory ledger modal (M4g), lazily created
+var _inventory_screen: InventoryScreen:
+	get: return _overlays.get("inventory") as InventoryScreen
+## the spatial town-map modal (M6c), lazily created
+var _townmap_screen: TownMapScreen:
+	get: return _overlays.get("townmap") as TownMapScreen
 # Secondary screens & modals. Each is typed via its preloaded script const (NOT a global
 # class_name) so the port never needs an --import pass to register it, and each is lazily
 # created on first open (assignment is always <Const>.new()).
 ## M10 — the achievements trophy modal.
 const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
-var _achievements_screen: AchievementsScreenScript   ## lazily created
+var _achievements_screen: AchievementsScreenScript:
+	get: return _overlays.get("achievements") as AchievementsScreenScript
 ## M11 — the tile-collection browser modal.
 const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
-var _tile_collection_screen: TileCollectionScreenScript   ## lazily created
+var _tile_collection_screen: TileCollectionScreenScript:
+	get: return _overlays.get("tile_collection") as TileCollectionScreenScript
 ## Story UI — the beat presenter (drains game.story.beat_queue) + the chronicle timeline.
 const StoryModalScript := preload("res://scenes/StoryModal.gd")
 const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
-var _story_modal: StoryModalScript   ## lazily created
-var _chronicle_screen: ChronicleScreenScript   ## lazily created
+var _story_modal: StoryModalScript:
+	get: return _overlays.get("story") as StoryModalScript
+var _chronicle_screen: ChronicleScreenScript:
+	get: return _overlays.get("chronicle") as ChronicleScreenScript
 ## Townsfolk roster screen — NPC cards with bond bars.
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
-var _townsfolk_screen: TownsfolkScreenScript   ## lazily created
+var _townsfolk_screen: TownsfolkScreenScript:
+	get: return _overlays.get("townsfolk") as TownsfolkScreenScript
 ## Cartography world-map screen — the 3-zone world view + alternate expedition entry.
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
-var _cartography_screen: CartographyScreenScript   ## lazily created
+var _cartography_screen: CartographyScreenScript:
+	get: return _overlays.get("cartography") as CartographyScreenScript
 ## Recipe wiki — read-only reference of all craftable recipes.
 const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
-var _recipe_wiki_screen: RecipeWikiScreenScript   ## lazily created
+var _recipe_wiki_screen: RecipeWikiScreenScript:
+	get: return _overlays.get("recipe_wiki") as RecipeWikiScreenScript
 ## Tutorial onboarding modal — the 6-step welcome shown once to new players + replayable via
 ## apply_deeplink("tutorial").
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
-var _tutorial_modal: TutorialModalScript   ## lazily created
+var _tutorial_modal: TutorialModalScript:
+	get: return _overlays.get("tutorial") as TutorialModalScript
 ## Launch splash — the Hearthlands pixel-art title card (cottage-at-dusk vista, pulsing
 ## window glow) shown over everything at boot. Self-dismissing (tap / key / auto after a
 ## few seconds); frees itself and fires `finished`. Loaded via preload (NO class_name) so
@@ -103,7 +134,8 @@ var _splash                              ## CanvasLayer (SplashScreenScript), li
 ## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
 ## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
 const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
-var _daily_modal: DailyStreakModalScript   ## lazily created
+var _daily_modal: DailyStreakModalScript:
+	get: return _overlays.get("daily") as DailyStreakModalScript
 ## The pending daily-streak claim from this launch's login_tick, or {} when none. login_tick
 ## fires EARLY in _ready (so the grant lands before any HUD refresh shows the coins/runes), but
 ## the modal is held back until the tutorial + story queue are clear so the three don't fight —
@@ -115,55 +147,69 @@ var _pending_daily_claim: Dictionary = {}
 ## Informational only — it grants nothing. Loaded via preload (NO class_name) so the port never
 ## needs an --import pass to register it (mirrors DailyStreakModal / every other lazy modal).
 const HarvestModalScript := preload("res://scenes/HarvestModal.gd")
-var _harvest_modal                       ## CanvasLayer (HarvestModalScript), lazily created
+## CanvasLayer (HarvestModalScript), lazily created
+var _harvest_modal: HarvestModalScript:
+	get: return _overlays.get("harvest") as HarvestModalScript
 ## Task C — "Start Farming" picker/confirm modal (the port's FARM/ENTER dialog). Opened from the
 ## town-map farm-pad tap (and apply_deeplink "startfarming"/"farm"); on Start it calls
 ## GameState.start_farm_run() and drops the player onto a fresh bounded board. Loaded via preload
 ## (NO class_name) so the port never needs an --import pass to register it (mirrors every lazy modal).
 const StartFarmingModalScript := preload("res://scenes/StartFarmingModal.gd")
-var _startfarming_modal                  ## CanvasLayer (StartFarmingModalScript), lazily created
+## CanvasLayer (StartFarmingModalScript), lazily created
+var _startfarming_modal: StartFarmingModalScript:
+	get: return _overlays.get("startfarming") as StartFarmingModalScript
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way sink).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
-var _castle_screen: CastleScreenScript   ## lazily created
+var _castle_screen: CastleScreenScript:
+	get: return _overlays.get("castle") as CastleScreenScript
 ## Decorations screen — build repeatable ornaments that GRANT the Influence currency.
 const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
-var _decorations_screen: DecorationsScreenScript   ## lazily created
+var _decorations_screen: DecorationsScreenScript:
+	get: return _overlays.get("decorations") as DecorationsScreenScript
 ## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
-var _portal_screen: PortalScreenScript   ## lazily created
+var _portal_screen: PortalScreenScript:
+	get: return _overlays.get("portal") as PortalScreenScript
 ## T31 — Boons screen: the keeper-perk catalogs (Coexist/Drive Out boons bought with
 ## Embers / Core Ingots). Reachable from the ☰ menu, the town-map "✨ Boons" button, and the
 ## `boons` deeplink.
 const BoonsScreenScript := preload("res://scenes/BoonsScreen.gd")
-var _boons_screen: BoonsScreenScript   ## lazily created
+var _boons_screen: BoonsScreenScript:
+	get: return _overlays.get("boons") as BoonsScreenScript
 ## T31 — Keeper encounter modal: appears when a settlement is built up; the FINAL Coexist /
 ## Drive Out choice. Auto-triggered off a town/build event (and replayable via the `keeper`
 ## deeplink for QA).
 const KeeperModalScript := preload("res://scenes/KeeperModal.gd")
-var _keeper_modal: KeeperModalScript   ## lazily created
+var _keeper_modal: KeeperModalScript:
+	get: return _overlays.get("keeper") as KeeperModalScript
 ## T22 — Founder picker modal: appears when founding a discovered, unfounded settlement node on
 ## the world map; the player picks the settlement's biome. Opened from CartographyScreen's
 ## `found_requested` signal.
 const FounderModalScript := preload("res://scenes/FounderModal.gd")
-var _founder_modal: FounderModalScript   ## lazily created
+var _founder_modal: FounderModalScript:
+	get: return _overlays.get("founder") as FounderModalScript
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
 ## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
-var _charter_screen: CharterScreenScript   ## lazily created
+var _charter_screen: CharterScreenScript:
+	get: return _overlays.get("charter") as CharterScreenScript
 ## Quests screen — the deterministic 6-slot quest board + the almanac XP/tier track (claim
 ## quests for coins + XP; claim almanac tiers for coins/runes/tools).
 const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
-var _quests_screen: QuestsScreenScript   ## lazily created
+var _quests_screen: QuestsScreenScript:
+	get: return _overlays.get("quests") as QuestsScreenScript
 ## M5-polish — leave-expedition confirm modal. Gates the HUD "🏠 Town" button when on an
 ## expedition (active_biome != farm): tapping Town shows this confirm first; only Confirm
 ## leaves. On the farm it never arms (Town opens directly).
 const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
-var _leaveboard_modal: LeaveBoardModalScript   ## lazily created
+var _leaveboard_modal: LeaveBoardModalScript:
+	get: return _overlays.get("leaveboard") as LeaveBoardModalScript
 ## M-infra — developer DEBUG overlay (the React `debug` modal's port). A dev-only QA tool:
 ## live state readout + a jump grid of every deep-link + quick-grant buttons. Reachable ONLY
 ## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React).
 const DebugModalScript := preload("res://scenes/DebugModal.gd")
-var _debug_modal: DebugModalScript   ## lazily created
+var _debug_modal: DebugModalScript:
+	get: return _overlays.get("debug") as DebugModalScript
 ## M5-polish — transient toast bubble (auto-dismissing parchment notification). Built once in
 ## _ready and reused for real one-off feedback (an order filled, a build done).
 const ToastScript := preload("res://scenes/Toast.gd")
@@ -641,18 +687,15 @@ func _install_overlay_dismiss(overlay) -> void:
 			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
 			return
 
-## Every closable modal overlay, in ONE place. Both `_close_top_overlay` (ESC/back) and
-## `_other_overlay_visible` (the launch-modal settle, FIX 1) iterate this so they can never
-## drift apart. Includes nulls / not-yet-built screens — callers guard with is_instance_valid.
+## Every closable modal overlay, in ONE place — read straight off the `_overlays`
+## registry so this can never drift from the lazy `_open_*` guards or a text-scale
+## rebuild (all three iterate the same dict; adding a screen registers it once and is
+## covered everywhere). Both `_close_top_overlay` (ESC/back) and `_other_overlay_visible`
+## (the launch-modal settle, FIX 1) iterate this. Only the overlays that have actually
+## been opened are present (the registry fills lazily); callers still guard with
+## is_instance_valid before touching an entry.
 func _overlay_list() -> Array:
-	return [
-		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
-		_startfarming_modal,
-		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
-		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
-		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
-		_charter_screen, _quests_screen, _boons_screen, _keeper_modal, _founder_modal,
-	]
+	return _overlays.values()
 
 ## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
 ## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
@@ -712,7 +755,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## `confirmed`; on Cancel it just closes.
 func _open_leaveboard() -> void:
 	if _leaveboard_modal == null:
-		_leaveboard_modal = LeaveBoardModalScript.new()
+		_overlays["leaveboard"] = LeaveBoardModalScript.new()
 		add_child(_leaveboard_modal)
 		_leaveboard_modal.setup(game)
 		_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
@@ -763,7 +806,7 @@ func show_toast(text: String) -> void:
 ## Open the town panel, lazily creating + wiring it on first use.
 func _open_town() -> void:
 	if _town_screen == null:
-		_town_screen = TownScreen.new()
+		_overlays["town"] = TownScreen.new()
 		add_child(_town_screen)
 		_town_screen.setup(game)
 		_town_screen.connect("closed", Callable(self, "_on_town_closed"))
@@ -796,7 +839,7 @@ func _on_town_closed() -> void:
 ## truth), mirroring how the Town screen routes "Shoo rats" back to Main.
 func _open_menu() -> void:
 	if _menu_screen == null:
-		_menu_screen = MenuScreen.new()
+		_overlays["menu"] = MenuScreen.new()
 		add_child(_menu_screen)
 		_menu_screen.setup(game)
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
@@ -830,7 +873,7 @@ func _on_menu_navigate(deeplink_id: String) -> void:
 ## time, so the ledger always reflects the latest stockpile.
 func _open_inventory() -> void:
 	if _inventory_screen == null:
-		_inventory_screen = InventoryScreen.new()
+		_overlays["inventory"] = InventoryScreen.new()
 		add_child(_inventory_screen)
 		_inventory_screen.setup(game)
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
@@ -856,7 +899,7 @@ func _on_inventory_closed() -> void:
 ## reflects the current state.
 func _open_townmap() -> void:
 	if _townmap_screen == null:
-		_townmap_screen = TownMapScreen.new()
+		_overlays["townmap"] = TownMapScreen.new()
 		add_child(_townmap_screen)
 		_townmap_screen.setup(game)
 		_townmap_screen.connect("closed", Callable(self, "_on_townmap_closed"))
@@ -922,7 +965,7 @@ func _on_townmap_boons_requested() -> void:
 ## time, so the trophy list always reflects current progress.
 func _open_achievements() -> void:
 	if _achievements_screen == null:
-		_achievements_screen = AchievementsScreenScript.new()
+		_overlays["achievements"] = AchievementsScreenScript.new()
 		add_child(_achievements_screen)
 		_achievements_screen.setup(game)
 		_achievements_screen.connect("closed", Callable(self, "_on_achievements_closed"))
@@ -942,7 +985,7 @@ func _on_achievements_closed() -> void:
 ## so the gallery always reflects the current wired tile set.
 func _open_tiles() -> void:
 	if _tile_collection_screen == null:
-		_tile_collection_screen = TileCollectionScreenScript.new()
+		_overlays["tile_collection"] = TileCollectionScreenScript.new()
 		add_child(_tile_collection_screen)
 		_tile_collection_screen.setup(game)
 		_tile_collection_screen.connect("closed", Callable(self, "_on_tiles_closed"))
@@ -962,7 +1005,7 @@ func _on_tiles_closed() -> void:
 ## always reflects the beats fired so far.
 func _open_chronicle() -> void:
 	if _chronicle_screen == null:
-		_chronicle_screen = ChronicleScreenScript.new()
+		_overlays["chronicle"] = ChronicleScreenScript.new()
 		add_child(_chronicle_screen)
 		_chronicle_screen.setup(game)
 		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
@@ -991,7 +1034,7 @@ func _on_chronicle_view_charter() -> void:
 ## reflects the current bond + worker state.
 func _open_townsfolk() -> void:
 	if _townsfolk_screen == null:
-		_townsfolk_screen = TownsfolkScreenScript.new()
+		_overlays["townsfolk"] = TownsfolkScreenScript.new()
 		add_child(_townsfolk_screen)
 		_townsfolk_screen.setup(game)
 		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
@@ -1017,7 +1060,7 @@ func _on_townsfolk_closed() -> void:
 ## runs game.travel_to + the biome/boss/toast follow-up.
 func _open_cartography() -> void:
 	if _cartography_screen == null:
-		_cartography_screen = CartographyScreenScript.new()
+		_overlays["cartography"] = CartographyScreenScript.new()
 		add_child(_cartography_screen)
 		_cartography_screen.setup(game)
 		_cartography_screen.connect("closed", Callable(self, "_on_cartography_closed"))
@@ -1045,7 +1088,7 @@ func _on_cartography_closed() -> void:
 ## stockpile (same handler the Town/Townmap screens use after any state-changing action).
 func _open_recipes() -> void:
 	if _recipe_wiki_screen == null:
-		_recipe_wiki_screen = RecipeWikiScreenScript.new()
+		_overlays["recipe_wiki"] = RecipeWikiScreenScript.new()
 		add_child(_recipe_wiki_screen)
 		_recipe_wiki_screen.setup(game)
 		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
@@ -1071,7 +1114,7 @@ func _on_recipes_closed() -> void:
 ## inventory each time, so the needs list always reflects current progress.
 func _open_castle() -> void:
 	if _castle_screen == null:
-		_castle_screen = CastleScreenScript.new()
+		_overlays["castle"] = CastleScreenScript.new()
 		add_child(_castle_screen)
 		_castle_screen.setup(game)
 		_castle_screen.connect("closed", Callable(self, "_on_castle_closed"))
@@ -1101,7 +1144,7 @@ func _on_castle_closed() -> void:
 ## always reflect current affordability + built counts.
 func _open_decorations() -> void:
 	if _decorations_screen == null:
-		_decorations_screen = DecorationsScreenScript.new()
+		_overlays["decorations"] = DecorationsScreenScript.new()
 		add_child(_decorations_screen)
 		_decorations_screen.setup(game)
 		_decorations_screen.connect("closed", Callable(self, "_on_decorations_closed"))
@@ -1131,7 +1174,7 @@ func _on_decorations_closed() -> void:
 ## time, so the screen always reflects current build state + affordability.
 func _open_portal() -> void:
 	if _portal_screen == null:
-		_portal_screen = PortalScreenScript.new()
+		_overlays["portal"] = PortalScreenScript.new()
 		add_child(_portal_screen)
 		_portal_screen.setup(game)
 		_portal_screen.connect("closed", Callable(self, "_on_portal_closed"))
@@ -1161,7 +1204,7 @@ func _on_portal_closed() -> void:
 ## re-reads the live balances + owned set each time.
 func _open_boons() -> void:
 	if _boons_screen == null:
-		_boons_screen = BoonsScreenScript.new()
+		_overlays["boons"] = BoonsScreenScript.new()
 		add_child(_boons_screen)
 		_boons_screen.setup(game)
 		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
@@ -1190,7 +1233,7 @@ func _open_keeper(type: String) -> void:
 	if not KeeperConfig.is_enabled():
 		return
 	if _keeper_modal == null:
-		_keeper_modal = KeeperModalScript.new()
+		_overlays["keeper"] = KeeperModalScript.new()
 		add_child(_keeper_modal)
 		_keeper_modal.setup(game)
 		_keeper_modal.connect("resolved", Callable(self, "_on_keeper_resolved"))
@@ -1242,7 +1285,7 @@ func _maybe_trigger_keeper() -> void:
 ## READ-ONLY (it never mutates GameState), so open() just re-reads the live story state.
 func _open_charter() -> void:
 	if _charter_screen == null:
-		_charter_screen = CharterScreenScript.new()
+		_overlays["charter"] = CharterScreenScript.new()
 		add_child(_charter_screen)
 		_charter_screen.setup(game)
 		_charter_screen.connect("closed", Callable(self, "_on_charter_closed"))
@@ -1264,7 +1307,7 @@ func _on_charter_closed() -> void:
 ## always reflects current progress + claim availability.
 func _open_quests() -> void:
 	if _quests_screen == null:
-		_quests_screen = QuestsScreenScript.new()
+		_overlays["quests"] = QuestsScreenScript.new()
 		add_child(_quests_screen)
 		_quests_screen.setup(game)
 		_quests_screen.connect("closed", Callable(self, "_on_quests_closed"))
@@ -1308,7 +1351,7 @@ func _on_quests_closed() -> void:
 ## still emits `finished` → _on_tutorial_finished marks seen (idempotent) + saves.
 func _open_tutorial() -> void:
 	if _tutorial_modal == null:
-		_tutorial_modal = TutorialModalScript.new()
+		_overlays["tutorial"] = TutorialModalScript.new()
 		add_child(_tutorial_modal)
 		_tutorial_modal.setup(game)
 		_tutorial_modal.connect("finished", Callable(self, "_on_tutorial_finished"))
@@ -1379,7 +1422,7 @@ func _maybe_show_daily() -> void:
 ## before the HUD rendered); this just presents the celebratory card.
 func _open_daily(day: int, reward: Dictionary) -> void:
 	if _daily_modal == null:
-		_daily_modal = DailyStreakModalScript.new()
+		_overlays["daily"] = DailyStreakModalScript.new()
 		add_child(_daily_modal)
 		_daily_modal.setup(game)
 		_daily_modal.connect("collected", Callable(self, "_on_daily_collected"))
@@ -1410,7 +1453,7 @@ func _on_daily_closed() -> void:
 ## (the fresh Spring cycle already began in state); "Continue" just dismisses it.
 func _open_harvest(summary: Dictionary) -> void:
 	if _harvest_modal == null:
-		_harvest_modal = HarvestModalScript.new()
+		_overlays["harvest"] = HarvestModalScript.new()
 		add_child(_harvest_modal)
 		_harvest_modal.setup(game)
 		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
@@ -1422,7 +1465,7 @@ func _open_harvest(summary: Dictionary) -> void:
 ## re-wiring it, and against a second run-end re-connecting) so close_season fires exactly once.
 func _open_harvest_run_end(summary: Dictionary) -> void:
 	if _harvest_modal == null:
-		_harvest_modal = HarvestModalScript.new()
+		_overlays["harvest"] = HarvestModalScript.new()
 		add_child(_harvest_modal)
 		_harvest_modal.setup(game)
 		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
@@ -1457,7 +1500,7 @@ func _on_harvest_closed() -> void:
 ## (→ _on_startfarming_closed). Opened from the town-map farm-pad tap + apply_deeplink.
 func _open_startfarming() -> void:
 	if _startfarming_modal == null:
-		_startfarming_modal = StartFarmingModalScript.new()
+		_overlays["startfarming"] = StartFarmingModalScript.new()
 		add_child(_startfarming_modal)
 		_startfarming_modal.setup(game)
 		_startfarming_modal.connect("start_requested", Callable(self, "_on_start_farming"))
@@ -1543,7 +1586,7 @@ func _on_season_return() -> void:
 ## — it's deep-link-only (apply_deeplink("debug")), matching the hidden React debug modal.
 func _open_debug() -> void:
 	if _debug_modal == null:
-		_debug_modal = DebugModalScript.new()
+		_overlays["debug"] = DebugModalScript.new()
 		add_child(_debug_modal)
 		_debug_modal.setup(game, self)
 		_debug_modal.connect("closed", Callable(self, "_on_debug_closed"))
@@ -1658,7 +1701,7 @@ func _on_cartography_found(node_id: String) -> void:
 ## Open the founder picker for `zone_id`, lazily creating + wiring it on first use.
 func _open_founder(zone_id: String) -> void:
 	if _founder_modal == null:
-		_founder_modal = FounderModalScript.new()
+		_overlays["founder"] = FounderModalScript.new()
 		add_child(_founder_modal)
 		_founder_modal.setup(game)
 		_founder_modal.connect("founded", Callable(self, "_on_founded"))
@@ -1731,7 +1774,7 @@ func _drain_story_queue() -> void:
 	if _story_modal != null and _story_modal.visible:
 		return
 	if _story_modal == null:
-		_story_modal = StoryModalScript.new()
+		_overlays["story"] = StoryModalScript.new()
 		add_child(_story_modal)
 		_story_modal.setup(game)
 		_story_modal.connect("advanced", Callable(self, "_on_story_advanced"))
@@ -1837,7 +1880,7 @@ func apply_deeplink(id: String) -> bool:
 			# expedition, arm() shows the real biome-specific prompt; on the farm we PREVIEW
 			# (the mine prompt) so QA / the sanity-capture can see the card from any state.
 			if _leaveboard_modal == null:
-				_leaveboard_modal = LeaveBoardModalScript.new()
+				_overlays["leaveboard"] = LeaveBoardModalScript.new()
 				add_child(_leaveboard_modal)
 				_leaveboard_modal.setup(game)
 				_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
@@ -2029,37 +2072,21 @@ func _reapply_text_scale() -> void:
 	# Site-specific extra: restore the active bottom-nav tab captured above (a fresh HUD reset it).
 	_hud.set_nav_current(prev_nav)
 	_hud._refresh_nav()
-	# (2) Invalidate cached screens/modals (EXCEPT the open menu) so each rebuilds at the new scale
-	# on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild. The
-	# list values are freed for safety, but we must also null each member explicitly (nulling a
-	# local array slot would NOT null the member), so the lazy guards actually re-trigger.
-	for o in _overlay_list():
-		if o != null and o != _menu_screen and is_instance_valid(o) and o.has_method("queue_free"):
+	# (2) Invalidate every cached screen/modal EXCEPT the open menu so each rebuilds at the new
+	# scale on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild.
+	# Every overlay lives in the single `_overlays` registry, so this is ONE loop: free the node and
+	# erase its key, which "nulls" the get-only member accessor (it reads the now-absent key back as
+	# null), so the lazy guard actually re-triggers. There is no hand-maintained per-member null
+	# block to drift from the close-list. The MENU is open during this callback, so freeing it
+	# mid-signal would crash — skip it; its body rebuilds on its next open and its button label is
+	# refreshed live by the caller. keys() is a snapshot, so erasing while iterating it is safe.
+	for k in _overlays.keys():
+		if k == "menu":
+			continue
+		var o = _overlays[k]
+		if is_instance_valid(o) and o.has_method("queue_free"):
 			o.queue_free()
-	_town_screen = null
-	_inventory_screen = null
-	_townmap_screen = null
-	_achievements_screen = null
-	_tile_collection_screen = null
-	_chronicle_screen = null
-	_townsfolk_screen = null
-	_cartography_screen = null
-	_recipe_wiki_screen = null
-	_castle_screen = null
-	_decorations_screen = null
-	_portal_screen = null
-	_charter_screen = null
-	_quests_screen = null
-	_boons_screen = null
-	_keeper_modal = null
-	_founder_modal = null
-	_story_modal = null
-	_tutorial_modal = null
-	_daily_modal = null
-	_harvest_modal = null
-	_leaveboard_modal = null
-	_startfarming_modal = null
-	_debug_modal = null
+		_overlays.erase(k)
 
 ## M4f — the New Game button emits `new_game_requested`; Main wipes the save and restarts from a
 ## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which
