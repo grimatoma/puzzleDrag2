@@ -164,8 +164,10 @@ async function callTool(token, name, args) {
 // ── Text-field extraction ────────────────────────────────────────────────────
 // The result text is human-readable, not structured. Pull `key: value` fields.
 function field(text, key) {
-  // Match "<key>: <value>" up to end of line. key is a literal.
-  const re = new RegExp(`${escapeRe(key)}\\s*:\\s*(.+)`, "i");
+  // Match "<key>: <value>" up to end of line. key is a literal, anchored to line
+  // start (after optional indent) so e.g. field(text,"id") can't be hijacked by an
+  // "object_id:" line.
+  const re = new RegExp(`(?:^|\\n)[^\\S\\n]*${escapeRe(key)}\\s*:\\s*(.+)`, "i");
   const m = text.match(re);
   return m ? m[1].trim() : null;
 }
@@ -257,6 +259,11 @@ export async function generateStill({
     throw new Error(`download failed: HTTP ${dl.status} from ${downloadUrl}`);
   }
   const buf = Buffer.from(await dl.arrayBuffer());
+  // Guard against a 200-with-error-body landing in the .png.
+  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buf.length < 8 || !buf.subarray(0, 8).equals(PNG_SIG)) {
+    throw new Error(`download did not return a PNG (${buf.length} bytes) from ${downloadUrl}`);
+  }
   writeFileSync(outAbs, buf);
   return outAbs;
 }
