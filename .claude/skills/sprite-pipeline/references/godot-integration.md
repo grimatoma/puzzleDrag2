@@ -9,9 +9,11 @@ for it), the engine-path decision, and the import gotchas that otherwise silentl
 
 ## Directory layout
 
-The **durable source of truth is the single `godot/assets/tiles/v2/pipeline.json`** (settings +
-items: master/children/animations + inline candidates — see `manifest-schema.md`); it is **not**
-co-located per set. The produced files for an item live under an `items/<itemId>/` tree:
+The **durable source of truth is `godot/assets/tiles/v2/pipeline.json`** (settings + items:
+master/children/animations, each keyframe holding `selected`/`selectedPath`), alongside its
+`pipeline.history.json` sidecar (the candidate/attempt log, keyed `itemId → keyframeId → candidate[]`)
+— see `manifest-schema.md`; it is **not** co-located per set. The produced files for an item live
+under an `items/<itemId>/` tree:
 
 ```
 <assets>/v2/
