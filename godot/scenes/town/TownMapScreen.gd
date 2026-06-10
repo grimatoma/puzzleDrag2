@@ -89,6 +89,9 @@ var _built: bool = false
 var _map                         ## the TownMap renderer node (TownMap.gd Node2D)
 var _map_host: Control           ## full-rect Control the map is parented under
 var _last_plan: Dictionary = {}  ## the plan from the most recent refresh()
+## The "▶ Board" / "▶ Start Farming" overlay button — relabelled each refresh() from the
+## live run state so an idle town never shows a dead-looking "Board" affordance.
+var _board_btn: Button
 ## The prominent "Build · <built>/<plots> plots" button (bottom-right, matches React).
 ## Opens the build picker for the first empty plot; its label is refreshed each render().
 var _build_btn: Button
@@ -154,6 +157,10 @@ func _build_shell() -> void:
 	_map_host.offset_top = UiKit.TOPBAR_RESERVE
 	_map_host.offset_bottom = -NAV_RESERVE
 	_map_host.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Clip the map's drawing to the host rect: the TownMap is a Node2D child, so without
+	# this a zoomed-in/panned map paints PAST the host — over the persistent HUD top bar
+	# and bottom nav (both LOWER CanvasLayers revealed through the reserved bands).
+	_map_host.clip_contents = true
 	_map_host.connect("gui_input", Callable(self, "_on_map_gui_input"))
 	add_child(_map_host)
 
@@ -201,6 +208,7 @@ func _build_shell() -> void:
 	board_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	board_btn.connect("pressed", Callable(self, "_on_board_button"))
 	overlay.add_child(board_btn)
+	_board_btn = board_btn
 	_action_buttons["board"] = board_btn
 
 	# review-3 — "📋 Town Ledger" button, top-left under the title pill. The discoverable on-map
@@ -334,6 +342,13 @@ func refresh() -> void:
 	if _build_btn != null:
 		_build_btn.text = "🔨 Build · %d/%d plots" % [built.size(), plot_count]
 		_build_btn.disabled = game.plots_free() <= 0
+	# Relabel the board-return affordance from the live run state: with a run / expedition /
+	# boss live it returns to that board ("▶ Board"); idle at home, Main routes the press to
+	# the Start Farming picker instead, so say what it actually does.
+	if _board_btn != null:
+		var board_live: bool = game.farm_run_active \
+			or game.active_biome != "farm" or game.is_boss_active()
+		_board_btn.text = "▶ Board" if board_live else "▶ Start Farming"
 
 # Live viewport size, falling back to the portrait default when none is available
 # (e.g. a headless run with no window).
@@ -652,8 +667,12 @@ func _close_panel() -> void:
 	_action_buttons = kept
 
 ## Build a fresh panel: a translucent scrim (clicking it closes the panel) holding a
-## centred parchment card with a title row (heading + ✖). Returns the card's content
-## VBox for the caller to fill. Any previously-open panel is torn down first.
+## centred parchment card with a title row (heading + ✖) pinned above a SCROLLING
+## content area. Returns the scroll's content VBox for the caller to fill — a short
+## card (the demolish info) stays content-sized, while a tall one (the full build
+## roster) caps to the viewport and scrolls instead of running off the fold. The card
+## fills most of the viewport width (capped at 560) so roster rows read comfortably.
+## Any previously-open panel is torn down first.
 func _begin_panel(title_text: String) -> VBoxContainer:
 	_close_panel()
 
@@ -678,7 +697,9 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	card.custom_minimum_size = Vector2(360, 0)
+	# Near-full-width card (capped for tablets/desktop): the old fixed 360px read as an
+	# unnecessarily skinny strip on the 720 portrait viewport.
+	card.custom_minimum_size = Vector2(minf(_viewport_size().x - 36.0, 560.0), 0)
 	center.add_child(card)
 
 	var body := VBoxContainer.new()
@@ -708,7 +729,31 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	_action_buttons["picker_close"] = x_btn
 
 	body.add_child(title_row)
-	return body
+
+	# Scrolling content area under the pinned title. The caller fills the returned VBox;
+	# the deferred fit then clamps the scroll to its content height (capped to the
+	# viewport) so short panels stay compact and the build roster scrolls.
+	var scroll := UiKit.make_vscroll()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll)
+
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 10)
+	scroll.add_child(content)
+
+	# Deferred: runs after the caller has filled `content` (same frame), so the measure
+	# sees the real row heights. Reserve the title row + card padding + screen margins.
+	_fit_panel_scroll.call_deferred(scroll, content)
+	return content
+
+## Clamp an open panel's scroll to its content height (viewport-capped). Split out so
+## the deferred call from _begin_panel survives a panel being closed before it lands.
+func _fit_panel_scroll(scroll: ScrollContainer, content: Control) -> void:
+	if _panel == null or scroll == null or not is_instance_valid(scroll):
+		return
+	UiKit.fit_scroll_height(scroll, content, 220.0)
 
 ## Clicking the bare scrim (outside the card) dismisses the panel.
 func _on_scrim_input(event: InputEvent) -> void:

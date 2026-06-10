@@ -8,11 +8,16 @@ extends RefCounted
 ##
 ## Direction spec table (authoritative):
 ##   Tier  Name     Cap  Plots  Unlocks
-##   1     Camp     200  3      Farm board (staple tiles), Orders, the Market
-##   2     Hamlet   300  5      Lumber Camp (trees → plank), Granary, first Worker
-##   3     Village  400  7      Coop (birds → eggs), Garden (veg → soup), Mill & Bakery
-##   4     Town     500  9      Workshop + farm tools, more workers, Caravan Post
-##   5     City     600  11     Top farm buildings; the expedition → Town 2
+##   1     Camp     200  25     Farm board (staple tiles), Orders, the Market
+##   2     Hamlet   300  27     Lumber Camp (trees → plank), Granary, first Worker
+##   3     Village  400  29     Coop (birds → eggs), Garden (veg → soup), Mill & Bakery
+##   4     Town     500  31     Workshop + farm tools, more workers, Caravan Post
+##   5     City     600  33     Top farm buildings; the expedition → Town 2
+##
+## PLOTS (2026-06-10, owner directive): the first town starts ROOMY — 25 plots at Camp
+## (it should hold ~25 buildings from the start), each tier adding +2. This deliberately
+## diverges from the old cramped 3/5/7/9/11 ladder (and from React); TownLayout's block
+## grid scales with plot_count, so the map simply renders a denser town.
 ##
 ## Tier-up COSTS are PC2-aligned FIRST-PASS values — escalating and pulling in
 ## cross-category goods, all expressed in resources the port can already produce
@@ -51,35 +56,35 @@ const TIERS: Array = [
 	{
 		"name": "Camp",
 		"cap": 200,
-		"plots": 3,
+		"plots": 25,
 		"unlocks": "Farm board (staple tiles), Orders, the Market",
 		"cost": {},
 	},
 	{
 		"name": "Hamlet",
 		"cap": 300,
-		"plots": 5,
+		"plots": 27,
 		"unlocks": "Lumber Camp (trees → plank), Granary, first Worker",
 		"cost": {"hay_bundle": 12, "flour": 6},
 	},
 	{
 		"name": "Village",
 		"cap": 400,
-		"plots": 7,
+		"plots": 29,
 		"unlocks": "Coop (birds → eggs), Garden (veg → soup), Mill & Bakery",
 		"cost": {"plank": 8, "hay_bundle": 16, "flour": 8},
 	},
 	{
 		"name": "Town",
 		"cap": 500,
-		"plots": 9,
+		"plots": 31,
 		"unlocks": "Workshop + farm tools, more workers, Caravan Post",
 		"cost": {"eggs": 8, "soup": 6, "plank": 10},
 	},
 	{
 		"name": "City",
 		"cap": 600,
-		"plots": 11,
+		"plots": 33,
 		"unlocks": "Top farm buildings; the expedition → Town 2",
 		"cost": {"soup": 10, "eggs": 12, "plank": 14},
 	},

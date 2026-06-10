@@ -47,9 +47,19 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after an expanded row's Sell/Buy mutated GameState (coins + inventory moved),
+## so Main can refresh the HUD pills + save — the same contract TownScreen uses.
+signal state_changed
 
-## action id → Button, for headless tests. Currently just "close".
+## action id → Button, for headless tests. Static: "close", "view_toggle". While a row is
+## expanded its actions register as "sell:<key>" / "buy:<key>" (dropped on re-render).
 var _action_buttons: Dictionary = {}
+
+## C2 — expand-in-place (React InventoryListItemExpanded parity): the entry key of the one
+## expanded ledger row ("" = none). Keys are namespaced "res:<key>" / "tool:<id>" / "item:<id>"
+## so a resource and a tool sharing a name can't collide. Tapping a row toggles it; tapping
+## another row moves the expansion; the expansion survives refresh() (e.g. after a Sell).
+var _expanded: String = ""
 
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the latest inventory.
@@ -300,6 +310,10 @@ func refresh() -> void:
 	if not _built or game == null:
 		return
 	_sync_tabs()
+	# Drop the per-render expanded-row action keys so tests/handlers never see a freed node.
+	for k in _action_buttons.keys():
+		if String(k).begins_with("sell:") or String(k).begins_with("buy:"):
+			_action_buttons.erase(k)
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
@@ -533,18 +547,19 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 ## A single resource row: a soft-parchment chip holding three columns —
 ##   name (ink, expands) · count (ink, prominent) · value (gold, sell-each + line)
 ## The value column is OMITTED for non-sellable goods (e.g. supplies).
+## C2 — tapping the chip EXPANDS it in place (React InventoryListItemExpanded): a details
+## section (kind · description · Sell/Buy actions) slides open under the row.
 func _make_resource_row(res: String) -> PanelContainer:
 	var count: int = game.qty(res)
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry_key: String = "res:" + res
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
+	col.add_child(row)
 
 	# Icon — the same procedural art React shows, when we have it (text-only keys skip).
 	var icon := UiKit.make_icon(res, 34.0)
@@ -581,6 +596,38 @@ func _make_resource_row(res: String) -> PanelContainer:
 		value_lbl.add_theme_color_override("font_color", COL_MUTED)
 	row.add_child(value_lbl)
 
+	# Expanded details — kind eyebrow, the catalog description, and real Sell/Buy actions
+	# (the same GameState.sell/buy the Town Market uses; prices are the live drifted ones).
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Resource · %s" % group_of(res))
+		var desc: String = ResourceConfig.desc(res)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+		var actions := HBoxContainer.new()
+		actions.add_theme_constant_override("separation", 8)
+		details.add_child(actions)
+		if MarketConfig.can_sell(res):
+			var sell_btn := Button.new()
+			sell_btn.text = "Sell 1 · +%d🪙" % game.live_sell_price(res)
+			UiKit.style_action_button(sell_btn, Palette.MOSS, 6, 14)
+			sell_btn.disabled = count <= 0
+			sell_btn.connect("pressed", Callable(self, "_on_sell").bind(res))
+			actions.add_child(sell_btn)
+			_action_buttons["sell:" + res] = sell_btn
+		if MarketConfig.can_buy(res):
+			var buy_btn := Button.new()
+			var price: int = game.live_buy_price(res)
+			buy_btn.text = "Buy 1 · %d🪙" % price
+			UiKit.style_action_button(buy_btn, Palette.GOLD, 6, 14)
+			buy_btn.disabled = game.coins < price
+			buy_btn.connect("pressed", Callable(self, "_on_buy").bind(res))
+			actions.add_child(buy_btn)
+			_action_buttons["buy:" + res] = buy_btn
+		if actions.get_child_count() == 0:
+			actions.queue_free()
+			details.add_child(_make_detail_text("Not traded at the Market."))
+
 	return chip
 
 # ── Tools section (C1) ──────────────────────────────────────────────────────────
@@ -611,18 +658,18 @@ func _build_tool_section(tool_ids: Array) -> void:
 ## icon · name · ×charges. Tools carry no Market value, so there is no value column (a tool
 ## is consumed on use, not sold). Name uses the ToolConfig label for known ids, else the
 ## title-cased key (e.g. a summoned magic tool not in the ToolConfig catalog).
+## C2 — tapping expands in place to show the tool's catalog description + a usage hint.
 func _make_tool_row(id: String) -> PanelContainer:
 	var charges: int = game.tool_count(id)
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry_key: String = "tool:" + id
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
+	col.add_child(row)
 
 	# Icon — the procedural tool art exported to assets/resources/<id>.png (bomb, scythe, …).
 	var icon := UiKit.make_icon(id, 34.0)
@@ -643,6 +690,15 @@ func _make_tool_row(id: String) -> PanelContainer:
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(count_lbl)
+
+	# Expanded details — the tool's catalog description + where it's used.
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Tool · consumed on use")
+		var desc: String = ToolConfig.tool_desc(id)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+		details.add_child(_make_detail_text("Use it from the tool bar above the board."))
 
 	return chip
 
@@ -672,19 +728,19 @@ func _build_item_section(ids: Array) -> void:
 
 ## A single special-item row: a soft-parchment chip with glyph · name · ×count. Items carry no
 ## Market value (a rune is spent in the Portal, not sold), so there is no value column.
+## C2 — tapping expands in place to show the item's catalog description.
 func _make_item_row(id: String) -> PanelContainer:
 	var count: int = item_count(id)
 	var def: Dictionary = _item_def(id)
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry_key: String = "item:" + id
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
+	col.add_child(row)
 
 	# Glyph badge (these items have no procedural PNG art — they're scalar valuables).
 	var glyph := Label.new()
@@ -709,7 +765,111 @@ func _make_item_row(id: String) -> PanelContainer:
 	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(count_lbl)
 
+	# Expanded details — the valuable's catalog description (where it comes from / what
+	# it's for). No actions: runes/influence are spent at their own surfaces, not sold.
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Special item")
+		var desc: String = ResourceConfig.desc(id)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+
 	return chip
+
+# ── C2: expand-in-place plumbing (React InventoryListItemExpanded parity) ─────────
+
+## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
+## expanded) holding a VBox the caller fills with its row (and the details section appends
+## to). The chip itself listens for taps — a tap toggles the expansion. Inner content stays
+## MOUSE_FILTER_IGNORE so the chip sees every tap; the details' action Buttons still work
+## (Buttons are STOP by default and sit above the chip in pick order).
+func _begin_expandable_chip(entry_key: String) -> PanelContainer:
+	var chip := PanelContainer.new()
+	var sb := UiKit.row_box()
+	if _expanded == entry_key:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", sb)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+		if tap:
+			toggle_expand(entry_key)
+	)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
+	return chip
+
+## Append the details section container to an expanded chip's column, separated from the
+## row by a faint hairline. Fades in (UiFx — no-op headless / reduce-motion) so the
+## expansion reads as an animated reveal rather than a hard reflow.
+func _begin_details(col: VBoxContainer) -> VBoxContainer:
+	var rule := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(Palette.IRON, 0.5)
+	line.thickness = 1
+	rule.add_theme_stylebox_override("separator", line)
+	col.add_child(rule)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	UiFx.content_fade(details)
+	return details
+
+## A small all-caps-feel eyebrow line ("Resource · Farm Goods") for the details section.
+func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
+	var lbl := Label.new()
+	lbl.text = text.to_upper()
+	lbl.add_theme_font_size_override("font_size", 11)
+	lbl.add_theme_color_override("font_color", COL_HEADER)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_child(lbl)
+
+## A muted wrapping body line for the details section.
+func _make_detail_text(text: String) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", COL_MUTED)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+## Toggle the expansion for `entry_key` ("res:flour" / "tool:bomb" / "item:runes"): tapping
+## the expanded row collapses it, tapping another moves the expansion there. Public — the
+## headless test drives it directly. Re-renders the body (the chip set is rebuilt anyway).
+func toggle_expand(entry_key: String) -> void:
+	_expanded = "" if _expanded == entry_key else entry_key
+	refresh()
+
+## The currently expanded entry key ("" when none). Headless contract.
+func expanded_key() -> String:
+	return _expanded
+
+## Sell 1 unit of `res` through the real Market path (live drifted price), then re-render —
+## the row stays expanded so repeated sells are one tap each. Emits state_changed on success
+## so Main refreshes the HUD coin pill + saves.
+func _on_sell(res: String) -> void:
+	var result: Dictionary = game.sell(res, 1)
+	refresh()
+	if bool(result.get("ok", false)):
+		emit_signal("state_changed")
+
+## Buy 1 unit of `res` (live drifted price, cap-respecting) — mirror of _on_sell.
+func _on_buy(res: String) -> void:
+	var result: Dictionary = game.buy(res, 1)
+	refresh()
+	if bool(result.get("ok", false)):
+		emit_signal("state_changed")
 
 ## The footer: the total stockpile value (gold), then a muted "{K} kinds · {N} items"
 ## subline. Preceded by an iron hairline to set it off from the last group.

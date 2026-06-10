@@ -168,21 +168,25 @@ func _test_build_exists_no_mutation() -> void:
 		"inventory unchanged after failed re-build")
 
 func _test_plot_cap() -> void:
-	# At Village (tier 3) there are 7 plots. Pre-fill `buildings` with 7 DUMMY ids
-	# (bypassing build()) to simulate a full town, then try to build lumber_camp:
-	# the plot guard must trip with reason "no_plot".
+	# Pre-fill `buildings` with one DUMMY id per Village plot (bypassing build()) to
+	# simulate a full town, then try to build lumber_camp: the plot guard must trip
+	# with reason "no_plot". The dummy count tracks TownConfig.tier_plots so the test
+	# survives plot-ladder tuning (25/27/29/... since the roomy-first-town change).
 	var g := GameState.new()
 	g.settlement.tier = TownConfig.TIER_VILLAGE
-	_check(g.settlement.plots() == 7, "Village has 7 plots")
-	g.buildings = ["d1", "d2", "d3", "d4", "d5", "d6", "d7"]   # 7 dummy occupants
-	_check(g.plots_used() == 7, "plots_used == 7 (full)")
+	_check(g.settlement.plots() == 29, "Village has 29 plots")
+	var full: int = g.settlement.plots()
+	g.buildings = []
+	for i in full:
+		g.buildings.append("d%d" % (i + 1))                    # dummy occupants
+	_check(g.plots_used() == full, "plots_used == plots() (full)")
 	_check(g.plots_free() == 0, "plots_free == 0 (full)")
 	_give_all(g, BC.building_cost(BC.LUMBER_CAMP))            # affordable + unlocked
 	_check(not g.can_build(BC.LUMBER_CAMP), "can_build false when plots are full")
 	var res := g.build(BC.LUMBER_CAMP)
 	_check(not bool(res["ok"]), "build fails when plots are full")
 	_check(res.get("reason", "") == "no_plot", "failure reason is 'no_plot'")
-	_check(g.plots_used() == 7, "plots_used still 7 after failed build")
+	_check(g.plots_used() == full, "plots_used still full after failed build")
 
 func _test_demolish() -> void:
 	var g := GameState.new()
