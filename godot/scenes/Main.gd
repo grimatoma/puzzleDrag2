@@ -452,11 +452,14 @@ func _maybe_show_splash() -> void:
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
+	# The board sits in the FIXED band below the HUD's action panel (the React
+	# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top()
+	# is the band's top edge; the Board sizes its tiles to what remains above the
+	# status/orders strip + bottom nav.
+	board.board_top_px = _hud.board_top()
 	board.layout_for(vp)
 	var bw: Vector2 = board.board_pixel_size()
-	# Board sits below the top-bar + chain-progress bar (≈ 0–110px) and above the
-	# orders + stockpile below it. A touch lower than the old 0.22 to clear the bar.
-	board.position = Vector2((vp.x - bw.x) / 2.0, vp.y * 0.24)
+	board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
 	_hud._layout_hud(vp)
 	_hud._refresh_status()
 	# The chain-progress track width tracks the box width, so re-measure + redraw
@@ -2858,6 +2861,7 @@ func use_tool(id: String) -> bool:
 		board.set_targeting(true)
 		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
 		_hud.show_tool_armed_banner(id)
+		_refresh_tools()   # restyle the hotbar so the armed slot highlights
 		return true
 	# T14a — wolf-hazard tools (Rifle / Hound) act on the wolf OVERLAYS, not the grid: skip the
 	# board collapse/refill (apply_external_grid would needlessly re-roll an unchanged board) and
@@ -2928,6 +2932,7 @@ func _disarm_tool() -> void:
 		game.clear_pending_tool()
 	if _hud != null:
 		_hud.hide_tool_armed_banner()
+		_hud._refresh_tools()   # clear the armed slot highlight
 	if _status_label != null:
 		_status_label.text = ""
 

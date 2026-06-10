@@ -1,11 +1,19 @@
 extends Node
-## The HUD presentation layer, extracted verbatim from Main.gd (behaviour-preserving).
+## The HUD presentation layer, extracted from Main.gd (behaviour-preserving).
 ## A PLAIN NODE container (NOT a CanvasLayer — nesting CanvasLayers would shift compositing
 ## and break a visual golden); it holds the same child CanvasLayers the HUD always used (a
-## background layer=-1, the main HUD layer=1, the fx layer=2, and the bottom-nav layer). It
-## renders the parchment top-bar of pills, the season bar, the chain-progress bar, the
-## stockpile chip panel, the tool palette + armed banner, and the 5-tab bottom nav, plus the
-## reward-chip FX.
+## background layer=-1, the main HUD layer=1, the fx layer=2, and the bottom-nav layer).
+##
+## The BOARD page is the React BoardLayout portrait stack (src/ui/puzzleBoard.tsx), top to
+## bottom in FIXED bands: the parchment top-bar of pills → the season bar → the tool HOTBAR
+## (a dark rail of owned-tool slots) → the ACTION PANEL → the chain hint → the board →
+## the status/orders strip → the 5-tab bottom nav, plus the reward-chip FX.
+##
+## The ACTION PANEL is the React PuzzleActionPanel port: ONE fixed-height card that swaps
+## between three exclusive states by what the player is doing on the board —
+##   IDLE  (stockpile chip grid) · CHAIN (live chain readout) · TOOL (inspect/armed detail)
+## — see _build_action_panel/_update_action_state. Tapping a hotbar slot INSPECTS the tool
+## in the panel; tapping it again (or the panel's ARM/USE button) activates it.
 ##
 ## Main owns GameState, the Board, routing, screens, audio, and input; it injects `game` +
 ## `board` before build() and re-points its HUD call sites at this node. Up-calls (a nav-tab
@@ -55,15 +63,52 @@ const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
 var _season_bar_box: PanelContainer     ## parchment wrapper holding the drawn strip
 var _season_bar                         ## Control (SeasonBarScript) — the drawn strip
 
-# Chain-progress bar.
-var _chain_prog_label: Label            ## "{res}: {progress}/{threshold}"
-var _chain_prog_track: Panel            ## DIM track behind the fill
-var _chain_prog_fill: Panel             ## MOSS→GOLD fill (width = ratio * track width)
+# ── Action panel (React puzzleBoard.tsx PuzzleActionPanel port) ───────────────
+## ONE fixed-height parchment card pinned between the tool hotbar and the board that
+## swaps between three exclusive states by what the player is doing on the board
+## (React's data-state="idle|chain|tool"):
+##   IDLE  — the stockpile chip grid (React IdleView)
+##   CHAIN — the live chain-progress readout (React ChainView)
+##   TOOL  — the inspected/armed tool detail (React ToolView)
+## The container NEVER moves or resizes between states, so swapping content can't
+## shift the board below it (React: "Fixed height so swapping … never shifts layout").
+var _action_panel: PanelContainer
+var _action_idle: VBoxContainer
+var _action_chain: VBoxContainer
+var _action_tool: VBoxContainer
+## The tool id currently INSPECTED in the panel ("" = none). Tapping a hotbar slot
+## inspects it (the panel flips to TOOL); tapping the inspected slot again — or the
+## panel's ARM/USE button — activates it (React's two-tap inspect→activate pattern).
+## The armed tool auto-inspects via show_tool_armed_banner so an armed mode is always
+## visible in the panel.
+var _inspected_tool: String = ""
+
+# Chain view (React ChainView) widgets. The *KEPT* names (_chain_prog_label/_track/_fill)
+# preserve the m4b/m4e/m8d capture + forwarder contract: they are still "the chain progress
+# readout", now living inside the action panel's CHAIN state.
+var _chain_head_dot: Panel              ## header accent dot (stage accent / muddy when short)
+var _chain_head_right: Label            ## header right: "{Res} chain" / "N more to collect"
+var _chain_prog_label: Label            ## KEPT — now the big centred "N/M" bar counter
+var _chain_prog_track: Panel            ## KEPT — the big (56px) bar track
+var _chain_prog_fill: Panel             ## KEPT — the live STAGE-gradient fill
+var _chain_fill_carried: Panel          ## carried-progress base fill (brown), behind the live fill
 var _chain_prog_track_w: float = 0.0    ## current track inner width (recomputed on layout)
 ## A3 — the escalating chain-STAGE banner ("BONUS!"/"DOUBLE!"/…) overlaid top-right on the
 ## chain-progress track, shown only while a live chain has earned >= 1 upgrade.
 var _chain_stage_label: Label
-## A3 — live-drag chain tracking, used to colour the chain-progress bar by the chain's STAGE
+var _chain_res_box: PanelContainer      ## right-hand resource icon card (React's 64px box)
+var _chain_res_icon: TextureRect        ## the chained resource's icon
+var _chain_earn_badge: PanelContainer   ## "+N" earned-upgrades badge overhanging the icon card
+var _chain_earn_label: Label
+var _chain_upg_row: Control             ## "UPGRADE TO {tile}" footer strip (margin wrap)
+var _chain_upg_icon: TextureRect        ## the upgrade TILE's thumbnail
+var _chain_upg_name: Label
+var _chain_upg_track: Panel             ## slim footer progress track
+var _chain_upg_fill: Panel
+var _chain_upg_count: Label             ## "into/threshold"
+var _chain_upg_plus: PanelContainer     ## "+1" chip (stage-tinted once earned >= 1)
+var _chain_upg_plus_lbl: Label
+## A3 — live-drag chain tracking, used to drive the CHAIN state of the action panel
 ## (Constants.chain_stage_index) WHILE dragging. Pushed by Main (_on_chain_changed → set_live_chain).
 var _live_chain_len: int = 0
 var _live_chain_tile: int = Constants.EMPTY
@@ -86,18 +131,26 @@ var _stockpile_chips: Dictionary = {}
 ## nothing owned is ever hidden.
 ##
 ## Kept as an explicit ORDERED list (NOT derived from ResourceConfig) so the chip order stays
-## byte-identical to React's `BIOMES.farm.resources.slice(0,12)`. Every key here is a ResourceConfig
-## resource (mostly the "farm" family, plus the "refined" bread + the reconciled "farm" jam); each
-## chip's display name comes from ResourceConfig.label() via UiKit.pretty_name.
+## byte-identical to React's `BIOMES.farm.resources.slice(0,12)` — the first 12 `kind:"resource"`,
+## `biome:"farm"` ITEMS entries in src/constants.ts DECLARATION order (flour:383 … hay_bundle:406;
+## bread/supplies/cured_meat/… come later so they fall outside the 12 and render only as owned
+## extras). Each chip's display name comes from ResourceConfig.label() via UiKit.pretty_name.
 const STOCKPILE_ROSTER: Array = [
-	"hay_bundle", "flour", "bread", "eggs", "milk", "meat",
-	"soup", "pie", "honey", "jam", "plank", "horseshoe",
+	"flour", "plank", "dirt", "jam", "soup", "pie",
+	"honey", "meat", "milk", "horseshoe", "eggs", "hay_bundle",
+]
+## Mine/harbor rosters — React's IdleView swaps the chip list to the ACTIVE biome's
+## resources (BIOMES[biomeKey].resources.slice(0,12)). Same ITEMS declaration order.
+const STOCKPILE_ROSTER_MINE: Array = [
+	"block", "cut_gem", "coke", "iron_bar", "copper_bar", "gold_bar", "iron_ration",
+]
+const STOCKPILE_ROSTER_FISH: Array = [
+	"fish_fillet", "fish_oil", "sea_shells", "pearls",
 ]
 
-# Top-bar / stockpile container refs, repositioned in _layout_hud().
+# Top-bar container ref, repositioned in _layout_hud(). (The old floating _chain_prog_box /
+# _stockpile_box cards are gone — both surfaces live INSIDE the fixed action panel now.)
 var _topbar: PanelContainer
-var _chain_prog_box: PanelContainer
-var _stockpile_box: PanelContainer
 var _menu_btn: Button                   ## floating ⚙ button — vertically centred on the top bar in _layout_hud
 
 # M4b chain-progress tracking: the last resolved resource + its threshold.
@@ -108,16 +161,31 @@ var _last_threshold: int = 0
 var _tool_palette_box: PanelContainer   ## outer parchment card (hidden when no tools)
 var _tool_buttons: Dictionary = {}      ## {tool_id: Button} — rebuilt on each _refresh_tools()
 
-# ── Tool-armed banner (the React "TOOL ARMED" card) ─────────────────────────────
-var _tool_armed_box: PanelContainer     ## outer ember card (hidden unless armed)
-var _tool_armed_title: Label            ## "⚡ Tool armed · ×N left"
-var _tool_armed_name: Label             ## tool label (e.g. "Sickle")
-var _tool_armed_desc: Label             ## tool description
-var _tool_disarm_btn: Button            ## "✖ Disarm" (NOT in _tool_buttons — that's tool slots only)
+# ── Tool view (React ToolView) — the TOOL state of the action panel ───────────
+# Replaces the old full-width "Tool armed" overlay banner: the same information now
+# renders INSIDE the action panel (header dot + title, icon card, name/desc, footer
+# prompt + action button), armed-tinted while a tap-target tool is armed.
+var _tool_head_dot: Panel               ## header status dot (red while armed)
+var _tool_armed_title: Label            ## KEPT name — "TOOL ARMED · ×N LEFT" header title
+var _tool_armed_name: Label             ## KEPT name — tool label (e.g. "Sickle")
+var _tool_armed_desc: Label             ## KEPT name — tool description (2-line clamp)
+var _tool_view_icon_box: PanelContainer ## dark icon card (gold border; red while armed)
+var _tool_view_icon: TextureRect
+var _tool_view_footer: PanelContainer   ## footer strip (tinted hotter while armed)
+var _tool_view_prompt: Label            ## "Tap a tile on the board" / "Affects entire board"
+var _tool_action_btn: Button            ## ◎ ARM / ✕ DISARM / ✓ USE NOW
 
 # ── Bottom navigation bar (matches the React 5-tab BottomNav) ──────────────────
 const NAV_HEIGHT := UiKit.NAV_RESERVE     ## bottom-bar height (also the reserved layout gap)
 const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill
+## Board-page fixed bands (the React BoardLayout portrait stack, in 720-base px):
+## top bar (0..~60) → season bar (66..~124) → tool hotbar → action panel → chain hint →
+## board (Main._layout reads board_top()). Constant bands: swapping the action panel's
+## state can never shift the board, and nothing floats over it.
+const HOTBAR_TOP := 130.0                ## tool hotbar rail top
+const HOTBAR_H := 78.0                   ## tool hotbar rail height (single slot row)
+const PANEL_TOP := 216.0                 ## action panel top
+const PANEL_H := 208.0                   ## action panel FIXED height (all three states)
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
 var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label, icon}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
@@ -140,7 +208,7 @@ func play_intro() -> void:
 	UiFx.intro_drop(_topbar, -26.0, 0.42, 0.0)
 	if _nav_layer != null and _nav_layer.get_child_count() > 0:
 		UiFx.intro_drop(_nav_layer.get_child(0) as Control, 30.0, 0.42, 0.07)
-	UiFx.intro_drop(_stockpile_box, 24.0, 0.4, 0.14)
+	UiFx.intro_drop(_action_panel, 24.0, 0.4, 0.14)
 	UiFx.intro_drop(_tool_palette_box, -18.0, 0.4, 0.2)
 
 # ── HUD ────────────────────────────────────────────────────────────────────
@@ -276,126 +344,58 @@ func _build_hud() -> void:
 	# resolved farm chain (_refresh_season_bar) and repositioned in _layout_hud.
 	_build_season_bar(root)
 
-	# ── B. Chain-progress bar (just under the season bar) ─────────────────────
-	# A thin parchment pill holding a small label and a 2-color progress fill: a DIM
-	# track with a MOSS→GOLD foreground whose width tracks the fractional progress
-	# toward the next unit of the last-chained resource.
-	_chain_prog_box = PanelContainer.new()
-	_chain_prog_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_chain_prog_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_box.add_theme_stylebox_override("panel", UiKit.parchment_box(Palette.PARCHMENT))
-	root.add_child(_chain_prog_box)
-
-	var prog_margin := MarginContainer.new()
-	prog_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	prog_margin.add_theme_constant_override("margin_left", 12)
-	prog_margin.add_theme_constant_override("margin_right", 12)
-	prog_margin.add_theme_constant_override("margin_top", 6)
-	prog_margin.add_theme_constant_override("margin_bottom", 8)
-	_chain_prog_box.add_child(prog_margin)
-
-	var prog_col := VBoxContainer.new()
-	prog_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	prog_col.add_theme_constant_override("separation", 4)
-	prog_margin.add_child(prog_col)
-
-	_chain_prog_label = Label.new()
-	_chain_prog_label.text = "Chain tiles to gather"
-	_chain_prog_label.add_theme_font_size_override("font_size", 15)
-	_chain_prog_label.add_theme_color_override("font_color", Palette.INK_MID)
-	_chain_prog_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_chain_prog_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	prog_col.add_child(_chain_prog_label)
-
-	# Track + fill: a fixed-height container so the fill Panel can be width-driven.
-	_chain_prog_track = Panel.new()
-	_chain_prog_track.custom_minimum_size = Vector2(0, 12)
-	_chain_prog_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_chain_prog_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_track.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.DIM, Palette.IRON))
-	prog_col.add_child(_chain_prog_track)
-
-	_chain_prog_fill = Panel.new()
-	_chain_prog_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(Palette.MOSS, Palette.MOSS))
-	# Manually positioned/sized inside the track (it's a child Control, not laid out).
-	_chain_prog_fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_chain_prog_fill.position = Vector2.ZERO
-	_chain_prog_fill.size = Vector2(0, 12)
-	_chain_prog_track.add_child(_chain_prog_fill)
-
-	# A3 — the chain-STAGE banner ("BONUS!"/"DOUBLE!"/…), overlaid top-right on the track and
-	# drawn ABOVE the fill (added after it). Hidden at stage 0 / when no chain is in flight;
-	# _refresh_chain_progress sets its text + colour from the live chain's stage. Anchored to
-	# the track's top-right with a small inset (React's `top-0.5 right-2` stage label).
-	_chain_stage_label = Label.new()
-	_chain_stage_label.text = ""
-	_chain_stage_label.add_theme_font_size_override("font_size", 11)
-	_chain_stage_label.add_theme_color_override("font_color", Palette.PARCHMENT)
-	_chain_stage_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
-	_chain_stage_label.add_theme_constant_override("outline_size", 3)
-	_chain_stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_chain_stage_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_chain_stage_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_chain_stage_label.offset_right = -6
-	_chain_stage_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_stage_label.visible = false
-	_chain_prog_track.add_child(_chain_stage_label)
-
-	# Keep the fill height + track width in sync when the track is resized.
-	_chain_prog_track.resized.connect(_on_chain_track_resized)
-
-	# ── chain prompt (kept) — a slim prompt just above the board, centered ────
-	# Moved DOWN (offset_top 230) + smaller (font 16) so it clears the new tool bar,
-	# which now sits in the band the old offset_top 124 occupied.
+	# ── chain prompt (kept) — a slim prompt between the action panel and the board ────
+	# (The old floating chain-progress pill is gone: the chain readout is the action
+	# panel's CHAIN state now. This hint line keeps the smoke-test contract + the
+	# "what do I do" affordance; _layout_hud pins it just above the board.)
 	_chain_label = Label.new()
 	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
-	_chain_label.add_theme_font_size_override("font_size", 16)
+	_chain_label.add_theme_font_size_override("font_size", 14)
 	_chain_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_chain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_chain_label.offset_top = 230
+	_chain_label.offset_top = 424
 	_chain_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_chain_label)
 
-	# ── status (kept) — action feedback near the bottom, centered ─────────────
+	# ── status (kept) — action feedback in the strip between the board and the nav ──
 	_status_label = Label.new()
 	_status_label.text = ""
-	_status_label.add_theme_font_size_override("font_size", 20)
+	_status_label.add_theme_font_size_override("font_size", 17)
 	_status_label.add_theme_color_override("font_color", Palette.MOSS)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	# Lifted by NAV_HEIGHT (76) so the feedback line sits ABOVE the bottom nav bar.
-	_status_label.offset_top = -56 - NAV_HEIGHT
+	# The board now ends ~76px above the nav (Board.BOTTOM_RESERVE) — status sits in
+	# the lower half of that strip, clear of both the board and the nav bar.
+	_status_label.offset_top = -42 - NAV_HEIGHT
 	_status_label.offset_left = -340
 	_status_label.offset_right = 340
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_status_label)
 
-	# ── orders — compact one-line readout just above the stockpile ────────────
+	# ── orders — compact one-line readout in the upper half of the bottom strip ──
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
-	_orders_label.add_theme_font_size_override("font_size", 16)
+	_orders_label.add_theme_font_size_override("font_size", 14)
 	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_orders_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_orders_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_orders_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	# Lifted by NAV_HEIGHT (76) so the orders readout sits ABOVE the bottom nav bar.
-	_orders_label.offset_top = -118 - NAV_HEIGHT
+	# One clipped line right under the board's bottom edge, above the status line.
+	_orders_label.offset_top = -72 - NAV_HEIGHT
 	_orders_label.offset_left = 24
 	_orders_label.offset_right = -24
 	_orders_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_orders_label)
 
-	# ── C. Stockpile chip panel — parchment card below the board ──────────────
-	_build_stockpile(root)
+	# ── C. Action panel — ONE fixed card swapping stockpile / chain / tool states ──
+	# (React PuzzleActionPanel. Replaces the old floating stockpile card, the floating
+	# chain-progress pill, AND the overlay tool-armed banner.)
+	_build_action_panel(root)
 
-	# ── D. Tool palette — horizontal parchment bar centred above the board ────
+	# ── D. Tool hotbar — dark full-width tool rail between the season bar and panel ──
 	_build_tool_palette(root)
-
-	# ── D2. Tool-armed banner — ember card shown only while a tap-tool is armed ──
-	_build_tool_armed_banner(root)
 
 	# ── E. Bottom navigation bar — the 5-tab BOTTOM nav (matches the React original) ──
 	# Replaces the old left-edge strip of ~14 emoji buttons. Built on its OWN CanvasLayer
@@ -471,32 +471,66 @@ func _build_season_bar(root: Control) -> void:
 	_season_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_season_bar_box.add_child(_season_bar)
 
-## Build the stockpile card: a titled parchment card whose header reads
-## "STOCKPILE · {distinctKinds} kinds" (React's IdleView PanelHeader port — left an
-## uppercase tracked title with a moss accent dot, right the live distinct-kind count)
-## above a 4-col grid of resource chips (filled in _refresh_totals), plus a styled empty
-## placeholder. There is NO real per-KINDS cap in the port (the settlement cap is a
-## per-resource QUANTITY cap, not a kinds limit), so the header shows just "N kinds" —
-## no invented "/12" denominator.
-func _build_stockpile(root: Control) -> void:
-	_stockpile_box = PanelContainer.new()
-	_stockpile_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_stockpile_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_stockpile_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	root.add_child(_stockpile_box)
+## Build the ACTION PANEL (React puzzleBoard.tsx PuzzleActionPanel): ONE fixed-height
+## cream card holding three exclusive state views, visibility-swapped by
+## _update_action_state() from what the player is doing on the board:
+##   _action_idle  — the stockpile chip grid (React IdleView; _refresh_totals fills it)
+##   _action_chain — the live chain readout (React ChainView; _refresh_chain_progress)
+##   _action_tool  — the inspected/armed tool detail (React ToolView; _refresh_action_tool)
+## TOP_WIDE-anchored with fixed offsets from _layout_hud, so swapping states never
+## moves the board below it (React: fixed 148px height for exactly this reason).
+func _build_action_panel(root: Control) -> void:
+	_action_panel = PanelContainer.new()
+	_action_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_action_panel.add_theme_stylebox_override("panel", _action_panel_box())
+	root.add_child(_action_panel)
 
-	var col := VBoxContainer.new()
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 8)
-	_stockpile_box.add_child(col)
+	_action_idle = _build_idle_view()
+	_action_panel.add_child(_action_idle)
+	_action_chain = _build_chain_view()
+	_action_chain.visible = false
+	_action_panel.add_child(_action_chain)
+	_action_tool = _build_tool_view()
+	_action_tool.visible = false
+	_action_panel.add_child(_action_tool)
 
-	# Header row — a small moss accent dot + uppercase tracked "STOCKPILE · N kinds" title
-	# (React PanelHeader). _refresh_totals rewrites the text from the live distinct-kind count.
-	var header := HBoxContainer.new()
-	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_theme_constant_override("separation", 6)
-	col.add_child(header)
+## The action panel's card surface: soft cream paper, iron border, radius 13, the shared
+## soft drop shadow (React's cream `--panel-top/--panel-bottom` card). Content margins
+## match the border so each state view can run its header/footer edge-to-edge.
+func _action_panel_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PARCHMENT_SOFT
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(13)
+	sb.shadow_size = 8
+	sb.shadow_color = Color(0, 0, 0, 0.18)
+	sb.shadow_offset = Vector2(0, 3)
+	sb.set_content_margin_all(2)
+	return sb
 
+## A React PanelHeader: a slim row holding a small accent dot, an uppercase LEFT title,
+## and a muted RIGHT label, finished with a hairline divider. Returns the parts so each
+## state view can re-tint/re-text them: {"box", "row", "dot", "left", "right"}.
+func _panel_header(left_text: String) -> Dictionary:
+	var wrap := VBoxContainer.new()
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_theme_constant_override("separation", 0)
+
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_theme_constant_override("margin_left", 12)
+	pad.add_theme_constant_override("margin_right", 12)
+	pad.add_theme_constant_override("margin_top", 5)
+	pad.add_theme_constant_override("margin_bottom", 5)
+	wrap.add_child(pad)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 7)
+	pad.add_child(row)
+
+	var dot_wrap := CenterContainer.new()
+	dot_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var dot := Panel.new()
 	dot.custom_minimum_size = Vector2(8, 8)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -504,153 +538,537 @@ func _build_stockpile(root: Control) -> void:
 	dot_sb.bg_color = Palette.MOSS
 	dot_sb.set_corner_radius_all(999)
 	dot.add_theme_stylebox_override("panel", dot_sb)
-	# Nudge the dot to vertical centre of the title baseline via a wrapping CenterContainer.
-	var dot_wrap := CenterContainer.new()
-	dot_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dot_wrap.add_child(dot)
-	header.add_child(dot_wrap)
+	row.add_child(dot_wrap)
 
-	# React PanelHeader: an uppercase tracked "STOCKPILE" title on the LEFT (expands) and a
-	# muted "{owned}/{total} KINDS" count on the RIGHT — the at-a-glance "how full is the
-	# stockpile" readout (puzzleBoard.tsx IdleView).
-	_stockpile_title = Label.new()
-	_stockpile_title.text = "STOCKPILE"
-	_stockpile_title.add_theme_font_size_override("font_size", 14)
-	_stockpile_title.add_theme_color_override("font_color", Palette.INK)
-	_stockpile_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_stockpile_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_stockpile_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(_stockpile_title)
+	var left := Label.new()
+	left.text = left_text
+	left.add_theme_font_size_override("font_size", 13)
+	left.add_theme_color_override("font_color", Palette.INK)
+	left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(left)
 
-	_stockpile_kinds = Label.new()
+	var right := Label.new()
+	right.text = ""
+	right.add_theme_font_size_override("font_size", 12)
+	right.add_theme_color_override("font_color", Palette.INK_MID)
+	right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	right.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(right)
+
+	var rule := Panel.new()
+	rule.custom_minimum_size = Vector2(0, 1)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rule_sb := StyleBoxFlat.new()
+	rule_sb.bg_color = Color(Palette.IRON, 0.85)
+	rule.add_theme_stylebox_override("panel", rule_sb)
+	wrap.add_child(rule)
+
+	return {"box": wrap, "row": row, "dot": dot, "left": left, "right": right}
+
+## Re-tint a header accent dot (the dots are plain Panels with a rounded StyleBox).
+func _set_dot_color(dot: Panel, color: Color) -> void:
+	if dot == null:
+		return
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(999)
+	dot.add_theme_stylebox_override("panel", sb)
+
+## IDLE state (React IdleView): "STOCKPILE | n/m KINDS" header over a 4-column grid of
+## resource chips. The grid scrolls vertically when the roster + extra owned goods
+## outgrow the fixed panel height (React: overflow-y-auto on the chip grid).
+func _build_idle_view() -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+
+	var header := _panel_header("STOCKPILE")
+	_stockpile_title = header["left"]
+	_stockpile_kinds = header["right"]
 	_stockpile_kinds.text = "0/%d KINDS" % STOCKPILE_ROSTER.size()
-	_stockpile_kinds.add_theme_font_size_override("font_size", 13)
 	_stockpile_kinds.add_theme_color_override("font_color", Palette.MOSS)
-	_stockpile_kinds.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_stockpile_kinds.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_stockpile_kinds.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(_stockpile_kinds)
+	col.add_child(header["box"])
 
-	# The grid always renders the full farm roster (empty goods dimmed), so a fresh stockpile
-	# already reads as an intentional panel — no separate "empty" placeholder line is needed.
+	var scroll := UiKit.make_vscroll()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(scroll)
+
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_left", 10)
+	pad.add_theme_constant_override("margin_right", 10)
+	pad.add_theme_constant_override("margin_top", 8)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	scroll.add_child(pad)
+
 	_stockpile_grid = GridContainer.new()
 	_stockpile_grid.columns = 4
 	_stockpile_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stockpile_grid.add_theme_constant_override("h_separation", 8)
 	_stockpile_grid.add_theme_constant_override("v_separation", 8)
-	col.add_child(_stockpile_grid)
+	pad.add_child(_stockpile_grid)
+	return col
 
-## M8d — build the ToolPalette container: a HORIZONTAL parchment bar anchored
-## CENTER_TOP (like the chain-progress bar) so it centres horizontally and gets
-## positioned each layout in _layout_hud. It starts hidden (_refresh_tools shows/
-## hides it based on game.tools). The inner HBox gets rebuilt on each refresh.
-func _build_tool_palette(root: Control) -> void:
-	_tool_palette_box = PanelContainer.new()
-	_tool_palette_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_tool_palette_box.mouse_filter = Control.MOUSE_FILTER_IGNORE       # children override this
-	_tool_palette_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	_tool_palette_box.offset_top = 135    # just below the chain-progress bar; set in _layout_hud
-	_tool_palette_box.visible = false      # hidden until _refresh_tools sees tools in the bag
-	root.add_child(_tool_palette_box)
-
-## Build the "Tool armed" banner ONCE: a full-width ember card pinned TOP_WIDE just
-## below the top bar. It's only visible while a tap-target tool is armed (use_tool
-## populates + shows it; _on_tool_target / the Disarm button hide it), so it can
-## overlap the chain band underneath — the player is focused on tapping a tile.
-func _build_tool_armed_banner(root: Control) -> void:
-	_tool_armed_box = PanelContainer.new()
-	_tool_armed_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	# Sit just BELOW the top bar (≈60px tall) so the settlement title + pills stay
-	# visible; a small left/right gutter so it reads as an inset card. It can overlap
-	# the chain band beneath it — only shown while armed, when the player is tapping.
-	_tool_armed_box.offset_top = 70
-	_tool_armed_box.offset_left = 12
-	_tool_armed_box.offset_right = -12
-	_tool_armed_box.add_theme_stylebox_override("panel", _tool_armed_box_style())
-	_tool_armed_box.visible = false
-	root.add_child(_tool_armed_box)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	_tool_armed_box.add_child(margin)
-
+## CHAIN state (React ChainView): "CHAINING" header (right: "{res} chain" / "N more to
+## collect"), the big stage-coloured progress bar with the carried-progress base fill +
+## centred counter + stage banner, the chained resource's icon card with a "+N" earned
+## badge, and the "UPGRADE TO {tile}" footer with its own slim progress track.
+func _build_chain_view() -> VBoxContainer:
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	margin.add_child(col)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 0)
+
+	var header := _panel_header("CHAINING")
+	_chain_head_dot = header["dot"]
+	_chain_head_right = header["right"]
+	col.add_child(header["box"])
+
+	# Middle row: the big bar (expands) + the chained resource's icon card.
+	var mid_pad := MarginContainer.new()
+	mid_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid_pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mid_pad.add_theme_constant_override("margin_left", 12)
+	mid_pad.add_theme_constant_override("margin_right", 12)
+	mid_pad.add_theme_constant_override("margin_top", 6)
+	mid_pad.add_theme_constant_override("margin_bottom", 6)
+	col.add_child(mid_pad)
+
+	var mid := HBoxContainer.new()
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_theme_constant_override("separation", 12)
+	mid_pad.add_child(mid)
+
+	# The big track (React: 50px, radius 13). clip_contents squares the fills off at the
+	# rounded ends — the 2px inset keeps them inside the border, matching React's
+	# overflow-hidden bar. Fills are MANUALLY sized children (not laid out).
+	_chain_prog_track = Panel.new()
+	_chain_prog_track.custom_minimum_size = Vector2(0, 58)
+	_chain_prog_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_chain_prog_track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_chain_prog_track.clip_contents = true
+	_chain_prog_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_track.add_theme_stylebox_override("panel", _chain_track_box())
+	_chain_prog_track.resized.connect(_on_chain_track_resized)
+	mid.add_child(_chain_prog_track)
+
+	# Carried-progress base fill (brown) — prior chains' progress toward the next unit,
+	# drawn BEHIND the live fill (React's #b89762→#8a6428 "old" fill).
+	_chain_fill_carried = Panel.new()
+	_chain_fill_carried.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_fill_carried.add_theme_stylebox_override(
+		"panel", _bar_fill_box(Color("#b89762"), Color("#8a6428")))
+	_chain_fill_carried.position = Vector2(2, 2)
+	_chain_fill_carried.size = Vector2(0, 54)
+	_chain_prog_track.add_child(_chain_fill_carried)
+
+	# Live stage-gradient fill — KEPT name (_chain_prog_fill).
+	_chain_prog_fill = Panel.new()
+	_chain_prog_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_fill.add_theme_stylebox_override(
+		"panel", _bar_fill_box(Color("#f0c14b"), Color("#d97a2a")))
+	_chain_prog_fill.position = Vector2(2, 2)
+	_chain_prog_fill.size = Vector2(0, 54)
+	_chain_prog_track.add_child(_chain_prog_fill)
+
+	# Big centred counter ("3/6", "2+4/6", "1/6 +1", "×4") — KEPT name (_chain_prog_label).
+	_chain_prog_label = Label.new()
+	_chain_prog_label.text = ""
+	_chain_prog_label.add_theme_font_size_override("font_size", 27)
+	_chain_prog_label.add_theme_color_override("font_color", Color("#fff8e7"))
+	_chain_prog_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
+	_chain_prog_label.add_theme_constant_override("outline_size", 5)
+	_chain_prog_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_chain_prog_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_chain_prog_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chain_prog_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_prog_track.add_child(_chain_prog_label)
+
+	# A3 — the chain-STAGE banner ("BONUS!"/"DOUBLE!"/…), top-right on the track, above
+	# the fills. Hidden at stage 0; _refresh_chain_progress drives text/colour/pop.
+	_chain_stage_label = Label.new()
+	_chain_stage_label.text = ""
+	_chain_stage_label.add_theme_font_size_override("font_size", 12)
+	_chain_stage_label.add_theme_color_override("font_color", Palette.PARCHMENT)
+	_chain_stage_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	_chain_stage_label.add_theme_constant_override("outline_size", 4)
+	_chain_stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_chain_stage_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_chain_stage_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_chain_stage_label.offset_right = -8
+	_chain_stage_label.offset_top = 3
+	_chain_stage_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_stage_label.visible = false
+	_chain_prog_track.add_child(_chain_stage_label)
+
+	# Right: the chained resource's icon card, with the "+N" earned badge overhanging its
+	# bottom-right corner (React's 64px box + the stage-tinted "+N" pill).
+	var res_holder := Control.new()
+	res_holder.custom_minimum_size = Vector2(86, 86)
+	res_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	res_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mid.add_child(res_holder)
+
+	_chain_res_box = PanelContainer.new()
+	_chain_res_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_res_box.add_theme_stylebox_override("panel", _chain_res_box_style(Palette.IRON))
+	_chain_res_box.position = Vector2.ZERO
+	_chain_res_box.size = Vector2(78, 78)
+	res_holder.add_child(_chain_res_box)
+
+	var res_center := CenterContainer.new()
+	res_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_res_box.add_child(res_center)
+	_chain_res_icon = TextureRect.new()
+	_chain_res_icon.custom_minimum_size = Vector2(52, 52)
+	_chain_res_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_chain_res_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_chain_res_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_chain_res_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	res_center.add_child(_chain_res_icon)
+
+	_chain_earn_badge = PanelContainer.new()
+	_chain_earn_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_earn_badge.position = Vector2(48, 58)
+	_chain_earn_badge.visible = false
+	res_holder.add_child(_chain_earn_badge)
+	_chain_earn_label = Label.new()
+	_chain_earn_label.text = "+1"
+	_chain_earn_label.add_theme_font_size_override("font_size", 15)
+	_chain_earn_label.add_theme_color_override("font_color", Color("#fff8e7"))
+	_chain_earn_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.4))
+	_chain_earn_label.add_theme_constant_override("outline_size", 2)
+	_chain_earn_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_earn_badge.add_child(_chain_earn_label)
+
+	# Footer: "UPGRADE TO {tile}" + a slim progress track + "n/m → +1" (React's footer).
+	var foot_rule := Panel.new()
+	foot_rule.custom_minimum_size = Vector2(0, 1)
+	foot_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var foot_rule_sb := StyleBoxFlat.new()
+	foot_rule_sb.bg_color = Color(Palette.IRON, 0.85)
+	foot_rule.add_theme_stylebox_override("panel", foot_rule_sb)
+	col.add_child(foot_rule)
+
+	var foot_pad := MarginContainer.new()
+	foot_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot_pad.add_theme_constant_override("margin_left", 12)
+	foot_pad.add_theme_constant_override("margin_right", 12)
+	foot_pad.add_theme_constant_override("margin_top", 5)
+	foot_pad.add_theme_constant_override("margin_bottom", 7)
+	col.add_child(foot_pad)
+	_chain_upg_row = foot_pad
+
+	var foot := HBoxContainer.new()
+	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_theme_constant_override("separation", 8)
+	foot_pad.add_child(foot)
+
+	var upg_caption := Label.new()
+	upg_caption.text = "UPGRADE TO"
+	upg_caption.add_theme_font_size_override("font_size", 11)
+	upg_caption.add_theme_color_override("font_color", Palette.INK_MID)
+	upg_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	upg_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(upg_caption)
+
+	_chain_upg_icon = TextureRect.new()
+	_chain_upg_icon.custom_minimum_size = Vector2(26, 26)
+	_chain_upg_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_chain_upg_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_chain_upg_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_chain_upg_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(_chain_upg_icon)
+
+	_chain_upg_name = Label.new()
+	_chain_upg_name.text = ""
+	_chain_upg_name.add_theme_font_size_override("font_size", 13)
+	_chain_upg_name.add_theme_color_override("font_color", Palette.INK)
+	_chain_upg_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chain_upg_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(_chain_upg_name)
+
+	_chain_upg_track = Panel.new()
+	_chain_upg_track.custom_minimum_size = Vector2(40, 10)
+	_chain_upg_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_chain_upg_track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_chain_upg_track.clip_contents = true
+	_chain_upg_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var upg_track_sb := StyleBoxFlat.new()
+	upg_track_sb.bg_color = Color(0, 0, 0, 0.22)
+	upg_track_sb.set_corner_radius_all(5)
+	_chain_upg_track.add_theme_stylebox_override("panel", upg_track_sb)
+	foot.add_child(_chain_upg_track)
+
+	_chain_upg_fill = Panel.new()
+	_chain_upg_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_upg_fill.add_theme_stylebox_override(
+		"panel", _bar_fill_box(Color("#e07a3a"), Color("#f0c14b"), true))
+	_chain_upg_fill.position = Vector2.ZERO
+	_chain_upg_fill.size = Vector2(0, 10)
+	_chain_upg_track.add_child(_chain_upg_fill)
+
+	_chain_upg_count = Label.new()
+	_chain_upg_count.text = ""
+	_chain_upg_count.add_theme_font_size_override("font_size", 13)
+	_chain_upg_count.add_theme_color_override("font_color", Color("#7a3c12"))
+	_chain_upg_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chain_upg_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(_chain_upg_count)
+
+	var arrow := Label.new()
+	arrow.text = "→"
+	arrow.add_theme_font_size_override("font_size", 13)
+	arrow.add_theme_color_override("font_color", Palette.INK_MID)
+	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(arrow)
+
+	_chain_upg_plus = PanelContainer.new()
+	_chain_upg_plus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(_chain_upg_plus)
+	_chain_upg_plus_lbl = Label.new()
+	_chain_upg_plus_lbl.text = "+1"
+	_chain_upg_plus_lbl.add_theme_font_size_override("font_size", 13)
+	_chain_upg_plus_lbl.add_theme_color_override("font_color", Color("#3d5d18"))
+	_chain_upg_plus_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_upg_plus.add_child(_chain_upg_plus_lbl)
+
+	return col
+
+## The big chain track surface: a warm recessed parchment well with an iron border
+## (React's --board-panel-track + 2px border, radius 13).
+func _chain_track_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("#e3d3ae")
+	sb.border_color = Color("#b89d6f")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(13)
+	return sb
+
+## A gradient StyleBox for bar fills (React's linear-gradient fills): top→bottom by
+## default, left→right when `horizontal`. Built on a tiny GradientTexture2D — StyleBoxFlat
+## can't gradient. The track's clip_contents squares the ends off inside its radius.
+func _bar_fill_box(from: Color, to: Color, horizontal: bool = false) -> StyleBoxTexture:
+	var grad := Gradient.new()
+	grad.colors = PackedColorArray([from, to])
+	grad.offsets = PackedFloat32Array([0.0, 1.0])
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill_from = Vector2.ZERO
+	tex.fill_to = Vector2(1, 0) if horizontal else Vector2(0, 1)
+	tex.width = 8
+	tex.height = 8
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	return sb
+
+## The chain view's resource icon card surface (border re-tints to the stage accent
+## once the chain has earned an upgrade).
+func _chain_res_box_style(border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Palette.PAPER
+	sb.border_color = border
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(13)
+	return sb
+
+## TOOL state (React ToolView): header dot + "TOOL INSPECT/READY/ARMED · ×N LEFT" + ✕,
+## the tool's icon card + name + description, and a footer strip with the targeting
+## prompt and the ◎ ARM / ✕ DISARM / ✓ USE NOW action button.
+func _build_tool_view() -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+
+	var header := _panel_header("TOOL INSPECT")
+	_tool_head_dot = header["dot"]
+	_tool_armed_title = header["left"]
+	col.add_child(header["box"])
+
+	# ✕ close: drop the inspect, back to the stockpile. While ARMED it stays a no-op —
+	# DISARM is the explicit way out of an armed mode (React keeps the armed panel too).
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(30, 26)
+	close.focus_mode = Control.FOCUS_NONE
+	UiKit.style_button(close, Palette.EMBER, 0, 13)
+	close.pressed.connect(_on_tool_view_closed)
+	header["row"].add_child(close)
+
+	# Body: icon card + name/desc column.
+	var body_pad := MarginContainer.new()
+	body_pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body_pad.add_theme_constant_override("margin_left", 12)
+	body_pad.add_theme_constant_override("margin_right", 12)
+	body_pad.add_theme_constant_override("margin_top", 6)
+	body_pad.add_theme_constant_override("margin_bottom", 6)
+	col.add_child(body_pad)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	body_pad.add_child(body)
+
+	_tool_view_icon_box = PanelContainer.new()
+	_tool_view_icon_box.custom_minimum_size = Vector2(66, 66)
+	_tool_view_icon_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tool_view_icon_box.add_theme_stylebox_override("panel", _tool_icon_box_style(false))
+	body.add_child(_tool_view_icon_box)
+	var icon_center := CenterContainer.new()
+	_tool_view_icon_box.add_child(icon_center)
+	_tool_view_icon = TextureRect.new()
+	_tool_view_icon.custom_minimum_size = Vector2(44, 44)
+	_tool_view_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tool_view_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_tool_view_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	icon_center.add_child(_tool_view_icon)
+
+	var txt := VBoxContainer.new()
+	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	txt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	txt.add_theme_constant_override("separation", 3)
+	body.add_child(txt)
 
 	var heading_font: Font = UiKit.heading_font()
-
-	# Bold ember title line: "⚡ Tool armed · ×N left".
-	_tool_armed_title = Label.new()
-	_tool_armed_title.text = "⚡ Tool armed"
-	_tool_armed_title.add_theme_font_size_override("font_size", 20)
-	_tool_armed_title.add_theme_color_override("font_color", Palette.EMBER)
-	if heading_font != null:
-		_tool_armed_title.add_theme_font_override("font", heading_font)
-	col.add_child(_tool_armed_title)
-
-	# Tool name (e.g. "Sickle") in ink.
 	_tool_armed_name = Label.new()
 	_tool_armed_name.text = ""
-	_tool_armed_name.add_theme_font_size_override("font_size", 18)
+	_tool_armed_name.add_theme_font_size_override("font_size", 19)
 	_tool_armed_name.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
 		_tool_armed_name.add_theme_font_override("font", heading_font)
-	col.add_child(_tool_armed_name)
+	txt.add_child(_tool_armed_name)
 
-	# Tool description — wraps across the full card width.
 	_tool_armed_desc = Label.new()
 	_tool_armed_desc.text = ""
-	_tool_armed_desc.add_theme_font_size_override("font_size", 14)
+	_tool_armed_desc.add_theme_font_size_override("font_size", 13)
 	_tool_armed_desc.add_theme_color_override("font_color", Palette.INK_MID)
 	_tool_armed_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_tool_armed_desc)
+	_tool_armed_desc.max_lines_visible = 2
+	_tool_armed_desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	txt.add_child(_tool_armed_desc)
 
-	# Bottom row: a bold "TAP A TILE ON THE BOARD" prompt + a "✖ Disarm" button.
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 12)
-	col.add_child(bottom)
+	# Footer strip: targeting prompt + the action button. Tinted hotter while armed
+	# (_refresh_action_tool swaps the stylebox).
+	_tool_view_footer = PanelContainer.new()
+	_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("ready"))
+	col.add_child(_tool_view_footer)
 
-	var prompt := Label.new()
-	prompt.text = "Tap a tile on the board"
-	prompt.add_theme_font_size_override("font_size", 15)
-	prompt.add_theme_color_override("font_color", Palette.EMBER)
-	prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bottom.add_child(prompt)
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 10)
+	_tool_view_footer.add_child(foot)
 
-	_tool_disarm_btn = Button.new()
-	_tool_disarm_btn.text = "✖ Disarm"
-	UiKit.style_button(_tool_disarm_btn, Palette.EMBER, 6, 15)
-	_tool_disarm_btn.pressed.connect(func(): disarm_requested.emit())
-	bottom.add_child(_tool_disarm_btn)
+	_tool_view_prompt = Label.new()
+	_tool_view_prompt.text = ""
+	_tool_view_prompt.add_theme_font_size_override("font_size", 13)
+	_tool_view_prompt.add_theme_color_override("font_color", Color("#7a3c12"))
+	_tool_view_prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_tool_view_prompt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tool_view_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.add_child(_tool_view_prompt)
 
-## Ember-accented card StyleBox for the armed banner: a soft ember-tinted fill with
-## a 2 px ember border + drop shadow so it reads as a hot "danger" banner (parity
-## with React's red TOOL ARMED card), distinct from the calm parchment HUD cards.
-func _tool_armed_box_style() -> StyleBoxFlat:
+	_tool_action_btn = Button.new()
+	_tool_action_btn.text = "◎ ARM"
+	_tool_action_btn.focus_mode = Control.FOCUS_NONE
+	_tool_action_btn.pressed.connect(_on_tool_action_pressed)
+	foot.add_child(_tool_action_btn)
+
+	return col
+
+## The tool icon card: dark wood well, gold border — red border while armed (React's
+## #3a2412 box with #f0c14b / #e02828 borders).
+func _tool_icon_box_style(armed: bool) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	# An opaque warm ember wash (ember blended ~22% over parchment) so the banner reads
-	# as a hot "danger" card even over the warm app frame, not a faint tint.
-	sb.bg_color = Palette.PARCHMENT.lerp(Palette.EMBER, 0.22)
-	sb.border_color = Palette.EMBER
-	sb.border_width_left = 3
-	sb.border_width_top = 3
-	sb.border_width_right = 3
-	sb.border_width_bottom = 3
-	sb.set_corner_radius_all(12)
-	sb.shadow_size = 10
-	sb.shadow_color = Color(Palette.EMBER, 0.30)
-	sb.shadow_offset = Vector2(0, 3)
+	sb.bg_color = Color("#3a2412")
+	sb.border_color = Color("#e02828") if armed else Color("#f0c14b")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(13)
 	return sb
 
-## M8d — rebuild the tool palette from game.tools. For each owned tool with charges
-## > 0 a styled Button is added labelled "{name} ×{charges}" (plus a "↗" tap hint
-## for tap-target tools). Hidden completely when game.tools is empty (no phantom box).
-## Registers every button in _tool_buttons keyed by id for test access.
+## The tool footer strip surface by mode: "armed" = hot red wash, "ready" = warm orange
+## wash (tap-target awaiting ARM), "instant" = neutral parchment. Bottom corners follow
+## the panel radius so the strip reads as the card's base.
+func _tool_footer_style(mode: String) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	match mode:
+		"armed":
+			sb.bg_color = Color(0.88, 0.16, 0.16, 0.20)
+		"ready":
+			sb.bg_color = Color(0.88, 0.48, 0.23, 0.16)
+		_:
+			sb.bg_color = Color(Palette.PARCHMENT, 0.6)
+	sb.corner_radius_bottom_left = 11
+	sb.corner_radius_bottom_right = 11
+	sb.content_margin_left = 12
+	sb.content_margin_right = 8
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	return sb
+
+## A coloured CTA face for the tool action button (React's gradient pill buttons).
+func _style_cta(btn: Button, fill: Color, border: Color, ink: Color) -> void:
+	var base := StyleBoxFlat.new()
+	base.bg_color = fill
+	base.border_color = border
+	base.set_border_width_all(2)
+	base.set_corner_radius_all(9)
+	base.content_margin_left = 16
+	base.content_margin_right = 16
+	base.content_margin_top = 6
+	base.content_margin_bottom = 6
+	var hover := base.duplicate()
+	hover.bg_color = fill.lightened(0.06)
+	var pressed := base.duplicate()
+	pressed.bg_color = fill.darkened(0.08)
+	var disabled := base.duplicate()
+	disabled.bg_color = Color(fill, 0.45)
+	btn.add_theme_stylebox_override("normal", base)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("disabled", disabled)
+	btn.add_theme_stylebox_override("focus", base)
+	btn.add_theme_color_override("font_color", ink)
+	btn.add_theme_color_override("font_hover_color", ink)
+	btn.add_theme_color_override("font_pressed_color", ink)
+	btn.add_theme_color_override("font_disabled_color", Color(ink, 0.6))
+	btn.add_theme_font_size_override("font_size", 13)
+	UiFx.attach_press_feedback(btn)
+
+## Build the tool HOTBAR container (React PuzzleHotbar): a dark wood rail pinned
+## TOP_WIDE between the season bar and the action panel (_layout_hud sets the band).
+## Starts hidden (_refresh_tools shows it once the player owns tools); the inner slot
+## strip is rebuilt on each refresh. KEEPS the _tool_palette_box name (test contract).
+func _build_tool_palette(root: Control) -> void:
+	_tool_palette_box = PanelContainer.new()
+	_tool_palette_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_tool_palette_box.add_theme_stylebox_override("panel", _hotbar_box())
+	_tool_palette_box.offset_top = 130    # repositioned each layout in _layout_hud
+	_tool_palette_box.visible = false      # hidden until _refresh_tools sees tools in the bag
+	root.add_child(_tool_palette_box)
+
+## The hotbar rail surface: dark wood with a near-black bottom border (React's
+## linear-gradient(#6b4a26,#54391d) rail), rounded like a HUD card.
+func _hotbar_box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("#5f4122")
+	sb.border_color = Color("#2a1a08")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(12)
+	sb.shadow_size = 6
+	sb.shadow_color = Color(0, 0, 0, 0.20)
+	sb.shadow_offset = Vector2(0, 2)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	return sb
+
+## Rebuild the tool HOTBAR from game.tools (React PuzzleHotbar): one square slot per
+## owned tool — its icon + a dark count badge — the ARMED tool red-edged on a bright
+## fill, the INSPECTED tool gold-edged. A tap INSPECTS the tool in the action panel;
+## tapping the already-inspected slot ACTIVATES it (the port's timing-free version of
+## React's two-tap inspect→activate). Hidden completely when no tools are owned.
+## Registers every button in _tool_buttons keyed by id (test contract).
 func _refresh_tools() -> void:
 	if _tool_palette_box == null:
 		return
@@ -667,42 +1085,30 @@ func _refresh_tools() -> void:
 			if charges > 0:
 				owned.append({"id": id, "charges": charges})
 
+	# An inspected tool that is no longer owned (last charge spent) falls back to idle —
+	# unless it is somehow still armed (defensive; the armed view must stay reachable).
+	if _inspected_tool != "" and game != null and game.tool_count(_inspected_tool) <= 0 \
+			and game.pending_tool != _inspected_tool:
+		_inspected_tool = ""
+
 	if owned.is_empty():
 		_tool_palette_box.visible = false
+		_update_action_state()
 		return
 
 	_tool_palette_box.visible = true
 
-	# A3 — a small uppercase "TOOLS" caption above the slot strip so the rack reads clearly
-	# as a distinct TOOLS RACK (not the chain preview directly above it). The React board's
-	# tool strip sits in its own labelled panel region; the caption is the port's equivalent
-	# grouping cue. The icon slots below still carry the per-tool meaning.
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	_tool_palette_box.add_child(col)
+	# A single-row rail (React's fixed-height hotbar). Horizontal scroll (no bar) keeps
+	# every slot reachable when many tools are owned WITHOUT the rail growing taller —
+	# the action panel below is FIXED, so a wrapping rail would overlap it.
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tool_palette_box.add_child(scroll)
 
-	var caption := Label.new()
-	caption.text = "TOOLS"
-	caption.add_theme_font_size_override("font_size", 11)
-	caption.add_theme_color_override("font_color", Palette.INK_MID)
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_constant_override("outline_size", 0)
-	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(caption)
-
-	# A centred horizontal strip of tool SLOTS — React's tool strip: each tool is an icon
-	# tile with a dark count chip in its corner, the armed one ember-highlighted.
-	# A WRAPPING strip so every owned tool stays reachable no matter how many are owned
-	# or how narrow the window is. A flat HBox clipped tools past the card's right edge
-	# once the catalog grew (24 board tools); HFlowContainer flows left→right and wraps to
-	# a new line when the row is full, inheriting the card's bounded width from `col`.
-	# Stays a single centred line for the usual handful of tools.
-	var row := HFlowContainer.new()
-	row.add_theme_constant_override("h_separation", 8)
-	row.add_theme_constant_override("v_separation", 8)
-	row.alignment = FlowContainer.ALIGNMENT_CENTER
-	row.size_flags_horizontal = Control.SIZE_FILL
-	col.add_child(row)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	scroll.add_child(row)
 
 	var armed_id: String = game.pending_tool if game != null else ""
 
@@ -712,15 +1118,16 @@ func _refresh_tools() -> void:
 		var cfg: Dictionary = ToolConfig.get_tool(id)
 		var label: String = String(cfg.get("label", id))
 		var desc: String = String(cfg.get("desc", ""))
-		var is_tap: bool = ToolConfig.is_tap_target(id)
 		var is_armed: bool = (id == armed_id and armed_id != "")
+		var is_inspected: bool = (id == _inspected_tool and _inspected_tool != "")
 
 		# Slot = a square Control holding a full-rect icon Button + a corner count badge.
 		var slot := Control.new()
-		slot.custom_minimum_size = Vector2(54, 54)
+		slot.custom_minimum_size = Vector2(56, 58)
 
 		var btn := Button.new()
 		btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+		btn.focus_mode = Control.FOCUS_NONE
 		var tex := UiKit.resource_icon(id)
 		if tex != null:
 			btn.icon = tex
@@ -729,19 +1136,23 @@ func _refresh_tools() -> void:
 			btn.text = label                       # fallback for a tool with no art
 			btn.add_theme_font_size_override("font_size", 12)
 		# Tooltip carries the label + "×N" + the tool's description — the tests read
-		# tooltip_text (the button itself is now icon-only, no inline text).
+		# tooltip_text (the button itself is icon-only; the action panel shows the text).
 		btn.tooltip_text = "%s · ×%d%s" % [label, charges, ("\n" + desc if desc != "" else "")]
-		# Parchment slot, ember-tinted + ember-bordered while this tool is armed.
-		var slot_fill: Color = Palette.PARCHMENT_SOFT
-		var slot_border: Color = Palette.IRON
+		# React ToolTile palette on the dark rail: armed = bright parchment + gold edge;
+		# inspected = warm tint + soft gold edge; rest = faint parchment wash.
+		var slot_fill: Color = Color("#f6e3bf", 0.18)
+		var slot_border: Color = Color("#c8a05a", 0.40)
 		if is_armed:
-			slot_fill = Color(Palette.EMBER, 0.22)
-			slot_border = Palette.EMBER
+			slot_fill = Color("#fdf3e3")
+			slot_border = Color("#f0c14b")
+		elif is_inspected:
+			slot_fill = Color("#f6e3bf", 0.55)
+			slot_border = Color("#f0c14b", 0.60)
 		btn.add_theme_stylebox_override("normal", _tool_slot_box(slot_fill, slot_border))
 		btn.add_theme_stylebox_override("hover", _tool_slot_box(slot_fill.lightened(0.06), slot_border))
 		btn.add_theme_stylebox_override("pressed", _tool_slot_box(slot_fill.darkened(0.06), slot_border))
 		btn.pressed.connect(func():
-			tool_use_requested.emit(id)
+			_on_tool_slot_tapped(id)
 		)
 		slot.add_child(btn)
 
@@ -754,24 +1165,65 @@ func _refresh_tools() -> void:
 		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		badge.add_theme_stylebox_override("normal", _tool_badge_box())
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.position = Vector2(36, -6)
+		badge.position = Vector2(38, -6)
 		slot.add_child(badge)
-
-		# A small "↗" tap affordance bottom-left for tap-target tools.
-		if is_tap:
-			var tap := Label.new()
-			tap.text = "↗"
-			tap.add_theme_font_size_override("font_size", 12)
-			tap.add_theme_color_override("font_color", Palette.INK_MID)
-			tap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			tap.position = Vector2(3, 34)
-			slot.add_child(tap)
 
 		row.add_child(slot)
 		_tool_buttons[id] = btn
 
+	# The slot highlights are state-derived — keep the panel's TOOL view content current
+	# (counts change with every use; the armed highlight follows game.pending_tool).
+	_update_action_state()
+
+## A hotbar slot was tapped. First tap INSPECTS the tool (the action panel flips to its
+## detail); a second tap on the already-inspected slot ACTIVATES it — arming a tap-target
+## tool, firing an instant one, or TOGGLING OFF an armed one (React dispatchUseTool's
+## isPending → CANCEL_TOOL). Tapping a different slot while another tool is armed
+## TRANSFERS the arming (React maybeTransferArming): the player already committed to
+## using a tool, so the new tap switches tools rather than dropping to nothing.
+func _on_tool_slot_tapped(id: String) -> void:
+	var armed_id: String = game.pending_tool if game != null else ""
+	if armed_id != "" and armed_id != id:
+		# Transfer: disarm the old tool, then activate the new one immediately.
+		disarm_requested.emit()
+		_inspected_tool = id
+		tool_use_requested.emit(id)
+		_refresh_tools()
+		return
+	if _inspected_tool == id:
+		if armed_id == id:
+			disarm_requested.emit()        # tap-to-cancel an armed tool
+		else:
+			tool_use_requested.emit(id)    # arm a tap tool / fire an instant one
+		_refresh_tools()
+		return
+	_inspected_tool = id
+	_update_action_state()
+	_refresh_tools()
+
+## The action panel's ARM / DISARM / USE NOW button (TOOL state footer).
+func _on_tool_action_pressed() -> void:
+	var id := _inspected_tool
+	if id == "":
+		return
+	if game != null and game.pending_tool == id:
+		disarm_requested.emit()
+	else:
+		tool_use_requested.emit(id)
+	_refresh_tools()
+
+## The TOOL state's ✕ close: drop the inspect, back to the stockpile. While the
+## inspected tool is ARMED this is a no-op — DISARM is the explicit way out (React's
+## auto-inspect re-shows an armed tool immediately, so closing it is equally moot).
+func _on_tool_view_closed() -> void:
+	if game != null and game.pending_tool == _inspected_tool and _inspected_tool != "":
+		return
+	_inspected_tool = ""
+	_update_action_state()
+	_refresh_tools()
+
 ## A square parchment slot StyleBox for a tool icon button (10px radius, 2px border,
-## 6px padding); the fill/border vary so the armed tool reads ember-highlighted.
+## 6px padding); the fill/border vary so the armed/inspected tool reads highlighted.
 func _tool_slot_box(fill: Color, border: Color) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = fill
@@ -963,31 +1415,45 @@ func _nav_box() -> StyleBoxFlat:
 ## its count (React puzzleBoard.tsx IdleView chip). An OWNED chip is soft-parchment with an
 ## iron border + ink count; an EMPTY (count 0) roster chip renders DIMMED with a transparent
 ## border + muted count, so the panel always shows the full roster grid but the unfilled goods
-## read as faint placeholders (React `empty ? opacity .55 / transparent border`). The icon shows
-## when we have art for the key; otherwise the title-cased name is the fallback so board-only
-## keys (rat, mysterious_ore, …) still read.
+## read as faint placeholders (React `empty ? opacity .55 / transparent border`). Behind the
+## content a soft green wash spans count/effective_cap of the chip width — React's per-chip
+## fill bar (`width: pct%`, rgba(124,179,66,0.12) against currentCap). The icon shows when we
+## have art for the key; otherwise the title-cased name is the fallback so board-only keys
+## (rat, mysterious_ore, …) still read.
 func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	var empty: bool = count <= 0
 	var box := PanelContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.modulate = Color(1, 1, 1, 0.55) if empty else Color.WHITE
 	box.tooltip_text = "%s: %d" % [UiKit.pretty_name(res), count]
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(Palette.PARCHMENT_SOFT, 0.35) if empty else Palette.PARCHMENT_SOFT
 	sb.border_color = Color(Palette.IRON, 0.0) if empty else Palette.IRON
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_left = 8
-	sb.corner_radius_bottom_right = 8
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(8)
 	sb.content_margin_left = 8
 	sb.content_margin_right = 8
 	sb.content_margin_top = 4
 	sb.content_margin_bottom = 4
 	box.add_theme_stylebox_override("panel", sb)
+	# Cap-relative fill wash, BEHIND the icon/count row. Lives in a plain-Control host
+	# (PanelContainer lays out its direct children full-rect, but a non-container child's
+	# own children keep their anchors), with anchor_right = count/cap doing the width.
+	if not empty and game != null:
+		var cap: int = game.effective_cap()
+		if cap > 0:
+			var host := Control.new()
+			host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			box.add_child(host)
+			var wash := ColorRect.new()
+			wash.color = Color(0.486, 0.702, 0.259, 0.16)
+			wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			wash.anchor_left = 0.0
+			wash.anchor_top = 0.0
+			wash.anchor_bottom = 1.0
+			wash.anchor_right = clampf(float(count) / float(cap), 0.0, 1.0)
+			host.add_child(wash)
 	# React's stockpile chips are a compact icon + count. Show the same procedural icon
 	# when we have art for the key; fall back to the title-cased name when we don't.
 	var row := HBoxContainer.new()
@@ -1006,17 +1472,14 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	row.add_child(lbl)
 	return box
 
-## Keep the chain-progress fill height matched to the track, remember the inner
-## width (border-inset), and re-apply the current ratio so a resize keeps the fill
-## proportional.
+## Re-apply the live fills when the track changes size (a resize keeps the bar
+## proportional). Width is remembered for callers that probe it before a layout pass.
 func _on_chain_track_resized() -> void:
 	if _chain_prog_track == null or _chain_prog_fill == null:
 		return
-	var h: float = _chain_prog_track.size.y
-	_chain_prog_track_w = maxf(0.0, _chain_prog_track.size.x - 2.0)  # inset for the 1px border
-	_chain_prog_fill.position = Vector2(1, 1)
-	_chain_prog_fill.size.y = maxf(0.0, h - 2.0)
-	_apply_chain_progress_fill()
+	_chain_prog_track_w = maxf(0.0, _chain_prog_track.size.x - 4.0)  # inset for the 2px border
+	if _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY:
+		_refresh_chain_progress()
 
 # ── M4e reward "juice" (fly-to-coins + pill pulse) ───────────────────────────
 
@@ -1111,45 +1574,116 @@ func _make_chip_box() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 2)
 	return sb
 
-# ── Tool-armed banner show/hide (called by Main's tool dispatch) ──────────────
+# ── Tool-armed mode show/hide (called by Main's tool dispatch; KEPT names) ─────
 
-## Populate + show the "Tool armed" banner for a just-armed tap-target tool: the
-## "⚡ Tool armed · ×N left" title (N = remaining charges, the one being armed
-## included since the charge isn't spent until the tap), the tool name, and its
-## description.
+## A tap-target tool was just armed: auto-inspect it so the action panel flips to the
+## ARMED tool view (React useAutoInspectArmed). N in the header counts the remaining
+## charges, the one being armed included — the charge isn't spent until the tap.
 func show_tool_armed_banner(id: String) -> void:
-	if _tool_armed_box == null:
+	if _action_tool == null:
 		return
-	var charges: int = game.tool_count(id) if game != null else 0
-	_tool_armed_title.text = "⚡ Tool armed · ×%d left" % charges
-	_tool_armed_name.text = ToolConfig.tool_label(id)
-	_tool_armed_desc.text = ToolConfig.tool_desc(id)
-	_tool_armed_box.visible = true
-	# An armed tool is a MODE the player can forget they're in — fade the banner in and
-	# keep a gentle breathe on it until it's disarmed/spent (UiFx; rests on hide).
-	UiFx.content_fade(_tool_armed_box)
-	UiFx.attach_attention_pulse(_tool_armed_box, 1.02, 1.4)
+	_inspected_tool = id
+	_update_action_state()
+	# An armed tool is a MODE the player can forget they're in — keep a gentle breathe
+	# on its icon card until it's disarmed/spent (UiFx; rests on hide).
+	UiFx.content_fade(_action_tool)
+	UiFx.attach_attention_pulse(_tool_view_icon_box, 1.04, 1.4)
 
-## Hide the "Tool armed" banner (after the tap fires, or on Disarm).
+## The armed mode ended (the tap fired, or Disarm): drop the inspect so the panel
+## returns to the stockpile (React clears inspectedTool when toolPending goes null).
 func hide_tool_armed_banner() -> void:
-	if _tool_armed_box != null:
-		UiFx.clear_attention_pulse(_tool_armed_box)
-		_tool_armed_box.visible = false
+	if _tool_view_icon_box != null:
+		UiFx.clear_attention_pulse(_tool_view_icon_box)
+	_inspected_tool = ""
+	_update_action_state()
 
 # ── live-chain tracking (pushed by Main from _on_chain_changed) ───────────────
 
-## A3 — Main pushes the live drag state (length + the chained tile type) so the
-## chain-progress bar can colour its fill/accent by the chain's STAGE while dragging. A
-## length of 0 ends the drag → the bar reverts to its calm fractional-progress tint.
+## A3 — Main pushes the live drag state (length + the chained tile type); the action
+## panel flips to its CHAIN state while a drag is in flight and back when it ends
+## (length 0). The chain view colours its bar by the chain's STAGE.
 func set_live_chain(length: int, tile: int) -> void:
+	var ended: bool = length <= 0 and _live_chain_len > 0
 	_live_chain_len = length
 	_live_chain_tile = tile
+	# React: when a chain drag ends and no tool is ARMED, drop the inspect so the panel
+	# returns to the stockpile rather than a stale tool detail (prototype.tsx's
+	# "chainInfo goes null and no toolPending → setInspectedTool(null)").
+	if ended and _inspected_tool != "" and (game == null or game.pending_tool != _inspected_tool):
+		_inspected_tool = ""
+	_update_action_state()
+
+## Swap the action panel to the state the player's current activity demands —
+## chain > tool > idle (React PuzzleActionPanel's `hasChain ? "chain" : inspectedTool
+## ? "tool" : "idle"`) — and refresh the now-visible state's content.
+func _update_action_state() -> void:
+	if _action_panel == null:
+		return
+	var chain_live: bool = _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY
+	var tool_live: bool = _inspected_tool != "" and ToolConfig.has_tool(_inspected_tool)
+	_action_chain.visible = chain_live
+	_action_tool.visible = not chain_live and tool_live
+	_action_idle.visible = not chain_live and not tool_live
+	if _action_chain.visible:
+		_refresh_chain_progress()
+	elif _action_tool.visible:
+		_refresh_action_tool()
+
+## Refresh the TOOL state content (React ToolView) from _inspected_tool + game:
+## header mode (INSPECT / READY / ARMED) + charge count, icon card (red-edged while
+## armed), name + description, and the footer prompt + ARM / DISARM / USE NOW button.
+func _refresh_action_tool() -> void:
+	if _action_tool == null or _inspected_tool == "":
+		return
+	var id := _inspected_tool
+	var charges: int = game.tool_count(id) if game != null else 0
+	var armed: bool = game != null and game.pending_tool == id
+	var is_tap: bool = ToolConfig.is_tap_target(id)
+
+	var mode: String = "TOOL ARMED" if armed else ("TOOL READY" if is_tap else "TOOL INSPECT")
+	_tool_armed_title.text = "%s · ×%d LEFT" % [mode, charges]
+	_tool_armed_title.add_theme_color_override(
+		"font_color", Color("#9a1a1a") if armed else Palette.INK)
+	_set_dot_color(_tool_head_dot, Color("#e02828") if armed else Color("#8a6a47"))
+
+	_tool_armed_name.text = ToolConfig.tool_label(id)
+	_tool_armed_desc.text = ToolConfig.tool_desc(id)
+	_tool_view_icon.texture = UiKit.resource_icon(id)
+	_tool_view_icon_box.add_theme_stylebox_override("panel", _tool_icon_box_style(armed))
+
+	if is_tap:
+		_tool_view_footer.add_theme_stylebox_override(
+			"panel", _tool_footer_style("armed" if armed else "ready"))
+		_tool_view_prompt.text = "Tap a tile on the board" if armed else "Arm it — then pick a tile"
+		_tool_view_prompt.add_theme_color_override(
+			"font_color", Color("#9a1a1a") if armed else Color("#7a3c12"))
+		if armed:
+			_tool_action_btn.text = "✕ DISARM"
+			_style_cta(_tool_action_btn, Color("#d05030"), Color("#5a1a08"), Color("#fff8e7"))
+		else:
+			_tool_action_btn.text = "◎ ARM"
+			_style_cta(_tool_action_btn, Color("#eb9440"), Color("#7a3c12"), Color("#2c1408"))
+		_tool_action_btn.disabled = charges <= 0 and not armed
+	else:
+		_tool_view_footer.add_theme_stylebox_override("panel", _tool_footer_style("instant"))
+		_tool_view_prompt.text = "Affects the whole board"
+		_tool_view_prompt.add_theme_color_override("font_color", Color("#7a5520"))
+		_tool_action_btn.text = "✓ USE NOW"
+		_style_cta(_tool_action_btn, Color("#6aa338"), Color("#3a5a12"), Color("#0c2e10"))
+		_tool_action_btn.disabled = charges <= 0
 
 # ── HUD layout (pinned by Main's _layout) ─────────────────────────────────────
 
-## Pin the width-anchored HUD containers to the current viewport: the top-bar spans
-## the full width at the top; the chain-progress bar centres just under it; the
-## stockpile card spans most of the width below the board.
+## Y where the BOARD band starts — Main._layout places the board's top edge here,
+## below the action panel and the chain hint line.
+func board_top() -> float:
+	return PANEL_TOP + PANEL_H + 30.0
+
+## Pin the width-anchored HUD containers to the current viewport. The board page is a
+## FIXED vertical stack (the React BoardLayout portrait template): top bar → season bar
+## → tool hotbar → action panel → chain hint → board (Main._layout reads board_top()) —
+## constant bands, so no card can ever float over the board again (the old stockpile
+## card at vp.y*0.74 buried the bottom tile row).
 func _layout_hud(vp: Vector2) -> void:
 	# The top-bar is PRESET_TOP_WIDE (anchors left=0..right=1), so zero L/R offsets
 	# already make it span the full viewport width — don't set size.x (that fights
@@ -1162,38 +1696,27 @@ func _layout_hud(vp: Vector2) -> void:
 	# content-driven height (and the button's own size) settle a frame after a layout
 	# pass, so measuring immediately would centre against stale sizes.
 	_align_menu_btn.call_deferred()
+	var band_margin: float = maxf(12.0, vp.x * 0.03)
 	# A2 — the season bar spans the full width within the HUD margins, just below the top bar.
-	# It's TOP_WIDE-anchored, so left/right OFFSETS (not size.x) inset it; clamp the inset like
-	# the stockpile card so it stays full-width but never touches the screen edges.
 	if _season_bar_box != null:
-		var sb_margin: float = maxf(12.0, vp.x * 0.03)
-		_season_bar_box.offset_left = sb_margin
-		_season_bar_box.offset_right = -sb_margin
+		_season_bar_box.offset_left = band_margin
+		_season_bar_box.offset_right = -band_margin
 		_season_bar_box.offset_top = 66.0
-	if _chain_prog_box != null:
-		var cw: float = minf(520.0, vp.x - 32.0)
-		_chain_prog_box.offset_left = -cw / 2.0
-		_chain_prog_box.offset_right = cw / 2.0
-		# Pushed below the season bar (top 66 + 52 strip + 6 frame ≈ 124).
-		_chain_prog_box.offset_top = 128.0
+	# Tool hotbar — a fixed-height rail under the season bar (React's hotbar area).
 	if _tool_palette_box != null:
-		# Centre the horizontal tool bar just below the chain-progress bar and above the board
-		# (top ≈ vp.y * 0.24). It's CENTER_TOP-anchored, so a symmetric max-width offset keeps
-		# it centred while letting it shrink on narrow viewports.
-		var tw: float = minf(560.0, vp.x - 32.0)
-		_tool_palette_box.offset_left = -tw / 2.0
-		_tool_palette_box.offset_right = tw / 2.0
-		_tool_palette_box.offset_top = 188.0
-	if _stockpile_box != null:
-		var margin: float = maxf(16.0, vp.x * 0.04)
-		_stockpile_box.offset_left = margin
-		_stockpile_box.offset_right = -margin
-		# Sit below the board but ABOVE the bottom nav. Clamp the top so the card's
-		# (content-driven) height still has room to clear the nav on short viewports:
-		# reserve NAV_HEIGHT for the bar + ~150px for the card + an 8px gap.
-		var stock_top: float = vp.y * 0.74
-		var stock_ceiling: float = vp.y - float(NAV_HEIGHT) - 150.0 - 8.0
-		_stockpile_box.offset_top = minf(stock_top, maxf(0.0, stock_ceiling))
+		_tool_palette_box.offset_left = band_margin
+		_tool_palette_box.offset_right = -band_margin
+		_tool_palette_box.offset_top = HOTBAR_TOP
+		_tool_palette_box.offset_bottom = HOTBAR_TOP + HOTBAR_H
+	# Action panel — the fixed state-swapping card between the hotbar and the board.
+	if _action_panel != null:
+		_action_panel.offset_left = band_margin
+		_action_panel.offset_right = -band_margin
+		_action_panel.offset_top = PANEL_TOP
+		_action_panel.offset_bottom = PANEL_TOP + PANEL_H
+	# Chain hint — the slim prompt in the gap between the panel and the board.
+	if _chain_label != null:
+		_chain_label.offset_top = PANEL_TOP + PANEL_H + 7.0
 
 ## Centre the floating ⚙ button vertically within the top bar's band. The old fixed
 ## offset_top 18 left the gear hanging below the pill row (the "misaligned gear" on the
@@ -1210,9 +1733,17 @@ func _align_menu_btn() -> void:
 
 # ── refreshers (re-pointed from Main; names kept for the capture-script contract) ──
 
-## M4b — rebuild the stockpile chip grid from inventory (skip zero counts, sort by
-## key). KEEPS the name `_refresh_totals` so the capture scripts + Main still call
-## it; the body repopulates the GridContainer of chips.
+## The ACTIVE biome's stockpile roster (React IdleView reads BIOMES[biomeKey].resources,
+## so a mine/harbor expedition shows that biome's goods instead of the farm list).
+func _active_roster() -> Array:
+	if game != null and game.is_in_mine():
+		return STOCKPILE_ROSTER_MINE
+	if game != null and game.is_in_harbor():
+		return STOCKPILE_ROSTER_FISH
+	return STOCKPILE_ROSTER
+
+## M4b — rebuild the stockpile chip grid (the action panel's IDLE state) from inventory.
+## KEEPS the name `_refresh_totals` so the capture scripts + Main still call it.
 func _refresh_totals() -> void:
 	if _stockpile_grid == null:
 		return
@@ -1223,23 +1754,25 @@ func _refresh_totals() -> void:
 
 	# Build the chip order: every ROSTER resource (always shown — dimmed at 0), then any OWNED
 	# resource NOT in the roster (a mine/expedition good carried back), sorted, so nothing owned
-	# is ever hidden. Mirrors React's fixed biome roster + the player's actual counts.
+	# is ever hidden. (Deliberate port adaptation: React trims to the fixed 12; the port appends
+	# extras because the idle grid scrolls inside the fixed panel, so nothing can overflow.)
+	var roster: Array = _active_roster()
 	var roster_owned: int = 0
 	var order: Array = []
-	for res in STOCKPILE_ROSTER:
+	for res in roster:
 		order.append(String(res))
 	var extras: Array = []
 	if game != null:
 		for key in game.inventory:
 			var k := String(key)
-			if int(game.inventory[key]) > 0 and not STOCKPILE_ROSTER.has(k):
+			if int(game.inventory[key]) > 0 and not roster.has(k):
 				extras.append(k)
 	extras.sort()
 	order.append_array(extras)
 
 	for res in order:
 		var count: int = int(game.inventory.get(res, 0)) if game != null else 0
-		if STOCKPILE_ROSTER.has(res) and count > 0:
+		if roster.has(res) and count > 0:
 			roster_owned += 1
 		var chip := _make_stock_chip(res, count)
 		_stockpile_grid.add_child(chip)
@@ -1248,7 +1781,7 @@ func _refresh_totals() -> void:
 	# React PanelHeader: left "STOCKPILE", right "{owned}/{total} KINDS" — owned roster goods
 	# over the roster size (the denominator is the fixed roster, like React's `list.length`).
 	if _stockpile_kinds != null:
-		_stockpile_kinds.text = "%d/%d KINDS" % [roster_owned, STOCKPILE_ROSTER.size()]
+		_stockpile_kinds.text = "%d/%d KINDS" % [roster_owned, roster.size()]
 	_stockpile_grid.visible = true
 
 ## M4b — coins now live in the top-bar coin pill (the old _meta_label is gone). The
@@ -1471,100 +2004,171 @@ func _refresh_season_bar() -> void:
 		return
 	_season_bar.set_state(game.farm_turns_used, game.farm_turn_budget(), game.current_season_index())
 
-## M4b / A3 — refresh the chain-progress bar. While a LIVE chain is in flight (a drag long
-## enough to produce a real resource), the label reads "{res}: {length}/{threshold}" and the
-## fill is coloured by the chain's STAGE (Constants.chain_stage_index): the fill tracks the
-## progress WITHIN the current stage cycle (length % threshold) and the stage banner ("BONUS!"
-## /"DOUBLE!"/…) shows once earned >= 1. With NO chain in flight it falls back to the calm
-## MOSS→GOLD fractional progress toward the next unit (GameState.progress, the M4b behaviour),
-## and the stage banner is hidden. "Chain tiles to gather" when nothing has been chained yet.
+## Refresh the CHAIN state of the action panel (the React ChainView port). KEEPS the
+## name — Main + the m4b/m4e/m8d captures call it. Reads the live drag (length + tile
+## pushed by set_live_chain), the carried progress (GameState.progress — the persisted
+## remainder toward the next unit, React's carriedInCycle), and the zone's upgrade
+## target, then drives:
+##   • header — accent dot + right label ("{Res} chain" / "N more to collect" while
+##     short of the minimum);
+##   • the big bar — carried base fill (brown) + live STAGE-gradient fill on top; once
+##     carried+length wraps the threshold the bar LOOPS (full brown + overflow fill);
+##     the counter reads "len/thr", "carried+len/thr", or "rem/thr +cycles"; hazards
+##     with no producer read "×N" with no fills (React's ×{length});
+##   • the stage banner ("BONUS!"/…) + the resource icon card's accent ring + "+N"
+##     earned badge;
+##   • the "UPGRADE TO {tile}" footer with its mini progress track.
+## Thresholds are the EFFECTIVE (worker/ability-reduced) values via
+## GameState.effective_threshold — exactly what credit_chain will bank (and what
+## React's GameScene feeds ChainView via effectiveThresholds).
 func _refresh_chain_progress() -> void:
 	if _chain_prog_label == null:
 		return
-	# LIVE chain — colour by stage against the chained tile's threshold.
-	if _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY:
-		var live_threshold: int = Constants.threshold_for(_live_chain_tile)
-		var live_res: String = Constants.produced_resource(_live_chain_tile)
-		if live_threshold > 0 and live_threshold < Constants.NO_THRESHOLD and live_res != "":
-			# React's "1/6 +1" form: progress WITHIN the current stage cycle (length % threshold)
-			# plus the upgrades EARNED so far. The bar (and this counter) RESET each cycle, so the
-			# "+N" banner is what conveys a banked upgrade at a boundary (matches the fill below).
-			var earned: int = int(_live_chain_len / live_threshold)
-			var into: int = _live_chain_len % live_threshold
-			var txt: String = "%s  %d/%d" % [UiKit.pretty_name(live_res), into, live_threshold]
-			if earned > 0:
-				txt += "  +%d" % earned
-			_chain_prog_label.text = txt
-			_apply_chain_progress_fill()
-			return
-		# A hazard tile (RAT/RUBBLE — no producer/threshold): leave the bar on its prior
-		# resting state but still drop the live tracking so the fill uses the fallback below.
-	# No live chain (or a hazard chain): the resting fractional-progress view.
-	if game == null or _last_res == "" or _last_threshold <= 0:
-		_chain_prog_label.text = "Chain tiles to gather"
-		_apply_chain_progress_fill()
+	var length: int = _live_chain_len
+	var tile: int = _live_chain_tile
+	if length <= 0 or tile == Constants.EMPTY:
 		return
-	var prog: int = int(game.progress.get(_last_res, 0))
-	# Pretty label, matching the live-chain line above — the raw key ("hay_bundle")
-	# must never reach the player (review-4).
-	_chain_prog_label.text = "%s: %d/%d" % [UiKit.pretty_name(_last_res), prog, _last_threshold]
-	_apply_chain_progress_fill()
+	var threshold: int = game.effective_threshold(tile) if game != null \
+		else Constants.threshold_for(tile)
+	var has_threshold: bool = threshold > 0 and threshold < Constants.NO_THRESHOLD
+	var res: String = Constants.produced_resource(tile)
+	var min_chain: int = board.min_chain if board != null else Constants.MIN_CHAIN
+	var too_short: bool = length < min_chain
 
-## Position + size + tint the chain-progress fill. Two modes:
-##   LIVE chain → fill width = (length % threshold)/threshold (full at a stage boundary), tint
-##     blended from the STAGE gradient (top↔bot mid) with the stage `accent` as the border; the
-##     stage banner ("BONUS!"…) shows once earned >= 1 (Constants.chain_stage / CHAIN_STAGES).
-##   RESTING → fill width = progress/threshold, MOSS→GOLD lerp (the M4b look); banner hidden.
-func _apply_chain_progress_fill() -> void:
-	if _chain_prog_fill == null or _chain_prog_track == null:
-		return
-	var inner_w: float = maxf(0.0, _chain_prog_track.size.x - 2.0)
-	if inner_w <= 0.0:
-		inner_w = _chain_prog_track_w
-	var fill_h: float = maxf(0.0, _chain_prog_track.size.y - 2.0)
-	_chain_prog_fill.position = Vector2(1, 1)
+	# Stage by upgrades EARNED this chain (floor(len/threshold), clamped into CHAIN_STAGES).
+	var earned_units: int = int(length / threshold) if has_threshold else 0
+	var stage: Dictionary = Constants.CHAIN_STAGES[
+		clampi(earned_units, 0, Constants.CHAIN_STAGES.size() - 1)]
+	var stage_top := Color(String(stage.get("top", "#f0c14b")))
+	var stage_bot := Color(String(stage.get("bot", "#d97a2a")))
+	var accent := Color(String(stage.get("accent", "#e07a3a")))
 
-	# LIVE-chain stage colouring.
-	if _live_chain_len > 0 and _live_chain_tile != Constants.EMPTY:
-		var threshold: int = Constants.threshold_for(_live_chain_tile)
-		if threshold > 0 and threshold < Constants.NO_THRESHOLD:
-			var earned: int = Constants.chain_stage_index(_live_chain_len, threshold)
-			var stage: Dictionary = Constants.CHAIN_STAGES[earned]
-			# Progress within the CURRENT stage cycle — React resets the bar each cycle
-			# (length % threshold), so at an exact boundary the bar EMPTIES and the "+N" banner
-			# conveys the banked upgrade (rather than a full bar). Matches the label readout.
-			var into: int = _live_chain_len % threshold
-			var ratio: float = float(into) / float(threshold)
-			# Glide, don't step: rapid live-chain refreshes re-aim the in-flight tween.
-			UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h))
-			var top: Color = Color(String(stage.get("top", "#f0c14b")))
-			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))
-			var accent: Color = Color(String(stage.get("accent", "#e07a3a")))
-			_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(top.lerp(bot, 0.5), accent))
-			# Stage banner: shown once an upgrade is earned (earned >= 1). POP it on every
-			# stage ADVANCE ("BONUS!" → "DOUBLE!" → …) so crossing a threshold mid-drag
-			# lands as a beat; same-stage refreshes (every tile added) stay still.
-			if _chain_stage_label != null:
-				var label: String = String(stage.get("label", ""))
-				var was: String = String(_chain_stage_label.get_meta("_stage_shown", ""))
-				_chain_stage_label.visible = earned >= 1 and label != ""
-				_chain_stage_label.text = label
-				if _chain_stage_label.visible and label != was:
-					UiFx.pop(_chain_stage_label)
-				_chain_stage_label.set_meta("_stage_shown", label if _chain_stage_label.visible else "")
-				_chain_stage_label.add_theme_color_override(
-					"font_color", Color8(0xff, 0xe7, 0xa0) if earned >= 4 else Palette.PARCHMENT)
-			return
+	# Header (React: right = tooShort ? "N more to collect" : "{res} chain").
+	var res_label: String = UiKit.pretty_name(res) if res != "" \
+		else UiKit.pretty_name(Constants.string_key(tile))
+	if too_short:
+		_chain_head_right.text = "%d MORE TO COLLECT" % (min_chain - length)
+		_set_dot_color(_chain_head_dot, Color("#9a7b4f"))
+	else:
+		_chain_head_right.text = "%s CHAIN" % res_label.to_upper()
+		_set_dot_color(_chain_head_dot, accent)
 
-	# RESTING — the calm MOSS→GOLD fractional-progress fill (M4b), banner hidden.
+	# Bar geometry. progress[res] is already the post-chain remainder (mod threshold),
+	# so it IS React's carriedInCycle.
+	var inner_w: float = maxf(0.0, _chain_prog_track.size.x - 4.0)
+	var inner_h: float = maxf(0.0, _chain_prog_track.size.y - 4.0)
+	var carried: int = int(game.progress.get(res, 0)) if (game != null and res != "") else 0
+	if has_threshold:
+		var combined: int = carried + length
+		var looped: bool = combined >= threshold
+		var cycles: int = combined / threshold
+		var remainder: int = combined % threshold
+		_chain_prog_fill.add_theme_stylebox_override("panel", _bar_fill_box(stage_top, stage_bot))
+		if looped:
+			# Past the threshold the bar RESETS: a full "old" brown base (only while the
+			# overflow is non-zero — an exact boundary shows an empty bar + the "+N") and
+			# the overflow stage fill growing again from the left.
+			_chain_fill_carried.visible = remainder > 0
+			_chain_fill_carried.position = Vector2(2, 2)
+			_chain_fill_carried.size = Vector2(inner_w, inner_h)
+			_chain_prog_fill.position = Vector2(2, 2)
+			_chain_prog_fill.size = Vector2(inner_w * float(remainder) / float(threshold), inner_h)
+			_chain_prog_label.text = ("%d/%d +%d" % [remainder, threshold, cycles]) if cycles > 0 \
+				else ("%d/%d" % [remainder, threshold])
+		else:
+			var carried_w: float = inner_w * float(carried) / float(threshold)
+			_chain_fill_carried.visible = carried > 0
+			_chain_fill_carried.position = Vector2(2, 2)
+			_chain_fill_carried.size = Vector2(carried_w, inner_h)
+			_chain_prog_fill.position = Vector2(2 + carried_w, 2)
+			_chain_prog_fill.size = Vector2(inner_w * float(length) / float(threshold), inner_h)
+			_chain_prog_label.text = ("%d+%d/%d" % [carried, length, threshold]) if carried > 0 \
+				else ("%d/%d" % [length, threshold])
+	else:
+		# A hazard / no-producer chain (RAT, golden coin, …): plain "×N", no fills.
+		_chain_fill_carried.visible = false
+		_chain_prog_fill.size = Vector2.ZERO
+		_chain_prog_label.text = "×%d" % length
+
+	# Track ring: from earned >= 2 the bar itself glows the stage accent (React's
+	# `0 0 0 2px accent + 0 0 12px accent66` box-shadow at earned >= 2).
+	var track_sb := _chain_track_box()
+	if earned_units >= 2:
+		track_sb.border_color = accent
+		track_sb.shadow_size = 7
+		track_sb.shadow_color = Color(accent, 0.45)
+		track_sb.shadow_offset = Vector2.ZERO
+	_chain_prog_track.add_theme_stylebox_override("panel", track_sb)
+
+	# Stage banner: shown once an upgrade is earned. POP it on every stage ADVANCE
+	# ("BONUS!" → "DOUBLE!" → …) so crossing a threshold mid-drag lands as a beat;
+	# same-stage refreshes (every tile added) stay still.
 	if _chain_stage_label != null:
-		_chain_stage_label.visible = false
-	var rest_ratio: float = 0.0
-	if game != null and _last_res != "" and _last_threshold > 0:
-		rest_ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
-	UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * rest_ratio, fill_h))
-	var col: Color = Palette.MOSS.lerp(Palette.GOLD, rest_ratio)
-	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(col, col))
+		var stage_text: String = String(stage.get("label", ""))
+		var was: String = String(_chain_stage_label.get_meta("_stage_shown", ""))
+		_chain_stage_label.visible = has_threshold and earned_units >= 1 and stage_text != ""
+		_chain_stage_label.text = stage_text
+		if _chain_stage_label.visible and stage_text != was:
+			UiFx.pop(_chain_stage_label)
+		_chain_stage_label.set_meta("_stage_shown", stage_text if _chain_stage_label.visible else "")
+		_chain_stage_label.add_theme_color_override(
+			"font_color", Color8(0xff, 0xe7, 0xa0) if earned_units >= 4 else Palette.PARCHMENT)
+
+	# Resource icon card: the produced resource's icon (the tile's own art for a
+	# non-producer), accent ring + "+N" badge once an upgrade is earned.
+	if _chain_res_icon != null:
+		var icon_tex: Texture2D = UiKit.resource_icon(res) if res != "" else Tile.texture_for(tile)
+		_chain_res_icon.texture = icon_tex
+		_chain_res_box.add_theme_stylebox_override("panel",
+			_chain_res_box_style(accent if earned_units > 0 else Palette.IRON))
+		_chain_earn_badge.visible = earned_units > 0
+		if earned_units > 0:
+			_chain_earn_label.text = "+%d" % earned_units
+			var badge_sb := StyleBoxFlat.new()
+			badge_sb.bg_color = accent
+			badge_sb.border_color = Palette.INK
+			badge_sb.set_border_width_all(2)
+			badge_sb.set_corner_radius_all(10)
+			badge_sb.content_margin_left = 7
+			badge_sb.content_margin_right = 7
+			badge_sb.content_margin_top = 1
+			badge_sb.content_margin_bottom = 1
+			_chain_earn_badge.add_theme_stylebox_override("panel", badge_sb)
+
+	# "UPGRADE TO {tile}" footer. The provider (GameState.upgrade_spawn against the
+	# active farm zone) answers count 0 below the RAW threshold, so probe with a
+	# guaranteed-crediting length just to resolve the TARGET tile — React's
+	# nextUpgradeTile returns the target regardless of the live count.
+	var show_footer: bool = false
+	if has_threshold and board != null and board.upgrade_provider.is_valid():
+		var raw_threshold: int = Constants.threshold_for(tile)
+		var probe: Dictionary = board.upgrade_provider.call(tile, maxi(length, raw_threshold))
+		var up_tile: int = int(probe.get("tile", Constants.EMPTY))
+		if up_tile != Constants.EMPTY:
+			show_footer = true
+			_chain_upg_icon.texture = Tile.texture_for(up_tile)
+			_chain_upg_name.text = UiKit.pretty_name(Constants.string_key(up_tile))
+			var upg_w: float = maxf(0.0, _chain_upg_track.size.x)
+			var pct: float = clampf(float(length) / float(threshold), 0.0, 1.0)
+			_chain_upg_fill.position = Vector2.ZERO
+			_chain_upg_fill.size = Vector2(upg_w * pct, maxf(0.0, _chain_upg_track.size.y))
+			_chain_upg_fill.add_theme_stylebox_override(
+				"panel", _bar_fill_box(accent, stage_top, true))
+			_chain_upg_count.text = "%d/%d" % [length, threshold]
+			# The "+1" chip lights up stage-tinted once the chain has earned an upgrade.
+			var plus_sb := StyleBoxFlat.new()
+			plus_sb.set_corner_radius_all(7)
+			plus_sb.content_margin_left = 7
+			plus_sb.content_margin_right = 7
+			if earned_units >= 1:
+				plus_sb.bg_color = accent
+				_chain_upg_plus_lbl.add_theme_color_override("font_color", Color("#fff8e7"))
+			else:
+				plus_sb.bg_color = Color(0, 0, 0, 0)
+				_chain_upg_plus_lbl.add_theme_color_override("font_color", Color("#3d5d18"))
+			_chain_upg_plus.add_theme_stylebox_override("panel", plus_sb)
+	if _chain_upg_row != null:
+		_chain_upg_row.visible = show_footer
 
 func _refresh_status() -> void:
 	if board != null and _status_label != null and _status_label.text == "":

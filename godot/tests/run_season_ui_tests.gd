@@ -246,11 +246,13 @@ func _test_stockpile_panel() -> void:
 		"header reads '0/%d KINDS' on an empty stockpile (got '%s')" % [roster_n, hud._stockpile_kinds.text])
 
 	# Own two roster goods → header counts them; the chips for those keys exist.
-	game.inventory = {"flour": 5, "bread": 2}
+	# (flour + jam are both in the React-parity first-12 farm roster; bread is NOT —
+	# it falls outside BIOMES.farm.resources.slice(0,12), so it would be an extra.)
+	game.inventory = {"flour": 5, "jam": 2}
 	hud._refresh_totals()
 	_check(hud._stockpile_kinds.text == "2/%d KINDS" % roster_n,
-		"header reads '2/%d KINDS' after owning flour + bread (got '%s')" % [roster_n, hud._stockpile_kinds.text])
-	_check(hud._stockpile_chips.has("flour") and hud._stockpile_chips.has("bread"),
+		"header reads '2/%d KINDS' after owning flour + jam (got '%s')" % [roster_n, hud._stockpile_kinds.text])
+	_check(hud._stockpile_chips.has("flour") and hud._stockpile_chips.has("jam"),
 		"the owned roster goods have chips")
 
 	# An OWNED non-roster good (a mine resource) is appended as an extra chip beyond the roster.
