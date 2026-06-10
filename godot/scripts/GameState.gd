@@ -987,6 +987,10 @@ var achievement_counters: Dictionary:
 var achievements_unlocked: Dictionary:
 	get:
 		return achievement_state.unlocked
+
+## Newly-unlocked achievement dicts awaiting a UI toast (filled by bump_counter, drained
+## by Main). Runtime-only — deliberately NOT in to_dict/from_dict.
+var achievement_toast_queue: Array = []
 ## counter_name:String -> {distinct_key:String -> true}. Backs the distinct counters
 ## (distinct_resources_chained, distinct_buildings_built): a key bumps its counter the FIRST
 ## time it is seen for that counter and never again.
@@ -4639,6 +4643,10 @@ func bump_counter(counter: String, amount: int = 1, distinct_key = null) -> Arra
 	var newly: Array = achievement_state.bump(counter, amount, distinct_key)
 	for a in newly:
 		_grant_reward(a.get("reward", {}))
+		# Queue for the UI toast (Main drains after each resolve/town action). RUNTIME-only
+		# state — never serialized — so save/load and the headless economy suites are
+		# untouched; an undrained queue on quit simply evaporates.
+		achievement_toast_queue.append(a)
 	return newly
 
 ## Grant an achievement reward dict ({"coins": N} and/or {"tools": {id: n}}). Coins

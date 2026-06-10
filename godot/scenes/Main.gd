@@ -1579,6 +1579,23 @@ func _on_founder_closed() -> void:
 ## _on_town_changed). The beat modal lives at the top layer (5), above the others, so even
 ## if a beat surfaces while a lower modal is technically still visible it reads on top and
 ## the player dismisses it to return — no conflict, no suppression needed.
+## Surface any newly-unlocked achievements as a toast + fanfare. GameState.bump_counter
+## queues each unlock (runtime-only); this drains the queue after a resolve / town action.
+## One toast covers a burst ("🏆 First Steps (+2 more)") since the toast channel shows one
+## bubble at a time. No-op when nothing is queued.
+func _drain_achievement_toasts() -> void:
+	if game == null or game.achievement_toast_queue.is_empty():
+		return
+	var first: Dictionary = game.achievement_toast_queue[0]
+	var extra: int = game.achievement_toast_queue.size() - 1
+	var text: String = "🏆 %s unlocked!" % String(first.get("name", "Achievement"))
+	if extra > 0:
+		text = "🏆 %s (+%d more)" % [String(first.get("name", "Achievement")), extra]
+	game.achievement_toast_queue.clear()
+	show_toast(text)
+	if _audio != null:
+		_audio.play("fanfare")
+
 func _drain_story_queue() -> void:
 	if game == null:
 		return
@@ -2003,6 +2020,8 @@ func _on_town_changed() -> void:
 	_last_in_mine = game.is_in_mine()
 	_last_in_harbor = game.is_in_harbor()
 	SaveManager.save(game)
+	# Achievement unlock(s) from this action (an order fill, a build) → toast + fanfare.
+	_drain_achievement_toasts()
 	# Story UI: a town action posts events (tier_up → act1_hamlet / act2_city_expedition,
 	# building_built → act1_lumber_raised / act2_kitchen, order_fulfilled → act1_first_order).
 	# The Town/Map modal closed back to the board before this fires, so surface any queued
@@ -2420,6 +2439,9 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 	_refresh_runes()
 	_refresh_chain_progress()
 	SaveManager.save(game)
+	# Achievement unlock(s) from this chain → toast + fanfare (before the story modal so
+	# the bubble isn't instantly covered; it sits on layer 3 under the modal anyway).
+	_drain_achievement_toasts()
 	# Story UI: a chain can post events (chain threshold beats, a boss_defeated that queues
 	# the Frostmaw aftermath choice, a tier-up/order/build path) — surface any newly-queued
 	# beat immediately. No-op when nothing queued or a beat is already showing.
