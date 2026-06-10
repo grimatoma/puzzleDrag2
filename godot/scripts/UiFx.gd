@@ -162,6 +162,28 @@ static func nav_tab_rest(underline: Control, highlight: Control, icon: Control) 
 			(ctl as Control).scale = Vector2.ONE
 			(ctl as Control).modulate.a = 1.0
 
+# ── text reveal (typewriter) ──────────────────────────────────────────────────
+
+## Sweep a Label's glyphs in left-to-right (the storybook typewriter) by tweening
+## `visible_ratio` — `.text` itself is never touched, so anything reading the label's
+## content (tests, accessibility) sees the whole line immediately. Duration scales
+## with length (≈45 chars/s, capped) and `delay` staggers multi-line reveals.
+## Headless/disabled shows the full text instantly.
+static func reveal_text(label: Label, delay: float = 0.0) -> void:
+	if label == null or not is_instance_valid(label):
+		return
+	if not _active() or not label.is_inside_tree():
+		label.visible_ratio = 1.0
+		return
+	_kill_meta_tween(label, "_uifx_reveal")
+	label.visible_ratio = 0.0
+	var dur := clampf(float(label.text.length()) / 45.0, 0.25, 1.4)
+	var t := label.create_tween()
+	label.set_meta("_uifx_reveal", t)
+	if delay > 0.0:
+		t.tween_interval(delay)
+	t.tween_property(label, "visible_ratio", 1.0, dur)
+
 # ── attention pulse (looping) ─────────────────────────────────────────────────
 
 ## Start a gentle infinite breathe (scale 1 → 1.06 → 1) on a control that wants the

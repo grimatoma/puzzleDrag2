@@ -191,6 +191,11 @@ func _render(beat_id: String) -> void:
 		var speaker: String = String(ln.get("speaker", ""))
 		var text: String = String(ln.get("text", ""))
 		_lines_box.add_child(_make_line_row(speaker, text))
+	# Storybook typewriter (UiFx): each line's glyphs sweep in, staggered top-to-bottom.
+	# visible_ratio only affects DRAWN glyphs — `.text` stays whole, so tests reading
+	# _line_rows are unaffected; headless/motion-off shows everything at once.
+	for i in _line_rows.size():
+		UiFx.reveal_text(_line_rows[i], 0.10 * float(i))
 
 	# ── buttons: choices (one per choice) OR a single Continue ──────────────────
 	var choices: Array = beat.get("choices", [])
