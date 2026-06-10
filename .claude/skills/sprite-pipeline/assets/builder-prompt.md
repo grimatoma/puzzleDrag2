@@ -92,10 +92,12 @@ SKILL "Running agents concurrently"): every call is stateless — addressed by a
 5. Export: `export_sprite` png per frame (`frame_number: i`, two-digit names) →
    `frames/<id>/NN.png` (`00.png`, `01.png`, …); then `export_sprite` gif `frame_number: 0`
    (all frames) → `previews/<id>.gif`.
-6. **Assemble the `.tres`** via `scripts/integrate.mjs` (it imports, verifies the `.png.import`
-   sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one command). See
-   `references/godot-integration.md`. If the Godot binary or `--import` is blocked in your sandbox,
-   **stop at the frames + GIF**, say so, and hand back — the orchestrator runs `integrate.mjs`.
+6. The pipeline **ends at the frames + GIF**. Assembling the `.tres` is a **separate, on-demand
+   step** (`npm run godot:update-tiles` → `tools/update-godot-tiles.mjs`, which imports, verifies the
+   `.png.import` sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one
+   command). See `references/godot-integration.md`. As a builder you should **stop at the frames +
+   GIF**, say so, and hand back — the orchestrator runs the Godot update step out of band (and it's
+   blocked anyway in a sandbox without a Godot binary).
 
 **The subtle-idle tradeoff.** A static imported base means the silhouette itself never breathes — the
 overlay does all the moving. That's perfect for a falling leaf / glint / drifting snow over a still

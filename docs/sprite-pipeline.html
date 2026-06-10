@@ -192,8 +192,8 @@
       </section>
 
       <section id="stages">
-        <h2>The five stages</h2>
-        <p>References distil into a style spec once (Stage&nbsp;0). From there each run plans the set against what is already on disk (Stage&nbsp;1), generates the missing base stills (Stage&nbsp;2), storyboards the physics of each motion (Stage&nbsp;3), animates those storyboards (Stage&nbsp;4), and packs the frames into the engine (Stage&nbsp;5).</p>
+        <h2>The four stages</h2>
+        <p>References distil into a style spec once (Stage&nbsp;0). From there each run plans the set against what is already on disk (Stage&nbsp;1), generates the missing base stills (Stage&nbsp;2), storyboards the physics of each motion (Stage&nbsp;3), and animates those storyboards (Stage&nbsp;4). <b>The pixel pipeline ends at the produced frames + preview GIF.</b> Packing those frames into the Godot engine is a <b>separate, on-demand step</b> — <code>npm run godot:update-tiles</code> — run by hand, <b>never as part of the pipeline run or the <span class="mono">npm</span> build</b>.</p>
         <table>
           <thead><tr><th class="n">#</th><th>Stage</th><th>What happens</th><th>Tool</th></tr></thead>
           <tbody>
@@ -201,17 +201,17 @@
             <tr><td class="n">1</td><td><b>Plan the set</b></td><td>Diff the manifest's <code>keyframes</code>/<code>idles</code>/<code>transitions</code> against files on disk; <b>only the gaps proceed</b>. Gather sibling priors.</td><td>— (read <code>manifest.json</code>)</td></tr>
             <tr><td class="n">2</td><td><b>Generate keyframe stills</b> <span class="pill spend">spend</span></td><td>For each missing keyframe, generate the base still; priors = sibling set assets for continuity.</td><td><b>PixelLab</b> or hand</td></tr>
             <tr><td class="n">3</td><td><b>Physics storyboard</b></td><td>For each idle/transition, fill the storyboard template: frame count, fps, per-frame forces + pixel-level change.</td><td>pixel-art-animation skill</td></tr>
-            <tr><td class="n">4</td><td><b>Animate</b> <span class="pill spend">spend</span></td><td>Execute the storyboard into per-frame PNGs + a preview GIF.</td><td><b>Aseprite only</b></td></tr>
-            <tr><td class="n">5</td><td><b>Integrate &amp; verify</b></td><td>Pack frames → v2 <code>.tres</code>; import; verify in-engine.</td><td><span class="mono">assemble_tres.gd</span> + Godot</td></tr>
+            <tr><td class="n">4</td><td><b>Animate</b> <span class="pill spend">spend</span></td><td>Execute the storyboard into per-frame PNGs + a preview GIF. <b>The pipeline ends here.</b></td><td><b>Aseprite only</b></td></tr>
           </tbody>
         </table>
+        <p style="margin-top:1rem"><b>Separate step (not a stage): update Godot.</b> Pack frames → v2 <code>.tres</code>, import, and verify in-engine via <code>npm run godot:update-tiles</code> (<code>tools/update-godot-tiles.mjs</code>, a thin wrapper over the <span class="mono">integrate.mjs</span> engine that still lives with the skill). Decoupled from the pipeline and run on demand.</p>
       </section>
 
       <section id="flow">
         <h2>Pipeline flow</h2>
-        <p>References (the look) and the manifest (the work) feed Stage&nbsp;0/1. Gates <b>G1–G4</b> sit immediately around the two <span style="color:var(--danger);font-weight:700;">spend</span> steps. A reject loops back to fix that one step; an accept advances. After integration the viewer surfaces the whole set, and copied comments edit the manifest to drive the next idempotent pass.</p>
+        <p>References (the look) and the manifest (the work) feed Stage&nbsp;0/1. Gates <b>G1–G4</b> sit immediately around the two <span style="color:var(--danger);font-weight:700;">spend</span> steps. A reject loops back to fix that one step; an accept advances. The pipeline ends at the produced frames + GIF; the viewer then surfaces the whole set, and copied comments edit the manifest to drive the next idempotent pass. Updating Godot (dashed, off the main flow) is the <b>separate, on-demand</b> <code>npm run godot:update-tiles</code> step.</p>
         <div class="diagram">
-          <p class="cap">Five stages, four gates. Red blocks are the expensive operations; the dashed return is the human feedback loop through the viewer.</p>
+          <p class="cap">Four stages, four gates. Red blocks are the expensive operations; the dashed return is the human feedback loop through the viewer. The Godot update is a separate, on-demand step (dashed, off the main flow).</p>
           <svg viewBox="0 0 980 430" width="100%" role="img" aria-label="Sprite pipeline flowchart: reference assets and a set manifest feed style-spec extraction and set planning; gate 1 critiques the prompt before PixelLab generation; gate 2 critiques the still before storyboarding; gate 3 critiques the storyboard before Aseprite animation; gate 4 montage-reviews the frames before Godot integration; the viewer routes comments back into the manifest.">
             <defs>
               <marker id="arr" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
@@ -260,10 +260,11 @@
               <path d="M146 298 l32 -22 l32 22 l-32 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
               <text x="178" y="302" text-anchor="middle" fill="var(--ink)" font-size="12">G4</text>
 
-              <!-- row 3: integrate / viewer -->
-              <rect x="14" y="270" width="120" height="56" rx="10" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)"/>
-              <text x="74" y="293" text-anchor="middle" fill="var(--ink)">5 · Godot</text>
-              <text x="74" y="310" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">v2 .tres</text>
+              <!-- row 3: Godot update (separate step) / viewer -->
+              <rect x="14" y="270" width="120" height="56" rx="10" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)" stroke-dasharray="5 4"/>
+              <text x="74" y="290" text-anchor="middle" fill="var(--ink)" font-size="12">Godot update</text>
+              <text x="74" y="305" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">separate step · v2 .tres</text>
+              <text x="74" y="319" text-anchor="middle" fill="var(--muted)" font-size="9" font-weight="500">godot:update-tiles</text>
               <rect x="14" y="368" width="370" height="48" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
               <text x="199" y="389" text-anchor="middle" fill="var(--ink)">Review viewer · all sets + gaps as placeholders</text>
               <text x="199" y="405" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">comment anywhere · copy comments to clipboard</text>
@@ -281,8 +282,8 @@
               <!-- storyboard left edge(x540) -> G3 right tip(x516) ; G3 left tip(x452) -> animate right edge(x384) -->
               <line x1="540" y1="298" x2="518" y2="298" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
               <line x1="452" y1="298" x2="386" y2="298" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrG)"/>
-              <!-- animate abuts G4 (adjacent); G4 left tip(x146) -> integrate right edge(x134) -->
-              <line x1="146" y1="298" x2="136" y2="298" stroke="var(--ok)" stroke-width="2" marker-end="url(#arr)"/>
+              <!-- animate abuts G4 (adjacent); G4 left tip(x146) -> Godot update right edge(x134), dashed = separate on-demand step -->
+              <line x1="146" y1="298" x2="136" y2="298" stroke="var(--ok)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)"/>
               <!-- integrate -> viewer -->
               <line x1="74" y1="326" x2="74" y2="366" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
               <!-- viewer feedback dashed back to manifest -->
@@ -628,13 +629,14 @@
               <tr><td><code>references/reference-assets-spec.md</code></td><td>Stage 0 — what references to supply; every <code>_style-spec.json</code> field + how it's extracted.</td></tr>
               <tr><td><code>references/manifest-schema.md</code></td><td>Stage 1 — set directory layout, idempotent gap-fill, every manifest field.</td></tr>
               <tr><td><code>references/aseprite-execution.md</code></td><td>Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe, conformance helpers, Windows/path gotchas.</td></tr>
-              <tr><td><code>references/godot-integration.md</code></td><td>Stage 5 — set layout, frames→<code>.tres</code>, the engine-path decision, import/verify gotchas.</td></tr>
+              <tr><td><code>references/godot-integration.md</code></td><td>The <b>separate, on-demand</b> Godot update step (not a pipeline stage) — set layout, frames→<code>.tres</code> via <code>npm run godot:update-tiles</code>, the engine-path decision, import/verify gotchas.</td></tr>
               <tr><td><code>assets/style-spec.template.json</code></td><td>Stage 0 — blank style-spec to copy to <code>_style-spec.json</code>.</td></tr>
               <tr><td><code>assets/manifest.template.json</code></td><td>Stage 1 — blank per-set manifest to copy.</td></tr>
               <tr><td><code>assets/storyboard.template.md</code></td><td>Stage 3 / G3 — copy + fill per idle/transition; critique it before the expensive animate.</td></tr>
               <tr><td><code>assets/builder-prompt.md</code></td><td>Per-asset builder instruction (the build half of the loop).</td></tr>
               <tr><td><code>assets/critique-prompt.md</code></td><td>The gate scoring rubric (the critique half of the loop).</td></tr>
-              <tr><td><code>scripts/assemble_tres.gd</code></td><td>Stage 5 — pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code>.</td></tr>
+              <tr><td><code>tools/update-godot-tiles.mjs</code></td><td>Separate Godot update step (<code>npm run godot:update-tiles</code>) — standalone wrapper over the <code>integrate.mjs</code> engine; <b>not</b> part of the pipeline or the <span class="mono">npm</span> build.</td></tr>
+              <tr><td><code>scripts/assemble_tres.gd</code></td><td>Used by the Godot update step — pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code>.</td></tr>
               <tr><td><code>scripts/montage.py</code></td><td>G2/G4 — upscale a still or montage frames for review (Pillow only).</td></tr>
               <tr><td><code>scripts/build_viewer.mjs</code></td><td>Build the review viewer / intake proposal into <code>pixelGen/</code> (default out).</td></tr>
               <tr><td><code>viewer/</code></td><td>The review-page template (index.html + viewer.css + viewer.js).</td></tr>
@@ -660,7 +662,7 @@
             <tr><td>First real generation run (birch)</td><td><span class="pill warn">next</span></td><td>User-initiated — it spends PixelLab credits, so it is not run automatically.</td></tr>
           </tbody>
         </table>
-        <div class="box tip"><b>Bottom line.</b> The framework is built end-to-end: two inputs, five stages, four gates, the builder→critique loop, the integration scripts, and the review viewer all exist, validated structurally on the birch set. The <b>first real generation run</b> — producing the four birch season keyframes and animating them — is <b>user-initiated</b> because it spends PixelLab credits. Trust <code>.claude/skills/sprite-pipeline/SKILL.md</code> over this overview where they ever diverge.</div>
+        <div class="box tip"><b>Bottom line.</b> The framework is built end-to-end: two inputs, four stages, four gates, the builder→critique loop, the separate <code>npm run godot:update-tiles</code> step, and the review viewer all exist, validated structurally on the birch set. The <b>first real generation run</b> — producing the four birch season keyframes and animating them — is <b>user-initiated</b> because it spends PixelLab credits. Trust <code>.claude/skills/sprite-pipeline/SKILL.md</code> over this overview where they ever diverge.</div>
       </section>
 
     </div>

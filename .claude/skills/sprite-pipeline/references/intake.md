@@ -9,7 +9,8 @@ note. Nothing is generated and **no credits are spent** until the user reviews t
 says "run it".
 
 This sits **before Stage 1**: Stage 1 (plan the set) diffs `pipeline.json` against disk by shape.
-Intake is the front door; the five stages are the build.
+Intake is the front door; the four stages are the build. (Updating Godot with the produced frames
+is a separate, on-demand step after the build — `npm run godot:update-tiles` — not a pipeline stage.)
 
 > **Pre-flight once, before any tool call:** the Aseprite + PixelLab MCP tools are usually
 > **deferred** (schemas not loaded → a direct call fails `InputValidationError`). Bulk-load them up
@@ -87,6 +88,6 @@ transitions, the priors, and that the next step spends PixelLab credits).
 
 **Stop here and wait.** Intake produces config + the proposal view only — it never generates art.
 The user reviews pixelGen, tweaks prompts (edit `pipeline.json`) or comments, and re-builds until the
-plan reads right. Only when they explicitly approve ("run it") do you proceed to Stage 1 → 5, where
+plan reads right. Only when they explicitly approve ("run it") do you proceed to Stage 1 → 4, where
 generation and animation spend PixelLab credits + Aseprite ops. After the run, the **same** pixelGen
 cards fill with real art — proposal and output share one surface.

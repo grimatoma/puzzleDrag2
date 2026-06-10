@@ -54,14 +54,21 @@ wrote against itself + disk). Skip it when an item already covers the request �
 Stage 1 gap-fill. **When to read:** `references/intake.md` — the interview questions, how to write
 the `items[]` entry, building the proposal, and the approval gate.
 
-## The five stages
+## The four stages
+
+The pixel pipeline **ends at the produced frames + preview GIF** (Stage 4). Pushing those into the
+Godot project is a **separate, on-demand step that is not part of the pipeline** — see
+"Updating Godot is a separate step" below.
 
 ```
                  G1                    G2          G3                    G4
  references → 0 ──┐         ┌─ 2 ──────┐   3 ──────┐         ┌─ 4 ───────┐
- manifest   → 1 ─ critique  │ GENERATE │ critique  │ critique│ ANIMATE   │ critique → 5 → Godot
-                  prompt    │ (PixelLab)│  still    │ storybd │ (Aseprite)│ montage         .tres
-                            └──────────┘           └─────────┘           └───────────┘     + verify
+ manifest   → 1 ─ critique  │ GENERATE │ critique  │ critique│ ANIMATE   │ critique → frames + GIF
+                  prompt    │ (PixelLab)│  still    │ storybd │ (Aseprite)│ montage    (pipeline ends)
+                            └──────────┘           └─────────┘           └───────────┘
+                                                                       ┊ separate, on-demand step ┊
+                                                                       └→ node tools/update-godot-tiles.mjs
+                                                                          → v2 .tres + in-engine verify
 ```
 
 | # | Stage | What happens | Tool |
@@ -70,8 +77,23 @@ the `items[]` entry, building the proposal, and the approval gate.
 | **1** | Plan the set | Diff `pipeline.json`'s items (master/children/animations) by **shape** against themselves + files on disk; **only the gaps proceed**. Gather sibling priors. (`build_viewer.mjs --plan` prints the action list.) | — (read `pipeline.json`) |
 | **2** | Generate keyframe stills | Generate `settings.candidates` seeds per missing master, then derive each child from the **approved** master; priors = sibling set assets for continuity. **Expensive.** | **PixelLab** (pixellab skill / `scripts/pixellab.mjs`) or hand |
 | **3** | Physics storyboard | For each idle/transition, fill `assets/storyboard.template.md` **against the generated still**: frame count, fps, per-frame forces + pixel-level change. | pixel-art-animation skill |
-| **4** | Animate | Execute the storyboard into per-frame PNGs + a preview GIF. **Expensive.** | **Aseprite only** (`references/aseprite-execution.md`) |
-| **5** | Integrate & verify | Pack frames → v2 `.tres`; import; verify in-engine — one command. | `scripts/integrate.mjs` + `references/godot-integration.md` |
+| **4** | Animate | Execute the storyboard into per-frame PNGs + a preview GIF. **The pipeline ends here. Expensive.** | **Aseprite only** (`references/aseprite-execution.md`) |
+
+### Updating Godot is a separate step (not a pipeline stage)
+
+Getting the produced frames into the engine — pack frames → v2 `.tres`, import, verify in-engine —
+is **decoupled from the pixel pipeline** and run on demand, **never as a side effect of the
+pipeline or the `npm` build**:
+
+```bash
+npm run godot:update-tiles            # work list from pipeline.json (approved + generated idles)
+# or directly, with explicit pairs / a Godot binary:
+node tools/update-godot-tiles.mjs [--godot <path>] [<framesDir> <outTres> ...]
+```
+
+`tools/update-godot-tiles.mjs` is the standalone repo-level entrypoint; it wraps the integration
+engine `scripts/integrate.mjs` (which still lives with this skill). The full layout, the
+import/verify gotchas, and the engine-path decision are in `references/godot-integration.md`.
 
 ## The four gates — cheap reviews bracket the expensive work
 
@@ -153,7 +175,9 @@ in the flow, even though both bracket the same generate→animate boundary.
   executor — no procedural Pillow frame generation, ever.
 - **Pillow** — review glue **only**: `scripts/montage.py` upscales a still and lays frames into a
   montage for G2/G4. That is its entire sanctioned role.
-- **Godot** — `scripts/integrate.mjs` drives the whole frames→`.tres`+verify step (it calls
+- **Godot** — the **separate, post-pipeline** update step (not a pipeline stage). Run
+  `npm run godot:update-tiles` (`tools/update-godot-tiles.mjs`), which drives the whole
+  frames→`.tres`+verify dance via the engine `scripts/integrate.mjs` (it calls
   `tools/assemble_tres.gd` to pack and `tools/verify_sf.gd` to verify). See
   `references/godot-integration.md`.
 
@@ -212,7 +236,7 @@ re-animate** until the family reads as one set.
 | `references/reference-assets-spec.md` | Stage 0 — what references to supply; every `_style-spec.json` field + how it's extracted. |
 | `references/manifest-schema.md` | Stage 1 — the single `pipeline.json` model (settings + items: master/children/animations + inline candidates), structural gap-fill, every field. |
 | `references/aseprite-execution.md` | Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe (additive-overlay + flexing-base), conformance helpers, Windows/path gotchas. |
-| `references/godot-integration.md` | Stage 5 — set layout, frames→`.tres` via `integrate.mjs`, the engine-path decision, import/verify gotchas. |
+| `references/godot-integration.md` | The **separate, on-demand** Godot update step (not a pipeline stage) — set layout, frames→`.tres` via `npm run godot:update-tiles`, the engine-path decision, import/verify gotchas. |
 | `assets/style-spec.template.json` | Stage 0 — blank style-spec to copy to `<assets>/_style-spec.json`. |
 | `assets/manifest.template.json` | Superseded by the single `pipeline.json` model — pointer only; see `references/manifest-schema.md`. |
 | `assets/storyboard.template.md` | **Stage 3 / G3** — copy + fill per idle/transition (against the generated still); critique it before the expensive animate. |
@@ -227,7 +251,7 @@ re-animate** until the family reads as one set.
 | `scripts/build_viewer.mjs` | Reads `pipeline.json`, emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change; `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) as JSON without building. |
 | `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) **patches `pipeline.json` in place** (atomic temp+rename). Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
 | `scripts/pipeline-patch.mjs` | **`pipeline.json` bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif>` / `set-mode autonomous\|gated` / `show`. Atomic temp+rename write, preserves 2-space format. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
-| `scripts/integrate.mjs` | One-command Godot integration: `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (approved+generated idles) or explicit `<framesDir> <outTres>` pairs. |
+| `scripts/integrate.mjs` | The **Godot update engine** (a separate step, **not** a pipeline stage; exposed as `tools/update-godot-tiles.mjs` / `npm run godot:update-tiles`, which imports its `main`). One command: `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (approved+generated idles) or explicit `<framesDir> <outTres>` pairs. |
 | `scripts/pixellab.mjs` | PixelLab still client + importable module: `balance` checks credits; `create` runs the async **create → poll → download** loop and saves a PNG. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |
 | `scripts/montage.py` | G2/G4 review glue (**Pillow only**): upscale a still (`--scale`) or montage a `frames/<id>/` folder or a GIF for Read-and-judge. |
@@ -238,7 +262,8 @@ re-animate** until the family reads as one set.
 
 The redesigned pipeline is in place — intake, the builder/critique gate prompts, the
 `build_viewer.mjs` viewer + its `viewer/` template + the `serve_viewer.mjs` control server, the
-`pixellab.mjs` still client, and the `integrate.mjs` Godot path (which calls `assemble_tres.gd` +
+`pixellab.mjs` still client, and the **separate** Godot update step — `tools/update-godot-tiles.mjs`
+(`npm run godot:update-tiles`) over the `integrate.mjs` engine (which calls `assemble_tres.gd` +
 `verify_sf.gd`). This game's committed inputs are `godot/assets/tiles/v2/_style-spec.json` and the
 single `godot/assets/tiles/v2/pipeline.json` (the migrated `birch_tree` item). The birch keyframes +
 previews are committed; a fresh **first run on a new family** (which spends PixelLab credits +
