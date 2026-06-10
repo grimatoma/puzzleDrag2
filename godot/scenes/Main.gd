@@ -2184,6 +2184,11 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_audio.play("chain_collect")
 		if int(res.get("units", 0)) > 0:
 			_audio.play("upgrade")
+	# Impact accent (UiFx): a DOUBLE-stage-or-better chain (2+ whole units in one drag)
+	# lands with a short board shake scaled by how many units banked. Single-unit chains
+	# stay calm — the shake marks the standout pulls, not every harvest.
+	if int(res.get("units", 0)) >= 2:
+		UiFx.shake(board, minf(4.0 + 2.0 * float(int(res["units"])), 12.0))
 	# M4e: fly ONE reward chip from the board to the coin pill (the original's
 	# "rewardTrajectory"). Show the produced resource when a whole unit landed
 	# (gold), else the coins this chain earned (ember) — coins are always gained.

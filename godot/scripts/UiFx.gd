@@ -273,6 +273,37 @@ static func resize_to(ctl: Control, target: Vector2, dur: float = 0.18) -> void:
 	t.tween_property(ctl, "size", target, dur) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
+# ── impact shake ──────────────────────────────────────────────────────────────
+
+## Short decaying positional shake — the impact accent for a BIG chain landing (or any
+## hit that deserves weight). Works on any CanvasItem with a `position` (the board
+## Node2D, a Control). The rest position is remembered across a re-trigger mid-shake so
+## rapid impacts can't walk the node away from home; it always settles exactly at rest.
+static func shake(node: Node, amplitude: float = 6.0, dur: float = 0.3) -> void:
+	if node == null or not is_instance_valid(node) or not ("position" in node):
+		return
+	if not _active() or not node.is_inside_tree():
+		return
+	_kill_meta_tween(node, "_uifx_shake")
+	var rest: Vector2 = node.get_meta("_uifx_shake_rest", node.position)
+	node.set_meta("_uifx_shake_rest", rest)
+	node.position = rest
+	var t := node.create_tween()
+	node.set_meta("_uifx_shake", t)
+	var steps := 5
+	var step_dur := dur / float(steps + 1)
+	for i in range(steps):
+		var decay := 1.0 - float(i) / float(steps)
+		var off := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * amplitude * decay
+		t.tween_property(node, "position", rest + off, step_dur) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(node, "position", rest, step_dur) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.tween_callback(func() -> void:
+		if is_instance_valid(node):
+			node.remove_meta("_uifx_shake_rest")
+	)
+
 # ── shared helpers ────────────────────────────────────────────────────────────
 
 ## Kill + clear a tween stored in `node`'s meta under `key` (the standard "one live
