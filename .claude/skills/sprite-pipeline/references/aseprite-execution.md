@@ -101,8 +101,10 @@ each frame to its own file:
   frame `i` in `0…N−1`. Two-digit zero-padded names (`00.png`, `01.png`, …) so they sort in order
   (`assemble_tres.gd` sorts by filename).
 
-Then hand off to `godot-integration.md`: run `scripts/integrate.mjs` (it imports the PNGs, packs via
-`assemble_tres.gd`, and verifies via `verify_sf.gd` — one command).
+That is where the **pixel pipeline ends** — at the exported frame PNGs + preview GIF. Getting them
+into the engine is a **separate, on-demand step** (see `godot-integration.md`): run
+`npm run godot:update-tiles` (it imports the PNGs, packs via `assemble_tres.gd`, and verifies via
+`verify_sf.gd` — one command), **not** as part of the pipeline run itself.
 
 ---
 
