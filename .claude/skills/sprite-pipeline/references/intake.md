@@ -11,6 +11,11 @@ says "run it".
 This sits **before Stage 1**: Stage 1 (plan the set) diffs `pipeline.json` against disk by shape.
 Intake is the front door; the five stages are the build.
 
+> **Pre-flight once, before any tool call:** the Aseprite + PixelLab MCP tools are usually
+> **deferred** (schemas not loaded → a direct call fails `InputValidationError`). Bulk-load them up
+> front with `ToolSearch "aseprite"` and `ToolSearch "pixellab"` so every later call has its schema.
+> See SKILL.md §"Tool routing" and the cheat-sheet in `references/aseprite-execution.md`.
+
 ```
  user lists tiles ─▶ INTERVIEW ─▶ edit pipeline.json ─▶ rebuild pixelGen ─▶ user reviews ─▶ "run it" ─▶ Stage 1…5
                      (questions)   (settings + items[])  (the proposal doc)   (approve)        (the spend)

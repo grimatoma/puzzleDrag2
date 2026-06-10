@@ -107,7 +107,14 @@ the animate stage — so a bad asset never burns the next batch of credits. The 
 3. **Optional human-approval gate.** When `settings.humanApproval` is true (and `autonomous` false),
    pause for sign-off in the **pixelGen viewer** — the human picks/approves a candidate, which the
    control server writes back to `pipeline.json` (`selected` + candidate `status: "approved"`). When
-   `settings.autonomous` is true the gate is skipped and the LLM verdict decides what to approve.
+   `settings.autonomous` is true the gate is skipped and the LLM verdict decides what to approve. In
+   the autonomous path, **record the verdict with `scripts/pipeline-patch.mjs`** (`record-candidate`
+   for each seed, then `approve`/`reject "<reason>"`) rather than hand-editing the JSON — atomic
+   writes, no dropped-comma risk. To run a session full-auto without committing a settings change,
+   flip it with `pipeline-patch.mjs set-mode autonomous` and **restore `set-mode gated` before you
+   commit** (the committed default should keep the human gate on so the *next* run isn't silently
+   un-gated). A `SPRITE_PIPELINE_*` env override is intentionally **not** used — the mode lives in
+   `pipeline.json` so the viewer and the headless run always agree on it.
 4. **Proceed** to the next gated event (derive the children, then animate the idles/transitions).
 
 Each gated event is its own batch with its own audit + (optional) human approval, so the next spend
@@ -130,6 +137,14 @@ turns out transparent bit us once on a winter-glint pixel.) This is why Stage 3 
 in the flow, even though both bracket the same generate→animate boundary.
 
 ## Tool routing (what executes what)
+
+> **Pre-flight (do this once, before the first tool call): load the deferred MCP schemas.** The
+> Aseprite (`mcp__plugin_pixel-plugin_aseprite__*`) and PixelLab (`mcp__pixellab__*`) tools are
+> almost always **deferred** — their schemas are not in context, so calling one directly fails with
+> `InputValidationError` (e.g. guessing `image_path` when the real param is `reference_path`). Bulk-
+> load them first with two `ToolSearch` calls — `ToolSearch "aseprite"` and `ToolSearch "pixellab"`
+> (keyword search returns the whole toolkit per server in one shot) — then call them normally. A
+> param cheat-sheet for the common Aseprite tools is in `references/aseprite-execution.md`.
 
 - **Base stills** — **PixelLab** (async: create → poll `get_*` → download; check credits first; do
   the object review→select step) **or** a hand-drawn/edited still. Never Pillow.
@@ -211,6 +226,7 @@ re-animate** until the family reads as one set.
 |--------|--------------|
 | `scripts/build_viewer.mjs` | Reads `pipeline.json`, emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change; `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) as JSON without building. |
 | `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) **patches `pipeline.json` in place** (atomic temp+rename). Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
+| `scripts/pipeline-patch.mjs` | **`pipeline.json` bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif>` / `set-mode autonomous\|gated` / `show`. Atomic temp+rename write, preserves 2-space format. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
 | `scripts/integrate.mjs` | One-command Godot integration: `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (approved+generated idles) or explicit `<framesDir> <outTres>` pairs. |
 | `scripts/pixellab.mjs` | PixelLab still client + importable module: `balance` checks credits; `create` runs the async **create → poll → download** loop and saves a PNG. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |

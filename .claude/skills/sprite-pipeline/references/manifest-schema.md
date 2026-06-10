@@ -53,7 +53,7 @@ structural" below.
 |-------|------|---------|
 | `id` | string | Stable item id (e.g. `birch_tree`). Names the family; with the new layout it's also the `items/<id>/…` output directory stem. |
 | `basePrompt` | string | Optional. Prepended to every `master`/`child` `prompt` before generation — the description shared by the whole family (subject, framing, shadow), so each member's `prompt` only states what makes it distinct. By convention the effective prompt is `basePrompt + ", " + prompt`. |
-| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets fed in as visual priors for cohesion when generating new members. Usually other tiles in the same family. |
+| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets used as the cohesion reference for new members. Usually other tiles in the same family. **Note:** for PixelLab-generated stills these inform the **prompt wording + the G2 gate** (PixelLab `create` is text-only — it can't take a prior image); for hand/Aseprite stills and all animation they're used **directly** (`import_image`). |
 | `canvas` | `{ width, height, safeArea }` | **Optional** per-item override of `settings.canvas`. |
 | `fps` | number | **Optional** per-item override of `settings.fps`. |
 | `master` | object | The base sprite the family derives from (see below). |
