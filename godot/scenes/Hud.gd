@@ -118,8 +118,10 @@ var _tool_disarm_btn: Button            ## "✖ Disarm" (NOT in _tool_buttons �
 const NAV_HEIGHT := UiKit.NAV_RESERVE     ## bottom-bar height (also the reserved layout gap)
 const LEVEL_PILL_W := 54                 ## inner width of the "Lv N" XP pill
 var _nav_layer: CanvasLayer              ## dedicated layer above the HUD so the bar is never covered
-var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label}} for restyle
+var _nav_tabs: Dictionary = {}           ## {nav_key: {button, underline, highlight, label, icon}} for restyle
 var _nav_current: String = ""            ## active tab key ("town"/"inventory"/"craft"/"map"/"folk"), "" = board
+var _nav_prev_active: String = ""        ## last ANIMATED active tab — _refresh_nav only plays the
+                                         ## activation motion on a real change, not on every refresh
 
 # ── M4e reward "juice" ────────────────────────────────────────────────────────
 var _fx_layer: CanvasLayer
@@ -879,7 +881,8 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 	text_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(text_lbl)
 
-	_nav_tabs[key] = {"button": btn, "underline": underline, "highlight": highlight, "label": text_lbl}
+	_nav_tabs[key] = {"button": btn, "underline": underline, "highlight": highlight,
+		"label": text_lbl, "icon": icon_lbl}
 	return btn
 
 ## Restyle the five tabs from _nav_current: the active tab shows its ember underline +
@@ -893,6 +896,16 @@ func _refresh_nav() -> void:
 		(parts["highlight"] as ColorRect).visible = active
 		(parts["label"] as Label).add_theme_color_override(
 			"font_color", Palette.INK if active else Palette.INK_MID)
+		# Activation motion (UiFx): play the underline-grow + highlight-fade + icon-pop
+		# only on a REAL tab change (not on every refresh of an already-active tab);
+		# rest every inactive tab so an interrupted activation never leaves it half-scaled.
+		# The static visible/colour state above is already final, so headless runs are
+		# byte-identical with motion disabled.
+		if active and key != _nav_prev_active:
+			UiFx.nav_tab_activate(parts["underline"], parts["highlight"], parts["icon"])
+		elif not active:
+			UiFx.nav_tab_rest(parts["underline"], parts["highlight"], parts["icon"])
+	_nav_prev_active = _nav_current
 
 ## Clear the active-tab marker (back on the board) and restyle the five tabs. Called
 ## from every _on_*_closed and the apply_deeplink("board") close path so the nav never

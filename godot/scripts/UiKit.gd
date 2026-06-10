@@ -386,6 +386,9 @@ static func style_button(
 		btn.add_theme_color_override("font_disabled_color", Color(Palette.INK_MID, 0.5))
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
+	# Tactile press feedback (UiFx, idempotent): every styled button shrinks slightly on
+	# press and springs back on release — the shared motion language for all menus.
+	UiFx.attach_press_feedback(btn)
 
 ## FILLED primary-action button (React parity): the NORMAL state is a SOLID accent fill
 ## (green Craft, gold Sell, ember Enter, …) with contrast-picked text, so an enabled
@@ -406,6 +409,7 @@ static func style_action_button(btn: Button, accent: Color, padding_v: int = 6, 
 	btn.add_theme_color_override("font_disabled_color",  Color(Palette.INK_MID, 0.55))
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
+	UiFx.attach_press_feedback(btn)
 
 ## StyleBox for a filled action button: solid accent fill, a slightly darker accent
 ## border for definition, radius 8, snug margins.
@@ -436,6 +440,7 @@ static func _contrast_text(bg: Color) -> Color:
 ## (Achievements Trophies|Collection, Townsfolk Workers|Quests). Pair the buttons in a
 ## tight HBox; call this on each whenever the active tab changes.
 static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, padding_v: int = 6) -> void:
+	UiFx.attach_press_feedback(btn)
 	if active:
 		var box := _action_box(accent, padding_v)
 		var txt := _contrast_text(accent)

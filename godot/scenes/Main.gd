@@ -522,6 +522,18 @@ func _on_child_entered(node: Node) -> void:
 func _install_overlay_dismiss(overlay) -> void:
 	if overlay == null or not is_instance_valid(overlay):
 		return
+	# Open transition (UiFx): every overlay fades/pops in whenever it becomes visible.
+	# Wired HERE — the one deferred install every screen/modal already passes through —
+	# so all ~25 overlays animate with the same timing and zero per-screen edits.
+	# visibility_changed fires on every visible flip; we animate only the false→true
+	# edge. The FIRST open happened just before this deferred install ran, so kick the
+	# animation manually when the overlay is already up (one frame late — imperceptible).
+	overlay.visibility_changed.connect(func() -> void:
+		if overlay.visible:
+			UiFx.animate_overlay_open(overlay)
+	)
+	if overlay.visible:
+		UiFx.animate_overlay_open(overlay)
 	for child in overlay.get_children():
 		if child is ColorRect and (child as ColorRect).mouse_filter == Control.MOUSE_FILTER_STOP:
 			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
