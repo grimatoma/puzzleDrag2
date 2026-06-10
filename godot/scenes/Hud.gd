@@ -1309,6 +1309,10 @@ func _refresh_settlement() -> void:
 	var text: String = "%s · %d/%d" % [s.tier_name(), game.plots_used(), s.plots()]
 	if game.can_tier_up():
 		text = "▲ " + text
+		# An affordable advance is the run's headline action — breathe until taken.
+		UiFx.attach_attention_pulse(_tier_pill.get_parent() as Control)
+	else:
+		UiFx.clear_attention_pulse(_tier_pill.get_parent() as Control)
 	_tier_pill.text = text
 
 ## M4b — plots are shown inside the tier pill (used/total), so this just re-points at
@@ -1377,7 +1381,10 @@ func _refresh_boss() -> void:
 		_boss_pill_box.tooltip_text = tip
 		_boss_pill.tooltip_text = tip
 		_boss_pill_box.visible = true
+		# An active fight wants the eye — gentle looping breathe while the boss is live.
+		UiFx.attach_attention_pulse(_boss_pill_box)
 	else:
+		UiFx.clear_attention_pulse(_boss_pill_box)
 		_boss_pill_box.visible = false
 
 ## A short human label for a boss target resource/tile key (e.g. "tile_tree_oak" → "Oak",

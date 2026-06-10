@@ -162,6 +162,32 @@ static func nav_tab_rest(underline: Control, highlight: Control, icon: Control) 
 			(ctl as Control).scale = Vector2.ONE
 			(ctl as Control).modulate.a = 1.0
 
+# ── attention pulse (looping) ─────────────────────────────────────────────────
+
+## Start a gentle infinite breathe (scale 1 → 1.06 → 1) on a control that wants the
+## player's eye — the active-boss pill, an affordable tier-up hint. Idempotent: calling
+## again while pulsing is a no-op. Pair with clear_attention_pulse when the condition
+## ends. Headless/disabled starts nothing.
+static func attach_attention_pulse(ctl: Control, peak: float = 1.06, period: float = 1.1) -> void:
+	if ctl == null or not is_instance_valid(ctl) or ctl.has_meta("_uifx_pulse"):
+		return
+	if not _active() or not ctl.is_inside_tree():
+		return
+	ctl.pivot_offset = ctl.size / 2.0
+	var t := ctl.create_tween().set_loops()
+	ctl.set_meta("_uifx_pulse", t)
+	t.tween_property(ctl, "scale", Vector2(peak, peak), period * 0.5) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(ctl, "scale", Vector2.ONE, period * 0.5) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+## Stop an attention pulse and rest the control at scale 1. Safe when none is running.
+static func clear_attention_pulse(ctl: Control) -> void:
+	if ctl == null or not is_instance_valid(ctl):
+		return
+	_kill_meta_tween(ctl, "_uifx_pulse")
+	ctl.scale = Vector2.ONE
+
 # ── button press feedback ─────────────────────────────────────────────────────
 
 ## Attach tactile press feedback to a button: it shrinks slightly (scale 0.95 around
