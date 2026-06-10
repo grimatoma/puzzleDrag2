@@ -79,7 +79,7 @@ func _initialize() -> void:
 	board._extend_drag(Vector2i(1, 2))
 	board._finish_drag()
 
-	main._status_label.text = "Chain of 4  →  +1 hay_bundle"
+	main._status_label.text = "Chain of 4  →  +1 Hay Bundle"
 
 	# Await only a HANDFUL of frames so the reward chip is caught MID-FLIGHT (it lives
 	# ~0.7s) and a couple of refilled tiles are still mid scale-in.
