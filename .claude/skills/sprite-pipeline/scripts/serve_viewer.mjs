@@ -162,8 +162,10 @@ function resolveTarget(pipeline, body) {
 
 function candidateAt(key, idx) {
   const cands = Array.isArray(key.candidates) ? key.candidates : [];
-  if (!Number.isInteger(idx) || idx < 0 || idx >= cands.length) return null;
-  return cands[idx];
+  if (!Number.isInteger(idx)) return null;
+  // Match by the candidate's `idx` FIELD (not array position) so we stay
+  // consistent with build_viewer/viewer/integrate, which all key off `idx`.
+  return cands.find((c) => c && c.idx === idx) || null;
 }
 
 // ── the four patch actions ────────────────────────────────────────────────────────────────────
