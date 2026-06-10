@@ -398,14 +398,9 @@ func _ready() -> void:
 		_maybe_show_daily()
 	# Launch splash — the pixel-art Hearthlands title card (layer 12) laid over whatever
 	# _ready just staged (town home / tutorial / story beat), revealed as it fades out.
-	# Real interactive runs only: headless suites and the dialog-suppressed web boot smoke
-	# skip it (the same gate as the auto-open town home above), so every test boot stays
-	# deterministic and the Playwright readiness beacon below is never delayed behind art.
-	if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
-		_splash = SplashScreenScript.new()
-		add_child(_splash)
-		_splash.setup()
-		_splash.finished.connect(func() -> void: _splash = null)
+	# Deferred so the current_scene gate in _maybe_show_splash reads the engine's final
+	# boot state regardless of assignment order (see there for the full gate rationale).
+	call_deferred("_maybe_show_splash")
 	# Web-boot readiness beacon (M-infra: web-export smoke). On an HTML5/WASM build the
 	# whole scene tree is now up (HUD + board built, save loaded, story/tutorial wired),
 	# so flip a window flag the Playwright smoke (tests/godot-web/boot.spec.ts) waits on
@@ -418,6 +413,27 @@ func _ready() -> void:
 		# being applied by the time the Playwright smoke sees __hearthGodotReady.
 		_setup_browser_history()
 		JavaScriptBridge.eval("window.__hearthGodotReady = true;", true)
+
+## Show the launch splash on REAL interactive boots only. Three gates:
+##   • dialogs enabled — the web boot smoke suppresses auto-modals and must see
+##     the readiness beacon without art in the way;
+##   • a windowed display server — headless suites never want it;
+##   • Main is the ENGINE-LAUNCHED current scene (current_scene == self) — a
+##     harness that instantiates Main as a plain child under a REAL display
+##     (the xvfb visual render-smoke, every tools/*_capture.gd) must NOT get a
+##     layer-12 splash over its captures. tools/splash_capture.gd opts back in
+##     by assigning current_scene = main before the deferred call lands.
+func _maybe_show_splash() -> void:
+	if _splash != null:
+		return
+	if _dialogs_disabled() or DisplayServer.get_name() == "headless":
+		return
+	if get_tree() == null or get_tree().current_scene != self:
+		return
+	_splash = SplashScreenScript.new()
+	add_child(_splash)
+	_splash.setup()
+	_splash.finished.connect(func() -> void: _splash = null)
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size

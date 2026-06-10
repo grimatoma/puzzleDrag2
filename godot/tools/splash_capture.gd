@@ -18,6 +18,11 @@ func _initialize() -> void:
 
 	var main = load("res://scenes/Main.tscn").instantiate()
 	root.add_child(main)
+	# Opt back into the splash: Main._maybe_show_splash only auto-shows for the
+	# ENGINE-LAUNCHED current scene (so the other capture tools + the visual
+	# harness never get one over their screens). Claim that role before the
+	# deferred call lands — this capture exercises the REAL creation path.
+	current_scene = main
 	await process_frame
 	if main._splash == null:
 		push_error("splash did not auto-show (dialogs disabled / headless?)")

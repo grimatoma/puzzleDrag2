@@ -106,6 +106,10 @@ func _test_headless_main_skips_splash() -> void:
 	_check(packed != null, "Main.tscn loads")
 	var main = packed.instantiate()
 	root.add_child(main)
-	await process_frame                        # let the deferred _ready run
+	await process_frame                        # let the deferred _ready + splash gate run
 	_check(main._splash == null, "headless Main boot creates NO splash (test determinism)")
+	# Direct call — timing-independent: the gate must hold for a headless,
+	# harness-instantiated (non-current-scene) Main.
+	main._maybe_show_splash()
+	_check(main._splash == null, "_maybe_show_splash gate holds for a harness-instantiated Main")
 	main.free()
