@@ -1,36 +1,32 @@
 [gd_resource type="SpriteFrames" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/00.png" id="1_yctwn"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/01.png" id="2_13jca"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/02.png" id="3_lj8s4"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/03.png" id="4_j7f8b"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/04.png" id="5_78si1"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/05.png" id="6_asc6r"]
-[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/06.png" id="7_tiyup"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/00.png" id="1_4xklk"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/01.png" id="2_yctwn"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/02.png" id="3_13jca"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/03.png" id="4_lj8s4"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/04.png" id="5_j7f8b"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/05.png" id="6_78si1"]
 
 [resource]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("1_yctwn")
+"texture": ExtResource("1_4xklk")
 }, {
 "duration": 1.0,
-"texture": ExtResource("2_13jca")
+"texture": ExtResource("2_yctwn")
 }, {
 "duration": 1.0,
-"texture": ExtResource("3_lj8s4")
+"texture": ExtResource("3_13jca")
 }, {
 "duration": 1.0,
-"texture": ExtResource("4_j7f8b")
+"texture": ExtResource("4_lj8s4")
 }, {
 "duration": 1.0,
-"texture": ExtResource("5_78si1")
+"texture": ExtResource("5_j7f8b")
 }, {
 "duration": 1.0,
-"texture": ExtResource("6_asc6r")
-}, {
-"duration": 1.0,
-"texture": ExtResource("7_tiyup")
+"texture": ExtResource("6_78si1")
 }],
 "loop": true,
 "name": &"idle",

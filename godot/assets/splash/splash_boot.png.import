@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ckut167k3om8s"
-path="res://.godot/imported/06.png-7be925a5349c6320f633bee74bc822e8.ctex"
+uid="uid://um0133hmws4w"
+path="res://.godot/imported/splash_boot.png-02e79e0c22eada75a5fff42d2fc97110.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_winter/06.png"
-dest_files=["res://.godot/imported/06.png-7be925a5349c6320f633bee74bc822e8.ctex"]
+source_file="res://assets/splash/splash_boot.png"
+dest_files=["res://.godot/imported/splash_boot.png-02e79e0c22eada75a5fff42d2fc97110.ctex"]
 
 [params]
 

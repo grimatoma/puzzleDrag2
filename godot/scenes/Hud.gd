@@ -151,6 +151,7 @@ const STOCKPILE_ROSTER_FISH: Array = [
 # Top-bar container ref, repositioned in _layout_hud(). (The old floating _chain_prog_box /
 # _stockpile_box cards are gone — both surfaces live INSIDE the fixed action panel now.)
 var _topbar: PanelContainer
+var _menu_btn: Button                   ## floating ⚙ button — vertically centred on the top bar in _layout_hud
 
 # M4b chain-progress tracking: the last resolved resource + its threshold.
 var _last_res: String = ""
@@ -301,7 +302,7 @@ func _build_hud() -> void:
 	_level_pill_box = _build_level_pill()
 	topbar_row.add_child(_level_pill_box)
 
-	var tier_box := UiKit.make_pill("Camp · 0/3", Palette.INK)
+	var tier_box := UiKit.make_pill("Camp · 0/25", Palette.INK)
 	_tier_pill = tier_box.get_meta("label")
 	topbar_row.add_child(tier_box)
 
@@ -430,6 +431,7 @@ func _build_hud() -> void:
 	UiFx.attach_press_feedback(menu_btn)
 	UiFx.attach_press_spin(menu_btn)
 	root.add_child(menu_btn)
+	_menu_btn = menu_btn
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
 # Note: heading_font(), parchment_box(), make_pill(), bar_box(), card_box()
@@ -1338,6 +1340,10 @@ func _make_nav_tab(key: String, icon: String, label_text: String) -> Button:
 	var icon_lbl := Label.new()
 	icon_lbl.text = icon
 	icon_lbl.add_theme_font_size_override("font_size", 22)
+	# Explicit ink tint — REQUIRED for contrast. The bundled NotoEmoji fallback is
+	# MONOCHROME, so these glyphs render in the Label's font_color; without an override
+	# that's the theme default (near-white), which vanishes on the paper nav bar.
+	icon_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(icon_lbl)
@@ -1365,6 +1371,10 @@ func _refresh_nav() -> void:
 		(parts["highlight"] as ColorRect).visible = active
 		(parts["label"] as Label).add_theme_color_override(
 			"font_color", Palette.INK if active else Palette.INK_MID)
+		# The icon glyph follows the same ink scheme (ember when active) — the monochrome
+		# NotoEmoji fallback takes the Label tint, so this IS the icon's colour.
+		(parts["icon"] as Label).add_theme_color_override(
+			"font_color", Palette.EMBER if active else Palette.INK_MID)
 		# Activation motion (UiFx): play the underline-grow + highlight-fade + icon-pop
 		# only on a REAL tab change (not on every refresh of an already-active tab);
 		# rest every inactive tab so an interrupted activation never leaves it half-scaled.
@@ -1682,6 +1692,10 @@ func _layout_hud(vp: Vector2) -> void:
 		_topbar.offset_left = 0
 		_topbar.offset_right = 0
 		_topbar.offset_top = 0
+	# Vertically centre the floating ⚙ on the top bar's band. Deferred: the bar's
+	# content-driven height (and the button's own size) settle a frame after a layout
+	# pass, so measuring immediately would centre against stale sizes.
+	_align_menu_btn.call_deferred()
 	var band_margin: float = maxf(12.0, vp.x * 0.03)
 	# A2 — the season bar spans the full width within the HUD margins, just below the top bar.
 	if _season_bar_box != null:
@@ -1703,6 +1717,19 @@ func _layout_hud(vp: Vector2) -> void:
 	# Chain hint — the slim prompt in the gap between the panel and the board.
 	if _chain_label != null:
 		_chain_label.offset_top = PANEL_TOP + PANEL_H + 7.0
+
+## Centre the floating ⚙ button vertically within the top bar's band. The old fixed
+## offset_top 18 left the gear hanging below the pill row (the "misaligned gear" on the
+## title bar); centring against the bar's real content-driven height tracks any future
+## pill/title size change for free. Deferred from _layout_hud so both sizes are settled.
+func _align_menu_btn() -> void:
+	if _menu_btn == null or _topbar == null:
+		return
+	var bar_h: float = _topbar.size.y
+	var btn_h: float = _menu_btn.size.y
+	if bar_h <= 0.0 or btn_h <= 0.0:
+		return
+	_menu_btn.offset_top = maxf(6.0, (bar_h - btn_h) / 2.0)
 
 # ── refreshers (re-pointed from Main; names kept for the capture-script contract) ──
 

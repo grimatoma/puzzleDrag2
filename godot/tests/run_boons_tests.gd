@@ -211,6 +211,21 @@ func _initialize() -> void:
 	_check(gd.core_ingots == 5 and gd.embers == 0, "driveout granted 5 core ingots, 0 embers")
 	_check(bool(gd.story.flags.get("keeper_farm_driveout", false)), "keeper_farm_driveout flag set")
 
+	# ── 3b. Feature flag (KeeperConfig.enabled) — the whole encounter system off-switch ──────────────
+	# Flip the flag OFF at runtime and assert the full off-contract, then reset so the auto-trigger /
+	# deeplink sections below run with the default ON. (Shipped default is ON; this is the only block
+	# that exercises the OFF path.) DISABLED here means: never encounter-ready, the grant is refused,
+	# and no currency is ever produced — so the dependent Boons economy simply has no source.
+	KeeperConfig.enabled = false
+	var gff := _game_with_buildings(4)
+	_check(not gff.keeper_encounter_ready("farm"), "flag OFF: keeper_encounter_ready('farm') false even at 4 buildings")
+	var rff := gff.give_keeper_reward("farm", "coexist")
+	_check(not bool(rff.get("ok", true)) and String(rff.get("reason", "")) == "disabled",
+		"flag OFF: give_keeper_reward refused with reason 'disabled'")
+	_check(gff.embers == 0 and gff.core_ingots == 0, "flag OFF: no Embers/Core Ingots granted")
+	KeeperConfig.enabled = true
+	_check(KeeperConfig.is_enabled(), "flag reset back ON for the remaining checks")
+
 	# Bad type / path guards.
 	var gx := _game_with_buildings(4)
 	_check(String(gx.give_keeper_reward("bogus", "coexist").get("reason", "")) == "unknown", "unknown type → unknown")
