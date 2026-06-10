@@ -432,6 +432,74 @@ static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> Style
 	sb.shadow_offset = Vector2(0, 5)
 	return sb
 
+# ── Expandable ledger chip (shared pattern: InventoryScreen + RecipeWikiScreen) ────────
+
+## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
+## expanded, soft row_box when collapsed) holding a VBox the caller fills with a summary
+## row and optionally an inline details section. Tapping the chip calls toggle_fn(entry_key).
+## Inner content is MOUSE_FILTER_IGNORE so the chip sees every tap; action Buttons inside
+## the details still work (Button.MOUSE_FILTER_STOP takes priority in the pick order).
+static func make_expandable_chip(entry_key: String, expanded_key: String, toggle_fn: Callable) -> PanelContainer:
+	var chip := PanelContainer.new()
+	var sb := row_box()
+	if expanded_key == entry_key:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", sb)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+		if tap:
+			toggle_fn.call(entry_key)
+	)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
+	return chip
+
+## Append the details section container to an expanded chip's VBox column, separated from
+## the summary row by a faint hairline. Fades in (UiFx — no-op headless / Reduce Motion).
+static func begin_expand_details(col: VBoxContainer) -> VBoxContainer:
+	var rule := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(Palette.IRON, 0.5)
+	line.thickness = 1
+	rule.add_theme_stylebox_override("separator", line)
+	col.add_child(rule)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	UiFx.content_fade(details)
+	return details
+
+## Add a small all-caps eyebrow label (e.g. "RESOURCE · FARM GOODS") to an expanded
+## details VBox.
+static func add_expand_eyebrow(details: VBoxContainer, text: String, col_header: Color) -> void:
+	var lbl := Label.new()
+	lbl.text = text.to_upper()
+	set_font_size(lbl, Typography.Role.CAPTION)
+	lbl.add_theme_color_override("font_color", col_header)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_child(lbl)
+
+## A muted wrapping body line for an expanded details section.
+static func make_expand_body_text(text: String, col_muted: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	set_font_size(lbl, Typography.Role.LABEL)
+	lbl.add_theme_color_override("font_color", col_muted)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
 ## Card StyleBox for the stockpile panel: parchment fill, 2 px iron border,
 ## radius 12, soft drop shadow, comfortable padding.
 static func card_box(fill: Color) -> StyleBoxFlat:
