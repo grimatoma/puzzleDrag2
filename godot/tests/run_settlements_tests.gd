@@ -20,6 +20,10 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	print("\n── Multi-settlement (T22) tests ───────────────────")
+	# Settlement completion resolves the home keeper via give_keeper_reward (in _complete_home and
+	# _test_completion_grants_token_once), which is gated by the keeper feature flag (shipped default
+	# OFF). Force it ON for this run so those completion paths work (mirrors fire_hazard_force usage).
+	KeeperConfig.enabled = true
 	_test_home_auto_founded()
 	_test_fresh_game_no_archives()
 	_test_config_settlement_types()

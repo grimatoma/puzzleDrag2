@@ -23,10 +23,10 @@ extends RefCounted
 ## FEATURE FLAG (same spirit as Constants.FIRE_HAZARD_ENABLED + GameState.fire_hazard_force).
 ## `enabled` gates the WHOLE keeper ENCOUNTER system: the auto-trigger off a build
 ## (Main._maybe_trigger_keeper via GameState.keeper_encounter_ready), the `keeper` deeplink / QA open
-## (Main._open_keeper), and the currency grant (GameState.give_keeper_reward). Default ON = shipped
-## behaviour; set it to false — here to disable permanently, or at runtime (a test / dev path) — to
-## disable keepers FULLY: no encounter ever fires, the deeplink no-ops, and no Embers/Core Ingots are
-## ever granted.
+## (Main._open_keeper), and the currency grant (GameState.give_keeper_reward). Default OFF — keepers
+## are DISABLED in the shipped game: no encounter ever fires, the deeplink no-ops, and no Embers/Core
+## Ingots are ever granted. Set it to true (here to re-enable, or at runtime in a test / dev path) to
+## restore the full encounter system.
 ##
 ## SAFE TO TOGGLE: story/act progression does NOT depend on it (StoryEngine.next_beat never gates on
 ## the act, so the act1_keeper_trial beat simply never fires, and NOTHING consumes the
@@ -34,9 +34,10 @@ extends RefCounted
 ## off (Embers/Core Ingots are granted ONLY by the keeper), so boons stay unpurchasable — the Boons
 ## screen still opens and shows 0/0. No crash, no soft-lock.
 ##
-## A runtime-settable `static var` (not a const) so tests can exercise the OFF path and reset it; the
-## keeper unit tests assume the default-ON, and one dedicated test flips it OFF + back.
-static var enabled: bool = true
+## A runtime-settable `static var` (not a const) so the keeper unit tests can force it ON to exercise
+## the encounter/grant path (mirroring how the fire-hazard tests set fire_hazard_force), even though
+## the shipped default is OFF.
+static var enabled: bool = false
 
 ## True when the keeper encounter system is enabled (the `enabled` flag above). Single source of
 ## truth read by GameState.keeper_encounter_ready / give_keeper_reward and Main._open_keeper.
