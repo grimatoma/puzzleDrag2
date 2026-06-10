@@ -41,6 +41,21 @@ cool/blue-shifted shadows, warm/yellow-shifted highlights — rather than a fixe
 that is what reads as crafted rather than plastic. If no palette file is supplied, extract one
 from the hero exemplars (see below) and treat the extracted ramps as locked from then on.
 
+**Extending the palette for a new material/hue (the sanctioned move).** A new subject often needs a
+hue the locked ramps don't cover — a pumpkin needs ripe orange, a berry needs purple, none of which
+may be in the shipped ramp set. **Don't generate off-palette and hope; add the ramp first, then
+lock it.** The cohesion-preserving way:
+1. Pick the **1–2 shipped sibling tiles** closest in material/hue (they become the item's `priors`
+   too) — e.g. for a pumpkin, the shipped squash + carrot tiles.
+2. `analyze_reference` / `get_palette` them and read the dominant hue's steps; **anchor the new
+   ramp's midtone to a real sampled hex** from a sibling (e.g. pumpkin-orange mid `#c3671d` = the
+   shipped carrot's lit step), then build the dark/light steps by the craft rules (cool-shift the
+   shadows, warm-shift + desaturate the highlights — see the **pixel-art-craft** skill, §1).
+3. **Append the new named ramp to `_style-spec.json` `palette.ramps[]`** and treat it as locked from
+   then on. Now the new ramp is part of the contract: generation targets it and G2 scores against it,
+   so the new member reads as family rather than a one-off. (This is how the `pumpkin-orange` ramp
+   was added — sampled from squash/carrot, hue-shifted, then locked before any generation.)
+
 ---
 
 ## 2. The style spec it produces
