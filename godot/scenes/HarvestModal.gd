@@ -119,10 +119,7 @@ func _build_shell() -> void:
 
 	# Warm-brown scrim (matches DailyStreakModal / StoryModal). MOUSE_FILTER_STOP so clicks
 	# behind it never reach the board; Main's _on_child_entered wires a tap to close().
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Full-rect CenterContainer centres the parchment card at its own min size.

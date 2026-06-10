@@ -94,9 +94,7 @@ func _build_shell() -> void:
 	visible = false
 
 	# Opaque VIEW background reserving the persistent top bar (top) + bottom nav (bottom).
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP

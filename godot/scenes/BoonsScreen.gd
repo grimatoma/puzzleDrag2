@@ -92,9 +92,7 @@ func _build_shell() -> void:
 
 	# Opaque VIEW background (a full-brightness page, NOT a dim modal scrim) — mirrors
 	# PortalScreen. Reserves the top-bar band + bottom-nav strip so the persistent chrome shows.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP

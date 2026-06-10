@@ -77,10 +77,7 @@ func _build_shell() -> void:
 	layer = 5                                   # above the other modals (Town/Menu at 3/4)
 	visible = false
 
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	var center := CenterContainer.new()

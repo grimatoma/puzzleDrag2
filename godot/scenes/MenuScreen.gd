@@ -118,10 +118,7 @@ func _build_shell() -> void:
 
 	# Full-rect dim backdrop. MOUSE_FILTER_STOP so clicks behind it never reach the
 	# board while the menu is open. A warm brown-tinted scrim (matches TownScreen).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Centered panel: a full-rect Control holds a centered PanelContainer so the

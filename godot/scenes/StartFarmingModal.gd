@@ -152,10 +152,7 @@ func _build_shell() -> void:
 	visible = false
 
 	# Warm-brown scrim (Main._install_overlay_dismiss wires a tap to close()).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# CenterContainer centres the parchment card at its own min size (no viewport math).

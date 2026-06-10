@@ -100,9 +100,7 @@ func _build_shell() -> void:
 	# Opaque VIEW background — the world map is one of the persistent bottom-nav VIEWS, so it
 	# paints the warm app-frame parchment over the board. Reserve the top-bar band + bottom-nav
 	# strip so the persistent HUD top bar + nav bar show; MOUSE_FILTER_STOP eats clicks here.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP

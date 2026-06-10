@@ -96,9 +96,7 @@ func _build_shell() -> void:
 	# warm app frame over the board and reserving UiKit.TOPBAR_RESERVE at the TOP (so the
 	# layer-1 HUD top bar shows above) + UiKit.NAV_RESERVE at the bottom (so the persistent nav
 	# bar shows through + stays tappable). MOUSE_FILTER_STOP eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP

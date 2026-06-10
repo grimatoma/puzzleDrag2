@@ -98,9 +98,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP

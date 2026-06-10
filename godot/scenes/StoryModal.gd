@@ -94,10 +94,7 @@ func _build_shell() -> void:
 
 	# Full-rect warm-brown scrim. MOUSE_FILTER_STOP so clicks behind it never reach the
 	# board while a beat is showing (matches the other modals).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Centred card via a full-rect CenterContainer (centres its single child at the

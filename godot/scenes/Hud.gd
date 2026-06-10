@@ -806,7 +806,9 @@ func _build_bottom_nav() -> void:
 		{"key": "town", "icon": "🏠", "label": "Town"},
 		{"key": "inventory", "icon": "📦", "label": "Inventory"},
 		{"key": "craft", "icon": "🔨", "label": "Craft"},
-		{"key": "map", "icon": "🗺", "label": "Map"},
+		# 🧭 (compass), not 🗺: the map emoji's colour glyph is a pale washed-out beige
+		# that all but vanishes against the paper nav bar; the compass reads crisply at 22px.
+		{"key": "map", "icon": "🧭", "label": "Map"},
 		{"key": "folk", "icon": "👥", "label": "Townsfolk"},
 	]
 	for spec in specs:

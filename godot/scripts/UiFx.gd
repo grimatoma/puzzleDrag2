@@ -68,6 +68,12 @@ static func animate_overlay_open(overlay: CanvasLayer) -> void:
 			cards.append(ctl)
 	if scrim == null and cards.is_empty():
 		return
+	# OPAQUE backdrops (the full-bleed VIEWS paint solid FRAME_BG) must NOT alpha-fade:
+	# fading one in would flash the board behind it on every tab switch (the old view is
+	# hidden instantly). Views keep an instant backdrop and animate only their content;
+	# translucent modal scrims fade in as scrims should.
+	if scrim != null and (scrim as ColorRect).color.a >= 0.999:
+		scrim = null
 	# Kill a previous open tween (a rapid re-open mid-animation) and snap targets
 	# transparent NOW so the pre-tween frame doesn't flash the finished overlay.
 	_kill_meta_tween(overlay, "_uifx_open_tween")

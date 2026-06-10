@@ -230,6 +230,84 @@ static func pretty_name(key: String) -> String:
 		return TileCategoryConfig.display_name_from_key(s)
 	return s.capitalize()
 
+# ── Backdrops (views + modal scrims) ─────────────────────────────────────────
+
+## Opaque full-bleed VIEW backdrop with depth: the flat FRAME_BG ColorRect every view
+## used, now layered with a subtle vertical wash (lighter at the top, settling darker
+## toward the nav) and a faint corner vignette so the page reads as lit paper instead
+## of a flat colour fill. Returns the base ColorRect (full-rect, MOUSE_FILTER_STOP) —
+## call sites keep adjusting offsets (top-bar / nav reserves) exactly as before; the
+## overlay children fill the base via anchors so every reserve adjustment carries over.
+## The base stays a ColorRect so Main's scrim-tap dismiss + UiFx's scrim detection
+## (both look for "first MOUSE_FILTER_STOP ColorRect child") keep working unchanged.
+static func make_view_backdrop() -> ColorRect:
+	var base := ColorRect.new()
+	base.color = Palette.FRAME_BG
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Vertical wash: a whisper of light at the top fading to a slightly deeper warm at
+	# the bottom (≈4% either way). Drawn as a gradient texture stretched over the base.
+	var wash := TextureRect.new()
+	var wash_grad := Gradient.new()
+	wash_grad.colors = PackedColorArray([
+		Color(1.0, 0.99, 0.94, 0.30),   # warm light at the top
+		Color(1.0, 0.99, 0.94, 0.0),    # neutral by mid-page
+		Color(0.24, 0.18, 0.10, 0.05),  # settle slightly deeper at the bottom
+	])
+	wash_grad.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+	var wash_tex := GradientTexture2D.new()
+	wash_tex.gradient = wash_grad
+	wash_tex.width = 64
+	wash_tex.height = 512
+	wash_tex.fill_from = Vector2(0.5, 0.0)
+	wash_tex.fill_to = Vector2(0.5, 1.0)
+	wash.texture = wash_tex
+	wash.stretch_mode = TextureRect.STRETCH_SCALE
+	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base.add_child(wash)
+	base.add_child(_make_vignette(0.06))
+	return base
+
+## Warm-brown modal SCRIM with focus: the shared Palette.SCRIM dim plus a radial
+## darkening toward the screen edges, so the eye is pulled to the centred card (the
+## standard cinematic "spotlight" scrim). Returns the base ColorRect (full-rect,
+## MOUSE_FILTER_STOP — the tap-outside-to-dismiss surface, same node shape as before).
+static func make_scrim() -> ColorRect:
+	var base := ColorRect.new()
+	base.color = Palette.SCRIM
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_STOP
+	base.add_child(_make_vignette(0.22))
+	return base
+
+## A full-rect, mouse-transparent radial vignette: clear at the centre, easing to
+## black at `edge_alpha` in the corners. Shared by the view backdrop (faint) and the
+## modal scrim (pronounced).
+static func _make_vignette(edge_alpha: float) -> TextureRect:
+	var rect := TextureRect.new()
+	var grad := Gradient.new()
+	grad.colors = PackedColorArray([
+		Color(0, 0, 0, 0.0),
+		Color(0, 0, 0, 0.0),
+		Color(0, 0, 0, edge_alpha),
+	])
+	grad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.width = 512
+	tex.height = 512
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	rect.texture = tex
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
 # ── StyleBox builders ─────────────────────────────────────────────────────────
 
 ## Parchment StyleBoxFlat used by Main.gd HUD buttons: warm fill, 2 px iron
