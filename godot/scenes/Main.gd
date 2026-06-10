@@ -1170,6 +1170,14 @@ func _on_tutorial_closed() -> void:
 	if _tutorial_modal != null:
 		_tutorial_modal.visible = false
 	_settle_close_to_home_or_board()
+	# review-4 — the scrim-tap / ESC dismiss path emits only `closed` (never `finished`),
+	# which used to SWALLOW the launch presentations queued behind the tutorial: the
+	# arrival story beats and this launch's daily-reward card (already granted by
+	# login_tick, so the celebration silently vanished). Drain them here too; both are
+	# no-ops when nothing is pending, and `finished` (which fires close() right after)
+	# stays the only path that marks tutorial_seen.
+	_drain_story_queue()
+	_maybe_show_daily()
 
 ## The tutorial finished (player stepped through all 6 steps OR pressed Skip): mark
 ## tutorial_seen, save, and drain the story queue — the story beats that were

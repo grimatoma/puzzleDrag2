@@ -465,6 +465,10 @@ func _make_grid_chip(entry: Dictionary) -> PanelContainer:
 	var chip := PanelContainer.new()
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	# review-4 — share the row width across the 3 columns. Without EXPAND_FILL each chip
+	# collapses to its icon's minimum width and the autowrapped name label breaks words
+	# mid-glyph ("Bomb" → "Bom/b", "Scythe" → "Scyth/e").
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 2)
