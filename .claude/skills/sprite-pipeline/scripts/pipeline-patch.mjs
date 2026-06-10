@@ -124,14 +124,21 @@ function findKeyframe(item, keyId) {
   return kf;
 }
 
-// Match an animation by selector: an idle's `for`, or a transition as
-// `<from>__to__<to>` or just `<to>`. matchAnimation returns null on a miss; findAnimation dies.
+// Match an animation by selector. The CANONICAL selector is the viewer id — an idle is
+// `<for>__idle`, a transition is `<from>__to__<to>` — but we also accept the BACK-COMPAT bare forms
+// (an idle's `<for>`, a transition's `<to>`) so older callers (and `animate-done <item> <for> <gif>`)
+// keep working. The `__idle` form is what disambiguates an idle from a keyframe of the same id in
+// clear-comment (a keyframe id never ends in `__idle`, so it falls through to the animation branch).
+// matchAnimation returns null on a miss; findAnimation dies.
 function matchAnimation(item, selector) {
   for (const a of item.animations || []) {
-    if (a.kind === "idle" && a.for === selector) return a;
+    if (a.kind === "idle") {
+      if (`${a.for}__idle` === selector) return a; // canonical viewer id
+      if (a.for === selector) return a; // back-compat bare id
+    }
     if (a.kind === "transition") {
-      if (`${a.from}__to__${a.to}` === selector) return a;
-      if (a.to === selector) return a;
+      if (`${a.from}__to__${a.to}` === selector) return a; // canonical viewer id
+      if (a.to === selector) return a; // back-compat bare id
     }
   }
   return null;
@@ -143,9 +150,11 @@ function findAnimation(item, selector) {
   return anim;
 }
 
-// Canonical selector for an animation (used as the stable diff/snapshot key and in show output).
+// Canonical selector for an animation — the SAME id the viewer/build_viewer emit (idle → `<for>__idle`,
+// transition → `<from>__to__<to>`). Used as the stable diff/snapshot key, in `show` output, and in the
+// AWAIT_REVIEW_RESULT animation selectors so they round-trip back through matchAnimation.
 function animationSelector(a) {
-  return a.kind === "idle" ? a.for : `${a.from}__to__${a.to}`;
+  return a.kind === "idle" ? `${a.for}__idle` : `${a.from}__to__${a.to}`;
 }
 
 // ── History lookup (pipeline.history.json) ────────────────────────────────────────
