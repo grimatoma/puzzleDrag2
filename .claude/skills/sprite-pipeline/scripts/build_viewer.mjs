@@ -103,6 +103,50 @@ function assetUrl(rel, baseDir, outDir) {
   return relUrl(outDir, abs);
 }
 
+// True when the URL emitted for `abs` would resolve OUTSIDE the out dir (a leading ".." escape). The
+// control server's static root is the out dir's parent (v2/), so any url that climbs above the out dir
+// AND above v2/ — e.g. a prior at `../tile_tree_oak.png` resolving to `<v2>/../tile_tree_oak.png` —
+// 404s when served. We detect that by relativizing against outDir and checking the leading segment.
+function escapesOutDir(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return false;
+  const abs = path.resolve(baseDir, rel);
+  const r = relUrl(outDir, abs); // POSIX-relative from outDir
+  // Servable when it stays at/below outDir (no leading "..") OR climbs exactly one level (to v2/, the
+  // docRoot) — `../sets/...`, `../items/...` are fine. Two-or-more "../" climbs above v2/ → unservable.
+  return r.startsWith("../../");
+}
+
+// Copy a prior file that lives ABOVE the docRoot into `<outDir>/_priors/<basename>` so the viewer can
+// load it (the static server's root is the out dir's PARENT, v2/, so a `../../foo.png` url escapes it).
+// Returns the servable url (`_priors/<basename>`) on success, or null when the source is missing / the
+// copy fails. Idempotent: re-copies on each build (cheap, keeps the snapshot fresh). `_priors/` lands
+// under the already-gitignored pixelGen/ out dir, so nothing leaks into git.
+function copyPriorIntoOut(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return null;
+  const abs = path.resolve(baseDir, rel);
+  if (!isFile(abs)) return null;
+  try {
+    const priorsDir = path.join(outDir, "_priors");
+    fs.mkdirSync(priorsDir, { recursive: true });
+    const base = path.basename(abs);
+    fs.copyFileSync(abs, path.join(priorsDir, base));
+    return "_priors/" + base;
+  } catch {
+    return null;
+  }
+}
+
+// Resolve an item `prior` to a servable url. When the file sits under the out dir / v2 docRoot the
+// normal relative url works; when it escapes (the common `../tile_*.png` case) we copy it into
+// `_priors/` and return that url instead. Returns null when the file is missing on disk.
+function priorUrl(rel, baseDir, outDir) {
+  if (typeof rel !== "string" || rel === "") return null;
+  const abs = path.resolve(baseDir, rel);
+  if (!isFile(abs)) return null;
+  if (escapesOutDir(rel, baseDir, outDir)) return copyPriorIntoOut(rel, baseDir, outDir);
+  return relUrl(outDir, abs);
+}
+
 // The per-frame PNG urls backing an animation's gif, for the viewer's frame scrubber. By convention the
 // frames live beside the gif: a gif at `items/<x>/previews/<id>.gif` has its frames at
 // `items/<x>/frames/<id>/NN.png` (zero-padded). We derive the frames dir from the gif path (swap the
@@ -247,11 +291,14 @@ function projectItem(item, settings, baseDir, outDir) {
   }
 
   // Prior reference art the family was scored against (item.priors). Resolve each to a {path, url} —
-  // `path` is the verbatim pipeline-relative string, `url` is null when the file is missing on disk.
+  // `path` is the verbatim pipeline-relative string (for display), `url` is a SERVABLE path: priors
+  // that escape the docRoot (the common `../tile_*.png`, which lives ABOVE v2/) are copied into
+  // `<out>/_priors/` and the url points there; in-tree priors keep their normal relative url. `url` is
+  // null when the file is missing on disk.
   const priors = [];
   for (const rel of Array.isArray(item.priors) ? item.priors : []) {
     if (typeof rel !== "string" || rel === "") continue;
-    priors.push({ path: rel, url: assetUrl(rel, baseDir, outDir) });
+    priors.push({ path: rel, url: priorUrl(rel, baseDir, outDir) });
   }
 
   const projected = {
