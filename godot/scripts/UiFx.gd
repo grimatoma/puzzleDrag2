@@ -168,6 +168,26 @@ static func nav_tab_rest(underline: Control, highlight: Control, icon: Control) 
 			(ctl as Control).scale = Vector2.ONE
 			(ctl as Control).modulate.a = 1.0
 
+# ── one-shot pop ──────────────────────────────────────────────────────────────
+
+## Quick celebratory pop (scale 1 → peak → 1 around the centre) for a control whose
+## STATE just advanced — the chain stage banner hitting "DOUBLE!", a count chip
+## landing. One-shot; safe to spam (re-trigger restarts it); nothing headless/reduced.
+static func pop(ctl: Control, peak: float = 1.25, dur: float = 0.26) -> void:
+	if ctl == null or not is_instance_valid(ctl):
+		return
+	if not _active() or not ctl.is_inside_tree():
+		return
+	_kill_meta_tween(ctl, "_uifx_pop")
+	ctl.pivot_offset = ctl.size / 2.0
+	ctl.scale = Vector2.ONE
+	var t := ctl.create_tween()
+	ctl.set_meta("_uifx_pop", t)
+	t.tween_property(ctl, "scale", Vector2(peak, peak), dur * 0.4) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.tween_property(ctl, "scale", Vector2.ONE, dur * 0.6) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
 # ── content swap fade ─────────────────────────────────────────────────────────
 
 ## Quick fade-in for a control whose CONTENT was just swapped in place (a tutorial

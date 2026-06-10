@@ -1115,10 +1115,15 @@ func show_tool_armed_banner(id: String) -> void:
 	_tool_armed_name.text = ToolConfig.tool_label(id)
 	_tool_armed_desc.text = ToolConfig.tool_desc(id)
 	_tool_armed_box.visible = true
+	# An armed tool is a MODE the player can forget they're in — fade the banner in and
+	# keep a gentle breathe on it until it's disarmed/spent (UiFx; rests on hide).
+	UiFx.content_fade(_tool_armed_box)
+	UiFx.attach_attention_pulse(_tool_armed_box, 1.02, 1.4)
 
 ## Hide the "Tool armed" banner (after the tap fires, or on Disarm).
 func hide_tool_armed_banner() -> void:
 	if _tool_armed_box != null:
+		UiFx.clear_attention_pulse(_tool_armed_box)
 		_tool_armed_box.visible = false
 
 # ── live-chain tracking (pushed by Main from _on_chain_changed) ───────────────
@@ -1509,11 +1514,17 @@ func _apply_chain_progress_fill() -> void:
 			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))
 			var accent: Color = Color(String(stage.get("accent", "#e07a3a")))
 			_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(top.lerp(bot, 0.5), accent))
-			# Stage banner: shown once an upgrade is earned (earned >= 1).
+			# Stage banner: shown once an upgrade is earned (earned >= 1). POP it on every
+			# stage ADVANCE ("BONUS!" → "DOUBLE!" → …) so crossing a threshold mid-drag
+			# lands as a beat; same-stage refreshes (every tile added) stay still.
 			if _chain_stage_label != null:
 				var label: String = String(stage.get("label", ""))
+				var was: String = String(_chain_stage_label.get_meta("_stage_shown", ""))
 				_chain_stage_label.visible = earned >= 1 and label != ""
 				_chain_stage_label.text = label
+				if _chain_stage_label.visible and label != was:
+					UiFx.pop(_chain_stage_label)
+				_chain_stage_label.set_meta("_stage_shown", label if _chain_stage_label.visible else "")
 				_chain_stage_label.add_theme_color_override(
 					"font_color", Color8(0xff, 0xe7, 0xa0) if earned >= 4 else Palette.PARCHMENT)
 			return
