@@ -349,21 +349,10 @@ func _ready() -> void:
 	_last_in_harbor = game.is_in_harbor()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
-	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats).
-	_refresh_totals()
-	_refresh_meta()
-	_refresh_settlement()
-	_refresh_buildings()
-	_refresh_orders()
-	_refresh_biome()
-	_refresh_boss()
-	_refresh_rats()
-	_refresh_runes()
-	_refresh_chain_progress()
-	# A2 — seed the season bar + the board's per-season field tint from the restored save so
-	# both reflect the current farm season immediately (not just after the first chain).
-	_refresh_season_bar()
-	board.set_season(game.current_season_index())
+	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats),
+	# plus the season bar + the board's per-season field tint, via the shared post-build sweep so
+	# this path and the Text Size rebuild path can't drift.
+	_refresh_hud_all()
 	# Launch flourish — the persistent chrome (top bar / nav / stockpile / tools) reveals
 	# in a quick stagger. No-op headless / with UiFx disabled (tests + the boot smoke see
 	# the settled HUD), and the auto-modals below simply layer above it.
@@ -444,6 +433,20 @@ func _maybe_show_splash() -> void:
 	add_child(_splash)
 	_splash.setup()
 	_splash.finished.connect(func() -> void: _splash = null)
+
+## Re-push current game state into the (freshly built) HUD: totals, meta, settlement,
+## buildings, orders, biome, boss, rats, runes, chain progress, season bar, status, and
+## the board's season tint. Called from _ready (post-build) and on a Text Size rebuild,
+## so the two paths can't drift. Every call is idempotent, so it's safe even where _ready
+## already touched status via _layout().
+func _refresh_hud_all() -> void:
+	_refresh_totals(); _refresh_meta(); _refresh_settlement(); _refresh_buildings()
+	_refresh_orders(); _refresh_biome(); _refresh_boss(); _refresh_rats()
+	_refresh_runes(); _refresh_chain_progress(); _refresh_season_bar()
+	if _hud != null and is_instance_valid(_hud):
+		_hud._refresh_status()
+	if board != null and is_instance_valid(board) and game != null:
+		board.set_season(game.current_season_index())
 
 ## Build (or rebuild) the HUD node and wire ALL its intent signals + the post-build tool
 ## refresh, EXACTLY as _ready did inline. Extracted so the Text Size live re-scale can free
@@ -1990,24 +1993,12 @@ func _reapply_text_scale() -> void:
 	_build_hud_node()
 	var vp: Vector2 = get_viewport_rect().size
 	_hud._layout_hud(vp)
-	_refresh_totals()
-	_refresh_meta()
-	_refresh_settlement()
-	_refresh_buildings()
-	_refresh_orders()
-	_refresh_biome()
-	_refresh_boss()
-	_refresh_rats()
-	_refresh_runes()
-	_refresh_chain_progress()
-	_refresh_season_bar()
-	_hud._refresh_status()
+	# Shared post-build sweep (totals … season bar + status + board season tint) — same call _ready
+	# uses, so the two rebuild paths stay in lockstep.
+	_refresh_hud_all()
+	# Site-specific extra: restore the active bottom-nav tab captured above (a fresh HUD reset it).
 	_hud.set_nav_current(prev_nav)
 	_hud._refresh_nav()
-	# The board's season tint is set on the Board, not the HUD, so it survives the rebuild —
-	# but re-assert it for symmetry with the _ready post-build block.
-	if board != null and is_instance_valid(board) and game != null:
-		board.set_season(game.current_season_index())
 	# (2) Invalidate cached screens/modals (EXCEPT the open menu) so each rebuilds at the new scale
 	# on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild. The
 	# list values are freed for safety, but we must also null each member explicitly (nulling a
