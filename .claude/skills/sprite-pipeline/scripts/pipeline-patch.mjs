@@ -1,13 +1,21 @@
 #!/usr/bin/env node
-// sprite-pipeline — pipeline.json bookkeeping CLI.
+// sprite-pipeline — three-file bookkeeping CLI.
 //
-// The orchestrator records candidate lifecycle (generated/approved/rejected),
-// the approved `selected` idx, animation status+gif, and the run mode into the
-// single source of truth, `godot/assets/tiles/v2/pipeline.json`. Hand-editing
-// that JSON mid-run is the most error-prone surface in an autonomous run (a
-// dropped comma silently breaks the whole pipeline). This CLI does the edits
-// safely: parse -> mutate the exact node -> ATOMIC write (temp + rename),
-// preserving 2-space formatting and a trailing newline.
+// The orchestrator records candidate lifecycle (generated/approved/rejected), the approved `selected`
+// idx + paired `selectedPath`, animation status+gif, and the run mode. Under the three-file split
+// (see manifest.mjs) those fields live in TWO sibling files under `godot/assets/tiles/v2/`:
+//
+//   • pipeline.json          — spec + state. Keyframes keep `selected` + `selectedPath` (+ optional
+//                              `comment`); animations keep `status`/`gif`/`storyboard`; `settings`
+//                              holds the run mode. NO candidates here.
+//   • pipeline.history.json  — the candidate/attempt log sidecar, keyed itemId -> keyframeId ->
+//                              candidate[] (`{idx,path,status,llm?,reason?}`, matched by `idx` FIELD).
+//                              A missing sidecar reads as `{}`.
+//   • pipeline.schema.json   — the JSON Schema validated on load (refuse to mutate invalid data).
+//
+// This CLI mirrors serve_viewer's patch-split exactly: each command writes ONLY the file(s) it owns,
+// and `approve` writes history FIRST then pipeline so the pair always ends consistent. All
+// load/validate/write goes through the shared `manifest.mjs` seam (atomic temp-file + rename).
 //
 //   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm]
 //   node pipeline-patch.mjs approve          <item> <key> <idx>
@@ -21,45 +29,56 @@
 // All paths recorded are written verbatim (use v2-relative paths, e.g.
 // items/<id>/<key>/00.png) — they are only pointers (see manifest-schema.md).
 //
+// A `--pipeline <path>` flag (anywhere in argv) overrides the default pipeline.json location; the
+// history + schema sidecars are derived from it. Used for testing against a fixture.
+//
 // Node built-ins only. Resolves pipeline.json against the repo root, like integrate.mjs.
 
-import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import * as manifest from "./manifest.mjs";
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..", "..", "..", "..");
-const PIPELINE_JSON = path.join(REPO_ROOT, "godot", "assets", "tiles", "v2", "pipeline.json");
+const DEFAULT_PIPELINE_JSON = path.join(REPO_ROOT, "godot", "assets", "tiles", "v2", "pipeline.json");
 
 function die(msg) {
   console.error(`pipeline-patch: ${msg}`);
   process.exit(1);
 }
 
-// ── Load / save ───────────────────────────────────────────────────────────────
-function load() {
-  if (!existsSync(PIPELINE_JSON)) die(`pipeline.json not found at ${PIPELINE_JSON}`);
+// ── Load / validate ─────────────────────────────────────────────────────────────
+// Load BOTH on-disk files (history sidecar reads as {} when absent) and schema-validate each before
+// returning, mirroring the sibling scripts' gate. If either is invalid we refuse to mutate already-bad
+// data and exit non-zero. A missing history sidecar ({}) validates clean.
+function loadAll() {
+  let pipeline;
+  let history;
+  let schema;
   try {
-    return JSON.parse(readFileSync(PIPELINE_JSON, "utf8"));
+    pipeline = manifest.loadPipeline(PIPELINE_JSON);
+    history = manifest.loadHistory(PIPELINE_JSON);
+    schema = manifest.loadSchema(PIPELINE_JSON);
   } catch (e) {
-    die(`failed to parse pipeline.json: ${e.message}`);
+    die(`could not read pipeline/history/schema (${PIPELINE_JSON}): ${e.message}`);
   }
+  const errs = [
+    ...manifest.validateDoc(pipeline, schema, "pipelineDoc"),
+    ...manifest.validateDoc(history, schema, "historyDoc"),
+  ];
+  if (errs.length) {
+    die(`invalid pipeline/history data — refusing to mutate:\n  ${errs.join("\n  ")}`);
+  }
+  return { pipeline, history };
 }
 
-// Atomic write: stringify (2-space + trailing newline, matching the hand-authored
-// file), write a temp sibling, then rename over the original so a crash can never
-// leave a half-written pipeline.json.
-function save(data) {
-  const out = JSON.stringify(data, null, 2) + "\n";
-  const tmp = `${PIPELINE_JSON}.tmp-${process.pid}`;
-  writeFileSync(tmp, out);
-  renameSync(tmp, PIPELINE_JSON);
-}
-
-// ── Node lookup ───────────────────────────────────────────────────────────────
-function findItem(data, itemId) {
-  const item = (data.items || []).find((i) => i && i.id === itemId);
-  if (!item) die(`no item "${itemId}" in pipeline.json (have: ${(data.items || []).map((i) => i.id).join(", ")})`);
+// ── Node lookup (pipeline.json) ──────────────────────────────────────────────────
+function findItem(pipeline, itemId) {
+  const item = (pipeline.items || []).find((i) => i && i.id === itemId);
+  if (!item) {
+    die(`no item "${itemId}" in pipeline.json (have: ${(pipeline.items || []).map((i) => i.id).join(", ")})`);
+  }
   return item;
 }
 
@@ -69,10 +88,6 @@ function findKeyframe(item, keyId) {
   const kf = entries.find((e) => e && e.id === keyId);
   if (!kf) die(`no keyframe "${keyId}" in item "${item.id}" (have: ${entries.map((e) => e.id).join(", ")})`);
   return kf;
-}
-
-function findCandidate(kf, idx) {
-  return (kf.candidates || []).find((c) => c && c.idx === idx) || null;
 }
 
 // Match an animation by selector: an idle's `for`, or a transition as
@@ -88,7 +103,28 @@ function findAnimation(item, selector) {
   die(`no animation matching "${selector}" in item "${item.id}"`);
 }
 
-// ── Commands ──────────────────────────────────────────────────────────────────
+// ── History lookup (pipeline.history.json) ────────────────────────────────────────
+// Get (creating the nested {} -> [] path if missing) the candidate array for item/key in history.
+function ensureCandidateList(history, itemId, keyId) {
+  if (!history[itemId] || typeof history[itemId] !== "object") history[itemId] = {};
+  if (!Array.isArray(history[itemId][keyId])) history[itemId][keyId] = [];
+  return history[itemId][keyId];
+}
+
+// Read-only: the candidate array for item/key (or [] if none recorded yet).
+function candidateList(history, itemId, keyId) {
+  const perItem = history && typeof history === "object" ? history[itemId] : null;
+  return perItem && typeof perItem === "object" && Array.isArray(perItem[keyId]) ? perItem[keyId] : [];
+}
+
+// Match a candidate by its `idx` FIELD (not array position), consistent with serve_viewer/integrate.
+function findCandidate(cands, idx) {
+  return (cands || []).find((c) => c && c.idx === idx) || null;
+}
+
+// ── Commands ──────────────────────────────────────────────────────────────────────
+// record-candidate: verify the keyframe exists in pipeline.json (for the "no such item/key" errors),
+// then add-or-update the candidate in HISTORY. Writes history only — pipeline is left byte-unchanged.
 function cmdRecordCandidate(args) {
   const [itemId, keyId, idxRaw, p, status = "generated", llm] = args;
   if (!itemId || !keyId || idxRaw === undefined || !p) {
@@ -96,39 +132,47 @@ function cmdRecordCandidate(args) {
   }
   const idx = Number(idxRaw);
   if (!Number.isInteger(idx)) die(`idx must be an integer (got "${idxRaw}")`);
-  const data = load();
-  const kf = findKeyframe(findItem(data, itemId), keyId);
-  kf.candidates = kf.candidates || [];
-  let cand = findCandidate(kf, idx);
+  const { pipeline, history } = loadAll();
+  // Validate the keyframe target against pipeline (errors out if item/key is unknown).
+  findKeyframe(findItem(pipeline, itemId), keyId);
+  const cands = ensureCandidateList(history, itemId, keyId);
+  let cand = findCandidate(cands, idx);
   if (!cand) {
     cand = { idx, path: p, status };
-    kf.candidates.push(cand);
-    kf.candidates.sort((a, b) => a.idx - b.idx);
+    cands.push(cand);
+    cands.sort((a, b) => a.idx - b.idx);
   } else {
     cand.path = p;
     cand.status = status;
   }
   if (llm) cand.llm = llm;
-  save(data);
+  manifest.writeHistory(PIPELINE_JSON, history);
   console.log(`recorded ${itemId}/${keyId} candidate idx=${idx} status=${status}${llm ? ` llm=${llm}` : ""}`);
 }
 
+// approve: flip the candidate to approved/pass in HISTORY, and set the keyframe's selected +
+// selectedPath in PIPELINE. Writes history FIRST, then pipeline (consistent pair).
 function cmdApprove(args) {
   const [itemId, keyId, idxRaw] = args;
   if (!itemId || !keyId || idxRaw === undefined) die("approve <item> <key> <idx>");
   const idx = Number(idxRaw);
   if (!Number.isInteger(idx)) die(`idx must be an integer (got "${idxRaw}")`);
-  const data = load();
-  const kf = findKeyframe(findItem(data, itemId), keyId);
-  const cand = findCandidate(kf, idx);
+  const { pipeline, history } = loadAll();
+  const kf = findKeyframe(findItem(pipeline, itemId), keyId);
+  const cand = findCandidate(candidateList(history, itemId, keyId), idx);
   if (!cand) die(`no candidate idx=${idx} on ${itemId}/${keyId} — record-candidate it first`);
   cand.status = "approved";
   cand.llm = "pass";
   kf.selected = idx;
-  save(data);
+  kf.selectedPath = typeof cand.path === "string" ? cand.path : null;
+  manifest.writeHistory(PIPELINE_JSON, history);
+  manifest.writePipeline(PIPELINE_JSON, pipeline);
   console.log(`approved ${itemId}/${keyId} idx=${idx} (selected=${idx})`);
 }
 
+// reject: flip the candidate to rejected/fail (+ reason) in HISTORY. If that idx was the keyframe's
+// current selection, also clear selected + selectedPath in PIPELINE. Writes history always; pipeline
+// only when the selection was cleared.
 function cmdReject(args) {
   const [itemId, keyId, idxRaw, ...reasonParts] = args;
   if (!itemId || !keyId || idxRaw === undefined) die('reject <item> <key> <idx> "<reason>"');
@@ -136,49 +180,62 @@ function cmdReject(args) {
   if (!Number.isInteger(idx)) die(`idx must be an integer (got "${idxRaw}")`);
   const reason = reasonParts.join(" ").trim();
   if (!reason) die("reject requires a <reason> (kept inline as the audit trail)");
-  const data = load();
-  const kf = findKeyframe(findItem(data, itemId), keyId);
-  const cand = findCandidate(kf, idx);
+  const { pipeline, history } = loadAll();
+  const kf = findKeyframe(findItem(pipeline, itemId), keyId);
+  const cand = findCandidate(candidateList(history, itemId, keyId), idx);
   if (!cand) die(`no candidate idx=${idx} on ${itemId}/${keyId} — record-candidate it first`);
   cand.status = "rejected";
   cand.llm = "fail";
   cand.reason = reason;
-  if (kf.selected === idx) kf.selected = null;
-  save(data);
+  let clearedSelection = false;
+  if (kf.selected === idx) {
+    kf.selected = null;
+    kf.selectedPath = null;
+    clearedSelection = true;
+  }
+  manifest.writeHistory(PIPELINE_JSON, history);
+  if (clearedSelection) manifest.writePipeline(PIPELINE_JSON, pipeline);
   console.log(`rejected ${itemId}/${keyId} idx=${idx}: ${reason}`);
 }
 
+// animate-done: animations live in PIPELINE; set status/gif (+ optional storyboard). Pipeline only.
 function cmdAnimateDone(args) {
   const [itemId, selector, gif, storyboard] = args;
   if (!itemId || !selector || !gif) die("animate-done <item> <selector> <gifPath> [storyboardPath]");
-  const data = load();
-  const anim = findAnimation(findItem(data, itemId), selector);
+  const { pipeline } = loadAll();
+  const anim = findAnimation(findItem(pipeline, itemId), selector);
   anim.status = "generated";
   anim.gif = gif;
   if (storyboard) anim.storyboard = storyboard;
-  save(data);
+  manifest.writePipeline(PIPELINE_JSON, pipeline);
   console.log(`animation ${itemId}/${selector} -> generated, gif=${gif}${storyboard ? `, storyboard=${storyboard}` : ""}`);
 }
 
+// set-mode: run mode lives in PIPELINE settings. Pipeline only.
 function cmdSetMode(args) {
   const [mode] = args;
   if (mode !== "autonomous" && mode !== "gated") die("set-mode (autonomous | gated)");
-  const data = load();
-  data.settings = data.settings || {};
+  const { pipeline } = loadAll();
+  pipeline.settings = pipeline.settings || {};
   if (mode === "autonomous") {
-    data.settings.humanApproval = false;
-    data.settings.autonomous = true;
+    pipeline.settings.humanApproval = false;
+    pipeline.settings.autonomous = true;
   } else {
-    data.settings.humanApproval = true;
-    data.settings.autonomous = false;
+    pipeline.settings.humanApproval = true;
+    pipeline.settings.autonomous = false;
   }
-  save(data);
-  console.log(`mode = ${mode} (humanApproval=${data.settings.humanApproval}, autonomous=${data.settings.autonomous})`);
+  manifest.writePipeline(PIPELINE_JSON, pipeline);
+  console.log(`mode = ${mode} (humanApproval=${pipeline.settings.humanApproval}, autonomous=${pipeline.settings.autonomous})`);
 }
 
+// show: read-only. Use loadMerged so each keyframe's `candidates` are spliced in from history, then
+// display settings + per-keyframe selected/candidate counts + per-animation status. No write.
 function cmdShow(args) {
   const [itemId] = args;
-  const data = load();
+  // Validate the on-disk pair (loadAll) before reading the merged view, so `show` also refuses to
+  // operate on invalid data. The merged shape itself is NOT schema-valid (it re-adds candidates).
+  loadAll();
+  const data = manifest.loadMerged(PIPELINE_JSON);
   const items = itemId ? [findItem(data, itemId)] : data.items || [];
   console.log(`settings: humanApproval=${data.settings?.humanApproval} autonomous=${data.settings?.autonomous} candidates=${data.settings?.candidates}`);
   for (const item of items) {
@@ -194,17 +251,40 @@ function cmdShow(args) {
   }
 }
 
-// ── CLI ───────────────────────────────────────────────────────────────────────
+// ── CLI ───────────────────────────────────────────────────────────────────────────
 const USAGE = `Usage:
   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm]
   node pipeline-patch.mjs approve          <item> <key> <idx>
   node pipeline-patch.mjs reject           <item> <key> <idx> "<reason>"
   node pipeline-patch.mjs animate-done     <item> <selector> <gifPath> [storyboardPath]
   node pipeline-patch.mjs set-mode         (autonomous | gated)
-  node pipeline-patch.mjs show             [item]`;
+  node pipeline-patch.mjs show             [item]
+
+  --pipeline <path>   override the pipeline.json location (history/schema sidecars derived from it)`;
+
+// Pull an optional `--pipeline <path>` out of argv (anywhere), returning the resolved path + the
+// remaining args. Sidecars are derived from this path by manifest.mjs.
+function extractPipelineFlag(argv) {
+  const rest = [];
+  let pipelineOverride = null;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--pipeline") {
+      pipelineOverride = argv[++i];
+      if (!pipelineOverride) die("--pipeline requires a <path>");
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { pipelineOverride, rest };
+}
+
+// Resolved once main() parses argv; all commands read this module-level constant.
+let PIPELINE_JSON = DEFAULT_PIPELINE_JSON;
 
 function main() {
-  const [cmd, ...args] = process.argv.slice(2);
+  const { pipelineOverride, rest } = extractPipelineFlag(process.argv.slice(2));
+  if (pipelineOverride) PIPELINE_JSON = path.resolve(pipelineOverride);
+  const [cmd, ...args] = rest;
   switch (cmd) {
     case "record-candidate": return cmdRecordCandidate(args);
     case "approve": return cmdApprove(args);
