@@ -21,6 +21,12 @@ extends RefCounted
 ## every capture is taken at the settled end-state, never mid-animation.
 static var enabled: bool = true
 
+## PLAYER preference (the menu's "Reduce Motion" toggle, persisted on GameState as
+## `reduce_motion`). Kept SEPARATE from `enabled` (the infra/harness switch) so
+## Main applying the loaded preference on launch can never un-pin a harness that
+## disabled motion for deterministic captures.
+static var reduced: bool = false
+
 ## Motion timings (seconds). Kept short — mobile-first UI motion should read as
 ## "responsive", not "cinematic": the card lands before the finger lifts.
 const SCRIM_IN := 0.16          ## scrim/backdrop fade-in
@@ -36,7 +42,7 @@ const RELEASE_TIME := 0.12      ## button release spring-back time
 ## True when animations should actually play. Headless display servers (the unit-test
 ## sweep) get the end state instantly.
 static func _active() -> bool:
-	return enabled and DisplayServer.get_name() != "headless"
+	return enabled and not reduced and DisplayServer.get_name() != "headless"
 
 ## Public probe for continuous, self-driven effects (a _process-driven pulse) so they
 ## can idle when motion is off — the same gate every one-shot helper here uses.

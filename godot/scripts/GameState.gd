@@ -413,6 +413,11 @@ var _tile_collection_seeded: bool = false
 ## from the menu; persisted so the choice survives a reload. Defaults to "on".
 var audio_muted: bool = false
 
+## Player "Reduce Motion" accessibility preference, surfaced by the settings/menu
+## modal. Main applies it to the UiFx motion kit on launch (UiFx.reduced) and toggles
+## it from the menu; persisted so the choice survives a reload. Defaults to motion ON.
+var reduce_motion: bool = false
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 ## Whether the player has completed (or skipped) the 6-step tutorial onboarding
 ## modal. Persisted so the modal is shown only once. Main calls mark_tutorial_seen()
@@ -4786,6 +4791,7 @@ func to_dict() -> Dictionary:
 		"tile_research_progress": _tile_collection_dict_research(),
 		"tile_free_moves": free_moves(),
 		"audio_muted": audio_muted,
+		"reduce_motion": reduce_motion,
 		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
 		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
 		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
@@ -5195,6 +5201,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	# Restore the settings preference (M4f). Coerced to a plain bool; defaults to
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
+	s.reduce_motion = bool(d.get("reduce_motion", false))
 	# Restore owned tool charges (M8b) into the composed ToolState from the SAME flat
 	# top-level "tools" key. Missing key (any save written before tools existed) →
 	# ToolState.from_dict({}) yields {} (no tools). Each value is coerced to int (JSON

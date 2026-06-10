@@ -32,6 +32,10 @@ signal closed
 ## Audio service, saves, and calls back refresh_sound_label() (this screen never flips
 ## the flag itself, so the toggle is booked in ONE place — mirrors TownScreen.rats_shoo_requested).
 signal sound_toggle_requested
+## Emitted when the Reduce Motion button is pressed — Main flips game.reduce_motion,
+## applies it to the UiFx motion kit, saves, and calls back refresh_motion_label()
+## (same single-accounting-point pattern as the Sound toggle).
+signal motion_toggle_requested
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
 signal new_game_requested
 ## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
@@ -71,6 +75,7 @@ var _action_buttons: Dictionary = {}
 ## Static shell, built once in setup().
 var _sound_btn: Button
 var _fullscreen_btn: Button
+var _motion_btn: Button
 var _built: bool = false
 
 # ── parchment palette (matches Main's HUD / TownScreen journal tokens) ──────────
@@ -91,11 +96,13 @@ func setup(g: GameState) -> void:
 		_built = true
 	refresh_sound_label()
 	refresh_fullscreen_label()
+	refresh_motion_label()
 
 func open() -> void:
 	visible = true
 	refresh_sound_label()
 	refresh_fullscreen_label()
+	refresh_motion_label()
 
 func close() -> void:
 	visible = false
@@ -198,6 +205,17 @@ func _build_shell() -> void:
 	_fullscreen_btn.connect("pressed", Callable(self, "_on_fullscreen_pressed"))
 	col.add_child(_fullscreen_btn)
 	_action_buttons["toggle_fullscreen"] = _fullscreen_btn
+
+	# Reduce Motion — accessibility toggle for the UiFx motion kit (overlay transitions,
+	# nav animation, press feedback, pulses). Emits `motion_toggle_requested`; Main flips
+	# the persisted flag + applies it to UiFx (the single accounting point).
+	_motion_btn = Button.new()
+	_motion_btn.text = "Reduce Motion: Off"
+	_motion_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_button(_motion_btn, Palette.MOSS, 8, 20)
+	_motion_btn.connect("pressed", Callable(self, "_on_motion_pressed"))
+	col.add_child(_motion_btn)
+	_action_buttons["toggle_motion"] = _motion_btn
 
 	# Show Tutorial — re-opens the 6-step onboarding (replay). Closes the menu + emits
 	# navigation_requested("tutorial"); Main routes it through apply_deeplink("tutorial"), the
@@ -341,6 +359,18 @@ func _build_about_card(col: VBoxContainer) -> void:
 ## + label re-sync (the single accounting point). This screen never touches the flag.
 func _on_sound_pressed() -> void:
 	emit_signal("sound_toggle_requested")
+
+## The Reduce Motion button — emit `motion_toggle_requested`; Main owns the flag flip +
+## UiFx apply + save + label re-sync. This screen never touches the flag.
+func _on_motion_pressed() -> void:
+	emit_signal("motion_toggle_requested")
+
+## Re-sync the Reduce Motion button text from the persisted preference: "Reduce Motion: On"
+## when motion is reduced (animations off), "Reduce Motion: Off" otherwise. Called by Main
+## after it flips the flag, and on open/setup so a restored preference shows correctly.
+func refresh_motion_label() -> void:
+	if _motion_btn != null and game != null:
+		_motion_btn.text = "Reduce Motion: %s" % ("On" if game.reduce_motion else "Off")
 
 ## The Fullscreen button — flip the OS window between windowed + fullscreen via DisplayServer.
 ## A display-only preference (no game state, nothing persisted), so the screen owns it directly.
