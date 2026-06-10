@@ -59,6 +59,10 @@ export function loadSchema(pipelinePath) {
 // back in from history (itemId -> keyframeId -> candidate[]). Downstream projection/plan code reads
 // `keyframe.candidates`, so this keeps it working unchanged. Mutates only the freshly-parsed object
 // we return; never touches the on-disk files.
+//
+// NOTE: the merged object intentionally re-adds `candidates` to each keyframe, so it will NOT pass
+// validateDoc(..., "pipelineDoc") (whose `keyframe` is additionalProperties:false). Always
+// schema-validate the on-disk pipeline.json (via loadPipeline), never the merged result.
 export function loadMerged(pipelinePath) {
   const pipeline = loadPipeline(pipelinePath);
   const history = loadHistory(pipelinePath);
@@ -110,6 +114,13 @@ export function writeHistory(pipelinePath, obj) {
 // properties, additionalProperties (false | subschema), items, enum, oneOf, and local `$ref`
 // ("#/$defs/<name>"). Returns an array of human-readable error strings (empty = valid); each carries a
 // JSON-path-ish prefix (e.g. `items[0].master.selected`).
+//
+// Keywords on a node are evaluated ADDITIVELY: `oneOf` contributes its "must match exactly one
+// branch" error (if any) into the accumulated errors, and the node's own type/required/properties/
+// additionalProperties/items/enum are STILL evaluated on the same node. So a node may carry both a
+// shared shape (type/required/properties) and a oneOf that selects among additive variants.
+// Caveat: `$ref` must stand alone — sibling keywords placed beside a `$ref` are NOT evaluated (the
+// ref resolves and returns). No schema in the three-file model puts siblings beside a `$ref`.
 const TYPE_NAMES = ["object", "array", "string", "number", "integer", "boolean", "null"];
 
 function typeOk(value, t) {
@@ -156,16 +167,26 @@ function checkNode(value, schema, rootSchema, at, errors) {
   }
 
   if (Array.isArray(schema.oneOf)) {
+    // Evaluate oneOf ADDITIVELY: push its mismatch (if any) and fall through so the node's own
+    // sibling keywords (type/required/properties/…) below are still checked on the same value.
     let matches = 0;
+    let closest = null; // branch with the FEWEST sub-errors, to explain a zero-match failure.
     for (const branch of schema.oneOf) {
       const sub = [];
       checkNode(value, branch, rootSchema, at, sub);
-      if (sub.length === 0) matches += 1;
+      if (sub.length === 0) {
+        matches += 1;
+      } else if (closest === null || sub.length < closest.length) {
+        closest = sub;
+      }
     }
-    if (matches !== 1) {
-      errors.push(`${at}: expected to match exactly one schema (oneOf), matched ${matches}`);
+    if (matches === 0) {
+      // Append the closest branch's reasons so a hand-editor sees WHY nothing matched.
+      const why = closest && closest.length ? ` (closest branch: ${closest.join("; ")})` : "";
+      errors.push(`${at}: expected to match exactly one schema (oneOf), matched 0${why}`);
+    } else if (matches > 1) {
+      errors.push(`${at}: matched ${matches} (expected exactly 1) schema (oneOf)`);
     }
-    return;
   }
 
   if (schema.type !== undefined) {

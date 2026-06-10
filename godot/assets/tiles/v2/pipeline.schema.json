@@ -37,38 +37,24 @@
       "additionalProperties": false
     },
     "animation": {
+      "$comment": "Parent owns the full shape (type/required/properties/additionalProperties); the oneOf branches are ADDITIVE (each only adds a `required`) so they don't contradict the parent. The validator evaluates oneOf and the sibling keywords together. oneOf enforces: an idle (has `for`) XOR a transition (has `from`+`to`).",
       "type": "object",
       "required": ["kind", "status"],
+      "properties": {
+        "kind": { "enum": ["idle", "transition"] },
+        "for": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "frames": { "type": "integer" },
+        "motion": { "type": "string" },
+        "physics": { "type": "string" },
+        "status": { "enum": ["pending", "generated"] },
+        "gif": { "type": "string" }
+      },
+      "additionalProperties": false,
       "oneOf": [
-        {
-          "type": "object",
-          "required": ["for"],
-          "properties": {
-            "kind": { "enum": ["idle", "transition"] },
-            "for": { "type": "string" },
-            "frames": { "type": "integer" },
-            "motion": { "type": "string" },
-            "physics": { "type": "string" },
-            "status": { "enum": ["pending", "generated"] },
-            "gif": { "type": "string" }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": ["from", "to"],
-          "properties": {
-            "kind": { "enum": ["idle", "transition"] },
-            "from": { "type": "string" },
-            "to": { "type": "string" },
-            "frames": { "type": "integer" },
-            "motion": { "type": "string" },
-            "physics": { "type": "string" },
-            "status": { "enum": ["pending", "generated"] },
-            "gif": { "type": "string" }
-          },
-          "additionalProperties": false
-        }
+        { "required": ["for"] },
+        { "required": ["from", "to"] }
       ]
     },
     "settings": {
