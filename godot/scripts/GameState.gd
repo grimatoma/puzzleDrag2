@@ -734,6 +734,9 @@ func keeper_path_for(type: String) -> String:
 ## ported + forward-compatible — this gate answers true for them once those become settlements with
 ## their own built counts (a later task, T22); today only "farm" is reachable.
 func keeper_encounter_ready(type: String) -> bool:
+	# Feature flag: keepers fully disabled → the encounter is never ready (no auto-trigger fires).
+	if not KeeperConfig.is_enabled():
+		return false
 	if not KeeperConfig.has_keeper(type):
 		return false
 	if keeper_resolved(type):
@@ -750,6 +753,10 @@ func keeper_encounter_ready(type: String) -> bool:
 ## "resolved". On success returns {ok:true, type, path, flag, embers?|core_ingots?} with the amount
 ## granted; on failure {ok:false, reason} WITHOUT mutating.
 func give_keeper_reward(type: String, path: String) -> Dictionary:
+	# Feature flag: keepers fully disabled → refuse the grant (defence-in-depth; the UI path is
+	# already gated at Main._open_keeper, so this only trips a programmatic/deeplink caller).
+	if not KeeperConfig.is_enabled():
+		return {"ok": false, "reason": "disabled"}
 	if not KeeperConfig.has_keeper(type):
 		return {"ok": false, "reason": "unknown"}
 	if not KeeperConfig.is_path(path):
