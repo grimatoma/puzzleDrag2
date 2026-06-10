@@ -434,6 +434,19 @@ static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> Style
 
 # ── Expandable ledger chip (shared pattern: InventoryScreen + RecipeWikiScreen) ────────
 
+## Paint an expandable chip's panel border to reflect its state: an EMBER 2 px border when
+## expanded (the "you opened this" accent), the soft 1 px row_box border when collapsed. The
+## single source of the chip border look — make_expandable_chip uses it at build time, and the
+## in-place animated toggle (RecipeWikiScreen) recolours the SAME node as it opens/closes
+## without a rebuild.
+static func style_chip_expanded(chip: PanelContainer, expanded: bool) -> void:
+	var sb := row_box()
+	if expanded:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", sb)
+
 ## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
 ## expanded, soft row_box when collapsed) holding a VBox the caller fills with a summary
 ## row and optionally an inline details section. Tapping the chip calls toggle_fn(entry_key).
@@ -441,12 +454,7 @@ static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> Style
 ## the details still work (Button.MOUSE_FILTER_STOP takes priority in the pick order).
 static func make_expandable_chip(entry_key: String, expanded_key: String, toggle_fn: Callable) -> PanelContainer:
 	var chip := PanelContainer.new()
-	var sb := row_box()
-	if expanded_key == entry_key:
-		sb = sb.duplicate() as StyleBoxFlat
-		sb.border_color = Palette.EMBER
-		sb.set_border_width_all(2)
-	chip.add_theme_stylebox_override("panel", sb)
+	style_chip_expanded(chip, expanded_key == entry_key)
 	chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	chip.gui_input.connect(func(event: InputEvent) -> void:
 		var tap: bool = (event is InputEventMouseButton \
@@ -463,22 +471,73 @@ static func make_expandable_chip(entry_key: String, expanded_key: String, toggle
 	chip.add_child(col)
 	return chip
 
-## Append the details section container to an expanded chip's VBox column, separated from
-## the summary row by a faint hairline. Fades in (UiFx — no-op headless / Reduce Motion).
+## Append the details section to an expanded chip's VBox column, separated from the summary row
+## by a faint hairline, and return the details VBox the caller fills.
+##
+## The section lives inside a make_collapsible() wrapper, so it is height-animatable: the wrapper
+## is stashed on the owning chip (col's parent) under the "_details_wrap" meta, and the screen's
+## in-place expand/collapse toggle drives UiFx.expand_section / collapse_section on it (the
+## "a row unrolls open while the previous one rolls shut" motion). On a plain (re)build that never
+## calls those, the collapsible just sits at its content height — at rest it is indistinguishable
+## from an ordinary container row, so nothing else has to change. The inner spacing matches the
+## chip column's so the rest layout is byte-identical to the pre-collapsible version.
 static func begin_expand_details(col: VBoxContainer) -> VBoxContainer:
+	var wrap := make_collapsible()
+	var inner: VBoxContainer = wrap.get_meta("_inner")
+	inner.add_theme_constant_override("separation", 8)   # match the chip column's row spacing
 	var rule := HSeparator.new()
 	var line := StyleBoxLine.new()
 	line.color = Color(Palette.IRON, 0.5)
 	line.thickness = 1
 	rule.add_theme_stylebox_override("separator", line)
-	col.add_child(rule)
+	inner.add_child(rule)
 	var details := VBoxContainer.new()
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	details.add_theme_constant_override("separation", 6)
-	col.add_child(details)
-	UiFx.content_fade(details)
+	inner.add_child(details)
+	col.add_child(wrap)
+	var chip := col.get_parent()
+	if chip != null:
+		chip.set_meta("_details_wrap", wrap)
 	return details
+
+## A height-animatable "accordion" wrapper for an inline details section. Godot containers
+## always size to their content's minimum, so they can't be tweened shorter than their content
+## — the trick here is a plain clip `Control` (NOT a Container) whose height we OWN: at rest it
+## tracks its single content child's natural height (so it occupies exactly the content's space,
+## like a normal row would), but UiFx.expand_section / collapse_section can tween its height
+## 0↔natural while `clip_contents` reveals/hides the content top-down.
+##
+## Returns the wrapper; its content VBox is `wrapper.get_meta("_inner")` — add your hairline /
+## eyebrow / body / chips / buttons there. The wrapper keeps the inner stretched to its width and
+## pinned to the top, and re-syncs its own min height whenever the content's min size changes —
+## EXCEPT while an animation has pinned the height (the `_anim` meta guard) so the tween wins.
+static func make_collapsible() -> Control:
+	var wrap := Control.new()
+	wrap.clip_contents = true
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner := VBoxContainer.new()
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_theme_constant_override("separation", 6)
+	wrap.add_child(inner)
+	wrap.set_meta("_inner", inner)
+	# Keep `inner` filling the wrapper's width and anchored to the top, and (unless an animation
+	# owns the height) keep the wrapper's own minimum height equal to the content's natural height
+	# so at rest it behaves like an ordinary container row. A plain Control does not lay out its
+	# children, so this sizing is done by hand on every relevant resize.
+	var sync := func() -> void:
+		if not is_instance_valid(wrap) or not is_instance_valid(inner):
+			return
+		var h: float = inner.get_combined_minimum_size().y
+		inner.position = Vector2.ZERO
+		inner.size = Vector2(wrap.size.x, h)
+		if not wrap.has_meta("_anim"):
+			wrap.custom_minimum_size.y = h
+	wrap.resized.connect(sync)
+	inner.minimum_size_changed.connect(sync)
+	return wrap
 
 ## Add a small all-caps eyebrow label (e.g. "RESOURCE · FARM GOODS") to an expanded
 ## details VBox.

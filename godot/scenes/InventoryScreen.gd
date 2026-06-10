@@ -61,6 +61,11 @@ var _action_buttons: Dictionary = {}
 ## another row moves the expansion; the expansion survives refresh() (e.g. after a Sell).
 var _expanded: String = ""
 
+## entry_key → the rendered expandable-chip PanelContainer for the active list view, rebuilt each
+## refresh(). Lets toggle_expand animate the expand/collapse IN PLACE (rebuild only the two affected
+## rows) instead of refreshing the whole list — the same shared motion the crafting screen uses.
+var _cards: Dictionary = {}
+
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the latest inventory.
 var _body: VBoxContainer
@@ -317,6 +322,7 @@ func refresh() -> void:
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
+	_cards.clear()
 
 	if _view == VIEW_GRID:
 		_render_grid()
@@ -554,6 +560,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 	var entry_key: String = "res:" + res
 	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -664,6 +671,7 @@ func _make_tool_row(id: String) -> PanelContainer:
 	var entry_key: String = "tool:" + id
 	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -735,6 +743,7 @@ func _make_item_row(id: String) -> PanelContainer:
 	var entry_key: String = "item:" + id
 	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -778,10 +787,79 @@ func _make_item_row(id: String) -> PanelContainer:
 
 ## Toggle the expansion for `entry_key` ("res:flour" / "tool:bomb" / "item:runes"): tapping
 ## the expanded row collapses it, tapping another moves the expansion there. Public — the
-## headless test drives it directly. Re-renders the body (the chip set is rebuilt anyway).
+## headless test drives it directly.
+##
+## In the LIST view this animates IN PLACE (the same shared motion the crafting screen uses): only
+## the two affected rows change — the newly tapped row is rebuilt expanded and unrolls open while
+## the previously open row rolls shut and drops its details. The GRID view has no expandable rows,
+## so it falls back to a plain refresh().
 func toggle_expand(entry_key: String) -> void:
-	_expanded = "" if _expanded == entry_key else entry_key
-	refresh()
+	if not _built or _view != VIEW_LIST:
+		_expanded = "" if _expanded == entry_key else entry_key
+		refresh()
+		return
+	var old_key: String = _expanded
+	var new_key: String = "" if _expanded == entry_key else entry_key
+	_expanded = new_key
+	# Drop the previously expanded row's Sell/Buy action keys; the new row re-registers its own.
+	for k in _action_buttons.keys():
+		if String(k).begins_with("sell:") or String(k).begins_with("buy:"):
+			_action_buttons.erase(k)
+	if old_key != "" and old_key != new_key:
+		_collapse_row_inplace(old_key)
+	if new_key != "":
+		_expand_row_inplace(new_key)
+
+## Rebuild `entry_key`'s collapsed row as an EXPANDED one in place (so its summary + details read
+## the live inventory/price state), swap the node at the same list position, then unroll the new
+## details open. Falls back to a full refresh() if the row isn't currently rendered.
+func _expand_row_inplace(entry_key: String) -> void:
+	var old_chip: Variant = _cards.get(entry_key)
+	if old_chip == null or not is_instance_valid(old_chip) or not (old_chip as Node).is_inside_tree():
+		refresh()
+		return
+	var idx: int = (old_chip as Node).get_index()
+	_body.remove_child(old_chip)
+	(old_chip as Node).queue_free()
+	var new_chip := _build_row_for_key(entry_key)
+	if new_chip == null:
+		refresh()
+		return
+	_body.add_child(new_chip)
+	_body.move_child(new_chip, idx)
+	var wrap: Variant = new_chip.get_meta("_details_wrap", null)
+	if wrap != null:
+		UiFx.expand_section(wrap as Control)
+
+## Roll `entry_key`'s expanded row shut: recolour its border to the collapsed look and animate its
+## details section closed, freeing it when the collapse finishes. The summary row stays put.
+func _collapse_row_inplace(entry_key: String) -> void:
+	var chip: Variant = _cards.get(entry_key)
+	if chip == null or not is_instance_valid(chip):
+		return
+	UiKit.style_chip_expanded(chip as PanelContainer, false)
+	var node := chip as Node
+	if not node.has_meta("_details_wrap"):
+		return
+	var wrap: Variant = node.get_meta("_details_wrap")
+	node.remove_meta("_details_wrap")
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var w := wrap as Control
+	UiFx.collapse_section(w, func() -> void:
+		if is_instance_valid(w):
+			w.queue_free())
+
+## Build a fresh ledger row for a namespaced `entry_key`, dispatching to the right row builder by
+## prefix ("res:" / "tool:" / "item:"). Used by the in-place expand to rebuild only the tapped row.
+func _build_row_for_key(entry_key: String) -> PanelContainer:
+	if entry_key.begins_with("res:"):
+		return _make_resource_row(entry_key.substr(4))
+	elif entry_key.begins_with("tool:"):
+		return _make_tool_row(entry_key.substr(5))
+	elif entry_key.begins_with("item:"):
+		return _make_item_row(entry_key.substr(5))
+	return null
 
 ## The currently expanded entry key ("" when none). Headless contract.
 func expanded_key() -> String:
