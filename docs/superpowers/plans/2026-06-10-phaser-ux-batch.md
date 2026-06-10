@@ -296,6 +296,10 @@ git commit -m "UX: audible feedback when a tool is armed or fired"
 
 ### Task 3: Inventory-cap toast
 
+> **AMENDED 2026-06-10 after code review.** The original task (below) wired a toast to `GameScene.collectPath`'s `overCap`, which review proved is dead code: the registry `inventory` mirror is zone-keyed so `inv[res.key]` is always undefined, and the real cap applies to the *produced resource*, not the tile key. The commit was reverted and replaced by a React hook that surfaces the reducer's actual clamp signal: `addCappedResourceMut` (src/state/helpers.ts) sets `seasonStats.capFloaters[key]` once per season per resource at the true clamp moment. New implementation: `src/ui/useCapToasts.tsx` — pure exported `newlyCappedKeys(prev, next)` diff helper (unit-tested in `src/__tests__/useCapToasts.test.ts`) plus a thin `useCapToasts(state)` hook calling `announce("<Label> storage full — extra is wasted", { tone: "warning", icon: "⚠️" })`, wired in `prototype.tsx` beside `useAudio(state)`. No cooldown gate needed — capFloaters resets at CLOSE_SEASON, providing per-season dedupe.
+
+**Original task text (superseded, kept for the record):**
+
 **Files:**
 - Create: `src/game/capToastGate.ts`
 - Modify: `src/GameScene.ts` (`collectPath`, ~line 1789 `overCap` site; class fields ~line 143; imports ~line 20)

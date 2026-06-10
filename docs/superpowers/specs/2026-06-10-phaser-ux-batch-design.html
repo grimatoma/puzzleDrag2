@@ -190,8 +190,10 @@
 
       <section id="item-3">
         <h2>3 · Inventory-cap toast</h2>
-        <p><strong>Trigger site.</strong> <code>collectPath</code> already computes <code>overCap</code> per chain. When true, call the existing <code>announce()</code> bridge (<code>src/a11y.ts</code> — a plain module function, importable from the scene) with a warning-tone toast like <em>"Hay storage full — extra tiles lost"</em>, using the resource label.</p>
-        <p><strong>Spam control.</strong> A per-resource-key cooldown (~10&nbsp;s) stored on the scene so repeated capped chains don't stack toasts. The cooldown check is extracted as a small pure helper so it's unit-testable without booting Phaser, mirroring the <code>producedResource.ts</code> pattern.</p>
+        <div class="box warn"><b>Amended 2026-06-10 (review finding).</b> The originally specced trigger — <code>GameScene.collectPath</code>'s <code>overCap</code> — is provably dead code: the registry's <code>inventory</code> mirror is zone-keyed (so <code>inv[res.key]</code> is always <code>undefined</code>), and the cap actually applies to the <em>produced resource</em>, not the tile key. The scene-side approach was reverted in favor of the reducer's real signal.</div>
+        <p><strong>Trigger.</strong> The reducer already detects the true clamp moment: <code>addCappedResourceMut</code> (<code>src/state/helpers.ts</code>) flags <code>seasonStats.capFloaters[key]</code> once per season per resource when a roll-up credit is clamped at the cap — but no UI consumed that signal. A small React hook, <code>useCapToasts(state)</code> (wired in <code>prototype.tsx</code> beside <code>useAudio</code>), watches <code>capFloaters</code> transitions and calls <code>announce()</code> with a warning-tone toast — <em>"Hay Bundle storage full — extra is wasted"</em> — using the item label from the catalog.</p>
+        <p><strong>Spam control.</strong> Inherited from the reducer: <code>capFloaters</code> dedupes per resource per season (reset at <code>CLOSE_SEASON</code>), so no scene-side cooldown is needed. The transition diff is a pure exported helper (<code>newlyCappedKeys(prev, next)</code>) so it's unit-testable without React.</p>
+        <p><strong>Wording.</strong> Only whole roll-up units above the cap are discarded — coins, XP, upgrades, and fractional <code>resourceProgress</code> are all still earned — so the toast says the <em>extra</em> is wasted, not that the chain was lost.</p>
       </section>
 
       <section id="item-4">
@@ -214,8 +216,8 @@
             <tr><td><code>src/ui/puzzleBoard.tsx</code></td><td>1</td><td><span class="pill info">edit</span> <code>ChainInfo.minChain</code>; invalid-state header text in <code>ChainView</code></td></tr>
             <tr><td><code>src/audio/index.ts</code></td><td>2</td><td><span class="pill info">edit</span> <code>toolArmed</code> / <code>toolFired</code> sound defs</td></tr>
             <tr><td><code>src/audio/useAudio.tsx</code></td><td>2</td><td><span class="pill info">edit</span> <code>toolPending</code> + tool-count transition watcher</td></tr>
-            <tr><td><code>src/GameScene.ts</code></td><td>3, 4, 5</td><td><span class="pill info">edit</span> cap toast in <code>collectPath</code>; vignette tween; badge x-clamp</td></tr>
-            <tr><td><code>src/game/capToast.ts</code> (or co-located helper)</td><td>3</td><td><span class="pill ok">new</span> pure cooldown helper</td></tr>
+            <tr><td><code>src/GameScene.ts</code></td><td>4, 5</td><td><span class="pill info">edit</span> vignette tween; badge x-clamp</td></tr>
+            <tr><td><code>src/ui/useCapToasts.tsx</code> + <code>prototype.tsx</code></td><td>3</td><td><span class="pill ok">new</span> capFloaters→announce hook (+ pure <code>newlyCappedKeys</code> helper)</td></tr>
             <tr><td><code>src/visualTesting/matrix.js</code></td><td>1</td><td><span class="pill info">edit</span> short-invalid-chain scenario (e.g. <code>holdChain length 2</code>)</td></tr>
           </tbody>
         </table>
