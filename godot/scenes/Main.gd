@@ -535,6 +535,14 @@ func _install_overlay_dismiss(overlay) -> void:
 	overlay.visibility_changed.connect(func() -> void:
 		if overlay.visible:
 			UiFx.animate_overlay_open(overlay)
+			# Quiet open-swish — the audible half of the overlay transition. Played here
+			# (the one central open path) so every screen/modal sounds the same.
+			if _audio != null:
+				_audio.play("swish")
+		else:
+			# The matching dismiss tick (close button, scrim tap, ESC, tab switch).
+			if _audio != null:
+				_audio.play("tap")
 	)
 	if overlay.visible:
 		UiFx.animate_overlay_open(overlay)
