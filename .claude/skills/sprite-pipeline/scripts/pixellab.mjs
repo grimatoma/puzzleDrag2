@@ -17,13 +17,17 @@
 //                            [--frames 8] [--start <png>] [--end <png>] [--name <name>]
 //   node pixellab.mjs object --id <id> [--preview]                      # raw get_object (debug)
 //
-// The OBJECT flow is the consistency backbone of the sprite pipeline:
+// The OBJECT flow is the KEYFRAME backbone of the sprite pipeline (Stage 2 only):
 //   create-object  -> one review pack (many candidate seeds, ONE call)
 //   select-frames  -> promote the audited winner(s); each becomes its own object
 //   state          -> derive a variant (season/damage/etc.) FROM an object —
 //                     image-conditioned, so size/silhouette/identity carry over
-//   animate        -> v3 motion on-model; with --start/--end it INTERPOLATES
-//                     between two keyframes (real AI inbetweens, not a wipe)
+//
+// ANIMATION IS NOT DONE HERE. The sprite-pipeline animates idles + transitions
+// BY HAND IN ASEPRITE (references/aseprite-execution.md); PixelLab's job ends at
+// the keyframe stills. `animate`/`fetch-anim` below are an out-of-pipeline ESCAPE
+// HATCH (v3 motion / keyframe interpolation) for prototyping in OTHER contexts —
+// do NOT use them to produce shipped pipeline motion.
 //
 // The PixelLab MCP server is a STATELESS JSON-RPC-over-HTTP endpoint (no session
 // handshake). Responses are SSE-framed; there is no structured field payload, so we

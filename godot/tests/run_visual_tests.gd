@@ -138,6 +138,14 @@ func _freeze_tweens(main) -> void:
 			for t in row:
 				if t != null:
 					t.freeze_selection()
+		# Pin the armed-tool frame pulse (board-farm-tool-armed golden): the red rings'
+		# alpha breathes on _armed_phase, advanced per-frame while targeting — stop the
+		# processing and zero the phase so the captured ring intensity is identical
+		# every run. No-op when no tool is armed (processing is already off).
+		if main.board._targeting:
+			main.board.set_process(false)
+			main.board._armed_phase = 0.0
+			main.board.queue_redraw()
 
 func _dismiss_tutorial(main) -> void:
 	if main._tutorial_modal != null:
@@ -173,6 +181,18 @@ func _seed_board_farm_run(main) -> void:
 	# bar the run just armed. These are the same real paths the live game runs on run-start.
 	main.apply_deeplink("board")
 	main._refresh_season_bar()
+
+## board-farm-stocked — the live farm run PLUS a populated inventory, so the idle action
+## panel's chip grid renders real counts (and their cap-fill washes) instead of the
+## all-dimmed empty roster. Mix of roster goods + one non-roster extra (block).
+func _seed_board_farm_stocked(main) -> void:
+	_seed_board_farm_run(main)
+	var game: GameState = main.game
+	game.inventory = {
+		"flour": 5, "jam": 2, "hay_bundle": 14, "eggs": 3,
+		"plank": 7, "soup": 1, "block": 3,
+	}
+	main._refresh_totals()
 
 func _seed_achievements(main) -> void:
 	# Mirrors tools/m10ach_capture.gd — drive a realistic mix of unlocked + mid-progress
@@ -451,6 +471,13 @@ func _post_farm_chain(main) -> void:
 	if Constants.ROWS > 1:
 		board._extend_drag(Vector2i(Constants.COLS - 1, 1))
 
+func _post_farm_tool_armed(main) -> void:
+	# Inspect + ARM the starter bomb through the REAL wired path: use_tool arms it, the
+	# action panel flips to its TOOL ARMED view (red header dot + DISARM footer), the
+	# hotbar slot highlights, and the board frame pulses the red targeting rings
+	# (frozen to phase 0 by _freeze_tweens for determinism).
+	main.use_tool("bomb")
+
 func _post_town_build_picker(main) -> void:
 	# Open the build picker on the FIRST empty lot — exactly what a left click on an empty
 	# plot resolves to (lot index == built_count is the first un-built slot).
@@ -472,6 +499,13 @@ func _scenarios() -> Array:
 		# tiles + the live HUD chain readout. The `post` step drives the drag; _freeze_tweens pins
 		# the overlay/selection animation so the capture is deterministic.
 		{"id": "board-farm-chain", "deeplink": "",           "seed": Callable(self, "_seed_board_farm_run"), "post": Callable(self, "_post_farm_chain"), "post_dismiss_tutorial": true},
+		# The board with a tap-target tool ARMED: the action panel's TOOL ARMED view, the
+		# gold-edged hotbar slot, and the board's red targeting pulse (phase-pinned).
+		{"id": "board-farm-tool-armed", "deeplink": "",      "seed": Callable(self, "_seed_board_farm_run"), "post": Callable(self, "_post_farm_tool_armed"), "post_dismiss_tutorial": true},
+		# The idle action panel with a POPULATED stockpile: counted chips with their
+		# cap-fill washes + the owned/total KINDS header (the empty-board golden only
+		# ever showed dimmed placeholder chips).
+		{"id": "board-farm-stocked", "deeplink": "",         "seed": Callable(self, "_seed_board_farm_stocked"), "post_dismiss_tutorial": true},
 		{"id": "town-map",        "deeplink": "townmap",     "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "inventory",       "deeplink": "inventory",   "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},
 		{"id": "orders",          "deeplink": "town",        "seed": Callable(self, "_seed_none"),         "post_dismiss_tutorial": true},

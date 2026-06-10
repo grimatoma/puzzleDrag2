@@ -151,15 +151,16 @@
   <header class="hero">
     <p class="kicker">Asset Pipeline · Reusable Skill Suite</p>
     <h1>Sprite Pipeline</h1>
-    <p class="sub">Generate and animate a <b>cohesive family</b> of pixel-art game sprites from two durable inputs — gap-filled, quality-gated, and integrated into the Godot v2 tile slot. Cheap critique reviews bracket the two operations that actually cost: generation and animation.</p>
-    <p class="meta">Scope: framework overview · 2026-06-09 · lives in <code>.claude/skills/sprite-pipeline/</code> · docs drift from code — trust <code>SKILL.md</code></p>
+    <p class="sub">Generate and animate a <b>cohesive family</b> of pixel-art game sprites from two durable inputs — gap-filled, quality-gated, and handed to the Godot v2 tile slot by a separate, on-demand step. <b>Keyframes are source-pluggable stills</b> (hand-authored in Aseprite, with PixelLab as an optional accelerator); <b>animation is always hand-built in Aseprite</b>. Cheap critique reviews bracket the two operations that actually cost: keyframe generation and animation.</p>
+    <p class="meta">Scope: framework overview · revised 2026-06-10 · lives in <code>.claude/skills/sprite-pipeline/</code> · docs drift from code — trust <code>SKILL.md</code></p>
     <div class="chips">
       <span class="chip">pixel art</span>
-      <span class="chip">5 stages · 4 gates</span>
-      <span class="chip">PixelLab → Aseprite → Godot</span>
+      <span class="chip">4 stages · 4 gates</span>
+      <span class="chip">Aseprite · optional PixelLab</span>
+      <span class="chip">three-file config</span>
       <span class="chip">idempotent gap-fill</span>
       <span class="chip">intake → proposal</span>
-      <span class="chip">review viewer</span>
+      <span class="chip">live control viewer</span>
     </div>
     <p style="margin:1.1rem 0 0;">
       <a class="viewer-cta" href="pixel-pipeline-viewer/index.html">▸ Open the live review viewer</a>
@@ -172,7 +173,7 @@
     <button class="tab" role="tab" data-tab="overview">Overview &amp; flow</button>
     <button class="tab" role="tab" data-tab="gates">Gates &amp; cost</button>
     <button class="tab" role="tab" data-tab="inputs">The two inputs</button>
-    <button class="tab" role="tab" data-tab="build">Build, loop &amp; status</button>
+    <button class="tab" role="tab" data-tab="build">Run it, loop &amp; status</button>
   </nav>
 
   <main>
@@ -183,7 +184,23 @@
       <section id="summary">
         <h2>What this is</h2>
         <p class="lede">A reusable pipeline for producing a <b>growable family</b> of game sprites/tiles on a locked look. You hand it two durable inputs; it generates only what is <b>missing</b> and animates it, with <b>four cheap critique gates bracketing the two expensive operations</b> so a bad asset is caught on paper — not after you have spent generation credits and frame-by-frame effort.</p>
-        <div class="box tip"><b>TL;DR.</b> Two inputs in (a style spec from reference art + a co-located set manifest), a cohesive animated tile family out. Stage&nbsp;0–5 carry the work; gates G1–G4 keep cost down by rejecting off-style work <em>before</em> the spend. PixelLab generates stills, Aseprite is the only animation executor, Godot consumes the result.</div>
+        <div class="box tip"><b>TL;DR.</b> Two inputs in (a style spec distilled from reference art + a three-file pipeline config), a cohesive animated tile family out. Stages&nbsp;0–4 carry the work; gates G1–G4 keep cost down by rejecting off-style work <em>before</em> the spend. <b>Keyframes</b> are source-pluggable stills (Aseprite by hand and/or PixelLab, competing in one pool); <b>animation is Aseprite only</b>; Godot consumes the result through a separate update step. The pipeline <b>runs fully without PixelLab</b>.</div>
+        <div class="box warn"><b>The big change (read if you knew the old version).</b> Two things were superseded. (1) The old per-set <code>sets/&lt;set&gt;/manifest.json</code> is gone — work is now declared in a <b>three-file pipeline config</b> (<code>pipeline.json</code> + <code>pipeline.history.json</code> + <code>pipeline.schema.json</code>) of hierarchical <code>items[]</code> (a <code>master</code> keyframe + derived <code>children</code> + <code>animations</code>). (2) PixelLab was <em>mandatory</em>; it is now an <b>optional</b> keyframe source, and PixelLab's own <code>animate</code>/v3 is <b>not used for shipped motion</b> — every frame is hand-built in Aseprite.</div>
+      </section>
+
+      <section id="contract">
+        <h2>The consistency contract</h2>
+        <p class="lede">Two requirements, where the first is what makes the second <em>possible</em>:</p>
+        <div class="grid two">
+          <div class="card green"><h3><span class="num">1</span>Keyframes are a real family</h3><p>Each variant is <b>derived from the same anchor image</b>, never re-rolled from scratch. A child (season / damage / growth) keeps the master's size, position, silhouette, and identity, changing only what the variant names.</p></div>
+          <div class="card"><h3><span class="num">2</span>Aseprite tweens between them, by hand</h3><p>Because <code>from</code> and <code>to</code> share a size / silhouette / anchor, a hand-built tween has matching endpoints to work between — so it can be a <b>real staggered, arced motion</b> instead of a fade.</p></div>
+        </div>
+        <p>There are two ways to derive a child (the pipeline is agnostic — see <a href="#routing">Tool routing</a>):</p>
+        <ul>
+          <li><b>Hand (home-grown, default):</b> in Aseprite, <code>import_image</code> the approved <b>master PNG</b> and edit it into the variant (recolor, add frost/snow, wither, damage). The master pixels are literally the starting point, so size/silhouette/anchor are preserved by construction.</li>
+          <li><b>PixelLab (optional accelerator):</b> <code>state</code> on the master's <code>objectId</code> — an image-conditioned AI edit. Same guarantee, AI-driven.</li>
+        </ul>
+        <div class="box"><b>Why earlier runs failed — and why it's now fixable.</b> The winter pumpkin came out a smaller body with the stem flipped — a <b>keyframe</b> defect (the child was generated from scratch, not derived). The birch autumn→winter tween "just went top-down" — an <b>animation</b> defect, because its two endpoints were structurally different trees, so the only safe motion was a uniform fade. Derive the child from the master (shared trunk + canopy envelope) and Aseprite can stage a genuine leaf-clump-by-clump fall that reveals the matching branch skeleton beneath. <b>Derive keyframes from a shared anchor, then animate by hand.</b></div>
       </section>
 
       <section id="problem">
@@ -191,23 +208,23 @@
         <p>The goal is to <b>mass-produce cohesive, professional pixel-art assets</b> — tiles, items, characters — with consistent quality and a loop you can keep adding to. The craft pieces already existed, but they did not compose into a pipeline. Three gaps stood out:</p>
         <div class="grid">
           <div class="card"><h3>No physics direction</h3><p>Aseprite animates well when hand-directed frame by frame, but on its own it does not follow physics — you hand-describe all 16 frames of leaves falling or snow piling. There was no systematized motion-direction layer.</p></div>
-          <div class="card green"><h3>No cohesion anchor</h3><p>Strong static-art and motion skills existed, but nothing forced every asset onto one palette, light direction, and silhouette. A set drifts without a single contract to score each member against.</p></div>
-          <div class="card gold"><h3>No review surface</h3><p>No way to eyeball a whole set at once — gaps included — comment on it, and route those notes back into the work. The backlog was invisible and feedback was hand-typed.</p></div>
+          <div class="card green"><h3>No cohesion anchor</h3><p>Strong static-art and motion skills existed, but nothing forced every asset onto one palette, light direction, and silhouette — and nothing forced a variant to <em>derive</em> from its sibling rather than re-roll. A set drifts without a single contract to score each member against.</p></div>
+          <div class="card gold"><h3>No live review surface</h3><p>No way to eyeball a whole family at once — gaps included — pick / approve a candidate, and route those decisions back into the work. The backlog was invisible and approvals were hand-edited into JSON.</p></div>
         </div>
-        <p>The fix is a pipeline that takes <b>reference assets defining a look</b> plus <b>a co-located set manifest declaring a cohesive, growable group</b>, generates only what is missing, brackets the expensive steps with cheap critique gates, and exposes a review viewer where you eyeball every set (gaps included) and copy comments back to seed the next pass.</p>
+        <p>The fix is a pipeline that takes <b>reference assets defining a look</b> plus <b>a three-file config declaring a cohesive, growable group</b>, generates only what is missing, brackets the expensive steps with cheap critique gates, and exposes a <b>live control viewer</b> where you eyeball every set (gaps included) and select / approve / comment — and those decisions are written straight back into the config.</p>
       </section>
 
       <section id="stages">
         <h2>The four stages</h2>
-        <p>References distil into a style spec once (Stage&nbsp;0). From there each run plans the set against what is already on disk (Stage&nbsp;1), generates the missing base stills (Stage&nbsp;2), storyboards the physics of each motion (Stage&nbsp;3), and animates those storyboards (Stage&nbsp;4). <b>The pixel pipeline ends at the produced frames + preview GIF.</b> Packing those frames into the Godot engine is a <b>separate, on-demand step</b> — <code>npm run godot:update-tiles</code> — run by hand, <b>never as part of the pipeline run or the <span class="mono">npm</span> build</b>.</p>
+        <p>References distil into a style spec once (Stage&nbsp;0). From there each run plans the set against what is already on disk (Stage&nbsp;1), generates the missing keyframe stills (Stage&nbsp;2), storyboards the physics of each motion (Stage&nbsp;3), and animates those storyboards in Aseprite (Stage&nbsp;4). <b>The pixel pipeline ends at the produced frames + preview GIF.</b> Packing those frames into the Godot engine is a <b>separate, on-demand step</b> — <code>npm run godot:update-tiles</code> — run by hand, <b>never as part of the pipeline run or the <span class="mono">npm</span> build</b>.</p>
         <table>
           <thead><tr><th class="n">#</th><th>Stage</th><th>What happens</th><th>Tool</th></tr></thead>
           <tbody>
-            <tr><td class="n">0</td><td><b>Extract style spec</b></td><td>Read references; pull canvas + palette ramps + hue-shift; transcribe light / outline / perspective / fps into <code>_style-spec.json</code>.</td><td>Aseprite <span class="mono">analyze_reference</span> / <span class="mono">get_palette</span></td></tr>
-            <tr><td class="n">1</td><td><b>Plan the set</b></td><td>Diff the manifest's <code>keyframes</code>/<code>idles</code>/<code>transitions</code> against files on disk; <b>only the gaps proceed</b>. Gather sibling priors.</td><td>— (read <code>manifest.json</code>)</td></tr>
-            <tr><td class="n">2</td><td><b>Generate keyframe stills</b> <span class="pill spend">spend</span></td><td>For each missing keyframe, generate the base still; priors = sibling set assets for continuity.</td><td><b>PixelLab</b> or hand</td></tr>
-            <tr><td class="n">3</td><td><b>Physics storyboard</b></td><td>For each idle/transition, fill the storyboard template: frame count, fps, per-frame forces + pixel-level change.</td><td>pixel-art-animation skill</td></tr>
-            <tr><td class="n">4</td><td><b>Animate</b> <span class="pill spend">spend</span></td><td>Execute the storyboard into per-frame PNGs + a preview GIF. <b>The pipeline ends here.</b></td><td><b>Aseprite only</b></td></tr>
+            <tr><td class="n">0</td><td><b>Extract style spec</b></td><td>Read references; pull canvas + palette ramps + hue-shift; transcribe light / outline / perspective / fps into <code>_style-spec.json</code>. (One-time.)</td><td>Aseprite <span class="mono">analyze_reference</span> / <span class="mono">get_palette</span></td></tr>
+            <tr><td class="n">1</td><td><b>Plan the set</b></td><td>Diff <code>pipeline.json</code>'s items (master / children / animations) <b>by shape</b> against themselves + files on disk; <b>only the gaps proceed</b>. Gather sibling priors. (<code>build_viewer.mjs --plan</code> prints the action list.)</td><td>— (read <code>pipeline.json</code>)</td></tr>
+            <tr><td class="n">2</td><td><b>Generate keyframes</b> <span class="pill spend">spend</span></td><td>Build a candidate <b>pool</b> per keyframe from either/both sources, then G2 picks the best. <b>Hand:</b> author/edit in Aseprite. <b>PixelLab (optional):</b> review pack → <code>select-frames</code>; child via <code>state</code>.</td><td><b>Aseprite</b> and/or <b>PixelLab</b></td></tr>
+            <tr><td class="n">3</td><td><b>Storyboard</b></td><td>For each idle/transition, fill the storyboard template <b>against the approved keyframe(s)</b>: frame count, fps, per-frame force + easing + the concrete pixel-level change.</td><td>pixel-art-animation skill</td></tr>
+            <tr><td class="n">4</td><td><b>Animate</b> <span class="pill spend">spend</span></td><td>Author every frame in Aseprite per the storyboard — additive-overlay / flexing-base recipe, the two real keyframes locked as transition endpoints. Export frames + GIF. <b>The pipeline ends here.</b></td><td><b>Aseprite only</b></td></tr>
           </tbody>
         </table>
         <p style="margin-top:1rem"><b>Separate step (not a stage): update Godot.</b> Pack frames → v2 <code>.tres</code>, import, and verify in-engine via <code>npm run godot:update-tiles</code> (<code>tools/update-godot-tiles.mjs</code>, a thin wrapper over the <span class="mono">integrate.mjs</span> engine that still lives with the skill). Decoupled from the pipeline and run on demand.</p>
@@ -215,10 +232,10 @@
 
       <section id="flow">
         <h2>Pipeline flow</h2>
-        <p>References (the look) and the manifest (the work) feed Stage&nbsp;0/1. Gates <b>G1–G4</b> sit immediately around the two <span style="color:var(--danger);font-weight:700;">spend</span> steps. A reject loops back to fix that one step; an accept advances. The pipeline ends at the produced frames + GIF; the viewer then surfaces the whole set, and copied comments edit the manifest to drive the next idempotent pass. Updating Godot (dashed, off the main flow) is the <b>separate, on-demand</b> <code>npm run godot:update-tiles</code> step.</p>
+        <p>References (the look) and the config (the work) feed Stage&nbsp;0/1. Gates <b>G1–G4</b> sit immediately around the two <span style="color:var(--danger);font-weight:700;">spend</span> steps. A reject loops back to fix that one step; an accept advances. The pipeline ends at the produced frames + GIF; the live viewer surfaces the whole set, and your select/approve/comment decisions are <b>written straight back into the config</b> to drive the next idempotent pass. Updating Godot (dashed, off the main flow) is the <b>separate, on-demand</b> <code>npm run godot:update-tiles</code> step.</p>
         <div class="diagram">
-          <p class="cap">Four stages, four gates. Red blocks are the expensive operations; the dashed return is the human feedback loop through the viewer. The Godot update is a separate, on-demand step (dashed, off the main flow).</p>
-          <svg viewBox="0 0 980 430" width="100%" role="img" aria-label="Sprite pipeline flowchart: reference assets and a set manifest feed style-spec extraction and set planning; gate 1 critiques the prompt before PixelLab generation; gate 2 critiques the still before storyboarding; gate 3 critiques the storyboard before Aseprite animation; gate 4 montage-reviews the frames before Godot integration; the viewer routes comments back into the manifest.">
+          <p class="cap">Four stages, four gates. Red blocks are the expensive operations; the dashed return is the human feedback loop through the live viewer. The Godot update is a separate, on-demand step (dashed, off the main flow).</p>
+          <svg viewBox="0 0 980 430" width="100%" role="img" aria-label="Sprite pipeline flowchart: reference assets and a pipeline config feed style-spec extraction and set planning; gate 1 critiques the prompt before keyframe generation; gate 2 critiques the still before storyboarding; gate 3 critiques the storyboard before Aseprite animation; gate 4 montage-reviews the frames; the live control viewer writes select and approve decisions back into the config.">
             <defs>
               <marker id="arr" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
               <marker id="arrG" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker>
@@ -230,7 +247,7 @@
               <text x="99" y="63" text-anchor="middle" fill="var(--ink)">Reference assets</text>
               <text x="99" y="80" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">define the LOOK</text>
               <rect x="14" y="150" width="170" height="56" rx="10" fill="color-mix(in srgb,var(--gold) 15%,#fff)" stroke="var(--gold)"/>
-              <text x="99" y="173" text-anchor="middle" fill="var(--ink)">Set manifest (JSON)</text>
+              <text x="99" y="173" text-anchor="middle" fill="var(--ink)">pipeline.json (+2)</text>
               <text x="99" y="190" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">declares the WORK</text>
 
               <!-- stage 0 / 1 -->
@@ -246,8 +263,8 @@
               <text x="464" y="182" text-anchor="middle" fill="var(--ink)" font-size="12">G1</text>
               <!-- GEN -->
               <rect x="540" y="150" width="150" height="56" rx="10" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
-              <text x="615" y="170" text-anchor="middle" fill="var(--ink)">2 · Generate</text>
-              <text x="615" y="186" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">PixelLab stills</text>
+              <text x="615" y="170" text-anchor="middle" fill="var(--ink)">2 · Keyframes</text>
+              <text x="615" y="186" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">hand ± PixelLab</text>
               <text x="615" y="200" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="700">$ EXPENSIVE</text>
               <!-- G2 -->
               <path d="M738 178 l34 -22 l34 22 l-34 22 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
@@ -272,8 +289,8 @@
               <text x="74" y="305" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">separate step · v2 .tres</text>
               <text x="74" y="319" text-anchor="middle" fill="var(--muted)" font-size="9" font-weight="500">godot:update-tiles</text>
               <rect x="14" y="368" width="370" height="48" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
-              <text x="199" y="389" text-anchor="middle" fill="var(--ink)">Review viewer · all sets + gaps as placeholders</text>
-              <text x="199" y="405" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">comment anywhere · copy comments to clipboard</text>
+              <text x="199" y="389" text-anchor="middle" fill="var(--ink)">Live control viewer · every set + gaps</text>
+              <text x="199" y="405" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="500">select · approve · comment · regen</text>
 
               <!-- arrows: inputs -> 0/1 -->
               <line x1="184" y1="68" x2="230" y2="68" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
@@ -292,9 +309,9 @@
               <line x1="146" y1="298" x2="136" y2="298" stroke="var(--ok)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)"/>
               <!-- integrate -> viewer -->
               <line x1="74" y1="326" x2="74" y2="366" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
-              <!-- viewer feedback dashed back to manifest -->
+              <!-- viewer feedback dashed back to config -->
               <path d="M384 392 L470 392 L470 226 L99 226 L99 208" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr)"/>
-              <text x="284" y="218" text-anchor="middle" fill="var(--accent)" font-size="11" font-weight="600">paste comments → edit manifest</text>
+              <text x="284" y="218" text-anchor="middle" fill="var(--accent)" font-size="11" font-weight="600">decisions patch pipeline.json (live)</text>
             </g>
           </svg>
         </div>
@@ -304,7 +321,7 @@
           <span><span class="pill ok">→</span> integrate / verify</span>
           <span style="color:var(--accent);">▦ dashed = human feedback loop</span>
         </p>
-        <p>The same flow is described as an order-of-operations handshake between an orchestrator, a cheap critic, the generator, the Aseprite builder, and the engine. The critic is consulted four times — once on each side of each spend — and never gates a whole set in one pass: each missing asset is scored on its own so per-asset rejects are not lost.</p>
+        <p>The same flow is a handshake between an orchestrator, a cheap critic, the keyframe source, the Aseprite builder, and the engine. The critic is consulted four times — once on each side of each spend — and never gates a whole set in one pass: each missing asset is scored on its own so per-asset rejects are not lost.</p>
       </section>
 
     </div>
@@ -318,13 +335,13 @@
         <div class="box spend"><b>Why this shape.</b> The two expensive operations are bracketed: <b>G1 → generate → G2</b> and <b>G3 → animate → G4</b>. G2 and G3 straddle the generation→animation boundary; G1 and G4 are the outer cheap checks. A miss on a <em>locked</em> spec field (off-palette, wrong light) at G1/G2, or a "slide pretending to be motion" at G3/G4, is a <b>reject</b> — fix and re-run that step only.</div>
         <div class="diagram">
           <p class="cap">One critic, four firing points. The cheap diamonds bracket each red spend box — a reject rewinds one step, never the whole set.</p>
-          <svg viewBox="0 0 980 200" width="100%" role="img" aria-label="Cost model: gate 1 brackets generation on the left and gate 2 on the right; gate 3 brackets animation on the left and gate 4 on the right; each gate is a cheap review, each bracketed box is an expensive operation.">
+          <svg viewBox="0 0 980 200" width="100%" role="img" aria-label="Cost model: gate 1 brackets keyframe generation on the left and gate 2 on the right; gate 3 brackets animation on the left and gate 4 on the right; each gate is a cheap review, each bracketed box is an expensive operation.">
             <defs>
               <marker id="arr2" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
             </defs>
             <g font-size="13" font-weight="600">
               <!-- brackets labels -->
-              <text x="250" y="28" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="700" letter-spacing=".04em">GENERATION — $ EXPENSIVE</text>
+              <text x="250" y="28" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="700" letter-spacing=".04em">KEYFRAMES — $ EXPENSIVE</text>
               <text x="730" y="28" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="700" letter-spacing=".04em">ANIMATION — $$ MOST EXPENSIVE</text>
               <line x1="60" y1="40" x2="440" y2="40" stroke="var(--line)" stroke-width="2"/>
               <line x1="540" y1="40" x2="920" y2="40" stroke="var(--line)" stroke-width="2"/>
@@ -336,8 +353,8 @@
               <text x="160" y="150" text-anchor="middle" fill="var(--accent2)" font-size="11" font-weight="600">cheap · before</text>
               <!-- GEN box -->
               <rect x="230" y="68" width="100" height="48" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)" stroke-width="1.5"/>
-              <text x="280" y="89" text-anchor="middle" fill="var(--ink)" font-size="12">GENERATE</text>
-              <text x="280" y="104" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">PixelLab</text>
+              <text x="280" y="89" text-anchor="middle" fill="var(--ink)" font-size="12">KEYFRAMES</text>
+              <text x="280" y="104" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">hand ± PixelLab</text>
               <!-- G2 -->
               <path d="M360 92 l40 -28 l40 28 l-40 28 z" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
               <text x="400" y="90" text-anchor="middle" fill="var(--ink)">G2</text>
@@ -387,13 +404,25 @@
         <table id="gate-status-table">
           <thead><tr><th class="n">Gate</th><th>Fires</th><th>Critiques</th><th>Guards</th><th>Rubric</th></tr></thead>
           <tbody>
-            <tr data-status="before"><td class="n">G1</td><td>before generate</td><td>the <b>prompt</b> + manifest entry vs the style spec (subject, framing, palette intent); priors chosen</td><td>keyframe generation (credits/time)</td><td>pixel-art-craft</td></tr>
-            <tr data-status="after"><td class="n">G2</td><td>after generate,<br>before animate</td><td>the <b>still</b> vs the style spec — palette adherence, light dir, outline, silhouette</td><td><b>animation</b> (the big spend)</td><td>pixel-art-craft</td></tr>
+            <tr data-status="before"><td class="n">G1</td><td>before generate</td><td>the <b>prompt</b> + <code>pipeline.json</code> entry vs the style spec (subject, framing, palette intent); priors chosen</td><td>keyframe generation (credits/time)</td><td>pixel-art-craft</td></tr>
+            <tr data-status="after"><td class="n">G2</td><td>after generate,<br>before animate</td><td>the <b>still</b> vs the style spec — palette adherence, light dir, outline, silhouette. <b>Both sources compete in one pool here.</b></td><td><b>animation</b> (the big spend)</td><td>pixel-art-craft</td></tr>
             <tr data-status="before"><td class="n">G3</td><td>before animate</td><td>the <b>storyboard</b> — forces named, arcs not slides, staggered, eased, frame budget right, loop closes</td><td>animation <b>build</b> (many ops)</td><td>pixel-art-animation</td></tr>
             <tr data-status="after"><td class="n">G4</td><td>after animate</td><td>a <b>montage</b> of the frames — does the shape re-form? tip lag? phases? loops clean &amp; on-style?</td><td>re-do + integration</td><td>pixel-art-animation</td></tr>
           </tbody>
         </table>
         <div class="box tip"><b>The reject rule.</b> A miss on a <em>locked</em> spec field (off-palette, wrong light) at G1/G2, or a slide pretending to be motion at G3/G4, is a reject — you fix and re-run <em>that step only</em>, never the whole set. The actual gate prompts live in <code>assets/builder-prompt.md</code> (the per-asset build instruction) and <code>assets/critique-prompt.md</code> (the scoring rubric).</div>
+      </section>
+
+      <section id="control-flow">
+        <h2>Cost-gated control flow</h2>
+        <p>Spend is gated <b>before every major cost event</b> — the master candidate pack, each derived-child batch, and the animate stage — so a bad asset never burns the next batch of credits. The loop per keyframe:</p>
+        <ol>
+          <li><b>Generate candidates into a pool.</b> A keyframe accumulates up to <code>settings.candidates</code> (<code>1 | 2 | 4</code>) candidates, each tagged <code>source: hand | pixellab</code>. <b>PixelLab master:</b> one <code>create-object</code> call returns a whole review pack (seed count scales with canvas — 64 at ≤42px, 16 at ≤85px, 4 at ≤170px), <code>--style</code>-conditioned on the family's priors. <b>PixelLab child:</b> separate <code>state</code> calls on the approved master's <code>objectId</code>. <b>Hand:</b> author/edit in Aseprite and drop in the PNG.</li>
+          <li><b>LLM self-audit scores the whole group in ONE call.</b> Montage the candidates into a single sheet (<code>scripts/montage.py</code>), Read it once, and return a per-candidate verdict (the <code>llm: pass | fail</code> field) — not one Read per seed. For a PixelLab pack, promote only the audited pick(s) with <code>select-frames</code>; the unpromoted seeds die with the pack. Regenerate <b>only the failed subset</b>.</li>
+          <li><b>Approval gate.</b> When <code>humanApproval</code> is on (and <code>autonomous</code> off), pause for sign-off in the pixelGen viewer — the human picks a candidate and the control server writes <code>selected</code> + <code>selectedPath</code> to <code>pipeline.json</code> and the candidate's <code>status</code> to <code>pipeline.history.json</code>. When <code>autonomous</code> is on, the LLM verdict decides and you record it with <code>pipeline-patch.mjs</code> (never hand-edit the JSON — a dropped comma silently breaks the run).</li>
+          <li><b>Proceed</b> to the next gated event (derive the children, then animate the idles/transitions). Each gated event is its own batch with its own audit + approval, so the next spend only happens against assets that already passed.</li>
+        </ol>
+        <div class="box"><b>Mode lives in the config, not an env var.</b> To run a session full-auto without committing a settings change, flip it with <code>pipeline-patch.mjs set-mode autonomous</code> and <b>restore <code>set-mode gated</code> before you commit</b> (the committed default keeps the human gate on so the next run isn't silently un-gated). The mode lives in <code>pipeline.json</code> so the viewer and the headless run always agree on it.</div>
       </section>
 
       <section id="builder-loop">
@@ -404,18 +433,19 @@
           <li><b>Critique</b> scores that output against the relevant rubric (the gate above) and returns <b>accept</b> or <b>reject + reasons</b>.</li>
           <li>On reject, re-run the builder with the critique's notes; on accept, advance.</li>
         </ol>
-        <div class="box"><b>Batching a set = fan out one builder→critique pair per gap asset.</b> Because each asset is independent (its only shared context is the style spec + priors, both on disk), the gaps can be worked in parallel — one sub-agent pair per missing keyframe/idle/transition — then reconciled. Run the gates <em>per asset</em>; don't batch a whole set through one gate and lose per-asset rejects.</div>
+        <div class="box"><b>Batching a set = fan out one builder→critique pair per gap asset.</b> Because each asset is independent (its only shared context is the style spec + priors, both on disk), the gaps can be worked in parallel — one sub-agent pair per missing keyframe/idle/transition — then reconciled. The <b>additive-overlay</b> animation technique makes every Aseprite call stateless (each frame addressed by explicit <code>frame_number</code> + <code>layer_name</code>, no selection ops), and each builder owns its own <code>_work/&lt;id&gt;.aseprite</code> — so parallel animators never collide. Concurrency cap ~10–16 agents. <b>Parallel builders must NOT each <code>git commit</code></b> — they write files and hand back; the orchestrator commits once after reconciling.</div>
       </section>
 
       <section id="routing">
         <h2>Tool routing — what executes what</h2>
-        <p>The hard rule: <b>Aseprite is the only animation executor.</b> Pillow is review glue and nothing else; it never makes art.</p>
+        <p>The hard rules: <b>Stage 2 keyframes can come from hand-authored Aseprite and/or optional PixelLab</b>; <b>Stage 4 animation is Aseprite only</b>. Pillow is review glue and nothing else; it never makes art.</p>
         <div class="grid two">
-          <div class="card"><h3>Base stills → PixelLab</h3><p>Async AI generation (create → poll <code>get_*</code> → download; check credits first; do the object review→select step), <em>or</em> a hand-drawn/edited still. Never Pillow.</p></div>
-          <div class="card green"><h3>All animation → Aseprite</h3><p>Via the <code>mcp__plugin_pixel-plugin_aseprite__*</code> tools, following the frame-assembly recipe. The <b>only</b> animation executor — no procedural Pillow frame generation, ever.</p></div>
-          <div class="card gold"><h3>Pillow → review glue only</h3><p><code>scripts/montage.py</code> upscales a still and lays frames into a montage for the G2/G4 eyeball checks. That is its entire sanctioned role.</p></div>
-          <div class="card"><h3>Godot → assemble &amp; verify</h3><p><code>scripts/assemble_tres.gd</code> packs frame PNGs into the v2 <code>SpriteFrames</code> the engine loads as the idle loop.</p></div>
+          <div class="card green"><h3>Keyframes → hand (default)</h3><p>Author/edit in Aseprite — draw a master with the primitives + conformance helpers (<code>quantize_palette</code>, <code>apply_shading</code>, <code>apply_outline</code>), or <code>import_image</code> a sibling/approved master PNG and edit it. No credits. Record <code>--source hand</code>.</p></div>
+          <div class="card"><h3>Keyframes → PixelLab (optional)</h3><p>Async object flow via <code>scripts/pixellab.mjs</code>: <code>create-object</code> review pack → <code>select-frames</code> (masters); <code>state --object &lt;id&gt;</code> (children). Check <code>balance</code> first. <b>Never</b> a from-scratch text generation of a child.</p></div>
+          <div class="card green"><h3>Animation → Aseprite only</h3><p>Every idle and transition authored frame-by-frame via <code>mcp__plugin_pixel-plugin_aseprite__*</code>, following the additive-overlay / two-keyframe erosion recipe. <b>No PixelLab v3, no procedural Pillow frames, ever.</b></p></div>
+          <div class="card gold"><h3>Pillow → review glue only</h3><p><code>scripts/montage.py</code> (G2/G4 review sheets) and <code>scripts/gif.py</code> (assemble the preview GIF from exported frames). Pillow never generates art or motion.</p></div>
         </div>
+        <div class="box warn"><b>Pre-flight: prefer the CLI; load schemas first.</b> Prefer <code>scripts/pixellab.mjs</code> over raw MCP calls — it wraps the whole async create → poll → download loop and keeps base64 frames out of the LLM (hand-emitted base64 corrupts). The Aseprite + PixelLab MCP tools are usually <b>deferred</b>; bulk-load with <code>ToolSearch "aseprite"</code> / <code>ToolSearch "pixellab"</code> or calls fail with <code>InputValidationError</code>.</div>
       </section>
 
     </div>
@@ -425,16 +455,17 @@
 
       <section id="inputs-intro">
         <h2>The two inputs</h2>
-        <p class="lede">You hand the pipeline two durable inputs. One fixes the <b>look</b> (reference assets → a style spec); the other declares the <b>work</b> (a co-located, idempotent set manifest). Swap the inputs and the same pipeline produces a different look / set.</p>
+        <p class="lede">You hand the pipeline two durable inputs. One fixes the <b>look</b> (reference assets → a style spec); the other declares the <b>work</b> (a three-file pipeline config). Swap the inputs and the same pipeline produces a different look / set.</p>
         <div class="grid two">
-          <div class="card green"><h3>1 · Reference assets → a style spec</h3><p>A small set of hero exemplars + a locked palette + an art-direction note, distilled <b>once</b> into <code>&lt;assets&gt;/_style-spec.json</code> (canvas, ramps, light, outline, project FPS). This is the <b>cohesion anchor</b>: every still and every animation is scored against it. For an existing game, the shipped tiles <em>are</em> the references.</p></div>
-          <div class="card"><h3>2 · A co-located set manifest</h3><p>One <code>manifest.json</code> per set, living beside its output, declaring the group's <code>keyframes</code> + per-keyframe <code>idles</code> + <code>transitions</code>. It is <b>idempotent</b>: re-running diffs declared ids against files on disk and builds only the gaps, feeding existing siblings in as <b>priors</b> so new members stay continuous.</p></div>
+          <div class="card green"><h3>1 · Reference assets → a style spec</h3><p>A small set of hero exemplars + a locked palette + an art-direction note, distilled <b>once</b> into <code>&lt;assets&gt;/_style-spec.json</code> (canvas, ramps, light, outline, FPS). This is the <b>cohesion anchor</b>: every still and every animation is scored against it. For an existing game, the shipped tiles <em>are</em> the references.</p></div>
+          <div class="card"><h3>2 · A three-file pipeline config</h3><p><code>pipeline.json</code> (the spec + state — global <code>settings</code> + hierarchical <code>items[]</code>), <code>pipeline.history.json</code> (the candidate/attempt-log sidecar), and <code>pipeline.schema.json</code> (the formal JSON Schema both data files are validated against). <b>Idempotent</b>: re-running diffs the spec against itself + disk and builds only the gaps.</p></div>
         </div>
       </section>
 
       <section id="style-spec">
         <h2>Input 1 — the style spec</h2>
-        <p>The look contract. Extracted at Stage&nbsp;0 with Aseprite's <code>analyze_reference</code> / <code>get_palette</code> / <code>analyze_palette_harmonies</code>, then transcribed into a JSON the whole pipeline reads. It is the single thing every gate scores against. Two values are <b>project-wide</b> and define how the whole family animates: <code>animation.fps</code> and <code>animation.framesDefault</code>.</p>
+        <p>The look contract. Extracted at Stage&nbsp;0 with Aseprite's <code>analyze_reference</code> / <code>get_palette</code> / <code>analyze_palette_harmonies</code>, then transcribed into a JSON the whole pipeline reads. It is the single thing every gate scores against.</p>
+        <div class="box"><b>Settings supersede the spec.</b> The style spec's <code>canvas</code> is the game's <em>native</em> size (90×90); the actual <b>tile generation size (32px) and FPS live in <code>settings</code> in <code>pipeline.json</code></b>, which override the style spec's <code>canvas</code> / <code>animation.fps</code> as the pipeline defaults. So the style spec defines the <em>look</em> ramps/light/outline; <code>settings</code> defines the <em>output dimensions</em>.</div>
         <details>
           <summary>Worked example — <code>_style-spec.json</code> (canvas · palette ramps · light · outline · animation)</summary>
           <pre><code>{
@@ -461,90 +492,106 @@
       </section>
 
       <section id="manifest">
-        <h2>Input 2 — the set manifest</h2>
-        <p>A <b>set</b> is a cohesive, growable group of sprites — every season of one tree, all the fish, every variant of one crop. The manifest lives <b>beside the output it describes</b> at <code>&lt;assets&gt;/sets/&lt;set&gt;/manifest.json</code> and is the <b>durable source of truth</b> for that group.</p>
+        <h2>Input 2 — the three-file pipeline config</h2>
+        <p>The work is declared by <b>three files that live side-by-side</b> in <code>godot/assets/tiles/v2/</code>. They split the old single manifest into three concerns; all three are read, written, and validated through one shared seam, <code>scripts/manifest.mjs</code>, and <b>every script refuses to proceed on data that fails the schema</b>.</p>
+        <table>
+          <thead><tr><th>File</th><th>Owns</th><th>Root shape</th></tr></thead>
+          <tbody>
+            <tr><td><code>pipeline.json</code></td><td>the <b>spec + current state</b> — what to build and what's been chosen. The file humans/agents edit.</td><td><code>{ settings, items[] }</code></td></tr>
+            <tr><td><code>pipeline.history.json</code></td><td>the <b>candidate/attempt log</b> sidecar — every seed ever tried (incl. failures), the full audit trail. <b>Optional</b> (absent → read as <code>{}</code>, degraded viewer mode).</td><td><code>{ "&lt;itemId&gt;": { "&lt;keyframeId&gt;": [candidate…] } }</code></td></tr>
+            <tr><td><code>pipeline.schema.json</code></td><td>the <b>formal definition</b> — a JSON Schema (draft 2020-12) for both data files. The machine-readable source of truth.</td><td><code>{ $defs: { pipelineDoc, historyDoc, … } }</code></td></tr>
+          </tbody>
+        </table>
 
-        <h3>Idempotent gap-fill</h3>
-        <p>On every run the pipeline reads the declared <code>keyframes</code>/<code>idles</code>/<code>transitions</code>, diffs them against files present under the set directory, <b>generates only the missing artifacts</b>, and feeds the existing siblings in as <b>priors</b> so a new member inherits the set's silhouette, palette, and detail density. Re-running is therefore cheap and non-destructive — a <b>gap-fill</b>, not a rebuild. To deliberately regenerate one asset, delete its files and re-run.</p>
+        <h3>The hierarchy is the derivation graph</h3>
+        <p>Each <code>items[]</code> entry bundles <b>one <code>master</code></b> keyframe, its <b><code>children</code></b> (variants derived from the approved master), and the <b><code>animations</code></b> over them. There is <b>no <code>master:true</code> flag and no <code>derivesFrom</code> pointer</b> — a child derives from the item's master purely by position. A child is only eligible to generate once its master is approved (<code>selected !== null</code>) and, for the PixelLab path, its <code>objectId</code> is recorded.</p>
+
+        <h3>Idempotent, structural gap-fill</h3>
+        <p>On each run the pipeline diffs <code>pipeline.json</code> against itself <b>by shape</b> (with candidate counts merged in from history) and against files on disk, then acts: an unapproved <code>master</code> below its candidate target → <b>generate</b> seeds; a <code>child</code> with no candidates whose master is approved → <b>generate</b> it from the master; an <code>animation</code> whose keyframes are approved and whose <code>status</code> is <code>pending</code> → <b>animate</b> it; any <code>failed</code> candidate → <b>re-seed just that one</b>. Already-approved keyframes and already-generated animations are skipped, so re-running is a cheap <b>gap-fill</b>, not a rebuild. (<code>build_viewer.mjs --plan</code> prints this action list as JSON.)</p>
 
         <h3>basePrompt &amp; priors — cohesion at two levels</h3>
         <div class="grid two">
-          <div class="card"><h3>basePrompt</h3><p>Optional set-level string <b>prepended</b> to each keyframe's <code>prompt</code> (<code>basePrompt + ", " + keyframe.prompt</code>). Carries the shared description — subject, family, framing, shadow — so per-keyframe prompts only say what makes that variant distinct. Cohesion at the <b>prompt</b> level.</p></div>
-          <div class="card green"><h3>priors</h3><p>Paths to already-generated sibling assets passed as visual context when gap-filling. The new member inherits the family's silhouette and palette rather than drifting. Cohesion at the <b>pixel</b> level.</p></div>
+          <div class="card"><h3>basePrompt</h3><p>Optional item-level string <b>prepended</b> to each keyframe's <code>prompt</code> (<code>basePrompt + ", " + prompt</code>). Carries the shared description — subject, family, framing, shadow — so per-keyframe prompts only say what makes that variant distinct. Cohesion at the <b>prompt</b> level.</p></div>
+          <div class="card green"><h3>priors</h3><p>Relative paths to already-shipped sibling assets, passed as visual context when gap-filling a <b>master</b> (PixelLab <code>--style</code> conditioning, or <code>import_image</code> for the hand path). New members inherit the family's silhouette and palette. Cohesion at the <b>pixel</b> level. (Children don't use priors — they derive from the master.)</p></div>
         </div>
 
-        <h3>Worked example — the birch set</h3>
-        <p>This is the canonical manifest: the <code>birch</code> tree set at <code>godot/assets/tiles/v2/sets/birch/manifest.json</code>. It conforms to a style spec two directories up, uses two already-shipped sibling tiles <b>three</b> directories up as priors (the tiles sit in <code>godot/assets/tiles/</code>, one level above the <code>v2/</code> tree), inherits the project FPS (<code>fps: null</code>), tags each keyframe with <code>"group": "seasons"</code> so the viewer buckets them, and declares four seasonal keyframes plus the idles and seasonal transitions between them.</p>
-        <pre><code>{
-  "set": "birch",
-  "styleSpec": "../../_style-spec.json",
-  "priors": ["../../../tile_tree_oak.png", "../../../tile_tree_fir.png"],
-  "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
-  "fps": null,
-  "framesDefault": 8,
-  "keyframes": [
-    { "id": "tile_tree_birch_spring", "group": "seasons", "generator": "pixellab", "prompt": "fresh green canopy" },
-    { "id": "tile_tree_birch_summer", "group": "seasons", "generator": "pixellab", "prompt": "full deep-green canopy" },
-    { "id": "tile_tree_birch_autumn", "group": "seasons", "generator": "pixellab", "prompt": "gold/amber canopy" },
-    { "id": "tile_tree_birch_winter", "group": "seasons", "generator": "pixellab", "prompt": "bare branches, snow on limbs" }
-  ],
-  "idles": [
-    { "for": "tile_tree_birch_autumn", "frames": 8, "motion": "sway + occasional falling leaf" },
-    { "for": "tile_tree_birch_winter", "frames": 6, "motion": "bare-branch sway + snow glint" }
-  ],
-  "transitions": [
-    { "from": "tile_tree_birch_summer", "to": "tile_tree_birch_autumn", "frames": 16,
-      "physics": "chlorophyll fade->gold; first leaves loosen" },
-    { "from": "tile_tree_birch_autumn", "to": "tile_tree_birch_winter", "frames": 20,
-      "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground" },
-    { "from": "tile_tree_birch_winter", "to": "tile_tree_birch_spring", "frames": 16,
-      "physics": "snow melts top-down (drips); buds->green" }
+        <h3>Worked example — the migrated <code>birch_tree</code> item</h3>
+        <p>The real on-disk pair at <code>godot/assets/tiles/v2/pipeline.json</code> + <code>pipeline.history.json</code>. One item: the <b>autumn</b> keyframe is the <code>master</code> (fuller canopy), <b>winter</b> is its <code>child</code>, and three animations cover both idles plus the autumn→winter transition. Each keyframe carries <code>selected: 0</code> + <code>selectedPath</code>; the matching candidate records (a single <code>approved</code> seed each) live in the sidecar, so gap-fill sees the family as complete.</p>
+        <pre><code>// pipeline.json
+{
+  "settings": {
+    "styleSpec": "_style-spec.json",
+    "canvas": { "width": 32, "height": 32, "safeArea": 2 },
+    "fps": 10, "candidates": 4,
+    "humanApproval": true, "autonomous": false
+  },
+  "items": [
+    {
+      "id": "birch_tree",
+      "basePrompt": "deciduous birch tree tile, white bark, matches reference set, three-quarter top-down, soft drop shadow",
+      "priors": ["../tile_tree_oak.png", "../tile_tree_fir.png"],
+      "master":   { "id": "tile_tree_birch_autumn", "prompt": "gold/amber canopy",
+                    "selected": 0, "selectedPath": "sets/birch/keyframes/tile_tree_birch_autumn.png" },
+      "children": [
+        { "id": "tile_tree_birch_winter", "prompt": "bare branches, snow on limbs",
+          "selected": 0, "selectedPath": "sets/birch/keyframes/tile_tree_birch_winter.png" }
+      ],
+      "animations": [
+        { "kind": "idle", "for": "tile_tree_birch_autumn", "frames": 8, "motion": "sway + occasional falling leaf", "status": "generated", "gif": "sets/birch/previews/tile_tree_birch_autumn.gif" },
+        { "kind": "idle", "for": "tile_tree_birch_winter", "frames": 6, "motion": "bare-branch sway + snow glint", "status": "generated", "gif": "sets/birch/previews/tile_tree_birch_winter.gif" },
+        { "kind": "transition", "from": "tile_tree_birch_autumn", "to": "tile_tree_birch_winter", "frames": 20,
+          "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground",
+          "status": "generated", "gif": "sets/birch/previews/tile_tree_birch_autumn__to__tile_tree_birch_winter.gif" }
+      ]
+    }
   ]
 }</code></pre>
-        <p>Reading it: only the <b>missing</b> seasonal keyframes are generated on a given run; each new one is conditioned on <code>tile_tree_oak.png</code> / <code>tile_tree_fir.png</code> plus the already-generated birch siblings. The <b>autumn → winter</b> transition is the richest brief — staggered leaf-fall at terminal velocity, snow accumulating bottom-up — and that <code>physics</code> string is exactly the motion plan the Aseprite animator executes.</p>
-        <div class="box warn"><b>Growable.</b> Append a <code>raining</code> keyframe + idle and re-run — only the new entries generate, primed by the existing birch assets. The backlog grows by editing one JSON file. Full field reference: <code>references/manifest-schema.md</code>.</div>
+        <pre><code>// pipeline.history.json — candidate records (the audit trail; never delete failed/rejected)
+{
+  "birch_tree": {
+    "tile_tree_birch_autumn": [ { "idx": 0, "path": "sets/birch/keyframes/tile_tree_birch_autumn.png", "status": "approved", "llm": "pass" } ],
+    "tile_tree_birch_winter": [ { "idx": 0, "path": "sets/birch/keyframes/tile_tree_birch_winter.png", "status": "approved", "llm": "pass" } ]
+  }
+}</code></pre>
+        <div class="box warn"><b>Growable.</b> To add a third season, append a child keyframe (<code>{ id, prompt, selected: null, selectedPath: null }</code> — <b>no <code>candidates</code> key</b>, which would fail the keyframe's <code>additionalProperties:false</code> schema) and leave the sidecar without an entry for it. Gap-fill then generates just that one from the approved master, keeping the family cohesive via <code>priors</code>. Full field reference: <code>references/manifest-schema.md</code>.</div>
 
-        <h3>Per-set directory layout</h3>
-        <p>Everything a set produces is written into the same directory, so the manifest and its outputs travel together:</p>
-        <pre><code>&lt;assets&gt;/sets/&lt;set&gt;/
-  manifest.json              # the durable source of truth
-  keyframes/&lt;id&gt;.png         # one base still per keyframe (PixelLab output)
-  storyboards/&lt;id&gt;.md        # per-asset shot notes / motion plan
-  frames/&lt;id&gt;/NN.png         # exploded animation frames (00.png, 01.png, …)
-  previews/&lt;id&gt;.gif          # a looping preview GIF per animated id
-  &lt;key&gt;.tres                 # built SpriteFrames the engine loads (idle loop)</code></pre>
+        <h3>Paths &amp; on-disk layout</h3>
+        <p>Every path (keyframe <code>selectedPath</code>, candidate <code>path</code>, animation <code>gif</code>, item <code>priors</code>, <code>styleSpec</code>) is <b>relative to <code>pipeline.json</code>'s own dir</b> (<code>godot/assets/tiles/v2/</code>). New generation uses an <code>items/&lt;id&gt;/&lt;key&gt;/NN.png</code> layout; legacy birch art keeps its original <code>sets/&lt;set&gt;/…</code> paths. Both work — <code>path</code> is only a pointer.</p>
+        <pre><code>godot/assets/tiles/v2/
+  pipeline.json              # spec + state (edited by humans/agents)
+  pipeline.history.json      # candidate/attempt-log sidecar
+  pipeline.schema.json       # formal JSON Schema (both files validated against it)
+  _style-spec.json           # the look contract (Input 1)
+  items/&lt;id&gt;/
+    &lt;key&gt;/NN.png             # candidate seeds (NN = candidate idx)
+    storyboards/&lt;animId&gt;.md  # full per-frame motion plan (the config holds only a pointer)
+    frames/&lt;id&gt;/NN.png       # exploded animation frames
+    previews/&lt;id&gt;.gif        # looping preview GIF per animated id
+  pixelGen/                  # the built review viewer (generated, gitignored)</code></pre>
       </section>
 
     </div>
 
-    <!-- ══════════════════ PANEL 4 — BUILD, LOOP & STATUS ══════════════════ -->
-    <div class="panel" id="build" role="tabpanel" aria-label="Build, loop and status">
-
-      <section id="generic-split">
-        <h2>Generic vs per-project</h2>
-        <p class="lede">The <b>process is reusable on any game.</b> Only the style spec, manifests, generated assets, and review comments are per-game. The physics of motion is generic — leaves fall the same way in every game — so it ships in the skills, not the instance.</p>
-        <table>
-          <thead><tr><th>Concern</th><th>Generic (ships in the skills — reusable on any game)</th><th>Per-project instance (this game)</th></tr></thead>
-          <tbody>
-            <tr><td>Process spine</td><td><code>sprite-pipeline</code> SKILL.md, sub-agent prompts, templates</td><td>—</td></tr>
-            <tr><td>Static-art craft</td><td><code>pixel-art-craft</code> skill</td><td>—</td></tr>
-            <tr><td>Motion craft + physics</td><td><code>pixel-art-animation</code> skill (<code>physics-of-motion.md</code>)</td><td>—</td></tr>
-            <tr><td>Look contract</td><td><code>style-spec.template.json</code> (schema + defaults)</td><td><code>_style-spec.json</code> (filled from your refs)</td></tr>
-            <tr><td>Asset declaration</td><td>manifest schema + <code>manifest.template.json</code></td><td><code>sets/&lt;set&gt;/manifest.json</code> (co-located)</td></tr>
-            <tr><td>Direction</td><td><code>storyboard.template.md</code></td><td>filled storyboards per transition</td></tr>
-            <tr><td>Review surface</td><td>viewer template + <code>build_viewer.mjs</code></td><td><code>pixelGen/</code> output + your copied comments</td></tr>
-            <tr><td>Output</td><td>—</td><td><code>godot/assets/tiles/v2/sets/*</code> + <code>.tres</code></td></tr>
-          </tbody>
-        </table>
-        <div class="box"><b>Executor discipline.</b> <b>Aseprite is the only animation executor.</b> <b>Pillow is review-glue only</b> (<code>montage.py</code> upscale + frame montage) — it never produces art. The craft skills and templates are project-agnostic; copy the skill folders into another repo to carry the pipeline forward, then supply that game's references + manifests.</div>
-      </section>
+    <!-- ══════════════════ PANEL 4 — RUN IT, LOOP & STATUS ══════════════════ -->
+    <div class="panel" id="build" role="tabpanel" aria-label="Run it, loop and status">
 
       <section id="starting">
-        <h2>Starting a run — list tiles → proposal → run</h2>
-        <p class="lede">You don't hand-author the manifest. You <b>start a Claude Code session and name the sprites you want</b> ("5 new crop tiles: wheat, corn, pumpkin, …"); the <code>sprite-pipeline</code> skill interviews you, writes the config, and rebuilds the pixelGen viewer as a <b>proposal you review before anything is spent</b>. This is the <b>intake</b> front door — it sits before Stage&nbsp;1.</p>
+        <h2>Starting a run — how to actually kick it off</h2>
+        <p class="lede">You don't hand-author the config. You <b>start a Claude Code session in this repo and name the sprites you want</b> — the <code>sprite-pipeline</code> skill interviews you, writes the config, and shows you a <b>proposal you approve before anything is spent</b>.</p>
+        <div class="box tip"><b>Just say what you want.</b> Open Claude Code in the repo root and type something like:<br>
+          <code style="display:inline-block;margin:.4rem 0;">"Use the sprite-pipeline skill: make me 3 new crop tiles — wheat, corn, and a pumpkin — matching the existing tree tiles, each with a gentle idle sway."</code><br>
+          Naming the skill and listing the tiles is enough. The skill's <b>intake</b> front door takes over from there. (To grow something that already exists — "add a raining birch variant" — it skips intake and goes straight to gap-fill.)</div>
+        <h3>What happens, step by step</h3>
+        <ol>
+          <li><b>Interview.</b> The skill asks only what it can't infer (one family or several? animated or static? which shipped tiles to match as priors? size / FPS / seed count / human-gate-vs-autonomous) — usually one batched question card.</li>
+          <li><b>It writes <code>pipeline.json</code>.</b> A new <code>items[]</code> entry (master + children + draft animations), each keyframe seeded as <code>{ id, prompt, selected: null, selectedPath: null }</code>. First run also creates the global <code>settings</code> block. No <code>candidates</code> are authored — those fill in during the build.</li>
+          <li><b>It starts the live viewer and builds the proposal.</b> The pixelGen control server comes up and every requested asset shows as a <em>pending placeholder card</em> with its prompt/motion note. <b>This is the proposal — no art, no credits yet.</b></li>
+          <li><b>You review &amp; approve.</b> Tweak prompts or comment in the viewer until it reads right, then say <b>"run it"</b>. Only then does the builder→critique loop start spending.</li>
+        </ol>
+        <div class="box spend"><b>No spend until you approve.</b> Intake produces the config + the proposal view only. Generation (PixelLab credits, if you chose that source) and animation (Aseprite ops) start <em>after</em> your "run it". The full interview + approval protocol is in <code>.claude/skills/sprite-pipeline/references/intake.md</code>.</div>
         <div class="diagram">
-          <p class="cap">The intake front door: a few questions become a manifest + an all-pending pixelGen proposal. Generation only starts after you approve — the same cards then fill with art.</p>
-          <svg viewBox="0 0 940 96" width="100%" role="img" aria-label="Intake flow: you list the tiles; Claude interviews you; writes the manifest config; rebuilds the pixelGen viewer as an all-pending proposal; you review and approve; only then does the run spend credits and fill the same cards with art.">
+          <p class="cap">The intake front door: a few questions become a config + an all-pending pixelGen proposal. Generation only starts after you approve — the same cards then fill with art.</p>
+          <svg viewBox="0 0 940 96" width="100%" role="img" aria-label="Intake flow: you list the tiles; Claude interviews you; writes pipeline.json; starts the live viewer as an all-pending proposal; you review and approve; only then does the run spend credits and fill the same cards with art.">
             <defs><marker id="arrI" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker></defs>
             <g font-size="12.5" font-weight="600">
               <rect x="6"   y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
@@ -554,11 +601,11 @@
               <text x="236" y="50" text-anchor="middle" fill="var(--ink)">Interview</text>
               <text x="236" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">set · anim · priors</text>
               <rect x="334" y="30" width="132" height="44" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
-              <text x="400" y="50" text-anchor="middle" fill="var(--ink)">Write manifest</text>
-              <text x="400" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">the config</text>
+              <text x="400" y="50" text-anchor="middle" fill="var(--ink)">Write pipeline.json</text>
+              <text x="400" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">settings + items[]</text>
               <rect x="498" y="30" width="150" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
               <text x="573" y="50" text-anchor="middle" fill="var(--ink)">pixelGen proposal</text>
-              <text x="573" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">all-pending · review</text>
+              <text x="573" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">all-pending · live</text>
               <rect x="680" y="30" width="120" height="44" rx="9" fill="color-mix(in srgb,var(--gold) 14%,#fff)" stroke="var(--gold)"/>
               <text x="740" y="50" text-anchor="middle" fill="var(--ink)">Approve</text>
               <text x="740" y="65" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">"run it"</text>
@@ -573,102 +620,142 @@
             </g>
           </svg>
         </div>
-        <div class="box spend"><b>No spend until you approve.</b> Intake produces the manifest + the pixelGen proposal only — it never generates art. You review the proposal (placeholder cards with each tile's prompt/motion note), tweak prompts or comment, and re-build until it reads right. Only when you say <b>"run it"</b> does the builder→critique loop start spending PixelLab credits + Aseprite ops. The full interview + approval protocol lives in <code>.claude/skills/sprite-pipeline/references/intake.md</code>.</div>
-        <p>Already have a manifest that covers what you want? <b>Skip intake</b> — the run goes straight to Stage&nbsp;1 gap-fill, and the proposal is just rebuilding pixelGen against the existing manifest (e.g. the committed <code>birch</code> set, whose nine assets all show as pending until its first run).</p>
+        <h3>Prerequisites</h3>
+        <ul>
+          <li><b>The skill is in this repo</b> (<code>.claude/skills/sprite-pipeline/</code>) — Claude Code auto-discovers it, so just reference it by name.</li>
+          <li><b>PixelLab only if you want it.</b> The pipeline runs fully on hand-authored Aseprite keyframes. If you do choose the PixelLab source, its MCP server must be connected and you'll spend credits (check with <code>node .claude/skills/sprite-pipeline/scripts/pixellab.mjs balance</code>).</li>
+          <li><b>Aseprite MCP</b> (the <code>pixel-plugin</code> server) for animation, always.</li>
+          <li><b>A Godot 4.6 binary on PATH</b> only for the <em>separate</em> <code>npm run godot:update-tiles</code> step after the pipeline finishes — not for the pipeline itself.</li>
+        </ul>
       </section>
 
       <section id="viewer">
-        <h2>The review viewer loop</h2>
-        <p>A static review viewer (built by <code>scripts/build_viewer.mjs</code> into <code>pixelGen/</code>, served at <code>http://localhost:8100/pixelGen/</code>) renders the set's keyframes, idle GIFs, and transitions on one page so you can eyeball cohesion across the whole family — the human-facing end of the G4 montage check. It is also the <b>intake proposal surface</b> (all-pending before a run; the same cards fill with art after), where the backlog lives and where corrections re-enter the pipeline.</p>
+        <h2>The live review viewer loop</h2>
+        <p>The pixelGen viewer is a <b>live control surface</b>, not a static report. Built by <code>scripts/build_viewer.mjs</code> into <code>pixelGen/</code> and served by the control server <code>scripts/serve_viewer.mjs</code> at <code>http://localhost:8100/pixelGen/</code>, it renders every set's keyframes, candidate seeds, idle GIFs, and transitions on one page — and accepts <b>select / approve / regen / comment</b> decisions that are written <b>straight back into the three-file config</b>.</p>
+        <div class="box tip"><b>Start the control server FIRST, at the top of a run — not at the end.</b> Before any spend, launch <code>node .claude/skills/sprite-pipeline/scripts/serve_viewer.mjs</code> (background) and point at <code>http://localhost:8100/pixelGen/</code>. Its <code>build_viewer.mjs --watch</code> child re-emits <code>data.json</code> whenever <code>pipeline.json</code> changes, so as the run records progress the page <b>updates live</b> and you watch the family fill in. The viewer is a <em>progress monitor</em> — running it only at the end defeats the purpose. (Use the control server, not a plain <code>http.server</code>; that's just a snapshot.)</div>
         <div class="diagram">
-          <p class="cap">The loop closes through the viewer: build → montage (G4) → eyeball → comment → copy → paste into Claude Code → idempotent re-run fills exactly those items.</p>
-          <svg viewBox="0 0 920 130" width="100%" role="img" aria-label="Viewer loop: build the viewer, montage-review, eyeball the set, comment, copy comments to clipboard, paste into Claude Code which edits the manifest, and the idempotent re-run fills only the changed items.">
+          <p class="cap">The loop closes through the live viewer: serve → eyeball → select/approve/comment → the control server patches pipeline.json (+ history) → gap-fill re-run fills exactly those items, and the page re-polls.</p>
+          <svg viewBox="0 0 920 130" width="100%" role="img" aria-label="Viewer loop: start the control server, montage-review and eyeball the set, select or approve or comment, the control server patches pipeline.json and the history sidecar in place, and the idempotent gap-fill re-run fills only the changed items while the page re-polls live.">
             <defs>
               <marker id="arr3" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)"/></marker>
             </defs>
             <g font-size="12.5" font-weight="600">
               <rect x="10"  y="48" width="150" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
-              <text x="85"  y="74" text-anchor="middle" fill="var(--ink)">Build viewer</text>
+              <text x="85"  y="68" text-anchor="middle" fill="var(--ink)">Serve viewer</text>
+              <text x="85"  y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">control server, first</text>
               <rect x="200" y="48" width="170" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
               <text x="285" y="68" text-anchor="middle" fill="var(--ink)">Eyeball set + gaps</text>
-              <text x="285" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">placeholders for pending</text>
-              <rect x="410" y="48" width="160" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
-              <text x="490" y="68" text-anchor="middle" fill="var(--ink)">Comment + copy</text>
-              <text x="490" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">localStorage → clipboard</text>
-              <rect x="610" y="48" width="150" height="42" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
-              <text x="685" y="68" text-anchor="middle" fill="var(--ink)">Paste → Claude</text>
-              <text x="685" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">edits manifest</text>
-              <rect x="800" y="48" width="110" height="42" rx="9" fill="color-mix(in srgb,var(--ok) 13%,#fff)" stroke="var(--ok)"/>
-              <text x="855" y="68" text-anchor="middle" fill="var(--ink)">Re-run</text>
-              <text x="855" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">gap-fill only</text>
+              <text x="285" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">candidates + placeholders</text>
+              <rect x="410" y="48" width="170" height="42" rx="9" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="495" y="68" text-anchor="middle" fill="var(--ink)">Select / approve</text>
+              <text x="495" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">comment · regen</text>
+              <rect x="620" y="48" width="160" height="42" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="700" y="68" text-anchor="middle" fill="var(--ink)">Server patches</text>
+              <text x="700" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">pipeline.json + history</text>
+              <rect x="820" y="48" width="90" height="42" rx="9" fill="color-mix(in srgb,var(--ok) 13%,#fff)" stroke="var(--ok)"/>
+              <text x="865" y="68" text-anchor="middle" fill="var(--ink)">Re-run</text>
+              <text x="865" y="83" text-anchor="middle" fill="var(--muted)" font-size="10" font-weight="500">gap-fill</text>
               <line x1="160" y1="69" x2="198" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
               <line x1="370" y1="69" x2="408" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
-              <line x1="570" y1="69" x2="608" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
-              <line x1="760" y1="69" x2="798" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
-              <path d="M855 90 L855 112 L85 112 L85 92" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr3)"/>
+              <line x1="580" y1="69" x2="618" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <line x1="780" y1="69" x2="818" y2="69" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr3)"/>
+              <path d="M865 90 L865 112 L85 112 L85 92" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr3)"/>
             </g>
           </svg>
         </div>
         <ul>
-          <li><b>Renders every set</b> — keyframe cards (grouped, e.g. the four seasons), idle players, and transition players (looping GIFs), with a status badge per asset.</li>
-          <li><b>Gaps are visible</b> — anything declared in a manifest but not yet on disk shows a <b>placeholder card</b> with its id + intended prompt, so the backlog <em>is</em> the page.</li>
-          <li><b>Comment anywhere</b> — per-asset notes and free page-level comments, stored in <code>localStorage</code>.</li>
-          <li><b>Copy comments</b> — one button concatenates all notes (each tagged with its asset id) into a paste-ready block and copies it to the clipboard. Paste it into <b>Claude Code</b> to drive the next pass; because the manifest is idempotent, it regenerates exactly those items.</li>
+          <li><b>Renders every set</b> — keyframe cards (grouped), candidate seed grids, idle players, and transition players (looping GIFs), with a status badge per asset.</li>
+          <li><b>Gaps are visible</b> — anything declared in <code>pipeline.json</code> but not yet on disk shows a <b>placeholder card</b> with its id + intended prompt, so the backlog <em>is</em> the page (and the same surface is the intake proposal).</li>
+          <li><b>Decisions write through</b> — on POST <code>/api/&lt;action&gt;</code> the control server validates and <b>patches the three-file model in place</b>, splitting each patch by what it owns: <code>select</code>/<code>comment</code> → <code>pipeline.json</code>; <code>regen</code> → <code>pipeline.history.json</code>; <code>approve</code> → both. Writes are atomic (temp + rename).</li>
+          <li><b>Headless equivalent</b> — in an autonomous run the orchestrator uses <code>scripts/pipeline-patch.mjs</code> (<code>record-candidate</code> / <code>approve</code> / <code>reject</code> / <code>animate-done</code> / <code>set-mode</code>) to write the same split without the buttons.</li>
         </ul>
-        <div class="box warn"><b>Serve off the game port.</b> The game's service worker hijacks the Vite preview, so the viewer is served on a non-game port — the <code>pixelGen</code> entry in <code>.claude/launch.json</code> runs <code>http.server&nbsp;--directory&nbsp;godot/assets/tiles/v2</code> on <code>:8100</code>, so the page lives at <b><code>http://localhost:8100/pixelGen/</code></b> (with <code>docs-static</code> on <code>:8099</code>). The built <code>pixelGen/</code> dir is a generated artifact — <code>.gitignore</code> covers it; don't commit it.</div>
+        <div class="box warn"><b>Serve off the game port.</b> The game's service worker hijacks the Vite preview, so the viewer is served on a non-game port. The <code>pixelGen</code> entry in <code>.claude/launch.json</code> runs the <b>control server</b> on <code>:8100</code> (the page lives at <b><code>http://localhost:8100/pixelGen/</code></b>); <code>pixelGen-static</code> is a snapshot-only <code>http.server</code> on the same port, and <code>docs-static</code> serves <code>:8099</code>. The built <code>pixelGen/</code> dir is a generated artifact — <code>.gitignore</code> covers it; don't commit it.</div>
+      </section>
+
+      <section id="generic-split">
+        <h2>Generic vs per-project</h2>
+        <p class="lede">The <b>process is reusable on any game.</b> Only the style spec, config, generated assets, and review decisions are per-game. The physics of motion is generic — leaves fall the same way in every game — so it ships in the skills, not the instance.</p>
+        <table>
+          <thead><tr><th>Concern</th><th>Generic (ships in the skills — reusable on any game)</th><th>Per-project instance (this game)</th></tr></thead>
+          <tbody>
+            <tr><td>Process spine</td><td><code>sprite-pipeline</code> SKILL.md, sub-agent prompts, templates, scripts</td><td>—</td></tr>
+            <tr><td>Static-art craft</td><td><code>pixel-art-craft</code> skill</td><td>—</td></tr>
+            <tr><td>Motion craft + physics</td><td><code>pixel-art-animation</code> skill (<code>physics-of-motion.md</code>)</td><td>—</td></tr>
+            <tr><td>Look contract</td><td><code>style-spec.template.json</code> (schema + defaults)</td><td><code>_style-spec.json</code> (filled from your refs)</td></tr>
+            <tr><td>Work declaration</td><td>the three-file model + schema + templates</td><td><code>pipeline.json</code> / <code>pipeline.history.json</code> / <code>pipeline.schema.json</code></td></tr>
+            <tr><td>Direction</td><td><code>storyboard.template.md</code></td><td>filled storyboards per animation</td></tr>
+            <tr><td>Review surface</td><td>viewer template + <code>build_viewer.mjs</code> + <code>serve_viewer.mjs</code></td><td><code>pixelGen/</code> output + your decisions</td></tr>
+            <tr><td>Output</td><td>—</td><td><code>godot/assets/tiles/v2/items/*</code> + <code>.tres</code></td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>Executor discipline.</b> <b>Stage 2 keyframes</b> = hand-authored Aseprite and/or optional PixelLab, one G2 pool. <b>Stage 4 animation = Aseprite only.</b> <b>Pillow is review-glue only</b> — it never produces art. The craft skills and templates are project-agnostic; copy the skill folders into another repo to carry the pipeline forward, then supply that game's references + config.</div>
       </section>
 
       <section id="where">
         <h2>Where it lives</h2>
         <p>Three sibling skills carry the knowledge; the orchestrator calls the other two:</p>
         <div class="grid">
-          <div class="card"><h3>sprite-pipeline</h3><p>The <b>orchestrator spine</b> — the 5-stage flow, the two inputs, tool routing, the 4-gate cost model, the builder→critique loop, and the viewer loop. <code>.claude/skills/sprite-pipeline/</code></p></div>
+          <div class="card"><h3>sprite-pipeline</h3><p>The <b>orchestrator spine</b> — the 4-stage flow, the two inputs, tool routing, the 4-gate cost model, the cost-gated control flow, the builder→critique loop, and the viewer loop. <code>.claude/skills/sprite-pipeline/</code></p></div>
           <div class="card green"><h3>pixel-art-craft</h3><p>The <b>still-image rubric</b> — palette, hue-shifted ramps, light/shading (no pillow-shading), anti-aliasing, outlines. Powers keyframe art and the <b>G1/G2</b> critiques.</p></div>
-          <div class="card gold"><h3>pixel-art-animation</h3><p>The <b>motion craft</b> — the 12 principles, motion patterns, and the new <code>physics-of-motion.md</code> direction layer. Owns the storyboard and the <b>G3/G4</b> critiques.</p></div>
+          <div class="card gold"><h3>pixel-art-animation</h3><p>The <b>motion craft</b> — the 12 principles, motion patterns, and the <code>physics-of-motion.md</code> direction layer. Owns the storyboard and the <b>G3/G4</b> critiques.</p></div>
         </div>
-        <p>Output lands in the game's tile tree: generated assets in <code>godot/assets/tiles/v2/sets/&lt;set&gt;/</code>, the built loop in the v2 <code>.tres</code> slot that <code>godot/scenes/Tile.gd</code> resolves (animated <code>SpriteFrames</code> → static PNG → procedural color — newest wins). The locked look for this game is committed at <code>godot/assets/tiles/v2/_style-spec.json</code>.</p>
+        <p>Output lands in the game's tile tree: generated assets in <code>godot/assets/tiles/v2/items/&lt;id&gt;/</code>, the built loop in the v2 <code>.tres</code> slot that <code>godot/scenes/Tile.gd</code> resolves (animated <code>SpriteFrames</code> → static PNG → procedural color — newest wins). The locked look for this game is committed at <code>godot/assets/tiles/v2/_style-spec.json</code>.</p>
         <details>
           <summary>Bundled files in the orchestrator skill — when to read each</summary>
           <table>
             <thead><tr><th>File</th><th>When to read</th></tr></thead>
             <tbody>
+              <tr><td><code>references/intake.md</code></td><td><b>Intake</b> — the interview that turns "make me N tiles" into a <code>pipeline.json</code> <code>items[]</code> entry + the pixelGen proposal, before any spend.</td></tr>
               <tr><td><code>references/reference-assets-spec.md</code></td><td>Stage 0 — what references to supply; every <code>_style-spec.json</code> field + how it's extracted.</td></tr>
-              <tr><td><code>references/manifest-schema.md</code></td><td>Stage 1 — set directory layout, idempotent gap-fill, every manifest field.</td></tr>
-              <tr><td><code>references/aseprite-execution.md</code></td><td>Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe, conformance helpers, Windows/path gotchas.</td></tr>
-              <tr><td><code>references/godot-integration.md</code></td><td>The <b>separate, on-demand</b> Godot update step (not a pipeline stage) — set layout, frames→<code>.tres</code> via <code>npm run godot:update-tiles</code>, the engine-path decision, import/verify gotchas.</td></tr>
+              <tr><td><code>references/manifest-schema.md</code></td><td>Stage 1 — the three-file model, the <code>manifest.mjs</code> seam + merged view + degraded mode, structural gap-fill, every field.</td></tr>
+              <tr><td><code>references/aseprite-execution.md</code></td><td>Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe (additive-overlay + two-keyframe erosion), conformance helpers, Windows/path gotchas.</td></tr>
+              <tr><td><code>references/godot-integration.md</code></td><td>The <b>separate, on-demand</b> Godot update step (not a pipeline stage) — frames→<code>.tres</code> via <code>npm run godot:update-tiles</code>, the engine-path decision, import/verify gotchas.</td></tr>
               <tr><td><code>assets/style-spec.template.json</code></td><td>Stage 0 — blank style-spec to copy to <code>_style-spec.json</code>.</td></tr>
-              <tr><td><code>assets/manifest.template.json</code></td><td>Stage 1 — blank per-set manifest to copy.</td></tr>
-              <tr><td><code>assets/storyboard.template.md</code></td><td>Stage 3 / G3 — copy + fill per idle/transition; critique it before the expensive animate.</td></tr>
-              <tr><td><code>assets/builder-prompt.md</code></td><td>Per-asset builder instruction (the build half of the loop).</td></tr>
-              <tr><td><code>assets/critique-prompt.md</code></td><td>The gate scoring rubric (the critique half of the loop).</td></tr>
-              <tr><td><code>tools/update-godot-tiles.mjs</code></td><td>Separate Godot update step (<code>npm run godot:update-tiles</code>) — standalone wrapper over the <code>integrate.mjs</code> engine; <b>not</b> part of the pipeline or the <span class="mono">npm</span> build.</td></tr>
-              <tr><td><code>scripts/assemble_tres.gd</code></td><td>Used by the Godot update step — pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code>.</td></tr>
-              <tr><td><code>scripts/montage.py</code></td><td>G2/G4 — upscale a still or montage frames for review (Pillow only).</td></tr>
-              <tr><td><code>scripts/build_viewer.mjs</code></td><td>Build the review viewer / intake proposal into <code>pixelGen/</code> (default out).</td></tr>
-              <tr><td><code>viewer/</code></td><td>The review-page template (index.html + viewer.css + viewer.js).</td></tr>
+              <tr><td><code>assets/manifest.template.json</code> / <code>.history.template.json</code></td><td>Pointers + illustrative shapes for <code>pipeline.json</code> / <code>pipeline.history.json</code> (a new set's sidecar starts <code>{}</code>).</td></tr>
+              <tr><td><code>assets/storyboard.template.md</code></td><td>Stage 3 / G3 — copy + fill per idle/transition (against the generated still); critique it before the expensive animate.</td></tr>
+              <tr><td><code>assets/builder-prompt.md</code> / <code>critique-prompt.md</code></td><td>The per-asset build instruction + the gate scoring rubric (the two halves of the loop).</td></tr>
+              <tr><td><code>viewer/</code></td><td>The review-page template (index.html + viewer.css + viewer.js) <code>build_viewer.mjs</code> copies into <code>pixelGen/</code>.</td></tr>
+            </tbody>
+          </table>
+        </details>
+        <details>
+          <summary>Scripts quick-reference</summary>
+          <table>
+            <thead><tr><th>Script</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>scripts/manifest.mjs</code></td><td>The shared three-file seam every other script imports — load / validate / write the spec, history sidecar, and schema; <code>loadMerged</code> splices candidates back onto keyframes for the projection/plan code. Validate the on-disk docs, never the merged shape.</td></tr>
+              <tr><td><code>scripts/build_viewer.mjs</code></td><td>Reads + schema-validates both data files, emits <code>pixelGen/data.json</code> + copies the <code>viewer/</code> template. <code>--watch</code> re-emits on change; <code>--plan</code> prints the structural gap-fill action list as JSON.</td></tr>
+              <tr><td><code>scripts/serve_viewer.mjs</code></td><td>The pixelGen <b>control server</b> — static-serves the viewer + asset tree, and on POST <code>/api/&lt;action&gt;</code> patches the three-file model in place. Spawns <code>build_viewer.mjs --watch</code>. Default port 8100.</td></tr>
+              <tr><td><code>scripts/pipeline-patch.mjs</code></td><td>Three-file bookkeeping CLI (the headless counterpart to the viewer's buttons) — <code>record-candidate</code> / <code>approve</code> / <code>reject</code> / <code>animate-done</code> / <code>set-mode</code> / <code>show</code>. Use instead of hand-editing JSON in an autonomous run.</td></tr>
+              <tr><td><code>scripts/pixellab.mjs</code></td><td>The PixelLab <b>keyframe</b> client (Stage 2 only). <code>balance</code>; object flow <code>create-object</code> → <code>select-frames</code> → <code>state</code>. All image payloads are files — base64 never passes through the LLM. (An <code>animate</code>/v3 path exists as a clearly-marked escape hatch, <b>not</b> the pipeline path.)</td></tr>
+              <tr><td><code>scripts/pixels.mjs</code></td><td>PNG opaque-pixel feature map — read a still's non-transparent pixels / diff two stills, so a storyboard can cite real coordinates.</td></tr>
+              <tr><td><code>scripts/montage.py</code> · <code>gif.py</code></td><td>Pillow review glue only — montage stills/frames for G2/G4 (<code>montage.py</code>); assemble a preview GIF from exported frames (<code>gif.py</code>). Never generate art.</td></tr>
+              <tr><td><code>scripts/integrate.mjs</code></td><td>The <b>Godot update engine</b> (a separate step, exposed as <code>tools/update-godot-tiles.mjs</code> / <code>npm run godot:update-tiles</code>) — import → verify sidecars → <code>assemble_tres.gd</code> per idle → <code>verify_sf.gd</code>. <code>--list</code> dry-runs the work list.</td></tr>
+              <tr><td><code>scripts/assemble_tres.gd</code></td><td>Pack <code>frames/&lt;id&gt;/NN.png</code> into a v2 SpriteFrames <code>.tres</code> (one looping <code>idle</code>). Copied into <code>godot/tools/</code> and run there.</td></tr>
             </tbody>
           </table>
         </details>
       </section>
 
       <section id="status">
-        <h2>Status &amp; next step</h2>
+        <h2>Status &amp; current state</h2>
         <p class="legend">
           <span><span class="pill ok">built</span> exists now</span>
-          <span><span class="pill warn">next</span> user-initiated</span>
+          <span><span class="pill warn">gap</span> known open item</span>
         </p>
         <table>
           <thead><tr><th>Piece</th><th>State</th><th>Notes</th></tr></thead>
           <tbody>
             <tr><td>Orchestrator + craft/motion skills</td><td><span class="pill ok">built</span></td><td><code>sprite-pipeline</code>, <code>pixel-art-craft</code>, <code>pixel-art-animation</code> all in place.</td></tr>
-            <tr><td>Templates + references + scripts</td><td><span class="pill ok">built</span></td><td>Style-spec / manifest / storyboard templates, all reference docs, <code>assemble_tres.gd</code> · <code>montage.py</code> · <code>build_viewer.mjs</code>.</td></tr>
-            <tr><td>Builder + critique prompts, viewer</td><td><span class="pill ok">built</span></td><td>The 4-gate prompts and the static review viewer (<code>index.html</code> + css + js) all land.</td></tr>
-            <tr><td>Project config</td><td><span class="pill ok">built</span></td><td>This game's <code>_style-spec.json</code> committed; the <code>pixelGen</code> launch config serves the viewer at <code>http://localhost:8100/pixelGen/</code>.</td></tr>
-            <tr><td>Birch set manifest</td><td><span class="pill ok">built</span></td><td><code>sets/birch/manifest.json</code> authored (4 keyframes, 2 idles, 3 transitions) — its outputs are still all gaps.</td></tr>
-            <tr><td>First real generation run (birch)</td><td><span class="pill warn">next</span></td><td>User-initiated — it spends PixelLab credits, so it is not run automatically.</td></tr>
+            <tr><td>Three-file config model + schema</td><td><span class="pill ok">built</span></td><td><code>pipeline.json</code> / <code>pipeline.history.json</code> / <code>pipeline.schema.json</code> + the <code>manifest.mjs</code> seam; every script validates and refuses on invalid data.</td></tr>
+            <tr><td>Source-pluggable Stage 2</td><td><span class="pill ok">built</span></td><td>Candidates carry <code>source: hand|pixellab</code> and compete in one G2 pool. <b>The pipeline runs fully without PixelLab.</b></td></tr>
+            <tr><td>Aseprite-only Stage 4</td><td><span class="pill ok">built</span></td><td>v3 reverted at user direction — every idle/transition is hand-built in Aseprite (two-keyframe erosion recipe); PixelLab <code>animate</code>/v3 is an out-of-pipeline escape hatch.</td></tr>
+            <tr><td>Live control viewer + bookkeeping CLI</td><td><span class="pill ok">built</span></td><td><code>serve_viewer.mjs</code> patches the config in place; <code>pipeline-patch.mjs</code> is the headless equivalent. Started first, watched live.</td></tr>
+            <tr><td>Two real runs (birch + pumpkin)</td><td><span class="pill ok">built</span></td><td>Both families generated, animated, and committed: <code>birch_tree</code> + <code>pumpkin</code> items with packed/verified <code>.tres</code>.</td></tr>
+            <tr><td>In-game publish (C1)</td><td><span class="pill warn">gap</span></td><td>Built <code>.tres</code> live under <code>items/&lt;id&gt;/</code>, but <code>Tile.gd</code> resolves the <b>flat</b> <code>v2/&lt;key&gt;.tres</code>, and these aren't real game tile keys yet. Neither birch nor pumpkin renders on the live board — needs a publish-copy (or an <code>items/</code> scan) + a gameplay decision to make the tile spawnable.</td></tr>
           </tbody>
         </table>
-        <div class="box tip"><b>Bottom line.</b> The framework is built end-to-end: two inputs, four stages, four gates, the builder→critique loop, the separate <code>npm run godot:update-tiles</code> step, and the review viewer all exist, validated structurally on the birch set. The <b>first real generation run</b> — producing the four birch season keyframes and animating them — is <b>user-initiated</b> because it spends PixelLab credits. Trust <code>.claude/skills/sprite-pipeline/SKILL.md</code> over this overview where they ever diverge.</div>
+        <div class="box tip"><b>Bottom line.</b> The framework is built end-to-end and proven on two real runs: two inputs, four stages, four gates, the cost-gated control flow, the live control viewer, and the separate <code>npm run godot:update-tiles</code> step all exist. The one open item is <b>publishing built loops onto the live board</b> (C1). Trust <code>.claude/skills/sprite-pipeline/SKILL.md</code> over this overview where they ever diverge.</div>
       </section>
 
     </div>

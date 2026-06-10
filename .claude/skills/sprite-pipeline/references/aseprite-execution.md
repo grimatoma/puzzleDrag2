@@ -1,23 +1,19 @@
-# Executing a storyboard in Aseprite (the polish pass + fallback animator)
+# Executing a storyboard in Aseprite (the animation executor)
 
-**Aseprite is the pipeline's polish pass and fallback animator — PixelLab v3 is the default motion
-executor** (idles via text mode on the keyframe's object; transitions via interpolation — see
-SKILL "Tool routing"). You come HERE, via the **pixel-plugin Aseprite MCP** (tools named
-`mcp__plugin_pixel-plugin_aseprite__*`), when:
-- a keyframe has **no `objectId`** (hand-authored), so v3 can't host its motion;
-- a motion brief names something **v3 can't stage** (exact per-pixel choreography, a hard
-  particle path, color cycling);
-- a v3 result needs a **surgical polish** — snap a drifted frame back to the ramps
-  (`quantize_palette`), fix stray pixels (`draw_pixels`), retime holds — without re-staging motion.
-
+**Aseprite is the only thing that animates in this pipeline.** PixelLab (Stage 2) gives you the
+base **keyframe stills** — a master and its `state`-derived children; every moving frame of every
+idle and transition is then built HERE by hand, via the **pixel-plugin Aseprite MCP** (tools named
+`mcp__plugin_pixel-plugin_aseprite__*`). There is **no PixelLab-v3 motion path** in the pipeline.
 Pillow is *only* review glue (`scripts/montage.py`, `scripts/gif.py`) — never a frame generator.
 This doc is the concrete recipe for turning a filled `assets/storyboard.template.md` into the
 per-frame PNGs + preview GIF the Godot step packs.
 
-> Why Aseprite and not procedural Pillow for the fallback: real motion is hand/AI-authored cels
-> (the storyboard's per-frame "pixel-level change" column), not a parametric shear. The
-> `pixel-art-animation` skill explains *why a slide reads as dead*; Aseprite is *where* you draw
-> the genuine re-form.
+> Why Aseprite and not an AI animator: real motion is hand-authored cels (the storyboard's
+> per-frame "pixel-level change" column) staged with intent, not an opaque interpolation. The
+> `pixel-art-animation` skill explains *why a slide/fade reads as dead*; Aseprite is *where* you draw
+> the genuine re-form. **The PixelLab keyframes make this tractable** — because a transition's two
+> endpoints are a consistent pair (child `state`-derived from the master), the body holds and you
+> only hand-animate the staged change between them.
 
 ---
 
@@ -168,6 +164,42 @@ then **cycle them across the frames** on the base layer:
 This is **still additive** — each pose is imported to an explicit `frame_number`; **no selection
 ops** — so it stays parallel-safe and stateless. The tradeoff is the extra base-pose art; reach for
 it only when a static base reads dead.
+
+### Two-keyframe transition — the erosion/reveal recipe (the cohesive-tween technique)
+
+A season/state **transition** animates between **two approved keyframes** (`from` → `to`). The trap
+is the cross-fade: lowering the `from`'s opacity while raising the `to`'s reads as a dead dissolve
+(the "it just went top-down, not cohesive" failure). The fix exploits the fact that the two
+keyframes are a **consistent pair** (the `to` child was PixelLab-`state`-derived from the `from`
+master, so body/silhouette/anchor match): **stack them and stage a hand-controlled reveal.**
+
+Three layers, bottom→top:
+1. **`to` layer** (bottom) — the destination keyframe, imported on **every** in-between frame. This
+   is what gets revealed. (Often you want a **`to`-minus-late-extras** prep cel here — e.g. strip the
+   loose drifting snow flecks out of a winter keyframe so they don't show before the snow phase;
+   make it once by importing the keyframe and erasing those few pixels with `#00000000`.)
+2. **`from` layer** (middle) — the source keyframe, **eroded over the frames** in a *staged order*
+   that encodes the physics. Erode by drawing `#00000000` over the regions that "leave" each frame:
+   - leaves falling → erode the canopy **edge-clumps first, inward + downward** (not a uniform top
+     row — that's the wipe). Each eroded clump reveals the `to` branch/structure beneath.
+   - frost creeping → erode the warm rind **top-down**, revealing the pale frosted `to` body.
+   - melting/burning/withering → erode in the direction the real process moves.
+3. **`fx` layer** (top) — the **particles that give the change agency**: gold leaf flecks that spawn
+   at the current erosion front and **fall on arcs** (x *and* y change), drifting snow that descends
+   and feeds an accumulating mound. Without particles the reveal still reads as a dissolve; the
+   falling matter is what makes it read as *leaves leaving / snow arriving*.
+
+**Lock the endpoints exactly.** Make **frame 0 a single import of the `from` keyframe** and the
+**final frame a single import of the `to` keyframe** (no erosion, no fx) — diff them against the
+keyframes afterward; they must be pixel-identical (that's what makes idle → transition → idle
+seamless). Stagger the phases so they overlap (leaves still finishing as frost begins as snow
+starts) — concurrent phases are what make it one continuous event rather than three sequential
+wipes. Hold the final frame a beat (`set_frame_duration`). It's a one-shot (no loop tag, or a
+`forward` tag that the engine plays once).
+
+This is still all additive/erase + import by explicit `frame_number` — **no selection ops** — so it
+stays stateless. (You *may* use crop/erase freely when making a one-time **prep cel** off a keyframe,
+since that's authoring a source PNG, not a per-frame animation op.)
 
 ---
 

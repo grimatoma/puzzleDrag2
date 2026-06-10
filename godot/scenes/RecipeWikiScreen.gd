@@ -268,8 +268,10 @@ func _on_select_recipe(id: String) -> void:
 
 # ── recipe list row (selectable, with icons) ────────────────────────────────────
 
-## One selectable recipe row: the recipe name (Cinzel) over an icon formula
-## ([flour]×3 [eggs]×1 → [bread]×1). The selected row reads with an ember border.
+## One selectable recipe row: the produced item's icon as the HERO on the left, then the
+## recipe name (Cinzel) with a one-line status under it, and the output qty on the right.
+## The input formula lives ONLY on the selected-recipe detail card (have/need chips) — the
+## rows stay compact and don't duplicate it. The selected row reads with an ember border.
 func _make_recipe_row(id: String) -> PanelContainer:
 	var selected: bool = (id == _selected_recipe)
 	var row := PanelContainer.new()
@@ -288,11 +290,38 @@ func _make_recipe_row(id: String) -> PanelContainer:
 			_on_select_recipe(id)
 	)
 
+	var hbox := HBoxContainer.new()
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 12)
+	row.add_child(hbox)
+
+	# HERO — the produced item's icon, left of the card. Outputs with no exported art
+	# (e.g. honey_roll) fall back to their catalog glyph in the same 44px footprint so
+	# every row's name column lines up.
+	var output: String = RecipeConfig.recipe_output(id)
+	var hero := UiKit.make_icon(output, 44)
+	if hero != null:
+		hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(hero)
+	else:
+		var glyph := Label.new()
+		var g: String = ResourceConfig.glyph(output)
+		glyph.text = g if g != "" else "🍲"
+		UiKit.set_font_size(glyph, Typography.Role.DISPLAY)
+		glyph.add_theme_color_override("font_color", COL_BODY)
+		glyph.custom_minimum_size = Vector2(44, 44)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(glyph)
+
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 5)
-	row.add_child(col)
+	col.add_theme_constant_override("separation", 2)
+	hbox.add_child(col)
 
 	var name_lbl := Label.new()
 	name_lbl.text = RecipeConfig.recipe_name(id)
@@ -304,39 +333,17 @@ func _make_recipe_row(id: String) -> PanelContainer:
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_lbl)
 
-	# Icon formula: input icons + ×n, an arrow, then the output icon + ×qty.
-	var formula := HBoxContainer.new()
-	formula.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	formula.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	formula.add_theme_constant_override("separation", 4)
-	col.add_child(formula)
-
-	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
-	var first := true
-	for key in inputs.keys():
-		if not first:
-			formula.add_child(_plain("+", Typography.size(Typography.Role.SUBHEAD), COL_MUTED))
-		first = false
-		_add_icon_qty(formula, String(key), int(inputs[key]), COL_BODY)
-	formula.add_child(_plain("→", Typography.size(Typography.Role.SUBHEAD), COL_MUTED))
-	_add_icon_qty(formula, RecipeConfig.recipe_output(id), RecipeConfig.recipe_qty(id), COL_VALUE)
-
-	# Status subtitle on the row (React parity: each recipe card shows Ready / Missing inputs).
+	# Status subtitle (React parity: Ready / Missing inputs / Station not built).
 	var st: Dictionary = _craft_status(id)
 	if String(st["text"]) != "":
 		col.add_child(_plain(String(st["text"]), Typography.size(Typography.Role.BODY), st["color"]))
 
-	return row
+	# Output qty, right-aligned (only said once — the detail card spells out the inputs).
+	var qty: int = RecipeConfig.recipe_qty(id)
+	if qty > 1:
+		hbox.add_child(_plain("×%d" % qty, Typography.size(Typography.Role.SUBHEAD), COL_VALUE))
 
-## Append an icon (if art exists) + a "×n" label to `box`. Falls back to the resource
-## name when there's no icon so the formula always reads.
-func _add_icon_qty(box: HBoxContainer, key: String, n: int, qty_col: Color) -> void:
-	var icon := UiKit.make_icon(key, 24)
-	if icon != null:
-		box.add_child(icon)
-	else:
-		box.add_child(_plain(UiKit.pretty_name(key), Typography.size(Typography.Role.LABEL), COL_BODY))
-	box.add_child(_plain("×%d" % n, Typography.size(Typography.Role.SUBHEAD), qty_col))
+	return row
 
 func _plain(text: String, size: int, col: Color) -> Label:
 	var lbl := Label.new()
@@ -362,6 +369,9 @@ func _make_detail_card(id: String) -> PanelContainer:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 8)
 	card.add_child(col)
+	# Selection flow: the detail card fades in on every rebuild (selecting a recipe,
+	# switching station, crafting) — UiFx no-ops headless / under Reduce Motion.
+	UiFx.content_fade(col)
 
 	# Output header: big icon + "Bread ×1" + the station line.
 	var head := HBoxContainer.new()
@@ -373,6 +383,18 @@ func _make_detail_card(id: String) -> PanelContainer:
 	if out_icon != null:
 		out_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		head.add_child(out_icon)
+	else:
+		# Same glyph fallback as the list rows — art-less outputs still get a hero.
+		var head_glyph := Label.new()
+		var hg: String = ResourceConfig.glyph(RecipeConfig.recipe_output(id))
+		head_glyph.text = hg if hg != "" else "🍲"
+		UiKit.set_font_size(head_glyph, Typography.Role.TITLE)
+		head_glyph.add_theme_color_override("font_color", COL_BODY)
+		head_glyph.custom_minimum_size = Vector2(40, 40)
+		head_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		head_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		head.add_child(head_glyph)
 
 	var head_col := VBoxContainer.new()
 	head_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL

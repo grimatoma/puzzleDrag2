@@ -1,16 +1,18 @@
-# Motion brief — tile_veg_pumpkin_winter idle (PixelLab v3)
+# Storyboard — tile_veg_pumpkin_winter (idle, Aseprite)
 
-- **Kind:** idle (loop) · **frames requested:** 6 (v3 stores the reference frame → 7 on disk) · **fps:** 10
-- **Executor:** PixelLab v3 text mode on the approved winter state object (`pixellab.mjs animate
-  --name idle`), so frame 0 == the approved keyframe (pixel-identical, diff-verified).
-- **animation_description:** "subtle idle: sparse tiny snow flecks drift slowly down past the
-  pumpkin, a cold glint shimmers on the snow cap, the pumpkin and snow mound hold rigid"
+- **Kind:** idle (loop) · **frames:** 6 · **fps:** 10 (100 ms) · canvas 32×32 RGB
+- **Technique:** static base + `fx` particle overlay. Everything frozen; the only motion is a few snow flecks drifting down + a cold sparkle on the cap.
+- **Source:** `items/pumpkin/tile_veg_pumpkin_winter/04.png`.
 
-## Phases (what G4 checks)
+## Layers
+1. `base` — import the winter keyframe on **every** frame (1–6). Completely rigid (body, snow cap, mound, withered tendrils all hold).
+2. `fx` — snow flecks + sparkle, drawn per frame with `draw_pixels`.
 
-| Phase | Frames | Motion |
-|-------|--------|--------|
-| drift | 1–6 | 2–3 snow flecks descend at constant (terminal-velocity) pace, staggered out of phase |
-| glint | 1–6 | small highlight shifts on the snow cap; withered tendrils micro-flex |
+## Per-frame fx (base never changes)
+- **2 snow flecks** (white `#eef4fb`, 1px) falling in front of the body, out of phase:
+  - fleck A column ~x10: y = 4,7,10,13,16,2 (wraps) across f1–6.
+  - fleck B column ~x22: y = 14,17,20,2,5,8 across f1–6 (offset so they don't sync).
+  - draw each on `fx` at its (x,y) for that frame only.
+- **Cold sparkle** on the snow cap: a single white pixel that brightens then fades — present at ~(15,9) on f2 and ~(19,8) on f4, absent otherwise.
 
-**Rigid:** pumpkin body, snow cap mass, base mound, shadow. **Constant:** rind + snow palette.
+**Constants:** the entire pumpkin + cap + mound + tendrils, every frame. **Loop:** fleck positions chosen so f6→f1 is seamless (continuous fall, wrap at top). Export `frames/tile_veg_pumpkin_winter/NN.png` (00–05) + GIF; tag `idle` forward 1–6.

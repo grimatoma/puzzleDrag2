@@ -16,6 +16,7 @@ var _last_tier: int = 0                ## settlement tier → detect a tier-up
 var _last_coins: int = 0               ## coin balance → tell sell/buy from build/craft
 var _last_in_mine: bool = false        ## biome flag → detect entering the mine
 var _last_in_harbor: bool = false      ## biome flag → detect entering the harbor (M3j)
+var _last_buildings_count: int = 0     ## built-building count → fire the keeper encounter only on a BUILD (not on craft/sell/gift)
 ## T7/T9/T10 — the cells of the chain currently resolving (Array of {row,col,tile}), stashed by
 ## _on_chain_cells (Board emits chain_cells_resolved BEFORE chain_resolved) so _on_chain_resolved
 ## can run the farm-hazard interactions. Cleared after each resolve.
@@ -347,6 +348,9 @@ func _ready() -> void:
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
 	_last_in_harbor = game.is_in_harbor()
+	# Seed the build-count tracker from the loaded save so the keeper encounter does NOT auto-fire
+	# on the startup _on_town_changed() — it fires only when a later BUILD increases the count.
+	_last_buildings_count = game.buildings.size()
 	_layout()
 	get_viewport().size_changed.connect(_layout)
 	# Reflect any restored save immediately (inventory + coins + turn + tier + biome + boss + rats),
@@ -474,11 +478,14 @@ func _build_hud_node() -> void:
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
+	# The board sits in the FIXED band below the HUD's action panel (the React
+	# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top()
+	# is the band's top edge; the Board sizes its tiles to what remains above the
+	# status/orders strip + bottom nav.
+	board.board_top_px = _hud.board_top()
 	board.layout_for(vp)
 	var bw: Vector2 = board.board_pixel_size()
-	# Board sits below the top-bar + chain-progress bar (≈ 0–110px) and above the
-	# orders + stockpile below it. A touch lower than the old 0.22 to clear the bar.
-	board.position = Vector2((vp.x - bw.x) / 2.0, vp.y * 0.24)
+	board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
 	_hud._layout_hud(vp)
 	_hud._refresh_status()
 	# The chain-progress track width tracks the box width, so re-measure + redraw
@@ -818,6 +825,9 @@ func _open_inventory() -> void:
 		add_child(_inventory_screen)
 		_inventory_screen.setup(game)
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
+		# C2 — an expanded ledger row's Sell/Buy mutates coins + inventory; route through the
+		# shared state-changed path (refresh the HUD pills + save), same as the Town screens.
+		_inventory_screen.connect("state_changed", Callable(self, "_on_town_changed"))
 	_inventory_screen.open()
 	_router.open_modal(ViewRouter.Modal.INVENTORY)
 	_hud.set_nav_current("inventory")
@@ -874,7 +884,14 @@ func _on_townmap_closed() -> void:
 ## B1: the Town view's "▶ Board" overlay button was pressed — return to the board. Routes
 ## through the same path as apply_deeplink("board"): hide the view + reset the router + clear
 ## the active nav tab. (ESC/back returns to the board via _close_top_overlay → close() too.)
+## When the board is IDLE-GATED (no live run / expedition / boss), apply_deeplink("board")
+## would bounce straight back to this town map — the button would read as dead ("the board
+## never launches"). A press then means "play": open the Start Farming picker instead, the
+## one action that actually launches a board.
 func _on_townmap_board_requested() -> void:
+	if game != null and not _board_should_be_active():
+		_open_startfarming()
+		return
 	apply_deeplink("board")
 
 ## review-3: the Town map's "📋 Town Ledger" overlay button was pressed — open the TownScreen
@@ -1159,6 +1176,10 @@ func _on_boons_closed() -> void:
 ## game.give_keeper_reward(); its `resolved` signal routes to _on_keeper_resolved (save + refresh
 ## + a toast). Used by the auto-trigger in _on_town_changed and the `keeper` deeplink.
 func _open_keeper(type: String) -> void:
+	# Feature flag: keepers fully disabled → never present the encounter (covers the `keeper`
+	# deeplink / QA open; the auto-trigger is already gated via keeper_encounter_ready).
+	if not KeeperConfig.is_enabled():
+		return
 	if _keeper_modal == null:
 		_keeper_modal = KeeperModalScript.new()
 		add_child(_keeper_modal)
@@ -2060,6 +2081,10 @@ func _board_should_be_active() -> bool:
 func _on_town_changed() -> void:
 	var was_mine: bool = _board_pool_is_mine()
 	var was_harbor: bool = _board_pool_is_harbor()
+	# Did THIS town action actually put up a building? The keeper encounter must fire only on a
+	# BUILD that crosses its threshold — not on every funnel call (craft / sell / gift / hire all
+	# route here too). Captured BEFORE _last_buildings_count is refreshed below.
+	var built_this_action: bool = game != null and game.buildings.size() > _last_buildings_count
 	# T24 — while a boss is active the board uses the boss refill pool (respawn_boost weighting); a
 	# plain biome re-pool here would drop that bias. Pick the boss pool when fighting, else the biome pool.
 	board.set_tile_pool(_boss_refill_pool() if game.is_boss_active() else game.active_biome_pool())
@@ -2117,6 +2142,12 @@ func _on_town_changed() -> void:
 	_refresh_boss()
 	_refresh_rats()
 	_refresh_runes()
+	# A biome flip (mine/harbor entry or the return to the farm) changes which tools are
+	# RELEVANT to the board, so re-filter the hotbar (Hud._refresh_tools reads active_biome).
+	# Guarded on the flip so a plain town action (build/craft/sell/gift/hire) doesn't rebuild
+	# the rail needlessly — those leave the active board unchanged.
+	if game.is_in_mine() != was_mine or game.is_in_harbor() != was_harbor:
+		_refresh_tools()
 	# M4d: pick a confirm sound for whatever the town action did. Priority: a tier-up
 	# rings the warm bell; entering the mine OR harbor whooshes; a coin-balance change (sell /
 	# buy / order-fill) chimes "coin"; anything else (build / craft / demolish) pops.
@@ -2133,6 +2164,7 @@ func _on_town_changed() -> void:
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
 	_last_in_harbor = game.is_in_harbor()
+	_last_buildings_count = game.buildings.size()
 	SaveManager.save(game)
 	# Achievement unlock(s) from this action (an order fill, a build) → toast + fanfare.
 	_drain_achievement_toasts()
@@ -2142,9 +2174,11 @@ func _on_town_changed() -> void:
 	# beat now. No-op when nothing queued or a beat is already showing.
 	_drain_story_queue()
 	# T31 — a town action may have built the settlement up past its keeper's threshold (a
-	# `build`); fire the keeper encounter now if it's ready + unresolved. No-op when not ready,
-	# already resolved, or a keeper/story modal is already showing.
-	_maybe_trigger_keeper()
+	# `build`); fire the keeper encounter now if it's ready + unresolved. Gated on built_this_action
+	# so it fires ONLY off a build that grew the count — never off a craft / sell / gift / hire that
+	# also routes through this funnel. No-op when not ready, already resolved, or a modal is showing.
+	if built_this_action:
+		_maybe_trigger_keeper()
 
 ## True when the board's CURRENT refill pool is the mine pool — used to detect a
 ## biome flip before we overwrite the pool. Compares against Constants.MINE_POOL.
@@ -2926,6 +2960,7 @@ func use_tool(id: String) -> bool:
 		board.set_targeting(true)
 		_status_label.text = "Tap a tile to use %s" % ToolConfig.tool_label(id)
 		_hud.show_tool_armed_banner(id)
+		_refresh_tools()   # restyle the hotbar so the armed slot highlights
 		return true
 	# T14a — wolf-hazard tools (Rifle / Hound) act on the wolf OVERLAYS, not the grid: skip the
 	# board collapse/refill (apply_external_grid would needlessly re-roll an unchanged board) and
@@ -2996,6 +3031,7 @@ func _disarm_tool() -> void:
 		game.clear_pending_tool()
 	if _hud != null:
 		_hud.hide_tool_armed_banner()
+		_hud._refresh_tools()   # clear the armed slot highlight
 	if _status_label != null:
 		_status_label.text = ""
 
@@ -3047,6 +3083,9 @@ func _enter_mine_visuals() -> void:
 	_last_in_mine = game.is_in_mine()
 	_refresh_biome()
 	_refresh_totals()
+	# The dev-key mine entry is a biome flip too — re-filter the hotbar to the mine board
+	# (matches the real _on_town_changed entry path).
+	_refresh_tools()
 
 ## Push the new active pool onto the board and refresh the building-affected HUD.
 func _apply_pool_change() -> void:

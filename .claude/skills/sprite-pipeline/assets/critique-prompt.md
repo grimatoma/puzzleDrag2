@@ -30,10 +30,9 @@ The gates bracket the two expensive operations (Stage 2 generate, Stage 4 animat
     score the montage, return per-index verdicts for promotion) or the recorded candidates
     `items/<itemId>/<id>/NN.png` (incl. `state`-derived children — also check identity vs the
     master: same size, same position, features evolved in place, nothing teleported).
-  - G3 → the motion brief (PixelLab path: `animation_description` + frames + phases) or the full
-    per-frame storyboard (Aseprite path), in `storyboards/<id>.md` — written against the approved
-    stills.
-  - G4 → the frames `frames/<id>/NN.png` + `previews/<id>.gif`.
+  - G3 → the full per-frame storyboard `storyboards/<id>.md` (written against the approved
+    keyframe(s); a transition's storyboard locks f0 = `from` keyframe, final frame = `to` keyframe).
+  - G4 → the Aseprite-built frames `frames/<id>/NN.png` + `previews/<id>.gif`.
 - **Priors / references** — the item's `priors[]` and the spec's `references[]`, so you can judge
   cohesion against what already shipped.
 
@@ -64,6 +63,11 @@ Form your own evidence; the builder's self-report is a claim, not proof.
 5. **Dims + safe area** — canvas size and safe-area intent match the spec.
 
 ### G2 — still vs style (after generate, before paying to animate)
+> **Source-agnostic.** A keyframe's candidate pool may mix `hand` (Aseprite-authored) and `pixellab`
+> candidates — montage and score them **together** and pick the best **regardless of source** (a
+> hand candidate can absolutely beat the PixelLab ones, and vice-versa). Judge the pixels, not the
+> origin. For a **child** candidate of either source, also check identity-vs-master: same size, same
+> position, features evolved in place, nothing teleported.
 1. **Palette adherence** — every pixel on a locked ramp; no off-ramp drift (the #1 failure).
    Hue-shifted, not fixed-hue.
 2. **Light direction** — single key light = spec direction; no pillow-shading.
@@ -74,8 +78,8 @@ Form your own evidence; the builder's self-report is a claim, not proof.
 6. **Dimensions + safe area + transparency** — exact canvas size, nothing in the safe-area inset,
    background transparent.
 
-### G3 — motion brief / storyboard (before the expensive animate)
-1. **Forces named first** — each phase's motion traces to a real force, strongest first (not
+### G3 — storyboard (before the expensive animate)
+1. **Forces named first** — each frame's motion traces to a real force, strongest first (not
    "moves a bit").
 2. **Right speed profile** — falling-light = terminal-velocity constant; heavy = accelerating;
    gust = build→peak→release; accumulation/melt/growth = monotonic one-way.
@@ -84,14 +88,13 @@ Form your own evidence; the builder's self-report is a claim, not proof.
 4. **Stagger + overlap** — multiple elements release out of phase; phases blend into one
    continuous event.
 5. **Frame budget + fps** — frame count and fps match the spec / `pipeline.json` (after `frames`
-   precedence; v3 caps transitions at 16 requested and stores +1 on disk); enough frames for the
-   move to read, not so many it drags.
+   precedence); enough frames for the move to read, not so many it drags.
 6. **Rigid stays rigid; impacts settle; loop closes** — planted parts hold; landings
    squash/overshoot/settle; (idle) frame N → frame 0 seamlessly, or (transition) holds the final
    frame.
-7. **(PixelLab path) Constants named** — the `animation_description` states what must NOT change
-   ("brightness constant, no glow, body rigid"); v3 over-stages vague nouns (a "sheen" became a
-   whole-rind glow pulse). An interpolation brief must order the phases (what changes first/last).
+7. **Endpoints locked + base held (transitions)** — the storyboard pins f0 = the `from` keyframe and
+   the final frame = the `to` keyframe (real cels), and keeps the shared body rigid so only the
+   staged elements (falling leaves, frost, snow) change — not a uniform cross-fade.
 
 ### G4 — frames (after animate, the final motion gate)
 **You must have upscaled + montaged + Read the frames (see above) before scoring.**

@@ -101,6 +101,15 @@ var block_mine_hazards: bool = false
 ## (no zone upgradeMap) and any pre-A1b caller behave exactly as before.
 var upgrade_provider: Callable = Callable()
 
+## The board band's TOP edge in viewport px — Main sets it from Hud.board_top() (the
+## fixed line under the action panel) before each layout_for call. The default is that
+## same canonical value so direct layout_for(vp) callers (capture tools, scene-smoke,
+## e2e-input tests) get the real game geometry without a Main.
+var board_top_px: float = 454.0
+## Bottom chrome reserve below the board: the status/orders strip (~76px) + the bottom
+## nav (UiKit.NAV_RESERVE). layout_for subtracts it from the tile height budget.
+const BOTTOM_RESERVE: float = 76.0 + float(UiKit.NAV_RESERVE)
+
 ## A1b — upgrade tiles queued for the CURRENT _resolve's refill: an Array of int tile types, one
 ## entry per upgrade tile to place among the new top cells. Filled at the top of _resolve from
 ## upgrade_provider and drained as the refill loop spawns top-row cells; always empty between
@@ -247,13 +256,25 @@ func _draw() -> void:
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
 	draw_style_box(sb, rect)
 
-	# M8c — while a tap-target tool is armed, pulse a hot red border around the field so the
-	# board reads as "hot / waiting for your tap" (the React armed-pulse on the board frame).
+	# M8c — while a tap-target tool is armed, pulse a hot red frame around the field so the
+	# board reads as "hot / waiting for your tap". React's hwv-armed-pulse is a LAYERED
+	# rounded inset glow (4px core ring + 8px halo + a 32px interior bloom), so draw three
+	# nested rounded rings with falling alpha rather than one square stroke.
 	if _targeting:
 		var t: float = 0.5 + 0.5 * sin(_armed_phase * 5.2)
-		var red := Color(1.0, 0.22, 0.22, lerpf(0.45, 0.95, t))
-		var w: float = maxf(4.0, tile_size * 0.06)
-		draw_rect(rect, red, false, w)
+		var w: float = maxf(4.0, tile_size * 0.05)
+		var rings := [
+			{"color": Color(1.0, 0.18, 0.18, lerpf(0.75, 1.0, t)), "width": w, "inset": 0.0},
+			{"color": Color(1.0, 0.24, 0.24, lerpf(0.32, 0.55, t)), "width": w * 1.6, "inset": w},
+			{"color": Color(1.0, 0.30, 0.30, lerpf(0.10, 0.24, t)), "width": w * 2.6, "inset": w * 2.6},
+		]
+		for r in rings:
+			var ring := StyleBoxFlat.new()
+			ring.draw_center = false
+			ring.set_corner_radius_all(14)
+			ring.set_border_width_all(int(maxf(1.0, float(r["width"]))))
+			ring.border_color = r["color"]
+			draw_style_box(ring, rect.grow(-float(r["inset"])))
 
 ## A2 — set the current farm season (0=Spring … 3=Winter) and redraw so the board card's
 ## field tint follows the season. Main calls this on load and whenever a resolved farm chain
@@ -671,14 +692,13 @@ func layout_for(viewport: Vector2) -> void:
 		_shake_tween.kill()
 	_shake_tween = null
 	var avail_w := viewport.x * 0.94
-	# Height budget = the band between the board's top anchor (Main._layout puts it at
-	# 0.24·h) and the stockpile card's top anchor (Hud._layout_hud puts it at 0.74·h),
-	# plus a 36px allowance for the board card's bottom frame padding tucking under the
-	# stockpile (exactly the overlap the canonical 720×1280 portrait has always had —
-	# at that size this formula still yields tile_size 112, pixel-identical). review-4:
-	# the old flat 0.62·h budget overshot the stockpile on wide/landscape viewports
-	# (e.g. a 1280×800 desktop window), burying the bottom tile row under the card.
-	var avail_h := viewport.y * 0.50 + 36.0
+	# Height budget = the band between the board's top edge (board_top_px — Main sets it
+	# from Hud.board_top(), the fixed line under the action panel) and the bottom chrome
+	# (status/orders strip + the bottom nav, BOTTOM_RESERVE). Nothing is allowed to
+	# overlap the board any more — the old 0.50·h+36 budget deliberately tucked the
+	# bottom tile row under the floating stockpile card, which is gone. At the canonical
+	# 720×1280 this still yields tile_size 112 (width-bound), pixel-identical tiles.
+	var avail_h := maxf(float(Constants.ROWS) * 20.0, viewport.y - board_top_px - BOTTOM_RESERVE)
 	tile_size = floorf(minf(avail_w / Constants.COLS, avail_h / Constants.ROWS))
 	for r in Constants.ROWS:
 		for c in Constants.COLS:

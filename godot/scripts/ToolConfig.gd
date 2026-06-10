@@ -15,6 +15,14 @@ extends RefCounted
 ##               to_key / count, depending on the power.
 ##   tap_target: bool — true if the tool needs a tapped cell (tap power); false if
 ##               it fires instantly over the whole board.
+##   board_kind: String — which puzzle board this tool is RELEVANT to, so the HUD
+##               hotbar only shows tools usable on the ACTIVE biome (React parity:
+##               src/ui/toolRegistry.ts FARM_TOOL_KEYS / MINE_TOOL_KEYS / FISH_TOOL_KEYS
+##               → ToolEntry.boardKind, filtered by src/ui/puzzleToolFilter.ts). One of
+##               "all" (board-agnostic — shown everywhere) | "farm" | "mine" | "fish".
+##               Mirrors the React boardKind values tool-for-tool; the harbor biome is
+##               React's "fish" board. (Hazard-spawnability gating — the OTHER half of
+##               the React filter — is not modelled here; this is the board-kind column.)
 ##   desc:       String — player-facing description (the HUD tool rack tooltip + the
 ##               armed-tool banner read this). Sourced BYTE-IDENTICAL from the React
 ##               ITEMS[*].desc strings in src/constants.ts (matched by tool identity:
@@ -132,6 +140,7 @@ const TOOLS: Dictionary = {
 	# ── Tap-target tools (need a tapped cell) ──────────────────────────────────
 	BOMB: {
 		"label": "Bomb",
+		"board_kind": "all",
 		"power_id": "area_blast",
 		"params": {"radius": 1},
 		"tap_target": true,
@@ -139,6 +148,7 @@ const TOOLS: Dictionary = {
 	},
 	RAKE: {
 		"label": "Rake",
+		"board_kind": "farm",
 		"power_id": "clear_component",
 		"params": {},
 		"tap_target": true,
@@ -146,6 +156,7 @@ const TOOLS: Dictionary = {
 	},
 	SICKLE: {
 		"label": "Sickle",
+		"board_kind": "farm",
 		"power_id": "clear_row",
 		"params": {"span": 1},
 		"tap_target": true,
@@ -153,6 +164,7 @@ const TOOLS: Dictionary = {
 	},
 	AUGER: {
 		"label": "Auger",
+		"board_kind": "mine",
 		"power_id": "clear_column",
 		"params": {"span": 1},
 		"tap_target": true,
@@ -160,6 +172,7 @@ const TOOLS: Dictionary = {
 	},
 	BLAST_CHARGE: {
 		"label": "Blast Charge",
+		"board_kind": "mine",
 		"power_id": "clear_cross",
 		"params": {},
 		"tap_target": true,
@@ -167,6 +180,7 @@ const TOOLS: Dictionary = {
 	},
 	MAGNET: {
 		"label": "Magnet",
+		"board_kind": "mine",
 		"power_id": "transform_adjacent",
 		# Pull nearby iron ore into easy-to-chain stone.
 		"params": {"radius": 1, "from_keys": [Constants.Tile.IRON_ORE], "to_key": Constants.Tile.STONE},
@@ -176,6 +190,7 @@ const TOOLS: Dictionary = {
 	# ── Instant tools (fire over the whole board) ──────────────────────────────
 	AXE: {
 		"label": "Axe",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		# "trees" is OAK in the Godot tile set; resolved to its keys at dispatch.
 		"params": {"category": "trees"},
@@ -184,6 +199,7 @@ const TOOLS: Dictionary = {
 	},
 	SCYTHE: {
 		"label": "Scythe",
+		"board_kind": "farm",
 		"power_id": "clear_random_n",
 		"params": {"count": 6},
 		"tap_target": false,
@@ -192,6 +208,7 @@ const TOOLS: Dictionary = {
 	},
 	STONE_HAMMER: {
 		"label": "Stone Hammer",
+		"board_kind": "mine",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.STONE},
 		"tap_target": false,
@@ -199,6 +216,7 @@ const TOOLS: Dictionary = {
 	},
 	DRILL: {
 		"label": "Drill",
+		"board_kind": "mine",
 		"power_id": "transform_tiles",
 		# Turn loose dirt into stone (React: special_dirt → tile_mine_stone).
 		"params": {"from_keys": [Constants.Tile.DIRT], "to_key": Constants.Tile.STONE},
@@ -213,6 +231,7 @@ const TOOLS: Dictionary = {
 	# Farm — clear a single produce tile across the board (clear_all).
 	BIRD_CAGE: {
 		"label": "Bird Cage",
+		"board_kind": "farm",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.BIRD_CHICKEN},
 		"tap_target": false,
@@ -220,6 +239,7 @@ const TOOLS: Dictionary = {
 	},
 	SCYTHE_FULL: {
 		"label": "Scythe (full)",
+		"board_kind": "farm",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.WHEAT},
 		"tap_target": false,
@@ -227,6 +247,7 @@ const TOOLS: Dictionary = {
 	},
 	HOE: {
 		"label": "Hoe",
+		"board_kind": "farm",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.CARROT},
 		"tap_target": false,
@@ -234,6 +255,7 @@ const TOOLS: Dictionary = {
 	},
 	IRON_PICK: {
 		"label": "Iron Pick",
+		"board_kind": "mine",
 		"power_id": "clear_all",
 		"params": {"target": Constants.Tile.IRON_ORE},
 		"tap_target": false,
@@ -242,6 +264,7 @@ const TOOLS: Dictionary = {
 	# Farm/mine — clear a whole category (clear_category). PLOUGH unions two.
 	PLOUGH: {
 		"label": "Plough",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		# Multi-category clear: grass + grain. Resolved (and unioned) at dispatch.
 		"params": {"categories": ["grass", "grain"]},
@@ -250,6 +273,7 @@ const TOOLS: Dictionary = {
 	},
 	FRUIT_PICKER: {
 		"label": "Fruit Picker",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		"params": {"category": "fruit"},
 		"tap_target": false,
@@ -257,6 +281,7 @@ const TOOLS: Dictionary = {
 	},
 	HERDERS_CROOK: {
 		"label": "Herder's Crook",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		"params": {"category": "herd"},
 		"tap_target": false,
@@ -264,6 +289,7 @@ const TOOLS: Dictionary = {
 	},
 	MILK_CHURN: {
 		"label": "Milk Churn",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		"params": {"category": "cattle"},
 		"tap_target": false,
@@ -271,6 +297,7 @@ const TOOLS: Dictionary = {
 	},
 	SADDLE: {
 		"label": "Saddle",
+		"board_kind": "farm",
 		"power_id": "clear_category",
 		"params": {"category": "mount"},
 		"tap_target": false,
@@ -278,6 +305,7 @@ const TOOLS: Dictionary = {
 	},
 	COAL_HAMMER: {
 		"label": "Coal Hammer",
+		"board_kind": "mine",
 		"power_id": "clear_category",
 		"params": {"category": "coal"},
 		"tap_target": false,
@@ -285,6 +313,7 @@ const TOOLS: Dictionary = {
 	},
 	GOLD_PICK: {
 		"label": "Gold Pick",
+		"board_kind": "mine",
 		"power_id": "clear_category",
 		"params": {"category": "gold"},
 		"tap_target": false,
@@ -293,6 +322,7 @@ const TOOLS: Dictionary = {
 	# Transform a whole category into another tile (transform_tiles via from_category).
 	TRIMMER: {
 		"label": "Trimmer",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Trees → grass (clears the canopy back to open ground).
 		"params": {"from_category": "trees", "to_key": Constants.Tile.GRASS},
@@ -301,6 +331,7 @@ const TOOLS: Dictionary = {
 	},
 	BEE: {
 		"label": "Bee",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Flowers → fruit (pollination): PANSY (flower) → APPLE (fruit).
 		"params": {"from_category": "flower", "to_key": Constants.Tile.APPLE},
@@ -310,6 +341,7 @@ const TOOLS: Dictionary = {
 	# Tap-target — transmute nearby mine ores into coal (transform_adjacent via from_categories).
 	COAL_TRANSMUTER: {
 		"label": "Coal Transmuter",
+		"board_kind": "mine",
 		"power_id": "transform_adjacent",
 		# Real mine-ore tiles → COAL within radius 1. from_categories is resolved at
 		# dispatch (stone/iron/gold/gem/copper). COPPER_ORE exists in the Godot enum.
@@ -327,6 +359,7 @@ const TOOLS: Dictionary = {
 	# resolveTransformKey for the farm biome) resolved at dispatch via _resolve_spawn_key.
 	SEEDPACK: {
 		"label": "Seedpack",
+		"board_kind": "farm",
 		"power_id": "transform_random_n",
 		# 5 random cells → the farm base tile (GRASS) — sows easy-to-chain staples.
 		"params": {"count": 5, "to": "biome_base"},
@@ -335,6 +368,7 @@ const TOOLS: Dictionary = {
 	},
 	LOCKBOX: {
 		"label": "Lockbox",
+		"board_kind": "farm",
 		"power_id": "transform_random_n",
 		# 3 random cells → the farm rare tile (FRUIT_BLACKBERRY) — seeds a high-value target.
 		"params": {"count": 3, "to": "biome_rare"},
@@ -344,6 +378,7 @@ const TOOLS: Dictionary = {
 	# reshuffle_board — pure value-permutation of the board (no re-roll, no credit).
 	RESHUFFLE_HORN: {
 		"label": "Reshuffle Horn",
+		"board_kind": "all",
 		"power_id": "reshuffle_board",
 		"params": {},
 		"tap_target": false,
@@ -353,6 +388,7 @@ const TOOLS: Dictionary = {
 	# hazard NAME ("rats") is resolved to Constants.Tile.RAT at dispatch via _resolve_hazard_key.
 	CAT: {
 		"label": "Cat",
+		"board_kind": "farm",
 		"power_id": "clear_hazard",
 		"params": {"target": "rats"},
 		"tap_target": false,
@@ -360,6 +396,7 @@ const TOOLS: Dictionary = {
 	},
 	TERRIER: {
 		"label": "Terrier",
+		"board_kind": "farm",
 		"power_id": "clear_hazard",
 		# Same as Cat — the web's terrier tool also clears the rats hazard.
 		"params": {"target": "rats"},
@@ -374,6 +411,7 @@ const TOOLS: Dictionary = {
 	# already-eligible farm-pool slots while armed (never injects an off-zone tile).
 	FERTILIZER: {
 		"label": "Fertilizer",
+		"board_kind": "farm",
 		"power_id": "fill_bias",
 		# Bias the next fills toward wheat (the grain staple).
 		"params": {"target": Constants.Tile.WHEAT, "turns": 1},
@@ -382,6 +420,7 @@ const TOOLS: Dictionary = {
 	},
 	BIRD_FEED: {
 		"label": "Bird Feed",
+		"board_kind": "farm",
 		"power_id": "fill_bias",
 		# Bias toward the base bird. The web biases toward its base bird tile (chicken); the
 		# port's base bird is PHEASANT (FARM_CATEGORY_TILE["birds"]), so PHEASANT is the
@@ -393,6 +432,7 @@ const TOOLS: Dictionary = {
 	},
 	SAPLING: {
 		"label": "Sapling",
+		"board_kind": "farm",
 		"power_id": "fill_bias",
 		# Bias toward oak (the trees staple).
 		"params": {"target": Constants.Tile.OAK, "turns": 1},
@@ -405,6 +445,7 @@ const TOOLS: Dictionary = {
 	# no special-casing. The transform tools reuse transform_tiles via from_category.
 	GOLDEN_APPLE: {
 		"label": "Golden Apple",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Every tree tile → apple-fruit (React: trees → tile_fruit_apple).
 		"params": {"from_category": "trees", "to_key": Constants.Tile.APPLE},
@@ -413,6 +454,7 @@ const TOOLS: Dictionary = {
 	},
 	GOLDEN_CARROT: {
 		"label": "Golden Carrot",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Every grass tile → carrot (React: grass → tile_veg_carrot).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.CARROT},
@@ -421,6 +463,7 @@ const TOOLS: Dictionary = {
 	},
 	GOLDEN_IDOL: {
 		"label": "Golden Idol",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Every grass tile → cow (React: grass → tile_cattle_cow).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.COW},
@@ -429,6 +472,7 @@ const TOOLS: Dictionary = {
 	},
 	GOLDEN_SHEEP: {
 		"label": "Golden Sheep",
+		"board_kind": "farm",
 		"power_id": "transform_tiles",
 		# Every grass tile → sheep herd (React: grass → tile_herd_sheep).
 		"params": {"from_category": "grass", "to_key": Constants.Tile.HERD_SHEEP},
@@ -437,6 +481,7 @@ const TOOLS: Dictionary = {
 	},
 	PHILOSOPHERS_STONE: {
 		"label": "Philosopher's Stone",
+		"board_kind": "mine",
 		"power_id": "transform_tiles",
 		# Every stone tile → gold (React: stone → tile_mine_gold).
 		"params": {"from_category": "stone", "to_key": Constants.Tile.GOLD},
@@ -446,6 +491,7 @@ const TOOLS: Dictionary = {
 	# Magic Wand — the FIRST tap_clear_type tool: tap a cell, sweep every tile of that key.
 	MAGIC_WAND: {
 		"label": "Magic Wand",
+		"board_kind": "all",
 		"power_id": "tap_clear_type",
 		"params": {},
 		"tap_target": true,
@@ -456,6 +502,7 @@ const TOOLS: Dictionary = {
 	# farm turns before the next harvest boundary.
 	MAGIC_SEED: {
 		"label": "Magic Seed",
+		"board_kind": "all",
 		"power_id": "restore_turns",
 		"params": {"amount": 5},
 		"tap_target": false,
@@ -465,6 +512,7 @@ const TOOLS: Dictionary = {
 	# toward wheat (React: next 3 fills spawn grain).
 	MAGIC_FERTILIZER: {
 		"label": "Magic Fertilizer",
+		"board_kind": "farm",
 		"power_id": "fill_bias",
 		"params": {"target": Constants.Tile.WHEAT, "turns": 3},
 		"tap_target": false,
@@ -475,6 +523,7 @@ const TOOLS: Dictionary = {
 	# them (scared 5 turns). Both are instant (no tapped cell). Ported from React rifle/hound.
 	RIFLE: {
 		"label": "Rifle",
+		"board_kind": "farm",
 		"power_id": "clear_wolves",
 		"params": {},
 		"tap_target": false,
@@ -482,6 +531,7 @@ const TOOLS: Dictionary = {
 	},
 	HOUND: {
 		"label": "Hound",
+		"board_kind": "farm",
 		"power_id": "scatter_hazard",
 		"params": {},
 		"tap_target": false,
@@ -491,6 +541,7 @@ const TOOLS: Dictionary = {
 	# (they mutate `mine_hazards` + the grid, never reaching apply_instant). Both are instant.
 	WATER_PUMP: {
 		"label": "Water Pump",
+		"board_kind": "mine",
 		"power_id": "water_pump",
 		"params": {},
 		"tap_target": false,
@@ -498,6 +549,7 @@ const TOOLS: Dictionary = {
 	},
 	EXPLOSIVES: {
 		"label": "Explosives",
+		"board_kind": "mine",
 		"power_id": "explosives",
 		"params": {},
 		"tap_target": false,
@@ -507,6 +559,7 @@ const TOOLS: Dictionary = {
 	# Mossback). Handled in GameState.use_tool_on_grid's early path (never reaches apply_instant).
 	MINERS_HAT: {
 		"label": "Miner's Hat",
+		"board_kind": "mine",
 		"power_id": "reveal_tiles",
 		"params": {},
 		"tap_target": false,
@@ -579,6 +632,44 @@ static func power_id(id: String) -> String:
 	if not has_tool(id):
 		return ""
 	return String(TOOLS[id].get("power_id", ""))
+
+# ── Board-kind filtering (React src/ui/toolRegistry.ts + puzzleToolFilter.ts parity) ──
+# Each tool carries a `board_kind` column ("all"|"farm"|"mine"|"fish") so the HUD hotbar
+# shows only the tools relevant to the active board, instead of every owned tool on every
+# biome (the React tool strip is filtered by getPuzzleBoardKind(state)). "all" tools show
+# on every board; the rest show only when their board_kind matches the active biome's board.
+
+## React's ToolBoardKind tokens.
+const BOARD_KIND_ALL: String = "all"
+const BOARD_KIND_FARM: String = "farm"
+const BOARD_KIND_MINE: String = "mine"
+const BOARD_KIND_FISH: String = "fish"
+
+## Map a GameState.active_biome ("farm"|"mine"|"harbor") to the React board-kind token
+## ("farm"|"mine"|"fish"). The harbor biome IS React's "fish" board (getPuzzleBoardKind).
+## Any unknown biome falls back to the farm board (React's default).
+static func board_kind_for_biome(biome: String) -> String:
+	match biome:
+		"mine":   return BOARD_KIND_MINE
+		"harbor": return BOARD_KIND_FISH
+		_:        return BOARD_KIND_FARM
+
+## The board-kind a tool is most relevant to ("all" = shown on every board). An unknown id
+## is treated as board-agnostic ("all") so a not-yet-catalogued tool is never hidden.
+static func tool_board_kind(id: String) -> String:
+	if not has_tool(id):
+		return BOARD_KIND_ALL
+	return String(TOOLS[id].get("board_kind", BOARD_KIND_ALL))
+
+## True when a tool should appear on the hotbar for `biome`'s board: a board-agnostic tool
+## ("all") shows everywhere; otherwise its board_kind must match the active biome's board.
+## Mirrors React's isToolVisibleOnPuzzleBoard board-kind check (the hazard-spawnability half
+## of that filter is not modelled in the port).
+static func is_tool_visible_on_board(id: String, biome: String) -> bool:
+	var kind: String = tool_board_kind(id)
+	if kind == BOARD_KIND_ALL:
+		return true
+	return kind == board_kind_for_biome(biome)
 
 ## Resolve every Constants.Tile value belonging to a category id (e.g. "trees").
 ## Returns Array[int] in Tile-enum order. Used by clear_category (axe).
