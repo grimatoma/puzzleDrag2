@@ -17,12 +17,17 @@
 // and `approve` writes history FIRST then pipeline so the pair always ends consistent. All
 // load/validate/write goes through the shared `manifest.mjs` seam (atomic temp-file + rename).
 //
-//   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm]
+//   node pipeline-patch.mjs record-candidate <item> <key> <idx> <path> [status] [llm] [--object <uuid>] [--review-object <uuid>]
 //   node pipeline-patch.mjs approve          <item> <key> <idx>
 //   node pipeline-patch.mjs reject           <item> <key> <idx> "<reason>"
 //   node pipeline-patch.mjs animate-done      <item> <selector> <gifPath> [storyboardPath]
 //   node pipeline-patch.mjs set-mode          (autonomous | gated)
 //   node pipeline-patch.mjs show              [item]
+//
+// PixelLab object ids: a candidate may carry `objectId` (its own promoted/derived PixelLab object)
+// and `reviewObjectId` (the review pack it was picked from). `approve` denormalizes the approved
+// candidate's objectId onto the keyframe (keyframe.objectId) — that's what child states and
+// animations derive from; `reject` of the selected candidate clears it with selected/selectedPath.
 //
 // <key>      = a keyframe id (the item's master id or one of its children ids).
 // <selector> = an idle's `for` id, or a transition as `<from>__to__<to>` (or just `<to>`).
@@ -126,9 +131,24 @@ function findCandidate(cands, idx) {
 // record-candidate: verify the keyframe exists in pipeline.json (for the "no such item/key" errors),
 // then add-or-update the candidate in HISTORY. Writes history only — pipeline is left byte-unchanged.
 function cmdRecordCandidate(args) {
-  const [itemId, keyId, idxRaw, p, status = "generated", llm] = args;
+  // Pull the optional --object / --review-object flags out of the positional args.
+  const positional = [];
+  let objectId = null;
+  let reviewObjectId = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--object") {
+      objectId = args[++i];
+      if (!objectId) die("--object requires a <uuid>");
+    } else if (args[i] === "--review-object") {
+      reviewObjectId = args[++i];
+      if (!reviewObjectId) die("--review-object requires a <uuid>");
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  const [itemId, keyId, idxRaw, p, status = "generated", llm] = positional;
   if (!itemId || !keyId || idxRaw === undefined || !p) {
-    die("record-candidate <item> <key> <idx> <path> [status] [llm]");
+    die("record-candidate <item> <key> <idx> <path> [status] [llm] [--object <uuid>] [--review-object <uuid>]");
   }
   const idx = Number(idxRaw);
   if (!Number.isInteger(idx)) die(`idx must be an integer (got "${idxRaw}")`);
@@ -146,8 +166,10 @@ function cmdRecordCandidate(args) {
     cand.status = status;
   }
   if (llm) cand.llm = llm;
+  if (objectId) cand.objectId = objectId;
+  if (reviewObjectId) cand.reviewObjectId = reviewObjectId;
   manifest.writeHistory(PIPELINE_JSON, history);
-  console.log(`recorded ${itemId}/${keyId} candidate idx=${idx} status=${status}${llm ? ` llm=${llm}` : ""}`);
+  console.log(`recorded ${itemId}/${keyId} candidate idx=${idx} status=${status}${llm ? ` llm=${llm}` : ""}${objectId ? ` objectId=${objectId}` : ""}`);
 }
 
 // approve: flip the candidate to approved/pass in HISTORY, and set the keyframe's selected +
@@ -165,9 +187,12 @@ function cmdApprove(args) {
   cand.llm = "pass";
   kf.selected = idx;
   kf.selectedPath = typeof cand.path === "string" ? cand.path : null;
+  // Denormalize the candidate's PixelLab object id onto the keyframe — child
+  // states and animations derive from keyframe.objectId.
+  kf.objectId = typeof cand.objectId === "string" ? cand.objectId : null;
   manifest.writeHistory(PIPELINE_JSON, history);
   manifest.writePipeline(PIPELINE_JSON, pipeline);
-  console.log(`approved ${itemId}/${keyId} idx=${idx} (selected=${idx})`);
+  console.log(`approved ${itemId}/${keyId} idx=${idx} (selected=${idx}${kf.objectId ? `, objectId=${kf.objectId}` : ""})`);
 }
 
 // reject: flip the candidate to rejected/fail (+ reason) in HISTORY. If that idx was the keyframe's
@@ -193,6 +218,7 @@ function cmdReject(args) {
   if (kf.selected === idx) {
     kf.selected = null;
     kf.selectedPath = null;
+    kf.objectId = null;
     clearedSelection = true;
   }
   manifest.writeHistory(PIPELINE_JSON, history);

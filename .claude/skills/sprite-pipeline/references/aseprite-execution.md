@@ -1,14 +1,23 @@
-# Executing a storyboard in Aseprite (the animation executor)
+# Executing a storyboard in Aseprite (the polish pass + fallback animator)
 
-**Aseprite is the only thing that animates in this pipeline.** PixelLab (or a hand-drawn
-keyframe) gives you a base **still**; every moving frame is built here, via the **pixel-plugin
-Aseprite MCP** (tools named `mcp__plugin_pixel-plugin_aseprite__*`). Pillow is *only* review glue
-(`scripts/montage.py`) — never a frame generator. This doc is the concrete recipe for turning a
-filled `assets/storyboard.template.md` into the per-frame PNGs + preview GIF the Godot step packs.
+**Aseprite is the pipeline's polish pass and fallback animator — PixelLab v3 is the default motion
+executor** (idles via text mode on the keyframe's object; transitions via interpolation — see
+SKILL "Tool routing"). You come HERE, via the **pixel-plugin Aseprite MCP** (tools named
+`mcp__plugin_pixel-plugin_aseprite__*`), when:
+- a keyframe has **no `objectId`** (hand-authored), so v3 can't host its motion;
+- a motion brief names something **v3 can't stage** (exact per-pixel choreography, a hard
+  particle path, color cycling);
+- a v3 result needs a **surgical polish** — snap a drifted frame back to the ramps
+  (`quantize_palette`), fix stray pixels (`draw_pixels`), retime holds — without re-staging motion.
 
-> Why Aseprite and not procedural Pillow: real motion is hand/AI-authored cels (the storyboard's
-> per-frame "pixel-level change" column), not a parametric shear. The `pixel-art-animation` skill
-> explains *why a slide reads as dead*; Aseprite is *where* you draw the genuine re-form.
+Pillow is *only* review glue (`scripts/montage.py`, `scripts/gif.py`) — never a frame generator.
+This doc is the concrete recipe for turning a filled `assets/storyboard.template.md` into the
+per-frame PNGs + preview GIF the Godot step packs.
+
+> Why Aseprite and not procedural Pillow for the fallback: real motion is hand/AI-authored cels
+> (the storyboard's per-frame "pixel-level change" column), not a parametric shear. The
+> `pixel-art-animation` skill explains *why a slide reads as dead*; Aseprite is *where* you draw
+> the genuine re-form.
 
 ---
 

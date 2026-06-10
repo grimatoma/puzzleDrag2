@@ -86,7 +86,7 @@ structural" below.
 |-------|------|---------|
 | `id` | string | Stable item id (e.g. `birch_tree`). Names the family; with the new layout it's also the `items/<id>/…` output directory stem, and the **first key** in the history sidecar (`history["<id>"]`). |
 | `basePrompt` | string | Optional. Prepended to every `master`/`child` `prompt` before generation — the description shared by the whole family (subject, framing, shadow), so each member's `prompt` only states what makes it distinct. By convention the effective prompt is `basePrompt + ", " + prompt`. |
-| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets used as the cohesion reference for new members. Usually other tiles in the same family. **Note:** for PixelLab-generated stills these inform the **prompt wording + the G2 gate** (PixelLab `create` is text-only — it can't take a prior image); for hand/Aseprite stills and all animation they're used **directly** (`import_image`). |
+| `priors` | string[] | **Relative paths** (from `pipeline.json`) to already-shipped sibling assets used as the cohesion reference for new members. Usually other tiles in the same family. **Master generation passes them directly** as style references (`pixellab.mjs create-object --style …`, each ≤256px; pass them at the target canvas size since the largest style image sets the output size). Children don't use priors at all — they derive from the approved master's `objectId`. Hand/Aseprite stills and Aseprite-path animations use them **directly** (`import_image`). |
 | `canvas` | `{ width, height, safeArea }` | **Optional** per-item override of `settings.canvas`. |
 | `fps` | number | **Optional** per-item override of `settings.fps`. |
 | `master` | object | The base sprite the family derives from (see below). |
@@ -104,9 +104,10 @@ lives in the history sidecar, not here.
 | Field | Type | Meaning |
 |-------|------|---------|
 | `id` | string | The keyframe id — unique within the item, stable over time. Doubles as the on-disk filename stem for legacy assets and the `.tres` key for the built loop. Also the **second key** in the history sidecar (`history["<itemId>"]["<id>"]`). |
-| `prompt` | string | What makes this keyframe distinct. Combined with the item `basePrompt`. |
+| `prompt` | string | What makes this keyframe distinct. Combined with the item `basePrompt`. For a **child** this is the `state` **edit description** (what changes from the master), not a full scene description. |
 | `selected` | number \| null | Index (`idx`) of the **approved/selected** candidate. `null` until one is chosen. **`selected !== null` is the keyframe's "approved" signal** every script keys off. |
 | `selectedPath` | string \| null | **Relative path** (from `pipeline.json`) of the candidate at idx `selected` — the denormalized approved-art pointer. `null` while `selected` is `null`. **Kept paired with `selected`**: the control server moves them together, so `selectedPath` is always the path of the currently-selected candidate (and the viewer can resolve approved art from it even with no sidecar). |
+| `objectId` | string \| null | **The PixelLab object id of the approved candidate** — the derivation handle. `pipeline-patch.mjs approve` denormalizes it from the candidate (paired with `selected`/`selectedPath`; cleared together on reject). Child `state` calls and all v3 `animate` calls take this id. `null` for hand-authored keyframes — those can't derive states or host v3 animations (their children/animations fall back to Aseprite). PixelLab objects persist, so the id stays valid across sessions; **losing it means re-promoting a master**. |
 | `comment` | string | **Optional** free-text review note attached in the viewer. |
 
 > **`candidates` is gone from `pipeline.json`.** The keyframe schema is `additionalProperties: false`,
@@ -174,6 +175,16 @@ above).
 | `status` | `requested \| generated \| failed \| rejected \| approved` | Lifecycle state. `requested` = job dispatched; `generated` = image downloaded; `failed` = generation errored; `rejected` = generated but discarded; `approved` = the chosen one (the keyframe's `selected` points at this `idx`). |
 | `llm` | `pass \| fail` | **Optional.** The LLM self-audit verdict on the candidate (style/quality check). |
 | `reason` | string | **Optional, on `failed` / `rejected` (and viewer-flagged regen)** — why it failed or was discarded. Carry it so the history explains itself. |
+| `objectId` | string | **Optional.** The candidate's own PixelLab object id — set for master candidates promoted out of a review pack (`select-frames`) and for child candidates created via `state`. On approval it's denormalized to the keyframe's `objectId`. Record it with `pipeline-patch.mjs record-candidate … --object <uuid>`. |
+| `reviewObjectId` | string | **Optional.** The review-pack object the candidate was promoted from (master candidates only) — lets a later pass re-pick a different index from the same pack while it still exists, instead of paying for a new pack. `record-candidate … --review-object <uuid>`. |
+
+> **Master candidates come from a review pack, not N separate generations.** One
+> `pixellab.mjs create-object` call returns a pack of seeds (64 at ≤42px / 16 at ≤85px / 4 at
+> ≤170px). The G2 audit reads the pack montage once and the audited pick(s) are **promoted**
+> (`select-frames`) — only those become history candidates (with `objectId` + `reviewObjectId`);
+> the unpromoted seeds are not recorded. `settings.candidates` thus bounds the **promoted**
+> count per keyframe, not the seed count. Child candidates are `state` calls on the approved
+> master's `objectId` — one call per candidate, each its own object.
 
 > **Never delete `failed` / `rejected` candidates.** They are kept in the sidecar as the audit trail
 > — the *full history of what was tried* — and so gap-fill can re-seed only the slots that need it.

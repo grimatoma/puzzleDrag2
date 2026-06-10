@@ -4,16 +4,49 @@
       {
         "idx": 0,
         "path": "sets/birch/keyframes/tile_tree_birch_autumn.png",
+        "status": "rejected",
+        "llm": "fail",
+        "reason": "superseded by object-flow regeneration: pre-object keyframe had no PixelLab object id, so the winter child could not be derived from it"
+      },
+      {
+        "idx": 1,
+        "path": "items/birch_tree/tile_tree_birch_autumn/01.png",
+        "status": "generated",
+        "llm": "pass",
+        "objectId": "2ade1526-e1af-43d7-af24-2c7ce71777b0",
+        "reviewObjectId": "82c579d9-230f-4981-90c2-ae07b5915c6c"
+      },
+      {
+        "idx": 2,
+        "path": "items/birch_tree/tile_tree_birch_autumn/02.png",
+        "status": "generated",
+        "llm": "pass",
+        "objectId": "a2008f00-a682-407e-ac47-66a92d347149",
+        "reviewObjectId": "82c579d9-230f-4981-90c2-ae07b5915c6c"
+      },
+      {
+        "idx": 3,
+        "path": "items/birch_tree/tile_tree_birch_autumn/03.png",
         "status": "approved",
-        "llm": "pass"
+        "llm": "pass",
+        "objectId": "8510742d-3426-4a89-8621-c27e24ea612f",
+        "reviewObjectId": "82c579d9-230f-4981-90c2-ae07b5915c6c"
       }
     ],
     "tile_tree_birch_winter": [
       {
         "idx": 0,
         "path": "sets/birch/keyframes/tile_tree_birch_winter.png",
+        "status": "rejected",
+        "llm": "fail",
+        "reason": "structurally a different tree than the autumn master (different trunk, different branch skeleton) - independent text-only generation; transition between the two could only be a reveal wipe"
+      },
+      {
+        "idx": 1,
+        "path": "items/birch_tree/tile_tree_birch_winter/01.png",
         "status": "approved",
-        "llm": "pass"
+        "llm": "pass",
+        "objectId": "af6b5b9a-6f5d-4fff-86a7-9bb9808bd690"
       }
     ]
   },
@@ -43,8 +76,33 @@
       {
         "idx": 3,
         "path": "items/pumpkin/tile_veg_pumpkin_autumn/03.png",
+        "status": "rejected",
+        "llm": "fail",
+        "reason": "superseded by object-flow regeneration: pre-object candidate had no PixelLab object id, so the winter child could not be derived from it (text-only children caused the size-jump/stem-flip drift)"
+      },
+      {
+        "idx": 4,
+        "path": "items/pumpkin/tile_veg_pumpkin_autumn/04.png",
+        "status": "generated",
+        "llm": "pass",
+        "objectId": "d35f7c54-1275-4f6c-b488-e4346fe9736a",
+        "reviewObjectId": "658bf9d7-df66-4150-bff4-48c0b7d28cac"
+      },
+      {
+        "idx": 5,
+        "path": "items/pumpkin/tile_veg_pumpkin_autumn/05.png",
         "status": "approved",
-        "llm": "pass"
+        "llm": "pass",
+        "objectId": "53c08efa-8b4a-4ab5-a28a-44b1d0f354ff",
+        "reviewObjectId": "658bf9d7-df66-4150-bff4-48c0b7d28cac"
+      },
+      {
+        "idx": 6,
+        "path": "items/pumpkin/tile_veg_pumpkin_autumn/06.png",
+        "status": "generated",
+        "llm": "pass",
+        "objectId": "6ad0768c-ba3d-48b1-820e-5373c665a50d",
+        "reviewObjectId": "658bf9d7-df66-4150-bff4-48c0b7d28cac"
       }
     ],
     "tile_veg_pumpkin_winter": [
@@ -72,8 +130,16 @@
       {
         "idx": 3,
         "path": "items/pumpkin/tile_veg_pumpkin_winter/03.png",
+        "status": "rejected",
+        "llm": "fail",
+        "reason": "identity drift vs master: smaller body, stem flipped to the other side, autumn vine-leaf lost while new base foliage appeared — independent text-only generation, not derived from the approved master"
+      },
+      {
+        "idx": 4,
+        "path": "items/pumpkin/tile_veg_pumpkin_winter/04.png",
         "status": "approved",
-        "llm": "pass"
+        "llm": "pass",
+        "objectId": "878674a0-8ebc-45ef-a3b3-14b86120478d"
       }
     ]
   }
