@@ -124,11 +124,47 @@ h1, h2, h3, h4 { font-family: "Fraunces", Georgia, serif; line-height: 1.15; let
 // Friendlier labels + ordering for top-level doc sections.
 const SECTION_META = {
   ".": { label: "Overview", blurb: "Top-level design & audit docs", order: 0 },
-  engineering: { label: "Engineering", blurb: "Architecture & type-system notes", order: 1 },
-  superpowers: { label: "Plans & Specs", blurb: "Dated implementation plans and design specs", order: 2 },
-  "iso-buildings": { label: "Iso Buildings", blurb: "Isometric asset gallery progress", order: 3 },
-  references: { label: "References", blurb: "External wikis & research", order: 4 },
+  "pixel-pipeline-viewer": { label: "Pixel Pipeline Viewer", blurb: "Live sprite-set review viewer", order: 1 },
+  engineering: { label: "Engineering", blurb: "Architecture & type-system notes", order: 2 },
+  superpowers: { label: "Plans & Specs", blurb: "Dated implementation plans and design specs", order: 3 },
+  "iso-buildings": { label: "Iso Buildings", blurb: "Isometric asset gallery progress", order: 4 },
+  references: { label: "References", blurb: "External wikis & research", order: 5 },
 };
+
+// Docs surfaced in a prominent "Featured" block at the very top, in this order.
+// Keyed by docs-relative source path (forward slashes).
+const FEATURED_DOCS = ["sprite-pipeline.html"];
+
+// Old / superseded / off-focus docs, gathered into an "Archive" section at the
+// very bottom regardless of their folder. Keyed by docs-relative source path
+// (the .md/.html as it lives under docs/). Curated by hand — keep it current.
+const ARCHIVED_DOCS = new Set([
+  // Older design / redesign / concept docs, off the current focus.
+  "wiki-migration-plan.html",
+  "progression-trigger-redesign.html",
+  "board-topology-concepts.html",
+  // Iso-building progress tracker (paused).
+  "iso-buildings/PROGRESS.md",
+  // Shipped implementation plans + specs (today's stay current under Plans & Specs).
+  "superpowers/plans/2026-06-02-appearance-look-restructure.md",
+  "superpowers/plans/2026-06-02-board-kinds-wiki.md",
+  "superpowers/plans/2026-06-02-wiki-interconnection-ia.md",
+  "superpowers/specs/2026-06-02-board-kinds-wiki-design.html",
+  "superpowers/specs/2026-06-02-wiki-interconnection-ia-design.html",
+  "superpowers/plans/2026-06-03-progression-feed-phase1.md",
+  "superpowers/plans/2026-06-03-progression-phase2-engine-migration.md",
+  "superpowers/plans/2026-06-03-progression-phase2b-native-when.md",
+  // Pixel-art concept / exploration docs (shipped art lives in the game itself).
+  "birch-tree-64.html",
+  "birch-32-test.html",
+  "birch-tree-seasons.html",
+  "farm-tile-concepts.html",
+  "grass-tile-concepts.html",
+  "more-tile-concepts.html",
+  "seasonal-tile-animations.html",
+  "icon-review.html",
+  "icon-style-guide.html",
+]);
 
 function sectionKey(relPath) {
   const parts = relPath.split("/");
@@ -136,9 +172,31 @@ function sectionKey(relPath) {
   return parts.length > 1 ? parts[0] : ".";
 }
 
+function docCard(e) {
+  const sub = e.rel.includes("/") ? e.rel.slice(0, e.rel.lastIndexOf("/")) : "";
+  return `        <a class="doc" href="${e.href}">
+          <span class="doc-title">${escapeHtml(e.title)}</span>
+          <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span><code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
+        </a>`;
+}
+
 function renderIndex(entries) {
+  // Featured docs float to a prominent block at the top (explicit order).
+  const featured = FEATURED_DOCS.map((p) => entries.find((e) => e.src === p)).filter(
+    Boolean,
+  );
+  const featuredSrc = new Set(featured.map((e) => e.src));
+
+  // Archived docs sink to a single section at the bottom, regardless of folder.
+  const archived = entries
+    .filter((e) => ARCHIVED_DOCS.has(e.src) && !featuredSrc.has(e.src))
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const archivedSrc = new Set(archived.map((e) => e.src));
+
+  // Everything else groups by folder section as before.
   const groups = new Map();
   for (const e of entries) {
+    if (featuredSrc.has(e.src) || archivedSrc.has(e.src)) continue;
     const key = sectionKey(e.rel);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(e);
@@ -156,17 +214,9 @@ function renderIndex(entries) {
       const items = groups
         .get(key)
         .sort((a, b) => a.title.localeCompare(b.title))
-        .map((e) => {
-          const sub = e.rel.includes("/")
-            ? e.rel.slice(0, e.rel.lastIndexOf("/"))
-            : "";
-          return `        <a class="doc" href="${e.href}">
-          <span class="doc-title">${escapeHtml(e.title)}</span>
-          <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span><code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
-        </a>`;
-        })
+        .map(docCard)
         .join("\n");
-      return `    <section class="group reveal" style="animation-delay:${0.05 * (gi + 1)}s">
+      return `    <section class="group reveal" style="animation-delay:${0.05 * (gi + 2)}s">
       <header class="group-head">
         <h2>${escapeHtml(meta.label)}</h2>
         ${meta.blurb ? `<p>${escapeHtml(meta.blurb)}</p>` : ""}
@@ -178,6 +228,28 @@ ${items}
     </section>`;
     })
     .join("\n");
+
+  const featuredHtml = featured.length
+    ? `    <section class="featured reveal" style="animation-delay:.05s">
+      <p class="featured-eyebrow">★ Featured</p>
+      <div class="grid">
+${featured.map(docCard).join("\n")}
+      </div>
+    </section>`
+    : "";
+
+  const archiveHtml = archived.length
+    ? `    <section class="group archive reveal">
+      <header class="group-head">
+        <h2>Archive</h2>
+        <p>Superseded, shipped, or off-focus — kept for reference.</p>
+        <span class="count">${archived.length}</span>
+      </header>
+      <div class="grid">
+${archived.map(docCard).join("\n")}
+      </div>
+    </section>`
+    : "";
 
   return `<!doctype html>
 <html lang="en">
@@ -211,6 +283,14 @@ ${THEME}
 .badge { font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .12rem .42rem; border-radius: 5px; flex: none; }
 .badge-html { background: rgba(224,145,58,.18); color: #f0b46e; }
 .badge-md { background: rgba(139,171,90,.18); color: #b6cd84; }
+.featured { margin-top: 0; padding: 1.4rem 1.5rem 1.5rem; background: linear-gradient(135deg, rgba(224,145,58,.16), rgba(139,171,90,.07)); border: 1px solid var(--accent); border-radius: 18px; box-shadow: var(--shadow); }
+.featured-eyebrow { font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .9rem; }
+.featured .doc { border-color: rgba(224,145,58,.5); background: linear-gradient(180deg, rgba(224,145,58,.1), var(--bg-soft)); }
+.featured .doc-title { font-size: 1.4rem; }
+.archive { opacity: .68; transition: opacity .2s ease; }
+.archive:hover { opacity: 1; }
+.archive .group-head h2 { color: var(--muted); }
+.archive .doc { background: var(--bg-soft); box-shadow: none; }
 footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.4rem; }
 </style>
 </head>
@@ -227,7 +307,9 @@ footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1
         <a href="../iso/"><span>▸</span> Iso Gallery</a>
       </nav>
     </header>
+${featuredHtml}
 ${sections}
+${archiveHtml}
     <footer>
       ${entries.length} documents · generated at build time by <code>tools/build-docs.mjs</code>
     </footer>
@@ -295,7 +377,9 @@ let assetCount = 0;
 
 for (const repoRel of files) {
   const abs = join(repoRoot, repoRel);
-  const docRel = relative(docsRoot, abs); // path relative to docs/
+  // Normalize to forward slashes so section grouping + featured/archive
+  // matching behave identically on Windows (path.relative uses "\") and CI.
+  const docRel = relative(docsRoot, abs).replace(/\\/g, "/"); // path relative to docs/
   const file = docRel.split("/").pop();
   const depth = docRel.split("/").length - 1;
 
@@ -307,6 +391,7 @@ for (const repoRel of files) {
     entries.push({
       rel: docRel,
       href: docRel,
+      src: docRel,
       file,
       kind: "html",
       title: titleFromHtml(html, prettyName(file)),
@@ -322,6 +407,7 @@ for (const repoRel of files) {
     entries.push({
       rel: outRel,
       href: outRel,
+      src: docRel,
       file,
       kind: "md",
       title,
