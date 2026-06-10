@@ -140,7 +140,7 @@ export class GameScene extends Phaser.Scene {
   // Internal flags / deferred state
   _suppressNextGridApply: boolean = false;
   _deferredTool: string | null = null;
-  _hazardTimer: Phaser.Time.TimerEvent | null = null;
+  _hazardBreathe: Phaser.Tweens.Tween | null = null;
   constructor() {
     super("GameScene");
   }
@@ -471,30 +471,32 @@ export class GameScene extends Phaser.Scene {
     const hasFire = !!(fire?.cells?.length);
     const hasRats = !!(rats?.length);
 
-    if (this._hazardTimer) { this._hazardTimer.remove(); this._hazardTimer = null; }
+    if (this._hazardBreathe) { this._hazardBreathe.stop(); this._hazardBreathe = null; }
+    this.hazardVignette.clear();
+    this.hazardVignette.setAlpha(1);
+    if (!hasFire && !hasRats) return;
 
-    if (!hasFire && !hasRats) {
-      this.hazardVignette.clear();
-      return;
+    // Paint once at peak intensity, then breathe the layer's alpha with a slow
+    // yoyo tween — the old 120ms timer repainted with fresh random alpha every
+    // tick, which read as flicker rather than atmosphere.
+    const w = this.scale.width;
+    const h = this.scale.height;
+    if (hasFire) {
+      this.hazardVignette.fillStyle(0xff6600, 0.14);
+      this.hazardVignette.fillRect(0, 0, w, h);
     }
-
-    this._hazardTimer = this.time.addEvent({
-      delay: 120,
-      callback: () => {
-        this.hazardVignette.clear();
-        const w = this.scale.width;
-        const h = this.scale.height;
-        if (hasFire) {
-          const alpha = 0.06 + Math.random() * 0.08;
-          this.hazardVignette.fillStyle(0xff6600, alpha);
-          this.hazardVignette.fillRect(0, 0, w, h);
-        }
-        if (hasRats) {
-          this.hazardVignette.fillStyle(0x666666, hasFire ? 0.05 : 0.12);
-          this.hazardVignette.fillRect(0, 0, w, h);
-        }
-      },
-      loop: true,
+    if (hasRats) {
+      this.hazardVignette.fillStyle(0x666666, hasFire ? 0.05 : 0.12);
+      this.hazardVignette.fillRect(0, 0, w, h);
+    }
+    this.hazardVignette.setAlpha(0.45);
+    this._hazardBreathe = this.tweens.add({
+      targets: this.hazardVignette,
+      alpha: 1,
+      duration: this._dur(1400),
+      ease: "Sine.InOut",
+      yoyo: true,
+      repeat: -1,
     });
   }
 
