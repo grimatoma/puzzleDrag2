@@ -6,13 +6,15 @@ Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Ai
 
 ## Mental model (read first)
 
-Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
+**Two implementations live in this repo — and which one is "primary" has flipped.** The **Godot 4.6 port under `godot/` is now the primary, actively-developed game.** New game work — features, balance, content, art, bug fixes — lands there by default. The **React+Phaser app at the repo root** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain) is now **legacy**: the original implementation the port was built from and brought to full feature parity. It still builds, still deploys at `/`, and remains the richest reference for *how the game is meant to work* — but it is no longer where new game features go. Most of this file still documents it because it's the older, larger codebase; read that as reference, not as a signal that `src/` is where to make changes.
 
-**Two implementations live in this repo.** Everything above (and most of this file) is the **React+Phaser app at the repo root** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain). A **second, parallel Godot 4.6 port lives under `godot/`** — a from-scratch GDScript reimplementation of the same game, built side-by-side during an in-progress migration. It is a **completely separate codebase**: different language (GDScript, not TS/JS), different engine, its own tests, its own CI (`.github/workflows/godot-ci.yml`), its own deploy target (`/puzzleDrag2/godot/`). None of the `src/` / Vite / `npm` guidance applies inside `godot/`, and vice-versa. **Before acting on a request, work out which implementation it targets** — if the user says "Godot", or the symptom is on a `.gd`/`.tscn` surface, it's the port (see the next section), not `src/`.
+**Before acting on a request, work out which implementation it targets — and default to Godot for game work.** It's the legacy React app only when the request names React/Phaser/Vite/`npm`, points at `src/` or `prototype.tsx`, or the symptom is on a `.jsx`/`.tsx` surface. "Godot", a `.gd`/`.tscn` surface, or anything under `godot/` is always the port (see the next section). The two are **completely separate codebases**: different language (GDScript vs TS/JS), different engine, their own tests, their own CI (`.github/workflows/godot-ci.yml` vs `ci.yml`), their own deploy targets (`/puzzleDrag2/godot/` vs `/`). None of the `src/` / Vite / `npm` guidance applies inside `godot/`, and vice-versa.
+
+**The legacy React app, in brief:** Phaser 3 + React. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
 
 ## Godot port (`godot/`)
 
-A Godot **4.6** (GL Compatibility renderer, mobile-first **portrait** 720×1280) reimplementation of the game. Strategy + live status: `docs/godot-migration-plan.html` and `docs/godot-migration-progress.html`; orientation doc: `godot/README.md` (accurate on the asset pipeline + web nav; its file-layout list is stale — trust the tree). The Web export is deployed alongside the Phaser game at `/puzzleDrag2/godot/` by `.github/workflows/deploy.yml`.
+**This is the primary, actively-developed game project now** (see "Mental model" above). A Godot **4.6** (GL Compatibility renderer, mobile-first **portrait** 720×1280) reimplementation of the game, brought to full feature parity with the legacy React app. Strategy + live status: `docs/godot-migration-plan.html` and `docs/godot-migration-progress.html`; orientation doc: `godot/README.md` (accurate on the asset pipeline + web nav; its file-layout list is stale — trust the tree). The Web export is deployed alongside the legacy Phaser game at `/puzzleDrag2/godot/` by `.github/workflows/deploy.yml`.
 
 **Architecture (no autoloads).** State and services are plain `class_name`-registered scripts, owned and wired by the root scene — there is no `[autoload]` section in `project.godot`.
 - `scenes/Main.gd` + `Main.tscn` — the single root scene (`Node2D`). Owns `game: GameState`, the `Board`, a `ViewRouter`, the `Audio` service, and builds the HUD/screens in code. The whole game is essentially one scene with `*Screen.gd` / `*Modal.gd` panels swapped in.
@@ -46,6 +48,8 @@ npm run test:godot-web                                         # headless-Chromi
 
 ## Where to look
 
+These first-stops map the **legacy React app** (`src/`). For the now-primary Godot game, see the "Godot port (`godot/`)" section above and the `godot/` tree.
+
 | Task | First stop | See also |
 |---|---|---|
 | Add a new resource/tile | `src/constants.js` + `src/textures/categories/` | `resource-add` skill |
@@ -68,6 +72,8 @@ The body below covers commands, architecture, the core game mechanic, testing ha
 
 ## Commands
 
+These are **legacy React app** commands (Vite/`npm`). The now-primary Godot game uses a `godot` binary — see the "Godot port (`godot/`)" section above for its commands.
+
 ```bash
 npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
@@ -89,9 +95,9 @@ Every `test:visual*` script has a `pretest:visual*` hook that runs `tools/ensure
 
 Unit/integration tests live in `tests/` (22 phase-* files) and `src/__tests__/` (60+ files). `runSelfTests()` in `src/utils.js` is a thin smoke shim that delegates to `src/smokeTests.js` (`SMOKE_INVARIANTS`); it can still be invoked from the browser console after the game loads.
 
-## Godot fork (`godot/`)
+## Godot (`godot/`) — supplementary reference
 
-A **Godot 4.6** port of the game lives at `godot/` in the repo root, developed side-by-side with the React+Phaser version. It is a separate project (its own `project.godot`), not a Vite entry.
+The **primary** Godot details live in the "Godot port (`godot/`)" section near the top of this file (architecture, the `*Config.gd` convention, the 3-tier tile pipeline, the input gotcha, the command set); this section is older supplementary reference and may drift — trust the top section. The Godot 4.6 project at `godot/` is the actively-developed game; the React+Phaser version it was ported from is legacy. It is a separate project (its own `project.godot`), not a Vite entry.
 
 **Key scripts (GDScript, `class_name` registered):**
 - `godot/scripts/Constants.gd` — board dims, Farm tile set, thresholds, placeholder colors (mirrors `src/constants.js`)
@@ -118,7 +124,7 @@ godot --headless --path godot --export-release "Web" dist/index.html   # Web exp
 
 ## Architecture
 
-This is a Phaser 3 + React game. React owns the page shell *and* the canonical game state; Phaser owns the game canvas and mirrors needed fields via a registry bridge.
+This describes the **legacy React app** (`src/`); for the now-primary Godot game see the "Godot port (`godot/`)" section. This is a Phaser 3 + React game: React owns the page shell *and* the canonical game state; Phaser owns the game canvas and mirrors needed fields via a registry bridge.
 
 **Entry flow:** `index.html` (single `<script type="module" src="/main.jsx">`; Vite bundles React, Phaser, Tailwind, etc.) → `main.jsx` (mounts a `RootErrorBoundary` around the app) → `prototype.jsx` (calls `useReducer(gameReducer, initialState)` and mounts the Phaser.Game instance) → `src/GameScene.js` (the single Phaser Scene that renders the board and forwards input).
 
