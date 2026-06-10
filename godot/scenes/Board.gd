@@ -32,6 +32,10 @@ signal pearl_chain_resolved(cells: Array)
 ## cells are the ORIGINAL drag path (not the rat/rubble-swept removal set), so adjacency is checked
 ## against exactly what the player chained — mirrors pearl_chain_resolved's contract.
 signal chain_cells_resolved(cells: Array)
+## A REAL drag attempt (2+ cells) released BELOW the minimum chain — nothing resolves.
+## Emitted so the HUD can give "not enough" feedback (buzz + nudge); single taps
+## (length 1, the tool-target path) never fire it.
+signal chain_rejected(length: int)
 
 # Chain-resolve animation timing. The pipeline CASCADES (pop → settle → refill) the
 # way the React/Phaser original does, rather than firing every tween at t=0: the chained
@@ -834,6 +838,8 @@ func _finish_drag() -> void:
 		valid = BoardLogic.is_valid_chain(grid, path, min_chain)
 	if valid:
 		_resolve(path)
+	elif path.size() >= 2:
+		chain_rejected.emit(path.size())
 
 ## M4a — recompute the overlay's Board-local points from `_path` (each cell's
 ## centre) and push them to the chain overlay, flagged valid when the chain has

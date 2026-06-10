@@ -21,6 +21,12 @@ extends RefCounted
 ## every capture is taken at the settled end-state, never mid-animation.
 static var enabled: bool = true
 
+## PLAYER preference (the menu's "Reduce Motion" toggle, persisted on GameState as
+## `reduce_motion`). Kept SEPARATE from `enabled` (the infra/harness switch) so
+## Main applying the loaded preference on launch can never un-pin a harness that
+## disabled motion for deterministic captures.
+static var reduced: bool = false
+
 ## Motion timings (seconds). Kept short — mobile-first UI motion should read as
 ## "responsive", not "cinematic": the card lands before the finger lifts.
 const SCRIM_IN := 0.16          ## scrim/backdrop fade-in
@@ -36,7 +42,7 @@ const RELEASE_TIME := 0.12      ## button release spring-back time
 ## True when animations should actually play. Headless display servers (the unit-test
 ## sweep) get the end state instantly.
 static func _active() -> bool:
-	return enabled and DisplayServer.get_name() != "headless"
+	return enabled and not reduced and DisplayServer.get_name() != "headless"
 
 ## Public probe for continuous, self-driven effects (a _process-driven pulse) so they
 ## can idle when motion is off — the same gate every one-shot helper here uses.
@@ -161,6 +167,26 @@ static func nav_tab_rest(underline: Control, highlight: Control, icon: Control) 
 			_kill_meta_tween(ctl, "_uifx_tween")
 			(ctl as Control).scale = Vector2.ONE
 			(ctl as Control).modulate.a = 1.0
+
+# ── one-shot pop ──────────────────────────────────────────────────────────────
+
+## Quick celebratory pop (scale 1 → peak → 1 around the centre) for a control whose
+## STATE just advanced — the chain stage banner hitting "DOUBLE!", a count chip
+## landing. One-shot; safe to spam (re-trigger restarts it); nothing headless/reduced.
+static func pop(ctl: Control, peak: float = 1.25, dur: float = 0.26) -> void:
+	if ctl == null or not is_instance_valid(ctl):
+		return
+	if not _active() or not ctl.is_inside_tree():
+		return
+	_kill_meta_tween(ctl, "_uifx_pop")
+	ctl.pivot_offset = ctl.size / 2.0
+	ctl.scale = Vector2.ONE
+	var t := ctl.create_tween()
+	ctl.set_meta("_uifx_pop", t)
+	t.tween_property(ctl, "scale", Vector2(peak, peak), dur * 0.4) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.tween_property(ctl, "scale", Vector2.ONE, dur * 0.6) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ── content swap fade ─────────────────────────────────────────────────────────
 

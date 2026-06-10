@@ -274,6 +274,9 @@ func _ready() -> void:
 	_hud.board = board   # the HUD reads board only for the reward-chip fly-from start point
 	board.chain_changed.connect(_on_chain_changed)
 	board.chain_resolved.connect(_on_chain_resolved)
+	# A too-short drag (2+ cells but under the chain minimum) gives denied feedback —
+	# the buzz + a tiny board nudge — so the min-chain rule teaches itself.
+	board.chain_rejected.connect(_on_chain_rejected)
 	# M8c — a tapped cell while a tap-target tool is armed fires the armed tool on it.
 	board.cell_tapped.connect(_on_tool_target)
 	# M3j — a fish chain long enough to count toward a pearl capture reports its cells so we
@@ -337,6 +340,10 @@ func _ready() -> void:
 	# M4f: apply the restored mute preference so a saved "muted" choice takes effect on
 	# launch (the settings/menu modal flips it; GameState persists it).
 	_audio.set_muted(game.audio_muted)
+	# Apply the restored "Reduce Motion" preference to the UiFx motion kit. UiFx.reduced
+	# is the PLAYER gate — separate from UiFx.enabled (the infra/harness pin), so this
+	# can never re-enable motion under a harness that disabled it for captures.
+	UiFx.reduced = game.reduce_motion
 	_last_tier = game.settlement.tier
 	_last_coins = game.coins
 	_last_in_mine = game.is_in_mine()
@@ -469,6 +476,15 @@ func _refresh_runes() -> void: if _hud: _hud._refresh_runes()
 func _refresh_season_bar() -> void: if _hud: _hud._refresh_season_bar()
 func _refresh_chain_progress() -> void: if _hud: _hud._refresh_chain_progress()
 func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
+
+## A real drag attempt fell short of the chain minimum: denied buzz + a small board
+## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake) + a status hint.
+func _on_chain_rejected(length: int) -> void:
+	if _audio != null:
+		_audio.play("buzz")
+	UiFx.shake(board, 3.0, 0.22)
+	if _status_label != null:
+		_status_label.text = "Chain of %d — need %d or more." % [length, board.min_chain]
 
 ## Switch between the five persistent bottom-nav VIEWS without stacking them. Tapping a
 ## nav tab routes here (NOT straight to the opener): we first hide any OTHER primary view
@@ -743,6 +759,7 @@ func _open_menu() -> void:
 		_menu_screen.setup(game)
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
 		_menu_screen.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+		_menu_screen.connect("motion_toggle_requested", Callable(self, "_on_toggle_motion"))
 		_menu_screen.connect("new_game_requested", Callable(self, "_on_new_game"))
 		# The "More" section's nav buttons route the secondary screens (achievements,
 		# chronicle, castle, …) through the SAME deep-link path the old left-strip buttons
@@ -1909,6 +1926,17 @@ func _on_toggle_sound() -> void:
 	SaveManager.save(game)
 	if _menu_screen != null:
 		_menu_screen.refresh_sound_label()
+
+## The Reduce Motion button emits `motion_toggle_requested`; Main owns the flip (the single
+## accounting point): toggle the persisted preference, apply it to the UiFx motion kit,
+## save, then re-sync the menu's label. The change takes effect immediately — the very
+## next overlay open / nav tap is instant when reduced, animated when not.
+func _on_toggle_motion() -> void:
+	game.reduce_motion = not game.reduce_motion
+	UiFx.reduced = game.reduce_motion
+	SaveManager.save(game)
+	if _menu_screen != null:
+		_menu_screen.refresh_motion_label()
 
 ## M4f — the New Game button emits `new_game_requested`; Main wipes the save and restarts from a
 ## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which

@@ -22,6 +22,7 @@ var _failures: int = 0
 
 # Signal counters (MenuScreen layer).
 var _toggle_count: int = 0
+var _motion_toggle_count: int = 0
 var _newgame_count: int = 0
 var _closed_count: int = 0
 var _navigate_count: int = 0
@@ -38,6 +39,9 @@ func _check(cond: bool, msg: String) -> void:
 
 func _on_toggle_sound() -> void:
 	_toggle_count += 1
+
+func _on_toggle_motion() -> void:
+	_motion_toggle_count += 1
 
 func _on_new_game() -> void:
 	_newgame_count += 1
@@ -79,6 +83,18 @@ func _initialize() -> void:
 	var legacy: GameState = GameState.from_dict({"coins": 5})
 	_check(legacy.audio_muted == false, "from_dict() with no audio_muted defaults to false")
 
+	# Reduce Motion preference: defaults false, serialized, round-trips, legacy-safe.
+	var m0 := GameState.new()
+	_check(m0.reduce_motion == false, "reduce_motion defaults to false (motion on)")
+	_check(m0.to_dict().has("reduce_motion"), "to_dict() contains the reduce_motion key")
+	m0.reduce_motion = true
+	SaveManager.clear()
+	SaveManager.save(m0)
+	var m1: GameState = SaveManager.load_state()
+	_check(m1.reduce_motion == true, "reduce_motion survives save → load_state (true)")
+	SaveManager.clear()
+	_check(legacy.reduce_motion == false, "from_dict() with no reduce_motion defaults to false")
+
 	# ── 2. MenuScreen wiring ──────────────────────────────────────────────────
 	var game := GameState.new()
 	var menu := MenuScreen.new()
@@ -87,6 +103,7 @@ func _initialize() -> void:
 	await process_frame
 	menu.open()
 	menu.connect("sound_toggle_requested", Callable(self, "_on_toggle_sound"))
+	menu.connect("motion_toggle_requested", Callable(self, "_on_toggle_motion"))
 	menu.connect("new_game_requested", Callable(self, "_on_new_game"))
 	menu.connect("closed", Callable(self, "_on_closed"))
 	menu.connect("navigation_requested", Callable(self, "_on_navigate"))
@@ -143,6 +160,23 @@ func _initialize() -> void:
 	var sound_btn: Variant = menu._action_buttons.get("toggle_sound")
 	_check(sound_btn != null and sound_btn.text == "Sound: On",
 		"Sound button reads 'Sound: On' when not muted")
+
+	# Reduce Motion toggle: registered, labelled from the (motion-on) preference, and
+	# pressing it fires `motion_toggle_requested` without flipping the flag here (Main owns that).
+	_check(menu._action_buttons.has("toggle_motion"), "_action_buttons has 'toggle_motion'")
+	var motion_btn: Variant = menu._action_buttons.get("toggle_motion")
+	_check(motion_btn != null and motion_btn.text == "Reduce Motion: Off",
+		"Reduce Motion button reads 'Off' when motion is on")
+	var before_motion := _motion_toggle_count
+	_check(_press(menu, "toggle_motion"), "pressed the 'toggle_motion' button")
+	_check(_motion_toggle_count == before_motion + 1, "motion_toggle_requested fired once")
+	_check(game.reduce_motion == false, "MenuScreen did NOT flip reduce_motion itself (Main owns it)")
+	# Label re-syncs from the flag (the Main callback path).
+	game.reduce_motion = true
+	menu.refresh_motion_label()
+	_check(motion_btn.text == "Reduce Motion: On", "refresh_motion_label() reads 'On' when reduced")
+	game.reduce_motion = false
+	menu.refresh_motion_label()
 
 	# Pressing the Sound button fires `sound_toggle_requested` (and does NOT flip the flag here —
 	# Main owns that).
