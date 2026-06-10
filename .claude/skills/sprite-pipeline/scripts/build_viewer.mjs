@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // sprite-pipeline — build the static review viewer.
 //
-// Reads the single source of truth `godot/assets/tiles/v2/pipeline.json` (global settings + a flat
-// list of hierarchical items, each a master + children + animations, candidates inline) and emits a
-// browser-facing projection into <out>/: a `data.json` plus a copy of the `viewer/` template
-// (index.html + viewer.css + viewer.js). Open <out>/index.html (served — the page fetches data.json)
-// to eyeball the whole family.
+// Reads the three-file spec via manifest.mjs: `godot/assets/tiles/v2/pipeline.json` (global settings +
+// a flat list of hierarchical items, each a master + children + animations) plus its
+// `pipeline.history.json` candidate-log sidecar, merged so each keyframe regains its `candidates`.
+// Both files are schema-validated (pipeline.schema.json) before anything is emitted — the build
+// REFUSES to proceed on invalid data. A missing sidecar is tolerated: the build degrades (empty
+// candidates; approved urls resolved from each keyframe's `selectedPath`). Emits a browser-facing
+// projection into <out>/: a `data.json` plus a copy of the `viewer/` template (index.html + viewer.css
+// + viewer.js). Open <out>/index.html (served — the page fetches data.json) to eyeball the whole
+// family.
 //
 // Node built-ins only (fs, path, url) — no npm deps, no build step.
 //
@@ -24,8 +28,8 @@
 //
 // Flags:
 //   --plan   print a JSON array of structural gap-fill actions (no data.json, no template copy).
-//   --watch  after the initial build, watch pipeline.json + the v2 asset tree and re-emit data.json
-//            on change (debounced). Runs until killed.
+//   --watch  after the initial build, watch pipeline.json + pipeline.history.json + the v2 asset tree
+//            and re-emit data.json on change (debounced). Runs until killed.
 //
 // Idempotent + non-destructive: re-running just refreshes data.json + the template copy. Do NOT
 // commit the built pixelGen/ output — it is a generated artifact (.gitignore covers it).
@@ -33,6 +37,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import * as manifest from "./manifest.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // scripts/ and viewer/ are siblings under the skill dir.
@@ -83,7 +89,6 @@ const isFile = (p) => {
     return false;
   }
 };
-const readJson = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
 
 // POSIX-style relative path (forward slashes) so it works as a URL when served, on any OS.
 const relUrl = (fromDir, toPath) => path.relative(fromDir, toPath).split(path.sep).join("/");
@@ -125,6 +130,14 @@ function projectKey(entry, role, basePrompt, baseDir, outDir) {
   if (selected !== null) {
     const sel = candidates.find((c) => c.idx === selected) ?? candidates[selected] ?? null;
     approvedUrl = sel ? sel.url : null;
+    // Degraded-mode fallback: when the history sidecar is absent the merged `candidates` array is
+    // empty, so the lookup above yields null even though a keyframe IS approved. Resolve the url from
+    // the keyframe's own `selectedPath` instead. This NEVER fires in the normal (sidecar-present)
+    // case, so `data.json` stays byte-identical. `selectedPath` is only consumed here to compute
+    // `approvedUrl` — it is not added to the emitted projection object.
+    if (approvedUrl === null) {
+      approvedUrl = assetUrl(entry.selectedPath, baseDir, outDir);
+    }
   }
 
   // Derived status: approved (a candidate is selected) / review (candidates exist, none chosen) /
@@ -363,9 +376,35 @@ function copyTree(srcDir, dstDir) {
   }
 }
 
+// ── validated load (three-file model) ─────────────────────────────────────────────────────────
+// Load the on-disk pipeline + history sidecar, schema-validate BOTH against pipeline.schema.json, and
+// return the MERGED view (candidates spliced back onto each keyframe) for the projection/plan code.
+// The script REFUSES to proceed on invalid data: any schema error is printed to stderr and the process
+// exits non-zero. A missing history sidecar is NOT an error — `loadHistory` returns `{}` (which
+// validates clean) and the build proceeds in degraded mode (empty candidates, urls resolved from
+// each keyframe's `selectedPath`). We validate the on-disk `loadPipeline` result, never the merged one
+// (the merged keyframes re-carry `candidates`, which the strict pipelineDoc schema forbids).
+function loadValidated(pipelinePath) {
+  const pipeline = manifest.loadPipeline(pipelinePath);
+  const history = manifest.loadHistory(pipelinePath);
+  const schema = manifest.loadSchema(pipelinePath);
+  const errs = [
+    ...manifest.validateDoc(pipeline, schema, "pipelineDoc"),
+    ...manifest.validateDoc(history, schema, "historyDoc"),
+  ];
+  if (errs.length) {
+    console.error(`refusing to build — invalid pipeline data (${errs.length} error(s)):`);
+    for (const e of errs) console.error(`  ${e}`);
+    process.exit(1);
+  }
+  // Reuse the already-parsed + validated pipeline/history to build the merged shape via the shared
+  // manifest.mergeInto helper, rather than re-reading the files a third time or duplicating the splice.
+  return manifest.mergeInto(pipeline, history);
+}
+
 // ── build (emit data.json + copy template) ───────────────────────────────────────────────────
 function emit(pipelinePath, baseDir, outDir, { copyTemplate } = { copyTemplate: true }) {
-  const pipeline = readJson(pipelinePath);
+  const pipeline = loadValidated(pipelinePath);
   const data = buildData(pipeline, baseDir, outDir);
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, "data.json"), JSON.stringify(data, null, 2) + "\n");
@@ -399,6 +438,15 @@ function startWatch(pipelinePath, baseDir, outDir) {
     watchers.push(fs.watch(pipelinePath, schedule));
   } catch (err) {
     console.error(`could not watch ${pipelinePath}: ${err.message}`);
+  }
+  // The history sidecar — edits to it change the merged candidates, so they must rebuild data.json.
+  // The recursive v2 watch below already covers it on Win/macOS; this explicit watch adds robustness
+  // (and covers the Linux non-recursive fallback). Tolerate the sidecar being absent.
+  const histPath = manifest.historyPath(pipelinePath);
+  try {
+    if (isFile(histPath)) watchers.push(fs.watch(histPath, schedule));
+  } catch (err) {
+    console.error(`could not watch ${histPath}: ${err.message}`);
   }
   // The v2 asset tree (recursive where supported).
   try {
@@ -439,11 +487,12 @@ function main() {
     process.exit(1);
   }
 
-  // --plan: just print the structural gap-fill actions; emit nothing.
+  // --plan: just print the structural gap-fill actions; emit nothing. Validates spec + history first
+  // (loadValidated exits non-zero on schema errors), then plans off the merged view.
   if (args.plan) {
     let pipeline;
     try {
-      pipeline = readJson(pipelinePath);
+      pipeline = loadValidated(pipelinePath);
     } catch (err) {
       console.error(`pipeline.json unreadable: ${err.message}`);
       process.exit(1);

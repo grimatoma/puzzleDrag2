@@ -48,8 +48,11 @@ For each requested tile, decide whether it's the **master** (the base every sibl
 usually the fullest / most canonical variant) or a **child** (derived from the approved master).
 Give each a stable `id` (the on-disk filename stem — match the project's naming, e.g.
 `tile_<family>_<variant>`), a one-line distinct `prompt`, and hoist the shared parts into the item
-`basePrompt`. Seed every keyframe with an **empty `candidates: []`** and `selected: null` — those
-fill in during the build. For animated requests, draft `animations[]` entries: `{ kind: "idle",
+`basePrompt`. Seed every keyframe as `{ id, prompt, selected: null, selectedPath: null }` with **no
+`candidates` key** — those slots fill in during the build. Candidates are **not** authored at intake
+and do **not** live in `pipeline.json`: they accumulate in the separate `pipeline.history.json`
+sidecar during generation (a brand-new set starts that sidecar as `{}`). For animated requests, draft
+`animations[]` entries: `{ kind: "idle",
 for, frames, motion }` and `{ kind: "transition", from, to, frames, physics }`, each with
 `status: "pending"`. The `motion`/`physics` strings are the motion briefs the animator executes, so
 make them physical ("leaves loosen and fall staggered at terminal velocity"), not vague
@@ -57,15 +60,25 @@ make them physical ("leaves loosen and fall staggered at terminal velocity"), no
 
 ## Write the config
 
+The set is driven by **three side-by-side files** in `godot/assets/tiles/v2/` (see
+`references/manifest-schema.md`): `pipeline.json` (the spec + current state you edit here),
+`pipeline.history.json` (the candidate/attempt log sidecar — starts `{}`, populated by generation, not
+hand-authored), and `pipeline.schema.json` (the formal JSON Schema every script validates against —
+it **refuses** to proceed on invalid data, and a stray `candidates` key on a keyframe fails its
+`additionalProperties: false`). Intake only writes `pipeline.json`.
+
 1. Open `godot/assets/tiles/v2/pipeline.json`. **First run** (file absent): create it with a global
    `settings` block — `styleSpec: "_style-spec.json"`, `canvas` (32px tile size — note this lives
    here, **not** in the style spec), `fps`, `candidates`, `humanApproval`, `autonomous` — and an
-   empty `items: []`.
+   empty `items: []`. (The `pipeline.history.json` sidecar starts as `{}` — or may be left absent and
+   read as `{}`; you don't hand-author it.)
 2. **Append a new `items[]` entry** for the family: `{ id, basePrompt, priors, master, children,
-   animations }`. Master/children each get `{ id, prompt, selected: null, candidates: [] }`.
-   Validate against `references/manifest-schema.md`: every keyframe `id` unique + stable; each
-   animation's `for` / `from` / `to` references a real keyframe id; relative `styleSpec`, `priors`,
-   and (later) `path`/`gif` paths resolve from the `pipeline.json` dir (`godot/assets/tiles/v2/`).
+   animations }`. Master/children each get `{ id, prompt, selected: null, selectedPath: null }` —
+   **no `candidates` key** (that would make `pipeline.json` schema-invalid; candidates live in the
+   history sidecar). Validate against `references/manifest-schema.md` (the canonical schema reference)
+   / `pipeline.schema.json`: every keyframe `id` unique + stable; each animation's `for` / `from` /
+   `to` references a real keyframe id; relative `styleSpec`, `priors`, and (later) `selectedPath`/`gif`
+   paths resolve from the `pipeline.json` dir (`godot/assets/tiles/v2/`).
 3. **Growing an existing family?** Append the new `children` / `animations` to its existing `items[]`
    entry instead of adding a new item — gap-fill only touches the new ids, and the shipped siblings
    become priors automatically.

@@ -32,16 +32,19 @@ This is the **orchestrator**. The craft and motion knowledge live in sibling ski
    outline, FPS). This is the **cohesion anchor**: every still and every animation is scored
    against it. For an existing game, the shipped tiles *are* the references. **When to read:**
    `references/reference-assets-spec.md` — what to provide and every spec field.
-2. **One pipeline config (JSON).** A single `godot/assets/tiles/v2/pipeline.json` is the **durable
-   source of truth** for the whole set — global `settings` (style-spec path, default `canvas`/`fps`,
-   `candidates`, `humanApproval`/`autonomous`) plus a flat list of hierarchical **items**, each a
-   `master` keyframe + its derived `children` + the `animations` over them, with every generated
-   candidate (including failures) recorded **inline**. It replaces the old per-set
-   `sets/<set>/manifest.json` model — there is no longer a manifest beside each output directory. It
-   is **idempotent**: re-running diffs the file against itself **by shape** (and against files on
-   disk) and builds only the gaps, feeding shipped siblings in via item `priors` so new members stay
-   continuous. **When to read:** `references/manifest-schema.md` — the top-level shape, gap-fill, and
-   every field.
+2. **One pipeline config (three files).** The pipeline lives in **three files side-by-side** in
+   `godot/assets/tiles/v2/`: **`pipeline.json`** (the **spec + state** — global `settings` plus a flat
+   list of hierarchical **items**, each a `master` keyframe + its derived `children` + the
+   `animations` over them; each keyframe carries `selected`/`selectedPath`, **not** candidates),
+   **`pipeline.history.json`** (the **candidate/attempt-log sidecar**, keyed itemId → keyframeId →
+   candidate[] — every seed ever tried, failures included; starts `{}`), and **`pipeline.schema.json`**
+   (the **formal JSON Schema** both data files are validated against — every script REFUSES to proceed
+   on invalid data). They're loaded/validated/written through the shared `scripts/manifest.mjs` seam.
+   This replaces the old per-set `sets/<set>/manifest.json` model — there is no longer a manifest
+   beside each output directory. It is **idempotent**: re-running diffs the spec (with candidate counts
+   merged in from history) against itself **by shape** and against files on disk, and builds only the
+   gaps, feeding shipped siblings in via item `priors` so new members stay continuous. **When to
+   read:** `references/manifest-schema.md` — the three-file model, gap-fill, and every field.
 
 ## Starting a run — list tiles → proposal → run (intake)
 
@@ -128,15 +131,17 @@ the animate stage — so a bad asset never burns the next batch of credits. The 
    candidates are kept.
 3. **Optional human-approval gate.** When `settings.humanApproval` is true (and `autonomous` false),
    pause for sign-off in the **pixelGen viewer** — the human picks/approves a candidate, which the
-   control server writes back to `pipeline.json` (`selected` + candidate `status: "approved"`). When
-   `settings.autonomous` is true the gate is skipped and the LLM verdict decides what to approve. In
-   the autonomous path, **record the verdict with `scripts/pipeline-patch.mjs`** (`record-candidate`
-   for each seed, then `approve`/`reject "<reason>"`) rather than hand-editing the JSON — atomic
-   writes, no dropped-comma risk. To run a session full-auto without committing a settings change,
-   flip it with `pipeline-patch.mjs set-mode autonomous` and **restore `set-mode gated` before you
-   commit** (the committed default should keep the human gate on so the *next* run isn't silently
-   un-gated). A `SPRITE_PIPELINE_*` env override is intentionally **not** used — the mode lives in
-   `pipeline.json` so the viewer and the headless run always agree on it.
+   control server writes back across the split: `selected` + `selectedPath` to `pipeline.json`, and the
+   candidate's `status: "approved"` to `pipeline.history.json`. When `settings.autonomous` is true the
+   gate is skipped and the LLM verdict decides what to approve. In the autonomous path, **record the
+   verdict with `scripts/pipeline-patch.mjs`** (`record-candidate` for each seed, then
+   `approve`/`reject "<reason>"`) rather than hand-editing the JSON — it writes the same split as the
+   control server (candidate records to `pipeline.history.json`, `selected`/`selectedPath` to
+   `pipeline.json`) via atomic temp+rename, no dropped-comma risk. To run a session full-auto without
+   committing a settings change, flip it with `pipeline-patch.mjs set-mode autonomous` and **restore
+   `set-mode gated` before you commit** (the committed default should keep the human gate on so the
+   *next* run isn't silently un-gated). A `SPRITE_PIPELINE_*` env override is intentionally **not**
+   used — the mode lives in `pipeline.json` so the viewer and the headless run always agree on it.
 4. **Proceed** to the next gated event (derive the children, then animate the idles/transitions).
 
 Each gated event is its own batch with its own audit + (optional) human approval, so the next spend
@@ -147,8 +152,9 @@ only happens against assets that already passed.
 The `items[]` nesting **is** the derivation graph: each item has **one `master`** keyframe and its
 **`children`** (variants derived from the approved master). There is **no `master:true` flag and no
 `derivesFrom` pointer** — a `child` derives from the item's `master` purely by position. A child is
-only eligible to generate once its master's `selected` is non-null (approved); gap-fill enforces
-this structurally. See `references/manifest-schema.md` §"Gap-fill is structural".
+only eligible to generate once its master's `selected` is non-null (approved — `selected !== null` is
+the approval signal); gap-fill reads candidate counts from the merged history view and enforces this
+structurally. See `references/manifest-schema.md` §"Gap-fill is structural".
 
 ### Storyboard comes *after* the still
 
@@ -230,11 +236,14 @@ A static review **viewer** (built by `scripts/build_viewer.mjs` into `pixelGen/`
 renders the set's keyframes, candidate seeds, idle GIFs, and transitions on one page so you can
 eyeball cohesion across the whole family and confirm the idles/transitions read right in context —
 the human-facing end of the G4 montage check **and the human-approval gate**. The control server
-(`serve_viewer.mjs`) accepts the viewer's select/approve/regen/comment decisions and **patches
-`pipeline.json` in place**; its spawned `build_viewer.mjs --watch` child re-emits `data.json` so the
-page re-polls live. It doubles as the **intake proposal surface** (all-pending before a run; the same
-cards fill with art after). Iterate: **build → montage (G4) → viewer → tune storyboard/params →
-re-animate** until the family reads as one set.
+(`serve_viewer.mjs`) accepts the viewer's select/approve/regen/comment decisions and **patches the
+three-file model in place**, splitting each patch by what it owns: `select`/`comment` and the
+preference half of `approve` write `pipeline.json` (`selected`/`selectedPath`/`comment`); `regen` and
+the record half of `approve` write `pipeline.history.json` (candidate `status`/`reason`). Its spawned
+`build_viewer.mjs --watch` child re-emits `data.json` so the page re-polls live. It doubles as the
+**intake proposal surface** (all-pending before a run; the same cards fill with art after). Iterate:
+**build → montage (G4) → viewer → tune storyboard/params → re-animate** until the family reads as one
+set.
 
 ## Bundled files — when to read each
 
@@ -242,11 +251,12 @@ re-animate** until the family reads as one set.
 |------|--------------|
 | `references/intake.md` | **Intake** — the interview that turns "make me N tiles" into a `pipeline.json` `items[]` entry + the pixelGen proposal, before any spend. |
 | `references/reference-assets-spec.md` | Stage 0 — what references to supply; every `_style-spec.json` field + how it's extracted. |
-| `references/manifest-schema.md` | Stage 1 — the single `pipeline.json` model (settings + items: master/children/animations + inline candidates), structural gap-fill, every field. |
+| `references/manifest-schema.md` | Stage 1 — the three-file model (`pipeline.json` spec + state / `pipeline.history.json` candidate-log sidecar / `pipeline.schema.json` formal definition), the `manifest.mjs` seam + merged view + degraded mode, structural gap-fill, every field. |
 | `references/aseprite-execution.md` | Stage 4 — the concrete Aseprite MCP frame-assembly + export recipe (additive-overlay + flexing-base), conformance helpers, Windows/path gotchas. |
 | `references/godot-integration.md` | The **separate, on-demand** Godot update step (not a pipeline stage) — set layout, frames→`.tres` via `npm run godot:update-tiles`, the engine-path decision, import/verify gotchas. |
 | `assets/style-spec.template.json` | Stage 0 — blank style-spec to copy to `<assets>/_style-spec.json`. |
-| `assets/manifest.template.json` | Superseded by the single `pipeline.json` model — pointer only; see `references/manifest-schema.md`. |
+| `assets/manifest.template.json` | Superseded by the three-file model — pointer + an illustrative `pipeline.json` items[] shape (new keyframes are `{ id, prompt, selected: null, selectedPath: null }`, no candidates); see `references/manifest-schema.md`. |
+| `assets/manifest.history.template.json` | Pointer + starting point for the `pipeline.history.json` sidecar — a new set starts `{}` (or absent); shows the populated itemId → keyframeId → candidate[] shape. |
 | `assets/storyboard.template.md` | **Stage 3 / G3** — copy + fill per idle/transition (against the generated still); critique it before the expensive animate. |
 | `assets/builder-prompt.md` | Per-asset builder instruction (the build half of the loop) — incl. the additive-overlay technique. |
 | `assets/critique-prompt.md` | The gate scoring rubric (the critique half of the loop). |
@@ -256,10 +266,11 @@ re-animate** until the family reads as one set.
 
 | Script | What it does |
 |--------|--------------|
-| `scripts/build_viewer.mjs` | Reads `pipeline.json`, emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change; `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) as JSON without building. |
-| `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) **patches `pipeline.json` in place** (atomic temp+rename). Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
-| `scripts/pipeline-patch.mjs` | **`pipeline.json` bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `show`. Atomic temp+rename write, preserves 2-space format. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
-| `scripts/integrate.mjs` | The **Godot update engine** (a separate step, **not** a pipeline stage; exposed as `tools/update-godot-tiles.mjs` / `npm run godot:update-tiles`, which imports its `main`). One command: `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (approved+generated idles) or explicit `<framesDir> <outTres>` pairs. |
+| `scripts/manifest.mjs` | The shared three-file seam every other script imports: `loadPipeline`/`loadHistory`/`loadSchema`, `loadMerged`/`mergeInto` (splice candidates back onto keyframes for the projection/plan code), `writePipeline`/`writeHistory` (atomic temp+rename), `validate`/`validateDoc` (against `pipeline.schema.json`), `historyPath`/`schemaPath`. Validate the **on-disk** docs, never the merged shape. |
+| `scripts/build_viewer.mjs` | Reads + schema-validates `pipeline.json` **and** `pipeline.history.json` via `manifest.mjs` (REFUSES on invalid data; missing sidecar → degraded mode, approved art from `selectedPath`), emits `pixelGen/data.json` + copies the `viewer/` template (the review viewer / intake proposal). `--watch` re-emits `data.json` on change (watches both data files); `--plan` prints the structural gap-fill action list (generate-master / generate-child / animate / reseed) off the merged view as JSON without building. |
+| `scripts/serve_viewer.mjs` | The pixelGen **control server**: static-serves the viewer + the v2 asset tree, and on POST `/api/<action>` (select / approve / regen / comment) validates then **patches the three-file model in place**, writing only the file(s) the action owns (`select`/`comment` → `pipeline.json`; `regen` → `pipeline.history.json`; `approve` → both, history first). All load/validate/write via `manifest.mjs`. Spawns `build_viewer.mjs --watch` so patches rebuild `data.json`. Default port 8100 (`$PORT`). |
+| `scripts/pipeline-patch.mjs` | **Three-file bookkeeping CLI** for the orchestrator (the headless counterpart to the viewer's buttons) — `record-candidate` / `approve` / `reject "<reason>"` / `animate-done <selector> <gif> [storyboard]` / `set-mode autonomous\|gated` / `show`. Writes the same split as the control server via `manifest.mjs` (candidate records → `pipeline.history.json`; `selected`/`selectedPath`, animation status/gif/storyboard, mode → `pipeline.json`), atomic temp+rename. Use it instead of hand-editing the JSON in an autonomous run (a dropped comma silently breaks the pipeline). |
+| `scripts/integrate.mjs` | The **Godot update engine** (a separate step, **not** a pipeline stage; exposed as `tools/update-godot-tiles.mjs` / `npm run godot:update-tiles`, which imports its `main`). Loads + schema-validates `pipeline.json` via `manifest.mjs` (REFUSES on invalid data; needs only the spec, not history) → `--import` → verify every frame PNG got a `.png.import` sidecar (**re-import once** if any missing) → `git checkout godot/project.godot` → `assemble_tres.gd` per idle → `verify_sf.gd`. Work list from `pipeline.json` (idles whose keyframe is approved via `selected !== null` + `status: generated`) or explicit `<framesDir> <outTres>` pairs; `--list` dry-runs the work list as JSON with no Godot binary. |
 | `scripts/pixellab.mjs` | PixelLab still client + importable module: `balance` checks credits; `create` runs the async **create → poll → download** loop and saves a PNG. Token from `$PIXELLAB_TOKEN` or `~/.claude.json` (never logged). |
 | `scripts/pixels.mjs` | PNG **opaque-pixel feature map** helper — read a still's non-transparent pixels / diff two stills, so the storyboard can cite real coordinates (which pixels exist, what changed). |
 | `scripts/montage.py` | G2/G4 review glue (**Pillow only**): upscale a still (`--scale`) or montage a `frames/<id>/` folder or a GIF for Read-and-judge. |
@@ -270,11 +281,14 @@ re-animate** until the family reads as one set.
 
 The redesigned pipeline is in place — intake, the builder/critique gate prompts, the
 `build_viewer.mjs` viewer + its `viewer/` template + the `serve_viewer.mjs` control server, the
-`pixellab.mjs` still client, and the **separate** Godot update step — `tools/update-godot-tiles.mjs`
+shared `manifest.mjs` seam, the `pipeline-patch.mjs` bookkeeping CLI, the `pixellab.mjs` still
+client, and the **separate** Godot update step — `tools/update-godot-tiles.mjs`
 (`npm run godot:update-tiles`) over the `integrate.mjs` engine (which calls `assemble_tres.gd` +
 `verify_sf.gd`). This game's committed inputs are `godot/assets/tiles/v2/_style-spec.json` and the
-single `godot/assets/tiles/v2/pipeline.json` (the migrated `birch_tree` item). The birch keyframes +
-previews are committed; a fresh **first run on a new family** (which spends PixelLab credits +
-Aseprite ops) is user-initiated: start with intake (or, for an existing item, jump to Stage 1
-gap-fill — `build_viewer.mjs --plan` shows what's pending) and approve the pixelGen proposal before
+three-file pipeline at `godot/assets/tiles/v2/` — `pipeline.json` (the `birch_tree` and `pumpkin`
+items, spec + state), `pipeline.history.json` (their candidate records), and `pipeline.schema.json`
+(the formal definition all scripts validate against). The birch + pumpkin keyframes + previews are
+committed; a fresh **first run on a new family** (which spends PixelLab credits + Aseprite ops) is
+user-initiated: start with intake (or, for an existing item, jump to Stage 1 gap-fill —
+`build_viewer.mjs --plan` shows what's pending) and approve the pixelGen proposal before
 the spend.

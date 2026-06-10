@@ -16,7 +16,8 @@ into siblings.
   `godot/assets/tiles/v2/sets/birch/…`. The orchestrator hands you the concrete paths.
 - **The pipeline config** — the single `godot/assets/tiles/v2/pipeline.json` (the source of truth;
   see `references/manifest-schema.md`). Find your asset in the relevant `items[]` entry: a
-  `master`/`children[]` keyframe (`{ id, prompt, selected, candidates }`) or an `animations[]` row
+  `master`/`children[]` keyframe (`{ id, prompt, selected, selectedPath }` — its candidate records
+  live separately in the `pipeline.history.json` sidecar, not on the keyframe) or an `animations[]` row
   (`{ kind: "idle", for, frames?, motion }` or `{ kind: "transition", from, to, frames?, physics }`).
   Honour the item `basePrompt`, the per-item or global `fps`/`canvas`, and the `frames` precedence
   (animation `frames` → spec `animation.framesDefault`).
@@ -66,8 +67,10 @@ Route by kind. **Stills** may be generated or hand-authored; **all animation is 
    `apply_shading` / `apply_auto_shading` (one-light form shading, not flat fills),
    `suggest_antialiasing` + `apply_outline` (the spec's `outline.rule`). Respect the safe-area
    inset; keep the background transparent.
-4. Save the cleaned candidate still to its `NN.png` (the orchestrator records it inline in
-   `pipeline.json`; the human/LLM gate picks which `idx` is approved).
+4. Save the cleaned candidate still to its `NN.png` (the orchestrator records each candidate in the
+   `pipeline.history.json` sidecar, keyed `itemId → keyframeId → candidate[]`, **not** on the
+   keyframe in `pipeline.json` — which only ever carries `selected`/`selectedPath`; the human/LLM gate
+   picks which `idx` is approved and points the keyframe's `selected`/`selectedPath` at it).
 
 ### Idle / transition → `frames/<id>/NN.png` + `previews/<id>.gif` (+ assembled `<key>.tres`)
 

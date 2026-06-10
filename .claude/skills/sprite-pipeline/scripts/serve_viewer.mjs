@@ -5,14 +5,26 @@
 //   1. Static-serves the built pixelGen viewer + the v2 asset tree, so the page at
 //      /pixelGen/index.html, its /pixelGen/data.json, and the `../sets/...` -> /sets/... asset URLs
 //      all resolve from a single document root (godot/assets/tiles/v2).
-//   2. Accepts the viewer's POST decisions and PATCHES `godot/assets/tiles/v2/pipeline.json`
-//      IN PLACE — replacing the old copy-paste-comments channel. A patch locates an item by
-//      `itemId`, a keyframe by `keyId` (master then children), mutates it, and writes the whole
-//      file back atomically (temp file + rename), pretty-printed with a trailing newline.
+//   2. Accepts the viewer's POST decisions and PATCHES the three-file model in place. Under the new
+//      split, a keyframe's *preference* (`selected`/`selectedPath`/`comment`) lives in
+//      `pipeline.json`, but the candidate *records* (`status`/`reason`) live in the
+//      `pipeline.history.json` sidecar. So a patch locates an item by `itemId` and a keyframe by
+//      `keyId` (master then children) in the pipeline, resolves that keyframe's candidate list out of
+//      history, mutates whichever file(s) the action owns, and writes ONLY those files back
+//      atomically (temp file + rename), pretty-printed with a trailing newline. All load/validate/
+//      write goes through the shared `manifest.mjs` seam.
+//
+//   Which file each action dirties:
+//     select   → pipeline.json only          (sets key.selected + key.selectedPath, kept paired)
+//     approve  → pipeline.json + history.json (sets key.selected + key.selectedPath; candidate→approved)
+//     regen    → history.json only           (each flagged candidate → failed + reason)
+//     comment  → pipeline.json only          (sets key.comment)
+//   When both are dirty (approve) we write history FIRST, then pipeline, so the watcher's rebuild
+//   always ends on a consistent pair.
 //
 // data.json freshness: on startup we run one build, then spawn `build_viewer.mjs --watch` as a
-// child so any change to pipeline.json — including our own patches — auto-rebuilds pixelGen/data.json
-// and the viewer re-polls. The child is cleaned up on SIGINT/SIGTERM.
+// child so any change to pipeline.json/pipeline.history.json — including our own patches —
+// auto-rebuilds pixelGen/data.json and the viewer re-polls. The child is cleaned up on SIGINT/SIGTERM.
 //
 // Architecture mirrors tools/serve-godot-dist.mjs (createServer, MIME map, path-traversal guard,
 // $PORT). Node built-ins only (http, fs, path, url, child_process). No npm deps.
@@ -21,23 +33,16 @@
 //
 // Defaults:
 //   --root      godot/assets/tiles/v2          (document root; pixelGen/ + sets/ live under it)
-//   --pipeline  <root>/pipeline.json           (the file patched in place)
+//   --pipeline  <root>/pipeline.json           (the file patched in place; sidecars derived from it)
 //   --port      8100  (override via $PORT)
 
 import { spawn } from "node:child_process";
-import {
-  createReadStream,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import * as manifest from "./manifest.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // scripts/ -> sprite-pipeline/ -> skills/ -> .claude/ -> repo (or worktree) root.
@@ -66,7 +71,6 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const docRoot = resolve(args.root || join(repoRoot, "godot", "assets", "tiles", "v2"));
 const pipelinePath = resolve(args.pipeline || join(docRoot, "pipeline.json"));
-const pipelineDir = dirname(pipelinePath);
 const port = args.port || Number(process.env.PORT) || 8100;
 
 // MIME map — covers the viewer shell (.html/.css/.js/.json), the generated art (.png/.gif), and the
@@ -106,30 +110,7 @@ function sendText(res, code, msg) {
   res.end(msg);
 }
 
-// ── pipeline.json patch primitives ───────────────────────────────────────────────────────────
-function readPipeline() {
-  return JSON.parse(readFileSync(pipelinePath, "utf8"));
-}
-
-// Atomic write: serialize to a temp file in the SAME directory, then rename over the target. Rename
-// within a dir is atomic on every OS we run on, so a reader never sees a half-written file.
-function writePipelineAtomic(obj) {
-  const text = JSON.stringify(obj, null, 2) + "\n";
-  const tmpDir = mkdtempSync(join(pipelineDir, ".pipeline-tmp-"));
-  const tmpFile = join(tmpDir, "pipeline.json");
-  try {
-    writeFileSync(tmpFile, text, "utf8");
-    renameSync(tmpFile, pipelinePath);
-  } finally {
-    // Clean up the temp dir (the file moved out on success; on failure it may remain).
-    try {
-      rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
+// ── three-file patch primitives ──────────────────────────────────────────────────────────────
 // Find an item by id in pipeline.items.
 function findItem(pipeline, itemId) {
   const items = Array.isArray(pipeline.items) ? pipeline.items : [];
@@ -145,8 +126,11 @@ function findKey(item, keyId) {
   return children.find((c) => c && typeof c === "object" && c.id === keyId) || null;
 }
 
-// Resolve { item, key } from a body's itemId/keyId, or an { error: {code,msg} } describing the miss.
-function resolveTarget(pipeline, body) {
+// Resolve { item, key, histCands } from a body's itemId/keyId, or an { error: {code,msg} } describing
+// the miss. `key` is the keyframe object inside `pipeline` (preference fields live here); `histCands`
+// is that keyframe's candidate array inside `history` (the record fields live there). `histCands`
+// aliases into the loaded history tree, so mutating its elements and then writing `history` persists.
+function resolveTarget(pipeline, history, body) {
   if (typeof body.itemId !== "string" || body.itemId === "") {
     return { error: { code: 400, msg: "missing or invalid itemId" } };
   }
@@ -157,64 +141,77 @@ function resolveTarget(pipeline, body) {
   if (!item) return { error: { code: 404, msg: `item not found: ${body.itemId}` } };
   const key = findKey(item, body.keyId);
   if (!key) return { error: { code: 404, msg: `key not found: ${body.keyId}` } };
-  return { item, key };
+  const perItem = history && typeof history === "object" ? history[item.id] : null;
+  const histCands =
+    perItem && typeof perItem === "object" && Array.isArray(perItem[key.id]) ? perItem[key.id] : [];
+  return { item, key, histCands };
 }
 
-function candidateAt(key, idx) {
-  const cands = Array.isArray(key.candidates) ? key.candidates : [];
+// Match a candidate by its `idx` FIELD (not array position), so we stay consistent with
+// build_viewer/viewer/integrate, which all key off `idx`. `histCands` is the keyframe's history list.
+function candidateAt(histCands, idx) {
   if (!Number.isInteger(idx)) return null;
-  // Match by the candidate's `idx` FIELD (not array position) so we stay
-  // consistent with build_viewer/viewer/integrate, which all key off `idx`.
-  return cands.find((c) => c && c.idx === idx) || null;
+  return histCands.find((c) => c && c.idx === idx) || null;
 }
 
 // ── the four patch actions ────────────────────────────────────────────────────────────────────
-// Each returns { error } on a validation miss, or mutates `key` in place and returns {}.
+// Each receives { key, histCands, body } and either returns { error } on a validation miss, or
+// mutates the file(s) it owns in place and returns a `dirty` map naming which file(s) changed:
+//   { dirty: { pipeline: bool, history: bool } }
+// The handler writes ONLY the files flagged dirty (history first, then pipeline). `key` lives in the
+// loaded pipeline; `histCands` aliases into the loaded history, so mutations there persist on write.
 const ACTIONS = {
-  // preference only — no status change.
-  select(key, body) {
+  // preference only — set key.selected (and the paired key.selectedPath) in pipeline. No history
+  // change: select expresses a preference, it does not commit a candidate, so no status flips.
+  // selectedPath is DEFINED as "the path of the candidate at idx `selected`", so it must move with
+  // `selected` or it goes stale (e.g. approve@0 then select@2 would leave selectedPath on cand 0).
+  select({ key, histCands, body }) {
     if (!Number.isInteger(body.idx)) return { error: { code: 400, msg: "idx must be an integer" } };
-    if (!candidateAt(key, body.idx)) {
+    const cand = candidateAt(histCands, body.idx);
+    if (!cand) {
       return { error: { code: 400, msg: `idx out of range: ${body.idx}` } };
     }
     key.selected = body.idx;
-    return {};
+    key.selectedPath = typeof cand.path === "string" ? cand.path : null;
+    return { dirty: { pipeline: true, history: false } };
   },
 
-  // select + mark the chosen candidate approved.
-  approve(key, body) {
+  // select + record the chosen candidate's path in pipeline, AND mark it approved in history.
+  approve({ key, histCands, body }) {
     if (!Number.isInteger(body.idx)) return { error: { code: 400, msg: "idx must be an integer" } };
-    const cand = candidateAt(key, body.idx);
+    const cand = candidateAt(histCands, body.idx);
     if (!cand) return { error: { code: 400, msg: `idx out of range: ${body.idx}` } };
     key.selected = body.idx;
+    key.selectedPath = typeof cand.path === "string" ? cand.path : null;
     cand.status = "approved";
-    return {};
+    return { dirty: { pipeline: true, history: true } };
   },
 
-  // flag one or more candidates for regenerate → status "failed" + reason (gap-fill rule 4 re-seeds).
-  regen(key, body) {
+  // flag one or more candidates for regenerate → history status "failed" + reason (gap-fill rule 4
+  // re-seeds). Pipeline is untouched.
+  regen({ histCands, body }) {
     if (!Array.isArray(body.idxs) || body.idxs.length === 0) {
       return { error: { code: 400, msg: "idxs must be a non-empty array" } };
     }
     // Validate every index up front so the patch is all-or-nothing.
     for (const idx of body.idxs) {
-      if (!Number.isInteger(idx) || !candidateAt(key, idx)) {
+      if (!Number.isInteger(idx) || !candidateAt(histCands, idx)) {
         return { error: { code: 400, msg: `idx out of range: ${idx}` } };
       }
     }
     for (const idx of body.idxs) {
-      const cand = candidateAt(key, idx);
+      const cand = candidateAt(histCands, idx);
       cand.status = "failed";
       cand.reason = "human: flagged for regenerate";
     }
-    return {};
+    return { dirty: { pipeline: false, history: true } };
   },
 
-  // attach / overwrite a free-text review comment on the keyframe.
-  comment(key, body) {
+  // attach / overwrite a free-text review comment on the keyframe (pipeline only).
+  comment({ key, body }) {
     if (body.comment == null) return { error: { code: 400, msg: "missing comment" } };
     key.comment = String(body.comment);
-    return {};
+    return { dirty: { pipeline: true, history: false } };
   },
 };
 
@@ -283,30 +280,53 @@ async function handleApi(req, res, action) {
     return;
   }
 
+  // Load BOTH files (history sidecar reads as {} when absent) and schema-validate each on-disk doc
+  // before touching anything — mirror build_viewer's gate so a corrupt pair can't be patched into a
+  // worse state. We validate the on-disk pipeline/history (never a merged shape).
   let pipeline;
+  let history;
   try {
-    pipeline = readPipeline();
+    pipeline = manifest.loadPipeline(pipelinePath);
+    history = manifest.loadHistory(pipelinePath);
+    const schema = manifest.loadSchema(pipelinePath);
+    const errs = [
+      ...manifest.validateDoc(pipeline, schema, "pipelineDoc"),
+      ...manifest.validateDoc(history, schema, "historyDoc"),
+    ];
+    if (errs.length) {
+      sendText(res, 500, `500 invalid pipeline/history data: ${errs.join("; ")}`);
+      return;
+    }
   } catch (err) {
-    sendText(res, 500, `500 pipeline.json unreadable: ${err.message}`);
+    sendText(res, 500, `500 pipeline/history/schema unreadable: ${err.message}`);
     return;
   }
 
-  const target = resolveTarget(pipeline, body);
+  const target = resolveTarget(pipeline, history, body);
   if (target.error) {
     sendText(res, target.error.code, `${target.error.code} ${target.error.msg}`);
     return;
   }
 
-  const result = fn(target.key, body);
+  const result = fn({ key: target.key, histCands: target.histCands, body });
   if (result.error) {
     sendText(res, result.error.code, `${result.error.code} ${result.error.msg}`);
     return;
   }
 
+  // Write ONLY the files the action dirtied. When both changed (approve), write history FIRST then
+  // pipeline so the watcher's rebuild always ends on a consistent pair (selectedPath ↔ approved
+  // status). A --watch rebuild that races in BETWEEN the two writes is harmless: build_viewer derives
+  // keyframe status from pipeline.selected (still the prior selection at that instant), so the interim
+  // data.json just shows the old selection — never a crash or a dangling path — and the following
+  // pipeline write + re-rebuild reconciles it. The `histCands` array aliases into `history`, so its
+  // mutations are already reflected.
+  const dirty = result.dirty || {};
   try {
-    writePipelineAtomic(pipeline);
+    if (dirty.history) manifest.writeHistory(pipelinePath, history);
+    if (dirty.pipeline) manifest.writePipeline(pipelinePath, pipeline);
   } catch (err) {
-    sendText(res, 500, `500 could not write pipeline.json: ${err.message}`);
+    sendText(res, 500, `500 could not write pipeline data: ${err.message}`);
     return;
   }
 

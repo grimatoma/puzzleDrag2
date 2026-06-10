@@ -23,28 +23,14 @@
         "id": "tile_tree_birch_autumn",
         "prompt": "gold/amber canopy",
         "selected": 0,
-        "candidates": [
-          {
-            "idx": 0,
-            "path": "sets/birch/keyframes/tile_tree_birch_autumn.png",
-            "status": "approved",
-            "llm": "pass"
-          }
-        ]
+        "selectedPath": "sets/birch/keyframes/tile_tree_birch_autumn.png"
       },
       "children": [
         {
           "id": "tile_tree_birch_winter",
           "prompt": "bare branches, snow on limbs",
           "selected": 0,
-          "candidates": [
-            {
-              "idx": 0,
-              "path": "sets/birch/keyframes/tile_tree_birch_winter.png",
-              "status": "approved",
-              "llm": "pass"
-            }
-          ]
+          "selectedPath": "sets/birch/keyframes/tile_tree_birch_winter.png"
         }
       ],
       "animations": [
@@ -86,70 +72,14 @@
         "id": "tile_veg_pumpkin_autumn",
         "prompt": "ripe deep-orange ribbed pumpkin, dark green curling vine with two leaves, stubby brown stem",
         "selected": 3,
-        "candidates": [
-          {
-            "idx": 0,
-            "path": "items/pumpkin/tile_veg_pumpkin_autumn/00.png",
-            "status": "rejected",
-            "llm": "fail",
-            "reason": "shade side drifts crimson/red — off the pumpkin-orange ramp (red-brown, not crimson)"
-          },
-          {
-            "idx": 1,
-            "path": "items/pumpkin/tile_veg_pumpkin_autumn/01.png",
-            "status": "rejected",
-            "llm": "fail",
-            "reason": "rind is pale squash-gold, not ripe deep-orange; confusable with shipped tile_veg_squash"
-          },
-          {
-            "idx": 2,
-            "path": "items/pumpkin/tile_veg_pumpkin_autumn/02.png",
-            "status": "rejected",
-            "llm": "fail",
-            "reason": "oversaturated fire-red + pumpkin under-sized vs family detail density (leaf dominates)"
-          },
-          {
-            "idx": 3,
-            "path": "items/pumpkin/tile_veg_pumpkin_autumn/03.png",
-            "status": "approved",
-            "llm": "pass"
-          }
-        ]
+        "selectedPath": "items/pumpkin/tile_veg_pumpkin_autumn/03.png"
       },
       "children": [
         {
           "id": "tile_veg_pumpkin_winter",
           "prompt": "the same round heavily-ribbed pumpkin with stubby dark stem and short curling tendrils on top, now frost-dusted pale orange, tendrils withered gray-brown and drooping, white snow cap on the crown, small snow mound at the base",
           "selected": 3,
-          "candidates": [
-            {
-              "idx": 0,
-              "path": "items/pumpkin/tile_veg_pumpkin_winter/00.png",
-              "status": "rejected",
-              "llm": "fail",
-              "reason": "rind drifts gold-tan into the wheat-gold family (loses pumpkin identity); base frost reads as icy web, not an accumulable mound"
-            },
-            {
-              "idx": 1,
-              "path": "items/pumpkin/tile_veg_pumpkin_winter/01.png",
-              "status": "rejected",
-              "llm": "fail",
-              "reason": "rind drifts pink/salmon (off-ramp); new base vine-wrap geometry breaks silhouette continuity with the master"
-            },
-            {
-              "idx": 2,
-              "path": "items/pumpkin/tile_veg_pumpkin_winter/02.png",
-              "status": "rejected",
-              "llm": "fail",
-              "reason": "reads autumn-alive: saturated warm rind + healthy green leaves; winter variant features too weak (no paling, no mound)"
-            },
-            {
-              "idx": 3,
-              "path": "items/pumpkin/tile_veg_pumpkin_winter/03.png",
-              "status": "approved",
-              "llm": "pass"
-            }
-          ]
+          "selectedPath": "items/pumpkin/tile_veg_pumpkin_winter/03.png"
         }
       ],
       "animations": [

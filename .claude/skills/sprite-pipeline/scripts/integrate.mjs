@@ -20,17 +20,25 @@
 //   6. verifies all built .tres via tools/verify_sf.gd (idle/loop/frames),
 //   7. prints a summary and exits 0 on success, non-zero on any failure.
 //
-// Node built-ins only. Invoke from anywhere — paths are resolved against the repo root.
+// Node built-ins only (plus the sibling manifest.mjs seam). Invoke from anywhere — paths are resolved
+// against the repo root.
 //
-//   node integrate.mjs [--godot <path>] [<framesDir> <outTres> [<framesDir2> <outTres2> ...]]
+//   node integrate.mjs [--godot <path>] [--list] [<framesDir> <outTres> [<framesDir2> <outTres2> ...]]
 //
 // framesDir/outTres overrides are relative to the v2 dir (godot/assets/tiles/v2/) or absolute.
-// With no override pairs, the work list is derived from pipeline.json.
+// With no override pairs, the work list is derived from pipeline.json (loaded + schema-validated via
+// manifest.mjs; integrate REFUSES to proceed on invalid data).
+//
+//   --list   dry-run: build + validate the pipeline, derive the work list, print it as pretty JSON,
+//            and exit 0 — all BEFORE resolving a Godot binary or importing/packing. Lets you exercise
+//            and inspect the work-list derivation with no Godot installed (mirrors build_viewer --plan).
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import * as manifest from "./manifest.mjs";
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 // This script lives at <repo>/.claude/skills/sprite-pipeline/scripts/integrate.mjs.
@@ -93,15 +101,15 @@ function toWorkPaths(p) {
 }
 
 // Is the keyframe an idle's `for` key points at approved?
-// Searches the item's master + children for an entry whose id === key, then checks
-// `selected` is non-null and the selected candidate is status "approved".
+// Searches the item's master + children for an entry whose id === key, then checks the
+// keyframe-level approval signal: approved = a candidate has been selected (`selected` non-null);
+// candidate-level status lives in pipeline.history.json and is not needed here. This matches
+// build_viewer's projection, which derives keyframe status "approved" from `selected !== null`.
 function keyframeApproved(item, key) {
   const entries = [item.master, ...(item.children || [])].filter(Boolean);
   const kf = entries.find((e) => e && e.id === key);
   if (!kf) return false;
-  if (kf.selected === null || kf.selected === undefined) return false;
-  const cand = (kf.candidates || []).find((c) => c && c.idx === kf.selected);
-  return !!cand && cand.status === "approved";
+  return kf.selected !== null && kf.selected !== undefined;
 }
 
 // Derive a work item from an idle animation's gif path, by convention:
@@ -138,9 +146,24 @@ function workListFromPipeline() {
   }
   let data;
   try {
-    data = JSON.parse(readFileSync(PIPELINE_JSON, "utf8"));
+    data = manifest.loadPipeline(PIPELINE_JSON);
   } catch (e) {
     die(`failed to parse pipeline.json: ${e.message}`);
+  }
+  // Refuse to proceed on invalid on-disk data (consistent with build_viewer/serve_viewer). integrate
+  // does not need history — only the spec drives the work list — so validate the pipeline alone.
+  // Validate the object we'll actually iterate (loaded once above), not a fresh re-parse.
+  const errs = manifest.validateDoc(
+    data,
+    manifest.loadSchema(PIPELINE_JSON),
+    "pipelineDoc",
+  );
+  if (errs.length) {
+    console.error(
+      `integrate: refusing to proceed — invalid pipeline data (${errs.length} error(s)):`,
+    );
+    for (const e of errs) console.error(`  ${e}`);
+    die("pipeline.json failed schema validation.");
   }
   const work = [];
   for (const item of data.items || []) {
@@ -292,7 +315,7 @@ function revertProjectGodot() {
 // ── 5. Pack each work item ───────────────────────────────────────────────────
 function pipelineFps() {
   try {
-    const data = JSON.parse(readFileSync(PIPELINE_JSON, "utf8"));
+    const data = manifest.loadPipeline(PIPELINE_JSON);
     const fps = data?.settings?.fps;
     if (typeof fps === "number" && fps > 0) return fps;
   } catch {
@@ -350,6 +373,7 @@ function verifyAll(godot, tresResPaths) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
   let godot = null;
+  let list = false;
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -358,22 +382,24 @@ function parseArgs(argv) {
       if (!godot) die("--godot requires a path argument");
     } else if (a.startsWith("--godot=")) {
       godot = a.slice("--godot=".length);
+    } else if (a === "--list") {
+      list = true;
     } else if (a === "--help" || a === "-h") {
       console.log(
-        "Usage: node integrate.mjs [--godot <path>] [<framesDir> <outTres> ...]",
+        "Usage: node integrate.mjs [--godot <path>] [--list] [<framesDir> <outTres> ...]",
       );
       process.exit(0);
     } else {
       rest.push(a);
     }
   }
-  return { godot, overridePairs: rest };
+  return { godot, list, overridePairs: rest };
 }
 
 function main() {
-  const { godot: godotArg, overridePairs } = parseArgs(process.argv.slice(2));
-  const godot = resolveGodot(godotArg);
+  const { godot: godotArg, list, overridePairs } = parseArgs(process.argv.slice(2));
 
+  // Build + validate the work list BEFORE touching Godot, so --list (dry-run) needs no binary.
   let work =
     overridePairs.length > 0
       ? workListFromOverrides(overridePairs)
@@ -381,9 +407,18 @@ function main() {
 
   work = filterExistingFrames(work);
 
+  // --list: print the derived work list as pretty JSON and exit, before resolving Godot or
+  // importing/packing. Mirrors build_viewer.mjs --plan: a no-binary inspection/verification hook.
+  if (list) {
+    console.log(JSON.stringify(work, null, 2));
+    process.exit(0);
+  }
+
   if (work.length === 0) {
     die("no work items to pack (nothing approved/generated, or all framesDirs missing).");
   }
+
+  const godot = resolveGodot(godotArg);
 
   console.log(
     `integrate: ${work.length} idle(s) to pack: ${work.map((w) => w.name).join(", ")}`,
