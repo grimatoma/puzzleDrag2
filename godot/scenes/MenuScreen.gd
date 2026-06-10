@@ -36,6 +36,10 @@ signal sound_toggle_requested
 ## applies it to the UiFx motion kit, saves, and calls back refresh_motion_label()
 ## (same single-accounting-point pattern as the Sound toggle).
 signal motion_toggle_requested
+## Emitted when the Text Size button is pressed — Main cycles game.text_size_index,
+## sets Typography.scale, saves, re-applies the scale to live UI, and calls back
+## refresh_text_size_label() (same single-accounting-point pattern as the toggles).
+signal text_size_cycle_requested
 ## Emitted when New Game is pressed — Main wipes the save + restarts the run.
 signal new_game_requested
 ## Emitted when a "More" navigation button is pressed, carrying the deep-link id of the
@@ -76,6 +80,7 @@ var _action_buttons: Dictionary = {}
 var _sound_btn: Button
 var _fullscreen_btn: Button
 var _motion_btn: Button
+var _text_size_btn: Button
 var _built: bool = false
 
 # ── parchment palette (matches Main's HUD / TownScreen journal tokens) ──────────
@@ -97,12 +102,14 @@ func setup(g: GameState) -> void:
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
+	refresh_text_size_label()
 
 func open() -> void:
 	visible = true
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
+	refresh_text_size_label()
 
 func close() -> void:
 	visible = false
@@ -216,6 +223,18 @@ func _build_shell() -> void:
 	_motion_btn.connect("pressed", Callable(self, "_on_motion_pressed"))
 	col.add_child(_motion_btn)
 	_action_buttons["toggle_motion"] = _motion_btn
+
+	# Text Size — accessibility cycle (Normal → Large → Larger → …) for the Typography
+	# scale that sizes every UI label. Emits `text_size_cycle_requested`; Main cycles the
+	# persisted index + sets Typography.scale + re-applies it to live UI (the single
+	# accounting point). Styled identically to the Reduce Motion button above.
+	_text_size_btn = Button.new()
+	_text_size_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_button(_text_size_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
+	_text_size_btn.connect("pressed", Callable(self, "_on_text_size_pressed"))
+	col.add_child(_text_size_btn)
+	_action_buttons["cycle_text_size"] = _text_size_btn
+	refresh_text_size_label()
 
 	# Show Tutorial — re-opens the 6-step onboarding (replay). Closes the menu + emits
 	# navigation_requested("tutorial"); Main routes it through apply_deeplink("tutorial"), the
@@ -371,6 +390,19 @@ func _on_motion_pressed() -> void:
 func refresh_motion_label() -> void:
 	if _motion_btn != null and game != null:
 		_motion_btn.text = "Reduce Motion: %s" % ("On" if game.reduce_motion else "Off")
+
+## The Text Size button — emit `text_size_cycle_requested`; Main owns the index cycle +
+## Typography.scale set + save + live re-apply + label re-sync. This screen never touches
+## the index itself (single accounting point — mirrors the Sound/Reduce Motion toggles).
+func _on_text_size_pressed() -> void:
+	emit_signal("text_size_cycle_requested")
+
+## Re-sync the Text Size button text from the persisted index: "Text Size: Normal" /
+## "Large" / "Larger" (the matching TEXT_SIZE_LABELS entry). Called by Main after it cycles
+## the index, and on open/setup so a restored preference shows correctly.
+func refresh_text_size_label() -> void:
+	if _text_size_btn != null and game != null:
+		_text_size_btn.text = "Text Size: %s" % Typography.TEXT_SIZE_LABELS[game.text_size_index]
 
 ## The Fullscreen button — flip the OS window between windowed + fullscreen via DisplayServer.
 ## A display-only preference (no game state, nothing persisted), so the screen owns it directly.
