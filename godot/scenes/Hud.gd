@@ -1431,7 +1431,9 @@ func _refresh_chain_progress() -> void:
 		_apply_chain_progress_fill()
 		return
 	var prog: int = int(game.progress.get(_last_res, 0))
-	_chain_prog_label.text = "%s: %d/%d" % [_last_res, prog, _last_threshold]
+	# Pretty label, matching the live-chain line above — the raw key ("hay_bundle")
+	# must never reach the player (review-4).
+	_chain_prog_label.text = "%s: %d/%d" % [UiKit.pretty_name(_last_res), prog, _last_threshold]
 	_apply_chain_progress_fill()
 
 ## Position + size + tint the chain-progress fill. Two modes:

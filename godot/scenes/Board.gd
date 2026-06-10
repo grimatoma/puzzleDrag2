@@ -667,7 +667,14 @@ func layout_for(viewport: Vector2) -> void:
 		_shake_tween.kill()
 	_shake_tween = null
 	var avail_w := viewport.x * 0.94
-	var avail_h := viewport.y * 0.62
+	# Height budget = the band between the board's top anchor (Main._layout puts it at
+	# 0.24·h) and the stockpile card's top anchor (Hud._layout_hud puts it at 0.74·h),
+	# plus a 36px allowance for the board card's bottom frame padding tucking under the
+	# stockpile (exactly the overlap the canonical 720×1280 portrait has always had —
+	# at that size this formula still yields tile_size 112, pixel-identical). review-4:
+	# the old flat 0.62·h budget overshot the stockpile on wide/landscape viewports
+	# (e.g. a 1280×800 desktop window), burying the bottom tile row under the card.
+	var avail_h := viewport.y * 0.50 + 36.0
 	tile_size = floorf(minf(avail_w / Constants.COLS, avail_h / Constants.ROWS))
 	for r in Constants.ROWS:
 		for c in Constants.COLS:

@@ -72,9 +72,14 @@ static func heading_font() -> Font:
 			var fv := FontVariation.new()
 			fv.base_font = base
 			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
+			var fb: Array = []
 			var emoji := emoji_font()
 			if emoji != null:
-				fv.fallbacks = [emoji]
+				fb.append(emoji)
+			var symbols := symbols_font()
+			if symbols != null:
+				fb.append(symbols)
+			fv.fallbacks = fb
 			_heading_font_cache = fv
 	return _heading_font_cache
 
@@ -99,6 +104,30 @@ static func emoji_font() -> Font:
 		if f is FontFile:
 			_emoji_font_cache = f
 	return _emoji_font_cache
+
+# ── symbols fallback font ──────────────────────────────────────────────────────
+
+## Cached DejaVu Sans symbol SUBSET (godot/assets/fonts/DejaVuSymbols-subset.ttf,
+## Bitstream Vera license — see the .LICENSE file beside it), or null if absent.
+## Covers the non-emoji symbol codepoints the UI strings use that NEITHER the engine
+## default font NOR NotoEmoji carries — → (U+2192), ◉ (U+25C9), ✎ (U+270E), ★, ✓,
+## ⬡, ⟳, ⊞, ∈, ∪, ≈, Δ … — which otherwise render as tofu boxes on the Web export
+## (review-4: the chain toast's "→" and the daily-reward "◉" were tofu in QA).
+static var _symbols_font_cache: Font = null
+static var _symbols_font_tried: bool = false
+
+## Load the bundled symbols-subset font. Same pattern as emoji_font(): bundled so it
+## renders identically on desktop AND web, cached on the class, null-safe for callers.
+static func symbols_font() -> Font:
+	if _symbols_font_tried:
+		return _symbols_font_cache
+	_symbols_font_tried = true
+	var path := "res://assets/fonts/DejaVuSymbols-subset.ttf"
+	if ResourceLoader.exists(path):
+		var f = load(path)
+		if f is FontFile:
+			_symbols_font_cache = f
+	return _symbols_font_cache
 
 ## Cached synthetic-italic FontVariation (the default body font sheared right). Godot's
 ## bundled font has no italic face, so story/quote text gets a real slant via the font
@@ -132,15 +161,18 @@ static func italic_font() -> Font:
 ## Main._ready. Base glyphs are unchanged (same default font), so body text is
 ## pixel-identical — only previously-broken emoji start rendering.
 static func install_emoji_fallback() -> void:
-	var emoji := emoji_font()
-	if emoji == null:
-		return
 	var base: Font = ThemeDB.fallback_font
 	if base == null:
 		return
 	var fb: Array = base.fallbacks
-	if not fb.has(emoji):
-		fb.append(emoji)
+	var changed := false
+	# Emoji first (existing behaviour), then the symbols subset (→ ◉ ✎ ★ ✓ …) so any
+	# codepoint both carry keeps resolving from NotoEmoji exactly as before.
+	for f in [emoji_font(), symbols_font()]:
+		if f != null and not fb.has(f):
+			fb.append(f)
+			changed = true
+	if changed:
 		base.fallbacks = fb
 
 # ── resource icons + names ──────────────────────────────────────────────────────

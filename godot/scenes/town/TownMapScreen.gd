@@ -273,7 +273,7 @@ func _build_shell() -> void:
 	zoom_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	overlay.add_child(zoom_box)
 
-	var zoom_in_btn := _make_zoom_btn("＋")
+	var zoom_in_btn := _make_zoom_btn("+")
 	zoom_in_btn.connect("pressed", Callable(self, "_on_zoom_in"))
 	zoom_box.add_child(zoom_in_btn)
 	_action_buttons["zoom_in"] = zoom_in_btn
