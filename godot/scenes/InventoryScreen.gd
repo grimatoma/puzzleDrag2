@@ -552,7 +552,7 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 func _make_resource_row(res: String) -> PanelContainer:
 	var count: int = game.qty(res)
 	var entry_key: String = "res:" + res
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
@@ -599,11 +599,11 @@ func _make_resource_row(res: String) -> PanelContainer:
 	# Expanded details — kind eyebrow, the catalog description, and real Sell/Buy actions
 	# (the same GameState.sell/buy the Town Market uses; prices are the live drifted ones).
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Resource · %s" % group_of(res))
+		var details := UiKit.begin_expand_details(col)
+		UiKit.add_expand_eyebrow(details, "Resource · %s" % group_of(res), COL_HEADER)
 		var desc: String = ResourceConfig.desc(res)
 		if desc != "":
-			details.add_child(_make_detail_text(desc))
+			details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
 		var actions := HBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
 		details.add_child(actions)
@@ -626,7 +626,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 			_action_buttons["buy:" + res] = buy_btn
 		if actions.get_child_count() == 0:
 			actions.queue_free()
-			details.add_child(_make_detail_text("Not traded at the Market."))
+			details.add_child(UiKit.make_expand_body_text("Not traded at the Market.", COL_MUTED))
 
 	return chip
 
@@ -662,7 +662,7 @@ func _build_tool_section(tool_ids: Array) -> void:
 func _make_tool_row(id: String) -> PanelContainer:
 	var charges: int = game.tool_count(id)
 	var entry_key: String = "tool:" + id
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
@@ -693,12 +693,12 @@ func _make_tool_row(id: String) -> PanelContainer:
 
 	# Expanded details — the tool's catalog description + where it's used.
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Tool · consumed on use")
+		var details := UiKit.begin_expand_details(col)
+		UiKit.add_expand_eyebrow(details, "Tool · consumed on use", COL_HEADER)
 		var desc: String = ToolConfig.tool_desc(id)
 		if desc != "":
-			details.add_child(_make_detail_text(desc))
-		details.add_child(_make_detail_text("Use it from the tool bar above the board."))
+			details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
+		details.add_child(UiKit.make_expand_body_text("Use it from the tool bar above the board.", COL_MUTED))
 
 	return chip
 
@@ -733,7 +733,7 @@ func _make_item_row(id: String) -> PanelContainer:
 	var count: int = item_count(id)
 	var def: Dictionary = _item_def(id)
 	var entry_key: String = "item:" + id
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
@@ -768,81 +768,13 @@ func _make_item_row(id: String) -> PanelContainer:
 	# Expanded details — the valuable's catalog description (where it comes from / what
 	# it's for). No actions: runes/influence are spent at their own surfaces, not sold.
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Special item")
+		var details := UiKit.begin_expand_details(col)
+		UiKit.add_expand_eyebrow(details, "Special item", COL_HEADER)
 		var desc: String = ResourceConfig.desc(id)
 		if desc != "":
-			details.add_child(_make_detail_text(desc))
+			details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
 
 	return chip
-
-# ── C2: expand-in-place plumbing (React InventoryListItemExpanded parity) ─────────
-
-## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
-## expanded) holding a VBox the caller fills with its row (and the details section appends
-## to). The chip itself listens for taps — a tap toggles the expansion. Inner content stays
-## MOUSE_FILTER_IGNORE so the chip sees every tap; the details' action Buttons still work
-## (Buttons are STOP by default and sit above the chip in pick order).
-func _begin_expandable_chip(entry_key: String) -> PanelContainer:
-	var chip := PanelContainer.new()
-	var sb := UiKit.row_box()
-	if _expanded == entry_key:
-		sb = sb.duplicate() as StyleBoxFlat
-		sb.border_color = Palette.EMBER
-		sb.set_border_width_all(2)
-	chip.add_theme_stylebox_override("panel", sb)
-	chip.mouse_filter = Control.MOUSE_FILTER_STOP
-	chip.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton \
-			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
-			and (event as InputEventMouseButton).pressed) \
-			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
-		if tap:
-			toggle_expand(entry_key)
-	)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 8)
-	chip.add_child(col)
-	return chip
-
-## Append the details section container to an expanded chip's column, separated from the
-## row by a faint hairline. Fades in (UiFx — no-op headless / reduce-motion) so the
-## expansion reads as an animated reveal rather than a hard reflow.
-func _begin_details(col: VBoxContainer) -> VBoxContainer:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.5)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	col.add_child(rule)
-	var details := VBoxContainer.new()
-	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	details.add_theme_constant_override("separation", 6)
-	col.add_child(details)
-	UiFx.content_fade(details)
-	return details
-
-## A small all-caps-feel eyebrow line ("Resource · Farm Goods") for the details section.
-func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
-	var lbl := Label.new()
-	lbl.text = text.to_upper()
-	UiKit.set_font_size(lbl, Typography.Role.CAPTION)
-	lbl.add_theme_color_override("font_color", COL_HEADER)
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	details.add_child(lbl)
-
-## A muted wrapping body line for the details section.
-func _make_detail_text(text: String) -> Label:
-	var lbl := Label.new()
-	lbl.text = text
-	UiKit.set_font_size(lbl, Typography.Role.LABEL)
-	lbl.add_theme_color_override("font_color", COL_MUTED)
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return lbl
 
 ## Toggle the expansion for `entry_key` ("res:flour" / "tool:bomb" / "item:runes"): tapping
 ## the expanded row collapses it, tapping another moves the expansion there. Public — the
