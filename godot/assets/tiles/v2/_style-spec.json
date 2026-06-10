@@ -25,6 +25,10 @@
         "hexes": ["#5a3a10", "#8a6418", "#c79a2e", "#e3c45a", "#f4e08a"]
       },
       {
+        "name": "pumpkin-orange",
+        "hexes": ["#4a1f10", "#8a3c12", "#c3671d", "#e8923c", "#f4b95e"]
+      },
+      {
         "name": "stone-gray",
         "hexes": ["#1b1c1a", "#3a3c38", "#5c5f58", "#888c82", "#c2c6ba"]
       }
