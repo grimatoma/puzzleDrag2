@@ -77,11 +77,15 @@ The proposal surface is the pixelGen viewer in **all-pending** state — no sepa
 node .claude/skills/sprite-pipeline/scripts/build_viewer.mjs   # default out: godot/assets/tiles/v2/pixelGen
 ```
 
-Then serve it (launch config `pixelGen`, or `python -m http.server 8100 --directory
-godot/assets/tiles/v2`) and point the user at **http://localhost:8100/pixelGen/**. Every requested
-asset renders as a placeholder card showing its id + prompt + motion/physics — that *is* the
-proposal. Post a short chat summary too (item id, N keyframes [master + children] / idles /
-transitions, the priors, and that the next step spends PixelLab credits).
+Then serve it and point the user at **http://localhost:8100/pixelGen/**. **Prefer the control server
+`node scripts/serve_viewer.mjs`** (background) over a plain static server: it spawns
+`build_viewer.mjs --watch`, so the page updates **live** as the run progresses (the static
+`python -m http.server 8100 --directory godot/assets/tiles/v2` only shows a snapshot). Start it here,
+at intake, and **leave it running for the whole session** so the same page is the proposal now and
+the live progress monitor during the build. Every requested asset renders as a placeholder card
+showing its id + prompt + motion/physics — that *is* the proposal. Post a short chat summary too
+(item id, N keyframes [master + children] / idles / transitions, the priors, and that the next step
+spends PixelLab credits).
 
 ## The approval gate
 
