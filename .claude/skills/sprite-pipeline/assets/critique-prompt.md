@@ -26,8 +26,13 @@ The gates bracket the two expensive operations (Stage 2 generate, Stage 4 animat
   (prompt / motion / physics, frame budget after precedence).
 - **The artifact for this gate** (read it directly — see "Independent verification"):
   - G1 → the prompt text / pipeline entry (no art yet).
-  - G2 → the generated candidate still(s) `items/<itemId>/<id>/NN.png`.
-  - G3 → the filled storyboard `storyboards/<id>.md` (written against the generated still).
+  - G2 → the generated candidate still(s): a review-pack grid (`cand_NN.png` from `create-object` —
+    score the montage, return per-index verdicts for promotion) or the recorded candidates
+    `items/<itemId>/<id>/NN.png` (incl. `state`-derived children — also check identity vs the
+    master: same size, same position, features evolved in place, nothing teleported).
+  - G3 → the motion brief (PixelLab path: `animation_description` + frames + phases) or the full
+    per-frame storyboard (Aseprite path), in `storyboards/<id>.md` — written against the approved
+    stills.
   - G4 → the frames `frames/<id>/NN.png` + `previews/<id>.gif`.
 - **Priors / references** — the item's `priors[]` and the spec's `references[]`, so you can judge
   cohesion against what already shipped.
@@ -69,8 +74,8 @@ Form your own evidence; the builder's self-report is a claim, not proof.
 6. **Dimensions + safe area + transparency** — exact canvas size, nothing in the safe-area inset,
    background transparent.
 
-### G3 — storyboard (before the expensive animate)
-1. **Forces named first** — each frame's motion traces to a real force, strongest first (not
+### G3 — motion brief / storyboard (before the expensive animate)
+1. **Forces named first** — each phase's motion traces to a real force, strongest first (not
    "moves a bit").
 2. **Right speed profile** — falling-light = terminal-velocity constant; heavy = accelerating;
    gust = build→peak→release; accumulation/melt/growth = monotonic one-way.
@@ -79,10 +84,14 @@ Form your own evidence; the builder's self-report is a claim, not proof.
 4. **Stagger + overlap** — multiple elements release out of phase; phases blend into one
    continuous event.
 5. **Frame budget + fps** — frame count and fps match the spec / `pipeline.json` (after `frames`
-   precedence); enough frames for the move to read, not so many it drags.
+   precedence; v3 caps transitions at 16 requested and stores +1 on disk); enough frames for the
+   move to read, not so many it drags.
 6. **Rigid stays rigid; impacts settle; loop closes** — planted parts hold; landings
    squash/overshoot/settle; (idle) frame N → frame 0 seamlessly, or (transition) holds the final
    frame.
+7. **(PixelLab path) Constants named** — the `animation_description` states what must NOT change
+   ("brightness constant, no glow, body rigid"); v3 over-stages vague nouns (a "sheen" became a
+   whole-rind glow pulse). An interpolation brief must order the phases (what changes first/last).
 
 ### G4 — frames (after animate, the final motion gate)
 **You must have upscaled + montaged + Read the frames (see above) before scoring.**
@@ -98,6 +107,10 @@ Form your own evidence; the builder's self-report is a claim, not proof.
    outline don't drift mid-animation.
 6. **Frame integrity** — `N` frames present and in order (`00.png…`), correct dims/transparency,
    GIF timing matches fps.
+7. **(Transitions) Endpoints identical** — frame 0 diffs clean against the `from` keyframe and the
+   last frame against the `to` keyframe (pixel-identical; the chain-seamlessness contract). And the
+   subject stays the SAME OBJECT throughout — size, position, and feature placement never jump
+   (a mid-animation body swap is the canonical reject).
 
 ## Verdict
 

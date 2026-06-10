@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dkb18yjybekts"
-path="res://.godot/imported/17.png-b1430da39e06c66eaa5ce50e7e1f1ed6.ctex"
+uid="uid://cetg6c67rjh6j"
+path="res://.godot/imported/02.png-075a29e626cfabb6991510545535c917.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/tiles/v2/items/pumpkin/frames/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter/17.png"
-dest_files=["res://.godot/imported/17.png-b1430da39e06c66eaa5ce50e7e1f1ed6.ctex"]
+source_file="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/02.png"
+dest_files=["res://.godot/imported/02.png-075a29e626cfabb6991510545535c917.ctex"]
 
 [params]
 

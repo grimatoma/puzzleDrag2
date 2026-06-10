@@ -29,86 +29,83 @@ into siblings.
   `references/reference-assets-spec.md`).
 - **Priors** — the item's `priors[]` plus any already-approved siblings (the keyframes' selected
   candidate PNGs). How priors are actually used depends on the asset kind:
-  - **Still via PixelLab** — `pixellab.mjs create` is **text-only** (no image conditioning), so
-    priors **cannot be fed in as an image**. Instead: open the prior(s) yourself, and let them shape
-    the **prompt wording** (name the shared material, palette, silhouette, detail density) — then
-    rely on the **G2 critique** to reject any candidate that drifts off the family. Continuity for
-    generated stills is *prompt-described + gate-enforced*, not image-conditioned.
-  - **Still by hand / Aseprite, or any animation** — priors are used **directly**: `import_image`
-    the approved sibling/keyframe and build over it. Here the visual prior really is the foundation.
-- **(Animation only) the filled storyboard** — `storyboards/<id>.md` (from
-  `assets/storyboard.template.md`), which has **passed its Gate-3 critique** and was written
-  **against the already-generated keyframe still** (it cites real pixel coordinates). It is your
-  shot list: frame count `N`, fps, per-frame force + easing + the concrete pixel-level change. You
-  execute it; you do not re-improvise the motion.
+  - **Master still via PixelLab** — pass prior PNGs **directly** as style references:
+    `pixellab.mjs create-object --style a.png,b.png` (each ≤256px; the largest style image sets the
+    output size, so pass priors at the target canvas size — resize a 90px shipped tile down first
+    if needed). The pack is image-conditioned on the family; the **G2 critique** still rejects any
+    candidate that drifts.
+  - **Child still** — the prior IS the approved master, enforced structurally: derive with
+    `pixellab.mjs state --object <master objectId>`. **Never generate a child from text alone.**
+  - **Still by hand / Aseprite, or any Aseprite-path animation** — priors are used **directly**:
+    `import_image` the approved sibling/keyframe and build over it.
+- **(Animation only) the motion brief / storyboard** — `storyboards/<id>.md`, which has **passed
+  its Gate-3 critique** and was written **against the approved stills**. For the PixelLab path it
+  specifies the `animation_description`, frame count, and the expected phases (your G4 checklist).
+  For the Aseprite path it's the full per-frame shot list (from `assets/storyboard.template.md`,
+  citing real pixel coordinates). You execute it; you do not re-improvise the motion.
 - **Your asset kind + id** — `keyframe` (master or child) / `idle` / `transition`, and the id (the
   on-disk filename stem, unique and stable within the item).
 
 ## What you produce (by kind)
 
-Route by kind. **Stills** may be generated or hand-authored; **all animation is Aseprite**
-(`references/aseprite-execution.md`) — never procedural Pillow.
+Route by kind. **Stills** are generated via the PixelLab object flow or hand-authored. **Motion**
+is PixelLab v3 (idles: text mode; transitions: interpolation) with **Aseprite as the polish pass /
+fallback** (`references/aseprite-execution.md`) — never procedural Pillow.
 
-### Keyframe still → the candidate PNG(s) (`items/<itemId>/<id>/NN.png`)
+### Master keyframe still → candidate PNG(s) (`items/<itemId>/<id>/NN.png`) + objectId
 1. Build the effective prompt: `basePrompt + ", " + keyframe.prompt` (the keyframe may restate
    base fields to countermand them). Bake the style spec into it — canvas size, the palette
-   ramps, light direction, outline rule, shadow, perspective. A **child** keyframe is conditioned
-   on its item's already-**approved** `master` (derive from it, don't reinvent the silhouette).
-2. Generate `settings.candidates` seed(s):
-   - **PixelLab** — the **pixellab** skill or `scripts/pixellab.mjs` (`create --desc … --out …`):
-     async create → poll → download; **check credits first** (`pixellab.mjs balance`). `create` is
-     **text-only** — bake the priors' shared material/palette/silhouette into the **`--desc` text**
-     (you can't pass a prior image), and lean on G2 to catch drift. A **child** keyframe's prompt
-     should explicitly restate the master's shape ("the same round ribbed pumpkin … now frosted")
-     since it can't see the approved master either. Each seed is one candidate `idx` → `NN.png`.
-   - **Aseprite** — author/edit the still directly with the Aseprite draw primitives.
-3. Lift it onto the family look with the conformance helpers in `aseprite-execution.md`:
-   `quantize_palette` (snap to the locked ramps — the #1 cohesion failure is palette drift),
-   `apply_shading` / `apply_auto_shading` (one-light form shading, not flat fills),
-   `suggest_antialiasing` + `apply_outline` (the spec's `outline.rule`). Respect the safe-area
-   inset; keep the background transparent.
-4. Save the cleaned candidate still to its `NN.png` (the orchestrator records each candidate in the
-   `pipeline.history.json` sidecar, keyed `itemId → keyframeId → candidate[]`, **not** on the
-   keyframe in `pipeline.json` — which only ever carries `selected`/`selectedPath`; the human/LLM gate
-   picks which `idx` is approved and points the keyframe's `selected`/`selectedPath` at it).
+   ramps, light direction, outline rule, shadow, perspective.
+2. **Check credits first** (`pixellab.mjs balance`), then ONE review-pack call:
+   `pixellab.mjs create-object --desc "…" --style <prior1.png,prior2.png> --out-dir <tmp>`
+   (style refs at the target canvas size; the pack downloads as `cand_NN.png` — 64 seeds at 32px).
+3. Montage the pack (`montage.py <tmp> --cols 8`), **Read it**, pick the best `settings.candidates`
+   indices against the G2 rubric, and promote them:
+   `pixellab.mjs select-frames --object <packId> --indices i,j,k --out-dir <tmp>` — each promoted
+   frame becomes its **own persistent object**. Copy the picked PNGs to `items/<itemId>/<id>/NN.png`.
+4. Report each promoted candidate with its `objectId` + the pack's `reviewObjectId` so the
+   orchestrator records them (`pipeline-patch.mjs record-candidate … --object … --review-object …`).
+   Aseprite conformance helpers (`quantize_palette`, `apply_outline`, …) remain available to clean
+   a near-miss candidate — but a cleaned PNG diverges from its PixelLab object, so prefer picking a
+   clean seed from the pack (there are 64) over hand-fixing one.
 
-### Idle / transition → `frames/<id>/NN.png` + `previews/<id>.gif` (+ assembled `<key>.tres`)
+### Child keyframe still → candidate PNG(s) + objectId — ALWAYS derived, never re-rolled
+1. The child's `prompt` is an **edit description** ("winter version: …; same pumpkin, same size,
+   same position"), not a scene description. Name what changes; say what stays.
+2. Per candidate: `pixellab.mjs state --object <master objectId> --desc "<edit>" --out
+   items/<itemId>/<id>/NN.png [--seed k]`. The output keeps the master's size/silhouette/identity —
+   that's the point. Report each candidate's `objectId`.
+3. **Hard rule:** if the master has no `objectId` (hand-authored), do NOT fall back to a text-only
+   generation — hand back `blocked` and say the master needs promoting through the object flow
+   (or the child must be hand-derived in Aseprite from the master PNG).
 
-**Default method: the additive-overlay technique (parallel-safe + stateless).** Build motion as
-**explicit pixels added per frame**, never by selecting and moving a region. This is the default
-because it is what lets the orchestrator fan **one builder per gap animation out in parallel** (see
-SKILL "Running agents concurrently"): every call is stateless — addressed by an explicit
-`frame_number` + `layer_name`, so no hidden cursor/selection carries between calls.
+### Idle / transition → `frames/<id>/NN.png` + `previews/<id>.gif`
 
-1. Follow the **frame-assembly recipe** in `references/aseprite-execution.md` exactly:
-   `create_canvas` → `save_as` to a stable `_work/<id>.aseprite` path (your own file — never shared
-   with a sibling builder) → `add_frame`×(N−1) with `duration_ms = round(1000/fps)`.
-2. **Import the approved base still onto a `tree` (base) layer at every frame** (`import_image`,
-   reusing one `layer_name`, explicit `frame_number` per frame). This is the static foundation.
-3. **Draw the motion as additive pixels on a separate `fx` layer**, per the **storyboard's
-   pixel-level column** — `import_image` (a pre-rendered cel), `draw_pixels`, or `fill_area`, each
-   with an explicit `frame_number`. **Never** `select_rectangle` / `move_selection` / `copy` /
-   `cut` / `paste` — those depend on a hidden selection state and break parallel-safety (and slide
-   regions instead of re-forming them).
-4. `set_frame_duration` for endpoint/extreme holds → `create_tag` over `1…N` forward, named the
-   spec's `animation.idleAnimationName` (`"idle"`).
-5. Export: `export_sprite` png per frame (`frame_number: i`, two-digit names) →
-   `frames/<id>/NN.png` (`00.png`, `01.png`, …); then `export_sprite` gif `frame_number: 0`
-   (all frames) → `previews/<id>.gif`.
-6. The pipeline **ends at the frames + GIF**. Assembling the `.tres` is a **separate, on-demand
-   step** (`npm run godot:update-tiles` → `tools/update-godot-tiles.mjs`, which imports, verifies the
-   `.png.import` sidecars, packs via `assemble_tres.gd`, and verifies via `verify_sf.gd` — one
-   command). See `references/godot-integration.md`. As a builder you should **stop at the frames +
-   GIF**, say so, and hand back — the orchestrator runs the Godot update step out of band (and it's
-   blocked anyway in a sandbox without a Godot binary).
+**Default executor: PixelLab v3 on the keyframe's object.** The motion brief (Stage 3, gate-passed)
+gives you the `animation_description` + frame count + expected phases.
 
-**The subtle-idle tradeoff.** A static imported base means the silhouette itself never breathes — the
-overlay does all the moving. That's perfect for a falling leaf / glint / drifting snow over a still
-tree, but a *whole-canopy sway* can read flat. For livelier idles, opt into the **flexing-base
-recipe**: pre-render **2–3 base poses** (e.g. canopy leaned left / neutral / right) as extra base
-cels and **cycle them** across frames so the silhouette breathes, then add the overlay on top. It's
-still additive (each pose is imported to an explicit `frame_number`; no selection ops), so it stays
-parallel-safe. See `references/aseprite-execution.md`.
+- **Idle:** `pixellab.mjs animate --object <keyframe objectId> --desc "<motion>" --frames N
+  --name idle --out-dir frames/<id>/` — v3 animates the object's own frame, so frame 0 == the
+  keyframe and the loop is on-model by construction. Phrase the brief with explicit CONSTANTS
+  ("overall brightness stays constant; no glow, no pulsing") — v3 over-stages vague nouns like
+  "sheen" into whole-sprite brightness swells.
+- **Transition:** `pixellab.mjs animate --object <from objectId> --desc "<physics>" --frames 16
+  --end <to selectedPath> --name <from>__to__<to> --out-dir frames/<id>/` — v3 interpolation;
+  start defaults to the object's frame. First/last frames come back **pixel-identical** to the two
+  keyframes (verify with a diff — it's the chain-seamlessness guarantee). 16 is the v3 max;
+  on-disk count is frames+1 (the reference frame is stored too).
+- Assemble the preview: `python gif.py frames/<id>/ --out previews/<id>.gif --fps <fps>`.
+- If a frame drifts off-palette or needs a surgical fix, run an **Aseprite polish pass** on that
+  frame (`quantize_palette`, targeted `draw_pixels`) — polish edits frames in place; it does not
+  re-stage motion.
+- **Aseprite fallback** (no `objectId`, or a motion v3 can't express): build the full per-frame
+  storyboard and execute the additive-overlay recipe in `references/aseprite-execution.md`
+  (static base layer per frame + explicit `fx`-layer pixels per `frame_number`; never selection
+  ops; flexing-base variant for breathing silhouettes).
+- The pipeline **ends at the frames + GIF**. Assembling the `.tres` is a **separate, on-demand
+  step** (`npm run godot:update-tiles` → `tools/update-godot-tiles.mjs`). See
+  `references/godot-integration.md`. As a builder you **stop at the frames + GIF**, say so, and
+  hand back — the orchestrator runs the Godot update step out of band.
 
 > `scripts/pixels.mjs` gives you the **opaque-pixel feature map** of the base still —
 > which pixels are non-transparent and what differs between two stills — so your overlay lands on
@@ -164,10 +161,12 @@ Report concisely:
 - **Asset** — item id, keyframe/animation id, kind.
 - **Files written** — exact relative paths (the candidate `NN.png`(s), or `frames/<id>/NN.png` count
   + `previews/<id>.gif` + whether `<key>.tres` was assembled).
-- **Decisions** — for a still: generator used (PixelLab / Aseprite), candidate count, palette ramps
-  you snapped to, any prompt adjustments. For animation: frame count + fps, base method
-  (static-base vs flexing-base), the dominant forces you staged, what re-forms vs holds, and the
-  montage observation.
+- **PixelLab ids** — every candidate's `objectId` (+ the pack's `reviewObjectId` for masters) so
+  the orchestrator can record them; losing an id orphans the keyframe from future derivation.
+- **Decisions** — for a still: generator used (object flow / Aseprite), candidate count, palette
+  ramps you snapped to, any prompt adjustments. For animation: executor (v3 text / v3 interpolation
+  / Aseprite fallback), frame count + fps, the dominant forces staged, what re-forms vs holds, the
+  endpoint-diff result (transitions), and the montage observation.
 - **Status** — one of:
   - `built` — produced and passes your self-review; ready for the critique gate.
   - `built-needs-pack` — frames + GIF done but `.tres` assembly/verify is blocked in your
@@ -181,15 +180,19 @@ Report concisely:
 - **One asset only.** Don't touch sibling keyframes/idles/transitions.
 - **Stay on the locked spec.** Off-palette color or wrong light direction is a reject, not a
   style choice — `quantize_palette` to the ramps.
-- **Execute the storyboard; don't re-improvise motion.** The storyboard passed Gate-3; deviate
+- **Children derive from the master's object — never from text.** A text-only child is the
+  size-jump/stem-flip regression; `blocked` beats a re-rolled lookalike.
+- **Execute the motion brief / storyboard; don't re-improvise motion.** It passed Gate-3; deviate
   only to *fix* a flaw you can name, and say so.
-- **Aseprite is the only animator.** No procedural Pillow frame generation, ever. Pillow is
-  review glue (`montage.py`) only.
-- **Additive overlay, never selection ops.** Build motion by adding explicit pixels per
-  `frame_number` on an `fx` layer over the imported base. **No `select_rectangle` /
+- **Motion comes from PixelLab v3 or Aseprite — never Pillow.** No procedural Pillow frame
+  generation, ever. Pillow is review glue (`montage.py`, `gif.py`) only.
+- **(Aseprite path) Additive overlay, never selection ops.** Build motion by adding explicit
+  pixels per `frame_number` on an `fx` layer over the imported base. **No `select_rectangle` /
   `move_selection` / `copy` / `cut` / `paste`** — they break parallel-safety and slide regions
   instead of re-forming them. (Flexing-base poses are imported per-frame; still no selection ops.)
 - **Never fake the output.** If you can't generate the still or build the frames, hand back
   `blocked` with the reason — do not ship a placeholder or a slid crossfade as if it were real
   motion.
-- **Verify motion by reading the montage**, not by assuming the export worked.
+- **Verify motion by reading the montage**, not by assuming the export worked. For transitions,
+  also **diff the first/last frame against the two keyframes** — identical endpoints are the
+  contract.

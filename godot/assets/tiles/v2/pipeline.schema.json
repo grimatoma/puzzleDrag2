@@ -20,7 +20,9 @@
         "path": { "type": "string" },
         "status": { "enum": ["requested", "generated", "failed", "rejected", "approved"] },
         "llm": { "enum": ["pass", "fail"] },
-        "reason": { "type": "string" }
+        "reason": { "type": "string" },
+        "objectId": { "type": "string" },
+        "reviewObjectId": { "type": "string" }
       },
       "additionalProperties": false
     },
@@ -32,6 +34,7 @@
         "prompt": { "type": "string" },
         "selected": { "type": ["integer", "null"] },
         "selectedPath": { "type": ["string", "null"] },
+        "objectId": { "type": ["string", "null"] },
         "comment": { "type": "string" }
       },
       "additionalProperties": false

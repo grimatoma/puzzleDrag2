@@ -21,16 +21,18 @@
       ],
       "master": {
         "id": "tile_tree_birch_autumn",
-        "prompt": "gold/amber canopy",
-        "selected": 0,
-        "selectedPath": "sets/birch/keyframes/tile_tree_birch_autumn.png"
+        "prompt": "slender white bark trunk with dark horizontal marks, full gold-amber autumn canopy in rounded clumps, small grass tuft at the base",
+        "selected": 3,
+        "selectedPath": "items/birch_tree/tile_tree_birch_autumn/03.png",
+        "objectId": "8510742d-3426-4a89-8621-c27e24ea612f"
       },
       "children": [
         {
           "id": "tile_tree_birch_winter",
-          "prompt": "bare branches, snow on limbs",
-          "selected": 0,
-          "selectedPath": "sets/birch/keyframes/tile_tree_birch_winter.png"
+          "prompt": "deep winter version: the gold canopy is gone, replaced by bare slender gray-brown branches following the same overall canopy silhouette, snow resting along the tops of the limbs, the same white birch trunk with dark marks in the same position, a white snow mound covering the grass at the base; same tree, same size, same composition",
+          "selected": 1,
+          "selectedPath": "items/birch_tree/tile_tree_birch_winter/01.png",
+          "objectId": "af6b5b9a-6f5d-4fff-86a7-9bb9808bd690"
         }
       ],
       "animations": [
@@ -38,26 +40,29 @@
           "kind": "idle",
           "for": "tile_tree_birch_autumn",
           "frames": 8,
-          "motion": "sway + occasional falling leaf",
+          "motion": "very subtle idle: the three gold canopy clumps sway gently together in a light breeze; the white trunk, the grass tuft and the ground shadow at the base stay exactly as in the source frame in every frame; overall colors and brightness constant; no elements appear or disappear",
           "status": "generated",
-          "gif": "sets/birch/previews/tile_tree_birch_autumn.gif"
+          "gif": "items/birch_tree/previews/tile_tree_birch_autumn.gif",
+          "storyboard": "items/birch_tree/storyboards/tile_tree_birch_autumn.md"
         },
         {
           "kind": "idle",
           "for": "tile_tree_birch_winter",
           "frames": 6,
-          "motion": "bare-branch sway + snow glint",
+          "motion": "nearly static idle: the bare winter tree holds completely rigid and identical to the source frame; the ONLY motion is a few tiny white snow flecks drifting slowly straight down in front of the tree",
           "status": "generated",
-          "gif": "sets/birch/previews/tile_tree_birch_winter.gif"
+          "gif": "items/birch_tree/previews/tile_tree_birch_winter.gif",
+          "storyboard": "items/birch_tree/storyboards/tile_tree_birch_winter.md"
         },
         {
           "kind": "transition",
           "from": "tile_tree_birch_autumn",
           "to": "tile_tree_birch_winter",
-          "frames": 20,
-          "physics": "leaves fall+flutter (staggered, terminal velocity); snow falls slower; accumulates bottom-up on branches then ground",
+          "frames": 16,
+          "physics": "autumn to winter: gold leaves detach in staggered clumps from the canopy edges inward and flutter down off the tree, gradually revealing the bare branches underneath; snow settles along the limbs and builds a white mound over the grass at the base; trunk never moves; holds final winter frame (16 = v3 interpolation max)",
           "status": "generated",
-          "gif": "sets/birch/previews/tile_tree_birch_autumn__to__tile_tree_birch_winter.gif"
+          "gif": "items/birch_tree/previews/tile_tree_birch_autumn__to__tile_tree_birch_winter.gif",
+          "storyboard": "items/birch_tree/storyboards/tile_tree_birch_autumn__to__tile_tree_birch_winter.md"
         }
       ]
     },
@@ -71,15 +76,17 @@
       "master": {
         "id": "tile_veg_pumpkin_autumn",
         "prompt": "ripe deep-orange ribbed pumpkin, dark green curling vine with two leaves, stubby brown stem",
-        "selected": 3,
-        "selectedPath": "items/pumpkin/tile_veg_pumpkin_autumn/03.png"
+        "selected": 5,
+        "selectedPath": "items/pumpkin/tile_veg_pumpkin_autumn/05.png",
+        "objectId": "53c08efa-8b4a-4ab5-a28a-44b1d0f354ff"
       },
       "children": [
         {
           "id": "tile_veg_pumpkin_winter",
-          "prompt": "the same round heavily-ribbed pumpkin with stubby dark stem and short curling tendrils on top, now frost-dusted pale orange, tendrils withered gray-brown and drooping, white snow cap on the crown, small snow mound at the base",
-          "selected": 3,
-          "selectedPath": "items/pumpkin/tile_veg_pumpkin_winter/03.png"
+          "prompt": "winter version: frost-dusted pale orange rind, vine and leaves withered to drooping gray-brown, white snow cap settled on the crown around the stem, small snow mound at the base; same pumpkin, same size, same position",
+          "selected": 4,
+          "selectedPath": "items/pumpkin/tile_veg_pumpkin_winter/04.png",
+          "objectId": "878674a0-8ebc-45ef-a3b3-14b86120478d"
         }
       ],
       "animations": [
@@ -87,7 +94,7 @@
           "kind": "idle",
           "for": "tile_veg_pumpkin_autumn",
           "frames": 8,
-          "motion": "vine-leaf flutter in a light breeze + a slow passing sheen glint across the rind; pumpkin body holds rigid",
+          "motion": "very subtle idle: only the green vine tendrils sway and flex gently in a light breeze; the pumpkin body, colors and overall brightness stay completely constant; no glow, no pulsing, no color change on the rind",
           "status": "generated",
           "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn.gif",
           "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_autumn.md"
@@ -96,7 +103,7 @@
           "kind": "idle",
           "for": "tile_veg_pumpkin_winter",
           "frames": 6,
-          "motion": "sparse snow flecks drift down + cold glint on the frost cap; pumpkin and mound hold rigid",
+          "motion": "subtle idle: sparse tiny snow flecks drift slowly down past the pumpkin, a cold glint shimmers on the snow cap, the pumpkin and snow mound hold rigid",
           "status": "generated",
           "gif": "items/pumpkin/previews/tile_veg_pumpkin_winter.gif",
           "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_winter.md"
@@ -105,8 +112,8 @@
           "kind": "transition",
           "from": "tile_veg_pumpkin_autumn",
           "to": "tile_veg_pumpkin_winter",
-          "frames": 20,
-          "physics": "vine leaves wilt, curl and detach (staggered, terminal-velocity fall with x-wobble); rind pales as frost creeps top-down; snow falls slower than leaves and accumulates bottom-up on the ground mound, then surface-first on the pumpkin crown; holds final winter frame",
+          "frames": 16,
+          "physics": "autumn to winter: green tendrils wither and droop to gray-brown, frost creeps across the rind paling it top-down, snow falls and settles as a white cap on the crown and a small mound at the base; holds final winter frame (16 = v3 interpolation max)",
           "status": "generated",
           "gif": "items/pumpkin/previews/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter.gif",
           "storyboard": "items/pumpkin/storyboards/tile_veg_pumpkin_autumn__to__tile_veg_pumpkin_winter.md"
