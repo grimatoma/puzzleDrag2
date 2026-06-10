@@ -62,8 +62,9 @@ make them physical ("leaves loosen and fall staggered at terminal velocity"), no
 
 The set is driven by **three side-by-side files** in `godot/assets/tiles/v2/` (see
 `references/manifest-schema.md`): `pipeline.json` (the spec + current state you edit here),
-`pipeline.history.json` (the candidate/attempt log sidecar — starts `{}`, populated by generation, not
-hand-authored), and `pipeline.schema.json` (the formal JSON Schema every script validates against —
+`pipeline.history.json` (the candidate/attempt log sidecar — starts `{}`, ready-to-copy starter at
+`assets/manifest.history.template.json`, populated by generation, not hand-authored), and
+`pipeline.schema.json` (the formal JSON Schema every script validates against —
 it **refuses** to proceed on invalid data, and a stray `candidates` key on a keyframe fails its
 `additionalProperties: false`). Intake only writes `pipeline.json`.
 
