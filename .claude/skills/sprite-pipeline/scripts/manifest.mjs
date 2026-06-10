@@ -55,17 +55,12 @@ export function loadSchema(pipelinePath) {
   return JSON.parse(readFileSync(schemaPath(pipelinePath), "utf8"));
 }
 
-// Reconstruct the pre-split shape: parse pipeline.json, then splice each keyframe's candidate array
-// back in from history (itemId -> keyframeId -> candidate[]). Downstream projection/plan code reads
-// `keyframe.candidates`, so this keeps it working unchanged. Mutates only the freshly-parsed object
-// we return; never touches the on-disk files.
+// Splice each keyframe's candidate array back in from already-parsed history
+// (itemId -> keyframeId -> candidate[]). Mutates `pipeline` in place and returns it.
 //
-// NOTE: the merged object intentionally re-adds `candidates` to each keyframe, so it will NOT pass
-// validateDoc(..., "pipelineDoc") (whose `keyframe` is additionalProperties:false). Always
-// schema-validate the on-disk pipeline.json (via loadPipeline), never the merged result.
-export function loadMerged(pipelinePath) {
-  const pipeline = loadPipeline(pipelinePath);
-  const history = loadHistory(pipelinePath);
+// This is the single implementation of the spec+history merge; both loadMerged (here) and
+// build_viewer's loadValidated reuse it so the splice semantics live in exactly one place.
+export function mergeInto(pipeline, history) {
   for (const item of Array.isArray(pipeline.items) ? pipeline.items : []) {
     if (!item || typeof item !== "object") continue;
     const perItem = (history && typeof history === "object" && history[item.id]) || {};
@@ -77,6 +72,18 @@ export function loadMerged(pipelinePath) {
     for (const child of Array.isArray(item.children) ? item.children : []) splice(child);
   }
   return pipeline;
+}
+
+// Reconstruct the pre-split shape: parse pipeline.json, then splice each keyframe's candidate array
+// back in from history (itemId -> keyframeId -> candidate[]). Downstream projection/plan code reads
+// `keyframe.candidates`, so this keeps it working unchanged. Mutates only the freshly-parsed object
+// we return; never touches the on-disk files.
+//
+// NOTE: the merged object intentionally re-adds `candidates` to each keyframe, so it will NOT pass
+// validateDoc(..., "pipelineDoc") (whose `keyframe` is additionalProperties:false). Always
+// schema-validate the on-disk pipeline.json (via loadPipeline), never the merged result.
+export function loadMerged(pipelinePath) {
+  return mergeInto(loadPipeline(pipelinePath), loadHistory(pipelinePath));
 }
 
 // ── atomic writers ───────────────────────────────────────────────────────────────────────────

@@ -397,19 +397,9 @@ function loadValidated(pipelinePath) {
     for (const e of errs) console.error(`  ${e}`);
     process.exit(1);
   }
-  // Reuse the already-parsed + validated pipeline/history to build the merged shape, rather than
-  // re-reading the files a third time.
-  for (const item of Array.isArray(pipeline.items) ? pipeline.items : []) {
-    if (!item || typeof item !== "object") continue;
-    const perItem = (history && typeof history === "object" && history[item.id]) || {};
-    const splice = (kf) => {
-      if (!kf || typeof kf !== "object") return;
-      kf.candidates = Array.isArray(perItem[kf.id]) ? perItem[kf.id] : [];
-    };
-    splice(item.master);
-    for (const child of Array.isArray(item.children) ? item.children : []) splice(child);
-  }
-  return pipeline;
+  // Reuse the already-parsed + validated pipeline/history to build the merged shape via the shared
+  // manifest.mergeInto helper, rather than re-reading the files a third time or duplicating the splice.
+  return manifest.mergeInto(pipeline, history);
 }
 
 // ── build (emit data.json + copy template) ───────────────────────────────────────────────────
