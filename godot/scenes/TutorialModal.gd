@@ -36,6 +36,7 @@ var _action_buttons: Dictionary = {}
 
 ## The index of the current step (0-based).
 var _current_step: int = 0
+var _last_rendered_step: int = -1   ## last step whose content was drawn — gates the swap fade
 
 ## True once _build_shell() has run (safe to call setup() again).
 var _built: bool = false
@@ -241,6 +242,13 @@ func _render_step() -> void:
 	_indicator_label.text = "Step %d / %d" % [idx + 1, total]
 	_next_btn.text = "Got it!" if idx == total - 1 else "Next"
 	_render_dots(idx)
+	# Step-swap cue (UiFx): fade the swapped title/body in on a REAL step change (not the
+	# first render — the overlay open transition already covers that). Modulate-only, so
+	# container layout and the headless text reads are untouched.
+	if _last_rendered_step != -1 and _last_rendered_step != idx:
+		UiFx.content_fade(_title_label)
+		UiFx.content_fade(_body_label)
+	_last_rendered_step = idx
 
 ## Re-tint the page dots: the current step's dot is a FILLED ember pill (slightly wider), the
 ## rest are small hollow muted dots. Mirrors the React • ● page indicator.

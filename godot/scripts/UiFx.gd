@@ -162,6 +162,24 @@ static func nav_tab_rest(underline: Control, highlight: Control, icon: Control) 
 			(ctl as Control).scale = Vector2.ONE
 			(ctl as Control).modulate.a = 1.0
 
+# ── content swap fade ─────────────────────────────────────────────────────────
+
+## Quick fade-in for a control whose CONTENT was just swapped in place (a tutorial
+## step's title/body, a paged panel) — the gentle cue that "this changed". Only
+## modulate is tweened (container layout never fights it). Instant when inactive.
+static func content_fade(ctl: Control, dur: float = 0.22) -> void:
+	if ctl == null or not is_instance_valid(ctl):
+		return
+	if not _active() or not ctl.is_inside_tree():
+		ctl.modulate.a = 1.0
+		return
+	_kill_meta_tween(ctl, "_uifx_fade")
+	ctl.modulate.a = 0.0
+	var t := ctl.create_tween()
+	ctl.set_meta("_uifx_fade", t)
+	t.tween_property(ctl, "modulate:a", 1.0, dur) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
 # ── text reveal (typewriter) ──────────────────────────────────────────────────
 
 ## Sweep a Label's glyphs in left-to-right (the storybook typewriter) by tweening
