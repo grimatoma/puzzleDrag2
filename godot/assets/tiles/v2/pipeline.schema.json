@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "sprite-pipeline three-file model. Two roots under $defs: pipelineDoc (pipeline.json — spec + state, keyframes carry selected/selectedPath, NO candidates) and historyDoc (pipeline.history.json — itemId -> keyframeId -> candidate[]). Validated by the compact subset validator in scripts/manifest.mjs; select a root by name via validateDoc(doc, schema, 'pipelineDoc'|'historyDoc').",
+  "$defs": {
+    "canvas": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "safeArea": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["idx", "path", "status"],
+      "properties": {
+        "idx": { "type": "integer" },
+        "path": { "type": "string" },
+        "status": { "enum": ["requested", "generated", "failed", "rejected", "approved"] },
+        "llm": { "enum": ["pass", "fail"] },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "keyframe": {
+      "type": "object",
+      "required": ["id", "prompt"],
+      "properties": {
+        "id": { "type": "string" },
+        "prompt": { "type": "string" },
+        "selected": { "type": ["integer", "null"] },
+        "selectedPath": { "type": ["string", "null"] },
+        "comment": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "animation": {
+      "type": "object",
+      "required": ["kind", "status"],
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["for"],
+          "properties": {
+            "kind": { "enum": ["idle", "transition"] },
+            "for": { "type": "string" },
+            "frames": { "type": "integer" },
+            "motion": { "type": "string" },
+            "physics": { "type": "string" },
+            "status": { "enum": ["pending", "generated"] },
+            "gif": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["from", "to"],
+          "properties": {
+            "kind": { "enum": ["idle", "transition"] },
+            "from": { "type": "string" },
+            "to": { "type": "string" },
+            "frames": { "type": "integer" },
+            "motion": { "type": "string" },
+            "physics": { "type": "string" },
+            "status": { "enum": ["pending", "generated"] },
+            "gif": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "settings": {
+      "type": "object",
+      "required": ["styleSpec", "canvas", "fps", "candidates"],
+      "properties": {
+        "styleSpec": { "type": "string" },
+        "canvas": { "$ref": "#/$defs/canvas" },
+        "fps": { "type": "number" },
+        "candidates": { "enum": [1, 2, 4] },
+        "humanApproval": { "type": "boolean" },
+        "autonomous": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "master"],
+      "properties": {
+        "id": { "type": "string" },
+        "basePrompt": { "type": "string" },
+        "priors": { "type": "array", "items": { "type": "string" } },
+        "canvas": { "$ref": "#/$defs/canvas" },
+        "fps": { "type": "number" },
+        "master": { "$ref": "#/$defs/keyframe" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/keyframe" } },
+        "animations": { "type": "array", "items": { "$ref": "#/$defs/animation" } }
+      },
+      "additionalProperties": false
+    },
+    "pipelineDoc": {
+      "type": "object",
+      "required": ["settings", "items"],
+      "properties": {
+        "settings": { "$ref": "#/$defs/settings" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+      },
+      "additionalProperties": false
+    },
+    "historyDoc": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/candidate" }
+        }
+      }
+    }
+  }
+}

@@ -16,28 +16,14 @@
         "id": "tile_tree_birch_autumn",
         "prompt": "gold/amber canopy",
         "selected": 0,
-        "candidates": [
-          {
-            "idx": 0,
-            "path": "sets/birch/keyframes/tile_tree_birch_autumn.png",
-            "status": "approved",
-            "llm": "pass"
-          }
-        ]
+        "selectedPath": "sets/birch/keyframes/tile_tree_birch_autumn.png"
       },
       "children": [
         {
           "id": "tile_tree_birch_winter",
           "prompt": "bare branches, snow on limbs",
           "selected": 0,
-          "candidates": [
-            {
-              "idx": 0,
-              "path": "sets/birch/keyframes/tile_tree_birch_winter.png",
-              "status": "approved",
-              "llm": "pass"
-            }
-          ]
+          "selectedPath": "sets/birch/keyframes/tile_tree_birch_winter.png"
         }
       ],
       "animations": [
