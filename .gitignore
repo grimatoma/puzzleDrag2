@@ -7,6 +7,17 @@ playwright-report/
 playwright/.cache/
 coverage/
 
+# Secrets / local agent config — never commit. MCP server configs and env files can
+# carry API keys (e.g. PixelLab). Project-scoped agent state and personal overrides also
+# stay local. The shared, committed agent config is .claude/settings.json + skills.
+.env
+.env.*
+!.env.example
+.mcp.json
+.claude.json
+.claude/settings.local.json
+.claude/.credentials.json
+
 # Repo-root icon-review/ scratch dir — rendered before/after PNGs, contact sheets,
 # and the generated manifest. Disposable working area; the committed tracker
 # (docs/icon-review.html) now references extracted PNGs under docs/assets/icon-review/
