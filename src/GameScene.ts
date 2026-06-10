@@ -1944,7 +1944,13 @@ export class GameScene extends Phaser.Scene {
     // Offset up by a full tile height + padding so the badge sits clearly
     // above the tile rather than overlapping it, and nudge right so it reads
     // as adjacent to the tile rather than centered on the cursor.
-    this.grassHover.setPosition(x + ts * 0.55, Math.max(minY, y - ts * 0.9));
+    // The badge is an 80×44 (css px) container centered on its position —
+    // clamp the center so edge-column drags keep it fully on-canvas.
+    const halfW = 40 * dpr;
+    const pad = 4 * dpr;
+    const rawX = x + ts * 0.55;
+    const clampedX = Math.min(Math.max(rawX, halfW + pad), this.scale.width - halfW - pad);
+    this.grassHover.setPosition(clampedX, Math.max(minY, y - ts * 0.9));
   }
 
   hideGrassHover() {
