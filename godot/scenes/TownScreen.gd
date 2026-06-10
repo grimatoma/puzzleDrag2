@@ -168,7 +168,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🏠 Town"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	# M4c: the Cinzel display serif (parity with Main's headings). Defensive — falls
 	# back to the default font when the asset isn't imported/present.
@@ -210,7 +210,7 @@ func _add_section(header_text: String) -> VBoxContainer:
 
 	var header := Label.new()
 	header.text = header_text
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -378,7 +378,7 @@ func _build_market_section() -> void:
 		banner.add_theme_stylebox_override("panel", banner_style)
 		var banner_vbox := VBoxContainer.new()
 		var ev_title := _make_label("⚡ %s" % ev_label, COL_HEADER)
-		ev_title.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(ev_title, Typography.Role.LABEL)
 		ev_title.add_theme_color_override("font_color", Palette.EMBER)
 		banner_vbox.add_child(ev_title)
 		if ev_desc != "":
@@ -515,7 +515,7 @@ func _build_order_card(i: int) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = npc_name
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -525,7 +525,7 @@ func _build_order_card(i: int) -> PanelContainer:
 	if not npc_role.is_empty():
 		var role_lbl := Label.new()
 		role_lbl.text = npc_role
-		role_lbl.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(role_lbl, Typography.Role.LABEL)
 		role_lbl.add_theme_color_override("font_color", COL_MUTED)
 		name_col.add_child(role_lbl)
 
@@ -582,7 +582,7 @@ func _build_order_card(i: int) -> PanelContainer:
 
 	var hn_lbl := Label.new()
 	hn_lbl.text = "%d/%d" % [have, qty]
-	hn_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(hn_lbl, Typography.Role.LABEL)
 	hn_lbl.add_theme_color_override("font_color", COL_MUTED)
 	hn_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
 	hn_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -616,7 +616,7 @@ func _make_avatar(bg: Color, initial: String) -> PanelContainer:
 	av.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = initial
-	lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(lbl, Typography.Role.HEADING)
 	# Light/dark text picked for legibility on the avatar tint (parity with how
 	# UiKit's filled buttons pick contrasting label colors).
 	var lum: float = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
@@ -888,7 +888,7 @@ func _chip(row: Control) -> PanelContainer:
 func _make_subheader(text: String) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -899,7 +899,7 @@ func _make_subheader(text: String) -> Label:
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return lbl

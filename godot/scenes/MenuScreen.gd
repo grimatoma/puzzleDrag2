@@ -158,7 +158,7 @@ func _build_shell() -> void:
 	# card is branded with the game title, not a generic "Menu" label).
 	var title := Label.new()
 	title.text = "🔥 Hearthlands"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var heading_font: Font = UiKit.heading_font()
@@ -170,7 +170,7 @@ func _build_shell() -> void:
 	# "A puzzle of seasons and stews."), centered to match the title.
 	var tagline := Label.new()
 	tagline.text = "A puzzle of seasons and stews."
-	tagline.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(tagline, Typography.Role.LABEL)
 	tagline.add_theme_color_override("font_color", Palette.INK_MID)
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(tagline)
@@ -180,7 +180,7 @@ func _build_shell() -> void:
 	# the menu's Settings tab). Sound mute + a Go Fullscreen toggle.
 	var settings_heading := Label.new()
 	settings_heading.text = "Settings"
-	settings_heading.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(settings_heading, Typography.Role.SUBHEAD)
 	settings_heading.add_theme_color_override("font_color", COL_TITLE)
 	if heading_font != null:
 		settings_heading.add_theme_font_override("font", heading_font)
@@ -190,7 +190,7 @@ func _build_shell() -> void:
 	_sound_btn = Button.new()
 	_sound_btn.text = "Sound: On"
 	_sound_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_sound_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_sound_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_sound_btn.connect("pressed", Callable(self, "_on_sound_pressed"))
 	col.add_child(_sound_btn)
 	_action_buttons["toggle_sound"] = _sound_btn
@@ -201,7 +201,7 @@ func _build_shell() -> void:
 	_fullscreen_btn = Button.new()
 	_fullscreen_btn.text = "Go Fullscreen"
 	_fullscreen_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_fullscreen_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_fullscreen_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_fullscreen_btn.connect("pressed", Callable(self, "_on_fullscreen_pressed"))
 	col.add_child(_fullscreen_btn)
 	_action_buttons["toggle_fullscreen"] = _fullscreen_btn
@@ -212,7 +212,7 @@ func _build_shell() -> void:
 	_motion_btn = Button.new()
 	_motion_btn.text = "Reduce Motion: Off"
 	_motion_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_motion_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(_motion_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	_motion_btn.connect("pressed", Callable(self, "_on_motion_pressed"))
 	col.add_child(_motion_btn)
 	_action_buttons["toggle_motion"] = _motion_btn
@@ -223,7 +223,7 @@ func _build_shell() -> void:
 	var tutorial_btn := Button.new()
 	tutorial_btn.text = "📖 Show Tutorial"
 	tutorial_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(tutorial_btn, Palette.MOSS, 8, 20)
+	UiKit.style_button(tutorial_btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 	tutorial_btn.connect("pressed", Callable(self, "_on_show_tutorial_pressed"))
 	col.add_child(tutorial_btn)
 	_action_buttons["show_tutorial"] = tutorial_btn
@@ -232,7 +232,7 @@ func _build_shell() -> void:
 	var new_btn := Button.new()
 	new_btn.text = "New Game"
 	new_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(new_btn, COL_DANGER, 8, 20)
+	UiKit.style_button(new_btn, COL_DANGER, 8, Typography.size(Typography.Role.SUBHEAD))
 	new_btn.connect("pressed", Callable(self, "_on_new_game_pressed"))
 	col.add_child(new_btn)
 	_action_buttons["new_game"] = new_btn
@@ -254,7 +254,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "Close"
 	close_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(close_btn, Palette.EMBER, 8, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	col.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -268,7 +268,7 @@ func _build_shell() -> void:
 func _build_more_section(col: VBoxContainer) -> void:
 	var heading := Label.new()
 	heading.text = "More"
-	heading.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(heading, Typography.Role.SUBHEAD)
 	heading.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -296,7 +296,7 @@ func _build_more_section(col: VBoxContainer) -> void:
 		# Centered + same font size as the top Sound/New Game/Close buttons so the whole
 		# menu reads as one uniform pill list (was left-aligned + smaller = a jarring two-tier look).
 		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		UiKit.style_button(btn, Palette.MOSS, 8, 20)
+		UiKit.style_button(btn, Palette.MOSS, 8, Typography.size(Typography.Role.SUBHEAD))
 		btn.connect("pressed", Callable(self, "_on_nav_pressed").bind(id))
 		list.add_child(btn)
 		_action_buttons["nav:" + id] = btn
@@ -333,7 +333,7 @@ func _build_about_card(col: VBoxContainer) -> void:
 
 	var about_title := Label.new()
 	about_title.text = "About"
-	about_title.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(about_title, Typography.Role.SUBHEAD)
 	about_title.add_theme_color_override("font_color", COL_TITLE)
 	if heading_font != null:
 		about_title.add_theme_font_override("font", heading_font)
@@ -341,14 +341,14 @@ func _build_about_card(col: VBoxContainer) -> void:
 
 	var name_lbl := Label.new()
 	name_lbl.text = "Hearthlands — a puzzle of seasons and stews."
-	name_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
 	name_lbl.add_theme_color_override("font_color", Palette.INK)
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acol.add_child(name_lbl)
 
 	var credits := Label.new()
 	credits.text = "Godot 4.6 port · chain tiles, restore the vale, build the town."
-	credits.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(credits, Typography.Role.META)
 	credits.add_theme_color_override("font_color", Palette.INK_MID)
 	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acol.add_child(credits)
