@@ -258,7 +258,7 @@ func _make_line_row(speaker: String, text: String) -> Control:
 
 	var body := Label.new()
 	body.text = text
-	UiKit.set_font_size(body, Typography.Role.HEADING)  # promoted: speaker=SUBHEAD, body one tier up
+	UiKit.set_font_size(body, Typography.Role.SUBHEAD)
 	# Narration (no speaker) reads in the muted tone; spoken lines in full ink.
 	body.add_theme_color_override("font_color", COL_BODY if speaker != "" else COL_NARRATION)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
