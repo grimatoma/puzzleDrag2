@@ -34,6 +34,8 @@ export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
+import { createCooldownGate } from "./game/capToastGate.js";
+import { announce } from "./a11y.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -141,6 +143,7 @@ export class GameScene extends Phaser.Scene {
   _suppressNextGridApply: boolean = false;
   _deferredTool: string | null = null;
   _hazardTimer: Phaser.Time.TimerEvent | null = null;
+  _capToastGate: (key: string, now: number) => boolean = createCooldownGate(10_000);
 
   constructor() {
     super("GameScene");
@@ -1798,6 +1801,12 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.floatText(`+${actualGain} ${res.label}${overCap ? " ⓘ" : ""}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+
+    // Storage-cap feedback: the float text's ⓘ is gone in under a second, so
+    // surface a real toast (per-resource cooldown keeps repeat chains quiet).
+    if (overCap && this._capToastGate(res.key, Date.now())) {
+      announce(`${res.label} storage full — extra tiles lost`, { tone: "warning", icon: "⚠️" });
+    }
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
     // earn loud feedback; upgrades add an extra burst.
