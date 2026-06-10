@@ -1,4 +1,25 @@
 {
+  "desktop/board-farm-chain-2-short.png": {
+    "scenarioId": "board-farm-chain-2-short",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [
+      {
+        "type": "api",
+        "method": "holdChain",
+        "args": {
+          "key": "tile_grass_grass",
+          "length": 2
+        }
+      }
+    ],
+    "expectation": "Scenario board-farm-chain-2-short renders correctly at #/board after 1 scripted action.",
+    "checklist": [
+      "Open #/board.",
+      "Apply action api:holdChain.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "desktop/board-farm-chain-7.png": {
     "scenarioId": "board-farm-chain-7",
     "routeHash": "#/board",
@@ -218,6 +239,27 @@
     "expectation": "Scenario board-boss-weather renders correctly at #/board.",
     "checklist": [
       "Open #/board.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
+  "iphone-portrait/board-farm-chain-2-short.png": {
+    "scenarioId": "board-farm-chain-2-short",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [
+      {
+        "type": "api",
+        "method": "holdChain",
+        "args": {
+          "key": "tile_grass_grass",
+          "length": 2
+        }
+      }
+    ],
+    "expectation": "Scenario board-farm-chain-2-short renders correctly at #/board after 1 scripted action.",
+    "checklist": [
+      "Open #/board.",
+      "Apply action api:holdChain.",
       "Compare UI and canvas output to the golden image."
     ]
   },

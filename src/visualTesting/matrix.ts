@@ -74,6 +74,7 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "board-farm-idle", state: "boardFarm", hash: "#/board", diff: canvasDiff },
   { id: "board-anim-demo", state: "boardFarm", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
   { id: "board-farm-chain-7", state: "boardFarm", hash: "#/board", actions: [api("holdChain", { key: "tile_grass_grass", length: 7 })], diff: canvasDiff },
+  { id: "board-farm-chain-2-short", state: "boardFarm", hash: "#/board", actions: [api("holdChain", { key: "tile_grass_grass", length: 2 })], diff: canvasDiff },
   { id: "board-farm-fire-rats", state: "boardFarmHazards", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-tool-bomb", state: "boardFarmBomb", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-tool-sickle", state: "boardFarmSickle", hash: "#/board", diff: canvasDiff },
@@ -151,6 +152,7 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
 
 const expectationOverrideById: Record<string, string> = {
   "board-farm-chain-7": "A 7-tile grass chain is visibly held on the farm board before capture.",
+  "board-farm-chain-2-short": "A 2-tile chain is held; the chain panel header shows how many more tiles are needed to collect.",
   "shell-menu-settings": "Settings panel is open from the menu modal.",
   "town-build-picker-locked": "Build picker is open and a locked building option is shown.",
 };
@@ -194,6 +196,7 @@ export const VISUAL_DESKTOP_SMOKE_SCENARIO_IDS = [
   "start-farming-default",
   "board-farm-idle",
   "board-farm-chain-7",
+  "board-farm-chain-2-short",
   "board-mine-idle",
   "inventory-grid-all",
   "crafting-bakery",
