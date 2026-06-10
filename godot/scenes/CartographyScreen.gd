@@ -1,4 +1,4 @@
-﻿extends CanvasLayer
+extends CanvasLayer
 ## The CARTOGRAPHY world map — T26: the FULL illustrated 11-node parchment map (was a trimmed
 ## 3-node hub). A from-config render of CartographyConfig: REGIONS as soft blobs, the 14 roads
 ## as dashed/solid lines, 11 node PINS state-styled by the live travel state (hidden=fogged,
