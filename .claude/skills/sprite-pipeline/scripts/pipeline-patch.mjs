@@ -184,6 +184,8 @@ function cmdReject(args) {
   const kf = findKeyframe(findItem(pipeline, itemId), keyId);
   const cand = findCandidate(candidateList(history, itemId, keyId), idx);
   if (!cand) die(`no candidate idx=${idx} on ${itemId}/${keyId} — record-candidate it first`);
+  // "rejected" is terminal: unlike the viewer's regen (which marks "failed"), a rejected candidate
+  // is NOT re-seeded by build_viewer's gap-fill planner and still occupies its candidate slot.
   cand.status = "rejected";
   cand.llm = "fail";
   cand.reason = reason;
@@ -260,22 +262,22 @@ const USAGE = `Usage:
   node pipeline-patch.mjs set-mode         (autonomous | gated)
   node pipeline-patch.mjs show             [item]
 
-  --pipeline <path>   override the pipeline.json location (history/schema sidecars derived from it)`;
+  --pipeline <path>   (leading option, before the command) override the pipeline.json location
+                      — history/schema sidecars are derived from it`;
 
-// Pull an optional `--pipeline <path>` out of argv (anywhere), returning the resolved path + the
-// remaining args. Sidecars are derived from this path by manifest.mjs.
+// Pull an optional leading `--pipeline <path>` off the front of argv, returning the resolved path +
+// the remaining args. It is honored ONLY before the subcommand, so a free-text positional later (e.g.
+// a reject reason of literally "--pipeline") is never mistaken for the flag. Sidecars are derived
+// from this path by manifest.mjs.
 function extractPipelineFlag(argv) {
-  const rest = [];
   let pipelineOverride = null;
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--pipeline") {
-      pipelineOverride = argv[++i];
-      if (!pipelineOverride) die("--pipeline requires a <path>");
-    } else {
-      rest.push(argv[i]);
-    }
+  let i = 0;
+  while (i < argv.length && argv[i] === "--pipeline") {
+    pipelineOverride = argv[i + 1];
+    if (!pipelineOverride) die("--pipeline requires a <path>");
+    i += 2;
   }
-  return { pipelineOverride, rest };
+  return { pipelineOverride, rest: argv.slice(i) };
 }
 
 // Resolved once main() parses argv; all commands read this module-level constant.
