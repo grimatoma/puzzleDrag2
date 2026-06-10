@@ -246,8 +246,12 @@ func _test_board_drag(main) -> void:
 	board._build_tiles()
 	board.layout_for(root.get_visible_rect().size)
 	# Mirror Main._layout's board placement so to_global() maps cells to real screen px.
+	# The board band starts at Hud.board_top() (below the fixed action panel) — placing it
+	# at the old 0.24·vp would park row 0 UNDER the action panel, whose card correctly
+	# swallows the press before it reaches Board._unhandled_input.
 	var vp: Vector2 = root.get_visible_rect().size
-	board.position = Vector2((vp.x - board.board_pixel_size().x) / 2.0, vp.y * 0.24)
+	board.position = Vector2(
+		(vp.x - board.board_pixel_size().x) / 2.0, main._hud.board_top())
 	await process_frame
 
 	_resolved = {}

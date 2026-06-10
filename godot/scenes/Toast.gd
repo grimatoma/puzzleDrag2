@@ -82,7 +82,7 @@ func _build_shell() -> void:
 
 	_label = Label.new()
 	_label.text = ""
-	_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_label, Typography.Role.SUBHEAD)
 	_label.add_theme_color_override("font_color", Palette.INK)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# Toast messages are short single lines — DON'T autowrap (autowrap with no width budget

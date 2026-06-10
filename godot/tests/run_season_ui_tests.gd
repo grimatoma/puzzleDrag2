@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_test_season_turn_ranges_nonpositive()
 	_test_strip_palettes()
 	_test_field_colors()
+	_test_biome_accents()
 	_test_harvest_recap_line()
 	await _test_season_bar_run_gated()
 	await _test_free_moves_readout()
@@ -139,6 +140,16 @@ func _test_field_colors() -> void:
 	_check((winter["top"] as Color).is_equal_approx(Color8(0xdd, 0xe4, 0xea)), "Winter field top == #dde4ea")
 	_check((winter["bot"] as Color).is_equal_approx(Color8(0xb6, 0xc2, 0xcc)), "Winter field bot == #b6c2cc")
 
+# ── board TOP-edge biome accent (verbatim src BIOMES[*].palette.bg hex) ─────────
+
+func _test_biome_accents() -> void:
+	# The three playable biomes each map to their React palette.bg; biome_accent() resolves by name
+	# and an unknown biome falls back to the farm green (the home board).
+	_check(Constants.biome_accent("farm").is_equal_approx(Color8(0x7f, 0xa8, 0x48)), "farm accent == #7fa848")
+	_check(Constants.biome_accent("mine").is_equal_approx(Color8(0x6a, 0x7d, 0x92)), "mine accent == #6a7d92")
+	_check(Constants.biome_accent("harbor").is_equal_approx(Color8(0x4a, 0x8a, 0xa8)), "harbor accent == #4a8aa8")
+	_check(Constants.biome_accent("nope").is_equal_approx(Color8(0x7f, 0xa8, 0x48)), "unknown biome falls back to farm green")
+
 # ── HarvestModal.recap_line (pure recap string) ────────────────────────────────
 
 func _test_harvest_recap_line() -> void:
@@ -246,11 +257,13 @@ func _test_stockpile_panel() -> void:
 		"header reads '0/%d KINDS' on an empty stockpile (got '%s')" % [roster_n, hud._stockpile_kinds.text])
 
 	# Own two roster goods → header counts them; the chips for those keys exist.
-	game.inventory = {"flour": 5, "bread": 2}
+	# (flour + jam are both in the React-parity first-12 farm roster; bread is NOT —
+	# it falls outside BIOMES.farm.resources.slice(0,12), so it would be an extra.)
+	game.inventory = {"flour": 5, "jam": 2}
 	hud._refresh_totals()
 	_check(hud._stockpile_kinds.text == "2/%d KINDS" % roster_n,
-		"header reads '2/%d KINDS' after owning flour + bread (got '%s')" % [roster_n, hud._stockpile_kinds.text])
-	_check(hud._stockpile_chips.has("flour") and hud._stockpile_chips.has("bread"),
+		"header reads '2/%d KINDS' after owning flour + jam (got '%s')" % [roster_n, hud._stockpile_kinds.text])
+	_check(hud._stockpile_chips.has("flour") and hud._stockpile_chips.has("jam"),
 		"the owned roster goods have chips")
 
 	# An OWNED non-roster good (a mine resource) is appended as an extra chip beyond the roster.

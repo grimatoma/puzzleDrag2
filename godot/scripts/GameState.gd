@@ -418,6 +418,12 @@ var audio_muted: bool = false
 ## it from the menu; persisted so the choice survives a reload. Defaults to motion ON.
 var reduce_motion: bool = false
 
+## Player "Text Size" accessibility preference: an index into Typography.TEXT_SCALES
+## (0=Normal, 1=Large, 2=Larger). Main sets Typography.scale from this on launch (before
+## the HUD builds) and cycles it from the menu; persisted so the choice survives a reload.
+## Legacy-safe default 0 (Normal) — a save written before this field existed loads at Normal.
+var text_size_index: int = 0
+
 # ── Tutorial onboarding ────────────────────────────────────────────────────────
 ## Whether the player has completed (or skipped) the 6-step tutorial onboarding
 ## modal. Persisted so the modal is shown only once. Main calls mark_tutorial_seen()
@@ -734,6 +740,9 @@ func keeper_path_for(type: String) -> String:
 ## ported + forward-compatible — this gate answers true for them once those become settlements with
 ## their own built counts (a later task, T22); today only "farm" is reachable.
 func keeper_encounter_ready(type: String) -> bool:
+	# Feature flag: keepers fully disabled → the encounter is never ready (no auto-trigger fires).
+	if not KeeperConfig.is_enabled():
+		return false
 	if not KeeperConfig.has_keeper(type):
 		return false
 	if keeper_resolved(type):
@@ -750,6 +759,10 @@ func keeper_encounter_ready(type: String) -> bool:
 ## "resolved". On success returns {ok:true, type, path, flag, embers?|core_ingots?} with the amount
 ## granted; on failure {ok:false, reason} WITHOUT mutating.
 func give_keeper_reward(type: String, path: String) -> Dictionary:
+	# Feature flag: keepers fully disabled → refuse the grant (defence-in-depth; the UI path is
+	# already gated at Main._open_keeper, so this only trips a programmatic/deeplink caller).
+	if not KeeperConfig.is_enabled():
+		return {"ok": false, "reason": "disabled"}
 	if not KeeperConfig.has_keeper(type):
 		return {"ok": false, "reason": "unknown"}
 	if not KeeperConfig.is_path(path):
@@ -966,6 +979,13 @@ var pending_tool: String:
 ## absent from to_dict/from_dict — a per-session transient, exactly like pending_tool above.
 var fill_bias_target: int = Constants.EMPTY   ## armed bias target Tile, EMPTY when off
 var fill_bias_turns: int = 0                  ## remaining biased farm turns
+## Id of the tool that armed the live bias ("" when off). The board never shows a fill_bias
+## tool as a pending tap-tool, so the HUD reads this to highlight EXACTLY the slot the player
+## armed — fertilizer/bird_feed/sapling/magic_fertilizer all funnel into the SAME transient
+## bias and fertilizer + magic_fertilizer share WHEAT, so a target → tool reverse map is
+## ambiguous. Refund on disarm hands the charge back to this tool. Transient like the bias
+## itself (to_dict/from_dict skip it; a save/reload simply clears it).
+var fill_bias_tool: String = ""
 
 # ── Achievements (M10, counters + trophies) ───────────────────────────────────
 ## The trophy system, ported from the React achievements slice
@@ -1280,26 +1300,37 @@ func seed_orders(s: int) -> void:
 	rng.seed = s
 
 ## Apply one resolved chain to the run economy and return a summary dict.
+## The EFFECTIVE upgrade threshold for chaining `tile_type`: the raw Constants threshold
+## minus the worker threshold_reduce_category reduction and the unified aggregate's
+## threshold_reduce channel, floored at WORKER_MIN_THRESHOLD. This is the SAME math
+## credit_chain banks units with, exposed so the HUD's live chain readout (React:
+## GameScene's effectiveThresholds → ChainView) always shows the numbers the resolve
+## will actually credit. Both reductions are 0 for a fresh game → returns the raw
+## threshold, byte-identical to the pre-workers economy.
+##
+## Workers (ADDITIVE): threshold_reduce_category workers shave tiles off the matching
+## chain; the WORKER_MIN_THRESHOLD floor keeps a fully-staffed category from collapsing
+## the threshold to 0/1 and exploding the units. T17/T21 (ADDITIVE): the aggregate's
+## threshold_reduce channel (BUILDINGS + TILES — e.g. Observatory threshold_reduce_category
+## gem -1) is keyed by RESOURCE (the React effectiveThresholds key) and stacks ON TOP of
+## the worker reduction; workers are NOT in the aggregate, so there is no double-count.
+## A hazard's NO_THRESHOLD sentinel still has the reductions applied (matching the old
+## inline credit_chain math exactly) — at ~2^30 the result is still "never yields units".
+func effective_threshold(tile_type: int) -> int:
+	var threshold: int = Constants.threshold_for(tile_type)
+	if threshold <= 0:
+		return threshold
+	var resource: String = Constants.produced_resource(tile_type)
+	var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
+	return maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+
 ## Mutates inventory/progress, increments coins and turn.
 func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var resource: String = Constants.produced_resource(tile_type)
-	var threshold: int = Constants.threshold_for(tile_type)
-	# Workers (ADDITIVE): threshold_reduce_category workers shave tiles off the
-	# matching chain. worker_threshold_reduction is 0 when no worker of this tile's
-	# category is hired, so eff_threshold == threshold and the unit/progress math is
-	# IDENTICAL to the pre-workers economy. The WORKER_MIN_THRESHOLD floor keeps a
-	# fully-staffed category from collapsing the threshold to 0/1 and exploding the
-	# units. The floor only ever applies to a REAL (positive) threshold — the
-	# NO_THRESHOLD sentinel branch below (threshold <= 0, hazards) is untouched.
-	if threshold > 0:
-		# T17/T21 (ADDITIVE): the unified aggregate's threshold_reduce channel (BUILDINGS + TILES —
-		# e.g. Observatory threshold_reduce_category gem -1, keyed by produced resource) stacks ON TOP
-		# of the worker reduction. It is keyed by RESOURCE (the React effectiveThresholds key), so look
-		# it up by this chain's produced `resource`. EMPTY for a fresh game → 0 → eff_threshold
-		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
-		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
-		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
-		threshold = maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+	# The worker/aggregate-reduced threshold (see effective_threshold above — the
+	# extraction keeps this math and the HUD's live readout in lockstep). The
+	# threshold <= 0 branch below (defensive) is untouched.
+	var threshold: int = effective_threshold(tile_type)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
@@ -2796,6 +2827,7 @@ func note_farm_turn() -> Dictionary:
 		fill_bias_turns -= 1
 		if fill_bias_turns <= 0:
 			fill_bias_target = Constants.EMPTY
+			fill_bias_tool = ""
 	var harvest: bool = false
 	var ended: bool = false
 	# `budget > 0` guard: a non-positive budget (corrupt save / test edge) is treated as
@@ -3054,6 +3086,7 @@ func close_season() -> Dictionary:
 	tile_free_moves = 0
 	fill_bias_target = Constants.EMPTY
 	fill_bias_turns = 0
+	fill_bias_tool = ""
 	# Clear the run + reset the farm to a fresh Spring on the home board.
 	farm_run_active = false
 	farm_run_budget = 0
@@ -3362,9 +3395,17 @@ static func _build_farm_category_tiles(cats: Array) -> Dictionary:
 ## (herd→PIG, cattle→COW, mount→HORSE) map to real tiles even though they never base-spawn.
 ## ONLY meaningful for the FARM (home zone) — the mine/harbor have no zone upgradeMap, so callers
 ## apply this on the farm biome only (mine/harbor pass through unchanged).
-static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
+##
+## `threshold_override`: when >= 0, the per-chain threshold to divide by INSTEAD of the RAW
+## Constants.threshold_for(source_tile). The instance path (upgrade_spawn_active) passes the
+## EFFECTIVE (worker/ability-reduced) threshold so the spawned upgrade count matches what
+## credit_chain banks and the HUD's "+N" badge shows (React computes the same count from its
+## effectiveThresholds registry — src/GameScene.ts upgradeCountForChain). The static default
+## (-1) keeps the RAW threshold, so pure/headless callers and a fresh game (no workers/abilities →
+## effective == raw) stay byte-identical — the determinism contract holds.
+static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int, threshold_override: int = -1) -> Dictionary:
 	var none := {"count": 0, "tile": Constants.EMPTY}
-	var threshold: int = Constants.threshold_for(source_tile)
+	var threshold: int = threshold_override if threshold_override >= 0 else Constants.threshold_for(source_tile)
 	var count: int = BoardLogic.upgrade_count(chain_len, threshold)
 	if count <= 0:
 		return none   # below threshold, or a hazard tile (NO_THRESHOLD)
@@ -3384,7 +3425,12 @@ static func upgrade_spawn(zone_id: String, source_tile: int, chain_len: int) -> 
 ## this returns the SAME tile as the static helper. Use this from the live board (Main.gd)
 ## so an upgrade chain spawns the player's chosen variant of the target category.
 func upgrade_spawn_active(zone_id: String, source_tile: int, chain_len: int) -> Dictionary:
-	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len)
+	# Spawn count uses the EFFECTIVE (worker/ability-reduced) threshold — the SAME value
+	# credit_chain banks units with and the HUD's "+N" badge reads (effective_threshold). A
+	# threshold-reduction worker therefore spawns as many upgrade tiles as it credits units,
+	# matching React (upgradeCountForChain over effectiveThresholds). Fresh game (no reductions)
+	# → effective == raw → byte-identical to the static helper.
+	var res: Dictionary = GameState.upgrade_spawn(zone_id, source_tile, chain_len, effective_threshold(source_tile))
 	if int(res.get("count", 0)) <= 0:
 		return res   # below threshold / GOLD sentinel / hazard — no tile to substitute
 	# T17/T21: chain_redirect_category channel (a worker ability — src/config/abilitiesAggregate.ts
@@ -4292,6 +4338,33 @@ func is_tool_armed() -> bool:
 func clear_pending_tool() -> void:
 	tool_state.disarm()
 
+## True while a fill_bias spawn bias is armed (the React `isFillBiasArmed` predicate). A
+## fill_bias tool (fertilizer/bird_feed/sapling/magic_fertilizer) never enters the board's
+## pending-tap mode, so this is the SECOND armed-mode the HUD must surface alongside
+## is_tool_armed() — without it an armed fertilizer shows no panel state or hotbar highlight.
+func is_fill_bias_armed() -> bool:
+	return fill_bias_turns > 0 and fill_bias_target != Constants.EMPTY
+
+## The id of the tool that armed the live fill_bias ("" when none). Lets the HUD highlight the
+## exact slot the player armed (see fill_bias_tool — target → tool would be ambiguous).
+func armed_fill_bias_tool() -> String:
+	return fill_bias_tool if is_fill_bias_armed() else ""
+
+## Disarm a live fill_bias and REFUND the charge the arming spent (React `disarmFillBias`,
+## the web's "re-dispatch USE_TOOL fertilizer = disarm + refund" toggle). Clears the transient
+## bias and hands one charge back to the tool that armed it. Returns true when a bias was
+## disarmed, false when none was armed.
+func disarm_fill_bias() -> bool:
+	if not is_fill_bias_armed():
+		return false
+	var refund_id: String = fill_bias_tool
+	fill_bias_target = Constants.EMPTY
+	fill_bias_turns = 0
+	fill_bias_tool = ""
+	if refund_id != "" and ToolConfig.has_tool(refund_id):
+		grant_tool(refund_id, 1)
+	return true
+
 ## Apply tool `id` to `grid`, crediting collected tiles and consuming one charge.
 ## Returns {ok, reason, grid, collected}:
 ##   - ok=false leaves the grid/inventory/charges UNCHANGED and names the FIRST guard
@@ -4352,6 +4425,7 @@ func use_tool_on_grid(id: String, grid: Array, cell: Vector2i = Vector2i(-1, -1)
 		var p: Dictionary = ToolConfig.get_tool(id).get("params", {})
 		fill_bias_target = int(p.get("target", Constants.EMPTY))
 		fill_bias_turns = maxi(1, int(p.get("turns", 1)))
+		fill_bias_tool = id
 		tool_state.consume(id)
 		_tick_quests({"type": "tool", "tool": id})
 		return {"ok": true, "reason": "", "grid": grid, "collected": {}}
@@ -4792,6 +4866,7 @@ func to_dict() -> Dictionary:
 		"tile_free_moves": free_moves(),
 		"audio_muted": audio_muted,
 		"reduce_motion": reduce_motion,
+		"text_size_index": text_size_index,
 		# M8b: owned tool charges from the composed ToolState, flattened back into the SAME
 		# top-level "tools" key. pending_tool is TRANSIENT and intentionally NOT persisted (a
 		# reload always starts disarmed) — ToolState.to_dict emits only the charges.
@@ -5202,6 +5277,10 @@ static func from_dict(d: Dictionary) -> GameState:
 	# "on" (false) for any save written before this field existed.
 	s.audio_muted = bool(d.get("audio_muted", false))
 	s.reduce_motion = bool(d.get("reduce_motion", false))
+	# Restore the Text Size index (M-typography). clampi guards against an out-of-range
+	# saved value (e.g. a save written when TEXT_SCALES had more entries); defaults to 0
+	# (Normal) for any save written before this field existed.
+	s.text_size_index = clampi(int(d.get("text_size_index", 0)), 0, Typography.TEXT_SCALES.size() - 1)
 	# Restore owned tool charges (M8b) into the composed ToolState from the SAME flat
 	# top-level "tools" key. Missing key (any save written before tools existed) →
 	# ToolState.from_dict({}) yields {} (no tools). Each value is coerced to int (JSON

@@ -101,6 +101,15 @@ var block_mine_hazards: bool = false
 ## (no zone upgradeMap) and any pre-A1b caller behave exactly as before.
 var upgrade_provider: Callable = Callable()
 
+## The board band's TOP edge in viewport px — Main sets it from Hud.board_top() (the
+## fixed line under the action panel) before each layout_for call. The default is that
+## same canonical value so direct layout_for(vp) callers (capture tools, scene-smoke,
+## e2e-input tests) get the real game geometry without a Main.
+var board_top_px: float = 454.0
+## Bottom chrome reserve below the board: the status/orders strip (~76px) + the bottom
+## nav (UiKit.NAV_RESERVE). layout_for subtracts it from the tile height budget.
+const BOTTOM_RESERVE: float = 76.0 + float(UiKit.NAV_RESERVE)
+
 ## A1b — upgrade tiles queued for the CURRENT _resolve's refill: an Array of int tile types, one
 ## entry per upgrade tile to place among the new top cells. Filled at the top of _resolve from
 ## upgrade_provider and drained as the refill loop spawns top-row cells; always empty between
@@ -178,6 +187,15 @@ const FRAME_PAD := 10.0
 ## before Main seeds it still reads as a calm green field (Spring's field colour).
 var _season_idx: int = 0
 
+## A2 — the biome the board card's TOP-edge accent strip is tinted for. An optional provider Main
+## installs (mirrors upgrade_provider: a Callable, NOT a GameState ref — the Board never reads game
+## state, it only ASKS an opaque function). Called from _draw as `biome_provider.call() -> String`
+## ("farm"/"mine"/"harbor"); since it re-reads game.active_biome on every redraw it self-updates as
+## the player enters an expedition and returns, with no per-transition push needed (the board
+## already redraws on biome flips via setup_new_board). Unset (the default null Callable) leaves the
+## strip on the farm green, so capture tools / tests that build a bare Board without Main still draw.
+var biome_provider: Callable = Callable()
+
 ## Resolve "juice" (the React feel the port lacked): a screen shake whose magnitude scales
 ## with the chain length, an expanding flash ring + a collect spark burst at the chain head,
 ## and an upgrade-burst flash when the chain spawns an upgrade tile. All are PURELY visual,
@@ -217,43 +235,72 @@ func _process(delta: float) -> void:
 ## A CanvasItem renders itself before its children, so this frame sits under every
 ## Tile node automatically. Re-run on layout/board changes via queue_redraw().
 func _draw() -> void:
-	var sb := StyleBoxFlat.new()
-	# Light parchment field with a thin moss-green frame — matches the React board,
-	# which floats the pastel tile cards on a cream board (the gaps between tiles read
-	# CREAM, not green) inside a soft green edge. The old solid-green fill made the
-	# whole board read dark/heavy and muddied the tiles' per-type pastel backgrounds.
-	# A2 — gently tint the card per the CURRENT season (src/ui/puzzleBoard.tsx field gradient):
-	# the FILL stays a season-blended parchment (only ~22% toward the season's field tone so the
-	# tiles' own pastel backgrounds still read over it) and the BORDER takes the season's darker
-	# field-bottom tone. Spring reads close to the old calm green; Winter cools to a slate edge.
+	# The board card is a TWO-LAYER parchment construction ported from the React board
+	# (src/GameScene.ts drawBackground + src/ui/puzzleBoard.tsx): an outer DIRT frame holds a
+	# slightly-inset CREAM card the pastel tiles float on (the gaps between tiles read CREAM, not
+	# green), with a BIOME-coloured accent strip along the card's TOP edge (which biome you're on)
+	# and a SEASON-coloured strip along its BOTTOM edge (which season it is). The single solid-green
+	# fill the port shipped before made the whole board read dark/heavy and muddied the tiles.
+	# A2 — the cream fill keeps a faint season tint (≈22% toward the season's field-top tone, from
+	# src/ui/puzzleBoard.tsx's field gradient) so the per-tile pastel backgrounds still read over it,
+	# and the BOTTOM strip takes the season's darker field-bottom tone (Constants.SEASON_FIELD_COLORS).
 	var field: Dictionary = _season_field()
 	var field_top: Color = field["top"]
 	var field_bot: Color = field["bot"]
-	sb.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
-	sb.corner_radius_top_left = 16
-	sb.corner_radius_top_right = 16
-	sb.corner_radius_bottom_left = 16
-	sb.corner_radius_bottom_right = 16
-	sb.border_width_left = 3
-	sb.border_width_top = 3
-	sb.border_width_right = 3
-	sb.border_width_bottom = 3
-	sb.border_color = field_bot
-	sb.shadow_size = 10
-	sb.shadow_color = Color(0, 0, 0, 0.18)
-	sb.shadow_offset = Vector2(0, 4)
+
+	# Outer rect = the dirt frame (the armed-pulse rings below key off this); the cream card is
+	# inset a touch so the dirt reads as a thin border around it (React frame*0.6 vs frame).
 	var rect := Rect2(
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
-	draw_style_box(sb, rect)
+	var card := rect.grow(-FRAME_PAD * 0.4)
 
-	# M8c — while a tap-target tool is armed, pulse a hot red border around the field so the
-	# board reads as "hot / waiting for your tap" (the React armed-pulse on the board frame).
+	# Layer 1 — the dirt frame (React special_dirt 0xc9b993 == Palette.IRON), rounded, with the
+	# soft drop shadow that used to hang off the single card.
+	var dirt := StyleBoxFlat.new()
+	dirt.bg_color = Palette.IRON
+	dirt.set_corner_radius_all(16)
+	dirt.shadow_size = 10
+	dirt.shadow_color = Color(0, 0, 0, 0.18)
+	dirt.shadow_offset = Vector2(0, 4)
+	draw_style_box(dirt, rect)
+
+	# Layer 2 — the cream card the tiles sit on (React boardBg 0xf6efe0 == Palette.PARCHMENT),
+	# gently season-tinted so the tiles' own pastel backgrounds still read over it.
+	var cream := StyleBoxFlat.new()
+	cream.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
+	cream.set_corner_radius_all(14)
+	draw_style_box(cream, card)
+
+	# Edge accent strips — straight bars inset past the card's rounded corners so they never poke
+	# outside the corner curve. TOP = the biome accent (Constants.biome_accent via biome_provider),
+	# BOTTOM = the season's field-bottom tone. Thin, scaled to the tile size.
+	var strip_h: float = maxf(3.0, tile_size * 0.05)
+	var corner: float = 14.0
+	var strip_w: float = card.size.x - 2.0 * corner
+	if strip_w > 0.0:
+		draw_rect(Rect2(card.position.x + corner, card.position.y, strip_w, strip_h), _biome_accent())
+		draw_rect(Rect2(card.position.x + corner, card.position.y + card.size.y - strip_h, strip_w, strip_h), field_bot)
+
+	# M8c — while a tap-target tool is armed, pulse a hot red frame around the field so the
+	# board reads as "hot / waiting for your tap". React's hwv-armed-pulse is a LAYERED
+	# rounded inset glow (4px core ring + 8px halo + a 32px interior bloom), so draw three
+	# nested rounded rings with falling alpha rather than one square stroke.
 	if _targeting:
 		var t: float = 0.5 + 0.5 * sin(_armed_phase * 5.2)
-		var red := Color(1.0, 0.22, 0.22, lerpf(0.45, 0.95, t))
-		var w: float = maxf(4.0, tile_size * 0.06)
-		draw_rect(rect, red, false, w)
+		var w: float = maxf(4.0, tile_size * 0.05)
+		var rings := [
+			{"color": Color(1.0, 0.18, 0.18, lerpf(0.75, 1.0, t)), "width": w, "inset": 0.0},
+			{"color": Color(1.0, 0.24, 0.24, lerpf(0.32, 0.55, t)), "width": w * 1.6, "inset": w},
+			{"color": Color(1.0, 0.30, 0.30, lerpf(0.10, 0.24, t)), "width": w * 2.6, "inset": w * 2.6},
+		]
+		for r in rings:
+			var ring := StyleBoxFlat.new()
+			ring.draw_center = false
+			ring.set_corner_radius_all(14)
+			ring.set_border_width_all(int(maxf(1.0, float(r["width"]))))
+			ring.border_color = r["color"]
+			draw_style_box(ring, rect.grow(-float(r["inset"])))
 
 ## A2 — set the current farm season (0=Spring … 3=Winter) and redraw so the board card's
 ## field tint follows the season. Main calls this on load and whenever a resolved farm chain
@@ -266,6 +313,15 @@ func set_season(idx: int) -> void:
 ## ported from src/ui/puzzleBoard.tsx). Used by _draw to tint the board card per season.
 func _season_field() -> Dictionary:
 	return Constants.SEASON_FIELD_COLORS[_season_idx]
+
+## The board card's TOP-edge accent Color for the CURRENT biome. Resolves the biome id from the
+## Main-installed biome_provider (re-read every redraw so it follows expedition entry/return) and
+## looks the colour up in Constants.BIOME_FIELD_ACCENTS; with no provider it stays the farm green.
+func _biome_accent() -> Color:
+	var biome: String = "farm"
+	if biome_provider.is_valid():
+		biome = String(biome_provider.call())
+	return Constants.biome_accent(biome)
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 
@@ -671,14 +727,13 @@ func layout_for(viewport: Vector2) -> void:
 		_shake_tween.kill()
 	_shake_tween = null
 	var avail_w := viewport.x * 0.94
-	# Height budget = the band between the board's top anchor (Main._layout puts it at
-	# 0.24·h) and the stockpile card's top anchor (Hud._layout_hud puts it at 0.74·h),
-	# plus a 36px allowance for the board card's bottom frame padding tucking under the
-	# stockpile (exactly the overlap the canonical 720×1280 portrait has always had —
-	# at that size this formula still yields tile_size 112, pixel-identical). review-4:
-	# the old flat 0.62·h budget overshot the stockpile on wide/landscape viewports
-	# (e.g. a 1280×800 desktop window), burying the bottom tile row under the card.
-	var avail_h := viewport.y * 0.50 + 36.0
+	# Height budget = the band between the board's top edge (board_top_px — Main sets it
+	# from Hud.board_top(), the fixed line under the action panel) and the bottom chrome
+	# (status/orders strip + the bottom nav, BOTTOM_RESERVE). Nothing is allowed to
+	# overlap the board any more — the old 0.50·h+36 budget deliberately tucked the
+	# bottom tile row under the floating stockpile card, which is gone. At the canonical
+	# 720×1280 this still yields tile_size 112 (width-bound), pixel-identical tiles.
+	var avail_h := maxf(float(Constants.ROWS) * 20.0, viewport.y - board_top_px - BOTTOM_RESERVE)
 	tile_size = floorf(minf(avail_w / Constants.COLS, avail_h / Constants.ROWS))
 	for r in Constants.ROWS:
 		for c in Constants.COLS:
@@ -1273,7 +1328,7 @@ func play_gain_text(text: String, color: Color) -> void:
 		return
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30)))
+	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30) * Typography.scale))
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	lbl.add_theme_constant_override("outline_size", 5)

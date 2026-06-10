@@ -177,7 +177,7 @@ func _build_shell() -> void:
 
 	# Title — "Start Farming — <active node name>" (text filled by _refresh_header_text()).
 	_title_label = Label.new()
-	_title_label.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -189,7 +189,7 @@ func _build_shell() -> void:
 	# Intro line — React's mustPick === false copy: tap a slot to pick a variant. The count is
 	# filled by _refresh_header_text() (here + on every open()) from the active zone's _categories.
 	_intro_label = Label.new()
-	_intro_label.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_intro_label, Typography.Role.BODY)
 	_intro_label.add_theme_color_override("font_color", Palette.INK_MID)
 	_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -240,7 +240,7 @@ func _build_shell() -> void:
 
 	var fert_lbl := Label.new()
 	fert_lbl.text = "Use Fertilizer — doubles turns (×2)"
-	fert_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(fert_lbl, Typography.Role.LABEL)
 	fert_lbl.add_theme_color_override("font_color", Palette.MOSS)
 	fert_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fert_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -257,12 +257,12 @@ func _build_shell() -> void:
 	budget_card.add_child(budget_col)
 
 	_budget_label = Label.new()
-	_budget_label.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(_budget_label, Typography.Role.SUBHEAD)
 	_budget_label.add_theme_color_override("font_color", Palette.INK)
 	budget_col.add_child(_budget_label)
 
 	_budget_sub_label = Label.new()
-	_budget_sub_label.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(_budget_sub_label, Typography.Role.META)
 	_budget_sub_label.add_theme_color_override("font_color", Palette.INK_MID)
 	budget_col.add_child(_budget_sub_label)
 	col.add_child(budget_card)
@@ -273,13 +273,13 @@ func _build_shell() -> void:
 	cost_row.add_theme_constant_override("separation", 8)
 	var cost_lbl := Label.new()
 	cost_lbl.text = "Cost to start"
-	cost_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(cost_lbl, Typography.Role.LABEL)
 	cost_lbl.add_theme_color_override("font_color", Palette.INK)
 	cost_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cost_row.add_child(cost_lbl)
 
 	_cost_value_label = Label.new()
-	_cost_value_label.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(_cost_value_label, Typography.Role.SUBHEAD)
 	_cost_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	cost_row.add_child(_cost_value_label)
 	col.add_child(cost_row)
@@ -287,7 +287,7 @@ func _build_shell() -> void:
 	# Start — primary confirm; disabled when unaffordable.
 	_start_btn = Button.new()
 	_start_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(_start_btn, Palette.GO_GREEN, 10, 18)
+	UiKit.style_action_button(_start_btn, Palette.GO_GREEN, 10, Typography.size(Typography.Role.SUBHEAD))
 	_start_btn.connect("pressed", Callable(self, "_on_start"))
 	col.add_child(_start_btn)
 	_action_buttons["start"] = _start_btn
@@ -296,7 +296,7 @@ func _build_shell() -> void:
 	_cancel_btn = Button.new()
 	_cancel_btn.text = "Cancel"
 	_cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_cancel_btn, Palette.IRON, 10, 18)
+	UiKit.style_button(_cancel_btn, Palette.IRON, 10, Typography.size(Typography.Role.SUBHEAD))
 	_cancel_btn.connect("pressed", Callable(self, "_on_cancel"))
 	col.add_child(_cancel_btn)
 	_action_buttons["cancel"] = _cancel_btn
@@ -359,14 +359,14 @@ func _build_spawn_info(col: VBoxContainer) -> void:
 
 	_spawn_info_title = Label.new()
 	_spawn_info_title.text = "ℹ What spawns this season"
-	_spawn_info_title.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_spawn_info_title, Typography.Role.BODY)
 	_spawn_info_title.add_theme_color_override("font_color", Palette.MOSS)
 	_spawn_info_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(_spawn_info_title)
 
 	_spawn_info_body = Label.new()
 	_spawn_info_body.text = ""
-	_spawn_info_body.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(_spawn_info_body, Typography.Role.META)
 	_spawn_info_body.add_theme_color_override("font_color", Palette.INK_MID)
 	_spawn_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spawn_info_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -382,8 +382,9 @@ func _build_slot(cat: String) -> Control:
 	var btn := Button.new()
 	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
 	btn.toggle_mode = false
-	# Slots are always ON in the home zone → styled like a selected/active variant.
-	UiKit.style_action_button(btn, Palette.GO_GREEN, 6, 0)
+	# Plain parchment slot — these are informational pickers (tap to change the variant),
+	# not CTAs, so the solid action green was misleading; the green stays on Start.
+	UiKit.style_button(btn, Palette.IRON, 6, 0)
 	btn.connect("pressed", Callable(self, "open_chooser").bind(cat))
 	wrap.add_child(btn)
 	_slot_buttons[cat] = btn
@@ -404,7 +405,7 @@ func _build_slot(cat: String) -> Control:
 	_slot_icon_holders[cat] = icon_holder
 
 	var name_lbl := Label.new()
-	name_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(name_lbl, Typography.Role.META)
 	name_lbl.add_theme_color_override("font_color", Palette.INK)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -413,7 +414,7 @@ func _build_slot(cat: String) -> Control:
 	_slot_name_labels[cat] = name_lbl
 
 	var sub_lbl := Label.new()
-	sub_lbl.add_theme_font_size_override("font_size", 10)
+	UiKit.set_font_size(sub_lbl, Typography.Role.CAPTION)
 	sub_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -423,7 +424,7 @@ func _build_slot(cat: String) -> Control:
 	# "✎" change affordance, top-right corner (decorative; the whole slot opens the chooser).
 	var edit := Label.new()
 	edit.text = "✎"
-	edit.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(edit, Typography.Role.META)
 	edit.add_theme_color_override("font_color", Palette.INK_MID)
 	edit.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	edit.offset_left = -18
@@ -482,7 +483,7 @@ func _build_chooser_layer() -> void:
 
 	_chooser_title = Label.new()
 	_chooser_title.text = "Choose tile"
-	_chooser_title.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_chooser_title, Typography.Role.SUBHEAD)
 	_chooser_title.add_theme_color_override("font_color", Palette.INK)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -493,7 +494,7 @@ func _build_chooser_layer() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✕"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.IRON, 4, 16)
+	UiKit.style_button(close_btn, Palette.IRON, 4, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "_close_chooser"))
 	title_row.add_child(close_btn)
 
@@ -569,7 +570,7 @@ func _render_slot(cat: String) -> void:
 	else:
 		var glyph := Label.new()
 		glyph.text = TileCategoryConfig.glyph_or(cat, "•")
-		glyph.add_theme_font_size_override("font_size", 30)
+		UiKit.set_font_size(glyph, Typography.Role.DISPLAY)
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(glyph)
 	name_lbl.text = _variant_name(id) if id != "" else _category_label(cat)
@@ -601,7 +602,7 @@ func _rebuild_chooser_rows(cat: String) -> void:
 	if ids.is_empty():
 		var empty := Label.new()
 		empty.text = "No %s tiles unlocked yet. Research or buy new variants in the Tiles browser." % _category_label(cat)
-		empty.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(empty, Typography.Role.BODY)
 		empty.add_theme_color_override("font_color", Palette.INK_MID)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -655,7 +656,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 
 	var name_lbl := Label.new()
 	name_lbl.text = _variant_name(id)
-	name_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else Palette.INK_MID)
 	name_row.add_child(name_lbl)
 
@@ -666,7 +667,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 	if is_active:
 		var act := Label.new()
 		act.text = "● Active"
-		act.add_theme_font_size_override("font_size", 11)
+		UiKit.set_font_size(act, Typography.Role.CAPTION)
 		act.add_theme_color_override("font_color", Palette.GO_GREEN)
 		name_row.add_child(act)
 
@@ -678,7 +679,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 		var desc_line: String = (desc_full.substr(0, dot_pos + 1) if dot_pos >= 0 else desc_full)
 		var desc_lbl := Label.new()
 		desc_lbl.text = desc_line
-		desc_lbl.add_theme_font_size_override("font_size", 11)
+		UiKit.set_font_size(desc_lbl, Typography.Role.CAPTION)
 		desc_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(desc_lbl)
@@ -686,7 +687,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 	# Status line (mirrors React effects.ts statusFor).
 	var status := Label.new()
 	status.text = _status_for(id)
-	status.add_theme_font_size_override("font_size", 11)
+	UiKit.set_font_size(status, Typography.Role.CAPTION)
 	status.add_theme_color_override("font_color", Palette.INK_MID)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(status)
@@ -696,7 +697,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 	if ability_text != "":
 		var ab := Label.new()
 		ab.text = ability_text
-		ab.add_theme_font_size_override("font_size", 11)
+		UiKit.set_font_size(ab, Typography.Role.CAPTION)
 		ab.add_theme_color_override("font_color", Palette.MOSS)
 		ab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(ab)
@@ -717,7 +718,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 		buy.size_flags_horizontal = Control.SIZE_SHRINK_END
 		buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var afford: bool = game != null and game.coins >= cost
-		UiKit.style_action_button(buy, Palette.GOLD if afford else Palette.IRON, 6, 13)
+		UiKit.style_action_button(buy, Palette.GOLD if afford else Palette.IRON, 6, Typography.size(Typography.Role.BODY))
 		buy.disabled = not afford
 		buy.connect("pressed", Callable(self, "_on_buy").bind(cat, id))
 		hbox.add_child(buy)
@@ -840,7 +841,7 @@ func _chip(text: String) -> Control:
 	c.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 10)
+	UiKit.set_font_size(lbl, Typography.Role.CAPTION)
 	lbl.add_theme_color_override("font_color", Palette.INK)
 	c.add_child(lbl)
 	return c
