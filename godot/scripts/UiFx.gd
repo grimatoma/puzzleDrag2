@@ -191,6 +191,61 @@ static func attach_press_feedback(btn: BaseButton) -> void:
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	)
 
+## Attach a quarter-turn spin on press (the ⚙ settings cog flourish). Rotation is
+## visual-only, around the control's centre; idempotent via meta guard.
+static func attach_press_spin(btn: BaseButton) -> void:
+	if btn == null or btn.has_meta("_uifx_spin"):
+		return
+	btn.set_meta("_uifx_spin", true)
+	btn.pressed.connect(func() -> void:
+		if not _active() or not btn.is_inside_tree():
+			return
+		_kill_meta_tween(btn, "_uifx_spin_tween")
+		btn.pivot_offset = btn.size / 2.0
+		btn.rotation = 0.0
+		var t := btn.create_tween()
+		btn.set_meta("_uifx_spin_tween", t)
+		t.tween_property(btn, "rotation", PI / 2.0, 0.28) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		t.tween_callback(func() -> void: btn.rotation = 0.0)
+	)
+
+# ── HUD value transitions ─────────────────────────────────────────────────────
+
+## Animate a Label's numeric readout from `from` to `to`, formatting each frame with
+## `fmt` (e.g. "🪙 %d") — the classic count-up/count-down currency tick. Headless /
+## disabled (and the no-change case) snap straight to the final text, so callers can
+## route EVERY refresh through this without branching.
+static func count_to(label: Label, from: int, to: int, fmt: String = "%d", dur: float = 0.45) -> void:
+	if label == null or not is_instance_valid(label):
+		return
+	if not _active() or not label.is_inside_tree() or from == to:
+		label.text = fmt % to
+		return
+	_kill_meta_tween(label, "_uifx_count")
+	var t := label.create_tween()
+	label.set_meta("_uifx_count", t)
+	t.tween_method(func(v: float) -> void:
+		label.text = fmt % int(roundf(v)),
+		float(from), float(to), dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## Smoothly resize a bar-fill Control to `target` (the progress-bar grow/shrink).
+## Rapid successive calls (a live chain updating every tile) kill the in-flight tween
+## and re-aim at the new target, so the fill glides instead of stepping. Headless /
+## disabled snaps to the target so goldens and tests see the settled width.
+static func resize_to(ctl: Control, target: Vector2, dur: float = 0.18) -> void:
+	if ctl == null or not is_instance_valid(ctl):
+		return
+	if not _active() or not ctl.is_inside_tree():
+		ctl.size = target
+		return
+	_kill_meta_tween(ctl, "_uifx_size")
+	var t := ctl.create_tween()
+	ctl.set_meta("_uifx_size", t)
+	t.tween_property(ctl, "size", target, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
 # ── shared helpers ────────────────────────────────────────────────────────────
 
 ## Kill + clear a tween stored in `node`'s meta under `key` (the standard "one live

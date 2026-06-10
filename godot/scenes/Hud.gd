@@ -414,6 +414,10 @@ func _build_hud() -> void:
 	menu_btn.offset_top = 18
 	menu_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN   # grow LEFT from the right edge
 	menu_btn.pressed.connect(func(): menu_requested.emit())
+	# Shared press feedback + a quarter-turn gear spin on press (a small mechanical
+	# flourish that sells the "settings cog" affordance).
+	UiFx.attach_press_feedback(menu_btn)
+	UiFx.attach_press_spin(menu_btn)
 	root.add_child(menu_btn)
 
 # ── M4b HUD helpers (pills / bars / chips) ───────────────────────────────────
@@ -1210,7 +1214,11 @@ func _refresh_totals() -> void:
 func _refresh_meta() -> void:
 	if _coin_pill == null or game == null:
 		return
-	_coin_pill.text = "🪙 %d" % game.coins
+	# Count-up/down tick (UiFx) from the last shown balance — sells/buys/rewards read as
+	# the number rolling to its new value instead of teleporting. First refresh snaps.
+	var shown: int = int(_coin_pill.get_meta("_shown_coins", game.coins))
+	UiFx.count_to(_coin_pill, shown, game.coins, "🪙 %d")
+	_coin_pill.set_meta("_shown_coins", game.coins)
 	_refresh_level()
 	_refresh_free_moves()
 
@@ -1278,7 +1286,8 @@ func _refresh_level() -> void:
 	if _level_xp_fill != null:
 		var into: float = float(game.almanac_xp % AlmanacConfig.XP_PER_LEVEL) \
 			/ float(AlmanacConfig.XP_PER_LEVEL)
-		_level_xp_fill.size = Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22)
+		# Glide the XP fill to its new width (UiFx) so quest/almanac XP visibly flows in.
+		UiFx.resize_to(_level_xp_fill, Vector2(LEVEL_PILL_W * clampf(into, 0.0, 1.0), 22))
 
 ## M4b — the settlement tier + plots now live in the top-bar tier pill (e.g.
 ## "City · 2/11"); a "▲" prefix hints when a tier-up is affordable. KEEPS the name.
@@ -1474,7 +1483,8 @@ func _apply_chain_progress_fill() -> void:
 			# conveys the banked upgrade (rather than a full bar). Matches the label readout.
 			var into: int = _live_chain_len % threshold
 			var ratio: float = float(into) / float(threshold)
-			_chain_prog_fill.size = Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h)
+			# Glide, don't step: rapid live-chain refreshes re-aim the in-flight tween.
+			UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * clampf(ratio, 0.0, 1.0), fill_h))
 			var top: Color = Color(String(stage.get("top", "#f0c14b")))
 			var bot: Color = Color(String(stage.get("bot", "#d97a2a")))
 			var accent: Color = Color(String(stage.get("accent", "#e07a3a")))
@@ -1494,7 +1504,7 @@ func _apply_chain_progress_fill() -> void:
 	var rest_ratio: float = 0.0
 	if game != null and _last_res != "" and _last_threshold > 0:
 		rest_ratio = clampf(float(int(game.progress.get(_last_res, 0))) / float(_last_threshold), 0.0, 1.0)
-	_chain_prog_fill.size = Vector2(inner_w * rest_ratio, fill_h)
+	UiFx.resize_to(_chain_prog_fill, Vector2(inner_w * rest_ratio, fill_h))
 	var col: Color = Palette.MOSS.lerp(Palette.GOLD, rest_ratio)
 	_chain_prog_fill.add_theme_stylebox_override("panel", UiKit.bar_box(col, col))
 
