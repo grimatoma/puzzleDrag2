@@ -38,4 +38,5 @@ const TEXT_SIZE_LABELS := ["Normal", "Large", "Larger"]
 
 ## The px size for a role at the current scale, rounded to a whole pixel.
 static func size(role: int) -> int:
+	assert(BASE.has(role), "Typography.size(): unknown role %d" % role)
 	return int(round(float(BASE[role]) * scale))
