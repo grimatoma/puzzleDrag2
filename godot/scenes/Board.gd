@@ -187,6 +187,15 @@ const FRAME_PAD := 10.0
 ## before Main seeds it still reads as a calm green field (Spring's field colour).
 var _season_idx: int = 0
 
+## A2 — the biome the board card's TOP-edge accent strip is tinted for. An optional provider Main
+## installs (mirrors upgrade_provider: a Callable, NOT a GameState ref — the Board never reads game
+## state, it only ASKS an opaque function). Called from _draw as `biome_provider.call() -> String`
+## ("farm"/"mine"/"harbor"); since it re-reads game.active_biome on every redraw it self-updates as
+## the player enters an expedition and returns, with no per-transition push needed (the board
+## already redraws on biome flips via setup_new_board). Unset (the default null Callable) leaves the
+## strip on the farm green, so capture tools / tests that build a bare Board without Main still draw.
+var biome_provider: Callable = Callable()
+
 ## Resolve "juice" (the React feel the port lacked): a screen shake whose magnitude scales
 ## with the chain length, an expanding flash ring + a collect spark burst at the chain head,
 ## and an upgrade-burst flash when the chain spawns an upgrade tile. All are PURELY visual,
@@ -226,35 +235,52 @@ func _process(delta: float) -> void:
 ## A CanvasItem renders itself before its children, so this frame sits under every
 ## Tile node automatically. Re-run on layout/board changes via queue_redraw().
 func _draw() -> void:
-	var sb := StyleBoxFlat.new()
-	# Light parchment field with a thin moss-green frame — matches the React board,
-	# which floats the pastel tile cards on a cream board (the gaps between tiles read
-	# CREAM, not green) inside a soft green edge. The old solid-green fill made the
-	# whole board read dark/heavy and muddied the tiles' per-type pastel backgrounds.
-	# A2 — gently tint the card per the CURRENT season (src/ui/puzzleBoard.tsx field gradient):
-	# the FILL stays a season-blended parchment (only ~22% toward the season's field tone so the
-	# tiles' own pastel backgrounds still read over it) and the BORDER takes the season's darker
-	# field-bottom tone. Spring reads close to the old calm green; Winter cools to a slate edge.
+	# The board card is a TWO-LAYER parchment construction ported from the React board
+	# (src/GameScene.ts drawBackground + src/ui/puzzleBoard.tsx): an outer DIRT frame holds a
+	# slightly-inset CREAM card the pastel tiles float on (the gaps between tiles read CREAM, not
+	# green), with a BIOME-coloured accent strip along the card's TOP edge (which biome you're on)
+	# and a SEASON-coloured strip along its BOTTOM edge (which season it is). The single solid-green
+	# fill the port shipped before made the whole board read dark/heavy and muddied the tiles.
+	# A2 — the cream fill keeps a faint season tint (≈22% toward the season's field-top tone, from
+	# src/ui/puzzleBoard.tsx's field gradient) so the per-tile pastel backgrounds still read over it,
+	# and the BOTTOM strip takes the season's darker field-bottom tone (Constants.SEASON_FIELD_COLORS).
 	var field: Dictionary = _season_field()
 	var field_top: Color = field["top"]
 	var field_bot: Color = field["bot"]
-	sb.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
-	sb.corner_radius_top_left = 16
-	sb.corner_radius_top_right = 16
-	sb.corner_radius_bottom_left = 16
-	sb.corner_radius_bottom_right = 16
-	sb.border_width_left = 3
-	sb.border_width_top = 3
-	sb.border_width_right = 3
-	sb.border_width_bottom = 3
-	sb.border_color = field_bot
-	sb.shadow_size = 10
-	sb.shadow_color = Color(0, 0, 0, 0.18)
-	sb.shadow_offset = Vector2(0, 4)
+
+	# Outer rect = the dirt frame (the armed-pulse rings below key off this); the cream card is
+	# inset a touch so the dirt reads as a thin border around it (React frame*0.6 vs frame).
 	var rect := Rect2(
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
-	draw_style_box(sb, rect)
+	var card := rect.grow(-FRAME_PAD * 0.4)
+
+	# Layer 1 — the dirt frame (React special_dirt 0xc9b993 == Palette.IRON), rounded, with the
+	# soft drop shadow that used to hang off the single card.
+	var dirt := StyleBoxFlat.new()
+	dirt.bg_color = Palette.IRON
+	dirt.set_corner_radius_all(16)
+	dirt.shadow_size = 10
+	dirt.shadow_color = Color(0, 0, 0, 0.18)
+	dirt.shadow_offset = Vector2(0, 4)
+	draw_style_box(dirt, rect)
+
+	# Layer 2 — the cream card the tiles sit on (React boardBg 0xf6efe0 == Palette.PARCHMENT),
+	# gently season-tinted so the tiles' own pastel backgrounds still read over it.
+	var cream := StyleBoxFlat.new()
+	cream.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
+	cream.set_corner_radius_all(14)
+	draw_style_box(cream, card)
+
+	# Edge accent strips — straight bars inset past the card's rounded corners so they never poke
+	# outside the corner curve. TOP = the biome accent (Constants.biome_accent via biome_provider),
+	# BOTTOM = the season's field-bottom tone. Thin, scaled to the tile size.
+	var strip_h: float = maxf(3.0, tile_size * 0.05)
+	var corner: float = 14.0
+	var strip_w: float = card.size.x - 2.0 * corner
+	if strip_w > 0.0:
+		draw_rect(Rect2(card.position.x + corner, card.position.y, strip_w, strip_h), _biome_accent())
+		draw_rect(Rect2(card.position.x + corner, card.position.y + card.size.y - strip_h, strip_w, strip_h), field_bot)
 
 	# M8c — while a tap-target tool is armed, pulse a hot red frame around the field so the
 	# board reads as "hot / waiting for your tap". React's hwv-armed-pulse is a LAYERED
@@ -287,6 +313,15 @@ func set_season(idx: int) -> void:
 ## ported from src/ui/puzzleBoard.tsx). Used by _draw to tint the board card per season.
 func _season_field() -> Dictionary:
 	return Constants.SEASON_FIELD_COLORS[_season_idx]
+
+## The board card's TOP-edge accent Color for the CURRENT biome. Resolves the biome id from the
+## Main-installed biome_provider (re-read every redraw so it follows expedition entry/return) and
+## looks the colour up in Constants.BIOME_FIELD_ACCENTS; with no provider it stays the farm green.
+func _biome_accent() -> Color:
+	var biome: String = "farm"
+	if biome_provider.is_valid():
+		biome = String(biome_provider.call())
+	return Constants.biome_accent(biome)
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 

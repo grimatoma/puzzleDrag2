@@ -888,6 +888,18 @@ const SEASON_FIELD_COLORS: Array = [
 	{"name": "Winter", "top": Color8(0xdd, 0xe4, 0xea), "bot": Color8(0xb6, 0xc2, 0xcc)},
 ]
 
+## The per-biome ACCENT colour for the board card's TOP-edge strip — the GDScript counterpart of
+## the React board frame's biome strip (src/GameScene.ts drawBackground draws `b.palette.bg` along
+## the top edge). Keyed by GameState.active_biome ("farm"/"mine"/"harbor"); the values are ported
+## VERBATIM from the React BIOMES[*].palette.bg hex (the React "fish" biome → the port's "harbor").
+## Board._draw reads it by name via biome_accent() so the top strip identifies which biome the
+## player is on without re-deriving the colour at the scene layer.
+const BIOME_FIELD_ACCENTS: Dictionary = {
+	"farm":   Color8(0x7f, 0xa8, 0x48),   # src BIOMES.farm.palette.bg == 0x7fa848
+	"mine":   Color8(0x6a, 0x7d, 0x92),   # src BIOMES.mine.palette.bg == 0x6a7d92
+	"harbor": Color8(0x4a, 0x8a, 0xa8),   # src BIOMES.fish.palette.bg == 0x4a8aa8
+}
+
 # ── Chain-stage palette (src/ui/puzzleBoard.tsx CHAIN_STAGES) ──────────────────
 ## The escalating chain-tier palette, ported VERBATIM from src/ui/puzzleBoard.tsx
 ## `CHAIN_STAGES`. Index = upgrades EARNED (floor(chain_len / threshold)), clamped to
@@ -929,6 +941,11 @@ static func produced_resource(tile: int) -> String:
 
 static func threshold_for(tile: int) -> int:
 	return THRESHOLDS.get(tile, NO_THRESHOLD)
+
+## The board card's TOP-edge accent Color for `biome` ("farm"/"mine"/"harbor"), from
+## BIOME_FIELD_ACCENTS. An unknown biome falls back to the farm green (the home board).
+static func biome_accent(biome: String) -> Color:
+	return BIOME_FIELD_ACCENTS.get(biome, BIOME_FIELD_ACCENTS["farm"])
 
 ## The chain STAGE index (0..4) for a live chain of `chain_len` tiles against `threshold`,
 ## ported from src/ui/puzzleBoard.tsx: `earned = floor(chain_len / threshold)`, then
