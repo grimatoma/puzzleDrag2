@@ -332,10 +332,16 @@ function handleStatic(req, res) {
   if (urlPath === "/" || urlPath === "") urlPath = "/pixelGen/index.html";
 
   // Resolve INSIDE docRoot and reject path-traversal (a leading-".." escape).
-  const resolved = normalize(join(docRoot, urlPath));
+  let resolved = normalize(join(docRoot, urlPath));
   if (resolved !== docRoot && !resolved.startsWith(docRoot + sep)) {
     sendText(res, 403, "403 Forbidden");
     return;
+  }
+
+  // Directory request (e.g. /pixelGen or /pixelGen/) → serve its index.html, so the
+  // human-friendly URL http://localhost:8100/pixelGen/ works, not just …/pixelGen/index.html.
+  if (existsSync(resolved) && statSync(resolved).isDirectory()) {
+    resolved = join(resolved, "index.html");
   }
 
   if (!existsSync(resolved) || !statSync(resolved).isFile()) {
