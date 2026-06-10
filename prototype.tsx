@@ -24,6 +24,7 @@ import { emitBurst } from "./src/ui/rewardEvents.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
 import { useA11yBridge } from "./src/a11y.js";
+import { useCapToasts } from "./src/ui/useCapToasts.jsx";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
 import { zoneInventory } from "./src/state/zoneInventory.js";
 import {
@@ -368,6 +369,7 @@ export default function App() {
   );
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
+  useCapToasts(state);
   useRouter(state, dispatch);
   useA11yBridge();
 
