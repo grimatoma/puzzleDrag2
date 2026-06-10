@@ -1280,26 +1280,37 @@ func seed_orders(s: int) -> void:
 	rng.seed = s
 
 ## Apply one resolved chain to the run economy and return a summary dict.
+## The EFFECTIVE upgrade threshold for chaining `tile_type`: the raw Constants threshold
+## minus the worker threshold_reduce_category reduction and the unified aggregate's
+## threshold_reduce channel, floored at WORKER_MIN_THRESHOLD. This is the SAME math
+## credit_chain banks units with, exposed so the HUD's live chain readout (React:
+## GameScene's effectiveThresholds → ChainView) always shows the numbers the resolve
+## will actually credit. Both reductions are 0 for a fresh game → returns the raw
+## threshold, byte-identical to the pre-workers economy.
+##
+## Workers (ADDITIVE): threshold_reduce_category workers shave tiles off the matching
+## chain; the WORKER_MIN_THRESHOLD floor keeps a fully-staffed category from collapsing
+## the threshold to 0/1 and exploding the units. T17/T21 (ADDITIVE): the aggregate's
+## threshold_reduce channel (BUILDINGS + TILES — e.g. Observatory threshold_reduce_category
+## gem -1) is keyed by RESOURCE (the React effectiveThresholds key) and stacks ON TOP of
+## the worker reduction; workers are NOT in the aggregate, so there is no double-count.
+## A hazard's NO_THRESHOLD sentinel still has the reductions applied (matching the old
+## inline credit_chain math exactly) — at ~2^30 the result is still "never yields units".
+func effective_threshold(tile_type: int) -> int:
+	var threshold: int = Constants.threshold_for(tile_type)
+	if threshold <= 0:
+		return threshold
+	var resource: String = Constants.produced_resource(tile_type)
+	var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
+	return maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+
 ## Mutates inventory/progress, increments coins and turn.
 func credit_chain(tile_type: int, chain_len: int) -> Dictionary:
 	var resource: String = Constants.produced_resource(tile_type)
-	var threshold: int = Constants.threshold_for(tile_type)
-	# Workers (ADDITIVE): threshold_reduce_category workers shave tiles off the
-	# matching chain. worker_threshold_reduction is 0 when no worker of this tile's
-	# category is hired, so eff_threshold == threshold and the unit/progress math is
-	# IDENTICAL to the pre-workers economy. The WORKER_MIN_THRESHOLD floor keeps a
-	# fully-staffed category from collapsing the threshold to 0/1 and exploding the
-	# units. The floor only ever applies to a REAL (positive) threshold — the
-	# NO_THRESHOLD sentinel branch below (threshold <= 0, hazards) is untouched.
-	if threshold > 0:
-		# T17/T21 (ADDITIVE): the unified aggregate's threshold_reduce channel (BUILDINGS + TILES —
-		# e.g. Observatory threshold_reduce_category gem -1, keyed by produced resource) stacks ON TOP
-		# of the worker reduction. It is keyed by RESOURCE (the React effectiveThresholds key), so look
-		# it up by this chain's produced `resource`. EMPTY for a fresh game → 0 → eff_threshold
-		# unchanged → byte-identical. Workers are NOT in this aggregate (they use the dedicated path
-		# above), so there is no double-count. Same WORKER_MIN_THRESHOLD floor protects the combined sum.
-		var agg_thresh_reduce: int = int(floor(float(compute_ability_channels()["threshold_reduce"].get(resource, 0.0))))
-		threshold = maxi(WorkerConfig.WORKER_MIN_THRESHOLD, threshold - worker_threshold_reduction(tile_type) - agg_thresh_reduce)
+	# The worker/aggregate-reduced threshold (see effective_threshold above — the
+	# extraction keeps this math and the HUD's live readout in lockstep). The
+	# threshold <= 0 branch below (defensive) is untouched.
+	var threshold: int = effective_threshold(tile_type)
 	var new_progress: int = int(progress.get(resource, 0)) + chain_len
 	var units: int = 0
 	if threshold > 0:
