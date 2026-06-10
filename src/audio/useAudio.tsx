@@ -10,6 +10,7 @@ type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" |
   craftedTotals?: Record<string, number>;
   toolPending?: string | null;
   tools?: Record<string, number | boolean | undefined>;
+  runeStash?: number;
   fish?: { tide?: string } | null;
   settings?: {
     sfxOn?: boolean;
@@ -76,8 +77,8 @@ export function useAudio(state: AudioGameState | null | undefined): void {
 
     // Tool armed / fired — classified from toolPending + charge-count transitions
     const toolEvent = toolTracker.current(
-      { toolPending: p.toolPending, tools: p.tools },
-      { toolPending: s.toolPending, tools: s.tools },
+      { toolPending: p.toolPending, tools: p.tools, runeStash: p.runeStash },
+      { toolPending: s.toolPending, tools: s.tools, runeStash: s.runeStash },
     );
     if (toolEvent === 'armed') play('toolArmed');
     if (toolEvent === 'fired') {

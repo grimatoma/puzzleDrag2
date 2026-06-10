@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createToolSoundTracker } from "../audio/toolSounds.js";
 
-const snap = (toolPending: string | null, tools: Record<string, number>) => ({ toolPending, tools });
+const snap = (toolPending: string | null, tools: Record<string, number>, runeStash?: number) => ({ toolPending, tools, runeStash });
 
 describe("createToolSoundTracker", () => {
   it("reports 'armed' when a tap-target tool arms (no charge spent yet)", () => {
@@ -21,16 +21,16 @@ describe("createToolSoundTracker", () => {
     expect(step(snap("bomb", { bomb: 2 }), snap(null, { bomb: 2 }))).toBeNull();
   });
 
-  it("reports 'fired' for an instant tool (charge spent at arm, none on clear)", () => {
+  it("reports 'fired' for a brief-arm instant tool (charge spent at arm, none on clear)", () => {
     const step = createToolSoundTracker();
-    expect(step(snap(null, { axe: 3 }), snap("axe", { axe: 2 }))).toBe("armed");
-    expect(step(snap("axe", { axe: 2 }), snap(null, { axe: 2 }))).toBe("fired");
+    expect(step(snap(null, { shuffle: 3 }), snap("shuffle", { shuffle: 2 }))).toBe("armed");
+    expect(step(snap("shuffle", { shuffle: 2 }), snap(null, { shuffle: 2 }))).toBe("fired");
   });
 
-  it("stays silent when an instant arm is cancelled (charge refunded)", () => {
+  it("stays silent when a brief-arm instant tool is cancelled (charge refunded)", () => {
     const step = createToolSoundTracker();
-    step(snap(null, { axe: 3 }), snap("axe", { axe: 2 }));
-    expect(step(snap("axe", { axe: 2 }), snap(null, { axe: 3 }))).toBeNull();
+    step(snap(null, { shuffle: 3 }), snap("shuffle", { shuffle: 2 }));
+    expect(step(snap("shuffle", { shuffle: 2 }), snap(null, { shuffle: 3 }))).toBeNull();
   });
 
   it("reports 'armed' again when arming transfers to a different tool", () => {
@@ -44,5 +44,27 @@ describe("createToolSoundTracker", () => {
     expect(step(snap(null, {}), snap(null, {}))).toBeNull();
     step(snap(null, { bomb: 1 }), snap("bomb", { bomb: 1 }));
     expect(step(snap("bomb", { bomb: 1 }), snap("bomb", { bomb: 1 }))).toBeNull();
+  });
+
+  it("reports 'fired' for the rune wildcard (charge lives in runeStash)", () => {
+    const step = createToolSoundTracker();
+    expect(step({ toolPending: null, tools: {}, runeStash: 2 }, { toolPending: "rune_wildcard", tools: {}, runeStash: 1 })).toBe("armed");
+    expect(step({ toolPending: "rune_wildcard", tools: {}, runeStash: 1 }, { toolPending: null, tools: {}, runeStash: 1 })).toBe("fired");
+  });
+
+  it("stays silent when the rune wildcard is cancelled (runeStash refunded)", () => {
+    const step = createToolSoundTracker();
+    step({ toolPending: null, tools: {}, runeStash: 2 }, { toolPending: "rune_wildcard", tools: {}, runeStash: 1 });
+    expect(step({ toolPending: "rune_wildcard", tools: {}, runeStash: 1 }, { toolPending: null, tools: {}, runeStash: 2 })).toBeNull();
+  });
+
+  it("reports 'fired' when a no-arm instant tool's count drops (e.g. axe / clear_category)", () => {
+    const step = createToolSoundTracker();
+    expect(step(snap(null, { axe: 3 }), snap(null, { axe: 2 }))).toBe("fired");
+  });
+
+  it("stays silent when a tool count increases without any arm transition (acquisition)", () => {
+    const step = createToolSoundTracker();
+    expect(step(snap(null, { axe: 2 }), snap(null, { axe: 3 }))).toBeNull();
   });
 });
