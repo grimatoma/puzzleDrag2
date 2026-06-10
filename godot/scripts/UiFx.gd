@@ -213,6 +213,17 @@ static func attach_attention_pulse(ctl: Control, peak: float = 1.06, period: flo
 		return
 	if not _active() or not ctl.is_inside_tree():
 		return
+	# Mark BEFORE the awaited frame (idempotence guard), then let layout size the
+	# control so the pivot lands at its true centre — a first-build call would
+	# otherwise read size (0,0) and pulse around the top-left corner.
+	ctl.set_meta("_uifx_pulse", true)
+	var tree := ctl.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(ctl) or not ctl.is_inside_tree():
+		return
+	if not ctl.has_meta("_uifx_pulse"):
+		return   # cleared during the awaited frame — the condition already ended
 	ctl.pivot_offset = ctl.size / 2.0
 	var t := ctl.create_tween().set_loops()
 	ctl.set_meta("_uifx_pulse", t)
