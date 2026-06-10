@@ -11,6 +11,18 @@ base viewport — so the pixels stay crisp squares. Two PNGs are written:
                                          brightest star cores. SplashScreen.gd
                                          layers it over the base and pulses its
                                          alpha so the scene breathes.
+  godot/assets/splash/splash_boot.png  — the ENGINE/web-loader boot splash: a
+                                         400x400 circular medallion (the
+                                         cottage vignette in a gold ring, RGBA)
+                                         shown CENTERED at natural size
+                                         (boot_splash/fullsize=false). The boot
+                                         phase can only contain-fit an image —
+                                         a full-bleed portrait scene would
+                                         letterbox into a "portrait strip" on
+                                         wide screens and then jump to full
+                                         width when SplashScreen.gd takes over,
+                                         so the boot image is an emblem that
+                                         reads as deliberate at ANY aspect.
 
 Scene (top to bottom): deep-indigo night sky Bayer-dithered down to an ember
 horizon; stars; a pale-gold moon upper-right; a cool violet far ridge; a moss
@@ -138,21 +150,25 @@ def rect(px, x0, y0, x1, y1, c):
 
 
 # ── sky ──────────────────────────────────────────────────────────────────────
-def draw_sky(px):
+def draw_sky(px, bottom=HORIZON):
     """Vertical dusk gradient, Bayer-dithered between ramp steps. The ember
-    band is compressed near the horizon (gamma) so the zenith stays deep."""
-    for y in range(HORIZON):
-        t = (y / (HORIZON - 1)) ** 1.6 * (len(SKY) - 1)
+    band is compressed near the horizon (gamma) so the zenith stays deep.
+    `bottom` is where the ramp's warm end lands — the main scene puts it at the
+    ridge HORIZON; the boot-medallion scene stretches it to the hill line so
+    the ember band hides behind the hill (no ridge in that composition)."""
+    for y in range(bottom):
+        t = (y / (bottom - 1)) ** 1.6 * (len(SKY) - 1)
         i = min(int(t), len(SKY) - 2)
         frac = t - i
         for x in range(W):
             px[x, y] = SKY[i + 1] if dith(x, y, frac) else SKY[i]
 
 
-def draw_stars(px):
+def draw_stars(px, rng_):
     """Sparse field, denser + brighter near the zenith, fading toward the warm
     horizon. A few 'plus' twinkles; no two stars adjacent (no orphan noise —
     each star is a deliberate 1px point or a 5px plus)."""
+    rng = rng_
     taken = set()
 
     def free(x, y):
@@ -234,21 +250,24 @@ def hill_top(x):
     return int(176 - 14 * math.cos((x - 58) * 0.018) + 6 * math.sin(x * 0.05))
 
 
-def draw_hill(px):
+def draw_hill(px, valley=True):
     # shadowed valley band between the far ridge and the hill crest — fills the
-    # rows the sky/ridge passes leave untouched, dith-blended into the ridge
-    for x in range(W):
-        for y in range(HORIZON, hill_top(x)):
-            if y - HORIZON < 3 and dith(x, y, 0.5):
-                put(px, x, y, RIDGE_FAR)
-            else:
-                put(px, x, y, RIDGE_NEAR)
-    # distant homestead lights in the shadowed valley (2x1 gold gleams) — other
-    # hearths across Hearthwood Vale, echoing the cottage windows
-    for (lx, ly) in ((18, 168), (132, 165), (158, 170)):
-        if hill_top(lx) > ly + 1:
-            put(px, lx, ly, WINDOW)
-            put(px, lx + 1, ly, WINDOW_EDGE)
+    # rows the sky/ridge passes leave untouched, dith-blended into the ridge.
+    # The boot-medallion scene has no ridge (sky runs to the hill), so it skips
+    # the band + the valley homestead lights.
+    if valley:
+        for x in range(W):
+            for y in range(HORIZON, hill_top(x)):
+                if y - HORIZON < 3 and dith(x, y, 0.5):
+                    put(px, x, y, RIDGE_FAR)
+                else:
+                    put(px, x, y, RIDGE_NEAR)
+        # distant homestead lights in the shadowed valley (2x1 gold gleams) —
+        # other hearths across Hearthwood Vale, echoing the cottage windows
+        for (lx, ly) in ((18, 168), (132, 165), (158, 170)):
+            if hill_top(lx) > ly + 1:
+                put(px, lx, ly, WINDOW)
+                put(px, lx + 1, ly, WINDOW_EDGE)
     for x in range(W):
         top = hill_top(x)
         for y in range(max(HORIZON - 18, top), 215):
@@ -508,12 +527,72 @@ def build_glow():
     return img
 
 
+# ── boot medallion ───────────────────────────────────────────────────────────
+BOOT_SIZE = 100              # native medallion canvas (x4 -> 400x400)
+RING_GOLD_D = hx("#8a6428")  # gold ring ramp: shadow / base / lit (hue-shifted)
+RING_GOLD = hx("#e2b24a")    # Palette.GOLD
+RING_GOLD_L = hx("#ffd248")  # Palette.GOLD_BRIGHT
+RING_INK = hx("#2b2218")     # Palette.INK — the selout outline
+
+
+def build_boot_scene():
+    """The medallion's backdrop: the SAME cottage/hill/fields/path/smoke
+    geometry as the main scene, but with the night sky running clean down to
+    the hill crest (no far ridge / ember gaps — a circular crop of those reads
+    as floating orange wedges). Stars use a fresh fixed seed so the medallion
+    is deterministic independent of the main scene's draw order."""
+    img = Image.new("RGB", (W, H))
+    px = img.load()
+    draw_sky(px, bottom=215)
+    draw_stars(px, random.Random(1337))
+    draw_hill(px, valley=False)
+    draw_fields(px)
+    draw_path(px)
+    draw_cottage(px)
+    draw_smoke(px)
+    return img
+
+
+def build_boot_medallion(scene):
+    """Circular emblem cropped from the composed scene, centred on the cottage
+    (the hearth), in a gold ring lit from the upper-right like everything else.
+    Transparent outside the ring, so the loader page / engine bg_color frames
+    it at any viewport aspect."""
+    import math
+    img = Image.new("RGBA", (BOOT_SIZE, BOOT_SIZE), (0, 0, 0, 0))
+    px = img.load()
+    # crop window: centre the cottage (x≈69) with its ground line in the lower
+    # third (y 172), so roof + chimney + first smoke puff + path all fit
+    crop_x0, crop_y0 = 69 - BOOT_SIZE // 2, 172 - BOOT_SIZE // 2
+    c = (BOOT_SIZE - 1) / 2.0
+    for y in range(BOOT_SIZE):
+        for x in range(BOOT_SIZE):
+            d = math.hypot(x - c, y - c)
+            if d <= 43.0:
+                px[x, y] = scene.getpixel((crop_x0 + x, crop_y0 + y)) + (255,)
+            elif d <= 44.0:
+                px[x, y] = RING_INK + (255,)        # inner rim: art/ring seam
+            elif d <= 47.5:
+                # gold ring, form-lit upper-right (matches the scene key light)
+                t = 0.5 + ((x - c) - (y - c)) / (2.8 * 47.0)
+                if t > 0.72:
+                    px[x, y] = RING_GOLD_L + (255,)
+                elif t > 0.34:
+                    px[x, y] = (RING_GOLD if dith(x, y, (t - 0.34) / 0.38)
+                                else RING_GOLD_D) + (255,)
+                else:
+                    px[x, y] = RING_GOLD_D + (255,)
+            elif d <= 49.0:
+                px[x, y] = RING_INK + (255,)        # solid outline ring
+    return img
+
+
 # ── compose ──────────────────────────────────────────────────────────────────
 def main():
     img = Image.new("RGB", (W, H))
     px = img.load()
     draw_sky(px)
-    draw_stars(px)
+    draw_stars(px, rng)
     draw_moon(px)
     draw_far_ridge(px)
     draw_hill(px)
@@ -530,7 +609,11 @@ def main():
     big.save(os.path.join(OUT_DIR, "splash.png"))
     glow = build_glow().resize((W * SCALE, H * SCALE), Image.NEAREST)
     glow.save(os.path.join(OUT_DIR, "splash_glow.png"))
-    print("wrote", os.path.join(OUT_DIR, "splash.png"), "and splash_glow.png")
+    boot = build_boot_medallion(build_boot_scene()).resize(
+        (BOOT_SIZE * SCALE, BOOT_SIZE * SCALE), Image.NEAREST)
+    boot.save(os.path.join(OUT_DIR, "splash_boot.png"))
+    print("wrote", os.path.join(OUT_DIR, "splash.png"),
+          "+ splash_glow.png + splash_boot.png")
 
 
 if __name__ == "__main__":
