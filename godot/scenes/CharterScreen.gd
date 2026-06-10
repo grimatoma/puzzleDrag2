@@ -228,18 +228,11 @@ func _build_shell() -> void:
 	_build_detail_panel()
 
 ## A parchment card StyleBoxFlat — the shared modal look (warm fill, iron border,
-## rounded, drop shadow). Used by the main panel + the detail overlay.
+## rounded, drop shadow). Used by the main panel + the detail overlay. Delegates to
+## UiKit.modal_card_box (the one builder every centred-card modal uses), keeping this
+## screen's snugger 20px content margin.
 func _parchment_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	return style
+	return UiKit.modal_card_box(20)
 
 ## The settlement ribbon: a soft-parchment chip with the name + turns-elapsed line and a
 ## right-aligned "Hollow Pact" tag. Mirrors the React SettlementRibbon.

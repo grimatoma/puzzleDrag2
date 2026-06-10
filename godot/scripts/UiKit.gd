@@ -376,6 +376,23 @@ static func bar_box(fill: Color, border: Color) -> StyleBoxFlat:
 	sb.corner_radius_bottom_right = 6
 	return sb
 
+## THE floating modal card surface: parchment fill, 2 px iron border, radius 16, the
+## shared soft drop shadow. Every centred-card modal (Menu, Daily, Story, Tutorial,
+## Harvest, Keeper, Founder, StartFarming, LeaveBoard, Charter dialog, Debug) uses
+## this ONE builder — previously each hand-rolled an identical StyleBoxFlat, drifting
+## only in content margin, which stays a parameter.
+static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.set_corner_radius_all(16)
+	sb.set_content_margin_all(margin)
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(2)
+	sb.shadow_size = 12
+	sb.shadow_color = Color(0, 0, 0, 0.28)
+	sb.shadow_offset = Vector2(0, 5)
+	return sb
+
 ## Card StyleBox for the stockpile panel: parchment fill, 2 px iron border,
 ## radius 12, soft drop shadow, comfortable padding.
 static func card_box(fill: Color) -> StyleBoxFlat:
