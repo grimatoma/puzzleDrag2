@@ -7,13 +7,20 @@ extends CanvasLayer
 ## familiar grouped ledger (Farm goods / Refined / Mine / Other) with counts + Market value.
 ##
 ## TABS (React parity, honestly mapped to what the port actually has):
-##   • All       — everything owned: the grouped resource ledger PLUS owned tools.
+##   • All       — everything owned: the grouped resource ledger PLUS owned tools PLUS items.
 ##   • Resources — the grouped resource ledger only (GameState.inventory counts).
 ##   • Tools     — owned tools (GameState.tools, charges > 0): icon + name + ×count.
-##   The React reference also has an "Items" tab (INVENTORY_TAGS.ITEM — items whose kind is
-##   neither resource nor tool). The port has NO such distinct kind: every inventory key is a
-##   resource family and every tool lives in GameState.tools, so the Items tab is OMITTED
-##   rather than faked (per the no-fakes rule). If a real "item" kind ever lands it gets a tab.
+##   • Items     — the port's special valuables that are NEITHER a resource family NOR a tool:
+##                 Runes (🔮 — the harbor's premium giant-pearl reward, also granted by Almanac
+##                 tiers) and Influence (◈ — the portal-magic currency earned from decorations).
+##                 These are real, non-faked GameState scalar counters (game.runes / game.influence),
+##                 the port's analogue of React's INVENTORY_TAGS.ITEM (kind:"item") entries. Shown
+##                 only when held (> 0); the tab reads its empty state otherwise. This is NOT a fake:
+##                 it surfaces existing player-facing valuables that previously had no inventory home.
+##
+## VIEW TOGGLE (React header ⊞/≣): the body renders as a LIST (grouped ledger rows, the default)
+## or a GRID (compact icon+count chips, 3 columns). The ⊞ toggle in the title row flips it; the
+## chosen mode persists across tabs. The grid view mirrors React's grid inventory layout.
 ##
 ## Modelled on TownScreen / TownsfolkScreen: full-bleed parchment VIEW panel (reserves the
 ## persistent top bar + bottom nav), a Cinzel title, a UiKit.style_segment tab row (same
@@ -30,18 +37,29 @@ extends CanvasLayer
 ## from ToolConfig. Grouping comes from the Constants production families. Nothing is faked.
 ##
 ## Headless-test contract. The close Button is registered in `_action_buttons` under the
-## stable key "close" (emits `closed`); the tab buttons are registered in `_tab_buttons`
-## keyed by tab id ("all"/"resources"/"tools"); the screen exposes pure compute helpers —
+## stable key "close" (emits `closed`); the view toggle is `_action_buttons["view_toggle"]`;
+## the tab buttons are registered in `_tab_buttons` keyed by tab id
+## ("all"/"resources"/"tools"/"items"); the screen exposes pure compute helpers —
 ## total_value(), kinds(), total_units(), group_of(res), tab_ids(), owned_tool_ids(),
-## visible_tool_ids() — so the UI-wiring test can verify tabs + search + the ledger math
-## without rendering.
+## visible_tool_ids(), item_ids(), visible_item_ids(), view_mode() ("list"/"grid") — so the
+## UI-wiring test can verify tabs + search + the view toggle + the ledger math without rendering.
 
 var game: GameState
 
 signal closed
+## Emitted after an expanded row's Sell/Buy mutated GameState (coins + inventory moved),
+## so Main can refresh the HUD pills + save — the same contract TownScreen uses.
+signal state_changed
 
-## action id → Button, for headless tests. Currently just "close".
+## action id → Button, for headless tests. Static: "close", "view_toggle". While a row is
+## expanded its actions register as "sell:<key>" / "buy:<key>" (dropped on re-render).
 var _action_buttons: Dictionary = {}
+
+## C2 — expand-in-place (React InventoryListItemExpanded parity): the entry key of the one
+## expanded ledger row ("" = none). Keys are namespaced "res:<key>" / "tool:<id>" / "item:<id>"
+## so a resource and a tool sharing a name can't collide. Tapping a row toggles it; tapping
+## another row moves the expansion; the expansion survives refresh() (e.g. after a Sell).
+var _expanded: String = ""
 
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the latest inventory.
@@ -54,41 +72,68 @@ var _built: bool = false
 var _query: String = ""
 var _search_field: LineEdit             ## the search input (registered for headless tests)
 
-## C1 — category tabs (React PRIMARY_FILTERS parity, minus the un-backed "Items" tab).
-## The active tab filters the body to a kind: All shows resources + tools, Resources shows
-## the grouped resource ledger, Tools shows owned tool charges. "all" is the default so
-## setup()+open() renders the full ledger the existing view tests inspect.
+## C1 — category tabs (React PRIMARY_FILTERS parity). The active tab filters the body to a
+## kind: All shows resources + tools + items, Resources shows the grouped resource ledger,
+## Tools shows owned tool charges, Items shows the special valuables (runes / influence).
+## "all" is the default so setup()+open() renders the full ledger the existing view tests inspect.
 const TAB_ALL := "all"
 const TAB_RESOURCES := "resources"
 const TAB_TOOLS := "tools"
+const TAB_ITEMS := "items"
 ## Tab id → display label, in render order. Drives both the tab row build + tab_ids().
 const TAB_DEFS: Array = [
 	[TAB_ALL, "All"],
 	[TAB_RESOURCES, "Resources"],
 	[TAB_TOOLS, "Tools"],
+	[TAB_ITEMS, "Items"],
 ]
 var _tab: String = TAB_ALL
 ## tab id → segmented toggle Button. Built once in the shell; registered for headless tests.
 var _tab_buttons: Dictionary = {}
 
-# ── group membership (per the Constants production families) ───────────────────
-# Ordered group definitions: each is [display name, Array of resource keys]. A
-# resource not in any of these lands in the trailing "Other" group so the ledger
-# NEVER silently drops an owned good. Mirrors the CLAUDE-listed port resources:
-#   Farm:    hay_bundle, flour, eggs, soup, pie, honey, plank, meat, milk, horseshoe
-#   Refined: bread, supplies
-#   Mine:    block, iron_bar, coke, cut_gem, dirt
+## C1+ — body view mode: "list" (grouped ledger rows, default) or "grid" (compact icon+count
+## chips). The ⊞ toggle in the title row flips it; persists across tab switches. Mirrors React's
+## list/grid inventory header toggle.
+const VIEW_LIST := "list"
+const VIEW_GRID := "grid"
+var _view: String = VIEW_LIST
+var _view_btn: Button                   ## the ⊞/≣ view-toggle Button (registered for tests)
+
+## The port's special "Items" — non-resource, non-tool valuables surfaced as inventory items.
+## REAL GameState scalar counters; nothing invented. ITEM_IDS is the stable id list + render order;
+## the glyph + label for each are DERIVED from the ResourceConfig kind:"item" rows (the single
+## source of truth — was a hardcoded [id, glyph, label] literal here). item_count() still binds each
+## id to its GameState scalar field (game.runes / game.influence) — that's logic, not metadata.
+const ITEM_IDS: Array = ["runes", "influence"]
+
+## The rendered [id, glyph, label] rows, populated from ResourceConfig in ITEM_IDS order. A
+## function (not a const) because the metadata now lives in the catalog. Callers + the headless
+## item tests iterate this exactly as they did the old ITEM_DEFS const.
+func _item_defs() -> Array:
+	var out: Array = []
+	for id in ITEM_IDS:
+		out.append([id, ResourceConfig.glyph(id), ResourceConfig.label(id)])
+	return out
+
+# ── group membership (derived from ResourceConfig.family) ───────────────────────
+# Each owned resource is bucketed into one of these four ledger sections by its
+# ResourceConfig family id ("farm"/"refined"/"mine"/"other"). A resource whose family is
+# unknown (or "other") lands in the trailing "Other" group so the ledger NEVER silently
+# drops an owned good. The catalog reproduces today's exact grouping, with ONE deliberate
+# reconciliation: `jam` is family "farm" (it was in the Hud STOCKPILE_ROSTER but missing
+# from the old hardcoded FARM list, so it used to fall into "Other"). See ResourceConfig.gd.
 const GROUP_FARM := "Farm Goods"
 const GROUP_REFINED := "Refined"
 const GROUP_MINE := "Mine"
 const GROUP_OTHER := "Other"
 
-const FARM_RESOURCES: Array = [
-	"hay_bundle", "flour", "eggs", "soup", "pie",
-	"honey", "plank", "meat", "milk", "horseshoe",
-]
-const REFINED_RESOURCES: Array = ["bread", "supplies"]
-const MINE_RESOURCES: Array = ["block", "iron_bar", "coke", "cut_gem", "dirt"]
+## ResourceConfig family id → display group name. Anything not here (incl. ResourceConfig
+## FAMILY_OTHER and any uncatalogued key) maps to GROUP_OTHER via group_of().
+const FAMILY_TO_GROUP: Dictionary = {
+	ResourceConfig.FAMILY_FARM: GROUP_FARM,
+	ResourceConfig.FAMILY_REFINED: GROUP_REFINED,
+	ResourceConfig.FAMILY_MINE: GROUP_MINE,
+}
 
 ## The render order of the groups. "Other" is last so unknown keys trail the knowns.
 const GROUP_ORDER: Array = [GROUP_FARM, GROUP_REFINED, GROUP_MINE, GROUP_OTHER]
@@ -134,9 +179,7 @@ func _build_shell() -> void:
 	# ABOVE the view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar
 	# (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP eats clicks in
 	# the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -191,13 +234,23 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "📦 Inventory"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
 		title.add_theme_font_override("font", heading_font)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
+
+	# View toggle (React header ⊞/≣) — flips the body between the grouped LIST and the compact
+	# icon GRID. Right-aligned in the title row. Its glyph reflects the mode it will switch TO.
+	_view_btn = Button.new()
+	_view_btn.text = "⊞ Grid"
+	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
+	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
+	title_row.add_child(_view_btn)
+	_action_buttons["view_toggle"] = _view_btn
 
 	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
@@ -219,7 +272,7 @@ func _build_shell() -> void:
 		var tab_id: String = String(def[0])
 		var tab_btn := Button.new()
 		tab_btn.text = String(def[1])
-		tab_btn.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(tab_btn, Typography.Role.SUBHEAD)
 		tab_btn.connect("pressed", Callable(self, "_on_tab").bind(tab_id))
 		tab_row.add_child(tab_btn)
 		_tab_buttons[tab_id] = tab_btn
@@ -231,7 +284,7 @@ func _build_shell() -> void:
 	_search_field.placeholder_text = "Search inventory…"
 	_search_field.clear_button_enabled = true
 	_search_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_search_field.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_search_field, Typography.Role.SUBHEAD)
 	_search_field.add_theme_color_override("font_color", COL_BODY)
 	_search_field.add_theme_color_override("font_placeholder_color", COL_MUTED)
 	_search_field.add_theme_stylebox_override("normal", UiKit.row_box())
@@ -257,15 +310,24 @@ func refresh() -> void:
 	if not _built or game == null:
 		return
 	_sync_tabs()
+	# Drop the per-render expanded-row action keys so tests/handlers never see a freed node.
+	for k in _action_buttons.keys():
+		if String(k).begins_with("sell:") or String(k).begins_with("buy:"):
+			_action_buttons.erase(k)
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
 
+	if _view == VIEW_GRID:
+		_render_grid()
+		return
 	if _tab == TAB_TOOLS:
 		_render_tools_tab()
+	elif _tab == TAB_ITEMS:
+		_render_items_tab()
 	else:
 		# All + Resources both render the grouped resource ledger; All ALSO appends owned
-		# tools below it so it's a true "everything owned" view.
+		# tools + items below it so it's a true "everything owned" view.
 		_render_resources_tab(_tab == TAB_ALL)
 
 ## RESOURCES / ALL tab — the grouped resource ledger. Each non-empty group (after the live
@@ -287,15 +349,19 @@ func _render_resources_tab(include_tools: bool) -> void:
 		any_resource_shown = true
 		_build_group_section(group_name, shown)
 
-	# On All, append owned tools (search-filtered) as a trailing "Tools" section.
+	# On All, append owned tools + items (search-filtered) as trailing sections.
 	var tool_ids: Array = visible_tool_ids() if include_tools else []
 	var any_tool_owned: bool = (not owned_tool_ids().is_empty()) if include_tools else false
 	if not tool_ids.is_empty():
 		_build_tool_section(tool_ids)
+	var item_ids_shown: Array = visible_item_ids() if include_tools else []
+	var any_item_owned: bool = (not item_ids().is_empty()) if include_tools else false
+	if not item_ids_shown.is_empty():
+		_build_item_section(item_ids_shown)
 
-	if not any_resource_shown and tool_ids.is_empty():
+	if not any_resource_shown and tool_ids.is_empty() and item_ids_shown.is_empty():
 		# Nothing rendered — say WHY (empty stockpile vs no search match).
-		var any_owned: bool = any_resource_owned or any_tool_owned
+		var any_owned: bool = any_resource_owned or any_tool_owned or any_item_owned
 		if any_owned and _query != "":
 			_body.add_child(_make_label("No items match '%s'." % _query, COL_MUTED))
 		else:
@@ -338,6 +404,121 @@ func _render_tools_tab() -> void:
 	subline.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_body.add_child(subline)
 
+## ITEMS tab — the special valuables (runes / influence) the player holds, after the live
+## search. A header + a row per held item (glyph · name · ×count). Empty state distinguishes
+## "none held yet" from "filtered out". REAL data: game.runes / game.influence scalar counters.
+func _render_items_tab() -> void:
+	var held: Array = item_ids()
+	var shown: Array = visible_item_ids()
+	if shown.is_empty():
+		if not held.is_empty() and _query != "":
+			_body.add_child(_make_label("No items match '%s'." % _query, COL_MUTED))
+		else:
+			_body.add_child(_make_label(
+				"No special items yet — capture a giant pearl for a Rune, or raise Influence with decorations.",
+				COL_MUTED))
+		return
+	_build_item_section(shown)
+
+## GRID view — a 3-column grid of compact icon+count chips for whatever the active tab covers
+## (resources / tools / items / all). Mirrors React's grid inventory layout. Empty → the same
+## muted hint the list view shows.
+func _render_grid() -> void:
+	var keys: Array = _grid_entries()
+	if keys.is_empty():
+		var msg := "Your stockpile is empty — chain tiles to gather goods."
+		if _query != "":
+			msg = "No items match '%s'." % _query
+		_body.add_child(_make_label(msg, COL_MUTED))
+		return
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	_body.add_child(grid)
+	for entry in keys:
+		grid.add_child(_make_grid_chip(entry as Dictionary))
+
+## The chips the grid view shows for the active tab, each {key, glyph, label, count}. Resources
+## come from the owned (search-filtered) ledger; tools from visible_tool_ids; items from
+## visible_item_ids; All concatenates all three. Drives _render_grid + the grid headless test.
+func _grid_entries() -> Array:
+	var out: Array = []
+	var want_res: bool = _tab == TAB_ALL or _tab == TAB_RESOURCES
+	var want_tools: bool = _tab == TAB_ALL or _tab == TAB_TOOLS
+	var want_items: bool = _tab == TAB_ALL or _tab == TAB_ITEMS
+	if want_res:
+		var res_keys: Array = []
+		if game != null:
+			for key in game.inventory:
+				if int(game.inventory[key]) > 0 and matches_query(String(key), _query):
+					res_keys.append(String(key))
+		res_keys.sort()
+		for res in res_keys:
+			out.append({"key": res, "glyph": "", "label": UiKit.pretty_name(res),
+				"count": game.qty(String(res))})
+	if want_tools:
+		for id in visible_tool_ids():
+			out.append({"key": id, "glyph": "", "label": _tool_name(String(id)),
+				"count": game.tool_count(String(id))})
+	if want_items:
+		for entry in _item_defs():
+			var id: String = String(entry[0])
+			if not visible_item_ids().has(id):
+				continue
+			out.append({"key": id, "glyph": String(entry[1]), "label": String(entry[2]),
+				"count": item_count(id)})
+	return out
+
+## A compact grid chip: a soft-parchment cell with the icon (or glyph) above a "name ×count"
+## line. Used by the grid view across every tab.
+func _make_grid_chip(entry: Dictionary) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	# review-4 — share the row width across the 3 columns. Without EXPAND_FILL each chip
+	# collapses to its icon's minimum width and the autowrapped name label breaks words
+	# mid-glyph ("Bomb" → "Bom/b", "Scythe" → "Scyth/e").
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(col)
+
+	var icon := UiKit.make_icon(String(entry.get("key", "")), 36.0)
+	if icon != null:
+		var holder := CenterContainer.new()
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(icon)
+		col.add_child(holder)
+	elif String(entry.get("glyph", "")) != "":
+		var glyph := Label.new()
+		glyph.text = String(entry["glyph"])
+		UiKit.set_font_size(glyph, Typography.Role.TITLE)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(glyph)
+
+	var name_lbl := Label.new()
+	name_lbl.text = String(entry.get("label", ""))
+	UiKit.set_font_size(name_lbl, Typography.Role.BODY)
+	name_lbl.add_theme_color_override("font_color", COL_BODY)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_lbl)
+
+	var count_lbl := Label.new()
+	count_lbl.text = "×%d" % int(entry.get("count", 0))
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
+	count_lbl.add_theme_color_override("font_color", COL_VALUE)
+	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(count_lbl)
+	return chip
+
 ## Build one group: an ember Cinzel section header, then a row per owned resource
 ## (sorted by key) showing name · count · sell-each + line value (gold) when sellable.
 func _build_group_section(group_name: String, keys: Array) -> void:
@@ -351,7 +532,7 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 
 	var header := Label.new()
 	header.text = group_name
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -366,18 +547,19 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 ## A single resource row: a soft-parchment chip holding three columns —
 ##   name (ink, expands) · count (ink, prominent) · value (gold, sell-each + line)
 ## The value column is OMITTED for non-sellable goods (e.g. supplies).
+## C2 — tapping the chip EXPANDS it in place (React InventoryListItemExpanded): a details
+## section (kind · description · Sell/Buy actions) slides open under the row.
 func _make_resource_row(res: String) -> PanelContainer:
 	var count: int = game.qty(res)
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry_key: String = "res:" + res
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
+	col.add_child(row)
 
 	# Icon — the same procedural art React shows, when we have it (text-only keys skip).
 	var icon := UiKit.make_icon(res, 34.0)
@@ -392,7 +574,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 	# Count — prominent ink, right-aligned in its own fixed column.
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % count
-	count_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_BODY)
 	count_lbl.custom_minimum_size = Vector2(64, 0)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -401,7 +583,7 @@ func _make_resource_row(res: String) -> PanelContainer:
 
 	# Value — sell-each + the line value (count × sell), gold. Sellable goods only.
 	var value_lbl := Label.new()
-	value_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(value_lbl, Typography.Role.SUBHEAD)
 	value_lbl.add_theme_color_override("font_color", COL_VALUE)
 	value_lbl.custom_minimum_size = Vector2(150, 0)
 	value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -413,6 +595,38 @@ func _make_resource_row(res: String) -> PanelContainer:
 		value_lbl.text = "—"
 		value_lbl.add_theme_color_override("font_color", COL_MUTED)
 	row.add_child(value_lbl)
+
+	# Expanded details — kind eyebrow, the catalog description, and real Sell/Buy actions
+	# (the same GameState.sell/buy the Town Market uses; prices are the live drifted ones).
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Resource · %s" % group_of(res))
+		var desc: String = ResourceConfig.desc(res)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+		var actions := HBoxContainer.new()
+		actions.add_theme_constant_override("separation", 8)
+		details.add_child(actions)
+		if MarketConfig.can_sell(res):
+			var sell_btn := Button.new()
+			sell_btn.text = "Sell 1 · +%d🪙" % game.live_sell_price(res)
+			UiKit.style_action_button(sell_btn, Palette.MOSS, 6, Typography.size(Typography.Role.LABEL))
+			sell_btn.disabled = count <= 0
+			sell_btn.connect("pressed", Callable(self, "_on_sell").bind(res))
+			actions.add_child(sell_btn)
+			_action_buttons["sell:" + res] = sell_btn
+		if MarketConfig.can_buy(res):
+			var buy_btn := Button.new()
+			var price: int = game.live_buy_price(res)
+			buy_btn.text = "Buy 1 · %d🪙" % price
+			UiKit.style_action_button(buy_btn, Palette.GOLD, 6, Typography.size(Typography.Role.LABEL))
+			buy_btn.disabled = game.coins < price
+			buy_btn.connect("pressed", Callable(self, "_on_buy").bind(res))
+			actions.add_child(buy_btn)
+			_action_buttons["buy:" + res] = buy_btn
+		if actions.get_child_count() == 0:
+			actions.queue_free()
+			details.add_child(_make_detail_text("Not traded at the Market."))
 
 	return chip
 
@@ -430,7 +644,7 @@ func _build_tool_section(tool_ids: Array) -> void:
 
 	var header := Label.new()
 	header.text = "Tools"
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -444,18 +658,18 @@ func _build_tool_section(tool_ids: Array) -> void:
 ## icon · name · ×charges. Tools carry no Market value, so there is no value column (a tool
 ## is consumed on use, not sold). Name uses the ToolConfig label for known ids, else the
 ## title-cased key (e.g. a summoned magic tool not in the ToolConfig catalog).
+## C2 — tapping expands in place to show the tool's catalog description + a usage hint.
 func _make_tool_row(id: String) -> PanelContainer:
 	var charges: int = game.tool_count(id)
-
-	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	var entry_key: String = "tool:" + id
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
-	chip.add_child(row)
+	col.add_child(row)
 
 	# Icon — the procedural tool art exported to assets/resources/<id>.png (bomb, scythe, …).
 	var icon := UiKit.make_icon(id, 34.0)
@@ -470,14 +684,192 @@ func _make_tool_row(id: String) -> PanelContainer:
 	# Charges — prominent ink, right-aligned (mirrors the resource count column).
 	var count_lbl := Label.new()
 	count_lbl.text = "×%d" % charges
-	count_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
 	count_lbl.add_theme_color_override("font_color", COL_BODY)
 	count_lbl.custom_minimum_size = Vector2(64, 0)
 	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(count_lbl)
 
+	# Expanded details — the tool's catalog description + where it's used.
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Tool · consumed on use")
+		var desc: String = ToolConfig.tool_desc(id)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+		details.add_child(_make_detail_text("Use it from the tool bar above the board."))
+
 	return chip
+
+# ── Items section (special valuables: runes / influence) ──────────────────────────
+
+## Build the "Items" section: an ember Cinzel header, then a row per held special item
+## (already search-filtered by the caller). Glyph · name · ×count — real GameState counters.
+func _build_item_section(ids: Array) -> void:
+	var rule := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(Palette.IRON, 0.7)
+	line.thickness = 1
+	rule.add_theme_stylebox_override("separator", line)
+	_body.add_child(rule)
+
+	var header := Label.new()
+	header.text = "Items"
+	UiKit.set_font_size(header, Typography.Role.HEADING)
+	header.add_theme_color_override("font_color", COL_HEADER)
+	var heading_font: Font = UiKit.heading_font()
+	if heading_font != null:
+		header.add_theme_font_override("font", heading_font)
+	_body.add_child(header)
+
+	for id in ids:
+		_body.add_child(_make_item_row(String(id)))
+
+## A single special-item row: a soft-parchment chip with glyph · name · ×count. Items carry no
+## Market value (a rune is spent in the Portal, not sold), so there is no value column.
+## C2 — tapping expands in place to show the item's catalog description.
+func _make_item_row(id: String) -> PanelContainer:
+	var count: int = item_count(id)
+	var def: Dictionary = _item_def(id)
+	var entry_key: String = "item:" + id
+	var chip := _begin_expandable_chip(entry_key)
+	var col: VBoxContainer = chip.get_child(0)
+
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	col.add_child(row)
+
+	# Glyph badge (these items have no procedural PNG art — they're scalar valuables).
+	var glyph := Label.new()
+	glyph.text = String(def.get("glyph", "•"))
+	UiKit.set_font_size(glyph, Typography.Role.TITLE)
+	glyph.custom_minimum_size = Vector2(34, 34)
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(glyph)
+
+	var name_lbl := _make_label(String(def.get("label", id)), COL_BODY)
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_lbl)
+
+	var count_lbl := Label.new()
+	count_lbl.text = "×%d" % count
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
+	count_lbl.add_theme_color_override("font_color", COL_BODY)
+	count_lbl.custom_minimum_size = Vector2(64, 0)
+	count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(count_lbl)
+
+	# Expanded details — the valuable's catalog description (where it comes from / what
+	# it's for). No actions: runes/influence are spent at their own surfaces, not sold.
+	if _expanded == entry_key:
+		var details := _begin_details(col)
+		_add_detail_eyebrow(details, "Special item")
+		var desc: String = ResourceConfig.desc(id)
+		if desc != "":
+			details.add_child(_make_detail_text(desc))
+
+	return chip
+
+# ── C2: expand-in-place plumbing (React InventoryListItemExpanded parity) ─────────
+
+## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
+## expanded) holding a VBox the caller fills with its row (and the details section appends
+## to). The chip itself listens for taps — a tap toggles the expansion. Inner content stays
+## MOUSE_FILTER_IGNORE so the chip sees every tap; the details' action Buttons still work
+## (Buttons are STOP by default and sit above the chip in pick order).
+func _begin_expandable_chip(entry_key: String) -> PanelContainer:
+	var chip := PanelContainer.new()
+	var sb := UiKit.row_box()
+	if _expanded == entry_key:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", sb)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+		if tap:
+			toggle_expand(entry_key)
+	)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
+	return chip
+
+## Append the details section container to an expanded chip's column, separated from the
+## row by a faint hairline. Fades in (UiFx — no-op headless / reduce-motion) so the
+## expansion reads as an animated reveal rather than a hard reflow.
+func _begin_details(col: VBoxContainer) -> VBoxContainer:
+	var rule := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(Palette.IRON, 0.5)
+	line.thickness = 1
+	rule.add_theme_stylebox_override("separator", line)
+	col.add_child(rule)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	UiFx.content_fade(details)
+	return details
+
+## A small all-caps-feel eyebrow line ("Resource · Farm Goods") for the details section.
+func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
+	var lbl := Label.new()
+	lbl.text = text.to_upper()
+	UiKit.set_font_size(lbl, Typography.Role.CAPTION)
+	lbl.add_theme_color_override("font_color", COL_HEADER)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_child(lbl)
+
+## A muted wrapping body line for the details section.
+func _make_detail_text(text: String) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	UiKit.set_font_size(lbl, Typography.Role.LABEL)
+	lbl.add_theme_color_override("font_color", COL_MUTED)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+## Toggle the expansion for `entry_key` ("res:flour" / "tool:bomb" / "item:runes"): tapping
+## the expanded row collapses it, tapping another moves the expansion there. Public — the
+## headless test drives it directly. Re-renders the body (the chip set is rebuilt anyway).
+func toggle_expand(entry_key: String) -> void:
+	_expanded = "" if _expanded == entry_key else entry_key
+	refresh()
+
+## The currently expanded entry key ("" when none). Headless contract.
+func expanded_key() -> String:
+	return _expanded
+
+## Sell 1 unit of `res` through the real Market path (live drifted price), then re-render —
+## the row stays expanded so repeated sells are one tap each. Emits state_changed on success
+## so Main refreshes the HUD coin pill + saves.
+func _on_sell(res: String) -> void:
+	var result: Dictionary = game.sell(res, 1)
+	refresh()
+	if bool(result.get("ok", false)):
+		emit_signal("state_changed")
+
+## Buy 1 unit of `res` (live drifted price, cap-respecting) — mirror of _on_sell.
+func _on_buy(res: String) -> void:
+	var result: Dictionary = game.buy(res, 1)
+	refresh()
+	if bool(result.get("ok", false)):
+		emit_signal("state_changed")
 
 ## The footer: the total stockpile value (gold), then a muted "{K} kinds · {N} items"
 ## subline. Preceded by an iron hairline to set it off from the last group.
@@ -491,7 +883,7 @@ func _build_footer() -> void:
 
 	var total := Label.new()
 	total.text = "Total stockpile value: %d 🪙" % total_value()
-	total.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(total, Typography.Role.HEADING)
 	total.add_theme_color_override("font_color", COL_VALUE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -534,6 +926,31 @@ func _sync_tabs() -> void:
 func set_tab(tab: String) -> void:
 	_on_tab(tab)
 
+# ── view toggle (list ↔ grid) ─────────────────────────────────────────────────────
+
+## The ⊞/≣ view-toggle button was pressed — flip the body between list + grid and re-render.
+func _on_view_toggle() -> void:
+	_view = VIEW_GRID if _view == VIEW_LIST else VIEW_LIST
+	if _view_btn != null:
+		# The button labels the mode it will switch TO next, like React's toggle.
+		_view_btn.text = "≣ List" if _view == VIEW_GRID else "⊞ Grid"
+	refresh()
+
+## Set the view mode programmatically (headless tests / deep-links). "list" | "grid".
+func set_view(mode: String) -> void:
+	if mode != VIEW_LIST and mode != VIEW_GRID:
+		return
+	if mode == _view:
+		return
+	_view = mode
+	if _view_btn != null:
+		_view_btn.text = "≣ List" if _view == VIEW_GRID else "⊞ Grid"
+	refresh()
+
+## The current body view mode ("list" | "grid"). Headless contract.
+func view_mode() -> String:
+	return _view
+
 ## True when `res`'s name matches `query` as a case-insensitive substring. An empty/blank
 ## query matches EVERYTHING (no filter). Pure + headless-testable — the single source of the
 ## filter rule shared by the UI render path and the tests.
@@ -555,13 +972,49 @@ func _apply_query(keys: Array) -> Array:
 
 # ── tabs + tools (pure helpers — usable + testable without rendering) ──────────
 
-## The tab ids in render order ("all", "resources", "tools"). Drives the tab row build and
-## is the headless contract for "which tabs exist" (the Items tab is intentionally absent —
-## the port has no item kind that lands in inventory; see the header).
+## The tab ids in render order ("all", "resources", "tools", "items"). Drives the tab row build
+## and is the headless contract for "which tabs exist". The Items tab surfaces the port's real
+## special valuables (runes / influence) — see the header.
 func tab_ids() -> Array:
 	var out: Array = []
 	for def in TAB_DEFS:
 		out.append(String(def[0]))
+	return out
+
+# ── items (special valuables — pure helpers) ──────────────────────────────────────
+
+## The ITEM_DEFS row for `id`, or {glyph,label} fallbacks for an unknown id.
+func _item_def(id: String) -> Dictionary:
+	for entry in _item_defs():
+		if String(entry[0]) == id:
+			return {"glyph": String(entry[1]), "label": String(entry[2])}
+	return {"glyph": "•", "label": UiKit.pretty_name(id)}
+
+## The live count of special item `id` from the matching GameState scalar counter.
+func item_count(id: String) -> int:
+	if game == null:
+		return 0
+	match id:
+		"runes":     return game.runes
+		"influence": return game.influence
+		_:           return 0
+
+## Every special item id the player HOLDS (count > 0), in ITEM_DEFS order. REAL GameState data.
+func item_ids() -> Array:
+	var out: Array = []
+	for entry in _item_defs():
+		var id: String = String(entry[0])
+		if item_count(id) > 0:
+			out.append(id)
+	return out
+
+## Held special items filtered by the live search query — matched against the id AND the label.
+func visible_item_ids() -> Array:
+	var out: Array = []
+	for id in item_ids():
+		var def: Dictionary = _item_def(id)
+		if matches_query(id, _query) or matches_query(String(def.get("label", id)), _query):
+			out.append(id)
 	return out
 
 ## Display name for a tool id: the ToolConfig label for a known tool ("bomb" → "Bomb"), else
@@ -602,16 +1055,11 @@ func visible_tool_ids() -> Array:
 
 # ── ledger math (pure helpers — usable + testable without rendering) ───────────
 
-## Which group a resource belongs to: "Farm Goods" / "Refined" / "Mine" for the
-## known production families, else "Other" so nothing is ever dropped.
+## Which group a resource belongs to: "Farm Goods" / "Refined" / "Mine" for the known
+## production families (derived from ResourceConfig.family), else "Other" so nothing is ever
+## dropped (covers ResourceConfig FAMILY_OTHER AND any uncatalogued key).
 func group_of(res: String) -> String:
-	if FARM_RESOURCES.has(res):
-		return GROUP_FARM
-	if REFINED_RESOURCES.has(res):
-		return GROUP_REFINED
-	if MINE_RESOURCES.has(res):
-		return GROUP_MINE
-	return GROUP_OTHER
+	return String(FAMILY_TO_GROUP.get(ResourceConfig.family(res), GROUP_OTHER))
 
 ## Distinct owned resource kinds (count > 0).
 func kinds() -> int:
@@ -666,7 +1114,7 @@ func _grouped_owned() -> Dictionary:
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE

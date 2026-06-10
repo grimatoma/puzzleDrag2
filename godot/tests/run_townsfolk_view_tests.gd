@@ -23,6 +23,7 @@ const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
 var _checks: int = 0
 var _failures: int = 0
 var _closed_count: int = 0
+var _changes: int = 0   ## state_changed emissions (gift / hire / fire)
 
 func _check(cond: bool, msg: String) -> void:
 	_checks += 1
@@ -35,6 +36,9 @@ func _check(cond: bool, msg: String) -> void:
 
 func _on_closed() -> void:
 	_closed_count += 1
+
+func _on_changed() -> void:
+	_changes += 1
 
 ## Press the action button registered under `key`. Returns true if it existed.
 func _press(screen, key: String) -> bool:
@@ -77,6 +81,7 @@ func _initialize() -> void:
 	await process_frame
 	screen.open()
 	screen.connect("closed", Callable(self, "_on_closed"))
+	screen.connect("state_changed", Callable(self, "_on_changed"))
 
 	_check(screen.visible, "townsfolk screen is visible after open()")
 	_check(screen._action_buttons.has("close"), "_action_buttons has 'close'")
@@ -140,13 +145,52 @@ func _initialize() -> void:
 		_check(_find_label_with(wren_card, "1.00") != null,
 			"wren card contains multiplier '1.00' (Warm band)")
 
-	# ── Tabs: Workers (default, the roster) | Quests (the active quest board) ──────
-	_check(screen._tab_buttons.has("workers") and screen._tab_buttons.has("quests"),
-		"_tab_buttons has both 'workers' and 'quests'")
-	_check(screen._tab == "workers", "default tab is 'workers' (the roster)")
+	# ── Tabs (T20): Bonds (default, the NPC roster + gifts) | Workers (hire cards) | Quests ──
+	_check(screen._tab_buttons.has("bonds") and screen._tab_buttons.has("workers")
+		and screen._tab_buttons.has("quests"),
+		"_tab_buttons has 'bonds', 'workers' and 'quests'")
+	_check(screen._tab == "bonds", "default tab is 'bonds' (the NPC roster + gift control)")
+
+	# ── Bonds tab: a GIFT control per NPC. Give mira flour (she LOVES flour, +0.5) and assert
+	# the gift consumed the resource, bumped the bond, and set the once-per-season cooldown. ──
+	game.inventory["flour"] = 2
+	screen.refresh()   # re-render so the gift picker reflects the now-owned flour
+	_check(screen._action_buttons.has("gift:mira"), "Bonds card has a gift:mira Give button")
+	_check(screen._action_buttons.has("gift_pick:mira"), "Bonds card has a gift_pick:mira picker")
+	var mira_bond_before: float = game.npc_bond("mira")
+	var flour_before: int = int(game.inventory.get("flour", 0))
+	var changes_before_gift := _changes
+	_check(_press(screen, "gift:mira"), "pressed gift:mira (default choice = a loved/liked owned resource)")
+	_check(is_equal_approx(game.npc_bond("mira"), mira_bond_before + 0.5),
+		"gifting mira flour raised her bond by 0.5 (loved)")
+	_check(int(game.inventory.get("flour", 0)) == flour_before - 1, "gift consumed one flour")
+	_check(_changes == changes_before_gift + 1, "state_changed fired once on the gift")
+	# After the gift the per-season cooldown disables further gifting this season — the Give button
+	# is gone (replaced by the cooldown hint) on the re-rendered card.
+	_check(not screen._action_buttons.has("gift:mira"), "gift:mira removed after the season cooldown sets")
+
+	# ── Workers tab (T20): hire-by-type cards. Give coins + cost, hire a Farmer, fire it. ──
+	screen._on_tab("workers")
+	_check(screen._tab == "workers", "_on_tab('workers') switches to the hire tab")
+	_check(not screen._cards.has("mira"), "NPC bond cards cleared on the Workers tab")
+	game.coins = 1000
+	game.inventory["hay_bundle"] = int(game.inventory.get("hay_bundle", 0)) + 10
+	screen.refresh()
+	for wid in WorkerConfig.all_ids():
+		_check(screen._cards.has(String(wid)), "Workers tab has a card for %s" % wid)
+		_check(screen._action_buttons.has("hire:" + String(wid)), "Workers tab has a hire:%s button" % wid)
+	var farmers_before: int = game.worker_count(WorkerConfig.FARMER)
+	var changes_before_hire := _changes
+	_check(_press(screen, "hire:" + WorkerConfig.FARMER), "pressed hire:farmer on the Workers tab")
+	_check(game.worker_count(WorkerConfig.FARMER) == farmers_before + 1, "farmer count rose by 1 after hire")
+	_check(_changes == changes_before_hire + 1, "state_changed fired once on hire")
+	_check(screen._action_buttons.has("fire:" + WorkerConfig.FARMER), "card now shows fire:farmer after hiring")
+	var farmers_pre_fire: int = game.worker_count(WorkerConfig.FARMER)
+	_check(_press(screen, "fire:" + WorkerConfig.FARMER), "pressed fire:farmer")
+	_check(game.worker_count(WorkerConfig.FARMER) == farmers_pre_fire - 1, "farmer count fell by 1 after fire")
 
 	# Switch to the Quests tab — ensure_quests rolls the board, a card per quest, the header
-	# reads "N quests", and the NPC roster cards are gone from _cards.
+	# reads "N quests", and the NPC roster cards stay gone from _cards.
 	screen._on_tab("quests")
 	_check(screen._tab == "quests", "_on_tab('quests') switches tab")
 	game.ensure_quests()
@@ -155,9 +199,9 @@ func _initialize() -> void:
 	_check(screen._header_label.text == "%d quests" % quest_n, "Quests header reads 'N quests'")
 	_check(not screen._cards.has("mira"), "NPC cards cleared on the Quests tab")
 
-	# Switch back — the roster re-renders into _cards.
-	screen._on_tab("workers")
-	_check(screen._tab == "workers", "_on_tab('workers') restores the roster")
+	# Switch back to Bonds — the roster re-renders into _cards.
+	screen._on_tab("bonds")
+	_check(screen._tab == "bonds", "_on_tab('bonds') restores the roster")
 	_check(screen._cards.has("mira") and screen._cards.has("bram"), "roster re-rendered after returning")
 
 	# Pressing Close fires `closed` and hides the modal.

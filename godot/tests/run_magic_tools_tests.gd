@@ -18,7 +18,8 @@ extends SceneTree
 ##     fill_bias_turns == 3.
 ##   - a summon → use round-trip: portal-built GameState with influence summons
 ##     philosophers_stone, then use_tool_on_grid applies the transform.
-##   - the 2 deferred magic tools (hourglass / miners_hat) are NOT ToolConfig members.
+##   - the 1 remaining deferred magic tool (hourglass) is NOT a ToolConfig member; miners_hat IS
+##     now wired (T24 reveal_tiles, the boss hide_resources hidden-tile layer).
 
 const T := Constants.Tile
 
@@ -210,8 +211,8 @@ func _test_magic_fertilizer_arms_fill_bias() -> void:
 func _test_summon_then_use_roundtrip() -> void:
 	var g := GameState.new()
 	# Build the portal (coins + runes), then bank enough influence to summon.
-	g.coins = GameState.PORTAL_COST_COINS
-	g.runes = GameState.PORTAL_COST_RUNES
+	g.coins = PortalConfig.BUILD_COST_COINS
+	g.runes = PortalConfig.BUILD_COST_RUNES
 	_check(bool(g.build_portal().get("ok", false)), "portal built for the summon round-trip")
 	g.influence = PortalConfig.influence_cost("philosophers_stone")
 	var sres := g.summon_magic_tool("philosophers_stone")
@@ -228,11 +229,15 @@ func _test_summon_then_use_roundtrip() -> void:
 	_check(ures["grid"][3][3] == T.GOLD, "summoned philosophers_stone turned STONE → GOLD")
 	_check(g.tool_count("philosophers_stone") == 0, "the summoned charge was consumed on use")
 
-# ── the two deferred magic tools stay out of ToolConfig ────────────────────────
+# ── the remaining deferred magic tool stays out of ToolConfig ──────────────────
 
 func _test_deferred_tools_not_toolconfig_members() -> void:
-	# hourglass (undo_move) + miners_hat (reveal_tiles) need absent mechanics, so they remain
-	# summonable in PortalConfig but are NOT wired as ToolConfig members.
-	for id in ["hourglass", "miners_hat"]:
-		_check(PortalConfig.has_tool(id), "deferred '%s' is still in PortalConfig (summonable)" % id)
-		_check(not ToolConfig.has_tool(id), "deferred '%s' is NOT a ToolConfig member (no effect yet)" % id)
+	# hourglass (undo_move) still needs an absent mechanic (a board/inventory snapshot), so it remains
+	# summonable in PortalConfig but is NOT a ToolConfig member. As of T24 miners_hat (reveal_tiles) IS
+	# wired (the boss hide_resources modifier added the hidden-tile layer it awaited) — it's now a real
+	# ToolConfig member, summonable AND usable.
+	_check(PortalConfig.has_tool("hourglass"), "deferred 'hourglass' is still in PortalConfig (summonable)")
+	_check(not ToolConfig.has_tool("hourglass"), "deferred 'hourglass' is NOT a ToolConfig member (no effect yet)")
+	_check(PortalConfig.has_tool("miners_hat"), "miners_hat is still summonable in PortalConfig")
+	_check(ToolConfig.has_tool("miners_hat"), "miners_hat is NOW a ToolConfig member (T24 reveal_tiles wired)")
+	_check(ToolConfig.power_id("miners_hat") == "reveal_tiles", "miners_hat carries the reveal_tiles power")

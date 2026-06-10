@@ -29,6 +29,7 @@ func _initialize() -> void:
 	_test_ratcatcher_charges()
 	await _test_board_clear_all_rats()
 	await _test_master_ratcatcher_flag()
+	await _test_positional_rat_lifecycle()
 	_test_save_load()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
@@ -84,7 +85,7 @@ func _test_rat_tile() -> void:
 	# RAT is a real color (not the MAGENTA fallback).
 	_check(Constants.color_for(T.RAT) == Color(0.36, 0.34, 0.38), "RAT has its drab grey color")
 
-# ── rats_enabled + the farm pool seeding ──────────────────────────────────────
+# ── rats_enabled + the farm pool (T9: rats are NO LONGER pool-seeded) ──────────
 
 func _test_rats_enabled_and_pool() -> void:
 	# Fresh state: rats off, farm pool has no rats.
@@ -92,24 +93,24 @@ func _test_rats_enabled_and_pool() -> void:
 	_check(not fresh.rats_enabled(), "fresh state: rats_enabled false")
 	_check(_count(fresh.active_tile_pool(), T.RAT) == 0, "fresh farm pool has no RAT")
 
-	# Turn rats on (Town 2 complete): rats_enabled true, pool gains exactly RAT_POOL_SLOTS rats.
-	# A1: the rat-free baseline is the season-weighted, zone-restricted base pool (a fresh farm
-	# WITHOUT rats), not the flat FARM_POOL. Rats ride on TOP of that base, adding only RAT slots.
+	# T9 CHANGE: rats are now POSITIONAL (HazardLogic.roll_rat_spawn each fill + they EAT plants),
+	# NOT seeded into the refill pool. So even with rats_enabled the farm pool stays rat-free — the
+	# old "pool gains RAT_POOL_SLOTS" assertions are obsolete and replaced here.
 	var base := GameState.new()           # rats off, same fresh Spring base
 	var base_pool: Array = base.active_tile_pool()
 	var g := GameState.new()
 	g.town2_complete = true
 	_check(g.rats_enabled(), "town2_complete → rats_enabled true")
 	var pool: Array = g.active_tile_pool()
-	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
-		"farm pool now has exactly RAT_POOL_SLOTS (%d) rats" % Constants.RAT_POOL_SLOTS)
-	# The season-weighted base is unchanged alongside the rats.
+	_check(_count(pool, T.RAT) == 0,
+		"T9: farm pool has NO rats even when enabled (rats are positional, not pool-seeded)")
+	# The season-weighted base is unchanged — enabling rats no longer touches the pool at all.
 	_check(_count(pool, T.GRASS) == _count(base_pool, T.GRASS),
-		"farm grass slots unchanged by the rat seeding")
+		"farm grass slots unchanged by rats")
 	_check(_count(pool, T.WHEAT) == _count(base_pool, T.WHEAT),
-		"farm wheat slots unchanged by the rat seeding")
-	_check(pool.size() == base_pool.size() + Constants.RAT_POOL_SLOTS,
-		"farm pool = season base + RAT_POOL_SLOTS (no other additions)")
+		"farm wheat slots unchanged by rats")
+	_check(pool.size() == base_pool.size(),
+		"T9: farm pool size identical with rats on (no pool seeding)")
 
 	# Mine pool is unaffected — rats are a farm-only hazard.
 	var m := GameState.new()
@@ -150,13 +151,13 @@ func _test_building_gating() -> void:
 	_check(BC.is_hazard_building(BC.MASTER_RATCATCHER), "is_hazard_building(master_ratcatcher) true")
 	_check(not BC.is_spawner(BC.RATCATCHER), "ratcatcher is NOT a spawner")
 	_check(not BC.is_refiner(BC.RATCATCHER), "ratcatcher is NOT a refiner")
-	# A built Ratcatcher adds NOTHING to the pool beyond the rat slots (no tile/category).
-	# A1: the rat-free baseline is the season-weighted base pool (no spawners), not FARM_POOL.
+	# A built Ratcatcher adds NOTHING to the pool (no tile/category). T9: rats are not pool-seeded,
+	# so the pool stays the season base — a built Ratcatcher (a hazard building) is pool-neutral.
 	var base_pool: Array = GameState.new().active_tile_pool()
 	var pool: Array = g.active_tile_pool()
-	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
-		"built Ratcatcher leaves the pool at season base + RAT_POOL_SLOTS")
-	_check(pool.size() == base_pool.size() + Constants.RAT_POOL_SLOTS,
+	_check(_count(pool, T.RAT) == 0,
+		"T9: built Ratcatcher leaves the pool rat-free (rats are positional, not pool-seeded)")
+	_check(pool.size() == base_pool.size(),
 		"hazard buildings contribute no extra pool tiles")
 	_check(not g.active_categories().has("rat"),
 		"hazard buildings add no 'rat' (or any) board CATEGORY via active_categories")
@@ -173,7 +174,7 @@ func _test_ratcatcher_charges() -> void:
 	# With a Ratcatcher: 5 charges, spend them down to 0.
 	var g := _city_rats_state({"plank": 50, "hay_bundle": 50})
 	_check(g.build(BC.RATCATCHER)["ok"], "(setup) built the Ratcatcher")
-	_check(GameState.RATCATCHER_CHARGES == 5, "RATCATCHER_CHARGES is 5")
+	_check(BuildingConfig.RATCATCHER_CHARGES == 5, "BuildingConfig.RATCATCHER_CHARGES is 5")
 	_check(g.ratcatcher_charges_left() == 5, "fresh Ratcatcher has 5 charges")
 	_check(g.can_shoo_rats(), "can_shoo_rats true with charges")
 	for i in 5:
@@ -265,6 +266,70 @@ func _test_master_ratcatcher_flag() -> void:
 	_check(_grid_count(b3.grid, T.RAT) == 1,
 		"flag off: the adjacent rat is NOT cleared by a grass chain")
 	b3.queue_free()
+
+# ── T9 positional rat lifecycle on a LIVE board ────────────────────────────────
+# The new rat model: rats are positional cells that EAT adjacent plants (via GameState.
+# tick_farm_hazards) and are cleared by chaining 3+ rat tiles (GameState.clear_rat_chain),
+# landed on the live Board via apply_hazard_state / clear_hazard_cells.
+
+func _test_positional_rat_lifecycle() -> void:
+	var board := Board.new()
+	board.tile_pool = [T.WHEAT]                 # refill never re-adds GRASS/RAT here
+	root.add_child(board)
+	await process_frame
+
+	# A board with a RAT at (1,1) and a GRASS plant above it. tick_farm_hazards eats the grass.
+	var g := GameState.new()
+	g.town2_complete = true                     # rats enabled
+	var grid := _full_grid(T.WHEAT)
+	grid[0][1] = T.GRASS
+	grid[1][1] = T.RAT
+	board.grid = grid
+	board._build_tiles()
+	g.hazards["rats"] = [{"row": 1, "col": 1, "age": 0}]
+	var tick: Dictionary = g.tick_farm_hazards(board.grid, board.rng)
+	_check(int(tick["grid"][0][1]) == Constants.EMPTY, "tick_farm_hazards: rat ate the grass on the live grid")
+	board.apply_hazard_state(tick["grid"], g.active_rats(), g.active_fire_cells(), g.active_wolves())
+	# The rat tile is re-stamped at (1,1) after collapse/refill (positional, pinned).
+	_check(board.grid[1][1] == T.RAT, "rat tile stays pinned at (1,1) after the tick lands")
+	_check(int(g.active_rats()[0].get("age", -1)) == 1, "the rat aged +1")
+	board.queue_free()
+
+	# Chain-3 rats → cleared for +15 coins, removed from the board.
+	var b2 := Board.new()
+	b2.tile_pool = [T.WHEAT]
+	root.add_child(b2)
+	await process_frame
+	var g2 := GameState.new()
+	g2.town2_complete = true
+	g2.coins = 0
+	var grid2 := _full_grid(T.WHEAT)
+	grid2[0][0] = T.RAT
+	grid2[0][1] = T.RAT
+	grid2[0][2] = T.RAT
+	b2.grid = grid2
+	b2._build_tiles()
+	g2.hazards["rats"] = [
+		{"row": 0, "col": 0, "age": 0}, {"row": 0, "col": 1, "age": 0}, {"row": 0, "col": 2, "age": 0},
+	]
+	var chain := [
+		{"row": 0, "col": 0, "tile": T.RAT}, {"row": 0, "col": 1, "tile": T.RAT}, {"row": 0, "col": 2, "tile": T.RAT},
+	]
+	var cr: Dictionary = g2.clear_rat_chain(chain)
+	_check(bool(cr.get("ok", false)), "3-rat chain clears via GameState.clear_rat_chain")
+	_check(g2.coins == 15, "rat chain pays +15 coins (5×3)")
+	_check(g2.active_rats().is_empty(), "all rats removed from hazards after the chain clear")
+	b2.queue_free()
+
+## A full 6x6 grid of a single tile.
+func _full_grid(fill: int) -> Array:
+	var out: Array = []
+	for r in Constants.ROWS:
+		var row: Array = []
+		for c in Constants.COLS:
+			row.append(fill)
+		out.append(row)
+	return out
 
 # ── save / load of the rats state ─────────────────────────────────────────────
 

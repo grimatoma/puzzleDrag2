@@ -94,10 +94,7 @@ func _build_shell() -> void:
 
 	# Full-rect warm-brown scrim. MOUSE_FILTER_STOP so clicks behind it never reach the
 	# board while a beat is showing (matches the other modals).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Centred card via a full-rect CenterContainer (centres its single child at the
@@ -111,16 +108,9 @@ func _build_shell() -> void:
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
 	# Parchment card — warm fill, iron border, rounded corners, generous padding, soft
 	# drop shadow so it floats over the warm scrim.
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(24)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	panel.add_theme_stylebox_override("panel", style)
+	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
+	# centred-card modal so radius/border/shadow can never drift again.
+	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(24))
 	center.add_child(panel)
 
 	var col := VBoxContainer.new()
@@ -131,7 +121,7 @@ func _build_shell() -> void:
 	# Title — the beat title in the Cinzel display serif (parity with Main's headings).
 	_title_label = Label.new()
 	_title_label.text = ""
-	_title_label.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(_title_label, Typography.Role.DISPLAY)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -201,6 +191,11 @@ func _render(beat_id: String) -> void:
 		var speaker: String = String(ln.get("speaker", ""))
 		var text: String = String(ln.get("text", ""))
 		_lines_box.add_child(_make_line_row(speaker, text))
+	# Storybook typewriter (UiFx): each line's glyphs sweep in, staggered top-to-bottom.
+	# visible_ratio only affects DRAWN glyphs — `.text` stays whole, so tests reading
+	# _line_rows are unaffected; headless/motion-off shows everything at once.
+	for i in _line_rows.size():
+		UiFx.reveal_text(_line_rows[i], 0.10 * float(i))
 
 	# ── buttons: choices (one per choice) OR a single Continue ──────────────────
 	var choices: Array = beat.get("choices", [])
@@ -208,7 +203,7 @@ func _render(beat_id: String) -> void:
 		var cont := Button.new()
 		cont.text = "Continue"
 		cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_action_button(cont, Palette.GO_GREEN, 8, 20)
+		UiKit.style_action_button(cont, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 		cont.connect("pressed", Callable(self, "_on_continue"))
 		_buttons_box.add_child(cont)
 		_action_buttons["continue"] = cont
@@ -221,7 +216,7 @@ func _render(beat_id: String) -> void:
 			btn.text = label
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			UiKit.style_button(btn, Palette.EMBER, 8, 18)
+			UiKit.style_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.SUBHEAD))
 			# bind the choice id so the handler resolves THIS choice on the current beat.
 			btn.connect("pressed", Callable(self, "_on_choice").bind(cid))
 			_buttons_box.add_child(btn)
@@ -253,7 +248,7 @@ func _make_line_row(speaker: String, text: String) -> Control:
 	if speaker != "":
 		var spk := Label.new()
 		spk.text = speaker
-		spk.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(spk, Typography.Role.SUBHEAD)
 		spk.add_theme_color_override("font_color", COL_SPEAKER)
 		var heading_font: Font = UiKit.heading_font()
 		if heading_font != null:
@@ -263,7 +258,7 @@ func _make_line_row(speaker: String, text: String) -> Control:
 
 	var body := Label.new()
 	body.text = text
-	body.add_theme_font_size_override("font_size", 17)
+	UiKit.set_font_size(body, Typography.Role.SUBHEAD)
 	# Narration (no speaker) reads in the muted tone; spoken lines in full ink.
 	body.add_theme_color_override("font_color", COL_BODY if speaker != "" else COL_NARRATION)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

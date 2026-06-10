@@ -34,12 +34,11 @@ func test_runes_and_unlisted_default() -> void:
 	var r14 := DailyRewardConfig.reward_for_day(14)
 	assert_int(int(r14.get("coins", 0))).is_equal(300)
 	assert_int(int(r14.get("runes", 0))).is_equal(1)
-	# Day 30 = 1000 coins + 3 runes, NO unlockTile (dropped), no tool.
+	# Day 30 = 1000 coins + 3 runes + the Triceratops unlock_tile (React unlockTile — the port HAS the tile), no tool.
 	var r30 := DailyRewardConfig.reward_for_day(30)
 	assert_int(int(r30.get("coins", 0))).is_equal(1000)
 	assert_int(int(r30.get("runes", 0))).is_equal(3)
-	assert_bool(r30.has("unlockTile")).is_false()
-	assert_bool(r30.has("unlock_tile")).is_false()
+	assert_str(String(r30.get("unlock_tile", ""))).is_equal("tile_cattle_triceratops")
 	assert_bool(r30.has("tool")).is_false()
 	# Day past 30 (defensive) → {coins:25} default.
 	assert_int(int(DailyRewardConfig.reward_for_day(31).get("coins", 0))).is_equal(25)

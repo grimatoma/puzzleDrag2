@@ -29,6 +29,7 @@ func _initialize() -> void:
 	_test_full_category_tile_map()
 	_test_upgrade_spawn_home_zone()
 	_test_upgrade_spawn_edge_cases()
+	_test_upgrade_spawn_effective_threshold()
 	await _test_board_injects_birds_to_pig()
 	await _test_board_injects_grass_to_pheasant()
 	await _test_board_fruit_spawns_no_upgrade()
@@ -159,6 +160,46 @@ func _test_upgrade_spawn_edge_cases() -> void:
 	_check(int(GameState.upgrade_spawn(H, T.GRASS, 5)["count"]) == 0, "grass len==thr-1 → 0")
 	_check(int(GameState.upgrade_spawn(H, T.GRASS, 11)["count"]) == 1, "grass len 11 (thr 6) → 1")
 	_check(int(GameState.upgrade_spawn(H, T.GRASS, 12)["count"]) == 2, "grass len 12 (thr 6) → 2")
+
+# ── upgrade_spawn honours the EFFECTIVE (worker/ability-reduced) threshold ─────
+# React counts upgrade tiles over its effectiveThresholds registry (src/GameScene.ts
+# upgradeCountForChain); in the port credit_chain banks units and the HUD's "+N" badge BOTH
+# divide by GameState.effective_threshold. The spawn must use that SAME reduced threshold, or a
+# hired threshold-reduction worker under-spawns relative to the units it credits (and below the
+# badge it shows). The static helper exposes this via the threshold_override arg (default -1 →
+# RAW, so pure callers and a fresh game stay byte-identical); the instance upgrade_spawn_active
+# passes effective_threshold(source_tile).
+func _test_upgrade_spawn_effective_threshold() -> void:
+	var H := ZoneConfig.HOME_ZONE
+	# WHEAT (grain, RAW threshold 5) upgrades to veg → CARROT. A 4-chain is below the raw
+	# threshold (default override) so it spawns nothing.
+	_check(int(GameState.upgrade_spawn(H, T.WHEAT, 4)["count"]) == 0,
+		"raw thr 5: 4-wheat chain → 0 (default override)")
+	# An explicit effective threshold of 2 (what 3 farmers yield) → floor(4/2) = 2 CARROTs.
+	var forced := GameState.upgrade_spawn(H, T.WHEAT, 4, 2)
+	_check(int(forced["count"]) == 2 and int(forced["tile"]) == T.CARROT,
+		"threshold_override 2: 4-wheat chain → 2 CARROT (grain→veg)")
+	# A negative override falls back to the RAW threshold — the static default contract.
+	_check(int(GameState.upgrade_spawn(H, T.WHEAT, 4, -1)["count"]) == 0,
+		"threshold_override -1 → raw threshold (5) → 0")
+
+	# Instance path: a hired threshold-reduction worker drives the count through
+	# effective_threshold. 3 farmers → grain eff_threshold 2 → a 4-wheat chain spawns 2 CARROTs,
+	# matching the units credit_chain banks for the same chain (run_workers_tests covers that).
+	var farmed := GameState.new()
+	farmed.workers[WorkerConfig.FARMER] = 3
+	_check(farmed.effective_threshold(T.WHEAT) == 2, "(setup) 3 farmers → wheat eff_threshold 2")
+	var up := farmed.upgrade_spawn_active(H, T.WHEAT, 4)
+	_check(int(up["count"]) == 2,
+		"3 farmers: 4-wheat chain spawns 2 upgrade tiles (was 0 with the raw threshold)")
+	_check(int(up["tile"]) == T.CARROT, "3 farmers: the upgrade tile is CARROT (grain→veg)")
+
+	# Determinism contract: a fresh game (0 workers) spawns the SAME count as the static RAW
+	# helper — effective == raw, byte-identical to the pre-workers economy.
+	var fresh := GameState.new()
+	_check(int(fresh.upgrade_spawn_active(H, T.WHEAT, 5)["count"])
+			== int(GameState.upgrade_spawn(H, T.WHEAT, 5)["count"]),
+		"0 workers: instance path == static raw helper (byte-identical)")
 
 # ── Board: a resolved BIRDS chain ≥6 injects PIG upgrade tiles ─────────────────
 

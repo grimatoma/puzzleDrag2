@@ -61,6 +61,11 @@ func _initialize() -> void:
 	_check(empties == 0, "board is full after resolve (collapse + refill)")
 	_check(missing == 0, "every cell has a live Tile node after resolve")
 	_check(main._chain_label != null, "HUD chain label was built")
+	# FIX 2: the build-time chain prompt placeholder must derive from Constants.MIN_CHAIN
+	# (no baked "Drag 3+" literal), so the static text tracks the base min-chain value.
+	if main._chain_label != null:
+		_check(main._chain_label.text == "Drag %d+ matching tiles" % Constants.MIN_CHAIN,
+			"HUD chain prompt placeholder interpolates Constants.MIN_CHAIN")
 
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])

@@ -93,14 +93,25 @@ func _test_building_config_values() -> void:
 
 func _test_available_at_tier() -> void:
 	_check(BC.available_at_tier(1) == [], "no buildings available at Camp (tier 1)")
-	_check(BC.available_at_tier(2) == [BC.LUMBER_CAMP], "only lumber_camp at Hamlet (tier 2)")
+	# T17/T21: Hamlet (tier 2) now offers lumber_camp PLUS the Hamlet-tier landmarks (Mill, Granary).
+	var at2: Array = BC.available_at_tier(2)
+	_check(at2.has(BC.LUMBER_CAMP), "lumber_camp available at Hamlet (tier 2)")
+	_check(at2.has(BC.MILL) and at2.has(BC.GRANARY), "Hamlet landmarks (Mill, Granary) available at tier 2")
+	_check(not at2.has(BC.COOP) and not at2.has(BC.BAKERY), "Village-tier buildings NOT offered at Hamlet")
 	var at3: Array = BC.available_at_tier(3)
 	_check(at3.has(BC.LUMBER_CAMP) and at3.has(BC.COOP) and at3.has(BC.GARDEN),
 		"all three spawners available at Village (tier 3)")
-	# M3c: available_at_tier now iterates ALL_BUILD_IDS, so the Bakery (refiner) is
-	# offered at Village too — four buildable ids, not three.
+	# M3c: available_at_tier iterates ALL_BUILD_IDS, so the Bakery (refiner) is offered at Village.
 	_check(at3.has(BC.BAKERY), "Bakery (refiner) also available at Village (tier 3)")
-	_check(at3.size() == 4, "exactly four buildings available at Village")
+	# T17/T21: Village-tier landmarks (Housing×3, Silo, Sawmill, Apiary) are offered too.
+	_check(at3.has(BC.HOUSING) and at3.has(BC.SILO) and at3.has(BC.SAWMILL) and at3.has(BC.APIARY),
+		"Village-tier landmarks available at tier 3")
+	# Every available id must actually be unlock_tier <= 3 (no leak of a higher-tier building).
+	var all_le_3: bool = true
+	for id in at3:
+		if BC.unlock_tier(id) > 3:
+			all_le_3 = false
+	_check(all_le_3, "available_at_tier(3) only returns buildings with unlock_tier <= 3")
 
 func _test_cost_returns_copy() -> void:
 	# Mutating a returned cost must not mutate the const catalog.
@@ -157,21 +168,25 @@ func _test_build_exists_no_mutation() -> void:
 		"inventory unchanged after failed re-build")
 
 func _test_plot_cap() -> void:
-	# At Village (tier 3) there are 7 plots. Pre-fill `buildings` with 7 DUMMY ids
-	# (bypassing build()) to simulate a full town, then try to build lumber_camp:
-	# the plot guard must trip with reason "no_plot".
+	# Pre-fill `buildings` with one DUMMY id per Village plot (bypassing build()) to
+	# simulate a full town, then try to build lumber_camp: the plot guard must trip
+	# with reason "no_plot". The dummy count tracks TownConfig.tier_plots so the test
+	# survives plot-ladder tuning (25/27/29/... since the roomy-first-town change).
 	var g := GameState.new()
 	g.settlement.tier = TownConfig.TIER_VILLAGE
-	_check(g.settlement.plots() == 7, "Village has 7 plots")
-	g.buildings = ["d1", "d2", "d3", "d4", "d5", "d6", "d7"]   # 7 dummy occupants
-	_check(g.plots_used() == 7, "plots_used == 7 (full)")
+	_check(g.settlement.plots() == 29, "Village has 29 plots")
+	var full: int = g.settlement.plots()
+	g.buildings = []
+	for i in full:
+		g.buildings.append("d%d" % (i + 1))                    # dummy occupants
+	_check(g.plots_used() == full, "plots_used == plots() (full)")
 	_check(g.plots_free() == 0, "plots_free == 0 (full)")
 	_give_all(g, BC.building_cost(BC.LUMBER_CAMP))            # affordable + unlocked
 	_check(not g.can_build(BC.LUMBER_CAMP), "can_build false when plots are full")
 	var res := g.build(BC.LUMBER_CAMP)
 	_check(not bool(res["ok"]), "build fails when plots are full")
 	_check(res.get("reason", "") == "no_plot", "failure reason is 'no_plot'")
-	_check(g.plots_used() == 7, "plots_used still 7 after failed build")
+	_check(g.plots_used() == full, "plots_used still full after failed build")
 
 func _test_demolish() -> void:
 	var g := GameState.new()
@@ -215,14 +230,14 @@ func _test_active_pool_and_categories() -> void:
 		"fresh pool EXCLUDES the ineligible tiles (pansy/pig/cow/horse)")
 	var oak_base := pool0.count(T.OAK)
 
-	# Build lumber_camp → its tile (OAK) gets SPAWNER_BOOST_SLOTS extra slots, boosting trees.
+	# Build lumber_camp → its tile (OAK) gets ZoneConfig.SPAWNER_BOOST_SLOTS extra slots, boosting trees.
 	g.settlement.tier = TownConfig.TIER_HAMLET
 	_give_all(g, BC.building_cost(BC.LUMBER_CAMP))
 	_check(g.build(BC.LUMBER_CAMP)["ok"], "build lumber_camp for pool test")
 	_check(g.active_categories().has("trees"), "categories include 'trees' after lumber_camp")
 	var pool1 := g.active_tile_pool()
 	_check(pool1.has(T.OAK), "pool still contains OAK after lumber_camp")
-	_check(pool1.count(T.OAK) == oak_base + GameState.SPAWNER_BOOST_SLOTS,
+	_check(pool1.count(T.OAK) == oak_base + ZoneConfig.SPAWNER_BOOST_SLOTS,
 		"lumber_camp BOOSTS OAK weight by SPAWNER_BOOST_SLOTS (specialisation, not unlock)")
 	# Staples still present.
 	_check(pool1.has(T.GRASS) and pool1.has(T.WHEAT), "staples still in the pool after a build")

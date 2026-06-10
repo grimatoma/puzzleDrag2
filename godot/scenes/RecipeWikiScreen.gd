@@ -83,15 +83,13 @@ func _build_shell() -> void:
 	layer = 4                                   # modal, above the HUD (layer 1)
 	visible = false
 
-	# Opaque VIEW background (not a dim modal scrim). B2 promotes this menu sub-page to a
-	# full-brightness VIEW: it paints the warm app-frame parchment over the board (no longer
-	# dimmed behind), reserving UiKit.TOPBAR_RESERVE at the TOP so the persistent layer-1 HUD
-	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
-	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
-	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Opaque VIEW background (not a dim modal scrim). review-3 promotes this from a ☰-menu
+	# SECONDARY sub-page to the 🔨 Craft PRIMARY nav VIEW (B1 family): it paints the warm
+	# app-frame parchment over the board (no longer dimmed behind), reserving UiKit.TOPBAR_RESERVE
+	# at the TOP so the persistent layer-1 HUD top bar shows ABOVE the view, and stopping
+	# UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a LOWER CanvasLayer) shows
+	# through + stays tappable; MOUSE_FILTER_STOP eats clicks in the band it covers.
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -114,8 +112,8 @@ func _build_shell() -> void:
 	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
 	panel.offset_bottom = -UiKit.NAV_RESERVE
 	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
-	# shadow, so it reads as a full-brightness page under the persistent top bar. This menu
-	# sub-page KEEPS its visible "✖ Close" (the legitimate back-to-board affordance).
+	# shadow, so it reads as a full-brightness page under the persistent top bar. As a B1
+	# PRIMARY view it has NO visible card "✖ Close" — it's left via the bottom nav / ESC-back.
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
 	style.set_content_margin_all(20)
@@ -133,14 +131,17 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "📜 Recipes" heading + right-aligned "✖ Close" button.
+	# Title row: "🔨 Craft" heading spanning the row. As a primary nav VIEW (like Town /
+	# Inventory) there is NO visible card "✖ Close" — the view is left via the bottom nav or
+	# ESC-back. A non-rendered close Button is still created + wired below so ESC/back, the
+	# "board" deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
 
 	var title := Label.new()
-	title.text = "📜 Recipes"
-	title.add_theme_font_size_override("font_size", 30)
+	title.text = "🔨 Craft"
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -148,12 +149,11 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
+	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
+	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
 	var close_btn := Button.new()
-	close_btn.text = "✖ Close"
-	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
-	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
 
 	# Station tab row: one segmented tab per real station (Bakery / Kitchen), with the
@@ -166,14 +166,14 @@ func _build_shell() -> void:
 	for station_id in _stations():
 		var btn := Button.new()
 		btn.text = BuildingConfig.building_name(station_id)
-		btn.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(btn, Typography.Role.SUBHEAD)
 		btn.connect("pressed", Callable(self, "_on_station_tab").bind(station_id))
 		tab_row.add_child(btn)
 		_station_buttons[station_id] = btn
 
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -268,8 +268,10 @@ func _on_select_recipe(id: String) -> void:
 
 # ── recipe list row (selectable, with icons) ────────────────────────────────────
 
-## One selectable recipe row: the recipe name (Cinzel) over an icon formula
-## ([flour]×3 [eggs]×1 → [bread]×1). The selected row reads with an ember border.
+## One selectable recipe row: the produced item's icon as the HERO on the left, then the
+## recipe name (Cinzel) with a one-line status under it, and the output qty on the right.
+## The input formula lives ONLY on the selected-recipe detail card (have/need chips) — the
+## rows stay compact and don't duplicate it. The selected row reads with an ember border.
 func _make_recipe_row(id: String) -> PanelContainer:
 	var selected: bool = (id == _selected_recipe)
 	var row := PanelContainer.new()
@@ -288,15 +290,42 @@ func _make_recipe_row(id: String) -> PanelContainer:
 			_on_select_recipe(id)
 	)
 
+	var hbox := HBoxContainer.new()
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 12)
+	row.add_child(hbox)
+
+	# HERO — the produced item's icon, left of the card. Outputs with no exported art
+	# (e.g. honey_roll) fall back to their catalog glyph in the same 44px footprint so
+	# every row's name column lines up.
+	var output: String = RecipeConfig.recipe_output(id)
+	var hero := UiKit.make_icon(output, 44)
+	if hero != null:
+		hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(hero)
+	else:
+		var glyph := Label.new()
+		var g: String = ResourceConfig.glyph(output)
+		glyph.text = g if g != "" else "🍲"
+		UiKit.set_font_size(glyph, Typography.Role.DISPLAY)
+		glyph.add_theme_color_override("font_color", COL_BODY)
+		glyph.custom_minimum_size = Vector2(44, 44)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(glyph)
+
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 5)
-	row.add_child(col)
+	col.add_theme_constant_override("separation", 2)
+	hbox.add_child(col)
 
 	var name_lbl := Label.new()
 	name_lbl.text = RecipeConfig.recipe_name(id)
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -304,39 +333,17 @@ func _make_recipe_row(id: String) -> PanelContainer:
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_lbl)
 
-	# Icon formula: input icons + ×n, an arrow, then the output icon + ×qty.
-	var formula := HBoxContainer.new()
-	formula.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	formula.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	formula.add_theme_constant_override("separation", 4)
-	col.add_child(formula)
-
-	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
-	var first := true
-	for key in inputs.keys():
-		if not first:
-			formula.add_child(_plain("+", 16, COL_MUTED))
-		first = false
-		_add_icon_qty(formula, String(key), int(inputs[key]), COL_BODY)
-	formula.add_child(_plain("→", 18, COL_MUTED))
-	_add_icon_qty(formula, RecipeConfig.recipe_output(id), RecipeConfig.recipe_qty(id), COL_VALUE)
-
-	# Status subtitle on the row (React parity: each recipe card shows Ready / Missing inputs).
+	# Status subtitle (React parity: Ready / Missing inputs / Station not built).
 	var st: Dictionary = _craft_status(id)
 	if String(st["text"]) != "":
-		col.add_child(_plain(String(st["text"]), 13, st["color"]))
+		col.add_child(_plain(String(st["text"]), Typography.size(Typography.Role.BODY), st["color"]))
+
+	# Output qty, right-aligned (only said once — the detail card spells out the inputs).
+	var qty: int = RecipeConfig.recipe_qty(id)
+	if qty > 1:
+		hbox.add_child(_plain("×%d" % qty, Typography.size(Typography.Role.SUBHEAD), COL_VALUE))
 
 	return row
-
-## Append an icon (if art exists) + a "×n" label to `box`. Falls back to the resource
-## name when there's no icon so the formula always reads.
-func _add_icon_qty(box: HBoxContainer, key: String, n: int, qty_col: Color) -> void:
-	var icon := UiKit.make_icon(key, 24)
-	if icon != null:
-		box.add_child(icon)
-	else:
-		box.add_child(_plain(UiKit.pretty_name(key), 15, COL_BODY))
-	box.add_child(_plain("×%d" % n, 16, qty_col))
 
 func _plain(text: String, size: int, col: Color) -> Label:
 	var lbl := Label.new()
@@ -362,6 +369,9 @@ func _make_detail_card(id: String) -> PanelContainer:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 8)
 	card.add_child(col)
+	# Selection flow: the detail card fades in on every rebuild (selecting a recipe,
+	# switching station, crafting) — UiFx no-ops headless / under Reduce Motion.
+	UiFx.content_fade(col)
 
 	# Output header: big icon + "Bread ×1" + the station line.
 	var head := HBoxContainer.new()
@@ -373,6 +383,18 @@ func _make_detail_card(id: String) -> PanelContainer:
 	if out_icon != null:
 		out_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		head.add_child(out_icon)
+	else:
+		# Same glyph fallback as the list rows — art-less outputs still get a hero.
+		var head_glyph := Label.new()
+		var hg: String = ResourceConfig.glyph(RecipeConfig.recipe_output(id))
+		head_glyph.text = hg if hg != "" else "🍲"
+		UiKit.set_font_size(head_glyph, Typography.Role.TITLE)
+		head_glyph.add_theme_color_override("font_color", COL_BODY)
+		head_glyph.custom_minimum_size = Vector2(40, 40)
+		head_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		head_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		head.add_child(head_glyph)
 
 	var head_col := VBoxContainer.new()
 	head_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -381,7 +403,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 
 	var out_name := Label.new()
 	out_name.text = "%s ×%d" % [RecipeConfig.recipe_name(id), RecipeConfig.recipe_qty(id)]
-	out_name.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(out_name, Typography.Role.SUBHEAD)
 	out_name.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -391,7 +413,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var station_id: String = RecipeConfig.recipe_station(id)
 	var station_lbl := Label.new()
 	station_lbl.text = "at %s" % BuildingConfig.building_name(station_id)
-	station_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(station_lbl, Typography.Role.BODY)
 	station_lbl.add_theme_color_override("font_color", COL_MUTED)
 	head_col.add_child(station_lbl)
 
@@ -400,7 +422,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var status: Dictionary = _craft_status(id)
 	var status_lbl := Label.new()
 	status_lbl.text = String(status["text"])
-	status_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(status_lbl, Typography.Role.LABEL)
 	status_lbl.add_theme_color_override("font_color", status["color"])
 	status_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head_col.add_child(status_lbl)
@@ -411,7 +433,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	if desc_text != "":
 		var desc_lbl := Label.new()
 		desc_lbl.text = desc_text
-		desc_lbl.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(desc_lbl, Typography.Role.BODY)
 		desc_lbl.add_theme_color_override("font_color", COL_BODY)
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -433,7 +455,7 @@ func _make_detail_card(id: String) -> PanelContainer:
 	var craft_btn := Button.new()
 	craft_btn.text = "Craft"
 	craft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, 18)
+	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	craft_btn.disabled = not craftable
 	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
 	col.add_child(craft_btn)
@@ -452,6 +474,11 @@ func _craft_status(id: String) -> Dictionary:
 	var station_id: String = RecipeConfig.recipe_station(id)
 	if not game.has_building(station_id):
 		return {"text": "Station not built", "color": COL_MUTED}
+	# T15: a built station whose recipe is still tier-locked reads "Requires <Tier>"
+	# (the craft is gated on settlement tier, not inputs). Tier-1 recipes never trip this.
+	var min_tier: int = RecipeConfig.recipe_min_settlement_tier(id)
+	if game.settlement.tier < min_tier:
+		return {"text": "Requires %s" % TownConfig.tier_name(min_tier), "color": COL_MUTED}
 	if game.can_craft(id):
 		return {"text": "Ready to craft", "color": Palette.MOSS}
 	return {"text": "Missing inputs", "color": COL_SHORT}
@@ -487,11 +514,11 @@ func _input_chip(key: String, need: int) -> PanelContainer:
 		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(icon)
 	else:
-		row.add_child(_plain(UiKit.pretty_name(key), 13, COL_BODY))
+		row.add_child(_plain(UiKit.pretty_name(key), Typography.size(Typography.Role.BODY), COL_BODY))
 
 	var count := Label.new()
 	count.text = "%d/%d" % [have, need]
-	count.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(count, Typography.Role.LABEL)
 	count.add_theme_color_override("font_color", Palette.MOSS if covered else COL_SHORT)
 	count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	count.mouse_filter = Control.MOUSE_FILTER_IGNORE

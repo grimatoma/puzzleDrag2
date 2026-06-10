@@ -170,28 +170,34 @@ func _test_close_season() -> void:
 	var b_after: float = g2.npc_bond("wren")
 	_check(abs(b_after - 5.0) < 0.0001, "close_season floors 5.05 bond to exactly 5.0 (not 4.95)")
 
-# ── selection bias: chosen category gets SPAWNER_BOOST_SLOTS more slots ──────────
+# ── selection no longer biases the pool (T6 — faithful to React) ─────────────────
 
+## T6: the React home categories are LOCKED ON; the player picks a VARIANT per category,
+## not an on/off category set. The old farm_run_selected SOFT-BOOST (the documented
+## divergence) was REMOVED — the per-category variant choices (tile_active_by_category) are
+## the run config now. farm_run_selected stays a vestigial field: still sanitised + round-
+## tripped, but it no longer perturbs the active_tile_pool. This test asserts BOTH: the
+## selection no longer changes the pool, and the sanitiser/round-trip still behaves.
 func _test_selection_bias_boost() -> void:
 	# Unbiased run: baseline count of the trees tile (OAK) in the Spring pool.
 	var base_g := GameState.new()
 	base_g.coins = 50
 	_check(bool(base_g.start_farm_run([], false).get("ok", false)), "(setup) unbiased run started")
 	var base_oak := _count(base_g.active_tile_pool(), T.OAK)
-	# Biased run: select "trees" → its tile (OAK) gets SPAWNER_BOOST_SLOTS more slots.
+	# Selecting "trees" must NOT change the pool anymore (T6 — no soft boost).
 	var bias_g := GameState.new()
 	bias_g.coins = 50
-	_check(bool(bias_g.start_farm_run(["trees"], false).get("ok", false)), "(setup) biased run started")
-	_check(bias_g.farm_run_selected == ["trees"], "selection sanitised to ['trees']")
-	var biased_oak := _count(bias_g.active_tile_pool(), T.OAK)
-	_check(biased_oak == base_oak + GameState.SPAWNER_BOOST_SLOTS,
-		"selecting 'trees' boosts OAK by SPAWNER_BOOST_SLOTS (%d)" % GameState.SPAWNER_BOOST_SLOTS)
-	# The boost never smuggles an ineligible tile, and an ineligible selection is dropped.
+	_check(bool(bias_g.start_farm_run(["trees"], false).get("ok", false)), "(setup) 'trees' run started")
+	_check(bias_g.farm_run_selected == ["trees"], "selection still sanitised to ['trees'] (vestigial field)")
+	var selected_oak := _count(bias_g.active_tile_pool(), T.OAK)
+	_check(selected_oak == base_oak,
+		"T6: selecting 'trees' does NOT boost OAK (no soft category boost; %d == %d)" % [selected_oak, base_oak])
+	# The sanitiser still drops ineligible categories, and the pool never carries an off-zone tile.
 	var off_g := GameState.new()
 	off_g.coins = 50
 	_check(bool(off_g.start_farm_run(["mount", "trees"], false).get("ok", false)), "(setup) mixed selection")
 	_check(off_g.farm_run_selected == ["trees"], "ineligible 'mount' dropped from the selection")
-	_check(_count(off_g.active_tile_pool(), T.HORSE) == 0, "selection never smuggles HORSE onto the farm")
+	_check(_count(off_g.active_tile_pool(), T.HORSE) == 0, "pool never carries HORSE onto the farm")
 
 # ── save round-trip: the six new fields survive ─────────────────────────────────
 

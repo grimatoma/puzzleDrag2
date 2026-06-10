@@ -32,6 +32,10 @@ signal state_changed   ## emitted after any action mutates `game`
 ## (this screen has no board ref). Main connects it, spends the charge, and clears
 ## the board (the single accounting point for a shoo-move).
 signal rats_shoo_requested
+## T24 — the "Challenge <Boss>" button emits this instead of starting the fight itself (this
+## screen has no board ref). Main connects it, calls _enter_boss_fight (which arms the boss +
+## the board modifier overlay + the boosted refill pool + the chain bar), and refreshes.
+signal boss_challenge_requested
 
 ## Keyed by a string action id → the Button node, rebuilt each refresh() so
 ## headless tests can locate + press a specific button. Keys:
@@ -52,7 +56,9 @@ var _orders_body: VBoxContainer
 var _expedition_body: VBoxContainer   ## M3f — enter/leave the mine
 var _boss_body: VBoxContainer         ## M3g — challenge the capstone boss
 var _rats_body: VBoxContainer         ## M3h — Town-3 rats hazard (build/shoo)
-var _workers_body: VBoxContainer      ## workers — hire/fire by type
+# T20: the Workers (hire-by-type) section MOVED to the Townsfolk screen's Workers tab
+# (NPCs vs hired Workers are distinct concepts on distinct tabs). TownScreen no longer
+# renders a Workers section, so there is no double-hire UI.
 var _built: bool = false
 
 # ── parchment palette (M4c — matches Main's HUD / Palette.gd journal tokens) ───
@@ -107,9 +113,7 @@ func _build_shell() -> void:
 	# view, and stops UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a
 	# LOWER CanvasLayer) shows through and stays tappable; MOUSE_FILTER_STOP eats clicks in
 	# the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -164,7 +168,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🏠 Town"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	# M4c: the Cinzel display serif (parity with Main's headings). Defensive — falls
 	# back to the default font when the asset isn't imported/present.
@@ -190,7 +194,7 @@ func _build_shell() -> void:
 	_expedition_body = _add_section("Expedition")
 	_boss_body = _add_section("Boss")
 	_rats_body = _add_section("Rats")
-	_workers_body = _add_section("Workers")
+	# T20: no Workers section here — hiring lives on the Townsfolk screen's Workers tab.
 
 ## Append a section to the root VBox: a thin "ledger rule" divider, a header Label,
 ## then an (initially empty) body VBox that refresh() repopulates. Returns the body
@@ -206,7 +210,7 @@ func _add_section(header_text: String) -> VBoxContainer:
 
 	var header := Label.new()
 	header.text = header_text
-	header.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(header, Typography.Role.HEADING)
 	header.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -249,7 +253,6 @@ func refresh() -> void:
 	_clear(_expedition_body)
 	_clear(_boss_body)
 	_clear(_rats_body)
-	_clear(_workers_body)
 
 	_build_settlement_section()
 	_build_buildings_section()
@@ -259,7 +262,6 @@ func refresh() -> void:
 	_build_expedition_section()
 	_build_boss_section()
 	_build_rats_section()
-	_build_workers_section()
 
 ## Detach every child of `container` from the tree NOW (so the rebuilt rows render
 ## correctly and the dict is the only live reference), then queue_free it. The
@@ -331,7 +333,7 @@ func _build_buildings_section() -> void:
 			row.add_child(build_btn)
 			_action_buttons["build:" + id] = build_btn
 
-		_buildings_body.add_child(row)
+		_buildings_body.add_child(_chip(row))
 
 func _build_refine_section() -> void:
 	for id in RecipeConfig.RECIPE_IDS:
@@ -359,9 +361,38 @@ func _build_refine_section() -> void:
 		row.add_child(craft_btn)
 		_action_buttons["craft:" + id] = craft_btn
 
-		_refine_body.add_child(row)
+		_refine_body.add_child(_chip(row))
 
 func _build_market_section() -> void:
+	# T16: Event banner — show when a seasonal market event is active.
+	var ev: Dictionary = game.market_event
+	if not ev.is_empty():
+		var ev_label: String = String(ev.get("label", ""))
+		var ev_desc: String = String(ev.get("desc", ""))
+		var banner := PanelContainer.new()
+		banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var banner_style := StyleBoxFlat.new()
+		banner_style.bg_color = Color(0.95, 0.88, 0.50, 0.90)   # warm amber
+		banner_style.set_corner_radius_all(8)
+		banner_style.set_content_margin_all(10)
+		banner.add_theme_stylebox_override("panel", banner_style)
+		var banner_vbox := VBoxContainer.new()
+		var ev_title := _make_label("⚡ %s" % ev_label, COL_HEADER)
+		UiKit.set_font_size(ev_title, Typography.Role.LABEL)
+		ev_title.add_theme_color_override("font_color", Palette.EMBER)
+		banner_vbox.add_child(ev_title)
+		if ev_desc != "":
+			var ev_body := _make_label(ev_desc, COL_BODY)
+			ev_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+			banner_vbox.add_child(ev_body)
+		banner.add_child(banner_vbox)
+		_market_body.add_child(banner)
+
+	# review-17 — a clear "Sell" sub-header so the sell rows read as their own group and the
+	# Buy group below it is obviously a separate, reachable section (the buy rows used to sit
+	# under a faint "— Buy —" line that was easy to miss below the sell fold).
+	_market_body.add_child(_make_subheader("⤴ Sell"))
+
 	var any_sell := false
 	for res in MarketConfig.sellable_resources():
 		var owned: int = game.qty(res)
@@ -374,8 +405,10 @@ func _build_market_section() -> void:
 		var sell_icon := UiKit.make_icon(res, 30.0)
 		if sell_icon != null:
 			row.add_child(sell_icon)
+		# T16: show the LIVE drifted sell price (falls back to base with no drift).
+		var live_sell: int = game.live_sell_price(res)
 		var label := _make_label("%s ×%d  (sell %d🪙)" % [
-			UiKit.pretty_name(res), owned, MarketConfig.sell_price(res)], COL_BODY)
+			UiKit.pretty_name(res), owned, live_sell], COL_BODY)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)
 
@@ -387,19 +420,20 @@ func _build_market_section() -> void:
 		row.add_child(sell_btn)
 		_action_buttons["sell:" + res] = sell_btn
 
-		_market_body.add_child(row)
+		_market_body.add_child(_chip(row))
 
 	if not any_sell:
 		_market_body.add_child(_make_label("nothing to sell yet", COL_MUTED))
 
 	# ── Buy rows ─────────────────────────────────────────────────────────────
-	# A "Buy" subheading visually separates the sell rows from the buy rows.
-	var buy_header := _make_label("— Buy —", COL_MUTED)
-	buy_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_market_body.add_child(buy_header)
+	# review-17 — a prominent ember "Buy" sub-header (matching the "Sell" one above) makes the
+	# buy section obviously reachable, instead of the old faint centred "— Buy —" line that was
+	# easy to miss below the sell fold.
+	_market_body.add_child(_make_subheader("⤵ Buy"))
 
 	for res in MarketConfig.buyable_resources():
-		var price: int = MarketConfig.buy_price(res)
+		# T16: show the LIVE drifted buy price (falls back to base with no drift).
+		var price: int = game.live_buy_price(res)
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 10)
@@ -419,7 +453,7 @@ func _build_market_section() -> void:
 		row.add_child(buy_btn)
 		_action_buttons["buy:" + res] = buy_btn
 
-		_market_body.add_child(row)
+		_market_body.add_child(_chip(row))
 
 func _build_orders_section() -> void:
 	if game.orders.is_empty():
@@ -481,7 +515,7 @@ func _build_order_card(i: int) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = npc_name
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -491,7 +525,7 @@ func _build_order_card(i: int) -> PanelContainer:
 	if not npc_role.is_empty():
 		var role_lbl := Label.new()
 		role_lbl.text = npc_role
-		role_lbl.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(role_lbl, Typography.Role.LABEL)
 		role_lbl.add_theme_color_override("font_color", COL_MUTED)
 		name_col.add_child(role_lbl)
 
@@ -548,7 +582,7 @@ func _build_order_card(i: int) -> PanelContainer:
 
 	var hn_lbl := Label.new()
 	hn_lbl.text = "%d/%d" % [have, qty]
-	hn_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(hn_lbl, Typography.Role.LABEL)
 	hn_lbl.add_theme_color_override("font_color", COL_MUTED)
 	hn_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
 	hn_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -582,7 +616,7 @@ func _make_avatar(bg: Color, initial: String) -> PanelContainer:
 	av.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = initial
-	lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(lbl, Typography.Role.HEADING)
 	# Light/dark text picked for legibility on the avatar tint (parity with how
 	# UiKit's filled buttons pick contrasting label colors).
 	var lum: float = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b
@@ -645,8 +679,12 @@ func _build_expedition_section() -> void:
 	# behind town2_complete (the Frostmaw capstone) — matching how rats/Town-3 unlock. The
 	# button is disabled unless can_enter_harbor() AND town2_complete; the label shows the
 	# supplies cost (turns) and a hint when Town 2 isn't done yet.
+	# BUG FIX (Batch 9 A2): the gate copy hardcoded "Frostmaw", but the harbor is gated on
+	# town2_complete — which is set by defeating the CAPSTONE boss (the Town-2 close), not
+	# Frostmaw. Name the capstone via BossConfig (consistent with the "Town 2 complete — <X>
+	# defeated" line below that already uses BossConfig.boss_name(BossConfig.CAPSTONE)).
 	var harbor_gate_text: String = "Town 2 done" if game.town2_complete \
-		else "defeat Frostmaw to unlock"
+		else "defeat %s to unlock" % BossConfig.boss_name(BossConfig.CAPSTONE)
 	_expedition_body.add_child(_make_label(
 		"Harbor — Supplies: %d · %s" % [supplies, harbor_gate_text], COL_BODY))
 	var enter_h_btn := Button.new()
@@ -658,28 +696,35 @@ func _build_expedition_section() -> void:
 	_action_buttons["enter_harbor"] = enter_h_btn
 
 func _build_boss_section() -> void:
-	# M3g — the capstone boss (Frostmaw), the Town-2 close. You don't fight from a
-	# button here: an active boss raises the BOARD's chain bar, so you damage it by
-	# chaining on the board. While fighting we show its HP + a hint to go chain; once
-	# Town 2 is done we show the win mark; otherwise a challenge row gated by
-	# can_challenge_boss() (City tier + mine mastery).
+	# T24 — the seasonal boss (the Town-2 close + the rotation). You don't fight from a button
+	# here: an active boss applies a board MODIFIER + asks for a resource target within a turn
+	# window, so you progress it by chaining on the board. While fighting we show the target /
+	# progress / turns + the modifier + a hint to go chain; once Town 2 is done (the CAPSTONE
+	# beaten) we show the win mark; otherwise a challenge row for the CURRENT season's boss, gated
+	# by can_challenge_boss() (City tier + mine mastery + a season boss available).
 	if game.is_boss_active():
 		_boss_body.add_child(_make_label(
-			"⚔ Fighting %s — HP %d" % [
-				BossConfig.boss_name(game.boss_active), game.boss_hp], COL_BODY))
-		_boss_body.add_child(_make_label(
-			"Close this menu and chain 4+ tiles to damage it.", COL_MUTED))
+			"⚔ %s — %d/%d %s · %d turns left" % [
+				BossConfig.boss_name(game.boss_active), game.boss_progress, game.boss_target_amount,
+				UiKit.pretty_name(game.boss_target_resource), game.boss_turns_remaining], COL_BODY))
+		_boss_body.add_child(_make_label(BossConfig.modifier_desc(game.boss_active), COL_MUTED))
+		_boss_body.add_child(_make_label("Close this menu and chain on the board to make progress.", COL_MUTED))
 		return
 
 	if game.town2_complete:
 		_boss_body.add_child(_make_label(
-			"✔ Town 2 complete — Frostmaw defeated.", COL_BODY))
-		return
+			"✔ Town 2 complete — %s defeated." % BossConfig.boss_name(BossConfig.CAPSTONE), COL_BODY))
+		# The five non-capstone bosses stay challengeable per season even after Town 2.
 
+	var pending: String = game.pending_boss_id()
+	if pending == "":
+		if not game.town2_complete:
+			_boss_body.add_child(_make_label("No boss stirs this season.", COL_MUTED))
+		return
 	_boss_body.add_child(_make_label(
-		"Capstone: %s" % BossConfig.boss_desc(BossConfig.FROSTMAW), COL_BODY))
+		"This season: %s — %s" % [BossConfig.boss_name(pending), BossConfig.boss_desc(pending)], COL_BODY))
 	var challenge_btn := Button.new()
-	challenge_btn.text = "⚔ Challenge Frostmaw"
+	challenge_btn.text = "⚔ Challenge %s" % BossConfig.boss_name(pending)
 	challenge_btn.disabled = not game.can_challenge_boss()
 	UiKit.style_action_button(challenge_btn, Palette.EMBER, 6, 0)
 	challenge_btn.connect("pressed", Callable(self, "_do_challenge_boss"))
@@ -699,7 +744,7 @@ func _build_rats_section() -> void:
 	if game.has_ratcatcher():
 		_rats_body.add_child(_make_label(
 			"Shoo charges: %d/%d" % [
-				game.ratcatcher_charges_left(), GameState.RATCATCHER_CHARGES], COL_MUTED))
+				game.ratcatcher_charges_left(), BuildingConfig.RATCATCHER_CHARGES], COL_MUTED))
 
 	for id in [BuildingConfig.RATCATCHER, BuildingConfig.MASTER_RATCATCHER]:
 		var row := HBoxContainer.new()
@@ -741,66 +786,10 @@ func _build_rats_section() -> void:
 		_rats_body.add_child(shoo_btn)
 		_action_buttons["shoo_rats"] = shoo_btn
 
-func _build_workers_section() -> void:
-	# Workers — hire-by-type units whose passive effects shave tiles off a chain
-	# (threshold_reduce_category) or stretch a recipe (recipe_input_reduce). One row
-	# per WorkerConfig type: name/role + "×count/max" + an effect summary + the ramped
-	# next-hire cost, a Hire button (disabled unless can_hire_worker), and a Fire button
-	# (only when at least one is hired). Wired to game.hire_worker / fire_worker via
-	# _after, exactly like the build/market rows.
-	for id in WorkerConfig.all_ids():
-		var count: int = game.worker_count(id)
-		var maxc: int = WorkerConfig.max_count(id)
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 10)
-
-		var cost: Dictionary = WorkerConfig.hire_cost_at(id, count)
-		var cost_text: String = _format_worker_cost(cost)
-		var label := _make_label("%s ×%d/%d — %s  (%s)" % [
-			WorkerConfig.worker_name(id), count, maxc,
-			_worker_effect_summary(id), cost_text], COL_BODY)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-
-		# Fire button only when at least one of this type is hired.
-		if count > 0:
-			var fire_btn := Button.new()
-			fire_btn.text = "Fire"
-			fire_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-			UiKit.style_button(fire_btn, COL_DANGER, 6, 0, true)
-			fire_btn.connect("pressed", Callable(self, "_do_fire").bind(id))
-			row.add_child(fire_btn)
-			_action_buttons["fire:" + id] = fire_btn
-
-		var hire_btn := Button.new()
-		hire_btn.text = "Hire"
-		hire_btn.disabled = not game.can_hire_worker(id)
-		hire_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-		UiKit.style_action_button(hire_btn, Palette.MOSS, 6, 0)
-		hire_btn.connect("pressed", Callable(self, "_do_hire").bind(id))
-		row.add_child(hire_btn)
-		_action_buttons["hire:" + id] = hire_btn
-
-		_workers_body.add_child(row)
-
-## A short player-facing description of `id`'s passive effect.
-func _worker_effect_summary(id: String) -> String:
-	var kind: String = WorkerConfig.ability_kind(id)
-	var amount: int = WorkerConfig.ability_amount(id)
-	if kind == WorkerConfig.KIND_THRESHOLD_REDUCE_CATEGORY:
-		return "-%d %s chain" % [amount, WorkerConfig.ability_category(id)]
-	if kind == WorkerConfig.KIND_RECIPE_INPUT_REDUCE:
-		return "-%d %s in %s" % [amount, WorkerConfig.ability_input(id), WorkerConfig.ability_recipe(id)]
-	return ""
-
-## Format a worker hire cost {coins, resources} like "50c, hay_bundle 2".
-func _format_worker_cost(cost: Dictionary) -> String:
-	var parts: Array = ["%dc" % int(cost.get("coins", 0))]
-	var res: Dictionary = cost.get("resources", {})
-	for k in res.keys():
-		parts.append("%s %d" % [k, int(res[k])])
-	return ", ".join(parts)
+# T20: the Workers (hire-by-type) section + its helpers (_worker_effect_summary,
+# _format_worker_cost) and the _do_hire / _do_fire handlers have MOVED to
+# scenes/TownsfolkScreen.gd (the Workers tab). Hiring is reached via the Townsfolk
+# screen now; TownScreen renders no Workers section, so there is no double-hire UI.
 
 # ── action handlers ───────────────────────────────────────────────────────────
 # Each calls the GameState method, emits `state_changed` only when the result is
@@ -853,18 +842,15 @@ func _do_leave_harbor() -> void:
 	refresh()
 
 func _do_challenge_boss() -> void:
-	# start_boss() returns the standard {ok, reason|...} dict, so _after handles it.
-	# Main's _on_town_changed reacts to state_changed by raising the board's chain bar.
-	_after(game.start_boss())
+	# T24 — this screen has no board ref + the boss fight needs the board wired (modifier overlay,
+	# boosted pool, raised chain bar). So gate on availability, then emit `boss_challenge_requested`;
+	# Main owns the board and runs _enter_boss_fight (which calls start_boss + wires the board), then
+	# calls back refresh() so the boss section re-renders.
+	if not game.can_challenge_boss():
+		return
+	emit_signal("boss_challenge_requested")
 
-func _do_hire(id: String) -> void:
-	# hire_worker() returns the standard {ok, reason|...} dict, so _after handles it
-	# (emits state_changed on success, always refreshes so disabled states re-evaluate).
-	_after(game.hire_worker(id))
-
-func _do_fire(id: String) -> void:
-	# fire_worker() returns the standard {ok, reason|...} dict, so _after handles it.
-	_after(game.fire_worker(id))
+# T20: _do_hire / _do_fire moved to scenes/TownsfolkScreen.gd (the Workers tab).
 
 func _do_shoo_rats() -> void:
 	# M3h — this screen has no board ref and must NOT spend the charge (Main owns the
@@ -886,11 +872,34 @@ func _after(result: Dictionary) -> void:
 # TownScreen calls UiKit.style_button(..., 6, 0, true) to preserve the
 # disabled-state override that TownScreen originally carried.
 
+## A bold ember sub-header (review-17): used inside a section to separate sub-groups (e.g.
+## the Market's Sell / Buy halves) so each is obviously its own reachable block. Smaller than
+## a top-level section header, in the Cinzel display face when available.
+## Wrap an action row in the shared ledger row chip (UiKit.row_box) so the Town
+## ledger's Buildings / Refine / Market rows read as carded entries — the same row
+## treatment the Inventory ledger uses — instead of bare text lines.
+func _chip(row: Control) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	chip.add_child(row)
+	return chip
+
+func _make_subheader(text: String) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
+	lbl.add_theme_color_override("font_color", COL_HEADER)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		lbl.add_theme_font_override("font", hf)
+	return lbl
+
 ## A wrapping body Label in the given color.
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return lbl
@@ -902,5 +911,6 @@ func _format_cost(cost: Dictionary) -> String:
 		return "free"
 	var parts: Array = []
 	for k in cost.keys():
-		parts.append("%s %d" % [k, int(cost[k])])
+		# Display label, not the raw catalog key ("hay_bundle" -> "Hay Bundle") — review-4.
+		parts.append("%s %d" % [UiKit.pretty_name(String(k)), int(cost[k])])
 	return ", ".join(parts)

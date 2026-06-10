@@ -43,6 +43,7 @@ export interface ChainUpdatePayload {
   count: number;
   upgrades: number;
   valid: boolean;
+  minChain: number;
   nextTileProgress: { current: number; threshold: number; targetLabel: string; targetKey: string } | null;
   resourceKey: string | null;
   resourceLabel: string | null;
@@ -81,6 +82,7 @@ export function buildChainUpdatePayload(args: ChainUpdateArgs): ChainUpdatePaylo
     count: n,
     upgrades: k,
     valid,
+    minChain: effectiveMinChain,
     nextTileProgress,
     resourceKey:   producedKey ?? res?.key ?? null,
     resourceLabel: producedDef?.label ?? res?.label ?? null,

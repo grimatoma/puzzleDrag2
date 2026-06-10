@@ -1,0 +1,31 @@
+{
+  "_superseded": true,
+  "_note": "The per-set sets/<set>/manifest.json model is GONE. The pipeline is now THREE files side-by-side in godot/assets/tiles/v2/: pipeline.json (spec + state), pipeline.history.json (the candidate/attempt-log sidecar, keyed itemId -> keyframeId -> candidate[]), and pipeline.schema.json (the formal JSON Schema both data files are validated against). There is no blank per-set manifest to copy. To author a new family, append an items[] entry to pipeline.json.",
+  "_keyframeShape": "A NEW keyframe (master or child) in pipeline.json carries ONLY: { id, prompt, selected: null, selectedPath: null }. NO candidates field — candidate records live in pipeline.history.json, which starts as {} and fills in as seeds generate. See assets/manifest.history.template.json.",
+  "_pipelineExample": {
+    "settings": {
+      "styleSpec": "_style-spec.json",
+      "canvas": { "width": 32, "height": 32, "safeArea": 2 },
+      "fps": 10,
+      "candidates": 4,
+      "humanApproval": true,
+      "autonomous": false
+    },
+    "items": [
+      {
+        "id": "<family_id>",
+        "basePrompt": "<shared subject / framing / shadow>",
+        "priors": ["../<shipped_sibling>.png"],
+        "master": { "id": "<tile_family_variant>", "prompt": "<what makes the base distinct>", "selected": null, "selectedPath": null },
+        "children": [
+          { "id": "<tile_family_variant2>", "prompt": "<distinct prompt>", "selected": null, "selectedPath": null }
+        ],
+        "animations": [
+          { "kind": "idle", "for": "<tile_family_variant>", "frames": 8, "motion": "<physical idle brief>", "status": "pending" },
+          { "kind": "transition", "from": "<tile_family_variant>", "to": "<tile_family_variant2>", "frames": 20, "physics": "<what moves/falls/accumulates, in order>", "status": "pending" }
+        ]
+      }
+    ]
+  },
+  "_see": "references/manifest-schema.md (the three-file shape + every field) and references/intake.md (how intake writes the items[] entry)."
+}

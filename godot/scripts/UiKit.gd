@@ -72,9 +72,14 @@ static func heading_font() -> Font:
 			var fv := FontVariation.new()
 			fv.base_font = base
 			fv.variation_opentype = {"wght": 700}   # bold weight on the variable axis
+			var fb: Array = []
 			var emoji := emoji_font()
 			if emoji != null:
-				fv.fallbacks = [emoji]
+				fb.append(emoji)
+			var symbols := symbols_font()
+			if symbols != null:
+				fb.append(symbols)
+			fv.fallbacks = fb
 			_heading_font_cache = fv
 	return _heading_font_cache
 
@@ -99,6 +104,30 @@ static func emoji_font() -> Font:
 		if f is FontFile:
 			_emoji_font_cache = f
 	return _emoji_font_cache
+
+# ── symbols fallback font ──────────────────────────────────────────────────────
+
+## Cached DejaVu Sans symbol SUBSET (godot/assets/fonts/DejaVuSymbols-subset.ttf,
+## Bitstream Vera license — see the .LICENSE file beside it), or null if absent.
+## Covers the non-emoji symbol codepoints the UI strings use that NEITHER the engine
+## default font NOR NotoEmoji carries — → (U+2192), ◉ (U+25C9), ✎ (U+270E), ★, ✓,
+## ⬡, ⟳, ⊞, ∈, ∪, ≈, Δ … — which otherwise render as tofu boxes on the Web export
+## (review-4: the chain toast's "→" and the daily-reward "◉" were tofu in QA).
+static var _symbols_font_cache: Font = null
+static var _symbols_font_tried: bool = false
+
+## Load the bundled symbols-subset font. Same pattern as emoji_font(): bundled so it
+## renders identically on desktop AND web, cached on the class, null-safe for callers.
+static func symbols_font() -> Font:
+	if _symbols_font_tried:
+		return _symbols_font_cache
+	_symbols_font_tried = true
+	var path := "res://assets/fonts/DejaVuSymbols-subset.ttf"
+	if ResourceLoader.exists(path):
+		var f = load(path)
+		if f is FontFile:
+			_symbols_font_cache = f
+	return _symbols_font_cache
 
 ## Cached synthetic-italic FontVariation (the default body font sheared right). Godot's
 ## bundled font has no italic face, so story/quote text gets a real slant via the font
@@ -125,6 +154,13 @@ static func italic_font() -> Font:
 	_italic_font_cache = fv
 	return _italic_font_cache
 
+## Set a node's font_size from a Typography role at the current text scale. Works on any
+## Control with a "font_size" theme item (Label / Button / RichTextLabel). The single
+## chokepoint for sizing text — call sites read UiKit.set_font_size(lbl, Typography.Role.BODY).
+static func set_font_size(node: Control, role: int) -> void:
+	if node != null:
+		node.add_theme_font_size_override("font_size", Typography.size(role))
+
 ## Attach the bundled emoji font as a fallback on the ENGINE DEFAULT font so every
 ## Label/Button that uses the inherited default font (the HUD pills, bottom-nav icons,
 ## modal close buttons, status text — all of which carry emoji like 🪙🏠📦🔨🗺👥)
@@ -132,15 +168,18 @@ static func italic_font() -> Font:
 ## Main._ready. Base glyphs are unchanged (same default font), so body text is
 ## pixel-identical — only previously-broken emoji start rendering.
 static func install_emoji_fallback() -> void:
-	var emoji := emoji_font()
-	if emoji == null:
-		return
 	var base: Font = ThemeDB.fallback_font
 	if base == null:
 		return
 	var fb: Array = base.fallbacks
-	if not fb.has(emoji):
-		fb.append(emoji)
+	var changed := false
+	# Emoji first (existing behaviour), then the symbols subset (→ ◉ ✎ ★ ✓ …) so any
+	# codepoint both carry keeps resolving from NotoEmoji exactly as before.
+	for f in [emoji_font(), symbols_font()]:
+		if f != null and not fb.has(f):
+			fb.append(f)
+			changed = true
+	if changed:
 		base.fallbacks = fb
 
 # ── resource icons + names ──────────────────────────────────────────────────────
@@ -182,7 +221,9 @@ static func resource_icon(key: String) -> Texture2D:
 	if _icon_cache.has(key):
 		return _icon_cache[key]
 	var tex: Texture2D = null
-	var path := "res://assets/resources/%s.png" % key
+	# ResourceConfig.icon_basename(key) defaults to the key itself (the asset convention), so
+	# behaviour is identical for every current row; a catalog row may override the PNG basename.
+	var path := "res://assets/resources/%s.png" % ResourceConfig.icon_basename(key)
 	if ResourceLoader.exists(path):
 		var loaded = load(path)
 		if loaded is Texture2D:
@@ -218,15 +259,93 @@ static func make_icon(key: String, px: float = 30.0) -> TextureRect:
 ## TileCollectionScreen._derive_display_name; non-tile resource keys keep the plain path.
 static func pretty_name(key: String) -> String:
 	var s := String(key)
+	# Catalog resources/currencies get their CANONICAL React label ("bread" → "Bread Loaf",
+	# "fish_fillet" → "Fillet") — the single source of truth. Tools/unknowns fall through to the
+	# capitalize() path below; TILE keys use the shared TileCategoryConfig derivation (the ONE
+	# tile-key prefix-strip + title-case implementation, replacing the former inline DROP_PREFIXES).
+	if ResourceConfig.has(s):
+		return ResourceConfig.label(s)
 	if s.begins_with("tile_"):
-		s = s.substr(5)
-		var parts: Array = s.split("_")
-		const DROP_PREFIXES := ["grass", "grain", "bird", "veg", "fruit", "flower",
-			"tree", "herd", "cattle", "mount", "mine", "special", "fish"]
-		if parts.size() >= 2 and DROP_PREFIXES.has(String(parts[0])):
-			parts.remove_at(0)
-		s = " ".join(parts)
+		return TileCategoryConfig.display_name_from_key(s)
 	return s.capitalize()
+
+# ── Backdrops (views + modal scrims) ─────────────────────────────────────────
+
+## Opaque full-bleed VIEW backdrop with depth: the flat FRAME_BG ColorRect every view
+## used, now layered with a subtle vertical wash (lighter at the top, settling darker
+## toward the nav) and a faint corner vignette so the page reads as lit paper instead
+## of a flat colour fill. Returns the base ColorRect (full-rect, MOUSE_FILTER_STOP) —
+## call sites keep adjusting offsets (top-bar / nav reserves) exactly as before; the
+## overlay children fill the base via anchors so every reserve adjustment carries over.
+## The base stays a ColorRect so Main's scrim-tap dismiss + UiFx's scrim detection
+## (both look for "first MOUSE_FILTER_STOP ColorRect child") keep working unchanged.
+static func make_view_backdrop() -> ColorRect:
+	var base := ColorRect.new()
+	base.color = Palette.FRAME_BG
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Vertical wash: a whisper of light at the top fading to a slightly deeper warm at
+	# the bottom (≈4% either way). Drawn as a gradient texture stretched over the base.
+	var wash := TextureRect.new()
+	var wash_grad := Gradient.new()
+	wash_grad.colors = PackedColorArray([
+		Color(1.0, 0.99, 0.94, 0.30),   # warm light at the top
+		Color(1.0, 0.99, 0.94, 0.0),    # neutral by mid-page
+		Color(0.24, 0.18, 0.10, 0.05),  # settle slightly deeper at the bottom
+	])
+	wash_grad.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+	var wash_tex := GradientTexture2D.new()
+	wash_tex.gradient = wash_grad
+	wash_tex.width = 64
+	wash_tex.height = 512
+	wash_tex.fill_from = Vector2(0.5, 0.0)
+	wash_tex.fill_to = Vector2(0.5, 1.0)
+	wash.texture = wash_tex
+	wash.stretch_mode = TextureRect.STRETCH_SCALE
+	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base.add_child(wash)
+	base.add_child(_make_vignette(0.06))
+	return base
+
+## Warm-brown modal SCRIM with focus: the shared Palette.SCRIM dim plus a radial
+## darkening toward the screen edges, so the eye is pulled to the centred card (the
+## standard cinematic "spotlight" scrim). Returns the base ColorRect (full-rect,
+## MOUSE_FILTER_STOP — the tap-outside-to-dismiss surface, same node shape as before).
+static func make_scrim() -> ColorRect:
+	var base := ColorRect.new()
+	base.color = Palette.SCRIM
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_STOP
+	base.add_child(_make_vignette(0.22))
+	return base
+
+## A full-rect, mouse-transparent radial vignette: clear at the centre, easing to
+## black at `edge_alpha` in the corners. Shared by the view backdrop (faint) and the
+## modal scrim (pronounced).
+static func _make_vignette(edge_alpha: float) -> TextureRect:
+	var rect := TextureRect.new()
+	var grad := Gradient.new()
+	grad.colors = PackedColorArray([
+		Color(0, 0, 0, 0.0),
+		Color(0, 0, 0, 0.0),
+		Color(0, 0, 0, edge_alpha),
+	])
+	grad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.width = 512
+	tex.height = 512
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	rect.texture = tex
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
 
 # ── StyleBox builders ─────────────────────────────────────────────────────────
 
@@ -296,6 +415,23 @@ static func bar_box(fill: Color, border: Color) -> StyleBoxFlat:
 	sb.corner_radius_bottom_right = 6
 	return sb
 
+## THE floating modal card surface: parchment fill, 2 px iron border, radius 16, the
+## shared soft drop shadow. Every centred-card modal (Menu, Daily, Story, Tutorial,
+## Harvest, Keeper, Founder, StartFarming, LeaveBoard, Charter dialog, Debug) uses
+## this ONE builder — previously each hand-rolled an identical StyleBoxFlat, drifting
+## only in content margin, which stays a parameter.
+static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fill
+	sb.set_corner_radius_all(16)
+	sb.set_content_margin_all(margin)
+	sb.border_color = Palette.IRON
+	sb.set_border_width_all(2)
+	sb.shadow_size = 12
+	sb.shadow_color = Color(0, 0, 0, 0.28)
+	sb.shadow_offset = Vector2(0, 5)
+	return sb
+
 ## Card StyleBox for the stockpile panel: parchment fill, 2 px iron border,
 ## radius 12, soft drop shadow, comfortable padding.
 static func card_box(fill: Color) -> StyleBoxFlat:
@@ -345,7 +481,7 @@ static func make_pill(text: String, fg: Color, bg := Palette.PARCHMENT) -> Panel
 	box.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", fg)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -384,6 +520,9 @@ static func style_button(
 		btn.add_theme_color_override("font_disabled_color", Color(Palette.INK_MID, 0.5))
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
+	# Tactile press feedback (UiFx, idempotent): every styled button shrinks slightly on
+	# press and springs back on release — the shared motion language for all menus.
+	UiFx.attach_press_feedback(btn)
 
 ## FILLED primary-action button (React parity): the NORMAL state is a SOLID accent fill
 ## (green Craft, gold Sell, ember Enter, …) with contrast-picked text, so an enabled
@@ -404,6 +543,7 @@ static func style_action_button(btn: Button, accent: Color, padding_v: int = 6, 
 	btn.add_theme_color_override("font_disabled_color",  Color(Palette.INK_MID, 0.55))
 	if with_font_size > 0:
 		btn.add_theme_font_size_override("font_size", with_font_size)
+	UiFx.attach_press_feedback(btn)
 
 ## StyleBox for a filled action button: solid accent fill, a slightly darker accent
 ## border for definition, radius 8, snug margins.
@@ -434,6 +574,7 @@ static func _contrast_text(bg: Color) -> Color:
 ## (Achievements Trophies|Collection, Townsfolk Workers|Quests). Pair the buttons in a
 ## tight HBox; call this on each whenever the active tab changes.
 static func style_segment(btn: Button, active: bool, accent := Palette.EMBER, padding_v: int = 6) -> void:
+	UiFx.attach_press_feedback(btn)
 	if active:
 		var box := _action_box(accent, padding_v)
 		var txt := _contrast_text(accent)

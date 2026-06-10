@@ -255,6 +255,18 @@ function freezeUi() {
     `;
     document.head.append(style);
   }
+  // Snap any in-flight CSS animations to their END keyframe. The stylesheet above only shortens
+  // FUTURE animation durations; it does not advance an animation already running. Modals injected
+  // via scenario state (story beats, boss, toast, market news) animate opacity 0→1 through
+  // `storyDialogIn` / `fadein`, and the running animation sits pinned at currentTime 0 (opacity 0)
+  // under the harness — so without finishing it the overlay captures invisible (a "plain town"
+  // golden). finish() holds the end keyframe so the overlay is fully visible. Infinite animations
+  // can't be finished and throw — ignore those (the duration override already settles them).
+  try {
+    for (const anim of document.getAnimations()) {
+      try { anim.finish(); } catch { /* infinite / fill-less animation — leave it */ }
+    }
+  } catch { /* getAnimations unsupported */ }
   const scene = window.__phaserScene;
   scene?.tweens?.pauseAll?.();
   if (scene?.time) {

@@ -72,11 +72,11 @@ func _initialize() -> void:
 	# Day 14 = 300 coins + 1 rune.
 	var r14: Dictionary = DailyRewardConfig.reward_for_day(14)
 	_check(int(r14.get("coins", 0)) == 300 and int(r14.get("runes", 0)) == 1, "day 14 = 300 coins + 1 rune")
-	# Day 30 = 1000 coins + 3 runes, NO unlockTile (dropped).
+	# Day 30 = 1000 coins + 3 runes + the Triceratops unlock_tile (React unlockTile — the port HAS the tile).
 	var r30: Dictionary = DailyRewardConfig.reward_for_day(30)
 	_check(int(r30.get("coins", 0)) == 1000, "day 30 reward = 1000 coins")
 	_check(int(r30.get("runes", 0)) == 3, "day 30 reward = 3 runes")
-	_check(not r30.has("unlockTile") and not r30.has("unlock_tile"), "day 30 has NO unlockTile (dropped — no port tile)")
+	_check(String(r30.get("unlock_tile", "")) == "tile_cattle_triceratops", "day 30 reward carries the Triceratops unlock_tile")
 	_check(not r30.has("tool"), "day 30 has no tool grant")
 	# Day past 30 (defensive) → {coins:25} default.
 	_check(int(DailyRewardConfig.reward_for_day(31).get("coins", 0)) == 25, "day 31 (out of range) = {coins:25} default")
@@ -145,6 +145,12 @@ func _initialize() -> void:
 	_check(gcap.daily_streak_day == 30, "streak day == 30 after 30 consecutive")
 	_check(int(day30_res.get("reward", {}).get("coins", 0)) == 1000, "day 30 grants 1000 coins")
 	_check(int(day30_res.get("reward", {}).get("runes", 0)) == 3, "day 30 grants 3 runes")
+	# The `daily` tile-discovery method: day 30 unlocks Triceratops (React unlockTile). The reward
+	# carries unlock_tile and login_tick discovers it — the tile is now in the player's collection.
+	_check(String(day30_res.get("reward", {}).get("unlock_tile", "")) == "tile_cattle_triceratops",
+		"day 30 reward carries the unlock_tile")
+	_check(gcap.is_tile_discovered("tile_cattle_triceratops"),
+		"day 30 DISCOVERS Triceratops (the `daily` discovery method works)")
 	# The 31st consecutive day (2026-01-31) → still day 30 (capped).
 	var coins_at_30: int = gcap.coins
 	var runes_at_30: int = gcap.runes

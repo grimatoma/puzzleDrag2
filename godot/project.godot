@@ -12,6 +12,18 @@ config/description="Godot 4 port of the React+Phaser drag-chain puzzle. Mobile-f
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
+; Engine boot splash — a 400x400 circular cottage medallion (authored by
+; tools/gen_splash.py alongside the full splash art), drawn CENTERED at its
+; natural size (stretch_mode=0, Disabled) on the vignette-indigo bg.
+; The earlier full-bleed 720x1280 portrait scene letterboxed into a "portrait
+; strip" on wide screens and then JUMPED to full width when SplashScreen.gd
+; took over — a centred emblem reads as deliberate at any viewport aspect.
+; use_filter=false keeps the x4-nearest pixels crisp (the web loader honours
+; it as image-rendering:pixelated).
+boot_splash/bg_color=Color(0.054902, 0.062745, 0.141176, 1)
+boot_splash/image="res://assets/splash/splash_boot.png"
+boot_splash/stretch_mode=0
+boot_splash/use_filter=false
 
 [display]
 

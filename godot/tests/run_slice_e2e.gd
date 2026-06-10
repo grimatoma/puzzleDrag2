@@ -195,42 +195,44 @@ func _run_slice() -> void:
 	_check(g.qty("block") > 0, "11. block gathered on the expedition is kept")
 	_check(g.qty("iron_bar") > 0, "11. iron_bar gathered on the expedition is kept")
 
-	# ── 12. Capstone boss (Frostmaw). ────────────────────────────────────────
+	# ── 12. Capstone boss (T24 — the seasonal timed-target model). ────────────────
 	# The gate wants 12+ combined block + iron_bar. Top up if the run was short.
 	if g.qty("block") + g.qty("iron_bar") < 12:
 		_give(g, "block", 12 - (g.qty("block") + g.qty("iron_bar")))
+	# Force the CAPSTONE (storm, summer) so defeating it sets town2_complete (step 13 needs it). With
+	# town2 not yet done, the summer season offers the capstone (pending_boss_id).
+	var budget: int = g.farm_turn_budget()
+	g.farm_turns_used = int(float(budget) * 1.5 / 4.0)   # land in the summer quarter
+	_check(g.pending_boss_id() == BossConfig.CAPSTONE, "12. summer + town2 not done → the capstone (storm) is offered")
 	_check(g.can_challenge_boss(), "12. can challenge the boss (City + 12 mine goods)")
 	var coins_before_boss: int = g.coins
 	var sb := g.start_boss()
 	_check(bool(sb.get("ok", false)), "12. start_boss() ok")
 	_check(g.is_boss_active(), "12. boss fight is active")
-	_check(g.boss_min_chain() == 4, "12. boss raises the min chain to 4")
-	# Grind it down with chains of 8 until defeat.
-	var defeated: bool = false
-	var reward_coins: int = 0
-	for _i in 20:
-		if not g.is_boss_active():
-			break
-		var dr := g.damage_boss(8)
-		if bool(dr.get("defeated", false)):
-			defeated = true
-			reward_coins = int(dr.get("reward", 0))
-			break
-	_check(defeated, "12. boss defeated by repeated chains")
-	_check(g.town2_complete, "12. town2_complete set on defeat")
+	_check(g.boss_min_chain() == 4, "12. storm raises the min chain to 4")
+	# Win it: meet the fish_fillet ×6 target with a fish chain producing 6 units.
+	var dr := g.note_boss_chain(T.FISH_SARDINE, 6, 6)
+	_check(bool(dr.get("defeated", false)), "12. boss defeated by meeting the target")
+	var reward_coins: int = int(dr.get("reward_coins", 0))
+	_check(g.town2_complete, "12. town2_complete set on the CAPSTONE defeat")
 	_check(reward_coins > 0, "12. defeat returned a reward")
-	# M10 (additive): this first boss defeat also unlocks `first_blood` (+200 coins) on
-	# top of the boss reward. damage_boss's own payout is unchanged (reward_coins above
-	# is still the pure boss reward); the +200 is the achievement bonus stacking. The
-	# boss is ground down with bare damage_boss(8) calls (not credit_chain), so no chain
-	# achievement fires here — first_blood is the only new unlock in this step.
+	# M10 (additive): this first boss defeat also unlocks `first_blood` (+200 coins) on top of the
+	# boss reward (the achievement bonus stacking; reward_coins above is the pure boss reward).
 	_check(g.coins == coins_before_boss + reward_coins + 200,
 		"12. boss reward + first_blood achievement coins credited")
 	_check(not g.is_boss_active(), "12. boss cleared after defeat")
 
 	# ── 13. Rats hazard + Ratcatcher (Town 3 lesson). ────────────────────────
 	_check(g.rats_enabled(), "13. rats are enabled once Town 2 is complete")
-	_check(g.active_tile_pool().has(T.RAT), "13. RAT tiles now seed into the farm pool")
+	# T9: rats are POSITIONAL now (spawn-roll per fill + eat plants), NOT pool-seeded — the farm
+	# pool stays rat-free. A chain through 3+ rats clears them for coins (clear_rat_chain).
+	_check(not g.active_tile_pool().has(T.RAT), "13. T9: RAT tiles are NOT seeded into the farm pool")
+	g.hazards["rats"] = [{"row": 0, "col": 0, "age": 0}, {"row": 0, "col": 1, "age": 0}, {"row": 0, "col": 2, "age": 0}]
+	var coins_pre_rats: int = g.coins
+	var rat_clear: Dictionary = g.clear_rat_chain([
+		{"row": 0, "col": 0, "tile": T.RAT}, {"row": 0, "col": 1, "tile": T.RAT}, {"row": 0, "col": 2, "tile": T.RAT}])
+	_check(bool(rat_clear.get("ok", false)) and g.coins == coins_pre_rats + 15,
+		"13. chaining 3 rats clears them for +15 coins")
 	_ensure(g, BLD.building_cost(BLD.RATCATCHER))   # {plank:6, hay_bundle:8}
 	_check(g.can_build(BLD.RATCATCHER), "13. can build the Ratcatcher (rats enabled)")
 	_check(bool(g.build(BLD.RATCATCHER).get("ok", false)), "13. build(RATCATCHER) ok")

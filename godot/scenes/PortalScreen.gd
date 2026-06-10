@@ -41,6 +41,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a portal build / tool summon mutates GameState — Main refreshes the
+## always-visible HUD (coin pill, tool palette) + persists immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Always has "close"; has "build" while NOT built.
 var _action_buttons: Dictionary = {}
@@ -108,9 +111,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -159,7 +160,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🌀 Magic Portal"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -170,7 +171,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -216,7 +217,7 @@ func refresh() -> void:
 func _render_build_state() -> void:
 	var msg := Label.new()
 	msg.text = "Build the Magic Portal to unlock summoning."
-	msg.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(msg, Typography.Role.SUBHEAD)
 	msg.add_theme_color_override("font_color", COL_MUTED)
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -235,7 +236,7 @@ func _render_build_state() -> void:
 
 	var cost_lbl := Label.new()
 	cost_lbl.text = "Cost"
-	cost_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(cost_lbl, Typography.Role.LABEL)
 	cost_lbl.add_theme_color_override("font_color", COL_BODY)
 	cost_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(cost_lbl)
@@ -246,8 +247,8 @@ func _render_build_state() -> void:
 	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chips.add_theme_constant_override("separation", 6)
 	col.add_child(chips)
-	chips.add_child(UiKit.make_pill("%d ◉" % GameState.PORTAL_COST_COINS, COL_VALUE))
-	chips.add_child(UiKit.make_pill("%d runes" % GameState.PORTAL_COST_RUNES, COL_INFLUENCE))
+	chips.add_child(UiKit.make_pill("%d ◉" % PortalConfig.BUILD_COST_COINS, COL_VALUE))
+	chips.add_child(UiKit.make_pill("%d runes" % PortalConfig.BUILD_COST_RUNES, COL_INFLUENCE))
 
 	var bottom := HBoxContainer.new()
 	bottom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -262,7 +263,7 @@ func _render_build_state() -> void:
 	var build_btn := Button.new()
 	build_btn.text = "Build Portal"
 	build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 15)
+	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 	build_btn.disabled = not game.can_build_portal()
 	build_btn.connect("pressed", Callable(self, "_on_build_portal"))
 	bottom.add_child(build_btn)
@@ -272,7 +273,7 @@ func _render_build_state() -> void:
 func _render_summon_state() -> void:
 	_header_label = Label.new()
 	_header_label.text = "✨ Influence: %d" % game.influence
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_INFLUENCE)
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(_header_label)
@@ -312,7 +313,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = name_str
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -325,7 +326,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	if count > 0:
 		var count_lbl := Label.new()
 		count_lbl.text = "×%d" % count
-		count_lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(count_lbl, Typography.Role.LABEL)
 		count_lbl.add_theme_color_override("font_color", COL_MUTED)
 		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -334,7 +335,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	# ── effect text ───────────────────────────────────────────────────────────
 	var effect_lbl := Label.new()
 	effect_lbl.text = effect_str
-	effect_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(effect_lbl, Typography.Role.BODY)
 	effect_lbl.add_theme_color_override("font_color", COL_MUTED)
 	effect_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	effect_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -355,7 +356,7 @@ func _make_tool_card(entry: Dictionary) -> PanelContainer:
 	var summon_btn := Button.new()
 	summon_btn.text = "Summon (%d✨)" % cost
 	summon_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(summon_btn, COL_INFLUENCE, 6, 15, true)
+	UiKit.style_button(summon_btn, COL_INFLUENCE, 6, Typography.size(Typography.Role.LABEL), true)
 	summon_btn.disabled = not affordable
 	summon_btn.connect("pressed", Callable(self, "_on_summon").bind(id))
 	bottom.add_child(summon_btn)
@@ -371,6 +372,7 @@ func _on_build_portal() -> void:
 		return
 	game.build_portal()
 	refresh()
+	emit_signal("state_changed")
 
 ## A Summon button was pressed: summon `id` the REAL way (deducts influence, +1 to the tools
 ## dict), then re-render so the Influence header + ×count badge + button states reflect the
@@ -380,6 +382,7 @@ func _on_summon(id: String) -> void:
 		return
 	game.summon_magic_tool(id)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

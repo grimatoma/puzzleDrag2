@@ -31,6 +31,9 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a decoration build mutates GameState (coins + items spent, Influence
+## granted) — Main refreshes the always-visible HUD + persists immediately.
+signal state_changed
 
 ## action id → Button, for headless tests. Currently just "close".
 var _action_buttons: Dictionary = {}
@@ -98,9 +101,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -151,7 +152,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "🌷 Decorations"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -162,7 +163,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -170,7 +171,7 @@ func _build_shell() -> void:
 	# Header line — "✨ N Influence" (the violet currency line), rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_INFLUENCE)
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
@@ -240,7 +241,7 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = name_str
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -253,7 +254,7 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 	if count > 0:
 		var count_lbl := Label.new()
 		count_lbl.text = "×%d" % count
-		count_lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(count_lbl, Typography.Role.LABEL)
 		count_lbl.add_theme_color_override("font_color", COL_MUTED)
 		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -285,7 +286,7 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 
 	var grant_lbl := Label.new()
 	grant_lbl.text = "+%d ✨" % grant
-	grant_lbl.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(grant_lbl, Typography.Role.LABEL)
 	grant_lbl.add_theme_color_override("font_color", COL_INFLUENCE)
 	grant_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grant_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -295,7 +296,7 @@ func _make_decoration_card(entry: Dictionary) -> PanelContainer:
 	var build_btn := Button.new()
 	build_btn.text = "Build"
 	build_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, 15)
+	UiKit.style_action_button(build_btn, Palette.GO_GREEN, 6, Typography.size(Typography.Role.LABEL))
 	build_btn.disabled = not affordable
 	build_btn.connect("pressed", Callable(self, "_on_build").bind(id))
 	bottom.add_child(build_btn)
@@ -311,6 +312,7 @@ func _on_build(id: String) -> void:
 		return
 	game.build_decoration(id)
 	refresh()
+	emit_signal("state_changed")
 
 # ── pure helpers (usable + testable without rendering) ─────────────────────────
 

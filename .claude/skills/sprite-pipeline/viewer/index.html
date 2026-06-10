@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sprite set review</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="viewer.css" />
+  </head>
+  <body>
+    <header class="page-head">
+      <div class="page-head__inner">
+        <div class="page-head__title">
+          <h1>Sprite set review</h1>
+          <p class="tagline">
+            Eyeball each item's masters, children &amp; animations for cohesion. Approve, select, or
+            regenerate candidates — the human gate that drives the next pass.
+          </p>
+        </div>
+        <div class="page-head__meta">
+          <div id="totals" class="totals" aria-live="polite"></div>
+          <div id="live" class="live" aria-live="polite" title="Auto-refreshes from data.json"></div>
+          <div class="legend" aria-hidden="true">
+            <span class="legend__item"><span class="dot dot--approved"></span>approved</span>
+            <span class="legend__item"><span class="dot dot--review"></span>review</span>
+            <span class="legend__item"><span class="dot dot--pending"></span>pending</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Banner shown when /api/* control-server POSTs fail (server not running). -->
+    <div id="server-banner" class="server-banner" role="status" aria-live="polite" hidden></div>
+
+    <main id="app">
+      <!-- items render here -->
+      <p id="loading" class="loading">Loading <code>data.json</code>…</p>
+    </main>
+
+    <!-- ── templates (cloned by viewer.js) ─────────────────────────────────────────────────── -->
+
+    <!-- One ITEM: header + its keys + its animations. -->
+    <template id="item-tpl">
+      <section class="item">
+        <div class="item__head">
+          <h2 class="item__id"></h2>
+          <p class="item__prompt"></p>
+        </div>
+        <div class="item__keys"></div>
+        <div class="item__anims"></div>
+      </section>
+    </template>
+
+    <!-- One KEY card (master / child): approved image + status + collapsible candidates + controls. -->
+    <template id="key-tpl">
+      <article class="card card--key">
+        <div class="card__media">
+          <!-- <img> / placeholder injected here -->
+        </div>
+        <div class="card__body">
+          <div class="card__head">
+            <span class="card__role"></span>
+            <span class="badge"></span>
+          </div>
+          <h3 class="card__id"></h3>
+          <p class="card__desc"></p>
+
+          <details class="cands">
+            <summary class="cands__summary">Candidates (<span class="cands__n">0</span>)</summary>
+            <div class="cands__grid"></div>
+            <div class="cands__regen">
+              <button class="btn btn--ghost btn--sm regen-btn" type="button" disabled>
+                Regenerate selected
+              </button>
+              <span class="cands__regen-hint">tick candidates above to regenerate them</span>
+            </div>
+          </details>
+
+          <div class="card__controls">
+            <button class="btn btn--primary btn--sm approve-btn" type="button">Approve</button>
+            <span class="card__controls-note" role="status" aria-live="polite"></span>
+          </div>
+
+          <textarea
+            class="comment card__comment"
+            rows="2"
+            placeholder="Note for this key…"
+          ></textarea>
+        </div>
+      </article>
+    </template>
+
+    <!-- One CANDIDATE thumbnail inside the collapsible section. -->
+    <template id="cand-tpl">
+      <div class="cand">
+        <label class="cand__pick">
+          <input type="checkbox" class="cand__check" />
+          <span class="cand__thumb">
+            <!-- <img> / placeholder injected here -->
+          </span>
+        </label>
+        <div class="cand__meta">
+          <div class="cand__row">
+            <span class="cand__idx"></span>
+            <span class="badge badge--cand"></span>
+          </div>
+          <div class="cand__llm"></div>
+          <p class="cand__reason"></p>
+          <button class="btn btn--ghost btn--xs select-btn" type="button">Select</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- One ANIMATION card (idle / transition): GIF + meta. -->
+    <template id="anim-tpl">
+      <article class="card card--anim">
+        <div class="card__media">
+          <!-- <img> (gif) / poster / placeholder injected here -->
+        </div>
+        <div class="card__body">
+          <div class="card__head">
+            <span class="card__role"></span>
+            <span class="badge"></span>
+          </div>
+          <h3 class="card__id"></h3>
+          <p class="card__desc"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="viewer.js" defer></script>
+  </body>
+</html>

@@ -37,6 +37,13 @@ const BAKER: String = "baker"
 const KIND_THRESHOLD_REDUCE_CATEGORY: String = "threshold_reduce_category"
 const KIND_RECIPE_INPUT_REDUCE: String = "recipe_input_reduce"
 
+## A threshold can NEVER be reduced below this floor — so stacking enough workers of a
+## category can't collapse the threshold to 0/1 and "explode" the unit math (a chain of 3
+## would otherwise mint absurd quantities). Mirrors a sane minimum chain length; at 0 workers
+## the reduction is 0 so this floor is never even reached. (Relocated from GameState — worker
+## tuning belongs with the worker config.)
+const WORKER_MIN_THRESHOLD: int = 2
+
 ## Worker catalog keyed by id. Each entry:
 ##   id:         String      — stable worker id (matches the key)
 ##   name:       String      — display name
@@ -152,6 +159,38 @@ static func ability_input(id: String) -> String:
 ## The per-hire effect amount of `id` (0 for an unknown id).
 static func ability_amount(id: String) -> int:
 	return int(ability(id).get("amount", 0))
+
+## The worker's ability as AbilityConfig INSTANCE(S) ({id, params}) — the source shape
+## AbilityAggregate consumes. Reconciles the port's flat `ability` dict to the React worker
+## `abilities` array (src/features/workers/data.ts). Returns [] for an unknown id or a worker
+## with no ability.
+##
+## DOUBLE-COUNT NOTE: the two worker ability kinds (threshold_reduce_category,
+## recipe_input_reduce) are ALREADY wired through GameState's dedicated worker paths
+## (worker_threshold_reduction → credit_chain, worker_recipe_input_reduction → craft), so
+## GameState.compute_ability_channels deliberately does NOT feed workers into the unified
+## aggregate — doing so would double-count those channels. This helper exists for parity /
+## tests / future worker abilities that have NO dedicated path; it is the faithful mapping
+## of a worker's ability into the aggregator's instance shape.
+static func abilities_of(id: String) -> Array:
+	var ab: Dictionary = ability(id)
+	var kind: String = String(ab.get("kind", ""))
+	if kind == "":
+		return []
+	match kind:
+		KIND_THRESHOLD_REDUCE_CATEGORY:
+			return [{"id": "threshold_reduce_category", "params": {
+				"category": String(ab.get("category", "")),
+				"amount": int(ab.get("amount", 0)),
+			}}]
+		KIND_RECIPE_INPUT_REDUCE:
+			return [{"id": "recipe_input_reduce", "params": {
+				"recipe": String(ab.get("recipe", "")),
+				"input": String(ab.get("input", "")),
+				"amount": int(ab.get("amount", 0)),
+			}}]
+		_:
+			return []
 
 ## Cost to hire the NEXT worker of `id`, given the current hired count.
 ## Returns { coins:int, resources:{key:int} } for the (current_count+1)-th hire:

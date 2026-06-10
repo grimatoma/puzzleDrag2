@@ -17,8 +17,44 @@ const ROWS: int = 6
 const TILE_SIZE: int = 74          ## base tile size in px (responsive at runtime)
 const MIN_CHAIN: int = 3           ## default minimum chain length (a boss may raise it)
 
+## Coins a brand-new game starts with (React src/state/init.ts:71 — `coins: 150`).
+## Seeded by GameState.new_game() so the entry-cost gate (start_farm_run costs 50) is
+## immediately affordable. The `var coins: int = 0` field default is intentionally left at
+## 0 — only new_game() applies this baseline (the test suites build GameState.new() at 0).
+const STARTING_COINS: int = 150
+
+## Per-chain coin economy — M2 PLACEHOLDER. The React per-tile `value` coin economy is
+## deferred to M3; until then each resolved chain earns floor(chain_len / divisor) coins,
+## floored to at least the minimum. Kept as named consts so the formula reads by name and the
+## integer-division semantics stay byte-identical (do NOT switch to per-item value — that's M3).
+## Used by GameState.credit_chain: maxi(CHAIN_COIN_MIN, chain_len / CHAIN_COIN_DIVISOR) + bonuses.
+const CHAIN_COIN_MIN: int = 1
+const CHAIN_COIN_DIVISOR: int = 2
+
 ## Sentinel for an empty grid cell.
 const EMPTY: int = -1
+
+## The most slots the Start-Farming picker ever shows (the home zone has <= 8). Named here (Batch 9
+## D7) instead of a modal-local const so the picker cap is a shared, drift-resistant value. Mirrors
+## the React MAX_SLOTS.
+const MAX_FARM_SLOTS: int = 8
+
+## The most resource-tally chips the run-end HarvestModal shows (top N by quantity). Named here
+## (Batch 9 D9) instead of an inline `8` so the cap reads by name. Mirrors React's ResourceTally
+## "top 8 shown".
+const HARVEST_TALLY_MAX: int = 8
+
+## The starter tool rack granted ONCE on a fresh game (Main._ready, only when game.tools.is_empty()).
+## A small visible set so the puzzle page reads as a populated TOOLS rack from the first run, using
+## REAL ToolConfig ids: Scythe×2 (instant — clears 6 random tiles), Bomb×1 (tap-target 3×3 blast),
+## Rake×1 (tap-target — sweeps a connected same-type patch). Ordered { "id", "count" } rows so the
+## grant order is data, not three inline calls. The honest equivalent of the React fresh-game grant
+## (Scythe×2 + Seedpack + Lockbox); the port has no seedpack/lockbox so it grants the wired tools.
+const STARTER_TOOLS: Array = [
+	{ "id": "scythe", "count": 2 },   # instant (clears 6 random tiles) — proves instant path
+	{ "id": "bomb", "count": 1 },     # tap-target (3x3 area blast) — proves targeting mode
+	{ "id": "rake", "count": 1 },     # tap-target (clears a connected same-type patch)
+]
 
 # ── Tile types — Farm biome starting set (src/constants.ts FARM pool) ───────
 ## GDScript enums are int-backed. STRING_KEYS maps each value back to the
@@ -157,6 +193,37 @@ enum Tile {
 	# (the web pays coins directly via a tile ability not ported here), so it is deliberately
 	# ABSENT from PRODUCES/THRESHOLDS (threshold_for → NO_THRESHOLD, produced_resource → "").
 	COIN_GOLDEN,
+	# ── Fire farm hazard (T7, ported from src/features/farm/hazards.ts) — APPENDED so every
+	# existing ordinal above is UNCHANGED (saves serialise via STRING_KEYS). FIRE is a board-only
+	# HAZARD tile (like RAT/RUBBLE): it produces NOTHING (deliberately ABSENT from PRODUCES/
+	# THRESHOLDS → produced_resource "" + threshold_for NO_THRESHOLD). Fire SPREADS to an
+	# adjacent free cell each turn (HazardLogic.tick_fire) and is cleared by chaining FIRE tiles
+	# (HazardLogic.try_extinguish_fire → +2 coins/tile). GATED OFF by default to match the live
+	# React game (FIRE_HAZARD_ENABLED false; isFireHazardEnabled() reads a tuning override).
+	FIRE,
+	# ── Mine hazards (T11, ported from src/features/mine/hazards.ts) — APPENDED so every existing
+	# ordinal above is UNCHANGED (saves serialise via STRING_KEYS). Three new board-only HAZARD/special
+	# tiles for the Town-2 mine expedition:
+	#   LAVA  — the Lava Flow hazard cell (MineHazardLogic.tick_mine_hazards spreads it to one random
+	#           orthogonal free cell each turn). BLOCKS chaining (MineHazardLogic.tile_blocked_by_hazard,
+	#           like RUBBLE) and produces NOTHING (deliberately ABSENT from PRODUCES/THRESHOLDS →
+	#           produced_resource "" + threshold_for NO_THRESHOLD). Cleared by the Water Pump tool
+	#           (turns lava → rubble). React key "lava" (hazards.ts:240 `key: "lava"`).
+	#   GAS   — the Gas Vent cloud cell. UNLIKE lava/rubble it is CHAINABLE (chaining through gas is
+	#           the counter — disperse_gas), so it is NOT in tile_blocked_by_hazard. Produces NOTHING.
+	#           A 3-turn countdown lives on GameState.mine_hazards.gas_vent; chaining the gas cell before
+	#           it expires disperses the vent, else it costs a turn on expiry. React models gas as a
+	#           per-cell `gas` overlay flag; the port models it as a single board GAS tile at the vent
+	#           cell (documented adaptation — the port has no per-cell overlay-flag layer).
+	#   MYSTERIOUS_ORE — the rune-capture tile (the mine's analogue of the harbor's FISH_PEARL). It is
+	#           CHAINABLE and produces NOTHING via the normal chain path (ABSENT from PRODUCES/THRESHOLDS);
+	#           a 5-turn countdown lives on GameState.mysterious_ore. Chaining it together with >= 2 DIRT
+	#           tiles before it expires grants +1 Rune (MineHazardLogic.is_mysterious_chain_valid); on
+	#           countdown expiry it degrades to plain DIRT (tile_special_dirt). React key "mysterious_ore"
+	#           (mysterious_ore.ts:58).
+	LAVA,
+	GAS,
+	MYSTERIOUS_ORE,
 }
 
 const STRING_KEYS := {
@@ -259,6 +326,16 @@ const STRING_KEYS := {
 	Tile.GOLD:               "tile_mine_gold",
 	# Treasure
 	Tile.COIN_GOLDEN:        "tile_coin_golden",
+	# Fire farm hazard (T7) — its own "fire" string key (mirrors the React board cell key
+	# "fire" that try_extinguish_fire matches on). No PNG ships; flat fallback fill.
+	Tile.FIRE:               "fire",
+	# Mine hazards (T11) — their own string keys, mirroring the React board-cell keys the
+	# mine-hazard logic matches on ("lava" hazards.ts:240, "mysterious_ore" mysterious_ore.ts:58).
+	# GAS has no React board-key (React uses a per-cell overlay flag); the port keys it "gas" for
+	# the single GAS tile it stamps at the vent cell. No PNGs ship; flat fallback fills.
+	Tile.LAVA:               "lava",
+	Tile.GAS:                "gas",
+	Tile.MYSTERIOUS_ORE:     "mysterious_ore",
 }
 
 ## Resource each tile family produces (src/constants.ts:298-319).
@@ -336,8 +413,11 @@ const PRODUCES := {
 	Tile.TREE_CYPRESS:       "plank",
 	Tile.TREE_PALM:          "plank",
 	Tile.BIRD_TURKEY:        "eggs",
-	Tile.BIRD_CLOVER:        "eggs",
-	Tile.BIRD_MELON:         "eggs",
+	# Clover/Melon carry a legacy tile_bird_ id prefix but the web authors them as
+	# flowers/fruits (tileCollection/data.ts:126,135) → they produce the FLOWER/FRUIT
+	# family resource (honey/pie), NOT eggs. Re-filed to category flower/fruit below.
+	Tile.BIRD_CLOVER:        "honey",
+	Tile.BIRD_MELON:         "pie",
 	Tile.BIRD_CHICKEN:       "eggs",
 	Tile.BIRD_HEN:           "eggs",
 	Tile.BIRD_ROOSTER:       "eggs",
@@ -364,6 +444,13 @@ const PRODUCES := {
 	# COIN_GOLDEN produces NOTHING through the chain pipeline — deliberately ABSENT (like
 	# RAT/RUBBLE/FISH_PEARL): produced_resource → "" and threshold_for → NO_THRESHOLD.
 	Tile.COIN_GOLDEN:        "",
+	# Mine hazards (T11): LAVA / GAS / MYSTERIOUS_ORE all produce NOTHING via the normal chain
+	# pipeline (like RAT/RUBBLE/FIRE/FISH_PEARL). LAVA/GAS are pure hazards; MYSTERIOUS_ORE is the
+	# rune-capture tile (captured via GameState.try_capture_mysterious_ore, not credited as a chain).
+	# Deliberately absent from THRESHOLDS too (threshold_for → NO_THRESHOLD).
+	Tile.LAVA:               "",
+	Tile.GAS:                "",
+	Tile.MYSTERIOUS_ORE:     "",
 }
 
 ## Chain length that yields ONE unit of the produced resource
@@ -426,8 +513,10 @@ const THRESHOLDS := {
 	Tile.TREE_CYPRESS:       6,
 	Tile.TREE_PALM:          6,
 	Tile.BIRD_TURKEY:        6,
-	Tile.BIRD_CLOVER:        6,
-	Tile.BIRD_MELON:         6,
+	# Clover = flower family (threshold 10), Melon = fruit family (threshold 7) — see
+	# the produced-resource + category re-file (web authors them flowers/fruits).
+	Tile.BIRD_CLOVER:        10,
+	Tile.BIRD_MELON:         7,
 	Tile.BIRD_CHICKEN:       6,
 	Tile.BIRD_HEN:           6,
 	Tile.BIRD_ROOSTER:       6,
@@ -607,8 +696,10 @@ const CATEGORY := {
 	Tile.TREE_CYPRESS:       "trees",
 	Tile.TREE_PALM:          "trees",
 	Tile.BIRD_TURKEY:        "birds",
-	Tile.BIRD_CLOVER:        "birds",
-	Tile.BIRD_MELON:         "birds",
+	# Re-filed: the web authors Clover as a flower and Melon as a fruit
+	# (tileCollection/data.ts:126,135); only the legacy id keeps the bird_ prefix.
+	Tile.BIRD_CLOVER:        "flower",
+	Tile.BIRD_MELON:         "fruit",
 	Tile.BIRD_CHICKEN:       "birds",
 	Tile.BIRD_HEN:           "birds",
 	Tile.BIRD_ROOSTER:       "birds",
@@ -633,21 +724,104 @@ const CATEGORY := {
 	Tile.COPPER_ORE:         "copper",
 	Tile.GOLD:               "gold",
 	Tile.COIN_GOLDEN:        "coin",
+	# Fire farm hazard (T7) — its own "fire" category; never seeded into any board pool
+	# (HazardLogic places it positionally via the spawn roll, like rats/wolves).
+	Tile.FIRE:               "fire",
+	# Mine hazards (T11) — their own categories; none seed into any board pool (MineHazardLogic
+	# places them positionally via the spawn roll / countdown, like rats/wolves/fire). "dirt" is
+	# deliberately NOT reused for MYSTERIOUS_ORE — it is its own capture tile, kept out of the
+	# dirt-count its capture chain requires (mirrors FISH_PEARL's own "fish_pearl" category).
+	Tile.LAVA:               "lava",
+	Tile.GAS:                "gas",
+	Tile.MYSTERIOUS_ORE:     "mysterious_ore",
 }
 
 ## A very large int that stands in for "no threshold" without needing INF.
 const NO_THRESHOLD: int = 1 << 30
 
-## Rats hazard (M3h, Town 3). How many RAT tiles seed into the FARM refill pool
-## while rats are active (GameState.rats_enabled / active_tile_pool). Kept low so
-## rats are a recurring nuisance the player has to manage, not a board takeover.
+## Rats hazard (M3h, Town 3). LEGACY pool-seed count — retained as a NAMED constant only
+## for back-compat (run_rats_tests references it). The faithful T9 rat model (HazardLogic)
+## NO LONGER seeds rats into the refill pool: rats spawn POSITIONALLY via roll_rat_spawn and
+## eat plants each turn (src/features/farm/rats.ts). active_tile_pool() no longer reads this.
 const RAT_POOL_SLOTS: int = 2
+
+# ── Farm hazards (T7/T8/T9, ported from src/features/farm/rats.ts + hazards.ts +
+# attractsRats.ts) ──────────────────────────────────────────────────────────────
+## Rat spawn gate: react inv.tile_grass_grass / tile_grain_wheat > 50. The Godot
+## inventory is RESOURCE-keyed (no tile-key counts), so the faithful analogue uses the
+## grass/wheat PRODUCE staples: qty("hay_bundle") > 50 AND qty("flour") > 50 (documented
+## adaptation). 10% spawn chance per board fill, cap 4 active. (rats.ts:54-83 / RAT_SPAWN_THRESHOLDS)
+const RAT_SPAWN_HAY_THRESHOLD: int = 50
+const RAT_SPAWN_FLOUR_THRESHOLD: int = 50
+const RAT_SPAWN_RATE: float = 0.10
+const RAT_MAX_ACTIVE: int = 4
+## +5 coins per rat cleared by a chain-3 (rats.ts RAT_CLEAR_REWARD_PER).
+const RAT_CLEAR_REWARD_PER: int = 5
+## attracts_rats per-tile spawn-rate bump (Manna/Jackfruit), capped at 1.0 (attractsRats.ts).
+const ATTRACT_RATE_BONUS: float = 0.05
+
+## Fire hazard (hazards.ts): 4% spawn/fill, 50% spread/turn, cap 3 cells, +2 coins/tile extinguished.
+const FIRE_SPAWN_RATE: float = 0.04
+const FIRE_SPREAD_RATE: float = 0.50
+const FIRE_MAX_CELLS: int = 3
+const FIRE_EXTINGUISH_REWARD_PER: int = 2
+## Fire is GATED OFF by default to match the live React game (FIRE_HAZARD_ENABLED false +
+## isFireHazardEnabled() tuning override, default off). GameState.fire_hazard_enabled() reads
+## this; tests force-enable it on a GameState instance via fire_hazard_force.
+const FIRE_HAZARD_ENABLED: bool = false
+
+## Wolves hazard (hazards.ts): 6% spawn/fill when birds-rich (eggs > 30 OR turkey > 5), cap 2.
+## Scattered wolves stay scared for 5 turns; non-scared wolves eat one adjacent bird tile/turn.
+const WOLF_SPAWN_RATE: float = 0.06
+const WOLF_MAX_ACTIVE: int = 2
+const WOLF_SPAWN_EGGS_THRESHOLD: int = 30
+const WOLF_SPAWN_TURKEY_THRESHOLD: int = 5
+const WOLF_SCARED_TURNS: int = 5
 
 ## Rubble mine hazard (M3i, Town 2 expedition). How many RUBBLE tiles seed into the
 ## MINE refill pool while on an expedition (GameState.active_biome_pool). Kept low so
 ## rubble is a recurring nuisance the player mines through, not a board takeover — with
 ## only 2 slots in a 10-slot MINE_POOL it never dominates the board.
 const RUBBLE_POOL_SLOTS: int = 2
+
+# ── Mine hazards (T11, ported from src/features/mine/hazards.ts) ─────────────────
+## The mine-hazard SPAWN gate: a hazard rolls at MINE_HAZARD_BASE_RATE per board fill, ONLY in
+## the mine, NEVER with a boss active, and NEVER when another mine hazard is already active
+## (single-active cap). Mirrors React HAZARD_BASE_RATE (hazards.ts:13).
+const MINE_HAZARD_BASE_RATE: float = 0.05
+
+## Weighted pick over the four mine hazards (total 100). Mirrors the React HAZARDS pool weights
+## (hazards.ts: cave_in 25, gas_vent 40, lava 20, mole 15). Used by MineHazardLogic.roll_mine_hazard.
+const MINE_HAZARD_WEIGHTS: Dictionary = {
+	"cave_in":  25,
+	"gas_vent": 40,
+	"lava":     20,
+	"mole":     15,
+}
+
+## Stable iteration order for the mine-hazard weighted pick (so the seeded roll is deterministic —
+## a Dictionary's key order is insertion order in GDScript, but an explicit list is unambiguous).
+const MINE_HAZARD_IDS: Array = ["cave_in", "gas_vent", "lava", "mole"]
+
+## Gas Vent countdown (in mine turns) before the cloud expires. On expiry it COSTS A TURN and
+## clears (the "You cough through it." floater). Chaining the gas cell disperses it early. Mirrors
+## the React gas_vent durationTurns (hazards.ts:71 / spawn turnsRemaining 3).
+const GAS_VENT_TURNS: int = 3
+
+## Giant Mole cycle (in mine turns): while turnsRemaining > 0 the mole consumes one adjacent
+## non-consumed/non-rubble tile each turn; at 0 it HOPS to a random free adjacent cell and resets
+## to this. Mirrors the React mole turnsRemaining 3 (hazards.ts:101 / _tickMole).
+const MOLE_TURNS: int = 3
+
+# ── Mysterious Ore → Rune (T23, ported from src/features/mine/mysterious_ore.ts) ─
+## Countdown (in mine turns) on a freshly-spawned Mysterious Ore before it degrades to plain DIRT.
+## Chain it (with >= REQUIRED_DIRT_IN_CHAIN dirt) within this window to capture the Rune. Mirrors
+## React MYSTERIOUS_ORE_TURNS (mysterious_ore.ts:11).
+const MYSTERIOUS_ORE_TURNS: int = 5
+
+## How many DIRT tiles a Mysterious-Ore capture chain must ALSO contain (the ore itself does not
+## count) to grant a Rune. Mirrors React REQUIRED_DIRT_IN_CHAIN (mysterious_ore.ts:12).
+const REQUIRED_DIRT_IN_CHAIN: int = 2
 
 # ── Seasons (src/constants.ts:256 SEASONS + zones/data.ts seasonIndexInSession) ──
 ## The farm board cycles four seasons over its turn budget (see GameState.farm_turns_used
@@ -714,6 +888,18 @@ const SEASON_FIELD_COLORS: Array = [
 	{"name": "Winter", "top": Color8(0xdd, 0xe4, 0xea), "bot": Color8(0xb6, 0xc2, 0xcc)},
 ]
 
+## The per-biome ACCENT colour for the board card's TOP-edge strip — the GDScript counterpart of
+## the React board frame's biome strip (src/GameScene.ts drawBackground draws `b.palette.bg` along
+## the top edge). Keyed by GameState.active_biome ("farm"/"mine"/"harbor"); the values are ported
+## VERBATIM from the React BIOMES[*].palette.bg hex (the React "fish" biome → the port's "harbor").
+## Board._draw reads it by name via biome_accent() so the top strip identifies which biome the
+## player is on without re-deriving the colour at the scene layer.
+const BIOME_FIELD_ACCENTS: Dictionary = {
+	"farm":   Color8(0x7f, 0xa8, 0x48),   # src BIOMES.farm.palette.bg == 0x7fa848
+	"mine":   Color8(0x6a, 0x7d, 0x92),   # src BIOMES.mine.palette.bg == 0x6a7d92
+	"harbor": Color8(0x4a, 0x8a, 0xa8),   # src BIOMES.fish.palette.bg == 0x4a8aa8
+}
+
 # ── Chain-stage palette (src/ui/puzzleBoard.tsx CHAIN_STAGES) ──────────────────
 ## The escalating chain-tier palette, ported VERBATIM from src/ui/puzzleBoard.tsx
 ## `CHAIN_STAGES`. Index = upgrades EARNED (floor(chain_len / threshold)), clamped to
@@ -756,6 +942,11 @@ static func produced_resource(tile: int) -> String:
 static func threshold_for(tile: int) -> int:
 	return THRESHOLDS.get(tile, NO_THRESHOLD)
 
+## The board card's TOP-edge accent Color for `biome` ("farm"/"mine"/"harbor"), from
+## BIOME_FIELD_ACCENTS. An unknown biome falls back to the farm green (the home board).
+static func biome_accent(biome: String) -> Color:
+	return BIOME_FIELD_ACCENTS.get(biome, BIOME_FIELD_ACCENTS["farm"])
+
 ## The chain STAGE index (0..4) for a live chain of `chain_len` tiles against `threshold`,
 ## ported from src/ui/puzzleBoard.tsx: `earned = floor(chain_len / threshold)`, then
 ## `CHAIN_STAGES[min(earned, len-1)]`. A non-positive threshold (a hazard tile like RAT/
@@ -776,6 +967,17 @@ static func chain_stage(chain_len: int, threshold: int) -> Dictionary:
 
 static func string_key(tile: int) -> String:
 	return STRING_KEYS.get(tile, "")
+
+## Reverse of string_key: the Tile enum whose canonical string key == `key` (EMPTY for unknown /
+## hazard-only keys). Linear scan over STRING_KEYS (small map). Used by the T17/T21 pool_weight
+## channel to resolve a target tile-key (tile_tree_oak, …) back to its Tile for pool-slot boosting.
+static func tile_for_string_key(key: String) -> int:
+	if key == "":
+		return EMPTY
+	for tile in STRING_KEYS.keys():
+		if String(STRING_KEYS[tile]) == key:
+			return int(tile)
+	return EMPTY
 
 ## Category id for a tile ("grass", "grain", "trees", …); "" for unknown tiles.
 static func category_of(tile: int) -> String:
@@ -876,4 +1078,29 @@ static func color_for(tile: int) -> Color:
 		Tile.COPPER_ORE:         return Color8(0xc9, 0x7f, 0x4f)
 		Tile.GOLD:               return Color8(0xff, 0xd3, 0x4c)
 		Tile.COIN_GOLDEN:        return Color8(0xff, 0xd3, 0x4c)
+		# Fire farm hazard (T7) — a hot orange-red flame fill. No PNG ships; flat fallback.
+		Tile.FIRE:               return Color8(0xe2, 0x5a, 0x1e)
+		# Mine hazards (T11) — flat fallback fills (no PNGs ship). LAVA a molten red-orange,
+		# GAS a sickly noxious green, MYSTERIOUS_ORE a glowing violet that reads as "special".
+		Tile.LAVA:               return Color8(0xd8, 0x3a, 0x12)
+		Tile.GAS:                return Color8(0x86, 0xb8, 0x4a)
+		Tile.MYSTERIOUS_ORE:     return Color8(0x9a, 0x5c, 0xd6)
 		_:             return Color.MAGENTA
+
+## Map a start_farm_run() FAILURE reason to a player-facing toast string (Batch 9 C6 — moved
+## BYTE-IDENTICAL from Main._start_farm_fail_text). These are RUN-ECONOMY failures (no coins for
+## the entry cost / no fertilizer entry item / a run already underway), so the copy lives in
+## Constants beside the run-economy values (STARTING_COINS, etc.) rather than a view. Reasons
+## mirror GameState.start_farm_run()'s failure codes.
+static func start_farm_fail_text(reason: String) -> String:
+	match reason:
+		"no_coins":
+			return "Not enough coin to start."
+		"no_fertilizer":
+			return "No fertilizer on hand."
+		"already_running":
+			return "A farm run is already underway."
+		"unfounded":
+			return "Found this settlement before you can farm it."
+		_:
+			return "Cannot start a run right now."

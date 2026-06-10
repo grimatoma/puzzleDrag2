@@ -8,9 +8,11 @@ extends SceneTree
 ##
 ## Three layers (no real input events — drive accessors/signals directly, like
 ## run_townmap_tests):
-##   1. StartFarmingModal — setup(game) builds the shell headlessly; preview_budget(),
-##      default-all-selected categories, Start enabled/disabled by affordability, and the
-##      start_requested(selected, use_fertilizer) emission on Start.
+##   1. StartFarmingModal — setup(game) builds the shell headlessly; preview_budget(); the
+##      locked-on per-category SLOT + CHOOSER picker (default active variant == base tile;
+##      open_chooser → choose_ a discovered variant updates active_variant_for + GameState; a
+##      buy-variant flow grants coins → buy → it becomes choosable); Start enabled/disabled by
+##      affordability + its start_requested(selected, use_fertilizer) emission.
 ##   2. TownMap.board_at_screen — the farm pad's screen centre round-trips to "farm"; a
 ##      far-off point returns "".
 ##   3. TownMapScreen.start_farming_requested — a tap on the farm pad fires the signal once
@@ -40,6 +42,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _test_modal()
+	await _test_modal_orchard_preview()
 	await _test_board_at_screen()
 	await _test_screen_signal()
 	await _test_main_wiring()
@@ -61,32 +64,95 @@ func _test_modal() -> void:
 	# Budget preview == game.farm_run_turn_budget(false) == 10 for the home zone.
 	_check(m.preview_budget() == 10, "preview_budget() == 10 (game.farm_run_turn_budget(false))")
 
-	# Default selection == every eligible home category, in declaration order.
+	# The home zone is locked-on: selected_categories() == every eligible category.
 	var eligible: Array = ZoneConfig.eligible_categories("home")
 	_check(m.selected_categories() == eligible,
-		"default selected_categories() == ZoneConfig.eligible_categories('home') (%s)" % str(eligible))
-	# One toggle button registered per category.
+		"selected_categories() == ZoneConfig.eligible_categories('home') (%s)" % str(eligible))
+	# One locked-on SLOT button registered per category (NOT an on/off toggle).
 	for c in eligible:
-		_check(m._action_buttons.has("cat_" + String(c)), "registered a 'cat_%s' toggle" % String(c))
+		_check(m._action_buttons.has("slot_" + String(c)), "registered a 'slot_%s' button" % String(c))
+
+	# Each category's DEFAULT active variant == its base tile (the GameState default seed).
+	for c in eligible:
+		var cat: String = String(c)
+		var expected: String = TileVariantConfig.default_active_by_category().get(cat, "")
+		_check(m.active_variant_for(cat) == expected,
+			"default active_variant_for('%s') == base '%s' (got '%s')" % [cat, expected, m.active_variant_for(cat)])
 
 	# Now mount + open so the live render runs (affordable case).
 	root.add_child(m)
 	m.open()
 	await process_frame
 	_check(m.visible, "open() shows the modal")
+	_check(m.chooser_open_for() == "", "no chooser open immediately after open()")
 	_check(m._action_buttons.has("start") and not m._action_buttons["start"].disabled,
 		"coins == 50 (>= 50 cost) → Start button ENABLED")
 
-	# Toggling a category off drops it from the selection.
-	var first_cat: String = String(eligible[0])
-	m._action_buttons["cat_" + first_cat].button_pressed = false
+	# ── Zone-spawn info (review task 16): the season-drops "i" summary ──
+	# A fresh game is Spring; the summary names the season's top categories from ZoneConfig.
+	_check(m._current_season_name() == "Spring", "fresh game season is Spring")
+	var summary: String = m.season_spawn_summary()
+	# Spring's heaviest home-zone drop is grass (0.38) → "Grass 38%"; trees + grain also appear.
+	_check(summary.contains("Grass 38%"), "Spring spawn summary leads with 'Grass 38%' (got '%s')" % summary)
+	_check(summary.contains("Trees") and summary.contains("Grain"),
+		"Spring spawn summary lists Trees + Grain too")
+	# Categories with weight 0 this season (flower/herd/cattle/mount) are omitted.
+	_check(not summary.contains("Flower") and not summary.contains("Mount"),
+		"zero-weight categories are omitted from the spawn summary")
+	# The info card nodes exist + were filled on open().
+	_check(m._spawn_info_title != null and m._spawn_info_title.text.contains("Spring"),
+		"the spawn-info header names the current season")
+	_check(m._spawn_info_body != null and m._spawn_info_body.text == summary,
+		"the spawn-info body shows the season summary")
+
+	# ── CHOOSER: open the grass slot → pick a DISCOVERED variant → active updates ──
+	# Grass has a default base (tile_grass_grass) plus a 'default' heather? No — pick a known
+	# discovered sibling. tile_grass_heather is chain-method (locked); we need a DISCOVERED one.
+	# tile_grass_grass is default-discovered and is the base. We want to switch to a different
+	# discovered variant: discover tile_grass_meadow directly (a chain-method variant) so it is
+	# choosable, then pick it.
+	game.discover_tile("tile_grass_meadow")
+	m._action_buttons["slot_grass"].emit_signal("pressed")
 	await process_frame
-	_check(not m.selected_categories().has(first_cat),
-		"toggling '%s' off removes it from selected_categories()" % first_cat)
-	# Re-select it so the Start emission carries the full set.
-	m._action_buttons["cat_" + first_cat].button_pressed = true
+	_check(m.chooser_open_for() == "grass", "tapping slot_grass opened the chooser for 'grass'")
+	_check(m._action_buttons.has("choose_tile_grass_meadow"),
+		"the chooser lists a 'choose_' button for the discovered tile_grass_meadow")
+	_check(m._action_buttons.has("choose_tile_grass_grass"),
+		"the chooser lists a 'choose_' button for the base tile_grass_grass")
+	m._action_buttons["choose_tile_grass_meadow"].emit_signal("pressed")
 	await process_frame
-	_check(m.selected_categories().has(first_cat), "re-toggling '%s' on restores it" % first_cat)
+	_check(m.active_variant_for("grass") == "tile_grass_meadow",
+		"choosing tile_grass_meadow set the active variant")
+	_check(game.active_tile_id_for_category("grass") == "tile_grass_meadow",
+		"GameState.active_tile_id_for_category('grass') matches the chosen variant")
+	_check(m.chooser_open_for() == "", "choosing a variant closed the chooser")
+
+	# ── BUY flow: a buy-method variant becomes choosable after a buy ──
+	# tile_bird_clover is a buy-method flower variant (coinCost 200), but flower is not a home
+	# eligible category. Use a category we can open. Birds has no buy variant in the home set
+	# either; clover sits under 'flower'. Instead use the chooser's buy path on the 'fruit'
+	# category: tile_bird_melon is a buy-method FRUIT variant (coinCost 500).
+	game.coins = 600
+	m._action_buttons["slot_fruit"].emit_signal("pressed")
+	await process_frame
+	_check(m.chooser_open_for() == "fruit", "tapping slot_fruit opened the chooser for 'fruit'")
+	_check(m._action_buttons.has("buy_tile_bird_melon"),
+		"the locked buy-variant tile_bird_melon shows a 'buy_' button")
+	_check(not m._action_buttons.has("choose_tile_bird_melon"),
+		"the undiscovered buy-variant is NOT yet choosable")
+	_check(not game.is_tile_discovered("tile_bird_melon"), "tile_bird_melon undiscovered pre-buy")
+	m._action_buttons["buy_tile_bird_melon"].emit_signal("pressed")
+	await process_frame
+	_check(game.is_tile_discovered("tile_bird_melon"), "buying tile_bird_melon discovered it")
+	_check(game.coins == 100, "buying tile_bird_melon spent 500 coins (600 → 100)")
+	_check(m.chooser_open_for() == "fruit", "the chooser stays open after a buy")
+	_check(m._action_buttons.has("choose_tile_bird_melon"),
+		"the bought variant is now choosable (a 'choose_' button)")
+	m._action_buttons["choose_tile_bird_melon"].emit_signal("pressed")
+	await process_frame
+	_check(m.active_variant_for("fruit") == "tile_bird_melon",
+		"the freshly-bought variant can be activated")
+	m._close_chooser()
 
 	# Pressing Start emits start_requested(selected, false) then closes.
 	var probe := {"fired": 0, "selected": [], "fert": null}
@@ -97,8 +163,7 @@ func _test_modal() -> void:
 	m._action_buttons["start"].emit_signal("pressed")
 	await process_frame
 	_check(probe.fired == 1, "Start fired start_requested exactly once")
-	_check((probe.selected as Array).size() > 0, "start_requested carried a non-empty selection (%s)" % str(probe.selected))
-	_check(probe.selected == eligible, "start_requested selection == all categories (none dropped)")
+	_check(probe.selected == eligible, "start_requested selection == all eligible categories")
 	_check(probe.fert == false, "start_requested use_fertilizer == false (NO-FAKE: no primitive)")
 	_check(not m.visible, "Start closed the modal")
 	m.queue_free()
@@ -116,6 +181,49 @@ func _test_modal() -> void:
 	_check("Not enough coin" in m2._action_buttons["start"].text,
 		"unaffordable Start label reads 'Not enough coin' (got '%s')" % m2._action_buttons["start"].text)
 	m2.queue_free()
+	await process_frame
+
+# ── 1b. StartFarmingModal at the ORCHARD (per-node board-template preview) ──────
+
+## The modal PREVIEWS the ACTIVE farm zone, not a hardcoded home. Standing on the orchard node
+## (board template ORCHARD_FARM: 7 categories incl. "herd", base 12, fruit-heavy Spring) the modal's
+## slot set, budget, and season summary must follow the orchard — proving _zone resolves through
+## game._active_farm_zone() rather than HOME_ZONE.
+func _test_modal_orchard_preview() -> void:
+	var game := GameState.new()
+	game.map_current = "orchard"  # standing on the orchard farm node, no run active
+	_check(game._active_farm_zone() == "orchard",
+		"orchard: _active_farm_zone() resolves to 'orchard' (map_current, no run)")
+
+	var m = StartFarmingModalScript.new()
+	m.setup(game)
+	root.add_child(m)
+	m.open()
+	await process_frame
+
+	# Slot set follows the orchard's 7 eligible categories (incl. "herd"), not home's 6.
+	var orchard_cats: Array = ZoneConfig.eligible_categories("orchard")
+	_check(m.selected_categories() == orchard_cats,
+		"orchard: selected_categories() == ZoneConfig.eligible_categories('orchard') (%s)" % str(orchard_cats))
+	_check(orchard_cats.has("herd"),
+		"orchard: the eligible set CONTAINS 'herd' (home/meadow lacks it)")
+	_check(m._action_buttons.has("slot_herd"),
+		"orchard: a 'slot_herd' button was registered (the orchard-only category slot)")
+
+	# Budget follows the orchard base (12), no fertilizer.
+	_check(m.preview_budget() == 12,
+		"orchard: preview_budget() == 12 (orchard base, no fertilizer); got %d" % m.preview_budget())
+
+	# The season summary is the orchard's fruit-heavy Spring — distinct from the home summary.
+	var home_game := GameState.new()  # a fresh home game for the comparison summary
+	var hm = StartFarmingModalScript.new()
+	hm.setup(home_game)
+	var home_summary: String = hm.season_spawn_summary()
+	var orchard_summary: String = m.season_spawn_summary()
+	_check(orchard_summary != home_summary,
+		"orchard: season_spawn_summary() differs from the home summary (orchard is fruit-heavy)")
+	hm.queue_free()
+	m.queue_free()
 	await process_frame
 
 # ── 2. TownMap.board_at_screen ─────────────────────────────────────────────────

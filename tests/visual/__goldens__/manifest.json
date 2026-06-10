@@ -1,4 +1,25 @@
 {
+  "desktop/board-farm-chain-2-short.png": {
+    "scenarioId": "board-farm-chain-2-short",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [
+      {
+        "type": "api",
+        "method": "holdChain",
+        "args": {
+          "key": "tile_grass_grass",
+          "length": 2
+        }
+      }
+    ],
+    "expectation": "Scenario board-farm-chain-2-short renders correctly at #/board after 1 scripted action.",
+    "checklist": [
+      "Open #/board.",
+      "Apply action api:holdChain.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "desktop/board-farm-chain-7.png": {
     "scenarioId": "board-farm-chain-7",
     "routeHash": "#/board",
@@ -221,6 +242,27 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "iphone-portrait/board-farm-chain-2-short.png": {
+    "scenarioId": "board-farm-chain-2-short",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [
+      {
+        "type": "api",
+        "method": "holdChain",
+        "args": {
+          "key": "tile_grass_grass",
+          "length": 2
+        }
+      }
+    ],
+    "expectation": "Scenario board-farm-chain-2-short renders correctly at #/board after 1 scripted action.",
+    "checklist": [
+      "Open #/board.",
+      "Apply action api:holdChain.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "iphone-portrait/board-farm-chain-7.png": {
     "scenarioId": "board-farm-chain-7",
     "routeHash": "#/board",
@@ -365,12 +407,12 @@
   },
   "iphone-portrait/boss-modal.png": {
     "scenarioId": "boss-modal",
-    "routeHash": "#/town",
-    "view": null,
+    "routeHash": null,
+    "view": "town",
     "actions": [],
-    "expectation": "Scenario boss-modal renders correctly at #/town.",
+    "expectation": "Scenario boss-modal renders correctly at view:town.",
     "checklist": [
-      "Open #/town.",
+      "Open view:town.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -1141,23 +1183,23 @@
   },
   "iphone-portrait/townsfolk-bosses.png": {
     "scenarioId": "townsfolk-bosses",
-    "routeHash": "#/townsfolk/bosses",
-    "view": null,
+    "routeHash": null,
+    "view": "bosses",
     "actions": [],
-    "expectation": "Scenario townsfolk-bosses renders correctly at #/townsfolk/bosses.",
+    "expectation": "Scenario townsfolk-bosses renders correctly at view:bosses.",
     "checklist": [
-      "Open #/townsfolk/bosses.",
+      "Open view:bosses.",
       "Compare UI and canvas output to the golden image."
     ]
   },
   "iphone-portrait/townsfolk-castle.png": {
     "scenarioId": "townsfolk-castle",
-    "routeHash": "#/townsfolk/castle",
-    "view": null,
+    "routeHash": null,
+    "view": "castle",
     "actions": [],
-    "expectation": "Scenario townsfolk-castle renders correctly at #/townsfolk/castle.",
+    "expectation": "Scenario townsfolk-castle renders correctly at view:castle.",
     "checklist": [
-      "Open #/townsfolk/castle.",
+      "Open view:castle.",
       "Compare UI and canvas output to the golden image."
     ]
   },

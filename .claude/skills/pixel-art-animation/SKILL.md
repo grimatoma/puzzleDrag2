@@ -1,23 +1,18 @@
 ---
 name: pixel-art-animation
 description: >-
-  Create animated pixel-art sprites, tiles, or icons whose motion is REAL animation —
-  organic bending, articulation, character motion — instead of a rigid pixel-shift that
-  just slides a region side to side, AND whose art is designed with professional craft
-  (hue-shifted palettes, proper light/shading, anti-aliasing, clean clusters). Use this
-  whenever the user wants to animate a sprite/tile/icon, make a looping pixel-art GIF, add
-  motion like sway / peck / swim / bob / sparkle / glow / open-close, design or improve
-  pixel-art color/shading/palette, asks why an animation "looks like it's just sliding
-  around" or "isn't really animated," wants higher-quality / more professional / more
-  realistic pixel art, or wants animation that keeps the detail of an existing sprite.
-  Covers procedural frame generation (Python + Pillow); the design craft pros use (hue
-  shifting, color ramps, light direction / no pillow-shading, anti-aliasing, banding,
-  dithering, selective outlining); the 12 animation principles applied to sprites
-  (anticipation, squash & stretch, follow-through, easing, arcs, timing); pixel techniques
-  (sub-pixel animation, smears, color cycling); a catalog of motion patterns (cantilever
-  bend, articulation, pendulum, traveling wave, pulse/glow, overlays); seamless looping;
-  the upscale-and-montage review workflow; and the round-half-up / outline /
-  GIF-transparency gotchas that silently wreck pixel animation.
+  Use when adding MOTION to a pixel-art sprite, tile, or icon — making it genuinely move
+  (organic bending, articulation, character motion) rather than a rigid pixel-shift that
+  just slides a region side to side. Triggers: animating a sprite/tile/icon, a looping
+  pixel-art GIF, motion like sway / peck / swim / bob / sparkle / glow / open-close, asking
+  why an animation "looks like it's just sliding around" / "isn't really animated", wanting
+  motion that keeps an existing sprite's detail, needing a seamless loop, or deciding which
+  parts move vs stay rigid.
+  Covers "animate the shape, don't slide it," the 12 animation principles on sprites, pixel
+  motion techniques (sub-pixel, smears, color cycling), a motion-pattern catalog (bend,
+  articulation, pendulum, traveling wave, pulse/glow, overlays), looping, the montage
+  motion-review workflow, and the round-half-up / outline / GIF-transparency gotchas. For
+  STATIC pixel-art design (palette, shading, anti-aliasing), see the pixel-art-craft skill.
 ---
 
 # Pixel-Art Animation
@@ -25,6 +20,13 @@ description: >-
 How to make pixel-art sprites/tiles that genuinely *move* — and why the obvious approach
 fails. This skill is the distillation of building dozens of 32–48px looping tile
 animations; it exists mostly to save you from the same dead ends.
+
+This skill is the **motion** half of a pair. For the static-art craft that a sprite needs
+*before* it moves — hue-shifted palettes, one-light shading (no pillow-shading),
+anti-aliasing, banding, clean clusters, outlines — see the **pixel-art-craft** skill. For
+the full production pipeline (style spec → base art → animation → critique loop), see the
+**sprite-pipeline** skill, which executes animation in Aseprite and uses this skill's
+patterns and principles as the motion direction + the motion-critique rubric.
 
 ## The one idea that matters: animate the shape, don't slide it
 
@@ -70,20 +72,39 @@ flames, light) move; hard things (cobs, trunks, rock, shells' bodies) don't. The
 "alive" tiles often combine a **rigid body** with one or two **moving soft parts** plus an
 **overlay** (a glint, sparkle, bubble, falling leaf, drifting spore).
 
-## Generate frames in code, not by hand
+**On a small or mostly-rigid tile, let the overlay carry the *readable* motion.** When the only soft
+part is small (a pumpkin's vine, a gem's one loose facet), its honest bend is ~1px — genuinely
+organic at 8× but **barely perceptible at 32px tile size**. Don't fix that by exaggerating the bend
+into a slide (that's the cardinal sin, and a heavy body shouldn't visibly flex anyway). Instead make
+the **overlay the primary read** — a travelling sheen across the rind, a glint sweep, a falling leaf,
+a drifting flake — and let the 1px part-bend be the *secondary* motion. The overlay moves a clearly
+visible distance frame-to-frame, so the tile reads as alive even though the body is (correctly)
+almost still. (This is why a glossy gem or a frosted fruit idles convincingly with **no deformation
+at all** — only the light moves.)
+
+## Think in re-drawn frames, not translated regions
 
 At 32–64px, hand-keying organic bends across a dozen frames is exactly what produces the
-mechanical slide — it's too fiddly to get the curve+lag+phase right by eye, frame by
-frame. Express the motion as **math** and re-rasterize each frame. **Python + Pillow** is
-the right tool: total control over the per-pixel shape, easy GIF export.
+mechanical slide — it's too fiddly to get the curve+lag+phase right by eye if you think of
+it as "move this region." The fix is conceptual and **tool-agnostic**: express each soft
+part's motion as a **curve over distance-along-the-part and over phase** (bend ∝ `s^1.7`,
+phase-lagged by `s`), and **re-form the silhouette** each frame from that — whether you draw
+the frames by hand, in Aseprite, or generate them procedurally.
 
-`assets/anim_starter.py` is a complete, runnable starter — copy it and adapt. It contains
-the drawing helpers (`Buf` with the round-half-up `put`, `disc`, `rect`, `softline`,
-`poly`, `outline`), color + shading craft (`ramp()` for a pro hue-shifted palette from one
-color, `lit`, `sphere_t`, `dither`), timing helpers (`smooth()` easing, `pulse01()` eased
-action pulse), the `cantilever()` bend function, the seamless-loop GIF exporter, and two
-worked examples (a swaying tuft = the bend pattern, a bobbing/pecking creature =
-articulation + anticipation). Run it: `python anim_starter.py` → writes the looping GIFs.
+> **Production path:** in the **sprite-pipeline** workflow, animation frames are authored in
+> **Aseprite** (timeline + onion-skinning), driven by the patterns and principles below.
+> Aseprite is the tool of record — not a procedural generator.
+
+`assets/anim_starter.py` is a **reference-only** procedural example (Python + Pillow), **not
+the production path**. It's a fully worked illustration of these ideas in code — the drawing
+helpers (`Buf` with the round-half-up `put`, `disc`, `rect`, `softline`, `poly`, `outline`),
+timing helpers (`smooth()` easing, `pulse01()` eased action pulse), the `cantilever()` bend
+function, the seamless-loop GIF exporter, and two worked examples (a swaying tuft = the bend
+pattern, a bobbing/pecking creature = articulation + anticipation). Read it (or run `python
+anim_starter.py`) to see exactly how curve+lag+phase, easing, and seamless looping turn into
+concrete numbers; then apply the same motion in your tool of choice. (It also ships the
+static-craft helpers `ramp()`/`lit`/`sphere_t`/`dither` — those belong to the
+**pixel-art-craft** skill.)
 
 ## Motion patterns (catalog)
 
@@ -131,29 +152,27 @@ Full treatment — each principle in pixel terms, key-pose libraries (walk/idle/
 table mapping every principle to a starter helper — is in
 **`references/animation-principles.md`**.
 
-## Design the image first — craft that reads as pro
+For staging motion that obeys **real-world forces** — leaves vs snow vs rock falling, snow
+piling bottom-up, a gust's build→peak→release, a dropped object's squash-and-settle, melt/wither,
+fire/smoke/ripples — read **`references/physics-of-motion.md`**. It names the dominant force first,
+then turns it into a **frame-by-frame staging recipe** (spawn stagger, terminal velocity,
+accumulation order, where pixels appear/move/vanish), and ends with a fully storyboarded birch
+**autumn→winter** transition. Read it whenever a motion should "follow physics and the world" and
+a plain bend/slide isn't selling it. For a curated, link-verified **reading list** of pro
+pixel-art + animation resources (Saint11, SLYNYRD, the *Animator's Survival Kit*, *Illusion of
+Life*, and more), see **`references/learning-resources.md`**.
 
-Motion can't save a weak sprite. Draw a strong **static frame 0** before animating, with the
-craft that separates professional pixel art from flat fills:
+## Design the image first — then animate it
 
-- **Hue-shift your ramps.** Don't shade one hue dark→light (muddy). Pros rotate the hue —
-  **cool/blue shadows, warm/yellow highlights** (~15–25°), saturation peaking in the middle,
-  never max-sat at max-value. `ramp(base, n)` in the starter does exactly this from one color.
-- **One light source; never pillow-shade.** Hold a single light direction (upper-left) and
-  shade the **3D form** — light one side, shadow the opposite. Shading concentrically inward
-  from the outline ("pillow shading") is the #1 amateur tell; `sphere_t` gives correct form
-  light for rounded shapes.
-- **Anti-alias selectively** — smooth long staircase steps, but **not** 45°/straight lines,
-  and never so much it blurs. Watch for **banding** (parallel equal-length runs that echo the
-  grid as a false line).
-- **Clean clusters & chunky pixels.** Monotonic run-lengths (no jaggies/orphan pixels); give
-  thin limbs ≥2px of mass so they don't flicker. **Dither** (`dither()`) to imply a shade
-  from two colors. Use a **solid outline** for game icons, **selout** for a softer read.
-- **Include the real identifying detail** (comb, fins, veins, bark, kernels, petals) and give
-  it room: author at **48px** (or 64px), not a cramped 32px, before sacrificing detail.
+Motion can't save a weak sprite. Draw a strong **static frame 0** before animating: a
+hue-shifted palette, one consistent light source (never pillow-shaded), selective
+anti-aliasing, clean clusters, and the real identifying detail (comb, fins, veins, bark,
+kernels) with room to read — author at **48px (or 64px)**, not a cramped 32px.
 
-Full treatment — palettes, light, AA, banding, clusters, dithering, outlining, and a
-mistakes→fixes table — is in **`references/pixel-art-craft.md`**. Read it when designing the art.
+All of that still-craft — palettes/ramps, light & shading, AA, banding, clusters, dithering,
+outlining, resolution discipline, and a mistakes→fixes table — lives in the
+**pixel-art-craft** skill. Get the static frame looking professional with that skill first,
+then come back here for the motion.
 
 ## Gotchas that silently break pixel animation
 
@@ -172,6 +191,15 @@ mistakes→fixes table — is in **`references/pixel-art-craft.md`**. Read it wh
   `transparency=0, disposal=2, loop=0` and a per-frame duration. (Recipe is in the starter's
   `save()`.) Ground rooted things with their own base (soil/feet) rather than a floating
   soft shadow — a hard shadow blob plus the outline pass looks wrong.
+- **An overlay needs value contrast against what it sits on, or the motion is invisible.** A moving
+  overlay (snow fleck, glint, sparkle, bubble, spore) only reads if it differs in *value* from the
+  pixels behind it. White snow flecks drifting down a **white** snow cap, or a pale glint over a pale
+  highlight, are near-invisible (light-on-light) — the element is there, but the motion doesn't read,
+  so the tile looks static. Fix it by **routing the overlay through higher-contrast zones** (drift
+  the flake down the dark side / over the saturated body, not the white cap) and/or giving it a
+  brighter core + a darker trailing pixel so it carries its own contrast — while staying on the
+  palette's ramp for that material. Check this on the montage: if you can't immediately spot the
+  moving element in each frame, it has no contrast where it is.
 - **Transparent background**, centered art, consistent anchor across frames (animate around
   a fixed root/pivot, don't let the whole sprite drift unless it's meant to).
 
@@ -198,35 +226,43 @@ end up shipping the mechanical slide.
 
 1. **Identify the object and its parts.** What's rigid, what's soft, how would each soft
    part really move? Note the source palette/elements to match.
-2. **Copy `assets/anim_starter.py`**, set the canvas size (48px is a good default), and
-   draw a strong **static frame 0** first — hue-shifted `ramp()`s + one-light `sphere_t`
-   shading + the real detail elements (see `references/pixel-art-craft.md`). Make it look
-   good *standing still* before animating.
+2. **Get a strong static frame 0 first** — a professional still at 48px (or 64px) using the
+   **pixel-art-craft** skill (hue-shifted ramps, one-light shading, real detail). Make it
+   look good *standing still* before animating.
 3. **Add motion** using the fitting pattern(s) from the catalog — bend the soft parts,
    articulate moving parts, layer an overlay — and apply the **principles**
-   (`references/animation-principles.md`): an anticipation wind-up, eased timing (`smooth()`
-   / `pulse01()`), follow-through lag. Keep rigid parts rigid. Drive everything off `phase`
-   for a seamless loop.
+   (`references/animation-principles.md`): an anticipation wind-up, eased timing,
+   follow-through lag. Keep rigid parts rigid. Drive everything off `phase` for a seamless
+   loop. In the **sprite-pipeline** flow this is authored in Aseprite; `assets/anim_starter.py`
+   is a reference example of the same motion expressed in code.
 4. **Export** the looping GIF + a representative still.
 5. **Montage-review** with `scripts/preview_frames.py`; tune curve amplitude, lag, phase
-   spread, frame count, and timing; regenerate. Repeat until the motion reads as organic.
+   spread, frame count, and timing; redo the frames. Repeat until the motion reads as organic.
 6. If the art is for a doc/gallery, display GIFs at large size with
    `image-rendering: pixelated` and consider **base64-inlining** them so the page is
    self-contained and never 404s.
 
 ## What's in this skill
 
-- `assets/anim_starter.py` — runnable generator: drawing + `ramp()` hue-shift color +
-  `smooth()`/`pulse01()` timing + `cantilever()` bend + seamless GIF export + 2 worked
-  examples. Start here; copy and adapt.
-- `references/pixel-art-craft.md` — **designing the image** like a pro: hue-shifted palettes,
-  light/shading (no pillow-shading), anti-aliasing, banding, clusters, dithering, outlining,
-  and a mistakes→fixes table. Read it when drawing the art.
+- `assets/anim_starter.py` — **reference-only** procedural example (Python + Pillow), not
+  the production path: drawing helpers + `cantilever()` bend + `smooth()`/`pulse01()` timing
+  + seamless GIF export + 2 worked examples. Read it to see curve+lag+phase as concrete
+  numbers, then apply the motion in your tool of choice (Aseprite in the sprite-pipeline
+  flow). (Its `ramp()`/`lit`/`sphere_t`/`dither` static-craft helpers belong to the
+  **pixel-art-craft** skill.)
 - `references/animation-principles.md` — **animating** like a pro: the 12 principles in pixel
   terms, sub-pixel animation / smears / color cycling, key-pose libraries, timing/FPS, and a
   principle→helper map.
 - `references/motion-patterns.md` — full code recipes for every motion pattern (bend,
   articulation, pendulum/settle, traveling wave, pulse/glow, glint, overlays, hinge,
   breathing) with the "make it organic" notes.
+- `references/physics-of-motion.md` — turning **real-world forces** into **frame-by-frame
+  staging**: a catalog (falling/flutter, accumulation, gusts, momentum/settle, growth/melt/
+  wither, fire/ember/smoke, water/ripple/drip) that names the force, the principles it invokes,
+  and how to distribute it across N pixel frames — plus a fully storyboarded birch autumn→winter
+  transition. Read it when motion must obey physics, not just bend.
+- `references/learning-resources.md` — a curated, link-verified reading list of professional
+  pixel-art + animation resources (static craft, animation, palettes/tools), each tagged with
+  which skill it supports.
 - `scripts/preview_frames.py` — the upscale + frame-montage review tool. Use it every
   iteration.

@@ -30,14 +30,22 @@ extends RefCounted
 ## ECONOMY; ToolConfig provides the power. The `power` block on each entry below still captures
 ## the original React metadata (power id + params, VERBATIM from src/constants.ts) for the Wiki.
 ##
-## DEFERRED (still effect-less): `hourglass` (undo_move) needs a board/inventory SNAPSHOT
-## system, and `miners_hat` (reveal_tiles) needs a HIDDEN-TILE layer — neither mechanic exists
-## in the port yet, so these two remain summonable (the catalog surfaces them) but do nothing
-## until those milestones land. They are intentionally NOT ToolConfig members.
+## EFFECTS (T24 update). `miners_hat` (reveal_tiles) is NOW WIRED — the seasonal-boss `hide_resources`
+## modifier (Mossback) added the HIDDEN-TILE layer it needed, so miners_hat is a real ToolConfig member
+## whose reveal_tiles STATE power reveals every hidden boss cell. Only `hourglass` (undo_move) stays
+## DEFERRED — it needs a board/inventory SNAPSHOT system that doesn't exist yet — so it remains
+## summonable (the catalog surfaces it) but effect-less, and is intentionally NOT a ToolConfig member.
 ##
 ## Registered as a `class_name` global (like CastleConfig / DecorationConfig / WorkerConfig)
 ## so its const + static helpers are reachable WITHOUT a live autoload — headless tests run
 ## before the scene tree exists. Stateless: never instantiated.
+
+## The Magic Portal's one-time BUILD cost (coins + runes), carried from the React portal
+## building (src/constants.ts:805). Both are NON-inventory currencies on GameState; this is
+## the cost to ERECT the portal, distinct from the per-tool Influence summon costs above.
+## (Relocated from GameState — feature-domain tuning belongs with the feature's config.)
+const BUILD_COST_COINS: int = 2000
+const BUILD_COST_RUNES: int = 5
 
 ## The ported magic tools, in stable display order. Each entry:
 ##   id:             String     — stable tool id (matches React MAGIC_TOOLS id + ITEMS key)

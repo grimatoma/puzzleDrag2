@@ -52,7 +52,8 @@ Roughly in order of impact-per-effort on small game animation:
   looks like nothing happened.
 - **Staging / readability** — present **one clear action at a time** and keep the
   **silhouette legible** all the way through the motion. If the moving part disappears into
-  the body's silhouette mid-action, the read is lost (see craft.md §2).
+  the body's silhouette mid-action, the read is lost (silhouette craft lives in the
+  **pixel-art-craft** skill, §2).
 - **Straight-ahead vs pose-to-pose** — two workflows. **Pose-to-pose** (draw the key
   extremes, then the breakdowns between) gives control — use it for characters and any
   deliberate motion. **Straight-ahead** (draw frame after frame in sequence) gives organic
@@ -60,7 +61,7 @@ Roughly in order of impact-per-effort on small game animation:
   characters, straight-ahead for effects*.
 - **Appeal & solid drawing** — the design must be appealing and **hold its volume/perspective
   frame to frame** (don't let the form wobble or change size unintentionally). Appeal is a
-  static-craft property too — see `pixel-art-craft.md`.
+  static-craft property too — see the **pixel-art-craft** skill.
 
 ## 2. Timing & frame rate
 

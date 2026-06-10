@@ -250,26 +250,28 @@ func _test_pool_spawner_boost() -> void:
 	g.inventory["flour"] = 50
 	_check(g.build(BuildingConfig.LUMBER_CAMP)["ok"], "(setup) built a Lumber Camp")
 	var boosted := _count(g.active_tile_pool(), T.OAK)
-	_check(boosted == oak_base + GameState.SPAWNER_BOOST_SLOTS,
-		"Lumber Camp BOOSTS OAK slots by SPAWNER_BOOST_SLOTS (%d)" % GameState.SPAWNER_BOOST_SLOTS)
+	_check(boosted == oak_base + ZoneConfig.SPAWNER_BOOST_SLOTS,
+		"Lumber Camp BOOSTS OAK slots by SPAWNER_BOOST_SLOTS (%d)" % ZoneConfig.SPAWNER_BOOST_SLOTS)
 	# The boost is a weight bump, not a category unlock: still no ineligible tiles.
 	var pool := g.active_tile_pool()
 	_check(_count(pool, T.PANSY) == 0 and _count(pool, T.PIG) == 0,
 		"a spawner never smuggles an ineligible tile onto the home farm")
 
-# ── rats still seed the farm pool (existing semantics preserved) ───────────────
+# ── rats are NO LONGER pool-seeded (T9: positional rat model) ──────────────────
 
 func _test_pool_keeps_rats() -> void:
 	var g := GameState.new()
 	g.town2_complete = true            # rats_enabled → true
 	_check(g.rats_enabled(), "(setup) rats enabled (Town 2 complete)")
 	var pool := g.active_tile_pool()
-	_check(_count(pool, T.RAT) == Constants.RAT_POOL_SLOTS,
-		"rats still seed the farm pool with RAT_POOL_SLOTS rats")
-	# Rats ride ON TOP of the season-restricted base — the eligible tiles are still present and
-	# the ineligible ones still absent.
-	_check(_count(pool, T.GRASS) > 0, "season base still present alongside rats")
-	_check(_count(pool, T.HORSE) == 0, "rats do not re-introduce ineligible tiles")
+	# T9 CHANGE: rats spawn POSITIONALLY (HazardLogic.roll_rat_spawn) + eat plants each turn; they
+	# are no longer seeded into the refill pool. The pool stays the pure season-restricted base.
+	_check(_count(pool, T.RAT) == 0,
+		"T9: the farm pool is rat-free even with rats enabled (rats are positional)")
+	# The season base is intact and the ineligible tiles still absent — enabling rats is now
+	# entirely pool-neutral.
+	_check(_count(pool, T.GRASS) > 0, "season base present")
+	_check(_count(pool, T.HORSE) == 0, "no ineligible tiles in the pool")
 
 # ── save / load round-trips the season counter ─────────────────────────────────
 

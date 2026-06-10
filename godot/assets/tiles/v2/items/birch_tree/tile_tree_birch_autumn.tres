@@ -1,0 +1,42 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/00.png" id="1_05c2t"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/01.png" id="2_ys81f"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/02.png" id="3_ud63e"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/03.png" id="4_i2s6f"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/04.png" id="5_hyk07"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/05.png" id="6_r5ap3"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/06.png" id="7_3r06q"]
+[ext_resource type="Texture2D" path="res://assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/07.png" id="8_20xsc"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_05c2t")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_ys81f")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_ud63e")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_i2s6f")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_hyk07")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_r5ap3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_3r06q")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_20xsc")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 10.0
+}]

@@ -34,6 +34,7 @@ func _initialize() -> void:
 	_test_integration_credit_chain_path()
 	_test_integration_fill_order_path()
 	_test_integration_boss_defeat_path()
+	_test_champion_unlock_and_reward()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -61,17 +62,18 @@ func _give_all(g: GameState, cost: Dictionary) -> void:
 
 func _test_config_loads() -> void:
 	var all := AC.all()
-	_check(all.size() == 19, "catalog has the 19 ported achievements")
+	_check(all.size() == 24, "catalog has the 24 ported achievements (incl. fish + fowler + champion)")
 	# Spot-check expected ids are present.
 	for id in ["first_steps", "patient_hands", "tireless", "trusted_friend",
 			"village_voice", "first_blood", "naturalist", "polymath",
 			"town_planner", "first_strike", "deep_digger", "mine_master",
 			"forester", "veg_patron", "orchard_friend", "pollinator",
-			"herder", "dairyman", "stable_hand"]:
+			"herder", "dairyman", "stable_hand",
+			"first_catch", "tide_runner", "master_angler", "fowler", "champion"]:
 		_check(AC.has_achievement(id), "catalog includes '%s'" % id)
-	# And that the UNREACHABLE React ids were OMITTED (no fakes).
-	for omitted in ["champion", "supply_chain", "first_catch", "tide_runner",
-			"master_angler", "fowler", "powerful_keep", "ability_artisan"]:
+	# And that the still-UNREACHABLE React ids stay OMITTED (no fakes). first_catch/tide_runner/
+	# master_angler/fowler (harbor+birds) and champion (6 re-challengeable bosses, T24) are now reachable.
+	for omitted in ["supply_chain", "powerful_keep", "ability_artisan"]:
 		_check(not AC.has_achievement(omitted), "unreachable '%s' is OMITTED" % omitted)
 
 	# all() / get_achievement return defensive copies (mutating must not corrupt).
@@ -85,10 +87,11 @@ func _test_for_counter() -> void:
 	var orders := AC.for_counter("orders_fulfilled")
 	_check(orders.size() == 2, "for_counter(orders_fulfilled) → 2")
 	var bosses := AC.for_counter("bosses_defeated")
-	_check(bosses.size() == 1, "for_counter(bosses_defeated) → 1 (first_blood only; champion omitted)")
+	_check(bosses.size() == 2, "for_counter(bosses_defeated) → 2 (first_blood + champion)")
 	var mine := AC.for_counter("mine_chained")
 	_check(mine.size() == 3, "for_counter(mine_chained) → 3")
-	_check(AC.for_counter("fish_chained").is_empty(), "for_counter(fish_chained) → empty (no harbor)")
+	_check(AC.for_counter("fish_chained").size() == 3, "for_counter(fish_chained) → 3 (first_catch/tide_runner/master_angler)")
+	_check(AC.for_counter("bird_chained").size() == 1, "for_counter(bird_chained) → 1 (fowler)")
 
 func _test_counter_for_category() -> void:
 	_check(AC.counter_for_category("trees") == "tree_chained", "trees → tree_chained")
@@ -98,7 +101,8 @@ func _test_counter_for_category() -> void:
 	_check(AC.counter_for_category("gem") == "mine_chained", "gem → mine_chained")
 	_check(AC.counter_for_category("grass") == "", "grass (staple) → no counter")
 	_check(AC.counter_for_category("rat") == "", "rat (hazard) → no counter")
-	_check(AC.counter_for_category("birds") == "", "birds → no counter (fowler omitted from this slice)")
+	_check(AC.counter_for_category("birds") == "bird_chained", "birds → bird_chained (fowler)")
+	_check(AC.counter_for_category("fish") == "fish_chained", "fish → fish_chained (harbor)")
 
 # ── bump_counter: unlocks, rewards, idempotence ───────────────────────────────
 
@@ -304,20 +308,59 @@ func _test_integration_fill_order_path() -> void:
 		"trusted_friend unlocked via fill_order")
 
 func _test_integration_boss_defeat_path() -> void:
-	# Only a DEFEAT bumps bosses_defeated through the wired damage_boss path.
+	# T24: only a DEFEAT (target met / a win resolution) bumps bosses_defeated through the wired
+	# note_boss_chain → _resolve_boss path. Arm a frostmaw fight by hand (catalog target 30 oak).
 	var g := GameState.new()
 	g.boss_active = BossConfig.FROSTMAW
-	g.boss_hp = 5
+	g.boss_season = "winter"
+	g.boss_year = 1
+	g.boss_turns_remaining = BossConfig.BOSS_WINDOW_TURNS
+	g.boss_target_resource = "tile_tree_oak"
+	g.boss_target_amount = 30
 	var coins_before := g.coins
-	var r1 := g.damage_boss(2)   # 5 - 2 = 3, NOT defeated
-	_check(not bool(r1.get("defeated", false)), "non-fatal hit does not defeat")
+	# A short oak chain (under the target) makes progress but does NOT defeat → no bump.
+	var r1 := g.note_boss_chain(Constants.Tile.OAK, 5, 0)
+	_check(not bool(r1.get("defeated", false)), "under-target chain does not defeat")
 	_check(int(g.achievement_counters.get("bosses_defeated", 0)) == 0,
-		"a non-fatal hit does NOT bump bosses_defeated")
-	var r2 := g.damage_boss(10)  # over-kill → defeated
-	_check(bool(r2.get("defeated", false)), "the fatal hit defeats the boss")
+		"an under-target chain does NOT bump bosses_defeated")
+	# A big oak chain meeting the target wins → bumps bosses_defeated + first_blood.
+	var r2 := g.note_boss_chain(Constants.Tile.OAK, 30, 0)
+	_check(bool(r2.get("defeated", false)), "meeting the target defeats the boss")
 	_check(int(g.achievement_counters.get("bosses_defeated", 0)) == 1,
 		"the DEFEAT bumps bosses_defeated to 1 via the wired path")
 	_check(bool(g.achievements_unlocked.get("first_blood", false)),
 		"first_blood unlocked on boss defeat")
-	# first_blood grants +200 coins ON TOP of the boss reward already credited by damage_boss.
+	# first_blood grants +200 coins ON TOP of the boss reward already credited on the win.
 	_check(g.coins >= coins_before + 200, "first_blood's +200 coin reward is granted")
+
+func _test_champion_unlock_and_reward() -> void:
+	# T24: with SIX re-challengeable seasonal bosses, bosses_defeated is no longer capped at
+	# 1, so champion (threshold 4) is reachable. Drive the counter directly to verify the
+	# threshold-4 crossing unlocks champion and grants its reward through the real grant_tool
+	# path — mirroring _test_tool_reward_grants_real_tool, but for the boss counter.
+	var g := GameState.new()
+	# Three defeats: first_blood (threshold 1) is earned; champion stays locked; no tool yet.
+	for _i in 3:
+		g.bump_counter("bosses_defeated")
+	_check(bool(g.achievements_unlocked.get("first_blood", false)),
+		"first_blood unlocked by the first boss defeat")
+	_check(not bool(g.achievements_unlocked.get("champion", false)),
+		"champion still locked at 3 boss defeats")
+	_check(g.tool_count("magic_wand") == 0, "no magic_wand granted before champion unlocks")
+	# The 4th defeat crosses champion's threshold.
+	var coins_before := g.coins
+	var newly := g.bump_counter("bosses_defeated")     # 4th
+	_check(bool(g.achievements_unlocked.get("champion", false)),
+		"champion unlocks at the 4th boss defeat")
+	_check(newly.size() == 1 and String(newly[0]["id"]) == "champion",
+		"the 4th bump returns [champion] only")
+	# React's reward is carried over verbatim: {tools:{magic_wand:1}}. magic_wand is a real
+	# ToolConfig member, so it routes through grant_tool exactly like master_angler's reward
+	# (a tool-only reward — no coin component).
+	_check(g.tool_count("magic_wand") == 1,
+		"champion grants 1 charge of magic_wand via grant_tool")
+	_check(g.coins == coins_before, "champion's tool-only reward grants no coins")
+	# Idempotent: a 5th defeat re-grants nothing (the unlocked set blocks a re-grant).
+	var newly5 := g.bump_counter("bosses_defeated")    # 5th
+	_check(newly5.is_empty(), "no new unlock on the 5th boss defeat")
+	_check(g.tool_count("magic_wand") == 1, "champion does not re-grant magic_wand")

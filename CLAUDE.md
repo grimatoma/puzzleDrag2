@@ -6,23 +6,27 @@ Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Ai
 
 ## Mental model (read first)
 
-Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
+**Two implementations live in this repo — and which one is "primary" has flipped.** The **Godot 4.6 port under `godot/` is now the primary, actively-developed game.** New game work — features, balance, content, art, bug fixes — lands there by default. The **React+Phaser app at the repo root** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain) is now **legacy**: the original implementation the port was built from and brought to full feature parity. It still builds, still deploys at `/`, and remains the richest reference for *how the game is meant to work* — but it is no longer where new game features go. Most of this file still documents it because it's the older, larger codebase; read that as reference, not as a signal that `src/` is where to make changes.
 
-**Two implementations live in this repo.** Everything above (and most of this file) is the **React+Phaser app at the repo root** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain). A **second, parallel Godot 4.6 port lives under `godot/`** — a from-scratch GDScript reimplementation of the same game, built side-by-side during an in-progress migration. It is a **completely separate codebase**: different language (GDScript, not TS/JS), different engine, its own tests, its own CI (`.github/workflows/godot-ci.yml`), its own deploy target (`/puzzleDrag2/godot/`). None of the `src/` / Vite / `npm` guidance applies inside `godot/`, and vice-versa. **Before acting on a request, work out which implementation it targets** — if the user says "Godot", or the symptom is on a `.gd`/`.tscn` surface, it's the port (see the next section), not `src/`.
+**Before acting on a request, work out which implementation it targets — and default to Godot for game work.** It's the legacy React app only when the request names React/Phaser/Vite/`npm`, points at `src/` or `prototype.tsx`, or the symptom is on a `.jsx`/`.tsx` surface. "Godot", a `.gd`/`.tscn` surface, or anything under `godot/` is always the port (see the next section). The two are **completely separate codebases**: different language (GDScript vs TS/JS), different engine, their own tests, their own CI (`.github/workflows/godot-ci.yml` vs `ci.yml`), their own deploy targets (`/puzzleDrag2/godot/` vs `/`). None of the `src/` / Vite / `npm` guidance applies inside `godot/`, and vice-versa.
+
+**The legacy React app, in brief:** Phaser 3 + React. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
 
 ## Godot port (`godot/`)
 
-A Godot **4.6** (GL Compatibility renderer, mobile-first **portrait** 720×1280) reimplementation of the game. Strategy + live status: `docs/godot-migration-plan.html` and `docs/godot-migration-progress.html`; orientation doc: `godot/README.md` (accurate on the asset pipeline + web nav; its file-layout list is stale — trust the tree). The Web export is deployed alongside the Phaser game at `/puzzleDrag2/godot/` by `.github/workflows/deploy.yml`.
+**This is the primary, actively-developed game project now** (see "Mental model" above). A Godot **4.6** (GL Compatibility renderer, mobile-first **portrait** 720×1280) reimplementation of the game, brought to full feature parity with the legacy React app. Strategy + live status: `docs/godot-migration-plan.html` and `docs/godot-migration-progress.html`; orientation doc: `godot/README.md` (accurate on the asset pipeline + web nav; its file-layout list is stale — trust the tree). The Web export is deployed alongside the legacy Phaser game at `/puzzleDrag2/godot/` by `.github/workflows/deploy.yml`.
 
 **Architecture (no autoloads).** State and services are plain `class_name`-registered scripts, owned and wired by the root scene — there is no `[autoload]` section in `project.godot`.
 - `scenes/Main.gd` + `Main.tscn` — the single root scene (`Node2D`). Owns `game: GameState`, the `Board`, a `ViewRouter`, the `Audio` service, and builds the HUD/screens in code. The whole game is essentially one scene with `*Screen.gd` / `*Modal.gd` panels swapped in.
 - `scripts/GameState.gd` — canonical run economy (inventory, fractional chain `progress` carry-over, coins, turn, `Settlement`). The GDScript analogue of the React reducer's `resourceProgress` accumulator. `RefCounted`, instantiable in tests.
 - `scripts/ViewRouter.gd` — pure nav state machine (`View`/`Modal` enums), no Node/signals. Mirrors React's `src/router.js`. On the **Web export only**, `Main.gd` syncs it to `location.hash` for Back/Forward + `#/<id>` deep links.
 - `scripts/*Config.gd` — the data layer (`Constants`, `RecipeConfig`, `BossConfig`, `CartographyConfig`, `TownConfig`, …): the GDScript counterpart of `src/constants.js` + the feature configs. `BoardLogic.gd` holds the pure board rules (chain validation, collapse, refill).
-- `scripts/UiKit.gd` — shared UI factory (buttons, scroll containers, scrollbar theming). `Palette.gd` is the color source.
+- `scripts/UiKit.gd` — shared UI factory (buttons, scroll containers, scrollbar theming, view backdrops/scrims, the shared modal card surface). `Palette.gd` is the color source. `scripts/UiFx.gd` is the **motion kit**: overlay open transitions, nav-tab animation, button press feedback, count-up/bar-glide tweens, shake/pulse accents — wired centrally (the overlay transition hooks in `Main._install_overlay_dismiss`, so every new modal animates for free). UiFx only touches `modulate`/`scale`/`pivot`, never logical state; it no-ops headless, and the visual harness pins `UiFx.enabled = false`, so tests and goldens always see settled end-states.
 - `scenes/*.gd` — one script per board element / screen / modal (`Board.gd`, `Tile.gd`, `InventoryScreen.gd`, `TownScreen.gd`, …).
 
-**Tiles render in 3 tiers** (`scenes/Tile.gd`, newest wins): v2 animated `SpriteFrames` (`assets/tiles/v2/<key>.tres`) → v1 flat PNG (`assets/tiles/<key>.png`, exported from the Phaser runtime via `node tools/export-v1-tiles.mjs`) → procedural `Palette` color square. So a tile with no committed art still renders.
+**Config data lives in a `*Config.gd` catalog, not inlined in logic/scene code.** Domain/config data — entity attributes, balance/tuning numbers, player-facing flavor & label copy, and id→{label, glyph, family, …} classification tables — belongs in a `class_name`-registered `*Config.gd` catalog (or `Constants.gd`), keyed by id, exposed through static accessors; logic and scene scripts read it by name. This mirrors React, whose single source of truth is its config (`ITEMS`, `RECIPES`, `CATEGORY_LABEL`, …). So when you find a literal table or a magic number sitting in a reducer or scene (`GameState.gd`, `Main.gd`, a `*Screen.gd`/`*Modal.gd`), move it to the owning catalog instead of copying it: resources → `ResourceConfig`, a tool and its `desc` → `ToolConfig`, tile categories (label/glyph/family) → `TileCategoryConfig`, bosses → `BossConfig`, SFX → `AudioConfig`, and so on. Don't introduce a second copy of a table that already exists (the `DROP_PREFIXES` / category-label drift is the cautionary tale). **Stays inline (NOT config):** pure UI layout/geometry, pure presentational colors (use `Palette` tokens), engine/audio-engine tuning (mix rate, pool size), and faithful 1:1 deterministic ports of React data files (e.g. `TownLayout.BOARD_SPOTS`) where relocating would risk the cross-language determinism contract.
+
+**Tiles render in 3 tiers** (`scenes/Tile.gd`, newest wins): v2 animated `SpriteFrames` (`assets/tiles/v2/<key>.tres`, packed from pixel-pipeline frames by the **separate, on-demand** `npm run godot:update-tiles` step — not part of the pixel pipeline or the `npm` build) → v1 flat PNG (`assets/tiles/<key>.png`, exported from the Phaser runtime via `node tools/export-v1-tiles.mjs`) → procedural `Palette` color square. So a tile with no committed art still renders.
 
 **Touch / input gotcha (the one that bit us).** `project.godot` enables **both** `pointing/emulate_mouse_from_touch` **and** `pointing/emulate_touch_from_mouse` ("treat touch as mouse so one drag path serves both"). The cost: one physical drag arrives as **two** events — a real `InputEventScreenDrag` *and* a synthesized `InputEventMouseMotion`. Any handler that reacts to both will **double-count** the gesture. This is exactly the "scroll moves at 2× my finger" bug — fixed by routing drags through the mouse path only (`drag_with_touch = false` in `UiKit.make_vscroll()`, the single factory every list/modal scroll goes through). When adding new drag/gesture handling in the port, listen to **one** event type, not both.
 
@@ -43,6 +47,8 @@ npm run test:godot-web                                         # headless-Chromi
 **Visual evidence.** `godot/tools/*_capture.gd` / `screenshot.gd` render screens to PNGs headlessly; goldens live in `godot/tests/visual/__goldens__`. (The repo-root `npm run test:visual` Playwright suite is the **Phaser** app's, not the port's.)
 
 ## Where to look
+
+These first-stops map the **legacy React app** (`src/`). For the now-primary Godot game, see the "Godot port (`godot/`)" section above and the `godot/` tree.
 
 | Task | First stop | See also |
 |---|---|---|
@@ -66,6 +72,8 @@ The body below covers commands, architecture, the core game mechanic, testing ha
 
 ## Commands
 
+These are **legacy React app** commands (Vite/`npm`). The now-primary Godot game uses a `godot` binary — see the "Godot port (`godot/`)" section above for its commands.
+
 ```bash
 npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
@@ -87,9 +95,9 @@ Every `test:visual*` script has a `pretest:visual*` hook that runs `tools/ensure
 
 Unit/integration tests live in `tests/` (22 phase-* files) and `src/__tests__/` (60+ files). `runSelfTests()` in `src/utils.js` is a thin smoke shim that delegates to `src/smokeTests.js` (`SMOKE_INVARIANTS`); it can still be invoked from the browser console after the game loads.
 
-## Godot fork (`godot/`)
+## Godot (`godot/`) — supplementary reference
 
-A **Godot 4.6** port of the game lives at `godot/` in the repo root, developed side-by-side with the React+Phaser version. It is a separate project (its own `project.godot`), not a Vite entry.
+The **primary** Godot details live in the "Godot port (`godot/`)" section near the top of this file (architecture, the `*Config.gd` convention, the 3-tier tile pipeline, the input gotcha, the command set); this section is older supplementary reference and may drift — trust the top section. The Godot 4.6 project at `godot/` is the actively-developed game; the React+Phaser version it was ported from is legacy. It is a separate project (its own `project.godot`), not a Vite entry.
 
 **Key scripts (GDScript, `class_name` registered):**
 - `godot/scripts/Constants.gd` — board dims, Farm tile set, thresholds, placeholder colors (mirrors `src/constants.js`)
@@ -98,7 +106,7 @@ A **Godot 4.6** port of the game lives at `godot/` in the repo root, developed s
 **Scenes:** `Main.tscn` (root) → `Board.gd` (6×6 grid, drag input, collect/collapse/refill) + `Tile.gd` (per-tile rendering with three-tier asset fallback) + HUD.
 
 **Asset pipeline — three-tier fallback (newest available wins):**
-1. `godot/assets/tiles/v2/<key>.tres` — animated `SpriteFrames` (PixelLab/Ludo.ai art, drop-in)
+1. `godot/assets/tiles/v2/<key>.tres` — animated `SpriteFrames` (PixelLab/Ludo.ai art, drop-in), packed from the pixel pipeline's frames by the **separate** `npm run godot:update-tiles` step (`tools/update-godot-tiles.mjs`) — run on demand, never as part of the pixel pipeline or the `npm` build
 2. `godot/assets/tiles/<key>.png` — flat PNGs exported from the Phaser runtime (`node tools/export-v1-tiles.mjs`)
 3. Procedural colored square via `Constants.color_for()` (always available, no committed asset needed)
 
@@ -116,7 +124,7 @@ godot --headless --path godot --export-release "Web" dist/index.html   # Web exp
 
 ## Architecture
 
-This is a Phaser 3 + React game. React owns the page shell *and* the canonical game state; Phaser owns the game canvas and mirrors needed fields via a registry bridge.
+This describes the **legacy React app** (`src/`); for the now-primary Godot game see the "Godot port (`godot/`)" section. This is a Phaser 3 + React game: React owns the page shell *and* the canonical game state; Phaser owns the game canvas and mirrors needed fields via a registry bridge.
 
 **Entry flow:** `index.html` (single `<script type="module" src="/main.jsx">`; Vite bundles React, Phaser, Tailwind, etc.) → `main.jsx` (mounts a `RootErrorBoundary` around the app) → `prototype.jsx` (calls `useReducer(gameReducer, initialState)` and mounts the Phaser.Game instance) → `src/GameScene.js` (the single Phaser Scene that renders the board and forwards input).
 
@@ -278,6 +286,8 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 - **Always use subagent-driven development for plan execution.** When executing an implementation plan, always invoke the `subagent-driven-development` skill (`.claude/skills/subagent-driven-development/SKILL.md`) — never execute tasks inline in the main session. This keeps the main chat's context small and focused.
 
 - **Cursor agents (desktop and Cloud).** Load `AGENTS.md`, this file, and `.cursor/rules/cursor-superpowers.mdc` from the repo clone. Skills: `.claude/skills/<name>/SKILL.md` (also `.cursor/skills/`); use **Read** in Cursor, **Skill** tool in Claude Code. Cloud has no access to `~/.cursor/rules` — commit project rules and skills; do not rely on personal Cursor rules for this repo. Claude Code hooks in `.claude/settings.json` run in Claude Code only (including remote); they do not run in Cursor.
+
+- **Headroom context compression (local machine only).** On the developer's local machine, [Headroom](https://github.com/chopratejas/headroom) runs as a compression proxy at `http://127.0.0.1:8787` and is configured in the user-level `~/.claude/settings.json` (not in this project's `.claude/settings.json` — do not add `ANTHROPIC_BASE_URL` here). It auto-starts via a `SessionStart` hook and a `PreToolUse(Bash)` hook in global settings. The venv lives at `~/.cache/headroom-bootstrap/venv`; the bootstrap script at `~/.cache/headroom-bootstrap/headroom-bootstrap.sh`. **Cloud/remote sessions do not use headroom** — the proxy is `127.0.0.1`-only and does not exist on cloud containers. Diagnostics: `curl -s 127.0.0.1:8787/stats`.
 
 ## Engineering rules
 

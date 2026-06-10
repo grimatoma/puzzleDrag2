@@ -89,8 +89,8 @@ func _count_of(grid: Array, tile: int) -> int:
 # ── membership + catalog shape ──────────────────────────────────────────────
 
 func _test_membership_and_shape() -> void:
-	# All 40 ids resolvable (10 original + 14 PR1 + 5 PR2 + 3 PR2b fill_bias + 8 PR3 magic) and TOOL_IDS has no dupes.
-	_check(ToolConfig.all_ids().size() == 40, "catalog has 40 tools (10 original + 14 PR1 + 5 PR2 + 3 PR2b + 8 PR3)")
+	# All 45 ids resolvable (10 original + 14 PR1 + 5 PR2 + 3 PR2b + 8 PR3 + 2 T14a wolf + 2 T14b mine + 1 T24 miners_hat) + no dupes.
+	_check(ToolConfig.all_ids().size() == 45, "catalog has 45 tools (10 original + 14 PR1 + 5 PR2 + 3 PR2b + 8 PR3 + 2 T14a rifle/hound + 2 T14b water_pump/explosives + 1 T24 miners_hat)")
 	var seen := {}
 	var dup := false
 	for id in ToolConfig.all_ids():

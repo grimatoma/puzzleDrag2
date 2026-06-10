@@ -5,11 +5,17 @@ extends CanvasLayer
 ## parchment card + scrim, Cinzel title, scroll list of cards, UiKit/Palette.
 ##
 ## NO class_name on purpose — Main preloads this script so the port never needs an
-## --import pass to register a new global. Pure read-only: the only actionable Control
-## is "✖ Close"; everything else is MOUSE_FILTER_IGNORE.
+## --import pass to register a new global.
+##
+## TABS (T20): Bonds (the NPC relationship roster — avatars + bond bars + a GIFT control),
+## Workers (the HIRE-by-type system — Farmer/Lumberjack/Miner/Baker cards with Hire/Fire),
+## and Quests (the active quest board). NPCs (bonds/gifts) and hired Workers are DISTINCT
+## concepts on DISTINCT tabs — the React structure. The Bonds tab gifts and the Workers tab
+## hires both mutate GameState and emit `state_changed` so Main persists + refreshes the HUD.
 ##
 ## REAL DATA: the roster comes from game.npcs.roster (in NpcConfig.all_ids() order);
-## names/roles/colors from NpcConfig; bond floats from game.npc_bond(id). Nothing faked.
+## names/roles/colors + gift preferences from NpcConfig; bond floats from game.npc_bond(id);
+## worker counts/costs from game/WorkerConfig; gifts/hires go through GameState. Nothing faked.
 ##
 ## Headless-test contract:
 ##   _action_buttons["close"] — the close Button (emits `closed` signal)
@@ -19,6 +25,10 @@ extends CanvasLayer
 var game: GameState
 
 signal closed
+## Emitted after a mutation on this screen (a gift given, a worker hired/fired) so Main can
+## persist the save + refresh the HUD totals (wired to _on_town_changed, the shared town-action
+## funnel). The screen itself re-renders in-place after the mutation.
+signal state_changed
 
 ## action id → Button, for headless tests. Currently just "close".
 var _action_buttons: Dictionary = {}
@@ -36,19 +46,31 @@ var _built: bool = false
 var _header_label: Label
 
 ## id:String → rendered PanelContainer card, rebuilt each refresh(). Lets tests fetch a
-## specific card (e.g. assert the name label or bond band text). On the Workers tab this
-## holds the NPC roster cards (the view-test contract); the Quests tab uses its own nodes.
+## specific card (e.g. assert the name label or bond band text). On the BONDS tab this
+## holds the NPC roster cards (the view-test contract); the Workers tab holds the hire
+## cards keyed by worker id; the Quests tab uses its own nodes.
 var _cards: Dictionary = {}
 
-## Current tab: "workers" (the named townsfolk roster) | "quests" (the active quest board).
-## Workers is the default so setup()+open() renders the roster the view test inspects.
-var _tab: String = TAB_WORKERS
+## Current tab (T20 restructure):
+##   "bonds"   — the named NPC roster: avatars + bond bars + a GIFT control (the relationship
+##               layer; React's NPC bonds/gifts). DEFAULT so setup()+open() renders the roster.
+##   "workers" — the HIRE-by-type system (Farmer/Lumberjack/Miner/Baker cards: cost, effect,
+##               Hire/Fire). The React distinction: NPCs (bonds/gifts) and hired Workers are
+##               DISTINCT concepts on DISTINCT tabs. This tab is the canonical hire surface.
+##   "quests"  — the active quest board.
+var _tab: String = TAB_BONDS
 
-## "workers" / "quests" → the segmented toggle Button. Built once in the shell.
+## "bonds" / "workers" / "quests" → the segmented toggle Button. Built once in the shell.
 var _tab_buttons: Dictionary = {}
 
+const TAB_BONDS := "bonds"
 const TAB_WORKERS := "workers"
 const TAB_QUESTS := "quests"
+
+## The resource the player has currently selected to gift, per NPC card. id:String →
+## resource:String. Defaults (lazily) to the NPC's top giftable owned preference. The gift
+## OptionButton on each Bonds card writes here; the Give button reads it.
+var _gift_choice: Dictionary = {}
 
 # ── palette tokens (matches other parchment screens) ──────────────────────────────────
 const COL_TITLE  := Palette.INK
@@ -105,9 +127,7 @@ func _build_shell() -> void:
 	# bar shows ABOVE the view, and stops UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable;
 	# MOUSE_FILTER_STOP eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -156,7 +176,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "👥 Townsfolk"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -171,23 +191,32 @@ func _build_shell() -> void:
 	close_btn.connect("pressed", Callable(self, "close"))
 	_action_buttons["close"] = close_btn
 
-	# Tab row: a Workers | Quests segmented toggle on the left, with the count
-	# ("N townsfolk" / "N quests") pushed to the right (React's FeaturePanel.Tabs row).
+	# Tab row: a Bonds | Workers | Quests segmented toggle on the left, with the count
+	# ("N townsfolk" / "N workers" / "N quests") pushed to the right (React's FeaturePanel.Tabs row).
+	# Bonds = the NPC relationship roster (avatars + bond bars + gifts); Workers = the hire-by-type
+	# system; Quests = the active quest board. (T20: NPCs and hired Workers are DISTINCT concepts.)
 	var tab_row := HBoxContainer.new()
 	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_row.add_theme_constant_override("separation", 6)
 	root_vbox.add_child(tab_row)
 
+	var bonds_btn := Button.new()
+	bonds_btn.text = "Bonds"
+	UiKit.set_font_size(bonds_btn, Typography.Role.SUBHEAD)
+	bonds_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_BONDS))
+	tab_row.add_child(bonds_btn)
+	_tab_buttons[TAB_BONDS] = bonds_btn
+
 	var workers_btn := Button.new()
 	workers_btn.text = "Workers"
-	workers_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(workers_btn, Typography.Role.SUBHEAD)
 	workers_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_WORKERS))
 	tab_row.add_child(workers_btn)
 	_tab_buttons[TAB_WORKERS] = workers_btn
 
 	var quests_btn := Button.new()
 	quests_btn.text = "Quests"
-	quests_btn.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(quests_btn, Typography.Role.SUBHEAD)
 	quests_btn.connect("pressed", Callable(self, "_on_tab").bind(TAB_QUESTS))
 	tab_row.add_child(quests_btn)
 	_tab_buttons[TAB_QUESTS] = quests_btn
@@ -195,7 +224,7 @@ func _build_shell() -> void:
 	# Count line — "N townsfolk" / "N quests" (gold), right-aligned, rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
 	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -230,15 +259,24 @@ func refresh() -> void:
 		_body.remove_child(child)
 		child.queue_free()
 	_cards.clear()
+	# Drop every action button except the static "close" so tests never read a stale node
+	# (the Workers / Bonds tabs register hire:/fire:/gift: buttons that are rebuilt each refresh).
+	var close_btn: Variant = _action_buttons.get("close")
+	_action_buttons.clear()
+	if close_btn != null:
+		_action_buttons["close"] = close_btn
 
-	if _tab == TAB_QUESTS:
-		_render_quests()
-	else:
-		_render_workers()
+	match _tab:
+		TAB_QUESTS:
+			_render_quests()
+		TAB_WORKERS:
+			_render_workers_hire()
+		_:
+			_render_bonds()
 
-## WORKERS tab — the named townsfolk roster (NpcConfig.all_ids() order). Each NPC gets a
-## card tracked in `_cards` (the view-test contract).
-func _render_workers() -> void:
+## BONDS tab — the named NPC relationship roster (NpcConfig.all_ids() order). Each NPC gets a
+## card tracked in `_cards` (the view-test contract): avatar + bond bar + a GIFT control.
+func _render_bonds() -> void:
 	var roster: Array = game.npcs.get("roster", NpcConfig.all_ids())
 	var ordered: Array = []
 	for id in NpcConfig.all_ids():
@@ -250,6 +288,20 @@ func _render_workers() -> void:
 		_body.add_child(card)
 		_cards[id] = card
 
+## WORKERS tab — the HIRE-by-type system (T20). One card per WorkerConfig type: name/role,
+## "×count/max", an effect summary, the ramped next-hire cost, a Hire button (disabled unless
+## affordable) and a Fire button (only when at least one is hired). Mirrors TownScreen's old
+## Workers section — the hire UI now lives HERE (NPCs vs hired Workers are distinct concepts on
+## distinct tabs). Cards tracked in `_cards` keyed by worker id; buttons in `_action_buttons`
+## as "hire:<id>" / "fire:<id>".
+func _render_workers_hire() -> void:
+	var ids: Array = WorkerConfig.all_ids()
+	_header_label.text = "%d trades" % ids.size()
+	for wid in ids:
+		var card := _make_worker_card(String(wid))
+		_body.add_child(card)
+		_cards[String(wid)] = card
+
 ## QUESTS tab — the active quest board (real game.quests; ensure_quests rolls them on first
 ## view, idempotent). A compact card per quest: its label, a progress bar, and the reward.
 func _render_quests() -> void:
@@ -259,7 +311,7 @@ func _render_quests() -> void:
 	if quests.is_empty():
 		var empty := Label.new()
 		empty.text = "No quests on the board yet."
-		empty.add_theme_font_size_override("font_size", 16)
+		UiKit.set_font_size(empty, Typography.Role.SUBHEAD)
 		empty.add_theme_color_override("font_color", COL_MUTED)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -321,7 +373,7 @@ func _make_npc_card(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = npc_name
-	name_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -331,7 +383,7 @@ func _make_npc_card(id: String) -> PanelContainer:
 
 	var role_lbl := Label.new()
 	role_lbl.text = npc_role
-	role_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(role_lbl, Typography.Role.LABEL)
 	role_lbl.add_theme_color_override("font_color", COL_MUTED)
 	role_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_col.add_child(role_lbl)
@@ -376,12 +428,206 @@ func _make_npc_card(id: String) -> PanelContainer:
 	# Band label: "<band name> · bond X.X/10 · ×<mult> orders"
 	var band_lbl := Label.new()
 	band_lbl.text = "%s · bond %.1f/10 · ×%.2f orders" % [band_name, bond, mult]
-	band_lbl.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(band_lbl, Typography.Role.BODY)
 	band_lbl.add_theme_color_override("font_color", fill_color)
 	band_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_col.add_child(band_lbl)
 
+	# ── gift control row ──────────────────────────────────────────────────────
+	# A resource picker (loved/liked owned resources, tier-tagged) + a "Give" button. The
+	# button is disabled during this NPC's once-per-season cooldown or when nothing giftable
+	# is owned; the label shows the bond delta the chosen gift would grant.
+	col.add_child(_make_gift_row(id))
+
 	return chip
+
+# ── gift control ───────────────────────────────────────────────────────────────────────
+
+## Build the gift-control row for NPC `id`: an OptionButton of giftable OWNED resources
+## (the NPC's loved/liked preferences the player currently holds, each tagged with its tier
+## + delta) and a Give button. On cooldown OR with no giftable stock the control is disabled
+## and a status hint replaces it. The chosen resource is tracked in `_gift_choice[id]`.
+func _make_gift_row(id: String) -> Control:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 8)
+
+	# The giftable OWNED preferences: loved first, then liked, deduped, that the player holds.
+	var options: Array = _giftable_options(id)
+	var on_cooldown: bool = not game.npcs_state.can_gift(id, game.current_season_index())
+
+	if options.is_empty() or on_cooldown:
+		# Nothing actionable — show a muted status hint instead of a dead control.
+		var hint := Label.new()
+		if on_cooldown:
+			hint.text = "🎁 Gifted this season"
+		else:
+			hint.text = "🎁 No favoured goods in stock"
+		UiKit.set_font_size(hint, Typography.Role.BODY)
+		hint.add_theme_color_override("font_color", COL_MUTED)
+		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(hint)
+		return row
+
+	# Resolve / clamp the remembered choice for this NPC to a still-valid option.
+	var choice: String = String(_gift_choice.get(id, ""))
+	var valid_keys: Array = []
+	for o in options:
+		valid_keys.append(String(o["key"]))
+	if not valid_keys.has(choice):
+		choice = String(options[0]["key"])
+		_gift_choice[id] = choice
+
+	var picker := OptionButton.new()
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.set_font_size(picker, Typography.Role.BODY)
+	for i in options.size():
+		var o: Dictionary = options[i]
+		# "flour ×2 — loves +0.5"
+		picker.add_item("%s ×%d — %s +%.2f" % [String(o["key"]), int(o["owned"]), String(o["tier"]), float(o["delta"])])
+		picker.set_item_metadata(i, String(o["key"]))
+		if String(o["key"]) == choice:
+			picker.select(i)
+	picker.item_selected.connect(func(idx: int):
+		_gift_choice[id] = String(picker.get_item_metadata(idx))
+	)
+	row.add_child(picker)
+	_action_buttons["gift_pick:" + id] = picker
+
+	var give_btn := Button.new()
+	give_btn.text = "Give"
+	UiKit.set_font_size(give_btn, Typography.Role.BODY)
+	give_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_action_button(give_btn, Palette.GOLD, 6, 0)
+	give_btn.connect("pressed", Callable(self, "_do_gift").bind(id))
+	row.add_child(give_btn)
+	_action_buttons["gift:" + id] = give_btn
+
+	return row
+
+## The giftable OWNED options for NPC `id`: every loved/liked preference the player currently
+## holds (qty > 0), loved first then liked, deduped. Each entry: {key, tier, delta, owned}.
+func _giftable_options(id: String) -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
+	for tier_list in [["loves", NpcConfig.loves_of(id)], ["likes", NpcConfig.likes_of(id)]]:
+		var tier_name: String = String(tier_list[0])
+		for key in (tier_list[1] as Array):
+			var k := String(key)
+			if seen.has(k):
+				continue
+			var owned: int = int(game.inventory.get(k, 0))
+			if owned <= 0:
+				continue
+			seen[k] = true
+			out.append({"key": k, "tier": tier_name, "delta": NpcConfig.gift_delta(tier_name), "owned": owned})
+	return out
+
+## Give the currently-selected resource to NPC `id`. Routes through GameState.give_gift (consume
+## 1, bump bond by tier delta, set the season cooldown); on success emits state_changed so Main
+## persists + refreshes the HUD, then re-renders so the bond bar + cooldown state update.
+func _do_gift(id: String) -> void:
+	var resource: String = String(_gift_choice.get(id, ""))
+	if resource == "":
+		return
+	var res: Dictionary = game.give_gift(id, resource)
+	if bool(res.get("ok", false)):
+		emit_signal("state_changed")
+	refresh()
+
+# ── worker hire card ──────────────────────────────────────────────────────────────────
+
+## A single Worker HIRE card (Workers tab): name/role + "×count/max" + effect summary + the
+## ramped next-hire cost, with a Hire button (disabled unless affordable) and a Fire button
+## (only when at least one is hired). Mirrors TownScreen's old Workers rows; wired to
+## game.hire_worker / fire_worker via _do_hire / _do_fire.
+func _make_worker_card(id: String) -> PanelContainer:
+	var count: int = game.worker_count(id)
+	var maxc: int = WorkerConfig.max_count(id)
+
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 5)
+	chip.add_child(col)
+
+	var name_lbl := Label.new()
+	name_lbl.text = "%s ×%d/%d" % [WorkerConfig.worker_name(id), count, maxc]
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
+	name_lbl.add_theme_color_override("font_color", COL_BODY)
+	var hf: Font = UiKit.heading_font()
+	if hf != null:
+		name_lbl.add_theme_font_override("font", hf)
+	col.add_child(name_lbl)
+
+	var effect_lbl := Label.new()
+	effect_lbl.text = "%s  (%s)" % [_worker_effect_summary(id), _format_worker_cost(WorkerConfig.hire_cost_at(id, count))]
+	UiKit.set_font_size(effect_lbl, Typography.Role.BODY)
+	effect_lbl.add_theme_color_override("font_color", COL_MUTED)
+	effect_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(effect_lbl)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_row.add_theme_constant_override("separation", 8)
+	col.add_child(btn_row)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_row.add_child(spacer)
+
+	if count > 0:
+		var fire_btn := Button.new()
+		fire_btn.text = "Fire"
+		UiKit.set_font_size(fire_btn, Typography.Role.BODY)
+		UiKit.style_action_button(fire_btn, Palette.EMBER, 6, 0)
+		fire_btn.connect("pressed", Callable(self, "_do_fire").bind(id))
+		btn_row.add_child(fire_btn)
+		_action_buttons["fire:" + id] = fire_btn
+
+	var hire_btn := Button.new()
+	hire_btn.text = "Hire"
+	UiKit.set_font_size(hire_btn, Typography.Role.BODY)
+	hire_btn.disabled = not game.can_hire_worker(id)
+	UiKit.style_action_button(hire_btn, Palette.MOSS, 6, 0)
+	hire_btn.connect("pressed", Callable(self, "_do_hire").bind(id))
+	btn_row.add_child(hire_btn)
+	_action_buttons["hire:" + id] = hire_btn
+
+	return chip
+
+## A short player-facing description of worker `id`'s passive effect (mirrors TownScreen).
+func _worker_effect_summary(id: String) -> String:
+	var kind: String = WorkerConfig.ability_kind(id)
+	var amount: int = WorkerConfig.ability_amount(id)
+	if kind == WorkerConfig.KIND_THRESHOLD_REDUCE_CATEGORY:
+		return "-%d %s chain" % [amount, WorkerConfig.ability_category(id)]
+	if kind == WorkerConfig.KIND_RECIPE_INPUT_REDUCE:
+		return "-%d %s in %s" % [amount, WorkerConfig.ability_input(id), WorkerConfig.ability_recipe(id)]
+	return ""
+
+## Format a worker hire cost {coins, resources} like "50c, hay_bundle 2" (mirrors TownScreen).
+func _format_worker_cost(cost: Dictionary) -> String:
+	var parts: Array = ["%dc" % int(cost.get("coins", 0))]
+	var res: Dictionary = cost.get("resources", {})
+	for k in res.keys():
+		parts.append("%s %d" % [k, int(res[k])])
+	return ", ".join(parts)
+
+## Hire one of worker `id`: route through game.hire_worker, emit state_changed on success
+## (Main persists + refreshes the HUD), then re-render so counts/affordability re-evaluate.
+func _do_hire(id: String) -> void:
+	if bool(game.hire_worker(id).get("ok", false)):
+		emit_signal("state_changed")
+	refresh()
+
+## Fire one of worker `id`: route through game.fire_worker, same emit + re-render pattern.
+func _do_fire(id: String) -> void:
+	if bool(game.fire_worker(id).get("ok", false)):
+		emit_signal("state_changed")
+	refresh()
 
 # ── framed portrait thumbnail ─────────────────────────────────────────────────────────
 
@@ -427,7 +673,7 @@ func _make_portrait(npc_color: Color, npc_name: String) -> Control:
 	# The NPC's initial, centred, in the serif heading font.
 	var initial := Label.new()
 	initial.text = npc_name.left(1).to_upper() if npc_name.length() > 0 else "?"
-	initial.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(initial, Typography.Role.TITLE)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
 		initial.add_theme_font_override("font", hf)
@@ -470,7 +716,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = _quest_label(q)
-	name_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -487,7 +733,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 	else:
 		badge.text = _quest_reward_text(q.get("reward", {}))
 		badge.add_theme_color_override("font_color", COL_VALUE)
-	badge.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(badge, Typography.Role.BODY)
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_row.add_child(badge)
@@ -524,7 +770,7 @@ func _make_quest_card(q: Dictionary) -> PanelContainer:
 
 	var prog_lbl := Label.new()
 	prog_lbl.text = "%d/%d" % [mini(progress, target), target]
-	prog_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(prog_lbl, Typography.Role.META)
 	prog_lbl.add_theme_color_override("font_color", COL_MUTED)
 	prog_lbl.custom_minimum_size = Vector2(44, 0)
 	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

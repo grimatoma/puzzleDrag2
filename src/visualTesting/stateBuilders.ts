@@ -452,6 +452,8 @@ function profileState(profile: string): VisualStateTree {
     case "fresh": return baseState();
     case "rich": return richState();
     case "bubble": return { ...richState(), bubble: { id: 101, npc: "wren", text: "A visual check toast is on the wind.", ms: 10_000 } };
+    // Castle contribution view with partial progress against the 3 needs (soup 53 / meat 47 / coal 43).
+    case "castleContrib": return { ...richState(), castle: { contributed: { soup: 21, meat: 15, coal: 9 } } } as VisualStateTree;
     case "buildReady": return { ...richState(), built: { ...richState().built, home: builtFromPlots({ 0: "hearth" }) } };
     case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { home: { supplies: 0 } } };
     case "unfoundedBlocked": return { ...richState(), mapCurrent: "orchard", activeZone: "orchard", settlements: { home: { founded: true, biome: "prairie" } }, coins: 50 };

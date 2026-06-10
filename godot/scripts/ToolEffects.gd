@@ -41,8 +41,10 @@ const DIRS4: Array = [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 ## True when a tile value is a board HAZARD that clears/transforms must skip.
+## (RAT / RUBBLE / FIRE — a tool must not drain the board out from under a hazard; mirrors
+## React's HAZARD_LOCKED guard rubble/gas/frozen/rat/fire.)
 static func is_hazard(tile: int) -> bool:
-	return tile == Constants.Tile.RAT or tile == Constants.Tile.RUBBLE
+	return tile == Constants.Tile.RAT or tile == Constants.Tile.RUBBLE or tile == Constants.Tile.FIRE
 
 static func _in_bounds(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < Constants.COLS \

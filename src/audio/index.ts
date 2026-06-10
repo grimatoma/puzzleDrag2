@@ -99,6 +99,17 @@ const SOUNDS: Record<string, SoundDef> = {
       { freq: 2400, dur: 80, type: 'sine', gain: 0.05, gap: 0, delay: 0.120 },
     ],
   },
+  // Tool armed — crisp two-note ready blip, distinct from chainStart's slide
+  toolArmed: {
+    steps: [
+      { freq: 520, dur: 55, type: 'triangle', gain: 0.06, gap: 65 },
+      { freq: 740, dur: 70, type: 'triangle', gain: 0.06, gap: 0, delay: 0.065 },
+    ],
+  },
+  // Tool fired — low percussive thunk for the moment of impact
+  toolFired: {
+    steps: [{ freq: 280, freqEnd: 140, dur: 110, type: 'square', gain: 0.07 }],
+  },
 };
 
 /**

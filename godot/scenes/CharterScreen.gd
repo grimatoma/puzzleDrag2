@@ -122,9 +122,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -174,7 +172,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "⚖️ The Charter"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -185,7 +183,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -201,14 +199,14 @@ func _build_shell() -> void:
 
 	var terms_btn := Button.new()
 	terms_btn.text = "Terms"
-	UiKit.style_button(terms_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(terms_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	terms_btn.connect("pressed", Callable(self, "_on_tab").bind("terms"))
 	tabs.add_child(terms_btn)
 	_tab_buttons["terms"] = terms_btn
 
 	var all_btn := Button.new()
 	all_btn.text = "All choices"
-	UiKit.style_button(all_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(all_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	all_btn.connect("pressed", Callable(self, "_on_tab").bind("all"))
 	tabs.add_child(all_btn)
 	_tab_buttons["all"] = all_btn
@@ -230,18 +228,11 @@ func _build_shell() -> void:
 	_build_detail_panel()
 
 ## A parchment card StyleBoxFlat — the shared modal look (warm fill, iron border,
-## rounded, drop shadow). Used by the main panel + the detail overlay.
+## rounded, drop shadow). Used by the main panel + the detail overlay. Delegates to
+## UiKit.modal_card_box (the one builder every centred-card modal uses), keeping this
+## screen's snugger 20px content margin.
 func _parchment_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(20)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	return style
+	return UiKit.modal_card_box(20)
 
 ## The settlement ribbon: a soft-parchment chip with the name + turns-elapsed line and a
 ## right-aligned "Hollow Pact" tag. Mirrors the React SettlementRibbon.
@@ -267,21 +258,21 @@ func _build_ribbon() -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = SETTLEMENT_NAME
-	name_lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", COL_BODY)
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_lbl)
 
 	_ribbon_turns = Label.new()
 	_ribbon_turns.text = _turns_text()
-	_ribbon_turns.add_theme_font_size_override("font_size", 13)
+	UiKit.set_font_size(_ribbon_turns, Typography.Role.BODY)
 	_ribbon_turns.add_theme_color_override("font_color", COL_MUTED)
 	_ribbon_turns.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_ribbon_turns)
 
 	var tag := Label.new()
 	tag.text = "Hollow Pact"
-	tag.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(tag, Typography.Role.META)
 	tag.add_theme_color_override("font_color", COL_MUTED)
 	tag.size_flags_horizontal = Control.SIZE_SHRINK_END
 	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -316,7 +307,7 @@ func _make_ribbon_badge() -> Control:
 
 	var glyph := Label.new()
 	glyph.text = "⭐"                                # the Pact seal mark (covered by the NotoEmoji fallback)
-	glyph.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(glyph, Typography.Role.SUBHEAD)
 	glyph.add_theme_color_override("font_color", Palette.GOLD.darkened(0.1))
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -374,7 +365,7 @@ func _render_terms() -> void:
 
 	var note := Label.new()
 	note.text = "Six terms, sworn at the home hearth. Read by the Ember at the close of the age. Each choice you make is weighed against them."
-	note.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(note, Typography.Role.META)
 	note.add_theme_color_override("font_color", COL_MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -401,7 +392,7 @@ func _make_term_card(term: Dictionary, log: Array, flags: Dictionary) -> PanelCo
 	# Roman numeral (ember, fixed-ish width on the left).
 	var roman_lbl := Label.new()
 	roman_lbl.text = "%s." % roman
-	roman_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(roman_lbl, Typography.Role.HEADING)
 	roman_lbl.add_theme_color_override("font_color", COL_HEADER)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -419,14 +410,14 @@ func _make_term_card(term: Dictionary, log: Array, flags: Dictionary) -> PanelCo
 
 	var title_lbl := Label.new()
 	title_lbl.text = title
-	title_lbl.add_theme_font_size_override("font_size", 16)
+	UiKit.set_font_size(title_lbl, Typography.Role.SUBHEAD)
 	title_lbl.add_theme_color_override("font_color", COL_BODY)
 	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(title_lbl)
 
 	var cap_lbl := Label.new()
 	cap_lbl.text = caption
-	cap_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(cap_lbl, Typography.Role.META)
 	cap_lbl.add_theme_color_override("font_color", COL_MUTED)
 	cap_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(cap_lbl)
@@ -474,7 +465,7 @@ func _make_state_pill(state: String) -> PanelContainer:
 
 	var lbl := Label.new()
 	lbl.text = label
-	lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(lbl, Typography.Role.LABEL)
 	lbl.add_theme_color_override("font_color", ink)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -487,7 +478,7 @@ func _render_timeline() -> void:
 	if log.is_empty():
 		var empty := Label.new()
 		empty.text = "Your choices will be recorded here as the pact unfolds."
-		empty.add_theme_font_size_override("font_size", 14)
+		UiKit.set_font_size(empty, Typography.Role.LABEL)
 		empty.add_theme_color_override("font_color", COL_MUTED)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -520,7 +511,7 @@ func _make_timeline_row(entry: Dictionary) -> PanelContainer:
 
 	var title_lbl := Label.new()
 	title_lbl.text = String(f.get("title", ""))
-	title_lbl.add_theme_font_size_override("font_size", 15)
+	UiKit.set_font_size(title_lbl, Typography.Role.LABEL)
 	title_lbl.add_theme_color_override("font_color", COL_BODY)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -530,7 +521,7 @@ func _make_timeline_row(entry: Dictionary) -> PanelContainer:
 	if act > 0:   # 0 is the "no act" sentinel (unknown beat) → hide the badge
 		var act_lbl := Label.new()
 		act_lbl.text = "Act %d" % act
-		act_lbl.add_theme_font_size_override("font_size", 11)
+		UiKit.set_font_size(act_lbl, Typography.Role.CAPTION)
 		act_lbl.add_theme_color_override("font_color", COL_MUTED)
 		act_lbl.size_flags_horizontal = Control.SIZE_SHRINK_END
 		act_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -538,7 +529,7 @@ func _make_timeline_row(entry: Dictionary) -> PanelContainer:
 
 	var choice_lbl := Label.new()
 	choice_lbl.text = String(f.get("choice_label", ""))
-	choice_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(choice_lbl, Typography.Role.META)
 	choice_lbl.add_theme_color_override("font_color", COL_MUTED)
 	choice_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	choice_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -604,7 +595,7 @@ func _sync_detail_panel() -> void:
 
 	var head_lbl := Label.new()
 	head_lbl.text = "Term %s — %s" % [String(term.get("roman", "")), String(term.get("title", ""))]
-	head_lbl.add_theme_font_size_override("font_size", 22)
+	UiKit.set_font_size(head_lbl, Typography.Role.HEADING)
 	head_lbl.add_theme_color_override("font_color", COL_TITLE)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -616,7 +607,7 @@ func _sync_detail_panel() -> void:
 	var dclose := Button.new()
 	dclose.text = "✖"
 	dclose.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(dclose, Palette.EMBER, 6, 18)
+	UiKit.style_button(dclose, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	dclose.connect("pressed", Callable(self, "_on_detail_close"))
 	head.add_child(dclose)
 	_action_buttons["detail_close"] = dclose
@@ -629,7 +620,7 @@ func _sync_detail_panel() -> void:
 	# Description.
 	var desc := Label.new()
 	desc.text = String(term.get("description", ""))
-	desc.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(desc, Typography.Role.LABEL)
 	desc.add_theme_color_override("font_color", COL_BODY)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -638,7 +629,7 @@ func _sync_detail_panel() -> void:
 	# "Where it was tested" header.
 	var tested_hdr := Label.new()
 	tested_hdr.text = "Where it was tested"
-	tested_hdr.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(tested_hdr, Typography.Role.META)
 	tested_hdr.add_theme_color_override("font_color", COL_MUTED)
 	tested_hdr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail_body.add_child(tested_hdr)
@@ -647,7 +638,7 @@ func _sync_detail_panel() -> void:
 	if entries.is_empty():
 		var empty := Label.new()
 		empty.text = "No choices recorded against this term yet."
-		empty.add_theme_font_size_override("font_size", 13)
+		UiKit.set_font_size(empty, Typography.Role.BODY)
 		empty.add_theme_color_override("font_color", COL_MUTED)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE

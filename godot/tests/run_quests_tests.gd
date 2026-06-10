@@ -617,10 +617,21 @@ func _test_screen_and_router_and_main() -> void:
 	_check(screen.claimable_count() == 1, "claimable_count() == 1 (the forced-complete quest)")
 	_check(screen.tier_total() == 10, "tier_total() == 10")
 
-	# Claiming the complete quest via its button credits coins + XP + marks claimed.
+	# ── Quest card weight: reward chip + larger Claim button (review task 19) ──
+	# Each quest row carries its reward as a chip; the Claim button is a large green CTA.
 	var claim_qid := String(game.quests[0]["id"])
-	var coins0 := game.coins
 	var claim_btn = screen._quest_buttons.get(claim_qid)
+	_check(claim_btn != null, "the quest's Claim button is registered")
+	if claim_btn != null:
+		_check(claim_btn.text == "✓ CLAIM", "claimable button reads '✓ CLAIM'")
+		_check(claim_btn.custom_minimum_size.x >= 120 and claim_btn.custom_minimum_size.y >= 40,
+			"Claim button has a large min size (>=120x40) — a weighty CTA")
+	# The reward chip helper renders the coin (and XP) reward text from the reward dict.
+	var chip := screen._make_reward_chip({"coins": 30, "xp": 20})
+	_check(chip != null and chip.get_child_count() > 0, "_make_reward_chip builds a non-empty chip")
+
+	# Claiming the complete quest via its button credits coins + XP + marks claimed.
+	var coins0 := game.coins
 	_check(claim_btn != null and not claim_btn.disabled, "the complete quest's Claim button is enabled")
 	if claim_btn != null:
 		claim_btn.emit_signal("pressed")

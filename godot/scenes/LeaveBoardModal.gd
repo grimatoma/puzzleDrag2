@@ -113,10 +113,7 @@ func _build_shell() -> void:
 	visible = false
 
 	# Warm-brown scrim (matches TutorialModal / DailyStreakModal).
-	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.17, 0.13, 0.08, 0.66)
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := UiKit.make_scrim()
 	add_child(backdrop)
 
 	# Full-rect CenterContainer centres the parchment card at its own min size.
@@ -127,16 +124,9 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
-	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(28)
-	style.border_color = Palette.IRON
-	style.set_border_width_all(2)
-	style.shadow_size = 12
-	style.shadow_color = Color(0, 0, 0, 0.28)
-	style.shadow_offset = Vector2(0, 5)
-	panel.add_theme_stylebox_override("panel", style)
+	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
+	# centred-card modal so radius/border/shadow can never drift again.
+	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(28))
 	center.add_child(panel)
 
 	var col := VBoxContainer.new()
@@ -147,7 +137,7 @@ func _build_shell() -> void:
 	# Title — Cinzel display serif, centred.
 	_title_label = Label.new()
 	_title_label.text = "Leave the expedition?"
-	_title_label.add_theme_font_size_override("font_size", 27)
+	UiKit.set_font_size(_title_label, Typography.Role.TITLE)
 	_title_label.add_theme_color_override("font_color", COL_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -168,7 +158,7 @@ func _build_shell() -> void:
 	# Body — the reassurance line (everything gathered is banked already).
 	_body_label = Label.new()
 	_body_label.text = ""
-	_body_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_body_label, Typography.Role.SUBHEAD)
 	_body_label.add_theme_color_override("font_color", COL_BODY)
 	_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -184,7 +174,7 @@ func _build_shell() -> void:
 	_cancel_btn = Button.new()
 	_cancel_btn.text = "Stay"
 	_cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(_cancel_btn, Palette.IRON, 10, 18)
+	UiKit.style_button(_cancel_btn, Palette.IRON, 10, Typography.size(Typography.Role.SUBHEAD))
 	_cancel_btn.connect("pressed", Callable(self, "_on_cancel"))
 	btn_row.add_child(_cancel_btn)
 	_action_buttons["cancel"] = _cancel_btn
@@ -194,7 +184,7 @@ func _build_shell() -> void:
 	_confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Primary confirm — a FILLED ember button so it reads as the emphasized action (React
 	# gives the LEAVE confirm weight); "Stay" stays a quiet parchment/iron button.
-	UiKit.style_action_button(_confirm_btn, Palette.EMBER, 10, 18)
+	UiKit.style_action_button(_confirm_btn, Palette.EMBER, 10, Typography.size(Typography.Role.SUBHEAD))
 	_confirm_btn.connect("pressed", Callable(self, "_on_confirm"))
 	btn_row.add_child(_confirm_btn)
 	_action_buttons["confirm"] = _confirm_btn

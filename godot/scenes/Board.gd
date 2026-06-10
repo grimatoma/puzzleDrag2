@@ -17,13 +17,25 @@ signal chain_resolved(tile_type: int, length: int)
 ## the tool — it only reports WHICH cell was tapped; Main owns the GameState ref and
 ## applies the tool (mirrors how chain_resolved keeps the Board decoupled from economy).
 signal cell_tapped(cell: Vector2i)
-## M3j (harbor pearl capture) — fired when clear_pearl_on_fish_chain is set and a resolved
-## chain is a FISH-category tile of length >= Constants.REQUIRED_FISH_IN_CHAIN. Carries the
-## chained cells (Array[Vector2i]) so Main can ask GameState.capture_pearl_if_adjacent
-## whether they sit next to the live pearl. The Board stays decoupled from GameState (it has
-## no pearl ref) — exactly like chain_resolved / cell_tapped report WHAT happened and let
-## Main own the economy.
+## T25 (harbor in-chain pearl capture) — fired when clear_pearl_on_fish_chain is set and a
+## resolved chain CONTAINS the FISH_PEARL tile. Carries the chained cells as Array[{row,col,tile}]
+## (the same shape as chain_cells_resolved — tile value BEFORE the chain cleared them) so Main
+## can pass the tile keys to GameState.try_capture_pearl (the React rule: chain contains pearl +
+## ≥ REQUIRED_FISH_IN_CHAIN other fish tiles). Emitted BEFORE chain_resolved. The Board stays
+## decoupled from GameState — it just reports WHAT was chained; Main owns the economy.
 signal pearl_chain_resolved(cells: Array)
+## T7/T9/T10 (farm hazards) — fired on EVERY resolved chain, carrying the chained CELLS as an
+## Array of { row:int, col:int, tile:int } (the tile value BEFORE the chain cleared it). Main uses
+## this to detect a RAT chain (clear → coins, no credit), a FIRE chain (extinguish → coins), and a
+## deadly_pests chain (Cypress/Beet/Phoenix → cull adjacent rats). Emitted BEFORE chain_resolved so
+## Main can decide whether the chain is a hazard-clear (RAT) and SUPPRESS the normal credit. The
+## cells are the ORIGINAL drag path (not the rat/rubble-swept removal set), so adjacency is checked
+## against exactly what the player chained — mirrors pearl_chain_resolved's contract.
+signal chain_cells_resolved(cells: Array)
+## A REAL drag attempt (2+ cells) released BELOW the minimum chain — nothing resolves.
+## Emitted so the HUD can give "not enough" feedback (buzz + nudge); single taps
+## (length 1, the tool-target path) never fire it.
+signal chain_rejected(length: int)
 
 # Chain-resolve animation timing. The pipeline CASCADES (pop → settle → refill) the
 # way the React/Phaser original does, rather than firing every tween at t=0: the chained
@@ -70,6 +82,13 @@ var clear_rats_on_grass: bool = false
 ## chain length nor credited (RUBBLE produces nothing).
 var clear_rubble_on_stone: bool = false
 
+## T11 (Town 2 mine hazards): when true (exactly while on a mine expedition — Main sets it from
+## GameState.is_in_mine()), the drag path SKIPS hazard-BLOCKED cells (RUBBLE / LAVA) so a chain can
+## never be drawn through them — mirrors React's tileBlockedByHazard guard in the drag path
+## (src/features/mine/hazards.ts:157). GAS / MYSTERIOUS_ORE are CHAINABLE (chaining is their
+## counter), so they are NOT blocked. Off the mine this stays false and the drag path is unchanged.
+var block_mine_hazards: bool = false
+
 ## A1b (upgradeMap-driven upgrade tiles): an optional provider Main installs so a resolved
 ## FARM chain spawns UPGRADE TILES of the zone's next tier during the SAME collapse/refill — the
 ## React core loop (src/GameScene.ts nextUpgradeTile + the pendingUpgrades queue). Called inside
@@ -82,19 +101,44 @@ var clear_rubble_on_stone: bool = false
 ## (no zone upgradeMap) and any pre-A1b caller behave exactly as before.
 var upgrade_provider: Callable = Callable()
 
+## The board band's TOP edge in viewport px — Main sets it from Hud.board_top() (the
+## fixed line under the action panel) before each layout_for call. The default is that
+## same canonical value so direct layout_for(vp) callers (capture tools, scene-smoke,
+## e2e-input tests) get the real game geometry without a Main.
+var board_top_px: float = 454.0
+## Bottom chrome reserve below the board: the status/orders strip (~76px) + the bottom
+## nav (UiKit.NAV_RESERVE). layout_for subtracts it from the tile height budget.
+const BOTTOM_RESERVE: float = 76.0 + float(UiKit.NAV_RESERVE)
+
 ## A1b — upgrade tiles queued for the CURRENT _resolve's refill: an Array of int tile types, one
 ## entry per upgrade tile to place among the new top cells. Filled at the top of _resolve from
 ## upgrade_provider and drained as the refill loop spawns top-row cells; always empty between
 ## moves. A transient (never saved, never read by drag validation).
 var _pending_upgrades: Array = []
 
-## M3j (harbor giant pearl): when true (exactly while on a harbor expedition), a resolved
-## FISH-category chain of length >= Constants.REQUIRED_FISH_IN_CHAIN emits `pearl_chain_resolved` with
-## its chained cells so Main can run GameState.capture_pearl_if_adjacent (a fish chain run
-## 8-adjacent to the live pearl captures it for a Rune). Main sets this from
-## GameState.is_in_harbor() after load and on every board re-pool. Mirrors
-## clear_rubble_on_stone — it only ever fires in the harbor; farm/mine are untouched.
+## T25 (fish pearl in-chain capture — replaces adjacency rule): when true (exactly while
+## on a harbor expedition), FISH_PEARL is JOINABLE into a fish-category chain just like
+## MYSTERIOUS_ORE is joinable into a DIRT chain (T23). `_cell_can_extend_chain` treats a
+## FISH_PEARL cell as compatible with a fish-anchor chain and vice-versa, so the player can
+## drag through the pearl + ≥ REQUIRED_FISH_IN_CHAIN fish tiles in ONE chain. On resolve,
+## the chain key reported to Main via chain_resolved is the FISH anchor type (not FISH_PEARL),
+## and _chain_cells carries all chained tiles including the FISH_PEARL cell, so
+## Main._on_chain_resolved can detect the pearl and call GameState.try_capture_pearl.
+## Set by Main from GameState.is_in_harbor() after load and on every board re-pool. Off the
+## harbor this stays false and the drag path is byte-identical to any other biome.
 var clear_pearl_on_fish_chain: bool = false
+
+## T24 (seasonal boss board modifiers): the live boss modifier_state overlay (the
+## BossModifierLogic bag — frozen_columns / rubble / hidden / heat / boost+factor), or {} when no
+## boss is active. Main pushes it via set_boss_modifier_state() on boss start, every boss turn tick,
+## and on resolve (cleared to {}). The Board reads it through the pure BossModifierLogic statics to:
+##   • GATE drags — frozen-column / rubble / hidden cells are unchainable (cell_chainable),
+##   • RENDER overlays — frozen columns dimmed, hidden cells face-down, heat cells glowing (drawn
+##     by Tile via the per-cell flags pushed in _build_tiles / _refresh_boss_overlays),
+##   • REVEAL a hidden cell when it's chained (Main calls reveal on the chained cells).
+## Empty {} (no boss) leaves every cell chainable + un-overlaid, so the board is byte-identical
+## off a boss — mirrors how block_mine_hazards / clear_rubble_on_stone gate only when set.
+var boss_modifier_state: Dictionary = {}
 
 var _dragging := false
 var _path: Array[Vector2i] = []        ## dragged cells
@@ -121,6 +165,19 @@ var _targeting := false
 ## so its reference survives every collapse/refill.
 var _chain_overlay: ChainOverlay
 
+## T8 — live wolf-marker overlay nodes (one per wolf), keyed by cell Vector2i. Wolves are
+## OVERLAY entities, NOT grid cells (they don't occupy/collapse a board cell — they roam ON TOP
+## eating adjacent birds), so they are drawn as their own Node2D markers over the cell centre,
+## freed + rebuilt wholesale whenever the wolf set changes (refresh_wolves). Like the chain
+## overlay these are siblings of the Tile nodes and survive _build_tiles (which frees only Tiles).
+var _wolf_markers: Array = []   ## Array of _WolfMarker Node2D
+
+## T11 — live mole-marker overlay node (the Giant Mole), or null when no mole. Like the wolf the
+## mole is an OVERLAY entity (NOT a grid cell — it roams ON TOP consuming adjacent tiles + hops), so
+## it rides as its own Node2D over the cell centre, freed + rebuilt whenever the mole moves
+## (refresh_mole). A sibling of the Tile nodes; survives _build_tiles (which frees only Tiles).
+var _mole_marker: Node2D = null
+
 ## M4a — padding (px) of the field-tinted card drawn behind the tiles by _draw().
 const FRAME_PAD := 10.0
 
@@ -129,6 +186,15 @@ const FRAME_PAD := 10.0
 ## and whenever a resolved farm chain turns the season. Defaults to Spring so a board built
 ## before Main seeds it still reads as a calm green field (Spring's field colour).
 var _season_idx: int = 0
+
+## A2 — the biome the board card's TOP-edge accent strip is tinted for. An optional provider Main
+## installs (mirrors upgrade_provider: a Callable, NOT a GameState ref — the Board never reads game
+## state, it only ASKS an opaque function). Called from _draw as `biome_provider.call() -> String`
+## ("farm"/"mine"/"harbor"); since it re-reads game.active_biome on every redraw it self-updates as
+## the player enters an expedition and returns, with no per-transition push needed (the board
+## already redraws on biome flips via setup_new_board). Unset (the default null Callable) leaves the
+## strip on the farm green, so capture tools / tests that build a bare Board without Main still draw.
+var biome_provider: Callable = Callable()
 
 ## Resolve "juice" (the React feel the port lacked): a screen shake whose magnitude scales
 ## with the chain length, an expanding flash ring + a collect spark burst at the chain head,
@@ -169,43 +235,72 @@ func _process(delta: float) -> void:
 ## A CanvasItem renders itself before its children, so this frame sits under every
 ## Tile node automatically. Re-run on layout/board changes via queue_redraw().
 func _draw() -> void:
-	var sb := StyleBoxFlat.new()
-	# Light parchment field with a thin moss-green frame — matches the React board,
-	# which floats the pastel tile cards on a cream board (the gaps between tiles read
-	# CREAM, not green) inside a soft green edge. The old solid-green fill made the
-	# whole board read dark/heavy and muddied the tiles' per-type pastel backgrounds.
-	# A2 — gently tint the card per the CURRENT season (src/ui/puzzleBoard.tsx field gradient):
-	# the FILL stays a season-blended parchment (only ~22% toward the season's field tone so the
-	# tiles' own pastel backgrounds still read over it) and the BORDER takes the season's darker
-	# field-bottom tone. Spring reads close to the old calm green; Winter cools to a slate edge.
+	# The board card is a TWO-LAYER parchment construction ported from the React board
+	# (src/GameScene.ts drawBackground + src/ui/puzzleBoard.tsx): an outer DIRT frame holds a
+	# slightly-inset CREAM card the pastel tiles float on (the gaps between tiles read CREAM, not
+	# green), with a BIOME-coloured accent strip along the card's TOP edge (which biome you're on)
+	# and a SEASON-coloured strip along its BOTTOM edge (which season it is). The single solid-green
+	# fill the port shipped before made the whole board read dark/heavy and muddied the tiles.
+	# A2 — the cream fill keeps a faint season tint (≈22% toward the season's field-top tone, from
+	# src/ui/puzzleBoard.tsx's field gradient) so the per-tile pastel backgrounds still read over it,
+	# and the BOTTOM strip takes the season's darker field-bottom tone (Constants.SEASON_FIELD_COLORS).
 	var field: Dictionary = _season_field()
 	var field_top: Color = field["top"]
 	var field_bot: Color = field["bot"]
-	sb.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
-	sb.corner_radius_top_left = 16
-	sb.corner_radius_top_right = 16
-	sb.corner_radius_bottom_left = 16
-	sb.corner_radius_bottom_right = 16
-	sb.border_width_left = 3
-	sb.border_width_top = 3
-	sb.border_width_right = 3
-	sb.border_width_bottom = 3
-	sb.border_color = field_bot
-	sb.shadow_size = 10
-	sb.shadow_color = Color(0, 0, 0, 0.18)
-	sb.shadow_offset = Vector2(0, 4)
+
+	# Outer rect = the dirt frame (the armed-pulse rings below key off this); the cream card is
+	# inset a touch so the dirt reads as a thin border around it (React frame*0.6 vs frame).
 	var rect := Rect2(
 		board_origin - Vector2(FRAME_PAD, FRAME_PAD),
 		board_pixel_size() + Vector2(2.0 * FRAME_PAD, 2.0 * FRAME_PAD))
-	draw_style_box(sb, rect)
+	var card := rect.grow(-FRAME_PAD * 0.4)
 
-	# M8c — while a tap-target tool is armed, pulse a hot red border around the field so the
-	# board reads as "hot / waiting for your tap" (the React armed-pulse on the board frame).
+	# Layer 1 — the dirt frame (React special_dirt 0xc9b993 == Palette.IRON), rounded, with the
+	# soft drop shadow that used to hang off the single card.
+	var dirt := StyleBoxFlat.new()
+	dirt.bg_color = Palette.IRON
+	dirt.set_corner_radius_all(16)
+	dirt.shadow_size = 10
+	dirt.shadow_color = Color(0, 0, 0, 0.18)
+	dirt.shadow_offset = Vector2(0, 4)
+	draw_style_box(dirt, rect)
+
+	# Layer 2 — the cream card the tiles sit on (React boardBg 0xf6efe0 == Palette.PARCHMENT),
+	# gently season-tinted so the tiles' own pastel backgrounds still read over it.
+	var cream := StyleBoxFlat.new()
+	cream.bg_color = Palette.PARCHMENT.lerp(field_top, 0.22)
+	cream.set_corner_radius_all(14)
+	draw_style_box(cream, card)
+
+	# Edge accent strips — straight bars inset past the card's rounded corners so they never poke
+	# outside the corner curve. TOP = the biome accent (Constants.biome_accent via biome_provider),
+	# BOTTOM = the season's field-bottom tone. Thin, scaled to the tile size.
+	var strip_h: float = maxf(3.0, tile_size * 0.05)
+	var corner: float = 14.0
+	var strip_w: float = card.size.x - 2.0 * corner
+	if strip_w > 0.0:
+		draw_rect(Rect2(card.position.x + corner, card.position.y, strip_w, strip_h), _biome_accent())
+		draw_rect(Rect2(card.position.x + corner, card.position.y + card.size.y - strip_h, strip_w, strip_h), field_bot)
+
+	# M8c — while a tap-target tool is armed, pulse a hot red frame around the field so the
+	# board reads as "hot / waiting for your tap". React's hwv-armed-pulse is a LAYERED
+	# rounded inset glow (4px core ring + 8px halo + a 32px interior bloom), so draw three
+	# nested rounded rings with falling alpha rather than one square stroke.
 	if _targeting:
 		var t: float = 0.5 + 0.5 * sin(_armed_phase * 5.2)
-		var red := Color(1.0, 0.22, 0.22, lerpf(0.45, 0.95, t))
-		var w: float = maxf(4.0, tile_size * 0.06)
-		draw_rect(rect, red, false, w)
+		var w: float = maxf(4.0, tile_size * 0.05)
+		var rings := [
+			{"color": Color(1.0, 0.18, 0.18, lerpf(0.75, 1.0, t)), "width": w, "inset": 0.0},
+			{"color": Color(1.0, 0.24, 0.24, lerpf(0.32, 0.55, t)), "width": w * 1.6, "inset": w},
+			{"color": Color(1.0, 0.30, 0.30, lerpf(0.10, 0.24, t)), "width": w * 2.6, "inset": w * 2.6},
+		]
+		for r in rings:
+			var ring := StyleBoxFlat.new()
+			ring.draw_center = false
+			ring.set_corner_radius_all(14)
+			ring.set_border_width_all(int(maxf(1.0, float(r["width"]))))
+			ring.border_color = r["color"]
+			draw_style_box(ring, rect.grow(-float(r["inset"])))
 
 ## A2 — set the current farm season (0=Spring … 3=Winter) and redraw so the board card's
 ## field tint follows the season. Main calls this on load and whenever a resolved farm chain
@@ -218,6 +313,15 @@ func set_season(idx: int) -> void:
 ## ported from src/ui/puzzleBoard.tsx). Used by _draw to tint the board card per season.
 func _season_field() -> Dictionary:
 	return Constants.SEASON_FIELD_COLORS[_season_idx]
+
+## The board card's TOP-edge accent Color for the CURRENT biome. Resolves the biome id from the
+## Main-installed biome_provider (re-read every redraw so it follows expedition entry/return) and
+## looks the colour up in Constants.BIOME_FIELD_ACCENTS; with no provider it stays the farm green.
+func _biome_accent() -> Color:
+	var biome: String = "farm"
+	if biome_provider.is_valid():
+		biome = String(biome_provider.call())
+	return Constants.biome_accent(biome)
 
 # ── board lifecycle ────────────────────────────────────────────────────────
 
@@ -235,6 +339,33 @@ func set_tile_pool(pool: Array) -> void:
 ## save restored mid-fight.
 func set_min_chain(n: int) -> void:
 	min_chain = maxi(2, n)
+
+## T24 — adopt the live boss modifier_state overlay (a copy is stored) and refresh the per-tile
+## overlay visuals. Main calls this on boss start, every boss-turn tick (heat ages/spawns), on a
+## hidden-cell reveal, and on resolve (passing {} to clear). An empty {} leaves every cell
+## chainable + un-overlaid (the no-boss baseline). The chain GATE reads boss_modifier_state directly
+## in _begin_drag/_extend_drag, so it follows along the moment this is set.
+func set_boss_modifier_state(state: Dictionary) -> void:
+	boss_modifier_state = state.duplicate(true) if state != null else {}
+	_refresh_boss_overlays()
+
+## T24 — push the frozen / hidden / heat overlay flags from boss_modifier_state onto every live Tile
+## node. Called from set_boss_modifier_state + after every _build_tiles (so a board rebuild — biome
+## flip, hidden-reveal rebuild, etc. — re-applies the overlay). Guarded so it's a no-op before tiles
+## are built. With an empty modifier_state every tile is cleared (all flags false).
+func _refresh_boss_overlays() -> void:
+	if tiles.is_empty():
+		return
+	for r in Constants.ROWS:
+		for c in Constants.COLS:
+			var t: Tile = tiles[r][c]
+			if t == null:
+				continue
+			t.set_boss_overlay(
+				BossModifierLogic.cell_frozen(boss_modifier_state, c),
+				BossModifierLogic.cell_hidden(boss_modifier_state, r, c),
+				BossModifierLogic.cell_heat(boss_modifier_state, r, c),
+				BossModifierLogic.cell_rubble(boss_modifier_state, r, c))
 
 ## A3 — the Constants.Tile type of the CURRENTLY-DRAGGED chain (its anchor cell), or
 ## Constants.EMPTY when no drag is in flight. The chain is single-type (every extend
@@ -279,6 +410,10 @@ func _build_tiles() -> void:
 			t.position = _cell_center(c, r)
 			row.append(t)
 		tiles.append(row)
+	# T24 — re-apply any live boss-modifier overlay onto the freshly-built tiles (a board rebuild
+	# — biome flip, hidden-reveal rebuild — would otherwise drop the frozen/hidden/heat/rubble
+	# visuals). A no-op with an empty modifier_state (no boss).
+	_refresh_boss_overlays()
 	queue_redraw()   # field card depends on board_origin / size
 
 func _make_tile(t: int) -> Tile:
@@ -322,6 +457,210 @@ func apply_external_grid(new_grid: Array) -> void:
 	BoardLogic.refill(grid, rng, tile_pool)
 	_ensure_live_board()
 	_build_tiles()
+
+## T7/T9 — adopt a grid AFTER a farm-hazard tick mutated it, then RE-STAMP the positional hazard
+## tiles so rats/fire stay PINNED at their recorded cells (matching React's fillBoard fire-overlay:
+## the hazard positions are authoritative state, not subject to gravity). `new_grid` is the ticked
+## grid (eaten/burned cells already EMPTY; spawned RAT/FIRE already written). `rat_cells` /
+## `fire_cells` are Arrays of {row,col} (GameState.active_rats() / active_fire_cells()). Flow:
+##   1. blank the recorded hazard cells (so collapse/refill treats them as holes to fill),
+##   2. collapse + refill the holes from the pool (the eaten/burned + hazard cells all refill),
+##   3. re-stamp RAT / FIRE at their recorded cells (overwrite whatever filled there),
+##   4. guard a live board, rebuild the visual tile layer, then refresh the wolf overlays.
+## Keeps `grid` (and the on-screen tiles) in lockstep with GameState.hazards every tick.
+func apply_hazard_state(new_grid: Array, rat_cells: Array, fire_cells: Array, wolf_cells: Array) -> void:
+	if new_grid == null or new_grid.is_empty():
+		return
+	grid = new_grid
+	# 1. Blank every recorded hazard cell so collapse/refill fills around them, then we re-stamp.
+	for rc in rat_cells:
+		var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+			grid[rr][rcl] = Constants.EMPTY
+	for fc in fire_cells:
+		var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+			grid[fr][fcl] = Constants.EMPTY
+	# 2. Collapse survivors down + refill the holes from the active pool.
+	BoardLogic.collapse(grid)
+	BoardLogic.refill(grid, rng, tile_pool)
+	# 3. Re-stamp the positional hazard tiles at their recorded cells (authoritative).
+	for rc in rat_cells:
+		var rr2: int = int(rc.get("row", -1)); var rcl2: int = int(rc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(rcl2, rr2)):
+			grid[rr2][rcl2] = Constants.Tile.RAT
+	for fc in fire_cells:
+		var fr2: int = int(fc.get("row", -1)); var fcl2: int = int(fc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(fcl2, fr2)):
+			grid[fr2][fcl2] = Constants.Tile.FIRE
+	# 4. Keep the board playable, rebuild tiles, refresh wolf overlays.
+	_ensure_live_board_preserving_hazards(rat_cells, fire_cells)
+	_build_tiles()
+	refresh_wolves(wolf_cells)
+
+## A live-board guard that PRESERVES recorded hazard cells across a reshuffle. _ensure_live_board
+## rebuilds the WHOLE grid (losing the pinned RAT/FIRE), so when hazards are present we re-stamp
+## them after any reshuffle. Rare (the pool almost always lands a live board), but keeps the
+## hazard tiles from vanishing on the unlucky reshuffle.
+func _ensure_live_board_preserving_hazards(rat_cells: Array, fire_cells: Array) -> void:
+	var guard := 0
+	while not BoardLogic.has_valid_chain(grid) and guard < 64:
+		grid = BoardLogic.make_empty_grid()
+		BoardLogic.refill(grid, rng, tile_pool)
+		for rc in rat_cells:
+			var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+				grid[rr][rcl] = Constants.Tile.RAT
+		for fc in fire_cells:
+			var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+				grid[fr][fcl] = Constants.Tile.FIRE
+		guard += 1
+
+## T8 — rebuild the wolf-marker overlay from `wolf_cells` (Array of {row,col,scared}). Frees the
+## existing markers and creates one Node2D marker per wolf at the cell centre. A scared wolf reads
+## dimmer (it won't eat this turn). Called on every hazard tick + on load/biome flip. An empty
+## list clears all markers. Headless-safe: markers are pure Node2D _draw (no textures).
+func refresh_wolves(wolf_cells: Array) -> void:
+	for m in _wolf_markers:
+		if is_instance_valid(m):
+			m.queue_free()
+	_wolf_markers = []
+	for w in wolf_cells:
+		var wr: int = int(w.get("row", -1)); var wc: int = int(w.get("col", -1))
+		if not BoardLogic.in_bounds(Vector2i(wc, wr)):
+			continue
+		var marker := _WolfMarker.new()
+		marker.scared = bool(w.get("scared", false))
+		marker.radius = tile_size * 0.32
+		marker.position = _cell_center(wc, wr)
+		marker.z_index = 90   # above tiles, below the chain overlay (100)
+		add_child(marker)
+		_wolf_markers.append(marker)
+
+## T11 — adopt a grid AFTER a mine-hazard tick mutated it, then RE-STAMP the positional mine-hazard
+## tiles so the buried cave-in row (RUBBLE), the lava cells (LAVA), and the gas vent (GAS) stay
+## PINNED at their recorded cells across the collapse/refill (matching apply_hazard_state's farm
+## pattern — the hazard positions are authoritative state, not subject to gravity). `new_grid` is the
+## ticked grid (eaten/consumed cells already EMPTY; spread LAVA already written). The cave-in /
+## gas_vent / lava args come from GameState (active_cave_in / active_gas_vent / active_lava_cells);
+## `mole` is GameState.active_mole() ({} when none) — an OVERLAY, refreshed via refresh_mole. Flow:
+##   1. blank the recorded pinned cells (so collapse/refill treats them as holes),
+##   2. collapse + refill the holes from the pool,
+##   3. re-stamp RUBBLE (cave-in row) / LAVA / GAS at their recorded cells,
+##   4. guard a live board (preserving the pins), rebuild tiles, refresh the mole overlay.
+## Keeps `grid` (and the on-screen tiles) in lockstep with GameState.mine_hazards every tick.
+func apply_mine_hazard_state(new_grid: Array, cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array, mole: Dictionary) -> void:
+	if new_grid == null or new_grid.is_empty():
+		return
+	grid = new_grid
+	# 1. Blank every recorded pinned hazard cell so collapse/refill fills around them.
+	_blank_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+	# 2. Collapse survivors + refill the holes from the active pool.
+	BoardLogic.collapse(grid)
+	BoardLogic.refill(grid, rng, tile_pool)
+	# 3. Re-stamp the positional hazard tiles (authoritative).
+	_stamp_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+	# 4. Keep the board playable (preserving the pins), rebuild tiles, refresh the mole overlay.
+	_ensure_live_board_preserving_mine(cave_in, gas_vent, lava_cells)
+	_build_tiles()
+	refresh_mole(mole)
+
+## Blank every recorded mine-hazard cell to EMPTY (cave-in row of RUBBLE, gas-vent GAS cell, every
+## LAVA cell). Used before collapse/refill so the holes get filled, then re-stamped. Shared by
+## apply_mine_hazard_state + the live-board guard.
+func _blank_mine_hazard_cells(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	if not cave_in.is_empty():
+		var cr: int = int(cave_in.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				grid[cr][c] = Constants.EMPTY
+	if not gas_vent.is_empty():
+		var gr: int = int(gas_vent.get("row", -1)); var gc: int = int(gas_vent.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(gc, gr)):
+			grid[gr][gc] = Constants.EMPTY
+	for lc in lava_cells:
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(lcl, lr)):
+			grid[lr][lcl] = Constants.EMPTY
+
+## Re-stamp the positional mine-hazard tiles onto `grid` at their recorded cells (cave-in row →
+## RUBBLE, gas vent → GAS, each lava cell → LAVA). The mole is an OVERLAY (no grid stamp). Shared by
+## apply_mine_hazard_state + the live-board guard.
+func _stamp_mine_hazard_cells(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	if not cave_in.is_empty():
+		var cr: int = int(cave_in.get("row", -1))
+		if cr >= 0 and cr < Constants.ROWS:
+			for c in Constants.COLS:
+				grid[cr][c] = Constants.Tile.RUBBLE
+	if not gas_vent.is_empty():
+		var gr: int = int(gas_vent.get("row", -1)); var gc: int = int(gas_vent.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(gc, gr)):
+			grid[gr][gc] = Constants.Tile.GAS
+	for lc in lava_cells:
+		var lr: int = int(lc.get("row", -1)); var lcl: int = int(lc.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(lcl, lr)):
+			grid[lr][lcl] = Constants.Tile.LAVA
+
+## A live-board guard that PRESERVES the recorded mine-hazard cells across a reshuffle (mirrors
+## _ensure_live_board_preserving_hazards for the farm). _ensure_live_board rebuilds the WHOLE grid
+## (losing the pinned cave-in/gas/lava), so when mine hazards are present we re-stamp them after any
+## reshuffle. Rare (the pool almost always lands a live board), but keeps the hazard tiles pinned.
+func _ensure_live_board_preserving_mine(cave_in: Dictionary, gas_vent: Dictionary, lava_cells: Array) -> void:
+	var guard := 0
+	while not BoardLogic.has_valid_chain(grid) and guard < 64:
+		grid = BoardLogic.make_empty_grid()
+		BoardLogic.refill(grid, rng, tile_pool)
+		_stamp_mine_hazard_cells(cave_in, gas_vent, lava_cells)
+		guard += 1
+
+## T11 — rebuild the mole-marker overlay from `mole` ({} when none, else {row,col,turns_remaining}).
+## Frees the existing marker and creates one Node2D marker at the cell centre. Called on every
+## mine-hazard tick + on load/biome flip. An empty dict clears the marker. Headless-safe (pure _draw).
+func refresh_mole(mole: Dictionary) -> void:
+	if _mole_marker != null and is_instance_valid(_mole_marker):
+		_mole_marker.queue_free()
+	_mole_marker = null
+	if mole.is_empty():
+		return
+	var mr: int = int(mole.get("row", -1)); var mc: int = int(mole.get("col", -1))
+	if not BoardLogic.in_bounds(Vector2i(mc, mr)):
+		return
+	var marker := _MoleMarker.new()
+	marker.radius = tile_size * 0.32
+	marker.position = _cell_center(mc, mr)
+	marker.z_index = 90   # above tiles, below the chain overlay (100) — same band as the wolf
+	add_child(marker)
+	_mole_marker = marker
+
+## T9 — clear EVERY rat from the board + the count of cells to blank, used when a rat-chain or a
+## deadly-pests cull or a Rifle removes specific rats. Given the cleared rat cells (Array of
+## {row,col}), blank them, collapse + refill, re-stamp the REMAINING rats/fire, rebuild. Returns
+## the number of cells cleared. Distinct from clear_all_rats (the Ratcatcher shoo, which clears
+## the whole board's rats) — this clears a SPECIFIC set after a chain/cull.
+func clear_hazard_cells(cleared_cells: Array, remaining_rats: Array, remaining_fire: Array, wolf_cells: Array) -> int:
+	var n := 0
+	for cell in cleared_cells:
+		var cr: int = int(cell.get("row", -1)); var cc: int = int(cell.get("col", -1))
+		if BoardLogic.in_bounds(Vector2i(cc, cr)):
+			grid[cr][cc] = Constants.EMPTY
+			n += 1
+	if n > 0:
+		BoardLogic.collapse(grid)
+		BoardLogic.refill(grid, rng, tile_pool)
+		# Re-stamp the survivors so they stay pinned.
+		for rc in remaining_rats:
+			var rr: int = int(rc.get("row", -1)); var rcl: int = int(rc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(rcl, rr)):
+				grid[rr][rcl] = Constants.Tile.RAT
+		for fc in remaining_fire:
+			var fr: int = int(fc.get("row", -1)); var fcl: int = int(fc.get("col", -1))
+			if BoardLogic.in_bounds(Vector2i(fcl, fr)):
+				grid[fr][fcl] = Constants.Tile.FIRE
+		_ensure_live_board_preserving_hazards(remaining_rats, remaining_fire)
+		_build_tiles()
+	refresh_wolves(wolf_cells)
+	return n
 
 # ── harbor (M3j): tide mutation + giant-pearl placement ──────────────────────
 # These act only while Main has flipped the harbor on (it sets clear_pearl_on_fish_chain
@@ -388,7 +727,13 @@ func layout_for(viewport: Vector2) -> void:
 		_shake_tween.kill()
 	_shake_tween = null
 	var avail_w := viewport.x * 0.94
-	var avail_h := viewport.y * 0.62
+	# Height budget = the band between the board's top edge (board_top_px — Main sets it
+	# from Hud.board_top(), the fixed line under the action panel) and the bottom chrome
+	# (status/orders strip + the bottom nav, BOTTOM_RESERVE). Nothing is allowed to
+	# overlap the board any more — the old 0.50·h+36 budget deliberately tucked the
+	# bottom tile row under the floating stockpile card, which is gone. At the canonical
+	# 720×1280 this still yields tile_size 112 (width-bound), pixel-identical tiles.
+	var avail_h := maxf(float(Constants.ROWS) * 20.0, viewport.y - board_top_px - BOTTOM_RESERVE)
 	tile_size = floorf(minf(avail_w / Constants.COLS, avail_h / Constants.ROWS))
 	for r in Constants.ROWS:
 		for c in Constants.COLS:
@@ -478,6 +823,18 @@ func _begin_drag(cell: Vector2i) -> void:
 		return
 	if grid[cell.y][cell.x] == Constants.EMPTY:
 		return
+	# T11 — a chain can't START on a hazard-BLOCKED cell (RUBBLE / LAVA) in the mine.
+	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
+		return
+	# T24 — a chain can't START on a boss-blocked cell (frozen column / rubble / hidden).
+	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
+		return
+	# T25 — the giant pearl is NOT a valid drag ANCHOR (you drag fish tiles into it, not
+	# start a chain on the pearl). If the player presses directly on the pearl tile, reject
+	# the start so the drag stays anchored on a fish tile. The pearl CAN still join via
+	# _extend_drag when the chain drags over it (see _cell_can_extend_chain).
+	if clear_pearl_on_fish_chain and grid[cell.y][cell.x] == Constants.Tile.FISH_PEARL:
+		return
 	_dragging = true
 	_path = [cell]
 	_set_highlight(cell, true)
@@ -499,8 +856,18 @@ func _extend_drag(cell: Vector2i) -> void:
 		return
 	if _path.has(cell):
 		return
-	# Extend: must match the chain's type and be 8-way adjacent to the last cell.
-	if grid[cell.y][cell.x] != grid[_path[0].y][_path[0].x]:
+	# T11 — never extend onto a hazard-BLOCKED cell (RUBBLE / LAVA) in the mine. (The same-type
+	# guard below already blocks most cases since a blocked tile can't be the anchor, but a buried
+	# cave-in row is many RUBBLE cells — this keeps the chain off them defensively.)
+	if block_mine_hazards and MineHazardLogic.tile_blocked_by_hazard(int(grid[cell.y][cell.x])):
+		return
+	# T24 — never extend onto a boss-blocked cell (frozen column / rubble / hidden).
+	if not BossModifierLogic.cell_chainable(boss_modifier_state, cell.y, cell.x):
+		return
+	# Extend: must be compatible with the chain's anchor type and 8-way adjacent to the last cell.
+	# T25 — _cell_can_extend_chain handles the normal same-type case PLUS the special case where
+	# FISH_PEARL can join a fish-category chain (and a fish tile can follow the pearl in the chain).
+	if not _cell_can_extend_chain(cell, int(grid[_path[0].y][_path[0].x])):
 		return
 	if maxi(absi(cell.x - last.x), absi(cell.y - last.y)) != 1:
 		return
@@ -517,8 +884,17 @@ func _finish_drag() -> void:
 	_dragging = false
 	_update_chain_overlay()                # clears the path line + nodes
 	chain_changed.emit(0)
-	if BoardLogic.is_valid_chain(grid, path, min_chain):
+	# T25 — for harbor mixed chains (fish + FISH_PEARL), use the pearl-aware validator;
+	# for all other chains the standard same-type validator.
+	var valid: bool
+	if clear_pearl_on_fish_chain:
+		valid = _is_valid_chain_pearl_aware(grid, path, min_chain)
+	else:
+		valid = BoardLogic.is_valid_chain(grid, path, min_chain)
+	if valid:
 		_resolve(path)
+	elif path.size() >= 2:
+		chain_rejected.emit(path.size())
 
 ## M4a — recompute the overlay's Board-local points from `_path` (each cell's
 ## centre) and push them to the chain overlay, flagged valid when the chain has
@@ -561,15 +937,35 @@ func _set_highlight(cell: Vector2i, on: bool) -> void:
 
 ## Validate-and-resolve a path. Returns true if it was a legal chain. Exposed
 ## so headless smoke tests can drive a move without synthesising input events.
+## T25 — uses the pearl-aware validator when in the harbor (clear_pearl_on_fish_chain),
+## so test paths that include FISH_PEARL mixed with fish tiles resolve correctly.
 func try_resolve(path: Array) -> bool:
-	if not BoardLogic.is_valid_chain(grid, path, min_chain):
+	var valid: bool
+	if clear_pearl_on_fish_chain:
+		valid = _is_valid_chain_pearl_aware(grid, path, min_chain)
+	else:
+		valid = BoardLogic.is_valid_chain(grid, path, min_chain)
+	if not valid:
 		return false
 	_resolve(path)
 	return true
 
 func _resolve(path: Array) -> void:
+	# T25 — for a harbor mixed chain (fish + FISH_PEARL), the anchor is always a fish tile
+	# (FISH_PEARL can't anchor — _begin_drag rejects it). `key` is the anchor tile type; the
+	# pearl cell in the path is reported via _chain_cells so Main can detect it. For counting
+	# purposes (`length`) the full path size is used — the pearl takes a slot, matching React.
 	var key: int = grid[path[0].y][path[0].x]
 	var length: int = path.size()
+
+	# T7/T9/T10 — snapshot the chained cells (row/col + their tile value, read BEFORE the chain
+	# clears them) so Main can run the farm-hazard interactions: a RAT chain clears for coins, a
+	# FIRE chain extinguishes, and a deadly_pests chain (Cypress/Beet/Phoenix) culls adjacent rats.
+	# Emitted before chain_resolved so Main can suppress the normal credit for a pure-hazard chain.
+	var chain_cells: Array = []
+	for cell in path:
+		chain_cells.append({"row": int(cell.y), "col": int(cell.x), "tile": int(grid[cell.y][cell.x])})
+	chain_cells_resolved.emit(chain_cells)
 
 	# A1b — UPGRADE TILES (the React core loop): ask the provider (if Main installed one)
 	# how many next-tier tiles this chain spawns and which tile. We compute it HERE, before
@@ -686,17 +1082,21 @@ func _resolve(path: Array) -> void:
 	if not BoardLogic.has_valid_chain(grid):
 		setup_new_board()
 
-	# M3j (harbor): a resolved FISH-category chain long enough to count toward a pearl
-	# capture reports its cells so Main can run GameState.capture_pearl_if_adjacent (a fish
-	# chain 8-adjacent to the live pearl grabs the Rune). Only fires while on the harbor
-	# (clear_pearl_on_fish_chain) — farm/mine resolves never emit it. We pass the ORIGINAL
-	# chain cells (`path`), not the rubble/rat-swept `removal` set, so Main checks adjacency
-	# against exactly what the player chained. Emitted BEFORE chain_resolved so the capture
-	# is attempted FIRST — _on_chain_resolved then ticks note_harbor_turn (which could expire
-	# the pearl on its final turn), so checking capture ahead of the tick is the right order.
-	if clear_pearl_on_fish_chain and length >= Constants.REQUIRED_FISH_IN_CHAIN \
-			and Constants.category_of(key) == "fish":
-		pearl_chain_resolved.emit(path.duplicate())
+	# T25 (harbor in-chain pearl capture): emit pearl_chain_resolved when the resolved
+	# chain CONTAINS the pearl tile (any cell in chain_cells had tile FISH_PEARL) so that
+	# Main can call try_capture_pearl with the chain's tile keys — the React rule.
+	# This REPLACES the old adjacency-based path (a fish chain run 8-adjacent to the pearl)
+	# with the faithful React rule: the chain must INCLUDE the pearl tile + enough fish.
+	# Emitted BEFORE chain_resolved so the capture fires before the harbor turn ticks
+	# (a final-turn chain can still capture). Only while on the harbor (clear_pearl_on_fish_chain).
+	if clear_pearl_on_fish_chain:
+		var has_pearl_in_chain: bool = false
+		for cc in chain_cells:
+			if int(cc.get("tile", Constants.EMPTY)) == Constants.Tile.FISH_PEARL:
+				has_pearl_in_chain = true
+				break
+		if has_pearl_in_chain:
+			pearl_chain_resolved.emit(chain_cells.duplicate())
 
 	# Resolve "juice": a length-scaled screen shake, an expanding flash ring + collect spark
 	# burst at the chain head, and (when this chain spawned an upgrade tile) an upgrade burst.
@@ -731,6 +1131,63 @@ func _sync_grid_from_tiles() -> void:
 		for c in Constants.COLS:
 			var t: Tile = tiles[r][c]
 			grid[r][c] = t.tile_type if t != null else Constants.EMPTY
+
+## T25 — Pearl-aware chain validator for harbor boards. Mirrors BoardLogic.is_valid_chain
+## but accepts FISH_PEARL tiles mixed with fish-category tiles in the same chain (as React
+## allows). The anchor is the FIRST cell; all subsequent cells must satisfy
+## _cell_can_extend_chain (same type OR fish↔pearl when harbor). Adjacency + no-revisit
+## rules are identical to the standard validator. Used by try_resolve + _finish_drag when
+## clear_pearl_on_fish_chain is true; farm/mine chains still use the strict same-type validator.
+func _is_valid_chain_pearl_aware(g: Array, path: Array, mc: int = Constants.MIN_CHAIN) -> bool:
+	if path.size() < mc:
+		return false
+	var first: Vector2i = path[0]
+	if not BoardLogic.in_bounds(first):
+		return false
+	var anchor_tile: int = int(g[first.y][first.x])
+	if anchor_tile == Constants.EMPTY:
+		return false
+	# T25 — skip validation if anchor is FISH_PEARL (drag should never start on it, but
+	# be defensive). A chain anchored on FISH_PEARL has no fish companion to count.
+	if anchor_tile == Constants.Tile.FISH_PEARL:
+		return false
+	var seen := {}
+	for i in path.size():
+		var cell: Vector2i = path[i]
+		if not BoardLogic.in_bounds(cell):
+			return false
+		# Each cell must be compatible with the anchor (same type or fish↔pearl).
+		if not _cell_can_extend_chain(cell, anchor_tile):
+			return false
+		if seen.has(cell):
+			return false
+		seen[cell] = true
+		if i > 0:
+			var prev: Vector2i = path[i - 1]
+			if maxi(absi(cell.x - prev.x), absi(cell.y - prev.y)) != 1:
+				return false
+	return true
+
+## T25 — True when the tile at `cell` is compatible with a chain whose anchor tile type
+## is `anchor_tile`. In the normal same-type case both tiles match. The special case: when
+## `clear_pearl_on_fish_chain` is on (harbor only), FISH_PEARL is compatible with any
+## fish-category anchor and any fish tile is compatible with a FISH_PEARL anchor — so the
+## player can drag through the pearl together with fish tiles in one mixed chain, mirroring
+## React's in-chain pearl rule (src/features/fish/pearl.ts:122-128). Off the harbor this is
+## always false for cross-type combos (byte-identical to the prior same-type check).
+func _cell_can_extend_chain(cell: Vector2i, anchor_tile: int) -> bool:
+	var candidate: int = int(grid[cell.y][cell.x])
+	if candidate == anchor_tile:
+		return true
+	# T25 — harbor pearl join: FISH_PEARL can extend a fish chain; a fish tile can extend a
+	# FISH_PEARL-anchored chain (the anchor should never be FISH_PEARL since _begin_drag
+	# rejects starting on it, but handle it symmetrically for robustness).
+	if clear_pearl_on_fish_chain:
+		if candidate == Constants.Tile.FISH_PEARL and FishConfig.is_fish_tile(anchor_tile):
+			return true
+		if FishConfig.is_fish_tile(candidate) and anchor_tile == Constants.Tile.FISH_PEARL:
+			return true
+	return false
 
 ## M3h — every distinct RAT cell that is 8-adjacent (king move) to any cell in
 ## `path`. Used by _resolve when the Master Ratcatcher is active so a grass chain
@@ -871,7 +1328,7 @@ func play_gain_text(text: String, color: Color) -> void:
 		return
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30)))
+	lbl.add_theme_font_size_override("font_size", int(maxf(18.0, tile_size * 0.30) * Typography.scale))
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	lbl.add_theme_constant_override("outline_size", 5)
@@ -944,3 +1401,51 @@ class _RingFx extends Node2D:
 		tw.tween_method(_set_radius, start_r, end_r, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.tween_method(_set_alpha, alpha, 0.0, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.chain().tween_callback(queue_free)
+
+## T8 — a wolf-marker overlay: a dark snout-ringed disk with two ears + a fang glint, drawn over
+## the cell a wolf roams. Wolves are NOT grid tiles (they don't collapse), so they ride as their
+## own Node2D over the board. A SCARED wolf reads dimmer (it won't eat this turn). Pure _draw (no
+## textures) so it is headless-safe; the Board frees + rebuilds these whenever the wolf set changes.
+class _WolfMarker extends Node2D:
+	var radius: float = 24.0
+	var scared: bool = false
+
+	func _draw() -> void:
+		var body := Color(0.30, 0.30, 0.34) if not scared else Color(0.55, 0.55, 0.60, 0.65)
+		var snout := Color(0.18, 0.18, 0.22) if not scared else Color(0.40, 0.40, 0.46, 0.6)
+		# Two ears (triangles) poking up from the head.
+		var ear_l := PackedVector2Array([
+			Vector2(-radius * 0.6, -radius * 0.5), Vector2(-radius * 0.2, -radius * 1.1), Vector2(-radius * 0.05, -radius * 0.45)])
+		var ear_r := PackedVector2Array([
+			Vector2(radius * 0.6, -radius * 0.5), Vector2(radius * 0.2, -radius * 1.1), Vector2(radius * 0.05, -radius * 0.45)])
+		draw_colored_polygon(ear_l, body)
+		draw_colored_polygon(ear_r, body)
+		# Head + muzzle.
+		draw_circle(Vector2.ZERO, radius * 0.8, body)
+		draw_circle(Vector2(0, radius * 0.25), radius * 0.42, snout)
+		# Two eye glints (skip when scared — eyes shut/averted).
+		if not scared:
+			draw_circle(Vector2(-radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))
+			draw_circle(Vector2(radius * 0.3, -radius * 0.1), radius * 0.12, Color(0.95, 0.85, 0.30))
+
+## T11 — a mole-marker overlay: a round brown burrower with a pink snout, two paddle paws, and tiny
+## eyes, drawn over the cell the Giant Mole roams. Like the wolf the mole is NOT a grid tile (it
+## doesn't collapse), so it rides as its own Node2D over the board, consuming adjacent tiles + hopping.
+## Pure _draw (no textures) so it is headless-safe; the Board frees + rebuilds it whenever the mole moves.
+class _MoleMarker extends Node2D:
+	var radius: float = 24.0
+
+	func _draw() -> void:
+		var body := Color(0.42, 0.30, 0.20)        # earthy mole-brown
+		var snout := Color(0.86, 0.56, 0.58)       # pink nose
+		var paw := Color(0.34, 0.24, 0.16)         # darker digging paws
+		# Two big paddle paws flanking the body (digging claws).
+		draw_circle(Vector2(-radius * 0.7, radius * 0.35), radius * 0.32, paw)
+		draw_circle(Vector2(radius * 0.7, radius * 0.35), radius * 0.32, paw)
+		# Round body.
+		draw_circle(Vector2.ZERO, radius * 0.82, body)
+		# Pink snout at the bottom-front.
+		draw_circle(Vector2(0, radius * 0.42), radius * 0.30, snout)
+		# Two beady eyes.
+		draw_circle(Vector2(-radius * 0.26, -radius * 0.05), radius * 0.10, Color(0.10, 0.08, 0.08))
+		draw_circle(Vector2(radius * 0.26, -radius * 0.05), radius * 0.10, Color(0.10, 0.08, 0.08))

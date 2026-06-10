@@ -66,13 +66,28 @@ const BOARD_TINT := {
 	"fish": Color("6fa0b8"),
 }
 
-# Built-house placeholder tones (warm, distinct from the grass/dirt pads so a
-# built lot reads at a glance). A warm clay wall + a deep terracotta roof.
-const HOUSE_WALL := Color("d8b27a")
-const HOUSE_WALL_EDGE := Color("9a734a")
-const HOUSE_ROOF := Color("b25a36")
-const HOUSE_ROOF_EDGE := Color("7a3a1c")
+# Built-house label tone (the small caption under each building; the ART now
+# disambiguates the building — see BuildingArt.gd — the label is a subtle aid).
 const HOUSE_LABEL := Color("3a2c18")
+
+# ── Townsfolk (ambient walking villagers) ──────────────────────────────────────
+# A few little iso-character figures wander the lot/street band over time (React
+# parity: "little villager figures walking the streets"). Each has a plan-space
+# position + a target it strolls toward at WANDER_SPEED; on arrival it picks a new
+# nearby target (a short pause first). Drawn in _draw as a body+head 2-tone figure;
+# moved in _process (guarded so headless never errors — see _anim_enabled). The
+# count scales gently with town size (more plots → a livelier street).
+const WANDER_SPEED := 26.0       # plan-space px/sec
+const TOWNSFOLK_MIN := 3
+const TOWNSFOLK_MAX := 6
+# Tunic colours so the villagers read as a small varied crowd (not clones).
+const FOLK_TUNICS := [
+	Color("c7522a"), Color("4a6a8a"), Color("6f8a3a"), Color("8a5a8a"),
+	Color("c9a23a"), Color("5a8a7a"),
+]
+const FOLK_SKIN := Color("e8b88f")
+const FOLK_HAIR := Color("4a3322")
+const FOLK_LEG := Color("3a3024")
 
 var _plan: Dictionary = {}
 var _scale: float = 1.0
@@ -106,6 +121,18 @@ var _built_ids: Array = []
 # M6d: the build-slot lot currently hovered (a subtle highlight outline is drawn
 # on it); -1 = none. Set by set_hover_lot; only affects _draw, never state.
 var _hover_lot: int = -1
+
+# Animation clock (seconds) advanced in _process; drives the few animated building
+# details (mill sails, chimney smoke, sawmill blade, portal pulse) + the townsfolk
+# walk bob. Purely cosmetic; never affects state or hit-testing.
+var _phase: float = 0.0
+# Ambient walking villagers. Each entry: {pos:Vector2, target:Vector2, tunic:Color,
+# pause:float (seconds remaining before next move)} in PLAN space. Spawned from the
+# plan's lot/street band in render_plan; moved in _process; drawn in _draw.
+var _folk: Array = []
+# The plan-space rect the villagers roam within (the lot/board cluster bbox, padded
+# inward a touch). Computed in render_plan from the content bbox.
+var _folk_bounds: Rect2 = Rect2()
 
 # M6d: highlight tones for the hover outline (warm gold so it reads over both the
 # empty fenced pad and a built house without clashing with the parchment UI).
@@ -153,7 +180,86 @@ func render_plan(plan: Dictionary, view_w: float, view_h: float, built_ids: Arra
 	_fit_oy = (view_h - bh * _fit_scale) / 2.0 - bb.y0 * _fit_scale
 	_bb_w = bw
 	_bb_h = bh
+	# Spawn ambient walking villagers within the (slightly inset) content bbox, scaled
+	# to town size. Done here (not _process) so the crowd is set the moment a plan loads
+	# and a headless render that never ticks _process still has folk to draw safely.
+	_spawn_townsfolk(bb)
 	_recompute_view()
+
+# ── Townsfolk spawning ──────────────────────────────────────────────────────────
+## Populate `_folk` with TOWNSFOLK_MIN..MAX wandering villagers inside the content
+## bbox (inset so they stroll the lot/street band, not the very edge). The count
+## scales with the number of build-slot lots (a bigger town → a livelier street).
+## Deterministic-ish positions via a local RNG seeded from the lot count so a given
+## plan always spawns the same crowd (stable captures/tests).
+func _spawn_townsfolk(bb: Dictionary) -> void:
+	_folk.clear()
+	# Roam bounds: the content bbox inset by ~12% so figures keep off the edge.
+	var insx: float = (bb.x1 - bb.x0) * 0.12
+	var insy: float = (bb.y1 - bb.y0) * 0.12
+	_folk_bounds = Rect2(bb.x0 + insx, bb.y0 + insy, max(1.0, bb.x1 - bb.x0 - 2.0 * insx), max(1.0, bb.y1 - bb.y0 - 2.0 * insy))
+	var lots: int = lot_count()
+	var n: int = clampi(TOWNSFOLK_MIN + int(lots / 3), TOWNSFOLK_MIN, TOWNSFOLK_MAX)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9173 + lots * 31
+	for i in n:
+		var p := Vector2(
+			rng.randf_range(_folk_bounds.position.x, _folk_bounds.position.x + _folk_bounds.size.x),
+			rng.randf_range(_folk_bounds.position.y, _folk_bounds.position.y + _folk_bounds.size.y))
+		_folk.append({
+			"pos": p,
+			"target": _folk_pick_target(rng, p),
+			"tunic": FOLK_TUNICS[i % FOLK_TUNICS.size()],
+			"pause": rng.randf_range(0.0, 1.5),
+		})
+
+## Pick a new wander target a short hop from `from`, clamped to the roam bounds.
+func _folk_pick_target(rng: RandomNumberGenerator, from: Vector2) -> Vector2:
+	var span: float = min(_folk_bounds.size.x, _folk_bounds.size.y) * 0.5 + 60.0
+	var t := from + Vector2(rng.randf_range(-span, span), rng.randf_range(-span, span))
+	t.x = clampf(t.x, _folk_bounds.position.x, _folk_bounds.position.x + _folk_bounds.size.x)
+	t.y = clampf(t.y, _folk_bounds.position.y, _folk_bounds.position.y + _folk_bounds.size.y)
+	return t
+
+# ── animation tick (cosmetic; headless-guarded) ─────────────────────────────────
+## True when this node should run its cosmetic animation/draw work — i.e. it is in
+## the tree AND a real renderer is present. A COMPLETE no-op under the headless test
+## sweep (DisplayServer "headless"), so the logic suites never tick smoke/sails or
+## move villagers and never error. Mirrors Board._fx_enabled().
+func _anim_enabled() -> bool:
+	return is_inside_tree() and DisplayServer.get_name() != "headless"
+
+## Advance the animation clock + stroll the villagers toward their targets, then
+## request a redraw. Guarded so headless runs do nothing (no renderer to draw to and
+## the test sweep must stay deterministic). One RNG is reused for fresh targets.
+func _process(delta: float) -> void:
+	if not _anim_enabled():
+		return
+	_phase += delta
+	_step_townsfolk(delta)
+	queue_redraw()
+
+## Move each villager toward its target at WANDER_SPEED (plan space). On arrival it
+## pauses briefly, then picks a new nearby target. Pure cosmetic motion, bounded to
+## _folk_bounds via _folk_pick_target's clamp.
+func _step_townsfolk(delta: float) -> void:
+	if _folk.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(_phase * 1000.0) ^ 0x5bd1e995
+	for f in _folk:
+		if f.pause > 0.0:
+			f.pause -= delta
+			continue
+		var to: Vector2 = f.target - f.pos
+		var dist: float = to.length()
+		var step: float = WANDER_SPEED * delta
+		if dist <= step or dist < 1.0:
+			f.pos = f.target
+			f.pause = rng.randf_range(0.4, 1.8)
+			f.target = _folk_pick_target(rng, f.pos)
+		else:
+			f.pos += to / dist * step
 
 # ── zoom / pan / recenter (interactive view transform) ─────────────────────────
 
@@ -419,6 +525,8 @@ func _draw() -> void:
 	_draw_props()
 	# Front-layer trees draw LAST so their canopies sit over the lots they front.
 	_draw_trees_front()
+	# Ambient walking villagers stroll over the streets/lots (under the hover outline).
+	_draw_townsfolk()
 	# M6d: the hover highlight sits on TOP of everything so it's always visible.
 	_draw_hover_lot()
 
@@ -441,6 +549,44 @@ func _draw_hover_lot() -> void:
 		_draw_screen_rect(x0, y0, float(l["w"]), float(l["h"]), HOVER_FILL)
 		_draw_screen_rect_outline(x0, y0, float(l["w"]), float(l["h"]), HOVER_OUTLINE, _s(2.5))
 		return
+
+# ── Townsfolk (ambient walking villagers) ──────────────────────────────────────
+# Draw each villager in `_folk` as a small 2-tone iso figure (ground shadow + legs
+# + tunic body + head with hair) at its plan-space `pos`, mapped through _pxy/_s so
+# the figure scales with the map fit/zoom. A gentle vertical bob (driven by _phase +
+# a per-figure offset) sells the walk. No-op when no folk were spawned. Sorted back
+# → front by plan-y so nearer figures overlap farther ones.
+func _draw_townsfolk() -> void:
+	if _folk.is_empty():
+		return
+	var order := _folk.duplicate()
+	order.sort_custom(func(a, b): return a.pos.y < b.pos.y)
+	for f in order:
+		_draw_one_folk(f.pos, f.tunic)
+
+# A single villager figure (units are plan-space px, scaled by _s; the figure's feet
+# sit at `pos`). Body parts mirror IsoCharacter.tsx (legs / tunic / arms / head /
+# hair). Tiny, so it reads as a person on the street without stealing focus.
+func _draw_one_folk(pos: Vector2, tunic: Color) -> void:
+	var x: float = pos.x
+	var y: float = pos.y
+	# Per-figure phase offset from its position so the crowd doesn't bob in lockstep.
+	var bob: float = sin(_phase * 6.0 + x * 0.21 + y * 0.17) * 0.7
+	# Ground shadow (stays on the ground; doesn't bob).
+	_draw_filled_ellipse(_pxy(x, y), _s(4.0), _s(1.6), Color(0, 0, 0, 0.28))
+	var fy: float = y + bob       # body baseline lifts with the bob
+	# Legs.
+	_draw_screen_rect(x - 2.4, fy - 6.0, 1.8, 4.0, FOLK_LEG)
+	_draw_screen_rect(x + 0.6, fy - 6.0, 1.8, 4.0, FOLK_LEG)
+	# Tunic body (a little tapered block).
+	_draw_screen_rect(x - 3.0, fy - 12.0, 6.0, 7.0, tunic)
+	# Arms (slightly darker tunic shade).
+	var arm := tunic.darkened(0.18)
+	_draw_screen_rect(x - 4.0, fy - 12.0, 1.4, 5.5, arm)
+	_draw_screen_rect(x + 2.6, fy - 12.0, 1.4, 5.5, arm)
+	# Head + hair cap.
+	_draw_filled_ellipse(_pxy(x, fy - 14.5), _s(2.6), _s(2.6), FOLK_SKIN)
+	_draw_filled_ellipse(_pxy(x, fy - 15.8), _s(2.7), _s(1.5), FOLK_HAIR)
 
 # ── 1. grass texture ──────────────────────────────────────────────────────────
 func _draw_grass_texture() -> void:
@@ -652,56 +798,34 @@ func _draw_lot_pads() -> void:
 		else:
 			_draw_empty_lot(l)
 
-# A built lot: a placeholder house — a warm clay wall rect, a deep terracotta roof
-# triangle on top, and a small centred label = the building id. NOT final art; an
-# honest stand-in for a real built building (full iso art lands in a later milestone).
+# A built lot: a DISTINCT per-building silhouette (BuildingArt resolves the building
+# id to its shape family — mill/barn/forge/chapel/silo/portal/… each draws its own
+# massing, roof, accents + palette, so a built plot reads at a glance instead of the
+# old identical tan box). The art draws through THIS node's _pxy/_s helpers so it
+# honours the same fit/zoom/pan; a small building-id caption stays below as a subtle
+# aid. An unknown id still resolves to the generic "house" drawer (fallback intact).
 func _draw_built_house(l: Dictionary, id: String) -> void:
 	var lcx: float = float(l["cx"])
 	var lcy: float = float(l["cy"])
 	var lw: float = float(l["w"])
 	var lh: float = float(l["h"])
-	# House footprint: bottom-anchored in the lot, slightly inset.
-	var hw: float = lw * 0.62
-	var wall_h: float = lh * 0.42
-	var roof_h: float = lh * 0.26
-	var hx0: float = lcx - hw / 2.0
-	var base_y: float = lcy + lh / 2.0 - 6.0      # ground line
-	var wall_y0: float = base_y - wall_h
-	var roof_apex_y: float = wall_y0 - roof_h
-	# Ground shadow under the house.
-	_draw_filled_ellipse(_pxy(lcx, base_y + 2.0), _s(hw * 0.56), _s(max(4.0, lh * 0.06)), SHADOW)
-	# Wall.
-	_draw_screen_rect(hx0, wall_y0, hw, wall_h, HOUSE_WALL)
-	_draw_screen_rect_outline(hx0, wall_y0, hw, wall_h, HOUSE_WALL_EDGE, _s(2.0))
-	# A little door so the wall reads as a building, not a box.
-	var door_w: float = hw * 0.26
-	var door_h: float = wall_h * 0.5
-	_draw_screen_rect(lcx - door_w / 2.0, base_y - door_h, door_w, door_h, HOUSE_WALL_EDGE)
-	# Roof triangle (overhangs the wall a touch on each side).
-	var roof := PackedVector2Array([
-		_pxy(hx0 - hw * 0.08, wall_y0),
-		_pxy(lcx, roof_apex_y),
-		_pxy(hx0 + hw + hw * 0.08, wall_y0),
-	])
-	draw_colored_polygon(roof, HOUSE_ROOF)
-	var ring := roof.duplicate()
-	ring.append(roof[0])
-	draw_polyline(ring, HOUSE_ROOF_EDGE, _s(1.5), true)
-	# Centred building-id label above the house (e.g. "lumber_camp").
-	_draw_house_label(id, lcx, roof_apex_y - 4.0)
+	BuildingArt.draw_building(self, id, lcx, lcy, lw, lh, _phase)
+	# A small caption below the building (the ART disambiguates; this is a quiet aid).
+	_draw_house_label(BuildingConfig.building_name(id), lcx, lcy + lh / 2.0 + 2.0)
 
-# Draw the building id, centred horizontally on `cx` with its baseline near `y`,
-# using the default font. Sized down with the fit so labels don't overlap on a
-# dense map; skipped if no default font is available.
-func _draw_house_label(id: String, cx: float, y: float) -> void:
+# Draw a small building caption, centred horizontally on `cx` with its baseline near
+# `y`, using the default font. Sized down with the fit so captions don't overlap on a
+# dense map; skipped if no default font is available. The building ART (BuildingArt)
+# now disambiguates the structure — this is a quiet supporting label.
+func _draw_house_label(text: String, cx: float, y: float) -> void:
 	var font := ThemeDB.fallback_font
 	if font == null:
 		return
-	var fs: int = int(max(8.0, _s(13.0)))
-	var width: float = font.get_string_size(id, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var fs: int = int(max(7.0, _s(11.0)))
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var pos := _pxy(cx, y)
 	pos.x -= width / 2.0
-	draw_string(font, pos, id, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, HOUSE_LABEL)
+	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, HOUSE_LABEL)
 
 # An empty lot: the M6b look — a small bottom-anchored foundation footprint (pad
 # fill + a darker post-and-rail fence + a "build here" stake at the front).

@@ -28,7 +28,9 @@ extends RefCounted
 ##   act1_first_harvest  — folded into act1_light_hearth (single "bring 20 hay" gate;
 ##                         React split it into a 1-tile and a 20-tile beat — the port
 ##                         keeps the meaningful 20-hay milestone).
-##   act1_keeper_trial   — keeper_confronted event + keeper system: NOT in the port.
+##   act1_keeper_trial   — NOW PORTED (T29): the keeper system exists (T31, KeeperConfig +
+##                         give_keeper_reward). Re-expressed against the keeper_farm_<path> flag
+##                         instead of the absent keeper_confronted event. See the beat below.
 ##   act2_bram_arrives / act2_liss_arrives — spawnNPC (Bram / Sister Liss) + NPC roster:
 ##                         NO NPCs in the port. (Bram's smith flavour survives as the
 ##                         narrator voice in the quarry/iron beats.)
@@ -72,13 +74,20 @@ const FLAGS: Array = [
 	{"id": "keeper_path_broken",  "label": "Keeper path — broken", "desc": "The player broke the wyrm's hold and took its core (spoils)."},
 	{"id": "rats_arrived",        "label": "Rats arrived",         "desc": "With Town 2 done, vermin creep into the fields — the Town 3 lesson."},
 	{"id": "settlement_lives",    "label": "The settlement lives", "desc": "Town 1→2→3 mastered — the settlement stands on its own."},
+	# T29 — flags reachable now that the gating systems are ported (keepers / gifts / bonds).
+	{"id": "home_keeper_resolved","label": "Home keeper resolved", "desc": "The home settlement's keeper (the Deer-Spirit) has been faced and a path chosen."},
+	{"id": "first_gift_given",    "label": "First gift given",     "desc": "The player has given a villager their first gift — the bond economy has begun."},
+	{"id": "bond_liked_reached",  "label": "A villager warmed",    "desc": "A villager's bond has risen into Liked — someone in the Vale truly trusts you now."},
 ]
 
 # ── Beats ─────────────────────────────────────────────────────────────────────
-## ~14 portable beats spanning the port's arc:
+## ~17 portable beats spanning the port's arc:
 ##   arrival → light the hearth → first order → first spawner → grow to Hamlet →
+##   (T29) face the keeper → (T29) first gift → (T29) a villager warms →
 ##   pack the kitchen → reach City → quarry/stone → first iron → boss defeated →
 ##   (CHOICE: bind/break the wyrm) → rats → finish.
+## The three T29 beats (act1_keeper_trial / side_first_gift / side_bond_liked) became
+## reachable once the keeper (T31), gift (T18/T19), and bond-band (T20) systems were ported.
 ##
 ## Beat shape (Dictionary):
 ##   id:         String   — stable id; the fired-marker is "_fired_<id>"
@@ -178,6 +187,71 @@ const BEATS: Array = [
 			],
 		},
 		"on_complete": {"set_flag": ["hamlet_named"]},
+		"repeat": false,
+	},
+	{
+		# T29 — PORTED now that the keeper system exists (T31). React's act1_keeper_trial gated on a
+		# keeper_confronted event + the keeper system, both ABSENT when StoryConfig was first written;
+		# it is now reachable. The port's keeper resolution (give_keeper_reward) sets a
+		# keeper_<type>_<path> flag and posts a "keeper_resolved" event, so this beat fires the moment
+		# the home settlement's keeper (the Deer-Spirit) is faced on EITHER path. Narrative carried
+		# faithfully from React; React's advanceAct:2 maps to act:2 here (apply_beat advances the act).
+		# The keeper_resolved event also carries event.type=="keeper_resolved", but gating on the
+		# FLAG (set by give_keeper_reward before the event posts) keeps it robust on a reload too.
+		"id": "act1_keeper_trial",
+		"act": 2,
+		"title": "The Keeper At The Fence",
+		"lines": [
+			{"speaker": "", "text": "The old keeper of field and herd has watched you long enough to have an opinion. It has decided to share it."},
+			{"speaker": "Wren", "text": "So you've settled that. The Deer-Spirit doesn't bend for everyone — bound or banished, the land answers to your hearth now."},
+			{"speaker": "Wren", "text": "Whatever you chose, the road beyond the Vale can open. There's deeper country out there."},
+		],
+		# Fires when the home (farm) keeper is resolved on EITHER path (keeper_farm_coexist /
+		# keeper_farm_driveout, set by give_keeper_reward). `any` of the two path flags.
+		"when": {
+			"any": [
+				{"fact": "flag.keeper_farm_coexist", "op": "truthy"},
+				{"fact": "flag.keeper_farm_driveout", "op": "truthy"},
+			],
+		},
+		"on_complete": {"set_flag": ["home_keeper_resolved"]},
+		"repeat": false,
+	},
+	{
+		# T29 — PORTED now that the NPC gift system exists (T18/T19). There was no single React beat for
+		# "first gift" (React's gift content lived in the Bond-8 letter arcs, still unportable), so this
+		# is a port-native milestone that EXERCISES the now-real give_gift path the brief calls out: the
+		# first time the player gifts any villager, a short beat marks that the bond economy has opened.
+		# Fired off the "gift_given" event posted by give_gift. One-time (the first gift only).
+		"id": "side_first_gift",
+		"act": 1,
+		"title": "A Small Kindness",
+		"lines": [
+			{"speaker": "Wren", "text": "You gave something away with nothing asked in return. People remember that out here — more than coin, sometimes."},
+			{"speaker": "Wren", "text": "Keep at it. A villager who trusts you works harder, asks fairer, and looks out for the place."},
+		],
+		"when": {"fact": "event.type", "op": "eq", "value": "gift_given"},
+		"on_complete": {"set_flag": ["first_gift_given"]},
+		"repeat": false,
+	},
+	{
+		# T29 — PORTED now that NPC bonds + bands exist (T18/T20). React gated personal beats on
+		# `npc.<id>.bond >= N` (the bond_at_least settle-composite); the port has real bonds and the
+		# Liked band (NpcConfig.BOND_BANDS: bond >= 7). This beat fires the first time ANY villager's
+		# bond crosses into Liked — the gift_given / order_fulfilled events carry the resulting bond on
+		# event.bond, so the gate reads that. Mirrors the React bond-arc gate, simplified to the port's
+		# single bond fact (no per-NPC settle composite, no letter follow-up).
+		"id": "side_bond_liked",
+		"act": 2,
+		"title": "Warmed Through",
+		"lines": [
+			{"speaker": "", "text": "It's a small thing — a villager saves you the good loaf, leaves the gate open the way you like it."},
+			{"speaker": "Wren", "text": "That's what it looks like when someone here truly trusts you. Worth more than it weighs."},
+		],
+		# event.bond is the NEW bond after a gift/order fill (give_gift / fill_order post it). 7 = the
+		# Liked band floor. A chain event carries no event.bond → reads 0 → never fires off a chain.
+		"when": {"fact": "event.bond", "op": "gte", "value": 7},
+		"on_complete": {"set_flag": ["bond_liked_reached"]},
 		"repeat": false,
 	},
 	# ── Act 2 (the mine + the smith's voice) ──────────────────────────────────

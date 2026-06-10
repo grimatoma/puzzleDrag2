@@ -23,6 +23,11 @@ const INK_MID        := Color8(0x7a, 0x5e, 0x3f)   ## #7a5e3f — ink-mid (secon
 # ── Borders ─────────────────────────────────────────────────────────────────
 const IRON           := Color8(0xc9, 0xb9, 0x93)   ## #c9b993 — iron border
 
+# ── Modal scrim ─────────────────────────────────────────────────────────────
+## The shared warm-brown modal scrim every floating-card overlay dims the screen
+## with (was copy-pasted as Color(0.17, 0.13, 0.08, 0.66) across 11 modals).
+const SCRIM          := Color(0.17, 0.13, 0.08, 0.66)
+
 # ── Accents ─────────────────────────────────────────────────────────────────
 const EMBER          := Color8(0xd6, 0x61, 0x2a)   ## #d6612a — ember
 const EMBER_SOFT     := Color8(0xff, 0x8b, 0x25)   ## #ff8b25 — ember soft

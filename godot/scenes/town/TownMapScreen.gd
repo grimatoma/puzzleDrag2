@@ -58,6 +58,14 @@ signal board_requested
 ## affordance (parity with React tapping the farm board to open the FARM/ENTER dialog). Main
 ## (Task C) wires this to open the StartFarmingModal; NOT connected here.
 signal start_farming_requested
+## review-3 — emitted when the player taps the "📋 Town Ledger" overlay button. Now that the
+## 🔨 Craft bottom-nav tab opens the crafting UI (not the town-management ledger), the ledger
+## (settlement / buildings / refine / market sell+buy / orders) is reached from here + the ☰
+## menu. Main routes this through apply_deeplink("town") to open the TownScreen.
+signal ledger_requested
+## T31 — emitted when the player taps the "✨ Boons" overlay button. Main routes this through
+## apply_deeplink("boons") to open the BoonsScreen (the keeper-perk catalogs).
+signal boons_requested
 
 ## action id → Button, for headless tests. Static keys: "close". Panel keys are
 ## added/removed as panels open/close: "demolish" (built-lot card),
@@ -81,6 +89,9 @@ var _built: bool = false
 var _map                         ## the TownMap renderer node (TownMap.gd Node2D)
 var _map_host: Control           ## full-rect Control the map is parented under
 var _last_plan: Dictionary = {}  ## the plan from the most recent refresh()
+## The "▶ Board" / "▶ Start Farming" overlay button — relabelled each refresh() from the
+## live run state so an idle town never shows a dead-looking "Board" affordance.
+var _board_btn: Button
 ## The prominent "Build · <built>/<plots> plots" button (bottom-right, matches React).
 ## Opens the build picker for the first empty plot; its label is refreshed each render().
 var _build_btn: Button
@@ -128,12 +139,9 @@ func _build_shell() -> void:
 	# map) and stops UiKit.NAV_RESERVE short of the bottom, leaving the persistent nav bar (a
 	# LOWER CanvasLayer) visible + tappable. MOUSE_FILTER_STOP eats clicks in the band it
 	# covers so nothing leaks to the board behind the open map.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -NAV_RESERVE        # leave the bottom nav strip unpainted
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
 	# Full-rect host Control that the TownMap (a Node2D) hangs under, so the map
@@ -149,6 +157,10 @@ func _build_shell() -> void:
 	_map_host.offset_top = UiKit.TOPBAR_RESERVE
 	_map_host.offset_bottom = -NAV_RESERVE
 	_map_host.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Clip the map's drawing to the host rect: the TownMap is a Node2D child, so without
+	# this a zoomed-in/panned map paints PAST the host — over the persistent HUD top bar
+	# and bottom nav (both LOWER CanvasLayers revealed through the reserved bands).
+	_map_host.clip_contents = true
 	_map_host.connect("gui_input", Callable(self, "_on_map_gui_input"))
 	add_child(_map_host)
 
@@ -169,7 +181,7 @@ func _build_shell() -> void:
 	# Title pill — the in-fiction settlement name, top-left (over the map, below the HUD bar).
 	var title := Label.new()
 	title.text = "🗺 Hearthwood Vale"
-	title.add_theme_font_size_override("font_size", 26)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -189,14 +201,44 @@ func _build_shell() -> void:
 	# nav (apply_deeplink("board")). ESC/back also returns to the board.
 	var board_btn := Button.new()
 	board_btn.text = "▶ Board"
-	UiKit.style_button(board_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(board_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	board_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	board_btn.offset_right = -18
 	board_btn.offset_top = overlay_top
 	board_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	board_btn.connect("pressed", Callable(self, "_on_board_button"))
 	overlay.add_child(board_btn)
+	_board_btn = board_btn
 	_action_buttons["board"] = board_btn
+
+	# review-3 — "📋 Town Ledger" button, top-left under the title pill. The discoverable on-map
+	# path to the town-management ledger (settlement / buildings / refine / MARKET sell+buy /
+	# orders) now that the 🔨 Craft bottom-nav tab opens the crafting UI instead. Emits
+	# `ledger_requested`; Main routes it through apply_deeplink("town"). Registered as "ledger".
+	var ledger_btn := Button.new()
+	ledger_btn.text = "📋 Town Ledger"
+	UiKit.style_button(ledger_btn, Palette.GOLD, 6, Typography.size(Typography.Role.SUBHEAD))
+	ledger_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	ledger_btn.offset_left = 18
+	# Sit just below the title pill (overlay_top + the pill's rough height + a gap).
+	ledger_btn.offset_top = overlay_top + 52.0
+	ledger_btn.connect("pressed", Callable(self, "_on_ledger_button"))
+	overlay.add_child(ledger_btn)
+	_action_buttons["ledger"] = ledger_btn
+
+	# T31 — "✨ Boons" button, top-left under the Town Ledger button. The discoverable on-map path
+	# to the keeper-perk catalogs (Coexist / Drive Out boons bought with Embers / Core Ingots).
+	# Emits `boons_requested`; Main routes it through apply_deeplink("boons"). Registered as "boons".
+	var boons_btn := Button.new()
+	boons_btn.text = "✨ Boons"
+	UiKit.style_button(boons_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
+	boons_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	boons_btn.offset_left = 18
+	# Sit just below the Town Ledger button (overlay_top + the pill + ledger row heights).
+	boons_btn.offset_top = overlay_top + 100.0
+	boons_btn.connect("pressed", Callable(self, "_on_boons_button"))
+	overlay.add_child(boons_btn)
+	_action_buttons["boons"] = boons_btn
 
 	# Hidden close affordance — created + wired but NOT added to the overlay, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests
@@ -212,7 +254,7 @@ func _build_shell() -> void:
 	# label is refreshed each render() from the live plot counts. Registered as "build_open".
 	_build_btn = Button.new()
 	_build_btn.text = "🔨 Build"
-	UiKit.style_action_button(_build_btn, Palette.GO_GREEN, 8, 20)
+	UiKit.style_action_button(_build_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	_build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_build_btn.offset_right = -18
 	# Lifted above the reserved bottom-nav strip (NAV_RESERVE 76 + an 18px gap) so the
@@ -236,7 +278,7 @@ func _build_shell() -> void:
 	zoom_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	overlay.add_child(zoom_box)
 
-	var zoom_in_btn := _make_zoom_btn("＋")
+	var zoom_in_btn := _make_zoom_btn("+")
 	zoom_in_btn.connect("pressed", Callable(self, "_on_zoom_in"))
 	zoom_box.add_child(zoom_in_btn)
 	_action_buttons["zoom_in"] = zoom_in_btn
@@ -256,7 +298,7 @@ func _make_zoom_btn(glyph: String) -> Button:
 	var btn := Button.new()
 	btn.text = glyph
 	btn.custom_minimum_size = Vector2(46, 46)
-	UiKit.style_button(btn, Palette.EMBER, 8, 22)
+	UiKit.style_button(btn, Palette.EMBER, 8, Typography.size(Typography.Role.HEADING))
 	# Fully-rounded so the controls read as circular map buttons (React parity).
 	for state in ["normal", "hover", "pressed", "focus"]:
 		var sb: StyleBox = btn.get_theme_stylebox(state)
@@ -300,6 +342,13 @@ func refresh() -> void:
 	if _build_btn != null:
 		_build_btn.text = "🔨 Build · %d/%d plots" % [built.size(), plot_count]
 		_build_btn.disabled = game.plots_free() <= 0
+	# Relabel the board-return affordance from the live run state: with a run / expedition /
+	# boss live it returns to that board ("▶ Board"); idle at home, Main routes the press to
+	# the Start Farming picker instead, so say what it actually does.
+	if _board_btn != null:
+		var board_live: bool = game.farm_run_active \
+			or game.active_biome != "farm" or game.is_boss_active()
+		_board_btn.text = "▶ Board" if board_live else "▶ Start Farming"
 
 # Live viewport size, falling back to the portrait default when none is available
 # (e.g. a headless run with no window).
@@ -478,7 +527,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	else:
 		var emoji := Label.new()
 		emoji.text = "🏠"
-		emoji.add_theme_font_size_override("font_size", 28)
+		UiKit.set_font_size(emoji, Typography.Role.TITLE)
 		emoji.add_theme_color_override("font_color", Palette.INK_MID if tier_locked else Palette.INK)
 		row.add_child(emoji)
 
@@ -489,7 +538,7 @@ func _make_build_row(id: String) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.text = BuildingConfig.building_name(id)
-	name_lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
 	name_lbl.add_theme_color_override("font_color", Palette.INK if not tier_locked else Palette.INK_MID)
 	var hf: Font = UiKit.heading_font()
 	if hf != null:
@@ -500,7 +549,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	if desc != "":
 		var desc_lbl := Label.new()
 		desc_lbl.text = desc
-		desc_lbl.add_theme_font_size_override("font_size", 12)
+		UiKit.set_font_size(desc_lbl, Typography.Role.META)
 		desc_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(desc_lbl)
@@ -514,7 +563,7 @@ func _make_build_row(id: String) -> PanelContainer:
 	if tier_locked:
 		var lock := Label.new()
 		lock.text = "🔒"
-		lock.add_theme_font_size_override("font_size", 20)
+		UiKit.set_font_size(lock, Typography.Role.SUBHEAD)
 		lock.add_theme_color_override("font_color", Palette.INK_MID)
 		row.add_child(lock)
 	else:
@@ -545,7 +594,7 @@ func _make_cost_chips(cost: Dictionary) -> Control:
 			one.add_child(ic)
 		var lbl := Label.new()
 		lbl.text = ("×%d" % int(cost[k])) if ic != null else ("%s ×%d" % [UiKit.pretty_name(String(k)), int(cost[k])])
-		lbl.add_theme_font_size_override("font_size", 15)
+		UiKit.set_font_size(lbl, Typography.Role.LABEL)
 		lbl.add_theme_color_override("font_color", Palette.INK)
 		one.add_child(lbl)
 		box.add_child(one)
@@ -566,6 +615,19 @@ func _on_build_button() -> void:
 func _on_board_button() -> void:
 	_close_panel()
 	emit_signal("board_requested")
+
+## review-3 — the "📋 Town Ledger" overlay button was pressed: dismiss any open panel and emit
+## `ledger_requested` so Main opens the TownScreen ledger (settlement / buildings / refine /
+## market sell+buy / orders) via apply_deeplink("town").
+func _on_ledger_button() -> void:
+	_close_panel()
+	emit_signal("ledger_requested")
+
+## T31 — the "✨ Boons" overlay button was pressed: dismiss any open panel and emit
+## `boons_requested` so Main opens the BoonsScreen via apply_deeplink("boons").
+func _on_boons_button() -> void:
+	_close_panel()
+	emit_signal("boons_requested")
 
 ## Build `id` through the SAME GameState API as TownScreen, then dismiss the panel,
 ## re-render the map (so the new house shows), and emit state_changed on success.
@@ -591,7 +653,7 @@ func _do_demolish(id: String) -> void:
 ## `_action_buttons` so tests + handlers never read a stale node. The STATIC overlay
 ## entries (close, board, build_open, zoom_in/out, recenter) are preserved — only the
 ## per-panel keys (demolish / build:<id> / picker_close) are dropped.
-const _STATIC_ACTION_KEYS := ["close", "board", "build_open", "zoom_in", "zoom_out", "recenter"]
+const _STATIC_ACTION_KEYS := ["close", "board", "ledger", "boons", "build_open", "zoom_in", "zoom_out", "recenter"]
 func _close_panel() -> void:
 	if _panel != null:
 		_panel.queue_free()
@@ -605,8 +667,12 @@ func _close_panel() -> void:
 	_action_buttons = kept
 
 ## Build a fresh panel: a translucent scrim (clicking it closes the panel) holding a
-## centred parchment card with a title row (heading + ✖). Returns the card's content
-## VBox for the caller to fill. Any previously-open panel is torn down first.
+## centred parchment card with a title row (heading + ✖) pinned above a SCROLLING
+## content area. Returns the scroll's content VBox for the caller to fill — a short
+## card (the demolish info) stays content-sized, while a tall one (the full build
+## roster) caps to the viewport and scrolls instead of running off the fold. The card
+## fills most of the viewport width (capped at 560) so roster rows read comfortably.
+## Any previously-open panel is torn down first.
 func _begin_panel(title_text: String) -> VBoxContainer:
 	_close_panel()
 
@@ -631,7 +697,9 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	card.custom_minimum_size = Vector2(360, 0)
+	# Near-full-width card (capped for tablets/desktop): the old fixed 360px read as an
+	# unnecessarily skinny strip on the 720 portrait viewport.
+	card.custom_minimum_size = Vector2(minf(_viewport_size().x - 36.0, 560.0), 0)
 	center.add_child(card)
 
 	var body := VBoxContainer.new()
@@ -644,7 +712,7 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	title_row.add_theme_constant_override("separation", 12)
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 24)
+	UiKit.set_font_size(title, Typography.Role.TITLE)
 	title.add_theme_color_override("font_color", Palette.INK)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -661,7 +729,31 @@ func _begin_panel(title_text: String) -> VBoxContainer:
 	_action_buttons["picker_close"] = x_btn
 
 	body.add_child(title_row)
-	return body
+
+	# Scrolling content area under the pinned title. The caller fills the returned VBox;
+	# the deferred fit then clamps the scroll to its content height (capped to the
+	# viewport) so short panels stay compact and the build roster scrolls.
+	var scroll := UiKit.make_vscroll()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll)
+
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 10)
+	scroll.add_child(content)
+
+	# Deferred: runs after the caller has filled `content` (same frame), so the measure
+	# sees the real row heights. Reserve the title row + card padding + screen margins.
+	_fit_panel_scroll.call_deferred(scroll, content)
+	return content
+
+## Clamp an open panel's scroll to its content height (viewport-capped). Split out so
+## the deferred call from _begin_panel survives a panel being closed before it lands.
+func _fit_panel_scroll(scroll: ScrollContainer, content: Control) -> void:
+	if _panel == null or scroll == null or not is_instance_valid(scroll):
+		return
+	UiKit.fit_scroll_height(scroll, content, 220.0)
 
 ## Clicking the bare scrim (outside the card) dismisses the panel.
 func _on_scrim_input(event: InputEvent) -> void:
@@ -674,7 +766,7 @@ func _on_scrim_input(event: InputEvent) -> void:
 func _make_label(text: String, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return lbl

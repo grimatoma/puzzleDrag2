@@ -1,27 +1,17 @@
 class_name ZoneConfig
 extends Node
-## Pure data for the per-ZONE farm board template — the season-weighted, zone-restricted
-## base-spawn rules + the upgrade map. A MINIMAL ADDITIVE port of the React game's
-## `src/features/cartography/data.ts` farm board instance (boards.farm), trimmed to the
-## ONE zone the Godot port actually plays today: the home village ("home", the farm board).
+## Thin COMPATIBILITY SHIM over CartographyConfig — the single source of truth for the per-NODE
+## farm/mine/fish board templates (TEMPERATE_FARM, ORCHARD_FARM, MINE_*, FISH_HARBOR). The zone
+## board data used to be DUPLICATED here in a ZONES const; that copy is gone. The board-template
+## helpers below now FORWARD to CartographyConfig (the world-map node id IS the zone id), so there
+## is exactly one place where a board template lives.
 ##
-## This is the data layer behind two things:
-##   1. WHICH tile categories may BASE-SPAWN on the farm board (the upgradeMap KEYS — the
-##      "eligible" categories). The home zone is grass/grain/trees/birds/veg/fruit ONLY;
-##      flower/herd/cattle/mount are NOT eligible base spawns (so PANSY/PIG/COW/HORSE never
-##      base-spawn on the home farm — they exist as catalog tiles but the pool excludes them).
-##   2. HOW HEAVILY each eligible category spawns IN EACH SEASON (seasonDrops). The farm
-##      cycles Spring→Summer→Autumn→Winter over its turn budget (Constants.season_index);
-##      GameState.active_tile_pool() reads season_drops() for the current season to build a
-##      season-weighted refill pool.
-##
-## upgradeMap (carried for the FOLLOW-UP upgrade-tile-spawn milestone, NOT consumed yet by
-## the board fill): the category an eligible category UPGRADES TO when a chain crosses its
-## threshold. "gold" is the sentinel meaning "no upgrade tile / coins" (the React GOLD).
-##
-## DEFERRED (NOT modelled here, by design): the other React farm templates (orchard, …),
-## multi-zone farm play, entry costs, danger lists, building lists — see CartographyConfig
-## for the trimmed world-map port. Only "home" is needed this milestone.
+## This shim still exists for two reasons:
+##   1. A stable, zone-keyed API surface (has_zone / base_turns / entry_cost / eligible_categories /
+##      season_drops / upgrade_target) that the rest of the port + the suites call. Each is a static
+##      forwarder to the matching CartographyConfig node helper.
+##   2. It OWNS the SEASON_POOL_MODS data (the T13 additive per-season spawn deltas, ported from
+##      React src/constants.ts) — that is NOT cartography data, so it stays here.
 ##
 ## A stateless `class_name` global (NOT an autoload), mirroring Constants / CartographyConfig:
 ## every value is a `const` and every helper is `static`, so it's reachable as
@@ -31,103 +21,83 @@ extends Node
 ## The upgrade-target sentinel meaning "no upgrade tile — coins instead" (React GOLD).
 const GOLD: String = "gold"
 
-## The per-zone farm board templates, keyed by zone id. Only "home" is ported (the only
-## farm the Godot port plays). Fields mirror the React FarmBoardInstance:
-##   base_turns   — the season-cycle turn budget (React baseTurns; 10 for the home zone).
-##   upgrade_map  — source godot-category → target godot-category (or GOLD). Its KEYS are the
-##                  zone's ELIGIBLE base-spawn categories.
-##   season_drops — per season-name → { godot-category → weight }. Weight 0 means excluded;
-##                  a positive weight is the category's relative spawn share that season.
-## Categories use the GODOT category ids (Constants.CATEGORY values): grass/grain/trees/
-## birds/veg/fruit/flower/herd/cattle/mount. (React uses vegetables/fruits/herd_animals/
-## mounts; this template is already translated to the godot ids.)
-const ZONES := {
-	"home": {
-		"base_turns": 10,
-		# Entry cost for a bounded "Start Farming" run (React ZONES[].entryCost). The
-		# home zone costs 50 coins to start a farm run. React FARM/ENTER falls back to
-		# 50 when the field is absent (`zone.entryCost?.coins ?? 50`); we make it explicit.
-		"entry_cost": {"coins": 50},
-		"upgrade_map": {
-			"grass":  "birds",
-			"grain":  "veg",
-			"trees":  "birds",
-			"birds":  "herd",
-			"veg":    "fruit",
-			"fruit":  GOLD,
-		},
-		"season_drops": {
-			"Spring": {
-				"grass": 0.38, "grain": 0.20, "trees": 0.20,
-				"birds": 0.05, "veg": 0.13, "fruit": 0.04,
-				"flower": 0.0, "herd": 0.0, "cattle": 0.0, "mount": 0.0,
-			},
-			"Summer": {
-				"grass": 0.12, "grain": 0.38, "trees": 0.10,
-				"birds": 0.15, "veg": 0.21, "fruit": 0.04,
-				"flower": 0.0, "herd": 0.0, "cattle": 0.0, "mount": 0.0,
-			},
-			"Autumn": {
-				"grass": 0.10, "grain": 0.15, "trees": 0.42,
-				"birds": 0.15, "veg": 0.15, "fruit": 0.03,
-				"flower": 0.0, "herd": 0.0, "cattle": 0.0, "mount": 0.0,
-			},
-			"Winter": {
-				"grass": 0.05, "grain": 0.05, "trees": 0.73,
-				"birds": 0.10, "veg": 0.05, "fruit": 0.02,
-				"flower": 0.0, "herd": 0.0, "cattle": 0.0, "mount": 0.0,
-			},
-		},
-	},
-}
-
-## The default/home zone id — the only farm the port plays. Callers that have no explicit
-## zone (the single-settlement port) pass this.
+## The default/home zone id. Callers that have no explicit zone (a home-only game that never
+## travels off home) pass this; CartographyConfig's "home" node owns the actual board template.
 const HOME_ZONE: String = "home"
 
-# ── helpers (pure, usable + testable without a scene tree) ─────────────────────
+## The always-available home-zone STAPLE seeds — the two staples a Town-1 game always provides
+## regardless of which buildings are placed, kept here so both GameState seed sites agree on one
+## list rather than inlining the literals:
+##   • HOME_STAPLE_RESOURCES — the producible staple RESOURCES that seed orderable_resources
+##     (hay_bundle ← grass, flour ← grain). Buildings append their produced resource after these.
+##   • HOME_BASE_CATEGORIES — the staple CATEGORIES that seed active_categories (grass, grain).
+##     Placed spawners append their category after these.
+## These mirror Constants.STAPLE_TILES (Tile.GRASS/Tile.WHEAT): grass→hay_bundle, grain→flour.
+const HOME_STAPLE_RESOURCES: Array = ["hay_bundle", "flour"]
+const HOME_BASE_CATEGORIES: Array = ["grass", "grain"]
 
-## True when `zone_id` names a real ported zone template.
+## Extra weight slots a placed SPAWNER adds for its (eligible) category — a frequency BOOST,
+## not a category unlock (every eligible category already base-spawns season-weighted). Kept
+## modest so a spawner specialises the board without swamping the season profile. (Relocated
+## from GameState — board/zone-pool tuning belongs with the zone config.)
+const SPAWNER_BOOST_SLOTS: int = 6
+
+# ── helpers (thin static forwarders to CartographyConfig; node id == zone id) ──
+
+## True when `zone_id` names a real cartography node (forwards to CartographyConfig.has_node).
 static func has_zone(zone_id: String) -> bool:
-	return ZONES.has(zone_id)
+	return CartographyConfig.has_node(zone_id)
 
-## The full template dict for `zone_id`, or {} for an unknown zone.
-static func zone(zone_id: String) -> Dictionary:
-	return ZONES.get(zone_id, {})
-
-## The season-cycle turn budget for `zone_id` (React baseTurns). 0 for an unknown zone
-## (Constants.season_index treats a non-positive budget as "always Spring").
+## The season-cycle turn budget for `zone_id`'s board (React baseTurns). 0 for an unknown zone /
+## a non-board node (Constants.season_index treats a non-positive budget as "always Spring").
 static func base_turns(zone_id: String) -> int:
-	return int(zone(zone_id).get("base_turns", 0))
+	return CartographyConfig.base_turns(zone_id)
 
-## The coin cost to START a bounded farm run at `zone_id` (React ZONES[].entryCost.coins).
-## Reads entry_cost.coins; defaults to 0 for a zone with no entry cost / an unknown zone.
+## The coin cost to ENTER / START a bounded run at `zone_id` (React MAP_NODES[].entryCost.coins).
+## 0 for a zone with no entry cost / an unknown zone.
 static func entry_cost(zone_id: String) -> int:
-	var ec: Dictionary = zone(zone_id).get("entry_cost", {})
-	return int(ec.get("coins", 0))
+	return CartographyConfig.entry_cost(zone_id)
 
-## The ELIGIBLE base-spawn categories for `zone_id` — the KEYS of the upgrade map, in
-## declaration order. These are the only categories that may base-spawn on the board (the
-## home zone: grass/grain/trees/birds/veg/fruit). Returns a fresh Array; [] for an unknown
-## zone.
+## The ELIGIBLE base-spawn categories for `zone_id`'s farm board — the KEYS of its upgrade map, in
+## declaration order. These are the only categories that may base-spawn on the board. Returns a
+## fresh Array; [] for a non-farm / unknown zone.
 static func eligible_categories(zone_id: String) -> Array:
-	var out: Array = []
-	var um: Dictionary = zone(zone_id).get("upgrade_map", {})
-	for k in um.keys():
-		out.append(String(k))
-	return out
+	return CartographyConfig.eligible_categories(zone_id)
 
-## The season-drop weights for `zone_id` in season `season_name` ("Spring"…"Winter"):
-## a fresh COPY of { godot-category → weight }. {} for an unknown zone or season. Mutating
-## the result never corrupts the const template.
+## The season-drop weights for `zone_id` in season `season_name` ("Spring"…"Winter"): a fresh COPY
+## of { godot-category → weight }. {} for an unknown zone or season. Mutating the result never
+## corrupts the const template.
 static func season_drops(zone_id: String, season_name: String) -> Dictionary:
-	var sd: Dictionary = zone(zone_id).get("season_drops", {})
-	var row: Dictionary = sd.get(season_name, {})
-	return row.duplicate()
+	return CartographyConfig.season_drops(zone_id, season_name)
 
-## The upgrade-target category for `source_cat` in `zone_id`: the godot target category, the
-## GOLD sentinel ("no upgrade tile / coins"), or "" when `source_cat` is not an eligible
-## (upgradeable) category for the zone. Carried for the follow-up upgrade-tile milestone.
+## The upgrade-target category for `source_cat` in `zone_id`'s farm board: the godot target
+## category, the GOLD sentinel ("no upgrade tile / coins"), or "" when `source_cat` is not an
+## eligible (upgradeable) category for the zone.
 static func upgrade_target(zone_id: String, source_cat: String) -> String:
-	var um: Dictionary = zone(zone_id).get("upgrade_map", {})
-	return String(um.get(source_cat, ""))
+	return CartographyConfig.upgrade_target(zone_id, source_cat)
+
+# ── T13 — SEASON_POOL_MODS (additive spawn deltas) ────────────────────────────
+## Additive per-season spawn deltas applied ON TOP of seasonDrops, mirroring React's
+## SEASON_POOL_MODS (src/constants.ts:1123-1128) and applySeasonPoolMods
+## (src/features/farm/poolMath.ts:16-31).
+##
+## Each entry is:  season_name → { "tile_string_key": delta_int }
+##   delta > 0 → add that many EXTRA slots of that tile to the pool (push N copies).
+##   delta < 0 → remove up to |delta| slots (but NEVER the last — keeps count ≥ 1 per tile).
+##
+## These are tile STRING KEYS (matching Constants.TILE_KEY_TO_TILE), not category names —
+## they map to specific variants, faithfully mirroring the React table.
+##
+## Scope: FARM pool only (applied by GameState.active_tile_pool after the base weighting).
+## Keys outside the current active pool are silently skipped (can't add an off-zone tile).
+const SEASON_POOL_MODS: Dictionary = {
+	"Spring": { "tile_fruit_blackberry": 1 },
+	"Summer": { "tile_grain_wheat":      1 },
+	"Autumn": { "tile_tree_oak":         2 },
+	"Winter": { "tile_mine_stone":       1, "tile_grass_grass": -1 },
+}
+
+## Return the additive deltas for `season_name` (a fresh copy; {} for an unknown season).
+## Keys are tile string keys (tile_grass_grass, …); values are signed integers.
+static func season_pool_mods(season_name: String) -> Dictionary:
+	return SEASON_POOL_MODS.get(season_name, {}).duplicate()

@@ -66,6 +66,7 @@ export interface ChainInfo {
   count: number;
   upgrades: number;
   valid: boolean;
+  minChain?: number;
   nextTileProgress: {
     current: number;
     threshold: number;
@@ -237,6 +238,9 @@ function ChainView({ chainInfo, inventory }: { chainInfo: ChainInfo; inventory: 
   const upgradeKey = chainInfo.nextTileProgress?.targetKey ?? null;
   const resourceKey = chainInfo.resourceKey;
   const resourceLabel = chainInfo.resourceLabel ?? resourceKey ?? "";
+  const minChain = chainInfo.minChain ?? 3;
+  const shortBy = Math.max(0, minChain - length);
+  const tooShort = !chainInfo.valid && length > 0;
 
   const stage = CHAIN_STAGES[Math.min(earned, CHAIN_STAGES.length - 1)];
   const pct = threshold > 0 ? Math.min(100, (into / threshold) * 100) : 0;
@@ -270,8 +274,8 @@ function ChainView({ chainInfo, inventory }: { chainInfo: ChainInfo; inventory: 
     <>
       <PanelHeader
         left="Chaining"
-        right={`${resourceLabel} chain`}
-        accent={stage.accent}
+        right={tooShort ? `${shortBy} more to collect` : `${resourceLabel} chain`}
+        accent={tooShort ? "#9a7b4f" : stage.accent}
       />
       <div className="flex items-center gap-3 px-3 py-2 min-h-0 flex-1">
         <div className="flex-1 relative">

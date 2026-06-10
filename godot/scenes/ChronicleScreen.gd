@@ -87,9 +87,7 @@ func _build_shell() -> void:
 	# top bar shows ABOVE the view, and stopping UiKit.NAV_RESERVE short of the bottom so the
 	# persistent nav bar (a LOWER CanvasLayer) shows through + stays tappable; MOUSE_FILTER_STOP
 	# eats clicks in the band it covers.
-	var backdrop := ColorRect.new()
-	backdrop.color = Palette.FRAME_BG
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var backdrop := UiKit.make_view_backdrop()
 	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
 	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -138,7 +136,7 @@ func _build_shell() -> void:
 
 	var title := Label.new()
 	title.text = "📜 Chronicle"
-	title.add_theme_font_size_override("font_size", 30)
+	UiKit.set_font_size(title, Typography.Role.DISPLAY)
 	title.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -151,7 +149,7 @@ func _build_shell() -> void:
 	var charter_btn := Button.new()
 	charter_btn.text = "View Charter"
 	charter_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(charter_btn, Palette.EMBER, 6, 16)
+	UiKit.style_button(charter_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	charter_btn.connect("pressed", Callable(self, "_on_view_charter"))
 	title_row.add_child(charter_btn)
 	_action_buttons["charter"] = charter_btn
@@ -159,7 +157,7 @@ func _build_shell() -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✖ Close"
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(close_btn, Palette.EMBER, 6, 20)
+	UiKit.style_button(close_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
 	close_btn.connect("pressed", Callable(self, "close"))
 	title_row.add_child(close_btn)
 	_action_buttons["close"] = close_btn
@@ -167,8 +165,11 @@ func _build_shell() -> void:
 	# Header line — "N / total chapters" (gold), rebuilt each refresh().
 	_header_label = Label.new()
 	_header_label.text = ""
-	_header_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_header_label, Typography.Role.SUBHEAD)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
+	# Right-aligned — the shared status-count position (Craft "50 recipes", Townsfolk
+	# "5 townsfolk", Achievements "0 / 24 unlocked" all sit at the right edge).
+	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root_vbox.add_child(_header_label)
 
@@ -190,7 +191,7 @@ func _build_shell() -> void:
 	# above is EXPAND_FILL, so it pushes this footer down). Italic, faint, letter-spaced.
 	var footer := Label.new()
 	footer.text = "— THE RECORD OF YOUR IMPACT —"
-	footer.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(footer, Typography.Role.META)
 	footer.add_theme_color_override("font_color", Color(Palette.INK_MID, 0.7))
 	var italic: Font = UiKit.italic_font()
 	if italic != null:
@@ -204,7 +205,7 @@ func _build_shell() -> void:
 	# Two-line empty state (React parity): the flavor line + a secondary explanation of
 	# how the chronicle fills, so a fresh game's blank chronicle isn't a bare one-liner.
 	_empty_label.text = "The pages are still blank. Your journey has just begun.\n\nComplete story beats to record your legacy here."
-	_empty_label.add_theme_font_size_override("font_size", 18)
+	UiKit.set_font_size(_empty_label, Typography.Role.SUBHEAD)
 	_empty_label.add_theme_color_override("font_color", COL_MUTED)
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -287,7 +288,7 @@ func _make_timeline_entry(beat: Dictionary) -> HBoxContainer:
 	# "ACT N" eyebrow — ember, small, letter-spaced (uppercase like React's hl-section-label).
 	var act_lbl := Label.new()
 	act_lbl.text = "ACT %d" % act
-	act_lbl.add_theme_font_size_override("font_size", 12)
+	UiKit.set_font_size(act_lbl, Typography.Role.META)
 	act_lbl.add_theme_color_override("font_color", COL_HEADER)
 	act_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(act_lbl)
@@ -295,7 +296,7 @@ func _make_timeline_entry(beat: Dictionary) -> HBoxContainer:
 	# Title — serif (Cinzel), ink.
 	var title_lbl := Label.new()
 	title_lbl.text = title
-	title_lbl.add_theme_font_size_override("font_size", 20)
+	UiKit.set_font_size(title_lbl, Typography.Role.SUBHEAD)
 	title_lbl.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
@@ -314,7 +315,7 @@ func _make_timeline_entry(beat: Dictionary) -> HBoxContainer:
 	card.add_theme_stylebox_override("panel", UiKit.row_box())
 	var lede_lbl := Label.new()
 	lede_lbl.text = lede
-	lede_lbl.add_theme_font_size_override("font_size", 14)
+	UiKit.set_font_size(lede_lbl, Typography.Role.LABEL)
 	lede_lbl.add_theme_color_override("font_color", COL_MUTED)
 	var italic: Font = UiKit.italic_font()
 	if italic != null:
