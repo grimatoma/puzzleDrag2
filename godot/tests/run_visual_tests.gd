@@ -80,7 +80,13 @@ const DESKTOP_SCENARIOS := ["board-farm-idle", "board-farm-chain", "town-map", "
 const CHANNEL_TOLERANCE := 12        # per-channel delta above which a pixel is "different"
 const DIFF_FAIL_FRACTION := 0.01     # FAIL if differing pixels > 1.0% of total
 const SETTLE_FRAMES := 22            # frames to await after seeding/deeplink before capture
-const SMOKE_MIN_DISTINCT := 200      # render-smoke: minimum distinct-ish colours for "has content"
+# render-smoke: minimum distinct-ish colours for "has content". CALIBRATION (review-4): a
+# genuinely blank/uniform frame measures < 10; a sparse-but-fully-rendered parchment modal
+# (inventory empty-state, chronicle, daily card …) measures 116-192 under CI's llvmpipe
+# software GL — the old 200 flagged every one of those real screens as BLANK (the standing
+# godot-visual job failure). 80 keeps an 8× margin over a uniform frame while passing the
+# sparsest real screen with headroom.
+const SMOKE_MIN_DISTINCT := 80
 const BOARD_RNG_SEED := 0xC0FFEE     # fixed board seed → deterministic tile layout per scenario
 
 const GOLDEN_ROOT := "res://tests/visual/__goldens__"
@@ -589,11 +595,11 @@ func _capture_scenario(scn: Dictionary, vp_size: Vector2i) -> Image:
 ## size-mismatch diff (the long-standing board-farm-idle/portrait flake). Polling the real
 ## get_image() size is authoritative. Capped at ~150 frames so a genuinely unreachable size can't
 ## hang the suite — it just proceeds and any true mismatch surfaces as a normal diff.
-func _await_capture_size(vp_size: Vector2i) -> void:
+func _await_capture_size(vp_size: Vector2i) -> bool:
 	var want: Vector2i = _capture_size(vp_size)
 	for _i in range(150):
 		if root.get_texture().get_image().get_size() == want:
-			return
+			return true
 		# Re-ASSERT the window size periodically, not just wait: on a cold start the very first
 		# resize gets clamped by the OS (the renderable client area comes up short — 720×1175 vs
 		# the requested 1280), and only a SUBSEQUENT window_set_size call (once the window is fully
@@ -602,6 +608,9 @@ func _await_capture_size(vp_size: Vector2i) -> void:
 			DisplayServer.window_set_position(Vector2i.ZERO)
 			DisplayServer.window_set_size(vp_size)
 		await process_frame
+	# Size never settled — report it so callers can SKIP rather than fail (a bare-X/xvfb
+	# environment with no window manager never applies a landscape resize; review-4).
+	return false
 
 # ── Image comparison ───────────────────────────────────────────────────────────────────────
 ## Golden slot for a scenario × viewport: <root>/<platform>/<scenario>/<viewport>.png. The
@@ -706,6 +715,17 @@ func _initialize() -> void:
 	for vp in VIEWPORTS:
 		var vp_name: String = vp["name"]
 		var vp_size: Vector2i = vp["size"]
+		# Probe non-native window shapes once per viewport: under a bare X server with no
+		# window manager (CI's xvfb), the landscape resize is silently never applied, so every
+		# desktop scenario used to fail size=BAD with a portrait capture (review-4). When the
+		# environment can't reach the shape, SKIP the viewport (it's a framing check, fully
+		# covered on the golden platform) instead of reporting 6 false failures.
+		if vp_size != Vector2i(CONTENT_SIZE):
+			DisplayServer.window_set_size(vp_size)
+			if not await _await_capture_size(vp_size):
+				print("  SKIP  %s viewport — window resize to %dx%d not applied (no WM?); framing covered by the golden platform" % [
+					vp_name, vp_size.x, vp_size.y])
+				continue
 		for scn in _scenarios():
 			var scn_id: String = scn["id"]
 			if vp_name == "desktop" and not DESKTOP_SCENARIOS.has(scn_id):

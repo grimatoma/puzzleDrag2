@@ -358,7 +358,7 @@ func _build_spawn_info(col: VBoxContainer) -> void:
 	card.add_child(c)
 
 	_spawn_info_title = Label.new()
-	_spawn_info_title.text = "ⓘ What spawns this season"
+	_spawn_info_title.text = "ℹ What spawns this season"
 	_spawn_info_title.add_theme_font_size_override("font_size", 13)
 	_spawn_info_title.add_theme_color_override("font_color", Palette.MOSS)
 	_spawn_info_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -548,7 +548,7 @@ func _render() -> void:
 
 	# Zone-spawn info — name the current season + its ranked spawn summary.
 	if _spawn_info_title != null:
-		_spawn_info_title.text = "ⓘ %s spawns" % _current_season_name()
+		_spawn_info_title.text = "ℹ %s spawns" % _current_season_name()
 	if _spawn_info_body != null:
 		_spawn_info_body.text = season_spawn_summary()
 

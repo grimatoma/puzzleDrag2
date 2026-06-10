@@ -93,6 +93,12 @@ var _recipe_wiki_screen: RecipeWikiScreenScript   ## lazily created
 ## apply_deeplink("tutorial").
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
 var _tutorial_modal: TutorialModalScript   ## lazily created
+## Launch splash — the Hearthlands pixel-art title card (cottage-at-dusk vista, pulsing
+## window glow) shown over everything at boot. Self-dismissing (tap / key / auto after a
+## few seconds); frees itself and fires `finished`. Loaded via preload (NO class_name) so
+## the port never needs an --import pass to register it (mirrors every lazy modal).
+const SplashScreenScript := preload("res://scenes/SplashScreen.gd")
+var _splash                              ## CanvasLayer (SplashScreenScript), live only during launch
 ## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
 ## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
 const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
@@ -394,6 +400,11 @@ func _ready() -> void:
 		# on screen is the story modal. _maybe_show_daily() no-ops while a story beat is showing
 		# (it's surfaced instead when the story queue fully drains in _on_story_advanced).
 		_maybe_show_daily()
+	# Launch splash — the pixel-art Hearthlands title card (layer 12) laid over whatever
+	# _ready just staged (town home / tutorial / story beat), revealed as it fades out.
+	# Deferred so the current_scene gate in _maybe_show_splash reads the engine's final
+	# boot state regardless of assignment order (see there for the full gate rationale).
+	call_deferred("_maybe_show_splash")
 	# Web-boot readiness beacon (M-infra: web-export smoke). On an HTML5/WASM build the
 	# whole scene tree is now up (HUD + board built, save loaded, story/tutorial wired),
 	# so flip a window flag the Playwright smoke (tests/godot-web/boot.spec.ts) waits on
@@ -406,6 +417,27 @@ func _ready() -> void:
 		# being applied by the time the Playwright smoke sees __hearthGodotReady.
 		_setup_browser_history()
 		JavaScriptBridge.eval("window.__hearthGodotReady = true;", true)
+
+## Show the launch splash on REAL interactive boots only. Three gates:
+##   • dialogs enabled — the web boot smoke suppresses auto-modals and must see
+##     the readiness beacon without art in the way;
+##   • a windowed display server — headless suites never want it;
+##   • Main is the ENGINE-LAUNCHED current scene (current_scene == self) — a
+##     harness that instantiates Main as a plain child under a REAL display
+##     (the xvfb visual render-smoke, every tools/*_capture.gd) must NOT get a
+##     layer-12 splash over its captures. tools/splash_capture.gd opts back in
+##     by assigning current_scene = main before the deferred call lands.
+func _maybe_show_splash() -> void:
+	if _splash != null:
+		return
+	if _dialogs_disabled() or DisplayServer.get_name() == "headless":
+		return
+	if get_tree() == null or get_tree().current_scene != self:
+		return
+	_splash = SplashScreenScript.new()
+	add_child(_splash)
+	_splash.setup()
+	_splash.finished.connect(func() -> void: _splash = null)
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -1220,6 +1252,14 @@ func _on_tutorial_closed() -> void:
 	if _tutorial_modal != null:
 		_tutorial_modal.visible = false
 	_settle_close_to_home_or_board()
+	# review-4 — the scrim-tap / ESC dismiss path emits only `closed` (never `finished`),
+	# which used to SWALLOW the launch presentations queued behind the tutorial: the
+	# arrival story beats and this launch's daily-reward card (already granted by
+	# login_tick, so the celebration silently vanished). Drain them here too; both are
+	# no-ops when nothing is pending, and `finished` (which fires close() right after)
+	# stays the only path that marks tutorial_seen.
+	_drain_story_queue()
+	_maybe_show_daily()
 
 ## The tutorial finished (player stepped through all 6 steps OR pressed Skip): mark
 ## tutorial_seen, save, and drain the story queue — the story beats that were
@@ -1245,6 +1285,11 @@ func _on_tutorial_finished() -> void:
 ## shows once. The reward was already granted by login_tick in _ready; this is display-only.
 func _maybe_show_daily() -> void:
 	if _pending_daily_claim.is_empty():
+		return
+	# review-5 — same continuous suppression as _drain_story_queue (the reward itself was
+	# already granted by login_tick; only the celebratory card is suppressed). Without this
+	# the card popped mid-session the moment a story modal closed during scripted QA.
+	if _dialogs_disabled():
 		return
 	# Don't fight the tutorial or a story beat — retry once they're dismissed.
 	if _tutorial_modal != null and _tutorial_modal.visible:
@@ -1599,6 +1644,13 @@ func _drain_achievement_toasts() -> void:
 func _drain_story_queue() -> void:
 	if game == null:
 		return
+	# review-5 — QA/test flag parity with React: isDialogsDisabled() suppresses story beats
+	# CONTINUOUSLY (render-time), not just at boot. Without this, a beat triggered mid-run
+	# (e.g. the arrival beat on the first chain) still popped over scripted QA sessions.
+	# Beats stay queued exactly like React's render-null path; players are unaffected
+	# (_dialogs_disabled is web-only and false unless the page set the hook before boot).
+	if _dialogs_disabled():
+		return
 	if game.story.beat_queue.is_empty():
 		return
 	# Don't interrupt a beat already on screen — it'll advance to the next on dismiss.
@@ -1724,9 +1776,14 @@ func apply_deeplink(id: String) -> bool:
 		ViewRouter.Modal.STARTFARMING:
 			_open_startfarming()
 		_:
-			# NONE / board — close whatever is open. We're returning to the board, so
-			# clear the bottom-nav active-tab marker (several screens below are hidden
-			# inline here without routing through their _on_*_closed handler).
+			# NONE / board — close EVERY open overlay first (overlays can stack: the
+			# tutorial layers over a deep-linked screen, the menu over the town map), then
+			# land on the board or — when the board is idle-gated (town-is-home) — on the
+			# town map. review-4 BUG: the idle branch used to early-return BEFORE the close
+			# chain, so "#/board" with the menu / tutorial / start-farming picker open left
+			# them painted on top of the next view (stacked-modal ghosts).
+			_hud._clear_nav()
+			_close_open_overlays()
 			# Task C / BUG C1 — board PLAYABILITY GATE: the board is reachable while a
 			# bounded farm run is live, OR on a non-farm expedition (mine/harbor), OR
 			# during a boss fight (town is home only when none of those are true).
@@ -1736,84 +1793,20 @@ func apply_deeplink(id: String) -> bool:
 				board.set_active(false)
 				_open_townmap()
 				return true
-			# The board IS playable → keep the existing hide-all-overlays behaviour and
-			# set the gate consistently via the helper (covers all three live cases).
+			# The board IS playable → set the gate consistently via the helper (covers
+			# all three live cases).
 			board.set_active(_board_should_be_active())
-			_hud._clear_nav()
-			if _town_screen != null and _town_screen.visible:
-				_town_screen.visible = false
-				_router.close_modal()
-			elif _menu_screen != null and _menu_screen.visible:
-				_menu_screen.visible = false
-				_router.close_modal()
-			elif _inventory_screen != null and _inventory_screen.visible:
-				_inventory_screen.visible = false
-				_router.close_modal()
-			elif _townmap_screen != null and _townmap_screen.visible:
-				_townmap_screen.visible = false
-				_router.close_modal()
-			elif _achievements_screen != null and _achievements_screen.visible:
-				_achievements_screen.visible = false
-				_router.close_modal()
-			elif _tile_collection_screen != null and _tile_collection_screen.visible:
-				_tile_collection_screen.visible = false
-				_router.close_modal()
-			elif _chronicle_screen != null and _chronicle_screen.visible:
-				_chronicle_screen.visible = false
-				_router.close_modal()
-			elif _townsfolk_screen != null and _townsfolk_screen.visible:
-				_townsfolk_screen.visible = false
-				_router.close_modal()
-			elif _cartography_screen != null and _cartography_screen.visible:
-				_cartography_screen.visible = false
-				_router.close_modal()
-			elif _recipe_wiki_screen != null and _recipe_wiki_screen.visible:
-				_recipe_wiki_screen.visible = false
-				_router.close_modal()
-			elif _tutorial_modal != null and _tutorial_modal.visible:
-				_tutorial_modal.visible = false
-				_router.close_modal()
-			elif _castle_screen != null and _castle_screen.visible:
-				# Route through the close handler so a contribution is persisted + the
-				# stockpile HUD refreshed (it also hides + resets the router).
-				_on_castle_closed()
-			elif _decorations_screen != null and _decorations_screen.visible:
-				# Route through the close handler so a build is persisted + the stockpile
-				# HUD refreshed (it also hides + resets the router).
-				_on_decorations_closed()
-			elif _portal_screen != null and _portal_screen.visible:
-				# Route through the close handler so a build/summon is persisted + the
-				# stockpile HUD refreshed (it also hides + resets the router).
-				_on_portal_closed()
-			elif _boons_screen != null and _boons_screen.visible:
-				# Route through the close handler so a claim is persisted + the stockpile
-				# HUD refreshed (it also hides + resets the router).
-				_on_boons_closed()
-			elif _keeper_modal != null and _keeper_modal.visible:
-				# A keeper encounter open on top of the board: hide it (resets the router).
-				_keeper_modal.visible = false
-				_router.close_modal()
-			elif _charter_screen != null and _charter_screen.visible:
-				# Charter is read-only — the close handler just hides + resets the router
-				# (no save needed, nothing changed).
-				_on_charter_closed()
-			elif _quests_screen != null and _quests_screen.visible:
-				# Route through the close handler so a claim is persisted + the stockpile
-				# HUD refreshed (it also hides + resets the router).
-				_on_quests_closed()
-			elif _daily_modal != null and _daily_modal.visible:
-				# Daily modal is display-only — the close handler just hides + resets the
-				# router (no save needed; the grant was already persisted in _ready).
-				_on_daily_closed()
-			elif _leaveboard_modal != null and _leaveboard_modal.visible:
-				# Leave-confirm card: route through close (Cancel semantics — nothing leaves;
-				# it hides + resets the router). Confirm has its own button on the card.
-				_on_leaveboard_closed()
-			elif _debug_modal != null and _debug_modal.visible:
-				# Debug overlay: route through the close handler so any quick-grant mutation
-				# is persisted (it also hides + resets the router).
-				_on_debug_closed()
 	return true
+
+## Close every open overlay (screens + modals), topmost-first. Each pass of
+## _close_top_overlay() hides ONE visible overlay (routing through its close handler
+## where persistence matters); looping drains a whole stack — e.g. the tutorial layered
+## over a deep-linked quests screen. Bounded to the overlay count so a close handler
+## that re-shows something can never wedge the loop.
+func _close_open_overlays() -> void:
+	for _i in range(32):
+		if not _close_top_overlay():
+			return
 
 # ── Browser Back/Forward bridge (web export only) ───────────────────────────────
 
@@ -2272,7 +2265,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 		_last_res = produced
 		_last_threshold = Constants.threshold_for(tile_type)
 	if int(res.get("units", 0)) > 0:
-		_status_label.text = "Chain of %d  →  +%d %s" % [length, res["units"], res["resource"]]
+		_status_label.text = "Chain of %d  →  +%d %s" % [length, res["units"], UiKit.pretty_name(String(res["resource"]))]
 	else:
 		_status_label.text = "Chain of %d  →  building progress…" % length
 	# M3f: a chain resolved inside the mine spends one expedition turn (the goods are

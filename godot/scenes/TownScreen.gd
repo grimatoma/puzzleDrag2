@@ -911,5 +911,6 @@ func _format_cost(cost: Dictionary) -> String:
 		return "free"
 	var parts: Array = []
 	for k in cost.keys():
-		parts.append("%s %d" % [k, int(cost[k])])
+		# Display label, not the raw catalog key ("hay_bundle" -> "Hay Bundle") — review-4.
+		parts.append("%s %d" % [UiKit.pretty_name(String(k)), int(cost[k])])
 	return ", ".join(parts)
