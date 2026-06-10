@@ -28,7 +28,7 @@
 //            and inspect the work-list derivation with no Godot installed (mirrors build_viewer --plan).
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -146,8 +146,9 @@ function workListFromPipeline() {
   }
   // Refuse to proceed on invalid on-disk data (consistent with build_viewer/serve_viewer). integrate
   // does not need history — only the spec drives the work list — so validate the pipeline alone.
+  // Validate the object we'll actually iterate (loaded once above), not a fresh re-parse.
   const errs = manifest.validateDoc(
-    manifest.loadPipeline(PIPELINE_JSON),
+    data,
     manifest.loadSchema(PIPELINE_JSON),
     "pipelineDoc",
   );
@@ -308,7 +309,7 @@ function revertProjectGodot() {
 // ── 5. Pack each work item ───────────────────────────────────────────────────
 function pipelineFps() {
   try {
-    const data = JSON.parse(readFileSync(PIPELINE_JSON, "utf8"));
+    const data = manifest.loadPipeline(PIPELINE_JSON);
     const fps = data?.settings?.fps;
     if (typeof fps === "number" && fps > 0) return fps;
   } catch {
