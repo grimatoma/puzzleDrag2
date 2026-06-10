@@ -2049,6 +2049,12 @@ func _on_town_changed() -> void:
 	_refresh_boss()
 	_refresh_rats()
 	_refresh_runes()
+	# A biome flip (mine/harbor entry or the return to the farm) changes which tools are
+	# RELEVANT to the board, so re-filter the hotbar (Hud._refresh_tools reads active_biome).
+	# Guarded on the flip so a plain town action (build/craft/sell/gift/hire) doesn't rebuild
+	# the rail needlessly — those leave the active board unchanged.
+	if game.is_in_mine() != was_mine or game.is_in_harbor() != was_harbor:
+		_refresh_tools()
 	# M4d: pick a confirm sound for whatever the town action did. Priority: a tier-up
 	# rings the warm bell; entering the mine OR harbor whooshes; a coin-balance change (sell /
 	# buy / order-fill) chimes "coin"; anything else (build / craft / demolish) pops.
@@ -2984,6 +2990,9 @@ func _enter_mine_visuals() -> void:
 	_last_in_mine = game.is_in_mine()
 	_refresh_biome()
 	_refresh_totals()
+	# The dev-key mine entry is a biome flip too — re-filter the hotbar to the mine board
+	# (matches the real _on_town_changed entry path).
+	_refresh_tools()
 
 ## Push the new active pool onto the board and refresh the building-affected HUD.
 func _apply_pool_change() -> void:
