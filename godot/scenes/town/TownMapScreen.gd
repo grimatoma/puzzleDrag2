@@ -58,13 +58,14 @@ signal board_requested
 ## affordance (parity with React tapping the farm board to open the FARM/ENTER dialog). Main
 ## (Task C) wires this to open the StartFarmingModal; NOT connected here.
 signal start_farming_requested
-## review-3 — emitted when the player taps the "📋 Town Ledger" overlay button. Now that the
-## 🔨 Craft bottom-nav tab opens the crafting UI (not the town-management ledger), the ledger
-## (settlement / buildings / refine / market sell+buy / orders) is reached from here + the ☰
-## menu. Main routes this through apply_deeplink("town") to open the TownScreen.
+## Latent route to the town-management ledger (settlement / buildings / refine / market sell+buy /
+## orders). The on-map "Town Ledger" button was removed — the ledger is now reached via the ☰ menu
+## ("nav:town") — but Main still listens to this signal as a programmatic route through
+## apply_deeplink("town"), exercised by run_router_tests.
 signal ledger_requested
-## T31 — emitted when the player taps the "✨ Boons" overlay button. Main routes this through
-## apply_deeplink("boons") to open the BoonsScreen (the keeper-perk catalogs).
+## Latent route to the BoonsScreen (the keeper-perk catalogs). The on-map "Boons" button was
+## removed — Boons is now reached via the ☰ menu ("boons") — but Main still listens to this signal
+## as a programmatic route through apply_deeplink("boons").
 signal boons_requested
 
 ## action id → Button, for headless tests. Static keys: "close". Panel keys are
@@ -167,33 +168,16 @@ func _build_shell() -> void:
 	_map = TownMapScript.new()
 	_map_host.add_child(_map)
 
-	# Floating UI layer over the map: a title pill (top-left) + the board-return button
-	# (top-right). A full-rect, click-through Control holds both. Top-anchored children are
-	# lowered past UiKit.TOPBAR_RESERVE so they sit OVER the map, clear of the persistent
-	# HUD top bar (which already shows the settlement name) revealed above the view.
+	# Floating UI layer over the map: the board-return button (top-right). A full-rect,
+	# click-through Control holds it. Top-anchored children are lowered past
+	# UiKit.TOPBAR_RESERVE so they sit OVER the map, clear of the persistent HUD top bar
+	# (which already shows the settlement name) revealed above the view.
 	var overlay := Control.new()
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(overlay)
 	## Top inset for the overlay's top-anchored controls — clears the persistent HUD top bar.
 	var overlay_top: float = float(UiKit.TOPBAR_RESERVE) + 18.0
-
-	# Title pill — the in-fiction settlement name, top-left (over the map, below the HUD bar).
-	var title := Label.new()
-	title.text = "🗺 Hearthwood Vale"
-	UiKit.set_font_size(title, Typography.Role.TITLE)
-	title.add_theme_color_override("font_color", Palette.INK)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	var title_box := PanelContainer.new()
-	title_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	title_box.offset_left = 18
-	title_box.offset_top = overlay_top
-	title_box.add_child(title)
-	overlay.add_child(title_box)
 
 	# Board-return button — top-right, a clear "▶ Board" affordance. The Town view is a
 	# primary nav VIEW with no card "✖ Close", so this is the discoverable on-screen path back
@@ -210,35 +194,6 @@ func _build_shell() -> void:
 	overlay.add_child(board_btn)
 	_board_btn = board_btn
 	_action_buttons["board"] = board_btn
-
-	# review-3 — "📋 Town Ledger" button, top-left under the title pill. The discoverable on-map
-	# path to the town-management ledger (settlement / buildings / refine / MARKET sell+buy /
-	# orders) now that the 🔨 Craft bottom-nav tab opens the crafting UI instead. Emits
-	# `ledger_requested`; Main routes it through apply_deeplink("town"). Registered as "ledger".
-	var ledger_btn := Button.new()
-	ledger_btn.text = "📋 Town Ledger"
-	UiKit.style_button(ledger_btn, Palette.GOLD, 6, Typography.size(Typography.Role.SUBHEAD))
-	ledger_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	ledger_btn.offset_left = 18
-	# Sit just below the title pill (overlay_top + the pill's rough height + a gap).
-	ledger_btn.offset_top = overlay_top + 52.0
-	ledger_btn.connect("pressed", Callable(self, "_on_ledger_button"))
-	overlay.add_child(ledger_btn)
-	_action_buttons["ledger"] = ledger_btn
-
-	# T31 — "✨ Boons" button, top-left under the Town Ledger button. The discoverable on-map path
-	# to the keeper-perk catalogs (Coexist / Drive Out boons bought with Embers / Core Ingots).
-	# Emits `boons_requested`; Main routes it through apply_deeplink("boons"). Registered as "boons".
-	var boons_btn := Button.new()
-	boons_btn.text = "✨ Boons"
-	UiKit.style_button(boons_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
-	boons_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	boons_btn.offset_left = 18
-	# Sit just below the Town Ledger button (overlay_top + the pill + ledger row heights).
-	boons_btn.offset_top = overlay_top + 100.0
-	boons_btn.connect("pressed", Callable(self, "_on_boons_button"))
-	overlay.add_child(boons_btn)
-	_action_buttons["boons"] = boons_btn
 
 	# Hidden close affordance — created + wired but NOT added to the overlay, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests
@@ -616,19 +571,6 @@ func _on_board_button() -> void:
 	_close_panel()
 	emit_signal("board_requested")
 
-## review-3 — the "📋 Town Ledger" overlay button was pressed: dismiss any open panel and emit
-## `ledger_requested` so Main opens the TownScreen ledger (settlement / buildings / refine /
-## market sell+buy / orders) via apply_deeplink("town").
-func _on_ledger_button() -> void:
-	_close_panel()
-	emit_signal("ledger_requested")
-
-## T31 — the "✨ Boons" overlay button was pressed: dismiss any open panel and emit
-## `boons_requested` so Main opens the BoonsScreen via apply_deeplink("boons").
-func _on_boons_button() -> void:
-	_close_panel()
-	emit_signal("boons_requested")
-
 ## Build `id` through the SAME GameState API as TownScreen, then dismiss the panel,
 ## re-render the map (so the new house shows), and emit state_changed on success.
 func _do_build(id: String) -> void:
@@ -653,7 +595,7 @@ func _do_demolish(id: String) -> void:
 ## `_action_buttons` so tests + handlers never read a stale node. The STATIC overlay
 ## entries (close, board, build_open, zoom_in/out, recenter) are preserved — only the
 ## per-panel keys (demolish / build:<id> / picker_close) are dropped.
-const _STATIC_ACTION_KEYS := ["close", "board", "ledger", "boons", "build_open", "zoom_in", "zoom_out", "recenter"]
+const _STATIC_ACTION_KEYS := ["close", "board", "build_open", "zoom_in", "zoom_out", "recenter"]
 func _close_panel() -> void:
 	if _panel != null:
 		_panel.queue_free()

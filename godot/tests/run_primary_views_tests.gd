@@ -164,18 +164,13 @@ func _run() -> void:
 		await process_frame
 	_check(emitted["v"], "TownMap: pressing 'board' emits board_requested")
 
-	# review-3 — the relocated Town ledger affordance: a visible "📋 Town Ledger" button that
-	# emits ledger_requested (Main routes it to apply_deeplink('town') → the TownScreen).
-	_check(townmap.has_signal("ledger_requested"), "TownMap: has a ledger_requested signal")
-	var ledger_btn: Variant = townmap._action_buttons.get("ledger")
-	_check(ledger_btn != null, "TownMap: _action_buttons has a 'ledger' button")
-	if ledger_btn != null:
-		_check((ledger_btn as Button).visible, "TownMap: the 'ledger' button IS visible (discoverable)")
-	var led_emitted := {"v": false}
-	townmap.connect("ledger_requested", func() -> void: led_emitted["v"] = true)
-	if ledger_btn != null:
-		(ledger_btn as Button).emit_signal("pressed")
-		await process_frame
-	_check(led_emitted["v"], "TownMap: pressing 'Town Ledger' emits ledger_requested")
+	# The on-map "Town Ledger" / "Boons" buttons (and the title pill) were removed; the ledger
+	# and Boons are reached via the ☰ menu instead. The signals survive as latent programmatic
+	# routes Main listens to (exercised by run_router_tests), so assert they still exist and that
+	# no on-map button is registered for them.
+	_check(townmap.has_signal("ledger_requested"), "TownMap: still has a ledger_requested signal (latent route)")
+	_check(townmap.has_signal("boons_requested"), "TownMap: still has a boons_requested signal (latent route)")
+	_check(not townmap._action_buttons.has("ledger"), "TownMap: no on-map 'ledger' button (removed)")
+	_check(not townmap._action_buttons.has("boons"), "TownMap: no on-map 'boons' button (removed)")
 	townmap.queue_free()
 	await process_frame
