@@ -386,7 +386,7 @@ func _seed_town_built_out(main) -> void:
 	game.build(BuildingConfig.GARDEN)
 
 func _seed_town_build_picker(main) -> void:
-	# City tier (11 plots) + a generous inventory so the build-picker rows read as ENABLED
+	# City tier (25 plots) + a generous inventory so the build-picker rows read as ENABLED
 	# (can_build true). The picker is opened in the row's `post` step after the townmap
 	# deeplink. Mirrors tools/m6d_capture.gd — the picker's "ready" state.
 	var game: GameState = main.game
@@ -768,10 +768,10 @@ func _initialize() -> void:
 			if vp_name == "desktop" and not DESKTOP_SCENARIOS.has(scn_id):
 				continue   # desktop viewport is a representative subset only
 
-				if vp_name == "portrait":
-					print("  - %s : %s" % [scn_id, String(scn.get("expect", "(no expect set)"))])
+			if vp_name == "portrait":
+				print("  - %s : %s" % [scn_id, String(scn.get("expect", "(no expect set)"))])
 
-				var img := await _capture_scenario(scn, vp_size)
+			var img := await _capture_scenario(scn, vp_size)
 			var tag := "%s/%s" % [scn_id, vp_name]   # scenario × viewport label in the tally
 
 			if img == null:

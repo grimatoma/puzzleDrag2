@@ -823,7 +823,7 @@
       "godot_status": "partial",
       "target_milestone": "M6",
       "verified_by": [
-        "run_town_layout_tests.gd",
+        "run_village_tests.gd",
         "run_townmap_tests.gd",
         "run_town_map_tests.gd",
         "e2e:town-build",
@@ -1343,7 +1343,7 @@
       "target_milestone": "M6",
       "verified_by": [
         "run_visual_tests.gd",
-        "run_town_layout_tests.gd",
+        "run_village_tests.gd",
         "golden:town-home-fresh"
       ],
       "note": "Fresh spatial town map (no buildings) renders + committed golden (run_visual_tests.gd scenario town-map, 0% diff)."
@@ -1357,7 +1357,7 @@
       "target_milestone": "M6",
       "verified_by": [
         "run_visual_tests.gd",
-        "run_town_layout_tests.gd",
+        "run_village_tests.gd",
         "e2e:town-build",
         "golden:town-home-built-out"
       ],
@@ -1966,7 +1966,7 @@
       "target_milestone": "M6",
       "verified_by": [
         "run_visual_tests.gd",
-        "run_town_layout_tests.gd",
+        "run_village_tests.gd",
         "golden:shell-town-fresh"
       ],
       "note": "Town view (spatial village map) renders + committed golden (run_visual_tests.gd scenario town-map, 0% diff)."
