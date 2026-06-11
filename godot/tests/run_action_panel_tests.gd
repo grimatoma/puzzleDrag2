@@ -14,10 +14,10 @@ extends SceneTree
 ## chain_changed → Main._on_chain_changed → Hud.set_live_chain), the hotbar slot taps
 ## (_on_tool_slot_tapped), and Main.use_tool/_disarm_tool. Asserts:
 ##   • exactly one state visible at a time, with React's chain > tool > idle priority;
-##   • the ChainView math: "len/thr" counter, the carried base fill ("carried+len/thr"),
-##     the loop past the threshold ("rem/thr +cycles"), the too-short header, the stage
-##     banner at earned >= 1, the "+N" earned badge, the hazard "×N" fallback, and the
-##     UPGRADE TO footer naming the zone's upgrade target;
+##   • the ChainView math: a plain "have/need" counter (combined carried + live over the
+##     threshold; past the threshold it shows the post-wrap "rem/thr"), the too-short header,
+##     the stage banner at earned >= 1, the "+N" yield pill (true banked units), the hazard
+##     "×N" fallback, and the UPGRADE TO footer naming the zone's upgrade target;
 ##   • the ToolView flow: inspect (READY) → arm (ARMED) → disarm/fire → back to idle,
 ##     and the chain-end inspect reset (React's chainInfo-null effect);
 ##   • the panel band geometry: the panel and the board can never overlap.
@@ -112,12 +112,12 @@ func _test_states_and_chain_math() -> void:
 	for c in range(3, Constants.COLS):
 		board._extend_drag(Vector2i(c, 0))
 	board._extend_drag(Vector2i(Constants.COLS - 1, 1))   # 7th tile, 8-adjacent below
-	_check(hud._chain_prog_label.text == "1/6 +1",
-		"looped counter reads '1/6 +1' at 7 tiles (got '%s')" % hud._chain_prog_label.text)
+	_check(hud._chain_prog_label.text == "1/6",
+		"looped counter reads plain 'M/T' (1/6) at 7 tiles — the +cycles moved to the yield pill (got '%s')" % hud._chain_prog_label.text)
 	_check(hud._chain_stage_label.visible and hud._chain_stage_label.text == "BONUS!",
 		"stage banner reads BONUS! at one earned upgrade")
-	_check(hud._chain_earn_badge.visible, "+N badge shows at one earned upgrade")
-	_check(hud._chain_earn_label.text == "+1", "+N badge reads '+1'")
+	_check(hud._chain_earn_badge.visible, "+N yield pill shows at one banked unit")
+	_check(hud._chain_earn_label.text == "+1", "+N yield pill reads '+1'")
 
 	# ── drag end: back to IDLE ──
 	board._finish_drag()
@@ -125,15 +125,15 @@ func _test_states_and_chain_math() -> void:
 		await process_frame
 	_check(hud._action_idle.visible, "panel returns to IDLE after the chain resolves")
 
-	# ── carried progress feeds the base fill + the "carried+len/thr" counter ──
-	# The 7-chain above banked progress 1 (7 % 6). Drag 3 more: carried 1 + live 3.
+	# ── carried progress feeds the base fill + the COMBINED counter ──
+	# The 7-chain above banked progress 1 (7 % 6). Drag 3 more: carried 1 + live 3 = 4/6.
 	board.grid = _full(T.GRASS)
 	board._build_tiles()
 	_check(int(main.game.progress.get("hay_bundle", 0)) == 1,
 		"the resolved 7-chain carried progress 1 (7 %% 6)")
 	_drag_top_row(board, 3)
-	_check(hud._chain_prog_label.text == "1+3/6",
-		"carried counter reads '1+3/6' (got '%s')" % hud._chain_prog_label.text)
+	_check(hud._chain_prog_label.text == "4/6",
+		"carried counter reads combined '4/6' (1 carried + 3 live; got '%s')" % hud._chain_prog_label.text)
 	_check(hud._chain_fill_carried.visible, "the carried base fill renders")
 	board._finish_drag()
 	for _i in 4:
