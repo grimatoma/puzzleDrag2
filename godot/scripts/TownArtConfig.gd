@@ -21,8 +21,8 @@ extends RefCounted
 ##
 ## RESOLUTION mirrors scenes/Tile.gd's tier philosophy: texture_for() returns
 ## null for an unknown/missing id and callers draw their procedural fallback —
-## a shape with no committed art still renders (BuildingArt stays the fallback
-## for plots; "portal" intentionally ships NO bitmap). Phase 5 swaps the art
+## a shape with no committed art still renders (the renderer's flat-square
+## placeholder stays the fallback; "portal" intentionally ships NO bitmap). Phase 5 swaps the art
 ## set by flipping SOURCE to "pixellab": resolution then tries
 ## assets/town/pixellab/<rest-of-path> first and falls back to the committed
 ## stock slice per id, so a partial PixelLab drop is always safe.

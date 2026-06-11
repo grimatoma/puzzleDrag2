@@ -82,13 +82,12 @@ func _test_building_shape_coverage() -> void:
 	for shape: String in shapes.keys():
 		_check(TownArtConfig.has_art(shape),
 			"BuildingConfig shape '%s' has stock art" % shape)
-	# A KNOWN_SHAPES member without art (portal) must fall back cleanly:
-	# has_art false -> texture_for null, no error, defaults from the accessors.
-	for shape: String in BuildingArt.KNOWN_SHAPES:
-		if TownArtConfig.has_art(shape):
-			continue
-		_check(TownArtConfig.texture_for(shape) == null,
-			"art-less shape '%s' resolves to null (procedural fallback)" % shape)
+	# A shape family without art ("portal" intentionally ships NO bitmap — see the
+	# TownArtConfig header) must fall back cleanly: has_art false -> texture_for
+	# null, no error, defaults from the accessors.
+	_check(not TownArtConfig.has_art("portal")
+		and TownArtConfig.texture_for("portal") == null,
+		"art-less shape 'portal' resolves to null (procedural fallback)")
 	# The three board landmarks ship art.
 	for lm in ["board_farm", "board_mine", "board_fish"]:
 		_check(TownArtConfig.texture_for(lm) != null, "landmark art loads: %s" % lm)

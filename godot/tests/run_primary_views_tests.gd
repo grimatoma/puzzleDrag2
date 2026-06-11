@@ -17,7 +17,8 @@ extends SceneTree
 ##     offset_bottom == -UiKit.NAV_RESERVE (the reveal-top-bar / clear-nav contract),
 ##   • a "close" Button is still registered in _action_buttons (ESC/back + deep-link + the
 ##     existing per-screen tests rely on it) but is NOT visible (the card close is dropped),
-##   • the TownMapScreen additionally exposes a board_requested signal and a visible "board"
+##   • the VillageScreen (the Town tab's village map) additionally exposes a board_requested
+##     signal and a visible "board"
 ##     overlay button (the required board-return affordance, since Close is gone).
 ##
 ## Dependency-free harness (mirrors run_router_tests / run_townsfolk_view_tests). Run from
@@ -27,7 +28,6 @@ extends SceneTree
 
 const InventoryScreenScript := preload("res://scenes/InventoryScreen.gd")
 const TownScreenScript := preload("res://scenes/TownScreen.gd")
-const TownMapScreenScript := preload("res://scenes/town/TownMapScreen.gd")
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
 const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
@@ -134,48 +134,48 @@ func _run() -> void:
 	_assert_hidden_close(folk, "Townsfolk")
 	folk.queue_free()
 
-	# ── 5. Town map view + the REQUIRED board-return affordance ────────────────
-	var townmap = TownMapScreenScript.new()
+	# ── 5. Town village view + the REQUIRED board-return affordance ────────────
+	var townmap := VillageScreen.new()
 	root.add_child(townmap)
 	townmap.setup(game)
 	await process_frame
-	_assert_backdrop(townmap, "TownMap")
-	_assert_hidden_close(townmap, "TownMap")
+	_assert_backdrop(townmap, "Village")
+	_assert_hidden_close(townmap, "Village")
 	# The Town view also reserves the top band on its map host so the map re-fits below the bar.
-	_check(townmap._map_host != null, "TownMap: exposes its map host Control")
+	_check(townmap._map_host != null, "Village: exposes its map host Control")
 	if townmap._map_host != null:
 		_check(is_equal_approx(townmap._map_host.offset_top, float(UiKit.TOPBAR_RESERVE)),
-			"TownMap: _map_host.offset_top == UiKit.TOPBAR_RESERVE (%d), got %.1f" % [
+			"Village: _map_host.offset_top == UiKit.TOPBAR_RESERVE (%d), got %.1f" % [
 				UiKit.TOPBAR_RESERVE, townmap._map_host.offset_top])
 		_check(is_equal_approx(townmap._map_host.offset_bottom, -float(UiKit.NAV_RESERVE)),
-			"TownMap: _map_host.offset_bottom == -UiKit.NAV_RESERVE (%d), got %.1f" % [
+			"Village: _map_host.offset_bottom == -UiKit.NAV_RESERVE (%d), got %.1f" % [
 				UiKit.NAV_RESERVE, townmap._map_host.offset_bottom])
 	# Board-return affordance: a board_requested signal + a visible "board" overlay button.
-	_check(townmap.has_signal("board_requested"), "TownMap: has a board_requested signal")
+	_check(townmap.has_signal("board_requested"), "Village: has a board_requested signal")
 	var board_btn: Variant = townmap._action_buttons.get("board")
-	_check(board_btn != null, "TownMap: _action_buttons has a 'board' return button")
+	_check(board_btn != null, "Village: _action_buttons has a 'board' return button")
 	if board_btn != null:
-		_check((board_btn as Button).visible, "TownMap: the 'board' button IS visible (discoverable)")
+		_check((board_btn as Button).visible, "Village: the 'board' button IS visible (discoverable)")
 	# Pressing it emits board_requested (the path Main routes to apply_deeplink('board')).
 	var emitted := {"v": false}
 	townmap.connect("board_requested", func() -> void: emitted["v"] = true)
 	if board_btn != null:
 		(board_btn as Button).emit_signal("pressed")
 		await process_frame
-	_check(emitted["v"], "TownMap: pressing 'board' emits board_requested")
+	_check(emitted["v"], "Village: pressing 'board' emits board_requested")
 
 	# review-3 — the relocated Town ledger affordance: a visible "📋 Town Ledger" button that
 	# emits ledger_requested (Main routes it to apply_deeplink('town') → the TownScreen).
-	_check(townmap.has_signal("ledger_requested"), "TownMap: has a ledger_requested signal")
+	_check(townmap.has_signal("ledger_requested"), "Village: has a ledger_requested signal")
 	var ledger_btn: Variant = townmap._action_buttons.get("ledger")
-	_check(ledger_btn != null, "TownMap: _action_buttons has a 'ledger' button")
+	_check(ledger_btn != null, "Village: _action_buttons has a 'ledger' button")
 	if ledger_btn != null:
-		_check((ledger_btn as Button).visible, "TownMap: the 'ledger' button IS visible (discoverable)")
+		_check((ledger_btn as Button).visible, "Village: the 'ledger' button IS visible (discoverable)")
 	var led_emitted := {"v": false}
 	townmap.connect("ledger_requested", func() -> void: led_emitted["v"] = true)
 	if ledger_btn != null:
 		(ledger_btn as Button).emit_signal("pressed")
 		await process_frame
-	_check(led_emitted["v"], "TownMap: pressing 'Town Ledger' emits ledger_requested")
+	_check(led_emitted["v"], "Village: pressing 'Town Ledger' emits ledger_requested")
 	townmap.queue_free()
 	await process_frame

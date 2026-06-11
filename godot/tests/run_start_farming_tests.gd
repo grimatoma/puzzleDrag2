@@ -13,13 +13,10 @@ extends SceneTree
 ##      open_chooser → choose_ a discovered variant updates active_variant_for + GameState; a
 ##      buy-variant flow grants coins → buy → it becomes choosable); Start enabled/disabled by
 ##      affordability + its start_requested(selected, use_fertilizer) emission.
-##   2. TownMap.board_at_screen — the farm pad's screen centre round-trips to "farm"; a
-##      far-off point returns "".
-##   3. TownMapScreen.start_farming_requested — a tap on the farm pad fires the signal once
-##      and opens NO build/demolish panel.
+##   2. VillageScreen.start_farming_requested — a tap on the farm landmark fires the
+##      signal once and opens NO build/demolish panel (landmark wins over plots).
 
 const StartFarmingModalScript := preload("res://scenes/StartFarmingModal.gd")
-const TownMapScript := preload("res://scenes/town/TownMap.gd")
 
 var _checks: int = 0
 var _failures: int = 0
@@ -43,7 +40,6 @@ func _initialize() -> void:
 func _run() -> void:
 	await _test_modal()
 	await _test_modal_orchard_preview()
-	await _test_board_at_screen()
 	await _test_screen_signal()
 	await _test_main_wiring()
 	await _test_expedition_input_gate()
@@ -226,53 +222,36 @@ func _test_modal_orchard_preview() -> void:
 	m.queue_free()
 	await process_frame
 
-# ── 2. TownMap.board_at_screen ─────────────────────────────────────────────────
-
-func _test_board_at_screen() -> void:
-	var town_map: Node2D = TownMapScript.new()
-	root.add_child(town_map)
-	# A plan WITH a farm board (board_kinds includes "farm").
-	var plan := TownLayout.build_plan("home", 7, ["farm"])
-	town_map.render_plan(plan, 720.0, 1280.0, [])
-	await process_frame
-	_check(town_map._scale > 0.0, "render_plan produced a positive scale")
-
-	var farm_center: Vector2 = town_map.board_screen_center("farm")
-	_check(farm_center.x != INF, "board_screen_center('farm') resolved a finite centre")
-	_check(town_map.board_at_screen(farm_center) == "farm",
-		"board_at_screen(centre of farm pad) == 'farm' (round-trips)")
-	_check(town_map.board_at_screen(Vector2(-9999.0, -9999.0)) == "",
-		"board_at_screen(far outside) == '' (no board hit)")
-	town_map.queue_free()
-	await process_frame
-
-# ── 3. TownMapScreen.start_farming_requested ───────────────────────────────────
+# ── 2. VillageScreen.start_farming_requested ───────────────────────────────────
 
 func _test_screen_signal() -> void:
 	var game := GameState.new()
 	game.settlement.tier = TownConfig.TIER_VILLAGE
-	var screen := TownMapScreen.new()
+	var screen := VillageScreen.new()
 	root.add_child(screen)
 	screen.setup(game)
 	screen.open()
 	await process_frame
 
-	var map = screen._map
-	_check(map != null, "TownMapScreen exposes its TownMap node")
-	var farm_center: Vector2 = map.board_screen_center("farm")
-	_check(farm_center.x != INF, "the rendered plan has a farm board pad")
-	_check(map.board_at_screen(farm_center) == "farm", "farm pad centre resolves to 'farm' on the live screen")
+	# Host-px point over the farm landmark's centre (world → host transform).
+	var farm: Dictionary = VillageLayout.landmarks()["board_farm"]
+	var farm_world := Vector2(
+		(float((farm["cell"] as Vector2i).x) + 1.5) * float(TownArtConfig.TILE),
+		(float((farm["cell"] as Vector2i).y) + 1.5) * float(TownArtConfig.TILE))
+	var farm_center: Vector2 = farm_world * screen._zoom + screen._cam_offset
+	_check(screen._cell_at_host_point(farm_center) == (farm["cell"] as Vector2i) + Vector2i.ONE,
+		"farm landmark centre round-trips through _cell_at_host_point")
 
 	var probe := {"fired": 0}
 	screen.start_farming_requested.connect(func() -> void: probe.fired += 1)
 
-	# Drive the tap-resolution path directly (mirrors how run_townmap_tests drives clicks).
-	screen._resolve_lot_click(farm_center)
+	# Drive the tap-resolution path directly (mirrors how run_village_tests drives taps).
+	screen._resolve_tap(farm_center)
 	await process_frame
-	_check(probe.fired == 1, "tapping the farm pad fired start_farming_requested exactly once")
-	# The farm-pad tap must NOT open a build/demolish panel — it's its own affordance.
-	_check(not screen._action_buttons.has("demolish"), "farm-pad tap opened NO demolish (built-lot) panel")
-	_check(not screen._action_buttons.has("picker_close"), "farm-pad tap opened NO build picker")
+	_check(probe.fired == 1, "tapping the farm landmark fired start_farming_requested exactly once")
+	# The farm tap must NOT open a build/demolish panel — it's its own affordance.
+	_check(not screen._action_buttons.has("demolish"), "farm tap opened NO demolish (built-plot) panel")
+	_check(not screen._action_buttons.has("picker_close"), "farm tap opened NO build picker")
 
 	screen.queue_free()
 	await process_frame

@@ -59,8 +59,8 @@ extends RefCounted
 ##
 ## ── DETERMINISM (ported EXACTLY from React rngFrom) ─────────────────────────────
 ## rngFrom = FNV-1a hash of the seed string → a mulberry32 PRNG. The 32-bit integer
-## math (Math.imul / >>> / | 0) is mirrored via the same 16-bit _imul split used by
-## TownLayout.gd, so roll_quests yields IDENTICAL results for identical seeds and is
+## math (Math.imul / >>> / | 0) is mirrored via a 16-bit _imul split (see below),
+## so roll_quests yields IDENTICAL results for identical seeds and is
 ## headless-testable. roll_quests draws in the SAME consumption order as React: per
 ## pick, one draw selects the template index (splice), one draw picks the target in
 ## [targetMin, targetMax].
@@ -137,7 +137,7 @@ const QUEST_TEMPLATES: Array = [
 		"target_min": 1,  "target_max": 2,  "coin_base": 80, "coin_per_unit": 40},
 ]
 
-# ── 32-bit integer helpers (mirror TownLayout._imul / >>> / | 0 semantics) ──────
+# ── 32-bit integer helpers (mirror JS Math.imul / >>> / | 0 semantics) ──────
 const _U32: int = 0x100000000
 const _MASK32: int = 0xFFFFFFFF
 
@@ -151,7 +151,7 @@ static func _to_uint32(x: int) -> int:
 	return x & _MASK32
 
 ## JS Math.imul(a, b): 32-bit integer multiply via a 16-bit split (a full 32×32
-## product overflows GDScript's signed-64 int). Mirrors TownLayout._imul exactly.
+## product overflows GDScript's signed-64 int). Mirrors JS Math.imul exactly.
 static func _imul(a: int, b: int) -> int:
 	var ua: int = a & _MASK32
 	var ub: int = b & _MASK32
@@ -172,7 +172,7 @@ static func _ushr(x: int, n: int) -> int:
 ## _rng_next(state) for each draw. Mirrors:
 ##   let h = 2166136261; for c: h ^= c; h = Math.imul(h, 16777619); let a = h >>> 0;
 ## NOTE: React's rngFrom uses FNV-1a (offset 2166136261, prime 16777619); this is
-## DIFFERENT from TownLayout's mulberry32-seed hash — we reproduce THIS one faithfully.
+## DIFFERENT from a plain mulberry32-seed hash — we reproduce THIS one faithfully.
 static func rng_state(seed_str: String) -> Dictionary:
 	var h: int = 2166136261
 	for i in seed_str.length():

@@ -16,8 +16,9 @@ extends RefCounted
 ##
 ## PLOTS (2026-06-10, owner directive): the first town starts ROOMY — 25 plots at Camp
 ## (it should hold ~25 buildings from the start), each tier adding +2. This deliberately
-## diverges from the old cramped 3/5/7/9/11 ladder (and from React); TownLayout's block
-## grid scales with plot_count, so the map simply renders a denser town.
+## diverges from the old cramped 3/5/7/9/11 ladder (and from React); the village map's
+## growth stage scales with plot_count (VillageLayout.stage_for_plot_count), so the
+## town simply renders denser.
 ##
 ## Tier-up COSTS are PC2-aligned FIRST-PASS values — escalating and pulling in
 ## cross-category goods, all expressed in resources the port can already produce

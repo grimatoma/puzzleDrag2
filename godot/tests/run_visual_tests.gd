@@ -479,11 +479,11 @@ func _post_farm_tool_armed(main) -> void:
 	main.use_tool("bomb")
 
 func _post_town_build_picker(main) -> void:
-	# Open the build picker on the FIRST empty lot — exactly what a left click on an empty
-	# plot resolves to (lot index == built_count is the first un-built slot).
-	if main._townmap_screen != null and main._townmap_screen._map != null:
-		var first_empty: int = main._townmap_screen._map.built_count()
-		main._townmap_screen._open_build_picker_for_lot(first_empty)
+	# Open the build picker on the FIRST empty plot — exactly what a tap on an empty
+	# pad resolves to (ordinal plot index == game.buildings.size() is the first
+	# un-built plot; the VillageScreen's 🔨 Build button does the same).
+	if main._townmap_screen != null:
+		main._townmap_screen._open_build_picker_for_plot(main.game.buildings.size())
 
 # ── Scenario table ─────────────────────────────────────────────────────────────────────────
 # Each row: { id, deeplink, seed: Callable(main) -> void }. `id` maps 1:1 to a parity-matrix

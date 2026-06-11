@@ -4,11 +4,12 @@ extends SceneTree
 ## trees, plaza/props, and the placeholder built houses:
 ##   godot --path godot --script res://tools/m6c_capture.gd -- <out_path>
 ##
-## Sets up a City-tier town (11 plots) with three built buildings, opens the real
-## TownMapScreen via Main._open_townmap(), lets it settle, and writes the PNG. The
-## map is fed by REAL state: settlement.plots() drives the lot count and
-## game.buildings marks the first N lots as built (drawn as labelled placeholder
-## houses). Migration evidence for the headline visible feature (town map in-game).
+## Sets up a City-tier town with three built buildings, opens the real Town-route
+## screen (now the VillageScreen) via Main._open_townmap(), lets it settle, and
+## writes the PNG. The map is fed by REAL state: settlement.plots() drives the lot
+## count and game.buildings marks the first N plots as built. (Superseded by
+## tools/village_capture.gd, which builds through the real API — kept as a quick
+## duck-typed smoke shot.)
 
 func _save(path: String) -> void:
 	var img := root.get_texture().get_image()

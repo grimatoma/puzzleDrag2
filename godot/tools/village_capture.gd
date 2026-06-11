@@ -1,15 +1,17 @@
 extends SceneTree
-## Dev utility: open the Phase-1 VillageScreen IN-GAME on a realistic GameState
+## Dev utility: open the Phase-2 VillageScreen IN-GAME on a realistic GameState
 ## and save a 720×1280 PNG. Run NON-headless (foreground — background
 ## non-headless renders are flaky on Windows) so the GPU draws the ground
 ## TileMapLayer, the floor-anchored building/decor sprites, and the overlay:
 ##   godot --path godot --script res://tools/village_capture.gd -- <out_path>
 ##
 ## Defaults to res://tools/_caps/village.png (_caps/ is gitignored). Sets up a
-## City-tier town with three built buildings (the live counts feed the 🔨 Build
-## button label; the Phase-1 village itself draws the static spread), opens the
-## real screen via Main._open_townmap(), settles, and writes the PNG — the
-## phase's visual acceptance evidence.
+## City-tier town, GRANTS resources, and BUILDS several buildings through the
+## REAL game.build() API (no direct buildings pokes) so the capture shows the
+## GameState-driven village: building sprites on the first ordinal plots, empty
+## pads on the rest, landmarks + decor around them. Opens the real screen via
+## Main._open_townmap(), settles, and writes the PNG — the phase's visual
+## acceptance evidence. A second _wide shot zooms out to the CONTAIN fit.
 
 func _save(path: String) -> void:
 	var img := root.get_texture().get_image()
@@ -31,15 +33,26 @@ func _initialize() -> void:
 	if main._tutorial_modal != null:
 		main._tutorial_modal.visible = false
 
-	# A City-tier town with three honest BuildingConfig ids — drives the Build
-	# button's live "N/M plots" label (the Phase-1 village art is static).
+	# A City-tier town built up through the REAL build API: grant the resources
+	# the costs need, then game.build() a spread of spawners / refiners /
+	# landmarks. The village renders these on the first ordinal plots; the
+	# remaining lots show as prepared pads (the buildings-with-pads mix the
+	# capture is meant to show).
 	main.game.settlement.tier = TownConfig.TIER_CITY
 	main.game.active_biome = "farm"
-	main.game.buildings = [
-		BuildingConfig.LUMBER_CAMP,
-		BuildingConfig.COOP,
-		BuildingConfig.BAKERY,
-	]
+	var grant := {"hay_bundle": 200, "flour": 200, "plank": 200, "eggs": 80,
+		"block": 120, "iron_bar": 40, "soup": 40}
+	for k in grant:
+		main.game.inventory[k] = grant[k]
+	for id in [
+		BuildingConfig.LUMBER_CAMP, BuildingConfig.COOP, BuildingConfig.GARDEN,
+		BuildingConfig.BAKERY, BuildingConfig.MILL, BuildingConfig.GRANARY,
+		BuildingConfig.SILO, BuildingConfig.CHAPEL, BuildingConfig.WORKSHOP,
+		BuildingConfig.STABLE,
+	]:
+		var res: Dictionary = main.game.build(id)
+		if not bool(res.get("ok", false)):
+			print("  build FAILED: %s → %s" % [id, str(res)])
 	main._refresh_hud_all()                      # top-bar pills reflect the tier
 
 	# Open the real village screen (lazily builds the shell + fits the camera),
@@ -51,7 +64,7 @@ func _initialize() -> void:
 	_save(out_path)
 
 	# Second shot zoomed out to the CONTAIN fit — the whole village in frame
-	# (letterboxed), for checking the full layout/landmarks/river at a glance.
+	# (letterboxed), for checking buildings/pads/landmarks/river at a glance.
 	var screen = main._townmap_screen
 	while screen._zoom > screen._min_zoom + 0.001:
 		screen.zoom_at(1.0 / VillageScreen.ZOOM_STEP, screen._host_size() * 0.5)
