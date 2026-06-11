@@ -107,10 +107,15 @@ func _run() -> void:
 			"start_farming_requested", "ledger_requested", "boons_requested"]:
 		_check(screen.has_signal(sig), "has_signal('%s')" % sig)
 
-	for key in ["board", "ledger", "boons", "close", "build_open",
+	for key in ["board", "close", "build_open",
 			"zoom_in", "zoom_out", "recenter"]:
 		_check(screen._action_buttons.has(key) and screen._action_buttons[key] is Button,
 			"_action_buttons['%s'] is a Button" % key)
+	# The on-map "Town Ledger" / "Boons" buttons (and the title pill) were removed
+	# (parity with main's TownMapScreen change a8ea14a6): the ledger and Boons are
+	# reached via the ☰ menu; ledger_requested / boons_requested stay latent routes.
+	_check(not screen._action_buttons.has("ledger"), "no on-map 'ledger' button (removed)")
+	_check(not screen._action_buttons.has("boons"), "no on-map 'boons' button (removed)")
 
 	_check(screen.plan_lot_count() == max(1, TownConfig.tier_plots(game.settlement.tier)),
 		"plan_lot_count() (%d) == tier_plots(tier %d)"
@@ -120,19 +125,10 @@ func _run() -> void:
 		"plan_lot_count() tracks the live tier (City → %d)" % screen.plan_lot_count())
 	game.settlement.tier = TownConfig.TIER_CAMP
 
-	var ledger_hits: Array = []
-	screen.ledger_requested.connect(func() -> void: ledger_hits.append(1))
-	(screen._action_buttons["ledger"] as Button).emit_signal("pressed")
-	_check(ledger_hits.size() == 1, "pressing 'ledger' emits ledger_requested")
-
 	var board_hits: Array = []
 	screen.board_requested.connect(func() -> void: board_hits.append(1))
 	(screen._action_buttons["board"] as Button).emit_signal("pressed")
 	_check(board_hits.size() == 1, "pressing 'board' emits board_requested")
-	var boons_hits: Array = []
-	screen.boons_requested.connect(func() -> void: boons_hits.append(1))
-	(screen._action_buttons["boons"] as Button).emit_signal("pressed")
-	_check(boons_hits.size() == 1, "pressing 'boons' emits boons_requested")
 
 	# Idle home (no run, farm biome, no boss) → the board button says Start Farming.
 	_check((screen._action_buttons["board"] as Button).text == "▶ Start Farming",

@@ -359,6 +359,48 @@ const SETTLEMENT_BIOMES: Dictionary = {
 ## (src/constants.ts:205) is "prairie".
 const DEFAULT_HOME_BIOME: String = "prairie"
 
+# ── Hazard SPAWNABILITY (React src/ui/puzzleToolFilter.ts parity) ────────────────────────────
+# The settlement / zone hazard NAMES (in MAP_NODES[].dangers + SETTLEMENT_BIOMES[].hazards) are
+# flavor-level labels; the BOARD spawn system rolls a smaller set of runtime hazard ids. These two
+# tables map a zone/biome hazard label → the runtime spawn id(s) it actually produces, mirroring
+# React's SETTLEMENT_HAZARD_TO_SPAWN + IMPLEMENTED_SPAWN_IDS. Used by GameState.spawnable_hazards()
+# (which feeds the HUD hazard-tool filter), so a hazard tool is only shown when its target can
+# actually appear on the current board. Unmapped flavor hazards (locusts / ash_cloud / poison /
+# flooding / frost / storm / …) contribute NOTHING (no implemented spawn behind them).
+
+## Runtime spawn ids the farm/mine hazard systems actually roll (HazardLogic + MineHazardLogic).
+## Matches GameState's hazard state keys + ToolConfig hazard_targets strings.
+const IMPLEMENTED_SPAWN_IDS: Array = ["fire", "wolves", "rats", "cave_in", "gas_vent", "lava", "mole"]
+
+## Settlement / zone hazard label → the runtime spawn id(s) it maps to. Mirrors React's
+## SETTLEMENT_HAZARD_TO_SPAWN (puzzleToolFilter.ts): the SETTLEMENT_BIOMES use some alternate
+## spellings ("wolf", "gas_pocket") that resolve to the same runtime ids.
+const SETTLEMENT_HAZARD_TO_SPAWN: Dictionary = {
+	"fire": ["fire"],
+	"wolf": ["wolves"],
+	"wolves": ["wolves"],
+	"rats": ["rats"],
+	"cave_in": ["cave_in"],
+	"gas_vent": ["gas_vent"],
+	"gas_pocket": ["gas_vent"],
+	"lava": ["lava"],
+	"mole": ["mole"],
+}
+
+## Map a list of zone/biome hazard LABELS to the set of runtime spawn ids they produce (a fresh
+## Array, de-duplicated, only ids in IMPLEMENTED_SPAWN_IDS). The React per-label expansion +
+## implemented-id filter in one helper. Unmapped labels drop out.
+static func hazard_labels_to_spawn_ids(labels: Array) -> Array:
+	var seen: Dictionary = {}
+	for raw in labels:
+		var mapped: Variant = SETTLEMENT_HAZARD_TO_SPAWN.get(String(raw), [])
+		if mapped is Array:
+			for id in (mapped as Array):
+				var sid: String = String(id)
+				if IMPLEMENTED_SPAWN_IDS.has(sid):
+					seen[sid] = true
+	return seen.keys()
+
 ## The biome options for founding a settlement of `type` (a COPY; [] for an unknown type).
 ## React biomesForType (data.ts:575-578).
 static func biomes_for_type(type: String) -> Array:
@@ -502,6 +544,13 @@ static func requires_hearth_tokens(node_id: String) -> bool:
 ## "boss" | "capital"), or "" when unknown. (React MapNode.kind.)
 static func kind_of(node_id: String) -> String:
 	return String(by_id(node_id).get("kind", ""))
+
+## The per-zone hazard LABELS for `node_id` (React MAP_NODES[].dangers / Zone.dangers) — a fresh
+## COPY ([] when none / unknown). These are flavor labels; hazard_labels_to_spawn_ids() maps them
+## to runtime spawn ids. (Quarry → cave_in/gas_vent/mole; Caves → +lava; everything else → [].)
+static func dangers_of(node_id: String) -> Array:
+	var d: Variant = by_id(node_id).get("dangers", [])
+	return (d as Array).duplicate() if d is Array else []
 
 ## The SETTLEMENT TYPE for `node_id` — "farm" | "mine" | "harbor" — or "" when the node isn't a
 ## settlement (event / festival / boss / capital). FAITHFUL port of React's settlementTypeForZone

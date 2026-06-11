@@ -198,10 +198,15 @@ static func wire_backdrop_dismiss(backdrop: Control, on_dismiss: Callable) -> vo
 	if backdrop.has_meta("_dismiss_wired"):
 		return
 	backdrop.set_meta("_dismiss_wired", true)
+	# MOUSE-path only (see the touch/input gotcha in CLAUDE.md + Hud._slot_gui_input):
+	# project.godot has emulate_touch_from_mouse on, so ONE physical tap arrives as a real
+	# InputEventMouseButton AND a synthesized InputEventScreenTouch. Reacting to both lets
+	# the *same* tap that just opened a modal (on the mouse release) fire this dismiss on the
+	# emulated touch press — the modal opens and instantly closes, reading as "nothing
+	# happened" (the touchpad-tap settings-button bug). emulate_mouse_from_touch stays on, so
+	# a real touchscreen tap still delivers a MouseButton here; the touch branch is redundant.
 	backdrop.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
-			or (event is InputEventScreenTouch and event.pressed)
-		if tap:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			on_dismiss.call()
 	)
 
@@ -431,6 +436,135 @@ static func modal_card_box(margin: int = 24, fill := Palette.PARCHMENT) -> Style
 	sb.shadow_color = Color(0, 0, 0, 0.28)
 	sb.shadow_offset = Vector2(0, 5)
 	return sb
+
+# ── Expandable ledger chip (shared pattern: InventoryScreen + RecipeWikiScreen) ────────
+
+## Paint an expandable chip's panel border to reflect its state: an EMBER 2 px border when
+## expanded (the "you opened this" accent), the soft 1 px row_box border when collapsed. The
+## single source of the chip border look — make_expandable_chip uses it at build time, and the
+## in-place animated toggle (RecipeWikiScreen) recolours the SAME node as it opens/closes
+## without a rebuild.
+static func style_chip_expanded(chip: PanelContainer, expanded: bool) -> void:
+	var sb := row_box()
+	if expanded:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.border_color = Palette.EMBER
+		sb.set_border_width_all(2)
+	chip.add_theme_stylebox_override("panel", sb)
+
+## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
+## expanded, soft row_box when collapsed) holding a VBox the caller fills with a summary
+## row and optionally an inline details section. Tapping the chip calls toggle_fn(entry_key).
+## Inner content is MOUSE_FILTER_IGNORE so the chip sees every tap; action Buttons inside
+## the details still work (Button.MOUSE_FILTER_STOP takes priority in the pick order).
+static func make_expandable_chip(entry_key: String, expanded_key: String, toggle_fn: Callable) -> PanelContainer:
+	var chip := PanelContainer.new()
+	style_chip_expanded(chip, expanded_key == entry_key)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	# MOUSE-path only (same emulate_touch_from_mouse gotcha as wire_backdrop_dismiss): a tap
+	# arrives as BOTH a mouse press and an emulated touch press, so reacting to both fired this
+	# TOGGLE twice per tap — expand then collapse — and the chip appeared inert. emulate_mouse_
+	# _from_touch keeps real touchscreen taps flowing through the mouse branch.
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton \
+				and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+				and (event as InputEventMouseButton).pressed:
+			toggle_fn.call(entry_key)
+	)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
+	return chip
+
+## Append the details section to an expanded chip's VBox column, separated from the summary row
+## by a faint hairline, and return the details VBox the caller fills.
+##
+## The section lives inside a make_collapsible() wrapper, so it is height-animatable: the wrapper
+## is stashed on the owning chip (col's parent) under the "_details_wrap" meta, and the screen's
+## in-place expand/collapse toggle drives UiFx.expand_section / collapse_section on it (the
+## "a row unrolls open while the previous one rolls shut" motion). On a plain (re)build that never
+## calls those, the collapsible just sits at its content height — at rest it is indistinguishable
+## from an ordinary container row, so nothing else has to change. The inner spacing matches the
+## chip column's so the rest layout is byte-identical to the pre-collapsible version.
+static func begin_expand_details(col: VBoxContainer) -> VBoxContainer:
+	var wrap := make_collapsible()
+	var inner: VBoxContainer = wrap.get_meta("_inner")
+	inner.add_theme_constant_override("separation", 8)   # match the chip column's row spacing
+	var rule := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(Palette.IRON, 0.5)
+	line.thickness = 1
+	rule.add_theme_stylebox_override("separator", line)
+	inner.add_child(rule)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	inner.add_child(details)
+	col.add_child(wrap)
+	var chip := col.get_parent()
+	if chip != null:
+		chip.set_meta("_details_wrap", wrap)
+	return details
+
+## A height-animatable "accordion" wrapper for an inline details section. Godot containers
+## always size to their content's minimum, so they can't be tweened shorter than their content
+## — the trick here is a plain clip `Control` (NOT a Container) whose height we OWN: at rest it
+## tracks its single content child's natural height (so it occupies exactly the content's space,
+## like a normal row would), but UiFx.expand_section / collapse_section can tween its height
+## 0↔natural while `clip_contents` reveals/hides the content top-down.
+##
+## Returns the wrapper; its content VBox is `wrapper.get_meta("_inner")` — add your hairline /
+## eyebrow / body / chips / buttons there. The wrapper keeps the inner stretched to its width and
+## pinned to the top, and re-syncs its own min height whenever the content's min size changes —
+## EXCEPT while an animation has pinned the height (the `_anim` meta guard) so the tween wins.
+static func make_collapsible() -> Control:
+	var wrap := Control.new()
+	wrap.clip_contents = true
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner := VBoxContainer.new()
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_theme_constant_override("separation", 6)
+	wrap.add_child(inner)
+	wrap.set_meta("_inner", inner)
+	# Keep `inner` filling the wrapper's width and anchored to the top, and (unless an animation
+	# owns the height) keep the wrapper's own minimum height equal to the content's natural height
+	# so at rest it behaves like an ordinary container row. A plain Control does not lay out its
+	# children, so this sizing is done by hand on every relevant resize.
+	var sync := func() -> void:
+		if not is_instance_valid(wrap) or not is_instance_valid(inner):
+			return
+		var h: float = inner.get_combined_minimum_size().y
+		inner.position = Vector2.ZERO
+		inner.size = Vector2(wrap.size.x, h)
+		if not wrap.has_meta("_anim"):
+			wrap.custom_minimum_size.y = h
+	wrap.resized.connect(sync)
+	inner.minimum_size_changed.connect(sync)
+	return wrap
+
+## Add a small all-caps eyebrow label (e.g. "RESOURCE · FARM GOODS") to an expanded
+## details VBox.
+static func add_expand_eyebrow(details: VBoxContainer, text: String, col_header: Color) -> void:
+	var lbl := Label.new()
+	lbl.text = text.to_upper()
+	set_font_size(lbl, Typography.Role.CAPTION)
+	lbl.add_theme_color_override("font_color", col_header)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_child(lbl)
+
+## A muted wrapping body line for an expanded details section.
+static func make_expand_body_text(text: String, col_muted: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	set_font_size(lbl, Typography.Role.LABEL)
+	lbl.add_theme_color_override("font_color", col_muted)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
 
 ## Card StyleBox for the stockpile panel: parchment fill, 2 px iron border,
 ## radius 12, soft drop shadow, comfortable padding.

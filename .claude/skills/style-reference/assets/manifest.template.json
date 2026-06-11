@@ -1,0 +1,43 @@
+{
+  "title": "<Project> tile style reference",
+  "notes": "Light upper-left, selective dark outline, soft drop shadow, 3/4 top-down. <fill in the rules a palette can't encode>.",
+  "palette": "auto",
+
+  "_comment_palette": "'auto' quantizes the exemplars below into a swatch row, OR give a path to a .gpl / .hex palette file (e.g. 'references/palette.gpl') to use the locked ramps verbatim. Paths resolve relative to THIS manifest file.",
+
+  "exemplars": [
+    {
+      "_comment": "1) A single image. Order exemplars simple -> detailed; the simplest sets the detail floor, the most detailed the ceiling.",
+      "src": "../../godot/assets/tiles/tile_tree_oak.png",
+      "label": "oak (detailed hero)"
+    },
+    {
+      "src": "../../godot/assets/tiles/tile_tree_fir.png",
+      "label": "fir"
+    },
+    {
+      "_comment": "2) A SHEET: one PNG that is a grid of frames. 'frame' is one cell's [w,h]; 'grid' is [cols,rows]. The whole grid is sliced and laid out as one animation row.",
+      "src": "path/to/idle_sheet.png",
+      "label": "idle (8-frame sheet)",
+      "frame": [90, 90],
+      "grid": [8, 1]
+    },
+    {
+      "_comment": "2b) Same sheet, but only specific cells (0-based, row-major) — use to thin a long strip down to readable keyframes.",
+      "src": "path/to/idle_sheet.png",
+      "label": "idle (frames 0,3,6)",
+      "frame": [90, 90],
+      "grid": [8, 1],
+      "cells": [0, 3, 6]
+    },
+    {
+      "_comment": "3) A frame STRIP: a list of already-sliced NN.png frames, laid out as one animation row so the motion reads left-to-right.",
+      "frames": [
+        "path/to/frames/idle/00.png",
+        "path/to/frames/idle/04.png",
+        "path/to/frames/idle/07.png"
+      ],
+      "label": "idle frames"
+    }
+  ]
+}

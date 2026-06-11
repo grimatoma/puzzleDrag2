@@ -1,0 +1,43 @@
+{
+  "title": "Hearth tile style reference",
+  "notes": "Light upper-left (55deg), selective dark outline #1b1410, soft drop shadow, 3/4 top-down, hue-shifted ramps, fps 10 on-twos.",
+  "palette": "auto",
+
+  "_comment": "The live Hearth reference set, used to generate godot/assets/tiles/v2/_style-reference.png. Paths resolve relative to THIS file (.claude/skills/style-reference/assets/). The hero exemplars are shipped tiles; the seasonal keyframes + idle frame strip show 'keyframes and animations' per the user's mental model. 'palette':'auto' quantizes the dominant colors out of these exemplars; the LOCKED ramps live in _style-spec.json palette.ramps[] (the spec's palette.source 'references/palette.gpl' is a provenance pointer, not a file on disk).",
+
+  "exemplars": [
+    {
+      "src": "../../../../godot/assets/tiles/tile_tree_oak.png",
+      "label": "oak tree (detailed hero)"
+    },
+    {
+      "src": "../../../../godot/assets/tiles/tile_tree_fir.png",
+      "label": "fir tree"
+    },
+    {
+      "src": "../../../../godot/assets/tiles/tile_veg_squash.png",
+      "label": "squash (crop hero)"
+    },
+    {
+      "src": "../../../../godot/assets/tiles/tile_veg_carrot.png",
+      "label": "carrot"
+    },
+    {
+      "src": "../../../../godot/assets/tiles/v2/items/birch_tree/tile_tree_birch_autumn/03.png",
+      "label": "birch keyframe: autumn (master)"
+    },
+    {
+      "src": "../../../../godot/assets/tiles/v2/items/birch_tree/tile_tree_birch_winter/01.png",
+      "label": "birch keyframe: winter (derived child)"
+    },
+    {
+      "frames": [
+        "../../../../godot/assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/00.png",
+        "../../../../godot/assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/02.png",
+        "../../../../godot/assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/04.png",
+        "../../../../godot/assets/tiles/v2/items/birch_tree/frames/tile_tree_birch_autumn/06.png"
+      ],
+      "label": "birch autumn idle (animation frames 0,2,4,6)"
+    }
+  ]
+}

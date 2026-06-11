@@ -10,9 +10,10 @@ extends CanvasLayer
 ## CONTRACT (byte-compatible with the old TownMapScreen, so Main only swapped the
 ## var type + constructor — see Main._open_townmap):
 ##   signals  closed / state_changed / board_requested / start_farming_requested
-##            / ledger_requested / boons_requested
+##            / ledger_requested / boons_requested (the last two are LATENT —
+##            no on-map button emits them; Main still listens)
 ##   lifecycle setup(g) / open() / close() / plan_lot_count()
-##   _action_buttons static keys: board, ledger, boons, close, build_open,
+##   _action_buttons static keys: board, close, build_open,
 ##            zoom_in, zoom_out, recenter. Panel keys are added/removed as panels
 ##            open/close: "demolish" (built-plot card), "build:<id>" +
 ##            "picker_close" (build-picker card).
@@ -68,14 +69,18 @@ signal board_requested
 ## Emitted when the player TAPS the farm-field landmark on the village map (the
 ## on-map "Start Farming" affordance). Main wires this to the StartFarmingModal.
 signal start_farming_requested
-## "📋 Town Ledger" overlay button. Main routes this through
-## apply_deeplink("town") to open the TownScreen ledger.
+## Latent route to the town-management ledger. The on-map "Town Ledger" button
+## was removed — the ledger is reached via the ☰ menu ("nav:town") — but Main
+## still listens to this signal as a programmatic route through
+## apply_deeplink("town"), exercised by run_router_tests.
 signal ledger_requested
-## "✨ Boons" overlay button. Main routes through apply_deeplink("boons").
+## Latent route to the BoonsScreen (keeper-perk catalogs). The on-map "Boons"
+## button was removed — Boons is reached via the ☰ menu ("boons") — but Main
+## still listens, routing through apply_deeplink("boons").
 signal boons_requested
 
-## action id → Button, for headless tests. Static keys: board, ledger, boons,
-## close, build_open, zoom_in, zoom_out, recenter. Per-panel keys (added on open,
+## action id → Button, for headless tests. Static keys: board, close,
+## build_open, zoom_in, zoom_out, recenter. Per-panel keys (added on open,
 ## dropped on close): demolish, build:<id>, picker_close.
 var _action_buttons: Dictionary = {}
 
@@ -263,8 +268,12 @@ func _build_shell() -> void:
 	# villagers' _process work.
 	connect("visibility_changed", Callable(self, "_on_screen_visibility_changed"))
 
-## Floating UI over the village: title pill, ▶ Board, Ledger, Boons, Build,
-## zoom stack — same placement + signals as the old TownMapScreen overlay.
+## Floating UI over the village: ▶ Board, Build, zoom stack — same placement +
+## signals as the old TownMapScreen overlay. The title pill and the on-map
+## Ledger / Boons buttons were removed (the HUD top bar already shows the
+## settlement name; the ledger and Boons are reached via the ☰ menu) — the
+## ledger_requested / boons_requested signals survive as latent programmatic
+## routes Main still listens to (exercised by run_router_tests).
 func _build_overlay() -> void:
 	var overlay := Control.new()
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -272,23 +281,6 @@ func _build_overlay() -> void:
 	add_child(overlay)
 	## Top inset clears the persistent HUD top bar revealed above the view.
 	var overlay_top: float = float(UiKit.TOPBAR_RESERVE) + 18.0
-
-	# Title pill — the in-fiction settlement name, top-left.
-	var title := Label.new()
-	title.text = "🏡 " + _settlement_name()
-	UiKit.set_font_size(title, Typography.Role.TITLE)
-	title.add_theme_color_override("font_color", Palette.INK)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	var title_box := PanelContainer.new()
-	title_box.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT))
-	title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	title_box.offset_left = 18
-	title_box.offset_top = overlay_top
-	title_box.add_child(title)
-	overlay.add_child(title_box)
 
 	# "▶ Board" — top-right; emits board_requested (Main: live run → board,
 	# idle → Start Farming picker). Relabelled each refresh() from run state.
@@ -303,28 +295,6 @@ func _build_overlay() -> void:
 	overlay.add_child(board_btn)
 	_board_btn = board_btn
 	_action_buttons["board"] = board_btn
-
-	# "📋 Town Ledger" — top-left under the title pill.
-	var ledger_btn := Button.new()
-	ledger_btn.text = "📋 Town Ledger"
-	UiKit.style_button(ledger_btn, Palette.GOLD, 6, Typography.size(Typography.Role.SUBHEAD))
-	ledger_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	ledger_btn.offset_left = 18
-	ledger_btn.offset_top = overlay_top + 52.0
-	ledger_btn.connect("pressed", Callable(self, "_on_ledger_button"))
-	overlay.add_child(ledger_btn)
-	_action_buttons["ledger"] = ledger_btn
-
-	# "✨ Boons" — top-left under the Town Ledger button.
-	var boons_btn := Button.new()
-	boons_btn.text = "✨ Boons"
-	UiKit.style_button(boons_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
-	boons_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	boons_btn.offset_left = 18
-	boons_btn.offset_top = overlay_top + 100.0
-	boons_btn.connect("pressed", Callable(self, "_on_boons_button"))
-	overlay.add_child(boons_btn)
-	_action_buttons["boons"] = boons_btn
 
 	# Hidden close affordance — wired but NOT added to the overlay, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the
@@ -385,13 +355,6 @@ func _make_zoom_btn(glyph: String) -> Button:
 		if sb is StyleBoxFlat:
 			(sb as StyleBoxFlat).set_corner_radius_all(999)
 	return btn
-
-## The home settlement's display name from config, with the literal fallback
-## (same source StartFarmingModal._zone_name uses for the home zone).
-func _settlement_name() -> String:
-	var z: Dictionary = CartographyConfig.by_id("home")
-	var nm: String = String(z.get("name", ""))
-	return nm if nm != "" else "Hearthwood Vale"
 
 # ── ground paint ───────────────────────────────────────────────────────────────
 
@@ -1070,7 +1033,7 @@ func _do_demolish(id: String) -> void:
 ## from `_action_buttons` so tests + handlers never read a stale node. The
 ## STATIC overlay entries are preserved — only the per-panel keys
 ## (demolish / build:<id> / picker_close) are dropped.
-const _STATIC_ACTION_KEYS := ["close", "board", "ledger", "boons", "build_open", "zoom_in", "zoom_out", "recenter"]
+const _STATIC_ACTION_KEYS := ["close", "board", "build_open", "zoom_in", "zoom_out", "recenter"]
 func _close_panel() -> void:
 	if _panel != null:
 		_panel.queue_free()
@@ -1198,14 +1161,6 @@ func _viewport_size() -> Vector2:
 func _on_board_button() -> void:
 	_close_panel()
 	emit_signal("board_requested")
-
-func _on_ledger_button() -> void:
-	_close_panel()
-	emit_signal("ledger_requested")
-
-func _on_boons_button() -> void:
-	_close_panel()
-	emit_signal("boons_requested")
 
 ## The prominent 🔨 Build button: open the build picker for the first EMPTY
 ## plot — exactly what a tap on an empty pad resolves to (ordinal index ==

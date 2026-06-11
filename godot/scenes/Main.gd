@@ -63,37 +63,68 @@ var _last_threshold: int:
 		if _hud:
 			_hud._last_threshold = value
 
-var _town_screen: TownScreen            ## the real on-screen Town panel (M3e), lazily created
-var _menu_screen: MenuScreen            ## the settings/menu modal (M4f), lazily created
-var _inventory_screen: InventoryScreen  ## the dedicated Inventory ledger modal (M4g), lazily created
-var _townmap_screen: VillageScreen      ## the spatial village view on the Town route (Phase 1), lazily created
+## ── Cached overlay registry ──────────────────────────────────────────────────
+## The ONE place every lazily-built overlay screen/modal is cached. Each `_*_screen`
+## / `_*_modal` below is a get-only ACCESSOR that reads its node out of this dict by a
+## stable id — there is NO separate per-screen storage, so the cache lives in exactly
+## one structure. `_overlay_list()` (ESC/back close), the lazy `if _x == null` guards
+## in each `_open_*`, and any future text-scale / typography rebuild all iterate THIS
+## dict, so they can never drift out of lockstep: registering an overlay
+## (`_overlays["id"] = X.new()`) lands it in the close-list AND the rebuild for free,
+## and invalidation is a single loop —
+##   for k in _overlays.keys(): if is_instance_valid(_overlays[k]): _overlays[k].queue_free(); _overlays.erase(k)
+## which both frees the node and "nulls" the accessor (it reads the now-absent key as
+## null, so the lazy guard rebuilds it on next open). Get-only by design: an overlay can
+## ONLY be written through this dict, which is exactly what stops a newly-added member
+## from quietly becoming a fourth thing that has to be kept in sync.
+var _overlays: Dictionary = {}
+## the real on-screen Town panel (M3e), lazily created
+var _town_screen: TownScreen:
+	get: return _overlays.get("town") as TownScreen
+## the settings/menu modal (M4f), lazily created
+var _menu_screen: MenuScreen:
+	get: return _overlays.get("menu") as MenuScreen
+## the dedicated Inventory ledger modal (M4g), lazily created
+var _inventory_screen: InventoryScreen:
+	get: return _overlays.get("inventory") as InventoryScreen
+## the spatial village view on the Town route (Phase 1), lazily created
+var _townmap_screen: VillageScreen:
+	get: return _overlays.get("townmap") as VillageScreen
 # Secondary screens & modals. Each is typed via its preloaded script const (NOT a global
 # class_name) so the port never needs an --import pass to register it, and each is lazily
 # created on first open (assignment is always <Const>.new()).
 ## M10 — the achievements trophy modal.
 const AchievementsScreenScript := preload("res://scenes/AchievementsScreen.gd")
-var _achievements_screen: AchievementsScreenScript   ## lazily created
+var _achievements_screen: AchievementsScreenScript:
+	get: return _overlays.get("achievements") as AchievementsScreenScript
 ## M11 — the tile-collection browser modal.
 const TileCollectionScreenScript := preload("res://scenes/TileCollectionScreen.gd")
-var _tile_collection_screen: TileCollectionScreenScript   ## lazily created
+var _tile_collection_screen: TileCollectionScreenScript:
+	get: return _overlays.get("tile_collection") as TileCollectionScreenScript
 ## Story UI — the beat presenter (drains game.story.beat_queue) + the chronicle timeline.
 const StoryModalScript := preload("res://scenes/StoryModal.gd")
 const ChronicleScreenScript := preload("res://scenes/ChronicleScreen.gd")
-var _story_modal: StoryModalScript   ## lazily created
-var _chronicle_screen: ChronicleScreenScript   ## lazily created
+var _story_modal: StoryModalScript:
+	get: return _overlays.get("story") as StoryModalScript
+var _chronicle_screen: ChronicleScreenScript:
+	get: return _overlays.get("chronicle") as ChronicleScreenScript
 ## Townsfolk roster screen — NPC cards with bond bars.
 const TownsfolkScreenScript := preload("res://scenes/TownsfolkScreen.gd")
-var _townsfolk_screen: TownsfolkScreenScript   ## lazily created
+var _townsfolk_screen: TownsfolkScreenScript:
+	get: return _overlays.get("townsfolk") as TownsfolkScreenScript
 ## Cartography world-map screen — the 3-zone world view + alternate expedition entry.
 const CartographyScreenScript := preload("res://scenes/CartographyScreen.gd")
-var _cartography_screen: CartographyScreenScript   ## lazily created
+var _cartography_screen: CartographyScreenScript:
+	get: return _overlays.get("cartography") as CartographyScreenScript
 ## Recipe wiki — read-only reference of all craftable recipes.
 const RecipeWikiScreenScript := preload("res://scenes/RecipeWikiScreen.gd")
-var _recipe_wiki_screen: RecipeWikiScreenScript   ## lazily created
+var _recipe_wiki_screen: RecipeWikiScreenScript:
+	get: return _overlays.get("recipe_wiki") as RecipeWikiScreenScript
 ## Tutorial onboarding modal — the 6-step welcome shown once to new players + replayable via
 ## apply_deeplink("tutorial").
 const TutorialModalScript := preload("res://scenes/TutorialModal.gd")
-var _tutorial_modal: TutorialModalScript   ## lazily created
+var _tutorial_modal: TutorialModalScript:
+	get: return _overlays.get("tutorial") as TutorialModalScript
 ## Launch splash — the Hearthlands pixel-art title card (cottage-at-dusk vista, pulsing
 ## window glow) shown over everything at boot. Self-dismissing (tap / key / auto after a
 ## few seconds); frees itself and fires `finished`. Loaded via preload (NO class_name) so
@@ -103,7 +134,8 @@ var _splash                              ## CanvasLayer (SplashScreenScript), li
 ## Daily login-streak reward modal — shown once per fresh daily claim on launch (after the
 ## tutorial + story queue) and reachable on demand via apply_deeplink("daily")/"streak").
 const DailyStreakModalScript := preload("res://scenes/DailyStreakModal.gd")
-var _daily_modal: DailyStreakModalScript   ## lazily created
+var _daily_modal: DailyStreakModalScript:
+	get: return _overlays.get("daily") as DailyStreakModalScript
 ## The pending daily-streak claim from this launch's login_tick, or {} when none. login_tick
 ## fires EARLY in _ready (so the grant lands before any HUD refresh shows the coins/runes), but
 ## the modal is held back until the tutorial + story queue are clear so the three don't fight —
@@ -115,55 +147,77 @@ var _pending_daily_claim: Dictionary = {}
 ## Informational only — it grants nothing. Loaded via preload (NO class_name) so the port never
 ## needs an --import pass to register it (mirrors DailyStreakModal / every other lazy modal).
 const HarvestModalScript := preload("res://scenes/HarvestModal.gd")
-var _harvest_modal                       ## CanvasLayer (HarvestModalScript), lazily created
+## CanvasLayer (HarvestModalScript), lazily created
+var _harvest_modal: HarvestModalScript:
+	get: return _overlays.get("harvest") as HarvestModalScript
 ## Task C — "Start Farming" picker/confirm modal (the port's FARM/ENTER dialog). Opened from the
 ## town-map farm-pad tap (and apply_deeplink "startfarming"/"farm"); on Start it calls
 ## GameState.start_farm_run() and drops the player onto a fresh bounded board. Loaded via preload
 ## (NO class_name) so the port never needs an --import pass to register it (mirrors every lazy modal).
 const StartFarmingModalScript := preload("res://scenes/StartFarmingModal.gd")
-var _startfarming_modal                  ## CanvasLayer (StartFarmingModalScript), lazily created
+## CanvasLayer (StartFarmingModalScript), lazily created
+var _startfarming_modal: StartFarmingModalScript:
+	get: return _overlays.get("startfarming") as StartFarmingModalScript
 ## Castle contributions screen — donate resources toward the 3 Castle needs (a one-way sink).
 const CastleScreenScript := preload("res://scenes/CastleScreen.gd")
-var _castle_screen: CastleScreenScript   ## lazily created
+var _castle_screen: CastleScreenScript:
+	get: return _overlays.get("castle") as CastleScreenScript
 ## Decorations screen — build repeatable ornaments that GRANT the Influence currency.
 const DecorationsScreenScript := preload("res://scenes/DecorationsScreen.gd")
-var _decorations_screen: DecorationsScreenScript   ## lazily created
+var _decorations_screen: DecorationsScreenScript:
+	get: return _overlays.get("decorations") as DecorationsScreenScript
 ## Portal screen — summon magic tools with the Influence currency (build gate: coins + runes).
 const PortalScreenScript := preload("res://scenes/PortalScreen.gd")
-var _portal_screen: PortalScreenScript   ## lazily created
+var _portal_screen: PortalScreenScript:
+	get: return _overlays.get("portal") as PortalScreenScript
 ## T31 — Boons screen: the keeper-perk catalogs (Coexist/Drive Out boons bought with
 ## Embers / Core Ingots). Reachable from the ☰ menu, the town-map "✨ Boons" button, and the
 ## `boons` deeplink.
 const BoonsScreenScript := preload("res://scenes/BoonsScreen.gd")
-var _boons_screen: BoonsScreenScript   ## lazily created
+var _boons_screen: BoonsScreenScript:
+	get: return _overlays.get("boons") as BoonsScreenScript
 ## T31 — Keeper encounter modal: appears when a settlement is built up; the FINAL Coexist /
 ## Drive Out choice. Auto-triggered off a town/build event (and replayable via the `keeper`
 ## deeplink for QA).
 const KeeperModalScript := preload("res://scenes/KeeperModal.gd")
-var _keeper_modal: KeeperModalScript   ## lazily created
+var _keeper_modal: KeeperModalScript:
+	get: return _overlays.get("keeper") as KeeperModalScript
 ## T22 — Founder picker modal: appears when founding a discovered, unfounded settlement node on
 ## the world map; the player picks the settlement's biome. Opened from CartographyScreen's
 ## `found_requested` signal.
 const FounderModalScript := preload("res://scenes/FounderModal.gd")
-var _founder_modal: FounderModalScript   ## lazily created
+var _founder_modal: FounderModalScript:
+	get: return _overlays.get("founder") as FounderModalScript
 ## Charter screen — read-only reflection of the Hollow Pact's six terms against the story
 ## choice_log + flags.
 const CharterScreenScript := preload("res://scenes/CharterScreen.gd")
-var _charter_screen: CharterScreenScript   ## lazily created
+var _charter_screen: CharterScreenScript:
+	get: return _overlays.get("charter") as CharterScreenScript
 ## Quests screen — the deterministic 6-slot quest board + the almanac XP/tier track (claim
 ## quests for coins + XP; claim almanac tiers for coins/runes/tools).
 const QuestsScreenScript := preload("res://scenes/QuestsScreen.gd")
-var _quests_screen: QuestsScreenScript   ## lazily created
+var _quests_screen: QuestsScreenScript:
+	get: return _overlays.get("quests") as QuestsScreenScript
 ## M5-polish — leave-expedition confirm modal. Gates the HUD "🏠 Town" button when on an
 ## expedition (active_biome != farm): tapping Town shows this confirm first; only Confirm
 ## leaves. On the farm it never arms (Town opens directly).
 const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
-var _leaveboard_modal: LeaveBoardModalScript   ## lazily created
+var _leaveboard_modal: LeaveBoardModalScript:
+	get: return _overlays.get("leaveboard") as LeaveBoardModalScript
+## The puzzle board's top-left "◀ Leave" back button confirm — asks before ENDING a live farm RUN
+## early. On Confirm Main snapshots the run summary + opens the run-end HarvestModal (whose return
+## path runs close_season, making the next farm visit fresh). The farm-run counterpart of
+## LeaveBoardModal (expeditions). Loaded via preload (NO class_name) so the port never needs an
+## --import pass to register it.
+const LeaveFarmModalScript := preload("res://scenes/LeaveFarmModal.gd")
+var _leavefarm_modal: LeaveFarmModalScript:
+	get: return _overlays.get("leavefarm") as LeaveFarmModalScript
 ## M-infra — developer DEBUG overlay (the React `debug` modal's port). A dev-only QA tool:
 ## live state readout + a jump grid of every deep-link + quick-grant buttons. Reachable ONLY
 ## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React).
 const DebugModalScript := preload("res://scenes/DebugModal.gd")
-var _debug_modal: DebugModalScript   ## lazily created
+var _debug_modal: DebugModalScript:
+	get: return _overlays.get("debug") as DebugModalScript
 ## M5-polish — transient toast bubble (auto-dismissing parchment notification). Built once in
 ## _ready and reused for real one-off feedback (an order filled, a build done).
 const ToastScript := preload("res://scenes/Toast.gd")
@@ -380,7 +434,7 @@ func _ready() -> void:
 	#     deterministic. Placed BEFORE the tutorial/story/daily block so those auto-modals still
 	#     layer on top.
 	var board_live := _board_should_be_active()
-	board.set_active(board_live)
+	_set_board_active(board_live)
 	if not board_live:
 		if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
 			_open_townmap()
@@ -389,9 +443,9 @@ func _ready() -> void:
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
 	# finishes (via _on_tutorial_finished → _drain_story_queue). If the player has already
 	# seen the tutorial the queue is drained immediately as before.
-	if _dialogs_disabled():
-		# Web smoke / tests: suppress the first-launch auto-modals so the board comes up
-		# quiescent and the browser-history nav smoke is deterministic (see _dialogs_disabled).
+	if _narrative_dialogs_disabled():
+		# Dialogs off (every exported build by default; also the web nav smoke): suppress the
+		# first-launch auto-modals so the board comes up quiescent (see _narrative_dialogs_disabled).
 		pass
 	elif not game.tutorial_seen:
 		_open_tutorial()
@@ -475,22 +529,40 @@ func _build_hud_node() -> void:
 	_hud.tool_use_requested.connect(_on_tool_use_requested)
 	_hud.disarm_requested.connect(_disarm_tool)
 	_hud.menu_requested.connect(_open_menu)
+	# The board-page "◀ Leave" back button (shown only in board mode): Main confirms leaving the
+	# farming session and ends it with a summary (or, off a farm run, falls back to the town path).
+	_hud.back_requested.connect(_on_board_back)
 	# Re-inject board on a rebuild (it already exists then); on the first _ready call board is
 	# still null and gets injected at its creation site just below the _build_hud_node() call.
 	if board != null and is_instance_valid(board):
 		_hud.board = board
+		# A REBUILT HUD comes up with default chrome (nav visible, back button hidden); re-assert the
+		# board-page chrome so a Text Size re-scale mid-run doesn't flash the nav back over the board.
+		_hud.set_board_mode(_board_should_be_active())
 	_refresh_tools()   # M8d: populate the palette after the starter grant (and on every rebuild)
 
 func _layout() -> void:
 	var vp: Vector2 = get_viewport_rect().size
-	# The board sits in the FIXED band below the HUD's action panel (the React
-	# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top()
-	# is the band's top edge; the Board sizes its tiles to what remains above the
-	# status/orders strip + bottom nav.
-	board.board_top_px = _hud.board_top()
-	board.layout_for(vp)
-	var bw: Vector2 = board.board_pixel_size()
-	board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
+	if _hud.is_landscape(vp):
+		# LANDSCAPE (React BoardLayout @media landscape: "panel board" / "tools board"):
+		# the panel + tools dock to the LEFT column; the board fills the RIGHT column. The
+		# Board sizes its tiles to that column's width × height, then we centre it within it.
+		var rect: Dictionary = _hud.landscape_board_rect(vp)
+		board.board_top_px = float(rect["y"])
+		board.layout_for_rect(float(rect["w"]), float(rect["h"]))
+		var bw_l: Vector2 = board.board_pixel_size()
+		board.position = Vector2(
+			float(rect["x"]) + (float(rect["w"]) - bw_l.x) / 2.0,
+			float(rect["y"]) + (float(rect["h"]) - bw_l.y) / 2.0)
+	else:
+		# PORTRAIT — the board sits in the FIXED band below the HUD's action panel (the React
+		# BoardLayout portrait stack: hotbar → action panel → board). Hud.board_top() is the
+		# band's top edge; the Board sizes its tiles to what remains above the status/orders
+		# strip + bottom nav.
+		board.board_top_px = _hud.board_top()
+		board.layout_for(vp)
+		var bw: Vector2 = board.board_pixel_size()
+		board.position = Vector2((vp.x - bw.x) / 2.0, _hud.board_top())
 	_hud._layout_hud(vp)
 	_hud._refresh_status()
 	# The chain-progress track width tracks the box width, so re-measure + redraw
@@ -515,14 +587,27 @@ func _refresh_season_bar() -> void: if _hud: _hud._refresh_season_bar()
 func _refresh_chain_progress() -> void: if _hud: _hud._refresh_chain_progress()
 func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
 
+## Flip the board between PLAYABLE and inert, and keep the board-page chrome in lockstep. Every
+## board.set_active() call in Main routes through here (a single funnel) so the puzzle-board page
+## chrome can never drift from board state: when the board is the active surface the HUD hides the
+## bottom nav and shows the top-left "◀ Leave" back button (set_board_mode(true)); when it goes inert
+## (town is home) the nav returns and the back button hides. `_hud` is guarded so an early call (the
+## first _ready pass flips the board before some HUD wiring settles) is still safe.
+func _set_board_active(active: bool) -> void:
+	board.set_active(active)
+	if _hud != null and is_instance_valid(_hud):
+		_hud.set_board_mode(active)
+
 ## A real drag attempt fell short of the chain minimum: denied buzz + a small board
-## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake) + a status hint.
-func _on_chain_rejected(length: int) -> void:
+## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake). The "Chain of N —
+## need more" text hint was removed as board clutter; the buzz + shake remain the feedback.
+## Any prior status text is cleared so a stale success message can't linger after a miss.
+func _on_chain_rejected(_length: int) -> void:
 	if _audio != null:
 		_audio.play("buzz")
 	UiFx.shake(board, 3.0, 0.22)
 	if _status_label != null:
-		_status_label.text = "Chain of %d — need %d or more." % [length, board.min_chain]
+		_status_label.text = ""
 
 ## Switch between the five persistent bottom-nav VIEWS without stacking them. Tapping a
 ## nav tab routes here (NOT straight to the opener): we first hide any OTHER primary view
@@ -555,6 +640,13 @@ func _switch_primary_view(opener: String) -> void:
 			_portal_screen, _quests_screen, _boons_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
+	# Town-side views always use nav mode: hide the Leave back button and show the bottom nav,
+	# regardless of whether a run or expedition is live. Returning to the board via
+	# apply_deeplink("board") or the "▶ Board" button calls _set_board_active(true), which
+	# restores board-page chrome. Without this, loading the game with a stale #/townmap URL
+	# while a run is saved (web only) shows the Leave button over the town map.
+	if _hud != null and is_instance_valid(_hud):
+		_hud.set_board_mode(false)
 	call(opener)
 
 # ── HUD up-calls (the HUD emits intents; Main does the routing / tool dispatch) ──
@@ -641,18 +733,15 @@ func _install_overlay_dismiss(overlay) -> void:
 			UiKit.wire_backdrop_dismiss(child, Callable(overlay, "close"))
 			return
 
-## Every closable modal overlay, in ONE place. Both `_close_top_overlay` (ESC/back) and
-## `_other_overlay_visible` (the launch-modal settle, FIX 1) iterate this so they can never
-## drift apart. Includes nulls / not-yet-built screens — callers guard with is_instance_valid.
+## Every closable modal overlay, in ONE place — read straight off the `_overlays`
+## registry so this can never drift from the lazy `_open_*` guards or a text-scale
+## rebuild (all three iterate the same dict; adding a screen registers it once and is
+## covered everywhere). Both `_close_top_overlay` (ESC/back) and `_other_overlay_visible`
+## (the launch-modal settle, FIX 1) iterate this. Only the overlays that have actually
+## been opened are present (the registry fills lazily); callers still guard with
+## is_instance_valid before touching an entry.
 func _overlay_list() -> Array:
-	return [
-		_debug_modal, _story_modal, _tutorial_modal, _daily_modal, _harvest_modal, _leaveboard_modal,
-		_startfarming_modal,
-		_menu_screen, _town_screen, _inventory_screen, _townmap_screen, _achievements_screen,
-		_tile_collection_screen, _chronicle_screen, _townsfolk_screen, _cartography_screen,
-		_recipe_wiki_screen, _castle_screen, _decorations_screen, _portal_screen,
-		_charter_screen, _quests_screen, _boons_screen, _keeper_modal, _founder_modal,
-	]
+	return _overlays.values()
 
 ## Close the top-most visible modal overlay (highest CanvasLayer.layer). Returns true if
 ## one was closed. Used by ESC / Android-back so the player is never stuck in a modal.
@@ -700,6 +789,12 @@ func _settle_close_to_home_or_board() -> void:
 ## the player can always back out of any screen, regardless of the Close button.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		# The board tool dropdown (Hud) floats over the board rather than being a modal overlay,
+		# so close it first on Back/ESC before falling through to the overlay stack.
+		if _hud != null and is_instance_valid(_hud) and _hud.is_tool_dropdown_open():
+			_hud.close_tool_dropdown()
+			get_viewport().set_input_as_handled()
+			return
 		if _close_top_overlay():
 			get_viewport().set_input_as_handled()
 
@@ -712,7 +807,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## `confirmed`; on Cancel it just closes.
 func _open_leaveboard() -> void:
 	if _leaveboard_modal == null:
-		_leaveboard_modal = LeaveBoardModalScript.new()
+		_overlays["leaveboard"] = LeaveBoardModalScript.new()
 		add_child(_leaveboard_modal)
 		_leaveboard_modal.setup(game)
 		_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
@@ -747,6 +842,67 @@ func _on_leaveboard_closed() -> void:
 	if _router.current_modal() == ViewRouter.Modal.LEAVEBOARD:
 		_router.close_modal()
 
+# ── Leave the farming session (board-page back button) ─────────────────────────
+
+## The puzzle board's top-left "◀ Leave" back button was tapped. The board page hides the bottom
+## nav, so this is the single way out. Branch on what the board is showing:
+##   • A live FARM RUN → confirm ending the session (then end it with a summary; see _open_leavefarm).
+##   • An EXPEDITION (mine/harbor) → reuse the existing leave-expedition gate (_on_town_button shows
+##     the leave-board confirm, which abandons back to the farm).
+##   • Anything else live on the board (e.g. a boss fight on the farm) → _on_town_button opens Town,
+##     matching the old town-button behaviour. The button is only shown while the board is active.
+func _on_board_back() -> void:
+	if game != null and game.farm_run_active:
+		_open_leavefarm()
+	else:
+		_on_town_button()
+
+## Present the leave-farming-session confirm card, lazily creating + wiring it on first use. On
+## Confirm it emits `confirmed` → _on_leavefarm_confirmed (end the run with a summary); on Cancel it
+## just closes.
+func _open_leavefarm() -> void:
+	if _leavefarm_modal == null:
+		_overlays["leavefarm"] = LeaveFarmModalScript.new()
+		add_child(_leavefarm_modal)
+		_leavefarm_modal.setup(game)
+		_leavefarm_modal.connect("confirmed", Callable(self, "_on_leavefarm_confirmed"))
+		_leavefarm_modal.connect("closed", Callable(self, "_on_leavefarm_closed"))
+	_leavefarm_modal.open()
+	_router.open_modal(ViewRouter.Modal.LEAVEFARM)
+
+## The player confirmed leaving the farming session early. END THE RUN RIGHT HERE WITH A SUMMARY:
+## make the board inert FIRST (so no further chaining can re-trigger anything — same guard the
+## budget-exhaustion run-end uses), build the run-end summary dict (the run is still live, so the
+## season/budget/stores read true), then present the run-end HarvestModal. Its "Return to Town" CTA
+## (or any dismiss — see _on_harvest_closed) runs close_season(), which banks the return bonus and
+## CLEARS the run so the next farm visit starts fresh. close_season is idempotent, so dismiss
+## ordering can never double-grant.
+func _on_leavefarm_confirmed() -> void:
+	if game == null or not game.farm_run_active:
+		return
+	# Board inert before the summary shows (mirrors the budget-exhaustion path's BUG I1 guard).
+	_set_board_active(false)
+	# The note_farm_turn()-shaped recap dict the HarvestModal header reads (season + a year's budget
+	# + the current stores). The rich dashboard is pulled separately from live telemetry inside
+	# open_for_run_end (game.build_run_summary()), so this only feeds the header/recap lines.
+	var summary: Dictionary = {
+		"ended": true,
+		"season": game.current_season_name(),
+		"budget": game.farm_turn_budget(),
+		"coins": game.coins,
+		"runes": game.runes,
+	}
+	_open_harvest_run_end(summary)
+
+## The leave-farming confirm card was dismissed (Cancel, or after Confirm closed it). Hide + reset
+## the router. On Confirm, _on_leavefarm_confirmed already opened the run-end HarvestModal (a higher
+## layer), so only reset the router when LEAVEFARM is still the active modal (the Cancel path).
+func _on_leavefarm_closed() -> void:
+	if _leavefarm_modal != null:
+		_leavefarm_modal.visible = false
+	if _router.current_modal() == ViewRouter.Modal.LEAVEFARM:
+		_router.close_modal()
+
 # ── Toast (M5-polish) ─────────────────────────────────────────────────────────
 
 ## Public helper — show a transient toast bubble with `text`. Safe to call before the toast
@@ -763,7 +919,7 @@ func show_toast(text: String) -> void:
 ## Open the town panel, lazily creating + wiring it on first use.
 func _open_town() -> void:
 	if _town_screen == null:
-		_town_screen = TownScreen.new()
+		_overlays["town"] = TownScreen.new()
 		add_child(_town_screen)
 		_town_screen.setup(game)
 		_town_screen.connect("closed", Callable(self, "_on_town_closed"))
@@ -796,7 +952,7 @@ func _on_town_closed() -> void:
 ## truth), mirroring how the Town screen routes "Shoo rats" back to Main.
 func _open_menu() -> void:
 	if _menu_screen == null:
-		_menu_screen = MenuScreen.new()
+		_overlays["menu"] = MenuScreen.new()
 		add_child(_menu_screen)
 		_menu_screen.setup(game)
 		_menu_screen.connect("closed", Callable(self, "_on_menu_closed"))
@@ -830,7 +986,7 @@ func _on_menu_navigate(deeplink_id: String) -> void:
 ## time, so the ledger always reflects the latest stockpile.
 func _open_inventory() -> void:
 	if _inventory_screen == null:
-		_inventory_screen = InventoryScreen.new()
+		_overlays["inventory"] = InventoryScreen.new()
 		add_child(_inventory_screen)
 		_inventory_screen.setup(game)
 		_inventory_screen.connect("closed", Callable(self, "_on_inventory_closed"))
@@ -856,7 +1012,7 @@ func _on_inventory_closed() -> void:
 ## reflects the current state.
 func _open_townmap() -> void:
 	if _townmap_screen == null:
-		_townmap_screen = VillageScreen.new()
+		_overlays["townmap"] = VillageScreen.new()
 		add_child(_townmap_screen)
 		_townmap_screen.setup(game)
 		_townmap_screen.connect("closed", Callable(self, "_on_townmap_closed"))
@@ -869,8 +1025,9 @@ func _open_townmap() -> void:
 		# the deep-link: hide the view + clear the nav.
 		_townmap_screen.connect("board_requested", Callable(self, "_on_townmap_board_requested"))
 		# Task C: tapping the farm board pad opens the "Start Farming" picker (the FARM/ENTER
-		# dialog) — the player's entry point into a bounded run from the town home.
-		_townmap_screen.connect("start_farming_requested", Callable(self, "_open_startfarming"))
+		# dialog) — the player's entry point into a bounded run from the town home. When a run
+		# is ALREADY live this resumes the board instead (see _on_townmap_start_farming).
+		_townmap_screen.connect("start_farming_requested", Callable(self, "_on_townmap_start_farming"))
 		# review-3: the "📋 Town Ledger" overlay button opens the TownScreen ledger. Route it
 		# through apply_deeplink("town") → _switch_primary_view("_open_town"), so the town MAP
 		# (a sibling primary) is hidden first and the ledger reads as a full-brightness view.
@@ -922,7 +1079,7 @@ func _on_townmap_boons_requested() -> void:
 ## time, so the trophy list always reflects current progress.
 func _open_achievements() -> void:
 	if _achievements_screen == null:
-		_achievements_screen = AchievementsScreenScript.new()
+		_overlays["achievements"] = AchievementsScreenScript.new()
 		add_child(_achievements_screen)
 		_achievements_screen.setup(game)
 		_achievements_screen.connect("closed", Callable(self, "_on_achievements_closed"))
@@ -942,7 +1099,7 @@ func _on_achievements_closed() -> void:
 ## so the gallery always reflects the current wired tile set.
 func _open_tiles() -> void:
 	if _tile_collection_screen == null:
-		_tile_collection_screen = TileCollectionScreenScript.new()
+		_overlays["tile_collection"] = TileCollectionScreenScript.new()
 		add_child(_tile_collection_screen)
 		_tile_collection_screen.setup(game)
 		_tile_collection_screen.connect("closed", Callable(self, "_on_tiles_closed"))
@@ -962,7 +1119,7 @@ func _on_tiles_closed() -> void:
 ## always reflects the beats fired so far.
 func _open_chronicle() -> void:
 	if _chronicle_screen == null:
-		_chronicle_screen = ChronicleScreenScript.new()
+		_overlays["chronicle"] = ChronicleScreenScript.new()
 		add_child(_chronicle_screen)
 		_chronicle_screen.setup(game)
 		_chronicle_screen.connect("closed", Callable(self, "_on_chronicle_closed"))
@@ -991,7 +1148,7 @@ func _on_chronicle_view_charter() -> void:
 ## reflects the current bond + worker state.
 func _open_townsfolk() -> void:
 	if _townsfolk_screen == null:
-		_townsfolk_screen = TownsfolkScreenScript.new()
+		_overlays["townsfolk"] = TownsfolkScreenScript.new()
 		add_child(_townsfolk_screen)
 		_townsfolk_screen.setup(game)
 		_townsfolk_screen.connect("closed", Callable(self, "_on_townsfolk_closed"))
@@ -1017,7 +1174,7 @@ func _on_townsfolk_closed() -> void:
 ## runs game.travel_to + the biome/boss/toast follow-up.
 func _open_cartography() -> void:
 	if _cartography_screen == null:
-		_cartography_screen = CartographyScreenScript.new()
+		_overlays["cartography"] = CartographyScreenScript.new()
 		add_child(_cartography_screen)
 		_cartography_screen.setup(game)
 		_cartography_screen.connect("closed", Callable(self, "_on_cartography_closed"))
@@ -1045,7 +1202,7 @@ func _on_cartography_closed() -> void:
 ## stockpile (same handler the Town/Townmap screens use after any state-changing action).
 func _open_recipes() -> void:
 	if _recipe_wiki_screen == null:
-		_recipe_wiki_screen = RecipeWikiScreenScript.new()
+		_overlays["recipe_wiki"] = RecipeWikiScreenScript.new()
 		add_child(_recipe_wiki_screen)
 		_recipe_wiki_screen.setup(game)
 		_recipe_wiki_screen.connect("closed", Callable(self, "_on_recipes_closed"))
@@ -1071,7 +1228,7 @@ func _on_recipes_closed() -> void:
 ## inventory each time, so the needs list always reflects current progress.
 func _open_castle() -> void:
 	if _castle_screen == null:
-		_castle_screen = CastleScreenScript.new()
+		_overlays["castle"] = CastleScreenScript.new()
 		add_child(_castle_screen)
 		_castle_screen.setup(game)
 		_castle_screen.connect("closed", Callable(self, "_on_castle_closed"))
@@ -1101,7 +1258,7 @@ func _on_castle_closed() -> void:
 ## always reflect current affordability + built counts.
 func _open_decorations() -> void:
 	if _decorations_screen == null:
-		_decorations_screen = DecorationsScreenScript.new()
+		_overlays["decorations"] = DecorationsScreenScript.new()
 		add_child(_decorations_screen)
 		_decorations_screen.setup(game)
 		_decorations_screen.connect("closed", Callable(self, "_on_decorations_closed"))
@@ -1131,7 +1288,7 @@ func _on_decorations_closed() -> void:
 ## time, so the screen always reflects current build state + affordability.
 func _open_portal() -> void:
 	if _portal_screen == null:
-		_portal_screen = PortalScreenScript.new()
+		_overlays["portal"] = PortalScreenScript.new()
 		add_child(_portal_screen)
 		_portal_screen.setup(game)
 		_portal_screen.connect("closed", Callable(self, "_on_portal_closed"))
@@ -1161,7 +1318,7 @@ func _on_portal_closed() -> void:
 ## re-reads the live balances + owned set each time.
 func _open_boons() -> void:
 	if _boons_screen == null:
-		_boons_screen = BoonsScreenScript.new()
+		_overlays["boons"] = BoonsScreenScript.new()
 		add_child(_boons_screen)
 		_boons_screen.setup(game)
 		_boons_screen.connect("closed", Callable(self, "_on_boons_closed"))
@@ -1190,7 +1347,7 @@ func _open_keeper(type: String) -> void:
 	if not KeeperConfig.is_enabled():
 		return
 	if _keeper_modal == null:
-		_keeper_modal = KeeperModalScript.new()
+		_overlays["keeper"] = KeeperModalScript.new()
 		add_child(_keeper_modal)
 		_keeper_modal.setup(game)
 		_keeper_modal.connect("resolved", Callable(self, "_on_keeper_resolved"))
@@ -1227,6 +1384,12 @@ func _on_keeper_closed() -> void:
 func _maybe_trigger_keeper() -> void:
 	if game == null:
 		return
+	# Dialogs-off parity with the sibling auto-modals (tutorial / story / daily): suppresses the
+	# keeper encounter CONTINUOUSLY, not just at boot — so on a shipped build (off by default) it
+	# never auto-pops. The encounter stays ELIGIBLE (keeper_encounter_ready is unchanged) and fires
+	# the moment dialogs are re-enabled. Explicit apply_deeplink("keeper") still opens it for QA.
+	if _narrative_dialogs_disabled():
+		return
 	# Don't stack the encounter on top of an already-open keeper modal or a story beat.
 	if _keeper_modal != null and _keeper_modal.visible:
 		return
@@ -1242,7 +1405,7 @@ func _maybe_trigger_keeper() -> void:
 ## READ-ONLY (it never mutates GameState), so open() just re-reads the live story state.
 func _open_charter() -> void:
 	if _charter_screen == null:
-		_charter_screen = CharterScreenScript.new()
+		_overlays["charter"] = CharterScreenScript.new()
 		add_child(_charter_screen)
 		_charter_screen.setup(game)
 		_charter_screen.connect("closed", Callable(self, "_on_charter_closed"))
@@ -1264,7 +1427,7 @@ func _on_charter_closed() -> void:
 ## always reflects current progress + claim availability.
 func _open_quests() -> void:
 	if _quests_screen == null:
-		_quests_screen = QuestsScreenScript.new()
+		_overlays["quests"] = QuestsScreenScript.new()
 		add_child(_quests_screen)
 		_quests_screen.setup(game)
 		_quests_screen.connect("closed", Callable(self, "_on_quests_closed"))
@@ -1308,7 +1471,7 @@ func _on_quests_closed() -> void:
 ## still emits `finished` → _on_tutorial_finished marks seen (idempotent) + saves.
 func _open_tutorial() -> void:
 	if _tutorial_modal == null:
-		_tutorial_modal = TutorialModalScript.new()
+		_overlays["tutorial"] = TutorialModalScript.new()
 		add_child(_tutorial_modal)
 		_tutorial_modal.setup(game)
 		_tutorial_modal.connect("finished", Callable(self, "_on_tutorial_finished"))
@@ -1360,10 +1523,10 @@ func _on_tutorial_finished() -> void:
 func _maybe_show_daily() -> void:
 	if _pending_daily_claim.is_empty():
 		return
-	# review-5 — same continuous suppression as _drain_story_queue (the reward itself was
-	# already granted by login_tick; only the celebratory card is suppressed). Without this
-	# the card popped mid-session the moment a story modal closed during scripted QA.
-	if _dialogs_disabled():
+	# Same continuous suppression as _drain_story_queue (the reward itself was already granted by
+	# login_tick; only the celebratory card is suppressed). On a shipped build (dialogs off by
+	# default) the card never shows; the streak reward is unaffected.
+	if _narrative_dialogs_disabled():
 		return
 	# Don't fight the tutorial or a story beat — retry once they're dismissed.
 	if _tutorial_modal != null and _tutorial_modal.visible:
@@ -1379,7 +1542,7 @@ func _maybe_show_daily() -> void:
 ## before the HUD rendered); this just presents the celebratory card.
 func _open_daily(day: int, reward: Dictionary) -> void:
 	if _daily_modal == null:
-		_daily_modal = DailyStreakModalScript.new()
+		_overlays["daily"] = DailyStreakModalScript.new()
 		add_child(_daily_modal)
 		_daily_modal.setup(game)
 		_daily_modal.connect("collected", Callable(self, "_on_daily_collected"))
@@ -1410,7 +1573,7 @@ func _on_daily_closed() -> void:
 ## (the fresh Spring cycle already began in state); "Continue" just dismisses it.
 func _open_harvest(summary: Dictionary) -> void:
 	if _harvest_modal == null:
-		_harvest_modal = HarvestModalScript.new()
+		_overlays["harvest"] = HarvestModalScript.new()
 		add_child(_harvest_modal)
 		_harvest_modal.setup(game)
 		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
@@ -1422,7 +1585,7 @@ func _open_harvest(summary: Dictionary) -> void:
 ## re-wiring it, and against a second run-end re-connecting) so close_season fires exactly once.
 func _open_harvest_run_end(summary: Dictionary) -> void:
 	if _harvest_modal == null:
-		_harvest_modal = HarvestModalScript.new()
+		_overlays["harvest"] = HarvestModalScript.new()
 		add_child(_harvest_modal)
 		_harvest_modal.setup(game)
 		_harvest_modal.connect("closed", Callable(self, "_on_harvest_closed"))
@@ -1445,7 +1608,13 @@ func _open_harvest_run_end(summary: Dictionary) -> void:
 func _on_harvest_closed() -> void:
 	if _harvest_modal != null:
 		_harvest_modal.visible = false
-	if game != null and game.farm_run_active and game.farm_run_turns_left == 0:
+	# Complete the return whenever a RUN-END summary is dismissed while the run is still live —
+	# whether it ended on its turn budget (farm_run_turns_left == 0) OR was ended EARLY by the
+	# board's "◀ Leave" back button (turns_left > 0). is_run_end() distinguishes the run-end modal
+	# from the legacy informational harvest recap (which never closes a run). close_season is
+	# idempotent, so the CTA path — where it already ran (farm_run_active is now false) — is skipped.
+	if game != null and game.farm_run_active \
+			and _harvest_modal != null and _harvest_modal.is_run_end():
 		# A run-end dismiss bypassed the return CTA → complete the return so close_season runs.
 		_on_season_return()
 
@@ -1455,9 +1624,19 @@ func _on_harvest_closed() -> void:
 ## (mirrors _open_leaveboard). The modal emits start_requested(selected, use_fertilizer) on Start
 ## (→ _on_start_farming, which calls GameState.start_farm_run) and `closed` on Cancel/dismiss
 ## (→ _on_startfarming_closed). Opened from the town-map farm-pad tap + apply_deeplink.
+## The farm pad on the town map was tapped. If a bounded run / non-farm expedition / boss
+## board is ALREADY live, RESUME it (the board deep-link) instead of opening the Start-Farming
+## picker — a second start_farm_run would fail with `already_running` and dump the player back
+## to town (the modal closes over the still-open town map). Mirrors _on_townmap_board_requested.
+func _on_townmap_start_farming() -> void:
+	if game != null and _board_should_be_active():
+		apply_deeplink("board")
+		return
+	_open_startfarming()
+
 func _open_startfarming() -> void:
 	if _startfarming_modal == null:
-		_startfarming_modal = StartFarmingModalScript.new()
+		_overlays["startfarming"] = StartFarmingModalScript.new()
 		add_child(_startfarming_modal)
 		_startfarming_modal.setup(game)
 		_startfarming_modal.connect("start_requested", Callable(self, "_on_start_farming"))
@@ -1498,6 +1677,12 @@ func _on_start_farming(selected: Array, use_fertilizer: bool) -> void:
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_chain_progress()
+	# WEB BOUNCE FIX: we jumped straight to the board from a STACKED overlay state (town map
+	# #/map  ➜  picker #/startfarming). _sync_history's close-to-board step issues a single
+	# history.back(), which would pop #/startfarming and land on the still-present #/map — a
+	# popstate then reopens the town map ("blink, then bounce back to town"). Collapse the URL
+	# to #/board now so that back() never fires into a stale modal entry.
+	_normalize_history_to_board()
 	SaveManager.save(game)
 
 ## Map a start_farm_run failure reason to a player-facing toast string. (Batch 9 C6: the
@@ -1512,7 +1697,7 @@ func _start_farm_fail_text(reason: String) -> String:
 ## reopen the town. A confirming toast reports the return bonus.
 func _on_season_return() -> void:
 	var summary: Dictionary = game.close_season()
-	board.set_active(false)
+	_set_board_active(false)
 	board.set_tile_pool(game.active_tile_pool())
 	# T30 — board-preserve: when close_season reports preserve_board (a Silo/Barn
 	# board_preserve_biomes channel covering the run's biome), KEEP the existing board grid across
@@ -1543,7 +1728,7 @@ func _on_season_return() -> void:
 ## — it's deep-link-only (apply_deeplink("debug")), matching the hidden React debug modal.
 func _open_debug() -> void:
 	if _debug_modal == null:
-		_debug_modal = DebugModalScript.new()
+		_overlays["debug"] = DebugModalScript.new()
 		add_child(_debug_modal)
 		_debug_modal.setup(game, self)
 		_debug_modal.connect("closed", Callable(self, "_on_debug_closed"))
@@ -1658,7 +1843,7 @@ func _on_cartography_found(node_id: String) -> void:
 ## Open the founder picker for `zone_id`, lazily creating + wiring it on first use.
 func _open_founder(zone_id: String) -> void:
 	if _founder_modal == null:
-		_founder_modal = FounderModalScript.new()
+		_overlays["founder"] = FounderModalScript.new()
 		add_child(_founder_modal)
 		_founder_modal.setup(game)
 		_founder_modal.connect("founded", Callable(self, "_on_founded"))
@@ -1718,12 +1903,11 @@ func _drain_achievement_toasts() -> void:
 func _drain_story_queue() -> void:
 	if game == null:
 		return
-	# review-5 — QA/test flag parity with React: isDialogsDisabled() suppresses story beats
-	# CONTINUOUSLY (render-time), not just at boot. Without this, a beat triggered mid-run
-	# (e.g. the arrival beat on the first chain) still popped over scripted QA sessions.
-	# Beats stay queued exactly like React's render-null path; players are unaffected
-	# (_dialogs_disabled is web-only and false unless the page set the hook before boot).
-	if _dialogs_disabled():
+	# Parity with React's isDialogsDisabled(): suppresses story beats CONTINUOUSLY (render-time),
+	# not just at boot, so a beat triggered mid-run (e.g. the arrival beat on the first chain)
+	# doesn't pop on a shipped build. Beats stay queued exactly like React's render-null path and
+	# present the moment dialogs are re-enabled; off by default in every exported build.
+	if _narrative_dialogs_disabled():
 		return
 	if game.story.beat_queue.is_empty():
 		return
@@ -1731,7 +1915,7 @@ func _drain_story_queue() -> void:
 	if _story_modal != null and _story_modal.visible:
 		return
 	if _story_modal == null:
-		_story_modal = StoryModalScript.new()
+		_overlays["story"] = StoryModalScript.new()
 		add_child(_story_modal)
 		_story_modal.setup(game)
 		_story_modal.connect("advanced", Callable(self, "_on_story_advanced"))
@@ -1837,7 +2021,7 @@ func apply_deeplink(id: String) -> bool:
 			# expedition, arm() shows the real biome-specific prompt; on the farm we PREVIEW
 			# (the mine prompt) so QA / the sanity-capture can see the card from any state.
 			if _leaveboard_modal == null:
-				_leaveboard_modal = LeaveBoardModalScript.new()
+				_overlays["leaveboard"] = LeaveBoardModalScript.new()
 				add_child(_leaveboard_modal)
 				_leaveboard_modal.setup(game)
 				_leaveboard_modal.connect("confirmed", Callable(self, "_on_leaveboard_confirmed"))
@@ -1849,6 +2033,10 @@ func apply_deeplink(id: String) -> bool:
 			_open_debug()
 		ViewRouter.Modal.STARTFARMING:
 			_open_startfarming()
+		ViewRouter.Modal.LEAVEFARM:
+			# QA / sanity-capture preview of the leave-farming-session confirm card. The button that
+			# normally opens it only shows mid-run, so this lets the card be previewed from any state.
+			_open_leavefarm()
 		_:
 			# NONE / board — close EVERY open overlay first (overlays can stack: the
 			# tutorial layers over a deep-linked screen, the menu over the town map), then
@@ -1864,12 +2052,12 @@ func apply_deeplink(id: String) -> bool:
 			# _on_start_farming calls apply_deeplink("board") only AFTER start_farm_run
 			# set farm_run_active = true, so that path correctly falls through below.
 			if game != null and not _board_should_be_active():
-				board.set_active(false)
+				_set_board_active(false)
 				_open_townmap()
 				return true
 			# The board IS playable → set the gate consistently via the helper (covers
 			# all three live cases).
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 	return true
 
 ## Close every open overlay (screens + modals), topmost-first. Each pass of
@@ -1897,6 +2085,33 @@ func _dialogs_disabled() -> bool:
 	if not OS.has_feature("web"):
 		return false
 	return bool(JavaScriptBridge.eval("!!window.__hearthDisableDialogs", true))
+
+## Whether the NARRATIVE auto-dialogs are suppressed. These are the automatic pop-ups the
+## game raises on its own — the welcome TUTORIAL, the STORY-BEAT modals, the DAILY-streak
+## reward card, and the KEEPER encounter. (NOT the launch splash or the town-home auto-open,
+## which stay on _dialogs_disabled() so a shipped build still comes up looking right; and NOT
+## explicit deep-links — apply_deeplink("tutorial"|"story"|"daily"|"keeper") always opens
+## regardless of this flag.)
+##
+## They are OFF BY DEFAULT in every EXPORTED build — desktop AND web, including the GitHub
+## Pages deploy — mirroring the React app's isDialogsDisabled(), which defaults true wherever
+## it ships. The editor + headless test/capture harness run the EDITOR binary (no "template"
+## feature), so there they stay ON: the suites that integration-test these modals
+## (run_tutorial_tests / run_story_ui_tests / run_boons_tests / run_visual_tests …) and every
+## tools/*_capture.gd keep working with no changes.
+##
+## Overrides on a shipped build: on web set `window.__hearthDisableDialogs = false` before
+## boot to re-enable (or `= true` to force off); on any export set the env var
+## `HEARTH_DIALOGS=on` to re-enable (`=off` forces off). Absent any override, the result is
+## simply "is this an exported build?".
+func _narrative_dialogs_disabled() -> bool:
+	if OS.has_feature("web"):
+		var hook: Variant = JavaScriptBridge.eval("window.__hearthDisableDialogs", true)
+		if hook is bool:
+			return hook
+	if OS.has_environment("HEARTH_DIALOGS"):
+		return OS.get_environment("HEARTH_DIALOGS").to_lower() != "on"
+	return OS.has_feature("template")
 
 ## Wire the browser History API to the modal nav. Called from _ready ONLY on a web
 ## build. Registers a popstate listener (Back/Forward → apply_deeplink), then collapses
@@ -1965,6 +2180,18 @@ func _sync_history() -> void:
 	else:
 		JavaScriptBridge.eval("history.pushState({}, '', '#/%s');" % id, true)
 
+## Collapse the web history/URL straight to #/board, bypassing _sync_history's fragile
+## "close one screen → history.back()" step. Used when the game jumps to the board from a
+## state where MORE THAN ONE overlay was pushed (town map → start-farming picker → Start):
+## a single back() would land on the intermediate #/map and bounce the player back to town.
+## replaceState fires no popstate, and stamping _last_synced_modal = NONE means the next
+## _sync_history sees no change and issues no back(). Web-only (no-op until _history_ready).
+func _normalize_history_to_board() -> void:
+	if not _history_ready:
+		return
+	JavaScriptBridge.eval("history.replaceState({}, '', '#/board');", true)
+	_last_synced_modal = ViewRouter.Modal.NONE
+
 func _process(_delta: float) -> void:
 	if _history_ready:
 		_sync_history()
@@ -2029,37 +2256,21 @@ func _reapply_text_scale() -> void:
 	# Site-specific extra: restore the active bottom-nav tab captured above (a fresh HUD reset it).
 	_hud.set_nav_current(prev_nav)
 	_hud._refresh_nav()
-	# (2) Invalidate cached screens/modals (EXCEPT the open menu) so each rebuilds at the new scale
-	# on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild. The
-	# list values are freed for safety, but we must also null each member explicitly (nulling a
-	# local array slot would NOT null the member), so the lazy guards actually re-trigger.
-	for o in _overlay_list():
-		if o != null and o != _menu_screen and is_instance_valid(o) and o.has_method("queue_free"):
+	# (2) Invalidate every cached screen/modal EXCEPT the open menu so each rebuilds at the new
+	# scale on its next open — the existing `if _x == null:` lazy-create guards handle the rebuild.
+	# Every overlay lives in the single `_overlays` registry, so this is ONE loop: free the node and
+	# erase its key, which "nulls" the get-only member accessor (it reads the now-absent key back as
+	# null), so the lazy guard actually re-triggers. There is no hand-maintained per-member null
+	# block to drift from the close-list. The MENU is open during this callback, so freeing it
+	# mid-signal would crash — skip it; its body rebuilds on its next open and its button label is
+	# refreshed live by the caller. keys() is a snapshot, so erasing while iterating it is safe.
+	for k in _overlays.keys():
+		if k == "menu":
+			continue
+		var o = _overlays[k]
+		if is_instance_valid(o) and o.has_method("queue_free"):
 			o.queue_free()
-	_town_screen = null
-	_inventory_screen = null
-	_townmap_screen = null
-	_achievements_screen = null
-	_tile_collection_screen = null
-	_chronicle_screen = null
-	_townsfolk_screen = null
-	_cartography_screen = null
-	_recipe_wiki_screen = null
-	_castle_screen = null
-	_decorations_screen = null
-	_portal_screen = null
-	_charter_screen = null
-	_quests_screen = null
-	_boons_screen = null
-	_keeper_modal = null
-	_founder_modal = null
-	_story_modal = null
-	_tutorial_modal = null
-	_daily_modal = null
-	_harvest_modal = null
-	_leaveboard_modal = null
-	_startfarming_modal = null
-	_debug_modal = null
+		_overlays.erase(k)
 
 ## M4f — the New Game button emits `new_game_requested`; Main wipes the save and restarts from a
 ## fresh run. Closing the menu first, then reload_current_scene() re-runs _ready, which
@@ -2141,7 +2352,7 @@ func _on_town_changed() -> void:
 	# cartography, boss start, leave-expedition return): entering the mine/harbor or starting a boss
 	# makes the board LIVE, and returning to the farm with no run makes it INERT again. Set AFTER
 	# the board has been re-pooled/regenerated above so the live board is the correct biome.
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -2477,7 +2688,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
@@ -2503,7 +2714,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 		else:
 			# TIDE FLIP — the surface catch changed with the water; reseed the bottom row.
 			if bool(h_res.get("tide_flipped", false)):
@@ -2537,7 +2748,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# so the player can't keep chaining (and re-popping the modal) no matter HOW the modal
 			# is dismissed. The run is still in its ended-but-unclosed state here (farm_run_active
 			# is true, farm_run_turns_left == 0); close_season runs only on the return path.
-			board.set_active(false)
+			_set_board_active(false)
 			_open_harvest_run_end(farm_res)
 		elif bool(farm_res.get("harvest", false)):
 			# A2 — a full year wrapped on the LEGACY always-on cycle (no bounded run): surface the
@@ -2829,7 +3040,7 @@ func _enter_boss_fight() -> Dictionary:
 	board.set_min_chain(game.boss_min_chain())
 	# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so the board must be
 	# made LIVE for the fight (the gate follows boss state via _board_should_be_active()).
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	if _audio != null:
 		_audio.play("tier_up")
 	_refresh_boss()
@@ -2877,7 +3088,7 @@ func _apply_boss_resolution(res: Dictionary) -> void:
 	board.set_min_chain(Constants.MIN_CHAIN)
 	board.set_boss_modifier_state({})
 	board.set_tile_pool(game.active_tile_pool())
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	if bool(res.get("defeated", false)):
 		var coins_won: int = int(res.get("reward_coins", 0))
 		var runes_won: int = int(res.get("reward_runes", 0))
@@ -3115,7 +3326,7 @@ func _enter_mine_visuals() -> void:
 	# BUG C1 — the dev-key mine entry is a playable-board transition too, so follow the gate (the
 	# real entry path routes through _on_town_changed, which sets it; this keeps the keyboard
 	# fallback honest so the mine board it just built is actually chainable).
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	# M4d: low, slow whoosh on the biome flip INTO the mine (keyboard M path). Keep
 	# the tracker in sync so _on_town_changed doesn't re-whoosh on its next refresh.
 	if _audio != null and game.is_in_mine() and not _last_in_mine:

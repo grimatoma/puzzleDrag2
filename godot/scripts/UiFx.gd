@@ -38,6 +38,8 @@ const ICON_POP_SCALE := 1.18    ## nav icon pop peak scale
 const PRESS_TIME := 0.06        ## button press-down shrink time
 const PRESS_SCALE := 0.95       ## button press-down scale
 const RELEASE_TIME := 0.12      ## button release spring-back time
+const SECTION_OPEN := 0.22      ## accordion details height-grow (expand)
+const SECTION_CLOSE := 0.17     ## accordion details height-collapse (close)
 
 ## True when animations should actually play. Headless display servers (the unit-test
 ## sweep) get the end state instantly.
@@ -58,9 +60,11 @@ static func is_active() -> bool:
 ## in-flight open tween first and is a complete no-op headless / when disabled (the
 ## overlay just appears at full opacity, exactly as before this kit existed).
 ##
-## Awaits ONE frame before tweening so first-open layout has resolved (pivot_offset
-## needs real sizes); the initial transparent state is snapped immediately so there is
-## no one-frame flash of the unanimated overlay.
+## The tween starts IMMEDIATELY (snap + tween in the same processing step) so the
+## fade is in progress when the first frame renders — avoiding the one-frame blank
+## parchment backdrop flash. The await that follows is only to correct scale pivots
+## once layout sizes are available; if the overlay is closed during the await the
+## tween is killed and state is restored.
 static func animate_overlay_open(overlay: CanvasLayer) -> void:
 	if overlay == null or not overlay.is_inside_tree():
 		return
@@ -85,27 +89,18 @@ static func animate_overlay_open(overlay: CanvasLayer) -> void:
 	# translucent modal scrims fade in as scrims should.
 	if scrim != null and (scrim as ColorRect).color.a >= 0.999:
 		scrim = null
-	# Kill a previous open tween (a rapid re-open mid-animation) and snap targets
-	# transparent NOW so the pre-tween frame doesn't flash the finished overlay.
+	# Kill a previous open tween (a rapid re-open mid-animation), snap targets
+	# transparent, and start the tween in the SAME processing step. Starting before
+	# any await means the tween is already running when the first frame renders, so
+	# the frame shows the fade in progress rather than a blank parchment backdrop.
 	_kill_meta_tween(overlay, "_uifx_open_tween")
 	if scrim != null:
 		scrim.modulate.a = 0.0
 	for c in cards:
-		(c as Control).modulate.a = 0.0
-	# One frame so container layout resolves (sizes → correct pivots on first open).
-	var tree := overlay.get_tree()
-	if tree != null:
-		await tree.process_frame
-	if not is_instance_valid(overlay) or not overlay.is_inside_tree():
-		return
-	if not overlay.visible:
-		# Closed again during the awaited frame — restore the resting state instantly.
-		if scrim != null and is_instance_valid(scrim):
-			scrim.modulate.a = 1.0
-		for c in cards:
-			if is_instance_valid(c):
-				(c as Control).modulate.a = 1.0
-		return
+		var ctl := c as Control
+		ctl.pivot_offset = ctl.size / 2.0   # best guess; corrected after layout below
+		ctl.scale = Vector2(CARD_SCALE_FROM, CARD_SCALE_FROM)
+		ctl.modulate.a = 0.0
 	var tween := overlay.create_tween()
 	tween.set_parallel(true)
 	overlay.set_meta("_uifx_open_tween", tween)
@@ -116,12 +111,32 @@ static func animate_overlay_open(overlay: CanvasLayer) -> void:
 		if not is_instance_valid(c):
 			continue
 		var ctl := c as Control
-		ctl.pivot_offset = ctl.size / 2.0
-		ctl.scale = Vector2(CARD_SCALE_FROM, CARD_SCALE_FROM)
 		tween.tween_property(ctl, "modulate:a", 1.0, CARD_IN) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.tween_property(ctl, "scale", Vector2.ONE, CARD_IN) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# One frame so container layout resolves — then correct the pivot to the true centre.
+	# (The tween already runs with the best-guess pivot; the correction lands mid-animation
+	# but the scale is so subtle (6%) that the pivot shift is imperceptible.)
+	var tree := overlay.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(overlay) or not overlay.is_inside_tree():
+		return
+	if not overlay.visible:
+		# Closed during the awaited frame — kill the tween and restore resting state.
+		_kill_meta_tween(overlay, "_uifx_open_tween")
+		if scrim != null and is_instance_valid(scrim):
+			scrim.modulate.a = 1.0
+		for c in cards:
+			if is_instance_valid(c):
+				(c as Control).modulate.a = 1.0
+				(c as Control).scale = Vector2.ONE
+		return
+	# Correct pivots now that layout has resolved.
+	for c in cards:
+		if is_instance_valid(c):
+			(c as Control).pivot_offset = (c as Control).size / 2.0
 
 # ── bottom-nav tab activation ─────────────────────────────────────────────────
 
@@ -205,6 +220,84 @@ static func content_fade(ctl: Control, dur: float = 0.22) -> void:
 	ctl.set_meta("_uifx_fade", t)
 	t.tween_property(ctl, "modulate:a", 1.0, dur) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+# ── accordion height open / close ─────────────────────────────────────────────
+#
+# Height-animate a UiKit.make_collapsible() wrapper open or closed — the "a detail row
+# unrolls open while the previous one rolls shut" motion. Both helpers OWN the wrapper's
+# `custom_minimum_size.y` for the duration (the `_anim` meta tells make_collapsible's own
+# sync to stand down so it doesn't fight the tween), pairing the height glide with a gentle
+# content fade. Headless / Reduce Motion is a complete no-op: the wrapper just sits at its
+# settled height (expand_section ensures full height + opacity; collapse_section fires its
+# done callback immediately so the caller frees the section with no delay).
+
+## Grow a freshly-built collapsible `wrap` from 0 → its content's natural height. Snaps to a
+## collapsed state IN THE SAME FRAME it is called (no flash of the full section), then waits one
+## frame for layout so the content's true height is known before tweening it open.
+static func expand_section(wrap: Control, dur: float = SECTION_OPEN) -> void:
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var inner: Control = wrap.get_meta("_inner", null) as Control
+	if inner == null:
+		return
+	if not _active() or not wrap.is_inside_tree():
+		# Rest state: full height + opaque (make_collapsible's sync already sized it).
+		inner.modulate.a = 1.0
+		if not wrap.has_meta("_anim"):
+			wrap.custom_minimum_size.y = inner.get_combined_minimum_size().y
+		return
+	# Snap collapsed NOW (before any frame is drawn) so the section never flashes at full height.
+	_kill_meta_tween(wrap, "_uifx_section")
+	wrap.set_meta("_anim", true)
+	wrap.custom_minimum_size.y = 0.0
+	inner.modulate.a = 0.0
+	# One frame so the inner content lays out against its real width → true min height.
+	var tree := wrap.get_tree()
+	if tree != null:
+		await tree.process_frame
+	if not is_instance_valid(wrap) or not wrap.is_inside_tree() or not is_instance_valid(inner):
+		return
+	var target: float = inner.get_combined_minimum_size().y
+	var t := wrap.create_tween()
+	wrap.set_meta("_uifx_section", t)
+	t.set_parallel(true)
+	t.tween_property(wrap, "custom_minimum_size:y", target, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	t.tween_property(inner, "modulate:a", 1.0, dur * 0.9) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.chain().tween_callback(func() -> void:
+		# Hand height management back to make_collapsible's sync (content is settled).
+		if is_instance_valid(wrap):
+			wrap.remove_meta("_anim"))
+
+## Shrink a collapsible `wrap` from its current height → 0, fading the content out, then invoke
+## `on_done` (where the caller frees the section). Headless / disabled calls `on_done` at once.
+static func collapse_section(wrap: Control, on_done: Callable = Callable(), dur: float = SECTION_CLOSE) -> void:
+	if wrap == null or not is_instance_valid(wrap):
+		if on_done.is_valid():
+			on_done.call()
+		return
+	if not _active() or not wrap.is_inside_tree():
+		if on_done.is_valid():
+			on_done.call()
+		return
+	var inner: Control = wrap.get_meta("_inner", null) as Control
+	_kill_meta_tween(wrap, "_uifx_section")
+	wrap.set_meta("_anim", true)
+	# Seed the start height (a section sitting at content-min reports 0 custom_minimum until now).
+	if wrap.custom_minimum_size.y <= 0.0 and inner != null:
+		wrap.custom_minimum_size.y = inner.get_combined_minimum_size().y
+	var t := wrap.create_tween()
+	wrap.set_meta("_uifx_section", t)
+	t.set_parallel(true)
+	t.tween_property(wrap, "custom_minimum_size:y", 0.0, dur) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	if inner != null and is_instance_valid(inner):
+		t.tween_property(inner, "modulate:a", 0.0, dur * 0.9) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	t.chain().tween_callback(func() -> void:
+		if on_done.is_valid():
+			on_done.call())
 
 # ── text reveal (typewriter) ──────────────────────────────────────────────────
 

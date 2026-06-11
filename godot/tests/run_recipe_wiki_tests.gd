@@ -107,49 +107,60 @@ func _initialize() -> void:
 	_check(screen._header_label.text == "%d recipes" % expected_count,
 		"header reads '%d recipes'" % expected_count)
 
-	# Default station = Bakery → BREAD shown + selected; SUPPLIES (Kitchen) not shown.
+	# Default station = Bakery → BREAD shown; SUPPLIES (Kitchen) not shown.
 	_check(screen._active_station == BuildingConfig.BAKERY, "default station is Bakery")
-	_check(screen._selected_recipe == RecipeConfig.BREAD, "default selected recipe is BREAD")
+	_check(screen._expanded == "", "no recipe auto-expanded by default")
 	_check(screen._cards.has(RecipeConfig.BREAD), "BREAD row present on the Bakery tab")
 	_check(not screen._cards.has(RecipeConfig.SUPPLIES), "SUPPLIES row absent on the Bakery tab")
 
-	# The detail card shows the recipe name + "at Bakery" station line.
+	# Recipe name appears in the collapsed row; station line + craft button only appear
+	# when the row is expanded — expand BREAD to check those.
+	var bakery_texts_collapsed: Array = _collect_label_texts(screen._body)
+	var has_bread_collapsed := false
+	for t in bakery_texts_collapsed:
+		if String(t).to_lower().contains("bread"): has_bread_collapsed = true
+	_check(has_bread_collapsed, "Bakery tab shows 'Bread' in the collapsed row")
+
+	screen.toggle_expand(RecipeConfig.BREAD)
+	_check(screen._expanded == RecipeConfig.BREAD, "toggle_expand(BREAD) expands the BREAD row")
+
 	var bakery_texts: Array = _collect_label_texts(screen._body)
-	var has_bread := false
 	var has_bakery := false
 	for t in bakery_texts:
-		if String(t).to_lower().contains("bread"): has_bread = true
 		if String(t).to_lower().contains("bakery"): has_bakery = true
-	_check(has_bread, "Bakery tab shows 'Bread'")
-	_check(has_bakery, "Bakery tab shows the 'at Bakery' station line")
+	_check(has_bakery, "Expanded BREAD row shows the 'Recipe · Bakery' station eyebrow")
 
-	# A fresh game can't craft (no Bakery built) → the Craft button is disabled.
-	_check(screen._action_buttons.has("craft"), "_action_buttons has 'craft' (detail card)")
+	# Craft button appears in the expanded row; disabled with no station / inputs.
+	_check(screen._action_buttons.has("craft"), "_action_buttons has 'craft' when row expanded")
 	_check(screen._action_buttons["craft"].disabled, "Craft disabled with no station / inputs")
 
-	# Switch to the Kitchen tab → SUPPLIES becomes the shown + selected recipe.
+	# Switch to the Kitchen tab → SUPPLIES shown, expansion collapses.
 	screen._on_station_tab(BuildingConfig.KITCHEN)
 	_check(screen._active_station == BuildingConfig.KITCHEN, "_on_station_tab(Kitchen) switches station")
-	_check(screen._selected_recipe == RecipeConfig.SUPPLIES, "Kitchen tab selects SUPPLIES")
+	_check(screen._expanded == "", "station switch collapses the expanded row")
 	_check(screen._cards.has(RecipeConfig.SUPPLIES), "SUPPLIES row present on the Kitchen tab")
 	_check(not screen._cards.has(RecipeConfig.BREAD), "BREAD row absent on the Kitchen tab")
+
+	# Expand SUPPLIES to verify the station eyebrow.
+	screen.toggle_expand(RecipeConfig.SUPPLIES)
 	var kitchen_texts: Array = _collect_label_texts(screen._body)
 	var has_kitchen := false
 	for t in kitchen_texts:
 		if String(t).to_lower().contains("kitchen"): has_kitchen = true
-	_check(has_kitchen, "Kitchen tab shows the 'at Kitchen' station line")
+	_check(has_kitchen, "Expanded SUPPLIES row shows the 'Recipe · Kitchen' station eyebrow")
 
 	# ── Real craft flow: build the Bakery, stock flour+eggs, press Craft ─────────
 	screen._on_station_tab(BuildingConfig.BAKERY)
 	game.buildings.append(BuildingConfig.BAKERY)   # the same array game.build() appends to
 	game.inventory["flour"] = 6
 	game.inventory["eggs"] = 2
-	screen.refresh()
+	# Expand BREAD so the inline detail (have/need chips + Craft button) is rendered.
+	screen.toggle_expand(RecipeConfig.BREAD)
 	_check(game.can_craft(RecipeConfig.BREAD), "can_craft(BREAD) after building Bakery + stocking")
 	_check(not screen._action_buttons["craft"].disabled, "Craft enabled when craftable")
 
-	# review-3 — the detail card shows per-input have/need chips ("flour 6/3", "eggs 2/1") and a
-	# "Ready to craft" status line when craftable. Assert the have/need text is rendered.
+	# The expanded row shows per-input have/need chips ("flour 6/3", "eggs 2/1") and a
+	# "Ready to craft" status line when craftable.
 	var detail_texts: Array = _collect_label_texts(screen._body)
 	var has_flour_haveneed := false
 	var has_eggs_haveneed := false
@@ -159,9 +170,9 @@ func _initialize() -> void:
 		if s == "6/3": has_flour_haveneed = true        # flour have/need chip
 		if s == "2/1": has_eggs_haveneed = true          # eggs have/need chip
 		if s.to_lower().contains("ready to craft"): has_ready = true
-	_check(has_flour_haveneed, "detail card shows the flour have/need chip '6/3'")
-	_check(has_eggs_haveneed, "detail card shows the eggs have/need chip '2/1'")
-	_check(has_ready, "detail card shows the 'Ready to craft' status when craftable")
+	_check(has_flour_haveneed, "expanded row shows the flour have/need chip '6/3'")
+	_check(has_eggs_haveneed, "expanded row shows the eggs have/need chip '2/1'")
+	_check(has_ready, "expanded row shows the 'Ready to craft' status when craftable")
 	var bread_before := int(game.inventory.get("bread", 0))
 	var changed := [false]
 	screen.connect("state_changed", func(): changed[0] = true)
@@ -170,6 +181,36 @@ func _initialize() -> void:
 	_check(int(game.inventory.get("flour", 0)) == 3, "Craft consumed 3 flour (6 → 3)")
 	_check(int(game.inventory.get("eggs", 0)) == 1, "Craft consumed 1 eggs (2 → 1)")
 	_check(changed[0], "Craft emitted state_changed")
+
+	# ── Grid view expansion: a full-width detail card drops in below the tapped chip ──
+	# In the grid view tapping a chip still expands it, but the detail renders as a full-width
+	# inline card beneath the chip's row (with an ▲ over the origin column) instead of an in-place
+	# row — so the surrounding chips never shift. It reads the same live state (eyebrow + have/need
+	# + Craft button). The craft above left flour=3 / eggs=1, so BREAD is still exactly craftable.
+	screen.set_view("grid")
+	_check(screen.view_mode() == "grid", "set_view('grid') switches the crafting view")
+	if screen._expanded != "":
+		screen.toggle_expand(screen._expanded)   # collapse whatever the list flow left open
+	_check(screen._expanded == "", "grid: baseline starts collapsed")
+	screen.toggle_expand(RecipeConfig.BREAD)
+	_check(screen._expanded == RecipeConfig.BREAD, "grid: toggle_expand(BREAD) expands the chip")
+	_check(screen._cards.has(RecipeConfig.BREAD), "grid: the tapped chip is tracked in _cards")
+	_check(screen._action_buttons.has("craft"), "grid: expanded detail registers the Craft button")
+	_check(not screen._action_buttons["craft"].disabled, "grid: Craft enabled (still craftable)")
+	var grid_texts: Array = _collect_label_texts(screen._body)
+	var grid_has_eyebrow := false
+	var grid_has_arrow := false
+	for t in grid_texts:
+		var gs := String(t)
+		if gs.to_lower().contains("bakery"): grid_has_eyebrow = true
+		if gs == "▲": grid_has_arrow = true
+	_check(grid_has_eyebrow, "grid: the inline detail card shows the 'Recipe · Bakery' eyebrow")
+	_check(grid_has_arrow, "grid: an ▲ points back at the originating chip")
+	# Tapping the SAME chip collapses; the detail card (and its Craft button) goes away.
+	screen.toggle_expand(RecipeConfig.BREAD)
+	_check(screen._expanded == "", "grid: tapping the expanded chip again collapses it")
+	_check(not screen._action_buttons.has("craft"), "grid: collapsing drops the Craft button")
+	screen.set_view("list")   # restore list view for the close-button check below
 
 	# Close button fires `closed` and hides the modal.
 	var before_closed := _closed_count

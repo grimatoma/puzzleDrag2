@@ -61,6 +61,11 @@ var _action_buttons: Dictionary = {}
 ## another row moves the expansion; the expansion survives refresh() (e.g. after a Sell).
 var _expanded: String = ""
 
+## entry_key → the rendered expandable-chip PanelContainer for the active list view, rebuilt each
+## refresh(). Lets toggle_expand animate the expand/collapse IN PLACE (rebuild only the two affected
+## rows) instead of refreshing the whole list — the same shared motion the crafting screen uses.
+var _cards: Dictionary = {}
+
 ## Static shell, built once in setup(); the body VBox is cleared + repopulated each
 ## refresh() so reopening always reflects the latest inventory.
 var _body: VBoxContainer
@@ -98,6 +103,9 @@ const VIEW_LIST := "list"
 const VIEW_GRID := "grid"
 var _view: String = VIEW_LIST
 var _view_btn: Button                   ## the ⊞/≣ view-toggle Button (registered for tests)
+
+## Columns in the grid view. The expanded grid detail spans a full row of this many cells.
+const GRID_COLS := 3
 
 ## The port's special "Items" — non-resource, non-tool valuables surfaced as inventory items.
 ## REAL GameState scalar counters; nothing invented. ITEM_IDS is the stable id list + render order;
@@ -317,6 +325,7 @@ func refresh() -> void:
 	for child in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
+	_cards.clear()
 
 	if _view == VIEW_GRID:
 		_render_grid()
@@ -420,29 +429,123 @@ func _render_items_tab() -> void:
 		return
 	_build_item_section(shown)
 
-## GRID view — a 3-column grid of compact icon+count chips for whatever the active tab covers
-## (resources / tools / items / all). Mirrors React's grid inventory layout. Empty → the same
-## muted hint the list view shows.
+## GRID view — a GRID_COLS-wide grid of compact icon+count chips for whatever the active tab covers
+## (resources / tools / items / all). Mirrors React's grid inventory layout. Empty → the same muted
+## hint the list view shows.
+##
+## Built as a VBox of GRID_COLS-wide HBox rows (not a single GridContainer) so the expanded chip's
+## detail can drop in as a full-width card BETWEEN rows — a GridContainer cell can't span columns,
+## and we never want to shift the surrounding chips. The tapped chip keeps its cell; its detail
+## unfolds full-width directly beneath its row, with an ▲ over the origin column.
 func _render_grid() -> void:
-	var keys: Array = _grid_entries()
-	if keys.is_empty():
+	var entries: Array = _grid_entries()
+	if entries.is_empty():
 		var msg := "Your stockpile is empty — chain tiles to gather goods."
 		if _query != "":
 			msg = "No items match '%s'." % _query
 		_body.add_child(_make_label(msg, COL_MUTED))
 		return
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	_body.add_child(grid)
-	for entry in keys:
-		grid.add_child(_make_grid_chip(entry as Dictionary))
 
-## The chips the grid view shows for the active tab, each {key, glyph, label, count}. Resources
-## come from the owned (search-filtered) ledger; tools from visible_tool_ids; items from
-## visible_item_ids; All concatenates all three. Drives _render_grid + the grid headless test.
+	var rows_box := VBoxContainer.new()
+	rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows_box.add_theme_constant_override("separation", 8)
+	rows_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(rows_box)
+
+	var n: int = entries.size()
+	var i: int = 0
+	while i < n:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rows_box.add_child(row)
+
+		var expanded_col: int = -1
+		var expanded_key: String = ""
+		for c in range(GRID_COLS):
+			var idx: int = i + c
+			if idx < n:
+				var entry: Dictionary = entries[idx] as Dictionary
+				var entry_key: String = String(entry.get("entry_key", ""))
+				var chip := _make_grid_chip(entry)
+				row.add_child(chip)
+				_cards[entry_key] = chip
+				if entry_key != "" and entry_key == _expanded:
+					expanded_col = c
+					expanded_key = entry_key
+			else:
+				# Empty filler so a short trailing row keeps its cells at the grid width (no stretch).
+				var filler := Control.new()
+				filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				row.add_child(filler)
+
+		if expanded_col != -1:
+			rows_box.add_child(_make_grid_detail(expanded_key, expanded_col))
+
+		i += GRID_COLS
+
+## The full-width inline detail card shown below the grid row holding the expanded entry. An ember
+## ▲ sits over the originating column so the card visibly points back at which grid chip was tapped.
+## Reuses _populate_details_for_key, so the card reads the same live state (description + Sell/Buy)
+## and registers the same action keys as the list view's expanded row.
+func _make_grid_detail(entry_key: String, origin_col: int) -> VBoxContainer:
+	var wrap := VBoxContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.add_theme_constant_override("separation", 0)
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# Arrow row: GRID_COLS cells matching the grid above (same separation), ▲ centred in origin_col.
+	var arrow_row := HBoxContainer.new()
+	arrow_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	arrow_row.add_theme_constant_override("separation", 8)
+	arrow_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for c in range(GRID_COLS):
+		if c == origin_col:
+			var arrow := Label.new()
+			arrow.text = "▲"
+			arrow.add_theme_font_size_override("font_size", 18)
+			arrow.add_theme_color_override("font_color", Palette.EMBER)
+			arrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			arrow.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+			arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(arrow)
+		else:
+			var cell := Control.new()
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(cell)
+	wrap.add_child(arrow_row)
+
+	# Ember-bordered detail panel (the "expanded" accent), full width — never shifts the grid.
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiKit.style_chip_expanded(panel, true)
+	wrap.add_child(panel)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	panel.add_child(col)
+
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	_populate_details_for_key(details, entry_key)
+
+	return wrap
+
+## The chips the grid view shows for the active tab, each {key, entry_key, glyph, label, count}.
+## `entry_key` is the namespaced expand key ("res:"/"tool:"/"item:") so a grid chip toggles the
+## same expansion the list rows use. Resources come from the owned (search-filtered) ledger; tools
+## from visible_tool_ids; items from visible_item_ids; All concatenates all three. Drives
+## _render_grid + the grid headless test.
 func _grid_entries() -> Array:
 	var out: Array = []
 	var want_res: bool = _tab == TAB_ALL or _tab == TAB_RESOURCES
@@ -456,28 +559,39 @@ func _grid_entries() -> Array:
 					res_keys.append(String(key))
 		res_keys.sort()
 		for res in res_keys:
-			out.append({"key": res, "glyph": "", "label": UiKit.pretty_name(res),
-				"count": game.qty(String(res))})
+			out.append({"key": res, "entry_key": "res:" + String(res), "glyph": "",
+				"label": UiKit.pretty_name(res), "count": game.qty(String(res))})
 	if want_tools:
 		for id in visible_tool_ids():
-			out.append({"key": id, "glyph": "", "label": _tool_name(String(id)),
-				"count": game.tool_count(String(id))})
+			out.append({"key": id, "entry_key": "tool:" + String(id), "glyph": "",
+				"label": _tool_name(String(id)), "count": game.tool_count(String(id))})
 	if want_items:
 		for entry in _item_defs():
 			var id: String = String(entry[0])
 			if not visible_item_ids().has(id):
 				continue
-			out.append({"key": id, "glyph": String(entry[1]), "label": String(entry[2]),
-				"count": item_count(id)})
+			out.append({"key": id, "entry_key": "item:" + id, "glyph": String(entry[1]),
+				"label": String(entry[2]), "count": item_count(id)})
 	return out
 
 ## A compact grid chip: a soft-parchment cell with the icon (or glyph) above a "name ×count"
-## line. Used by the grid view across every tab.
+## line. Tapping it expands the entry in place (a full-width detail card drops in below the chip's
+## grid row); the chip shows the ember "expanded" border when it is the open entry.
 func _make_grid_chip(entry: Dictionary) -> PanelContainer:
+	var entry_key: String = String(entry.get("entry_key", ""))
 	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
-	# review-4 — share the row width across the 3 columns. Without EXPAND_FILL each chip
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiKit.style_chip_expanded(chip, entry_key != "" and entry_key == _expanded)
+	if entry_key != "":
+		chip.gui_input.connect(func(event: InputEvent) -> void:
+			var tap: bool = (event is InputEventMouseButton \
+				and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+				and (event as InputEventMouseButton).pressed) \
+				or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+			if tap:
+				toggle_expand(entry_key)
+		)
+	# review-4 — share the row width across the columns. Without EXPAND_FILL each chip
 	# collapses to its icon's minimum width and the autowrapped name label breaks words
 	# mid-glyph ("Bomb" → "Bom/b", "Scythe" → "Scyth/e").
 	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -552,8 +666,9 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 func _make_resource_row(res: String) -> PanelContainer:
 	var count: int = game.qty(res)
 	var entry_key: String = "res:" + res
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -599,36 +714,44 @@ func _make_resource_row(res: String) -> PanelContainer:
 	# Expanded details — kind eyebrow, the catalog description, and real Sell/Buy actions
 	# (the same GameState.sell/buy the Town Market uses; prices are the live drifted ones).
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Resource · %s" % group_of(res))
-		var desc: String = ResourceConfig.desc(res)
-		if desc != "":
-			details.add_child(_make_detail_text(desc))
-		var actions := HBoxContainer.new()
-		actions.add_theme_constant_override("separation", 8)
-		details.add_child(actions)
-		if MarketConfig.can_sell(res):
-			var sell_btn := Button.new()
-			sell_btn.text = "Sell 1 · +%d🪙" % game.live_sell_price(res)
-			UiKit.style_action_button(sell_btn, Palette.MOSS, 6, Typography.size(Typography.Role.LABEL))
-			sell_btn.disabled = count <= 0
-			sell_btn.connect("pressed", Callable(self, "_on_sell").bind(res))
-			actions.add_child(sell_btn)
-			_action_buttons["sell:" + res] = sell_btn
-		if MarketConfig.can_buy(res):
-			var buy_btn := Button.new()
-			var price: int = game.live_buy_price(res)
-			buy_btn.text = "Buy 1 · %d🪙" % price
-			UiKit.style_action_button(buy_btn, Palette.GOLD, 6, Typography.size(Typography.Role.LABEL))
-			buy_btn.disabled = game.coins < price
-			buy_btn.connect("pressed", Callable(self, "_on_buy").bind(res))
-			actions.add_child(buy_btn)
-			_action_buttons["buy:" + res] = buy_btn
-		if actions.get_child_count() == 0:
-			actions.queue_free()
-			details.add_child(_make_detail_text("Not traded at the Market."))
+		var details := UiKit.begin_expand_details(col)
+		_populate_resource_details(details, res)
 
 	return chip
+
+## Fill an expanded resource entry's details VBox: the group eyebrow, catalog description, and the
+## real Sell/Buy actions (live drifted prices). Shared by the list row's inline expand AND the grid
+## view's full-width detail card, so both read the same live state and register the same
+## "sell:<res>" / "buy:<res>" action keys (the headless contract).
+func _populate_resource_details(details: VBoxContainer, res: String) -> void:
+	var count: int = game.qty(res)
+	UiKit.add_expand_eyebrow(details, "Resource · %s" % group_of(res), COL_HEADER)
+	var desc: String = ResourceConfig.desc(res)
+	if desc != "":
+		details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 8)
+	details.add_child(actions)
+	if MarketConfig.can_sell(res):
+		var sell_btn := Button.new()
+		sell_btn.text = "Sell 1 · +%d🪙" % game.live_sell_price(res)
+		UiKit.style_action_button(sell_btn, Palette.MOSS, 6, Typography.size(Typography.Role.LABEL))
+		sell_btn.disabled = count <= 0
+		sell_btn.connect("pressed", Callable(self, "_on_sell").bind(res))
+		actions.add_child(sell_btn)
+		_action_buttons["sell:" + res] = sell_btn
+	if MarketConfig.can_buy(res):
+		var buy_btn := Button.new()
+		var price: int = game.live_buy_price(res)
+		buy_btn.text = "Buy 1 · %d🪙" % price
+		UiKit.style_action_button(buy_btn, Palette.GOLD, 6, Typography.size(Typography.Role.LABEL))
+		buy_btn.disabled = game.coins < price
+		buy_btn.connect("pressed", Callable(self, "_on_buy").bind(res))
+		actions.add_child(buy_btn)
+		_action_buttons["buy:" + res] = buy_btn
+	if actions.get_child_count() == 0:
+		actions.queue_free()
+		details.add_child(UiKit.make_expand_body_text("Not traded at the Market.", COL_MUTED))
 
 # ── Tools section (C1) ──────────────────────────────────────────────────────────
 
@@ -662,8 +785,9 @@ func _build_tool_section(tool_ids: Array) -> void:
 func _make_tool_row(id: String) -> PanelContainer:
 	var charges: int = game.tool_count(id)
 	var entry_key: String = "tool:" + id
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -693,14 +817,19 @@ func _make_tool_row(id: String) -> PanelContainer:
 
 	# Expanded details — the tool's catalog description + where it's used.
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Tool · consumed on use")
-		var desc: String = ToolConfig.tool_desc(id)
-		if desc != "":
-			details.add_child(_make_detail_text(desc))
-		details.add_child(_make_detail_text("Use it from the tool bar above the board."))
+		var details := UiKit.begin_expand_details(col)
+		_populate_tool_details(details, id)
 
 	return chip
+
+## Fill an expanded tool entry's details VBox: the "consumed on use" eyebrow, the catalog
+## description, and the usage hint. Shared by the list row + the grid detail card.
+func _populate_tool_details(details: VBoxContainer, id: String) -> void:
+	UiKit.add_expand_eyebrow(details, "Tool · consumed on use", COL_HEADER)
+	var desc: String = ToolConfig.tool_desc(id)
+	if desc != "":
+		details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
+	details.add_child(UiKit.make_expand_body_text("Use it from the tool bar above the board.", COL_MUTED))
 
 # ── Items section (special valuables: runes / influence) ──────────────────────────
 
@@ -733,8 +862,9 @@ func _make_item_row(id: String) -> PanelContainer:
 	var count: int = item_count(id)
 	var def: Dictionary = _item_def(id)
 	var entry_key: String = "item:" + id
-	var chip := _begin_expandable_chip(entry_key)
+	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
 	var col: VBoxContainer = chip.get_child(0)
+	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -768,88 +898,105 @@ func _make_item_row(id: String) -> PanelContainer:
 	# Expanded details — the valuable's catalog description (where it comes from / what
 	# it's for). No actions: runes/influence are spent at their own surfaces, not sold.
 	if _expanded == entry_key:
-		var details := _begin_details(col)
-		_add_detail_eyebrow(details, "Special item")
-		var desc: String = ResourceConfig.desc(id)
-		if desc != "":
-			details.add_child(_make_detail_text(desc))
+		var details := UiKit.begin_expand_details(col)
+		_populate_item_details(details, id)
 
 	return chip
 
-# ── C2: expand-in-place plumbing (React InventoryListItemExpanded parity) ─────────
+## Fill an expanded special-item entry's details VBox: the eyebrow + catalog description. No
+## actions — runes/influence are spent at their own surfaces. Shared by the list row + grid card.
+func _populate_item_details(details: VBoxContainer, id: String) -> void:
+	UiKit.add_expand_eyebrow(details, "Special item", COL_HEADER)
+	var desc: String = ResourceConfig.desc(id)
+	if desc != "":
+		details.add_child(UiKit.make_expand_body_text(desc, COL_MUTED))
 
-## Begin an expandable ledger chip for `entry_key`: a PanelContainer (ember-bordered when
-## expanded) holding a VBox the caller fills with its row (and the details section appends
-## to). The chip itself listens for taps — a tap toggles the expansion. Inner content stays
-## MOUSE_FILTER_IGNORE so the chip sees every tap; the details' action Buttons still work
-## (Buttons are STOP by default and sit above the chip in pick order).
-func _begin_expandable_chip(entry_key: String) -> PanelContainer:
-	var chip := PanelContainer.new()
-	var sb := UiKit.row_box()
-	if _expanded == entry_key:
-		sb = sb.duplicate() as StyleBoxFlat
-		sb.border_color = Palette.EMBER
-		sb.set_border_width_all(2)
-	chip.add_theme_stylebox_override("panel", sb)
-	chip.mouse_filter = Control.MOUSE_FILTER_STOP
-	chip.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton \
-			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
-			and (event as InputEventMouseButton).pressed) \
-			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
-		if tap:
-			toggle_expand(entry_key)
-	)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 8)
-	chip.add_child(col)
-	return chip
-
-## Append the details section container to an expanded chip's column, separated from the
-## row by a faint hairline. Fades in (UiFx — no-op headless / reduce-motion) so the
-## expansion reads as an animated reveal rather than a hard reflow.
-func _begin_details(col: VBoxContainer) -> VBoxContainer:
-	var rule := HSeparator.new()
-	var line := StyleBoxLine.new()
-	line.color = Color(Palette.IRON, 0.5)
-	line.thickness = 1
-	rule.add_theme_stylebox_override("separator", line)
-	col.add_child(rule)
-	var details := VBoxContainer.new()
-	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	details.add_theme_constant_override("separation", 6)
-	col.add_child(details)
-	UiFx.content_fade(details)
-	return details
-
-## A small all-caps-feel eyebrow line ("Resource · Farm Goods") for the details section.
-func _add_detail_eyebrow(details: VBoxContainer, text: String) -> void:
-	var lbl := Label.new()
-	lbl.text = text.to_upper()
-	UiKit.set_font_size(lbl, Typography.Role.CAPTION)
-	lbl.add_theme_color_override("font_color", COL_HEADER)
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	details.add_child(lbl)
-
-## A muted wrapping body line for the details section.
-func _make_detail_text(text: String) -> Label:
-	var lbl := Label.new()
-	lbl.text = text
-	UiKit.set_font_size(lbl, Typography.Role.LABEL)
-	lbl.add_theme_color_override("font_color", COL_MUTED)
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return lbl
+## Fill `details` with the right per-kind content for a namespaced `entry_key`
+## ("res:" / "tool:" / "item:"). Lets the grid detail card reuse the exact list-row detail bodies.
+func _populate_details_for_key(details: VBoxContainer, entry_key: String) -> void:
+	if entry_key.begins_with("res:"):
+		_populate_resource_details(details, entry_key.substr(4))
+	elif entry_key.begins_with("tool:"):
+		_populate_tool_details(details, entry_key.substr(5))
+	elif entry_key.begins_with("item:"):
+		_populate_item_details(details, entry_key.substr(5))
 
 ## Toggle the expansion for `entry_key` ("res:flour" / "tool:bomb" / "item:runes"): tapping
 ## the expanded row collapses it, tapping another moves the expansion there. Public — the
-## headless test drives it directly. Re-renders the body (the chip set is rebuilt anyway).
+## headless test drives it directly.
+##
+## In the LIST view this animates IN PLACE (the same shared motion the crafting screen uses): only
+## the two affected rows change — the newly tapped row is rebuilt expanded and unrolls open while
+## the previously open row rolls shut and drops its details. The GRID view rebuilds via refresh():
+## the tapped chip stays put in its cell and a full-width detail card drops in below that grid row
+## (so the surrounding chips never shift), with an ▲ over the origin column pointing at the chip.
 func toggle_expand(entry_key: String) -> void:
-	_expanded = "" if _expanded == entry_key else entry_key
-	refresh()
+	if not _built or _view != VIEW_LIST:
+		_expanded = "" if _expanded == entry_key else entry_key
+		refresh()
+		return
+	var old_key: String = _expanded
+	var new_key: String = "" if _expanded == entry_key else entry_key
+	_expanded = new_key
+	# Drop the previously expanded row's Sell/Buy action keys; the new row re-registers its own.
+	for k in _action_buttons.keys():
+		if String(k).begins_with("sell:") or String(k).begins_with("buy:"):
+			_action_buttons.erase(k)
+	if old_key != "" and old_key != new_key:
+		_collapse_row_inplace(old_key)
+	if new_key != "":
+		_expand_row_inplace(new_key)
+
+## Rebuild `entry_key`'s collapsed row as an EXPANDED one in place (so its summary + details read
+## the live inventory/price state), swap the node at the same list position, then unroll the new
+## details open. Falls back to a full refresh() if the row isn't currently rendered.
+func _expand_row_inplace(entry_key: String) -> void:
+	var old_chip: Variant = _cards.get(entry_key)
+	if old_chip == null or not is_instance_valid(old_chip) or not (old_chip as Node).is_inside_tree():
+		refresh()
+		return
+	var idx: int = (old_chip as Node).get_index()
+	_body.remove_child(old_chip)
+	(old_chip as Node).queue_free()
+	var new_chip := _build_row_for_key(entry_key)
+	if new_chip == null:
+		refresh()
+		return
+	_body.add_child(new_chip)
+	_body.move_child(new_chip, idx)
+	var wrap: Variant = new_chip.get_meta("_details_wrap", null)
+	if wrap != null:
+		UiFx.expand_section(wrap as Control)
+
+## Roll `entry_key`'s expanded row shut: recolour its border to the collapsed look and animate its
+## details section closed, freeing it when the collapse finishes. The summary row stays put.
+func _collapse_row_inplace(entry_key: String) -> void:
+	var chip: Variant = _cards.get(entry_key)
+	if chip == null or not is_instance_valid(chip):
+		return
+	UiKit.style_chip_expanded(chip as PanelContainer, false)
+	var node := chip as Node
+	if not node.has_meta("_details_wrap"):
+		return
+	var wrap: Variant = node.get_meta("_details_wrap")
+	node.remove_meta("_details_wrap")
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var w := wrap as Control
+	UiFx.collapse_section(w, func() -> void:
+		if is_instance_valid(w):
+			w.queue_free())
+
+## Build a fresh ledger row for a namespaced `entry_key`, dispatching to the right row builder by
+## prefix ("res:" / "tool:" / "item:"). Used by the in-place expand to rebuild only the tapped row.
+func _build_row_for_key(entry_key: String) -> PanelContainer:
+	if entry_key.begins_with("res:"):
+		return _make_resource_row(entry_key.substr(4))
+	elif entry_key.begins_with("tool:"):
+		return _make_tool_row(entry_key.substr(5))
+	elif entry_key.begins_with("item:"):
+		return _make_item_row(entry_key.substr(5))
+	return null
 
 ## The currently expanded entry key ("" when none). Headless contract.
 func expanded_key() -> String:

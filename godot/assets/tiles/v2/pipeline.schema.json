@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "sprite-pipeline three-file model. Two roots under $defs: pipelineDoc (pipeline.json — spec + state, keyframes carry selected/selectedPath, NO candidates) and historyDoc (pipeline.history.json — itemId -> keyframeId -> candidate[]). Validated by the compact subset validator in scripts/manifest.mjs; select a root by name via validateDoc(doc, schema, 'pipelineDoc'|'historyDoc').",
+  "$comment": "sprite-pipeline three-file model. Two roots under $defs: pipelineDoc (pipeline.json — spec + state: settings + items[] plus optional runState/presets; keyframes carry selected/selectedPath, NO candidates) and historyDoc (pipeline.history.json — itemId -> keyframeId -> candidate[]). Validated by the compact subset validator in scripts/manifest.mjs; select a root by name via validateDoc(doc, schema, 'pipelineDoc'|'historyDoc').",
   "$defs": {
     "canvas": {
       "type": "object",
@@ -43,7 +43,7 @@
       "additionalProperties": false
     },
     "animation": {
-      "$comment": "Parent owns the full shape (type/required/properties/additionalProperties); the oneOf branches are ADDITIVE (each only adds a `required`) so they don't contradict the parent. The validator evaluates oneOf and the sibling keywords together. oneOf enforces: an idle (has `for`) XOR a transition (has `from`+`to`).",
+      "$comment": "Parent owns the full shape (type/required/properties/additionalProperties); the oneOf branches are ADDITIVE (each only adds a `required`) so they don't contradict the parent. The validator evaluates oneOf and the sibling keywords together. oneOf enforces: an idle (has `for`) XOR a transition (has `from`+`to`). status `rejected` = a human rejected the built animation in the viewer; the gap-fill planner re-animates it. `comment` is human feedback left in the viewer, cleared by the orchestrator once consumed.",
       "type": "object",
       "required": ["kind", "status"],
       "properties": {
@@ -54,9 +54,10 @@
         "frames": { "type": "integer" },
         "motion": { "type": "string" },
         "physics": { "type": "string" },
-        "status": { "enum": ["pending", "generated"] },
+        "status": { "enum": ["pending", "generated", "rejected"] },
         "gif": { "type": "string" },
-        "storyboard": { "type": "string" }
+        "storyboard": { "type": "string" },
+        "comment": { "type": "string" }
       },
       "additionalProperties": false,
       "oneOf": [
@@ -64,7 +65,33 @@
         { "required": ["from", "to"] }
       ]
     },
+    "runState": {
+      "$comment": "The orchestrator's progress broadcast to the viewer (e.g. 'Stage 2: generating grass candidates (2/4)'). Written via pipeline-patch run-state / await-review; the viewer only reads it.",
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["idle", "running", "waiting", "done"] },
+        "detail": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "preset": {
+      "$comment": "A named bundle of generation settings the intake interview offers as reusable defaults when adding new tiles. Keyed by preset name under pipelineDoc.presets.",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "canvas": { "$ref": "#/$defs/canvas" },
+        "fps": { "type": "number" },
+        "candidates": { "enum": [1, 2, 4] },
+        "humanApproval": { "type": "boolean" },
+        "idleFrames": { "type": "integer" },
+        "transitionFrames": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
     "settings": {
+      "$comment": "`reviewState` is the pause/resume handshake between the orchestrating agent and the browser viewer: pipeline-patch await-review sets 'reviewing', the viewer flips it to 'resume', and await-review deletes it on exit. Absent outside a review wait.",
       "type": "object",
       "required": ["styleSpec", "canvas", "fps", "candidates"],
       "properties": {
@@ -73,7 +100,8 @@
         "fps": { "type": "number" },
         "candidates": { "enum": [1, 2, 4] },
         "humanApproval": { "type": "boolean" },
-        "autonomous": { "type": "boolean" }
+        "autonomous": { "type": "boolean" },
+        "reviewState": { "enum": ["reviewing", "resume"] }
       },
       "additionalProperties": false
     },
@@ -97,7 +125,9 @@
       "required": ["settings", "items"],
       "properties": {
         "settings": { "$ref": "#/$defs/settings" },
-        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+        "runState": { "$ref": "#/$defs/runState" },
+        "presets": { "type": "object", "additionalProperties": { "$ref": "#/$defs/preset" } }
       },
       "additionalProperties": false
     },

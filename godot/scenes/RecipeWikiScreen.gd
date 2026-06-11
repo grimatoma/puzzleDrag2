@@ -1,49 +1,55 @@
 extends CanvasLayer
-## Recipe Wiki — an interactive crafting reference rendered as a parchment card.
-## Mirrors the AchievementsScreen / TownScreen pattern: extends CanvasLayer,
-## setup(g)/open()/refresh(), `closed` + `state_changed` signals, _action_buttons,
-## parchment card + scrim + Cinzel title.
+## Recipe Wiki — interactive crafting list using the same expand-in-place pattern as
+## InventoryScreen. Tapping a recipe row expands it in place to reveal the input chips
+## and Craft button; the separate detail card below the list is gone.
 ##
-## LAYOUT (React crafting-view parity): a STATION tab bar (one tab per real station —
-## the port's Bakery + Kitchen; no fake Larder/Forge/Workshop), a list of that
-## station's recipes as selectable rows with resource ICONS, and a SELECTED-RECIPE
-## detail card with per-input have/need chips + a green Craft button. Crafting calls
-## the real GameState.craft() and emits `state_changed` so Main refreshes the HUD.
+## LAYOUT (InventoryScreen parity): a STATION tab bar (Bakery, Kitchen, …), an optional
+## ⊞ Grid / ≣ List view toggle (list = expandable rows, grid = compact icon+name chips),
+## and a list/grid body rebuilt each refresh(). The shared expand helpers live in UiKit
+## (make_expandable_chip / begin_expand_details / add_expand_eyebrow / make_expand_body_text)
+## so both screens use exactly the same chip-and-details component.
 ##
-## NO class_name on purpose — Main preloads this script
-## (preload("res://scenes/RecipeWikiScreen.gd")) so the port never needs an --import.
+## NO class_name on purpose — Main preloads this script so the port never needs --import.
 ##
-## Data: RecipeConfig (RECIPE_IDS / recipe_name / recipe_inputs / recipe_output /
-## recipe_qty / recipe_station) + BuildingConfig.building_name + GameState
-## (inventory / can_craft / has_building / craft). The screen auto-grows as
-## RecipeConfig.RECIPES grows.
+## Data: RecipeConfig + BuildingConfig + GameState. Auto-grows with new recipes.
 
 var game: GameState
 
 signal closed
 signal state_changed   ## emitted after a successful craft so Main re-renders the HUD
 
-## action id → Button. "close" + (when a recipe is selected) "craft".
+## action id → Button. "close" + "view_toggle" (static); "craft" when a row is expanded.
 var _action_buttons: Dictionary = {}
 
-## Static shell, built once in setup(); the body VBox is cleared + repopulated each
-## refresh() so reopening always reflects the current recipe catalog + live inventory.
+## Static shell, built once in setup(); the body VBox is cleared + repopulated each refresh().
 var _body: VBoxContainer
 var _built: bool = false
 
-## Header label, rebuilt each refresh().
+## Header label (recipe count), rebuilt each refresh().
 var _header_label: Label
 
-## station building_id:String → its tab Button. Built once in the shell.
+## station building_id → its tab Button (built once in the shell).
 var _station_buttons: Dictionary = {}
 
-## recipe_id:String → the rendered list-row PanelContainer for the ACTIVE station
-## (rebuilt each refresh()). Lets a test fetch a specific row.
+## recipe_id → the rendered expandable chip PanelContainer for the active station
+## (rebuilt each refresh()). Lets tests fetch a specific row.
 var _cards: Dictionary = {}
 
-## The active station tab (a BuildingConfig id) + the currently selected recipe id.
+## The active station tab (a BuildingConfig id).
 var _active_station: String = ""
-var _selected_recipe: String = ""
+
+## The currently expanded recipe id ("" = none). Tapping a row toggles it; tapping
+## another moves the expansion. Collapses when the station tab switches.
+var _expanded: String = ""
+
+## Body view mode: "list" (expandable rows, default) or "grid" (compact icon+name chips).
+const VIEW_LIST := "list"
+const VIEW_GRID := "grid"
+var _view: String = VIEW_LIST
+var _view_btn: Button
+
+## Columns in the grid view. The expanded grid detail spans a full row of this many cells.
+const GRID_COLS := 2
 
 # ── parchment palette (matches AchievementsScreen / TownScreen tokens) ──────────
 const COL_TITLE  := Palette.INK
@@ -52,25 +58,22 @@ const COL_BODY   := Palette.INK
 const COL_MUTED  := Palette.INK_MID
 const COL_VALUE  := Palette.GOLD
 const COL_PANEL  := Palette.PARCHMENT
-## Warm rust tint for an under-stocked input chip (have < need) — reads "short" without
-## the harsh pure-red the parchment palette avoids.
 const COL_SHORT  := Color8(0xb0, 0x52, 0x3a)
 const PANEL_MAX_WIDTH := 560.0
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
-## Store `game`, build the static shell ONCE, then render. Safe to call again.
 func setup(g: GameState) -> void:
 	game = g
 	if not _built:
 		_build_shell()
 		_built = true
-	_ensure_selection()
+	_ensure_station()
 	refresh()
 
 func open() -> void:
 	visible = true
-	_ensure_selection()
+	_ensure_station()
 	refresh()
 
 func close() -> void:
@@ -80,24 +83,15 @@ func close() -> void:
 # ── static shell ──────────────────────────────────────────────────────────────
 
 func _build_shell() -> void:
-	layer = 4                                   # modal, above the HUD (layer 1)
+	layer = 4
 	visible = false
 
-	# Opaque VIEW background (not a dim modal scrim). review-3 promotes this from a ☰-menu
-	# SECONDARY sub-page to the 🔨 Craft PRIMARY nav VIEW (B1 family): it paints the warm
-	# app-frame parchment over the board (no longer dimmed behind), reserving UiKit.TOPBAR_RESERVE
-	# at the TOP so the persistent layer-1 HUD top bar shows ABOVE the view, and stopping
-	# UiKit.NAV_RESERVE short of the bottom so the persistent nav bar (a LOWER CanvasLayer) shows
-	# through + stays tappable; MOUSE_FILTER_STOP eats clicks in the band it covers.
 	var backdrop := UiKit.make_view_backdrop()
-	backdrop.offset_top = UiKit.TOPBAR_RESERVE   # reveal the persistent HUD top bar above
-	backdrop.offset_bottom = -UiKit.NAV_RESERVE  # leave the bottom nav strip unpainted
+	backdrop.offset_top = UiKit.TOPBAR_RESERVE
+	backdrop.offset_bottom = -UiKit.NAV_RESERVE
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
 
-	# Full-bleed view content: a full-rect Control holds a panel pinned edge-to-edge (no card
-	# margins), reserving the top-bar band + bottom-nav strip; a width-cap MarginContainer keeps
-	# line length tidy on wide viewports.
 	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -105,36 +99,25 @@ func _build_shell() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Full-bleed: no L/R card margins; the backdrop already reserves the top band so only a
-	# small inner pad is needed at the top; the bottom clears the persistent nav strip.
 	panel.offset_left = 0
 	panel.offset_right = 0
 	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
 	panel.offset_bottom = -UiKit.NAV_RESERVE
-	# Flat page fill (NOT a floating card) — parchment, no corner radius, no border, no drop
-	# shadow, so it reads as a full-brightness page under the persistent top bar. As a B1
-	# PRIMARY view it has NO visible card "✖ Close" — it's left via the bottom nav / ESC-back.
 	var style := StyleBoxFlat.new()
-	style.bg_color = COL_PANEL                   # Palette.PARCHMENT
+	style.bg_color = COL_PANEL
 	style.set_content_margin_all(20)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 
-	# Keep the panel from sprawling on wide viewports.
 	var width_cap := UiKit.make_width_cap()
 	panel.add_child(width_cap)
 
-	# A non-scrolling column: title row + station tab row pinned at the top, then a
-	# ScrollContainer that owns the recipe list + selected-recipe detail card.
 	var root_vbox := VBoxContainer.new()
 	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "🔨 Craft" heading spanning the row. As a primary nav VIEW (like Town /
-	# Inventory) there is NO visible card "✖ Close" — the view is left via the bottom nav or
-	# ESC-back. A non-rendered close Button is still created + wired below so ESC/back, the
-	# "board" deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
+	# Title row: "🔨 Craft" heading + ⊞/≣ view toggle (mirrors InventoryScreen).
 	var title_row := HBoxContainer.new()
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(title_row)
@@ -149,15 +132,21 @@ func _build_shell() -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 
-	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
-	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
+	_view_btn = Button.new()
+	_view_btn.text = "⊞ Grid"
+	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
+	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
+	title_row.add_child(_view_btn)
+	_action_buttons["view_toggle"] = _view_btn
+
+	# Hidden close affordance — wired but not rendered (primary view, left via nav/ESC).
 	var close_btn := Button.new()
 	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
 	_action_buttons["close"] = close_btn
 
-	# Station tab row: one segmented tab per real station (Bakery / Kitchen), with the
-	# "N recipes" count pushed to the right.
+	# Station tab row.
 	var tab_row := HBoxContainer.new()
 	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_row.add_theme_constant_override("separation", 6)
@@ -187,34 +176,25 @@ func _build_shell() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(scroll)
 
-	# The dynamic body — cleared + rebuilt each refresh().
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 12)
+	_body.add_theme_constant_override("separation", 8)
 	scroll.add_child(_body)
 
-# ── selection state ────────────────────────────────────────────────────────────
+# ── station state ──────────────────────────────────────────────────────────────
 
-## Ensure `_active_station` + `_selected_recipe` name real, consistent values: default
-## the station to the first station, and the selected recipe to the first recipe of the
-## active station.
-func _ensure_selection() -> void:
+## Ensure `_active_station` names a real station; default to the first one.
+func _ensure_station() -> void:
 	var stations: Array = _stations()
 	if _active_station == "" or not stations.has(_active_station):
 		_active_station = String(stations[0]) if not stations.is_empty() else ""
-	var recipes: Array = RecipeConfig.recipes_for_station(_active_station)
-	if _selected_recipe == "" or not recipes.has(_selected_recipe):
-		_selected_recipe = String(recipes[0]) if not recipes.is_empty() else ""
 
 # ── render ────────────────────────────────────────────────────────────────────
 
-## Clear the body and repopulate it for the active station: a selectable row per recipe
-## (tracked in `_cards`), then the selected recipe's detail card with have/need chips +
-## the Craft button. The header reads the TOTAL recipe count (across all stations).
 func refresh() -> void:
 	if not _built:
 		return
-	_ensure_selection()
+	_ensure_station()
 	_sync_station_tabs()
 	_action_buttons.erase("craft")
 	for child in _body.get_children():
@@ -225,18 +205,17 @@ func refresh() -> void:
 	var total: int = RecipeConfig.RECIPE_IDS.size()
 	_header_label.text = "%d recipe%s" % [total, "" if total == 1 else "s"]
 
+	if _view == VIEW_GRID:
+		_render_grid()
+		return
+
 	for id in RecipeConfig.recipes_for_station(_active_station):
 		var row := _make_recipe_row(String(id))
 		_body.add_child(row)
 		_cards[String(id)] = row
 
-	if _selected_recipe != "":
-		_body.add_child(_make_detail_card(_selected_recipe))
-
 # ── station tabs ───────────────────────────────────────────────────────────────
 
-## The distinct stations across the recipe catalog, in RECIPE_IDS order. The port's
-## real stations (Bakery, Kitchen) — derived, so this auto-grows with new recipes.
 func _stations() -> Array:
 	var out: Array = []
 	var seen: Dictionary = {}
@@ -251,59 +230,104 @@ func _on_station_tab(station_id: String) -> void:
 	if station_id == _active_station:
 		return
 	_active_station = station_id
-	_selected_recipe = ""    # re-default to the new station's first recipe
-	_ensure_selection()
+	_expanded = ""   # collapse any expanded row when switching station
+	_ensure_station()
 	refresh()
 
-## Apply the segmented active/inactive look to the station tab buttons.
 func _sync_station_tabs() -> void:
 	for key in _station_buttons.keys():
 		UiKit.style_segment(_station_buttons[key], String(key) == _active_station)
 
-func _on_select_recipe(id: String) -> void:
-	if id == _selected_recipe:
+# ── expand-in-place ────────────────────────────────────────────────────────────
+
+## Toggle the expansion for `entry_key` (a recipe id): tapping the expanded row collapses
+## it, tapping another moves the expansion. Public — headless tests drive it directly.
+##
+## In the LIST view this animates IN PLACE — only the two affected rows change: the newly tapped
+## row is rebuilt expanded and unrolls open (UiFx.expand_section) while the previously open row
+## rolls shut (UiFx.collapse_section) and drops its details. The untouched rows never rebuild, so
+## the list reflows smoothly instead of snapping. The GRID view rebuilds via refresh(): the tapped
+## chip stays put in its cell and a full-width detail card is inserted below that grid row (so the
+## surrounding cells never shift), with an ▲ over the originating column pointing back at the chip.
+func toggle_expand(entry_key: String) -> void:
+	if not _built or _view != VIEW_LIST:
+		_expanded = "" if _expanded == entry_key else entry_key
+		refresh()
 		return
-	_selected_recipe = id
-	refresh()
+	var old_key: String = _expanded
+	var new_key: String = "" if _expanded == entry_key else entry_key
+	_expanded = new_key
+	# The previously open row's Craft button is going away; the new row re-registers its own.
+	_action_buttons.erase("craft")
+	if old_key != "" and old_key != new_key:
+		_collapse_row_inplace(old_key)
+	if new_key != "":
+		_expand_row_inplace(new_key)
 
-# ── recipe list row (selectable, with icons) ────────────────────────────────────
+## Rebuild `id`'s collapsed row as an EXPANDED one in place (so its summary status + detail chips
+## read the live craft state), swapping the node at the same list position, then unroll the new
+## details open.
+func _expand_row_inplace(id: String) -> void:
+	var old_chip: Variant = _cards.get(id)
+	if old_chip == null or not is_instance_valid(old_chip) or not (old_chip as Node).is_inside_tree():
+		refresh()   # row not currently rendered — fall back to a full rebuild
+		return
+	var idx: int = (old_chip as Node).get_index()
+	_body.remove_child(old_chip)
+	(old_chip as Node).queue_free()
+	var new_chip := _make_recipe_row(id)
+	_body.add_child(new_chip)
+	_body.move_child(new_chip, idx)
+	_cards[id] = new_chip
+	var wrap: Variant = new_chip.get_meta("_details_wrap", null)
+	if wrap != null:
+		UiFx.expand_section(wrap as Control)
 
-## One selectable recipe row: the produced item's icon as the HERO on the left, then the
-## recipe name (Cinzel) with a one-line status under it, and the output qty on the right.
-## The input formula lives ONLY on the selected-recipe detail card (have/need chips) — the
-## rows stay compact and don't duplicate it. The selected row reads with an ember border.
+## Roll `id`'s expanded row shut: recolour its border to the collapsed look and animate its
+## details section closed, freeing it when the collapse finishes. The summary row (which the
+## toggle did not change) stays put — only the inline details collapse away.
+func _collapse_row_inplace(id: String) -> void:
+	var chip: Variant = _cards.get(id)
+	if chip == null or not is_instance_valid(chip):
+		return
+	UiKit.style_chip_expanded(chip as PanelContainer, false)
+	var node := chip as Node
+	if not node.has_meta("_details_wrap"):
+		return
+	var wrap: Variant = node.get_meta("_details_wrap")
+	node.remove_meta("_details_wrap")
+	if wrap == null or not is_instance_valid(wrap):
+		return
+	var w := wrap as Control
+	UiFx.collapse_section(w, func() -> void:
+		if is_instance_valid(w):
+			w.queue_free())
+
+## The currently expanded recipe id ("" when none). Headless contract.
+func expanded_key() -> String:
+	return _expanded
+
+# ── recipe list row (expandable, with inline detail) ────────────────────────────
+
+## One expandable recipe row: output icon hero on the left, recipe name + status subtitle
+## in the centre column, optional ×qty on the right. Tapping expands inline to show the
+## inputs (have/need chips) and the Craft button — no separate detail card below the list.
 func _make_recipe_row(id: String) -> PanelContainer:
-	var selected: bool = (id == _selected_recipe)
-	var row := PanelContainer.new()
+	var chip := UiKit.make_expandable_chip(id, _expanded, Callable(self, "toggle_expand"))
+	var col: VBoxContainer = chip.get_child(0)
+
+	var row := HBoxContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var sb := UiKit.row_box()
-	if selected:
-		sb = sb.duplicate() as StyleBoxFlat
-		sb.border_color = Palette.EMBER
-		sb.set_border_width_all(2)
-	row.add_theme_stylebox_override("panel", sb)
-	# Click anywhere on the row to select it.
-	row.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
-			or (event is InputEventScreenTouch and event.pressed)
-		if tap:
-			_on_select_recipe(id)
-	)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 12)
+	col.add_child(row)
 
-	var hbox := HBoxContainer.new()
-	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_theme_constant_override("separation", 12)
-	row.add_child(hbox)
-
-	# HERO — the produced item's icon, left of the card. Outputs with no exported art
-	# (e.g. honey_roll) fall back to their catalog glyph in the same 44px footprint so
-	# every row's name column lines up.
+	# Output icon hero.
 	var output: String = RecipeConfig.recipe_output(id)
 	var hero := UiKit.make_icon(output, 44)
 	if hero != null:
 		hero.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		hbox.add_child(hero)
+		row.add_child(hero)
 	else:
 		var glyph := Label.new()
 		var g: String = ResourceConfig.glyph(output)
@@ -314,14 +338,14 @@ func _make_recipe_row(id: String) -> PanelContainer:
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_child(glyph)
+		row.add_child(glyph)
 
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_theme_constant_override("separation", 2)
-	hbox.add_child(col)
+	var name_col := VBoxContainer.new()
+	name_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_col.add_theme_constant_override("separation", 2)
+	row.add_child(name_col)
 
 	var name_lbl := Label.new()
 	name_lbl.text = RecipeConfig.recipe_name(id)
@@ -331,126 +355,52 @@ func _make_recipe_row(id: String) -> PanelContainer:
 	if heading_font != null:
 		name_lbl.add_theme_font_override("font", heading_font)
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(name_lbl)
+	name_col.add_child(name_lbl)
 
-	# Status subtitle (React parity: Ready / Missing inputs / Station not built).
 	var st: Dictionary = _craft_status(id)
 	if String(st["text"]) != "":
-		col.add_child(_plain(String(st["text"]), Typography.size(Typography.Role.BODY), st["color"]))
+		name_col.add_child(_plain(String(st["text"]), Typography.size(Typography.Role.BODY), st["color"]))
 
-	# Output qty, right-aligned (only said once — the detail card spells out the inputs).
 	var qty: int = RecipeConfig.recipe_qty(id)
 	if qty > 1:
-		hbox.add_child(_plain("×%d" % qty, Typography.size(Typography.Role.SUBHEAD), COL_VALUE))
+		var qty_lbl := _plain("×%d" % qty, Typography.size(Typography.Role.SUBHEAD), COL_VALUE)
+		qty_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(qty_lbl)
 
-	return row
+	# Expanded inline details — begin_expand_details builds them inside a height-animatable
+	# collapsible (stashed on the chip as "_details_wrap") so the tap-to-expand toggle can unroll
+	# it open and roll the previously-open row shut. On a plain refresh() it just sits at its
+	# content height; toggle_expand is what drives UiFx.expand_section / collapse_section.
+	if _expanded == id:
+		var details := UiKit.begin_expand_details(col)
+		_populate_recipe_details(details, id)
 
-func _plain(text: String, size: int, col: Color) -> Label:
-	var lbl := Label.new()
-	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", size)
-	lbl.add_theme_color_override("font_color", col)
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return lbl
+	return chip
 
-# ── selected-recipe detail card (have/need chips + Craft) ───────────────────────
-
-## The detail card for the selected recipe: the output, an "at <Station>" line, a row
-## of per-input have/need chips (green when covered, rose when short), and a Craft
-## button (filled green when craftable, disabled with a reason otherwise).
-func _make_detail_card(id: String) -> PanelContainer:
-	var card := PanelContainer.new()
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var sb := UiKit.card_box(Palette.PARCHMENT_SOFT)
-	card.add_theme_stylebox_override("panel", sb)
-
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 8)
-	card.add_child(col)
-	# Selection flow: the detail card fades in on every rebuild (selecting a recipe,
-	# switching station, crafting) — UiFx no-ops headless / under Reduce Motion.
-	UiFx.content_fade(col)
-
-	# Output header: big icon + "Bread ×1" + the station line.
-	var head := HBoxContainer.new()
-	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_theme_constant_override("separation", 8)
-	col.add_child(head)
-
-	var out_icon := UiKit.make_icon(RecipeConfig.recipe_output(id), 40)
-	if out_icon != null:
-		out_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(out_icon)
-	else:
-		# Same glyph fallback as the list rows — art-less outputs still get a hero.
-		var head_glyph := Label.new()
-		var hg: String = ResourceConfig.glyph(RecipeConfig.recipe_output(id))
-		head_glyph.text = hg if hg != "" else "🍲"
-		UiKit.set_font_size(head_glyph, Typography.Role.TITLE)
-		head_glyph.add_theme_color_override("font_color", COL_BODY)
-		head_glyph.custom_minimum_size = Vector2(40, 40)
-		head_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		head_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		head_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		head.add_child(head_glyph)
-
-	var head_col := VBoxContainer.new()
-	head_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head_col.add_theme_constant_override("separation", 1)
-	head.add_child(head_col)
-
-	var out_name := Label.new()
-	out_name.text = "%s ×%d" % [RecipeConfig.recipe_name(id), RecipeConfig.recipe_qty(id)]
-	UiKit.set_font_size(out_name, Typography.Role.SUBHEAD)
-	out_name.add_theme_color_override("font_color", COL_HEADER)
-	var hf: Font = UiKit.heading_font()
-	if hf != null:
-		out_name.add_theme_font_override("font", hf)
-	head_col.add_child(out_name)
-
+## Fill an expanded recipe row's details VBox: the station eyebrow, optional description, the
+## per-input have/need chips, and the Craft button. Shared by the refresh() build path and the
+## in-place animated expand (so both always read the LIVE craft state). Registers the Craft
+## button under _action_buttons["craft"] (the headless contract).
+func _populate_recipe_details(details: VBoxContainer, id: String) -> void:
 	var station_id: String = RecipeConfig.recipe_station(id)
-	var station_lbl := Label.new()
-	station_lbl.text = "at %s" % BuildingConfig.building_name(station_id)
-	UiKit.set_font_size(station_lbl, Typography.Role.BODY)
-	station_lbl.add_theme_color_override("font_color", COL_MUTED)
-	head_col.add_child(station_lbl)
+	UiKit.add_expand_eyebrow(details, "Recipe · %s" % BuildingConfig.building_name(station_id), COL_HEADER)
 
-	# Status sub-line (React crafting-view parity): Ready to craft / Station not built /
-	# Missing inputs — coloured moss (ready) / muted (no station) / rose (short).
-	var status: Dictionary = _craft_status(id)
-	var status_lbl := Label.new()
-	status_lbl.text = String(status["text"])
-	UiKit.set_font_size(status_lbl, Typography.Role.LABEL)
-	status_lbl.add_theme_color_override("font_color", status["color"])
-	status_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head_col.add_child(status_lbl)
-
-	# Flavor description of the produced good (verbatim React item desc) — React shows
-	# `recipe.desc || itemDef.desc` in the selected-recipe detail card.
 	var desc_text: String = RecipeConfig.recipe_desc(id)
 	if desc_text != "":
-		var desc_lbl := Label.new()
-		desc_lbl.text = desc_text
-		UiKit.set_font_size(desc_lbl, Typography.Role.BODY)
-		desc_lbl.add_theme_color_override("font_color", COL_BODY)
-		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col.add_child(desc_lbl)
+		details.add_child(UiKit.make_expand_body_text(desc_text, COL_MUTED))
 
-	# Input chips — one per input: [icon] name  have/need (green when covered, rose short).
+	# Input chips — have/need, green when covered, rose when short.
 	var chips := HFlowContainer.new()
 	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chips.add_theme_constant_override("h_separation", 6)
 	chips.add_theme_constant_override("v_separation", 6)
-	col.add_child(chips)
+	details.add_child(chips)
 
 	var inputs: Dictionary = RecipeConfig.recipe_inputs(id)
 	for key in inputs.keys():
 		chips.add_child(_input_chip(String(key), int(inputs[key])))
 
-	# Craft button — filled green when craftable, otherwise disabled with a reason.
+	# Craft button.
 	var craftable: bool = game != null and game.can_craft(id)
 	var craft_btn := Button.new()
 	craft_btn.text = "Craft"
@@ -458,24 +408,194 @@ func _make_detail_card(id: String) -> PanelContainer:
 	UiKit.style_action_button(craft_btn, Palette.GO_GREEN, 8, Typography.size(Typography.Role.SUBHEAD))
 	craft_btn.disabled = not craftable
 	craft_btn.connect("pressed", Callable(self, "_on_craft").bind(id))
-	col.add_child(craft_btn)
+	details.add_child(craft_btn)
 	_action_buttons["craft"] = craft_btn
 
-	# (The not-craftable reason is now shown as the coloured status sub-line in the head.)
+# ── grid view ──────────────────────────────────────────────────────────────────
 
-	return card
+## Render the grid view as a VBox of GRID_COLS-wide HBox rows (not a single GridContainer) so the
+## expanded recipe's detail can be inserted as a full-width card BETWEEN rows — a GridContainer cell
+## can't span columns, and we never want to shift the surrounding chips. The tapped chip keeps its
+## cell; its detail unfolds full-width directly beneath its row, with an ▲ over the origin column.
+func _render_grid() -> void:
+	var rows_box := VBoxContainer.new()
+	rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows_box.add_theme_constant_override("separation", 8)
+	rows_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(rows_box)
 
-## {text:String, color:Color} craft status for the selected-recipe card + row badges
-## (React parity): "Ready to craft" (moss) when craftable, "Station not built" (muted)
-## when the station isn't built, else "Missing inputs" (rose).
+	var ids: Array = RecipeConfig.recipes_for_station(_active_station)
+	var n: int = ids.size()
+	var i: int = 0
+	while i < n:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rows_box.add_child(row)
+
+		var expanded_col: int = -1
+		for c in range(GRID_COLS):
+			var idx: int = i + c
+			if idx < n:
+				var id: String = String(ids[idx])
+				var chip := _make_grid_chip(id)
+				row.add_child(chip)
+				_cards[id] = chip
+				if id == _expanded:
+					expanded_col = c
+			else:
+				# Empty filler so a lone trailing card keeps its half-width cell (no stretch).
+				var filler := Control.new()
+				filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				row.add_child(filler)
+
+		if expanded_col != -1:
+			rows_box.add_child(_make_grid_detail(String(_expanded), expanded_col))
+
+		i += GRID_COLS
+
+## The full-width inline detail card shown below the grid row holding the expanded recipe. An ember
+## ▲ sits over the originating column (left chip → left arrow, right chip → right arrow) so the card
+## visibly points back at which grid chip was tapped. Reuses _populate_recipe_details, so the input
+## chips + Craft button read the LIVE craft state, exactly like the list view's expanded row.
+func _make_grid_detail(id: String, origin_col: int) -> VBoxContainer:
+	var wrap := VBoxContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.add_theme_constant_override("separation", 0)
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# Arrow row: GRID_COLS cells matching the grid above (same separation), ▲ centred in origin_col.
+	var arrow_row := HBoxContainer.new()
+	arrow_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	arrow_row.add_theme_constant_override("separation", 8)
+	arrow_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for c in range(GRID_COLS):
+		if c == origin_col:
+			var arrow := Label.new()
+			arrow.text = "▲"
+			arrow.add_theme_font_size_override("font_size", 18)
+			arrow.add_theme_color_override("font_color", Palette.EMBER)
+			arrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			arrow.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+			arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(arrow)
+		else:
+			var cell := Control.new()
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(cell)
+	wrap.add_child(arrow_row)
+
+	# Ember-bordered detail panel (the "expanded" accent), full width — never shifts the grid.
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiKit.style_chip_expanded(panel, true)
+	wrap.add_child(panel)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	panel.add_child(col)
+
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	_populate_recipe_details(details, id)
+
+	return wrap
+
+func _make_grid_chip(id: String) -> PanelContainer:
+	var chip := PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiKit.style_chip_expanded(chip, id == _expanded)
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+		if tap:
+			toggle_expand(id)
+	)
+
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(col)
+
+	var output: String = RecipeConfig.recipe_output(id)
+	var icon := UiKit.make_icon(output, 36.0)
+	if icon != null:
+		var holder := CenterContainer.new()
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(icon)
+		col.add_child(holder)
+	else:
+		var glyph := Label.new()
+		var g: String = ResourceConfig.glyph(output)
+		glyph.text = g if g != "" else "🍲"
+		UiKit.set_font_size(glyph, Typography.Role.TITLE)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(glyph)
+
+	var name_lbl := Label.new()
+	name_lbl.text = RecipeConfig.recipe_name(id)
+	UiKit.set_font_size(name_lbl, Typography.Role.BODY)
+	name_lbl.add_theme_color_override("font_color", COL_BODY)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_lbl)
+
+	var st: Dictionary = _craft_status(id)
+	var status_lbl := Label.new()
+	status_lbl.text = String(st["text"])
+	UiKit.set_font_size(status_lbl, Typography.Role.CAPTION)
+	status_lbl.add_theme_color_override("font_color", st["color"])
+	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(status_lbl)
+
+	return chip
+
+# ── view toggle ────────────────────────────────────────────────────────────────
+
+func _on_view_toggle() -> void:
+	_view = VIEW_GRID if _view == VIEW_LIST else VIEW_LIST
+	if _view_btn != null:
+		_view_btn.text = "≣ List" if _view == VIEW_GRID else "⊞ Grid"
+	refresh()
+
+func set_view(mode: String) -> void:
+	if mode != VIEW_LIST and mode != VIEW_GRID:
+		return
+	if mode == _view:
+		return
+	_view = mode
+	if _view_btn != null:
+		_view_btn.text = "≣ List" if _view == VIEW_GRID else "⊞ Grid"
+	refresh()
+
+func view_mode() -> String:
+	return _view
+
+# ── craft status helpers ───────────────────────────────────────────────────────
+
 func _craft_status(id: String) -> Dictionary:
 	if game == null:
 		return {"text": "", "color": COL_MUTED}
 	var station_id: String = RecipeConfig.recipe_station(id)
 	if not game.has_building(station_id):
 		return {"text": "Station not built", "color": COL_MUTED}
-	# T15: a built station whose recipe is still tier-locked reads "Requires <Tier>"
-	# (the craft is gated on settlement tier, not inputs). Tier-1 recipes never trip this.
 	var min_tier: int = RecipeConfig.recipe_min_settlement_tier(id)
 	if game.settlement.tier < min_tier:
 		return {"text": "Requires %s" % TownConfig.tier_name(min_tier), "color": COL_MUTED}
@@ -483,8 +603,6 @@ func _craft_status(id: String) -> Dictionary:
 		return {"text": "Ready to craft", "color": Palette.MOSS}
 	return {"text": "Missing inputs", "color": COL_SHORT}
 
-## A single input chip: [icon] have/need, tinted green when the player has enough of
-## this input, rose when short. Reads live inventory.
 func _input_chip(key: String, need: int) -> PanelContainer:
 	var have: int = 0
 	if game != null:
@@ -526,17 +644,6 @@ func _input_chip(key: String, need: int) -> PanelContainer:
 
 	return chip
 
-## Why `id` can't be crafted right now: station not built, or short on inputs.
-func _craft_reason(id: String) -> String:
-	if game == null:
-		return ""
-	var station_id: String = RecipeConfig.recipe_station(id)
-	if not game.has_building(station_id):
-		return "Build the %s to craft this." % BuildingConfig.building_name(station_id)
-	return "Not enough ingredients."
-
-## Craft the selected recipe via the real GameState path; on success refresh + tell
-## Main (state_changed) to re-render the HUD stockpile.
 func _on_craft(id: String) -> void:
 	if game == null:
 		return
@@ -545,9 +652,19 @@ func _on_craft(id: String) -> void:
 		emit_signal("state_changed")
 	refresh()
 
-# ── pure helpers (kept for the view tests) ─────────────────────────────────────
+# ── helpers ────────────────────────────────────────────────────────────────────
 
-## Build the formula string: "flour×3 + eggs×1 → bread×1".
+func _plain(text: String, size: int, col: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", size)
+	lbl.add_theme_color_override("font_color", col)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return lbl
+
+# ── pure helpers (kept for view tests) ─────────────────────────────────────────
+
 static func _build_formula(inputs: Dictionary, output: String, qty: int) -> String:
 	var parts: Array = []
 	for key in inputs.keys():
@@ -557,6 +674,5 @@ static func _build_formula(inputs: Dictionary, output: String, qty: int) -> Stri
 	var rhs: String = "%s×%d" % [output, qty] if output != "" else "—"
 	return "%s  →  %s" % [lhs, rhs]
 
-## Total recipes in the catalog (= RecipeConfig.RECIPE_IDS.size()).
 static func recipe_count() -> int:
 	return RecipeConfig.RECIPE_IDS.size()
