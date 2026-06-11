@@ -664,8 +664,16 @@ func _build_group_section(group_name: String, keys: Array) -> void:
 func _make_resource_row(res: String) -> PanelContainer:
 	var count: int = game.qty(res)
 	var entry_key: String = "res:" + res
-	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
-	var col: VBoxContainer = chip.get_child(0)
+
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
 	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
@@ -711,9 +719,8 @@ func _make_resource_row(res: String) -> PanelContainer:
 
 	# Expanded details — kind eyebrow, the catalog description, and real Sell/Buy actions
 	# (the same GameState.sell/buy the Town Market uses; prices are the live drifted ones).
-	if _expanded == entry_key:
-		var details := UiKit.begin_expand_details(col)
-		_populate_resource_details(details, res)
+	var details := UiKit.begin_expand_details(col)
+	_populate_resource_details(details, res)
 
 	return chip
 
@@ -783,8 +790,16 @@ func _build_tool_section(tool_ids: Array) -> void:
 func _make_tool_row(id: String) -> PanelContainer:
 	var charges: int = game.tool_count(id)
 	var entry_key: String = "tool:" + id
-	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
-	var col: VBoxContainer = chip.get_child(0)
+
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
 	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
@@ -814,9 +829,8 @@ func _make_tool_row(id: String) -> PanelContainer:
 	row.add_child(count_lbl)
 
 	# Expanded details — the tool's catalog description + where it's used.
-	if _expanded == entry_key:
-		var details := UiKit.begin_expand_details(col)
-		_populate_tool_details(details, id)
+	var details := UiKit.begin_expand_details(col)
+	_populate_tool_details(details, id)
 
 	return chip
 
@@ -860,8 +874,16 @@ func _make_item_row(id: String) -> PanelContainer:
 	var count: int = item_count(id)
 	var def: Dictionary = _item_def(id)
 	var entry_key: String = "item:" + id
-	var chip := UiKit.make_expandable_chip(entry_key, _expanded, Callable(self, "toggle_expand"))
-	var col: VBoxContainer = chip.get_child(0)
+
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	chip.add_child(col)
 	_cards[entry_key] = chip
 
 	var row := HBoxContainer.new()
@@ -895,9 +917,8 @@ func _make_item_row(id: String) -> PanelContainer:
 
 	# Expanded details — the valuable's catalog description (where it comes from / what
 	# it's for). No actions: runes/influence are spent at their own surfaces, not sold.
-	if _expanded == entry_key:
-		var details := UiKit.begin_expand_details(col)
-		_populate_item_details(details, id)
+	var details := UiKit.begin_expand_details(col)
+	_populate_item_details(details, id)
 
 	return chip
 
@@ -929,21 +950,13 @@ func _populate_details_for_key(details: VBoxContainer, entry_key: String) -> voi
 ## the tapped chip stays put in its cell and a full-width detail card drops in below that grid row
 ## (so the surrounding chips never shift), with an ▲ over the origin column pointing at the chip.
 func toggle_expand(entry_key: String) -> void:
-	if not _built or _view != VIEW_LIST:
-		_expanded = "" if _expanded == entry_key else entry_key
-		refresh()
+	if not _built:
 		return
-	var old_key: String = _expanded
-	var new_key: String = "" if _expanded == entry_key else entry_key
-	_expanded = new_key
-	# Drop the previously expanded row's Sell/Buy action keys; the new row re-registers its own.
-	for k in _action_buttons.keys():
-		if String(k).begins_with("sell:") or String(k).begins_with("buy:"):
-			_action_buttons.erase(k)
-	if old_key != "" and old_key != new_key:
-		_collapse_row_inplace(old_key)
-	if new_key != "":
-		_expand_row_inplace(new_key)
+	if _view != VIEW_GRID:
+		# List view has all items expanded all of the time, so no-op.
+		return
+	_expanded = "" if _expanded == entry_key else entry_key
+	refresh()
 
 ## Rebuild `entry_key`'s collapsed row as an EXPANDED one in place (so its summary + details read
 ## the live inventory/price state), swap the node at the same list position, then unroll the new

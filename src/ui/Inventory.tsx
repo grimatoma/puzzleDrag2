@@ -332,12 +332,9 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
 
   return (
     <div className="hl-browser-item is-selected hl-browser-item--expanded">
-      <button
-        type="button"
-        className="hl-browser-item__row"
-        onClick={onCollapse}
-        aria-expanded="true"
-        aria-label={`Collapse ${label}`}
+      <div
+        className="hl-browser-item__row !cursor-default"
+        aria-label={label}
       >
         <span className="hl-browser-item__icon">
           <Icon iconKey={key} size={40} title={label} />
@@ -357,7 +354,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
           {count != null && <span className="tabular-nums">{count}</span>}
           {listStatus && <span>{listStatus}</span>}
         </span>
-      </button>
+      </div>
       <div className="hl-browser-item__details">
         {showActions && (
           <div className="flex flex-wrap gap-2">
@@ -771,29 +768,14 @@ export function InventoryGrid({
               progressMax={progressMaxFor(entry.key)}
             />
           );
-        } else if (isSelected) {
+        } else {
           cells.push(
             <InventoryListItemExpanded
               key={entry.key}
               entry={entry}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onCollapse={accordion.closeImmediate}
-              progressValue={progressValueFor(entry.key)}
-              progressMax={progressMaxFor(entry.key)}
-            />
-          );
-        } else {
-          cells.push(
-            <InventoryBrowserItem
-              key={entry.key}
-              itemKey={entry.key}
-              label={entry.label}
-              count={entry.count}
-              orderStatus={entry.orderStatus}
-              index={i}
-              selected={false}
-              onSelect={selectInPlaceStable}
+              onCollapse={() => {}}
               progressValue={progressValueFor(entry.key)}
               progressMax={progressMaxFor(entry.key)}
             />

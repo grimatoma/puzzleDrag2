@@ -17,6 +17,6 @@
 // frames (`.claude/skills/sprite-pipeline/scripts/integrate.mjs`). All CLI args/flags pass
 // straight through to it.
 
-import { main } from "../.claude/skills/sprite-pipeline/scripts/integrate.mjs";
+import { main } from "./integrate.mjs";
 
 main();

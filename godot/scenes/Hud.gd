@@ -141,7 +141,7 @@ var _stockpile_chips: Dictionary = {}
 ## bread/supplies/cured_meat/… come later so they fall outside the 12 and render only as owned
 ## extras). Each chip's display name comes from ResourceConfig.label() via UiKit.pretty_name.
 const STOCKPILE_ROSTER: Array = [
-	"flour", "plank", "dirt", "jam", "soup", "pie",
+	"flour", "plank", "jam", "soup", "pie",
 	"honey", "meat", "milk", "horseshoe", "eggs", "hay_bundle",
 ]
 ## Mine/harbor rosters — React's IdleView swaps the chip list to the ACTIVE biome's
@@ -714,7 +714,7 @@ func _build_idle_view() -> VBoxContainer:
 	scroll.add_child(pad)
 
 	_stockpile_grid = GridContainer.new()
-	_stockpile_grid.columns = 4
+	_stockpile_grid.columns = 2
 	_stockpile_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stockpile_grid.add_theme_constant_override("h_separation", 8)
 	_stockpile_grid.add_theme_constant_override("v_separation", 8)
@@ -1372,7 +1372,11 @@ func _make_tool_slot(id: String, charges: int, is_armed: bool, is_inspected: boo
 	var desc: String = String(cfg.get("desc", ""))
 
 	var slot := Control.new()
-	slot.custom_minimum_size = Vector2(56, 58)
+	var is_large: bool = _dropdown_docked and not from_hotbar
+	var slot_w: float = 110.0 if is_large else 56.0
+	var slot_h: float = 116.0 if is_large else 58.0
+	slot.custom_minimum_size = Vector2(slot_w, slot_h)
+	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var btn := Button.new()
 	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1412,7 +1416,7 @@ func _make_tool_slot(id: String, charges: int, is_armed: bool, is_inspected: boo
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	badge.add_theme_stylebox_override("normal", _tool_badge_box())
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.position = Vector2(38, -6)
+	badge.position = Vector2(slot_w - 18.0, -6.0)
 	slot.add_child(badge)
 
 	# Hide the slot's icon button while it is the one being DRAGGED (the ghost stands in for it),
@@ -2318,10 +2322,10 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 	sb.border_color = Color(Palette.IRON, 0.0) if empty else Palette.IRON
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 8
-	sb.content_margin_right = 8
-	sb.content_margin_top = 4
-	sb.content_margin_bottom = 4
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
 	box.add_theme_stylebox_override("panel", sb)
 	# Cap-relative fill wash, BEHIND the icon/count row. Lives in a plain-Control host
 	# (PanelContainer lays out its direct children full-rect, but a non-container child's
@@ -2340,22 +2344,30 @@ func _make_stock_chip(res: String, count: int) -> PanelContainer:
 			wash.anchor_bottom = 1.0
 			wash.anchor_right = clampf(float(count) / float(cap), 0.0, 1.0)
 			host.add_child(wash)
-	# React's stockpile chips are a compact icon + count. Show the same procedural icon
-	# when we have art for the key; fall back to the title-cased name when we don't.
+	# Stockpile chips show an icon, resource name, and count.
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 4)
+	row.add_theme_constant_override("separation", 8)
 	box.add_child(row)
-	var icon := UiKit.make_icon(res, 26.0)
+	var icon := UiKit.make_icon(res, 32.0)
 	if icon != null:
 		row.add_child(icon)
-	var lbl := Label.new()
-	lbl.text = "%d" % count if icon != null else "%s  %d" % [UiKit.pretty_name(res), count]
-	UiKit.set_font_size(lbl, Typography.Role.SUBHEAD)
-	lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(lbl)
+	var name_lbl := Label.new()
+	name_lbl.text = UiKit.pretty_name(res)
+	UiKit.set_font_size(name_lbl, Typography.Role.SUBHEAD)
+	name_lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
+	name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_lbl)
+	
+	var count_lbl := Label.new()
+	count_lbl.text = "%d" % count
+	UiKit.set_font_size(count_lbl, Typography.Role.SUBHEAD)
+	count_lbl.add_theme_color_override("font_color", Palette.INK_MID if empty else Palette.INK)
+	count_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(count_lbl)
 	return box
 
 ## Re-apply the live fills when the track changes size (a resize keeps the bar
