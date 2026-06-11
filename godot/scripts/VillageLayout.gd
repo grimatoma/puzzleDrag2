@@ -282,6 +282,8 @@ static func decor_for_stage(stage: int) -> Array:
 ## The explicit ground-paint kind at `cell` ("water" / "plaza" / "path" /
 ## "grass_flowers"), or "grass" — the implicit default — for any unlisted
 ## cell. Thin reverse lookup over ground_cells().
+## Test/debug convenience ONLY: every call deep-copies the whole ground cache.
+## Painters must iterate ground_cells() once, not call this per cell.
 static func ground_cell(c: Vector2i) -> String:
 	var ground: Dictionary = ground_cells()
 	for kind: String in ground.keys():
@@ -324,8 +326,13 @@ static func _rect_cells(rect: Rect2i) -> Array[Vector2i]:
 	return out
 
 ## Inclusive axis-aligned run -> cells (also tolerates a single-cell run).
+## A diagonal run (both axes differing) is a data typo in PATH_RUNS — fail
+## loudly with an empty result so the gate test catches it immediately.
 static func _run_cells(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
+	if from.x != to.x and from.y != to.y:
+		push_error("VillageLayout._run_cells: run %s -> %s is not axis-aligned" % [from, to])
+		return out
 	var lo := Vector2i(mini(from.x, to.x), mini(from.y, to.y))
 	var hi := Vector2i(maxi(from.x, to.x), maxi(from.y, to.y))
 	for y in range(lo.y, hi.y + 1):

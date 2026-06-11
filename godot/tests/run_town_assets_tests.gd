@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_test_stage_filtered_accessors()
 	_test_stage_for_plot_count()
 	_test_ground_tileset()
+	_test_source_flip_fallback()  # runs LAST: flips SOURCE, then restores it
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -44,9 +45,7 @@ func _check(cond: bool, msg: String) -> void:
 
 func _test_manifest_entries_load() -> void:
 	_check(TownArtConfig.TILE == 16, "TILE is 16 px")
-	var ids: Array = []
-	for id in TownArtConfig._entries().keys():
-		ids.append(String(id))
+	var ids: Array = TownArtConfig.art_ids()
 	_check(ids.size() >= 45, "manifest has >= 45 entries (got %d)" % ids.size())
 	var kinds_seen: Dictionary = {}
 	for id: String in ids:
@@ -111,7 +110,10 @@ func _test_characters() -> void:
 		_check(w % fw == 0 and h % fh == 0,
 			"%s sheet size %dx%d divides into %dx%d frames" % [id, w, h, fw, fh])
 		var cols: PackedStringArray = String(e.get("columns", "")).split(",")
-		_check(cols.size() == int(float(w) / float(fw)),
+		# The `%` check above guarantees divisibility — clean integer division.
+		@warning_ignore("integer_division")
+		var frame_cols: int = w / fw
+		_check(cols.size() == frame_cols,
 			"%s declares one facing per frame column" % id)
 		for facing in ["down", "up", "left", "right"]:
 			_check(cols.has(facing), "%s has facing column '%s'" % [id, facing])
@@ -363,6 +365,26 @@ func _test_ground_tileset() -> void:
 			"layout ground kind '%s' is paintable" % kind)
 	_check(TownArtConfig.GROUND_KINDS.has("grass"), "the implicit default 'grass' is paintable")
 	_check(TownArtConfig.GROUND_KINDS.has("pad"), "the empty-plot 'pad' kind is paintable")
+	# Sync guard: the paint table and the source-id order list cover the same
+	# kinds in the same order (source id = index in GROUND_KIND_ORDER).
+	_check(TownArtConfig.GROUND_KINDS.keys() == TownArtConfig.GROUND_KIND_ORDER,
+		"GROUND_KINDS keys match GROUND_KIND_ORDER exactly")
+
+# ── SOURCE flip: a missing pixellab slice falls back to committed stock ─────
+# Runs LAST (it flips the active art set both ways); ends back on "stock" so
+# the registry is clean for any later consumer.
+
+func _test_source_flip_fallback() -> void:
+	# "house" ships only as a stock slice — no pixellab/ art exists yet, so the
+	# resolver must fall through to the committed stock PNG.
+	TownArtConfig.set_source("pixellab")
+	_check(TownArtConfig.SOURCE == "pixellab", "set_source flips SOURCE to 'pixellab'")
+	_check(TownArtConfig.texture_for("house") != null,
+		"pixellab source: stock-only id still resolves via the stock fallback")
+	TownArtConfig.set_source("stock")
+	_check(TownArtConfig.SOURCE == "stock", "set_source restores 'stock'")
+	_check(TownArtConfig.texture_for("house") != null,
+		"stock texture resolves again after restore (setter cleared the cache)")
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

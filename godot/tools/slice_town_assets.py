@@ -24,6 +24,10 @@ plus godot/assets/town/manifest.json (id -> file/w/h/anchor/footprint/kind/licen
 TownArtConfig.gd parses the manifest at runtime (it is whitelisted in
 export_presets.cfg include_filter so the Web export ships it); the headless gate
 test (godot/tests/run_town_assets_tests.gd) asserts every entry loads.
+
+Sliced with Pillow 12.2.0. The emitted PNG bytes are only guaranteed
+byte-identical to the committed slices on that Pillow version — other versions
+may encode the same pixels differently (expect spurious diffs, not corruption).
 """
 
 from __future__ import annotations
@@ -181,6 +185,18 @@ def anchor_for(kind: str, w: int, h: int) -> list[int]:
     return [w // 2, h - 2]
 
 
+def open_sheet(path: Path) -> Image.Image:
+    """Open a pack sheet as RGBA, failing with a friendly error when the pack
+    isn't unzipped where expected (see the packs-dir layout in the docstring)."""
+    if not path.is_file():
+        raise SystemExit(
+            f"pack sheet not found: {path}\n"
+            "Unzip the asset packs into the --packs-dir layout described in the "
+            "module docstring (kenney/, serene/, ninja/)."
+        )
+    return Image.open(path).convert("RGBA")
+
+
 def fill_enclosed_transparency(im: Image.Image, fill=(28, 22, 36, 255)) -> Image.Image:
     """Flood-fill transparency reachable from the border; any remaining fully
     transparent pixels are ENCLOSED (e.g. the dark doorway inside the Kenney
@@ -215,7 +231,7 @@ def main() -> int:
         print(f"packs dir not found: {packs}", file=sys.stderr)
         return 1
 
-    sheets = {k: Image.open(packs / v).convert("RGBA") for k, v in SHEETS.items()}
+    sheets = {k: open_sheet(packs / v) for k, v in SHEETS.items()}
     manifest: dict[str, dict] = {}
 
     def emit(art_id: str, im: Image.Image, subdir: str, kind: str, lic: dict, extra: dict | None = None) -> None:
@@ -255,13 +271,13 @@ def main() -> int:
     arch = fill_enclosed_transparency(sheets["kenney"].crop((48, 144, 80, 176)))
     emit("board_mine", arch, "buildings", "landmark", LIC_KENNEY,
          {"footprint": [2, 2], "anchor": [16, 31]})
-    boat = Image.open(packs / NINJA_ROOT / "Backgrounds/Vehicles/Boat.png").convert("RGBA")
+    boat = open_sheet(packs / NINJA_ROOT / "Backgrounds/Vehicles/Boat.png")
     emit("board_fish", boat, "buildings", "landmark", LIC_NINJA,
          {"footprint": [5, 2], "anchor": [40, 30]})
 
     # Villager walk sheets (4 dirs x 4 frames of 16x16).
     for art_id, rel in CHARACTERS.items():
-        sheet = Image.open(packs / NINJA_ROOT / rel).convert("RGBA")
+        sheet = open_sheet(packs / NINJA_ROOT / rel)
         emit(art_id, sheet, "characters", "character", LIC_NINJA,
              {"frame_w": 16, "frame_h": 16, "columns": "down,up,left,right", "rows": "walk frames 0-3"})
 
@@ -269,7 +285,7 @@ def main() -> int:
     for art_id, box in DECOR.items():
         emit(art_id, sheets["serene"].crop(box), "decor", "decor", LIC_SERENE)
     # The street lamp (Ninja Adventure — see LAMP_SHEET note above).
-    element = Image.open(packs / NINJA_ROOT / LAMP_SHEET).convert("RGBA")
+    element = open_sheet(packs / NINJA_ROOT / LAMP_SHEET)
     emit("lamp", element.crop(LAMP_BOX), "decor", "decor", LIC_NINJA)
 
     OUT_ROOT.mkdir(parents=True, exist_ok=True)

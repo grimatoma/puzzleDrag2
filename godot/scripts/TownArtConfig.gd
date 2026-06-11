@@ -42,7 +42,16 @@ const ART_ROOT: String = "res://assets/town/"
 ## Active art set: the first path component tried under assets/town/. Phase 5
 ## flips this to "pixellab" once generated art lands; any id missing from the
 ## new set falls back to its committed stock slice (see _candidate_paths).
+## Read directly, but flip via set_source(), never assign directly — the
+## setter drops the texture cache so stale stock textures can't leak through.
 static var SOURCE: String = "stock"
+
+## Switch the active art set (e.g. "pixellab") and drop the caches so every
+## subsequent texture_for() re-resolves against the new source. The ONLY
+## supported way to flip SOURCE at runtime.
+static func set_source(s: String) -> void:
+	SOURCE = s
+	clear_cache()
 
 ## Ground-kind paint table: VillageLayout ground kind -> manifest art id.
 ## build_tileset() creates ONE single-tile TileSetAtlasSource per kind, with
@@ -88,6 +97,15 @@ static func _entries() -> Dictionary:
 static func has_art(art_id: String) -> bool:
 	return _entries().has(art_id)
 
+## Every manifest art id, sorted — the public iteration surface (tests/tools
+## use this instead of reaching into the private _entries() cache).
+static func art_ids() -> Array:
+	var out: Array = []
+	for id in _entries().keys():
+		out.append(String(id))
+	out.sort()
+	return out
+
 ## The full manifest entry for `art_id` (a COPY, so callers can't mutate the
 ## cache), or {} for an unknown id.
 static func entry(art_id: String) -> Dictionary:
@@ -109,6 +127,9 @@ static func character_ids() -> Array[String]:
 
 ## Ground tiles `art_id` occupies, in TILE cells. (1,1) for unknown ids — the
 ## safe minimum, matching the procedural-fallback draw size.
+## NOTE: a building footprint describes the sprite's own base coverage only;
+## village plots are fixed 3×3 (VillageLayout.PLOT_FOOTPRINT) and do NOT
+## consume this field.
 static func footprint_of(art_id: String) -> Vector2i:
 	if not has_art(art_id):
 		return Vector2i.ONE
@@ -129,6 +150,8 @@ static func footprint_of(art_id: String) -> Vector2i:
 ## sprite up off its footprint. Ground tiles anchor at (8,16) and characters at
 ## (8,15) per 16x16 frame. Mirrored by the "anchor_convention" note at the top
 ## of manifest.json; keep both in sync with anchor_for() if the rule changes.
+## For characters the anchor is PER-FRAME (coords within one 16x16 walk frame),
+## not coords on the full walk sheet.
 static func anchor_of(art_id: String) -> Vector2:
 	if not has_art(art_id):
 		return Vector2.ZERO
@@ -192,6 +215,9 @@ static func ground_source_id(kind: String) -> int:
 ## VillageLayout paints explicit cells per kind. A kind whose texture fails to
 ## load is skipped with a warning (the painter then leaves those cells on the
 ## default grass layer fill).
+## Consumers MUST set texture_filter = TEXTURE_FILTER_NEAREST on the
+## TileMapLayer (and any sprites placed over it) — the project ships no global
+## nearest-filter default, so 16px art renders blurry otherwise.
 static func build_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(TILE, TILE)
