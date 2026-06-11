@@ -93,7 +93,7 @@ func _test_modal() -> void:
 	_check(m._current_season_name() == "Spring", "fresh game season is Spring")
 	var summary: String = m.season_spawn_summary()
 	# Spring's heaviest home-zone drop is grass (0.38) → "Grass 38%"; trees + grain also appear.
-	_check(summary.contains("Grass 38%"), "Spring spawn summary leads with 'Grass 38%' (got '%s')" % summary)
+	_check(summary.contains("Grass 38%"), "Spring spawn summary leads with 'Grass 38%%' (got '%s')" % summary)
 	_check(summary.contains("Trees") and summary.contains("Grain"),
 		"Spring spawn summary lists Trees + Grain too")
 	# Categories with weight 0 this season (flower/herd/cattle/mount) are omitted.
