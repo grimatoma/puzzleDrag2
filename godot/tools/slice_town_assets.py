@@ -58,7 +58,10 @@ LIC_NINJA = {"license": "CC0", "source": "Ninja Adventure by Pixel-boy & AAA (pi
 GROUND = {
     # 16x16 ground paint tiles (one TileSetAtlasSource each in TownArtConfig.build_tileset()).
     "ground_grass":  ("serene", (48, 0, 64, 16), LIC_SERENE),
-    "ground_path":   ("serene_auto", (16, 0, 32, 16), LIC_SERENE),
+    # The seamless full-dirt FILL tile from the main sheet. (The autotile sheet's
+    # dirt block at (16,0) is a grass-TRANSITION edge tile — tiled, it repeats a
+    # grass blob along every tile's right edge.)
+    "ground_path":   ("serene", (160, 32, 176, 48), LIC_SERENE),
     "ground_plaza":  ("serene", (272, 64, 288, 80), LIC_SERENE),
     "ground_water":  ("serene", (192, 16, 208, 32), LIC_SERENE),
     "ground_pad":    ("kenney", (16, 32, 32, 48), LIC_KENNEY),
@@ -116,10 +119,15 @@ BUILDINGS = {
     "mine":        _BLUE["big_b"],
 }
 
-# Decor: trees / fences / lamp / sign / flowers / bush / rocks, all Serene.
+# Decor: trees / fences / sign / flowers / bush / rocks, all Serene (the lamp
+# is emitted separately from the Ninja pack below). The two big trees are the
+# ISOLATED single-tree sprites in the row at y 202 — the earlier crops from the
+# overlapping tree rows (y 245/293) dragged in the neighbour tree's tan trunk.
+# The sign crop starts at y 208 so the 1-px gray base sliver of the sprite
+# above it (sheet rows 206-207) stays out.
 DECOR = {
-    "tree_green":     (144, 293, 176, 336),
-    "tree_teal":      (144, 245, 176, 288),
+    "tree_green":     (176, 202, 208, 240),
+    "tree_teal":      (208, 202, 240, 240),
     "tree_small":     (272, 210, 302, 240),
     "bush":           (112, 192, 128, 208),
     "flowers_red":    (32, 192, 48, 208),
@@ -128,10 +136,17 @@ DECOR = {
     "fence_h":        (80, 272, 96, 288),
     "fence_post":     (64, 226, 80, 242),
     "mailbox":        (112, 254, 128, 272),
-    "sign":           (112, 206, 128, 224),
+    "sign":           (112, 208, 128, 224),
     "rock_small":     (16, 238, 32, 254),
     "rock_tall":      (48, 224, 64, 254),
 }
+
+# Street lamp: Ninja Adventure's standing paper lantern (TilesetElement.png).
+# Neither the Serene Village sheet nor Kenney Tiny Town ships a lamp prop, so
+# the village lamp post comes from the third pack. Box excludes the wall ring
+# above it (rows <= 47) and the unrelated props left/right of it.
+LAMP_SHEET = "Backgrounds/Tilesets/TilesetElement.png"
+LAMP_BOX = (97, 48, 111, 77)
 
 # Ninja Adventure villagers: SeparateAnim/Walk.png is a 64x64 sheet of 16x16
 # frames — columns = facing (down, up, left, right), rows = the 4 walk frames.
@@ -253,10 +268,25 @@ def main() -> int:
     # Decor.
     for art_id, box in DECOR.items():
         emit(art_id, sheets["serene"].crop(box), "decor", "decor", LIC_SERENE)
+    # The street lamp (Ninja Adventure — see LAMP_SHEET note above).
+    element = Image.open(packs / NINJA_ROOT / LAMP_SHEET).convert("RGBA")
+    emit("lamp", element.crop(LAMP_BOX), "decor", "decor", LIC_NINJA)
 
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     with open(OUT_ROOT / "manifest.json", "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"tile": 16, "entries": manifest}, f, indent=2, sort_keys=True)
+        json.dump({
+            "tile": 16,
+            # BLESSED deviation from the Phase-0 spec's literal (w/2, h): see
+            # anchor_for() — buildings/decor anchor at (w//2, h-2) so the
+            # sprite's ~2px grass fringe sits below the floor line.
+            "anchor_convention": (
+                "Floor-center-bottom in texture px. Buildings/decor use (w//2, h-2) — "
+                "2px above the sprite's bottom edge, keeping the baked-in grass fringe "
+                "below the wall line — not the spec's literal (w/2, h). Ground tiles "
+                "anchor at (8,16); characters at (8,15) per 16x16 frame."
+            ),
+            "entries": manifest,
+        }, f, indent=2, sort_keys=True)
         f.write("\n")
     total = sum((OUT_ROOT / e["file"]).stat().st_size for e in manifest.values())
     print(f"wrote {len(manifest)} slices, {total} bytes of PNG, manifest at {OUT_ROOT / 'manifest.json'}")

@@ -120,6 +120,15 @@ static func footprint_of(art_id: String) -> Vector2i:
 ## The sprite's floor-center-bottom point in texture px. A renderer aligns this
 ## point with the footprint's floor center (Sprite2D.offset = -anchor with
 ## centered = false). Texture center-bottom for unknown ids.
+##
+## ANCHOR CONVENTION (BLESSED deviation from the Phase-0 spec): the spec wrote
+## the anchor as the literal texture bottom-center (w/2, h), but the stock
+## building/decor sprites bake a ~2px grass fringe under their wall line, so
+## the slicer (tools/slice_town_assets.py, anchor_for()) emits (w//2, h-2) for
+## those kinds — the fringe hangs BELOW the floor line instead of pushing the
+## sprite up off its footprint. Ground tiles anchor at (8,16) and characters at
+## (8,15) per 16x16 frame. Mirrored by the "anchor_convention" note at the top
+## of manifest.json; keep both in sync with anchor_for() if the rule changes.
 static func anchor_of(art_id: String) -> Vector2:
 	if not has_art(art_id):
 		return Vector2.ZERO

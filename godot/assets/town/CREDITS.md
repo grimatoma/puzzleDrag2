@@ -15,8 +15,8 @@ fields on every entry).
 - Taken: the 22 house exteriors under `stock/buildings/` (8 silhouettes × 3
   roof colors, one per `BuildingConfig` shape family), most ground tiles
   (`ground_grass`, `ground_grass_flowers`, `ground_path`, `ground_plaza`,
-  `ground_water`), and all `stock/decor/` sprites (trees, bush, flowers,
-  fences, sign, mailbox, rocks).
+  `ground_water`), and all `stock/decor/` sprites except the lamp (trees,
+  bush, flowers, fences, sign, mailbox, rocks).
 
 ## Ninja Adventure — Pixel-boy & AAA (CC0)
 
@@ -26,8 +26,9 @@ fields on every entry).
 - Taken: the six villager walk spritesheets under `stock/characters/`
   (`villager_a`–`villager_f`: Villager, Villager2, Villager3, Villager4,
   Woman, OldMan — each a 64×64 sheet of 16×16 frames, columns =
-  down/up/left/right facing, rows = the 4 walk frames) and the fishing boat
-  (`board_fish`).
+  down/up/left/right facing, rows = the 4 walk frames), the fishing boat
+  (`board_fish`), and the street lamp (`lamp`, the standing paper lantern
+  from `Backgrounds/Tilesets/TilesetElement.png`).
 
 ## Tiny Town — Kenney (CC0)
 

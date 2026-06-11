@@ -253,6 +253,15 @@ static func plots() -> Array:
 			})
 	return _plots_cache.duplicate(true)
 
+## The plots unlocked at growth stage `stage` (entries with stage <= `stage`),
+## in the same plaza-out order as plots(). Thin filter over plots().
+static func plots_for_stage(stage: int) -> Array:
+	var out: Array = []
+	for p: Dictionary in plots():
+		if int(p["stage"]) <= stage:
+			out.append(p)
+	return out
+
 ## The three board-entrance landmarks: art id -> {cell, footprint} (deep copy).
 static func landmarks() -> Dictionary:
 	return LANDMARKS.duplicate(true)
@@ -260,6 +269,25 @@ static func landmarks() -> Dictionary:
 ## Stage-tagged dressing: Array of {art_id, cell, stage} (deep copy).
 static func decor() -> Array:
 	return DECOR.duplicate(true)
+
+## The dressing visible at growth stage `stage` (entries with stage <=
+## `stage`). Thin filter over decor().
+static func decor_for_stage(stage: int) -> Array:
+	var out: Array = []
+	for d: Dictionary in decor():
+		if int(d["stage"]) <= stage:
+			out.append(d)
+	return out
+
+## The explicit ground-paint kind at `cell` ("water" / "plaza" / "path" /
+## "grass_flowers"), or "grass" — the implicit default — for any unlisted
+## cell. Thin reverse lookup over ground_cells().
+static func ground_cell(c: Vector2i) -> String:
+	var ground: Dictionary = ground_cells()
+	for kind: String in ground.keys():
+		if (ground[kind] as Array).has(c):
+			return kind
+	return "grass"
 
 ## Every walkable cell: in-bounds and not water/plot/landmark. Paths, plaza,
 ## and open grass are all walkable; decor does not block in Phase 0. ONE

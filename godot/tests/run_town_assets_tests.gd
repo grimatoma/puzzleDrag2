@@ -22,6 +22,7 @@ func _initialize() -> void:
 	_test_layout_no_overlaps()
 	_test_layout_walkable_connected()
 	_test_layout_decor_and_flowers()
+	_test_stage_filtered_accessors()
 	_test_stage_for_plot_count()
 	_test_ground_tileset()
 	print("──────────────────────────────────────────────────")
@@ -66,6 +67,11 @@ func _test_manifest_entries_load() -> void:
 			"entry carries a known license: %s" % id)
 	for kind in ["ground", "building", "character", "decor", "landmark"]:
 		_check(kinds_seen.has(kind), "manifest covers kind '%s'" % kind)
+	# The street lamp the Phase-0 spec promised (auto-covered above once
+	# present; this pins its existence + kind so it can't silently drop out).
+	_check(TownArtConfig.has_art("lamp")
+		and String(TownArtConfig.entry("lamp").get("kind", "")) == "decor",
+		"the 'lamp' decor slice ships in the manifest")
 
 # ── every BuildingConfig shape has art or falls back cleanly ────────────────
 
@@ -282,6 +288,38 @@ func _test_layout_decor_and_flowers() -> void:
 		_check(VillageLayout.in_bounds(c) and not water.has(c) and not plaza.has(c)
 			and not path.has(c) and not blocked_non_water.has(c) and not seen_cells.has(c),
 			"grass_flowers cell is plain grass: %s" % c)
+
+# ── stage-filtered accessors: thin wrappers over plots()/decor()/ground ─────
+
+func _test_stage_filtered_accessors() -> void:
+	# plots_for_stage matches the cumulative capacity ladder at both ends.
+	_check(VillageLayout.plots_for_stage(1).size() == int(VillageLayout.STAGE_PLOT_CAPACITY[0]),
+		"plots_for_stage(1) == stage-1 capacity")
+	_check(VillageLayout.plots_for_stage(VillageLayout.MAX_STAGE).size() == VillageLayout.plots().size(),
+		"plots_for_stage(MAX_STAGE) == every plot")
+	for p: Dictionary in VillageLayout.plots_for_stage(2):
+		if int(p["stage"]) > 2:
+			_check(false, "plots_for_stage(2) leaked a stage-%d plot" % int(p["stage"]))
+	# decor_for_stage is monotone non-decreasing and tops out at decor().
+	var prev := 0
+	var monotone := true
+	for s in range(1, VillageLayout.MAX_STAGE + 1):
+		var n: int = VillageLayout.decor_for_stage(s).size()
+		if n < prev:
+			monotone = false
+		prev = n
+	_check(monotone, "decor_for_stage counts are non-decreasing over stages")
+	_check(VillageLayout.decor_for_stage(VillageLayout.MAX_STAGE).size() == VillageLayout.decor().size(),
+		"decor_for_stage(MAX_STAGE) == full decor catalog")
+	# ground_cell agrees with ground_cells() and defaults to grass.
+	_check(VillageLayout.ground_cell(VillageLayout.PLAZA_RECT.position) == "plaza",
+		"ground_cell: plaza corner reads 'plaza'")
+	_check(VillageLayout.ground_cell(VillageLayout.WATER_RECT.position) == "water",
+		"ground_cell: river cell reads 'water'")
+	_check(VillageLayout.ground_cell(Vector2i(2, 13)) == "path",
+		"ground_cell: Main Street cell reads 'path'")
+	_check(VillageLayout.ground_cell(Vector2i(0, 0)) == "grass",
+		"ground_cell: unlisted cell defaults to 'grass'")
 
 # ── stage_for_plot_count: monotone band lookup ───────────────────────────────
 

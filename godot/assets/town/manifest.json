@@ -1,4 +1,5 @@
 {
+  "anchor_convention": "Floor-center-bottom in texture px. Buildings/decor use (w//2, h-2) \u2014 2px above the sprite's bottom edge, keeping the baked-in grass fringe below the wall line \u2014 not the spec's literal (w/2, h). Ground tiles anchor at (8,16); characters at (8,15) per 16x16 frame.",
   "entries": {
     "barn": {
       "anchor": [
@@ -416,6 +417,22 @@
       "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
       "w": 43
     },
+    "lamp": {
+      "anchor": [
+        7,
+        27
+      ],
+      "file": "stock/decor/lamp.png",
+      "footprint": [
+        1,
+        1
+      ],
+      "h": 29,
+      "kind": "decor",
+      "license": "CC0",
+      "source": "Ninja Adventure by Pixel-boy & AAA (pixel-boy.itch.io/ninja-adventure-asset-pack)",
+      "w": 14
+    },
     "lumber": {
       "anchor": [
         33,
@@ -563,14 +580,14 @@
     "sign": {
       "anchor": [
         8,
-        16
+        14
       ],
       "file": "stock/decor/sign.png",
       "footprint": [
         1,
         1
       ],
-      "h": 18,
+      "h": 16,
       "kind": "decor",
       "license": "CC-BY 4.0",
       "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
@@ -643,14 +660,14 @@
     "tree_green": {
       "anchor": [
         16,
-        41
+        36
       ],
       "file": "stock/decor/tree_green.png",
       "footprint": [
         1,
         1
       ],
-      "h": 43,
+      "h": 38,
       "kind": "decor",
       "license": "CC-BY 4.0",
       "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
@@ -675,14 +692,14 @@
     "tree_teal": {
       "anchor": [
         16,
-        41
+        36
       ],
       "file": "stock/decor/tree_teal.png",
       "footprint": [
         1,
         1
       ],
-      "h": 43,
+      "h": 38,
       "kind": "decor",
       "license": "CC-BY 4.0",
       "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
