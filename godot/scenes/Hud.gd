@@ -782,18 +782,27 @@ func _build_chain_view() -> VBoxContainer:
 	_chain_prog_fill.size = Vector2(0, 54)
 	_chain_prog_track.add_child(_chain_prog_fill)
 
-	# Big centred counter ("3/6", "2+4/6", "1/6 +1", "×4") — KEPT name (_chain_prog_label).
+	# "have / need" counter ("3/6") — KEPT name (_chain_prog_label). It sits in a FIXED-width
+	# slot to the RIGHT of the bar, NOT overlaid on it: the bar keeps SIZE_EXPAND_FILL so it
+	# still fills all remaining width, and because the slot is a fixed Control with the label
+	# anchored inside (not a sizing child), the counter text can change without ever resizing
+	# the slot — so the bar never shifts (the old overlaid "2+1/6" jump is gone). Dark ink now
+	# that it reads on the parchment panel instead of on the coloured fill.
+	var num_slot := Control.new()
+	num_slot.custom_minimum_size = Vector2(66, 0)
+	num_slot.size_flags_vertical = Control.SIZE_FILL
+	num_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(num_slot)
 	_chain_prog_label = Label.new()
 	_chain_prog_label.text = ""
-	UiKit.set_font_size(_chain_prog_label, Typography.Role.TITLE)
-	_chain_prog_label.add_theme_color_override("font_color", Color("#fff8e7"))
-	_chain_prog_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
-	_chain_prog_label.add_theme_constant_override("outline_size", 5)
+	UiKit.set_font_size(_chain_prog_label, Typography.Role.HEADING)
+	_chain_prog_label.add_theme_color_override("font_color", Palette.INK)
 	_chain_prog_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_chain_prog_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chain_prog_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chain_prog_label.clip_text = true
 	_chain_prog_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chain_prog_track.add_child(_chain_prog_label)
+	num_slot.add_child(_chain_prog_label)
 
 	# A3 — the chain-STAGE banner ("BONUS!"/"DOUBLE!"/…), top-right on the track, above
 	# the fills. Hidden at stage 0; _refresh_chain_progress drives text/colour/pop.
@@ -2995,12 +3004,14 @@ func _refresh_season_bar() -> void:
 ## target, then drives:
 ##   • header — accent dot + right label ("{Res} chain" / "N more to collect" while
 ##     short of the minimum);
-##   • the big bar — carried base fill (brown) + live STAGE-gradient fill on top; once
-##     carried+length wraps the threshold the bar LOOPS (full brown + overflow fill);
-##     the counter reads "len/thr", "carried+len/thr", or "rem/thr +cycles"; hazards
-##     with no producer read "×N" with no fills (React's ×{length});
-##   • the stage banner ("BONUS!"/…) + the resource icon card's accent ring + "+N"
-##     earned badge;
+##   • the big bar (fills all width) — carried base fill (brown) + live STAGE-gradient fill
+##     on top; once carried+length wraps the threshold the bar LOOPS (full brown + overflow
+##     fill). A FIXED-width counter slot beside the bar reads a plain "M/T" toward the next
+##     unit (combined progress, or the post-wrap remainder) — never the old "carried+len" or
+##     "+cycles" math, which the two-tone fill + yield pill now carry; hazards with no
+##     producer read "×N" with no fills (React's ×{length});
+##   • the stage banner ("BONUS!"/…) + the resource icon card's accent ring + "+N" yield
+##     pill, where +N is the TRUE banked units floor((carried+length)/threshold);
 ##   • the "UPGRADE TO {tile}" footer with its mini progress track.
 ## Thresholds are the EFFECTIVE (worker/ability-reduced) values via
 ## GameState.effective_threshold — exactly what credit_chain will bank (and what
@@ -3027,6 +3038,14 @@ func _refresh_chain_progress() -> void:
 	var stage_bot := Color(String(stage.get("bot", "#d97a2a")))
 	var accent := Color(String(stage.get("accent", "#e07a3a")))
 
+	# Goal ③ — the TRUE yield on release = floor((carried + length) / threshold), exactly what
+	# GameState.credit_chain banks (carried = the banked remainder from prior chains). The
+	# resource pill shows THIS, so a chain that finishes a unit off banked progress still reads
+	# "+1". (The stage banner below stays on earned_units — the live chain's own combo escalation,
+	# a distinct idea from how many units actually land in the inventory.)
+	var carried: int = int(game.progress.get(res, 0)) if (game != null and res != "") else 0
+	var banked_units: int = int((carried + length) / threshold) if has_threshold else 0
+
 	# Header (React: right = tooShort ? "N more to collect" : "{res} chain").
 	var res_label: String = UiKit.pretty_name(res) if res != "" \
 		else UiKit.pretty_name(Constants.string_key(tile))
@@ -3041,14 +3060,12 @@ func _refresh_chain_progress() -> void:
 	# so it IS React's carriedInCycle.
 	var inner_w: float = maxf(0.0, _chain_prog_track.size.x - 4.0)
 	var inner_h: float = maxf(0.0, _chain_prog_track.size.y - 4.0)
-	var carried: int = int(game.progress.get(res, 0)) if (game != null and res != "") else 0
 	if has_threshold:
 		var combined: int = carried + length
 		# `>` not `>=`: an EXACT completion (combined == threshold) is a *full* bar, not a
 		# reset. The old `>=` sent the boundary into the reset branch below, which rendered
 		# an empty "0/6 +1" — reading as incomplete the instant the unit was actually earned.
 		var looped: bool = combined > threshold
-		var cycles: int = combined / threshold
 		var remainder: int = combined % threshold
 		_chain_prog_fill.add_theme_stylebox_override("panel", _bar_fill_box(stage_top, stage_bot))
 		if looped:
@@ -3063,7 +3080,8 @@ func _refresh_chain_progress() -> void:
 			_chain_fill_carried.size = Vector2(inner_w, inner_h)
 			_chain_prog_fill.position = Vector2(2, 2)
 			_chain_prog_fill.size = Vector2(inner_w * float(shown) / float(threshold), inner_h)
-			_chain_prog_label.text = "%d/%d +%d" % [shown, threshold, cycles]
+			# Just "M/T" toward the NEXT unit — the yield pill ("+N") carries the cycles count.
+			_chain_prog_label.text = "%d/%d" % [shown, threshold]
 		else:
 			var carried_w: float = inner_w * float(carried) / float(threshold)
 			_chain_fill_carried.visible = carried > 0
@@ -3071,8 +3089,10 @@ func _refresh_chain_progress() -> void:
 			_chain_fill_carried.size = Vector2(carried_w, inner_h)
 			_chain_prog_fill.position = Vector2(2 + carried_w, 2)
 			_chain_prog_fill.size = Vector2(inner_w * float(length) / float(threshold), inner_h)
-			_chain_prog_label.text = ("%d+%d/%d" % [carried, length, threshold]) if carried > 0 \
-				else ("%d/%d" % [length, threshold])
+			# Counter reads the COMBINED total over the requirement ("3/6"), not the raw
+			# "old+new" expression ("2+1/6") — the two-tone fill already shows the carried
+			# (brown) vs live (gradient) split, so the number stays a plain "have / need".
+			_chain_prog_label.text = "%d/%d" % [carried + length, threshold]
 	else:
 		# A hazard / no-producer chain (RAT, golden coin, …): plain "×N", no fills.
 		_chain_fill_carried.visible = false
@@ -3109,10 +3129,10 @@ func _refresh_chain_progress() -> void:
 		var icon_tex: Texture2D = UiKit.resource_icon(res) if res != "" else Tile.texture_for(tile)
 		_chain_res_icon.texture = icon_tex
 		_chain_res_box.add_theme_stylebox_override("panel",
-			_chain_res_box_style(accent if earned_units > 0 else Palette.IRON))
-		_chain_earn_badge.visible = earned_units > 0
-		if earned_units > 0:
-			_chain_earn_label.text = "+%d" % earned_units
+			_chain_res_box_style(accent if banked_units > 0 else Palette.IRON))
+		_chain_earn_badge.visible = banked_units > 0
+		if banked_units > 0:
+			_chain_earn_label.text = "+%d" % banked_units
 			var badge_sb := StyleBoxFlat.new()
 			badge_sb.bg_color = accent
 			badge_sb.border_color = Palette.INK
