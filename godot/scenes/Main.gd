@@ -618,6 +618,19 @@ func _on_chain_rejected(_length: int) -> void:
 ## methods stay usable directly (deep-links, tests) — only the nav-tab wiring goes through
 ## here. Reopening the same view is a no-op switch (it just re-opens + re-highlights).
 func _switch_primary_view(opener: String) -> void:
+	# Re-opening the ALREADY-VISIBLE primary is a true no-op. The web History bridge
+	# can re-apply the deep-link for the view that's already open: closing the ☰ menu
+	# over the Town map sets the router to NONE, which makes _sync_history fire one
+	# history.back(); that pops `#/menu` back to `#/map`, whose popstate re-runs
+	# apply_deeplink("map") → _switch_primary_view("_open_townmap"). Without this guard
+	# the hide-then-reopen below would tear the live Town view down and rebuild it,
+	# replaying the overlay fade-in (the "white blink") AND resetting its pan/zoom via
+	# open()'s _refit(). This mirrors the same-tab guard in _on_nav_selected, but covers
+	# EVERY entry (deep-link, browser Back/Forward, manual hash edit). Desktop/headless
+	# never reach this — there's no History bridge — so it's a harmless no-op there.
+	var current_primary: Node = _primary_screen_for_opener(opener)
+	if current_primary != null and is_instance_valid(current_primary) and current_primary.visible:
+		return
 	# T15/review-3 — the Craft tab now opens the crafting UI (RecipeWikiScreen), so it
 	# joins the PRIMARY views that must be hidden when ANOTHER primary tab is opened. The
 	# Town ledger (TownScreen) is no longer a nav-tab target (it moved to the ☰ menu + the
@@ -648,6 +661,20 @@ func _switch_primary_view(opener: String) -> void:
 	if _hud != null and is_instance_valid(_hud):
 		_hud.set_board_mode(false)
 	call(opener)
+
+## Map a _switch_primary_view opener method name to the screen instance it opens, so the
+## "already visible → no-op" guard can tell whether that view is the live primary. Returns
+## null for an unknown opener or a not-yet-created (lazy) screen. Mirrors the opener strings
+## used by _on_nav_selected + the apply_deeplink primary branches.
+func _primary_screen_for_opener(opener: String) -> Node:
+	match opener:
+		"_open_town": return _town_screen
+		"_open_inventory": return _inventory_screen
+		"_open_townmap": return _townmap_screen
+		"_open_cartography": return _cartography_screen
+		"_open_townsfolk": return _townsfolk_screen
+		"_open_recipes": return _recipe_wiki_screen
+	return null
 
 # ── HUD up-calls (the HUD emits intents; Main does the routing / tool dispatch) ──
 
