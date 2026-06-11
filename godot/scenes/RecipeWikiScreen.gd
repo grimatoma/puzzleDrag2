@@ -117,58 +117,56 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 10)
 	width_cap.add_child(root_vbox)
 
-	# Title row: "🔨 Craft" heading + ⊞/≣ view toggle (mirrors InventoryScreen).
-	var title_row := HBoxContainer.new()
-	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(title_row)
-
-	var title := Label.new()
-	title.text = "🔨 Craft"
-	UiKit.set_font_size(title, Typography.Role.DISPLAY)
-	title.add_theme_color_override("font_color", COL_TITLE)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title)
-
-	_view_btn = Button.new()
-	_view_btn.text = "⊞ Grid"
-	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
-	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
-	title_row.add_child(_view_btn)
-	_action_buttons["view_toggle"] = _view_btn
-
-	# Hidden close affordance — wired but not rendered (primary view, left via nav/ESC).
+	# Hidden close affordance — wired but not rendered; backs ESC/back, apply_deeplink("board"),
+	# and the headless tests (which press _action_buttons["close"]). The view title is now shown
+	# in the persistent HUD top bar (set_nav_title("Craft")) so no in-page heading is needed.
 	var close_btn := Button.new()
 	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
 	_action_buttons["close"] = close_btn
 
-	# Station tab row.
+	# Station tab row: scrollable tab buttons on the left, "N recipes" count + ⊞ Grid toggle pinned right.
+	# The ScrollContainer lets many station tabs scroll horizontally without pushing the controls off screen.
 	var tab_row := HBoxContainer.new()
 	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_row.add_theme_constant_override("separation", 6)
 	root_vbox.add_child(tab_row)
+
+	var tab_scroll := ScrollContainer.new()
+	tab_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tab_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	tab_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_row.add_child(tab_scroll)
+
+	var tab_inner := HBoxContainer.new()
+	tab_inner.add_theme_constant_override("separation", 6)
+	tab_scroll.add_child(tab_inner)
 
 	for station_id in _stations():
 		var btn := Button.new()
 		btn.text = BuildingConfig.building_name(station_id)
 		UiKit.set_font_size(btn, Typography.Role.SUBHEAD)
 		btn.connect("pressed", Callable(self, "_on_station_tab").bind(station_id))
-		tab_row.add_child(btn)
+		tab_inner.add_child(btn)
 		_station_buttons[station_id] = btn
 
 	_header_label = Label.new()
 	_header_label.text = ""
 	UiKit.set_font_size(_header_label, Typography.Role.LABEL)
 	_header_label.add_theme_color_override("font_color", COL_VALUE)
-	_header_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_header_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_header_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tab_row.add_child(_header_label)
+
+	_view_btn = Button.new()
+	_view_btn.text = "⊞ Grid"
+	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
+	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
+	tab_row.add_child(_view_btn)
+	_action_buttons["view_toggle"] = _view_btn
 
 	var scroll := UiKit.make_vscroll()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

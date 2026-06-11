@@ -232,49 +232,30 @@ func _build_shell() -> void:
 	root_vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(root_vbox)
 
-	# Title row: "📦 Inventory" heading spanning the row. The visible "✖ Close" is GONE — a
-	# primary nav VIEW is left via the bottom nav / ESC-back, not a card close button. A
-	# non-rendered close Button is still created + wired below so ESC/back, the "board"
-	# deep-link, and the headless tests (which press _action_buttons["close"]) keep working.
-	var title_row := HBoxContainer.new()
-	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(title_row)
-
-	var title := Label.new()
-	title.text = "📦 Inventory"
-	UiKit.set_font_size(title, Typography.Role.DISPLAY)
-	title.add_theme_color_override("font_color", COL_TITLE)
-	var heading_font: Font = UiKit.heading_font()
-	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title)
-
-	# View toggle (React header ⊞/≣) — flips the body between the grouped LIST and the compact
-	# icon GRID. Right-aligned in the title row. Its glyph reflects the mode it will switch TO.
-	_view_btn = Button.new()
-	_view_btn.text = "⊞ Grid"
-	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	UiKit.style_button(_view_btn, Palette.EMBER, 6, Typography.size(Typography.Role.SUBHEAD))
-	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
-	title_row.add_child(_view_btn)
-	_action_buttons["view_toggle"] = _view_btn
-
-	# Hidden close affordance — created + wired but NOT added to the visible row, so it never
-	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
+	# Hidden close affordance — wired but not rendered; backs ESC/back, apply_deeplink("board"),
+	# and the headless tests (which press _action_buttons["close"]). The view title is now shown
+	# in the persistent HUD top bar (set_nav_title("Inventory")) so no in-page heading is needed.
 	var close_btn := Button.new()
 	close_btn.visible = false
 	close_btn.connect("pressed", Callable(self, "close"))
 	_action_buttons["close"] = close_btn
 
-	# C1 — category tab row (React PRIMARY_FILTERS parity). A tight HBox of segmented
-	# toggles (the same UiKit.style_segment look TownsfolkScreen uses): All | Resources |
-	# Tools. Selecting a tab re-renders the body filtered to that kind. "All" is active by
-	# default. Each button is registered in _tab_buttons for the headless tab-switch test.
+	# C1 — category tab row (React PRIMARY_FILTERS parity): scrollable tabs on the left,
+	# the ⊞/≣ view toggle pinned to the far right. Tabs can swipe-scroll; the toggle is fixed.
 	var tab_row := HBoxContainer.new()
 	tab_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_row.add_theme_constant_override("separation", 6)
 	root_vbox.add_child(tab_row)
+
+	var tab_scroll := ScrollContainer.new()
+	tab_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tab_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	tab_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_row.add_child(tab_scroll)
+
+	var tab_inner := HBoxContainer.new()
+	tab_inner.add_theme_constant_override("separation", 6)
+	tab_scroll.add_child(tab_inner)
 
 	for def in TAB_DEFS:
 		var tab_id: String = String(def[0])
@@ -282,8 +263,17 @@ func _build_shell() -> void:
 		tab_btn.text = String(def[1])
 		UiKit.set_font_size(tab_btn, Typography.Role.SUBHEAD)
 		tab_btn.connect("pressed", Callable(self, "_on_tab").bind(tab_id))
-		tab_row.add_child(tab_btn)
+		tab_inner.add_child(tab_btn)
 		_tab_buttons[tab_id] = tab_btn
+
+	# View toggle — pinned to the right of the tab row, always visible.
+	_view_btn = Button.new()
+	_view_btn.text = "⊞ Grid"
+	_view_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+	UiKit.style_button(_view_btn, Palette.EMBER, 6, 16)
+	_view_btn.connect("pressed", Callable(self, "_on_view_toggle"))
+	tab_row.add_child(_view_btn)
+	_action_buttons["view_toggle"] = _view_btn
 
 	# M5-polish — a search field that filters the ledger rows by name (case-insensitive
 	# substring). Sits between the title and the grouped body. Typing re-renders the body
@@ -306,6 +296,14 @@ func _build_shell() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 12)
 	root_vbox.add_child(_body)
+
+	# Auto-refresh on window resize to update grid columns
+	tree_entered.connect(func() -> void:
+		get_viewport().size_changed.connect(func() -> void:
+			if visible:
+				refresh()
+		)
+	)
 
 # ── render ────────────────────────────────────────────────────────────────────
 

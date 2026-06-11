@@ -61,6 +61,7 @@ var _runes_pill_box: PanelContainer     ## M3j — runes pill wrapper (toggled v
 var _runes_pill: Label                  ## 🔮 N (harbor's premium reward)
 var _free_moves_pill_box: PanelContainer ## tile-variant free-moves pill wrapper (toggled visible)
 var _free_moves_pill: Label             ## 👟 N — banked free moves from tile abilities
+var _nav_title: Label                   ## dynamic view title in the top bar (replaces static "Hearthwood Vale")
 
 # A2 — Season bar (the React src/ui/seasonStrip.tsx port). Loaded via preload (NO class_name).
 const SeasonBarScript := preload("res://scenes/SeasonBar.gd")
@@ -379,24 +380,21 @@ func _build_hud() -> void:
 	topbar_row.add_child(back_btn)
 	_back_btn = back_btn
 
-	# LEFT — the in-fiction settlement name in Cinzel (parity with the original's
-	# heading). Replaces the old "puzzleDrag2 · Godot M3" debug title.
-	var title := Label.new()
-	title.text = "Hearthwood Vale"
-	UiKit.set_font_size(title, Typography.Role.TITLE)
-	title.add_theme_color_override("font_color", Palette.INK)
+	# LEFT — dynamic view title (shows "Hearthwood Vale" on the board, the current view name
+	# when a primary view is open). Replaces the old static settlement heading.
+	_nav_title = Label.new()
+	_nav_title.text = "Hearthwood Vale"
+	UiKit.set_font_size(_nav_title, Typography.Role.TITLE)
+	_nav_title.add_theme_color_override("font_color", Palette.INK)
 	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# The title EXPANDs to fill the slack (left-aligned, so it reads the same as before) and
-	# CLIPS rather than overflow: when many pills are visible (a boss fight adds the boss/rats
-	# pills) the row could otherwise grow past the bar and shove the right-most pill under the
-	# ⚙. With clip_text the title yields its width to the pills first, so the pill cluster is
-	# never pushed off the edge — the title just truncates with an ellipsis in that rare case.
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.clip_text = true
-	topbar_row.add_child(title)
+		_nav_title.add_theme_font_override("font", heading_font)
+	_nav_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_nav_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# EXPANDs to fill slack (left-aligned) and CLIPs so the pill cluster is never shoved off
+	# the edge when many pills are visible (boss fight, rats, runes, free-moves).
+	_nav_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_nav_title.clip_text = true
+	topbar_row.add_child(_nav_title)
 
 	# RIGHT — the pill cluster. coins (gold), tier (ink), biome (moss/ember), then
 	# the conditionally-visible boss + rats pills.
@@ -2251,6 +2249,8 @@ func _refresh_nav() -> void:
 func _clear_nav() -> void:
 	_nav_current = ""
 	_refresh_nav()
+	if _nav_title:
+		_nav_title.text = "Hearthwood Vale"
 
 ## Toggle the puzzle-board page chrome. While the board is the ACTIVE playable surface we HIDE
 ## the bottom nav (no tab-hopping mid-session) and SHOW the top-left "◀ Leave" back button (the
@@ -2269,6 +2269,12 @@ func set_board_mode(active: bool) -> void:
 ## `_nav_current = "..."; _refresh_nav()` pattern.
 func set_nav_current(key: String) -> void:
 	_nav_current = key
+
+## Update the top-bar title to reflect the current primary view (e.g. "Craft", "Inventory").
+## Main calls this alongside set_nav_current(). _clear_nav() resets it to "Hearthwood Vale".
+func set_nav_title(text: String) -> void:
+	if _nav_title:
+		_nav_title.text = text
 
 ## The bottom-nav bar surface: a paper fill, a 2px iron TOP border, and a soft UPWARD
 ## drop shadow so the bar reads as a raised tray over the board.
@@ -2609,6 +2615,8 @@ func _layout_hud(vp: Vector2) -> void:
 	# The top-bar is PRESET_TOP_WIDE (anchors left=0..right=1), so zero L/R offsets
 	# already make it span the full viewport width — don't set size.x (that fights
 	# the anchors and triggers a "non-equal opposite anchors" warning).
+	# Centering of the top bar content is done by adding side margins to _topbar_margin
+	# when the viewport width exceeds the capped readable width.
 	if _topbar != null:
 		_topbar.offset_left = 0
 		_topbar.offset_right = 0
