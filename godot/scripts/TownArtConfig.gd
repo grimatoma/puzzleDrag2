@@ -123,6 +123,37 @@ static func character_ids() -> Array[String]:
 	out.sort()
 	return out
 
+## Normalized walk-sheet descriptor for a character id — the ONE place the
+## manifest's character frame-grid format is interpreted (VillageNpcs builds its
+## shared SpriteFrames from this, never from the raw entry):
+##   texture:  Texture2D (null when unloadable — caller draws its fallback)
+##   frame_w/frame_h: int   — one frame's size in px (16×16 for the stock sheets)
+##   facings:  Array[String] — the facing each frame COLUMN holds, in column
+##             order (the manifest's "columns" csv: down,up,left,right)
+##   rows:     int          — walk frames per facing (sheet h / frame_h)
+##   anchor:   Vector2      — the PER-FRAME floor anchor ((8,15) for 16×16
+##             frames; see anchor_of's convention note)
+## {} for an unknown / non-character id.
+static func character_sheet(art_id: String) -> Dictionary:
+	var e: Dictionary = entry(art_id)
+	if e.is_empty() or String(e.get("kind", "")) != "character":
+		return {}
+	var fw: int = maxi(1, int(e.get("frame_w", TILE)))
+	var fh: int = maxi(1, int(e.get("frame_h", TILE)))
+	var facings: Array[String] = []
+	for c in String(e.get("columns", "")).split(",", false):
+		facings.append(String(c).strip_edges())
+	@warning_ignore("integer_division")
+	var rows: int = maxi(1, int(e.get("h", fh)) / fh)
+	return {
+		"texture": texture_for(art_id),
+		"frame_w": fw,
+		"frame_h": fh,
+		"facings": facings,
+		"rows": rows,
+		"anchor": anchor_of(art_id),
+	}
+
 # ── Placement metadata ───────────────────────────────────────────────────────
 
 ## Ground tiles `art_id` occupies, in TILE cells. (1,1) for unknown ids — the

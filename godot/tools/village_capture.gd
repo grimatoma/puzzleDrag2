@@ -61,6 +61,22 @@ func _initialize() -> void:
 	for _i in range(6):
 		await process_frame
 
+	# Phase 3 — walking villagers: deterministically advance the wander FSM a
+	# few simulated seconds so the crowd is caught MID-STREET (walking between
+	# cells), not all standing on their spawn points. Foreground _process walks
+	# them too; the manual step() just guarantees the pose regardless of how
+	# fast the settle frames ran.
+	var npcs = main._townmap_screen._npcs
+	for _i in range(40):
+		npcs.step(0.1)
+	var walking: int = 0
+	for v in npcs._villagers:
+		if v.state == VillageNpcs.STATE_WALK:
+			walking += 1
+	print("  villagers=%d walking=%d" % [npcs._villagers.size(), walking])
+	for _i in range(2):
+		await process_frame
+
 	_save(out_path)
 
 	# Second shot zoomed out to the CONTAIN fit — the whole village in frame

@@ -38,7 +38,10 @@ extends CanvasLayer
 ##     card; bare ground dismisses any open panel.
 ##   · the 🔨 Build overlay button opens the build picker for the first empty
 ##     plot (the Phase-1 interim ledger routing is gone).
-##   · walking NPCs arrive in Phase 3; water animation in Phase 4.
+##   · walking NPCs (Phase 3) live in their OWN y-sorted World child —
+##     VillageNpcs.gd owns the A* grid, spawn, FSM and SpriteFrames; this
+##     screen only instantiates it, forwards the stage on refresh(), and
+##     forwards visibility. Water animation arrives in Phase 4.
 ##
 ## INPUT GOTCHA (CLAUDE.md): the project enables BOTH emulate_mouse_from_touch
 ## AND emulate_touch_from_mouse, so one physical drag arrives as a real
@@ -103,13 +106,14 @@ var _world: Node2D            ## the pan/zoom transform target (y-sorted)
 var _ground: TileMapLayer     ## flat ground paint (NOT y-sorted)
 var _props: Node2D            ## decor sprites (y-sorted with buildings)
 var _buildings: Node2D        ## building + landmark sprites (y-sorted)
+var _npcs: VillageNpcs        ## walking villagers (Phase 3; y-sorted sibling)
 var _board_btn: Button
 var _build_btn: Button
 ## The currently-open interaction panel (build picker or demolish info), or null
 ## when none is open. A fresh full-rect Control holding a scrim + parchment card.
 var _panel: Control = null
 ## The transient locked-expedition notice bubble (a Toast), lazily created.
-var _toast = null
+var _toast: ToastScript = null
 ## The growth stage the village currently renders at — derived EVERY refresh()
 ## from the live tier's plot grant (stage_for_plot_count(plan_lot_count())).
 var _render_stage: int = 1
@@ -215,8 +219,21 @@ func _build_shell() -> void:
 	_render_stage = VillageLayout.stage_for_plot_count(plan_lot_count())
 	_place_props()
 
+	# Walking villagers (Phase 3) — a self-contained y-sorted World child whose
+	# sprites sort against the building sprites by the shared floor line. All
+	# NPC behavior (A* grid, spawn, wander FSM) lives in VillageNpcs.gd.
+	_npcs = VillageNpcs.new()
+	_world.add_child(_npcs)
+	_npcs.setup(_render_stage)
+	_npcs.set_running(visible)
+
 	_build_overlay()
 	_refit()
+	# Main hides primary views via `.visible = false` (not close()), so react to
+	# RAW visibility: dismiss the layer-5 toast (it's a nested CanvasLayer that
+	# would otherwise keep rendering over the next view) and pause/resume the
+	# villagers' _process work.
+	connect("visibility_changed", Callable(self, "_on_screen_visibility_changed"))
 
 ## Floating UI over the village: title pill, ▶ Board, Ledger, Boons, Build,
 ## zoom stack — same placement + signals as the old TownMapScreen overlay.
@@ -510,10 +527,9 @@ static func _fallback_texture(px: Vector2i) -> Texture2D:
 ## STAGE FLOW. Re-derive the growth stage from the CURRENT tier's plot grant,
 ## re-place the decor when it changed, re-place the building sprites from
 ## game.buildings, repaint the pad/grass ground under every plot, and refresh
-## the live-state overlay labels. Called on setup(), every open(), after every
-## build/demolish/expedition from this screen, and by Main on its town-changed
-## round-trip — cheap enough to run every time (a few dozen sprites + ~300
-## ground cells).
+## the live-state overlay labels. Called on setup(), every open(), and after
+## every build/demolish/expedition from this screen — cheap enough to run
+## every time (a few dozen sprites + ~300 ground cells).
 func refresh() -> void:
 	if not _built or game == null:
 		return
@@ -522,11 +538,14 @@ func refresh() -> void:
 		_render_stage = stage
 		_place_props()
 	_rebuild_buildings(game.buildings)
+	# Villager crowd tracks the rendered stage (no-op while it's unchanged, so
+	# a plain refresh never scatters the walkers).
+	if _npcs != null:
+		_npcs.set_stage(stage)
 	# Build button label: LIVE GameState plot counts (matches the old screen and
 	# the React "Build · N/N plots"). Disabled when every plot is filled.
 	if _build_btn != null:
-		var plot_count: int = max(1, game.settlement.plots())
-		_build_btn.text = "🔨 Build · %d/%d plots" % [game.buildings.size(), plot_count]
+		_build_btn.text = "🔨 Build · %d/%d plots" % [game.buildings.size(), plan_lot_count()]
 		_build_btn.disabled = game.plots_free() <= 0
 	# Relabel the board-return affordance from the live run state (old-screen
 	# parity): live run/expedition/boss → "▶ Board"; idle at home → Main routes
@@ -536,13 +555,22 @@ func refresh() -> void:
 			or game.active_biome != "farm" or game.is_boss_active()
 		_board_btn.text = "▶ Board" if board_live else "▶ Start Farming"
 
-## Lot count for the headless wiring test — the plots the CURRENT TIER grants
-## (max(1, game.settlement.plots()); the old screen's rendered plan exposed the
-## same number).
+## The lot count the CURRENT TIER grants (max(1, game.settlement.plots())) —
+## the screen's single source for the visible-plot slice, the stage derivation,
+## and the Build-button label (and the number the headless wiring test asserts).
 func plan_lot_count() -> int:
 	if game == null:
 		return 0
 	return max(1, game.settlement.plots())
+
+## RAW visibility flip (Main hides primary views via `.visible = false`, which
+## bypasses close()): kill the nested layer-5 toast so it can't linger over the
+## next view, and stop ticking the villagers while hidden.
+func _on_screen_visibility_changed() -> void:
+	if not visible and _toast != null:
+		_toast.dismiss()
+	if _npcs != null:
+		_npcs.set_running(visible)
 
 # ── camera (transform on _world, clamped) ─────────────────────────────────────
 
@@ -807,7 +835,10 @@ func _open_info_for_plot(index: int) -> void:
 	var demo := Button.new()
 	demo.text = "Demolish"
 	UiKit.style_button(demo, COL_DANGER, 6, 0, true)
-	# bind the id so demolish targets THIS plot's building, not "the last built".
+	# Bind the id shown on this plot. NOTE: game.demolish(id) erases the FIRST
+	# occurrence of that id in the flat list — with duplicate buildings the
+	# ordinal re-flow may visually clear a DIFFERENT plot than the one tapped
+	# (GameState has no per-plot model; same caveat as the ordinal render).
 	demo.connect("pressed", Callable(self, "_do_demolish").bind(id))
 	card.add_child(demo)
 	_action_buttons["demolish"] = demo
