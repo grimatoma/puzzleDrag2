@@ -471,6 +471,12 @@ func current_season() -> String:
 func is_dashboard_visible() -> bool:
 	return _run_end_mode and not _run.is_empty()
 
+## True when the modal was last opened in RUN-END mode (open_for_run_end) vs the legacy
+## informational season recap (open_for). Main reads this on dismiss to decide whether a
+## scrim/ESC bypass should still complete the run return (close_season).
+func is_run_end() -> bool:
+	return _run_end_mode
+
 ## The run-summary dict currently presented (a copy; {} in legacy mode). For tests.
 func run_summary() -> Dictionary:
 	return _run.duplicate(true)

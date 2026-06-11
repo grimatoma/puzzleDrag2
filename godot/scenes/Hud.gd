@@ -32,6 +32,10 @@ signal tool_use_requested(id: String)
 signal disarm_requested
 ## The floating ⚙ top-right button was pressed — Main opens the MenuScreen (_open_menu).
 signal menu_requested
+## The top-left "◀ Leave" back button was pressed (shown only in board mode — see set_board_mode).
+## Main routes it: on a live farm run it confirms leaving the session (+ ends it with a summary);
+## otherwise it falls back to the town/expedition path.
+signal back_requested
 
 # ── injected by Main before build() ──────────────────────────────────────────
 var game: GameState                    ## canonical run economy (inventory/coins/turn)
@@ -152,6 +156,7 @@ const STOCKPILE_ROSTER_FISH: Array = [
 # _stockpile_box cards are gone — both surfaces live INSIDE the fixed action panel now.)
 var _topbar: PanelContainer
 var _menu_btn: Button                   ## floating ⚙ button — vertically centred on the top bar in _layout_hud
+var _back_btn: Button                   ## top-left "◀ Leave" back button — visible only in board mode (set_board_mode)
 
 # M4b chain-progress tracking: the last resolved resource + its threshold.
 var _last_res: String = ""
@@ -349,6 +354,30 @@ func _build_hud() -> void:
 	topbar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	topbar_row.add_theme_constant_override("separation", 8)
 	topbar_margin.add_child(topbar_row)
+
+	# LEFT-most — the board-mode "◀ Leave" back button. The puzzle board page HIDES the bottom
+	# nav (no tab-hopping mid-session), so this is the ONE way out: tapping it asks Main to confirm
+	# leaving the farming session (and end it with a harvest summary). Hidden by default; shown only
+	# in board mode (set_board_mode), where it sits left of the settlement title and the title's
+	# SIZE_EXPAND_FILL + clip_text reflow around it.
+	var back_btn := Button.new()
+	back_btn.name = "BoardBackButton"
+	back_btn.text = "◀ Leave"
+	UiKit.set_font_size(back_btn, Typography.Role.LABEL)
+	back_btn.add_theme_color_override("font_color", Palette.INK)
+	back_btn.add_theme_color_override("font_hover_color", Palette.EMBER)
+	back_btn.add_theme_color_override("font_pressed_color", Palette.INK_MID)
+	back_btn.add_theme_stylebox_override("normal", UiKit.parchment_box(Palette.PARCHMENT))
+	back_btn.add_theme_stylebox_override("hover", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	back_btn.add_theme_stylebox_override("pressed", UiKit.parchment_box(Palette.DIM))
+	back_btn.add_theme_stylebox_override("focus", UiKit.parchment_box(Palette.PARCHMENT_SOFT))
+	back_btn.focus_mode = Control.FOCUS_NONE
+	back_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	back_btn.visible = false
+	back_btn.pressed.connect(func(): back_requested.emit())
+	UiFx.attach_press_feedback(back_btn)
+	topbar_row.add_child(back_btn)
+	_back_btn = back_btn
 
 	# LEFT — the in-fiction settlement name in Cinzel (parity with the original's
 	# heading). Replaces the old "puzzleDrag2 · Godot M3" debug title.
@@ -2222,6 +2251,18 @@ func _refresh_nav() -> void:
 func _clear_nav() -> void:
 	_nav_current = ""
 	_refresh_nav()
+
+## Toggle the puzzle-board page chrome. While the board is the ACTIVE playable surface we HIDE
+## the bottom nav (no tab-hopping mid-session) and SHOW the top-left "◀ Leave" back button (the
+## one way out — Main confirms leaving + ends the run with a summary). On the inert town home it
+## is the reverse: the bottom nav is the way around, and the back button is hidden. Main calls this
+## from its single board-active helper (_set_board_active) so the chrome always tracks board state.
+## Safe before build (guards null) and idempotent.
+func set_board_mode(active: bool) -> void:
+	if _back_btn != null and is_instance_valid(_back_btn):
+		_back_btn.visible = active
+	if _nav_layer != null and is_instance_valid(_nav_layer):
+		_nav_layer.visible = not active
 
 ## Set the active-tab key (Main calls this after routing a nav tap or an _open_*). Does
 ## NOT restyle — the caller pairs it with _refresh_nav(), mirroring the original inline

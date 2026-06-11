@@ -204,6 +204,14 @@ var _quests_screen: QuestsScreenScript:
 const LeaveBoardModalScript := preload("res://scenes/LeaveBoardModal.gd")
 var _leaveboard_modal: LeaveBoardModalScript:
 	get: return _overlays.get("leaveboard") as LeaveBoardModalScript
+## The puzzle board's top-left "◀ Leave" back button confirm — asks before ENDING a live farm RUN
+## early. On Confirm Main snapshots the run summary + opens the run-end HarvestModal (whose return
+## path runs close_season, making the next farm visit fresh). The farm-run counterpart of
+## LeaveBoardModal (expeditions). Loaded via preload (NO class_name) so the port never needs an
+## --import pass to register it.
+const LeaveFarmModalScript := preload("res://scenes/LeaveFarmModal.gd")
+var _leavefarm_modal: LeaveFarmModalScript:
+	get: return _overlays.get("leavefarm") as LeaveFarmModalScript
 ## M-infra — developer DEBUG overlay (the React `debug` modal's port). A dev-only QA tool:
 ## live state readout + a jump grid of every deep-link + quick-grant buttons. Reachable ONLY
 ## via apply_deeplink("debug") — NO permanent HUD button (it's hidden, matching React).
@@ -426,7 +434,7 @@ func _ready() -> void:
 	#     deterministic. Placed BEFORE the tutorial/story/daily block so those auto-modals still
 	#     layer on top.
 	var board_live := _board_should_be_active()
-	board.set_active(board_live)
+	_set_board_active(board_live)
 	if not board_live:
 		if not _dialogs_disabled() and DisplayServer.get_name() != "headless":
 			_open_townmap()
@@ -521,10 +529,16 @@ func _build_hud_node() -> void:
 	_hud.tool_use_requested.connect(_on_tool_use_requested)
 	_hud.disarm_requested.connect(_disarm_tool)
 	_hud.menu_requested.connect(_open_menu)
+	# The board-page "◀ Leave" back button (shown only in board mode): Main confirms leaving the
+	# farming session and ends it with a summary (or, off a farm run, falls back to the town path).
+	_hud.back_requested.connect(_on_board_back)
 	# Re-inject board on a rebuild (it already exists then); on the first _ready call board is
 	# still null and gets injected at its creation site just below the _build_hud_node() call.
 	if board != null and is_instance_valid(board):
 		_hud.board = board
+		# A REBUILT HUD comes up with default chrome (nav visible, back button hidden); re-assert the
+		# board-page chrome so a Text Size re-scale mid-run doesn't flash the nav back over the board.
+		_hud.set_board_mode(_board_should_be_active())
 	_refresh_tools()   # M8d: populate the palette after the starter grant (and on every rebuild)
 
 func _layout() -> void:
@@ -572,6 +586,17 @@ func _refresh_runes() -> void: if _hud: _hud._refresh_runes()
 func _refresh_season_bar() -> void: if _hud: _hud._refresh_season_bar()
 func _refresh_chain_progress() -> void: if _hud: _hud._refresh_chain_progress()
 func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
+
+## Flip the board between PLAYABLE and inert, and keep the board-page chrome in lockstep. Every
+## board.set_active() call in Main routes through here (a single funnel) so the puzzle-board page
+## chrome can never drift from board state: when the board is the active surface the HUD hides the
+## bottom nav and shows the top-left "◀ Leave" back button (set_board_mode(true)); when it goes inert
+## (town is home) the nav returns and the back button hides. `_hud` is guarded so an early call (the
+## first _ready pass flips the board before some HUD wiring settles) is still safe.
+func _set_board_active(active: bool) -> void:
+	board.set_active(active)
+	if _hud != null and is_instance_valid(_hud):
+		_hud.set_board_mode(active)
 
 ## A real drag attempt fell short of the chain minimum: denied buzz + a small board
 ## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake). The "Chain of N —
@@ -808,6 +833,67 @@ func _on_leaveboard_closed() -> void:
 	if _leaveboard_modal != null:
 		_leaveboard_modal.visible = false
 	if _router.current_modal() == ViewRouter.Modal.LEAVEBOARD:
+		_router.close_modal()
+
+# ── Leave the farming session (board-page back button) ─────────────────────────
+
+## The puzzle board's top-left "◀ Leave" back button was tapped. The board page hides the bottom
+## nav, so this is the single way out. Branch on what the board is showing:
+##   • A live FARM RUN → confirm ending the session (then end it with a summary; see _open_leavefarm).
+##   • An EXPEDITION (mine/harbor) → reuse the existing leave-expedition gate (_on_town_button shows
+##     the leave-board confirm, which abandons back to the farm).
+##   • Anything else live on the board (e.g. a boss fight on the farm) → _on_town_button opens Town,
+##     matching the old town-button behaviour. The button is only shown while the board is active.
+func _on_board_back() -> void:
+	if game != null and game.farm_run_active:
+		_open_leavefarm()
+	else:
+		_on_town_button()
+
+## Present the leave-farming-session confirm card, lazily creating + wiring it on first use. On
+## Confirm it emits `confirmed` → _on_leavefarm_confirmed (end the run with a summary); on Cancel it
+## just closes.
+func _open_leavefarm() -> void:
+	if _leavefarm_modal == null:
+		_overlays["leavefarm"] = LeaveFarmModalScript.new()
+		add_child(_leavefarm_modal)
+		_leavefarm_modal.setup(game)
+		_leavefarm_modal.connect("confirmed", Callable(self, "_on_leavefarm_confirmed"))
+		_leavefarm_modal.connect("closed", Callable(self, "_on_leavefarm_closed"))
+	_leavefarm_modal.open()
+	_router.open_modal(ViewRouter.Modal.LEAVEFARM)
+
+## The player confirmed leaving the farming session early. END THE RUN RIGHT HERE WITH A SUMMARY:
+## make the board inert FIRST (so no further chaining can re-trigger anything — same guard the
+## budget-exhaustion run-end uses), build the run-end summary dict (the run is still live, so the
+## season/budget/stores read true), then present the run-end HarvestModal. Its "Return to Town" CTA
+## (or any dismiss — see _on_harvest_closed) runs close_season(), which banks the return bonus and
+## CLEARS the run so the next farm visit starts fresh. close_season is idempotent, so dismiss
+## ordering can never double-grant.
+func _on_leavefarm_confirmed() -> void:
+	if game == null or not game.farm_run_active:
+		return
+	# Board inert before the summary shows (mirrors the budget-exhaustion path's BUG I1 guard).
+	_set_board_active(false)
+	# The note_farm_turn()-shaped recap dict the HarvestModal header reads (season + a year's budget
+	# + the current stores). The rich dashboard is pulled separately from live telemetry inside
+	# open_for_run_end (game.build_run_summary()), so this only feeds the header/recap lines.
+	var summary: Dictionary = {
+		"ended": true,
+		"season": game.current_season_name(),
+		"budget": game.farm_turn_budget(),
+		"coins": game.coins,
+		"runes": game.runes,
+	}
+	_open_harvest_run_end(summary)
+
+## The leave-farming confirm card was dismissed (Cancel, or after Confirm closed it). Hide + reset
+## the router. On Confirm, _on_leavefarm_confirmed already opened the run-end HarvestModal (a higher
+## layer), so only reset the router when LEAVEFARM is still the active modal (the Cancel path).
+func _on_leavefarm_closed() -> void:
+	if _leavefarm_modal != null:
+		_leavefarm_modal.visible = false
+	if _router.current_modal() == ViewRouter.Modal.LEAVEFARM:
 		_router.close_modal()
 
 # ── Toast (M5-polish) ─────────────────────────────────────────────────────────
@@ -1515,7 +1601,13 @@ func _open_harvest_run_end(summary: Dictionary) -> void:
 func _on_harvest_closed() -> void:
 	if _harvest_modal != null:
 		_harvest_modal.visible = false
-	if game != null and game.farm_run_active and game.farm_run_turns_left == 0:
+	# Complete the return whenever a RUN-END summary is dismissed while the run is still live —
+	# whether it ended on its turn budget (farm_run_turns_left == 0) OR was ended EARLY by the
+	# board's "◀ Leave" back button (turns_left > 0). is_run_end() distinguishes the run-end modal
+	# from the legacy informational harvest recap (which never closes a run). close_season is
+	# idempotent, so the CTA path — where it already ran (farm_run_active is now false) — is skipped.
+	if game != null and game.farm_run_active \
+			and _harvest_modal != null and _harvest_modal.is_run_end():
 		# A run-end dismiss bypassed the return CTA → complete the return so close_season runs.
 		_on_season_return()
 
@@ -1598,7 +1690,7 @@ func _start_farm_fail_text(reason: String) -> String:
 ## reopen the town. A confirming toast reports the return bonus.
 func _on_season_return() -> void:
 	var summary: Dictionary = game.close_season()
-	board.set_active(false)
+	_set_board_active(false)
 	board.set_tile_pool(game.active_tile_pool())
 	# T30 — board-preserve: when close_season reports preserve_board (a Silo/Barn
 	# board_preserve_biomes channel covering the run's biome), KEEP the existing board grid across
@@ -1934,6 +2026,10 @@ func apply_deeplink(id: String) -> bool:
 			_open_debug()
 		ViewRouter.Modal.STARTFARMING:
 			_open_startfarming()
+		ViewRouter.Modal.LEAVEFARM:
+			# QA / sanity-capture preview of the leave-farming-session confirm card. The button that
+			# normally opens it only shows mid-run, so this lets the card be previewed from any state.
+			_open_leavefarm()
 		_:
 			# NONE / board — close EVERY open overlay first (overlays can stack: the
 			# tutorial layers over a deep-linked screen, the menu over the town map), then
@@ -1949,12 +2045,12 @@ func apply_deeplink(id: String) -> bool:
 			# _on_start_farming calls apply_deeplink("board") only AFTER start_farm_run
 			# set farm_run_active = true, so that path correctly falls through below.
 			if game != null and not _board_should_be_active():
-				board.set_active(false)
+				_set_board_active(false)
 				_open_townmap()
 				return true
 			# The board IS playable → set the gate consistently via the helper (covers
 			# all three live cases).
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 	return true
 
 ## Close every open overlay (screens + modals), topmost-first. Each pass of
@@ -2249,7 +2345,7 @@ func _on_town_changed() -> void:
 	# cartography, boss start, leave-expedition return): entering the mine/harbor or starting a boss
 	# makes the board LIVE, and returning to the farm with no run makes it INERT again. Set AFTER
 	# the board has been re-pooled/regenerated above so the live board is the correct biome.
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	_refresh_totals()
 	_refresh_meta()
 	_refresh_settlement()
@@ -2585,7 +2681,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 		else:
 			_status_label.text = "%s  ·  ⛏ %d mine turn(s) left" % [
 				_status_label.text, int(turn_res.get("turns_left", 0))]
@@ -2611,7 +2707,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# BUG C1 Hole B — lower the board gate now that we're back on an idle farm.
 			# _board_should_be_active() returns false (no run, farm biome, no boss)
 			# → the board becomes the inert town-home backdrop as expected.
-			board.set_active(_board_should_be_active())
+			_set_board_active(_board_should_be_active())
 		else:
 			# TIDE FLIP — the surface catch changed with the water; reseed the bottom row.
 			if bool(h_res.get("tide_flipped", false)):
@@ -2645,7 +2741,7 @@ func _on_chain_resolved(tile_type: int, length: int) -> void:
 			# so the player can't keep chaining (and re-popping the modal) no matter HOW the modal
 			# is dismissed. The run is still in its ended-but-unclosed state here (farm_run_active
 			# is true, farm_run_turns_left == 0); close_season runs only on the return path.
-			board.set_active(false)
+			_set_board_active(false)
 			_open_harvest_run_end(farm_res)
 		elif bool(farm_res.get("harvest", false)):
 			# A2 — a full year wrapped on the LEGACY always-on cycle (no bounded run): surface the
@@ -2937,7 +3033,7 @@ func _enter_boss_fight() -> Dictionary:
 	board.set_min_chain(game.boss_min_chain())
 	# BUG C1 — the boss is fought on the farm board (active_biome stays "farm"), so the board must be
 	# made LIVE for the fight (the gate follows boss state via _board_should_be_active()).
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	if _audio != null:
 		_audio.play("tier_up")
 	_refresh_boss()
@@ -2985,7 +3081,7 @@ func _apply_boss_resolution(res: Dictionary) -> void:
 	board.set_min_chain(Constants.MIN_CHAIN)
 	board.set_boss_modifier_state({})
 	board.set_tile_pool(game.active_tile_pool())
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	if bool(res.get("defeated", false)):
 		var coins_won: int = int(res.get("reward_coins", 0))
 		var runes_won: int = int(res.get("reward_runes", 0))
@@ -3223,7 +3319,7 @@ func _enter_mine_visuals() -> void:
 	# BUG C1 — the dev-key mine entry is a playable-board transition too, so follow the gate (the
 	# real entry path routes through _on_town_changed, which sets it; this keeps the keyboard
 	# fallback honest so the mine board it just built is actually chainable).
-	board.set_active(_board_should_be_active())
+	_set_board_active(_board_should_be_active())
 	# M4d: low, slow whoosh on the biome flip INTO the mine (keyboard M path). Keep
 	# the tracker in sync so _on_town_changed doesn't re-whoosh on its next refresh.
 	if _audio != null and game.is_in_mine() and not _last_in_mine:
