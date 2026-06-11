@@ -10,9 +10,9 @@ extends SceneTree
 ## run_townmap_tests):
 ##   1. StartFarmingModal — setup(game) builds the shell headlessly; preview_budget(); the
 ##      locked-on per-category SLOT + CHOOSER picker (default active variant == base tile;
-##      open_chooser → choose_ a discovered variant updates active_variant_for + GameState; a
-##      buy-variant flow grants coins → buy → it becomes choosable); Start enabled/disabled by
-##      affordability + its start_requested(selected, use_fertilizer) emission.
+##      open_chooser → choose_ a discovered variant updates active_variant_for + GameState; the
+##      SELECT-ONLY chooser lists ONLY unlocked variants — locked/buyable tiles are NOT shown);
+##      Start enabled/disabled by affordability + its start_requested(selected, use_fertilizer) emission.
 ##   2. VillageScreen.start_farming_requested — a tap on the farm landmark fires the
 ##      signal once and opens NO build/demolish panel (landmark wins over plots).
 
@@ -123,31 +123,22 @@ func _test_modal() -> void:
 		"GameState.active_tile_id_for_category('grass') matches the chosen variant")
 	_check(m.chooser_open_for() == "", "choosing a variant closed the chooser")
 
-	# ── BUY flow: a buy-method variant becomes choosable after a buy ──
-	# tile_bird_clover is a buy-method flower variant (coinCost 200), but flower is not a home
-	# eligible category. Use a category we can open. Birds has no buy variant in the home set
-	# either; clover sits under 'flower'. Instead use the chooser's buy path on the 'fruit'
-	# category: tile_bird_melon is a buy-method FRUIT variant (coinCost 500).
-	game.coins = 600
+	# ── SELECT-ONLY: locked / buyable variants are NOT listed in the chooser ──
+	# This modal only lets you SELECT unlocked tiles; unlocking + viewing locked tiles lives on the
+	# Tiles page. tile_bird_melon is a buy-method FRUIT variant (coinCost 500) — undiscovered, so it
+	# must NOT appear here (neither a 'buy_' nor a 'choose_' button), while the discovered active
+	# fruit variant IS choosable.
 	m._action_buttons["slot_fruit"].emit_signal("pressed")
 	await process_frame
 	_check(m.chooser_open_for() == "fruit", "tapping slot_fruit opened the chooser for 'fruit'")
-	_check(m._action_buttons.has("buy_tile_bird_melon"),
-		"the locked buy-variant tile_bird_melon shows a 'buy_' button")
+	_check(not game.is_tile_discovered("tile_bird_melon"), "tile_bird_melon is undiscovered")
+	_check(not m._action_buttons.has("buy_tile_bird_melon"),
+		"select-only chooser shows NO 'buy_' button for the undiscovered buy-variant")
 	_check(not m._action_buttons.has("choose_tile_bird_melon"),
-		"the undiscovered buy-variant is NOT yet choosable")
-	_check(not game.is_tile_discovered("tile_bird_melon"), "tile_bird_melon undiscovered pre-buy")
-	m._action_buttons["buy_tile_bird_melon"].emit_signal("pressed")
-	await process_frame
-	_check(game.is_tile_discovered("tile_bird_melon"), "buying tile_bird_melon discovered it")
-	_check(game.coins == 100, "buying tile_bird_melon spent 500 coins (600 → 100)")
-	_check(m.chooser_open_for() == "fruit", "the chooser stays open after a buy")
-	_check(m._action_buttons.has("choose_tile_bird_melon"),
-		"the bought variant is now choosable (a 'choose_' button)")
-	m._action_buttons["choose_tile_bird_melon"].emit_signal("pressed")
-	await process_frame
-	_check(m.active_variant_for("fruit") == "tile_bird_melon",
-		"the freshly-bought variant can be activated")
+		"the undiscovered buy-variant is NOT listed in the chooser")
+	var fruit_active: String = m.active_variant_for("fruit")
+	_check(fruit_active != "" and m._action_buttons.has("choose_" + fruit_active),
+		"the discovered active fruit variant IS choosable (got active '%s')" % fruit_active)
 	m._close_chooser()
 
 	# Pressing Start emits start_requested(selected, false) then closes.

@@ -6,11 +6,10 @@ extends CanvasLayer
 ## The home zone exposes <= 8 categories (React mustPick === false), so every category slot is
 ## LOCKED ON and shows that category's ACTIVE variant (its icon + display name + a small "✎"
 ## change affordance). Tapping a slot opens a CHOOSER popup (an in-modal sub-panel on a higher
-## sub-layer) listing the DISCOVERED variants in that category — each a row with icon + name +
-## tier/ability summary, the active one marked. Picking one calls game.set_active_tile(cat, id)
-## and updates the slot. LOCKED (undiscovered) variants render greyed with their unlock STATUS
-## (mirrors React effects.ts statusFor); a `buy`-method locked variant gets a "Buy N◉" button
-## calling game.buy_tile(id) — once bought it becomes selectable.
+## sub-layer) listing ONLY the UNLOCKED (discovered) variants in that category — each a row with
+## icon + name + tier/ability summary, the active one marked. Picking one calls
+## game.set_active_tile(cat, id) and updates the slot. This modal is SELECT-ONLY: locked /
+## buyable variants are unlocked + viewed on the Tiles page (TileCollectionScreen), not here.
 ##
 ## On Start it emits `start_requested(selected, use_fertilizer)` — the list of active category
 ## ids + false (the port has no fertilizer primitive; see the NO-FAKE note). Main wires that to
@@ -22,8 +21,7 @@ extends CanvasLayer
 ## HEADLESS-TEST CONTRACT
 ##   `_action_buttons` (stable keys):
 ##     "slot_<cat>"      — one per eligible category; opens the chooser for that category
-##     "choose_<tileid>" — picks a discovered variant (present ONLY while a chooser is open)
-##     "buy_<tileid>"    — buys a locked buy-variant (present ONLY while a chooser is open)
+##     "choose_<tileid>" — picks an unlocked (discovered) variant (present ONLY while a chooser is open)
 ##     "use_fertilizer"  — the T12 fertilizer CheckBox (ONLY present when game has ≥1 fert
 ##                         in its tool inventory; hidden + ignored when absent)
 ##     "start"           — confirm; disabled when coins < entry cost
@@ -578,8 +576,9 @@ func _render_slot(cat: String) -> void:
 
 # ── chooser ─────────────────────────────────────────────────────────────────────
 
-## Open the chooser popup for `cat`: rebuild the variant rows (discovered = pickable, locked =
-## greyed with a status line + an optional Buy button), then show the sub-layer.
+## Open the chooser popup for `cat`: rebuild the variant rows (one pickable row per UNLOCKED
+## variant — locked/buyable tiles are unlocked on the Tiles page, not listed here), then show
+## the sub-layer.
 func open_chooser(cat: String) -> void:
 	if not _built:
 		return
@@ -588,20 +587,25 @@ func open_chooser(cat: String) -> void:
 	_rebuild_chooser_rows(cat)
 	_chooser_layer.visible = true
 
-## Rebuild the chooser's variant rows for `cat`. Clears stale "choose_*"/"buy_*" registry keys.
+## Rebuild the chooser's variant rows for `cat`. Clears stale "choose_*" registry keys.
 func _rebuild_chooser_rows(cat: String) -> void:
 	for child in _chooser_list.get_children():
 		child.queue_free()
 	# Drop any prior per-variant action buttons from the registry.
 	for k in _action_buttons.keys():
-		if String(k).begins_with("choose_") or String(k).begins_with("buy_"):
+		if String(k).begins_with("choose_"):
 			_action_buttons.erase(k)
 
-	var ids: Array = TileVariantConfig.for_category(cat)
+	# Select-only chooser: list ONLY the UNLOCKED (discovered) variants. Locked/buyable variants
+	# are unlocked + viewed on the Tiles page (TileCollectionScreen), never here.
+	var ids: Array = []
+	for id_v in TileVariantConfig.for_category(cat):
+		if game != null and game.is_tile_discovered(String(id_v)):
+			ids.append(id_v)
 	var active_id: String = active_variant_for(cat)
 	if ids.is_empty():
 		var empty := Label.new()
-		empty.text = "No %s tiles unlocked yet. Research or buy new variants in the Tiles browser." % _category_label(cat)
+		empty.text = "No %s tiles unlocked yet. Unlock new variants on the Tiles page." % _category_label(cat)
 		UiKit.set_font_size(empty, Typography.Role.BODY)
 		empty.add_theme_color_override("font_color", Palette.INK_MID)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -613,13 +617,10 @@ func _rebuild_chooser_rows(cat: String) -> void:
 		var id: String = String(id_v)
 		_chooser_list.add_child(_build_variant_row(cat, id, id == active_id))
 
-## Build one chooser row for variant `id`: icon + name + tier/chain chips + ability summary, and
-## either marked Active, pickable (discovered, not active), or greyed locked (with status + Buy).
+## Build one chooser row for an UNLOCKED variant `id`: icon + name + tier chip + (Active badge) +
+## description + status + ability summary. The whole row is a pick button — the chooser only ever
+## lists discovered variants (locked/buyable tiles are unlocked on the Tiles page, not here).
 func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
-	var discovered: bool = game != null and game.is_tile_discovered(id)
-	var d: Dictionary = TileVariantConfig.discovery_of(id)
-	var method: String = String(d.get("method", ""))
-
 	var row := PanelContainer.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var rb := UiKit.row_box()
@@ -633,14 +634,12 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 	hbox.add_theme_constant_override("separation", 10)
 	row.add_child(hbox)
 
-	# Icon (greyed when locked).
+	# Icon.
 	var icon_holder := CenterContainer.new()
 	icon_holder.custom_minimum_size = Vector2(ROW_ICON_PX, ROW_ICON_PX)
 	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var icon := _make_tile_icon(TileVariantConfig.tile_for(id), ROW_ICON_PX)
 	if icon != null:
-		if not discovered:
-			icon.modulate = Color(1, 1, 1, 0.45)
 		icon_holder.add_child(icon)
 	hbox.add_child(icon_holder)
 
@@ -657,7 +656,7 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 	var name_lbl := Label.new()
 	name_lbl.text = _variant_name(id)
 	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
-	name_lbl.add_theme_color_override("font_color", Palette.INK if discovered else Palette.INK_MID)
+	name_lbl.add_theme_color_override("font_color", Palette.INK)
 	name_row.add_child(name_lbl)
 
 	var tier: int = TileVariantConfig.tier_of(id)
@@ -684,7 +683,8 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(desc_lbl)
 
-	# Status line (mirrors React effects.ts statusFor).
+	# Status line (mirrors React effects.ts statusFor — for an unlocked tile this reads how it was
+	# discovered, e.g. "Default — always available").
 	var status := Label.new()
 	status.text = _status_for(id)
 	UiKit.set_font_size(status, Typography.Role.CAPTION)
@@ -702,27 +702,13 @@ func _build_variant_row(cat: String, id: String, is_active: bool) -> Control:
 		ab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(ab)
 
-	# Action column (right).
-	if discovered:
-		# Whole row picks the variant (a transparent overlay button keeps the layout readable).
-		var pick := Button.new()
-		pick.flat = true
-		pick.set_anchors_preset(Control.PRESET_FULL_RECT)
-		pick.connect("pressed", Callable(self, "_on_choose").bind(cat, id))
-		row.add_child(pick)
-		_action_buttons["choose_" + id] = pick
-	elif method == "buy":
-		var cost: int = int(d.get("coinCost", 0))
-		var buy := Button.new()
-		buy.text = "Buy %d 🪙" % cost
-		buy.size_flags_horizontal = Control.SIZE_SHRINK_END
-		buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var afford: bool = game != null and game.coins >= cost
-		UiKit.style_action_button(buy, Palette.GOLD if afford else Palette.IRON, 6, Typography.size(Typography.Role.BODY))
-		buy.disabled = not afford
-		buy.connect("pressed", Callable(self, "_on_buy").bind(cat, id))
-		hbox.add_child(buy)
-		_action_buttons["buy_" + id] = buy
+	# Whole row picks the variant (a transparent overlay button keeps the layout readable).
+	var pick := Button.new()
+	pick.flat = true
+	pick.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pick.connect("pressed", Callable(self, "_on_choose").bind(cat, id))
+	row.add_child(pick)
+	_action_buttons["choose_" + id] = pick
 
 	return row
 
@@ -743,16 +729,6 @@ func _on_choose(cat: String, id: String) -> void:
 		game.set_active_tile(cat, id)
 	_close_chooser()
 	_render()
-
-## A locked buy-variant's Buy button was pressed: purchase it (marks it discovered + spends
-## coins), then rebuild the chooser rows so it becomes pickable. Mirrors React BUY_TILE — buying
-## discovers ONLY; the player still activates it separately by tapping the (now pickable) row.
-func _on_buy(cat: String, id: String) -> void:
-	if game != null:
-		game.buy_tile(id)
-	# Stay in the chooser so the player can now pick the freshly-bought variant.
-	_rebuild_chooser_rows(cat)
-	_render()  # update the affordability tint on the Start row / cost too
 
 ## Start — emit the active category ids and the fertilizer flag (true only when the toggle
 ## is checked AND the player actually has a fertilizer). The GameState.start_farm_run guard
