@@ -78,6 +78,7 @@ var _chooser_cat: String = ""
 var _fertilizer_checked: bool = false
 
 # Static shell nodes (text re-set each open()).
+var _panel: PanelContainer   ## the parchment card; width re-fitted to the viewport on open()
 var _title_label: Label
 var _intro_label: Label    ## "These N tile types..." line — count re-set per open() from _categories
 var _budget_label: Label
@@ -102,8 +103,16 @@ var _chooser_list: VBoxContainer
 const COL_TITLE := Palette.INK
 const COL_BODY := Palette.INK_MID
 const COL_PANEL := Palette.PARCHMENT
-const PANEL_MAX_WIDTH := 480.0
-const SLOT_ICON_PX: int = 52
+## The card grows to fill the viewport (minus side margins), clamped to [MIN, MAX]. Previously a
+## fixed 480; widening it lets the slot grid breathe on tall portrait + wider/landscape viewports.
+const PANEL_MIN_WIDTH := 360.0
+const PANEL_MAX_WIDTH := 660.0
+const PANEL_SIDE_MARGIN := 24.0
+## Slot grid: 3 columns reads as a balanced 2×3 for the home/meadow 6 (vs the old 4-col 4+2 with a
+## lopsided trailing row), and the wider slots host a much larger tile icon.
+const SLOT_COLUMNS: int = 3
+const SLOT_ICON_PX: int = 72
+const SLOT_HEIGHT_PX: int = 136
 const ROW_ICON_PX: int = 40
 
 ## The most slots the picker ever shows (React MAX_SLOTS). The home zone has <= 8. (Batch 9 D7:
@@ -135,6 +144,7 @@ func open() -> void:
 	if _fert_check != null:
 		_fert_check.button_pressed = false
 	_zone = game._active_farm_zone() if game != null else "home"
+	_apply_panel_width()
 	_rebuild_slots()
 	_refresh_header_text()
 	_render()
@@ -144,6 +154,19 @@ func close() -> void:
 	_close_chooser()
 	visible = false
 	emit_signal("closed")
+
+## Fit the card to the live viewport: fill its width minus side margins, clamped to
+## [PANEL_MIN_WIDTH, PANEL_MAX_WIDTH] so it widens on roomy portrait/landscape viewports but never
+## hugs the edges or stretches absurdly wide. No-ops gracefully with no viewport (headless build).
+func _apply_panel_width() -> void:
+	if _panel == null:
+		return
+	var avail: float = PANEL_MAX_WIDTH
+	var vp: Viewport = get_viewport()
+	if vp != null:
+		avail = vp.get_visible_rect().size.x
+	var w: float = clampf(avail - 2.0 * PANEL_SIDE_MARGIN, PANEL_MIN_WIDTH, PANEL_MAX_WIDTH)
+	_panel.custom_minimum_size = Vector2(w, 0)
 
 # ── static shell ───────────────────────────────────────────────────────────────
 
@@ -162,11 +185,14 @@ func _build_shell() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
+	# Width is re-fitted to the live viewport on every open() (_apply_panel_width); seed it at the
+	# max so a no-viewport build (the headless test path) still has a sane size.
 	panel.custom_minimum_size = Vector2(PANEL_MAX_WIDTH, 0)
 	# Shared modal card surface (UiKit.modal_card_box) — one builder for every
 	# centred-card modal so radius/border/shadow can never drift again.
 	panel.add_theme_stylebox_override("panel", UiKit.modal_card_box(26))
 	center.add_child(panel)
+	_panel = panel
 
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -204,12 +230,12 @@ func _build_shell() -> void:
 	rule.add_theme_stylebox_override("separator", line)
 	col.add_child(rule)
 
-	# The locked-on category SLOT grid (React's grid-cols-4 of TileSlot). Populated by
+	# The locked-on category SLOT grid (3 wide — a balanced 2×3 for the home/meadow 6). Populated by
 	# _rebuild_slots() (here + on every open()) because the slot SET differs by active zone.
 	_slot_grid = GridContainer.new()
-	_slot_grid.columns = 4
-	_slot_grid.add_theme_constant_override("h_separation", 8)
-	_slot_grid.add_theme_constant_override("v_separation", 8)
+	_slot_grid.columns = SLOT_COLUMNS
+	_slot_grid.add_theme_constant_override("h_separation", 10)
+	_slot_grid.add_theme_constant_override("v_separation", 10)
 	_slot_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(_slot_grid)
 
@@ -377,35 +403,47 @@ func _build_spawn_info(col: VBoxContainer) -> void:
 func _build_slot(cat: String) -> Control:
 	var wrap := Control.new()
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	wrap.custom_minimum_size = Vector2(0, 104)
+	wrap.custom_minimum_size = Vector2(0, SLOT_HEIGHT_PX)
 
 	var btn := Button.new()
 	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
 	btn.toggle_mode = false
 	# Plain parchment slot — these are informational pickers (tap to change the variant),
 	# not CTAs, so the solid action green was misleading; the green stays on Start.
-	UiKit.style_button(btn, Palette.IRON, 6, 0)
+	UiKit.style_button(btn, Palette.IRON, 8, 0)
 	btn.connect("pressed", Callable(self, "open_chooser").bind(cat))
 	wrap.add_child(btn)
 	_slot_buttons[cat] = btn
 	_action_buttons["slot_" + cat] = btn
 
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 2)
-	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(vbox)
+	# A MarginContainer pads the content off the slot edges so the larger icon + labels never
+	# crowd the border (the old slot left the icon floating in empty space).
+	var pad := MarginContainer.new()
+	pad.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pad.add_theme_constant_override("margin_top", 10)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	pad.add_theme_constant_override("margin_left", 6)
+	pad.add_theme_constant_override("margin_right", 6)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(pad)
 
-	# Icon holder (centre) — swapped to the active variant's art in _render.
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(vbox)
+
+	# Icon holder (centre, expands to claim the slot's free vertical space) — swapped to the
+	# active variant's art in _render. The big icon is the star of the slot now.
 	var icon_holder := CenterContainer.new()
 	icon_holder.custom_minimum_size = Vector2(0, SLOT_ICON_PX)
+	icon_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(icon_holder)
 	_slot_icon_holders[cat] = icon_holder
 
 	var name_lbl := Label.new()
-	UiKit.set_font_size(name_lbl, Typography.Role.META)
+	UiKit.set_font_size(name_lbl, Typography.Role.LABEL)
 	name_lbl.add_theme_color_override("font_color", Palette.INK)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -414,7 +452,7 @@ func _build_slot(cat: String) -> Control:
 	_slot_name_labels[cat] = name_lbl
 
 	var sub_lbl := Label.new()
-	UiKit.set_font_size(sub_lbl, Typography.Role.CAPTION)
+	UiKit.set_font_size(sub_lbl, Typography.Role.META)
 	sub_lbl.add_theme_color_override("font_color", Palette.INK_MID)
 	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -427,9 +465,9 @@ func _build_slot(cat: String) -> Control:
 	UiKit.set_font_size(edit, Typography.Role.META)
 	edit.add_theme_color_override("font_color", Palette.INK_MID)
 	edit.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	edit.offset_left = -18
-	edit.offset_top = 3
-	edit.offset_right = -4
+	edit.offset_left = -20
+	edit.offset_top = 4
+	edit.offset_right = -5
 	edit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(edit)
 
