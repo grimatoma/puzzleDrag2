@@ -574,13 +574,15 @@ func _refresh_chain_progress() -> void: if _hud: _hud._refresh_chain_progress()
 func _refresh_tools() -> void: if _hud: _hud._refresh_tools()
 
 ## A real drag attempt fell short of the chain minimum: denied buzz + a small board
-## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake) + a status hint.
-func _on_chain_rejected(length: int) -> void:
+## nudge (amplitude 3 — a head-shake, not the multi-unit impact shake). The "Chain of N —
+## need more" text hint was removed as board clutter; the buzz + shake remain the feedback.
+## Any prior status text is cleared so a stale success message can't linger after a miss.
+func _on_chain_rejected(_length: int) -> void:
 	if _audio != null:
 		_audio.play("buzz")
 	UiFx.shake(board, 3.0, 0.22)
 	if _status_label != null:
-		_status_label.text = "Chain of %d — need %d or more." % [length, board.min_chain]
+		_status_label.text = ""
 
 ## Switch between the five persistent bottom-nav VIEWS without stacking them. Tapping a
 ## nav tab routes here (NOT straight to the opener): we first hide any OTHER primary view
