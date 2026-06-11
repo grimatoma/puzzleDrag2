@@ -13,7 +13,9 @@ extends RefCounted
 ##   · 35 building PLOTS (3×3 cells each) in organic rows fronting the streets,
 ##     stage-tagged so the village visibly grows: stage 1 = the 5 plots hugging
 ##     the plaza, later stages radiate outward (cumulative 5/10/15/20/35 —
-##     STAGE_PLOT_CAPACITY; TownConfig's tier ladder tops out at 33 plots)
+##     STAGE_PLOT_CAPACITY; TownConfig's staged-growth tier ladder lands on
+##     5/10/15/20/25, one stage band per tier, with 10 spare catalog plots
+##     beyond the City grant for save-overflow renders)
 ##   · landmarks: the FARM field at the south-west village edge, the MINE arch
 ##     at the rocky north-east corner, the FISH dock boat on the river
 ##   · stage-tagged decor (trees / bushes / fences / flowers / plaza dressing)
@@ -150,9 +152,12 @@ const LANDMARKS: Dictionary = {
 ## stage-5 southern tree line. Decor never sits on plots/landmarks/water
 ## (gate-tested); signs/flowers may dress plaza or path edges.
 const DECOR: Array = [
-	# Stage 1 — plaza dressing.
+	# Stage 1 — plaza dressing. The two plaza lamps are also the anchor points
+	# for VillageAmbience's glow halos (it filters decor_for_stage by "lamp").
 	{"art_id": "sign", "cell": Vector2i(14, 12), "stage": 1},
 	{"art_id": "mailbox", "cell": Vector2i(19, 15), "stage": 1},
+	{"art_id": "lamp", "cell": Vector2i(15, 15), "stage": 1},
+	{"art_id": "lamp", "cell": Vector2i(18, 12), "stage": 1},
 	{"art_id": "flowers_red", "cell": Vector2i(20, 12), "stage": 1},
 	{"art_id": "flowers_yellow", "cell": Vector2i(20, 15), "stage": 1},
 	{"art_id": "flowers_blue", "cell": Vector2i(13, 15), "stage": 1},
@@ -163,7 +168,10 @@ const DECOR: Array = [
 	{"art_id": "tree_teal", "cell": Vector2i(10, 11), "stage": 2},
 	{"art_id": "bush", "cell": Vector2i(6, 17), "stage": 2},
 	{"art_id": "bush", "cell": Vector2i(10, 17), "stage": 2},
-	# Stage 3 — riverbank trees + the rocky mine corner.
+	# Stage 3 — riverbank trees + the rocky mine corner + Main Street lamps
+	# (in the gap columns between the north-side plot rows).
+	{"art_id": "lamp", "cell": Vector2i(10, 12), "stage": 3},
+	{"art_id": "lamp", "cell": Vector2i(24, 12), "stage": 3},
 	{"art_id": "tree_green", "cell": Vector2i(32, 2), "stage": 3},
 	{"art_id": "tree_teal", "cell": Vector2i(32, 9), "stage": 3},
 	{"art_id": "tree_green", "cell": Vector2i(32, 16), "stage": 3},
@@ -177,7 +185,9 @@ const DECOR: Array = [
 	{"art_id": "fence_post", "cell": Vector2i(5, 20), "stage": 4},
 	{"art_id": "bush", "cell": Vector2i(6, 21), "stage": 4},
 	{"art_id": "tree_small", "cell": Vector2i(1, 19), "stage": 4},
-	# Stage 5 — the southern tree line + outskirts flowers.
+	# Stage 5 — the southern tree line + outskirts flowers + dock-road lamps.
+	{"art_id": "lamp", "cell": Vector2i(15, 20), "stage": 5},
+	{"art_id": "lamp", "cell": Vector2i(18, 19), "stage": 5},
 	{"art_id": "tree_small", "cell": Vector2i(6, 27), "stage": 5},
 	{"art_id": "tree_small", "cell": Vector2i(10, 27), "stage": 5},
 	{"art_id": "tree_small", "cell": Vector2i(14, 27), "stage": 5},

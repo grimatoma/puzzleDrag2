@@ -202,10 +202,10 @@ func _run() -> void:
 	# Drive the FSM manually: after the initial pause (≤ PAUSE_MAX) every
 	# villager has begun walking at least once.
 	var v0: VillageNpcs.Villager = npcs._villagers[0]
-	_check(v0.state == VillageNpcs.STATE_IDLE and v0.pause_left > 0.0,
+	_check(v0.state == VillageNpcs.State.IDLE and v0.pause_left > 0.0,
 		"villagers spawn IDLE with a staggered pause")
 	npcs.step(VillageNpcs.PAUSE_MAX + 0.01)
-	_check(v0.state == VillageNpcs.STATE_WALK and v0.path.size() >= 2,
+	_check(v0.state == VillageNpcs.State.WALK and v0.path.size() >= 2,
 		"after the pause the villager picked a path and entered WALK")
 	_check(String(v0.sprite.animation).begins_with("walk_"),
 		"walking villager plays a walk_<facing> animation")
@@ -242,7 +242,7 @@ func _run() -> void:
 	var arrived := false
 	for _i in range(2000):
 		npcs.step(1.0 / 30.0)
-		if v0.state == VillageNpcs.STATE_IDLE:
+		if v0.state == VillageNpcs.State.IDLE:
 			arrived = true
 			break
 	var dest: Vector2i = v0.path[v0.path.size() - 1]
@@ -263,7 +263,7 @@ func _run() -> void:
 		for v in npcs._villagers:
 			if not walk_set.has(v.cell):
 				soak_ok = false
-			if v.state == VillageNpcs.STATE_IDLE \
+			if v.state == VillageNpcs.State.IDLE \
 					and v.node.position != VillageNpcs.cell_floor_pos(v.cell):
 				soak_ok = false
 	_check(soak_ok, "30 s soak: logical cells stay walkable; idlers rest on floor points")

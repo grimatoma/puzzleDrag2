@@ -71,6 +71,15 @@ func _test_manifest_entries_load() -> void:
 	_check(TownArtConfig.has_art("lamp")
 		and String(TownArtConfig.entry("lamp").get("kind", "")) == "decor",
 		"the 'lamp' decor slice ships in the manifest")
+	# The Phase-4 animated water strip: 14 horizontal 16×16 frames whose grid
+	# exactly divides the strip texture (build_tileset clamps regardless).
+	var wa: Dictionary = TownArtConfig.entry("ground_water_anim")
+	_check(not wa.is_empty() and int(wa.get("frames", 0)) == 14,
+		"the animated water strip ships 14 frames")
+	_check(int(wa.get("w", 0)) == int(wa.get("frames", 0)) * int(wa.get("frame_w", 0))
+		and int(wa.get("h", 0)) == int(wa.get("frame_h", 0)),
+		"water strip size (%dx%d) divides into its %d frame grid"
+		% [int(wa.get("w", 0)), int(wa.get("h", 0)), int(wa.get("frames", 0))])
 
 # ── every BuildingConfig shape has art or falls back cleanly ────────────────
 
@@ -368,6 +377,23 @@ func _test_ground_tileset() -> void:
 	# kinds in the same order (source id = index in GROUND_KIND_ORDER).
 	_check(TownArtConfig.GROUND_KINDS.keys() == TownArtConfig.GROUND_KIND_ORDER,
 		"GROUND_KINDS keys match GROUND_KIND_ORDER exactly")
+	# Phase-4 water shimmer: the water source is the FRAME-ANIMATED strip —
+	# 14 frames at 0.1 s each, laid out as one horizontal line (columns 0),
+	# tile still at (0,0) so the painter's set_cell contract is unchanged.
+	var wsid: int = TownArtConfig.ground_source_id("water")
+	if ts.has_source(wsid):
+		var wsrc: TileSetAtlasSource = ts.get_source(wsid)
+		_check(wsrc.get_tile_animation_frames_count(Vector2i.ZERO) == 14,
+			"water source animates 14 frames (got %d)"
+			% wsrc.get_tile_animation_frames_count(Vector2i.ZERO))
+		_check(wsrc.get_tile_animation_columns(Vector2i.ZERO) == 0,
+			"water frames lay out as one horizontal line (columns 0)")
+		_check(absf(wsrc.get_tile_animation_frame_duration(Vector2i.ZERO, 0) - 0.1) < 0.001,
+			"water frame duration is the pack GIF's 100 ms")
+		# Every animated ground kind still keys a real GROUND_KINDS entry.
+		for kind: String in TownArtConfig.GROUND_ANIMATED.keys():
+			_check(TownArtConfig.GROUND_KINDS.has(kind),
+				"GROUND_ANIMATED kind '%s' is a real ground kind" % kind)
 
 # ── SOURCE flip: a missing pixellab slice falls back to committed stock ─────
 # Runs LAST (it flips the active art set both ways); ends back on "stock" so
@@ -376,14 +402,25 @@ func _test_ground_tileset() -> void:
 func _test_source_flip_fallback() -> void:
 	# "house" ships only as a stock slice — no pixellab/ art exists yet, so the
 	# resolver must fall through to the committed stock PNG.
+	var stock_frames: SpriteFrames = VillageNpcs.frames_for("villager_a")
 	TownArtConfig.set_source("pixellab")
 	_check(TownArtConfig.SOURCE == "pixellab", "set_source flips SOURCE to 'pixellab'")
 	_check(TownArtConfig.texture_for("house") != null,
 		"pixellab source: stock-only id still resolves via the stock fallback")
+	# Villager SpriteFrames must REFRESH across the flip (the frames cache is
+	# keyed by TownArtConfig.SOURCE, so a stale stock atlas can't leak into a
+	# new art set) — and still resolve frame textures via the stock fallback.
+	var flipped_frames: SpriteFrames = VillageNpcs.frames_for("villager_a")
+	_check(flipped_frames != stock_frames,
+		"source flip rebuilds the villager SpriteFrames (no stale cache)")
+	_check(flipped_frames.get_frame_count("walk_down") == 4,
+		"rebuilt frames still carry the walk cycle (stock fallback)")
 	TownArtConfig.set_source("stock")
 	_check(TownArtConfig.SOURCE == "stock", "set_source restores 'stock'")
 	_check(TownArtConfig.texture_for("house") != null,
 		"stock texture resolves again after restore (setter cleared the cache)")
+	_check(VillageNpcs.frames_for("villager_a") == stock_frames,
+		"restoring the source serves the original cached frames again")
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

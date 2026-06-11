@@ -171,10 +171,10 @@ func _test_plot_cap() -> void:
 	# Pre-fill `buildings` with one DUMMY id per Village plot (bypassing build()) to
 	# simulate a full town, then try to build lumber_camp: the plot guard must trip
 	# with reason "no_plot". The dummy count tracks TownConfig.tier_plots so the test
-	# survives plot-ladder tuning (25/27/29/... since the roomy-first-town change).
+	# survives plot-ladder tuning (5/10/15/... since the staged-growth re-tune).
 	var g := GameState.new()
 	g.settlement.tier = TownConfig.TIER_VILLAGE
-	_check(g.settlement.plots() == 29, "Village has 29 plots")
+	_check(g.settlement.plots() == 15, "Village has 15 plots")
 	var full: int = g.settlement.plots()
 	g.buildings = []
 	for i in full:

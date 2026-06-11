@@ -74,6 +74,15 @@ GROUND = {
 # (keeps the ground palette 100% Serene instead of mixing Kenney's hue).
 GRASS_FLOWER_DECAL = ("serene", (32, 222, 48, 238))
 
+# Animated river water (Phase 4 shimmer): the Serene pack ships a ready-made
+# 14-frame 16x16 wave strip under "Animated stuff/" whose base blue is the
+# EXACT color of the flat ground_water tile, so the swap is seamless. The whole
+# 224x16 strip is committed as ONE PNG; TownArtConfig.build_tileset() reads the
+# frame grid below and drives it with TileSetAtlasSource's built-in frame
+# animation (zero per-frame code). The companion GIF plays 100 ms/frame.
+WATER_ANIM_SHEET = "serene/SERENE_VILLAGE_REVAMPED/Animated stuff/water_waves_16x16.png"
+WATER_ANIM_META = {"frame_w": 16, "frame_h": 16, "frames": 14, "frame_duration": 0.1}
+
 # Serene house sheet: 24 houses, 8 silhouettes x 3 roof colors. Boxes from
 # connected-component detection over the sheet (exact sprite bounds).
 _RED = {
@@ -260,6 +269,12 @@ def main() -> int:
     decal = sheets[GRASS_FLOWER_DECAL[0]].crop(GRASS_FLOWER_DECAL[1])
     grass.alpha_composite(decal)
     emit("ground_grass_flowers", grass, "ground", "ground", LIC_SERENE)
+    # Animated water strip (14 frames laid out horizontally; see WATER_ANIM_META).
+    # anchor/footprint describe ONE 16x16 frame, not the whole strip — the entry
+    # is consumed only by build_tileset()'s frame-animated water source.
+    water_strip = open_sheet(packs / WATER_ANIM_SHEET)
+    emit("ground_water_anim", water_strip, "ground", "ground", LIC_SERENE,
+         {"anchor": [8, 16], "footprint": [1, 1], **WATER_ANIM_META})
 
     # Buildings (Serene houses).
     for art_id, box in BUILDINGS.items():

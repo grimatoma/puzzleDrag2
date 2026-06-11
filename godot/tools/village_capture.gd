@@ -1,17 +1,31 @@
 extends SceneTree
-## Dev utility: open the Phase-2 VillageScreen IN-GAME on a realistic GameState
-## and save a 720×1280 PNG. Run NON-headless (foreground — background
-## non-headless renders are flaky on Windows) so the GPU draws the ground
-## TileMapLayer, the floor-anchored building/decor sprites, and the overlay:
-##   godot --path godot --script res://tools/village_capture.gd -- <out_path>
+## Dev utility: open the VillageScreen IN-GAME on a realistic GameState and
+## save a 720×1280 PNG. Run NON-headless (foreground — background non-headless
+## renders are flaky on Windows) so the GPU draws the ground TileMapLayer (the
+## frame-animated river included), the floor-anchored building/decor sprites,
+## the Phase-4 ambience (chimney smoke + lamp halos), and the overlay:
+##   godot --path godot --script res://tools/village_capture.gd -- <out_path> [tier] [builds]
 ##
-## Defaults to res://tools/_caps/village.png (_caps/ is gitignored). Sets up a
-## City-tier town, GRANTS resources, and BUILDS several buildings through the
-## REAL game.build() API (no direct buildings pokes) so the capture shows the
-## GameState-driven village: building sprites on the first ordinal plots, empty
-## pads on the rest, landmarks + decor around them. Opens the real screen via
-## Main._open_townmap(), settles, and writes the PNG — the phase's visual
+## `tier` (1..5, default 5) sets the settlement tier for the shot — the
+## staged-growth re-tune maps tiers to growth stages 1..5, so tier 1 is the
+## tiny 5-lot Camp and tier 5 the full 25-lot City. `builds` (default 15)
+## buildings are constructed through the REAL game.build() API at City tier
+## (every unlock available), then the settlement is set to the target tier —
+## ordinal plots keep every built sprite legal, and the capture shows the
+## buildings-with-pads mix plus smoke above every built house.
+##
+## Defaults to res://tools/_caps/village.png (_caps/ is gitignored). Opens the
+## real screen via Main._open_townmap(), settles, poses the villagers AND the
+## smoke cycle deterministically, and writes the PNG — the phase's visual
 ## acceptance evidence. A second _wide shot zooms out to the CONTAIN fit.
+
+## Build order for the `builds` count — a spread of spawners / refiners /
+## landmarks (no hazard buildings; they need the rats gate).
+const BUILD_ORDER: Array = [
+	"lumber_camp", "coop", "garden", "bakery", "mill", "granary", "silo",
+	"chapel", "workshop", "stable", "kitchen", "barn", "sawmill", "apiary",
+	"observatory", "forge", "smokehouse", "larder",
+]
 
 func _save(path: String) -> void:
 	var img := root.get_texture().get_image()
@@ -21,6 +35,9 @@ func _save(path: String) -> void:
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out_path: String = args[0] if args.size() > 0 else "res://tools/_caps/village.png"
+	var tier: int = clampi(int(args[1]) if args.size() > 1 else TownConfig.TIER_CITY,
+		TownConfig.TIER_CAMP, TownConfig.MAX_TIER)
+	var builds: int = clampi(int(args[2]) if args.size() > 2 else 15, 0, BUILD_ORDER.size())
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_path).get_base_dir())
 
 	SaveManager.clear()                          # ignore any leftover test save
@@ -33,26 +50,21 @@ func _initialize() -> void:
 	if main._tutorial_modal != null:
 		main._tutorial_modal.visible = false
 
-	# A City-tier town built up through the REAL build API: grant the resources
-	# the costs need, then game.build() a spread of spawners / refiners /
-	# landmarks. The village renders these on the first ordinal plots; the
-	# remaining lots show as prepared pads (the buildings-with-pads mix the
-	# capture is meant to show).
+	# Build through the REAL build API at City tier (all unlocks live), then
+	# drop to the target tier for the shot — ordinal plots keep every built
+	# sprite legal at any tier (the overflow guard renders them regardless).
 	main.game.settlement.tier = TownConfig.TIER_CITY
 	main.game.active_biome = "farm"
-	var grant := {"hay_bundle": 200, "flour": 200, "plank": 200, "eggs": 80,
-		"block": 120, "iron_bar": 40, "soup": 40}
+	var grant := {"hay_bundle": 400, "flour": 400, "plank": 400, "eggs": 200,
+		"block": 300, "iron_bar": 120, "soup": 120, "honey": 60, "bread": 60}
 	for k in grant:
 		main.game.inventory[k] = grant[k]
-	for id in [
-		BuildingConfig.LUMBER_CAMP, BuildingConfig.COOP, BuildingConfig.GARDEN,
-		BuildingConfig.BAKERY, BuildingConfig.MILL, BuildingConfig.GRANARY,
-		BuildingConfig.SILO, BuildingConfig.CHAPEL, BuildingConfig.WORKSHOP,
-		BuildingConfig.STABLE,
-	]:
+	for i in range(builds):
+		var id: String = String(BUILD_ORDER[i])
 		var res: Dictionary = main.game.build(id)
 		if not bool(res.get("ok", false)):
 			print("  build FAILED: %s → %s" % [id, str(res)])
+	main.game.settlement.tier = tier
 	main._refresh_hud_all()                      # top-bar pills reflect the tier
 
 	# Open the real village screen (lazily builds the shell + fits the camera),
@@ -61,19 +73,22 @@ func _initialize() -> void:
 	for _i in range(6):
 		await process_frame
 
-	# Phase 3 — walking villagers: deterministically advance the wander FSM a
-	# few simulated seconds so the crowd is caught MID-STREET (walking between
-	# cells), not all standing on their spawn points. Foreground _process walks
-	# them too; the manual step() just guarantees the pose regardless of how
-	# fast the settle frames ran.
+	# Walking villagers: deterministically advance the wander FSM a few
+	# simulated seconds so the crowd is caught MID-STREET. Foreground _process
+	# walks them too; the manual step() just guarantees the pose.
 	var npcs = main._townmap_screen._npcs
 	for _i in range(40):
 		npcs.step(0.1)
 	var walking: int = 0
 	for v in npcs._villagers:
-		if v.state == VillageNpcs.STATE_WALK:
+		if v.state == VillageNpcs.State.WALK:
 			walking += 1
-	print("  villagers=%d walking=%d" % [npcs._villagers.size(), walking])
+	# Ambience: pose the smoke mid-cycle (puffs risen + visible) the same way.
+	var ambience = main._townmap_screen._ambience
+	for _i in range(30):
+		ambience.step(0.1)
+	print("  villagers=%d walking=%d puffs=%d halos=%d"
+		% [npcs._villagers.size(), walking, ambience._puffs.size(), ambience._halos.size()])
 	for _i in range(2):
 		await process_frame
 

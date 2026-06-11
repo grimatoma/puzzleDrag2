@@ -41,7 +41,13 @@ extends CanvasLayer
 ##   · walking NPCs (Phase 3) live in their OWN y-sorted World child —
 ##     VillageNpcs.gd owns the A* grid, spawn, FSM and SpriteFrames; this
 ##     screen only instantiates it, forwards the stage on refresh(), and
-##     forwards visibility. Water animation arrives in Phase 4.
+##     forwards visibility.
+##   · AMBIENCE (Phase 4) is the same shape: VillageAmbience.gd (chimney smoke
+##     over built houses + pulsing lamp halos + the stage-reveal pad flash)
+##     is another self-contained y-sorted World child fed pure data from
+##     _rebuild_buildings. The river WATER animates inside the ground TileSet
+##     itself (TownArtConfig.build_tileset's frame-animated water source) —
+##     zero per-frame code in this screen.
 ##
 ## INPUT GOTCHA (CLAUDE.md): the project enables BOTH emulate_mouse_from_touch
 ## AND emulate_touch_from_mouse, so one physical drag arrives as a real
@@ -107,6 +113,7 @@ var _ground: TileMapLayer     ## flat ground paint (NOT y-sorted)
 var _props: Node2D            ## decor sprites (y-sorted with buildings)
 var _buildings: Node2D        ## building + landmark sprites (y-sorted)
 var _npcs: VillageNpcs        ## walking villagers (Phase 3; y-sorted sibling)
+var _ambience: VillageAmbience ## chimney smoke + lamp glow (Phase 4; y-sorted sibling)
 var _board_btn: Button
 var _build_btn: Button
 ## The currently-open interaction panel (build picker or demolish info), or null
@@ -226,6 +233,13 @@ func _build_shell() -> void:
 	_world.add_child(_npcs)
 	_npcs.setup(_render_stage)
 	_npcs.set_running(visible)
+
+	# Ambient dressing (Phase 4) — chimney smoke + lamp glow, another
+	# self-contained y-sorted World child (data flows in via refresh()'s
+	# _rebuild_buildings; all behavior lives in VillageAmbience.gd).
+	_ambience = VillageAmbience.new()
+	_world.add_child(_ambience)
+	_ambience.set_running(visible)
 
 	_build_overlay()
 	_refit()
@@ -462,14 +476,19 @@ func _rebuild_buildings(building_ids: Array) -> void:
 		child.queue_free()
 
 	# Buildings on the first N visible plots (ordinal — see the class header).
+	# `spots` collects each placed building's floor point + art id for the
+	# ambience layer (chimney smoke wants DATA, not our sprite nodes).
 	var plots: Array = _visible_plots()
 	var count: int = mini(building_ids.size(), plots.size())
+	var spots: Array = []
 	for i in range(count):
 		var p: Dictionary = plots[i]
 		var art_id: String = BuildingConfig.shape_of(String(building_ids[i]))
-		var s := _make_sprite(art_id, _floor_pos(p["cell"], p["footprint"]))
+		var pos: Vector2 = _floor_pos(p["cell"], p["footprint"])
+		var s := _make_sprite(art_id, pos)
 		s.name = "building_%d_%s" % [i, art_id]
 		_buildings.add_child(s)
+		spots.append({"pos": pos, "art_id": art_id})
 
 	# The three board-entrance landmarks at their fixed VillageLayout cells.
 	var landmarks: Dictionary = VillageLayout.landmarks()
@@ -480,14 +499,29 @@ func _rebuild_buildings(building_ids: Array) -> void:
 		_buildings.add_child(s)
 
 	_paint_plots(plots.size(), count)
+	if _ambience != null:
+		_ambience.set_stage_and_buildings(_render_stage, spots)
 
 ## The plots the player can actually use right now: the rendered stage's plot
 ## list truncated to the live tier's lot grant (plan_lot_count()). plots() is
 ## ordered stage-ascending, so plots_for_stage(stage) is a prefix of the full
 ## catalog and this slice is a prefix of THAT — index i here == catalog index i.
+##
+## SAVE-OVERFLOW GUARD (the 2026-06-10 plots re-tune): a pre-re-tune save may
+## hold MORE buildings than the new tier grant (e.g. 10 buildings at Camp's 5
+## lots). can_build already blocks new construction, but the village must
+## still RENDER every built building — so when game.buildings overflows the
+## grant the slice extends past the stage prefix into the full 35-plot
+## catalog (still index-aligned). Pads never exceed the grant either way:
+## _paint_plots only pads indices in [built_count, visible_count).
 func _visible_plots() -> Array:
 	var plots: Array = VillageLayout.plots_for_stage(_render_stage)
-	return plots.slice(0, mini(plan_lot_count(), plots.size()))
+	var n: int = mini(plan_lot_count(), plots.size())
+	var built: int = game.buildings.size() if game != null else 0
+	if built > n:
+		var all: Array = VillageLayout.plots()
+		return all.slice(0, mini(built, all.size()))
+	return plots.slice(0, n)
 
 ## Floor-center-bottom of a footprint anchored at top-left `cell`, in world px —
 ## the point a sprite's TownArtConfig anchor is pinned to (and the y its
@@ -535,8 +569,13 @@ func refresh() -> void:
 		return
 	var stage: int = VillageLayout.stage_for_plot_count(plan_lot_count())
 	if stage != _render_stage:
+		var prev_stage: int = _render_stage
 		_render_stage = stage
 		_place_props()
+		# Stage-reveal accent (Phase 4): a one-shot soft flash on the pads this
+		# growth step just revealed. Motion-gated inside VillageAmbience.
+		if stage > prev_stage and _ambience != null:
+			_ambience.flash_new_pads(prev_stage, stage, plan_lot_count())
 	_rebuild_buildings(game.buildings)
 	# Villager crowd tracks the rendered stage (no-op while it's unchanged, so
 	# a plain refresh never scatters the walkers).
@@ -571,6 +610,8 @@ func _on_screen_visibility_changed() -> void:
 		_toast.dismiss()
 	if _npcs != null:
 		_npcs.set_running(visible)
+	if _ambience != null:
+		_ambience.set_running(visible)
 
 # ── camera (transform on _world, clamped) ─────────────────────────────────────
 

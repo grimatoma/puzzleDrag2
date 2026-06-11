@@ -57,7 +57,8 @@ const GRASS_WEIGHT := 2.0
 ## Default crowd seed (VillageScreen uses it; tests pass explicit seeds).
 const DEFAULT_SEED := 113
 
-enum { STATE_IDLE, STATE_WALK }
+## The villager wander FSM's states (named enum, matching the house style).
+enum State { IDLE, WALK }
 
 ## One ambient villager: its scene nodes + wander-FSM state. Pure data holder —
 ## all behavior lives on VillageNpcs so the FSM is steppable headless.
@@ -67,15 +68,19 @@ class Villager:
 	var sprite: AnimatedSprite2D
 	var char_id: String = ""
 	var cell: Vector2i = Vector2i.ZERO  ## last cell reached (logical position)
-	var state: int = STATE_IDLE
+	var state: State = State.IDLE
 	var pause_left: float = 0.0         ## IDLE countdown
 	var path: Array[Vector2i] = []      ## current path's cells (head == start)
 	var points: PackedVector2Array = [] ## the path as world floor points
 	var seg: int = 0                    ## index into points we're walking toward
 	var facing: String = "down"
 
-## ONE SpriteFrames per character id, shared by every villager of that
-## character (and across screens — the sheets are immutable art).
+## ONE SpriteFrames per (art SOURCE, character id), shared by every villager of
+## that character (and across screens — the sheets are immutable art). Keyed by
+## TownArtConfig.SOURCE so a runtime art-set flip (set_source("pixellab"))
+## naturally re-resolves frames against the new sheets instead of serving stale
+## stock atlases — the cache key carries the dependency, so TownArtConfig never
+## has to reach DOWN into this scene class to invalidate us.
 static var _frames_cache: Dictionary = {}
 ## The flat placeholder frame used when a sheet texture is unavailable
 ## (headless-without-import) — the same graceful tier as Tile.gd / _make_sprite.
@@ -183,15 +188,18 @@ func _respawn() -> void:
 
 	var ids: Array[String] = TownArtConfig.character_ids()
 	var count: int = spawn_count(_stage)
-	# Distinct spawn cells drawn from the street pool (swap-remove sampling);
-	# villagers start ON the streets, where the crowd reads best.
+	# Distinct spawn cells drawn from the street pool (true swap-remove
+	# sampling: O(1) removal — overwrite the pick with the tail, pop the
+	# tail); villagers start ON the streets, where the crowd reads best.
 	var pool: Array[Vector2i] = _street.duplicate()
 	var id_offset: int = _rng.randi_range(0, maxi(1, ids.size()) - 1)
 	for i in range(count):
 		if pool.is_empty():
 			break
-		var cell: Vector2i = pool[_rng.randi_range(0, pool.size() - 1)]
-		pool.erase(cell)
+		var pick: int = _rng.randi_range(0, pool.size() - 1)
+		var cell: Vector2i = pool[pick]
+		pool[pick] = pool[pool.size() - 1]
+		pool.pop_back()
 		var char_id: String = ids[(id_offset + i) % ids.size()] if not ids.is_empty() else ""
 		_spawn_villager(i, char_id, cell)
 
@@ -199,7 +207,7 @@ func _spawn_villager(index: int, char_id: String, cell: Vector2i) -> void:
 	var v := Villager.new()
 	v.char_id = char_id
 	v.cell = cell
-	v.state = STATE_IDLE
+	v.state = State.IDLE
 	# Staggered first pause so the crowd doesn't move in lockstep on open.
 	v.pause_left = _rng.randf_range(PAUSE_MIN, PAUSE_MAX)
 	v.facing = "down"
@@ -214,6 +222,8 @@ func _spawn_villager(index: int, char_id: String, cell: Vector2i) -> void:
 	v.sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	# PER-FRAME floor anchor (8,15 on the stock 16×16 frames): pin it to the
 	# node's floor point, exactly like _make_sprite pins building anchors.
+	# character_sheet() owns the per-frame default; the literal here only
+	# covers the {} sheet of an unknown/empty char id.
 	var sheet: Dictionary = TownArtConfig.character_sheet(char_id)
 	var anchor: Vector2 = sheet.get("anchor", Vector2(TILE / 2.0, float(TILE) - 1.0))
 	v.sprite.offset = -anchor
@@ -225,16 +235,20 @@ func _spawn_villager(index: int, char_id: String, cell: Vector2i) -> void:
 
 # ── shared SpriteFrames ───────────────────────────────────────────────────────
 
-## The shared SpriteFrames for a character id — built ONCE per id and cached
-## statically, so every villager of that character references the IDENTICAL
-## resource. Animations: walk_<facing> (all sheet rows, looped at WALK_FPS) and
-## idle_<facing> (the first row only) for each facing column the sheet
-## declares. When the sheet texture is unavailable every frame degrades to the
-## flat placeholder (the house procedural-fallback tier), keeping the
-## animation NAMES intact so the FSM never special-cases missing art.
+## The shared SpriteFrames for a character id — built ONCE per (SOURCE, id)
+## and cached statically, so every villager of that character references the
+## IDENTICAL resource (and an art-set flip rebuilds against the new sheets —
+## see the _frames_cache note). Animations: walk_<facing> (all sheet rows,
+## looped at WALK_FPS) and idle_<facing> (the first row only) for each facing
+## column the sheet declares. When the sheet texture is unavailable — or a
+## declared facing column / frame row would overrun the real texture — that
+## frame degrades to the flat placeholder (the house procedural-fallback
+## tier), keeping the animation NAMES intact so the FSM never special-cases
+## missing art.
 static func frames_for(char_id: String) -> SpriteFrames:
-	if _frames_cache.has(char_id):
-		return _frames_cache[char_id]
+	var cache_key: String = "%s|%s" % [TownArtConfig.SOURCE, char_id]
+	if _frames_cache.has(cache_key):
+		return _frames_cache[cache_key]
 	var sheet: Dictionary = TownArtConfig.character_sheet(char_id)
 	var facings: Array[String] = []
 	if sheet.get("facings") is Array:
@@ -242,9 +256,19 @@ static func frames_for(char_id: String) -> SpriteFrames:
 	if facings.is_empty():
 		facings.assign(["down", "up", "left", "right"])
 	var rows: int = maxi(1, int(sheet.get("rows", 1)))
-	var fw: int = int(sheet.get("frame_w", TILE))
-	var fh: int = int(sheet.get("frame_h", TILE))
+	var fw: int = maxi(1, int(sheet.get("frame_w", TILE)))
+	var fh: int = maxi(1, int(sheet.get("frame_h", TILE)))
 	var tex: Texture2D = sheet.get("texture", null)
+	# Clamp the atlas grid to what the REAL texture holds, so a manifest that
+	# declares more facings/rows than the sheet is wide/tall can never emit an
+	# AtlasTexture region past the texture edge.
+	var tex_cols: int = 0
+	var tex_rows: int = 0
+	if tex != null:
+		@warning_ignore("integer_division")
+		tex_cols = tex.get_width() / fw
+		@warning_ignore("integer_division")
+		tex_rows = tex.get_height() / fh
 
 	var sf := SpriteFrames.new()
 	sf.remove_animation("default")
@@ -260,7 +284,7 @@ static func frames_for(char_id: String) -> SpriteFrames:
 		sf.set_animation_loop(idle, true)
 		for row in range(rows):
 			var frame_tex: Texture2D
-			if tex != null:
+			if tex != null and col < tex_cols and row < tex_rows:
 				var at := AtlasTexture.new()
 				at.atlas = tex
 				at.region = Rect2(float(col * fw), float(row * fh), float(fw), float(fh))
@@ -270,8 +294,13 @@ static func frames_for(char_id: String) -> SpriteFrames:
 			sf.add_frame(walk, frame_tex)
 			if row == 0:
 				sf.add_frame(idle, frame_tex)
-	_frames_cache[char_id] = sf
+	_frames_cache[cache_key] = sf
 	return sf
+
+## Drop every cached SpriteFrames (test hygiene; runtime art flips don't need
+## it — the SOURCE-keyed cache already misses after set_source()).
+static func clear_frames_cache() -> void:
+	_frames_cache.clear()
 
 ## Flat 16×16 placeholder frame (missing-sheet fallback), built once.
 static func _fallback_frame() -> Texture2D:
@@ -295,18 +324,23 @@ func _process(delta: float) -> void:
 func step(delta: float) -> void:
 	for v in _villagers:
 		match v.state:
-			STATE_IDLE:
+			State.IDLE:
 				v.pause_left -= delta
 				if v.pause_left <= 0.0:
 					_begin_wander(v)
-			STATE_WALK:
+			State.WALK:
 				_step_walk(v, delta)
 
 ## Pick a random walkable target and start walking its path. A handful of
 ## retries shrugs off same-cell / unroutable picks (the walkable region is one
 ## gate-tested connected component, so retries are virtually never exhausted);
-## on total failure the villager just pauses again.
+## on total failure the villager just pauses again. An EMPTY walkable catalog
+## (defensive — the gate test forbids it) parks the villager in IDLE forever
+## instead of indexing into nothing.
 func _begin_wander(v: Villager) -> void:
+	if _walkable.is_empty():
+		v.pause_left = _rng.randf_range(PAUSE_MIN, PAUSE_MAX)
+		return
 	for _attempt in range(4):
 		var target: Vector2i = _walkable[_rng.randi_range(0, _walkable.size() - 1)]
 		if target == v.cell:
@@ -322,7 +356,7 @@ func _begin_wander(v: Villager) -> void:
 			pts[i] = cell_floor_pos(cells[i])
 		v.points = pts
 		v.seg = 1
-		v.state = STATE_WALK
+		v.state = State.WALK
 		_face_toward(v, pts[1] - pts[0])
 		return
 	v.pause_left = _rng.randf_range(PAUSE_MIN, PAUSE_MAX)
@@ -348,7 +382,7 @@ func _step_walk(v: Villager, delta: float) -> void:
 	v.node.position = pos
 	if v.seg >= v.points.size():
 		v.cell = v.path[v.path.size() - 1]
-		v.state = STATE_IDLE
+		v.state = State.IDLE
 		v.pause_left = _rng.randf_range(PAUSE_MIN, PAUSE_MAX)
 		v.sprite.play("idle_" + v.facing)
 

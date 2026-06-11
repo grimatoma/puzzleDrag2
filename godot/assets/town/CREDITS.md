@@ -15,8 +15,10 @@ fields on every entry).
 - Taken: the 22 house exteriors under `stock/buildings/` (8 silhouettes × 3
   roof colors, one per `BuildingConfig` shape family), most ground tiles
   (`ground_grass`, `ground_grass_flowers`, `ground_path`, `ground_plaza`,
-  `ground_water`), and all `stock/decor/` sprites except the lamp (trees,
-  bush, flowers, fences, sign, mailbox, rocks).
+  `ground_water`, plus `ground_water_anim` — the 14-frame 16×16 wave strip
+  from `Animated stuff/water_waves_16x16.png`), and all `stock/decor/`
+  sprites except the lamp (trees, bush, flowers, fences, sign, mailbox,
+  rocks).
 
 ## Ninja Adventure — Pixel-boy & AAA (CC0)
 

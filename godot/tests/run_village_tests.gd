@@ -144,7 +144,7 @@ func _run() -> void:
 	game.farm_run_active = false
 	screen.refresh()
 
-	# ── 2. World render from REAL state (fresh Camp: 25 pads, 0 buildings) ─────
+	# ── 2. World render from REAL state (fresh Camp: 5 pads, 0 buildings) ──────
 	var grid: Vector2i = VillageLayout.grid_size()
 	var painted: int = screen._ground.get_used_cells().size()
 	_check(painted == grid.x * grid.y,
@@ -160,7 +160,8 @@ func _run() -> void:
 				kind_ok = false
 	_check(kind_ok, "every explicit ground cell painted with its kind's source id")
 
-	# Stage derives from the LIVE tier's plot grant (Camp = 25 plots → stage 5).
+	# Stage derives from the LIVE tier's plot grant (Camp = 5 plots → stage 1
+	# since the 2026-06-10 staged-growth re-tune).
 	_check(screen._render_stage == VillageLayout.stage_for_plot_count(screen.plan_lot_count()),
 		"rendered stage (%d) == stage_for_plot_count(plan_lot_count() %d)"
 		% [screen._render_stage, screen.plan_lot_count()])
@@ -356,7 +357,7 @@ func _run() -> void:
 	screen.refresh()
 
 	# ── 5. Stage / lot math across refresh() ──────────────────────────────────
-	# Tier UP (Village 29 → City 33): more pads appear on the next refresh and
+	# Tier UP (Village 15 → City 25): more pads appear on the next refresh and
 	# the stage keeps honoring stage_for_plot_count(plan_lot_count()).
 	var pads_before: int = int(_plot_paint_census(screen)["pads"])
 	game.settlement.tier = TownConfig.TIER_CITY
@@ -370,11 +371,55 @@ func _run() -> void:
 		- TownConfig.tier_plots(TownConfig.TIER_VILLAGE)),
 		"tier-up grew the pad count (%d → %d)" % [pads_before, pads_after])
 
-	# Stage DECREASE then INCREASE (every TownConfig tier maps to stage 5 today,
-	# so force a small stage through the internals): pads beyond the small
-	# stage's plot set revert to grass, decor shrinks to the stage's entries —
-	# then ONE refresh() restores the live-state stage, pads, and decor exactly
-	# (the full-catalog repaint + clear-before-place make this symmetric).
+	# ── 5b. STAGED GROWTH (2026-06-10 re-tune): every tier lands exactly on
+	# the next VillageLayout stage band (5/10/15/20/25 ⇒ stages 1..5), so the
+	# village physically grows on each tier-up — more pads AND more decor.
+	var ladder_ok := true
+	var decor_ok := true
+	for t in range(TownConfig.TIER_CAMP, TownConfig.MAX_TIER + 1):
+		game.settlement.tier = t
+		screen.refresh()
+		if screen._visible_plots().size() != TownConfig.tier_plots(t) \
+				or screen._render_stage != t:
+			ladder_ok = false
+		if _live_children(screen._props).size() \
+				!= VillageLayout.decor_for_stage(t).size():
+			decor_ok = false
+	_check(ladder_ok,
+		"tier ladder walks the stage bands (5/10/15/20/25 plots ⇒ stages 1..5)")
+	_check(decor_ok, "each tier's decor matches its stage band (village dresses up)")
+
+	# ── 5c. SAVE OVERFLOW: a save holding MORE buildings than the tier grant
+	# (a pre-re-tune save, e.g. 8 buildings at Camp's 5 lots) must still render
+	# EVERY built building; pads never appear past the grant; new builds stay
+	# blocked by the plot guard.
+	game.settlement.tier = TownConfig.TIER_CAMP
+	var kept_buildings: Array = game.buildings.duplicate()
+	game.buildings = []
+	for i in range(8):
+		game.buildings.append("overflow_dummy_%d" % i)
+	screen.refresh()
+	_check(screen._visible_plots().size() == 8,
+		"overflow: visible plots extend to the 8 built (grant is 5)")
+	_check(_building_sprite_count(screen) == 8,
+		"overflow: ALL 8 built buildings render")
+	census = _plot_paint_census(screen)
+	_check(int(census["pads"]) == 0 and int(census["mixed"]) == 0,
+		"overflow: zero pads (nothing buildable past the grant; got %s)" % str(census))
+	_check(game.plots_free() == 0, "overflow: plots_free clamps to 0 (no new builds)")
+	game.buildings = kept_buildings
+	screen.refresh()
+	_check(screen._visible_plots().size() == TownConfig.tier_plots(TownConfig.TIER_CAMP),
+		"clearing the overflow restores the tier's own grant")
+
+	# Stage DECREASE then INCREASE (forced through the internals — refresh()
+	# itself always re-derives the stage from the live grant): pads beyond the
+	# small stage's plot set revert to grass, decor shrinks to the stage's
+	# entries — then ONE refresh() restores the live-state stage, pads, and
+	# decor exactly (the full-catalog repaint + clear-before-place make this
+	# symmetric).
+	game.settlement.tier = TownConfig.TIER_CITY
+	screen.refresh()
 	screen._render_stage = 1
 	screen._place_props()
 	screen._rebuild_buildings(game.buildings)

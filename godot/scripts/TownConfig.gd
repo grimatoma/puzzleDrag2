@@ -8,17 +8,21 @@ extends RefCounted
 ##
 ## Direction spec table (authoritative):
 ##   Tier  Name     Cap  Plots  Unlocks
-##   1     Camp     200  25     Farm board (staple tiles), Orders, the Market
-##   2     Hamlet   300  27     Lumber Camp (trees → plank), Granary, first Worker
-##   3     Village  400  29     Coop (birds → eggs), Garden (veg → soup), Mill & Bakery
-##   4     Town     500  31     Workshop + farm tools, more workers, Caravan Post
-##   5     City     600  33     Top farm buildings; the expedition → Town 2
+##   1     Camp     200  5      Farm board (staple tiles), Orders, the Market
+##   2     Hamlet   300  10     Lumber Camp (trees → plank), Granary, first Worker
+##   3     Village  400  15     Coop (birds → eggs), Garden (veg → soup), Mill & Bakery
+##   4     Town     500  20     Workshop + farm tools, more workers, Caravan Post
+##   5     City     600  25     Top farm buildings; the expedition → Town 2
 ##
-## PLOTS (2026-06-10, owner directive): the first town starts ROOMY — 25 plots at Camp
-## (it should hold ~25 buildings from the start), each tier adding +2. This deliberately
-## diverges from the old cramped 3/5/7/9/11 ladder (and from React); the village map's
-## growth stage scales with plot_count (VillageLayout.stage_for_plot_count), so the
-## town simply renders denser.
+## PLOTS (2026-06-10, owner directive — STAGED GROWTH): the town starts SMALL — ~5
+## plots at Camp — and physically GROWS a few times on the village map as it tiers
+## up (5/10/15/20/25). This supersedes the earlier same-day "starts roomy at 25"
+## directive: each tier now lands exactly on the next VillageLayout growth stage
+## (stage_for_plot_count: 5→1, 10→2, 15→3, 20→4, 25→5), so a tier-up visibly
+## expands the village (new pads, new decor band) instead of just densifying it.
+## SAVE OVERFLOW: a pre-re-tune save may hold more buildings than the new grant;
+## GameState.can_build blocks NEW builds and VillageScreen still renders every
+## built building (its _visible_plots extends past the grant, pads stay capped).
 ##
 ## Tier-up COSTS are PC2-aligned FIRST-PASS values — escalating and pulling in
 ## cross-category goods, all expressed in resources the port can already produce
@@ -57,35 +61,35 @@ const TIERS: Array = [
 	{
 		"name": "Camp",
 		"cap": 200,
-		"plots": 25,
+		"plots": 5,
 		"unlocks": "Farm board (staple tiles), Orders, the Market",
 		"cost": {},
 	},
 	{
 		"name": "Hamlet",
 		"cap": 300,
-		"plots": 27,
+		"plots": 10,
 		"unlocks": "Lumber Camp (trees → plank), Granary, first Worker",
 		"cost": {"hay_bundle": 12, "flour": 6},
 	},
 	{
 		"name": "Village",
 		"cap": 400,
-		"plots": 29,
+		"plots": 15,
 		"unlocks": "Coop (birds → eggs), Garden (veg → soup), Mill & Bakery",
 		"cost": {"plank": 8, "hay_bundle": 16, "flour": 8},
 	},
 	{
 		"name": "Town",
 		"cap": 500,
-		"plots": 31,
+		"plots": 20,
 		"unlocks": "Workshop + farm tools, more workers, Caravan Post",
 		"cost": {"eggs": 8, "soup": 6, "plank": 10},
 	},
 	{
 		"name": "City",
 		"cap": 600,
-		"plots": 33,
+		"plots": 25,
 		"unlocks": "Top farm buildings; the expedition → Town 2",
 		"cost": {"soup": 10, "eggs": 12, "plank": 14},
 	},

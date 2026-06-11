@@ -385,6 +385,26 @@
       "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
       "w": 16
     },
+    "ground_water_anim": {
+      "anchor": [
+        8,
+        16
+      ],
+      "file": "stock/ground/ground_water_anim.png",
+      "footprint": [
+        1,
+        1
+      ],
+      "frame_duration": 0.1,
+      "frame_h": 16,
+      "frame_w": 16,
+      "frames": 14,
+      "h": 16,
+      "kind": "ground",
+      "license": "CC-BY 4.0",
+      "source": "Serene Village Revamped by LimeZu (limezu.itch.io/serenevillagerevamped)",
+      "w": 224
+    },
     "house": {
       "anchor": [
         21,

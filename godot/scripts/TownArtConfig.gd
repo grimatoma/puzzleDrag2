@@ -69,6 +69,16 @@ const GROUND_KINDS: Dictionary = {
 ## Stable source-id order for build_tileset(). Index == TileSet source id.
 const GROUND_KIND_ORDER: Array = ["grass", "grass_flowers", "path", "plaza", "water", "pad"]
 
+## Ground kinds with an ANIMATED frame strip (Phase 4 — the water shimmer):
+## kind -> the manifest id of a horizontal multi-frame strip (frame_w/frame_h/
+## frames/frame_duration fields). build_tileset() prefers the strip and drives
+## it with TileSetAtlasSource's built-in tile animation — zero per-frame code,
+## the TileMapLayer animates by itself. A kind whose strip is missing or
+## single-frame falls back to its static GROUND_KINDS tile.
+const GROUND_ANIMATED: Dictionary = {
+	"water": "ground_water_anim",
+}
+
 static var _entries_cache: Dictionary = {}
 static var _entries_loaded: bool = false
 ## art id -> Texture2D (misses cached as null so a failed load never retries).
@@ -132,7 +142,11 @@ static func character_ids() -> Array[String]:
 ##             order (the manifest's "columns" csv: down,up,left,right)
 ##   rows:     int          — walk frames per facing (sheet h / frame_h)
 ##   anchor:   Vector2      — the PER-FRAME floor anchor ((8,15) for 16×16
-##             frames; see anchor_of's convention note)
+##             frames; see anchor_of's convention note). THIS layer owns the
+##             per-frame default: a manifest entry missing its anchor falls
+##             back to (frame_w/2, frame_h-1) — the per-FRAME convention —
+##             never anchor_of's whole-SHEET (w/2, h) fallback, which would
+##             pin a walk frame to the bottom of the full sheet.
 ## {} for an unknown / non-character id.
 static func character_sheet(art_id: String) -> Dictionary:
 	var e: Dictionary = entry(art_id)
@@ -145,13 +159,19 @@ static func character_sheet(art_id: String) -> Dictionary:
 		facings.append(String(c).strip_edges())
 	@warning_ignore("integer_division")
 	var rows: int = maxi(1, int(e.get("h", fh)) / fh)
+	var raw_anchor: Array = e.get("anchor", [])
+	var anchor: Vector2
+	if raw_anchor.size() == 2:
+		anchor = Vector2(float(raw_anchor[0]), float(raw_anchor[1]))
+	else:
+		anchor = Vector2(float(fw) / 2.0, float(fh) - 1.0)   # per-frame default
 	return {
 		"texture": texture_for(art_id),
 		"frame_w": fw,
 		"frame_h": fh,
 		"facings": facings,
 		"rows": rows,
-		"anchor": anchor_of(art_id),
+		"anchor": anchor,
 	}
 
 # ── Placement metadata ───────────────────────────────────────────────────────
@@ -253,13 +273,50 @@ static func build_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(TILE, TILE)
 	for kind: String in GROUND_KIND_ORDER:
-		var tex: Texture2D = texture_for(String(GROUND_KINDS[kind]))
-		if tex == null:
-			push_warning("TownArtConfig.build_tileset: no texture for ground kind '%s'" % kind)
-			continue
-		var src := TileSetAtlasSource.new()
-		src.texture = tex
-		src.texture_region_size = Vector2i(TILE, TILE)
-		src.create_tile(Vector2i.ZERO)
+		var src: TileSetAtlasSource = _animated_ground_source(kind)
+		if src == null:
+			var tex: Texture2D = texture_for(String(GROUND_KINDS[kind]))
+			if tex == null:
+				push_warning("TownArtConfig.build_tileset: no texture for ground kind '%s'" % kind)
+				continue
+			src = TileSetAtlasSource.new()
+			src.texture = tex
+			src.texture_region_size = Vector2i(TILE, TILE)
+			src.create_tile(Vector2i.ZERO)
 		ts.add_source(src, ground_source_id(kind))
 	return ts
+
+## The frame-animated atlas source for a GROUND_ANIMATED kind, or null when the
+## kind has no strip / the strip texture is unavailable / it carries fewer than
+## 2 frames (callers then fall back to the static tile). The strip lays its
+## frames out as ONE horizontal line, which is exactly TileSetAtlasSource's
+## animation_columns = 0 layout: the (0,0) tile plus `frames` cells to the
+## right. The engine cycles the frames itself — painting stays the plain
+## set_cell(cell, source_id, Vector2i.ZERO).
+static func _animated_ground_source(kind: String) -> TileSetAtlasSource:
+	if not GROUND_ANIMATED.has(kind):
+		return null
+	var strip_id: String = String(GROUND_ANIMATED[kind])
+	var e: Dictionary = entry(strip_id)
+	var frames: int = int(e.get("frames", 0))
+	if frames < 2:
+		return null
+	var tex: Texture2D = texture_for(strip_id)
+	if tex == null:
+		return null
+	var fw: int = maxi(1, int(e.get("frame_w", TILE)))
+	# Defensive clamp: never declare more frames than the strip texture holds.
+	@warning_ignore("integer_division")
+	frames = mini(frames, maxi(1, tex.get_width() / fw))
+	if frames < 2:
+		return null
+	var src := TileSetAtlasSource.new()
+	src.texture = tex
+	src.texture_region_size = Vector2i(fw, maxi(1, int(e.get("frame_h", TILE))))
+	src.create_tile(Vector2i.ZERO)
+	src.set_tile_animation_columns(Vector2i.ZERO, 0)   # frames in one horizontal line
+	src.set_tile_animation_frames_count(Vector2i.ZERO, frames)
+	var dur: float = maxf(0.02, float(e.get("frame_duration", 0.1)))
+	for i in range(frames):
+		src.set_tile_animation_frame_duration(Vector2i.ZERO, i, dur)
+	return src
