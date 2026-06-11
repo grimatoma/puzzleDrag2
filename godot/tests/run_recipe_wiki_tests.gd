@@ -182,6 +182,36 @@ func _initialize() -> void:
 	_check(int(game.inventory.get("eggs", 0)) == 1, "Craft consumed 1 eggs (2 → 1)")
 	_check(changed[0], "Craft emitted state_changed")
 
+	# ── Grid view expansion: a full-width detail card drops in below the tapped chip ──
+	# In the grid view tapping a chip still expands it, but the detail renders as a full-width
+	# inline card beneath the chip's row (with an ▲ over the origin column) instead of an in-place
+	# row — so the surrounding chips never shift. It reads the same live state (eyebrow + have/need
+	# + Craft button). The craft above left flour=3 / eggs=1, so BREAD is still exactly craftable.
+	screen.set_view("grid")
+	_check(screen.view_mode() == "grid", "set_view('grid') switches the crafting view")
+	if screen._expanded != "":
+		screen.toggle_expand(screen._expanded)   # collapse whatever the list flow left open
+	_check(screen._expanded == "", "grid: baseline starts collapsed")
+	screen.toggle_expand(RecipeConfig.BREAD)
+	_check(screen._expanded == RecipeConfig.BREAD, "grid: toggle_expand(BREAD) expands the chip")
+	_check(screen._cards.has(RecipeConfig.BREAD), "grid: the tapped chip is tracked in _cards")
+	_check(screen._action_buttons.has("craft"), "grid: expanded detail registers the Craft button")
+	_check(not screen._action_buttons["craft"].disabled, "grid: Craft enabled (still craftable)")
+	var grid_texts: Array = _collect_label_texts(screen._body)
+	var grid_has_eyebrow := false
+	var grid_has_arrow := false
+	for t in grid_texts:
+		var gs := String(t)
+		if gs.to_lower().contains("bakery"): grid_has_eyebrow = true
+		if gs == "▲": grid_has_arrow = true
+	_check(grid_has_eyebrow, "grid: the inline detail card shows the 'Recipe · Bakery' eyebrow")
+	_check(grid_has_arrow, "grid: an ▲ points back at the originating chip")
+	# Tapping the SAME chip collapses; the detail card (and its Craft button) goes away.
+	screen.toggle_expand(RecipeConfig.BREAD)
+	_check(screen._expanded == "", "grid: tapping the expanded chip again collapses it")
+	_check(not screen._action_buttons.has("craft"), "grid: collapsing drops the Craft button")
+	screen.set_view("list")   # restore list view for the close-button check below
+
 	# Close button fires `closed` and hides the modal.
 	var before_closed := _closed_count
 	_check(_press(screen, "close"), "pressed close button")

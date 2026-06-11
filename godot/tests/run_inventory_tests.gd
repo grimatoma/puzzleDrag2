@@ -137,10 +137,32 @@ func _initialize() -> void:
 	_check(tab_inv.view_mode() == "list", "default view mode is 'list'")
 	tab_inv.set_view("grid")
 	_check(tab_inv.view_mode() == "grid", "set_view('grid') switched the view mode")
-	# The grid view renders a single GridContainer of chips for the active (All) tab.
+	# The grid view renders a VBox of GRID_COLS-wide chip rows for the active (All) tab.
 	var grid_kids := tab_inv._body.get_child_count()
 	_check(grid_kids >= 1, "grid view populated the body")
 	_check(not tab_inv._grid_entries().is_empty(), "grid view has chip entries on the All tab")
+
+	# Grid expansion (same treatment as the crafting grid): tapping a chip drops a full-width
+	# detail card below its row, with an ▲ pointing back at the originating chip — the surrounding
+	# chips never shift. The card reuses the list-row detail body (eyebrow + live Sell/Buy actions).
+	tab_inv.toggle_expand("res:bread")
+	_check(tab_inv.expanded_key() == "res:bread", "grid: toggle_expand('res:bread') expands the chip")
+	_check(tab_inv._cards.has("res:bread"), "grid: the tapped chip is tracked in _cards")
+	_check(tab_inv._action_buttons.has("sell:bread"), "grid: the detail registers the live Sell action")
+	var gtexts: Array = _collect_label_texts(tab_inv._body)
+	var g_has_eyebrow := false
+	var g_has_arrow := false
+	for t in gtexts:
+		var gs := String(t)
+		if gs.to_upper().begins_with("RESOURCE ·"): g_has_eyebrow = true
+		if gs == "▲": g_has_arrow = true
+	_check(g_has_eyebrow, "grid: the inline detail card shows the 'Resource · …' eyebrow")
+	_check(g_has_arrow, "grid: an ▲ points back at the originating chip")
+	# Tapping the SAME chip again collapses; the detail card + Sell action go away.
+	tab_inv.toggle_expand("res:bread")
+	_check(tab_inv.expanded_key() == "", "grid: tapping the expanded chip again collapses it")
+	_check(not tab_inv._action_buttons.has("sell:bread"), "grid: collapsing drops the Sell action")
+
 	tab_inv.set_view("list")
 	_check(tab_inv.view_mode() == "list", "set_view('list') restored the list view")
 
@@ -283,3 +305,12 @@ func _initialize() -> void:
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
+
+## Walk a control tree depth-first and collect the `text` of every Label found.
+func _collect_label_texts(node: Node) -> Array:
+	var out: Array = []
+	if node is Label:
+		out.append((node as Label).text)
+	for child in node.get_children():
+		out.append_array(_collect_label_texts(child))
+	return out
