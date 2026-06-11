@@ -421,10 +421,11 @@ func _build_hud() -> void:
 	# resolved farm chain (_refresh_season_bar) and repositioned in _layout_hud.
 	_build_season_bar(root)
 
-	# ── chain prompt (kept) — a slim prompt between the action panel and the board ────
-	# (The old floating chain-progress pill is gone: the chain readout is the action
-	# panel's CHAIN state now. This hint line keeps the smoke-test contract + the
-	# "what do I do" affordance; _layout_hud pins it just above the board.)
+	# ── chain prompt — a slim prompt between the action panel and the board ────
+	# The node is KEPT (the scene-smoke test asserts its `.text`, and Main writes to it) but
+	# it is no longer displayed: the "Drag N+ matching tiles" instruction was removed as
+	# board clutter — the action panel's CHAIN state is now the sole chain readout. Created
+	# hidden and never re-shown (see _layout_hud_portrait, which no longer forces it visible).
 	_chain_label = Label.new()
 	_chain_label.text = "Drag %d+ matching tiles" % Constants.MIN_CHAIN
 	UiKit.set_font_size(_chain_label, Typography.Role.LABEL)
@@ -433,6 +434,7 @@ func _build_hud() -> void:
 	_chain_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_chain_label.offset_top = 424
 	_chain_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chain_label.visible = false
 	root.add_child(_chain_label)
 
 	# ── status (kept) — action feedback in the strip between the board and the nav ──
@@ -452,8 +454,11 @@ func _build_hud() -> void:
 	root.add_child(_status_label)
 
 	# ── orders — compact one-line readout in the upper half of the bottom strip ──
+	# Node KEPT (Main + _refresh_orders write to it) but no longer displayed: the
+	# "Orders: …" line was removed as board clutter. Created hidden; refresh leaves it so.
 	_orders_label = Label.new()
 	_orders_label.text = "Orders:  —"
+	_orders_label.visible = false
 	UiKit.set_font_size(_orders_label, Typography.Role.LABEL)
 	_orders_label.add_theme_color_override("font_color", Palette.GOLD)
 	_orders_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2588,11 +2593,10 @@ func _layout_hud(vp: Vector2) -> void:
 func _layout_hud_portrait(vp: Vector2) -> void:
 	var band_margin: float = maxf(12.0, vp.x * 0.03)
 	# Leaving landscape: undock the tools dropdown (back to the transient portrait modal) and
-	# restore the hotbar rail. The chain hint (hidden in landscape) is re-pinned below.
+	# restore the hotbar rail. (The "Drag N+ matching tiles" chain hint was removed as board
+	# clutter — the label stays hidden in both orientations, so it is not re-shown here.)
 	if _dropdown_docked:
 		_undock_dropdown()
-	if _chain_label != null:
-		_chain_label.visible = true
 	# Tool hotbar — a fixed-height rail under the season bar (React's hotbar area).
 	if _tool_palette_box != null:
 		# Visibility is owned by _refresh_tools (hidden when no tools) — only re-show the rail
