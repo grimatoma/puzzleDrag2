@@ -45,6 +45,32 @@ var _map: Control
 var _detail_body: VBoxContainer
 var _built: bool = false
 
+## The persistent content host (the PanelContainer that fills the view) + the swappable layout
+## scaffold under it. The map/legend/detail/title cards are created ONCE and RE-PARENTED between a
+## portrait (vertical stack) and a wide/desktop (two-column: big map left, info right) scaffold by
+## _relayout(); only the throwaway scaffold (cap/scroll/boxes) is rebuilt on a viewport breakpoint
+## cross, never the shared cards (so the test contract — _map, _detail_body, _action_buttons — and
+## the live detail state survive a resize).
+var _panel: PanelContainer
+var _layout_root: Control          ## the current scaffold root under _panel (freed + rebuilt on reflow)
+var _title_lbl: Label
+var _subtitle_lbl: Label
+var _map_card: PanelContainer
+var _legend_node: Control
+var _detail_card: PanelContainer
+## True while the wide/desktop two-column layout is active.
+var _wide: bool = false
+
+## Viewport width (px) at/above which the screen switches to the wide two-column desktop layout.
+## Below it (phones / narrow windows) the portrait vertical stack is kept. Sized so the big map
+## (≥ ~480) + the fixed info column (RIGHT_COL_W) + margins all fit before we split.
+const WIDE_MIN_WIDTH := 900.0
+## Content cap (px) for the wide layout — wider than the portrait VIEW_MAX_WIDTH so the two columns
+## get room; still centred on ultra-wide windows so the map never stretches edge-to-edge.
+const WIDE_CAP := 1320
+## Fixed width (px) of the right-hand info column in the wide layout (legend + scrolling detail).
+const RIGHT_COL_W := 380
+
 ## The node the player has TAPPED/selected in the map (drives the detail panel). Defaults to the
 ## current node on each open(). A test can drive it via select_node(id).
 var _selected: String = "home"
@@ -111,47 +137,33 @@ func _build_shell() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 0
-	panel.offset_right = 0
-	panel.offset_top = UiKit.TOPBAR_RESERVE + 8
-	panel.offset_bottom = -UiKit.NAV_RESERVE
+	_panel = PanelContainer.new()
+	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel.offset_left = 0
+	_panel.offset_right = 0
+	_panel.offset_top = UiKit.TOPBAR_RESERVE + 8
+	_panel.offset_bottom = -UiKit.NAV_RESERVE
 	var style := StyleBoxFlat.new()
 	style.bg_color = COL_PANEL
 	style.set_content_margin_all(16)
-	panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+	_panel.add_theme_stylebox_override("panel", style)
+	center.add_child(_panel)
 
-	var width_cap := UiKit.make_width_cap()
-	panel.add_child(width_cap)
-
-	# A vertical scroll so the map + legend + detail panel never overflow on a short viewport.
-	var scroll := UiKit.make_vscroll()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	width_cap.add_child(scroll)
-
-	var root_vbox := VBoxContainer.new()
-	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root_vbox.add_theme_constant_override("separation", 12)
-	scroll.add_child(root_vbox)
-
+	# ── shared cards (built ONCE, re-parented by _relayout) ──────────────────────
 	# Title + flavour lede.
-	var title := Label.new()
-	title.text = "🧭 World Map"
-	UiKit.set_font_size(title, Typography.Role.DISPLAY)
-	title.add_theme_color_override("font_color", COL_TITLE)
+	_title_lbl = Label.new()
+	_title_lbl.text = "🧭 World Map"
+	UiKit.set_font_size(_title_lbl, Typography.Role.DISPLAY)
+	_title_lbl.add_theme_color_override("font_color", COL_TITLE)
 	var heading_font: Font = UiKit.heading_font()
 	if heading_font != null:
-		title.add_theme_font_override("font", heading_font)
-	root_vbox.add_child(title)
+		_title_lbl.add_theme_font_override("font", heading_font)
 
-	var subtitle := Label.new()
-	subtitle.text = "Chart the Long Return — tap a place to read it, then travel its road."
-	UiKit.set_font_size(subtitle, Typography.Role.LABEL)
-	subtitle.add_theme_color_override("font_color", COL_MUTED)
-	root_vbox.add_child(subtitle)
+	_subtitle_lbl = Label.new()
+	_subtitle_lbl.text = "Chart the Long Return — tap a place to read it, then travel its road."
+	_subtitle_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiKit.set_font_size(_subtitle_lbl, Typography.Role.LABEL)
+	_subtitle_lbl.add_theme_color_override("font_color", COL_MUTED)
 
 	# Hidden close affordance — created + wired but NOT added to the visible tree, so it never
 	# renders yet still backs ESC/back, apply_deeplink("board"), and the close-button tests.
@@ -161,10 +173,9 @@ func _build_shell() -> void:
 	_action_buttons["close"] = close_btn
 
 	# The map panel: a nested Control that paints the regions + roads + node pins in its _draw.
-	var map_card := PanelContainer.new()
-	map_card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PAPER))
-	map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(map_card)
+	_map_card = PanelContainer.new()
+	_map_card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PAPER))
+	_map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	_map = _MapView.new()
 	_map.screen = self
@@ -172,21 +183,125 @@ func _build_shell() -> void:
 	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# The map ACCEPTS clicks (tap a pin to select it) — STOP, not IGNORE.
 	_map.mouse_filter = Control.MOUSE_FILTER_STOP
-	map_card.add_child(_map)
+	_map_card.add_child(_map)
 
 	# Legend keying the four node states + the two road styles.
-	root_vbox.add_child(_build_legend())
+	_legend_node = _build_legend()
 
 	# The per-node DETAIL panel — a parchment card rebuilt each refresh() from the selected node.
-	var detail_card := PanelContainer.new()
-	detail_card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT_SOFT))
-	detail_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(detail_card)
+	_detail_card = PanelContainer.new()
+	_detail_card.add_theme_stylebox_override("panel", UiKit.card_box(Palette.PARCHMENT_SOFT))
+	_detail_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	_detail_body = VBoxContainer.new()
 	_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail_body.add_theme_constant_override("separation", 6)
-	detail_card.add_child(_detail_body)
+	_detail_card.add_child(_detail_body)
+
+	# Arrange the cards for the current viewport, and re-arrange on a breakpoint cross.
+	_relayout(true)
+	var viewport := get_viewport()
+	if viewport != null:
+		viewport.size_changed.connect(_relayout.bind(false))
+
+# ── responsive layout (portrait stack ⇄ wide two-column) ─────────────────────────
+
+## Choose + (re)build the layout scaffold for the current viewport. On a wide/desktop window the
+## map gets a large left column and the info (legend + detail) a fixed right column; on a phone /
+## narrow window the classic vertical stack is kept. Only the throwaway scaffold is rebuilt — the
+## shared cards are detached + re-parented, so the live detail state + the test contract survive.
+func _relayout(force: bool) -> void:
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var vp: Vector2 = viewport.get_visible_rect().size
+	var wide: bool = vp.x >= WIDE_MIN_WIDTH
+	if not force and wide == _wide and _layout_root != null:
+		return
+	_wide = wide
+	# Detach the shared cards from any prior scaffold before freeing it.
+	for card in [_title_lbl, _subtitle_lbl, _map_card, _legend_node, _detail_card]:
+		if card != null and card.get_parent() != null:
+			card.get_parent().remove_child(card)
+	if _layout_root != null:
+		_layout_root.queue_free()
+		_layout_root = null
+	if wide:
+		_build_wide_layout()
+	else:
+		_build_portrait_layout()
+
+## PORTRAIT: a single capped, vertically-scrolling column — title, subtitle, the fixed-height map,
+## the legend, then the detail card (the original phone layout).
+func _build_portrait_layout() -> void:
+	var cap := UiKit.make_width_cap()
+	_panel.add_child(cap)
+	var scroll := UiKit.make_vscroll()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cap.add_child(scroll)
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 12)
+	scroll.add_child(vbox)
+
+	# The map is a fixed-height card that scrolls with the rest.
+	_map.custom_minimum_size = Vector2(0, MAP_HEIGHT)
+	_map.size_flags_vertical = Control.SIZE_FILL
+	_map_card.size_flags_vertical = Control.SIZE_FILL
+	_detail_card.size_flags_vertical = Control.SIZE_FILL
+
+	vbox.add_child(_title_lbl)
+	vbox.add_child(_subtitle_lbl)
+	vbox.add_child(_map_card)
+	vbox.add_child(_legend_node)
+	vbox.add_child(_detail_card)
+	_layout_root = cap
+
+## WIDE / DESKTOP: title + subtitle across the top, then a two-column row — a BIG map filling the
+## left (all leftover width + the full height) and a fixed-width info column on the right holding
+## the legend above a vertically-scrolling detail card.
+func _build_wide_layout() -> void:
+	var cap := UiKit.make_width_cap(WIDE_CAP)
+	_panel.add_child(cap)
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 8)
+	cap.add_child(vbox)
+
+	vbox.add_child(_title_lbl)
+	vbox.add_child(_subtitle_lbl)
+
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 16)
+	vbox.add_child(row)
+
+	# Left — the big map: drop the fixed min-height so it fills the whole column height.
+	_map.custom_minimum_size = Vector2(0, 0)
+	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_map_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_child(_map_card)
+
+	# Right — a fixed-width info column: legend pinned on top, detail scrolls below.
+	var right := VBoxContainer.new()
+	right.custom_minimum_size = Vector2(RIGHT_COL_W, 0)
+	right.size_flags_horizontal = Control.SIZE_FILL
+	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 10)
+	row.add_child(right)
+
+	right.add_child(_legend_node)
+	var rscroll := UiKit.make_vscroll()
+	rscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.add_child(rscroll)
+	_detail_card.size_flags_vertical = Control.SIZE_FILL
+	rscroll.add_child(_detail_card)
+	_layout_root = cap
 
 # ── render ────────────────────────────────────────────────────────────────────
 
