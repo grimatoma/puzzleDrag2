@@ -640,6 +640,13 @@ func _switch_primary_view(opener: String) -> void:
 			_portal_screen, _quests_screen, _boons_screen]:
 		if screen != null and is_instance_valid(screen) and screen.visible:
 			screen.visible = false
+	# Town-side views always use nav mode: hide the Leave back button and show the bottom nav,
+	# regardless of whether a run or expedition is live. Returning to the board via
+	# apply_deeplink("board") or the "▶ Board" button calls _set_board_active(true), which
+	# restores board-page chrome. Without this, loading the game with a stale #/townmap URL
+	# while a run is saved (web only) shows the Leave button over the town map.
+	if _hud != null and is_instance_valid(_hud):
+		_hud.set_board_mode(false)
 	call(opener)
 
 # ── HUD up-calls (the HUD emits intents; Main does the routing / tool dispatch) ──

@@ -62,6 +62,7 @@ func _initialize() -> void:
 	await _test_main_cta_path()
 	await _test_main_bypass_path()
 	await _test_deeplink()
+	await _test_board_mode_cleared_on_townmap()
 	SaveManager.clear()
 	print("──────────────────────────────────────────────────")
 	print("%d checks, %d failure(s)\n" % [_checks, _failures])
@@ -202,7 +203,40 @@ func _test_main_bypass_path() -> void:
 
 	main.free()
 
-# ── 4. ViewRouter + Main — the leavefarm deeplink shows the card ───────────────
+# ── 4. Stale-URL deep link — board mode clears when a town view opens mid-run ──────
+# Reproduces: player has a live farm run saved, reloads the web game with #/townmap in
+# the URL (or uses browser Back from a run). apply_deeplink("townmap") should clear the
+# board-page chrome (Leave button hidden, nav visible) even though the run is still live.
+
+func _test_board_mode_cleared_on_townmap() -> void:
+	var packed: PackedScene = load("res://scenes/Main.tscn")
+	var main = packed.instantiate()
+	get_root().add_child(main)
+	await process_frame
+	if main._tutorial_modal != null:
+		main._tutorial_modal.visible = false
+
+	# Live run → board-page chrome active (Leave visible, nav hidden).
+	_arm_run(main.game, 5)
+	main.apply_deeplink("board")
+	_check(main._hud._back_btn.visible, "board mode: Leave button visible")
+	_check(not main._hud._nav_layer.visible, "board mode: bottom nav hidden")
+
+	# Simulate stale #/townmap URL navigation (e.g. web reload with old hash).
+	main.apply_deeplink("townmap")
+	await process_frame
+	_check(main._townmap_screen != null and main._townmap_screen.visible,
+		"town map opens after apply_deeplink('townmap')")
+	_check(not main._hud._back_btn.visible,
+		"Leave button HIDDEN when town map opens mid-run")
+	_check(main._hud._nav_layer.visible,
+		"bottom nav SHOWN when town map opens mid-run")
+	# The run itself should still be live (navigating to town doesn't end it).
+	_check(main.game.farm_run_active, "farm run still live after navigating to town map")
+
+	main.free()
+
+# ── 5. ViewRouter + Main — the leavefarm deeplink shows the card ───────────────
 
 func _test_deeplink() -> void:
 	# Pure router round-trip.
