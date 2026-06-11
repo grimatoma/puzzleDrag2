@@ -175,10 +175,13 @@ func _run() -> void:
 	_check(main.has_method("_on_townmap_closed"), "Main has _on_townmap_closed()")
 	_check(main._townmap_screen == null, "town-map screen is lazily created (null before open)")
 
-	# Opening lazily creates + shows it.
+	# Opening lazily creates + shows it. Phase 1 of the town-map rebuild swapped
+	# the Town route's screen to VillageScreen (same contract: signals,
+	# setup/open/close, plan_lot_count); sections 1–2c above still test the old
+	# TownMap/TownMapScreen classes directly until Phase 2 deletes them.
 	main._open_townmap()
-	_check(main._townmap_screen != null, "_open_townmap() lazily created the TownMapScreen")
-	_check(main._townmap_screen is TownMapScreen, "_townmap_screen is a TownMapScreen")
+	_check(main._townmap_screen != null, "_open_townmap() lazily created the village screen")
+	_check(main._townmap_screen is VillageScreen, "_townmap_screen is a VillageScreen")
 	_check(main._townmap_screen.visible, "town-map is visible after _open_townmap()")
 	_check(main._router.current_modal() == ViewRouter.Modal.TOWNMAP,
 		"_router.current_modal() == TOWNMAP after _open_townmap()")
