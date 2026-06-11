@@ -198,6 +198,30 @@ func _initialize() -> void:
 	_check(main._townmap_screen == null or not main._townmap_screen.visible,
 		"opening the ledger from the map hides the town map (sibling primary)")
 
+	# REGRESSION (web menu-close blink + zoom reset): re-applying the deep-link for the
+	# ALREADY-VISIBLE primary view must be a TRUE no-op. The web History bridge re-runs
+	# apply_deeplink("map") when the ☰ menu closes over the Town map (close_modal → NONE
+	# makes _sync_history fire one history.back(), whose popstate re-applies "map"). Without
+	# the _switch_primary_view "already visible → return" guard, that hides + re-opens the
+	# live Town view — replaying the overlay fade-in (a white "blink") AND resetting its
+	# pan/zoom via open()'s _refit(). This is the headless analogue of that popstate.
+	main.apply_deeplink("map")
+	await process_frame
+	_check(main._townmap_screen != null and main._townmap_screen.visible,
+		"town map open before the re-apply no-op check")
+	var vs = main._townmap_screen
+	# Simulate the player having zoomed the village, so a stray _refit would be observable.
+	vs.zoom_at(VillageScreen.ZOOM_STEP, vs._host_size() * 0.5)
+	var zoom_before: float = vs._zoom
+	_check(vs._user_adjusted, "village marked _user_adjusted after a manual zoom")
+	# Re-apply the SAME primary's deep-link — exactly what the web menu-close popstate does.
+	main.apply_deeplink("map")
+	await process_frame
+	_check(main._townmap_screen == vs and vs.visible,
+		"re-applying the active primary's deep-link keeps the SAME live view (no rebuild)")
+	_check(is_equal_approx(vs._zoom, zoom_before) and vs._user_adjusted,
+		"re-applying the active primary's deep-link preserves pan/zoom (no _refit blink)")
+
 	# Task C — board RUN-GATE. The board is only reachable while a bounded farm run is live (town
 	# is home). With NO run active, apply_deeplink("board") redirects to the town home (and leaves
 	# the board inert) rather than landing on an empty board, so it routes to TOWNMAP, not NONE.
