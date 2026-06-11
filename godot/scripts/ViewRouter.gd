@@ -12,7 +12,7 @@ class_name ViewRouter extends RefCounted
 ## what overlay (if any) is shown on top of it.
 
 enum View  { BOARD }
-enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD, DEBUG, STARTFARMING, BOONS, KEEPER }
+enum Modal { NONE, TOWN, MENU, INVENTORY, TOWNMAP, ACHIEVEMENTS, TILES, CHRONICLE, TOWNSFOLK, CARTOGRAPHY, RECIPES, TUTORIAL, CASTLE, DECORATIONS, PORTAL, CHARTER, QUESTS, DAILY, LEAVEBOARD, DEBUG, STARTFARMING, BOONS, KEEPER, LEAVEFARM }
 
 var view:  int = View.BOARD
 var modal: int = Modal.NONE
@@ -59,6 +59,9 @@ const MODAL_IDS: Dictionary = {
 	# T31 — the keeper-encounter modal. Normally auto-triggered off a town/build event;
 	# this deep-link lets QA / the sanity-capture preview the encounter.
 	Modal.KEEPER:       ["keeper"],
+	# Leave-FARM-session confirm (the puzzle board's top-left "◀ Leave" back button). Normally
+	# opened by that button mid-run; this deep-link lets QA / the sanity-capture preview the card.
+	Modal.LEAVEFARM:    ["leavefarm"],
 }
 
 # ── Instance state machine ────────────────────────────────────────────────────

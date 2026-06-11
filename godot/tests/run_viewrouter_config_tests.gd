@@ -76,6 +76,7 @@ func _legacy_id_to_modal() -> Dictionary:
 		"boons": ViewRouter.Modal.BOONS,
 		"boon": ViewRouter.Modal.BOONS,
 		"keeper": ViewRouter.Modal.KEEPER,
+		"leavefarm": ViewRouter.Modal.LEAVEFARM,
 	}
 
 ## Modal enum value → canonical id string, hardcoded from the old modal_id() match
@@ -105,6 +106,7 @@ func _legacy_modal_to_id() -> Dictionary:
 		ViewRouter.Modal.STARTFARMING: "startfarming",
 		ViewRouter.Modal.BOONS: "boons",
 		ViewRouter.Modal.KEEPER: "keeper",
+		ViewRouter.Modal.LEAVEFARM: "leavefarm",
 	}
 
 ## The EXACT legacy known_ids() list, in order (hardcoded from the old PackedStringArray).
@@ -114,7 +116,7 @@ func _legacy_known_ids() -> Array:
 		"folk", "cartography", "world", "recipes", "recipewiki", "craft", "crafting", "tutorial",
 		"castle", "keep", "decorations", "decor", "portal", "summon", "charter", "pact", "quests",
 		"almanac", "daily", "streak", "leaveboard", "leave", "debug", "startfarming", "farm",
-		"boons", "boon", "keeper"]
+		"boons", "boon", "keeper", "leavefarm"]
 
 func _initialize() -> void:
 	print("\n── Batch 10 ViewRouter dedup tests ─────────────────")
