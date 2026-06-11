@@ -117,10 +117,11 @@ const OBSERVATORY: String = "observatory"
 ##                          contributes to the unified channels when BUILT (weight 1). [] for the
 ##                          spawner/refiner/hazard buildings that carry no ability. Ported VERBATIM
 ##                          from the React BUILDINGS `abilities` arrays (src/constants.ts).
-##   shape:       String  — the BuildingArt silhouette family drawn for this plot on the
-##                          spatial town map (scenes/town/BuildingArt.gd). One of
-##                          BuildingArt.KNOWN_SHAPES; "house" is the generic fallback. Owned here
-##                          (per-building art attribute) and read via BuildingArt.shape_of(id).
+##   shape:       String  — the art family drawn for this building on the spatial village
+##                          map: a TownArtConfig art id (VillageScreen renders
+##                          TownArtConfig.texture_for(shape) on the plot); "house" is the
+##                          generic fallback. Owned here (per-building art attribute) and
+##                          read via BuildingConfig.shape_of(id).
 const BUILDINGS: Dictionary = {
 	LUMBER_CAMP: {
 		"name": "Lumber Camp",
@@ -558,11 +559,11 @@ static func building_kind(id: String) -> String:
 		return ""
 	return String(BUILDINGS[id].get("kind", ""))
 
-## The BuildingArt silhouette family drawn for `id` on the spatial town map
-## (scenes/town/BuildingArt.gd, one of BuildingArt.KNOWN_SHAPES). Unknown ids — and any row
-## that ever lacks an explicit `shape` — fall back to "house", the generic always-draws
-## silhouette, preserving BuildingArt's original implicit fallback. The per-building art
-## attribute lives on the catalog row; BuildingArt.shape_for() reads it via this accessor.
+## The art family drawn for `id` on the spatial village map — a TownArtConfig art id
+## (VillageScreen renders TownArtConfig.texture_for(shape) on the building's plot).
+## Unknown ids — and any row that ever lacks an explicit `shape` — fall back to "house",
+## the generic always-draws family. The per-building art attribute lives on the catalog
+## row; VillageScreen reads it via this accessor.
 static func shape_of(id: String) -> String:
 	if not is_building(id):
 		return "house"

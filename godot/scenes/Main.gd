@@ -87,9 +87,9 @@ var _menu_screen: MenuScreen:
 ## the dedicated Inventory ledger modal (M4g), lazily created
 var _inventory_screen: InventoryScreen:
 	get: return _overlays.get("inventory") as InventoryScreen
-## the spatial town-map modal (M6c), lazily created
-var _townmap_screen: TownMapScreen:
-	get: return _overlays.get("townmap") as TownMapScreen
+## the spatial village view on the Town route (Phase 1), lazily created
+var _townmap_screen: VillageScreen:
+	get: return _overlays.get("townmap") as VillageScreen
 # Secondary screens & modals. Each is typed via its preloaded script const (NOT a global
 # class_name) so the port never needs an --import pass to register it, and each is lazily
 # created on first open (assignment is always <Const>.new()).
@@ -1014,7 +1014,7 @@ func _on_inventory_closed() -> void:
 ## reflects the current state.
 func _open_townmap() -> void:
 	if _townmap_screen == null:
-		_overlays["townmap"] = TownMapScreen.new()
+		_overlays["townmap"] = VillageScreen.new()
 		add_child(_townmap_screen)
 		_townmap_screen.setup(game)
 		_townmap_screen.connect("closed", Callable(self, "_on_townmap_closed"))

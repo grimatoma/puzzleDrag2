@@ -7,7 +7,7 @@ extends CanvasLayer
 ## game.story.beat_queue, and Main's _drain_story_queue() drives this modal to present
 ## the FRONT of that queue, advancing through it as the player dismisses each beat.
 ##
-## Modelled on MenuScreen / TownMapScreen (warm-scrim backdrop + centred parchment
+## Modelled on MenuScreen (warm-scrim backdrop + centred parchment
 ## PanelContainer + UiKit-styled pill buttons), with a ScrollContainer around the lines
 ## so a long beat stays readable. Data-driven: every render reads StoryConfig.beat_by_id.
 ##

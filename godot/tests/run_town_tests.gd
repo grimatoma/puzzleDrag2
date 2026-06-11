@@ -47,7 +47,7 @@ func _test_fresh_settlement() -> void:
 	_check(s.tier == TownConfig.TIER_CAMP, "fresh settlement is tier 1 (Camp)")
 	_check(s.tier_name() == "Camp", "fresh settlement name is 'Camp'")
 	_check(s.cap() == 200, "Camp cap is 200")
-	_check(s.plots() == 25, "Camp has 25 plots")
+	_check(s.plots() == 5, "Camp has 5 plots")
 	_check(not s.is_max_tier(), "Camp is not the max tier")
 	_check(s.next_tier_cost() == {"hay_bundle": 12, "flour": 6},
 		"Camp's next-tier cost is the Hamlet cost (staples only)")
@@ -56,7 +56,7 @@ func _test_townconfig_table() -> void:
 	# TownConfig helpers return the Direction-spec table values for every tier.
 	var names := ["", "Camp", "Hamlet", "Village", "Town", "City"]
 	var caps := [0, 200, 300, 400, 500, 600]
-	var plots := [0, 25, 27, 29, 31, 33]
+	var plots := [0, 5, 10, 15, 20, 25]
 	for t in range(1, TownConfig.MAX_TIER + 1):
 		_check(TownConfig.tier_name(t) == names[t], "tier %d name is '%s'" % [t, names[t]])
 		_check(TownConfig.tier_cap(t) == caps[t], "tier %d cap is %d" % [t, caps[t]])
@@ -94,7 +94,7 @@ func _test_tier_up_exact_cost() -> void:
 	_check(g.settlement.tier == 2, "settlement advanced to tier 2")
 	_check(g.settlement.tier_name() == "Hamlet", "settlement name is 'Hamlet'")
 	_check(g.settlement.cap() == 300, "Hamlet cap is 300")
-	_check(g.settlement.plots() == 27, "Hamlet has 27 plots")
+	_check(g.settlement.plots() == 10, "Hamlet has 10 plots")
 	_check(g.qty("hay_bundle") == 0, "hay_bundle deducted to 0")
 	_check(g.qty("flour") == 0, "flour deducted to 0")
 

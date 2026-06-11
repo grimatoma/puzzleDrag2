@@ -1,24 +1,25 @@
 extends SceneTree
-## Headless tests for Batch-7 config migration: the per-building art `shape` field now
-## lives on the BuildingConfig catalog ROW (read via BuildingConfig.shape_of /
-## BuildingArt.shape_for), and the boss-target short LABELS now live on each boss's
-## target definition in BossConfig (read via BossConfig.target_label). Both moves are
-## BEHAVIOR-PRESERVING — this suite locks the old mappings byte-for-byte so a regression
-## that changes a drawn silhouette or a HUD pill label fails the gate.
+## Headless tests for the building-art SHAPE config + boss-target LABELS.
+##
+## History: Batch 7 moved the per-building art `shape` onto the BuildingConfig
+## catalog ROW; the town-map rebuild Phase 2 then deleted the old BuildingArt
+## renderer, leaving BuildingConfig.shape_of(id) as the ONE shape accessor (the
+## VillageScreen resolves it to TownArtConfig art). This suite locks the row
+## mappings byte-for-byte so a regression that changes a drawn building family
+## or a HUD pill label fails the gate.
 ##
 ## Run from the godot/ project root:
 ##   godot --headless --script res://tests/run_building_art_config_tests.gd
 ## Exits 0 when every check passes, 1 on any failure — so CI can gate on it.
 ##
 ## Coverage:
-##   1. For EVERY key in the OLD BuildingArt.SHAPE_BY_ID (the 27 pairs hardcoded below),
-##      BuildingArt.shape_for(key) returns the SAME shape it did before the move — incl.
-##      the non-row aliases "magic_portal"/"portal" → "portal".
-##   2. Every BuildingConfig build id resolves to a shape in BuildingArt.KNOWN_SHAPES
-##      (so the existing "never an unknown shape" contract still holds via the new path),
-##      and an unknown id falls back to "house".
-##   3. BossConfig.target_label(res) returns the six expected short labels + the exact
-##      `trim_prefix("tile_").capitalize()` fallback for an unknown key.
+##   1. For EVERY build id, BuildingConfig.shape_of(id) returns the SAME shape
+##      the old BuildingArt.SHAPE_BY_ID carried (the 25 row pairs pinned below);
+##      an unknown id falls back to "house".
+##   2. Every shape a row names resolves to REAL TownArtConfig stock art (the
+##      VillageScreen render contract — no silent flat-square buildings).
+##   3. BossConfig.target_label(res) returns the six expected short labels + the
+##      exact `trim_prefix("tile_").capitalize()` fallback for an unknown key.
 
 var _checks: int = 0
 var _failures: int = 0
@@ -40,11 +41,11 @@ func _initialize() -> void:
 	quit(1 if _failures > 0 else 0)
 
 func _run() -> void:
-	# ── 1. Every OLD SHAPE_BY_ID key → its old shape, via the new shape_for() path ──
-	# The 27 key→shape pairs as they existed in BuildingArt.SHAPE_BY_ID BEFORE the move.
-	# shape_for() must return the SAME value for every one of these (rows carry their
-	# shape on the BuildingConfig row; the two non-row Portal aliases resolve via the
-	# tiny BuildingArt.SHAPE_ALIASES map). DO NOT drop any mapping.
+	# ── 1. Every build-id row → its locked shape, via BuildingConfig.shape_of ──
+	# The 25 id→shape pairs as they existed in the old BuildingArt.SHAPE_BY_ID
+	# (minus its two non-row "portal" aliases, which died with the old renderer —
+	# the Magic Portal remains a GameState special-case, not a catalog row).
+	# DO NOT drop any mapping.
 	var expected_shape := {
 		"lumber_camp": "lumber",
 		"coop": "coop",
@@ -71,31 +72,28 @@ func _run() -> void:
 		"housing3": "cottage",
 		"ratcatcher": "hut",
 		"master_ratcatcher": "hut",
-		"magic_portal": "portal",
-		"portal": "portal",
 	}
-	_check(expected_shape.size() == 27, "old SHAPE_BY_ID had 27 keys (got %d)" % expected_shape.size())
+	_check(expected_shape.size() == 25, "locked shape table has 25 row keys (got %d)" % expected_shape.size())
 	for key in expected_shape:
 		var want: String = expected_shape[key]
-		var got: String = BuildingArt.shape_for(key)
-		_check(got == want, "shape_for('%s') == '%s' (got '%s')" % [key, want, got])
-
-	# ── 2. Every BuildingConfig id resolves to a KNOWN shape; unknown → "house" ──
-	var known := {}
-	for s in BuildingArt.KNOWN_SHAPES:
-		known[s] = true
+		var got: String = BuildingConfig.shape_of(key)
+		_check(got == want, "shape_of('%s') == '%s' (got '%s')" % [key, want, got])
+	# Every catalog id is covered by the locked table (a NEW building must be
+	# added here deliberately, with its shape choice reviewed).
 	for id in BuildingConfig.ALL_BUILD_IDS:
-		var sh: String = BuildingArt.shape_for(String(id))
-		_check(sh != "", "shape_for('%s') is non-empty (got '%s')" % [id, sh])
-		_check(known.has(sh), "shape_for('%s') == '%s' is a KNOWN shape" % [id, sh])
-		# The shape on the row equals what shape_for resolves (no alias for real rows).
-		_check(BuildingConfig.shape_of(String(id)) == sh,
-			"BuildingConfig.shape_of('%s') matches shape_for ('%s')" % [id, sh])
-	_check(BuildingArt.shape_for("totally_unknown_building") == "house",
-		"shape_for(unknown id) falls back to 'house'")
-	_check(BuildingArt.shape_for("") == "house", "shape_for('') falls back to 'house'")
+		_check(expected_shape.has(String(id)),
+			"build id '%s' is covered by the locked shape table" % id)
+
+	# ── 2. Every row shape resolves to REAL TownArtConfig stock art ──
+	for id in BuildingConfig.ALL_BUILD_IDS:
+		var sh: String = BuildingConfig.shape_of(String(id))
+		_check(sh != "", "shape_of('%s') is non-empty (got '%s')" % [id, sh])
+		_check(TownArtConfig.has_art(sh),
+			"shape_of('%s') == '%s' has stock art (VillageScreen render contract)" % [id, sh])
 	_check(BuildingConfig.shape_of("totally_unknown_building") == "house",
-		"BuildingConfig.shape_of(unknown id) falls back to 'house'")
+		"shape_of(unknown id) falls back to 'house'")
+	_check(BuildingConfig.shape_of("") == "house", "shape_of('') falls back to 'house'")
+	_check(TownArtConfig.has_art("house"), "the 'house' fallback shape has stock art")
 
 	# ── 3. BossConfig.target_label — six expected labels + the capitalize fallback ──
 	var expected_label := {
