@@ -692,7 +692,7 @@ func _on_town_button() -> void:
 	if game != null and game.active_biome != "farm":
 		_open_leaveboard()
 		return
-	_open_town()
+	_switch_primary_view("_open_town")
 
 # ── modal closability (tap-scrim / ESC / back) ────────────────────────────────
 
@@ -781,6 +781,7 @@ func _settle_close_to_home_or_board() -> void:
 		_router.open_modal(ViewRouter.Modal.TOWNMAP)
 		if _hud != null:
 			_hud.set_nav_current("town")
+			_hud.set_nav_title("Town")
 			_hud._refresh_nav()
 	else:
 		_router.close_modal()
@@ -817,7 +818,7 @@ func _open_leaveboard() -> void:
 	else:
 		# On the farm there is nothing to leave — open Town directly (defensive: arm() only
 		# returns false off an expedition, so this keeps the button always responsive).
-		_open_town()
+		_switch_primary_view("_open_town")
 
 ## The player confirmed leaving — the modal already ran game.leave_mine()/leave_harbor(),
 ## so run Main's existing biome-change refresh path (re-pool the board onto the farm, reset
@@ -830,7 +831,7 @@ func _on_leaveboard_confirmed() -> void:
 		_toast.show_toast("Returned to the farm — your stores are intact.")
 	# The leave is done; the modal closed itself. Land the player in Town (their intent when
 	# they tapped the Town button) now that they're back on the farm board.
-	_open_town()
+	_switch_primary_view("_open_town")
 
 ## The leave-confirm card was dismissed (Cancel, or after Confirm closed it). Hide + reset
 ## the router. NOTE: on Confirm, _on_leaveboard_confirmed already opened Town (which re-set
@@ -996,6 +997,7 @@ func _open_inventory() -> void:
 	_inventory_screen.open()
 	_router.open_modal(ViewRouter.Modal.INVENTORY)
 	_hud.set_nav_current("inventory")
+	_hud.set_nav_title("Inventory")
 	_hud._refresh_nav()
 
 func _on_inventory_closed() -> void:
@@ -1039,6 +1041,7 @@ func _open_townmap() -> void:
 	_router.open_modal(ViewRouter.Modal.TOWNMAP)
 	# The spatial town map (where buildings are placed) is the "Town" tab's target.
 	_hud.set_nav_current("town")
+	_hud.set_nav_title("Town")
 	_hud._refresh_nav()
 
 func _on_townmap_closed() -> void:
@@ -1156,6 +1159,7 @@ func _open_townsfolk() -> void:
 	_townsfolk_screen.open()
 	_router.open_modal(ViewRouter.Modal.TOWNSFOLK)
 	_hud.set_nav_current("folk")
+	_hud.set_nav_title("Townsfolk")
 	_hud._refresh_nav()
 
 func _on_townsfolk_closed() -> void:
@@ -1184,6 +1188,7 @@ func _open_cartography() -> void:
 	_router.open_modal(ViewRouter.Modal.CARTOGRAPHY)
 	# The cartography world map is the "Map" tab's target.
 	_hud.set_nav_current("map")
+	_hud.set_nav_title("Map")
 	_hud._refresh_nav()
 
 func _on_cartography_closed() -> void:
@@ -1211,6 +1216,7 @@ func _open_recipes() -> void:
 	_router.open_modal(ViewRouter.Modal.RECIPES)
 	# The crafting screen is the "Craft" tab's target — mark it active on the bottom nav.
 	_hud.set_nav_current("craft")
+	_hud.set_nav_title("Craft")
 	_hud._refresh_nav()
 
 func _on_recipes_closed() -> void:
@@ -1716,7 +1722,7 @@ func _on_season_return() -> void:
 	_refresh_season_bar()
 	_refresh_chain_progress()
 	SaveManager.save(game)
-	_open_townmap()
+	_switch_primary_view("_open_townmap")
 	show_toast("Harvest complete — +%d 🪙 return bonus." % int(summary.get("coins_granted", 0)))
 
 # ── Developer DEBUG overlay (M-infra) ────────────────────────────────────────────
