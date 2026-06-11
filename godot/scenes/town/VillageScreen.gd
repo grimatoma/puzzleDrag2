@@ -123,6 +123,8 @@ var _panel: Control = null
 var _toast: ToastScript = null
 ## The growth stage the village currently renders at — derived EVERY refresh()
 ## from the live tier's plot grant (stage_for_plot_count(plan_lot_count())).
+## setup() BASELINES it for each GameState before the first refresh(), so the
+## default here is never compared against live state (see the setup() note).
 var _render_stage: int = 1
 ## Grass alternative-tile ids on the grass atlas source ([0] == the base tile);
 ## a deterministic per-cell hash picks one so the field isn't one repeated tile.
@@ -144,8 +146,21 @@ var _dragging: bool = false
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
 ## Store `game`, build the static shell ONCE, then render. Safe to call again.
+##
+## FIRST-RENDER BASELINE (stage-reveal flash suppression): _render_stage
+## defaults to 1, so without this re-derive a tier>1 GameState's first
+## refresh() would read prev_stage = 1 and fire the stage-reveal flash over
+## every long-existing pad. Baselining here — on EVERY setup, including a
+## re-setup with a different GameState — makes refresh()'s stage delta mean
+## "the village grew while this screen was watching it", the only time the
+## reveal accent should play.
 func setup(g: GameState) -> void:
 	game = g
+	var baseline: int = VillageLayout.stage_for_plot_count(plan_lot_count())
+	if baseline != _render_stage:
+		_render_stage = baseline
+		if _built:
+			_place_props()   # re-setup on a different-stage game: decor must follow
 	if not _built:
 		_build_shell()
 		_built = true
@@ -221,9 +236,8 @@ func _build_shell() -> void:
 	_buildings.y_sort_enabled = true
 	_world.add_child(_buildings)
 
-	# Initial stage from the live tier's plot grant (refresh() re-derives it
-	# every call — see the STAGE FLOW note above refresh()).
-	_render_stage = VillageLayout.stage_for_plot_count(plan_lot_count())
+	# _render_stage was baselined by setup() for this GameState (first-render
+	# flash suppression) — place the initial decor for it.
 	_place_props()
 
 	# Walking villagers (Phase 3) — a self-contained y-sorted World child whose
@@ -568,15 +582,23 @@ func refresh() -> void:
 	if not _built or game == null:
 		return
 	var stage: int = VillageLayout.stage_for_plot_count(plan_lot_count())
+	var revealed_from: int = 0   # >0 → a stage INCREASE revealed pads this refresh
 	if stage != _render_stage:
 		var prev_stage: int = _render_stage
 		_render_stage = stage
 		_place_props()
-		# Stage-reveal accent (Phase 4): a one-shot soft flash on the pads this
-		# growth step just revealed. Motion-gated inside VillageAmbience.
-		if stage > prev_stage and _ambience != null:
-			_ambience.flash_new_pads(prev_stage, stage, plan_lot_count())
+		if stage > prev_stage:
+			revealed_from = prev_stage
 	_rebuild_buildings(game.buildings)
+	# Stage-reveal accent (Phase 4): a one-shot soft flash on the pads this
+	# growth step just revealed. Fired AFTER _rebuild_buildings on purpose —
+	# its tail calls _ambience.set_stage_and_buildings, whose signature-change
+	# rebuild wipes the recycled smoke/halo sprites; flashing first used to
+	# spawn into that wipe and render for zero frames. (The flashes also live
+	# under the ambience's wipe-proof fx holder — belt and braces.) Motion-
+	# gated inside VillageAmbience.
+	if revealed_from > 0 and _ambience != null:
+		_ambience.flash_new_pads(revealed_from, stage, plan_lot_count())
 	# Villager crowd tracks the rendered stage (no-op while it's unchanged, so
 	# a plain refresh never scatters the walkers).
 	if _npcs != null:

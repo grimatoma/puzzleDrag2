@@ -380,7 +380,12 @@ func _test_ground_tileset() -> void:
 	# Phase-4 water shimmer: the water source is the FRAME-ANIMATED strip —
 	# 14 frames at 0.1 s each, laid out as one horizontal line (columns 0),
 	# tile still at (0,0) so the painter's set_cell contract is unchanged.
+	# The source must EXIST at all (animated strip, or the static tile
+	# fallback) — without this explicit check a missing/renamed water asset
+	# would skip every animation assertion below silently.
 	var wsid: int = TownArtConfig.ground_source_id("water")
+	_check(ts.has_source(wsid),
+		"water ground source exists (animated strip or static fallback)")
 	if ts.has_source(wsid):
 		var wsrc: TileSetAtlasSource = ts.get_source(wsid)
 		_check(wsrc.get_tile_animation_frames_count(Vector2i.ZERO) == 14,

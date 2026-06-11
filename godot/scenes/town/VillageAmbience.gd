@@ -31,8 +31,10 @@ const TILE := TownArtConfig.TILE
 
 ## ── Smoke tuning (KEEP IT SUBTLE — wisps, not a soot storm) ─────────────────
 const PUFFS_PER_BUILDING := 3
-## Global puff cap: a 25-house City still spawns at most this many sprites
-## (round-robin over the buildings, so every chimney keeps at least one wisp).
+## Global puff cap: a crowded village still spawns at most this many sprites.
+## Puffs are dealt round-robin over the buildings, so the cap is shared evenly
+## — every chimney keeps at least one wisp WHILE buildings <= MAX_PUFFS; past
+## that (the 35-building save-overflow render) the later chimneys go without.
 const MAX_PUFFS := 30
 const PUFF_LIFE_MIN := 2.6          ## seconds a puff lives (rise + fade)
 const PUFF_LIFE_MAX := 3.8
@@ -88,11 +90,27 @@ var _time: float = 0.0
 ## unchanged state never resets the smoke/halo cycle (mirrors VillageNpcs'
 ## same-stage no-op).
 var _signature: String = ""
+## One-shot FX (the stage-reveal pad flash) parent under THIS dedicated holder,
+## which _rebuild()'s wipe skips — VillageScreen.refresh() rebuilds the
+## smoke/halo set in the SAME call that reveals new pads, and parenting the
+## flashes with the recycled sprites used to free them (and their bound tweens)
+## the same frame they spawned. The holder sits at y=0 (neutral sort): flashes
+## accent GROUND pads, so the merged y-sort drawing them above the ground paint
+## but behind every floor-anchored sprite is exactly right.
+var _fx_holder: Node2D
+## Catalog plot indices the LAST flash_new_pads call resolved (the compute half
+## runs unconditionally — see flash_new_pads), so headless tests can assert the
+## screen requested the right reveal range even while the motion gate keeps the
+## sprites unspawned.
+var _last_flash_indices: Array = []
 
 func _init(rng_seed: int = DEFAULT_SEED) -> void:
 	_seed_base = rng_seed
 	y_sort_enabled = true
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_fx_holder = Node2D.new()
+	_fx_holder.name = "fx"
+	add_child(_fx_holder)
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -117,7 +135,11 @@ func set_running(on: bool) -> void:
 # ── build ─────────────────────────────────────────────────────────────────────
 
 func _rebuild(stage: int, buildings: Array) -> void:
+	# Wipe the recycled smoke/halo set — but NEVER the fx holder: an in-flight
+	# stage-reveal flash must survive the rebuild the same refresh() triggers.
 	for child in get_children():
+		if child == _fx_holder:
+			continue
 		remove_child(child)
 		child.queue_free()
 	_puffs = []
@@ -129,14 +151,17 @@ func _rebuild(stage: int, buildings: Array) -> void:
 	_rng.seed = hash("village_ambience:%d:%s" % [_seed_base, _signature])
 
 	# Chimney smoke — round-robin puffs over the buildings under the cap.
+	# Chimney points are manifest lookups, so compute each ONCE per building,
+	# not once per puff.
 	if not buildings.is_empty():
 		var total: int = mini(buildings.size() * PUFFS_PER_BUILDING, MAX_PUFFS)
 		var holders: Array[Node2D] = []
+		var chimneys: Array[Vector2] = []
 		for i in range(buildings.size()):
 			holders.append(_make_holder(buildings[i], i))
+			chimneys.append(_chimney_point(buildings[i]))
 		for i in range(total):
-			_spawn_puff(holders[i % buildings.size()],
-				_chimney_point(buildings[i % buildings.size()]),
+			_spawn_puff(holders[i % buildings.size()], chimneys[i % buildings.size()],
 				float(i) / float(maxi(1, total)))
 
 	# Lamp halos — one per "lamp" decor entry visible at this stage.
@@ -255,20 +280,37 @@ func _place_puff(p: Puff) -> void:
 # ── stage-reveal accent ───────────────────────────────────────────────────────
 
 ## One-shot accent on the pads a stage increase just revealed: a soft white
-## flash that swells and fades over each newly granted plot. Catalog indices
-## [capacity(prev_stage), min(lot_grant, capacity(new_stage))) are exactly the
-## plots the tier-up added. Motion-gated like everything else here — headless,
-## the harness, and Reduce Motion skip it entirely.
-func flash_new_pads(prev_stage: int, new_stage: int, lot_grant: int) -> void:
-	if not UiFx.is_active():
-		return
+## flash that swells and fades over each newly granted plot.
+##
+## Mirrors step()'s compute/motion split: the COMPUTE half (which pads the
+## reveal covers, recorded in _last_flash_indices) always runs, so headless
+## tests can assert the requested range; the SPAWN half is motion-gated —
+## headless, the visual harness, and Reduce Motion skip it — unless `force`
+## (test hook) bypasses just the UiFx check.
+##
+## Sprites parent under _fx_holder, the one child _rebuild()'s wipe skips, so
+## the set_stage_and_buildings rebuild the same refresh() performs can't free
+## them mid-flash. Their tweens are BOUND (flash.create_tween), so a screen
+## close that frees this whole layer kills them silently — no dangling-tween
+## errors.
+func flash_new_pads(prev_stage: int, new_stage: int, lot_grant: int, force: bool = false) -> void:
+	# Compute: the reveal starts at the previous stage's CUMULATIVE capacity
+	# (everything below it was already visible) and walks the stage-ordered
+	# catalog up to the live lot grant; the first plot past new_stage ends the
+	# range (plots() is stage-ascending, so nothing later can qualify).
 	var lo_stage: int = clampi(prev_stage, 1, VillageLayout.MAX_STAGE)
 	var lo: int = int(VillageLayout.STAGE_PLOT_CAPACITY[lo_stage - 1])
 	var plots: Array = VillageLayout.plots()
 	var hi: int = mini(lot_grant, plots.size())
+	_last_flash_indices = []
 	for i in range(lo, hi):
 		if int(plots[i]["stage"]) > new_stage:
-			continue
+			break
+		_last_flash_indices.append(i)
+	# Spawn: motion-gated (force bypasses ONLY this gate, for headless tests).
+	if not force and not UiFx.is_active():
+		return
+	for i in _last_flash_indices:
 		var p: Dictionary = plots[i]
 		var fp: Vector2i = p["footprint"]
 		var center := (Vector2(p["cell"]) + Vector2(fp) * 0.5) * float(TILE)
@@ -278,7 +320,7 @@ func flash_new_pads(prev_stage: int, new_stage: int, lot_grant: int) -> void:
 		flash.modulate = Color(1.0, 0.98, 0.88, 0.55)
 		flash.scale = Vector2(0.7, 0.7)
 		flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		add_child(flash)
+		_fx_holder.add_child(flash)
 		var tw := flash.create_tween()
 		tw.set_parallel(true)
 		tw.tween_property(flash, "modulate:a", 0.0, 0.7).set_ease(Tween.EASE_OUT)

@@ -22,9 +22,12 @@ extends SceneTree
 ## Build order for the `builds` count — a spread of spawners / refiners /
 ## landmarks (no hazard buildings; they need the rats gate).
 const BUILD_ORDER: Array = [
-	"lumber_camp", "coop", "garden", "bakery", "mill", "granary", "silo",
-	"chapel", "workshop", "stable", "kitchen", "barn", "sawmill", "apiary",
-	"observatory", "forge", "smokehouse", "larder",
+	BuildingConfig.LUMBER_CAMP, BuildingConfig.COOP, BuildingConfig.GARDEN,
+	BuildingConfig.BAKERY, BuildingConfig.MILL, BuildingConfig.GRANARY,
+	BuildingConfig.SILO, BuildingConfig.CHAPEL, BuildingConfig.WORKSHOP,
+	BuildingConfig.STABLE, BuildingConfig.KITCHEN, BuildingConfig.BARN,
+	BuildingConfig.SAWMILL, BuildingConfig.APIARY, BuildingConfig.OBSERVATORY,
+	BuildingConfig.FORGE, BuildingConfig.SMOKEHOUSE, BuildingConfig.LARDER,
 ]
 
 func _save(path: String) -> void:
