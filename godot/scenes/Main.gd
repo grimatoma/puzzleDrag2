@@ -435,9 +435,9 @@ func _ready() -> void:
 	# doesn't fight the arrival story beat. The story queue is drained AFTER the tutorial
 	# finishes (via _on_tutorial_finished → _drain_story_queue). If the player has already
 	# seen the tutorial the queue is drained immediately as before.
-	if _dialogs_disabled():
-		# Web smoke / tests: suppress the first-launch auto-modals so the board comes up
-		# quiescent and the browser-history nav smoke is deterministic (see _dialogs_disabled).
+	if _narrative_dialogs_disabled():
+		# Dialogs off (every exported build by default; also the web nav smoke): suppress the
+		# first-launch auto-modals so the board comes up quiescent (see _narrative_dialogs_disabled).
 		pass
 	elif not game.tutorial_seen:
 		_open_tutorial()
@@ -1289,12 +1289,11 @@ func _on_keeper_closed() -> void:
 func _maybe_trigger_keeper() -> void:
 	if game == null:
 		return
-	# QA/test flag parity with the sibling auto-modals (tutorial / story / daily / splash all
-	# honour this): isDialogsDisabled() suppresses the keeper encounter CONTINUOUSLY, not just
-	# at boot. Without this the keeper was the one auto-popup that still interrupted a scripted
-	# session with the flag set. The encounter stays ELIGIBLE (keeper_encounter_ready is
-	# unchanged) and fires the moment the flag is cleared. Web-only; false in normal play.
-	if _dialogs_disabled():
+	# Dialogs-off parity with the sibling auto-modals (tutorial / story / daily): suppresses the
+	# keeper encounter CONTINUOUSLY, not just at boot — so on a shipped build (off by default) it
+	# never auto-pops. The encounter stays ELIGIBLE (keeper_encounter_ready is unchanged) and fires
+	# the moment dialogs are re-enabled. Explicit apply_deeplink("keeper") still opens it for QA.
+	if _narrative_dialogs_disabled():
 		return
 	# Don't stack the encounter on top of an already-open keeper modal or a story beat.
 	if _keeper_modal != null and _keeper_modal.visible:
@@ -1429,10 +1428,10 @@ func _on_tutorial_finished() -> void:
 func _maybe_show_daily() -> void:
 	if _pending_daily_claim.is_empty():
 		return
-	# review-5 — same continuous suppression as _drain_story_queue (the reward itself was
-	# already granted by login_tick; only the celebratory card is suppressed). Without this
-	# the card popped mid-session the moment a story modal closed during scripted QA.
-	if _dialogs_disabled():
+	# Same continuous suppression as _drain_story_queue (the reward itself was already granted by
+	# login_tick; only the celebratory card is suppressed). On a shipped build (dialogs off by
+	# default) the card never shows; the streak reward is unaffected.
+	if _narrative_dialogs_disabled():
 		return
 	# Don't fight the tutorial or a story beat — retry once they're dismissed.
 	if _tutorial_modal != null and _tutorial_modal.visible:
@@ -1803,12 +1802,11 @@ func _drain_achievement_toasts() -> void:
 func _drain_story_queue() -> void:
 	if game == null:
 		return
-	# review-5 — QA/test flag parity with React: isDialogsDisabled() suppresses story beats
-	# CONTINUOUSLY (render-time), not just at boot. Without this, a beat triggered mid-run
-	# (e.g. the arrival beat on the first chain) still popped over scripted QA sessions.
-	# Beats stay queued exactly like React's render-null path; players are unaffected
-	# (_dialogs_disabled is web-only and false unless the page set the hook before boot).
-	if _dialogs_disabled():
+	# Parity with React's isDialogsDisabled(): suppresses story beats CONTINUOUSLY (render-time),
+	# not just at boot, so a beat triggered mid-run (e.g. the arrival beat on the first chain)
+	# doesn't pop on a shipped build. Beats stay queued exactly like React's render-null path and
+	# present the moment dialogs are re-enabled; off by default in every exported build.
+	if _narrative_dialogs_disabled():
 		return
 	if game.story.beat_queue.is_empty():
 		return
@@ -1982,6 +1980,33 @@ func _dialogs_disabled() -> bool:
 	if not OS.has_feature("web"):
 		return false
 	return bool(JavaScriptBridge.eval("!!window.__hearthDisableDialogs", true))
+
+## Whether the NARRATIVE auto-dialogs are suppressed. These are the automatic pop-ups the
+## game raises on its own — the welcome TUTORIAL, the STORY-BEAT modals, the DAILY-streak
+## reward card, and the KEEPER encounter. (NOT the launch splash or the town-home auto-open,
+## which stay on _dialogs_disabled() so a shipped build still comes up looking right; and NOT
+## explicit deep-links — apply_deeplink("tutorial"|"story"|"daily"|"keeper") always opens
+## regardless of this flag.)
+##
+## They are OFF BY DEFAULT in every EXPORTED build — desktop AND web, including the GitHub
+## Pages deploy — mirroring the React app's isDialogsDisabled(), which defaults true wherever
+## it ships. The editor + headless test/capture harness run the EDITOR binary (no "template"
+## feature), so there they stay ON: the suites that integration-test these modals
+## (run_tutorial_tests / run_story_ui_tests / run_boons_tests / run_visual_tests …) and every
+## tools/*_capture.gd keep working with no changes.
+##
+## Overrides on a shipped build: on web set `window.__hearthDisableDialogs = false` before
+## boot to re-enable (or `= true` to force off); on any export set the env var
+## `HEARTH_DIALOGS=on` to re-enable (`=off` forces off). Absent any override, the result is
+## simply "is this an exported build?".
+func _narrative_dialogs_disabled() -> bool:
+	if OS.has_feature("web"):
+		var hook: Variant = JavaScriptBridge.eval("window.__hearthDisableDialogs", true)
+		if hook is bool:
+			return hook
+	if OS.has_environment("HEARTH_DIALOGS"):
+		return OS.get_environment("HEARTH_DIALOGS").to_lower() != "on"
+	return OS.has_feature("template")
 
 ## Wire the browser History API to the modal nav. Called from _ready ONLY on a web
 ## build. Registers a popstate listener (Back/Forward → apply_deeplink), then collapses
