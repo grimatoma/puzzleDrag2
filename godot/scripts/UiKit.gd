@@ -198,10 +198,15 @@ static func wire_backdrop_dismiss(backdrop: Control, on_dismiss: Callable) -> vo
 	if backdrop.has_meta("_dismiss_wired"):
 		return
 	backdrop.set_meta("_dismiss_wired", true)
+	# MOUSE-path only (see the touch/input gotcha in CLAUDE.md + Hud._slot_gui_input):
+	# project.godot has emulate_touch_from_mouse on, so ONE physical tap arrives as a real
+	# InputEventMouseButton AND a synthesized InputEventScreenTouch. Reacting to both lets
+	# the *same* tap that just opened a modal (on the mouse release) fire this dismiss on the
+	# emulated touch press — the modal opens and instantly closes, reading as "nothing
+	# happened" (the touchpad-tap settings-button bug). emulate_mouse_from_touch stays on, so
+	# a real touchscreen tap still delivers a MouseButton here; the touch branch is redundant.
 	backdrop.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) \
-			or (event is InputEventScreenTouch and event.pressed)
-		if tap:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			on_dismiss.call()
 	)
 
@@ -456,12 +461,14 @@ static func make_expandable_chip(entry_key: String, expanded_key: String, toggle
 	var chip := PanelContainer.new()
 	style_chip_expanded(chip, expanded_key == entry_key)
 	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	# MOUSE-path only (same emulate_touch_from_mouse gotcha as wire_backdrop_dismiss): a tap
+	# arrives as BOTH a mouse press and an emulated touch press, so reacting to both fired this
+	# TOGGLE twice per tap — expand then collapse — and the chip appeared inert. emulate_mouse_
+	# _from_touch keeps real touchscreen taps flowing through the mouse branch.
 	chip.gui_input.connect(func(event: InputEvent) -> void:
-		var tap: bool = (event is InputEventMouseButton \
-			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
-			and (event as InputEventMouseButton).pressed) \
-			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
-		if tap:
+		if event is InputEventMouseButton \
+				and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+				and (event as InputEventMouseButton).pressed:
 			toggle_fn.call(entry_key)
 	)
 	var col := VBoxContainer.new()

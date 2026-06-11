@@ -106,7 +106,13 @@ func setup(g: GameState) -> void:
 
 func open() -> void:
 	visible = true
-	move_to_front()  # ensure menu renders above other same-layer modals (e.g. open inventory)
+	# Render above other same-layer (layer=4) modals (e.g. an open InventoryScreen added to
+	# Main first). CanvasLayer has NO move_to_front() — that's a CanvasItem method, so calling
+	# it here was a hard compile error that broke MenuScreen (and the dependent Main) entirely.
+	# Same-layer CanvasLayers draw in tree order, so reordering this node to LAST puts it on top.
+	var parent := get_parent()
+	if parent != null:
+		parent.move_child(self, parent.get_child_count() - 1)
 	refresh_sound_label()
 	refresh_fullscreen_label()
 	refresh_motion_label()
