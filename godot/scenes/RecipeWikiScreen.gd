@@ -48,6 +48,9 @@ const VIEW_GRID := "grid"
 var _view: String = VIEW_LIST
 var _view_btn: Button
 
+## Columns in the grid view. The expanded grid detail spans a full row of this many cells.
+const GRID_COLS := 2
+
 # ── parchment palette (matches AchievementsScreen / TownScreen tokens) ──────────
 const COL_TITLE  := Palette.INK
 const COL_HEADER := Palette.EMBER
@@ -243,8 +246,9 @@ func _sync_station_tabs() -> void:
 ## In the LIST view this animates IN PLACE — only the two affected rows change: the newly tapped
 ## row is rebuilt expanded and unrolls open (UiFx.expand_section) while the previously open row
 ## rolls shut (UiFx.collapse_section) and drops its details. The untouched rows never rebuild, so
-## the list reflows smoothly instead of snapping. The GRID view has no expandable rows, so it
-## falls back to a plain refresh().
+## the list reflows smoothly instead of snapping. The GRID view rebuilds via refresh(): the tapped
+## chip stays put in its cell and a full-width detail card is inserted below that grid row (so the
+## surrounding cells never shift), with an ▲ over the originating column pointing back at the chip.
 func toggle_expand(entry_key: String) -> void:
 	if not _built or _view != VIEW_LIST:
 		_expanded = "" if _expanded == entry_key else entry_key
@@ -409,22 +413,117 @@ func _populate_recipe_details(details: VBoxContainer, id: String) -> void:
 
 # ── grid view ──────────────────────────────────────────────────────────────────
 
+## Render the grid view as a VBox of GRID_COLS-wide HBox rows (not a single GridContainer) so the
+## expanded recipe's detail can be inserted as a full-width card BETWEEN rows — a GridContainer cell
+## can't span columns, and we never want to shift the surrounding chips. The tapped chip keeps its
+## cell; its detail unfolds full-width directly beneath its row, with an ▲ over the origin column.
 func _render_grid() -> void:
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	_body.add_child(grid)
+	var rows_box := VBoxContainer.new()
+	rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows_box.add_theme_constant_override("separation", 8)
+	rows_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(rows_box)
 
-	for id in RecipeConfig.recipes_for_station(_active_station):
-		grid.add_child(_make_grid_chip(String(id)))
+	var ids: Array = RecipeConfig.recipes_for_station(_active_station)
+	var n: int = ids.size()
+	var i: int = 0
+	while i < n:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rows_box.add_child(row)
+
+		var expanded_col: int = -1
+		for c in range(GRID_COLS):
+			var idx: int = i + c
+			if idx < n:
+				var id: String = String(ids[idx])
+				var chip := _make_grid_chip(id)
+				row.add_child(chip)
+				_cards[id] = chip
+				if id == _expanded:
+					expanded_col = c
+			else:
+				# Empty filler so a lone trailing card keeps its half-width cell (no stretch).
+				var filler := Control.new()
+				filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				row.add_child(filler)
+
+		if expanded_col != -1:
+			rows_box.add_child(_make_grid_detail(String(_expanded), expanded_col))
+
+		i += GRID_COLS
+
+## The full-width inline detail card shown below the grid row holding the expanded recipe. An ember
+## ▲ sits over the originating column (left chip → left arrow, right chip → right arrow) so the card
+## visibly points back at which grid chip was tapped. Reuses _populate_recipe_details, so the input
+## chips + Craft button read the LIVE craft state, exactly like the list view's expanded row.
+func _make_grid_detail(id: String, origin_col: int) -> VBoxContainer:
+	var wrap := VBoxContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrap.add_theme_constant_override("separation", 0)
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# Arrow row: GRID_COLS cells matching the grid above (same separation), ▲ centred in origin_col.
+	var arrow_row := HBoxContainer.new()
+	arrow_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	arrow_row.add_theme_constant_override("separation", 8)
+	arrow_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for c in range(GRID_COLS):
+		if c == origin_col:
+			var arrow := Label.new()
+			arrow.text = "▲"
+			arrow.add_theme_font_size_override("font_size", 18)
+			arrow.add_theme_color_override("font_color", Palette.EMBER)
+			arrow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			arrow.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+			arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(arrow)
+		else:
+			var cell := Control.new()
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			arrow_row.add_child(cell)
+	wrap.add_child(arrow_row)
+
+	# Ember-bordered detail panel (the "expanded" accent), full width — never shifts the grid.
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	UiKit.style_chip_expanded(panel, true)
+	wrap.add_child(panel)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 8)
+	panel.add_child(col)
+
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_theme_constant_override("separation", 6)
+	col.add_child(details)
+	_populate_recipe_details(details, id)
+
+	return wrap
 
 func _make_grid_chip(id: String) -> PanelContainer:
 	var chip := PanelContainer.new()
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chip.add_theme_stylebox_override("panel", UiKit.row_box())
+	UiKit.style_chip_expanded(chip, id == _expanded)
+	chip.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: bool = (event is InputEventMouseButton \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and (event as InputEventMouseButton).pressed) \
+			or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+		if tap:
+			toggle_expand(id)
+	)
 
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
