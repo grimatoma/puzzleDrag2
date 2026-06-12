@@ -1,0 +1,34 @@
+# Ignore images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+
+# Ignore documents and reports
+*.md
+*.html
+*.txt
+*.pdf
+*.json
+*.log
+
+# Ignore specific directories
+docs/
+public/
+dist/
+node_modules/
+playwright-report/
+coverage/
+test-results/
+.git/
+.github/
+.vscode/
+.claude/
+.cursor/
+.agents/
+story/
+b/
+iso/
+tools/
