@@ -44,6 +44,8 @@ const TOOL_KEYS = [
   // Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
   "golden_apple", "golden_carrot", "golden_idol", "golden_sheep", "philosophers_stone",
   "magic_wand", "magic_seed", "magic_fertilizer",
+  // Wolf & mine hazard counters + miners_hat
+  "rifle", "hound", "water_pump", "explosives", "miners_hat",
 ];
 
 (async () => {
