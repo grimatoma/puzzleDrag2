@@ -22,7 +22,6 @@ import BuildingIllustration, { BUILDING_KEYS } from "../../ui/buildings/index.js
 import { COLORS, Pill } from "../shared.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
 import { buildTownPlan, STAGE_W, STAGE_H } from "../../townLayout.js";
-import TownGround from "../../ui/TownGround.jsx";
 import { MAP_NODES } from "../../features/cartography/data.js";
 import { ZONES, zoneHasBoard } from "../../features/zones/data.js";
 import { keeperIconKey, dailyRewardIconKey } from "./concepts.js";
@@ -146,8 +145,8 @@ function ZoneTownMap({ zoneId, size }: { zoneId: string; size: number }) {
   });
 
   const biomeVariant = zoneHasBoard(zone, "mine") && !zoneHasBoard(zone, "farm") ? "mine" : "farm";
-  // Render every lot as built so the wiki town reads as a populated settlement.
-  const builtLots = new Set<number>(plan.lots.map((l) => l.index));
+  const bgGrass = biomeVariant === "mine" ? "#565a48" : "#5a7f36";
+  const roadColor = "#c2ab70";
 
   return (
     <svg
@@ -155,11 +154,61 @@ function ZoneTownMap({ zoneId, size }: { zoneId: string; size: number }) {
       preserveAspectRatio="xMidYMid meet"
       width={size}
       height={size}
-      style={{ display: "block", borderRadius: 8, background: COLORS.parchmentDeep }}
+      style={{ display: "block", borderRadius: 8, background: bgGrass }}
       role="img"
       aria-label={`${zoneId} town map`}
     >
-      <TownGround plan={plan} biomeVariant={biomeVariant} builtLots={builtLots} />
+      {/* Rivers/Shorelines */}
+      {plan.water.map((w, idx) => {
+        if (w.polygon) {
+          const pointsStr = w.polygon.map(p => `${p.x},${p.y}`).join(" ");
+          return <polygon key={`water-${idx}`} points={pointsStr} fill="#4a8aaa" opacity={0.85} />;
+        }
+        if (w.path && w.width) {
+          const pathD = w.path.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+          return <path key={`water-${idx}`} d={pathD} stroke="#4a8aaa" strokeWidth={w.width} fill="none" strokeLinecap="round" opacity={0.85} />;
+        }
+        return null;
+      })}
+
+      {/* Roads */}
+      {plan.roads.map((r, idx) => {
+        const pathD = r.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+        return <path key={`road-${idx}`} d={pathD} stroke={roadColor} strokeWidth={r.width} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />;
+      })}
+
+      {/* Plaza */}
+      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill="#9c9c9c" opacity={0.8} />
+      <circle cx={plan.well.cx} cy={plan.well.cy} r={plan.well.r} fill="#5a4a30" stroke="#7a6a4a" strokeWidth={2} />
+
+      {/* Boards */}
+      {plan.boards.map((b, idx) => (
+        <rect
+          key={`board-${idx}`}
+          x={b.cx - b.w / 2}
+          y={b.cy - b.h / 2}
+          width={b.w}
+          height={b.h}
+          fill={b.kind === "farm" ? "#2a5010" : b.kind === "mine" ? "#1a1e22" : "#1a3a5a"}
+          stroke="#fff"
+          strokeWidth={1.5}
+          opacity={0.9}
+        />
+      ))}
+
+      {/* Lots */}
+      {plan.lots.map((l, idx) => (
+        <rect
+          key={`lot-${idx}`}
+          x={l.cx - l.w / 2}
+          y={l.cy - l.h / 2}
+          width={l.w}
+          height={l.h}
+          fill="rgba(0,0,0,0.15)"
+          stroke="rgba(255,255,255,0.4)"
+          strokeWidth={1.5}
+        />
+      ))}
     </svg>
   );
 }
