@@ -5,10 +5,6 @@ Guidance for agents working in this repository.
 ## Mental model (read first)
 
 This repository contains the **React+Phaser app** (`src/`, `prototype.tsx`, the Vite/`npm` toolchain) for **puzzleDrag2**.
-The **Godot 4.6 port has been extracted to its own repository** at [puzzleDrag2-godot](https://github.com/grimatoma/puzzleDrag2-godot).
-The React+Phaser app at the repo root is the original implementation the port was built from. It remains the reference for how the game is meant to work, but it is no longer the primary active version of the game.
-
-The repository also hosts the headless asset exporters that drive the Phaser app in a browser to capture canvas textures and export them to the sibling Godot project's assets.
 
 ---
 
@@ -36,15 +32,6 @@ Vite ships three independent entries from one repo:
 
 ---
 
-## Asset Exporters (Phaser to Godot)
-
-Exporters drive the local Phaser web app headlessly to generate PNGs and icons for the Godot sibling repository:
-- `tools/export-v1-tiles.mjs` — headlessly captures and exports board tiles.
-- `tools/export-v1-resources.mjs` — headlessly captures and exports inventory item icons.
-- `tools/export-tool-icons.mjs` — captures and exports tool icons.
-
----
-
 ## Commands
 
 ```bash
@@ -55,11 +42,6 @@ npm run typecheck            # tsc --noEmit over `src/` + entries
 npm test                     # Vitest unit tests
 npm run test:e2e             # Playwright browser flows (tests/e2e)
 npm run test:visual          # Playwright visual regression — desktop smoke set
-
-# Exporters (requires 'npm run dev' to be running first)
-node tools/export-v1-tiles.mjs
-node tools/export-v1-resources.mjs
-node tools/export-tool-icons.mjs
 ```
 
 ---

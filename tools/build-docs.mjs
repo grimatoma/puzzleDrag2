@@ -127,13 +127,12 @@ const SECTION_META = {
   "pixel-pipeline-viewer": { label: "Pixel Pipeline Viewer", blurb: "Live sprite-set review viewer", order: 1 },
   engineering: { label: "Engineering", blurb: "Architecture & type-system notes", order: 2 },
   superpowers: { label: "Plans & Specs", blurb: "Dated implementation plans and design specs", order: 3 },
-  "iso-buildings": { label: "Iso Buildings", blurb: "Isometric asset gallery progress", order: 4 },
   references: { label: "References", blurb: "External wikis & research", order: 5 },
 };
 
 // Docs surfaced in a prominent "Featured" block at the very top, in this order.
 // Keyed by docs-relative source path (forward slashes).
-const FEATURED_DOCS = ["sprite-pipeline.html"];
+const FEATURED_DOCS = [];
 
 // Old / superseded / off-focus docs, gathered into an "Archive" section at the
 // very bottom regardless of their folder. Keyed by docs-relative source path
@@ -143,8 +142,6 @@ const ARCHIVED_DOCS = new Set([
   "wiki-migration-plan.html",
   "progression-trigger-redesign.html",
   "board-topology-concepts.html",
-  // Iso-building progress tracker (paused).
-  "iso-buildings/PROGRESS.md",
   // Shipped implementation plans + specs (today's stay current under Plans & Specs).
   "superpowers/plans/2026-06-02-appearance-look-restructure.md",
   "superpowers/plans/2026-06-02-board-kinds-wiki.md",
@@ -304,7 +301,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1
         <a href="../"><span>▸</span> Play the game</a>
         <a href="../b/"><span>▸</span> Dev Panel</a>
         <a href="../story/"><span>▸</span> Story Editor</a>
-        <a href="../iso/"><span>▸</span> Iso Gallery</a>
       </nav>
     </header>
 ${featuredHtml}

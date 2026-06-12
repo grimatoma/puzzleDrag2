@@ -30,7 +30,6 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         balance: resolve(__dirname, "b/index.html"),
         story: resolve(__dirname, "story/index.html"),
-        iso: resolve(__dirname, "iso/index.html"),
       },
       output: {
         // Function form so Rollup doesn't pre-create a chunk for phaser
