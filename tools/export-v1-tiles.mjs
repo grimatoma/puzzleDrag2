@@ -44,7 +44,7 @@ function arg(name, fallback) {
 const flag = (name) => process.argv.includes(`--${name}`);
 
 const BASE = arg("base", "http://localhost:5173/puzzleDrag2/");
-const OUT_DIR = resolve(__dirname, "..", arg("out", "godot/assets/tiles"));
+const OUT_DIR = resolve(__dirname, "..", "..", "puzzleDrag2-godot", arg("out", "assets/tiles"));
 const SCENARIO = arg("scenario", "board-farm-idle");
 
 // The 10 Farm board tiles the Godot M3 slice references (mirror of

@@ -25,7 +25,7 @@ function arg(name, fallback) {
 }
 
 const BASE = arg("base", "http://localhost:5173/puzzleDrag2/");
-const OUT_DIR = resolve(__dirname, "..", arg("out", "godot/assets/resources"));
+const OUT_DIR = resolve(__dirname, "..", "..", "puzzleDrag2-godot", arg("out", "assets/resources"));
 const SCENARIO = arg("scenario", "board-farm-idle");
 
 // The tools the Godot ToolConfig references (godot/scripts/ToolConfig.gd). paintIcon
