@@ -14,7 +14,10 @@ BUILDING_KEYS.forEach((id) => {
   }
 });
 
+const savedCameraStates: Record<string, { scrollX: number; scrollY: number; zoom: number }> = {};
+
 interface TownPhaserCanvasProps {
+  zoneId: string;
   plan: TownPlan;
   builtLots: Set<number>;
   buildingsMap: Record<number, string>;
@@ -27,6 +30,7 @@ interface TownPhaserCanvasProps {
 type GameWithObserver = Phaser.Game & { __resizeObserver?: ResizeObserver };
 
 export default function TownPhaserCanvas({
+  zoneId,
   plan,
   builtLots,
   buildingsMap,
@@ -106,6 +110,7 @@ export default function TownPhaserCanvas({
                   builtLots,
                   buildingsMap,
                   pendingBuilding,
+                  initialCameraState: savedCameraStates[zoneId],
                 });
 
                 scene.events.on("town.placebuilding", (data: { lotIndex: number; buildingId: string }) => {
@@ -135,12 +140,21 @@ export default function TownPhaserCanvas({
       cancelled = true;
       const game = gameRef.current;
       if (game) {
+        const scene = game.scene.scenes[0];
+        if (scene && scene.cameras && scene.cameras.main) {
+          const cam = scene.cameras.main;
+          savedCameraStates[zoneId] = {
+            scrollX: cam.scrollX,
+            scrollY: cam.scrollY,
+            zoom: cam.zoom,
+          };
+        }
         game.__resizeObserver?.disconnect();
         game.destroy(true);
         gameRef.current = null;
       }
     };
-  }, [plan]);
+  }, [plan, zoneId]);
 
   return (
     <div className="relative w-full h-full">

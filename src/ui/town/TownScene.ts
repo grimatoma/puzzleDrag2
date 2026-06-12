@@ -56,11 +56,14 @@ export class TownScene extends Phaser.Scene {
     super("TownScene");
   }
 
-  init(data: { plan: TownPlan; builtLots?: Set<number>; buildingsMap?: Record<number, string>; pendingBuilding?: { id: string; name: string } | null }) {
+  initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
+
+  init(data: { plan: TownPlan; builtLots?: Set<number>; buildingsMap?: Record<number, string>; pendingBuilding?: { id: string; name: string } | null; initialCameraState?: { scrollX: number; scrollY: number; zoom: number } }) {
     this.plan = data.plan;
     this.builtLots = data.builtLots || new Set();
     this.buildingsMap = data.buildingsMap || {};
     this.pendingBuilding = data.pendingBuilding || null;
+    this.initialCameraState = data.initialCameraState;
   }
 
   preload() {
@@ -122,11 +125,24 @@ export class TownScene extends Phaser.Scene {
     this.drawPlaza();
 
     // Setup cameras
-    this.cameras.main.setBounds(0, 0, 1280, 960);
-    this.cameras.main.setZoom(1.0);
+    if (this.initialCameraState) {
+      this.cameras.main.setZoom(this.initialCameraState.zoom);
+      this.cameras.main.scrollX = this.initialCameraState.scrollX;
+      this.cameras.main.scrollY = this.initialCameraState.scrollY;
+    } else {
+      this.cameras.main.setZoom(1.0);
+    }
 
     // Setup input listeners for dragging & zooming
     this.setupCameraControls();
+
+    // Initial clamp / center
+    this.clampCamera();
+
+    // Re-clamp on window resize
+    this.scale.on("resize", () => {
+      this.clampCamera();
+    });
 
     // Setup static props (like the well, lampposts)
     this.drawProps();
@@ -431,7 +447,7 @@ export class TownScene extends Phaser.Scene {
       marker.add(txt);
 
       border.setInteractive(new Phaser.Geom.Rectangle(-b.w / 2, -b.h / 2, b.w, b.h), Phaser.Geom.Rectangle.Contains);
-      border.on("pointerdown", () => {
+      border.on("pointerup", () => {
         if (this.isDragging) return;
         this.events.emit("town.clickboard", b.kind);
       });
@@ -467,7 +483,7 @@ export class TownScene extends Phaser.Scene {
         
         // Click to enter crafting station
         sprite.setInteractive({ useHandCursor: true });
-        sprite.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+        sprite.on("pointerup", (pointer: Phaser.Input.Pointer) => {
           if (this.isDragging) return;
           this.events.emit("town.clickbuilding", buildingId);
         });
@@ -501,7 +517,7 @@ export class TownScene extends Phaser.Scene {
 
         // Interactive plot marker
         border.setInteractive(new Phaser.Geom.Rectangle(-l.w / 2, -l.h / 2, l.w, l.h), Phaser.Geom.Rectangle.Contains);
-        border.on("pointerdown", () => {
+        border.on("pointerup", () => {
           if (this.isDragging) return;
           if (isPlacing && this.pendingBuilding) {
             this.events.emit("town.placebuilding", { lotIndex: l.index, buildingId: this.pendingBuilding.id });
@@ -593,14 +609,77 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
+  clampCamera() {
+    const cam = this.cameras.main;
+    const zoom = cam.zoom;
+
+    // Visible world dimensions
+    const wVisible = cam.width / zoom;
+    const hVisible = cam.height / zoom;
+
+    // Town design space dimensions
+    const townW = 1280;
+    const townH = 960;
+
+    let minX, maxX;
+    if (wVisible >= townW) {
+      // Town is smaller than screen, center it
+      minX = maxX = (townW - wVisible) / 2;
+    } else {
+      // Town is larger than screen, clamp to town bounds
+      minX = 0;
+      maxX = townW - wVisible;
+    }
+
+    let minY, maxY;
+    if (hVisible >= townH) {
+      // Town is smaller than screen, center it
+      minY = maxY = (townH - hVisible) / 2;
+    } else {
+      // Town is larger than screen, clamp to town bounds
+      minY = 0;
+      maxY = townH - hVisible;
+    }
+
+    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
+    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
+  }
+
   setupCameraControls() {
-    this.input.on("pointerdown", () => {
-      this.isDragging = false;
+    let startDist = 0;
+    let startZoom = 1;
+
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      const pointer1 = this.input.pointer1;
+      const pointer2 = this.input.pointer2;
+
+      if (pointer1 && pointer2 && pointer1.isDown && pointer2.isDown) {
+        startDist = Math.hypot(pointer1.x - pointer2.x, pointer1.y - pointer2.y);
+        startZoom = this.cameras.main.zoom;
+      } else {
+        this.isDragging = false;
+      }
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      const pointer1 = this.input.pointer1;
+      const pointer2 = this.input.pointer2;
+
+      // Check for two-finger pinch-to-zoom first
+      if (pointer1 && pointer2 && pointer1.isDown && pointer2.isDown) {
+        const dist = Math.hypot(pointer1.x - pointer2.x, pointer1.y - pointer2.y);
+        if (startDist > 0) {
+          const factor = dist / startDist;
+          const newZoom = Phaser.Math.Clamp(startZoom * factor, 0.5, 3);
+          this.cameras.main.setZoom(newZoom);
+          this.clampCamera();
+        }
+        return;
+      }
+
+      // Fall back to mouse / single touch pan-to-drag
       if (!pointer.isDown) return;
-      
+
       const dx = pointer.x - pointer.prevPosition.x;
       const dy = pointer.y - pointer.prevPosition.y;
 
@@ -610,11 +689,16 @@ export class TownScene extends Phaser.Scene {
 
       this.cameras.main.scrollX -= dx / this.cameras.main.zoom;
       this.cameras.main.scrollY -= dy / this.cameras.main.zoom;
+      this.clampCamera();
     });
 
     this.input.on("wheel", (pointer: Phaser.Input.Pointer, gameObjects: unknown, deltaX: number, deltaY: number) => {
+      if (pointer.event) {
+        pointer.event.preventDefault();
+      }
       const zoom = this.cameras.main.zoom - deltaY * 0.001;
       this.cameras.main.setZoom(Phaser.Math.Clamp(zoom, 0.5, 3));
+      this.clampCamera();
     });
   }
 

@@ -304,6 +304,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
           fixed-aspect stage box. The grass margins above and the UI overlays
           below stay fixed. */}
       <TownPhaserCanvas
+        zoneId={mapCurrent}
         plan={townPlan}
         builtLots={builtLotIndices}
         buildingsMap={buildingsMap}
