@@ -1,5 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
-import type { ReactNode } from "react";
+import { useState, useMemo } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
@@ -7,13 +6,11 @@ import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
-import { canEnterBiome } from "../state/biomeAccess.js";
-import { buildTownPlan, STAGE_W, STAGE_H } from "../townLayout.js";
+import { buildTownPlan } from "../townLayout.js";
 import TownPhaserCanvas from "./TownPhaserCanvas.jsx";
 import Icon from "./Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
-import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
-import { FarmFieldArt, MineEntranceArt } from "./town/decor.jsx";
+import { TOWN_THEMES, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
 import {
   BrowserDetailLayout,
   BrowserGrid,
@@ -34,13 +31,6 @@ interface LocationBuiltState {
   [buildingId: string]: unknown;
 }
 
-interface BoardMetaEntry {
-  label: string;
-  icon: string;
-  border: string;
-  art: (locked?: boolean) => ReactNode;
-}
-
 interface BuildingTipData {
   label: string;
   desc?: string;
@@ -59,21 +49,6 @@ const BUILDING_IDS = new Set(BUILDINGS.map((b) => b.id));
 const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
 const BUILDINGS_BY_ID = new Map(BUILDINGS.map((b) => [b.id, b]));
 const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
-// Built buildings have intrinsic SVG padding, so scale the box up slightly to
-// fill its (now block-sized) lot. Bottom-center anchored, so we widen and
-// re-center; only applies to BUILT buildings (not board buttons or the
-// placement overlay). Lots are large, so this stays modest to avoid spilling
-// the building into the surrounding streets.
-const BUILD_FILL = 1.06;
-
-// Puzzle-board fixtures placed on lots in the town (see townLayout.js
-// `boards`): label / nav icon / lot border / the art that fills the tile.
-// `kind` matches the `setEntryBiome` argument.
-const BOARD_META: Record<string, BoardMetaEntry> = {
-  farm: { label: "Farm Field", icon: "tile_grass_grass", border: "#2a5010", art: () => <FarmFieldArt /> },
-  mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={!!locked} /> },
-  fish: { label: "Harbor",     icon: "ui_enter",  border: "#1a3a5a", art: () => <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 55%, #1a3a5a 100%)" }} /> },
-};
 
 // Phase 6a — Town-view "Found this settlement" CTA. Mirrors the map-side
 // FoundSettlementControl: when the player is in the Town view of a settleable
@@ -171,9 +146,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   // an empty plot to place it on. Cleared when they confirm or cancel.
   const [pendingBuilding, setPendingBuilding] = useState<PendingBuilding | null>(null);
   const [buildPickerOpen, setBuildPickerOpen] = useState(false);
-  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, lastTouchTime } = useTooltip<BuildingTipData>();
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressActive = useRef(false);
+  const { tip: buildingTip } = useTooltip<BuildingTipData>();
   const mapCurrent = String(state.mapCurrent ?? DEFAULT_ZONE);
   const locConfig = LOCATION_TOWN_CONFIGS[mapCurrent];
   const biomeVariant = locConfig?.biomeVariant ?? (state.biomeKey === 'mine' ? 'mine' : 'farm');
@@ -207,7 +180,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
   // any legacy buildings that lack an entry (e.g. saves predating the plot
   // system, or tests that set { hearth: true } without _plots).
-  const { plotById, slotRows, occupiedPlots, builtLotIndices, buildingsMap } = useMemo(() => {
+  const { occupiedPlots, builtLotIndices, buildingsMap } = useMemo(() => {
     const builtIds = Object.keys(locationBuilt).filter(
       (k) => !RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k),
     );
@@ -269,34 +242,6 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   );
   const freePlots = plotCount - occupiedPlots;
 
-  const builtTipHandlers = (b: Building) => {
-    const data: BuildingTipData = { label: b.name, desc: b.desc, color: b.look.color };
-    return {
-      onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (Date.now() - lastTouchTime.current > 600) showBuildingTip(data, e.currentTarget); },
-      onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hideBuildingTip(); },
-      onTouchStart: (e: React.TouchEvent<HTMLElement>) => {
-        lastTouchTime.current = Date.now();
-        longPressActive.current = false;
-        const target = e.currentTarget;
-        longPressTimer.current = setTimeout(() => {
-          longPressActive.current = true;
-          showBuildingTip(data, target);
-        }, 500);
-      },
-      onTouchEnd: (e: React.TouchEvent<HTMLElement>) => {
-        if (longPressTimer.current) clearTimeout(longPressTimer.current);
-        if (longPressActive.current) {
-          e.preventDefault();
-          hideBuildingTip(2000);
-        }
-      },
-      onTouchCancel: () => {
-        if (longPressTimer.current) clearTimeout(longPressTimer.current);
-        if (longPressActive.current) hideBuildingTip(2000);
-        longPressActive.current = false;
-      },
-    };
-  };
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: marginGrass }}>
       {/* Pan/zoom world — the top-down map (terrain, roads, fields, plaza, board
@@ -631,38 +576,3 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
   );
 }
 
-function BuildingSmoke() {
-  return (
-    <div className="absolute -top-2 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 18, height: 36 }}>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="absolute left-1/2 -translate-x-1/2 rounded-full"
-          style={{
-            bottom: 0,
-            width: 8 + i * 2,
-            height: 8 + i * 2,
-            background: "rgba(240,235,220,.6)",
-            animation: "townSmoke 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite",
-            animationDelay: `${i * 1.1}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-function HearthGlow() {
-  return (
-    <div className="absolute inset-0 pointer-events-none grid place-items-center">
-      <div
-        className="rounded-full blur-xl"
-        style={{
-          width: "120%",
-          height: "120%",
-          background: "radial-gradient(circle, rgba(255,160,0,0.22) 0%, rgba(255,100,0,0.08) 50%, transparent 100%)",
-          animation: "hearthPulse 4s cubic-bezier(0.4, 0, 0.2, 1) infinite",
-        }}
-      />
-    </div>
-  );
-}

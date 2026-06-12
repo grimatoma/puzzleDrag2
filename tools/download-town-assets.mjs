@@ -4,13 +4,20 @@ import https from "https";
 
 const assets = [
   {
+    // Tuxemon sample tileset, 32px extruded (margin=1, spacing=2). CC-BY-SA (Tuxemon project).
     url: "https://raw.githubusercontent.com/mikewesthad/phaser-3-tilemap-blog-posts/master/examples/post-1/assets/tilesets/tuxmon-sample-32px-extruded.png",
     dest: "public/town/tileset.png",
   },
   {
-    url: "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/dude.png",
-    dest: "public/town/character.png",
-  }
+    // "Misa" 4-direction top-down walk atlas (png + JSONHash). Tuxemon character
+    // sprite, CC-BY-SA 4.0, via the Phaser RPG tutorial project. See public/town/CREDITS.md.
+    url: "https://raw.githubusercontent.com/remarkablegames/phaser-rpg/master/src/assets/atlas/atlas.png",
+    dest: "public/town/character-atlas.png",
+  },
+  {
+    url: "https://raw.githubusercontent.com/remarkablegames/phaser-rpg/master/src/assets/atlas/atlas.json",
+    dest: "public/town/character-atlas.json",
+  },
 ];
 
 function download(url, dest) {

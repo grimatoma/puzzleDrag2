@@ -12,6 +12,7 @@ export interface TownPlanField { cx: number; cy: number; w: number; h: number; r
 export interface TownPlanFence { points: Pt[] }
 export interface TownPlanLotDecor { lot: number; x: number; y: number; kind: "bed" | "pots" | "shrub" }
 export interface TownPlanStreetTree { x: number; y: number; r: number }
+export interface TownPlanProp { kind: string; x: number; y: number }
 
 export interface TownPlan {
   width: number;
@@ -30,7 +31,32 @@ export interface TownPlan {
   fences: TownPlanFence[];
   lotDecor: TownPlanLotDecor[];
   streetTrees: TownPlanStreetTree[];
+  props?: TownPlanProp[];
 }
+
+// ── Tuxemon tileset indices (0-based, 24 cols, 32px, extruded margin=1 spacing=2)
+// Verified by slicing public/town/tileset.png into a labelled montage.
+const T = {
+  GRASS: 26,                                   // pure flat grass
+  GRASS_ALT: [50, 51, 76, 77, 98, 99] as const, // subtle grass variants (no decor)
+  GRASS_FLOWER: [120, 121] as const,           // poppy + clover on grass (opaque)
+  DIRT: 35,                                    // clean tan path (roads / plaza / fields)
+  WATER: 250,                                  // deep solid water
+};
+
+// Multi-tile sprite recipes baked into standalone textures (avoids extrusion
+// seams, gains transparency). [gridCols, gridRows, tileIndices...]
+const PINE = { key: "town_pine", cols: 1, rows: 2, idx: [168, 192], oh: 64 };   // tall conifer
+const TREE2 = { key: "town_tree2", cols: 1, rows: 1, idx: [299], oh: 32 };      // round broadleaf canopy
+const FOUNTAIN = { key: "town_fountain", cols: 3, rows: 3, idx: [272, 273, 274, 296, 297, 298, 320, 321, 322], oh: 96 };
+const BUSH = { key: "town_bush", cols: 1, rows: 1, idx: [275], oh: 32 };
+const SIGN = { key: "town_sign", cols: 1, rows: 1, idx: [358], oh: 32 };
+const ROCK = { key: "town_rock", cols: 1, rows: 1, idx: [323], oh: 32 };
+const ORE = { key: "town_ore", cols: 1, rows: 1, idx: [324], oh: 32 };
+
+const GRID_COLS = 40; // 1280 / 32
+const GRID_ROWS = 30; // 960 / 32
+const TILE = 32;
 
 export class TownScene extends Phaser.Scene {
   plan!: TownPlan;
@@ -38,25 +64,21 @@ export class TownScene extends Phaser.Scene {
   buildingsMap: Record<number, string> = {}; // lotIndex -> buildingId
   pendingBuilding: { id: string; name: string } | null = null;
 
-  // Render objects
   map!: Phaser.Tilemaps.Tilemap;
   tileset!: Phaser.Tilemaps.Tileset;
   groundLayer!: Phaser.Tilemaps.TilemapLayer;
-  roadLayer!: Phaser.Tilemaps.TilemapLayer;
 
   buildingSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
   plotMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   villagers: Phaser.GameObjects.Sprite[] = [];
-  treesGroup!: Phaser.GameObjects.Group;
+  decorLayer!: Phaser.GameObjects.Layer; // depth-sorted props/trees/buildings
 
-  // Input drag state
   isDragging = false;
+  initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
 
   constructor() {
     super("TownScene");
   }
-
-  initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
 
   init(data: { plan: TownPlan; builtLots?: Set<number>; buildingsMap?: Record<number, string>; pendingBuilding?: { id: string; name: string } | null; initialCameraState?: { scrollX: number; scrollY: number; zoom: number } }) {
     this.plan = data.plan;
@@ -67,64 +89,44 @@ export class TownScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("tileset", "town/tileset.png");
-    this.load.spritesheet("character", "town/character.png", { frameWidth: 32, frameHeight: 48 });
+    // Guard against re-load on scene.restart() (the React bridge restarts the
+    // scene with plan data after boot), which otherwise warns "key already in use".
+    if (!this.textures.exists("tileset")) this.load.image("tileset", "town/tileset.png");
+    if (!this.textures.exists("character")) this.load.atlas("character", "town/character-atlas.png", "town/character-atlas.json");
   }
 
   create() {
-    const registry = this.registry;
+    this.bakeSpriteTextures();
+    this.bakeBuildingTextures();
+    this.createCharacterAnims();
 
-    // 1. Bake SVG building illustrations dynamically from React static markup
-    const svgMap = registry.get("hwv.svgMap") as Record<string, string> || {};
-    Object.entries(svgMap).forEach(([id, svg]) => {
-      this.bakeSvgTexture(`building_${id}`, svg);
-    });
-
-    // 2. Create Animations for dude character
-    if (!this.anims.exists("walk_left")) {
-      this.anims.create({
-        key: "walk_left",
-        frames: this.anims.generateFrameNumbers("character", { start: 0, end: 3 }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
-    if (!this.anims.exists("walk_right")) {
-      this.anims.create({
-        key: "walk_right",
-        frames: this.anims.generateFrameNumbers("character", { start: 5, end: 8 }),
-        frameRate: 8,
-        repeat: -1,
-      });
-    }
-
-    // 3. Setup dynamic tilemap grid
-    const cols = 40; // 1280 / 32
-    const rows = 30; // 960 / 32
-    this.map = this.make.tilemap({ tileWidth: 32, tileHeight: 32, width: cols, height: rows });
-    
-    // tuxmon tileset has 1px margin and 2px spacing
-    const tilesetImg = this.map.addTilesetImage("tiles", "tileset", 32, 32, 1, 2);
+    // ── Tilemap ground (grass base, dirt roads/plaza, water) ────────────────
+    this.map = this.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: GRID_COLS, height: GRID_ROWS });
+    const tilesetImg = this.map.addTilesetImage("tiles", "tileset", TILE, TILE, 1, 2);
     if (!tilesetImg) return;
     this.tileset = tilesetImg;
 
-    // Create Layers
     this.groundLayer = this.map.createBlankLayer("ground", this.tileset)!;
-    this.roadLayer = this.map.createBlankLayer("roads", this.tileset)!;
+    this.groundLayer.setDepth(-1000);
+    this.paintGrass();
+    this.paintWater();   // under roads so bridges read on top
+    this.paintRoads();
+    this.paintPlaza();
+    this.paintFields();
+    this.paintBridges();
+    this.scatterGroundDetail();
 
-    // Fill ground with base grass (index 125 is standard green grass in Tuxemon)
-    this.groundLayer.fill(125);
+    // ── Depth-sorted object layer ───────────────────────────────────────────
+    this.drawBoards();
+    this.drawTrees();
+    this.drawStreetTrees();
+    this.drawProps();
+    this.drawFences();
+    this.drawLotDecor();
+    this.rebuildBuildingsAndPlots();
+    this.spawnVillagers();
 
-    // Render road network onto the road layer
-    this.drawRoads();
-
-    // Render water bodies (rivers, shores)
-    this.drawWater();
-
-    // Render plaza cobble ring
-    this.drawPlaza();
-
-    // Setup cameras
+    // ── Camera ──────────────────────────────────────────────────────────────
     if (this.initialCameraState) {
       this.cameras.main.setZoom(this.initialCameraState.zoom);
       this.cameras.main.scrollX = this.initialCameraState.scrollX;
@@ -132,49 +134,11 @@ export class TownScene extends Phaser.Scene {
     } else {
       this.cameras.main.setZoom(1.0);
     }
-
-    // Setup input listeners for dragging & zooming
+    this.cameras.main.setBackgroundColor("#4e7a39");
     this.setupCameraControls();
-
-    // Initial clamp / center
     this.clampCamera();
+    this.scale.on("resize", () => this.clampCamera());
 
-    // Re-clamp on window resize
-    this.scale.on("resize", () => {
-      this.clampCamera();
-    });
-
-    // Setup static props (like the well, lampposts)
-    this.drawProps();
-
-    // Draw bridges
-    this.drawBridges();
-
-    // Draw fields
-    this.drawFields();
-
-    // Draw fences
-    this.drawFences();
-
-    // Draw boards (clickable farm/mine/harbor zones)
-    this.drawBoards();
-
-    // Draw lot decorations
-    this.drawLotDecor();
-
-    // Render building/plots
-    this.rebuildBuildingsAndPlots();
-
-    // Scatter trees
-    this.drawTrees();
-
-    // Scatter street trees
-    this.drawStreetTrees();
-
-    // Spawn walking villagers
-    this.spawnVillagers();
-
-    // Bind event registry listeners to React changes
     this.events.on("town.update_built", (data: { builtLots: Set<number>; buildingsMap: Record<number, string>; pendingBuilding: { id: string; name: string } | null }) => {
       this.builtLots = data.builtLots;
       this.buildingsMap = data.buildingsMap;
@@ -183,463 +147,442 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
-  // Draw roads using plan coordinates (dirt path is index 173)
-  drawRoads() {
-    this.plan.roads.forEach(rd => {
-      rd.points.forEach((p, idx) => {
-        if (idx === rd.points.length - 1) return;
-        const next = rd.points[idx + 1];
-        
-        // Draw segments axis-aligned
-        const tx1 = Math.floor(p.x / 32);
-        const ty1 = Math.floor(p.y / 32);
-        const tx2 = Math.floor(next.x / 32);
-        const ty2 = Math.floor(next.y / 32);
+  // ── Texture baking ──────────────────────────────────────────────────────────
+  /** Bake a multi-tile recipe into a single transparent texture. */
+  bakeRecipe(recipe: { key: string; cols: number; rows: number; idx: number[] }) {
+    if (this.textures.exists(recipe.key)) return;
+    const src = this.textures.get("tileset").getSourceImage() as HTMLImageElement;
+    const ct = this.textures.createCanvas(recipe.key, recipe.cols * TILE, recipe.rows * TILE);
+    if (!ct) return;
+    recipe.idx.forEach((idx, i) => {
+      if (idx < 0) return;
+      const sc = idx % 24, sr = Math.floor(idx / 24);
+      const sx = 1 + sc * 34, sy = 1 + sr * 34;
+      const dc = i % recipe.cols, dr = Math.floor(i / recipe.cols);
+      ct.context.drawImage(src, sx, sy, TILE, TILE, dc * TILE, dr * TILE, TILE, TILE);
+    });
+    ct.refresh();
+  }
 
-        const xStart = Math.min(tx1, tx2);
-        const xEnd = Math.max(tx1, tx2);
-        const yStart = Math.min(ty1, ty2);
-        const yEnd = Math.max(ty1, ty2);
+  bakeSpriteTextures() {
+    [PINE, TREE2, FOUNTAIN, BUSH, SIGN, ROCK, ORE].forEach((r) => this.bakeRecipe(r));
+  }
 
-        for (let x = xStart; x <= xEnd; x++) {
-          for (let y = yStart; y <= yEnd; y++) {
-            // Draw a road block of width (approx. 2-3 tiles for main roads, 1 tile for branches)
-            const rw = Math.round(rd.width / 32);
-            for (let dx = -Math.floor(rw / 2); dx <= Math.floor(rw / 2); dx++) {
-              if (tx1 === tx2) {
-                // Vertical road
-                const rx = x + dx;
-                if (rx >= 0 && rx < 40) this.roadLayer.putTileAt(173, rx, y);
-              } else {
-                // Horizontal road
-                const ry = y + dx;
-                if (ry >= 0 && ry < 30) this.roadLayer.putTileAt(173, x, ry);
-              }
-            }
-          }
-        }
+  bakeBuildingTextures() {
+    const svgMap = this.registry.get("hwv.svgMap") as Record<string, string> || {};
+    Object.entries(svgMap).forEach(([id, svg]) => this.bakeSvgTexture(`building_${id}`, svg));
+  }
+
+  createCharacterAnims() {
+    const dirs = ["front", "back", "left", "right"] as const;
+    dirs.forEach((d) => {
+      const key = `misa-${d}-walk`;
+      if (this.anims.exists(key)) return;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNames("character", { prefix: `misa-${d}-walk.`, start: 0, end: 3, zeroPad: 3 }),
+        frameRate: 10,
+        repeat: -1,
       });
     });
   }
 
-  // Draw water: rivers (water tiles are index 10)
-  drawWater() {
-    this.plan.water.forEach(w => {
-      if (w.path) {
-        w.path.forEach((p, idx) => {
-          if (idx === w.path!.length - 1) return;
-          const next = w.path![idx + 1];
-          const tx1 = Math.floor(p.x / 32);
-          const ty1 = Math.floor(p.y / 32);
-          const tx2 = Math.floor(next.x / 32);
-          const ty2 = Math.floor(next.y / 32);
+  // ── Ground painting ─────────────────────────────────────────────────────────
+  inBounds(tx: number, ty: number) { return tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS; }
+  putGround(idx: number, tx: number, ty: number) { if (this.inBounds(tx, ty)) this.groundLayer.putTileAt(idx, tx, ty); }
 
-          const xStart = Math.min(tx1, tx2);
-          const xEnd = Math.max(tx1, tx2);
-          const yStart = Math.min(ty1, ty2);
-          const yEnd = Math.max(ty1, ty2);
+  paintGrass() {
+    this.groundLayer.fill(T.GRASS);
+  }
 
-          for (let x = xStart; x <= xEnd; x++) {
-            for (let y = yStart; y <= yEnd; y++) {
-              // Draw 2 tiles wide river
-              this.groundLayer.putTileAt(9, x, y);
-              this.groundLayer.putTileAt(9, x + 1, y);
-            }
-          }
-        });
+  /** Paint a band of `idx` tiles `widthTiles` thick along an axis-aligned segment. */
+  paintBand(a: Pt, b: Pt, widthTiles: number, idx: number) {
+    const tx1 = Math.round(a.x / TILE), ty1 = Math.round(a.y / TILE);
+    const tx2 = Math.round(b.x / TILE), ty2 = Math.round(b.y / TILE);
+    const half = Math.floor(widthTiles / 2);
+    const extra = widthTiles - 1 - half; // bias for even widths
+    if (ty1 === ty2) {
+      // horizontal
+      const x0 = Math.min(tx1, tx2), x1 = Math.max(tx1, tx2);
+      for (let x = x0; x <= x1; x++)
+        for (let o = -half; o <= extra; o++) this.putGround(idx, x, ty1 + o);
+    } else if (tx1 === tx2) {
+      // vertical
+      const y0 = Math.min(ty1, ty2), y1 = Math.max(ty1, ty2);
+      for (let y = y0; y <= y1; y++)
+        for (let o = -half; o <= extra; o++) this.putGround(idx, tx1 + o, y);
+    } else {
+      // diagonal — rasterise as a thick line of stamped blocks
+      this.stampThickLine(a, b, widthTiles, idx);
+    }
+  }
+
+  stampThickLine(a: Pt, b: Pt, widthTiles: number, idx: number) {
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.ceil(dist / (TILE / 2)));
+    const half = Math.floor(widthTiles / 2);
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const cx = Math.round((a.x + (b.x - a.x) * t) / TILE);
+      const cy = Math.round((a.y + (b.y - a.y) * t) / TILE);
+      for (let ox = -half; ox <= half; ox++)
+        for (let oy = -half; oy <= half; oy++) this.putGround(idx, cx + ox, cy + oy);
+    }
+  }
+
+  paintRoads() {
+    this.plan.roads.forEach((rd) => {
+      const wt = Math.max(1, Math.round(rd.width / TILE));
+      for (let i = 0; i < rd.points.length - 1; i++) {
+        this.paintBand(rd.points[i], rd.points[i + 1], wt, T.DIRT);
       }
     });
   }
 
-  // Draw plaza center (cobble tile is index 161)
-  drawPlaza() {
+  paintPlaza() {
     const p = this.plan.plaza;
-    const tx = Math.floor(p.cx / 32);
-    const ty = Math.floor(p.cy / 32);
-    const rx = Math.floor(p.rx / 32);
-    const ry = Math.floor(p.ry / 32);
-
+    const tx = Math.round(p.cx / TILE), ty = Math.round(p.cy / TILE);
+    const rx = Math.max(1, Math.round(p.rx / TILE)), ry = Math.max(1, Math.round(p.ry / TILE));
     for (let x = tx - rx; x <= tx + rx; x++) {
       for (let y = ty - ry; y <= ty + ry; y++) {
-        if (x >= 0 && x < 40 && y >= 0 && y < 30) {
-          // Check if inside ellipse
-          const val = ((x - tx) ** 2) / (rx ** 2) + ((y - ty) ** 2) / (ry ** 2);
-          if (val <= 1.05) {
-            this.roadLayer.putTileAt(161, x, y);
-          }
-        }
+        const val = ((x - tx) ** 2) / (rx * rx) + ((y - ty) ** 2) / (ry * ry);
+        if (val <= 1.02) this.putGround(T.DIRT, x, y);
       }
     }
   }
 
-  drawProps() {
-    // Plaza well
-    const well = this.plan.well;
-    // Draw a small 3D well or use a nice circle shape/sprite
-    const wellG = this.add.graphics();
-    wellG.fillStyle(0x7a6a4a, 1);
-    wellG.fillCircle(well.cx, well.cy, well.r);
-    wellG.lineStyle(2, 0x5a4a30, 1);
-    wellG.strokeCircle(well.cx, well.cy, well.r);
-    wellG.fillStyle(0x23323a, 1);
-    wellG.fillCircle(well.cx, well.cy, well.r * 0.6);
-  }
-
-  drawTrees() {
-    this.treesGroup = this.add.group();
-    this.plan.trees.forEach(t => {
-      // Create a pixel-art tree sprite using the tileset texture
-      const sprite = this.add.image(t.x, t.y, "tileset");
-      sprite.setOrigin(0.5, 1); // Anchor at bottom-center of the tree trunk
-      
-      // Crop a 2x4 tile block (66x134px) representing a tree
-      sprite.setCrop(69, 1, 66, 134);
-      
-      // Set scale based on plan radius
-      const scale = (t.r * 2) / 64;
-      sprite.setScale(scale);
-
-      // Add a nice semi-transparent shadow under the tree
-      const shadow = this.add.ellipse(t.x, t.y - 4, t.r * 1.5, t.r * 0.6, 0x000000, 0.25);
-      shadow.setDepth(t.y - 5);
-      
-      // Depth-sort according to baseline Y
-      sprite.setDepth(t.y);
-      
-      this.treesGroup.add(sprite);
-      this.treesGroup.add(shadow);
+  paintFields() {
+    this.plan.fields.forEach((f) => {
+      const tx = Math.round((f.cx - f.w / 2) / TILE), ty = Math.round((f.cy - f.h / 2) / TILE);
+      const tw = Math.round(f.w / TILE), th = Math.round(f.h / TILE);
+      for (let x = tx; x < tx + tw; x++)
+        for (let y = ty; y < ty + th; y++) this.putGround(T.DIRT, x, y);
     });
   }
 
-  drawStreetTrees() {
-    this.plan.streetTrees.forEach(t => {
-      const sprite = this.add.image(t.x, t.y, "tileset");
-      sprite.setOrigin(0.5, 1);
-      
-      // Crop a smaller 2x2 green bush/small tree (66x66px) starting at Row 7, Col 2 (x=69, y=239)
-      sprite.setCrop(69, 239, 66, 66);
-      
-      sprite.setScale(1.0);
-      sprite.setDepth(t.y);
-      
-      const shadow = this.add.ellipse(t.x, t.y - 2, t.r * 1.5, t.r * 0.6, 0x000000, 0.25);
-      shadow.setDepth(t.y - 2);
-    });
-  }
-
-  drawBridges() {
-    this.plan.bridges.forEach(b => {
-      const tx = Math.floor(b.x / 32);
-      const ty = Math.floor(b.y / 32);
-      const tw = Math.round(b.width / 32);
-
-      // Draw horizontal bridge spanning tw tiles
-      // We use tile 466 (wood bridge center) for the bridge
-      for (let dx = -Math.floor(tw / 2); dx <= Math.floor(tw / 2); dx++) {
-        const bx = tx + dx;
-        if (bx >= 0 && bx < 40) {
-          // Put the bridge tiles on the road layer so they render on top of water
-          this.roadLayer.putTileAt(466, bx, ty);
-          this.roadLayer.putTileAt(466, bx, ty + 1);
+  paintWater() {
+    this.plan.water.forEach((w) => {
+      if (w.path) {
+        const wt = Math.max(2, Math.round((w.width ?? 48) / TILE));
+        for (let i = 0; i < w.path.length - 1; i++) this.stampThickLine(w.path[i], w.path[i + 1], wt, T.WATER);
+      }
+      if (w.polygon) {
+        const xs = w.polygon.map((p) => p.x), ys = w.polygon.map((p) => p.y);
+        const x0 = Math.round(Math.min(...xs) / TILE), x1 = Math.round(Math.max(...xs) / TILE);
+        const y0 = Math.round(Math.min(...ys) / TILE), y1 = Math.round(Math.max(...ys) / TILE);
+        for (let x = x0; x <= x1; x++) {
+          for (let y = y0; y <= y1; y++) {
+            if (this.pointInPoly({ x: x * TILE + TILE / 2, y: y * TILE + TILE / 2 }, w.polygon)) this.putGround(T.WATER, x, y);
+          }
         }
       }
     });
   }
 
-  drawFields() {
-    this.plan.fields.forEach(f => {
-      const tx = Math.floor((f.cx - f.w / 2) / 32);
-      const ty = Math.floor((f.cy - f.h / 2) / 32);
-      const tw = Math.floor(f.w / 32);
-      const th = Math.floor(f.h / 32);
+  pointInPoly(p: Pt, poly: Pt[]): boolean {
+    let inside = false;
+    for (let i = 0, k = poly.length - 1; i < poly.length; k = i++) {
+      const a = poly[i], b = poly[k];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
 
-      for (let x = tx; x < tx + tw; x++) {
-        for (let y = ty; y < ty + th; y++) {
-          if (x >= 0 && x < 40 && y >= 0 && y < 30) {
-            // Fill with tilled dirt tile (index 173)
-            this.roadLayer.putTileAt(173, x, y);
-          }
+  paintBridges() {
+    this.plan.bridges.forEach((b) => {
+      const tx = Math.round(b.x / TILE), ty = Math.round(b.y / TILE);
+      const tw = Math.max(2, Math.round(b.width / TILE));
+      const half = Math.floor(tw / 2);
+      // span dirt across the river in the road direction
+      const horizontal = Math.abs(Math.cos(b.angle)) >= Math.abs(Math.sin(b.angle));
+      for (let m = -half - 1; m <= half + 1; m++) {
+        for (let o = -half; o <= half; o++) {
+          if (horizontal) this.putGround(T.DIRT, tx + m, ty + o);
+          else this.putGround(T.DIRT, tx + o, ty + m);
         }
+      }
+    });
+  }
+
+  /** Sprinkle deterministic grass variants + flower clusters for life. */
+  scatterGroundDetail() {
+    // Seeded by plan dimensions so it's stable per zone render.
+    let seed = (this.plan.lots.length * 2654435761) >>> 0;
+    const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    for (let x = 0; x < GRID_COLS; x++) {
+      for (let y = 0; y < GRID_ROWS; y++) {
+        const tile = this.groundLayer.getTileAt(x, y);
+        if (!tile || tile.index !== T.GRASS) continue;
+        const r = rnd();
+        if (r < 0.04) this.putGround(T.GRASS_FLOWER[Math.floor(rnd() * T.GRASS_FLOWER.length)], x, y);
+        else if (r < 0.20) this.putGround(T.GRASS_ALT[Math.floor(rnd() * T.GRASS_ALT.length)], x, y);
+      }
+    }
+  }
+
+  // ── Object props (depth-sorted by baseline Y) ───────────────────────────────
+  addShadow(x: number, y: number, rx: number, ry: number, depth: number, alpha = 0.22) {
+    const sh = this.add.ellipse(x, y, rx, ry, 0x000000, alpha);
+    sh.setDepth(depth - 1);
+    return sh;
+  }
+
+  drawTrees() {
+    this.plan.trees.forEach((t) => {
+      const round = (t.cluster % 2 === 1);
+      const sprite = this.add.image(t.x, t.y, round ? TREE2.key : PINE.key);
+      if (round) {
+        // Round broadleaf canopy — anchor low and scale up so it reads as a
+        // full tree rather than a shrub.
+        sprite.setOrigin(0.5, 0.82);
+        sprite.setScale(Math.max(1.5, (t.r * 3.2) / TILE));
+      } else {
+        sprite.setOrigin(0.5, 1);
+        sprite.setScale(Math.max(0.9, (t.r * 2.4) / TILE));
+      }
+      sprite.setDepth(t.y);
+      this.addShadow(t.x, t.y - 2, t.r * 1.6, t.r * 0.55, t.y);
+    });
+  }
+
+  drawStreetTrees() {
+    this.plan.streetTrees.forEach((t) => {
+      const sprite = this.add.image(t.x, t.y, BUSH.key);
+      sprite.setOrigin(0.5, 0.85);
+      sprite.setScale(Math.max(0.8, (t.r * 2) / TILE));
+      sprite.setDepth(t.y);
+      this.addShadow(t.x, t.y, t.r * 1.4, t.r * 0.5, t.y, 0.18);
+    });
+  }
+
+  drawProps() {
+    const props = this.plan.props ?? [];
+    // Fountain stands in for the plaza well.
+    const well = this.plan.well;
+    const fountain = this.add.image(well.cx, well.cy + 8, FOUNTAIN.key);
+    fountain.setOrigin(0.5, 0.7);
+    fountain.setScale(0.7);
+    fountain.setDepth(well.cy + 8);
+    this.addShadow(well.cx, well.cy + 12, 64, 22, well.cy + 8, 0.2);
+
+    props.forEach((p) => {
+      if (p.kind === "well") return; // replaced by fountain
+      if (p.kind === "signpost") {
+        const s = this.add.image(p.x, p.y, SIGN.key);
+        s.setOrigin(0.5, 0.9).setDepth(p.y);
+      } else if (p.kind === "planter" || p.kind === "cart") {
+        const b = this.add.image(p.x, p.y, BUSH.key);
+        b.setOrigin(0.5, 0.85).setScale(1).setDepth(p.y);
+      } else if (p.kind === "lamppost") {
+        const g = this.add.graphics();
+        g.fillStyle(0x4a3b2a, 1).fillRect(p.x - 2, p.y - 26, 4, 26);
+        g.fillStyle(0xffe9a8, 1).fillCircle(p.x, p.y - 28, 5);
+        g.setDepth(p.y);
+        this.addShadow(p.x, p.y, 14, 6, p.y, 0.16);
       }
     });
   }
 
   drawFences() {
-    this.plan.fences.forEach(f => {
-      f.points.forEach(p => {
-        const tx = Math.floor(p.x / 32);
-        const ty = Math.floor(p.y / 32);
-        if (tx >= 0 && tx < 40 && ty >= 0 && ty < 30) {
-          // Tile 358 is fence post
-          this.roadLayer.putTileAt(358, tx, ty);
-        }
-      });
+    this.plan.fences.forEach((f) => {
+      const g = this.add.graphics();
+      g.lineStyle(3, 0x8a6a44, 1);
+      f.points.forEach((p, i) => { if (i === 0) g.beginPath(), g.moveTo(p.x, p.y); else g.lineTo(p.x, p.y); });
+      g.strokePath();
+      g.fillStyle(0x6f5435, 1);
+      f.points.forEach((p) => g.fillRect(p.x - 2, p.y - 8, 4, 10));
+      g.setDepth(f.points[0]?.y ?? 0);
     });
   }
 
   drawLotDecor() {
-    this.plan.lotDecor.forEach(d => {
-      const tx = Math.floor(d.x / 32);
-      const ty = Math.floor(d.y / 32);
-      if (tx >= 0 && tx < 40 && ty >= 0 && ty < 30) {
-        if (d.kind === "shrub") {
-          this.roadLayer.putTileAt(299, tx, ty);
-        } else if (d.kind === "pots") {
-          this.roadLayer.putTileAt(349, tx, ty);
-        } else {
-          this.roadLayer.putTileAt(275, tx, ty);
-        }
+    this.plan.lotDecor.forEach((d) => {
+      if (d.kind === "shrub") {
+        const b = this.add.image(d.x, d.y, BUSH.key);
+        b.setOrigin(0.5, 0.85).setScale(0.7).setDepth(d.y);
+      } else {
+        // bed / pots → a small flower tile dropped into the ground layer
+        this.putGround(T.GRASS_FLOWER[(d.x + d.y) % T.GRASS_FLOWER.length], Math.round(d.x / TILE), Math.round(d.y / TILE));
       }
     });
   }
 
   drawBoards() {
-    this.plan.boards.forEach(b => {
-      const tx = Math.floor((b.cx - b.w / 2) / 32);
-      const ty = Math.floor((b.cy - b.h / 2) / 32);
-      const tw = Math.floor(b.w / 32);
-      const th = Math.floor(b.h / 32);
-
-      // Fill board zone thematic tiles
-      if (b.kind === "farm") {
-        for (let x = tx; x < tx + tw; x++) {
-          for (let y = ty; y < ty + th; y++) {
-            this.roadLayer.putTileAt(173, x, y);
-          }
+    this.plan.boards.forEach((b) => {
+      const tx = Math.round((b.cx - b.w / 2) / TILE), ty = Math.round((b.cy - b.h / 2) / TILE);
+      const tw = Math.round(b.w / TILE), th = Math.round(b.h / TILE);
+      // Thematic ground bed for each board.
+      for (let x = tx; x < tx + tw; x++) {
+        for (let y = ty; y < ty + th; y++) {
+          if (b.kind === "fish") this.putGround(T.WATER, x, y);
+          else this.putGround(T.DIRT, x, y);
         }
-        for (let x = tx; x < tx + tw; x += 2) {
-          for (let y = ty; y < ty + th; y += 2) {
-            this.roadLayer.putTileAt(275, x, y);
-          }
-        }
-      } else if (b.kind === "mine") {
-        for (let x = tx; x < tx + tw; x++) {
-          for (let y = ty; y < ty + th; y++) {
-            this.roadLayer.putTileAt(161, x, y);
-          }
-        }
-      } else if (b.kind === "fish") {
-        for (let x = tx; x < tx + tw; x++) {
-          for (let y = ty; y < ty + th; y++) {
-            this.groundLayer.putTileAt(9, x, y);
-          }
+      }
+      if (b.kind === "mine") {
+        // scatter ore boulders on the dirt
+        for (let i = 0; i < 4; i++) {
+          const rx = b.cx + (i % 2 ? 1 : -1) * b.w * 0.22;
+          const ry = b.cy + (i < 2 ? -1 : 1) * b.h * 0.22;
+          const o = this.add.image(rx, ry, i % 2 ? ORE.key : ROCK.key);
+          o.setOrigin(0.5, 0.85).setDepth(ry);
         }
       }
 
-      const labelText = b.kind === "farm" ? "Farm Field" : b.kind === "mine" ? "Mine Entrance" : "Harbor";
+      const label = b.kind === "farm" ? "Farm" : b.kind === "mine" ? "Mine" : "Harbor";
+      const color = b.kind === "farm" ? "#a8e063" : b.kind === "mine" ? "#d8d2c4" : "#7abaf7";
       const marker = this.add.container(b.cx, b.cy);
-      marker.setDepth(b.cy + b.h / 2);
+      marker.setDepth(b.cy + b.h / 2 + 1);
 
       const border = this.add.graphics();
-      border.lineStyle(2, b.kind === "farm" ? 0x9bdb6a : b.kind === "mine" ? 0x9c9c9c : 0x5fa1e0, 0.6);
-      border.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h);
-      border.fillStyle(0x000000, 0.25);
-      border.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+      border.lineStyle(2, Phaser.Display.Color.HexStringToColor(color).color, 0.8);
+      border.strokeRoundedRect(-b.w / 2, -b.h / 2, b.w, b.h, 8);
       marker.add(border);
 
-      const txt = this.add.text(0, 0, labelText, {
-        fontSize: "14px",
-        color: b.kind === "farm" ? "#9bdb6a" : b.kind === "mine" ? "#cccccc" : "#7abaf7",
-        fontStyle: "bold",
-        fontFamily: "Arial",
-      });
+      const plate = this.add.graphics();
+      plate.fillStyle(0x1d2418, 0.78);
+      plate.fillRoundedRect(-34, -b.h / 2 - 14, 68, 22, 6);
+      marker.add(plate);
+      const txt = this.add.text(0, -b.h / 2 - 3, label, { fontSize: "13px", color, fontStyle: "bold", fontFamily: "Arial" });
       txt.setOrigin(0.5);
       marker.add(txt);
 
-      border.setInteractive(new Phaser.Geom.Rectangle(-b.w / 2, -b.h / 2, b.w, b.h), Phaser.Geom.Rectangle.Contains);
-      border.on("pointerup", () => {
-        if (this.isDragging) return;
-        this.events.emit("town.clickboard", b.kind);
-      });
+      const hit = this.add.zone(0, 0, b.w, b.h).setInteractive({ useHandCursor: true });
+      hit.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickboard", b.kind); });
+      marker.add(hit);
     });
   }
 
   rebuildBuildingsAndPlots() {
-    // Clear old ones
-    this.buildingSprites.forEach(s => s.destroy());
+    this.buildingSprites.forEach((s) => s.destroy());
     this.buildingSprites.clear();
-    this.plotMarkers.forEach(c => c.destroy());
+    this.plotMarkers.forEach((c) => c.destroy());
     this.plotMarkers.clear();
 
     const isPlacing = !!this.pendingBuilding;
 
-    this.plan.lots.forEach(l => {
+    this.plan.lots.forEach((l) => {
       const isBuilt = this.builtLots.has(l.index);
       const buildingId = this.buildingsMap[l.index];
 
-      // Draw a snapped grid container
       if (isBuilt && buildingId) {
-        // Render building sprite using the baked SVG texture
         const texKey = `building_${buildingId}`;
-        const sprite = this.add.sprite(l.cx, l.cy + l.h / 2, this.textures.exists(texKey) ? texKey : "character", 4);
-        sprite.setOrigin(0.5, 1); // Anchor at bottom-center
-        
-        // Scale it to fit the lot dimensions nicely (e.g. 128x128px lots)
-        const scale = (l.w * 1.1) / sprite.width;
+        if (!this.textures.exists(texKey)) return; // wait for SVG bake
+        const baseY = l.cy + l.h / 2;
+        this.addShadow(l.cx, baseY - 2, l.w * 0.62, l.h * 0.16, baseY, 0.14);
+        const sprite = this.add.sprite(l.cx, baseY, texKey);
+        sprite.setOrigin(0.5, 1);
+        const scale = (l.w * 1.18) / sprite.width;
         sprite.setScale(scale);
-        
-        // Depth-sort by Y
-        sprite.setDepth(l.cy + l.h / 2);
-        
-        // Click to enter crafting station
+        sprite.setDepth(baseY);
         sprite.setInteractive({ useHandCursor: true });
-        sprite.on("pointerup", (pointer: Phaser.Input.Pointer) => {
-          if (this.isDragging) return;
-          this.events.emit("town.clickbuilding", buildingId);
-        });
-
+        sprite.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickbuilding", buildingId); });
         this.buildingSprites.set(l.index, sprite);
       } else {
-        // Draw empty plot marker
         const container = this.add.container(l.cx, l.cy);
-        container.setDepth(l.cy + l.h / 2);
-
-        // Grid outline
+        container.setDepth(l.cy);
         const border = this.add.graphics();
-        border.lineStyle(2.5, isPlacing ? 0x9bdb6a : 0xffffff, isPlacing ? 0.9 : 0.35);
-        border.strokeRect(-l.w / 2, -l.h / 2, l.w, l.h);
-
-        // Fill color
-        border.fillStyle(isPlacing ? 0x9bdb6a : 0x000000, isPlacing ? 0.14 : 0.18);
-        border.fillRect(-l.w / 2, -l.h / 2, l.w, l.h);
-
+        border.lineStyle(2.5, isPlacing ? 0xa8e063 : 0xffffff, isPlacing ? 0.95 : 0.4);
+        border.strokeRoundedRect(-l.w / 2, -l.h / 2, l.w, l.h, 8);
+        border.fillStyle(isPlacing ? 0xa8e063 : 0x000000, isPlacing ? 0.16 : 0.14);
+        border.fillRoundedRect(-l.w / 2, -l.h / 2, l.w, l.h, 8);
         container.add(border);
 
-        // Text label
         const txt = this.add.text(0, 0, isPlacing ? "+ Build" : "Plot", {
-          fontSize: "13px",
-          color: isPlacing ? "#9bdb6a" : "#ffffff",
-          fontStyle: "bold",
-          fontFamily: "Arial",
+          fontSize: "13px", color: isPlacing ? "#cdf5a0" : "#ffffff", fontStyle: "bold", fontFamily: "Arial",
         });
         txt.setOrigin(0.5);
         container.add(txt);
 
-        // Interactive plot marker
-        border.setInteractive(new Phaser.Geom.Rectangle(-l.w / 2, -l.h / 2, l.w, l.h), Phaser.Geom.Rectangle.Contains);
-        border.on("pointerup", () => {
+        const hit = this.add.zone(0, 0, l.w, l.h).setInteractive({ useHandCursor: isPlacing });
+        hit.on("pointerup", () => {
           if (this.isDragging) return;
-          if (isPlacing && this.pendingBuilding) {
-            this.events.emit("town.placebuilding", { lotIndex: l.index, buildingId: this.pendingBuilding.id });
-          }
+          if (isPlacing && this.pendingBuilding) this.events.emit("town.placebuilding", { lotIndex: l.index, buildingId: this.pendingBuilding.id });
         });
-
+        container.add(hit);
         this.plotMarkers.set(l.index, container);
       }
     });
   }
 
   spawnVillagers() {
-    this.villagers.forEach(v => v.destroy());
+    this.villagers.forEach((v) => v.destroy());
     this.villagers = [];
-
-    // Simple A* waypoints pathing
     const waypoints = this.plan.waypoints;
     if (waypoints.length === 0) return;
 
-    // Spawn 6 random walking villagers
-    for (let i = 0; i < 6; i++) {
-      const startWpIdx = Math.floor(Math.random() * waypoints.length);
-      const wp = waypoints[startWpIdx];
+    let seed = (waypoints.length * 40503 + 12345) >>> 0;
+    const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 
-      const sprite = this.add.sprite(wp.x, wp.y, "character", 4);
-      sprite.setOrigin(0.5, 0.9);
+    const count = Math.min(7, Math.max(4, Math.floor(waypoints.length / 4)));
+    for (let i = 0; i < count; i++) {
+      const startWp = Math.floor(rnd() * waypoints.length);
+      const wp = waypoints[startWp];
+      const sprite = this.add.sprite(wp.x, wp.y, "character", "misa-front");
+      sprite.setOrigin(0.5, 0.85);
       sprite.setDepth(wp.y);
       sprite.setScale(0.85);
-
-      // Simple navigation AI state
-      sprite.setData("currentWp", startWpIdx);
-      sprite.setData("targetWp", this.getRandomNeighbor(startWpIdx));
+      sprite.setData("currentWp", startWp);
+      sprite.setData("targetWp", this.getRandomNeighbor(startWp, rnd));
       sprite.setData("progress", 0);
-
+      sprite.setData("speed", 0.6 + rnd() * 0.5);
       this.villagers.push(sprite);
     }
   }
 
-  getRandomNeighbor(wpIdx: number): number {
-    const connectedEdges = this.plan.edges.filter(([a, b]) => a === wpIdx || b === wpIdx);
-    if (connectedEdges.length === 0) return wpIdx;
-    const edge = connectedEdges[Math.floor(Math.random() * connectedEdges.length)];
+  getRandomNeighbor(wpIdx: number, rnd: () => number = Math.random): number {
+    const connected = this.plan.edges.filter(([a, b]) => a === wpIdx || b === wpIdx);
+    if (connected.length === 0) return wpIdx;
+    const edge = connected[Math.floor(rnd() * connected.length)];
     return edge[0] === wpIdx ? edge[1] : edge[0];
   }
 
-  override update(time: number, delta: number) {
-    // Animate villagers walking along the grid lanes
-    this.villagers.forEach(v => {
+  override update(_time: number, delta: number) {
+    const dt = delta / 16.6;
+    this.villagers.forEach((v) => {
       const currentWp = v.getData("currentWp") as number;
       const targetWp = v.getData("targetWp") as number;
+      const speed = (v.getData("speed") as number) || 1;
       let progress = v.getData("progress") as number;
-
       const p1 = this.plan.waypoints[currentWp];
       const p2 = this.plan.waypoints[targetWp];
-
       if (!p1 || !p2) return;
 
-      // Update progress
-      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const speed = 0.05 / (dist || 1); // speed factor
-      progress += speed * (delta / 16.6); // scale with frame delta
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+      progress += (speed * 0.9 / dist) * dt;
 
       if (progress >= 1) {
-        // Arrived! Choose next node
         v.setData("currentWp", targetWp);
         v.setData("targetWp", this.getRandomNeighbor(targetWp));
         v.setData("progress", 0);
-        v.x = p2.x;
-        v.y = p2.y;
+        v.setPosition(p2.x, p2.y);
         v.setDepth(p2.y);
       } else {
         v.setData("progress", progress);
         v.x = Phaser.Math.Linear(p1.x, p2.x, progress);
         v.y = Phaser.Math.Linear(p1.y, p2.y, progress);
         v.setDepth(v.y);
-
-        // Play correct walking anims based on delta direction
-        const dx = p2.x - p1.x;
-        if (Math.abs(dx) > 2) {
-          if (dx < 0) {
-            v.play("walk_left", true);
-          } else {
-            v.play("walk_right", true);
-          }
-        } else {
-          v.play("walk_left", true); // fallback anim
-        }
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const dir = Math.abs(dy) >= Math.abs(dx) ? (dy > 0 ? "front" : "back") : (dx > 0 ? "right" : "left");
+        v.play(`misa-${dir}-walk`, true);
       }
     });
   }
 
+  // ── Camera ────────────────────────────────────────────────────────────────
   clampCamera() {
     const cam = this.cameras.main;
     const zoom = cam.zoom;
-
-    // Visible world dimensions
     const wVisible = cam.width / zoom;
     const hVisible = cam.height / zoom;
-
-    // Town design space dimensions
-    const townW = 1280;
-    const townH = 960;
+    const townW = this.plan.width || 1280;
+    const townH = this.plan.height || 960;
 
     let minX, maxX;
-    if (wVisible >= townW) {
-      // Town is smaller than screen, center it
-      minX = maxX = (townW - wVisible) / 2;
-    } else {
-      // Town is larger than screen, clamp to town bounds
-      minX = 0;
-      maxX = townW - wVisible;
-    }
-
+    if (wVisible >= townW) { minX = maxX = (townW - wVisible) / 2; }
+    else { minX = 0; maxX = townW - wVisible; }
     let minY, maxY;
-    if (hVisible >= townH) {
-      // Town is smaller than screen, center it
-      minY = maxY = (townH - hVisible) / 2;
-    } else {
-      // Town is larger than screen, clamp to town bounds
-      minY = 0;
-      maxY = townH - hVisible;
-    }
+    if (hVisible >= townH) { minY = maxY = (townH - hVisible) / 2; }
+    else { minY = 0; maxY = townH - hVisible; }
 
     cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
     cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
@@ -649,12 +592,10 @@ export class TownScene extends Phaser.Scene {
     let startDist = 0;
     let startZoom = 1;
 
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      const pointer1 = this.input.pointer1;
-      const pointer2 = this.input.pointer2;
-
-      if (pointer1 && pointer2 && pointer1.isDown && pointer2.isDown) {
-        startDist = Math.hypot(pointer1.x - pointer2.x, pointer1.y - pointer2.y);
+    this.input.on("pointerdown", () => {
+      const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      if (p1 && p2 && p1.isDown && p2.isDown) {
+        startDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         startZoom = this.cameras.main.zoom;
       } else {
         this.isDragging = false;
@@ -662,40 +603,27 @@ export class TownScene extends Phaser.Scene {
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      const pointer1 = this.input.pointer1;
-      const pointer2 = this.input.pointer2;
-
-      // Check for two-finger pinch-to-zoom first
-      if (pointer1 && pointer2 && pointer1.isDown && pointer2.isDown) {
-        const dist = Math.hypot(pointer1.x - pointer2.x, pointer1.y - pointer2.y);
+      const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      if (p1 && p2 && p1.isDown && p2.isDown) {
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         if (startDist > 0) {
           const factor = dist / startDist;
-          const newZoom = Phaser.Math.Clamp(startZoom * factor, 0.5, 3);
-          this.cameras.main.setZoom(newZoom);
+          this.cameras.main.setZoom(Phaser.Math.Clamp(startZoom * factor, 0.5, 3));
           this.clampCamera();
         }
         return;
       }
-
-      // Fall back to mouse / single touch pan-to-drag
       if (!pointer.isDown) return;
-
       const dx = pointer.x - pointer.prevPosition.x;
       const dy = pointer.y - pointer.prevPosition.y;
-
-      if (Math.hypot(dx, dy) > 3) {
-        this.isDragging = true;
-      }
-
+      if (Math.hypot(dx, dy) > 3) this.isDragging = true;
       this.cameras.main.scrollX -= dx / this.cameras.main.zoom;
       this.cameras.main.scrollY -= dy / this.cameras.main.zoom;
       this.clampCamera();
     });
 
-    this.input.on("wheel", (pointer: Phaser.Input.Pointer, gameObjects: unknown, deltaX: number, deltaY: number) => {
-      if (pointer.event) {
-        pointer.event.preventDefault();
-      }
+    this.input.on("wheel", (pointer: Phaser.Input.Pointer, _objs: unknown, _dx: number, deltaY: number) => {
+      if (pointer.event) pointer.event.preventDefault();
       const zoom = this.cameras.main.zoom - deltaY * 0.001;
       this.cameras.main.setZoom(Phaser.Math.Clamp(zoom, 0.5, 3));
       this.clampCamera();
@@ -704,13 +632,30 @@ export class TownScene extends Phaser.Scene {
 
   bakeSvgTexture(key: string, svg: string) {
     if (this.textures.exists(key)) return;
+    // The building SVGs size themselves via `viewBox` + Tailwind `w-full h-full`
+    // classes, which carry no intrinsic dimensions when rasterized standalone
+    // (no CSS context). Inject explicit pixel width/height from the viewBox so
+    // `new Image()` rasterizes at a known, crisp resolution instead of 0×0.
+    const SCALE = 3;
+    const vb = svg.match(/viewBox="([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"/);
+    const vbw = vb ? parseFloat(vb[3]) : 100;
+    const vbh = vb ? parseFloat(vb[4]) : 100;
+    const w = Math.max(1, Math.round(vbw * SCALE));
+    const h = Math.max(1, Math.round(vbh * SCALE));
+    // `renderToStaticMarkup` does not emit an `xmlns`, so the data URI would be
+    // parsed as generic XML and rejected by <img>. Inject the SVG namespace plus
+    // explicit pixel dimensions into the root element.
+    const attrs = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`;
+    const sized = svg.replace(/<svg\b/, attrs);
     const img = new Image();
-    // Use base64 format for high cross-browser SVG loader compatibility
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    img.width = w;
+    img.height = h;
     img.onload = () => {
+      if (this.textures.exists(key)) return;
       this.textures.addImage(key, img);
-      // Rebuild to force refresh using the baked texture
       this.rebuildBuildingsAndPlots();
     };
+    img.onerror = () => console.warn("[town] failed to bake building SVG", key);
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
   }
 }
