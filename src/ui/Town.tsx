@@ -9,9 +9,7 @@ import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
 import { canEnterBiome } from "../state/biomeAccess.js";
 import { buildTownPlan, STAGE_W, STAGE_H } from "../townLayout.js";
-import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pan-pinch";
-import TownGround from "./TownGround.jsx";
-import TownVillagers from "./TownVillagers.jsx";
+import TownPhaserCanvas from "./TownPhaserCanvas.jsx";
 import Icon from "./Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
 import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
@@ -149,74 +147,7 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
   );
 }
 
-// Vertical cluster of zoom controls. Rendered inside <TransformWrapper> but
-// OUTSIDE <TransformComponent>, so it stays fixed over the panning world.
-function ZoomControls() {
-  const { zoomIn, zoomOut, resetTransform } = useControls();
-  const btn =
-    "w-9 h-9 grid place-items-center rounded-full font-bold text-[18px] leading-none bg-white/90 text-[#2b2218] border-2 border-white shadow-lg hover:bg-white transition-colors";
-  return (
-    <div className="absolute left-4 bottom-[10%] z-30 flex flex-col gap-2">
-      <button type="button" className={btn} aria-label="Zoom in" onClick={() => zoomIn()}>＋</button>
-      <button type="button" className={btn} aria-label="Zoom out" onClick={() => zoomOut()}>−</button>
-      <button type="button" className={btn} aria-label="Reset view" onClick={() => resetTransform()}>⟳</button>
-    </div>
-  );
-}
 
-// The pan/zoom "stage". Measures its container to compute a fit-to-viewport
-// scale (so the whole STAGE_W×STAGE_H town frames on load), then renders the
-// world inside a fixed-aspect box so it scales uniformly — never stretches.
-function TownStage({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  // `fit` is the fit-to-contain scale (whole town visible) — the zoomed-OUT
-  // floor (minScale). We open slightly zoomed IN from there (`initial`) so a
-  // one-finger drag has room to pan the map around; the player can pinch / use
-  // the −/⟳ controls to zoom back out to the whole town. Opening exactly at fit
-  // left no pannable slack, which read as "pan is broken".
-  const [fit, setFit] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const update = () => {
-      const cw = el.clientWidth, ch = el.clientHeight;
-      if (cw && ch) setFit(Math.min(cw / STAGE_W, ch / STAGE_H));
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const initial = fit * 1.35; // open a touch zoomed-in so panning has slack
-  // Quantize so minor resizes don't thrash the remount that re-frames the town.
-  const stageKey = Math.round(fit * 200);
-  return (
-    <div ref={ref} className="absolute inset-0">
-      {fit > 0 && (
-        <TransformWrapper
-          key={stageKey}
-          minScale={fit}
-          maxScale={fit * 3.5}
-          initialScale={initial}
-          centerOnInit
-          centerZoomedOut
-          limitToBounds
-          doubleClick={{ disabled: true }}
-          pinch={{ step: 5 }}
-          wheel={{ step: 0.12 }}
-        >
-          <TransformComponent
-            wrapperStyle={{ width: "100%", height: "100%" }}
-            contentStyle={{ width: STAGE_W, height: STAGE_H, position: "relative" }}
-          >
-            {children}
-          </TransformComponent>
-          <ZoomControls />
-        </TransformWrapper>
-      )}
-    </div>
-  );
-}
 
 export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) {
   return (
@@ -276,7 +207,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
   // any legacy buildings that lack an entry (e.g. saves predating the plot
   // system, or tests that set { hearth: true } without _plots).
-  const { plotById, slotRows, occupiedPlots, builtLotIndices } = useMemo(() => {
+  const { plotById, slotRows, occupiedPlots, builtLotIndices, buildingsMap } = useMemo(() => {
     const builtIds = Object.keys(locationBuilt).filter(
       (k) => !RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k),
     );
@@ -314,11 +245,19 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
       Object.entries(nextPlotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
     );
 
+    const buildingsMap: Record<number, string> = {};
+    for (const [idx, id] of Object.entries(nextPlotMap)) {
+      if (id != null) {
+        buildingsMap[Number(idx)] = id;
+      }
+    }
+
     return {
       plotById: nextPlotById,
       slotRows: rows,
       occupiedPlots: occupied,
       builtLotIndices: lots,
+      buildingsMap,
     };
   }, [layoutPlots, locationBuilt, plotCount, storedPlots]);
 
@@ -364,153 +303,24 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
           fixtures, buildings and trees) scales uniformly together inside a
           fixed-aspect stage box. The grass margins above and the UI overlays
           below stay fixed. */}
-      <TownStage>
-      {/* Top-down terrain plan — grass, water, roads, fields, plaza, back-trees
-          and props. Buildings + front trees (below) are positioned onto its lots. */}
-      <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
-
-      {/* Puzzle-board fixtures — the farm field, mine entrance and harbor now
-          sit on lots in the town's wings (from townPlan.boards) rather than
-          floating in the corners. Same STAGE_W×STAGE_H placement convention as
-          the building illustrations below. */}
-      <div className="absolute inset-0 pointer-events-none">
-        {(townPlan.boards || []).map((b) => {
-          const meta = BOARD_META[b.kind];
-          if (!meta) return null;
-          const locked = b.kind === "mine" || b.kind === "fish"
-            ? !canEnterBiome(state, b.kind).ok
-            : false;
-          return (
-            <button
-              key={b.kind}
-              type="button"
-              aria-label={locked ? `${meta.label} (locked until level 2)` : `Enter ${meta.label}`}
-              disabled={locked}
-              className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
-              style={{
-                left: `${((b.cx - b.w / 2) / STAGE_W) * 100}%`,
-                bottom: `${((STAGE_H - (b.cy + b.h / 2)) / STAGE_H) * 100}%`,
-                width: `${(b.w / STAGE_W) * 100}%`,
-                aspectRatio: "1",
-                opacity: locked ? 0.7 : 1,
-              }}
-              onClick={() => setEntryBiome(b.kind)}
-            >
-              <div
-                className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-[1.03]"
-                style={{ aspectRatio: "1", borderRadius: "10px", border: `2.5px solid ${meta.border}`, boxShadow: "0 3px 12px rgba(0,0,0,.4)" }}
-              >
-                {meta.art(locked)}
-                <div className="absolute inset-x-0 top-0 flex justify-center items-center gap-1 font-bold text-white py-0.5" style={{ background: "rgba(0,0,0,.5)", fontSize: "clamp(7px,0.85vw,11px)", borderRadius: "8px 8px 0 0" }}>
-                  <Icon iconKey={locked ? "ui_lock" : meta.icon} size={11} /> {meta.label}
-                </div>
-                <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.4)" }}>
-                  <span className="font-bold text-white flex items-center gap-1" style={{ fontSize: "clamp(8px,0.95vw,12px)" }}><Icon iconKey={locked ? "ui_lock" : "ui_enter"} size={11} /> {locked ? "Level 2" : "Enter"}</span>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Plots + buildings positioned in the STAGE_W×STAGE_H design space, scaled to viewport */}
-      {/* isolation:isolate creates a stacking context so per-building zIndex (derived from y, up to ~700) doesn't escape and cover modals/tooltips. */}
-      <div className="absolute inset-0 pointer-events-none" style={{ isolation: "isolate" }}>
-        <svg viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
-        <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-          {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
-          <TownVillagers key={mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
-          {/* Front trees — drawn in the SAME stacking context as buildings so a
-              tree with a higher base-y can occlude a building rooftop in front of
-              it (and vice-versa). Back trees live in <TownGround>; these are the
-              ones flagged front:true by the plan generator. */}
-          {((townPlan.trees ?? []) as Array<{ x: number; y: number; r: number; front?: boolean }>)
-            .filter((t) => t.front === true)
-            .map((t, i) => (
-              <div
-                key={`ft-${i}`}
-                className="absolute pointer-events-none"
-                style={{
-                  left: `${((t.x - t.r) / STAGE_W) * 100}%`,
-                  top: `${((t.y - t.r) / STAGE_H) * 100}%`,
-                  width: `${((2 * t.r) / STAGE_W) * 100}%`,
-                  height: `${((2 * t.r) / STAGE_H) * 100}%`,
-                  zIndex: Math.floor(t.y),
-                }}
-              >
-                <div
-                  className="w-full h-full"
-                  style={{
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle at 38% 32%, #83ad52, #4a7028 70%)",
-                    boxShadow: "0 6px 14px rgba(0,0,0,.32)",
-                  }}
-                />
-              </div>
-            ))}
-          {slotRows.map((slot) => {
-            const b = slot.buildingId ? BUILDINGS_BY_ID.get(slot.buildingId) : null;
-            const isBuilt = !!b;
-            const isPlacing = !!pendingBuilding && !isBuilt;
-            // Empty plots are invisible until the player enters placement mode.
-            if (!isBuilt && !isPlacing) return null;
-            const onClick = () => {
-              if (longPressActive.current) { longPressActive.current = false; return; }
-              // Placement mode: clicking an empty plot confirms placement.
-              if (isPlacing) {
-                setPurchaseBuilding({ ...pendingBuilding, _plot: slot.idx });
-                return;
-              }
-              if (!isBuilt) return;
-              if (CRAFTING_STATIONS.has(b.id)) {
-                dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
-              }
-            };
-
-            return (
-              <div
-                key={slot.idx}
-                className="absolute pointer-events-auto"
-                style={{
-                  left: isBuilt
-                    ? `${((slot.x - slot.w * (BUILD_FILL - 1) / 2) / STAGE_W) * 100}%`
-                    : `${(slot.x / STAGE_W) * 100}%`,
-                  bottom: `${((STAGE_H - slot.y - slot.h) / STAGE_H) * 100}%`,
-                  width: isBuilt
-                    ? `${(slot.w * BUILD_FILL / STAGE_W) * 100}%`
-                    : `${(slot.w / STAGE_W) * 100}%`,
-                  aspectRatio: "1",
-                  cursor: isBuilt && CRAFTING_STATIONS.has(b.id) ? "pointer" : isPlacing ? "pointer" : "default",
-                  zIndex: Math.floor(slot.y + slot.h),
-                }}
-                onClick={onClick}
-                {...(isBuilt && b ? builtTipHandlers(b as unknown as Building) : {})}
-              >
-                {isBuilt ? (
-                  <>
-                    <BuildingIllustration id={b.id} isBuilt={true} />
-                    {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
-                    {b.id === "hearth" && (state.story?.flags as Record<string, unknown> | undefined)?.hearth_lit && <HearthGlow />}
-                  </>
-                ) : (
-                  <div
-                    className={`absolute inset-0 rounded-sm grid place-items-center font-bold ${isPlacing ? "animate-pulse" : ""}`}
-                    style={{
-                      background: isPlacing ? "rgba(155,219,106,.18)" : "rgba(0,0,0,.22)",
-                      border: `2px dashed ${isPlacing ? "#9bdb6a" : "rgba(255,255,255,.35)"}`,
-                      color: isPlacing ? "#9bdb6a" : "rgba(255,255,255,.55)",
-                      fontSize: "clamp(10px,1.1vw,14px)",
-                    }}
-                  >
-                    {isPlacing ? "+ Place here" : "Empty plot"}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      </TownStage>
+      <TownPhaserCanvas
+        plan={townPlan}
+        builtLots={builtLotIndices}
+        buildingsMap={buildingsMap}
+        pendingBuilding={pendingBuilding}
+        onPlaceBuilding={(lotIdx) => {
+          if (pendingBuilding) {
+            setPurchaseBuilding({ ...pendingBuilding, _plot: lotIdx });
+          }
+        }}
+        onClickBuilding={(buildingId) => {
+          const b = BUILDINGS_BY_ID.get(buildingId);
+          if (b && CRAFTING_STATIONS.has(b.id)) {
+            dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
+          }
+        }}
+        onClickBoard={(kind) => setEntryBiome(kind)}
+      />
 
       {/* Vignette — softly darkens the screen edges so the finite 4:3 map fades
           into the grass margins rather than ending in a hard box. Above the

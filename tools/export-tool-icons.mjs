@@ -25,7 +25,7 @@ function arg(name, fallback) {
 }
 
 const BASE = arg("base", "http://localhost:5173/puzzleDrag2/");
-const OUT_DIR = resolve(__dirname, "..", arg("out", "godot/assets/resources"));
+const OUT_DIR = resolve(__dirname, "..", "..", "puzzleDrag2-godot", arg("out", "assets/resources"));
 const SCENARIO = arg("scenario", "board-farm-idle");
 
 // The tools the Godot ToolConfig references (godot/scripts/ToolConfig.gd). paintIcon
@@ -44,6 +44,8 @@ const TOOL_KEYS = [
   // Tools PR3 — portal magic tools (transform_tiles / tap_clear_type / restore_turns / fill_bias).
   "golden_apple", "golden_carrot", "golden_idol", "golden_sheep", "philosophers_stone",
   "magic_wand", "magic_seed", "magic_fertilizer",
+  // Wolf & mine hazard counters + miners_hat
+  "rifle", "hound", "water_pump", "explosives", "miners_hat",
 ];
 
 (async () => {

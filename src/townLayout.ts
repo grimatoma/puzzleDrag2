@@ -609,19 +609,171 @@ export function buildTownPlan(
     if (ok) streetTrees.push({ x, y, r });
   }
 
-  // ── 14. Return ────────────────────────────────────────────────────────────
+  // ── 14. Snap coordinates to grid for 32x32 pixel-art rendering ───────────
+  const snap32 = (v: number) => Math.round(v / 32) * 32;
+  const snap16 = (v: number) => Math.round(v / 16) * 16;
+
+  const snappedPlaza = {
+    cx: snap32(plaza.cx),
+    cy: snap32(plaza.cy),
+    rx: snap32(plaza.rx),
+    ry: snap32(plaza.ry),
+  };
+
+  const snappedWell = {
+    cx: snap32(well.cx),
+    cy: snap32(well.cy),
+    r: snap16(well.r),
+  };
+
+  const snappedStreets = streets.map(s => ({
+    x1: snap32(s.x1),
+    y1: snap32(s.y1),
+    x2: snap32(s.x2),
+    y2: snap32(s.y2),
+    width: snap16(s.width),
+  }));
+
+  const snappedLotW = snap32(LOT_W);
+  const snappedLotH = snap32(LOT_H);
+  const snappedLots = keptLots.map(l => {
+    const left = snap32(l.cx - l.w / 2);
+    const top = snap32(l.cy - l.h / 2);
+    return {
+      ...l,
+      cx: left + snappedLotW / 2,
+      cy: top + snappedLotH / 2,
+      w: snappedLotW,
+      h: snappedLotH,
+    };
+  });
+
+  const snappedBoards = boards.map(b => {
+    const bw = snap32(b.w);
+    const bh = snap32(b.h);
+    const left = snap32(b.cx - b.w / 2);
+    const top = snap32(b.cy - b.h / 2);
+    return {
+      ...b,
+      cx: left + bw / 2,
+      cy: top + bh / 2,
+      w: bw,
+      h: bh,
+    };
+  });
+
+  const snappedRoads = roads.map(r => ({
+    ...r,
+    points: r.points.map(p => ({ x: snap32(p.x), y: snap32(p.y) })),
+    width: snap16(r.width),
+  }));
+
+  const snappedWater = water.map(w => {
+    const res = { ...w };
+    if (w.polygon) {
+      res.polygon = w.polygon.map(p => ({ x: snap32(p.x), y: snap32(p.y) }));
+    }
+    if (w.path) {
+      res.path = w.path.map(p => ({ x: snap32(p.x), y: snap32(p.y) }));
+    }
+    if (w.width !== undefined) {
+      res.width = snap16(w.width);
+    }
+    return res;
+  });
+
+  const snappedTrees = trees.map(t => ({
+    ...t,
+    x: snap16(t.x),
+    y: snap16(t.y),
+    r: snap16(t.r),
+  }));
+
+  const snappedFields = fields.map(f => {
+    const fw = snap32(f.w);
+    const bh = snap32(f.h);
+    const left = snap32(f.cx - f.w / 2);
+    const top = snap32(f.cy - f.h / 2);
+    return {
+      ...f,
+      cx: left + fw / 2,
+      cy: top + bh / 2,
+      w: fw,
+      h: bh,
+    };
+  });
+
+  const snappedFences = fences.map(f => ({
+    points: f.points.map(p => ({ x: snap32(p.x), y: snap32(p.y) })),
+  }));
+
+  const snappedBridges = bridges.map(b => ({
+    ...b,
+    x: snap32(b.x),
+    y: snap32(b.y),
+    width: snap16(b.width),
+  }));
+
+  const snappedPaths = paths.map(p => ({
+    ...p,
+    x1: snap32(p.x1),
+    y1: snap32(p.y1),
+    x2: snap32(p.x2),
+    y2: snap32(p.y2),
+    width: snap16(p.width),
+  }));
+
+  const snappedWaypoints = waypoints.map(w => ({
+    x: snap32(w.x),
+    y: snap32(w.y),
+  }));
+
+  const snappedProps = props.map(p => ({
+    ...p,
+    x: snap16(p.x),
+    y: snap16(p.y),
+  }));
+
+  const snappedLotDecor = lotDecor.map(d => {
+    const originalLot = keptLots.find(l => l.index === d.lot);
+    const snappedLot = snappedLots.find(l => l.index === d.lot);
+    if (originalLot && snappedLot) {
+      const dx = d.x - originalLot.cx;
+      const dy = d.y - originalLot.cy;
+      return {
+        ...d,
+        x: snappedLot.cx + snap16(dx),
+        y: snappedLot.cy + snap16(dy),
+      };
+    }
+    return { ...d, x: snap16(d.x), y: snap16(d.y) };
+  });
+
+  const snappedStreetTrees = streetTrees.map(t => ({
+    ...t,
+    x: snap16(t.x),
+    y: snap16(t.y),
+  }));
+
   return {
     width: W, height: H,
     ground: { top: 0 },
-    plaza,
-    well,
-    streets,
-    lots: keptLots,
-    boards,
-    props,
-    waypoints, edges,
-    roads, water, trees, fields, fences,
-    bridges, paths,
-    lotDecor, streetTrees,
+    plaza: snappedPlaza,
+    well: snappedWell,
+    streets: snappedStreets,
+    lots: snappedLots,
+    boards: snappedBoards,
+    props: snappedProps,
+    waypoints: snappedWaypoints,
+    edges,
+    roads: snappedRoads,
+    water: snappedWater,
+    trees: snappedTrees,
+    fields: snappedFields,
+    fences: snappedFences,
+    bridges: snappedBridges,
+    paths: snappedPaths,
+    lotDecor: snappedLotDecor,
+    streetTrees: snappedStreetTrees,
   };
 }
