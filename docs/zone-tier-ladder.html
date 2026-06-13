@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone Tier Ladder — Hand-Crafted Town Growth</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#2b2418; --muted:#7a6f5c; --line:#e3d9c4; --bg:#faf6ec;
+    --paper:#fffdf6; --code:#efe7d3;
+    --accent:#8a5a2b;       /* earthy gold-brown */
+    --accent2:#4f7a34;      /* field green */
+    --shadow:0 1px 2px rgba(50,35,8,.06), 0 6px 20px -10px rgba(50,35,8,.22);
+    --ok:#3f8f3a; --warn:#c9750c; --info:#2767b0; --danger:#b03a23; --idle:#9a8f7a;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 80% -8%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #f1e9d6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#6a5230;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;color:#5a4a30;}
+
+  .page{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.4rem 1.5rem 1.1rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,transparent), color-mix(in srgb,var(--accent2) 7%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.7rem/1.08 var(--serif);letter-spacing:-.015em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.04rem;margin:.2rem 0 .75rem;max-width:66ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(50,35,8,.30);}
+
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.85rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.22rem/1.25 var(--serif);margin-top:1.5rem;color:var(--ink);}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.86rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem;}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(50,35,8,.08),0 12px 28px -12px rgba(50,35,8,.3);}
+  .card.g{border-left-color:var(--accent2);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+
+  .filterbar{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 .2rem;align-items:center;}
+  .filterbar .lbl{font-size:.8rem;color:var(--muted);margin-right:.2rem;}
+  .filterbar button{font:600 .8rem/1 var(--sans);padding:.34rem .65rem;border:1px solid var(--line);background:var(--paper);border-radius:7px;cursor:pointer;color:var(--ink);transition:background .14s,color .14s,border-color .14s;}
+  .filterbar button:hover{border-color:var(--accent);color:var(--accent);}
+  .filterbar button.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.45rem 0;color:var(--ink);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs,.filterbar{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Zone Tier Ladder</h1>
+    <p class="sub">Settlements grow through per-zone tiers — each rung unlocks more plots and more buildings, rendered as a hand-crafted Phaser tilemap. The home zone reaching <b>City</b> unlocks the Town&nbsp;2 expedition.</p>
+    <p class="meta">puzzleDrag2 · Status: Approved design, pre-implementation · 2026-06-13 · branch <code>claude/game-town-building-graphics-n6r9pg</code></p>
+    <div class="chips">
+      <span class="chip">per-zone tiers</span>
+      <span class="chip">hand-tiled maps</span>
+      <span class="chip">Phaser Tilemap</span>
+      <span class="chip">building gating</span>
+      <span class="chip">Town 2 gate</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="design">Design</button>
+    <button class="tab" role="tab" data-tab="balance">Tiers &amp; Balance</button>
+    <button class="tab" role="tab" data-tab="plan">Build Plan</button>
+    <button class="tab" role="tab" data-tab="reference">Reference</button>
+  </nav>
+
+  <main>
+
+    <!-- ════════════ OVERVIEW ════════════ -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+
+      <section id="summary">
+        <h2>Overview</h2>
+        <p>Today a settlement has a fixed <code>plotCount</code> and a fixed building list. This feature turns each settlement into a <b>growing town</b>: the player upgrades their town centre through a ladder of <b>tiers</b>, and every rung grants more building plots and unlocks more building types. The ladder is authored <b>per zone</b>, so each zone has its own rung count, plot curve, cost curve, and unlock schedule.</p>
+        <div class="box tip"><b>TL;DR.</b> Add a per-zone <code>tiers[]</code> ladder + a <code>tier</code> field on each settlement + a <code>TIER_UP</code> action. Each <code>(zone, tier)</code> renders a <b>hand-authored tilemap</b> through the existing Phaser <code>TownScene</code>. Tier-ups grant <b>plots + building unlocks only — no turn/yield change</b>. The home zone hitting its top rung (<b>City</b>) gates the Town&nbsp;2 expedition.</div>
+      </section>
+
+      <section id="decisions">
+        <h2>Locked decisions</h2>
+        <table>
+          <thead><tr><th>Question</th><th>Decision</th></tr></thead>
+          <tbody>
+            <tr><td>What does a tier-up grant?</td><td>More land plots + tier-gated building unlocks. <b>No</b> turn-budget or yield bump — the puzzle math is untouched.</td></tr>
+            <tr><td>Ladder scope</td><td>Per-zone. Rung count, plots, costs, unlocks and the map are all authored independently for each zone — <b>Town 1 (home) = 3 rungs</b>, <b>Town 2 (the mine) = 4 rungs</b>; minor nodes 2 or none.</td></tr>
+            <tr><td>Town 2 unlock</td><td>The mine-founding expedition is gated on the home zone reaching its <b>City</b> rung.</td></tr>
+            <tr><td>Map source</td><td>Hand-crafted, not procedural. Each <code>(zone, tier)</code> is an authored tilemap. <code>buildTownPlan</code> stays only as a fallback for un-authored zones.</td></tr>
+            <tr><td>Map growth feel</td><td>Appended: higher tiers are drawn as the previous town + new plots ringing it. Lot indices stay stable, so built buildings never move.</td></tr>
+            <tr><td>Rendering tech</td><td>Phaser <code>Tilemaps.Tilemap</code> — the existing <code>TownScene</code> already uses it; we invert it to consume authored tile data instead of generating it.</td></tr>
+            <tr><td>Authoring (for now)</td><td>Claude hand-tiles each town using the existing <code>public/town/tileset.png</code> tiles. A human polish pass comes later.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="context">
+        <h2>Where this plugs in</h2>
+        <p>The relevant machinery already exists; this feature mostly redirects data sources rather than building new subsystems.</p>
+        <ul>
+          <li><b>Zones</b> are nodes in <code>src/features/cartography/data.ts</code>, each already carrying its own <code>buildings[]</code>, <code>plotCount</code>, <code>entryCost</code>, and board set.</li>
+          <li><b>The town view</b> (<code>src/ui/Town.tsx</code>) reads <code>plotCount</code>, builds a <code>TownPlan</code>, and hands it to a Phaser scene. Plot count is the single knob that drives layout size (<code>Town.tsx:168</code>).</li>
+          <li><b>The renderer</b> (<code>src/ui/town/TownScene.ts</code>) is already a <code>Phaser.Scene</code> on a <code>40×30</code> tile grid (<code>32px</code> tiles, <code>public/town/tileset.png</code>). It paints ground tiles + a depth-sorted object layer from the <code>TownPlan</code>.</li>
+          <li><b>Settlements</b> already have per-zone runtime state (founding) in <code>state.settlements[zoneId]</code> — the natural home for a <code>tier</code> field.</li>
+        </ul>
+      </section>
+
+    </div>
+
+    <!-- ════════════ DESIGN ════════════ -->
+    <div class="panel" id="design" role="tabpanel" aria-label="Design">
+
+      <section id="dataflow">
+        <h2>Architecture &amp; data flow</h2>
+        <p>The only structural change to rendering is <b>inverting the map source</b>: instead of <code>buildTownPlan</code> generating the plan, the current tier indexes into an authored map registry. Everything downstream of <code>TownPlan</code> is unchanged.</p>
+        <div class="diagram">
+          <svg viewBox="0 0 920 300" width="100%" role="img" aria-label="Tier index selects an authored town map, which renders through the existing TownScene; TIER_UP advances the tier.">
+            <defs>
+              <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600">
+              <rect x="20" y="120" width="170" height="60" rx="10" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/>
+              <text x="105" y="145" text-anchor="middle" fill="var(--ink)">settlements[zone]</text>
+              <text x="105" y="164" text-anchor="middle" fill="var(--muted)" font-size="11">.tier (0…n)</text>
+              <rect x="250" y="20" width="190" height="80" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="345" y="46" text-anchor="middle" fill="var(--ink)">zone.tiers[tier]</text>
+              <text x="345" y="65" text-anchor="middle" fill="var(--muted)" font-size="11">plots · unlocks[]</text>
+              <text x="345" y="81" text-anchor="middle" fill="var(--muted)" font-size="11">upgradeCost · name</text>
+              <rect x="250" y="195" width="190" height="80" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="345" y="221" text-anchor="middle" fill="var(--ink)">TOWN_MAPS[zone][tier]</text>
+              <text x="345" y="240" text-anchor="middle" fill="var(--muted)" font-size="11">groundTiles[ ][ ]</text>
+              <text x="345" y="256" text-anchor="middle" fill="var(--muted)" font-size="11">lots · boards · props</text>
+              <rect x="500" y="120" width="160" height="60" rx="10" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/>
+              <text x="580" y="146" text-anchor="middle" fill="var(--ink)">TownPlan</text>
+              <text x="580" y="164" text-anchor="middle" fill="var(--muted)" font-size="11">(authored or fallback)</text>
+              <rect x="720" y="120" width="170" height="60" rx="10" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)"/>
+              <text x="805" y="146" text-anchor="middle" fill="var(--ink)">TownScene</text>
+              <text x="805" y="164" text-anchor="middle" fill="var(--muted)" font-size="11">Phaser Tilemap</text>
+              <line x1="190" y1="140" x2="248" y2="70"  stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="190" y1="160" x2="248" y2="230" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="440" y1="235" x2="540" y2="180" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="660" y1="150" x2="718" y2="150" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <rect x="20" y="225" width="170" height="48" rx="10" fill="#fff" stroke="var(--warn)" stroke-dasharray="4 3"/>
+              <text x="105" y="246" text-anchor="middle" fill="var(--ink)">TIER_UP action</text>
+              <text x="105" y="263" text-anchor="middle" fill="var(--muted)" font-size="11">pay cost → tier++</text>
+              <line x1="105" y1="225" x2="105" y2="182" stroke="var(--warn)" stroke-width="2" marker-end="url(#arr)"/>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section id="map-format">
+        <h2>Authored tilemap format</h2>
+        <p>A hand-crafted map is a <code>TownPlan</code> in which the ground is an <b>explicit tile grid</b> (full hand control of terrain/roads/water) plus explicit object lists. <code>TownScene</code> gains one branch: when <code>groundTiles</code> is present, paint straight from it and skip the procedural <code>paintGrass/paintRoads/paintWater/…</code> passes; the object layer (lots, boards, props) is drawn from the authored lists exactly as today.</p>
+<pre><code>// src/ui/town/townMaps.ts  (new)
+export interface AuthoredTownMap {
+  // 30 rows × 40 cols of tileset indices (TILE=32, GRID 40×30 = 1280×960).
+  // -1 = leave blank (transparent). Painted directly into the ground layer.
+  groundTiles: number[][];
+  // Interactive plots. index is STABLE across tiers (tier N adds higher indices).
+  lots: { index: number; cx: number; cy: number; w: number; h: number }[];
+  boards?: { kind: "farm" | "mine" | "fish"; cx: number; cy: number; w: number; h: number }[];
+  props?:  { kind: string; x: number; y: number }[];
+  plaza?:  { cx: number; cy: number; rx: number; ry: number };
+  well?:   { cx: number; cy: number; r: number };
+}
+
+// Keyed by zoneId, indexed by tier. Missing entry → procedural fallback.
+export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };</code></pre>
+        <div class="box"><b>Why a tile grid, not a full procedural <code>TownPlan</code>.</b> The user wants literal hand-tiling. An explicit <code>groundTiles</code> array is the most direct expression of that and reuses the existing tileset indices (<code>T.GRASS</code>, <code>T.DIRT</code>, <code>T.WATER</code>, decorative variants). The object lists stay coordinate-based because <code>TownScene</code> already places lots/boards/props by coordinate.</div>
+        <div class="box tip"><b>Stable lot indices = appended growth for free.</b> Because lot <code>index</code> is preserved between tiers and the renderer maps stored buildings by lot index (<code>Town.tsx:190</code>), a building placed at Hamlet stays exactly put at City — the new tier just adds higher-indexed lots around it.</div>
+      </section>
+
+      <section id="tier-model">
+        <h2>Tier model</h2>
+        <p>Each cartography node gains an optional <code>tiers?: ZoneTier[]</code>. The <b>array length is the rung count</b> for that zone; nodes with no <code>tiers</code> (events, boss arenas) keep today's single fixed layout and show no upgrade control.</p>
+<pre><code>interface ZoneTier {
+  id: string;                // "camp" | "hamlet" | "village" | … (zone-authored)
+  name: string;              // display: "Mining Camp", "Boomtown", …
+  plots: number;             // TOTAL plots at this rung (must match authored map lots)
+  unlocks: BuildingId[];     // buildings newly buildable at this rung (cumulative)
+  upgradeCost?: ResourceCost;// cost to REACH this rung; rung 0 has none (founding)
+}</code></pre>
+        <ul>
+          <li><b>Buildings available</b> at the current rung = union of <code>unlocks</code> for all rungs ≤ current. The node's existing <code>buildings[]</code> becomes the validated superset (a unit test asserts <code>union(tiers.unlocks) === buildings</code>), so every system that reads <code>node.buildings</code> keeps working.</li>
+          <li><b>Plots</b> come from <code>tiers[tier].plots</code>, replacing the static <code>plotCount</code> read at <code>Town.tsx:168</code>. The authored map for that rung must expose exactly that many lots (test-enforced).</li>
+          <li><b>Cost</b> reuses the existing resource-cost shape that <code>FOUND_SETTLEMENT</code> already validates and deducts.</li>
+        </ul>
+      </section>
+
+      <section id="state-action">
+        <h2>State &amp; action</h2>
+        <p>One new field, one new action — both mirroring the proven founding flow.</p>
+        <div class="grid">
+          <div class="card"><h3>State</h3><p><code>state.settlements[zoneId].tier: number</code> (default <code>0</code>). Already-founded zones default to rung 0. Persisted with the rest of the settlement record.</p></div>
+          <div class="card g"><h3>Action <code>TIER_UP</code></h3><p>Payload <code>{ zoneId }</code>. Look up <code>tiers[tier+1].upgradeCost</code> → verify the player can pay → deduct → <code>tier++</code>. No-op at max rung or if unaffordable. Registered via the slice system (validated with <code>check-slice-action</code>).</p></div>
+        </div>
+        <div class="box warn"><b>Slice footgun.</b> Per <code>CLAUDE.md</code>, a new dispatch type must be registered in <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> or it silently does nothing. The <code>check-slice-action</code> skill is part of the plan for this reason.</div>
+      </section>
+
+      <section id="ui-gate">
+        <h2>Upgrade UI &amp; the Town 2 gate</h2>
+        <div class="grid">
+          <div class="card"><h3>Hearth upgrade control</h3><p>The town-centre building (Hearth) gains an <em>"Upgrade to {nextTier.name} — {cost}"</em> control, reusing the existing FoundSettlement banner pattern. Disabled-with-reason when unaffordable; hidden at max rung.</p></div>
+          <div class="card g"><h3>City → Town 2</h3><p>The mine-founding expedition is gated on <code>home.tier === lastRung</code> ("City"), surfaced as a locked-with-reason node on the cartography map, consistent with the existing <code>requiresHearthTokens</code> gate.</p></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════ TIERS & BALANCE ════════════ -->
+    <div class="panel" id="balance" role="tabpanel" aria-label="Tiers and balance">
+
+      <section id="curves">
+        <h2>Per-zone ladders <span class="pill warn">first pass</span></h2>
+        <div class="box warn"><b>Illustrative numbers.</b> Plot curves, costs and unlock schedules below are a sensible first pass to make the slice playable. They are explicitly the user's later balance/polish pass — treat them as placeholders, not final tuning.</div>
+
+        <h3>Town 1 — home / "the capital farm" · <b>3 rungs</b></h3>
+        <p>Zone id <code>home</code>. The flagship ladder. Final rung <b>City</b> unlocks the Town&nbsp;2 expedition. Plots grow 6 → 12 → 20 (the existing static <code>plotCount: 20</code> becomes the top rung, so a fully-grown home is unchanged from today).</p>
+        <table>
+          <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>Hamlet</td><td class="num">6</td><td>Hearth, Mill, Granary, Larder, Bakery, Inn, Housing</td><td class="num">— (founding)</td></tr>
+            <tr><td>1</td><td>Village</td><td class="num">12</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td class="num">2,500c + 120 grain</td></tr>
+            <tr><td>2</td><td><b>City</b></td><td class="num">20</td><td>Forge, CaravanPost, Kitchen, Workshop, PowderStore, Portal, ClockTower, Lighthouse, Apothecary, Observatory, Housing2/3, Barn, Harbor set</td><td class="num">9,000c + 60 iron</td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>City rung = today's home.</b> Rung 2 plots (20) and unlocks equal the current <code>home</code> node exactly, so an existing maxed save looks identical. Rungs 0–1 are the new "earlier" states the town grows through.</div>
+
+        <h3>Town 2 — first mine / "the quarry" · <b>4 rungs</b></h3>
+        <p>Zone id <code>quarry</code> (the natural Town 2). Locked until <code>home.tier === 2</code> (City). Plots grow 4 → 6 → 8 → 12 (top rung ≥ today's static <code>plotCount: 8</code>).</p>
+        <table>
+          <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>Dig Site</td><td class="num">4</td><td>Hearth, Kitchen, Housing</td><td class="num">— (founding)</td></tr>
+            <tr><td>1</td><td>Mining Camp</td><td class="num">6</td><td>Workshop, Forge, Inn, Watchtower</td><td class="num">2,000c + 60 stone</td></tr>
+            <tr><td>2</td><td>Boomtown</td><td class="num">8</td><td>Barn, PowderStore, Housing2, Apothecary</td><td class="num">5,500c + 50 ore</td></tr>
+            <tr><td>3</td><td>Foundry City</td><td class="num">12</td><td>Observatory, Housing3, CaravanPost</td><td class="num">12,000c + 30 ingots</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Other nodes</h3>
+        <p>Every other cartography node keeps a single fixed layout (no <code>tiers</code> → no upgrade control), rendering via the procedural fallback until/unless a ladder is authored for it later.</p>
+      </section>
+
+      <section id="assignment-philosophy">
+        <h2>Building → tier philosophy</h2>
+        <div class="grid">
+          <div class="card"><h3>Early rungs</h3><p>Survival &amp; staples: food production (Mill, Granary, Bakery), first housing, the Inn. Gets a new settlement self-sufficient.</p></div>
+          <div class="card g"><h3>Mid rungs</h3><p>Comfort &amp; production: Brewery, Apiary, Workshop, Chapel, defensive Watchtower. The town becomes a real economy.</p></div>
+          <div class="card"><h3>Late rungs</h3><p>Industry &amp; prestige: Forge, Portal, Observatory, ClockTower, advanced housing. Gates the high-end and the next town.</p></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════ BUILD PLAN ════════════ -->
+    <div class="panel" id="plan" role="tabpanel" aria-label="Build plan">
+
+      <section id="orientation">
+        <h2>For the implementing session — start here</h2>
+        <div class="box"><b>You are a fresh session picking up an approved design.</b> This tab is the executable plan. Read the <a href="#design">Design</a> and <a href="#balance">Tiers &amp; Balance</a> tabs first for the data shapes and the exact rung tables, then work the steps below <b>in order</b>. Each step has explicit <b>acceptance criteria</b> — do not advance until they pass. Commit after each step.</div>
+        <h3>Ground truth (verify before coding)</h3>
+        <ul>
+          <li><b>Branch:</b> <code>claude/game-town-building-graphics-n6r9pg</code>. Commit per step; open a draft PR after step&nbsp;2.</li>
+          <li><b>Run it:</b> <code>npm run dev</code> → game at <code>/</code>. Use the <code>dev-server</code> skill for a headless browser walkthrough; screenshot the Town view to verify maps.</li>
+          <li><b>Gates:</b> <code>npm run lint</code> · <code>npm run typecheck</code> · <code>npm test</code> · <code>npm run test:visual</code> (goldens — run before PR per <code>CLAUDE.md</code>).</li>
+          <li><b>Mental model:</b> React owns state (reducer in <code>src/state.ts</code> + slices under <code>src/features/*</code>); Phaser owns the canvas. The Town view is <code>src/ui/Town.tsx</code> → <code>src/ui/town/TownScene.ts</code> (already a Phaser tilemap scene, 40×30 @ 32px).</li>
+          <li><b>Tooling note:</b> the <code>graphify</code> pre-read hook is configured but <b>not installed</b> here; read source directly (documented fallback) or install it.</li>
+        </ul>
+        <div class="box warn"><b>Footgun (read <code>CLAUDE.md</code>).</b> A new reducer action that isn't registered in <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> silently no-ops. Run the <code>check-slice-action</code> skill on <code>TIER_UP</code> in step&nbsp;2. Also: <b>no fakes/mocks in production code</b> — wire real implementations.</div>
+      </section>
+
+      <section id="order">
+        <h2>Step-by-step</h2>
+        <p>Two phases. <b>Phase A (steps 1–4)</b> is the vertical slice: prove the authored-map pipeline + the upgrade loop on Town 1 alone. <b>Phase B (steps 5–7)</b> fills content (Town 1 to 3 rungs, Town 2 to 4 rungs) and the Town 2 gate.</p>
+        <p class="legend">
+          <span><span class="pill ok">done</span> shipped</span>
+          <span><span class="pill info">wip</span> in progress</span>
+          <span><span class="pill warn">next</span> queued</span>
+          <span><span class="pill idle">later</span> deferred</span>
+        </p>
+        <div class="filterbar">
+          <span class="lbl">Filter:</span>
+          <button class="on" data-filter="all">All</button>
+          <button data-filter="next">Phase A</button>
+          <button data-filter="later">Phase B</button>
+        </div>
+        <table id="status-table">
+          <thead><tr><th>#</th><th>Step</th><th>Touches</th><th>Phase</th></tr></thead>
+          <tbody>
+            <tr data-status="next"><td>1</td><td><b>Tier data model.</b> Add <code>ZoneTier</code> + <code>tiers?: ZoneTier[]</code> to the cartography node type; populate Town 1 (3 rungs) &amp; Town 2 (4 rungs) per the Balance tab. Add derivation helpers.</td><td><code>cartography/data.ts</code>, types</td><td><span class="pill warn">A</span></td></tr>
+            <tr data-status="next"><td>2</td><td><b>Tier state + <code>TIER_UP</code> action.</b> Add <code>tier</code> to the settlement record (default 0); reducer mirrors <code>FOUND_SETTLEMENT</code> (validate cost → deduct → tier++). Register slice; <code>check-slice-action</code>.</td><td><code>state.ts</code>, zones slice, <code>types/state.ts</code></td><td><span class="pill warn">A</span></td></tr>
+            <tr data-status="next"><td>3</td><td><b>Authored-map pipeline + 2 maps.</b> New <code>townMaps.ts</code> (<code>AuthoredTownMap</code>, <code>TOWN_MAPS</code>, <code>getTownMap</code>, grid helpers); hand-tile Town 1 Hamlet &amp; Village; branch <code>TownScene</code> to paint <code>groundTiles</code>; <code>Town.tsx</code> uses tier-derived plots + authored plan, procedural fallback.</td><td><code>townMaps.ts</code>, <code>TownScene.ts</code>, <code>Town.tsx</code></td><td><span class="pill warn">A</span></td></tr>
+            <tr data-status="next"><td>4</td><td><b>Hearth upgrade UI + unlock gating.</b> "Upgrade to {next.name} — {cost}" control on the Hearth (reuse FoundSettlement banner); disabled-with-reason / hidden at max. BuildPicker filters by <code>union(tiers≤current).unlocks</code>.</td><td><code>Town.tsx</code>, Hearth UI, BuildPicker</td><td><span class="pill warn">A</span></td></tr>
+            <tr data-status="later"><td>5</td><td><b>Finish Town 1 (City) + Town 2 maps.</b> Hand-tile Town 1 City and all 4 Town 2 maps (Dig Site → Foundry City). Verify each map's lot count equals its rung's <code>plots</code>.</td><td><code>townMaps.ts</code></td><td><span class="pill idle">B</span></td></tr>
+            <tr data-status="later"><td>6</td><td><b>Town 2 gate.</b> Lock the <code>quarry</code> founding/expedition until <code>home.tier === 2</code> (City); surface a locked-with-reason node like the existing <code>requiresHearthTokens</code> gate.</td><td>expedition/zone-entry gate, cartography UI</td><td><span class="pill idle">B</span></td></tr>
+            <tr data-status="later"><td>7</td><td><b>Tests + verification.</b> Unit tests (lots==plots, unlock⊆buildings superset, <code>TIER_UP</code> reducer, gate); refresh <code>test:visual</code> goldens for new maps; lint + typecheck green.</td><td><code>src/__tests__/…</code>, goldens</td><td><span class="pill idle">B</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="step-detail">
+        <h2>Step detail &amp; acceptance criteria</h2>
+
+        <details open>
+          <summary>Step 1 — Tier data model</summary>
+          <ul>
+            <li>Add the <code>ZoneTier</code> interface (see <a href="#tier-model">Tier model</a>) to the cartography types and an optional <code>tiers?: ZoneTier[]</code> on the node interface (<code>cartography/data.ts</code> ~line 48).</li>
+            <li>Populate <code>home</code> with the 3-rung table and <code>quarry</code> with the 4-rung table from the <a href="#balance">Balance tab</a>. Keep each node's existing flat <code>buildings[]</code> as the superset.</li>
+            <li>Add helpers: <code>tiersForZone(zoneId)</code>, <code>currentTierDef(zoneId, tier)</code>, <code>unlockedBuildings(zoneId, tier)</code> (cumulative union), <code>plotsForTier(zoneId, tier)</code>, <code>maxTier(zoneId)</code>. Place beside existing zone helpers in <code>features/zones/data.ts</code>.</li>
+          </ul>
+          <div class="box tip"><b>Accept:</b> <code>npm run typecheck</code> green; a scratch test logs <code>unlockedBuildings("home", 2)</code> === the full <code>home.buildings</code> set.</div>
+        </details>
+
+        <details>
+          <summary>Step 2 — Tier state + <code>TIER_UP</code> action</summary>
+          <ul>
+            <li>Add <code>tier: number</code> to the settlement state shape (<code>types/state.ts</code>); default <code>0</code> on founding and in any migration/normalization path so existing saves load at rung 0.</li>
+            <li>Implement <code>TIER_UP</code> (payload <code>{ zoneId }</code>) in the zones slice, mirroring <code>FOUND_SETTLEMENT</code>'s cost path: read <code>tiers[tier+1].upgradeCost</code>, verify affordability, deduct, <code>tier++</code>. No-op at max rung / when unaffordable (return state unchanged).</li>
+            <li>Register the action so the slice actually runs (the <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> tables). <b>Run the <code>check-slice-action</code> skill on <code>TIER_UP</code>.</b></li>
+          </ul>
+          <div class="box tip"><b>Accept:</b> a reducer unit test — dispatch <code>TIER_UP</code> with enough resources → <code>tier</code> increments and cost is deducted; without resources → state unchanged. <code>check-slice-action</code> reports <code>TIER_UP</code> wired.</div>
+        </details>
+
+        <details>
+          <summary>Step 3 — Authored-map pipeline + first two maps</summary>
+          <ul>
+            <li>Create <code>src/ui/town/townMaps.ts</code>: the <code>AuthoredTownMap</code> type (<a href="#map-format">format</a>), <code>TOWN_MAPS</code> registry, and <code>getTownMap(zoneId, tier): TownPlan | null</code> that converts an authored map into the <code>TownPlan</code> shape <code>TownScene</code> expects (carrying a new optional <code>groundTiles</code> field).</li>
+            <li>Add tile-grid helpers so maps are <em>composed</em>, not typed cell-by-cell: <code>fill(grid, tile)</code>, <code>rect(grid, x, y, w, h, tile)</code>, <code>border(...)</code>, <code>roadH/roadV(...)</code> using the tileset indices in the <a href="#appendix">appendix</a>.</li>
+            <li>Hand-tile <b>Town 1 Hamlet (6 lots)</b> and <b>Town 1 Village (12 lots)</b>, drawn so Village visibly contains Hamlet + 6 appended lots; lot indices 0–5 identical between them.</li>
+            <li>In <code>TownScene.create()</code>, if the plan carries <code>groundTiles</code>, paint the ground layer straight from it and skip <code>paintGrass/paintWater/paintRoads/paintPlaza/paintFields</code>; keep the object-layer draws (boards/props/lots/buildings) unchanged.</li>
+            <li>In <code>Town.tsx</code>, derive <code>requestedPlots</code> from the current tier and prefer <code>getTownMap(zone, tier)</code>; fall back to <code>buildTownPlan</code> when no authored map exists (line ~168–172).</li>
+          </ul>
+          <div class="box tip"><b>Accept:</b> <code>npm run dev</code> → enter Town 1; at <code>tier 0</code> the hand-tiled Hamlet renders with 6 plots; temporarily forcing <code>tier 1</code> shows Village with 12 plots and the original 6 in the same positions. Other zones still render (procedural fallback). Screenshot both.</div>
+        </details>
+
+        <details>
+          <summary>Step 4 — Hearth upgrade UI + unlock gating</summary>
+          <ul>
+            <li>On the Hearth (town-centre) surface, add an "Upgrade to {nextTier.name} — {cost}" control that dispatches <code>TIER_UP</code>. Reuse the FoundSettlement banner styling. Disabled-with-reason when unaffordable; hidden at max rung or for zones without <code>tiers</code>.</li>
+            <li>Filter <code>BuildPicker</code> (<code>Town.tsx</code> ~line 509) to <code>unlockedBuildings(zone, tier)</code> instead of the full node list.</li>
+          </ul>
+          <div class="box tip"><b>Accept:</b> in-app, clicking Upgrade on a sufficiently-stocked home advances Hamlet→Village live (plots appear, buildings stay put); the BuildPicker shows only rung-appropriate buildings before and after.</div>
+        </details>
+
+        <details>
+          <summary>Steps 5–7 — Content, gate, verification</summary>
+          <ul>
+            <li><b>5:</b> Author the remaining maps — Town 1 City (20 lots) and Town 2's four maps (4/6/8/12 lots), each appended from the prior rung. Lot count must equal the rung's <code>plots</code>.</li>
+            <li><b>6:</b> Gate Town 2: the <code>quarry</code> founding/expedition is locked until <code>home.tier === 2</code>; mirror the <code>requiresHearthTokens</code> locked-with-reason presentation on the cartography node.</li>
+            <li><b>7:</b> Tests: <code>lots.length === tiers[t].plots</code> for every authored <code>(zone,tier)</code>; <code>unlocks ⊆ buildings</code> superset; <code>TIER_UP</code> reducer happy/blocked paths; gate test. Refresh visual goldens for the new town maps and justify diffs. Final: lint + typecheck + <code>npm test</code> + <code>npm run test:visual</code> all green.</li>
+          </ul>
+          <div class="box tip"><b>Accept (feature done):</b> a fresh game can grow Town 1 Hamlet→Village→City, City unlocks the Town 2 expedition, Town 2 grows Dig Site→Foundry City, building pickers respect each rung, and all gates pass.</div>
+        </details>
+      </section>
+
+      <section id="risks">
+        <h2>Risks &amp; mitigations</h2>
+        <table>
+          <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>Authored <code>lots.length</code> drifts from <code>tiers[tier].plots</code></td><td>Step-7 unit test asserts equality per <code>(zone, tier)</code>; <code>plotCount</code> derives from the map, not a second source of truth.</td></tr>
+            <tr><td>Hand-tiling 40×30 grids is tedious / error-prone</td><td>Step-3 tile-grid helpers (fill/rect/border/road) compose maps instead of cell-by-cell; prove one map before authoring the rest.</td></tr>
+            <tr><td>Existing saves on a tiered zone</td><td>Default <code>tier = 0</code> in founding + save normalization; un-authored zones keep rendering via procedural fallback.</td></tr>
+            <tr><td><code>TIER_UP</code> silently no-ops</td><td><code>check-slice-action</code> in step 2; reducer test covers the happy path.</td></tr>
+            <tr><td>Visual goldens churn</td><td>Author maps before running <code>test:visual</code>; regenerate + justify goldens per <code>CLAUDE.md</code>.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+
+    <!-- ════════════ REFERENCE ════════════ -->
+    <div class="panel" id="reference" role="tabpanel" aria-label="Reference">
+
+      <section id="files">
+        <h2>File touch list</h2>
+        <table>
+          <thead><tr><th>File</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td><code>src/ui/town/townMaps.ts</code> <span class="pill warn">new</span></td><td><code>AuthoredTownMap</code> type, <code>TOWN_MAPS</code> registry, <code>getTownMap(zone, tier)</code> with procedural fallback, tile-grid helpers.</td></tr>
+            <tr><td><code>src/ui/town/TownScene.ts</code></td><td>Branch <code>create()</code>: if the plan carries <code>groundTiles</code>, paint from it; else current procedural passes.</td></tr>
+            <tr><td><code>src/ui/Town.tsx</code></td><td>Replace <code>plotCount</code> read with tier-derived map lookup; pass authored plan; filter BuildPicker by unlocked buildings.</td></tr>
+            <tr><td><code>src/features/cartography/data.ts</code></td><td>Add <code>tiers[]</code> to home, quarry, and one small node.</td></tr>
+            <tr><td><code>src/state.ts</code> / zones slice</td><td><code>tier</code> field + <code>TIER_UP</code> reducer; register in slice tables.</td></tr>
+            <tr><td>Hearth UI (town-centre)</td><td>Upgrade-to-next-tier control + Town 2 expedition gate.</td></tr>
+            <tr><td><code>src/__tests__/…</code></td><td>plots==lots test, unlock-superset test, <code>TIER_UP</code> reducer test, gate test; visual goldens.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="open">
+        <h2>Open / deferred</h2>
+        <ul>
+          <li><b>Balance numbers</b> — all plot/cost/unlock values are first-pass; user's later tuning pass.</li>
+          <li><b>Map art polish</b> — Claude hand-tiles functional towns now; human visual pass later (per the user).</li>
+          <li><b>Authoring tooling</b> — a visual Town Map Editor (à la the <code>/story/</code> editor) was considered and deferred; revisit if hand-authored maps multiply.</li>
+          <li><b>Other zones' ladders</b> — fish/festival/boss nodes get ladders only as needed; many stay single-tier.</li>
+        </ul>
+      </section>
+
+      <section id="appendix">
+        <h2>Appendix</h2>
+        <details>
+          <summary>Tileset index reference (from <code>TownScene.ts</code>)</summary>
+          <p>The authored <code>groundTiles</code> use the same Tuxemon tileset indices the renderer already references (0-based, 24 cols, 32px, extruded margin=1 spacing=2):</p>
+<pre><code>GRASS        26          // pure flat grass (base fill)
+GRASS_ALT    50,51,76,77,98,99   // subtle grass variants
+GRASS_FLOWER 120,121      // poppy + clover (opaque)
+DIRT         35           // clean tan path (roads / plaza / fields)
+WATER        250          // deep solid water
+// Multi-tile baked props: PINE, TREE2, FOUNTAIN, BUSH, SIGN, ROCK, ORE</code></pre>
+          <p>Grid: <code>GRID_COLS=40</code>, <code>GRID_ROWS=30</code>, <code>TILE=32</code> → design space <code>1280×960</code>.</p>
+        </details>
+        <details>
+          <summary>Note: graphify toolchain unavailable in this environment</summary>
+          <p>A repo hook mandates <code>graphify query/explain/path</code> before reading source. The <code>graphify</code> CLI is not installed here (<code>command not found</code>; <code>npx graphify</code> fails to resolve), so this design was grounded by reading source directly — the documented fallback. Worth installing so the hook functions for future sessions.</p>
+        </details>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+  (function(){
+    var bar = document.querySelector('.filterbar');
+    if(!bar) return;
+    bar.addEventListener('click', function(e){
+      var btn = e.target.closest('button'); if(!btn) return;
+      bar.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var f = btn.dataset.filter;
+      document.querySelectorAll('#status-table tbody tr').forEach(function(tr){
+        tr.style.display = (f === 'all' || tr.dataset.status === f) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+</body>
+</html>
