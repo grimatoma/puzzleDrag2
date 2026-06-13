@@ -315,7 +315,7 @@ const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label
   );
 });
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progressValue: number; progressMax: number }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; progressValue: number; progressMax: number }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
@@ -572,7 +572,6 @@ export function InventoryGrid({
     }
     accSelect(key);
   }, [accSelect, accSelectInPlace]);
-  const selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
   const selectWide = useCallback((key: string) => setSelectedKey(key), []);
 
   useLayoutEffect(() => {
@@ -775,7 +774,6 @@ export function InventoryGrid({
               entry={entry}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onCollapse={() => {}}
               progressValue={progressValueFor(entry.key)}
               progressMax={progressMaxFor(entry.key)}
             />
