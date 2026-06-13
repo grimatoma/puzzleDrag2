@@ -25,3 +25,7 @@ coverage/
 /icon-review/
 
 
+
+# Generated pixel-art export scratch dirs (not part of the repo)
+output/
+output_128/
