@@ -13,28 +13,29 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  a{color:var(--winter)}
   header{padding:28px 32px 18px;border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,#191c22,#14161a)}
   h1{margin:0 0 6px;font-size:24px;letter-spacing:.2px}
-  .sub{color:var(--muted);max-width:70ch}
+  .sub{color:var(--muted);max-width:74ch}
   .chips{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
   .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
     padding:4px 12px;font-size:12.5px;color:var(--muted)}
   .chip b{color:var(--ink);font-weight:600}
   main{padding:24px 32px 64px;max-width:1180px;margin:0 auto}
-  details.spec{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:14px 18px;margin:0 0 26px}
-  details.spec summary{cursor:pointer;font-weight:600}
+  h2.round{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--summer);
+    margin:30px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  details.spec,details.archive{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 18px;margin:0 0 22px}
+  details summary{cursor:pointer;font-weight:600}
   details.spec pre{white-space:pre-wrap;color:var(--muted);font-size:13px;
     background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0 0}
   table.legend{border-collapse:collapse;margin:12px 0 0;font-size:13px;width:100%}
   table.legend th,table.legend td{border:1px solid var(--line);padding:6px 10px;text-align:left}
   table.legend th{background:var(--panel2);color:var(--muted);font-weight:600}
   section.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;
-    padding:20px 22px;margin:0 0 24px}
+    padding:20px 22px;margin:0 0 22px}
   .tilehead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
-  .tilehead h2{margin:0;font-size:19px}
+  .tilehead h3{margin:0;font-size:19px}
   .map{color:var(--muted);font-size:13.5px}
   .prompt{color:var(--muted);font-size:12.5px;font-style:italic;margin:6px 0 16px;
     border-left:3px solid var(--line);padding-left:10px}
@@ -51,7 +52,7 @@
     background-size:16px 16px;background-position:0 0,8px 8px;
     border-radius:8px;padding:8px;display:inline-block;line-height:0}
   img.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
-  .big{width:192px;height:192px}
+  .big{width:180px;height:180px}
   .label{margin-top:10px;font-size:12px;color:var(--muted)}
   .label b{color:var(--ink)}
   .id{font-size:10.5px;color:#6c7480;margin-top:2px;font-family:ui-monospace,monospace}
@@ -62,8 +63,10 @@
   .sizes .frame{background-size:8px 8px;padding:4px}
   .sizes small{display:block;color:var(--muted);margin-top:6px;font-size:11px}
   .note{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--summer);
-    border-radius:8px;padding:12px 16px;margin:0 0 26px;color:var(--ink);font-size:13.5px}
+    border-radius:8px;padding:12px 16px;margin:0 0 22px;color:var(--ink);font-size:13.5px}
   .note b{color:var(--summer)}
+  .archive .cands{margin-top:14px}
+  .archive .big{width:120px;height:120px}
   footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);
     padding-top:18px;margin-top:8px}
   @media(max-width:820px){.cands{grid-template-columns:repeat(2,1fr)}.big{width:150px;height:150px}}
@@ -72,125 +75,122 @@
 <body>
 <header>
   <h1>Seasonal Board Tiles — Review</h1>
-  <div class="sub">Milestone&nbsp;1a — <b>Spring base candidates</b>. Each tile was generated 4 ways
-    (varying camera view, outline, and shading) so we lock the art style and pick the best base in
-    one pass. Compare <b>across a row</b> for the four variants of a tile, and <b>down a column</b>
-    (c1 vs c1, etc.) to check the style stays consistent across different tiles.</div>
+  <div class="sub">Locking a consistent, repeatable board-tile art style before chaining seasons.
+    Seasons are <b>farm-only</b>; the board grid stays a square 6×6 (this is tile <i>art</i>, not an
+    isometric grid). Method: cheap multi-candidate generation + human pick (no expensive Pro edits).</div>
   <div class="chips">
-    <span class="chip">Phase: <b>M1a — pick spring base</b></span>
     <span class="chip">Tiles: <b>Oak · Corn</b></span>
     <span class="chip">Native: <b>64×64</b></span>
-    <span class="chip">Tool: <b>create_map_object</b> (~1 gen each)</span>
-    <span class="chip">Spent: <b>~10 generations</b></span>
+    <span class="chip">Anchor season: <b>Summer (max size)</b></span>
+    <span class="chip">Spent so far: <b>~26 generations</b></span>
     <span class="chip">★ = <b>Claude's pick</b></span>
   </div>
 </header>
 
 <main>
+  <h2 class="round">Round 2 — Summer anchor + flat-pad attempt (current)</h2>
+
+  <div class="note"><b>Why "summer anchor":</b> PixelLab auto-frames every generation to fill the
+    canvas, so independently-made seasons aren't to-scale. We generate the <b>largest-extent season
+    first</b> (summer = full-grown) with deliberate headroom (~70–75%), then derive spring / autumn /
+    winter from it so they sit to-scale and never overflow. The full corn stalk + ear now fits with
+    room to spare. ✅</div>
+
+  <div class="note" style="border-left-color:var(--winter)"><b>Flat-pad status:</b> PixelLab
+    map-objects still extrude a <i>thin isometric edge</i> (a low slab), not a perfectly flat pad —
+    far flatter than round 1's tall cube, but not zero-depth. "low top-down" (a2/a4) flattens more
+    but gets messy &amp; loses headroom. <b>Open decision:</b> accept the clean low slab (a1), or
+    switch to a <b>decoupled pipeline</b> — generate the subject alone (no pad) and composite it onto
+    a truly-flat pad we control (also gives perfect scale + identical pads across all tiles).</div>
+
   <details class="spec">
     <summary>Style spec &amp; candidate legend</summary>
-    <pre>SPRING look — waking, fresh. Dark damp tilled soil, bright green grass at the pad edges,
-a few tiny pink/white blossoms + dew, soft cool morning light from upper-left.
-Subject: young / small / vivid green, no fruit yet. Discrete square "tile of land".</pre>
+    <pre>SUMMER anchor — peak, abundance. Full-grown subject, deep saturated green, bright midday
+light from upper-left, lush grass at the pad edge. Subject fills ~70–75% of the tile with
+clear headroom. Flat-ish square soil pad. Selective outline, hue-shifted ramps.</pre>
     <table class="legend">
-      <tr><th>Variant</th><th>Camera view</th><th>Outline</th><th>Shading</th><th>Detail</th></tr>
-      <tr><td><b>c1</b></td><td>high top-down</td><td>selective</td><td>medium</td><td>high</td></tr>
-      <tr><td><b>c2</b></td><td>low top-down</td><td>selective</td><td>medium</td><td>high</td></tr>
-      <tr><td><b>c3</b></td><td>high top-down</td><td>single color</td><td>detailed</td><td>high</td></tr>
-      <tr><td><b>c4</b></td><td>low top-down</td><td>single color</td><td>medium</td><td>medium</td></tr>
+      <tr><th>Variant</th><th>Camera</th><th>Outline</th><th>Shading</th><th>Detail</th></tr>
+      <tr><td><b>a1</b></td><td>high top-down</td><td>selective</td><td>medium</td><td>high</td></tr>
+      <tr><td><b>a2</b></td><td>low top-down</td><td>selective</td><td>medium</td><td>high</td></tr>
+      <tr><td><b>a3</b></td><td>high top-down</td><td>selective</td><td>detailed</td><td>high</td></tr>
+      <tr><td><b>a4</b></td><td>low top-down</td><td>selective</td><td>medium</td><td>medium</td></tr>
     </table>
   </details>
 
-  <div class="note"><b>Decision to make:</b> "high top-down" (c1/c3) renders the soil as a clean
-    raised <b>isometric land-block</b> — discrete and tile-like. "low top-down" (c2/c4) gives a
-    flatter, more organic ground but is messier and over-matures the corn. The board grid stays a
-    square 6×6 either way — this is tile <i>art</i>, not grid projection. If you'd rather have the
-    flatter square soil-pad from your reference photos, say so and I'll reprompt for a thin flat
-    pad instead of a raised block.</div>
-
-  <!-- OAK -->
+  <!-- OAK round 2 -->
   <section class="tile">
-    <div class="tilehead"><h2>🌳 Oak</h2>
-      <span class="map">tile_tree_oak &nbsp;·&nbsp; resource → <b>plank</b> (stack of cut planks, pad-less)</span></div>
-    <div class="prompt">"A young oak tree growing on a square patch of dark brown tilled soil with green grass
-      around the rim; slim trunk and a fresh light-green rounded canopy, slightly sparse; a few tiny
-      pink-white spring blossoms and dewdrops; cozy farm game tile, spring morning, soft cool light from upper left"</div>
+    <div class="tilehead"><h3>🌳 Oak — summer anchor</h3>
+      <span class="map">tile_tree_oak · resource → <b>plank</b></span></div>
     <div class="cands">
-      <div class="cand pick">
-        <div class="badge">★ Claude's pick</div>
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c1.png" alt="oak c1"></div>
-        <div class="label"><b>c1</b> · high · selective · medium</div>
-        <div class="id">76a65f0b</div>
-        <div class="why">Cleanest discrete land-block; vivid cohesive palette; pad matches corn-c1.</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c2.png" alt="oak c2"></div>
-        <div class="label"><b>c2</b> · low · selective · medium</div>
-        <div class="id">15104995</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c3.png" alt="oak c3"></div>
-        <div class="label"><b>c3</b> · high · single · detailed</div>
-        <div class="id">1ce694b4</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c4.png" alt="oak c4"></div>
-        <div class="label"><b>c4</b> · low · single · medium</div>
-        <div class="id">a8e461a9</div>
-      </div>
+      <div class="cand pick"><div class="badge">★ Claude's pick</div>
+        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a1.png"></div>
+        <div class="label"><b>a1</b> · high · selective · medium</div><div class="id">04965b05</div>
+        <div class="why">Cleanest thin pad, good headroom, vivid palette; pad matches corn-a1.</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a2.png"></div>
+        <div class="label"><b>a2</b> · low · selective · medium</div><div class="id">78a13833</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a3.png"></div>
+        <div class="label"><b>a3</b> · high · selective · detailed</div><div class="id">d9efcf5c</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a4.png"></div>
+        <div class="label"><b>a4</b> · low · selective · medium</div><div class="id">1b1ba5d3</div></div>
     </div>
     <div class="sizes">
-      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c1.png"></div><small>c1 @64</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="48" height="48" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c1.png"></div><small>c1 @48</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="32" height="32" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c1.png"></div><small>c1 @32 (min)</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c3.png"></div><small>c3 @64</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a1.png"></div><small>a1 @64</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="48" height="48" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a1.png"></div><small>a1 @48</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="32" height="32" src="../assets/seasonal-tiles/oak/summer-anchor-candidates/oak-summer-a1.png"></div><small>a1 @32 (min)</small></div>
     </div>
   </section>
 
-  <!-- CORN -->
+  <!-- CORN round 2 -->
   <section class="tile">
-    <div class="tilehead"><h2>🌽 Corn</h2>
-      <span class="map">tile_grain_corn &nbsp;·&nbsp; resource → <b>flour</b> / corn-cob bundle (pad-less)</span></div>
-    <div class="prompt">"A young corn seedling growing on a square patch of dark brown tilled soil with green grass
-      around the rim; two or three bright green corn leaves, short and tender, no cob yet; a few tiny
-      pink-white spring blossoms and dewdrops; cozy farm game tile, spring morning, soft cool light from upper left"</div>
+    <div class="tilehead"><h3>🌽 Corn — summer anchor</h3>
+      <span class="map">tile_grain_corn · resource → <b>flour</b> / corn-cob bundle</span></div>
     <div class="cands">
-      <div class="cand pick">
-        <div class="badge">★ Claude's pick</div>
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c1.png" alt="corn c1"></div>
-        <div class="label"><b>c1</b> · high · selective · medium</div>
-        <div class="id">350dba1d</div>
-        <div class="why">Correct spring maturity (no cob); clean block; pad twins oak-c1 → consistent.</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c2.png" alt="corn c2"></div>
-        <div class="label"><b>c2</b> · low · selective · medium</div>
-        <div class="id">f6144b29</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c3.png" alt="corn c3"></div>
-        <div class="label"><b>c3</b> · high · single · detailed</div>
-        <div class="id">b6bef813</div>
-      </div>
-      <div class="cand">
-        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c4.png" alt="corn c4"></div>
-        <div class="label"><b>c4</b> · low · single · medium</div>
-        <div class="id">d852e03a</div>
-      </div>
+      <div class="cand pick"><div class="badge">★ Claude's pick</div>
+        <div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a1.png"></div>
+        <div class="label"><b>a1</b> · high · selective · medium</div><div class="id">2cd0641b</div>
+        <div class="why">Full stalk + ear fits with headroom; clean thin pad twins oak-a1.</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a2.png"></div>
+        <div class="label"><b>a2</b> · low · selective · medium</div><div class="id">20c6a7b2</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a3.png"></div>
+        <div class="label"><b>a3</b> · high · selective · detailed</div><div class="id">87c68c74</div></div>
+      <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a4.png"></div>
+        <div class="label"><b>a4</b> · low · selective · medium</div><div class="id">aea87614</div></div>
     </div>
     <div class="sizes">
-      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c1.png"></div><small>c1 @64</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="48" height="48" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c1.png"></div><small>c1 @48</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="32" height="32" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c1.png"></div><small>c1 @32 (min)</small></div>
-      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c3.png"></div><small>c3 @64</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="64" height="64" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a1.png"></div><small>a1 @64</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="48" height="48" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a1.png"></div><small>a1 @48</small></div>
+      <div class="grp"><div class="frame"><img class="px" width="32" height="32" src="../assets/seasonal-tiles/corn/summer-anchor-candidates/corn-summer-a1.png"></div><small>a1 @32 (min)</small></div>
     </div>
   </section>
+
+  <!-- ARCHIVE -->
+  <details class="archive">
+    <summary>📦 Round 1 — Spring iso-block candidates (rejected: pad too tall/cube-like)</summary>
+    <section class="tile" style="margin-top:14px;background:transparent;border:none;padding:0">
+      <div class="tilehead"><h3>🌳 Oak — spring (round 1)</h3></div>
+      <div class="cands">
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c1.png"></div><div class="label">c1 high·sel·med</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c2.png"></div><div class="label">c2 low·sel·med</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c3.png"></div><div class="label">c3 high·single·detail</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/oak/spring-candidates/oak-spring-c4.png"></div><div class="label">c4 low·single·med</div></div>
+      </div>
+    </section>
+    <section class="tile" style="margin-top:14px;background:transparent;border:none;padding:0">
+      <div class="tilehead"><h3>🌽 Corn — spring (round 1)</h3></div>
+      <div class="cands">
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c1.png"></div><div class="label">c1 high·sel·med</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c2.png"></div><div class="label">c2 low·sel·med</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c3.png"></div><div class="label">c3 high·single·detail</div></div>
+        <div class="cand"><div class="frame"><img class="px big" src="../assets/seasonal-tiles/corn/spring-candidates/corn-spring-c4.png"></div><div class="label">c4 low·single·med</div></div>
+      </div>
+    </section>
+  </details>
 
   <footer>
-    <b>Next:</b> you pick a spring base per tile (or "reprompt for flat pad"). Then I chain
-    Summer → Autumn → Winter off the approved spring, generate the idle + transition animations,
-    and add them as new columns here — with a collapsed "Rejected attempts" archive per tile.
-    Generated with PixelLab (Tier 2; ~3,656 generations remaining).
+    <b>Next:</b> confirm a summer anchor per tile (and the pad decision: clean low slab vs truly-flat
+    decoupled). Then I derive spring → autumn → winter from the locked summer (to-scale), generate
+    idle + transition animations, and add them as new columns here.
+    Generated with PixelLab (Tier 2).
   </footer>
 </main>
 </body>
