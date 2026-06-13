@@ -142,6 +142,14 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
       } else {
         add("Entry cost", "Free");
       }
+      // Zone Tier Ladder — surface the settlement-tier rungs for tiered zones.
+      const tiers = e["tiers"];
+      if (Array.isArray(tiers) && tiers.length > 0) {
+        const names = tiers.map((t) => (t as { name?: string })?.name).filter(Boolean);
+        const plots = tiers.map((t) => (t as { plots?: number })?.plots).filter((p) => p != null);
+        if (names.length > 0) add("Tiers", names.join(" → "));
+        if (plots.length > 0) add("Plots by tier", plots.join(" → "));
+      }
       break;
     }
 
