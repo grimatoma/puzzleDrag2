@@ -18,7 +18,7 @@ beforeEach(() => global.localStorage.clear());
 describe("fresh state — settlements", () => {
   it("home is founded for free; other zones are not", () => {
     const s = createInitialState();
-    expect(s.settlements).toEqual({ home: { founded: true } });
+    expect(s.settlements).toEqual({ home: { founded: true, tier: 0 } });
     expect(isSettlementFounded(s, "home")).toBe(true);
     expect(isSettlementFounded(s, "meadow")).toBe(false);
     expect(foundedSettlementCount(s)).toBe(1);
@@ -91,6 +91,22 @@ describe("FOUND_SETTLEMENT", () => {
     expect(result.settlements?.meadow).toBeUndefined();
     expect(result.coins).toBe(s.coins); // not deducted
     expect(result.bubble?.text).toMatch(/Complete your first settlement/i);
+  });
+
+  // Zone Tier Ladder — the quarry (Town 2) requires home at its City rung.
+  it("rejects founding the quarry until home reaches City (tier 2)", () => {
+    // home completed (passes the prior-complete gate) but still at tier 0.
+    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 0 } } });
+    const blocked = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
+    expect(blocked.settlements?.quarry).toBeUndefined();
+    expect(blocked.coins).toBe(s.coins); // not deducted
+    expect(blocked.bubble?.text).toMatch(/City before founding/i);
+  });
+
+  it("allows founding the quarry once home is at City (tier 2)", () => {
+    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 2 } } });
+    const ok = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
+    expect(ok.settlements?.quarry).toMatchObject({ founded: true, tier: 0 });
   });
 });
 

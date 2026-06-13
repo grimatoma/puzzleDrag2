@@ -45,7 +45,7 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
@@ -721,6 +721,17 @@ function coreReducer(state: GameState, action: Action): GameState {
           bubble: { id: Date.now(), npc: "wren", text: "Complete your first settlement before founding the next.", ms: 2400 },
         };
       }
+      // Tier gate (Zone Tier Ladder): some zones require another zone to reach a
+      // tier first — e.g. the quarry's mine expedition needs home at its City rung.
+      const tierGate = ZONES[zoneId].requiresZoneTier;
+      if (tierGate && settlementTier(state, tierGate.zone) < tierGate.tier) {
+        const gateName = displayZoneName(state, tierGate.zone);
+        const gateTierName = currentTierDef(tierGate.zone, tierGate.tier)?.name ?? `tier ${tierGate.tier}`;
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `Grow ${gateName} to ${gateTierName} before founding here.`, ms: 2600 },
+        };
+      }
       const cost = settlementFoundingCost(state) as { coins?: number };
       if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
       // Phase 5e — pick the biome at founding (the picker passes payload.biome;
@@ -730,8 +741,39 @@ function coreReducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         coins: state.coins - (cost.coins ?? 0),
-        settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id } },
+        settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id, tier: 0 } },
         bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a ${biome.name} settlement now. People will come.`, ms: 2400 },
+      };
+    }
+    case "TIER_UP": {
+      // Zone Tier Ladder — upgrade a settlement to its next rung. Mirrors the
+      // FOUND_SETTLEMENT cost path: validate coins + zone-inventory resources,
+      // deduct, then bump `tier`. No-op at the top rung or when unaffordable.
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      if (!zoneId || !ZONES[zoneId]) return state;
+      if (!isSettlementFounded(state, zoneId)) return state;
+      const cur = settlementTier(state, zoneId);
+      if (cur >= maxTier(zoneId)) return state;                  // already at top rung
+      const next = currentTierDef(zoneId, cur + 1);
+      if (!next) return state;
+      const upCost = next.upgradeCost ?? {};
+      const coinCost = upCost.coins ?? 0;
+      const resCost = upCost.resources ?? {};
+      if ((state.coins ?? 0) < coinCost) return state;           // can't afford coins
+      const upInv = zoneInventory(state, zoneId);
+      const canRes = Object.entries(resCost).every(([k, v]) => inventoryQty(upInv, k) >= v);
+      if (!canRes) return state;                                 // can't afford resources
+      let nextInv = { ...upInv };
+      Object.entries(resCost).forEach(([k, v]) => {
+        nextInv = inventoryPut(nextInv, k, inventoryQty(nextInv, k) - v);
+      });
+      const prevEntry = (state.settlements?.[zoneId] as Record<string, unknown> | undefined) ?? { founded: true };
+      return {
+        ...state,
+        coins: (state.coins ?? 0) - coinCost,
+        inventory: { ...state.inventory, [zoneId]: nextInv },
+        settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, founded: true, tier: cur + 1 } },
+        bubble: { id: Date.now(), npc: "mira", text: `${displayZoneName(state, zoneId)} grew into a ${next.name}!`, ms: 2600 },
       };
     }
     case "KEEPER/CONFRONT": {

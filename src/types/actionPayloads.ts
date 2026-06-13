@@ -161,6 +161,12 @@ export interface FoundSettlementAction {
   zoneId?: string;
 }
 
+export interface TierUpAction {
+  type: "TIER_UP";
+  payload?: SettlementPayload;
+  zoneId?: string;
+}
+
 export interface KeeperConfrontAction {
   type: "KEEPER/CONFRONT";
   payload?: KeeperPayload;
@@ -567,6 +573,7 @@ export type TypedActionType =
   | SetViewParamsAction["type"]
   | SettlementNameAction["type"]
   | FoundSettlementAction["type"]
+  | TierUpAction["type"]
   | KeeperConfrontAction["type"]
   | KeeperStartTrialAction["type"]
   | KeeperAppeaseAction["type"]
@@ -656,6 +663,7 @@ export type TypedAction =
   | SetViewParamsAction
   | SettlementNameAction
   | FoundSettlementAction
+  | TierUpAction
   | KeeperConfrontAction
   | KeeperStartTrialAction
   | KeeperAppeaseAction

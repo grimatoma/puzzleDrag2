@@ -117,7 +117,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     magicFertilizerCharges: 0,
     built: { home: { decorations: {}, _plots: {} } },
     zoneNames: { home: "" },
-    settlements: { home: { founded: true } },
+    settlements: { home: { founded: true, tier: 0 } },
     influence: 0,
     bubble: null,
     modal: null,
