@@ -9,7 +9,7 @@ import IconCanvas, { hasIcon } from "../ui/IconCanvas.jsx";
 import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
-} from "../config/applyOverrides.js";
+} from "../config/storySanitizers.js";
 import { condToTrigger } from "../config/progression/storyBridge.js";
 import { describeCond, factIdsIn } from "../config/progression/conditions.js";
 import { UI_COLORS } from "../ui/primitives/palette.js";

@@ -3,7 +3,6 @@
 // Shares localStorage with the game and Dev Panel; story-beat overrides
 // written here flow through the same hearth.balance.draft key.
 
-import "./config/balance/bootstrap.js";
 import "./index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";

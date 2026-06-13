@@ -35,7 +35,6 @@ export type BiomeId = "farm" | "mine" | "fish";
 export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "RecipeAliasId">;
 export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
 
-import type { TuningOverrides } from "./config/schemas/tuning.js";
 import type { ToolPowerDefinition } from "./config/schemas/shared.js";
 import type {
   TileItemEntry,
@@ -170,11 +169,10 @@ export const EXPEDITION_FOOD_TURNS = {
   iron_ration:   4,
 };
 // Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
-// Not frozen — replaced/edited via `applyExpeditionOverrides`.
 export const EXPEDITION_MEAT_FOODS = ["cured_meat"];
 // An expedition needs at least this many turns of food packed before you can
-// set out (Phase 5d). Tunable.
-export let MIN_EXPEDITION_TURNS = 3;    // Dev Panel: tuning.minExpeditionTurns
+// set out (Phase 5d).
+export const MIN_EXPEDITION_TURNS = 3;
 
 // Phase 5e — settlement biomes (master doc §IV). A biome is chosen at founding
 // and fixes the two hazards that appear in every round at that settlement, plus
@@ -202,18 +200,7 @@ export const SETTLEMENT_BIOMES = Object.freeze({
   ],
 });
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).
-export let DEFAULT_HOME_BIOME = "prairie"; // Dev Panel: tuning.homeBiome
-
-/** Apply Dev Panel tuning fields owned by this module (`export let` bindings). */
-export function applyConstantsTuning(tuning: TuningOverrides): void {
-  if (tuning.minExpeditionTurns !== undefined) MIN_EXPEDITION_TURNS = tuning.minExpeditionTurns;
-  if (
-    tuning.homeBiome !== undefined
-    && (SETTLEMENT_BIOMES.farm ?? []).some((b) => b.id === tuning.homeBiome)
-  ) {
-    DEFAULT_HOME_BIOME = tuning.homeBiome;
-  }
-}
+export const DEFAULT_HOME_BIOME = "prairie";
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
@@ -1175,12 +1162,11 @@ export function dayKeyForDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-// ─── Dev Panel overrides ─────────────────────────────────────────────
-// Parsed balance.json + optional localStorage draft (no merge onto live tables here).
-// Call `initBalanceOverrides()` from app entry / Vitest setup to apply patches.
+// ─── Dev Panel / editor draft baseline ───────────────────────────────
+// The committed `balance.json` override layer was removed — these canonical
+// constants ARE the balance. `BALANCE_OVERRIDES` is just the parsed baseline
+// (an optional localStorage draft, empty by default) the Story Editor and Dev
+// Panel wiki seed their editable draft from; it no longer patches live tables.
 import { loadBalanceOverrides } from "./config/balance/load.js";
 
 export const BALANCE_OVERRIDES = loadBalanceOverrides();
-
-export { getTuningOverrides } from "./config/balance/init.js";
-export type { TuningOverrides } from "./config/balance/applyAll.js";

@@ -1,4 +1,3 @@
-import "./src/config/balance/bootstrap.js";
 import "./src/index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";

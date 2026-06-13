@@ -3,7 +3,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { rootReducer, createInitialState } from "../state.js";
 import { KEEPERS, keeperForType, keeperPathInfo } from "../keepers.js";
-import { applyKeeperOverrides } from "../config/applyOverrides.js";
 import { settlementKeeperPath, keeperReadyFor, builtCountAt } from "../features/zones/data.js";
 
 beforeEach(() => global.localStorage.clear());
@@ -43,25 +42,6 @@ describe("KEEPERS config", () => {
     expect(keeperPathInfo("mine", "driveout")).toBe(KEEPERS.mine.driveout);
     expect(keeperPathInfo("mine", "bogus")).toBeNull();
     expect(keeperPathInfo("nope", "coexist")).toBeNull();
-  });
-});
-
-describe("applyKeeperOverrides", () => {
-  it("merges whitelisted fields in place; ignores a missing override object", () => {
-    const fake = {
-      farm: { id: "f", name: "Old", title: "T", look: { icon: "x" }, appearsAfterBuildings: 4, intro: ["a"], coexist: { label: "c", pitch: ["p"], embers: 5 }, driveout: { label: "d", pitch: ["q"], coreIngots: 5 } },
-    };
-    applyKeeperOverrides(fake, { farm: { name: "New", appearsAfterBuildings: 2, intro: ["one", "two"], coexist: { embers: 11, label: "stay!" }, driveout: { coreIngots: 3 } } });
-    expect(fake.farm.name).toBe("New");
-    expect(fake.farm.appearsAfterBuildings).toBe(2);
-    expect(fake.farm.intro).toEqual(["one", "two"]);
-    expect(fake.farm.coexist.embers).toBe(11);
-    expect(fake.farm.coexist.label).toBe("stay!");
-    expect(fake.farm.driveout.coreIngots).toBe(3);
-    expect(fake.farm.id).toBe("f"); // untouched
-    const before = JSON.stringify(fake);
-    applyKeeperOverrides(fake, undefined);
-    expect(JSON.stringify(fake)).toBe(before);
   });
 });
 
