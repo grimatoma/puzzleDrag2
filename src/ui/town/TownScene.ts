@@ -17,6 +17,13 @@ export interface TownPlanProp { kind: string; x: number; y: number }
 export interface TownPlan {
   width: number;
   height: number;
+  /**
+   * Optional hand-authored ground layer (Zone Tier Ladder). 30 rows × 40 cols
+   * of tileset indices; -1 leaves a cell blank. When present, the scene paints
+   * the ground straight from it and skips the procedural grass/water/road
+   * passes — the object layer (lots/boards/props) is unchanged.
+   */
+  groundTiles?: number[][];
   plaza: { cx: number; cy: number; rx: number; ry: number };
   well: { cx: number; cy: number; r: number };
   lots: TownPlanLot[];
@@ -108,13 +115,18 @@ export class TownScene extends Phaser.Scene {
 
     this.groundLayer = this.map.createBlankLayer("ground", this.tileset)!;
     this.groundLayer.setDepth(-1000);
-    this.paintGrass();
-    this.paintWater();   // under roads so bridges read on top
-    this.paintRoads();
-    this.paintPlaza();
-    this.paintFields();
-    this.paintBridges();
-    this.scatterGroundDetail();
+    if (this.plan.groundTiles) {
+      // Hand-authored ground (Zone Tier Ladder) — paint straight from the grid.
+      this.paintGroundTiles();
+    } else {
+      this.paintGrass();
+      this.paintWater();   // under roads so bridges read on top
+      this.paintRoads();
+      this.paintPlaza();
+      this.paintFields();
+      this.paintBridges();
+      this.scatterGroundDetail();
+    }
 
     // ── Depth-sorted object layer ───────────────────────────────────────────
     this.drawBoards();
@@ -193,6 +205,20 @@ export class TownScene extends Phaser.Scene {
 
   paintGrass() {
     this.groundLayer.fill(T.GRASS);
+  }
+
+  /** Paint the ground layer directly from an authored tile grid (rows × cols). */
+  paintGroundTiles() {
+    const grid = this.plan.groundTiles;
+    if (!grid) return;
+    for (let ty = 0; ty < GRID_ROWS; ty++) {
+      const row = grid[ty];
+      if (!row) continue;
+      for (let tx = 0; tx < GRID_COLS; tx++) {
+        const idx = row[tx];
+        if (idx >= 0) this.putGround(idx, tx, ty);
+      }
+    }
   }
 
   /** Paint a band of `idx` tiles `widthTiles` thick along an axis-aligned segment. */

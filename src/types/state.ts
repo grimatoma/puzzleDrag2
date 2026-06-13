@@ -239,7 +239,7 @@ export interface GameState {
   magicFertilizerCharges: number;
   built: Record<string, Record<string, unknown>>;
   zoneNames: Record<string, string>;
-  settlements: Record<string, { founded: boolean; [k: string]: unknown }>;
+  settlements: Record<string, { founded: boolean; tier?: number; [k: string]: unknown }>;
   influence: number;
   bubble: Bubble | null;
   modal: string | null;

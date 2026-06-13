@@ -68,7 +68,8 @@ describe("FOUND_SETTLEMENT picks the biome", () => {
       ...createInitialState(),
       coins: 9999,
       built: { ...createInitialState().built, home: built },
-      settlements: { home: { founded: true, biome: DEFAULT_HOME_BIOME, keeperPath: "coexist" } },
+      // home at its City rung (tier 2) so the quarry's Town-2 tier gate passes.
+      settlements: { home: { founded: true, biome: DEFAULT_HOME_BIOME, keeperPath: "coexist", tier: 2 } },
       ...over,
     };
   };

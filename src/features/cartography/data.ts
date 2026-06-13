@@ -30,6 +30,35 @@ export interface MapEntryCost {
   coins?: number;
 }
 
+/**
+ * Cost to reach a tier rung. Coins are spent from `state.coins`; resources are
+ * spent from the zone's own inventory (same shape the BUILD action validates).
+ */
+export interface ResourceCost {
+  coins?: number;
+  resources?: Record<string, number>;
+}
+
+/**
+ * One rung of a zone's settlement-tier ladder. The position in `MapNode.tiers`
+ * IS the tier number (0-based); the array length is the zone's rung count.
+ *
+ *  - `plots`   — TOTAL building plots at this rung (must equal the authored
+ *                town map's lot count for `(zone, tier)` — test-enforced).
+ *  - `unlocks` — buildings *newly* buildable at this rung. The buildings
+ *                available at tier N are the union of `unlocks` for rungs ≤ N,
+ *                and that union must equal the node's flat `buildings[]`
+ *                superset (test-enforced).
+ *  - `upgradeCost` — cost to REACH this rung. Rung 0 (founding) has none.
+ */
+export interface ZoneTier {
+  id: string;
+  name: string;
+  plots: number;
+  unlocks: BuildingId[];
+  upgradeCost?: ResourceCost;
+}
+
 export interface MapNode {
   id: string;
   name: string;
@@ -47,6 +76,13 @@ export interface MapNode {
   buildings: BuildingId[];
   plotCount: number;
   requiresHearthTokens?: boolean;
+  /** Optional per-zone settlement-tier ladder. Absent → single fixed layout. */
+  tiers?: ZoneTier[];
+  /**
+   * Gate this zone's founding on another zone reaching a tier. Mirrors
+   * `requiresHearthTokens` but generalised: e.g. quarry requires home at City.
+   */
+  requiresZoneTier?: { zone: string; tier: number };
 }
 
 export interface MapRegion {
@@ -209,6 +245,36 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Brewery, BuildingId.Observatory,
     ],
     plotCount: 20,
+    // ── Town 1 ladder · 3 rungs (Hamlet → Village → City). The City rung
+    // equals today's flat home (20 plots + full buildings), so a fully-grown
+    // home is unchanged. Costs/plots are first-pass (see docs/zone-tier-ladder.html).
+    tiers: [
+      {
+        id: "hamlet", name: "Hamlet", plots: 6,
+        unlocks: [
+          BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Larder,
+          BuildingId.Bakery, BuildingId.Inn, BuildingId.Housing,
+        ],
+      },
+      {
+        id: "village", name: "Village", plots: 12,
+        unlocks: [
+          BuildingId.Silo, BuildingId.Stable, BuildingId.Sawmill, BuildingId.Apiary,
+          BuildingId.Brewery, BuildingId.Watchtower, BuildingId.Chapel,
+        ],
+        upgradeCost: { coins: 2500, resources: { hay_bundle: 120 } },
+      },
+      {
+        id: "city", name: "City", plots: 20,
+        unlocks: [
+          BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Kitchen, BuildingId.Workshop,
+          BuildingId.PowderStore, BuildingId.Portal, BuildingId.ClockTower, BuildingId.Lighthouse,
+          BuildingId.Apothecary, BuildingId.Observatory, BuildingId.Housing2, BuildingId.Housing3,
+          BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
+        ],
+        upgradeCost: { coins: 9000, resources: { plank: 60 } },
+      },
+    ],
   },
   {
     id: "meadow", name: "Greenmeadow", kind: "farm", icon: "🌾",
@@ -262,9 +328,34 @@ export const MAP_NODES: MapNode[] = [
     buildings: [
       BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Workshop, BuildingId.Forge, BuildingId.Barn,
       BuildingId.PowderStore, BuildingId.Inn, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
-      BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory,
+      BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory, BuildingId.CaravanPost,
     ],
-    plotCount: 8,
+    plotCount: 12,
+    // ── Town 2 ladder · 4 rungs (Dig Site → Mining Camp → Boomtown → Foundry
+    // City). Locked until home reaches its City rung. plotCount above is the
+    // top rung (12). Costs/plots are first-pass (see docs/zone-tier-ladder.html).
+    requiresZoneTier: { zone: "home", tier: 2 },
+    tiers: [
+      {
+        id: "dig_site", name: "Dig Site", plots: 4,
+        unlocks: [BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Housing],
+      },
+      {
+        id: "mining_camp", name: "Mining Camp", plots: 6,
+        unlocks: [BuildingId.Workshop, BuildingId.Forge, BuildingId.Inn, BuildingId.Watchtower],
+        upgradeCost: { coins: 2000, resources: { block: 60 } },
+      },
+      {
+        id: "boomtown", name: "Boomtown", plots: 8,
+        unlocks: [BuildingId.Barn, BuildingId.PowderStore, BuildingId.Housing2, BuildingId.Apothecary],
+        upgradeCost: { coins: 5500, resources: { iron_bar: 50 } },
+      },
+      {
+        id: "foundry_city", name: "Foundry City", plots: 12,
+        unlocks: [BuildingId.Observatory, BuildingId.Housing3, BuildingId.CaravanPost],
+        upgradeCost: { coins: 12000, resources: { gold_bar: 30 } },
+      },
+    ],
   },
   {
     id: "caves", name: "Lanternlit Caves", kind: "mine", icon: "🪨",
