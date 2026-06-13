@@ -441,6 +441,19 @@ export function currentTierDef(zoneId: string, tier: number): ZoneTier | null {
   return tiersForZone(zoneId)[tier] ?? null;
 }
 
+/**
+ * If `zoneId`'s founding is gated on another zone reaching a tier and that gate
+ * is unmet, return a player-facing reason; otherwise null. Single source of
+ * truth for the FOUND_SETTLEMENT reducer gate and the founding/map UI locks.
+ */
+export function zoneTierGateReason(state: GameState | null | undefined, zoneId: string): string | null {
+  const gate = ZONES[zoneId]?.requiresZoneTier;
+  if (!gate) return null;
+  if (settlementTier(state, gate.zone) >= gate.tier) return null;
+  const tierName = currentTierDef(gate.zone, gate.tier)?.name ?? `tier ${gate.tier}`;
+  return `Grow ${displayZoneName(state, gate.zone)} to ${tierName}`;
+}
+
 /** TOTAL plots at `(zone, tier)`. Falls back to the zone's flat plotCount. */
 export function plotsForTier(zoneId: string, tier: number): number {
   const def = currentTierDef(zoneId, tier);

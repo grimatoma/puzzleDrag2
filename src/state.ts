@@ -45,7 +45,7 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
@@ -723,13 +723,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       // Tier gate (Zone Tier Ladder): some zones require another zone to reach a
       // tier first — e.g. the quarry's mine expedition needs home at its City rung.
-      const tierGate = ZONES[zoneId].requiresZoneTier;
-      if (tierGate && settlementTier(state, tierGate.zone) < tierGate.tier) {
-        const gateName = displayZoneName(state, tierGate.zone);
-        const gateTierName = currentTierDef(tierGate.zone, tierGate.tier)?.name ?? `tier ${tierGate.tier}`;
+      const tierGateReason = zoneTierGateReason(state, zoneId);
+      if (tierGateReason) {
         return {
           ...state,
-          bubble: { id: Date.now(), npc: "wren", text: `Grow ${gateName} to ${gateTierName} before founding here.`, ms: 2600 },
+          bubble: { id: Date.now(), npc: "wren", text: `${tierGateReason} before founding here.`, ms: 2600 },
         };
       }
       const cost = settlementFoundingCost(state) as { coins?: number };

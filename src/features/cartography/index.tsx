@@ -13,6 +13,7 @@ import {
   settlementBiome,
   settlementKeeperPath,
   keeperReadyFor,
+  zoneTierGateReason,
   type SettlementType,
 } from "../zones/data.js";
 import { keeperForType } from "../../keepers.js";
@@ -299,23 +300,27 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
   if (!type) return null;
   const cost = settlementFoundingCost(state).coins;
   const canAfford = (state?.coins ?? 0) >= cost;
+  // Zone Tier Ladder — founding can be gated on another zone's tier (e.g. the
+  // quarry needs home at City). Surface that as a locked-with-reason button.
+  const tierGateReason = zoneTierGateReason(state, node.id);
+  const blocked = !canAfford || !!tierGateReason;
   return (
     <>
       <button
-        onClick={() => canAfford && setPickerOpen(true)}
-        disabled={!canAfford}
-        title={canAfford ? `Found ${node.name}` : `Need ${cost}◉ to found this settlement`}
+        onClick={() => !blocked && setPickerOpen(true)}
+        disabled={blocked}
+        title={tierGateReason ? `🔒 ${tierGateReason} to found here` : canAfford ? `Found ${node.name}` : `Need ${cost}◉ to found this settlement`}
         className="rounded-lg px-2 py-1.5 text-center text-[11px] font-bold"
         style={{
           ...cardStyle,
-          background: canAfford ? "linear-gradient(to bottom, #c8923a, #a06a1a)" : "#cbb98c",
-          border: canAfford ? "2px solid #7a4f10" : "2px solid #a08850",
-          color: canAfford ? "white" : "#7c5a3a",
-          cursor: canAfford ? "pointer" : "not-allowed",
+          background: !blocked ? "linear-gradient(to bottom, #c8923a, #a06a1a)" : "#cbb98c",
+          border: !blocked ? "2px solid #7a4f10" : "2px solid #a08850",
+          color: !blocked ? "white" : "#7c5a3a",
+          cursor: !blocked ? "pointer" : "not-allowed",
           width: "100%",
         }}
       >
-        🏗 Found this hearth · {cost}◉
+        {tierGateReason ? `🔒 ${tierGateReason}` : `🏗 Found this hearth · ${cost}◉`}
       </button>
       {pickerOpen && (
         <BiomePicker node={node} type={type} cost={cost} dispatch={dispatch} onClose={() => setPickerOpen(false)} />

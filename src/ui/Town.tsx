@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, unlockedBuildings, currentTierDef, maxTier } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, unlockedBuildings, currentTierDef, maxTier, zoneTierGateReason } from "../features/zones/data.js";
 import { getTownMap } from "./town/townMaps.js";
 import type { TownPlan } from "./town/TownScene.js";
 import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
@@ -67,14 +67,17 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
   const cost = settlementFoundingCost(state).coins;
   const canAfford = (state?.coins ?? 0) >= cost;
   const needPriorComplete = completedSettlementCount(state) < 1;
+  const tierGateReason = zoneTierGateReason(state, zoneId);
   const node = ZONES[zoneId];
   const name = displayZoneName(state, zoneId);
-  const blocked = needPriorComplete || !canAfford;
+  const blocked = needPriorComplete || !!tierGateReason || !canAfford;
   const blockedReason: string | undefined = needPriorComplete
     ? "Complete your first settlement first"
-    : !canAfford
-      ? `Need ${cost}◉`
-      : undefined;
+    : tierGateReason
+      ? tierGateReason
+      : !canAfford
+        ? `Need ${cost}◉`
+        : undefined;
   return (
     <>
       <div
