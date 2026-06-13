@@ -77,6 +77,7 @@ export class TownScene extends Phaser.Scene {
 
   buildingSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
   plotMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
+  boardZones: Phaser.GameObjects.Zone[] = []; // board hit areas, disabled while placing
   villagers: Phaser.GameObjects.Sprite[] = [];
   decorLayer!: Phaser.GameObjects.Layer; // depth-sorted props/trees/buildings
 
@@ -475,6 +476,7 @@ export class TownScene extends Phaser.Scene {
       const hit = this.add.zone(0, 0, b.w, b.h).setInteractive({ useHandCursor: true });
       hit.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickboard", b.kind); });
       marker.add(hit);
+      this.boardZones.push(hit);
     });
   }
 
@@ -485,6 +487,11 @@ export class TownScene extends Phaser.Scene {
     this.plotMarkers.clear();
 
     const isPlacing = !!this.pendingBuilding;
+
+    // While placing a building only the empty plots accept input — boards (Farm,
+    // Mine, Harbor) are silenced so a tap meant for the build flow can't fall
+    // through and open, say, the Farm menu underneath the placement UI.
+    this.boardZones.forEach((z) => { if (z.input) z.input.enabled = !isPlacing; });
 
     this.plan.lots.forEach((l) => {
       const isBuilt = this.builtLots.has(l.index);
@@ -500,8 +507,12 @@ export class TownScene extends Phaser.Scene {
         const scale = (l.w * 1.18) / sprite.width;
         sprite.setScale(scale);
         sprite.setDepth(baseY);
-        sprite.setInteractive({ useHandCursor: true });
-        sprite.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickbuilding", buildingId); });
+        // Existing buildings are only clickable outside placement mode, so a tap
+        // during the build flow can't open a station instead of placing.
+        if (!isPlacing) {
+          sprite.setInteractive({ useHandCursor: true });
+          sprite.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickbuilding", buildingId); });
+        }
         this.buildingSprites.set(l.index, sprite);
       } else {
         const container = this.add.container(l.cx, l.cy);
@@ -519,12 +530,16 @@ export class TownScene extends Phaser.Scene {
         txt.setOrigin(0.5);
         container.add(txt);
 
-        const hit = this.add.zone(0, 0, l.w, l.h).setInteractive({ useHandCursor: isPlacing });
-        hit.on("pointerup", () => {
-          if (this.isDragging) return;
-          if (isPlacing && this.pendingBuilding) this.events.emit("town.placebuilding", { lotIndex: l.index, buildingId: this.pendingBuilding.id });
-        });
-        container.add(hit);
+        // Empty plots only accept input while placing — outside the build flow
+        // they're inert decorations, never tappable.
+        if (isPlacing) {
+          const hit = this.add.zone(0, 0, l.w, l.h).setInteractive({ useHandCursor: true });
+          hit.on("pointerup", () => {
+            if (this.isDragging) return;
+            if (this.pendingBuilding) this.events.emit("town.placebuilding", { lotIndex: l.index, buildingId: this.pendingBuilding.id });
+          });
+          container.add(hit);
+        }
         this.plotMarkers.set(l.index, container);
       }
     });
