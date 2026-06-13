@@ -49,9 +49,9 @@ describe("Power hooks at runtime", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_grass", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    // Base coinsGain = max(1, floor(5*1/2)) = 2 (Spring +1 harvest bonus on 4),
-    // plus hook flat = 50. Total delta = 52.
-    expect(sAfter.coins - before).toBe(52);
+    // Base coinsGain = max(1, floor(4*1)) = 4 (2x economy-balance bump),
+    // plus hook flat = 50. Total delta = 54.
+    expect(sAfter.coins - before).toBe(54);
   });
 
   it("coin_bonus_per_tile scales with chain length", () => {
@@ -66,10 +66,9 @@ describe("Power hooks at runtime", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_grass", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
-    // Phase 7 — calendar Spring +20% removed. gained 5 → coinsGain
-    // max(1, floor(5/2)) = 2. Per-tile hook: 3 × chainLength(5) = 15.
-    // Total delta = 17.
-    expect(sAfter.coins - before).toBe(17);
+    // gained 5 → coinsGain max(1, floor(5)) = 5 (2x economy-balance bump).
+    // Per-tile hook: 3 × chainLength(5) = 15. Total delta = 20.
+    expect(sAfter.coins - before).toBe(20);
   });
 
   it("free_turn_after_n grants 1 free move only when chain meets threshold", () => {

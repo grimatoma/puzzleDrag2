@@ -253,6 +253,19 @@ export const UPGRADE_THRESHOLDS = {
   tile_fish_sardine: 5, tile_fish_mackerel: 5, tile_fish_clam: 5, tile_fish_kelp: 6, tile_fish_oyster: 5,
 };
 
+// Tiles-per-resource — the INCOME divisor, keyed by tile key. How many collected
+// tiles of a family yield ONE inventory resource: the CHAIN_COLLECTED reducer
+// accrues chain length into resourceProgress and rolls `floor(progress / divisor)`
+// units into the (capped) inventory.
+//
+// DECOUPLED from UPGRADE_THRESHOLDS on purpose: UPGRADE_THRESHOLDS sets how many
+// chained tiles upgrade a *board tile* to its next type (and gates tile discovery
+// + the HUD "next tile" bar), whereas this divisor sets *resource income*. Seeded
+// equal to UPGRADE_THRESHOLDS so income is unchanged at introduction — tune the two
+// independently in the economy balance pass (lower this for more income without
+// speeding up board-tier upgrades, and vice-versa).
+export const TILES_PER_RESOURCE: Record<string, number> = { ...UPGRADE_THRESHOLDS };
+
 export const SEASONS = [
   { name: "Spring", look: { iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 } },
   { name: "Summer", look: { iconKey: "season_summer", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f } },

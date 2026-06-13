@@ -117,8 +117,9 @@
   <header class="hero">
     <h1>Zone Tier Ladder</h1>
     <p class="sub">Settlements grow through per-zone tiers — each rung unlocks more plots and more buildings, rendered as a hand-crafted Phaser tilemap. The home zone reaching <b>City</b> unlocks the Town&nbsp;2 expedition.</p>
-    <p class="meta">puzzleDrag2 · Status: Approved design, pre-implementation · 2026-06-13 · branch <code>claude/game-town-building-graphics-n6r9pg</code></p>
+    <p class="meta">puzzleDrag2 · Status: <b>Shipped</b> · design <a href="https://github.com/grimatoma/puzzleDrag2/pull/1141">#1141</a> → implementation <a href="https://github.com/grimatoma/puzzleDrag2/pull/1143">#1143</a> · 2026-06-13</p>
     <div class="chips">
+      <span class="chip" style="background:var(--ok);color:#fff;border-color:var(--ok);">✓ shipped</span>
       <span class="chip">per-zone tiers</span>
       <span class="chip">hand-tiled maps</span>
       <span class="chip">Phaser Tilemap</span>
@@ -144,6 +145,7 @@
         <h2>Overview</h2>
         <p>Today a settlement has a fixed <code>plotCount</code> and a fixed building list. This feature turns each settlement into a <b>growing town</b>: the player upgrades their town centre through a ladder of <b>tiers</b>, and every rung grants more building plots and unlocks more building types. The ladder is authored <b>per zone</b>, so each zone has its own rung count, plot curve, cost curve, and unlock schedule.</p>
         <div class="box tip"><b>TL;DR.</b> Add a per-zone <code>tiers[]</code> ladder + a <code>tier</code> field on each settlement + a <code>TIER_UP</code> action. Each <code>(zone, tier)</code> renders a <b>hand-authored tilemap</b> through the existing Phaser <code>TownScene</code>. Tier-ups grant <b>plots + building unlocks only — no turn/yield change</b>. The home zone hitting its top rung (<b>City</b>) gates the Town&nbsp;2 expedition.</div>
+        <div class="box"><b>✓ Shipped in <a href="https://github.com/grimatoma/puzzleDrag2/pull/1143">PR&nbsp;#1143</a></b> (<code>SAVE_SCHEMA_VERSION 44</code>). As built: tier data + helpers in <code>src/features/cartography/data.ts</code> &amp; <code>src/features/zones/data.ts</code>; <code>TIER_UP</code> in <code>src/state.ts</code>; authored maps in <code>src/ui/town/townMaps.ts</code>; upgrade UI + gate in <code>src/ui/Town.tsx</code> &amp; <code>src/features/cartography/index.tsx</code>; tests in <code>src/__tests__/zone-tier-ladder.test.ts</code>. This page is now a <b>record of what shipped</b> — the per-section callouts below flag where the build refined the original design.</div>
       </section>
 
       <section id="decisions">
@@ -152,7 +154,7 @@
           <thead><tr><th>Question</th><th>Decision</th></tr></thead>
           <tbody>
             <tr><td>What does a tier-up grant?</td><td>More land plots + tier-gated building unlocks. <b>No</b> turn-budget or yield bump — the puzzle math is untouched.</td></tr>
-            <tr><td>Ladder scope</td><td>Per-zone. Rung count, plots, costs, unlocks and the map are all authored independently for each zone — <b>Town 1 (home) = 3 rungs</b>, <b>Town 2 (the mine) = 4 rungs</b>; minor nodes 2 or none.</td></tr>
+            <tr><td>Ladder scope</td><td>Per-zone. Rung count, plots, costs, unlocks and the map are all authored independently for each zone — <b>Town 1 (home) = 3 rungs</b>, <b>Town 2 (quarry) = 4 rungs</b>. <em>As shipped:</em> only these two zones have ladders; every other node stays single-tier (procedural fallback).</td></tr>
             <tr><td>Town 2 unlock</td><td>The mine-founding expedition is gated on the home zone reaching its <b>City</b> rung.</td></tr>
             <tr><td>Map source</td><td>Hand-crafted, not procedural. Each <code>(zone, tier)</code> is an authored tilemap. <code>buildTownPlan</code> stays only as a fallback for un-authored zones.</td></tr>
             <tr><td>Map growth feel</td><td>Appended: higher tiers are drawn as the previous town + new plots ringing it. Lot indices stay stable, so built buildings never move.</td></tr>
@@ -261,16 +263,16 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
         <p>One new field, one new action — both mirroring the proven founding flow.</p>
         <div class="grid">
           <div class="card"><h3>State</h3><p><code>state.settlements[zoneId].tier: number</code> (default <code>0</code>). Already-founded zones default to rung 0. Persisted with the rest of the settlement record.</p></div>
-          <div class="card g"><h3>Action <code>TIER_UP</code></h3><p>Payload <code>{ zoneId }</code>. Look up <code>tiers[tier+1].upgradeCost</code> → verify the player can pay → deduct → <code>tier++</code>. No-op at max rung or if unaffordable. Registered via the slice system (validated with <code>check-slice-action</code>).</p></div>
+          <div class="card g"><h3>Action <code>TIER_UP</code></h3><p>Payload <code>{ zoneId }</code>. Look up <code>tiers[tier+1].upgradeCost</code> → verify the player can pay → deduct → <code>tier++</code>. No-op at max rung or if unaffordable.</p></div>
         </div>
-        <div class="box warn"><b>Slice footgun.</b> Per <code>CLAUDE.md</code>, a new dispatch type must be registered in <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> or it silently does nothing. The <code>check-slice-action</code> skill is part of the plan for this reason.</div>
+        <div class="box tip"><b>As shipped:</b> <code>TIER_UP</code> landed as a plain <code>case "TIER_UP"</code> in the <b>root reducer</b> (<code>src/state.ts</code>), right beside <code>FOUND_SETTLEMENT</code> — <em>not</em> via the slice system, so the slice-registration footgun never applied. Coins are deducted from the global pool; the resource cost is deducted from the <b>zone inventory</b>. At max rung or when unaffordable it returns state unchanged.</div>
       </section>
 
       <section id="ui-gate">
         <h2>Upgrade UI &amp; the Town 2 gate</h2>
         <div class="grid">
           <div class="card"><h3>Hearth upgrade control</h3><p>The town-centre building (Hearth) gains an <em>"Upgrade to {nextTier.name} — {cost}"</em> control, reusing the existing FoundSettlement banner pattern. Disabled-with-reason when unaffordable; hidden at max rung.</p></div>
-          <div class="card g"><h3>City → Town 2</h3><p>The mine-founding expedition is gated on <code>home.tier === lastRung</code> ("City"), surfaced as a locked-with-reason node on the cartography map, consistent with the existing <code>requiresHearthTokens</code> gate.</p></div>
+          <div class="card g"><h3>City → Town 2</h3><p><b>As shipped:</b> generalised into a reusable node field <code>requiresZoneTier: { zone, tier }</code> (quarry uses <code>{ zone: "home", tier: 2 }</code>). A <code>zoneTierGateReason()</code> helper drives a locked-with-reason node on the cartography map (<code>src/features/cartography/index.tsx</code>), mirroring the <code>requiresHearthTokens</code> pattern but data-driven for any future gate.</p></div>
         </div>
       </section>
 
@@ -280,8 +282,8 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
     <div class="panel" id="balance" role="tabpanel" aria-label="Tiers and balance">
 
       <section id="curves">
-        <h2>Per-zone ladders <span class="pill warn">first pass</span></h2>
-        <div class="box warn"><b>Illustrative numbers.</b> Plot curves, costs and unlock schedules below are a sensible first pass to make the slice playable. They are explicitly the user's later balance/polish pass — treat them as placeholders, not final tuning.</div>
+        <h2>Per-zone ladders <span class="pill ok">tier costs tuned</span></h2>
+        <div class="box tip"><b>Tuned to a moderate run-budget.</b> The upgrade-cost column has been re-tuned (down ~3–5× from the shipped first-pass) so the ladder fits a <b>moderate pacing target — grow home → City in ~15–25 board runs</b>, derived from the income-per-run model (~10 chains/run on the 6×6 board → a few of each staple resource + coins/run). Two structural changes back the costs: chain coin yield was <b>raised ~2×</b> (was <code>floor(N·value/2)</code>, now <code>floor(N·value)</code>) so coins keep pace with the breadth of coin sinks, and the income knob is now <b>decoupled</b> (<code>TILES_PER_RESOURCE</code> vs <code>UPGRADE_THRESHOLDS</code>) so resource yield tunes without touching board-tier pacing. Plots and unlocks are unchanged; costs stay resource-led with a coin component sized to the doubled income. The wider sweep (building/tool/recipe/quest costs to the same budget) is the continuing work — see <a href="#open">What's next</a>.</div>
 
         <h3>Town 1 — home / "the capital farm" · <b>3 rungs</b></h3>
         <p>Zone id <code>home</code>. The flagship ladder. Final rung <b>City</b> unlocks the Town&nbsp;2 expedition. Plots grow 6 → 12 → 20 (the existing static <code>plotCount: 20</code> becomes the top rung, so a fully-grown home is unchanged from today).</p>
@@ -289,8 +291,8 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
           <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
           <tbody>
             <tr><td>0</td><td>Hamlet</td><td class="num">6</td><td>Hearth, Mill, Granary, Larder, Bakery, Inn, Housing</td><td class="num">— (founding)</td></tr>
-            <tr><td>1</td><td>Village</td><td class="num">12</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td class="num">2,500c + 120 grain</td></tr>
-            <tr><td>2</td><td><b>City</b></td><td class="num">20</td><td>Forge, CaravanPost, Kitchen, Workshop, PowderStore, Portal, ClockTower, Lighthouse, Apothecary, Observatory, Housing2/3, Barn, Harbor set</td><td class="num">9,000c + 60 iron</td></tr>
+            <tr><td>1</td><td>Village</td><td class="num">12</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td class="num">600c + 15 hay_bundle</td></tr>
+            <tr><td>2</td><td><b>City</b></td><td class="num">20</td><td>Forge, CaravanPost, Kitchen, Workshop, PowderStore, Portal, ClockTower, Lighthouse, Apothecary, Observatory, Housing2, Housing3, Barn, HarborDock, Fishmonger, Smokehouse</td><td class="num">2,000c + 18 plank</td></tr>
           </tbody>
         </table>
         <div class="box"><b>City rung = today's home.</b> Rung 2 plots (20) and unlocks equal the current <code>home</code> node exactly, so an existing maxed save looks identical. Rungs 0–1 are the new "earlier" states the town grows through.</div>
@@ -301,9 +303,9 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
           <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
           <tbody>
             <tr><td>0</td><td>Dig Site</td><td class="num">4</td><td>Hearth, Kitchen, Housing</td><td class="num">— (founding)</td></tr>
-            <tr><td>1</td><td>Mining Camp</td><td class="num">6</td><td>Workshop, Forge, Inn, Watchtower</td><td class="num">2,000c + 60 stone</td></tr>
-            <tr><td>2</td><td>Boomtown</td><td class="num">8</td><td>Barn, PowderStore, Housing2, Apothecary</td><td class="num">5,500c + 50 ore</td></tr>
-            <tr><td>3</td><td>Foundry City</td><td class="num">12</td><td>Observatory, Housing3, CaravanPost</td><td class="num">12,000c + 30 ingots</td></tr>
+            <tr><td>1</td><td>Mining Camp</td><td class="num">6</td><td>Workshop, Forge, Inn, Watchtower</td><td class="num">500c + 12 block</td></tr>
+            <tr><td>2</td><td>Boomtown</td><td class="num">8</td><td>Barn, PowderStore, Housing2, Apothecary</td><td class="num">1,500c + 12 iron_bar</td></tr>
+            <tr><td>3</td><td>Foundry City</td><td class="num">12</td><td>Observatory, Housing3, CaravanPost</td><td class="num">3,500c + 8 gold_bar</td></tr>
           </tbody>
         </table>
 
@@ -327,16 +329,16 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
 
       <section id="orientation">
         <h2>For the implementing session — start here</h2>
-        <div class="box"><b>You are a fresh session picking up an approved design.</b> This tab is the executable plan. Read the <a href="#design">Design</a> and <a href="#balance">Tiers &amp; Balance</a> tabs first for the data shapes and the exact rung tables, then work the steps below <b>in order</b>. Each step has explicit <b>acceptance criteria</b> — do not advance until they pass. Commit after each step.</div>
-        <h3>Ground truth (verify before coding)</h3>
+        <div class="box tip"><b>✓ All steps below shipped in <a href="https://github.com/grimatoma/puzzleDrag2/pull/1143">PR&nbsp;#1143</a>.</b> This tab is kept as a record of the executed plan (every step marked <span class="pill ok">done</span>). The acceptance criteria all passed; the unit suite is <code>src/__tests__/zone-tier-ladder.test.ts</code>.</div>
+        <h3>Ground truth (as built)</h3>
         <ul>
-          <li><b>Branch:</b> <code>claude/game-town-building-graphics-n6r9pg</code>. Commit per step; open a draft PR after step&nbsp;2.</li>
+          <li><b>Branch:</b> implemented on <code>feat/zone-tier-ladder</code>, merged via <a href="https://github.com/grimatoma/puzzleDrag2/pull/1143">#1143</a> (the design doc itself was the earlier <a href="https://github.com/grimatoma/puzzleDrag2/pull/1141">#1141</a>).</li>
           <li><b>Run it:</b> <code>npm run dev</code> → game at <code>/</code>. Use the <code>dev-server</code> skill for a headless browser walkthrough; screenshot the Town view to verify maps.</li>
           <li><b>Gates:</b> <code>npm run lint</code> · <code>npm run typecheck</code> · <code>npm test</code> · <code>npm run test:visual</code> (goldens — run before PR per <code>CLAUDE.md</code>).</li>
           <li><b>Mental model:</b> React owns state (reducer in <code>src/state.ts</code> + slices under <code>src/features/*</code>); Phaser owns the canvas. The Town view is <code>src/ui/Town.tsx</code> → <code>src/ui/town/TownScene.ts</code> (already a Phaser tilemap scene, 40×30 @ 32px).</li>
-          <li><b>Tooling note:</b> the <code>graphify</code> pre-read hook is configured but <b>not installed</b> here; read source directly (documented fallback) or install it.</li>
+          <li><b>Tooling note:</b> a local <code>graphify</code> shim is now installed, so the pre-read hook functions (the original design was grounded by reading source directly — the documented fallback).</li>
         </ul>
-        <div class="box warn"><b>Footgun (read <code>CLAUDE.md</code>).</b> A new reducer action that isn't registered in <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> silently no-ops. Run the <code>check-slice-action</code> skill on <code>TIER_UP</code> in step&nbsp;2. Also: <b>no fakes/mocks in production code</b> — wire real implementations.</div>
+        <div class="box tip"><b>The slice footgun didn't apply.</b> The original plan flagged the <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code> footgun and a <code>check-slice-action</code> step. In the end <code>TIER_UP</code> shipped as a plain <code>case</code> in the <b>root reducer</b> (<code>src/state.ts</code>, beside <code>FOUND_SETTLEMENT</code>), so no slice registration was needed. Real implementations throughout — no fakes/mocks.</div>
       </section>
 
       <section id="order">
@@ -355,15 +357,15 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
           <button data-filter="later">Phase B</button>
         </div>
         <table id="status-table">
-          <thead><tr><th>#</th><th>Step</th><th>Touches</th><th>Phase</th></tr></thead>
+          <thead><tr><th>#</th><th>Step</th><th>Touches</th><th>Phase</th><th>Status</th></tr></thead>
           <tbody>
-            <tr data-status="next"><td>1</td><td><b>Tier data model.</b> Add <code>ZoneTier</code> + <code>tiers?: ZoneTier[]</code> to the cartography node type; populate Town 1 (3 rungs) &amp; Town 2 (4 rungs) per the Balance tab. Add derivation helpers.</td><td><code>cartography/data.ts</code>, types</td><td><span class="pill warn">A</span></td></tr>
-            <tr data-status="next"><td>2</td><td><b>Tier state + <code>TIER_UP</code> action.</b> Add <code>tier</code> to the settlement record (default 0); reducer mirrors <code>FOUND_SETTLEMENT</code> (validate cost → deduct → tier++). Register slice; <code>check-slice-action</code>.</td><td><code>state.ts</code>, zones slice, <code>types/state.ts</code></td><td><span class="pill warn">A</span></td></tr>
-            <tr data-status="next"><td>3</td><td><b>Authored-map pipeline + 2 maps.</b> New <code>townMaps.ts</code> (<code>AuthoredTownMap</code>, <code>TOWN_MAPS</code>, <code>getTownMap</code>, grid helpers); hand-tile Town 1 Hamlet &amp; Village; branch <code>TownScene</code> to paint <code>groundTiles</code>; <code>Town.tsx</code> uses tier-derived plots + authored plan, procedural fallback.</td><td><code>townMaps.ts</code>, <code>TownScene.ts</code>, <code>Town.tsx</code></td><td><span class="pill warn">A</span></td></tr>
-            <tr data-status="next"><td>4</td><td><b>Hearth upgrade UI + unlock gating.</b> "Upgrade to {next.name} — {cost}" control on the Hearth (reuse FoundSettlement banner); disabled-with-reason / hidden at max. BuildPicker filters by <code>union(tiers≤current).unlocks</code>.</td><td><code>Town.tsx</code>, Hearth UI, BuildPicker</td><td><span class="pill warn">A</span></td></tr>
-            <tr data-status="later"><td>5</td><td><b>Finish Town 1 (City) + Town 2 maps.</b> Hand-tile Town 1 City and all 4 Town 2 maps (Dig Site → Foundry City). Verify each map's lot count equals its rung's <code>plots</code>.</td><td><code>townMaps.ts</code></td><td><span class="pill idle">B</span></td></tr>
-            <tr data-status="later"><td>6</td><td><b>Town 2 gate.</b> Lock the <code>quarry</code> founding/expedition until <code>home.tier === 2</code> (City); surface a locked-with-reason node like the existing <code>requiresHearthTokens</code> gate.</td><td>expedition/zone-entry gate, cartography UI</td><td><span class="pill idle">B</span></td></tr>
-            <tr data-status="later"><td>7</td><td><b>Tests + verification.</b> Unit tests (lots==plots, unlock⊆buildings superset, <code>TIER_UP</code> reducer, gate); refresh <code>test:visual</code> goldens for new maps; lint + typecheck green.</td><td><code>src/__tests__/…</code>, goldens</td><td><span class="pill idle">B</span></td></tr>
+            <tr data-status="next"><td>1</td><td><b>Tier data model.</b> Add <code>ZoneTier</code> + <code>tiers?: ZoneTier[]</code> to the cartography node type; populate Town 1 (3 rungs) &amp; Town 2 (4 rungs) per the Balance tab. Add derivation helpers.</td><td><code>cartography/data.ts</code>, types</td><td><span class="pill warn">A</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="next"><td>2</td><td><b>Tier state + <code>TIER_UP</code> action.</b> Add <code>tier</code> to the settlement record (default 0); reducer mirrors <code>FOUND_SETTLEMENT</code> (validate cost → deduct → tier++). Register slice; <code>check-slice-action</code>.</td><td><code>state.ts</code>, zones slice, <code>types/state.ts</code></td><td><span class="pill warn">A</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="next"><td>3</td><td><b>Authored-map pipeline + 2 maps.</b> New <code>townMaps.ts</code> (<code>AuthoredTownMap</code>, <code>TOWN_MAPS</code>, <code>getTownMap</code>, grid helpers); hand-tile Town 1 Hamlet &amp; Village; branch <code>TownScene</code> to paint <code>groundTiles</code>; <code>Town.tsx</code> uses tier-derived plots + authored plan, procedural fallback.</td><td><code>townMaps.ts</code>, <code>TownScene.ts</code>, <code>Town.tsx</code></td><td><span class="pill warn">A</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="next"><td>4</td><td><b>Hearth upgrade UI + unlock gating.</b> "Upgrade to {next.name} — {cost}" control on the Hearth (reuse FoundSettlement banner); disabled-with-reason / hidden at max. BuildPicker filters by <code>union(tiers≤current).unlocks</code>.</td><td><code>Town.tsx</code>, Hearth UI, BuildPicker</td><td><span class="pill warn">A</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="later"><td>5</td><td><b>Finish Town 1 (City) + Town 2 maps.</b> Hand-tile Town 1 City and all 4 Town 2 maps (Dig Site → Foundry City). Verify each map's lot count equals its rung's <code>plots</code>.</td><td><code>townMaps.ts</code></td><td><span class="pill idle">B</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="later"><td>6</td><td><b>Town 2 gate.</b> Lock the <code>quarry</code> founding/expedition until <code>home.tier === 2</code> (City); surface a locked-with-reason node like the existing <code>requiresHearthTokens</code> gate.</td><td>expedition/zone-entry gate, cartography UI</td><td><span class="pill idle">B</span></td><td><span class="pill ok">done</span></td></tr>
+            <tr data-status="later"><td>7</td><td><b>Tests + verification.</b> Unit tests (lots==plots, unlock⊆buildings superset, <code>TIER_UP</code> reducer, gate); refresh <code>test:visual</code> goldens for new maps; lint + typecheck green.</td><td><code>src/__tests__/…</code>, goldens</td><td><span class="pill idle">B</span></td><td><span class="pill ok">done</span></td></tr>
           </tbody>
         </table>
       </section>
@@ -447,24 +449,30 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
         <table>
           <thead><tr><th>File</th><th>Change</th></tr></thead>
           <tbody>
-            <tr><td><code>src/ui/town/townMaps.ts</code> <span class="pill warn">new</span></td><td><code>AuthoredTownMap</code> type, <code>TOWN_MAPS</code> registry, <code>getTownMap(zone, tier)</code> with procedural fallback, tile-grid helpers.</td></tr>
-            <tr><td><code>src/ui/town/TownScene.ts</code></td><td>Branch <code>create()</code>: if the plan carries <code>groundTiles</code>, paint from it; else current procedural passes.</td></tr>
-            <tr><td><code>src/ui/Town.tsx</code></td><td>Replace <code>plotCount</code> read with tier-derived map lookup; pass authored plan; filter BuildPicker by unlocked buildings.</td></tr>
-            <tr><td><code>src/features/cartography/data.ts</code></td><td>Add <code>tiers[]</code> to home, quarry, and one small node.</td></tr>
-            <tr><td><code>src/state.ts</code> / zones slice</td><td><code>tier</code> field + <code>TIER_UP</code> reducer; register in slice tables.</td></tr>
-            <tr><td>Hearth UI (town-centre)</td><td>Upgrade-to-next-tier control + Town 2 expedition gate.</td></tr>
-            <tr><td><code>src/__tests__/…</code></td><td>plots==lots test, unlock-superset test, <code>TIER_UP</code> reducer test, gate test; visual goldens.</td></tr>
+            <tr><td><code>src/ui/town/townMaps.ts</code> <span class="pill ok">new</span></td><td><code>AuthoredTownMap</code> type, <code>TOWN_MAPS</code> registry, <code>getTownMap(zone, tier)</code> + <code>authoredLotCount</code>; grid helpers <code>blankGrid / setTile / rectTiles / roadH / roadV / disc / decorateGrass</code>. All 7 maps (home ×3, quarry ×4) authored.</td></tr>
+            <tr><td><code>src/ui/town/TownScene.ts</code></td><td><code>create()</code> branches on <code>groundTiles</code>: <code>paintGroundTiles()</code> when present, else the procedural passes.</td></tr>
+            <tr><td><code>src/ui/Town.tsx</code></td><td>Tier-derived <code>requestedPlots</code> + <code>getTownMap(zone, tier)</code> with procedural fallback; <code>TierUpgradeBanner</code> upgrade control; BuildPicker filtered by <code>unlockedBuildings()</code>.</td></tr>
+            <tr><td><code>src/features/cartography/data.ts</code></td><td><code>ZoneTier</code> type + <code>tiers[]</code> on <b>home</b> &amp; <b>quarry</b> only; <code>requiresZoneTier</code> on quarry. (No minor-node ladder shipped.)</td></tr>
+            <tr><td><code>src/features/zones/data.ts</code></td><td>Tier helpers: <code>tiersForZone / maxTier / settlementTier / currentTierDef / plotsForTier / unlockedBuildings / zoneTierGateReason</code>.</td></tr>
+            <tr><td><code>src/state.ts</code> <span class="pill info">root reducer</span></td><td><code>tier</code> field (default 0 on founding) + <code>case "TIER_UP"</code> beside <code>FOUND_SETTLEMENT</code> — <b>not</b> a slice.</td></tr>
+            <tr><td><code>src/features/cartography/index.tsx</code></td><td>Town 2 gate UI — locked-with-reason node via <code>zoneTierGateReason()</code>.</td></tr>
+            <tr><td><code>src/__tests__/zone-tier-ladder.test.ts</code></td><td>lots==plots, unlock-superset, <code>TIER_UP</code> happy/blocked paths, gate. Fixtures: <code>src/visualTesting/stateBuilders.ts</code> (richState home tier 2 / quarry tier 3). Visual goldens not regenerated on this host.</td></tr>
           </tbody>
         </table>
       </section>
 
       <section id="open">
-        <h2>Open / deferred</h2>
+        <h2>What's next</h2>
+        <div class="box tip"><b>Primary next work — comprehensive economy balance pass.</b> The tier-upgrade costs here are one knob in a larger economy (tools, buildings, recipes, founding, workers, boons, decorations, quests, dailies). The next effort tunes <b>the whole economy</b> to a <b>run-budget model</b> — deciding how many puzzle-board runs each milestone should take (<b>moderate pacing</b>, ~15–25 runs to grow home → City) and deriving every cost from income-per-run, so numbers are logical and story-aligned rather than picked at random. Grounded in <a href="references/puzzle-craft-2-wiki.html">the Puzzle Craft 2 reference</a>.</div>
         <ul>
-          <li><b>Balance numbers</b> — all plot/cost/unlock values are first-pass; user's later tuning pass.</li>
-          <li><b>Map art polish</b> — Claude hand-tiles functional towns now; human visual pass later (per the user).</li>
-          <li><b>Authoring tooling</b> — a visual Town Map Editor (à la the <code>/story/</code> editor) was considered and deferred; revisit if hand-authored maps multiply.</li>
-          <li><b>Other zones' ladders</b> — fish/festival/boss nodes get ladders only as needed; many stay single-tier.</li>
+          <li><b>Decouple the income knob</b> — today a single constant (<code>UPGRADE_THRESHOLDS</code>) sets <em>both</em> the board-tier-upgrade rate and the tiles-per-resource income rate. Split out a dedicated tiles-per-resource constant so income tunes independently (a small, test-covered change in <code>src/state.ts</code>).</li>
+          <li><b>Account for board dynamics</b> — the model must fold in per-season drop rates (<code>seasonDrops</code>) and how built buildings/workers/tiles shift drop pools and yields (<code>pool_weight</code>, <code>bonus_yield</code>, <code>threshold_reduce</code>, <code>turn_budget_bonus</code>).</li>
+          <li><b>Update the wikis</b> — document the tuned economy + run-budget rationale in the Dev Panel wiki (<code>src/balanceManager/content/pages/balance.html</code> &amp; <code>direction.html</code>); the infobox/concept grids auto-refresh from config.</li>
+          <li><b>Single source of truth</b> — remove the empty <code>src/config/balance.json</code> override layer so the canonical configs are the only definition (preserving the shared <code>/story/</code>-editor sanitizers).</li>
+          <li><b>Re-baseline visual goldens</b> — town DOM legitimately changed (upgrade banner + tier plot counts); needs a canonical host.</li>
+          <li><b>Town-map art polish</b> — functional Claude-tiled grids now; a human / PixelLab visual pass later.</li>
+          <li><b>Extend ladders to more zones</b> — only <code>home</code> + <code>quarry</code> are tiered today; other nodes stay single-tier until a ladder earns its keep.</li>
+          <li><b>Authoring tooling</b> — a visual Town Map Editor (à la <code>/story/</code>) remains deferred; revisit if hand-authored maps multiply.</li>
         </ul>
       </section>
 
@@ -482,8 +490,8 @@ WATER        250          // deep solid water
           <p>Grid: <code>GRID_COLS=40</code>, <code>GRID_ROWS=30</code>, <code>TILE=32</code> → design space <code>1280×960</code>.</p>
         </details>
         <details>
-          <summary>Note: graphify toolchain unavailable in this environment</summary>
-          <p>A repo hook mandates <code>graphify query/explain/path</code> before reading source. The <code>graphify</code> CLI is not installed here (<code>command not found</code>; <code>npx graphify</code> fails to resolve), so this design was grounded by reading source directly — the documented fallback. Worth installing so the hook functions for future sessions.</p>
+          <summary>Note: graphify toolchain (historical)</summary>
+          <p>A repo hook mandates <code>graphify query/explain/path</code> before reading source. When this design was written the <code>graphify</code> CLI wasn't on PATH, so it was grounded by reading source directly (the documented fallback). A local shim has since been installed, so the hook now functions.</p>
         </details>
       </section>
 
