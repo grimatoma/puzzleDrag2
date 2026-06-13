@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearthlands — UX Redesign Atlas 2026</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,800;9..144,900&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     HEARTHLANDS REDESIGN — "Illuminated Ledger"
+     Doc chrome theme. The in-mock design tokens live in their own block
+     below (.mock scope) so the page chrome and the prototype never bleed.
+     ════════════════════════════════════════════════════════════════ */
+  :root{
+    /* doc chrome */
+    --ink:#2b2218; --muted:#7a5e3f; --faint:#a8916c; --line:#ddccab;
+    --bg:#efe4cb; --paper:#fbf6ea; --code:#efe6d0;
+    --accent:#d6612a;       /* ember — dominant */
+    --accent2:#6f8a3a;      /* moss — secondary */
+    --gold:#e2b24a;
+    --walnut:#241a12;       /* the atmosphere layer */
+    --shadow:0 1px 2px rgba(40,26,12,.10), 0 14px 30px -16px rgba(40,26,12,.40);
+    --shadow-lift:0 2px 4px rgba(40,26,12,.10), 0 26px 60px -22px rgba(40,26,12,.55);
+    /* semantic status ramp — the heart of the redesign */
+    --st-locked:#9a8c74; --st-available:#2f7d8c; --st-active:#d6612a;
+    --st-owned:#5e8c1e; --st-missing:#b5341f; --st-progress:#e2b24a;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"Work Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1100px 480px at 82% -10%, color-mix(in srgb,var(--accent) 14%,transparent), transparent 60%),
+      radial-gradient(900px 420px at -8% 2%, color-mix(in srgb,var(--accent2) 12%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #e4d6b6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);}
+  a{color:var(--accent);text-decoration:none;font-weight:600;}
+  a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.82em var(--mono);color:#6a4a28;}
+  pre{background:var(--walnut);color:#f0e3c4;padding:.95rem 1.1rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.55 var(--mono);}
+  pre code{background:none;padding:0;color:inherit;}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  .page{max-width:1180px;margin:0 auto;padding:1.5rem 1.25rem 6rem;}
+
+  /* ── hero ─────────────────────────────────────────────────────── */
+  header.hero{
+    position:relative; overflow:hidden;
+    border:1px solid color-mix(in srgb,var(--walnut) 30%,transparent);
+    padding:2rem 2rem 1.6rem; margin-bottom:1.4rem;
+    background:
+      radial-gradient(700px 300px at 90% -40%, color-mix(in srgb,var(--gold) 40%,transparent), transparent 60%),
+      linear-gradient(150deg, #2f231a 0%, #241a12 55%, #1c140d 100%);
+    color:#f3e7cc; border-radius:18px 18px 8px 8px; box-shadow:var(--shadow-lift);
+  }
+  header.hero::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.05'/></svg>");
+    mix-blend-mode:overlay;
+  }
+  .hero .eyebrow{font:600 .72rem/1 var(--mono);letter-spacing:.28em;text-transform:uppercase;color:var(--gold);}
+  header.hero h1{font:900 3rem/1.02 var(--serif);letter-spacing:-.02em;margin:.55rem 0 .5rem;color:#fbf2dd;}
+  header.hero h1 em{font-style:italic;color:var(--gold);}
+  .hero .lede{font-size:1.06rem;max-width:64ch;color:#e7d6b4;margin:.2rem 0 0;}
+  .hero .meta{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.1rem;}
+  .hero .meta span{font:600 .72rem/1 var(--mono);letter-spacing:.04em;color:#e7d6b4;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:.42rem .6rem;border-radius:999px;}
+
+  /* ── tab bar ──────────────────────────────────────────────────── */
+  nav.tabs{position:sticky;top:0;z-index:40;display:flex;flex-wrap:wrap;gap:.3rem;
+    padding:.5rem;margin-bottom:1.4rem;border-radius:14px;
+    background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(10px);
+    border:1px solid var(--line);box-shadow:var(--shadow);}
+  nav.tabs button{font:700 .82rem/1 var(--sans);letter-spacing:.01em;color:var(--muted);
+    background:transparent;border:0;padding:.66rem .9rem;border-radius:9px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:.45rem;transition:background .16s,color .16s,transform .12s;}
+  nav.tabs button .ix{font:700 .68rem/1 var(--mono);color:var(--faint);}
+  nav.tabs button:hover{color:var(--ink);background:color-mix(in srgb,var(--accent) 9%,transparent);}
+  nav.tabs button[aria-selected="true"]{color:#fff;background:linear-gradient(180deg,var(--accent),#b94f1f);box-shadow:0 2px 0 #8f3d18;}
+  nav.tabs button[aria-selected="true"] .ix{color:rgba(255,255,255,.7);}
+
+  .panel{display:none;animation:fadeUp .5s cubic-bezier(.21,.61,.35,1) both;}
+  .panel.is-active{display:block;}
+
+  /* ── sections & typography ────────────────────────────────────── */
+  section{margin:0 0 2.2rem;}
+  section > h2{font:800 1.9rem/1.12 var(--serif);letter-spacing:-.01em;margin:.2rem 0 .5rem;
+    padding-bottom:.4rem;border-bottom:2px solid color-mix(in srgb,var(--accent) 35%,var(--line));}
+  section > h3{font:600 1.24rem/1.2 var(--serif);margin:1.6rem 0 .5rem;color:var(--ink);}
+  section > h4{font:700 .78rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);margin:1.3rem 0 .5rem;}
+  p{margin:.55rem 0;} .lead{font-size:1.08rem;color:var(--muted);}
+  ul,ol{margin:.5rem 0;padding-left:1.15rem;} li{margin:.28rem 0;}
+  .kicker{font:700 .72rem/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--accent);}
+
+  /* ── cards / grids ────────────────────────────────────────────── */
+  .grid{display:grid;gap:1rem;}
+  .g2{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:repeat(3,1fr);} .g4{grid-template-columns:repeat(4,1fr);}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.2rem;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift);}
+  .card h3{font:600 1.06rem/1.2 var(--serif);margin:.1rem 0 .35rem;}
+  .card .ic{font-size:1.5rem;line-height:1;}
+  .card p{font-size:.92rem;color:var(--muted);margin:.3rem 0 0;}
+
+  /* ── callouts ─────────────────────────────────────────────────── */
+  .callout{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--paper));
+    border-radius:0 12px 12px 0;padding:.85rem 1.1rem;margin:1rem 0;box-shadow:var(--shadow);}
+  .callout.note{border-color:var(--st-available);background:color-mix(in srgb,var(--st-available) 8%,var(--paper));}
+  .callout.tip{border-color:var(--st-owned);background:color-mix(in srgb,var(--st-owned) 8%,var(--paper));}
+  .callout.warn{border-color:var(--st-missing);background:color-mix(in srgb,var(--st-missing) 8%,var(--paper));}
+  .callout .t{font:700 .72rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
+  .callout.note .t{color:var(--st-available);} .callout.tip .t{color:var(--st-owned);} .callout.warn .t{color:var(--st-missing);}
+  .callout p{margin:.3rem 0 0;font-size:.95rem;}
+
+  /* ── chips ────────────────────────────────────────────────────── */
+  .chip{display:inline-flex;align-items:center;gap:.35rem;font:700 .7rem/1 var(--mono);
+    padding:.32rem .56rem;border-radius:999px;border:1px solid;letter-spacing:.02em;}
+  .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;}
+  .c-locked{color:var(--st-locked);border-color:color-mix(in srgb,var(--st-locked) 50%,transparent);background:color-mix(in srgb,var(--st-locked) 12%,transparent);}
+  .c-available{color:var(--st-available);border-color:color-mix(in srgb,var(--st-available) 50%,transparent);background:color-mix(in srgb,var(--st-available) 12%,transparent);}
+  .c-active{color:var(--st-active);border-color:color-mix(in srgb,var(--st-active) 50%,transparent);background:color-mix(in srgb,var(--st-active) 12%,transparent);}
+  .c-owned{color:var(--st-owned);border-color:color-mix(in srgb,var(--st-owned) 50%,transparent);background:color-mix(in srgb,var(--st-owned) 12%,transparent);}
+  .c-missing{color:var(--st-missing);border-color:color-mix(in srgb,var(--st-missing) 50%,transparent);background:color-mix(in srgb,var(--st-missing) 12%,transparent);}
+
+  /* ── tables ───────────────────────────────────────────────────── */
+  table{width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.9rem;background:var(--paper);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{text-align:left;padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font:700 .72rem/1.1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb,var(--accent) 6%,var(--paper));}
+  tr:last-child td{border-bottom:0;}
+  td .arch{font:700 .72rem/1 var(--mono);color:var(--accent);}
+
+  /* ── before/after ─────────────────────────────────────────────── */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+  .ba > div{border-radius:12px;padding:1rem 1.1rem;}
+  .ba .before{background:color-mix(in srgb,var(--st-missing) 7%,var(--paper));border:1px dashed color-mix(in srgb,var(--st-missing) 45%,transparent);}
+  .ba .after{background:color-mix(in srgb,var(--st-owned) 8%,var(--paper));border:1px solid color-mix(in srgb,var(--st-owned) 45%,transparent);}
+  .ba h4{margin-top:0;} .ba .before h4{color:var(--st-missing);} .ba .after h4{color:var(--st-owned);}
+
+  /* ════════════════════════════════════════════════════════════════
+     LIVE MOCK HARNESS — device frames + the in-prototype design system.
+     Everything under .stage is the REAL proposed UI rendered in HTML/CSS.
+     ════════════════════════════════════════════════════════════════ */
+  .stage{margin:1.1rem 0 .4rem;border-radius:16px;padding:1.2rem;
+    background:
+      radial-gradient(600px 300px at 50% -20%, rgba(226,178,74,.18), transparent 65%),
+      linear-gradient(160deg,#2c2017,#1d150e);
+    border:1px solid rgba(255,255,255,.06);box-shadow:var(--shadow-lift) inset, var(--shadow);
+    display:flex;flex-direction:column;align-items:center;gap:1rem;}
+  .stage-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;width:100%;justify-content:space-between;}
+  .stage-bar .label{font:600 .72rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);}
+  .segctl{display:inline-flex;gap:.2rem;padding:.25rem;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);}
+  .segctl button{font:700 .72rem/1 var(--sans);color:#cdb892;background:transparent;border:0;padding:.4rem .7rem;border-radius:999px;cursor:pointer;transition:background .15s,color .15s;}
+  .segctl button[aria-pressed="true"]{background:var(--gold);color:#2b2010;}
+  .device{position:relative;background:#0e0a06;border-radius:26px;padding:10px;box-shadow:0 0 0 2px rgba(255,255,255,.05),0 30px 60px -24px rgba(0,0,0,.8);transition:width .45s cubic-bezier(.5,.1,.2,1),height .45s cubic-bezier(.5,.1,.2,1);}
+  .device .screen{width:100%;height:100%;border-radius:18px;overflow:hidden;position:relative;background:var(--hl-walnut);}
+  /* device sizes (toggled by JS) */
+  .device[data-mode="portrait"]{width:300px;height:600px;}
+  .device[data-mode="landscape"]{width:600px;height:300px;}
+  .device[data-mode="desktop"]{width:100%;max-width:920px;height:560px;border-radius:14px;}
+  .device[data-mode="desktop"] .screen{border-radius:9px;}
+  .device .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:80px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);z-index:60;pointer-events:none;}
+  .device[data-mode="desktop"] .notch,.device[data-mode="landscape"] .notch{display:none;}
+  .stage figcaption{font-size:.85rem;color:#cdb892;max-width:70ch;text-align:center;}
+
+  /* ── HEARTHLANDS in-mock tokens (scoped to .hl) ─────────────────── */
+  .hl{
+    --parch:#f7f0e1; --parch-2:#efe4ca; --parch-soft:#fbf7ec;
+    --card:#fbf7ec; --card-hover:#fffaef; --cardline:#cdbb92; --cardline-2:#a89272;
+    --ink:#2b2218; --ink-soft:#7a5e3f; --ink-faint:#b09a76; --label:#8a4a26;
+    --ember:#d6612a; --ember-hot:#b94f1f; --gold:#e2b24a; --gold-br:#ffd248; --moss:#6f8a3a; --moss-soft:#8fb33a;
+    --walnut:#241a12; --walnut-2:#2f2318;
+    --st-locked:#9a8c74; --st-available:#2f7d8c; --st-active:#d6612a; --st-owned:#5e8c1e; --st-missing:#b5341f; --st-progress:#e2b24a;
+    --r-sm:7px; --r-md:11px; --r-lg:15px; --r-xl:20px;
+    --elev-1:0 1px 0 rgba(205,187,146,.6),0 2px 6px rgba(60,40,20,.06);
+    --elev-2:0 2px 0 rgba(168,146,114,.4),0 8px 22px -8px rgba(60,40,20,.30);
+    --fdisp:"Fraunces",Georgia,serif; --fbody:"Work Sans",system-ui,sans-serif; --fmono:"JetBrains Mono",monospace;
+    --hl-walnut:#241a12;
+    font-family:var(--fbody); color:var(--ink); height:100%;
+  }
+  .hl, .hl *{box-sizing:border-box; margin:0; padding:0;}
+  .hl button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;}
+  .hl .mono{font-family:var(--fmono);font-variant-numeric:tabular-nums;}
+  .hl .disp{font-family:var(--fdisp);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  /* ── responsive doc chrome ────────────────────────────────────── */
+  @media (max-width:880px){
+    .g2,.g3,.g4,.ba{grid-template-columns:1fr;}
+    header.hero h1{font-size:2.2rem;}
+    .page{padding:1rem .8rem 4rem;}
+    .device[data-mode="desktop"]{height:460px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}html{scroll-behavior:auto;}}
+  @media print{
+    nav.tabs{display:none;} .panel{display:block!important;}
+    .stage{background:#eee;} body{background:#fff;} *{box-shadow:none!important;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow">Hearthlands · Design System &amp; UX Atlas</div>
+    <h1>The <em>Illuminated Ledger</em><br>UX Redesign</h1>
+    <p class="lede">A cohesive, polished visual language for every screen in the game — collapsing ~25 bespoke layouts into <strong>four archetypes</strong> and <strong>one living chrome</strong>, governed by a semantic status palette and a shared spatial-motion model. Built for touch &amp; mouse, portrait &amp; landscape, phone &amp; desktop.</p>
+    <div class="meta">
+      <span>v1.0 · 2026-06-13</span>
+      <span>Theme: Illuminated Ledger</span>
+      <span>Fraunces · Work Sans · JetBrains Mono</span>
+      <span>25 views → 4 archetypes</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Document sections">
+    <button role="tab" aria-selected="true" data-panel="p-thesis"><span class="ix">01</span> Thesis &amp; Audit</button>
+    <button role="tab" aria-selected="false" data-panel="p-foundations"><span class="ix">02</span> Foundations</button>
+    <button role="tab" aria-selected="false" data-panel="p-motion"><span class="ix">03</span> Motion &amp; Responsive</button>
+    <button role="tab" aria-selected="false" data-panel="p-chrome"><span class="ix">04</span> Living Chrome</button>
+    <button role="tab" aria-selected="false" data-panel="p-archetypes"><span class="ix">05</span> Archetypes</button>
+    <button role="tab" aria-selected="false" data-panel="p-pages"><span class="ix">06</span> Page Atlas</button>
+  </nav>
+
+  <!-- ══ PANEL 01 — THESIS ══════════════════════════════════════════ -->
+  <div class="panel is-active" id="p-thesis" role="tabpanel">
+
+    <section id="problem">
+      <div class="kicker">The diagnosis</div>
+      <h2>The theme is good. The system isn't applied.</h2>
+      <p class="lead">Hearthlands already has a warm, characterful identity — parchment &amp; ink, ember/gold/moss accents, a serif display voice — and a real token layer (<code>tokens.css</code>, <code>components.css</code>). The problem is <strong>not</strong> the look. It's that ~25 screens each re-implement that look slightly differently. The result reads as a talented team that never agreed on the rules.</p>
+
+      <div class="grid g4" style="margin-top:1rem">
+        <div class="card"><div class="ic">🧩</div><h3>3 nav systems</h3><p>A bottom-nav tab bar, a HUD menu pill, and <code>FeaturePanel.Tabs</code> — three affordances for the same job. The bottom nav also vanishes entirely on the board.</p></div>
+        <div class="card"><div class="ic">🎨</div><h3>Hex, not tokens</h3><p>"Active orange" is <code>#ff7a00</code> in Bosses but <code>#d6612a</code> in Portal. Keeper-path &amp; season colors are component constants. State color is reinvented per file.</p></div>
+        <div class="card"><div class="ic">📑</div><h3>4 "list" layouts</h3><p>Crafting uses Browser-Detail, Inventory uses <code>inv-grid</code>, Orders uses ad-hoc <code>ActionCard</code> rows, Decorations a plain card grid. One mental model, four executions.</p></div>
+        <div class="card"><div class="ic">🪟</div><h3>Modals opt out</h3><p>Settings, Tutorial, Festivals bypass the panel system with inline styles, so the most-seen surfaces look least like the game.</p></div>
+      </div>
+
+      <div class="callout warn"><div class="t">The cost</div><p>Every new screen starts from a blank file because there's no archetype to drop into. Cohesion decays with each feature, and a global restyle means editing dozens of inline <code>style={{…}}</code> objects by hand. The board literally "feels like two apps" because its portrait/landscape grid flips wholesale at 500px.</p></div>
+    </section>
+
+    <section id="thesis">
+      <div class="kicker">The thesis</div>
+      <h2>Four archetypes, one living chrome</h2>
+      <p class="lead">Almost every screen in the game is one of four shapes. Name them, build them once, and a "new page" becomes "an archetype with its slots filled" — not a blank canvas. The chrome around them stops disappearing and instead <em>morphs</em> to context.</p>
+
+      <div class="grid g4" style="margin-top:1rem">
+        <div class="card" style="border-top:3px solid var(--st-available)"><div class="ic">🗺️</div><h3>Atlas</h3><p><strong>Canvas&nbsp;+&nbsp;rail.</strong> A living scene (Phaser) with an inspector rail that docks or rises. Board, Town/Village, Cartography.</p></div>
+        <div class="card" style="border-top:3px solid var(--st-owned)"><div class="ic">📖</div><h3>Ledger</h3><p><strong>List ⇄ detail.</strong> Browse a collection, inspect one. Crafting, Inventory, Workers, Tile Collection, Wiki, Decorations.</p></div>
+        <div class="card" style="border-top:3px solid var(--gold)"><div class="ic">🧾</div><h3>Stack</h3><p><strong>Card column.</strong> A scroll of self-contained, actionable cards. Orders, Quests, Achievements, Castle, Boons, Bosses, Charter, Chronicle.</p></div>
+        <div class="card" style="border-top:3px solid var(--st-active)"><div class="ic">🛎️</div><h3>Sheet</h3><p><strong>Focused interrupt.</strong> Rises over context, dismiss to return. Menu, Settings, Tutorial, Festivals, Run Summary, Boss intro.</p></div>
+      </div>
+
+      <p style="margin-top:1rem">The wins compound: a single Ledger component means Inventory's search, Crafting's detail pane, and Workers' hire flow all behave identically. A single status palette means "locked / available / active / owned / missing / in-progress" looks the same in the map, the shop, and the quest log. And one chrome means players learn navigation exactly once.</p>
+    </section>
+
+    <section id="principles">
+      <h2>Five principles guiding every decision</h2>
+      <div class="grid g2">
+        <div class="card"><h3>1 · Depth earns focus</h3><p>The current UI is parchment edge-to-edge — flat, no hierarchy. We float panels on a <strong>hearth-walnut atmosphere layer</strong> with vignette + grain. The thing you act on is always the brightest, highest object on screen.</p></div>
+        <div class="card"><h3>2 · State has one color</h3><p>A semantic ramp — <span class="chip c-locked">locked</span> <span class="chip c-available">available</span> <span class="chip c-active">active</span> <span class="chip c-owned">owned</span> <span class="chip c-missing">missing</span> — used everywhere. No screen invents its own "active."</p></div>
+        <div class="card"><h3>3 · Chrome morphs, never vanishes</h3><p>One Hearth Bar that becomes town navigation in the world and the tool tray on the board. Continuity over context-switching whiplash.</p></div>
+        <div class="card"><h3>4 · Space is continuous</h3><p>Three fluid tiers (Compact · Cozy · Hearth) instead of one hard 500px flip. Rails slide from bottom-sheet to side-dock; nothing teleports.</p></div>
+        <div class="card"><h3>5 · Motion is spatial</h3><p>Views live on a ribbon. Lateral nav slides sideways; drill-in pushes forward; sheets rise. Direction always encodes "where did I go."</p></div>
+        <div class="card" style="background:linear-gradient(160deg,#2f2318,#241a12);color:#f0e3c4;border-color:#3a2c1c"><h3 style="color:var(--gold)">The bar</h3><p style="color:#e7d6b4">Every screen should feel like a page torn from the same illuminated almanac. If a reviewer can tell which engineer built a screen, we've failed.</p></div>
+      </div>
+    </section>
+
+    <section id="audit-table">
+      <h2>Audit at a glance</h2>
+      <p>The full per-view inventory lives in the <a href="#atlas-table">Page Atlas</a>. The headline pattern: adherence is highest where a shared layout primitive already exists (Browser-Detail) and lowest where screens were hand-built.</p>
+      <table>
+        <thead><tr><th>Symptom</th><th>Where it shows up</th><th>Redesign answer</th></tr></thead>
+        <tbody>
+          <tr><td>Ad-hoc hex for state</td><td>Cartography, Portal, Boons, Bosses, Orders, Quests</td><td>Semantic status ramp tokens</td></tr>
+          <tr><td>Inline <code>style</code> objects</td><td>Orders, Settings, Tutorial, Boons, Cartography</td><td>Stack &amp; Sheet archetype classes</td></tr>
+          <tr><td>Divergent "list" layout</td><td>Inventory vs Crafting vs Orders vs Decorations</td><td>One Ledger primitive</td></tr>
+          <tr><td>Three tab/nav styles</td><td>Bottom nav · HUD pill · FeaturePanel tabs</td><td>One Hearth Bar + one Segmented control</td></tr>
+          <tr><td>Whole-layout flip at 500px</td><td>Board (portrait ⇄ landscape)</td><td>Continuous 3-tier reflow</td></tr>
+          <tr><td>No transitions between views</td><td>Entire shell</td><td>Spatial ribbon motion model</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- ══ PANEL 02 — FOUNDATIONS ═════════════════════════════════════ -->
+  <div class="panel" id="p-foundations" role="tabpanel">
+
+    <section id="color">
+      <div class="kicker">Foundations · Color</div>
+      <h2>One palette, with state as a first-class citizen</h2>
+      <p class="lead">The surface palette stays faithful to the game's warmth. The new idea is a <strong>semantic status ramp</strong>: six tokens that mean the same thing on every screen, replacing the dozens of one-off hexes. A tile that's locked on the map, a recipe you can't afford, and a quest not yet started all speak the same color.</p>
+
+      <h4>Surfaces &amp; ink</h4>
+      <div class="grid g4">
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:64px;background:#241a12"></div><div style="padding:.5rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Walnut</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#241A12 · atmosphere</div></div></div>
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:64px;background:#f7f0e1"></div><div style="padding:.5rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Parchment</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#F7F0E1 · panel</div></div></div>
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:64px;background:#fbf7ec"></div><div style="padding:.5rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Paper</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#FBF7EC · card</div></div></div>
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:64px;background:#2b2218"></div><div style="padding:.5rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Ink</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#2B2218 · text</div></div></div>
+      </div>
+
+      <h4>Brand accents</h4>
+      <div class="grid g3">
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:56px;background:#d6612a"></div><div style="padding:.45rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Ember</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#D6612A · primary action</div></div></div>
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:56px;background:#e2b24a"></div><div style="padding:.45rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Gold</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#E2B24A · reward / focus</div></div></div>
+        <div style="border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)"><div style="height:56px;background:#6f8a3a"></div><div style="padding:.45rem .7rem;background:var(--paper)"><strong style="font-family:var(--serif)">Moss</strong><div class="num" style="font-size:.78rem;color:var(--muted)">#6F8A3A · growth / confirm</div></div></div>
+      </div>
+
+      <h4>The status ramp — the part that's new</h4>
+      <div class="grid g3">
+        <div class="card" style="border-left:5px solid var(--st-locked)"><strong style="font-family:var(--serif)">Locked</strong> <span class="chip c-locked">locked</span><p>Not yet reachable. Muted clay. <code>--st-locked #9A8C74</code></p></div>
+        <div class="card" style="border-left:5px solid var(--st-available)"><strong style="font-family:var(--serif)">Available</strong> <span class="chip c-available">available</span><p>Actionable now. Teal. <code>--st-available #2F7D8C</code></p></div>
+        <div class="card" style="border-left:5px solid var(--st-active)"><strong style="font-family:var(--serif)">Active</strong> <span class="chip c-active">active</span><p>Currently engaged. Ember. <code>--st-active #D6612A</code></p></div>
+        <div class="card" style="border-left:5px solid var(--st-owned)"><strong style="font-family:var(--serif)">Owned</strong> <span class="chip c-owned">owned</span><p>Done / acquired. Green. <code>--st-owned #5E8C1E</code></p></div>
+        <div class="card" style="border-left:5px solid var(--st-missing)"><strong style="font-family:var(--serif)">Missing</strong> <span class="chip c-missing">missing</span><p>Insufficient / failed. Rust red. <code>--st-missing #B5341F</code></p></div>
+        <div class="card" style="border-left:5px solid var(--st-progress)"><strong style="font-family:var(--serif)">In progress</strong> <span class="chip" style="color:var(--st-progress);border-color:color-mix(in srgb,var(--st-progress) 50%,transparent);background:color-mix(in srgb,var(--st-progress) 14%,transparent)">42%</span><p>Partially complete. Gold. <code>--st-progress #E2B24A</code></p></div>
+      </div>
+      <div class="callout tip"><div class="t">Rule</div><p>No component literal ever names a hex for a <em>state</em>. If you're typing <code>#ff7a00</code> to mean "this is active," you want <code>var(--st-active)</code>. Brand hexes (ember/gold/moss) live in tokens too; the only raw hex left is inside canvas/SVG artwork.</p></div>
+    </section>
+
+    <section id="type">
+      <div class="kicker">Foundations · Type</div>
+      <h2>Typography with a strong voice</h2>
+      <p class="lead"><strong>Fraunces</strong> carries every title — it's a high-contrast "old-style" serif that reads as hand-set and illuminated, matching the game's existing <code>--font-display</code> intent (Cinzel/Fraunces). <strong>Work Sans</strong> handles body and UI for clean legibility at small sizes. <strong>JetBrains Mono</strong> locks every number to tabular figures so counters never jitter.</p>
+      <div class="card" style="padding:1.4rem 1.6rem">
+        <div style="font:900 2.6rem/1.05 var(--serif);letter-spacing:-.02em;color:var(--ink)">Harvest complete</div>
+        <div style="font:600 1.5rem/1.2 var(--serif);color:var(--muted);margin-top:.4rem">Hearthwood Vale · Season of Plenty</div>
+        <div style="font:700 .76rem/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-top:1rem">Section label · eyebrow</div>
+        <p style="margin-top:.5rem;max-width:60ch">Body copy in Work Sans at 16px / 1.64. Comfortable for tooltips, descriptions, and recipe notes. Numbers like <span class="num" style="font-weight:600">1,284 coins</span> and <span class="num" style="font-weight:600">42 / 50 XP</span> use tabular mono so they don't reflow as they tick.</p>
+      </div>
+      <table style="margin-top:1rem">
+        <thead><tr><th>Token</th><th>Font / weight / size</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td class="arch">display-1</td><td>Fraunces 900 · 32px</td><td>Screen &amp; modal titles, run-summary headline</td></tr>
+          <tr><td class="arch">display-2</td><td>Fraunces 600 · 22px</td><td>Panel titles, detail-pane name, card hero</td></tr>
+          <tr><td class="arch">heading</td><td>Work Sans 700 · 15px</td><td>Card titles, list-row titles</td></tr>
+          <tr><td class="arch">eyebrow</td><td>JetBrains Mono 700 · 12px · 0.16em</td><td>Section labels, statuses, kickers</td></tr>
+          <tr><td class="arch">body</td><td>Work Sans 400 · 14–16px</td><td>Descriptions, prose</td></tr>
+          <tr><td class="arch">numeral</td><td>JetBrains Mono 600 · tabular</td><td>Every count, cost, timer, percentage</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="space-elev">
+      <div class="kicker">Foundations · Space &amp; Elevation</div>
+      <h2>A 4px rhythm and a real elevation ladder</h2>
+      <p class="lead">Spacing stays on the existing 4px base. Elevation is where we add the depth the flat UI is missing — three rungs, each pairing a soft cream top-light with a warm drop shadow so panels feel like paper laid on a table, not painted on glass.</p>
+      <div class="grid g3" style="margin-top:1rem">
+        <div style="background:var(--paper);border-radius:12px;padding:1.1rem;box-shadow:0 1px 0 rgba(205,187,146,.6),0 2px 6px rgba(60,40,20,.06);border:1px solid var(--line)"><strong style="font-family:var(--serif)">Elev 1 · Card</strong><p style="font-size:.9rem;color:var(--muted);margin-top:.3rem">Rows, tiles, list items resting in a panel.</p></div>
+        <div style="background:var(--paper);border-radius:14px;padding:1.1rem;box-shadow:0 2px 0 rgba(168,146,114,.4),0 8px 22px -8px rgba(60,40,20,.30);border:1px solid var(--line)"><strong style="font-family:var(--serif)">Elev 2 · Panel</strong><p style="font-size:.9rem;color:var(--muted);margin-top:.3rem">A screen floating on the atmosphere layer.</p></div>
+        <div style="background:var(--paper);border-radius:16px;padding:1.1rem;box-shadow:var(--shadow-lift);border:1px solid var(--line);transform:translateY(-2px)"><strong style="font-family:var(--serif)">Elev 3 · Sheet</strong><p style="font-size:.9rem;color:var(--muted);margin-top:.3rem">A modal or bottom-sheet, above everything.</p></div>
+      </div>
+      <h4>Radii &amp; touch</h4>
+      <p>Radii nest: <code>--r-sm 7</code> (chips/buttons) → <code>--r-md 11</code> (cards) → <code>--r-lg 15</code> (panels) → <code>--r-xl 20</code> (sheets). Every interactive target keeps the existing <code>44px</code> hit floor; on the board, tools get a <code>52px</code> floor because they're used under time pressure.</p>
+    </section>
+  </div>
+
+  <!-- ══ PANEL 03 — MOTION & RESPONSIVE ═════════════════════════════ -->
+  <div class="panel" id="p-motion" role="tabpanel">
+
+    <section id="ribbon">
+      <div class="kicker">Motion · Spatial model</div>
+      <h2>Every view has a place on the ribbon</h2>
+      <p class="lead">The shell is one horizontal ribbon of peer views with the board/town as home. Transitions encode geography, so the player always feels <em>where</em> they went, not just that something changed. Three gestures, three motions — that's the whole vocabulary.</p>
+
+      <div class="card" style="padding:1.2rem;overflow-x:auto">
+        <svg viewBox="0 0 900 240" width="100%" style="min-width:680px" role="img" aria-label="Spatial ribbon diagram">
+          <defs>
+            <linearGradient id="rib" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#efe4ca"/><stop offset="1" stop-color="#e4d6b6"/></linearGradient>
+            <marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#d6612a"/></marker>
+          </defs>
+          <!-- ribbon track -->
+          <rect x="20" y="92" width="860" height="56" rx="12" fill="url(#rib)" stroke="#cdbb92"/>
+          <text x="30" y="80" font-family="JetBrains Mono" font-size="11" fill="#8a4a26" letter-spacing="2">LATERAL — slide horizontally between peers</text>
+          <!-- peer views -->
+          <g font-family="Fraunces" font-size="13" fill="#2b2218" text-anchor="middle">
+            <rect x="40" y="100" width="120" height="40" rx="9" fill="#fbf7ec" stroke="#cdbb92"/><text x="100" y="124">Inventory</text>
+            <rect x="180" y="100" width="120" height="40" rx="9" fill="#fbf7ec" stroke="#cdbb92"/><text x="240" y="124">Craft</text>
+            <rect x="330" y="96" width="150" height="48" rx="11" fill="#d6612a" stroke="#b94f1f"/><text x="405" y="125" fill="#fff" font-weight="600">Hearth ▸ Home</text>
+            <rect x="510" y="100" width="120" height="40" rx="9" fill="#fbf7ec" stroke="#cdbb92"/><text x="570" y="124">Map</text>
+            <rect x="650" y="100" width="120" height="40" rx="9" fill="#fbf7ec" stroke="#cdbb92"/><text x="710" y="124">Townsfolk</text>
+            <rect x="790" y="100" width="70" height="40" rx="9" fill="#fbf7ec" stroke="#cdbb92"/><text x="825" y="124">…</text>
+          </g>
+          <!-- forward drill -->
+          <g>
+            <rect x="510" y="178" width="200" height="44" rx="10" fill="#fef6e6" stroke="#e2b24a"/>
+            <text x="610" y="205" font-family="Fraunces" font-size="13" fill="#2b2218" text-anchor="middle">Zone detail (drill-in)</text>
+            <path d="M580,150 L600,176" stroke="#d6612a" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+            <text x="724" y="200" font-family="JetBrains Mono" font-size="10" fill="#8a4a26">FORWARD — push + fade</text>
+          </g>
+          <!-- sheet rise -->
+          <g>
+            <rect x="330" y="14" width="150" height="40" rx="10" fill="#241a12" stroke="#3a2c1c"/>
+            <text x="405" y="39" font-family="Fraunces" font-size="13" fill="#e2b24a" text-anchor="middle">Menu / Settings</text>
+            <path d="M405,92 L405,58" stroke="#d6612a" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+            <text x="490" y="40" font-family="JetBrains Mono" font-size="10" fill="#8a4a26">RISE — sheet from below</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="grid g3" style="margin-top:1rem">
+        <div class="card"><h3>Lateral</h3><p>Switching peer views (nav). The outgoing view slides off toward its side, the incoming slides in from the opposite edge. Direction matches the nav order.</p></div>
+        <div class="card"><h3>Forward / Back</h3><p>Drilling into a detail (zone, recipe, NPC). New layer pushes up 1 z-step, scales from 0.96→1 + fades; back reverses. The parent dims, never unmounts.</p></div>
+        <div class="card"><h3>Rise</h3><p>Sheets &amp; modals. Translate from the bottom with a spring, scrim fades in. Dismiss drops back down. On phones this <em>is</em> a draggable bottom-sheet.</p></div>
+      </div>
+    </section>
+
+    <section id="motion-spec">
+      <h2>Motion tokens &amp; the live feel</h2>
+      <p>Durations and easings are tokenized so motion is consistent and tunable in one place. Tap the demo to feel each transition.</p>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td class="arch">--m-fast</td><td>120ms · ease-out</td><td>Hover, press, chip toggles, tooltip</td></tr>
+          <tr><td class="arch">--m-med</td><td>240ms · cubic-bezier(.21,.61,.35,1)</td><td>Lateral &amp; forward view transitions</td></tr>
+          <tr><td class="arch">--m-rise</td><td>320ms · cubic-bezier(.34,1.3,.5,1)</td><td>Sheet rise (gentle overshoot)</td></tr>
+          <tr><td class="arch">--m-celebrate</td><td>600ms · ease-out</td><td>Reward count-up, level-up, harvest tally</td></tr>
+        </tbody>
+      </table>
+
+      <div class="stage">
+        <div class="stage-bar"><span class="label">Live · transition feel</span></div>
+        <div id="motion-demo" style="position:relative;width:100%;max-width:520px;height:300px;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#2c2017,#1d150e);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)">
+          <div class="md-layer hl" data-k="home" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#f7f0e1,#efe4ca);transition:transform .24s cubic-bezier(.21,.61,.35,1),opacity .24s">
+            <div style="text-align:center"><div class="disp" style="font-size:1.6rem;font-weight:700">Hearth · Home</div><div style="color:var(--ink-soft);font-size:.85rem">the board / town lives here</div></div>
+          </div>
+          <div class="md-layer hl" data-k="lateral" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fbf7ec,#efe4ca);transform:translateX(100%);transition:transform .24s cubic-bezier(.21,.61,.35,1),opacity .24s">
+            <div style="text-align:center"><div class="disp" style="font-size:1.6rem;font-weight:700">Map</div><div style="color:var(--ink-soft);font-size:.85rem">slid in from the right</div></div>
+          </div>
+          <div class="md-layer hl" data-k="forward" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fef6e6,#f3e6c8);transform:scale(.96);opacity:0;transition:transform .24s cubic-bezier(.21,.61,.35,1),opacity .24s">
+            <div style="text-align:center"><div class="disp" style="font-size:1.6rem;font-weight:700">Zone detail</div><div style="color:var(--ink-soft);font-size:.85rem">pushed forward</div></div>
+          </div>
+          <div class="md-layer hl" data-k="rise" style="position:absolute;left:8%;right:8%;bottom:0;height:62%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2f2318,#241a12);border-radius:18px 18px 0 0;transform:translateY(105%);transition:transform .32s cubic-bezier(.34,1.3,.5,1)">
+            <div style="text-align:center"><div class="disp" style="font-size:1.4rem;font-weight:700;color:var(--gold)">Settings sheet</div><div style="color:#cdb892;font-size:.85rem">rose from below</div></div>
+          </div>
+        </div>
+        <div class="segctl" role="group" aria-label="Play transition">
+          <button data-md="home" aria-pressed="true">Home</button>
+          <button data-md="lateral">Lateral →</button>
+          <button data-md="forward">Forward ↑</button>
+          <button data-md="rise">Rise ▲</button>
+        </div>
+        <figcaption>The same four motions used everywhere. Lateral slides, forward pushes &amp; fades, rise springs from below. Reduced-motion users get instant cross-fades.</figcaption>
+      </div>
+    </section>
+
+    <section id="responsive">
+      <div class="kicker">Responsive · Touch &amp; mouse, portrait &amp; landscape</div>
+      <h2>Three fluid tiers, not one hard flip</h2>
+      <p class="lead">The board's wholesale 500px reshuffle is the worst offender — it reads as two different apps. The redesign replaces every binary breakpoint with a continuous reflow across three tiers. Rails migrate; they never teleport.</p>
+      <div class="grid g3">
+        <div class="card" style="border-top:3px solid var(--st-active)"><h3>Compact &lt; 600px</h3><p><strong>Phone portrait.</strong> Single column. Inspector rails become draggable bottom-sheets. Hearth Bar pinned to the bottom. One primary action always thumb-reachable.</p></div>
+        <div class="card" style="border-top:3px solid var(--gold)"><h3>Cozy 600–1024px</h3><p><strong>Phone landscape · small tablet.</strong> Content + a docked side rail appear together. Hearth Bar can sit on the leading edge. Ledger shows list&nbsp;+&nbsp;detail side by side.</p></div>
+        <div class="card" style="border-top:3px solid var(--st-available)"><h3>Hearth &gt; 1024px</h3><p><strong>Tablet landscape · desktop.</strong> Full three-zone composition: persistent rail, generous canvas, contextual inspector. Hover affordances unlock; nothing is hidden behind a tap.</p></div>
+      </div>
+
+      <h4>Touch vs mouse — same layout, adapted affordances</h4>
+      <table>
+        <thead><tr><th>Concern</th><th>Touch</th><th>Mouse / pointer</th></tr></thead>
+        <tbody>
+          <tr><td>Hit targets</td><td>≥44px (52px for board tools)</td><td>Same targets; denser hover zones allowed</td></tr>
+          <tr><td>Reveal detail</td><td>Tap → sheet / expand-in-place</td><td>Hover popover + click to pin</td></tr>
+          <tr><td>Tool use on board</td><td>Two-tap (arm → place); long-press to pin</td><td>Click to arm, click to place; drag to pin</td></tr>
+          <tr><td>Feedback</td><td><code>:active</code> scale 0.96 + haptic-style flash</td><td><code>:hover</code> lift -1px + shadow</td></tr>
+          <tr><td>Scroll</td><td>Momentum, <code>overscroll-contain</code></td><td>Wheel + visible scrollbar track</td></tr>
+        </tbody>
+      </table>
+      <div class="callout note"><div class="t">Implementation note</div><p>Affordances key off <code>@media (hover:hover) and (pointer:fine)</code>, never off viewport width. A touchscreen laptop and a phone in a stand both get touch-first behavior at any size — the existing <code>hl-btn</code> hover rule already does this; we extend the pattern system-wide.</p></div>
+    </section>
+  </div>
+
+  <!-- ══ PANEL 04 — LIVING CHROME ═══════════════════════════════════ -->
+  <div class="panel" id="p-chrome" role="tabpanel">
+
+  <style>
+    /* ── Shared in-mock app shell + chrome (scoped to .hl) ─────────── */
+    .hl-app{container-type:inline-size;position:absolute;inset:0;display:flex;flex-direction:column;background:
+      radial-gradient(420px 220px at 50% -10%, rgba(226,178,74,.16), transparent 65%),
+      linear-gradient(170deg,#2c2017,#1d150e);}
+    .hl-scene{flex:1;min-height:0;position:relative;margin:8px;border-radius:var(--r-lg);overflow:hidden;
+      background:linear-gradient(180deg,var(--field-top,#dbe6b5),var(--field-bot,#b8cf8a));
+      box-shadow:0 4px 0 rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.18);}
+    .hl-scene .vignette{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 30%,transparent 55%,rgba(40,26,12,.28));pointer-events:none;}
+
+    /* HUD */
+    .hl-hud{display:flex;align-items:center;gap:8px;padding:8px 10px;
+      background:linear-gradient(180deg,#fbf6ea,#f3e7cb);border-bottom:1px solid var(--cardline);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 2px 8px rgba(40,26,12,.18);position:relative;z-index:5;}
+    .hl-hud::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:var(--accent-strip,var(--ember));opacity:.5;}
+    .hl-iconbtn{width:34px;height:34px;border-radius:var(--r-sm);background:var(--parch-soft);border:1.5px solid var(--cardline-2);
+      display:grid;place-items:center;font-size:1rem;color:var(--ink-soft);flex-shrink:0;transition:transform .12s,background .12s;}
+    .hl-iconbtn:active{transform:scale(.94);}
+    .hl-hud .loc{font-family:var(--fdisp);font-weight:600;font-size:.92rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .hl-hud .spacer{flex:1;}
+    .hl-pill{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 9px;border-radius:999px;
+      font:600 .8rem/1 var(--fbody);border:1px solid var(--cardline-2);flex-shrink:0;}
+    .hl-pill .mono{font-size:.82rem;}
+    .hl-pill--gold{background:linear-gradient(180deg,#ffe9b0,#f3d27e);color:#6a4a12;}
+    .hl-pill--ember{background:linear-gradient(180deg,var(--ember),#bf531d);color:#fff;border-color:#9a3f15;}
+    .hl-pill--ctx{background:#fff7e6;color:var(--ink);}
+    .hl-xpbar{width:38px;height:6px;border-radius:999px;background:rgba(0,0,0,.22);overflow:hidden;}
+    .hl-xpbar i{display:block;height:100%;background:var(--gold-br);}
+    .hl-season{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;background:#fff7e6;border:1px solid var(--cardline-2);font:600 .78rem/1 var(--fbody);color:var(--ink);}
+    .hl-season .dots{display:inline-flex;gap:3px;}
+    .hl-season .dots b{width:7px;height:7px;border-radius:50%;background:var(--cardline-2);}
+    .hl-season .dots b.on{background:var(--ember);}
+
+    /* HEARTH BAR — the morphing dock */
+    .hl-bar{flex-shrink:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px));
+      background:linear-gradient(180deg,#fbf6ea,#efe1c2);border-top:1px solid var(--cardline);
+      box-shadow:0 -2px 10px rgba(40,26,12,.16);position:relative;z-index:5;}
+    .hl-bar__rail{display:flex;align-items:stretch;gap:4px;}
+    /* nav variant */
+    .hl-nav{flex:1;display:flex;gap:2px;}
+    .hl-nav button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;
+      padding:6px 2px;border-radius:var(--r-sm);color:var(--ink-soft);transition:background .14s,color .14s;position:relative;}
+    .hl-nav button .gl{font-size:1.18rem;line-height:1;}
+    .hl-nav button .lb{font:600 .62rem/1 var(--fbody);letter-spacing:.01em;}
+    .hl-nav button.on{color:var(--ember);background:color-mix(in srgb,var(--ember) 12%,transparent);}
+    .hl-nav button.on::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:22px;height:3px;border-radius:3px;background:var(--ember);}
+    .hl-nav button .badge{position:absolute;top:2px;right:18%;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--st-owned);color:#fff;font:700 .58rem/15px var(--fmono);}
+    /* tool-tray variant */
+    .hl-tray{flex:1;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+    .hl-tool{flex-shrink:0;width:52px;height:54px;border-radius:var(--r-md);background:var(--card);border:1.5px solid var(--cardline);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;box-shadow:var(--elev-1);transition:transform .12s;}
+    .hl-tool:active{transform:scale(.93);}
+    .hl-tool .gl{font-size:1.3rem;line-height:1;}
+    .hl-tool.armed{border-color:var(--gold);background:#fff7e6;box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 45%,transparent);}
+    .hl-tool .ct{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--walnut);color:#f0e3c4;font:700 .58rem/16px var(--fmono);}
+    .hl-tool.empty{opacity:.4;background:rgba(0,0,0,.05);border-style:dashed;}
+    .hl-bar__lead{flex-shrink:0;display:flex;align-items:center;}
+    .hl-leavebtn{display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;height:54px;border-radius:var(--r-md);
+      background:#9a724d;border:1.5px solid #e6c49a;color:#fff;font:700 .6rem/1 var(--fbody);justify-content:center;}
+    .hl-leavebtn .gl{font-size:1.1rem;}
+    .hl-bar__more{flex-shrink:0;width:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink-soft);border-radius:var(--r-sm);border-left:1px dashed var(--cardline);}
+    .hl-bar__more .gl{font-size:1.18rem;} .hl-bar__more .lb{font:600 .6rem/1 var(--fbody);}
+
+    .hl-tag{position:absolute;top:8px;left:8px;z-index:6;font:600 .62rem/1 var(--fmono);letter-spacing:.1em;text-transform:uppercase;
+      color:#fff;background:rgba(40,26,12,.55);padding:5px 8px;border-radius:999px;backdrop-filter:blur(3px);}
+    .hl-scene .scene-label{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#3a3216;}
+    .hl-scene .scene-label .t{font-family:var(--fdisp);font-weight:700;font-size:1.3rem;}
+    .hl-scene .scene-label .s{font-size:.8rem;opacity:.7;}
+
+    /* context morph: show only the active context's elements */
+    .hl-app[data-ctx="town"] .ctx-board{display:none;}
+    .hl-app[data-ctx="board"] .ctx-town{display:none;}
+
+    /* container-query reflow inside the device */
+    @container (min-width:560px){
+      .hl-nav button{flex-direction:row;gap:6px;justify-content:center;}
+      .hl-nav button .lb{font-size:.72rem;}
+    }
+  </style>
+
+    <section id="chrome-intro">
+      <div class="kicker">Living Chrome</div>
+      <h2>One HUD, one Hearth Bar — and it never disappears</h2>
+      <p class="lead">Today the bottom nav exists in town and <em>vanishes</em> on the board, while a hamburger pill and a separate tool grid try to fill the gap. Players relearn navigation every time they enter the field. The redesign uses a single bar that <strong>morphs</strong>: in the world it's navigation; on the board it's the tool tray and a Leave control. Same position, same physics, continuous identity.</p>
+    </section>
+
+    <section id="chrome-mock">
+      <h3>Live · the chrome in both contexts</h3>
+      <p>Toggle the device size and the world/board context. Watch the Hearth Bar morph in place and the labels reflow as the frame widens (driven by real CSS container queries — this is the actual responsive behavior, not a picture).</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Hearth Chrome</span>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <div class="segctl" role="group" aria-label="Context">
+              <button data-ctx="town" aria-pressed="true">World</button>
+              <button data-ctx="board">Board</button>
+            </div>
+            <div class="segctl" role="group" aria-label="Device size">
+              <button data-mode="portrait" aria-pressed="true">Portrait</button>
+              <button data-mode="landscape">Landscape</button>
+              <button data-mode="desktop">Desktop</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-app" id="chrome-app" data-ctx="town" style="--accent-strip:var(--ember)">
+                <!-- HUD -->
+                <div class="hl-hud">
+                  <button class="hl-iconbtn" data-hudmenu>≡</button>
+                  <span class="loc">Hearthwood Vale</span>
+                  <span class="ctx-town hl-pill hl-pill--ctx" style="margin-left:6px">🍂 Autumn</span>
+                  <span class="ctx-board hl-season">🌾 <span class="dots"><b class="on"></b><b class="on"></b><b></b><b></b></span> <span class="mono">18</span></span>
+                  <span class="spacer"></span>
+                  <span class="hl-pill hl-pill--gold">🪙 <span class="mono">1,284</span></span>
+                  <span class="hl-pill hl-pill--ember">Lv <span class="mono">7</span> <span class="hl-xpbar"><i style="width:62%"></i></span></span>
+                </div>
+
+                <!-- SCENE -->
+                <div class="hl-scene ctx-town" style="--field-top:#e7d9b0;--field-bot:#c9b985">
+                  <span class="hl-tag">World · Town</span>
+                  <div class="vignette"></div>
+                  <div class="scene-label"><div><div class="t">🏡 Hearthwood Vale</div><div class="s">tap a plot to build · pan to explore</div></div></div>
+                </div>
+                <div class="hl-scene ctx-board" style="--field-top:#e8c890;--field-bot:#c8a45a">
+                  <span class="hl-tag">Board · Autumn field</span>
+                  <div class="vignette"></div>
+                  <div class="scene-label"><div><div class="t">🟫 Match &amp; harvest</div><div class="s">drag to chain · arm a tool below</div></div></div>
+                </div>
+
+                <!-- HEARTH BAR -->
+                <div class="hl-bar">
+                  <div class="hl-bar__rail">
+                    <!-- WORLD: navigation -->
+                    <nav class="hl-nav ctx-town">
+                      <button class="on"><span class="gl">🏡</span><span class="lb">Home</span></button>
+                      <button><span class="gl">🎒</span><span class="lb">Items</span><span class="badge">2</span></button>
+                      <button><span class="gl">⚒️</span><span class="lb">Craft</span></button>
+                      <button><span class="gl">🗺️</span><span class="lb">Map</span></button>
+                      <button><span class="gl">👪</span><span class="lb">Folk</span></button>
+                    </nav>
+                    <div class="hl-bar__more ctx-town"><span class="gl">⋯</span><span class="lb">More</span></div>
+                    <!-- BOARD: tool tray + leave -->
+                    <div class="hl-bar__lead ctx-board"><button class="hl-leavebtn"><span class="gl">←</span>Leave</button></div>
+                    <div class="hl-tray ctx-board">
+                      <button class="hl-tool armed"><span class="gl">🪓</span><span class="ct">3</span></button>
+                      <button class="hl-tool"><span class="gl">🔥</span><span class="ct">5</span></button>
+                      <button class="hl-tool"><span class="gl">💧</span><span class="ct">2</span></button>
+                      <button class="hl-tool"><span class="gl">⚡</span><span class="ct">1</span></button>
+                      <button class="hl-tool empty"><span class="gl">＋</span></button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>The hamburger opens the Menu sheet; the gold coin &amp; ember level pills open currency / almanac popovers. On the board the same bar becomes a scrollable tool tray with a Leave control where Home used to be — and the season indicator slides into the HUD center.</figcaption>
+      </div>
+    </section>
+
+    <section id="chrome-rationale">
+      <h3>Why this beats three separate systems</h3>
+      <div class="ba">
+        <div class="before"><h4>Before</h4>
+          <ul style="margin:0">
+            <li>Bottom nav (town) · hamburger pill (everywhere) · tool grid (board landscape only) · tool modal (board portrait only)</li>
+            <li>Nav disappears on the board → dead space + relearning</li>
+            <li>Only the Inventory tab can show a badge</li>
+            <li>Portrait &amp; landscape board duplicate ~90% of tool code with different UX</li>
+          </ul>
+        </div>
+        <div class="after"><h4>After</h4>
+          <ul style="margin:0">
+            <li>One Hearth Bar with two modes (nav ⇄ tray) sharing physics, position, and styling</li>
+            <li>Persistent → muscle memory holds across contexts</li>
+            <li>Any destination can carry a status badge (orders ready, quest claimable, castle need)</li>
+            <li>One tool component; the tray simply docks to the side at Cozy+ tiers instead of forking the layout</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout tip"><div class="t">Migration</div><p>This maps cleanly onto the existing code: the bottom-nav <code>TabBar</code> becomes the nav mode, the board's <code>PuzzleHotbar</code>/<code>PuzzleToolGrid</code>/<code>PuzzleToolModal</code> trio collapses into the tray mode, and the HUD's <code>OPEN_MODAL menu/leaveBoard</code> dispatch already does the right thing from the leading button.</p></div>
+    </section>
+  </div>
+
+  <!-- ══ PANEL 05 — ARCHETYPES ══════════════════════════════════════ -->
+  <div class="panel" id="p-archetypes" role="tabpanel">
+
+  <style>
+    /* ── Feature panel + the unified controls (scoped .hl) ─────────── */
+    .hl-fp{container-type:inline-size;position:absolute;inset:0;display:flex;flex-direction:column;
+      background:linear-gradient(180deg,var(--parch-soft),var(--parch-2));}
+    .hl-fp__hd{display:flex;align-items:center;gap:8px;padding:0 10px;min-height:46px;flex-shrink:0;
+      border-bottom:1px solid color-mix(in srgb,var(--cardline) 75%,transparent);position:relative;}
+    .hl-fp__hd::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:1px;
+      background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gold) 70%,transparent) 25%,color-mix(in srgb,var(--gold) 70%,transparent) 75%,transparent);opacity:.6;}
+    .hl-fp__title{font-family:var(--fdisp);font-weight:600;font-size:1.02rem;color:var(--ink);letter-spacing:.01em;}
+    .hl-fp__close{margin-left:auto;width:30px;height:30px;border-radius:var(--r-sm);background:var(--card);border:1.5px solid var(--cardline-2);color:var(--ink-soft);font-weight:700;}
+    .hl-fp__bd{flex:1;min-height:0;overflow-y:auto;padding:10px;overscroll-behavior:contain;}
+
+    /* unified segmented control — replaces all 3 tab styles */
+    .hl-seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;background:var(--well-bg,rgba(122,94,63,.1));border:1px solid color-mix(in srgb,var(--cardline) 60%,transparent);}
+    .hl-seg button{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;
+      font:700 .72rem/1 var(--fbody);color:var(--ink-soft);white-space:nowrap;transition:background .14s,color .14s;}
+    .hl-seg button .gl{font-size:.95rem;}
+    .hl-seg button.on{background:var(--ember);color:#fff;box-shadow:0 1px 0 var(--ember-hot);}
+    .hl-seg button .lk{font-size:.7rem;opacity:.6;}
+
+    .hl-toolbar{display:flex;align-items:center;gap:8px;padding:8px 10px;flex-shrink:0;flex-wrap:wrap;
+      background:rgba(201,185,147,.18);border-bottom:1px solid color-mix(in srgb,var(--cardline) 60%,transparent);}
+    .hl-search{flex:1;min-width:120px;height:32px;display:flex;align-items:center;gap:7px;padding:0 10px;border-radius:var(--r-sm);background:var(--card);border:1px solid var(--cardline-2);color:var(--ink-faint);font-size:.82rem;}
+
+    /* ── LEDGER (list ⇄ detail) ───────────────────────────────────── */
+    .hl-ledger{display:flex;flex-direction:column;gap:8px;height:100%;min-height:0;}
+    .hl-ledger__body{flex:1;min-height:0;display:grid;gap:8px;grid-template-columns:1fr;}
+    .hl-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding-right:2px;}
+    .hl-row{display:flex;align-items:center;gap:9px;padding:8px;border-radius:var(--r-md);background:var(--card);
+      border:2px solid var(--cardline);box-shadow:var(--elev-1);text-align:left;transition:border-color .14s,background .14s,box-shadow .14s;width:100%;}
+    .hl-row:hover{background:var(--card-hover);border-color:var(--cardline-2);}
+    .hl-row.sel{border-color:var(--moss);background:color-mix(in srgb,var(--moss) 13%,var(--card));box-shadow:0 0 0 3px color-mix(in srgb,var(--moss) 32%,transparent);}
+    .hl-row.act:not(.sel){border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--card));}
+    .hl-row.lock{opacity:.6;}
+    .hl-row__ic{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:1.25rem;background:var(--well-bg,rgba(122,94,63,.1));border:1px solid color-mix(in srgb,var(--cardline) 60%,transparent);flex-shrink:0;}
+    .hl-row__main{flex:1;min-width:0;}
+    .hl-row__t{display:block;font:700 .85rem/1.2 var(--fbody);color:var(--ink);}
+    .hl-row__s{display:block;font:400 .72rem/1.25 var(--fbody);color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .hl-row__meta{flex-shrink:0;text-align:right;}
+    .hl-detail{display:none;border-radius:var(--r-md);background:var(--card);border:2px solid var(--cardline-2);box-shadow:var(--elev-2);padding:12px;flex-direction:column;gap:11px;overflow-y:auto;min-height:0;}
+    .hl-detail__hd{display:flex;gap:11px;}
+    .hl-detail__ic{width:66px;height:66px;border-radius:var(--r-md);display:grid;place-items:center;font-size:2.1rem;background:var(--well-bg,rgba(122,94,63,.1));border:1px solid color-mix(in srgb,var(--cardline) 60%,transparent);flex-shrink:0;}
+    .hl-eyebrow{font:700 .64rem/1 var(--fmono);letter-spacing:.14em;text-transform:uppercase;color:var(--label);}
+    .hl-detail__t{font-family:var(--fdisp);font-weight:600;font-size:1.25rem;color:var(--ink);margin:2px 0;}
+    .hl-detail__desc{font-size:.84rem;color:var(--ink-soft);line-height:1.5;}
+    .hl-costrow{display:flex;flex-wrap:wrap;gap:6px;}
+    .hl-cost{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:var(--r-sm);font:700 .72rem/1 var(--fmono);border:1px solid;}
+    .hl-cost.ok{color:#3a5410;background:color-mix(in srgb,var(--moss) 18%,transparent);border-color:color-mix(in srgb,var(--moss) 55%,transparent);}
+    .hl-cost.no{color:var(--st-missing);background:color-mix(in srgb,var(--st-missing) 12%,transparent);border-color:color-mix(in srgb,var(--st-missing) 45%,transparent);}
+    .hl-actions{margin-top:auto;display:flex;gap:8px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--cardline) 60%,transparent);}
+    .hl-btn2{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;border-radius:var(--r-md);
+      font:700 .82rem/1 var(--fbody);border:2px solid;transition:transform .1s,filter .14s;}
+    .hl-btn2:active{transform:translateY(1px) scale(.98);}
+    .hl-btn2--go{background:var(--moss);border-color:#4f7016;color:#fff;}
+    .hl-btn2--ghost{background:var(--card);border-color:var(--cardline-2);color:var(--ink-soft);}
+    .hl-statpill{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;font:700 .68rem/1 var(--fmono);letter-spacing:.04em;border:1px solid;}
+    .sp-active{color:var(--st-active);background:color-mix(in srgb,var(--st-active) 13%,transparent);border-color:color-mix(in srgb,var(--st-active) 45%,transparent);}
+    .sp-owned{color:var(--st-owned);background:color-mix(in srgb,var(--st-owned) 13%,transparent);border-color:color-mix(in srgb,var(--st-owned) 45%,transparent);}
+    .sp-locked{color:var(--st-locked);background:color-mix(in srgb,var(--st-locked) 14%,transparent);border-color:color-mix(in srgb,var(--st-locked) 45%,transparent);}
+    .hl-mini{display:flex;flex-direction:column;gap:4px;}
+    .hl-mini b{font:700 .64rem/1 var(--fmono);letter-spacing:.1em;text-transform:uppercase;color:var(--label);}
+    .hl-mini ul{list-style:none;display:flex;flex-direction:column;gap:3px;}
+    .hl-mini li{position:relative;padding-left:14px;font-size:.8rem;color:var(--ink-soft);}
+    .hl-mini li::before{content:"";position:absolute;left:0;top:.5em;width:5px;height:5px;border-radius:50%;background:var(--moss);}
+
+    /* Compact: detail rises above the list once a row is chosen */
+    .hl-ledger.show-detail .hl-detail{display:flex;order:-1;max-height:62%;animation:hlRise .26s cubic-bezier(.34,1.3,.5,1) both;}
+    @keyframes hlRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+    /* Cozy+ : split list & detail side by side (always visible) */
+    @container (min-width:560px){
+      .hl-ledger__body{grid-template-columns:minmax(220px,1fr) minmax(240px,300px);}
+      .hl-detail{display:flex;}
+      .hl-ledger.show-detail .hl-detail{order:0;max-height:none;animation:none;}
+    }
+  </style>
+
+    <section id="arch-intro">
+      <div class="kicker">Archetypes</div>
+      <h2>Build four shapes, get every screen</h2>
+      <p class="lead">Each archetype is a real, responsive component with named slots. A "new feature screen" stops being a blank file and becomes a choice: <em>which archetype, what goes in the slots.</em> All four share the foundations — status palette, type, elevation, motion — so they feel like one product. Each mock below is live: toggle the device size to watch it reflow.</p>
+      <div class="grid g4">
+        <div class="card"><div class="ic">📖</div><h3>Ledger</h3><p>List ⇄ detail. Compact stacks; Cozy+ splits. 6 views.</p></div>
+        <div class="card"><div class="ic">🧾</div><h3>Stack</h3><p>Actionable card column. 8 views.</p></div>
+        <div class="card"><div class="ic">🗺️</div><h3>Atlas</h3><p>Canvas + docking inspector rail. 3 views.</p></div>
+        <div class="card"><div class="ic">🛎️</div><h3>Sheet</h3><p>Rising focused interrupt. 6 surfaces.</p></div>
+      </div>
+    </section>
+
+    <section id="arch-ledger">
+      <h2>① Ledger — list ⇄ detail</h2>
+      <p>The workhorse. A toolbar (unified segmented filter + search), a scrollable list of rows carrying status color, and a detail pane. On a phone the detail rises over the list when you tap a row; at Cozy width and up they sit side by side. <strong>Maps to:</strong> Crafting, Inventory, Workers, Tile Collection, Recipe Wiki, Decorations.</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Archetype · Ledger</span>
+          <div class="segctl" role="group" aria-label="Device size">
+            <button data-mode="portrait" aria-pressed="true">Portrait</button>
+            <button data-mode="landscape">Landscape</button>
+            <button data-mode="desktop">Desktop</button>
+          </div>
+        </div>
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-fp">
+                <div class="hl-fp__hd">
+                  <span class="hl-fp__title">⚒️ Crafting</span>
+                  <button class="hl-fp__close">✕</button>
+                </div>
+                <div class="hl-toolbar">
+                  <div class="hl-seg">
+                    <button class="on">Forge</button>
+                    <button>Kitchen</button>
+                    <button>Loom <span class="lk">🔒</span></button>
+                  </div>
+                </div>
+                <div class="hl-fp__bd">
+                  <div class="hl-ledger">
+                    <div class="hl-ledger__body">
+                      <div class="hl-list" id="ledger-list">
+                        <button class="hl-row sel" data-i="0"><span class="hl-row__ic">🪓</span><span class="hl-row__main"><span class="hl-row__t">Iron Axe</span><span class="hl-row__s">Forge · clears 2 chain steps</span></span><span class="hl-row__meta"><span class="hl-statpill sp-active">ready</span></span></button>
+                        <button class="hl-row act" data-i="1"><span class="hl-row__ic">🔥</span><span class="hl-row__main"><span class="hl-row__t">Ember Torch</span><span class="hl-row__s">Forge · lights hazards</span></span><span class="hl-row__meta"><span class="num" style="font-weight:600;color:var(--ink-soft)">×5</span></span></button>
+                        <button class="hl-row" data-i="2"><span class="hl-row__ic">⚙️</span><span class="hl-row__main"><span class="hl-row__t">Gear Assembly</span><span class="hl-row__s">Forge · workshop part</span></span><span class="hl-row__meta"><span class="num" style="font-weight:600;color:var(--ink-soft)">×0</span></span></button>
+                        <button class="hl-row lock" data-i="3"><span class="hl-row__ic">🛡️</span><span class="hl-row__main"><span class="hl-row__t">Bronze Shield</span><span class="hl-row__s">Forge · needs Lv 9</span></span><span class="hl-row__meta"><span class="hl-statpill sp-locked">locked</span></span></button>
+                        <button class="hl-row" data-i="4"><span class="hl-row__ic">🔩</span><span class="hl-row__main"><span class="hl-row__t">Rivets</span><span class="hl-row__s">Forge · bulk part</span></span><span class="hl-row__meta"><span class="num" style="font-weight:600;color:var(--ink-soft)">×24</span></span></button>
+                      </div>
+                      <div class="hl-detail" id="ledger-detail">
+                        <div class="hl-detail__hd">
+                          <div class="hl-detail__ic">🪓</div>
+                          <div style="min-width:0">
+                            <div class="hl-eyebrow">Forge · Tool</div>
+                            <div class="hl-detail__t">Iron Axe</div>
+                            <span class="hl-statpill sp-active">ready to craft</span>
+                          </div>
+                        </div>
+                        <p class="hl-detail__desc">A dependable felling axe. When placed on the board it clears two steps from the active chain — your bread-and-butter tempo tool.</p>
+                        <div class="hl-mini"><b>Cost</b>
+                          <div class="hl-costrow">
+                            <span class="hl-cost ok">🪵 8 / 8</span>
+                            <span class="hl-cost ok">⛏️ 3 / 5</span>
+                            <span class="hl-cost no">🔥 0 / 2</span>
+                          </div>
+                        </div>
+                        <div class="hl-mini"><b>Effect</b><ul><li>Clears 2 chain steps on place</li><li>Stacks up to ×5 in the tray</li></ul></div>
+                        <div class="hl-actions">
+                          <button class="hl-btn2 hl-btn2--ghost">Recipe ▸</button>
+                          <button class="hl-btn2 hl-btn2--go">Craft</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>One row is <span class="chip c-active" style="font-size:.62rem">active</span>, one <span class="chip c-locked" style="font-size:.62rem">locked</span> — status color does the explaining. Tap any row to load the detail (it rises on portrait, docks on the right at Landscape/Desktop). The same component is Inventory, Workers, and the Tile Collection with different slots.</figcaption>
+      </div>
+    </section>
+
+  <style>
+    /* ── STACK (actionable card column) ───────────────────────────── */
+    .hl-stack{display:flex;flex-direction:column;gap:9px;}
+    .hl-acard{background:var(--card);border:2px solid var(--cardline);border-radius:var(--r-md);box-shadow:var(--elev-1);
+      overflow:hidden;display:flex;flex-direction:column;}
+    .hl-acard.glow{border-color:var(--gold);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 40%,transparent),var(--elev-2);}
+    .hl-acard__edge{height:4px;background:var(--st-progress);}
+    .hl-acard__edge.s-owned{background:var(--st-owned);} .hl-acard__edge.s-active{background:var(--st-active);} .hl-acard__edge.s-locked{background:var(--st-locked);}
+    .hl-acard__hd{display:flex;align-items:center;gap:9px;padding:9px 10px 4px;}
+    .hl-acard__av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:1.15rem;flex-shrink:0;color:#fff;}
+    .hl-acard__t{display:block;font:700 .88rem/1.2 var(--fbody);color:var(--ink);}
+    .hl-acard__sub{display:block;font:400 .72rem/1.25 var(--fbody);color:var(--ink-soft);}
+    .hl-acard__bd{padding:2px 10px 8px;display:flex;flex-direction:column;gap:7px;}
+    .hl-prog{height:9px;border-radius:999px;background:rgba(122,94,63,.18);overflow:hidden;}
+    .hl-prog i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold),var(--gold-br));transition:width .6s cubic-bezier(.21,.61,.35,1);}
+    .hl-prog i.done{background:linear-gradient(90deg,var(--moss),var(--moss-soft));}
+    .hl-acard__meta{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .hl-acard__rew{display:inline-flex;align-items:center;gap:5px;font:700 .76rem/1 var(--fmono);color:#6a4a12;}
+    .hl-acard__ft{padding:0 10px 10px;}
+    .hl-bondchip{display:inline-flex;align-items:center;gap:4px;font:700 .64rem/1 var(--fmono);color:var(--moss);background:color-mix(in srgb,var(--moss) 12%,transparent);border:1px solid color-mix(in srgb,var(--moss) 40%,transparent);padding:3px 7px;border-radius:999px;}
+    @container (min-width:620px){ .hl-stack{display:grid;grid-template-columns:1fr 1fr;gap:9px;} }
+  </style>
+
+    <section id="arch-stack">
+      <h2>② Stack — actionable card column</h2>
+      <p>A scroll of self-contained cards, each carrying its own status edge, progress, reward, and a single primary action. Replaces the ad-hoc <code>ActionCard</code> + inline-hex sprawl in Orders, Quests, and the keeper shops. At Cozy+ width the column becomes a two-up masonry without changing the card. <strong>Maps to:</strong> Orders, Quests, Achievements, Castle, Boons, Bosses, Charter, Chronicle.</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Archetype · Stack</span>
+          <div class="segctl" role="group" aria-label="Device size">
+            <button data-mode="portrait" aria-pressed="true">Portrait</button>
+            <button data-mode="landscape">Landscape</button>
+            <button data-mode="desktop">Desktop</button>
+          </div>
+        </div>
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-fp">
+                <div class="hl-fp__hd"><span class="hl-fp__title">📜 Orders</span><button class="hl-fp__close">✕</button></div>
+                <div class="hl-toolbar">
+                  <div class="hl-seg"><button class="on">Active <span class="lk">3</span></button><button>Ready <span class="lk">1</span></button><button>Done</button></div>
+                </div>
+                <div class="hl-fp__bd">
+                  <div class="hl-stack">
+                    <div class="hl-acard glow">
+                      <div class="hl-acard__edge s-owned"></div>
+                      <div class="hl-acard__hd"><span class="hl-acard__av" style="background:#9c3a4a">M</span><span style="flex:1;min-width:0"><span class="hl-acard__t">Mara's Pie Order</span><span class="hl-acard__sub">Deliver · ready to turn in</span></span><span class="hl-statpill sp-owned">ready</span></div>
+                      <div class="hl-acard__bd"><div class="hl-prog"><i class="done" style="width:100%"></i></div>
+                        <div class="hl-acard__meta"><span class="hl-bondchip">♥ Bond ×1.5</span><span class="hl-acard__rew">🪙 120 · ⭐ 30</span></div></div>
+                      <div class="hl-acard__ft"><button class="hl-btn2 hl-btn2--go" style="width:100%">Deliver 4 Pies</button></div>
+                    </div>
+                    <div class="hl-acard">
+                      <div class="hl-acard__edge s-active"></div>
+                      <div class="hl-acard__hd"><span class="hl-acard__av" style="background:#38406b">T</span><span style="flex:1;min-width:0"><span class="hl-acard__t">Tomas needs Planks</span><span class="hl-acard__sub">3 of 10 crafted</span></span></div>
+                      <div class="hl-acard__bd"><div class="hl-prog"><i style="width:30%"></i></div>
+                        <div class="hl-acard__meta"><span class="hl-bondchip">♥ Bond ×1.2</span><span class="hl-acard__rew">🪙 80</span></div></div>
+                      <div class="hl-acard__ft"><button class="hl-btn2 hl-btn2--ghost" style="width:100%">Craft Planks ▸</button></div>
+                    </div>
+                    <div class="hl-acard">
+                      <div class="hl-acard__edge"></div>
+                      <div class="hl-acard__hd"><span class="hl-acard__av" style="background:#6f8a3a">B</span><span style="flex:1;min-width:0"><span class="hl-acard__t">Bram's Ore Haul</span><span class="hl-acard__sub">7 of 12 gathered</span></span></div>
+                      <div class="hl-acard__bd"><div class="hl-prog"><i style="width:58%"></i></div>
+                        <div class="hl-acard__meta"><span class="num" style="font-size:.72rem;color:var(--ink-soft)">expires in 2 seasons</span><span class="hl-acard__rew">🪙 150 · 💎 1</span></div></div>
+                      <div class="hl-acard__ft"><button class="hl-btn2 hl-btn2--ghost" style="width:100%">View on Map ▸</button></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>The status edge on top of each card reads at a glance — green = deliverable, ember = in progress. Reward and bond multiplier sit in a fixed footer so the primary action is always the same distance from the thumb. Quests, Achievements, and Boons are the same card with different slots.</figcaption>
+      </div>
+    </section>
+
+  <style>
+    /* ── ATLAS (canvas + docking inspector rail) ──────────────────── */
+    .hl-atlas{container-type:inline-size;position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(170deg,#2c2017,#1d150e);}
+    .hl-atlas__canvas{flex:1;min-height:0;position:relative;margin:8px;border-radius:var(--r-lg);overflow:hidden;}
+    .hl-atlas__rail{flex-shrink:0;background:linear-gradient(180deg,var(--parch-soft),var(--parch-2));
+      border:1px solid var(--cardline);box-shadow:0 -3px 14px rgba(40,26,12,.22);
+      margin:0 8px 8px;border-radius:var(--r-lg);padding:11px;display:flex;flex-direction:column;gap:9px;
+      animation:hlRise .26s cubic-bezier(.34,1.3,.5,1) both;}
+    .hl-atlas__grab{width:38px;height:4px;border-radius:3px;background:var(--cardline-2);margin:-2px auto 2px;}
+    .hl-map-node{position:absolute;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:1rem;
+      border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.35);transform:translate(-50%,-50%);transition:transform .12s;}
+    .hl-map-node:active{transform:translate(-50%,-50%) scale(.9);}
+    .hl-map-node.n-owned{background:var(--st-owned);} .hl-map-node.n-active{background:var(--st-active);}
+    .hl-map-node.n-available{background:var(--st-available);} .hl-map-node.n-locked{background:var(--st-locked);}
+    .hl-map-node.sel{box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 70%,transparent),0 3px 8px rgba(0,0,0,.35);}
+    .hl-map-edge{position:absolute;height:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.6) 0 6px,transparent 6px 11px);transform-origin:left center;}
+    @container (min-width:560px){
+      .hl-atlas{flex-direction:row;}
+      .hl-atlas__canvas{margin:8px;}
+      .hl-atlas__rail{width:250px;margin:8px 8px 8px 0;animation:none;}
+    }
+  </style>
+
+    <section id="arch-atlas">
+      <h2>③ Atlas — canvas + docking rail</h2>
+      <p>A living scene with an inspector that knows where it belongs: a <strong>bottom-sheet peek</strong> on a phone, a <strong>docked side rail</strong> on anything wider. This is the single pattern behind the board, the village, and the world map — replacing the board's wholesale portrait/landscape fork and Cartography's bespoke two-column logic. <strong>Maps to:</strong> Board, Town/Village, Cartography.</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Archetype · Atlas</span>
+          <div class="segctl" role="group" aria-label="Device size">
+            <button data-mode="portrait" aria-pressed="true">Portrait</button>
+            <button data-mode="landscape">Landscape</button>
+            <button data-mode="desktop">Desktop</button>
+          </div>
+        </div>
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-atlas">
+                <div class="hl-atlas__canvas" style="background:radial-gradient(120% 100% at 50% 0,#3b6b4a,#274a35)">
+                  <span class="hl-tag">World Map · Verdant Reach</span>
+                  <div class="hl-map-edge" style="left:24%;top:34%;width:96px;transform:rotate(34deg)"></div>
+                  <div class="hl-map-edge" style="left:52%;top:58%;width:90px;transform:rotate(-26deg)"></div>
+                  <button class="hl-map-node n-owned" style="left:24%;top:34%" data-node>🌾</button>
+                  <button class="hl-map-node n-active sel" style="left:52%;top:58%" data-node data-name="Orchard Vale" data-st="active">🍎</button>
+                  <button class="hl-map-node n-available" style="left:76%;top:40%" data-node data-name="Iron Hollow" data-st="available">⛏️</button>
+                  <button class="hl-map-node n-locked" style="left:70%;top:78%" data-node data-name="Misty Shoals" data-st="locked">🌊</button>
+                </div>
+                <div class="hl-atlas__rail" id="atlas-rail">
+                  <div class="hl-atlas__grab"></div>
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <div class="hl-detail__ic" style="width:48px;height:48px;font-size:1.5rem">🍎</div>
+                    <div style="min-width:0"><div class="hl-eyebrow" id="atlas-eb">Settlement · Active</div><div class="hl-detail__t" id="atlas-name" style="font-size:1.1rem">Orchard Vale</div></div>
+                    <span class="hl-statpill sp-active" id="atlas-st" style="margin-left:auto">active</span>
+                  </div>
+                  <div class="hl-mini"><b>Yields</b><ul><li>Apples, Cider, Honey</li><li>Tier 3 · 15 plots</li></ul></div>
+                  <button class="hl-btn2 hl-btn2--go" id="atlas-cta">Travel here</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Tap a node to inspect it; the rail updates and (on a phone) rises from the bottom as a peek sheet, (on desktop) stays docked at the right. Map nodes wear the status palette — green owned, ember active, teal available, clay locked — so the whole journey is legible without reading a word.</figcaption>
+      </div>
+    </section>
+
+  <style>
+    /* ── SHEET (rising focused interrupt) ─────────────────────────── */
+    .hl-sheetwrap{container-type:inline-size;position:absolute;inset:0;overflow:hidden;}
+    .hl-sheetwrap__bg{position:absolute;inset:0;filter:saturate(.7) brightness(.8);}
+    .hl-scrim{position:absolute;inset:0;background:rgba(20,12,6,.55);animation:fadeIn .2s both;}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .hl-sheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,var(--parch-soft),var(--parch-2));
+      border-radius:var(--r-xl) var(--r-xl) 0 0;border:1px solid var(--cardline);border-bottom:0;
+      box-shadow:0 -10px 40px rgba(20,12,6,.5);padding:8px 14px calc(16px + env(safe-area-inset-bottom,0px));
+      max-height:88%;overflow-y:auto;animation:hlSheetUp .32s cubic-bezier(.34,1.3,.5,1) both;}
+    @keyframes hlSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .hl-sheet__grab{width:42px;height:5px;border-radius:3px;background:var(--cardline-2);margin:4px auto 12px;}
+    .hl-sheet__title{font-family:var(--fdisp);font-weight:700;font-size:1.4rem;color:var(--ink);text-align:center;margin-bottom:2px;}
+    .hl-sheet__sub{text-align:center;font-size:.8rem;color:var(--ink-soft);margin-bottom:14px;}
+    .hl-optgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+    .hl-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:13px 8px;border-radius:var(--r-md);
+      background:var(--card);border:2px solid var(--cardline);box-shadow:var(--elev-1);}
+    .hl-opt .gl{font-size:1.5rem;} .hl-opt .lb{font:700 .78rem/1 var(--fbody);color:var(--ink);}
+    .hl-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:var(--r-md);background:var(--card);border:1.5px solid var(--cardline);}
+    .hl-toggle .lb{font:600 .86rem/1 var(--fbody);color:var(--ink);}
+    .hl-sw{width:44px;height:26px;border-radius:999px;background:var(--cardline-2);position:relative;transition:background .18s;flex-shrink:0;}
+    .hl-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .18s;}
+    .hl-sw.on{background:var(--moss);} .hl-sw.on::after{left:21px;}
+    @container (min-width:620px){
+      .hl-sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:440px;max-height:80%;
+        border-radius:var(--r-xl);border-bottom:1px solid var(--cardline);animation:hlPop .26s cubic-bezier(.34,1.3,.5,1) both;}
+      @keyframes hlPop{from{opacity:0;transform:translate(-50%,-46%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+      .hl-sheet__grab{display:none;}
+    }
+  </style>
+
+    <section id="arch-sheet">
+      <h2>④ Sheet — the focused interrupt</h2>
+      <p>One rising surface for everything that overlays context: the Menu, Settings, the Tutorial coach-mark, Festivals, the Boss intro, and the Run Summary. On a phone it's a draggable bottom-sheet that lands under the thumb; on desktop the very same content becomes a centered dialog. This kills the inline-styled one-off modals entirely. <strong>Maps to:</strong> Menu, Settings, Tutorial, Festivals, Run Summary, Boss intro.</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Archetype · Sheet</span>
+          <div class="segctl" role="group" aria-label="Device size">
+            <button data-mode="portrait" aria-pressed="true">Portrait</button>
+            <button data-mode="landscape">Landscape</button>
+            <button data-mode="desktop">Desktop</button>
+          </div>
+        </div>
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-sheetwrap">
+                <div class="hl-sheetwrap__bg" style="background:radial-gradient(120% 90% at 50% 10%,#e7d9b0,#c9b985)"></div>
+                <div class="hl-scrim"></div>
+                <div class="hl-sheet">
+                  <div class="hl-sheet__grab"></div>
+                  <div class="hl-sheet__title">Hearthwood Vale</div>
+                  <div class="hl-sheet__sub">Day 24 · Season of Plenty</div>
+                  <div class="hl-optgrid" style="margin-bottom:11px">
+                    <div class="hl-opt"><span class="gl">📖</span><span class="lb">Almanac</span></div>
+                    <div class="hl-opt"><span class="gl">🏆</span><span class="lb">Trophies</span></div>
+                    <div class="hl-opt"><span class="gl">📜</span><span class="lb">Charter</span></div>
+                    <div class="hl-opt"><span class="gl">⚙️</span><span class="lb">Settings</span></div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div class="hl-toggle"><span class="lb">🔊 Sound effects</span><span class="hl-sw on" data-sw></span></div>
+                    <div class="hl-toggle"><span class="lb">🎵 Music</span><span class="hl-sw on" data-sw></span></div>
+                    <div class="hl-toggle"><span class="lb">🌙 Reduce motion</span><span class="hl-sw" data-sw></span></div>
+                  </div>
+                  <button class="hl-btn2 hl-btn2--ghost" style="width:100%;margin-top:13px">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Same markup, two presentations: bottom-sheet on Portrait/Landscape, centered dialog on Desktop (toggle the size to see it re-anchor). The option grid and toggle rows are the shared building blocks for every overlay surface in the game. Tap a toggle to flip it.</figcaption>
+      </div>
+    </section>
+  </div>
+
+  <!-- ══ PANEL 06 — PAGE ATLAS ══════════════════════════════════════ -->
+  <div class="panel" id="p-pages" role="tabpanel">
+
+    <section id="atlas-table">
+      <div class="kicker">Page Atlas</div>
+      <h2>Every screen, mapped to its archetype</h2>
+      <p class="lead">This is the migration key: each existing view, the archetype it becomes, and the concrete change. Read it as the redesign's table of contents — and as proof that four shapes plus the chrome genuinely cover the whole game.</p>
+
+      <h4>📖 Ledger — list ⇄ detail</h4>
+      <table>
+        <thead><tr><th>View</th><th>Becomes</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Crafting</strong></td><td class="arch">Ledger + Segmented stations</td><td>Station tabs → one Segmented control (no inline-hex tabs); "Recipe Graph" → a standard ghost button in the detail footer.</td></tr>
+          <tr><td><strong>Inventory</strong></td><td class="arch">Ledger (grid list mode)</td><td><code>inv-grid</code> becomes the Ledger's list in grid density; filter buttons → the same Segmented control; search lives in the toolbar, not the HUD.</td></tr>
+          <tr><td><strong>Workers</strong></td><td class="arch">Ledger</td><td>Already Browser-Detail — drops in nearly unchanged; hire/fire use the shared <code>hl-btn2</code> footer.</td></tr>
+          <tr><td><strong>Tile Collection</strong></td><td class="arch">Ledger + 2 Segmented rows</td><td>Hazard cards lose bespoke rust-hex and adopt <code>--st-missing</code>; sub-category + category both use Segmented.</td></tr>
+          <tr><td><strong>Recipe Wiki</strong></td><td class="arch">Ledger (graph in detail)</td><td>The pan/zoom graph becomes the detail-pane canvas; node colors → status palette; search shared with toolbar.</td></tr>
+          <tr><td><strong>Decorations</strong></td><td class="arch">Ledger</td><td>Folds into Crafting as a station tab — one screen, not two near-duplicates; influence shown as a detail stat, not a naked colored span.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>🧾 Stack — actionable card column</h4>
+      <table>
+        <thead><tr><th>View</th><th>Becomes</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Orders</strong></td><td class="arch">Stack</td><td>Ad-hoc <code>ActionCard</code> + inline hex → the status-edged action card; bond multiplier → standard bond chip.</td></tr>
+          <tr><td><strong>Quests</strong> (Daily)</td><td class="arch">Stack + Segmented</td><td>Daily/Almanac split → Segmented; claim buttons unify on <code>--st-owned</code>.</td></tr>
+          <tr><td><strong>Achievements</strong></td><td class="arch">Stack (trophy) + Ledger (collection)</td><td>Trophy grid = Stack cards with progress edges; the resource-collection tab is a Ledger.</td></tr>
+          <tr><td><strong>Castle</strong></td><td class="arch">Stack</td><td>Already close; ProgressBar gradient → <code>--st-progress</code> token; contribute buttons shared.</td></tr>
+          <tr><td><strong>Boons</strong></td><td class="arch">Stack + Segmented</td><td>Custom full-page layout → Stack inside a feature panel; keeper-path colors → <code>--st-available/owned</code>; path columns become a 2-up at Cozy+.</td></tr>
+          <tr><td><strong>Bosses</strong></td><td class="arch">Stack</td><td>Per-boss season hex → one accent token; "active" glow → <code>--st-active</code>; tribute/modifier → cost chips.</td></tr>
+          <tr><td><strong>Charter</strong></td><td class="arch">Stack (timeline) + Sheet (term)</td><td>Already token-clean; term detail opens as a Sheet, not a bespoke dialog.</td></tr>
+          <tr><td><strong>Chronicle</strong></td><td class="arch">Stack (timeline)</td><td>Timeline dots use the status edge; serif from <code>--fdisp</code> token, not a hardcoded face.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>🗺️ Atlas — canvas + docking rail · 🛎️ Sheet — interrupt</h4>
+      <table>
+        <thead><tr><th>View</th><th>Becomes</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Board</strong> (core loop)</td><td class="arch">Atlas + Hearth Bar tray</td><td>Portrait/landscape fork → one continuous Atlas; tool trio collapses into the morphing tray; season moves to HUD center. <a href="#board-deep">Deep dive ↓</a></td></tr>
+          <tr><td><strong>Town / Village</strong></td><td class="arch">Atlas</td><td>Plot inspector → docking rail; "Found Settlement" banner → a rail CTA / Sheet, not inline-styled gold gradient.</td></tr>
+          <tr><td><strong>Cartography</strong></td><td class="arch">Atlas</td><td>Bespoke 2-col logic → the shared Atlas rail; keeper/zone modals → Sheets; node colors → status palette.</td></tr>
+          <tr><td><strong>Menu</strong></td><td class="arch">Sheet</td><td>The option grid + toggles shown in the archetype; replaces the HUD pill menu.</td></tr>
+          <tr><td><strong>Settings</strong></td><td class="arch">Sheet</td><td>Inline-styled Toggle/ActionBtn → shared toggle &amp; option components; tokenized colors.</td></tr>
+          <tr><td><strong>Tutorial</strong></td><td class="arch">Sheet (coach-mark variant)</td><td>Corner toast + center card → one Sheet that can anchor to a target; CTA pulse from global motion, not a <code>&lt;style&gt;</code> tag.</td></tr>
+          <tr><td><strong>Run Summary</strong></td><td class="arch">Sheet (celebration)</td><td>Becomes a celebratory rising sheet with staggered tallies. <a href="#runsum-deep">Deep dive ↓</a></td></tr>
+          <tr><td><strong>Festivals</strong> · <strong>Boss intro</strong></td><td class="arch">Sheet</td><td>Placeholder &amp; cinematic both ride the Sheet; consistent dismiss + scrim.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout note"><div class="t">Coverage</div><p>Mine &amp; Fish are <em>biome skins</em> of the Board Atlas (field gradient + tide HUD chip), not separate screens. NPCs, Story, Almanac, Market are data/sub-surfaces that render inside the archetypes above. The four archetypes + chrome cover 100% of the navigable UI.</p></div>
+    </section>
+
+    <section id="board-deep">
+      <h2>Deep dive · The Board (core loop)</h2>
+      <p>The most-played screen earns the most scrutiny. Today it's an Atlas in spirit but forks its entire grid at 500px and scatters tools across three components. The redesign makes it one Atlas whose rail is the Hearth Bar tray.</p>
+      <div class="grid g2">
+        <div class="card"><h4 style="margin-top:0">Layout &amp; reflow</h4>
+          <ul>
+            <li><strong>Compact:</strong> board fills the canvas; tray is the bottom Hearth Bar (scrollable); the action panel (chain progress / tool inspect) is a thin band above the bar.</li>
+            <li><strong>Cozy:</strong> tray docks to the leading edge as a vertical rail; board grows into the freed width — <em>continuously</em>, no snap.</li>
+            <li><strong>Hearth:</strong> board centers with the tray rail left and a live chain/score inspector right; hover reveals tool tooltips.</li>
+          </ul>
+        </div>
+        <div class="card"><h4 style="margin-top:0">Animation spec</h4>
+          <ul>
+            <li><strong>Chain build:</strong> matched tiles pulse (<code>--m-fast</code>), the chain meter fills (<code>--m-med</code>), milestone crossings flash gold.</li>
+            <li><strong>Tool arm:</strong> armed tool gets the gold ring + a 1px lift; the board edge breathes a faint ember pulse (state, not hardcoded red).</li>
+            <li><strong>Harvest / season turn:</strong> field gradient cross-fades between seasons over <code>--m-celebrate</code>; reward chips fly to the HUD coin pill.</li>
+          </ul>
+        </div>
+      </div>
+      <h4>Touch &amp; mouse on the board</h4>
+      <table>
+        <thead><tr><th>Action</th><th>Touch</th><th>Mouse</th></tr></thead>
+        <tbody>
+          <tr><td>Build a chain</td><td>Drag across adjacent tiles</td><td>Click-drag across adjacent tiles</td></tr>
+          <tr><td>Arm a tool</td><td>Tap tool → tap target (two-tap, prevents misfire)</td><td>Click tool → click target</td></tr>
+          <tr><td>Inspect a tool</td><td>Long-press → rises tool detail Sheet</td><td>Hover → tooltip; right-click → detail</td></tr>
+          <tr><td>Pin / reorder tools</td><td>Long-press + drag in the tray</td><td>Drag in the tray</td></tr>
+        </tbody>
+      </table>
+      <p>See the morphing tray and HUD live in <a href="#chrome-mock">Living Chrome → Board context</a>, and the canvas+rail reflow in <a href="#arch-atlas">Archetypes → Atlas</a>.</p>
+    </section>
+
+  <style>
+    .hl-tally{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 11px;border-radius:var(--r-md);background:var(--card);border:1.5px solid var(--cardline);box-shadow:var(--elev-1);}
+    .hl-tally .l{display:flex;align-items:center;gap:8px;font:600 .86rem/1 var(--fbody);color:var(--ink);}
+    .hl-tally .v{font:700 .95rem/1 var(--fmono);color:#6a4a12;}
+    .hl-hero-num{font-family:var(--fdisp);font-weight:900;font-size:2.6rem;line-height:1;color:var(--ember);}
+    .stagger > *{animation:hlRise .4s cubic-bezier(.21,.61,.35,1) both;}
+    .stagger > *:nth-child(1){animation-delay:.05s} .stagger > *:nth-child(2){animation-delay:.12s}
+    .stagger > *:nth-child(3){animation-delay:.19s} .stagger > *:nth-child(4){animation-delay:.26s} .stagger > *:nth-child(5){animation-delay:.33s}
+  </style>
+
+    <section id="runsum-deep">
+      <h2>Deep dive · Run Summary (celebration)</h2>
+      <p>The pay-off screen should feel like a reward, not a receipt. Same Sheet archetype, dressed for celebration: a hero headline, a "best moment" highlight, and tallies that count up in a staggered cascade.</p>
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="label">Run Summary · celebration sheet</span>
+          <div class="segctl" role="group" aria-label="Device size">
+            <button data-mode="portrait" aria-pressed="true">Portrait</button>
+            <button data-mode="landscape">Landscape</button>
+            <button data-mode="desktop">Desktop</button>
+          </div>
+        </div>
+        <div class="device" data-mode="portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="hl">
+              <div class="hl-sheetwrap">
+                <div class="hl-sheetwrap__bg" style="background:radial-gradient(120% 90% at 50% 0,#e8c890,#c8a45a)"></div>
+                <div class="hl-scrim"></div>
+                <div class="hl-sheet">
+                  <div class="hl-sheet__grab"></div>
+                  <div class="stagger" style="display:flex;flex-direction:column;gap:10px">
+                    <div style="text-align:center">
+                      <div class="hl-eyebrow" style="color:var(--label)">Harvest complete</div>
+                      <div class="hl-sheet__title" style="font-size:1.7rem;margin-top:3px">A Bountiful Season</div>
+                    </div>
+                    <div style="text-align:center;padding:10px;border-radius:var(--r-md);background:linear-gradient(180deg,#fff7e6,#f6e8c6);border:1.5px solid color-mix(in srgb,var(--gold) 55%,transparent)">
+                      <div class="hl-eyebrow" style="color:var(--label)">Best moment</div>
+                      <div class="hl-hero-num">×14</div>
+                      <div style="font-size:.78rem;color:var(--ink-soft)">longest chain — a personal best</div>
+                    </div>
+                    <div class="hl-tally"><span class="l">🪙 Coins earned</span><span class="v">+1,240</span></div>
+                    <div class="hl-tally"><span class="l">🌾 Crops harvested</span><span class="v">86</span></div>
+                    <div class="hl-tally"><span class="l">♥ Bonds raised</span><span class="v">Mara, Tomas</span></div>
+                    <button class="hl-btn2 hl-btn2--go" style="width:100%">Return to Hearthwood ▸</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>The hero "best moment" card and count-up tallies cascade in on a staggered <code>--m-celebrate</code> timeline (reload the tab to replay). The biome retitles the headline — "Harvest complete" / "Mine sealed" / "Voyage returned" — but the structure is one Sheet.</figcaption>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2>Implementation roadmap</h2>
+      <p>The redesign is mostly a <em>consolidation</em>, not a rewrite — most pieces already exist; they need to be unified and tokenized. Sequenced so value lands early and risk stays contained.</p>
+      <table>
+        <thead><tr><th>Phase</th><th>Work</th><th>Why first / risk</th></tr></thead>
+        <tbody>
+          <tr><td class="arch">0 · Tokens</td><td>Add the status ramp + motion tokens to <code>tokens.css</code>; add <code>hl-seg</code>, <code>hl-btn2</code>, <code>hl-acard</code>, sheet primitives to <code>components.css</code>.</td><td>Pure addition, zero behavior change. Unblocks everything.</td></tr>
+          <tr><td class="arch">1 · Chrome</td><td>Build the Hearth Bar (nav ⇄ tray morph) + unified HUD; retire the 3 nav patterns.</td><td>Highest visibility, touches navigation — ship behind a flag, QA on board ↔ town transitions.</td></tr>
+          <tr><td class="arch">2 · Stack</td><td>Migrate Orders, Quests, Boons, Bosses, Castle to the action card. Kills the most inline hex.</td><td>Self-contained screens; easy to verify with visual goldens.</td></tr>
+          <tr><td class="arch">3 · Ledger</td><td>Converge Inventory + Crafting + Decorations + Tile Collection + Wiki on one Ledger.</td><td>Inventory's grid mode is the trickiest; do it last in this phase.</td></tr>
+          <tr><td class="arch">4 · Atlas</td><td>Unify Board reflow + Town + Cartography on the docking rail; remove the 500px fork.</td><td>Phaser-adjacent; needs the scene-bridge regression suite green.</td></tr>
+          <tr><td class="arch">5 · Sheet</td><td>Move Settings, Tutorial, Festivals, Run Summary, Boss onto the Sheet.</td><td>Cleanup + the celebration polish. Low risk, high delight.</td></tr>
+          <tr><td class="arch">6 · Motion</td><td>Wire the spatial ribbon transitions into the view router.</td><td>Final layer; gate on <code>prefers-reduced-motion</code>.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout"><div class="t">Verification</div><p>Each phase ends with <code>npm run test:visual</code> goldens re-baselined and justified, per the repo's pre-PR rule. The token phase should produce <em>no</em> visual diffs; if it does, a screen was reading a hardcoded value it shouldn't have — that's a find, not a regression.</p></div>
+    </section>
+
+    <section id="close">
+      <h2>The one-sentence version</h2>
+      <p class="lead">Keep the soul — parchment, ember, the illuminated-almanac voice — but give it <strong>structure</strong>: four archetypes, one living chrome, a status palette, and a spatial motion model, so every screen finally feels like a page from the same book, on any device, under any thumb.</p>
+      <p style="color:var(--muted)">Each interactive mock in this document is real HTML/CSS using the proposed token system and the actual container-query reflow — open it on a phone and resize to feel it. From here the natural next step is a clickable prototype branch implementing Phase 0–1.</p>
+    </section>
+  </div>
+
+</div>
+
+<script>
+  // Tab switching with hash deep-linking (panel id or any section id within).
+  const tabs = [...document.querySelectorAll('nav.tabs button')];
+  const panels = [...document.querySelectorAll('.panel')];
+  function showPanel(id, scrollToId){
+    tabs.forEach(t=>t.setAttribute('aria-selected', String(t.dataset.panel===id)));
+    panels.forEach(p=>p.classList.toggle('is-active', p.id===id));
+    if(scrollToId){const el=document.getElementById(scrollToId); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});}
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>{history.pushState(null,'','#'+t.dataset.panel);showPanel(t.dataset.panel);window.scrollTo({top:0,behavior:'smooth'});}));
+  function routeHash(){
+    const h=location.hash.replace('#','');
+    if(!h) return;
+    const panel=panels.find(p=>p.id===h);
+    if(panel){showPanel(h);return;}
+    const sec=document.getElementById(h);
+    if(sec){const host=sec.closest('.panel'); if(host) showPanel(host.id, h);}
+  }
+  window.addEventListener('popstate',routeHash);
+  // intercept in-doc anchor links to switch tabs
+  document.addEventListener('click',e=>{
+    const a=e.target.closest('a[href^="#"]'); if(!a) return;
+    const id=a.getAttribute('href').slice(1); const sec=document.getElementById(id);
+    if(sec){const host=sec.closest('.panel'); if(host){e.preventDefault();history.pushState(null,'','#'+id);showPanel(host.id,id);}}
+  });
+  routeHash();
+
+  // Device-frame size toggles (event-delegated; works for every stage).
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.segctl button[data-mode]'); if(!b) return;
+    const ctl=b.closest('.segctl'); const stage=b.closest('.stage');
+    ctl.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+    stage.querySelectorAll('.device').forEach(d=>d.dataset.mode=b.dataset.mode);
+  });
+
+  // Motion demo — replay each spatial transition.
+  const mdStage = document.getElementById('motion-demo');
+  function setMotion(k){
+    const L = id => mdStage.querySelector('.md-layer[data-k="'+id+'"]');
+    // reset to resting positions
+    L('home').style.transform='translateX(0)'; L('home').style.opacity='1';
+    L('lateral').style.transform='translateX(100%)'; L('lateral').style.opacity='1';
+    L('forward').style.transform='scale(.96)'; L('forward').style.opacity='0';
+    L('rise').style.transform='translateY(105%)';
+    if(k==='lateral'){ L('home').style.transform='translateX(-100%)'; L('lateral').style.transform='translateX(0)'; }
+    if(k==='forward'){ L('forward').style.transform='scale(1)'; L('forward').style.opacity='1'; }
+    if(k==='rise'){ L('rise').style.transform='translateY(0)'; }
+  }
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.segctl button[data-md]'); if(!b) return;
+    b.closest('.segctl').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    setMotion(b.dataset.md);
+  });
+
+  // Chrome context morph (World ⇄ Board) + season-tinted HUD strip.
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.segctl button[data-ctx]'); if(!b) return;
+    b.closest('.segctl').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    const app=document.getElementById('chrome-app'); if(!app) return;
+    app.dataset.ctx=b.dataset.ctx;
+    app.style.setProperty('--accent-strip', b.dataset.ctx==='board' ? 'var(--gold)' : 'var(--ember)');
+  });
+
+  // In-mock tool arming demo (board tray): tap to arm one tool.
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('.hl-tool:not(.empty)'); if(!t) return;
+    const tray=t.closest('.hl-tray'); tray.querySelectorAll('.hl-tool').forEach(x=>x.classList.remove('armed'));
+    t.classList.add('armed');
+  });
+  // In-mock nav demo: tap to select a destination.
+  document.addEventListener('click',e=>{
+    const n=e.target.closest('.hl-nav button'); if(!n) return;
+    n.closest('.hl-nav').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    n.classList.add('on');
+  });
+
+  // Ledger row → load detail (rises on Compact, docks on Cozy+).
+  document.addEventListener('click',e=>{
+    const r=e.target.closest('#ledger-list .hl-row'); if(!r) return;
+    const list=r.closest('.hl-list'); const ledger=r.closest('.hl-ledger'); const d=document.getElementById('ledger-detail');
+    list.querySelectorAll('.hl-row').forEach(x=>x.classList.remove('sel'));
+    r.classList.add('sel'); ledger.classList.add('show-detail');
+    d.querySelector('.hl-detail__ic').textContent=r.querySelector('.hl-row__ic').textContent;
+    d.querySelector('.hl-detail__t').textContent=r.querySelector('.hl-row__t').textContent;
+    d.querySelector('.hl-eyebrow').textContent=r.querySelector('.hl-row__s').textContent.split('·')[0].trim()+' · Item';
+    const pill=d.querySelector('.hl-detail__hd .hl-statpill');
+    const go=d.querySelector('.hl-btn2--go');
+    if(r.classList.contains('lock')){pill.className='hl-statpill sp-locked';pill.textContent='locked';go.disabled=true;go.style.filter='grayscale(.6) opacity(.6)';}
+    else{pill.className='hl-statpill sp-active';pill.textContent='ready to craft';go.disabled=false;go.style.filter='';}
+    // re-trigger rise animation on Compact
+    d.style.animation='none'; void d.offsetWidth; d.style.animation='';
+  });
+
+  // Atlas map node → update inspector rail.
+  document.addEventListener('click',e=>{
+    const n=e.target.closest('.hl-atlas [data-node]'); if(!n||!n.dataset.name) return;
+    n.closest('.hl-atlas__canvas').querySelectorAll('[data-node]').forEach(x=>x.classList.remove('sel'));
+    n.classList.add('sel');
+    const rail=document.getElementById('atlas-rail');
+    rail.querySelector('.hl-detail__ic').textContent=n.textContent;
+    document.getElementById('atlas-name').textContent=n.dataset.name;
+    const st=n.dataset.st, pill=document.getElementById('atlas-st'), eb=document.getElementById('atlas-eb'), cta=document.getElementById('atlas-cta');
+    pill.className='hl-statpill sp-'+(st==='available'?'active':st==='locked'?'locked':st); pill.textContent=st;
+    eb.textContent = 'Settlement · '+st.charAt(0).toUpperCase()+st.slice(1);
+    cta.textContent = st==='locked' ? 'Locked — explore first' : st==='available' ? 'Found settlement' : 'Travel here';
+    cta.disabled = st==='locked'; cta.style.filter = st==='locked' ? 'grayscale(.6) opacity(.6)' : '';
+    rail.style.animation='none'; void rail.offsetWidth; rail.style.animation='';
+  });
+
+  // Sheet toggles.
+  document.addEventListener('click',e=>{ const s=e.target.closest('[data-sw]'); if(s) s.classList.toggle('on'); });
+  // Sheet option / generic press feedback already via :active.
+</script>
+</body>
+</html>
