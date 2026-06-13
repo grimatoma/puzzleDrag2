@@ -262,7 +262,7 @@ export const MAP_NODES: MapNode[] = [
           BuildingId.Silo, BuildingId.Stable, BuildingId.Sawmill, BuildingId.Apiary,
           BuildingId.Brewery, BuildingId.Watchtower, BuildingId.Chapel,
         ],
-        upgradeCost: { coins: 300, resources: { hay_bundle: 15 } },
+        upgradeCost: { coins: 600, resources: { hay_bundle: 15 } },
       },
       {
         id: "city", name: "City", plots: 20,
@@ -272,7 +272,7 @@ export const MAP_NODES: MapNode[] = [
           BuildingId.Apothecary, BuildingId.Observatory, BuildingId.Housing2, BuildingId.Housing3,
           BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
         ],
-        upgradeCost: { coins: 1000, resources: { plank: 18 } },
+        upgradeCost: { coins: 2000, resources: { plank: 18 } },
       },
     ],
   },
@@ -343,17 +343,17 @@ export const MAP_NODES: MapNode[] = [
       {
         id: "mining_camp", name: "Mining Camp", plots: 6,
         unlocks: [BuildingId.Workshop, BuildingId.Forge, BuildingId.Inn, BuildingId.Watchtower],
-        upgradeCost: { coins: 250, resources: { block: 12 } },
+        upgradeCost: { coins: 500, resources: { block: 12 } },
       },
       {
         id: "boomtown", name: "Boomtown", plots: 8,
         unlocks: [BuildingId.Barn, BuildingId.PowderStore, BuildingId.Housing2, BuildingId.Apothecary],
-        upgradeCost: { coins: 800, resources: { iron_bar: 12 } },
+        upgradeCost: { coins: 1500, resources: { iron_bar: 12 } },
       },
       {
         id: "foundry_city", name: "Foundry City", plots: 12,
         unlocks: [BuildingId.Observatory, BuildingId.Housing3, BuildingId.CaravanPost],
-        upgradeCost: { coins: 1800, resources: { gold_bar: 8 } },
+        upgradeCost: { coins: 3500, resources: { gold_bar: 8 } },
       },
     ],
   },

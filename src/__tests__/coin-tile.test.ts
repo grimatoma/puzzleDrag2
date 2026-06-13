@@ -95,9 +95,9 @@ describe("Golden Coin tile — chaining grants coins", () => {
     const s1 = dispatchCoinChain(s0, 3);
     // The chain payout (tracked in seasonStats.coins, isolated from later
     // story-beat / hazard rewards) is base + per-tile hook:
-    //   base = max(1, floor(gained * value / 2)); hook = 20 per tile * chain.
+    //   base = max(1, floor(gained * value)); hook = 20 per tile * chain.
     const value = ITEMS.tile_coin_golden.value;
-    const expectedPayout = Math.max(1, Math.floor((3 * value) / 2)) + 20 * 3;
+    const expectedPayout = Math.max(1, Math.floor(3 * value)) + 20 * 3;
     expect(s1.seasonStats.coins).toBe(expectedPayout);
     // The coin balance increases.
     expect(s1.coins).toBeGreaterThan(s0.coins);

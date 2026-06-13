@@ -395,7 +395,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
 
-      const baseCoinsGain = Math.max(1, Math.floor((gained * (value ?? 1)) / 2)) + coinHookBonus;
+      // Economy balance pass: chain coin yield raised ~2x (was floor(gained*value/2))
+      // so coins keep pace with the breadth of coin sinks (tiers, ~26 buildings,
+      // founding, tools). See docs/zone-tier-ladder.html → What's next / balance model.
+      const baseCoinsGain = Math.max(1, Math.floor(gained * (value ?? 1))) + coinHookBonus;
       // Phase 6b — coin_gain_mult boons scale chain coin reward.
       const coinMultBoon = boonEffectMult(state, "coin_gain_mult");
       const coinsGain = coinMultBoon > 1
