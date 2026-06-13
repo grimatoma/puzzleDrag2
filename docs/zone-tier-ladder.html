@@ -282,8 +282,8 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
     <div class="panel" id="balance" role="tabpanel" aria-label="Tiers and balance">
 
       <section id="curves">
-        <h2>Per-zone ladders <span class="pill info">as shipped</span> <span class="pill warn">first-pass values</span></h2>
-        <div class="box warn"><b>Shipped first-pass numbers — tuning pending.</b> The plot curves, costs and unlock schedules below are <b>exactly what shipped</b> in PR&nbsp;#1143 (resource columns now show the real catalog IDs). They remain a deliberate first pass; a dedicated <b>economy balance pass</b> (run-budgeted, story-aligned, covering tools/buildings/quests too) is the next work — see the <a href="#open">What's next</a> section. Treat these as the current baseline, not final tuning.</div>
+        <h2>Per-zone ladders <span class="pill ok">tier costs tuned</span></h2>
+        <div class="box tip"><b>Tuned to a moderate run-budget.</b> The upgrade-cost column has been re-tuned (down ~3–5× from the shipped first-pass) so the ladder fits a <b>moderate pacing target — grow home → City in ~15–25 board runs</b>, derived from the income-per-run model (~10 chains/run on the 6×6 board → a few of each staple resource + ~40 coins/run, before buildings/workers). Plots and unlocks are unchanged. Costs stay resource-led with a modest coin component. The income knob is now <b>decoupled</b> (<code>TILES_PER_RESOURCE</code> vs <code>UPGRADE_THRESHOLDS</code>), so resource yield can be tuned without touching board-tier pacing. The wider sweep (building/tool/recipe/quest costs to the same budget) is the continuing work — see <a href="#open">What's next</a>.</div>
 
         <h3>Town 1 — home / "the capital farm" · <b>3 rungs</b></h3>
         <p>Zone id <code>home</code>. The flagship ladder. Final rung <b>City</b> unlocks the Town&nbsp;2 expedition. Plots grow 6 → 12 → 20 (the existing static <code>plotCount: 20</code> becomes the top rung, so a fully-grown home is unchanged from today).</p>
@@ -291,8 +291,8 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
           <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
           <tbody>
             <tr><td>0</td><td>Hamlet</td><td class="num">6</td><td>Hearth, Mill, Granary, Larder, Bakery, Inn, Housing</td><td class="num">— (founding)</td></tr>
-            <tr><td>1</td><td>Village</td><td class="num">12</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td class="num">2,500c + 120 hay_bundle</td></tr>
-            <tr><td>2</td><td><b>City</b></td><td class="num">20</td><td>Forge, CaravanPost, Kitchen, Workshop, PowderStore, Portal, ClockTower, Lighthouse, Apothecary, Observatory, Housing2, Housing3, Barn, HarborDock, Fishmonger, Smokehouse</td><td class="num">9,000c + 60 plank</td></tr>
+            <tr><td>1</td><td>Village</td><td class="num">12</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td class="num">300c + 15 hay_bundle</td></tr>
+            <tr><td>2</td><td><b>City</b></td><td class="num">20</td><td>Forge, CaravanPost, Kitchen, Workshop, PowderStore, Portal, ClockTower, Lighthouse, Apothecary, Observatory, Housing2, Housing3, Barn, HarborDock, Fishmonger, Smokehouse</td><td class="num">1,000c + 18 plank</td></tr>
           </tbody>
         </table>
         <div class="box"><b>City rung = today's home.</b> Rung 2 plots (20) and unlocks equal the current <code>home</code> node exactly, so an existing maxed save looks identical. Rungs 0–1 are the new "earlier" states the town grows through.</div>
@@ -303,9 +303,9 @@ export const TOWN_MAPS: Record&lt;string, AuthoredTownMap[]&gt; = { /* … */ };
           <thead><tr><th>Rung</th><th>Name</th><th class="num">Plots</th><th>Newly unlocked buildings</th><th class="num">Upgrade cost</th></tr></thead>
           <tbody>
             <tr><td>0</td><td>Dig Site</td><td class="num">4</td><td>Hearth, Kitchen, Housing</td><td class="num">— (founding)</td></tr>
-            <tr><td>1</td><td>Mining Camp</td><td class="num">6</td><td>Workshop, Forge, Inn, Watchtower</td><td class="num">2,000c + 60 block</td></tr>
-            <tr><td>2</td><td>Boomtown</td><td class="num">8</td><td>Barn, PowderStore, Housing2, Apothecary</td><td class="num">5,500c + 50 iron_bar</td></tr>
-            <tr><td>3</td><td>Foundry City</td><td class="num">12</td><td>Observatory, Housing3, CaravanPost</td><td class="num">12,000c + 30 gold_bar</td></tr>
+            <tr><td>1</td><td>Mining Camp</td><td class="num">6</td><td>Workshop, Forge, Inn, Watchtower</td><td class="num">250c + 12 block</td></tr>
+            <tr><td>2</td><td>Boomtown</td><td class="num">8</td><td>Barn, PowderStore, Housing2, Apothecary</td><td class="num">800c + 12 iron_bar</td></tr>
+            <tr><td>3</td><td>Foundry City</td><td class="num">12</td><td>Observatory, Housing3, CaravanPost</td><td class="num">1,800c + 8 gold_bar</td></tr>
           </tbody>
         </table>
 
