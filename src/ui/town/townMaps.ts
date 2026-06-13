@@ -105,13 +105,15 @@ export interface AuthoredTownMap {
   well?: { cx: number; cy: number; r: number };
 }
 
-// ── Shared layout grid for the home (farm) ladder ───────────────────────────
-// Lot centres (pixel space). Columns C0/C1 are the Hamlet core; C2/C3 are the
-// Village/City extension. Indices below are STABLE across all three rungs.
-const LOT_W = 128;
-const LOT_H = 112;
-const HOME_COLS = [150, 300, 450, 600];
-const HOME_ROWS = [300, 470, 640];
+// ── Town 1 — home (farm) ladder ─────────────────────────────────────────────
+// Lot centres (pixel space) on a 5-col × 4-row grid. Hamlet = cols 0–1 ×
+// rows 0–2; Village adds cols 2–3; City adds col 4 and the bottom row. Lot
+// indices are STABLE across every rung (appended growth), so a placed building
+// never moves as the town grows.
+const LOT_W = 112;
+const LOT_H = 104;
+const HOME_COLS = [110, 240, 370, 500, 630];
+const HOME_ROWS = [280, 440, 600, 760];
 const lot = (index: number, col: number, row: number): AuthoredLot => ({
   index,
   cx: HOME_COLS[col],
@@ -122,35 +124,33 @@ const lot = (index: number, col: number, row: number): AuthoredLot => ({
 
 // Farm board fixture, shared by all home rungs (right third of the map).
 const HOME_FARM_BOARD: AuthoredBoard = { kind: "farm", cx: 1010, cy: 470, w: 380, h: 520 };
-const HOME_PLAZA = { cx: 380, cy: 150, rx: px(5), ry: px(3) };
-const HOME_WELL = { cx: 380, cy: 150, r: 20 };
+const HOME_PLAZA = { cx: 370, cy: 120, rx: px(4), ry: px(2) };
+const HOME_WELL = { cx: 370, cy: 120, r: 20 };
 
 /** Paint the ground shared by every home rung (grass, plaza, road skeleton). */
 function homeGround(seed: number): Grid {
   const g = blankGrid(GRASS);
-  // Plaza disc (tile space) around the well.
-  disc(g, 12, 5, 5, 3, DIRT);
-  // Main streets: a vertical spine to the board + a cross street through town.
-  roadV(g, 2, 28, 23, 2);          // spine separating town from the farm board
-  roadH(g, 3, 37, 5, 2);           // plaza-level road reaching across to the board
-  roadV(g, 5, 25, 12, 1);          // central town street (between cols C1 and C2)
-  roadH(g, 2, 23, 25, 2);          // bottom street
+  disc(g, 11, 4, 4, 2, DIRT);       // town-green plaza around the well
+  roadV(g, 2, 28, 23, 2);           // spine separating town from the farm board
+  roadH(g, 3, 37, 5, 2);            // plaza-level road reaching across to the board
+  roadV(g, 5, 27, 11, 1);           // central town avenue (between cols 1 and 2)
   rectTiles(g, 24, 13, 1, 2, DIRT); // dirt apron leading onto the farm board
   decorateGrass(g, seed);
   return g;
 }
 
-// ── Town 1 — home ladder ────────────────────────────────────────────────────
-// Hamlet (6 lots): columns C0–C1 × rows 0–2.
+const HOME_PROPS_BASE: AuthoredProp[] = [
+  { kind: "signpost", x: 470, y: 135 },
+  { kind: "lamppost", x: 305, y: 360 },
+];
+
+// Hamlet (6 lots): cols 0–1 × rows 0–2.
 const HOME_HAMLET: AuthoredTownMap = {
   groundTiles: homeGround(6),
   plaza: HOME_PLAZA,
   well: HOME_WELL,
   boards: [HOME_FARM_BOARD],
-  props: [
-    { kind: "signpost", x: 470, y: 165 },
-    { kind: "lamppost", x: 250, y: 410 },
-  ],
+  props: HOME_PROPS_BASE,
   lots: [
     lot(0, 0, 0), lot(1, 1, 0),
     lot(2, 0, 1), lot(3, 1, 1),
@@ -158,18 +158,13 @@ const HOME_HAMLET: AuthoredTownMap = {
   ],
 };
 
-// Village (12 lots): Hamlet + columns C2–C3 (indices 6–11). Lots 0–5 unchanged.
+// Village (12 lots): Hamlet + cols 2–3 × rows 0–2 (indices 6–11). 0–5 unchanged.
 const HOME_VILLAGE: AuthoredTownMap = {
   groundTiles: homeGround(12),
   plaza: HOME_PLAZA,
   well: HOME_WELL,
   boards: [HOME_FARM_BOARD],
-  props: [
-    { kind: "signpost", x: 470, y: 165 },
-    { kind: "lamppost", x: 250, y: 410 },
-    { kind: "lamppost", x: 550, y: 410 },
-    { kind: "planter", x: 380, y: 760 },
-  ],
+  props: [...HOME_PROPS_BASE, { kind: "lamppost", x: 565, y: 360 }, { kind: "planter", x: 370, y: 680 }],
   lots: [
     lot(0, 0, 0), lot(1, 1, 0), lot(6, 2, 0), lot(7, 3, 0),
     lot(2, 0, 1), lot(3, 1, 1), lot(8, 2, 1), lot(9, 3, 1),
@@ -177,11 +172,118 @@ const HOME_VILLAGE: AuthoredTownMap = {
   ],
 };
 
+// City (20 lots): Village + col 4 × rows 0–2 (12–14) and the bottom row (15–19).
+const HOME_CITY: AuthoredTownMap = {
+  groundTiles: homeGround(20),
+  plaza: HOME_PLAZA,
+  well: HOME_WELL,
+  boards: [HOME_FARM_BOARD],
+  props: [
+    ...HOME_PROPS_BASE,
+    { kind: "lamppost", x: 565, y: 360 },
+    { kind: "planter", x: 370, y: 680 },
+    { kind: "signpost", x: 695, y: 360 },
+    { kind: "lamppost", x: 435, y: 760 },
+  ],
+  lots: [
+    lot(0, 0, 0), lot(1, 1, 0), lot(6, 2, 0), lot(7, 3, 0), lot(12, 4, 0),
+    lot(2, 0, 1), lot(3, 1, 1), lot(8, 2, 1), lot(9, 3, 1), lot(13, 4, 1),
+    lot(4, 0, 2), lot(5, 1, 2), lot(10, 2, 2), lot(11, 3, 2), lot(14, 4, 2),
+    lot(15, 0, 3), lot(16, 1, 3), lot(17, 2, 3), lot(18, 3, 3), lot(19, 4, 3),
+  ],
+};
+
+// ── Town 2 — quarry (mine) ladder ───────────────────────────────────────────
+// A mining settlement on a dug-out yard, growing 4 → 6 → 8 → 12. Indices stable
+// across rungs. Mine board on the right (drawBoards scatters ore/rock on it).
+const Q_LOT_W = 118;
+const Q_LOT_H = 106;
+const QUARRY_COLS = [160, 310, 460, 610];
+const QUARRY_ROWS = [310, 480, 650];
+const qlot = (index: number, col: number, row: number): AuthoredLot => ({
+  index,
+  cx: QUARRY_COLS[col],
+  cy: QUARRY_ROWS[row],
+  w: Q_LOT_W,
+  h: Q_LOT_H,
+});
+const QUARRY_MINE_BOARD: AuthoredBoard = { kind: "mine", cx: 1010, cy: 470, w: 380, h: 520 };
+const QUARRY_PLAZA = { cx: 330, cy: 130, rx: px(4), ry: px(2) };
+const QUARRY_WELL = { cx: 330, cy: 130, r: 18 };
+
+function quarryGround(seed: number): Grid {
+  const g = blankGrid(GRASS);
+  disc(g, 10, 4, 4, 2, DIRT);        // small plaza by the well
+  roadV(g, 2, 28, 23, 2);            // spine to the mine board
+  roadH(g, 3, 37, 5, 2);             // top road across to the board
+  rectTiles(g, 4, 8, 18, 14, DIRT);  // the excavated quarry yard the lots sit on
+  rectTiles(g, 24, 13, 1, 2, DIRT);  // apron onto the mine board
+  decorateGrass(g, seed);
+  return g;
+}
+
+const QUARRY_PROPS: AuthoredProp[] = [
+  { kind: "signpost", x: 430, y: 145 },
+  { kind: "lamppost", x: 110, y: 400 },
+];
+
+// Dig Site (4): cols 0–1 × rows 0–1.
+const QUARRY_DIG: AuthoredTownMap = {
+  groundTiles: quarryGround(4),
+  plaza: QUARRY_PLAZA,
+  well: QUARRY_WELL,
+  boards: [QUARRY_MINE_BOARD],
+  props: QUARRY_PROPS,
+  lots: [qlot(0, 0, 0), qlot(1, 1, 0), qlot(2, 0, 1), qlot(3, 1, 1)],
+};
+
+// Mining Camp (6): + cols 0–1 × row 2 (indices 4–5).
+const QUARRY_CAMP: AuthoredTownMap = {
+  groundTiles: quarryGround(6),
+  plaza: QUARRY_PLAZA,
+  well: QUARRY_WELL,
+  boards: [QUARRY_MINE_BOARD],
+  props: QUARRY_PROPS,
+  lots: [
+    qlot(0, 0, 0), qlot(1, 1, 0),
+    qlot(2, 0, 1), qlot(3, 1, 1),
+    qlot(4, 0, 2), qlot(5, 1, 2),
+  ],
+};
+
+// Boomtown (8): + col 2 × rows 0–1 (indices 6–7).
+const QUARRY_BOOM: AuthoredTownMap = {
+  groundTiles: quarryGround(8),
+  plaza: QUARRY_PLAZA,
+  well: QUARRY_WELL,
+  boards: [QUARRY_MINE_BOARD],
+  props: [...QUARRY_PROPS, { kind: "lamppost", x: 460, y: 400 }],
+  lots: [
+    qlot(0, 0, 0), qlot(1, 1, 0), qlot(6, 2, 0),
+    qlot(2, 0, 1), qlot(3, 1, 1), qlot(7, 2, 1),
+    qlot(4, 0, 2), qlot(5, 1, 2),
+  ],
+};
+
+// Foundry City (12): + col 2 row 2 and col 3 × rows 0–2 (indices 8–11).
+const QUARRY_FOUNDRY: AuthoredTownMap = {
+  groundTiles: quarryGround(12),
+  plaza: QUARRY_PLAZA,
+  well: QUARRY_WELL,
+  boards: [QUARRY_MINE_BOARD],
+  props: [...QUARRY_PROPS, { kind: "lamppost", x: 460, y: 400 }, { kind: "signpost", x: 690, y: 280 }],
+  lots: [
+    qlot(0, 0, 0), qlot(1, 1, 0), qlot(6, 2, 0), qlot(9, 3, 0),
+    qlot(2, 0, 1), qlot(3, 1, 1), qlot(7, 2, 1), qlot(10, 3, 1),
+    qlot(4, 0, 2), qlot(5, 1, 2), qlot(8, 2, 2), qlot(11, 3, 2),
+  ],
+};
+
 // ── Registry — keyed by zoneId, indexed by tier ─────────────────────────────
-// City (home tier 2) and the quarry ladder are authored in a later step; until
-// then those rungs fall back to the procedural town plan.
+// Zones/tiers with no entry fall back to the procedural town plan.
 export const TOWN_MAPS: Record<string, AuthoredTownMap[]> = {
-  home: [HOME_HAMLET, HOME_VILLAGE],
+  home: [HOME_HAMLET, HOME_VILLAGE, HOME_CITY],
+  quarry: [QUARRY_DIG, QUARRY_CAMP, QUARRY_BOOM, QUARRY_FOUNDRY],
 };
 
 /** Convert an authored map into the TownPlan shape TownScene consumes. */

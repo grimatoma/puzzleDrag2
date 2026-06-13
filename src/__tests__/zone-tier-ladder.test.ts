@@ -92,8 +92,16 @@ describe("authored town maps", () => {
   });
 
   it("returns null for un-authored zones/tiers (procedural fallback)", () => {
-    expect(getTownMap("meadow", 0)).toBeNull();
-    expect(getTownMap("home", 2)).toBeNull(); // City not authored until step 5
+    expect(getTownMap("meadow", 0)).toBeNull(); // un-tiered zone
+    expect(getTownMap("home", 9)).toBeNull();   // tier beyond the ladder
+  });
+
+  it("home and quarry are fully authored across all rungs", () => {
+    expect(TOWN_MAPS.home).toHaveLength(3);
+    expect(TOWN_MAPS.quarry).toHaveLength(4);
+    for (const zoneId of ["home", "quarry"]) {
+      tiersForZone(zoneId).forEach((_t, tier) => expect(getTownMap(zoneId, tier)).not.toBeNull());
+    }
   });
 });
 
