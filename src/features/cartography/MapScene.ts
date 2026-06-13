@@ -142,6 +142,17 @@ export class MapScene extends Phaser.Scene {
   _t: number = 0;
   layers!: MapLayers;
 
+  // Camera (pinch/drag/wheel) state. The map is letterboxed inside the
+  // canvas by relayout(); these bounds describe the painted content rect in
+  // scene-pixel space so the camera can't be panned off into the margins.
+  isDragging: boolean = false;
+  contentX: number = 0;
+  contentY: number = 0;
+  contentW: number = WORLD_W;
+  contentH: number = WORLD_H;
+  minZoom: number = 1;
+  maxZoom: number = 4;
+
   constructor() {
     super("CartoMapScene");
     this.nodeViews = new Map();   // id → { container, label, ember, ... }
@@ -160,6 +171,7 @@ export class MapScene extends Phaser.Scene {
     this._cloudPool = [];
     this._birdPool = [];
     this._t = 0;
+    this.isDragging = false;
   }
 
   create() {
@@ -189,12 +201,17 @@ export class MapScene extends Phaser.Scene {
     this.buildNodeViews();
 
     this.spawnInitialAmbient();
-    this.input.on("gameobjectdown", (_pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
+    // Node selection fires on pointer-up, and only when the gesture wasn't a
+    // camera drag/pinch — otherwise panning that begins over a medallion (very
+    // common on touch) would also select that node.
+    this.input.on("gameobjectup", (_pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
+      if (this.isDragging) return;
       const id = (obj as Phaser.GameObjects.GameObject & { getData?: (k: string) => string | undefined }).getData?.("nodeId");
       if (id) {
         this.events.emit("carto.nodetap", id);
       }
     });
+    this.setupCameraControls();
 
     // React snapshot → repaint hook.
     this.registry.events.on("changedata-carto.payload", () => this.applyState());
@@ -1015,6 +1032,100 @@ export class MapScene extends Phaser.Scene {
       layer.setScale(s);
       layer.setPosition(ox, oy);
     });
+
+    // Record the painted content rect so the camera clamp can keep the map on
+    // screen, then re-clamp in case a resize shrank the viewport while zoomed.
+    this.contentX = ox;
+    this.contentY = oy;
+    this.contentW = WORLD_W * s;
+    this.contentH = WORLD_H * s;
+    this.clampCamera();
+  }
+
+  // ─── Camera: pinch-zoom, drag-pan, wheel-zoom ───────────────────────────
+
+  setupCameraControls() {
+    let startDist = 0;
+    let startZoom = 1;
+
+    this.input.on("pointerdown", () => {
+      const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      if (p1 && p2 && p1.isDown && p2.isDown) {
+        startDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        startZoom = this.cameras.main.zoom;
+      } else {
+        // A fresh single-pointer gesture — assume a tap until it moves far
+        // enough to count as a drag.
+        this.isDragging = false;
+      }
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      // Two fingers down → pinch-zoom about the gesture midpoint.
+      if (p1 && p2 && p1.isDown && p2.isDown) {
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (startDist > 0) {
+          const factor = dist / startDist;
+          this.zoomTo(startZoom * factor, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+        }
+        // A pinch is never a node tap.
+        this.isDragging = true;
+        return;
+      }
+      // One finger / button down → drag-pan.
+      if (!pointer.isDown) return;
+      const dx = pointer.x - pointer.prevPosition.x;
+      const dy = pointer.y - pointer.prevPosition.y;
+      if (Math.hypot(dx, dy) > 3) this.isDragging = true;
+      const cam = this.cameras.main;
+      cam.scrollX -= dx / cam.zoom;
+      cam.scrollY -= dy / cam.zoom;
+      this.clampCamera();
+    });
+
+    this.input.on("wheel", (pointer: Phaser.Input.Pointer, _objs: unknown, _dx: number, deltaY: number) => {
+      if (pointer.event) pointer.event.preventDefault();
+      const cam = this.cameras.main;
+      this.zoomTo(cam.zoom - deltaY * 0.0015 * cam.zoom, pointer.x, pointer.y);
+    });
+  }
+
+  // Zoom toward a screen-space focal point so the world point under the
+  // cursor / pinch centre stays put.
+  zoomTo(targetZoom: number, screenX: number, screenY: number) {
+    const cam = this.cameras.main;
+    const z = Phaser.Math.Clamp(targetZoom, this.minZoom, this.maxZoom);
+    if (z === cam.zoom) return;
+    const before = cam.getWorldPoint(screenX, screenY);
+    const bx = before.x, by = before.y;
+    cam.setZoom(z);
+    const after = cam.getWorldPoint(screenX, screenY);
+    cam.scrollX += bx - after.x;
+    cam.scrollY += by - after.y;
+    this.clampCamera();
+  }
+
+  clampCamera() {
+    const cam = this.cameras.main;
+    const wVis = cam.width / cam.zoom;
+    const hVis = cam.height / cam.zoom;
+    let minX: number, maxX: number;
+    if (wVis >= this.contentW) {
+      minX = maxX = this.contentX - (wVis - this.contentW) / 2;
+    } else {
+      minX = this.contentX;
+      maxX = this.contentX + this.contentW - wVis;
+    }
+    let minY: number, maxY: number;
+    if (hVis >= this.contentH) {
+      minY = maxY = this.contentY - (hVis - this.contentH) / 2;
+    } else {
+      minY = this.contentY;
+      maxY = this.contentY + this.contentH - hVis;
+    }
+    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
+    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
   }
 }
 
