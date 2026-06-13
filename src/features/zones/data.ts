@@ -38,7 +38,6 @@ import {
   EXPEDITION_MEAT_FOODS,
   SETTLEMENT_BIOMES,
 } from "../../constants.js";
-import type { TuningOverrides } from "../../config/schemas/tuning.js";
 import type { GameState, HeirloomsState } from "../../types/state.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
@@ -382,14 +381,8 @@ export function displayZoneName(state: GameState | null | undefined, zoneId?: st
 // isSettlementFounded), and there is no Kingdoms-hub UI on the cartography map
 // that surfaces founded/completed status or a "Found this settlement" button.
 // Wire both of those in 4b.
-export let SETTLEMENT_FOUNDING_BASE_COINS = 300; // Dev Panel: tuning.foundingBaseCoins
-export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Dev Panel: tuning.foundingGrowth
-
-/** Apply Dev Panel tuning fields owned by this module. */
-export function applySettlementFoundingTuning(tuning: TuningOverrides): void {
-  if (tuning.foundingBaseCoins !== undefined) SETTLEMENT_FOUNDING_BASE_COINS = tuning.foundingBaseCoins;
-  if (tuning.foundingGrowth !== undefined) SETTLEMENT_FOUNDING_GROWTH = tuning.foundingGrowth;
-}
+export const SETTLEMENT_FOUNDING_BASE_COINS = 300;
+export const SETTLEMENT_FOUNDING_GROWTH = 1.7;
 
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state: GameState | null | undefined): number {

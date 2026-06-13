@@ -1,7 +1,7 @@
 /**
  * Trigger `type` strings for beat triggers (`Beat.trigger`), flag triggers
- * (`STORY_FLAGS[].triggers`), and story events — see `conditionMatches` and
- * `sanitizeTrigger` in `src/story.ts` / `src/config/applyOverrides.ts`.
+ * (`STORY_FLAGS[].triggers`), and story events — see `conditionMatches` in
+ * `src/story.ts` and `sanitizeTrigger` in `src/config/storySanitizers.ts`.
  */
 
 export enum StoryTriggerType {
