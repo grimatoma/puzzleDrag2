@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, getItem, tileFamilyResource } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
@@ -347,11 +347,11 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       // Fractional resource accumulation: chain length contributes to
       // zoneResourceProgress[resourceKey], rolling into inventory once it
-      // crosses UPGRADE_THRESHOLDS[key] (the chained tile's threshold).
-      // Tile keys no longer enter state.inventory directly.
+      // crosses TILES_PER_RESOURCE[key] (the income divisor — decoupled from the
+      // board-tier-upgrade threshold). Tile keys no longer enter state.inventory.
       const progress: Partial<Record<ResourceKey, number>> = { ...zoneResourceProgress(state) };
       if (resourceKey) {
-        const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
+        const thresholds = TILES_PER_RESOURCE;
         const threshold = thresholds[key] ?? Infinity;
         const chainLenForProgress = chainLength ?? gained;
         const rk = resourceKey as ResourceKey;
@@ -368,14 +368,14 @@ function coreReducer(state: GameState, action: Action): GameState {
       // the SAME fractional-progress + threshold path as the main chain so
       // partners produce at their normal thresholds.
       // The map is keyed by TILE KEY (e.g. tile_grain_wheat). We resolve the
-      // produced resource for inventory/progress and look up the threshold by
-      // TILE KEY in UPGRADE_THRESHOLDS — exactly like the main chain above.
+      // produced resource for inventory/progress and look up the income divisor
+      // by TILE KEY in TILES_PER_RESOURCE — exactly like the main chain above.
       // Processing is sequential against the SAME `progress`/`inventory` the
       // main chain produced, so a partner whose resource equals the chain's
       // resourceKey stacks correctly.
       const crossCollected = (payload?.crossCollected ?? null) as Record<string, number> | null;
       if (crossCollected) {
-        const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
+        const thresholds = TILES_PER_RESOURCE;
         for (const [tileKey, count] of Object.entries(crossCollected)) {
           if (!count) continue;
           const rk = (producedResource({ key: tileKey }) ?? tileKey) as ResourceKey;
