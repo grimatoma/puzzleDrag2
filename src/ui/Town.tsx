@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, unlockedBuildings, currentTierDef, maxTier } from "../features/zones/data.js";
+import { getTownMap } from "./town/townMaps.js";
+import type { TownPlan } from "./town/TownScene.js";
 import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
@@ -124,6 +126,66 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
 
 
 
+// Zone Tier Ladder — the Hearth (town-centre) upgrade control. When the current
+// zone has a tier ladder and isn't at its top rung, show a top-centre banner to
+// grow the settlement to the next rung. Disabled-with-reason when the player
+// can't pay the coins + zone-inventory resources; hidden at max rung / for
+// un-tiered zones. Mirrors the FoundSettlementBanner pattern.
+function TierUpgradeBanner({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+  const zoneId = String(state.mapCurrent ?? "");
+  if (!zoneId) return null;
+  if (!isSettlementFounded(state, zoneId)) return null;
+  if (maxTier(zoneId) < 0) return null; // un-tiered zone
+  const tier = settlementTier(state, zoneId);
+  if (tier >= maxTier(zoneId)) return null; // already at top rung
+  const next = currentTierDef(zoneId, tier + 1);
+  if (!next) return null;
+  const cost = next.upgradeCost ?? {};
+  const coinCost = cost.coins ?? 0;
+  const resCost = cost.resources ?? {};
+  const inv = zoneInventory(state, zoneId);
+  const canCoins = (state.coins ?? 0) >= coinCost;
+  const missingRes = Object.entries(resCost).filter(([k, v]) => inventoryQty(inv, k) < v);
+  const blocked = !canCoins || missingRes.length > 0;
+  const costLabel = [
+    coinCost ? `${coinCost}◉` : null,
+    ...Object.entries(resCost).map(([k, v]) => `${v} ${getItem(k)?.label ?? k}`),
+  ].filter(Boolean).join("  ·  ");
+  const blockedReason = !canCoins
+    ? `Need ${coinCost}◉`
+    : missingRes.length > 0
+      ? `Need ${missingRes.map(([k, v]) => `${v - inventoryQty(inv, k)} more ${getItem(k)?.label ?? k}`).join(", ")}`
+      : undefined;
+  return (
+    <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 pointer-events-none">
+      <button
+        type="button"
+        disabled={blocked}
+        onClick={() => !blocked && dispatch({ type: "TIER_UP", payload: { zoneId } })}
+        className="pointer-events-auto rounded-lg px-4 py-2 font-bold text-[13px] transition-colors disabled:cursor-not-allowed"
+        style={{
+          background: blocked ? "#7a6a4a" : "linear-gradient(to bottom, #5aa84a, #3f7a34)",
+          color: "white",
+          border: blocked ? "2px solid #5a4a30" : "2px solid #2c5a22",
+          opacity: blocked ? 0.85 : 1,
+          boxShadow: blocked ? "none" : "0 3px 10px rgba(0,0,0,.45)",
+        }}
+        title={blocked ? blockedReason : `Grow into a ${next.name}`}
+      >
+        ⬆ Upgrade to {next.name}  ·  {costLabel || "free"}
+      </button>
+      {blocked && blockedReason && (
+        <div
+          className="pointer-events-none rounded px-2 py-0.5 text-[10px] font-semibold text-white"
+          style={{ background: "rgba(120,30,30,.85)", border: "1px solid rgba(255,255,255,.2)" }}
+        >
+          {blockedReason}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) {
   return (
     <>
@@ -165,12 +227,18 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   // grid of building lots) replaces the old hand-scattered plot positions. The
   // building-render below still consumes a flat `layoutPlots` of {x,y,w,h}, so
   // we just project the plan's lots into that shape.
-  const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
-  const townPlan = useMemo(() => {
+  // Zone Tier Ladder — the settlement's current rung drives both the plot count
+  // and which authored town map renders. Un-tiered zones report tier 0 and fall
+  // back to the static plotCount + the procedural plan.
+  const tier = settlementTier(state, mapCurrent);
+  const requestedPlots = Math.max(1, plotsForTier(mapCurrent, tier) || (zoneConfig?.plotCount ?? 12));
+  const townPlan = useMemo<TownPlan>(() => {
+    const authored = getTownMap(mapCurrent, tier);
+    if (authored) return authored;
     const z = ZONES[mapCurrent];
     const boardKinds = [z && zoneHasBoard(z, "farm") && "farm", z && zoneHasBoard(z, "mine") && "mine", z && zoneHasBoard(z, "fish") && "fish"].filter(Boolean) as string[];
-    return buildTownPlan({ zoneId: mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
-  }, [mapCurrent, requestedPlots]);
+    return buildTownPlan({ zoneId: mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] }) as unknown as TownPlan;
+  }, [mapCurrent, tier, requestedPlots]);
   const layoutPlots = useMemo(
     () => townPlan.lots.map((l: { cx: number; cy: number; w: number; h: number }) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h })),
     [townPlan],
@@ -234,8 +302,9 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
     };
   }, [layoutPlots, locationBuilt, plotCount, storedPlots]);
 
-  // Filter buildings to those available at this location, then by biome.
-  const allowedBuildings = zoneConfig?.buildings ?? ALL_BUILDING_IDS;
+  // Filter buildings to those unlocked at the current tier (cumulative), then by
+  // biome. For un-tiered zones, unlockedBuildings returns the flat buildings[].
+  const allowedBuildings = zoneConfig ? unlockedBuildings(mapCurrent, tier) : ALL_BUILDING_IDS;
   const eligibleBuildings = useMemo(
     () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant)),
     [allowedBuildings, biomeVariant],
@@ -295,6 +364,9 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
 
       {/* "Found this settlement" CTA — only renders for visited-but-unfounded settleable zones. */}
       <FoundSettlementBanner state={state} dispatch={dispatch} />
+
+      {/* Tier-ladder upgrade CTA — grows a founded, tiered settlement to its next rung. */}
+      <TierUpgradeBanner state={state} dispatch={dispatch} />
 
       {/* Build button — opens the building picker. Hidden when zone has no plots. */}
       {plotCount > 0 && (

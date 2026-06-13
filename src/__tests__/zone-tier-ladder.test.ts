@@ -13,6 +13,7 @@ import {
   plotsForTier,
   unlockedBuildings,
 } from "../features/zones/data.js";
+import { TOWN_MAPS, getTownMap, authoredLotCount } from "../ui/town/townMaps.js";
 
 beforeEach(() => global.localStorage.clear());
 
@@ -60,6 +61,40 @@ describe("superset invariant — union(tiers.unlocks) === node.buildings", () =>
       );
     });
   }
+});
+
+describe("authored town maps", () => {
+  it("every authored (zone, tier) map exposes exactly tiers[tier].plots lots", () => {
+    for (const [zoneId, maps] of Object.entries(TOWN_MAPS)) {
+      maps.forEach((_m, tier) => {
+        expect(authoredLotCount(zoneId, tier)).toBe(plotsForTier(zoneId, tier));
+        expect(getTownMap(zoneId, tier)!.lots.length).toBe(plotsForTier(zoneId, tier));
+      });
+    }
+  });
+
+  it("ground grid is 30 rows × 40 cols", () => {
+    const plan = getTownMap("home", 0)!;
+    expect(plan.groundTiles!.length).toBe(30);
+    expect(plan.groundTiles!.every((r) => r.length === 40)).toBe(true);
+  });
+
+  it("lot indices are stable across rungs (a built lot never moves)", () => {
+    const hamlet = getTownMap("home", 0)!;
+    const village = getTownMap("home", 1)!;
+    const byIndex = (p: typeof village) => new Map(p.lots.map((l) => [l.index, l]));
+    const vMap = byIndex(village);
+    for (const l of hamlet.lots) {
+      const v = vMap.get(l.index)!;
+      expect(v).toBeDefined();
+      expect({ cx: v.cx, cy: v.cy, w: v.w, h: v.h }).toEqual({ cx: l.cx, cy: l.cy, w: l.w, h: l.h });
+    }
+  });
+
+  it("returns null for un-authored zones/tiers (procedural fallback)", () => {
+    expect(getTownMap("meadow", 0)).toBeNull();
+    expect(getTownMap("home", 2)).toBeNull(); // City not authored until step 5
+  });
 });
 
 describe("TIER_UP reducer", () => {
