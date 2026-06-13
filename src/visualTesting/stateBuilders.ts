@@ -283,9 +283,11 @@ function richState(): VisualStateTree {
       harbor: builtFromPlots(HARBOR_PLOTS),
     },
     settlements: {
-      home: { founded: true, biome: "prairie", keeperPath: "coexist" },
+      // Zone Tier Ladder — a fully-grown game: home at City, quarry at Foundry
+      // City, so the built-out HOME_PLOTS/MINE_PLOTS render across all lots.
+      home: { founded: true, biome: "prairie", keeperPath: "coexist", tier: 2 },
       meadow: { founded: true, biome: "forest", keeperPath: "coexist" },
-      quarry: { founded: true, biome: "mountain", keeperPath: "driveout" },
+      quarry: { founded: true, biome: "mountain", keeperPath: "driveout", tier: 3 },
       harbor: { founded: true, biome: "coastal" },
     },
     story: quietStory({
@@ -455,7 +457,7 @@ function profileState(profile: string): VisualStateTree {
     // Castle contribution view with partial progress against the 3 needs (soup 53 / meat 47 / coal 43).
     case "castleContrib": return { ...richState(), castle: { contributed: { soup: 21, meat: 15, coal: 9 } } } as VisualStateTree;
     case "buildReady": return { ...richState(), built: { ...richState().built, home: builtFromPlots({ 0: "hearth" }) } };
-    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { home: { supplies: 0 } } };
+    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { home: { supplies: 0 } }, settlements: { home: { founded: true, biome: "prairie", tier: 2 } } };
     case "unfoundedBlocked": return { ...richState(), mapCurrent: "orchard", activeZone: "orchard", settlements: { home: { founded: true, biome: "prairie" } }, coins: 50 };
     case "unfoundedReady": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { home: { founded: true, biome: "prairie", keeperPath: "coexist" } } };
     case "mineTown": return { ...richState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "mine", biome: "mine" };
