@@ -20,7 +20,7 @@
 //   flowers, herd_animals, cattle, mounts
 // Special upgrade target: "gold" (board-only coin tile, not in inventory).
 
-import { MAP_NODES, type MapNode, type BoardKind, type ZoneBoards } from "../cartography/data.js";
+import { MAP_NODES, type MapNode, type BoardKind, type ZoneBoards, type ZoneTier } from "../cartography/data.js";
 import type {
   FarmBoardInstance,
   FishBoardInstance,
@@ -131,7 +131,11 @@ export interface Zone {
   dangers: string[];
   buildings: BuildingId[];
   plotCount: number;
+  tiers?: ZoneTier[];
+  requiresZoneTier?: { zone: string; tier: number };
 }
+
+export type { ZoneTier };
 
 function resolveZone(zoneOrId: string | Zone | undefined | null): Zone | null {
   if (!zoneOrId) return null;
@@ -345,6 +349,8 @@ export const ZONES: Readonly<Record<string, Zone>> = Object.freeze(
         dangers: n.dangers ?? [],
         buildings: n.buildings ?? [],
         plotCount: n.plotCount ?? (n.buildings?.length ?? 0),
+        ...(n.tiers ? { tiers: n.tiers } : {}),
+        ...(n.requiresZoneTier ? { requiresZoneTier: n.requiresZoneTier } : {}),
       } as Zone,
     ]),
   ) as Record<string, Zone>,
@@ -405,6 +411,59 @@ export function isSettlementFounded(state: GameState | null | undefined, zoneId:
 export function settlementFoundingCost(state: GameState | null | undefined): { coins: number } {
   const k = Math.max(1, foundedSettlementCount(state));
   return { coins: Math.round(SETTLEMENT_FOUNDING_BASE_COINS * Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1)) };
+}
+
+// ─── Settlement tier ladder (Zone Tier Ladder) ──────────────────────────────
+// A zone with a `tiers[]` ladder grows through rungs; each rung grants more
+// plots and unlocks more building types (and nothing else — no turn/yield
+// change). Zones without `tiers` keep their single fixed layout.
+
+/** The zone's tier ladder, or [] when the zone has no ladder. */
+export function tiersForZone(zoneId: string): ZoneTier[] {
+  return ZONES[zoneId]?.tiers ?? [];
+}
+
+/** Highest tier index for a zone (rung count − 1); −1 when un-tiered. */
+export function maxTier(zoneId: string): number {
+  return tiersForZone(zoneId).length - 1;
+}
+
+/** The current rung a settlement sits at (default 0; clamped to the ladder). */
+export function settlementTier(state: GameState | null | undefined, zoneId: string): number {
+  const ladder = tiersForZone(zoneId);
+  if (ladder.length === 0) return 0;
+  const raw = Number((state?.settlements?.[zoneId] as { tier?: number } | undefined)?.tier ?? 0);
+  return Math.min(Math.max(0, Math.floor(Number.isFinite(raw) ? raw : 0)), ladder.length - 1);
+}
+
+/** The tier definition for `(zone, tier)`, or null when out of range. */
+export function currentTierDef(zoneId: string, tier: number): ZoneTier | null {
+  return tiersForZone(zoneId)[tier] ?? null;
+}
+
+/** TOTAL plots at `(zone, tier)`. Falls back to the zone's flat plotCount. */
+export function plotsForTier(zoneId: string, tier: number): number {
+  const def = currentTierDef(zoneId, tier);
+  if (def) return def.plots;
+  return ZONES[zoneId]?.plotCount ?? 0;
+}
+
+/**
+ * Buildings buildable at `(zone, tier)` = the cumulative union of `unlocks`
+ * for every rung ≤ tier. For un-tiered zones, returns the flat `buildings[]`.
+ */
+export function unlockedBuildings(zoneId: string, tier: number): BuildingId[] {
+  const ladder = tiersForZone(zoneId);
+  if (ladder.length === 0) return ZONES[zoneId]?.buildings ?? [];
+  const out: BuildingId[] = [];
+  const seen = new Set<string>();
+  const top = Math.min(Math.max(0, tier), ladder.length - 1);
+  for (let t = 0; t <= top; t++) {
+    for (const b of ladder[t].unlocks) {
+      if (!seen.has(b)) { seen.add(b); out.push(b); }
+    }
+  }
+  return out;
 }
 
 /**
