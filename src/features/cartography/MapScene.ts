@@ -151,7 +151,7 @@ export class MapScene extends Phaser.Scene {
   contentW: number = WORLD_W;
   contentH: number = WORLD_H;
   minZoom: number = 1;
-  maxZoom: number = 4;
+  maxZoom: number = 8;
 
   constructor() {
     super("CartoMapScene");
@@ -1110,20 +1110,16 @@ export class MapScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const wVis = cam.width / cam.zoom;
     const hVis = cam.height / cam.zoom;
-    let minX: number, maxX: number;
-    if (wVis >= this.contentW) {
-      minX = maxX = this.contentX - (wVis - this.contentW) / 2;
-    } else {
-      minX = this.contentX;
-      maxX = this.contentX + this.contentW - wVis;
-    }
-    let minY: number, maxY: number;
-    if (hVis >= this.contentH) {
-      minY = maxY = this.contentY - (hVis - this.contentH) / 2;
-    } else {
-      minY = this.contentY;
-      maxY = this.contentY + this.contentH - hVis;
-    }
+    // When the viewport is larger than the content in a dimension, allow the
+    // content to slide anywhere between "content at left/top edge" and "content
+    // at right/bottom edge" (content is always fully visible, no cropping).
+    // When the viewport is smaller, clamp to the normal content bounds.
+    // This replaces the old hard center-lock so focal-point zoom works even
+    // when the map is narrower than the screen (e.g. portrait devices).
+    const minX = this.contentX - Math.max(0, wVis - this.contentW);
+    const maxX = this.contentX + Math.max(0, this.contentW - wVis);
+    const minY = this.contentY - Math.max(0, hVis - this.contentH);
+    const maxY = this.contentY + Math.max(0, this.contentH - hVis);
     cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
     cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
   }
