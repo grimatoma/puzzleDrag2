@@ -13,7 +13,7 @@ import type { VisualScenario } from "./matrix.js";
  * Synthetic visual-test state. We deliberately keep this looser than the
  * canonical `GameState`: the harness builds *fragments* of state (no save
  * version, sometimes no biome, sometimes additional UI-only fields like
- * `runSummary`, `bespokeSeasonWidget`, etc). Builders compose by spreading,
+ * `runSummary`, `settingsTab`, etc). Builders compose by spreading,
  * so an open shape with an index signature is more practical than the
  * full GameState surface.
  */
@@ -399,15 +399,13 @@ function boardState(kind: "farm" | "mine" | "fish" = "farm"): VisualStateTree {
 
 // Mid-season variant of boardState — `turnsUsed` lands the season indicator
 // inside a specific season (Spring 0-1, Summer 2-4, Autumn 5-6, Winter 7-9
-// with the default 10-turn budget) and `bespoke` flips the season widget.
-function boardWithSeason(turnsUsed: number, bespoke: boolean) {
+// with the default 10-turn budget).
+function boardWithSeason(turnsUsed: number) {
   const base = boardState("farm") as Record<string, unknown> & { farmRun?: { turnsRemaining?: number } };
-  const baseSettings = (base.settings as Record<string, unknown> | undefined) ?? {};
   return {
     ...base,
     turnsUsed,
     farmRun: { ...(base.farmRun ?? {}), turnsRemaining: 10 - turnsUsed },
-    settings: { ...baseSettings, bespokeSeasonWidget: !!bespoke },
   };
 }
 
@@ -487,14 +485,10 @@ function profileState(profile: string): VisualStateTree {
       return { ...st, grid: g, hazards: { ...(st.hazards ?? {}), caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
     }
     case "boardFish": return boardState("fish");
-    case "boardSeasonSpringWheel":   return boardWithSeason(1, false);
-    case "boardSeasonSpringBespoke": return boardWithSeason(1, true);
-    case "boardSeasonSummerWheel":   return boardWithSeason(3, false);
-    case "boardSeasonSummerBespoke": return boardWithSeason(3, true);
-    case "boardSeasonAutumnWheel":   return boardWithSeason(5, false);
-    case "boardSeasonAutumnBespoke": return boardWithSeason(5, true);
-    case "boardSeasonWinterWheel":   return boardWithSeason(8, false);
-    case "boardSeasonWinterBespoke": return boardWithSeason(8, true);
+    case "boardSeasonSpring": return boardWithSeason(1);
+    case "boardSeasonSummer": return boardWithSeason(3);
+    case "boardSeasonAutumn": return boardWithSeason(5);
+    case "boardSeasonWinter": return boardWithSeason(8);
     case "boardFishPearl": {
       const st = boardState("fish");
       const grid0 = (st.grid ?? []) as Grid;

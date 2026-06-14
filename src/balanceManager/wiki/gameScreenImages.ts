@@ -12,7 +12,7 @@
  * Only scenarios that actually appear in content need an entry.
  */
 import boardFarmIdle from "./assets/game-screens/board-farm-idle.png";
-import boardSeasonWinterWheel from "./assets/game-screens/board-season-winter-wheel.png";
+import boardSeasonWinter from "./assets/game-screens/board-season-winter.png";
 import craftingBakery from "./assets/game-screens/crafting-bakery.png";
 import mapCurrentHome from "./assets/game-screens/map-current-home.png";
 import townHomeBuiltOut from "./assets/game-screens/town-home-built-out.png";
@@ -21,7 +21,7 @@ import townsfolkBosses from "./assets/game-screens/townsfolk-bosses.png";
 /** Scenario id → static screenshot URL (Vite-resolved). */
 const GAME_SCREEN_IMAGES: Record<string, string> = {
   "board-farm-idle": boardFarmIdle,
-  "board-season-winter-wheel": boardSeasonWinterWheel,
+  "board-season-winter": boardSeasonWinter,
   "crafting-bakery": craftingBakery,
   "map-current-home": mapCurrentHome,
   "town-home-built-out": townHomeBuiltOut,
