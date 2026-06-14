@@ -8,7 +8,10 @@ import type { Action } from "../types/state.js";
 import { reduce as castleReduce } from "../features/castle/slice.js";
 import { reduce as storyReduce } from "../features/story/slice.js";
 import { reduce as tutorialReduce } from "../features/tutorial/slice.js";
+import { STEPS, TOTAL_STEPS } from "../features/tutorial/steps.js";
 import { CASTLE_NEEDS } from "../features/castle/data.js";
+
+const STEP = (id: string) => STEPS.findIndex((s) => s.id === id);
 import { mergeTestState, unsafeGameState, testAction } from "../testUtils/testState.js";
 
 // ─── castle/slice.js ────────────────────────────────────────────────────────
@@ -273,43 +276,63 @@ describe("tutorial slice — coverage gaps", () => {
     expect(s1.modal).toBe("tutorial");
   });
 
-  it("CHAIN_COLLECTED on step 1 advances; on other steps does not", () => {
-    const s0 = baseState({ tutorial: baseTutorial({ step: 1 }) });
+  it("CHAIN_COLLECTED on the puzzle step advances; on other steps does not", () => {
+    const puzzle = STEP("puzzle");
+    const s0 = baseState({ tutorial: baseTutorial({ step: puzzle }) });
     const s1 = tutorialReduce(s0, { type: "CHAIN_COLLECTED" } as Action);
-    expect(s1.tutorial.step).toBe(2);
+    expect(s1.tutorial.step).toBe(puzzle + 1);
 
-    const s2 = baseState({ tutorial: baseTutorial({ step: 2 }) });
+    const upgrades = STEP("upgrades");
+    const s2 = baseState({ tutorial: baseTutorial({ step: upgrades }) });
     const s3 = tutorialReduce(s2, { type: "CHAIN_COLLECTED" } as Action);
-    expect(s3.tutorial.step).toBe(2);
+    expect(s3.tutorial.step).toBe(upgrades);
   });
 
-  it("TURN_IN_ORDER on step 3 advances", () => {
-    const s0 = baseState({ tutorial: baseTutorial({ step: 3 }) });
-    const s1 = tutorialReduce(s0, {
-      type: "TURN_IN_ORDER",
-      id: 1,
-    } as Action);
-    expect(s1.tutorial.step).toBe(4);
+  it("BUILD on the build step advances", () => {
+    const build = STEP("build");
+    const s0 = baseState({ tutorial: baseTutorial({ step: build }) });
+    const s1 = tutorialReduce(s0, { type: "BUILD", building: { id: "mill" } } as unknown as Action);
+    expect(s1.tutorial.step).toBe(build + 1);
   });
 
-  it("SET_VIEW(town) on step 4 advances", () => {
-    const s0 = baseState({ tutorial: baseTutorial({ step: 4 }) });
-    const s1 = tutorialReduce(s0, { type: "SET_VIEW", view: "town" } as Action);
-    expect(s1.tutorial.step).toBe(5);
+  it("CRAFTING/CRAFT_RECIPE on the craft step advances", () => {
+    const craft = STEP("craft");
+    const s0 = baseState({ tutorial: baseTutorial({ step: craft }) });
+    const s1 = tutorialReduce(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "rec_rake" } as Action);
+    expect(s1.tutorial.step).toBe(craft + 1);
   });
 
-  it("SET_VIEW(other) on step 4 does NOT advance", () => {
-    const s0 = baseState({ tutorial: baseTutorial({ step: 4 }) });
-    const s1 = tutorialReduce(s0, {
-      type: "SET_VIEW",
-      view: "crafting",
-    } as Action);
-    expect(s1.tutorial.step).toBe(4);
+  it("TURN_IN_ORDER on the quest step advances", () => {
+    const quest = STEP("quest");
+    const s0 = baseState({ tutorial: baseTutorial({ step: quest }) });
+    const s1 = tutorialReduce(s0, { type: "TURN_IN_ORDER", id: 1 } as Action);
+    expect(s1.tutorial.step).toBe(quest + 1);
+  });
+
+  it("SET_VIEW never advances the wizard (navigation is driven by the overlay)", () => {
+    const build = STEP("build");
+    const s0 = baseState({ tutorial: baseTutorial({ step: build }) });
+    const s1 = tutorialReduce(s0, { type: "SET_VIEW", view: "crafting" } as Action);
+    expect(s1.tutorial.step).toBe(build);
+  });
+
+  it("advancing onto a spotlight step clears the modal; onto a blocking step sets it", () => {
+    // step 0 (welcome) is blocking → modal "tutorial"; step 1 (spotlight) → null.
+    const s0 = baseState({ tutorial: baseTutorial({ step: 0 }) });
+    const s1 = tutorialReduce(s0, { type: "TUTORIAL/NEXT" } as Action);
+    expect(s1.tutorial.step).toBe(1);
+    expect(s1.modal).toBeNull();
+
+    // The final step is blocking, so the modal returns when we reach it.
+    const beforeLast = TOTAL_STEPS - 2;
+    const s2 = baseState({ tutorial: baseTutorial({ step: beforeLast }), modal: null });
+    const s3 = tutorialReduce(s2, { type: "TUTORIAL/NEXT" } as Action);
+    expect(s3.tutorial.step).toBe(TOTAL_STEPS - 1);
+    expect(s3.modal).toBe("tutorial");
   });
 
   it("TUTORIAL/NEXT past the last step ends the tutorial and clears the modal", () => {
-    // 6 total steps (0..5); from step 5 the next advance ends.
-    const s0 = baseState({ tutorial: baseTutorial({ step: 5 }) });
+    const s0 = baseState({ tutorial: baseTutorial({ step: TOTAL_STEPS - 1 }) });
     const s1 = tutorialReduce(s0, { type: "TUTORIAL/NEXT" } as Action);
     expect(s1.tutorial.active).toBe(false);
     expect(s1.tutorial.seen).toBe(true);

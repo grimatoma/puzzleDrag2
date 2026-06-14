@@ -32,10 +32,10 @@ describe("tutorial skip", () => {
     expect(next.tutorial.step).toBe(0);
   });
 
-  it("TUTORIAL/PREV from a center step keeps the modal open; from a corner step closes it", () => {
+  it("TUTORIAL/PREV onto a spotlight step clears the modal so the highlighted UI stays clickable", () => {
     let state = initialState();
-    // Step 2 is a center step, step 1 is a corner step. Going back from 2 → 1
-    // should clear the modal so the corner toast can render.
+    // Steps 1 and 2 are spotlight steps (no blocking modal). Stepping back from
+    // 2 → 1 should leave the modal null so the spotlighted element is interactive.
     state = { ...state, tutorial: { active: true, step: 2, seen: false }, modal: 'tutorial' };
     const next = gameReducer(state, { type: 'TUTORIAL/PREV' });
     expect(next.tutorial.step).toBe(1);
