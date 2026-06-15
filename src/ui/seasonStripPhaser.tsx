@@ -1,13 +1,12 @@
 /**
  * React wrapper around the Phaser-powered season strip.
  *
- * Lazy-loads Phaser + SeasonStripScene so the strip's heavy graphics
- * library is only fetched when the player opts in. Mounts a Phaser
- * Game instance, syncs state via the registry, and tears down cleanly
- * on unmount.
+ * Lazy-loads SeasonStripScene so the strip's bespoke graphics code is only
+ * fetched when the HUD mounts the strip. Mounts a Phaser Game instance,
+ * syncs state via the registry, and tears down cleanly on unmount.
  *
- * Used by SeasonIndicator in puzzleBoard.jsx when
- * `state.settings.seasonStripPhaser` is on.
+ * Used by SeasonIndicator in puzzleBoard.jsx — the sole season-strip
+ * renderer.
  */
 
 import { useEffect, useRef, useState } from "react";

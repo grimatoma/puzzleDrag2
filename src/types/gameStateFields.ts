@@ -24,8 +24,6 @@ export interface GameSettings {
   sfxOn?: boolean;
   musicOn?: boolean;
   hapticsOn?: boolean;
-  bespokeSeasonWidget?: boolean;
-  seasonStripPhaser?: boolean;
   [key: string]: boolean | undefined;
 }
 
