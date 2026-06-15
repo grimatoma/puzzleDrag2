@@ -1723,6 +1723,7 @@ export function BoardFrame({ children, seasonIdx, armed = false }: { children?: 
   // gets a thin drop shadow for depth.
   return (
     <div
+      data-tour="board"
       className="w-full h-full relative overflow-hidden"
       style={{
         background: fieldGradientFor(seasonIdx),
