@@ -46,6 +46,7 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
   const [itemKey, setItemKey] = useState('tile_grass_grass');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
+  const settings = (state.settings ?? {}) as { tutorialDisabled?: boolean };
   const gotoView = (view: string) => {
     dispatch({ type: 'CLOSE_MODAL' });
     dispatch({ type: 'SET_VIEW', view });
@@ -156,6 +157,21 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
             </div>
           </div>
 
+          {/* Display toggles */}
+          <div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Display</div>
+            <div className="grid grid-cols-1 gap-1.5">
+              <DebugBtn
+                color={settings.tutorialDisabled ? 'slate' : 'green'}
+                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'tutorialDisabled' })}
+              >
+                {settings.tutorialDisabled ? '○ OFF' : '● ON'} — Tutorial
+              </DebugBtn>
+              <div className="text-[10px] italic text-on-panel-faint text-center">
+                Feature flag: when OFF the onboarding tutorial never auto-starts. Persists across a game reset.
+              </div>
+            </div>
+          </div>
 
           {/* Triggers & Reset */}
           <div>

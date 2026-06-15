@@ -43,6 +43,7 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
+  tutorialDisabled: false,
 };
 
 export const initial = {
