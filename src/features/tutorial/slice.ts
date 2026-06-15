@@ -64,6 +64,9 @@ export function reduce(state: GameState, action: Action): GameState {
   if (
     !tutorial.seen &&
     !tutorial.active &&
+    // Feature flag (lives in settings, survives a game reset): when the player
+    // has disabled the tutorial it must never auto-start.
+    !state.settings?.tutorialDisabled &&
     !TUTORIAL_SKIP_ACTIONS.has(action.type) &&
     state.modal === null
   ) {

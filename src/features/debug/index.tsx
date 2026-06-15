@@ -46,7 +46,7 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
   const [itemKey, setItemKey] = useState('tile_grass_grass');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
-  const settings = (state.settings ?? {}) as { bespokeSeasonWidget?: boolean; seasonStripPhaser?: boolean };
+  const settings = (state.settings ?? {}) as { bespokeSeasonWidget?: boolean; seasonStripPhaser?: boolean; tutorialDisabled?: boolean };
   const gotoView = (view: string) => {
     dispatch({ type: 'CLOSE_MODAL' });
     dispatch({ type: 'SET_VIEW', view });
@@ -178,6 +178,15 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
               </DebugBtn>
               <div className="text-[10px] italic text-on-panel-faint text-center">
                 High-fidelity Phaser version with parallax hills + dense particle effects.
+              </div>
+              <DebugBtn
+                color={settings.tutorialDisabled ? 'slate' : 'green'}
+                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'tutorialDisabled' })}
+              >
+                {settings.tutorialDisabled ? '○ OFF' : '● ON'} — Tutorial
+              </DebugBtn>
+              <div className="text-[10px] italic text-on-panel-faint text-center">
+                Feature flag: when OFF the onboarding tutorial never auto-starts. Persists across a game reset.
               </div>
             </div>
           </div>

@@ -26,6 +26,9 @@ export interface GameSettings {
   hapticsOn?: boolean;
   bespokeSeasonWidget?: boolean;
   seasonStripPhaser?: boolean;
+  /** Feature flag: when true the onboarding tutorial never auto-starts.
+   *  Lives in settings so it survives DEV/RESET_GAME (which preserves settings). */
+  tutorialDisabled?: boolean;
   [key: string]: boolean | undefined;
 }
 

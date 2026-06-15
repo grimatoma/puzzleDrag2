@@ -45,6 +45,7 @@ const DEFAULT_SETTINGS = {
   hapticsOn: true,
   bespokeSeasonWidget: false,
   seasonStripPhaser: false,
+  tutorialDisabled: false,
 };
 
 export const initial = {
