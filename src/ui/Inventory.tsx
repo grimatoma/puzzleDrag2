@@ -315,7 +315,7 @@ const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label
   );
 });
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse: _onCollapse, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progressValue: number; progressMax: number }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progressValue: number; progressMax: number }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
@@ -332,9 +332,12 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse: _
 
   return (
     <div className="hl-browser-item is-selected hl-browser-item--expanded">
-      <div
-        className="hl-browser-item__row !cursor-default"
-        aria-label={label}
+      <button
+        type="button"
+        className="hl-browser-item__row"
+        onClick={onCollapse}
+        aria-expanded="true"
+        aria-label={`Collapse ${label}`}
       >
         <span className="hl-browser-item__icon">
           <Icon iconKey={key} size={40} title={label} />
@@ -354,7 +357,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse: _
           {count != null && <span className="tabular-nums">{count}</span>}
           {listStatus && <span>{listStatus}</span>}
         </span>
-      </div>
+      </button>
       <div className="hl-browser-item__details">
         {showActions && (
           <div className="flex flex-wrap gap-2">
@@ -572,7 +575,7 @@ export function InventoryGrid({
     }
     accSelect(key);
   }, [accSelect, accSelectInPlace]);
-  const _selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
+  const selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
   const selectWide = useCallback((key: string) => setSelectedKey(key), []);
 
   useLayoutEffect(() => {
@@ -768,14 +771,29 @@ export function InventoryGrid({
               progressMax={progressMaxFor(entry.key)}
             />
           );
-        } else {
+        } else if (isSelected) {
           cells.push(
             <InventoryListItemExpanded
               key={entry.key}
               entry={entry}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onCollapse={() => {}}
+              onCollapse={accordion.closeImmediate}
+              progressValue={progressValueFor(entry.key)}
+              progressMax={progressMaxFor(entry.key)}
+            />
+          );
+        } else {
+          cells.push(
+            <InventoryBrowserItem
+              key={entry.key}
+              itemKey={entry.key}
+              label={entry.label}
+              count={entry.count}
+              orderStatus={entry.orderStatus}
+              index={i}
+              selected={false}
+              onSelect={selectInPlaceStable}
               progressValue={progressValueFor(entry.key)}
               progressMax={progressMaxFor(entry.key)}
             />
