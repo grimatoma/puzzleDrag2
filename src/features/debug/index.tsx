@@ -46,7 +46,7 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
   const [itemKey, setItemKey] = useState('tile_grass_grass');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
-  const settings = (state.settings ?? {}) as { bespokeSeasonWidget?: boolean; seasonStripPhaser?: boolean; tutorialDisabled?: boolean };
+  const settings = (state.settings ?? {}) as { tutorialDisabled?: boolean };
   const gotoView = (view: string) => {
     dispatch({ type: 'CLOSE_MODAL' });
     dispatch({ type: 'SET_VIEW', view });
@@ -161,24 +161,6 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
           <div>
             <div className="hl-section-label !text-[10px] mb-1.5">Display</div>
             <div className="grid grid-cols-1 gap-1.5">
-              <DebugBtn
-                color={settings.bespokeSeasonWidget ? 'teal' : 'slate'}
-                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'bespokeSeasonWidget' })}
-              >
-                {settings.bespokeSeasonWidget ? '● ON' : '○ OFF'} — Bespoke season widget
-              </DebugBtn>
-              <div className="text-[10px] italic text-on-panel-faint text-center">
-                Replaces the season wheel with a per-season mini-scene.
-              </div>
-              <DebugBtn
-                color={settings.seasonStripPhaser ? 'purple' : 'slate'}
-                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'seasonStripPhaser' })}
-              >
-                {settings.seasonStripPhaser ? '● ON' : '○ OFF'} — Phaser season strip (HQ)
-              </DebugBtn>
-              <div className="text-[10px] italic text-on-panel-faint text-center">
-                High-fidelity Phaser version with parallax hills + dense particle effects.
-              </div>
               <DebugBtn
                 color={settings.tutorialDisabled ? 'slate' : 'green'}
                 onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'tutorialDisabled' })}

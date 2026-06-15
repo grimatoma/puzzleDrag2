@@ -43,8 +43,6 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
-  bespokeSeasonWidget: false,
-  seasonStripPhaser: false,
   tutorialDisabled: false,
 };
 

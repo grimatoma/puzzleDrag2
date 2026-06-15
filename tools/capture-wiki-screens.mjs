@@ -24,7 +24,7 @@ const VISUAL_FIXED_NOW = 1_700_000_000_000;
 // on the Phaser canvas and need the extra grid wait.
 const SCENARIOS = [
   { id: "town-home-built-out", board: false },
-  { id: "board-season-winter-wheel", board: true },
+  { id: "board-season-winter", board: true },
   { id: "board-farm-idle", board: true },
   { id: "map-current-home", board: false },
   { id: "crafting-bakery", board: false },
