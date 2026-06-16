@@ -9,7 +9,7 @@
 // Output shape matches what run_subject.mjs consumes, so the driver just runs the plan.
 
 import { SEASONS, SEASON_ORDER, seasonDressing } from "./seasons.mjs";
-import { STYLE_WORDS, STYLE_LOCK, FRAMING, FOOTPRINT_LOCK } from "./framing.mjs";
+import { STYLE_WORDS, STYLE_LOCK, FRAMING, FOOTPRINT_LOCK, PAD_LOCK } from "./framing.mjs";
 import { CATEGORIES, TOKEN_DEFAULTS } from "./categories.mjs";
 
 const CANONICAL_ANCHORS = [
@@ -65,7 +65,7 @@ function composeSeasonEdit(cfg, cat, ctx, season, from) {
     : seasonDressing(season);
   const parts = [
     `Pixel-art edit of the ${from} ${cfg.subject} tile.`,
-    `Keep the SAME ${cfg.subject}: same ${anchor} and round pad. ${FOOTPRINT_LOCK}.`,
+    `Keep the SAME ${cfg.subject}: same ${anchor} and round pad. ${FOOTPRINT_LOCK}. ${PAD_LOCK}.`,
     `Change ONLY ${fill(cat.morphScope, ctx)} to ${isHinge ? "the bare-mound state" : season}: ${delta}; ${dressing}.`,
     lock ? `${lock}.` : "",
     envelope,

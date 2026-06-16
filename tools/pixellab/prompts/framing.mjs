@@ -35,3 +35,16 @@ export const FOOTPRINT_LOCK =
   "keep the subject at the EXACT same size, position, rotation, lean and footprint on the " +
   "same pad as the source image — do not move, rescale, rotate, straighten, reshape, recrop " +
   "or redraw it; preserve its exact orientation and silhouette";
+
+// Re-asserted on every EDIT so a season re-dress never resizes/reshapes the GROUND PAD or
+// litters dressing past its edge. FOOTPRINT_LOCK pins the subject; this pins the base it sits
+// on. The pad is the one element shared by every tile and every season, so its silhouette must
+// be identical across the year (only its surface colour/texture changes). The carrot's spring
+// pad drifted wider because the dressing said "scattered petals on AND AROUND the pad" — petals
+// spilling past the rim widened the base. Keep all dressing ON the pad, inside its outline.
+export const PAD_LOCK =
+  "keep the round ground pad the EXACT same elliptical size, shape, outline and position as the " +
+  "source pad — do not grow, shrink, reshape or move it; change ONLY its surface colour and texture " +
+  "for the season. Any seasonal dressing (petals, leaves, frost, snow) rests ON the pad's surface " +
+  "INSIDE its outline and is never scattered onto the transparent margin or allowed to widen the " +
+  "pad's silhouette";
