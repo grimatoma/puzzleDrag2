@@ -4,6 +4,7 @@
 // compare against the shipped willow prompts in the design doc.
 export default {
   subject: "willow",
+  tileKey: "tile_tree_willow", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "tree-deciduous",
   size: 128,
   summer: { existing: "docs/seasonal-tile-system/assets/willow-summer.png" },

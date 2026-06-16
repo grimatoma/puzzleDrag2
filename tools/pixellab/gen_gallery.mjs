@@ -11,9 +11,10 @@
 //     reveals the alternates each key frame was picked from, the chosen one badged;
 //   • each subject with NO art yet -> a placeholder card (four dashed season slots) so the
 //     set's progress is visible as it fills in.
-// Category/size come from tools/pixellab/subjects/<slug>.mjs; "in-game" from the
-// seasonalArt.ts registry. Candidates are matched to their chosen frame BY HASH. Everything
-// is referenced by relative path (never base64).
+// Category/size come from tools/pixellab/subjects/<slug>.mjs; "in-game" from each subject's
+// tileKey having a public/seasonal-tiles/<tileKey>/ folder (the engine auto-discovers those).
+// Candidates are matched to their chosen frame BY HASH. Everything is referenced by relative
+// path (never base64).
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
@@ -45,11 +46,16 @@ const has = (p) => existsSync(join(ROOT, p));
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const md5 = (p) => createHash("md5").update(readFileSync(join(ROOT, p))).digest("hex");
 
-// Subjects integrated in-game = the dirs in the seasonalArt REGISTRY.
+// Subjects integrated in-game = tile keys with a public/seasonal-tiles/<tileKey>/ folder
+// that ships (at least) the summer anchor frame — the engine auto-discovers these.
 function integratedDirs() {
-  const src = readFileSync(join(ROOT, "src/textures/seasonal/seasonalArt.ts"), "utf8");
-  const region = src.slice(src.indexOf("REGISTRY"), src.indexOf("BAKED_SEASONAL_KEYS"));
-  return new Set([...region.matchAll(/dir:\s*"([^"]+)"/g)].map((m) => m[1]));
+  const dir = "public/seasonal-tiles";
+  if (!has(dir)) return new Set();
+  return new Set(
+    readdirSync(join(ROOT, dir), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && has(`${dir}/${d.name}/idle-summer.png`))
+      .map((d) => d.name),
+  );
 }
 
 async function meta(subject) {
@@ -57,7 +63,7 @@ async function meta(subject) {
   if (!has(cfgPath)) return {};
   try {
     const cfg = (await import(pathToFileURL(join(ROOT, cfgPath)).href)).default;
-    return { size: cfg.size, decimateTo: cfg.decimateTo };
+    return { size: cfg.size, decimateTo: cfg.decimateTo, tileKey: cfg.tileKey };
   } catch {
     return {};
   }
@@ -99,7 +105,7 @@ function realCard({ slug, name, cat, files, animFiles, cands, m, integrated }) {
     .map((t) => ({ src: `assets/anim/${slug}-${t}.gif`, cap: TRANS_LABEL[t] }));
 
   const sizeChip = m.size ? ` <span class="pill info">${m.decimateTo ? `${m.size}→${m.decimateTo}px` : `${m.size}px`}</span>` : "";
-  const liveChip = integrated.has(slug) ? ` <span class="pill ok">in-game</span>` : ` <span class="pill idle">art only</span>`;
+  const liveChip = integrated.has(m.tileKey) ? ` <span class="pill ok">in-game</span>` : ` <span class="pill idle">art only</span>`;
 
   // Candidate strip (hidden unless the page toggle is on).
   const candSeasons = Object.keys(cands);

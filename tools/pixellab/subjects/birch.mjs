@@ -7,6 +7,7 @@
 // Generated and shipped at 128px (no decimate — the set is 128 going forward).
 export default {
   subject: "birch",
+  tileKey: "tile_tree_birch", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "tree-deciduous",
   size: 128,
 

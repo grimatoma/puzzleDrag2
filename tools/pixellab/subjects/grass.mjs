@@ -1,6 +1,7 @@
 // Meadow grass — GRASS/groundcover. VALIDATED + shipped; thin config for reproduction.
 export default {
   subject: "grass",
+  tileKey: "tile_grass_meadow", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "grass",
   size: 128,
   summer: { existing: "docs/seasonal-tile-system/assets/grass-summer.png" },

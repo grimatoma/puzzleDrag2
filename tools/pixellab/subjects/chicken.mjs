@@ -8,6 +8,7 @@
 // as-is). The rest of the set is 128 going forward — chicken is the one 64px exception.
 export default {
   subject: "chicken",
+  tileKey: "tile_bird_chicken", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "bird",
   size: 64,
 

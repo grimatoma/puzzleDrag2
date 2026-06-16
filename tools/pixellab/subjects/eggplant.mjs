@@ -2,6 +2,7 @@
 // thin config for reproduction.
 export default {
   subject: "eggplant",
+  tileKey: "tile_veg_eggplant", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "produce-veg",
   size: 128,
   summer: { existing: "docs/seasonal-tile-system/assets/eggplant-summer.png" },

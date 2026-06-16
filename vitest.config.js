@@ -1,8 +1,9 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { seasonalSubjects } from "./tools/vite/seasonalSubjects.mjs";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), seasonalSubjects()],
   test: {
     environment: "node",
     include: [

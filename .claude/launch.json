@@ -8,6 +8,12 @@
       "port": 5173
     },
     {
+      "name": "dev-worktree",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5199", "--strictPort"],
+      "port": 5199
+    },
+    {
       "name": "docs-static",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8099"],
