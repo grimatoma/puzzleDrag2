@@ -1454,3 +1454,291 @@
     transition: none !important;
   }
 }
+
+/* ── Cost matrix (Buildings / Tools / Resources balance grids) ───────────────── */
+
+.wiki-root .wiki-cost-card {
+  scroll-margin-top: 64px;
+}
+
+/* Sticky action bar — stays pinned under the header while the grids scroll. */
+.wiki-root .wiki-cost-actionbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wiki-parchment) 92%, transparent);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--wiki-border);
+  box-shadow: var(--wiki-shadow-card);
+}
+
+.wiki-root .wiki-cost-actionbar__status {
+  font-size: 13px;
+  color: var(--wiki-ink);
+}
+
+/* Scroll wrapper — horizontal for wide grids, vertical cap so the sticky
+   header has something to pin against on tall grids. */
+.wiki-root .wiki-cost-scroll {
+  overflow: auto;
+  max-height: min(70vh, 640px);
+  border: 1px solid var(--wiki-border);
+  border-radius: 10px;
+  background: var(--wiki-parchment);
+}
+
+.wiki-root .wiki-cost-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+  font-size: 12px;
+  color: var(--wiki-ink);
+}
+
+/* Header cells */
+.wiki-root .wiki-cost-th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--wiki-parchment-deep);
+  border-bottom: 2px solid var(--wiki-border);
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--wiki-ink-subtle);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wiki-root .wiki-cost-th--row {
+  left: 0;
+  z-index: 4; /* top-left corner sits above both sticky axes */
+  text-align: left;
+  min-width: 150px;
+}
+
+.wiki-root .wiki-cost-th--ctx {
+  text-align: left;
+}
+
+.wiki-root .wiki-cost-th--num {
+  min-width: 52px;
+}
+
+.wiki-root .wiki-cost-th--currency {
+  color: var(--wiki-ember-deep);
+}
+
+.wiki-root .wiki-cost-th__inner {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.05;
+}
+
+.wiki-root .wiki-cost-th__label {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Row header (sticky first column) */
+.wiki-root .wiki-cost-rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--wiki-parchment);
+  border-bottom: 1px solid var(--wiki-canvas-rule);
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wiki-root .wiki-cost-rowhead__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Context (read-only) cells */
+.wiki-root .wiki-cost-ctx {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--wiki-canvas-rule);
+  color: var(--wiki-ink-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Numeric cost cells */
+.wiki-root .wiki-cost-cell {
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--wiki-canvas-rule);
+  border-left: 1px solid color-mix(in srgb, var(--wiki-canvas-rule) 60%, transparent);
+  text-align: center;
+}
+
+.wiki-root .wiki-cost-cell--changed {
+  background: color-mix(in srgb, var(--wiki-ember) 16%, transparent);
+}
+
+/* Hover highlight across the whole row, including sticky cells */
+.wiki-root .wiki-cost-table tbody tr:hover .wiki-cost-rowhead,
+.wiki-root .wiki-cost-table tbody tr:hover .wiki-cost-ctx,
+.wiki-root .wiki-cost-table tbody tr:hover .wiki-cost-cell {
+  background: color-mix(in srgb, var(--wiki-ember) 8%, var(--wiki-parchment));
+}
+
+/* Editable number input */
+.wiki-root .wiki-cost-input {
+  width: 52px;
+  padding: 2px 4px;
+  text-align: right;
+  font-family: var(--wiki-font-mono);
+  font-size: 12px;
+  color: var(--wiki-ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.wiki-root .wiki-cost-input::-webkit-outer-spin-button,
+.wiki-root .wiki-cost-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.wiki-root .wiki-cost-input:hover {
+  border-color: var(--wiki-border);
+}
+
+.wiki-root .wiki-cost-input:focus {
+  outline: none;
+  border-color: var(--wiki-ember);
+  background: var(--wiki-parchment);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wiki-ember) 25%, transparent);
+}
+
+.wiki-root .wiki-cost-input--changed {
+  font-weight: 700;
+  color: var(--wiki-ember-deep);
+}
+
+.wiki-root .wiki-cost-input::placeholder {
+  color: color-mix(in srgb, var(--wiki-ink-subtle) 45%, transparent);
+}
+
+/* Read-only numeric display (Player view / inert cells) */
+.wiki-root .wiki-cost-static {
+  font-family: var(--wiki-font-mono);
+  font-size: 12px;
+}
+
+.wiki-root .wiki-cost-static--changed {
+  font-weight: 700;
+  color: var(--wiki-ember-deep);
+}
+
+.wiki-root .wiki-cost-blank {
+  color: color-mix(in srgb, var(--wiki-ink-subtle) 40%, transparent);
+}
+
+/* Grouping band (resources: Crafted / Raw) */
+.wiki-root .wiki-cost-band td {
+  position: sticky;
+  left: 0;
+  background: var(--wiki-parchment-deep);
+  border-bottom: 1px solid var(--wiki-border);
+  border-top: 1px solid var(--wiki-border);
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wiki-ink-subtle);
+}
+
+/* ── Export modal ─────────────────────────────────────────────────────────────── */
+
+.wiki-root .wiki-cost-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(43, 34, 24, 0.45);
+}
+
+.wiki-root .wiki-cost-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(720px, 100%);
+  max-height: 86vh;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--wiki-parchment);
+  border: 1px solid var(--wiki-border);
+  box-shadow: var(--wiki-shadow-panel);
+}
+
+.wiki-root .wiki-cost-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wiki-root .wiki-cost-modal__close {
+  font-size: 14px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--wiki-ink-subtle);
+  background: var(--wiki-parchment-deep);
+  border: 1px solid var(--wiki-border);
+  cursor: pointer;
+}
+
+.wiki-root .wiki-cost-modal__close:hover {
+  color: var(--wiki-ink);
+}
+
+.wiki-root .wiki-cost-export-text {
+  flex: 1;
+  min-height: 280px;
+  resize: vertical;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--wiki-border);
+  background: var(--wiki-canvas);
+  color: var(--wiki-ink);
+  font-family: var(--wiki-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-cost-actionbar {
+    backdrop-filter: none;
+  }
+}

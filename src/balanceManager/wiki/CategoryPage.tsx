@@ -42,7 +42,13 @@ import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
 import { ProgressionTimeline } from "./sections/ProgressionTimeline.jsx";
+import { LiveCostMatrix } from "./sections/CostMatrixCard.jsx";
+import { useWikiView } from "./wikiView.js";
+import type { CostMatrixId } from "./costMatrix.js";
 import { conceptAccent } from "./conceptAccent.js";
+
+/** Concepts that get an inline editable cost matrix on their category page. */
+const COST_MATRIX_CONCEPTS = new Set<string>(["buildings", "tools", "resources"]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +80,7 @@ export interface CategoryPageProps {
 
 export function CategoryPage({ conceptId }: CategoryPageProps) {
   const { navigate } = useBalanceNav();
+  const { view } = useWikiView();
 
   // Tracks whether the recipe graph section is open (collapsed by default)
   const [graphOpen, setGraphOpen] = useState(false);
@@ -244,6 +251,13 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       {conceptId === "bosses" && <BossComparison />}
       {conceptId === "workers" && <WorkerComparison />}
       {conceptId === "tiles" && <ProgressionTimeline />}
+
+      {/* ── 4a. Editable cost matrix (Buildings / Tools / Resources) ───────
+          Editing is staging-only (Developer view); the unified "Cost matrix"
+          dev page stacks all three and exports the staged changes. */}
+      {COST_MATRIX_CONCEPTS.has(conceptId) && (
+        <LiveCostMatrix matrixId={conceptId as CostMatrixId} editable={view === "developer"} />
+      )}
 
       {/* ── 4b. Recipe relationship graph (recipes concept only) ─────────── */}
       {conceptId === "recipes" && (

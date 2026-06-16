@@ -43,6 +43,9 @@ const WikiHomeLazy = lazy(() =>
 const ProgressionFeedLazy = lazy(() =>
   import("./sections/ProgressionFeed.jsx").then((m) => ({ default: m.default })),
 );
+const CostMatrixPageLazy = lazy(() =>
+  import("./sections/CostMatrixPage.jsx").then((m) => ({ default: m.CostMatrixPage })),
+);
 const IconsTab = lazy(() => import("../tabs/IconsTab.jsx")) as unknown as TabComponent;
 const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
 
@@ -399,6 +402,8 @@ export default function WikiShell() {
     } else {
       mainContent = <NarrativePageLazy slug={pageSlug!} />;
     }
+  } else if (tab === "costMatrix") {
+    mainContent = <CostMatrixPageLazy />;
   } else if (tab === "icons") {
     mainContent = <IconsTab draft={draft} updateDraft={noop} focus={focus} />;
   } else if (tab === "animationsDemo") {
