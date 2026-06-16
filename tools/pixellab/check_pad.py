@@ -27,11 +27,11 @@ from PIL import Image
 
 def pad_metrics(path, band=5):
     im = Image.open(path).convert('RGBA'); W, H = im.size; px = im.load()
-    rows = {}
+    rows = {}; all_xs = []
     for y in range(H):
         xs = [x for x in range(W) if px[x, y][3] > 128]
         if xs:
-            rows[y] = (xs[0], xs[-1])
+            rows[y] = (xs[0], xs[-1]); all_xs += xs
     if not rows:
         return None
     bottom = max(rows)
@@ -40,7 +40,12 @@ def pad_metrics(path, band=5):
     centers = sorted((r[0] + r[1]) / 2.0 for r in band_rows)
     pad_w = widths[len(widths) // 2]
     pad_cx = centers[len(centers) // 2]
-    return dict(bottom_y=bottom, pad_w=pad_w, pad_cx=pad_cx, size=(W, H))
+    # content_cx = center of the whole opaque silhouette. The PAD can be centered
+    # while this is not (a slanted carrot's body leans up to one side) -- and the
+    # engine blits the frame centered, so it is content_cx, not pad_cx, that decides
+    # whether the tile looks centered in its cell. pack_sheets.py re-centers on this.
+    content_cx = (min(all_xs) + max(all_xs)) / 2.0
+    return dict(bottom_y=bottom, pad_w=pad_w, pad_cx=pad_cx, content_cx=content_cx, size=(W, H))
 
 
 def realign(path, dx, dy, out):
@@ -61,7 +66,13 @@ def main():
     a = ap.parse_args()
 
     r = pad_metrics(a.ref, a.band)
-    print('ref %s: bottom=%d width=%d cx=%.1f' % (os.path.basename(a.ref), r['bottom_y'], r['pad_w'], r['pad_cx']))
+    frame_cx = (r['size'][0] - 1) / 2.0
+    pad_off = r['pad_cx'] - frame_cx
+    body_lean = r['content_cx'] - r['pad_cx']
+    print('ref %s: bottom=%d width=%d pad_cx=%.1f (off frame %+.1f) body_lean=%+.1f' % (
+        os.path.basename(a.ref), r['bottom_y'], r['pad_w'], r['pad_cx'], pad_off, body_lean))
+    print('  (pack_sheets.py centers the PAD in the frame; a body_lean just means the subject is')
+    print('   slanted/asymmetric on its pad -- that is fine, the base still ships centered.)')
     bad = 0
     for c in a.check:
         m = pad_metrics(c, a.band)

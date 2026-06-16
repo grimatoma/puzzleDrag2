@@ -13,7 +13,7 @@ export const SEASONS = {
     light: "soft, cool, bright early-spring light",
     pad: "the round ground pad is fresh new spring-green grass with a little dew",
     palette: "a fresh, lightly-desaturated pastel palette",
-    overlays: "a few tiny blossoms and scattered pale petals on and around the pad",
+    overlays: "a few tiny blossoms and pale petals resting on the pad's grass, inside its outline (none on the margin)",
   },
   summer: {
     light: "warm midday light",
@@ -25,13 +25,13 @@ export const SEASONS = {
     light: "low, warm, golden late-afternoon light",
     pad: "the round ground pad is amber-tan grass",
     palette: "a gold, orange and rust palette",
-    overlays: "the first few fallen leaves scattered on and around the pad",
+    overlays: "the first few fallen leaves resting on the pad, inside its outline (none on the margin)",
   },
   winter: {
     light: "pale, cool, blue-shadowed winter light",
-    pad: "clean white snow fully covering the round pad and the ground",
+    pad: "clean white snow covering the round pad, keeping the pad's exact same outline (no snow spreading onto the transparent margin)",
     palette: "a desaturated, cool palette with soft blue shadows",
-    overlays: "frost and little caps of snow",
+    overlays: "frost and little caps of snow on the pad",
   },
 };
 

@@ -163,6 +163,20 @@ python tools/pixellab/pack_sheets.py <subject>
 ```
 Transparent horizontal strips → `public/seasonal-tiles/<subject>/{idle-<season>.png, trans-<from>-<to>.png}`.
 
+**Pad centering is automatic here (don't skip it).** The engine (`drawFrame` in
+`src/textures/seasonal/seasonalArt.ts`) blits each native frame **centered** in the tile cell, so where a
+tile sits in its cell is decided by where its pixels sit in the frame. The element that must be consistent
+is the **ground pad** — the small round patch every tile shares — so every season and every tile rests on
+the **same centered base** and the land never jumps. `pack_sheets.py` shifts each sheet so its rest frame's
+**pad** (bottom-rim center) lands on frame-center, and prints the shift (`center dx=…`). Center on the
+**pad, not the content bbox**: a slanted/asymmetric subject's reach (the carrot's feathery top sprawls
+up-right) would drag the bbox — and thus the pad — off-center, making the base poke out to one side. The
+subject may lean within the cell (**slant is fine**); the pad stays put. For a symmetric subject (willow,
+chicken) pad-center == frame-center, so `dx≈0` (no-op). This is the **carrot lesson**: its spring pad had
+drifted +4px and every season's body leaned right — centering the pad fixed the base across all four seasons
+while keeping the slant. `--no-center` opts out. **Re-pack (don't hand-edit) the sheets** so it stays
+reproducible.
+
 ### 6 — Engine integration (optional)
 Wire the subject onto the board. See `references/engine-integration.md` for the willow pattern and how to
 generalize it to a registry so any subject registers declaratively. Then **verify in-game** (step 7 there).
@@ -182,7 +196,7 @@ idle's frames with the season still, then `assemble_gifs.py`) so the gallery sho
 
 | Check | Command | Catches |
 |---|---|---|
-| Pad alignment | `python tools/pixellab/check_pad.py --ref <subject>-summer.png --check <subject>-{spring,autumn,winter}.png [--fix]` | pad drift (SHIFT auto-fixes; REJECT = regenerate). Measures the bottom `--band` rim only, so base props don't skew it. |
+| Pad alignment | `python tools/pixellab/check_pad.py --ref <subject>-summer.png --check <subject>-{spring,autumn,winter}.png [--fix]` | pad drift *between seasons* (SHIFT auto-fixes; REJECT = regenerate). Measures the bottom `--band` rim only, so base props don't skew it. Also prints the ref's `body_lean` (how far the subject leans off its pad — informational; a slant is fine). NOTE: this aligns seasons to each other; `pack_sheets.py` then centers the **pad in the frame** so the base sits at cell-center. The "land base must be centered + consistent across all seasons" rule is enforced by **both**, on the pad — never the content bbox. |
 | Envelope | `python tools/pixellab/check_envelope.py <subject>` | a season that grew/shrank/sprawled vs summer (numeric; pair with the montage) |
 | Glow | `python tools/pixellab/check_glow.py .../anim/<subject>-idle-<season>` | the bright overshoot frame in an idle/transition |
 | Fix glow | `python tools/pixellab/drop_glow_frame.py <dir> <index>` then re-pack | — |
@@ -210,6 +224,14 @@ Throwaway one-offs are named `_*` and gitignored; the above are the durable pipe
 
 ## Gotchas
 
+- **The engine blits each native frame CENTERED in the cell — so the GROUND PAD must be centered in the
+  frame, and identically across every season, or the tile renders off to one side / the base jumps.** This is
+  enforced at pack time (`pack_sheets.py` centers the pad; default on). Center on the **pad (bottom rim)**,
+  never the content bounding box — a slanted/asymmetric subject (the carrot's feathery top sprawls up-right)
+  drags the bbox off-center and pulls the pad with it. The subject is allowed to lean (slant is fine); the
+  *base* is the thing that must be centered + consistent. The carrot shipped off-center because (a) its
+  spring still's pad had drifted +4px and never got `check_pad --fix`, and (b) nothing centered the pad in
+  the frame at all — both now closed.
 - Windows console is cp1252 — keep script output ASCII (a stray `Δ` crashes Python).
 - `convert` on PATH is the Windows disk tool, NOT ImageMagick — use Python/Pillow for GIFs.
 - Big edits can exceed a 240s poll; the wrapper's timeout is 540s — re-poll a job by id rather than
