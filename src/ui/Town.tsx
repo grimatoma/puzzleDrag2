@@ -204,7 +204,7 @@ export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) 
   );
 }
 
-export function TownView({ state, dispatch, active = true }: { state: GameState; dispatch: Dispatch; active?: boolean }) {
+export function TownView({ state, dispatch, active = true, onReady }: { state: GameState; dispatch: Dispatch; active?: boolean; onReady?: () => void }) {
   const [entryBiome, setEntryBiome] = useState<string | null>(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
   // Build flow: when set, the player has chosen a building and is now picking
@@ -322,6 +322,7 @@ export function TownView({ state, dispatch, active = true }: { state: GameState;
           below stay fixed. */}
       <TownPhaserCanvas
         active={active}
+        onReady={onReady}
         zoneId={mapCurrent}
         plan={townPlan}
         builtLots={builtLotIndices}

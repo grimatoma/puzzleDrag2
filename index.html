@@ -47,10 +47,95 @@
       .animate-fadein { animation: fadein .2s cubic-bezier(0.4, 0, 0.2, 1); }
       .animate-bubblein { animation: bubblein .35s cubic-bezier(.34,1.56,.64,1); }
       .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+      /* ── Boot splash ─────────────────────────────────────────────────────
+         Painted on the first byte (before the JS bundle even downloads), so
+         the player never sees a bare tan rectangle while Phaser loads. Lives
+         OUTSIDE #root so React's mount can't wipe it. Removed by the inline
+         script at the bottom of <body> once the game signals it's ready
+         (src/bootSplash.ts → window.__bootSplash.dismiss). */
+      #boot-splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 22px;
+        background: radial-gradient(120% 100% at 50% 38%, #f6efe0 0%, #e9dfc6 58%, #ddd0b1 100%);
+        color: #2b2218; overflow: hidden;
+        transition: opacity .55s ease;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      #boot-splash.boot-splash--hidden { opacity: 0; pointer-events: none; }
+      .boot-cloud { position: absolute; border-radius: 999px; background: #fbf5e6; filter: blur(2px); z-index: 0; pointer-events: none; }
+      .boot-cloud--a { width: 190px; height: 56px; top: 17%; opacity: .55; animation: bootCloud 26s linear infinite; }
+      .boot-cloud--b { width: 130px; height: 42px; top: 30%; opacity: .4;  animation: bootCloud 34s linear infinite; animation-delay: -13s; }
+      .boot-cloud--c { width: 230px; height: 62px; top: 9%;  opacity: .32; animation: bootCloud 46s linear infinite; animation-delay: -30s; }
+      @keyframes bootCloud { from { transform: translateX(-280px); } to { transform: translateX(calc(100vw + 280px)); } }
+      .boot-hearth, .boot-textblock, .boot-bar { position: relative; z-index: 1; }
+      .boot-hearth { width: 148px; height: 164px; }
+      .boot-hearth .glow { fill: #ffb24a; transform-box: fill-box; transform-origin: 50% 72%; animation: bootGlow 2.4s ease-in-out infinite; }
+      .boot-hearth .flame { transform-box: fill-box; transform-origin: 50% 100%; }
+      .boot-hearth .flame--outer { fill: #e0631f; animation: bootFlicker 1.7s ease-in-out infinite; }
+      .boot-hearth .flame--mid   { fill: #ffaa2b; animation: bootFlicker 1.15s ease-in-out infinite reverse; }
+      .boot-hearth .flame--core  { fill: #ffe49a; animation: bootCore 0.85s ease-in-out infinite; }
+      @keyframes bootFlicker { 0%,100% { transform: scaleY(1) scaleX(1) translateY(0); } 45% { transform: scaleY(1.1) scaleX(.92) translateY(-2px); } 72% { transform: scaleY(.96) scaleX(1.04); } }
+      @keyframes bootCore { 0%,100% { transform: scaleY(1) scaleX(1); opacity: 1; } 50% { transform: scaleY(1.16) scaleX(.9); opacity: .82; } }
+      @keyframes bootGlow { 0%,100% { opacity: .26; transform: scale(1); } 50% { opacity: .5; transform: scale(1.08); } }
+      .boot-textblock { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+      .boot-title { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; font-size: clamp(30px, 7vw, 42px); font-weight: 700; letter-spacing: .5px; color: #3a2a18; text-shadow: 0 1px 0 #fff7e6, 0 0 22px rgba(224,99,31,.28); }
+      .boot-sub { font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: #7a5e3f; opacity: .85; }
+      .boot-bar { width: min(220px, 56vw); height: 6px; border-radius: 999px; background: rgba(122,94,63,.2); overflow: hidden; }
+      .boot-bar__fill { width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e2b24a, #e0631f); animation: bootSlide 1.35s cubic-bezier(.45,0,.55,1) infinite; }
+      @keyframes bootSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(360%); } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-cloud, .boot-hearth .flame, .boot-hearth .glow, .boot-bar__fill { animation: none; }
+        .boot-bar__fill { width: 100%; opacity: .8; }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Initial loading screen. Inline so it paints before the JS bundle
+         loads; removed once the game is fully loaded (see the script below). -->
+    <div id="boot-splash" role="status" aria-label="Loading Hearthlands">
+      <div class="boot-cloud boot-cloud--a"></div>
+      <div class="boot-cloud boot-cloud--b"></div>
+      <div class="boot-cloud boot-cloud--c"></div>
+      <svg class="boot-hearth" viewBox="-60 -72 120 134" aria-hidden="true">
+        <ellipse class="glow" cx="0" cy="6" rx="50" ry="46"></ellipse>
+        <ellipse cx="0" cy="53" rx="40" ry="7" fill="rgba(60,40,20,.16)"></ellipse>
+        <rect x="-38" y="42" width="76" height="13" rx="6.5" fill="#6e4a2c" transform="rotate(-8)"></rect>
+        <rect x="-38" y="42" width="76" height="13" rx="6.5" fill="#825b37" transform="rotate(9)"></rect>
+        <path class="flame flame--outer" d="M -26,42 C -36,8 -20,-16 0,-56 C 20,-16 36,8 26,42 C 14,54 -14,54 -26,42 Z"></path>
+        <path class="flame flame--mid"   d="M -17,42 C -24,12 -12,-8 0,-38 C 12,-8 24,12 17,42 C 9,52 -9,52 -17,42 Z"></path>
+        <path class="flame flame--core"  d="M -9,42 C -13,18 -6,2 0,-20 C 6,2 13,18 9,42 C 5,49 -5,49 -9,42 Z"></path>
+      </svg>
+      <div class="boot-textblock">
+        <div class="boot-title">Hearthlands</div>
+        <div class="boot-sub">Stoking the hearth…</div>
+      </div>
+      <div class="boot-bar"><div class="boot-bar__fill"></div></div>
+    </div>
+    <script>
+      // Expose a one-shot dismiss the app calls when the game has fully loaded
+      // (src/bootSplash.ts). Classic (non-module) script so it runs immediately
+      // at parse time — window.__bootSplash is defined before main.tsx executes.
+      (function () {
+        function dismiss() {
+          var el = document.getElementById("boot-splash");
+          if (!el || el.dataset.dismissing) return;
+          el.dataset.dismissing = "1";
+          el.classList.add("boot-splash--hidden");
+          window.setTimeout(function () {
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+          }, 650);
+        }
+        window.__bootSplash = { dismiss: dismiss };
+        // Safety net: a Phaser boot failure must never trap the player behind
+        // the splash. Self-dismiss after a generous ceiling regardless.
+        window.setTimeout(dismiss, 12000);
+      })();
+    </script>
+
     <script type="module" src="/main.tsx"></script>
   </body>
 </html>
