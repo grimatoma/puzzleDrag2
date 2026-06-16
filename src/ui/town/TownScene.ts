@@ -44,12 +44,16 @@ export interface TownPlan {
 // ── Tuxemon tileset indices (0-based, 24 cols, 32px, extruded margin=1 spacing=2)
 // Verified by slicing public/town/tileset.png into a labelled montage.
 const T = {
-  GRASS: 26,                                   // pure flat grass
-  GRASS_ALT: [50, 51, 76, 77, 98, 99] as const, // subtle grass variants (no decor)
+  GRASS: 125,                                  // clean flat grass (blob centre — no baked fleck)
+  GRASS_ALT: [126, 189] as const,              // genuinely clean grass variants (subtle, no sand)
   GRASS_FLOWER: [120, 121] as const,           // poppy + clover on grass (opaque)
-  DIRT: 35,                                    // clean tan path (roads / plaza / fields)
+  DIRT: 173,                                   // clean tan path (sand-blob centre; roads / plaza / fields)
   WATER: 250,                                  // deep solid water
 };
+// NB: 26/35 and the 50/51/76/77/98/99 "variants" are NOT flat — each carries a
+// baked dark fleck / sand patch (they're grass↔sand transition tiles). Used as a
+// flat fill they line up into a regular grid of "smudges". The clean interiors are
+// 125 (grass) and 173 (sand, the centre of the autotiler's blob).
 
 // Multi-tile sprite recipes baked into standalone textures (avoids extrusion
 // seams, gains transparency). [gridCols, gridRows, tileIndices...]

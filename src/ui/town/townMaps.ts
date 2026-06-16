@@ -25,8 +25,12 @@ const DESIGN_H = ROWS * TILE; // 960
 
 // ── Tileset indices (mirror of the private `T` in TownScene.ts; appendix of
 // docs/zone-tier-ladder.html). Authors may also write -1 for a blank cell.
-const GRASS = 26;
-const GRASS_ALT = [50, 51, 76, 77, 98, 99];
+// Clean flat fills — NOT 26/35 or the 50/51/… "variants", which each carry a
+// baked dark fleck / sand patch and tile into a regular grid of smudges. See the
+// `T` table in TownScene.ts. 125 = clean grass; sand fill is the autotiler's blob
+// centre (roadAutotile SAND.fill).
+const GRASS = 125;
+const GRASS_ALT = [126, 189];
 const GRASS_FLOWER = [120, 121];
 
 type Grid = number[][];
