@@ -57,9 +57,9 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer":
-        "the {foliage} fills in and the spring green deepens to lush full summer green and the light warms; the trunk stays anchored",
+        "the {foliage} fills in and the spring green deepens to lush full summer green; the trunk stays anchored",
       "summer-autumn":
-        "the {foliage} turns from green to {autumnColor} from the top down, a few leaves loosen and begin to fall around the tree, and a small mound starts to gather at the base; the light warms to gold",
+        "the {foliage} turns from green to {autumnColor} from the top down, a few leaves loosen and begin to fall around the tree, and a small mound starts to gather at the base",
       // autumn->winter is TWO segments via the bare-mound hinge:
       "autumn-baremound":
         "the remaining {autumnColor} leaves detach and fall and gather into a mound at the base until the slender branches are bare, no snow",
@@ -92,8 +92,8 @@ export const CATEGORIES = {
       winter: "the snow-laden boughs dip and settle, shedding a little loose snow",
     },
     trans: {
-      "spring-summer": "the green deepens and the light warms; the shape stays anchored",
-      "summer-autumn": "the light warms to gold and a few needles loosen; the boughs stay green",
+      "spring-summer": "the green deepens; the shape stays anchored",
+      "summer-autumn": "a few needles loosen; the boughs stay green",
       "autumn-winter": "snow begins to fall and settles as caps along the boughs and covers the pad",
     },
     twoSegmentAutumnWinter: false,
@@ -128,7 +128,7 @@ export const CATEGORIES = {
       "spring-summer":
         "the blades deepen from fresh spring green to lush full summer green and grow fuller as the little wildflowers fade back into the tussock",
       "summer-autumn":
-        "the grass dries from green to golden tan from the blade tips downward, the tussock goes strawy and a few blades droop loose, the light warms",
+        "the grass dries from green to dry tan from the blade tips downward, the tussock goes strawy and a few blades droop loose",
       "autumn-winter":
         "first the dry blades flatten and pale, then snow begins to fall and settle, covering the pad and partly burying the base of the tussock with frost on the tips",
     },
@@ -158,7 +158,7 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer": "the green shoots grow tall and the heads ripen from green to gold",
-      "summer-autumn": "the stalks dry and bow under the weight of the ripe heads, the light warms",
+      "summer-autumn": "the stalks dry and bow under the weight of the ripe heads",
       "autumn-winter": "the stalks are cut down to stubble and snow falls and covers the soil pad",
     },
     twoSegmentAutumnWinter: false,
@@ -200,7 +200,7 @@ export const CATEGORIES = {
       "spring-summer":
         "the item ripens and deepens to its full glossy colour, the skin tightens and gains a wet shine, and the little spring blossom falls away",
       "summer-autumn":
-        "the item loses its glossy shine and dulls toward an overripe tone, the skin wrinkles slightly, and a couple of fallen leaves gather on the pad, the light warms",
+        "the item loses its glossy shine and dulls toward an overripe tone, the skin wrinkles slightly, and a couple of fallen leaves gather on the pad",
       "autumn-winter":
         "snow begins to fall and gently settles, building up to fully cover the pad in clean white with just a light dusting of frost on the item; the item keeps its OWN colour and stays clearly visible the whole time — NO white burst, splash, flash, bloom or full ice-coating",
     },
@@ -231,7 +231,7 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer": "the fruit ripens to its full rich colour and gains a sheen, the blossom falls away",
-      "summer-autumn": "the fruit deepens and develops a soft spot, a couple of leaves gather on the pad, the light warms",
+      "summer-autumn": "the fruit deepens and develops a soft spot, a couple of leaves gather on the pad",
       "autumn-winter": "frost forms on the fruit and snow falls and settles over the pad",
     },
     twoSegmentAutumnWinter: false,
@@ -260,7 +260,7 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer": "the bud opens fully into a richly coloured bloom",
-      "summer-autumn": "the bloom fades and dulls and a seed head begins to form, the light warms",
+      "summer-autumn": "the bloom fades and dulls and a seed head begins to form",
       "autumn-winter": "the bloom dries to a dormant stalk and snow falls and covers the pad",
     },
     twoSegmentAutumnWinter: false,
@@ -289,8 +289,8 @@ export const CATEGORIES = {
       winter: "the bird gives a small shiver and a head-bob, then settles back to rest with a faint puff of breath",
     },
     trans: {
-      "spring-summer": "the pad's little spring flowers fade and the grass deepens to lush summer green and the light warms; the bird stays in place with a small settle",
-      "summer-autumn": "a few leaves drift down and settle on the pad and the light warms to gold; the bird stays in place with a small head-bob",
+      "spring-summer": "the pad's little spring flowers fade and the grass deepens to lush summer green; the bird stays in place with a small settle",
+      "summer-autumn": "a few leaves drift down and settle on the pad; the bird stays in place with a small head-bob",
       "autumn-winter": "snow begins to fall and settles, covering the leaves and the pad in clean white and the light turns pale and cool; the bird fluffs up against the cold",
     },
     twoSegmentAutumnWinter: false,
@@ -319,7 +319,7 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer": "the spring petals fade and the pad deepens to lush summer green; the animal stays in place with a small weight-shift",
-      "summer-autumn": "a few leaves drift onto the pad and the light warms; the animal stays in place with a tail-swish",
+      "summer-autumn": "a few leaves drift onto the pad; the animal stays in place with a tail-swish",
       "autumn-winter": "snow falls and covers the pad and the coat thickens; the animal stays in place with a small shiver",
     },
     twoSegmentAutumnWinter: false,
@@ -348,8 +348,8 @@ export const CATEGORIES = {
       winter: "a faint cold glint crosses the ore over the snow dusting",
     },
     trans: {
-      "spring-summer": "the moss dries off the pad and the light warms; the rock is unchanged",
-      "summer-autumn": "a leaf settles on the pad and the light warms to gold; the rock is unchanged",
+      "spring-summer": "the moss dries off the pad; the rock is unchanged",
+      "summer-autumn": "a leaf settles on the pad; the rock is unchanged",
       "autumn-winter": "frost and a dusting of snow form over the rock and the pad turns icy; the ore is unchanged",
     },
     twoSegmentAutumnWinter: false,
@@ -378,7 +378,7 @@ export const CATEGORIES = {
     },
     trans: {
       "spring-summer": "the water brightens and clears; the subject is unchanged",
-      "summer-autumn": "a few leaves drift onto the water and the light warms; the subject is unchanged",
+      "summer-autumn": "a few leaves drift onto the water; the subject is unchanged",
       "autumn-winter": "an icy skin forms over the water pad with a snow rim; the subject is unchanged",
     },
     twoSegmentAutumnWinter: false,
@@ -406,8 +406,8 @@ export const CATEGORIES = {
       winter: "a slow cold shine glints across the object over the snow dusting",
     },
     trans: {
-      "spring-summer": "the light warms; the object is unchanged",
-      "summer-autumn": "a leaf settles on the pad and the light warms; the object is unchanged",
+      "spring-summer": "the object is unchanged",
+      "summer-autumn": "a leaf settles on the pad; the object is unchanged",
       "autumn-winter": "snow dusts the pad and the light cools; the object is unchanged",
     },
     twoSegmentAutumnWinter: false,
