@@ -23,6 +23,7 @@ const TRANS_MS = 70;    // ms per transition frame
 const REGISTRY: Record<string, { dir: string }> = {
   tile_tree_willow: { dir: "willow" },
   tile_bird_chicken: { dir: "chicken" },
+  tile_veg_carrot: { dir: "carrot" },
 };
 
 /** Tiles whose art is fully baked — TileObj skips its angle-sway for these (the
