@@ -195,23 +195,6 @@
   .hl-browser-pane {
     @apply pl-1;
   }
-  /* Desktop (≥ BREAKPOINTS.desktop = 900px, src/ui/breakpoints.ts): cap and
-     center the two-pane block. With only a handful of items, the default
-     full-bleed layout pinned content to the top-left of a very wide panel and
-     left a large empty void below; centering it reads as a focused cluster.
-     `flex: 0 1 auto` lets the body size to its content (so the cluster centers
-     vertically) yet still shrink and let each pane scroll when content is tall.
-     Phones and landscape phones (< 900px) keep the full-bleed layout untouched. */
-  @media (min-width: 900px) {
-    .hl-browser-detail {
-      max-width: 1180px;
-      margin-inline: auto;
-      justify-content: center;
-    }
-    .hl-browser-detail__body {
-      flex: 0 1 auto;
-    }
-  }
   /* Stacked layout for narrow viewports (portrait phones) — mirrors
      BREAKPOINTS.browserStack (720) in src/ui/breakpoints.ts. Wider viewports —
      including a phone rotated to landscape — fall through to the two-column
