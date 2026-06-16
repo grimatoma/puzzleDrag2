@@ -198,8 +198,8 @@ idle's frames with the season still, then `assemble_gifs.py`) so the gallery sho
 |---|---|---|
 | Pad alignment | `python tools/pixellab/check_pad.py --ref <subject>-summer.png --check <subject>-{spring,autumn,winter}.png [--fix]` | pad drift *between seasons* (SHIFT auto-fixes; REJECT = regenerate). Measures the bottom `--band` rim only, so base props don't skew it. Also prints the ref's `body_lean` (how far the subject leans off its pad — informational; a slant is fine). NOTE: this aligns seasons to each other; `pack_sheets.py` then centers the **pad in the frame** so the base sits at cell-center. The "land base must be centered + consistent across all seasons" rule is enforced by **both**, on the pad — never the content bbox. |
 | Envelope | `python tools/pixellab/check_envelope.py <subject>` | a season that grew/shrank/sprawled vs summer (numeric; pair with the montage) |
-| Glow | `python tools/pixellab/check_glow.py .../anim/<subject>-idle-<season>` | the bright overshoot frame in an idle/transition |
-| Fix glow | `python tools/pixellab/drop_glow_frame.py <dir> <index>` then re-pack | — |
+| Glow | `python tools/pixellab/check_glow.py .../anim/<subject>-<clip>` | two failure modes: **SPIKE** = a single overshoot frame (drop it); **BLOOM** = a sustained mid-clip glow brighter than *both* endpoints — the median test misses it, so this is the gate that catches the summer→autumn "light warms" bloom. A BLOOM can't be frame-dropped; it's a prompt bug → regenerate. Run it on **transitions too**, not just idles. |
+| Fix glow | `python tools/pixellab/drop_glow_frame.py <dir> <index>` then re-pack (SPIKE only) | — |
 | Visual review | `python tools/pixellab/assemble_gifs.py <subject>` | builds loop GIFs + frame strips + a **gridline stills montage** — the real consistency/envelope eyeball. **Read these.** |
 | In-game | browser eval, see `references/engine-integration.md` | per-season render correct (pixel-sample, since WebGL screenshots time out here) |
 
@@ -232,6 +232,18 @@ Throwaway one-offs are named `_*` and gitignored; the above are the durable pipe
   *base* is the thing that must be centered + consistent. The carrot shipped off-center because (a) its
   spring still's pad had drifted +4px and never got `check_pad --fix`, and (b) nothing centered the pad in
   the frame at all — both now closed.
+- **A transition action must say NOTHING about light — mentioning it (even to forbid it) makes the bloom
+  WORSE.** `animate-with-text` over-brightens mid-clip when tweening toward a bright endpoint (the
+  summer→autumn white-out; grass flared white-yellow). The counterintuitive part, measured on grass
+  summer→autumn: the original "the light warms to gold" peaked ~+45 over the endpoints; "improving" it to a
+  hue shift **plus a NO-glow/NO-bloom negation lock made it +58** (naming an artifact summons it — negation
+  is weak in these models); even a *positive* "flat even shading, steady brightness" was +38; the SAME morph
+  described as a plain **colour + shape** change with **zero** light/exposure words was **+15**. Seeds don't
+  help (they ranged +67…+109). Rule: a transition action describes only **colour and shape**; never name
+  light, glow, exposure or brightness, positive or negative. There is deliberately **no** `BRIGHTNESS_LOCK`.
+  `check_glow.py` gates two ways — **SPIKE** (a single interior frame brighter than both neighbours → drop
+  it) and **BLOOM** (sustained peak > both endpoints; `--bloom 25` passes a natural warm/golden peak ≤~18
+  but fails a white-out ≥45). Run it on **transitions**, not just idles.
 - Windows console is cp1252 — keep script output ASCII (a stray `Δ` crashes Python).
 - `convert` on PATH is the Windows disk tool, NOT ImageMagick — use Python/Pillow for GIFs.
 - Big edits can exceed a 240s poll; the wrapper's timeout is 540s — re-poll a job by id rather than

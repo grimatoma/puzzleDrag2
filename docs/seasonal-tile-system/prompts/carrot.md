@@ -39,7 +39,7 @@ the item ripens and deepens to its full glossy colour, the skin tightens and gai
 
 ### summer → autumn  _(16 frames)_
 ```text
-the item loses its glossy shine and dulls toward an overripe tone, the skin wrinkles slightly, and a couple of fallen leaves gather on the pad, the light warms; throughout, carrot keeps the same size, position and footprint
+the item loses its glossy shine and dulls toward an overripe tone, the skin wrinkles slightly, and a couple of fallen leaves gather on the pad; throughout, carrot keeps the same size, position and footprint
 ```
 
 ### autumn → winter  _(16 frames, seed 11)_

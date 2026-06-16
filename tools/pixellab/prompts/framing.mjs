@@ -48,3 +48,12 @@ export const PAD_LOCK =
   "for the season. Any seasonal dressing (petals, leaves, frost, snow) rests ON the pad's surface " +
   "INSIDE its outline and is never scattered onto the transparent margin or allowed to widen the " +
   "pad's silhouette";
+
+// NOTE ON TRANSITION BLOOM (the summer->autumn glow): the fix is NOT a lock here. A transition
+// action that mentions LIGHT at all -- "the light warms to gold", or even a NO-glow/NO-bloom
+// negation lock -- makes animate-with-text bloom HARDER (naming the artifact summons it; talking
+// about light/exposure at all biases brightness up). Measured on grass summer->autumn: a verbose
+// action with a brightness "lock" peaked +58 over the endpoints; the SAME morph described as a
+// plain colour change with NO light words peaked +15. So the rule lives in categories.mjs: a
+// transition action describes only the COLOUR + SHAPE morph, and says nothing about light,
+// exposure, glow or brightness (positive or negative). There is deliberately no BRIGHTNESS_LOCK.
