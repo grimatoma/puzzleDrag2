@@ -83,17 +83,21 @@ export class TownScene extends Phaser.Scene {
 
   isDragging = false;
   initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
+  // Which settlement this scene is currently rendering. Lets the React bridge
+  // persist/restore the right camera when restarting the scene for a new zone.
+  zoneId?: string;
 
   constructor() {
     super("TownScene");
   }
 
-  init(data: { plan: TownPlan; builtLots?: Set<number>; buildingsMap?: Record<number, string>; pendingBuilding?: { id: string; name: string } | null; initialCameraState?: { scrollX: number; scrollY: number; zoom: number } }) {
+  init(data: { plan: TownPlan; builtLots?: Set<number>; buildingsMap?: Record<number, string>; pendingBuilding?: { id: string; name: string } | null; initialCameraState?: { scrollX: number; scrollY: number; zoom: number }; zoneId?: string }) {
     this.plan = data.plan;
     this.builtLots = data.builtLots || new Set();
     this.buildingsMap = data.buildingsMap || {};
     this.pendingBuilding = data.pendingBuilding || null;
     this.initialCameraState = data.initialCameraState;
+    this.zoneId = data.zoneId;
   }
 
   preload() {

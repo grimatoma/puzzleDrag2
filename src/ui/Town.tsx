@@ -204,7 +204,7 @@ export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) 
   );
 }
 
-export function TownView({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+export function TownView({ state, dispatch, active = true }: { state: GameState; dispatch: Dispatch; active?: boolean }) {
   const [entryBiome, setEntryBiome] = useState<string | null>(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
   // Build flow: when set, the player has chosen a building and is now picking
@@ -321,6 +321,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
           fixed-aspect stage box. The grass margins above and the UI overlays
           below stay fixed. */}
       <TownPhaserCanvas
+        active={active}
         zoneId={mapCurrent}
         plan={townPlan}
         builtLots={builtLotIndices}
