@@ -29,6 +29,9 @@ interface TownPhaserCanvasProps {
    * to town is instant rather than a full cold reboot.
    */
   active?: boolean;
+  /** Fired once the town's Phaser engine has booted (or failed to) — drives the
+   *  initial loading screen dismissal when the game opens straight into town. */
+  onReady?: () => void;
   onPlaceBuilding: (lotIndex: number, buildingId: string) => void;
   onClickBuilding: (buildingId: string) => void;
   onClickBoard: (kind: string) => void;
@@ -43,6 +46,7 @@ export default function TownPhaserCanvas({
   buildingsMap,
   pendingBuilding,
   active = true,
+  onReady,
   onPlaceBuilding,
   onClickBuilding,
   onClickBoard,
@@ -51,6 +55,16 @@ export default function TownPhaserCanvas({
   const gameRef = useRef<GameWithObserver | null>(null);
   const dprRef = useRef(Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3));
   const [loading, setLoading] = useState(true);
+  // onReady must fire exactly once (the boot effect runs once); read it through
+  // a ref and latch so a later prop change can't re-trigger it.
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; });
+  const readyFiredRef = useRef(false);
+  const fireReady = () => {
+    if (readyFiredRef.current) return;
+    readyFiredRef.current = true;
+    onReadyRef.current?.();
+  };
 
   // The scene's event listeners are bound once at postBoot, so they would
   // otherwise capture the first render's prop closures forever (e.g. a
@@ -180,8 +194,10 @@ export default function TownPhaserCanvas({
 
         gameRef.current = game as GameWithObserver;
         if (!cancelled) setLoading(false);
+        fireReady();
       } catch (err) {
         console.error("Failed to boot Phaser TownScene:", err);
+        fireReady();
       }
     })();
 

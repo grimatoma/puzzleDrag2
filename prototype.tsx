@@ -26,6 +26,7 @@ import { useA11yBridge } from "./src/a11y.js";
 import { useCapToasts } from "./src/ui/useCapToasts.jsx";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
 import { zoneInventory } from "./src/state/zoneInventory.js";
+import { dismissBootSplash } from "./src/bootSplash.js";
 import {
   BoardFrame,
   BoardLayout,
@@ -104,9 +105,11 @@ interface PhaserMountProps {
   tileCollection: GameState["tileCollection"];
   gameState: GameState;
   grid: Grid;
+  /** Fired once the board's Phaser engine has booted (the heavy load is done). */
+  onReady?: () => void;
 }
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, toolPendingPower, setChainInfo, workers, tileCollection, gameState, grid }: PhaserMountProps) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, toolPendingPower, setChainInfo, workers, tileCollection, gameState, grid, onReady }: PhaserMountProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<HearthPhaserGame | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,6 +121,10 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   // starts as "town" and the router hasn't fired yet when Phaser initialises.
   const boardActiveRef = useRef(boardActive);
   useEffect(() => { boardActiveRef.current = boardActive; }, [boardActive]);
+  // postBoot is a stale closure (the mount effect runs once); read onReady
+  // through a ref so we always call the latest callback.
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
@@ -232,12 +239,14 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               });
               setBoardRuntimeActive(game, boardActiveRef.current);
               setLoading(false);
+              onReadyRef.current?.();
             },
           },
         });
       } catch (err) {
         console.error("Failed to load Phaser:", err);
         setLoading(false);
+        onReadyRef.current?.();
       }
     })();
 
@@ -340,6 +349,16 @@ export default function App() {
   const { drag, beginDrag } = useToolDrag({ pins, pinActions, maxFitPins });
   const sceneRef = useRef<GameScene | null>(null);
   const stateRef = useRef(state);
+  // Initial loading screen — dismiss it (index.html → src/bootSplash) once the
+  // Phaser engine behind the *initial* view has fully booted. The board engine
+  // is always mounted so boardReady is a universal "engine up" signal; if we
+  // boot straight into town, also wait for the town canvas's first paint.
+  const [boardReady, setBoardReady] = useState(false);
+  const [townReady, setTownReady] = useState(false);
+  const startedInTownRef = useRef(state.view === "town");
+  useEffect(() => {
+    if (boardReady && (!startedInTownRef.current || townReady)) dismissBootSplash();
+  }, [boardReady, townReady]);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
   const armedTapTarget = !!state.toolPending && isTapTargetTool(state.toolPending);
@@ -557,6 +576,7 @@ export default function App() {
                     tileCollection={state.tileCollection}
                     gameState={state}
                     grid={state.grid}
+                    onReady={() => setBoardReady(true)}
                   />
                 </BoardFrame>
               }
@@ -571,7 +591,7 @@ export default function App() {
               className={`absolute inset-0 z-20 ${state.view === "town" ? "view-enter-down" : "hidden"}`}
               aria-hidden={state.view !== "town"}
             >
-              <TownView state={state} dispatch={dispatch} active={state.view === "town"} />
+              <TownView state={state} dispatch={dispatch} active={state.view === "town"} onReady={() => setTownReady(true)} />
             </div>
           )}
 
