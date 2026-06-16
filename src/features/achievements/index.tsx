@@ -90,8 +90,14 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
   if (claimed)        { borderCls = "!border-[#91bf24]"; }
   else if (unlocked)  { borderCls = "!border-[#c5a87a]"; }
 
+  // Earned trophies glow with a warm parchment-gold fill so they read as
+  // "won" at a glance; locked ones stay flat.
+  const earnedStyle = claimed
+    ? { background: "linear-gradient(180deg, #fbf6e2 0%, #f1e7c6 100%)", boxShadow: "0 0 0 1px rgba(145,191,36,0.35), var(--card-shadow)" }
+    : undefined;
+
   return (
-    <div className={`hl-card !flex-row gap-2 items-center min-h-[72px] transition-colors ${borderCls}`}>
+    <div className={`hl-card !flex-row gap-2 items-center min-h-[72px] transition-colors ${borderCls}`} style={earnedStyle}>
       {/* Icon */}
       <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40 text-on-panel-faint" : ""}`}>
         {unlocked
@@ -184,15 +190,37 @@ function ResourceChip({ resource, count }: ResourceChipProps) {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
-// Derive counter-grouped categories from canonical ACHIEVEMENTS list
-const COUNTER_GROUPS: Record<string, string> = {
-  chains_committed: "Chains",
-  orders_fulfilled: "Orders",
-  bosses_defeated: "Bosses",
-  distinct_resources_chained: "Resources",
-  distinct_buildings_built: "Buildings",
-  supplies_converted: "Supplies",
+// Group metadata for the canonical ACHIEVEMENTS list: a display label and a
+// one-line bit of vale flavor shown under the section heading. Covers every
+// counter so no raw snake_case key (e.g. "fish_chained") leaks as a label.
+interface GroupMeta { label: string; flavor: string }
+const GROUP_META: Record<string, GroupMeta> = {
+  chains_committed:             { label: "Chains",        flavor: "The art of the long harvest — link the land together." },
+  orders_fulfilled:            { label: "Orders",        flavor: "Every cart you fill is a neighbour fed." },
+  bosses_defeated:             { label: "Bosses",        flavor: "The vale remembers those who stood against the dark." },
+  distinct_resources_chained:  { label: "Resources",     flavor: "A keeper knows the land by all it yields." },
+  distinct_buildings_built:    { label: "Buildings",     flavor: "Brick by brick, Hearthwood rises." },
+  supplies_converted:          { label: "Supplies",      flavor: "What you send the capital, the capital remembers." },
+  fish_chained:                { label: "The Harbor",    flavor: "Salt air, patient lines, and a full net by dusk." },
+  mine_chained:                { label: "The Mine",      flavor: "Down in the dark, the good stone waits." },
+  veg_chained:                 { label: "Vegetables",    flavor: "Honest food, pulled straight from the soil." },
+  fruit_chained:               { label: "The Orchard",   flavor: "Old Tomas judges every basket by its sweetest fruit." },
+  flower_chained:              { label: "Meadows",       flavor: "Petals for the dye-pots and the festival garlands." },
+  herd_chained:                { label: "Herds",         flavor: "Wool, mud, and the contentment of a full pen." },
+  cattle_chained:              { label: "Cattle",        flavor: "The dairy thanks you with every churn of butter." },
+  mount_chained:               { label: "Stables",       flavor: "A good mount is a road made shorter." },
+  tree_chained:                { label: "The Woods",     flavor: "Wren counts the rings and nods his approval." },
+  bird_chained:                { label: "Fowl",          flavor: "Feathers in the yard, eggs on the table." },
+  building_abilities_triggered:{ label: "The Keep",      flavor: "Your workshops hum with their own quiet magic." },
+  distinct_abilities_triggered:{ label: "Mastery",       flavor: "Few keepers ever learn so many tricks of the trade." },
 };
+
+function humanizeCounter(counter: string): string {
+  return counter.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function groupMeta(counter: string): GroupMeta {
+  return GROUP_META[counter] ?? { label: humanizeCounter(counter), flavor: "" };
+}
 
 interface AchievementsScreenProps {
   state: GameState;
@@ -213,8 +241,8 @@ export default function AchievementsScreen({ state, dispatch }: AchievementsScre
   const discoveredCount = ALL_RESOURCES.filter((r) => (collected[r.key] || 0) > 0).length;
   const totalLifetime = Object.values(collected).reduce((s: number, v: number) => s + v, 0);
 
-  // Use canonical achievements list, group by counter
-  const counterGroups = [...new Set(ACHIEVEMENTS.map((a) => COUNTER_GROUPS[a.counter] ?? a.counter))];
+  // Use canonical achievements list, grouped by counter key (stable order).
+  const counterKeys = [...new Set(ACHIEVEMENTS.map((a) => a.counter))];
   const unlockedCount = ACHIEVEMENTS.filter((a) => unlockedMap[a.id]).length;
 
   return (
@@ -230,22 +258,32 @@ export default function AchievementsScreen({ state, dispatch }: AchievementsScre
             {t === "trophies" ? "Trophies" : "Collection"}
           </FeaturePanel.Tab>
         ))}
-        <div className="ml-auto text-[10px] text-on-panel-dim flex items-center">
-          {tab === "trophies"
-            ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`
-            : `${discoveredCount}/${ALL_RESOURCES.length} discovered`}
-        </div>
       </FeaturePanel.Tabs>
 
       {/* Body */}
       {tab === "trophies" ? (
-        <div className="flex-1 overflow-y-auto px-2 pb-2" style={{ scrollbarWidth: "none" }}>
-          {counterGroups.map((grp) => {
-            const group = ACHIEVEMENTS.filter((a) => (COUNTER_GROUPS[a.counter] ?? a.counter) === grp);
+        <div className="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-2" style={{ scrollbarWidth: "none" }}>
+          <div className="hl-board-head mt-1">
+            {hasIcon("ach_champion") && (
+              <IconCanvas iconKey="ach_champion" size={34} background={null} rounded={false} title="Hall of Deeds" className="flex-shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="hl-board-head__kicker">Hearthwood Vale</div>
+              <div className="hl-board-head__title">Hall of Deeds</div>
+              <div className="hl-board-head__sub">Feats worth telling round the hearth.</div>
+            </div>
+            <span className="hl-board-pill">{unlockedCount}/{ACHIEVEMENTS.length} earned</span>
+          </div>
+          {counterKeys.map((counter) => {
+            const group = ACHIEVEMENTS.filter((a) => a.counter === counter);
             if (!group.length) return null;
+            const meta = groupMeta(counter);
             return (
-              <div key={grp} className="mb-2">
-                <div className="hl-section-label px-1 mb-1">{grp}</div>
+              <div key={counter}>
+                <div className="hl-section-label px-1">{meta.label}</div>
+                {meta.flavor && (
+                  <div className="px-1 mb-1.5 text-[10px] italic leading-snug text-on-panel-dim">{meta.flavor}</div>
+                )}
                 <div className="grid grid-cols-3 portrait:grid-cols-2 gap-1.5">
                   {group.map((a) => (
                     <TrophyCard
@@ -261,7 +299,18 @@ export default function AchievementsScreen({ state, dispatch }: AchievementsScre
           })}
         </div>
       ) : (
-        <div className="flex-1 flex flex-col overflow-hidden pb-2">
+        <div className="flex-1 flex flex-col overflow-hidden pb-2 gap-2">
+          <div className="hl-board-head mx-2 mt-2 flex-shrink-0">
+            {hasIcon("ach_naturalist") && (
+              <IconCanvas iconKey="ach_naturalist" size={34} background={null} rounded={false} title="Collection" className="flex-shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="hl-board-head__kicker">Hearthwood Vale</div>
+              <div className="hl-board-head__title">The Keeper's Collection</div>
+              <div className="hl-board-head__sub">Every resource you've pressed into the Almanac.</div>
+            </div>
+            <span className="hl-board-pill">{discoveredCount}/{ALL_RESOURCES.length} found</span>
+          </div>
           {/* Resource strip */}
           <div
             className="flex-1 overflow-y-auto overflow-x-hidden"
