@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { iconColor } from "../textures/iconRegistry.js";
 import { paintIcon } from "../textures/paintIcon.js";
+import { useSeasonalArtReady } from "./useSeasonalArtReady.js";
 
 /**
  * Renders an iconRegistry icon to a small <canvas>. Icons are drawn at the
@@ -33,6 +34,7 @@ export default function IconCanvas({
   [x: string]: unknown;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const seasonalReady = useSeasonalArtReady();
 
   useEffect(() => {
     const canvas = ref.current;
@@ -57,7 +59,7 @@ export default function IconCanvas({
     }
     if (iconKey) paintIcon(ctx, iconKey, size);
     ctx.restore();
-  }, [iconKey, size, background, rounded]);
+  }, [iconKey, size, background, rounded, seasonalReady]);
 
   return (
     <canvas
