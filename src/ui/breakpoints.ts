@@ -30,11 +30,6 @@ export const BREAKPOINTS = {
    * head row. CSS-only — mirrored in src/index.css `.craft-strip-upnext`.
    */
   craftStrip: 480,
-  /**
-   * At or above this, wide feature views cap + center their content instead of
-   * spreading a handful of items across the full panel width. components.css.
-   */
-  desktop: 900,
 } as const;
 
 /** Non-reactive check — safe to call outside React (event handlers, layout math). */
