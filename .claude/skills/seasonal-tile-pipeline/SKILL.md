@@ -167,6 +167,17 @@ Transparent horizontal strips → `public/seasonal-tiles/<subject>/{idle-<season
 Wire the subject onto the board. See `references/engine-integration.md` for the willow pattern and how to
 generalize it to a registry so any subject registers declaratively. Then **verify in-game** (step 7 there).
 
+### 7 — Refresh the doc gallery
+```
+node tools/pixellab/gen_gallery.mjs
+```
+Regenerates the **Subject gallery** in `docs/seasonal-tile-system/index.html` (the `<!-- AUTOGALLERY -->`
+region) directly from the assets on disk — every generated subject's stills + transition/idle GIFs, with an
+`in-game` chip for registered subjects. **Never hand-edit the gallery**; add/regenerate a subject and re-run
+this. (Hand-authored prose lives in the adjacent `#learnings` section, which the generator does not touch.)
+Note: a season packed as a **static** idle should have its review GIF rebuilt from the still (replace that
+idle's frames with the season still, then `assemble_gifs.py`) so the gallery shows what actually ships.
+
 ## Validation gates (run these, don't skip)
 
 | Check | Command | Catches |
@@ -191,7 +202,9 @@ After QA: rejected candidates + intermediates go to the **out-of-VC archive**
 - `run_subject.mjs` — driver; `node run_subject.mjs <config.mjs> <prompts|summer|seasons|transitions|idles>`.
 - `subjects/<subject>.mjs` — one **thin** config per subject (identity + category + overrides + locks). Copy `chicken.mjs`.
 - `check_pad.py` / `check_envelope.py` / `check_glow.py` / `drop_glow_frame.py` — QA gates.
-- `pack_sheets.py` — frames → game spritesheets. `assemble_gifs.py` — review GIFs/strips/montage.
+- `pack_sheets.py` — frames → game spritesheets (`--decimate N` to ship at N px, `--static-idle <seasons>` for
+  no-motion idles). `assemble_gifs.py` — review GIFs/strips/montage. `_reroll.mjs` — re-roll ONE clip.
+- `gen_gallery.mjs` — regenerate the doc's Subject gallery from the assets on disk (step 7).
 
 Throwaway one-offs are named `_*` and gitignored; the above are the durable pipeline.
 
