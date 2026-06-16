@@ -101,7 +101,7 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
 
       {/* Middle */}
       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <div className="hl-card-title text-[12px] leading-tight truncate">{name}</div>
+        <div className="hl-card-title text-caption leading-tight truncate">{name}</div>
         <div className="hl-card-meta text-[10px] leading-snug line-clamp-1">{desc}</div>
         {/* Progress bar */}
         <div className="flex items-center gap-1.5 mt-0.5">
@@ -291,7 +291,7 @@ export default function AchievementsScreen({ state, dispatch }: AchievementsScre
             </div>
           </div>
           {/* Footer strip */}
-          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[var(--panel-divider)] text-[11px] text-on-panel-dim font-bold flex gap-3">
+          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[var(--panel-divider)] text-micro text-on-panel-dim font-bold flex gap-3">
             <span>Discovered {discoveredCount}/{ALL_RESOURCES.length}</span>
             <span className="text-on-panel-faint">·</span>
             <span>Total harvested: {totalLifetime.toLocaleString()}</span>
