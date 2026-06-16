@@ -25,6 +25,8 @@ export interface WorkerDef {
   maxCount: number;
   abilities: WorkerAbility[];
   description: string;
+  /** Short in-world line giving the worker a place in Hearthwood Vale. */
+  flavor?: string;
   [extra: string]: unknown;
 }
 
@@ -62,6 +64,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
       { id: "threshold_reduce_category", params: { category: "grain", amount: 1 } },
     ],
     description: "Each hired Farmer trims one tile off the grain chain.",
+    flavor: "Hearthwood's fieldhands know every furrow — and they keep Mira's mill fed.",
   },
   {
     id: WorkerTypeId.Lumberjack,
@@ -74,6 +77,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
       { id: "threshold_reduce_category", params: { category: "trees", amount: 1 } },
     ],
     description: "Each hired Lumberjack trims one tile off the tree-felling chain.",
+    flavor: "Wren's woodcutters. They take only what the grove can spare, and no more.",
   },
   {
     id: WorkerTypeId.Miner,
@@ -86,6 +90,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
       { id: "threshold_reduce_category", params: { category: "wood", amount: 1 } },
     ],
     description: "Each hired Miner trims one tile off the plank-and-beam chain.",
+    flavor: "Bram's pickhands, at home in the dark where the good stone hides.",
   },
   {
     id: WorkerTypeId.Baker,
@@ -98,6 +103,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
       { id: "recipe_input_reduce", params: { recipe: "bread", input: "flour", amount: 1 } },
     ],
     description: "Each hired Baker trims one flour off the bread recipe.",
+    flavor: "Flour-dusted apprentices from Mira's kitchen, quick at the kneading board.",
   },
 ];
 

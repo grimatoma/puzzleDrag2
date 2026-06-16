@@ -602,14 +602,17 @@
    * Each card sets `--q-accent` inline to its category colour.
    * ════════════════════════════════════════════════════════════════════ */
 
-  /* Parchment header strip above the quest list. */
-  .quest-board-head {
+  /* Parchment header strip that introduces a panel's list with a little
+     in-world framing (kicker / title / sub) + an optional status pill.
+     Shared across the quest board, the workers roster, and other screens
+     so the panels read as a consistent set. */
+  .hl-board-head {
     @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 overflow-hidden;
     background: linear-gradient(180deg, #fbf3dc 0%, #f1e2bf 100%);
     border: 2px solid var(--card-border);
     box-shadow: var(--card-shadow);
   }
-  .quest-board-head::after {
+  .hl-board-head::after {
     /* gold rule along the bottom, echoing the panel header plate */
     content: "";
     position: absolute;
@@ -617,38 +620,50 @@
     background: linear-gradient(90deg, transparent, var(--gold-soft) 25%, var(--gold-soft) 75%, transparent);
     opacity: 0.6;
   }
-  .quest-board-kicker {
+  .hl-board-head__kicker {
     @apply font-bold uppercase tracking-wider;
     font-size: 9px;
     color: var(--on-panel-label);
   }
-  .quest-board-title {
+  .hl-board-head__title {
     @apply font-bold leading-tight;
     font-family: var(--font-display);
     font-size: 15px;
     letter-spacing: 0.015em;
     color: var(--on-panel);
   }
-  .quest-board-sub {
+  .hl-board-head__sub {
     @apply leading-snug;
     font-size: 10.5px;
     color: var(--on-panel-dim);
   }
-  /* "N ready" counter pill on the header. */
-  .quest-ready-pill {
+  /* Status pill on a board header. Neutral by default; `--alert` lights up
+     in ember to flag that something needs the player's attention (e.g. a
+     quest ready to claim). */
+  .hl-board-pill {
     @apply inline-flex items-center gap-1 rounded-pill font-bold flex-shrink-0;
     padding: 3px 9px;
     font-size: 10px;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+    color: var(--on-panel-dim);
+  }
+  .hl-board-pill--alert {
     background: var(--ember);
-    border: 1px solid var(--ember-hot);
+    border-color: var(--ember-hot);
     color: #fff;
     box-shadow: 0 0 10px -2px var(--ember);
   }
-  .quest-ready-pill--idle {
-    background: var(--well-bg);
-    border-color: var(--well-border);
+
+  /* In-world flavor line — an italic quote with a coloured rule. Set
+     `--flavor-accent` inline to tint the rule (e.g. an NPC / category
+     colour). Reusable anywhere a screen wants a line of story voice. */
+  .hl-flavor {
+    @apply italic leading-snug;
+    font-size: 12px;
     color: var(--on-panel-dim);
-    box-shadow: none;
+    border-left: 3px solid var(--flavor-accent, var(--gold-soft));
+    padding-left: 9px;
   }
 
   /* The commission card. */

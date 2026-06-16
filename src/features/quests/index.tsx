@@ -280,16 +280,16 @@ function QuestBoardHeader({ quests }: { quests: DisplayQuest[] }) {
   const total = quests.length;
   const ready = quests.filter((q) => isQuestDone(q) && !q.claimed).length;
   return (
-    <div className="quest-board-head">
+    <div className="hl-board-head">
       {hasIcon("quest_book") && (
         <IconCanvas iconKey="quest_book" size={36} background={null} rounded={false} title="Quest Board" className="flex-shrink-0" />
       )}
       <div className="flex-1 min-w-0">
-        <div className="quest-board-kicker">Commissions</div>
-        <div className="quest-board-title">The Vale Notice Board</div>
-        <div className="quest-board-sub">Tasks from the folk of the vale. Fill them before the season turns.</div>
+        <div className="hl-board-head__kicker">Commissions</div>
+        <div className="hl-board-head__title">The Vale Notice Board</div>
+        <div className="hl-board-head__sub">Tasks from the folk of the vale. Fill them before the season turns.</div>
       </div>
-      <span className={`quest-ready-pill ${ready === 0 ? "quest-ready-pill--idle" : ""}`}>
+      <span className={`hl-board-pill ${ready > 0 ? "hl-board-pill--alert" : ""}`}>
         {ready > 0 ? (
           <><SparkGlyph size={10} /> {ready} ready</>
         ) : (
