@@ -18,5 +18,3 @@ globalThis.localStorage = {
     return Object.keys(store).length;
   },
 } as Storage;
-
-import "../config/balance/bootstrap.js";

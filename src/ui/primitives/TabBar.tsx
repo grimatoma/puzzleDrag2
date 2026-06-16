@@ -80,6 +80,7 @@ export function Tab({
     <button
       type="button"
       onClick={onClick}
+      data-tour={`nav-${itemKey}`}
       aria-label={typeof label === "string" ? label : undefined}
       aria-current={active ? "page" : undefined}
       aria-disabled={locked || undefined}

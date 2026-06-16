@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from "../../constants.js";
 import type { Action, GameState } from "../../types/state.js";
+import { STEPS, TOTAL_STEPS, modalForStep } from "./steps.js";
 
 interface TutorialSubstate {
   active: boolean;
@@ -25,51 +26,54 @@ export const initial = {
   tutorial: { active: false, step: 0, seen: loadSeen() },
 };
 
-const TOTAL_STEPS = 6;
-// Steps that show a corner toast and require board interaction (no screen block)
-const CORNER_STEPS = new Set([1, 3, 4]);
-
 function endTutorial(state: GameState): GameState {
   persistSeen();
   const tutorial = (state.tutorial ?? {}) as TutorialSubstate;
   return {
     ...state,
     tutorial: { ...tutorial, active: false, seen: true },
-    modal: null,
+    // Only clear the modal if the wizard owned it — never stomp a real modal.
+    modal: state.modal === 'tutorial' ? null : state.modal,
+  };
+}
+
+function gotoStep(state: GameState, step: number): GameState {
+  const tutorial = (state.tutorial ?? {}) as TutorialSubstate;
+  return {
+    ...state,
+    tutorial: { ...tutorial, step },
+    modal: modalForStep(step),
   };
 }
 
 function advanceStep(state: GameState): GameState {
   const tutorial = (state.tutorial ?? {}) as TutorialSubstate;
   const next = tutorial.step + 1;
-  if (next >= TOTAL_STEPS) {
-    return endTutorial(state);
-  }
-  return {
-    ...state,
-    tutorial: { ...tutorial, step: next },
-    modal: CORNER_STEPS.has(next) ? null : 'tutorial',
-  };
+  if (next >= TOTAL_STEPS) return endTutorial(state);
+  return gotoStep(state, next);
 }
 
 export function reduce(state: GameState, action: Action): GameState {
   const tutorial = state.tutorial as TutorialSubstate | undefined;
   if (!tutorial) return state;
 
-  // Auto-start on very first action (exclude meta/biome actions that may fire before
-  // the player has a chance to see the board — prevents spurious auto-start in tests
-  // and during biome-switch no-ops).
+  // Auto-start on the player's very first meaningful action. Exclude meta/biome
+  // actions that may fire before the player has a chance to see the board —
+  // prevents spurious auto-start in tests and during biome-switch no-ops.
   const TUTORIAL_SKIP_ACTIONS = new Set(['@@INIT', 'SESSION_START', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON']);
   if (
     !tutorial.seen &&
     !tutorial.active &&
+    // Feature flag (lives in settings, survives a game reset): when the player
+    // has disabled the tutorial it must never auto-start.
+    !state.settings?.tutorialDisabled &&
     !TUTORIAL_SKIP_ACTIONS.has(action.type) &&
     state.modal === null
   ) {
     return {
       ...state,
       tutorial: { ...tutorial, active: true, step: 0 },
-      modal: 'tutorial',
+      modal: modalForStep(0),
     };
   }
 
@@ -78,45 +82,35 @@ export function reduce(state: GameState, action: Action): GameState {
       return {
         ...state,
         tutorial: { ...tutorial, active: true, step: 0 },
-        modal: 'tutorial',
+        modal: modalForStep(0),
       };
 
     case 'TUTORIAL/NEXT':
+      if (!tutorial.active) return state;
       return advanceStep(state);
 
     case 'TUTORIAL/PREV': {
       if (!tutorial.active) return state;
       const prev = Math.max(0, tutorial.step - 1);
       if (prev === tutorial.step) return state;
-      return {
-        ...state,
-        tutorial: { ...tutorial, step: prev },
-        modal: CORNER_STEPS.has(prev) ? null : 'tutorial',
-      };
+      return gotoStep(state, prev);
     }
 
     case 'TUTORIAL/SKIP':
       return endTutorial(state);
 
-    case 'CHAIN_COLLECTED':
-      if (tutorial.active && tutorial.step === 1) {
-        return advanceStep(state);
-      }
-      return state;
-
-    case 'TURN_IN_ORDER':
-      if (tutorial.active && tutorial.step === 3) {
-        return advanceStep(state);
-      }
-      return state;
-
-    case 'SET_VIEW':
-      if (tutorial.active && tutorial.step === 4 && action.view === 'town') {
-        return advanceStep(state);
-      }
-      return state;
-
     default:
-      return state;
+      break;
   }
+
+  // Action-gated steps auto-advance when the player performs the real action
+  // (collect a chain, build a building, craft a recipe, deliver an order).
+  if (tutorial.active) {
+    const current = STEPS[tutorial.step];
+    if (current?.advanceOn && current.advanceOn === action.type) {
+      return advanceStep(state);
+    }
+  }
+
+  return state;
 }

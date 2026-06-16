@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
-import { readBalanceDraft, writeBalanceDraft } from "../config/applyOverrides.js";
+import { readBalanceDraft, writeBalanceDraft } from "../config/balance/load.js";
 import { BALANCE_OVERRIDES } from "../constants.js";
 import {
   C, npcByKey, Portrait, actColor, hexAlpha, triggerSummary,

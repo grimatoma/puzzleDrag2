@@ -10,6 +10,7 @@ import {
   tiersForZone,
   maxTier,
   settlementTier,
+  currentTierDef,
   plotsForTier,
   unlockedBuildings,
 } from "../features/zones/data.js";
@@ -109,13 +110,17 @@ describe("TIER_UP reducer", () => {
   const atHome = (over = {}) => ({ ...createInitialState(), mapCurrent: "home", activeZone: "home", ...over });
 
   it("upgrades a rung, deducting coins + zone-inventory resources", () => {
-    let s = atHome({ coins: 5000 });
-    s = patchInventory(s, { hay_bundle: 200 }, "home");
+    // Read the Village (tier 1) cost from the ladder so this survives balance tuning.
+    const villageCost = currentTierDef("home", 1)!.upgradeCost!;
+    const coinCost = villageCost.coins ?? 0;
+    const [resKey, resQty] = Object.entries(villageCost.resources ?? {})[0];
+    let s = atHome({ coins: coinCost + 2000 });
+    s = patchInventory(s, { [resKey]: resQty + 50 }, "home");
     expect(settlementTier(s, "home")).toBe(0);
     s = rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } });
     expect(settlementTier(s, "home")).toBe(1);
-    expect(s.coins).toBe(5000 - 2500);
-    expect(inv(s, "home").hay_bundle).toBe(200 - 120);
+    expect(s.coins).toBe(coinCost + 2000 - coinCost);
+    expect(inv(s, "home")[resKey]).toBe(resQty + 50 - resQty);
   });
 
   it("is a no-op when coins are short (state unchanged)", () => {

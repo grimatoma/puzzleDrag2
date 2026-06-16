@@ -8,6 +8,31 @@
 
 <p style="font-size:13px;color:#7a6f5c;">Scope for "adopt now": <strong>Town 1 (farm) + Town 2 (mine)</strong> entities. Sea/late-game rows are documented for completeness but flagged parked.</p>
 
+<h2>Implemented economy model <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">live</span></h2>
+<p>This section is the <strong>actual tuned economy in code</strong> (not the PC2 reference below). It was derived from an <strong>income-per-run model</strong> and a <strong>moderate run-budget</strong> target. See <code>docs/zone-tier-ladder.html</code> for the full writeup.</p>
+
+<h3>The income-per-run model</h3>
+<ul>
+  <li><strong>Board &amp; run:</strong> 6×6 = 36 cells, base min-chain 3, ~10 turns/run (1 turn = 1 chain) → ~10 chains/run, avg chain ~5 → <strong>~50 tiles collected/run</strong>.</li>
+  <li><strong>Resource income:</strong> a chain of N tiles credits <code>floor(progress / TILES_PER_RESOURCE[tile])</code> of its produced resource — a home run yields ~2–3 each of hay_bundle / plank / flour (more with bonus-yield buildings, workers, season weighting).</li>
+  <li><strong>Coin income:</strong> <code>floor(N · value)</code> per chain — <strong>raised ~2×</strong> from the old <code>floor(N·value/2)</code> so coins keep pace with the breadth of coin sinks.</li>
+  <li><strong>Decoupled income knob:</strong> <code>TILES_PER_RESOURCE</code> (resource yield) is now separate from <code>UPGRADE_THRESHOLDS</code> (board-tile upgrade rate) — tune one without disturbing the other.</li>
+</ul>
+
+<h3>Run-budget &amp; tuned tier costs <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">tuned</span></h3>
+<p>Target pacing is <strong>moderate</strong>: grow home → City in <strong>~15–25 board runs</strong>, each rung earned without grind. The upgrade costs (in code at <code>cartography/data.ts</code>) were re-tuned down ~3–5× from the shipped first-pass to fit this budget:</p>
+<table>
+  <thead><tr><th>Zone · rung</th><th>Tuned cost</th><th>Was (shipped)</th></tr></thead>
+  <tbody>
+    <tr><td>home · Village</td><td>600c + 15 hay_bundle</td><td>2,500c + 120 hay_bundle</td></tr>
+    <tr><td>home · City</td><td>2,000c + 18 plank</td><td>9,000c + 60 plank</td></tr>
+    <tr><td>quarry · Mining Camp</td><td>500c + 12 block</td><td>2,000c + 60 block</td></tr>
+    <tr><td>quarry · Boomtown</td><td>1,500c + 12 iron_bar</td><td>5,500c + 50 iron_bar</td></tr>
+    <tr><td>quarry · Foundry City</td><td>3,500c + 8 gold_bar</td><td>12,000c + 30 gold_bar</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6f5c;">The other coin/resource sinks were reviewed against this model and sit <strong>in-range</strong> at the doubled income — buildings (200–2,000c, tier-gated ≈ 2–20 runs each), tools (1–2 resources ≈ &lt;1 run), founding (300c ≈ 3 runs), a quest claim (~50–160c ≈ one run), dailies/almanac/boons/decorations on their own cadences — so no further value churn was needed beyond the income+tier spine.</p>
+
 <h2>The settlement tier ladder</h2>
 <p>PC2's per-town rank ladder maps 1:1 onto our <strong>Camp → City</strong> ladder (see Direction). PC2 costs escalate sharply and pull in cross-category goods at each step:</p>
 <table>

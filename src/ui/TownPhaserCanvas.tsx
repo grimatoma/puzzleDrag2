@@ -43,6 +43,19 @@ export default function TownPhaserCanvas({
   const gameRef = useRef<GameWithObserver | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // The scene's event listeners are bound once at postBoot, so they would
+  // otherwise capture the first render's prop closures forever (e.g. a
+  // `pendingBuilding` that was still null at mount, silently swallowing every
+  // placement). Keep the latest callbacks in refs and call through them.
+  const onPlaceBuildingRef = useRef(onPlaceBuilding);
+  const onClickBuildingRef = useRef(onClickBuilding);
+  const onClickBoardRef = useRef(onClickBoard);
+  useEffect(() => {
+    onPlaceBuildingRef.current = onPlaceBuilding;
+    onClickBuildingRef.current = onClickBuilding;
+    onClickBoardRef.current = onClickBoard;
+  });
+
   // Sync state updates to Phaser TownScene
   useEffect(() => {
     const game = gameRef.current;
@@ -114,15 +127,15 @@ export default function TownPhaserCanvas({
                 });
 
                 scene.events.on("town.placebuilding", (data: { lotIndex: number; buildingId: string }) => {
-                  onPlaceBuilding(data.lotIndex, data.buildingId);
+                  onPlaceBuildingRef.current(data.lotIndex, data.buildingId);
                 });
 
                 scene.events.on("town.clickbuilding", (buildingId: string) => {
-                  onClickBuilding(buildingId);
+                  onClickBuildingRef.current(buildingId);
                 });
 
                 scene.events.on("town.clickboard", (kind: string) => {
-                  onClickBoard(kind);
+                  onClickBoardRef.current(kind);
                 });
               }
             },

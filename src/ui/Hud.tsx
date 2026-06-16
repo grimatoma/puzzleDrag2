@@ -189,8 +189,6 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
             turnsRemaining={turnsRemaining}
             seasonIdx={seasonIdx}
             seasonName={season.name}
-            bespoke={!!(state.settings as { bespokeSeasonWidget?: boolean } | undefined)?.bespokeSeasonWidget}
-            phaser={!!(state.settings as { seasonStripPhaser?: boolean } | undefined)?.seasonStripPhaser}
           />
         )}
         {showTide && <TideChip fish={state.fish as FishLike | null | undefined} />}

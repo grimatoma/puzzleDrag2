@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { rootReducer, createInitialState } from "../state.js";
 import { TILE_TYPES, TILE_TYPES_MAP } from "../features/tileCollection/data.js";
-import { applyTileOverrides } from "../config/applyOverrides.js";
+import { expandAbilitiesToEffects } from "../config/abilitiesAggregate.js";
 
 function snapshotEffects(id) {
   return JSON.parse(JSON.stringify(TILE_TYPES_MAP[id]?.effects ?? {}));
@@ -19,6 +19,13 @@ function snapshotEffects(id) {
 function restoreEffects(id, snap) {
   const tile = TILE_TYPES.find((t) => t.id === id);
   if (tile) tile.effects = snap;
+}
+// Compile a list of abilities into the tile's `effects` via the same production
+// path the game uses (this test formerly drove it through the removed
+// applyTileOverrides balance-override function).
+function setTileEffects(id, abilities) {
+  const tile = TILE_TYPES.find((t) => t.id === id);
+  if (tile) tile.effects = expandAbilitiesToEffects(abilities, {});
 }
 
 function warmupAndGetState() {
@@ -41,41 +48,34 @@ describe("Power hooks at runtime", () => {
     const sWarm = warmupAndGetState();
     const before = sWarm.coins;
 
-    applyTileOverrides(TILE_TYPES, {
-      tilePowers: { tile_grass_grass: { hooks: [{ id: "coin_bonus_flat", params: { amount: 50 } }] } },
-    });
+    setTileEffects("tile_grass_grass", [{ id: "coin_bonus_flat", params: { amount: 50 } }]);
 
     const sAfter = rootReducer(sWarm, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_grass", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    // Base coinsGain = max(1, floor(5*1/2)) = 2 (Spring +1 harvest bonus on 4),
-    // plus hook flat = 50. Total delta = 52.
-    expect(sAfter.coins - before).toBe(52);
+    // Base coinsGain = max(1, floor(4*1)) = 4 (2x economy-balance bump),
+    // plus hook flat = 50. Total delta = 54.
+    expect(sAfter.coins - before).toBe(54);
   });
 
   it("coin_bonus_per_tile scales with chain length", () => {
     const sWarm = warmupAndGetState();
     const before = sWarm.coins;
 
-    applyTileOverrides(TILE_TYPES, {
-      tilePowers: { tile_grass_grass: { hooks: [{ id: "coin_bonus_per_tile", params: { amount: 3 } }] } },
-    });
+    setTileEffects("tile_grass_grass", [{ id: "coin_bonus_per_tile", params: { amount: 3 } }]);
 
     const sAfter = rootReducer(sWarm, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_grass", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
-    // Phase 7 — calendar Spring +20% removed. gained 5 → coinsGain
-    // max(1, floor(5/2)) = 2. Per-tile hook: 3 × chainLength(5) = 15.
-    // Total delta = 17.
-    expect(sAfter.coins - before).toBe(17);
+    // gained 5 → coinsGain max(1, floor(5)) = 5 (2x economy-balance bump).
+    // Per-tile hook: 3 × chainLength(5) = 15. Total delta = 20.
+    expect(sAfter.coins - before).toBe(20);
   });
 
   it("free_turn_after_n grants 1 free move only when chain meets threshold", () => {
-    applyTileOverrides(TILE_TYPES, {
-      tilePowers: { tile_grass_grass: { hooks: [{ id: "free_turn_after_n", params: { minChain: 6 } }] } },
-    });
+    setTileEffects("tile_grass_grass", [{ id: "free_turn_if_chain", params: { minChain: 6 } }]);
     const s0 = createInitialState();
     const sShort = rootReducer(s0, {
       type: "CHAIN_COLLECTED",

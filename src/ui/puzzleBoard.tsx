@@ -26,7 +26,6 @@ import { TOOL_BY_KEY, isTapTargetTool, DEFAULT_TOOL_PINS } from "./toolRegistry.
 import { visiblePuzzleTools } from "./puzzleToolFilter.js";
 import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
-import { SeasonStrip } from "./seasonStrip.jsx";
 import { lazy, Suspense } from "react";
 import type { Dispatch, GameState } from "../types/state.js";
 import { ToolKey } from "../types/catalogKeys.js";
@@ -82,11 +81,59 @@ export interface ChainInfo {
 // Convenience alias for any-typed inventory map used throughout this file.
 type Inventory = Record<string, number> | null | undefined;
 
-// Phaser-rendered strip is lazy-loaded so the heavy graphics library is only
-// pulled into the bundle when the player opts in via the debug toggle.
+// The season strip is rendered by Phaser. Its scene module is lazy-loaded so
+// the strip's bespoke graphics code is only pulled in when the HUD mounts it,
+// and is split out from the main bundle.
 const SeasonStripPhaserLazy = lazy(() =>
   import("./seasonStripPhaser.jsx").then((m) => ({ default: m.SeasonStripPhaser }))
 );
+
+const STRIP_HEIGHT = 52;
+const STRIP_MAX_WIDTH = 760;
+const STRIP_MIN_WIDTH = 220;
+
+// Lightweight placeholder shown while the Phaser strip chunk loads. Carries the
+// same `role="status"` / `data-testid="turns-left"` hooks as the real strip so
+// the accessibility and test contracts hold even before the canvas mounts.
+function SeasonStripFallback({
+  turnsRemaining,
+  seasonName,
+}: {
+  turnsRemaining: number;
+  seasonName: string;
+}) {
+  const remaining = Math.max(0, turnsRemaining);
+  return (
+    <div
+      role="status"
+      aria-label={`${seasonName} — ${remaining} turn${remaining === 1 ? "" : "s"} left`}
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: STRIP_MAX_WIDTH,
+        minWidth: STRIP_MIN_WIDTH,
+        height: STRIP_HEIGHT,
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1.5px solid #3a2412",
+        boxShadow: "0 1px 0 rgba(0,0,0,0.25) inset",
+        background: "#2a1810",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#caa97a",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.5px",
+      }}
+    >
+      <span data-testid="turns-left" style={{ position: "absolute", left: -9999, top: 0 }} aria-hidden="true">
+        {remaining}
+      </span>
+      Loading…
+    </div>
+  );
+}
 
 const FIELD_GRADIENTS = [
   "linear-gradient(180deg,var(--field-spring-top) 0%,var(--field-spring-bot) 100%)",
@@ -116,50 +163,25 @@ export function SeasonIndicator({
   turnsRemaining,
   seasonIdx,
   seasonName,
-  bespoke,
-  phaser,
 }: {
   turnsUsed: number;
   turnBudget: number;
   turnsRemaining: number;
   seasonIdx: number;
   seasonName: string;
-  bespoke?: boolean;
-  phaser?: boolean;
 }) {
-  if (phaser) {
-    return (
-      <Suspense
-        fallback={
-          <SeasonStrip
-            turnsUsed={turnsUsed}
-            turnBudget={turnBudget}
-            turnsRemaining={turnsRemaining}
-            seasonIdx={seasonIdx}
-            seasonName={seasonName}
-            busy={!!bespoke}
-          />
-        }
-      >
-        <SeasonStripPhaserLazy
-          turnsUsed={turnsUsed}
-          turnBudget={turnBudget}
-          turnsRemaining={turnsRemaining}
-          seasonIdx={seasonIdx}
-          seasonName={seasonName}
-        />
-      </Suspense>
-    );
-  }
   return (
-    <SeasonStrip
-      turnsUsed={turnsUsed}
-      turnBudget={turnBudget}
-      turnsRemaining={turnsRemaining}
-      seasonIdx={seasonIdx}
-      seasonName={seasonName}
-      busy={!!bespoke}
-    />
+    <Suspense
+      fallback={<SeasonStripFallback turnsRemaining={turnsRemaining} seasonName={seasonName} />}
+    >
+      <SeasonStripPhaserLazy
+        turnsUsed={turnsUsed}
+        turnBudget={turnBudget}
+        turnsRemaining={turnsRemaining}
+        seasonIdx={seasonIdx}
+        seasonName={seasonName}
+      />
+    </Suspense>
   );
 }
 
@@ -1723,6 +1745,7 @@ export function BoardFrame({ children, seasonIdx, armed = false }: { children?: 
   // gets a thin drop shadow for depth.
   return (
     <div
+      data-tour="board"
       className="w-full h-full relative overflow-hidden"
       style={{
         background: fieldGradientFor(seasonIdx),

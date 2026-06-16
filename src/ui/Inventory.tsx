@@ -1,8 +1,7 @@
 import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef, memo } from "react";
-import { BIOMES, getItem, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import { BIOMES, getItem, ITEMS, RECIPES } from "../constants.js";
 import type { ResourceKey } from "../types/catalogKeys.js";
 import type { BiomeItemEntry, ItemEntry, ResourceItemEntry } from "../constants.js";
-import { ProgressBar } from "./primitives/ActionCard.jsx";
 import {
   INVENTORY_TAGS,
   itemHasTag,
@@ -175,19 +174,17 @@ function useAccordion() {
 // scalar fields instead of the whole `entry` object and a stable
 // `(key, index) => void` handler — that lets React.memo's default shallow
 // compare skip re-rendering all cells when only the selection changes.
-const InventoryIconCell = memo(forwardRef<HTMLButtonElement, { itemKey: string; label: string; count: number; index: number; selected: boolean; onSelect: (key: string, index: number) => void; progressValue: number; progressMax: number }>(function InventoryIconCell(
-  { itemKey, label, count, index, selected, onSelect, progressValue, progressMax },
+const InventoryIconCell = memo(forwardRef<HTMLButtonElement, { itemKey: string; label: string; count: number; index: number; selected: boolean; onSelect: (key: string, index: number) => void }>(function InventoryIconCell(
+  { itemKey, label, count, index, selected, onSelect },
   ref
 ) {
-  const hasProgress = progressValue > 0 && progressMax > 0;
-  const pct = hasProgress ? Math.max(0, Math.min(100, (progressValue / progressMax) * 100)) : 0;
   return (
     <button
       ref={ref}
       type="button"
-      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 && !hasProgress ? " is-muted" : ""}`}
+      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 ? " is-muted" : ""}`}
       aria-pressed={selected}
-      aria-label={`${label}${count > 0 ? `, ${count}` : ""}${hasProgress ? `, ${progressValue}/${progressMax} toward next` : ""}`}
+      aria-label={`${label}${count > 0 ? `, ${count}` : ""}`}
       onClick={() => onSelect(itemKey, index)}
     >
       <Icon iconKey={itemKey} size={52} title={label} />
@@ -195,17 +192,6 @@ const InventoryIconCell = memo(forwardRef<HTMLButtonElement, { itemKey: string; 
         <span className="inv-grid__badge" aria-hidden="true">
           {count > 999 ? "999+" : count}
         </span>
-      )}
-      {hasProgress && (
-        <div
-          className="absolute bottom-0 left-0 right-0 h-1 rounded-b overflow-hidden bg-black/20"
-          aria-hidden="true"
-        >
-          <div
-            className="h-full bg-amber-400 transition-[width] duration-300"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
       )}
     </button>
   );
@@ -291,11 +277,10 @@ function StatusPill({ status, total }: { status: string | undefined; total?: num
 
 // Memoized companion to InventoryIconCell — same primitive-props contract so
 // the default shallow compare keeps list cells from re-rendering on selection.
-const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label, count, orderStatus, index, selected, onSelect, progressValue, progressMax }: { itemKey: string; label: string; count: number; orderStatus: string | undefined; index: number; selected: boolean; onSelect: (key: string, index: number) => void; progressValue: number; progressMax: number }) {
+const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label, count, orderStatus, index, selected, onSelect }: { itemKey: string; label: string; count: number; orderStatus: string | undefined; index: number; selected: boolean; onSelect: (key: string, index: number) => void }) {
   // List view: surface only meaningful order statuses (ready/needed). The
   // "Excess" badge and the redundant kind subtitle stay on the detail card.
   const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
-  const hasProgress = progressValue > 0 && progressMax > 0;
   return (
     <BrowserItemButton
       selected={selected}
@@ -305,17 +290,11 @@ const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label
       status={listStatus}
       onClick={() => onSelect(itemKey, index)}
       aria-label={`View ${label}`}
-    >
-      {hasProgress && (
-        <div aria-label={`${progressValue}/${progressMax} toward next ${label}`}>
-          <ProgressBar value={progressValue} max={progressMax} tone="gold" className="h-1.5 mt-1" />
-        </div>
-      )}
-    </BrowserItemButton>
+    />
   );
 });
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse: _onCollapse, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progressValue: number; progressMax: number }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
@@ -332,29 +311,24 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse: _
 
   return (
     <div className="hl-browser-item is-selected hl-browser-item--expanded">
-      <div
-        className="hl-browser-item__row !cursor-default"
-        aria-label={label}
+      <button
+        type="button"
+        className="hl-browser-item__row"
+        onClick={onCollapse}
+        aria-expanded="true"
+        aria-label={`Collapse ${label}`}
       >
         <span className="hl-browser-item__icon">
           <Icon iconKey={key} size={40} title={label} />
         </span>
         <span className="hl-browser-item__main">
           <span className="hl-browser-item__title">{label}</span>
-          {progressValue > 0 && progressMax > 0 && (
-            <ProgressBar
-              value={progressValue}
-              max={progressMax}
-              tone="gold"
-              className="h-1.5 mt-1"
-            />
-          )}
         </span>
         <span className="hl-browser-item__meta">
           {count != null && <span className="tabular-nums">{count}</span>}
           {listStatus && <span>{listStatus}</span>}
         </span>
-      </div>
+      </button>
       <div className="hl-browser-item__details">
         {showActions && (
           <div className="flex flex-wrap gap-2">
@@ -506,7 +480,6 @@ export function InventoryGrid({
   query = "",
   recentOrder,
   viewMode = "list",
-  resourceProgress = {},
 }: {
   inventory: Record<string, number>;
   biomeKey: string;
@@ -519,7 +492,6 @@ export function InventoryGrid({
   query?: string;
   recentOrder?: string[] | null;
   viewMode?: string;
-  resourceProgress?: Record<string, number>;
 }) {
   const resources = BIOMES[biomeKey].resources; // already resource-only after data split
   const items = (Object.keys(ITEMS) as string[]).filter((key) => {
@@ -538,10 +510,6 @@ export function InventoryGrid({
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = (state?.market?.prices ?? {}) as Record<string, { buy?: number; sell?: number }>;
   const recipesByOutput = cachedRecipesByOutput;
-  // Cells take fractional progress as two scalars (value, max) so they stay
-  // memoizable; the bar is hidden when value <= 0 or no threshold exists.
-  const progressValueFor = (key: string): number => resourceProgress[key] ?? 0;
-  const progressMaxFor = (key: string): number => (RESOURCE_TO_THRESHOLD as Record<string, number>)[key] ?? 0;
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const accordion = useAccordion();
@@ -572,7 +540,7 @@ export function InventoryGrid({
     }
     accSelect(key);
   }, [accSelect, accSelectInPlace]);
-  const _selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
+  const selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
   const selectWide = useCallback((key: string) => setSelectedKey(key), []);
 
   useLayoutEffect(() => {
@@ -764,20 +732,29 @@ export function InventoryGrid({
               selected={isSelected}
               onSelect={selectGridCompact}
               ref={(el) => assignCellRef(entry.key, el)}
-              progressValue={progressValueFor(entry.key)}
-              progressMax={progressMaxFor(entry.key)}
             />
           );
-        } else {
+        } else if (isSelected) {
           cells.push(
             <InventoryListItemExpanded
               key={entry.key}
               entry={entry}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onCollapse={() => {}}
-              progressValue={progressValueFor(entry.key)}
-              progressMax={progressMaxFor(entry.key)}
+              onCollapse={accordion.closeImmediate}
+            />
+          );
+        } else {
+          cells.push(
+            <InventoryBrowserItem
+              key={entry.key}
+              itemKey={entry.key}
+              label={entry.label}
+              count={entry.count}
+              orderStatus={entry.orderStatus}
+              index={i}
+              selected={false}
+              onSelect={selectInPlaceStable}
             />
           );
         }
@@ -826,8 +803,6 @@ export function InventoryGrid({
           index={i}
           selected={selected?.key === entry.key}
           onSelect={selectWide}
-          progressValue={progressValueFor(entry.key)}
-          progressMax={progressMaxFor(entry.key)}
         />
       ))}
     </div>
@@ -843,8 +818,6 @@ export function InventoryGrid({
           index={i}
           selected={selected?.key === entry.key}
           onSelect={selectWide}
-          progressValue={progressValueFor(entry.key)}
-          progressMax={progressMaxFor(entry.key)}
         />
       ))}
     </BrowserGrid>
