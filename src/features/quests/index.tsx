@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
@@ -46,6 +47,33 @@ interface AlmanacTierDef {
 
 const TABS = ["daily", "almanac"];
 
+// ── Category presentation ──────────────────────────────────────────────────
+// Each quest category gets a colour (the card spine + tag + progress fill), a
+// short verb label, and the matching scroll icon. The flavor fallback covers
+// legacy dailies whose template id isn't in the pool.
+interface CategoryMeta {
+  label: string;
+  accent: string;
+  icon: string;
+  flavor: string;
+}
+const CATEGORY_META: Record<string, CategoryMeta> = {
+  collect: { label: "Gather",  accent: "#6f8a3a", icon: "quest_collect", flavor: "The vale's stores run low — gather what the land gives." },
+  craft:   { label: "Craft",   accent: "#d6612a", icon: "quest_craft",   flavor: "Idle hands, cold hearth. Set the workshops humming." },
+  order:   { label: "Deliver", accent: "#a8722a", icon: "quest_order",   flavor: "Carts wait at the gate. Fill the orders before dusk." },
+  tool:    { label: "Toil",    accent: "#38406b", icon: "quest_tool",    flavor: "The right tool, well used, is worth ten hands." },
+  chain:   { label: "Combo",   accent: "#9c3a4a", icon: "quest_chain",   flavor: "Link your harvest together for a richer haul." },
+};
+const CATEGORY_DEFAULT: CategoryMeta = {
+  label: "Task", accent: "var(--ember)", icon: "quest_book",
+  flavor: "A request from the folk of the vale.",
+};
+
+function categoryMeta(q: DisplayQuest): CategoryMeta {
+  const cat = (q as { category?: string }).category ?? "";
+  return CATEGORY_META[cat] ?? CATEGORY_DEFAULT;
+}
+
 function CheckGlyph({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -59,6 +87,15 @@ function LockGlyph({ size = 14 }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
       <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Four-point sparkle — marks a quest that's ready to claim.
+function SparkGlyph({ size = 11 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2c.6 4.4 3 6.8 7.4 7.4C15 10 12.6 12.4 12 16.8 11.4 12.4 9 10 4.6 9.4 9 8.8 11.4 6.4 12 2z" />
     </svg>
   );
 }
@@ -97,52 +134,91 @@ function questLabel(q: DisplayQuest): string {
   return `Quest: ${cat ?? "unknown"} (${q.target})`;
 }
 
+// The story line for a quest: prefer the template's authored flavor, then fall
+// back to a per-category line so legacy dailies still read like a commission.
+function questFlavor(q: DisplayQuest): string {
+  const tpl = QUEST_TEMPLATES.find((t) => t.id === (q as { template?: string }).template);
+  if (tpl?.flavor) return tpl.flavor;
+  return categoryMeta(q).flavor;
+}
+
+function isQuestDone(q: DisplayQuest): boolean {
+  return (q as LegacyDaily).done ?? (q.progress >= q.target);
+}
+
 interface QuestCardProps {
   q: DisplayQuest;
   dispatch: Dispatch;
 }
 
 function QuestCard({ q, dispatch }: QuestCardProps) {
-  const done = (q as LegacyDaily).done;
-  const isDone = done ?? (q.progress >= q.target);
+  const isDone = isQuestDone(q);
   const claimable = isDone && !q.claimed;
-  const completed = isDone || q.claimed;
-  const category = (q as { category?: string }).category;
-  const catKey = category ? `quest_${category}` : null;
+  const claimed = !!q.claimed;
+  const meta = categoryMeta(q);
+  const catKey = meta.icon;
+  const coins = q.reward.coins ?? 0;
+  // Legacy dailies carry `almanacXp`; deterministic quests carry `xp`. Both map
+  // to the almanac ✦ track, so show whichever is present.
+  const xp = q.reward.almanacXp ?? (q.reward as { xp?: number }).xp ?? 0;
+  const flavor = questFlavor(q);
+  const remaining = Math.max(0, q.target - q.progress);
 
   return (
-    <ActionCard
-      className={`max-w-sm w-full self-center transition-all duration-300 ${
-        completed ? "!border-[#d6612a] shadow-[0_0_0_2px_rgba(214,97,42,.25)]" : ""
-      }`}
+    <div
+      className={`quest-card max-w-sm w-full self-center ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
+      style={{ "--q-accent": meta.accent } as CSSProperties}
     >
-      <div className="flex items-start justify-between gap-2">
-        {catKey && hasIcon(catKey) && (
-          <IconCanvas iconKey={catKey} size={20} background={null} rounded={false} title={category} className="flex-shrink-0 mt-0.5" />
-        )}
-        <ActionCard.Title className="text-[12px] flex-1">{questLabel(q)}</ActionCard.Title>
-        {claimable && (
-          <span className="relative mr-1 mt-0.5">
-            <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#f1b34c] opacity-75 animate-ping" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-[#d6612a]" />
-          </span>
-        )}
-        <span className="text-[11px] font-bold text-[#a8722a] whitespace-nowrap">
-          +{q.reward.coins}◉{q.reward.almanacXp ? ` +${q.reward.almanacXp}✦` : ""}
+      {/* Category tag + reward token */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="quest-tag">
+          {catKey && hasIcon(catKey) && (
+            <IconCanvas iconKey={catKey} size={13} background={null} rounded={false} title={meta.label} />
+          )}
+          {meta.label}
+        </span>
+        <span className="quest-reward" title="Reward">
+          <span>+{coins}◉</span>
+          {xp > 0 && <span className="quest-reward-xp">+{xp}✦</span>}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <ProgressBar value={q.progress} max={q.target} className="flex-1" />
-        <span className="text-[11px] font-bold text-[#6a4b31] whitespace-nowrap">{q.progress}/{q.target}</span>
+
+      {/* Title + flavor line */}
+      <div className="flex flex-col gap-0.5">
+        <div className="quest-card-title">{questLabel(q)}</div>
+        {flavor && <div className="quest-card-flavor">{flavor}</div>}
       </div>
-      <button
-        disabled={!claimable}
-        onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_QUEST", id: q.id })}
-        className={`hl-btn hl-btn--go ${claimable ? "animate-pulse" : ""}`}
-      >
-        {q.claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={11} /> CLAIMED</span> : "CLAIM"}
-      </button>
-    </ActionCard>
+
+      {/* Progress */}
+      <div className="flex items-center gap-2">
+        <ProgressBar value={q.progress} max={q.target} color={meta.accent} className="flex-1" />
+        <span className="text-[11px] font-bold text-[#6a4b31] whitespace-nowrap tabular-nums">
+          {q.progress}/{q.target}
+        </span>
+      </div>
+
+      {/* Status + claim */}
+      <div className="flex items-center justify-between gap-2">
+        {claimable ? (
+          <span className="quest-card-status"><SparkGlyph size={11} /> Ready to claim</span>
+        ) : claimed ? (
+          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-[#7a5e3f]/70">
+            <CheckGlyph size={10} /> Filled
+          </span>
+        ) : (
+          <span className="text-[10px] font-bold text-[#7a5e3f]/70 tabular-nums">{remaining} to go</span>
+        )}
+        <button
+          disabled={!claimable}
+          onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_QUEST", id: q.id })}
+          className={`hl-btn hl-btn--sm ${claimable ? "hl-btn--go animate-pulse" : ""}`}
+        >
+          {claimed
+            ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={10} /> Claimed</span>
+            : "Claim"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -198,6 +274,106 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: 
   );
 }
 
+// ── Shared sections (used by both the embedded panel and the full screen) ───
+
+function QuestBoardHeader({ quests }: { quests: DisplayQuest[] }) {
+  const total = quests.length;
+  const ready = quests.filter((q) => isQuestDone(q) && !q.claimed).length;
+  return (
+    <div className="quest-board-head">
+      {hasIcon("quest_book") && (
+        <IconCanvas iconKey="quest_book" size={36} background={null} rounded={false} title="Quest Board" className="flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="quest-board-kicker">Commissions</div>
+        <div className="quest-board-title">The Vale Notice Board</div>
+        <div className="quest-board-sub">Tasks from the folk of the vale. Fill them before the season turns.</div>
+      </div>
+      <span className={`quest-ready-pill ${ready === 0 ? "quest-ready-pill--idle" : ""}`}>
+        {ready > 0 ? (
+          <><SparkGlyph size={10} /> {ready} ready</>
+        ) : (
+          `${total} open`
+        )}
+      </span>
+    </div>
+  );
+}
+
+function DailyList({ quests, dispatch }: { quests: DisplayQuest[]; dispatch: Dispatch }) {
+  const sorted = [...quests].sort((a, b) => {
+    const aReady = isQuestDone(a) && !a.claimed ? 1 : 0;
+    const bReady = isQuestDone(b) && !b.claimed ? 1 : 0;
+    if (aReady !== bReady) return bReady - aReady;
+    // then unclaimed-in-progress, then claimed last
+    const aClaimed = a.claimed ? 1 : 0;
+    const bClaimed = b.claimed ? 1 : 0;
+    return aClaimed - bClaimed;
+  });
+
+  return (
+    <div className="flex flex-col gap-2">
+      <QuestBoardHeader quests={quests} />
+      {sorted.length === 0 ? (
+        <div className="hl-empty">The board is clear. New commissions arrive each season.</div>
+      ) : (
+        sorted.map((q) => <QuestCard key={q.id} q={q} dispatch={dispatch} />)
+      )}
+    </div>
+  );
+}
+
+function AlmanacHeader({ almanacXp, xpIntoTier, nextCost }: { almanacXp: number; xpIntoTier: number; nextCost: number }) {
+  const maxed = nextCost > 1000;
+  return (
+    <div className="almanac-head flex-shrink-0">
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <div className="almanac-head-kicker">The Vale Almanac</div>
+          <div className="almanac-head-title">Keeper's Ledger</div>
+        </div>
+        <span className="text-[11px] font-bold text-[#3a2150] whitespace-nowrap tabular-nums">
+          {almanacXp}✦ {maxed ? "· MAX" : `/ ${nextCost}`}
+        </span>
+      </div>
+      <ProgressBar value={xpIntoTier} max={100} color="var(--panel-arcane-border)" className="h-3" />
+      <div className="text-[10px] leading-snug text-[#6a4a8a]">
+        Earn ✦ as you complete quests. Each tier the keeper records earns a standing reward.
+      </div>
+    </div>
+  );
+}
+
+function AlmanacList({
+  almanacXp,
+  almanacClaimed,
+  dispatch,
+  xpIntoTier,
+  nextCost,
+}: {
+  almanacXp: number;
+  almanacClaimed: number[];
+  dispatch: Dispatch;
+  xpIntoTier: number;
+  nextCost: number;
+}) {
+  return (
+    <>
+      <AlmanacHeader almanacXp={almanacXp} xpIntoTier={xpIntoTier} nextCost={nextCost} />
+      {ALMANAC_TIERS.map((tierDef, idx) => (
+        <AlmanacTierCard
+          key={idx}
+          idx={idx}
+          tierDef={tierDef as AlmanacTierDef}
+          almanacXp={almanacXp}
+          almanacClaimed={almanacClaimed}
+          dispatch={dispatch}
+        />
+      ))}
+    </>
+  );
+}
+
 interface QuestsPanelProps {
   state: GameState;
   dispatch: Dispatch;
@@ -232,33 +408,16 @@ export function QuestsPanel({ state, dispatch }: QuestsPanelProps) {
       </div>
 
       {tab === "daily" ? (
-        <div className="flex flex-col gap-2">
-          {[...quests].sort((a, b) => {
-            const aDone = (a as LegacyDaily).done ?? (a.progress >= a.target);
-            const bDone = (b as LegacyDaily).done ?? (b.progress >= b.target);
-            return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
-          }).map((q) => (
-            <QuestCard key={q.id} q={q} dispatch={dispatch} />
-          ))}
-        </div>
+        <DailyList quests={quests} dispatch={dispatch} />
       ) : (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
-            <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
-              {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
-            </span>
-          </div>
-          {ALMANAC_TIERS.map((tierDef, idx) => (
-            <AlmanacTierCard
-              key={idx}
-              idx={idx}
-              tierDef={tierDef as AlmanacTierDef}
-              almanacXp={almanacXp}
-              almanacClaimed={almanacClaimed}
-              dispatch={dispatch}
-            />
-          ))}
+          <AlmanacList
+            almanacXp={almanacXp}
+            almanacClaimed={almanacClaimed}
+            dispatch={dispatch}
+            xpIntoTier={xpIntoTier}
+            nextCost={nextCost}
+          />
         </div>
       )}
     </div>
@@ -300,37 +459,22 @@ export default function QuestsScreen({ state, dispatch, initialTab }: QuestsScre
       </FeaturePanel.Tabs>
 
       {tab === "daily" ? (
-        <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
-          {[...quests].sort((a, b) => {
-            const aDone = (a as LegacyDaily).done ?? (a.progress >= a.target);
-            const bDone = (b as LegacyDaily).done ?? (b.progress >= b.target);
-            return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
-          }).map((q) => (
-            <QuestCard key={q.id} q={q} dispatch={dispatch} />
-          ))}
+        <div className="flex-1 overflow-y-auto px-3 pb-3">
+          <DailyList quests={quests} dispatch={dispatch} />
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
-          <div className="flex-shrink-0 flex items-center gap-2">
-            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
-            <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
-              {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
-            </span>
-          </div>
           <div
             className="flex flex-col gap-2 pb-1 overflow-y-auto"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
-            {ALMANAC_TIERS.map((tierDef, idx) => (
-              <AlmanacTierCard
-                key={idx}
-                idx={idx}
-                tierDef={tierDef as AlmanacTierDef}
-                almanacXp={almanacXp}
-                almanacClaimed={almanacClaimed}
-                dispatch={dispatch}
-              />
-            ))}
+            <AlmanacList
+              almanacXp={almanacXp}
+              almanacClaimed={almanacClaimed}
+              dispatch={dispatch}
+              xpIntoTier={xpIntoTier}
+              nextCost={nextCost}
+            />
           </div>
         </div>
       )}

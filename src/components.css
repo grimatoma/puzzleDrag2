@@ -593,6 +593,168 @@
     color: #8a3326;
   }
 
+  /* ══ Quest board (daily commissions) ════════════════════════════════
+   * The daily quests render as little "commission" cards pinned to the
+   * vale notice board: a category-coloured spine down the left edge, a
+   * wax-seal category tag, a flavor line, and a reward token. A claimable
+   * card lights up with its category colour and a slow gold shimmer so the
+   * eye lands on what's ready before anything else.
+   * Each card sets `--q-accent` inline to its category colour.
+   * ════════════════════════════════════════════════════════════════════ */
+
+  /* Parchment header strip above the quest list. */
+  .quest-board-head {
+    @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 overflow-hidden;
+    background: linear-gradient(180deg, #fbf3dc 0%, #f1e2bf 100%);
+    border: 2px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
+  .quest-board-head::after {
+    /* gold rule along the bottom, echoing the panel header plate */
+    content: "";
+    position: absolute;
+    left: 12px; right: 12px; bottom: 4px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-soft) 25%, var(--gold-soft) 75%, transparent);
+    opacity: 0.6;
+  }
+  .quest-board-kicker {
+    @apply font-bold uppercase tracking-wider;
+    font-size: 9px;
+    color: var(--on-panel-label);
+  }
+  .quest-board-title {
+    @apply font-bold leading-tight;
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: 0.015em;
+    color: var(--on-panel);
+  }
+  .quest-board-sub {
+    @apply leading-snug;
+    font-size: 10.5px;
+    color: var(--on-panel-dim);
+  }
+  /* "N ready" counter pill on the header. */
+  .quest-ready-pill {
+    @apply inline-flex items-center gap-1 rounded-pill font-bold flex-shrink-0;
+    padding: 3px 9px;
+    font-size: 10px;
+    background: var(--ember);
+    border: 1px solid var(--ember-hot);
+    color: #fff;
+    box-shadow: 0 0 10px -2px var(--ember);
+  }
+  .quest-ready-pill--idle {
+    background: var(--well-bg);
+    border-color: var(--well-border);
+    color: var(--on-panel-dim);
+    box-shadow: none;
+  }
+
+  /* The commission card. */
+  .quest-card {
+    @apply relative flex flex-col gap-1.5 rounded-lg overflow-hidden;
+    padding: 9px 11px 9px 16px;
+    background: linear-gradient(180deg, var(--card-bg) 0%, #f3e8cf 100%);
+    border: 2px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    transition: border-color 240ms ease, box-shadow 240ms ease, transform 200ms ease;
+  }
+  /* Category-coloured spine down the left edge. */
+  .quest-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: var(--q-accent, var(--ember));
+  }
+  @media (hover: hover) {
+    .quest-card:hover { transform: translateY(-1px); box-shadow: var(--card-shadow-strong); }
+  }
+  /* Claimable: glow in the category colour + slow gold shimmer sweep. */
+  .quest-card--ready {
+    border-color: var(--q-accent, var(--ember));
+    box-shadow: 0 0 0 1px var(--q-accent, var(--ember)),
+                0 0 18px -5px var(--q-accent, var(--ember)),
+                var(--card-shadow);
+  }
+  .quest-card--ready::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 240, 190, 0.5) 50%, transparent 62%);
+    background-size: 240% 100%;
+    animation: quest-shimmer 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes quest-shimmer {
+    0%   { background-position: 150% 0; }
+    100% { background-position: -50% 0; }
+  }
+  /* Claimed: settle back, fade the spine. */
+  .quest-card--done { opacity: 0.7; }
+  .quest-card--done::before { opacity: 0.45; }
+
+  /* Category tag (wax-seal style pill). */
+  .quest-tag {
+    @apply inline-flex items-center gap-1 rounded-pill font-bold uppercase flex-shrink-0;
+    padding: 1px 8px 1px 6px;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    color: #fff;
+    background: var(--q-accent, var(--ember));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  /* Reward token — coins (+ almanac ✦) on a minted-gold chip. */
+  .quest-reward {
+    @apply inline-flex items-center gap-1.5 rounded-pill font-bold flex-shrink-0 tabular-nums;
+    padding: 2px 9px;
+    font-size: 11px;
+    color: #8a4a26;
+    background: linear-gradient(180deg, #fff6df 0%, #f3e1b2 100%);
+    border: 1px solid var(--gold-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .quest-reward .quest-reward-xp { color: #6f8a3a; }
+
+  .quest-card-title {
+    @apply font-bold leading-tight;
+    font-size: 13px;
+    color: var(--on-panel);
+  }
+  .quest-card-flavor {
+    @apply italic leading-snug;
+    font-size: 10.5px;
+    color: var(--on-panel-dim);
+  }
+  /* Small "ready to claim" status line above the button. */
+  .quest-card-status {
+    @apply inline-flex items-center gap-1 font-bold uppercase tracking-wide;
+    font-size: 9px;
+    color: var(--q-accent, var(--ember));
+  }
+
+  /* ══ Almanac progress header ════════════════════════════════════════ */
+  .almanac-head {
+    @apply relative flex flex-col gap-1.5 rounded-lg px-3 py-2.5 overflow-hidden;
+    background: linear-gradient(180deg, #efe6f6 0%, #e2d4ee 100%);
+    border: 2px solid var(--panel-arcane-border);
+    box-shadow: var(--card-shadow);
+  }
+  .almanac-head-title {
+    @apply font-bold leading-tight;
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: #3a2150;
+  }
+  .almanac-head-kicker {
+    @apply font-bold uppercase tracking-wider;
+    font-size: 9px;
+    color: #6a4a8a;
+  }
+
   /* ══ Modal backdrop ═════════════════════════════════════════════════ */
 
   .hl-backdrop {

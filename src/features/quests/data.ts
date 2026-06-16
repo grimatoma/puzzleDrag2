@@ -12,6 +12,8 @@ export interface QuestTemplate {
   tool?: string;
   minLength?: number;
   label: string;
+  /** Short in-world commission line shown beneath the title on the board. */
+  flavor?: string;
   targetMin: number;
   targetMax: number;
   coinBase: number;
