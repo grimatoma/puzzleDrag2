@@ -4,7 +4,7 @@
 > edit the layers or `subjects/carrot.mjs` and re-run `run_subject.mjs … prompts`.
 
 - **Category:** Produce — vegetable (`produce-veg`)
-- **Size:** generate at 128px, decimate to 64px for the game
+- **Size:** generate at 128px
 - **Identity:** a single large bright-orange carrot with a feathery green leafy top, lying at a natural diagonal slant across the pad (the pointed tip toward the lower-left and the feathery green top toward the upper-right), scaled to fill the tile on its diagonal
 - **Palette lock:** keep the carrot bright orange with a green leafy top — ripeness shows in surface and shade, not a hue change
 

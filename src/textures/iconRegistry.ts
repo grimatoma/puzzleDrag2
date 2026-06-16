@@ -60,7 +60,7 @@ import { ICONS as G_WEAPONS } from "./categories/weapons.js";
 import { ICONS as G_SPELLS } from "./categories/spells.js";
 import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
-import { paintSeasonalReference, ensureSeasonalArtLoaded, BAKED_SEASONAL_KEYS } from "./seasonal/seasonalArt.js";
+import { paintSeasonalReference, ensureSeasonalArtLoaded, SEASONAL_SUBJECT_KEYS } from "./seasonal/seasonalArt.js";
 
 export interface IconRegistryEntry {
   label?: string;
@@ -190,14 +190,13 @@ export function iconEntry(key: string): IconRegistryEntry | null {
 /** Draw the registered icon for `key` at the canvas's current origin.
  *  Returns true if the key was found and drawn, false otherwise.
  *
- *  Baked seasonal subjects (those with a `seasonalArt` registry entry +
- *  spritesheets in `public/seasonal-tiles/<dir>/`) render their Spring
- *  reference still here so every menu/wiki icon matches the board — drop-in,
- *  no per-icon wiring. Until the sheets load (and in environments without
- *  them, e.g. tests / offline icon render) it kicks the load and falls through
- *  to the subject's procedural icon. */
+ *  Baked seasonal subjects (any tile with spritesheets in
+ *  `public/seasonal-tiles/<tileKey>/`) render their reference still here so every
+ *  menu/wiki icon matches the board — drop-in, no per-icon wiring. Until the sheets
+ *  load (and in environments without them, e.g. tests / offline icon render) it kicks
+ *  the load and falls through to the subject's procedural icon. */
 export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
-  if (BAKED_SEASONAL_KEYS.has(key)) {
+  if (SEASONAL_SUBJECT_KEYS.has(key)) {
     if (paintSeasonalReference(ctx, key)) return true;
     ensureSeasonalArtLoaded();
   }

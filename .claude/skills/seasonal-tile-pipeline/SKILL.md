@@ -61,7 +61,7 @@ prompt for **every** object state (summer generate, each season edit, each trans
 - `compose.mjs` — `buildPlan(cfg)` → the plan; `renderPlanMarkdown` → a reviewable per-subject sheet.
 
 **Authoring a subject = a thin config** (`subjects/<name>.mjs`):
-`{ subject, category, size:128, decimateTo:64, identity, overrides, paletteLock, seeds }`. Tokens like
+`{ subject, category, size:128, identity, overrides, paletteLock, seeds }`. Tokens like
 `{foliage}`/`{autumnColor}`/`{trunkNote}` in a playbook are filled from the subject's `overrides`. **Dump and
 review the composed prompts before spending any credits** (the first ⟂ gate) — see Workflow step 0.
 
@@ -98,10 +98,12 @@ doc's "All tiles" tab; the essentials:
 - **Canonical style anchors (use both):** `docs/seasonal-tile-system/assets/willow-summer.png` +
   `eggplant-summer.png` — passed together as `style_images` so a new subject inherits the set's look. They
   span the two dominant archetypes (organic mass + hero object).
-- **Resolution:** ALWAYS generate at **128px**, then **decimate to 64px** for the small tiles (set
-  `size:128, decimateTo:64`). Native-64 generation drifts badly in base size/orientation and lets the season
-  light recolour constant subjects; the 128 set stays consistent — so generate big and downscale. (Output
-  size = the `image_size` you request; style refs can be a different size.)
+- **Resolution:** generate **AND ship at 128px** — `size:128`, **no decimate**. Native-64 generation drifts
+  badly in base size/orientation and lets the season light recolour constant subjects, so always generate at
+  128; and the board renders the native frame scaled to the cell, so 128 just reads crisper. (The chicken is
+  the one legacy exception — it shipped native-64 and is kept as-is; everything else is 128.) `pack_sheets.py`
+  still has an optional `--decimate N` if a specific tile ever needs a smaller sheet, but it is **off by
+  default**. (Output size = the `image_size` you request; style refs can be a different size.)
 - **Output convention:** stills at `docs/seasonal-tile-system/assets/<subject>-<season>.png`; animation
   frames at `.../assets/anim/<subject>-<clip>/frame_NN.png`; game sheets at
   `public/seasonal-tiles/<subject>/`.
@@ -185,12 +187,23 @@ generalize it to a registry so any subject registers declaratively. Then **verif
 ```
 node tools/pixellab/gen_gallery.mjs
 ```
-Regenerates the **Subject gallery** in `docs/seasonal-tile-system/index.html` (the `<!-- AUTOGALLERY -->`
-region) directly from the assets on disk — every generated subject's stills + transition/idle GIFs, with an
-`in-game` chip for registered subjects. **Never hand-edit the gallery**; add/regenerate a subject and re-run
-this. (Hand-authored prose lives in the adjacent `#learnings` section, which the generator does not touch.)
+Regenerates the **Asset gallery** in the **Assets** tab of `docs/seasonal-tile-system/index.html` (the
+`<!-- AUTOGALLERY -->` region) from the assets on disk **+ the planned-subject roster**
+(`tools/pixellab/roster.mjs`). Output: every category as a group with a `done / total` counter; each subject
+with art as **three stacked rows** (season key frames · idle animations · transitions) + an `in-game` chip if
+registered; each not-yet-generated subject as a `planned` placeholder so progress is visible. **Never
+hand-edit the gallery**; add/regenerate a subject and re-run this. (Hand-authored prose lives in the **Status**
+tab's `#learnings` section, which the generator does not touch.) When you add a brand-new subject, add a row
+to `roster.mjs` first (slug = asset filename stem) so it appears (as a placeholder until its art lands).
 Note: a season packed as a **static** idle should have its review GIF rebuilt from the still (replace that
 idle's frames with the season still, then `assemble_gifs.py`) so the gallery shows what actually ships.
+
+**Candidate review (optional).** The gallery has a "Show candidates" toggle that reveals, per key frame, the
+other candidates it was picked from — the chosen one ringed green (matched **by hash**). Only **Summer** is a
+true pick-of-N (`generate-with-style`); other seasons are single chained edits unless re-rolled. To expose a
+subject's candidates, copy them from the archive into `docs/seasonal-tile-system/assets/candidates/` named
+`<subject>-<season>-c<i>.png` (keep the original index `i`); the chosen frame must be byte-identical to the
+canonical `<subject>-<season>.png` so the generator can badge it. Re-run `gen_gallery.mjs` after.
 
 ## Validation gates (run these, don't skip)
 
@@ -218,7 +231,10 @@ After QA: rejected candidates + intermediates go to the **out-of-VC archive**
 - `check_pad.py` / `check_envelope.py` / `check_glow.py` / `drop_glow_frame.py` — QA gates.
 - `pack_sheets.py` — frames → game spritesheets (`--decimate N` to ship at N px, `--static-idle <seasons>` for
   no-motion idles). `assemble_gifs.py` — review GIFs/strips/montage. `_reroll.mjs` — re-roll ONE clip.
-- `gen_gallery.mjs` — regenerate the doc's Subject gallery from the assets on disk (step 7).
+- `roster.mjs` — canonical list of every planned tile subject (slug · name · category); drives the Assets-tab
+  grouping + placeholders. Add a row when a tile is planned.
+- `gen_gallery.mjs` — regenerate the doc's Asset gallery (roster + assets → category groups, 3-row cards,
+  candidate strips, placeholders) (step 7).
 
 Throwaway one-offs are named `_*` and gitignored; the above are the durable pipeline.
 

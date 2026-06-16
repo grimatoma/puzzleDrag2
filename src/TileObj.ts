@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
 
 // Global multiplier on the ambient sway frequency. >1 makes the wind sway play
 // faster across every tile without touching each per-resource `freq` in
@@ -147,9 +147,9 @@ export class TileObj {
   // those animations.
   ambient(time: number): void {
     if (this._destroying || this.selected) return;
-    // Baked-art tiles (willow) carry their motion inside the frames and have a
-    // ground pad that must not rotate — skip the sprite-angle sway entirely.
-    if (BAKED_SEASONAL_KEYS.has(this.res.key)) {
+    // Baked-art tiles carry their motion inside the frames and have a ground pad
+    // that must not rotate — skip the sprite-angle sway entirely once art is active.
+    if (seasonalArtActive(this.res.key)) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;
     }

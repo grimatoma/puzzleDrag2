@@ -5,7 +5,7 @@ import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
 import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
-import { paintSeasonalArt, seasonalArtLoaded, BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { paintSeasonalArt, seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -111,9 +111,9 @@ export function paintTileCanvas(
   }
   ctx.save();
   ctx.translate(w / 2, h / 2);
-  // Registered subjects (willow, chicken, …) render pre-baked seasonal art (idle
-  // loop + forward transitions); take priority over the procedural icon once loaded.
-  const baked = BAKED_SEASONAL_KEYS.has(res.key) && seasonalArtLoaded(res.key);
+  // Tiles with discovered PNG art render pre-baked seasonal art (idle loop + forward
+  // transitions); it fully replaces the procedural icon once any season has loaded.
+  const baked = seasonalArtActive(res.key);
   const conceptAnim =
     !baked && isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
   const anim = !baked && !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;

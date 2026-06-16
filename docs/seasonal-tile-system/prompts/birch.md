@@ -4,7 +4,7 @@
 > edit the layers or `subjects/birch.mjs` and re-run `run_subject.mjs … prompts`.
 
 - **Category:** Tree — deciduous (`tree-deciduous`)
-- **Size:** generate at 128px, decimate to 64px for the game
+- **Size:** generate at 128px
 - **Identity:** a slender upright birch tree with a light, airy, delicate green canopy and a slim white black-flecked trunk
 - **Palette lock:** the trunk stays white with fine black flecks — never tint it gold, grey or blue
 

@@ -4,7 +4,7 @@
 > edit the layers or `subjects/chicken.mjs` and re-run `run_subject.mjs … prompts`.
 
 - **Category:** Bird (`bird`) · constant subject (season = pad+light only)
-- **Size:** generate at 128px, decimate to 64px for the game
+- **Size:** generate at 64px
 - **Identity:** a small plump white-and-cream chicken with a tiny red comb and a small orange beak, standing
 - **Palette lock:** keep the chicken white and cream — never tint the bird orange, golden, grey or blue
 
