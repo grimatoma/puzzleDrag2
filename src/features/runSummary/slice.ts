@@ -145,7 +145,11 @@ export function reduce(state: GameState, action: Action): GameState {
       const gained = payload.gained || 0;
       const upgrades = payload.upgrades || 0;
       const value = payload.value || 0;
-      const coinGain = Math.max(1, Math.floor((gained * value) / 2));
+      // Mirror the board's base chain payout (state.ts: floor(gained * value)).
+      // The economy pass raised that ~2x (was /2); keep this in step so the run
+      // summary doesn't under-report. The per-tile coin hook + boon multiplier
+      // aren't in this payload, so this is the base figure, not the exact total.
+      const coinGain = Math.max(1, Math.floor(gained * value));
 
       const resourcesGained: Record<string, number> = { ...(run.resourcesGained ?? {}) };
       if (key && gained > 0) {
