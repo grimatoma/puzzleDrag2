@@ -160,6 +160,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   }, [searchOpen]);
 
   const combinedFilter = primaryFilter === "all" ? [] : [primaryFilter];
+  const distinctItems = Object.values(settlementInv).filter((n) => (n ?? 0) > 0).length;
 
   return (
     <FeaturePanel className="z-10">
@@ -179,6 +180,15 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
 
       <FeaturePanel.Body>
         <div className="w-full h-full min-h-0 flex flex-col gap-3">
+          <div className="hl-board-head flex-shrink-0">
+            <span className="text-[26px] leading-none flex-shrink-0" aria-hidden>📦</span>
+            <div className="flex-1 min-w-0">
+              <div className="hl-board-head__kicker">Hearthwood Vale</div>
+              <div className="hl-board-head__title">The Storehouse</div>
+              <div className="hl-board-head__sub">Everything you've gathered, crafted, and hauled home.</div>
+            </div>
+            <span className="hl-board-pill">{distinctItems} kinds</span>
+          </div>
           <div className="hl-well">
             <div className="flex flex-row flex-wrap items-center gap-2">
               {PRIMARY_FILTERS.map((option) => {

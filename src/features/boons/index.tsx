@@ -25,6 +25,10 @@ export const viewKey = "boons";
 // Tabbing by zone-type keeps the catalog reasonable on small screens.
 const TYPE_LABELS: Record<string, string> = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 const PATH_LABELS: Record<string, string> = { coexist: "Coexist", driveout: "Drive Out" };
+const PATH_FLAVOR: Record<string, string> = {
+  coexist: "Make peace with what stirs in the wild — strength through understanding.",
+  driveout: "Meet the threat with iron. Power claimed by force.",
+};
 
 interface PathColor { bg: string; border: string; text: string }
 const PATH_COLOR: Record<string, PathColor> = {
@@ -183,22 +187,28 @@ export default function BoonScreen({ state, dispatch }: BoonScreenProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <div className="hl-heading flex items-center gap-1.5">
-              {hasIcon("boon_branch_coexist") && (
-                <IconCanvas iconKey="boon_branch_coexist" size={20} background={null} rounded={false} title={PATH_LABELS.coexist} />
-              )}
-              {PATH_LABELS.coexist}
+            <div>
+              <div className="hl-heading flex items-center gap-1.5">
+                {hasIcon("boon_branch_coexist") && (
+                  <IconCanvas iconKey="boon_branch_coexist" size={20} background={null} rounded={false} title={PATH_LABELS.coexist} />
+                )}
+                {PATH_LABELS.coexist}
+              </div>
+              <div className="text-[11px] italic leading-snug text-on-panel-dim mt-0.5">{PATH_FLAVOR.coexist}</div>
             </div>
             {coexistList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_coexist` }} />
             ))}
           </div>
           <div className="flex flex-col gap-2">
-            <div className="hl-heading flex items-center gap-1.5">
-              {hasIcon("boon_branch_drive_out") && (
-                <IconCanvas iconKey="boon_branch_drive_out" size={20} background={null} rounded={false} title={PATH_LABELS.driveout} />
-              )}
-              {PATH_LABELS.driveout}
+            <div>
+              <div className="hl-heading flex items-center gap-1.5">
+                {hasIcon("boon_branch_drive_out") && (
+                  <IconCanvas iconKey="boon_branch_drive_out" size={20} background={null} rounded={false} title={PATH_LABELS.driveout} />
+                )}
+                {PATH_LABELS.driveout}
+              </div>
+              <div className="text-[11px] italic leading-snug text-on-panel-dim mt-0.5">{PATH_FLAVOR.driveout}</div>
             </div>
             {driveoutList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_driveout` }} />

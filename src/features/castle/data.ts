@@ -8,8 +8,8 @@
  * keeps three wired needs; the `cocoa`/`ink` placeholder needs were removed.
  */
 export const CASTLE_NEEDS = {
-  soup:  { target: 53, label: "Soup",  resource: "soup"  },
-  meat:  { target: 47, label: "Meat",  resource: "meat"  },
+  soup:  { target: 53, label: "Soup",  resource: "soup",  flavor: "Warm bowls for the capital's poor — nourishment they'll remember." },
+  meat:  { target: 47, label: "Meat",  resource: "meat",  flavor: "Salted provisions to carry the garrison through the long winter." },
   // Need-key `coal`; `resource` points to the prefixed mine inventory key.
-  coal:  { target: 43, label: "Coal",  resource: "tile_mine_coal" },
+  coal:  { target: 43, label: "Coal",  resource: "tile_mine_coal", flavor: "Fuel to keep the great hearths of the capital burning." },
 };
