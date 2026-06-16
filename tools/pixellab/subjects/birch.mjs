@@ -7,6 +7,7 @@
 // Generate at 128px (consistency), decimate to 64px for the game.
 export default {
   subject: "birch",
+  tileKey: "tile_tree_birch", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "tree-deciduous",
   size: 128,
   decimateTo: 64,

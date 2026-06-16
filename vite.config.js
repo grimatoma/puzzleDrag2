@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import compression from "vite-plugin-compression";
 import { visualizer } from "rollup-plugin-visualizer";
+import { seasonalSubjects } from "./tools/vite/seasonalSubjects.mjs";
 
 // Multi-page build:
 //   /         → the game (index.html → main.jsx, pulls in Phaser)
@@ -13,6 +14,8 @@ import { visualizer } from "rollup-plugin-visualizer";
 export default defineConfig({
   plugins: [
     react(),
+    // Discover public/seasonal-tiles/<tileKey>/ folders -> `virtual:seasonal-subjects`
+    seasonalSubjects(),
     // Pre-compress all JS/CSS assets with gzip and brotli for fast static serving
     compression({ algorithm: "gzip", ext: ".gz" }),
     compression({ algorithm: "brotliCompress", ext: ".br" }),

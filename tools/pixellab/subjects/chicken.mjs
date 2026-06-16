@@ -7,6 +7,7 @@
 // Now generated at 128px + decimated to 64 (the native-64 run drifted; see birch).
 export default {
   subject: "chicken",
+  tileKey: "tile_bird_chicken", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "bird",
   size: 128,
   decimateTo: 64,

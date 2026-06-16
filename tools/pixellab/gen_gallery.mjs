@@ -7,7 +7,7 @@
 // What it does: scans docs/seasonal-tile-system/assets/ for every "<subject>-summer.png"
 // (the canonical anchor), then for each subject collects its season stills + transition
 // and idle GIFs, reads its category/size from tools/pixellab/subjects/<subject>.mjs, and
-// marks it "in-game" if it's registered in src/textures/seasonal/seasonalArt.ts. The
+// marks it "in-game" if its tileKey has a public/seasonal-tiles/<tileKey>/ folder. The
 // result is spliced between the <!-- AUTOGALLERY:START --> / <!-- AUTOGALLERY:END -->
 // markers in index.html. Everything is referenced by relative path (never base64).
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
@@ -37,11 +37,16 @@ const CAT = {
 const has = (p) => existsSync(join(ROOT, p));
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Subjects integrated in-game = the dirs in the seasonalArt REGISTRY.
-function integratedDirs() {
-  const src = readFileSync(join(ROOT, "src/textures/seasonal/seasonalArt.ts"), "utf8");
-  const region = src.slice(src.indexOf("REGISTRY"), src.indexOf("BAKED_SEASONAL_KEYS"));
-  return new Set([...region.matchAll(/dir:\s*"([^"]+)"/g)].map((m) => m[1]));
+// Subjects integrated in-game = tile keys with a public/seasonal-tiles/<tileKey>/ folder
+// that ships (at least) the summer anchor frame — the engine auto-discovers these.
+function integratedKeys() {
+  const dir = "public/seasonal-tiles";
+  if (!has(dir)) return new Set();
+  return new Set(
+    readdirSync(join(ROOT, dir), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && has(`${dir}/${d.name}/idle-summer.png`))
+      .map((d) => d.name),
+  );
 }
 
 async function meta(subject) {
@@ -49,7 +54,7 @@ async function meta(subject) {
   if (!has(cfgPath)) return { category: null, size: null };
   try {
     const cfg = (await import(pathToFileURL(join(ROOT, cfgPath)).href)).default;
-    return { category: cfg.category, size: cfg.size, decimateTo: cfg.decimateTo };
+    return { category: cfg.category, size: cfg.size, decimateTo: cfg.decimateTo, tileKey: cfg.tileKey };
   } catch {
     return { category: null, size: null };
   }
@@ -66,7 +71,7 @@ async function build() {
   const subjects = files
     .filter((f) => /-summer\.png$/.test(f) && !/_cand_/.test(f))
     .map((f) => f.replace(/-summer\.png$/, ""));
-  const integrated = integratedDirs();
+  const integrated = integratedKeys();
   const animFiles = has(`${ASSETS}/anim`) ? readdirSync(join(ROOT, ASSETS, "anim")) : [];
 
   const rows = [];
@@ -89,7 +94,7 @@ async function build() {
       .map((season) => ({ src: `assets/anim/${s}-idle-${season}.gif`, cap: `${season} idle` }));
 
     const sizeChip = m.size ? ` <span class="pill info">${m.decimateTo ? `${m.size}→${m.decimateTo}px` : `${m.size}px`}</span>` : "";
-    const liveChip = integrated.has(s) ? ` <span class="pill ok">in-game</span>` : ` <span class="pill idle">art only</span>`;
+    const liveChip = integrated.has(m.tileKey) ? ` <span class="pill ok">in-game</span>` : ` <span class="pill idle">art only</span>`;
     const name = s.charAt(0).toUpperCase() + s.slice(1);
 
     const parts = [

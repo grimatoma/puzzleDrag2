@@ -3,6 +3,7 @@
 // carrot with a leafy green top".
 export default {
   subject: "carrot",
+  tileKey: "tile_veg_carrot", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "produce-veg",
   size: 128,
   decimateTo: 64,

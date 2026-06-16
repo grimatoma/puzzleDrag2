@@ -52,13 +52,27 @@ e.g. `seasonalTileArt.ts`:
   the registry's keyset. The five hook points above key on "is this tile registered" instead of "=== willow".
 - Preload all registered subjects in `create()`.
 
-Then onboarding a new subject = drop its sheets in `public/seasonal-tiles/<subject>/` + add one registry
-entry. Keep the per-tile playback (idle vs periodic) configurable per the category (foliage can run
-continuous; produce/animals/objects are better periodic — most tiles rest, life ripples through).
+This is now done — and onboarding is **zero-config**. The controller lives in
+`src/textures/seasonal/seasonalArt.ts` (`paintSeasonalArt`, `seasonalArtActive`, `preloadSeasonalArt`,
+`SEASONAL_SUBJECT_KEYS`); GameScene preloads + `_rebakeBakedTiles()`. There is **no hand-written registry**:
+the `seasonalSubjects()` Vite plugin (`tools/vite/seasonalSubjects.mjs`, wired into both `vite.config.js`
+and `vitest.config.js`) scans `public/seasonal-tiles/` and feeds the manifest in via the
+`virtual:seasonal-subjects` module.
 
-This is now done — the registry lives in `src/textures/seasonal/seasonalArt.ts` (`REGISTRY`,
-`paintSeasonalArt`, `seasonalArtLoaded`, `preloadSeasonalArt`, `BAKED_SEASONAL_KEYS`); GameScene preloads +
-`_rebakeBakedTiles()`.
+**Onboard a new subject = drop a folder named after its TILE KEY** (e.g.
+`public/seasonal-tiles/tile_tree_willow/`) holding its sheets — no code edit. Pack into the key-named folder
+with `pack_sheets.py <subject> --out-name <tileKey>` (each `subjects/<name>.mjs` carries its `tileKey`).
+Restart the dev server / rebuild so the plugin rescans.
+
+**Incremental rollout (add art in phases).** A subject goes live as soon as its **Summer anchor**
+(`idle-summer.png`) is present — that one frame stands in for every season and during transitions,
+**fully replacing the old vector art**. Add `idle-<season>.png` / `trans-<from>-<to>.png` later and they
+swap in automatically; any season still missing keeps falling back to Summer (rule:
+`fallbackIdleIndex` = exact season → Summer → first available). A missing transition just snaps. The plugin
+reads each folder's actual file list, so the engine fetches **only files that exist** (no 404 probing).
+
+Keep the per-tile playback (idle vs periodic) configurable per the category (foliage can run continuous;
+produce/animals/objects are better periodic — most tiles rest, life ripples through).
 
 ## Menu / wiki icons — automatic, no per-subject wiring
 
@@ -66,10 +80,11 @@ The board is only half the surface. React menus (the Tiles wiki, crafting/order 
 Dev Panel, …) render a tile's **static icon**, not the animated board texture — they all funnel through
 `drawIcon(ctx, key)` in `src/textures/iconRegistry.ts` (via `paintIcon` for `Icon`/`IconCanvas`, and via
 `drawTileIcon` for the tile-collection `TileIcon`). `drawIcon` is hooked once: if `key` is in
-`BAKED_SEASONAL_KEYS` it draws that subject's **Spring reference still** (`paintSeasonalReference` =
-`idle[0]` frame 0) and returns; otherwise it kicks `ensureSeasonalArtLoaded()` and falls through to the
-subject's procedural registry icon until the sheets arrive. So a subject's menu icon switches to its PNG
-art **purely from its `seasonalArt` REGISTRY entry** — you do NOT edit the per-family icon module
+`SEASONAL_SUBJECT_KEYS` it draws that subject's **reference still** (`paintSeasonalReference` = the resolved
+Spring frame, i.e. Spring if present else the Summer anchor) and returns; otherwise it kicks
+`ensureSeasonalArtLoaded()` and falls through to the subject's procedural registry icon until the sheets
+arrive. So a subject's menu icon switches to its PNG art **purely from dropping its
+`public/seasonal-tiles/<tileKey>/` folder** — you do NOT edit the per-family icon module
 (`categories/<family>.ts`); keep a procedural entry there only as the pre-load / offline fallback.
 
 Menu canvases bake once, so they re-bake when the art finishes loading: `seasonalArt` exposes

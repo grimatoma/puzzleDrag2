@@ -23,7 +23,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
-import { preloadSeasonalArt, seasonalArtLoaded, BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { preloadSeasonalArt, seasonalArtActive, SEASONAL_SUBJECT_KEYS } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
@@ -2131,8 +2131,7 @@ export class GameScene extends Phaser.Scene {
         const t = row[c];
         if (
           t &&
-          (hasSeasonalTileAnim(t.res.key, season) ||
-            (BAKED_SEASONAL_KEYS.has(t.res.key) && seasonalArtLoaded(t.res.key)))
+          (hasSeasonalTileAnim(t.res.key, season) || seasonalArtActive(t.res.key))
         ) {
           if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
           if (t.selected) selectedKeys.add(t.res.key);
@@ -2147,7 +2146,7 @@ export class GameScene extends Phaser.Scene {
       // Baked-art tiles (willow, chicken, …) own their idle + transition timing
       // internally, so feed them the raw clock; procedural seasonal tiles get the
       // staggered rest-pause warp.
-      const aSec = BAKED_SEASONAL_KEYS.has(res.key) ? tSec : idleAnimTime(tSec, res.key);
+      const aSec = seasonalArtActive(res.key) ? tSec : idleAnimTime(tSec, res.key);
       this._bakeAnimatedTile(res, false, season, aSec, dpr);
       if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, aSec, dpr);
     }
@@ -2181,8 +2180,8 @@ export class GameScene extends Phaser.Scene {
   private _rebakeBakedTiles() {
     const season = currentSeasonName(this);
     const dpr = this.bakeScale || this.dpr;
-    for (const key of BAKED_SEASONAL_KEYS) {
-      if (!seasonalArtLoaded(key)) continue;
+    for (const key of SEASONAL_SUBJECT_KEYS) {
+      if (!seasonalArtActive(key)) continue;
       const res = resourceByKey(key);
       if (!res) continue;
       for (const selected of [false, true]) {
