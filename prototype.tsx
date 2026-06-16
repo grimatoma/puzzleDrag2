@@ -328,6 +328,12 @@ export default function App() {
   const [inspectedTool, setInspectedTool] = useState<RuntimeTool | null>(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
+  // Once the player has opened the town, keep its (expensive) Phaser canvas
+  // mounted — hidden behind CSS — so returning to it is instant instead of a
+  // full cold reboot. See TownPhaserCanvas's lazy boot / pause-resume handling.
+  const [townEverOpened, setTownEverOpened] = useState(false);
+  if (state.view === "town" && !townEverOpened) setTownEverOpened(true);
+  const keepTownMounted = state.view === "town" || townEverOpened;
   const [pins, pinActions] = usePinnedTools();
   const hotbarRef = useRef<HTMLDivElement>(null);
   const maxFitPins = useMaxFitPins(hotbarRef);
@@ -557,10 +563,15 @@ export default function App() {
             />
           </div>
 
-          {/* Town overlay — covers exactly the same area as the board */}
-          {state.view === "town" && (
-            <div className="absolute inset-0 z-20 view-enter-down">
-              <TownView state={state} dispatch={dispatch} />
+          {/* Town overlay — covers exactly the same area as the board. Kept
+              mounted (hidden) after first open so the Phaser town doesn't have
+              to cold-boot on every visit. */}
+          {keepTownMounted && (
+            <div
+              className={`absolute inset-0 z-20 ${state.view === "town" ? "view-enter-down" : "hidden"}`}
+              aria-hidden={state.view !== "town"}
+            >
+              <TownView state={state} dispatch={dispatch} active={state.view === "town"} />
             </div>
           )}
 
