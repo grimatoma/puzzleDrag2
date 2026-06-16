@@ -6,7 +6,6 @@ export default {
   tileKey: "tile_veg_carrot", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "produce-veg",
   size: 128,
-  decimateTo: 64,
 
   // Slanted on purpose: a carrot's long tapered form fights an upright pose in a square
   // tile, so it lies on the tile's diagonal (tip lower-left, feathery top upper-right) —
