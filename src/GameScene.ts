@@ -22,6 +22,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { preloadWillowArt, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
@@ -2107,8 +2108,10 @@ export class GameScene extends Phaser.Scene {
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      this._bakeAnimatedTile(res, false, null, tSec, dpr);
-      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, null, tSec, dpr);
+      // Stagger each key's loop and insert a rest delay between iterations.
+      const aSec = idleAnimTime(tSec, res.key);
+      this._bakeAnimatedTile(res, false, null, aSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, null, aSec, dpr);
     }
   }
 
@@ -2138,8 +2141,11 @@ export class GameScene extends Phaser.Scene {
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      this._bakeAnimatedTile(res, false, season, tSec, dpr);
-      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, tSec, dpr);
+      // Willow carries its own idle/transition timeline (paintWillow) — feed it
+      // the raw clock. Procedural idle anims get the staggered, rest-delayed clock.
+      const aSec = res.key === "tile_tree_willow" ? tSec : idleAnimTime(tSec, res.key);
+      this._bakeAnimatedTile(res, false, season, aSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, aSec, dpr);
     }
   }
 
