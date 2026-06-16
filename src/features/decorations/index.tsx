@@ -13,6 +13,7 @@ interface Decoration {
   name: string;
   influence: number;
   cost: Record<string, number> & { coins?: number };
+  flavor?: string;
 }
 
 function canAfford(decor: Decoration, state: GameState): boolean {
@@ -38,6 +39,9 @@ function DecorationCard({ decor, state, dispatch }: { decor: Decoration; state: 
       )}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <span className="hl-card-title leading-tight">{decor.name}</span>
+        {decor.flavor && (
+          <span className="text-[10px] italic leading-snug text-on-panel-dim">{decor.flavor}</span>
+        )}
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
             <CostChip key={k}>{v as number} {k === "coins" ? "◉" : k}</CostChip>
@@ -59,10 +63,21 @@ function DecorationCard({ decor, state, dispatch }: { decor: Decoration; state: 
 }
 
 export default function DecorationsScreen({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+  const built = (locBuilt(state).decorations as Record<string, number> | undefined) ?? {};
+  const totalPlaced = Object.values(built).reduce((sum, n) => sum + (Number(n) || 0), 0);
   return (
     <FeaturePanel>
       {/* Decoration list */}
-      <FeaturePanel.Body className="!px-2">
+      <FeaturePanel.Body className="!px-2 flex flex-col gap-2">
+        <div className="hl-board-head">
+          <span className="text-[26px] leading-none flex-shrink-0" aria-hidden>🏡</span>
+          <div className="flex-1 min-w-0">
+            <div className="hl-board-head__kicker">Hearthwood Vale</div>
+            <div className="hl-board-head__title">Comforts of the Vale</div>
+            <div className="hl-board-head__sub">Little touches that make Hearthwood feel like home — each lifts the village's spirit.</div>
+          </div>
+          <span className="hl-board-pill">{totalPlaced} placed</span>
+        </div>
         <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
           {(Object.values(DECORATIONS) as Decoration[]).map((decor) => (
             <DecorationCard

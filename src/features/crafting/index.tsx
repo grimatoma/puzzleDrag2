@@ -47,6 +47,10 @@ interface StationMeta {
   label: string;
   iconKey: string;
   bg: string;
+  /** Evocative station name for the board header. */
+  title: string;
+  /** One-line in-world description of the station. */
+  flavor: string;
 }
 
 function LockGlyph({ size = 12 }: { size?: number }) {
@@ -59,12 +63,28 @@ function LockGlyph({ size = 12 }: { size?: number }) {
 }
 
 const STATION_META: Record<string, StationMeta> = {
-  bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458" },
-  forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4" },
-  larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658" },
-  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#a08c5e" },
-  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#b07ac0" },
+  bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458", title: "Mira's Bakery",  flavor: "Where flour and patience become warm bread." },
+  forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4", title: "Bram's Forge",   flavor: "Iron, fire, and the steady ring of the hammer." },
+  larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658", title: "The Larder",     flavor: "Preserves and provisions, put by for the lean months." },
+  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#a08c5e", title: "Wren's Workshop", flavor: "Planks, nails, and a carpenter's steady hands." },
+  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#b07ac0", title: "The Craft Table", flavor: "Small comforts that make the vale feel like home." },
 };
+
+function StationHeader({ meta, pill }: { meta: StationMeta; pill?: string | null }) {
+  return (
+    <div className="hl-board-head mx-3 mt-2 flex-shrink-0">
+      <span style={{ width: 32, height: 32 }} className="inline-grid place-items-center flex-shrink-0">
+        <IconCanvas iconKey={meta.iconKey} size={32} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="hl-board-head__kicker">Hearthwood Vale</div>
+        <div className="hl-board-head__title">{meta.title}</div>
+        <div className="hl-board-head__sub">{meta.flavor}</div>
+      </div>
+      {pill != null && <span className="hl-board-pill">{pill}</span>}
+    </div>
+  );
+}
 
 // Ordered list of all stations (decor appended)
 const STATION_ORDER = ["bakery", "larder", "forge", "workshop", "decor"];
@@ -328,6 +348,19 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const decorations = Object.values(DECORATIONS) as DecorDef[];
   const selectedDecor = decorations.find((decor: DecorDef) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
+  // Header pill: how many recipes are craftable right now (or decor placed).
+  const craftableCount = stationRecipes.filter(([key, recipe]) =>
+    canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, level),
+  ).length;
+  const decorPlaced = Object.values(
+    ((locBuilt(state) as { decorations?: Record<string, number> }).decorations) ?? {},
+  ).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const headerPill = activeTab === "decor"
+    ? `${decorPlaced} placed`
+    : !stationBuilt(built, activeTab)
+      ? "Locked"
+      : `${craftableCount}/${stationRecipes.length} ready`;
+
   return (
     <FeaturePanel>
       <FeaturePanel.Tabs className="!flex-nowrap overflow-x-auto">
@@ -360,6 +393,8 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
           Recipe Graph →
         </button>
       </FeaturePanel.Tabs>
+
+      <StationHeader meta={meta} pill={headerPill} />
 
       {activeTab === "decor" ? (
         <FeaturePanel.Body>

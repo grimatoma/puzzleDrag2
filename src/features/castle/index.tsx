@@ -30,7 +30,6 @@ function CastleNeedsList({ state, dispatch }: CastleNeedsListProps) {
 
   return (
     <div className="hl-well">
-      <div className="hl-section-label">🏰 Castle Needs</div>
       {Object.entries(CASTLE_NEEDS).map(([key, need]) => {
         const value = contributed[key] ?? 0;
         const have = inventoryQty(inventory, need.resource);
@@ -52,6 +51,9 @@ function CastleNeedsList({ state, dispatch }: CastleNeedsListProps) {
               </span>
               <span className="hl-card-meta tabular-nums">{value} / {need.target}</span>
             </div>
+            {(need as { flavor?: string }).flavor && (
+              <div className="text-[10px] italic leading-snug text-on-panel-dim">{(need as { flavor?: string }).flavor}</div>
+            )}
             <ProgressBar value={value} max={need.target} />
             {wired && (
               <div className="flex items-center justify-between gap-2 mt-0.5">
@@ -89,9 +91,22 @@ interface CastleScreenProps {
 }
 
 export default function CastleScreen({ state, dispatch }: CastleScreenProps) {
+  const contributed = (state?.castle as { contributed?: Record<string, number> } | undefined)?.contributed ?? {};
+  const entries = Object.entries(CASTLE_NEEDS);
+  const needsMet = entries.filter(([k, n]) => (contributed[k] ?? 0) >= n.target).length;
+
   return (
     <FeaturePanel>
-      <FeaturePanel.Body>
+      <FeaturePanel.Body className="flex flex-col gap-2">
+        <div className="hl-board-head">
+          <span className="text-[26px] leading-none flex-shrink-0" aria-hidden>🏰</span>
+          <div className="flex-1 min-w-0">
+            <div className="hl-board-head__kicker">The Capital</div>
+            <div className="hl-board-head__title">The Capital's Call</div>
+            <div className="hl-board-head__sub">The old capital asks for its due. Give freely, and be long remembered.</div>
+          </div>
+          <span className="hl-board-pill">{needsMet}/{entries.length} met</span>
+        </div>
         <CastleNeedsList state={state} dispatch={dispatch} />
       </FeaturePanel.Body>
     </FeaturePanel>
