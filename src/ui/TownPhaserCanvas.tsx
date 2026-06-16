@@ -22,6 +22,13 @@ interface TownPhaserCanvasProps {
   builtLots: Set<number>;
   buildingsMap: Record<number, string>;
   pendingBuilding: { id: string; name: string } | null;
+  /**
+   * True only while the town view is actually on screen. The Phaser game is
+   * booted lazily the first time this is true and then kept alive — when the
+   * view is hidden we pause the scene instead of destroying it, so returning
+   * to town is instant rather than a full cold reboot.
+   */
+  active?: boolean;
   onPlaceBuilding: (lotIndex: number, buildingId: string) => void;
   onClickBuilding: (buildingId: string) => void;
   onClickBoard: (kind: string) => void;
@@ -35,12 +42,14 @@ export default function TownPhaserCanvas({
   builtLots,
   buildingsMap,
   pendingBuilding,
+  active = true,
   onPlaceBuilding,
   onClickBuilding,
   onClickBoard,
 }: TownPhaserCanvasProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<GameWithObserver | null>(null);
+  const dprRef = useRef(Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3));
   const [loading, setLoading] = useState(true);
 
   // The scene's event listeners are bound once at postBoot, so they would
@@ -56,6 +65,30 @@ export default function TownPhaserCanvas({
     onClickBoardRef.current = onClickBoard;
   });
 
+  // Boot is async, so the latest plan/zone/state must be readable from the
+  // async closure and from the per-zone scene restarts below.
+  const planRef = useRef(plan);
+  const zoneIdRef = useRef(zoneId);
+  const builtLotsRef = useRef(builtLots);
+  const buildingsMapRef = useRef(buildingsMap);
+  const pendingBuildingRef = useRef(pendingBuilding);
+  useEffect(() => {
+    planRef.current = plan;
+    zoneIdRef.current = zoneId;
+    builtLotsRef.current = builtLots;
+    buildingsMapRef.current = buildingsMap;
+    pendingBuildingRef.current = pendingBuilding;
+  });
+
+  const saveCamera = (zid: string) => {
+    const game = gameRef.current;
+    const scene = game?.scene.scenes[0];
+    if (scene && scene.cameras && scene.cameras.main) {
+      const cam = scene.cameras.main;
+      savedCameraStates[zid] = { scrollX: cam.scrollX, scrollY: cam.scrollY, zoom: cam.zoom };
+    }
+  };
+
   // Sync state updates to Phaser TownScene
   useEffect(() => {
     const game = gameRef.current;
@@ -66,11 +99,13 @@ export default function TownPhaserCanvas({
     }
   }, [builtLots, buildingsMap, pendingBuilding]);
 
-  // Initial mount: Boot Phaser game
+  // Boot Phaser lazily, the first time the town view is shown. Guarded on
+  // gameRef so it only ever runs once; subsequent show/hide toggles are handled
+  // by the pause/resume effect below.
   useEffect(() => {
-    if (!hostRef.current || gameRef.current) return undefined;
+    if (!active || gameRef.current || !hostRef.current) return undefined;
     const host = hostRef.current;
-    const dpr = Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3);
+    const dpr = dprRef.current;
     let cancelled = false;
 
     (async () => {
@@ -117,13 +152,14 @@ export default function TownPhaserCanvas({
               if (scene) {
                 // Pass pre-boot data
                 g.registry.set("hwv.svgMap", svgMap);
-                
+
                 scene.scene.restart({
-                  plan,
-                  builtLots,
-                  buildingsMap,
-                  pendingBuilding,
-                  initialCameraState: savedCameraStates[zoneId],
+                  plan: planRef.current,
+                  zoneId: zoneIdRef.current,
+                  builtLots: builtLotsRef.current,
+                  buildingsMap: buildingsMapRef.current,
+                  pendingBuilding: pendingBuildingRef.current,
+                  initialCameraState: savedCameraStates[zoneIdRef.current],
                 });
 
                 scene.events.on("town.placebuilding", (data: { lotIndex: number; buildingId: string }) => {
@@ -149,29 +185,75 @@ export default function TownPhaserCanvas({
       }
     })();
 
+    // Note: no destroy here. Tearing the game down belongs to the unmount-only
+    // effect below — hiding the view must NOT throw away the loaded game.
     return () => {
       cancelled = true;
+    };
+  }, [active]);
+
+  // When the settlement changes (different zone, or a tier upgrade rebuilds the
+  // plan), restart the existing scene in place rather than rebuilding the whole
+  // game. The dep array fires this only on a real plan/zone change; on the
+  // initial mount the game isn't booted yet so it no-ops and boot does the work.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return; // not booted yet — boot picks up the current plan
+    const scene = game.scene.scenes[0] as TownScene | undefined;
+    if (!scene) return;
+    // Persist the outgoing settlement's camera (tracked on the scene itself)
+    // before swapping it out, so returning to it — or restarting the same zone
+    // for a tier upgrade — restores the player's pan/zoom.
+    if (scene.zoneId) saveCamera(scene.zoneId);
+    scene.scene.restart({
+      plan,
+      zoneId,
+      builtLots,
+      buildingsMap,
+      pendingBuilding,
+      initialCameraState: savedCameraStates[zoneId],
+    });
+    // builtLots/buildingsMap/pendingBuilding are forwarded as restart seed data
+    // but must not themselves trigger a restart — the sync effect handles those.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, zoneId]);
+
+  // Pause the scene while hidden (no wasted update/render work), and resume +
+  // resize to the host when shown again so a DPR/layout change while hidden is
+  // picked up.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    const scene = game.scene.scenes[0];
+    if (active) {
+      const host = hostRef.current;
+      if (host && host.clientWidth && host.clientHeight) {
+        game.scale.resize(host.clientWidth * dprRef.current, host.clientHeight * dprRef.current);
+      }
+      game.loop.wake?.();
+      scene?.scene.resume();
+    } else {
+      scene?.scene.pause();
+      game.loop.sleep?.();
+    }
+  }, [active]);
+
+  // Unmount-only teardown: this is the single place the game is destroyed.
+  useEffect(() => {
+    return () => {
       const game = gameRef.current;
       if (game) {
-        const scene = game.scene.scenes[0];
-        if (scene && scene.cameras && scene.cameras.main) {
-          const cam = scene.cameras.main;
-          savedCameraStates[zoneId] = {
-            scrollX: cam.scrollX,
-            scrollY: cam.scrollY,
-            zoom: cam.zoom,
-          };
-        }
+        saveCamera(zoneIdRef.current);
         game.__resizeObserver?.disconnect();
         game.destroy(true);
         gameRef.current = null;
       }
     };
-  }, [plan, zoneId]);
+  }, []);
 
   return (
     <div className="relative w-full h-full">
-      {loading && (
+      {loading && active && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#5a7f36]/90 text-white font-bold text-[18px] z-50">
           Loading Pixel Town...
         </div>
