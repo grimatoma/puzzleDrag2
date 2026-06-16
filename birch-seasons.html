@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silver Birch — Four Seasons (procedural canvas)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(120% 90% at 50% 0%, #1a2230 0%, #0d1118 70%);
+    color: #cdd6e2;
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  .wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 16px 40px; }
+  h1 { font-size: 16px; font-weight: 650; letter-spacing: .2px; margin: 2px 0 0; color: #e7edf6; }
+  .sub { font-size: 12px; color: #8593a6; margin: -8px 0 4px; }
+  .stage { position: relative; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 50px -20px #000, 0 0 0 1px #ffffff10 inset; }
+  canvas { display: block; }
+  .badge {
+    position: absolute; top: 12px; left: 14px; padding: 5px 11px; border-radius: 999px;
+    background: #0b0f16aa; backdrop-filter: blur(6px); font-size: 12px; font-weight: 600;
+    letter-spacing: .4px; color: #eaf0f8; border: 1px solid #ffffff20;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 600px; }
+  button {
+    appearance: none; border: 1px solid #ffffff1f; background: #161d28; color: #cdd6e2;
+    padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 550; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .05s;
+  }
+  button:hover { background: #1d2735; border-color: #ffffff33; }
+  button:active { transform: translateY(1px); }
+  button.active { background: #2b6cb0; border-color: #4a90d9; color: #fff; }
+  .sep { width: 1px; align-self: stretch; background: #ffffff14; margin: 2px 4px; }
+  .hint { font-size: 11.5px; color: #69768a; max-width: 560px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Silver Birch · <i>Betula pendula</i></h1>
+    <div class="sub">procedurally drawn on &lt;canvas&gt; — four seasons with animated transitions</div>
+    <div class="stage">
+      <canvas id="c"></canvas>
+      <div class="badge"><span class="dot" id="dot"></span><span id="label">Summer</span></div>
+    </div>
+    <div class="controls">
+      <button data-season="spring">🌸 Spring</button>
+      <button data-season="summer">🌳 Summer</button>
+      <button data-season="autumn">🍂 Autumn</button>
+      <button data-season="winter">❄️ Winter</button>
+      <div class="sep"></div>
+      <button id="cycle" class="active">▶ Cycle year</button>
+      <button id="gust">💨 Gust</button>
+    </div>
+    <div class="hint">Click a season to animate the transition, or let the year cycle. Branches sway in the wind; leaves bud in spring, deepen in summer, turn gold and fall in autumn, and snow settles on bare bark in winter.</div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  const W = 560, H = 680;
+  let dpr = Math.min(2, window.devicePixelRatio || 1);
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+  }
+  resize();
+
+  // ---------- small math/color helpers ----------
+  const TAU = Math.PI * 2;
+  const rad = d => d * Math.PI / 180;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  const smooth = t => t * t * (3 - 2 * t);
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const hex2rgb = h => {
+    h = h.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+  const rgb = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+  const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+  const shade = (c, k) => k >= 0 ? mix(c, [255, 255, 255], k) : mix(c, [12, 16, 22], -k);
+
+  // ---------- season model (interpolated continuously) ----------
+  // year t in [0,1): 0 spring, .25 summer, .5 autumn, .75 winter, wraps to spring
+  const SEASONS = [
+    { name: "Spring", at: 0.00, accent: "#9bd36b",
+      sky: ["#bfe3f3", "#eaf6ee"], ground: "#7fb45a", litter: "#cfe39a",
+      leafLo: "#cfe673", leafHi: "#8ec64e", foliage: 0.62, leafScale: 0.80,
+      catkin: 1.0, snow: 0.0, fall: 0.04 },
+    { name: "Summer", at: 0.25, accent: "#3fa64a",
+      sky: ["#9ed3f1", "#dff0e4"], ground: "#54a23c", litter: "#54a23c",
+      leafLo: "#62bd4c", leafHi: "#2c7a31", foliage: 1.0, leafScale: 1.0,
+      catkin: 0.0, snow: 0.0, fall: 0.02 },
+    { name: "Autumn", at: 0.50, accent: "#e8a31b",
+      sky: ["#f7dca6", "#f4ecd6"], ground: "#a9803a", litter: "#d39a2c",
+      leafLo: "#f7cb22", leafHi: "#d97f17", foliage: 0.94, leafScale: 1.0,
+      catkin: 0.0, snow: 0.0, fall: 1.0 },
+    { name: "Winter", at: 0.75, accent: "#bcd0e6",
+      sky: ["#c6d4e4", "#eef4fb"], ground: "#e9f1f9", litter: "#b8975a",
+      leafLo: "#c19a55", leafHi: "#9a7138", foliage: 0.0, leafScale: 0.9,
+      catkin: 0.0, snow: 1.0, fall: 0.22 },
+  ];
+  // precompute rgb forms
+  for (const s of SEASONS) {
+    s._sky = s.sky.map(hex2rgb); s._ground = hex2rgb(s.ground); s._litter = hex2rgb(s.litter);
+    s._leafLo = hex2rgb(s.leafLo); s._leafHi = hex2rgb(s.leafHi);
+  }
+  function seasonAt(t) {
+    t = (t % 1 + 1) % 1;
+    let i = 0;
+    while (i < 3 && t >= SEASONS[i + 1].at) i++;
+    const a = SEASONS[i], b = SEASONS[(i + 1) % 4];
+    const span = (i < 3 ? b.at : 1) - a.at;
+    const f = smooth(clamp((t - a.at) / span, 0, 1));
+    return {
+      name: f < 0.5 ? a.name : b.name,
+      accent: f < 0.5 ? a.accent : b.accent,
+      sky: [mix(a._sky[0], b._sky[0], f), mix(a._sky[1], b._sky[1], f)],
+      ground: mix(a._ground, b._ground, f),
+      litter: mix(a._litter, b._litter, f),
+      leafLo: mix(a._leafLo, b._leafLo, f),
+      leafHi: mix(a._leafHi, b._leafHi, f),
+      foliage: lerp(a.foliage, b.foliage, f),
+      leafScale: lerp(a.leafScale, b.leafScale, f),
+      catkin: lerp(a.catkin, b.catkin, f),
+      snow: lerp(a.snow, b.snow, f),
+      fall: lerp(a.fall, b.fall, f),
+    };
+  }
+
+  // ---------- unit birch leaf (ovate, acuminate tip, doubly-serrate) ----------
+  // local space: base at (0,0), tip at (0,-1). Built once, reused with transforms.
+  const leafPath = new Path2D();
+  const veinPath = new Path2D();
+  (function buildLeaf() {
+    const N = 10, halfW = 0.44, w0 = 0.05;
+    const right = [], left = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;                 // 0 base -> 1 tip
+      const y = -u;
+      // ovate width: widest ~33% up from base, taper to acuminate tip
+      let w = halfW * Math.sin(Math.PI * Math.pow(u, 0.72)) * (1 - 0.12 * u);
+      w = Math.max(w0, w);
+      // doubly-serrate teeth
+      const tooth = (u > 0.06 && u < 0.95) ? 0.045 * (0.6 + 0.4 * Math.sin(u * Math.PI)) : 0;
+      const saw = (i % 2 === 0) ? tooth : tooth * 0.4;
+      right.push([w + saw, y]); left.push([-(w + saw), y]);
+    }
+    leafPath.moveTo(right[0][0], right[0][1]);
+    for (let i = 1; i < right.length; i++) leafPath.lineTo(right[i][0], right[i][1]);
+    leafPath.lineTo(0, -1.04);                        // acuminate tip
+    for (let i = left.length - 1; i >= 0; i--) leafPath.lineTo(left[i][0], left[i][1]);
+    leafPath.quadraticCurveTo(0, 0.07, right[0][0], right[0][1]);  // rounded base (no notch)
+    leafPath.closePath();
+    // midrib + three pairs of pinnate veins
+    veinPath.moveTo(0, -0.02); veinPath.lineTo(0, -0.95);
+    for (const yy of [0.3, 0.5, 0.7]) {
+      veinPath.moveTo(0, -yy); veinPath.lineTo(0.24 * (1 - yy * 0.6), -yy - 0.16);
+      veinPath.moveTo(0, -yy); veinPath.lineTo(-0.24 * (1 - yy * 0.6), -yy - 0.16);
+    }
+  })();
+
+  // ---------- build the tree skeleton (once, seeded) ----------
+  const baseX = W * 0.5, baseY = H - 88, trunkTopY = 304;
+  const trunkBaseHalf = 16, trunkTopHalf = 6.5;
+
+  let trunkPath, barkParts, segs, leaves, catkins;
+
+  function buildTrunk(seed) {
+    const rng = mulberry32(seed);
+    const rand = (a, b) => a + (b - a) * rng();
+
+    // trunk polygon (slight S-curve), used for fill + clip
+    trunkPath = new Path2D();
+    const NT = 16, leftE = [], rightE = [];
+    const cxAt = p => baseX + Math.sin(p * Math.PI * 0.9) * 9 - p * 6;
+    const halfAt = p => lerp(trunkBaseHalf, trunkTopHalf, Math.pow(p, 0.85)) * (1 - 0.08 * Math.sin(p * Math.PI));
+    for (let i = 0; i <= NT; i++) {
+      const p = i / NT, y = lerp(baseY, trunkTopY, p), cx = cxAt(p), h = halfAt(p);
+      leftE.push([cx - h, y]); rightE.push([cx + h, y]);
+    }
+    trunkPath.moveTo(leftE[0][0], leftE[0][1]);
+    for (const e of leftE) trunkPath.lineTo(e[0], e[1]);
+    for (let i = rightE.length - 1; i >= 0; i--) trunkPath.lineTo(rightE[i][0], rightE[i][1]);
+    trunkPath.closePath();
+
+    // bark details: lenticels, dark "eye" chevrons, peeling strips, base fissures
+    barkParts = { lenticels: [], eyes: [], peels: [], fissures: [] };
+    for (let i = 0; i < 54; i++) {
+      const p = Math.pow(rng(), 0.9), y = lerp(baseY - 4, trunkTopY + 8, p), cx = cxAt(p), h = halfAt(p);
+      const x = cx + rand(-h * 0.82, h * 0.82);
+      barkParts.lenticels.push({ x, y, len: rand(4, 7 + h * 0.5), th: rand(1.2, 2.6), tilt: rand(-0.12, 0.12), a: rand(0.45, 0.8) });
+    }
+    for (let i = 0; i < 4; i++) {
+      const p = rand(0.25, 0.85), y = lerp(baseY, trunkTopY, p), cx = cxAt(p), h = halfAt(p);
+      barkParts.eyes.push({ x: cx + rand(-h * 0.4, h * 0.4), y, s: rand(5, 9) });
+    }
+    for (let i = 0; i < 3; i++) {
+      const p = rand(0.15, 0.7), y = lerp(baseY, trunkTopY, p), cx = cxAt(p), h = halfAt(p);
+      barkParts.peels.push({ x: cx + (rng() < 0.5 ? -1 : 1) * h * rand(0.4, 0.75), y, w: rand(3, 6), hgt: rand(14, 34) });
+    }
+    for (let i = 0; i < 7; i++) {
+      const cx = cxAt(0.04), h = halfAt(0.04);
+      barkParts.fissures.push({ x: cx + rand(-h, h), y0: baseY + 2, hgt: rand(14, 40), a: rand(0.25, 0.5) });
+    }
+  }
+
+  // crown center used for leaf colour gradient + orientation
+  const crownCY = 215;
+
+  function buildCrown(seed) {
+    const rng = mulberry32(seed);
+    const rand = (a, b) => a + (b - a) * rng();
+    const _segs = [], bearers = [], _catkins = [];   // bearers = segments that carry leaves
+    const MAXD = 5;
+    function grow(x, y, angDeg, len, w, depth) {
+      const a = rad(angDeg);
+      const ex = x + Math.cos(a) * len, ey = y + Math.sin(a) * len;
+      const droop = depth >= 2 ? len * (0.06 + 0.03 * depth) : 0; // pendulous, weeping branchlets
+      const seg = { x0: x, y0: y, cx: (x + ex) / 2, cy: (y + ey) / 2 + droop, x1: ex, y1: ey, w, depth, phase: rng() * TAU, term: false };
+      _segs.push(seg);
+      // terminate long outliers so bare twigs don't stray beyond the foliage envelope
+      const terminal = depth >= MAXD || w < 1.0 || len < 9 || Math.abs(ex - baseX) > 165 || ey < 34;
+      if (terminal) {
+        seg.term = true; bearers.push(seg);
+        if (rng() < 0.4) _catkins.push({ x: ex, y: ey, phase: rng() * TAU, len: rand(15, 27) });
+        return;
+      }
+      const n = depth === 0 ? 4 : (rng() < 0.4 ? 2 : 3);
+      for (let i = 0; i < n; i++) {
+        const spread = depth === 0 ? rand(-30, 30) : rand(-36, 36);
+        let childAng = angDeg + spread;
+        // silver birch is pendulous: finer branchlets bend progressively downward
+        if (depth >= 2) childAng = lerp(childAng, 95, clamp((depth - 1) * 0.17, 0, 0.62));
+        grow(ex, ey, childAng, len * rand(0.70, 0.80), w * rand(0.62, 0.72), depth + 1);
+      }
+      if (depth >= 2) bearers.push(seg);   // leaves fill the whole crown, not just tips
+    }
+    // main limbs: shorter & wider fan, centred on vertical -> rounded oval crown
+    const limbs = [[-130, 86, 9], [-112, 95, 10.5], [-98, 99, 11], [-82, 99, 11], [-68, 95, 10.5], [-50, 86, 9]];
+    for (const [ang, len, w] of limbs) grow(baseX - 3, trunkTopY + 6, ang, len, w, 1);
+
+    // ---- foliage as overlapping clumps filling a lumpy oval crown volume ----
+    // (decoupled from twig density so the whole crown fills evenly; branches show through gaps)
+    const cx0 = baseX + rand(-8, 8), cy0 = 172, RX = 146, RY = 137;
+    const clumps = [{ x: cx0, y: cy0 - 8, r: 64 }];               // dense core
+    const nLobe = 9;
+    for (let i = 0; i < nLobe; i++) {
+      const ang = (i / nLobe) * TAU + rand(-0.25, 0.25);
+      const rr = rand(0.5, 0.96);
+      clumps.push({ x: cx0 + Math.cos(ang) * RX * rr, y: cy0 + Math.sin(ang) * RY * rr * 0.96, r: rand(40, 60) });
+    }
+    const _leaves = [], TARGET = 1150, per = Math.ceil(TARGET / clumps.length);
+    for (const c of clumps) {
+      for (let i = 0; i < per; i++) {
+        if (_leaves.length >= 1400) break;
+        const a = rng() * TAU, rr = c.r * Math.sqrt(rng());
+        const bx = c.x + Math.cos(a) * rr, by = c.y + Math.sin(a) * rr * 0.95;
+        const ox = (bx - cx0) / RX, oy = (by - cy0) / RY;
+        if (Math.hypot(ox, oy) > 1.06) continue;                 // soft oval boundary
+        const side = Math.sign(bx - baseX) || 1;
+        const heightAmp = clamp((baseY - 120 - by) / 260, 0.2, 1);
+        _leaves.push({
+          bx, by, size: rand(5.4, 9), rot: side * rand(0.2, 1.0) + rand(-0.3, 0.3),
+          z: rng(), appear: rng() * 0.96, jit: rand(-0.5, 0.5),
+          amp: heightAmp * rand(0.7, 1.25), phase: rng() * TAU, alive: true,
+        });
+      }
+    }
+    // terminal twig tips, for branch-skeleton scoring (winter balance)
+    const tips = _segs.filter(s => s.term).map(s => [s.x1, s.y1]);
+    return { segs: _segs, twigs: bearers, catkins: _catkins, leaves: _leaves, tips };
+  }
+
+  // score the branch skeleton: prefer balanced (L/R), well-centred, full, well-spread tips
+  function scoreCrown(c) {
+    const tips = c.tips;
+    if (tips.length < 60) return Infinity;
+    let L = 0, R = 0, minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (const [x, y] of tips) {
+      x < baseX ? L++ : R++;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+    const total = tips.length;
+    const bal = Math.abs(L - R) / total;
+    const cx = (minX + maxX) / 2, w = maxX - minX, h = maxY - minY;
+    const centerPen = Math.abs(cx - baseX) / 90;
+    const widthPen = Math.abs(w - 280) / 280;
+    const heightPen = Math.abs(h - 250) / 250;
+    const countPen = Math.max(0, 120 - total) / 120;
+    return bal * 1.7 + centerPen * 1.6 + widthPen * 0.6 + heightPen * 0.5 + countPen * 0.6;
+  }
+
+  function selectTree() {
+    buildTrunk(3);
+    let best = null, bestScore = Infinity;
+    for (let s = 1; s <= 70; s++) {
+      const c = buildCrown(s);
+      const sc = scoreCrown(c);
+      if (sc < bestScore) { bestScore = sc; best = c; }
+    }
+    segs = best.segs; twigs = best.twigs; catkins = best.catkins; leaves = best.leaves;
+  }
+  let twigs;
+  selectTree();
+
+  // ---------- particles ----------
+  const fallingLeaves = [], snowFlakes = [];
+  function spawnLeaf(x, y, col) {
+    if (fallingLeaves.length > 200) return;
+    fallingLeaves.push({
+      x, y, vx: (Math.random() - 0.5) * 0.5, vy: 1.0 + Math.random() * 1.1,
+      rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 0.12,
+      sway: Math.random() * TAU, size: 6 + Math.random() * 3, col: col.slice(),
+    });
+  }
+  for (let i = 0; i < 90; i++) snowFlakes.push({ x: Math.random() * W, y: Math.random() * H, r: 0.8 + Math.random() * 2, vy: 0.4 + Math.random() * 0.9, sway: Math.random() * TAU, sp: 0.5 + Math.random() });
+
+  // ---------- wind ----------
+  let gust = 0;
+  function windAt(T) { return 0.55 + 0.45 * Math.sin(T * 0.00065) + 0.2 * Math.sin(T * 0.0021 + 1) + gust; }
+
+  // ---------- render ----------
+  const dot = document.getElementById("dot"), labelEl = document.getElementById("label");
+  let prevFoliage = null;
+
+  function draw(T, S, wind) {
+    dropBudget = 5;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    // sky
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, rgb(S.sky[0])); sky.addColorStop(0.62, rgb(S.sky[1])); sky.addColorStop(1, rgb(shade(S.sky[1], -0.04)));
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    // soft sun glow upper-left
+    const sun = ctx.createRadialGradient(120, 90, 10, 120, 90, 360);
+    sun.addColorStop(0, rgba([255, 250, 230], 0.5 - 0.25 * S.snow)); sun.addColorStop(1, "rgba(255,250,230,0)");
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+
+    // ground
+    const gY = baseY + 6;
+    const gg = ctx.createLinearGradient(0, gY - 30, 0, H);
+    gg.addColorStop(0, rgb(shade(S.ground, 0.06))); gg.addColorStop(1, rgb(shade(S.ground, -0.12)));
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.moveTo(0, gY + 18);
+    ctx.quadraticCurveTo(W * 0.5, gY - 14, W, gY + 18); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+    // litter / flecks on ground
+    ctx.save(); ctx.clip();
+    for (let i = 0; i < 36; i++) {
+      const x = (i * 97 % W), y = gY + 22 + (i * 53 % (H - gY - 26));
+      ctx.fillStyle = rgba(S.litter, 0.5);
+      ctx.fillRect(x, y, 3 + (i % 3), 2);
+    }
+    ctx.restore();
+    // contact shadow
+    ctx.fillStyle = "rgba(20,28,16,0.18)";
+    ctx.beginPath(); ctx.ellipse(baseX, gY + 10, 86, 16, 0, 0, TAU); ctx.fill();
+
+    // ---- helper to draw a swayed branch curve ----
+    const swayX = (depth, phase) => wind * (depth * depth) * 0.6 * Math.sin(T * 0.0016 + phase);
+    function branchPath(s) {
+      const sx1 = swayX(s.depth, s.phase), sxc = sx1 * 0.5;
+      const p = new Path2D();
+      p.moveTo(s.x0, s.y0);
+      p.quadraticCurveTo(s.cx + sxc, s.cy, s.x1 + sx1, s.y1 + Math.abs(sx1) * 0.12);
+      return { p, ex: s.x1 + sx1, ey: s.y1 + Math.abs(sx1) * 0.12 };
+    }
+
+    // ---- back canopy leaves (behind branches, slightly darker) ----
+    drawLeaves(T, S, wind, true);
+
+    // ---- trunk ----
+    ctx.save();
+    const tg = ctx.createLinearGradient(baseX - trunkBaseHalf, 0, baseX + trunkBaseHalf, 0);
+    tg.addColorStop(0, "#f4f1ea"); tg.addColorStop(0.45, "#e7e1d4"); tg.addColorStop(1, "#c9bda9");
+    ctx.fillStyle = tg; ctx.fill(trunkPath);
+    ctx.save(); ctx.clip(trunkPath);
+    // base darkening (rough fissured bark near the ground)
+    const bd = ctx.createLinearGradient(0, baseY - 70, 0, baseY + 6);
+    bd.addColorStop(0, "rgba(60,52,42,0)"); bd.addColorStop(1, "rgba(44,38,30,0.85)");
+    ctx.fillStyle = bd; ctx.fillRect(0, baseY - 70, W, 80);
+    for (const f of barkParts.fissures) {
+      ctx.strokeStyle = `rgba(30,24,18,${f.a})`; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(f.x, f.y0); ctx.lineTo(f.x + 1, f.y0 - f.hgt); ctx.stroke();
+    }
+    // peeling papery strips
+    for (const pl of barkParts.peels) {
+      ctx.fillStyle = "rgba(255,253,247,0.6)";
+      ctx.fillRect(pl.x - pl.w / 2, pl.y - pl.hgt, pl.w, pl.hgt);
+      ctx.strokeStyle = "rgba(90,80,66,0.45)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pl.x + pl.w / 2, pl.y - pl.hgt); ctx.lineTo(pl.x + pl.w / 2, pl.y); ctx.stroke();
+    }
+    // dark "eye" chevrons below limb scars
+    for (const e of barkParts.eyes) {
+      ctx.strokeStyle = "rgba(38,30,22,0.8)"; ctx.lineWidth = e.s * 0.5; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(e.x - e.s, e.y - e.s * 0.5); ctx.lineTo(e.x, e.y + e.s * 0.5);
+      ctx.lineTo(e.x + e.s, e.y - e.s * 0.5); ctx.stroke();
+    }
+    // horizontal lenticels (the birch signature)
+    ctx.lineCap = "round";
+    for (const l of barkParts.lenticels) {
+      ctx.strokeStyle = `rgba(46,38,30,${l.a})`; ctx.lineWidth = l.th;
+      ctx.beginPath(); ctx.moveTo(l.x - l.len / 2, l.y - l.tilt * l.len); ctx.lineTo(l.x + l.len / 2, l.y + l.tilt * l.len); ctx.stroke();
+    }
+    // form shadow on the right (light from upper-left)
+    const sh = ctx.createLinearGradient(baseX, 0, baseX + trunkBaseHalf + 4, 0);
+    sh.addColorStop(0, "rgba(60,52,40,0)"); sh.addColorStop(1, "rgba(60,52,40,0.4)");
+    ctx.fillStyle = sh; ctx.fillRect(baseX, trunkTopY, trunkBaseHalf + 6, baseY - trunkTopY);
+    ctx.restore(); // unclip
+    ctx.restore();
+
+    // ---- branches: thick (low depth) to thin (high depth) ----
+    const order = segs.slice().sort((a, b) => a.depth - b.depth);
+    for (const s of order) {
+      const { p } = branchPath(s);
+      // white birch limb with a touch of shadow underneath
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.strokeStyle = s.depth <= 2 ? "#ece6da" : (s.depth === 3 ? "#e3dccd" : "#d8cfbe");
+      ctx.lineWidth = Math.max(0.8, s.w); ctx.stroke(p);
+      // lenticels on the larger limbs
+      if (s.depth <= 2 && s.w > 4) {
+        const mid = [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2];
+        ctx.strokeStyle = "rgba(70,60,48,0.5)"; ctx.lineWidth = 1.1;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath(); ctx.moveTo(mid[0] - 3, mid[1] + i * 5); ctx.lineTo(mid[0] + 3, mid[1] + i * 5); ctx.stroke();
+        }
+      }
+    }
+
+    // ---- snow caps on branches (winter) ----
+    if (S.snow > 0.02) {
+      for (const s of order) {
+        if (s.depth > 3) continue;
+        const { p } = branchPath(s);
+        ctx.save();
+        ctx.translate(0, -Math.max(1.5, s.w) * 0.45 * S.snow);
+        ctx.strokeStyle = `rgba(244,248,253,${0.9 * S.snow})`;
+        ctx.lineWidth = Math.max(1, s.w * 0.85) * (0.5 + 0.5 * S.snow); ctx.lineCap = "round";
+        ctx.stroke(p); ctx.restore();
+      }
+    }
+
+    // ---- catkins (spring) ----
+    if (S.catkin > 0.02) {
+      for (const c of catkins) {
+        const sx = wind * 6 * Math.sin(T * 0.003 + c.phase);
+        const len = c.len * S.catkin;
+        ctx.save(); ctx.translate(c.x, c.y);
+        ctx.strokeStyle = "rgba(150,130,70,0.5)"; ctx.lineWidth = 1;
+        const g = ctx.createLinearGradient(0, 0, 0, len);
+        g.addColorStop(0, rgba([175, 158, 92], S.catkin)); g.addColorStop(1, rgba([120, 100, 50], S.catkin));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          const t = i / 8, yy = t * len, xx = sx * t + Math.sin(t * 9) * 1.2, w = (1.6 + Math.sin(t * 9) * 0.5) * (1 - 0.3 * t);
+          if (i === 0) ctx.moveTo(xx + w, yy); else ctx.lineTo(xx + w, yy);
+        }
+        for (let i = 8; i >= 0; i--) {
+          const t = i / 8, yy = t * len, xx = sx * t + Math.sin(t * 9) * 1.2, w = (1.6 + Math.sin(t * 9) * 0.5) * (1 - 0.3 * t);
+          ctx.lineTo(xx - w, yy);
+        }
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+    }
+
+    // ---- front canopy leaves ----
+    drawLeaves(T, S, wind, false);
+
+    // ---- gentle steady leaf-fall in autumn ----
+    if (S.foliage > 0.05 && S.fall > 0.05 && Math.random() < S.fall * 0.35) {
+      const lf = leaves[(Math.random() * leaves.length) | 0];
+      if (lf && lf.z >= 0.45 && S.foliage > lf.appear) {
+        const dx = wind * lf.amp * 9 * Math.sin(T * 0.004 + lf.phase);
+        spawnLeaf(lf.bx + dx, lf.by, mix(S.leafLo, S.leafHi, lf.z));
+      }
+    }
+
+    // ---- falling leaves ----
+    for (let i = fallingLeaves.length - 1; i >= 0; i--) {
+      const f = fallingLeaves[i];
+      f.sway += 0.04; f.x += f.vx + Math.sin(f.sway) * 0.7 + wind * 0.5; f.y += f.vy; f.rot += f.vr;
+      if (f.y > gY + 8) { fallingLeaves.splice(i, 1); continue; }
+      ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot); ctx.scale(f.size, f.size);
+      ctx.fillStyle = rgb(f.col); ctx.fill(leafPath); ctx.restore();
+    }
+
+    // ---- falling snow ----
+    if (S.snow > 0.02) {
+      ctx.fillStyle = `rgba(247,250,255,${0.85 * S.snow})`;
+      for (const fl of snowFlakes) {
+        fl.y += fl.vy * (0.4 + S.snow); fl.x += Math.sin(fl.sway += 0.02 * fl.sp) * 0.6 + wind * 0.6;
+        if (fl.y > H) { fl.y = -4; fl.x = Math.random() * W; }
+        if (fl.x > W + 4) fl.x = -4; if (fl.x < -4) fl.x = W + 4;
+        ctx.beginPath(); ctx.arc(fl.x, fl.y, fl.r, 0, TAU); ctx.fill();
+      }
+    }
+
+    // ---- snow blanket on ground (winter) ----
+    if (S.snow > 0.02) {
+      ctx.fillStyle = `rgba(238,244,251,${0.95 * S.snow})`;
+      ctx.beginPath(); ctx.moveTo(0, gY + 16);
+      ctx.quadraticCurveTo(W * 0.5, gY - 6, W, gY + 16); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  let dropBudget = 0; // throttles leaf-drop particle spawns per frame
+  function drawLeaves(T, S, wind, back) {
+    if (S.foliage < 0.012) return;
+    const lo = S.leafLo, hi = S.leafHi;
+    // only spawn drops on gradual change (not instant jumps): small per-frame delta
+    const dropping = prevFoliage !== null && prevFoliage > S.foliage && (prevFoliage - S.foliage) < 0.03;
+    for (const lf of leaves) {
+      if ((lf.z < 0.45) !== back) continue;
+      const shown = S.foliage > lf.appear;
+      if (lf.alive && !shown && dropping && lf.z >= 0.45 && dropBudget > 0) {
+        const dx = wind * lf.amp * 9 * Math.sin(T * 0.004 + lf.phase);
+        spawnLeaf(lf.bx + dx, lf.by, mix(lo, hi, lf.z));
+        dropBudget--;
+      }
+      lf.alive = shown;
+      if (!shown) continue;
+      const dx = wind * lf.amp * 9 * Math.sin(T * 0.004 + lf.phase);
+      const dy = Math.sin(T * 0.004 + lf.phase * 1.7) * 1.6;
+      // colour: lit crown top (lo) -> deeper shaded interior (hi) + jitter + directional light
+      let col = mix(lo, hi, clamp((lf.by - 50) / 220 + lf.jit * 0.15, 0, 1));
+      col = shade(col, (lf.bx < baseX ? 0.07 : -0.05) + lf.jit * 0.05); // light from upper-left
+      if (back) col = shade(col, -0.16);
+      const growScale = clamp((S.foliage - lf.appear) / 0.25, 0.35, 1); // bud-out easing
+      const s = lf.size * S.leafScale * growScale;
+      const rot = lf.rot + dx * 0.03 + lf.amp * 0.2 * Math.sin(T * 0.004 + lf.phase);
+      ctx.save();
+      ctx.translate(lf.bx + dx, lf.by + dy); ctx.rotate(rot); ctx.scale(s, s);
+      ctx.fillStyle = rgb(col); ctx.fill(leafPath);
+      if (s > 6.8) { ctx.strokeStyle = rgba(shade(col, -0.3), 0.45); ctx.lineWidth = 0.05; ctx.stroke(veinPath); }
+      ctx.restore();
+    }
+  }
+
+  // ---------- year cycle + transitions ----------
+  let curT = 0.25;          // start in summer
+  let target = 0.25, tweening = false, tweenFrom = 0.25, tweenStart = 0, cycling = true;
+  let YEAR_MS = 46000;      // one full year when cycling
+  const TWEEN_MS = 2600;
+
+  function gotoSeason(name, instant) {
+    const map = { spring: 0.0, summer: 0.25, autumn: 0.5, winter: 0.75 };
+    const goal = map[name];
+    cycling = false; document.getElementById("cycle").classList.remove("active");
+    // pick shortest direction around the ring, but bias forward for natural order
+    let g = goal; if (g < curT) g += 1;
+    if (instant) { curT = goal; target = goal; tweening = false; fallingLeaves.length = 0; prevFoliage = seasonAt(goal).foliage; }
+    else { tweenFrom = curT; target = g; tweening = true; tweenStart = performance.now(); }
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = now - last; last = now;
+    gust *= 0.96;
+    if (cycling) {
+      curT = (curT + dt / YEAR_MS) % 1;
+    } else if (tweening) {
+      const k = clamp((now - tweenStart) / TWEEN_MS, 0, 1);
+      curT = (tweenFrom + (target - tweenFrom) * smooth(k)) % 1;
+      if (k >= 1) tweening = false;
+    }
+    const S = seasonAt(curT);
+    const wind = windAt(now);
+    draw(now, S, wind);
+    prevFoliage = S.foliage;
+    // badge
+    labelEl.textContent = S.name;
+    dot.style.color = S.accent;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- UI ----------
+  document.querySelectorAll("button[data-season]").forEach(b =>
+    b.addEventListener("click", () => gotoSeason(b.dataset.season, false)));
+  document.getElementById("cycle").addEventListener("click", e => {
+    cycling = !cycling; tweening = false; e.target.classList.toggle("active", cycling);
+  });
+  document.getElementById("gust").addEventListener("click", () => { gust = 1.6; });
+  window.addEventListener("resize", resize);
+
+  // hooks for screenshot/automation
+  window.__BIRCH = {
+    jump(name) { gotoSeason(name, true); },
+    go(name) { gotoSeason(name, false); },
+    setT(t) { cycling = false; tweening = false; curT = ((t % 1) + 1) % 1; fallingLeaves.length = 0; prevFoliage = seasonAt(curT).foliage; },
+    cycle(on) { cycling = !!on; tweening = false; document.getElementById("cycle").classList.toggle("active", cycling); },
+    speed(ms) { YEAR_MS = ms; },
+    setCurT(t) { curT = ((t % 1) + 1) % 1; },
+    ready: true,
+  };
+})();
+</script>
+</body>
+</html>
