@@ -21,10 +21,30 @@ interface OrdersScreenProps {
 
 export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
   const { orders, inventory } = state;
+  const readyCount = orders.reduce(
+    (n: number, o: Order) => n + (inventoryQty(inventory, o.key) >= (o.need ?? o.amount) ? 1 : 0),
+    0,
+  );
 
   return (
     <FeaturePanel>
       <FeaturePanel.Body className="flex flex-col gap-2">
+        <div className="hl-board-head">
+          {hasIcon("quest_order") && (
+            <IconCanvas iconKey="quest_order" size={36} background={null} rounded={false} title="Order Board" className="flex-shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="hl-board-head__kicker">Hearthwood Vale</div>
+            <div className="hl-board-head__title">The Order Board</div>
+            <div className="hl-board-head__sub">Your neighbours are asking. Deliver what they need and earn their trust.</div>
+          </div>
+          <span className={`hl-board-pill ${readyCount > 0 ? "hl-board-pill--alert" : ""}`}>
+            {readyCount > 0 ? `${readyCount} ready` : `${orders.length} open`}
+          </span>
+        </div>
+        {orders.length === 0 && (
+          <div className="hl-empty">No orders just now. Your neighbours will call again soon.</div>
+        )}
         {orders.map((o: Order) => {
           const have = inventoryQty(inventory, o.key);
           const needed = o.need ?? o.amount;
@@ -45,12 +65,14 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
               key={o.id}
               onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
               interactive
-              className="!p-3 transition-transform hover:-translate-y-0.5"
+              className="!p-3 relative overflow-hidden transition-transform hover:-translate-y-0.5"
               style={{
                 background: done ? "#cfe4a3" : isCrafted ? "#e8d8f7" : "#f7ead8",
                 borderColor: done ? "#91bf24" : isCrafted ? "#9a7ab8" : "#c5a87a",
               }}
             >
+              {/* NPC-coloured spine ties the order to who's asking. */}
+              <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[5px]" style={{ background: npc.look?.color || "var(--ember)" }} />
               <div className="flex items-center gap-2.5">
                 <div
                   className="w-9 h-9 rounded-full grid place-items-center text-white font-bold text-[14px] flex-shrink-0"
@@ -60,7 +82,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-[#a8431a] text-[13px] leading-tight truncate">{npc.name}{isCrafted && <span className="ml-1 text-[10px] text-[#7a5ab0] font-bold">🔨 craft</span>}</div>
-                  <div className="text-[#6a4b31] text-[11px] leading-snug">{String(o.line ?? "")}</div>
+                  <div className="text-[#6a4b31] text-[11px] leading-snug italic">{String(o.line ?? "")}</div>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>

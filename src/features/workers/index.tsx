@@ -4,6 +4,7 @@
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { getItem } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
 import type { WorkerAbility, WorkerDef } from "./data.js";
@@ -155,6 +156,11 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
         </>
       }
     >
+      {worker.flavor && (
+        <div className="hl-flavor" style={{ "--flavor-accent": worker.look?.color } as CSSProperties}>
+          {worker.flavor}
+        </div>
+      )}
       <CostGrid entries={costEntries as never[]} title="Next hire cost" />
       <div>
         <div className="hl-section-label mb-1.5">Current effect</div>
@@ -177,12 +183,21 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
   const hired = (state?.workers?.hired ?? {}) as Record<string, number>;
   const [selectedId, setSelectedId] = useState<string | null>(TYPE_WORKERS[0]?.id ?? null);
   const selected = TYPE_WORKERS.find((w) => w.id === selectedId) ?? TYPE_WORKERS[0] ?? null;
+  const totalHired = Object.values(hired).reduce((sum, n) => sum + (Number(n) || 0), 0);
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col gap-3">
-      <div className="hl-text-dim px-1">
-        Anonymous, stackable workers. Each hire reduces the listed chain
-        (or recipe input) by a whole tile, stacking up to the max count.
+      <div className="hl-board-head">
+        <Icon iconKey="ui_build" size={34} title="" className="flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="hl-board-head__kicker">Hearthwood Vale</div>
+          <div className="hl-board-head__title">Hands for Hire</div>
+          <div className="hl-board-head__sub">Take on willing folk from around the vale — every hand shoulders part of the work.</div>
+        </div>
+        <span className="hl-board-pill">{totalHired} hired</span>
+      </div>
+      <div className="hl-text-faint px-1 text-[11px] leading-snug">
+        Each hire shaves a tile off the listed chain (or an input off a recipe), stacking up to the max count.
       </div>
       <BrowserDetailLayout
         toolbar={undefined}
