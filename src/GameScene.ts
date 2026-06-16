@@ -22,6 +22,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import { preloadWillowArt, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
@@ -2106,7 +2107,9 @@ export class GameScene extends Phaser.Scene {
       const ctx = tex.getContext();
       if (!ctx) continue;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, null, tSec);
+      // Stagger each key's loop and insert a rest delay between iterations.
+      const aSec = idleAnimTime(tSec, res.key);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, null, aSec);
       tex.refresh();
     }
   }
@@ -2139,7 +2142,11 @@ export class GameScene extends Phaser.Scene {
       const ctx = tex.getContext();
       if (!ctx) continue;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, tSec);
+      // Willow carries its own idle/transition timeline (paintWillow) — feed it
+      // the raw clock. Procedural idle anims get the staggered, rest-delayed clock.
+      const isWillow = res.key === "tile_tree_willow";
+      const aSec = isWillow ? tSec : idleAnimTime(tSec, res.key);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, aSec);
       tex.refresh();
     }
   }
