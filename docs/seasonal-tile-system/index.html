@@ -494,54 +494,107 @@
     <!-- ───────── STATUS & ASSETS ───────── -->
     <div class="panel" id="status" role="tabpanel" aria-label="Status and assets">
       <section id="results">
-        <h2>Validated end to end</h2>
-        <h3>Willow <span class="pill ok">deciduous tree</span></h3>
-        <div class="tiles">
-          <figure><img src="assets/willow-spring.png" alt="willow spring"><figcaption>spring</figcaption></figure>
-          <figure><img src="assets/willow-summer.png" alt="willow summer"><figcaption>summer · anchor</figcaption></figure>
-          <figure><img src="assets/willow-autumn.png" alt="willow autumn"><figcaption>autumn</figcaption></figure>
-          <figure><img src="assets/willow-baremound.png" alt="willow bare mound"><figcaption>bare-mound</figcaption></figure>
-          <figure><img src="assets/willow-winter.png" alt="willow winter"><figcaption>winter</figcaption></figure>
-        </div>
-        <div class="anim"><img src="assets/anim/willow-fullyear.gif" alt="willow full-year animation loop" width="320"></div>
-        <p class="strip"><img src="assets/anim/willow-autumn-winter-full-strip.png" alt="autumn to winter frame strip"></p>
-        <p>Full-year loop + the two-segment fall→winter strip (leaves pile, then snow covers the mound). Per-transition GIFs: <code>willow-{spring-summer,summer-autumn,autumn-baremound,baremound-winter}.gif</code>.</p>
-        <div class="box tip"><b>Winter mound — settled.</b> Kept the original snow-covered mound. The leaf-tips-through-snow prototype was rejected (the tips didn't read well), so the willow set ships unchanged.</div>
-        <p>Per-season idle loops — rest → gentle sway → rest (seamless, so they play continuously <em>or</em> periodically):</p>
-        <div class="tiles">
-          <figure><img src="assets/anim/willow-idle-spring.gif" alt="willow spring idle"><figcaption>spring idle</figcaption></figure>
-          <figure><img src="assets/anim/willow-idle-summer.gif" alt="willow summer idle"><figcaption>summer idle</figcaption></figure>
-          <figure><img src="assets/anim/willow-idle-autumn.gif" alt="willow autumn idle"><figcaption>autumn idle</figcaption></figure>
-          <figure><img src="assets/anim/willow-idle-winter.gif" alt="willow winter idle"><figcaption>winter idle</figcaption></figure>
-        </div>
-        <h3>Meadow grass <span class="pill ok">groundcover</span></h3>
-        <div class="tiles">
-          <figure><img src="assets/grass-spring.png" alt="grass spring"><figcaption>spring</figcaption></figure>
-          <figure><img src="assets/grass-summer.png" alt="grass summer"><figcaption>summer · anchor</figcaption></figure>
-          <figure><img src="assets/grass-autumn.png" alt="grass autumn"><figcaption>autumn</figcaption></figure>
-          <figure><img src="assets/grass-winter.png" alt="grass winter"><figcaption>winter</figcaption></figure>
-        </div>
-        <div class="anim"><img src="assets/anim/grass-fullyear.gif" alt="grass full-year animation loop" width="320"></div>
-        <h3>Eggplant <span class="pill ok">produce · ripeness arc</span></h3>
-        <div class="tiles">
-          <figure><img src="assets/eggplant-spring.png" alt="eggplant spring"><figcaption>spring</figcaption></figure>
-          <figure><img src="assets/eggplant-summer.png" alt="eggplant summer"><figcaption>summer · anchor</figcaption></figure>
-          <figure><img src="assets/eggplant-autumn.png" alt="eggplant autumn"><figcaption>autumn</figcaption></figure>
-          <figure><img src="assets/eggplant-winter.png" alt="eggplant winter"><figcaption>winter</figcaption></figure>
-        </div>
-        <div class="anim"><img src="assets/anim/eggplant-fullyear.gif" alt="eggplant full-year animation loop" width="320"></div>
-        <p>Year loops = the 3 forward transitions concatenated (51 frames). First-pass polish flags: eggplant <em>spring</em> shoulder reads slightly grey, and <code>eggplant-autumn-winter</code> flashes white frost before settling to the darker winter still — both seed re-rolls if wanted.</p>
-        <h3>Chicken <span class="pill ok">animal · 64px</span></h3>
-        <div class="tiles">
-          <figure><img src="assets/chicken-spring.png" alt="chicken spring"><figcaption>spring</figcaption></figure>
-          <figure><img src="assets/chicken-summer.png" alt="chicken summer"><figcaption>summer · anchor</figcaption></figure>
-          <figure><img src="assets/chicken-autumn.png" alt="chicken autumn"><figcaption>autumn</figcaption></figure>
-          <figure><img src="assets/chicken-winter.png" alt="chicken winter"><figcaption>winter</figcaption></figure>
-        </div>
-        <p>The <b>animal playbook</b> at <b>64px</b> (a resolution test): the chicken is held <em>constant</em> across all four seasons — the season lives entirely in the pad + light (flowers → green → leaves → snow), with a periodic peck/head-bob idle (winter adds a breath-puff). 64px holds up cleanly. A test-surfaced fix: the seasonal light recoloured the whole bird (autumn went orange) until the edit explicitly <b>locked the creature's palette and lit the ground only</b> — now baked into the animal playbook.</p>
+        <h2>Subject gallery</h2>
+        <p>Auto-generated from the canonical assets in <code>assets/</code> by <code>node tools/pixellab/gen_gallery.mjs</code> &mdash; every generated subject appears here automatically, with an <span class="pill ok">in-game</span> chip when it is wired into the engine registry. Do not hand-edit between the markers; re-run the generator after adding or regenerating a subject.</p>
+        <!-- AUTOGALLERY:START -->
+        <article class="subject" id="subj-willow">
+          <h3>Willow <span class="pill ok">deciduous tree</span> <span class="pill info">128px</span> <span class="pill ok">in-game</span></h3>
+          <div class="tiles">
+          <figure><img src="assets/willow-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/willow-summer.png" alt="summer · anchor" loading="lazy"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/willow-autumn.png" alt="autumn" loading="lazy"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/willow-baremound.png" alt="baremound" loading="lazy"><figcaption>baremound</figcaption></figure>
+          <figure><img src="assets/willow-winter.png" alt="winter" loading="lazy"><figcaption>winter</figcaption></figure>
+          </div>
+          <div class="tiles">
+          <figure><img src="assets/anim/willow-spring-summer.gif" alt="spring→summer" loading="lazy"><figcaption>spring→summer</figcaption></figure>
+          <figure><img src="assets/anim/willow-summer-autumn.gif" alt="summer→autumn" loading="lazy"><figcaption>summer→autumn</figcaption></figure>
+          <figure><img src="assets/anim/willow-autumn-baremound.gif" alt="autumn→bare" loading="lazy"><figcaption>autumn→bare</figcaption></figure>
+          <figure><img src="assets/anim/willow-baremound-winter.gif" alt="bare→winter" loading="lazy"><figcaption>bare→winter</figcaption></figure>
+          <figure><img src="assets/anim/willow-idle-spring.gif" alt="spring idle" loading="lazy"><figcaption>spring idle</figcaption></figure>
+          <figure><img src="assets/anim/willow-idle-summer.gif" alt="summer idle" loading="lazy"><figcaption>summer idle</figcaption></figure>
+          <figure><img src="assets/anim/willow-idle-autumn.gif" alt="autumn idle" loading="lazy"><figcaption>autumn idle</figcaption></figure>
+          <figure><img src="assets/anim/willow-idle-winter.gif" alt="winter idle" loading="lazy"><figcaption>winter idle</figcaption></figure>
+          </div>
+        </article>
+        <article class="subject" id="subj-grass">
+          <h3>Grass <span class="pill ok">groundcover</span> <span class="pill info">128px</span> <span class="pill idle">art only</span></h3>
+          <div class="tiles">
+          <figure><img src="assets/grass-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/grass-summer.png" alt="summer · anchor" loading="lazy"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/grass-autumn.png" alt="autumn" loading="lazy"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/grass-winter.png" alt="winter" loading="lazy"><figcaption>winter</figcaption></figure>
+          </div>
+          <div class="tiles">
+          <figure><img src="assets/anim/grass-spring-summer.gif" alt="spring→summer" loading="lazy"><figcaption>spring→summer</figcaption></figure>
+          <figure><img src="assets/anim/grass-summer-autumn.gif" alt="summer→autumn" loading="lazy"><figcaption>summer→autumn</figcaption></figure>
+          <figure><img src="assets/anim/grass-autumn-winter.gif" alt="autumn→winter" loading="lazy"><figcaption>autumn→winter</figcaption></figure>
+          </div>
+        </article>
+        <article class="subject" id="subj-carrot">
+          <h3>Carrot <span class="pill ok">vegetable</span> <span class="pill info">128→64px</span> <span class="pill ok">in-game</span></h3>
+          <div class="tiles">
+          <figure><img src="assets/carrot-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/carrot-summer.png" alt="summer · anchor" loading="lazy"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/carrot-autumn.png" alt="autumn" loading="lazy"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/carrot-winter.png" alt="winter" loading="lazy"><figcaption>winter</figcaption></figure>
+          </div>
+          <div class="tiles">
+          <figure><img src="assets/anim/carrot-spring-summer.gif" alt="spring→summer" loading="lazy"><figcaption>spring→summer</figcaption></figure>
+          <figure><img src="assets/anim/carrot-summer-autumn.gif" alt="summer→autumn" loading="lazy"><figcaption>summer→autumn</figcaption></figure>
+          <figure><img src="assets/anim/carrot-autumn-winter.gif" alt="autumn→winter" loading="lazy"><figcaption>autumn→winter</figcaption></figure>
+          <figure><img src="assets/anim/carrot-idle-spring.gif" alt="spring idle" loading="lazy"><figcaption>spring idle</figcaption></figure>
+          <figure><img src="assets/anim/carrot-idle-summer.gif" alt="summer idle" loading="lazy"><figcaption>summer idle</figcaption></figure>
+          <figure><img src="assets/anim/carrot-idle-autumn.gif" alt="autumn idle" loading="lazy"><figcaption>autumn idle</figcaption></figure>
+          <figure><img src="assets/anim/carrot-idle-winter.gif" alt="winter idle" loading="lazy"><figcaption>winter idle</figcaption></figure>
+          </div>
+        </article>
+        <article class="subject" id="subj-eggplant">
+          <h3>Eggplant <span class="pill ok">vegetable</span> <span class="pill info">128px</span> <span class="pill idle">art only</span></h3>
+          <div class="tiles">
+          <figure><img src="assets/eggplant-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/eggplant-summer.png" alt="summer · anchor" loading="lazy"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/eggplant-autumn.png" alt="autumn" loading="lazy"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/eggplant-winter.png" alt="winter" loading="lazy"><figcaption>winter</figcaption></figure>
+          </div>
+          <div class="tiles">
+          <figure><img src="assets/anim/eggplant-spring-summer.gif" alt="spring→summer" loading="lazy"><figcaption>spring→summer</figcaption></figure>
+          <figure><img src="assets/anim/eggplant-summer-autumn.gif" alt="summer→autumn" loading="lazy"><figcaption>summer→autumn</figcaption></figure>
+          <figure><img src="assets/anim/eggplant-autumn-winter.gif" alt="autumn→winter" loading="lazy"><figcaption>autumn→winter</figcaption></figure>
+          </div>
+        </article>
+        <article class="subject" id="subj-chicken">
+          <h3>Chicken <span class="pill ok">bird</span> <span class="pill info">128→64px</span> <span class="pill ok">in-game</span></h3>
+          <div class="tiles">
+          <figure><img src="assets/chicken-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/chicken-summer.png" alt="summer · anchor" loading="lazy"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/chicken-autumn.png" alt="autumn" loading="lazy"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/chicken-winter.png" alt="winter" loading="lazy"><figcaption>winter</figcaption></figure>
+          </div>
+          <div class="tiles">
+          <figure><img src="assets/anim/chicken-spring-summer.gif" alt="spring→summer" loading="lazy"><figcaption>spring→summer</figcaption></figure>
+          <figure><img src="assets/anim/chicken-summer-autumn.gif" alt="summer→autumn" loading="lazy"><figcaption>summer→autumn</figcaption></figure>
+          <figure><img src="assets/anim/chicken-autumn-winter.gif" alt="autumn→winter" loading="lazy"><figcaption>autumn→winter</figcaption></figure>
+          <figure><img src="assets/anim/chicken-idle-spring.gif" alt="spring idle" loading="lazy"><figcaption>spring idle</figcaption></figure>
+          <figure><img src="assets/anim/chicken-idle-summer.gif" alt="summer idle" loading="lazy"><figcaption>summer idle</figcaption></figure>
+          <figure><img src="assets/anim/chicken-idle-autumn.gif" alt="autumn idle" loading="lazy"><figcaption>autumn idle</figcaption></figure>
+          <figure><img src="assets/anim/chicken-idle-winter.gif" alt="winter idle" loading="lazy"><figcaption>winter idle</figcaption></figure>
+          </div>
+        </article>
+        <!-- AUTOGALLERY:END -->
+      </section>
+      <section id="learnings">
+        <h2>Per-subject notes &amp; learnings</h2>
+        <ul>
+          <li><b>Willow</b> (deciduous tree): winter kept the original snow-covered mound &mdash; the leaf-tips-through-snow prototype was rejected. Reaches winter through a two-segment fall&rarr;bare-mound&rarr;snow hinge so leaves and snow never co-occur, and the bare crown is locked to the summer envelope.</li>
+          <li><b>Eggplant</b> (produce): first-pass polish flags &mdash; the spring shoulder reads slightly grey and <code>eggplant-autumn-winter</code> flashes white frost before settling; both are seed re-rolls if wanted.</li>
+          <li><b>Chicken</b> (animal, 64px): the creature is held constant and the season lives entirely in the pad + light. The edit must lock the bird's own palette and light the GROUND only, or the seasonal light recolours the whole bird (autumn turned it orange).</li>
+          <li><b>Carrot</b> (produce, 128&rarr;64px): slanted to suit its tapered form (fills the tile diagonal). Produce ripeness is surface/sheen only, hue-locked &mdash; a &ldquo;paler young&rdquo; tone turned it salmon. The idle &ldquo;specular glint&rdquo; rendered as a white flash, so the cool-season idles (spring/winter) ship <b>static</b>; the snow transition needed a fixed seed to stop a white burst.</li>
+        </ul>
+        <div class="box tip"><b>How the gallery stays fresh.</b> The grids above are generated from <code>docs/seasonal-tile-system/assets/</code> by <code>node tools/pixellab/gen_gallery.mjs</code> (a step in the <code>seasonal-tile-pipeline</code> skill). Generate or regenerate a subject, re-run it, and the doc updates itself &mdash; no hand-editing.</div>
       </section>
       <section id="engine">
-        <h2>Engine integration — willow + chicken live in-game</h2>
+        <h2>Engine integration — baked tiles live in-game</h2>
         <p>The willow (<code>tile_tree_willow</code>) now renders its baked seasonal art on the real board, verified in the running game (typecheck + lint clean, clean boot, all 7 spritesheets serve 200). Below is the actual in-game tile texture captured per season — the rounded card chrome is the game's, the art is ours:</p>
         <p class="strip"><img src="assets/willow-ingame-seasons.png" alt="in-game willow tiles: spring, summer, autumn, winter" style="max-width:520px"></p>
         <p>Season selection verified by the rendered canopy colour: Spring <code>rgb(100,173,90)</code> → Summer <code>rgb(40,99,29)</code> → Autumn <code>rgb(180,120,25)</code> → Winter <code>rgb(111,126,91)</code>. The procedural fallback is season-identical, so four distinct, season-correct colours prove the PNG path + season pick are both working.</p>
@@ -579,8 +632,8 @@
         <h2>Asset inventory</h2>
         <p>In-repo (version-controlled alongside the doc) — <code>docs/seasonal-tile-system/assets/</code>, canonical only:</p>
         <ul>
-          <li><b>Stills (13):</b> <code>willow-{spring,summer,autumn,baremound,winter}.png</code>, <code>grass-{spring,summer,autumn,winter}.png</code>, <code>eggplant-{spring,summer,autumn,winter}.png</code>.</li>
-          <li><b>Animations:</b> <code>anim/&lt;subject&gt;-&lt;transition&gt;/frame_00..16.png</code> + assembled <code>.gif</code>; two-segment <code>willow-autumn-winter-full.gif</code>; per-subject <code>{willow,grass,eggplant}-fullyear.gif</code>; willow idle loops <code>willow-idle-{spring,summer,autumn,winter}.gif</code>. (Audit <code>-strip.png</code> + montages live in the archive, not the repo.)</li>
+          <li><b>Stills:</b> <code>&lt;subject&gt;-{spring,summer,autumn,winter}.png</code> per subject (deciduous trees add a <code>baremound</code> hinge). The auto-generated <a href="#results">Subject gallery</a> is the live index of what exists.</li>
+          <li><b>Animations:</b> <code>anim/&lt;subject&gt;-&lt;clip&gt;/frame_00..NN.png</code> + an assembled <code>.gif</code> per transition and idle; deciduous trees concat the two segments into a full <code>autumn-winter</code>. (Audit <code>-strip.png</code> + montages live in the archive, not the repo.)</li>
         </ul>
         <div class="box tip"><b>Out-of-VC archive.</b> Rejected candidates, the prior style anchor, review strips and superseded intermediates live <em>outside</em> the repo at <code>…\aiDev\puzzleDrag2-art-archive\seasonal-tiles\</code> (<code>candidates/ · review/ · superseded-anim/</code>) — kept for reference, never committed. New runs drop their rejects there, not in the repo.</div>
         <div class="box tip"><b>House rule.</b> Reference assets by relative path, never base64-inline (keeps the doc light and the git diff sane).</div>
