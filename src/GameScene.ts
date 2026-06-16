@@ -22,6 +22,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { preloadWillowArt, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
   conceptTilesPreloadReady,
@@ -162,6 +163,11 @@ export class GameScene extends Phaser.Scene {
         if (this.scene.isActive()) this._animateConceptTiles(0);
       });
     }
+    // Willow tiles render pre-baked seasonal art once these load (idle loop +
+    // season transitions); until then they show the procedural willow.
+    preloadWillowArt().then((ok) => {
+      if (ok && this.scene.isActive()) this._rebakeWillowStatic();
+    });
     this.layoutDims();
     this.drawBackground();
     this.fillBoard(true);
@@ -677,6 +683,9 @@ export class GameScene extends Phaser.Scene {
     // current season. Cheap: only distinct seasonal keys, in place. Fired on
     // season flips (turnsUsed) and biome/board changes.
     rebakeSeasonalTilesForSeason(this);
+    // Willow animates itself via the per-frame loop; under reduced motion that
+    // loop is idle, so bake its current-season still here on season flips.
+    if (!this._motionEnabled()) this._rebakeWillowStatic();
   }
 
   handleBiomeChange() {
@@ -2112,7 +2121,12 @@ export class GameScene extends Phaser.Scene {
       if (!row) continue;
       for (let c = 0; c < COLS; c++) {
         const t = row[c];
-        if (t && !reps.has(t.res.key) && hasSeasonalTileAnim(t.res.key, season)) {
+        if (
+          t &&
+          !reps.has(t.res.key) &&
+          (hasSeasonalTileAnim(t.res.key, season) ||
+            (willowLoaded() && t.res.key === "tile_tree_willow"))
+        ) {
           reps.set(t.res.key, t.res);
         }
       }
@@ -2126,6 +2140,28 @@ export class GameScene extends Phaser.Scene {
       if (!ctx) continue;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, tSec);
+      tex.refresh();
+    }
+  }
+
+  /** Bake the willow's current-season idle rest frame into its shared texture
+   *  once (no animation clock). Covers the moment the art finishes loading and,
+   *  under reduced motion, season flips — when the per-frame loop never runs. */
+  private _rebakeWillowStatic() {
+    if (!willowLoaded()) return;
+    const res = resourceByKey("tile_tree_willow");
+    if (!res) return;
+    const season = currentSeasonName(this);
+    const dpr = this.bakeScale || this.dpr;
+    for (const selected of [false, true]) {
+      const tex = this.textures.get(`tile_${res.key}${selected ? "_sel" : ""}`) as
+        | Phaser.Textures.CanvasTexture
+        | undefined;
+      if (!tex || typeof tex.getContext !== "function") continue;
+      const ctx = tex.getContext();
+      if (!ctx) continue;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season);
       tex.refresh();
     }
   }
