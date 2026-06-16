@@ -18,6 +18,7 @@ import {
   zoneBaseTurns,
 } from "./features/zones/data.js";
 import { assertTile } from "./types/guards.js";
+import { BREAKPOINTS } from "./ui/breakpoints.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
@@ -73,7 +74,7 @@ const BIOME_GOLD_TILE: Record<string, string | null> = Object.freeze({
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
 // viewports so the board can stretch as wide as possible.
 function boardFrameFor(cssVw: number): number {
-  return cssVw < 600 ? 8 : 14;
+  return cssVw < BREAKPOINTS.boardFrameNarrow ? 8 : 14;
 }
 
 

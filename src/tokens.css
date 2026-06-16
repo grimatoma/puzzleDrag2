@@ -205,6 +205,44 @@
   --on-dark-dim:         #d8c3a0;   /* secondary                      */
   --on-dark-faint:       #b39b76;   /* tertiary                       */
   --on-dark-label:       #eccb7c;   /* section labels / soft accent   */
+
+  /* ════════════════════════════════════════════════════════════════════
+   * FEATURE PALETTES — colours that used to be inline literals scattered
+   * across feature files. Hoisted here so the themed surfaces share one
+   * source and can be re-themed centrally.
+   * ════════════════════════════════════════════════════════════════════ */
+
+  /* ── Keeper paths (boons screen + cartography keeper dialog) ──────────
+     The two keeper resolutions: Coexist (green) and Drive Out (earthy).
+     Both screens themed these the same way with duplicated hexes. */
+  --path-coexist-bg:     #dfeecd;
+  --path-coexist-edge:   #6a9a3a;
+  --path-coexist-ink:    #1f3a10;
+  --path-driveout-bg:    #e4ddd0;
+  --path-driveout-edge:  #9a8a6a;
+  --path-owned-bg:       #cbe0b8;
+  --path-owned-chip-bg:  #a8d4a0;
+  --path-owned-edge:     #3a7a1a;
+  --path-owned-ink:      #1f3a10;
+
+  /* Themed buttons reused across the keeper / boon surfaces. */
+  --btn-gold-top:        #c8923a;
+  --btn-gold-bot:        #a06a1a;
+  --btn-gold-edge:       #7a4f10;
+  --btn-earth-bg:        #9a724d;
+  --btn-earth-edge:      #e6c49a;
+
+  /* ── Flame palette (boss encounter modal) ────────────────────────────
+     The boss modal is the one intentionally dark, fiery surface. The RGB
+     triple lets its rust panels build rgba() tints from a single source. */
+  --flame:               #ff7a00;
+  --flame-warm:          #f8c894;
+  --flame-alert:         #ff4040;
+  --flame-frame:         #a8431a;
+  --flame-rust-rgb:      168, 67, 26;
+  --flame-cta-top:       #e8622a;
+  --flame-cta-bot:       #a84010;
+  --flame-cta-edge:      #ff9a50;
 }
 
 /*

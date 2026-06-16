@@ -48,7 +48,7 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
       size="lg"
       ariaLabel={boss.name || "Boss encounter"}
       backdropClassName="z-50 !bg-black/70"
-      className="!border-[4px] !border-[#a8431a]"
+      className="!border-[4px] !border-[var(--flame-frame)]"
     >
       <StoryDialog.Body className="!p-5">
         {/* Header */}
@@ -56,7 +56,7 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
           {bossPortraitKey(boss) ? (
             <div style={{
               width: 96, height: 96, borderRadius: "50%", overflow: "hidden",
-              border: "3px solid #ff7a00", boxShadow: "0 0 22px rgba(255,122,0,0.45)",
+              border: "3px solid var(--flame)", boxShadow: "0 0 22px rgba(255,122,0,0.45)",
               marginBottom: 4, background: "rgba(0,0,0,0.35)",
             }}>
               <IconCanvas iconKey={bossPortraitKey(boss) ?? ""} size={96} />
@@ -66,21 +66,15 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
           )}
           <div
             className="text-[20px] font-bold text-center leading-tight"
-            style={{ color: "#ff7a00", fontFamily: "Arial, sans-serif" }}
+            style={{ color: "var(--flame)" }}
           >
             {boss.name}
           </div>
-          <div
-            className="text-[12px] text-white/70 text-center italic mt-1 px-2"
-            style={{ fontFamily: "Arial, sans-serif" }}
-          >
+          <div className="text-caption text-white/70 text-center italic mt-1 px-2">
             {boss.flavor || meta.flavor}
           </div>
           {boss.description && (
-            <div
-              className="text-[11px] text-white/60 text-center mt-2 px-3 leading-snug"
-              style={{ fontFamily: "Arial, sans-serif" }}
-            >
+            <div className="text-micro text-white/60 text-center mt-2 px-3 leading-snug">
               {boss.description}
             </div>
           )}
@@ -90,13 +84,10 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
         {boss.modifierDescription && (
           <div
             className="rounded-xl p-3 mb-4 flex items-start gap-2"
-            style={{ background: "rgba(168,67,26,0.18)", border: "1px solid rgba(168,67,26,0.4)" }}
+            style={{ background: "rgba(var(--flame-rust-rgb),0.18)", border: "1px solid rgba(var(--flame-rust-rgb),0.4)" }}
           >
-            <span className="flex-shrink-0 text-[#f8c894]"><WarningGlyph size={14} /></span>
-            <div
-              className="text-[11px] text-[#f8c894] leading-snug"
-              style={{ fontFamily: "Arial, sans-serif" }}
-            >
+            <span className="flex-shrink-0 text-[var(--flame-warm)]"><WarningGlyph size={14} /></span>
+            <div className="text-micro text-[var(--flame-warm)] leading-snug">
               <span className="font-bold">Board effect: </span>{boss.modifierDescription}
             </div>
           </div>
@@ -105,32 +96,32 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
         {/* Goal panel */}
         <div
           className="rounded-xl p-4 mb-4"
-          style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(168,67,26,0.5)" }}
+          style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(var(--flame-rust-rgb),0.5)" }}
         >
           <div
             className="text-[13px] font-bold text-center mb-3 leading-snug"
-            style={{ color: "#f8e7c6", fontFamily: "Arial, sans-serif" }}
+            style={{ color: "var(--cream)" }}
           >
             {boss.goal}
           </div>
 
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] text-white/60" style={{ fontFamily: "Arial, sans-serif" }}>
+            <span className="text-micro text-white/60">
               Progress
             </span>
-            <span className="text-[13px] font-bold" style={{ color: "#ff7a00", fontFamily: "Arial, sans-serif" }}>
+            <span className="text-[13px] font-bold" style={{ color: "var(--flame)" }}>
               {boss.progress} / {boss.targetCount}
             </span>
           </div>
-          <ProgressBar value={boss.progress} max={boss.targetCount} color="#ff7a00" />
+          <ProgressBar value={boss.progress} max={boss.targetCount} color="var(--flame)" />
 
           <div className="flex justify-between mt-3">
-            <span className="text-[11px] text-white/50" style={{ fontFamily: "Arial, sans-serif" }}>
+            <span className="text-micro text-white/50">
               {pct}% complete
             </span>
             <span
-              className="text-[12px] font-bold"
-              style={{ color: boss.turnsLeft <= 1 ? "#ff4040" : "#f8e7c6", fontFamily: "Arial, sans-serif" }}
+              className="text-caption font-bold"
+              style={{ color: boss.turnsLeft <= 1 ? "var(--flame-alert)" : "var(--cream)" }}
             >
               {boss.turnsLeft} turn{boss.turnsLeft !== 1 ? "s" : ""} left
             </span>
@@ -138,10 +129,7 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
         </div>
 
         {/* Reward hint — show actual year-scaled estimate */}
-        <div
-          className="text-[11px] text-center text-white/50 mb-4"
-          style={{ fontFamily: "Arial, sans-serif" }}
-        >
+        <div className="text-micro text-center text-white/50 mb-4">
           Victory reward: +{200 * year}◉ (Year {year})
         </div>
 
@@ -149,12 +137,11 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
         <div className="flex flex-col gap-2">
           <button
             onClick={() => dispatch({ type: "BOSS/CLOSE" })}
-            className="w-full py-3 rounded-xl font-bold text-[15px] transition-colors"
+            className="w-full py-3 rounded-xl font-bold text-body-lg transition-colors"
             style={{
-              background: "linear-gradient(to bottom, #e8622a, #a84010)",
-              border: "2px solid #ff9a50",
+              background: "linear-gradient(to bottom, var(--flame-cta-top), var(--flame-cta-bot))",
+              border: "2px solid var(--flame-cta-edge)",
               color: "white",
-              fontFamily: "Arial, sans-serif",
               letterSpacing: "0.05em",
             }}
           >
@@ -163,12 +150,11 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
           {!boss.isKeeperTrial && (
             <button
               onClick={() => dispatch({ type: "BOSS/REJECT" })}
-              className="w-full py-2 rounded-xl font-bold text-[12px] transition-colors"
+              className="w-full py-2 rounded-xl font-bold text-caption transition-colors"
               style={{
                 background: "transparent",
-                border: "1px solid rgba(168,67,26,0.6)",
+                border: "1px solid rgba(var(--flame-rust-rgb),0.6)",
                 color: "rgba(255,255,255,0.7)",
-                fontFamily: "Arial, sans-serif",
                 letterSpacing: "0.05em",
               }}
             >

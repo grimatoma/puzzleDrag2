@@ -408,7 +408,8 @@
 }
 
 /* Mobile portrait: the up-next row wraps below the head row so the recipe
-   name stops getting squeezed to a single letter on ~360-400px viewports. */
+   name stops getting squeezed to a single letter on ~360-400px viewports.
+   480 == BREAKPOINTS.craftStrip (src/ui/breakpoints.ts) — keep in sync. */
 @media (max-width: 480px) {
   .craft-strip-upnext {
     flex-basis: 100%;

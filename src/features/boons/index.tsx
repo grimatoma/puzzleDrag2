@@ -28,8 +28,8 @@ const PATH_LABELS: Record<string, string> = { coexist: "Coexist", driveout: "Dri
 
 interface PathColor { bg: string; border: string; text: string }
 const PATH_COLOR: Record<string, PathColor> = {
-  coexist: { bg: "#dfeecd", border: "#6a9a3a", text: "#1f3a10" },
-  driveout: { bg: "#e4ddd0", border: "#9a8a6a", text: "#2b2218" },
+  coexist: { bg: "var(--path-coexist-bg)", border: "var(--path-coexist-edge)", text: "var(--path-coexist-ink)" },
+  driveout: { bg: "var(--path-driveout-bg)", border: "var(--path-driveout-edge)", text: "var(--ink)" },
 };
 
 function CheckGlyph({ size = 10 }: { size?: number }) {
@@ -42,7 +42,7 @@ function CheckGlyph({ size = 10 }: { size?: number }) {
 
 function CostBadge({ cost }: { cost: BoonCost }) {
   return (
-    <RewardChip className="text-[11px]">
+    <RewardChip className="text-micro">
       {(cost.embers ?? 0) > 0 && (
         <span className="inline-flex items-center gap-0.5">
           <DesignIcon iconKey="design.currency.ember" size={12} />
@@ -80,8 +80,8 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
     <ActionCard
       className="gap-1"
       style={{
-        background: owned ? "#cbe0b8" : color.bg,
-        borderColor: owned ? "#3a7a1a" : color.border,
+        background: owned ? "var(--path-owned-bg)" : color.bg,
+        borderColor: owned ? "var(--path-owned-edge)" : color.border,
         color: color.text,
         opacity: !unlocked ? 0.55 : 1,
       }}
@@ -91,10 +91,10 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
           {effectKey && hasIcon(effectKey) && (
             <IconCanvas iconKey={effectKey} size={20} background={null} rounded={false} title={boon.effect?.type} className="flex-shrink-0" />
           )}
-          <span className="font-bold text-[14px]">{boon.name}</span>
+          <span className="font-bold text-body">{boon.name}</span>
         </div>
         {owned ? (
-          <RewardChip className="text-[10px] bg-[#a8d4a0] border-[#3a7a1a] text-[#1f3a10]">
+          <RewardChip className="text-micro bg-[var(--path-owned-chip-bg)] border-[var(--path-owned-edge)] text-[var(--path-owned-ink)]">
             <CheckGlyph size={10} />
             Owned
           </RewardChip>
@@ -102,17 +102,17 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
           <CostBadge cost={boon.cost} />
         )}
       </div>
-      <div className="text-[12px] leading-snug">{boon.desc}</div>
+      <div className="text-caption leading-snug">{boon.desc}</div>
       {!owned && (
         <button
           type="button"
           disabled={!canBuy}
           onClick={() => canBuy && dispatch({ type: "BOON/PURCHASE", payload: { id: boon.id } })}
-          className="self-end mt-1 rounded-lg px-3 py-1 font-bold text-[12px] transition-colors disabled:cursor-not-allowed"
+          className="self-end mt-1 rounded-lg px-3 py-1 font-bold text-caption transition-colors disabled:cursor-not-allowed"
           style={{
-            background: canBuy ? "linear-gradient(to bottom, #c8923a, #a06a1a)" : "#a09078",
+            background: canBuy ? "linear-gradient(to bottom, var(--btn-gold-top), var(--btn-gold-bot))" : "#a09078",
             color: "white",
-            border: canBuy ? "2px solid #7a4f10" : "2px solid #6a5a3a",
+            border: canBuy ? "2px solid var(--btn-gold-edge)" : "2px solid #6a5a3a",
             opacity: canBuy ? 1 : 0.85,
           }}
           title={!unlocked ? "Face this path's keeper first" : !canAffordBoon(state, boon) ? "Not enough currency" : `Claim ${boon.name}`}
@@ -147,8 +147,8 @@ export default function BoonScreen({ state, dispatch }: BoonScreenProps) {
           <button
             type="button"
             onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-            className="rounded-lg px-3 py-1.5 font-bold text-[12px] text-white"
-            style={{ background: "#9a724d", border: "2px solid #e6c49a" }}
+            className="rounded-lg px-3 py-1.5 font-bold text-caption text-white"
+            style={{ background: "var(--btn-earth-bg)", border: "2px solid var(--btn-earth-edge)" }}
           >
             ← Back to Town
           </button>
@@ -172,9 +172,9 @@ export default function BoonScreen({ state, dispatch }: BoonScreenProps) {
               onClick={() => setType(k)}
               className="flex-1 rounded-lg px-2 py-1.5 font-bold text-[13px] transition-colors"
               style={{
-                background: type === k ? "#c8923a" : "#efe4cc",
-                color: type === k ? "white" : "#2b2218",
-                border: type === k ? "2px solid #7a4f10" : "2px solid #c5a87a",
+                background: type === k ? "var(--btn-gold-top)" : "#efe4cc",
+                color: type === k ? "white" : "var(--ink)",
+                border: type === k ? "2px solid var(--btn-gold-edge)" : "2px solid #c5a87a",
               }}
             >
               {label}
