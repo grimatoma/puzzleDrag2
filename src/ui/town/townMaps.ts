@@ -14,6 +14,7 @@
 //
 // Ground uses the same Tuxemon tileset indices `TownScene` references.
 import type { TownPlan } from "./TownScene.js";
+import { blankMask, maskBandH, maskBandV, maskDisc, maskRect, paintSandPaths } from "./roadAutotile.js";
 
 // Design space — must match TownScene's grid (40×30 @ 32px → 1280×960).
 const TILE = 32;
@@ -27,47 +28,15 @@ const DESIGN_H = ROWS * TILE; // 960
 const GRASS = 26;
 const GRASS_ALT = [50, 51, 76, 77, 98, 99];
 const GRASS_FLOWER = [120, 121];
-const DIRT = 35;
 
 type Grid = number[][];
 
 // ── Grid composition helpers (compose maps instead of typing cell-by-cell) ──
+// Ground is grass + AUTOTILED sand: roads/plaza/yards are described as a sand
+// MASK (where) and `paintSandPaths` picks the soft grass↔sand transition tile per
+// cell (which). See `roadAutotile.ts`. There is no flat-DIRT fill path any more.
 function blankGrid(fill = GRASS): Grid {
   return Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => fill));
-}
-
-function inBounds(tx: number, ty: number): boolean {
-  return tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS;
-}
-
-function setTile(grid: Grid, tx: number, ty: number, idx: number): void {
-  if (inBounds(tx, ty)) grid[ty][tx] = idx;
-}
-
-/** Fill an axis-aligned tile rect [tx,ty,w,h). */
-function rectTiles(grid: Grid, tx: number, ty: number, w: number, h: number, idx: number): void {
-  for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) setTile(grid, x, y, idx);
-}
-
-/** Horizontal road band, `thick` tiles tall, centred on row `ty`. */
-function roadH(grid: Grid, tx1: number, tx2: number, ty: number, thick = 2, idx = DIRT): void {
-  const half = Math.floor(thick / 2);
-  for (let x = Math.min(tx1, tx2); x <= Math.max(tx1, tx2); x++)
-    for (let o = -half; o <= thick - 1 - half; o++) setTile(grid, x, ty + o, idx);
-}
-
-/** Vertical road band, `thick` tiles wide, centred on col `tx`. */
-function roadV(grid: Grid, ty1: number, ty2: number, tx: number, thick = 2, idx = DIRT): void {
-  const half = Math.floor(thick / 2);
-  for (let y = Math.min(ty1, ty2); y <= Math.max(ty1, ty2); y++)
-    for (let o = -half; o <= thick - 1 - half; o++) setTile(grid, tx + o, y, idx);
-}
-
-/** Filled ellipse of `idx` (tile space) — used for the plaza disc. */
-function disc(grid: Grid, cx: number, cy: number, rx: number, ry: number, idx: number): void {
-  for (let y = cy - ry; y <= cy + ry; y++)
-    for (let x = cx - rx; x <= cx + rx; x++)
-      if (((x - cx) ** 2) / (rx * rx) + ((y - cy) ** 2) / (ry * ry) <= 1.05) setTile(grid, x, y, idx);
 }
 
 /** Deterministic grass variants + flower clusters so plain grass reads alive. */
@@ -127,15 +96,30 @@ const HOME_FARM_BOARD: AuthoredBoard = { kind: "farm", cx: 1010, cy: 470, w: 380
 const HOME_PLAZA = { cx: 370, cy: 120, rx: px(4), ry: px(2) };
 const HOME_WELL = { cx: 370, cy: 120, r: 20 };
 
-/** Paint the ground shared by every home rung (grass, plaza, road skeleton). */
+/**
+ * Paint the ground shared by every home rung. The streets + plaza are described
+ * as a single boolean MASK (where sand goes), then AUTOTILED into the grass↔sand
+ * blob so every boundary gets a soft rounded transition instead of a hard DIRT
+ * seam (see `roadAutotile.ts` + docs/road-system-proposal.html). Street widths
+ * are ≥2 so a two-sided border fits — a 1-wide road can't carry one.
+ *
+ * The network reads as a clear village: a top boulevard off the plaza, a left
+ * avenue and a right spine enclosing the lots, three cross streets between the
+ * lot rows, and an apron onto the farm board.
+ */
 function homeGround(seed: number): Grid {
   const g = blankGrid(GRASS);
-  disc(g, 11, 4, 4, 2, DIRT);       // town-green plaza around the well
-  roadV(g, 2, 28, 23, 2);           // spine separating town from the farm board
-  roadH(g, 3, 37, 5, 2);            // plaza-level road reaching across to the board
-  roadV(g, 5, 27, 11, 1);           // central town avenue (between cols 1 and 2)
-  rectTiles(g, 24, 13, 1, 2, DIRT); // dirt apron leading onto the farm board
-  decorateGrass(g, seed);
+  const m = blankMask(ROWS, COLS);
+  maskDisc(m, 11, 4, 5, 3);          // town-green plaza around the well
+  maskBandH(m, 1, 23, 6, 3);         // top boulevard: plaza → spine
+  maskBandV(m, 6, 26, 1, 2);         // left avenue
+  maskBandV(m, 5, 27, 23, 2);        // spine separating town from the farm board
+  maskBandH(m, 1, 23, 11, 2);        // cross street between lot rows 0–1
+  maskBandH(m, 1, 23, 16, 2);        // cross street between lot rows 1–2
+  maskBandH(m, 1, 23, 21, 2);        // cross street between lot rows 2–3
+  maskRect(m, 23, 13, 3, 3);         // apron leading onto the farm board
+  paintSandPaths(g, m);              // overlay autotiled sand transitions
+  decorateGrass(g, seed);            // sprinkle variants on the remaining grass
   return g;
 }
 
@@ -213,11 +197,13 @@ const QUARRY_WELL = { cx: 330, cy: 130, r: 18 };
 
 function quarryGround(seed: number): Grid {
   const g = blankGrid(GRASS);
-  disc(g, 10, 4, 4, 2, DIRT);        // small plaza by the well
-  roadV(g, 2, 28, 23, 2);            // spine to the mine board
-  roadH(g, 3, 37, 5, 2);             // top road across to the board
-  rectTiles(g, 4, 8, 18, 14, DIRT);  // the excavated quarry yard the lots sit on
-  rectTiles(g, 24, 13, 1, 2, DIRT);  // apron onto the mine board
+  const m = blankMask(ROWS, COLS);
+  maskDisc(m, 10, 4, 4, 2);          // small plaza by the well
+  maskBandV(m, 2, 28, 23, 2);        // spine to the mine board
+  maskBandH(m, 3, 37, 5, 2);         // top road across to the board
+  maskRect(m, 4, 8, 18, 14);         // the excavated quarry yard the lots sit on
+  maskRect(m, 23, 13, 3, 3);         // apron onto the mine board
+  paintSandPaths(g, m);              // autotiled sand: the yard gets a soft pit edge
   decorateGrass(g, seed);
   return g;
 }
