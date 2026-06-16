@@ -11,8 +11,8 @@
 // cell is "sand" or it's grass), then for every sand cell read its 8 neighbours,
 // classify the boundary, and emit the matching tile from the Tuxemon set's
 // grass↔sand blob — a clean 3×3 ring (edges + outer corners) plus a 2×2 inner-
-// corner block, with DIRT(35) as the flat interior. The soft rounded sand border
-// falls out automatically; nothing is hand-placed.
+// corner block, with tile 173 (the blob's centre) as the flat interior. The soft
+// rounded sand border falls out automatically; nothing is hand-placed.
 //
 // Tile indices were verified by slicing public/town/tileset.png and rendering the
 // autotiler output against the real tiles before wiring (the skill's "verify by
@@ -20,7 +20,7 @@
 
 /** grass↔sand blob roles → tileset index (the verified mapping). */
 export const SAND = {
-  fill: 35, // pure tan interior (the existing DIRT tile)
+  fill: 173, // clean tan interior — the blob's centre tile (35 carried a baked dark fleck)
   iso: 173, // sand surrounded by grass on most sides (peninsula / 1-wide)
   edgeN: 149, edgeS: 197, edgeW: 172, edgeE: 174,
   outerNW: 148, outerNE: 150, outerSW: 196, outerSE: 198, // convex corners
