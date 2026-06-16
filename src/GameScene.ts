@@ -22,6 +22,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import type { SeasonName } from "./textures/seasonal/types.js";
 import { preloadWillowArt, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
@@ -683,9 +684,13 @@ export class GameScene extends Phaser.Scene {
     // current season. Cheap: only distinct seasonal keys, in place. Fired on
     // season flips (turnsUsed) and biome/board changes.
     rebakeSeasonalTilesForSeason(this);
-    // Willow animates itself via the per-frame loop; under reduced motion that
-    // loop is idle, so bake its current-season still here on season flips.
-    if (!this._motionEnabled()) this._rebakeWillowStatic();
+    // Bake the willow's current-season rest frame on season flips. This covers
+    // both texture variants — crucially the selected (`_sel`) one, which the
+    // per-frame loop below only refreshes while a willow tile is actually picked
+    // up, so without this a tile selected right after a flip would briefly show
+    // the previous season. Under reduced motion the per-frame loop never runs,
+    // so this is also the only thing that keeps the base texture in-season.
+    this._rebakeWillowStatic();
   }
 
   handleBiomeChange() {
@@ -2082,40 +2087,39 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
-  /** Re-bake distinct on-board seasonal tiles that have an animation for the
-   *  current season, at elapsed time `tSec` (seconds — same clock the gallery
-   *  uses). Mutates the shared `tile_<key>` texture so all instances update. */
-  /** Re-bake concept-tile GIF frames when `?conceptTiles=1` is set. */
+  /** Re-bake concept-tile GIF frames when `?conceptTiles=1` is set. Mutates the
+   *  shared `tile_<key>` texture (and `_sel` when picked up) so all instances
+   *  update. */
   private _animateConceptTiles(tSec: number) {
     const reps = new Map<string, TileRes>();
+    const selectedKeys = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
       for (let c = 0; c < COLS; c++) {
         const t = row[c];
-        if (t && !reps.has(t.res.key) && hasConceptTileAnim(t.res.key)) {
-          reps.set(t.res.key, t.res);
+        if (t && hasConceptTileAnim(t.res.key)) {
+          if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
+          if (t.selected) selectedKeys.add(t.res.key);
         }
       }
     }
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
-      if (!tex || typeof tex.getContext !== "function") continue;
-      const ctx = tex.getContext();
-      if (!ctx) continue;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, null, tSec);
-      tex.refresh();
+      this._bakeAnimatedTile(res, false, null, tSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, null, tSec, dpr);
     }
   }
 
   private _animateSeasonalTiles(tSec: number) {
     const season = currentSeasonName(this);
     if (!season) return;
-    // Collect one representative TileObj.res per distinct animated key present.
+    // Collect one representative TileObj.res per distinct animated key present,
+    // and note which keys have a currently-selected tile so we keep that lifted
+    // tile's `_sel` texture animating in the current season too.
     const reps = new Map<string, TileRes>();
+    const selectedKeys = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
@@ -2123,25 +2127,41 @@ export class GameScene extends Phaser.Scene {
         const t = row[c];
         if (
           t &&
-          !reps.has(t.res.key) &&
           (hasSeasonalTileAnim(t.res.key, season) ||
             (willowLoaded() && t.res.key === "tile_tree_willow"))
         ) {
-          reps.set(t.res.key, t.res);
+          if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
+          if (t.selected) selectedKeys.add(t.res.key);
         }
       }
     }
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
-      if (!tex || typeof tex.getContext !== "function") continue;
-      const ctx = tex.getContext();
-      if (!ctx) continue;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, tSec);
-      tex.refresh();
+      this._bakeAnimatedTile(res, false, season, tSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, tSec, dpr);
     }
+  }
+
+  /** Re-bake one animated-tile texture variant (`tile_<key>` or its `_sel`
+   *  companion) at animation time `tSec`. Shared by the seasonal and concept
+   *  per-frame passes so the selected lift never shows a stale, off-season
+   *  still. */
+  private _bakeAnimatedTile(
+    res: TileRes,
+    selected: boolean,
+    season: SeasonName | null,
+    tSec: number,
+    dpr: number,
+  ) {
+    const key = `tile_${res.key}${selected ? "_sel" : ""}`;
+    const tex = this.textures.get(key) as Phaser.Textures.CanvasTexture | undefined;
+    if (!tex || typeof tex.getContext !== "function") return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season, tSec);
+    tex.refresh();
   }
 
   /** Bake the willow's current-season idle rest frame into its shared texture
