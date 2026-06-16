@@ -78,6 +78,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   fish: "🐟",
 };
 
+// Per-section framing for the wiki board header: an in-world title + flavor
+// line so each sub-category reads like a page of Hearthwood's almanac.
+const SECTION_META: Record<string, { title: string; flavor: string }> = {
+  farm:    { title: "The Fields",         flavor: "Everything that grows in Hearthwood's good soil." },
+  mine:    { title: "The Deep Veins",     flavor: "Stone, ore, and gem — Bram's domain, far below the light." },
+  fish:    { title: "The Harbor",         flavor: "The cold water's bounty, hauled in by net and line." },
+  hazards: { title: "Troubles of the Vale", flavor: "What creeps onto the board uninvited. Know it, and clear it." },
+};
+
 // Look up resources across every biome — mine and fish tiles also need
 // their colour/icon in the wiki, not just farm.
 interface BiomeDef { tiles?: Resource[]; resources?: Resource[] }
@@ -417,6 +426,28 @@ export default function TileCollectionPanel({ state, dispatch }: TileCollectionP
 
       {/* Content */}
       <FeaturePanel.Body>
+        {(() => {
+          const section = SECTION_META[subCategory] ?? {
+            title: (SUB_CATEGORY_LABELS as Record<string, string>)[subCategory] ?? "Tiles",
+            flavor: "",
+          };
+          const unlocked = rows.filter((r) => !r.locked).length;
+          return (
+            <div className="hl-board-head mb-2">
+              <span className="text-[26px] leading-none flex-shrink-0" aria-hidden>
+                {(SUB_CATEGORY_ICONS as Record<string, string>)[subCategory] ?? "📖"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="hl-board-head__kicker">Hearthwood Vale · Almanac</div>
+                <div className="hl-board-head__title">{section.title}</div>
+                {section.flavor && <div className="hl-board-head__sub">{section.flavor}</div>}
+              </div>
+              {subCategory !== "hazards" && rows.length > 0 && (
+                <span className="hl-board-pill">{unlocked}/{rows.length} found</span>
+              )}
+            </div>
+          );
+        })()}
         {subCategory === "hazards" ? (
           <>
             <div className="text-xs text-on-panel-dim text-center py-1 mb-2 italic">
