@@ -6,6 +6,15 @@ import { BAKED_SEASONAL_KEYS } from "./textures/seasonal/willowArt.js";
 // constants — it preserves amplitude and the primary/gust frequency ratio.
 const SWAY_SPEED = 1.3;
 
+// Idle sway is not continuous: each tile plays a brief sway "gesture" then rests.
+// IDLE_PERIOD_MS is the full cycle (one gesture + the pause that follows); the
+// sway only plays during the first IDLE_ACTIVE_MS of each cycle and the tile is
+// held still for the remainder. Per-tile `_phase` offsets where each tile sits
+// in the cycle, so the gestures roll across the board (a wind front) instead of
+// every tile gusting — and pausing — in lockstep.
+const IDLE_PERIOD_MS = 5000;
+const IDLE_ACTIVE_MS = 2500;
+
 /** Minimal shape of a resource/tile definition that TileObj needs. */
 export interface TileRes {
   key: string;
@@ -150,12 +159,25 @@ export class TileObj {
       return;
     }
     if (this._tweenActive) return;
+    // Duty-cycle envelope: a smooth 0→1→0 bell over the active window, then a
+    // flat rest for the rest of the cycle. The bell hits 0 at both ends of the
+    // window, so the sway eases in from — and back to — a dead-still rest with
+    // no snap. `_phase` shifts each tile's place in the cycle so the gesture
+    // staggers across the board.
+    const cyclePos = (((time + this._phase) % IDLE_PERIOD_MS) + IDLE_PERIOD_MS) % IDLE_PERIOD_MS;
+    const envelope = cyclePos < IDLE_ACTIVE_MS
+      ? Math.sin((cyclePos / IDLE_ACTIVE_MS) * Math.PI)
+      : 0;
+    if (envelope <= 0.001) {
+      if (this.sprite.angle !== 0) this.sprite.angle = 0;
+      return;
+    }
     const t = (time + this._phase) * SWAY_SPEED;
     // Primary sway plus a smaller higher-frequency gust component so the
     // motion isn't a perfect sine — closer to real wind / dangle.
     const a = Math.sin(t * sway.freq) * sway.amp
             + Math.sin(t * sway.freq * 2.4) * sway.amp * sway.gust;
-    this.sprite.angle = a;
+    this.sprite.angle = a * envelope;
   }
 
   destroy(): void {
