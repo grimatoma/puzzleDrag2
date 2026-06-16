@@ -5,6 +5,7 @@ import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
 import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
+import { paintWillow, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -110,11 +111,15 @@ export function paintTileCanvas(
   }
   ctx.save();
   ctx.translate(w / 2, h / 2);
+  // Willow renders pre-baked seasonal art (idle loop + forward transitions);
+  // takes priority over the procedural icon once its spritesheets have loaded.
+  const willow = res.key === "tile_tree_willow" && willowLoaded();
   const conceptAnim =
-    isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
-  const anim = !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
-  const sdraw = !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
-  if (conceptAnim) conceptAnim(ctx, t as number);
+    !willow && isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
+  const anim = !willow && !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
+  const sdraw = !willow && !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
+  if (willow) paintWillow(ctx, season, t ?? 0);
+  else if (conceptAnim) conceptAnim(ctx, t as number);
   else if (anim) anim(ctx, t as number);
   else if (sdraw) sdraw(ctx);
   else drawTileIcon(ctx, res.key);

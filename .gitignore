@@ -29,3 +29,8 @@ coverage/
 # Generated pixel-art export scratch dirs (not part of the repo)
 output/
 output_128/
+
+# Throwaway seasonal-tile batch runners (durable pipeline = tools/pixellab/{pixellab.mjs,check_pad.py}).
+# Rejected candidates + intermediates are archived OUTSIDE the repo at
+# <Documents>\aiDev\puzzleDrag2-art-archive\seasonal-tiles\ (kept, never committed).
+tools/pixellab/_*
