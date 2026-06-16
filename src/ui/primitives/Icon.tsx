@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { iconColor, iconLabel } from "../../textures/iconRegistry.js";
 import { paintIcon } from "../../textures/paintIcon.js";
+import { useSeasonalArtReady } from "../useSeasonalArtReady.js";
 
 type SvgRender = (props: { size: number; fill: string }) => React.ReactNode;
 const SVG_REGISTRY: Record<string, SvgRender> = {};
@@ -54,6 +55,7 @@ function labelForKey(key: string | null | undefined) {
 
 function CanvasIcon({ iconKey, size, tone, title }: { iconKey: string; size: number; tone: string; title?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const seasonalReady = useSeasonalArtReady();
 
   useEffect(() => {
     const canvas = ref.current;
@@ -67,7 +69,7 @@ function CanvasIcon({ iconKey, size, tone, title }: { iconKey: string; size: num
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
     paintIcon(ctx, iconKey, size);
-  }, [iconKey, size]);
+  }, [iconKey, size, seasonalReady]);
 
   const filter = TONE_FILTER[tone];
   return (

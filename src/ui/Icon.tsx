@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ICON_REGISTRY } from "../textures/iconRegistry.js";
 import { paintIcon } from "../textures/paintIcon.js";
+import { onSeasonalArtLoaded } from "../textures/seasonal/seasonalArt.js";
 
 // Global cache mapping size -> { key -> dataUri }
 // We use a combined string key for easy lookups: `${iconKey}_${size}_${dpr}`
@@ -27,6 +28,11 @@ if (typeof window !== "undefined") {
 if (import.meta.hot) {
   import.meta.hot.accept(["../textures/iconRegistry.js"], () => clearIconCache());
 }
+
+// Re-bake cached icons once baked seasonal art (e.g. the willow Spring
+// reference) finishes loading, so any icon that cached the procedural fallback
+// updates to the reference still.
+onSeasonalArtLoaded(() => clearIconCache());
 
 /**
  * Universal Icon Component
