@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BAKED_SEASONAL_KEYS } from "./textures/seasonal/willowArt.js";
+import { BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
 
 // Global multiplier on the ambient sway frequency. >1 makes the wind sway play
 // faster across every tile without touching each per-resource `freq` in

@@ -22,9 +22,9 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { preloadSeasonalArt, seasonalArtLoaded, BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
-import { preloadWillowArt, willowLoaded } from "./textures/seasonal/willowArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
   conceptTilesPreloadReady,
@@ -165,10 +165,10 @@ export class GameScene extends Phaser.Scene {
         if (this.scene.isActive()) this._animateConceptTiles(0);
       });
     }
-    // Willow tiles render pre-baked seasonal art once these load (idle loop +
-    // season transitions); until then they show the procedural willow.
-    preloadWillowArt().then((ok) => {
-      if (ok && this.scene.isActive()) this._rebakeWillowStatic();
+    // Registered subjects render pre-baked seasonal art once these load (idle loop
+    // + season transitions); until then they show the procedural icon.
+    preloadSeasonalArt().then(() => {
+      if (this.scene.isActive()) this._rebakeBakedTiles();
     });
     this.layoutDims();
     this.drawBackground();
@@ -685,13 +685,13 @@ export class GameScene extends Phaser.Scene {
     // current season. Cheap: only distinct seasonal keys, in place. Fired on
     // season flips (turnsUsed) and biome/board changes.
     rebakeSeasonalTilesForSeason(this);
-    // Bake the willow's current-season rest frame on season flips. This covers
-    // both texture variants — crucially the selected (`_sel`) one, which the
-    // per-frame loop below only refreshes while a willow tile is actually picked
-    // up, so without this a tile selected right after a flip would briefly show
-    // the previous season. Under reduced motion the per-frame loop never runs,
-    // so this is also the only thing that keeps the base texture in-season.
-    this._rebakeWillowStatic();
+    // Baked-art tiles (willow, chicken, …) animate via the per-frame loop, which
+    // plays the season transition on a motion-on flip — so we DON'T snap them here
+    // then. Under reduced motion that loop is idle, so bake their current-season
+    // stills (both variants) here instead. (A tile selected at the exact moment of
+    // a motion-on flip can briefly show the prior season on its `_sel` lift until
+    // the loop catches it — a rare edge traded for keeping the transition.)
+    if (!this._motionEnabled()) this._rebakeBakedTiles();
   }
 
   handleBiomeChange() {
@@ -2131,7 +2131,7 @@ export class GameScene extends Phaser.Scene {
         if (
           t &&
           (hasSeasonalTileAnim(t.res.key, season) ||
-            (willowLoaded() && t.res.key === "tile_tree_willow"))
+            (BAKED_SEASONAL_KEYS.has(t.res.key) && seasonalArtLoaded(t.res.key)))
         ) {
           if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
           if (t.selected) selectedKeys.add(t.res.key);
@@ -2143,7 +2143,10 @@ export class GameScene extends Phaser.Scene {
     for (const res of reps.values()) {
       // Willow carries its own idle/transition timeline (paintWillow) — feed it
       // the raw clock. Procedural idle anims get the staggered, rest-delayed clock.
-      const aSec = res.key === "tile_tree_willow" ? tSec : idleAnimTime(tSec, res.key);
+      // Baked-art tiles (willow, chicken, …) own their idle + transition timing
+      // internally, so feed them the raw clock; procedural seasonal tiles get the
+      // staggered rest-pause warp.
+      const aSec = BAKED_SEASONAL_KEYS.has(res.key) ? tSec : idleAnimTime(tSec, res.key);
       this._bakeAnimatedTile(res, false, season, aSec, dpr);
       if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, aSec, dpr);
     }
@@ -2170,25 +2173,28 @@ export class GameScene extends Phaser.Scene {
     tex.refresh();
   }
 
-  /** Bake the willow's current-season idle rest frame into its shared texture
-   *  once (no animation clock). Covers the moment the art finishes loading and,
-   *  under reduced motion, season flips — when the per-frame loop never runs. */
-  private _rebakeWillowStatic() {
-    if (!willowLoaded()) return;
-    const res = resourceByKey("tile_tree_willow");
-    if (!res) return;
+  /** Bake every loaded baked-art tile's current-season idle rest frame into its
+   *  shared texture once (no animation clock). Covers the moment art finishes
+   *  loading and, under reduced motion, season flips — when the per-frame loop
+   *  never runs. */
+  private _rebakeBakedTiles() {
     const season = currentSeasonName(this);
     const dpr = this.bakeScale || this.dpr;
-    for (const selected of [false, true]) {
-      const tex = this.textures.get(`tile_${res.key}${selected ? "_sel" : ""}`) as
-        | Phaser.Textures.CanvasTexture
-        | undefined;
-      if (!tex || typeof tex.getContext !== "function") continue;
-      const ctx = tex.getContext();
-      if (!ctx) continue;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season);
-      tex.refresh();
+    for (const key of BAKED_SEASONAL_KEYS) {
+      if (!seasonalArtLoaded(key)) continue;
+      const res = resourceByKey(key);
+      if (!res) continue;
+      for (const selected of [false, true]) {
+        const tex = this.textures.get(`tile_${res.key}${selected ? "_sel" : ""}`) as
+          | Phaser.Textures.CanvasTexture
+          | undefined;
+        if (!tex || typeof tex.getContext !== "function") continue;
+        const ctx = tex.getContext();
+        if (!ctx) continue;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season);
+        tex.refresh();
+      }
     }
   }
 }

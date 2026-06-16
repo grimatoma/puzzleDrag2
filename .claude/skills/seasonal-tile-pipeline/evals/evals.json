@@ -1,0 +1,26 @@
+{
+  "skill_name": "seasonal-tile-pipeline",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Make the full seasonal art set for a pumpkin board tile - all four seasons (spring/summer/autumn/winter), the forward transition animations, and a per-season idle loop, anchored to our style.",
+      "expected_output": "Authors a pumpkin subject config (produce ripeness arc), generates the summer anchor with the canonical style refs and gates on the 4 candidates, derives the 3 other seasons as edits, runs the 3 forward transitions + 4 idles, runs the pad/envelope/glow QA gates + a visual stills montage, and packs game spritesheets.",
+      "assertions": [],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Add a strawberry tile with its four seasons and idles. It should match the look of the rest of the set.",
+      "expected_output": "Recognizes this as the seasonal-tile-pipeline; uses the two canonical style anchors so the strawberry matches; produces stills + idles (transitions if asked); QA-gates and packs; presents the four stills together for approval.",
+      "assertions": [],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Generate the chicken's seasonal sprites at 64px and hook them into the game board.",
+      "expected_output": "Animal playbook (constant creature, season in pad+light), size 64; generates + QA's the art, packs sheets, and wires it into the Phaser board via the registry pattern in references/engine-integration.md, then verifies per-season render in-game by pixel-sampling the tile texture.",
+      "assertions": [],
+      "files": []
+    }
+  ]
+}
