@@ -128,49 +128,49 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
             : <span className="text-[26px] leading-none">{keeper.look?.icon}</span>}
           <div>
             <div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
-            <div className="text-[11px] italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
+            <div className="text-micro italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
           </div>
         </div>
         {!chosen ? (
           <>
-            <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
+            <div className="flex flex-col gap-1.5 text-caption text-ink leading-snug mb-3">
               {keeper.intro.map((line: string, i: number) => <p key={i}>{line}</p>)}
             </div>
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => pick("coexist")}
-                className="text-left bg-[#dfeecd] hover:bg-[#e8f3d6] border-2 border-[#6a9a3a] rounded-xl px-3 py-2 transition-colors"
+                className="text-left bg-[var(--path-coexist-bg)] hover:bg-[#e8f3d6] border-2 border-[var(--path-coexist-edge)] rounded-xl px-3 py-2 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[13px] text-[#1f3a10]">🤝 Coexist</span>
+                  <span className="font-bold text-[13px] text-[var(--path-coexist-ink)]">🤝 Coexist</span>
                   <StatusChip tone="gold" style={{}}>+{keeper.coexist.embers ?? 0} 🔥 Embers</StatusChip>
                 </div>
-                <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
+                <div className="text-caption text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
               </button>
               <button
                 onClick={() => pick("driveout")}
-                className="text-left bg-[#e4ddd0] hover:bg-[#ece6da] border-2 border-[#9a8a6a] rounded-xl px-3 py-2 transition-colors"
+                className="text-left bg-[var(--path-driveout-bg)] hover:bg-[#ece6da] border-2 border-[var(--path-driveout-edge)] rounded-xl px-3 py-2 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[13px] text-[#2b2218]">⚔ Trial</span>
+                  <span className="font-bold text-[13px] text-ink">⚔ Trial</span>
                   <StatusChip tone="slate" style={{}}>+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
                 </div>
-                <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
+                <div className="text-caption text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
               </button>
             </div>
             <button
               onClick={onClose}
-              className="w-full mt-3 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-1.5 rounded-lg border border-[#e6c49a] text-[12px] transition-colors"
+              className="w-full mt-3 bg-[var(--btn-earth-bg)] hover:bg-[#b8845a] text-white font-bold py-1.5 rounded-lg border border-[var(--btn-earth-edge)] text-caption transition-colors"
             >
               Not yet
             </button>
           </>
         ) : (
           <>
-            <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${chosen === "coexist" ? "text-[#3a7a1a]" : "text-[#6a5a3a]"}`}>
+            <div className={`text-micro font-bold uppercase tracking-wide mb-1 ${chosen === "coexist" ? "text-[#3a7a1a]" : "text-[#6a5a3a]"}`}>
               {chosen === "coexist" ? "🤝 You chose to coexist" : "⚔ Keeper trial started"}
             </div>
-            <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
+            <div className="flex flex-col gap-1.5 text-caption text-ink leading-snug mb-3">
               {(info?.pitch ?? []).map((line: string, i: number) => <p key={i}>{line}</p>)}
               <p className="font-bold text-[#5a7a1a]">
                 {chosen === "coexist"
@@ -192,7 +192,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
 
 const cardStyle: CSSProperties = {
   fontFamily: "'Newsreader', 'Times New Roman', serif",
-  color: "#2b2218",
+  color: "var(--ink)",
 };
 
 interface NodeStatusChipProps {
@@ -251,7 +251,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
     return (
       <div className="flex flex-col gap-1.5">
         <div
-          className="rounded-lg px-2 py-1.5 text-center text-[11px] font-bold"
+          className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
           style={{
             ...cardStyle,
             background: done ? "#a8d4a0" : "#cbe0b8",
@@ -268,7 +268,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
               ...cardStyle,
               background: path === "coexist" ? "#dfeecd" : "#e4ddd0",
               border: "1.5px solid #9a8a6a",
-              color: "#2b2218",
+              color: "var(--ink)",
             }}
           >
             {path === "coexist" ? "🤝" : "⚔"} {keeper.name} · {path === "coexist" ? "Coexisting" : "Driven out"}
@@ -277,7 +277,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
         {ready && keeper && (
           <button
             onClick={() => setKeeperOpen(true)}
-            className="rounded-lg px-2 py-1.5 text-center text-[11px] font-bold"
+            className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
             style={{
               ...cardStyle,
               background: "linear-gradient(to bottom, #7a3a8a, #5a2a6a)",
@@ -310,7 +310,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
         onClick={() => !blocked && setPickerOpen(true)}
         disabled={blocked}
         title={tierGateReason ? `🔒 ${tierGateReason} to found here` : canAfford ? `Found ${node.name}` : `Need ${cost}◉ to found this settlement`}
-        className="rounded-lg px-2 py-1.5 text-center text-[11px] font-bold"
+        className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
         style={{
           ...cardStyle,
           background: !blocked ? "linear-gradient(to bottom, #c8923a, #a06a1a)" : "#cbb98c",
@@ -352,7 +352,7 @@ function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTra
   };
   if (isCurrent) {
     return (
-      <div style={{ ...base, background: "#c8a868", border: "2px solid #a07840", color: "#2b2218" }}>
+      <div style={{ ...base, background: "#c8a868", border: "2px solid #a07840", color: "var(--ink)" }}>
         Your hearth
       </div>
     );
@@ -430,13 +430,13 @@ function EmptyPanel() {
   return (
     <div
       className="flex flex-col items-start gap-1.5 px-3 py-3"
-      style={{ ...cardStyle, color: "#2b2218" }}
+      style={{ ...cardStyle, color: "var(--ink)" }}
     >
       <div className="font-bold text-[14px]">The Hearthwood</div>
-      <div className="text-[12px] italic" style={{ color: "#5a3a20" }}>
+      <div className="text-caption italic" style={{ color: "#5a3a20" }}>
         Smoke rises where the line keeps faith.
       </div>
-      <div className="text-[11px] mt-1" style={{ color: "#5a3a20" }}>
+      <div className="text-micro mt-1" style={{ color: "#5a3a20" }}>
         Tap a hearth, a sister-hold, or a quiet mark for its name and what waits there.
       </div>
       <div className="mt-2 grid grid-cols-3 gap-1.5 w-full" style={{ fontSize: 10 }}>
@@ -506,7 +506,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
   return (
     <div
       className="flex flex-col gap-2 px-3 py-3 h-full overflow-y-auto"
-      style={{ ...cardStyle, color: "#2b2218" }}
+      style={{ ...cardStyle, color: "var(--ink)" }}
     >
       <div className="flex flex-col gap-0.5">
         <div className="text-[10px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: "#7c4f2c", fontWeight: 700 }}>
@@ -517,7 +517,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
           {isHidden ? "? ? ?" : node.name}
         </div>
         {!isHidden && lore?.subtitle && (
-          <div className="text-[11px] italic" style={{ color: "#5a3a20" }}>
+          <div className="text-micro italic" style={{ color: "#5a3a20" }}>
             {lore.subtitle}
           </div>
         )}
@@ -539,7 +539,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
             borderLeft: "4px solid #b28b62",
           }}
         >
-          <blockquote className="text-[12px] italic leading-snug">
+          <blockquote className="text-caption italic leading-snug">
             "{lore.epitaph}"
           </blockquote>
           {lore.speaker && (
@@ -556,7 +556,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
             What waits here
           </div>
           {node.activities.map((a: string, i: number) => (
-            <div key={i} className="text-[11px]" style={{ color: "#2b2218" }}>
+            <div key={i} className="text-micro" style={{ color: "var(--ink)" }}>
               • {a}
             </div>
           ))}
@@ -648,7 +648,7 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state }: HeaderBarPr
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <div className="flex flex-col min-w-0">
-          <span className="font-bold text-[14px] text-[#2b2218] truncate">
+          <span className="font-bold text-[14px] text-ink truncate">
             🗺 The Hearthwood
           </span>
           {currentNode && (

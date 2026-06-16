@@ -2,16 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { MouseEventHandler, ReactNode, TouchEventHandler } from "react";
 import { createPortal } from "react-dom";
 import BottomSheet from "./BottomSheet.jsx";
+import { isPhoneViewport } from "../breakpoints.js";
 
 const LONG_PRESS_MS = 500;
 const HOVER_DELAY_MS = 200;
 const MOVE_TOLERANCE = 8;
 const VIEWPORT_MARGIN = 8;
-
-function isPhone() {
-  if (typeof window === "undefined") return false;
-  return window.innerWidth < 768;
-}
 
 interface Position {
   top: number;
@@ -84,7 +80,7 @@ export default function Popover({
   const openIt = useCallback(() => setOpen(true), []);
 
   useLayoutEffect(() => {
-    if (!open || (isPhone() && density === "rich")) return;
+    if (!open || (isPhoneViewport() && density === "rich")) return;
     const anchorEl = anchorRef.current;
     const contentEl = contentRef.current;
     if (!anchorEl || !contentEl) return;
@@ -173,7 +169,7 @@ export default function Popover({
     </span>
   );
 
-  const phoneRich = open && density === "rich" && isPhone();
+  const phoneRich = open && density === "rich" && isPhoneViewport();
 
   const popoverPanel = open && !phoneRich ? createPortal(
     <div

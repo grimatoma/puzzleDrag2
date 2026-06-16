@@ -195,7 +195,8 @@
   .hl-browser-pane {
     @apply pl-1;
   }
-  /* Stacked layout for narrow viewports (portrait phones). Wider viewports —
+  /* Stacked layout for narrow viewports (portrait phones) — mirrors
+     BREAKPOINTS.browserStack (720) in src/ui/breakpoints.ts. Wider viewports —
      including a phone rotated to landscape — fall through to the two-column
      grid defined above. ~720px is comfortably above the grid's ~620px minimum
      width and above every phone's portrait width. */

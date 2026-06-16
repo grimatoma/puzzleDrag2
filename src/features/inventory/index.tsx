@@ -5,6 +5,7 @@ import { InventoryGrid } from "../../ui/Inventory.jsx";
 import { INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { SearchInput } from "../../ui/primitives/Field.jsx";
+import { useIsPhoneViewport } from "../../ui/breakpoints.js";
 
 export const viewKey = "inventory";
 
@@ -14,22 +15,6 @@ const PRIMARY_FILTERS = [
   { id: INVENTORY_TAGS.TOOL, label: "Tools" },
   { id: INVENTORY_TAGS.ITEM, label: "Items" },
 ];
-
-const PHONE_BREAKPOINT = 768;
-
-function usePhoneViewport() {
-  const [isPhone, setIsPhone] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth < PHONE_BREAKPOINT;
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const onResize = () => setIsPhone(window.innerWidth < PHONE_BREAKPOINT);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  return isPhone;
-}
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -142,7 +127,7 @@ interface InventoryScreenProps {
 
 export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp }: InventoryScreenProps) {
   const biomeKey = state.biomeKey ?? "farm";
-  const isPhone = usePhoneViewport();
+  const isPhone = useIsPhoneViewport();
 
   const [queryInput, setQueryInput] = useState("");
   const [primaryFilter, setPrimaryFilter] = useState("all");

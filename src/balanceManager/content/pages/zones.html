@@ -37,7 +37,7 @@
   <thead><tr><th>State</th><th>What it is</th><th>Player attention</th></tr></thead>
   <tbody>
     <tr><td><strong>Frontier</strong></td><td>newest zone(s) being explored / run</td><td>full, hand-played</td></tr>
-    <tr><td><strong>Settling</strong></td><td>founded, mid build-out (Camp → City tier ladder)</td><td>active</td></tr>
+    <tr><td><strong>Settling</strong></td><td>founded, mid build-out (per-zone tier ladder)</td><td>active</td></tr>
     <tr><td><strong>Hinterland</strong></td><td>completed — core supported buildings built + keeper resolved + Hearth-Token minted</td><td>passive — glance &amp; collect</td></tr>
   </tbody>
 </table>
@@ -95,7 +95,7 @@
 <h2>1.4 Zone-relative progression (player-chosen order)</h2>
 <p>Because order is player-chosen after the first settlements, progression is <strong>zone-relative</strong>, not globally linear:</p>
 <ul>
-  <li>A shared <strong>settlement template</strong> runs per zone, keyed on <code>event.zoneId</code>: found → tier-ups (Camp → Hamlet → Village → Town → City) → keeper decision → complete → Hearth-Token.</li>
+  <li>A shared <strong>settlement template</strong> runs per zone, keyed on <code>event.zoneId</code>: found → tier-ups (per-zone authored ladder — home is Hamlet → Village → City) → keeper decision → complete → Hearth-Token.</li>
   <li>A thin layer of <strong>zone-specific flavor triggers</strong> sits on top (the per-zone "key triggers" in Part 3).</li>
   <li>The <strong>only global spine</strong> is: found a complete zone of each biome (farm / mine / fish) → unlock the <strong>[[zones:oldcapital|Old Capital]]</strong> finale. Everything else is local to a zone and reorderable.</li>
 </ul>
@@ -150,7 +150,7 @@
   <p style="margin:0.2em 0;"><strong>Specialization.</strong> The core loop (drag-chain, upgrade tiles, orders, build, first worker). Grain → [[resources:bread|bread]] staple. <strong>Idle-produces:</strong> [[resources:bread|bread]] + coin — the breadbasket.</p>
   <p style="margin:0.2em 0;"><strong>Board.</strong> Farm <strong>TEMPERATE</strong>, 6×6, 10 turns. Upgrade grass→birds, grain→veg, birds→herd.</p>
   <p style="margin:0.2em 0;"><strong>Signature tiles.</strong> grass, grain, oak, birds.</p>
-  <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> Tutorial-safe (no hazards early); introduces <strong>rats</strong> as the first managed hazard mid-tutorial.</p>
+  <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> Tutorial-safe — no hazards in the home tutorial. The <strong>rats</strong> hazard is a Town&nbsp;3 lesson (see <strong>Direction</strong>), not a home one.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
@@ -377,5 +377,5 @@
 <p>First pass. All three forks resolved with the designer (farm re-spec · forge→board · caravan delivery). Remaining specifics — caravan routing depth, exact idle-yield rates, board templates, hazard cadence — are intentionally left to the encoding follow-on plans, tuned later against the Dev Panel.</p>
 
 <h2>See also</h2>
-<p>The <strong>Direction</strong> page is the committed plan — the Town&nbsp;1–Town&nbsp;3 slice, the Camp&nbsp;→&nbsp;City tier ladder (which is where zone-growth&nbsp;→&nbsp;plots/buildings is locked), and status on every game system. <strong>Future systems</strong> holds the rest of the parked roadmap. <strong>Story</strong> tells the fiction of the dormant network of holds. This page is the long-term zone exploration that feeds them.</p>
+<p>The <strong>Direction</strong> page is the committed plan — the Town&nbsp;1–Town&nbsp;3 slice, the per-zone tier ladder (which is where zone-growth&nbsp;→&nbsp;plots/buildings is locked), and status on every game system. <strong>Future systems</strong> holds the rest of the parked roadmap. <strong>Story</strong> tells the fiction of the dormant network of holds. This page is the long-term zone exploration that feeds them.</p>
 <p style="font-size:12px;color:#867a66;">Like everything under the wiki/docs, this is allowed to drift from code; dated 2026-06-04. Where this page and the code disagree, code is truth — update this page in the same change.</p>

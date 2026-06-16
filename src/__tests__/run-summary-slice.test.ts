@@ -35,7 +35,10 @@ describe("runSummary slice — chain accumulation", () => {
     expect(s.runSummary.biggestChain.count).toBe(9);
     expect(s.runSummary.biggestChain.key).toBe("tile_tree_oak");
     expect(s.runSummary.totalUpgrades).toBe(1);
-    expect(s.runSummary.totalCoinGain).toBeGreaterThan(0);
+    // Coins mirror the board base payout floor(gained*value), un-halved:
+    // chain1 floor(4*2)=8 + chain2 floor(9*3)=27 = 35; biggest = the 9-chain.
+    expect(s.runSummary.totalCoinGain).toBe(35);
+    expect(s.runSummary.biggestChain.coinGain).toBe(27);
     expect(s.runSummary.resourcesGained.tile_grass_grass).toBe(4);
     expect(s.runSummary.resourcesGained.tile_tree_oak).toBe(9);
   });

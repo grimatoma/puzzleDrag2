@@ -23,6 +23,7 @@ const TRANS_MS = 70;    // ms per transition frame
 const REGISTRY: Record<string, { dir: string }> = {
   tile_tree_willow: { dir: "willow" },
   tile_bird_chicken: { dir: "chicken" },
+  tile_veg_carrot: { dir: "carrot" },
 };
 
 /** Tiles whose art is fully baked — TileObj skips its angle-sway for these (the
@@ -46,6 +47,28 @@ interface State {
 
 const states = new Map<string, State>();
 
+// React menu icons (tile collection, ledgers, …) bake their canvas once. They
+// want the baked spring "reference" still instead of the procedural icon, but
+// the sheets load async — so we expose a one-time load kick + a "loaded"
+// subscription those canvases can use to re-bake once the art arrives.
+const loadListeners = new Set<() => void>();
+let loadKicked = false;
+
+/** Subscribe to "seasonal art finished (pre)loading". Returns an unsubscribe.
+ *  Fires once per `preloadSeasonalArt()` completion. */
+export function onSeasonalArtLoaded(cb: () => void): () => void {
+  loadListeners.add(cb);
+  return () => { loadListeners.delete(cb); };
+}
+
+/** Kick the one-time preload if nothing has started it yet. Lets menu icon
+ *  draws trigger the load on the Phaser-free Dev Panel, where GameScene (which
+ *  normally calls `preloadSeasonalArt`) never runs. */
+export function ensureSeasonalArtLoaded(): void {
+  if (loadKicked) return;
+  void preloadSeasonalArt();
+}
+
 function baseUrl(dir: string): string {
   const b = import.meta.env.BASE_URL ?? "/";
   return `${b.replace(/\/?$/, "/")}seasonal-tiles/${dir}/`;
@@ -68,6 +91,7 @@ async function loadSheet(url: string): Promise<Clip | null> {
  *  optional (a missing one just snaps). No-ops in environments without fetch /
  *  createImageBitmap (e.g. tests). */
 export async function preloadSeasonalArt(): Promise<void> {
+  loadKicked = true;
   if (typeof fetch === "undefined" || typeof createImageBitmap === "undefined") return;
   await Promise.all(
     Object.entries(REGISTRY).map(async ([key, sub]) => {
@@ -89,6 +113,8 @@ export async function preloadSeasonalArt(): Promise<void> {
       });
     }),
   );
+  // Let menu icon canvases that baked before the art arrived re-bake now.
+  loadListeners.forEach((cb) => cb());
 }
 
 export function seasonalArtLoaded(key: string): boolean {
@@ -99,6 +125,19 @@ function drawFrame(ctx: CanvasRenderingContext2D, clip: Clip, frame: number): vo
   const f = Math.max(0, Math.min(clip.frames - 1, frame));
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(clip.bmp, f * clip.fw, 0, clip.fw, clip.fw, -DRAW / 2, -DRAW / 2, DRAW, DRAW);
+}
+
+/** Draw a registered subject's spring "reference" still (the Spring idle rest
+ *  frame) into an origin-centered context — the static art menu icons should
+ *  show so they match the board. Returns false if the art hasn't loaded yet, so
+ *  the caller can fall back to its procedural icon (and kick a load). */
+export function paintSeasonalReference(ctx: CanvasRenderingContext2D, key: string): boolean {
+  const st = states.get(key);
+  if (!st || !st.loaded) return false;
+  const spring = st.idle[0]; // SEASON_NAMES[0] === "Spring"
+  if (!spring) return false;
+  drawFrame(ctx, spring, 0);
+  return true;
 }
 
 /** Draw a registered subject into an origin-centered tile context. `tSec <= 0` is a

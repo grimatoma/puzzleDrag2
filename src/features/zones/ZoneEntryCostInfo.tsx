@@ -1,7 +1,6 @@
 import { useState } from "react";
-import DesignIcon from "../../ui/primitives/Icon.jsx";
 import ZoneInfoModal from "./ZoneInfoModal.jsx";
-import { ZONES, zoneHasBoard } from "./data.js";
+import { ZONES } from "./data.js";
 import type { GameState } from "../../types/state.js";
 import type { SessionSeasonName } from "./zoneInfoFormat.js";
 
@@ -10,35 +9,28 @@ interface ZoneEntryCostInfoProps {
   state: GameState;
   /** Optional season column highlight inside the info modal. */
   highlightSeason?: SessionSeasonName | null;
-  /** When true, only the info button is shown (cost is displayed elsewhere). */
+  /**
+   * Retained for backwards compatibility with existing callers. The entry-cost
+   * coin pill is no longer rendered here (it duplicated the HUD wallet balance);
+   * the cost is shown inside {@link ZoneInfoModal} instead.
+   */
   infoOnly?: boolean;
   className?: string;
 }
 
 /**
- * Compact entry-cost pill plus an info affordance that opens {@link ZoneInfoModal}.
- * Shown on zone headers (town view, cartography panel, start-farming flow).
+ * Info affordance that opens {@link ZoneInfoModal} (spawn rates, modifiers, and
+ * farm entry cost). Shown on zone headers (town view, cartography panel,
+ * start-farming flow).
  */
-export default function ZoneEntryCostInfo({ zoneId, state, highlightSeason, infoOnly = false, className = "" }: ZoneEntryCostInfoProps) {
+export default function ZoneEntryCostInfo({ zoneId, state, highlightSeason, className = "" }: ZoneEntryCostInfoProps) {
   const [open, setOpen] = useState(false);
   const zone = ZONES[zoneId];
   if (!zone) return null;
 
-  const cost = zone.entryCost?.coins ?? 0;
-  const showCoinCost = !infoOnly && zoneHasBoard(zone, "farm");
-
   return (
     <>
       <div className={`inline-flex items-center gap-1 ${className}`}>
-        {showCoinCost && (
-          <span
-            className="inline-flex items-center gap-1 bg-white/85 px-2.5 py-1 rounded-full font-bold text-[#2b2218] text-[13px] tabular-nums border border-white/60"
-            title="Coin cost to start a farm session here"
-          >
-            <DesignIcon iconKey="design.currency.coin" size={14} title="" />
-            {cost}◉
-          </span>
-        )}
         <button
           type="button"
           onClick={() => setOpen(true)}

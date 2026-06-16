@@ -13,6 +13,7 @@ import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS, type HazardDef } from "../mine/hazards.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import { useSeasonalArtReady } from "../../ui/useSeasonalArtReady.js";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import SegmentedControl from "../../ui/primitives/SegmentedControl.jsx";
 import {
@@ -122,6 +123,7 @@ interface TileIconProps { tileId: string; size?: number; locked?: boolean }
 
 export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
   const ref = useRef<HTMLCanvasElement | null>(null);
+  const seasonalReady = useSeasonalArtReady();
   const t = (TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[tileId];
   const key = t?.baseResource;
   const res: Resource | null = key ? (ALL_RESOURCES[key] ?? null) : null;
@@ -160,7 +162,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
     ctx.scale(iconScale, iconScale);
     if (key) drawTileIcon(ctx, key);
     ctx.restore();
-  }, [size, key, res]);
+  }, [size, key, res, seasonalReady]);
 
   if (!res) {
     return (

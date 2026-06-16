@@ -32,8 +32,11 @@ A tile is a **constant subject in a constant pad**, re-*dressed* per season — 
 (that was the old approach's root cause of drift). Identity (silhouette, pad, footprint, position) holds
 across all four seasons; the season lives in **color, the ground pad, the light, and overlays** (blossom,
 fallen leaves, frost, snow). Generate peak **Summer** as the style anchor, then derive the other seasons
-as small registered **edits** on the summer PNG. Consistency comes from the anchor image + conservative
-chained edits, not long prompts.
+as registered **edits** on the summer PNG. Consistency comes from the anchor image **plus a fully-quantified
+prompt on every call** — each edit must carry the full framing geometry, the complete season dressing, and an
+explicit identity/footprint + palette lock. **Thin one-line deltas were a primary cause of drift:** an
+under-specified call lets the subject move, resize, and recolour between seasons. These prompts are **composed
+from meta-prompt layers** (next section), never hand-written per state.
 
 Two halves:
 1. **Art generation** — PixelLab raw v2 REST (`tools/pixellab/pixellab.mjs`), config-driven via
@@ -44,6 +47,23 @@ Two halves:
 Why gates: every generation costs credits + 30s–5min, and everything downstream inherits from the summer
 anchor — a wrong anchor or off-model season is cheap to catch by eye and expensive to discover after the
 next batch. **Stop and show the user at each ⟂ gate.**
+
+## Prompt composition (the meta-prompt layers)
+
+Prompts are **composed, not hand-written.** A thin subject config carries only identity + locks + per-subject
+overrides; the composer (`tools/pixellab/prompts/`) layers the shared metas under it to emit a fully-quantified
+prompt for **every** object state (summer generate, each season edit, each transition, each idle):
+
+- `framing.mjs` — L0 style words + L1 framing geometry + the footprint lock (carried on every call).
+- `seasons.mjs` — L2 the four season dressings (light / pad / palette / overlays), in full.
+- `categories.mjs` — L3+L4 the 12 category playbooks (per-season delta, idle, transition, the deciduous
+  bare-mound hinge + envelope lock, and the **constant-subject pixel-lock** for animals/minerals/objects).
+- `compose.mjs` — `buildPlan(cfg)` → the plan; `renderPlanMarkdown` → a reviewable per-subject sheet.
+
+**Authoring a subject = a thin config** (`subjects/<name>.mjs`):
+`{ subject, category, size:128, decimateTo:64, identity, overrides, paletteLock, seeds }`. Tokens like
+`{foliage}`/`{autumnColor}`/`{trunkNote}` in a playbook are filled from the subject's `overrides`. **Dump and
+review the composed prompts before spending any credits** (the first ⟂ gate) — see Workflow step 0.
 
 ## Per-category playbook (how a subject moves through the year)
 
@@ -78,17 +98,26 @@ doc's "All tiles" tab; the essentials:
 - **Canonical style anchors (use both):** `docs/seasonal-tile-system/assets/willow-summer.png` +
   `eggplant-summer.png` — passed together as `style_images` so a new subject inherits the set's look. They
   span the two dominant archetypes (organic mass + hero object).
-- **Resolution:** 128px is the validated default. 64px works for a lighter/chunkier subject (e.g. a small
-  animal) — set `size: 64` in the config; everything else is identical. (Output size = the `image_size`
-  you request; style refs can be a different size.)
+- **Resolution:** ALWAYS generate at **128px**, then **decimate to 64px** for the small tiles (set
+  `size:128, decimateTo:64`). Native-64 generation drifts badly in base size/orientation and lets the season
+  light recolour constant subjects; the 128 set stays consistent — so generate big and downscale. (Output
+  size = the `image_size` you request; style refs can be a different size.)
 - **Output convention:** stills at `docs/seasonal-tile-system/assets/<subject>-<season>.png`; animation
   frames at `.../assets/anim/<subject>-<clip>/frame_NN.png`; game sheets at
   `public/seasonal-tiles/<subject>/`.
 
 ## Workflow
 
-Author a subject config (copy `tools/pixellab/subjects/chicken.mjs`, fill the prompts per the category
-playbook), then run it phase by phase, gating between phases.
+Author a **thin** subject config (copy `tools/pixellab/subjects/chicken.mjs` — identity + category + overrides
++ locks, **not** per-state prompts), then run it phase by phase, gating between phases.
+
+### 0 — Compose & review prompts  ⟂ GATE
+```
+node tools/pixellab/run_subject.mjs tools/pixellab/subjects/<subject>.mjs prompts
+```
+Dumps the fully-composed prompt for every state to `docs/seasonal-tile-system/prompts/<subject>.md` (no API
+calls). **Read it and show the user** before generating — this is where an under-specified or off-model prompt
+is caught for free. Tune the config (or the shared layers in `prompts/`) and re-dump until the set is right.
 
 ### 1 — Summer anchor  ⟂ GATE
 ```
@@ -157,8 +186,10 @@ After QA: rejected candidates + intermediates go to the **out-of-VC archive**
 
 - `pixellab.mjs` — the raw v2 wrapper: `generateWithStyle` / `editWithText` / `animateTransition` + poll +
   save. Token from `~/.claude.json`.
-- `run_subject.mjs` — config-driven driver; `node run_subject.mjs <config.mjs> <summer|seasons|transitions|idles>`.
-- `subjects/<subject>.mjs` — one config per subject (prompts, size, chain, seeds). Copy `chicken.mjs`.
+- `prompts/` — the meta-prompt composition layer (`framing` / `seasons` / `categories` / `compose`). Edit
+  these to tune the shared metas; `buildPlan(cfg)` emits the full per-state prompts.
+- `run_subject.mjs` — driver; `node run_subject.mjs <config.mjs> <prompts|summer|seasons|transitions|idles>`.
+- `subjects/<subject>.mjs` — one **thin** config per subject (identity + category + overrides + locks). Copy `chicken.mjs`.
 - `check_pad.py` / `check_envelope.py` / `check_glow.py` / `drop_glow_frame.py` — QA gates.
 - `pack_sheets.py` — frames → game spritesheets. `assemble_gifs.py` — review GIFs/strips/montage.
 

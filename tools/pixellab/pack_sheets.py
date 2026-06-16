@@ -13,6 +13,11 @@ the shared hinge frame, skipping the two source dirs:
 Usage:
   python tools/pixellab/pack_sheets.py chicken
   python tools/pixellab/pack_sheets.py willow --concat autumn-baremound+baremound-winter=trans-autumn-winter
+  python tools/pixellab/pack_sheets.py carrot --decimate 64 --static-idle spring,winter
+
+--decimate N      generate at 128 but pack the GAME sheets at N px (clean 2:1 box downscale).
+--static-idle S   pack idle-<season>.png from the season STILL as a 1-frame hold (for seasons
+                  whose motion blooms badly, e.g. snow/pastel) instead of the anim dir.
 """
 import os, glob, argparse
 from PIL import Image
@@ -22,6 +27,8 @@ ap.add_argument('subject')
 ap.add_argument('--assets', default='docs/seasonal-tile-system/assets')
 ap.add_argument('--out', default='public/seasonal-tiles')
 ap.add_argument('--concat', action='append', default=[], help='A+B=sheetname (hinge de-duped)')
+ap.add_argument('--decimate', type=int, default=0, help='downscale packed frames to N px (e.g. 64)')
+ap.add_argument('--static-idle', default='', help='comma seasons packed static from the still')
 a = ap.parse_args()
 
 anim = os.path.join(a.assets, 'anim')
@@ -46,11 +53,19 @@ def write_sheet(imgs, name):
     s = Image.new('RGBA', (w * len(imgs), h), (0, 0, 0, 0))
     for i, im in enumerate(imgs):
         s.paste(im, (i * w, 0))
+    if a.decimate and h != a.decimate:  # clean 2:1-style box downscale of the whole strip
+        s = s.resize((max(1, round(s.width * a.decimate / h)), a.decimate), Image.BOX)
     s.save(os.path.join(outdir, name))
-    print('  %-28s %2d frames' % (name, len(imgs)))
+    print('  %-28s %2d frames @%dpx' % (name, len(imgs), s.height))
 
 
 skip = set()
+# Static idles: pack the season still as a 1-frame hold and skip its anim dir.
+for season in [x for x in a.static_idle.split(',') if x]:
+    still = os.path.join(a.assets, '%s-%s.png' % (a.subject, season))
+    write_sheet([Image.open(still).convert('RGBA')], 'idle-' + season)
+    skip.add(pre + 'idle-' + season)
+
 for spec in a.concat:
     srcs, name = spec.split('=')
     imgs = []

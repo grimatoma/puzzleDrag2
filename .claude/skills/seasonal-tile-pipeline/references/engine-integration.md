@@ -56,6 +56,28 @@ Then onboarding a new subject = drop its sheets in `public/seasonal-tiles/<subje
 entry. Keep the per-tile playback (idle vs periodic) configurable per the category (foliage can run
 continuous; produce/animals/objects are better periodic — most tiles rest, life ripples through).
 
+This is now done — the registry lives in `src/textures/seasonal/seasonalArt.ts` (`REGISTRY`,
+`paintSeasonalArt`, `seasonalArtLoaded`, `preloadSeasonalArt`, `BAKED_SEASONAL_KEYS`); GameScene preloads +
+`_rebakeBakedTiles()`.
+
+## Menu / wiki icons — automatic, no per-subject wiring
+
+The board is only half the surface. React menus (the Tiles wiki, crafting/order ledgers, biome-entry,
+Dev Panel, …) render a tile's **static icon**, not the animated board texture — they all funnel through
+`drawIcon(ctx, key)` in `src/textures/iconRegistry.ts` (via `paintIcon` for `Icon`/`IconCanvas`, and via
+`drawTileIcon` for the tile-collection `TileIcon`). `drawIcon` is hooked once: if `key` is in
+`BAKED_SEASONAL_KEYS` it draws that subject's **Spring reference still** (`paintSeasonalReference` =
+`idle[0]` frame 0) and returns; otherwise it kicks `ensureSeasonalArtLoaded()` and falls through to the
+subject's procedural registry icon until the sheets arrive. So a subject's menu icon switches to its PNG
+art **purely from its `seasonalArt` REGISTRY entry** — you do NOT edit the per-family icon module
+(`categories/<family>.ts`); keep a procedural entry there only as the pre-load / offline fallback.
+
+Menu canvases bake once, so they re-bake when the art finishes loading: `seasonalArt` exposes
+`onSeasonalArtLoaded(cb)`; the `src/ui/useSeasonalArtReady.ts` hook (used by `IconCanvas`,
+`primitives/Icon`, and the tile-collection `TileIcon`) bumps a render counter on load, and
+`src/ui/Icon.tsx` clears its data-URI cache on the same signal. Generic + load-triggered, so it already
+covers every future subject.
+
 ## Verify in-game (no screenshots — they time out)
 
 The GameScene is reachable from any scene; the season is registry-driven; so you can drive it directly and
