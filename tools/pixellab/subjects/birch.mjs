@@ -4,12 +4,11 @@
 // meta-prompt layers in tools/pixellab/prompts/ — run `… prompts` to dump the full set
 // to docs/seasonal-tile-system/prompts/birch.md for review.
 //
-// Generate at 128px (consistency), decimate to 64px for the game.
+// Generated and shipped at 128px (no decimate — the set is 128 going forward).
 export default {
   subject: "birch",
   category: "tree-deciduous",
   size: 128,
-  decimateTo: 64,
 
   // One-line identity for the generated Summer anchor (style = the two canonical anchors).
   identity:

@@ -749,7 +749,7 @@
         </article>
         <h2 class="cat-group" id="cat-produce-veg">Vegetables <span class="cat-prog">2 / 10</span></h2>
         <article class="subject" id="subj-carrot">
-          <h3>Carrot <span class="pill ok">Vegetables</span> <span class="pill info">128→64px</span> <span class="pill ok">in-game</span></h3>
+          <h3>Carrot <span class="pill ok">Vegetables</span> <span class="pill info">128px</span> <span class="pill ok">in-game</span></h3>
           <p class="rowlab">Season key frames</p>
           <div class="tiles">
           <figure><img src="assets/carrot-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
@@ -1004,7 +1004,7 @@
           </div>
         </article>
         <article class="subject" id="subj-chicken">
-          <h3>Chicken <span class="pill ok">Birds</span> <span class="pill info">128→64px</span> <span class="pill ok">in-game</span></h3>
+          <h3>Chicken <span class="pill ok">Birds</span> <span class="pill info">64px</span> <span class="pill ok">in-game</span></h3>
           <p class="rowlab">Season key frames</p>
           <div class="tiles">
           <figure><img src="assets/chicken-spring.png" alt="spring" loading="lazy"><figcaption>spring</figcaption></figure>
@@ -1446,7 +1446,7 @@
           <li><b>Willow</b> (deciduous tree): winter kept the original snow-covered mound &mdash; the leaf-tips-through-snow prototype was rejected. Reaches winter through a two-segment fall&rarr;bare-mound&rarr;snow hinge so leaves and snow never co-occur, and the bare crown is locked to the summer envelope.</li>
           <li><b>Eggplant</b> (produce): first-pass polish flags &mdash; the spring shoulder reads slightly grey and <code>eggplant-autumn-winter</code> flashes white frost before settling; both are seed re-rolls if wanted.</li>
           <li><b>Chicken</b> (animal, 64px): the creature is held constant and the season lives entirely in the pad + light. The edit must lock the bird's own palette and light the GROUND only, or the seasonal light recolours the whole bird (autumn turned it orange).</li>
-          <li><b>Carrot</b> (produce, 128&rarr;64px): slanted to suit its tapered form (fills the tile diagonal). Produce ripeness is surface/sheen only, hue-locked &mdash; a &ldquo;paler young&rdquo; tone turned it salmon. The idle &ldquo;specular glint&rdquo; rendered as a white flash, so the cool-season idles (spring/winter) ship <b>static</b>; the snow transition needed a fixed seed to stop a white burst.</li>
+          <li><b>Carrot</b> (produce, 128px): slanted to suit its tapered form (fills the tile diagonal). Produce ripeness is surface/sheen only, hue-locked &mdash; a &ldquo;paler young&rdquo; tone turned it salmon. The idle &ldquo;specular glint&rdquo; rendered as a white flash, so the cool-season idles (spring/winter) ship <b>static</b>; the snow transition needed a fixed seed to stop a white burst. <em>(Resolution: ships at native 128px &mdash; the set keeps 128 going forward, no decimation; the chicken is the one legacy 64px exception.)</em></li>
         </ul>
         <div class="box tip"><b>How the gallery stays fresh.</b> The grids in the <b>Assets</b> tab are generated from <code>docs/seasonal-tile-system/assets/</code> + the roster by <code>node tools/pixellab/gen_gallery.mjs</code> (a step in the <code>seasonal-tile-pipeline</code> skill). Generate or regenerate a subject, re-run it, and the doc updates itself &mdash; no hand-editing.</div>
       </section>
