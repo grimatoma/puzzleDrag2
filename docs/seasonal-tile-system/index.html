@@ -430,7 +430,7 @@
         <h3>Birds <span class="pill idle">animal · periodic idle</span></h3>
         <table><thead><tr><th>Tile</th><th>Summer base</th></tr></thead><tbody>
           <tr><td>Pheasant</td><td>a plump long-tailed pheasant with coppery plumage, standing on a small round grassy pad, summer</td></tr>
-          <tr><td>Chicken</td><td>a small white-and-cream chicken, on a small round grassy pad, summer</td></tr>
+          <tr><td>Chicken <span class="pill ok">done · 64px</span></td><td>a small plump white-and-cream chicken with a tiny red comb and orange beak, on a small round grassy pad, summer (validated at 64px; animal palette-lock)</td></tr>
           <tr><td>Hen</td><td>a brown speckled hen, on a small round grassy pad, summer</td></tr>
           <tr><td>Rooster</td><td>a proud red-combed rooster with arched tail feathers, on a small round grassy pad, summer</td></tr>
           <tr><td>Wild Goose</td><td>a grey-brown wild goose, on a small round grassy pad, summer</td></tr>
@@ -531,15 +531,25 @@
         </div>
         <div class="anim"><img src="assets/anim/eggplant-fullyear.gif" alt="eggplant full-year animation loop" width="320"></div>
         <p>Year loops = the 3 forward transitions concatenated (51 frames). First-pass polish flags: eggplant <em>spring</em> shoulder reads slightly grey, and <code>eggplant-autumn-winter</code> flashes white frost before settling to the darker winter still — both seed re-rolls if wanted.</p>
+        <h3>Chicken <span class="pill ok">animal · 64px</span></h3>
+        <div class="tiles">
+          <figure><img src="assets/chicken-spring.png" alt="chicken spring"><figcaption>spring</figcaption></figure>
+          <figure><img src="assets/chicken-summer.png" alt="chicken summer"><figcaption>summer · anchor</figcaption></figure>
+          <figure><img src="assets/chicken-autumn.png" alt="chicken autumn"><figcaption>autumn</figcaption></figure>
+          <figure><img src="assets/chicken-winter.png" alt="chicken winter"><figcaption>winter</figcaption></figure>
+        </div>
+        <p>The <b>animal playbook</b> at <b>64px</b> (a resolution test): the chicken is held <em>constant</em> across all four seasons — the season lives entirely in the pad + light (flowers → green → leaves → snow), with a periodic peck/head-bob idle (winter adds a breath-puff). 64px holds up cleanly. A test-surfaced fix: the seasonal light recoloured the whole bird (autumn went orange) until the edit explicitly <b>locked the creature's palette and lit the ground only</b> — now baked into the animal playbook.</p>
       </section>
       <section id="engine">
-        <h2>Engine integration — willow is live in-game</h2>
+        <h2>Engine integration — willow + chicken live in-game</h2>
         <p>The willow (<code>tile_tree_willow</code>) now renders its baked seasonal art on the real board, verified in the running game (typecheck + lint clean, clean boot, all 7 spritesheets serve 200). Below is the actual in-game tile texture captured per season — the rounded card chrome is the game's, the art is ours:</p>
         <p class="strip"><img src="assets/willow-ingame-seasons.png" alt="in-game willow tiles: spring, summer, autumn, winter" style="max-width:520px"></p>
         <p>Season selection verified by the rendered canopy colour: Spring <code>rgb(100,173,90)</code> → Summer <code>rgb(40,99,29)</code> → Autumn <code>rgb(180,120,25)</code> → Winter <code>rgb(111,126,91)</code>. The procedural fallback is season-identical, so four distinct, season-correct colours prove the PNG path + season pick are both working.</p>
+        <p>And the <b>same path, generalized to a registry</b>, renders the <b>chicken</b> (a 64px animal) per season — here the bird stays constant and the pad carries the season:</p>
+        <p class="strip"><img src="assets/chicken-ingame-seasons.png" alt="in-game chicken tiles: spring, summer, autumn, winter" style="max-width:520px"></p>
         <div class="grid">
-          <div class="card"><h3>How it hooks in</h3><p>An isolated controller <code>src/textures/seasonal/willowArt.ts</code> loads the 7 transparent spritesheets from <code>public/seasonal-tiles/willow/</code> and exposes <code>paintWillow(ctx, season, t)</code>. The shared tile painter <code>paintTileCanvas</code> draws it for the willow key once loaded; the existing per-frame loop (<code>_animateSeasonalTiles</code>, ~20fps) repaints the shared texture so the idle plays; the controller self-detects season changes from <code>currentSeasonName</code> and plays the forward transition once, then resumes the new idle.</p></div>
-          <div class="card s2"><h3>Touched files</h3><p><code>willowArt.ts</code> (new); <code>textures.ts</code> (willow branch + static rebake); <code>GameScene.ts</code> (preload, animate-loop inclusion, reduced-motion still); <code>TileObj.ts</code> (skip the sprite-angle sway — the baked motion is in the frames and the pad must not rotate). Falls back to the procedural willow until art loads; every other tile is untouched.</p></div>
+          <div class="card"><h3>How it hooks in</h3><p>A registry controller <code>src/textures/seasonal/seasonalArt.ts</code> maps each tile key to its <code>public/seasonal-tiles/&lt;subject&gt;/</code> sheets and exposes <code>paintSeasonalArt(ctx, key, season, t)</code> with per-subject state. The shared painter <code>paintTileCanvas</code> draws it for any registered key once loaded; the per-frame loop (<code>_animateSeasonalTiles</code>, ~20fps) repaints the texture so the idle plays; the controller self-detects season changes and plays the forward transition once, then resumes the idle. <b>Add a subject = drop its sheets + one registry entry.</b></p></div>
+          <div class="card s2"><h3>Touched files</h3><p><code>seasonalArt.ts</code> (the registry controller, renamed from willowArt); <code>textures.ts</code> (registered-key branch + static rebake); <code>GameScene.ts</code> (preload-all, animate-loop inclusion, reduced-motion bake of all baked tiles); <code>TileObj.ts</code> (skip the sprite-angle sway for baked keys). Falls back to the procedural icon until art loads; unregistered tiles are untouched.</p></div>
         </div>
         <div class="box tip"><b>Playback as shipped.</b> The willow idles <em>continuously</em> today (the per-frame loop repaints every animated tile). The <a href="#anim-meta">periodic-&amp;-staggered</a> board policy remains the recommended next refinement; for a single hero tile, continuous reads fine.</div>
       </section>
@@ -555,11 +565,12 @@
             <tr><td>Grass + Eggplant summer</td><td><span class="pill ok">done</span></td><td>generated from anchor; set consistent.</td></tr>
             <tr><td>QA metric refine (mound)</td><td><span class="pill ok">done</span></td><td>bottom-band median (<code>--band</code> 5); willow set reads identical, grass +4 shift auto-fixed.</td></tr>
             <tr><td>Grass + Eggplant seasons + transitions</td><td><span class="pill ok">done</span></td><td>4 stills + 3 transition clips each; pad-registered.</td></tr>
+            <tr><td>Chicken (animal, 64px)</td><td><span class="pill ok">done</span></td><td>4 stills + 3 transitions + 4 idles; animal palette-lock; packed + integrated + verified in-game.</td></tr>
             <tr><td>Willow idles (4)</td><td><span class="pill ok">done</span></td><td>per-season seamless micro-loops (first=last, 8f); continuous-vs-periodic playback is an engine choice.</td></tr>
             <tr><td>Idle glow-frame fix</td><td><span class="pill ok">done</span></td><td>dropped the overshoot frame (07) from the spring + autumn idle loops; verified flat luminance.</td></tr>
             <tr><td>Winter mound pop</td><td><span class="pill idle">dropped</span></td><td>Prototype (leaf-tips through snow) rejected — kept the original snow-mound winter.</td></tr>
             <tr><td>All-tile prompts (first pass)</td><td><span class="pill info">draft</span></td><td>meta-prompts (season/category/idle/transition) + per-subject summer bases for all ~85 tiles — see the <a href="#roadmap">All tiles</a> tab. NOT final; evaluate against generated output.</td></tr>
-            <tr><td>Willow engine integration</td><td><span class="pill ok">done</span></td><td><code>willowArt.ts</code> + <code>paintTileCanvas</code> hook; verified in-game (per-season render + season select). Other subjects pending art.</td></tr>
+            <tr><td>Engine integration (registry)</td><td><span class="pill ok">done</span></td><td><code>seasonalArt.ts</code> registry + <code>paintTileCanvas</code> hook; willow + chicken both verified in-game. Add a subject = sheets + one entry.</td></tr>
             <tr><td>Roll-out: other subjects</td><td><span class="pill idle">later</span></td><td>generate per the first-pass prompts; reuse the same engine hook.</td></tr>
           </tbody>
         </table>
