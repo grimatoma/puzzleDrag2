@@ -23,6 +23,8 @@ const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(nu
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
 import { preloadSeasonalArt, seasonalArtLoaded, BAKED_SEASONAL_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { idleAnimTime } from "./textures/idleAnimTiming.js";
+import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
   conceptTilesPreloadReady,
@@ -683,8 +685,12 @@ export class GameScene extends Phaser.Scene {
     // current season. Cheap: only distinct seasonal keys, in place. Fired on
     // season flips (turnsUsed) and biome/board changes.
     rebakeSeasonalTilesForSeason(this);
-    // Baked-art tiles animate via the per-frame loop; under reduced motion that
-    // loop is idle, so bake their current-season stills here on season flips.
+    // Baked-art tiles (willow, chicken, …) animate via the per-frame loop, which
+    // plays the season transition on a motion-on flip — so we DON'T snap them here
+    // then. Under reduced motion that loop is idle, so bake their current-season
+    // stills (both variants) here instead. (A tile selected at the exact moment of
+    // a motion-on flip can briefly show the prior season on its `_sel` lift until
+    // the loop catches it — a rare edge traded for keeping the transition.)
     if (!this._motionEnabled()) this._rebakeBakedTiles();
   }
 
@@ -2082,40 +2088,41 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
-  /** Re-bake distinct on-board seasonal tiles that have an animation for the
-   *  current season, at elapsed time `tSec` (seconds — same clock the gallery
-   *  uses). Mutates the shared `tile_<key>` texture so all instances update. */
-  /** Re-bake concept-tile GIF frames when `?conceptTiles=1` is set. */
+  /** Re-bake concept-tile GIF frames when `?conceptTiles=1` is set. Mutates the
+   *  shared `tile_<key>` texture (and `_sel` when picked up) so all instances
+   *  update. */
   private _animateConceptTiles(tSec: number) {
     const reps = new Map<string, TileRes>();
+    const selectedKeys = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
       for (let c = 0; c < COLS; c++) {
         const t = row[c];
-        if (t && !reps.has(t.res.key) && hasConceptTileAnim(t.res.key)) {
-          reps.set(t.res.key, t.res);
+        if (t && hasConceptTileAnim(t.res.key)) {
+          if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
+          if (t.selected) selectedKeys.add(t.res.key);
         }
       }
     }
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
-      if (!tex || typeof tex.getContext !== "function") continue;
-      const ctx = tex.getContext();
-      if (!ctx) continue;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, null, tSec);
-      tex.refresh();
+      // Stagger each key's loop and insert a rest delay between iterations.
+      const aSec = idleAnimTime(tSec, res.key);
+      this._bakeAnimatedTile(res, false, null, aSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, null, aSec, dpr);
     }
   }
 
   private _animateSeasonalTiles(tSec: number) {
     const season = currentSeasonName(this);
     if (!season) return;
-    // Collect one representative TileObj.res per distinct animated key present.
+    // Collect one representative TileObj.res per distinct animated key present,
+    // and note which keys have a currently-selected tile so we keep that lifted
+    // tile's `_sel` texture animating in the current season too.
     const reps = new Map<string, TileRes>();
+    const selectedKeys = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
@@ -2123,25 +2130,47 @@ export class GameScene extends Phaser.Scene {
         const t = row[c];
         if (
           t &&
-          !reps.has(t.res.key) &&
           (hasSeasonalTileAnim(t.res.key, season) ||
             (BAKED_SEASONAL_KEYS.has(t.res.key) && seasonalArtLoaded(t.res.key)))
         ) {
-          reps.set(t.res.key, t.res);
+          if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
+          if (t.selected) selectedKeys.add(t.res.key);
         }
       }
     }
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      const tex = this.textures.get(`tile_${res.key}`) as Phaser.Textures.CanvasTexture | undefined;
-      if (!tex || typeof tex.getContext !== "function") continue;
-      const ctx = tex.getContext();
-      if (!ctx) continue;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, tSec);
-      tex.refresh();
+      // Willow carries its own idle/transition timeline (paintWillow) — feed it
+      // the raw clock. Procedural idle anims get the staggered, rest-delayed clock.
+      // Baked-art tiles (willow, chicken, …) own their idle + transition timing
+      // internally, so feed them the raw clock; procedural seasonal tiles get the
+      // staggered rest-pause warp.
+      const aSec = BAKED_SEASONAL_KEYS.has(res.key) ? tSec : idleAnimTime(tSec, res.key);
+      this._bakeAnimatedTile(res, false, season, aSec, dpr);
+      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, aSec, dpr);
     }
+  }
+
+  /** Re-bake one animated-tile texture variant (`tile_<key>` or its `_sel`
+   *  companion) at animation time `tSec`. Shared by the seasonal and concept
+   *  per-frame passes so the selected lift never shows a stale, off-season
+   *  still. */
+  private _bakeAnimatedTile(
+    res: TileRes,
+    selected: boolean,
+    season: SeasonName | null,
+    tSec: number,
+    dpr: number,
+  ) {
+    const key = `tile_${res.key}${selected ? "_sel" : ""}`;
+    const tex = this.textures.get(key) as Phaser.Textures.CanvasTexture | undefined;
+    if (!tex || typeof tex.getContext !== "function") return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season, tSec);
+    tex.refresh();
   }
 
   /** Bake every loaded baked-art tile's current-season idle rest frame into its

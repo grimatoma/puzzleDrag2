@@ -9,7 +9,6 @@ import type { ChainInfo, RuntimeTool } from "./src/ui/puzzleBoard.jsx";
 import { Hud } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
-import SeasonCinematic from "./src/ui/SeasonCinematic.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
 import BossCinematic from "./src/ui/BossCinematic.jsx";
 import RewardChipsLayer from "./src/ui/RewardChipsLayer.jsx";
@@ -329,6 +328,12 @@ export default function App() {
   const [inspectedTool, setInspectedTool] = useState<RuntimeTool | null>(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
+  // Once the player has opened the town, keep its (expensive) Phaser canvas
+  // mounted — hidden behind CSS — so returning to it is instant instead of a
+  // full cold reboot. See TownPhaserCanvas's lazy boot / pause-resume handling.
+  const [townEverOpened, setTownEverOpened] = useState(false);
+  if (state.view === "town" && !townEverOpened) setTownEverOpened(true);
+  const keepTownMounted = state.view === "town" || townEverOpened;
   const [pins, pinActions] = usePinnedTools();
   const hotbarRef = useRef<HTMLDivElement>(null);
   const maxFitPins = useMaxFitPins(hotbarRef);
@@ -558,10 +563,15 @@ export default function App() {
             />
           </div>
 
-          {/* Town overlay — covers exactly the same area as the board */}
-          {state.view === "town" && (
-            <div className="absolute inset-0 z-20 view-enter-down">
-              <TownView state={state} dispatch={dispatch} />
+          {/* Town overlay — covers exactly the same area as the board. Kept
+              mounted (hidden) after first open so the Phaser town doesn't have
+              to cold-boot on every visit. */}
+          {keepTownMounted && (
+            <div
+              className={`absolute inset-0 z-20 ${state.view === "town" ? "view-enter-down" : "hidden"}`}
+              aria-hidden={state.view !== "town"}
+            >
+              <TownView state={state} dispatch={dispatch} active={state.view === "town"} />
             </div>
           )}
 
@@ -582,10 +592,6 @@ export default function App() {
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
-
-        {/* Season transition cinematic — overlays everything when the
-            in-session season index changes mid-run. Pointer-events off. */}
-        <SeasonCinematic state={state} />
 
         {/* Level-up cinematic — fires when state.level increases. */}
         <LevelUpCinematic state={state} />
