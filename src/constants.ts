@@ -480,12 +480,12 @@ const ITEMS_DATA = {
   // Special family (custom mechanics — dirt feeds rune countdown with mysterious ore).
   tile_special_dirt: { kind: "tile", biome: "mine", label: "Dirt", value: 1, next: "dirt", look: { color: 0x7a6850, dark: 0x3e3a36 } },
   // Terminal mine resources.
-  block: { kind: "resource", biome: "mine", label: "Block", value: 6, next: null, look: { color: 0x7c8388, dark: 0x2a2e32 } },
-  cut_gem: { kind: "resource", biome: "mine", label: "Cut Gem", value: 14, next: null, look: { color: 0xa3f0ff, dark: 0x1686a3 } },
-  coke: { kind: "resource", biome: "mine", label: "Coke", value: 9, next: null, look: { color: 0x5a5a60, dark: 0x1a1a20 } },
-  iron_bar: { kind: "resource", biome: "mine", label: "Iron Bar", value: 8, next: null, look: { color: 0x8a8e94, dark: 0x3a3e44 } },
-  copper_bar: { kind: "resource", biome: "mine", label: "Copper Bar", value: 8, next: null, look: { color: 0xc97f3c, dark: 0x6a3e18 } },
-  gold_bar: { kind: "resource", biome: "mine", label: "Gold Bar", value: 16, next: null, look: { color: 0xf4c430, dark: 0x7a6010 } },
+  block: { kind: "resource", biome: "mine", label: "Block", value: 10, next: null, look: { color: 0x7c8388, dark: 0x2a2e32 } },
+  cut_gem: { kind: "resource", biome: "mine", label: "Cut Gem", value: 110, next: null, look: { color: 0xa3f0ff, dark: 0x1686a3 } },
+  coke: { kind: "resource", biome: "mine", label: "Coke", value: 40, next: null, look: { color: 0x5a5a60, dark: 0x1a1a20 } },
+  iron_bar: { kind: "resource", biome: "mine", label: "Iron Bar", value: 11, next: null, look: { color: 0x8a8e94, dark: 0x3a3e44 } },
+  copper_bar: { kind: "resource", biome: "mine", label: "Copper Bar", value: 11, next: null, look: { color: 0xc97f3c, dark: 0x6a3e18 } },
+  gold_bar: { kind: "resource", biome: "mine", label: "Gold Bar", value: 110, next: null, look: { color: 0xf4c430, dark: 0x7a6010 } },
   // PC2 Max Sell 40. (Mine/sea values are compressed vs PC2 today — the
   // value-rescale to PC2 for existing resources is Phase 2 of the cost port.)
   silver_bar: { kind: "resource", biome: "mine", label: "Silver Bar", value: 40, next: null, look: { color: 0xd6dbe2, dark: 0x6a7079 } },
@@ -503,10 +503,10 @@ const ITEMS_DATA = {
   tile_fish_jade: { kind: "tile", biome: "fish", label: "Jade", value: 4, next: "jade", look: { color: 0x3fae7a, dark: 0x1c5a3e, sway: { amp: 0.6, freq: 0.00022, gust: 0.03 } } },
   // Special family fish — Giant Pearl, triggers +1 rune on special chain validation.
   tile_special_giant_pearl: { kind: "tile", biome: "fish", label: "Giant Pearl", value: 0, next: null, look: { color: 0xefe8d8, dark: 0x6a6258 } },
-  fish_fillet: { kind: "resource", biome: "fish", label: "Fillet", value: 8, next: null, look: { color: 0xe8c8b0, dark: 0x7a604c } },
-  fish_oil: { kind: "resource", biome: "fish", label: "Fish Oil", value: 6, next: null, look: { color: 0xe8d050, dark: 0x7a6818 } },
-  sea_shells: { kind: "resource", biome: "fish", label: "Sea Shells", value: 5, next: null, look: { color: 0xf4ead0, dark: 0x80755a } },
-  pearls: { kind: "resource", biome: "fish", label: "Pearls", value: 12, next: null, look: { color: 0xe8e0e8, dark: 0x807888 } },
+  fish_fillet: { kind: "resource", biome: "fish", label: "Fillet", value: 40, next: null, look: { color: 0xe8c8b0, dark: 0x7a604c } },
+  fish_oil: { kind: "resource", biome: "fish", label: "Fish Oil", value: 11, next: null, look: { color: 0xe8d050, dark: 0x7a6818 } },
+  sea_shells: { kind: "resource", biome: "fish", label: "Sea Shells", value: 11, next: null, look: { color: 0xf4ead0, dark: 0x80755a } },
+  pearls: { kind: "resource", biome: "fish", label: "Pearls", value: 800, next: null, look: { color: 0xe8e0e8, dark: 0x807888 } },
   // PC2 Max Sell — Cocoa 160, Ink 160, Jade 800. (Existing mine/sea value
   // rescale to PC2 lands in Phase 2 of the cost port.)
   cocoa: { kind: "resource", biome: "fish", label: "Cocoa", value: 160, next: null, look: { color: 0x7a4a28, dark: 0x3e2412 } },
@@ -1046,12 +1046,12 @@ export const MARKET_PRICES = {
   jam:          { buy: 90,  sell: 5  },
   hay_bundle:   { buy: 90,  sell: 6  },
   // Terminal mine resources.
-  block:        { buy: 90,  sell: 6  },
-  cut_gem:      { buy: 220, sell: 14 },
-  coke:         { buy: 130, sell: 9  },
-  iron_bar:     { buy: 120, sell: 8  },
-  copper_bar:   { buy: 120, sell: 8  },
-  gold_bar:     { buy: 240, sell: 16 },
+  block:        { buy: 100,  sell: 10  },
+  cut_gem:      { buy: 1000, sell: 110 },
+  coke:         { buy: 260,  sell: 40  },
+  iron_bar:     { buy: 100,  sell: 11  },
+  copper_bar:   { buy: 100,  sell: 11  },
+  gold_bar:     { buy: 1000, sell: 110 },
   // PC2-aligned (Max Sell 40 / Buy 300).
   silver_bar:   { buy: 300, sell: 40 },
   // Soup and other terminal farm products.
@@ -1068,15 +1068,15 @@ export const MARKET_PRICES = {
   // Fish biome — buy/sell pairs follow the same ~10× ratio as the rest
   // of MARKET_PRICES. Drift logic in features/market expects both columns
   // populated (buy: 0 would violate the ±15% drift bound).
-  fish_fillet:      { buy: 200,  sell: 12  },
-  fish_oil:         { buy: 100,  sell: 8   },
+  fish_fillet:      { buy: 320,  sell: 40  },
+  fish_oil:         { buy: 110,  sell: 11  },
   fish_oil_bottled: { buy: 600,  sell: 80  },
-  sea_shells:       { buy: 70,   sell: 5   },
-  pearls:           { buy: 180,  sell: 12  },
+  sea_shells:       { buy: 80,   sell: 11  },
+  pearls:           { buy: 4200, sell: 800 },
   // PC2-aligned — Cocoa/Ink Max Sell 160 (Buy 1280), Jade Max Sell 800 (Buy 4000).
   cocoa:            { buy: 1280, sell: 160 },
   ink:              { buy: 1280, sell: 160 },
-  jade:             { buy: 4000, sell: 800 },
+  jade:             { buy: 4200, sell: 800 },
   chowder:          { buy: 2400, sell: 280 },
   cured_meat:       { buy: 400,  sell: 45  },
   iron_ration:      { buy: 1200, sell: 120 },
