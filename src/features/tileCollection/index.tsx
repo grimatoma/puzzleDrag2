@@ -8,7 +8,7 @@ import {
 } from "./data.js";
 import { displayKey, getCategoryViewModel, getTileDetailViewModel, type CategoryRowViewModel, type TileDetailViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
-import { BIOMES } from "../../constants.js";
+import { BIOMES, tileBackgroundColor } from "../../constants.js";
 import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS, type HazardDef } from "../mine/hazards.js";
@@ -139,7 +139,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
     ctx.imageSmoothingEnabled = false;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
-    const baseColor = hex(res.look.color);
+    const baseColor = hex(tileBackgroundColor(res));
     const grad = ctx.createRadialGradient(size * 0.4, size * 0.35, 2, size / 2, size / 2, size * 0.6);
     grad.addColorStop(0, lighten(baseColor, 0.25));
     grad.addColorStop(1, baseColor);
