@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Town Layout — Growing Outpost → City</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#2b2418; --muted:#7a6f5c; --line:#e3d9c4; --bg:#faf6ec;
+    --paper:#fffdf6; --code:#efe7d3;
+    --accent:#8a5a2b;       /* earthy gold-brown */
+    --accent2:#4f7a34;      /* field green */
+    --shadow:0 1px 2px rgba(50,35,8,.06), 0 6px 20px -10px rgba(50,35,8,.22);
+    --ok:#3f8f3a; --warn:#c9750c; --info:#2767b0; --danger:#b03a23; --idle:#9a8f7a;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 80% -8%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #f1e9d6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#6a5230;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;color:#5a4a30;}
+  .page{max-width:1180px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.4rem 1.5rem 1.1rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,transparent), color-mix(in srgb,var(--accent2) 7%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.7rem/1.08 var(--serif);letter-spacing:-.015em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.04rem;margin:.2rem 0 .75rem;max-width:70ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.85rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.22rem/1.25 var(--serif);margin-top:1.5rem;color:var(--ink);}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.86rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem;}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);} .pill.idle{background:var(--idle);}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);}
+  .card.g{border-left-color:var(--accent2);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  /* ── Interactive stage ─────────────────────────────────────────── */
+  .stage{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:1rem 1rem 1.2rem;margin:1.1rem 0 1.6rem;box-shadow:var(--shadow);}
+  .stage-controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.7rem;}
+  .tierbtns{display:inline-flex;gap:.25rem;background:color-mix(in srgb,var(--accent) 8%,#fff);padding:.25rem;border-radius:11px;border:1px solid var(--line);}
+  .tierbtns button{font:700 .92rem/1 var(--serif);letter-spacing:-.01em;padding:.5rem .85rem;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .14s;}
+  .tierbtns button:hover{color:var(--accent);}
+  .tierbtns button.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px -3px rgba(50,35,8,.5);}
+  .tierbtns button .n{display:block;font:600 .68rem/1.2 var(--mono);opacity:.8;}
+  .ctl{font:600 .82rem/1 var(--sans);padding:.5rem .7rem;border:1px solid var(--line);background:var(--paper);border-radius:8px;cursor:pointer;color:var(--ink);transition:all .14s;}
+  .ctl:hover{border-color:var(--accent);color:var(--accent);}
+  .ctl.grow{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+  .ctl.grow:hover{filter:brightness(1.07);color:#fff;}
+  .toggles{display:inline-flex;gap:.3rem;margin-left:auto;flex-wrap:wrap;}
+  .toggles label{font:600 .76rem/1 var(--sans);color:var(--muted);display:inline-flex;align-items:center;gap:.3rem;padding:.42rem .6rem;border:1px solid var(--line);border-radius:7px;cursor:pointer;user-select:none;}
+  .toggles label.on{border-color:var(--accent2);color:var(--accent2);background:color-mix(in srgb,var(--accent2) 8%,#fff);}
+  .canvas-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#33502f;}
+  canvas{display:block;width:100%;height:auto;}
+  .caption{margin:.7rem 0 .2rem;font:500 .98rem/1.45 var(--sans);color:var(--ink);min-height:2.6em;}
+  .caption b{font-family:var(--serif);font-weight:800;color:var(--accent);}
+  .legend{font-size:.76rem;color:var(--muted);margin:.55rem 0 0;display:flex;gap:.55rem 1rem;flex-wrap:wrap;}
+  .legend .sw{display:inline-flex;align-items:center;gap:.35rem;}
+  .legend .swatch{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.18);display:inline-block;}
+  .statline{font:600 .8rem/1.4 var(--mono);color:var(--muted);margin-top:.5rem;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  @media (max-width:820px){ header.hero h1{font-size:2.05rem;} .toggles{margin-left:0;} }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;} }
+  @media print{ .stage-controls,.toggles{display:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.card,pre,.stage{box-shadow:none;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Town Layout — Growing Outpost&nbsp;→&nbsp;City</h1>
+    <p class="sub">A fresh, organic home-town layout that starts as a tiny <b>forest outpost</b> and visibly grows into a <b>city</b> — wilderness clears into plots, a central landmark evolves, paths upgrade, and the place feels more alive at every rung. The <b>farm board</b> (the core puzzle) is a plot-sized widget at the heart of town, so it's always a tap away. This is a <b>layout mockup</b> (flat colors, no pixel art yet) drawn on the real <code>40×30 @ 32px</code> grid so coordinates drop straight into the game.</p>
+    <p class="meta">puzzleDrag2 · Status: <span class="pill warn">Layout proposal — iterate before building</span> · 2026-06-16</p>
+    <div class="chips">
+      <span class="chip">4 rungs: Outpost · Hamlet · Village · City</span>
+      <span class="chip">3 → 6 → 12 → 20 plots</span>
+      <span class="chip">Farm board at town centre</span>
+      <span class="chip">Additive growth (lots never move)</span>
+    </div>
+  </header>
+
+  <main>
+
+  <!-- ── INTERACTIVE MOCKUP ─────────────────────────────────────── -->
+  <section id="mockup">
+    <h2>The growing town</h2>
+    <p>Step through the four rungs and watch the woods pull back. Hit <b>Grow ▸</b> to play the whole arc. Everything from a lower rung stays exactly where it was — each upgrade only <em>adds</em> (the same contract the engine enforces, so a placed building never moves).</p>
+
+    <div class="stage">
+      <div class="stage-controls">
+        <div class="tierbtns" id="tierbtns">
+          <button data-tier="0" class="on">Outpost<span class="n">3 plots</span></button>
+          <button data-tier="1">Hamlet<span class="n">6 plots</span></button>
+          <button data-tier="2">Village<span class="n">12 plots</span></button>
+          <button data-tier="3">City<span class="n">20 plots</span></button>
+        </div>
+        <button class="ctl grow" id="growBtn">Grow&nbsp;▸</button>
+        <button class="ctl" id="copyBtn" title="Copy this rung's lots[] as AuthoredTownMap JSON">Copy layout JSON</button>
+        <div class="toggles" id="toggles">
+          <label data-tg="grid"><input type="checkbox"> tile grid</label>
+          <label data-tg="coords"><input type="checkbox"> coords</label>
+          <label data-tg="labels" class="on"><input type="checkbox" checked> labels</label>
+          <label data-tg="forest" class="on"><input type="checkbox" checked> forest</label>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="town" width="1280" height="960" role="img" aria-label="Top-down town layout mockup"></canvas>
+      </div>
+
+      <p class="caption" id="caption"></p>
+
+      <div class="legend">
+        <span class="sw"><span class="swatch" style="background:#2f5733"></span>forest / wilderness</span>
+        <span class="sw"><span class="swatch" style="background:#93c47d"></span>cleared grass</span>
+        <span class="sw"><span class="swatch" style="background:#c7a86a"></span>dirt path</span>
+        <span class="sw"><span class="swatch" style="background:#bdb6a8"></span>cobble</span>
+        <span class="sw"><span class="swatch" style="background:#cdb083;border-color:#7a5a32"></span>empty plot (buildable)</span>
+        <span class="sw"><span class="swatch" style="background:#e8a33d"></span>new this rung</span>
+        <span class="sw"><span class="swatch" style="background:#5bb4d6"></span>fountain / water</span>
+        <span class="sw"><span class="swatch" style="background:#c9a26a;border-color:#5d8a3a"></span>farm board (central puzzle)</span>
+      </div>
+      <p class="statline" id="statline"></p>
+    </div>
+
+    <div class="box tip"><b>How to read growth.</b> The forest edge (the tree-line ring) is the progress bar: each rung the developed clearing expands and the woods recede toward the frame. Empty <b>cleared pads</b> are where the player drops buildings. The <b>farm board</b> sits beside the landmark at the very centre — the core loop is always one tap from the plaza. The landmark goes <b>well → fountain → town-square monument</b>; the paths out of the plaza upgrade <b>dirt → cobble</b>.</p>
+  </section>
+
+  <!-- ── PROBLEM ────────────────────────────────────────────────── -->
+  <section id="problem">
+    <h2>Why redo it</h2>
+    <p>Today the home town (<code>src/ui/town/townMaps.ts</code>) is a <b>placeholder rectangular grid</b>: flat grass, two straight dirt bands, a tiny plaza disc, and building plots dropped onto a rigid <code>HOME_COLS × HOME_ROWS</code> lattice — with the farm board parked as a giant slab on the right third. There is no forest, no wilderness, no curves, no varied lots, and no sense of growth — a tier upgrade just adds more identical cells. It reads as unfinished.</p>
+    <p>The goal is the opposite: a place that feels like a <b>cheerful little settlement growing up around you</b>, with the farm puzzle right at its heart, where every upgrade is a visible, earned milestone.</p>
+  </section>
+
+  <!-- ── DESIGN PRINCIPLES ──────────────────────────────────────── -->
+  <section id="principles">
+    <h2>Design principles</h2>
+    <div class="grid">
+      <div class="card g"><b>Organic radial growth.</b> Plots ring out from the central plaza in loose, varied clusters — not a lattice. Slight jitter + mixed lot sizes make it read hand-placed. (Townscaper, Dorfromantik.)</div>
+      <div class="card g"><b>The puzzle is the heart.</b> The farm board is a plot-sized widget right next to the landmark at town centre — front-and-centre and always a tap away, since it's the core loop. The town grows in a full ring around it.</div>
+      <div class="card g"><b>One evolving landmark.</b> A single focal point anchors the scene and <em>levels up</em> with the town: well → fountain+plaza → town-square monument. It never moves. (Pelican Town square, Animal Crossing plazas.)</div>
+      <div class="card g"><b>Wilderness → plots = the progress bar.</b> The town is carved out of forest; each rung clears a wider ring. Receding woods are the clearest "we grew" signal, no UI text needed. (Ooblets clearing, Ashes of Creation stages.)</div>
+      <div class="card g"><b>Path material as a free stage cue.</b> Dirt tracks (outpost) → cobble near the plaza (village) → mostly cobbled streets (city). The ground itself tells you how far you've come.</div>
+      <div class="card"><b>Avoid "grid death."</b> Uniform spacing on a straight grid is what reads as placeholder. The fixes are cheap: a focal centre, varied lot sizes, jitter, edge vegetation, rising prop &amp; NPC density.</div>
+    </div>
+    <div class="box"><b>Additive &amp; stable.</b> "The town grows on top of the previous level." We keep the engine's existing contract: <code>lots.length === tiers[tier].plots</code>, and a lot's <code>index</code> is stable across rungs (tier N keeps N−1's indices and only appends). So the map grows exactly like the town — nothing already placed ever shifts.</div>
+  </section>
+
+  <!-- ── LADDER ─────────────────────────────────────────────────── -->
+  <section id="ladder">
+    <h2>Revised home ladder — 4 rungs</h2>
+    <p>Today the home zone has <b>3</b> rungs (Hamlet 6 → Village 12 → City 20). We add a tiny tutorial <b>Outpost (3 plots)</b> <em>below</em> them, so the existing rungs slide up to Hamlet / Village / City and a fully-grown City stays essentially today's home. The plot curve becomes a clean <b>3 → 6 → 12 → 20</b>.</p>
+    <table>
+      <thead><tr><th>Rung</th><th class="num">Plots</th><th class="num">Adds</th><th>Identity</th><th>Building unlocks (proposed split)</th><th>Upgrade cost (first-pass)</th></tr></thead>
+      <tbody>
+        <tr><td><b>Outpost</b> <span class="pill ok">new</span></td><td class="num">3</td><td class="num">+3</td><td>A foothold in the woods. Tutorial.</td><td>Hearth, Housing, Mill</td><td>— (founding)</td></tr>
+        <tr><td><b>Hamlet</b></td><td class="num">6</td><td class="num">+3</td><td>Cottages cluster; roots go down.</td><td>Granary, Larder, Bakery, Inn</td><td>~150c + a few hay</td></tr>
+        <tr><td><b>Village</b></td><td class="num">12</td><td class="num">+6</td><td>Fountain, cobbled plaza, a market.</td><td>Silo, Stable, Sawmill, Apiary, Brewery, Watchtower, Chapel</td><td>600c + 15 hay_bundle</td></tr>
+        <tr><td><b>City</b></td><td class="num">20</td><td class="num">+8</td><td>Town square + monument; streets.</td><td>Forge, Kitchen, Workshop, Portal … (today's City set)</td><td>2000c + 18 plank</td></tr>
+      </tbody>
+    </table>
+    <div class="box warn"><b>Wiring is a later phase.</b> This rung table is the <em>proposal</em>. Inserting Outpost as tier&nbsp;0 in <code>src/features/cartography/data.ts</code> means redistributing building unlocks (the union across all 4 rungs must still equal the full home list — test-enforced), bumping <code>SAVE_SCHEMA_VERSION 44→45</code>, and moving the quarry gate <code>requiresZoneTier home tier 2→3</code>. Not touched in this layout phase.</div>
+  </section>
+
+  <!-- ── PER-TIER SPEC ──────────────────────────────────────────── -->
+  <section id="spec">
+    <h2>Per-rung layout spec</h2>
+    <p>The landmark and the plot-sized farm board both sit at a fixed town centre for every rung, so the puzzle is always at the heart and a tap away. Plots, paths and props grow outward around them.</p>
+    <table>
+      <thead><tr><th>Rung</th><th class="num">Plots</th><th>Forest</th><th>Landmark</th><th>Paths</th><th>Props / life</th></tr></thead>
+      <tbody>
+        <tr><td><b>Outpost</b></td><td class="num">3 (idx 0–2)</td><td>Dense — only a small clearing around the well &amp; field.</td><td>Wooden <b>well</b> beside the farm field.</td><td>Short <b>dirt</b> links plaza → plots.</td><td>Signpost, a few flowers.</td></tr>
+        <tr><td><b>Hamlet</b></td><td class="num">6 (+3, 3–5)</td><td>Recedes one ring; clearing widens.</td><td>Well (unchanged).</td><td>Dirt paths fan to the new cluster.</td><td>+ lamppost, cart, more flowers.</td></tr>
+        <tr><td><b>Village</b></td><td class="num">12 (+6, 6–11)</td><td>Recedes to a mid-frame band.</td><td>Well → <b>fountain + cobble plaza</b>.</td><td><b>Cobble</b> near plaza, dirt further out.</td><td>+ market stall, planters, 2nd lamppost.</td></tr>
+        <tr><td><b>City</b></td><td class="num">20 (+8, 12–19)</td><td>A thin frame only, at the far edges.</td><td>Fountain → <b>town-square monument</b>.</td><td><b>Mostly cobble</b>; reads as streets/districts.</td><td>Banners, full prop density.</td></tr>
+      </tbody>
+    </table>
+    <p>Plots cluster organically around the centre in varied footprints (not a lattice); each rung only <b>adds</b> plots / clearing / props — inherited elements never move. The <b>Copy&nbsp;layout&nbsp;JSON</b> button above exports the current rung's resolved <code>lots[]</code> + the central <code>board</code> in the <code>AuthoredTownMap</code> shape, ready to paste into <code>townMaps.ts</code>.</p>
+  </section>
+
+  <!-- ── TILE MANIFEST ──────────────────────────────────────────── -->
+  <section id="manifest">
+    <h2>Tile &amp; prop manifest</h2>
+    <p>What we'll need to generate (via the PixelLab MCP) and wire into the Phaser ground palette in the build phase. Boundaries get <b>transition tiles</b> so terrains never butt edge-to-edge (per the <code>tileset-scene-design</code> skill).</p>
+    <div class="grid">
+      <div class="card"><b>Terrain</b><br>forest (+ forest→grass edge), grass, flower-grass, dirt&nbsp;path, cobble&nbsp;path (+ dirt→cobble edge), plaza / town-square, cleared-plot pad, optional water + bridge.</div>
+      <div class="card"><b>Landmark (staged)</b><br>well → fountain → monument — the single focal point, three forms.</div>
+      <div class="card"><b>Central farm board</b><br>a plot-sized tilled field that reads as the puzzle entry (distinct from buildable plots).</div>
+      <div class="card"><b>Props</b><br>signpost, lamppost, cart, market-stall, planter, banner — revealed cumulatively by rung.</div>
+    </div>
+  </section>
+
+  <!-- ── LATER PHASES ───────────────────────────────────────────── -->
+  <section id="later">
+    <h2>What happens after we lock the layout</h2>
+    <ol>
+      <li>Rewrite the home authored maps in <code>src/ui/town/townMaps.ts</code> from the exported coordinates (forest, central plot-sized board, varied lots, staged landmark), reusing the existing helpers.</li>
+      <li>Insert the <b>Outpost</b> rung in <code>src/features/cartography/data.ts</code>, redistribute unlocks, bump the save schema, move the quarry gate.</li>
+      <li>Extend <code>src/ui/town/TownScene.ts</code> ground painting for forest / cobble / cleared-pad terrain + transition tiles, and re-anchor the farm board at the town centre.</li>
+      <li>Generate the tile/prop art via the PixelLab MCP (the <code>pixellab</code> / <code>seasonal-tile-pipeline</code> skills).</li>
+      <li>Apply the same growing-town pattern to the quarry and other zones.</li>
+      <li>Run <code>npm run test:visual</code> + the zone-tier-ladder map test; re-baseline goldens on the canonical host.</li>
+    </ol>
+  </section>
+
+  <!-- ── SOURCES ────────────────────────────────────────────────── -->
+  <section id="sources">
+    <h2>Research sources</h2>
+    <ul>
+      <li><a href="https://www.wayline.io/blog/beyond-the-grid-organic-level-design">Beyond the Grid: Organic Level Design</a> — why grids read dead; jitter, landmarks, navigation cues.</li>
+      <li><a href="https://design-milk.com/townscaper-architecture-cityscape-pc-game/">Townscaper</a> &amp; <a href="https://www.vice.com/en/article/dorfromantik-turns-city-building-into-a-beautiful-series-of-puzzles/">Dorfromantik</a> — satisfying organic placement.</li>
+      <li><a href="https://ashesofcreation.wiki/Settlement_stages">Ashes of Creation — Settlement stages</a> (Wilderness → Expedition → Camp → Village → Town → City).</li>
+      <li><a href="https://www.thegamer.com/animal-crossing-make-neighborhood-villagers/">Animal Crossing neighborhoods</a> &amp; <a href="https://stardewvalleywiki.com/Pelican_Town">Pelican Town</a> — central gathering space, breathing room.</li>
+      <li><a href="https://ooblets.com/2018/04/march-2018-devlog/">Ooblets devlog</a> — clearing logs/rocks/weeds as small victories.</li>
+      <li><a href="https://gamebalanceconcepts.wordpress.com/2010/08/18/level-7-advancement-progression-and-pacing/">Game Balance Concepts — Pacing</a> — start tiny, steady meaningful jumps.</li>
+      <li><a href="https://www.simplypsychology.org/burgess-concentric-zone-model.html">Concentric Zone Model</a> — urban growth in rings.</li>
+    </ul>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const cv = document.getElementById("town");
+  const ctx = cv.getContext("2d");
+  const W = 1280, H = 960, TILE = 32, COLS = 40, ROWS = 30;
+
+  // ── deterministic RNG ───────────────────────────────────────────
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+  // ── world geometry ──────────────────────────────────────────────
+  // Frame-centred town: landmark + plot-sized farm board sit together at the
+  // heart; plots ring outward 360° around them.
+  const C = { x: 640, y: 452 };                       // landmark + ring centre
+  const BOARD = { cx: 640, cy: 606, w: 150, h: 136 }; // farm board — plot-sized, just below the landmark
+  const MINR = 158;                                   // keep plots clear of the central plaza
+
+  // plaza ↔ board connector + spur anchor
+  const SPINE = [[C.x, C.y], [BOARD.cx, BOARD.cy]];
+
+  // bounds for lot centres (leave a forest frame all round)
+  const BX0 = 70, BX1 = W - 70, BY0 = 84, BY1 = H - 80;
+
+  // developed clearing radius per rung (forest recedes monotonically)
+  const RDEV = [255, 335, 455, 650];
+  const REVEAL = [3, 6, 12, 20];
+  const TIER_NAMES = ["Outpost","Hamlet","Village","City"];
+  const CAPTIONS = [
+    "<b>Outpost — 3 plots.</b> A foothold in the woods: a well and the farm field at the heart, with a few cleared lots ringing them. Everything beyond is forest.",
+    "<b>Hamlet — 6 plots.</b> The clearing widens and the woods pull back; a second cluster of cottages, a cart and a lamp. It's starting to feel lived-in.",
+    "<b>Village — 12 plots.</b> The well becomes a fountain on a cobbled plaza, a market stall appears, and cobble creeps out from the centre. A real little village.",
+    "<b>City — 20 plots.</b> A town square and monument crown the centre, streets are cobbled into districts, and the forest is just a frame on the horizon. An accomplishment."
+  ];
+
+  // ── plots: precomputed once for all 20 (positions fixed → additive) ──
+  // [radius, angleDeg]  (0°=E, 90°=S, 180°=W, 270°=N). Inner ring avoids due
+  // south, where the farm board sits.
+  const PLOT_BASE = [
+    [165,180],[165,250],[165,320],            // 0-2  Outpost (W, NW, NE — board is S)
+    [205,140],[205,40],[205,300],             // 3-5  Hamlet (flank the board, N)
+    [290,200],[290,160],[290,95],[290,320],[290,35],[290,260], // 6-11 Village
+    [370,220],[370,150],[370,110],[370,70],[370,20],[370,330],[370,290],[370,255] // 12-19 City
+  ];
+  const SIZES = [[112,104],[120,112],[104,120],[128,104],[96,112]];
+  function bandTier(i){ return i<3?0 : i<6?1 : i<12?2 : 3; }
+
+  const lots = (function(){
+    const rng = mulberry32(0xC0FFEE);
+    const a = PLOT_BASE.map(function(p,i){
+      const jR = (rng()-0.5)*28, jA = (rng()-0.5)*0.30;
+      const r = p[0]+jR, th = (p[1]/180*Math.PI)+jA;
+      const sz = SIZES[i%SIZES.length];
+      return { index:i, cx:C.x+r*Math.cos(th), cy:C.y+r*Math.sin(th), w:sz[0], h:sz[1] };
+    });
+    function clampOne(L){
+      L.cx = Math.max(BX0+L.w/2, Math.min(BX1-L.w/2, L.cx));
+      L.cy = Math.max(BY0+L.h/2, Math.min(BY1-L.h/2, L.cy));
+    }
+    for(let it=0; it<80; it++){
+      // keep clear of the central plaza
+      a.forEach(function(L){
+        const dx=L.cx-C.x, dy=L.cy-C.y, d=Math.hypot(dx,dy)||1;
+        if(d<MINR){ const k=(MINR-d)/d; L.cx+=dx*k; L.cy+=dy*k; }
+      });
+      // push out of the central farm board's footprint
+      a.forEach(function(L){
+        const ox=(L.w+BOARD.w)/2+16-Math.abs(L.cx-BOARD.cx);
+        const oy=(L.h+BOARD.h)/2+16-Math.abs(L.cy-BOARD.cy);
+        if(ox>0&&oy>0){ if(ox<oy){ L.cx += (L.cx<BOARD.cx?-1:1)*ox; } else { L.cy += (L.cy<BOARD.cy?-1:1)*oy; } }
+      });
+      // separate plot pairs (AABB with 14px gap)
+      for(let i=0;i<a.length;i++) for(let j=i+1;j<a.length;j++){
+        const A=a[i],B=a[j];
+        const ox=(A.w+B.w)/2+14-Math.abs(A.cx-B.cx);
+        const oy=(A.h+B.h)/2+14-Math.abs(A.cy-B.cy);
+        if(ox>0&&oy>0){
+          if(ox<oy){ const s=(A.cx<B.cx?-1:1)*ox/2; A.cx+=s; B.cx-=s; }
+          else { const s=(A.cy<B.cy?-1:1)*oy/2; A.cy+=s; B.cy-=s; }
+        }
+      }
+      a.forEach(clampOne);
+    }
+    a.forEach(function(L){ L.cx=Math.round(L.cx); L.cy=Math.round(L.cy); });
+    return a;
+  })();
+
+  // ── props (cumulative reveal by rung) ───────────────────────────
+  const PROPS = [
+    {kind:"signpost",   x:762, y:642, from:0, emoji:"🪧"},
+    {kind:"lamppost",   x:500, y:560, from:1, emoji:"🏮"},
+    {kind:"cart",       x:784, y:404, from:1, emoji:"🛒"},
+    {kind:"lamppost",   x:772, y:556, from:2, emoji:"🏮"},
+    {kind:"market",     x:470, y:392, from:2, emoji:"🏪"},
+    {kind:"planter",    x:560, y:702, from:2, emoji:"🪴"},
+    {kind:"banner",     x:640, y:300, from:3, emoji:"🚩"},
+    {kind:"planter",    x:792, y:470, from:3, emoji:"🪴"},
+    {kind:"lamppost",   x:500, y:410, from:3, emoji:"🏮"}
+  ];
+
+  // ── forest scatter: fixed candidate points, culled by clearing ──
+  const TREES = (function(){
+    const rng = mulberry32(0x5EED01), out=[];
+    for(let i=0;i<1700;i++){
+      out.push({ x: 6 + rng()*(W-12), y: 6 + rng()*(H-12), r: 11+rng()*9, g: rng() });
+    }
+    return out;
+  })();
+
+  // wavy clearing radius (organic edge), shared shape → monotonic recede
+  function rEff(ang, rdev){
+    return rdev * (1 + 0.085*Math.sin(3*ang+0.7) + 0.05*Math.sin(5*ang-1.3) + 0.028*Math.sin(7*ang+2.1));
+  }
+  function inClearing(x,y,rdev){
+    const ang = Math.atan2(y-C.y, x-C.x);
+    return Math.hypot(x-C.x,y-C.y) <= rEff(ang,rdev);
+  }
+  function onBoard(x,y,m){ m=m||14; return Math.abs(x-BOARD.cx)<BOARD.w/2+m && Math.abs(y-BOARD.cy)<BOARD.h/2+m; }
+  function nearSpine(x,y,maxd){
+    for(let i=0;i<SPINE.length-1;i++){
+      const ax=SPINE[i][0],ay=SPINE[i][1],bx=SPINE[i+1][0],by=SPINE[i+1][1];
+      const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
+      let t=L2?((x-ax)*dx+(y-ay)*dy)/L2:0; t=Math.max(0,Math.min(1,t));
+      if(Math.hypot(x-(ax+dx*t), y-(ay+dy*t))<maxd) return true;
+    }
+    return false;
+  }
+  function onPad(x,y,reveal){
+    for(let i=0;i<reveal;i++){ const L=lots[i];
+      if(Math.abs(x-L.cx)<L.w/2+20 && Math.abs(y-L.cy)<L.h/2+20) return true; }
+    return false;
+  }
+
+  // ── path helpers ────────────────────────────────────────────────
+  function strokePoly(pts, width, color, cap){
+    ctx.lineJoin="round"; ctx.lineCap=cap||"round"; ctx.strokeStyle=color; ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke();
+  }
+
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  // ── state + animation ───────────────────────────────────────────
+  let tier = 0;
+  let dispRdev = RDEV[0];
+  const tg = { grid:false, coords:false, labels:true, forest:true };
+  let raf = null;
+
+  function clearingPath(rdev){
+    ctx.beginPath();
+    const N=84;
+    for(let i=0;i<=N;i++){ const a=i/N*Math.PI*2, r=rEff(a,rdev);
+      const x=C.x+r*Math.cos(a), y=C.y+r*Math.sin(a);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.closePath();
+  }
+
+  function draw(){
+    const reveal = REVEAL[tier];
+    ctx.clearRect(0,0,W,H);
+
+    // 0 · forest floor everywhere
+    ctx.fillStyle = "#2f5733"; ctx.fillRect(0,0,W,H);
+
+    // 1 · forest trees over the whole frame (culled inside the clearing / board / pads)
+    if(tg.forest){
+      for(const t of TREES){
+        if(inClearing(t.x,t.y,dispRdev) || onBoard(t.x,t.y,18) || nearSpine(t.x,t.y,20) || onPad(t.x,t.y,reveal)) continue;
+        const g = t.g;
+        ctx.fillStyle = g<0.34?"#27502f": g<0.7?"#2c5a34":"#356b3e";
+        ctx.beginPath(); ctx.arc(t.x, t.y+t.r*0.5, t.r, 0, 7); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,.05)";
+        ctx.beginPath(); ctx.arc(t.x-t.r*0.3, t.y+t.r*0.2, t.r*0.55, 0, 7); ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = "#6f9a55"; ctx.fillRect(0,0,W,H);
+    }
+
+    // 2 · cleared grass blob + texture
+    ctx.save();
+    clearingPath(dispRdev);
+    ctx.fillStyle = "#8cbf6e"; ctx.shadowColor="rgba(0,0,0,.18)"; ctx.shadowBlur=10; ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+    const grng = mulberry32(0x515A);
+    for(let i=0;i<300;i++){
+      const x=8+grng()*(W-16), y=8+grng()*(H-16);
+      if(!inClearing(x,y,dispRdev)) continue;
+      const k=grng();
+      ctx.fillStyle = k<0.18?"#ffd24d": k<0.30?"#ff9ec0": k<0.62?"#9ed080":"#83b966";
+      const s = k<0.30?3:6; ctx.beginPath(); ctx.arc(x,y,s,0,7); ctx.fill();
+    }
+
+    // 3 · cleared pads — board first, then each revealed plot
+    ctx.fillStyle="#bfa06a"; roundRect(BOARD.cx-BOARD.w/2-12, BOARD.cy-BOARD.h/2-12, BOARD.w+24, BOARD.h+24, 16); ctx.fill();
+    for(let i=0;i<reveal;i++){ const L=lots[i];
+      ctx.fillStyle="#bfa06a"; roundRect(L.cx-L.w/2-10, L.cy-L.h/2-10, L.w+20, L.h+20, 14); ctx.fill();
+    }
+
+    // 4 · paths — plot spurs to plaza centre, then the plaza↔board link
+    const cobble = tier>=2;
+    for(let i=0;i<reveal;i++){ const L=lots[i];
+      strokePoly([[L.cx,L.cy],[C.x,C.y]], 13, "#c7a86a"); }
+    strokePoly(SPINE, 22, cobble?"#bdb6a8":"#c7a86a");
+
+    // 5 · plaza / town square (Village+, City bigger)
+    if(tier>=2){
+      const sq = tier>=3;
+      ctx.fillStyle = sq?"#c6bfb0":"#bdb6a8";
+      if(sq){ roundRect(C.x-150, C.y-118, 300, 250, 26); ctx.fill(); }
+      else { ctx.beginPath(); ctx.ellipse(C.x,C.y,118,104,0,0,7); ctx.fill(); }
+      ctx.strokeStyle="rgba(0,0,0,.07)"; ctx.lineWidth=2;
+      for(let gx=-132;gx<=132;gx+=24){ ctx.beginPath(); ctx.moveTo(C.x+gx,C.y-110); ctx.lineTo(C.x+gx,C.y+118); ctx.stroke(); }
+      // re-cover the board pad so the square reads as sitting behind the field
+      ctx.fillStyle="#bfa06a"; roundRect(BOARD.cx-BOARD.w/2-12, BOARD.cy-BOARD.h/2-12, BOARD.w+24, BOARD.h+24, 16); ctx.fill();
+    }
+
+    // 6 · forest edge tree-line
+    if(tg.forest) drawWoodline(dispRdev, reveal);
+
+    // 7 · the central farm board
+    drawBoard();
+
+    // 8 · plots
+    for(let i=0;i<reveal;i++) drawPlot(lots[i], bandTier(lots[i].index)===tier);
+
+    // 9 · landmark + props
+    drawLandmark();
+    for(const p of PROPS){ if(p.from<=tier) drawProp(p); }
+
+    // 10 · overlays
+    if(tg.grid) drawGrid();
+    if(tg.coords) drawCoords();
+  }
+
+  function drawBoard(){
+    const x=BOARD.cx-BOARD.w/2, y=BOARD.cy-BOARD.h/2;
+    ctx.save();
+    // green "interactive / core loop" halo
+    ctx.strokeStyle="rgba(79,122,52,.85)"; ctx.lineWidth=5; ctx.setLineDash([10,7]);
+    roundRect(x-6,y-6,BOARD.w+12,BOARD.h+12,16); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#caa46b"; ctx.strokeStyle="#5d8a3a"; ctx.lineWidth=3.5;
+    roundRect(x,y,BOARD.w,BOARD.h,12); ctx.fill(); ctx.stroke();
+    // tilled rows
+    ctx.strokeStyle="rgba(122,90,50,.4)"; ctx.lineWidth=3;
+    for(let ry=y+22; ry<y+BOARD.h-12; ry+=20){ ctx.beginPath(); ctx.moveTo(x+14,ry); ctx.lineTo(x+BOARD.w-14,ry); ctx.stroke(); }
+    if(tg.labels){
+      label("🌾 Farm", BOARD.cx, y+18, "#2f4a18", 18, "#f4e6c8");
+      label("tap to play", BOARD.cx, BOARD.cy+BOARD.h/2-14, "#3c6321", 12, "#eef6e3");
+    }
+    ctx.restore();
+  }
+
+  function drawWoodline(rdev, reveal){
+    const N=140;
+    for(let i=0;i<N;i++){ const a=i/N*Math.PI*2, r=rEff(a,rdev);
+      const x=C.x+r*Math.cos(a), y=C.y+r*Math.sin(a);
+      if(x<6 || x>W-6 || y<6 || y>H-6) continue;
+      if(onBoard(x,y,18) || nearSpine(x,y,22) || onPad(x,y,reveal)) continue;
+      const tr = 12 + ((i*53)%7);
+      ctx.fillStyle = (i%3===0)?"#27502f":(i%3===1)?"#356b3e":"#2c5a34";
+      ctx.beginPath(); ctx.arc(x, y, tr, 0, 7); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.06)"; ctx.beginPath(); ctx.arc(x-tr*0.3,y-tr*0.2,tr*0.5,0,7); ctx.fill();
+    }
+  }
+
+  function drawPlot(L, isNew){
+    const x=L.cx-L.w/2, y=L.cy-L.h/2;
+    ctx.save();
+    ctx.fillStyle = isNew? "rgba(232,163,61,.26)" : "rgba(255,255,255,.14)";
+    ctx.strokeStyle = isNew? "#e8a33d" : "#7a5a32";
+    ctx.lineWidth = isNew? 4 : 2.5; ctx.setLineDash(isNew?[]:[9,6]);
+    if(isNew){ ctx.shadowColor="rgba(232,163,61,.55)"; ctx.shadowBlur=16; }
+    roundRect(x,y,L.w,L.h,10); ctx.fill(); ctx.shadowBlur=0; ctx.stroke();
+    ctx.setLineDash([]);
+    if(tg.labels){
+      label("plot "+L.index, L.cx, L.cy-6, "#4a361a", 15, null);
+      label("buildable", L.cx, L.cy+13, "#7a5f33", 12, null);
+    }
+    if(isNew) label("NEW", L.cx, y-9, "#a85d12", 13, "#fff3da");
+    ctx.restore();
+  }
+
+  function drawLandmark(){
+    if(tier<2){ // well
+      ctx.save();
+      ctx.fillStyle="#b7b0a3"; ctx.strokeStyle="#7c7464"; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(C.x,C.y,26,0,7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="#3b566a"; ctx.beginPath(); ctx.arc(C.x,C.y,15,0,7); ctx.fill();
+      ctx.strokeStyle="#9c6b3f"; ctx.lineWidth=5; ctx.beginPath();
+      ctx.moveTo(C.x-22,C.y-26); ctx.lineTo(C.x-22,C.y-44); ctx.moveTo(C.x+22,C.y-26); ctx.lineTo(C.x+22,C.y-44);
+      ctx.moveTo(C.x-26,C.y-42); ctx.lineTo(C.x+26,C.y-42); ctx.stroke();
+      if(tg.labels) label("Well", C.x, C.y+44, "#4a361a", 15, "#eef3e6");
+      ctx.restore();
+    } else if(tier===2){ // fountain
+      ctx.save();
+      ctx.fillStyle="#aeb6bd"; ctx.strokeStyle="#7c7464"; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(C.x,C.y,40,0,7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="#5bb4d6"; ctx.beginPath(); ctx.arc(C.x,C.y,30,0,7); ctx.fill();
+      ctx.fillStyle="#9ad7ec"; ctx.beginPath(); ctx.arc(C.x,C.y,11,0,7); ctx.fill();
+      ctx.strokeStyle="#cfe9f3"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(C.x,C.y,20,0,7); ctx.stroke();
+      if(tg.labels) label("Fountain", C.x, C.y-54, "#234a5c", 16, "#eef6fb");
+      ctx.restore();
+    } else { // monument / town square
+      ctx.save();
+      ctx.fillStyle="#9aa1a8"; roundRect(C.x-26,C.y-10,52,40,6); ctx.fill();
+      ctx.fillStyle="#c9b27a"; ctx.beginPath();
+      ctx.moveTo(C.x,C.y-72); ctx.lineTo(C.x-16,C.y-6); ctx.lineTo(C.x+16,C.y-6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="#ffd24d"; ctx.beginPath(); ctx.arc(C.x,C.y-74,7,0,7); ctx.fill();
+      if(tg.labels) label("Town Square", C.x, C.y-86, "#3a2f1c", 16, "#f4eede");
+      ctx.restore();
+    }
+  }
+
+  function drawProp(p){
+    ctx.save();
+    ctx.font = "26px serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle="rgba(255,255,255,.55)"; ctx.beginPath(); ctx.arc(p.x,p.y,16,0,7); ctx.fill();
+    ctx.fillText(p.emoji, p.x, p.y+1);
+    ctx.restore();
+  }
+
+  function label(txt, x, y, color, size, halo){
+    ctx.save();
+    ctx.font = "700 "+(size||14)+"px 'IBM Plex Sans',sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.lineWidth=4; ctx.strokeStyle=halo||"rgba(255,255,255,.7)"; ctx.lineJoin="round"; ctx.strokeText(txt,x,y);
+    ctx.fillStyle=color; ctx.fillText(txt,x,y);
+    ctx.restore();
+  }
+
+  function drawGrid(){
+    ctx.save(); ctx.strokeStyle="rgba(0,0,0,.10)"; ctx.lineWidth=1;
+    for(let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*TILE,0); ctx.lineTo(x*TILE,H); ctx.stroke(); }
+    for(let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*TILE); ctx.lineTo(W,y*TILE); ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawCoords(){
+    ctx.save(); ctx.fillStyle="rgba(0,0,0,.45)"; ctx.font="9px 'JetBrains Mono',monospace"; ctx.textBaseline="top";
+    for(let x=0;x<COLS;x+=2) for(let y=0;y<ROWS;y+=2){ ctx.fillText(x+","+y, x*TILE+2, y*TILE+2); }
+    ctx.restore();
+  }
+
+  // ── animate forest recede on rung change ────────────────────────
+  function animateTo(t){
+    tier = t;
+    const target = RDEV[t];
+    if(raf) cancelAnimationFrame(raf);
+    let k = 0;
+    const step = ()=>{
+      k++;
+      dispRdev += (target - dispRdev)*0.18;
+      if(Math.abs(target-dispRdev) < 0.6 || k > 120){ dispRdev = target; draw(); raf=null; return; }
+      draw(); raf = requestAnimationFrame(step);
+    };
+    step();
+    // Safety: guarantee a correct final frame even if rAF is throttled (hidden/blurred tab).
+    setTimeout(()=>{ if(dispRdev !== target){ dispRdev = target; draw(); } }, 650);
+    syncUI();
+  }
+  function syncUI(){
+    document.querySelectorAll("#tierbtns button").forEach(b=>{
+      b.classList.toggle("on", +b.dataset.tier===tier); });
+    document.getElementById("caption").innerHTML = CAPTIONS[tier];
+    const reveal=REVEAL[tier], added = reveal - (tier?REVEAL[tier-1]:0);
+    document.getElementById("statline").textContent =
+      TIER_NAMES[tier]+" · "+reveal+" plots ("+ (tier?("+"+added):added) +" this rung) · clearing radius "+RDEV[tier]+"px · landmark: "+(tier<2?"well":tier===2?"fountain":"monument")+" · farm board at centre";
+  }
+
+  // ── controls ────────────────────────────────────────────────────
+  document.getElementById("tierbtns").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return; stopGrow(); animateTo(+b.dataset.tier);
+  });
+  let growTimer=null;
+  function stopGrow(){ if(growTimer){ clearInterval(growTimer); growTimer=null; document.getElementById("growBtn").textContent="Grow ▸"; } }
+  document.getElementById("growBtn").addEventListener("click", ()=>{
+    if(growTimer){ stopGrow(); return; }
+    document.getElementById("growBtn").textContent="❚❚ pause";
+    animateTo(0);
+    let t=0;
+    growTimer=setInterval(()=>{ t++; if(t>3){ stopGrow(); return; } animateTo(t); }, 1150);
+  });
+  document.getElementById("toggles").addEventListener("click", e=>{
+    const l=e.target.closest("label"); if(!l) return;
+    const k=l.dataset.tg; setTimeout(()=>{ tg[k]=l.querySelector("input").checked; l.classList.toggle("on",tg[k]); draw(); },0);
+  });
+  document.getElementById("copyBtn").addEventListener("click", ()=>{
+    const reveal=REVEAL[tier];
+    const out = {
+      zone:"home", tier, rung:TIER_NAMES[tier],
+      landmark:{ kind: tier<2?"well":tier===2?"fountain":"monument", cx:C.x, cy:C.y },
+      board:{ kind:"farm", cx:BOARD.cx, cy:BOARD.cy, w:BOARD.w, h:BOARD.h },
+      lots: lots.slice(0,reveal).map(L=>({ index:L.index, cx:L.cx, cy:L.cy, w:L.w, h:L.h }))
+    };
+    const txt = JSON.stringify(out,null,2);
+    navigator.clipboard && navigator.clipboard.writeText(txt);
+    const btn=document.getElementById("copyBtn"); const old=btn.textContent;
+    btn.textContent="Copied ✓ ("+reveal+" lots)"; setTimeout(()=>btn.textContent=old,1400);
+  });
+
+  // boot
+  dispRdev = RDEV[0]; draw(); syncUI();
+})();
+</script>
+</body>
+</html>
