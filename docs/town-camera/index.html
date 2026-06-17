@@ -30,6 +30,10 @@
   .sub{color:#5e5341;font-size:1.05rem;margin:.2rem 0 .75rem;max-width:80ch;}
   .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
   .chips{display:flex;flex-wrap:wrap;gap:.4rem;} .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+  .demolink{display:inline-block;font:800 .92rem/1 var(--sans);color:#fff;background:var(--accent2);padding:.55rem .85rem;border-radius:9px;box-shadow:var(--shadow);}
+  .demolink:hover{background:#3f6a28;text-decoration:none;}
+  .demo-callout{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;background:color-mix(in srgb,var(--accent2) 9%,#fff);border:1px solid var(--line);border-left:6px solid var(--accent2);border-radius:0 11px 11px 0;padding:.8rem 1.1rem;margin:1rem 0;box-shadow:var(--shadow);}
+  .demo-callout b{font-family:var(--serif);}
   nav.tabs{display:flex;gap:.35rem;flex-wrap:wrap;border-bottom:2px solid var(--line);margin:.2rem 0 1.5rem;position:sticky;top:0;z-index:30;background:linear-gradient(var(--bg) 78%,transparent);backdrop-filter:blur(3px);padding-top:.4rem;}
   nav.tabs button{font:700 1.02rem/1 var(--serif);letter-spacing:-.01em;padding:.7rem 1.2rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:all .14s;}
   nav.tabs button:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
@@ -113,6 +117,7 @@
     <p class="sub">Locking down the <b>camera view of the town map</b> before any building art is committed — every asset is drawn <i>on top of</i> this decision. <b>30 projection options</b> with a custom geometry diagram each, a clear recommendation, and a straight answer on <b>rotation</b>. Companion to <a href="../town-layout/index.html">Town Layout</a> &amp; the <a href="../art-style-board/index.html">Art Style Board</a>.</p>
     <p class="meta">puzzleDrag2 · <span class="chip">Decision proposal — 2026-06-17</span> · today's town = Phaser&nbsp;2D, 40×30 @ 32px square grid, Tuxemon ¾ tileset, fixed pan/zoom camera</p>
     <div class="chips"><span class="chip">★ Keep the ¾ top-down</span><span class="chip">＋ dynamic 2D lighting</span><span class="chip">Runner-up: cabinet oblique</span><span class="chip">Rotation: NO</span><span class="chip">30 options surveyed</span></div>
+    <p style="margin:.9rem 0 0;"><a class="demolink" href="demo/index.html">▶ Open the live interactive demo</a> &nbsp;— ONE cozy scene built from the game's real pixel sprites, flippable between ¾ / cabinet / iso with day-night lighting &amp; tilt-shift (variants 01·02·07·11·19).</p>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -125,6 +130,11 @@
   <!-- ───────────── RECOMMENDATION ───────────── -->
   <div class="panel on" id="panel-rec">
     <p class="lead">Short version: <b>don't change the projection — invest in it.</b> The ¾ high top-down with front-faced buildings that puzzleDrag2 already ships is the cozy-farming genre standard (Stardew, Sun Haven, Fields of Mistria, Roots of Pacha). The highest-value move is to raise its production value cheaply with lighting and polish, not to rebuild the whole square-grid stack for a diamond grid players don't demand.</p>
+
+    <div class="demo-callout">
+      <a class="demolink" href="demo/index.html">▶ Open the live interactive demo</a>
+      <span><b>See it, don't just read it.</b> One farm-village scene built from the game's real pixel sprites, rendered live through each candidate camera — flip between ¾, cabinet &amp; isometric, drag day→night to watch windows glow (variant 02), toggle tilt-shift (19), and try rotating to feel why it would cost 4× the art.</span>
+    </div>
 
     <div class="verdict go">
       <span class="tag">Recommended</span>
