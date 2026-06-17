@@ -1,4 +1,4 @@
-import { TILE, BIOMES } from "./constants.js";
+import { TILE, BIOMES, tileBackgroundColor } from "./constants.js";
 import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
@@ -90,7 +90,7 @@ export function paintTileCanvas(
     ctx.fill();
   }
   rr(ctx, 7, 5, w - 14, h - 14, 14);
-  const baseColor = hex(res.look.color);
+  const baseColor = hex(tileBackgroundColor(res));
   const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
   tileGrad.addColorStop(0, lighten(baseColor, 0.50));
   tileGrad.addColorStop(1, lighten(baseColor, 0.18));

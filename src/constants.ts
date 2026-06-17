@@ -352,6 +352,45 @@ export function tileFamilyResource(tileKey: string): string | null {
   return fam ? ((TILE_FAMILY_RESOURCE as Record<string, string>)[fam] ?? null) : null;
 }
 
+// The category portion of a tile key — the first segment after "tile_".
+// e.g. "tile_mine_iron_ore" -> "mine", "tile_fish_clam" -> "fish",
+// "tile_grass_meadow" -> "grass". Returns null for non-tile keys.
+export function tileCategory(tileKey: string): string | null {
+  if (typeof tileKey !== "string" || !tileKey.startsWith("tile_")) return null;
+  return tileKey.slice(5).split("_")[0] || null;
+}
+
+// One background color per tile category. Every tile in a category renders the
+// same board background so the board reads by category at a glance, instead of
+// each individual tile picking its own tint. Keep this the single source of
+// truth for category backgrounds; the per-resource `look.color` still drives
+// incidental effects like collect-particle bursts.
+export const TILE_CATEGORY_COLORS: Record<string, number> = {
+  grass: 0x6fa838,   // meadow green
+  grain: 0xd9b441,   // wheat gold
+  veg: 0x9c9a3a,     // garden olive
+  fruit: 0xcf5a4e,   // orchard red
+  flower: 0xcf6fae,  // blossom pink
+  tree: 0x3f7d54,    // forest green
+  bird: 0xcf9a52,    // feather amber
+  herd: 0xc78a86,    // pasture rose
+  cattle: 0x9c6b42,  // cattle brown
+  mount: 0x7f8aa3,   // steed slate
+  mine: 0x8b8e94,    // stone grey
+  coin: 0xeac642,    // bright gold
+  fish: 0x3f93a8,    // ocean teal
+  special: 0x9a8260, // neutral earth
+};
+
+// Background color for a tile, shared across its category. Non-tile keys and
+// any tile whose category has no registered color fall back to the resource's
+// own look.color (then a neutral grey) so nothing renders without a tint.
+export function tileBackgroundColor(res: { key?: string; look?: { color?: number } }): number {
+  const cat = res?.key ? tileCategory(res.key) : null;
+  if (cat && cat in TILE_CATEGORY_COLORS) return TILE_CATEGORY_COLORS[cat];
+  return res?.look?.color ?? 0x888888;
+}
+
 // Derived map: resource key → upgrade threshold of the tile that produces it.
 // Built once at module load from UPGRADE_THRESHOLDS + tileFamilyResource.
 // When multiple tile variants in the same family share a threshold (grass,
