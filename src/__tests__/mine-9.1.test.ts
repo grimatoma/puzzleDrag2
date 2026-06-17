@@ -6,9 +6,11 @@ import { upgradeCountForChain } from "../utils.js";
 
 describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup", () => {
   // ── Pool shape locked exactly ─────────────────────────────────────────────
-  it("MINE_TILE_POOL is a 9-entry array", () => {
+  it("MINE_TILE_POOL is a 10-entry array", () => {
     expect(Array.isArray(MINE_TILE_POOL)).toBe(true);
-    expect(MINE_TILE_POOL.length).toBe(9);
+    // 9 original entries + tile_mine_silver (PC2 silver resource, added for the
+    // cost port so town-upgrade costs can require it).
+    expect(MINE_TILE_POOL.length).toBe(10);
   });
 
   it("MINE_TILE_POOL contains all mine base resources (iron + copper ore split)", () => {

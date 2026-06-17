@@ -210,7 +210,7 @@ export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
   tile_grain_wheat: 5,
   tile_mine_stone: 8,
-  tile_mine_iron_ore: 6, tile_mine_copper_ore: 6, tile_mine_coal: 7, tile_mine_gem: 5, tile_mine_gold: 6,
+  tile_mine_iron_ore: 6, tile_mine_copper_ore: 6, tile_mine_coal: 7, tile_mine_gem: 5, tile_mine_gold: 6, tile_mine_silver: 6,
   // Birds → Eggs (chain 6). Existing bird tiles get explicit thresholds now
   // that they upgrade to the new `eggs` product.
   tile_bird_turkey: 6, tile_bird_clover: 6, tile_bird_melon: 6,
@@ -238,6 +238,7 @@ export const UPGRADE_THRESHOLDS = {
   tile_mount_horse: 10, tile_mount_donkey: 10, tile_mount_moose: 10, tile_mount_mammoth: 10,
   // Fish biome — flat one-step chains.
   tile_fish_sardine: 5, tile_fish_mackerel: 5, tile_fish_clam: 5, tile_fish_kelp: 6, tile_fish_oyster: 5,
+  tile_fish_cocoa: 5, tile_fish_ink: 5, tile_fish_jade: 5,
 };
 
 // Tiles-per-resource — the INCOME divisor, keyed by tile key. How many collected
@@ -279,7 +280,7 @@ export const FARM_TILE_POOL = [
   // Bird category slot uses pheasant as pool key; alternate bird species are
   // activated via the species-activation pipeline rather than additional pool slots.
 ];
-export const MINE_TILE_POOL = ["tile_mine_stone", "tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_copper_ore", "tile_mine_coal", "tile_special_dirt", "tile_special_dirt", "tile_mine_gem"];
+export const MINE_TILE_POOL = ["tile_mine_stone", "tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_copper_ore", "tile_mine_coal", "tile_special_dirt", "tile_special_dirt", "tile_mine_gem", "tile_mine_silver"];
 
 // Fish biome (MVP) — sardines / mackerel are most common, kelp is a filler,
 // clam/oyster are mid-rare, fish_fillet is rare so it's mostly a chain product.
@@ -289,6 +290,7 @@ export const FISH_TILE_POOL = [
   "tile_fish_clam", "tile_fish_clam",
   "tile_fish_kelp", "tile_fish_kelp",
   "tile_fish_oyster",
+  "tile_fish_cocoa", "tile_fish_ink", "tile_fish_jade",
 ];
 
 // Maps tile family name -> default produced resource key.
@@ -312,10 +314,14 @@ export const TILE_FAMILY_RESOURCE = {
   mine_coal: "coke",
   mine_gem: "cut_gem",
   mine_gold: "gold_bar",
+  mine_silver: "silver_bar",
   fish: "fish_fillet",
   fish_clam: "sea_shells",
   fish_oyster: "pearls",
   fish_kelp: "fish_oil",
+  fish_cocoa: "cocoa",
+  fish_ink: "ink",
+  fish_jade: "jade",
 };
 
 // Tiles whose output is not a simple family-default resource — they have
@@ -462,6 +468,9 @@ const ITEMS_DATA = {
   tile_mine_coal: { kind: "tile", biome: "mine", label: "Coal", value: 2, next: "coke", look: { color: 0x333333, dark: 0x000000 } },
   tile_mine_gem: { kind: "tile", biome: "mine", label: "Gem", value: 7, next: "cut_gem", look: { color: 0x65e5ff, dark: 0x1686a3, sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } } },
   tile_mine_gold: { kind: "tile", biome: "mine", label: "Gold", value: 5, next: "gold_bar", look: { color: 0xffd34c, dark: 0x946b11, sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } } },
+  // Silver — PC2 mine mineral (used by town-upgrade costs). Uncategorized
+  // passthrough tile (mirrors copper): spawns directly, chains to silver_bar.
+  tile_mine_silver: { kind: "tile", biome: "mine", label: "Silver", value: 4, next: "silver_bar", look: { color: 0xd6dbe2, dark: 0x6a7079, sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } } },
   // Golden Coin — a treasure tile that pays out coins directly when chained
   // (no resource output: next is null, and "coin" has no TILE_FAMILY_RESOURCE
   // family, so producedResource() returns null). The coin payout comes from the
@@ -477,6 +486,9 @@ const ITEMS_DATA = {
   iron_bar: { kind: "resource", biome: "mine", label: "Iron Bar", value: 8, next: null, look: { color: 0x8a8e94, dark: 0x3a3e44 } },
   copper_bar: { kind: "resource", biome: "mine", label: "Copper Bar", value: 8, next: null, look: { color: 0xc97f3c, dark: 0x6a3e18 } },
   gold_bar: { kind: "resource", biome: "mine", label: "Gold Bar", value: 16, next: null, look: { color: 0xf4c430, dark: 0x7a6010 } },
+  // PC2 Max Sell 40. (Mine/sea values are compressed vs PC2 today — the
+  // value-rescale to PC2 for existing resources is Phase 2 of the cost port.)
+  silver_bar: { kind: "resource", biome: "mine", label: "Silver Bar", value: 40, next: null, look: { color: 0xd6dbe2, dark: 0x6a7079 } },
 
   // Harbor tiles/resources (flat one-step chain)
   tile_fish_sardine: { kind: "tile", biome: "fish", label: "Sardine", value: 1, next: "fish_fillet", look: { color: 0x9ab8c4, dark: 0x4a5e68, sway: { amp: 1.4, freq: 0.00050, gust: 0.08 } } },
@@ -484,12 +496,22 @@ const ITEMS_DATA = {
   tile_fish_clam: { kind: "tile", biome: "fish", label: "Clam", value: 2, next: "sea_shells", look: { color: 0xc8a888, dark: 0x705a40, sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } } },
   tile_fish_oyster: { kind: "tile", biome: "fish", label: "Oyster", value: 3, next: "pearls", look: { color: 0xd0c0a8, dark: 0x6a5e48, sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } } },
   tile_fish_kelp: { kind: "tile", biome: "fish", label: "Kelp", value: 1, next: "fish_oil", look: { color: 0x3a6a3a, dark: 0x1a3818, sway: { amp: 3.0, freq: 0.00060, gust: 0.18 } } },
+  // PC2 sea minerals — cocoa islands / octopus ink / jade islands. Uncategorized
+  // passthrough tiles (mirror copper): spawn directly, chain to their resource.
+  tile_fish_cocoa: { kind: "tile", biome: "fish", label: "Cocoa", value: 3, next: "cocoa", look: { color: 0x7a4a28, dark: 0x3e2412, sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } } },
+  tile_fish_ink: { kind: "tile", biome: "fish", label: "Octopus", value: 3, next: "ink", look: { color: 0x3a3358, dark: 0x161228, sway: { amp: 1.2, freq: 0.00046, gust: 0.10 } } },
+  tile_fish_jade: { kind: "tile", biome: "fish", label: "Jade", value: 4, next: "jade", look: { color: 0x3fae7a, dark: 0x1c5a3e, sway: { amp: 0.6, freq: 0.00022, gust: 0.03 } } },
   // Special family fish — Giant Pearl, triggers +1 rune on special chain validation.
   tile_special_giant_pearl: { kind: "tile", biome: "fish", label: "Giant Pearl", value: 0, next: null, look: { color: 0xefe8d8, dark: 0x6a6258 } },
   fish_fillet: { kind: "resource", biome: "fish", label: "Fillet", value: 8, next: null, look: { color: 0xe8c8b0, dark: 0x7a604c } },
   fish_oil: { kind: "resource", biome: "fish", label: "Fish Oil", value: 6, next: null, look: { color: 0xe8d050, dark: 0x7a6818 } },
   sea_shells: { kind: "resource", biome: "fish", label: "Sea Shells", value: 5, next: null, look: { color: 0xf4ead0, dark: 0x80755a } },
   pearls: { kind: "resource", biome: "fish", label: "Pearls", value: 12, next: null, look: { color: 0xe8e0e8, dark: 0x807888 } },
+  // PC2 Max Sell — Cocoa 160, Ink 160, Jade 800. (Existing mine/sea value
+  // rescale to PC2 lands in Phase 2 of the cost port.)
+  cocoa: { kind: "resource", biome: "fish", label: "Cocoa", value: 160, next: null, look: { color: 0x7a4a28, dark: 0x3e2412 } },
+  ink: { kind: "resource", biome: "fish", label: "Ink", value: 160, next: null, look: { color: 0x2a2440, dark: 0x12101f } },
+  jade: { kind: "resource", biome: "fish", label: "Jade", value: 800, next: null, look: { color: 0x3fae7a, dark: 0x1c5a3e } },
 
   // Tools — behavior, animation, and arm copy are data-driven via `power` (TOOL_POWERS catalog).
   // Field starter tools
@@ -1030,6 +1052,8 @@ export const MARKET_PRICES = {
   iron_bar:     { buy: 120, sell: 8  },
   copper_bar:   { buy: 120, sell: 8  },
   gold_bar:     { buy: 240, sell: 16 },
+  // PC2-aligned (Max Sell 40 / Buy 300).
+  silver_bar:   { buy: 300, sell: 40 },
   // Soup and other terminal farm products.
   soup:         { buy: 220, sell: 20 },
   // Phase: wire-all-chains — terminal products from REFERENCE_CATALOG §4.
@@ -1049,6 +1073,10 @@ export const MARKET_PRICES = {
   fish_oil_bottled: { buy: 600,  sell: 80  },
   sea_shells:       { buy: 70,   sell: 5   },
   pearls:           { buy: 180,  sell: 12  },
+  // PC2-aligned — Cocoa/Ink Max Sell 160 (Buy 1280), Jade Max Sell 800 (Buy 4000).
+  cocoa:            { buy: 1280, sell: 160 },
+  ink:              { buy: 1280, sell: 160 },
+  jade:             { buy: 4000, sell: 800 },
   chowder:          { buy: 2400, sell: 280 },
   cured_meat:       { buy: 400,  sell: 45  },
   iron_ration:      { buy: 1200, sell: 120 },
