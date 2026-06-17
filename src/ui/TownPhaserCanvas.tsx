@@ -149,7 +149,14 @@ export default function TownPhaserCanvas({
             roundPixels: false,
             pixelArt: true, // Crucial for pixel art crispness
           },
-          input: { activePointers: 2 },
+          // windowEvents: false stops Phaser from processing pointer events it
+          // sees on the *window* rather than the canvas. Without it, a tap on a
+          // React overlay rendered above the town canvas (the inventory/quests
+          // screens, build picker, or any modal) still gets routed into the
+          // TownScene's input pipeline and can fire a board's pointerup —
+          // popping the Start Farming / biome-entry modal while another menu is
+          // open on top of the map. Mirrors the main game board (see PhaserMount).
+          input: { activePointers: 2, windowEvents: false },
           callbacks: {
             postBoot: (g: Phaser.Game) => {
               const ro = new ResizeObserver(() => {
