@@ -1,0 +1,1451 @@
+{
+  "recommendation": {
+    "primary": "current-34-topdown (keep the 3/4 high top-down + front-faced billboard objects), enhanced with eastward-lit-topdown (a dynamic 2D lighting layer) and optionally the tilt-shift-diorama garnish",
+    "runnerUp": "cabinet-oblique (the only way to add genuine 3D building charm while keeping the square grid AND reusing the flat-front v2kit at 1 sprite/building) — adopt this only if the team wants more dimensionality than lighting alone provides",
+    "rationale": "puzzleDrag2 is a 2D Phaser pixel-art cozy farming/town game whose entire shipped stack assumes a 40x30 square grid of 32px tiles: the roadAutotile grass<->sand Wang autotiler, the hand-authored townMaps.ts with stable-additive lot indices, the seasonal-tile pipeline (77 tiles with per-season stills/idles/transitions), and a Y-depth-sorted billboard object layer. The current 3/4 high-top-down with front-faced buildings IS the genre standard — it is exactly what Stardew Valley, Sun Haven, Roots of Pacha, Fields of Mistria, Littlewood and classic Harvest Moon use, and it is what players of this genre expect. Every square-grid projection (current 3/4, pure top-down, cabinet oblique, oblique free-iso) preserves nearly the whole engine; only object art changes. Every diamond-grid projection (2:1 dimetric, true iso, military) forces a wholesale rewrite (col/row->screen transform, a new iso autotiler + tileset, re-laying-out every map, re-deriving lot indices) AND strands the Tuxemon ground art AND clashes with the 128px 3/4 seasonal board unless that is also redone — doubling the most expensive asset program for a look players don't demand. The town's KEY goal is to visibly GROW (outpost->hamlet->village->city); growth is already delivered by the growing-settlement-layout model (radial growth from an evolving landmark, receding wilderness, additive lots) which is projection-independent and works perfectly in the current 3/4 view. So the highest-value move is NOT to change the projection but to raise its production value cheaply: layer Eastward/Sea-of-Stars-style dynamic 2D lighting (warm lantern pools, glowing windows, dusk gradients) for the cozy-night diorama mood, and optionally a tilt-shift garnish rendered at higher internal res then downscaled (respecting the project's 'town smudge' golden gotcha). If, after lighting, the team still wants more building dimensionality, cabinet oblique is the runner-up because it keeps the square ground (autotiler, townMaps, camera math, Y-sort all stay valid), reuses the existing flat-front v2kit as a true elevation, and adds a half-depth side at 1 sprite/building with zero rotation art. True isometric is a pixel-art jaggy trap; 2:1 dimetric is the 'real isometric' but is a high-effort diamond rewrite; HD-2D and all free-rotation paths require leaving Phaser-2D entirely.",
+    "rotationVerdict": "NO — do not build camera rotation. The genre evidence is decisive: every cozy-farming pillar (Stardew, Coral Island, Sun Haven, Fae Farm, Animal Crossing) ships without free world rotation, and Coral Island is the clincher — it is already a full 3D game yet its devs deliberately LOCKED the camera to a zoomable bird's-eye with no rotation, because the cozy genre chooses a fixed, art-directed, readable frame even when rotation would be technically free. The cost/value ratio for puzzleDrag2 is upside-down. In a sprite engine, every rotation step MULTIPLIES art (SimCity 4 = 40 renders/building); 4-way rotatable iso would cost ~2.5-4x art on EVERY building, 4x the seasonal output (4 seasons x 4 facings before idles/transitions), a from-scratch orientation-aware autotiler/road/river/farm rewrite, and 4x the visual goldens (already non-regenerable on this host). 8-way or pre-rendered-3D abandons hand-pixel craft; free 3D (Townscaper/Timberborn) is a different engine and a different game. And rotation doesn't even fully satisfy the underlying desire — Animal Crossing's 3-angle curved-world model still draws occlusion complaints. The fixed single angle is precisely what lets hand-painted pixel art look its best (baked light direction, anti-aliasing, hue-shift). The ONLY viable path if rotation is ever a hard requirement is a full 3D reboot (real meshes -> free rotation, e.g. the Cities: Skylines / Timberborn / Townscaper path, or low-poly-3D + pixelation a la A Short Hike) — out of scope for a cozy 2D puzzle-farming game. Instead, address the real wants cheaply WITHIN the fixed view: fade/x-ray tall sprites that occlude the player's row (a standard Stardew trick), camera pan + zoom + a simple photo mode for screenshots, and free horizontal mirror (setFlipX) for symmetric props/townsfolk facing.",
+    "migrationNote": "RECOMMENDED PATH (keep current projection): zero structural change. The 40x30 @ 32px square grid (TownScene), roadAutotile, townMaps.ts, the stable-additive lot indices, the seasonal-tile pipeline and the Y-depth-sort all stay verbatim. The only work is art polish plus an optional Phaser dynamic-lighting layer (emissive light/window/lantern masks). CRITICAL GOTCHA: the seasonal/board tiles already BAKE their own light, so adding real-time lights risks double-lighting — provide flat-lit tile variants or a normal-map pass for any tile under dynamic light, and render any tilt-shift/DOF at higher internal resolution then downscale (the documented 'town smudge' golden failure). RUNNER-UP PATH (cabinet oblique): still keeps the square groundTiles, roadAutotile, mask stamps, clampCamera, pixel-coord lots and Y-sort; the change is purely re-authoring building/prop sprites with a consistent half-depth oblique extrusion + light direction (reuse v2kit fronts as the true elevation; Tuxemon GROUND stays valid, Tuxemon OBJECTS won't match and would be replaced). AVOID (diamond/iso or 3D): any isometric or 3D path requires rewriting the screen transform, a new autotiler + tileset, re-laying-out every townMaps tier, re-deriving the lot-index contract, and either stranding or re-baking the 128px seasonal board — a multi-week structural rewrite plus a full art re-program, justified only if 'growing CITY dimensionality' becomes a higher priority than shipping cost and the existing pixel investment."
+  },
+  "masterVariants": [
+    {
+      "id": "current-34-topdown",
+      "name": "3/4 high top-down with front-faced billboard objects (current style / the \"Stardew trick\")",
+      "family": "oblique/axonometric",
+      "description": "The style puzzleDrag2 ships TODAY and the dominant cozy-farming idiom. Ground is a flat square grid seen from a steep overhead angle (~55-70 deg, RPG-Maker/Pokemon-GSC look the Tuxemon sheet is drawn for); trees, buildings, fences and NPCs are drawn UPRIGHT showing their front face, anchored at their base and depth-sorted by Y. It is a deliberate, eye-accepted inconsistency (plan-view ground + elevation-view objects), not a true geometric projection. Height is faked by drawing objects taller and overlapping the row behind. This is exactly the current TownScene/townMaps/roadAutotile contract.",
+      "angle": "~55-70 deg tilt; ground read flat on the square grid, objects upright with a visible front face",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed by genre convention. One sprite per building (no facing variants); characters get 4 walk facings. Rotation would cost ~4x building art and is essentially never done in this idiom.",
+      "effort": "Low",
+      "pipelineChange": "none — this is the existing 40x30 @ 32px square grid, the roadAutotile grass<->sand Wang autotiler, the seasonal-tile pipeline and townMaps.ts verbatim. Only art polish.",
+      "prosForUs": [
+        "ZERO engine change — verbatim the existing TownScene/townMaps/roadAutotile/Y-sort contract",
+        "The proven cozy-farming idiom (Stardew-class) players instantly recognize",
+        "Square grid keeps tile math, autotiling, drag hit-testing and pathing trivial",
+        "Buildings show a charming front face (door/windows/roof) so the town feels alive",
+        "Cheapest art: 1 sprite per building, 4 character facings; matches the 3/4 seasonal board tiles so town and board feel like one game",
+        "Tuxemon source art is native to this projection"
+      ],
+      "consForUs": [
+        "Tall front-faced buildings occlude rows behind them (handled only by Y-sort; wide buildings on adjacent lots can clip)",
+        "Less true-3D volume / less 'wow' for a city-growth showcase than isometric",
+        "Geometrically 'incorrect' (purists dislike it) — but this is a feature for the genre"
+      ],
+      "gameExamples": [
+        {
+          "name": "Stardew Valley",
+          "url": "https://store.steampowered.com/app/413150/Stardew_Valley/"
+        },
+        {
+          "name": "The Legend of Zelda: A Link to the Past",
+          "url": "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_A_Link_to_the_Past"
+        },
+        {
+          "name": "Pokemon Gold/Silver/Crystal",
+          "url": "https://wiki.tuxemon.org/Creating_Tilesets"
+        },
+        {
+          "name": "Tuxemon",
+          "url": "https://opengameart.org/content/tuxemon-tileset"
+        },
+        {
+          "name": "Sun Haven",
+          "url": "https://store.steampowered.com/app/1432860/Sun_Haven/"
+        },
+        {
+          "name": "Fields of Mistria",
+          "url": "https://en.wikipedia.org/wiki/Fields_of_Mistria"
+        }
+      ],
+      "assetImplications": "Keep the square tilemap floor (Tuxemon 32px) painted by the autotiler; place buildings/trees/NPCs as upright front-facing transparent PNG sprites anchored at base, depth-sorted by Y. Roof/front-wall split per building. This is puzzleDrag2's current model; onboarding cost is near zero.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "eastward-lit-topdown",
+      "name": "3/4 top-down + dynamic 2D lighting layer (Sea of Stars / Eastward upgrade)",
+      "family": "hybrid",
+      "description": "The cheapest 'premium' upgrade that stays inside a 2D engine: keep the exact 3/4 square-grid top-down pipeline but layer REAL dynamic lighting, day/night, warm lantern pools, fog/god-rays and optional reflections on top. Sea of Stars stays a pure 2D pixel pipeline and adds dynamic lighting + real-time water reflections at 640x360; Eastward bolts Pixpil deferred 3D lighting onto flat top-down pixel art. This is the most achievable path to the cozy-night-town diorama mood without leaving Phaser.",
+      "angle": "same ~55-70 deg 3/4 top-down as current; the upgrade is lighting, not camera angle",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Same as current (fixed). No per-angle sprite cost; the work is shaders + light placement, not new facings.",
+      "effort": "Medium",
+      "pipelineChange": "small-to-medium — grid/autotiler/townMaps all unchanged; add a Phaser lighting/normal-map layer. GOTCHA: the seasonal/board tiles already BAKE their own light, so dynamic lights risk double-lighting — needs flat-lit tile variants or a normal-map pass.",
+      "prosForUs": [
+        "Reuses the entire square grid, drag hit-testing, autotiler and existing seasonal tiles",
+        "Warm night lights (glowing tavern windows, hanging lanterns) directly serve the cozy-night-town reference",
+        "Proven incremental upgrade path (Eastward bolted lighting onto flat top-down pixel art)",
+        "Keeps the hand-pixel identity; no per-rotation art"
+      ],
+      "consForUs": [
+        "Real-time lights over already-baked-light tiles double-light them — needs flat/neutral tile variants or normal maps (extra per-asset work)",
+        "Reflections/distortion are extra shader work, not free",
+        "Still a 3/4 top-down, not a 'shopfront row' presentation"
+      ],
+      "gameExamples": [
+        {
+          "name": "Sea of Stars",
+          "url": "https://www.megavisions.net/the-art-of-sea-of-stars-a-sea-of-pixels/"
+        },
+        {
+          "name": "Eastward",
+          "url": "https://www.gamedeveloper.com/art/eastward-s-creators-share-insights-on-making-pixel-art-adventures"
+        },
+        {
+          "name": "Hyper Light Drifter",
+          "url": "https://hookshotchargebeamrevive.com/2018/09/10/hyper-light-drifters-pixel-impressionism/"
+        }
+      ],
+      "assetImplications": "Author tiles relatively flat/neutral (or add normal maps) so dynamic lights read; keep a consistent 3/4 angle. Add an emissive/light layer for lit windows and lanterns. Render any blur at higher internal res then downscale (the project's 'town smudge' golden gotcha).",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "normalmapped-topdown",
+      "name": "3/4 top-down with normal-mapped sprite lighting (Graveyard Keeper)",
+      "family": "oblique/axonometric",
+      "description": "A refinement of the current model: still a 2D pixel top-down world with front-on sprites and a fixed camera, but every sprite carries a hand-authored normal map so a real-time light source illuminates 'up-facing' parts and shades the camera-facing dark side. Object altitude is tagged for fog/depth. Gives 2D pixel art 3D-lit volume and dynamic day/night without going 3D. Graveyard Keeper is the clearest published example.",
+      "angle": "flat-ish elevated 3/4 top-down; sprites lit as if they have volume",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Same as current plus a normal map per sprite. No new facings, but each of the 142+ tiles/buildings needs a paired normal map.",
+      "effort": "Medium",
+      "pipelineChange": "medium — grid/autotiler unchanged; adds a normal-map authoring pass per sprite and a dynamic-light pipeline. Same double-lighting caveat as the Eastward path.",
+      "prosForUs": [
+        "Drop-in on the existing front-on 2D model — same grid, same camera",
+        "Adds tangible depth/volume and dynamic day-night lighting to flat pixel art",
+        "Could pair with the project's seasonal-transition lighting work"
+      ],
+      "consForUs": [
+        "Roughly doubles per-sprite art (color map + normal map for every tile/building)",
+        "Normal-map authoring is specialist; risks inconsistency across 142+ tiles",
+        "Overkill for a cozy puzzle board unless dynamic lighting is a headline feature"
+      ],
+      "gameExamples": [
+        {
+          "name": "Graveyard Keeper",
+          "url": "https://www.pcgamingwiki.com/wiki/Graveyard_Keeper"
+        }
+      ],
+      "assetImplications": "Author the front-on color sprite AND a paired normal map (paint directional lighting, script-convert to normals); tag each object with an altitude value for fog/light falloff. Heavier per-asset than current, optional polish on the same base model.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "steep-34",
+      "name": "High-angle steep three-quarter (tactics-style)",
+      "family": "oblique/axonometric",
+      "description": "The three-quarter view pushed toward vertical (~65-75 deg): ground dominates, object front faces are short/foreshortened — 'more map, less wall'. A unit cube reads as a large top square with a thin front strip. Good when reading the board/layout matters more than building character (tactics/strategy lean). FF Tactics reads steep.",
+      "angle": "~65-75 deg tilt (steeper than the Stardew baseline)",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed by convention; same 4-direction character cost as standard three-quarter. 1 sprite per building.",
+      "effort": "Low",
+      "pipelineChange": "none-to-small — identical square grid and pipeline as current; only the building front-face:top ratio is tuned steeper. Re-authoring building art to the steeper ratio is the only cost.",
+      "prosForUs": [
+        "Maximizes legibility of the town layout/grid (you see the plan clearly)",
+        "Still square grid -> trivial math",
+        "Less occlusion than a shallow angle"
+      ],
+      "consForUs": [
+        "Thin front faces give buildings less personality than the cozy ~60 deg baseline",
+        "Can feel clinical/map-like rather than warm and storybook",
+        "Less dramatic, less 'place-like'"
+      ],
+      "gameExamples": [
+        {
+          "name": "Final Fantasy Tactics",
+          "url": "https://en.wikipedia.org/wiki/Final_Fantasy_Tactics"
+        }
+      ],
+      "assetImplications": "Same authoring model as current but with shorter front-face bands and a larger visible top. Single sprite per building, 4-facing characters.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "shallow-34",
+      "name": "Low-angle shallow three-quarter (cozy street diorama)",
+      "family": "oblique/axonometric",
+      "description": "The three-quarter view pushed toward the horizon (~40-50 deg): big tall front faces, compressed ground, strong 'standing in the scene' feel. A unit cube reads as a large front wall with a sliver of top — the 'storybook diorama / cozy street' end of the spectrum, closest to looking at a village from across the square.",
+      "angle": "~40-50 deg tilt (a low, near-horizon camera)",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed; characters 4-facing or even side-only. 1 sprite per building.",
+      "effort": "Low",
+      "pipelineChange": "small — same square grid/pipeline; tall foreground occlusion may force a shallower (fewer-rows-deep) board layout, otherwise no engine change.",
+      "prosForUs": [
+        "Maximum building character/charm — big readable facades, doors, windows, signs",
+        "Strong cozy 'place' feeling, very storybook",
+        "Great for a town/main-street showcase"
+      ],
+      "consForUs": [
+        "Heavy occlusion: tall foreground buildings hide everything behind -> hard to fit a deep grid",
+        "Compressed ground makes a large board hard to read",
+        "Worse for gameplay that needs the whole layout visible at once"
+      ],
+      "gameExamples": [
+        {
+          "name": "Graveyard Keeper",
+          "url": "https://en.wikipedia.org/wiki/Graveyard_Keeper"
+        }
+      ],
+      "assetImplications": "Author tall, detailed front facades with minimal visible roof/top; rely on Y-depth sorting and maybe a shallow grid (few rows deep). Good for a 'hero street', awkward for a big farm board.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "pure-topdown",
+      "name": "Pure top-down / bird's-eye (90 deg)",
+      "family": "top-down",
+      "description": "Camera straight down; the world is a flat plan with zero vertical face. A unit cube reads as a single top-face square; buildings are roof footprints, trees are canopy discs. Height shown only by drop-shadow/overlap. Ground autotiling is unchanged from today; only the OBJECT philosophy differs (roofs not facades). PixelLab's create_topdown_tileset defaults to exactly this.",
+      "angle": "90 deg straight down (orthographic plan view)",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Near-free for terrain (square top faces are rotation-symmetric so 4-way map rotation is cheap), but content is fixed-orientation so n/a. 1 sprite per object.",
+      "effort": "Low",
+      "pipelineChange": "small — still a square grid and tilemap; stop drawing objects as upright billboards and lay them flat (no baseline anchor / Y-overlap needed). PixelLab create_topdown_tileset maps 1:1 onto roadAutotile.",
+      "prosForUs": [
+        "Engine change essentially nil — still square grid/tilemap",
+        "Cleanest footprint packing: a building exactly fills its lot, no upward sprawl (kills the wide-building clip)",
+        "Simplest possible grid math, unambiguous adjacency/pathing, easiest autotiling",
+        "PixelLab create_topdown_tileset (Wang) maps onto roadAutotile"
+      ],
+      "consForUs": [
+        "Least characterful — roofs-only towns read as floor plans; cozy charm and building identity drop hard",
+        "Breaks visual continuity with the 3/4 seasonal board tiles (town vs board would clash)",
+        "Tuxemon source art is 3/4, not 90 deg, so existing terrain looks subtly wrong next to true top-down objects",
+        "Throws away depth/Y-sort code for no gameplay gain"
+      ],
+      "gameExamples": [
+        {
+          "name": "The Legend of Zelda (1986)",
+          "url": "https://en.wikipedia.org/wiki/The_Legend_of_Zelda_(video_game)"
+        },
+        {
+          "name": "Factorio",
+          "url": "https://store.steampowered.com/app/427520/Factorio/"
+        },
+        {
+          "name": "Pac-Man",
+          "url": "https://en.wikipedia.org/wiki/Pac-Man"
+        }
+      ],
+      "assetImplications": "Author buildings as top-down roof footprints (no front wall), trees as canopy discs. Objects can sit ON the grid rather than billboarding upward, so no baseline anchoring needed.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/41/Graphical_projection_comparison.png",
+      "imageLicense": "CC BY-SA 3.0 / GFDL 1.2+. Author: SharkD. Source: https://commons.wikimedia.org/wiki/File:Graphical_projection_comparison.png"
+    },
+    {
+      "id": "cabinet-oblique",
+      "name": "Cabinet oblique (half-depth) — classic SimCity/Ultima/EarthBound look",
+      "family": "oblique/axonometric",
+      "description": "The 'nicer' oblique and the cheapest dimensionality upgrade that KEEPS the square grid. The building front is a true undistorted elevation (reuse the flat-front v2kit directly), while the receding depth axis is drawn at HALF scale (1:2), so objects look correctly proportioned and you see front + a bit of side/top. This is the warm, readable look of SimCity Classic, Ultima VI/VII, EarthBound, Q*bert, Zaxxon — and exactly the spirit of puzzleDrag2's existing flat-front building kit.",
+      "angle": "front face flat/frontal (true elevation); depth extruded at half scale (1:2), depth axis ~30/45 deg",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed single orientation by nature (front face privileged). VERY cheap: 1 sprite per building, no rotation/facing art — the lowest art cost of any 3D-ish style.",
+      "effort": "Low-Medium",
+      "pipelineChange": "small — the GROUND stays a square grid so townMaps groundTiles, roadAutotile, mask stamps, clampCamera, pixel-coord lots and Y-sort ALL stay valid. Only object art is re-authored with a consistent oblique extrusion. PixelLab has no dedicated cabinet mode (approximate via side / high-top-down object views).",
+      "prosForUs": [
+        "Keeps the SQUARE grid — the entire town stack stays valid (the big win vs iso)",
+        "Front face = true elevation, so the existing flat-front v2kit drops in almost directly",
+        "Half-depth side adds real 3D charm without distortion — cozy and readable",
+        "ONE sprite per building, no facings — lowest art cost of any 3D-ish style",
+        "Strong precedent for town/city builders (SimCity Classic, Ultima, EarthBound)"
+      ],
+      "consForUs": [
+        "Only one fixed viewing angle (no rotation)",
+        "Building/prop art must be re-authored for a consistent oblique extrusion + light; Tuxemon objects (3/4) won't match (Tuxemon GROUND still works)",
+        "Tall oblique objects extruded back can over-cover the lot behind; depth-sort tuning needed",
+        "PixelLab needs iteration to keep oblique consistent across many buildings"
+      ],
+      "gameExamples": [
+        {
+          "name": "SimCity (Classic, 1989)",
+          "url": "https://en.wikipedia.org/wiki/SimCity_(1989_video_game)"
+        },
+        {
+          "name": "Ultima VII",
+          "url": "https://en.wikipedia.org/wiki/Ultima_VII"
+        },
+        {
+          "name": "EarthBound",
+          "url": "https://en.wikipedia.org/wiki/EarthBound"
+        },
+        {
+          "name": "Zaxxon",
+          "url": "https://en.wikipedia.org/wiki/Zaxxon"
+        },
+        {
+          "name": "Q*bert",
+          "url": "https://en.wikipedia.org/wiki/Q*bert"
+        }
+      ],
+      "assetImplications": "Author each building as a TRUE flat front (reuse existing elevation kit) + a half-length ~45 deg side/top extrusion, consistent light direction. One sprite per building, no facings. Square grid on screen; objects extrude up-right; depth-sort by Y.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/29/Cabinet_projection_of_cube_above_plane.svg",
+      "imageLicense": "CC BY-SA 4.0. Authors: SharkD, updated by Datumizer. Source: https://commons.wikimedia.org/wiki/File:Cabinet_projection_of_cube_above_plane.svg"
+    },
+    {
+      "id": "cavalier-oblique",
+      "name": "Cavalier oblique (full-depth)",
+      "family": "oblique/axonometric",
+      "description": "A non-perspective oblique where the front face is drawn flat and true (an elevation) and depth lines shoot off at 30/45 deg at FULL 1:1 length. Because depth isn't foreshortened, deep objects look exaggerated/stretched ('too deep'). A unit cube reads as a square front + a full-length 45 deg shadow-box side. Simple to draw (front undistorted) but cabinet is the better oblique for buildings.",
+      "angle": "front face true/flat; depth axis recedes at 30 or 45 deg at full 1:1 scale",
+      "tileShape": "none",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed single orientation by nature (front face privileged); rotation not idiomatic. 1 sprite per object.",
+      "effort": "Low-Medium",
+      "pipelineChange": "medium — no clean grid tiling idiom (full-depth lines make tiles awkward), so it doesn't drop onto the current tiled board cleanly; best for a single hero building, not a tiled town.",
+      "prosForUs": [
+        "Front face is a true elevation -> reuse flat facade art directly (cheap, charming)",
+        "Dead-simple geometry (full-length 45/30 deg depth lines)"
+      ],
+      "consForUs": [
+        "Full-depth looks distorted/unnaturally deep — less appealing than cabinet for buildings",
+        "No grid tiling idiom; awkward for a tiled town board",
+        "Only one privileged facing"
+      ],
+      "gameExamples": [
+        {
+          "name": "Ultima (early entries)",
+          "url": "https://en.wikipedia.org/wiki/Oblique_projection"
+        }
+      ],
+      "assetImplications": "Author a flat true front (elevation) plus full-length 45/30 deg depth edges. Good for a single hero building; not for a tiled grid (use cabinet instead).",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/32/Cabinet_perspective_45.svg",
+      "imageLicense": "CC BY-SA 3.0 + GFDL 1.2+. Author: Mosca2. Source: https://commons.wikimedia.org/wiki/File:Cabinet_perspective_45.svg (filename says cabinet but the page describes cavalier/full-depth at 45 deg; verify before captioning). Cleaner alt: https://commons.wikimedia.org/wiki/File:Oblique_projection_comparison_top.svg (CC BY-SA 4.0, Datumizer)."
+    },
+    {
+      "id": "oblique-freeiso",
+      "name": "Oblique 'free-iso' / front-readable square grid (CrossCode / Moonlighter)",
+      "family": "oblique/axonometric",
+      "description": "A pragmatic middle ground: the ground plays like a top-down SQUARE grid for movement/collision, but objects and characters are drawn in near-front elevation so you read their faces, with a separate vertical height axis + cast drop-shadow handling elevation/jumping. Cleaner to build than true iso (square math) while feeling dimensional. Moonlighter's shop is essentially a front-readable interior in this view.",
+      "angle": "high 3/4 / oblique — front faces of objects visible (full bodies), ground near-top-down; height is a separate vertical offset with a drop shadow",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Fixed angle. Actors typically use 8 directions; buildings need only 1 front-faced view.",
+      "effort": "Low-Medium",
+      "pipelineChange": "small — keeps the SQUARE grid (drag hit-testing and autotiler stay in familiar square space); add a height-offset + drop-shadow trick for raised/stacked buildings. Largely reuses square-grid tooling.",
+      "prosForUs": [
+        "Keeps a SQUARE grid (closest to current tilemap; drag hit-testing and autotiler stay)",
+        "Shows building FRONT faces clearly (shopfronts/cottages read well) while staying a navigable map",
+        "8-direction actor sprites only; no diamond math",
+        "Drop-shadow + height-offset is simple to implement for stacked/raised buildings"
+      ],
+      "consForUs": [
+        "Less 'wow' than HD-2D or full iso",
+        "Depth-sorting of tall front-faced buildings still needs care",
+        "Mixing near-top-down ground with front-faced buildings can look inconsistent if angles aren't disciplined"
+      ],
+      "gameExamples": [
+        {
+          "name": "CrossCode",
+          "url": "https://www.radicalfishgames.com/presskit/sheet.php?p=crosscode"
+        },
+        {
+          "name": "Moonlighter",
+          "url": "https://store.steampowered.com/app/606150/Moonlighter/"
+        }
+      ],
+      "assetImplications": "Author ground tiles top-down-ish but buildings/props in front elevation with a consistent vanishing-free oblique; give every raised object a separate base footprint + drop shadow so the height axis reads. One baked light direction.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "military-planometric",
+      "name": "Military / planometric projection (45 deg plan, true square top)",
+      "family": "oblique/axonometric",
+      "description": "An axonometric where the horizontal plane is ROTATED 45 deg but NOT tilted, so the top stays a true, un-foreshortened square; verticals are drawn vertical at true length. You take a plan view rotated 45 deg, then extrude walls straight up at full height. Reads very architectural / board-game. Distinct from iso because the top keeps right angles and true proportions. 45 deg geometry pixels cleanly (1:1 stair).",
+      "angle": "45 deg plan rotation, NO tilt; top stays a true un-foreshortened square; verticals true length",
+      "tileShape": "square",
+      "rotation": "4-way",
+      "rotationCost": "4 facings for 45 deg-step rotation of asymmetric pieces; top square is rotation-symmetric so ground tiles are cheap.",
+      "effort": "Medium-High",
+      "pipelineChange": "medium-large — the on-screen footprint is a diamond, so the screen transform + depth sort change like iso even though the top stays a true square; townMaps coords and camera bounds need rework.",
+      "prosForUs": [
+        "Top face stays a TRUE square -> plan/layout reads accurately (great for a buildable grid)",
+        "Full-height true walls give strong building presence",
+        "Clean 45 deg geometry pixels crisply",
+        "Nice 'tabletop diorama' charm"
+      ],
+      "consForUs": [
+        "Less common/familiar than 2:1 iso, so less instant-recognition payoff",
+        "Tall full-height walls cause significant occlusion of rows behind",
+        "Still a non-square SCREEN footprint (diamond on screen) -> grid math rework vs the current board"
+      ],
+      "gameExamples": [
+        {
+          "name": "Monument Valley",
+          "url": "https://en.wikipedia.org/wiki/Monument_Valley_(video_game)"
+        },
+        {
+          "name": "Axonometric projection (board-game adaptations)",
+          "url": "https://en.wikipedia.org/wiki/Axonometric_projection"
+        }
+      ],
+      "assetImplications": "Draw a true 45 deg-rotated square top (no vertical squash) plus full-height vertical walls. 45 deg edges pixel cleanly. 4 facings for asymmetric buildings; ground tiles symmetric. Engine needs a diamond screen transform + depth sort.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Milit%C3%A4rperspektive.svg",
+      "imageLicense": "CC BY 4.0. Author: Wittiko. Source: https://commons.wikimedia.org/wiki/File:Milit%C3%A4rperspektive.svg"
+    },
+    {
+      "id": "dimetric-2to1",
+      "name": "Dimetric 2:1 'pixel isometric' (26.565 deg)",
+      "family": "isometric/dimetric",
+      "description": "The de-facto 'isometric' of pixel games and what most people MEAN by isometric. Ground axes drawn at arctan(1/2)=26.565 deg via an exact 2:1 pixel run (2 across, 1 up), which makes every diamond edge a clean repeating 2px stair (crisp, no jaggies — the whole reason pixel art uses this over true 30 deg). Ground tile is a 2:1 diamond; a unit cube reads as top diamond + left + right wall. Best dimensionality for selling 'my town is growing into a city'. Classic of SimCity 2000, Civ II, RollerCoaster Tycoon, AoE2, Habbo, TheoTown, Pocket City.",
+      "angle": "26.565 deg dimetric, exact 2:1 pixel ratio",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "4-way",
+      "rotationCost": "Up to 4 sprites per asymmetric building for the standard 4-way rotate; many games ship a fixed single orientation (1x). For puzzleDrag2 with no rotation it would be 1x, but every tile would be re-authored on the diamond.",
+      "effort": "High",
+      "pipelineChange": "large — MAJOR rewrite: the whole town stack assumes a SQUARE axis-aligned grid. screen=(col-row)*tileW/2,(col+row)*tileH/2 transform replaces x=col*32; mask/paint/clampCamera/Y-depth/lot pixel coords ALL change; roadAutotile needs a new iso/Wang tile set + neighbour math; every townMaps map re-laid-out on the diamond and the stable-additive lot-index contract re-derived; clashes with the 128px 3/4 seasonal board unless that is also redone; Tuxemon ground art is unusable. PixelLab create_isometric_tile / create_tiles_pro(isometric) fit the art side.",
+      "prosForUs": [
+        "Crisp pixel edges by construction (2:1 = clean stair) — looks pro",
+        "Best dimensionality for the 'growing city' headline; buildings read as little 3D models, overlap/occlusion reads naturally",
+        "Huge precedent for town/city builders specifically (SimCity 2000, RCT, TheoTown)",
+        "PixelLab has first-class iso support (create_isometric_tile, thin/thick/block thickness for height/stacking)"
+      ],
+      "consForUs": [
+        "Diamond grid = real rework of the square board math, autotiler, drag hit-testing and Y-depth",
+        "Re-laying out every authored map + re-deriving lot indices; strands the Tuxemon set and clashes with the 3/4 seasonal board (doubles the art program)",
+        "Up to 4 rotation sprites per asymmetric building if rotation is ever wanted",
+        "Tall-object depth sorting/occlusion fiddly"
+      ],
+      "gameExamples": [
+        {
+          "name": "SimCity 2000",
+          "url": "https://en.wikipedia.org/wiki/SimCity_2000"
+        },
+        {
+          "name": "RollerCoaster Tycoon",
+          "url": "https://en.wikipedia.org/wiki/RollerCoaster_Tycoon_(video_game)"
+        },
+        {
+          "name": "Civilization II",
+          "url": "https://en.wikipedia.org/wiki/Civilization_II"
+        },
+        {
+          "name": "Age of Empires II",
+          "url": "https://www.forgottenempires.net/age-of-empires-definitive-edition-is-it-a-3d-or-a-2d-game"
+        },
+        {
+          "name": "TheoTown",
+          "url": "https://store.steampowered.com/app/1084020/TheoTown/"
+        },
+        {
+          "name": "Pocket City",
+          "url": "https://blog.pocketcitygame.com/isometric-city-art-first-look/"
+        }
+      ],
+      "assetImplications": "Author 2:1 diamond ground tiles and buildings on 26.565 deg axes (clean 2-step edges) showing top + left + right faces; stack floors for height/growth. For rotation, 4 facings of asymmetric buildings. Engine: iso<->screen transform + Y depth sort. PixelLab create_isometric_tile fits.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/87/Isometric_Dimetric_oblique_front_projection.svg",
+      "imageLicense": "Public domain. Author: Yuri Raysper. Source: https://commons.wikimedia.org/wiki/File:Isometric_Dimetric_oblique_front_projection.svg"
+    },
+    {
+      "id": "true-iso-30",
+      "name": "True isometric (35.264 deg camera / 30 deg axes)",
+      "family": "isometric/dimetric",
+      "description": "Geometrically pure isometric: camera tilted arcsin(1/sqrt3)=35.264 deg, plan-rotated 45 deg; on-screen ground axes at 30 deg, three cube axes exactly 120 deg apart, all equally foreshortened (~81.6%). Ground tile is a 1.732:1 diamond; a unit cube reads as a regular hexagon. Mathematically clean but the 30 deg / sqrt3 slope does NOT land on clean pixel steps, so it causes jaggy staircase edges — a pixel-art trap. Rare in pixel art; more common in vector/3D-rendered iso.",
+      "angle": "camera 35.264 deg; on-screen ground axes 30 deg; ~81.6% foreshortening; diamond ratio 1.732:1",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "4-way",
+      "rotationCost": "4 sprites per asymmetric building for 4-way rotation, or 1 with rotation forbidden; free in 3D-rendered iso.",
+      "effort": "High",
+      "pipelineChange": "large — same diamond-grid rewrite as 2:1 dimetric PLUS worse pixel fidelity (the 30 deg slope shimmers). No practical advantage over dimetric 2:1 for pixel art; PixelLab's iso output targets the pixel 2:1 diamond, so true 30 deg is awkward to hit.",
+      "prosForUs": [
+        "Mathematically clean, all axes equal — balanced look",
+        "Shows 3D volume (top + two walls)"
+      ],
+      "consForUs": [
+        "30 deg / sqrt3 slope gives ugly anti-aliased staircase edges in PIXEL art — the reason pixel games use 2:1 instead",
+        "All the diamond-grid rewrite cost of 2:1 with worse fidelity (a trap)",
+        "Diamond grid complicates tile math/autotiling/pathing vs the square board",
+        "Asymmetric buildings need up to 4 rotation sprites"
+      ],
+      "gameExamples": [
+        {
+          "name": "Diablo / Diablo II",
+          "url": "https://en.wikipedia.org/wiki/Isometric_video_game_graphics"
+        },
+        {
+          "name": "Baldur's Gate (Infinity Engine)",
+          "url": "https://en.wikipedia.org/wiki/Infinity_Engine"
+        }
+      ],
+      "assetImplications": "Tiles are 1.732:1 diamonds; buildings on 30 deg axes showing top + two walls. Avoid for pixel art unless you accept jaggies — prefer 2:1 dimetric. Engine needs iso<->screen transform and Y/depth sort.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/9/95/Isometric_camera_view_35.264_degrees_color.png",
+      "imageLicense": "CC BY-SA 4.0 (also GFDL/other CC). Author: SharkD. Source: https://commons.wikimedia.org/wiki/File:Isometric_camera_view_35.264_degrees_color.png"
+    },
+    {
+      "id": "flatter-dimetric",
+      "name": "Flatter dimetric 3:1 / 4:1",
+      "family": "isometric/dimetric",
+      "description": "Dimetric with a gentler slope than 2:1: ground axes at arctan(1/3)=18.43 deg (3:1) or arctan(1/4)=14.04 deg (4:1). Tiles are wide shallow diamonds; a unit cube reads as a wide squashed hexagon with a big top and short walls. Shows more of the board per screen and a less 'tall' look while still showing two walls. Integer ratios keep edges crisp.",
+      "angle": "18.43 deg (3:1) or 14.04 deg (4:1) from horizontal",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "4-way",
+      "rotationCost": "Same as 2:1 dimetric — up to 4 facings per asymmetric building.",
+      "effort": "High",
+      "pipelineChange": "large — same diamond-grid rewrite as 2:1 dimetric with less of the classic 'isometric' payoff (wide diamonds look unusual).",
+      "prosForUs": [
+        "More of the board visible at once (flatter)",
+        "Still clean pixel stairs (3:1/4:1 are integer ratios)",
+        "Less vertical occlusion than 2:1"
+      ],
+      "consForUs": [
+        "Wide diamonds look unusual/less iconic than the familiar 2:1",
+        "Same diamond-grid rework cost as 2:1 with less classic-iso payoff",
+        "Short walls = less building character than 2:1"
+      ],
+      "gameExamples": [
+        {
+          "name": "Various mobile/strategy builders (flatter dimetric)",
+          "url": "https://en.wikipedia.org/wiki/Isometric_video_game_graphics"
+        }
+      ],
+      "assetImplications": "Author wide 3:1/4:1 diamonds and buildings on the shallower axis; keep integer pixel ratios. Same 4-facing rotation and depth-sort needs as 2:1.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "trimetric",
+      "name": "Trimetric",
+      "family": "isometric/dimetric",
+      "description": "The most general axonometric: all three axes at DIFFERENT angles and different foreshortening, so a unit cube shows all three faces each sized/sheared differently — a slightly more 'natural'/asymmetric look. Famously Fallout 1/2 and SimCity 4. Rare in pixel art because non-integer slopes hurt pixel cleanliness; common in pre-rendered/3D-to-2D pipelines.",
+      "angle": "all three axes at different angles + different scales (no canonical number)",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "none(fixed)",
+      "rotationCost": "Typically fixed single orientation (per-axis math makes hand rotation expensive); pre-rendered pipelines re-render other angles.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — best produced from 3D renders sliced to tiles; not practical to hand-pixel cleanly; abandons the hand-pixel direction and the square grid.",
+      "prosForUs": [
+        "Most flexible/natural-looking of the parallel views",
+        "Can tune the look precisely to taste"
+      ],
+      "consForUs": [
+        "Worst fit for hand-pixel art (odd slopes = jaggies, hard to tile)",
+        "Hardest geometry to reason about for a grid game",
+        "Rotation effectively unsupported without re-rendering — overkill for a cozy 2D farm game"
+      ],
+      "gameExamples": [
+        {
+          "name": "Fallout (1997) / Fallout 2",
+          "url": "https://en.wikipedia.org/wiki/Fallout_(video_game)"
+        },
+        {
+          "name": "SimCity 4",
+          "url": "https://wiki.sc4devotion.com/index.php?title=Building_Architect_Tool"
+        }
+      ],
+      "assetImplications": "Best produced from 3D renders at the chosen trimetric camera, sliced to tiles; not practical to hand-pixel. Fixed single orientation. Avoid for puzzleDrag2's hand-pixel direction.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/41/Graphical_projection_comparison.png",
+      "imageLicense": "CC BY-SA 3.0 / GFDL 1.2+. Author: SharkD. Source: https://commons.wikimedia.org/wiki/File:Graphical_projection_comparison.png"
+    },
+    {
+      "id": "side-elevation-shopfront",
+      "name": "Side-elevation / front-row shopfront town (Terraria / Starbound / shopfront street)",
+      "family": "side-elevation",
+      "description": "The world as a side cross-section / a parade of building facades facing the viewer (like a high-street). Terraria/Starbound build towns by stacking front-elevation cutaway rooms; the 'shopfront street' applies the same idea as a town strip. Orthographic elevation means proportions are exact and undistorted — clean, readable shopfronts and the natural home for the reference (c) flat-front farm building (which is literally one sprite). Parallax background layers give cheap depth, great at night with lit windows. Best as a town/menu SCREEN, not the playable plot board.",
+      "angle": "0 deg — pure side-on orthographic elevation; building fronts/cutaways, no top, no foreshortening; camera pans, gravity down",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Zero — one flat front view per building; a flat front has no other faces, so rotation is meaningless and unneeded.",
+      "effort": "Medium",
+      "pipelineChange": "large for the main board (collapses a spatial axis — plots/roads/autotiler/townMaps coords lose meaning, needs a different scene type) but small as a SECONDARY 'main street' screen alongside the plot grid.",
+      "prosForUs": [
+        "SIMPLEST building art — one flat front per building, no angled faces, no iso math; reference (c) drops in directly",
+        "Reads instantly as 'a shop'/'a cottage' — great for a clickable shopfront row or upgradeable town strip",
+        "Parallax layers give cheap depth and a strong night-time sense of place (lit windows)",
+        "Maps cleanly to a horizontal 'street' where each tier adds another storefront — easy to show GROWTH"
+      ],
+      "consForUs": [
+        "A pure side-on town is a different game shape than a top-down draggable board — best as a SCREEN, not the puzzle board",
+        "Side view discards the depth axis, so 'placing buildings on plots' becomes 'arranging a row' — may not fit the plot-grid model",
+        "Flat facades alone feel like paper-doll cutouts without parallax/overlap/lit windows",
+        "Doesn't combine with the existing diamond/grid plot system without a mode switch"
+      ],
+      "gameExamples": [
+        {
+          "name": "Terraria",
+          "url": "https://store.steampowered.com/app/105600/Terraria/"
+        },
+        {
+          "name": "Starbound",
+          "url": "https://www.thegamer.com/rpgs-town-building/"
+        },
+        {
+          "name": "Kingdom: New Lands",
+          "url": "https://store.steampowered.com/app/496300/Kingdom_New_Lands/"
+        },
+        {
+          "name": "Regions of Ruin",
+          "url": "https://www.thegamer.com/rpgs-town-building/"
+        }
+      ],
+      "assetImplications": "Author each building as a flat front elevation (orthographic, no perspective) with an optional lit-window/emissive layer; add 2-3 parallax background layers (sky, far hills, near foliage). Minimal art cost per building; use overlap + drop shadows + size variation to avoid a flat sticker-row.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/41/Graphical_projection_comparison.png",
+      "imageLicense": "CC BY-SA 3.0 / GFDL 1.2+. Author: SharkD. Source: https://commons.wikimedia.org/wiki/File:Graphical_projection_comparison.png (includes orthographic side/front elevations)"
+    },
+    {
+      "id": "pure-sideview-platformer",
+      "name": "Pure side-on platformer view (Mario / Sonic / Terraria movement)",
+      "family": "side-elevation",
+      "description": "The classic platformer/side-scroller view: camera level with the horizon, gameplay confined to a vertical XY plane (left/right + jump). A unit cube reads as a single side face; depth faked only with parallax. Included for completeness as the disambiguation outlier — cozy farm/life sims CAN be side-view (Spiritfarer, Kynseed), so 'cozy farm sim' does not imply top-down. Wrong genre for a top-down plot board.",
+      "angle": "0 deg — camera level with the horizon, pure orthographic side elevation",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Side sprite + horizontal flip for the other direction -> 1-2 facings, very cheap.",
+      "effort": "Medium",
+      "pipelineChange": "total-rewrite for a town LAYOUT — cannot represent a 2D plot/farm grid; a different genre and scene type entirely.",
+      "prosForUs": [
+        "Cheapest art (one side view + flip)",
+        "Great character personality in silhouette",
+        "Trivial 2D physics/grid"
+      ],
+      "consForUs": [
+        "Cannot represent a 2D town LAYOUT / farm grid — wrong genre for puzzleDrag2",
+        "No sense of a plot of land you build out",
+        "Only a vertical slice of the world is visible"
+      ],
+      "gameExamples": [
+        {
+          "name": "Super Mario Bros.",
+          "url": "https://en.wikipedia.org/wiki/Super_Mario_Bros."
+        },
+        {
+          "name": "Sonic the Hedgehog",
+          "url": "https://en.wikipedia.org/wiki/Sonic_the_Hedgehog_(1991_video_game)"
+        },
+        {
+          "name": "Spiritfarer",
+          "url": "https://store.steampowered.com/app/972660/Spiritfarer_Farewell_Edition/"
+        },
+        {
+          "name": "Kynseed",
+          "url": "https://store.steampowered.com/app/758870/Kynseed/"
+        }
+      ],
+      "assetImplications": "Author side-profile sprites; flip horizontally for the opposite direction; layer parallax backgrounds for depth. Not applicable to a buildable town grid.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "dome-keeper-crosssection",
+      "name": "Side-on single-screen cross-section (Dome Keeper)",
+      "family": "side-elevation",
+      "description": "A focused single-screen variant of side-elevation: the playfield is a clean vertical cross-section (surface dome on top, mined caverns below) in crisp, well-lit pixel art — a tight, composed single framed diorama-strip rather than a scrolling world. Relevant if a town screen wants to be one framed strip where vertical growth (build up/down) is instantly legible.",
+      "angle": "pure side-on cross-section, single composed screen",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Zero — one side view per asset.",
+      "effort": "Medium",
+      "pipelineChange": "large for the main board (single-screen cross-section is a different scene concept than the 40x30 explorable plot grid); niche fit.",
+      "prosForUs": [
+        "Single-screen composed framing is simple to lay out and very readable",
+        "Cross-section makes vertical growth/upgrades instantly legible — could map to settlement tiers stacking",
+        "Crisp pixel art, no rotation or iso math"
+      ],
+      "consForUs": [
+        "Very specific to a cut-away mining fantasy; less natural for a cozy surface town",
+        "Single-screen limits the sprawling-town feeling the growth goal wants",
+        "Niche look, weak fit for the plot-grid board"
+      ],
+      "gameExamples": [
+        {
+          "name": "Dome Keeper",
+          "url": "https://store.steampowered.com/app/1637320/Dome_Keeper/"
+        }
+      ],
+      "assetImplications": "Author a fixed single-screen composition with flat side-on building/terrain sprites and one consistent light direction; emphasize clear silhouettes since everything shares one frame. Minimal per-asset cost.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "front-elevation-frieze",
+      "name": "Front-elevation 'shopfront row' diorama (presentation screen)",
+      "family": "front-elevation",
+      "description": "Buildings presented head-on as a row of facades (a 'main street' frieze) arranged left-to-right with no ground perspective — a presentation/diorama style for shop menus, town selectors or storybook spreads rather than a navigable world. A unit cube reads as a flat square front. Charming for a 'visit the shops' / town-directory screen; reuses the flat front building art with zero distortion. Best as a SECONDARY screen paired with the playable board.",
+      "angle": "0 deg head-on frontal; no depth axis (or a token shadow)",
+      "tileShape": "none",
+      "rotation": "none(fixed)",
+      "rotationCost": "1 front sprite per building, no facings — cheapest possible.",
+      "effort": "Low",
+      "pipelineChange": "small as a SECONDARY presentation screen (a horizontal row, trivial layout reusing the v2kit); not a spatial world, so it can't replace the plot board.",
+      "prosForUs": [
+        "Maximum facade charm/readability — great for a shop row / town directory / storybook screen",
+        "Reuses flat front building art (v2kit) directly with zero distortion",
+        "Dead simple layout (a horizontal row), trivial to compose"
+      ],
+      "consForUs": [
+        "Not a spatial world: can't represent a 2D plot/farm layout or movement",
+        "No depth -> feels like a menu/diorama, not a place you build",
+        "Best as a SECONDARY presentation screen, not the main board"
+      ],
+      "gameExamples": [
+        {
+          "name": "Animal Crossing (Main Street shop row)",
+          "url": "https://en.wikipedia.org/wiki/Animal_Crossing"
+        },
+        {
+          "name": "2.5D (facade-row presentation)",
+          "url": "https://en.wikipedia.org/wiki/2.5D"
+        }
+      ],
+      "assetImplications": "Author flat front facades only, arrange in a horizontal row with a baseline + optional ground strip + cast shadow. Ideal for a shop/town-directory screen using the existing elevation kit; pair with the 3/4 board for the playable world.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "tilt-shift-diorama",
+      "name": "Tilt-shift miniature diorama filter (Link's Awakening 2019 / Parkitect)",
+      "family": "hybrid",
+      "description": "A presentation FILTER, not a projection: blur the extreme foreground/background while keeping a focused middle band, tricking the eye into reading the world as a tiny physical model (photographic miniature faking). Aonuma used it for Link's Awakening to make a small world feel like a hand-built diorama; Parkitect exposes it as a slider. Pairs best with rounded, toy/Playmobil-like, slightly oversaturated shapes and warm night lighting. Layers over EITHER a top-down or isometric base without changing the projection.",
+      "angle": "camera-agnostic; sharp center band, progressive blur toward near/far edges over any base angle",
+      "tileShape": "none",
+      "rotation": "none(fixed)",
+      "rotationCost": "N/A — it's a post filter, not tied to sprite rotation; applies over any moving camera.",
+      "effort": "Low-Medium",
+      "pipelineChange": "small — a post-process shader layered over the existing board; no grid/autotiler/townMaps change. GOTCHA: blurring crisp low-res pixels looks like a smudge (the project's 'town smudge' golden failure) — must render/blur at higher internal res then downscale; bottom-edge blur can hide interactive tiles.",
+      "prosForUs": [
+        "Cheapest path to the 'cozy miniature town' feeling — a post shader over the existing board, no projection change or art redraw",
+        "Strongly reinforces the diorama/toy-town vibe",
+        "Tunable (slider) — subtle or strong; works over top-down or iso",
+        "Pairs beautifully with warm night lighting and bloom"
+      ],
+      "consForUs": [
+        "A garnish, not a structure — alone it doesn't make a town 'grow' or read as buildings; needs a good underlying layout",
+        "Pixel art + heavy blur fights (smudge risk) unless rendered hi-res then downscaled",
+        "Overuse looks gimmicky; bottom blur can hide gameplay-relevant tiles on an interactive board"
+      ],
+      "gameExamples": [
+        {
+          "name": "The Legend of Zelda: Link's Awakening (2019)",
+          "url": "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_Link's_Awakening_(2019_video_game)"
+        },
+        {
+          "name": "The Plucky Squire",
+          "url": "https://www.resetera.com/threads/what-are-some-video-games-with-a-tilt-shift-or-miniature-toy-aesthetic.964152/"
+        },
+        {
+          "name": "Parkitect",
+          "url": "https://www.resetera.com/threads/what-are-some-video-games-with-a-tilt-shift-or-miniature-toy-aesthetic.964152/"
+        }
+      ],
+      "assetImplications": "Favor rounded, chunky toy-like silhouettes and slightly exaggerated, warm, oversaturated palettes; render/blur at higher internal resolution then downscale so the tilt-shift doesn't mud the pixels. No new sprites for the effect itself.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "hd2d-octopath",
+      "name": "HD-2D (Octopath / Square Enix diorama 2.5D)",
+      "family": "3D-rendered",
+      "description": "Pixel-art character/prop sprites (billboards) placed inside a fully 3D-rendered environment, then post-processed with tilt-shift, depth of field, bloom, volumetric light/fog, real point-light shadows and parallax so the frame reads like a lit tabletop diorama / pop-up book. Coined by Square Enix for Octopath Traveler. Towns are 3D geometry dressed with 2D facade/prop sprites — a built set, not a tilemap. Highest perceived production value.",
+      "angle": "~45-60 deg low-to-ground tilt with a WIDE FOV that flattens the scene while preserving depth; tilt-shift focal plane blurs near/far",
+      "tileShape": "none",
+      "rotation": "free",
+      "rotationCost": "Free for camera moves (the scene is real 3D; character/object sprites are billboards that auto-face the camera). In practice Octopath keeps a near-fixed angle and only swings during set-pieces.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — true HD-2D needs a real 3D scene + lighting pipeline; Phaser is 2D, so this means a 3D layer (Three.js/Babylon) or faking DOF/tilt-shift with shaders. Billboard auto-facing sprites fight a believable building row (buildings usually become 3D meshes/angled planes). Conflicts with already-baked-light seasonal tiles.",
+      "prosForUs": [
+        "Highest perceived production value — instantly reads as premium / 'a cut above other pixel games'",
+        "Tilt-shift + DOF + warm point-lights are exactly the cozy-lantern-night-town mood",
+        "2D sprites can stay hand-pixeled while lighting/atmosphere is done in-engine — a small team punches above its weight",
+        "Camera can gently move for drama without re-authoring art (billboards auto-face)"
+      ],
+      "consForUs": [
+        "Requires a real 3D scene + lighting pipeline — a large jump from the current tilemap board",
+        "Billboard sprites that always face camera fight a believable 'building row' — buildings become 3D meshes/angled cards, not flat front sprites",
+        "Authoring tilt-shift/DOF/bloom convincingly is finicky; done badly it looks like a cheap blur",
+        "Conflicts with the baked-light seasonal tiles; overkill for a 2D drag-puzzle loop"
+      ],
+      "gameExamples": [
+        {
+          "name": "Octopath Traveler / HD-2D",
+          "url": "https://en.wikipedia.org/wiki/HD-2D"
+        }
+      ],
+      "assetImplications": "Sprites authored flat (front-facing billboards) but lit-neutral so engine point-lights/shadows do the shading — conflicts with the project's baked-season tiles that already bake their own light. Ground/buildings become 3D geometry or angled cards. You stop authoring a tile atlas and start authoring a lit scene.",
+      "embeddableImageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/41/Graphical_projection_comparison.png",
+      "imageLicense": "CC BY-SA 3.0 / GFDL 1.2+. Author: SharkD. Source: https://commons.wikimedia.org/wiki/File:Graphical_projection_comparison.png"
+    },
+    {
+      "id": "paper-mario-billboard",
+      "name": "3D world with billboarded 2D pixel sprites (Paper-Mario / 2.5D), rotatable",
+      "family": "hybrid",
+      "description": "A true 3D environment (real ground mesh, real depth) populated by flat 2D pixel-art sprites that billboard toward the camera, a la Paper Mario / Snacko. Because the world is 3D the camera can orbit and zoom freely while characters/props stay charming pixel cutouts — one of the few ways to keep pixel art AND a rotatable camera. Kainga shows the same trick with a free-orbit camera, at the cost that billboards read as thin 'cardboard cutouts' when orbited (fine for small characters, jarring for big buildings).",
+      "angle": "3/4 perspective 3D camera, free orbit + zoom",
+      "tileShape": "none",
+      "rotation": "free",
+      "rotationCost": "Free for the world (it's 3D). Sprites are drawn once (a single billboarded front) — you avoid a hand-drawn rotation set, but billboards look flat at oblique angles and big buildings read as cardboard cutouts on rotation.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite of the engine — requires a real 3D engine + billboard system + 3D ground beneath the sprites; abandons Phaser's 2D tilemap board, though it keeps the 2D pixel art itself.",
+      "prosForUs": [
+        "Keeps the beloved pixel-art aesthetic while allowing FREE camera rotation",
+        "3D handles depth/occlusion/lighting automatically",
+        "Cheaper art than full 3D: keep painting 2D, only terrain/props that must read 3D become meshes"
+      ],
+      "consForUs": [
+        "Requires a real 3D engine — a wholesale departure from the Phaser 2D board",
+        "Billboarded sprites look flat/like thin cardboard at oblique angles — bad for large buildings",
+        "Far more engineering than a cozy puzzle board warrants; still needs 3D terrain"
+      ],
+      "gameExamples": [
+        {
+          "name": "Snacko",
+          "url": "https://store.steampowered.com/app/1125510/Snacko/"
+        },
+        {
+          "name": "Don't Starve",
+          "url": "https://forums.kleientertainment.com/forums/topic/56775-is-there-a-name-for-the-games-2d-as-3d-animation-style/"
+        },
+        {
+          "name": "Kainga: Seeds of Civilization",
+          "url": "https://store.steampowered.com/app/1269710/Kainga_Seeds_of_Civilization/"
+        },
+        {
+          "name": "Cassette Beasts",
+          "url": "https://www.cassettebeasts.com/2021/08/09/technical-look-the-park/"
+        },
+        {
+          "name": "Songs of Conquest",
+          "url": "https://80.lv/articles/mixing-2d-billboards-and-3d-environments-in-a-game"
+        }
+      ],
+      "assetImplications": "Build a 3D terrain/scene; author 2D sprites that billboard (always face camera) or have enough angles to survive rotation. You inherit 3D engine complexity (lighting, depth-sort, collision) but keep 2D art. Not a fit for Phaser-2D without an engine change.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "sprite-stacking",
+      "name": "Sprite-stacking (voxel-from-sprites, rotatable pseudo-3D)",
+      "family": "hybrid",
+      "description": "A voxel model sliced into horizontal cross-sections; the slices are drawn bottom-to-top each offset slightly, creating a fake-3D volume that rotates 360 deg in real time. The only listed 2D-ish style that gives FREE rotation of buildings without per-angle hand art — but the look is inherently chunky/voxel, not crisp hand-pixel, and reads best only when the camera actually moves. Tools: SpriteStack.io / MagicaVoxel pipelines.",
+      "angle": "high-angle ~3/4 that must tilt enough to separate the stacked slices into apparent height; the whole stack rotates freely",
+      "tileShape": "none",
+      "rotation": "free",
+      "rotationCost": "Free 360 rotation, but N slices per object (memory/draw cost) and it needs a moving camera to justify it.",
+      "effort": "High",
+      "pipelineChange": "large — adopt a voxel toolchain (MagicaVoxel/SpriteStack) for buildings; the engine draws N offset slices per object and rotates them; a big departure from the 2D tile workflow and the crisp hand-pixel identity.",
+      "prosForUs": [
+        "The only 2D-ish style giving FREE 360 rotation of buildings without redrawing per angle",
+        "Buildings become little turnable models — very 'toy diorama' in motion",
+        "Some artists prefer authoring stacked slices over angled hand-iso"
+      ],
+      "consForUs": [
+        "Inherently voxel/chunky — clashes hard with the project's crisp seasonal hand-pixel identity",
+        "Many slices per object (memory/draw cost) and needs a moving camera to justify it; a static cozy town doesn't benefit",
+        "Big pipeline change (voxel modeling); hard to make it read cozy/warm"
+      ],
+      "gameExamples": [
+        {
+          "name": "Delver (sprite-stacking)",
+          "url": "https://www.creativebloq.com/3d/video-game-design/this-technique-for-making-2d-pixel-art-look-3d-is-blowing-peoples-minds"
+        },
+        {
+          "name": "SpriteStack.io (tool)",
+          "url": "https://spritestack.io/"
+        }
+      ],
+      "assetImplications": "Model objects as voxels or hand-author horizontal slices; engine draws N offset slices per object and rotates them. Light baked into voxel colors. A different pipeline from tile sprites.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "render3d-pixelate",
+      "name": "Low-poly 3D + pixelation post-process (A Short Hike)",
+      "family": "3D-rendered",
+      "description": "Build a low-poly 3D world with flat cohesive shading, no AA, soft outlines, then apply an adjustable PIXELATION post-process. You get a chunky retro/pixel LOOK with full free camera rotation — the strongest 'have your pixel cake and rotate it too' route — but the source assets are 3D meshes and the 'pixels' are a shader, so the hand-painted seasonal-tile craft would not transfer.",
+      "angle": "free-ish 3D third-person; default near-iso tilt, free rotate",
+      "tileShape": "none",
+      "rotation": "free",
+      "rotationCost": "Free in 3D — the pixel look is a screen-space filter on real geometry, so rotation costs nothing and the retro look is preserved.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — low-poly 3D models + a pixelation/flat-shade shader; abandons Phaser-2D and the PixelLab hand-pixel pipeline (the seasonal hand-painted tiles wouldn't transfer; pixels become a shader).",
+      "prosForUs": [
+        "Strongest template for 'retro/pixel look + free rotation': render low-poly 3D, pixelate in post",
+        "Adjustable pixel size = tunable aesthetic; outlines keep readability",
+        "Free occlusion handling and screenshot framing"
+      ],
+      "consForUs": [
+        "The art is 3D meshes, not hand-drawn sprites — pixels are a shader, not the source art",
+        "Hand-painted seasonal-tile craft wouldn't transfer directly",
+        "Full pipeline + engine change away from the current board"
+      ],
+      "gameExamples": [
+        {
+          "name": "A Short Hike",
+          "url": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/"
+        }
+      ],
+      "assetImplications": "Low-poly 3D models + a screen-space pixelation/flat-shade shader. The most relevant 'pixel + rotation' route, but assets are 3D meshes.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "fixed-angle-3d",
+      "name": "Fixed-angle 3D, 3/4 top-down, NO rotation (Coral Island / Fae Farm)",
+      "family": "3D-rendered",
+      "description": "Full 3D models and lighting, but the camera is deliberately pinned to one Stardew-style 3/4 angle and cannot be rotated by the player (zoom only). Looks like an HD/3D evolution of the classic farm-sim view. Coral Island shipped at 42.5->37.5 deg; Fae Farm and AC:NH are also effectively fixed-angle. The framing is the closest 3D analog to puzzleDrag2's fixed-angle 2D board — and it proves even 3D cozy games choose fixed for readability/art direction.",
+      "angle": "fixed ~37-42 deg downward 3/4 tilt; zoom allowed, no orbit",
+      "tileShape": "square",
+      "rotation": "none(fixed)",
+      "rotationCost": "Free in 3D to add rotation, but these games deliberately LOCK it to one 3/4 angle to preserve a readable Stardew-like layout. Back faces can be optimized/cheated since you only see one angle.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — requires 3D assets + engine; not compatible with the current 2D Phaser board. Useful mainly as a CAMERA-FEEL reference for the fixed-angle 2D board.",
+      "prosForUs": [
+        "Framing matches the project's fixed-angle readable board (good reference for camera feel)",
+        "3D lighting/seasons for free",
+        "Proof that even full-3D cozy games deliberately choose a fixed angle"
+      ],
+      "consForUs": [
+        "Requires 3D assets + engine; incompatible with the current 2D Phaser board",
+        "Fixed angle still causes occlusion that flat 2D front-on art avoids",
+        "Loses the pixel-art cozy charm"
+      ],
+      "gameExamples": [
+        {
+          "name": "Coral Island",
+          "url": "https://steamcommunity.com/app/1158160/discussions/0/3953658857079015271/"
+        },
+        {
+          "name": "Fae Farm",
+          "url": "https://www.nintendo.com/us/store/products/fae-farm-switch/"
+        },
+        {
+          "name": "Animal Crossing: New Horizons",
+          "url": "https://www.nintendo.com/us/store/products/animal-crossing-new-horizons-switch/"
+        }
+      ],
+      "assetImplications": "Author full 3D building/prop models seen from one angle (back faces optimizable). Grid conceptually square. Not the project's pipeline, but the framing is the closest 3D analog to the fixed-angle 2D board.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "curved-world-acnh",
+      "name": "Curved-world fixed-angle 3D (Animal Crossing rolling-log model)",
+      "family": "hybrid",
+      "description": "A 3D world where the camera is NOT free: it snaps among a few discrete fixed angles (AC:NH = 3) and lerps between them, with a vertex-displacement 'curved world' shader bending terrain so each angle shows roughly the same amount and the horizon stays hidden. Buildings have ground-level entrances to fit the curvature. It supports SOME angle choice while keeping a tightly art-directed, always-flattering frame — but players still grumble about occlusion, so rotation doesn't fully satisfy the desire it promises.",
+      "angle": "a few discrete fixed pitch presets (3) + horizontal rotate; world geometry curved to hide the horizon",
+      "tileShape": "none",
+      "rotation": "4-way",
+      "rotationCost": "3D content cost, but rotation is constrained to a handful of authored angles, so per-angle tuning is bounded. In a 2D pixel project this degrades to 'a few hand-drawn angles' = the 4-way ~2.5-4x cost, with none of the shader's free framing.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — the curved-world vertex shader only pays off in real 3D; in 2D pixel it collapses to authoring multiple hand-drawn angles (the diamond/iso 4-way cost) without the shader benefit.",
+      "prosForUs": [
+        "Constrains rotation to a few flattering, art-directed frames — keeps a cozy composed look while giving SOME angle choice",
+        "Bounded per-angle work vs free rotation; always-good framing",
+        "Proven cozy-game model balancing control vs art direction"
+      ],
+      "consForUs": [
+        "The curved-world shader only pays off in real 3D; in 2D pixel it collapses back to multiple hand-drawn angles (4-way ~2.5-4x cost) with none of the shader's free framing",
+        "Players still complain about occlusion even WITH this model — so it doesn't fully 'solve' rotation",
+        "Still a meaningful engine + asset investment for a nice-to-have"
+      ],
+      "gameExamples": [
+        {
+          "name": "Animal Crossing: New Horizons (curved world)",
+          "url": "https://github.com/skylarbeaty/curved-world"
+        },
+        {
+          "name": "Curved-world shader recreations (Bevy)",
+          "url": "https://github.com/bevyengine/bevy/discussions/10062"
+        }
+      ],
+      "assetImplications": "Buildings/terrain authored to look right only at the chosen fixed angles (entrances at bottom); requires a curved-world vertex shader + per-angle camera tuning. In 2D pixel it degrades to the 4-way hand-drawn cost.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "hex-lowpoly-3d",
+      "name": "Hex tiles (low-poly 3D, Dorfromantik) / hex projection family",
+      "family": "isometric/dimetric",
+      "description": "A hexagonal tile grid. Dorfromantik renders clean low-poly 3D hexes (houses, fields, rivers, rail) at an iso-ish default tilt with free orbit — a proven cozy tile-placement formula. Edge sockets (river/road/field) must line up across rotations. PixelLab also supports hex/hex_pointy tiles via create_tiles_pro for a 2D pixel route. Hex breaks the square-grid board model and the autotiler entirely.",
+      "angle": "iso-ish default tilt (free orbit in the 3D version)",
+      "tileShape": "hex",
+      "rotation": "free",
+      "rotationCost": "Free in 3D (each hex is a small mesh). For a 2D pixel hex board, tiles author once; edge-socket art must read across the 6 neighbour directions.",
+      "effort": "High",
+      "pipelineChange": "large — hex breaks the square 40x30 grid, the screen transform, and the roadAutotile (square 8-neighbour) entirely; a hex autotiler + 6-neighbour socket system and a re-laid-out townMaps are needed. The 3D version also abandons Phaser-2D.",
+      "prosForUs": [
+        "Hex + low-poly 3D is a proven cozy tile-placement formula with free rotation",
+        "Edge-socket discipline maps conceptually to autotiler thinking",
+        "PixelLab supports hex/hex_pointy for a 2D route"
+      ],
+      "consForUs": [
+        "Hex breaks the square-grid board model and the roadAutotile/townMaps coords",
+        "Edge sockets must read from every (3D) angle / 6 neighbours",
+        "3D version abandons Phaser-2D; a large departure either way"
+      ],
+      "gameExamples": [
+        {
+          "name": "Dorfromantik",
+          "url": "https://store.steampowered.com/app/1455840/Dorfromantik/"
+        }
+      ],
+      "assetImplications": "Author hex tiles (2D pixel via PixelLab create_tiles_pro, or low-poly 3D meshes) with matching edge sockets so river/road/field line up across neighbours. Re-lay-out townMaps on a hex grid; build a hex autotiler.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "townscaper-quadmesh",
+      "name": "Curved/irregular-grid free-orbit 3D mesh (Townscaper)",
+      "family": "3D-rendered",
+      "description": "The canonical 'rotation is free because it's real 3D' case. Blocks are placed on an irregular quadrilateral grid (a hex grid subdivided into quads, then jittered); the engine assembles true 3D meshes live via Wave Function Collapse + marching-cubes corner placement, so the camera orbits smoothly 360 deg (a soft near-iso default tilt). Buildings are authored as 300+ modular CORNER segments with adjacency rules, not whole-building sprites — you cannot use flat pre-drawn building sprites.",
+      "angle": "~60 deg default tilt, fully free orbit (no snap)",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "free",
+      "rotationCost": "Free in 3D (real mesh re-rendered from any angle at zero art cost). The one cost: buildings are authored as 300+ modular corner pieces assembled live, not whole sprites.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — needs a 3D mesh + WFC/marching-cubes pipeline and a real 3D renderer; cannot use flat pixel sprites at all. Far heavier than a 2D Phaser board.",
+      "prosForUs": [
+        "Proof that free rotation + a cozy curated look CAN coexist — but only via real 3D meshes",
+        "Modular corner-piece approach yields huge variety from a small authored set",
+        "Defines the modern cozy-builder look"
+      ],
+      "consForUs": [
+        "Completely abandons flat pixel sprites — requires a 3D mesh + WFC pipeline and a real 3D renderer",
+        "Far heavier engineering than a 2D Phaser board",
+        "No reuse of the existing pixel art"
+      ],
+      "gameExamples": [
+        {
+          "name": "Townscaper",
+          "url": "https://www.townscapergame.com/"
+        },
+        {
+          "name": "Islanders",
+          "url": "https://en.wikipedia.org/wiki/Islanders_(video_game)"
+        },
+        {
+          "name": "Tiny Glade",
+          "url": "https://store.steampowered.com/app/2198150/Tiny_Glade/"
+        }
+      ],
+      "assetImplications": "Author small modular 3D corner pieces with adjacency/connection rules + WFC constraints, plus stencil-cut details and procedurally-scattered props. Style lives in the mesh + shading, not a 2D canvas.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "full-3d-free-orbit",
+      "name": "Full 3D, free-orbiting camera (Cities: Skylines / Timberborn / Against the Storm)",
+      "family": "3D-rendered",
+      "description": "Real 3D building meshes on 3D terrain with a free-orbiting, free-pitching camera (and free building rotation with R). Rotation is genuinely free because the GPU re-renders existing geometry from any angle at zero ART cost — the cost moves entirely upstream to a heavyweight 3D asset pipeline (per-building mesh + LOD + diffuse/normal/spec textures, per Cities: Skylines modding docs) and a real 3D engine. The 'far end' of the spectrum for a town builder; abandons Phaser-2D and pixel art.",
+      "angle": "free orbit + free pitch, near-ground to top-down",
+      "tileShape": "square",
+      "rotation": "free",
+      "rotationCost": "Zero per-angle art multiply — one mesh serves every camera angle and every building facing. Cost = building real 3D models/LODs/textures and a 3D engine.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — Phaser 2D + sprite/tilemap pipeline abandoned for a 3D renderer; TownScene, townMaps, autotiler and the React canvas bridge become irrelevant; PixelLab cannot author meshes. Zero reuse of existing pixel work.",
+      "prosForUs": [
+        "The only family where camera + building rotation is genuinely FREE",
+        "Highest production ceiling / 'premium cozy builder' feel; trivial day/dusk + dynamic shadows",
+        "Square-grid colony layout maps well to a farming/town game (Timberborn)"
+      ],
+      "consForUs": [
+        "Total tech change: abandons Phaser-2D + sprite/tilemap; TownScene/townMaps/autotiler/canvas bridge irrelevant",
+        "PixelLab cannot author it — discards seasonal tiles, building SVGs, Tuxemon, the whole pixel pipeline",
+        "Maximal art + engineering cost; mismatched with a pixel-art identity; we don't even rotate today so the benefit is unused"
+      ],
+      "gameExamples": [
+        {
+          "name": "Cities: Skylines",
+          "url": "https://cslmodding.info/asset/building/"
+        },
+        {
+          "name": "Timberborn",
+          "url": "https://timberborn.fandom.com/wiki/Key_Bindings"
+        },
+        {
+          "name": "Against the Storm",
+          "url": "https://hoodedhorse.com/wiki/Against_the_Storm/Tutorial_Walkthrough"
+        },
+        {
+          "name": "Foundation",
+          "url": "https://store.steampowered.com/app/690830/Foundation/"
+        },
+        {
+          "name": "Going Medieval",
+          "url": "https://foxyvoxel.io/games/going-medieval/"
+        }
+      ],
+      "assetImplications": "Every building/tile becomes a 3D mesh + materials (+ LOD + PBR-ish textures) authored to look correct from all sides; real-time lighting/shadows replace baked pixel shading. Totally incompatible with the current architecture.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "4way-rotatable-iso",
+      "name": "4-way rotatable isometric (SimCity 4 / Pharaoh — the rotation-with-2D-sprites path)",
+      "family": "isometric/dimetric",
+      "description": "The classic 'rotatable isometric' for a 2D sprite engine: the world snaps between 4 fixed iso orientations (90 deg steps); the player presses rotate and every building swaps to its sprite for that facing. It genuinely solves occlusion (rotate to see behind a tower) but is the canonical proof of the art-multiply rule — SimCity 4's Building Architect Tool exports EACH building as 40 images (4 rotations x 5 zooms x day/night). Pharaoh added 4 cardinal views; Caesar III itself had none. This is the only way to get camera rotation while staying a 2D sprite game, at ~4x building art.",
+      "angle": "iso angle (2:1 dimetric typical), snapped to 4 quarter-turns",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "4-way",
+      "rotationCost": "~2.5-4x art per building (front + back + two sides; diagonals rarely mirror for architecture). For puzzleDrag2 it also multiplies the SEASONAL output: a tile with 4 seasons x 4 facings = 16 stills before idles/transitions.",
+      "effort": "Very High",
+      "pipelineChange": "total-rewrite — the diamond-grid rewrite of dimetric PLUS the autotiler, road-growth, river/bridge and farm-parcel logic in townMaps.ts all become orientation-aware; per-angle visual goldens quadruple (and goldens already aren't regenerable on this host).",
+      "prosForUs": [
+        "Real benefit: rotate to see behind tall buildings / back rows — fixes the genuine occlusion pain point while staying a 2D sprite game",
+        "Enables satisfying screenshot framing without going full 3D",
+        "4 snapped angles keep crisp pixel art (no sub-pixel shimmer)"
+      ],
+      "consForUs": [
+        "~2.5-4x art on EVERY building PLUS 4x the seasonal-tile output (stills/idles/transitions per facing) — multiplies the most expensive asset work",
+        "Autotiler/road-growth/river/bridge/farm logic must all become orientation-aware — large engine rewrite",
+        "Per-angle visual goldens quadruple (already non-regenerable on this host)",
+        "Cozy-farming players don't expect or demand it"
+      ],
+      "gameExamples": [
+        {
+          "name": "SimCity 4 (Building Architect Tool)",
+          "url": "https://wiki.sc4devotion.com/index.php?title=Building_Architect_Tool"
+        },
+        {
+          "name": "Pharaoh",
+          "url": "https://en.wikipedia.org/wiki/Pharaoh_(video_game)"
+        },
+        {
+          "name": "RollerCoaster Tycoon 2",
+          "url": "https://www.spriters-resource.com/pc_computer/rollercoastertycoon2/"
+        },
+        {
+          "name": "Block'hood",
+          "url": "https://en.wikipedia.org/wiki/Block'hood"
+        }
+      ],
+      "assetImplications": "Each asymmetric building needs 4 pre-drawn faces (or 2 + mirrors if symmetric, which buildings rarely are); seasonal sets multiply 4x; the autotiler/road/river/farm logic must resolve in all 4 orientations; per-angle QA quadruples.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    },
+    {
+      "id": "mirror-flip-pseudorotation",
+      "name": "Mirror-only pseudo-rotation (horizontal flip)",
+      "family": "oblique/axonometric",
+      "description": "Not true world rotation — a cheap trick where a single sprite is reflected horizontally (Phaser setFlipX) to face the other diagonal/direction. Universal for characters (walk-left = flipped walk-right) and some symmetric props that 'face' two ways. The camera/world never turns. Breaks on anything asymmetric (lettering, a one-side door, baked light direction), which then needs a real hand-authored variant. A near-free way to give townsfolk/animals/symmetric props two facings.",
+      "angle": "unchanged (fixed) base angle; sprite horizontally flipped for the opposite facing",
+      "tileShape": "diamond(rhombus)",
+      "rotation": "none(fixed)",
+      "rotationCost": "~1x for symmetric assets (flip is free at runtime); ~1.5x for 'handed' assets needing a real second draw to avoid mirrored-text/wrong-light giveaways.",
+      "effort": "Low",
+      "pipelineChange": "none — runtime setFlipX; no grid/autotiler/townMaps change. Applies on top of whatever base projection is chosen.",
+      "prosForUs": [
+        "Essentially free for symmetric props/animals — Phaser setFlipX, no new assets",
+        "Lets townsfolk/animal sprites face both directions cheaply (a need the project already has)",
+        "Adds 'placed facing left vs right' variety for near-zero cost"
+      ],
+      "consForUs": [
+        "Not real rotation — world/camera angle unchanged, so it doesn't solve occlusion or screenshot framing",
+        "Baked light direction flips with the sprite; highlight ends up on the wrong side for shaded pixel buildings",
+        "Asymmetric buildings (most of the set) gain nothing and need real redraws"
+      ],
+      "gameExamples": [
+        {
+          "name": "How many sprites do different perspectives need (analysis)",
+          "url": "https://cxong.github.io/2022/03/how-many-sprites-do-different-perspectives-need"
+        },
+        {
+          "name": "Sun Haven (rotatable furniture = discrete variants/flips)",
+          "url": "https://sun-haven.fandom.com/wiki/Furniture/Rotatable"
+        }
+      ],
+      "assetImplications": "Symmetric props/townsfolk get a free second facing via flipX; asymmetric ones (signage, porches, directional shading) must be redrawn or they look obviously mirrored with inverted light. Useful for characters and a few symmetric decorations, not a building-rotation substitute.",
+      "embeddableImageUrl": "",
+      "imageLicense": ""
+    }
+  ],
+  "referenceGames": [
+    {
+      "name": "Stardew Valley",
+      "view": "3/4 high top-down, square grid, front-faced billboard buildings, fixed camera (the canonical cozy-farm idiom and puzzleDrag2's current model)",
+      "url": "https://store.steampowered.com/app/413150/Stardew_Valley/"
+    },
+    {
+      "name": "The Legend of Zelda: A Link to the Past",
+      "view": "SNES three-quarter overhead, square grid",
+      "url": "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_A_Link_to_the_Past"
+    },
+    {
+      "name": "Sun Haven",
+      "view": "2D pixel 3/4 top-down farm sim, fixed camera; 'rotatable' furniture is discrete flip variants",
+      "url": "https://store.steampowered.com/app/1432860/Sun_Haven/"
+    },
+    {
+      "name": "Fields of Mistria",
+      "view": "HD pixel-art 'bird's-eye' 3/4 top-down farm/life sim, fixed camera",
+      "url": "https://en.wikipedia.org/wiki/Fields_of_Mistria"
+    },
+    {
+      "name": "Roots of Pacha",
+      "view": "2D pixel top-down/bird's-eye farm sim, front-on structures, fixed camera",
+      "url": "https://store.steampowered.com/app/1245560/Roots_of_Pacha/"
+    },
+    {
+      "name": "Littlewood",
+      "view": "2D pixel top-down town-builder/life sim, fixed camera",
+      "url": "https://store.steampowered.com/app/894940/Littlewood/"
+    },
+    {
+      "name": "Tuxemon",
+      "view": "open-source GSC-style 3/4 top-down; source of puzzleDrag2's tileset",
+      "url": "https://opengameart.org/content/tuxemon-tileset"
+    },
+    {
+      "name": "Sea of Stars",
+      "view": "2D pixel 3/4 top-down + real dynamic lighting & water reflections at 640x360 (the in-2D 'premium' lighting upgrade)",
+      "url": "https://www.megavisions.net/the-art-of-sea-of-stars-a-sea-of-pixels/"
+    },
+    {
+      "name": "Eastward",
+      "view": "top-down 2D pixel art + Pixpil deferred 3D lighting (fog, god-rays, dusk warmth) — incremental lighting upgrade path",
+      "url": "https://www.gamedeveloper.com/art/eastward-s-creators-share-insights-on-making-pixel-art-adventures"
+    },
+    {
+      "name": "Graveyard Keeper",
+      "view": "3/4 top-down pixel art with hand-painted normal maps + dynamic lights, fixed camera",
+      "url": "https://www.pcgamingwiki.com/wiki/Graveyard_Keeper"
+    },
+    {
+      "name": "CrossCode",
+      "view": "oblique 'free-iso' on a square grid with a separate height axis + drop shadows, fixed camera",
+      "url": "https://www.radicalfishgames.com/presskit/sheet.php?p=crosscode"
+    },
+    {
+      "name": "Moonlighter",
+      "view": "front-readable oblique pixel-art shop/dungeon, square grid, fixed camera",
+      "url": "https://store.steampowered.com/app/606150/Moonlighter/"
+    },
+    {
+      "name": "SimCity (Classic, 1989)",
+      "view": "cabinet-oblique city, square ground footprint, fixed camera, 1 sprite/building",
+      "url": "https://en.wikipedia.org/wiki/SimCity_(1989_video_game)"
+    },
+    {
+      "name": "EarthBound",
+      "view": "iconic oblique/near-cabinet overworld on a square grid",
+      "url": "https://en.wikipedia.org/wiki/EarthBound"
+    },
+    {
+      "name": "Ultima VII",
+      "view": "oblique (front-true) world, classic example",
+      "url": "https://en.wikipedia.org/wiki/Ultima_VII"
+    },
+    {
+      "name": "SimCity 2000",
+      "view": "archetypal 2:1 dimetric pixel city builder, fixed camera, diamond grid",
+      "url": "https://en.wikipedia.org/wiki/SimCity_2000"
+    },
+    {
+      "name": "RollerCoaster Tycoon",
+      "view": "2:1 dimetric pixel sprites with 4-way rotation (pre-rendered per facing)",
+      "url": "https://en.wikipedia.org/wiki/RollerCoaster_Tycoon_(video_game)"
+    },
+    {
+      "name": "TheoTown",
+      "view": "fixed 64x32 isometric pixel-art city builder, custom 2D engine, no rotation",
+      "url": "https://store.steampowered.com/app/1084020/TheoTown/"
+    },
+    {
+      "name": "Pocket City",
+      "view": "fixed 2:1 isometric 2D sprites, pan+zoom only, no rotation",
+      "url": "https://blog.pocketcitygame.com/isometric-city-art-first-look/"
+    },
+    {
+      "name": "Habbo Hotel",
+      "view": "fixed dimetric isometric pixel rooms; furni has only limited placement orientations, room never rotates",
+      "url": "https://help.habbo.com/hc/en-us/articles/360018234739-Habbo-Camera-"
+    },
+    {
+      "name": "Project Zomboid",
+      "view": "2D dimetric, blank-backed single-direction sprites, no camera rotation (devs cite art cost)",
+      "url": "https://pzwiki.net/wiki/Isometric_Development"
+    },
+    {
+      "name": "Age of Empires II",
+      "view": "dimetric 2D sprites rendered from 3D; UNITS rotate, BUILDINGS rendered one direction only (the key cost asymmetry)",
+      "url": "https://www.forgottenempires.net/age-of-empires-definitive-edition-is-it-a-3d-or-a-2d-game"
+    },
+    {
+      "name": "Diablo II",
+      "view": "2:1 dimetric; world fixed, actors pre-rendered in 16 directions (spend rotation budget on small actors, never buildings)",
+      "url": "https://en.wikipedia.org/wiki/Isometric_video_game_graphics"
+    },
+    {
+      "name": "SimCity 4",
+      "view": "4-way rotatable dimetric; Building Architect Tool exports 40 images/building (4 rot x 5 zoom x day/night) — the canonical art-multiply proof",
+      "url": "https://wiki.sc4devotion.com/index.php?title=Building_Architect_Tool"
+    },
+    {
+      "name": "Pharaoh",
+      "view": "isometric city builder with discrete 90-deg map rotation (4 cardinal views); Caesar III had none",
+      "url": "https://en.wikipedia.org/wiki/Pharaoh_(video_game)"
+    },
+    {
+      "name": "Cozy Grove",
+      "view": "hand-drawn 2D isometric, FIXED camera — beloved precisely for a single-angle painterly look",
+      "url": "https://store.steampowered.com/app/1458100/Cozy_Grove/"
+    },
+    {
+      "name": "Bastion",
+      "view": "hand-painted 2D isometric, fixed camera (premium hand-drawn art requires fixed view)",
+      "url": "https://en.wikipedia.org/wiki/Bastion_(video_game)"
+    },
+    {
+      "name": "Octopath Traveler (HD-2D)",
+      "view": "pixel billboards in a 3D scene + tilt-shift/DOF/bloom/point-lights; camera can move, near-fixed angle",
+      "url": "https://en.wikipedia.org/wiki/HD-2D"
+    },
+    {
+      "name": "The Legend of Zelda: Link's Awakening (2019)",
+      "view": "tilt-shift miniature/diorama filter over a 3D toy-town, near-fixed angle",
+      "url": "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_Link's_Awakening_(2019_video_game)"
+    },
+    {
+      "name": "Snacko",
+      "view": "Paper-Mario 2.5D: 3D world + billboarded 2D pixel sprites, rotatable camera (keep pixels AND rotate)",
+      "url": "https://store.steampowered.com/app/1125510/Snacko/"
+    },
+    {
+      "name": "Kainga: Seeds of Civilization",
+      "view": "2D billboard characters on low-poly 3D terrain, free orbit (cardboard-cutout artifact on rotation)",
+      "url": "https://store.steampowered.com/app/1269710/Kainga_Seeds_of_Civilization/"
+    },
+    {
+      "name": "A Short Hike",
+      "view": "low-poly 3D + pixelation post-process, free third-person rotation (pixel LOOK + rotation, but assets are 3D)",
+      "url": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/"
+    },
+    {
+      "name": "Coral Island",
+      "view": "full 3D farm sim but DELIBERATELY fixed 3/4 bird's-eye (42.5->37.5 deg), zoom only, no rotation",
+      "url": "https://steamcommunity.com/app/1158160/discussions/0/3953658857079015271/"
+    },
+    {
+      "name": "Animal Crossing: New Horizons",
+      "view": "3D + curved-world vertex shader, 3 fixed pitch presets + horizontal rotate; players still want more (rotation doesn't fully satisfy)",
+      "url": "https://github.com/skylarbeaty/curved-world"
+    },
+    {
+      "name": "Townscaper",
+      "view": "true 3D irregular-quad mesh (WFC + marching cubes), free 360 orbit; cozy + free rotation, but no flat sprites",
+      "url": "https://www.townscapergame.com/"
+    },
+    {
+      "name": "Dorfromantik",
+      "view": "low-poly 3D HEX tiles, iso-ish default tilt with free orbit (cozy hex tile-placement)",
+      "url": "https://store.steampowered.com/app/1455840/Dorfromantik/"
+    },
+    {
+      "name": "Timberborn",
+      "view": "full 3D Unity colony builder, free orbit + 90-deg snaps + R to rotate buildings (rotation free in 3D)",
+      "url": "https://timberborn.fandom.com/wiki/Key_Bindings"
+    },
+    {
+      "name": "Against the Storm",
+      "view": "full 3D roguelite settlement builder, orbitable camera + free building rotation",
+      "url": "https://hoodedhorse.com/wiki/Against_the_Storm/Tutorial_Walkthrough"
+    },
+    {
+      "name": "Cities: Skylines",
+      "view": "full 3D city builder, free orbit/pitch; modding docs spell out the per-building mesh+LOD+texture cost of 3D rotation",
+      "url": "https://cslmodding.info/asset/building/"
+    },
+    {
+      "name": "Terraria",
+      "view": "2D side-on world; NPC towns are stacked front-elevation cutaway houses (shopfront/side-elevation family)",
+      "url": "https://store.steampowered.com/app/105600/Terraria/"
+    },
+    {
+      "name": "Kingdom: New Lands",
+      "view": "cozy side-scrolling kingdom/town builder, fixed side elevation, parallax depth",
+      "url": "https://store.steampowered.com/app/496300/Kingdom_New_Lands/"
+    },
+    {
+      "name": "Spiritfarer",
+      "view": "2D hand-drawn SIDE-VIEW management/life sim (cozy farm sim is not necessarily top-down)",
+      "url": "https://store.steampowered.com/app/972660/Spiritfarer_Farewell_Edition/"
+    },
+    {
+      "name": "Dome Keeper",
+      "view": "side-on single-screen cross-section (surface dome + underground), crisp pixel art, no rotation",
+      "url": "https://store.steampowered.com/app/1637320/Dome_Keeper/"
+    },
+    {
+      "name": "Delver",
+      "view": "sprite-stacking (voxel-from-sprites) pseudo-3D with free 360 rotation, chunky voxel look",
+      "url": "https://www.creativebloq.com/3d/video-game-design/this-technique-for-making-2d-pixel-art-look-3d-is-blowing-peoples-minds"
+    },
+    {
+      "name": "Monument Valley",
+      "view": "orthographic isometric 3D (military/planometric-adjacent), rotatable geometry snapping to iso angles",
+      "url": "https://en.wikipedia.org/wiki/Monument_Valley_(video_game)"
+    },
+    {
+      "name": "Fallout (1997)",
+      "view": "trimetric 2D world (all three axes different) — pre-rendered, fixed orientation",
+      "url": "https://en.wikipedia.org/wiki/Fallout_(video_game)"
+    }
+  ],
+  "embeddableImages": [
+    {
+      "label": "Graphical projection comparison — one building rendered through orthographic / isometric / dimetric / trimetric / oblique / perspective (best single overview figure; covers top-down, side elevation, trimetric, HD-2D base)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/41/Graphical_projection_comparison.png",
+      "license": "CC BY-SA 3.0 / GFDL 1.2+",
+      "attribution": "Author: SharkD",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Graphical_projection_comparison.png"
+    },
+    {
+      "label": "True isometric camera view at 35.264 degrees (atan(sin45)) — illustrates the true-iso camera tilt",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Isometric_camera_view_35.264_degrees_color.png",
+      "license": "CC BY-SA 4.0 (also GFDL 1.2 / other CC)",
+      "attribution": "Author: SharkD",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Isometric_camera_view_35.264_degrees_color.png"
+    },
+    {
+      "label": "Isometric vs Dimetric vs oblique-front projection axis schemes (good for the 2:1 dimetric 'pixel isometric' variant)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/87/Isometric_Dimetric_oblique_front_projection.svg",
+      "license": "Public domain",
+      "attribution": "Author: Yuri Raysper (Yuri r)",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Isometric_Dimetric_oblique_front_projection.svg"
+    },
+    {
+      "label": "Cabinet projection of a cube above a plane (half-depth oblique — the cabinet-oblique variant)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/29/Cabinet_projection_of_cube_above_plane.svg",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Authors: SharkD, updated by Datumizer",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Cabinet_projection_of_cube_above_plane.svg"
+    },
+    {
+      "label": "Cabinet/cavalier 45-degree oblique (NOTE: filename says cabinet but the Commons page text describes cavalier/full-depth at 45 deg — verify before captioning)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/32/Cabinet_perspective_45.svg",
+      "license": "CC BY-SA 3.0 + GFDL 1.2+",
+      "attribution": "Author: Mosca2 (derived from de.wikipedia Kavalierperspektive)",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Cabinet_perspective_45.svg"
+    },
+    {
+      "label": "Oblique vs orthographic cube above plane (clean labeled oblique reference for cavalier/cabinet)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/?title=File:Oblique_projection_comparison_top.svg",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Author: Datumizer",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Oblique_projection_comparison_top.svg"
+    },
+    {
+      "label": "Military (planometric) projection — 45-degree plan rotation, un-foreshortened true square top",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Milit%C3%A4rperspektive.svg",
+      "license": "CC BY 4.0",
+      "attribution": "Author: Wittiko",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Milit%C3%A4rperspektive.svg"
+    },
+    {
+      "label": "3D shapes in isometric projection with true-vs-drawn dimensions (extra isometric reference)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/?title=File:3D_shapes_in_isometric_projection.svg",
+      "license": "CC BY-SA 3.0",
+      "attribution": "Author: Cmglee",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:3D_shapes_in_isometric_projection.svg"
+    },
+    {
+      "label": "Comparison of graphical projections — the full taxonomy flowchart (parallel -> ortho/oblique -> iso/dimetric/trimetric + cavalier/cabinet/military); ideal master taxonomy figure",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/?title=File:Comparison_of_graphical_projections.svg",
+      "license": "CC BY-SA 4.0 / GFDL",
+      "attribution": "Authors: Cmglee + Datumizer",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Comparison_of_graphical_projections.svg"
+    }
+  ]
+}
