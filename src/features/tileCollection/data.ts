@@ -712,3 +712,46 @@ export const TILE_TYPES_BY_CATEGORY = Object.fromEntries(
 export const CATEGORY_OF = Object.fromEntries(
   TILE_TYPES.map((t) => [t.baseResource, t.category]),
 );
+
+// One background tint per tile category — the single source of truth for the
+// board-tile background and the tile-collection grid. Every tile in a category
+// shares its background so the board reads by category at a glance, instead of
+// each individual tile picking its own tint. The board only ever shows one
+// active tile per category at a time (see getActivePool), so distinct tiles on
+// screen never collapse to the same color. Categories that co-occur on one
+// board (all 10 farm categories; the 6+ mine categories) are kept visually
+// well separated; the per-resource `look.color` still drives incidental
+// effects like collect-particle bursts.
+export const TILE_CATEGORY_COLORS: Record<string, number> = {
+  // Farm — up to ten of these share the farm board, so spread across the wheel.
+  grass: 0x6fa838,         // meadow green
+  grain: 0xe0bf3e,         // wheat gold
+  vegetables: 0xd97b32,    // garden orange
+  fruits: 0xd44b48,        // orchard red
+  flowers: 0xd96bb0,       // blossom pink
+  trees: 0x357d4e,         // deep forest green
+  bird: 0xd9a85c,          // feather tan
+  herd_animals: 0xc97e7a,  // pasture rose
+  cattle: 0x9c6230,        // cattle brown
+  mounts: 0x6f86b0,        // steed slate blue
+  // Mine — these co-occur on the mine board, so each ore reads distinctly.
+  mine_stone: 0x8a9098,    // cool stone grey
+  mine_iron_ore: 0xa3795a, // rusted iron
+  mine_coal: 0x4a4f57,     // charcoal black
+  mine_gem: 0x9b59c4,      // amethyst purple
+  mine_gold: 0xe8c33a,     // metallic gold
+  special_dirt: 0x7a5236,  // turned earth
+  treasure: 0xf0a83a,      // coin amber
+  // Fish biome — single category.
+  fish: 0x3f9cb5,          // ocean teal
+};
+
+// Background color for a tile, shared across its canonical tile category.
+// Non-tile keys, and any tile whose category has no registered color (e.g.
+// copper ore, which isn't a tile-collection category), fall back to the
+// resource's own look.color, then a neutral grey, so nothing renders untinted.
+export function tileBackgroundColor(res: { key?: string; look?: { color?: number } }): number {
+  const cat = res?.key ? (CATEGORY_OF as Record<string, string | undefined>)[res.key] : undefined;
+  if (cat && cat in TILE_CATEGORY_COLORS) return TILE_CATEGORY_COLORS[cat];
+  return res?.look?.color ?? 0x888888;
+}

@@ -1,4 +1,5 @@
-import { TILE, BIOMES, tileBackgroundColor } from "./constants.js";
+import { TILE, BIOMES } from "./constants.js";
+import { tileBackgroundColor } from "./features/tileCollection/data.js";
 import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
