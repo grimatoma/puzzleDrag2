@@ -12,7 +12,7 @@
 // built matrices, which already carry the `changed` flag per cell.
 
 import { buildAllCostMatrices } from "./costMatrix.js";
-import type { CostMatrix, CostOverrides } from "./costMatrix.js";
+import type { CostColumnsByMatrix, CostMatrix, CostOverrides } from "./costMatrix.js";
 
 export interface CostChange {
   matrixId: string;
@@ -110,9 +110,12 @@ export function renderMarkdown(changes: CostChange[]): string {
   return lines.join("\n");
 }
 
-/** Build the full report for a set of staged overrides. */
-export function buildCostReport(overrides: CostOverrides = {}): CostReport {
-  const matrices = buildAllCostMatrices(overrides);
+/** Build the full report for a set of staged overrides (+ any added columns). */
+export function buildCostReport(
+  overrides: CostOverrides = {},
+  extraColumns: CostColumnsByMatrix = {},
+): CostReport {
+  const matrices = buildAllCostMatrices(overrides, extraColumns);
   const changes = collectChanges(matrices);
   return {
     matrices,

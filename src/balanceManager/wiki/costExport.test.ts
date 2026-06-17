@@ -46,6 +46,20 @@ describe("buildCostReport", () => {
     const report = buildCostReport({ "BUILDINGS.mill.cost.plank": baseline });
     expect(report.count).toBe(0);
   });
+
+  it("exports a value staged on a user-added column", () => {
+    // gems is a currency no building natively costs — add it as a column, then
+    // stage a value on the mill. It must surface as a regular change.
+    const report = buildCostReport(
+      { "BUILDINGS.mill.cost.gems": 4 },
+      { buildings: ["gems"] },
+    );
+    const change = report.changes.find((c) => c.path === "BUILDINGS.mill.cost.gems");
+    expect(change, "expected the added-column edit to be collected").toBeTruthy();
+    expect(change!.from).toBe(0);
+    expect(change!.to).toBe(4);
+    expect(JSON.parse(report.json)["BUILDINGS.mill.cost.gems"]).toBe(4);
+  });
 });
 
 describe("collectChanges / renderJsonPatch", () => {

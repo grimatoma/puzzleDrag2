@@ -19,6 +19,7 @@ import React, { useState } from "react";
 import { COLORS, SmallButton } from "../../shared.jsx";
 import { useWikiView } from "../wikiView.js";
 import { useCostEdits } from "../costEditsStore.js";
+import { useCostColumns } from "../costColumnsStore.js";
 import { buildCostReport } from "../costExport.js";
 import type { CostReport } from "../costExport.js";
 import { CostMatrixCard } from "./CostMatrixCard.jsx";
@@ -118,8 +119,17 @@ export function CostMatrixPage() {
   const { view } = useWikiView();
   const editable = view === "developer";
   const { edits, clearAll } = useCostEdits();
-  const report = buildCostReport(edits);
+  const { columns, clearAll: clearAllColumns } = useCostColumns();
+  const report = buildCostReport(edits, columns);
   const [showExport, setShowExport] = useState(false);
+
+  // Reset clears the whole scratch pad — staged values AND any added columns.
+  const hasColumns = Object.values(columns).some((arr) => arr && arr.length > 0);
+  const canReset = report.count > 0 || hasColumns;
+  const resetAll = () => {
+    clearAll();
+    clearAllColumns();
+  };
 
   return (
     <div className="wiki-cost-page flex flex-col gap-4">
@@ -151,7 +161,7 @@ export function CostMatrixPage() {
           <SmallButton variant="primary" disabled={report.count === 0} onClick={() => setShowExport(true)}>
             Export changes…
           </SmallButton>
-          <SmallButton variant="ghost" disabled={report.count === 0} onClick={clearAll}>
+          <SmallButton variant="ghost" disabled={!canReset} onClick={resetAll}>
             Reset all
           </SmallButton>
         </div>

@@ -5,9 +5,17 @@ import {
   buildResourceCostMatrix,
   buildCostMatrix,
   buildAllCostMatrices,
+  costColumnOptions,
   VALUE_COL,
 } from "./costMatrix.js";
 import type { CostMatrix } from "./costMatrix.js";
+
+/** First pickable resource/currency key not already a column of `matrix`. */
+function firstUnusedColumnKey(matrix: CostMatrix): string {
+  const opt = costColumnOptions(matrix.columns.map((c) => c.key)).flatMap((g) => g.options)[0];
+  expect(opt, "expected at least one pickable column option").toBeTruthy();
+  return opt!.key;
+}
 
 function row(matrix: CostMatrix, id: string) {
   const r = matrix.rows.find((x) => x.id === id);
@@ -97,6 +105,60 @@ describe("buildResourceCostMatrix", () => {
   });
 });
 
+describe("extra (user-added) columns", () => {
+  it("appends an editable column for a resource no building natively costs", () => {
+    const base = buildBuildingCostMatrix();
+    const key = firstUnusedColumnKey(base);
+
+    const m = buildBuildingCostMatrix({}, [key]);
+    const col = m.columns.find((c) => c.key === key);
+    expect(col, `expected an added "${key}" column`).toBeTruthy();
+    expect(col!.extra).toBe(true);
+
+    const mill = row(m, "mill");
+    const cell = mill.cells[key];
+    expect(cell.editable).toBe(true);
+    expect(cell.original).toBe(0);
+    expect(cell.editPath).toBe(`BUILDINGS.mill.cost.${key}`);
+  });
+
+  it("does not flag a natural column as extra", () => {
+    const m = buildBuildingCostMatrix({}, ["coins"]); // coins is already natural
+    expect(m.columns.find((c) => c.key === "coins")!.extra).toBeFalsy();
+  });
+
+  it("threads added columns through tools and resources", () => {
+    const toolKey = firstUnusedColumnKey(buildToolCostMatrix());
+    const tools = buildToolCostMatrix({}, [toolKey]);
+    const drill = row(tools, "drill");
+    expect(drill.cells[toolKey].editable).toBe(true);
+    expect(drill.cells[toolKey].editPath).toBe(`RECIPES.rec_drill.inputs.${toolKey}`);
+
+    const resKey = firstUnusedColumnKey(buildResourceCostMatrix());
+    const resources = buildResourceCostMatrix({}, [resKey]);
+    expect(resources.columns.find((c) => c.key === resKey)!.extra).toBe(true);
+  });
+
+  it("ignores an added column already present in the catalog", () => {
+    const before = buildBuildingCostMatrix();
+    const after = buildBuildingCostMatrix({}, ["plank"]); // plank already a column
+    expect(after.columns.length).toBe(before.columns.length);
+  });
+});
+
+describe("costColumnOptions", () => {
+  it("groups currencies + resources and excludes keys already present", () => {
+    const groups = costColumnOptions([]);
+    expect(groups.map((g) => g.group)).toContain("Currencies");
+    expect(groups.map((g) => g.group)).toContain("Resources");
+
+    // Excluding coins drops it from the currency group.
+    const withoutCoins = costColumnOptions(["coins"]).flatMap((g) => g.options).map((o) => o.key);
+    expect(withoutCoins).not.toContain("coins");
+    expect(costColumnOptions([]).flatMap((g) => g.options).map((o) => o.key)).toContain("coins");
+  });
+});
+
 describe("buildCostMatrix / buildAllCostMatrices", () => {
   it("dispatches by id", () => {
     expect(buildCostMatrix("buildings").id).toBe("buildings");
@@ -107,5 +169,17 @@ describe("buildCostMatrix / buildAllCostMatrices", () => {
   it("builds all three with one override set", () => {
     const all = buildAllCostMatrices();
     expect(all.map((m) => m.id)).toEqual(["buildings", "tools", "resources"]);
+  });
+
+  it("applies a per-matrix extra-columns map", () => {
+    // Pick a key unused by BOTH buildings and tools so the per-matrix isolation
+    // assertion can't be confounded by a shared natural column.
+    const used = [...buildBuildingCostMatrix().columns, ...buildToolCostMatrix().columns].map((c) => c.key);
+    const key = costColumnOptions(used).flatMap((g) => g.options)[0].key;
+
+    const [buildings, tools] = buildAllCostMatrices({}, { buildings: [key] });
+    expect(buildings.columns.some((c) => c.key === key && c.extra)).toBe(true);
+    // The map is per-matrix — tools should be untouched.
+    expect(tools.columns.some((c) => c.key === key)).toBe(false);
   });
 });

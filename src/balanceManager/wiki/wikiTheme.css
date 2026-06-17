@@ -1461,11 +1461,8 @@
   scroll-margin-top: 64px;
 }
 
-/* Sticky action bar — stays pinned under the header while the grids scroll. */
+/* Action bar — scrolls with the page (no longer pinned to the top). */
 .wiki-root .wiki-cost-actionbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1473,8 +1470,7 @@
   flex-wrap: wrap;
   padding: 8px 12px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--wiki-parchment) 92%, transparent);
-  backdrop-filter: blur(4px);
+  background: var(--wiki-parchment);
   border: 1px solid var(--wiki-border);
   box-shadow: var(--wiki-shadow-card);
 }
@@ -1553,6 +1549,65 @@
   text-overflow: ellipsis;
 }
 
+/* User-added column header — tinted accent so extra columns read as staging. */
+.wiki-root .wiki-cost-th--extra {
+  background: color-mix(in srgb, var(--wiki-ember) 10%, var(--wiki-parchment-deep));
+}
+
+/* Remove (×) button on a user-added column header */
+.wiki-root .wiki-cost-colremove {
+  margin-top: 1px;
+  width: 15px;
+  height: 15px;
+  line-height: 1;
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--wiki-ink-subtle);
+  background: transparent;
+  border: 1px solid var(--wiki-border);
+  cursor: pointer;
+}
+
+.wiki-root .wiki-cost-colremove:hover {
+  color: var(--wiki-ember-deep);
+  border-color: var(--wiki-ember);
+  background: color-mix(in srgb, var(--wiki-ember) 14%, transparent);
+}
+
+/* Trailing add-column header cell */
+.wiki-root .wiki-cost-th--add {
+  min-width: 132px;
+  vertical-align: middle;
+}
+
+.wiki-root .wiki-cost-addcol {
+  width: 100%;
+  max-width: 130px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--wiki-ink);
+  background: var(--wiki-parchment);
+  border: 1px dashed var(--wiki-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.wiki-root .wiki-cost-addcol:hover:not(:disabled) {
+  border-color: var(--wiki-ember);
+  border-style: solid;
+}
+
+.wiki-root .wiki-cost-addcol:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Row header (sticky first column) */
 .wiki-root .wiki-cost-rowhead {
   position: sticky;
@@ -1573,6 +1628,16 @@
 .wiki-root .wiki-cost-rowhead__name {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Building row glyph — holds the inline-SVG illustration at a fixed size. */
+.wiki-root .wiki-cost-rowhead__glyph {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 /* Context (read-only) cells */
@@ -1735,10 +1800,4 @@
   line-height: 1.5;
   white-space: pre;
   overflow: auto;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wiki-root .wiki-cost-actionbar {
-    backdrop-filter: none;
-  }
 }
