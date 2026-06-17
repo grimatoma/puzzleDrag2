@@ -3,6 +3,30 @@
 Distilled research for designing a settlement that grows from forest outpost to city in a cozy,
 cheerful game. Companion to `SKILL.md`.
 
+## 0. Roads-first — the structural backbone (read this first)
+
+Coherent towns are built **roads → blocks → buildings**, never buildings-then-connect-them.
+
+- **Burgage plots.** Medieval towns laid the high street first, then subdivided the *frontage* into narrow
+  street-facing lots with depth behind. Buildings face the street; roads run between them. Same idea in
+  **Manor Lords** (draw a plot region, it subdivides the frontage into dwellings).
+- **Procedural pipeline (Parish & Müller; Watabou).** Grow the road network with local constraints
+  (no crossing segments, snap near-intersections, keep minimum frontage), *then* subdivide each
+  road-bounded block into lots by its shorter axis, enforcing a minimum frontage edge and a sane
+  aspect ratio (≈1:0.5 … 1:3). Watabou's village generator is "Parish & Müller with the L-systems
+  scrapped" — road-centric, houses placed sparsely *along* roads.
+- **Concrete ratios.** Road width hierarchy: main/high street ~6–8 m, secondary lanes ~4–6 m, back lanes
+  ~3–4 m. Building setback from the road ~2–5 m. Lot frontage ~ minimum 5–8 m; depth ≈ 1.4× frontage. To
+  place a building beside a road: take a point on the segment, offset perpendicular by
+  `road_width/2 + setback + building_depth/2`; do both sides for a dual-fronted street.
+- **Growth = new routes, not just more houses.** Stage it: **hamlet** = one high street (ribbon); **village**
+  = add perpendicular back lanes / secondary lanes at T-junctions; **town/city** = add a ring/loop or
+  cross-connectors knitting blocks, infill, cobble the centre. Roads are **immutable** once laid; each
+  stage only extends the network, which is what makes the growth read.
+- **The fix for the three classic failures:** roads crossing buildings → never route a road to a building
+  centroid (front them instead); buildings too dense → enforce minimum frontage + spacing; central square
+  overrunning its surroundings → lock the plaza size and densify the *ring* around it.
+
 ## 1. Organic layout (non-grid but readable)
 
 Cozy/settlement games that feel alive reject the rigid grid while staying legible through intentional
@@ -96,3 +120,9 @@ puzzleDrag2 home reference curve: **3 → 6 → 12 → 20**.
 - Game Balance Concepts, Pacing — https://gamebalanceconcepts.wordpress.com/2010/08/18/level-7-advancement-progression-and-pacing/
 - Burgess concentric-zone model — https://www.simplypsychology.org/burgess-concentric-zone-model.html
 - Manor Lords, burgage plots — https://www.gamerguides.com/manor-lords/guide/basics/buildings/burgage-plots-guide-levels-designs-extensions-and-more
+- Burgage plots (medieval frontage) — https://www.burgageplots.info/ · https://ruralhistoria.com/2023/12/04/what-is-a-medieval-burgage-plot/
+- Parish & Müller, Procedural Modeling of Cities — https://cgl.ethz.ch/Downloads/Publications/Papers/2001/p_Par01.pdf
+- Procedural lot subdivision (frontage + aspect rules) — https://martindevans.me/game-development/2015/12/27/Procedural-Generation-For-Dummies-Lots/
+- Watabou village generator — https://watabou.itch.io/village-generator
+- Ribbon development (linear main-street growth) — https://en.wikipedia.org/wiki/Ribbon_development
+- Medieval market squares (bounded plaza, perimeter buildings) — https://www.maloriesadventures.com/blog/the-medieval-market-square-why-every-great-european-city-has-one-and-what-they-were-actually-for/
