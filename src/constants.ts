@@ -204,7 +204,7 @@ export const DEFAULT_HOME_BIOME = "prairie";
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 44;
+export const SAVE_SCHEMA_VERSION = 45;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,

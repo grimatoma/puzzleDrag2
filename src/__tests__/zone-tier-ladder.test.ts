@@ -19,11 +19,11 @@ import { TOWN_MAPS, getTownMap, authoredLotCount } from "../ui/town/townMaps.js"
 beforeEach(() => global.localStorage.clear());
 
 describe("tier helpers", () => {
-  it("home has a 3-rung ladder, quarry a 4-rung ladder", () => {
-    expect(tiersForZone("home").map((t) => t.id)).toEqual(["hamlet", "village", "city"]);
-    expect(maxTier("home")).toBe(2);
-    expect(tiersForZone("quarry").map((t) => t.id)).toEqual(["dig_site", "mining_camp", "boomtown", "foundry_city"]);
-    expect(maxTier("quarry")).toBe(3);
+  it("home and quarry each have a 6-rung ladder (PC2 Camp→Manor)", () => {
+    expect(tiersForZone("home").map((t) => t.id)).toEqual(["camp", "settlement", "village", "town", "city", "manor"]);
+    expect(maxTier("home")).toBe(5);
+    expect(tiersForZone("quarry").map((t) => t.id)).toEqual(["dig_site", "prospect", "mining_camp", "boomtown", "smeltworks", "foundry_city"]);
+    expect(maxTier("quarry")).toBe(5);
   });
 
   it("un-tiered zones report no ladder", () => {
@@ -32,17 +32,17 @@ describe("tier helpers", () => {
   });
 
   it("plotsForTier returns the rung's total plots", () => {
-    expect(plotsForTier("home", 0)).toBe(6);
-    expect(plotsForTier("home", 1)).toBe(12);
-    expect(plotsForTier("home", 2)).toBe(20);
-    expect(plotsForTier("quarry", 0)).toBe(4);
-    expect(plotsForTier("quarry", 3)).toBe(12);
+    expect(plotsForTier("home", 0)).toBe(3);
+    expect(plotsForTier("home", 1)).toBe(6);
+    expect(plotsForTier("home", 5)).toBe(20);
+    expect(plotsForTier("quarry", 0)).toBe(2);
+    expect(plotsForTier("quarry", 5)).toBe(12);
   });
 
   it("unlockedBuildings accumulates rung-by-rung", () => {
     expect(unlockedBuildings("home", 0)).toContain("hearth");
-    expect(unlockedBuildings("home", 0)).not.toContain("forge"); // forge is a City unlock
-    expect(unlockedBuildings("home", 2)).toContain("forge");
+    expect(unlockedBuildings("home", 0)).not.toContain("forge"); // forge is a City (tier 4) unlock
+    expect(unlockedBuildings("home", 4)).toContain("forge");
     // rung 1 is a strict superset of rung 0
     const r0 = new Set(unlockedBuildings("home", 0));
     expect(unlockedBuildings("home", 1).filter((b) => r0.has(b)).length).toBe(r0.size);
@@ -98,8 +98,8 @@ describe("authored town maps", () => {
   });
 
   it("home and quarry are fully authored across all rungs", () => {
-    expect(TOWN_MAPS.home).toHaveLength(3);
-    expect(TOWN_MAPS.quarry).toHaveLength(4);
+    expect(TOWN_MAPS.home).toHaveLength(6);
+    expect(TOWN_MAPS.quarry).toHaveLength(6);
     for (const zoneId of ["home", "quarry"]) {
       tiersForZone(zoneId).forEach((_t, tier) => expect(getTownMap(zoneId, tier)).not.toBeNull());
     }
@@ -109,34 +109,45 @@ describe("authored town maps", () => {
 describe("TIER_UP reducer", () => {
   const atHome = (over = {}) => ({ ...createInitialState(), mapCurrent: "home", activeZone: "home", ...over });
 
-  it("upgrades a rung, deducting coins + zone-inventory resources", () => {
-    // Read the Village (tier 1) cost from the ladder so this survives balance tuning.
-    const villageCost = currentTierDef("home", 1)!.upgradeCost!;
-    const coinCost = villageCost.coins ?? 0;
-    const [resKey, resQty] = Object.entries(villageCost.resources ?? {})[0];
-    let s = atHome({ coins: coinCost + 2000 });
-    s = patchInventory(s, { [resKey]: resQty + 50 }, "home");
+  it("upgrades a rung, deducting all zone-inventory resources (resource-only)", () => {
+    // Read the Settlement (tier 1) cost from the ladder so this survives balance tuning.
+    const resources = currentTierDef("home", 1)!.upgradeCost!.resources ?? {};
+    expect(Object.keys(resources).length).toBeGreaterThan(0);
+    let s = atHome({ coins: 500 });
+    const patch: Record<string, number> = {};
+    for (const [k, v] of Object.entries(resources)) patch[k] = v + 5;
+    s = patchInventory(s, patch, "home");
     expect(settlementTier(s, "home")).toBe(0);
     s = rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } });
     expect(settlementTier(s, "home")).toBe(1);
-    expect(s.coins).toBe(coinCost + 2000 - coinCost);
-    expect(inv(s, "home")[resKey]).toBe(resQty + 50 - resQty);
+    expect(s.coins).toBe(500); // resource-only — coins untouched
+    for (const [k, v] of Object.entries(resources)) {
+      expect(inv(s, "home")[k]).toBe(v + 5 - v);
+    }
   });
 
-  it("is a no-op when coins are short (state unchanged)", () => {
-    let s = atHome({ coins: 100 });
-    s = patchInventory(s, { hay_bundle: 200 }, "home");
-    expect(rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } })).toBe(s);
+  it("ignores coins — upgrades with 0 coins when resources suffice", () => {
+    const resources = currentTierDef("home", 1)!.upgradeCost!.resources ?? {};
+    let s = atHome({ coins: 0 });
+    const patch: Record<string, number> = {};
+    for (const [k, v] of Object.entries(resources)) patch[k] = v + 1;
+    s = patchInventory(s, patch, "home");
+    s = rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } });
+    expect(settlementTier(s, "home")).toBe(1);
   });
 
   it("is a no-op when resources are short (state unchanged)", () => {
-    const s = atHome({ coins: 5000 }); // no hay_bundle in inventory
+    const s = atHome({ coins: 5000 }); // empty inventory — missing the rung's resources
     expect(rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } })).toBe(s);
   });
 
   it("is a no-op at the top rung", () => {
-    let s = atHome({ coins: 999999, settlements: { home: { founded: true, tier: 2 } } });
-    s = patchInventory(s, { hay_bundle: 999, plank: 999 }, "home");
+    let s = atHome({ coins: 999999, settlements: { home: { founded: true, tier: 5 } } });
+    s = patchInventory(
+      s,
+      { hay_bundle: 999, plank: 999, iron_bar: 999, gold_bar: 999, cut_gem: 999, jade: 999, pearls: 999, honey: 999, horseshoe: 999 },
+      "home",
+    );
     expect(rootReducer(s, { type: "TIER_UP", payload: { zoneId: "home" } })).toBe(s);
   });
 

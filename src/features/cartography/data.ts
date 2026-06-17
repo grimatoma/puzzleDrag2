@@ -245,34 +245,42 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Brewery, BuildingId.Observatory,
     ],
     plotCount: 20,
-    // ── Town 1 ladder · 3 rungs (Hamlet → Village → City). The City rung
-    // equals today's flat home (20 plots + full buildings), so a fully-grown
-    // home is unchanged. Costs/plots are first-pass (see docs/zone-tier-ladder.html).
+    // ── Town 1 ladder · 6 rungs, PC2 Camp→Manor (PC2 cost port). Manor (tier 5)
+    // equals today's flat home (20 plots + full buildings). Costs are resource-only
+    // (coins=0), ported from PC2's Town Upgrades. Plots grow 3/6/9/12/16/20 and
+    // must match the authored maps in src/ui/town/townMaps.ts (test-enforced).
     tiers: [
       {
-        id: "hamlet", name: "Hamlet", plots: 6,
-        unlocks: [
-          BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Larder,
-          BuildingId.Bakery, BuildingId.Inn, BuildingId.Housing,
-        ],
+        id: "camp", name: "Camp", plots: 3,
+        unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Inn],
       },
       {
-        id: "village", name: "Village", plots: 12,
-        unlocks: [
-          BuildingId.Silo, BuildingId.Stable, BuildingId.Sawmill, BuildingId.Apiary,
-          BuildingId.Brewery, BuildingId.Watchtower, BuildingId.Chapel,
-        ],
-        upgradeCost: { coins: 600, resources: { hay_bundle: 15 } },
+        id: "settlement", name: "Settlement", plots: 6,
+        unlocks: [BuildingId.Larder, BuildingId.Bakery, BuildingId.Housing, BuildingId.Silo],
+        upgradeCost: { resources: { hay_bundle: 3, plank: 5, bread: 10, eggs: 4, soup: 2 } },
       },
       {
-        id: "city", name: "City", plots: 20,
+        id: "village", name: "Village", plots: 9,
+        unlocks: [BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Watchtower],
+        upgradeCost: { resources: { eggs: 10, soup: 4, meat: 2, block: 20, coke: 4, silver_bar: 4 } },
+      },
+      {
+        id: "town", name: "Town", plots: 12,
+        unlocks: [BuildingId.Brewery, BuildingId.Chapel, BuildingId.Housing2, BuildingId.Apothecary, BuildingId.Kitchen],
+        upgradeCost: { resources: { soup: 8, milk: 1, coke: 10, silver_bar: 10, cocoa: 2, ink: 2 } },
+      },
+      {
+        id: "city", name: "City", plots: 16,
+        unlocks: [BuildingId.Workshop, BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Housing3, BuildingId.ClockTower],
+        upgradeCost: { resources: { honey: 1, horseshoe: 1, block: 20, coke: 10, cut_gem: 1, gold_bar: 3, ink: 2 } },
+      },
+      {
+        id: "manor", name: "Manor", plots: 20,
         unlocks: [
-          BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Kitchen, BuildingId.Workshop,
-          BuildingId.PowderStore, BuildingId.Portal, BuildingId.ClockTower, BuildingId.Lighthouse,
-          BuildingId.Apothecary, BuildingId.Observatory, BuildingId.Housing2, BuildingId.Housing3,
+          BuildingId.PowderStore, BuildingId.Portal, BuildingId.Observatory, BuildingId.Lighthouse,
           BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
         ],
-        upgradeCost: { coins: 2000, resources: { plank: 18 } },
+        upgradeCost: { resources: { honey: 2, horseshoe: 2, iron_bar: 30, cut_gem: 3, gold_bar: 10, jade: 1, pearls: 1 } },
       },
     ],
   },
@@ -331,29 +339,39 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory, BuildingId.CaravanPost,
     ],
     plotCount: 12,
-    // ── Town 2 ladder · 4 rungs (Dig Site → Mining Camp → Boomtown → Foundry
-    // City). Locked until home reaches its City rung. plotCount above is the
-    // top rung (12). Costs/plots are first-pass (see docs/zone-tier-ladder.html).
-    requiresZoneTier: { zone: "home", tier: 2 },
+    // ── Town 2 ladder · 6 rungs, mine-themed (Dig Site → Foundry City). Locked
+    // until home reaches its City rung (now tier 4 of the 6-rung home ladder).
+    // plotCount above is the top rung (12). Costs are resource-only (mine goods).
+    requiresZoneTier: { zone: "home", tier: 4 },
     tiers: [
       {
-        id: "dig_site", name: "Dig Site", plots: 4,
-        unlocks: [BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Housing],
+        id: "dig_site", name: "Dig Site", plots: 2,
+        unlocks: [BuildingId.Hearth, BuildingId.Kitchen],
+      },
+      {
+        id: "prospect", name: "Prospect Camp", plots: 4,
+        unlocks: [BuildingId.Workshop, BuildingId.Inn],
+        upgradeCost: { resources: { block: 12, dirt: 8 } },
       },
       {
         id: "mining_camp", name: "Mining Camp", plots: 6,
-        unlocks: [BuildingId.Workshop, BuildingId.Forge, BuildingId.Inn, BuildingId.Watchtower],
-        upgradeCost: { coins: 500, resources: { block: 12 } },
+        unlocks: [BuildingId.Forge, BuildingId.Housing],
+        upgradeCost: { resources: { block: 16, iron_bar: 8, coke: 2 } },
       },
       {
         id: "boomtown", name: "Boomtown", plots: 8,
-        unlocks: [BuildingId.Barn, BuildingId.PowderStore, BuildingId.Housing2, BuildingId.Apothecary],
-        upgradeCost: { coins: 1500, resources: { iron_bar: 12 } },
+        unlocks: [BuildingId.Barn, BuildingId.Watchtower],
+        upgradeCost: { resources: { iron_bar: 12, coke: 6, silver_bar: 2 } },
+      },
+      {
+        id: "smeltworks", name: "Smeltworks", plots: 10,
+        unlocks: [BuildingId.PowderStore, BuildingId.Apothecary, BuildingId.Housing2],
+        upgradeCost: { resources: { iron_bar: 16, coke: 10, silver_bar: 6, cut_gem: 1 } },
       },
       {
         id: "foundry_city", name: "Foundry City", plots: 12,
-        unlocks: [BuildingId.Observatory, BuildingId.Housing3, BuildingId.CaravanPost],
-        upgradeCost: { coins: 3500, resources: { gold_bar: 8 } },
+        unlocks: [BuildingId.Observatory, BuildingId.CaravanPost, BuildingId.Housing3],
+        upgradeCost: { resources: { iron_bar: 20, gold_bar: 4, cut_gem: 3, silver_bar: 8 } },
       },
     ],
   },
