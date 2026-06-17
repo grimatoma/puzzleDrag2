@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run build:docs",
+    "build": "npm run build:prod && npm run build:dev",
+    "build:prod": "vite build && npm run build:docs",
+    "build:dev": "DEV_DEPLOY=1 vite build",
     "build:docs": "node tools/build-docs.mjs",
     "lint": "eslint src/ prototype.tsx --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
