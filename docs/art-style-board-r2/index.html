@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>puzzleDrag2 — Storybook &amp; HD-2D · Round 2</title>
+<style>
+  :root{
+    --bg:#14121a; --bg2:#1c1925; --card:#221e2c; --card2:#2a2536;
+    --ink:#ece7f5; --ink-dim:#a79fbb; --line:#352f44;
+    --accent:#e0a84e;
+    --mono:ui-monospace,"Cascadia Code",Consolas,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:radial-gradient(1200px 700px at 50% -10%,#241f31 0%,var(--bg) 60%) fixed;
+    color:var(--ink); font-family:var(--sans); line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  img{image-rendering:pixelated; image-rendering:crisp-edges;}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 22px 90px}
+
+  /* masthead */
+  header.top{padding:54px 22px 22px; text-align:center; max-width:1120px; margin:0 auto}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:var(--accent); margin:0 0 14px}
+  header.top h1{font-size:clamp(30px,5vw,52px); line-height:1.05; margin:0 0 14px; letter-spacing:-.02em; font-weight:800}
+  header.top h1 span{color:var(--accent)}
+  .sub{font-size:18px; color:var(--ink-dim); max-width:780px; margin:0 auto}
+  .note{max-width:840px; margin:22px auto 0; padding:14px 18px; background:var(--card); border:1px solid var(--line);
+        border-radius:12px; font-size:13.5px; color:var(--ink-dim); text-align:left}
+  .note b{color:var(--ink)}
+  .backlink{display:inline-block; margin:18px auto 0; font-size:13px; font-family:var(--mono)}
+
+  /* anchor / "you are here" */
+  .anchor{max-width:1120px; margin:26px auto 0; padding:16px 18px; background:linear-gradient(#241f3a,#1b1726);
+          border:1px solid var(--line); border-radius:16px; display:flex; gap:18px; align-items:center}
+  .anchor img{height:104px; width:auto; image-rendering:pixelated; filter:drop-shadow(0 6px 7px rgba(0,0,0,.5)); flex:0 0 auto}
+  .anchor .txt h2{margin:0 0 4px; font-size:16px}
+  .anchor .txt p{margin:0; font-size:13.5px; color:var(--ink-dim)}
+  .anchor .txt .lede{color:#7bb86a; font-weight:700; font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; display:block; margin-bottom:6px}
+  @media(max-width:600px){.anchor{flex-direction:column; text-align:center} .anchor img{height:120px}}
+
+  /* compare strip */
+  .compare{max-width:1120px; margin:18px auto 8px; padding:18px; background:var(--card); border:1px solid var(--line); border-radius:16px}
+  .compare h2{margin:2px 0 4px; font-size:15px; letter-spacing:.02em}
+  .compare p{margin:0 0 16px; font-size:13px; color:var(--ink-dim)}
+  .compare-row{display:grid; grid-template-columns:repeat(5,1fr); gap:12px}
+  .compare-cell{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:14px 8px 10px; text-align:center; position:relative}
+  .compare-cell.ref{opacity:.82; border-style:dashed}
+  .compare-cell img{height:104px; width:auto; filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+  .compare-cell .cname{font-size:11.5px; font-weight:700; margin-top:8px}
+  .compare-cell .cnum{font-family:var(--mono); font-size:10px; color:var(--ink-dim)}
+  .compare-cell .badge{position:absolute; top:8px; right:8px; font-family:var(--mono); font-size:8.5px; letter-spacing:.08em;
+        background:var(--accent); color:#191421; padding:2px 6px; border-radius:6px; font-weight:700}
+  @media(max-width:760px){.compare-row{grid-template-columns:repeat(2,1fr)} .compare-cell img{height:92px}}
+
+  /* tabs */
+  .tabset > input{position:absolute; opacity:0; pointer-events:none}
+  nav.tabs{position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+           padding:16px 0 14px; margin-top:14px;
+           background:linear-gradient(var(--bg) 70%,transparent); backdrop-filter:blur(3px)}
+  nav.tabs label{cursor:pointer; padding:10px 16px; border-radius:999px; font-size:13.5px; font-weight:700;
+                 background:var(--card); border:1px solid var(--line); color:var(--ink-dim); white-space:nowrap;
+                 transition:all .15s ease; display:flex; gap:8px; align-items:center}
+  nav.tabs label .dot{width:9px; height:9px; border-radius:50%; background:var(--c)}
+  nav.tabs label:hover{color:var(--ink); border-color:var(--c)}
+  .panel{display:none; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+  #t1:checked ~ nav .l1,#t2:checked ~ nav .l2,#t3:checked ~ nav .l3,#t4:checked ~ nav .l4{
+    color:#191421; background:var(--c); border-color:var(--c)}
+  #t1:checked ~ nav .l1 .dot,#t2:checked ~ nav .l2 .dot,#t3:checked ~ nav .l3 .dot,#t4:checked ~ nav .l4 .dot{background:#191421}
+  #t1:checked ~ .panels #p1,#t2:checked ~ .panels #p2,#t3:checked ~ .panels #p3,#t4:checked ~ .panels #p4{display:block}
+
+  /* panel content */
+  .panel{ --c:var(--accent) }
+  .phead{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:4px}
+  .phead .idx{font-family:var(--mono); font-size:13px; color:var(--c); border:1px solid var(--c); border-radius:8px; padding:3px 9px}
+  .phead h2{font-size:30px; margin:0; letter-spacing:-.02em}
+  .phead .tag{color:var(--ink-dim); font-size:15px; flex-basis:100%; margin-top:-4px}
+
+  .scene{position:relative; height:330px; border-radius:16px; overflow:hidden; margin:22px 0 8px;
+         border:1px solid var(--line); box-shadow:inset 0 -40px 70px rgba(0,0,0,.35)}
+  .scene .ground{position:absolute; left:0; right:0; bottom:0; height:34%}
+  .scene .layer{position:absolute; bottom:8%; image-rendering:pixelated; filter:drop-shadow(0 8px 7px rgba(0,0,0,.45))}
+  .scene .bld{left:50%; transform:translateX(-50%); height:74%; z-index:2}
+  .scene .tree{left:6%; height:60%; z-index:1}
+  .scene .vil{left:30%; height:30%; z-index:4}
+  .scene .bar{right:30%; height:21%; z-index:3; bottom:9%}
+  .scene .cap{position:absolute; top:10px; left:14px; font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.78);
+              background:rgba(0,0,0,.34); padding:3px 9px; border-radius:7px; z-index:6}
+  @media(max-width:680px){.scene{height:250px}}
+
+  .assets{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:18px 0 6px}
+  .chip{background:repeating-conic-gradient(#262130 0% 25%,#201b29 0% 50%) 50%/22px 22px;
+        border:1px solid var(--line); border-radius:12px; height:150px; display:flex; align-items:center; justify-content:center; position:relative}
+  .chip img{max-height:84%; max-width:84%}
+  .chip .clabel{position:absolute; bottom:7px; left:0; right:0; text-align:center; font-family:var(--mono);
+                font-size:10.5px; color:var(--ink-dim)}
+  @media(max-width:680px){.assets{grid-template-columns:repeat(2,1fr)}}
+
+  .palette{display:flex; flex-wrap:wrap; gap:0; border-radius:12px; overflow:hidden; border:1px solid var(--line); margin:6px 0 4px}
+  .palette .sw{flex:1 1 0; min-width:64px; height:62px; display:flex; align-items:flex-end; justify-content:center; padding-bottom:5px}
+  .palette .sw code{font-family:var(--mono); font-size:9.5px; background:rgba(0,0,0,.35); color:#fff; padding:1px 5px; border-radius:5px}
+
+  .cols{display:grid; grid-template-columns:1.35fr 1fr; gap:26px; margin-top:26px}
+  @media(max-width:840px){.cols{grid-template-columns:1fr}}
+  h3.sec{font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--c); margin:26px 0 8px}
+  .panel p{margin:0 0 12px}
+  .spec{list-style:none; padding:0; margin:0}
+  .spec li{display:flex; gap:12px; padding:9px 0; border-bottom:1px dashed var(--line); font-size:14px}
+  .spec li b{flex:0 0 116px; color:var(--ink-dim); font-weight:600}
+  .pills{display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 6px}
+  .pills span{font-size:12px; background:var(--card2); border:1px solid var(--line); padding:5px 11px; border-radius:999px}
+  .reflist{display:flex; flex-wrap:wrap; gap:8px}
+  .reflist a{font-size:13px; background:var(--card); border:1px solid var(--line); padding:7px 12px; border-radius:9px; color:var(--ink)}
+  .reflist a:hover{border-color:var(--c); color:var(--c); text-decoration:none}
+  .reflist a::after{content:" ↗"; color:var(--ink-dim); font-size:11px}
+  .callout{background:var(--card); border:1px solid var(--line); border-left:3px solid var(--c); border-radius:10px; padding:14px 16px; margin:8px 0}
+  .callout.mob{border-left-color:#5aa0e0}
+  .callout.fit{border-left-color:#6fae5f}
+  .recipe{background:#100d16; border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-family:var(--mono); font-size:12.2px; color:#cfc7e0; overflow-x:auto}
+  .recipe .k{color:var(--c)} .recipe .c{color:#7d8aa5}
+  .verdict{display:inline-block; font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px; margin-top:6px}
+  .v-go{background:#234b2c; color:#bff0c4; border:1px solid #3c7a47}
+  .v-mid{background:#4d4321; color:#f3e2a3; border:1px solid #7a6a35}
+  .v-stretch{background:#3a2a4d; color:#e2c4f5; border:1px solid #6a4a8a}
+
+  /* shared sections */
+  section.block{max-width:1120px; margin:46px auto 0; padding:0 22px}
+  section.block h2.bh{font-size:22px; margin:0 0 6px; letter-spacing:-.01em}
+  section.block p.bd{color:var(--ink-dim); font-size:14px; margin:0 0 18px; max-width:760px}
+  .checklist{display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; margin:0; padding:0; list-style:none}
+  @media(max-width:680px){.checklist{grid-template-columns:1fr}}
+  .checklist li{font-size:13.5px; padding:10px 14px; background:var(--card); border:1px solid var(--line); border-radius:10px; display:flex; gap:10px}
+  .checklist li::before{content:"✓"; color:#6fae5f; font-weight:800}
+  .fresh{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:6px}
+  @media(max-width:840px){.fresh{grid-template-columns:1fr}}
+  .fresh .fcard{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px 16px}
+  .fresh .fcard h4{margin:0 0 6px; font-size:15px}
+  .fresh .fcard p{margin:0 0 8px; font-size:13px; color:var(--ink-dim)}
+  .fresh .fcard .meta{font-family:var(--mono); font-size:10.5px; color:var(--ink-dim)}
+  .fresh .fcard .ref{display:inline-block; margin-top:6px; font-size:12px}
+
+  footer{max-width:1120px; margin:44px auto 0; padding:24px 22px; border-top:1px solid var(--line); color:var(--ink-dim); font-size:13px}
+  footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <p class="eyebrow">Concept Art · Round 2 · Storybook &amp; HD-2D</p>
+  <h1>Four ways to grow the <span>Storybook / HD-2D</span> look</h1>
+  <p class="sub">You liked the Storybook&nbsp;HD-2D direction from Round&nbsp;1 — but it was dark and heavy. Here are four evolutions of that family: the recommended cozy hybrid, a brighter storybook, a different HD-2D flavour, and a sunlit daytime HD-2D. Every sprite is real PixelLab test art, same four subjects across all four, so the comparison is honest.</p>
+  <div class="note">
+    <b>The brief that shaped these.</b> The puzzle <b>board</b> is the fast-moving part of the game — tiles must parse in a glance. Everything else (the village, menus) is slow-paced, so <b>rich detail there is welcome</b>. The one hard constraint: <b>it must render well on a phone</b>. So each direction below is judged on mobile readability first, "wow" second. Reference games are inspiration touchstones only — no third-party art is reproduced here.
+  </div>
+  <a class="backlink" href="../art-style-board/index.html">← back to Round 1 (all five styles)</a>
+</header>
+
+<div class="anchor">
+  <img src="assets/cottage_storybook.png" alt="Original Storybook HD-2D cottage">
+  <div class="txt">
+    <span class="lede">Your starting point — Round 1, Style 02</span>
+    <h2>Storybook HD-2D (the original)</h2>
+    <p>Lantern-lit, twilight, painterly — premium but <b>dark</b>, and the heaviest to produce. The four directions below keep its craft and warmth while fixing the darkness and, in two cases, pulling production cost back down.</p>
+  </div>
+</div>
+
+<div class="compare">
+  <h2>The four at a glance — one cottage, four evolutions</h2>
+  <p>Same subject, four directions. The dashed card on the left is the original for reference. Pick a feel, then open its tab.</p>
+  <div class="compare-row">
+    <div class="compare-cell ref"><img src="assets/cottage_storybook.png" alt="Original"><div class="cname">Original (dark)</div><div class="cnum">R1·02</div></div>
+    <div class="compare-cell"><span class="badge">★ rec</span><img src="assets/cottage_cozystory.png" alt="Cozy Storybook"><div class="cname">Cozy Storybook</div><div class="cnum">A</div></div>
+    <div class="compare-cell"><img src="assets/cottage_cheerystory.png" alt="Cheery Storybook"><div class="cname">Cheery Storybook</div><div class="cnum">B</div></div>
+    <div class="compare-cell"><img src="assets/cottage_lushhd2d.png" alt="Lush Fantasy HD-2D"><div class="cname">Lush Fantasy HD-2D</div><div class="cnum">C</div></div>
+    <div class="compare-cell"><img src="assets/cottage_brighthd2d.png" alt="Bright HD-2D"><div class="cname">Bright HD-2D</div><div class="cnum">D</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+<div class="tabset">
+  <input type="radio" name="tabs" id="t1" checked>
+  <input type="radio" name="tabs" id="t2">
+  <input type="radio" name="tabs" id="t3">
+  <input type="radio" name="tabs" id="t4">
+
+  <nav class="tabs">
+    <label class="l1" for="t1" style="--c:#e0a84e"><span class="dot"></span>A · Cozy Storybook</label>
+    <label class="l2" for="t2" style="--c:#6cc24a"><span class="dot"></span>B · Cheery Storybook</label>
+    <label class="l3" for="t3" style="--c:#2fc7a0"><span class="dot"></span>C · Lush Fantasy HD-2D</label>
+    <label class="l4" for="t4" style="--c:#4aa3e0"><span class="dot"></span>D · Bright HD-2D</label>
+  </nav>
+
+  <div class="panels">
+
+  <!-- ============ A · COZY STORYBOOK ============ -->
+  <div class="panel" id="p1" style="--c:#e0a84e">
+    <div class="phead">
+      <span class="idx">A</span>
+      <h2>Cozy Storybook</h2>
+      <span class="verdict v-go">★ My recommendation — the cozy + storybook hybrid</span>
+      <p class="tag">Stardew-readable chunky shapes, lit by storybook warmth. Daytime, golden, friendly — the "wow" of lit windows without the dark.</p>
+    </div>
+
+    <div class="scene" style="background:linear-gradient(#fdeccb 0%,#f8dfa6 50%,#bcd98a 50%,#8fbf5e 100%)">
+      <span class="cap">composed from generated sprites · warm golden-hour, glowing windows, soft shadows</span>
+      <div class="ground" style="background:linear-gradient(#9cc763,#7cb04a)"></div>
+      <img class="layer tree" src="assets/tree_cozystory.png" alt="">
+      <img class="layer bld"  src="assets/cottage_cozystory.png" alt="">
+      <img class="layer bar"  src="assets/barrel_cozystory.png" alt="">
+      <img class="layer vil"  src="assets/villager_cozystory.png" alt="">
+    </div>
+
+    <div class="assets">
+      <div class="chip"><img src="assets/cottage_cozystory.png" alt=""><span class="clabel">building</span></div>
+      <div class="chip"><img src="assets/villager_cozystory.png" alt=""><span class="clabel">character</span></div>
+      <div class="chip"><img src="assets/tree_cozystory.png" alt=""><span class="clabel">prop · tree</span></div>
+      <div class="chip"><img src="assets/barrel_cozystory.png" alt=""><span class="clabel">item · barrel</span></div>
+    </div>
+
+    <div class="palette">
+      <div class="sw" style="background:#f4e4c1"><code>#f4e4c1</code></div>
+      <div class="sw" style="background:#e7b65a"><code>#e7b65a</code></div>
+      <div class="sw" style="background:#c9764a"><code>#c9764a</code></div>
+      <div class="sw" style="background:#8a5a3b"><code>#8a5a3b</code></div>
+      <div class="sw" style="background:#7cb04a"><code>#7cb04a</code></div>
+      <div class="sw" style="background:#4e7a33"><code>#4e7a33</code></div>
+      <div class="sw" style="background:#ffd98a"><code>#ffd98a</code></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3 class="sec">The pitch</h3>
+        <p>This is the Round&nbsp;1 recommendation made concrete: take the <b>chunky, instantly-readable forms</b> of cozy cottagecore and light them with the <b>storybook's baked warmth</b> — glowing windows, soft cast shadows, a touch of moss-and-grain texture — but at <b>golden-hour daytime</b> instead of midnight. You keep the premium "hand-crafted" feel where it matters (hero buildings, the village) without the legibility tax of full twilight HD-2D.</p>
+        <p>Crucially it's the <b>cheapest to adopt</b>: it's mostly tightening and re-lighting what puzzleDrag2 already has. One disciplined warm palette unifies the whole town, and the existing 128&nbsp;px seasonal pipeline already lives in this world.</p>
+
+        <h3 class="sec">Reference touchstones</h3>
+        <div class="reflist" data-reflist="A"></div>
+
+        <div class="callout mob">
+          <b>Mobile readability →</b> Strongest of the four. Chunky silhouettes + a single soft outline read perfectly at thumbnail size; the warm window-glow gives free focal contrast even under phone glare. Lowest risk on a small screen.
+        </div>
+        <div class="callout fit">
+          <b>Fit with puzzleDrag2 today →</b> Best of the four. Adopting it is <i>tighten &amp; re-light</i>, not rebuild. Board tiles stay calm; hero buildings get the glow.
+        </div>
+      </div>
+      <div>
+        <h3 class="sec">Style spec</h3>
+        <ul class="spec">
+          <li><b>Resolution</b> 48–128 px; current 128 px tiles fit directly</li>
+          <li><b>Outline</b> Soft single-colour (warm dark brown, never black)</li>
+          <li><b>Shading</b> Medium — 2–3 bands + baked window glow + soft cast shadow</li>
+          <li><b>Light</b> Warm golden-hour key, gentle ambient; daytime</li>
+          <li><b>Palette</b> Warm earthy, medium-high saturation, one glow accent</li>
+          <li><b>Mood</b> Inviting, sunlit, wholesome, hand-made</li>
+        </ul>
+        <h3 class="sec">Best for / trade-offs</h3>
+        <div class="pills"><span>instantly readable</span><span>cheapest to adopt</span><span>keeps the "wow" glow</span><span>genre-proven</span><span>⚠ least novel of the four</span></div>
+
+        <h3 class="sec">PixelLab recipe</h3>
+        <div class="recipe">
+<span class="c"># cottage · create_map_object</span><br>
+<span class="k">description</span>: "cozy storybook cottage, chunky<br>
+&nbsp;&nbsp;readable shapes, warm cream timber walls, golden<br>
+&nbsp;&nbsp;thatch, glowing lantern windows, soft cast shadow,<br>
+&nbsp;&nbsp;subtle moss texture, golden-hour, warm palette"<br>
+<span class="k">view</span>: side &nbsp; <span class="k">outline</span>: single color<br>
+<span class="k">shading</span>: medium &nbsp; <span class="k">detail</span>: medium &nbsp; <span class="k">size</span>: 160
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ B · CHEERY STORYBOOK ============ -->
+  <div class="panel" id="p2" style="--c:#6cc24a">
+    <div class="phead">
+      <span class="idx">B</span>
+      <h2>Cheery Storybook</h2>
+      <span class="verdict v-mid">● The original, but bright &amp; sunny</span>
+      <p class="tag">Same painterly storybook fidelity — now under a blue-sky noon. Mossy roofs, flower boxes, whimsical picture-book colour.</p>
+    </div>
+
+    <div class="scene" style="background:linear-gradient(#bfeaff 0%,#dff5ff 52%,#9fd06a 52%,#74b84e 100%)">
+      <span class="cap">composed from generated sprites · bright blue-sky daytime, soft daylight shadows</span>
+      <div class="ground" style="background:linear-gradient(#9fd06a,#74b84e)"></div>
+      <img class="layer tree" src="assets/tree_cheerystory.png" alt="">
+      <img class="layer bld"  src="assets/cottage_cheerystory.png" alt="">
+      <img class="layer bar"  src="assets/barrel_cheerystory.png" alt="">
+      <img class="layer vil"  src="assets/villager_cheerystory.png" alt="">
+    </div>
+
+    <div class="assets">
+      <div class="chip"><img src="assets/cottage_cheerystory.png" alt=""><span class="clabel">building</span></div>
+      <div class="chip"><img src="assets/villager_cheerystory.png" alt=""><span class="clabel">character</span></div>
+      <div class="chip"><img src="assets/tree_cheerystory.png" alt=""><span class="clabel">prop · tree</span></div>
+      <div class="chip"><img src="assets/barrel_cheerystory.png" alt=""><span class="clabel">item · barrel</span></div>
+    </div>
+
+    <div class="palette">
+      <div class="sw" style="background:#efe2c4"><code>#efe2c4</code></div>
+      <div class="sw" style="background:#6fae4f"><code>#6fae4f</code></div>
+      <div class="sw" style="background:#4f8f3e"><code>#4f8f3e</code></div>
+      <div class="sw" style="background:#c98a4a"><code>#c98a4a</code></div>
+      <div class="sw" style="background:#9c6b43"><code>#9c6b43</code></div>
+      <div class="sw" style="background:#8fd0f0"><code>#8fd0f0</code></div>
+      <div class="sw" style="background:#e2557b"><code>#e2557b</code></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3 class="sec">The pitch</h3>
+        <p>The most literal answer to "make the Storybook less dark." It keeps the <b>full painterly detail</b> — layered foliage, mossy green roofs, flower boxes, hand-illustrated grain — but swaps twilight for a <b>bright blue-sky noon</b> with cheerful, saturated-but-warm colour. It reads like the cover of a children's picture book: premium and inviting at once.</p>
+        <p>The trade-off is honesty: it's still <b>detailed, high-fidelity art</b>. The village will look gorgeous; the board tiles will need a deliberately calmer, lower-detail treatment so the puzzle stays legible at speed.</p>
+
+        <h3 class="sec">Reference touchstones</h3>
+        <div class="reflist" data-reflist="B"></div>
+
+        <div class="callout mob">
+          <b>Mobile readability →</b> Good, with care. Bright sky + high value-contrast helps enormously under glare. The risk is busy foliage/grain muddying small tiles — mitigate by keeping board sprites a notch simpler than hero art and holding a strong dark outline on interactive tiles.
+        </div>
+        <div class="callout fit">
+          <b>Fit with puzzleDrag2 today →</b> Moderate. The 128 px pipeline supports it; the work is re-lighting to daytime and policing detail density so the board doesn't get noisy.
+        </div>
+      </div>
+      <div>
+        <h3 class="sec">Style spec</h3>
+        <ul class="spec">
+          <li><b>Resolution</b> 64–128 px; detail rewards the bigger canvas</li>
+          <li><b>Outline</b> Selective — light reads form; dark outline on board tiles</li>
+          <li><b>Shading</b> Detailed, soft daylight; gentle ambient occlusion</li>
+          <li><b>Light</b> Bright top-down noon, blue-sky fill, soft short shadows</li>
+          <li><b>Palette</b> Warm + cheerful, higher saturation, sky-blue accents</li>
+          <li><b>Mood</b> Sunny, whimsical, picture-book</li>
+        </ul>
+        <h3 class="sec">Best for / trade-offs</h3>
+        <div class="pills"><span>premium + cheerful</span><span>great store shots</span><span>keeps storybook craft</span><span>⚠ board needs a calmer variant</span><span>⚠ pricier to produce</span></div>
+
+        <h3 class="sec">PixelLab recipe</h3>
+        <div class="recipe">
+<span class="c"># cottage · create_map_object</span><br>
+<span class="k">description</span>: "richly detailed storybook cottage,<br>
+&nbsp;&nbsp;bright sunny day, blue-sky daylight, painterly<br>
+&nbsp;&nbsp;stone &amp; timber, mossy roof, flower boxes, warm<br>
+&nbsp;&nbsp;cheerful saturated colors, whimsical picture-book"<br>
+<span class="k">view</span>: side &nbsp; <span class="k">outline</span>: selective<br>
+<span class="k">shading</span>: detailed &nbsp; <span class="k">detail</span>: high &nbsp; <span class="k">size</span>: 160
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ C · LUSH FANTASY HD-2D ============ -->
+  <div class="panel" id="p3" style="--c:#2fc7a0">
+    <div class="phead">
+      <span class="idx">C</span>
+      <h2>Lush Fantasy HD-2D</h2>
+      <span class="verdict v-stretch">◆ A different HD-2D flavour — jewel-tone &amp; magical</span>
+      <p class="tag">Sea-of-Stars lineage: vibrant jewel tones, glowing flora, soft bloom. Cinematic and enchanted rather than cozy-rustic.</p>
+    </div>
+
+    <div class="scene" style="background:linear-gradient(#10243a 0%,#163b4a 46%,#123028 46%,#0c1f1c 100%)">
+      <span class="cap">composed from generated sprites · note the bloom, glowing flora, jewel-tone depth</span>
+      <div class="ground" style="background:linear-gradient(#163428,#0c1f1c)"></div>
+      <img class="layer tree" src="assets/tree_lushhd2d.png" alt="">
+      <img class="layer bld"  src="assets/cottage_lushhd2d.png" alt="">
+      <img class="layer bar"  src="assets/barrel_lushhd2d.png" alt="">
+      <img class="layer vil"  src="assets/villager_lushhd2d.png" alt="">
+    </div>
+
+    <div class="assets">
+      <div class="chip"><img src="assets/cottage_lushhd2d.png" alt=""><span class="clabel">building</span></div>
+      <div class="chip"><img src="assets/villager_lushhd2d.png" alt=""><span class="clabel">character</span></div>
+      <div class="chip"><img src="assets/tree_lushhd2d.png" alt=""><span class="clabel">prop · tree</span></div>
+      <div class="chip"><img src="assets/barrel_lushhd2d.png" alt=""><span class="clabel">item · barrel</span></div>
+    </div>
+
+    <div class="palette">
+      <div class="sw" style="background:#0f2b2b"><code>#0f2b2b</code></div>
+      <div class="sw" style="background:#1f6f5c"><code>#1f6f5c</code></div>
+      <div class="sw" style="background:#38d6a8"><code>#38d6a8</code></div>
+      <div class="sw" style="background:#b07ad6"><code>#b07ad6</code></div>
+      <div class="sw" style="background:#6a4a8a"><code>#6a4a8a</code></div>
+      <div class="sw" style="background:#ffcf6a"><code>#ffcf6a</code></div>
+      <div class="sw" style="background:#e8fff4"><code>#e8fff4</code></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3 class="sec">The pitch</h3>
+        <p>A genuinely different take on HD-2D. Instead of the warm-rustic Octopath mood, this is the <b>vibrant, enchanted</b> end of the genre — rich emerald-teal and amethyst jewel tones, <b>luminescent flowers and glowing lanterns</b>, soft bloom and drifting light. It signals "magical world" and gives the game a distinct, memorable identity that the cozy-farming crowd rarely owns.</p>
+        <p>It's the boldest swing: it moves furthest from the current warm palette and leans hardest on emissive glow and bloom — gorgeous in the slow village, but it demands the most discipline to keep the puzzle board legible.</p>
+
+        <h3 class="sec">Reference touchstones</h3>
+        <div class="reflist" data-reflist="C"></div>
+
+        <div class="callout mob">
+          <b>Mobile readability →</b> Highest risk — and most manageable with one rule. Glow + bloom on a dark ground can wash out on cheap/sunlit screens. Mitigate by reserving emissives for accents (not whole tiles), keeping <i>value</i> separation high, and giving board tiles a clear dark base. Done right, the glow actually <i>aids</i> focus.
+        </div>
+        <div class="callout fit">
+          <b>Fit with puzzleDrag2 today →</b> A full mood pivot. The pipeline supports it, but it's a re-palette of the entire library plus a glow/bloom layer — closest to a rebrand of the four.
+        </div>
+      </div>
+      <div>
+        <h3 class="sec">Style spec</h3>
+        <ul class="spec">
+          <li><b>Resolution</b> 64–128 px+; bloom &amp; depth want room</li>
+          <li><b>Outline</b> Lineless — form carried by light and value</li>
+          <li><b>Shading</b> Detailed; rim light, soft bloom, emissive accents</li>
+          <li><b>Light</b> Cool jewel-tone ambient + warm/teal glow sources</li>
+          <li><b>Palette</b> Saturated emerald-teal-amethyst, amber glow accent</li>
+          <li><b>Mood</b> Enchanted, cinematic, magical-cozy</li>
+        </ul>
+        <h3 class="sec">Best for / trade-offs</h3>
+        <div class="pills"><span>most distinctive</span><span>memorable identity</span><span>stunning village</span><span>⚠ readability discipline</span><span>⚠ biggest rebuild</span></div>
+
+        <h3 class="sec">PixelLab recipe</h3>
+        <div class="recipe">
+<span class="c"># cottage · create_map_object</span><br>
+<span class="k">description</span>: "enchanted fantasy cottage, HD-2D,<br>
+&nbsp;&nbsp;vibrant jewel-tone palette, glowing magical<br>
+&nbsp;&nbsp;lanterns, luminescent flowers, emerald-teal &amp;<br>
+&nbsp;&nbsp;amethyst, amber window glow, soft bloom, cinematic"<br>
+<span class="k">view</span>: side &nbsp; <span class="k">outline</span>: lineless<br>
+<span class="k">shading</span>: detailed &nbsp; <span class="k">detail</span>: high &nbsp; <span class="k">size</span>: 160
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ D · BRIGHT HD-2D ============ -->
+  <div class="panel" id="p4" style="--c:#4aa3e0">
+    <div class="phead">
+      <span class="idx">D</span>
+      <h2>Bright HD-2D</h2>
+      <span class="verdict v-stretch">◆ The premium look — in full daylight</span>
+      <p class="tag">High-key midday HD-2D: crisp, sunlit, naturalistic, with a subtle bloom on highlights. The "diorama in the sun" tier.</p>
+    </div>
+
+    <div class="scene" style="background:linear-gradient(#aaddf5 0%,#cfeefb 54%,#7fb86a 54%,#5d9c48 100%)">
+      <span class="cap">composed from generated sprites · crisp high-key midday light, clear soft shadows</span>
+      <div class="ground" style="background:linear-gradient(#7fb86a,#5d9c48)"></div>
+      <img class="layer tree" src="assets/tree_brighthd2d.png" alt="">
+      <img class="layer bld"  src="assets/cottage_brighthd2d.png" alt="">
+      <img class="layer bar"  src="assets/barrel_brighthd2d.png" alt="">
+      <img class="layer vil"  src="assets/villager_brighthd2d.png" alt="">
+    </div>
+
+    <div class="assets">
+      <div class="chip"><img src="assets/cottage_brighthd2d.png" alt=""><span class="clabel">building</span></div>
+      <div class="chip"><img src="assets/villager_brighthd2d.png" alt=""><span class="clabel">character</span></div>
+      <div class="chip"><img src="assets/tree_brighthd2d.png" alt=""><span class="clabel">prop · tree</span></div>
+      <div class="chip"><img src="assets/barrel_brighthd2d.png" alt=""><span class="clabel">item · barrel</span></div>
+    </div>
+
+    <div class="palette">
+      <div class="sw" style="background:#bfe3f5"><code>#bfe3f5</code></div>
+      <div class="sw" style="background:#7fb5d8"><code>#7fb5d8</code></div>
+      <div class="sw" style="background:#d8c79a"><code>#d8c79a</code></div>
+      <div class="sw" style="background:#9c7a4f"><code>#9c7a4f</code></div>
+      <div class="sw" style="background:#6fae4f"><code>#6fae4f</code></div>
+      <div class="sw" style="background:#3f7a3a"><code>#3f7a3a</code></div>
+      <div class="sw" style="background:#fff3d0"><code>#fff3d0</code></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3 class="sec">The pitch</h3>
+        <p>The prestige HD-2D look you liked — but at <b>high noon</b>. It keeps the technical hallmarks (detailed sprites, miniature-<b>diorama</b> framing, a kiss of bloom on sunlit edges) while swapping the moody twilight for <b>crisp, high-key naturalistic daylight</b>: clear blue sky, vivid-but-true colour, clean short shadows. It's the most "photographable" of the four and still unmistakably premium.</p>
+        <p>Compared to Lush Fantasy it's <b>grounded and naturalistic</b> rather than magical; compared to Cheery Storybook it's <b>more cinematic and less illustrated</b> — the light is real, not painted-on. The cost sits between the two: detailed art, but a daylight key is far kinder to readability than twilight.</p>
+
+        <h3 class="sec">Reference touchstones</h3>
+        <div class="reflist" data-reflist="D"></div>
+
+        <div class="callout mob">
+          <b>Mobile readability →</b> Strong. High-key daylight gives the best value-contrast of any detailed style, so sprites separate cleanly even under glare. Watch only for bloom blowing out highlights — keep it subtle and keep a clear shadow anchoring each object.
+        </div>
+        <div class="callout fit">
+          <b>Fit with puzzleDrag2 today →</b> Medium. The pipeline holds the detail; the work is consistent daylight direction across every tile plus a restrained bloom pass. Lower readability risk than the dark original.
+        </div>
+      </div>
+      <div>
+        <h3 class="sec">Style spec</h3>
+        <ul class="spec">
+          <li><b>Resolution</b> 64–128 px+; detail and bloom want the canvas</li>
+          <li><b>Outline</b> Selective — daylight defines edges, not lines</li>
+          <li><b>Shading</b> Detailed; crisp key light, clean soft cast shadow</li>
+          <li><b>Light</b> Bright high-key midday, blue-sky fill, subtle bloom</li>
+          <li><b>Palette</b> Vivid naturalistic, true greens/sky, warm sun highlight</li>
+          <li><b>Mood</b> Cinematic, sunlit, premium-realistic</li>
+        </ul>
+        <h3 class="sec">Best for / trade-offs</h3>
+        <div class="pills"><span>premium + readable</span><span>best store shots</span><span>daylight = phone-friendly</span><span>⚠ pricier to produce</span><span>⚠ needs lighting discipline</span></div>
+
+        <h3 class="sec">PixelLab recipe</h3>
+        <div class="recipe">
+<span class="c"># cottage · create_map_object</span><br>
+<span class="k">description</span>: "detailed HD-2D cottage, bright clean<br>
+&nbsp;&nbsp;midday sunlight, crisp high-key daylight, painterly<br>
+&nbsp;&nbsp;stone &amp; timber, clear soft shadows, vivid natural<br>
+&nbsp;&nbsp;colors, diorama feel, subtle bloom on highlights"<br>
+<span class="k">view</span>: side &nbsp; <span class="k">outline</span>: selective<br>
+<span class="k">shading</span>: detailed &nbsp; <span class="k">detail</span>: high &nbsp; <span class="k">size</span>: 160
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /.panels -->
+</div><!-- /.tabset -->
+</div><!-- /.wrap -->
+
+<!-- ============ MOBILE READABILITY ============ -->
+<section class="block">
+  <h2 class="bh">Will it render well on a phone? — the shared checklist</h2>
+  <p class="bd">Your one hard constraint. Whichever direction wins, hold these. They're what separates "premium on a monitor" from "muddy on a phone in the sun."</p>
+  <ul class="checklist" data-checklist></ul>
+</section>
+
+<!-- ============ FRESH DIRECTIONS ============ -->
+<section class="block">
+  <h2 class="bh">Not locked in? — five more directions worth a test</h2>
+  <p class="bd">You said you're not committed to a style. Most of these sit just outside the Storybook/HD-2D family but score well on mobile and would make the game look unlike its cozy competitors. The first is a direct proof point — a cozy pixel village game already shipping on iOS. Say the word and I'll generate a test sprite set for any of them.</p>
+  <div class="fresh" data-fresh></div>
+</section>
+
+<footer>
+  <p><b>My recommendation.</b> Ship <b>A · Cozy Storybook</b> as the production baseline — it's the cheapest to adopt, the most phone-readable, and it keeps the lit-window "wow" you liked without the darkness. Hold <b>D · Bright HD-2D</b> as the aspirational target for hero buildings &amp; the store page (daylight makes premium art phone-safe). Treat <b>C · Lush Fantasy HD-2D</b> as the bold-identity bet if you want to stand out hard, and <b>B · Cheery Storybook</b> as the middle path if you want maximum warmth without going magical.</p>
+  <p>Generated for puzzleDrag2 with <b>PixelLab</b> · 16 original test sprites (4 directions × cottage / villager / tree / barrel) + the Round 1 Storybook as anchor. Reference games linked for inspiration only — no third-party art is reproduced on this board.</p>
+</footer>
+
+<script>
+  /* Reference touchstones + checklist + fresh directions are injected here so the
+     research pass can update copy in one place. Progressive enhancement only. */
+  const REFS = {
+    A: [
+      {name:"Eastward — warm-glow pixel pipeline", why:"Gold-standard 'pixel that doesn't look like Stardew': crisp sprites + warm LUT grading + hand-painted lighting; the lived-in storybook density target.", url:"https://80.lv/articles/eastward-charming-chinese-pixel-art-adventure"},
+      {name:"Sea of Stars — modern-pixel craft", why:"'Modern fidelity over retro authenticity' — larger palette, layering, dynamic colored lighting. The license to generate at 128px and light richly.", url:"https://www.megavisions.net/the-art-of-sea-of-stars-a-sea-of-pixels/"},
+      {name:"SLYNYRD — hue-shift palettes", why:"The hue-shift + cozy-town palette recipe that makes baked light read as luminous hand-painting (warm-cream + soft-blue-gray ramp).", url:"https://www.slynyrd.com/blog/2018/1/10/pixelblog-1-color-palettes"},
+      {name:"Kynseed — fairytale pixel", why:"Pixel art that reads as oil-painting/illustration via rich color + dense eccentric detail; the fairytale-with-warmth dressing target.", url:"https://www.dexerto.com/gaming/kynseed-review-the-ultimate-fairytale-farming-game-2002157/"}
+    ],
+    B: [
+      {name:"Dragon Quest III HD-2D Remake", why:"The canonical 'bright + crisp': environments are brighter precisely because it eases off DoF/motion-blur and lifts exposure.", url:"https://www.rpgfan.com/review/dragon-quest-iii-hd-2d-remake/"},
+      {name:"Coral Island · Ooblets (bright cozy)", why:"The high-key palette target: clear sky blue + warm gold + energetic green/coral over pale cream — sunny and optimistic.", url:"https://screenrant.com/cozy-pixel-games-like-stardew-valley-list/"},
+      {name:"PhotoPills — daylight color temp", why:"Hard numbers for two-temperature daylight: ~5000-5500K warm sun key + ~10000K cool blue sky fill that keeps shadows luminous, not black.", url:"https://www.photopills.com/articles/mastering-golden-hour-blue-hour-magic-hours-and-twilights"},
+      {name:"SLYNYRD — high-key palettes", why:"Saturation peaks in midtones; desaturate the brightest values — the recipe for vibrant-but-not-blown-out high-key color.", url:"https://www.slynyrd.com/blog/2018/1/10/pixelblog-1-color-palettes"}
+    ],
+    C: [
+      {name:"HD-2D — definition & ingredients", why:"Authoritative breakdown of the post stack to emulate (billboard sprites, tilt-shift, DoF, bloom, fog, particles) + the canonical lineage.", url:"https://en.wikipedia.org/wiki/HD-2D"},
+      {name:"Sea of Stars — press kit (2D dynamic light)", why:"Proves HD-2D-grade dynamic lighting + real water reflection is achievable in PURE 2D, no 3D diorama — the feasibility anchor for a flat board.", url:"https://sabotagestudio.com/presskits/sea-of-stars/"},
+      {name:"Faking shadows & lights in 2D", why:"Concrete pure-2D techniques: per-light fake shadow sprites, shadow-skew shader, baked per-object shadows — how to fake the cast-shadow + glow read.", url:"https://www.psychicsoftware.com/2017/faking-shadows-and-lights-in-a-2d-game/"},
+      {name:"Triangle Strategy on HD-2D", why:"The pixel-integrity rule (build the stylized sprite first, THEN add effects) so lush glow never drowns the sprite — and a warning it 'costs more than you'd think'.", url:"https://www.nintendolife.com/news/2022/05/triangle-strategy-producers-talk-hd-2d-and-why-other-devs-havent-used-it"}
+    ],
+    D: [
+      {name:"Dragon Quest III HD-2D Remake", why:"The 'crisper + brighter' HD-2D archetype this direction is named after — easing DoF/blur + lifting exposure is what makes HD-2D read bright & legible.", url:"https://www.rpgfan.com/review/dragon-quest-iii-hd-2d-remake/"},
+      {name:"'HD-2D bloom washes out colors'", why:"Player/critic consensus that default HD-2D bloom + tilt-shift is too intense — the justification for whisper-bloom + DoF-off here.", url:"https://steamcommunity.com/app/1912750/discussions/0/3814039462156818382/"},
+      {name:"Game UI color palette (contrast)", why:"The 7:1+ critical-contrast rec, the 200-400ms glance-parse window, and the four-layer value palette — the readability backbone for value-layered tiles.", url:"https://colorarchive.org/guides/game-ui-color-palette/"},
+      {name:"Octopath shadow angles (Unity)", why:"The billboard-with-shadow-casting mechanic behind the sprite-in-diorama read; how to fake a correct directional baked shadow under each tile.", url:"https://discussions.unity.com/t/how-do-games-like-octopath-traveler-handle-the-angle-of-shadows-and-is-this-even-possible-in-unity-urp/246459"}
+    ]
+  };
+  const CHECKLIST = [
+    "Silhouette-first: every tile must be identifiable as a single flat-filled shape. If the outline alone doesn't say what it is, simplify — don't add detail.",
+    "Triple-redundant identity: each tile differs by SHAPE + VALUE + HUE at once, never hue alone (survives ~8% colour-blindness, sunlight wash-out, OLED auto-dim).",
+    "One outline rule, never mixed: a consistent 1px-equivalent dark outline (or one consistent selout) so every tile pops off the board identically.",
+    "Value-layered with a raised floor: dark-ish board base → distinct mid-value tile bodies → small set of bright accents; aim 7:1+ contrast on glance-read tiles.",
+    "Author at 128px, integer-scale to the cell, and JUDGE at true on-phone footprint & arm's length — never at 800% editor zoom.",
+    "Grayscale + deuteranopia squint test on a real device-size screenshot: if two tiles blur together, push values apart — don't add interior detail.",
+    "Quarantine atmosphere: bloom, glow, fog, particles, tilt-shift & lavish dressing live in the village/background ONLY — never over the puzzle play area.",
+    "Touch + sunlight floor: targets ≥ 44-48dp; verify the held tile + valid drop targets read instantly mid-drag, outdoors at max brightness."
+  ];
+  const FRESH = [
+    {name:"Isometric Toy Diorama", look:"Village + board as a small isometric collectible miniature on a table — tilt-shift vignette, soft contact shadows, chunky 32px iso tiles, buildings as placeable 'toys'.", ref:"Viladia — a shipping iOS cozy pixel village", feas:"Strongest genre+platform PROOF. Med mobile risk (iso depth can crowd a phone — keep tiles big & silhouettes blocky). Uses PixelLab iso/topdown tiles + baked contact shadows."},
+    {name:"Gouache-Textured Storybook", look:"Clean pixel base + a subtle paper-grain/gouache overlay (~30-50% soft-light), hue-shifted cool-shadow ramps, soft selout instead of hard keylines — a hand-painted page on a readable grid.", ref:"Pixel Parmesan (dithering craft)", feas:"LOWEST risk; closest to the A/B hybrid. Grain must read as a GRADIENT at game size — add it as a post-overlay since PixelLab can't paint it natively."},
+    {name:"Soft 'Marshmallow' 3D-Toy", look:"Chunky high-bit pixels, rounded blobby silhouettes, matte plasticky shading (no harsh speculars), soft drop shadows + AO, pastel-but-contrasty — tactile pick-it-up toy feel without a real 3D renderer.", ref:"Tiny Glade (pastel diorama)", feas:"Med risk — pastel softness can go low-contrast; force value separation & verify silhouette at thumbnail. Prompt rounded forms + matte shading + soft AO, no hard outlines."},
+    {name:"Risograph / Limited-Ink", look:"The whole game locked to 2-4 misregistered 'ink' channels (fluoro pink + teal + warm yellow + near-black) with grain/halftone — reads as obviously NOT-Stardew from the thumbnail.", ref:"RizzCraft / True Grit riso effects", feas:"HIGH distinctiveness-per-effort, low-med risk. PixelLab outputs flat near-mono shapes; you composite the 2-4 channels (1px offset + multiply + grain) in post."},
+    {name:"Cozy-with-an-Edge (folklore dusk)", look:"A content+staging hook on any base above: lantern-lit / blue-hour folklore mood, gently-witchy village dressing — a signature time-of-day that owns the store thumbnail.", ref:"Neverway (spooky cozy life-sim)", feas:"Cheap — it's content + signature lighting, not a new pipeline; bolts onto A-D. Low mobile risk if the dusk stays in the village and the board keeps its daytime sub-palette."}
+  ];
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-reflist]').forEach(function (el) {
+      (REFS[el.getAttribute('data-reflist')] || []).forEach(function (r) {
+        var a = document.createElement('a'); a.href = r.url; a.target = "_blank"; a.rel = "noopener";
+        a.textContent = r.name; a.title = r.why || ''; el.appendChild(a);
+      });
+    });
+    var cl = document.querySelector('[data-checklist]');
+    if (cl) CHECKLIST.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; cl.appendChild(li); });
+    var fr = document.querySelector('[data-fresh]');
+    if (fr) FRESH.forEach(function (f) {
+      var d = document.createElement('div'); d.className = 'fcard';
+      d.innerHTML = '<h4>'+f.name+'</h4><p>'+f.look+'</p><div class="meta">↳ feasibility: '+f.feas+'</div><div class="ref">ref: '+f.ref+'</div>';
+      fr.appendChild(d);
+    });
+    /* Hide any sprite that fails to load so the board never shows a broken icon. */
+    document.querySelectorAll('.scene img.layer, .chip img, .compare-cell img, .anchor img').forEach(function (img) {
+      img.addEventListener('error', function () { img.style.visibility = 'hidden'; });
+    });
+  });
+</script>
+
+</body>
+</html>
