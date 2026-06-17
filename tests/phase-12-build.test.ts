@@ -26,8 +26,11 @@ function listFilesRecursive(dir) {
 
 describe("Phase 12.4 — build optimisation", () => {
   beforeAll(() => {
-    // Build once for the whole describe block.
-    if (!existsSync(distDir)) execSync("npm run build", { stdio: "inherit" });
+    // Build once for the whole describe block. Only the prod target (dist/) is
+    // asserted on here, so build:prod alone — `npm run build` also emits the
+    // unminified dev mirror under dist/dev/, which would roughly double the time
+    // and risk the timeout below for no added coverage.
+    if (!existsSync(distDir)) execSync("npm run build:prod", { stdio: "inherit" });
   }, 120_000);
 
   it("dist/ exists with index.html", () => {
