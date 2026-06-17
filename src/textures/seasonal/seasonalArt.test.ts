@@ -3,6 +3,8 @@ import {
   fallbackIdleIndex,
   seasonalArtActive,
   paintSeasonalReference,
+  advanceTransition,
+  type TransState,
   SEASONAL_SUBJECT_KEYS,
 } from "./seasonalArt.js";
 
@@ -63,5 +65,58 @@ describe("subject discovery + inactive guards", () => {
     const ctx = { drawImage: () => calls.push("draw"), imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
     expect(paintSeasonalReference(ctx, "tile_tree_willow")).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("advanceTransition — season transition state machine", () => {
+  const idle = (curIdx: number): TransState => ({ curIdx, mode: "idle", transTo: 0, transStart: 0 });
+  const hasAll = () => true;
+  const frames8 = () => 8; // 8-frame transition clips (≈ willow)
+
+  it("snaps to the target season on a static bake (tSec <= 0)", () => {
+    const r = advanceTransition(idle(SUMMER), WINTER, hasAll, frames8, 0);
+    expect(r.transitioning).toBe(false);
+    expect(r.state).toMatchObject({ curIdx: WINTER, mode: "idle" });
+  });
+
+  it("holds idle when the season hasn't changed", () => {
+    const r = advanceTransition(idle(SUMMER), SUMMER, hasAll, frames8, 5);
+    expect(r.transitioning).toBe(false);
+    expect(r.settledSeasonIdx).toBe(SUMMER);
+  });
+
+  it("enters a transition on an adjacent forward change with a clip", () => {
+    const r = advanceTransition(idle(SUMMER), AUTUMN, hasAll, frames8, 10);
+    expect(r.transitioning).toBe(true);
+    expect(r.transFromIdx).toBe(SUMMER);
+    expect(r.transFrame).toBe(0);
+    expect(r.state).toMatchObject({ mode: "trans", transTo: AUTUMN, transStart: 10 });
+  });
+
+  it("plays the transition once, then settles into the new idle season", () => {
+    // Start the transition at t=10s.
+    let st = advanceTransition(idle(SUMMER), AUTUMN, hasAll, frames8, 10).state;
+    // Mid-clip (2 frames * 70ms = 140ms in): still transitioning.
+    const mid = advanceTransition(st, AUTUMN, hasAll, frames8, 10.14);
+    expect(mid.transitioning).toBe(true);
+    expect(mid.transFrame).toBe(2);
+    st = mid.state;
+    // Past the clip (8 frames * 70ms = 560ms): settles to AUTUMN idle.
+    const done = advanceTransition(st, AUTUMN, hasAll, frames8, 11);
+    expect(done.transitioning).toBe(false);
+    expect(done.settledSeasonIdx).toBe(AUTUMN);
+    expect(done.state).toMatchObject({ curIdx: AUTUMN, mode: "idle" });
+  });
+
+  it("snaps (no transition) when the forward season has no transition clip", () => {
+    const noClip = () => false;
+    const r = advanceTransition(idle(SUMMER), AUTUMN, noClip, () => 0, 10);
+    expect(r.transitioning).toBe(false);
+    expect(r.state).toMatchObject({ curIdx: AUTUMN, mode: "idle" });
+  });
+
+  it("snaps on a backward or non-adjacent season jump", () => {
+    expect(advanceTransition(idle(AUTUMN), SPRING, hasAll, frames8, 10).transitioning).toBe(false);
+    expect(advanceTransition(idle(SPRING), WINTER, hasAll, frames8, 10).transitioning).toBe(false);
   });
 });

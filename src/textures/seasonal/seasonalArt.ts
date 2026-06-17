@@ -165,48 +165,167 @@ export function paintSeasonalReference(ctx: CanvasRenderingContext2D, key: strin
   return true;
 }
 
-/** Draw a subject into an origin-centered tile context. `tSec <= 0` is a static bake
- *  (snap to the season's idle rest frame, no transition); `tSec > 0` drives the loop
- *  and, on an adjacent forward season change, plays that transition once before settling
- *  into the new idle. Missing seasons fall back to the Summer anchor; a missing
- *  transition snaps. Season changes are self-detected from the `season` passed each call. */
+/** Clamp a season to its index 0..3, or fall back to `cur` when no season is set. */
+function seasonIdx(season: SeasonName | null, cur: number): number {
+  return season ? Math.max(0, Math.min(3, SEASON_NAMES.indexOf(season))) : cur;
+}
+
+/** Mutable slice of the per-key transition state machine. */
+export interface TransState { curIdx: number; mode: "idle" | "trans"; transTo: number; transStart: number; }
+
+/** What to render for a subject this tick, plus the (already-advanced) state. */
+export interface SeasonalPlan {
+  active: boolean;
+  /** Mid-transition: render `transFrame` of the `transFromIdx → +1` clip, in lockstep
+   *  across all instances (a season change is global). */
+  transitioning: boolean;
+  transFromIdx: number;
+  transFrame: number;
+  /** The settled idle season — what the per-tile idle bank should hold. */
+  settledSeasonIdx: number;
+  /** Resolved idle clip index after Summer-anchor fallback (cache key for re-bakes). */
+  resolvedIdleIdx: number;
+  /** Idle frame count for the settled season (1 = static still). */
+  idleFrames: number;
+}
+
+/**
+ * Pure transition state machine: given the current state, the target season `idx`,
+ * and the clip facts, return the next state and what to render. `tSec <= 0` snaps to
+ * idle (a static bake); an adjacent forward season change with a transition clip plays
+ * it once before settling; anything else snaps. Pure + exported for tests.
+ */
+export function advanceTransition(
+  st: TransState,
+  idx: number,
+  hasTransFrom: (fromIdx: number) => boolean,
+  transFrames: (fromIdx: number) => number,
+  tSec: number,
+): { state: TransState; transitioning: boolean; transFromIdx: number; transFrame: number; settledSeasonIdx: number } {
+  const s: TransState = { ...st };
+  if (tSec <= 0) {
+    s.curIdx = idx; s.mode = "idle";
+    return { state: s, transitioning: false, transFromIdx: idx, transFrame: 0, settledSeasonIdx: idx };
+  }
+  const settled = s.mode === "trans" ? s.transTo : s.curIdx;
+  if (idx !== settled) {
+    if (s.mode === "idle" && idx === s.curIdx + 1 && hasTransFrom(s.curIdx)) {
+      s.mode = "trans"; s.transTo = idx; s.transStart = tSec;
+    } else {
+      s.curIdx = idx; s.mode = "idle"; // jump / backward / no clip -> snap
+    }
+  }
+  if (s.mode === "trans") {
+    const n = transFrames(s.curIdx);
+    if (n > 0) {
+      const lf = Math.floor(((tSec - s.transStart) * 1000) / TRANS_MS);
+      if (lf < n - 1) {
+        return { state: s, transitioning: true, transFromIdx: s.curIdx, transFrame: lf, settledSeasonIdx: s.curIdx };
+      }
+    }
+    s.curIdx = s.transTo; s.mode = "idle";
+  }
+  return { state: s, transitioning: false, transFromIdx: s.curIdx, transFrame: 0, settledSeasonIdx: s.curIdx };
+}
+
+/** Advance a subject's transition state machine one tick and report what to render.
+ *  Mutates the module state, so call exactly once per key per tick (the per-frame
+ *  board loop is the single driver). Inactive subjects return a no-op plan. */
+export function seasonalAdvance(key: string, season: SeasonName | null, tSec: number): SeasonalPlan {
+  const st = states.get(key);
+  if (!st || !st.active) {
+    return { active: false, transitioning: false, transFromIdx: 0, transFrame: 0, settledSeasonIdx: 0, resolvedIdleIdx: -1, idleFrames: 0 };
+  }
+  const idx = seasonIdx(season, st.curIdx);
+  const r = advanceTransition(
+    { curIdx: st.curIdx, mode: st.mode, transTo: st.transTo, transStart: st.transStart },
+    idx,
+    (from) => !!st.trans[from],
+    (from) => st.trans[from]?.frames ?? 0,
+    tSec,
+  );
+  st.curIdx = r.state.curIdx; st.mode = r.state.mode; st.transTo = r.state.transTo; st.transStart = r.state.transStart;
+  const idleClip = resolveIdle(st, r.settledSeasonIdx);
+  return {
+    active: true,
+    transitioning: r.transitioning,
+    transFromIdx: r.transFromIdx,
+    transFrame: r.transFrame,
+    settledSeasonIdx: r.settledSeasonIdx,
+    resolvedIdleIdx: fallbackIdleIndex(st.idle.map(Boolean), r.settledSeasonIdx),
+    idleFrames: idleClip ? idleClip.frames : 0,
+  };
+}
+
+/** True while a subject is mid season-transition — instances should render the
+ *  lockstep transition frame, not their own idle frame. */
+export function seasonalIsTransitioning(key: string): boolean {
+  return states.get(key)?.mode === "trans";
+}
+
+/** Idle frame count for `key` at `season` (after Summer-anchor fallback): >1 means a
+ *  real idle loop, 1 a static still, 0 when nothing decoded. */
+export function seasonalIdleFrameCount(key: string, season: SeasonName | null): number {
+  const st = states.get(key);
+  if (!st || !st.active) return 0;
+  const c = resolveIdle(st, seasonIdx(season, st.curIdx));
+  return c ? c.frames : 0;
+}
+
+/** The widest idle clip across every decoded season — the frame-bank width a subject
+ *  needs so one strip texture survives season changes. */
+export function seasonalMaxIdleFrames(key: string): number {
+  const st = states.get(key);
+  if (!st || !st.active) return 0;
+  return st.idle.reduce((m, c) => (c ? Math.max(m, c.frames) : m), 0);
+}
+
+/** Draw idle `frame` of the resolved season into an origin-centered context. Pure
+ *  (no state mutation) — the caller owns frame selection (per-tile timing). */
+export function paintSeasonalIdleFrame(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  season: SeasonName | null,
+  frame: number,
+): void {
+  const st = states.get(key);
+  if (!st || !st.active) return;
+  const c = resolveIdle(st, seasonIdx(season, st.curIdx));
+  if (c) drawFrame(ctx, c, frame);
+}
+
+/** Draw `frame` of the `fromIdx → fromIdx+1` transition clip into an origin-centered
+ *  context. Pure — used to bake the lockstep transition frame. */
+export function paintSeasonalTransFrame(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  fromIdx: number,
+  frame: number,
+): void {
+  const st = states.get(key);
+  if (!st || !st.active) return;
+  const c = st.trans[fromIdx];
+  if (c) drawFrame(ctx, c, frame);
+}
+
+/** Draw a subject into an origin-centered tile context, advancing its transition
+ *  state machine. `tSec <= 0` is a static bake (idle rest frame). Retained for the
+ *  static-still bake path and any non-board caller; the board drives multi-frame idle
+ *  per-tile via `seasonalAdvance` + `paintSeasonalIdleFrame` instead of this loop. */
 export function paintSeasonalArt(
   ctx: CanvasRenderingContext2D,
   key: string,
   season: SeasonName | null,
   tSec: number,
 ): void {
-  const st = states.get(key);
-  if (!st || !st.active) return;
-  const idx = season ? Math.max(0, Math.min(3, SEASON_NAMES.indexOf(season))) : st.curIdx;
-
-  if (tSec <= 0) {
-    st.curIdx = idx;
-    st.mode = "idle";
-    const c = resolveIdle(st, idx);
-    if (c) drawFrame(ctx, c, 0);
+  const plan = seasonalAdvance(key, season, tSec);
+  if (!plan.active) return;
+  if (plan.transitioning) {
+    paintSeasonalTransFrame(ctx, key, plan.transFromIdx, plan.transFrame);
     return;
   }
-
-  const settled = st.mode === "trans" ? st.transTo : st.curIdx;
-  if (idx !== settled) {
-    if (st.mode === "idle" && idx === st.curIdx + 1 && st.trans[st.curIdx]) {
-      st.mode = "trans"; st.transTo = idx; st.transStart = tSec;
-    } else {
-      st.curIdx = idx; st.mode = "idle"; // jump / backward / no clip -> snap
-    }
-  }
-
-  if (st.mode === "trans") {
-    const c = st.trans[st.curIdx];
-    if (c) {
-      const lf = Math.floor(((tSec - st.transStart) * 1000) / TRANS_MS);
-      if (lf < c.frames - 1) { drawFrame(ctx, c, lf); return; }
-    }
-    st.curIdx = st.transTo; st.mode = "idle";
-  }
-
-  const c = resolveIdle(st, st.curIdx);
+  const st = states.get(key)!;
+  const c = resolveIdle(st, plan.settledSeasonIdx);
   if (!c) return;
-  drawFrame(ctx, c, Math.floor((tSec * 1000) / IDLE_MS) % c.frames);
+  drawFrame(ctx, c, tSec <= 0 ? 0 : Math.floor((tSec * 1000) / IDLE_MS) % c.frames);
 }

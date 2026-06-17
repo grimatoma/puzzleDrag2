@@ -1,5 +1,7 @@
 import Phaser from "phaser";
-import { seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
+import { seasonalArtActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
+import { idleFrameAt } from "./textures/seasonalIdleTiming.js";
+import type { SeasonName } from "./textures/seasonal/types.js";
 
 // Global multiplier on the ambient sway frequency. >1 makes the wind sway play
 // faster across every tile without touching each per-resource `freq` in
@@ -35,6 +37,10 @@ interface TileScene extends Phaser.Scene {
   tileScale?: number;
   tileSize?: number;
   boardY?: number;
+  /** Per-frame snapshot set by GameScene.update so each tile can pick its own idle
+   *  frame: whether motion plays, and the current season. */
+  motionOn?: boolean;
+  seasonName?: SeasonName | null;
   tweens: Phaser.Tweens.TweenManager;
   add: Phaser.GameObjects.GameObjectFactory;
   startPath(tile: TileObj): void;
@@ -148,9 +154,24 @@ export class TileObj {
   ambient(time: number): void {
     if (this._destroying || this.selected) return;
     // Baked-art tiles carry their motion inside the frames and have a ground pad
-    // that must not rotate — skip the sprite-angle sway entirely once art is active.
+    // that must not rotate — keep the sprite upright and, instead of the sway,
+    // drive the idle FRAME per tile so each one rests then gestures on its own
+    // staggered timer (no shared-texture lockstep loop).
     if (seasonalArtActive(this.res.key)) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
+      // Only frame-bank strips carry numbered frames; single-frame stills (and the
+      // brief window before a strip is built) have only __BASE, where setFrame would
+      // warn. The bound texture itself is the robust gate.
+      if (!this.sprite.texture.has("0")) return;
+      // Reduced motion → hold the rest frame. Mid season-transition → show the
+      // lockstep transition frame the scene baked into slot 0 (whole board flips
+      // together). Otherwise pick this cell's own idle frame.
+      if (this.scene.motionOn === false || seasonalIsTransitioning(this.res.key)) {
+        this.sprite.setFrame(0);
+        return;
+      }
+      const frames = seasonalIdleFrameCount(this.res.key, this.scene.seasonName ?? null);
+      this.sprite.setFrame(idleFrameAt(time, this.col, this.row, frames));
       return;
     }
     const sway = this.res.look?.sway;

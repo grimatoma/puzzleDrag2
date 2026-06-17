@@ -6,7 +6,7 @@ import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
 import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
-import { paintSeasonalArt, seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
+import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalTransFrame, seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -71,6 +71,16 @@ export function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: nu
 //   4. the base static icon (`drawTileIcon`)
 // Used by the initial bake, the resize re-bake, the season-change re-bake, and
 // the per-frame animation pass — so all four share identical tile chrome.
+/** Optional frame selector for baked seasonal art. Lets the board bake one specific
+ *  frame into a frame-bank strip slot (per-tile idle) or the lockstep transition frame,
+ *  instead of the time-driven shared loop. */
+export interface SeasonalBake {
+  /** Bake idle frame `idleFrame` of the current season (frame-bank slot). */
+  idleFrame?: number;
+  /** Bake `frame` of the `fromIdx → fromIdx+1` season transition clip (lockstep). */
+  trans?: { fromIdx: number; frame: number };
+}
+
 export function paintTileCanvas(
   ctx: CanvasRenderingContext2D,
   res: { key: string; look: { color: number } },
@@ -79,6 +89,7 @@ export function paintTileCanvas(
   h: number,
   season: SeasonName | null,
   t?: number,
+  bake?: SeasonalBake,
 ) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "rgba(0,0,0,.22)";
@@ -119,8 +130,13 @@ export function paintTileCanvas(
     !baked && isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
   const anim = !baked && !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
   const sdraw = !baked && !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
-  if (baked) paintSeasonalArt(ctx, res.key, season, t ?? 0);
-  else if (conceptAnim) conceptAnim(ctx, t as number);
+  if (baked) {
+    // Frame-bank baking: a specific idle frame (per-tile idle slot) or the lockstep
+    // transition frame. Without a `bake` selector, fall back to the time-driven loop.
+    if (bake?.trans) paintSeasonalTransFrame(ctx, res.key, bake.trans.fromIdx, bake.trans.frame);
+    else if (bake?.idleFrame != null) paintSeasonalIdleFrame(ctx, res.key, season, bake.idleFrame);
+    else paintSeasonalArt(ctx, res.key, season, t ?? 0);
+  } else if (conceptAnim) conceptAnim(ctx, t as number);
   else if (anim) anim(ctx, t as number);
   else if (sdraw) sdraw(ctx);
   else drawTileIcon(ctx, res.key);
