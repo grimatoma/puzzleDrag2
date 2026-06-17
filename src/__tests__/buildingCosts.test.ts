@@ -71,6 +71,8 @@ describe("analyseBuildingCosts", () => {
     const out = analyseBuildingCosts();
     expect(out.perBuilding.length).toBeGreaterThan(0);
     expect(out.perResource.length).toBeGreaterThan(0);
-    expect(out.totals.coins).toBeGreaterThan(0);
+    // Buildings are resource-only after the PC2 cost port — assert the catalog
+    // carries real resource demand rather than a coin total.
+    expect(out.perResource.reduce((sum, r) => sum + r.qty, 0)).toBeGreaterThan(0);
   });
 });

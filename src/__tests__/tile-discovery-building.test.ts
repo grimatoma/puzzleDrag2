@@ -47,7 +47,10 @@ describe("own-a-building tile discovery", () => {
   it("BUILD on the Kitchen discovers Broccoli end-to-end", () => {
     const def = BUILDINGS.find((b) => b.id === "kitchen");
     const base = createInitialState();
-    const stocked = { ...base, ...patchInventory(base, { plank: (def.cost.plank ?? 0) + 10 }), coins: (def.cost.coins ?? 0) + 100 };
+    // Kitchen is resource-only after the PC2 cost port — stock each required resource.
+    const resPatch: Record<string, number> = {};
+    for (const [k, v] of Object.entries(def.cost)) if (k !== "coins") resPatch[k] = (v as number) + 10;
+    const stocked = { ...base, ...patchInventory(base, resPatch), coins: 0 };
     const s0 = {
       ...stocked,
       built: { ...stocked.built, home: { ...(stocked.built.home as object), decorations: {}, _plots: {} } },

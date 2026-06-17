@@ -22,13 +22,16 @@ describe("EconomyRollup", () => {
     expect((container.textContent ?? "")).toMatch(/town economy/i);
   });
 
-  it("renders the kingdom-wide coins metric card with the summed total", () => {
+  it("renders the surviving currency metric card with the summed total", () => {
     const { container } = render(<EconomyRollup />);
     const body = container.textContent ?? "";
-    expect(totals.coins).toBeGreaterThan(0);
-    expect(body).toMatch(/coins/i);
-    // The formatted coins total (with thousands separators) appears on the card.
-    expect(body).toContain(totals.coins.toLocaleString("en-US"));
+    // Buildings are resource-only after the PC2 cost port — coins are no longer
+    // a building currency, so the coins card drops out. Runes survive (the
+    // Magic Portal is rune-gated), so that currency card still renders.
+    expect(totals.coins).toBe(0);
+    expect(totals.runes).toBeGreaterThan(0);
+    expect(body).toMatch(/runes/i);
+    expect(body).toContain(totals.runes.toLocaleString("en-US"));
   });
 
   it("renders a per-resource bar with a 'used by N buildings' annotation", () => {

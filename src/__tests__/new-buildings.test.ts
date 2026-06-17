@@ -13,7 +13,12 @@ describe("new harbor + smokehouse buildings", () => {
   it("each new building has cost, lv, color, and a description", () => {
     for (const id of ["harbor_dock", "fishmonger", "smokehouse"]) {
       const b = BUILDINGS.find((x) => x.id === id);
-      expect(b.cost.coins).toBeGreaterThan(0);
+      // Resource-only costs (PC2 cost port): every building requires a non-zero
+      // amount of some resource (coins are no longer a building currency).
+      const resTotal = Object.entries(b.cost)
+        .filter(([k]) => k !== "coins")
+        .reduce((sum, [, v]) => sum + (v as number), 0);
+      expect(resTotal, id).toBeGreaterThan(0);
       expect(b.lv).toBeGreaterThanOrEqual(1);
       expect(typeof b.look.color).toBe("string");
       expect(typeof b.desc).toBe("string");
@@ -28,17 +33,22 @@ describe("new harbor + smokehouse buildings", () => {
 
   it("BUILD on harbor_dock with sufficient resources succeeds", () => {
     const def = BUILDINGS.find((b) => b.id === "harbor_dock");
+    // Seed the zone inventory with each resource the (resource-only) cost needs.
+    const homeInv: Record<string, number> = {};
+    for (const [k, v] of Object.entries(def.cost)) if (k !== "coins") homeInv[k] = (v as number) + 5;
     const s0 = {
       ...createInitialState(),
-      coins: def.cost.coins + 100,
-      inventory: { home: { plank: def.cost.plank + 10, block: def.cost.block + 10 } },
+      coins: 0,
+      inventory: { home: homeInv },
       level: def.lv + 1,
       built: {},
     };
     const s1 = rootReducer(s0, { type: "BUILD", building: def });
     const loc = s1.mapCurrent ?? "home";
     expect(s1.built[loc]?.harbor_dock).toBe(true);
-    expect(s1.coins).toBe(s0.coins - def.cost.coins);
+    // A representative resource was debited from the zone inventory.
+    const firstRes = Object.keys(def.cost).find((k) => k !== "coins") as string;
+    expect(s1.inventory[loc][firstRes]).toBe(homeInv[firstRes] - def.cost[firstRes]);
   });
 
   it("BUILD on fishmonger requires fish_fillet — rejects without it", () => {
@@ -46,7 +56,9 @@ describe("new harbor + smokehouse buildings", () => {
     const s0 = {
       ...createInitialState(),
       coins: 5000,
-      inventory: { home: { plank: 50, fish_fillet: 0 } },
+      // Everything fishmonger needs EXCEPT fish_fillet, so the rejection is
+      // specifically due to the missing fish_fillet.
+      inventory: { home: { plank: 50, block: 50, fish_fillet: 0 } },
       level: 10,
       built: {},
     };
