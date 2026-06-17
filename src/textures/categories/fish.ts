@@ -291,8 +291,126 @@ function drawPearl(ctx: CanvasRenderingContext2D) {
   ctx.stroke();
 }
 
+// Cocoa pod — ridged amber-brown pod (PC2 cocoa island).
+function drawCocoaPod(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 12);
+  const g = ctx.createLinearGradient(-8, -16, 8, 16);
+  g.addColorStop(0, "#a05f30"); g.addColorStop(0.5, "#7a4a28"); g.addColorStop(1, "#4a2c16");
+  ctx.fillStyle = g; ctx.strokeStyle = "#2e1a0c"; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.ellipse(0, 0, 11, 19, 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Lengthwise ridges
+  ctx.strokeStyle = "rgba(40,22,10,0.55)"; ctx.lineWidth = 1.2;
+  [-6, -2, 2, 6].forEach((dx) => { ctx.beginPath(); ctx.moveTo(dx, -16); ctx.quadraticCurveTo(dx * 1.4, 0, dx, 16); ctx.stroke(); });
+  // Highlight
+  ctx.strokeStyle = "rgba(255,210,150,0.5)"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-5, -13); ctx.quadraticCurveTo(-8, 0, -5, 13); ctx.stroke();
+}
+
+// Cocoa beans — a small heap of roasted beans.
+function drawCocoa(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 16);
+  const beans: [number, number, number][] = [[-7, 6, 0.3], [6, 7, -0.4], [0, 9, 0.1], [-3, 0, -0.2], [4, -1, 0.4], [0, -7, 0.0]];
+  beans.forEach(([bx, by, ang]) => {
+    ctx.save(); ctx.translate(bx, by); ctx.rotate(ang);
+    const g = ctx.createLinearGradient(0, -6, 0, 6);
+    g.addColorStop(0, "#8a5430"); g.addColorStop(1, "#4a2c16");
+    ctx.fillStyle = g; ctx.strokeStyle = "#2e1a0c"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(40,22,10,0.6)"; ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+    ctx.restore();
+  });
+}
+
+// Octopus — the PC2 ink source.
+function drawOctopus(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 18);
+  const g = ctx.createRadialGradient(-3, -6, 2, 0, -2, 16);
+  g.addColorStop(0, "#6a5a90"); g.addColorStop(1, "#3a3358");
+  ctx.fillStyle = g; ctx.strokeStyle = "#161228"; ctx.lineWidth = 1.6;
+  // Head/mantle
+  ctx.beginPath(); ctx.ellipse(0, -6, 12, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Tentacles
+  ctx.fillStyle = "#473d6a";
+  for (let i = -2; i <= 2; i++) {
+    const bx = i * 5;
+    ctx.beginPath();
+    ctx.moveTo(bx - 2, 4);
+    ctx.quadraticCurveTo(bx + i * 3, 18, bx + i * 5, 20);
+    ctx.quadraticCurveTo(bx + i * 2, 16, bx + 2, 4);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  // Eyes
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(-4, -8, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5, -8, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#161228";
+  ctx.beginPath(); ctx.arc(-4, -8, 1.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5, -8, 1.1, 0, Math.PI * 2); ctx.fill();
+}
+
+// Ink — a stoppered bottle of dark ink.
+function drawInk(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 12);
+  ctx.fillStyle = "#2a2440"; ctx.strokeStyle = "#100c1c"; ctx.lineWidth = 1.6;
+  // Bulb body
+  ctx.beginPath(); ctx.arc(0, 6, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Neck + cork
+  ctx.fillStyle = "#3a3358";
+  ctx.beginPath(); ctx.rect(-5, -10, 10, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#7a6a9a";
+  ctx.beginPath(); ctx.rect(-6, -14, 12, 5); ctx.fill(); ctx.stroke();
+  // Liquid sheen
+  ctx.fillStyle = "rgba(150,130,200,0.5)";
+  ctx.beginPath(); ctx.ellipse(-4, 3, 3, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.beginPath(); ctx.arc(-5, 1, 1.4, 0, Math.PI * 2); ctx.fill();
+}
+
+// Raw jade — a rounded green river stone.
+function drawJadeRaw(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 18);
+  const g = ctx.createRadialGradient(-5, -6, 2, 0, 0, 22);
+  g.addColorStop(0, "#7fd6a6"); g.addColorStop(0.6, "#3fae7a"); g.addColorStop(1, "#1c5a3e");
+  ctx.fillStyle = g; ctx.strokeStyle = "#103a28"; ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-20, 2); ctx.bezierCurveTo(-20, -12, -8, -20, 4, -19);
+  ctx.bezierCurveTo(16, -18, 22, -8, 21, 4);
+  ctx.bezierCurveTo(20, 16, 8, 22, -4, 21);
+  ctx.bezierCurveTo(-16, 19, -20, 12, -20, 2);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Mottled translucency
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.beginPath(); ctx.ellipse(-6, -8, 6, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(20,80,52,0.4)";
+  [[8, 6, 4], [-4, 10, 3], [10, -6, 2.5]].forEach(([dx, dy, dr]) => { ctx.beginPath(); ctx.arc(dx, dy, dr, 0, Math.PI * 2); ctx.fill(); });
+}
+
+// Polished jade — a cut cabochon gem.
+function drawJadeGem(ctx: CanvasRenderingContext2D) {
+  shadow(ctx, 18);
+  const body = ctx.createRadialGradient(-4, -4, 2, 0, 0, 22);
+  body.addColorStop(0, "#d6f7e4"); body.addColorStop(0.4, "#4fc78c"); body.addColorStop(1, "#176a47");
+  ctx.fillStyle = body; ctx.strokeStyle = "#0e3e2a"; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 18, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Facet ring
+  ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 11, 9, 0, 0, Math.PI * 2); ctx.stroke();
+  // Specular
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.beginPath(); ctx.ellipse(-6, -6, 4, 2.6, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath(); ctx.arc(6, 5, 1.6, 0, Math.PI * 2); ctx.fill();
+}
+
 export const ICONS = {
   tile_fish_sardine:        { label: "Sardine",     color: "#9ab8c4", draw: drawSardine },
+  tile_fish_cocoa:          { label: "Cocoa Pod",   color: "#7a4a28", draw: drawCocoaPod },
+  cocoa:                    { label: "Cocoa",       color: "#7a4a28", draw: drawCocoa },
+  tile_fish_ink:            { label: "Octopus",     color: "#3a3358", draw: drawOctopus },
+  ink:                      { label: "Ink",         color: "#2a2440", draw: drawInk },
+  tile_fish_jade:           { label: "Jade (rough)",color: "#3fae7a", draw: drawJadeRaw },
+  jade:                     { label: "Jade",        color: "#3fae7a", draw: drawJadeGem },
   tile_fish_mackerel:       { label: "Mackerel",    color: "#4a7a9a", draw: drawMackerel },
   tile_fish_clam:           { label: "Clam",        color: "#c8a888", draw: drawClam },
   tile_fish_oyster:         { label: "Oyster",      color: "#d0c0a8", draw: drawOyster },

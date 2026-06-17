@@ -200,18 +200,34 @@ export function drawTileIcon(ctx: CanvasRenderingContext2D, key: string) {
   // Each dispatcher returns true if it handled the key.
   if (drawFarmTileIcon(ctx, key)) return;
   if (drawMineTileIcon(ctx, key)) return;
-  // Glyph fallback — only fires if neither registry nor legacy handled it.
+  // Colored-token fallback — fires only if neither registry nor legacy handled
+  // the key. Renders a rounded gem-ish token in the resource's own palette so a
+  // freshly-added resource (e.g. the PC2 silver/cocoa/ink/jade) reads as a
+  // distinct colored piece instead of a bare "?" until bespoke art lands.
   let res = null;
   for (const biome of Object.values(BIOMES)) {
     res = [...biome.tiles, ...biome.resources].find((r) => r.key === key);
     if (res) break;
   }
   if (res) {
-    ctx.fillStyle = hex(res.look.dark);
-    ctx.font = 'bold 36px "Newsreader", "Times New Roman", serif';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("?", 0, 2);
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body in the resource's color
+    ctx.fillStyle = hex(res.look.color);
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = hex(res.look.dark);
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    // Top-left specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(-5, -6, 6, 4, -0.4, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 

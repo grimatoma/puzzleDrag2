@@ -265,8 +265,54 @@ function drawGold(ctx: CanvasRenderingContext2D) {
   ctx.beginPath(); ctx.arc(0,-2,12,Math.PI*1.18,Math.PI*1.5); ctx.stroke();
 }
 
+// Silver ore — cold grey rock body with a bright white-silver vein.
+function drawMineSilver(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
+  const grad = ctx.createLinearGradient(0,-22,0,22);
+  grad.addColorStop(0,"#d6dbe2"); grad.addColorStop(0.5,"#9aa0a8"); grad.addColorStop(1,"#5a6068");
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.moveTo(-21,4); ctx.lineTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(18,-14); ctx.lineTo(23,2); ctx.lineTo(15,19); ctx.lineTo(-6,22); ctx.lineTo(-19,14); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#3a3e44"; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
+  // Bright silver vein
+  const seam = ctx.createLinearGradient(-20,0,20,0);
+  seam.addColorStop(0,"#aab2bc"); seam.addColorStop(0.5,"#ffffff"); seam.addColorStop(1,"#7a828c");
+  ctx.fillStyle = seam;
+  ctx.beginPath(); ctx.moveTo(-18,-2); ctx.bezierCurveTo(-6,-8,6,4,20,0); ctx.lineTo(20,3); ctx.bezierCurveTo(6,9,-6,-3,-18,2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#4a525c"; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-15,0); ctx.bezierCurveTo(-4,-5,4,5,16,1); ctx.stroke();
+  ctx.fillStyle = "#eef2f6";
+  [[8,8],[-10,12],[4,-14],[-14,-8],[14,-6]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy,1.1,0,Math.PI*2); ctx.fill(); });
+}
+
+// Silver bar — poured metallic ingot, cooler/brighter than the iron bar.
+function drawSilverBar(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0,18,22,5,0,0,Math.PI*2); ctx.fill();
+  // Front face (trapezoid)
+  const front = ctx.createLinearGradient(0,-4,0,16);
+  front.addColorStop(0,"#dde2e8"); front.addColorStop(1,"#8a929c");
+  ctx.fillStyle = front;
+  ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.lineTo(16,16); ctx.lineTo(-16,16); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#3a4048"; ctx.lineWidth = 2; ctx.stroke();
+  // Top face
+  const top = ctx.createLinearGradient(0,-14,0,0);
+  top.addColorStop(0,"#fcffff"); top.addColorStop(1,"#c2cad2");
+  ctx.fillStyle = top;
+  ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(-14,-12); ctx.lineTo(14,-12); ctx.lineTo(20,0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Top edge highlight
+  ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-12,-10); ctx.lineTo(12,-10); ctx.stroke();
+  // Stamp
+  ctx.strokeStyle = "rgba(40,46,52,0.7)"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(0,8,4,0,Math.PI*2); ctx.stroke();
+}
+
 export const ICONS = {
   tile_mine_stone:       { label:"Stone",       color:"#8a8f94", draw:drawStone },
+  tile_mine_silver:      { label:"Silver Ore",  color:"#c2c8d0", draw:drawMineSilver },
+  silver_bar:            { label:"Silver Bar",  color:"#d6dbe2", draw:drawSilverBar },
   block:            { label:"Block",       color:"#7e858a", draw:drawBlock },
   tile_mine_iron_ore:    { label:"Iron Ore",    color:"#a89890", draw:drawMineIronOre },
   tile_mine_copper_ore:  { label:"Copper Ore",  color:"#c97f4f", draw:drawMineCopperOre },
