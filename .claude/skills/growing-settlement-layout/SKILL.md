@@ -26,21 +26,32 @@ inside it are `tileset-scene-design`; the *tiles* themselves are `pixellab` / `s
 
 ## The one idea everything follows from
 
-**A town grows in rings from a fixed heart, carved out of wilderness.** Don't lay plots on a `cols × rows`
-lattice — that is exactly what reads as placeholder ("grid death"). Instead:
+**Lay the ROADS first; place buildings FRONTING the roads; grow the road network each rung.** This is how
+real towns and city-builders stay coherent — and it is the fix for the three things that wreck a town
+layout:
 
-- **A single focal landmark sits at a fixed centre and levels up with the town** — well → fountain+plaza →
-  town-square monument. It never moves.
-- **Plots ring outward from it in loose, varied clusters** (mixed footprints, 5–15% jitter, a curved path
-  spine — never a straight grid line).
-- **The surrounding wilderness is the progress bar.** The town is a clearing in forest; each tier clears a
-  wider ring. Receding woods = the clearest "we grew" signal, no UI text needed. Forest recedes
-  **monotonically** — never re-wilds.
-- **The ground tells the story for free**: path material upgrades dirt → cobble; prop/NPC density rises
-  each tier.
+- **Never route a road to a building's centre.** That makes roads cross other buildings. Instead lay a
+  road segment, then place each building *beside* it at a fixed setback, facing it. Roads then always run
+  *between* buildings. (Burgage-plot frontage; Parish & Müller; Manor Lords.)
+- **Give every lot a minimum street frontage + spacing**, so buildings never crowd.
+- **Grow the network with visible NEW ROUTES.** Each rung adds a distinct piece: extend the main street,
+  open a back lane behind it, add cross-connectors into blocks. The road map itself tells the growth
+  story. Roads are immutable once laid — growth only *extends* them. (Ribbon development; Watabou.)
+- **A bounded plaza the buildings ring.** The market square / plaza is a *fixed* open hub that never grows
+  over its buildings; streets radiate from it. Put a single focal landmark in it that levels up with the
+  town — well → fountain → town-square monument — without moving or resizing the plaza.
+- **The wilderness is the progress bar.** The town is a clearing in forest; clear it *along the new roads*
+  each rung, so growth reads as the town pushing route-by-route into the woods. Forest never re-wilds.
+- **The ground tells the story for free**: main-street surface upgrades dirt → cobble; prop/NPC density
+  rises each rung.
 
-The full rationale, named game references, and citations are in
-[`references/design-principles.md`](references/design-principles.md). Read it before designing a ladder.
+The practical geometry that makes this collision-free: band the plots into rows (back-lane row · main-st
+north row · main street · south row · back-lane row); a road's frontage row aligns building *edges* to
+the street at `roadHalf + setback`; connectors only thread x-columns with no plot in either adjacent row
+(or join through the plaza). Verify a candidate layout in a tiny Node harness (no plot overlaps another
+plot / a road / the plaza) *before* baking coordinates in. The full rationale, named references, and
+citations are in [`references/design-principles.md`](references/design-principles.md). Read it before
+designing a layout.
 
 ## The puzzleDrag2 authoring contract (don't break these)
 
@@ -74,13 +85,16 @@ When inserting a new bottom rung into an existing ladder:
 ## Workflow
 
 1. **Set the ladder** — rung names + plot curve (above). Confirm count/curve with the user.
-2. **Sketch each rung in the mockup** — `docs/town-layout/index.html` is a live, canvas-based layout tool
-   on the real 40×30 grid: tier selector, "Grow" play-through, forest/plot/landmark/path/prop rendering,
-   and a **Copy layout JSON** button that exports a rung's resolved `lots[]` in `AuthoredTownMap` shape.
-   Iterate here with **flat colors only** — lock the layout before any art.
-3. **Verify the layout** before porting: deterministic placement (seeded), no lot overlaps, all in bounds,
-   forest recedes monotonically, inherited lots/landmark never move. (Headless: sample canvas pixels +
-   re-run the placement math in Node — see the doc's verification section.)
+2. **Author roads → frontage in the mockup** — `docs/town-layout/index.html` is a live, canvas-based tool
+   on the real 40×30 grid: it holds a `ROADS` list (segments with a `tier`) and a `SPEC` list of frontage
+   slots (which road + side + position-along), resolves slots to building rects at a setback, and renders
+   the network + plots + a "Grow" play-through, with a **Copy layout JSON** export of `roads` + `lots` in
+   `AuthoredTownMap` shape. Iterate here with **flat colors only** — lock the layout before any art.
+3. **Verify the layout headlessly first** — run the placement math in a small Node harness and assert: no
+   plot overlaps another plot, no plot overlaps any road segment, no plot overlaps the bounded plaza or
+   the board, all in bounds, and the per-rung reveal counts equal the ladder. Fix flagged collisions by
+   nudging an along-position before baking. (Then sample canvas pixels / capture per-rung PNGs to eyeball
+   it — see the doc + project memory for the headless-canvas capture trick.)
 4. **Port coordinates** into `townMaps.ts` authored maps (paste the exported `lots[]`; build `groundTiles`
    with the helpers + the new forest/cobble/clearing vocabulary).
 5. **Fill the tile/prop manifest** (template below) — the art shopping list.
@@ -108,9 +122,17 @@ When inserting a new bottom rung into an existing ladder:
 
 ## Pitfalls
 
-- **Grid death** — uniform spacing on a straight lattice reads as placeholder. Curve the spine, vary lot
-  sizes, jitter positions, anchor on a focal landmark.
-- **Moving inherited elements** — repositioning a lower-rung lot/landmark on upgrade breaks the
+- **Roads crossing buildings** — the #1 incoherence tell. It happens when you route a road *to* a building
+  (e.g. a spur from each plot to the plaza centre). Fix: lay roads first, place buildings fronting them at
+  a setback; a road never targets a building.
+- **Buildings too dense** — no frontage rule. Give each lot a minimum street-frontage width and space
+  columns by ≥ plot-width + gap.
+- **A plaza/square that grows over its buildings** — caused by treating the central feature like a building
+  that scales each rung. Lock the plaza to a *fixed* size; let the ring of buildings around it densify
+  instead, and swap only the landmark sprite (well → fountain → monument).
+- **Grid death** — uniform spacing on a straight lattice reads as placeholder. Vary lot sizes, stagger
+  frontage, anchor on the plaza, and let the road network (not a grid) shape the town.
+- **Moving inherited elements** — repositioning a lower-rung lot/landmark/road on upgrade breaks the
   stable-index contract *and* looks wrong (a placed building teleports). Only ever append.
 - **Re-wilding** — cleared ground that grows forest back reads as "losing territory". Forest recedes one
   way.
