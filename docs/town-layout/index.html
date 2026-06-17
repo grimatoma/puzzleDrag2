@@ -276,8 +276,9 @@
   const MILL={x:156,y:632,from:1};
   // keep the forest off the mill + each storytelling vignette so trees don't draw on top of them ([x,y,halfW,halfH])
   const CLEAR_SPOTS=[[156,632,52,72],[566,540,40,64],[60,560,50,70],[566,808,44,66],[1160,620,50,70],[980,840,44,66],[214,152,38,52]];
-  const SIZES=[[112,104],[120,112],[104,120],[128,104],[100,112]];
-  const sz=i=>SIZES[i%SIZES.length];
+  // varied per-lot footprints (band-aware: deep lots only where there's room behind) — kills the uniform-square "spreadsheet" read
+  const FOOT={0:[128,100],1:[132,96],2:[100,104],3:[92,100],4:[112,108],5:[134,98],6:[92,118],7:[132,114],8:[104,110],9:[96,124],10:[134,100],11:[114,112],12:[104,106],13:[92,98],14:[116,104],15:[110,102],16:[96,106],17:[134,96],18:[108,104],19:[100,104]};
+  const sz=i=>FOOT[i]||[104,104];
   const ROADS=[
     {id:'HS0',axis:'H',line:470,half:17,a:400,b:870,tier:0,kind:'main'},
     {id:'HS1w',axis:'H',line:470,half:17,a:265,b:400,tier:1,kind:'main'},
@@ -292,16 +293,19 @@
     {id:'CN_w',axis:'V',line:560,half:10,a:487,b:768,tier:3,kind:'lane'},
     {id:'CN_e',axis:'V',line:976,half:10,a:487,b:768,tier:3,kind:'lane'},
     {id:'CN_ne',axis:'V',line:880,half:10,a:300,b:453,tier:3,kind:'lane'},
+    {id:'RID',pts:[[1040,300],[1226,150]],half:11,tier:3,kind:'lane'}, // City: a NEW diagonal ridge lane branching into the NE forest (growth = new geometry, not more rows)
   ];
+  // frontage slots: uneven along-positions + per-lot setback (sb) stagger break the mirror-symmetry / ruler-row "spreadsheet" read; lot 14 fronts the diagonal ridge lane
   const SPEC=[
-    {i:0,line:470,half:17,side:'N',along:470,t:0},{i:1,line:470,half:17,side:'N',along:800,t:0},{i:2,line:470,half:17,side:'S',along:300,t:0},
-    {i:3,line:470,half:17,side:'S',along:430,t:1},{i:4,line:470,half:17,side:'N',along:330,t:1},{i:5,line:470,half:17,side:'N',along:950,t:1},
-    {i:6,line:470,half:17,side:'N',along:200,t:2},{i:7,line:470,half:17,side:'N',along:1080,t:2},
-    {i:8,line:300,half:13,side:'N',along:360,t:2},{i:9,line:300,half:13,side:'N',along:560,t:2},{i:10,line:300,half:13,side:'N',along:760,t:2},{i:11,line:300,half:13,side:'N',along:980,t:2},
-    {i:12,line:470,half:17,side:'S',along:1044,t:3},{i:13,line:470,half:17,side:'S',along:1180,t:3},{i:14,line:300,half:13,side:'N',along:1160,t:3},
-    {i:15,line:768,half:13,side:'N',along:290,t:3},{i:16,line:768,half:13,side:'N',along:420,t:3},{i:17,line:768,half:13,side:'N',along:632,t:3},{i:18,line:768,half:13,side:'N',along:1056,t:3},{i:19,line:768,half:13,side:'N',along:1190,t:3},
+    {i:0,line:470,half:17,side:'N',along:455,t:0,sb:4},{i:1,line:470,half:17,side:'N',along:800,t:0,sb:0},{i:2,line:470,half:17,side:'S',along:300,t:0,sb:6},
+    {i:3,line:470,half:17,side:'S',along:440,t:1,sb:0},{i:4,line:470,half:17,side:'N',along:318,t:1,sb:10},{i:5,line:470,half:17,side:'N',along:966,t:1,sb:2},
+    {i:6,line:470,half:17,side:'N',along:158,t:2,sb:6},{i:7,line:470,half:17,side:'N',along:1108,t:2,sb:0},
+    {i:8,line:300,half:13,side:'N',along:352,t:2,sb:8},{i:9,line:300,half:13,side:'N',along:548,t:2,sb:0},{i:10,line:300,half:13,side:'N',along:772,t:2,sb:6},{i:11,line:300,half:13,side:'N',along:992,t:2,sb:0},
+    {i:12,line:470,half:17,side:'S',along:1052,t:3,sb:2},{i:13,line:470,half:17,side:'S',along:1182,t:3,sb:8},
+    {i:14,diag:'RID',t:3,cx:1130,cy:150,side:'N'},
+    {i:15,line:768,half:13,side:'N',along:286,t:3,sb:0},{i:16,line:768,half:13,side:'N',along:424,t:3,sb:8},{i:17,line:768,half:13,side:'N',along:600,t:3,sb:2},{i:18,line:768,half:13,side:'N',along:1060,t:3,sb:0},{i:19,line:768,half:13,side:'N',along:1196,t:3,sb:8},
   ];
-  const LOTS=SPEC.map(s=>{const[w,h]=sz(s.i);const jx=((s.i*37)%9-4),js=((s.i*53)%11-5);let cx=s.along+jx,cy=(s.side==='N'?s.line-s.half-SET-h/2:s.line+s.half+SET+h/2)+js;cx=Math.max(34+w/2,Math.min(1280-34-w/2,cx));return{index:s.i,cx,cy,w,h,t:s.t,side:s.side};});
+  const LOTS=SPEC.map(s=>{const[w,h]=sz(s.i);if(s.diag)return{index:s.i,cx:s.cx,cy:s.cy,w,h,t:s.t,side:s.side};const jx=((s.i*37)%9-4),sb=SET+(s.sb||0);let cx=s.along+jx,cy=(s.side==='N'?s.line-s.half-sb-h/2:s.line+s.half+sb+h/2);cx=Math.max(34+w/2,Math.min(1280-34-w/2,cx));return{index:s.i,cx,cy,w,h,t:s.t,side:s.side};});
   const ROOFS=["#b6422c","#a85a2c","#9c6b3f","#6e8b4f","#4f7a6a","#8a5a8a","#b07a32"];
   const WALLS=["#e8d3a8","#e6cd9c","#dec9b2","#ecd8ad","#e0cba0"];
   const TIER_NAMES=["Outpost","Hamlet","Village","City"];
@@ -337,7 +341,7 @@
   }
 
   // ── helpers ───────────────────────────────────────────────────
-  const segPts=r=>r.axis==='H'?[[r.a,r.line],[r.b,r.line]]:[[r.line,r.a],[r.line,r.b]];
+  const segPts=r=>r.pts?r.pts:(r.axis==='H'?[[r.a,r.line],[r.b,r.line]]:[[r.line,r.a],[r.line,r.b]]);
   function distSeg(x,y,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy;let t=L?((x-ax)*dx+(y-ay)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-(ax+dx*t),y-(ay+dy*t));}
   const RPTS=(()=>{const o=[];for(let i=0;i<RIVER.length-1;i++){const[ax,ay]=RIVER[i],[bx,by]=RIVER[i+1];const L=Math.hypot(bx-ax,by-ay),n=Math.ceil(L/8);for(let k=0;k<=n;k++)o.push([ax+(bx-ax)*k/n,ay+(by-ay)*k/n]);}return o;})();
   function inEll(x,y,e,pad){pad=pad||0;return ((x-e.cx)/(e.rx+pad))**2+((y-e.cy)/(e.ry+pad))**2<=1;}
