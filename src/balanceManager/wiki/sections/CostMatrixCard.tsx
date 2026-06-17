@@ -13,6 +13,7 @@
 import React from "react";
 import { COLORS } from "../../shared.jsx";
 import { useCostEdits } from "../costEditsStore.js";
+import { useCostColumns } from "../costColumnsStore.js";
 import { buildCostMatrix } from "../costMatrix.js";
 import type { CostMatrix, CostMatrixId } from "../costMatrix.js";
 import { CostMatrixTable } from "./CostMatrixTable.jsx";
@@ -43,10 +44,11 @@ export interface LiveCostMatrixProps {
   id?: string;
 }
 
-/** Self-building card bound to the live edit store (per-category pages). */
+/** Self-building card bound to the live edit + columns stores (category pages). */
 export function LiveCostMatrix({ matrixId, editable, id }: LiveCostMatrixProps) {
   const { edits } = useCostEdits();
-  const matrix = buildCostMatrix(matrixId, edits);
+  const { columns } = useCostColumns();
+  const matrix = buildCostMatrix(matrixId, edits, columns[matrixId] ?? []);
   return <CostMatrixCard matrix={matrix} editable={editable} id={id} />;
 }
 

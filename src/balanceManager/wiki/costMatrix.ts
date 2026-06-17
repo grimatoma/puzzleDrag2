@@ -35,6 +35,12 @@ export interface CostMatrixColumn {
   iconKey: string;
   /** Currencies (coins/runes/…) sort first and render with a subtle accent. */
   currency: boolean;
+  /**
+   * True when this column was added by the user (a resource that no entity in
+   * the matrix natively costs) rather than derived from the catalogs. Extra
+   * columns are removable in the editor.
+   */
+  extra?: boolean;
 }
 
 export interface CostMatrixCell {
@@ -153,6 +159,22 @@ function orderColumns(keys: Iterable<string>, valueFirst = false): CostMatrixCol
   return cols;
 }
 
+/**
+ * Fold user-added column keys into the natural column set: append the ones the
+ * catalog doesn't already cover, build the ordered columns, then flag each
+ * non-natural column `extra` so the editor can offer to remove it.
+ */
+function withExtraColumns(
+  naturalKeys: Set<string>,
+  extraColumns: readonly string[],
+  valueFirst = false,
+): CostMatrixColumn[] {
+  const extra = extraColumns.filter((k) => k && !naturalKeys.has(k));
+  const columns = orderColumns([...naturalKeys, ...extra], valueFirst);
+  for (const col of columns) col.extra = !naturalKeys.has(col.key);
+  return columns;
+}
+
 /** Build a single cell, applying overrides + change detection. */
 function makeCell(
   colKey: string,
@@ -183,6 +205,45 @@ function itemsOfKind(kind: string): Array<{ key: string; label: string; iconKey:
   }
   out.sort((a, b) => a.label.localeCompare(b.label));
   return out;
+}
+
+// ─── Add-column picker ────────────────────────────────────────────────────────
+
+export interface CostColumnOption {
+  key: string;
+  label: string;
+  iconKey: string;
+}
+
+export interface CostColumnOptionGroup {
+  group: string;
+  options: CostColumnOption[];
+}
+
+/**
+ * Every resource/currency that can be ADDED as a new cost column, grouped for a
+ * picker and excluding any key already present in the matrix. Currencies first,
+ * then resource items, then tool items — each group alphabetised by label.
+ *
+ * PURE — derived from the static CURRENCY_META + ITEMS catalogs.
+ */
+export function costColumnOptions(existing: Iterable<string> = []): CostColumnOptionGroup[] {
+  const taken = new Set(existing);
+  const groups: CostColumnOptionGroup[] = [];
+
+  const currencies = CURRENCY_ORDER
+    .filter((k) => !taken.has(k))
+    .map((k) => ({ key: k, label: CURRENCY_META[k].label, iconKey: CURRENCY_META[k].icon }));
+  if (currencies.length) groups.push({ group: "Currencies", options: currencies });
+
+  for (const [kind, label] of [["resource", "Resources"], ["tool", "Tools"]] as const) {
+    const options = itemsOfKind(kind)
+      .filter((it) => !taken.has(it.key))
+      .map((it) => ({ key: it.key, label: it.label, iconKey: it.iconKey }));
+    if (options.length) groups.push({ group: label, options });
+  }
+
+  return groups;
 }
 
 /**
@@ -223,14 +284,17 @@ function buildingList(): RawBuilding[] {
     .sort((a, b) => (toNum(a.lv) - toNum(b.lv)) || String(a.name ?? a.id).localeCompare(String(b.name ?? b.id)));
 }
 
-export function buildBuildingCostMatrix(overrides: CostOverrides = {}): CostMatrix {
+export function buildBuildingCostMatrix(
+  overrides: CostOverrides = {},
+  extraColumns: readonly string[] = [],
+): CostMatrix {
   const buildings = buildingList();
 
   const keys = new Set<string>();
   for (const b of buildings) {
     for (const k of Object.keys(b.cost ?? {})) keys.add(k);
   }
-  const columns = orderColumns(keys);
+  const columns = withExtraColumns(keys, extraColumns);
 
   const rows: CostMatrixRow[] = buildings.map((b) => {
     const cost = isRecord(b.cost) ? b.cost : {};
@@ -262,7 +326,10 @@ export function buildBuildingCostMatrix(overrides: CostOverrides = {}): CostMatr
 
 // ─── Tools ────────────────────────────────────────────────────────────────────
 
-export function buildToolCostMatrix(overrides: CostOverrides = {}): CostMatrix {
+export function buildToolCostMatrix(
+  overrides: CostOverrides = {},
+  extraColumns: readonly string[] = [],
+): CostMatrix {
   const recipes = recipeByItem();
   const tools = [...recipes.entries()]
     .filter(([item]) => itemKind(item) === "tool")
@@ -273,7 +340,7 @@ export function buildToolCostMatrix(overrides: CostOverrides = {}): CostMatrix {
   for (const t of tools) {
     for (const k of Object.keys(t.inputs)) keys.add(k);
   }
-  const columns = orderColumns(keys);
+  const columns = withExtraColumns(keys, extraColumns);
 
   const rows: CostMatrixRow[] = tools.map((t) => {
     const cells: Record<string, CostMatrixCell> = {};
@@ -305,7 +372,10 @@ export function buildToolCostMatrix(overrides: CostOverrides = {}): CostMatrix {
 
 // ─── Resources ──────────────────────────────────────────────────────────────
 
-export function buildResourceCostMatrix(overrides: CostOverrides = {}): CostMatrix {
+export function buildResourceCostMatrix(
+  overrides: CostOverrides = {},
+  extraColumns: readonly string[] = [],
+): CostMatrix {
   const recipes = recipeByItem();
   const resources = itemsOfKind("resource");
 
@@ -315,7 +385,7 @@ export function buildResourceCostMatrix(overrides: CostOverrides = {}): CostMatr
     const rec = recipes.get(r.key);
     if (rec) for (const k of Object.keys(rec.inputs)) keys.add(k);
   }
-  const columns = orderColumns(keys, true);
+  const columns = withExtraColumns(keys, extraColumns, true);
 
   // Craftable rows first (grouped by station), then raw/chain-sourced resources.
   const decorated = resources.map((r) => ({ ...r, rec: recipes.get(r.key) ?? null }));
@@ -370,14 +440,21 @@ export function buildResourceCostMatrix(overrides: CostOverrides = {}): CostMatr
 
 export const COST_MATRIX_IDS: CostMatrixId[] = ["buildings", "tools", "resources"];
 
-export function buildCostMatrix(id: CostMatrixId, overrides: CostOverrides = {}): CostMatrix {
+/** Per-matrix user-added column keys (the staging columns store shape). */
+export type CostColumnsByMatrix = Partial<Record<CostMatrixId, string[]>>;
+
+export function buildCostMatrix(
+  id: CostMatrixId,
+  overrides: CostOverrides = {},
+  extraColumns: readonly string[] = [],
+): CostMatrix {
   switch (id) {
     case "buildings":
-      return buildBuildingCostMatrix(overrides);
+      return buildBuildingCostMatrix(overrides, extraColumns);
     case "tools":
-      return buildToolCostMatrix(overrides);
+      return buildToolCostMatrix(overrides, extraColumns);
     case "resources":
-      return buildResourceCostMatrix(overrides);
+      return buildResourceCostMatrix(overrides, extraColumns);
     default: {
       const _exhaustive: never = id;
       throw new Error(`Unknown cost matrix id: ${String(_exhaustive)}`);
@@ -386,6 +463,9 @@ export function buildCostMatrix(id: CostMatrixId, overrides: CostOverrides = {})
 }
 
 /** Build all three matrices with the same overrides (export + unified page). */
-export function buildAllCostMatrices(overrides: CostOverrides = {}): CostMatrix[] {
-  return COST_MATRIX_IDS.map((id) => buildCostMatrix(id, overrides));
+export function buildAllCostMatrices(
+  overrides: CostOverrides = {},
+  extraColumns: CostColumnsByMatrix = {},
+): CostMatrix[] {
+  return COST_MATRIX_IDS.map((id) => buildCostMatrix(id, overrides, extraColumns[id] ?? []));
 }

@@ -4,12 +4,18 @@ import { render, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 import { CostMatrixTable } from "./CostMatrixTable.jsx";
 import { buildBuildingCostMatrix } from "../costMatrix.js";
-import { getCostEdits, clearAllCostEdits } from "../costEditsStore.js";
+import { getCostEdits, setCostEdit, clearAllCostEdits } from "../costEditsStore.js";
+import { getCostColumns, addCostColumn, clearAllCostColumns } from "../costColumnsStore.js";
 
-beforeEach(() => clearAllCostEdits());
+function reset() {
+  clearAllCostEdits();
+  clearAllCostColumns();
+}
+
+beforeEach(reset);
 afterEach(() => {
   cleanup();
-  clearAllCostEdits();
+  reset();
 });
 
 describe("CostMatrixTable", () => {
@@ -52,5 +58,45 @@ describe("CostMatrixTable", () => {
     expect(getCostEdits()["BUILDINGS.mill.cost.plank"]).toBe(12);
     fireEvent.change(input!, { target: { value: "" } });
     expect("BUILDINGS.mill.cost.plank" in getCostEdits()).toBe(false);
+  });
+
+  it("renders an inline building SVG glyph for building rows", () => {
+    const { container } = render(
+      <CostMatrixTable matrix={buildBuildingCostMatrix()} editable={false} />,
+    );
+    expect(container.querySelector(".wiki-cost-rowhead__glyph svg")).toBeTruthy();
+  });
+
+  it("shows the add-column picker only in editable mode", () => {
+    const ro = render(<CostMatrixTable matrix={buildBuildingCostMatrix()} editable={false} />);
+    expect(ro.container.querySelector(".wiki-cost-addcol")).toBeNull();
+    cleanup();
+    const ed = render(<CostMatrixTable matrix={buildBuildingCostMatrix()} editable />);
+    expect(ed.container.querySelector(".wiki-cost-addcol")).toBeTruthy();
+  });
+
+  it("stages a new column into the columns store when one is picked", () => {
+    const { container } = render(<CostMatrixTable matrix={buildBuildingCostMatrix()} editable />);
+    const select = container.querySelector<HTMLSelectElement>(".wiki-cost-addcol")!;
+    const opt = select.querySelector<HTMLOptionElement>("optgroup option")!;
+    expect(opt).toBeTruthy();
+    fireEvent.change(select, { target: { value: opt.value } });
+    expect(getCostColumns().buildings ?? []).toContain(opt.value);
+  });
+
+  it("removes a user-added column and clears any edit staged on it", () => {
+    addCostColumn("buildings", "gems");
+    setCostEdit("BUILDINGS.mill.cost.gems", 3);
+    const matrix = buildBuildingCostMatrix(getCostEdits(), getCostColumns().buildings);
+    const { container } = render(<CostMatrixTable matrix={matrix} editable />);
+
+    const btn = container.querySelector<HTMLButtonElement>(
+      ".wiki-cost-th--extra .wiki-cost-colremove",
+    )!;
+    expect(btn).toBeTruthy();
+    fireEvent.click(btn);
+
+    expect(getCostColumns().buildings ?? []).not.toContain("gems");
+    expect("BUILDINGS.mill.cost.gems" in getCostEdits()).toBe(false);
   });
 });

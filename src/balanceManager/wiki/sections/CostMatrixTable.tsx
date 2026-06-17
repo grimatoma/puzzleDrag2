@@ -8,7 +8,13 @@
  *
  * In Developer view (`editable`) cost cells become number inputs that stage
  * edits into the cost-edit store; clearing a cell or typing the baseline value
- * reverts it. In Player view the same grid renders as static numbers.
+ * reverts it. The header also grows an "+ Add column" picker so a cost can be
+ * staged for ANY resource — even one no entity currently uses — and each
+ * user-added column carries a remove (×) button. In Player view the same grid
+ * renders as static numbers with no add/remove affordances.
+ *
+ * Buildings have no baked <Icon>; their row glyph is the inline-SVG
+ * <BuildingIllustration> via <EntityVisual>, matching the buildings gallery.
  *
  * React Compiler is on — no manual useMemo/useCallback.
  */
@@ -17,10 +23,62 @@ import React from "react";
 import Icon from "../../../ui/Icon.jsx";
 import { COLORS } from "../../shared.jsx";
 import { useCostEdits } from "../costEditsStore.js";
-import type { CostMatrix, CostMatrixCell } from "../costMatrix.js";
+import { useCostColumns } from "../costColumnsStore.js";
+import { costColumnOptions } from "../costMatrix.js";
+import type { CostMatrix, CostMatrixCell, CostMatrixColumn, CostMatrixRow } from "../costMatrix.js";
+import { EntityVisual } from "../EntityVisual.jsx";
 
 function fmt(n: number): string {
   return n.toLocaleString("en-US");
+}
+
+// ─── Row glyph ───────────────────────────────────────────────────────────────
+
+/** Buildings use their inline SVG illustration; everything else a baked icon. */
+function RowGlyph({ matrixId, row }: { matrixId: CostMatrix["id"]; row: CostMatrixRow }) {
+  if (matrixId === "buildings") {
+    return (
+      <span className="wiki-cost-rowhead__glyph" aria-hidden>
+        <EntityVisual conceptId="buildings" entityKey={row.id} size={24} />
+      </span>
+    );
+  }
+  if (row.iconKey) return <Icon iconKey={row.iconKey} size={16} title="" />;
+  return null;
+}
+
+// ─── Add-column picker ───────────────────────────────────────────────────────
+
+/** A header <select> that stages a new cost column for any resource/currency. */
+function AddColumnControl({ matrix }: { matrix: CostMatrix }) {
+  const { addColumn } = useCostColumns();
+  const groups = costColumnOptions(matrix.columns.map((c) => c.key));
+  const exhausted = groups.length === 0;
+
+  return (
+    <select
+      className="wiki-cost-addcol"
+      aria-label={`Add a cost column to ${matrix.title}`}
+      value=""
+      disabled={exhausted}
+      onChange={(e) => {
+        const key = e.target.value;
+        e.currentTarget.value = "";
+        if (key) addColumn(matrix.id, key);
+      }}
+    >
+      <option value="">{exhausted ? "All added" : "+ Add column…"}</option>
+      {groups.map((g) => (
+        <optgroup key={g.group} label={g.group}>
+          {g.options.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
 }
 
 // ─── Cell ──────────────────────────────────────────────────────────────────────
@@ -84,7 +142,21 @@ export interface CostMatrixTableProps {
 
 export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
   const { setEdit, clearEdit } = useCostEdits();
-  const totalCols = 1 + matrix.contextColumns.length + matrix.columns.length;
+  const { removeColumn } = useCostColumns();
+
+  // The add-column affordance only exists in the editor.
+  const showAdd = editable;
+  const totalCols = 1 + matrix.contextColumns.length + matrix.columns.length + (showAdd ? 1 : 0);
+
+  // Removing a column also clears any edits staged on it (using the real edit
+  // paths off the built cells) so a dropped column leaves no orphan changes.
+  function handleRemoveColumn(col: CostMatrixColumn) {
+    for (const row of matrix.rows) {
+      const path = row.cells[col.key]?.editPath;
+      if (path) clearEdit(path);
+    }
+    removeColumn(matrix.id, col.key);
+  }
 
   if (matrix.rows.length === 0) {
     return (
@@ -115,15 +187,31 @@ export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
             {matrix.columns.map((col) => (
               <th
                 key={col.key}
-                className={`wiki-cost-th wiki-cost-th--num${col.currency ? " wiki-cost-th--currency" : ""}`}
+                className={`wiki-cost-th wiki-cost-th--num${col.currency ? " wiki-cost-th--currency" : ""}${col.extra ? " wiki-cost-th--extra" : ""}`}
                 title={col.label}
               >
                 <span className="wiki-cost-th__inner">
                   <Icon iconKey={col.iconKey} size={15} title="" />
                   <span className="wiki-cost-th__label">{col.label}</span>
+                  {editable && col.extra && (
+                    <button
+                      type="button"
+                      className="wiki-cost-colremove"
+                      aria-label={`Remove ${col.label} column`}
+                      title={`Remove ${col.label} column`}
+                      onClick={() => handleRemoveColumn(col)}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </span>
               </th>
             ))}
+            {showAdd && (
+              <th className="wiki-cost-th wiki-cost-th--add">
+                <AddColumnControl matrix={matrix} />
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -136,7 +224,7 @@ export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
               )}
               <tr>
                 <th scope="row" className="wiki-cost-rowhead">
-                  {row.iconKey && <Icon iconKey={row.iconKey} size={16} title="" />}
+                  <RowGlyph matrixId={matrix.id} row={row} />
                   <span className="wiki-cost-rowhead__name">{row.name}</span>
                 </th>
                 {row.context.map((c) => (
@@ -157,6 +245,7 @@ export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
                     </td>
                   );
                 })}
+                {showAdd && <td className="wiki-cost-cell wiki-cost-cell--add" aria-hidden />}
               </tr>
             </React.Fragment>
           ))}
