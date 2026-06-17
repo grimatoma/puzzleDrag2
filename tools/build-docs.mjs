@@ -119,14 +119,47 @@ h1, h2, h3, h4 { font-family: "Fraunces", Georgia, serif; line-height: 1.15; let
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 }`;
 
+// --- dates ------------------------------------------------------------------
+
+// Every doc gets a date so the index can be ordered chronologically. Prefer an
+// explicit `YYYY-MM-DD` prefix baked into the filename (the convention for
+// dated plans/specs); otherwise fall back to the file's *creation* date in git
+// (`--diff-filter=A --follow`, so a later move into docs/archive/ doesn't reset
+// it). Returns "" when git has no history (e.g. an untracked working copy).
+const dateCache = new Map();
+function docDate(repoRel, file) {
+  const named = file.match(/(\d{4}-\d{2}-\d{2})/);
+  if (named) return named[1];
+  if (dateCache.has(repoRel)) return dateCache.get(repoRel);
+  let date = "";
+  try {
+    const out = execFileSync(
+      "git",
+      ["log", "--diff-filter=A", "--follow", "--format=%as", "--", repoRel],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length) date = lines[lines.length - 1]; // oldest add = creation
+  } catch {
+    /* no git history available — leave blank */
+  }
+  dateCache.set(repoRel, date);
+  return date;
+}
+
+// Newest first; fall back to title for stable ordering when dates tie.
+function byDateDesc(a, b) {
+  return (b.date || "").localeCompare(a.date || "") || a.title.localeCompare(b.title);
+}
+
 // --- index page -------------------------------------------------------------
 
 // Friendlier labels + ordering for top-level doc sections.
 const SECTION_META = {
   ".": { label: "Overview", blurb: "Top-level design & audit docs", order: 0 },
-  "pixel-pipeline-viewer": { label: "Pixel Pipeline Viewer", blurb: "Live sprite-set review viewer", order: 1 },
-  engineering: { label: "Engineering", blurb: "Architecture & type-system notes", order: 2 },
-  superpowers: { label: "Plans & Specs", blurb: "Dated implementation plans and design specs", order: 3 },
+  "building-art": { label: "Building Art", blurb: "Building-art pipeline & reference", order: 1 },
+  "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2 },
+  "town-layout": { label: "Town Layout", blurb: "Settlement growth mockups", order: 3 },
   references: { label: "References", blurb: "External wikis & research", order: 5 },
 };
 
@@ -134,34 +167,43 @@ const SECTION_META = {
 // Keyed by docs-relative source path (forward slashes).
 const FEATURED_DOCS = [];
 
-// Old / superseded / off-focus docs, gathered into an "Archive" section at the
-// very bottom regardless of their folder. Keyed by docs-relative source path
-// (the .md/.html as it lives under docs/). Curated by hand — keep it current.
-const ARCHIVED_DOCS = new Set([
-  // Older design / redesign / concept docs, off the current focus.
-  "wiki-migration-plan.html",
-  "progression-trigger-redesign.html",
-  "board-topology-concepts.html",
-  // Shipped implementation plans + specs (today's stay current under Plans & Specs).
-  "superpowers/plans/2026-06-02-appearance-look-restructure.md",
-  "superpowers/plans/2026-06-02-board-kinds-wiki.md",
-  "superpowers/plans/2026-06-02-wiki-interconnection-ia.md",
-  "superpowers/specs/2026-06-02-board-kinds-wiki-design.html",
-  "superpowers/specs/2026-06-02-wiki-interconnection-ia-design.html",
-  "superpowers/plans/2026-06-03-progression-feed-phase1.md",
-  "superpowers/plans/2026-06-03-progression-phase2-engine-migration.md",
-  "superpowers/plans/2026-06-03-progression-phase2b-native-when.md",
-  // Pixel-art concept / exploration docs (shipped art lives in the game itself).
-  "birch-tree-64.html",
-  "birch-32-test.html",
-  "birch-tree-seasons.html",
-  "farm-tile-concepts.html",
-  "grass-tile-concepts.html",
-  "more-tile-concepts.html",
-  "seasonal-tile-animations.html",
-  "icon-review.html",
-  "icon-style-guide.html",
-]);
+// Anything physically under docs/archive/ is treated as archived: it sinks to a
+// single collapsed "Archive" section at the very bottom, regardless of subtree.
+// (See docs/archive/README.md for what lives there and why.)
+const ARCHIVE_PREFIX = "archive/";
+function isArchived(rel) {
+  return rel === "archive" || rel.startsWith(ARCHIVE_PREFIX);
+}
+
+// Logical sub-groups inside the Archive, in display order. `test` runs against
+// the archive-relative path (with the leading "archive/" stripped). Unmatched
+// docs fall into the trailing "Other" bucket. Each group is ordered by date.
+const ARCHIVE_GROUPS = [
+  {
+    label: "Design & concept docs",
+    blurb: "Early design explorations, since superseded.",
+    test: (p) =>
+      /^(board-topology-concepts|progression-trigger-redesign|wiki-migration-plan)\.html$/.test(p),
+  },
+  {
+    label: "Icon & art explorations",
+    blurb: "Concept-only pixel-art studies, replaced by the seasonal-tile pipeline.",
+    test: (p) =>
+      /^(icon-|birch|farm-tile|grass-tile|more-tile|seasonal-tile-animations|seasonal-tiles-review)/.test(
+        p,
+      ),
+  },
+  {
+    label: "Plans & specs (shipped)",
+    blurb: "Point-in-time plans and specs for features now implemented.",
+    test: (p) => p.startsWith("superpowers/"),
+  },
+  {
+    label: "Pixel Pipeline Viewer",
+    blurb: "Retired live sprite-set review viewer.",
+    test: (p) => p.startsWith("pixel-pipeline-viewer/"),
+  },
+];
 
 function sectionKey(relPath) {
   const parts = relPath.split("/");
@@ -171,9 +213,12 @@ function sectionKey(relPath) {
 
 function docCard(e) {
   const sub = e.rel.includes("/") ? e.rel.slice(0, e.rel.lastIndexOf("/")) : "";
+  const date = e.date
+    ? `<time class="doc-date">${escapeHtml(e.date)}</time>`
+    : "";
   return `        <a class="doc" href="${e.href}">
           <span class="doc-title">${escapeHtml(e.title)}</span>
-          <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span><code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
+          <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span>${date}<code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
         </a>`;
 }
 
@@ -184,10 +229,10 @@ function renderIndex(entries) {
   );
   const featuredSrc = new Set(featured.map((e) => e.src));
 
-  // Archived docs sink to a single section at the bottom, regardless of folder.
-  const archived = entries
-    .filter((e) => ARCHIVED_DOCS.has(e.src) && !featuredSrc.has(e.src))
-    .sort((a, b) => a.title.localeCompare(b.title));
+  // Archived docs sink to a single collapsed section at the bottom.
+  const archived = entries.filter(
+    (e) => isArchived(e.rel) && !featuredSrc.has(e.src),
+  );
   const archivedSrc = new Set(archived.map((e) => e.src));
 
   // Everything else groups by folder section as before.
@@ -210,7 +255,7 @@ function renderIndex(entries) {
       const meta = SECTION_META[key] || { label: prettyName(key), blurb: "" };
       const items = groups
         .get(key)
-        .sort((a, b) => a.title.localeCompare(b.title))
+        .sort(byDateDesc)
         .map(docCard)
         .join("\n");
       return `    <section class="group reveal" style="animation-delay:${0.05 * (gi + 2)}s">
@@ -235,18 +280,44 @@ ${featured.map(docCard).join("\n")}
     </section>`
     : "";
 
-  const archiveHtml = archived.length
-    ? `    <section class="group archive reveal">
-      <header class="group-head">
-        <h2>Archive</h2>
-        <p>Superseded, shipped, or off-focus — kept for reference.</p>
+  // Archive: collapsed by default, internally split into logical sub-groups,
+  // each ordered by date (newest first).
+  const archiveHtml = (() => {
+    if (!archived.length) return "";
+    const buckets = ARCHIVE_GROUPS.map((g) => ({ ...g, items: [] }));
+    const other = { label: "Other", blurb: "", items: [] };
+    for (const e of archived) {
+      const p = e.rel.slice(ARCHIVE_PREFIX.length);
+      const bucket = buckets.find((b) => b.test(p)) || other;
+      bucket.items.push(e);
+    }
+    const inner = [...buckets, other]
+      .filter((g) => g.items.length)
+      .map((g) => {
+        const items = g.items.sort(byDateDesc).map(docCard).join("\n");
+        return `        <div class="arch-group">
+          <header class="arch-head">
+            <h3>${escapeHtml(g.label)}</h3>
+            ${g.blurb ? `<p>${escapeHtml(g.blurb)}</p>` : ""}
+            <span class="count">${g.items.length}</span>
+          </header>
+          <div class="grid">
+${items}
+          </div>
+        </div>`;
+      })
+      .join("\n");
+    return `    <details class="archive reveal">
+      <summary>
+        <span class="arch-title">Archive</span>
+        <span class="arch-sub">Superseded, shipped, or off-focus — kept for reference.</span>
         <span class="count">${archived.length}</span>
-      </header>
-      <div class="grid">
-${archived.map(docCard).join("\n")}
+      </summary>
+      <div class="arch-body">
+${inner}
       </div>
-    </section>`
-    : "";
+    </details>`;
+  })();
 
   return `<!doctype html>
 <html lang="en">
@@ -280,14 +351,27 @@ ${THEME}
 .badge { font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .12rem .42rem; border-radius: 5px; flex: none; }
 .badge-html { background: rgba(224,145,58,.18); color: #f0b46e; }
 .badge-md { background: rgba(139,171,90,.18); color: #b6cd84; }
+.doc-date { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--muted); flex: none; }
 .featured { margin-top: 0; padding: 1.4rem 1.5rem 1.5rem; background: linear-gradient(135deg, rgba(224,145,58,.16), rgba(139,171,90,.07)); border: 1px solid var(--accent); border-radius: 18px; box-shadow: var(--shadow); }
 .featured-eyebrow { font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .9rem; }
 .featured .doc { border-color: rgba(224,145,58,.5); background: linear-gradient(180deg, rgba(224,145,58,.1), var(--bg-soft)); }
 .featured .doc-title { font-size: 1.4rem; }
-.archive { opacity: .68; transition: opacity .2s ease; }
-.archive:hover { opacity: 1; }
-.archive .group-head h2 { color: var(--muted); }
-.archive .doc { background: var(--bg-soft); box-shadow: none; }
+.archive { margin-top: 3.5rem; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-soft); overflow: hidden; }
+.archive > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .85rem; flex-wrap: wrap; padding: 1.1rem 1.4rem; user-select: none; }
+.archive > summary::-webkit-details-marker { display: none; }
+.archive > summary::before { content: "▸"; color: var(--accent); font-size: .9rem; align-self: center; transition: transform .15s ease; }
+.archive[open] > summary::before { transform: rotate(90deg); }
+.archive > summary:hover .arch-title { color: var(--accent); }
+.archive .arch-title { font-family: "Fraunces", serif; font-size: 1.6rem; font-weight: 600; }
+.archive .arch-sub { color: var(--muted); font-size: .95rem; }
+.archive > summary .count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .6rem; align-self: center; }
+.arch-body { padding: 0 1.4rem 1.6rem; }
+.arch-group { margin-top: 1.8rem; }
+.arch-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: .45rem; margin-bottom: 1rem; }
+.arch-head h3 { font-size: 1.2rem; font-weight: 600; margin: 0; color: var(--muted); }
+.arch-head p { color: var(--muted); margin: 0; font-size: .9rem; }
+.arch-head .count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .08rem .55rem; }
+.archive .doc { background: var(--card); box-shadow: none; }
 footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.4rem; }
 </style>
 </head>
@@ -379,6 +463,9 @@ for (const repoRel of files) {
   const file = docRel.split("/").pop();
   const depth = docRel.split("/").length - 1;
 
+  // Folder READMEs document the directory, not the catalogue — don't list them.
+  const isReadme = /^readme\.md$/i.test(file);
+
   if (/\.html?$/i.test(file)) {
     const html = readFileSync(abs, "utf8");
     const outPath = join(outRoot, docRel);
@@ -391,8 +478,9 @@ for (const repoRel of files) {
       file,
       kind: "html",
       title: titleFromHtml(html, prettyName(file)),
+      date: docDate(repoRel, file),
     });
-  } else if (/\.md$/i.test(file)) {
+  } else if (/\.md$/i.test(file) && !isReadme) {
     const md = readFileSync(abs, "utf8");
     const title = titleFromMarkdown(md, prettyName(file));
     const body = marked.parse(md);
@@ -407,6 +495,7 @@ for (const repoRel of files) {
       file,
       kind: "md",
       title,
+      date: docDate(repoRel, file),
     });
   } else {
     const outPath = join(outRoot, docRel);
