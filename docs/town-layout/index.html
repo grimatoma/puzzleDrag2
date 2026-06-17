@@ -334,7 +334,7 @@
   function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error(src));im.src=src;});}
   async function boot(){
     try{
-      [tileset,atlas]=await Promise.all([loadImg('../../public/town/tileset.png'),loadImg('../../public/town/character-atlas.png')]);
+      [tileset,atlas]=await Promise.all([loadImg('../../town/tileset.png'),loadImg('../../town/character-atlas.png')]);
       for(const k in REC) baked[k]=bakeSprite(REC[k]);
       assetsOK=true;
     }catch(e){ assetsOK=false; }
@@ -453,7 +453,7 @@
     for(const b of BEDS) gardenBed(og,b[0],b[1]);
     groundDirty=false;
   }
-  function drawTile2(o,i,dx,dy){const[sx,sy]=tileSrc(i);o.drawImage(tileset,sx,sy,TILE,TILE,dx,dy,TILE,TILE);}
+  function drawTile2(o,i,dx,dy){if(!tileset){o.fillStyle=(i===T.WATER?"#5bb4d6":i===T.DIRT?"#c7a86a":"#6f9a55");o.fillRect(dx,dy,TILE,TILE);return;}const[sx,sy]=tileSrc(i);o.drawImage(tileset,sx,sy,TILE,TILE,dx,dy,TILE,TILE);}
 
   // ── NPCs ──────────────────────────────────────────────────────
   // route walkers + stationary activity actors; gated by tier
