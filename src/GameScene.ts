@@ -23,7 +23,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
-import { preloadSeasonalArt, seasonalArtActive, SEASONAL_SUBJECT_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { preloadSeasonalArt, seasonalArtActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, SEASONAL_SUBJECT_KEYS } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
@@ -132,6 +132,13 @@ export class GameScene extends Phaser.Scene {
   /** Last time (ms) the seasonal-tile animation pass re-baked (≈20fps throttle). */
   _seasonalAnimLast: number = 0;
   _conceptAnimLast: number = 0;
+  /** Per-frame snapshot read by TileObj.ambient so each tile can pick its own idle
+   *  frame: whether motion is enabled and the current season. Set once per update(). */
+  motionOn: boolean = true;
+  seasonName: SeasonName | null = null;
+  /** Baked-art keys whose `tile_<key>` is a frame-bank strip → resolved idle season
+   *  index currently baked into it (skips redundant re-bakes across season ticks). */
+  _bankSeason: Map<string, number> = new Map();
 
   // Misc scene objects
   sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -590,6 +597,9 @@ export class GameScene extends Phaser.Scene {
       this.bakeScale = requiredScale;
       setRegistry(this.registry, "bakeScale", requiredScale);
       regenerateTextures(this);
+      // regenerateTextures rebuilds `tile_<key>` as a 1-frame texture — rebuild the
+      // baked-art frame-bank strips (and re-bind their sprites) at the new scale.
+      this._rebakeBakedTiles();
       this.layoutDims();
     }
     (this.children.list as Array<Phaser.GameObjects.GameObject & { __layer?: string }>).filter((o) => o.__layer === "bg").forEach((o) => o.destroy());
@@ -2049,6 +2059,10 @@ export class GameScene extends Phaser.Scene {
 
   // Called every frame by Phaser. Drives the per-tile ambient sway.
   override update(time: number) {
+    // Snapshot motion + season once so each tile's ambient() can pick its own idle
+    // frame without recomputing them per cell.
+    this.motionOn = this._motionEnabled();
+    this.seasonName = currentSeasonName(this);
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
@@ -2121,7 +2135,7 @@ export class GameScene extends Phaser.Scene {
     if (!season) return;
     // Collect one representative TileObj.res per distinct animated key present,
     // and note which keys have a currently-selected tile so we keep that lifted
-    // tile's `_sel` texture animating in the current season too.
+    // tile's `_sel` texture in step with the current season / transition.
     const reps = new Map<string, TileRes>();
     const selectedKeys = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
@@ -2141,21 +2155,38 @@ export class GameScene extends Phaser.Scene {
     if (reps.size === 0) return;
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
-      // Willow carries its own idle/transition timeline (paintWillow) — feed it
-      // the raw clock. Procedural idle anims get the staggered, rest-delayed clock.
-      // Baked-art tiles (willow, chicken, …) own their idle + transition timing
-      // internally, so feed them the raw clock; procedural seasonal tiles get the
-      // staggered rest-pause warp.
-      const aSec = seasonalArtActive(res.key) ? tSec : idleAnimTime(tSec, res.key);
-      this._bakeAnimatedTile(res, false, season, aSec, dpr);
-      if (selectedKeys.has(res.key)) this._bakeAnimatedTile(res, true, season, aSec, dpr);
+      const sel = selectedKeys.has(res.key);
+      if (seasonalArtActive(res.key)) {
+        // Baked PixelLab art. The per-frame canvas re-bake is gone for the idle
+        // steady-state — `tile_<key>` is a frame-bank strip and each TileObj picks
+        // its own frame (rest → play once → rest, staggered). This pass only drives
+        // the GLOBAL transition (a season flip hits the whole board at once) and
+        // re-bakes the bank when the settled season changes.
+        const plan = seasonalAdvance(res.key, season, tSec);
+        if (!plan.active) continue;
+        if (plan.transitioning) {
+          // Bank slot 0 holds the lockstep transition frame; every instance shows
+          // frame 0 (TileObj defers to it while transitioning).
+          this._bakeBankTrans(res, season, plan.transFromIdx, plan.transFrame, dpr);
+          if (sel) this._bakeSelFrame(res, season, dpr, { trans: { fromIdx: plan.transFromIdx, frame: plan.transFrame } });
+          this._bankSeason.delete(res.key); // force an idle re-bake when the clip ends
+        } else if (this._bankSeason.get(res.key) !== plan.resolvedIdleIdx) {
+          this._bakeBankIdle(res, season, dpr);
+          if (sel) this._bakeSelFrame(res, season, dpr, { idleFrame: 0 });
+          this._bankSeason.set(res.key, plan.resolvedIdleIdx);
+        }
+        // Settled idle: nothing more here — TileObj.ambient drives setFrame per tile.
+      } else {
+        // Procedural seasonal anim (no baked art): keep the per-key staggered,
+        // rest-paused re-bake of the shared texture.
+        const aSec = idleAnimTime(tSec, res.key);
+        this._bakeAnimatedTile(res, false, season, aSec, dpr);
+        if (sel) this._bakeAnimatedTile(res, true, season, aSec, dpr);
+      }
     }
   }
 
-  /** Re-bake one animated-tile texture variant (`tile_<key>` or its `_sel`
-   *  companion) at animation time `tSec`. Shared by the seasonal and concept
-   *  per-frame passes so the selected lift never shows a stale, off-season
-   *  still. */
+  /** Re-bake one procedural animated-tile texture variant at animation time `tSec`. */
   private _bakeAnimatedTile(
     res: TileRes,
     selected: boolean,
@@ -2173,10 +2204,91 @@ export class GameScene extends Phaser.Scene {
     tex.refresh();
   }
 
-  /** Bake every loaded baked-art tile's current-season idle rest frame into its
-   *  shared texture once (no animation clock). Covers the moment art finishes
-   *  loading and, under reduced motion, season flips — when the per-frame loop
-   *  never runs. */
+  /** Ensure `tile_<resKey>` is a frame-bank strip wide enough for `maxN` square
+   *  frames (one slot per idle frame). (Re)creates the canvas + frame defs when
+   *  missing or mis-sized and re-binds on-board sprites; __BASE is pinned to slot 0
+   *  so a sprite shows the rest frame even before its first setFrame(). */
+  private _ensureStripTexture(resKey: string, maxN: number, dpr: number): Phaser.Textures.CanvasTexture | undefined {
+    const key = `tile_${resKey}`;
+    const n = Math.max(1, maxN);
+    const fw = Math.round(TILE * dpr);
+    const wantW = fw * n;
+    const wantH = fw;
+    const existing = this.textures.get(key) as Phaser.Textures.CanvasTexture | undefined;
+    if (existing && typeof existing.getContext === "function"
+      && existing.width === wantW && existing.height === wantH && existing.has("0")) {
+      return existing;
+    }
+    if (this.textures.exists(key)) this.textures.remove(key);
+    const tex = this.textures.createCanvas(key, wantW, wantH) as Phaser.Textures.CanvasTexture | undefined;
+    if (!tex) return undefined;
+    const ctx = tex.getContext();
+    if (ctx) ctx.imageSmoothingEnabled = false;
+    for (let i = 0; i < n; i++) tex.add(i, 0, i * fw, 0, fw, fw);
+    const base = tex.get("__BASE");
+    if (base) base.setSize(fw, fw, 0, 0);
+    // Re-point existing sprites of this key at the rebuilt strip and clamp to a real
+    // frame (not the full-width source) so they don't flash the whole strip.
+    for (let r = 0; r < ROWS; r++) {
+      const row = this.grid[r];
+      if (!row) continue;
+      for (let c = 0; c < COLS; c++) {
+        const t = row[c];
+        if (t && !t.selected && t.res.key === resKey) {
+          t.sprite.setTexture(key);
+          t.sprite.setFrame(0);
+        }
+      }
+    }
+    return tex;
+  }
+
+  /** Bake the current season's idle frames into the frame-bank strip (one per slot;
+   *  unused slots duplicate the last frame) and refresh the `_sel` rest frame. */
+  private _bakeBankIdle(res: TileRes, season: SeasonName | null, dpr: number) {
+    const maxN = Math.max(1, seasonalMaxIdleFrames(res.key));
+    const n = Math.max(1, seasonalIdleFrameCount(res.key, season));
+    const tex = this._ensureStripTexture(res.key, maxN, dpr);
+    if (!tex) return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    const fw = Math.round(TILE * dpr);
+    for (let i = 0; i < maxN; i++) {
+      const frame = Math.min(i, n - 1);
+      ctx.setTransform(dpr, 0, 0, dpr, i * fw, 0);
+      paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, undefined, { idleFrame: frame });
+    }
+    tex.refresh();
+    this._bakeSelFrame(res, season, dpr, { idleFrame: 0 });
+  }
+
+  /** Bake the lockstep transition frame into the frame-bank strip's slot 0 (every
+   *  instance shows frame 0 while transitioning). */
+  private _bakeBankTrans(res: TileRes, season: SeasonName | null, fromIdx: number, frame: number, dpr: number) {
+    const tex = this._ensureStripTexture(res.key, Math.max(1, seasonalMaxIdleFrames(res.key)), dpr);
+    if (!tex) return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, undefined, { trans: { fromIdx, frame } });
+    tex.refresh();
+  }
+
+  /** Bake the (single-frame) `_sel` lift texture with a specific baked frame. */
+  private _bakeSelFrame(res: TileRes, season: SeasonName | null, dpr: number, bake: { idleFrame?: number; trans?: { fromIdx: number; frame: number } }) {
+    const tex = this.textures.get(`tile_${res.key}_sel`) as Phaser.Textures.CanvasTexture | undefined;
+    if (!tex || typeof tex.getContext !== "function") return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTileCanvas(ctx, res as { key: string; look: { color: number } }, true, TILE, TILE, season, undefined, bake);
+    tex.refresh();
+  }
+
+  /** Bake every loaded baked-art tile's current-season rest state once (no clock):
+   *  multi-frame keys get their idle frame-bank built/repainted; single-frame stills
+   *  get their rest frame. Covers art-load, post-resize regen, and (under reduced
+   *  motion) season flips — when the per-frame transition loop never runs. */
   private _rebakeBakedTiles() {
     const season = currentSeasonName(this);
     const dpr = this.bakeScale || this.dpr;
@@ -2184,17 +2296,24 @@ export class GameScene extends Phaser.Scene {
       if (!seasonalArtActive(key)) continue;
       const res = resourceByKey(key);
       if (!res) continue;
-      for (const selected of [false, true]) {
-        const tex = this.textures.get(`tile_${res.key}${selected ? "_sel" : ""}`) as
-          | Phaser.Textures.CanvasTexture
-          | undefined;
-        if (!tex || typeof tex.getContext !== "function") continue;
-        const ctx = tex.getContext();
-        if (!ctx) continue;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season);
-        tex.refresh();
+      // Snap the transition state machine to the settled season (no transition).
+      const plan = seasonalAdvance(key, season, 0);
+      if (seasonalMaxIdleFrames(key) > 1) {
+        this._bakeBankIdle(res, season, dpr);
+      } else {
+        for (const selected of [false, true]) {
+          const tex = this.textures.get(`tile_${res.key}${selected ? "_sel" : ""}`) as
+            | Phaser.Textures.CanvasTexture
+            | undefined;
+          if (!tex || typeof tex.getContext !== "function") continue;
+          const ctx = tex.getContext();
+          if (!ctx) continue;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season, undefined, { idleFrame: 0 });
+          tex.refresh();
+        }
       }
+      this._bankSeason.set(key, plan.resolvedIdleIdx);
     }
   }
 }
