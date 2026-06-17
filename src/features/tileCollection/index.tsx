@@ -5,10 +5,11 @@ import {
   SUB_CATEGORY_LABELS,
   SUB_CATEGORY_ICONS,
   categoriesForSubCategory,
+  tileBackgroundColor,
 } from "./data.js";
 import { displayKey, getCategoryViewModel, getTileDetailViewModel, type CategoryRowViewModel, type TileDetailViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
-import { BIOMES, tileBackgroundColor } from "../../constants.js";
+import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS, type HazardDef } from "../mine/hazards.js";
