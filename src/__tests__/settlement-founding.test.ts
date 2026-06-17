@@ -94,7 +94,7 @@ describe("FOUND_SETTLEMENT", () => {
   });
 
   // Zone Tier Ladder — the quarry (Town 2) requires home at its City rung.
-  it("rejects founding the quarry until home reaches City (tier 2)", () => {
+  it("rejects founding the quarry until home reaches City (tier 4)", () => {
     // home completed (passes the prior-complete gate) but still at tier 0.
     const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 0 } } });
     const blocked = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
@@ -103,8 +103,8 @@ describe("FOUND_SETTLEMENT", () => {
     expect(blocked.bubble?.text).toMatch(/City before founding/i);
   });
 
-  it("allows founding the quarry once home is at City (tier 2)", () => {
-    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 2 } } });
+  it("allows founding the quarry once home is at City (tier 4)", () => {
+    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 4 } } });
     const ok = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
     expect(ok.settlements?.quarry).toMatchObject({ founded: true, tier: 0 });
   });
