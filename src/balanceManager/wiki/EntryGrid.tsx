@@ -5,10 +5,17 @@ import { COLORS, hexToCss } from "../shared.jsx";
 import { useWikiView } from "./wikiView.js";
 
 type CardSize = "s" | "m" | "l";
-const SIZE_CONFIG: Record<CardSize, { icon: number; emoji: number; placeholder: number; label: number; gridCols: string; minHeight: number }> = {
-  s: { icon: 36,  emoji: 28, placeholder: 36, label: 12, gridCols: "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2",  minHeight: 96  },
-  m: { icon: 56,  emoji: 44, placeholder: 56, label: 13, gridCols: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2",  minHeight: 120 },
-  l: { icon: 80,  emoji: 64, placeholder: 80, label: 14, gridCols: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3",                 minHeight: 160 },
+// Cards lay out horizontally (visual on the left, details on the right). For
+// `m`/`l` the two sides split the card ~50/50 (`split: true`) so the icon can be
+// rendered much larger; `s` keeps the visual at inline-text size (like a
+// currency glyph inside a sentence) and lets the details fill the rest.
+const SIZE_CONFIG: Record<
+  CardSize,
+  { icon: number; emoji: number; placeholder: number; label: number; gridCols: string; minHeight: number; split: boolean }
+> = {
+  s: { icon: 20,  emoji: 18, placeholder: 22, label: 12, gridCols: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2",  minHeight: 44,  split: false },
+  m: { icon: 72,  emoji: 56, placeholder: 64, label: 14, gridCols: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3",  minHeight: 100, split: true  },
+  l: { icon: 104, emoji: 84, placeholder: 96, label: 16, gridCols: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3",                 minHeight: 140, split: true  },
 };
 
 /** A single fact chip rendered below an entity card's name. */
@@ -155,37 +162,54 @@ export default function EntryGrid({
         const cardInner = (
           <>
             {bar && <div style={{ ...bar, width: "100%" }} />}
-            <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
-              {renderVisual ? renderVisual(entry) : cardVisual}
+            <div
+              className="flex flex-row items-center gap-2 px-2 py-2 w-full"
+              style={{ flex: 1 }}
+            >
+              {/* Visual — left half. For m/l it grows to share the card 50/50
+                  with the details; for s it stays at its (inline) icon size. */}
               <div
-                className="font-bold text-center leading-tight break-words w-full"
-                style={{ color: COLORS.ink, fontSize: cfg.label }}
+                className="flex items-center justify-center"
+                style={
+                  cfg.split
+                    ? { flex: "1 1 0", minWidth: 0, alignSelf: "stretch" }
+                    : { flexShrink: 0 }
+                }
               >
-                {entry.name}
+                {renderVisual ? renderVisual(entry) : cardVisual}
               </div>
-              {view === "developer" && (
+              {/* Details — right half. */}
+              <div className="flex flex-col gap-0.5 min-w-0" style={{ flex: "1 1 0" }}>
                 <div
-                  className="font-mono text-[10px] text-center leading-tight break-all w-full"
-                  style={{ color: COLORS.inkSubtle }}
+                  className="font-bold leading-tight break-words"
+                  style={{ color: COLORS.ink, fontSize: cfg.label }}
                 >
-                  {entry.key}
+                  {entry.name}
                 </div>
-              )}
-              {visibleFacts.length > 0 && (
-                <div className="wiki-card-facts">
-                  {visibleFacts.map((fact, i) => (
-                    <span key={fact.label ?? fact.value ?? i} className="wiki-card-fact">
-                      {fact.iconKey && (
-                        <Icon iconKey={fact.iconKey} size={12} style={{ flexShrink: 0 }} />
-                      )}
-                      {fact.label && (
-                        <span className="wiki-card-fact__label">{fact.label}:</span>
-                      )}
-                      <span>{fact.value}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
+                {view === "developer" && (
+                  <div
+                    className="font-mono text-[10px] leading-tight break-all"
+                    style={{ color: COLORS.inkSubtle }}
+                  >
+                    {entry.key}
+                  </div>
+                )}
+                {visibleFacts.length > 0 && (
+                  <div className="wiki-card-facts" style={{ justifyContent: "flex-start" }}>
+                    {visibleFacts.map((fact, i) => (
+                      <span key={fact.label ?? fact.value ?? i} className="wiki-card-fact">
+                        {fact.iconKey && (
+                          <Icon iconKey={fact.iconKey} size={12} style={{ flexShrink: 0 }} />
+                        )}
+                        {fact.label && (
+                          <span className="wiki-card-fact__label">{fact.label}:</span>
+                        )}
+                        <span>{fact.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         );
@@ -195,7 +219,7 @@ export default function EntryGrid({
             <button
               key={entry.key}
               type="button"
-              className="wiki-entry-card rounded-lg border flex flex-col items-center cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="wiki-entry-card rounded-lg border flex flex-col cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{
                 background: COLORS.parchment,
                 borderColor: COLORS.border,
@@ -213,7 +237,7 @@ export default function EntryGrid({
         return (
           <div
             key={entry.key}
-            className="wiki-entry-card rounded-lg border flex flex-col items-center"
+            className="wiki-entry-card rounded-lg border flex flex-col"
             style={{
               background: COLORS.parchment,
               borderColor: COLORS.border,
