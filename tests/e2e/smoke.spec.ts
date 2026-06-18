@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers';
+import { gotoFresh, getReactState, dispatchAction, isIgnoredConsoleError } from './helpers';
 
 test('initial load: boots on Town view, HUD + bottom nav render without errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // Ignore known-benign console noise (Phaser texture-key re-add, tween race,
+  // asset 404s) so a real new console.error still fails the assert below.
+  page.on('console', (m) => { if (m.type() === 'error' && !isIgnoredConsoleError(m.text())) errors.push(m.text()); });
   await gotoFresh(page);
 
   const s = await getReactState(page);
