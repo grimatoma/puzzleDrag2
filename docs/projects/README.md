@@ -4,7 +4,33 @@ Each file in this folder is a **self-contained implementation brief**: point a f
 
 > How to use: open a new session and say something like *"Implement `docs/projects/03-live-boss-board-modifiers.md`."* The doc is the whole spec.
 
-These docs describe **work to do** — they are not yet implemented. Effort is a rough size (S ≈ hours, M ≈ a day, L ≈ multi-day, XL ≈ a week+).
+Effort is a rough size (S ≈ hours, M ≈ a day, L ≈ multi-day, XL ≈ a week+). For the **ranked roadmap** (what's left, by value) see **[ROADMAP.html](ROADMAP.html)**.
+
+---
+
+## Status at a glance (verified 2026-06-18)
+
+Briefs were originally authored as "work to do"; several have since shipped. Verified against HEAD:
+
+| # | Brief | Status |
+|---|---|---|
+| 01 | Quick wins — dormant systems | ✅ **Done** |
+| 02 | Drag-build feedback ladder | ✅ **Done** — open [PR #1241](https://github.com/grimatoma/puzzleDrag2/pull/1241) (per-tile ladder + `src/game/dragFeedback.ts`) |
+| 03 | Live boss board modifiers | ⬜ Not started |
+| 04 | Roguelite board-altering boons | ⬜ Not started |
+| 05 | AI playtest & balance harness | ✅ **Done** (merged) |
+| 06 | Story editor write-back loop | ✅ **Done** (merged) |
+| 07 | Living named town | 🟡 Partial (Tomas fix only; placement/talk remain) |
+| 08 | Save migration ladder | ✅ **Done** (merged; live, schema **47**) |
+| 09 | CI gate for e2e + visual | 🟡 Infra landed but **non-gating** — e2e bit-rotted (~32/63); de-rot then flip |
+| 10 | Self-describing slices | ⬜ Not started |
+| 11 | GameScene decomposition | 🟢 Substantially done (6 pure `src/game/*` modules) |
+| 12 | Endgame finale + goals hub | 🟡 Partial — **12A token-strip bug ✅ fixed**; finale + goals hub remain |
+| 13 | Economy: unify price model | ✅ **Fork fixed** (`effectiveSellPrice`); orphan-slice retirement + harness rebalance deferred |
+| 14 | Port zones atlas | ✅ **Done** (Mirefen; ~9 atlas zones remain) |
+| 15 | Incremental "Hearthkeeping" | 🗑️ **Dropped** (removed at user request) |
+| 16 | "Fiber Crush" | 🗑️ **Dropped** (removed at user request) |
+| 17–23 | Net-new polish concepts | 🆕 **Proposed** (see below) |
 
 ---
 
@@ -54,13 +80,26 @@ Note (13): the real defect is a verified **~10× payout fork** — the same item
 
 Note (08): there are **two** version gates (`persistence.ts` + `init.ts`) — make `loadSavedState` return a version-bumped object so both pass. Note (09): infra **landed** (PR #1229) — the `e2e`, `visual-smoke`, and `visual-rebaseline` CI jobs + the Phaser texture-key console-error allowlist. Both `e2e` and `visual-smoke` land **non-blocking**: the first CI run revealed the never-gated e2e suite has **bit-rotted** (32 pass / 31 fail on main — stale fixtures/selectors/balance, NOT a regression). De-rot the specs (and re-baseline the goldens on CI) before flipping either to gating — full inventory in [09 findings](09-ci-e2e-gate-findings.md). Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned. Note (11): the split is **already partly done** — `src/game/` exists; finish it and backfill tests.
 
-### New game systems (proposals + implementation briefs)
-| # | Brief | Effort | Depends on |
+### New game systems (proposals + implementation briefs) — 🗑️ both DROPPED
+| # | Brief | Effort | Status |
 |---|---|---|---|
-| 15 | [Incremental "Hearthkeeping" (idle layer)](15-new-game-incremental-hearth.md) | L | **08 (hard)** |
-| 16 | ["Fiber Crush" (Wool-Crush-inspired match mode)](16-new-game-fiber-crush.md) | XL | **08 (hard)** |
+| 15 | [Incremental "Hearthkeeping" (idle layer)](15-new-game-incremental-hearth.md) | L | 🗑️ merged then **removed at user request** (PR #1239) |
+| 16 | ["Fiber Crush" (match mode)](16-new-game-fiber-crush.md) | XL | 🗑️ merged then **removed at user request** (PR #1238) |
 
-Note (15): renamed off "Embergarden" because `state.embers` is an already-shipped keeper/boon currency — the new prestige currency is **Warmth / Hearthlight**; the idle layer is hard-bounded so it augments, never replaces, the board. Note (16): there is **no existing wool/yarn/dye economy** (only `tile_herd_sheep → meat`), so the fiber chain is defined from scratch; the mode is a **fork** (adjacent-swap match-3), not an edit to the drag-chain engine.
+Both were built and reverted (the idle layer and the second-verb fork). The briefs are kept for history; **do not re-implement** without an explicit new decision. The doc-08 save ladder they relied on **stays** (schema held at 47, the removed-feature rungs are no-op bumps).
+
+### Net-new polish concepts (proposed 2026-06-18)
+| # | Brief | Effort | Notes |
+|---|---|---|---|
+| 17 | [Season-flip cinematic beat](17-season-flip-cinematic.md) | M | Board-wide weather+light sweep on season turn; reuses the seasonal pipeline |
+| 18 | [2D town lighting layer](18-town-2d-lighting.md) | M | Builds the *already-decided* lit ¾-top-down direction (`docs/town-camera`) |
+| 19 | [Chain juice & game-feel (remaining)](19-chain-juice-and-game-feel.md) | S–M | Combo/streak meter + long-chain flourish; most juice already ships |
+| 20 | [Milestone celebrations](20-milestone-celebrations.md) | M | First chain-of-10 / building / city / zone → toast + flourish |
+| 21 | [Ambient seasonal soundscape](21-ambient-soundscape.md) | S–M | Synth ambient bed per zone×season, behind `musicOn` |
+| 22 | [Complete the four-season tile sets](22-four-season-tile-sets.md) | L | 76/79 tiles are summer-only; finish spring/autumn/winter + transitions |
+| 23 | [Accessibility: shape-coded tiles + reduced-motion](23-accessibility-shape-coded-tiles.md) | M | `reducedMotion` setting end-to-end + colour-independent tile silhouettes |
+
+Note (19): the per-tile feedback ladder and counter tick-up are **already done** — this brief is the *remaining* vision (marked inline). Note (23): adding `reducedMotion` touches the persisted settings shape → needs a **47→48** migration rung (the doc-08 ladder is live, so add a rung, don't wipe).
 
 ---
 
@@ -87,5 +126,5 @@ Note (15): renamed off "Embergarden" because `state.embers` is an already-shippe
 ## House facts baked into every brief
 - Files are **`.ts`/`.tsx`** (CLAUDE.md's `.js`/`.jsx` is stale doc-drift).
 - **Slice footgun:** a new action only reaches a slice if it's in `SLICE_PRIMARY_ACTIONS`/`ALWAYS_RUN_SLICES` — else it silently no-ops. Use the `check-slice-action` skill.
-- **Persistence:** any persisted-shape change needs a `SAVE_SCHEMA_VERSION` bump, which **wipes saves** until doc `08` lands the migration ladder.
+- **Persistence:** `SAVE_SCHEMA_VERSION` is **47** (`src/constants.ts:215` — briefs that still say "45" predate the fiber/embergarden removals). The doc-08 **migration ladder is LIVE** (`src/state/saveMigrations.ts`): a persisted-shape change now adds a `MIGRATIONS[n]` rung and bumps the version — it no longer wipes saves. Don't roll the version back when removing a feature; no-op the rung.
 - **Validation:** `npm run lint` · `npm run typecheck` · `npm test` · `npm run test:e2e` · `npm run test:visual` · `npm run build`. The Phaser/canvas layer has no unit coverage (only e2e/visual). Visual goldens are **not** re-baselineable on the Windows dev host — do it on the Linux CI runner.
