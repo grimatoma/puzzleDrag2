@@ -5,7 +5,9 @@ export default defineConfig({
   timeout: 30_000,
   fullyParallel: false,
   retries: 0,
-  reporter: [['list']],
+  // `list` for live CI logs; `html` (never auto-open) writes a browsable report
+  // to playwright-report/ that the CI `e2e` job uploads as an artifact on failure.
+  reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://localhost:5173/puzzleDrag2/',
     trace: 'retain-on-failure',
