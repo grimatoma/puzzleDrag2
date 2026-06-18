@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fenwick — grounded settlement (look test)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@500;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+ body{margin:0;background:#1c2622;color:#e6efe6;font:500 15px/1.5 "IBM Plex Sans",system-ui;padding:14px;}
+ h1{font:800 1.6rem/1.1 "Fraunces",serif;margin:.2rem 0;} .wrap{max-width:1180px;margin:0 auto;}
+ .ctrls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.7rem 0;}
+ .tierbtns{display:inline-flex;gap:.2rem;background:#26302a;padding:.25rem;border-radius:11px;}
+ .tierbtns button{font:700 .85rem/1 "Fraunces",serif;padding:.5rem .7rem;border:0;background:transparent;border-radius:8px;cursor:pointer;color:#a2b2a4;}
+ .tierbtns button.on{background:#8aae84;color:#15201a;} .tierbtns button .n{display:block;font:600 .6rem/1.2 "JetBrains Mono";opacity:.8;}
+ .ctl{font:600 .82rem/1 "IBM Plex Sans";padding:.5rem .75rem;border:1px solid #38463e;background:#26302a;border-radius:8px;cursor:pointer;color:#e6efe6;} .ctl.grow{background:#558a64;border-color:#558a64;color:#fff;}
+ .toggles{display:inline-flex;gap:.5rem;flex-wrap:wrap;margin-left:auto;}
+ .toggles label{font:600 .72rem/1 "IBM Plex Sans";display:inline-flex;gap:.3rem;align-items:center;background:#26302a;padding:.4rem .55rem;border-radius:7px;cursor:pointer;}
+ .cw{border-radius:12px;overflow:hidden;border:1px solid #38463e;background:#3a5244;line-height:0;} canvas{display:block;width:100%;height:auto;}
+ .cap{margin:.6rem 0 .2rem;min-height:2.2em;} .cap b{font-family:"Fraunces",serif;color:#bfe0c8;} .stat{font:600 .8rem/1.4 "JetBrains Mono";color:#92a896;}
+</style></head><body><div class="wrap">
+ <h1>🪶 Fenwick</h1>
+ <p style="color:#a2b2a4;margin:.1rem 0 .4rem">A lowland town on raised ground among slow braided river channels and reedy water-meadows, drained and dyked as it grows. <i>Look test — braided channels &amp; causeways.</i></p>
+ <div class="ctrls">
+  <div class="tierbtns" data-tierbtn-for="fenwick">
+   <button data-tier="0" class="on">Eyot<span class="n">4</span></button><button data-tier="1">Causeway<span class="n">8</span></button><button data-tier="2">Fen Village<span class="n">12</span></button><button data-tier="3">Fenwick Town<span class="n">18</span></button><button data-tier="4">Fenwick<span class="n">24</span></button>
+  </div>
+  <button class="ctl grow" data-grow-for="fenwick">Grow&nbsp;▸</button>
+  <div class="toggles">
+   <label><input type="checkbox" data-toggle-for data-toggle="buildings" checked> buildings</label><label><input type="checkbox" data-toggle-for data-toggle="dressing" checked> dressing</label><label><input type="checkbox" data-toggle-for data-toggle="forest" checked> willows</label><label><input type="checkbox" data-toggle-for data-toggle="labels"> labels</label><label><input type="checkbox" data-toggle-for data-toggle="dusk"> dusk</label>
+  </div>
+ </div>
+ <div class="cw"><canvas data-layout="fenwick" width="1280" height="960"></canvas></div>
+ <p class="cap" data-caption-for="fenwick"></p>
+ <p class="stat" data-stat-for="fenwick"></p>
+</div>
+<script>
+window.LAYOUT_DATA = { fenwick: {
+  setback: 15, treeDensity: 0.3,
+  roofs: ["#6e7a4a","#7a5a3c","#8a7a4a","#5e7a52","#9c6b3f","#7a6a52","#6a7a62"],
+  walls: ["#d8d0a8","#cdbf94","#d4c8a0","#e0d4b0","#c2b488"],
+  tiers: [
+    { name:"Eyot", plots:4, caption:"A few reed-thatched cots on the one dry eyot — a hummock of firm ground among the slow fen channels. Punts drawn up at the water's edge; reeds and willows to the horizon." },
+    { name:"Causeway", plots:8, caption:"A raised causeway is banked across the eyot and the channels dyked; an eel-house and a fowler's hut appear, and more cots line the dry road." },
+    { name:"Fen Village", plots:12, caption:"A cross lane and a well make a green; a chapel and an inn on the bank. Plank footbridges cross the channels to cots on the next eyots; the wet meadows are cut for hay and sedge." },
+    { name:"Fenwick Town", plots:18, caption:"A market on the green, the channels spanned by proper bridges to whole new clusters, side lanes on the drained ground, and a granary for the rich fen harvest." },
+    { name:"Fenwick", plots:24, caption:"A thriving fen town: a fountain and a town hall on the square, causeways and bridges knitting the eyots into one place, and drained polder fields where the reeds once stood." },
+  ],
+  water: {
+    rivers: [
+      { pts:[[-30,316],[240,342],[520,354],[800,372],[1100,408],[1320,440]], width:28 },
+      { pts:[[-30,690],[240,672],[520,658],[800,672],[1100,704],[1320,744]], width:26 },
+      { pts:[[864,276],[846,476],[862,700],[878,880]], width:22 },
+    ],
+  },
+  bridges: [
+    { x:520, y:354, vertical:true, span:88, hr:13, from:3 }, { x:520, y:658, vertical:true, span:88, hr:13, from:3 }, { x:862, y:500, vertical:false, span:90, hr:14, from:4 },
+  ],
+  plaza: { cx:520, cy:500, rx:78, ry:50 },
+  landmark: { cx:520, cy:500 },
+  clearSpots: [[520,500,82,64]],
+  roads: [
+    { id:"HC", axis:"H", line:500, half:15, a:200, b:820, tier:0, kind:"main" },
+    { id:"ML", axis:"V", line:520, half:14, a:400, b:600, tier:1, kind:"main" },
+    { id:"WC", axis:"V", line:340, half:13, a:420, b:580, tier:2, kind:"lane" },
+    { id:"EC", axis:"V", line:700, half:13, a:420, b:580, tier:2, kind:"lane" },
+    { id:"NC", axis:"V", line:520, half:13, a:280, b:400, tier:3, kind:"lane" },
+    { id:"SC", axis:"V", line:520, half:13, a:600, b:760, tier:3, kind:"lane" },
+  ],
+  foot: {0:[114,94],1:[110,98],2:[118,96],3:[108,100],4:[118,94],5:[114,98],6:[108,96],7:[120,94],8:[112,98],9:[116,94],10:[110,96],11:[118,98],12:[108,94],13:[114,98],14:[120,96],15:[110,98],16:[116,94],17:[108,96],18:[118,98],19:[112,96],20:[116,98],21:[110,96],22:[118,98],23:[112,94]},
+  special: { 4:"inn", 5:"shop", 8:"chapel", 12:"townhall" },
+  spec: [
+    { i:0, road:"HC", side:"N", along:420, t:0 }, { i:1, road:"HC", side:"N", along:640, t:0 },
+    { i:2, road:"HC", side:"S", along:420, t:0 }, { i:3, road:"HC", side:"S", along:640, t:0 },
+    { i:4, road:"ML", side:"W", along:430, t:1 }, { i:5, road:"ML", side:"E", along:430, t:1 },
+    { i:6, road:"HC", side:"N", along:260, t:1 }, { i:7, road:"HC", side:"S", along:260, t:1 },
+    { i:8, road:"WC", side:"W", along:500, t:2 }, { i:9, road:"WC", side:"E", along:500, t:2 },
+    { i:10, road:"EC", side:"W", along:500, t:2 }, { i:11, road:"EC", side:"E", along:500, t:2 },
+    { i:12, road:"NC", side:"W", along:320, t:3 }, { i:13, road:"NC", side:"E", along:320, t:3 },
+    { i:14, road:"SC", side:"W", along:700, t:3 }, { i:15, road:"SC", side:"E", along:700, t:3 },
+    { i:16, road:"HC", side:"N", along:800, t:3 }, { i:17, road:"HC", side:"S", along:800, t:3 },
+    { i:18, road:"ML", side:"W", along:580, t:4 }, { i:19, road:"ML", side:"E", along:580, t:4 }, { i:20, road:"WC", side:"W", along:420, t:4 }, { i:21, road:"EC", side:"E", along:420, t:4 }, { i:22, road:"HC", side:"N", along:180, t:4 }, { i:23, road:"HC", side:"S", along:180, t:4 },
+  ],
+  widgets: [
+    { k:"reed", x:300, y:340, from:0 }, { k:"reed", x:600, y:360, from:0 }, { k:"reed", x:420, y:670, from:0 }, { k:"reed", x:760, y:680, from:1 }, { k:"reed", x:900, y:440, from:1 },
+    { k:"boat", x:470, y:354, from:0 }, { k:"boat", x:560, y:658, from:1 }, { k:"fishrack", x:444, y:540, from:1 }, { k:"campfire", x:520, y:560, from:0, to:1 }, { k:"signpost", x:484, y:536, from:1 },
+    { k:"lamp", x:460, y:540, from:2 }, { k:"lamp", x:580, y:540, from:2 }, { k:"lamp", x:460, y:460, from:3 }, { k:"lamp", x:580, y:460, from:3 },
+    { k:"haybale", x:200, y:560, from:2 }, { k:"vegplot", x:640, y:560, from:3 }, { k:"market", x:460, y:532, from:3 }, { k:"market", x:544, y:532, from:3 }, { k:"banner", x:500, y:540, from:4 },
+  ],
+  actors: [
+    { pts:[[300,500],[760,500],[300,500]], spd:48, from:1 },
+    { pts:[[520,420],[520,600],[520,420]], spd:40, from:1 },
+    { x:460, y:532, dir:"back", from:3, kind:"idle" },
+    { x:484, y:520, dir:"front", from:0, kind:"idle" },
+    { x:580, y:536, dir:"front", from:2, kind:"kid" },
+  ],
+  critters: [ { k:"duck", x:470, y:354, from:0 }, { k:"duck", x:560, y:658, from:1 }, { k:"duck", x:640, y:368, from:2 }, { k:"dog", x:520, y:532, from:2 } ],
+}};
+</script>
+<script src="../lib/layout.js"></script>
+</body></html>
