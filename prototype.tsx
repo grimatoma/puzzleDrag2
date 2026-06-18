@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
-import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
+import { COLS, ROWS, TILE, SCENE_EVENTS, dayKeyForDate } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import type Phaser from "phaser";
@@ -459,6 +459,14 @@ export default function App() {
   // Fire session_start story beat on first mount
   useEffect(() => {
     dispatch({ type: "SESSION_START" });
+  }, [dispatch]);
+
+  // Daily login-streak tick — fires once per app mount; the reducer is
+  // idempotent per local day (state.ts LOGIN_TICK), so re-mounts (incl.
+  // StrictMode's double-invoke) within the same day are no-ops. Uses the
+  // local-day key helper from constants.
+  useEffect(() => {
+    dispatch({ type: "LOGIN_TICK", payload: { today: dayKeyForDate(new Date()) } });
   }, [dispatch]);
 
   useEffect(() => {
