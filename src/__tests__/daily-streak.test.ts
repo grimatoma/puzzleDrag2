@@ -85,6 +85,24 @@ describe("3.5 — Daily login streak", () => {
     expect(at7.tools.shuffle).toBeGreaterThan(at6.tools.shuffle ?? 0);
   });
 
+  it("LOGIN_TICK: opens the daily_streak modal with the current day in modalParams", () => {
+    // Proves the modal trigger fires — the dispatch wired at app mount
+    // (prototype.tsx) advances the streak AND raises the reward modal.
+    const s0 = initialState();
+    const s1 = gameReducer(s0, { type: "LOGIN_TICK", payload: { today: "2026-01-01" } });
+    expect(s1.modal).toBe("daily_streak");
+    expect(s1.modalParams?.day).toBe(s1.dailyStreak.currentDay);
+    expect(s1.modalParams?.day).toBe(1);
+  });
+
+  it("LOGIN_TICK: same-day re-open does not re-raise the modal", () => {
+    const s0 = initialState();
+    const s1 = gameReducer(s0, { type: "LOGIN_TICK", payload: { today: "2026-01-01" } });
+    const dismissed = { ...s1, modal: null, modalParams: undefined };
+    const s2 = gameReducer(dismissed, { type: "LOGIN_TICK", payload: { today: "2026-01-01" } });
+    expect(s2.modal).toBeNull();
+  });
+
   it("dayKeyForDate returns local YYYY-MM-DD", () => {
     const d = new Date("2026-05-06T03:30:00");
     expect(dayKeyForDate(d)).toBe("2026-05-06");
