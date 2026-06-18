@@ -86,7 +86,7 @@
   <thead><tr><th>Host zone builds…</th><th>…opens this board</th></tr></thead>
   <tbody>
     <tr><td>farm town builds [[buildings:harbor_dock|Harbor Dock]]</td><td>a small <strong>fish board</strong> alongside the farm board</td></tr>
-    <tr><td>mine town builds [[buildings:forge|Forge]] at City tier</td><td>a hazard-free <strong>Forge (smithing) board</strong></td></tr>
+    <tr><td>mine town builds [[buildings:forge|Forge]]</td><td>a hazard-free <strong>Forge (smithing) board</strong></td></tr>
     <tr><td>mine town builds [[buildings:observatory|Observatory]]</td><td>a <strong>deep-shaft board</strong></td></tr>
   </tbody>
 </table>
@@ -95,7 +95,7 @@
 <h2>1.4 Zone-relative progression (player-chosen order)</h2>
 <p>Because order is player-chosen after the first settlements, progression is <strong>zone-relative</strong>, not globally linear:</p>
 <ul>
-  <li>A shared <strong>settlement template</strong> runs per zone, keyed on <code>event.zoneId</code>: found → tier-ups (per-zone authored ladder — home is Hamlet → Village → City) → keeper decision → complete → Hearth-Token.</li>
+  <li>A shared <strong>settlement template</strong> runs per zone, keyed on <code>event.zoneId</code>: found → tier-ups (per-zone authored ladder — home is <span data-wiki-fact="zone.home.ladderSpan"></span>) → keeper decision → complete → Hearth-Token.</li>
   <li>A thin layer of <strong>zone-specific flavor triggers</strong> sits on top (the per-zone "key triggers" in Part 3).</li>
   <li>The <strong>only global spine</strong> is: found a complete zone of each biome (farm / mine / fish) → unlock the <strong>[[zones:oldcapital|Old Capital]]</strong> finale. Everything else is local to a zone and reorderable.</li>
 </ul>
@@ -229,13 +229,13 @@
 </div>
 
 <h2>Mine region</h2>
-<p style="font-size:13px;color:#867a66;margin:0 0 0.6em;"><strong>Black Forge folded into a progressive board.</strong> The mastery smithy is no longer a standalone node — it opens inside a mine zone once the [[buildings:forge|forge]] is raised at City tier.</p>
+<p style="font-size:13px;color:#867a66;margin:0 0 0.6em;"><strong>Black Forge folded into a progressive board.</strong> The mastery smithy is no longer a standalone node — it opens inside a mine zone once the [[buildings:forge|forge]] is raised.</p>
 
 <!-- QUARRY -->
 <div style="border:2px solid #b28b62;border-radius:14px;background:linear-gradient(160deg,#f7f1e6,#ece2cc);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
   <h3 style="margin-top:0;">quarry — Cracked Quarry <span style="font-size:12px;font-weight:600;color:#867a66;">· intro mine</span></h3>
   <p style="margin:0.2em 0;"><strong>Specialization.</strong> Stone &amp; base metal — stone→[[resources:block|block]], iron_ore→[[resources:iron_bar|iron_bar]]. Teaches <strong>mine hazards + the supplies gate</strong>. <strong>Idle-produces:</strong> [[resources:block|block]] + [[resources:iron_bar|iron_bar]] — construction materials that feed every zone's tier-ups, so quarry is the <em>materials backbone</em>.</p>
-  <p style="margin:0.2em 0;"><strong>Board.</strong> Mine <strong>STANDARD</strong>, 10 turns. Progressive: building [[buildings:forge|forge]] at City tier opens the <strong>Forge board</strong> (mastery smithing — see below).</p>
+  <p style="margin:0.2em 0;"><strong>Board.</strong> Mine <strong>STANDARD</strong>, 10 turns. Progressive: building [[buildings:forge|forge]] opens the <strong>Forge board</strong> (mastery smithing — see below).</p>
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> cave_in, gas_vent, mole (intro tier).</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
@@ -294,10 +294,10 @@
   <h3 style="margin-top:0;">Forge board <span style="font-size:12px;font-weight:600;color:#867a66;">· progressive — replaces the standalone Black Forge zone</span></h3>
   <p style="margin:0.2em 0;">
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">RESOLVED</span>
-    The [[zones:forge|Black Forge]] is <strong>no longer a standalone node</strong>. It becomes a progressive, hazard-free smithing board that opens inside a mine zone (quarry or caves) once the [[buildings:forge|forge]] building is raised at City tier — so "multiple boards per zone" carries the region's mastery content.</p>
+    The [[zones:forge|Black Forge]] is <strong>no longer a standalone node</strong>. It becomes a progressive, hazard-free smithing board that opens inside a mine zone (quarry or caves) once the [[buildings:forge|forge]] building is raised — so "multiple boards per zone" carries the region's mastery content.</p>
   <p style="margin:0.2em 0;"><strong>Specialization.</strong> Master smithing — [[resources:iron_bar|iron_bar]] + [[resources:coke|coke]] → steel/tools, runes. <strong>Idle-produces:</strong> finished tools / steel / runes (top tier) into the host zone's cache.</p>
   <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> No hazards (mastery board); long, high-value chains.</p>
-  <p style="margin:0.2em 0;"><strong>Unlock gate.</strong> <code>event:build_forge</code> at the host mine zone's City tier.</p>
+  <p style="margin:0.2em 0;"><strong>Unlock gate.</strong> <code>event:build_forge</code> at the host mine zone (the [[buildings:forge|forge]] building unlocks at the Mining&nbsp;Camp rung).</p>
   <p style="margin:0.4em 0 0;"><strong>Return hook.</strong> The only source of best-in-slot tools/runes for boss fights — a strong reason to keep a mature mine zone in rotation.</p>
 </div>
 
