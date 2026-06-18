@@ -31,15 +31,29 @@ describe("persistence", () => {
     expect(state).toEqual(validData);
   });
 
-  test("loadSavedState returns null and clears save when version mismatches", () => {
+  test("loadSavedState returns null and clears save when version has no migration path", () => {
+    // version -1 is below current with no migrator rung → discard (new contract).
     const oldData = { version: -1, something: "else" };
     localStorage.setItem(SAVE_KEY, JSON.stringify(oldData));
     const state = loadSavedState();
     expect(state).toBeNull();
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("discarding save: schema version")
+      expect.stringContaining("cannot migrate version")
     );
+  });
+
+  test("loadSavedState UPGRADES a laddered old version instead of wiping it", () => {
+    // The headline non-destructive guarantee: a v45 save (one below current)
+    // now migrates to current and is NOT removed from storage.
+    const v45 = { version: 45, coins: 999, inventory: { home: { flour: 3 } } };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(v45));
+    const state = loadSavedState();
+    expect(state).not.toBeNull();
+    expect(state?.version).toBe(SAVE_SCHEMA_VERSION); // bumped to 46
+    expect((state as Record<string, unknown>).fiber).toBeTruthy(); // fiber seeded
+    expect(state?.coins).toBe(999); // progress preserved
+    expect(localStorage.getItem(SAVE_KEY)).not.toBeNull(); // save NOT wiped
   });
 
   test("loadSavedState returns null when data is not an object", () => {
