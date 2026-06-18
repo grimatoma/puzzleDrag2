@@ -26,7 +26,7 @@
 <p>The tutorial settlement. Teaches the drag-chain, upgrade thresholds, filling <strong>orders</strong>, the Market, growing the town through the tier ladder, shaping the board with buildings, and the farm refining economy (grain → [[resources:flour]] → [[resources:bread]]). Town&nbsp;1's specialization is the grain/bread farm.</p>
 
 <h3>The expedition to find Town 2</h3>
-<p>Town&nbsp;2 is not simply unlocked by a level — you <strong>run an expedition to discover it</strong>. Raising the wagon at the top of Town&nbsp;1's tier ladder funds and launches that expedition, bridging the farm cluster to the first mine. This is the forcing function that turns "what do I do next?" into one obvious answer.</p>
+<p>Town&nbsp;2 is not simply unlocked by a level — you <strong>run an expedition to discover it</strong>. Raising the wagon — unlocked once Town&nbsp;1 reaches its City rung — funds and launches that expedition, bridging the farm cluster to the first mine. This is the forcing function that turns "what do I do next?" into one obvious answer.</p>
 
 <h3>Town 2 — the mine &amp; "the combination"</h3>
 <p>Town&nbsp;2 teaches mining and, crucially, <strong>the combination</strong> of the two economies: mine rounds are <em>expeditions</em> whose turns are bought with packed food. The [[buildings:kitchen]] converts farm grain into [[resources:supplies]]; you bring supplies before a run and play until they run out (soft fail — you keep everything gathered). Stone chains yield [[resources:block]], iron chains yield [[resources:iron_bar]]; the [[buildings:workshop]] and [[buildings:forge]] turn metal into better tools. Mine hazards (cave-ins, gas, moles) add urgency the farm never had.</p>
@@ -38,28 +38,13 @@
 <p>The slice closes back on the farm with a <strong>second, richer farm hold</strong> that introduces farm-side <strong>hazard management</strong> — mirroring the mine's hazards. Its signature lesson is the <strong>rats</strong> hazard, handled with <em>Ratcatcher</em> (free moves for rats) and <em>Master&nbsp;Ratcatcher</em> (collect rats together with grass) buildings. It also opens a deeper crop economy and its own distinct specialization. Town&nbsp;3 = farm + rats is fixed; the exact specialization roster stays draft (see <strong>Zones (parked)</strong>).</p>
 
 <h2>How a zone grows: the per-zone tier ladder <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></h2>
-<p>Each town climbs its <strong>own authored ladder of tiers</strong> (rung count, plots, costs and unlocks are authored <em>per zone</em>). A tier-up is one town-center (<strong>[[buildings:hearth|Hearth]]</strong>) upgrade costing escalating local resources, and it does exactly two things: it <strong>adds building plots</strong> and <strong>unlocks the next batch of building types</strong> — <em>nothing else</em>. There is deliberately <strong>no turn-budget or yield change</strong>, so the puzzle math stays untouched. Each <code>(zone, tier)</code> renders a hand-authored Phaser tilemap that grows by appending new plots around the previous town, so a placed building never moves. The home zone reaching its top rung (<strong>City</strong>) is <em>intended</em> to gate the Town&nbsp;2 expedition — declared in data as <code>requiresZoneTier</code> on the quarry and enforced in the founding reducer + map locks (<code>zoneTierGateReason</code>). <strong>Today, cross-zone access is still gated by player level</strong> (the legacy <code>node.level</code> check in <code>CARTO/TRAVEL</code> remains live), so this gate is only <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> until the level gate is retired. Implementation: <code>tiers[]</code> on each cartography node, the <code>TIER_UP</code> action, and <code>src/ui/town/townMaps.ts</code>. See <strong>docs/zone-tier-ladder.html</strong>.</p>
+<p>Each town climbs its <strong>own authored ladder of tiers</strong> (rung count, plots, costs and unlocks are authored <em>per zone</em>). A tier-up is one town-center (<strong>[[buildings:hearth|Hearth]]</strong>) upgrade costing escalating local resources, and it does exactly two things: it <strong>adds building plots</strong> and <strong>unlocks the next batch of building types</strong> — <em>nothing else</em>. There is deliberately <strong>no turn-budget or yield change</strong>, so the puzzle math stays untouched. Each <code>(zone, tier)</code> renders a hand-authored Phaser tilemap that grows by appending new plots around the previous town, so a placed building never moves. The Town&nbsp;2 expedition is <em>intended</em> to be gated on the home zone climbing its ladder — declared in data as <code>requiresZoneTier</code> on the quarry (today: <span data-wiki-fact="zone.quarry.gate"></span>) and enforced in the founding reducer + map locks (<code>zoneTierGateReason</code>). <strong>Today, cross-zone access is still gated by player level</strong> (the legacy <code>node.level</code> check in <code>CARTO/TRAVEL</code> remains live), so this gate is only <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> until the level gate is retired. Implementation: <code>tiers[]</code> on each cartography node, the <code>TIER_UP</code> action, and <code>src/ui/town/townMaps.ts</code>. See <strong>docs/zone-tier-ladder.html</strong>.</p>
 <p style="font-size:13px;color:#7a6f5c;">The zones concept page surfaces each zone's <strong>Tiers</strong> and <strong>Plots by tier</strong> straight from <code>ZONES[*].tiers</code>.</p>
-<h3>Town 1 — home · 3 rungs</h3>
-<table>
-  <thead><tr><th>Tier</th><th>Name</th><th>Newly-unlocked buildings (Town 1)</th><th>Plots</th></tr></thead>
-  <tbody>
-    <tr><td>0</td><td>Hamlet</td><td>[[buildings:hearth|Hearth]], [[buildings:mill|Mill]], [[buildings:granary|Granary]], [[buildings:larder|Larder]], [[buildings:bakery|Bakery]], [[buildings:inn|Inn]], [[buildings:housing|Housing]]</td><td>6</td></tr>
-    <tr><td>1</td><td>Village</td><td>[[buildings:silo|Silo]], [[buildings:stable|Stable]], [[buildings:sawmill|Sawmill]], [[buildings:apiary|Apiary]], [[buildings:brewery|Brewery]], [[buildings:watchtower|Watchtower]], [[buildings:chapel|Chapel]]</td><td>12</td></tr>
-    <tr><td>2</td><td>City</td><td>[[buildings:forge|Forge]], [[buildings:workshop|Workshop]], [[buildings:kitchen|Kitchen]], [[buildings:powder_store|Powder Store]], [[buildings:portal|Portal]], [[buildings:caravan_post|Caravan Post]], [[buildings:observatory|Observatory]], top housing + harbor set; the expedition → Town&nbsp;2</td><td>20</td></tr>
-  </tbody>
-</table>
-<h3>Town 2 — the mine (quarry) · 4 rungs <span style="font-size:11px;color:#7a6f5c;">— locked until home reaches City</span></h3>
-<table>
-  <thead><tr><th>Tier</th><th>Name</th><th>Newly-unlocked buildings (Town 2)</th><th>Plots</th></tr></thead>
-  <tbody>
-    <tr><td>0</td><td>Dig Site</td><td>[[buildings:hearth|Hearth]], [[buildings:kitchen|Kitchen]], [[buildings:housing|Housing]]</td><td>4</td></tr>
-    <tr><td>1</td><td>Mining Camp</td><td>[[buildings:workshop|Workshop]], [[buildings:forge|Forge]], [[buildings:inn|Inn]], [[buildings:watchtower|Watchtower]]</td><td>6</td></tr>
-    <tr><td>2</td><td>Boomtown</td><td>[[buildings:barn|Barn]], [[buildings:powder_store|Powder Store]], top housing, [[buildings:apothecary|Apothecary]]</td><td>8</td></tr>
-    <tr><td>3</td><td>Foundry City</td><td>[[buildings:observatory|Observatory]], top housing, [[buildings:caravan_post|Caravan Post]]</td><td>12</td></tr>
-  </tbody>
-</table>
-<p style="font-size:13px;color:#7a6f5c;">Plots/unlocks per rung are fixed; the upgrade <strong>costs</strong> have been tuned to a <strong>moderate run-budget</strong> (grow home → City in ~15–25 board runs), backed by a ~2× chain-coin bump and the decoupled <code>TILES_PER_RESOURCE</code> income knob — see the <strong>Balance baseline</strong> page's <em>Implemented economy model</em> and <strong>docs/zone-tier-ladder.html</strong>.</p>
+<h3>Town 1 — home · <span data-wiki-fact="zone.home.rungCount"></span> rungs</h3>
+<div data-wiki-tier-ladder="home"></div>
+<h3>Town 2 — the mine (quarry) · <span data-wiki-fact="zone.quarry.rungCount"></span> rungs <span style="font-size:11px;color:#7a6f5c;">— locked until <span data-wiki-fact="zone.quarry.gate"></span></span></h3>
+<div data-wiki-tier-ladder="quarry"></div>
+<p style="font-size:13px;color:#7a6f5c;">Both tables above are generated <strong>live</strong> from <code>ZONES[*].tiers</code> (rung names, plots, per-rung building unlocks, and upgrade costs) — they cannot drift from the game. Upgrade costs are <strong>resource-only</strong> (no coins), ported from Puzzle&nbsp;Craft&nbsp;2's town-upgrade ladder — see the <strong>Balance baseline</strong> page's <em>Implemented economy model</em> and <strong>docs/zone-tier-ladder.html</strong>.</p>
 
 <h2>How you shape your board: the building loadout</h2>
 <p>Beyond a town's two <strong>staple tiles</strong>, the buildings you place decide what the board <em>is</em>. Two mechanics combine into the central choice of the game:</p>
@@ -88,9 +73,9 @@
   <thead><tr><th>Unlock</th><th>Trigger</th><th>Ordering</th></tr></thead>
   <tbody>
     <tr><td>Staple tiles, Orders, Market</td><td>arrive</td><td>fixed (first)</td></tr>
-    <tr><td>Tier-ups Hamlet → City</td><td>town-center upgrade (resource cost)</td><td><strong>fixed spine</strong></td></tr>
+    <tr><td>Tier-ups <span data-wiki-fact="zone.home.ladderSpan"></span></td><td>town-center upgrade (resource cost)</td><td><strong>fixed spine</strong></td></tr>
     <tr><td>Category spawners (Lumber Camp, Coop, Garden, …)</td><td>build the producer building (within its tier)</td><td>flexible</td></tr>
-    <tr><td>[[buildings:mill]] / [[buildings:bakery]] (bread)</td><td>Village tier + build</td><td>fixed gate (bread needed later)</td></tr>
+    <tr><td>[[buildings:mill]] / [[buildings:bakery]] (bread)</td><td>Settlement tier + build</td><td>fixed gate (bread needed later)</td></tr>
     <tr><td>Expedition → Town 2</td><td>reach City tier + raise the wagon</td><td>fixed (last)</td></tr>
   </tbody>
 </table>
@@ -119,7 +104,7 @@
 <h2>Game-level timeline (the global spine)</h2>
 <p>The only thing that is globally sequential is the town spine; within each town, building order is mostly the player's choice.</p>
 <pre style="background:#2a2317;color:#f3ead4;padding:0.95rem 1.1rem;border-radius:10px;overflow-x:auto;font-size:12px;line-height:1.5;">
- [Town1: Hamlet→City]──▶[expedition]──▶[Town2: DigSite→Foundry]──▶[★ boss]──▶[Town3: tier ladder + rats]
+ [Town1: <span data-wiki-fact="zone.home.ladderSpan"></span>]──▶[expedition]──▶[Town2: <span data-wiki-fact="zone.quarry.ladderSpan"></span>]──▶[★ boss]──▶[Town3: tier ladder + rats]
         fixed spine          fixed          fixed spine        fixed         fixed spine
         (build order            (build order          (build order
          flexible within)        flexible within)      flexible within)
@@ -134,7 +119,7 @@
   <li><strong>Exactly three biomes</strong> (Farm, Mine, Harbor) — though only Farm + Mine appear in this slice; Harbor is parked.</li>
   <li><strong>Instant crafting.</strong> No real-time craft queue or gem-skip.</li>
   <li><strong>Resources stay per-settlement</strong>; coins, tools, workers, level/XP, and knowledge carry globally. A fresh town bootstraps from global coins via its Market.</li>
-  <li><strong>Advancement = the wagon/expedition</strong>, built at the top tier — one clear forcing function, not scattered level gates.</li>
+  <li><strong>Advancement = the wagon/expedition</strong>, raised when the home zone reaches its City rung — one clear forcing function, not scattered level gates.</li>
 </ul>
 
 <h2>Now vs Later</h2>
@@ -145,7 +130,7 @@
     <tr>
       <td>
         Town 1 → Town 2 (+boss) → Town 3 slice ·
-        per-zone tier ladder + plots (Hamlet→City / Dig Site→Foundry City) ·
+        per-zone tier ladder + plots (<span data-wiki-fact="zone.home.ladderSpan"></span> / <span data-wiki-fact="zone.quarry.ladderSpan"></span>) ·
         building-gated category spawners ·
         demolishable building loadout ·
         the rats hazard + Ratcatcher buildings ·
@@ -173,7 +158,7 @@
   <thead><tr><th>System</th><th>Status</th><th>Now / Later</th></tr></thead>
   <tbody>
     <tr><td>Core chain loop + refining</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>NOW</td></tr>
-    <tr><td>Per-zone tier ladder + plots (Hamlet→City / Dig Site→Foundry City)</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> tiers[], TIER_UP, authored town maps; balance first-pass</td><td>NOW</td></tr>
+    <tr><td>Per-zone tier ladder + plots (<span data-wiki-fact="zone.home.ladderSpan"></span> / <span data-wiki-fact="zone.quarry.ladderSpan"></span>)</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span> tiers[], TIER_UP, authored town maps; balance first-pass</td><td>NOW</td></tr>
     <tr><td>Building-gated category spawners</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">PARTIAL</span> ability ships; no building uses it yet</td><td>NOW</td></tr>
     <tr><td>Demolish / flexible loadout</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span></td><td>NOW</td></tr>
     <tr><td>Mine expedition + food gate</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">WIRED</span></td><td>NOW</td></tr>
