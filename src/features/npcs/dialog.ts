@@ -220,6 +220,7 @@ export const DIALOG_POOLS: Record<string, NpcDialogPool> = {
         "Old Tomas: 'I've made it to another winter. You helped.'",
         "Old Tomas: 'Come spring, I'll show you the queen cell. A privilege few share.'",
       ],
+    },
     reactive: [
       {
         id: "tomas_first_order",
@@ -227,7 +228,6 @@ export const DIALOG_POOLS: Record<string, NpcDialogPool> = {
         req: (s: ReactiveState) => s.story?.flags?.first_order
       }
     ],
-    },
   },
 
   bram: {

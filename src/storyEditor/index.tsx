@@ -1,8 +1,9 @@
 // Story Tree Editor — full-page editor at /story/.
 // Visualises STORY_BEATS + SIDE_BEATS (plus author-created draft beats) as a
 // decision tree. Edits go to `draft.story` in the shared `hearth.balance.draft`
-// localStorage key, so they flow through `applyStoryOverrides` on the game's
-// next load:
+// localStorage key, so they flow through `applyStoryOverrides`
+// (src/state/applyStoryOverrides.ts, wired into src/story.ts at boot) on the
+// game's next load:
 //   draft.story.beats[id]   — title / scene / body / lines, the full choice
 //                             list (label + whitelisted outcome), and (for
 //                             draft beats) trigger + onComplete.setFlag
