@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 // docs/zones — generator. Emits the self-contained atlas (and, later, per-zone docs)
 // from the data layer + shared engine. Run: node docs/zones/build.mjs
-import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { ZONES } from "./data/zones.mjs";
 import { META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURCING, REGIONS } from "./data/world.mjs";
 import { buildAtlas } from "./lib/atlas.mjs";
+import { buildPage } from "./lib/page.mjs";
+import { verifyLayout } from "./lib/geometry.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFileSync(join(__dir, p), "utf8");
 
 const styles = read("lib/styles.css");
 const engine = read("lib/engine.js");
+const layoutEngine = read("lib/layout.js");
 
 // ── sanity checks: keep the data honest before we render ───────────────────────
 // Base/board resources every zone can produce early (so they never gate-lock a rung).
@@ -49,6 +52,25 @@ for (const z of ZONES) {
 }
 if (problems.length) { console.error("Data problems:\n  " + problems.join("\n  ")); process.exit(1); }
 
-const html = buildAtlas({ ZONES, META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURCING, REGIONS, styles, engine });
+// ── per-zone build-out pages (Pass 2): emit a doc for every authored layout ────
+const topoById = Object.fromEntries(TOPOLOGIES.map((t) => [t.id, t]));
+const builtPages = new Set();
+const layoutsDir = join(__dir, "data", "layouts");
+if (existsSync(layoutsDir)) {
+  for (const f of readdirSync(layoutsDir).filter((f) => f.endsWith(".mjs"))) {
+    const layout = (await import(pathToFileURL(join(layoutsDir, f)).href)).default;
+    const zone = ZONES.find((z) => z.id === layout.id);
+    if (!zone) { console.error(`layout "${f}" has no matching zone "${layout.id}"`); process.exit(1); }
+    const { problems } = verifyLayout(layout, zone);
+    if (problems.length) { console.error(`✗ ${layout.id} layout geometry:\n  ` + problems.join("\n  ")); process.exit(1); }
+    const page = buildPage({ zone, layout, topo: topoById[zone.topology], styles, layoutEngine, principles: PRINCIPLES });
+    mkdirSync(join(__dir, layout.id), { recursive: true });
+    writeFileSync(join(__dir, layout.id, "index.html"), page);
+    builtPages.add(layout.id);
+    console.log(`✓ zone page → docs/zones/${layout.id}/index.html (${(page.length / 1024).toFixed(0)} KB)`);
+  }
+}
+
+const html = buildAtlas({ ZONES, META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURCING, REGIONS, styles, engine, builtPages: [...builtPages] });
 writeFileSync(join(__dir, "index.html"), html);
-console.log(`✓ atlas → docs/zones/index.html (${(html.length / 1024).toFixed(0)} KB, ${ZONES.length} zones, ${TOPOLOGIES.length} topologies)`);
+console.log(`✓ atlas → docs/zones/index.html (${(html.length / 1024).toFixed(0)} KB, ${ZONES.length} zones, ${TOPOLOGIES.length} topologies, ${builtPages.size} build-out pages)`);
