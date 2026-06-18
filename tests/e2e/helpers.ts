@@ -92,6 +92,25 @@ export async function seedQuietSave(page: Page, overrides: QuietSaveOverrides = 
     },
     { overrides, saveVersion: SAVE_SCHEMA_VERSION },
   );
+  // Kill CSS animations/transitions so dynamically-mounted DOM overlays (the
+  // tool dropdown, action panel, story bar) settle instantly. On the slower CI
+  // runner an in-flight ~200ms drop animation leaves a button "not stable" for
+  // Playwright's actionability check well past the 30s test timeout — the cuj
+  // arming/cancel journeys timed out on Linux CI while passing locally. This is
+  // purely cosmetic (no spec asserts on an animation) and does not touch the
+  // Phaser canvas, which has its own tween layer.
+  await page.addInitScript(() => {
+    const css =
+      "*,*::before,*::after{animation-duration:0.001ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;transition-delay:0ms!important;scroll-behavior:auto!important;}";
+    const inject = () => {
+      const style = document.createElement("style");
+      style.setAttribute("data-e2e-no-anim", "");
+      style.textContent = css;
+      (document.head ?? document.documentElement).appendChild(style);
+    };
+    if (document.head) inject();
+    else document.addEventListener("DOMContentLoaded", inject, { once: true });
+  });
 }
 
 /** Wipe save + seed quiet flags + navigate + wait. Single call for most specs. */

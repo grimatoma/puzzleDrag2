@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test';
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 test.describe('CUJ: tools + hotbar journeys', () => {
+  // These portrait modal/hotbar journeys are the heaviest UI specs (mount the
+  // board, open an animated dropdown, arm/cancel). They settle fast locally but
+  // the slower headless CI runner needs headroom over the 30s default — the
+  // animation-disable in seedQuietSave does the heavy lifting; this is margin.
+  test.describe.configure({ timeout: 60_000 });
+
   // The hotbar dropdown → tool-modal → backdrop flow is the PORTRAIT layout.
   // In landscape (≥500px) puzzleBoard.tsx hides [data-area="hotbar"] (display:none)
   // and surfaces tools through the always-visible tool grid instead (that path is
