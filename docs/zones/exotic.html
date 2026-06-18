@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone Atlas — puzzleDrag2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>/* docs/zones — shared styles. Warm earthy base inherited from docs/town-layout; extended for the
+   zone atlas (cards, matrices, palette ramps) and per-zone docs. Per-zone accent is set inline
+   via --z-accent / --z-accent2 / --z-glow so every zone is colour-themed from its own palette. */
+:root{
+  --ink:#2b2418; --muted:#7a6f5c; --line:#e3d9c4; --bg:#faf6ec; --paper:#fffdf6; --code:#efe7d3;
+  --accent:#8a5a2b; --accent2:#4f7a34;
+  --shadow:0 1px 2px rgba(50,35,8,.06), 0 6px 20px -10px rgba(50,35,8,.22);
+  --ok:#3f8f3a; --warn:#c9750c; --info:#2767b0; --danger:#b03a23;
+  --serif:"Fraunces",Georgia,serif; --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;} html{scroll-behavior:smooth;}
+body{font:400 16px/1.64 var(--sans);color:var(--ink);margin:0;
+  background:radial-gradient(1200px 520px at 80% -8%,color-mix(in srgb,var(--accent) 10%,transparent),transparent 60%),
+    radial-gradient(1000px 460px at -10% 4%,color-mix(in srgb,var(--accent2) 9%,transparent),transparent 55%),
+    linear-gradient(180deg,var(--bg),#f1e9d6);background-attachment:fixed;background-color:var(--bg);}
+a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#6a5230;}
+.page{max-width:1200px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+header.hero{border-bottom:3px solid var(--accent);padding:1.5rem 1.6rem 1.2rem;margin-bottom:1rem;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 10%,transparent),color-mix(in srgb,var(--accent2) 7%,transparent));
+  border-radius:14px 14px 6px 6px;box-shadow:var(--shadow);}
+header.hero h1{font:800 2.9rem/1.05 var(--serif);letter-spacing:-.018em;margin:.1rem 0 .4rem;}
+.sub{color:var(--muted);font-size:1.06rem;margin:.2rem 0 .8rem;max-width:80ch;}
+.meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+.chip{font-size:.78rem;font-weight:600;padding:.2rem .62rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.12rem .55rem;border-radius:999px;color:#fff;}
+.pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);} .pill.new{background:var(--danger);} .pill.reuse{background:var(--info);}
+h2{font:800 1.8rem/1.14 var(--serif);letter-spacing:-.01em;margin:2.4rem 0 .5rem;border-bottom:1px solid var(--line);padding-bottom:.3rem;}
+h3{font:600 1.2rem/1.25 var(--serif);margin:1.3rem 0 .3rem;}
+p,li{margin:.45rem 0;} .lead{font-size:1.05rem;}
+table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.85rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+th,td{border:1px solid var(--line);padding:.46rem .64rem;text-align:left;vertical-align:top;}
+th{background:color-mix(in srgb,var(--accent) 9%,#fff);font-weight:700;} tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem;}
+.box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+.box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+.box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+.box b{font-family:var(--serif);}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+.card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.75rem 1.05rem;box-shadow:var(--shadow);}
+.card.g{border-left-color:var(--accent2);} .card h4{font:700 1rem/1.2 var(--serif);margin:.1rem 0 .35rem;}
+.card .k{font-weight:700;color:var(--ink);}
+
+/* ── palette ramps ── */
+.ramps{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.4rem .9rem;margin:.5rem 0 1rem;}
+.ramp{display:flex;align-items:center;gap:2px;}
+.ramp .rl{flex:0 0 110px;font-size:.8rem;color:var(--muted);}
+.ramp i{flex:1 1 0;height:22px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);}
+
+/* ── zone atlas cards ── */
+.zgrid{display:grid;grid-template-columns:1fr;gap:1.5rem;margin:1.2rem 0;}
+.zone{--z-accent:var(--accent);--z-accent2:var(--accent2);--z-glow:#ffd24d;
+  background:var(--paper);border:1px solid var(--line);border-top:5px solid var(--z-accent);border-radius:14px;
+  box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:1rem;}
+.zone .ztop{display:block;}
+.zone .art{position:relative;background:#15131a;border-bottom:1px solid var(--line);overflow:hidden;line-height:0;}
+.zone .art canvas{display:block;width:100%;height:auto;}
+.zone .artctl{position:absolute;left:10px;right:10px;bottom:9px;display:flex;align-items:center;gap:.5rem;
+  background:rgba(20,16,12,.46);backdrop-filter:blur(3px);border-radius:9px;padding:.3rem .55rem;}
+.zone .artctl label{font:700 .66rem/1 var(--mono);color:#f4ecd8;letter-spacing:.04em;text-transform:uppercase;opacity:.85;}
+.zone .artctl input[type=range]{flex:1;accent-color:var(--z-accent);height:3px;}
+.zone .artctl .grow-end{font:700 .66rem/1 var(--mono);color:#ffe9b8;}
+.zone .zbody{padding:1.05rem 1.25rem 1.2rem;min-width:0;}
+.zone .zhdr{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;}
+.zone .zno{font:800 .9rem/1 var(--mono);color:#fff;background:var(--z-accent);border-radius:7px;padding:.28rem .5rem;}
+.zone h3.zname{font:800 1.5rem/1.05 var(--serif);margin:0;color:var(--ink);letter-spacing:-.01em;}
+.zone .ztag{font-size:.92rem;color:var(--muted);font-style:italic;margin:.3rem 0 .7rem;}
+.zone .zmeta{display:flex;flex-wrap:wrap;gap:.35rem;margin:.1rem 0 .7rem;}
+.zone .tagk{font:600 .7rem/1.3 var(--sans);padding:.12rem .5rem;border-radius:999px;background:color-mix(in srgb,var(--z-accent) 12%,#fff);color:var(--z-accent2);border:1px solid color-mix(in srgb,var(--z-accent) 28%,#fff);}
+.zone .zrow{display:grid;grid-template-columns:84px 1fr;gap:.2rem .6rem;font-size:.88rem;margin:.5rem 0;}
+.zone .zrow .lbl{font:700 .72rem/1.5 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.zone .ladder{display:flex;flex-wrap:wrap;gap:.3rem;margin:.2rem 0 .1rem;}
+.zone .rung{display:flex;flex-direction:column;gap:1px;background:color-mix(in srgb,var(--z-accent) 7%,#fff);border:1px solid color-mix(in srgb,var(--z-accent) 22%,#fff);border-radius:8px;padding:.3rem .5rem;min-width:78px;}
+.zone .rung .rn{font:700 .76rem/1.1 var(--serif);color:var(--ink);} .zone .rung .rp{font:700 .68rem/1 var(--mono);color:var(--z-accent2);}
+.zone .zsub{font:700 .74rem/1 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.9rem 0 .35rem;border-top:1px dashed var(--line);padding-top:.6rem;}
+.zone .haz{font-size:.84rem;margin:.28rem 0;} .zone .haz b{font-family:var(--serif);}
+.zone .boss{background:color-mix(in srgb,var(--danger) 6%,#fff);border-left:3px solid var(--danger);border-radius:0 7px 7px 0;padding:.5rem .7rem;font-size:.85rem;margin:.3rem 0;}
+.zone .miniramps{display:flex;gap:.4rem;flex-wrap:wrap;margin:.3rem 0;}
+.zone .miniramp{display:flex;border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
+.zone .miniramp i{width:15px;height:15px;display:block;}
+.tocgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.5rem;margin:1rem 0 1.5rem;}
+.toccard{display:flex;align-items:center;gap:.55rem;background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:9px;padding:.5rem .7rem;box-shadow:var(--shadow);}
+.toccard:hover{text-decoration:none;transform:translateY(-1px);} .toccard .e{font-size:1.4rem;} .toccard .tt{font:700 .9rem/1.1 var(--serif);color:var(--ink);} .toccard .ts{font:600 .68rem/1.1 var(--mono);color:var(--muted);}
+.statline{font:600 .8rem/1.5 var(--mono);color:var(--muted);}
+
+/* ── per-zone doc: tabs + top-down layout play-through ── */
+nav.tabs{display:flex;gap:.35rem;border-bottom:2px solid var(--line);margin:.2rem 0 1.4rem;flex-wrap:wrap;}
+nav.tabs button{font:700 1.02rem/1 var(--serif);letter-spacing:-.01em;padding:.65rem 1.2rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:all .14s;}
+nav.tabs button:hover{color:var(--z-accent,var(--accent));background:color-mix(in srgb,var(--z-accent,var(--accent)) 8%,transparent);}
+nav.tabs button.on{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--z-accent,var(--accent));box-shadow:0 -5px 16px -9px rgba(50,35,8,.3);}
+.panel{display:none;} .panel.on{display:block;animation:fade .35s both;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.stage{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:1rem 1rem 1.2rem;margin:.6rem 0 1.4rem;box-shadow:var(--shadow);}
+.ctrls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.7rem;}
+.tierbtns{display:inline-flex;gap:.25rem;background:color-mix(in srgb,var(--z-accent,var(--accent)) 8%,#fff);padding:.25rem;border-radius:11px;border:1px solid var(--line);}
+.tierbtns button{font:700 .9rem/1 var(--serif);padding:.5rem .8rem;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;color:var(--muted);}
+.tierbtns button.on{background:var(--z-accent,var(--accent));color:#fff;} .tierbtns button .n{display:block;font:600 .64rem/1.2 var(--mono);opacity:.8;}
+.ctl{font:600 .82rem/1 var(--sans);padding:.5rem .75rem;border:1px solid var(--line);background:var(--paper);border-radius:8px;cursor:pointer;color:var(--ink);}
+.ctl:hover{border-color:var(--z-accent,var(--accent));color:var(--z-accent,var(--accent));} .ctl.grow{background:var(--z-accent2,var(--accent2));color:#fff;border-color:var(--z-accent2,var(--accent2));}
+.toggles{display:inline-flex;gap:.3rem;margin-left:auto;flex-wrap:wrap;}
+.toggles label{font:600 .74rem/1 var(--sans);color:var(--muted);display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .55rem;border:1px solid var(--line);border-radius:7px;cursor:pointer;user-select:none;}
+.canvas-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#14181a;line-height:0;}
+.canvas-wrap canvas{display:block;width:100%;height:auto;}
+.caption{margin:.7rem 0 .2rem;font:500 .98rem/1.45 var(--sans);min-height:2.4em;} .caption b{font-family:var(--serif);font-weight:800;color:var(--z-accent,var(--accent));}
+.legend{font-size:.74rem;color:var(--muted);margin:.5rem 0 0;display:flex;gap:.5rem .9rem;flex-wrap:wrap;}
+.legend .sw{display:inline-flex;align-items:center;gap:.32rem;} .legend .swatch{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.18);}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.8rem;margin:.8rem 0;}
+.inv-item{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.6rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.3rem;}
+.inv-item .art{height:74px;border-radius:7px;border:1px solid var(--line);background:repeating-conic-gradient(#efe7d3 0 25%,#f7f1e0 0 50%) 0 0/14px 14px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.inv-item .nm{font:700 .9rem/1.2 var(--serif);} .inv-item .ds{font-size:.78rem;color:var(--muted);line-height:1.4;}
+.inv-item .tags{display:flex;flex-wrap:wrap;gap:.25rem;} .inv-item .tag{font:600 .64rem/1.3 var(--mono);padding:.04rem .4rem;border-radius:999px;background:var(--code);color:#6a5230;}
+.backlink{font:600 .85rem/1 var(--sans);}
+@media (max-width:820px){header.hero h1{font-size:2.1rem;} .toggles{margin-left:0;}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;}}
+</style>
+</head><body><div class="page">
+  <header class="hero">
+    <h1>The Zone Atlas — Ten Worlds That Grow</h1>
+    <p class="sub">Ten unique, AAA-bar settlement zones for puzzleDrag2 — each a different world, each growing from a foothold into a flourishing place by its own logic of growth. Each zone is a different <b>environment</b> and a different <b>logic of growth</b> — built on the <a href="../town-layout/">town-layout</a> foundation (roads-first, the wilderness as the progress bar, a landmark that levels up in place), then taken somewhere new. The art here is a flat-color / vector mockup; pixel art is generated once a layout locks.</p>
+    <p class="meta">puzzleDrag2 · <span class="pill warn">Proposal — Pass 1 of the build-out</span> · 2026-06-17</p>
+    <div class="chips"><span class="chip">10 distinct growth topologies</span><span class="chip">173 plots at full size</span><span class="chip">23 new hazards/boss mechanics</span><span class="chip">Reuses the game's real hazards &amp; bosses</span><span class="chip">Drag “Grow” on any card</span></div>
+  </header>
+
+  <div style="margin:1rem 0;padding:.8rem 1.1rem;border-radius:10px;border:1px solid var(--line);border-left:5px solid var(--accent2);background:color-mix(in srgb,var(--accent2) 8%,#fff);box-shadow:var(--shadow);font-size:.96rem">
+    <b style="font-family:var(--serif)">Heads up — this is the earlier <em>exotic</em> concept set.</b> These ten fantasy zones (volcano, sky-isles, crystal caverns, haunted ruins…) were later reworked into <b>grounded, realistic frontier settlements</b> — believable towns in the woods, plains, hills and coast that read like real growing places. <a href="grounded.html"><b>→ See the Grounded Settlements hub</b></a>. Both sets live here in the docs; the grounded set is the current direction.
+  </div>
+
+  <p class="lead">This atlas proposes ten settlement zones for puzzleDrag2. Every one is unique in <b>look</b> and in <b>how it grows</b> — a stilt-town strung over black water, a forge-town terraced up a live volcano, a city of crystal caverns, a sky-port on floating isles, a haunted ruin you reclaim from the fog. They share one craft bar (below) and the same authored-map contract as the home town, so each can become a real, playable, growing place. <b>Drag the “Grow” slider</b> on any card to watch a foothold become a capital (double-click to let it breathe on its own).</p>
+
+  <h2>The ten worlds</h2>
+  <div class="tocgrid"><a class="toccard" href="./mirefen/" style="border-left-color:#7a9c5a"><span class="e">🪷</span><span><span class="tt">Mirefen Hollow</span><br><span class="ts">Boardwalk ribbon over water · ▶ playable</span></span></a><a class="toccard" href="./cinderhold/" style="border-left-color:#e8702a"><span class="e">🌋</span><span><span class="tt">Cinderhold</span><br><span class="ts">Switchback terraces up a slope · ▶ playable</span></span></a><a class="toccard" href="./hoarfrost/" style="border-left-color:#e8a44a"><span class="e">❄️</span><span><span class="tt">Hoarfrost Hold</span><br><span class="ts">Sheltered hollow cluster · ▶ playable</span></span></a><a class="toccard" href="./sunspire/" style="border-left-color:#c45a3a"><span class="e">🏜️</span><span><span class="tt">Sunspire Oasis</span><br><span class="ts">Concentric oasis rings + caravan spokes · ▶ playable</span></span></a><a class="toccard" href="./gullcliff/" style="border-left-color:#c4502a"><span class="e">🪺</span><span><span class="tt">Gullcliff</span><br><span class="ts">Stacked sea-cliff terraces · ▶ playable</span></span></a><a class="toccard" href="./thornwild/" style="border-left-color:#d6a83a"><span class="e">🌳</span><span><span class="tt">Thornwild Canopy</span><br><span class="ts">Treetop platforms + rope bridges · ▶ playable</span></span></a><a class="toccard" href="./glimmerdeep/" style="border-left-color:#46d6e0"><span class="e">💎</span><span><span class="tt">Glimmerdeep</span><br><span class="ts">Linked caverns + cart tunnels · ▶ playable</span></span></a><a class="toccard" href="./aetherreach/" style="border-left-color:#7a5ac4"><span class="e">☁️</span><span><span class="tt">Aetherreach</span><br><span class="ts">Floating-island archipelago · ▶ playable</span></span></a><a class="toccard" href="./gravemoor/" style="border-left-color:#e88a3a"><span class="e">🕯️</span><span><span class="tt">Gravemoor</span><br><span class="ts">Reclaimed ancient ruin-grid · ▶ playable</span></span></a><a class="toccard" href="./goldgrass/" style="border-left-color:#c46a2a"><span class="e">🌾</span><span><span class="tt">Goldgrass Reach</span><br><span class="ts">Grand axial boulevard + ring road · ▶ playable</span></span></a></div>
+
+  <h2>How they grow — ten different layout logics</h2>
+  <p>Variety of <b>layout style</b> is a hard requirement: no two zones grow the same way. Each claims exactly one growth topology — the menu of ten is the spine of the whole set.</p>
+  <table><thead><tr><th>Topology</th><th>Zone</th><th>What it is</th><th>How it grows</th></tr></thead><tbody><tr><td><b>Boardwalk ribbon over water</b></td><td>🪷 Mirefen Hollow</td><td>No solid ground — platforms on stilts, linked by raised boardwalks that branch island to island.</td><td>Spreads HORIZONTALLY across one flat water plane — the boardwalk forks island to island and each rung planks over more open mire. (The flat-water counterpart to Thornwild's vertical climb.)</td></tr><tr><td><b>Switchback terraces up a slope</b></td><td>🌋 Cinderhold</td><td>Hairpin roads climb a volcano's flank; buildings cut into terraces facing the bend.</td><td>Growth goes UP — each rung adds a higher terrace as cooling lava solidifies into buildable obsidian shelves.</td></tr><tr><td><b>Sheltered hollow cluster</b></td><td>❄️ Hoarfrost Hold</td><td>The town huddles in a windbreak hollow around a steaming hot-spring — the warm heart.</td><td>Rings radiate outward but cling to the warmth; outer rings need windbreak walls. Snow thaws to ground.</td></tr><tr><td><b>Concentric oasis rings + caravan spokes</b></td><td>🏜️ Sunspire Oasis</td><td>Circular oasis at centre; the town grows in rings around the water with caravan roads spoking to the dunes.</td><td>Grows as CLOSED CONCENTRIC RINGS — each rung wraps a new walled ring around the water, with caravan spokes punching out to the dunes. Radial and enclosed (vs Goldgrass's single open axis).</td></tr><tr><td><b>Stacked sea-cliff terraces</b></td><td>🪺 Gullcliff</td><td>The town climbs a sheer sea-cliff in shelves linked by switchback stairs and a cargo lift; harbour at the base.</td><td>Higher shelves are carved up the cliff while the tide-pool harbour extends below. Bare rock → railed terrace.</td></tr><tr><td><b>Treetop platforms + rope bridges</b></td><td>🌳 Thornwild Canopy</td><td>Platforms ring giant trunks at varying heights; vine bridges connect them across the canopy.</td><td>Grows VERTICALLY — each rung climbs to a higher layer (understory → mid-canopy → emergent crown); undergrowth is cleared to reveal buildable boughs. (The vertical counterpart to Mirefen's flat spread.)</td></tr><tr><td><b>Linked caverns + cart tunnels</b></td><td>💎 Glimmerdeep</td><td>A chain of lit caverns, each a district, joined by mine-cart tunnels through the dark rock.</td><td>Each rung opens a new chamber down a tunnel; unlit rubble is cleared to reveal the next glowing cavern.</td></tr><tr><td><b>Floating-island archipelago</b></td><td>☁️ Aetherreach</td><td>Each building rides its own floating islet; sky-bridges and zip-lines knit them; airship docks spoke out.</td><td>New islets drift in and get tethered each rung; the empty sky is the frontier that fills with anchored rock.</td></tr><tr><td><b>Reclaimed ancient ruin-grid</b></td><td>🕯️ Gravemoor</td><td>Inverted: you don't push into wild — you UNCOVER and rebuild atop a buried orthogonal grid of ruins.</td><td>Growth cleanses blight from old streets and re-raises buildings on ancient footings. Fog &amp; bramble recede to hallowed cobble.</td></tr><tr><td><b>Grand axial boulevard + ring road</b></td><td>🌾 Goldgrass Reach</td><td>A monumental central avenue with a great plaza; a ring road encircles the city; districts fill the quadrants.</td><td>Grows along ONE monumental axis — the great avenue lengthens and perpendicular streets subdivide grid blocks beside it; the ring road closes last. Linear and axial (vs Sunspire's concentric rings) — and the widest, grandest layout, the capstone.</td></tr></tbody></table>
+
+  <h2>The zones</h2>
+  <div class="zgrid">
+
+  <section class="zone" id="zone-mirefen" style="--z-accent:#7a9c5a;--z-accent2:#5a7a52;--z-glow:#ffd66a">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="mirefen" data-w="920" data-h="300" role="img" aria-label="Mirefen Hollow establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="mirefen" aria-label="grow Mirefen Hollow">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">01</span><h3 class="zname">🪷 Mirefen Hollow</h3><a class="chip" href="./mirefen/" style="background:#7a9c5a;color:#fff;border-color:#7a9c5a">Open build-out →</a></div>
+        <div class="ztag">A stilt-town strung across black water on golden boardwalks.</div>
+        <div class="zmeta">
+          <span class="tagk">marsh / fen</span>
+          <span class="tagk">Boardwalk ribbon over water</span>
+          <span class="tagk">Lv 3+</span>
+          <span class="tagk">3→15 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Hushed, misty, golden-hour still. Frogs and fireflies; reeds whispering.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Spreads HORIZONTALLY across one flat water plane — the boardwalk forks island to island and each rung planks over more open mire. (The flat-water counterpart to Thornwild's vertical climb.)</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is open black water &amp; reed beds, planked into buildable hummocks.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Fishing Stilt</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Bogwalk Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Mire Village</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Fen Town</span><span class="rp">15 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Stilt Hearth</span> <span class="tagk">Reed Stilt-house</span> <span class="tagk">Bog Fishmonger</span> <span class="tagk">Drying Dock</span> <span class="tagk">Marsh Apiary</span> <span class="tagk">Fenmead Brewery</span> <span class="tagk">Mirewife's Apothecary</span> <span class="tagk">Reed Shrine</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Fenmead</b> — brewed at the Fenmead Brewery (unlocked at Mire Village) — an end-good you sell or spend, gating the final rung once you can make it</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">The tide cycle IS the game: at high tide only the upper boardwalk rows are workable; at low tide the harbour opens below. You bank every build and chain around the rising and falling water — reading the tide, not the board, is the skill.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Tidewater flood</b> — Water rises each in-run season, submerging the lowest board rows (tiles become unchainable). <i>Counter:</i> Chain to drain — clearing tiles on a flooded row pumps it back; bogwalk pylons protect adjacent rows.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Miasma fog</b> — A poison cloud blooms from a vent and spreads; tiles caught in it spoil after 3 turns. <i>Counter:</i> Chain any tiles in the cloud before the timer to disperse it (gas-vent rules).</div><div class="haz"><span class="pill new">new</span> <b>Leech bloom</b> — Leeches latch onto a cluster of tiles and multiply, eating 1 plant/fish tile each per turn. <i>Counter:</i> Salt-chain: a 4+ chain of any kind purges leeches in its footprint for coins.</div><div class="haz"><span class="pill new">new</span> <b>Will-o'-wisp lure</b> — A wisp marks a high-value tile and drags it one cell toward the deep water each turn; lost if it reaches the edge. <i>Counter:</i> Chain the marked tile to break the lure (bonus coins if you do).</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🌿 Quagmire</b> <span class="pill reuse">reuse</span> — Reimagined for the fen — the bog floods and reed tiles respawn at 1.5×, but the surge only comes at high tide: ride each high tide to out-harvest the mire before low tide strands you short of the target (respawn_boost × the tide cycle).<br><span style="color:var(--muted)"><i>Alt idea:</i> The Fenmother — a colossal heron-witch who steals a column into the fog each turn unless fed a fish chain.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#1c2a2a"></i><i style="background:#2c4a47"></i><i style="background:#365a52"></i><i style="background:#4a7068"></i></span><span class="miniramp"><i style="background:#3a4a2a"></i><i style="background:#5f6e4a"></i><i style="background:#7a9c5a"></i><i style="background:#a8bf78"></i></span><span class="miniramp"><i style="background:#6a4a28"></i><i style="background:#8a6438"></i><i style="background:#b88a52"></i><i style="background:#d6a868"></i></span><span class="miniramp"><i style="background:#cdb98a"></i><i style="background:#e8dcb0"></i><i style="background:#ffd66a"></i><i style="background:#fff4c8"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Stilt platform + pylons</b> — The buildable hummock — a planked deck on driven pylons over water.</li><li><b>Boardwalk (autotile)</b> — Raised plank walkway with straight / corner / T / branch / rail pieces.</li><li><b>Lily-pad &amp; cattail clusters</b> — Open-water dressing; firefly perches at dusk.</li><li><b>Heron Gate beacon</b> — Staged landmark — reed shrine → cistern fountain → bog-lantern → heron arch.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Fishing Stilt</b></td><td class="num">3</td><td>hearth, housing, fishmonger</td><td><span class="pill ok">free / founding</span></td><td>Three stilt-huts on one boardwalk over the water; a single reed shrine. Mist all around.</td></tr><tr><td><b>Bogwalk Hamlet</b></td><td class="num">6</td><td>larder, harbor_dock, watchtower</td><td>650¢ · 16 plank, 8 fish fillet</td><td>The boardwalk forks to a second hummock; a drying-dock and larder; lanterns strung along the planks.</td></tr><tr><td><b>Mire Village</b></td><td class="num">10</td><td>apiary, brewery, apothecary, smokehouse</td><td>1,700¢ · 22 plank, 14 fish fillet</td><td>A cistern fountain rises on the central platform; an apiary on a flowered islet, a brewery for fenmead. Reed beds drained into garden hummocks.</td></tr><tr><td><b>Fen Town</b></td><td class="num">15</td><td>inn, chapel, caravan_post, granary, observatory</td><td>3,600¢ · 30 plank, 10 fenmead</td><td>The Heron Gate beacon crowns the deepwater channel; a chapel of reeds, an inn for fen-traders. Boardwalks knit into a raised plaza.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-cinderhold" style="--z-accent:#e8702a;--z-accent2:#8a3320;--z-glow:#ff9a3a">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="cinderhold" data-w="920" data-h="300" role="img" aria-label="Cinderhold establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="cinderhold" aria-label="grow Cinderhold">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">02</span><h3 class="zname">🌋 Cinderhold</h3><a class="chip" href="./cinderhold/" style="background:#e8702a;color:#fff;border-color:#e8702a">Open build-out →</a></div>
+        <div class="ztag">Hammers and lava-light — a forge-town climbing a living volcano in switchbacks.</div>
+        <div class="zmeta">
+          <span class="tagk">volcanic</span>
+          <span class="tagk">Switchback terraces up a slope</span>
+          <span class="tagk">Lv 5+</span>
+          <span class="tagk">3→14 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Dramatic, hot, dangerous-beautiful. Ember-glow on black rock; a red sky.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Growth goes UP — each rung adds a higher terrace as cooling lava solidifies into buildable obsidian shelves.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is glowing lava fields that cool into buildable obsidian terraces.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Ashfall Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Emberforge Terrace</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Cinderhold</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Magma Crown</span><span class="rp">14 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Brazier Hearth</span> <span class="tagk">Great Forge</span> <span class="tagk">Powder Store</span> <span class="tagk">Toolwright</span> <span class="tagk">Cinder Smokehouse</span> <span class="tagk">Mountain Watch</span> <span class="tagk">Obsidian Caravan</span> <span class="tagk">Eruption Watchtower</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Obsidian</b> — mined from cooled lava at the frontier (a board resource, not a craft good) — the zone's premium currency, used to gate the higher terraces</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">A rising heat meter and live lava channels you physically route mining around. Each new terrace is cooled lava you cleared at the frontier — the mountain hands you the next shelf to build on — and obsidian, the premium currency, is only won by clearing that cooled lava.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Lava flow</b> — A molten tongue spreads to a random adjacent cell each turn, destroying resources in its path. <i>Counter:</i> No direct clear — route your mining away from the channel; obsidian dikes (built) pin its direction.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Ash cloud</b> — Falling ash dims a region of the board; dimmed tiles read face-grey and can't be targeted until cleared around. <i>Counter:</i> Chain at the cloud's edge to thin it; the watchtower shortens its duration.</div><div class="haz"><span class="pill new">new</span> <b>Ember rain</b> — Cinders ignite 1–2 random tiles per turn (fire rules); fire spreads to neighbours if left. <i>Counter:</i> Chain burning tiles to snuff them (coins per tile), as with wildfire.</div><div class="haz"><span class="pill new">new</span> <b>Tremor</b> — A quake jolts the board: one row shuffles its tiles sideways, scrambling near-complete chains. <i>Counter:</i> The observatory predicts the tremor row a turn ahead so you can cash chains early.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🔥 Ember Drake</b> <span class="pill reuse">reuse</span> — Reimagined on the slope — a heat tile spawns each turn and pools on the LOWEST terrace first, so build high and mine low: anything left on heat 2+ turns burns away. Land 3 iron bars before the heat climbs the whole mountain (heat_tiles × the terraces).<br><span style="color:var(--muted)"><i>Alt idea:</i> Magmaw — a lava-worm that surfaces through a terrace, turning a 2×2 block molten until quenched by a stone chain.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#120c10"></i><i style="background:#2a2226"></i><i style="background:#3e3236"></i><i style="background:#5a4a4e"></i></span><span class="miniramp"><i style="background:#7a1a08"></i><i style="background:#c43a10"></i><i style="background:#ff6a1a"></i><i style="background:#ffb04a"></i></span><span class="miniramp"><i style="background:#4a4044"></i><i style="background:#6a5e60"></i><i style="background:#8a7e80"></i><i style="background:#c8bcbe"></i></span><span class="miniramp"><i style="background:#3a2e30"></i><i style="background:#8a5a2a"></i><i style="background:#d6922c"></i><i style="background:#ffd24d"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Terrace shelf + retaining wall</b> — The buildable cooled-obsidian step cut into the slope, with a basalt retaining edge.</li><li><b>Switchback road (autotile)</b> — Hairpin road pieces: straight, hairpin-left, hairpin-right, ramp-up.</li><li><b>Lava channel (animated)</b> — Flowing molten surface with crust crackle; the live hazard + obsidian frontier.</li><li><b>Magma Crown furnace</b> — Staged landmark — brazier → tap-furnace → great forge → caldera crown.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Ashfall Camp</b></td><td class="num">3</td><td>hearth, housing, smokehouse</td><td><span class="pill ok">free / founding</span></td><td>Three heat-shielded tents on the lowest cooled shelf, a brazier, a single switchback up the black slope.</td></tr><tr><td><b>Emberforge Terrace</b></td><td class="num">6</td><td>workshop, watchtower, powder_store</td><td>800¢ · 18 block, 8 obsidian</td><td>A second terrace and a tap-furnace; a workshop and watchtower scan for eruptions. The road hairpins higher.</td></tr><tr><td><b>Cinderhold</b></td><td class="num">10</td><td>forge, observatory, caravan_post, housing2</td><td>2,200¢ · 14 iron bar, 16 obsidian</td><td>The great forge roars on the third terrace; an observatory reads the mountain, a caravan post trades obsidian and steel.</td></tr><tr><td><b>Magma Crown</b></td><td class="num">14</td><td>chapel, inn, housing3, apothecary</td><td>4,500¢ · 8 gold bar, 28 obsidian</td><td>Terraces ring the caldera lip; a magma-fed crown-furnace and a basalt chapel. The whole road is paved in fitted obsidian.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-hoarfrost" style="--z-accent:#e8a44a;--z-accent2:#6a4a52;--z-glow:#9affc8">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="hoarfrost" data-w="920" data-h="300" role="img" aria-label="Hoarfrost Hold establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="hoarfrost" aria-label="grow Hoarfrost Hold">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">03</span><h3 class="zname">❄️ Hoarfrost Hold</h3><a class="chip" href="./hoarfrost/" style="background:#e8a44a;color:#fff;border-color:#e8a44a">Open build-out →</a></div>
+        <div class="ztag">Warm light against the cold — a hollow-town gathered around a steaming spring under the aurora.</div>
+        <div class="zmeta">
+          <span class="tagk">tundra / alpine</span>
+          <span class="tagk">Sheltered hollow cluster</span>
+          <span class="tagk">Lv 4+</span>
+          <span class="tagk">3→15 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Serene, cold, cozy-against-the-dark. Snow hush; aurora ribbons; hearths glowing amber.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Rings radiate outward but cling to the warmth; outer rings need windbreak walls. Snow thaws to ground.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is deep snow &amp; glacier ice, thawed into warm buildable ground.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Frostward Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Snowhollow Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Hoarfrost Village</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Auroral Hold</span><span class="rp">15 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Spring Hearth</span> <span class="tagk">Warm Lodge</span> <span class="tagk">Frost Smokehouse</span> <span class="tagk">Reindeer Stable</span> <span class="tagk">Aurora Shrine</span> <span class="tagk">Aurora Watch</span> <span class="tagk">Insulated Longhouse</span> <span class="tagk">Fur &amp; Amber Caravan</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Hide &amp; amber</b> — board resources — hide from the highland herds, amber foraged from the glacier ice — so they're producible before the rung that spends them</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">Warmth is a resource: the spring projects a warmth radius and tiles outside it freeze faster. You expand the hold by extending bonfires — drop one beside a frozen column to thaw it within a turn. Heat, not space, is the real frontier against the snow.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Hard freeze</b> — Two columns freeze solid and can't be chained until thawed — worse the farther from the spring (freeze rules). <i>Counter:</i> Drop a bonfire on the board edge nearest a frozen column; anything inside its warmth radius thaws within a turn. The hearth keeps the central columns permanently warm.</div><div class="haz"><span class="pill new">new</span> <b>Blizzard whiteout</b> — A whiteout hides a patch of tiles face-blank for a few turns; you chain blind. <i>Counter:</i> Tiles inside the warmth radius stay visible; the watchtower narrows the whiteout.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Ice spike</b> — Spikes erupt and block 3–4 board cells like rubble. <i>Counter:</i> Clear via an adjacent grain/log chain (warm produce shatters the ice).</div><div class="haz"><span class="pill new">new</span> <b>Avalanche</b> — Snow sweeps a full row from the top edge downward, carrying tiles off unless braced. <i>Counter:</i> Watchtower + windbreak walls (built) brace the threatened row; chain it out before the sweep lands.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>❄️ Frostmaw</b> <span class="pill reuse">reuse</span> — Reimagined around the warmth — columns freeze from the OUTSIDE in (farthest from the spring first), so the warm heart is your safe zone; thaw outward with bonfires and harvest 30 oak logs before the ice closes over the spring itself (freeze_columns × warmth).<br><span style="color:var(--muted)"><i>Alt idea:</i> The Wendigo — a starving frost-spirit that snuffs your outermost bonfire each turn, shrinking the warm zone.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#a8c0d4"></i><i style="background:#c4d6e6"></i><i style="background:#dfe9f2"></i><i style="background:#ffffff"></i></span><span class="miniramp"><i style="background:#3a7a9a"></i><i style="background:#5a9ab8"></i><i style="background:#7fb8d6"></i><i style="background:#bfe4f2"></i></span><span class="miniramp"><i style="background:#4a3a32"></i><i style="background:#6a4a3a"></i><i style="background:#8a6a4a"></i><i style="background:#b89a72"></i></span><span class="miniramp"><i style="background:#e8a44a"></i><i style="background:#ffd07a"></i><i style="background:#9affc8"></i><i style="background:#b0a0ff"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Thawed ground patch</b> — The buildable cleared ground — warm mud ringed by snowmelt within the spring's reach.</li><li><b>Windbreak palisade (autotile)</b> — Snow-laden log wall sheltering the outer rings; straight / corner / gate pieces.</li><li><b>Steaming hot-spring</b> — Animated turquoise spring with rising steam — the warm heart and central landmark base.</li><li><b>Bonfire (warmth emitter)</b> — Built prop that projects a thaw radius; flickering light, melt-ring underneath.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Frostward Camp</b></td><td class="num">3</td><td>hearth, housing, smokehouse</td><td><span class="pill ok">free / founding</span></td><td>Three turf-roofed longhuts ringing the steaming spring; a cairn firepit; a wall of snow all around.</td></tr><tr><td><b>Snowhollow Hamlet</b></td><td class="num">6</td><td>larder, inn, watchtower</td><td>650¢ · 16 plank, 6 cured meat</td><td>The clearing widens; a larder and a warm inn; the first windbreak palisade. Snow thaws to mud along the paths.</td></tr><tr><td><b>Hoarfrost Village</b></td><td class="num">10</td><td>stable, chapel, observatory, housing2</td><td>1,800¢ · 24 plank, 10 hide</td><td>A spring shrine and a reindeer stable; an aurora bell tolls. Insulated longhouses on the outer ring behind a stout windbreak.</td></tr><tr><td><b>Auroral Hold</b></td><td class="num">15</td><td>caravan_post, apothecary, housing3, granary, clock_tower</td><td>3,700¢ · 32 plank, 8 amber</td><td>The Warm Hall crowns the spring; a caravan post for furs and amber, a sky-watch observatory. Bonfire-lit cobble holds the cold at bay.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-sunspire" style="--z-accent:#c45a3a;--z-accent2:#b85a30;--z-glow:#ffd24d">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="sunspire" data-w="920" data-h="300" role="img" aria-label="Sunspire Oasis establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="sunspire" aria-label="grow Sunspire Oasis">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">04</span><h3 class="zname">🏜️ Sunspire Oasis</h3><a class="chip" href="./sunspire/" style="background:#c45a3a;color:#fff;border-color:#c45a3a">Open build-out →</a></div>
+        <div class="ztag">Bells, spice and water in the dunes — a caravan city ringing an oasis under a great sundial.</div>
+        <div class="zmeta">
+          <span class="tagk">desert</span>
+          <span class="tagk">Concentric oasis rings + caravan spokes</span>
+          <span class="tagk">Lv 4+</span>
+          <span class="tagk">3→20 plots · 5 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Warm, exotic, bustling. Heat-haze by day, lantern-bazaar by night; a sky of brass and rose.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Grows as CLOSED CONCENTRIC RINGS — each rung wraps a new walled ring around the water, with caravan spokes punching out to the dunes. Radial and enclosed (vs Goldgrass's single open axis).</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is encroaching dunes, pushed back and irrigated into green oasis rings.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Wellspring Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Caravan Halt</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Oasis Market</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Sunspire Town</span><span class="rp">14 plots</span></div><div class="rung"><span class="rn">Spice Capital</span><span class="rp">20 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Caravan Exchange</span> <span class="tagk">Spice Bazaar</span> <span class="tagk">Caravanserai</span> <span class="tagk">Spice Apothecary</span> <span class="tagk">Date-Palm Apiary</span> <span class="tagk">Sundial Spire</span> <span class="tagk">Star-Navigator's Tower</span> <span class="tagk">Sun Temple</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Spice</b> — milled at the Spice Apothecary (unlocked at Oasis Market) — gates the upper rungs only once you can produce it</div><div class="haz"><b>Dates</b> — a board fruit (date-palm tiles), producible from tier 0 — so the early rungs that spend it never softlock</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">Two live systems pull against each other: bank stockpile into caravans for big coin multipliers when a route is open, while mirage tiles (the hazard) disguise one resource as another — so the safest big chain and the most profitable one are rarely the same tiles. Greed vs. certainty, every turn.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill new">new</span> <b>Sandstorm</b> — A wall of dust sweeps across the board over 2–3 turns, burying tiles it passes (face-sand) and relocating a few. <i>Counter:</i> Walls (built) on the windward side break the storm; chain ahead of the front to bank resources.</div><div class="haz"><span class="pill new">new</span> <b>Drought</b> — The spring runs low: yields drop and your stockpile drains faster until water is restored. <i>Counter:</i> Chain water/oasis tiles to refill the cistern; irrigation buildings soften the penalty.</div><div class="haz"><span class="pill new">new</span> <b>Scorpion swarm</b> — Scorpions surface in a cluster and creep outward, stinging (locking) tiles they cover. <i>Counter:</i> A 4+ chain over the cluster scatters them for coins (rat/locust rules).</div><div class="haz"><span class="pill new">new</span> <b>Quicksand</b> — Patches turn sticky — tiles on them take two chains to clear, eating turns. <i>Counter:</i> Plank causeways (built) firm up routes; a tool can solidify a patch.</div><div class="haz"><span class="pill new">new</span> <b>Mirage</b> — Heat-shimmer disguises a cluster of tiles as the wrong resource; a chain built on a misread mirage fails and wastes the turn. <i>Counter:</i> Chain a single tile at the mirage's edge to dispel the shimmer and reveal the true tiles before you commit a big chain.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🐉 The Sandwyrm</b> <span class="pill new">new</span> — The wyrm tunnels beneath the board: each turn it surfaces and buries a moving 2×3 block (rubble that drifts). Mine the target before it swallows the oasis.<br><span style="color:var(--muted)"><i>Alt idea:</i> The Dust Djinn — swaps two random tiles each turn, sabotaging set-ups; banished by a long single-colour chain.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#c49a5a"></i><i style="background:#d6b074"></i><i style="background:#e0c088"></i><i style="background:#f2dca8"></i></span><span class="miniramp"><i style="background:#2a6a5a"></i><i style="background:#3a9a8a"></i><i style="background:#52b8a4"></i><i style="background:#7fd6c0"></i></span><span class="miniramp"><i style="background:#8a5a2a"></i><i style="background:#b88a52"></i><i style="background:#e8d4a8"></i><i style="background:#f4e8c8"></i></span><span class="miniramp"><i style="background:#b83a1a"></i><i style="background:#e85a2a"></i><i style="background:#ffd24d"></i><i style="background:#ff8a3a"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Ring wall + gate (autotile)</b> — The concentric oasis wall — straight / corner / gate / tower pieces that wrap each new ring.</li><li><b>Caravan road spoke</b> — Packed-sand road radiating from the gate into the dunes, with wheel-rut detail.</li><li><b>Date-palm &amp; oasis pool</b> — Animated palm sway over the turquoise spring — the green heart in the gold.</li><li><b>Sunspire gnomon</b> — Staged landmark — wellhead → sundial spire → grand sundial → the brass Sunspire.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Wellspring Camp</b></td><td class="num">3</td><td>hearth, housing, granary</td><td><span class="pill ok">free / founding</span></td><td>Three tents and a stone wellhead at the water's edge; a single date-palm; dunes pressing in on every side.</td></tr><tr><td><b>Caravan Halt</b></td><td class="num">6</td><td>inn, caravan_post, apiary</td><td>700¢ · 16 block, 8 dates</td><td>The first ring wraps the oasis with a low wall and a gate; a caravanserai inn and an apiary among the palms.</td></tr><tr><td><b>Oasis Market</b></td><td class="num">10</td><td>apothecary, bakery, kitchen, housing2</td><td>1,900¢ · 24 block, 12 dates</td><td>A second ring and a sundial spire; a spice apothecary and a bakery-bazaar. Irrigation greens the inner ring.</td></tr><tr><td><b>Sunspire Town</b></td><td class="num">14</td><td>chapel, observatory, clock_tower, housing3</td><td>3,400¢ · 30 block, 16 spice, 4 gold bar</td><td>A grand sundial crowns the plaza; a sun-temple chapel and a star-navigation observatory. Three rings, all walled.</td></tr><tr><td><b>Spice Capital</b></td><td class="num">20</td><td>forge, smokehouse, brewery, stable, watchtower</td><td>6,000¢ · 10 gold bar, 28 spice</td><td>The Sunspire itself — a brass gnomon visible across the dunes; the outer ring is a sprawling bazaar with a forge and full caravan exchange.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-gullcliff" style="--z-accent:#c4502a;--z-accent2:#3a6a7a;--z-glow:#ffe08a">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="gullcliff" data-w="920" data-h="300" role="img" aria-label="Gullcliff establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="gullcliff" aria-label="grow Gullcliff">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">05</span><h3 class="zname">🪺 Gullcliff</h3><a class="chip" href="./gullcliff/" style="background:#c4502a;color:#fff;border-color:#c4502a">Open build-out →</a></div>
+        <div class="ztag">Stacked up the chalk cliff over a crashing sea — stairs, lifts, lighthouses and gulls.</div>
+        <div class="zmeta">
+          <span class="tagk">coastal cliff</span>
+          <span class="tagk">Stacked sea-cliff terraces</span>
+          <span class="tagk">Lv 3+</span>
+          <span class="tagk">3→15 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Windswept, briny, vertiginous. Surf-thunder; wheeling gulls; a beacon sweeping the dusk.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Higher shelves are carved up the cliff while the tide-pool harbour extends below. Bare rock → railed terrace.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is bare cliff rock, carved into railed terraces and harbour shelves.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Tidewatch Landing</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Cliffstair Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Gullcliff Town</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Beaconhead</span><span class="rp">15 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Great Beacon</span> <span class="tagk">Cliff Fishmonger</span> <span class="tagk">Tide Harbour</span> <span class="tagk">Drying Smokehouse</span> <span class="tagk">Sailors' Rest</span> <span class="tagk">Sea Shrine</span> <span class="tagk">Storm Watch</span> <span class="tagk">Cliff Cottage</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Pearls</b> — a board resource (oyster tiles on the fishing board), producible from tier 0 — so the rungs that spend it never softlock</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">A vertical logistics puzzle no flat zone has: the cargo lift physically carries resource tiles between shelves, so where you mine (low) and where you craft (high) sit on different levels — and the harbour rows at the base flood and drain with the tide. You play up and down, not just across.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Squall (min-chain)</b> — In rough weather, fish chains under length 4 fail and waste the turn (storm rules). <i>Counter:</i> The storm-watch flags the squall a turn early; bank short chains before it hits.</div><div class="haz"><span class="pill new">new</span> <b>Riptide</b> — The undertow drags the bottom harbour row one cell seaward each turn; tiles lost off the edge are gone. <i>Counter:</i> Chain the bottom row to land the catch before it's pulled out; the harbour wall (built) slows the drag.</div><div class="haz"><span class="pill new">new</span> <b>Rogue wave</b> — Every few turns a wave floods the lowest two rows, washing loose tiles away. <i>Counter:</i> The lighthouse predicts the wave; a sea-wall building shields one row.</div><div class="haz"><span class="pill new">new</span> <b>Gull raid</b> — Gulls dive on fish/egg tiles and carry them off, like wolves but from above and faster. <i>Counter:</i> A scare-chain (any 3 adjacent) near the flock drives them off for a turn.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🌩 The Storm</b> <span class="pill reuse">reuse</span> — Reimagined with the beacon — the squall demands fish chains of 4+, but the lighthouse sweep briefly calms ONE column each pass, so you time your big chains to the rotating light. Land 6 fillets before the window closes (min_chain × the beacon sweep).<br><span style="color:var(--muted)"><i>Alt idea:</i> The Kraken — a tentacle rises each turn and yanks a column down into the sea unless a pearl chain severs it.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#8a8276"></i><i style="background:#b8b0a0"></i><i style="background:#cfc8ba"></i><i style="background:#ece4d4"></i></span><span class="miniramp"><i style="background:#1c4a5e"></i><i style="background:#3a7a9a"></i><i style="background:#52a0bc"></i><i style="background:#bfe0ec"></i></span><span class="miniramp"><i style="background:#3a4a50"></i><i style="background:#5a6a6e"></i><i style="background:#7a8a8a"></i><i style="background:#a8b4b2"></i></span><span class="miniramp"><i style="background:#c4502a"></i><i style="background:#ffe08a"></i><i style="background:#fff6e0"></i><i style="background:#e8e0d0"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Cliff terrace shelf</b> — The buildable carved shelf with a safety rail and a stair landing.</li><li><b>Switchback stair + cargo lift</b> — Vertical connectors between shelves; the lift is the tier-gated growth piece.</li><li><b>Tide-pool harbour (animated)</b> — Rock pools and surf at the cliff base that flood/drain with the tide — the fishing board.</li><li><b>Sweeping beacon</b> — Staged landmark — watch-lantern → stone beacon → lighthouse → great headland beacon.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Tidewatch Landing</b></td><td class="num">3</td><td>hearth, housing, harbor_dock</td><td><span class="pill ok">free / founding</span></td><td>Three cottages on the lowest shelf above the tide-pools; a watch-post lantern; a rope stair to the rock above.</td></tr><tr><td><b>Cliffstair Hamlet</b></td><td class="num">6</td><td>fishmonger, smokehouse, watchtower</td><td>700¢ · 16 plank, 10 fish fillet</td><td>A second shelf and a cargo lift; a fishmonger and a smokehouse over the drying-racks; switchback stairs climb on.</td></tr><tr><td><b>Gullcliff Town</b></td><td class="num">10</td><td>lighthouse, inn, chapel, larder</td><td>1,800¢ · 24 plank, 6 pearls</td><td>A stone lighthouse rises mid-cliff; a sailors' inn and a sea-shrine chapel; railed terraces and lantern-strung stairs.</td></tr><tr><td><b>Beaconhead</b></td><td class="num">15</td><td>observatory, caravan_post, housing2, granary, apothecary</td><td>3,700¢ · 32 plank, 12 pearls</td><td>The great beacon crowns the headland, sweeping the sea; an observatory and caravan post on the top shelf, the harbour doubled below.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-thornwild" style="--z-accent:#d6a83a;--z-accent2:#6a8a3a;--z-glow:#ffe27a">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="thornwild" data-w="920" data-h="300" role="img" aria-label="Thornwild Canopy establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="thornwild" aria-label="grow Thornwild Canopy">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">06</span><h3 class="zname">🌳 Thornwild Canopy</h3><a class="chip" href="./thornwild/" style="background:#d6a83a;color:#fff;border-color:#d6a83a">Open build-out →</a></div>
+        <div class="ztag">A village in the treetops — platforms and rope bridges strung through colossal ancient boughs.</div>
+        <div class="zmeta">
+          <span class="tagk">giant forest / canopy</span>
+          <span class="tagk">Treetop platforms + rope bridges</span>
+          <span class="tagk">Lv 5+</span>
+          <span class="tagk">3→15 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Enchanted, hidden, verdant. Dappled sun-shafts; drifting spores; birdsong far below.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Grows VERTICALLY — each rung climbs to a higher layer (understory → mid-canopy → emergent crown); undergrowth is cleared to reveal buildable boughs. (The vertical counterpart to Mirefen's flat spread.)</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is thornvine undergrowth, cleared to reveal buildable boughs.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Root Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Bough Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Canopy Village</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Highcrown</span><span class="rp">15 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Bough Sawmill</span> <span class="tagk">Canopy Apiary</span> <span class="tagk">Herbalist's Hollow</span> <span class="tagk">Treehouse Lodge</span> <span class="tagk">Grove Shrine</span> <span class="tagk">Above-Canopy Watch</span> <span class="tagk">Bough Treehouse</span> <span class="tagk">Sap &amp; Herb Caravan</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Herbs</b> — distilled at the Herbalist's Hollow (unlocked at Canopy Village) — gates the upper rung only once producible</div><div class="haz"><b>Amber sap</b> — a board resource (tapped from the great trunks), producible from tier 0</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">You grow UP, not out: each rung climbs to a higher layer — understory → mid-canopy → emergent crown — and roaming sun-shafts super-charge any plant tile they cross. The brighter (higher) you build, the richer the harvest, so the town reaches for the light.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Spore bloom</b> — Fungus spreads across the platforms, fouling tiles it covers (fungus rules). <i>Counter:</i> Chain through the spread to cut it back; the herbalist halves the spread rate.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Canopy prowlers</b> — Big cats stalk the bird/egg tiles along the bridges, eating them each turn (wolf rules, reflavoured). <i>Counter:</i> A scare-chain or a built watchtower drives them off (scared state).</div><div class="haz"><span class="pill new">new</span> <b>Thornvine overgrowth</b> — Vines creep back over cleared tiles, blocking them; they advance like a slow fire if ignored. <i>Counter:</i> Chain the vine tiles to cut them (coins per cut); the sawmill keeps adjacent boughs clear.</div><div class="haz"><span class="pill new">new</span> <b>Beetle infestation</b> — Wood-borers cluster on a platform and chew plank/tree tiles outward. <i>Counter:</i> A 4+ chain over the cluster smokes them out (rat/locust rules).</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🌱 Mossback</b> <span class="pill reuse">reuse</span> — Reimagined in the canopy — four tiles hide face-down under moss, but a roaming sun-shaft reveals any hidden tile it crosses, so you chase the light to expose the moss and gather 30 berries before the canopy swallows them (hide_resources × the sun-shaft).<br><span style="color:var(--muted)"><i>Alt idea:</i> The Elder Bramble — a waking treant that ensnares a bridge each turn, cutting one platform off until freed by an axe chain.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#16240f"></i><i style="background:#2a4226"></i><i style="background:#4a6e3a"></i><i style="background:#7aae6a"></i></span><span class="miniramp"><i style="background:#3a2a1a"></i><i style="background:#5a4228"></i><i style="background:#8a6a3a"></i><i style="background:#b89860"></i></span><span class="miniramp"><i style="background:#7a3a3a"></i><i style="background:#c45a4a"></i><i style="background:#e8c0a0"></i><i style="background:#fff0d8"></i></span><span class="miniramp"><i style="background:#d6a83a"></i><i style="background:#ffe27a"></i><i style="background:#fff6c8"></i><i style="background:#9affb0"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Bough platform + railing</b> — The buildable deck lashed around a great trunk at a set height.</li><li><b>Rope / vine bridge (autotile)</b> — Sagging plank-and-rope spans between platforms; straight / fork / anchor pieces.</li><li><b>Giant trunk &amp; sun-shaft</b> — Colossal tree base with a roaming light-shaft beam — the vertical anchor and signature mechanic.</li><li><b>Highcrown loom</b> — Staged landmark — burl hearth → grove totem → sunlight loom → emergent crown.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Root Camp</b></td><td class="num">3</td><td>hearth, housing, larder</td><td><span class="pill ok">free / founding</span></td><td>Three platforms low on a great trunk, joined by one rope bridge; a hearth in a burl-hollow; thornvine all around.</td></tr><tr><td><b>Bough Hamlet</b></td><td class="num">6</td><td>sawmill, apiary, watchtower</td><td>650¢ · 18 plank, 4 amber sap</td><td>Bridges span to a second tree; a sustainable sawmill and a canopy apiary; the undergrowth pulls back from the trunks.</td></tr><tr><td><b>Canopy Village</b></td><td class="num">10</td><td>apothecary, inn, chapel, housing2</td><td>1,700¢ · 26 plank, 8 honey</td><td>A grove totem and a herbalist's apothecary; an inn-treehouse and a grove shrine. Platforms climb to the mid-canopy where sun-shafts break through.</td></tr><tr><td><b>Highcrown</b></td><td class="num">15</td><td>observatory, caravan_post, housing3, granary, brewery</td><td>3,600¢ · 34 plank, 8 amber sap</td><td>The Highcrown tree breaks the canopy with a sunlight loom and an observatory above the leaves; a caravan post for amber sap and rare herbs.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-glimmerdeep" style="--z-accent:#46d6e0;--z-accent2:#5a3a7a;--z-glow:#5af0ff">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="glimmerdeep" data-w="920" data-h="300" role="img" aria-label="Glimmerdeep establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="glimmerdeep" aria-label="grow Glimmerdeep">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">07</span><h3 class="zname">💎 Glimmerdeep</h3><a class="chip" href="./glimmerdeep/" style="background:#46d6e0;color:#fff;border-color:#46d6e0">Open build-out →</a></div>
+        <div class="ztag">A city in the dark below — glowing caverns strung together by mine-cart tunnels.</div>
+        <div class="zmeta">
+          <span class="tagk">deep cave / crystal</span>
+          <span class="tagk">Linked caverns + cart tunnels</span>
+          <span class="tagk">Lv 6+</span>
+          <span class="tagk">3→20 plots · 5 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Awe, glittering dark, subterranean wonder. Crystal-light on still water; glowworm constellations.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Each rung opens a new chamber down a tunnel; unlit rubble is cleared to reveal the next glowing cavern.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is unlit rock &amp; rubble, cleared to open the next glowing chamber.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Lantern Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Crystal Dig</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Glimmer Town</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Deephold</span><span class="rp">14 plots</span></div><div class="rung"><span class="rn">Geode City</span><span class="rp">20 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Deep Forge</span> <span class="tagk">Resonance Spire</span> <span class="tagk">Crystal Distillery</span> <span class="tagk">Blasting Store</span> <span class="tagk">Cart-Line Exchange</span> <span class="tagk">Crystal Shrine</span> <span class="tagk">Carved Dwelling</span> <span class="tagk">Lapidary</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Crystal</b> — mined from glowing crystal seams (a board resource), producible from the first dig — so the rungs that spend it never softlock</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">Light is life: unlit tiles can't be chained until a lantern or crystal reaches them. You expand by carrying light into the dark — and cart-rails ferry mined resources between chambers, so a rich chamber can feed a poor one.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Cave-in</b> — Rubble buries an entire row, making it unchainable (cave-in rules). <i>Counter:</i> Clear with a stone chain adjacent to the buried row; a sapper (worker) cuts the spawn rate.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Gas vent</b> — A pocket of choke-damp blooms and spreads; tiles in it spoil after 3 turns. <i>Counter:</i> Chain through the cloud before the timer; a canary (worker) warns early.</div><div class="haz"><span class="pill new">new</span> <b>Sinkhole</b> — The floor gives way: a 2×2 hole opens and any tiles over it drop and are lost. <i>Counter:</i> Bridge the hole with a plank chain, or simply mine the threatened tiles before it opens.</div><div class="haz"><span class="pill new">new</span> <b>Resonance quake</b> — A crystal hum shakes a chamber, shuffling one column and dimming the lanterns for a turn. <i>Counter:</i> The resonance spire predicts the quake column; relit lanterns steady it.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🪨 Old Stoneface</b> <span class="pill reuse">reuse</span> — Reimagined in the dark — each time the golem drops one of its four rubble blocks it also snuffs the nearest lantern, so you fight to keep the chamber LIT while you clear 20 stone tiles before it seals the cavern (rubble_blocks × the light system).<br><span style="color:var(--muted)"><i>Alt idea:</i> The Crystal Colossus — a living geode that drains the light from one lantern each turn; relight the cavern by chaining gems.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#0e0a1c"></i><i style="background:#2a2440"></i><i style="background:#3e3658"></i><i style="background:#5a5278"></i></span><span class="miniramp"><i style="background:#1a6a8a"></i><i style="background:#2aa8c4"></i><i style="background:#5af0ff"></i><i style="background:#c0fbff"></i></span><span class="miniramp"><i style="background:#5a2a7a"></i><i style="background:#9a3ab0"></i><i style="background:#d65ae0"></i><i style="background:#f0a8ff"></i></span><span class="miniramp"><i style="background:#3a2a1a"></i><i style="background:#c4902c"></i><i style="background:#ffd24d"></i><i style="background:#fff0b0"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Carved cavern floor</b> — The buildable lit ground — smoothed rock ringed by glowing crystal seams.</li><li><b>Cart-rail tunnel (autotile)</b> — The connector between chambers: rail straight / curve / junction / cart pieces.</li><li><b>Bioluminescent crystal cluster</b> — Animated glow-crystals that light the chamber — the light-source the whole zone runs on.</li><li><b>Heart Geode</b> — Staged landmark — lantern post → geode shrine → resonant spire → blazing heart geode.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Lantern Camp</b></td><td class="num">3</td><td>hearth, housing, workshop</td><td><span class="pill ok">free / founding</span></td><td>Three carved dwellings in the first lit cavern around a lantern post; a single dark tunnel-mouth leading on.</td></tr><tr><td><b>Crystal Dig</b></td><td class="num">6</td><td>forge, powder_store, watchtower</td><td>800¢ · 18 block, 6 cut gem</td><td>A cart-tunnel opens a second chamber; a forge and a powder store; rails thread between the caverns.</td></tr><tr><td><b>Glimmer Town</b></td><td class="num">10</td><td>observatory, apothecary, caravan_post, housing2</td><td>2,200¢ · 12 cut gem, 8 crystal</td><td>A geode shrine and a resonant observatory read the crystal-song; an apothecary distils crystal essence. Three caverns lit and linked.</td></tr><tr><td><b>Deephold</b></td><td class="num">14</td><td>chapel, inn, housing3, granary</td><td>4,200¢ · 16 crystal, 6 gold bar</td><td>A fourth, deeper chamber and a crystal chapel; cart-lines run ore between districts. Bridges cross an underground lake.</td></tr><tr><td><b>Geode City</b></td><td class="num">20</td><td>smokehouse, brewery, stable, clock_tower, barn</td><td>6,500¢ · 30 crystal, 12 gold bar</td><td>The Heart Geode blazes at the city's core, a cathedral of light; the outer chambers hold a full forge-district and exchange.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-aetherreach" style="--z-accent:#7a5ac4;--z-accent2:#5a6ab0;--z-glow:#b89aff">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="aetherreach" data-w="920" data-h="300" role="img" aria-label="Aetherreach establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="aetherreach" aria-label="grow Aetherreach">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">08</span><h3 class="zname">☁️ Aetherreach</h3><a class="chip" href="./aetherreach/" style="background:#7a5ac4;color:#fff;border-color:#7a5ac4">Open build-out →</a></div>
+        <div class="ztag">A sky-port adrift above the clouds — islets tethered by bridges, airships at the docks.</div>
+        <div class="zmeta">
+          <span class="tagk">floating sky-isles</span>
+          <span class="tagk">Floating-island archipelago</span>
+          <span class="tagk">Lv 7+</span>
+          <span class="tagk">3→18 plots · 5 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Lofty, dreamlike, adventurous. Sunlit cloud-sea; waterfalls into the void; airship sails.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>New islets drift in and get tethered each rung; the empty sky is the frontier that fills with anchored rock.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is open sky &amp; drifting loose rock, anchored into built islets.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Anchor Platform</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Skydock Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Aether Village</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Cloudreach Town</span><span class="rp">14 plots</span></div><div class="rung"><span class="rn">Sky Citadel</span><span class="rp">18 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Airship Dock</span> <span class="tagk">Aether Portal</span> <span class="tagk">Above-Cloud Observatory</span> <span class="tagk">Airship Works</span> <span class="tagk">Skyport Inn</span> <span class="tagk">Wind Shrine</span> <span class="tagk">Sky Spire</span> <span class="tagk">Sky Cottage</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Aether</b> — mined from the floating rock itself (a board resource), producible from the first islet — so the rungs that spend it never softlock</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">Everything floats — from tier 0, untethered tiles drift one cell with the prevailing wind each turn (the wind rotates per season), so anchoring and chain-direction always matter; the Gale hazard just turns the wind up. Airships ferry stockpile between isles.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill new">new</span> <b>Gale</b> — A crosswind shoves every tile in a column one cell sideways each turn, drifting your set-ups apart. <i>Counter:</i> Windbreak sails (built) on an isle still the gale within their reach; chain with the wind, not against it.</div><div class="haz"><span class="pill new">new</span> <b>Lightning</b> — A bolt strikes a random tile and destroys it (and sometimes a neighbour). <i>Counter:</i> The sky-spire's rod draws strikes to itself; the observatory marks the next strike cell.</div><div class="haz"><span class="pill new">new</span> <b>Island-drift</b> — A loose islet drifts out of reach for a few turns — its tiles are NOT destroyed, just temporarily unreachable, shrinking your workable board until it floats back. <i>Counter:</i> Anchor chains (built) keep an isle from drifting at all; otherwise just work the rest of the board until it returns — nothing is ever lost.</div><div class="haz"><span class="pill new">new</span> <b>Cloud-leech swarm</b> — Sky-jellies drift onto the board in a cluster and sap charge from tiles they touch. <i>Counter:</i> A 4+ chain pops the swarm for coins (rat/locust rules).</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🐋 The Sky Leviathan</b> <span class="pill new">new</span> — A vast sky-whale circles the archipelago; each pass its wake tilts the board, sliding a whole edge of tiles toward the void. Deliver the cargo target before three passes.<br><span style="color:var(--muted)"><i>Alt idea:</i> The Storm Roc — a thunderbird that snatches your highest islet each turn unless warded by a wind chain.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#8fc4e8"></i><i style="background:#bcdcf0"></i><i style="background:#e8f2fa"></i><i style="background:#ffffff"></i></span><span class="miniramp"><i style="background:#7a6a4a"></i><i style="background:#a89878"></i><i style="background:#c8b894"></i><i style="background:#e4d6b4"></i></span><span class="miniramp"><i style="background:#5a3ab0"></i><i style="background:#7a5ac4"></i><i style="background:#b89aff"></i><i style="background:#e0d0ff"></i></span><span class="miniramp"><i style="background:#3a4a6a"></i><i style="background:#7088b0"></i><i style="background:#d6b86a"></i><i style="background:#ffe8a8"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Floating islet (anchored)</b> — The buildable platform — a grassy floating rock with a glowing aether underside and tether rings.</li><li><b>Sky-bridge / zip-line (autotile)</b> — Arched rope-and-plank spans and cable lines between islets; anchor / span / dock pieces.</li><li><b>Cloud sea &amp; waterfall</b> — The drifting cloud floor with rock-edge waterfalls pouring into the void — the frontier.</li><li><b>Aether Spire</b> — Staged landmark — mooring mast → sky-beacon → aether spire → the ringed Sky Citadel.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Anchor Platform</b></td><td class="num">3</td><td>hearth, housing, workshop</td><td><span class="pill ok">free / founding</span></td><td>Three cottages on one tethered islet around a mooring mast; a single rope sky-bridge to a drifting rock.</td></tr><tr><td><b>Skydock Hamlet</b></td><td class="num">6</td><td>caravan_post, inn, watchtower</td><td>750¢ · 16 plank, 6 aether</td><td>A second islet anchored; an airship caravan-dock and a skyport inn; zip-lines link the platforms.</td></tr><tr><td><b>Aether Village</b></td><td class="num">10</td><td>observatory, chapel, portal, housing2</td><td>1,900¢ · 24 plank, 12 aether</td><td>A sky-beacon and an above-cloud observatory; a wind-shrine chapel. Sky-bridges arch between four islets.</td></tr><tr><td><b>Cloudreach Town</b></td><td class="num">14</td><td>clock_tower, housing3, granary, apothecary</td><td>3,600¢ · 20 aether, 6 gold bar</td><td>An aether spire crowns the central isle; a sky-spire clock and a second airship dock. A drifting market-isle joins the archipelago.</td></tr><tr><td><b>Sky Citadel</b></td><td class="num">18</td><td>forge, smokehouse, brewery, stable</td><td>5,800¢ · 32 aether, 12 gold bar</td><td>The Sky Citadel anchors the realm — a ringed cluster of isles around the great spire, with a forge-isle and a full aether exchange.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-gravemoor" style="--z-accent:#e88a3a;--z-accent2:#4a3a5a;--z-glow:#7adcff">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="gravemoor" data-w="920" data-h="300" role="img" aria-label="Gravemoor establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="gravemoor" aria-label="grow Gravemoor">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">09</span><h3 class="zname">🕯️ Gravemoor</h3><a class="chip" href="./gravemoor/" style="background:#e88a3a;color:#fff;border-color:#e88a3a">Open build-out →</a></div>
+        <div class="ztag">Lantern by lantern, reclaim a cursed ruin from the fog — rebuild the old kingdom's bones.</div>
+        <div class="zmeta">
+          <span class="tagk">haunted moor / ruins</span>
+          <span class="tagk">Reclaimed ancient ruin-grid</span>
+          <span class="tagk">Lv 6+</span>
+          <span class="tagk">3→15 plots · 4 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Eerie, melancholic turning hopeful, gothic. Fog over broken stone; wisps adrift; bells warding the dark.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Growth cleanses blight from old streets and re-raises buildings on ancient footings. Fog &amp; bramble recede to hallowed cobble.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is blight-fog &amp; bramble over ruins, cleansed into hallowed cobble.</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Wardens' Camp</span><span class="rp">3 plots</span></div><div class="rung"><span class="rn">Hallowed Hamlet</span><span class="rp">6 plots</span></div><div class="rung"><span class="rn">Reclaimed Village</span><span class="rp">10 plots</span></div><div class="rung"><span class="rn">Dawnhold</span><span class="rp">15 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Consecrated Chapel</span> <span class="tagk">Wardens' Vigil</span> <span class="tagk">Curse-ward Apothecary</span> <span class="tagk">Warding Bell</span> <span class="tagk">Wayfarers' Rest</span> <span class="tagk">Moor Smokehouse</span> <span class="tagk">Omen Tower</span> <span class="tagk">Restored Manor</span></div>
+        <div class="zsub">New resources <span style="font-weight:400;text-transform:none">— and where they come from (no softlocks)</span></div><div class="haz"><b>Warding salt</b> — ground at the Curse-ward Apothecary (unlocked at Hallowed Hamlet) — gates the mid rungs once producible</div><div class="haz"><b>Blessed oil</b> — consecrated at the Chapel (unlocked at Hallowed Hamlet) — gates the final rung; both producers exist well before the rungs that spend them</div>
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">Reclamation, not conquest: you uncover a pre-built ancient grid and cleanse it — the only zone that grows by UNCOVERING rather than pushing outward. The Chapel projects a consecration radius (hallowed ground spirits can't enter), and night is far more dangerous than day, so you race the dark.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill new">new</span> <b>Blight spread</b> — A creeping rot advances across the board like a slow fire, blocking every tile it covers. <i>Counter:</i> Chain the blighted tiles to cleanse them (coins per cleanse); consecrated ground (built) halts its advance.</div><div class="haz"><span class="pill new">new</span> <b>Restless wisp</b> — A wisp possesses a tile, flipping it spectral (face-blank); the curse-meter ticks up while it's loose. <i>Counter:</i> Chain the possessed tile to banish the wisp and drop the curse-meter.</div><div class="haz"><span class="pill new">new</span> <b>Bramble</b> — Thorns knot over a cluster of ruins, locking those cells (rubble-like) until cut. <i>Counter:</i> An axe/grain chain over the bramble clears it; the warden's vigil slows regrowth.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Miasma</b> — Grave-mist seeps from a vent and spreads, spoiling tiles after 3 turns (gas-vent rules). <i>Counter:</i> Chain through the mist before the timer; the bell disperses it within its toll-radius.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>💀 The Barrow-Lich</b> <span class="pill new">new</span> — The lich raises the dead grid: each turn it haunts a fresh tile (face-down) and the curse-meter climbs; banish enough hauntings by chaining them and break the lich before the meter fills.<br><span style="color:var(--muted)"><i>Alt idea:</i> The Risen Statue — a reskinned stone colossus that walls the old plaza with rubble until cleared by stone chains.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#3a3450"></i><i style="background:#5a5660"></i><i style="background:#7a7686"></i><i style="background:#aaa6b6"></i></span><span class="miniramp"><i style="background:#4a4650"></i><i style="background:#6a6470"></i><i style="background:#9a96a4"></i><i style="background:#cfcbd6"></i></span><span class="miniramp"><i style="background:#2a3a24"></i><i style="background:#3a4a3a"></i><i style="background:#5a6a48"></i><i style="background:#7a8a58"></i></span><span class="miniramp"><i style="background:#7adcff"></i><i style="background:#bff0ff"></i><i style="background:#e88a3a"></i><i style="background:#ffd07a"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Ancient foundation (buildable)</b> — A pre-existing ruined footing on the old grid — cleansed, it becomes a buildable lot in place.</li><li><b>Reclaimed cobble street (autotile)</b> — The orthogonal old-grid streets re-laid as warded cobble; blight-edge transition pieces.</li><li><b>Wisp &amp; gravestone dressing</b> — Standing stones, broken columns, drifting wisps — the eerie frontier and the wisp hazard.</li><li><b>Dawnlight bell</b> — Staged landmark — warding fire → broken shrine → consecrated bell → the Dawnlight keep.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Wardens' Camp</b></td><td class="num">3</td><td>hearth, housing, watchtower</td><td><span class="pill ok">free / founding</span></td><td>Three tents pitched on a cleared crossroads of the old grid; a warding fire; ruined foundations and fog stretching off into the dark.</td></tr><tr><td><b>Hallowed Hamlet</b></td><td class="num">6</td><td>chapel, apothecary, larder</td><td>700¢ · 18 block</td><td>The bell-shrine is re-raised; an apothecary of curse-remedies and a larder. The blight recedes one old street, cobble laid back over the ruins.</td></tr><tr><td><b>Reclaimed Village</b></td><td class="num">10</td><td>inn, smokehouse, clock_tower, housing2</td><td>1,800¢ · 24 block, 12 warding salt</td><td>A consecrated bell tolls; restored manors on ancient footings, a wayfarers' inn, a smokehouse. Lantern-light pushes the fog back two more blocks.</td></tr><tr><td><b>Dawnhold</b></td><td class="num">15</td><td>observatory, caravan_post, housing3, granary, forge</td><td>3,700¢ · 30 block, 8 blessed oil</td><td>The Dawnlight crowns the old keep — the curse broken; an observatory of omens and a caravan post. The reclaimed grid glows with warded cobble and street-lamps.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="zone" id="zone-goldgrass" style="--z-accent:#c46a2a;--z-accent2:#a8502a;--z-glow:#ffe27a">
+    <div class="ztop">
+      <div class="art">
+        <canvas data-zone="goldgrass" data-w="920" data-h="300" role="img" aria-label="Goldgrass Reach establishing shot"></canvas>
+        <div class="artctl">
+          <label>Grow</label>
+          <input type="range" min="0" max="100" value="42" data-grow-for="goldgrass" aria-label="grow Goldgrass Reach">
+          <span class="grow-end">camp → capital</span>
+        </div>
+      </div>
+      <div class="zbody">
+        <div class="zhdr"><span class="zno">10</span><h3 class="zname">🌾 Goldgrass Reach</h3><a class="chip" href="./goldgrass/" style="background:#c46a2a;color:#fff;border-color:#c46a2a">Open build-out →</a></div>
+        <div class="ztag">The journey's capstone — a grand capital of grand boulevards rising from an endless golden harvest.</div>
+        <div class="zmeta">
+          <span class="tagk">golden plains</span>
+          <span class="tagk">Grand axial boulevard + ring road</span>
+          <span class="tagk">Lv 8+</span>
+          <span class="tagk">4→26 plots · 5 rungs</span>
+        </div>
+        <div class="zrow"><span class="lbl">Mood</span><span>Triumphant, abundant, sunlit. Wind through wheat to the horizon; windmill sails; a great avenue.</span></div>
+        <div class="zrow"><span class="lbl">Grows by</span><span>Grows along ONE monumental axis — the great avenue lengthens and perpendicular streets subdivide grid blocks beside it; the ring road closes last. Linear and axial (vs Sunspire's concentric rings) — and the widest, grandest layout, the capstone.</span></div>
+        <div class="zrow"><span class="lbl">Frontier</span><span>The progress bar is open prairie farmland, urbanised into grand civic districts (ringed by permanent fields).</span></div>
+
+        <div class="zsub">Tier ladder</div>
+        <div class="ladder"><div class="rung"><span class="rn">Crossroads Waystation</span><span class="rp">4 plots</span></div><div class="rung"><span class="rn">Granary Town</span><span class="rp">8 plots</span></div><div class="rung"><span class="rn">Market City</span><span class="rp">14 plots</span></div><div class="rung"><span class="rn">Goldgrass Reach</span><span class="rp">20 plots</span></div><div class="rung"><span class="rn">The Golden Capital</span><span class="rp">26 plots</span></div></div>
+
+        <div class="zsub">Themed buildings</div>
+        <div><span class="tagk">Grand Mill</span> <span class="tagk">Capital Bakery</span> <span class="tagk">Trade Exchange</span> <span class="tagk">Capital Clock Tower</span> <span class="tagk">Grand Cathedral</span> <span class="tagk">Royal Observatory</span> <span class="tagk">City Forge</span> <span class="tagk">Great Silo</span></div>
+        
+
+        <div class="zsub">Signature mechanic</div>
+        <p style="font-size:.9rem;margin:.2rem 0">The capstone of scale and prestige: the grandest layout, the most plots and buildings, civic grandeur (boulevards, ring road, monument) — the agrarian capital the whole journey climbs toward, ringed by the permanent farmland that feeds the realm.</p>
+
+        <div class="zsub">Hazards <span style="font-weight:400;text-transform:none">— reused from the game + new</span></div>
+        <div class="haz"><span class="pill reuse">reuse</span> <b>Locust swarm</b> — Locusts descend on a band of grain tiles and devour them outward each turn. <i>Counter:</i> A 4+ chain through the swarm scatters it (locust rules); the watchtower spots it early.</div><div class="haz"><span class="pill reuse">reuse</span> <b>Wildfire</b> — Dry wheat catches and fire spreads to neighbours each turn, destroying resources (fire rules). <i>Counter:</i> Chain the burning tiles to beat it out (coins per tile); ploughed firebreaks (built) stop the spread.</div><div class="haz"><span class="pill new">new</span> <b>Drought</b> — A dry spell cuts grain yields and drains the granary faster until rain returns. <i>Counter:</i> Chain water/well tiles to irrigate; the great silo cushions the shortfall.</div><div class="haz"><span class="pill new">new</span> <b>Stampede</b> — A spooked herd charges across the board, trampling a moving band of tiles each turn. <i>Counter:</i> Fences and the stable (built) turn the herd; chain ahead of the charge to bank the band first.</div>
+
+        <div class="zsub">Boss</div>
+        <div class="boss"><b>🐂 Goldhorn</b> <span class="pill new">new</span> — The great plains-bull charges every few turns, trampling a full band of tiles in its lane; herd 20 of the right resource into the stockpens (the Stable) before it flattens the harvest.<br><span style="color:var(--muted)"><i>Alt idea:</i> The Locust Queen — spawns a swarm-cluster each turn that doubles if not chained; a scaled-up swarm boss.</span></div>
+
+        <div class="zsub">Tile set — palette &amp; signature pieces</div>
+        <div class="miniramps"><span class="miniramp"><i style="background:#8a6a1a"></i><i style="background:#c4a63a"></i><i style="background:#d6b84a"></i><i style="background:#f2dc8a"></i></span><span class="miniramp"><i style="background:#7a7264"></i><i style="background:#9a9486"></i><i style="background:#b0a892"></i><i style="background:#d4ccb8"></i></span><span class="miniramp"><i style="background:#8a7a5a"></i><i style="background:#b8a880"></i><i style="background:#e0d4b0"></i><i style="background:#f4ecd4"></i></span><span class="miniramp"><i style="background:#a8502a"></i><i style="background:#c46a2a"></i><i style="background:#ffd24d"></i><i style="background:#ffe9b0"></i></span></div>
+        <ul style="font-size:.82rem;margin:.4rem 0 0;padding-left:1.1rem"><li><b>Grand boulevard (autotile)</b> — The wide cobbled avenue with a planted median; straight / junction / plaza-edge pieces.</li><li><b>Ring road + district block</b> — The encircling road and the quartered civic blocks the boulevards define.</li><li><b>Windmill &amp; wheat field</b> — Turning-sail windmill over rippling golden wheat — the permanent farmland frame.</li><li><b>Golden Monument</b> — Staged landmark — waystone → market cross → civic fountain → the Golden Monument.</li></ul>
+      </div>
+    </div>
+    <details style="border-top:1px solid var(--line)">
+      <summary style="cursor:pointer;padding:.6rem 1.25rem;font:700 .82rem/1 var(--mono);color:var(--muted)">▾ full tier ladder — plots · unlocks · cost · what changes</summary>
+      <div style="padding:0 1.25rem 1rem">
+        <table><thead><tr><th>Rung</th><th class="num">Plots</th><th>Unlocks (new this rung)</th><th>Upgrade cost</th><th>What visibly changes</th></tr></thead><tbody><tr><td><b>Crossroads Waystation</b></td><td class="num">4</td><td>hearth, mill, granary, housing</td><td><span class="pill ok">free / founding</span></td><td>Four buildings at a prairie crossroads around a waystone; the first stretch of the great avenue, wheat to every horizon.</td></tr><tr><td><b>Granary Town</b></td><td class="num">8</td><td>bakery, silo, brewery, stable, watchtower</td><td>900¢ · 20 flour, 18 plank</td><td>The avenue lengthens with a market cross; a bakery, a silo, a brewery and a stable line the street. A perpendicular trade-road opens.</td></tr><tr><td><b>Market City</b></td><td class="num">14</td><td>caravan_post, kitchen, apiary, sawmill, chapel</td><td>2,400¢ · 32 flour, 26 plank, 16 block</td><td>A civic fountain anchors a true plaza; a caravan post, kitchen, apiary and sawmill fill the quadrants. The ring road begins to close.</td></tr><tr><td><b>Goldgrass Reach</b></td><td class="num">20</td><td>forge, observatory, clock_tower, housing2, apothecary</td><td>4,500¢ · 44 flour, 8 gold bar</td><td>Grand boulevards quarter the city behind a closed ring road; a forge, an observatory, a clock tower and a cathedral. Districts, all cobbled.</td></tr><tr><td><b>The Golden Capital</b></td><td class="num">26</td><td>housing3, barn, smokehouse, harbor_dock, fishmonger, portal</td><td>8,000¢ · 16 gold bar, 60 flour</td><td>The Golden Monument crowns the plaza; the capital sprawls in grand districts ringed by working farmland — the breadbasket of the realm.</td></tr></tbody></table>
+      </div>
+    </details>
+  </section>
+  </div>
+
+  <h2>Scale at a glance — the plot &amp; rung curves</h2>
+  <p>Each zone starts tiny (tier 0 doubles as its tutorial) and grows in meaningful jumps. Rung counts (4–5) and full-size plot caps (14–26) vary so each zone has its own sense of scale; the grand capital is deliberately the largest. Endpoint grandeur is intentional too — frontier outposts crown at a Town or Hold, while the trade hubs and the capital crown at a Capital. Every gating resource is producible by the rung before it spends it (see each zone's “new resources” note) — no softlocks.</p>
+  <table><thead><tr><th>Zone</th><th>Topology</th><th class="num">Lv</th><th class="num">Rungs</th><th>Plot curve</th></tr></thead><tbody><tr><td>🪷 <b>Mirefen Hollow</b></td><td>Boardwalk ribbon over water</td><td class="num">3+</td><td class="num">4</td><td>3 → 6 → 10 → 15</td></tr><tr><td>🌋 <b>Cinderhold</b></td><td>Switchback terraces up a slope</td><td class="num">5+</td><td class="num">4</td><td>3 → 6 → 10 → 14</td></tr><tr><td>❄️ <b>Hoarfrost Hold</b></td><td>Sheltered hollow cluster</td><td class="num">4+</td><td class="num">4</td><td>3 → 6 → 10 → 15</td></tr><tr><td>🏜️ <b>Sunspire Oasis</b></td><td>Concentric oasis rings + caravan spokes</td><td class="num">4+</td><td class="num">5</td><td>3 → 6 → 10 → 14 → 20</td></tr><tr><td>🪺 <b>Gullcliff</b></td><td>Stacked sea-cliff terraces</td><td class="num">3+</td><td class="num">4</td><td>3 → 6 → 10 → 15</td></tr><tr><td>🌳 <b>Thornwild Canopy</b></td><td>Treetop platforms + rope bridges</td><td class="num">5+</td><td class="num">4</td><td>3 → 6 → 10 → 15</td></tr><tr><td>💎 <b>Glimmerdeep</b></td><td>Linked caverns + cart tunnels</td><td class="num">6+</td><td class="num">5</td><td>3 → 6 → 10 → 14 → 20</td></tr><tr><td>☁️ <b>Aetherreach</b></td><td>Floating-island archipelago</td><td class="num">7+</td><td class="num">5</td><td>3 → 6 → 10 → 14 → 18</td></tr><tr><td>🕯️ <b>Gravemoor</b></td><td>Reclaimed ancient ruin-grid</td><td class="num">6+</td><td class="num">4</td><td>3 → 6 → 10 → 15</td></tr><tr><td>🌾 <b>Goldgrass Reach</b></td><td>Grand axial boulevard + ring road</td><td class="num">8+</td><td class="num">5</td><td>4 → 8 → 14 → 20 → 26</td></tr></tbody></table>
+
+  <h2>Looking to the game — hazards &amp; bosses, reused and extended</h2>
+  <p>Per the brief, every zone first <b>reuses real mechanics from the game</b> where they fit, then extends with new ones — so the challenge vocabulary is grounded, not invented in a vacuum.</p>
+  <div class="grid">
+    <div class="card"><h4>Reused hazards</h4><p style="font-size:.86rem">fire · wolves · rats · cave_in · gas_vent · lava · mole · frost/freeze · ice_spike · flooding · ash_cloud · locusts · fungus · storm/min_chain</p></div>
+    <div class="card"><h4>Reused bosses</h4><p style="font-size:.86rem">Frostmaw (freeze_columns) · Ember Drake (heat_tiles) · Quagmire (respawn_boost) · Old Stoneface (rubble_blocks) · Mossback (hide_resources) · The Storm (min_chain)</p></div>
+    <div class="card g"><h4>New mechanics introduced (23)</h4><p style="font-size:.86rem">ember rain · tremor / quake-shuffle · blizzard whiteout · avalanche sweep · sandstorm · drought · scorpion swarm · quicksand (sticky tiles) · riptide · rogue wave · gull raid · thornvine overgrowth · giant insects · sinkhole · bats · resonance quake · gale (sideways push) · lightning strike · island-drift · blight spread · restless wisps (possess a tile) · bramble · stampede / trample-band</p></div>
+  </div>
+
+  <h2>Where they sit in the world — one long journey</h2>
+  <p>These slot into and extend the existing world (Hearthlands → Greenfields → Wilds → Stoneholds → Coast → Deep → Capital), weaving new regions between the old ones into a single progression from the cozy home town to a golden capital.</p>
+  <table><thead><tr><th class="num">#</th><th>Zone</th><th>Region</th><th class="num">Lv</th><th>Hook</th></tr></thead><tbody><tr><td class="num">1</td><td>🪷 <b>Mirefen Hollow</b></td><td>The Mirefen</td><td class="num">3+</td><td>A stilt-town strung across black water on golden boardwalks.</td></tr><tr><td class="num">2</td><td>🌋 <b>Cinderhold</b></td><td>The Ember Wastes</td><td class="num">5+</td><td>Hammers and lava-light — a forge-town climbing a living volcano in switchbacks.</td></tr><tr><td class="num">3</td><td>❄️ <b>Hoarfrost Hold</b></td><td>The Frostpeaks</td><td class="num">4+</td><td>Warm light against the cold — a hollow-town gathered around a steaming spring under the aurora.</td></tr><tr><td class="num">4</td><td>🏜️ <b>Sunspire Oasis</b></td><td>The Sunlands</td><td class="num">4+</td><td>Bells, spice and water in the dunes — a caravan city ringing an oasis under a great sundial.</td></tr><tr><td class="num">5</td><td>🪺 <b>Gullcliff</b></td><td>The Coast</td><td class="num">3+</td><td>Stacked up the chalk cliff over a crashing sea — stairs, lifts, lighthouses and gulls.</td></tr><tr><td class="num">6</td><td>🌳 <b>Thornwild Canopy</b></td><td>The Deepwood</td><td class="num">5+</td><td>A village in the treetops — platforms and rope bridges strung through colossal ancient boughs.</td></tr><tr><td class="num">7</td><td>💎 <b>Glimmerdeep</b></td><td>The Underdeep</td><td class="num">6+</td><td>A city in the dark below — glowing caverns strung together by mine-cart tunnels.</td></tr><tr><td class="num">8</td><td>☁️ <b>Aetherreach</b></td><td>The Skyrealm</td><td class="num">7+</td><td>A sky-port adrift above the clouds — islets tethered by bridges, airships at the docks.</td></tr><tr><td class="num">9</td><td>🕯️ <b>Gravemoor</b></td><td>The Blightmoor</td><td class="num">6+</td><td>Lantern by lantern, reclaim a cursed ruin from the fog — rebuild the old kingdom's bones.</td></tr><tr><td class="num">10</td><td>🌾 <b>Goldgrass Reach</b></td><td>The Goldlands</td><td class="num">8+</td><td>The journey's capstone — a grand capital of grand boulevards rising from an endless golden harvest.</td></tr></tbody></table>
+
+  <h2>The craft bar — what every zone is reviewed against</h2>
+  <p>These six principles, inherited from the town-layout foundation, are non-negotiable. A zone build that breaks one fails review and gets iterated. They are the “same quality bar” the brief asks for.</p>
+  <div class="grid"><div class="card g"><h4>Roads first, buildings front the street</h4><p style="font-size:.88rem;margin:.2rem 0">Lay the route network, then place each building beside a route at a fixed setback, facing it. A road is never drawn TO a building's centre — that is the #1 incoherence tell. Roads run between buildings.</p></div><div class="card g"><h4>The wilderness is the progress bar</h4><p style="font-size:.88rem;margin:.2rem 0">Every zone is a clearing pushed into something — forest, ash, ice, dune, fog, void. The receding frontier IS the visible growth. It only ever recedes; cleared ground never re-wilds.</p></div><div class="card g"><h4>A bounded landmark that levels up in place</h4><p style="font-size:.88rem;margin:.2rem 0">One fixed focal hub the buildings ring. It never grows over its neighbours; only its landmark sprite transforms with the town (well → fountain → monument; campfire → forge → magma crown).</p></div><div class="card g"><h4>Stable, additive growth</h4><p style="font-size:.88rem;margin:.2rem 0">Tier N keeps every lot, road and prop of tier N−1 and only APPENDS. A placed building never moves when the town grows. Each upgrade is an earned, legible before/after — a milestone, not a counter tick.</p></div><div class="card g"><h4>Kill grid-death</h4><p style="font-size:.88rem;margin:.2rem 0">Vary lot footprints, jitter placement 5–15%, curve the spine, stagger frontage. A uniform lattice reads as placeholder. Density and ambient life (NPC routines, props, particles) rise each rung.</p></div><div class="card g"><h4>Distinct identity per rung</h4><p style="font-size:.88rem;margin:.2rem 0">Each tier introduces a new landmark, a path-material upgrade (dirt → cobble → stone), and a visible jump in life. The skyline changes. The player should be able to name the era at a glance.</p></div></div>
+
+  <h2>From proposal to playable — the build-out plan</h2>
+  <div class="box"><b>This atlas is Pass 1.</b> Each zone then becomes its own interactive doc with a live top-down <b>Grow play-through</b> on the real <code>40×30 @ 32px</code> game grid, a <b>tile inventory</b> (the art backlog), and an <b>art bible</b> — exactly like <a href="../town-layout/">town-layout</a> — then is critically reviewed against the craft bar, iterated to a high bar, and merged. Advancements found building one zone are back-ported to the others (the shared engine that draws these cards is the cross-pollination mechanism: improve it once, every zone benefits).</p></div>
+  <ol>
+    <li><b>Lock the ladder</b> — rung names + plot curve (done, above) per zone.</li>
+    <li><b>Author roads → frontage</b> in the per-zone mockup with its own growth topology (flat colours first).</li>
+    <li><b>Verify the layout headlessly</b> — no plot overlaps a plot / road / landmark; per-rung reveal counts equal the ladder.</li>
+    <li><b>Port coordinates</b> into <code>src/ui/town/townMaps.ts</code> (stable, additive lot indices).</li>
+    <li><b>Fill the tile / prop manifest</b> — the art shopping list in the inventory tab.</li>
+    <li><b>Generate the tiles</b> (PixelLab) and handle terrain boundaries (autotiler) — only once positions are final.</li>
+    <li><b>Wire the scene + verify in-game.</b></li>
+  </ol>
+
+  <p class="statline">10 zones · 10 topologies · 44 rungs · 173 plots at full size · 41 hazards · 10 bosses · generated from <code>docs/zones/data/</code> · 2026-06-17</p>
+</div>
+<script>window.ZONE_DATA={"mirefen":{"topology":"ribbon-stilt","name":"Mirefen Hollow","palette":{"sky":["#cdb98a","#9fae8c"],"ground":"#5f6e4a","ground2":"#6f7a52","surface":"#2c4a47","surface2":"#365a52","path":"#b88a52","accent":"#7a9c5a","roof":"#5a7a52","wall":"#cdb98a","glow":"#ffd66a","dark":"#1c2a2a"}},"cinderhold":{"topology":"switchback-terrace","name":"Cinderhold","palette":{"sky":["#3a1a1e","#7a3320"],"ground":"#2a2226","ground2":"#3a2e30","surface":"#ff6a1a","surface2":"#c43a10","path":"#4a3e3e","accent":"#e8702a","roof":"#8a3320","wall":"#3e3236","glow":"#ff9a3a","dark":"#120c10"}},"hoarfrost":{"topology":"sheltered-hollow","name":"Hoarfrost Hold","palette":{"sky":["#1c2a4a","#3a5a7a"],"ground":"#dfe9f2","ground2":"#c4d6e6","surface":"#7fb8d6","surface2":"#a8d4e8","path":"#9aa8b6","accent":"#e8a44a","roof":"#6a4a52","wall":"#e8dcc8","glow":"#9affc8","dark":"#16203a"}},"sunspire":{"topology":"oasis-rings","name":"Sunspire Oasis","palette":{"sky":["#e8b46a","#d98a4a"],"ground":"#e0c088","ground2":"#d6b074","surface":"#3a9a8a","surface2":"#52b8a4","path":"#c49a5a","accent":"#c45a3a","roof":"#b85a30","wall":"#e8d4a8","glow":"#ffd24d","dark":"#5a3a1a"}},"gullcliff":{"topology":"vertical-cliff","name":"Gullcliff","palette":{"sky":["#bcd2dc","#8fb4c4"],"ground":"#cfc8ba","ground2":"#b8b0a0","surface":"#3a7a9a","surface2":"#52a0bc","path":"#9a9286","accent":"#c4502a","roof":"#3a6a7a","wall":"#e8e0d0","glow":"#ffe08a","dark":"#2a3a44"}},"thornwild":{"topology":"canopy-platforms","name":"Thornwild Canopy","palette":{"sky":["#bfe0a8","#7aae6a"],"ground":"#3a5a32","ground2":"#4a6e3a","surface":"#2a4226","surface2":"#365a2e","path":"#8a6a3a","accent":"#d6a83a","roof":"#6a8a3a","wall":"#c4a874","glow":"#ffe27a","dark":"#16240f"}},"glimmerdeep":{"topology":"linked-chambers","name":"Glimmerdeep","palette":{"sky":["#1a1430","#2a1f48"],"ground":"#2a2440","ground2":"#352e52","surface":"#2a3a6a","surface2":"#3a5a9a","path":"#4a4060","accent":"#46d6e0","roof":"#5a3a7a","wall":"#3e3658","glow":"#5af0ff","dark":"#0e0a1c"}},"aetherreach":{"topology":"sky-archipelago","name":"Aetherreach","palette":{"sky":["#8fc4e8","#cfe6f4"],"ground":"#c8b894","ground2":"#b8a47e","surface":"#e8f2fa","surface2":"#ffffff","path":"#a89878","accent":"#7a5ac4","roof":"#5a6ab0","wall":"#ece2cc","glow":"#b89aff","dark":"#3a4a6a","frontierFill":"#9fc8ea"}},"gravemoor":{"topology":"reclaimed-grid","name":"Gravemoor","palette":{"sky":["#3a3450","#5a5470"],"ground":"#6a6678","ground2":"#7a7488","surface":"#3a4a3a","surface2":"#4a5a48","path":"#9a96a8","cobble":"#b4b0c2","accent":"#e88a3a","roof":"#4a3a5a","wall":"#b8b0bc","glow":"#7adcff","dark":"#1e1a2c","frontierFill":"#2c2840"}},"goldgrass":{"topology":"axial-boulevard","name":"Goldgrass Reach","palette":{"sky":["#bfe0f4","#e8d89a"],"ground":"#d6b84a","ground2":"#c4a63a","surface":"#4a8ad6","surface2":"#6aa8e8","path":"#b0a892","accent":"#c46a2a","roof":"#a8502a","wall":"#f0e4c0","glow":"#ffe27a","dark":"#5a4a1a"}}};</script>
+<script>/* docs/zones — shared procedural vignette engine.
+ * Renders each zone's animated "establishing shot" from data only (palette + topology + ambient),
+ * with a live grow control (0..1) that adds buildings and pushes the frontier back.
+ * One painter per growth-topology → every zone looks and grows differently from the same engine.
+ * Inlined verbatim into the atlas + per-zone docs by build.mjs. No external assets. */
+(function () {
+  "use strict";
+  const DATA = window.ZONE_DATA || {};
+  const RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  // ── tiny helpers ──────────────────────────────────────────────────────────
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const TAU = Math.PI * 2;
+  function mulberry(seed) { let a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255; if (f >= 0) { r = lerp(r, 255, f); gg = lerp(gg, 255, f); b = lerp(b, 255, f); } else { const k = 1 + f; r *= k; gg *= k; b *= k; } return "rgb(" + (r | 0) + "," + (gg | 0) + "," + (b | 0) + ")"; }
+  function vgrad(g, x0, y0, x1, y1, c0, c1) { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, c0); gr.addColorStop(1, c1); return gr; }
+
+  // ── a generic stylised building glyph (palette-driven) ──────────────────────
+  function building(g, x, baseY, w, h, P, lit, kind) {
+    const wallTop = baseY - h, roofH = h * (kind === "tower" ? 0.30 : kind === "tent" ? 0.62 : 0.42);
+    g.save();
+    g.fillStyle = "rgba(10,8,16,.22)"; g.beginPath(); g.ellipse(x, baseY + 2, w * 0.6, 4, 0, 0, TAU); g.fill();
+    // wall
+    g.fillStyle = P.wall; g.strokeStyle = shade(P.wall, -0.5); g.lineWidth = 1.4;
+    rr(g, x - w / 2, wallTop + roofH, w, h - roofH, 2.5); g.fill(); g.stroke();
+    g.fillStyle = "rgba(0,0,0,.10)"; rr(g, x - w / 2 + w * 0.58, wallTop + roofH, w * 0.42, h - roofH, 2.5); g.fill();
+    // roof
+    g.fillStyle = P.roof; g.strokeStyle = shade(P.roof, -0.45); g.lineWidth = 1.4;
+    if (kind === "tent") { g.beginPath(); g.moveTo(x - w / 2 - 2, baseY); g.lineTo(x, wallTop); g.lineTo(x + w / 2 + 2, baseY); g.closePath(); g.fill(); g.stroke(); }
+    else { g.beginPath(); g.moveTo(x - w / 2 - 3, wallTop + roofH + 1); g.lineTo(x - w * (kind === "tower" ? 0.0 : 0.16), wallTop); g.lineTo(x + w * (kind === "tower" ? 0.0 : 0.16), wallTop); g.lineTo(x + w / 2 + 3, wallTop + roofH + 1); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = "rgba(255,255,255,.16)"; g.beginPath(); g.moveTo(x - w / 2 - 2, wallTop + roofH); g.lineTo(x, wallTop + 1); g.stroke(); }
+    // window
+    if (kind !== "tent") { const wy = wallTop + roofH + (h - roofH) * 0.34; g.fillStyle = lit ? P.glow : shade(P.surface, 0.25); g.globalAlpha = lit ? 0.95 : 0.7; rr(g, x - w * 0.16, wy, w * 0.22, h * 0.2, 1.5); g.fill(); g.globalAlpha = 1; if (lit) { g.fillStyle = "rgba(255,240,200,.18)"; g.beginPath(); g.arc(x - w * 0.05, wy + h * 0.1, w * 0.4, 0, TAU); g.fill(); } }
+    g.restore();
+  }
+
+  // ── particle / ambient systems (chosen per zone's ambient list) ─────────────
+  function particles(g, S, kind) {
+    const { W, H, t, P } = S, r = S.prng;
+    g.save();
+    if (kind === "fireflies" || kind === "wisps") { const col = kind === "wisps" ? P.glow : P.glow, n = 16; for (let i = 0; i < n; i++) { const ph = i * 1.7, x = (i / n) * W + Math.sin(t * 0.6 + ph) * 26, y = H * (0.45 + 0.4 * ((i * 53) % 10) / 10) + Math.cos(t * 0.5 + ph) * 18, a = 0.4 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2 + ph)); g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.arc(x, y, kind === "wisps" ? 3.2 : 1.8, 0, TAU); g.fill(); g.globalAlpha = a * 0.3; g.beginPath(); g.arc(x, y, kind === "wisps" ? 9 : 5, 0, TAU); g.fill(); } }
+    if (kind === "embers") { for (let i = 0; i < 26; i++) { const ph = i * 2.1, x = ((i * 71 + t * 14 * (0.5 + (i % 3) * 0.3)) % W), y = H - ((t * 30 + i * 60) % (H * 0.9)), a = 0.7 * (y / H); g.globalAlpha = clamp(a, 0, 1); g.fillStyle = i % 4 ? P.glow : P.accent; g.fillRect(x, y, 2, 2); } }
+    if (kind === "ash" || kind === "snow" || kind === "spores" || kind === "pollen" || kind === "dust" || kind === "drifting-petals") { const col = kind === "snow" ? "#fff" : kind === "ash" ? "#cabcbe" : kind === "spores" ? shade(P.glow, .2) : kind === "drifting-petals" ? "#ffd0e0" : shade(P.ground, .35); for (let i = 0; i < 34; i++) { const sp = 8 + (i % 5) * 5, x = ((i * 47 + Math.sin(t * 0.5 + i) * 30) % W + W) % W, y = (t * sp + i * 33) % H; g.globalAlpha = 0.5; g.fillStyle = col; g.beginPath(); g.arc(x, y, kind === "snow" ? 1.8 : 1.3, 0, TAU); g.fill(); } }
+    if (kind === "gulls" || kind === "swallows" || kind === "bats" || kind === "airships" || kind === "dragonflies") { const n = kind === "airships" ? 1 : 5; for (let i = 0; i < n; i++) { const ph = i * 900, sp = 22 + i * 9, x = ((t * sp + ph) % (W + 80)) - 40, y = H * (0.16 + 0.12 * ((i * 7) % 5) / 5) + Math.sin(t * 0.6 + i) * 8; if (kind === "airships") { drawAirship(g, x, y, P); continue; } const flap = Math.sin(t * 7 + i) * 4, s = kind === "bats" ? 4 : 6; g.strokeStyle = kind === "bats" ? "rgba(30,24,40,.7)" : "rgba(60,60,70,.6)"; g.lineWidth = 2; g.lineCap = "round"; g.beginPath(); g.moveTo(x - s, y + 2 - flap * .3); g.quadraticCurveTo(x, y - flap, x, y); g.quadraticCurveTo(x, y - flap, x + s, y + 2 - flap * .3); g.stroke(); } }
+    if (kind === "steam" || kind === "hearthsmoke" || kind === "smoke" || kind === "heat-haze" || kind === "heat-shimmer") { for (let i = 0; i < 5; i++) { const bx = W * (0.3 + i * 0.12), by = H * 0.72; for (let k = 0; k < 5; k++) { const y = by - ((t * 16 + k * 16 + i * 9) % (H * 0.5)), a = 0.18 * (1 - (by - y) / (H * 0.5)); g.globalAlpha = clamp(a, 0, 1); g.fillStyle = "#fff"; g.beginPath(); g.arc(bx + Math.sin(t + k + i) * 6, y, 4 + (by - y) * 0.04, 0, TAU); g.fill(); } } }
+    if (kind === "glowworms" || kind === "crystal-sparkle" || kind === "lens-flare" || kind === "lanterns") { for (let i = 0; i < 22; i++) { const x = (i * 97 % W), y = H * (0.1 + 0.5 * ((i * 31) % 10) / 10), a = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 3 + i)); g.globalAlpha = a; g.fillStyle = P.glow; g.beginPath(); g.arc(x, y, 1.5, 0, TAU); g.fill(); } }
+    g.globalAlpha = 1; g.restore();
+  }
+  function drawAirship(g, x, y, P) { g.save(); g.fillStyle = shade(P.roof, .1); g.strokeStyle = shade(P.roof, -.4); g.lineWidth = 1.2; g.beginPath(); g.ellipse(x, y, 22, 9, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = P.accent; rr(g, x - 6, y + 8, 12, 5, 2); g.fill(); g.strokeStyle = shade(P.roof, -.4); g.beginPath(); g.moveTo(x - 6, y + 7); g.lineTo(x - 4, y + 8); g.moveTo(x + 6, y + 7); g.lineTo(x + 4, y + 8); g.stroke(); g.restore(); }
+
+  function aurora(g, S) { const { W, H, t } = S; g.save(); g.globalCompositeOperation = "screen"; for (let b = 0; b < 4; b++) { g.beginPath(); for (let x = 0; x <= W; x += 10) { const y = H * (0.07 + b * 0.055) + Math.sin(x * 0.013 + t * 0.45 + b * 1.3) * 20; if (x === 0) g.moveTo(x, y); else g.lineTo(x, y); } g.lineTo(W, 0); g.lineTo(0, 0); g.closePath(); const gr = g.createLinearGradient(0, 0, 0, H * 0.46); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(0.7, b % 2 ? "rgba(120,255,180,.05)" : "rgba(150,120,255,.05)"); gr.addColorStop(1, b % 2 ? "rgba(120,255,190,.22)" : "rgba(160,120,255,.20)"); g.fillStyle = gr; g.fill(); } g.restore(); }
+  function sunShaft(g, S) { const { W, H, t } = S; g.save(); g.globalCompositeOperation = "screen"; for (let i = 0; i < 3; i++) { const x = W * (0.25 + i * 0.27) + Math.sin(t * 0.2 + i) * 10; g.fillStyle = "rgba(255,240,180,.07)"; g.beginPath(); g.moveTo(x - 16, 0); g.lineTo(x + 16, 0); g.lineTo(x + 50, H); g.lineTo(x - 18, H); g.closePath(); g.fill(); } g.restore(); }
+
+  // ── frontier wash (the receding wilderness) ─────────────────────────────────
+  function frontier(g, S, grow, col, side) {
+    const { W, H } = S; g.save(); g.globalAlpha = 0.9; g.fillStyle = col;
+    const ext = lerp(0.62, 0.18, grow); // how far the wild reaches in
+    if (side === "edges") { g.fillRect(0, 0, W * ext * 0.5, H); g.fillRect(W - W * ext * 0.5, 0, W * ext * 0.5, H); }
+    else if (side === "top") { g.globalAlpha = lerp(0.7, 0.25, grow); g.fillRect(0, 0, W, H * ext * 0.5); }
+    g.restore();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SCENES — one per growth topology. Each: (g, S, grow) where grow ∈ [0,1].
+  // ════════════════════════════════════════════════════════════════════════════
+  const SCENES = {
+    // 1 · boardwalk ribbon over water
+    "ribbon-stilt": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // water
+      const wy = H * 0.44; g.fillStyle = vgrad(g, 0, wy, 0, H, P.surface2, P.surface); g.fillRect(0, wy, W, H - wy);
+      g.save(); g.globalCompositeOperation = "screen"; g.strokeStyle = "rgba(255,255,255,.12)"; g.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = wy + 14 + i * (H - wy) / 7; g.beginPath(); g.moveTo(0, y + Math.sin(t + i) * 3); g.lineTo(W, y + Math.cos(t + i) * 3); g.stroke(); } g.restore();
+      // mist band
+      g.fillStyle = "rgba(230,224,180,.30)"; g.fillRect(0, wy - 10, W, 22);
+      // reed frontier
+      const reedN = Math.round(lerp(60, 22, grow)); const rr2 = mulberry(7); g.strokeStyle = P.ground; g.lineWidth = 2;
+      for (let i = 0; i < reedN; i++) { const x = rr2() * W, y = wy + 6 + rr2() * (H - wy) * 0.8; const sw = Math.sin(t * 1.2 + x) * 3; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + sw, y - 14, x + sw * 1.5, y - 22); g.stroke(); g.fillStyle = shade(P.ground, .2); g.fillRect(x + sw * 1.4 - 1, y - 26, 2, 6); }
+      // boardwalk + stilt platforms
+      const nB = Math.round(lerp(2, 7, grow)); g.strokeStyle = P.path; g.lineWidth = 7; g.lineCap = "round";
+      let px = W * 0.14, py = H * 0.74; g.beginPath(); g.moveTo(px, py);
+      const plats = [];
+      for (let i = 0; i < nB; i++) { const nx = W * (0.14 + (i + 1) / (nB + 1) * 0.78), ny = H * (0.64 + Math.sin(i * 1.3) * 0.12); g.lineTo(nx, ny); plats.push([nx, ny]); }
+      g.stroke();
+      // stilts + platforms + huts
+      plats.forEach((p, i) => { const lit = i % 2 === 0; g.strokeStyle = shade(P.path, -.3); g.lineWidth = 3; for (let s = -1; s <= 1; s++) { g.beginPath(); g.moveTo(p[0] + s * 14, p[1] + 2); g.lineTo(p[0] + s * 14, H); g.stroke(); } g.fillStyle = P.path; rr(g, p[0] - 20, p[1] - 5, 40, 10, 3); g.fill(); building(g, p[0], p[1] - 4, lerp(26, 34, (i % 3) / 3), 30, P, lit); });
+      particles(g, S, "fireflies"); particles(g, S, "dragonflies");
+    },
+
+    // 2 · switchback terraces up a volcano
+    "switchback-terrace": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // glow halo at the summit
+      g.save(); g.globalCompositeOperation = "screen"; const gh = g.createRadialGradient(W * 0.5, H * 0.16, 0, W * 0.5, H * 0.16, W * 0.5); gh.addColorStop(0, "rgba(255,120,40,.35)"); gh.addColorStop(1, "rgba(255,120,40,0)"); g.fillStyle = gh; g.fillRect(0, 0, W, H); g.restore();
+      // cone
+      g.fillStyle = P.ground; g.beginPath(); g.moveTo(W * 0.5, H * 0.08); g.lineTo(W * 1.05, H); g.lineTo(-W * 0.05, H); g.closePath(); g.fill();
+      g.fillStyle = shade(P.ground, .06); g.beginPath(); g.moveTo(W * 0.5, H * 0.08); g.lineTo(W * 0.5, H); g.lineTo(-W * 0.05, H); g.closePath(); g.fill();
+      // lava streak (frontier that cools as grow rises)
+      g.save(); g.strokeStyle = P.surface; g.lineWidth = lerp(10, 4, grow); g.lineCap = "round"; g.shadowColor = P.glow; g.shadowBlur = 12; g.beginPath(); g.moveTo(W * 0.52, H * 0.12); g.quadraticCurveTo(W * 0.6, H * 0.5, W * 0.46, H); g.stroke(); g.restore();
+      // terraces (each tier = one more shelf up)
+      const nT = Math.round(lerp(1, 4, grow));
+      for (let i = 0; i < nT; i++) { const ty = H * (0.86 - i * 0.19), hw = W * (0.4 - i * 0.06); g.fillStyle = shade(P.ground, .12); rr(g, W * 0.5 - hw, ty, hw * 2, 12, 3); g.fill(); g.strokeStyle = shade(P.ground, -.3); g.lineWidth = 2; g.stroke(); g.strokeStyle = P.path; g.lineWidth = 5; g.beginPath(); g.moveTo(W * 0.5 - hw * 0.6, ty); g.lineTo(W * 0.5 + hw * 0.5, ty - H * 0.19 + 14); g.stroke(); const nb = 2 + i; for (let b = 0; b < nb; b++) { const bx = W * 0.5 + (b - (nb - 1) / 2) * (hw * 1.5 / nb); building(g, bx, ty + 1, 26, 26, P, true, b === 0 && i === nT - 1 ? "tower" : ""); } }
+      particles(g, S, "embers"); particles(g, S, "ash");
+    },
+
+    // 3 · sheltered hollow around a hot-spring
+    "sheltered-hollow": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      aurora(g, S);
+      // snow ground
+      g.fillStyle = vgrad(g, 0, H * 0.5, 0, H, P.ground, shade(P.ground, -.08)); g.fillRect(0, H * 0.5, W, H);
+      // pines frontier (recede with grow)
+      const pineN = Math.round(lerp(16, 6, grow)); const pr = mulberry(11);
+      for (let i = 0; i < pineN; i++) { const x = pr() * W, near = pr() < 0.5, y = H * (0.5 + pr() * 0.12) + (near ? 30 : 0), s = near ? 1.1 : 0.7; g.fillStyle = shade("#2f5a3a", near ? 0 : .12); g.beginPath(); g.moveTo(x, y - 34 * s); g.lineTo(x - 12 * s, y); g.lineTo(x + 12 * s, y); g.closePath(); g.fill(); g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.moveTo(x, y - 34 * s); g.lineTo(x - 4 * s, y - 22 * s); g.lineTo(x + 4 * s, y - 22 * s); g.closePath(); g.fill(); }
+      // warmth-thaw ring: melted ground around the spring (the warm zone grows with the town)
+      const cx = W * 0.5, cy = H * 0.78, warmR = lerp(90, 200, grow);
+      g.save(); g.fillStyle = shade(P.ground, -.1); g.globalAlpha = .5; g.beginPath(); g.ellipse(cx, cy + 6, warmR, warmR * 0.34, 0, 0, TAU); g.fill(); g.restore();
+      // windbreak palisade arcing behind the outer ring
+      g.save(); g.strokeStyle = shade("#5a4632", 0); g.lineWidth = 4; g.beginPath(); g.ellipse(cx, cy - 2, lerp(96, 176, grow), lerp(40, 70, grow), 0, Math.PI * 1.04, Math.PI * 1.96); g.stroke(); g.restore();
+      // steaming hot spring at centre
+      g.fillStyle = P.surface2; g.beginPath(); g.ellipse(cx, cy, 56, 22, 0, 0, TAU); g.fill(); g.fillStyle = P.surface; g.beginPath(); g.ellipse(cx, cy, 42, 15, 0, 0, TAU); g.fill();
+      g.save(); g.globalCompositeOperation = "screen"; const wg = g.createRadialGradient(cx, cy, 0, cx, cy, warmR); wg.addColorStop(0, "rgba(255,210,120,.22)"); wg.addColorStop(1, "rgba(255,210,120,0)"); g.fillStyle = wg; g.fillRect(0, 0, W, H); g.restore();
+      // longhouses ring the spring
+      const nb = Math.round(lerp(3, 8, grow)); for (let i = 0; i < nb; i++) { const a = Math.PI + (i / Math.max(1, nb - 1)) * Math.PI, rx = lerp(80, 160, grow), x = cx + Math.cos(a) * rx, y = cy - 8 + Math.sin(a) * rx * 0.34; building(g, x, y, 30, 24, P, true, i === 0 ? "tower" : ""); }
+      particles(g, S, "steam"); particles(g, S, "snow");
+    },
+
+    // 4 · concentric oasis rings
+    "oasis-rings": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H * 0.6, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // sun
+      g.save(); g.globalCompositeOperation = "screen"; const sg = g.createRadialGradient(W * 0.8, H * 0.2, 0, W * 0.8, H * 0.2, 120); sg.addColorStop(0, "rgba(255,230,150,.5)"); sg.addColorStop(1, "rgba(255,230,150,0)"); g.fillStyle = sg; g.fillRect(0, 0, W, H); g.restore();
+      // dunes / sand
+      g.fillStyle = vgrad(g, 0, H * 0.45, 0, H, P.ground, P.ground2); g.fillRect(0, H * 0.45, W, H);
+      frontier(g, S, grow, shade(P.ground, .1), "edges");
+      // oasis pool + palms at centre
+      const cx = W * 0.5, cy = H * 0.72; g.fillStyle = P.surface; g.beginPath(); g.ellipse(cx, cy, 40, 16, 0, 0, TAU); g.fill(); g.fillStyle = P.surface2; g.beginPath(); g.ellipse(cx, cy - 2, 30, 10, 0, 0, TAU); g.fill();
+      for (let i = -1; i <= 1; i += 2) { const px = cx + i * 30, sw = Math.sin(t + i) * 4; g.strokeStyle = shade(P.path, -.3); g.lineWidth = 4; g.beginPath(); g.moveTo(px, cy); g.quadraticCurveTo(px + i * 4, cy - 24, px + i * 6 + sw, cy - 38); g.stroke(); g.fillStyle = "#3a8a5a"; for (let f = 0; f < 5; f++) { const a = -Math.PI / 2 + (f - 2) * 0.5; g.save(); g.translate(px + i * 6 + sw, cy - 38); g.rotate(a); g.fillRect(0, -2, 20, 4); g.restore(); } }
+      // caravan-road spokes radiating into the dunes (ground — drawn before walls/buildings)
+      g.strokeStyle = P.path; g.lineWidth = 5; g.lineCap = "round"; [Math.PI * 1.12, Math.PI * 1.5, Math.PI * 1.88].forEach((a) => { g.beginPath(); g.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 12); g.lineTo(cx + Math.cos(a) * 360, cy + Math.sin(a) * 120); g.stroke(); });
+      // concentric ring WALLS (the signature: each rung wraps a new walled ring) + buildings
+      const nR = Math.round(lerp(1, 4, grow));
+      for (let r2 = 1; r2 <= nR; r2++) {
+        const rx = r2 * 46 + 14, ry = r2 * 18 + 5;
+        // solid adobe ring wall with crenellations + gate towers
+        g.strokeStyle = shade(P.wall, -.28); g.lineWidth = 6; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, Math.PI * 0.98, Math.PI * 2.02); g.stroke();
+        g.strokeStyle = P.wall; g.lineWidth = 3; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, Math.PI * 0.98, Math.PI * 2.02); g.stroke();
+        for (let m = 0; m <= 10; m++) { const a = Math.PI + m / 10 * Math.PI, mx = cx + Math.cos(a) * rx, my = cy + Math.sin(a) * ry; g.fillStyle = P.wall; g.fillRect(mx - 2, my - 5, 4, 5); }
+        // gate posts where a caravan spoke meets the wall
+        [Math.PI * 1.18, Math.PI * 1.82].forEach((a) => { const gx = cx + Math.cos(a) * rx, gy = cy + Math.sin(a) * ry; g.fillStyle = shade(P.wall, -.1); g.fillRect(gx - 3, gy - 12, 6, 14); });
+        const nb = 2 + r2; for (let b = 0; b < nb; b++) { const a = Math.PI + (b + 0.5) / nb * Math.PI, x = cx + Math.cos(a) * (rx - 8), y = cy + Math.sin(a) * (ry - 3) - 6; building(g, x, y, 22, 19, P, false, r2 === nR && b === 0 ? "tower" : ""); }
+      }
+      particles(g, S, "dust"); particles(g, S, "heat-haze");
+    },
+
+    // 5 · stacked sea-cliff
+    "vertical-cliff": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      const sx = W * 0.60, x0 = W * 0.07;
+      // sea
+      g.fillStyle = vgrad(g, 0, 0, 0, H, P.surface2, P.surface); g.fillRect(sx, 0, W - sx, H);
+      g.save(); g.globalCompositeOperation = "screen"; g.strokeStyle = "rgba(255,255,255,.16)"; g.lineWidth = 2; for (let i = 0; i < 10; i++) { const y = i * H / 10; g.beginPath(); g.moveTo(sx, y + Math.sin(t + i) * 3); g.lineTo(W, y + Math.cos(t * 1.1 + i) * 3); g.stroke(); } g.restore();
+      // cliff body with sedimentary strata (reads as a tall rock face)
+      g.fillStyle = P.ground; g.beginPath(); g.moveTo(0, 0); g.lineTo(sx + 8, 0); g.lineTo(sx - 34, H); g.lineTo(0, H); g.closePath(); g.fill();
+      g.save(); g.beginPath(); g.moveTo(0, 0); g.lineTo(sx + 8, 0); g.lineTo(sx - 34, H); g.lineTo(0, H); g.closePath(); g.clip();
+      g.strokeStyle = "rgba(0,0,0,.10)"; g.lineWidth = 3; for (let y = 18; y < H; y += 26) { g.beginPath(); g.moveTo(-10, y); g.lineTo(sx + 8, y - 6); g.stroke(); }
+      g.fillStyle = shade(P.ground, -.14); g.beginPath(); g.moveTo(sx - 8, 0); g.lineTo(sx + 8, 0); g.lineTo(sx - 34, H); g.lineTo(sx - 50, H); g.closePath(); g.fill(); g.restore();
+      const nS = Math.round(lerp(1, 4, grow));
+      // cargo-lift cable (base harbour → top shelf) with a moving cart — the vertical-transport signature
+      const topY = H * (0.82 - (nS - 1) * 0.2);
+      const lb = [W * 0.40, H * 0.92], lt = [W * 0.46, topY - 8];
+      g.strokeStyle = shade(P.path, -.1); g.lineWidth = 2; g.beginPath(); g.moveTo(lb[0], lb[1]); g.lineTo(lt[0], lt[1]); g.stroke();
+      { const k = 0.5 + 0.5 * Math.sin(t * 0.7), cxp = lerp(lb[0], lt[0], k), cyp = lerp(lb[1], lt[1], k); g.fillStyle = P.roof; rr(g, cxp - 5, cyp - 5, 10, 9, 2); g.fill(); g.strokeStyle = shade(P.roof, -.4); g.stroke(); }
+      // stacked carved shelves climbing the cliff
+      for (let i = 0; i < nS; i++) { const sy = H * (0.82 - i * 0.2), sw = W * (0.5 - i * 0.04);
+        g.fillStyle = shade(P.ground, .16); rr(g, x0, sy, sw, 12, 3); g.fill(); g.strokeStyle = shade(P.ground, -.3); g.lineWidth = 1.5; g.stroke();
+        g.strokeStyle = shade(P.path, -.05); g.lineWidth = 1.5; for (let rx = x0 + 4; rx < x0 + sw; rx += 11) { g.beginPath(); g.moveTo(rx, sy); g.lineTo(rx, sy - 6); g.stroke(); } g.beginPath(); g.moveTo(x0 + 4, sy - 6); g.lineTo(x0 + sw, sy - 6); g.stroke();
+        if (i > 0) { g.strokeStyle = P.path; g.lineWidth = 4; const bx = x0 + sw * 0.8; g.beginPath(); g.moveTo(bx, sy); g.lineTo(bx + 15, sy + H * 0.2 - 12); g.lineTo(bx, sy + H * 0.2 - 12); g.stroke(); }
+        const nb = 2 + i; for (let b = 0; b < nb; b++) building(g, x0 + 22 + b * (sw - 36) / Math.max(1, nb - 1), sy + 1, 26, 26, P, true, i === nS - 1 && b === 0 ? "tower" : "");
+      }
+      // tide-pool harbour + foam spray at the base
+      g.fillStyle = P.surface; g.beginPath(); g.ellipse(W * 0.32, H - 6, 64, 12, 0, 0, TAU); g.fill();
+      g.save(); g.globalCompositeOperation = "screen"; g.fillStyle = "rgba(255,255,255,.5)"; for (let i = 0; i < 7; i++) { const fx = sx - 30 + Math.sin(t * 2 + i) * 8, fy = H * (0.5 + i * 0.07); g.beginPath(); g.arc(fx, fy, 4 + Math.sin(t * 3 + i) * 2, 0, TAU); g.fill(); } g.restore();
+      particles(g, S, "gulls");
+    },
+
+    // 6 · treetop platforms
+    "canopy-platforms": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      sunShaft(g, S);
+      // deep forest floor fade
+      g.fillStyle = "rgba(10,20,8,.4)"; g.fillRect(0, H * 0.7, W, H);
+      // giant trunks
+      const trunks = [W * 0.22, W * 0.52, W * 0.82];
+      trunks.forEach((tx) => { g.fillStyle = P.path; rr(g, tx - 16, 0, 32, H, 6); g.fill(); g.fillStyle = "rgba(0,0,0,.18)"; rr(g, tx + 2, 0, 14, H, 6); g.fill(); g.fillStyle = shade(P.roof, .1); g.beginPath(); g.ellipse(tx, H * 0.12, 70, 40, 0, 0, TAU); g.fill(); });
+      // thornvine frontier at the bottom recedes with grow
+      g.fillStyle = shade(P.surface, -.1); g.globalAlpha = lerp(0.8, 0.2, grow); g.fillRect(0, H * 0.86, W, H); g.globalAlpha = 1;
+      // platforms grow UP the trunks — vertical layering: understory → canopy → emergent crown.
+      const SLOTS = [[1, 0], [0, 0], [2, 0], [1, 1], [0, 1], [1, 2], [2, 1], [1, 3]];
+      const lvY = (L) => H * (0.80 - L * 0.165);
+      const nP = Math.round(lerp(2, 8, grow));
+      const pts = SLOTS.slice(0, nP).map(([ti, L]) => [trunks[ti], lvY(L), L]);
+      // vertical rope-ladder up the central trunk (you literally climb as the town grows)
+      const topL = Math.max(0, ...pts.filter((p) => p[0] === trunks[1]).map((p) => p[2]));
+      g.strokeStyle = shade(P.path, -.25); g.lineWidth = 1.5; for (let s = -1; s <= 1; s += 2) { g.beginPath(); g.moveTo(trunks[1] + s * 3, H * 0.86); g.lineTo(trunks[1] + s * 3, lvY(topL) - 4); g.stroke(); } for (let yy = lvY(topL); yy < H * 0.86; yy += 11) { g.beginPath(); g.moveTo(trunks[1] - 3, yy); g.lineTo(trunks[1] + 3, yy); g.stroke(); }
+      // rope bridges link platforms across trunks at nearby heights
+      g.strokeStyle = P.path; g.lineWidth = 2; for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const a = pts[i], b = pts[j]; if (a[0] !== b[0] && Math.abs(a[2] - b[2]) <= 1 && Math.abs(a[0] - b[0]) < W * 0.42) { g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, Math.max(a[1], b[1]) + 16, b[0], b[1]); g.stroke(); } }
+      // platforms + cabins, painted bottom→top so higher ones overlap correctly
+      pts.slice().sort((a, b) => a[1] - b[1]).forEach((p) => { g.fillStyle = shade(P.ground, .1); rr(g, p[0] - 24, p[1] - 3, 48, 9, 3); g.fill(); building(g, p[0], p[1] - 2, 28, 24, P, true, p[2] >= 3 ? "tower" : ""); });
+      particles(g, S, "spores"); particles(g, S, "fireflies");
+    },
+
+    // 7 · linked crystal caverns
+    "linked-chambers": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = P.dark; g.fillRect(0, 0, W, H);
+      // cavern walls (lumpy)
+      g.fillStyle = P.ground; const wr = mulberry(3); g.beginPath(); g.moveTo(0, 0); for (let x = 0; x <= W; x += 24) g.lineTo(x, H * (0.16 + wr() * 0.08)); g.lineTo(W, 0); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 24) g.lineTo(x, H * (0.82 - wr() * 0.08)); g.lineTo(W, H); g.closePath(); g.fill();
+      // stalactites
+      g.fillStyle = shade(P.ground, -.15); for (let i = 0; i < 9; i++) { const x = i * W / 9 + 20; g.beginPath(); g.moveTo(x - 8, H * 0.18); g.lineTo(x + 8, H * 0.18); g.lineTo(x, H * (0.26 + (i % 3) * 0.04)); g.closePath(); g.fill(); }
+      // chambers (lit pockets) — more as grow rises
+      const nC = Math.round(lerp(1, 4, grow));
+      for (let i = 0; i < nC; i++) { const cx = W * (0.2 + i * 0.78 / Math.max(1, nC)), cy = H * 0.62; g.save(); g.globalCompositeOperation = "screen"; const cg = g.createRadialGradient(cx, cy, 0, cx, cy, 80); cg.addColorStop(0, shade(P.surface, .2)); cg.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = cg; g.fillRect(0, 0, W, H); g.restore(); building(g, cx, cy + 14, 28, 26, P, true, i === nC - 1 ? "tower" : ""); /* crystals */ for (let k = 0; k < 4; k++) { const kx = cx + (k - 1.5) * 16, ky = cy + 20 + (k % 2) * 4; g.save(); g.fillStyle = P.glow; g.shadowColor = P.glow; g.shadowBlur = 10; g.beginPath(); g.moveTo(kx, ky); g.lineTo(kx - 4, ky - 14); g.lineTo(kx + 4, ky - 14); g.closePath(); g.fill(); g.restore(); } if (i > 0) { g.strokeStyle = P.path; g.lineWidth = 3; g.setLineDash([6, 4]); g.beginPath(); g.moveTo(W * (0.2 + (i - 1) * 0.78 / Math.max(1, nC)) + 20, cy + 26); g.lineTo(cx - 20, cy + 26); g.stroke(); g.setLineDash([]); } }
+      particles(g, S, "glowworms");
+    },
+
+    // 8 · floating sky-archipelago
+    "sky-archipelago": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // cloud sea
+      g.fillStyle = "rgba(255,255,255,.85)"; for (let i = 0; i < 6; i++) { const x = (i * W / 5 + t * 6) % (W + 120) - 60, y = H * (0.78 + (i % 2) * 0.06); g.beginPath(); g.ellipse(x, y, 70, 20, 0, 0, TAU); g.fill(); }
+      // floating islets — more anchored as grow rises
+      const nI = Math.round(lerp(2, 6, grow)); const ir = mulberry(5); const isles = [];
+      for (let i = 0; i < nI; i++) { const x = W * (0.16 + i / Math.max(1, nI) * 0.7) + ir() * 20, y = H * (0.34 + ((i * 3) % 4) * 0.08) + Math.sin(t * 0.5 + i) * 4; isles.push([x, y]); }
+      // sky-bridges
+      g.strokeStyle = P.path; g.lineWidth = 2.5; for (let i = 1; i < isles.length; i++) { g.beginPath(); g.moveTo(isles[i - 1][0], isles[i - 1][1]); g.quadraticCurveTo((isles[i - 1][0] + isles[i][0]) / 2, Math.max(isles[i - 1][1], isles[i][1]) + 20, isles[i][0], isles[i][1]); g.stroke(); }
+      isles.forEach((p, i) => { // rock underside
+        g.fillStyle = P.ground2; g.beginPath(); g.moveTo(p[0] - 30, p[1]); g.lineTo(p[0] + 30, p[1]); g.lineTo(p[0] + 14, p[1] + 26); g.lineTo(p[0] - 4, p[1] + 18); g.lineTo(p[0] - 18, p[1] + 26); g.closePath(); g.fill();
+        g.fillStyle = P.ground; rr(g, p[0] - 30, p[1] - 5, 60, 9, 4); g.fill(); g.fillStyle = shade(P.accent, .2); g.globalAlpha = .5; g.beginPath(); g.ellipse(p[0], p[1] + 18, 24, 6, 0, 0, TAU); g.fill(); g.globalAlpha = 1;
+        building(g, p[0], p[1] - 4, 26, 24, P, true, i === 0 ? "tower" : "");
+        // waterfall
+        g.strokeStyle = "rgba(255,255,255,.5)"; g.lineWidth = 2; g.beginPath(); g.moveTo(p[0] - 4, p[1] + 18); g.lineTo(p[0] - 6, p[1] + 60); g.stroke();
+      });
+      particles(g, S, "airships"); particles(g, S, "drifting-petals");
+    },
+
+    // 9 · reclaimed ruin-grid on a moor
+    "reclaimed-grid": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // moor ground
+      g.fillStyle = vgrad(g, 0, H * 0.5, 0, H, P.ground, shade(P.ground, -.08)); g.fillRect(0, H * 0.45, W, H);
+      // fog frontier recedes with grow
+      g.save(); g.fillStyle = "rgba(180,176,190,.55)"; const fogEdge = lerp(0.3, 0.86, grow); g.globalAlpha = 0.7; g.fillRect(0, H * 0.45, W, H); g.globalAlpha = 1; // clear a hallowed disc
+      g.globalCompositeOperation = "destination-out"; const cx = W * 0.5, cy = H * 0.66; g.beginPath(); g.ellipse(cx, cy, W * 0.5 * fogEdge, H * 0.4 * fogEdge, 0, 0, TAU); g.fill(); g.restore();
+      // the old grid (orthogonal streets), brightened where reclaimed
+      g.strokeStyle = shade(P.path, .1); g.lineWidth = 5; for (let i = -1; i <= 2; i++) { const gx = cx + i * 70; if (Math.abs(gx - cx) < W * 0.5 * fogEdge) { g.beginPath(); g.moveTo(gx, cy - 60); g.lineTo(gx + 14, H); g.stroke(); } } g.beginPath(); g.moveTo(cx - W * 0.5 * fogEdge, cy + 8); g.lineTo(cx + W * 0.5 * fogEdge, cy + 8); g.stroke();
+      // buildings on ancient footings (some ruined, some restored)
+      const nb = Math.round(lerp(3, 9, grow)); const br = mulberry(9);
+      for (let i = 0; i < nb; i++) { const a = Math.PI + (i + 0.5) / nb * Math.PI, rx = lerp(40, 150, (i % 3 + 1) / 3), x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * rx * 0.4 + 6; if (Math.hypot((x - cx) / (W * 0.5 * fogEdge), (y - cy) / (H * 0.4 * fogEdge)) > 1) continue; const restored = i < nb * grow + 1; if (restored) building(g, x, y, 26, 24, P, true, i === 0 ? "tower" : ""); else { g.fillStyle = shade(P.wall, -.2); g.globalAlpha = .7; rr(g, x - 12, y - 14, 24, 14, 2); g.fill(); g.globalAlpha = 1; } }
+      // bell tower centre
+      building(g, cx, cy + 4, 24, 40, P, grow > 0.4, "tower");
+      particles(g, S, "wisps"); particles(g, S, "bats");
+    },
+
+    // 10 · grand axial boulevard capital
+    "axial-boulevard": function (g, S, grow) {
+      const { W, H, P, t } = S; g.fillStyle = vgrad(g, 0, 0, 0, H * 0.6, P.sky[0], P.sky[1]); g.fillRect(0, 0, W, H);
+      // golden wheat plains
+      g.fillStyle = vgrad(g, 0, H * 0.5, 0, H, P.ground, P.ground2); g.fillRect(0, H * 0.5, W, H);
+      // windmills on the horizon frame (permanent farmland)
+      for (let i = 0; i < 3; i++) { const x = W * (0.12 + i * 0.34), y = H * 0.52; g.strokeStyle = shade(P.wall, -.3); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 22); g.stroke(); g.save(); g.translate(x, y - 22); g.rotate(t * 0.6 + i); for (let b = 0; b < 4; b++) { g.rotate(Math.PI / 2); g.fillStyle = P.wall; g.fillRect(0, -2, 16, 4); } g.restore(); }
+      // the grand boulevard receding to a vanishing point (perspective)
+      const vx = W * 0.5, vy = H * 0.52; g.fillStyle = P.path; g.beginPath(); g.moveTo(W * 0.32, H); g.lineTo(W * 0.68, H); g.lineTo(vx + 14, vy); g.lineTo(vx - 14, vy); g.closePath(); g.fill();
+      g.strokeStyle = shade(P.path, .14); g.lineWidth = 2; for (let i = 1; i < 6; i++) { const yy = lerp(H, vy, i / 6); g.beginPath(); g.moveTo(lerp(W * 0.32, vx - 14, i / 6), yy); g.lineTo(lerp(W * 0.68, vx + 14, i / 6), yy); g.stroke(); }
+      // buildings lining the boulevard, growing taller/denser toward the city
+      const nb = Math.round(lerp(4, 12, grow));
+      for (let i = 0; i < nb; i++) { const side = i % 2 ? 1 : -1, depth = (i / nb); const yy = lerp(H * 0.96, vy + 24, depth), sc = lerp(1, 0.3, depth), bx = vx + side * lerp(W * 0.2, 22, depth); building(g, bx, yy, 30 * sc, 30 * sc, P, true, ""); }
+      // the monument / clock tower at the vanishing point
+      g.save(); const ms = lerp(0.3, 1, grow); building(g, vx, vy + 8, 22 * ms, 56 * ms, P, true, "tower"); g.fillStyle = P.glow; g.beginPath(); g.arc(vx, vy - 48 * ms + 8, 3 * ms, 0, TAU); g.fill(); g.restore();
+      particles(g, S, "pollen"); particles(g, S, "swallows");
+    },
+  };
+
+  // ── per-canvas runner ───────────────────────────────────────────────────────
+  const runners = [];
+  function setup(cv) {
+    const id = cv.dataset.zone, spec = DATA[id]; if (!spec || !SCENES[spec.topology]) return;
+    const ctx = cv.getContext("2d");
+    const baseW = +cv.dataset.w || 560, baseH = +cv.dataset.h || 300;
+    function size() { const dpr = Math.min(2, devicePixelRatio || 1); cv.width = baseW * dpr; cv.height = baseH * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    size(); addEventListener("resize", size);
+    const S = { W: baseW, H: baseH, P: spec.palette, t: 0, prng: mulberry(id.length * 999 + 7) };
+    const scene = SCENES[spec.topology];
+    let grow = 0.42, target = 0.42, autop = true, vis = true;
+    const io = new IntersectionObserver((es) => es.forEach((e) => { vis = e.isIntersecting; }), { threshold: 0.05 }); io.observe(cv);
+    const r = { cv, draw(dt) { if (!vis) return; S.t += dt; if (autop && !RM) { target = 0.5 + 0.5 * Math.sin(S.t * 0.18); } grow += (target - grow) * Math.min(1, dt * 2.2); ctx.clearRect(0, 0, baseW, baseH); ctx.imageSmoothingEnabled = true; scene(ctx, S, clamp(grow, 0, 1)); vignette(ctx, S); }, setGrow(v) { autop = false; target = v; }, setAuto() { autop = true; } };
+    runners.push(r);
+    // optional controls (slider) if a sibling [data-grow-for=id] exists
+    const sl = document.querySelector('[data-grow-for="' + id + '"]'); if (sl) { sl.addEventListener("input", () => r.setGrow(+sl.value / 100)); sl.addEventListener("dblclick", () => r.setAuto()); }
+    return r;
+  }
+  function vignette(g, S) { const { W, H } = S; g.save(); const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.22)"); g.fillStyle = v; g.fillRect(0, 0, W, H); g.restore(); }
+
+  let last = 0;
+  function loop(ts) { const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts; for (const r of runners) { try { r.draw(dt); } catch (e) { /* keep others alive */ } } requestAnimationFrame(loop); }
+
+  function boot() { document.querySelectorAll("canvas[data-zone]").forEach(setup); requestAnimationFrame(loop); }
+  if (document.readyState === "loading") addEventListener("DOMContentLoaded", boot); else boot();
+  window.__zoneEngine = { runners };
+})();
+</script>
+</body></html>
