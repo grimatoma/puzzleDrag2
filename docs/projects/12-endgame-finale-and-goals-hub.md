@@ -47,7 +47,7 @@ I opened every file below and corrected the seed brief where it had drifted. Dis
 ### Persistence reality (VERIFIED — affects both parts)
 
 - `src/state/persistence.ts` saves the **whole `GameState` minus a VOLATILE blocklist** `{modal, bubble, view, viewParams, pendingView, craftingTab}` (`:6`, `:39`). It is a **blocklist, not a whitelist** — so any NEW persisted field (a new story flag, a new top-level object) is saved automatically with **no code change** and **no schema bump** *to write it*.
-- `loadSavedState` is **version-gated with NO migration** (`:23-29`): a save whose `version !== SAVE_SCHEMA_VERSION` is **deleted** and the player starts fresh. `SAVE_SCHEMA_VERSION = 45` (`src/constants.ts:207`). See `docs/projects/08-save-migration-ladder.md`.
+- `loadSavedState` is **version-gated with NO migration** (`:23-29`): a save whose `version !== SAVE_SCHEMA_VERSION` is **deleted** and the player starts fresh. `SAVE_SCHEMA_VERSION = 45` (`src/constants.ts:207`). See `docs/archive/projects/08-save-migration-ladder.md`.
 - **Consequence for this brief:** the finale flag (e.g. `story.flags.oldcapital_finale_seen`) and any small additive field default falsy/`?? default` on an old save, so reading them is safe **without** a bump. Therefore **prefer additive, default-safe story flags and avoid bumping `SAVE_SCHEMA_VERSION`** for this work — a bump wipes every save and is only justified if doc 08's migration ladder has landed. If you find you *must* change a persisted shape in a non-default-safe way, depend on doc 08 and add a migrator there; do not bump bare.
 
 ## Scope
@@ -228,6 +228,6 @@ After code changes: `graphify update .`.
 - `src/state/persistence.ts` — blocklist save (`:6,:39`), version gate no-migration (`:23-29`).
 - `src/constants.ts` — `SAVE_SCHEMA_VERSION = 45` (`:207`), `DAILY_REWARDS`, `dayKeyForDate`.
 - `src/__tests__/daily-streak.test.ts` — proves `LOGIN_TICK`/`dailyStreak`/`DAILY_REWARDS` already work.
-- `docs/projects/08-save-migration-ladder.md` — depend on this before any persisted-shape change requiring a bump.
+- `docs/archive/projects/08-save-migration-ladder.md` — depend on this before any persisted-shape change requiring a bump.
 - `.claude/skills/check-slice-action` — run for any new dispatched action (Part A's `STORY/OPEN_FINALE`).
 - CLAUDE.md (slice footgun, persistence, validation commands, live-verify, visual-golden host limits).

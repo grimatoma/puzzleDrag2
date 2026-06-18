@@ -1,7 +1,7 @@
 import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
-import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
+import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
 import { rollRatSpawn, tickRats } from "./features/farm/rats.js";
 import { canEnterBiome } from "./state/biomeAccess.js";
@@ -1262,7 +1262,9 @@ function coreReducer(state: GameState, action: Action): GameState {
       return { ...state, runes: (state.runes ?? 0) + amt };
     }
 
-    // Phase 10.3 — Sell a crafted item for its §10 sell price
+    // Sell a crafted item. Uses the unified sell price so an item pays the same
+    // as the equivalent SELL_RESOURCE would (closes the ~10× resource-vs-item
+    // payout fork); falls back to 10%-of-value when the key has no market price.
     case "SELL_ITEM": {
       const itemId = action.id ?? action.payload?.id;
       const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
@@ -1271,7 +1273,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const sellInv = zoneInventory(state, sellZone);
       const owned = inventoryQty(sellInv, itemId);
       if (owned < sellQty) return state;
-      const price = _sellPriceFor(itemId);
+      const price = _effectiveSellPrice(itemId, state.market?.prices);
       const proceeds = price * sellQty;
       return {
         ...state,

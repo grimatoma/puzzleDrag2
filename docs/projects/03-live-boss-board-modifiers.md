@@ -49,7 +49,7 @@ Net effect: when the player is actually on a board with an active boss, `fillBoa
 
 ### Persistence reality (matters for scope)
 - `boss` and `grid` are **both persisted** — `persistStateNow` (`src/state/persistence.ts:34-45`) whitelists all of `GameState` minus `VOLATILE` (`modal, bubble, view, viewParams, pendingView, craftingTab`, `:6`). `boss.modifierState` already round-trips (test at `boss-8.1.test.ts:130-138`).
-- `SAVE_SCHEMA_VERSION = 45` (`src/constants.ts:207`); any change to persisted **shape** wipes saves (no migration ladder yet — see doc `docs/projects/08-save-migration-ladder.md`).
+- `SAVE_SCHEMA_VERSION = 45` (`src/constants.ts:207`); any change to persisted **shape** wipes saves (no migration ladder yet — see doc `docs/archive/projects/08-save-migration-ladder.md`).
 
 ## Scope
 
@@ -205,4 +205,4 @@ In-scope changes touch only `TileObj` (runtime, not persisted) and re-use `froze
 - `src/balanceManager/wiki/status.ts:60-64` (the stale comment) + `status.test.ts`; `src/balanceManager/bossBalance.ts:29-36` (modifier labels/hints, reuse for UI copy).
 - Tests to model after: `src/__tests__/boss-8.1.test.ts` (modifier engine), `src/__tests__/board-regen-nonce.test.ts` (nonce/regen behavior), `src/__tests__/audit-boss.test.ts`, `src/__tests__/storm-boss.test.ts`.
 - Skills: `check-slice-action` (any new action type), `phaser-scene-debug` (state↔registry↔scene boundary), `pre-pr-check` (PR body). Memory: `live-game-preview-verify`, `phaser-scene-debug` patterns.
-- Related project doc: `docs/projects/08-save-migration-ladder.md` (required if `hidden`/`heat` deferred work is later pulled in — persisted grid shape change).
+- Related project doc: `docs/archive/projects/08-save-migration-ladder.md` (required if `hidden`/`heat` deferred work is later pulled in — persisted grid shape change).

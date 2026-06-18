@@ -591,10 +591,13 @@ function HearthTokensStrip({ state }: { state: GameState }) {
   const earned = useMemo(() => {
     // HeirloomsState's index sig is `unknown`; coerce per-key at the read site.
     const h = (state?.heirlooms ?? {}) as Record<string, number>;
+    // Token counts are keyed by HEARTH_TOKEN_FOR_TYPE (zones/data.ts):
+    // farm → heirloomSeed, mine → pactIron, harbor → tidesingerPearl.
+    // (The strip's display ids stay seed/iron/pearl to match HEARTH_TOKENS.)
     return {
-      seed:  (h.seed ?? 0) > 0,
-      iron:  (h.iron ?? 0) > 0,
-      pearl: (h.pearl ?? 0) > 0,
+      seed:  (h.heirloomSeed ?? 0) > 0,
+      iron:  (h.pactIron ?? 0) > 0,
+      pearl: (h.tidesingerPearl ?? 0) > 0,
     } as Record<string, boolean>;
   }, [state?.heirlooms]);
   return (

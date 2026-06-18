@@ -8,7 +8,7 @@ import {
   sourceTagsForItem,
   tagsForItemKey,
 } from "../features/inventory/tags.js";
-import { sellPriceFor } from "../features/market/pricing.js";
+import { sellPriceFor, effectiveSellPrice } from "../features/market/pricing.js";
 import { locBuilt } from "../locBuilt.js";
 import { iconLabel } from "../textures/iconRegistry.js";
 import Icon from "./Icon.jsx";
@@ -660,7 +660,9 @@ export function InventoryGrid({
       label: labelFor(key, item?.label),
       count: inventory[key] || 0,
       buyPrice: 0,
-      sellPrice: sellPriceFor(key),
+      // Unified with the resource sell path so the shown price matches what
+      // SELL_ITEM now pays (no resource-vs-item fork).
+      sellPrice: effectiveSellPrice(key, prices),
       orderStatus: status[key],
       orderTotal: totals[key],
     });
