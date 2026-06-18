@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
 import { parseZoneInventories } from "../types/inventory.js";
+import { migrateSave } from "./saveMigrations.js";
 import type { GameState } from "../types/state.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
@@ -21,11 +22,22 @@ export function loadSavedState(): SavedState | null {
     );
     if (!parsed || typeof parsed !== "object") return null;
     if (parsed.version !== SAVE_SCHEMA_VERSION) {
-      console.warn(
-        `[hearth] discarding save: schema version ${parsed.version} does not match current ${SAVE_SCHEMA_VERSION}; starting fresh`
-      );
-      try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
-      return null;
+      // Try the migration ladder before giving up. A laddered older version is
+      // upgraded in place (so both this gate and the redundant one in init.ts
+      // see version === current); forward/gap/corrupt saves still wipe exactly
+      // as before. The upgraded object isn't rewritten to disk here — the
+      // normal persist cycle (first state change / pagehide) does that, and the
+      // migration re-runs harmlessly until then.
+      const result = migrateSave(parsed as Record<string, unknown>);
+      if (!result.ok) {
+        console.warn(
+          `[hearth] discarding save: cannot migrate version ${parsed.version} ` +
+          `to ${SAVE_SCHEMA_VERSION} (${result.reason}); starting fresh`
+        );
+        try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+        return null;
+      }
+      return result.save as SavedState; // upgraded; version === SAVE_SCHEMA_VERSION
     }
     return parsed as SavedState;
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }

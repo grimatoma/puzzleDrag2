@@ -27,6 +27,8 @@ import { useCapToasts } from "./src/ui/useCapToasts.jsx";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
 import { zoneInventory } from "./src/state/zoneInventory.js";
 import { dismissBootSplash } from "./src/bootSplash.js";
+import { totalWarmthPerSec, OFFLINE_CAP_SECONDS } from "./src/features/embergarden/data.js";
+import WelcomeBack, { type WelcomeBackInfo } from "./src/features/embergarden/WelcomeBack.jsx";
 import {
   BoardFrame,
   BoardLayout,
@@ -40,6 +42,12 @@ import {
   DragGhost,
 } from "./src/ui/puzzleBoard.jsx";
 import { TOOL_BY_KEY, isTapTargetTool } from "./src/ui/toolRegistry.js";
+
+// Only surface the "welcome back, the hearth kept burning" modal when the
+// player was away long enough (and earned enough) for it to feel like a reward
+// rather than noise — a quick reload should never pop it.
+const WELCOME_MIN_AWAY_SEC = 5 * 60; // 5 minutes
+const WELCOME_MIN_GAIN = 1;          // at least 1 whole Warmth banked
 
 // The shared window augmentation lives in src/visualTesting/global.d.ts so
 // every module agrees on the shape of __phaserScene and friends.
@@ -337,6 +345,7 @@ export default function App() {
   const [inspectedTool, setInspectedTool] = useState<RuntimeTool | null>(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
+  const [welcomeBack, setWelcomeBack] = useState<WelcomeBackInfo | null>(null);
   // Once the player has opened the town, keep its (expensive) Phaser canvas
   // mounted — hidden behind CSS — so returning to it is instant instead of a
   // full cold reboot. See TownPhaserCanvas's lazy boot / pause-resume handling.
@@ -459,6 +468,40 @@ export default function App() {
   // Fire session_start story beat on first mount
   useEffect(() => {
     dispatch({ type: "SESSION_START" });
+  }, [dispatch]);
+
+  // Embergarden (idle layer) accrual: settle offline Warmth on mount and again
+  // whenever the tab returns to the foreground. Time is INJECTED via the payload
+  // so the reducer stays pure — this is the first real instance of the
+  // LOGIN_TICK time-injection pattern actually firing in the running app (the
+  // reducer case exists but was never dispatched). The 1s heartbeat only keeps
+  // the on-screen counter moving; correctness is delta-based, so a missed tick
+  // just accrues more next time, and the offline cap is enforced in `accrue`.
+  useEffect(() => {
+    // Compute the offline gain BEFORE the first tick consumes it, so the
+    // "welcome back" surface can report what the hearth banked while away.
+    // stateRef is seeded with the loaded state at first render, so this reads
+    // the persisted `lastTickAt` regardless of effect ordering.
+    const eg = stateRef.current.embergarden;
+    if (eg && eg.lastTickAt != null) {
+      const elapsedSec = (Date.now() - eg.lastTickAt) / 1000;
+      if (elapsedSec >= WELCOME_MIN_AWAY_SEC) {
+        const cappedSec = Math.min(elapsedSec, OFFLINE_CAP_SECONDS);
+        const gained = totalWarmthPerSec(eg.levels, eg.hearthlight) * cappedSec;
+        if (gained >= WELCOME_MIN_GAIN) {
+          setWelcomeBack({ gained, awaySec: cappedSec, capped: elapsedSec > OFFLINE_CAP_SECONDS });
+        }
+      }
+    }
+    const tick = () => dispatch({ type: "EMBERGARDEN/TICK", payload: { now: Date.now() } });
+    tick(); // settle offline gains immediately
+    const onVis = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVis);
+    const id = window.setInterval(tick, 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.clearInterval(id);
+    };
   }, [dispatch]);
 
   useEffect(() => {
@@ -632,6 +675,16 @@ export default function App() {
 
         {/* Feature modals */}
         <FeatureModals state={state} dispatch={dispatch} />
+
+        {/* "The hearth kept burning while you were away" — presentational only;
+            the offline Warmth was already settled by the mount tick. */}
+        {welcomeBack && (
+          <WelcomeBack
+            info={welcomeBack}
+            onClose={() => setWelcomeBack(null)}
+            onView={() => { setWelcomeBack(null); dispatch({ type: "SET_VIEW", view: "embergarden" }); }}
+          />
+        )}
 
         {/* Drag ghost — floats above everything while a hotbar drag is
             in-flight so the player can see the tool moving with their finger. */}

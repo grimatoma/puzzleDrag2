@@ -31,15 +31,44 @@ describe("persistence", () => {
     expect(state).toEqual(validData);
   });
 
-  test("loadSavedState returns null and clears save when version mismatches", () => {
+  test("loadSavedState returns null and clears save for an un-laddered (gap) version", () => {
+    // -1 is below current with no migrator rung → fail-safe discard, exactly as
+    // the old destructive behaviour (now via the migration ladder's gap guard).
     const oldData = { version: -1, something: "else" };
     localStorage.setItem(SAVE_KEY, JSON.stringify(oldData));
     const state = loadSavedState();
     expect(state).toBeNull();
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("discarding save: schema version")
+      expect.stringContaining("cannot migrate version")
     );
+  });
+
+  test("loadSavedState returns null and clears save for a forward (newer) version", () => {
+    const forwardData = { version: SAVE_SCHEMA_VERSION + 1, something: "else" };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(forwardData));
+    const state = loadSavedState();
+    expect(state).toBeNull();
+    expect(localStorage.getItem(SAVE_KEY)).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("forward-version")
+    );
+  });
+
+  test("loadSavedState UPGRADES a laddered older save instead of wiping it", () => {
+    // A v45 save (one below current) is reachable via MIGRATIONS[45]: it should
+    // come back upgraded (version bumped, embergarden defaulted), pre-existing
+    // fields preserved, and the save NOT removed from storage.
+    const v45 = { version: 45, coins: 999, inventory: { home: { supplies: 3 } } };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(v45));
+    const state = loadSavedState() as Record<string, unknown>;
+    expect(state).not.toBeNull();
+    expect(state.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(state.coins).toBe(999); // progress preserved, not reset
+    expect(state.embergarden).toEqual({
+      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
+    });
+    expect(localStorage.getItem(SAVE_KEY)).not.toBeNull(); // not wiped
   });
 
   test("loadSavedState returns null when data is not an object", () => {

@@ -202,9 +202,12 @@ export const SETTLEMENT_BIOMES = Object.freeze({
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).
 export const DEFAULT_HOME_BIOME = "prairie";
 
-// Save schema version. Forward migrations are not maintained — bump this
-// whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 45;
+// Save schema version. When persisted state changes shape: (1) bump this,
+// (2) add a MIGRATIONS[oldVersion] entry in src/state/saveMigrations.ts that
+// upgrades old -> new (and sets `version`), (3) add a fixture save under
+// src/__tests__/fixtures/saves/ plus a migrator test. Saves with no migrator
+// path (gaps, forward versions, corrupt) are still discarded by loadSavedState.
+export const SAVE_SCHEMA_VERSION = 46;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
