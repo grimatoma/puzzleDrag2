@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
@@ -30,7 +30,8 @@ import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
-import { INITIAL_STORY_STATE } from "./story.js";
+import { INITIAL_STORY_STATE, setStoryOverrides } from "./story.js";
+import type { StoryOverrides } from "./state/applyStoryOverrides.js";
 import { initialFlagState } from "./flags.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
@@ -44,7 +45,10 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
+import * as embergarden from "./features/embergarden/slice.js";
+import * as fiber from "./features/fiber/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
+import { hearthlightBoardCoinBonus } from "./features/embergarden/data.js";
 import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
@@ -61,7 +65,14 @@ export { evaluateAndApplyStoryBeat, maybeFireResourceBeats };
 import { createFreshState, generateSaveSeed, initialState } from "./state/init.js";
 export { createFreshState, generateSaveSeed, initialState };
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary];
+// Apply authored `/story/` editor overrides (the `draft.story` slice of the
+// `hearth.balance.draft` localStorage doc, parsed into `BALANCE_OVERRIDES`) onto
+// the built-in beat arrays before any story beat is evaluated. `setStoryOverrides`
+// is total and falls back to the built-ins on a malformed draft, so this can
+// never brick boot. See src/state/applyStoryOverrides.ts.
+setStoryOverrides((BALANCE_OVERRIDES.story as StoryOverrides | undefined) ?? null);
+
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, fiber, embergarden];
 
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
@@ -401,9 +412,17 @@ function coreReducer(state: GameState, action: Action): GameState {
       const baseCoinsGain = Math.max(1, Math.floor(gained * (value ?? 1))) + coinHookBonus;
       // Phase 6b — coin_gain_mult boons scale chain coin reward.
       const coinMultBoon = boonEffectMult(state, "coin_gain_mult");
-      const coinsGain = coinMultBoon > 1
+      const afterBoonCoins = coinMultBoon > 1
         ? Math.floor(baseCoinsGain * coinMultBoon)
         : baseCoinsGain;
+      // Embergarden (idle layer) prestige boon: a small, HARD-CAPPED (+15% max)
+      // bump to chain coin payout — the only place idle progress touches board
+      // balance. hearthlight 0 (a non-idle player) yields exactly afterBoonCoins,
+      // so the board behaves identically for anyone who never opens the Hearth.
+      const egCoinBonus = hearthlightBoardCoinBonus(state.embergarden?.hearthlight ?? 0);
+      const coinsGain = egCoinBonus > 0
+        ? Math.floor(afterBoonCoins * (1 + egCoinBonus))
+        : afterBoonCoins;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turn = boardTurnPatch(state);
@@ -1631,6 +1650,16 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Run summary modal open/close — owned by runSummary/slice
   "RUN_SUMMARY/OPEN",
   "RUN_SUMMARY/CLOSE",
+  // Fiber Crush minigame — all owned by fiber/slice (coreReducer handles none).
+  "FIBER/START_LEVEL",
+  "FIBER/RESOLVE_MOVE",
+  "FIBER/COMPLETE_LEVEL",
+  "FIBER/EXIT",
+  // Embergarden (idle layer) — owned entirely by embergarden/slice. coreReducer
+  // has no case for these, so without SLICE_PRIMARY registration they'd no-op.
+  "EMBERGARDEN/TICK",
+  "EMBERGARDEN/BUY_GENERATOR",
+  "EMBERGARDEN/REKINDLE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE

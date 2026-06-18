@@ -422,6 +422,37 @@ export interface FishForceTideFlipAction {
   type: "FISH/FORCE_TIDE_FLIP";
 }
 
+// ── Fiber Crush (feature slice) ──────────────────────────────────────────────
+
+export interface FiberStartLevelAction {
+  type: "FIBER/START_LEVEL";
+  levelId: string;
+}
+
+export interface FiberResolveMovePayload {
+  /** Per-colour cleared tally from resolveSwap (FiberColor → count). */
+  cleared: Partial<Record<string, number>>;
+  /** Specials created this resolution, by type (loom count drives "weave"). */
+  created?: Partial<Record<string, number>>;
+  movesSpent: number;
+}
+
+export interface FiberResolveMoveAction {
+  type: "FIBER/RESOLVE_MOVE";
+  payload: FiberResolveMovePayload;
+}
+
+export interface FiberCompleteLevelAction {
+  type: "FIBER/COMPLETE_LEVEL";
+  levelId: string;
+  won: boolean;
+  stars?: number;
+}
+
+export interface FiberExitAction {
+  type: "FIBER/EXIT";
+}
+
 // ── Modal / NPC / migration (core reducer) ───────────────────────────────────
 
 export interface CancelToolAction {
@@ -446,6 +477,25 @@ export interface DismissBubbleAction {
 
 export interface MigrateApplyCapsAction {
   type: "MIGRATE/APPLY_CAPS";
+}
+
+// ── Embergarden / Hearthkeeping (idle layer; owned by embergarden/slice) ─────
+// Time is injected via `now` (epoch ms) so the reducer stays pure, exactly like
+// LOGIN_TICK's `today`.
+
+export interface EmbergardenTickAction {
+  type: "EMBERGARDEN/TICK";
+  payload?: { now?: number };
+}
+
+export interface EmbergardenBuyGeneratorAction {
+  type: "EMBERGARDEN/BUY_GENERATOR";
+  payload?: { id?: string; now?: number };
+}
+
+export interface EmbergardenRekindleAction {
+  type: "EMBERGARDEN/REKINDLE";
+  payload?: { now?: number };
 }
 
 // ── Run summary (catalog + slice) ───────────────────────────────────────────
@@ -621,11 +671,18 @@ export type TypedActionType =
   | AdvanceSeasonAction["type"]
   | ActivateRuneWildcardAction["type"]
   | FishForceTideFlipAction["type"]
+  | FiberStartLevelAction["type"]
+  | FiberResolveMoveAction["type"]
+  | FiberCompleteLevelAction["type"]
+  | FiberExitAction["type"]
   | CancelToolAction["type"]
   | CloseModalAction["type"]
   | PopNpcAction["type"]
   | DismissBubbleAction["type"]
   | MigrateApplyCapsAction["type"]
+  | EmbergardenTickAction["type"]
+  | EmbergardenBuyGeneratorAction["type"]
+  | EmbergardenRekindleAction["type"]
   | RunSummaryOpenAction["type"]
   | RunSummaryCloseAction["type"]
   | SettingsOpenDebugAction["type"]
@@ -711,11 +768,18 @@ export type TypedAction =
   | AdvanceSeasonAction
   | ActivateRuneWildcardAction
   | FishForceTideFlipAction
+  | FiberStartLevelAction
+  | FiberResolveMoveAction
+  | FiberCompleteLevelAction
+  | FiberExitAction
   | CancelToolAction
   | CloseModalAction
   | PopNpcAction
   | DismissBubbleAction
   | MigrateApplyCapsAction
+  | EmbergardenTickAction
+  | EmbergardenBuyGeneratorAction
+  | EmbergardenRekindleAction
   | RunSummaryOpenAction
   | RunSummaryCloseAction
   | SettingsOpenDebugAction

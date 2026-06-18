@@ -12,6 +12,7 @@ import {
   isFlagOnlyCond,
   isStateCond,
 } from "./config/progression/storyBridge.js";
+import { applyStoryOverrides, type StoryOverrides } from "./state/applyStoryOverrides.js";
 
 export const INITIAL_STORY_STATE = {
   act: 1,
@@ -441,12 +442,55 @@ export const SIDE_BEATS: Beat[] = [
   },
 ];
 
+// ─── Effective (override-applied) beats ──────────────────────────────────────
+// The RUNTIME evaluators below read these, NOT the raw STORY_BEATS / SIDE_BEATS
+// above. They start as the built-ins and are re-derived by `setStoryOverrides`,
+// which src/state.ts calls once at boot with `BALANCE_OVERRIDES.story` so authored
+// edits in the `/story/` editor (saved to the `hearth.balance.draft` localStorage
+// key) reach the running game. The raw arrays stay exported unchanged as the
+// built-in source of truth the editor / chronicle / tests diff against.
+
+let EFFECTIVE_STORY_BEATS: Beat[] = STORY_BEATS as Beat[];
+let EFFECTIVE_SIDE_BEATS: Beat[] = SIDE_BEATS as Beat[];
+
+/**
+ * Re-derive the effective beat arrays from a `draft.story` override slice.
+ * Called once at boot (src/state.ts) with the parsed `BALANCE_OVERRIDES.story`,
+ * and by tests to inject an override. A null / empty override restores the exact
+ * built-ins (object identity preserved for unpatched beats), so it is always safe
+ * to call. newBeats route by their `act` (numeric → main chain, else → side).
+ */
+export function setStoryOverrides(story: StoryOverrides | null | undefined): void {
+  try {
+    const s = story && typeof story === "object" ? story : null;
+    const hasOverride = !!s && (
+      (!!s.beats && Object.keys(s.beats).length > 0)
+      || (Array.isArray(s.newBeats) && s.newBeats.length > 0)
+      || (Array.isArray(s.suppressedBeats) && s.suppressedBeats.length > 0)
+    );
+    if (!hasOverride) {
+      // No meaningful override — alias the original arrays directly (zero-alloc,
+      // and keeps the built-ins reference-identical so nothing observes a change).
+      EFFECTIVE_STORY_BEATS = STORY_BEATS as Beat[];
+      EFFECTIVE_SIDE_BEATS = SIDE_BEATS as Beat[];
+      return;
+    }
+    EFFECTIVE_STORY_BEATS = applyStoryOverrides(STORY_BEATS as Beat[], s, "main");
+    EFFECTIVE_SIDE_BEATS = applyStoryOverrides(SIDE_BEATS as Beat[], s, "side");
+  } catch {
+    // applyStoryOverrides is total and must not throw, but never let a malformed
+    // draft brick story progression — fall back to the built-ins.
+    EFFECTIVE_STORY_BEATS = STORY_BEATS as Beat[];
+    EFFECTIVE_SIDE_BEATS = SIDE_BEATS as Beat[];
+  }
+}
+
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
-/** Find a beat by id across both the main and side beat lists. */
+/** Find a beat by id across both the main and side beat lists (override-applied). */
 export function findBeat(id: string): Beat | null {
-  return (STORY_BEATS as readonly Beat[]).find((b) => b.id === id)
-    || (SIDE_BEATS as readonly Beat[]).find((b) => b.id === id)
+  return EFFECTIVE_STORY_BEATS.find((b) => b.id === id)
+    || EFFECTIVE_SIDE_BEATS.find((b) => b.id === id)
     || null;
 }
 
@@ -504,7 +548,7 @@ export interface StoryState {
  * Beats without one use an auto-generated "_fired_<id>" flag set when the beat fires.
  */
 export function isBeatComplete(state: StoryState, beatId: string): boolean {
-  const beat = (STORY_BEATS as readonly Beat[]).find((b) => b.id === beatId);
+  const beat = EFFECTIVE_STORY_BEATS.find((b) => b.id === beatId);
   if (!beat) return false;
   // Check explicit flag first; fall back to auto-generated fired marker.
   const explicitKey = beat.onComplete?.setFlag;
@@ -517,7 +561,7 @@ export function isBeatComplete(state: StoryState, beatId: string): boolean {
  * Returns the first beat whose act ≤ state.act and that has not yet been completed.
  */
 export function nextPendingBeat(state: StoryState): Beat | undefined {
-  return (STORY_BEATS as readonly Beat[]).find(
+  return EFFECTIVE_STORY_BEATS.find(
     (b) => (b.act ?? 0) <= state.act && !isBeatComplete(state, b.id)
   );
 }
@@ -672,7 +716,7 @@ export function evaluateSideBeats(
 ): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } | null {
   const flags = ((gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags) ?? {};
   let repeatCandidate: Beat | null = null;
-  for (const beat of SIDE_BEATS) {
+  for (const beat of EFFECTIVE_SIDE_BEATS) {
     // In flag-only mode, skip any beat whose condition isn't purely flag-driven.
     if (opts.onlyFlagConditions && beat.when && !isFlagOnlyCond(beat.when)) continue;
     if (!sideTriggerMatches(beat, event, gameState)) continue;

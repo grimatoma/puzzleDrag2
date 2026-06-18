@@ -133,6 +133,12 @@ export enum ResourceKey {
   IronRation = "iron_ration",
   FestivalLoaf = "festival_loaf",
   WeddingPie = "wedding_pie",
+  // Fiber Crush textile chain (produced by the Fiber Crush minigame, never on
+  // the chain board — see src/game/fiber/). Sellable + order-able like any goods.
+  Wool = "wool",
+  Yarn = "yarn",
+  Dye = "dye",
+  Cloth = "cloth",
 }
 
 export enum ToolKey {
