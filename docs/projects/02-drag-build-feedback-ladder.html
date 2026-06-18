@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drag-Build Feedback Ladder — audio + haptics (doc 02)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════ THEME — "rising tick + tone" : punchy orange + signal cyan on cool paper ════ */
+  :root{
+    --ink:#1c2230; --muted:#667085; --line:#e2e6ee; --bg:#f6f8fc;
+    --paper:#ffffff; --code:#eef2f9;
+    --accent:#e8590c;       /* rising-tick orange (energy / vibration)  */
+    --accent2:#0e9bb8;      /* tone cyan (the audio note)               */
+    --shadow:0 1px 2px rgba(20,28,48,.06), 0 6px 20px -10px rgba(20,28,48,.22);
+    --ok:#2f9e44; --warn:#f59f00; --info:#1971c2; --danger:#b5341f; --idle:#868e96;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 82% -8%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #eef1f8 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#365072;}
+  pre{background:#10182a;color:#dbe4f3;padding:.95rem 1.1rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.83rem/1.55 var(--mono);}
+  pre code{background:none;padding:0;color:inherit;}
+  pre .c{color:#7c89a3;font-style:italic;}
+  pre .k{color:#ff9e64;} pre .s{color:#9ece6a;} pre .f{color:#7dcfff;}
+
+  .page{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.5rem 1.6rem 1.15rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,transparent), color-mix(in srgb,var(--accent2) 8%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.75rem/1.06 var(--serif);letter-spacing:-.018em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:#3a4151;font-size:1.06rem;margin:.2rem 0 .8rem;max-width:68ch;}
+  .meta{font-size:.82rem;color:var(--muted);margin:.4rem 0 .75rem;}
+  .meta b{color:var(--accent);font-weight:700;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+  .chip.alt{background:color-mix(in srgb,var(--accent2) 12%,#fff);color:#0a7d96;border-color:color-mix(in srgb,var(--accent2) 32%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(20,28,48,.3);}
+
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.85rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.22rem/1.25 var(--serif);margin-top:1.5rem;color:var(--ink);}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.88rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+  td code{white-space:nowrap;}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);color:#3a2a00;} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(20,28,48,.08),0 12px 28px -12px rgba(20,28,48,.32);}
+  .card.alt{border-left-color:var(--accent2);}
+  .card h3{margin-top:.2rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.45rem 0;color:var(--ink);}
+  details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:.4rem;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Drag-Build Feedback Ladder</h1>
+    <p class="sub">A per-tile audio + haptic ladder <em>during</em> the drag-build chain — so building feels as alive as the release payoff. Pure presentation: no economy, no state shape, no persisted-data changes.</p>
+    <p class="meta">puzzleDrag2 · project doc <b>02</b> · Status: <b>Implemented</b> — <a href="https://github.com/grimatoma/puzzleDrag2/pull/1241">PR&nbsp;#1241</a> (review-ready) · Effort S · Last updated 2026-06-18</p>
+    <div class="chips">
+      <span class="chip">audio</span>
+      <span class="chip">haptics</span>
+      <span class="chip">game-feel</span>
+      <span class="chip alt">presentation-only</span>
+      <span class="chip alt">no SAVE_SCHEMA bump</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="design">Design &amp; build</button>
+    <button class="tab" role="tab" data-tab="validation">Validation</button>
+    <button class="tab" role="tab" data-tab="reference">Reference</button>
+  </nav>
+
+  <main>
+
+    <!-- ════════════════ OVERVIEW ════════════════ -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+
+      <section id="summary">
+        <h2>Overview</h2>
+        <p>Drag-to-build a chain was almost <strong>silent during the drag</strong>. The only escalating audio (<code>chainCollect</code>, pitch rising with chain length) fired <em>after</em> release, and the only haptic during the drag was a single <code>navigator.vibrate(10)</code> at drag-start. The drag was heavily juiced <em>visually</em> (growing line segments, ring bursts, star previews, validity colour-tween) — but with no per-tile <em>sound</em> and no escalating <em>haptic</em>, building felt flat next to the satisfying release.</p>
+        <p>This change adds a <strong>per-tile feedback ladder during the drag</strong> at the single chokepoint, <code>addToPath</code>: a rising-pitch tick on each successful tile add, a distinct confirm cue the moment the chain first crosses the collectable threshold, and an escalating haptic — for maximum game-feel ROI per line of code.</p>
+        <div class="box tip"><b>TL;DR.</b> Two new synth sounds + one tiny pure helper module + a wired-up <code>addToPath</code>. <strong>Zero</strong> economy / state-shape / persisted-data changes — no <code>SAVE_SCHEMA_VERSION</code> bump, no new actions, no slice touched. Fully revertible.</div>
+      </section>
+
+      <section id="shipped">
+        <h2>What shipped</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>🔊 Per-tile tick</h3>
+            <p>A <code>chainTick</code> bleep on every successful add, <strong>pitched up by chain length</strong> so a long chain climbs audibly (a 7-chain's last tick is clearly higher than its first).</p>
+          </div>
+          <div class="card alt">
+            <h3>🔔 Threshold confirm</h3>
+            <p>A distinct <code>chainReady</code> two-note cue the instant the chain first reaches <code>_effectiveMinChain()</code> (base 3, raised by an active boss). Fired <strong>once per drag</strong>.</p>
+          </div>
+          <div class="card">
+            <h3>📳 Escalating haptic</h3>
+            <p>A per-add <code>navigator.vibrate</code> that grows with length, with a stronger bump at the crossing — gated on <code>hapticsOn</code>, the same gate <code>startPath</code> already uses.</p>
+          </div>
+        </div>
+        <p class="legend">
+          <span><span class="pill ok">done</span> shipped in PR #1241</span>
+          <span><span class="pill idle">deferred</span> optional, out of this scope</span>
+        </p>
+        <table>
+          <thead><tr><th>Deliverable</th><th>File</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Two synth sounds (<code>chainTick</code>, <code>chainReady</code>)</td><td><code>src/audio/index.ts</code></td><td><span class="pill ok">done</span></td></tr>
+            <tr><td>Pure helpers (pitch ladder, crossing predicate, haptic curve)</td><td><code>src/game/dragFeedback.ts</code></td><td><span class="pill ok">done</span></td></tr>
+            <tr><td>Wire the ladder into the funnel</td><td><code>src/GameScene.ts</code> · <code>addToPath</code></td><td><span class="pill ok">done</span></td></tr>
+            <tr><td>Unit tests (helpers + sound registration)</td><td><code>dragFeedback.test.ts</code> · <code>chain-feedback-audio.test.ts</code></td><td><span class="pill ok">done</span></td></tr>
+            <tr><td>Cross-collect "partner eligible" cue</td><td>(optional Step 4)</td><td><span class="pill idle">deferred</span></td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>Doc-drift note.</b> The repo's <code>CLAUDE.md</code> still says <code>.js</code>/<code>.jsx</code>; the real files are <code>.ts</code>/<code>.tsx</code>. This doc uses the real paths.</div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════ DESIGN & BUILD ════════════════ -->
+    <div class="panel" id="design" role="tabpanel" aria-label="Design and build">
+
+      <section id="diagram">
+        <h2>Where the ladder lives</h2>
+        <p>Both <code>startPath</code> (drag start) and <code>tryAddToPath</code> (pointer-move, extend) route a successful add through the single funnel <code>addToPath</code>. That's the one place the tick + confirm + haptic belong — fired between the <code>path.push</code> and <code>redrawPath</code> so sound lands on the same frame as the visual ring-burst. The release path (<code>endPath → collectPath</code>) and its post-release <code>chainCollect</code> payoff are <strong>untouched</strong>.</p>
+        <div class="diagram">
+          <svg viewBox="0 0 720 430" width="100%" role="img" aria-label="Drag funnel: startPath and tryAddToPath both call addToPath, which fires chainTick, chainReady, and vibrate, then redrawPath and emitChainUpdate; the release path through endPath and collectPath is unchanged.">
+            <defs>
+              <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+              <marker id="arrA" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600">
+              <!-- inputs -->
+              <rect x="24"  y="26"  width="234" height="46" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="141" y="46" text-anchor="middle" fill="var(--ink)">pointerdown → startPath(tile)</text>
+              <text x="141" y="63" text-anchor="middle" fill="var(--muted)" font-size="11">drag begins · vibrate(10) once</text>
+
+              <rect x="24"  y="92"  width="234" height="46" rx="10" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/>
+              <text x="141" y="112" text-anchor="middle" fill="var(--ink)">pointermove → tryAddToPath(tile)</text>
+              <text x="141" y="129" text-anchor="middle" fill="var(--muted)" font-size="11">backtrack pops · same-key+adj extends</text>
+
+              <!-- funnel -->
+              <rect x="40" y="184" width="202" height="60" rx="12" fill="color-mix(in srgb,var(--accent) 16%,#fff)" stroke="var(--accent)" stroke-width="2.5"/>
+              <text x="141" y="208" text-anchor="middle" fill="var(--ink)" font-weight="800" font-size="15">addToPath(tile)</text>
+              <text x="141" y="227" text-anchor="middle" fill="var(--accent)" font-size="11.5" font-weight="700">THE FUNNEL — ladder injected here</text>
+
+              <line x1="141" y1="72"  x2="141" y2="90"  stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="141" y1="138" x2="141" y2="182" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+
+              <!-- feedback outputs -->
+              <rect x="430" y="150" width="262" height="40" rx="9" fill="#fff" stroke="var(--accent)"/>
+              <text x="446" y="174" fill="var(--ink)">🔊 chainTick &nbsp;<tspan fill="var(--muted)" font-size="11">pitch = tickPitch(len)</tspan></text>
+
+              <rect x="430" y="198" width="262" height="40" rx="9" fill="#fff" stroke="var(--accent)"/>
+              <text x="446" y="222" fill="var(--ink)">🔔 chainReady &nbsp;<tspan fill="var(--muted)" font-size="11">once @ crossing</tspan></text>
+
+              <rect x="430" y="246" width="262" height="40" rx="9" fill="#fff" stroke="var(--accent)"/>
+              <text x="446" y="270" fill="var(--ink)">📳 vibrate &nbsp;<tspan fill="var(--muted)" font-size="11">tickHapticMs(len) · 50 @ cross</tspan></text>
+
+              <line x1="242" y1="206" x2="426" y2="170" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrA)"/>
+              <line x1="242" y1="216" x2="426" y2="218" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrA)"/>
+              <line x1="242" y1="226" x2="426" y2="266" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrA)"/>
+
+              <!-- continue -->
+              <rect x="40" y="286" width="202" height="44" rx="10" fill="color-mix(in srgb,var(--bg) 40%,#fff)" stroke="var(--line)"/>
+              <text x="141" y="313" text-anchor="middle" fill="var(--ink)">redrawPath · _emitChainUpdate</text>
+              <line x1="141" y1="244" x2="141" y2="284" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+
+              <!-- release lane (unchanged) -->
+              <rect x="24" y="364" width="668" height="46" rx="10" fill="color-mix(in srgb,var(--ok) 8%,#fff)" stroke="var(--ok)" stroke-dasharray="5 4"/>
+              <text x="44" y="384" fill="var(--ink)">pointerup → endPath → collectPath → CHAIN_COLLECTED</text>
+              <text x="44" y="401" fill="var(--muted)" font-size="11">post-release chainCollect sound + haptic in useAudio.tsx — UNCHANGED (the payoff stays the payoff)</text>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section id="sounds">
+        <h2>Step 1 — two new sounds</h2>
+        <p>Added to the <code>SOUNDS</code> record in <code>src/audio/index.ts</code>, mirroring the existing step shape and the low ~0.05 gain range. <code>play()</code> is unchanged — it already accepts <code>{ pitch }</code>, clamps it to <code>[0.5, 2.5]</code>, and self-gates on <code>enabled.sfx</code>.</p>
+        <pre><code><span class="c">// Per-tile tick during a drag-build. Pitched up by chain length at the call site.</span>
+chainTick: {
+  steps: [{ freq: 330, freqEnd: 440, dur: 45, type: <span class="s">'triangle'</span>, gain: 0.05 }],
+},
+<span class="c">// Chain crossed the collectable threshold — distinct, brighter two-note confirm.</span>
+chainReady: {
+  steps: [
+    { freq: 523, dur: 55, type: <span class="s">'square'</span>, gain: 0.05, gap: 60 },
+    { freq: 784, dur: 70, type: <span class="s">'square'</span>, gain: 0.05, gap: 0, delay: 0.060 },
+  ],
+},</code></pre>
+        <table>
+          <thead><tr><th>Sound</th><th>Role</th><th>Shape</th></tr></thead>
+          <tbody>
+            <tr><td><code>chainTick</code></td><td>per-tile add</td><td>330→440 Hz triangle, 45 ms — short rising bleep</td></tr>
+            <tr><td><code>chainReady</code></td><td>threshold crossing</td><td>523 + 784 Hz square two-note — climbs above the tick's range, reads apart</td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>No volume control exists.</b> The audio system has <code>{ sfx, music }</code> booleans only — gain is baked per-step in <code>SOUNDS</code>. The dormant <code>chainStart</code> sound was left untouched (the optional "wire it into <code>startPath</code>" freebie was not taken; the first add already ticks).</div>
+      </section>
+
+      <section id="helpers">
+        <h2>Step 2 — pure helpers (no Phaser, unit-testable)</h2>
+        <p>In a new <code>src/game/dragFeedback.ts</code> — kept free of <code>window</code> / <code>AudioContext</code> so they unit-test in node and co-locate a <code>.test.ts</code> like the other <code>src/game/*.ts</code> pure helpers.</p>
+        <pre><code><span class="k">export function</span> <span class="f">tickPitch</span>(len: number): number {
+  <span class="c">// 1.0 at len 1, +~6%/tile, clamped to 2.2 so it never tops play()'s 2.5 ceiling.</span>
+  <span class="k">return</span> Math.min(2.2, 1 + Math.max(0, len - 1) * 0.06);
+}
+
+<span class="k">export function</span> <span class="f">crossesThreshold</span>(prevLen, newLen, minChain): boolean {
+  <span class="c">// True only on the single add where the chain first becomes collectable.</span>
+  <span class="k">return</span> prevLen &lt; minChain &amp;&amp; newLen &gt;= minChain;
+}
+
+<span class="k">export function</span> <span class="f">tickHapticMs</span>(len: number): number {
+  <span class="c">// 0 below len 2 (startPath already buzzed len 1); escalating, clamped 35ms.</span>
+  <span class="k">if</span> (len &lt; 2) <span class="k">return</span> 0;
+  <span class="k">return</span> Math.min(35, 6 + len * 3);
+}</code></pre>
+      </section>
+
+      <section id="wiring">
+        <h2>Step 3 — wire into the funnel</h2>
+        <p><code>addToPath</code> reads the length <em>before</em> and <em>after</em> the push, fires the tick, fires the confirm once (latched), and the haptic — all gated correctly — then proceeds to the existing redraw/emit.</p>
+        <pre><code><span class="f">addToPath</span>(tile: TileObj): void {
+  <span class="k">const</span> prevLen = this.path.length;          <span class="c">// length BEFORE this add</span>
+  tile.setSelected(<span class="k">true</span>);
+  tile.pulse();
+  this.path.push(tile);
+  <span class="k">const</span> len = this.path.length;              <span class="c">// length AFTER this add</span>
+  <span class="k">const</span> minChain = this._effectiveMinChain();
+  <span class="k">const</span> justBecameReady =
+    crossesThreshold(prevLen, len, minChain) &amp;&amp; !this._readyFiredThisDrag;
+
+  <span class="f">play</span>(<span class="s">"chainTick"</span>, { pitch: tickPitch(len) });   <span class="c">// per-tile rising tick</span>
+  <span class="k">if</span> (justBecameReady) {
+    <span class="f">play</span>(<span class="s">"chainReady"</span>);
+    this._readyFiredThisDrag = <span class="k">true</span>;
+  }
+
+  <span class="k">if</span> (getRegistry(this.registry, <span class="s">"hapticsOn"</span>) &amp;&amp; navigator.vibrate) {
+    <span class="k">const</span> ms = justBecameReady ? 50 : tickHapticMs(len); <span class="c">// stronger at the crossing</span>
+    <span class="k">if</span> (ms &gt; 0) { <span class="k">try</span> { navigator.vibrate(ms); } <span class="k">catch</span> { <span class="c">/* unsupported */</span> } }
+  }
+
+  this.redrawPath();
+  this.updateGrassHover();
+  this._emitChainUpdate();
+}</code></pre>
+        <p>A one-shot latch <code>_readyFiredThisDrag</code> (a new class field) is reset in <code>clearPath</code> — which every drag-start routes through via <code>startPath → clearPath(false)</code> — so the confirm fires at most once per drag even across a backtrack re-cross.</p>
+      </section>
+
+      <section id="decisions">
+        <h2>Design decisions</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Latch, not replay</h3>
+            <p>On a backtrack below the threshold then re-cross, the confirm is <strong>suppressed</strong> by the latch. A skeptic could argue a re-cross is a real re-confirmation; the latch was chosen so the cue reads as a single deterministic "now collectable" moment.</p>
+          </div>
+          <div class="card alt">
+            <h3>Scene-side, not React-side</h3>
+            <p>Firing inside <code>addToPath</code> (option A) lands the audio on the same frame as the ring-burst and reuses the <code>hapticsOn</code> registry read <code>startPath</code> already does. The <code>CHAIN_UPDATE</code>-delta alternative (option B) is one event-hop later and fiddlier (it also emits on backtrack and drag-end).</p>
+          </div>
+          <div class="card">
+            <h3>Cross-collect cue deferred</h3>
+            <p>The optional "partner became eligible" blip runs a grid scan on every add and is the least certain to feel good — deferred to keep this tight and CPU-cheap.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════ VALIDATION ════════════════ -->
+    <div class="panel" id="validation" role="tabpanel" aria-label="Validation">
+
+      <section id="gates">
+        <h2>Gates</h2>
+        <p>All four required gates pass (run from the worktree via the parent-repo <code>node_modules</code> junction).</p>
+        <table>
+          <thead><tr><th>Gate</th><th>Command</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Lint</td><td><code>npm run lint</code></td><td><span class="pill ok">pass</span> clean</td></tr>
+            <tr><td>Types</td><td><code>npm run typecheck</code></td><td><span class="pill ok">pass</span> clean</td></tr>
+            <tr><td>Unit tests</td><td><code>npm test</code></td><td><span class="pill ok">pass</span> 3713 passed / 2 skipped · 319 files (incl. 17 new)</td></tr>
+            <tr><td>Build</td><td><code>npm run build</code></td><td><span class="pill ok">pass</span> exit 0</td></tr>
+          </tbody>
+        </table>
+        <div class="box"><b>Why no live/visual check.</b> This is audio + haptics — not assertable in Playwright and not observable in a screenshot, and <code>preview_screenshot</code> hangs on this Windows host. Visual goldens are not relevant (no on-canvas change) and are not re-baselineable here anyway. Verification is unit tests + the gates + the static trace below.</div>
+      </section>
+
+      <section id="criteria">
+        <h2>Success criteria</h2>
+        <table>
+          <thead><tr><th>Criterion</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Audible tick on each added tile; pitch rises as the chain grows</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>Distinct <code>chainReady</code> confirm exactly once at the first <code>_effectiveMinChain()</code> crossing</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>Escalating haptic per add when <code>hapticsOn</code>; stronger at the crossing</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>Sound (sfx) OFF → no tick/confirm (via <code>play()</code> self-gate)</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>Haptics OFF → no <code>navigator.vibrate</code> during the drag</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>Post-release <code>chainCollect</code> sound + haptic unchanged</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>No new persisted settings, no <code>SAVE_SCHEMA_VERSION</code> bump, no new actions</td><td><span class="pill ok">met</span></td></tr>
+            <tr><td>lint · typecheck · test · build all pass</td><td><span class="pill ok">met</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="trace">
+        <h2>Static behaviour trace</h2>
+        <p>Traced through the funnel (the canvas layer has zero unit coverage, so behaviour is reasoned + the pure helpers are tested directly):</p>
+        <ul>
+          <li><b>Straight drag to length 5 (minChain 3):</b> 5 <code>chainTick</code>s with rising pitch (1.0 → ~1.24), <code>chainReady</code> once at the 3rd add, crossing haptic 50 ms.</li>
+          <li><b>Backtrack 5 → 2 → 4:</b> re-cross at len 3 sees <code>_readyFiredThisDrag === true</code> → no confirm replay.</li>
+          <li><b>sfx OFF:</b> <code>play()</code> short-circuits at <code>if (!enabled.sfx) return</code> — scene-side calls cannot bypass it.</li>
+          <li><b>haptics OFF:</b> the <code>getRegistry(registry,"hapticsOn")</code> gate skips the whole <code>vibrate</code> block.</li>
+          <li><b>Boss minChain 5:</b> <code>chainReady</code> fires at length 5, not 3, via the live <code>_effectiveMinChain()</code>.</li>
+        </ul>
+      </section>
+
+      <section id="tests">
+        <h2>New tests</h2>
+        <details>
+          <summary><code>src/game/dragFeedback.test.ts</code> — the pure helpers</summary>
+          <ul>
+            <li><code>tickPitch</code>: 1.0 at len 1; monotonic increasing; clamped ≤ 2.2 (and &lt; play()'s 2.5 ceiling); floors at 1.0 for degenerate lengths.</li>
+            <li><code>crossesThreshold</code>: fires at the crossing (incl. jump-past), not when already at/above, not on backtrack-down; honours a raised boss min-chain.</li>
+            <li><code>tickHapticMs</code>: 0 below len 2; positive and non-decreasing from 2 up; clamped ≤ 35.</li>
+          </ul>
+        </details>
+        <details>
+          <summary><code>src/__tests__/chain-feedback-audio.test.ts</code> — sound registration</summary>
+          <p>Asserts <code>SOUNDS.chainTick</code> and <code>SOUNDS.chainReady</code> exist with non-empty <code>steps</code> whose every step has positive <code>freq</code>/<code>dur</code>/<code>gain</code>, and that the confirm climbs above the tick's range. Does <strong>not</strong> call <code>play()</code> (it would construct an unavailable <code>AudioContext</code> in node).</p>
+        </details>
+      </section>
+
+      <section id="adversarial">
+        <h2>Adversarial double-check</h2>
+        <details>
+          <summary>How to prove the cues fired (without ears)</summary>
+          <p>Spy on <code>play</code> / add a <code>console.count('chainTick')</code> at the call site, drag a 5-chain: expect 5 ticks (incl. the <code>startPath</code> first add, which routes through <code>addToPath</code>) and <code>chainReady</code> logged once at the 3rd add. For haptics on desktop (where <code>navigator.vibrate</code> is a no-op), stub it: <code>navigator.vibrate = (...a)=>{console.log('VIBE',a);return true;}</code> and toggle Haptics off to confirm zero <code>VIBE</code> logs.</p>
+        </details>
+        <details>
+          <summary>Rollback safety</summary>
+          <p>Entirely additive presentation. Reverting the <code>addToPath</code> edits + the latch field + removing the two <code>SOUNDS</code> entries + the helper file fully restores prior behaviour. No data, schema, or actions touched — a revert cannot corrupt saves or no-op a slice.</p>
+        </details>
+      </section>
+
+    </div>
+
+    <!-- ════════════════ REFERENCE ════════════════ -->
+    <div class="panel" id="reference" role="tabpanel" aria-label="Reference">
+
+      <section id="risks">
+        <h2>Risks &amp; landmines</h2>
+        <div class="box warn"><b>Wrong setting names (top landmine).</b> There is <strong>no <code>volume</code></strong> and <strong>no <code>reduceMotion</code></strong> in this project. The only gates are <code>sfxOn</code> (→ <code>enabled.sfx</code>, auto via <code>play()</code>) and <code>hapticsOn</code> (registry, read with <code>getRegistry(this.registry,"hapticsOn")</code>). Do not invent settings or gate on <code>reduceMotion</code>.</div>
+        <ul>
+          <li><b><code>sfxOn</code> is not in the Phaser registry.</b> Scene-side code relies on <code>play()</code> self-gating, not a registry read — and does not need one.</li>
+          <li><b>Length timing.</b> Read <code>prevLen</code> <em>before</em> the push and <code>len</code> <em>after</em>, or crossing detection is off by one.</li>
+          <li><b>AudioContext gesture unlock.</b> Sound is silent until the first <code>pointerdown</code> unlocks the context; click the canvas once in manual/console testing.</li>
+          <li><b>Canvas has zero unit coverage.</b> Don't import <code>GameScene</code> in a Vitest test (needs <code>window</code>/Phaser); keep tests on the pure helpers + <code>SOUNDS</code> shape.</li>
+        </ul>
+      </section>
+
+      <section id="scope">
+        <h2>Scope boundary</h2>
+        <div class="grid">
+          <div class="card"><h3>In scope</h3><p>Two synth sounds · per-tile pitched tick · one-shot threshold confirm · escalating haptic gated on <code>hapticsOn</code> · unit tests for the pure helpers + sound registration.</p></div>
+          <div class="card alt"><h3>Out of scope</h3><p>No volume control · no <code>reduceMotion</code> · no new persisted settings · no <code>SAVE_SCHEMA_VERSION</code> bump · no new actions/slices · no change to the post-release <code>chainCollect</code> · no economy/yield change · optional cross-collect cue deferred.</p></div>
+        </div>
+      </section>
+
+      <section id="refs">
+        <h2>Code reference</h2>
+        <table>
+          <thead><tr><th>Symbol</th><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>addToPath</code></td><td><code>src/GameScene.ts</code></td><td>the single add funnel — ladder injected here</td></tr>
+            <tr><td><code>startPath</code> / <code>tryAddToPath</code></td><td><code>src/GameScene.ts</code></td><td>drag start / pointer-move; both route through <code>addToPath</code></td></tr>
+            <tr><td><code>clearPath</code></td><td><code>src/GameScene.ts</code></td><td>resets the path + the <code>_readyFiredThisDrag</code> latch</td></tr>
+            <tr><td><code>_effectiveMinChain()</code></td><td><code>src/GameScene.ts</code></td><td>collectable threshold (base 3, raised by an active boss)</td></tr>
+            <tr><td><code>tickPitch</code> · <code>crossesThreshold</code> · <code>tickHapticMs</code></td><td><code>src/game/dragFeedback.ts</code></td><td>the pure helpers</td></tr>
+            <tr><td><code>SOUNDS</code> · <code>play</code> · <code>setEnabled</code></td><td><code>src/audio/index.ts</code></td><td>synth table; <code>play()</code> self-gates on <code>enabled.sfx</code></td></tr>
+            <tr><td><code>chainCollect</code> ladder + haptic</td><td><code>src/audio/useAudio.tsx</code></td><td>post-release payoff — <strong>unchanged</strong></td></tr>
+            <tr><td><code>GameRegistryContract.hapticsOn</code></td><td><code>src/types/phaserRegistry.ts</code></td><td>the haptic gate (synced from settings in <code>prototype.tsx</code>)</td></tr>
+          </tbody>
+        </table>
+        <p>Source brief (Markdown): <code>docs/projects/02-drag-build-feedback-ladder.md</code>. Pull request: <a href="https://github.com/grimatoma/puzzleDrag2/pull/1241">grimatoma/puzzleDrag2#1241</a>.</p>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+</script>
+</body>
+</html>
