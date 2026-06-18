@@ -32,7 +32,8 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
   await waitForState(page, (s) => !(s.orders ?? []).some((o) => o.id === 'o1'));
   const s = await getReactState(page);
-  expect(inv(s).tile_grass_grass).toBe(0);
+  // inventoryPut drops the slot at 0, so the key reads back as undefined.
+  expect(inv(s).tile_grass_grass ?? 0).toBe(0);
   // Reward reaches the player as coins — we just assert it moved. The exact
   // number depends on bond + season multipliers and is covered in unit tests.
   expect(s.coins).toBeGreaterThan(0);

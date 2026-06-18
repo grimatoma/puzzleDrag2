@@ -18,8 +18,10 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
 
 test('boss dev trigger sets boss state', async ({ page }) => {
   await gotoFresh(page);
-  // Debug tools live in a standalone modal opened from the HUD's debug button.
-  await page.getByTitle('Debug tools').click();
+  // Debug tools live in the "🛠 Debug" modal, opened from the menu (settings)
+  // panel — there is no longer a standalone HUD debug button.
+  await page.getByTestId('menu-btn').click();
+  await page.getByRole('button', { name: /Debug/ }).click();
   await page.getByRole('button', { name: /Trigger Boss/ }).click();
 
   // BOSS/TRIGGER is a SLICE_PRIMARY action handled by the boss slice. The

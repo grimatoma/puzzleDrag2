@@ -668,6 +668,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Support both legacy action.key and Phase 12.5 action.payload.biome
       const key = action.key ?? action.payload?.biome;
       if (!key) return state;
+      // Reject unknown biome keys — only the three real board kinds exist
+      // (BiomeId in constants.ts). Without this guard a typo'd key would set
+      // state.biome to a nonexistent board and crash the scene's board-regen
+      // on the next render.
+      if (key !== "farm" && key !== "mine" && key !== "fish") return state;
       if (key === state.biomeKey) return state;
       const access = canEnterBiome(state, key) as { ok: boolean; reason?: string };
       if (!access.ok) {
@@ -1067,6 +1072,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE": {
+      if (!action.payload) return state; // malformed dispatch — no-op, don't throw
       const { key: buyKey, qty: buyQty } = action.payload;
       // Transitional: market still trades tile keys until PR 3 moves tiles out
       // of inventory. Cap-check against both lists.
@@ -1079,6 +1085,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       return applyTrade(state, action);
     }
     case "SELL_RESOURCE": {
+      if (!action.payload) return state; // malformed dispatch — no-op, don't throw
       return applyTrade(state, action);
     }
 
