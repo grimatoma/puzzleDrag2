@@ -202,5 +202,5 @@ After code changes, run `graphify update .` (AST-only, no API cost) per CLAUDE.m
 - `src/features/settings/slice.ts` — `DEFAULT_SETTINGS` (42, no volume/reduceMotion).
 - `prototype.tsx` — `useAudio(state)` (395) / `useA11yBridge()` (398) wiring site.
 - Skill `.claude/skills/check-slice-action` — for the new `MILESTONE/SEEN` action.
-- doc `08-save-migration-ladder.md` — the live ladder this brief depends on.
+- doc `../archive/projects/08-save-migration-ladder.md` — the live ladder this brief depends on.
 - CLAUDE.md (repo root) — house rules; `.js`→`.ts` doc drift.

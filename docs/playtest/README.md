@@ -4,7 +4,7 @@ A headless auto-player that plays full game runs **without Phaser** by driving
 the pure game logic + the React reducer directly in Node, then reports balance
 metrics and emits a machine-readable constant-edit change-list.
 
-See the implementation brief: [`docs/projects/05-ai-playtest-balance-harness.md`](../projects/05-ai-playtest-balance-harness.md).
+See the implementation brief (archived — shipped): [`docs/archive/projects/05-ai-playtest-balance-harness.md`](../archive/projects/05-ai-playtest-balance-harness.md).
 
 ## Run it
 

@@ -12,81 +12,65 @@ Effort is a rough size (S ≈ hours, M ≈ a day, L ≈ multi-day, XL ≈ a week
 
 Briefs were originally authored as "work to do"; several have since shipped. Verified against HEAD:
 
+Completed & dropped briefs are **📦 archived** — moved to [../archive/projects/](../archive/projects/README.md) (time-ordered) so this board shows only live work.
+
 | # | Brief | Status |
 |---|---|---|
-| 01 | Quick wins — dormant systems | ✅ **Done** |
-| 02 | Drag-build feedback ladder | ✅ **Done** — open [PR #1241](https://github.com/grimatoma/puzzleDrag2/pull/1241) (per-tile ladder + `src/game/dragFeedback.ts`) |
+| 01 | Quick wins — dormant systems | ✅ Done · 📦 [archived](../archive/projects/01-quick-wins-dormant-systems.md) |
+| 02 | Drag-build feedback ladder | ✅ Done — open [PR #1241](https://github.com/grimatoma/puzzleDrag2/pull/1241) |
 | 03 | Live boss board modifiers | ⬜ Not started |
 | 04 | Roguelite board-altering boons | ⬜ Not started |
-| 05 | AI playtest & balance harness | ✅ **Done** (merged) |
-| 06 | Story editor write-back loop | ✅ **Done** (merged) |
+| 05 | AI playtest & balance harness | ✅ Done · 📦 [archived](../archive/projects/05-ai-playtest-balance-harness.md) |
+| 06 | Story editor write-back loop | ✅ Done · 📦 [archived](../archive/projects/06-story-editor-writeback-loop.md) |
 | 07 | Living named town | 🟡 Partial (Tomas fix only; placement/talk remain) |
-| 08 | Save migration ladder | ✅ **Done** (merged; live, schema **47**) |
+| 08 | Save migration ladder | ✅ Done · 📦 [archived](../archive/projects/08-save-migration-ladder.md) |
 | 09 | CI gate for e2e + visual | 🟡 Infra landed but **non-gating** — e2e bit-rotted (~32/63); de-rot then flip |
 | 10 | Self-describing slices | ⬜ Not started |
-| 11 | GameScene decomposition | 🟢 Substantially done (6 pure `src/game/*` modules) |
-| 12 | Endgame finale + goals hub | 🟡 Partial — **12A token-strip bug ✅ fixed**; finale + goals hub remain |
-| 13 | Economy: unify price model | ✅ **Fork fixed** (`effectiveSellPrice`); orphan-slice retirement + harness rebalance deferred |
-| 14 | Port zones atlas | ✅ **Done** (Mirefen; ~9 atlas zones remain) |
-| 15 | Incremental "Hearthkeeping" | 🗑️ **Dropped** (removed at user request) |
-| 16 | "Fiber Crush" | 🗑️ **Dropped** (removed at user request) |
+| 11 | GameScene decomposition | 🟢 ~Done · 📦 [archived](../archive/projects/11-gamescene-decomposition.md) |
+| 12 | Endgame finale + goals hub | 🟡 Partial — **12A token-strip bug ✅ fixed** (PR #1243); finale + goals hub remain |
+| 13 | Economy: unify price model | ✅ Fork fixed (PR #1243); orphan-slice retirement + harness rebalance remain |
+| 14 | Port zones atlas | ✅ Done (Mirefen) · 📦 [archived](../archive/projects/14-port-zones-atlas.md) |
+| 15 | Incremental "Hearthkeeping" | 🗑️ Dropped · 📦 [archived](../archive/projects/15-new-game-incremental-hearth.md) |
+| 16 | "Fiber Crush" | 🗑️ Dropped · 📦 [archived](../archive/projects/16-new-game-fiber-crush.md) |
 | 17–23 | Net-new polish concepts | 🆕 **Proposed** (see below) |
 
 ---
 
-## The briefs
+## Active briefs
 
-### Quick wins — dormant & dead systems
-| # | Brief | Effort | Depends on |
-|---|---|---|---|
-| 01 | [Quick Wins — Dormant & Dead Systems](01-quick-wins-dormant-systems.md) | S | — |
-
-Four verified one-PR fixes: wire `LOGIN_TICK` on mount **+ add the missing `daily_streak` modal** (dispatch alone shows nothing), un-nest Tomas's reactive line, repoint the dead Miner worker off the non-existent `wood` category, and resolve the two orphaned seasonal folders (`tile_veg_eggplant`, `tile_grass_meadow`). No `SAVE_SCHEMA` bump, no slice footgun.
+Only live work is listed below. **Completed & dropped briefs (01, 05, 06, 08, 11, 14, 15, 16) have moved to [../archive/projects/](../archive/projects/README.md)** — a time-ordered index of what shipped and what was dropped.
 
 ### Core game-feel & a real second verb
 | # | Brief | Effort | Depends on |
 |---|---|---|---|
-| 02 | [Drag-Build Feedback Ladder (audio + haptics)](02-drag-build-feedback-ladder.md) | S | — |
+| 02 | [Drag-Build Feedback Ladder (audio + haptics)](02-drag-build-feedback-ladder.md) | S | ✅ done in open [PR #1241](https://github.com/grimatoma/puzzleDrag2/pull/1241) |
 | 03 | [Live Boss Board Modifiers](03-live-boss-board-modifiers.md) | M | — |
 | 04 | [Roguelite Board-Altering Boons](04-roguelite-board-altering-boons.md) | M | 05 (tuning only) |
 
-Note (03): the modifiers **already run live** — the stale `status.ts:63` comment is wrong; the real bug is `fillBoard`/`regenerateBoard` rebuilding tiles with `frozen=false` and wiping the flags. Note (04): the scene can't see `state.boons` — board-visual boons must be bridged through the Phaser registry.
+Note (02): handled by open PR #1241 — kept off the main work branch to avoid duplicating `src/game/dragFeedback.ts`. Note (03): the modifiers **already run live**; the real bug is `fillBoard`/`regenerateBoard` rebuilding tiles with `frozen=false` and wiping the flags. Note (04): the scene can't see `state.boons` — board-visual boons must be bridged through the Phaser registry.
 
-### Progression, world & content
+### Progression & world
 | # | Brief | Effort | Depends on |
 |---|---|---|---|
-| 06 | [Story Tree Editor Write-Back Loop](06-story-editor-writeback-loop.md) | M | — |
-| 07 | [Living Named Town (spatial NPCs)](07-living-named-town.md) | M | 01 (Tomas fix) |
-| 12 | [Endgame: Old Capital Finale + Goals Hub](12-endgame-finale-and-goals-hub.md) | M–L | 01 (streak) |
-| 14 | [Port the docs/zones Atlas → Playable Zones (one end-to-end)](14-port-zones-atlas.md) | L | 08 (if re-skinning) |
+| 07 | [Living Named Town (spatial NPCs)](07-living-named-town.md) | M | — (Tomas fix done) |
+| 12 | [Endgame: Old Capital Finale + Goals Hub](12-endgame-finale-and-goals-hub.md) | M–L | — |
 
-Note (12): the Hearth-token storage keys are camelCase (`heirloomSeed`/`pactIron`/`tidesingerPearl`) — a **real shipped bug** means the map token strip never lights; fix it here. Note (14): recommended first zone is **mirefen**; `resolveLots` already emits tier-correct lots, so the port is mechanical, but design-only resource costs must be remapped to real items to avoid a softlock.
+Note (12): the Hearth-token strip bug (12A) is **fixed** (PR #1243); the finale beats + the goals hub (12B) remain.
 
 ### Economy
 | # | Brief | Effort | Depends on |
 |---|---|---|---|
-| 05 | [AI Playtest & Auto-Balance Harness](05-ai-playtest-balance-harness.md) | L | — |
-| 13 | [Economy: Unify the Price Model + Retire the Orphan Market](13-economy-unify-price-model.md) | M | 05 (numbers), 08 (if shape changes) |
+| 13 | [Economy: Unify the Price Model + Retire the Orphan Market](13-economy-unify-price-model.md) | M | 05 (numbers) |
 
-Note (13): the real defect is a verified **~10× payout fork** — the same item sells for ~90 via `SELL_RESOURCE`/`applyTrade` but ~9 via `SELL_ITEM`/`sellPriceFor`, decided purely by UI resource-vs-item classification. Note (05): coins = `chainLength × tile value`, so the family-value spread is realized only on **sell/order** and must be measured as realized-value-per-tile.
+Note (13): the ~10× `SELL_ITEM` vs `SELL_RESOURCE` fork is **fixed** (`effectiveSellPrice`, PR #1243); retiring the dead `MARKET/SELL` slice + applying the 05-harness rebalance numbers remain.
 
 ### Engineering safety net & dev velocity
 | # | Brief | Effort | Depends on |
 |---|---|---|---|
-| 08 | [Save Migration Ladder](08-save-migration-ladder.md) | M | — |
 | 09 | [CI Gate for e2e + Visual Smoke](09-ci-e2e-visual-gate.md) | S–M | — |
 | 10 | [Self-Describing Slices (kill the footgun)](10-self-describing-slices.md) | M | — |
-| 11 | [GameScene.ts Decomposition](11-gamescene-decomposition.md) | L | 09 (net first) |
 
-Note (08): there are **two** version gates (`persistence.ts` + `init.ts`) — make `loadSavedState` return a version-bumped object so both pass. Note (09): infra **landed** (PR #1229) — the `e2e`, `visual-smoke`, and `visual-rebaseline` CI jobs + the Phaser texture-key console-error allowlist. Both `e2e` and `visual-smoke` land **non-blocking**: the first CI run revealed the never-gated e2e suite has **bit-rotted** (32 pass / 31 fail on main — stale fixtures/selectors/balance, NOT a regression). De-rot the specs (and re-baseline the goldens on CI) before flipping either to gating — full inventory in [09 findings](09-ci-e2e-gate-findings.md). Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned. Note (11): the split is **already partly done** — `src/game/` exists; finish it and backfill tests.
-
-### New game systems (proposals + implementation briefs) — 🗑️ both DROPPED
-| # | Brief | Effort | Status |
-|---|---|---|---|
-| 15 | [Incremental "Hearthkeeping" (idle layer)](15-new-game-incremental-hearth.md) | L | 🗑️ merged then **removed at user request** (PR #1239) |
-| 16 | ["Fiber Crush" (match mode)](16-new-game-fiber-crush.md) | XL | 🗑️ merged then **removed at user request** (PR #1238) |
-
-Both were built and reverted (the idle layer and the second-verb fork). The briefs are kept for history; **do not re-implement** without an explicit new decision. The doc-08 save ladder they relied on **stays** (schema held at 47, the removed-feature rungs are no-op bumps).
+Note (09): infra **landed** (PR #1229) — the `e2e`/`visual-smoke`/`visual-rebaseline` jobs — but both land **non-blocking** because the never-gated e2e suite has **bit-rotted** (~32 pass / 31 fail — stale fixtures/selectors, NOT a regression). De-rot + re-baseline goldens on CI before flipping to gating — full inventory in [09 findings](09-ci-e2e-gate-findings.md). Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned.
 
 ### Net-new polish concepts (proposed 2026-06-18)
 | # | Brief | Effort | Notes |
@@ -103,25 +87,24 @@ Note (19): the per-tile feedback ladder and counter tick-up are **already done**
 
 ---
 
-## Dependency map (build order that respects what blocks what)
+## Dependency map (active work)
+
+The foundations (`05` harness, `08` save ladder, `09` CI infra) have **landed** — see [../archive/projects/](../archive/projects/README.md). Remaining dependencies:
 
 ```
-08 save-migration ─┬─► 15 hearthkeeping (hard)
-                   ├─► 16 fiber-crush (hard)
-                   └─► (soft) 13, 14 if they change persisted shape
-05 harness ────────┬─► 04 board-boons (tuning numbers)
+05 harness (done) ─┬─► 04 board-boons (tuning numbers)
                    └─► 13 economy rebalance (numbers)
-01 quick-wins ─────┬─► 07 living-town (Tomas fix)
-                   └─► 12 endgame goals-hub (streak)
-09 CI gate ────────► 11 gamescene decomposition (have a net first)
+23 reduced-motion ──► 17 season-flip · 19 chain juice (effects must honor it)
 ```
 
 ## Recommended sequence
 
-1. **Foundations (do first):** `01` quick wins · `08` save migration · `09` CI gate. Cheap, unblock the rest, and stop the next change from wiping saves.
-2. **Depth & cleanup:** `02` feedback ladder · `03` live boss modifiers · `10` self-describing slices · `13` economy fork fix (structure now, numbers after 05) · `04` board boons (structure now).
-3. **Bigger bets:** `05` balance harness · `06` story write-back · `07` living town · `12` endgame + goals hub · `11` GameScene decomposition · `14` port one zone.
-4. **New systems:** `15` Hearthkeeping, then `16` Fiber Crush — both after `08` lands.
+Ranked by value in **[ROADMAP.html](ROADMAP.html)**. In short:
+
+1. **Depth (highest player value):** finish `13` (retire orphan slice + harness rebalance) · `03` live boss modifiers · `04` board boons.
+2. **Feel & direction:** `20` milestones · `17` season-flip · `18` town lighting · `12` goals hub · `19` chain combo meter.
+3. **Content & world:** `22` four-season tiles · further zone ports (recipe proven by 14) · `07` living town · `12` finale · `21` soundscape · `23` accessibility.
+4. **Engineering:** `09` de-rot e2e → gating · `10` self-describing slices.
 
 ## House facts baked into every brief
 - Files are **`.ts`/`.tsx`** (CLAUDE.md's `.js`/`.jsx` is stale doc-drift).
