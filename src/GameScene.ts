@@ -32,7 +32,7 @@ import {
   preloadConceptTileGifs,
 } from "./textures/conceptTiles/index.js";
 import { TileObj } from "./TileObj.js";
-import { computeBakeScale, hasValidChain } from "./game/chain.js";
+import { computeBakeScale, hasValidChain, effectiveMinChain, canExtendChain, toSelectorGrid } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
@@ -540,8 +540,7 @@ export class GameScene extends Phaser.Scene {
   /** Returns the effective minimum chain length given the active boss only.
    *  Phase 7 — winter minimum-chain check was removed with the calendar season. */
   _effectiveMinChain() {
-    const bossMin = getRegistry(this.registry, "boss")?.minChain ?? 0;
-    return Math.max(3, bossMin);
+    return effectiveMinChain(getRegistry(this.registry, "boss")?.minChain ?? 0);
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
@@ -1302,9 +1301,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Reducer-shaped grid for tile selectors (keys + selected flag). */
   _selectorGrid() {
-    return this.grid.map((row) =>
-      row.map((t) => (t ? { key: t.res.key, selected: !!t.selected } : { key: null })),
-    );
+    return toSelectorGrid(this.grid);
   }
 
   _collapseAfterSweep(msOverride?: number): void {
@@ -1432,20 +1429,22 @@ export class GameScene extends Phaser.Scene {
   tryAddToPath(tile: TileObj): void {
     if (!this.dragging || !this.path.length) return;
     if (tile.frozen || tile.rubble) return;
-    const last = this.path[this.path.length - 1];
-    const prev = this.path[this.path.length - 2];
-    if (prev === tile) {
-      last.setSelected(false);
+    // Pure geometry/key decision lives in ./game/chain.ts; the scene supplies
+    // the path's keys + cells and applies the Phaser side of the result.
+    const decision = canExtendChain(
+      this.path.map((t) => t.res.key),
+      this.path.map((t) => ({ col: t.col, row: t.row })),
+      { col: tile.col, row: tile.row, key: tile.res.key, selected: !!tile.selected },
+    );
+    if (decision === "backtrack") {
+      this.path[this.path.length - 1].setSelected(false);
       this.path.pop();
       this.redrawPath();
       this.updateGrassHover();
       this._emitChainUpdate();
       return;
     }
-    if (tile.selected) return;
-    const same = tile.res.key === this.path[0].res.key;
-    const adj = Math.abs(tile.col - last.col) <= 1 && Math.abs(tile.row - last.row) <= 1 && !(tile.col === last.col && tile.row === last.row);
-    if (same && adj) this.addToPath(tile);
+    if (decision === "extend") this.addToPath(tile);
   }
 
   addToPath(tile: TileObj): void {
