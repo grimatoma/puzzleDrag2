@@ -34,6 +34,7 @@ export { producedResource, buildChainUpdatePayload } from "./game/producedResour
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
 import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
 import { buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
+import { shakeIntensityFor, shakeDurationFor, radialPeakRadiusFor } from "./game/juiceCurves.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -1912,17 +1913,15 @@ export class GameScene extends Phaser.Scene {
 
   shakeForChain(len: number): void {
     if (len < 3) return;
-    // 3 → barely; 6 → noticeable; 10+ → bone-rattling.
-    const intensity = Math.min(0.018, 0.0025 + (len - 3) * 0.0028);
-    const duration = Math.min(520, 160 + (len - 3) * 50);
-    this._shake(duration, intensity);
+    // Curves live in ./game/juiceCurves.ts; the scene keeps the shake call.
+    this._shake(shakeDurationFor(len), shakeIntensityFor(len));
   }
 
   radialFlash(x: number, y: number, len: number) {
     if (len < 3) return;
     const ring = this.add.graphics().setDepth(15);
     const startR = 10 * this.tileScale;
-    const peakR = (40 + Math.min(80, (len - 3) * 14)) * this.tileScale;
+    const peakR = radialPeakRadiusFor(len, this.tileScale);
     const obj = { r: startR, a: 0.55 };
     this.tweens.add({
       targets: obj, r: peakR, a: 0,
