@@ -36,22 +36,16 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
     version: 46,
     fiber: save.fiber ?? { unlockedLevel: 1, stars: {}, active: null },
   }),
-  // 46 → 47: the Hearthkeeping idle layer (src/features/embergarden) added the
-  // persisted `embergarden` field. Old saves lack it; default it so the accrual
-  // reducer / `createFreshState` shape is satisfied. `lastTickAt: null` means
-  // "first foreground tick just stamps, accrues nothing" — the migration itself
-  // never hands an existing player a windfall.
-  46: (save) => ({
-    ...save,
-    version: 47,
-    embergarden: save.embergarden ?? {
-      warmth: 0,
-      lifetimeWarmth: 0,
-      hearthlight: 0,
-      levels: {},
-      lastTickAt: null,
-    },
-  }),
+  // 46 → 47: this version originally added the Hearthkeeping idle layer's
+  // `embergarden` field, but that feature was removed. The rung is kept as a
+  // no-op version bump (and strips any leftover `embergarden`) so saves written
+  // by the idle-layer build still load instead of being discarded as a forward
+  // version — we never roll a shipped SAVE_SCHEMA_VERSION backward.
+  46: (save) => {
+    const { embergarden: _removed, ...rest } = save as Record<string, unknown> & { embergarden?: unknown };
+    void _removed;
+    return { ...rest, version: 47 };
+  },
 };
 
 export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";

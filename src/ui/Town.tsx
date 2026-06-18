@@ -354,16 +354,6 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] z-10" style={{ color: theme.textColor }}>{locationName}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <ZoneEntryCostInfo zoneId={mapCurrent} state={state} />
-        {/* Hearthkeeping (idle layer) shortcut — always available; the hearth
-            keeps burning between board runs. */}
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SET_VIEW", view: "embergarden" })}
-          className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#2b2218] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
-          title="Tend the hearth — slow Warmth accrues in real time, even while you're away"
-        >
-          🔥 Hearth
-        </button>
         {/* Weaver's Loft — entry point to the Fiber Crush minigame. Shown on the
             home settlement (where the loft stands). */}
         {mapCurrent === DEFAULT_ZONE && (

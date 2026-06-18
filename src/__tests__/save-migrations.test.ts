@@ -56,15 +56,14 @@ describe("saveMigrations.migrateSave", () => {
 });
 
 describe("saveMigrations — v45 walks the full ladder to current", () => {
-  test("upgrades a real v45 save to current, seeding fiber + embergarden and preserving progress", () => {
+  test("upgrades a real v45 save to current, seeding fiber and preserving progress", () => {
     const result = migrateSave({ ...v45PreBump });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // 45 → 46 → 47
     expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // 45→46 rung
-    expect(result.save.embergarden).toEqual({
-      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
-    }); // 46→47 rung
+    // 46→47 is a no-op bump (the idle layer was removed) — no embergarden seeded.
+    expect(result.save.embergarden).toBeUndefined();
     // Pre-existing progress is untouched.
     expect(result.save.coins).toBe(1234);
     expect(result.save.level).toBe(7);
@@ -77,28 +76,35 @@ describe("saveMigrations — v45 walks the full ladder to current", () => {
     migrateSave(input);
     expect(input.version).toBe(45);
     expect((input as Record<string, unknown>).fiber).toBeUndefined();
-    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
 });
 
-describe("saveMigrations — 46 → 47 (Hearthkeeping / embergarden)", () => {
-  test("a v46 save upgrades to current, seeding embergarden and preserving the fiber slice", () => {
+describe("saveMigrations — 46 → 47 (idle layer removed; no-op bump)", () => {
+  test("a v46 save bumps to current, preserving the fiber slice and adding no embergarden", () => {
     const result = migrateSave({ ...v46Current });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // bumped 46 → 47
-    expect(result.save.embergarden).toEqual({
-      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
-    });
+    expect(result.save.embergarden).toBeUndefined(); // idle layer removed
     // The v46-era `fiber` slice (with progress) survives untouched.
     expect(result.save.fiber).toEqual({ unlockedLevel: 2, stars: { L1: 3 }, active: null });
     expect(result.save.coins).toBe(1234);
+  });
+
+  test("strips a leftover embergarden field from an idle-layer-era save", () => {
+    // A save written by the removed idle-layer build (version 46 with an
+    // embergarden field) loads and gets the dead field stripped on the bump.
+    const idleEra = { ...v46Current, embergarden: { warmth: 500, hearthlight: 3 } };
+    const result = migrateSave(idleEra);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(result.save.embergarden).toBeUndefined();
   });
 
   test("does not mutate the source v46 save (purity)", () => {
     const input = { ...v46Current };
     migrateSave(input);
     expect(input.version).toBe(46);
-    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
 });
