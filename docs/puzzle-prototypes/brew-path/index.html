@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brew Path — puzzleDrag2 puzzle prototype #07</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../proto.css">
+<style>
+  /* ---- Brew Path page-specific styling -------------------------------- */
+  /* the live "current sequence" readout above the recipe book */
+  .seq{font:700 1.05rem/1.3 var(--sans);min-height:2.2rem;display:flex;flex-wrap:wrap;
+    align-items:center;gap:.18rem;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:.5rem .65rem;margin:.1rem 0 .55rem;}
+  .seq .arr{color:var(--muted);font-weight:600;margin:0 .05rem;}
+  .seq .placeholder{color:var(--muted);font:600 .82rem/1.3 var(--sans);}
+  .seq.match{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,#fff);}
+  .seq.lead{border-color:var(--accent2);}
+  .seq .hint{flex-basis:100%;font:700 .72rem/1 var(--mono);letter-spacing:.04em;
+    text-transform:uppercase;margin-top:.2rem;}
+  .seq .hint.match{color:var(--accent);} .seq .hint.lead{color:#3f6a28;}
+
+  /* recipe book rows */
+  .recipes{display:flex;flex-direction:column;gap:.4rem;}
+  .recipe{display:grid;grid-template-columns:1fr auto;align-items:center;gap:.4rem;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:.4rem .6rem;
+    transition:border-color .12s, box-shadow .12s, background .12s;}
+  .recipe .nm{font:700 .9rem/1.1 var(--serif);color:var(--ink);}
+  .recipe .ord{font-size:1.05rem;line-height:1;letter-spacing:.06em;margin-top:.15rem;}
+  .recipe .ord .arr{color:var(--muted);font-size:.7em;margin:0 .04em;}
+  .recipe .val{font:800 .98rem/1 var(--serif);color:var(--accent);white-space:nowrap;}
+  .recipe.cooked{background:color-mix(in srgb,var(--accent2) 9%,#fff);border-color:color-mix(in srgb,var(--accent2) 35%,#fff);}
+  .recipe.cooked .nm::after{content:" ✓";color:var(--ok);}
+  .recipe.spot{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 28%,#fff);}
+  .recipe .ct{font:600 .68rem/1 var(--mono);color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../index.html">← All 10 prototypes</a>
+  <header class="hero">
+    <div class="eyebrow">Prototype 07 · mid · the <em>sequence</em> seam</div>
+    <h1>Brew Path</h1>
+    <p class="sub">The board is the kitchen. Drag a path that picks up ingredients <b>IN ORDER</b> — the sequence you trace is matched against a recipe book. Trace 🌾→💧→🌾 for Bread, 🍎→🌸→🌾 for Pie. Cook the exact order for a <b>perfect-brew bonus</b>. Crafting moves onto the board itself.</p>
+    <div class="chips"><span class="chip">drag-a-path</span> <span class="chip alt">+ any families, ORDER matters</span> <span class="chip alt">+ recipe matching</span></div>
+  </header>
+
+  <div class="stage">
+    <div class="board-card">
+      <div class="board" id="board" style="--cols:6"></div>
+      <svg class="board-overlay" id="ov"></svg>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Kitchen</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
+          <div class="stat"><div class="k">Dishes cooked</div><div class="v" id="dishes">0</div></div>
+          <div class="stat"><div class="k">Perfect brews</div><div class="v" id="perfect" style="color:var(--accent)">0</div></div>
+          <div class="stat"><div class="k">Last dish</div><div class="v" id="last" style="font-size:.92rem">—</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="reset">New board</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Current path</h2>
+        <div class="seq" id="seq"><span class="placeholder">Drag through ingredients to cook…</span></div>
+        <h2>Recipe book</h2>
+        <div class="recipes" id="recipes"></div>
+        <p class="note" style="margin:.7rem 0 0">Exact order = <b>Perfect brew ×2</b>. Right ingredients, wrong order = the dish at <b>×1</b>. No recipe? Nothing is consumed.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>How to play</h3>
+    <ul>
+      <li><b>Drag</b> a path through touching tiles (8 directions). The path may cross <b>any</b> families — what matters is the <b>order</b> you pick them up. Minimum 2 tiles.</li>
+      <li>The <b>Current path</b> readout shows your live sequence (e.g. <span class="kbd">🌾→💧→🌾</span>) and lights up when it matches — or leads toward — a recipe.</li>
+      <li><b>Release</b> to cook. An exact-order match is a <b>Perfect brew</b> worth <span class="kbd">×2</span>. The same ingredients in the wrong order still cook the dish at <span class="kbd">×1</span>. Anything else cooks nothing and <b>keeps your tiles</b>.</li>
+      <li>A successful brew <b>consumes</b> the path, the board <b>cascades</b> down, and fresh ingredients <b>refill</b> from the top.</li>
+    </ul>
+    <p class="note info"><b>Why it is ours:</b> It promotes the game crafting recipes from a separate menu onto the board: you cook by routing through ingredients in sequence. "Match identical tiles" becomes "compose a recipe", directly extending the existing resource→recipe pipeline into the core puzzle.</p>
+  </div>
+</div>
+
+<script src="../proto.js"></script>
+<script>
+(function(){
+  // ---- config ---------------------------------------------------------
+  const ROWS=6, COLS=6, MIN=2;
+  // Ingredient families on the board. grain/water/fruit/flower(sugar)/veg/bird(egg).
+  const FAMS=['grain','water','fruit','flower','veg','bird'];
+  const PATH_COLOR='rgba(201,117,12,.92)';      // warm orange (--warn-ish) for the brew path
+
+  // RECIPE BOOK — ordered family sequences. Value rises with length + rarity.
+  // (perfect brew pays value×2; wrong-order-same-ingredients pays value×1.)
+  const RECIPES=[
+    { name:'Bread',    seq:['grain','water','grain'],         value:12 },
+    { name:'Porridge', seq:['grain','water','fruit'],         value:14 },
+    { name:'Soup',     seq:['veg','water','veg'],             value:15 },
+    { name:'Jam',      seq:['fruit','flower','fruit'],        value:16 },
+    { name:'Pie',      seq:['fruit','flower','grain'],        value:18 },
+    { name:'Omelette', seq:['bird','bird','veg'],             value:20 },
+    { name:'Stew',     seq:['veg','veg','water','bird'],      value:28 },
+  ];
+
+  const rng=PD.rng(20260718);
+  const boardEl=document.getElementById('board');
+  const ov=document.getElementById('ov');
+  const seqEl=document.getElementById('seq');
+  const recipesEl=document.getElementById('recipes');
+  const log=PD.logger(document.getElementById('log'));
+  let grid, cells, dragger;
+  let coins=0, dishes=0, perfect=0;
+  const cookedSet=new Set();                    // recipe names cooked at least once
+
+  // ---- recipe matching (the core, kept clean) -------------------------
+  // A sorted-family signature, so two sequences with the same MULTISET share it.
+  const sig = (fams) => fams.slice().sort().join('|');
+  // Precompute a multiset signature for each recipe (used for wrong-order match).
+  RECIPES.forEach(R=>{ R.sig=sig(R.seq); R.key=R.seq.join('>'); });
+
+  // Classify a path's family sequence against the book.
+  //  -> { kind:'perfect'|'normal'|'none', recipe?, value? }
+  // Behaviour (documented per spec):
+  //  (a) EXACT ordered match to a recipe  -> 'perfect', value×2.
+  //  (b) else MULTISET equals a recipe    -> 'normal',  value×1 (ingredients right, order wrong).
+  //  (c) else                              -> 'none'    (forgiving: tiles are NOT consumed).
+  function classify(fams){
+    if(fams.length<MIN) return {kind:'none'};
+    const ordered=fams.join('>');
+    // (a) exact order
+    const exact=RECIPES.find(R=>R.key===ordered);
+    if(exact) return {kind:'perfect', recipe:exact, value:exact.value*2};
+    // (b) same multiset, wrong order
+    const ms=sig(fams);
+    const same=RECIPES.find(R=>R.sig===ms);
+    if(same) return {kind:'normal', recipe:same, value:same.value};
+    // (c) no recipe
+    return {kind:'none'};
+  }
+
+  // Live hint while dragging: does the partial sequence still lead toward any
+  // recipe as an ordered PREFIX? (purely cosmetic guidance.)
+  function leadsToward(fams){
+    if(!fams.length) return null;
+    const ordered=fams.join('>');
+    return RECIPES.find(R=>R.key.startsWith(ordered) && R.key!==ordered) || null;
+  }
+
+  // ---- board lifecycle ------------------------------------------------
+  function freshFam(){ return PD.choice(rng,FAMS); }
+  function newBoard(){
+    grid=[]; for(let r=0;r<ROWS;r++){grid[r]=[];for(let c=0;c<COLS;c++)grid[r][c]=freshFam();}
+    coins=0; dishes=0; perfect=0; cookedSet.clear();
+    renderAll(); renderRecipes(); refreshStats(); resetSeq();
+    log('Kitchen restocked. Trace a recipe to cook.','note');
+  }
+  function paint(el,r,c){
+    const fam=grid[r][c];
+    if(!fam){PD.paintTile(el,null);return;}
+    PD.paintTile(el,fam);
+  }
+  function renderAll(){ cells=PD.renderGrid(boardEl,ROWS,COLS,paint); attachDrag(); }
+
+  // ---- drag wiring ----------------------------------------------------
+  function attachDrag(){
+    if(dragger) dragger.destroy();
+    dragger=PD.dragPath(boardEl,{
+      // start (empty path) legal on any filled tile; else just 8-adjacency to last.
+      // NO same-family restriction — any ingredient may follow any other.
+      canExtend(path,r,c){
+        if(!grid[r][c]) return false;          // never step onto an empty cell
+        if(path.length===0) return true;       // PD calls canExtend with [] for the start
+        const last=path[path.length-1];
+        return PD.adj8(last,{r,c});             // 8-adjacent to the previous tile
+      },
+      onStart(path){ updateSeq(path); },
+      onExtend(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,PATH_COLOR); updateSeq(path); },
+      onBacktrack(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,PATH_COLOR); updateSeq(path); },
+      onEnd(path){ clearSel(); PD.drawPathOverlay(ov,boardEl,[]); commit(path); resetSeq(); }
+    });
+  }
+  function famsOf(path){ return path.map(p=>grid[p.r][p.c]); }
+  function paintSel(path){
+    clearSel();
+    const res=classify(famsOf(path));
+    const hot = res.kind!=='none';             // green ring when the path already cooks something
+    path.forEach(p=>p.el.classList.add('sel', hot?'hot':'alt'));
+  }
+  function clearSel(){ boardEl.querySelectorAll('.cell.sel').forEach(e=>e.classList.remove('sel','alt','hot')); }
+
+  // ---- commit a brew --------------------------------------------------
+  function commit(path){
+    if(path.length<MIN){
+      if(path.length>0) PD.toast('Trace at least '+MIN+' ingredients','');
+      return;
+    }
+    const fams=famsOf(path);
+    const res=classify(fams);
+
+    if(res.kind==='none'){
+      // (c) forgiving: nothing cooked, tiles stay put.
+      PD.toast('No recipe — nothing cooked','bad');
+      log('Traced '+fams.map(f=>PD.FAM[f].g).join('→')+' — no matching recipe.','bad');
+      return;
+    }
+
+    const R=res.recipe, gain=res.value, isPerfect=(res.kind==='perfect');
+    // consume the traced tiles
+    path.forEach(p=>{ grid[p.r][p.c]=null; });
+    cascade();
+    renderAll();
+
+    coins+=gain; dishes++; if(isPerfect) perfect++;
+    cookedSet.add(R.name);
+    document.getElementById('last').textContent=R.name;
+    refreshStats(); renderRecipes();
+
+    const trail=fams.map(f=>PD.FAM[f].g).join('→');
+    if(isPerfect){
+      PD.toast('Perfect brew: '+R.name+'! +'+gain+' 🪙','good');
+      log('PERFECT '+R.name+' '+trail+' (exact order ×2) → +'+gain+' coins.','good');
+    }else{
+      PD.toast('Cooked '+R.name+' +'+gain+' 🪙','');
+      log('Cooked '+R.name+' '+trail+' (right ingredients, off order ×1) → +'+gain+' coins.','');
+    }
+  }
+
+  // gravity + refill: ingredients fall, new ones drop in from the top.
+  function cascade(){
+    for(let c=0;c<COLS;c++){
+      const stack=[];
+      for(let r=ROWS-1;r>=0;r--) if(grid[r][c]) stack.push(grid[r][c]);
+      for(let r=ROWS-1;r>=0;r--) grid[r][c]= stack.length? stack.shift() : freshFam();
+    }
+  }
+
+  // ---- live "current sequence" readout --------------------------------
+  function resetSeq(){
+    seqEl.className='seq';
+    seqEl.innerHTML='<span class="placeholder">Drag through ingredients to cook…</span>';
+  }
+  function updateSeq(path){
+    const fams=famsOf(path);
+    if(!fams.length){ resetSeq(); return; }
+    // build glyph→glyph trail
+    const parts=[];
+    fams.forEach((f,i)=>{
+      if(i>0) parts.push('<span class="arr">→</span>');
+      parts.push('<span class="g">'+PD.FAM[f].g+'</span>');
+    });
+    const res=classify(fams);
+    let hint='', cls='seq';
+    if(res.kind==='perfect'){ cls+=' match'; hint='<span class="hint match">Perfect '+res.recipe.name+' — release! ×2</span>'; spotlight(res.recipe.name); }
+    else if(res.kind==='normal'){ cls+=' match'; hint='<span class="hint match">'+res.recipe.name+' (right ingredients) — release! ×1</span>'; spotlight(res.recipe.name); }
+    else{
+      const lead=leadsToward(fams);
+      if(lead){ cls+=' lead'; hint='<span class="hint lead">…on the way to '+lead.name+'</span>'; spotlight(lead.name); }
+      else spotlight(null);
+    }
+    seqEl.className=cls;
+    seqEl.innerHTML=parts.join('')+hint;
+  }
+
+  // ---- recipe book panel ----------------------------------------------
+  function renderRecipes(){
+    recipesEl.innerHTML='';
+    RECIPES.forEach(R=>{
+      const row=document.createElement('div');
+      row.className='recipe'+(cookedSet.has(R.name)?' cooked':'');
+      row.dataset.name=R.name;
+      const ord=R.seq.map(f=>PD.FAM[f].g).join('<span class="arr">→</span>');
+      row.innerHTML=
+        '<div><div class="nm">'+R.name+'</div><div class="ord">'+ord+'</div></div>'+
+        '<div class="val">'+R.value+'<span class="ct"> · ×2</span></div>';
+      recipesEl.appendChild(row);
+    });
+  }
+  // highlight the recipe the live path is matching/leading toward.
+  function spotlight(name){
+    recipesEl.querySelectorAll('.recipe.spot').forEach(e=>e.classList.remove('spot'));
+    if(!name) return;
+    const row=recipesEl.querySelector('.recipe[data-name="'+name+'"]');
+    if(row) row.classList.add('spot');
+  }
+
+  function refreshStats(){
+    document.getElementById('coins').textContent=coins;
+    document.getElementById('dishes').textContent=dishes;
+    document.getElementById('perfect').textContent=perfect;
+  }
+
+  document.getElementById('reset').onclick=newBoard;
+  newBoard();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puzzle Prototypes — 10 expansions of the drag-to-chain core (puzzleDrag2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+<style>
+  body{ -webkit-user-select:auto; user-select:auto; }
+  .page{max-width:1180px;margin:0 auto;padding:1.4rem 1.1rem 5rem;}
+  header.hero h1{font-size:2.6rem;}
+  .lead{font-size:1.06rem;max-width:84ch;color:#4a4232;}
+  h2.sec{font:800 1.45rem/1.15 var(--serif);letter-spacing:-.01em;margin:2.3rem 0 .4rem;border-bottom:1px solid var(--line);padding-bottom:.3rem;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;margin:1rem 0;}
+  @media(max-width:820px){.two{grid-template-columns:1fr;}}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:1rem 1.15rem;box-shadow:var(--shadow);}
+  .card h3{font:800 1.12rem/1.2 var(--serif);margin:.1rem 0 .5rem;}
+  .card ul{margin:.3rem 0;padding-left:1.15rem;} .card li{margin:.28rem 0;font-size:.92rem;}
+  .lever{display:flex;gap:.6rem;align-items:flex-start;margin:.5rem 0;font-size:.93rem;}
+  .lever .ic{flex:0 0 1.8rem;font-size:1.3rem;line-height:1.2;text-align:center;}
+  .lever b{font-family:var(--serif);}
+  .refrow{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem;}
+  .refrow a{font-size:.74rem;background:color-mix(in srgb,var(--accent) 7%,#fff);border:1px solid var(--line);padding:.22rem .5rem;border-radius:7px;color:#5e5341;}
+  .refrow a::after{content:" ↗";font-size:.66rem;color:var(--muted);}
+
+  .band{margin:1.5rem 0 .4rem;display:flex;align-items:center;gap:.7rem;}
+  .band .tag{font:800 .7rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:.32rem .6rem;border-radius:6px;color:#fff;}
+  .band.near .tag{background:var(--accent2);} .band.mid .tag{background:var(--warn);} .band.far .tag{background:var(--accent);}
+  .band .desc{font-size:.86rem;color:var(--muted);}
+
+  .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1.1rem;margin:.7rem 0 .4rem;}
+  .pcard{position:relative;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:.95rem 1.05rem 1rem;box-shadow:var(--shadow);transition:transform .12s,box-shadow .12s;}
+  .pcard:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(50,35,8,.08),0 16px 34px -16px rgba(50,35,8,.4);}
+  .pcard.flagship{border:2px solid var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 11%,transparent),var(--shadow);}
+  .pcard .num{position:absolute;top:.8rem;right:.9rem;font:800 1.4rem/1 var(--serif);color:color-mix(in srgb,var(--accent) 36%,#fff);}
+  .pcard .seam{font:700 .68rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent2);}
+  .pcard.mid .seam{color:var(--warn);} .pcard.far .seam{color:var(--accent);}
+  .pcard h3{font:800 1.2rem/1.12 var(--serif);margin:.3rem 0 .4rem;padding-right:2rem;}
+  .pcard .pitch{font-size:.9rem;color:#4a4232;flex:1;}
+  .pcard .why{font-size:.8rem;color:#5e5341;margin:.55rem 0 .7rem;border-top:1px dashed var(--line);padding-top:.5rem;}
+  .pcard .why b{color:var(--accent);font-family:var(--serif);}
+  .pcard .play{display:inline-flex;align-items:center;gap:.4rem;align-self:flex-start;font:800 .85rem/1 var(--sans);color:#fff;background:var(--accent2);padding:.55rem .9rem;border-radius:9px;}
+  .pcard .play:hover{background:#3f6a28;text-decoration:none;}
+  .ribbon{position:absolute;top:.7rem;left:-.3rem;font:800 .64rem/1 var(--mono);letter-spacing:.04em;color:#fff;background:var(--accent);padding:.28rem .5rem;border-radius:6px 0 0 6px;text-transform:uppercase;}
+
+  table.matrix{border-collapse:collapse;width:100%;margin:.8rem 0;font-size:.84rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  table.matrix th,table.matrix td{border:1px solid var(--line);padding:.42rem .6rem;text-align:left;vertical-align:top;}
+  table.matrix th{background:color-mix(in srgb,var(--accent) 9%,#fff);font-weight:700;}
+  table.matrix tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+  table.matrix td.n{font:700 .8rem var(--mono);text-align:center;width:2rem;color:var(--accent);}
+  .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;}
+  .dot.near{background:var(--accent2);} .dot.mid{background:var(--warn);} .dot.far{background:var(--accent);}
+  footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;}
+  .filebar{font:600 .76rem/1.5 var(--mono);color:var(--muted);background:color-mix(in srgb,var(--accent) 5%,#fff);border:1px solid var(--line);border-radius:9px;padding:.55rem .8rem;margin:.8rem 0;}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <div class="eyebrow" style="font:700 .72rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);">puzzleDrag2 · concept exploration · 2026-06-18</div>
+    <h1>Puzzle Prototypes</h1>
+    <p class="sub" style="font-size:1.08rem;max-width:82ch;"><b>Ten playable expansions of our one core verb</b> — drag a chain of touching same-type tiles — exploring what new <em>concepts</em> we can add that are unique to our game. Ordered <b>near → far</b>: from safe, shippable twists to bold reframings of what the board even is. Inspired in part by how <b>Puzzle Craft 2</b> grew a near-identical drag-match game by bolting on a <b>water board</b>.</p>
+    <div class="chips">
+      <span class="chip">10 playable demos</span>
+      <span class="chip alt">one shared engine</span>
+      <span class="chip alt">drag &amp; play in your browser</span>
+      <span class="chip">★ #4 = the PC2 water-board homage</span>
+    </div>
+  </header>
+
+  <p class="lead">Each tile below is a <b>real, draggable prototype</b> — not a mockup. They share one design system and one tiny drag/grid engine (<code>proto.css</code> + <code>proto.js</code>), so every idea looks and feels like the same game while isolating <em>one</em> new mechanical seam. Tap <b>▶ Play</b> on any card.</p>
+
+  <!-- ====================== THE CORE WE'RE EXPANDING ====================== -->
+  <h2 class="sec">The verb we're expanding</h2>
+  <div class="two">
+    <div class="card">
+      <h3>The core loop today</h3>
+      <p style="font-size:.93rem;color:#4a4232;margin:.2rem 0 .5rem;">Drag across <b>3+ touching tiles of the same family</b> (8 directions) → release to harvest → tiles clear, the board <b>cascades + refills</b>, and you accrue that family's <b>resource</b> and nudge a <b>tile-tier upgrade</b>. That's the whole verb. It's clean, it's tactile, and it's the thing we don't want to break.</p>
+      <p class="note" style="margin:.4rem 0 0">A deliberate, hard-won lesson lives here: a <b>second, different puzzle verb</b> (the removed swap-match "Fiber Crush") <b>fragmented attention</b>. So every prototype here keeps the <em>one</em> drag gesture and changes what it <em>means</em> — never a second minigame.</p>
+    </div>
+    <div class="card">
+      <h3>Depth the game already has</h3>
+      <ul>
+        <li><b>Cross-collect</b> — partner families adjacent to a chain auto-harvest (grass↔grain, fruit↔tree…).</li>
+        <li><b>Hazards</b> — rats &amp; fire (farm); cave-ins, gas, lava (mine) lock or spread across cells.</li>
+        <li><b>Mine tools</b> — area blast, transform-adjacent, transform-all reshape the board outside the drag.</li>
+        <li><b>Bosses &amp; seasons</b> — raise the minimum chain length, change the tile pool over a run.</li>
+      </ul>
+      <p style="font-size:.85rem;color:var(--muted);margin:.4rem 0 0;">These prototypes lean on this vocabulary — adjacency, cascade, refill, hazards, terrain — rather than inventing whole new systems.</p>
+    </div>
+  </div>
+
+  <!-- ====================== PC2 WATER BOARD ====================== -->
+  <h2 class="sec">What Puzzle Craft 2's water board teaches us</h2>
+  <p style="max-width:84ch;color:#4a4232;">PC2 is the closest commercial cousin to our game — a drag-to-match harvesting puzzle feeding a settlement economy. Its big mid-game expansion wasn't a new genre; it was a <b>third board</b>: the sea. Studying how it differs from its own land board is the richest source of "what could ours add". Five levers stand out:</p>
+  <div class="card" style="margin-top:.7rem;">
+    <div class="lever"><div class="ic">⛵</div><div><b>A mover on the board.</b> The land board has no avatar — you just match. The sea adds a <b>boat</b> that occupies a cell and must be <em>steered</em>. Suddenly position matters. → our <a href="tide-lanes/index.html"><b>Tide Lanes</b></a> &amp; <a href="mycelium-spread/index.html">Mycelium Spread</a>.</div></div>
+    <div class="lever"><div class="ic">🎯</div><div><b>Player-directed spawning.</b> Matching deep water makes a fish/island appear at the <em>last tile of your chain</em> — you decide where the next reward lands, then sail to it. Routing becomes planning. → <a href="tide-lanes/index.html">Tide Lanes</a>, <a href="loop-harvest/index.html">Loop Harvest</a>.</div></div>
+    <div class="lever"><div class="ic">🔁</div><div><b>Two-phase turns.</b> A "navigation move" (match water to set up) is distinct from a "ship move" (go collect). Set-up and pay-off split apart. → <a href="tide-lanes/index.html">Tide Lanes</a>, <a href="brew-path/index.html">Brew Path</a>, Mycelium.</div></div>
+    <div class="lever"><div class="ic">🗺️</div><div><b>Terrain variety.</b> Shallow water yields salt; deep water yields water; islands block. The board is no longer uniform. → <a href="river-run/index.html">River Run</a>, <a href="deep-layers/index.html">Deep Layers</a>, Tide Lanes.</div></div>
+    <div class="lever"><div class="ic">🪝</div><div><b>Harvest-by-reaching.</b> You don't collect a fish by matching it — you must move the boat <em>onto</em> it. Collection becomes a spatial act, not a pattern match. → Tide Lanes, Mycelium, <a href="tilt/index.html">Tilt</a>.</div></div>
+    <div class="refrow">
+      <span style="font-size:.76rem;color:var(--muted);align-self:center;">Sources:</span>
+      <a href="https://www.appgamer.com/puzzle-craft-2/strategy-guide/to-the-seato-the-sea">AppGamer — To the Sea guide</a>
+      <a href="https://www.gamezebo.com/walkthroughs/puzzle-craft-2-tips-cheats-and-strategies/">Gamezebo — PC2 tips</a>
+      <a href="https://atgamespl.fandom.com/wiki/Puzzle_Craft_2">PC2 Wiki</a>
+      <a href="https://jayisgames.com/review/puzzle-craft-2.php">JayIsGames review</a>
+    </div>
+  </div>
+  <p class="note info" style="margin-top:.9rem;"><b>The insight:</b> PC2 didn't add a new <em>gesture</em> — it added new <em>meaning</em> around the same match (a mover, a place to aim, terrain, a two-step rhythm). That's exactly the design budget we want: keep our beloved drag, change what it does. The ten below each pull one of these levers (or invent a sibling).</p>
+
+  <!-- ====================== THE 10 ====================== -->
+  <h2 class="sec">The ten prototypes</h2>
+
+  <div class="band near"><span class="tag">Near</span><span class="desc">Same gesture, same board — a single new dimension. Shippable twists.</span></div>
+  <div class="pgrid">
+    <div class="pcard near">
+      <div class="num">01</div><div class="seam">the time seam</div>
+      <h3>Ripen &amp; Reap</h3>
+      <p class="pitch">Every tile is alive on a clock: seedling → growing → ripe → rotten. Harvest at peak for the big yield; leave it and it rots and <b>spreads to neighbours</b>. <em>When</em> you chain now matters as much as <em>what</em>.</p>
+      <div class="why"><b>Why ours:</b> one new per-tile dimension turns a flat match into timing-and-triage — no second verb, reuses cascade/refill exactly.</div>
+      <a class="play" href="ripen-and-reap/index.html">▶ Play</a>
+    </div>
+    <div class="pcard near">
+      <div class="num">02</div><div class="seam">the connection-rule seam</div>
+      <h3>Two-Tone Braid</h3>
+      <p class="pitch">The connection grammar flips from "same" to "<b>alternating</b>". Weave a chain that strictly alternates two families — A,B,A,B — to spin a premium Blend. Reading interleaved patterns becomes the skill.</p>
+      <div class="why"><b>Why ours:</b> changes only the rule for what connects; same drag, board and refill, totally new board-reading.</div>
+      <a class="play" href="two-tone-braid/index.html">▶ Play</a>
+    </div>
+    <div class="pcard near">
+      <div class="num">03</div><div class="seam">the emergence seam</div>
+      <h3>Cross-Pollinate</h3>
+      <p class="pitch">Route a normal chain to <b>hug a cluster of another family</b> and those bordering tiles graft into premium hybrid blooms ✦ worth triple. New tile types <em>emerge</em> from how you draw.</p>
+      <div class="why"><b>Why ours:</b> evolves the existing cross-collect adjacency into a discovery/combo layer that grows the tile roster mid-run.</div>
+      <a class="play" href="cross-pollinate/index.html">▶ Play</a>
+    </div>
+  </div>
+
+  <div class="band mid"><span class="tag">Mid</span><span class="desc">A new primitive on the board — a mover, terrain, a shape, a sequence. Where PC2's levers land.</span></div>
+  <div class="pgrid">
+    <div class="pcard mid flagship">
+      <span class="ribbon">★ PC2 homage</span>
+      <div class="num">04</div><div class="seam">mover + spawn-placement</div>
+      <h3>Tide Lanes</h3>
+      <p class="pitch">PC2's water board, ported to our verb. Drag a chain of water to carve a <b>lane</b>; your boat ⛵ sails it, <b>hauling</b> every fish &amp; clam it passes, and a fresh catch <b>spawns where your lane ends</b> — you decide where the next fish appears.</p>
+      <div class="why"><b>Why ours:</b> the single biggest lever PC2 pulled — a steerable mover + player-placed spawns + harvest-by-reaching — on our chain.</div>
+      <a class="play" href="tide-lanes/index.html">▶ Play</a>
+    </div>
+    <div class="pcard mid">
+      <div class="num">05</div><div class="seam">the terrain seam</div>
+      <h3>River Run</h3>
+      <p class="pitch">A river snakes across the field as terrain. Chains drawn <b>alongside flowing water</b> earn a big flow multiplier — and you can <b>dig new channels</b> to irrigate more of the board. Half match-3, half irrigation planning.</p>
+      <div class="why"><b>Why ours:</b> adds terrain + a board-editing verb; you shape the board instead of only reacting to it.</div>
+      <a class="play" href="river-run/index.html">▶ Play</a>
+    </div>
+    <div class="pcard mid">
+      <div class="num">06</div><div class="seam">the shape seam</div>
+      <h3>Loop Harvest</h3>
+      <p class="pitch">Stop drawing lines — draw a <b>fence</b>. Close a same-family chain into a loop and <b>everything enclosed</b> is reaped at once. Bigger, more diverse enclosures pay off quadratically. The chain becomes a boundary.</p>
+      <div class="why"><b>Why ours:</b> reinterprets the gesture from a line you collect to an area you enclose — a territory puzzle, zero new input.</div>
+      <a class="play" href="loop-harvest/index.html">▶ Play</a>
+    </div>
+    <div class="pcard mid">
+      <div class="num">07</div><div class="seam">the sequence seam</div>
+      <h3>Brew Path</h3>
+      <p class="pitch">The board <em>is</em> the kitchen. Drag a path that picks up ingredients <b>in order</b>; the sequence you trace is matched to a recipe book. 🌾→💧→🌾 = Bread. Cook the exact order for a perfect-brew bonus.</p>
+      <div class="why"><b>Why ours:</b> promotes our crafting recipes onto the board — "match identical" becomes "compose a recipe".</div>
+      <a class="play" href="brew-path/index.html">▶ Play</a>
+    </div>
+  </div>
+
+  <div class="band far"><span class="tag">Far</span><span class="desc">Reframes what the board is — a third axis, an idle organism, a physics object. Bold bets.</span></div>
+  <div class="pgrid">
+    <div class="pcard mid">
+      <div class="num">08</div><div class="seam">the z-axis seam</div>
+      <h3>Deep Layers</h3>
+      <p class="pitch">The mine gains a third dimension. Each cell is a <b>stack</b> — clear the top ore and dig down to the richer, more dangerous layer beneath. Stone over iron over gem over gold… but water floods and gas waits in the deep.</p>
+      <div class="why"><b>Why ours:</b> adds the one dimension a flat grid lacks — depth — reusing the mine's ore families and hazard vocabulary.</div>
+      <a class="play" href="deep-layers/index.html">▶ Play</a>
+    </div>
+    <div class="pcard far">
+      <div class="num">09</div><div class="seam">the territory / idle seam</div>
+      <h3>Mycelium Spread</h3>
+      <p class="pitch">Plant a spore and grow a living network. Your mycelium <b>auto-harvests</b> everything it touches each tick — passive income — and you <b>drag to direct</b> its growth across the richest ground. Spread vs. starve.</p>
+      <div class="why"><b>Why ours:</b> the active drag becomes a seed for an idle, spreading layer — chains plant growth that pays out on its own.</div>
+      <a class="play" href="mycelium-spread/index.html">▶ Play</a>
+    </div>
+    <div class="pcard far">
+      <div class="num">10</div><div class="seam">the board-physics seam</div>
+      <h3>Tilt</h3>
+      <p class="pitch">What if the drag moved the whole board? <b>Swipe to tilt</b> the field; every tile slides under gravity until it hits a wall, lines of 3+ auto-clear, and everything falls again. 2048 meets match-3, on one gesture.</p>
+      <div class="why"><b>Why ours:</b> the boldest end — the gesture controls board physics instead of selecting tiles — yet still resolves to our 3+ matching.</div>
+      <a class="play" href="tilt/index.html">▶ Play</a>
+    </div>
+  </div>
+
+  <!-- ====================== MATRIX ====================== -->
+  <h2 class="sec">At a glance — which lever each pulls</h2>
+  <table class="matrix">
+    <thead><tr><th class="n">#</th><th>Prototype</th><th>Band</th><th>New seam</th><th>PC2 lever it echoes</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><a href="ripen-and-reap/index.html">Ripen &amp; Reap</a></td><td><span class="dot near"></span> near</td><td>per-tile time / decay</td><td>—</td></tr>
+      <tr><td class="n">2</td><td><a href="two-tone-braid/index.html">Two-Tone Braid</a></td><td><span class="dot near"></span> near</td><td>connection rule (alternating)</td><td>—</td></tr>
+      <tr><td class="n">3</td><td><a href="cross-pollinate/index.html">Cross-Pollinate</a></td><td><span class="dot near"></span> near</td><td>emergent tile types</td><td>player-directed spawning</td></tr>
+      <tr><td class="n">4</td><td><a href="tide-lanes/index.html"><b>Tide Lanes</b></a></td><td><span class="dot mid"></span> mid</td><td>mover + spawn placement</td><td>★ mover · spawning · reach · two-phase</td></tr>
+      <tr><td class="n">5</td><td><a href="river-run/index.html">River Run</a></td><td><span class="dot mid"></span> mid</td><td>terrain + board editing</td><td>terrain variety</td></tr>
+      <tr><td class="n">6</td><td><a href="loop-harvest/index.html">Loop Harvest</a></td><td><span class="dot mid"></span> mid</td><td>enclosure / shape</td><td>aim where reward lands</td></tr>
+      <tr><td class="n">7</td><td><a href="brew-path/index.html">Brew Path</a></td><td><span class="dot mid"></span> mid</td><td>ordered sequence / recipe</td><td>two-phase set-up→pay-off</td></tr>
+      <tr><td class="n">8</td><td><a href="deep-layers/index.html">Deep Layers</a></td><td><span class="dot mid"></span> mid→far</td><td>z-axis depth</td><td>terrain (vertical)</td></tr>
+      <tr><td class="n">9</td><td><a href="mycelium-spread/index.html">Mycelium Spread</a></td><td><span class="dot far"></span> far</td><td>idle territory network</td><td>mover · placement · two-phase</td></tr>
+      <tr><td class="n">10</td><td><a href="tilt/index.html">Tilt</a></td><td><span class="dot far"></span> far</td><td>board-physics / gravity</td><td>harvest-by-reaching (reframed)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec">How they're built</h2>
+  <p style="max-width:84ch;color:#4a4232;">All ten share one foundation so they read as the same game and stay easy to maintain:</p>
+  <div class="filebar">docs/puzzle-prototypes/<br>├─ <b>proto.css</b> &nbsp;— warm-paper design system, board/tile/panel vocabulary, family colour classes<br>├─ <b>proto.js</b> &nbsp;&nbsp;— tiny <code>PD</code> engine: seeded RNG · grid render · the cross-device drag-path tracker · path overlay · toast/log<br>└─ <b>&lt;slug&gt;/index.html</b> &nbsp;× 10 &nbsp;— each owns only its unique rules</div>
+  <p style="font-size:.88rem;color:#5e5341;max-width:84ch;">Because the fiddly bits (pointer capture, backtracking, the grid) live in <code>proto.js</code>, each prototype is small and focused on its <em>idea</em>. Everything is deterministic (seeded), responsive, and reduced-motion safe. None of this is wired into the live game yet — these are evaluation prototypes for deciding which seam to pursue.</p>
+
+  <footer>
+    puzzleDrag2 · Puzzle prototype exploration · 2026-06-18 · companion to the <a href="../zones/index.html">Zone Atlas</a>, <a href="../town-layout/index.html">Town Layout</a> &amp; <a href="../art-style-board/index.html">Art Style Board</a>. Built from the game's real core verb; not yet shipped.
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tide Lanes — puzzleDrag2 puzzle prototype #04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../proto.css">
+<style>
+  /* Tide Lanes — page-specific (sea board + boat token) */
+  /* a slightly bluer sea bed under the tiles */
+  .board-card.sea{background:#0e2535;border-color:#1d3a4d;}
+  .board-card.sea .board{filter:saturate(1.04);}
+
+  /* shallow water uses the f-pearl family fill but reads as bright shallows */
+  .cell.shallow{background:#7fc6d6;}
+  .cell.shallow[class*="f-"]{color:#0c3038;text-shadow:0 1px 0 rgba(255,255,255,.45);}
+
+  /* the boat token: an absolutely-positioned glyph on TOP of whatever tile it sits on */
+  .cell .boat{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:1.32em;pointer-events:none;z-index:5;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));
+    animation:bob 2.6s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-3px) rotate(3deg);}}
+  .cell.boatcell{box-shadow:0 0 0 3px var(--gold,#e7c14a), inset 0 -3px 0 rgba(0,0,0,.12);z-index:4;}
+
+  /* catch tiles get a soft halo so they read as targets sitting on the sea */
+  .cell.catch{box-shadow:inset 0 -3px 0 rgba(0,0,0,.14), 0 0 0 2px rgba(255,255,255,.35);}
+
+  /* hauled flash */
+  .cell.hauled{animation:haulFlash .4s ease;}
+  @keyframes haulFlash{0%{box-shadow:0 0 0 0 rgba(255,255,255,.9);}100%{box-shadow:0 0 0 12px rgba(255,255,255,0);}}
+
+  /* freshly placed spawn pulses to draw the eye to where YOU put it */
+  .cell.justspawned{animation:spawnPulse 1.1s ease;}
+  @keyframes spawnPulse{0%{transform:scale(.4);}55%{transform:scale(1.18);}100%{transform:scale(1);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../index.html">← All 10 prototypes</a>
+  <header class="hero">
+    <div class="eyebrow">Prototype 04 · mid · the <em>mover + spawn-placement</em> seam · ★ the Puzzle&nbsp;Craft&nbsp;2 homage</div>
+    <h1>Tide Lanes</h1>
+    <p class="sub">The direct translation of Puzzle Craft 2 water board into our chain verb. Drag a chain of water to carve a LANE; your boat sails it, hauling in every fish and clam it passes, and a fresh catch SPAWNS where your lane ends — so you decide where the next fish appears. Navigate, then harvest by reaching.</p>
+    <div class="chips"><span class="chip">drag-to-chain (water)</span> <span class="chip alt">+ a boat that MOVES</span> <span class="chip alt">+ player-placed spawns</span> <span class="chip alt">PC2 water board</span></div>
+  </header>
+
+  <div class="stage">
+    <div class="board-card sea">
+      <div class="board tight" id="board" style="--cols:7"></div>
+      <svg class="board-overlay" id="ov"></svg>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>The catch</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Fish 🐟</div><div class="v" id="fish">0</div></div>
+          <div class="stat"><div class="k">Shells 🐚</div><div class="v" id="shells">0</div></div>
+          <div class="stat"><div class="k">Salt 🧂</div><div class="v" id="salt">0</div></div>
+          <div class="stat"><div class="k">Water 💧</div><div class="v" id="water">0</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="reset">New board</button>
+        </div>
+        <p class="note info" style="margin:.7rem 0 0">Where your <b>lane ends</b> decides where the next catch appears — steer the boat toward open sea, then carve a lane back through the fish.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Sea legend</h2>
+        <div class="legend">
+          <div class="row"><span class="swatch f-water"></span> Deep water 💧 — chain it for <b>+Water</b></div>
+          <div class="row"><span class="swatch" style="background:#7fc6d6"></span> Shallow water 🌊 — chain it for <b>+Salt</b></div>
+          <div class="row"><span class="swatch f-fish"></span> Fish 🐟 — not chainable; haul by sailing past</div>
+          <div class="row"><span class="swatch f-clam"></span> Clam 🐚 — not chainable; haul for shells</div>
+          <div class="row"><span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex:0 0 18px">⛵</span> Your boat — moves to the lane's end</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>How to play</h3>
+    <ul>
+      <li><b>Drag a lane</b> across <span class="kbd">3+</span> touching water tiles of the <b>same depth</b> — all deep, or all shallow (8 directions). Fish, clams and the boat block the lane.</li>
+      <li>On release the lane is consumed (deep → <b>+Water</b>, shallow → <b>+Salt</b>) and your <b>boat ⛵ sails to the last cell</b> of the lane.</li>
+      <li><b>Haul:</b> every 🐟 / 🐚 touching <em>any</em> lane cell is reeled in (+Fish / +Shells). <b>Harvest by reaching</b> — long lanes that brush past catches collect more.</li>
+      <li><b>You place the next spawn:</b> a fresh catch appears on open sea right next to where your <b>lane ended</b>. End your lane near where you want fish to gather.</li>
+      <li>Consumed water cascades down and the top refills from open sea; catches stay put on the surface.</li>
+    </ul>
+    <p class="note info"><b>Why it is ours:</b> Puzzle Craft 2 expanded a near-identical drag-match game by adding the SEA: a boat you steer and spawns you place. This prototype ports exactly that lever — a mover on the board + player-directed spawn placement + harvest-by-reaching — onto our chain verb. It is the most direct answer to "what can a water board add to ours".</p>
+  </div>
+</div>
+
+<script src="../proto.js"></script>
+<script>
+(function(){
+  'use strict';
+  const ROWS=6, COLS=7, MIN=3;
+  // depths: 'deep' -> family water (💧, +Water) | 'shallow' -> family pearl shown as 🌊 (+Salt)
+  // catches: {kind:'fish'} or {kind:'clam'} — NOT chainable, sit ON the sea.
+  const SHALLOW_GLYPH='🌊';
+  const rng=PD.rng(20260404);
+
+  const boardEl=document.getElementById('board');
+  const ov=document.getElementById('ov');
+  const log=PD.logger(document.getElementById('log'));
+
+  let grid;          // grid[r][c] = {water:'deep'|'shallow'} OR {catch:'fish'|'clam'}
+  let boat;          // {r,c}
+  let cells, dragger;
+  let stats={fish:0,shells:0,salt:0,water:0};
+
+  const inBounds=(r,c)=> r>=0 && r<ROWS && c>=0 && c<COLS;
+  const isBoat=(r,c)=> boat && boat.r===r && boat.c===c;
+  const isWater=(t)=> t && t.water!=null;
+  const isCatch=(t)=> t && t.catch!=null;
+
+  function freshWater(){
+    // mostly deep, a healthy minority shallow — keeps both lane types live
+    return { water: rng()<0.34 ? 'shallow' : 'deep' };
+  }
+
+  function newBoard(){
+    grid=[];
+    for(let r=0;r<ROWS;r++){ grid[r]=[]; for(let c=0;c<COLS;c++) grid[r][c]=freshWater(); }
+    // scatter a starting catch population on the sea (not on the boat cell)
+    boat={ r: ROWS-1, c: 0 };
+    let placed=0, guard=0;
+    while(placed<6 && guard++<400){
+      const r=PD.randInt(rng,ROWS), c=PD.randInt(rng,COLS);
+      if(isBoat(r,c)) continue;
+      if(isCatch(grid[r][c])) continue;
+      grid[r][c]={ catch: rng()<0.78 ? 'fish' : 'clam' };
+      placed++;
+    }
+    stats={fish:0,shells:0,salt:0,water:0};
+    renderAll(); refreshStats();
+    log('A fresh sea. Your boat ⛵ waits in the shallows.','note');
+  }
+
+  function paint(el,r,c){
+    const t=grid[r][c];
+    if(isCatch(t)){
+      const fam=t.catch==='fish'?'fish':'clam';
+      PD.paintTile(el,fam);
+      el.classList.add('catch');
+    } else if(isWater(t)){
+      if(t.water==='shallow'){ PD.paintTile(el,'pearl',SHALLOW_GLYPH); el.classList.add('shallow'); }
+      else { PD.paintTile(el,'water'); }
+    } else {
+      // should not happen (sea is always full) — render as deep water defensively
+      PD.paintTile(el,'water');
+    }
+    if(isBoat(r,c)){
+      el.classList.add('boatcell');
+      const b=document.createElement('span'); b.className='boat'; b.textContent='⛵';
+      el.appendChild(b);
+    }
+  }
+  function renderAll(){ cells=PD.renderGrid(boardEl,ROWS,COLS,paint); attachDrag(); }
+
+  function attachDrag(){
+    if(dragger) dragger.destroy();
+    dragger=PD.dragPath(boardEl,{
+      canExtend(path,r,c){
+        if(!inBounds(r,c)) return false;
+        const t=grid[r][c];
+        if(!isWater(t)) return false;     // catches + (empty) never chainable
+        if(isBoat(r,c)) return false;     // the boat cell blocks the lane
+        if(path.length===0) return true;  // start cell: any legal water tile
+        // must match the depth of the lane's first cell
+        const head=grid[path[0].r][path[0].c];
+        if(t.water!==head.water) return false;
+        // 8-adjacent to the lane's current end
+        const last=path[path.length-1];
+        return Math.max(Math.abs(last.r-r),Math.abs(last.c-c))===1;
+      },
+      onStart(path){ overlay(path); },
+      onExtend(path){ paintSel(path); overlay(path); },
+      onBacktrack(path){ paintSel(path); overlay(path); },
+      onEnd(path){ clearSel(); PD.drawPathOverlay(ov,boardEl,[]); commit(path); }
+    });
+  }
+  function overlay(path){
+    const head=path[0]&&grid[path[0].r]&&grid[path[0].r][path[0].c];
+    const col = head&&head.water==='shallow' ? 'rgba(40,170,200,.95)' : 'rgba(39,103,176,.95)';
+    PD.drawPathOverlay(ov,boardEl,path,col);
+  }
+  function paintSel(path){
+    clearSel();
+    const head=grid[path[0].r][path[0].c];
+    const alt = head.water==='shallow';
+    path.forEach(p=>{ p.el.classList.add('sel'); if(alt) p.el.classList.add('alt'); });
+  }
+  function clearSel(){ boardEl.querySelectorAll('.cell.sel').forEach(e=>e.classList.remove('sel','alt')); }
+
+  function commit(path){
+    if(!path || path.length<MIN){
+      if(path && path.length>1) PD.toast('Lane needs '+MIN+'+ same-depth water','');
+      return;
+    }
+    const depth=grid[path[0].r][path[0].c].water; // 'deep' | 'shallow'
+    const laneCells=path.map(p=>({r:p.r,c:p.c}));
+
+    // (1) consume the chained water → resource per tile
+    if(depth==='deep'){ stats.water+=laneCells.length; }
+    else { stats.salt+=laneCells.length; }
+    laneCells.forEach(({r,c})=>{ grid[r][c]=null; });
+
+    // (2) the lane END becomes the boat's new position
+    const end=laneCells[laneCells.length-1];
+    boat={ r:end.r, c:end.c };
+
+    // (3) HAUL: any catch 8-adjacent to ANY lane cell is collected
+    const seen=new Set(); let haulFish=0, haulClam=0; const hauledCells=[];
+    laneCells.forEach(({r,c})=>{
+      PD.N8.forEach(([dr,dc])=>{
+        const nr=r+dr, nc=c+dc;
+        if(!inBounds(nr,nc)) return;
+        const key=nr+','+nc;
+        if(seen.has(key)) return;
+        const t=grid[nr][nc];
+        if(isCatch(t)){
+          seen.add(key);
+          if(t.catch==='fish'){ haulFish++; stats.fish++; } else { haulClam++; stats.shells++; }
+          hauledCells.push({r:nr,c:nc});
+          grid[nr][nc]=null; // removed from the board (becomes open sea, refills below)
+        }
+      });
+    });
+
+    // (4) SPAWN one new catch on open sea 8-adjacent to the lane END (player-directed).
+    //     The boat cell can't host a catch; prefer a free neighbour of the end.
+    const spawnKind = rng()<0.72 ? 'fish' : 'clam';
+    let spawnAt=placeSpawnNear(end, spawnKind);
+
+    // (5) refill consumed water: gravity + new sea from the top; catches keep their place.
+    cascade();
+
+    renderAll();
+    // post-render flourishes
+    if(spawnAt && cells[spawnAt.r] && cells[spawnAt.r][spawnAt.c]) cells[spawnAt.r][spawnAt.c].classList.add('justspawned');
+    refreshStats();
+
+    const res = depth==='deep' ? ('+'+laneCells.length+' water') : ('+'+laneCells.length+' salt');
+    const hauls=[]; if(haulFish) hauls.push(haulFish+'🐟'); if(haulClam) hauls.push(haulClam+'🐚');
+    const haulTxt = hauls.length ? ('hauled '+hauls.join(' & ')) : 'no catch in reach';
+    const spawnTxt = spawnAt ? (', new '+(spawnKind==='fish'?'🐟':'🐚')+' placed') : '';
+    log('Lane of '+laneCells.length+' '+depth+' → '+haulTxt+', '+res+spawnTxt,
+        (haulFish+haulClam)>0 ? 'good' : 'note');
+
+    if(haulFish+haulClam>=3) PD.toast('Big haul! '+(haulFish+haulClam)+' reeled in','good');
+    else if(haulFish+haulClam>0) PD.toast('+'+(haulFish+haulClam)+' catch','good');
+  }
+
+  // Place a catch on free water adjacent to the lane end; fall back to any free water.
+  function placeSpawnNear(end, kind){
+    const nbrs=[];
+    PD.N8.forEach(([dr,dc])=>{
+      const nr=end.r+dr, nc=end.c+dc;
+      if(!inBounds(nr,nc)) return;
+      if(isBoat(nr,nc)) return;
+      // free = currently water OR just-emptied (null) and NOT a catch; we want sea, not a catch tile
+      const t=grid[nr][nc];
+      if(isCatch(t)) return;
+      nbrs.push({r:nr,c:nc});
+    });
+    let spot = nbrs.length ? PD.choice(rng,nbrs) : null;
+    if(!spot){
+      // fall back to any free non-boat, non-catch cell anywhere
+      const free=[];
+      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+        if(isBoat(r,c)) continue;
+        if(isCatch(grid[r][c])) continue;
+        free.push({r,c});
+      }
+      spot = free.length ? PD.choice(rng,free) : null;
+    }
+    if(spot){ grid[spot.r][spot.c]={ catch: kind }; }
+    return spot;
+  }
+
+  // Gravity refill: water settles downward per column; empties at the top become fresh sea.
+  // Catches are anchored to their cell and do NOT fall (they float on the surface).
+  // The boat is also anchored (it occupies its cell on top of whatever is there).
+  function cascade(){
+    for(let c=0;c<COLS;c++){
+      // collect water that is free to fall (skip catch + boat anchored cells)
+      // We rebuild each column bottom-up: anchored cells (catch/boat) stay; remaining
+      // slots are filled from the column's existing water (gravity) then fresh sea.
+      const waterStack=[]; // existing water from bottom..top order preserved
+      for(let r=ROWS-1;r>=0;r--){
+        const t=grid[r][c];
+        if(isCatch(t)) continue;        // catch stays anchored, not part of falling water
+        if(isWater(t)) waterStack.push(t);
+        // null (consumed) contributes nothing
+      }
+      // now refill non-anchored cells bottom-up from waterStack, then fresh sea
+      let wi=0;
+      for(let r=ROWS-1;r>=0;r--){
+        const t=grid[r][c];
+        if(isCatch(t)) continue;        // leave anchored catch exactly where it is
+        // (boat is rendered on top of a water cell; the underlying cell is still water-fillable)
+        if(wi<waterStack.length){ grid[r][c]=waterStack[wi++]; }
+        else { grid[r][c]=freshWater(); }
+      }
+    }
+    // safety: never leave a null behind
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      if(grid[r][c]==null) grid[r][c]=freshWater();
+    }
+  }
+
+  function refreshStats(){
+    document.getElementById('fish').textContent=stats.fish;
+    document.getElementById('shells').textContent=stats.shells;
+    document.getElementById('salt').textContent=stats.salt;
+    document.getElementById('water').textContent=stats.water;
+  }
+
+  document.getElementById('reset').onclick=newBoard;
+  newBoard();
+})();
+</script>
+</body>
+</html>

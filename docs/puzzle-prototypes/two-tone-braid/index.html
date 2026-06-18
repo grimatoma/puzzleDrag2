@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two-Tone Braid — puzzleDrag2 puzzle prototype #02</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../proto.css">
+<style>
+  /* page-specific: the locked-pair swatch readout + woven selection accents */
+  .pair{display:flex;align-items:center;gap:.45rem;margin:.2rem 0 .1rem;font:600 .82rem/1.2 var(--sans);color:#5e5341;}
+  .pair .sw2{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+    font-size:13px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.16), 0 1px 2px rgba(0,0,0,.2);}
+  .pair .x{color:var(--muted);font:700 .8rem var(--mono);}
+  .pair .ph{color:var(--muted);font-style:italic;font-weight:600;}
+  /* second locked family gets the green woven ring (A keeps the brown .sel) */
+  .cell.sel.alt{box-shadow:0 0 0 3px var(--accent2), inset 0 -3px 0 rgba(0,0,0,.12);}
+  /* subtle dashed weave hint on selected tiles so the A,B,A,B reads as a braid */
+  .cell.sel::before{content:"";position:absolute;inset:3px;border-radius:8px;
+    border:1.5px dashed rgba(255,255,255,.55);pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../index.html">← All 10 prototypes</a>
+  <header class="hero">
+    <div class="eyebrow">Prototype 02 · near the core · the <em>connection-rule</em> seam</div>
+    <h1>Two-Tone Braid</h1>
+    <p class="sub">The drag verb, but the connection grammar flips from "same" to "alternating". Drag a chain that strictly ALTERNATES between exactly two crop families — A, B, A, B, … — to weave a premium "Blend". Reading interleaved patterns on the board becomes the skill.</p>
+    <div class="chips"><span class="chip">drag-to-chain</span> <span class="chip alt">+ must alternate 2 families</span> <span class="chip alt">+ Blend premium yield</span></div>
+  </header>
+
+  <div class="stage">
+    <div class="board-card">
+      <div class="board" id="board" style="--cols:6"></div>
+      <svg class="board-overlay" id="ov"></svg>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Weave</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Blend score</div><div class="v" id="score">0</div></div>
+          <div class="stat"><div class="k">Longest braid</div><div class="v" id="longest">0</div></div>
+          <div class="stat"><div class="k">Moves</div><div class="v" id="moves">0</div></div>
+          <div class="stat"><div class="k">Blends woven</div><div class="v" id="blends">0</div></div>
+        </div>
+        <div class="pair" id="pair">
+          <span class="sw2 ph" id="swA">A</span>
+          <span class="x">×</span>
+          <span class="sw2 ph" id="swB">B</span>
+          <span id="pairlbl" class="ph">— drag to lock a pair —</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="reset">New board</button>
+        </div>
+        <p class="note" style="margin:.7rem 0 0">The first tile sets <b>family A</b>, the second (a different family) sets <b>B</b> and locks the pair. Every tile after must touch the last and be the <em>opposite</em> family — A,B,A,B,…</p>
+      </div>
+
+      <div class="panel">
+        <h2>Braid length → Blend</h2>
+        <div class="legend">
+          <div class="row"><span class="swatch" style="background:#cdbfa0"></span> Length 3 or less — too short, ignored</div>
+          <div class="row"><span class="swatch" style="background:var(--accent2)"></span> <b>Length 4 = 5 pts</b> (the minimum Blend)</div>
+          <div class="row"><span class="swatch" style="background:var(--accent)"></span> Length 6 = 15 pts · 8 = 33 pts</div>
+          <div class="row" style="color:#5e5341;font-style:italic">pts = length + (length−3)² — long braids pay off super-linearly</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>How to play</h3>
+    <ul>
+      <li><b>Drag</b> a chain across touching tiles (8 directions). The 1st tile fixes family <b>A</b>; the 2nd touching tile of a <b>different</b> family fixes <b>B</b> and locks the pair.</li>
+      <li>From there each next tile must touch the last and be the <b>opposite</b> family, so the chain reads <span class="kbd">A,B,A,B,…</span> — only the two locked families are eligible.</li>
+      <li>Release a braid of <b>4 or more</b> to weave a <b>Blend</b>: <span class="kbd">pts = length + (length−3)²</span>. Longer braids pay off much faster. Then the chained tiles clear, columns cascade down, and the board refills from the top.</li>
+    </ul>
+    <p class="note info"><b>Why it is ours:</b> It changes only the connection grammar — same drag gesture, same board, same refill — but rewards a totally different kind of board-reading (interleaved patterns) than "find a blob of identical tiles". A safe, shippable twist that adds depth without a second puzzle verb.</p>
+  </div>
+</div>
+
+<script src="../proto.js"></script>
+<script>
+(function(){
+  const ROWS=6, COLS=6, MIN=4;
+  const FAMS=['grass','grain','veg','fruit','flower'];
+  const rng=PD.rng(20260618);
+  const boardEl=document.getElementById('board');
+  const ov=document.getElementById('ov');
+  const log=PD.logger(document.getElementById('log'));
+  let grid, cells, dragger;
+  let score=0, longest=0, moves=0, blends=0;
+
+  const famAt=(r,c)=> (grid[r] && grid[r][c]) ? grid[r][c] : null;
+
+  function newBoard(){
+    grid=[]; for(let r=0;r<ROWS;r++){grid[r]=[];for(let c=0;c<COLS;c++)grid[r][c]=PD.choice(rng,FAMS);}
+    score=0; longest=0; moves=0; blends=0;
+    renderAll(); setPair(null,null); refreshStats();
+    log('Fresh board sown — find an A,B,A,B braid.','note');
+  }
+
+  function paint(el,r,c){ PD.paintTile(el, famAt(r,c)); }
+  function renderAll(){ cells=PD.renderGrid(boardEl,ROWS,COLS,paint); attachDrag(); }
+
+  // ---- selection painting: A tiles get .sel (brown), B tiles get .sel.alt (green) ----
+  function clearSel(){
+    boardEl.querySelectorAll('.cell.sel').forEach(e=>e.classList.remove('sel','alt'));
+  }
+  function paintSel(path){
+    clearSel();
+    if(!path.length) return;
+    const a=grid[path[0].r][path[0].c];   // family A = whatever the first tile is
+    path.forEach(p=>{
+      p.el.classList.add('sel');
+      if(grid[p.r][p.c]!==a) p.el.classList.add('alt'); // B family woven in green
+    });
+  }
+
+  function attachDrag(){
+    if(dragger) dragger.destroy();
+    dragger=PD.dragPath(boardEl,{
+      canExtend(path,r,c){
+        const fam=famAt(r,c); if(!fam) return false;
+        // start cell — always legal (dragPath calls this with an empty path)
+        if(path.length===0) return true;
+        const last=path[path.length-1];
+        // every extension must be 8-adjacent to the previous tile
+        if(Math.max(Math.abs(last.r-r),Math.abs(last.c-c))!==1) return false;
+        const famA=grid[path[0].r][path[0].c];
+        if(path.length===1){
+          // second tile fixes B: must differ from A (8-adjacency already checked)
+          return fam!==famA;
+        }
+        // length>=2: locked pair {A,B}. next must alternate => equal the
+        // family two-back, and stay inside the locked pair.
+        const famB=grid[path[1].r][path[1].c];
+        if(fam!==famA && fam!==famB) return false;        // outside the pair
+        const twoBack=grid[path[path.length-2].r][path[path.length-2].c];
+        return fam===twoBack;                              // strict alternation
+      },
+      onStart(path){ setPair(null,null); },
+      onExtend(path){
+        paintSel(path);
+        PD.drawPathOverlay(ov,boardEl,path,'rgba(79,122,52,.92)');
+        if(path.length>=2){
+          const a=grid[path[0].r][path[0].c], b=grid[path[1].r][path[1].c];
+          setPair(a,b);
+        } else {
+          setPair(null,null);
+        }
+      },
+      onBacktrack(path){
+        paintSel(path);
+        PD.drawPathOverlay(ov,boardEl,path,'rgba(79,122,52,.92)');
+        if(path.length>=2){
+          setPair(grid[path[0].r][path[0].c], grid[path[1].r][path[1].c]);
+        } else {
+          setPair(null,null);
+        }
+      },
+      onEnd(path){ clearSel(); PD.drawPathOverlay(ov,boardEl,[]); commit(path); }
+    });
+  }
+
+  function commit(path){
+    if(path.length<MIN){
+      setPair(null,null);
+      if(path.length>1) PD.toast('Braid needs 4+ (A,B,A,B)','');
+      return;
+    }
+    const len=path.length;
+    const a=grid[path[0].r][path[0].c], b=grid[path[1].r][path[1].c];
+    const pts=len+(len-3)*(len-3);   // super-linear: 4→5, 5→9, 6→15, 7→23, 8→33
+    score+=pts; blends++; moves++;
+    if(len>longest) longest=len;
+    path.forEach(p=>{ grid[p.r][p.c]=null; });
+    cascade();
+    renderAll();
+    setPair(null,null);
+    refreshStats();
+    const labA=PD.FAM[a].label, labB=PD.FAM[b].label;
+    log('Braid '+len+' ('+labA+'×'+labB+') → Blend +'+pts, 'good');
+    PD.toast('Blend woven! +'+pts+' '+PD.FAM[a].g+PD.FAM[b].g, 'good');
+  }
+
+  // refill pattern matches the reference: drop survivors, sow new from the top
+  function cascade(){
+    for(let c=0;c<COLS;c++){
+      const stack=[];
+      for(let r=ROWS-1;r>=0;r--) if(grid[r][c]) stack.push(grid[r][c]);
+      for(let r=ROWS-1;r>=0;r--) grid[r][c]= stack.length? stack.shift() : PD.choice(rng,FAMS);
+    }
+  }
+
+  // ---- locked-pair swatch readout ----
+  function setPair(a,b){
+    const swA=document.getElementById('swA'), swB=document.getElementById('swB'),
+          lbl=document.getElementById('pairlbl');
+    function dress(el,fam,fallback){
+      el.className='sw2';
+      if(fam==null){ el.classList.add('ph'); el.textContent=fallback; el.style.background=''; el.style.color=''; return; }
+      el.classList.add('f-'+fam);
+      el.textContent=PD.FAM[fam].g;
+    }
+    dress(swA,a,'A'); dress(swB,b,'B');
+    if(a!=null && b!=null){
+      lbl.className=''; lbl.textContent=PD.FAM[a].label+' braided with '+PD.FAM[b].label;
+    } else {
+      lbl.className='ph'; lbl.textContent='— drag to lock a pair —';
+    }
+  }
+
+  function refreshStats(){
+    document.getElementById('score').textContent=score;
+    document.getElementById('longest').textContent=longest;
+    document.getElementById('moves').textContent=moves;
+    document.getElementById('blends').textContent=blends;
+  }
+
+  document.getElementById('reset').onclick=newBoard;
+  newBoard();
+})();
+</script>
+</body>
+</html>
