@@ -219,11 +219,71 @@ function quarryRung(plots: number): AuthoredTownMap {
 }
 const QUARRY_MAPS: AuthoredTownMap[] = QUARRY_PLOTS.map(quarryRung);
 
+// ── Mirefen Hollow — mirefen (fish) ladder · 4 rungs (3/6/10/15) ─────────────
+// Ported from docs/zones/data/layouts/mirefen.mjs through `resolveLots()`: a
+// ribbon-stilt town whose boardwalks ARE the roads, growing east/west/north
+// along the spine then dipping into the south lagoon. The lot list below is the
+// verbatim `resolveLots(mirefen)` output (index,cx,cy,w,h), ordered by index so
+// `slice(0, plots)` yields each rung (the design's per-lot `t` tier tag is
+// cumulative, exactly the stable-additive contract). Ground is a placeholder:
+// grass + an autotiled sand boardwalk network mirroring the design's roads[]
+// (px→tiles ÷32) — themed water terrain is a later art pass.
+const MIREFEN_PLOTS = [3, 6, 10, 15];
+// index → [index, cx, cy, w, h] straight from resolveLots(mirefen).
+const MIREFEN_LOTS: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [0, 416, 398, 120, 100], [1, 697, 402, 112, 96], [2, 758, 566, 124, 104],   // Fishing Stilt (0–2)
+  [3, 279, 398, 108, 100], [4, 330, 558, 120, 96], [5, 845, 394, 116, 104],   // Bogwalk Hamlet (3–5)
+  [6, 152, 399, 110, 98], [7, 363, 221, 120, 100], [8, 624, 221, 104, 104], [9, 836, 221, 114, 96], // Mire Village (6–9)
+  [10, 982, 398, 110, 100], [11, 1106, 396, 118, 100], [12, 1044, 559, 112, 98], [13, 457, 600, 108, 104], [14, 624, 601, 114, 100], // Fen Town (10–14)
+];
+const mlot = (i: number): AuthoredLot => {
+  const [index, cx, cy, w, h] = MIREFEN_LOTS[i];
+  return { index, cx, cy, w, h };
+};
+
+// Fishing board: the open south lagoon (the design's two pools), well clear of
+// every lot (lots end at y≈652) and the south branch boardwalk.
+const MIREFEN_FISH_BOARD: AuthoredBoard = { kind: "fish", cx: 640, cy: 830, w: 860, h: 220 };
+const MIREFEN_PLAZA = { cx: 570, cy: 392, rx: px(3), ry: px(2) }; // staged reed-shrine → Heron Gate beacon
+const MIREFEN_WELL = { cx: 570, cy: 392, r: 20 };
+
+function mirefenGround(seed: number): Grid {
+  const g = blankGrid(GRASS);
+  const m = blankMask(ROWS, COLS);
+  maskBandH(m, 3, 35, 15, 3);   // the spine boardwalk (HS0/HS1/HS2/HS3 — one run, row 15)
+  maskBandH(m, 8, 29, 9, 2);    // north back lane (NBL, row 9)
+  maskBandV(m, 9, 15, 16, 2);   // connector to the spine (NC, col 16)
+  maskBandV(m, 15, 21, 17, 2);  // south branch into the lagoon (SB, col 17)
+  maskDisc(m, 18, 12, 3, 2);    // central platform / reed-shrine plaza (the landmark)
+  paintSandPaths(g, m);         // overlay autotiled sand transitions
+  decorateGrass(g, seed);       // sprinkle variants on the remaining grass
+  return g;
+}
+
+const MIREFEN_PROPS: AuthoredProp[] = [
+  { kind: "signpost", x: 120, y: 430 },
+  { kind: "lamppost", x: 560, y: 360 },
+];
+
+/** Build one mirefen rung map: ground + the first `plots` stable lots. */
+function mirefenRung(plots: number): AuthoredTownMap {
+  return {
+    groundTiles: mirefenGround(plots),
+    plaza: MIREFEN_PLAZA,
+    well: MIREFEN_WELL,
+    boards: [MIREFEN_FISH_BOARD],
+    props: MIREFEN_PROPS,
+    lots: MIREFEN_LOTS.slice(0, plots).map(([index]) => mlot(index)),
+  };
+}
+const MIREFEN_MAPS: AuthoredTownMap[] = MIREFEN_PLOTS.map(mirefenRung);
+
 // ── Registry — keyed by zoneId, indexed by tier ─────────────────────────────
 // Zones/tiers with no entry fall back to the procedural town plan.
 export const TOWN_MAPS: Record<string, AuthoredTownMap[]> = {
   home: HOME_MAPS,
   quarry: QUARRY_MAPS,
+  mirefen: MIREFEN_MAPS,
 };
 
 /** Convert an authored map into the TownPlan shape TownScene consumes. */
