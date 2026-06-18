@@ -441,6 +441,53 @@ export const MAP_NODES: MapNode[] = [
     plotCount: 8,
   },
   {
+    id: "mirefen", name: "Mirefen Hollow", kind: "fish", icon: "🪷",
+    x: 34, y: 90, level: 3, region: "coast",
+    description: "A stilt-town strung across black water on golden boardwalks. Fish the misty fen, then grow the boardwalk into a town.",
+    activities: ["Harvest fish tiles", "Grow the stilt-town rung by rung"],
+    boards: { fish: cloneFishBoard(FISH_BOARD_HARBOR) },
+    entryCost: { coins: 100 },
+    dangers: [],
+    // The flat buildings[] MUST equal the deduped union of every tier's `unlocks`
+    // below (test-enforced superset invariant). Listed rung-by-rung to keep them
+    // in sync with the ladder.
+    buildings: [
+      BuildingId.Hearth, BuildingId.Housing, BuildingId.Fishmonger,            // Fishing Stilt (tier 0)
+      BuildingId.Larder, BuildingId.HarborDock, BuildingId.Watchtower,         // Bogwalk Hamlet (tier 1)
+      BuildingId.Apiary, BuildingId.Brewery, BuildingId.Apothecary, BuildingId.Smokehouse, // Mire Village (tier 2)
+      BuildingId.Inn, BuildingId.Chapel, BuildingId.CaravanPost, BuildingId.Granary, BuildingId.Observatory, // Fen Town (tier 3)
+    ],
+    plotCount: 15,
+    // ── Mirefen ladder · 4 rungs (Fishing Stilt → Fen Town), ported from
+    // docs/zones (mirefen design: plots 3/6/10/15). Costs are resource-only
+    // (matching home/quarry convention) and gate ONLY on fish-board-producible
+    // resources — the per-zone inventory is siloed, so a fish settlement can only
+    // ever stock fish goods. The design's `plank`/`fenmead` gates were swapped for
+    // real fish resources (fish_fillet/fish_oil/pearls) to avoid an un-upgradeable
+    // rung; the signature mechanic, hazards and new resources are deferred.
+    tiers: [
+      {
+        id: "stilt", name: "Fishing Stilt", plots: 3,
+        unlocks: [BuildingId.Hearth, BuildingId.Housing, BuildingId.Fishmonger],
+      },
+      {
+        id: "bogwalk", name: "Bogwalk Hamlet", plots: 6,
+        unlocks: [BuildingId.Larder, BuildingId.HarborDock, BuildingId.Watchtower],
+        upgradeCost: { resources: { fish_fillet: 8, fish_oil: 6 } },
+      },
+      {
+        id: "village", name: "Mire Village", plots: 10,
+        unlocks: [BuildingId.Apiary, BuildingId.Brewery, BuildingId.Apothecary, BuildingId.Smokehouse],
+        upgradeCost: { resources: { fish_fillet: 14, fish_oil: 10 } },
+      },
+      {
+        id: "town", name: "Fen Town", plots: 15,
+        unlocks: [BuildingId.Inn, BuildingId.Chapel, BuildingId.CaravanPost, BuildingId.Granary, BuildingId.Observatory],
+        upgradeCost: { resources: { fish_fillet: 22, pearls: 1 } },
+      },
+    ],
+  },
+  {
     id: "oldcapital", name: "The Old Capital", kind: "capital", icon: "🏛️",
     x: 93, y: 50, level: 1, region: "capital",
     description: "The first hearth of the old kingdom — dark for an age. They say the Ember still waits there.",
@@ -457,6 +504,7 @@ export const MAP_EDGES: ReadonlyArray<readonly [string, string]> = [
   ["home", "meadow"],
   ["home", "orchard"],
   ["home", "harbor"],
+  ["harbor", "mirefen"],
   ["meadow", "crossroads"],
   ["orchard", "crossroads"],
   ["crossroads", "quarry"],
@@ -486,7 +534,7 @@ export const REGIONS: MapRegion[] = [
   { id: "farm", label: "Greenfields", cx: 26, cy: 50, rx: 14, ry: 32, fill: "#b8c878" },
   { id: "wilds", label: "The Wilds", cx: 56, cy: 50, rx: 22, ry: 30, fill: "#c4b888" },
   { id: "mine", label: "Stoneholds", cx: 72, cy: 30, rx: 22, ry: 18, fill: "#a8a4a0" },
-  { id: "coast", label: "The Coast", cx: 16, cy: 86, rx: 14, ry: 12, fill: "#9ab8c4" },
+  { id: "coast", label: "The Coast", cx: 24, cy: 87, rx: 22, ry: 13, fill: "#9ab8c4" },
   { id: "boss", label: "The Deep", cx: 90, cy: 72, rx: 12, ry: 16, fill: "#8a5050" },
   { id: "capital", label: "The Old Capital", cx: 93, cy: 50, rx: 7, ry: 18, fill: "#cdb56a" },
 ];
