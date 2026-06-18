@@ -172,11 +172,16 @@
   function drawPathOverlay(overlaySvg, boardEl, path, color) {
     while (overlaySvg.firstChild) overlaySvg.removeChild(overlaySvg.firstChild);
     if (!path || path.length < 1) return;
-    const bRect = boardEl.getBoundingClientRect();
-    overlaySvg.setAttribute('viewBox', `0 0 ${bRect.width} ${bRect.height}`);
+    // Measure against the SVG's OWN box, not the board. The overlay is position:absolute
+    // inset:0 so it fills the board-card (padding + the board's centring margins), which is
+    // larger than the board itself — using the board's rect would scale + offset the line.
+    // Sizing the viewBox to the SVG's own rendered size makes 1 user unit = 1 CSS pixel and
+    // its aspect ratio match exactly (no letterboxing), so cell centres land dead-on.
+    const sRect = overlaySvg.getBoundingClientRect();
+    overlaySvg.setAttribute('viewBox', `0 0 ${sRect.width} ${sRect.height}`);
     const pts = path.map(p => {
       const r = p.el.getBoundingClientRect();
-      return [(r.left + r.width / 2) - bRect.left, (r.top + r.height / 2) - bRect.top];
+      return [(r.left + r.width / 2) - sRect.left, (r.top + r.height / 2) - sRect.top];
     });
     const NS = 'http://www.w3.org/2000/svg';
     if (pts.length >= 2) {
