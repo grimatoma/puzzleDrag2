@@ -119,6 +119,7 @@
         </div>
         <button class="ctl grow" id="growBtn">Grow&nbsp;▸</button>
         <div class="toggles" id="toggles">
+          <label data-tg="sprites"><input type="checkbox"> pixel buildings</label>
           <label data-tg="buildings"><input type="checkbox"> placeholder buildings</label>
           <label data-tg="dressing" class="on"><input type="checkbox" checked> widgets / props</label>
           <label data-tg="tiles"><input type="checkbox"> tile types</label>
@@ -326,7 +327,7 @@
     back:[[97,1,32,41],[97,44,32,41],[131,1,32,41],[97,44,32,41]],
     left:[[1,46,30,39],[131,44,30,41],[33,46,30,39],[131,44,30,41]],
     right:[[65,46,30,39],[163,44,30,41],[165,1,30,39],[163,44,30,41]] };
-  let tileset=null, atlas=null, baked={}, assetsOK=false, booted=false;
+  let tileset=null, atlas=null, baked={}, bld={}, assetsOK=false, booted=false;
   const tileSrc=i=>[TM+(i%TC)*(TILE+TSP), TM+Math.floor(i/TC)*(TILE+TSP)];
   function drawTile(img,i,dx,dy){const[sx,sy]=tileSrc(i);ctx.drawImage(img,sx,sy,TILE,TILE,dx,dy,TILE,TILE);}
   function bakeSprite(rec){const cw=rec.c*TILE,ch=rec.r*TILE,oc=document.createElement('canvas');oc.width=cw;oc.height=ch;const o=oc.getContext('2d');o.imageSmoothingEnabled=false;for(let k=0;k<rec.idx.length;k++){const[sx,sy]=tileSrc(rec.idx[k]);o.drawImage(tileset,sx,sy,TILE,TILE,(k%rec.c)*TILE,Math.floor(k/rec.c)*TILE,TILE,TILE);}return oc;}
@@ -338,6 +339,8 @@
       for(const k in REC) baked[k]=bakeSprite(REC[k]);
       assetsOK=true;
     }catch(e){ assetsOK=false; }
+    // hand-drawn pixel-art building sprites (loaded independently of the tileset)
+    try{ const[c,b]=await Promise.all([loadImg('buildings/cottage.png'),loadImg('buildings/bakery.png')]); bld.cottage=c; bld.bakery=b; }catch(e){}
     booted=true; try{rebuildGround(); render();}catch(e){console.error('town init',e&&(e.stack||e.message)||e);} syncUI(); requestAnimationFrame(loop);
   }
 
@@ -537,7 +540,7 @@
 
   // ── state ─────────────────────────────────────────────────────
   let TIER=0, groundDirty=true, time=0, last=0, dusk=0, duskTarget=0, _err=0, _hb=0;
-  const tg={buildings:false,dressing:true,tiles:false,labels:true,forest:true,grid:false};
+  const tg={sprites:false,buildings:false,dressing:true,tiles:false,labels:true,forest:true,grid:false};
 
   function revRoads(){return ROADS.filter(r=>r.tier<=TIER);}
   function revLots(){return LOTS.filter(l=>l.t<=TIER);}
@@ -567,7 +570,7 @@
     if(tg.forest) for(const t of TREES){ if(cleared(t.x,t.y,TIER)||inWater(t.x,t.y))continue; if(CLEAR_SPOTS.some(s=>Math.abs(t.x-s[0])<s[2]&&Math.abs(t.y-s[1])<s[3]))continue; items.push({y:t.y, z:0, d:()=>drawTree(t)}); }
     // bushes at clearing fringe (a few, seeded)
     for(const b of BUSHES){ if(b.from<=TIER) items.push({y:b.y,z:1,d:()=>drawBush(b)}); }
-    for(const l of revLots()) items.push({y:l.cy+l.h/2, z:2, d:()=> tg.buildings?drawCottage(l,l.t===TIER):drawPlot(l,l.t===TIER)});
+    for(const l of revLots()) items.push({y:l.cy+l.h/2, z:2, d:()=> tg.sprites?drawSpriteBuilding(l,l.t===TIER):(tg.buildings?drawCottage(l,l.t===TIER):drawPlot(l,l.t===TIER))});
     items.push({y:FIELD.y+FIELD.h, z:2, d:drawField});
     items.push({y:PLAZA.cy+PLAZA.ry, z:1, d:drawLandmark});
     if(tg.dressing) for(const wd of WIDGETS){ if(wd.from<=TIER && (wd.to===undefined||TIER<=wd.to)) items.push({y:wd.y, z:2, d:()=>drawWidget(wd)}); }
@@ -740,6 +743,21 @@
     if(isNew&&tg.labels){ctx.strokeStyle="#e8a33d";ctx.lineWidth=3.5;ctx.setLineDash([8,5]);rr(x-4,y-4,w+8,h+8,9);ctx.stroke();ctx.setLineDash([]);label("NEW",l.cx,y-11,"#a85d12",13,"#fff3da");}
     if(tg.labels)label("plot "+l.index,l.cx,dy+12,"#4a361a",12,"#f4ecd8");ctx.restore();}
 
+  // hand-drawn pixel-art building sprite, front-facing, anchored on the plot baseline (buildings/*.png)
+  function drawSpriteBuilding(l,isNew){
+    if(SPECIAL[l.index]) return drawCottage(l,isNew);          // keep civic silhouettes (chapel / town hall) vector
+    const spr=(l.index%2===0)?bld.cottage:bld.bakery;
+    if(!spr) return drawCottage(l,isNew);                      // graceful fallback if the PNG didn't load
+    ctx.save();
+    const baseY=l.cy+l.h/2;                                    // plot baseline = ground contact
+    const dw=l.w*1.28, dh=dw, cFrac=57/64;                     // 64px sprite -> wall ~0.8·plotW; row 57 is the footing
+    const ox=l.cx-dw/2, oy=baseY-dh*cFrac;
+    ctx.fillStyle="rgba(16,14,26,.30)";ctx.beginPath();ctx.ellipse(l.cx+4,baseY,dw*0.30,dw*0.082,0,0,7);ctx.fill();
+    ctx.imageSmoothingEnabled=false;ctx.drawImage(spr,ox,oy,dw,dh);
+    if(isNew&&tg.labels){ctx.strokeStyle="#e8a33d";ctx.lineWidth=3.5;ctx.setLineDash([8,5]);rr(l.cx-l.w/2-4,l.cy-l.h/2-4,l.w+8,l.h+8,9);ctx.stroke();ctx.setLineDash([]);label("NEW",l.cx,l.cy-l.h/2-11,"#a85d12",13,"#fff3da");}
+    if(tg.labels)label("plot "+l.index,l.cx,baseY+12,"#4a361a",12,"#f4ecd8");
+    ctx.restore();
+  }
   function drawLandmark(){const cx=640,cy=470;ctx.save();
     if(TIER<2){ shadow(cx,cy+6,22,6); ctx.fillStyle="#b7b0a3";ctx.strokeStyle="#7c7464";ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,24,0,7);ctx.fill();ctx.stroke();ctx.fillStyle="#3b566a";ctx.beginPath();ctx.arc(cx,cy,14,0,7);ctx.fill();ctx.strokeStyle="#9c6b3f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx-20,cy-24);ctx.lineTo(cx-20,cy-40);ctx.moveTo(cx+20,cy-24);ctx.lineTo(cx+20,cy-40);ctx.moveTo(cx-24,cy-38);ctx.lineTo(cx+24,cy-38);ctx.stroke();label("Well",cx,cy+40,"#4a361a",14,"#eef3e6"); }
     else if(TIER===2){ shadow(cx,cy+10,40,10);
