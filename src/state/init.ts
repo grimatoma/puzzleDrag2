@@ -19,7 +19,6 @@ import * as castle from "../features/castle/slice.js";
 import * as boons from "../features/boons/slice.js";
 import * as runSummary from "../features/runSummary/slice.js";
 import * as embergarden from "../features/embergarden/slice.js";
-import * as fiber from "../features/fiber/slice.js";
 import { driftPrices } from "../market.js";
 import { loadSavedState } from "./persistence.js";
 import {
@@ -177,7 +176,6 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     ...boons.initial,
     ...runSummary.initial,
     ...embergarden.initial,
-    ...fiber.initial,
     farm: { savedField: null },
     mine: { savedField: null },
   };

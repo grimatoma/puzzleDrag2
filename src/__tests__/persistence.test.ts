@@ -57,14 +57,13 @@ describe("persistence", () => {
 
   test("loadSavedState UPGRADES a laddered old version instead of wiping it", () => {
     // The headline non-destructive guarantee: a v45 save (below current) now
-    // walks the full ladder to current (seeding both fiber and embergarden) and
-    // is NOT removed from storage.
+    // walks the full ladder to current (45→46 version bump, then 46→47 seeding
+    // embergarden) and is NOT removed from storage.
     const v45 = { version: 45, coins: 999, inventory: { home: { flour: 3 } } };
     localStorage.setItem(SAVE_KEY, JSON.stringify(v45));
     const state = loadSavedState();
     expect(state).not.toBeNull();
     expect(state?.version).toBe(SAVE_SCHEMA_VERSION); // bumped to current (47)
-    expect((state as Record<string, unknown>).fiber).toBeTruthy(); // fiber seeded (45→46)
     expect((state as Record<string, unknown>).embergarden).toEqual({
       warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
     }); // embergarden seeded (46→47)

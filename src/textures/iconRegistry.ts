@@ -21,7 +21,6 @@ import { ICONS as G_TOOLS_SEA } from "./categories/toolsSea.js";
 import { ICONS as EXISTING_FARM } from "./categories/existingFarm.js";
 import { ICONS as EXISTING_MINE } from "./categories/existingMine.js";
 import { ICONS as G_CRAFTED } from "./categories/craftedProducts.js";
-import { ICONS as G_FIBER } from "./categories/fiber.js";
 import { ICONS as G_CHARACTERS } from "./categories/characters.js";
 import { ICONS as G_CHARACTERS_V2 } from "./categories/charactersV2.js";
 import { ICONS as G_MAP_NODES } from "./categories/mapNodes.js";
@@ -133,7 +132,6 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...EXISTING_FARM,
   ...EXISTING_MINE,
   ...G_CRAFTED,
-  ...G_FIBER,
   ...G_CHARACTERS,
   ...G_CHARACTERS_V2,
   ...G_MAP_NODES,

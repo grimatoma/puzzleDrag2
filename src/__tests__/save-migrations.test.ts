@@ -56,12 +56,13 @@ describe("saveMigrations.migrateSave", () => {
 });
 
 describe("saveMigrations — v45 walks the full ladder to current", () => {
-  test("upgrades a real v45 save to current, seeding fiber + embergarden and preserving progress", () => {
+  test("upgrades a real v45 save to current, seeding embergarden and preserving progress", () => {
     const result = migrateSave({ ...v45PreBump });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // 45 → 46 → 47
-    expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // 45→46 rung
+    // The 45→46 rung is now a pure version bump (the old Fiber Crush slice was removed).
+    expect(result.save.fiber).toBeUndefined();
     expect(result.save.embergarden).toEqual({
       warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
     }); // 46→47 rung
@@ -76,13 +77,12 @@ describe("saveMigrations — v45 walks the full ladder to current", () => {
     const input = { ...v45PreBump };
     migrateSave(input);
     expect(input.version).toBe(45);
-    expect((input as Record<string, unknown>).fiber).toBeUndefined();
     expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
 });
 
 describe("saveMigrations — 46 → 47 (Hearthkeeping / embergarden)", () => {
-  test("a v46 save upgrades to current, seeding embergarden and preserving the fiber slice", () => {
+  test("a v46 save upgrades to current, seeding embergarden and carrying any orphan field harmlessly", () => {
     const result = migrateSave({ ...v46Current });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -90,7 +90,8 @@ describe("saveMigrations — 46 → 47 (Hearthkeeping / embergarden)", () => {
     expect(result.save.embergarden).toEqual({
       warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
     });
-    // The v46-era `fiber` slice (with progress) survives untouched.
+    // An orphan `fiber` field from the removed minigame (present on real
+    // fiber-window saves) is carried through untouched — nothing reads it now.
     expect(result.save.fiber).toEqual({ unlockedLevel: 2, stars: { L1: 3 }, active: null });
     expect(result.save.coins).toBe(1234);
   });

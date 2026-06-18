@@ -46,7 +46,6 @@ import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import * as embergarden from "./features/embergarden/slice.js";
-import * as fiber from "./features/fiber/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { hearthlightBoardCoinBonus } from "./features/embergarden/data.js";
 import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason } from "./features/zones/data.js";
@@ -72,7 +71,7 @@ export { createFreshState, generateSaveSeed, initialState };
 // never brick boot. See src/state/applyStoryOverrides.ts.
 setStoryOverrides((BALANCE_OVERRIDES.story as StoryOverrides | undefined) ?? null);
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, fiber, embergarden];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, embergarden];
 
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
@@ -1650,11 +1649,6 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Run summary modal open/close — owned by runSummary/slice
   "RUN_SUMMARY/OPEN",
   "RUN_SUMMARY/CLOSE",
-  // Fiber Crush minigame — all owned by fiber/slice (coreReducer handles none).
-  "FIBER/START_LEVEL",
-  "FIBER/RESOLVE_MOVE",
-  "FIBER/COMPLETE_LEVEL",
-  "FIBER/EXIT",
   // Embergarden (idle layer) — owned entirely by embergarden/slice. coreReducer
   // has no case for these, so without SLICE_PRIMARY registration they'd no-op.
   "EMBERGARDEN/TICK",
