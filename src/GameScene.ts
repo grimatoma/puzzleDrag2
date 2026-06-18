@@ -32,6 +32,8 @@ export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
+import { play } from "./audio/index.js";
+import { tickPitch, crossesThreshold, tickHapticMs } from "./game/dragFeedback.js";
 import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
 import { buildActivePool, buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
 import { shakeIntensityFor, shakeDurationFor, radialPeakRadiusFor } from "./game/juiceCurves.js";
@@ -100,6 +102,10 @@ export class GameScene extends Phaser.Scene {
 
   _prevPathLen: number = 0;
   _prevStarGroups: number = 0;
+  /** One-shot latch so the chainReady confirm fires at most once per drag,
+   *  even if the player backtracks below the threshold and re-crosses it.
+   *  Reset in clearPath (which every drag-start routes through). */
+  _readyFiredThisDrag: boolean = false;
   dragging: boolean = false;
   locked: boolean = false;
   /** Container used as tween target for shuffle spin; null when idle. */
@@ -1365,9 +1371,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   addToPath(tile: TileObj): void {
+    const prevLen = this.path.length;          // length BEFORE this add
     tile.setSelected(true);
     tile.pulse();
     this.path.push(tile);
+    const len = this.path.length;              // length AFTER this add
+    const minChain = this._effectiveMinChain();
+    // First add where the chain becomes collectable (latched once per drag).
+    const justBecameReady =
+      crossesThreshold(prevLen, len, minChain) && !this._readyFiredThisDrag;
+
+    // Per-tile rising tick, in sync with the ring-burst at redrawPath below.
+    play("chainTick", { pitch: tickPitch(len) });
+    if (justBecameReady) {
+      play("chainReady");
+      this._readyFiredThisDrag = true;
+    }
+
+    // Escalating haptic, gated by the user setting (same gate startPath uses).
+    if (getRegistry(this.registry, "hapticsOn") && navigator.vibrate) {
+      const ms = justBecameReady ? 50 : tickHapticMs(len); // stronger at the crossing
+      if (ms > 0) { try { navigator.vibrate(ms); } catch { /* unsupported */ } }
+    }
+
     this.redrawPath();
     this.updateGrassHover();
     this._emitChainUpdate();
@@ -1673,6 +1699,7 @@ export class GameScene extends Phaser.Scene {
     this.path = [];
     this._prevPathLen = 0;
     this._prevStarGroups = 0;
+    this._readyFiredThisDrag = false;
     this.pathLines.forEach((l) => { this.tweens.killTweensOf(l); l.clear(); });
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
