@@ -37,11 +37,12 @@
   // ── per-topology terrain (top-down, flat colour) ────────────────────────────
   function paintGround(g, Z, lots, tier) {
     const P = Z.palette, seed = Z.terrainSeed || 7, rnd = mb(seed ^ (tier * 2654435761));
-    const nearRoad = (x, y, pad) => Z.roads.some((r) => r.tier <= tier && (() => { const p = segPts(r); return distSeg(x, y, p[0][0], p[0][1], p[1][0], p[1][1]) <= r.half + pad; })());
+    const nearRoad = (x, y, pad) => Z.roads.some((r) => { if (r.tier > tier) return false; const p = segPts(r); for (let k = 0; k < p.length - 1; k++) if (distSeg(x, y, p[k][0], p[k][1], p[k + 1][0], p[k + 1][1]) <= r.half + pad) return true; return false; });
     const onLot = (x, y, m) => lots.some((l) => l.t <= tier && Math.abs(x - l.cx) < l.w / 2 + m && Math.abs(y - l.cy) < l.h / 2 + m);
     const inPlaza = (x, y, pad) => Z.plaza && ((x - Z.plaza.cx) / (Z.plaza.rx + (pad || 0))) ** 2 + ((y - Z.plaza.cy) / (Z.plaza.ry + (pad || 0))) ** 2 <= 1;
     const nearLM = (x, y) => Z.landmark && Math.hypot(x - Z.landmark.cx, y - Z.landmark.cy) < (Z.landmark.r || 36) + 30;
-    const cleared = (x, y) => nearRoad(x, y, 70) || onLot(x, y, 20) || inPlaza(x, y, 10) || nearLM(x, y);
+    const nearSpan = (x, y, pad) => (Z.features || []).some((ft) => { if (ft.kind !== "span" || (ft.tier !== undefined && ft.tier > tier)) return false; for (let k = 0; k < ft.pts.length - 1; k++) if (distSeg(x, y, ft.pts[k][0], ft.pts[k][1], ft.pts[k + 1][0], ft.pts[k + 1][1]) <= (ft.w || 8) + pad) return true; return false; });
+    const cleared = (x, y) => nearRoad(x, y, 70) || onLot(x, y, 20) || inPlaza(x, y, 10) || nearLM(x, y) || nearSpan(x, y, 38);
     const water = Z.groundMode === "water";
 
     // base fill
@@ -68,6 +69,8 @@
       if (ft.tier !== undefined && ft.tier > tier) return false;
       if (ft.kind === "band") return x >= ft.x && x <= ft.x + ft.w && y >= ft.y && y <= ft.y + ft.h;
       if (ft.kind === "lake" || ft.kind === "pool") return ((x - ft.cx) / ft.rx) ** 2 + ((y - ft.cy) / ft.ry) ** 2 <= 1;
+      if (ft.kind === "disc") return ((x - ft.cx) / ft.r) ** 2 + ((y - ft.cy) / (ft.ry || ft.r)) ** 2 <= 1.3;
+      if (ft.kind === "span") { for (let k = 0; k < ft.pts.length - 1; k++) if (distSeg(x, y, ft.pts[k][0], ft.pts[k][1], ft.pts[k + 1][0], ft.pts[k + 1][1]) <= (ft.w || 8) + 5) return true; return false; }
       return false;
     });
     const glyph = Z.frontierGlyph || "tree";
@@ -87,6 +90,12 @@
     else if (ft.kind === "lava") { g.save(); g.shadowColor = P.glow; g.shadowBlur = 16; g.strokeStyle = P.surface; g.lineWidth = ft.w || 22; g.lineCap = "round"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke(); g.restore(); g.strokeStyle = P.glow; g.lineWidth = (ft.w || 22) * 0.4; g.lineCap = "round"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke(); }
     else if (ft.kind === "chasm") { g.fillStyle = P.dark || "#000"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.closePath(); g.fill(); }
     else if (ft.kind === "band") { g.fillStyle = ft.col || shade(P.ground, -.1); g.fillRect(ft.x, ft.y, ft.w, ft.h); }
+    else if (ft.kind === "disc") { g.fillStyle = ft.col || shade(P.path, -.1); g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.r, ft.ry || ft.r, 0, 0, TAU); g.fill(); if (ft.glow) { g.save(); g.globalCompositeOperation = "screen"; g.fillStyle = ft.glow; g.globalAlpha = .5; g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.r * 1.5, (ft.ry || ft.r) * 1.5, 0, 0, TAU); g.fill(); g.restore(); } }
+    else if (ft.kind === "span") { // decorative bridge / cart-rail / sky-bridge between platforms
+      g.strokeStyle = ft.col || P.path; g.lineWidth = ft.w || 8; g.lineCap = "round"; g.lineJoin = "round";
+      g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke();
+      g.strokeStyle = "rgba(0,0,0,.2)"; g.lineWidth = 1.4; g.stroke();
+    }
     g.restore();
   }
 
@@ -187,7 +196,7 @@
     function syncUI() {
       document.querySelectorAll(`[data-tierbtn-for="${id}"] button`).forEach((b) => b.classList.toggle("on", +b.dataset.tier === view.tier));
       const cap = document.querySelector(`[data-caption-for="${id}"]`); if (cap) { const T = Z.tiers[view.tier]; cap.innerHTML = `<b>${T.name} — ${T.plots} plots.</b> ${T.caption}`; }
-      const stat = document.querySelector(`[data-stat-for="${id}"]`); if (stat) { const shown = lots.filter((l) => l.t <= view.tier).length; stat.textContent = `tier ${view.tier + 1}/${Z.tiers.length} · ${shown} plots placed · ${Z.roads.filter((r) => r.tier <= view.tier).length} road segments · 40×30 grid`; }
+      const stat = document.querySelector(`[data-stat-for="${id}"]`); if (stat) { const shown = lots.filter((l) => l.t <= view.tier).length; const links = Z.roads.filter((r) => r.tier <= view.tier).length + (Z.features || []).filter((f) => f.kind === "span" && (f.tier === undefined || f.tier <= view.tier)).length; stat.textContent = `tier ${view.tier + 1}/${Z.tiers.length} · ${shown} plots placed · ${links} route/bridge segments · 40×30 grid`; }
     }
     // wire controls
     document.querySelectorAll(`[data-tierbtn-for="${id}"] button`).forEach((b) => b.addEventListener("click", () => { stopGrow(); setTier(+b.dataset.tier); }));
