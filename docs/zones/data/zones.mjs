@@ -561,9 +561,9 @@ export const ZONES = [
       mood: "Eerie, melancholic turning hopeful, gothic. Fog over broken stone; wisps adrift; bells warding the dark.",
       biome: "haunted moor / ruins", frontier: "blight-fog & bramble over ruins, cleansed into hallowed cobble",
       palette: {
-        sky: ["#3a3450", "#5a5470"], ground: "#5a5660", ground2: "#6a6470",
-        surface: "#3a4a3a", surface2: "#4a5a48", path: "#7a7686", accent: "#e88a3a",
-        roof: "#4a3a5a", wall: "#b8b0bc", glow: "#7adcff", dark: "#1e1a2c",
+        sky: ["#3a3450", "#5a5470"], ground: "#6a6678", ground2: "#7a7488",
+        surface: "#3a4a3a", surface2: "#4a5a48", path: "#9a96a8", cobble: "#b4b0c2", accent: "#e88a3a",
+        roof: "#4a3a5a", wall: "#b8b0bc", glow: "#7adcff", dark: "#1e1a2c", frontierFill: "#2c2840",
       },
       ambient: ["fog", "wisps", "bats", "embers"],
     },

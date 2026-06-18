@@ -8,7 +8,7 @@ const sizes = [[104, 88], [98, 86], [108, 90], [100, 88], [106, 86], [102, 90]];
 
 const inner = ringLots({ cx, cy, rx: 205, ry: 205, from: 0, to: TAU * 5 / 6, count: 6, t: 0, startIndex: 0, foot: sizes });
 inner.forEach((e, k) => { e.t = (k % 2 === 0) ? 0 : 1; }); // founding wells (t0) then infill (t1)
-const outer = ringLots({ cx, cy, rx: 385, ry: 385, from: TAU / 28, to: TAU / 28 + TAU * 13 / 14, count: 14, t: 2, startIndex: 6, foot: sizes });
+const outer = ringLots({ cx, cy, rx: 398, ry: 398, from: TAU / 28, to: TAU / 28 + TAU * 13 / 14, count: 14, t: 2, startIndex: 6, foot: sizes });
 outer.forEach((e, k) => { e.t = k < 4 ? 2 : k < 8 ? 3 : 4; });
 
 const all = [...inner, ...outer].sort((a, b) => a.t - b.t);
@@ -16,8 +16,8 @@ all.forEach((e, i) => { e.i = i; });
 const foot = footFrom(all);
 
 const roads = [
-  arcRoad({ id: "R0", cx, cy, rx: 120, ry: 120, from: 0, to: TAU, t: 0, half: 12, steps: 40 }),
-  arcRoad({ id: "R1", cx, cy, rx: 300, ry: 300, from: 0, to: TAU, t: 2, half: 12, steps: 48 }),
+  arcRoad({ id: "R0", cx, cy, rx: 120, ry: 120, from: 0, to: TAU, t: 0, half: 16, steps: 40 }),
+  arcRoad({ id: "R1", cx, cy, rx: 300, ry: 300, from: 0, to: TAU, t: 2, half: 16, steps: 48 }),
 ];
 // short caravan spokes in the inner-ring gaps (don't reach the dense outer ring)
 [30, 150, 210, 330].forEach((deg, k) => {

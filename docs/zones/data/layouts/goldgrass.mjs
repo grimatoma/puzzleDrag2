@@ -37,9 +37,9 @@ export default {
   plaza: { cx: 640, cy: 480, rx: 84, ry: 56 },
   landmark: { cx: 640, cy: 480, r: 30 }, // waystone → market cross → civic fountain → Golden Monument
   roads: [
-    { id: "MB0", axis: "H", line: 480, half: 18, a: 380, b: 900, tier: 0, kind: "main" },
-    { id: "MB1w", axis: "H", line: 480, half: 18, a: 120, b: 380, tier: 1, kind: "main" },
-    { id: "MB1e", axis: "H", line: 480, half: 18, a: 900, b: 1160, tier: 1, kind: "main" },
+    { id: "MB0", axis: "H", line: 480, half: 22, a: 380, b: 900, tier: 0, kind: "main" },
+    { id: "MB1w", axis: "H", line: 480, half: 22, a: 120, b: 380, tier: 1, kind: "main" },
+    { id: "MB1e", axis: "H", line: 480, half: 22, a: 900, b: 1160, tier: 1, kind: "main" },
     { id: "NBL", axis: "H", line: 320, half: 12, a: 160, b: 1120, tier: 1, kind: "lane" },
     { id: "SBL", axis: "H", line: 640, half: 12, a: 160, b: 1120, tier: 1, kind: "lane" },
     { id: "RRT", axis: "H", line: 168, half: 12, a: 200, b: 1080, tier: 3, kind: "lane" }, // ring — top

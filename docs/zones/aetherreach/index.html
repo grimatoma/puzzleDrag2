@@ -229,7 +229,7 @@ nav.tabs button.on{color:var(--ink);background:var(--paper);border-color:var(--l
     const inPlaza = (x, y, pad) => Z.plaza && ((x - Z.plaza.cx) / (Z.plaza.rx + (pad || 0))) ** 2 + ((y - Z.plaza.cy) / (Z.plaza.ry + (pad || 0))) ** 2 <= 1;
     const nearLM = (x, y) => Z.landmark && Math.hypot(x - Z.landmark.cx, y - Z.landmark.cy) < (Z.landmark.r || 36) + 30;
     const nearSpan = (x, y, pad) => (Z.features || []).some((ft) => { if (ft.kind !== "span" || (ft.tier !== undefined && ft.tier > tier)) return false; for (let k = 0; k < ft.pts.length - 1; k++) if (distSeg(x, y, ft.pts[k][0], ft.pts[k][1], ft.pts[k + 1][0], ft.pts[k + 1][1]) <= (ft.w || 8) + pad) return true; return false; });
-    const cleared = (x, y) => nearRoad(x, y, 70) || onLot(x, y, 20) || inPlaza(x, y, 10) || nearLM(x, y) || nearSpan(x, y, 38);
+    const cleared = (x, y) => nearRoad(x, y, 70) || onLot(x, y, 20) || inPlaza(x, y, 10) || nearLM(x, y) || nearSpan(x, y, 22);
     const water = Z.groundMode === "water";
 
     // base fill
@@ -238,8 +238,8 @@ nav.tabs button.on{color:var(--ink);background:var(--paper);border-color:var(--l
     // tile-granular ground vs frontier
     for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
       const cx = tx * TILE + 16, cy = ty * TILE + 16, cl = cleared(cx, cy);
-      if (water) { if (cl) { g.fillStyle = shade(P.ground, .04 + (rnd() < .5 ? .05 : 0)); g.fillRect(tx * TILE, ty * TILE, TILE, TILE); } }
-      else { g.fillStyle = cl ? shade(P.ground, rnd() < .18 ? .07 : 0) : (P.frontierFill || shade(P.ground, -0.16)); g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
+      if (water) { if (cl) { g.fillStyle = shade(P.ground, .08 + (rnd() < .5 ? .06 : 0)); g.fillRect(tx * TILE, ty * TILE, TILE, TILE); } }
+      else { g.fillStyle = cl ? shade(P.ground, .10 + (rnd() < .3 ? .06 : 0)) : (P.frontierFill || shade(P.ground, -0.2)); g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
     }
     // soft tonal blotches
     g.save(); for (let i = 0; i < 26; i++) { const x = rnd() * W, y = rnd() * H, r = 50 + rnd() * 150; const gr = g.createRadialGradient(x, y, 0, x, y, r); const dk = rnd() < .5; gr.addColorStop(0, dk ? "rgba(0,0,0,.07)" : "rgba(255,255,255,.05)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); } g.restore();
@@ -274,7 +274,9 @@ nav.tabs button.on{color:var(--ink);background:var(--paper);border-color:var(--l
     if (ft.tier !== undefined && ft.tier > tier) return;
     g.save();
     if (ft.kind === "pool" || ft.kind === "lake") { g.fillStyle = P.surface; g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.rx, ft.ry, 0, 0, TAU); g.fill(); g.fillStyle = P.surface2; g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.rx * 0.7, ft.ry * 0.7, 0, 0, TAU); g.fill(); g.save(); g.globalCompositeOperation = "screen"; g.fillStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.ellipse(ft.cx - ft.rx * .2, ft.cy - ft.ry * .2, ft.rx * .4, ft.ry * .3, 0, 0, TAU); g.fill(); g.restore(); }
-    else if (ft.kind === "lava") { g.save(); g.shadowColor = P.glow; g.shadowBlur = 16; g.strokeStyle = P.surface; g.lineWidth = ft.w || 22; g.lineCap = "round"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke(); g.restore(); g.strokeStyle = P.glow; g.lineWidth = (ft.w || 22) * 0.4; g.lineCap = "round"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke(); }
+    else if (ft.kind === "lava") { const stroke = (col, w) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.stroke(); };
+      g.save(); g.shadowColor = P.glow; g.shadowBlur = 26; stroke(P.surface, ft.w || 22); g.restore();
+      stroke(P.glow, (ft.w || 22) * 0.55); g.globalAlpha = 0.7; stroke("#fff3d0", (ft.w || 22) * 0.22); g.globalAlpha = 1; }
     else if (ft.kind === "chasm") { g.fillStyle = P.dark || "#000"; g.beginPath(); g.moveTo(ft.pts[0][0], ft.pts[0][1]); for (let i = 1; i < ft.pts.length; i++) g.lineTo(ft.pts[i][0], ft.pts[i][1]); g.closePath(); g.fill(); }
     else if (ft.kind === "band") { g.fillStyle = ft.col || shade(P.ground, -.1); g.fillRect(ft.x, ft.y, ft.w, ft.h); }
     else if (ft.kind === "disc") { g.fillStyle = ft.col || shade(P.path, -.1); g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.r, ft.ry || ft.r, 0, 0, TAU); g.fill(); if (ft.glow) { g.save(); g.globalCompositeOperation = "screen"; g.fillStyle = ft.glow; g.globalAlpha = .5; g.beginPath(); g.ellipse(ft.cx, ft.cy, ft.r * 1.5, (ft.ry || ft.r) * 1.5, 0, 0, TAU); g.fill(); g.restore(); } }
@@ -303,7 +305,7 @@ nav.tabs button.on{color:var(--ink);background:var(--paper);border-color:var(--l
   // ── roads (tier-gated): dirt/plank/cobble bands ─────────────────────────────
   function drawRoads(g, Z, tier) {
     const P = Z.palette;
-    for (const r of Z.roads) { if (r.tier > tier) continue; const p = segPts(r); const col = r.kind === "boardwalk" ? P.path : (tier >= 3 ? (P.cobble || shade(P.path, .12)) : P.path);
+    for (const r of Z.roads) { if (r.tier > tier) continue; const p = segPts(r); const col = r.col || (r.kind === "boardwalk" ? P.path : (tier >= 3 ? (P.cobble || shade(P.path, .12)) : P.path));
       g.strokeStyle = col; g.lineWidth = r.half * 2; g.lineCap = "round"; g.lineJoin = "round";
       g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]); g.stroke();
       // edge

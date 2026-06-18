@@ -20,7 +20,7 @@ export default {
     { id: "L01", pts: [[600, 778], [648, 652]], half: 11, tier: 1, kind: "lane" }, // stair up
     { id: "L12", pts: [[636, 624], [672, 500]], half: 11, tier: 2, kind: "lane" },
     { id: "L23", pts: [[660, 476], [660, 356]], half: 11, tier: 3, kind: "lane" },
-    { id: "LIFT", pts: [[702, 800], [682, 360]], half: 8, tier: 1, kind: "lane" }, // cargo lift line to the top
+    { id: "LIFT", pts: [[702, 800], [682, 360]], half: 12, tier: 1, kind: "lane", col: "#c4502a" }, // cargo lift line to the top
   ],
   foot: { 0: [118, 96], 1: [110, 92], 2: [120, 98], 3: [112, 94], 4: [118, 92], 5: [108, 96],
     6: [114, 94], 7: [120, 98], 8: [106, 92], 9: [116, 96], 10: [110, 94], 11: [118, 92],
