@@ -87,9 +87,9 @@ export const TYPE_WORKERS: WorkerDef[] = [
     hireCost: { coins: 75, coinsStep: 35, resources: { tile_mine_stone: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
-      { id: "threshold_reduce_category", params: { category: "wood", amount: 1 } },
+      { id: "threshold_reduce_category", params: { category: "mine_stone", amount: 1 } },
     ],
-    description: "Each hired Miner trims one tile off the plank-and-beam chain.",
+    description: "Each hired Miner trims one tile off the stone-and-block chain.",
     flavor: "Bram's pickhands, at home in the dark where the good stone hides.",
   },
   {
