@@ -16,6 +16,13 @@ built end-to-end with real assets rather than placeholders.
 |---|---|
 | ![self shadow](preview/self-shadow.png) | ![tilt shift](preview/tilt-shift.png) |
 
+**Sprites cast _and_ receive shadows.** Every sprite sets `receiveShadow`, so a low sun throws
+silhouettes that fall *across* the houses, villagers and road — not just onto the ground. Drag the sun low
+and rotate the direction to see them stretch and overlap. (A minimal procedural-only reference of just this
+mechanic lives in [`../hd2d-village-sim/`](../hd2d-village-sim/).)
+
+![shadow overlap](preview/shadow-overlap.png)
+
 ## Run it
 
 The demo loads React, three.js, R3F, drei and the postprocessing stack from a CDN (`esm.sh`) via an
