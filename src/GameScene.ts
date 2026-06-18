@@ -1,24 +1,18 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
-import { applySpawnPoolModifiers } from "./features/farm/poolMath.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
-  expandZoneCategories,
   pickByZoneSeasonDrops,
   seasonIndexInSession,
   seasonNameInSession,
   ZONES,
-  ZONE_UPGRADE_TARGET_GOLD,
-  TILE_CATEGORY_TO_ZONE_CATEGORY,
-  ZONE_TO_TILE_CATEGORIES,
   zoneFarmBoard,
   zoneBaseTurns,
 } from "./features/zones/data.js";
 import { assertTile } from "./types/guards.js";
-import { BREAKPOINTS } from "./ui/breakpoints.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
@@ -33,11 +27,14 @@ import {
   preloadConceptTileGifs,
 } from "./textures/conceptTiles/index.js";
 import { TileObj } from "./TileObj.js";
-import { computeBakeScale, hasValidChain } from "./game/chain.js";
+import { computeBakeScale, hasValidChain, effectiveMinChain, canExtendChain, toSelectorGrid } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
+import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
+import { buildActivePool, buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
+import { shakeIntensityFor, shakeDurationFor, radialPeakRadiusFor } from "./game/juiceCurves.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -70,13 +67,6 @@ const BIOME_GOLD_TILE: Record<string, string | null> = Object.freeze({
   mine: "tile_mine_gold",
   fish: null, // No gold tile for fish biome yet
 });
-
-// Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
-// viewports so the board can stretch as wide as possible.
-function boardFrameFor(cssVw: number): number {
-  return cssVw < BREAKPOINTS.boardFrameNarrow ? 8 : 14;
-}
-
 
 // Chain path colors (warm orange when the chain meets minimum length, brown
 // when it doesn't). Cross-faded via _pathValidProgress when validity flips.
@@ -211,8 +201,7 @@ export class GameScene extends Phaser.Scene {
       this._positionGrassHover(pointer.worldX, pointer.worldY);
       const ts = this.tileSize;
       if (!ts) return;
-      const col = Math.floor((pointer.worldX - this.boardX) / ts);
-      const row = Math.floor((pointer.worldY - this.boardY) / ts);
+      const { col, row } = worldToCell(pointer.worldX, pointer.worldY, this.boardX, this.boardY, ts);
       if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
       const tile = this.grid?.[row]?.[col];
       if (!tile) return;
@@ -220,10 +209,7 @@ export class GameScene extends Phaser.Scene {
       if (tile === last) return;
       // Reject corner clips: only register when the finger is within the
       // tile's circular hit area (0.6 × tile size, same as TileObj).
-      const dx = pointer.worldX - tile.x;
-      const dy = pointer.worldY - tile.y;
-      const hitR = ts * 0.6;
-      if (dx * dx + dy * dy > hitR * hitR) return;
+      if (!withinCircularHit(pointer.worldX, pointer.worldY, tile.x, tile.y, ts)) return;
       this.tryAddToPath(tile);
     });
 
@@ -551,37 +537,28 @@ export class GameScene extends Phaser.Scene {
   /** Returns the effective minimum chain length given the active boss only.
    *  Phase 7 — winter minimum-chain check was removed with the calendar season. */
   _effectiveMinChain() {
-    const bossMin = getRegistry(this.registry, "boss")?.minChain ?? 0;
-    return Math.max(3, bossMin);
+    return effectiveMinChain(getRegistry(this.registry, "boss")?.minChain ?? 0);
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
 
   layoutDims() {
     // Scene world coordinates are in canvas (device) pixels because the game
-    // is configured at gameSize = cssSize × dpr. CSS-pixel design constants
-    // are converted with this.dpr where they appear as world dimensions.
-    const dpr = this.dpr;
-    const vw = this.scale.width;
-    const vh = this.scale.height;
-    this.boardFrame = boardFrameFor(vw / dpr) * dpr;
-    const margin = this.boardFrame;
-    const maxByW = (vw - margin * 2) / COLS;
-    const maxByH = (vh - margin * 2) / ROWS;
-    // Let the board fill its container — only clamp a hard ceiling so
-    // huge ultrawide displays don't render absurdly large tiles.
-    const ceiling = TILE * 3.2 * dpr;
-    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling));
-    // Ratio of canvas px to CSS px at current tile size — used for graphics
-    // line widths, offsets, and other CSS-pixel design constants.
-    this.tileScale = this.tileSize / TILE;
-    // Sprite display scale: textures are baked at TILE * bakeScale
-    // canvas px, so dividing by bakeScale makes a sprite at scale 1 fill
-    // exactly that. bakeScale defaults to dpr until handleResize bumps it.
-    const bakeScale = this.bakeScale || dpr;
-    this.tileSpriteScale = this.tileScale / bakeScale;
-    this.boardX = Math.round((vw - COLS * this.tileSize) / 2);
-    this.boardY = Math.round((vh - ROWS * this.tileSize) / 2);
+    // is configured at gameSize = cssSize × dpr. The pure math lives in
+    // ./game/layout.ts so it can be unit-tested without Phaser; here we just
+    // read the Phaser-owned viewport/dpr and assign the result onto `this`.
+    const dims = computeLayout({
+      dpr: this.dpr,
+      vw: this.scale.width,
+      vh: this.scale.height,
+      bakeScale: this.bakeScale,
+    });
+    this.tileSize = dims.tileSize;
+    this.tileScale = dims.tileScale;
+    this.tileSpriteScale = dims.tileSpriteScale;
+    this.boardX = dims.boardX;
+    this.boardY = dims.boardY;
+    this.boardFrame = dims.boardFrame;
   }
 
   handleResize() {
@@ -768,53 +745,18 @@ export class GameScene extends Phaser.Scene {
    */
   nextUpgradeTile(tile: { key: string }): TileRes | null {
     if (!tile?.key) return null;
-    if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
-
-    const b = this.biome();
-    const biomeKey = this.biomeKey();
-    const allTiles: TileRes[] = b.tiles;
-
-    // Determine source zone-category from tile's tileCollection category.
-    const tileCat = (CATEGORY_OF as Record<string, string | undefined>)[tile.key];
-    if (!tileCat) return null;
-    const sourceZoneCat = (TILE_CATEGORY_TO_ZONE_CATEGORY as Record<string, string | undefined>)[tileCat];
-    if (!sourceZoneCat) return null;
-
-    // Look up the zone's upgradeMap for this source category.
+    // Pure resolution lives in ./game/spawnPool.ts; the scene supplies the
+    // registry/biome-derived inputs (active zone's upgradeMap, biome tiles,
+    // active tiles, the biome's GOLD tile).
     const zoneId = getRegistry(this.registry, "activeZone") ?? null;
-    if (!zoneId) return null;
-    const farm = zoneFarmBoard(zoneId);
-    if (!farm?.upgradeMap) return null;
-    const targetZoneCat = farm.upgradeMap[sourceZoneCat as import("./types/catalog/tileCategories.js").ZoneCategoryId];
-    if (!targetZoneCat) return null;
-
-    // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
-    if (targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) {
-      const goldKey = (BIOME_GOLD_TILE as Record<string, string | null>)[biomeKey] ?? null;
-      if (!goldKey) return null;
-      return allTiles.find((t: TileRes) => t.key === goldKey) ?? null;
-    }
-
-    // Normal case: find the player's active tile in the target zone-category.
-    const targetTileCats: string[] = (ZONE_TO_TILE_CATEGORIES as Record<string, string[]>)[targetZoneCat] ?? [];
-    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
-
-    if (tileCollectionActive) {
-      for (const tc of targetTileCats) {
-        const activeKey = tileCollectionActive[tc];
-        if (!activeKey) continue;
-        const r = allTiles.find((t: TileRes) => t.key === activeKey);
-        if (r) return r;
-      }
-    }
-
-    // Fallback: first biome tile whose category matches the target tile-categories.
-    for (const t of allTiles) {
-      const cat = (CATEGORY_OF as Record<string, string | undefined>)[t.key];
-      if (cat && targetTileCats.includes(cat)) return t;
-    }
-
-    return null;
+    const upgradeMap = zoneId ? zoneFarmBoard(zoneId)?.upgradeMap ?? null : null;
+    return resolveUpgradeTile<TileRes>({
+      tileKey: tile.key,
+      biomeTiles: this.biome().tiles,
+      upgradeMap,
+      tileCollectionActive: getRegistry(this.registry, "tileCollectionActive") ?? null,
+      goldTileKey: (BIOME_GOLD_TILE as Record<string, string | null>)[this.biomeKey()] ?? null,
+    });
   }
 
   /**
@@ -824,19 +766,7 @@ export class GameScene extends Phaser.Scene {
    * has explicitly chosen (or defaulted) will spawn.
    */
   activePool() {
-    const base = this.biome().pool;
-    const active = getRegistry(this.registry, "tileCollectionActive") ?? null;
-    if (!active) return [...base];
-    const out = [];
-    for (const baseKey of base) {
-      const cat = CATEGORY_OF[baseKey];
-      if (!cat) { out.push(baseKey); continue; }
-      const a = active[cat];
-      if (a === null || a === undefined) continue; // category disabled — drop slot
-      out.push(a);
-    }
-    // Safety: never return an empty pool (fallback to base so the board can fill)
-    return out.length > 0 ? out : [...base];
+    return buildActivePool(this.biome().pool, getRegistry(this.registry, "tileCollectionActive") ?? null);
   }
 
   randomResource() {
@@ -955,56 +885,12 @@ export class GameScene extends Phaser.Scene {
 
   fillBoard(initial = false) {
     const ts = this.tileSize;
-    // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
-    // by the active tile type: a boost for key K only applies when K is the active
-    // tile type in its category (matches getActivePool semantics).
-    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
-    let workerPool = this.activePool();
-    const poolWeights = getRegistry(this.registry, "effectivePoolWeights") ?? {};
-    // Phase 2 — restrict the spawn pool to the categories the player picked
-    // in the Start Farming modal. Empty/missing list = no filter (legacy
-    // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
-    // ignore this filter; it only applies on the farm board.
-    const sessionSelectedTiles = getRegistry(this.registry, "sessionSelectedTiles") ?? [];
-    if (this.biomeKey() === "farm" && sessionSelectedTiles.length > 0) {
-      const allowedCats = expandZoneCategories(sessionSelectedTiles);
-      const filtered = workerPool.filter((k) => {
-        const cat = CATEGORY_OF[k];
-        return cat ? allowedCats.has(cat) : true;
-      });
-      // Guard against an over-restrictive selection that would leave no
-      // tiles to spawn — fall back to the unfiltered pool in that case.
-      if (filtered.length > 0) workerPool = filtered;
-    }
-    // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
-    // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
-    const boss = getRegistry(this.registry, "boss");
-    const spawnBias = boss?.spawnBias ?? null;
-    if (spawnBias) {
-      const baseCounts: Record<string, number> = {};
-      for (const k of workerPool) baseCounts[k] = (baseCounts[k] ?? 0) + 1;
-      for (const [k, factor] of Object.entries(spawnBias as Record<string, number>)) {
-        const extra = Math.round((baseCounts[k] ?? 0) * (factor - 1));
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-    }
-    // Fertilizer bias: double seedling-tier resource copies in pool
-    // Also activated by magic_fertilizer charges (one charge consumed per fill)
+    // Build the worker-boosted, tile-collection-substituted, season/weight-
+    // modified spawn pool. The pure assembly (category filter + boss bias +
+    // fertilizer bias + modifiers) lives in ./game/spawnPool.ts; the scene reads
+    // the registry/biome and applies the FERTILIZER_CONSUMED side-effect.
     const fillBiasArmed = !!(getRegistry(this.registry, "fillBiasTarget") ||
                              (getRegistry(this.registry, "magicFertilizerCharges") ?? 0) > 0);
-    if (fillBiasArmed) {
-      const biasTargetKey = getRegistry(this.registry, "fillBiasTarget")?.key ?? null;
-      const biasKeys = biasTargetKey
-        ? [biasTargetKey, `tile_${biasTargetKey}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
-        : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
-      const fBase: Record<string, number> = {};
-      for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
-      for (const k of biasKeys) {
-        const extra = fBase[k] ?? 0;
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-      this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
-    }
     const farmSeasonName =
       this.biomeKey() === "farm"
         ? seasonNameInSession(
@@ -1012,12 +898,23 @@ export class GameScene extends Phaser.Scene {
             getRegistry(this.registry, "turnBudget") ?? 10,
           )
         : null;
-    workerPool = applySpawnPoolModifiers(workerPool, {
-      poolWeights,
-      tileCollectionActive,
+    const workerPool = buildSpawnPool({
+      basePool: this.activePool(),
       biomeKey: this.biomeKey(),
+      sessionSelectedTiles: getRegistry(this.registry, "sessionSelectedTiles") ?? [],
+      spawnBias: getRegistry(this.registry, "boss")?.spawnBias ?? null,
+      fertilizer: {
+        armed: fillBiasArmed,
+        targetKey: getRegistry(this.registry, "fillBiasTarget")?.key ?? null,
+      },
+      biomeTileKeys: this.biome().tiles.map((t: TileRes) => t.key),
+      poolWeights: getRegistry(this.registry, "effectivePoolWeights") ?? {},
+      tileCollectionActive: getRegistry(this.registry, "tileCollectionActive") ?? null,
       seasonName: farmSeasonName,
     });
+    // Fertilizer consumes a charge when armed (one per fill) — emitting the
+    // event is the scene-side effect; the bias itself is in buildSpawnPool.
+    if (fillBiasArmed) this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
@@ -1321,9 +1218,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Reducer-shaped grid for tile selectors (keys + selected flag). */
   _selectorGrid() {
-    return this.grid.map((row) =>
-      row.map((t) => (t ? { key: t.res.key, selected: !!t.selected } : { key: null })),
-    );
+    return toSelectorGrid(this.grid);
   }
 
   _collapseAfterSweep(msOverride?: number): void {
@@ -1451,20 +1346,22 @@ export class GameScene extends Phaser.Scene {
   tryAddToPath(tile: TileObj): void {
     if (!this.dragging || !this.path.length) return;
     if (tile.frozen || tile.rubble) return;
-    const last = this.path[this.path.length - 1];
-    const prev = this.path[this.path.length - 2];
-    if (prev === tile) {
-      last.setSelected(false);
+    // Pure geometry/key decision lives in ./game/chain.ts; the scene supplies
+    // the path's keys + cells and applies the Phaser side of the result.
+    const decision = canExtendChain(
+      this.path.map((t) => t.res.key),
+      this.path.map((t) => ({ col: t.col, row: t.row })),
+      { col: tile.col, row: tile.row, key: tile.res.key, selected: !!tile.selected },
+    );
+    if (decision === "backtrack") {
+      this.path[this.path.length - 1].setSelected(false);
       this.path.pop();
       this.redrawPath();
       this.updateGrassHover();
       this._emitChainUpdate();
       return;
     }
-    if (tile.selected) return;
-    const same = tile.res.key === this.path[0].res.key;
-    const adj = Math.abs(tile.col - last.col) <= 1 && Math.abs(tile.row - last.row) <= 1 && !(tile.col === last.col && tile.row === last.row);
-    if (same && adj) this.addToPath(tile);
+    if (decision === "extend") this.addToPath(tile);
   }
 
   addToPath(tile: TileObj): void {
@@ -2004,17 +1901,15 @@ export class GameScene extends Phaser.Scene {
 
   shakeForChain(len: number): void {
     if (len < 3) return;
-    // 3 → barely; 6 → noticeable; 10+ → bone-rattling.
-    const intensity = Math.min(0.018, 0.0025 + (len - 3) * 0.0028);
-    const duration = Math.min(520, 160 + (len - 3) * 50);
-    this._shake(duration, intensity);
+    // Curves live in ./game/juiceCurves.ts; the scene keeps the shake call.
+    this._shake(shakeDurationFor(len), shakeIntensityFor(len));
   }
 
   radialFlash(x: number, y: number, len: number) {
     if (len < 3) return;
     const ring = this.add.graphics().setDepth(15);
     const startR = 10 * this.tileScale;
-    const peakR = (40 + Math.min(80, (len - 3) * 14)) * this.tileScale;
+    const peakR = radialPeakRadiusFor(len, this.tileScale);
     const obj = { r: startR, a: 0.55 };
     this.tweens.add({
       targets: obj, r: peakR, a: 0,

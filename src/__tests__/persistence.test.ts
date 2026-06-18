@@ -31,9 +31,9 @@ describe("persistence", () => {
     expect(state).toEqual(validData);
   });
 
-  test("loadSavedState returns null and clears save for an un-laddered (gap) version", () => {
-    // -1 is below current with no migrator rung → fail-safe discard, exactly as
-    // the old destructive behaviour (now via the migration ladder's gap guard).
+  test("loadSavedState returns null and clears save when version has no migration path", () => {
+    // version -1 is below current with no migrator rung → fail-safe discard,
+    // exactly the old destructive behaviour, now via the ladder's gap guard.
     const oldData = { version: -1, something: "else" };
     localStorage.setItem(SAVE_KEY, JSON.stringify(oldData));
     const state = loadSavedState();
@@ -55,20 +55,21 @@ describe("persistence", () => {
     );
   });
 
-  test("loadSavedState UPGRADES a laddered older save instead of wiping it", () => {
-    // A v45 save (one below current) is reachable via MIGRATIONS[45]: it should
-    // come back upgraded (version bumped, embergarden defaulted), pre-existing
-    // fields preserved, and the save NOT removed from storage.
-    const v45 = { version: 45, coins: 999, inventory: { home: { supplies: 3 } } };
+  test("loadSavedState UPGRADES a laddered old version instead of wiping it", () => {
+    // The headline non-destructive guarantee: a v45 save (below current) now
+    // walks the full ladder to current (seeding both fiber and embergarden) and
+    // is NOT removed from storage.
+    const v45 = { version: 45, coins: 999, inventory: { home: { flour: 3 } } };
     localStorage.setItem(SAVE_KEY, JSON.stringify(v45));
-    const state = loadSavedState() as Record<string, unknown>;
+    const state = loadSavedState();
     expect(state).not.toBeNull();
-    expect(state.version).toBe(SAVE_SCHEMA_VERSION);
-    expect(state.coins).toBe(999); // progress preserved, not reset
-    expect(state.embergarden).toEqual({
+    expect(state?.version).toBe(SAVE_SCHEMA_VERSION); // bumped to current (47)
+    expect((state as Record<string, unknown>).fiber).toBeTruthy(); // fiber seeded (45→46)
+    expect((state as Record<string, unknown>).embergarden).toEqual({
       warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
-    });
-    expect(localStorage.getItem(SAVE_KEY)).not.toBeNull(); // not wiped
+    }); // embergarden seeded (46→47)
+    expect(state?.coins).toBe(999); // progress preserved
+    expect(localStorage.getItem(SAVE_KEY)).not.toBeNull(); // save NOT wiped
   });
 
   test("loadSavedState returns null when data is not an object", () => {

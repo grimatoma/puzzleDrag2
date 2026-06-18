@@ -1,97 +1,104 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { migrateSave, MIGRATIONS, type SaveMigrator } from "../state/saveMigrations.js";
+import { describe, expect, test } from "vitest";
+import { migrateSave, MIGRATIONS } from "../state/saveMigrations.js";
 import { SAVE_SCHEMA_VERSION } from "../constants.js";
+import v45PreBump from "./fixtures/saves/v45-pre-bump.json";
+import v46Current from "./fixtures/saves/v46-current.json";
 
-describe("save-migration ladder", () => {
-  // Some tests install synthetic rungs into the shared MIGRATIONS object; track
-  // them so we always restore the registry to its real shape afterward.
-  const installed: number[] = [];
-  function installRung(at: number, fn: SaveMigrator) {
-    installed.push(at);
-    MIGRATIONS[at] = fn;
-  }
-  afterEach(() => {
-    while (installed.length) delete MIGRATIONS[installed.pop()!];
-  });
-
-  it("identity: a current-version save is returned deep-equal unchanged", () => {
-    const input = { version: SAVE_SCHEMA_VERSION, coins: 150, nested: { a: 1 } };
+describe("saveMigrations.migrateSave", () => {
+  test("identity: a current-version save is returned deep-equal and unchanged", () => {
+    const input = { version: SAVE_SCHEMA_VERSION, coins: 200, inventory: { home: { flour: 3 } } };
     const result = migrateSave(input);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.save).toEqual(input);
   });
 
-  it("rejects a forward (newer-than-current) version, running no migrator", () => {
-    const result = migrateSave({ version: SAVE_SCHEMA_VERSION + 1 });
+  test("identity does not mutate a frozen input (purity)", () => {
+    const input = Object.freeze({ version: SAVE_SCHEMA_VERSION, coins: 1 });
+    expect(() => migrateSave(input as Record<string, unknown>)).not.toThrow();
+    const result = migrateSave(input as Record<string, unknown>);
+    expect(result.ok).toBe(true);
+  });
+
+  test("rejects a forward (newer-than-current) version, running no migrator", () => {
+    const result = migrateSave({ version: SAVE_SCHEMA_VERSION + 100 });
     expect(result).toEqual({ ok: false, reason: "forward-version" });
   });
 
-  it("rejects a missing rung (gap) below current", () => {
-    // A version far below current with no contiguous ladder of rungs.
-    const result = migrateSave({ version: -5 });
+  test("rejects a version below current with no migrator rung (missing-migrator)", () => {
+    // Version 1 will never have a migration rung → fail safe, do not half-migrate.
+    const result = migrateSave({ version: 1, coins: 5 });
     expect(result).toEqual({ ok: false, reason: "missing-migrator" });
   });
 
-  it("rejects a save with no numeric version", () => {
+  test("rejects a save with no numeric version", () => {
+    expect(migrateSave({}).ok).toBe(false);
     expect(migrateSave({})).toEqual({ ok: false, reason: "no-version" });
-    // A stringified version (very old / hand-edited save) is not a number.
-    expect(migrateSave({ version: "45" as unknown as number })).toEqual({ ok: false, reason: "no-version" });
-    expect(migrateSave({ version: NaN })).toEqual({ ok: false, reason: "no-version" });
+    expect(migrateSave({ version: "45" } as unknown as Record<string, unknown>))
+      .toEqual({ ok: false, reason: "no-version" });
   });
 
-  it("real 45 -> 46 rung defaults embergarden and preserves prior fields", () => {
-    const input = { version: 45, coins: 999, inventory: { home: { supplies: 3 } } };
-    const result = migrateSave(input);
+  test("each registered migrator advances version by exactly one and is callable", () => {
+    for (const [fromStr, migrator] of Object.entries(MIGRATIONS)) {
+      const from = Number(fromStr);
+      const out = migrator({ version: from });
+      expect(out.version).toBe(from + 1);
+    }
+  });
+
+  test("the ladder is contiguous up to the current version (no forgotten rung)", () => {
+    const keys = Object.keys(MIGRATIONS).map(Number);
+    if (keys.length === 0) return; // empty ladder is valid (nothing to migrate yet)
+    const min = Math.min(...keys);
+    for (let v = min; v < SAVE_SCHEMA_VERSION; v++) {
+      expect(MIGRATIONS[v], `missing migrator rung for version ${v}`).toBeTypeOf("function");
+    }
+  });
+});
+
+describe("saveMigrations — v45 walks the full ladder to current", () => {
+  test("upgrades a real v45 save to current, seeding fiber + embergarden and preserving progress", () => {
+    const result = migrateSave({ ...v45PreBump });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.save.version).toBe(46);
-    expect(result.save.coins).toBe(999);
-    expect(result.save.inventory).toEqual({ home: { supplies: 3 } });
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // 45 → 46 → 47
+    expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // 45→46 rung
+    expect(result.save.embergarden).toEqual({
+      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
+    }); // 46→47 rung
+    // Pre-existing progress is untouched.
+    expect(result.save.coins).toBe(1234);
+    expect(result.save.level).toBe(7);
+    expect(result.save.inventory).toEqual({ home: { flour: 5, plank: 12 } });
+    expect(result.save.settlements).toEqual({ home: { founded: true, tier: 2 } });
+  });
+
+  test("does not mutate the source v45 save (purity)", () => {
+    const input = { ...v45PreBump };
+    migrateSave(input);
+    expect(input.version).toBe(45);
+    expect((input as Record<string, unknown>).fiber).toBeUndefined();
+    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
+  });
+});
+
+describe("saveMigrations — 46 → 47 (Hearthkeeping / embergarden)", () => {
+  test("a v46 save upgrades to current, seeding embergarden and preserving the fiber slice", () => {
+    const result = migrateSave({ ...v46Current });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // bumped 46 → 47
     expect(result.save.embergarden).toEqual({
       warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
     });
+    // The v46-era `fiber` slice (with progress) survives untouched.
+    expect(result.save.fiber).toEqual({ unlockedLevel: 2, stars: { L1: 3 }, active: null });
+    expect(result.save.coins).toBe(1234);
   });
 
-  it("does not mutate a frozen input (migrators are pure)", () => {
-    const input = Object.freeze({ version: 45, coins: 10 });
-    expect(() => migrateSave(input)).not.toThrow();
-    const result = migrateSave(input);
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.save).not.toBe(input);
-  });
-
-  it("runs multiple rungs in order up to current", () => {
-    // Install synthetic rungs BELOW the real ladder so a low version walks all
-    // the way up to SAVE_SCHEMA_VERSION through both synthetic and real rungs.
-    const start = 43;
-    installRung(43, (s) => ({ ...s, version: 44, steps: [...(s.steps as number[] ?? []), 43] }));
-    installRung(44, (s) => ({ ...s, version: 45, steps: [...(s.steps as number[] ?? []), 44] }));
-    const result = migrateSave({ version: start, steps: [] });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
-    // 43,44 synthetic then the real 45->46 rung (which adds embergarden).
-    expect(result.save.steps).toEqual([43, 44]);
-    expect(result.save.embergarden).toBeTruthy();
-  });
-
-  it("a migrator that forgets to bump version still terminates (force-corrected)", () => {
-    installRung(40, (s) => ({ ...s })); // returns same version 40 — buggy
-    installRung(41, (s) => ({ ...s, version: 42 }));
-    installRung(42, (s) => ({ ...s, version: 43 }));
-    installRung(43, (s) => ({ ...s, version: 44 }));
-    installRung(44, (s) => ({ ...s, version: 45 }));
-    const result = migrateSave({ version: 40 });
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
-  });
-
-  it("MIGRATIONS has contiguous rungs up to the current version (no forgotten rung)", () => {
-    const keys = Object.keys(MIGRATIONS).map(Number).filter((n) => Number.isFinite(n));
-    if (keys.length === 0) return; // empty ladder is valid (nothing shipped above the seed)
-    const min = Math.min(...keys);
-    for (let v = min; v < SAVE_SCHEMA_VERSION; v++) {
-      expect(MIGRATIONS[v]).toBeTypeOf("function");
-    }
+  test("does not mutate the source v46 save (purity)", () => {
+    const input = { ...v46Current };
+    migrateSave(input);
+    expect(input.version).toBe(46);
+    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
 });

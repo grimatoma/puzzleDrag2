@@ -364,6 +364,18 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
         >
           🔥 Hearth
         </button>
+        {/* Weaver's Loft — entry point to the Fiber Crush minigame. Shown on the
+            home settlement (where the loft stands). */}
+        {mapCurrent === DEFAULT_ZONE && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SET_VIEW", view: "fiber" })}
+            className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#2b2218] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
+            title="Play Fiber Crush at the Weaver's Loft"
+          >
+            🧶 Weaver
+          </button>
+        )}
         {/* Boons shortcut — only visible once the player has faced any keeper. */}
         {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && (state.story.flags as Record<string, unknown>)[k]) && (
           <button

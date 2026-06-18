@@ -22,12 +22,8 @@ export function loadSavedState(): SavedState | null {
     );
     if (!parsed || typeof parsed !== "object") return null;
     if (parsed.version !== SAVE_SCHEMA_VERSION) {
-      // Try the migration ladder before giving up. A laddered older version is
-      // upgraded in place (so both this gate and the redundant one in init.ts
-      // see version === current); forward/gap/corrupt saves still wipe exactly
-      // as before. The upgraded object isn't rewritten to disk here — the
-      // normal persist cycle (first state change / pagehide) does that, and the
-      // migration re-runs harmlessly until then.
+      // Try to upgrade the save through the migration ladder instead of wiping
+      // it. Only forward/gap/corrupt versions (no migration path) are discarded.
       const result = migrateSave(parsed as Record<string, unknown>);
       if (!result.ok) {
         console.warn(
@@ -37,7 +33,10 @@ export function loadSavedState(): SavedState | null {
         try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
         return null;
       }
-      return result.save as SavedState; // upgraded; version === SAVE_SCHEMA_VERSION
+      // Upgraded in memory only; the next persist cycle rewrites it to disk.
+      // (We don't eagerly rewrite here — persistStateNow needs a full GameState,
+      // not the loose SavedState we hold at load time.)
+      return result.save as SavedState;
     }
     return parsed as SavedState;
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }

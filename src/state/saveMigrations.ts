@@ -1,44 +1,50 @@
-// Save-migration ladder. Replaces the old "discard the save on any version
-// mismatch" behaviour with an ordered chain of pure `version -> version + 1`
-// transforms, so an existing player who reloads after a shipped shape change
-// keeps their progress instead of starting over.
-//
-// This module is intentionally pure: no `localStorage`, no `console`, no
-// Phaser. The caller (`loadSavedState`) does the I/O and logging. Keeping it
-// side-effect free means the whole ladder is unit-testable in the node/vitest
-// env with no canvas.
-//
-// Contract for adding a migrator when you bump SAVE_SCHEMA_VERSION:
-//   1. bump SAVE_SCHEMA_VERSION in constants.ts,
-//   2. add a MIGRATIONS[oldVersion] entry below that upgrades old -> new and
-//      sets `version` to oldVersion + 1,
-//   3. add a fixture under src/__tests__/fixtures/saves/ + a migrator test.
-// Saves with no migrator path (gaps, forward versions, corrupt/no version) are
-// still discarded — fail-safe, never a silent half-upgrade.
-
+/**
+ * Forward-only save migration ladder.
+ *
+ * Replaces the old "discard on version mismatch" gate with an ordered set of
+ * pure `version → version+1` transforms. An old save reachable through the
+ * ladder is upgraded in place (the player keeps their progress) instead of
+ * being wiped. Saves with no migration path (a missing rung, a forward/unknown
+ * version, or a missing/non-numeric `version`) are still discarded by the
+ * caller — the ladder never half-migrates.
+ *
+ * Pure module: no `localStorage`, no `console`, no Phaser. The caller
+ * (`loadSavedState`) owns logging + storage side-effects.
+ *
+ * Adding a SAVE_SCHEMA_VERSION bump:
+ *   1. Bump `SAVE_SCHEMA_VERSION` in `constants.ts`.
+ *   2. Add a `MIGRATIONS[oldVersion]` entry here that upgrades old → new and
+ *      sets `version` to oldVersion + 1.
+ *   3. Add a fixture under `src/__tests__/fixtures/saves/` + a migrator test.
+ */
 import { SAVE_SCHEMA_VERSION } from "../constants.js";
 
-/**
- * A pure transform that upgrades a save from `from` to `from + 1`.
- * MUST NOT mutate its input and MUST set `version` to `from + 1` on its output.
- */
+/** A pure transform that upgrades a save from `from` to `from + 1`. Must not mutate its input. */
 export type SaveMigrator = (save: Record<string, unknown>) => Record<string, unknown>;
 
 /**
  * Ordered ladder. Key = the version the save is AT before the migrator runs.
- * `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). One entry per
- * SAVE_SCHEMA_VERSION bump; rungs must be contiguous up to the current version.
+ * `MIGRATIONS[n]` upgrades a v(n) save to v(n+1) and MUST set `version` to n+1
+ * on its output. Add one entry per SAVE_SCHEMA_VERSION bump; rungs must be
+ * contiguous up to the current version.
  */
 export const MIGRATIONS: Record<number, SaveMigrator> = {
-  // 45 -> 46: the Hearthkeeping idle layer (src/features/embergarden) adds the
-  // persisted `embergarden` field. Old saves simply lack it; default it so the
-  // accrual reducer/`createFreshState` shape is satisfied. `lastTickAt: null`
-  // means "first foreground tick just stamps, accrues nothing" — an existing
-  // player doesn't get a windfall from the migration itself.
+  // 45 → 46: "Fiber Crush" added the persisted `fiber` slice. Old saves simply
+  // lack the field; seed the default so the upgraded save carries it.
   45: (save) => ({
     ...save,
     version: 46,
-    embergarden: (save as { embergarden?: unknown }).embergarden ?? {
+    fiber: save.fiber ?? { unlockedLevel: 1, stars: {}, active: null },
+  }),
+  // 46 → 47: the Hearthkeeping idle layer (src/features/embergarden) added the
+  // persisted `embergarden` field. Old saves lack it; default it so the accrual
+  // reducer / `createFreshState` shape is satisfied. `lastTickAt: null` means
+  // "first foreground tick just stamps, accrues nothing" — the migration itself
+  // never hands an existing player a windfall.
+  46: (save) => ({
+    ...save,
+    version: 47,
+    embergarden: save.embergarden ?? {
       warmth: 0,
       lifetimeWarmth: 0,
       hearthlight: 0,
@@ -48,24 +54,30 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
   }),
 };
 
+export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";
+
+// The sibling fields are declared optional on both members so callers can read
+// `result.reason` / `result.save` without relying on discriminant narrowing —
+// the tests tsconfig runs with `strictNullChecks: false`, where that narrowing
+// is unreliable.
 export type MigrateResult =
-  | { ok: true; save: Record<string, unknown> }
-  | { ok: false; reason: "no-version" | "forward-version" | "missing-migrator" };
+  | { ok: true; save: Record<string, unknown>; reason?: undefined }
+  | { ok: false; save?: undefined; reason: MigrateFailReason };
 
 /**
- * Forward-only apply loop. Returns the upgraded save (whose `version` equals
+ * Forward-only apply loop. Returns the upgraded save (version ===
  * SAVE_SCHEMA_VERSION) or a typed failure the caller can log + discard on.
  *
- * - Forward-only: a save from a newer build (`v > current`) is rejected as
- *   `forward-version`; never run a migrator backward.
- * - Gap = fail safe: a missing rung while `v < current` returns
- *   `missing-migrator` → caller discards. Never half-migrate.
- * - Identity for current: `v === current` skips the loop and returns the save
- *   untouched (the "loads unchanged" guarantee).
+ * - `no-version`      — `version` is missing or not a number.
+ * - `forward-version` — save is from a NEWER build; never run a migrator backward.
+ * - `missing-migrator` — a rung below current has no entry; fail safe, do not half-migrate.
+ *
+ * A `version === SAVE_SCHEMA_VERSION` save skips the loop and is returned
+ * untouched (the "current save loads unchanged" guarantee).
  */
 export function migrateSave(raw: Record<string, unknown>): MigrateResult {
   const v = raw.version;
-  if (typeof v !== "number" || !Number.isFinite(v)) return { ok: false, reason: "no-version" };
+  if (typeof v !== "number") return { ok: false, reason: "no-version" };
   if (v > SAVE_SCHEMA_VERSION) return { ok: false, reason: "forward-version" };
   let cur = raw;
   let ver = v;

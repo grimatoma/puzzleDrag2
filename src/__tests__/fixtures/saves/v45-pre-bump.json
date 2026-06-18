@@ -1,0 +1,11 @@
+{
+  "version": 45,
+  "coins": 1234,
+  "level": 7,
+  "xp": 40,
+  "inventory": { "home": { "flour": 5, "plank": 12 } },
+  "resourceProgress": {},
+  "settlements": { "home": { "founded": true, "tier": 2 } },
+  "built": { "home": { "caravan_post": true } },
+  "tools": { "clear": 2, "basic": 1 }
+}
