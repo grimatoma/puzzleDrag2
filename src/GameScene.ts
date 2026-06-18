@@ -18,7 +18,6 @@ import {
   zoneBaseTurns,
 } from "./features/zones/data.js";
 import { assertTile } from "./types/guards.js";
-import { BREAKPOINTS } from "./ui/breakpoints.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
@@ -38,6 +37,7 @@ export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
+import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -70,13 +70,6 @@ const BIOME_GOLD_TILE: Record<string, string | null> = Object.freeze({
   mine: "tile_mine_gold",
   fish: null, // No gold tile for fish biome yet
 });
-
-// Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
-// viewports so the board can stretch as wide as possible.
-function boardFrameFor(cssVw: number): number {
-  return cssVw < BREAKPOINTS.boardFrameNarrow ? 8 : 14;
-}
-
 
 // Chain path colors (warm orange when the chain meets minimum length, brown
 // when it doesn't). Cross-faded via _pathValidProgress when validity flips.
@@ -211,8 +204,7 @@ export class GameScene extends Phaser.Scene {
       this._positionGrassHover(pointer.worldX, pointer.worldY);
       const ts = this.tileSize;
       if (!ts) return;
-      const col = Math.floor((pointer.worldX - this.boardX) / ts);
-      const row = Math.floor((pointer.worldY - this.boardY) / ts);
+      const { col, row } = worldToCell(pointer.worldX, pointer.worldY, this.boardX, this.boardY, ts);
       if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
       const tile = this.grid?.[row]?.[col];
       if (!tile) return;
@@ -220,10 +212,7 @@ export class GameScene extends Phaser.Scene {
       if (tile === last) return;
       // Reject corner clips: only register when the finger is within the
       // tile's circular hit area (0.6 × tile size, same as TileObj).
-      const dx = pointer.worldX - tile.x;
-      const dy = pointer.worldY - tile.y;
-      const hitR = ts * 0.6;
-      if (dx * dx + dy * dy > hitR * hitR) return;
+      if (!withinCircularHit(pointer.worldX, pointer.worldY, tile.x, tile.y, ts)) return;
       this.tryAddToPath(tile);
     });
 
@@ -559,29 +548,21 @@ export class GameScene extends Phaser.Scene {
 
   layoutDims() {
     // Scene world coordinates are in canvas (device) pixels because the game
-    // is configured at gameSize = cssSize × dpr. CSS-pixel design constants
-    // are converted with this.dpr where they appear as world dimensions.
-    const dpr = this.dpr;
-    const vw = this.scale.width;
-    const vh = this.scale.height;
-    this.boardFrame = boardFrameFor(vw / dpr) * dpr;
-    const margin = this.boardFrame;
-    const maxByW = (vw - margin * 2) / COLS;
-    const maxByH = (vh - margin * 2) / ROWS;
-    // Let the board fill its container — only clamp a hard ceiling so
-    // huge ultrawide displays don't render absurdly large tiles.
-    const ceiling = TILE * 3.2 * dpr;
-    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling));
-    // Ratio of canvas px to CSS px at current tile size — used for graphics
-    // line widths, offsets, and other CSS-pixel design constants.
-    this.tileScale = this.tileSize / TILE;
-    // Sprite display scale: textures are baked at TILE * bakeScale
-    // canvas px, so dividing by bakeScale makes a sprite at scale 1 fill
-    // exactly that. bakeScale defaults to dpr until handleResize bumps it.
-    const bakeScale = this.bakeScale || dpr;
-    this.tileSpriteScale = this.tileScale / bakeScale;
-    this.boardX = Math.round((vw - COLS * this.tileSize) / 2);
-    this.boardY = Math.round((vh - ROWS * this.tileSize) / 2);
+    // is configured at gameSize = cssSize × dpr. The pure math lives in
+    // ./game/layout.ts so it can be unit-tested without Phaser; here we just
+    // read the Phaser-owned viewport/dpr and assign the result onto `this`.
+    const dims = computeLayout({
+      dpr: this.dpr,
+      vw: this.scale.width,
+      vh: this.scale.height,
+      bakeScale: this.bakeScale,
+    });
+    this.tileSize = dims.tileSize;
+    this.tileScale = dims.tileScale;
+    this.tileSpriteScale = dims.tileSpriteScale;
+    this.boardX = dims.boardX;
+    this.boardY = dims.boardY;
+    this.boardFrame = dims.boardFrame;
   }
 
   handleResize() {
