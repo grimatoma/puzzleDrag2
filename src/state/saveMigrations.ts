@@ -29,15 +29,13 @@ export type SaveMigrator = (save: Record<string, unknown>) => Record<string, unk
  * contiguous up to the current version.
  */
 export const MIGRATIONS: Record<number, SaveMigrator> = {
-  // 45 → 46: "Fiber Crush" added the persisted `fiber` slice. Old saves simply
-  // lack the field; seed the default so the upgraded save carries it.
-  45: (save) => ({
-    ...save,
-    version: 46,
-    fiber: save.fiber ?? { unlockedLevel: 1, stars: {}, active: null },
-  }),
+  // 45 → 46: schema bump only. This rung originally seeded the "Fiber Crush"
+  // `fiber` slice (since removed); it stays as a pure version bump so old v45
+  // saves can still walk the chain up to the current version. (Any orphan
+  // `fiber` field on a pre-existing v46 save is harmless — nothing reads it.)
+  45: (save) => ({ ...save, version: 46 }),
   // 46 → 47: this version originally added the Hearthkeeping idle layer's
-  // `embergarden` field, but that feature was removed. The rung is kept as a
+  // `embergarden` field, but that feature was removed too. The rung is kept as a
   // no-op version bump (and strips any leftover `embergarden`) so saves written
   // by the idle-layer build still load instead of being discarded as a forward
   // version — we never roll a shipped SAVE_SCHEMA_VERSION backward.

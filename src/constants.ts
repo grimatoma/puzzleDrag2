@@ -415,14 +415,6 @@ const ITEMS_DATA = {
   honey: { kind: "resource", biome: "farm", label: "Honey", value: 300, next: null, look: { color: 0xe8a020, dark: 0x745010 } },
   meat: { kind: "resource", biome: "farm", label: "Meat", value: 21, next: null, look: { color: 0xc44848, dark: 0x682424 } },
   milk: { kind: "resource", biome: "farm", label: "Milk", value: 100, next: null, look: { color: 0xfaf6ec, dark: 0x807e74 } },
-  // ── Fiber Crush textile chain (wool → yarn → dye → cloth) ──────────────────
-  // Produced by the Fiber Crush minigame (src/game/fiber/), never on the chain
-  // board. Real catalog resources so they're sellable (sellPriceFor) and valid
-  // order/recipe keys. Conservative values — a new faucet, not a rebalance.
-  wool: { kind: "resource", biome: "farm", label: "Wool", value: 2, next: null, desc: "Raw fleece sheared and sorted by colour at the Weaver's Loft. The base of the Hearthwood textile trade.", look: { color: 0xf3ece0, dark: 0x9a8f7c } },
-  yarn: { kind: "resource", biome: "farm", label: "Yarn", value: 6, next: null, desc: "Wool spun into sturdy yarn, ready for the loom.", look: { color: 0xd9b06a, dark: 0x7a5e2c } },
-  dye: { kind: "resource", biome: "farm", label: "Dye", value: 5, next: null, desc: "A pot of rich plant dye for colouring yarn and cloth.", look: { color: 0x7c4a9a, dark: 0x3c2050 } },
-  cloth: { kind: "resource", biome: "farm", label: "Cloth", value: 18, next: null, desc: "Finished woven cloth — the prize of the Weaver's Loft, sold for a tidy sum.", look: { color: 0x4f87b8, dark: 0x274a68 } },
   horseshoe: { kind: "resource", biome: "farm", label: "Horseshoe", value: 400, next: null, look: { color: 0x8a8a90, dark: 0x46464a } },
   eggs: { kind: "resource", biome: "farm", label: "Eggs", value: 5, next: null, look: { color: 0xf8efd0, dark: 0x807660 } },
   hay_bundle: { kind: "resource", biome: "farm", label: "Hay Bundle", value: 6, next: null, look: { color: 0xc9b160, dark: 0x6a5828 } },

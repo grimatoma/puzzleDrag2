@@ -56,13 +56,14 @@ describe("saveMigrations.migrateSave", () => {
 });
 
 describe("saveMigrations — v45 walks the full ladder to current", () => {
-  test("upgrades a real v45 save to current, seeding fiber and preserving progress", () => {
+  test("upgrades a real v45 save to current as pure version bumps, preserving progress", () => {
     const result = migrateSave({ ...v45PreBump });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // 45 → 46 → 47
-    expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // 45→46 rung
-    // 46→47 is a no-op bump (the idle layer was removed) — no embergarden seeded.
+    // Both rungs are now no-op version bumps (Fiber Crush and the idle layer
+    // were removed) — neither slice is seeded.
+    expect(result.save.fiber).toBeUndefined();
     expect(result.save.embergarden).toBeUndefined();
     // Pre-existing progress is untouched.
     expect(result.save.coins).toBe(1234);
@@ -75,18 +76,18 @@ describe("saveMigrations — v45 walks the full ladder to current", () => {
     const input = { ...v45PreBump };
     migrateSave(input);
     expect(input.version).toBe(45);
-    expect((input as Record<string, unknown>).fiber).toBeUndefined();
   });
 });
 
 describe("saveMigrations — 46 → 47 (idle layer removed; no-op bump)", () => {
-  test("a v46 save bumps to current, preserving the fiber slice and adding no embergarden", () => {
+  test("a v46 save bumps to current, dropping embergarden and carrying any orphan fiber harmlessly", () => {
     const result = migrateSave({ ...v46Current });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // bumped 46 → 47
     expect(result.save.embergarden).toBeUndefined(); // idle layer removed
-    // The v46-era `fiber` slice (with progress) survives untouched.
+    // An orphan `fiber` field from the removed minigame (present on real
+    // fiber-window saves) is carried through untouched — nothing reads it now.
     expect(result.save.fiber).toEqual({ unlockedLevel: 2, stars: { L1: 3 }, active: null });
     expect(result.save.coins).toBe(1234);
   });

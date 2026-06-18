@@ -57,14 +57,16 @@ describe("persistence", () => {
 
   test("loadSavedState UPGRADES a laddered old version instead of wiping it", () => {
     // The headline non-destructive guarantee: a v45 save (below current) now
-    // walks the ladder to current (45→46 seeds fiber; 46→47 is a no-op bump now
-    // that the idle layer is removed) and is NOT removed from storage.
+    // walks the ladder to current (45→46 and 46→47 are both no-op version bumps
+    // now that Fiber Crush and the idle layer are removed) and is NOT removed
+    // from storage.
     const v45 = { version: 45, coins: 999, inventory: { home: { flour: 3 } } };
     localStorage.setItem(SAVE_KEY, JSON.stringify(v45));
     const state = loadSavedState();
     expect(state).not.toBeNull();
     expect(state?.version).toBe(SAVE_SCHEMA_VERSION); // bumped to current (47)
-    expect((state as Record<string, unknown>).fiber).toBeTruthy(); // fiber seeded (45→46)
+    expect((state as Record<string, unknown>).fiber).toBeUndefined();       // Fiber Crush removed
+    expect((state as Record<string, unknown>).embergarden).toBeUndefined(); // idle layer removed
     expect(state?.coins).toBe(999); // progress preserved
     expect(localStorage.getItem(SAVE_KEY)).not.toBeNull(); // save NOT wiped
   });
