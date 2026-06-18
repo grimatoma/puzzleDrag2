@@ -494,7 +494,7 @@ export const ZONES = [
       palette: {
         sky: ["#8fc4e8", "#cfe6f4"], ground: "#c8b894", ground2: "#b8a47e",
         surface: "#e8f2fa", surface2: "#ffffff", path: "#a89878", accent: "#7a5ac4",
-        roof: "#5a6ab0", wall: "#ece2cc", glow: "#b89aff", dark: "#3a4a6a",
+        roof: "#5a6ab0", wall: "#ece2cc", glow: "#b89aff", dark: "#3a4a6a", frontierFill: "#9fc8ea",
       },
       ambient: ["clouds", "airships", "drifting-petals", "lens-flare"],
     },

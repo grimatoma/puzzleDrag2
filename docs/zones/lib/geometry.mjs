@@ -38,7 +38,7 @@ export function verifyLayout(Z, zoneSpec) {
   const lots = resolveLots(Z);
   for (const l of lots) if (l.cx - l.w / 2 < 16 || l.cx + l.w / 2 > W - 16 || l.cy - l.h / 2 < 16 || l.cy + l.h / 2 > H - 16) problems.push(`lot ${l.index} out of bounds`);
   for (let i = 0; i < lots.length; i++) for (let j = i + 1; j < lots.length; j++) if (rectsOverlap(lots[i], lots[j], 6)) problems.push(`lot ${lots[i].index} overlaps lot ${lots[j].index}`);
-  for (const l of lots) for (const r of Z.roads) { const p = segPts(r); if (segRectDist(p[0], p[1], l) < r.half - 1) problems.push(`lot ${l.index} overlaps road "${r.id}"`); }
+  for (const l of lots) for (const r of Z.roads) { const p = segPts(r); let d = 1e9; for (let k = 0; k < p.length - 1; k++) d = Math.min(d, segRectDist(p[k], p[k + 1], l)); if (d < r.half - 1) problems.push(`lot ${l.index} overlaps road "${r.id}"`); }
   if (Z.landmark) for (const l of lots) { const dx = Math.max(Math.abs(l.cx - Z.landmark.cx) - l.w / 2, 0), dy = Math.max(Math.abs(l.cy - Z.landmark.cy) - l.h / 2, 0); if (Math.hypot(dx, dy) < (Z.landmark.r || 22) + 8) problems.push(`lot ${l.index} overlaps the landmark`); }
   if (Z.plaza) for (const l of lots) { const ddx = Math.max(Math.abs(l.cx - Z.plaza.cx) - l.w / 2, 0), ddy = Math.max(Math.abs(l.cy - Z.plaza.cy) - l.h / 2, 0); if ((ddx / Z.plaza.rx) ** 2 + (ddy / Z.plaza.ry) ** 2 < 1) problems.push(`lot ${l.index} overlaps the plaza`); }
   if (zoneSpec) {
