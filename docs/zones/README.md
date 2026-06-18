@@ -44,7 +44,11 @@ base/board resource nor a documented `newResource` (the no-softlock guardrail).
 
 ## Roadmap
 
-- **Pass 1 (this doc):** the atlas — propose and pitch all ten zones. ✅
-- **Pass 2:** each zone becomes its own interactive doc with a live top-down *Grow* play-through on
-  the real `40×30 @ 32px` grid, a tile inventory, and an art bible — critically reviewed, merged one
-  at a time.
+- **Pass 1:** the atlas — propose and pitch all ten zones (`index.html`). ✅
+- **Pass 2:** each zone has a live top-down *Grow* play-through on the real `40×30 @ 32px` grid, a tile
+  inventory, and an art bible (`<id>/index.html`) — all ten collision-verified, critically reviewed,
+  merged. ✅
+- **Next:** port the locked layouts into `src/ui/town/townMaps.ts`; generate the pixel art (PixelLab)
+  once positions are final.
+
+The method is captured in the **`zone-design`** skill (`.claude/skills/zone-design/`).
