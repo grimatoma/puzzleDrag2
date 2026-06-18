@@ -3,6 +3,7 @@ import {
   VISUAL_DESKTOP_SMOKE_SCENARIO_IDS,
   VISUAL_SCENARIOS,
 } from "../../src/visualTesting/matrix.js";
+import { isIgnoredVisualConsole } from "./_consoleAllow.js";
 
 const VISUAL_FIXED_NOW = 1_700_000_000_000;
 const SMOKE_SCENARIOS = VISUAL_DESKTOP_SMOKE_SCENARIO_IDS.map((id) => {
@@ -96,7 +97,7 @@ for (const scenario of SMOKE_SCENARIOS) {
     page.on("console", (msg) => {
       if (msg.type() !== "error") return;
       const text = msg.text();
-      if (/favicon|Failed to load resource/i.test(text)) return;
+      if (isIgnoredVisualConsole(text)) return;
       consoleErrors.push(text);
     });
 

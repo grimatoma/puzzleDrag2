@@ -1,9 +1,19 @@
-# CI — lint + typecheck + test + build on every PR vs main and push to main.
-# Branch protection (set in repo settings):
-#   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build
+# CI — lint + typecheck + test + build + e2e + visual smoke on every PR vs main and push to main.
+# Branch protection (set in repo settings — adding jobs here does NOT auto-gate merges):
+#   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build, e2e
+#   - Add `visual-smoke` to the required checks AFTER its goldens are re-baselined on CI
+#     and `continue-on-error` is removed (see the `visual-rebaseline` job + procedure below).
 #   - Require branches to be up to date before merging
 #   - Dismiss stale approvals on push
-# All jobs must pass before a PR can merge.
+# All required checks must pass before a PR can merge.
+#
+# Re-baselining visual goldens (NEVER do this on a Windows/local host — DOM drifts 3–5%,
+# Phaser WebGL ~38% off due to GPU/font differences; goldens must be made on this Linux runner):
+#   1. gh workflow run ci.yml -f update_goldens=true   (or trigger via the Actions tab)
+#   2. Download the `regenerated-goldens` artifact, unzip it over tests/visual/__goldens__/
+#   3. Eyeball the PNGs, commit them, open a PR.
+#   4. Once `visual-smoke` is green against the committed goldens, remove its `continue-on-error`
+#      and add `visual-smoke` to the required status checks above.
 
 name: CI
 on:
@@ -11,6 +21,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_goldens:
+        description: "Regenerate desktop visual goldens on the CI runner"
+        type: boolean
+        default: false
 
 jobs:
   lint:
@@ -94,3 +110,95 @@ jobs:
         with:
           name: dist
           path: dist/
+
+  # Gating Playwright e2e — the only CI coverage of the React → registry →
+  # GameScene → TileObj canvas bridge that vitest (node/no-canvas) can't see.
+  # Runs all e2e specs on chromium/Linux (the config's single forced project).
+  # Playwright starts its own Vite via `webServer` (reuseExistingServer is a
+  # no-op on a clean runner).
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # Idempotent: re-fetches the binary if the cache is stale (e.g. Playwright
+      # bumped its pinned browser revision without a package-lock change), and
+      # always (re)installs the system libs a fresh ubuntu runner needs.
+      - name: Install Playwright chromium (+ system deps)
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # Desktop visual smoke (the 3 *.desktop-smoke specs via `npm run test:visual`).
+  # Starts NON-BLOCKING: the committed goldens were not generated on this Linux
+  # runner, so the first run is expected to diff. Once goldens are re-baselined
+  # on CI (see the `visual-rebaseline` job + header procedure) and committed,
+  # remove `continue-on-error` and add `visual-smoke` to the required checks.
+  visual-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true # REMOVE after goldens are re-baselined on CI (see header)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright chromium (+ system deps)
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:visual
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-smoke-diffs
+          path: |
+            test-results/visual/
+            playwright-report/visual/
+          retention-days: 7
+
+  # Manual re-baseline of the desktop visual goldens ON the canonical Linux
+  # runner (never local — see header). Trigger with:
+  #   gh workflow run ci.yml -f update_goldens=true
+  # then download the `regenerated-goldens` artifact and commit it.
+  visual-rebaseline:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright chromium (+ system deps)
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:visual:update # writes new PNGs into tests/visual/__goldens__/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-goldens
+          path: tests/visual/__goldens__/
+          retention-days: 7
