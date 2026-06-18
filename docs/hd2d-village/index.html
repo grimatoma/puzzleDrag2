@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>HD-2D Village — R3F concept</title>
+<style>
+  :root{
+    --panel: rgba(18,20,30,0.72);
+    --panel-edge: rgba(255,255,255,0.10);
+    --ink: #eef1f8;
+    --ink-dim: #aab2c8;
+    --accent: #ffb15a;
+    --accent2: #6db5ff;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:#05060b; overflow:hidden;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased; }
+  #root{ position:fixed; inset:0; }
+  canvas{ display:block; touch-action:none; }
+
+  /* ---- loading veil ---- */
+  #boot{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px; z-index:50; background:#05060b; padding:24px; text-align:center;
+    transition:opacity .6s ease; }
+  #boot.gone{ opacity:0; pointer-events:none; }
+  #boot .ring{ width:46px; height:46px; border-radius:50%;
+    border:3px solid rgba(255,255,255,.15); border-top-color:var(--accent);
+    animation:spin 1s linear infinite; }
+  #boot .t{ font-size:13px; letter-spacing:.10em; color:var(--ink-dim); max-width:460px; line-height:1.5; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---- HUD ---- */
+  .hud{ position:fixed; z-index:20; pointer-events:none; }
+  .title{ top:16px; left:18px; }
+  .title h1{ margin:0; font-size:15px; font-weight:700; letter-spacing:.02em;
+    text-shadow:0 2px 10px rgba(0,0,0,.6); }
+  .title .sub{ margin-top:3px; font-size:11.5px; color:var(--ink-dim);
+    text-shadow:0 1px 6px rgba(0,0,0,.7); max-width:330px; line-height:1.4; }
+  .phase{ top:16px; right:18px; text-align:right; }
+  .phase .clock{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums;
+    text-shadow:0 2px 12px rgba(0,0,0,.7); }
+  .phase .label{ font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--accent); text-shadow:0 1px 8px rgba(0,0,0,.8); }
+
+  /* ---- control dock ---- */
+  .dock{ position:fixed; z-index:30; left:50%; bottom:16px; transform:translateX(-50%);
+    width:min(620px, calc(100vw - 24px));
+    background:var(--panel); border:1px solid var(--panel-edge); border-radius:16px;
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 18px 50px rgba(0,0,0,.5); padding:14px 16px 12px; }
+  .dock .row{ display:flex; align-items:center; gap:12px; }
+  .dock .sun-row{ margin-bottom:10px; }
+  .dock .sun-row .glyph{ font-size:20px; width:26px; text-align:center; }
+  .slider{ -webkit-appearance:none; appearance:none; flex:1; height:6px; border-radius:6px;
+    background:linear-gradient(90deg,#11203b 0%, #2b4f87 18%, #ffd27a 50%, #ff8a3d 70%, #1a1530 100%);
+    outline:none; }
+  .slider::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+    background:#fff; border:3px solid var(--accent); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.5); }
+  .slider::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#fff;
+    border:3px solid var(--accent); cursor:pointer; }
+  .slider.az{ background:linear-gradient(90deg,#2b2f44,#6db5ff,#2b2f44); }
+  .sval{ font-size:11px; color:var(--ink-dim); width:54px; text-align:right; font-variant-numeric:tabular-nums; }
+
+  .presets{ display:flex; gap:6px; margin:10px 0 8px; flex-wrap:wrap; }
+  .chip{ pointer-events:auto; cursor:pointer; border:1px solid var(--panel-edge);
+    background:rgba(255,255,255,.04); color:var(--ink); font-size:11.5px; font-weight:600;
+    padding:5px 11px; border-radius:999px; transition:.15s; }
+  .chip:hover{ background:rgba(255,255,255,.12); }
+  .chip.play{ border-color:var(--accent); color:var(--accent); }
+  .chip.play.on{ background:var(--accent); color:#1a1206; }
+
+  .toggles{ display:flex; flex-wrap:wrap; gap:6px 6px; padding-top:10px;
+    border-top:1px solid rgba(255,255,255,.07); }
+  .tg{ pointer-events:auto; cursor:pointer; user-select:none; font-size:11px; font-weight:600;
+    padding:4px 9px; border-radius:8px; border:1px solid var(--panel-edge);
+    background:rgba(255,255,255,.03); color:var(--ink-dim); transition:.15s; }
+  .tg.on{ color:#0c0f18; background:var(--accent2); border-color:var(--accent2); }
+  .dock label.cap{ font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-dim);
+    width:42px; }
+
+  .credit{ position:fixed; z-index:20; bottom:6px; left:8px; font-size:9.5px; color:rgba(255,255,255,.32);
+    text-shadow:0 1px 4px rgba(0,0,0,.8); pointer-events:none; }
+  @media (max-width:560px){
+    .title .sub{ display:none; }
+    .dock{ padding:11px 12px; }
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "three": "https://esm.sh/three@0.160.1",
+    "three/": "https://esm.sh/three@0.160.1/",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.17.10?external=react,react-dom,three",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@9.114.0?external=react,react-dom,three,@react-three/fiber",
+    "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@2.16.3?external=react,react-dom,three,@react-three/fiber",
+    "postprocessing": "https://esm.sh/postprocessing@6.36.4?external=three"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="boot"><div class="ring"></div><div class="t">Building the village…</div></div>
+  <div id="root"></div>
+
+  <!-- classic script: always runs even if the ES-module bundle fails to load -->
+  <script>
+  (function(){
+    var boot = document.getElementById('boot');
+    function msg(t, bad){
+      if (!boot) return;
+      var el = boot.querySelector('.t'); if (el) el.textContent = t;
+      var r = boot.querySelector('.ring'); if (r && bad) r.style.borderTopColor = '#ff6b6b';
+    }
+    if (location.protocol === 'file:'){
+      msg('Open this over HTTP, not file:// — e.g. `npx serve docs` then visit /hd2d-village/. ' +
+          'Browsers block ES-module import maps and taint WebGL textures on file://.', true);
+    }
+    window.addEventListener('error', function(e){
+      if (!window.__hd2dReady) msg('Load error: ' + (e.message || e.filename || 'see console'), true);
+    });
+    window.addEventListener('unhandledrejection', function(e){
+      if (!window.__hd2dReady) msg('Load error: ' + ((e.reason && e.reason.message) || e.reason || 'see console'), true);
+    });
+  })();
+  </script>
+
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+  <script type="text/babel" data-type="module" data-presets="react">
+import React, { useRef, useMemo, useState, useEffect, useContext, createContext, Suspense } from 'react'
+import { createRoot } from 'react-dom/client'
+import * as THREE from 'three'
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber'
+import { Stars } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette, DepthOfField, ToneMapping, SMAA } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
+
+const A = './assets'
+const clamp01 = (x) => Math.max(0, Math.min(1, x))
+const lerp = (a, b, t) => a + (b - a) * t
+function smoothstep(e0, e1, x){ const t = clamp01((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t) }
+
+// run a leaner pipeline on phones / touch devices
+const IS_MOBILE = (typeof matchMedia === 'function' && matchMedia('(pointer:coarse)').matches) ||
+                  (typeof innerWidth === 'number' && innerWidth < 760)
+
+/* ------------------------------------------------------------------ *
+ *  SUN / SKY MODEL
+ *  A single "hour" (0..24) + an azimuth offset drive everything: the
+ *  directional light (a warm sun by day, a soft cool moon by night),
+ *  its colour & intensity, the sky gradient, fog, ambient fill, and
+ *  how strongly the road lamps glow.
+ * ------------------------------------------------------------------ */
+const C = (hex) => new THREE.Color(hex)
+const COL = {
+  sunHorizon: C('#ff7b2e'), sunHigh: C('#fff3da'),
+  skyTopDay: C('#4f9fe8'),  skyTopNight: C('#070a18'),
+  skyHorDay: C('#d6ecff'),  skyHorNight: C('#161d33'),
+  sunset:    C('#ff9356'),  moon: C('#9fb4e0'),
+  hemiSkyDay: C('#bcd9ff'), hemiSkyNight: C('#1b2244'),
+}
+const MOON_DIR = new THREE.Vector3(-0.35, 0.86, 0.38).normalize()
+
+function computeSky(hour, azDeg){
+  const ang = (hour - 6) / 12 * Math.PI          // 6h→0, 12h→π/2, 18h→π
+  const el = Math.sin(ang)                         // sun elevation  (-1..1)
+  const horiz = Math.cos(ang)                      // horizontal reach (+ before noon, - after)
+  const az = azDeg * Math.PI / 180
+  // E→W arc, rotated by azimuth; overhead at noon (so azimuth has no effect at true noon — expected).
+  const dir = new THREE.Vector3(horiz * Math.cos(az), el, horiz * Math.sin(az)).normalize()
+
+  const day   = smoothstep(-0.10, 0.22, el)        // 0 night → 1 day
+  const night = 1 - day
+  const lowSun = 1 - smoothstep(0.0, 0.34, Math.abs(el))  // golden-hour weight
+  const aboveH = el > -0.06 ? 1 : 0
+
+  const sunColor = COL.sunHorizon.clone().lerp(COL.sunHigh, smoothstep(0.02, 0.4, el))
+  const sunIntensity = day * 1.5 + 0.03
+
+  const skyTop = COL.skyTopNight.clone().lerp(COL.skyTopDay, day)
+  let skyHor   = COL.skyHorNight.clone().lerp(COL.skyHorDay, day)
+  skyHor.lerp(COL.sunset, lowSun * aboveH * 0.75)  // warm band at dawn/dusk
+
+  // Billboards face the camera, so an overhead sun grazes them (N·L≈0); daytime
+  // "base" brightness comes from facing-independent ambient + hemisphere fill.
+  const hemiSky = COL.hemiSkyNight.clone().lerp(COL.hemiSkyDay, day)
+  const hemiInt = lerp(0.32, 1.0, day)
+  const ambInt  = lerp(0.12, 0.42, day)
+  const lampFactor = smoothstep(0.20, -0.08, el)    // lamps off in day, full at night
+
+  // Directional light = warm sun by day, soft cool moon by night. Lerping the
+  // direction as the sun dips keeps cast shadows alive (and swinging) at night.
+  const nightDeep = smoothstep(-0.04, -0.20, el)
+  const lightDir = dir.clone().lerp(MOON_DIR, nightDeep).normalize()
+  const lightColor = sunColor.clone().lerp(COL.moon, nightDeep)
+  const lightIntensity = lerp(sunIntensity, 0.5, nightDeep)
+
+  return { hour, el, dir, day, night, lampFactor,
+           sunColor, skyTop, skyHor, hemiSky, hemiInt, ambInt,
+           lightDir, lightColor, lightIntensity }
+}
+function phaseLabel(el, hour){
+  if (el < -0.06) return 'Night'
+  if (el < 0.18)  return hour < 12 ? 'Dawn' : 'Dusk'
+  if (el < 0.55)  return hour < 12 ? 'Morning' : 'Golden hour'
+  return 'Midday'
+}
+
+const SkyCtx = createContext(null)
+const useSky = () => useContext(SkyCtx)
+
+/* ------------------------------------------------------------------ *
+ *  TEXTURE HELPERS
+ * ------------------------------------------------------------------ */
+function pixelate(tex, { srgb = true, repeat = null } = {}){
+  tex.magFilter = THREE.NearestFilter
+  tex.minFilter = THREE.NearestFilter
+  tex.generateMipmaps = false
+  if (srgb) tex.colorSpace = THREE.SRGBColorSpace
+  if (repeat){ tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(repeat[0], repeat[1]) }
+  tex.anisotropy = 1
+  tex.needsUpdate = true
+  return tex
+}
+
+/* Derive an approximate normal map from a sprite's diffuse, on a canvas.
+   Luminance → heightfield → Sobel → packed RGB normal. Because the billboard
+   plane faces the camera, these per-texel normals are exactly what re-shade the
+   sprite's interior as the sun / lamps move (the "self-shadowing" effect). */
+function deriveNormalMap(image, strength = 2.4){
+  const w = image.width, h = image.height
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+  const g = cv.getContext('2d'); g.drawImage(image, 0, 0)
+  const src = g.getImageData(0, 0, w, h).data
+  const out = g.createImageData(w, h); const o = out.data
+  const L = (x, y) => {
+    x = x < 0 ? 0 : x > w - 1 ? w - 1 : x; y = y < 0 ? 0 : y > h - 1 ? h - 1 : y
+    const i = (y * w + x) * 4, a = src[i + 3] / 255
+    return (0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]) / 255 * a
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = (y * w + x) * 4
+    const dx = (L(x - 1, y) - L(x + 1, y)) * strength
+    const dy = (L(x, y + 1) - L(x, y - 1)) * strength   // +Y up
+    const nz = 1.0, len = Math.hypot(dx, dy, nz) || 1
+    o[i] = ((dx / len) * 0.5 + 0.5) * 255
+    o[i + 1] = ((dy / len) * 0.5 + 0.5) * 255
+    o[i + 2] = ((nz / len) * 0.5 + 0.5) * 255
+    o[i + 3] = 255
+  }
+  g.putImageData(out, 0, 0)
+  const t = new THREE.CanvasTexture(cv)
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter
+  t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace
+  return t
+}
+function getNormalMap(tex){
+  if (!tex.userData.__nrm) tex.userData.__nrm = deriveNormalMap(tex.image)
+  return tex.userData.__nrm
+}
+
+/* --- procedural pixel ground (grass) --- */
+function makeGrassTexture(){
+  const s = 32, cv = document.createElement('canvas'); cv.width = cv.height = s
+  const g = cv.getContext('2d')
+  const base = ['#5c8a3a', '#557f34', '#629340', '#4f7730']
+  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++){
+    const n = ((x * 7 + y * 13 + ((x * y) % 5)) % base.length)
+    g.fillStyle = base[n]; g.fillRect(x, y, 1, 1)
+  }
+  const seed = [[4,6],[11,2],[19,9],[26,5],[7,18],[15,23],[23,17],[29,26],[2,28],[13,13],[20,30],[30,12]]
+  for (const [x, y] of seed){
+    g.fillStyle = '#76a64e'; g.fillRect(x, y, 1, 2); g.fillRect((x+1)%s, y, 1, 1)
+    g.fillStyle = '#3f6428'; g.fillRect((x+2)%s, (y+2)%s, 1, 1)
+  }
+  return pixelate(new THREE.CanvasTexture(cv), { repeat: [34, 34] })
+}
+/* --- procedural cobblestone road --- */
+function makeCobbleTexture(){
+  const s = 32, cv = document.createElement('canvas'); cv.width = cv.height = s
+  const g = cv.getContext('2d')
+  g.fillStyle = '#5a5048'; g.fillRect(0, 0, s, s)                 // mortar
+  const stones = [
+    [1,1,7,6,'#9a8f7e'],[10,1,8,6,'#8d8270'],[20,1,9,7,'#a59a87'],
+    [2,9,9,7,'#938775'],[13,9,7,6,'#a39988'],[22,9,8,7,'#8a7f6d'],
+    [1,18,8,7,'#a59a87'],[11,18,9,7,'#8d8270'],[22,17,9,8,'#988d7a'],
+    [4,26,8,5,'#948977'],[15,26,9,5,'#a09578'],[26,26,6,5,'#8d8270'],
+  ]
+  for (const [x, y, w, h, col] of stones){
+    g.fillStyle = col; g.fillRect(x, y, w, h)
+    g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(x, y, w, 1)
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x, y + h - 1, w, 1)
+  }
+  return pixelate(new THREE.CanvasTexture(cv), { repeat: [3, 14] })
+}
+/* --- procedural lamp post (dark iron + warm lantern) --- */
+function makeLampTexture(){
+  const w = 32, h = 64, cv = document.createElement('canvas'); cv.width = w; cv.height = h
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false
+  const iron = '#2c2e3a', ironLt = '#454959', ironDk = '#1a1b25'
+  g.fillStyle = ironDk; g.fillRect(11, 60, 10, 3); g.fillStyle = iron; g.fillRect(12, 58, 8, 3)
+  g.fillStyle = iron; g.fillRect(14, 18, 4, 42)
+  g.fillStyle = ironLt; g.fillRect(14, 18, 1, 42)
+  g.fillStyle = ironDk; g.fillRect(17, 18, 1, 42)
+  g.fillStyle = iron; g.fillRect(12, 15, 8, 3)
+  g.fillStyle = ironDk; g.fillRect(9, 4, 14, 13)
+  g.fillStyle = iron;   g.fillRect(10, 5, 12, 11)
+  g.fillStyle = '#ffcd6b'; g.fillRect(11, 6, 10, 9)
+  g.fillStyle = '#fff0b8'; g.fillRect(13, 7, 6, 6)
+  g.fillStyle = '#fffae0'; g.fillRect(14, 8, 4, 4)
+  g.fillStyle = ironDk; g.fillRect(10, 2, 12, 2); g.fillRect(14, 0, 4, 2)
+  return pixelate(new THREE.CanvasTexture(cv))
+}
+/* --- soft radial textures (warm glow + dark foot shadow) --- */
+function makeGlowTexture(inner = '#ffd98a'){
+  const s = 64, cv = document.createElement('canvas'); cv.width = cv.height = s
+  const g = cv.getContext('2d')
+  const grad = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2)
+  grad.addColorStop(0, inner); grad.addColorStop(0.4, 'rgba(255,200,120,0.45)')
+  grad.addColorStop(1, 'rgba(255,180,90,0)')
+  g.fillStyle = grad; g.fillRect(0, 0, s, s)
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t
+}
+function makeSoftDisc(){
+  const s = 64, cv = document.createElement('canvas'); cv.width = cv.height = s
+  const g = cv.getContext('2d')
+  const grad = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2)
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.55, 'rgba(255,255,255,0.7)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad; g.fillRect(0, 0, s, s)
+  const t = new THREE.CanvasTexture(cv); return t
+}
+const FOOT_TEX = makeSoftDisc()
+
+/* a small soft contact (AO) shadow that grounds a sprite at its feet */
+function FootShadow({ width, opacity = 0.32 }){
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+      <circleGeometry args={[width * 0.42, 24]} />
+      <meshBasicMaterial map={FOOT_TEX} color={'#000000'} transparent opacity={opacity}
+        depthWrite={false} />
+    </mesh>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  BILLBOARD SPRITE CARD
+ *  A flat plane planted on the ground (pivot at its feet), oriented to
+ *  face the fixed camera. alphaTest gives a crisp pixel cut-out; a
+ *  matching customDepthMaterial (sun shadows) and customDistanceMaterial
+ *  (lamp/point-light shadows) make the SHADOW the silhouette, not a
+ *  square. MeshStandardMaterial → it reacts to the 3D lights, and an
+ *  optional derived normalMap gives interior self-shadowing.
+ * ------------------------------------------------------------------ */
+const UNIT_PLANE = (() => { const g = new THREE.PlaneGeometry(1, 1); g.translate(0, 0.5, 0); return g })()
+
+function makeSpriteMaterials(tex, { tint = '#ffffff', normalMap = null } = {}){
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex, transparent: false, alphaTest: 0.5, side: THREE.DoubleSide,
+    roughness: 1, metalness: 0, color: new THREE.Color(tint),
+  })
+  if (normalMap){ mat.normalMap = normalMap; mat.normalScale = new THREE.Vector2(0.9, 0.9) }
+  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.5 })
+  const dist  = new THREE.MeshDistanceMaterial({ map: tex, alphaTest: 0.5 })
+  return { mat, depth, dist }
+}
+
+function SpriteCard({ texture, height, position, yaw = 0, cast = true, sway = false,
+                      selfShadow = false, tint = '#ffffff' }){
+  const img = texture.image
+  const aspect = (img && img.width && img.height) ? img.width / img.height : 1
+  const normalMap = useMemo(() => (selfShadow ? getNormalMap(texture) : null), [texture, selfShadow])
+  const { mat, depth, dist } = useMemo(
+    () => makeSpriteMaterials(texture, { tint, normalMap }), [texture, tint, normalMap])
+  const meshRef = useRef()
+  const phase = useMemo(() => position[0] * 0.7 + position[2] * 0.5, [position])
+  useFrame((st) => {
+    if (sway && meshRef.current)
+      meshRef.current.rotation.z = Math.sin(st.clock.elapsedTime * 0.7 + phase) * 0.025
+  })
+  const w = height * aspect
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      <mesh ref={meshRef} geometry={UNIT_PLANE} material={mat}
+            customDepthMaterial={depth} customDistanceMaterial={dist}
+            scale={[w, height, 1]} castShadow={cast} />
+      {cast && <FootShadow width={w} />}
+    </group>
+  )
+}
+
+/* yaw so a card at (x,z) faces the (fixed) camera */
+function faceYaw(x, z, cam){ return Math.atan2(cam[0] - x, cam[2] - z) }
+
+/* ------------------------------------------------------------------ *
+ *  ANIMATED STRIP SPRITE  (chicken 9×64, willow 9×128 …)
+ * ------------------------------------------------------------------ */
+function StripSprite({ url, frames, fps = 6, height, position, yaw = 0, cast = true }){
+  const base = useLoader(THREE.TextureLoader, url)
+  // clone: useLoader caches by URL, so each instance needs its own offset/repeat
+  const tex = useMemo(() => {
+    const t = base.clone(); pixelate(t); t.repeat.set(1 / frames, 1); t.offset.set(0, 0); t.needsUpdate = true; return t
+  }, [base, frames])
+  const fw = tex.image.width / frames, fh = tex.image.height
+  const aspect = fw / fh
+  const { mat, depth, dist } = useMemo(() => makeSpriteMaterials(tex), [tex])
+  const fRef = useRef(-1), acc = useRef(0)
+  useFrame((_, dt) => {
+    acc.current += dt
+    const f = Math.floor(acc.current * fps) % frames
+    if (f !== fRef.current){ fRef.current = f; tex.offset.x = f / frames }
+  })
+  const w = height * aspect
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      <mesh geometry={UNIT_PLANE} material={mat} customDepthMaterial={depth} customDistanceMaterial={dist}
+            scale={[w, height, 1]} castShadow={cast} />
+      {cast && <FootShadow width={w} />}
+    </group>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  WALKER  (Misa atlas — a person that strolls the road)
+ * ------------------------------------------------------------------ */
+const ATLAS = { w: 196, h: 86, frames: {
+  front: [[1,1,30,43],[33,1,30,43],[65,1,30,43],[33,1,30,43]],
+  back:  [[97,1,32,41],[97,44,32,41],[131,1,32,41],[97,44,32,41]],
+}}
+function applyAtlasFrame(tex, rect){
+  const [x, y, w, h] = rect
+  tex.repeat.set(w / ATLAS.w, h / ATLAS.h)
+  tex.offset.set(x / ATLAS.w, 1 - (y + h) / ATLAS.h)
+  return h / w   // inverse aspect (height/width)
+}
+function Walker({ lane = 0, z0 = 6, z1 = -14, speed = 1.1, phase = 0, tint = '#ffffff', cam }){
+  const base = useLoader(THREE.TextureLoader, A + '/people/character-atlas.png')
+  const tex = useMemo(() => {
+    const t = base.clone(); pixelate(t); applyAtlasFrame(t, ATLAS.frames.front[0]); t.needsUpdate = true; return t
+  }, [base])
+  const { mat, depth, dist } = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({ map: tex, transparent:false, alphaTest:0.5,
+      side: THREE.DoubleSide, roughness:1, metalness:0, color:new THREE.Color(tint) })
+    const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.5 })
+    const ds = new THREE.MeshDistanceMaterial({ map: tex, alphaTest: 0.5 })
+    return { mat: m, depth: d, dist: ds }
+  }, [tex, tint])
+  const grp = useRef(), meshRef = useRef()
+  const cur = useRef(''), t = useRef(phase), prevZ = useRef(z0)
+  const H = 1.7
+  useFrame((_, dt) => {
+    t.current += dt
+    const span = z1 - z0
+    const tri = 1 - Math.abs(((t.current * speed / Math.abs(span)) % 2) - 1)  // phase 0 → z0
+    const z = z0 + span * tri
+    const dz = z - prevZ.current; prevZ.current = z
+    if (grp.current){
+      grp.current.position.set(lane, 0, z)
+      grp.current.rotation.y = faceYaw(lane, z, cam)
+    }
+    const dir = dz >= 0 ? 'front' : 'back'   // +z = walking toward the (fixed) camera
+    const fi = Math.floor(t.current * 6) % 4
+    const key = dir + fi
+    if (key !== cur.current){
+      cur.current = key
+      const invA = applyAtlasFrame(tex, ATLAS.frames[dir][fi])
+      if (meshRef.current) meshRef.current.scale.set(H / invA, H, 1)
+    }
+  })
+  return (
+    <group ref={grp}>
+      <mesh ref={meshRef} geometry={UNIT_PLANE} material={mat}
+            customDepthMaterial={depth} customDistanceMaterial={dist} castShadow />
+      <FootShadow width={0.95} />
+    </group>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  GROUND + ROAD
+ * ------------------------------------------------------------------ */
+function Ground(){
+  const grass = useMemo(makeGrassTexture, [])
+  const cobble = useMemo(makeCobbleTexture, [])
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -4]} receiveShadow>
+        <planeGeometry args={[80, 80]} />
+        <meshStandardMaterial map={grass} roughness={1} metalness={0} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -6]} receiveShadow>
+        <planeGeometry args={[5, 40]} />
+        <meshStandardMaterial map={cobble} roughness={1} metalness={0} polygonOffset polygonOffsetFactor={-2} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[7.5, 0.013, -3]} receiveShadow>
+        <planeGeometry args={[3.4, 11]} />
+        <meshStandardMaterial map={cobble} roughness={1} metalness={0} polygonOffset polygonOffsetFactor={-2} />
+      </mesh>
+    </group>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  LAMP  (post sprite + warm point light + bloom glow + ground spill)
+ * ------------------------------------------------------------------ */
+function Lamp({ position, cam, tex, glow, castShadow = false }){
+  const sky = useSky()
+  const lightRef = useRef(), glowRef = useRef(), spillRef = useRef()
+  const lampY = 2.55
+  useFrame(() => {
+    const f = sky.lampFactor
+    if (lightRef.current) lightRef.current.intensity = f * 14
+    if (glowRef.current){ glowRef.current.material.opacity = f; glowRef.current.scale.setScalar(0.9 + f * 0.5) }
+    if (spillRef.current) spillRef.current.material.opacity = f * 0.55
+  })
+  const yaw = faceYaw(position[0], position[2], cam)
+  return (
+    <group position={position}>
+      <SpriteCard texture={tex} height={2.7} position={[0, 0, 0]} yaw={yaw} cast />
+      {/* warm point light at the bulb — cutout shadows via customDistanceMaterial on sprites */}
+      <pointLight ref={lightRef} position={[0, lampY, 0]} color={'#ffb259'}
+        intensity={0} distance={12} decay={2}
+        castShadow={castShadow} shadow-mapSize-width={256} shadow-mapSize-height={256}
+        shadow-bias={-0.004} shadow-radius={3} shadow-camera-far={14} />
+      <sprite ref={glowRef} position={[0, lampY, 0.02]} scale={1.1}>
+        <spriteMaterial map={glow} color={'#ffd98a'} transparent opacity={0}
+          blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </sprite>
+      <mesh ref={spillRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <circleGeometry args={[2.6, 24]} />
+        <meshBasicMaterial map={glow} color={'#ffbf72'} transparent opacity={0}
+          blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+    </group>
+  )
+}
+
+/* small warm light-spill blob in a doorway (interior light at night) */
+function DoorGlow({ position, glow }){
+  const sky = useSky(); const ref = useRef()
+  useFrame(() => { if (ref.current) ref.current.material.opacity = sky.lampFactor * 0.8 })
+  return (
+    <sprite ref={ref} position={position} scale={[1.5, 1.1, 1]}>
+      <spriteMaterial map={glow} color={'#ffcf86'} transparent opacity={0}
+        blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+    </sprite>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  SKY DOME  (gradient + sunset glow), driven by the sun
+ * ------------------------------------------------------------------ */
+const skyVert = `
+  varying vec3 vDir;
+  void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+`
+const skyFrag = `
+  varying vec3 vDir;
+  uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uDay;
+  void main(){
+    float h = clamp(vDir.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 col = mix(uHor, uTop, smoothstep(0.0, 0.62, h));
+    float d = max(dot(vDir, normalize(uSunDir)), 0.0);
+    col += uSunCol * pow(d, 220.0) * 1.6;                 // sun disc bleed
+    col += uSunCol * pow(d, 6.0) * 0.22 * (0.4 + uDay);   // broad halo
+    gl_FragColor = vec4(col, 1.0);
+  }
+`
+function SkyDome(){
+  const sky = useSky(); const mat = useRef()
+  const uniforms = useMemo(() => ({
+    uTop: { value: new THREE.Color() }, uHor: { value: new THREE.Color() },
+    uSunDir: { value: new THREE.Vector3() }, uSunCol: { value: new THREE.Color() }, uDay: { value: 1 },
+  }), [])
+  useFrame(() => {
+    uniforms.uTop.value.copy(sky.skyTop); uniforms.uHor.value.copy(sky.skyHor)
+    uniforms.uSunDir.value.copy(sky.dir); uniforms.uSunCol.value.copy(sky.sunColor)
+    uniforms.uDay.value = sky.day
+  })
+  return (
+    <mesh renderOrder={-1}>
+      <sphereGeometry args={[60, 32, 16]} />
+      <shaderMaterial ref={mat} vertexShader={skyVert} fragmentShader={skyFrag}
+        uniforms={uniforms} side={THREE.BackSide} depthWrite={false} fog={false} toneMapped={false} />
+    </mesh>
+  )
+}
+function SunDisc(){
+  const sky = useSky(); const glow = useMemo(() => makeGlowTexture('#fff6d0'), [])
+  const ref = useRef()
+  useFrame(() => {
+    if (!ref.current) return
+    ref.current.position.copy(sky.dir).multiplyScalar(46)
+    ref.current.material.opacity = clamp01(sky.el * 4 + 0.2)
+    ref.current.material.color.copy(sky.sunColor)
+  })
+  return (
+    <sprite ref={ref} scale={[9, 9, 9]}>
+      <spriteMaterial map={glow} transparent opacity={0} blending={THREE.AdditiveBlending}
+        depthWrite={false} toneMapped={false} />
+    </sprite>
+  )
+}
+/* stars stay mounted (no geometry rebuild); visibility toggles per frame */
+function NightStars(){
+  const sky = useSky(); const g = useRef()
+  useFrame(() => { if (g.current) g.current.visible = sky.night > 0.12 })
+  return (
+    <group ref={g}>
+      <Stars radius={50} depth={40} count={1200} factor={3.4} saturation={0} fade speed={0.4} />
+    </group>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  LIGHTS  (sun/moon directional + hemisphere/ambient fill + fog)
+ * ------------------------------------------------------------------ */
+function Lighting(){
+  const sky = useSky()
+  const sun = useRef(), hemi = useRef(), amb = useRef()
+  const { scene } = useThree()
+  useEffect(() => {
+    if (!sun.current) return
+    const c = sun.current.shadow.camera
+    c.left = -22; c.right = 22; c.top = 22; c.bottom = -22; c.near = 1; c.far = 90
+    c.updateProjectionMatrix()
+    const m = IS_MOBILE ? 1024 : 2048
+    sun.current.shadow.mapSize.set(m, m)
+    sun.current.shadow.bias = -0.0004
+    sun.current.shadow.normalBias = 0.04
+  }, [])
+  useFrame(() => {
+    if (sun.current){
+      sun.current.position.copy(sky.lightDir).multiplyScalar(40)
+      sun.current.color.copy(sky.lightColor)
+      sun.current.intensity = sky.lightIntensity
+    }
+    if (hemi.current){ hemi.current.color.copy(sky.hemiSky); hemi.current.intensity = sky.hemiInt }
+    if (amb.current)   amb.current.intensity = sky.ambInt
+    if (scene.fog){ scene.fog.color.copy(sky.skyHor) }
+  })
+  return (
+    <>
+      <hemisphereLight ref={hemi} args={['#bcd9ff', '#6b5640', 1]} />
+      <ambientLight ref={amb} intensity={0.2} />
+      <directionalLight ref={sun} castShadow position={[20, 30, 10]} />
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  THE VILLAGE  (static — memoised so the day/night slider never
+ *  re-renders the React tree for it; only lights/sky/lamps update.)
+ * ------------------------------------------------------------------ */
+const BUILD = ['hearth', 'bakery', 'inn', 'forge', 'mill']
+function preload(){
+  const urls = [
+    ...BUILD.map(b => `${A}/buildings/${b}.png`),
+    ...['oak','birch','fir'].map(t => `${A}/props/${t}.png`),
+    `${A}/props/grass.png`, `${A}/props/meadow.png`,
+    `${A}/animals/cow.png`, `${A}/animals/sheep.png`, `${A}/animals/pig.png`,
+  ]
+  return useLoader(THREE.TextureLoader, urls)
+}
+
+const Village = React.memo(function Village({ cam, selfShadow }){
+  const texList = preload()
+  const tex = useMemo(() => {
+    const m = {}; texList.forEach(t => pixelate(t))
+    const keys = [...BUILD, 'oak','birch','fir','grass','meadow','cow','sheep','pig']
+    keys.forEach((k, i) => m[k] = texList[i])
+    return m
+  }, [texList])
+  const lampTex = useMemo(makeLampTexture, [])
+  const glowTex = useMemo(() => makeGlowTexture(), [])
+  const y = (x, z) => faceYaw(x, z, cam)
+  const ss = selfShadow
+
+  const lots = [
+    { k:'hearth', x:-5.4, z:2,   h:4.2 }, { k:'inn',    x:5.6,  z:1,   h:4.6 },
+    { k:'bakery', x:-6.0, z:-4,  h:4.0 }, { k:'forge',  x:5.8,  z:-5,  h:4.3 },
+    { k:'mill',   x:-6.4, z:-11, h:5.0 }, { k:'hearth', x:6.2,  z:-11, h:4.0 },
+    { k:'bakery', x:-6.8, z:-17, h:3.8 },
+  ]
+  const pasture = [
+    { k:'cow',   x:11.5, z:-1,  h:1.5 }, { k:'sheep', x:13.4, z:-3, h:1.05 },
+    { k:'pig',   x:12.3, z:-5,  h:0.95 }, { k:'sheep', x:10.8, z:-6, h:1.0 },
+  ]
+  const trees = [
+    { k:'oak',  x:-9.5, z:-2, h:3.8 }, { k:'fir', x:-10.5, z:-8, h:4.2 },
+    { k:'birch',x:-9.0, z:-15,h:3.6 }, { k:'oak', x:9.5,  z:-15, h:3.8 },
+    { k:'fir',  x:11.5, z:-11,h:4.0 }, { k:'birch',x:-2,  z:-22, h:3.6 },
+    { k:'oak',  x:3,    z:-23,h:4.0 }, { k:'fir', x:-6,   z:-23, h:4.2 },
+    { k:'oak',  x:8,    z:-22,h:3.8 }, { k:'birch',x:14,  z:-7,  h:3.4 },
+  ]
+  const tufts = []
+  const tp = [[-3,4],[3,3],[-2.5,-1],[2.6,-8],[-3,-13],[3.2,-18],[8,2],[-8,-12],[9,-4],[15,-2],[-1.5,-19],[4,-12]]
+  tp.forEach(([x, z], i) => tufts.push({ k: i % 2 ? 'meadow' : 'grass', x, z, h: 0.7 }))
+
+  // lamps lining the road; two near buildings cast (cutout) shadows at night
+  const lamps = [
+    { x:-2.7, z:5,  s:false }, { x:2.7, z:1,  s:!IS_MOBILE }, { x:-2.7, z:-3, s:false },
+    { x:2.7,  z:-7, s:false }, { x:-2.7, z:-11, s:!IS_MOBILE }, { x:2.7, z:-15, s:false },
+  ]
+
+  return (
+    <group>
+      {lots.map((b, i) => (
+        <group key={'b'+i}>
+          <SpriteCard texture={tex[b.k]} height={b.h} position={[b.x, 0, b.z]} yaw={y(b.x, b.z)} selfShadow={ss} />
+          <DoorGlow position={[b.x + (b.x < 0 ? 1.2 : -1.2), 0.9, b.z + 1.2]} glow={glowTex} />
+        </group>
+      ))}
+      {trees.map((t, i) => (
+        <SpriteCard key={'t'+i} texture={tex[t.k]} height={t.h} position={[t.x, 0, t.z]} yaw={y(t.x, t.z)} sway selfShadow={ss} />
+      ))}
+      {pasture.map((p, i) => (
+        <SpriteCard key={'p'+i} texture={tex[p.k]} height={p.h} position={[p.x, 0, p.z]} yaw={y(p.x, p.z)} selfShadow={ss} />
+      ))}
+      {tufts.map((g, i) => (
+        <SpriteCard key={'g'+i} texture={tex[g.k]} height={g.h} position={[g.x, 0, g.z]} yaw={y(g.x, g.z)} cast={false} sway />
+      ))}
+      {lamps.map((l, i) => (
+        <Lamp key={'l'+i} position={[l.x, 0, l.z]} cam={cam} tex={lampTex} glow={glowTex} castShadow={l.s} />
+      ))}
+
+      {/* animated life */}
+      <StripSprite url={A + '/animals/chicken_strip.png'} frames={9} fps={7} height={0.7} position={[-1.5, 0, 3]} yaw={y(-1.5, 3)} />
+      <StripSprite url={A + '/animals/chicken_strip.png'} frames={9} fps={6} height={0.66} position={[1.4, 0, -2]} yaw={y(1.4, -2)} />
+      <StripSprite url={A + '/props/willow_strip.png'} frames={9} fps={4} height={4.2} position={[-12.5, 0, -3]} yaw={y(-12.5, -3)} />
+      <StripSprite url={A + '/props/willow_strip.png'} frames={9} fps={4} height={4.0} position={[12.0, 0, -19]} yaw={y(12, -19)} />
+
+      {/* villagers on the road */}
+      <Walker cam={cam} lane={-0.9} z0={6}  z1={-15} speed={1.5} phase={0}   tint={'#ffffff'} />
+      <Walker cam={cam} lane={0.8}  z0={-13} z1={5}  speed={1.2} phase={3}   tint={'#ffe6d8'} />
+      <Walker cam={cam} lane={-0.2} z0={3}  z1={-9}  speed={0.9} phase={6}   tint={'#e4ecff'} />
+      <Walker cam={cam} lane={1.4}  z0={4}  z1={-12} speed={1.3} phase={1.5} tint={'#fff2cf'} />
+    </group>
+  )
+})
+
+/* signals readiness only after the village's assets have resolved (post-Suspense) */
+function Ready(){
+  useEffect(() => { window.__hd2dReady = true }, [])
+  return null
+}
+
+/* ------------------------------------------------------------------ *
+ *  POST-PROCESSING
+ * ------------------------------------------------------------------ */
+function Effects({ bloom, dof }){
+  return (
+    <EffectComposer multisampling={0} disableNormalPass>
+      <SMAA />
+      {bloom && <Bloom intensity={0.9} luminanceThreshold={0.62} luminanceSmoothing={0.2} mipmapBlur radius={0.7} />}
+      {dof && !IS_MOBILE && <DepthOfField focusDistance={0.013} focalLength={0.05} bokehScale={3.2} height={480} />}
+      <Vignette eskil={false} offset={0.32} darkness={0.52} />
+      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+    </EffectComposer>
+  )
+}
+
+/* ------------------------------------------------------------------ *
+ *  SCENE FOG (lives on the scene; colour follows the horizon)
+ * ------------------------------------------------------------------ */
+function FogRig({ on }){
+  const { scene } = useThree()
+  useEffect(() => {
+    scene.fog = on ? new THREE.Fog('#cfe9ff', 26, 62) : null
+    return () => { scene.fog = null }
+  }, [on, scene])
+  return null
+}
+
+/* ------------------------------------------------------------------ *
+ *  APP
+ * ------------------------------------------------------------------ */
+const CAM = [0, 8.4, 13.5]
+const LOOK = [0, 1.4, -3]
+
+function App(){
+  const [hour, setHour] = useState(19.3)     // start at dusk so the lamps read
+  const [az, setAz] = useState(35)
+  const [play, setPlay] = useState(false)
+  const [speed, setSpeed] = useState(0.6)
+  const [tg, setTg] = useState({ bloom: true, fog: true, stars: true, dof: false, self: false })
+  const toggle = (k) => setTg(s => ({ ...s, [k]: !s[k] }))
+
+  useEffect(() => {
+    if (!play) return
+    let raf, last = performance.now()
+    const tick = (now) => {
+      const dt = (now - last) / 1000; last = now
+      setHour(h => (h + dt * speed) % 24)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [play, speed])
+
+  const sky = useMemo(() => computeSky(hour, az), [hour, az])
+
+  useEffect(() => {
+    window.__setHour = (h) => { setPlay(false); setHour(h) }
+    window.__setAz = setAz
+    window.__toggle = (k) => toggle(k)
+  }, [])
+
+  const hh = Math.floor(hour), mm = Math.floor((hour - hh) * 60)
+  const clock = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`
+  const label = phaseLabel(sky.el, hour)
+
+  return (
+    <>
+      <Canvas shadows dpr={IS_MOBILE ? [1, 1.5] : [1, 2]}
+              gl={{ antialias: false, powerPreference: 'high-performance', toneMapping: THREE.NoToneMapping }}
+              camera={{ position: CAM, fov: 32, near: 0.5, far: 200 }}
+              onCreated={({ camera, gl }) => { camera.lookAt(...LOOK); gl.setClearColor('#0a0e1a', 1) }}>
+        <SkyCtx.Provider value={sky}>
+          <FogRig on={tg.fog} />
+          <SkyDome />
+          <SunDisc />
+          {tg.stars && <NightStars />}
+          <Lighting />
+          <Suspense fallback={null}>
+            <Ground />
+            <Village cam={CAM} selfShadow={tg.self} />
+            <Ready />
+          </Suspense>
+          <Effects bloom={tg.bloom} dof={tg.dof} />
+        </SkyCtx.Provider>
+      </Canvas>
+
+      <div className="hud title">
+        <h1>🏘️ HD-2D Village — R3F concept</h1>
+        <div className="sub">Real pixel sprites as billboards in a true 3D scene. Drag the sun to watch
+          shadows swing, the sky shift, and the road lamps take over at dusk.</div>
+      </div>
+      <div className="hud phase">
+        <div className="clock">{clock}</div>
+        <div className="label">{label}</div>
+      </div>
+
+      <div className="dock">
+        <div className="row sun-row">
+          <div className="glyph">{sky.el > -0.06 ? '☀️' : '🌙'}</div>
+          <input className="slider" type="range" min="0" max="24" step="0.05" value={hour}
+                 onChange={e => { setPlay(false); setHour(parseFloat(e.target.value)) }} />
+          <div className="sval">{clock}</div>
+        </div>
+        <div className="row">
+          <label className="cap">Dir</label>
+          <input className="slider az" type="range" min="0" max="360" step="1" value={az}
+                 onChange={e => setAz(parseFloat(e.target.value))} />
+          <div className="sval">{Math.round(az)}°</div>
+        </div>
+
+        <div className="presets">
+          <button className={'chip play' + (play ? ' on' : '')} onClick={() => setPlay(p => !p)}>
+            {play ? '⏸ Pause' : '▶ Day/night'}</button>
+          <button className="chip" onClick={() => { setPlay(false); setHour(6.4) }}>Dawn</button>
+          <button className="chip" onClick={() => { setPlay(false); setHour(12) }}>Noon</button>
+          <button className="chip" onClick={() => { setPlay(false); setHour(18.4) }}>Golden hour</button>
+          <button className="chip" onClick={() => { setPlay(false); setHour(22) }}>Night</button>
+        </div>
+
+        <div className="toggles">
+          {[['bloom','Bloom'],['fog','Fog'],['stars','Stars'],['self','Self-shadow'],['dof','Tilt-shift']].map(([k, lbl]) => (
+            <div key={k} className={'tg' + (tg[k] ? ' on' : '')} onClick={() => toggle(k)}>{lbl}</div>
+          ))}
+        </div>
+      </div>
+
+      <div className="credit">Buildings/trees/animals: puzzleDrag2 art · Villager &amp; tileset: Tuxemon (CC-BY-SA 4.0) · Ground/road/lamp: procedural</div>
+    </>
+  )
+}
+
+const boot = document.getElementById('boot')
+createRoot(document.getElementById('root')).render(<App />)
+const hideBoot = () => boot.classList.add('gone')
+let waited = 0
+const poll = setInterval(() => {
+  waited += 120
+  if (window.__hd2dReady || waited > 12000){ clearInterval(poll); setTimeout(hideBoot, 500) }
+}, 120)
+  </script>
+</body>
+</html>
