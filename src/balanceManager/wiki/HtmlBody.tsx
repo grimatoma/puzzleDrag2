@@ -26,6 +26,7 @@ import React from "react";
 import { parseWikiLinks } from "./wikilink.js";
 import { WikiLinkButton } from "./WikiLinkButton.jsx";
 import { GameScreenEmbed } from "./GameScreenEmbed.jsx";
+import { TierLadderTable, WikiFact } from "./derivedFacts.jsx";
 import { COLORS } from "../shared.jsx";
 
 // ---------------------------------------------------------------------------
@@ -180,6 +181,20 @@ function convertNode(node: Node, keyPrefix: string): React.ReactNode {
   const gameVisual = el.getAttribute("data-game-visual");
   if (gameVisual !== null) {
     return <GameScreenEmbed key={keyPrefix} scenarioId={gameVisual} />;
+  }
+
+  // ── data-wiki-tier-ladder → live tier-ladder table (children ignored) ────
+  // Lets authored prose render a zone's settlement-tier ladder from ZONES live
+  // instead of hand-typing rung names / plots / costs that go stale.
+  const tierLadder = el.getAttribute("data-wiki-tier-ladder");
+  if (tierLadder !== null) {
+    return <TierLadderTable key={keyPrefix} zoneId={tierLadder} />;
+  }
+
+  // ── data-wiki-fact → live code-derived scalar (children ignored) ─────────
+  const fact = el.getAttribute("data-wiki-fact");
+  if (fact !== null) {
+    return <WikiFact key={keyPrefix} factKey={fact} />;
   }
 
   // ── <a data-wiki> → WikiLinkButton ───────────────────────────────────────

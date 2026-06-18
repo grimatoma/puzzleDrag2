@@ -165,6 +165,47 @@ describe("HtmlBody — data-game-visual embed", () => {
   });
 });
 
+// ─── data-wiki-tier-ladder → live TierLadderTable ────────────────────────────
+
+describe("HtmlBody — data-wiki-tier-ladder embed", () => {
+  it("renders a live table of the home zone's tier ladder (rung names from code)", () => {
+    const { container } = renderHtml('<div data-wiki-tier-ladder="home"></div>');
+    const table = container.querySelector("table");
+    expect(table).not.toBeNull();
+    // The 6-rung home ladder Camp→Manor is read live from ZONES; the prose
+    // never types these names, so they prove the embed pulls from code.
+    expect(container.textContent).toContain("Camp");
+    expect(container.textContent).toContain("Manor");
+  });
+
+  it("ignores children and shows a note for an unknown zone id", () => {
+    const { container } = renderHtml(
+      '<div data-wiki-tier-ladder="not_a_zone">fallback</div>',
+    );
+    expect(screen.queryByText("fallback")).toBeNull();
+    expect(container.textContent).toMatch(/Unknown zone/i);
+  });
+});
+
+// ─── data-wiki-fact → live WikiFact scalar ───────────────────────────────────
+
+describe("HtmlBody — data-wiki-fact embed", () => {
+  it("renders the live rung count for the home zone", () => {
+    // home has a 6-rung ladder in code; the fact must read it live, not "3".
+    const { container } = renderHtml(
+      '<span data-wiki-fact="zone.home.rungCount"></span>',
+    );
+    expect(container.textContent).toBe("6");
+  });
+
+  it("renders a visible marker (not a crash) for an unknown fact key", () => {
+    const { container } = renderHtml(
+      '<span data-wiki-fact="zone.home.bogus"></span>',
+    );
+    expect(container.textContent).toContain("zone.home.bogus");
+  });
+});
+
 // ─── Security: script/style stripping ────────────────────────────────────────
 
 describe("HtmlBody — security stripping", () => {
