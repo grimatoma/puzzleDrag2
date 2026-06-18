@@ -93,8 +93,9 @@
   function revLots() { return LOTS.filter((l) => l.t <= TIER); }
   function revRoads() { return ROADS.filter((r) => r.tier <= TIER); }
 
-  // forest scatter (fixed positions; pine vs round; sway phase)
-  const TREES = (() => { const r = mb(0x5EED01), o = [], CN = 64; for (let c = 0; c < CN; c++) { const cqx = r() * W, cqy = r() * H, base = r() < 0.5; const n = 5 + Math.floor(r() * 11); for (let k = 0; k < n; k++) { const a = r() * 6.28, rad = r() * r() * 72; o.push({ x: cqx + Math.cos(a) * rad, y: cqy + Math.sin(a) * rad, pine: r() < 0.35 ? !base : base, s: 0.82 + r() * 0.5, ph: r() * 6.28 }); } } return o; })();
+  // forest scatter (fixed positions; pine vs round; sway phase). treeDensity<1 → open plains/farmland.
+  const TREE_DENSITY = Z.treeDensity == null ? 1 : Z.treeDensity;
+  const TREES = (() => { const r = mb(0x5EED01), o = [], CN = 64; for (let c = 0; c < CN; c++) { const cqx = r() * W, cqy = r() * H, base = r() < 0.5; const n = Math.round((5 + Math.floor(r() * 11)) * TREE_DENSITY); for (let k = 0; k < n; k++) { const a = r() * 6.28, rad = r() * r() * 72; o.push({ x: cqx + Math.cos(a) * rad, y: cqy + Math.sin(a) * rad, pine: r() < 0.35 ? !base : base, s: 0.82 + r() * 0.5, ph: r() * 6.28 }); } } return o; })();
   const BUSHES = (Z.bushes || []).map((b) => ({ x: b[0], y: b[1], from: b[2] || 0 }));
 
   function drawTile2(o, i, dx, dy) { if (!tileset) { o.fillStyle = (i === T.WATER ? "#5bb4d6" : i === T.DIRT ? "#c7a86a" : "#6f9a55"); o.fillRect(dx, dy, TILE, TILE); return; } const [sx, sy] = tileSrc(i); o.drawImage(tileset, sx, sy, TILE, TILE, dx, dy, TILE, TILE); }
