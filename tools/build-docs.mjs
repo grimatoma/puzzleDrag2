@@ -343,18 +343,35 @@ ${inner}
     </details>`;
   })();
 
-  // Flat "sort all by timestamp" view: every doc (including archived) in a
-  // single grid, newest first. Toggled client-side; hidden by default.
-  const byDateHtml = `    <section class="group">
+  // "Sort by timestamp" view: two separate sections so the archive stays split
+  // out from the live docs even when ordering purely by time — active docs in
+  // one grid, archived docs in another, each newest-first. Toggled client-side;
+  // hidden by default.
+  const activeByDate = entries.filter((e) => !archivedSrc.has(e.src)).sort(byDateDesc);
+  const archivedByDate = [...archived].sort(byDateDesc);
+  const byDateSection = (heading, blurb, items) =>
+    `    <section class="group">
       <header class="group-head">
-        <h2>All docs by date</h2>
-        <p>Newest first, across every section.</p>
-        <span class="count">${entries.length}</span>
+        <h2>${escapeHtml(heading)}</h2>
+        <p>${escapeHtml(blurb)}</p>
+        <span class="count">${items.length}</span>
       </header>
       <div class="grid">
-${[...entries].sort(byDateDesc).map(docCard).join("\n")}
+${items.map(docCard).join("\n")}
       </div>
     </section>`;
+  const byDateHtml = [
+    byDateSection("Docs by date", "Newest first, across every section.", activeByDate),
+    archivedByDate.length
+      ? byDateSection(
+          "Archive by date",
+          "Superseded, shipped, or off-focus — newest first.",
+          archivedByDate,
+        )
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return `<!doctype html>
 <html lang="en">
