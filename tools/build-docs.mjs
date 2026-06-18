@@ -319,6 +319,19 @@ ${inner}
     </details>`;
   })();
 
+  // Flat "sort all by timestamp" view: every doc (including archived) in a
+  // single grid, newest first. Toggled client-side; hidden by default.
+  const byDateHtml = `    <section class="group">
+      <header class="group-head">
+        <h2>All docs by date</h2>
+        <p>Newest first, across every section.</p>
+        <span class="count">${entries.length}</span>
+      </header>
+      <div class="grid">
+${[...entries].sort(byDateDesc).map(docCard).join("\n")}
+      </div>
+    </section>`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -337,6 +350,10 @@ ${THEME}
 .toplinks a { border: 1px solid var(--line); background: var(--card); padding: .5rem .95rem; border-radius: 999px; font-size: .9rem; color: var(--ink); box-shadow: var(--shadow); transition: transform .15s ease, border-color .15s ease; }
 .toplinks a:hover { text-decoration: none; transform: translateY(-2px); border-color: var(--accent); }
 .toplinks a span { color: var(--accent); }
+.sort-toggle { margin-top: 1rem; display: inline-flex; gap: .25rem; padding: .25rem; border: 1px solid var(--line); background: var(--bg-soft); border-radius: 999px; box-shadow: var(--shadow); }
+.sort-btn { font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--muted); background: transparent; border: 0; padding: .4rem .9rem; border-radius: 999px; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.sort-btn:hover { color: var(--ink); }
+.sort-btn.is-active { background: var(--accent); color: #1c1714; font-weight: 600; }
 .group { margin-top: 2.6rem; }
 .group-head { display: flex; align-items: baseline; gap: .85rem; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: .6rem; margin-bottom: 1.2rem; }
 .group-head h2 { font-size: 1.6rem; font-weight: 600; margin: 0; }
@@ -386,14 +403,48 @@ footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1
         <a href="../b/"><span>▸</span> Dev Panel</a>
         <a href="../story/"><span>▸</span> Story Editor</a>
       </nav>
+      <div class="sort-toggle" role="group" aria-label="Sort documents">
+        <button type="button" class="sort-btn is-active" data-view="grouped" aria-pressed="true">By section</button>
+        <button type="button" class="sort-btn" data-view="bydate" aria-pressed="false">By date (newest)</button>
+      </div>
     </header>
+    <div id="view-grouped">
 ${featuredHtml}
 ${sections}
 ${archiveHtml}
+    </div>
+    <div id="view-bydate" hidden>
+${byDateHtml}
+    </div>
     <footer>
       ${entries.length} documents · generated at build time by <code>tools/build-docs.mjs</code>
     </footer>
   </div>
+  <script>
+  (function () {
+    var KEY = "docs-sort-view";
+    var grouped = document.getElementById("view-grouped");
+    var bydate = document.getElementById("view-bydate");
+    var btns = Array.prototype.slice.call(document.querySelectorAll(".sort-btn"));
+    function apply(view) {
+      var byDate = view === "bydate";
+      grouped.hidden = byDate;
+      bydate.hidden = !byDate;
+      btns.forEach(function (b) {
+        var active = b.getAttribute("data-view") === view;
+        b.classList.toggle("is-active", active);
+        b.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      try { localStorage.setItem(KEY, view); } catch (e) {}
+    }
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.getAttribute("data-view")); });
+    });
+    var saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    if (saved === "bydate") apply(saved);
+  })();
+  </script>
 </body>
 </html>
 `;
