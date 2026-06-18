@@ -25,7 +25,8 @@ export type SaveMigrator = (save: Record<string, unknown>) => Record<string, unk
 /**
  * Ordered ladder. Key = the version the save is AT before the migrator runs.
  * `MIGRATIONS[n]` upgrades a v(n) save to v(n+1) and MUST set `version` to n+1
- * on its output. Add one entry per SAVE_SCHEMA_VERSION bump.
+ * on its output. Add one entry per SAVE_SCHEMA_VERSION bump; rungs must be
+ * contiguous up to the current version.
  */
 export const MIGRATIONS: Record<number, SaveMigrator> = {
   // 45 → 46: "Fiber Crush" added the persisted `fiber` slice. Old saves simply
@@ -34,6 +35,22 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
     ...save,
     version: 46,
     fiber: save.fiber ?? { unlockedLevel: 1, stars: {}, active: null },
+  }),
+  // 46 → 47: the Hearthkeeping idle layer (src/features/embergarden) added the
+  // persisted `embergarden` field. Old saves lack it; default it so the accrual
+  // reducer / `createFreshState` shape is satisfied. `lastTickAt: null` means
+  // "first foreground tick just stamps, accrues nothing" — the migration itself
+  // never hands an existing player a windfall.
+  46: (save) => ({
+    ...save,
+    version: 47,
+    embergarden: save.embergarden ?? {
+      warmth: 0,
+      lifetimeWarmth: 0,
+      hearthlight: 0,
+      levels: {},
+      lastTickAt: null,
+    },
   }),
 };
 

@@ -60,7 +60,13 @@ export function reduce(state: GameState, action: Action): GameState {
   // Auto-start on the player's very first meaningful action. Exclude meta/biome
   // actions that may fire before the player has a chance to see the board —
   // prevents spurious auto-start in tests and during biome-switch no-ops.
-  const TUTORIAL_SKIP_ACTIONS = new Set(['@@INIT', 'SESSION_START', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON']);
+  // EMBERGARDEN/* (the idle layer) is excluded too: its TICK fires automatically
+  // on mount/foreground (not a board interaction), and its buy/rekindle live on
+  // a side screen — none should hijack board onboarding.
+  const TUTORIAL_SKIP_ACTIONS = new Set([
+    '@@INIT', 'SESSION_START', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON',
+    'EMBERGARDEN/TICK', 'EMBERGARDEN/BUY_GENERATOR', 'EMBERGARDEN/REKINDLE',
+  ]);
   if (
     !tutorial.seen &&
     !tutorial.active &&

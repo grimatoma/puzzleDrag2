@@ -55,13 +55,16 @@ describe("saveMigrations.migrateSave", () => {
   });
 });
 
-describe("saveMigrations — 45 → 46 (Fiber Crush)", () => {
-  test("upgrades a real v45 save to current, adding the fiber slice and preserving progress", () => {
+describe("saveMigrations — v45 walks the full ladder to current", () => {
+  test("upgrades a real v45 save to current, seeding fiber + embergarden and preserving progress", () => {
     const result = migrateSave({ ...v45PreBump });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // bumped to 46
-    expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // default seeded
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // 45 → 46 → 47
+    expect(result.save.fiber).toEqual({ unlockedLevel: 1, stars: {}, active: null }); // 45→46 rung
+    expect(result.save.embergarden).toEqual({
+      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
+    }); // 46→47 rung
     // Pre-existing progress is untouched.
     expect(result.save.coins).toBe(1234);
     expect(result.save.level).toBe(7);
@@ -74,11 +77,28 @@ describe("saveMigrations — 45 → 46 (Fiber Crush)", () => {
     migrateSave(input);
     expect(input.version).toBe(45);
     expect((input as Record<string, unknown>).fiber).toBeUndefined();
+    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
+});
 
-  test("a current v46 fixture loads through the ladder unchanged (identity)", () => {
+describe("saveMigrations — 46 → 47 (Hearthkeeping / embergarden)", () => {
+  test("a v46 save upgrades to current, seeding embergarden and preserving the fiber slice", () => {
     const result = migrateSave({ ...v46Current });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.save).toEqual(v46Current);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION); // bumped 46 → 47
+    expect(result.save.embergarden).toEqual({
+      warmth: 0, lifetimeWarmth: 0, hearthlight: 0, levels: {}, lastTickAt: null,
+    });
+    // The v46-era `fiber` slice (with progress) survives untouched.
+    expect(result.save.fiber).toEqual({ unlockedLevel: 2, stars: { L1: 3 }, active: null });
+    expect(result.save.coins).toBe(1234);
+  });
+
+  test("does not mutate the source v46 save (purity)", () => {
+    const input = { ...v46Current };
+    migrateSave(input);
+    expect(input.version).toBe(46);
+    expect((input as Record<string, unknown>).embergarden).toBeUndefined();
   });
 });

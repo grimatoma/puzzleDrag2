@@ -12,6 +12,7 @@ import type { ResourceKey } from "./catalogKeys.js";
 import type {
   BossState,
   CastleState,
+  EmbergardenState,
   FishBiomeState,
   GameSettings,
   Quest,
@@ -298,6 +299,8 @@ export interface GameState {
   /** Fiber Crush minigame progression (src/features/fiber + src/game/fiber). */
   fiber: FiberSliceState;
   runSummary: RunSummary;
+  /** Hearthkeeping (idle layer) sub-state — see src/features/embergarden. */
+  embergarden: EmbergardenState;
   mapCurrent: string;
   mapVisited: string[];
   mapDiscovered: string[];

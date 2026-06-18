@@ -479,6 +479,25 @@ export interface MigrateApplyCapsAction {
   type: "MIGRATE/APPLY_CAPS";
 }
 
+// ── Embergarden / Hearthkeeping (idle layer; owned by embergarden/slice) ─────
+// Time is injected via `now` (epoch ms) so the reducer stays pure, exactly like
+// LOGIN_TICK's `today`.
+
+export interface EmbergardenTickAction {
+  type: "EMBERGARDEN/TICK";
+  payload?: { now?: number };
+}
+
+export interface EmbergardenBuyGeneratorAction {
+  type: "EMBERGARDEN/BUY_GENERATOR";
+  payload?: { id?: string; now?: number };
+}
+
+export interface EmbergardenRekindleAction {
+  type: "EMBERGARDEN/REKINDLE";
+  payload?: { now?: number };
+}
+
 // ── Run summary (catalog + slice) ───────────────────────────────────────────
 
 export interface RunSummaryOpenAction {
@@ -661,6 +680,9 @@ export type TypedActionType =
   | PopNpcAction["type"]
   | DismissBubbleAction["type"]
   | MigrateApplyCapsAction["type"]
+  | EmbergardenTickAction["type"]
+  | EmbergardenBuyGeneratorAction["type"]
+  | EmbergardenRekindleAction["type"]
   | RunSummaryOpenAction["type"]
   | RunSummaryCloseAction["type"]
   | SettingsOpenDebugAction["type"]
@@ -755,6 +777,9 @@ export type TypedAction =
   | PopNpcAction
   | DismissBubbleAction
   | MigrateApplyCapsAction
+  | EmbergardenTickAction
+  | EmbergardenBuyGeneratorAction
+  | EmbergardenRekindleAction
   | RunSummaryOpenAction
   | RunSummaryCloseAction
   | SettingsOpenDebugAction

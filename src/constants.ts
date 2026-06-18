@@ -207,9 +207,10 @@ export const DEFAULT_HOME_BIOME = "prairie";
 // upgrades old → new (and sets `version`), (3) add a fixture save under
 // src/__tests__/fixtures/saves/ and a migrator test. Saves with no migration
 // path (gaps, forward versions, corrupt) are still discarded.
-// 45 → 46: added the persisted `fiber` slice (Fiber Crush minigame). Migrator
-// at MIGRATIONS[45] in src/state/saveMigrations.ts upgrades old saves in place.
-export const SAVE_SCHEMA_VERSION = 46;
+// 45 → 46: added the persisted `fiber` slice (Fiber Crush minigame).
+// 46 → 47: added the persisted `embergarden` slice (Hearthkeeping idle layer).
+// Both migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
+export const SAVE_SCHEMA_VERSION = 47;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,

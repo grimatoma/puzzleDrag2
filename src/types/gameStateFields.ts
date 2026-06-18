@@ -6,6 +6,7 @@
 
 import type { RunSummary } from "../features/runSummary/slice.js";
 import type { BossState } from "../features/boss/slice.js";
+import type { EmbergardenState } from "../features/embergarden/slice.js";
 import type { Quest } from "../features/quests/data.js";
 
 /** Legacy 3-slot daily quest rows (spread at root from quests slice `initial`). */
@@ -50,6 +51,7 @@ export interface FishBiomeState {
 export interface SliceRootFields {
   boons: Record<string, boolean>;
   runSummary: RunSummary;
+  embergarden: EmbergardenState;
   mapCurrent: string;
   mapVisited: string[];
   mapDiscovered: string[];
@@ -85,4 +87,4 @@ export interface SliceRootFields {
   year?: number;
 }
 
-export type { RunSummary, BossState, Quest };
+export type { RunSummary, BossState, EmbergardenState, Quest };
