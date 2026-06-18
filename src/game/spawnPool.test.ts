@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSpawnPool, resolveUpgradeTile, type SpawnPoolInput } from "./spawnPool.js";
+import { buildActivePool, buildSpawnPool, resolveUpgradeTile, type SpawnPoolInput } from "./spawnPool.js";
 import { ZONE_UPGRADE_TARGET_GOLD } from "../features/zones/data.js";
 
 /** Count occurrences of a key in a pool. */
@@ -20,6 +20,48 @@ function input(overrides: Partial<SpawnPoolInput>): SpawnPoolInput {
     ...overrides,
   };
 }
+
+describe("buildActivePool", () => {
+  it("returns a copy of the base when no active map is given", () => {
+    const base = ["tile_grass_grass"];
+    const out = buildActivePool(base, null);
+    expect(out).toEqual(["tile_grass_grass"]);
+    expect(out).not.toBe(base); // fresh array
+  });
+
+  it("substitutes each slot with the active tile for its category", () => {
+    expect(buildActivePool(["tile_grass_grass"], { grass: "tile_grass_hay" })).toEqual([
+      "tile_grass_hay",
+    ]);
+  });
+
+  it("drops slots whose category is disabled (null) or unset (undefined)", () => {
+    expect(
+      buildActivePool(["tile_grass_grass", "tile_grain_wheat"], {
+        grass: "tile_grass_hay",
+        grain: null,
+      }),
+    ).toEqual(["tile_grass_hay"]);
+    // grain undefined in the map → dropped; a category-less key survives.
+    expect(buildActivePool(["tile_grain_wheat", "no_category_key"], {})).toEqual(["no_category_key"]);
+  });
+
+  it("passes category-less keys through unchanged", () => {
+    expect(buildActivePool(["no_category_key"], { grass: "tile_grass_hay" })).toEqual([
+      "no_category_key",
+    ]);
+  });
+
+  it("falls back to the base when every slot is dropped", () => {
+    expect(buildActivePool(["tile_grain_wheat"], { grain: null })).toEqual(["tile_grain_wheat"]);
+  });
+
+  it("does not mutate the base array", () => {
+    const base = ["tile_grass_grass", "tile_grain_wheat"];
+    buildActivePool(base, { grass: "tile_grass_hay", grain: null });
+    expect(base).toEqual(["tile_grass_grass", "tile_grain_wheat"]);
+  });
+});
 
 describe("buildSpawnPool", () => {
   it("does not mutate the caller's basePool", () => {

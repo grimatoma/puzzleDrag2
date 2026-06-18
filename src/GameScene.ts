@@ -33,7 +33,7 @@ import { producedResource, buildChainUpdatePayload } from "./game/producedResour
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
 import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
-import { buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
+import { buildActivePool, buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
 import { shakeIntensityFor, shakeDurationFor, radialPeakRadiusFor } from "./game/juiceCurves.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
@@ -766,19 +766,7 @@ export class GameScene extends Phaser.Scene {
    * has explicitly chosen (or defaulted) will spawn.
    */
   activePool() {
-    const base = this.biome().pool;
-    const active = getRegistry(this.registry, "tileCollectionActive") ?? null;
-    if (!active) return [...base];
-    const out = [];
-    for (const baseKey of base) {
-      const cat = CATEGORY_OF[baseKey];
-      if (!cat) { out.push(baseKey); continue; }
-      const a = active[cat];
-      if (a === null || a === undefined) continue; // category disabled — drop slot
-      out.push(a);
-    }
-    // Safety: never return an empty pool (fallback to base so the board can fill)
-    return out.length > 0 ? out : [...base];
+    return buildActivePool(this.biome().pool, getRegistry(this.registry, "tileCollectionActive") ?? null);
   }
 
   randomResource() {

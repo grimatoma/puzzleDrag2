@@ -26,6 +26,32 @@ const DEFAULT_FERTILIZER_BIAS_KEYS: ReadonlyArray<string> = Object.freeze([
   "tile_grain_wheat",
 ]);
 
+/**
+ * Substitute each slot of a biome's base pool with the player's currently
+ * active tile type for that category. Slots whose category is disabled
+ * (active value null/undefined) are dropped; category-less slots pass through.
+ * Never returns an empty pool — falls back to a copy of the base. Pure.
+ */
+export function buildActivePool(
+  base: ReadonlyArray<string>,
+  tileCollectionActive: Record<string, string | null> | null,
+): string[] {
+  if (!tileCollectionActive) return [...base];
+  const out: string[] = [];
+  for (const baseKey of base) {
+    const cat = CATEGORY_LOOKUP[baseKey];
+    if (!cat) {
+      out.push(baseKey);
+      continue;
+    }
+    const a = tileCollectionActive[cat];
+    if (a === null || a === undefined) continue; // category disabled — drop slot
+    out.push(a);
+  }
+  // Safety: never return an empty pool (fallback to base so the board can fill).
+  return out.length > 0 ? out : [...base];
+}
+
 export interface SpawnPoolInput {
   /** Base pool, already active-tile-substituted (GameScene.activePool()). */
   basePool: ReadonlyArray<string>;
