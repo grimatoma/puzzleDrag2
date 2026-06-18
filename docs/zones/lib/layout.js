@@ -62,12 +62,19 @@
     // water shimmer
     if (water) { g.save(); g.globalCompositeOperation = "screen"; g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = 2; for (let y = 40; y < H; y += 80) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); } g.restore(); }
 
-    // frontier dressing (the receding wilderness glyphs) in the un-cleared zone
+    // frontier dressing (the receding wilderness glyphs) in the un-cleared zone — but never over
+    // an opaque feature (sea / lake / pool), which would scatter forest on the water.
+    const inFeat = (x, y) => (Z.features || []).some((ft) => {
+      if (ft.tier !== undefined && ft.tier > tier) return false;
+      if (ft.kind === "band") return x >= ft.x && x <= ft.x + ft.w && y >= ft.y && y <= ft.y + ft.h;
+      if (ft.kind === "lake" || ft.kind === "pool") return ((x - ft.cx) / ft.rx) ** 2 + ((y - ft.cy) / ft.ry) ** 2 <= 1;
+      return false;
+    });
     const glyph = Z.frontierGlyph || "tree";
     const dr = mb((seed * 131) ^ (tier * 40503));
     for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
       const cx = tx * TILE + 8 + dr() * 16, cy = ty * TILE + 8 + dr() * 16;
-      if (cleared(cx, cy)) continue; if (dr() > 0.34) continue;
+      if (cleared(cx, cy) || inFeat(cx, cy)) continue; if (dr() > 0.34) continue;
       drawFrontierGlyph(g, glyph, cx, cy, P, dr);
     }
     return { cleared, nearRoad, onLot, inPlaza };
