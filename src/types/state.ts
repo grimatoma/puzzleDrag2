@@ -21,7 +21,6 @@ import type {
   TutorialState,
 } from "./gameStateFields.js";
 import type { ZoneInventoryMap, ZoneResourceProgressMap } from "./inventory.js";
-import type { FiberProgress } from "../game/fiber/levels.js";
 
 export type {
   BossState,
@@ -202,24 +201,6 @@ export interface AlmanacState {
   [extra: string]: unknown;
 }
 
-/** Fiber Crush — the active level run (null when not playing a level). */
-export interface FiberActiveLevel {
-  levelId: string;
-  movesLeft: number;
-  movesUsed: number;
-  progress: FiberProgress;
-  status: "playing" | "won" | "lost";
-}
-
-/** Fiber Crush — the persisted slice (`state.fiber`). */
-export interface FiberSliceState {
-  /** Highest unlocked level ordinal (1-based; L1 = 1). */
-  unlockedLevel: number;
-  /** Best stars earned per level id. */
-  stars: Record<string, number>;
-  active: FiberActiveLevel | null;
-}
-
 // ── Top-level GameState ───────────────────────────────────────────────────
 
 /**
@@ -296,8 +277,6 @@ export interface GameState {
   // Floaters layer rendered above the board after a chain commit.
   floaters?: unknown[];
   boons: Record<string, boolean>;
-  /** Fiber Crush minigame progression (src/features/fiber + src/game/fiber). */
-  fiber: FiberSliceState;
   runSummary: RunSummary;
   /** Hearthkeeping (idle layer) sub-state — see src/features/embergarden. */
   embergarden: EmbergardenState;
