@@ -5,7 +5,7 @@ import {
 
 test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '⌂ Town' }).click();
+  await page.locator('[data-tour="nav-town"]').click();
   await expect(page.getByText('Hearthwood Vale', { exact: true })).toBeVisible();
   const s = await getReactState(page);
   expect(s.view).toBe('town');
@@ -13,25 +13,31 @@ test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
 
 test('open Crafting screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🔨 Craft' }).click();
-  await expect(page.getByTestId('hud').getByText('Crafting', { exact: true })).toBeVisible();
+  await page.locator('[data-tour="nav-crafting"]').click();
+  // The HUD view-label for the crafting screen is "Craft" (src/ui/Hud.tsx VIEW_LABELS).
+  await expect(page.getByTestId('hud').getByText('Craft', { exact: true })).toBeVisible();
+  await waitForState(page, (s) => s.view === 'crafting');
 });
 
 test('open Inventory screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🎒 Inventory' }).click();
+  await page.locator('[data-tour="nav-inventory"]').click();
   await waitForState(page, (s) => s.view === 'inventory');
 });
 
 test('open Quests screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '📜 Quests' }).click();
-  await waitForState(page, (s) => s.view === 'quests');
+  // Quests moved from a standalone nav button into a tab inside the Townsfolk
+  // view (src/features/townsfolk/index.tsx). Navigate there, then open the tab.
+  await page.locator('[data-tour="nav-townsfolk"]').click();
+  await waitForState(page, (s) => s.view === 'townsfolk');
+  await page.getByRole('button', { name: 'Quests' }).click();
+  await waitForState(page, (s) => (s.viewParams?.tab ?? '') === 'quests');
 });
 
 test('open Map screen', async ({ page }) => {
   await gotoFresh(page);
-  await page.getByRole('button', { name: '🗺️ Map' }).click();
+  await page.locator('[data-tour="nav-cartography"]').click();
   await waitForState(page, (s) => s.view === 'cartography');
 });
 

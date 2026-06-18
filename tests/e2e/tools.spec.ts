@@ -64,10 +64,11 @@ test('USE_TOOL tap-target arms toolPending; CANCEL_TOOL clears it without touchi
 });
 
 test('CRAFT_TOOL: building a Workshop tool from WORKSHOP_RECIPES debits inventory + credits state.tools', async ({ page }) => {
+  // rec_rake inputs are { plank: 1 } (src/constants.ts RECIPES / WORKSHOP_RECIPES).
   await gotoFresh(page, {
     coins: 100,
     built: { workshop: true },
-    inventory: { wood_plank: 1 },
+    inventory: { home: { plank: 1 } },
     tools: { rake: 0 },
   });
   // CRAFT_TOOL is the coreReducer path for WORKSHOP_RECIPES (rake/axe/etc.) —
@@ -75,19 +76,20 @@ test('CRAFT_TOOL: building a Workshop tool from WORKSHOP_RECIPES debits inventor
   await dispatchAction(page, { type: 'CRAFT_TOOL', id: 'rake' });
   await waitForState(page, (s) => (s.tools?.rake ?? 0) === 1);
   const s = await getReactState(page);
-  expect(inv(s).wood_plank).toBe(0);
+  // inventoryPut drops the slot at 0, so plank reads back as undefined.
+  expect(inv(s).plank ?? 0).toBe(0);
 });
 
 test('CRAFT_TOOL with no workshop is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 100,
     built: {},
-    inventory: { wood_plank: 5 },
+    inventory: { home: { plank: 5 } },
     tools: { rake: 0 },
   });
   await dispatchAction(page, { type: 'CRAFT_TOOL', id: 'rake' });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
   expect(s.tools?.rake ?? 0).toBe(0);
-  expect(inv(s).wood_plank).toBe(5);
+  expect(inv(s).plank).toBe(5);
 });

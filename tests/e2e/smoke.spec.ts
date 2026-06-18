@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers';
+import { gotoFresh, getReactState, dispatchAction, isIgnoredConsoleError } from './helpers';
 
 test('initial load: boots on Town view, HUD + bottom nav render without errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // Ignore known-benign console noise (Phaser texture-key re-add, tween race,
+  // asset 404s) so a real new console.error still fails the assert below.
+  page.on('console', (m) => { if (m.type() === 'error' && !isIgnoredConsoleError(m.text())) errors.push(m.text()); });
   await gotoFresh(page);
 
   const s = await getReactState(page);
@@ -15,18 +17,19 @@ test('initial load: boots on Town view, HUD + bottom nav render without errors',
   await expect(page.getByTestId('coins')).toBeVisible();
   await expect(page.getByTestId('coins')).toContainText('150');
 
-  // Bottom nav always renders. Assert presence of each base item via aria-label.
-  for (const label of ['⌂ Town', '🎒 Inventory', '📜 Quests', '🔨 Craft']) {
-    await expect(page.getByRole('button', { name: label })).toHaveCount(1);
+  // Bottom nav always renders. Assert presence of each tab via its stable
+  // data-tour hook (src/ui/primitives/TabBar.tsx → `nav-<itemKey>`).
+  for (const key of ['town', 'inventory', 'crafting', 'cartography', 'townsfolk']) {
+    await expect(page.locator(`[data-tour="nav-${key}"]`)).toHaveCount(1);
   }
   expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
 });
 
 test('Board view: SeasonBar with 10 turns left appears once on board', async ({ page }) => {
   await gotoFresh(page);
-  // Town is the default boot view; force the player onto the board so the
-  // SeasonBar (which only renders when view === 'board') is visible.
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  // Start a farm run so the SeasonBar has an active turn budget (a bare
+  // SET_VIEW board with no run shows 0). Home farm baseTurns is 10.
+  await dispatchAction(page, { type: 'FARM/ENTER', payload: { selectedTiles: [], useFertilizer: false } });
   await expect(page.getByTestId('turns-left')).toBeVisible();
   await expect(page.getByTestId('turns-left')).toContainText('10');
 });

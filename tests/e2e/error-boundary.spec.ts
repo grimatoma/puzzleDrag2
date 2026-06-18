@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers';
+import { gotoFresh, getReactState, dispatchAction, isIgnoredConsoleError } from './helpers';
 
 /**
  * Error-boundary smoke. The RootErrorBoundary in main.jsx catches render
@@ -38,8 +38,9 @@ test('Boot completes without console.error leaks for a fresh save', async ({ pag
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await gotoFresh(page);
   await page.waitForTimeout(500);
-  // Filter out the well-known Phaser tween race surfaced under fast e2e
-  // sequencing (covered separately in full-year.spec.js).
-  const real = errors.filter((e) => !/Cannot read properties of null/.test(e));
+  // Filter out known-benign console noise (Phaser tween race + texture-key
+  // re-add across the four Phaser.Game instances + asset 404s); any other
+  // console.error still fails the boot guard. See helpers.IGNORED_CONSOLE.
+  const real = errors.filter((e) => !isIgnoredConsoleError(e));
   expect(real).toEqual([]);
 });
