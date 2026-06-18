@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
 import { parseZoneInventories } from "../types/inventory.js";
+import { migrateSave } from "./saveMigrations.js";
 import type { GameState } from "../types/state.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
@@ -21,11 +22,21 @@ export function loadSavedState(): SavedState | null {
     );
     if (!parsed || typeof parsed !== "object") return null;
     if (parsed.version !== SAVE_SCHEMA_VERSION) {
-      console.warn(
-        `[hearth] discarding save: schema version ${parsed.version} does not match current ${SAVE_SCHEMA_VERSION}; starting fresh`
-      );
-      try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
-      return null;
+      // Try to upgrade the save through the migration ladder instead of wiping
+      // it. Only forward/gap/corrupt versions (no migration path) are discarded.
+      const result = migrateSave(parsed as Record<string, unknown>);
+      if (!result.ok) {
+        console.warn(
+          `[hearth] discarding save: cannot migrate version ${parsed.version} ` +
+          `to ${SAVE_SCHEMA_VERSION} (${result.reason}); starting fresh`
+        );
+        try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+        return null;
+      }
+      // Upgraded in memory only; the next persist cycle rewrites it to disk.
+      // (We don't eagerly rewrite here — persistStateNow needs a full GameState,
+      // not the loose SavedState we hold at load time.)
+      return result.save as SavedState;
     }
     return parsed as SavedState;
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }

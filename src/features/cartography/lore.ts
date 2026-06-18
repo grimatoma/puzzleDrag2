@@ -78,6 +78,13 @@ export const NODE_LORE = {
     speaker: "The Tidesinger",
     hearth: "Sails patched. Nets folded. The sea takes its turn.",
   },
+  mirefen: {
+    subtitle: "Sister-hold · the stilt-town on black water",
+    epitaph:
+      "We build on water here. Drive your posts deep, and the fen will hold your hearth as well as any stone.",
+    speaker: "The Tidesinger",
+    hearth: "Lanterns strung on golden boardwalks — smoke over the still mere.",
+  },
   oldcapital: {
     subtitle: "Anchor of the Pact · the first hearth",
     epitaph:
