@@ -1,0 +1,119 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rivermeet — grounded settlement (look test)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@500;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+ body{margin:0;background:#1b2a1a;color:#efe6d8;font:500 15px/1.5 "IBM Plex Sans",system-ui;padding:14px;}
+ h1{font:800 1.6rem/1.1 "Fraunces",serif;margin:.2rem 0;}
+ .wrap{max-width:1180px;margin:0 auto;}
+ .ctrls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.7rem 0;}
+ .tierbtns{display:inline-flex;gap:.2rem;background:#26331f;padding:.25rem;border-radius:11px;}
+ .tierbtns button{font:700 .85rem/1 "Fraunces",serif;padding:.5rem .7rem;border:0;background:transparent;border-radius:8px;cursor:pointer;color:#bcae92;}
+ .tierbtns button.on{background:#caa978;color:#231a10;} .tierbtns button .n{display:block;font:600 .6rem/1.2 "JetBrains Mono";opacity:.8;}
+ .ctl{font:600 .82rem/1 "IBM Plex Sans";padding:.5rem .75rem;border:1px solid #3a4a30;background:#26331f;border-radius:8px;cursor:pointer;color:#efe6d8;} .ctl.grow{background:#6e8b4f;border-color:#6e8b4f;color:#fff;}
+ .toggles{display:inline-flex;gap:.5rem;flex-wrap:wrap;margin-left:auto;}
+ .toggles label{font:600 .72rem/1 "IBM Plex Sans";display:inline-flex;gap:.3rem;align-items:center;background:#26331f;padding:.4rem .55rem;border-radius:7px;cursor:pointer;}
+ .cw{border-radius:12px;overflow:hidden;border:1px solid #3a4a30;background:#33502f;line-height:0;}
+ canvas{display:block;width:100%;height:auto;}
+ .cap{margin:.6rem 0 .2rem;min-height:2.2em;} .cap b{font-family:"Fraunces",serif;color:#e9c98a;}
+ .stat{font:600 .8rem/1.4 "JetBrains Mono";color:#9fae8c;}
+</style></head><body><div class="wrap">
+ <h1>🌲 Rivermeet</h1>
+ <p style="color:#bcae92;margin:.1rem 0 .4rem">A timber &amp; fur landing on the inside of a slow river bend — it grows across the water (ferry → bridge) into a two-bank river town. <i>Look test of the tileset renderer.</i></p>
+ <div class="ctrls">
+  <div class="tierbtns" data-tierbtn-for="rivermeet">
+   <button data-tier="0" class="on">Landing<span class="n">4 plots</span></button>
+   <button data-tier="1">Ferry Hamlet<span class="n">8</span></button>
+   <button data-tier="2">Millpond Village<span class="n">13</span></button>
+   <button data-tier="3">Bridge Town<span class="n">19</span></button>
+   <button data-tier="4">Rivermeet City<span class="n">26</span></button>
+  </div>
+  <button class="ctl grow" data-grow-for="rivermeet">Grow&nbsp;▸</button>
+  <div class="toggles">
+   <label><input type="checkbox" data-toggle-for data-toggle="buildings" checked> buildings</label>
+   <label><input type="checkbox" data-toggle-for data-toggle="dressing" checked> dressing</label>
+   <label><input type="checkbox" data-toggle-for data-toggle="forest" checked> forest</label>
+   <label><input type="checkbox" data-toggle-for data-toggle="labels"> labels</label>
+   <label><input type="checkbox" data-toggle-for data-toggle="dusk"> dusk</label>
+  </div>
+ </div>
+ <div class="cw"><canvas data-layout="rivermeet" width="1280" height="960"></canvas></div>
+ <p class="cap" data-caption-for="rivermeet"></p>
+ <p class="stat" data-stat-for="rivermeet"></p>
+</div>
+<script>
+window.LAYOUT_DATA = { rivermeet: {
+  setback: 15,
+  roofs: ["#7a5a3c","#9c5a3a","#8a6a42","#6e8b4f","#b06a3a","#a85a2c","#5e7a52"],
+  walls: ["#caa978","#d8c39a","#c2a878","#e0cba0","#bfa074"],
+  tiers: [
+    { name:"Landing", plots:4, caption:"A fur &amp; timber landing on the gravel point bar inside the bend — four cabins front one muddy Landing Lane up from the canoe beach. Forest all around; the far bank is untouched woods." },
+    { name:"Ferry Hamlet", plots:8, caption:"Landing Lane gains a cross street and a green. A rope ferry works the slack water, and the first cabin appears on the far bank. A smokehouse and a kitchen-garden lane." },
+    { name:"Millpond Village", plots:13, caption:"The side-creek is dammed into a millpond and a water-mill rises beside it — the village's heart. Two streets form a rough grid; a chapel and inn front the green; a well marks the centre." },
+    { name:"Bridge Town", plots:19, caption:"A timber trestle bridge spans the narrows and stitches the two banks together. A market square opens off the landing; deepwater docks go in on the cut bank; the far bank becomes a second district." },
+    { name:"Rivermeet City", plots:26, caption:"A fortified river city: a stockade rings the wealthy core, the square gains a fountain and town hall, warehouses line the deepwater frontage, and farms spread up both banks — the woods just a frame." },
+  ],
+  water: {
+    rivers: [
+      { pts:[[-40,330],[200,360],[440,420],[640,460],[860,430],[1080,380],[1320,350]], width:52 },
+      { pts:[[300,980],[330,820],[372,660],[430,540],[520,470]], width:18 },
+    ],
+    lakes: [ { cx:372, cy:692, rx:50, ry:36 } ],
+  },
+  bridges: [ { x:880, y:432, vertical:true, span:104, hr:16, from:3 } ],
+  dock: { x:756, y0:392, y1:470, from:3 },
+  mill: { x:392, y:648, from:2 },
+  plaza: { cx:600, cy:760, rx:82, ry:56 },
+  landmark: { cx:600, cy:760 },
+  clearSpots: [[392,648,56,64],[600,760,86,72],[756,440,46,64],[372,692,58,46]],
+  roads: [
+    { id:"LL", axis:"V", line:600, half:16, a:470, b:900, tier:0, kind:"main" },
+    { id:"CS", axis:"H", line:760, half:14, a:340, b:860, tier:1, kind:"main" },
+    { id:"WS", axis:"V", line:360, half:13, a:560, b:880, tier:2, kind:"lane" },
+    { id:"ES", axis:"V", line:840, half:13, a:560, b:880, tier:2, kind:"lane" },
+    { id:"RB", axis:"H", line:560, half:13, a:300, b:1040, tier:3, kind:"lane" },
+    { id:"BR", axis:"V", line:880, half:14, a:230, b:560, tier:3, kind:"main" },
+    { id:"FB", axis:"H", line:230, half:14, a:680, b:1080, tier:1, kind:"lane" },
+    { id:"FBs", axis:"V", line:1000, half:12, a:120, b:230, tier:4, kind:"lane" },
+  ],
+  foot: {0:[118,96],1:[112,100],2:[124,98],3:[110,102],4:[120,96],5:[116,100],6:[110,98],7:[122,96],8:[114,100],9:[118,96],10:[112,98],11:[120,100],12:[110,96],13:[116,100],14:[122,98],15:[112,100],16:[118,96],17:[110,98],18:[120,100],19:[114,96],20:[116,100],21:[110,98],22:[122,96],23:[112,100],24:[118,98],25:[114,100]},
+  special: { 6:"shop", 8:"chapel", 12:"inn", 13:"townhall", 17:"shop" },
+  spec: [
+    { i:0, road:"LL", side:"W", along:520, t:0 }, { i:1, road:"LL", side:"E", along:520, t:0 },
+    { i:2, road:"LL", side:"W", along:646, t:0 }, { i:3, road:"LL", side:"E", along:646, t:0 },
+    { i:4, road:"CS", side:"N", along:440, t:1 }, { i:5, road:"CS", side:"N", along:740, t:1 },
+    { i:6, road:"CS", side:"S", along:440, t:1 }, { i:7, road:"FB", side:"S", along:860, t:1 },
+    { i:8, road:"WS", side:"W", along:640, t:2 }, { i:9, road:"WS", side:"E", along:640, t:2 },
+    { i:10, road:"ES", side:"E", along:640, t:2 }, { i:11, road:"ES", side:"W", along:640, t:2 },
+    { i:12, road:"CS", side:"S", along:740, t:2 },
+    { i:13, road:"RB", side:"S", along:440, t:3 }, { i:14, road:"RB", side:"S", along:760, t:3 },
+    { i:15, road:"LL", side:"W", along:864, t:3 }, { i:16, road:"LL", side:"E", along:864, t:3 },
+    { i:17, road:"FB", side:"S", along:980, t:3 }, { i:18, road:"FB", side:"N", along:860, t:3 },
+    { i:19, road:"RB", side:"S", along:300, t:4 }, { i:20, road:"RB", side:"S", along:920, t:4 },
+    { i:21, road:"ES", side:"E", along:760, t:4 }, { i:22, road:"WS", side:"W", along:760, t:4 },
+    { i:23, road:"FB", side:"S", along:740, t:4 }, { i:24, road:"FB", side:"N", along:1000, t:4 },
+    { i:25, road:"CS", side:"N", along:320, t:4 },
+  ],
+  widgets: [
+    { k:"campfire", x:600, y:540, from:0, to:1 }, { k:"fishrack", x:524, y:500, from:0 },
+    { k:"logboom", x:648, y:466, from:0, n:5 }, { k:"woodpile", x:210, y:540, from:1 },
+    { k:"boat", x:690, y:480, from:1 }, { k:"boat", x:340, y:700, from:2 },
+    { k:"signpost", x:548, y:716, from:1 }, { k:"reed", x:330, y:756, from:1 }, { k:"reed", x:436, y:512, from:1 },
+    { k:"lamp", x:560, y:700, from:2 }, { k:"lamp", x:640, y:700, from:2 }, { k:"lamp", x:560, y:820, from:3 }, { k:"lamp", x:640, y:820, from:3 },
+    { k:"vegplot", x:470, y:840, from:2 }, { k:"haybale", x:300, y:840, from:2 },
+    { k:"market", x:558, y:792, from:3 }, { k:"market", x:642, y:792, from:3 }, { k:"cart", x:700, y:740, from:3 },
+    { k:"banner", x:576, y:720, from:4 }, { k:"banner", x:624, y:720, from:4 },
+  ],
+  actors: [
+    { pts:[[600,520],[600,860],[600,520]], spd:42, from:1 },
+    { pts:[[400,760],[820,760],[400,760]], spd:46, from:1 },
+    { pts:[[880,540],[880,260],[880,540]], spd:40, from:3 },
+    { x:392, y:632, dir:"front", from:2, kind:"idle" },
+    { x:560, y:792, dir:"back", from:3, kind:"idle" },
+    { x:560, y:520, dir:"front", from:0, kind:"idle" },
+    { x:620, y:716, dir:"front", from:2, kind:"kid" },
+  ],
+  critters: [ { k:"duck", x:360, y:700, from:1 }, { k:"duck", x:700, y:470, from:1 }, { k:"dog", x:600, y:790, from:2 }, { k:"chick", x:480, y:826, from:2 }, { k:"chick", x:500, y:836, from:3 } ],
+}};
+</script>
+<script src="../lib/layout.js"></script>
+</body></html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tidewell — grounded settlement (look test)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@500;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+ body{margin:0;background:#15232a;color:#e4edf0;font:500 15px/1.5 "IBM Plex Sans",system-ui;padding:14px;}
+ h1{font:800 1.6rem/1.1 "Fraunces",serif;margin:.2rem 0;} .wrap{max-width:1180px;margin:0 auto;}
+ .ctrls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.7rem 0;}
+ .tierbtns{display:inline-flex;gap:.2rem;background:#1d2d34;padding:.25rem;border-radius:11px;}
+ .tierbtns button{font:700 .85rem/1 "Fraunces",serif;padding:.5rem .7rem;border:0;background:transparent;border-radius:8px;cursor:pointer;color:#9cb0b8;}
+ .tierbtns button.on{background:#6a9aa8;color:#0f1c20;} .tierbtns button .n{display:block;font:600 .6rem/1.2 "JetBrains Mono";opacity:.8;}
+ .ctl{font:600 .82rem/1 "IBM Plex Sans";padding:.5rem .75rem;border:1px solid #2e424c;background:#1d2d34;border-radius:8px;cursor:pointer;color:#e4edf0;} .ctl.grow{background:#3f8090;border-color:#3f8090;color:#fff;}
+ .toggles{display:inline-flex;gap:.5rem;flex-wrap:wrap;margin-left:auto;}
+ .toggles label{font:600 .72rem/1 "IBM Plex Sans";display:inline-flex;gap:.3rem;align-items:center;background:#1d2d34;padding:.4rem .55rem;border-radius:7px;cursor:pointer;}
+ .cw{border-radius:12px;overflow:hidden;border:1px solid #2e424c;background:#2c4850;line-height:0;} canvas{display:block;width:100%;height:auto;}
+ .cap{margin:.6rem 0 .2rem;min-height:2.2em;} .cap b{font-family:"Fraunces",serif;color:#bce0ea;} .stat{font:600 .8rem/1.4 "JetBrains Mono";color:#8ea6b0;}
+</style></head><body><div class="wrap">
+ <h1>🌊 Tidewell</h1>
+ <p style="color:#9cb0b8;margin:.1rem 0 .4rem">A port where a tidal river opens into the sea — a quay town on the firm bank above the estuary's tide-flats, growing into a busy harbour. <i>Look test — a river-mouth estuary.</i></p>
+ <div class="ctrls">
+  <div class="tierbtns" data-tierbtn-for="tidewell">
+   <button data-tier="0" class="on">Tide Landing<span class="n">4</span></button><button data-tier="1">Quayhead<span class="n">8</span></button><button data-tier="2">Estuary Village<span class="n">12</span></button><button data-tier="3">Tidewell Town<span class="n">18</span></button><button data-tier="4">Tidewell<span class="n">24</span></button>
+  </div>
+  <button class="ctl grow" data-grow-for="tidewell">Grow&nbsp;▸</button>
+  <div class="toggles">
+   <label><input type="checkbox" data-toggle-for data-toggle="buildings" checked> buildings</label><label><input type="checkbox" data-toggle-for data-toggle="dressing" checked> dressing</label><label><input type="checkbox" data-toggle-for data-toggle="forest" checked> trees</label><label><input type="checkbox" data-toggle-for data-toggle="labels"> labels</label><label><input type="checkbox" data-toggle-for data-toggle="dusk"> dusk</label>
+  </div>
+ </div>
+ <div class="cw"><canvas data-layout="tidewell" width="1280" height="960"></canvas></div>
+ <p class="cap" data-caption-for="tidewell"></p>
+ <p class="stat" data-stat-for="tidewell"></p>
+</div>
+<script>
+window.LAYOUT_DATA = { tidewell: {
+  setback: 15, treeDensity: 0.42,
+  roofs: ["#3f6a82","#4f6a6a","#7a5a3c","#5a7a86","#9c5a3a","#46707e","#6a6a8a"],
+  walls: ["#dcd6c0","#cabfa0","#d2c8b0","#e0d8c4","#c2b498"],
+  tiers: [
+    { name:"Tide Landing", plots:4, caption:"A landing on the firm west bank above the tide-flats, where the river broadens to meet the sea. A few cottages and a tide-mill by the slack water; the estuary glints out to the open coast." },
+    { name:"Quayhead", plots:8, caption:"A timber quay reaches the deep channel and a warehouse and chandlery set up; a lane climbs the bank to a green. Fishing boats and a coaster lie at the wharf." },
+    { name:"Estuary Village", plots:12, caption:"A market and a well on the green; a chapel and a sailors' inn front it. Stone quays line the firm bank; the tide-flats are netted for fish and fowl." },
+    { name:"Tidewell Town", plots:18, caption:"Ranks of quays and bonded warehouses along the deep water; side streets up the bank; a bridge upriver opens a smaller district on the east shore." },
+    { name:"Tidewell", plots:24, caption:"A busy estuary port: a fountain and a custom-house on the square, a long harbour of moored ships, a beacon at the river mouth, and the firm bank built up above the tides." },
+  ],
+  water: {
+    coast: { edge:"E", at:760 },
+    rivers: [ { pts:[[760,-30],[700,160],[640,360],[600,540],[640,720],[760,860]], width:48 } ],
+    lakes: [ { cx:840, cy:720, rx:240, ry:170 } ],
+  },
+  bridges: [ { x:612, y:300, vertical:false, span:92, hr:14, from:4 } ],
+  dock: { x:520, y0:520, y1:660, from:1 },
+  mill: { x:500, y:440, from:0 },
+  plaza: { cx:320, cy:500, rx:80, ry:52 },
+  landmark: { cx:320, cy:500 },
+  clearSpots: [[320,500,84,66],[500,440,52,60]],
+  roads: [
+    { id:"QR", axis:"V", line:440, half:15, a:200, b:760, tier:0, kind:"main" },
+    { id:"HL", axis:"H", line:500, half:14, a:120, b:440, tier:1, kind:"main" },
+    { id:"NL", axis:"H", line:360, half:13, a:140, b:420, tier:2, kind:"lane" },
+    { id:"SL", axis:"H", line:640, half:13, a:140, b:420, tier:3, kind:"lane" },
+    { id:"WL", axis:"V", line:200, half:13, a:380, b:620, tier:3, kind:"lane" },
+    { id:"EB", axis:"V", line:840, half:13, a:220, b:420, tier:4, kind:"lane" },
+  ],
+  foot: {0:[114,94],1:[110,98],2:[118,96],3:[108,100],4:[118,94],5:[114,98],6:[108,96],7:[120,94],8:[112,98],9:[116,94],10:[110,96],11:[118,98],12:[108,94],13:[114,98],14:[120,96],15:[110,98],16:[116,94],17:[108,96],18:[118,98],19:[112,96],20:[116,98],21:[110,96],22:[118,98],23:[112,94]},
+  special: { 4:"inn", 5:"shop", 8:"chapel", 12:"townhall" },
+  spec: [
+    { i:0, road:"QR", side:"W", along:360, t:0 }, { i:1, road:"QR", side:"E", along:360, t:0 },
+    { i:2, road:"QR", side:"W", along:620, t:0 }, { i:3, road:"QR", side:"E", along:620, t:0 },
+    { i:4, road:"HL", side:"N", along:180, t:1 }, { i:5, road:"HL", side:"S", along:180, t:1 },
+    { i:6, road:"QR", side:"W", along:700, t:1 }, { i:7, road:"QR", side:"E", along:700, t:1 },
+    { i:8, road:"NL", side:"N", along:220, t:2 }, { i:9, road:"NL", side:"N", along:380, t:2 },
+    { i:10, road:"NL", side:"S", along:220, t:2 }, { i:11, road:"HL", side:"N", along:360, t:2 },
+    { i:12, road:"SL", side:"N", along:220, t:3 }, { i:13, road:"SL", side:"N", along:380, t:3 }, { i:14, road:"WL", side:"W", along:460, t:3 }, { i:15, road:"WL", side:"E", along:460, t:3 }, { i:16, road:"SL", side:"S", along:300, t:3 }, { i:17, road:"HL", side:"S", along:360, t:3 },
+    { i:18, road:"EB", side:"W", along:320, t:4 }, { i:19, road:"EB", side:"E", along:320, t:4 }, { i:20, road:"WL", side:"W", along:580, t:4 }, { i:21, road:"NL", side:"S", along:380, t:4 }, { i:22, road:"QR", side:"W", along:480, t:4 }, { i:23, road:"EB", side:"W", along:420, t:4 },
+  ],
+  widgets: [
+    { k:"fishrack", x:500, y:520, from:0 }, { k:"boat", x:520, y:480, from:0 }, { k:"boat", x:560, y:600, from:1 }, { k:"crate", x:480, y:560, from:1 }, { k:"barrel", x:540, y:660, from:2 },
+    { k:"reed", x:560, y:460, from:0 }, { k:"reed", x:600, y:640, from:1 }, { k:"campfire", x:320, y:560, from:0, to:1 }, { k:"signpost", x:380, y:536, from:1 }, { k:"woodpile", x:140, y:560, from:3 },
+    { k:"lamp", x:380, y:540, from:2 }, { k:"lamp", x:300, y:540, from:2 }, { k:"lamp", x:380, y:460, from:3 }, { k:"lamp", x:300, y:460, from:3 },
+    { k:"market", x:280, y:532, from:3 }, { k:"market", x:364, y:532, from:3 }, { k:"cart", x:420, y:520, from:3 }, { k:"banner", x:320, y:540, from:4 }, { k:"boat", x:600, y:540, from:3 },
+  ],
+  actors: [
+    { pts:[[440,300],[440,720],[440,300]], spd:44, from:1 },
+    { pts:[[160,500],[420,500],[160,500]], spd:46, from:2 },
+    { x:280, y:532, dir:"back", from:3, kind:"idle" },
+    { x:500, y:520, dir:"front", from:0, kind:"idle" },
+    { x:300, y:540, dir:"front", from:2, kind:"kid" },
+  ],
+  critters: [ { k:"duck", x:540, y:520, from:1 }, { k:"duck", x:580, y:620, from:2 }, { k:"dog", x:320, y:532, from:2 } ],
+}};
+</script>
+<script src="../lib/layout.js"></script>
+</body></html>
