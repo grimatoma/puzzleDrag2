@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mycelium Spread — puzzleDrag2 puzzle prototype #09</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../proto.css">
+<style>
+  /* ---- mycelium-spread page-specific styling ----------------------------
+     A live mycelium cell keeps its underlying resource tile but dims it and
+     lays a glowing teal network tint + a pulsing node dot on top. Spent soil
+     is a depleted, desaturated patch. */
+  .cell.myc{
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), inset 0 0 0 2px rgba(120,235,205,.85),
+      0 0 12px -1px rgba(96,220,190,.7);
+  }
+  .cell.myc .glyph{opacity:.34;filter:saturate(.5) drop-shadow(0 1px 0 rgba(0,0,0,.2));}
+  .cell.myc::before{                       /* glowing network veil */
+    content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;
+    background:radial-gradient(circle at 50% 42%,rgba(150,255,225,.5),rgba(60,170,150,.28) 60%,rgba(30,90,80,.12));
+    mix-blend-mode:screen;
+  }
+  .cell.myc .node{                         /* the living node dot */
+    position:absolute;width:13px;height:13px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle at 36% 32%,#eafff7,#7af0d2 55%,#2fae90);
+    box-shadow:0 0 8px 1px rgba(120,240,210,.9);z-index:2;
+    animation:mycPulse 2.1s ease-in-out infinite;
+  }
+  @keyframes mycPulse{0%,100%{transform:scale(.82);opacity:.7;}50%{transform:scale(1.12);opacity:1;}}
+  .cell.core .node{width:17px;height:17px;animation-duration:1.6s;}
+  .cell.core{box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), inset 0 0 0 3px rgba(150,255,225,.95),
+      0 0 18px -1px rgba(96,220,190,.85);}
+
+  /* spent / depleted soil — a tilled, lifeless patch */
+  .cell.spent{background:#cdbf9f;color:#7a6f5c;
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), inset 0 2px 2px rgba(255,255,255,.35);}
+  .cell.spent .glyph{opacity:.5;filter:grayscale(.85) brightness(.92);font-size:.7em;}
+  .cell.spent.myc{background:#b7ad94;}     /* mycelium sitting on spent ground */
+
+  /* a cell that just harvested / changed this tick gets a quick ring */
+  .cell.reap{animation:reapRing .5s ease;}
+  @keyframes reapRing{0%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 0 rgba(255,216,74,.0);}
+    45%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 5px rgba(255,216,74,.6);}
+    100%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 0 rgba(255,216,74,0);}}
+
+  /* legend swatches reused from .legend */
+  .legend .swatch.myc-sw{background:radial-gradient(circle at 40% 35%,#9af0d6,#2fae90);box-shadow:inset 0 -2px 0 rgba(0,0,0,.12),0 0 6px rgba(96,220,190,.7);}
+  .legend .swatch.spent-sw{background:#cdbf9f;}
+  .legend .swatch.earth-sw{background:#efe6d2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../index.html">← All 10 prototypes</a>
+  <header class="hero">
+    <div class="eyebrow">Prototype 09 · far · the <em>territory / idle</em> seam</div>
+    <h1>Mycelium Spread</h1>
+    <p class="sub">Plant a spore and grow a living network. Your mycelium auto-harvests every resource it touches each tick — passive income — and you DRAG to direct its growth across the richest ground. The active chain becomes a seed for an idle, spreading organism.</p>
+    <div class="chips"><span class="chip">drag to direct growth</span> <span class="chip alt">+ auto-harvest each tick</span> <span class="chip alt">+ spread vs. nutrients</span> <span class="chip alt">idle layer</span></div>
+  </header>
+
+  <div class="stage">
+    <div class="board-card">
+      <div class="board tight" id="board" style="--cols:7"></div>
+      <svg class="board-overlay" id="ov"></svg>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Colony</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Nutrients</div><div class="v" id="nut" style="color:var(--accent2)">3</div></div>
+          <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
+          <div class="stat"><div class="k">Network</div><div class="v" id="net">1 <small>cells</small></div></div>
+          <div class="stat"><div class="k">Tick</div><div class="v" id="tick">0</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="grow">Grow a season ✿</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="reset">New board</button>
+        </div>
+        <p class="note" style="margin:.7rem 0 0">Each drag costs <b>1 nutrient per cell</b> grown and triggers a free tick. Or press <b>Grow a season</b> to tick without growing — pure passive harvest.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Legend</h2>
+        <div class="legend">
+          <div class="row"><span class="swatch myc-sw"></span> <b>Mycelium</b> — live network, auto-harvests neighbours</div>
+          <div class="row"><span class="swatch earth-sw"></span> Earth — a resource tile to grow onto / harvest</div>
+          <div class="row"><span class="swatch spent-sw"></span> Spent soil — depleted; refills to fresh earth in a few ticks</div>
+        </div>
+        <p class="note info" style="margin:.6rem 0 0">Spread your frontier over rich earth for more passive income — but a cell with <b>no earth left to eat</b> starves and dies back. Don't grow thin.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>How to play</h3>
+    <ul>
+      <li><b>Drag</b> a path that <b>starts on a glowing mycelium cell</b> and crosses touching <b>earth</b> tiles (8 directions). Release to grow the network along it — costs <span class="kbd">1 nutrient</span> per new cell.</li>
+      <li>Out of nutrients mid-path? It grows as far as you can afford and tells you. Min path is one cell beyond the start.</li>
+      <li>Every <b>tick</b> (each drag, or the <b>Grow a season</b> button) every live cell <b>auto-harvests</b> one adjacent earth tile — its value banks as <b>Nutrients + Score</b>, and that tile becomes spent soil. The frontier may also <b>spread for free</b>, and starving cells <b>die back</b>.</li>
+      <li>Steer toward unharvested, high-value ground; keep your network fed; reinvest nutrients into more growth.</li>
+    </ul>
+    <p class="note info"><b>Why it is ours:</b> It flips the loop: the active drag plants growth that then harvests ON ITS OWN over turns — an idle/territory layer grafted onto the chain. It echoes Puzzle Craft 2 "you choose where islands appear" placement and gives the game a passive-progress dimension steered by puzzle skill.</p>
+  </div>
+</div>
+
+<script src="../proto.js"></script>
+<script>
+(function(){
+  'use strict';
+  const ROWS=7, COLS=7;
+  const CENTER={r:3,c:3};
+  // earth families that grow on this ground, with a harvest value each
+  const EARTH=[
+    {fam:'grass', val:1}, {fam:'grain', val:2}, {fam:'veg', val:2},
+    {fam:'fruit', val:3}, {fam:'flower',val:3}, {fam:'tree', val:4},
+  ];
+  const VAL={}; EARTH.forEach(e=>VAL[e.fam]=e.val);
+  const FAMS=EARTH.map(e=>e.fam);
+  const SPREAD_CHANCE=0.18;   // free colonisation chance per edge cell per tick
+  const REFILL_TICKS=3;       // spent soil -> fresh earth after this many ticks
+  const STARVE_TICKS=3;       // live cell with no adjacent earth this long -> dies back
+  const GROW_COLOR='rgba(47,174,144,.95)';
+
+  const rng=PD.rng(20260918);
+  const boardEl=document.getElementById('board');
+  const ov=document.getElementById('ov');
+  const log=PD.logger(document.getElementById('log'));
+  const $=id=>document.getElementById(id);
+
+  let grid, cells, dragger;
+  let nutrients, score, tickN;
+
+  // --- model -------------------------------------------------------------
+  function freshEarth(){ return {kind:'earth', fam:PD.choice(rng,FAMS), live:false, spent:0, starve:0}; }
+  function inBounds(r,c){ return r>=0&&r<ROWS&&c>=0&&c<COLS; }
+  function isEarth(t){ return t.kind==='earth'; }      // a harvestable / growable resource tile
+
+  function newBoard(){
+    grid=[];
+    for(let r=0;r<ROWS;r++){ grid[r]=[]; for(let c=0;c<COLS;c++) grid[r][c]=freshEarth(); }
+    // plant the central spore on its own ground
+    const core=grid[CENTER.r][CENTER.c];
+    core.live=true; core.core=true;
+    nutrients=3; score=0; tickN=0;
+    renderAll(); refreshStats();
+    log('A spore takes root at the centre.','note');
+  }
+
+  // --- rendering ---------------------------------------------------------
+  function paint(el,r,c){
+    const t=grid[r][c];
+    PD.paintTile(el, t.fam);                 // always keep a tinted resource underneath
+    if(t.kind==='spent') el.classList.add('spent');
+    if(t.live){
+      el.classList.add('myc');
+      if(t.core) el.classList.add('core');
+      const node=document.createElement('span'); node.className='node'; el.appendChild(node);
+    }
+  }
+  function renderAll(){ cells=PD.renderGrid(boardEl,ROWS,COLS,paint); attachDrag(); }
+  function repaint(r,c){ paint(cells[r][c],r,c); }
+
+  function netSize(){ let n=0; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(grid[r][c].live) n++; return n; }
+  function refreshStats(){
+    $('nut').textContent=nutrients;
+    $('score').textContent=score;
+    $('net').innerHTML=netSize()+' <small>cells</small>';
+    $('tick').textContent=tickN;
+  }
+
+  // --- drag to grow ------------------------------------------------------
+  function attachDrag(){
+    if(dragger) dragger.destroy();
+    dragger=PD.dragPath(boardEl,{
+      canExtend(path,r,c){
+        const t=grid[r][c];
+        if(path.length===0){                 // start cell: must be live mycelium
+          return !!t.live;
+        }
+        // extensions must be plain earth (not already live, not spent), 8-adjacent to last
+        if(!isEarth(t) || t.live) return false;
+        const last=path[path.length-1];
+        return Math.max(Math.abs(last.r-r),Math.abs(last.c-c))===1;
+      },
+      onStart(path){ paintSel(path); },
+      onExtend(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,GROW_COLOR); },
+      onBacktrack(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,GROW_COLOR); },
+      onEnd(path){ clearSel(); PD.drawPathOverlay(ov,boardEl,[]); commitGrow(path); }
+    });
+  }
+  function paintSel(path){
+    clearSel();
+    path.forEach((p,i)=> p.el.classList.add('sel', i===0?'alt':'alt'));
+  }
+  function clearSel(){ boardEl.querySelectorAll('.cell.sel').forEach(e=>e.classList.remove('sel','alt')); }
+
+  function commitGrow(path){
+    // path[0] is the live start cell; new growth is path[1..]
+    if(path.length<2){
+      // a stray tap on a live cell, or nowhere to go — just tick passively if it was a real attempt
+      if(path.length===1){ /* tapped a node: do nothing destructive */ }
+      return;
+    }
+    const want=path.slice(1);
+    const afford=Math.min(want.length, nutrients);
+    if(afford<=0){
+      PD.toast('No nutrients — let it harvest first','bad');
+      log('Tried to grow but the colony is starved of nutrients.','bad');
+      return;
+    }
+    const grown=want.slice(0,afford);
+    grown.forEach(p=>{
+      const t=grid[p.r][p.c];
+      t.live=true; t.starve=0;
+      cells[p.r][p.c].classList.add('reap');
+    });
+    nutrients-=afford;
+    const short = afford<want.length;
+    log('Grew the network +'+afford+' cell'+(afford===1?'':'s')+' (−'+afford+' nutrients)'
+        +(short?' — ran short, stopped early':'')+'.', short?'bad':'good');
+    if(short) PD.toast('Grew '+afford+' / '+want.length+' — out of nutrients','');
+    // re-render the grown cells, then run a tick
+    grown.forEach(p=>repaint(p.r,p.c));
+    runTick(true);
+  }
+
+  // --- the idle TICK: auto-harvest, free spread, decay -------------------
+  function runTick(fromGrow){
+    tickN++;
+    const changed=new Set();      // "r,c" keys to flash
+    const mark=(r,c)=>changed.add(r+','+c);
+
+    // 1) AUTO-HARVEST: each live cell eats one adjacent earth tile (best value)
+    const liveCells=[];
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(grid[r][c].live) liveCells.push([r,c]);
+    let harvestedTiles=0, gained=0;
+    // resolve harvests against a snapshot of which tiles are claimable, first-come per live cell
+    const claimed=new Set();
+    PD.shuffle(rng, liveCells).forEach(([r,c])=>{
+      // candidate adjacent earth tiles not already claimed this tick
+      let best=null, bestVal=-1;
+      PD.N8.forEach(([dr,dc])=>{
+        const nr=r+dr, nc=c+dc;
+        if(!inBounds(nr,nc)) return;
+        const t=grid[nr][nc];
+        if(t.kind!=='earth' || t.live) return;
+        const key=nr+','+nc; if(claimed.has(key)) return;
+        if(VAL[t.fam]>bestVal){ bestVal=VAL[t.fam]; best=[nr,nc,key]; }
+      });
+      if(best){
+        const [nr,nc,key]=best; const t=grid[nr][nc];
+        claimed.add(key);
+        gained+=VAL[t.fam]; harvestedTiles++;
+        t.kind='spent'; t.spent=0; t.fam=t.fam; // depleted, keeps a ghost glyph
+        grid[r][c].starve=0;                    // this live cell fed this tick
+        mark(nr,nc); mark(r,c);
+      }
+    });
+    nutrients+=gained; score+=gained;
+
+    // 2) FREE SPREAD: each live EDGE cell may colonise one adjacent earth tile
+    let spread=0;
+    const edges=liveCells.filter(([r,c])=>{
+      return PD.N8.some(([dr,dc])=>{ const nr=r+dr,nc=c+dc; return inBounds(nr,nc)&&grid[nr][nc].kind==='earth'&&!grid[nr][nc].live; });
+    });
+    edges.forEach(([r,c])=>{
+      if(rng()>=SPREAD_CHANCE) return;
+      const cand=[];
+      PD.N8.forEach(([dr,dc])=>{ const nr=r+dr,nc=c+dc;
+        if(inBounds(nr,nc)&&grid[nr][nc].kind==='earth'&&!grid[nr][nc].live) cand.push([nr,nc]); });
+      if(!cand.length) return;
+      const [nr,nc]=PD.choice(rng,cand);
+      grid[nr][nc].live=true; grid[nr][nc].starve=0;
+      spread++; mark(nr,nc);
+    });
+
+    // 3) DECAY: live cells with NO adjacent earth left starve; after STARVE_TICKS they die back
+    let died=0;
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const t=grid[r][c]; if(!t.live || t.core) continue;
+      const hasEarth=PD.N8.some(([dr,dc])=>{ const nr=r+dr,nc=c+dc; return inBounds(nr,nc)&&grid[nr][nc].kind==='earth'&&!grid[nr][nc].live; });
+      if(hasEarth){ t.starve=0; }
+      else{
+        t.starve++;
+        if(t.starve>=STARVE_TICKS){ t.live=false; t.starve=0; t.kind='spent'; t.spent=0; died++; mark(r,c); }
+      }
+    }
+
+    // 4) REFILL: spent soil that has rested long enough returns as fresh earth
+    let refilled=0;
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const t=grid[r][c]; if(t.kind!=='spent' || t.live) continue;
+      t.spent++;
+      if(t.spent>=REFILL_TICKS){ t.kind='earth'; t.fam=PD.choice(rng,FAMS); t.spent=0; refilled++; mark(r,c); }
+    }
+
+    // re-render and flash everything that changed
+    renderAll();
+    changed.forEach(key=>{ const [r,c]=key.split(',').map(Number); if(cells[r]&&cells[r][c]) cells[r][c].classList.add('reap'); });
+    refreshStats();
+
+    // narrate
+    const net=netSize();
+    let msg='Tick '+tickN+': network '+net+' cell'+(net===1?'':'s')+' auto-harvested '+harvestedTiles+' tile'+(harvestedTiles===1?'':'s')+' → +'+gained+' nutrients';
+    const extras=[];
+    if(spread)   extras.push('spread '+spread);
+    if(died)     extras.push(died+' starved & died back');
+    if(refilled) extras.push(refilled+' soil refreshed');
+    if(extras.length) msg+=' ('+extras.join(', ')+')';
+    log(msg+'.', gained>0?'good':(died?'bad':'note'));
+    if(died) PD.toast(died+' cell'+(died===1?'':'s')+' starved — too thin!','bad');
+    else if(harvestedTiles>0 && !fromGrow) PD.toast('+'+gained+' nutrients harvested','good');
+  }
+
+  // --- controls ----------------------------------------------------------
+  $('grow').onclick=()=>runTick(false);
+  $('reset').onclick=newBoard;
+
+  newBoard();
+})();
+</script>
+</body>
+</html>
