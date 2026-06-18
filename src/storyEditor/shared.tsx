@@ -9,6 +9,7 @@ import IconCanvas, { hasIcon } from "../ui/IconCanvas.jsx";
 import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
+  sanitizeCond,
 } from "../config/storySanitizers.js";
 import { condToTrigger } from "../config/progression/storyBridge.js";
 import { describeCond, factIdsIn } from "../config/progression/conditions.js";
@@ -469,7 +470,7 @@ export function editorLinesForBeat(beat: StoryBeat | null | undefined) {
 }
 
 // Re-export the canonical sanitizers so callers don't reach into config/.
-export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown };
+export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, sanitizeCond };
 
 // ─── Draft (override-doc) helpers ────────────────────────────────────────────
 
@@ -554,6 +555,14 @@ export function effectiveBeat(beatId: string | null | undefined, draft: StoryDra
       merged.choices = base.choices.map((c) => ({ ...c, label: choiceOverrides[c.id]?.label ?? c.label }));
     }
     if (ov.trigger) { const t = sanitizeBeatTrigger(ov.trigger); if (t) merged.trigger = t as StoryBeat["trigger"]; }
+    // Native firing condition. TriggerEditor persists the picked trigger as a
+    // `when:` Cond (clearing any legacy `trigger:`); honour it here — after the
+    // legacy branch so it wins — so the canvas preview matches what
+    // `applyStoryOverrides` produces at runtime.
+    if (Object.prototype.hasOwnProperty.call(ov, "when")) {
+      const c = sanitizeCond(ov.when);
+      if (c) { merged.when = c as StoryBeat["when"]; delete merged.trigger; } else delete merged.when;
+    }
     if (Object.prototype.hasOwnProperty.call(ov, "repeat")) merged.repeat = ov.repeat === true ? true : undefined;
     if (Object.prototype.hasOwnProperty.call(ov, "repeatCooldown")) {
       const cd = sanitizeBeatRepeatCooldown(ov.repeatCooldown);
