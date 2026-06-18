@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
-import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
+import { COLS, ROWS, TILE, SCENE_EVENTS, dayKeyForDate } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import type Phaser from "phaser";
@@ -473,10 +473,10 @@ export default function App() {
   // Embergarden (idle layer) accrual: settle offline Warmth on mount and again
   // whenever the tab returns to the foreground. Time is INJECTED via the payload
   // so the reducer stays pure — this is the first real instance of the
-  // LOGIN_TICK time-injection pattern actually firing in the running app (the
-  // reducer case exists but was never dispatched). The 1s heartbeat only keeps
-  // the on-screen counter moving; correctness is delta-based, so a missed tick
-  // just accrues more next time, and the offline cap is enforced in `accrue`.
+  // LOGIN_TICK time-injection pattern actually firing in the running app via a
+  // real-time delta. The 1s heartbeat only keeps the on-screen counter moving;
+  // correctness is delta-based, so a missed tick just accrues more next time,
+  // and the offline cap is enforced in `accrue`.
   useEffect(() => {
     // Compute the offline gain BEFORE the first tick consumes it, so the
     // "welcome back" surface can report what the hearth banked while away.
@@ -502,6 +502,14 @@ export default function App() {
       document.removeEventListener("visibilitychange", onVis);
       window.clearInterval(id);
     };
+  }, [dispatch]);
+
+  // Daily login-streak tick — fires once per app mount; the reducer is
+  // idempotent per local day (state.ts LOGIN_TICK), so re-mounts (incl.
+  // StrictMode's double-invoke) within the same day are no-ops. Uses the
+  // local-day key helper from constants.
+  useEffect(() => {
+    dispatch({ type: "LOGIN_TICK", payload: { today: dayKeyForDate(new Date()) } });
   }, [dispatch]);
 
   useEffect(() => {

@@ -29,6 +29,7 @@ Vite ships three independent entries from one repo:
 | New view or modal route | `src/router.js` (`KNOWN_VIEWS` / `KNOWN_MODALS`) |
 | Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` |
+| Wiki prose (and keeping it from drifting) | `src/balanceManager/content/**/*.html` — inject structured facts via `data-wiki-tier-ladder` / `data-wiki-fact` (`src/balanceManager/wiki/derivedFacts.tsx`); the **wiki-content** skill |
 
 ---
 

@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
@@ -30,7 +30,8 @@ import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
-import { INITIAL_STORY_STATE } from "./story.js";
+import { INITIAL_STORY_STATE, setStoryOverrides } from "./story.js";
+import type { StoryOverrides } from "./state/applyStoryOverrides.js";
 import { initialFlagState } from "./flags.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
@@ -62,6 +63,13 @@ import { evaluateAndApplyStoryBeat, maybeFireResourceBeats } from "./state/story
 export { evaluateAndApplyStoryBeat, maybeFireResourceBeats };
 import { createFreshState, generateSaveSeed, initialState } from "./state/init.js";
 export { createFreshState, generateSaveSeed, initialState };
+
+// Apply authored `/story/` editor overrides (the `draft.story` slice of the
+// `hearth.balance.draft` localStorage doc, parsed into `BALANCE_OVERRIDES`) onto
+// the built-in beat arrays before any story beat is evaluated. `setStoryOverrides`
+// is total and falls back to the built-ins on a malformed draft, so this can
+// never brick boot. See src/state/applyStoryOverrides.ts.
+setStoryOverrides((BALANCE_OVERRIDES.story as StoryOverrides | undefined) ?? null);
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, embergarden];
 
