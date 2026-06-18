@@ -1,0 +1,1 @@
+{ "source": "PixelLab create_1_direction_object (128px)", "slice": { "top": 24, "right": 24, "bottom": 24, "left": 23 }, "recommendedSliceInset": 26, "repeat": "round", "native": { "w": 128, "h": 128 }, "fill": false, "note": "gold filigree runs along the edges — demonstrates edge-smear under stretch; prefer round, or move motif into corners" }
