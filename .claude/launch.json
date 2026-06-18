@@ -18,6 +18,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8099"],
       "port": 8099
+    },
+    {
+      "name": "docs-built",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8137", "--directory", "dist/docs"],
+      "port": 8137
     }
   ]
 }
