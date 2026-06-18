@@ -121,35 +121,59 @@ h1, h2, h3, h4 { font-family: "Fraunces", Georgia, serif; line-height: 1.15; let
 
 // --- dates ------------------------------------------------------------------
 
-// Every doc gets a date so the index can be ordered chronologically. Prefer an
-// explicit `YYYY-MM-DD` prefix baked into the filename (the convention for
-// dated plans/specs); otherwise fall back to the file's *creation* date in git
-// (`--diff-filter=A --follow`, so a later move into docs/archive/ doesn't reset
-// it). Returns "" when git has no history (e.g. an untracked working copy).
-const dateCache = new Map();
-function docDate(repoRel, file) {
-  const named = file.match(/(\d{4}-\d{2}-\d{2})/);
-  if (named) return named[1];
-  if (dateCache.has(repoRel)) return dateCache.get(repoRel);
-  let date = "";
-  try {
-    const out = execFileSync(
-      "git",
-      ["log", "--diff-filter=A", "--follow", "--format=%as", "--", repoRel],
-      { cwd: repoRoot, encoding: "utf8" },
-    );
-    const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (lines.length) date = lines[lines.length - 1]; // oldest add = creation
-  } catch {
-    /* no git history available — leave blank */
+// Every doc gets a creation date plus a precise sort timestamp, so the index is
+// ordered by *timestamp* — not just calendar day. Same-day docs then keep their
+// true chronological order instead of being shuffled alphabetically. We read the
+// file's *creation* commit (`--diff-filter=A --follow`, so a later move into
+// docs/archive/ doesn't reset it) and take both its UNIX timestamp (`%at`, the
+// sort key) and short date (`%as`, the display string). A `YYYY-MM-DD` prefix
+// baked into the filename still wins for the *displayed* date (the convention
+// for dated plans/specs); git time remains the tiebreaker for ordering.
+//
+// NOTE: this needs full git history. The Pages deploy checks out with
+// `fetch-depth: 0` for exactly this reason — a shallow clone collapses every
+// file's "creation" onto the single fetched commit, dating all docs today.
+// Returns { date: "", ts: 0 } when git has no history (e.g. an untracked copy).
+const metaCache = new Map();
+function docMeta(repoRel, file) {
+  if (!metaCache.has(repoRel)) {
+    let date = "";
+    let ts = 0;
+    try {
+      const out = execFileSync(
+        "git",
+        ["log", "--diff-filter=A", "--follow", "--format=%at %as", "--", repoRel],
+        { cwd: repoRoot, encoding: "utf8" },
+      );
+      const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (lines.length) {
+        const oldest = lines[lines.length - 1]; // oldest add = creation
+        const sp = oldest.indexOf(" ");
+        ts = Number(oldest.slice(0, sp)) || 0;
+        date = oldest.slice(sp + 1);
+      }
+    } catch {
+      /* no git history available — leave blank */
+    }
+    metaCache.set(repoRel, { date, ts });
   }
-  dateCache.set(repoRel, date);
-  return date;
+  const git = metaCache.get(repoRel);
+  // A dated filename prefix wins for display; fall back to it for the sort key
+  // too when git has no history.
+  const named = file.match(/(\d{4}-\d{2}-\d{2})/);
+  const date = named ? named[1] : git.date;
+  const ts = git.ts || (named ? Date.parse(`${named[1]}T00:00:00Z`) / 1000 || 0 : 0);
+  return { date, ts };
 }
 
-// Newest first; fall back to title for stable ordering when dates tie.
+// Newest first by precise creation timestamp; fall back to date then title for
+// stable ordering when timestamps tie (e.g. docs added in one commit).
 function byDateDesc(a, b) {
-  return (b.date || "").localeCompare(a.date || "") || a.title.localeCompare(b.title);
+  return (
+    (b.ts || 0) - (a.ts || 0) ||
+    (b.date || "").localeCompare(a.date || "") ||
+    a.title.localeCompare(b.title)
+  );
 }
 
 // --- index page -------------------------------------------------------------
@@ -529,7 +553,7 @@ for (const repoRel of files) {
       file,
       kind: "html",
       title: titleFromHtml(html, prettyName(file)),
-      date: docDate(repoRel, file),
+      ...docMeta(repoRel, file),
     });
   } else if (/\.md$/i.test(file) && !isReadme) {
     const md = readFileSync(abs, "utf8");
@@ -546,7 +570,7 @@ for (const repoRel of files) {
       file,
       kind: "md",
       title,
-      date: docDate(repoRel, file),
+      ...docMeta(repoRel, file),
     });
   } else {
     const outPath = join(outRoot, docRel);

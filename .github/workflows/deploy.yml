@@ -23,6 +23,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.client_payload.sha || github.sha }}
+          # Full history: build-docs.mjs derives each doc's creation date from
+          # git. A shallow clone (the default) collapses every file onto the one
+          # fetched commit, dating all docs today.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
