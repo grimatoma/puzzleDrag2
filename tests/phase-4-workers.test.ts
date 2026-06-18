@@ -130,6 +130,18 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
     }
   });
 
+  it("a hired Miner contributes to thresholdReduce on stone-mining species", () => {
+    const out = computeWorkerEffects({ workers: { hired: { miner: 10 } } });
+    // Miner is threshold_reduce_category on "mine_stone" with amount=1 per hire.
+    // Regression guard: against the old category "wood" (no such category) the
+    // keys list was empty and this worker silently did nothing.
+    const stoneKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_mine_stone"));
+    expect(stoneKeys.length).toBeGreaterThan(0);
+    for (const k of stoneKeys) {
+      expect(out.thresholdReduce[k]).toBe(10);
+    }
+  });
+
   it("a Baker hired to maxCount contributes amount*count to recipeInputReduce", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: 10 } } });
     // Baker: recipe_input_reduce bread/flour, amount=1 per hire.
