@@ -181,7 +181,7 @@ function computeSky(hour, azDeg){
   const aboveH = el > -0.06 ? 1 : 0
 
   const sunColor = COL.sunHorizon.clone().lerp(COL.sunHigh, smoothstep(0.02, 0.4, el))
-  const sunIntensity = day * 1.5 + 0.03
+  const sunIntensity = day * 2.0 + 0.03
 
   const skyTop = COL.skyTopNight.clone().lerp(COL.skyTopDay, day)
   let skyHor   = COL.skyHorNight.clone().lerp(COL.skyHorDay, day)
@@ -190,8 +190,8 @@ function computeSky(hour, azDeg){
   // Billboards face the camera, so an overhead sun grazes them (N·L≈0); daytime
   // "base" brightness comes from facing-independent ambient + hemisphere fill.
   const hemiSky = COL.hemiSkyNight.clone().lerp(COL.hemiSkyDay, day)
-  const hemiInt = lerp(0.32, 1.0, day)
-  const ambInt  = lerp(0.12, 0.42, day)
+  const hemiInt = lerp(0.32, 0.62, day)
+  const ambInt  = lerp(0.12, 0.30, day)
   const lampFactor = smoothstep(0.20, -0.08, el)    // lamps off in day, full at night
 
   // Directional light = warm sun by day, soft cool moon by night. Lerping the
@@ -389,7 +389,7 @@ function SpriteCard({ texture, height, position, yaw = 0, cast = true, sway = fa
     <group position={position} rotation={[0, yaw, 0]}>
       <mesh ref={meshRef} geometry={UNIT_PLANE} material={mat}
             customDepthMaterial={depth} customDistanceMaterial={dist}
-            scale={[w, height, 1]} castShadow={cast} />
+            scale={[w, height, 1]} castShadow={cast} receiveShadow />
       {cast && <FootShadow width={w} />}
     </group>
   )
@@ -420,7 +420,7 @@ function StripSprite({ url, frames, fps = 6, height, position, yaw = 0, cast = t
   return (
     <group position={position} rotation={[0, yaw, 0]}>
       <mesh geometry={UNIT_PLANE} material={mat} customDepthMaterial={depth} customDistanceMaterial={dist}
-            scale={[w, height, 1]} castShadow={cast} />
+            scale={[w, height, 1]} castShadow={cast} receiveShadow />
       {cast && <FootShadow width={w} />}
     </group>
   )
@@ -476,7 +476,7 @@ function Walker({ lane = 0, z0 = 6, z1 = -14, speed = 1.1, phase = 0, tint = '#f
   return (
     <group ref={grp}>
       <mesh ref={meshRef} geometry={UNIT_PLANE} material={mat}
-            customDepthMaterial={depth} customDistanceMaterial={dist} castShadow />
+            customDepthMaterial={depth} customDistanceMaterial={dist} castShadow receiveShadow />
       <FootShadow width={0.95} />
     </group>
   )

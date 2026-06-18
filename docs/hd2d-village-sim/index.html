@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>HD-2D Village Simulator — shadow reference</title>
+<!--
+  Reference demo (procedural pixel textures, no external assets) showing flat 2D
+  billboard sprites casting AND receiving mathematically-accurate 3D shadows —
+  including shadows that fall ACROSS other sprites. The key is `receiveShadow`
+  on every sprite (not just the ground). Vanilla three.js + React.
+  Kept verbatim from the original; only the imports + mount were adapted to run
+  standalone from a CDN. Serve over http (not file://).
+-->
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { height: 100%; margin: 0; background: #0f172a; }
+  /* Guarantee the WebGL mount has size even before Tailwind's async CDN applies
+     h-screen/h-full (otherwise the canvas mounts at 0×0 and renders nothing). */
+  #root > div { width: 100%; height: 100%; }
+  #root > div > div:first-child { width: 100%; height: 100%; }
+  #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; z-index: 50;
+    background: #0f172a; transition: opacity .5s ease; text-align: center; padding: 24px; }
+  #boot.gone { opacity: 0; pointer-events: none; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "three": "https://esm.sh/three@0.160.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="boot">Loading the simulator…</div>
+  <div id="root" style="width:100%;height:100%"></div>
+
+  <script>
+  (function(){
+    var boot = document.getElementById('boot');
+    if (location.protocol === 'file:'){
+      boot.textContent = 'Open this over HTTP, not file:// — e.g. `npx serve docs` then visit /hd2d-village-sim/. Browsers block ES-module import maps on file://.';
+    }
+    window.addEventListener('error', function(e){
+      if (!window.__simReady) boot.textContent = 'Load error: ' + (e.message || e.filename || 'see console');
+    });
+  })();
+  </script>
+
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+  <script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import * as THREE from 'three';
+import { Sun, Moon, Compass } from 'lucide-react';
+
+// ==========================================
+// PROCEDURAL PIXEL ART GENERATOR
+// ==========================================
+// We generate textures dynamically to avoid external image dependencies.
+const generatePixelTexture = (type) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+
+  // Disable anti-aliasing for that crisp pixel look
+  ctx.imageSmoothingEnabled = false;
+
+  if (type === 'character_red') {
+    ctx.clearRect(0, 0, 16, 16);
+    ctx.fillStyle = '#ffb8b8'; ctx.fillRect(5, 2, 6, 5); // Head
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(4, 7, 8, 5); // Body
+    ctx.fillStyle = '#7f1d1d'; ctx.fillRect(5, 12, 2, 4); // Leg L
+    ctx.fillRect(9, 12, 2, 4); // Leg R
+    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(6, 4, 1, 1); ctx.fillRect(9, 4, 1, 1); // Eyes
+  } else if (type === 'character_blue') {
+    ctx.clearRect(0, 0, 16, 16);
+    ctx.fillStyle = '#fef08a'; ctx.fillRect(5, 1, 6, 6); // Head/Hair
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(3, 7, 10, 4); // Body
+    ctx.fillStyle = '#1e3a8a'; ctx.fillRect(4, 11, 3, 5); // Leg L
+    ctx.fillRect(9, 11, 3, 5); // Leg R
+    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(6, 4, 1, 1); ctx.fillRect(9, 4, 1, 1); // Eyes
+  } else if (type === 'wall') {
+    ctx.fillStyle = '#e5e5e5'; ctx.fillRect(0, 0, 16, 16); // Base mortar
+    ctx.fillStyle = '#d4d4d8';
+    ctx.fillRect(0, 0, 7, 3); ctx.fillRect(8, 0, 8, 3); // Row 1
+    ctx.fillRect(0, 4, 3, 3); ctx.fillRect(4, 4, 8, 3); ctx.fillRect(13, 4, 3, 3); // Row 2
+    ctx.fillRect(0, 8, 7, 3); ctx.fillRect(8, 8, 8, 3); // Row 3
+    ctx.fillRect(0, 12, 3, 3); ctx.fillRect(4, 12, 8, 3); ctx.fillRect(13, 12, 3, 3); // Row 4
+  } else if (type === 'roof') {
+    ctx.fillStyle = '#7c2d12'; ctx.fillRect(0, 0, 16, 16); // Dark base
+    ctx.fillStyle = '#9a3412'; ctx.fillRect(0, 0, 16, 4); ctx.fillRect(0, 8, 16, 4); // Tiles
+    ctx.fillStyle = '#ea580c'; ctx.fillRect(0, 0, 16, 1); ctx.fillRect(0, 8, 16, 1); // Highlights
+  } else if (type === 'grass') {
+    ctx.fillStyle = '#4ade80'; ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#22c55e'; for(let i=0; i<15; i++) ctx.fillRect(Math.random()*16, Math.random()*16, 2, 2);
+  } else if (type === 'dirt') {
+    ctx.fillStyle = '#d97706'; ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#b45309'; for(let i=0; i<20; i++) ctx.fillRect(Math.random()*16, Math.random()*16, 3, 1);
+  } else if (type === 'door') {
+    ctx.fillStyle = '#451a03'; ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#78350f'; ctx.fillRect(2, 2, 12, 14);
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(11, 8, 2, 2); // knob
+  } else if (type === 'flat_building') {
+    canvas.width = 32; canvas.height = 32;
+    ctx.imageSmoothingEnabled = false; // Reset smoothing after resizing canvas
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.fillStyle = '#d4d4d8'; ctx.fillRect(4, 12, 24, 20); // Wall
+    ctx.fillStyle = '#9a3412'; // Roof
+    ctx.beginPath(); ctx.moveTo(16, 2); ctx.lineTo(0, 12); ctx.lineTo(32, 12); ctx.fill();
+    ctx.fillStyle = '#451a03'; ctx.fillRect(12, 20, 8, 12); // Door
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(6, 16, 4, 4); ctx.fillRect(22, 16, 4, 4); // Windows
+  } else if (type === 'flat_streetlight') {
+    canvas.width = 16; canvas.height = 32;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 16, 32);
+    ctx.fillStyle = '#475569'; ctx.fillRect(7, 6, 2, 26); // Post
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(5, 4, 6, 2); // Lamp Base
+    ctx.fillStyle = '#fef08a'; ctx.fillRect(6, 1, 4, 3); // Lamp Glass
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter; // Crucial for pixel art
+  texture.minFilter = THREE.NearestFilter;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+};
+
+// ==========================================
+// MAIN APP COMPONENT
+// ==========================================
+
+function App() {
+  const mountRef = useRef(null);
+  const [time, setTime] = useState(14); // Start at 2:00 PM
+  const [sunAngle, setSunAngle] = useState(45); // Start at a 45-degree diagonal trajectory
+
+  const timeRef = useRef(time);
+  const sunAngleRef = useRef(sunAngle);
+
+  // Keep refs in sync for the animation loop
+  useEffect(() => { timeRef.current = time; }, [time]);
+  useEffect(() => { sunAngleRef.current = sunAngle; }, [sunAngle]);
+
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    // --- 1. SETUP SCENE ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#87CEEB');
+
+    const camera = new THREE.PerspectiveCamera(35, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 100);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    mountRef.current.appendChild(renderer.domElement);
+    window.__simReady = true;
+
+    // --- 2. FIXED CAMERA SETUP ---
+    // Set a fixed isometric-style angle for that classic 2D RPG feel
+    camera.position.set(18, 14, 18);
+    camera.lookAt(0, 0, 0);
+
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    // Tailwind's CDN styles apply asynchronously, so the container may be 0×0 at
+    // mount; re-fit the renderer/camera once it gets real dimensions. (Only
+    // adaptation made to run this standalone from a CDN.)
+    const ro = new ResizeObserver(() => handleResize());
+    ro.observe(mountRef.current);
+
+    // --- 3. SCENE ELEMENTS ---
+    const sprites = [];
+    const streetLights = [];
+
+    // Ground
+    const grassTex = generatePixelTexture('grass');
+    grassTex.repeat.set(20, 20);
+    const grass = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 40),
+      new THREE.MeshStandardMaterial({ map: grassTex })
+    );
+    grass.rotation.x = -Math.PI / 2;
+    grass.receiveShadow = true;
+    scene.add(grass);
+
+    const dirtTex = generatePixelTexture('dirt');
+    dirtTex.repeat.set(2, 20);
+    const dirt = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 40),
+      new THREE.MeshStandardMaterial({ map: dirtTex })
+    );
+    dirt.rotation.x = -Math.PI / 2;
+    dirt.position.y = 0.01;
+    dirt.receiveShadow = true;
+    scene.add(dirt);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.left = -15;
+    sunLight.shadow.camera.right = 15;
+    sunLight.shadow.camera.top = 15;
+    sunLight.shadow.camera.bottom = -15;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    // Helpers
+    const createCharacter = (position, type) => {
+      const tex = generatePixelTexture(type);
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        transparent: true,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide
+      });
+      const geom = new THREE.PlaneGeometry(1, 1);
+      geom.translate(0, 0.5, 0); // Move pivot to the bottom edge
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.set(position[0], 0, position[2]); // Pin strictly to ground
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      sprites.push(mesh);
+    };
+
+    const createBuilding = (position, scale) => {
+      const tex = generatePixelTexture('flat_building');
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        transparent: true,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide
+      });
+      const geom = new THREE.PlaneGeometry(scale, scale);
+      geom.translate(0, scale / 2, 0); // Move pivot to the bottom edge
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.set(position[0], 0, position[2]); // Pin strictly to ground
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      sprites.push(mesh); // Add to sprites array so it billboards to face the camera!
+    };
+
+    const createStreetLight = (position) => {
+      const tex = generatePixelTexture('flat_streetlight');
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        transparent: true,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide
+      });
+      const geom = new THREE.PlaneGeometry(1, 2);
+      geom.translate(0, 1, 0); // Move pivot to the bottom edge
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.set(position[0], 0, position[2]); // Pin strictly to ground
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      sprites.push(mesh); // Billboard it!
+
+      const light = new THREE.PointLight(0xfef08a, 0, 10);
+      light.position.set(position[0], 1.8, position[2]); // Position at top of sprite
+      light.castShadow = true;
+      light.shadow.bias = -0.001;
+      scene.add(light);
+
+      streetLights.push({ mat, light });
+    };
+
+    // Populate
+    createBuilding([-4, 0, -2], 4);
+    createBuilding([-4, 0, 4], 3.5);
+    createBuilding([4, 0, 0], 5);
+    createBuilding([5, 0, -5], 3);
+
+    // Make sure the Y position is explicitly 0 for characters now
+    createCharacter([0, 0, 2], 'character_red');
+    createCharacter([1.5, 0, 0], 'character_blue');
+    createCharacter([-2, 0, -1], 'character_blue');
+    createCharacter([0, 0, -3], 'character_red');
+
+    createStreetLight([-2.5, 0, 2]);
+    createStreetLight([2.5, 0, -2]);
+
+    // Pre-define colors for smooth day/night interpolation
+    const ambientNightColor = new THREE.Color('#1e3a8a');
+    const ambientDayColor = new THREE.Color('#ffffff');
+    const bgNightColor = new THREE.Color('#0f172a');
+    const bgDayColor = new THREE.Color('#87CEEB');
+    const emissiveDayColor = new THREE.Color('#211003');
+    const emissiveNightColor = new THREE.Color('#422006');
+
+    // --- 4. RENDER LOOP ---
+    const updateEnvironment = (timeVal, angleDeg) => {
+      // Calculate sun height and horizontal progression based on time
+      const t = ((timeVal - 6) / 24) * Math.PI * 2;
+      const virtualSunY = Math.sin(t) * 50;
+      const horizontalDist = Math.cos(t) * 50;
+
+      // Project the horizontal progression onto X and Z axes based on the user's angle
+      const angleRad = (angleDeg * Math.PI) / 180;
+      const sunX = Math.cos(angleRad) * horizontalDist;
+      const sunZ = Math.sin(angleRad) * horizontalDist;
+
+      // Keep the physical light source above ground so shadows don't invert
+      const physicalSunY = Math.max(5, virtualSunY);
+
+      // Create a smooth transition "twilight" phase.
+      // 1.0 is full day, 0.0 is full night.
+      // Transition happens as virtualSunY goes from 15 (above horizon) down to -15 (below ground).
+      const twilightFactor = Math.max(0, Math.min(1, (virtualSunY + 15) / 30));
+      const isNight = twilightFactor === 0;
+
+      // Smoothly interpolate ambient light intensity and color
+      ambientLight.intensity = 0.2 + (0.4 * twilightFactor);
+      ambientLight.color.copy(ambientNightColor).lerp(ambientDayColor, twilightFactor);
+
+      if (!isNight) {
+        sunLight.intensity = twilightFactor * 2.5; // Smoothly fades to 0 as it goes under
+        sunLight.position.set(sunX, physicalSunY, sunZ);
+        sunLight.castShadow = true;
+      } else {
+        sunLight.intensity = 0;
+        sunLight.castShadow = false;
+      }
+
+      // Smoothly blend Sky background colors
+      scene.background.copy(bgNightColor).lerp(bgDayColor, twilightFactor);
+
+      // Transition Streetlights smoothly
+      streetLights.forEach(({ mat, light }) => {
+        const darkness = 1 - twilightFactor;
+        mat.emissive.copy(emissiveDayColor).lerp(emissiveNightColor, darkness);
+        light.intensity = 4 + (4 * darkness);
+      });
+    };
+
+    let animationFrameId;
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+
+      // Billboarding: Ensure all flat sprites rotate to face the fixed camera
+      sprites.forEach(sprite => {
+        sprite.quaternion.copy(camera.quaternion);
+      });
+
+      // Update lighting based on the React state value inside the ref
+      updateEnvironment(timeRef.current, sunAngleRef.current);
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // --- 5. CLEANUP ---
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
+      if (mountRef.current && renderer.domElement) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+    };
+  }, []);
+
+  return (
+    <div className="w-full h-screen bg-slate-900 font-sans text-slate-100 overflow-hidden relative">
+      {/* 3D Container where Three.js mounts */}
+      <div ref={mountRef} className="w-full h-full cursor-default" />
+
+      {/* UI Overlay */}
+      <div className="absolute top-0 left-0 w-full p-6 pointer-events-none">
+        <div className="max-w-md mx-auto bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700 shadow-2xl pointer-events-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+              HD-2D Village Simulator
+            </h1>
+            <div className="text-sm font-mono bg-slate-800 px-3 py-1 rounded-full text-blue-300">
+              {Math.floor(time).toString().padStart(2, '0')}:{(Math.floor((time % 1) * 60)).toString().padStart(2, '0')}
+            </div>
+          </div>
+
+          <p className="text-slate-400 text-sm mb-6">
+            The camera is fixed in a traditional RPG perspective. Notice how the flat 2D sprites cast mathematically accurate 3D shadows. Move the slider to transition from day to night.
+          </p>
+
+          <div className="flex flex-col gap-4">
+            {/* Time of Day Slider */}
+            <div className="flex items-center gap-4">
+              <Moon className="w-5 h-5 text-indigo-400" />
+              <input
+                type="range"
+                min="0"
+                max="24"
+                step="0.1"
+                value={time}
+                onChange={(e) => setTime(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <Sun className="w-5 h-5 text-amber-400" />
+            </div>
+
+            {/* Sun Direction Slider */}
+            <div className="flex items-center gap-4">
+              <Compass className="w-5 h-5 text-slate-400" />
+              <input
+                type="range"
+                min="0"
+                max="360"
+                step="1"
+                value={sunAngle}
+                onChange={(e) => setSunAngle(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-400"
+              />
+              <div className="w-8 text-right text-xs font-mono text-slate-400">{sunAngle}°</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
+// hide the loading veil once the canvas is up
+const boot = document.getElementById('boot');
+let waited = 0;
+const poll = setInterval(() => {
+  waited += 120;
+  if (window.__simReady || waited > 12000){ clearInterval(poll); setTimeout(() => boot.classList.add('gone'), 400); }
+}, 120);
+  </script>
+</body>
+</html>
