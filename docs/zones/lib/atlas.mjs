@@ -11,8 +11,9 @@ function cost(c) {
   return `${c.coins.toLocaleString()}¢${res ? " · " + esc(res) : ""}`;
 }
 
-function zoneCard(z, topoById) {
+function zoneCard(z, topoById, builtSet) {
   const topo = topoById[z.topology];
+  const built = builtSet.has(z.id);
   const plots = z.tiers.map((t) => t.plots);
   const ladder = z.tiers.map((t) =>
     `<div class="rung"><span class="rn">${esc(t.name)}</span><span class="rp">${t.plots} plots</span></div>`
@@ -43,7 +44,7 @@ function zoneCard(z, topoById) {
         </div>
       </div>
       <div class="zbody">
-        <div class="zhdr"><span class="zno">${String(z.order).padStart(2, "0")}</span><h3 class="zname">${z.emoji} ${esc(z.name)}</h3></div>
+        <div class="zhdr"><span class="zno">${String(z.order).padStart(2, "0")}</span><h3 class="zname">${z.emoji} ${esc(z.name)}</h3>${built ? `<a class="chip" href="./${z.id}/" style="background:${z.env.palette.accent};color:#fff;border-color:${z.env.palette.accent}">Open build-out →</a>` : `<span class="chip" style="opacity:.7">build-out: pending</span>`}</div>
         <div class="ztag">${esc(z.tagline)}</div>
         <div class="zmeta">
           <span class="tagk">${esc(z.env.biome)}</span>
@@ -85,14 +86,15 @@ function zoneCard(z, topoById) {
   </section>`;
 }
 
-export function buildAtlas({ ZONES, META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURCING, REGIONS, styles, engine }) {
+export function buildAtlas({ ZONES, META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURCING, REGIONS, styles, engine, builtPages = [] }) {
   const topoById = Object.fromEntries(TOPOLOGIES.map((t) => [t.id, t]));
+  const builtSet = new Set(builtPages);
   const sorted = [...ZONES].sort((a, b) => a.order - b.order);
 
   const zoneData = Object.fromEntries(sorted.map((z) => [z.id, { topology: z.topology, name: z.name, palette: z.env.palette }]));
 
   const toc = sorted.map((z) =>
-    `<a class="toccard" href="#zone-${z.id}" style="border-left-color:${z.env.palette.accent}"><span class="e">${z.emoji}</span><span><span class="tt">${esc(z.name)}</span><br><span class="ts">${esc(topoById[z.topology].name)}</span></span></a>`
+    `<a class="toccard" href="${builtSet.has(z.id) ? `./${z.id}/` : `#zone-${z.id}`}" style="border-left-color:${z.env.palette.accent}"><span class="e">${z.emoji}</span><span><span class="tt">${esc(z.name)}</span><br><span class="ts">${esc(topoById[z.topology].name)}${builtSet.has(z.id) ? " · ▶ playable" : ""}</span></span></a>`
   ).join("");
 
   const principles = PRINCIPLES.map((p) => `<div class="card g"><h4>${esc(p.k)}</h4><p style="font-size:.88rem;margin:.2rem 0">${esc(p.d)}</p></div>`).join("");
@@ -140,7 +142,7 @@ export function buildAtlas({ ZONES, META, PRINCIPLES, TOPOLOGIES, MECHANIC_SOURC
 
   <h2>The zones</h2>
   <div class="zgrid">
-${sorted.map((z) => zoneCard(z, topoById)).join("\n")}
+${sorted.map((z) => zoneCard(z, topoById, builtSet)).join("\n")}
   </div>
 
   <h2>Scale at a glance — the plot &amp; rung curves</h2>

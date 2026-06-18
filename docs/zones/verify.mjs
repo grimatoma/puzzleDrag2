@@ -22,7 +22,8 @@ await page.waitForTimeout(1600); // let canvases animate a few frames
 // confirm each zone canvas painted something (sample non-transparent pixels)
 const painted = await page.evaluate(() => {
   const out = {};
-  document.querySelectorAll("canvas[data-zone]").forEach((cv) => {
+  document.querySelectorAll("canvas[data-zone],canvas[data-layout]").forEach((cv) => {
+    cv.dataset.zone = cv.dataset.zone || cv.dataset.layout;
     const ctx = cv.getContext("2d");
     let nz = 0;
     try { const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for (let i = 3; i < d.length; i += 4 * 997) if (d[i] > 8) nz++; } catch (e) { nz = -1; }
