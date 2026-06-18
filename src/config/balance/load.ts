@@ -3,10 +3,12 @@ import type { BalanceOverrides } from "../schemas/balance.js";
 
 // Single source of truth: the committed `balance.json` override file has been
 // removed — the canonical constants (constants.ts + feature data) ARE the balance.
-// The override pipeline now carries no committed data; only an optional in-browser
-// Dev Panel draft can layer on top (and the panel is read-only today, so in
-// practice nothing overrides the constants). Fully deleting the (now-inert) apply
-// pipeline is a separate refactor (see docs/zone-tier-ladder.html → What's next).
+// The override pipeline carries no committed data; only an optional in-browser
+// Dev Panel / Story Editor draft can layer on top. The BALANCE slices stay
+// read-only (nothing overrides those constants today), but the STORY slice IS
+// live: `draft.story` is consumed at runtime by `applyStoryOverrides`
+// (src/state/applyStoryOverrides.ts), wired into src/story.ts at boot, so authored
+// `/story/` edits reach the running game's StoryModal.
 const balanceFile: Record<string, unknown> = {};
 
 export const BALANCE_DRAFT_KEY = "hearth.balance.draft";

@@ -38,6 +38,20 @@ describe("effectiveBeat", () => {
     expect(b.scene).toBeUndefined();        // "" clears the built-in "ruin"
     expect(b.act).toBe(1);                  // untouched fields survive
   });
+  it("layers a when override onto a built-in (matches runtime applyStoryOverrides)", () => {
+    const d = draftWith({ beats: { act1_first_harvest: { when: { fact: "resource.tile_grass_grass.total", op: "gte", value: 99 } } } });
+    const b = effectiveBeat("act1_first_harvest", d);
+    expect(b.when).toEqual({ fact: "resource.tile_grass_grass.total", op: "gte", value: 99 });
+  });
+  it("a when override drops a stale legacy trigger on the same patch", () => {
+    const d = draftWith({ beats: { act1_first_harvest: {
+      trigger: { type: "session_start" },
+      when: { fact: "resource.tile_grass_grass.total", op: "gte", value: 5 },
+    } } });
+    const b = effectiveBeat("act1_first_harvest", d);
+    expect(b.when).toEqual({ fact: "resource.tile_grass_grass.total", op: "gte", value: 5 });
+    expect(b.trigger).toBeUndefined();
+  });
   it("resolves an author-created draft beat from newBeats", () => {
     const d = draftWith({ newBeats: [{ id: "branch_x", title: "Branch X", lines: [{ speaker: "wren", text: "hey" }] }] });
     expect(isDraftBeat(d, "branch_x")).toBe(true);

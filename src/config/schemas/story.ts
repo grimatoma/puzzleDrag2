@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Balance story section — presentation patches; full beat shape validated by applyStoryOverrides. */
+/** Balance story section — authoring patches; merged onto the built-in beats at runtime by applyStoryOverrides (src/state/applyStoryOverrides.ts). */
 export const storyOverridesSchema = z
   .object({
     beats: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
