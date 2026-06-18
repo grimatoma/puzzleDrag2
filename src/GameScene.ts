@@ -1,19 +1,14 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
-import { applySpawnPoolModifiers } from "./features/farm/poolMath.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
-  expandZoneCategories,
   pickByZoneSeasonDrops,
   seasonIndexInSession,
   seasonNameInSession,
   ZONES,
-  ZONE_UPGRADE_TARGET_GOLD,
-  TILE_CATEGORY_TO_ZONE_CATEGORY,
-  ZONE_TO_TILE_CATEGORIES,
   zoneFarmBoard,
   zoneBaseTurns,
 } from "./features/zones/data.js";
@@ -38,6 +33,7 @@ import { producedResource, buildChainUpdatePayload } from "./game/producedResour
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
 import { computeLayout, worldToCell, withinCircularHit } from "./game/layout.js";
+import { buildSpawnPool, resolveUpgradeTile } from "./game/spawnPool.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -748,53 +744,18 @@ export class GameScene extends Phaser.Scene {
    */
   nextUpgradeTile(tile: { key: string }): TileRes | null {
     if (!tile?.key) return null;
-    if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
-
-    const b = this.biome();
-    const biomeKey = this.biomeKey();
-    const allTiles: TileRes[] = b.tiles;
-
-    // Determine source zone-category from tile's tileCollection category.
-    const tileCat = (CATEGORY_OF as Record<string, string | undefined>)[tile.key];
-    if (!tileCat) return null;
-    const sourceZoneCat = (TILE_CATEGORY_TO_ZONE_CATEGORY as Record<string, string | undefined>)[tileCat];
-    if (!sourceZoneCat) return null;
-
-    // Look up the zone's upgradeMap for this source category.
+    // Pure resolution lives in ./game/spawnPool.ts; the scene supplies the
+    // registry/biome-derived inputs (active zone's upgradeMap, biome tiles,
+    // active tiles, the biome's GOLD tile).
     const zoneId = getRegistry(this.registry, "activeZone") ?? null;
-    if (!zoneId) return null;
-    const farm = zoneFarmBoard(zoneId);
-    if (!farm?.upgradeMap) return null;
-    const targetZoneCat = farm.upgradeMap[sourceZoneCat as import("./types/catalog/tileCategories.js").ZoneCategoryId];
-    if (!targetZoneCat) return null;
-
-    // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
-    if (targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) {
-      const goldKey = (BIOME_GOLD_TILE as Record<string, string | null>)[biomeKey] ?? null;
-      if (!goldKey) return null;
-      return allTiles.find((t: TileRes) => t.key === goldKey) ?? null;
-    }
-
-    // Normal case: find the player's active tile in the target zone-category.
-    const targetTileCats: string[] = (ZONE_TO_TILE_CATEGORIES as Record<string, string[]>)[targetZoneCat] ?? [];
-    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
-
-    if (tileCollectionActive) {
-      for (const tc of targetTileCats) {
-        const activeKey = tileCollectionActive[tc];
-        if (!activeKey) continue;
-        const r = allTiles.find((t: TileRes) => t.key === activeKey);
-        if (r) return r;
-      }
-    }
-
-    // Fallback: first biome tile whose category matches the target tile-categories.
-    for (const t of allTiles) {
-      const cat = (CATEGORY_OF as Record<string, string | undefined>)[t.key];
-      if (cat && targetTileCats.includes(cat)) return t;
-    }
-
-    return null;
+    const upgradeMap = zoneId ? zoneFarmBoard(zoneId)?.upgradeMap ?? null : null;
+    return resolveUpgradeTile<TileRes>({
+      tileKey: tile.key,
+      biomeTiles: this.biome().tiles,
+      upgradeMap,
+      tileCollectionActive: getRegistry(this.registry, "tileCollectionActive") ?? null,
+      goldTileKey: (BIOME_GOLD_TILE as Record<string, string | null>)[this.biomeKey()] ?? null,
+    });
   }
 
   /**
@@ -935,56 +896,12 @@ export class GameScene extends Phaser.Scene {
 
   fillBoard(initial = false) {
     const ts = this.tileSize;
-    // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
-    // by the active tile type: a boost for key K only applies when K is the active
-    // tile type in its category (matches getActivePool semantics).
-    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
-    let workerPool = this.activePool();
-    const poolWeights = getRegistry(this.registry, "effectivePoolWeights") ?? {};
-    // Phase 2 — restrict the spawn pool to the categories the player picked
-    // in the Start Farming modal. Empty/missing list = no filter (legacy
-    // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
-    // ignore this filter; it only applies on the farm board.
-    const sessionSelectedTiles = getRegistry(this.registry, "sessionSelectedTiles") ?? [];
-    if (this.biomeKey() === "farm" && sessionSelectedTiles.length > 0) {
-      const allowedCats = expandZoneCategories(sessionSelectedTiles);
-      const filtered = workerPool.filter((k) => {
-        const cat = CATEGORY_OF[k];
-        return cat ? allowedCats.has(cat) : true;
-      });
-      // Guard against an over-restrictive selection that would leave no
-      // tiles to spawn — fall back to the unfiltered pool in that case.
-      if (filtered.length > 0) workerPool = filtered;
-    }
-    // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
-    // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
-    const boss = getRegistry(this.registry, "boss");
-    const spawnBias = boss?.spawnBias ?? null;
-    if (spawnBias) {
-      const baseCounts: Record<string, number> = {};
-      for (const k of workerPool) baseCounts[k] = (baseCounts[k] ?? 0) + 1;
-      for (const [k, factor] of Object.entries(spawnBias as Record<string, number>)) {
-        const extra = Math.round((baseCounts[k] ?? 0) * (factor - 1));
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-    }
-    // Fertilizer bias: double seedling-tier resource copies in pool
-    // Also activated by magic_fertilizer charges (one charge consumed per fill)
+    // Build the worker-boosted, tile-collection-substituted, season/weight-
+    // modified spawn pool. The pure assembly (category filter + boss bias +
+    // fertilizer bias + modifiers) lives in ./game/spawnPool.ts; the scene reads
+    // the registry/biome and applies the FERTILIZER_CONSUMED side-effect.
     const fillBiasArmed = !!(getRegistry(this.registry, "fillBiasTarget") ||
                              (getRegistry(this.registry, "magicFertilizerCharges") ?? 0) > 0);
-    if (fillBiasArmed) {
-      const biasTargetKey = getRegistry(this.registry, "fillBiasTarget")?.key ?? null;
-      const biasKeys = biasTargetKey
-        ? [biasTargetKey, `tile_${biasTargetKey}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
-        : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
-      const fBase: Record<string, number> = {};
-      for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
-      for (const k of biasKeys) {
-        const extra = fBase[k] ?? 0;
-        for (let i = 0; i < extra; i++) workerPool.push(k);
-      }
-      this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
-    }
     const farmSeasonName =
       this.biomeKey() === "farm"
         ? seasonNameInSession(
@@ -992,12 +909,23 @@ export class GameScene extends Phaser.Scene {
             getRegistry(this.registry, "turnBudget") ?? 10,
           )
         : null;
-    workerPool = applySpawnPoolModifiers(workerPool, {
-      poolWeights,
-      tileCollectionActive,
+    const workerPool = buildSpawnPool({
+      basePool: this.activePool(),
       biomeKey: this.biomeKey(),
+      sessionSelectedTiles: getRegistry(this.registry, "sessionSelectedTiles") ?? [],
+      spawnBias: getRegistry(this.registry, "boss")?.spawnBias ?? null,
+      fertilizer: {
+        armed: fillBiasArmed,
+        targetKey: getRegistry(this.registry, "fillBiasTarget")?.key ?? null,
+      },
+      biomeTileKeys: this.biome().tiles.map((t: TileRes) => t.key),
+      poolWeights: getRegistry(this.registry, "effectivePoolWeights") ?? {},
+      tileCollectionActive: getRegistry(this.registry, "tileCollectionActive") ?? null,
       seasonName: farmSeasonName,
     });
+    // Fertilizer consumes a charge when armed (one per fill) — emitting the
+    // event is the scene-side effect; the bias itself is in buildSpawnPool.
+    if (fillBiasArmed) this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
