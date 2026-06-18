@@ -81,6 +81,18 @@ function prettyName(fileBase) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Markdown docs cross-link each other with `.md` hrefs, but on the deployed
+// site every tracked `.md` is rendered to a `.html` sibling — so those links
+// would 404. Rewrite local `*.md` links to `*.html`. README targets are left
+// alone: folder READMEs are copied as raw assets (not rendered), except the one
+// promoted to a folder's index.html, which lives at a different path anyway.
+function rewriteMdLinks(html) {
+  return html.replace(
+    /href="(?!https?:|\/\/|mailto:)([^"]+?)\.md(#[^"]*)?"/gi,
+    (m, path, frag) => (/readme$/i.test(path) ? m : `href="${path}.html${frag || ""}"`),
+  );
+}
+
 // --- shared styling ---------------------------------------------------------
 
 const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,6 +203,31 @@ const SECTION_META = {
 // Keyed by docs-relative source path (forward slashes).
 const FEATURED_DOCS = [];
 
+// "Collection" folders are multi-page sets whose own index page is already a
+// navigation hub for everything inside (e.g. the prototypes index links all ten
+// prototypes; the zone atlas renders a card per zone). Listing every nested page
+// on the landing page is overwhelming — so each collection is represented by a
+// SINGLE hub card. The nested pages are still built and reachable through the
+// hub; they just don't flood the index. Keyed by top-level folder; `hub` is the
+// docs-relative page a click opens.
+const COLLECTIONS = {
+  "puzzle-prototypes": {
+    label: "Puzzle Prototypes",
+    hub: "puzzle-prototypes/index.html",
+    blurb: "Ten playable expansions of the drag-to-chain core — open to play each.",
+  },
+  zones: {
+    label: "Zone Atlas",
+    hub: "zones/index.html",
+    blurb: "Unique settlement zones, each with its own environment & growth topology.",
+  },
+  projects: {
+    label: "Project Briefs",
+    hub: "projects/index.html",
+    blurb: "Ranked roadmap + self-contained implementation briefs for upcoming work.",
+  },
+};
+
 // Anything physically under docs/archive/ is treated as archived: it sinks to a
 // single collapsed "Archive" section at the very bottom, regardless of subtree.
 // (See docs/archive/README.md for what lives there and why.)
@@ -246,6 +283,26 @@ function docCard(e) {
         </a>`;
 }
 
+// The hub entry that a collection's card links to (its `index.html`); falls
+// back to the first member so the card always has a destination.
+function hubEntry(key, group) {
+  const hub = COLLECTIONS[key].hub;
+  return group.find((e) => e.href === hub || e.src === hub) || group[0];
+}
+
+// A single card standing in for a whole collection folder. `count` is the number
+// of pages inside, minus the hub page itself.
+function collectionCard(key, group, hub) {
+  const meta = COLLECTIONS[key];
+  const count = Math.max(0, group.length - 1);
+  const href = hub ? hub.href : meta.hub;
+  return `        <a class="doc collection" href="${href}">
+          <span class="doc-title">${escapeHtml(meta.label)}</span>
+          <span class="coll-blurb">${escapeHtml(meta.blurb)}</span>
+          <span class="doc-meta"><span class="badge badge-collection">collection</span><span class="coll-count">Browse ${count} ${count === 1 ? "page" : "pages"} →</span></span>
+        </a>`;
+}
+
 function renderIndex(entries) {
   // Featured docs float to a prominent block at the top (explicit order).
   const featured = FEATURED_DOCS.map((p) => entries.find((e) => e.src === p)).filter(
@@ -259,14 +316,42 @@ function renderIndex(entries) {
   );
   const archivedSrc = new Set(archived.map((e) => e.src));
 
-  // Everything else groups by folder section as before.
-  const groups = new Map();
+  // Collection folders collapse to a single hub card; everything else groups by
+  // folder section as before.
+  const collGroups = new Map(); // collection key -> its entries
+  const groups = new Map(); // section key -> entries (non-collection)
   for (const e of entries) {
     if (featuredSrc.has(e.src) || archivedSrc.has(e.src)) continue;
     const key = sectionKey(e.rel);
+    if (COLLECTIONS[key]) {
+      if (!collGroups.has(key)) collGroups.set(key, []);
+      collGroups.get(key).push(e);
+      continue;
+    }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(e);
   }
+
+  // One hub card per present collection, in registry order, in a "Collections"
+  // section near the top.
+  const collectionEntries = Object.keys(COLLECTIONS)
+    .filter((key) => collGroups.has(key))
+    .map((key) => {
+      const group = collGroups.get(key);
+      return { key, group, hub: hubEntry(key, group) };
+    });
+  const collectionsHtml = collectionEntries.length
+    ? `    <section class="group reveal" style="animation-delay:.1s">
+      <header class="group-head">
+        <h2>Collections</h2>
+        <p>Multi-page sets — open one to browse everything inside.</p>
+        <span class="count">${collectionEntries.length}</span>
+      </header>
+      <div class="grid">
+${collectionEntries.map((c) => collectionCard(c.key, c.group, c.hub)).join("\n")}
+      </div>
+    </section>`
+    : "";
 
   const orderedKeys = [...groups.keys()].sort((a, b) => {
     const oa = SECTION_META[a]?.order ?? 99;
@@ -347,7 +432,15 @@ ${inner}
   // out from the live docs even when ordering purely by time — active docs in
   // one grid, archived docs in another, each newest-first. Toggled client-side;
   // hidden by default.
-  const activeByDate = entries.filter((e) => !archivedSrc.has(e.src)).sort(byDateDesc);
+  // Collapse collection children in the by-date view too: keep each collection's
+  // hub entry, drop the rest, so the timeline isn't flooded either.
+  const inCollectionSrc = new Set();
+  for (const c of collectionEntries) for (const e of c.group) inCollectionSrc.add(e.src);
+  const collectionHubSrc = new Set(collectionEntries.map((c) => c.hub.src));
+  const activeByDate = entries
+    .filter((e) => !archivedSrc.has(e.src))
+    .filter((e) => !inCollectionSrc.has(e.src) || collectionHubSrc.has(e.src))
+    .sort(byDateDesc);
   const archivedByDate = [...archived].sort(byDateDesc);
   const byDateSection = (heading, blurb, items) =>
     `    <section class="group">
@@ -409,6 +502,11 @@ ${THEME}
 .badge { font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .12rem .42rem; border-radius: 5px; flex: none; }
 .badge-html { background: rgba(224,145,58,.18); color: #f0b46e; }
 .badge-md { background: rgba(139,171,90,.18); color: #b6cd84; }
+.badge-collection { background: rgba(224,145,58,.2); color: #f0b46e; }
+.doc.collection { background: linear-gradient(180deg, rgba(224,145,58,.1), var(--bg-soft)); border-color: rgba(224,145,58,.42); }
+.doc.collection:hover { border-color: var(--accent); }
+.coll-blurb { color: var(--muted); font-size: .88rem; line-height: 1.45; }
+.coll-count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--accent); white-space: nowrap; }
 .doc-date { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--muted); flex: none; }
 .featured { margin-top: 0; padding: 1.4rem 1.5rem 1.5rem; background: linear-gradient(135deg, rgba(224,145,58,.16), rgba(139,171,90,.07)); border: 1px solid var(--accent); border-radius: 18px; box-shadow: var(--shadow); }
 .featured-eyebrow { font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .9rem; }
@@ -451,6 +549,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: .85rem; border-top: 1
     </header>
     <div id="view-grouped">
 ${featuredHtml}
+${collectionsHtml}
 ${sections}
 ${archiveHtml}
     </div>
@@ -547,6 +646,16 @@ const files = trackedDocs();
 const entries = [];
 let assetCount = 0;
 
+// Folders that already ship their own index.html — used to decide whether a
+// folder's README should be promoted into that folder's hub page.
+const indexFolders = new Set();
+for (const repoRel of files) {
+  const docRel = relative(docsRoot, join(repoRoot, repoRel)).replace(/\\/g, "/");
+  if (/(^|\/)index\.html?$/i.test(docRel)) {
+    indexFolders.add(docRel.replace(/\/?index\.html?$/i, ""));
+  }
+}
+
 for (const repoRel of files) {
   const abs = join(repoRoot, repoRel);
   // Normalize to forward slashes so section grouping + featured/archive
@@ -554,9 +663,14 @@ for (const repoRel of files) {
   const docRel = relative(docsRoot, abs).replace(/\\/g, "/"); // path relative to docs/
   const file = docRel.split("/").pop();
   const depth = docRel.split("/").length - 1;
+  const dir = docRel.includes("/") ? docRel.slice(0, docRel.lastIndexOf("/")) : "";
 
-  // Folder READMEs document the directory, not the catalogue — don't list them.
   const isReadme = /^readme\.md$/i.test(file);
+  // A folder README with no sibling index.html becomes that folder's hub page
+  // (rendered to <dir>/index.html), so the folder gets a real landing page on
+  // the deployed site — e.g. projects/README.md → projects/index.html, the
+  // index of every brief. Archived folders keep their existing handling.
+  const promoteReadme = isReadme && dir && !isArchived(docRel) && !indexFolders.has(dir);
 
   if (/\.html?$/i.test(file)) {
     const html = readFileSync(abs, "utf8");
@@ -572,10 +686,27 @@ for (const repoRel of files) {
       title: titleFromHtml(html, prettyName(file)),
       ...docMeta(repoRel, file),
     });
+  } else if (promoteReadme) {
+    const md = readFileSync(abs, "utf8");
+    const title = titleFromMarkdown(md, prettyName(dir.split("/").pop()));
+    const body = rewriteMdLinks(marked.parse(md));
+    const outRel = `${dir}/index.html`;
+    const outPath = join(outRoot, outRel);
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, renderMarkdownPage(title, body, depth));
+    entries.push({
+      rel: outRel,
+      href: outRel,
+      src: docRel,
+      file: "index.html",
+      kind: "md",
+      title,
+      ...docMeta(repoRel, file),
+    });
   } else if (/\.md$/i.test(file) && !isReadme) {
     const md = readFileSync(abs, "utf8");
     const title = titleFromMarkdown(md, prettyName(file));
-    const body = marked.parse(md);
+    const body = rewriteMdLinks(marked.parse(md));
     const outRel = docRel.replace(/\.md$/i, ".html");
     const outPath = join(outRoot, outRel);
     mkdirSync(dirname(outPath), { recursive: true });
