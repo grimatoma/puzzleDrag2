@@ -13,7 +13,14 @@
 // required at build time.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  copyFileSync,
+  existsSync,
+  statSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
@@ -79,6 +86,159 @@ function prettyName(fileBase) {
     .replace(/\.(md|html)$/i, "")
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// --- summary, reading time & thumbnail extraction ---------------------------
+//
+// The index card used to show only a title + filename. To save a reader from
+// opening every doc, we pull a short *summary* (the doc's own subtitle / first
+// real paragraph), an estimated *reading time*, and — where the doc ships a
+// representative raster image — a *thumbnail*. All three are derived from the
+// doc's own content, so they can't drift out of sync with what was written.
+
+function stripTags(s) {
+  return s.replace(/<[^>]+>/g, " ");
+}
+function collapseWs(s) {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+// Clamp to ~n chars on a word boundary, adding an ellipsis when truncated.
+function clampText(s, n) {
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n);
+  const sp = cut.lastIndexOf(" ");
+  const base = sp > n * 0.6 ? cut.slice(0, sp) : cut;
+  return base.replace(/[\s.,;:–—-]+$/, "") + "…";
+}
+
+const SUMMARY_MAX = 240;
+
+// Drop <style>/<script>/<head> so we never scrape CSS or JS as prose.
+function htmlBody(html) {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<head[\s\S]*?<\/head>/gi, " ");
+}
+
+function summaryFromHtml(html) {
+  // 1. An explicit <meta name="description"> wins.
+  const meta = html.match(
+    /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i,
+  );
+  if (meta) return clampText(collapseWs(decodeEntities(meta[1])), SUMMARY_MAX);
+
+  const body = htmlBody(html);
+
+  // 2. A hero subtitle paragraph (the convention across these self-contained docs).
+  const sub = body.match(
+    /<p[^>]*class=["'][^"']*\b(?:sub|lede|subtitle|subhead|tagline|intro|dek)\b[^"']*["'][^>]*>([\s\S]*?)<\/p>/i,
+  );
+  if (sub) {
+    const t = collapseWs(decodeEntities(stripTags(sub[1])));
+    if (t.length >= 24) return clampText(t, SUMMARY_MAX);
+  }
+
+  // 3. Otherwise the first paragraph with real prose in it.
+  const paras = body.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi) || [];
+  for (const p of paras) {
+    const inner = p.replace(/^<p\b[^>]*>/i, "").replace(/<\/p>\s*$/i, "");
+    const t = collapseWs(decodeEntities(stripTags(inner)));
+    if (t.length >= 40) return clampText(t, SUMMARY_MAX);
+  }
+  return "";
+}
+
+function summaryFromMarkdown(md) {
+  const lines = md.split("\n");
+  const para = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (para.length) break; // blank line ends the first real paragraph
+      continue;
+    }
+    if (/^([-*_])\1{2,}\s*$/.test(line)) continue; // horizontal rule
+    if (/^#{1,6}\s/.test(line) || /^>/.test(line)) {
+      if (para.length) break;
+      continue; // skip leading headings / blockquote notes
+    }
+    if (/^(\||[-*+]\s|\d+\.\s|!\[|<!--)/.test(line)) {
+      if (para.length) break;
+      continue; // skip tables, lists, images, comments
+    }
+    para.push(line);
+  }
+  if (!para.length) return "";
+  const t = para
+    .join(" ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links → text
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1"); // bold / italic
+  return clampText(collapseWs(decodeEntities(t)), SUMMARY_MAX);
+}
+
+// ~200 wpm; never reports "0 min".
+function readingMinutes(text) {
+  const words = (text.match(/\S+/g) || []).length;
+  return words ? Math.max(1, Math.round(words / 200)) : 0;
+}
+function textFromHtml(html) {
+  return collapseWs(stripTags(htmlBody(html)));
+}
+function textFromMarkdown(md) {
+  return collapseWs(
+    md
+      .replace(/```[\s\S]*?```/g, " ") // fenced code
+      .replace(/`[^`]*`/g, " ")
+      .replace(/[#>*_`|-]/g, " "),
+  );
+}
+
+// Resolve an image src that's relative to a doc into a path relative to the
+// docs root (which is exactly its href from the generated index.html).
+function resolveDocPath(docRel, src) {
+  const base = docRel.includes("/")
+    ? docRel.slice(0, docRel.lastIndexOf("/")).split("/")
+    : [];
+  for (const seg of src.split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg === "..") base.pop();
+    else base.push(seg);
+  }
+  return base.join("/");
+}
+
+// Big images make the index heavy; above this we fall back to the glyph tile.
+const THUMB_MAX_BYTES = 512 * 1024;
+
+function firstImageSrc(content) {
+  const re =
+    /<img[^>]+src=["']([^"']+\.(?:png|jpe?g|gif|webp|svg))["']|!\[[^\]]*\]\(([^)\s]+\.(?:png|jpe?g|gif|webp|svg))[^)]*\)/gi;
+  let m;
+  while ((m = re.exec(content))) {
+    const src = m[1] || m[2];
+    if (!src || src.includes("${") || /^(data:|https?:)/i.test(src)) continue;
+    return src;
+  }
+  return "";
+}
+
+// Returns a docs-root-relative path to a small-enough, tracked image, or "".
+function pickThumb(content, docRel) {
+  const src = firstImageSrc(content);
+  if (!src) return "";
+  const rel = resolveDocPath(docRel, src);
+  const abs = join(docsRoot, rel);
+  try {
+    if (!existsSync(abs)) return "";
+    if (statSync(abs).size > THUMB_MAX_BYTES) return "";
+  } catch {
+    return "";
+  }
+  return rel;
 }
 
 // --- shared styling ---------------------------------------------------------
@@ -178,13 +338,25 @@ function byDateDesc(a, b) {
 
 // --- index page -------------------------------------------------------------
 
-// Friendlier labels + ordering for top-level doc sections.
+// Friendlier labels + ordering for top-level doc sections. `glyph`/`accent`
+// also drive the per-card visual tile shown when a doc has no thumbnail of its
+// own, so every section reads at a glance.
 const SECTION_META = {
-  ".": { label: "Overview", blurb: "Top-level design & audit docs", order: 0 },
-  "building-art": { label: "Building Art", blurb: "Building-art pipeline & reference", order: 1 },
-  "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2 },
-  "town-layout": { label: "Town Layout", blurb: "Settlement growth mockups", order: 3 },
-  references: { label: "References", blurb: "External wikis & research", order: 5 },
+  ".": { label: "Overview", blurb: "Top-level design, audit & proposal docs", order: 0, glyph: "🗺️", accent: "#e0913a" },
+  projects: { label: "Project Briefs", blurb: "Ranked roadmap + self-contained implementation briefs", order: 1, glyph: "🧭", accent: "#e0913a" },
+  "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2, glyph: "🍂", accent: "#c8743a" },
+  "town-layout": { label: "Town Layout", blurb: "Settlement growth mockups", order: 3, glyph: "🏘️", accent: "#8bab5a" },
+  "town-camera": { label: "Town Camera", blurb: "Map camera-view decision board + live demo", order: 4, glyph: "🎥", accent: "#8bab5a" },
+  zones: { label: "Zone Atlas", blurb: "Unique growing-settlement zones & build-outs", order: 5, glyph: "🌍", accent: "#6fae8f" },
+  "puzzle-prototypes": { label: "Puzzle Prototypes", blurb: "Playable browser prototypes of the drag-chain core", order: 6, glyph: "🧩", accent: "#9b8fd0" },
+  "art-style-board": { label: "Art Style Board", blurb: "Candidate art directions, pitched & proven", order: 7, glyph: "🎨", accent: "#d98a8a" },
+  "art-style-board-r2": { label: "Art Style Board · R2", blurb: "Round-2 drill into the chosen storybook look", order: 8, glyph: "🎨", accent: "#d98a8a" },
+  "hd2d-village": { label: "HD-2D Village", blurb: "React-Three-Fiber HD-2D look test", order: 9, glyph: "🌄", accent: "#7fa8d8" },
+  "hd2d-village-sim": { label: "HD-2D Village · Sim", blurb: "Procedural shadow / lighting reference", order: 10, glyph: "🌄", accent: "#7fa8d8" },
+  "building-art": { label: "Building Art", blurb: "Building-art pipeline & reference", order: 11, glyph: "🏠", accent: "#c8743a" },
+  "pixelart-ui-scaling": { label: "Pixel-Art UI Scaling", blurb: "Crisp dynamically-scaling pixel UI proposal", order: 12, glyph: "🔲", accent: "#9fb0bd" },
+  playtest: { label: "Playtest", blurb: "Headless auto-player reports & balance audits", order: 13, glyph: "🤖", accent: "#9fb0bd" },
+  references: { label: "References", blurb: "External wikis & research", order: 14, glyph: "📚", accent: "#b6a487" },
 };
 
 // Docs surfaced in a prominent "Featured" block at the very top, in this order.
@@ -206,12 +378,14 @@ const ARCHIVE_GROUPS = [
   {
     label: "Design & concept docs",
     blurb: "Early design explorations, since superseded.",
+    glyph: "📐",
     test: (p) =>
       /^(board-topology-concepts|progression-trigger-redesign|wiki-migration-plan)\.html$/.test(p),
   },
   {
     label: "Icon & art explorations",
     blurb: "Concept-only pixel-art studies, replaced by the seasonal-tile pipeline.",
+    glyph: "🎨",
     test: (p) =>
       /^(icon-|birch|farm-tile|grass-tile|more-tile|seasonal-tile-animations|seasonal-tiles-review)/.test(
         p,
@@ -220,14 +394,29 @@ const ARCHIVE_GROUPS = [
   {
     label: "Plans & specs (shipped)",
     blurb: "Point-in-time plans and specs for features now implemented.",
+    glyph: "📜",
     test: (p) => p.startsWith("superpowers/"),
   },
   {
     label: "Pixel Pipeline Viewer",
     blurb: "Retired live sprite-set review viewer.",
+    glyph: "🎞️",
     test: (p) => p.startsWith("pixel-pipeline-viewer/"),
   },
 ];
+
+// The glyph + accent tint for a doc's fallback visual tile (used when the doc
+// ships no usable thumbnail). Archived docs borrow their archive sub-group's
+// glyph; everything else uses its section's.
+function visualMeta(rel) {
+  if (isArchived(rel)) {
+    const p = rel.slice(ARCHIVE_PREFIX.length);
+    const g = ARCHIVE_GROUPS.find((b) => b.test(p));
+    return { glyph: (g && g.glyph) || "🗃️", accent: "#8a7d66" };
+  }
+  const m = SECTION_META[sectionKey(rel)];
+  return { glyph: (m && m.glyph) || "📄", accent: (m && m.accent) || "#b6a487" };
+}
 
 function sectionKey(relPath) {
   const parts = relPath.split("/");
@@ -240,9 +429,21 @@ function docCard(e) {
   const date = e.date
     ? `<time class="doc-date">${escapeHtml(e.date)}</time>`
     : "";
+  const read = e.minutes ? `<span class="doc-read">${e.minutes} min read</span>` : "";
+  const { glyph, accent } = visualMeta(e.rel);
+  const visual = e.thumb
+    ? `<span class="doc-visual"><img loading="lazy" decoding="async" src="${escapeHtml(e.thumb)}" alt=""></span>`
+    : `<span class="doc-visual doc-glyph" style="--tile:${accent}" aria-hidden="true">${glyph}</span>`;
+  const summary = e.summary
+    ? `<p class="doc-summary">${escapeHtml(e.summary)}</p>`
+    : "";
   return `        <a class="doc" href="${e.href}">
-          <span class="doc-title">${escapeHtml(e.title)}</span>
-          <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span>${date}<code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
+          ${visual}
+          <span class="doc-body">
+            <span class="doc-title">${escapeHtml(e.title)}</span>
+            ${summary}
+            <span class="doc-meta"><span class="badge badge-${e.kind}">${e.kind}</span>${date}${read}<code>${escapeHtml(sub ? sub + "/" : "")}${escapeHtml(e.file)}</code></span>
+          </span>
         </a>`;
 }
 
@@ -400,20 +601,28 @@ ${THEME}
 .group-head h2 { font-size: 1.6rem; font-weight: 600; margin: 0; }
 .group-head p { color: var(--muted); margin: 0; font-size: .95rem; }
 .group-head .count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .6rem; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .9rem; }
-.doc { display: flex; flex-direction: column; gap: .5rem; padding: 1.05rem 1.15rem; background: linear-gradient(180deg, var(--card), var(--bg-soft)); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); transition: transform .15s ease, border-color .15s ease; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: .9rem; }
+.doc { display: grid; grid-template-columns: 3.4rem 1fr; gap: .95rem; align-items: start; padding: 1.05rem 1.15rem; background: linear-gradient(180deg, var(--card), var(--bg-soft)); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); transition: transform .15s ease, border-color .15s ease; }
 .doc:hover { text-decoration: none; transform: translateY(-3px); border-color: var(--accent); }
-.doc-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 1.1rem; color: var(--ink); }
-.doc-meta { display: flex; align-items: center; gap: .55rem; font-size: .78rem; color: var(--muted); }
-.doc-meta code { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-visual { width: 3.4rem; height: 3.4rem; border-radius: 11px; overflow: hidden; display: grid; place-items: center; flex: none; }
+.doc-visual img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--bg); }
+.doc-glyph { font-size: 1.55rem; line-height: 1; background: var(--bg-soft); background: linear-gradient(150deg, color-mix(in srgb, var(--tile) 30%, var(--card)), var(--bg-soft)); border: 1px solid var(--line); border-color: color-mix(in srgb, var(--tile) 38%, var(--line)); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+.doc-body { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
+.doc-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 1.1rem; color: var(--ink); line-height: 1.25; }
+.doc-summary { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.doc-meta { display: flex; align-items: center; gap: .5rem .6rem; flex-wrap: wrap; font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+.doc-meta code { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .badge { font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .12rem .42rem; border-radius: 5px; flex: none; }
 .badge-html { background: rgba(224,145,58,.18); color: #f0b46e; }
 .badge-md { background: rgba(139,171,90,.18); color: #b6cd84; }
 .doc-date { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--muted); flex: none; }
+.doc-read { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--muted); flex: none; }
+.doc-read::before { content: "·"; margin-right: .55rem; color: var(--line); }
 .featured { margin-top: 0; padding: 1.4rem 1.5rem 1.5rem; background: linear-gradient(135deg, rgba(224,145,58,.16), rgba(139,171,90,.07)); border: 1px solid var(--accent); border-radius: 18px; box-shadow: var(--shadow); }
 .featured-eyebrow { font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .9rem; }
 .featured .doc { border-color: rgba(224,145,58,.5); background: linear-gradient(180deg, rgba(224,145,58,.1), var(--bg-soft)); }
 .featured .doc-title { font-size: 1.4rem; }
+.featured .doc-visual { width: 4rem; height: 4rem; }
 .archive { margin-top: 3.5rem; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-soft); overflow: hidden; }
 .archive > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .85rem; flex-wrap: wrap; padding: 1.1rem 1.4rem; user-select: none; }
 .archive > summary::-webkit-details-marker { display: none; }
@@ -570,6 +779,9 @@ for (const repoRel of files) {
       file,
       kind: "html",
       title: titleFromHtml(html, prettyName(file)),
+      summary: summaryFromHtml(html),
+      minutes: readingMinutes(textFromHtml(html)),
+      thumb: pickThumb(html, docRel),
       ...docMeta(repoRel, file),
     });
   } else if (/\.md$/i.test(file) && !isReadme) {
@@ -587,6 +799,9 @@ for (const repoRel of files) {
       file,
       kind: "md",
       title,
+      summary: summaryFromMarkdown(md),
+      minutes: readingMinutes(textFromMarkdown(md)),
+      thumb: pickThumb(md, docRel),
       ...docMeta(repoRel, file),
     });
   } else {
