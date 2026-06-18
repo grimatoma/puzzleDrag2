@@ -13,7 +13,7 @@ const spec = P.map(([x, y, t], i) => ({ i, free: [x, y], t, side: y < 470 ? "N" 
 const foot = {}; P.forEach((_, i) => { foot[i] = sizes[i % 4]; });
 
 const LM = [680, 440];
-const span = (a, b, t) => ({ kind: "span", pts: [a, b], w: 8, tier: t });
+const span = (a, b, t) => ({ kind: "span", pts: [a, b], w: 12, tier: t });
 
 export default {
   id: "thornwild",
@@ -24,9 +24,9 @@ export default {
   landmark: { cx: LM[0], cy: LM[1], r: 30 }, // burl hearth → grove totem → sunlight loom → Highcrown
   roads: [],
   features: [
-    { kind: "disc", cx: 580, cy: 470, r: 54, ry: 50, col: "#3a2a1a" }, // great trunks
-    { kind: "disc", cx: 880, cy: 500, r: 48, ry: 46, col: "#3a2a1a" },
-    { kind: "disc", cx: 300, cy: 600, r: 46, ry: 44, col: "#3a2a1a" },
+    { kind: "disc", cx: 580, cy: 470, r: 82, ry: 76, col: "#3a2a1a" }, // great trunks the platforms cling to
+    { kind: "disc", cx: 880, cy: 500, r: 72, ry: 66, col: "#3a2a1a" },
+    { kind: "disc", cx: 300, cy: 600, r: 66, ry: 60, col: "#3a2a1a" },
     span([520, 440], [680, 300], 0), span([680, 300], [840, 440], 0), span([680, 300], LM, 0),
     span([380, 560], [520, 440], 1), span([560, 620], LM, 1), span([820, 600], [840, 440], 1),
     span([260, 440], [380, 560], 2), span([320, 720], [380, 560], 2), span([960, 580], [820, 600], 2), span([1040, 400], [960, 580], 2),
