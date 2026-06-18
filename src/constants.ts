@@ -208,8 +208,10 @@ export const DEFAULT_HOME_BIOME = "prairie";
 // src/__tests__/fixtures/saves/ and a migrator test. Saves with no migration
 // path (gaps, forward versions, corrupt) are still discarded.
 // 45 → 46: added the persisted `fiber` slice (Fiber Crush minigame).
-// 46 → 47: added the persisted `embergarden` slice (Hearthkeeping idle layer).
-// Both migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
+// 46 → 47: was the Hearthkeeping idle layer (`embergarden`), since removed; the
+//          46→47 migrator is now a no-op version bump kept so idle-layer-era
+//          saves still load (we never roll a shipped version backward).
+// Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
 export const SAVE_SCHEMA_VERSION = 47;
 
 export const UPGRADE_THRESHOLDS = {

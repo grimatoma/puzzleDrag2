@@ -12,7 +12,6 @@ import type { ResourceKey } from "./catalogKeys.js";
 import type {
   BossState,
   CastleState,
-  EmbergardenState,
   FishBiomeState,
   GameSettings,
   Quest,
@@ -278,8 +277,6 @@ export interface GameState {
   floaters?: unknown[];
   boons: Record<string, boolean>;
   runSummary: RunSummary;
-  /** Hearthkeeping (idle layer) sub-state — see src/features/embergarden. */
-  embergarden: EmbergardenState;
   mapCurrent: string;
   mapVisited: string[];
   mapDiscovered: string[];
