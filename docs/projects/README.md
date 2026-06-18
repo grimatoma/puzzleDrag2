@@ -52,7 +52,7 @@ Note (13): the real defect is a verified **~10× payout fork** — the same item
 | 10 | [Self-Describing Slices (kill the footgun)](10-self-describing-slices.md) | M | — |
 | 11 | [GameScene.ts Decomposition](11-gamescene-decomposition.md) | L | 09 (net first) |
 
-Note (08): there are **two** version gates (`persistence.ts` + `init.ts`) — make `loadSavedState` return a version-bumped object so both pass. Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned. Note (11): the split is **already partly done** — `src/game/` exists; finish it and backfill tests.
+Note (08): there are **two** version gates (`persistence.ts` + `init.ts`) — make `loadSavedState` return a version-bumped object so both pass. Note (09): infra **landed** (PR #1229) — the `e2e`, `visual-smoke`, and `visual-rebaseline` CI jobs + the Phaser texture-key console-error allowlist. Both `e2e` and `visual-smoke` land **non-blocking**: the first CI run revealed the never-gated e2e suite has **bit-rotted** (32 pass / 31 fail on main — stale fixtures/selectors/balance, NOT a regression). De-rot the specs (and re-baseline the goldens on CI) before flipping either to gating — full inventory in [09 findings](09-ci-e2e-gate-findings.md). Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned. Note (11): the split is **already partly done** — `src/game/` exists; finish it and backfill tests.
 
 ### New game systems (proposals + implementation briefs)
 | # | Brief | Effort | Depends on |
