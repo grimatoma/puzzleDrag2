@@ -1,16 +1,16 @@
-# Graph Report - bold-gagarin-ff13a7  (2026-06-17)
+# Graph Report - bold-gagarin-ff13a7  (2026-06-18)
 
 ## Corpus Check
-- 876 files · ~764,395 words
+- 882 files · ~767,605 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6039 nodes · 14636 edges · 250 communities (224 shown, 26 thin omitted)
+- 6064 nodes · 14704 edges · 260 communities (220 shown, 40 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 30 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1bd619f9`
+- Built from commit: `b512a9c6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -234,7 +234,9 @@
 - [[_COMMUNITY_Community 220|Community 220]]
 - [[_COMMUNITY_Community 221|Community 221]]
 - [[_COMMUNITY_Community 222|Community 222]]
+- [[_COMMUNITY_Community 223|Community 223]]
 - [[_COMMUNITY_Community 224|Community 224]]
+- [[_COMMUNITY_Community 225|Community 225]]
 - [[_COMMUNITY_Community 226|Community 226]]
 - [[_COMMUNITY_Community 227|Community 227]]
 - [[_COMMUNITY_Community 229|Community 229]]
@@ -242,22 +244,30 @@
 - [[_COMMUNITY_Community 231|Community 231]]
 - [[_COMMUNITY_Community 242|Community 242]]
 - [[_COMMUNITY_Community 244|Community 244]]
+- [[_COMMUNITY_Community 245|Community 245]]
+- [[_COMMUNITY_Community 246|Community 246]]
+- [[_COMMUNITY_Community 248|Community 248]]
 - [[_COMMUNITY_Community 249|Community 249]]
+- [[_COMMUNITY_Community 250|Community 250]]
+- [[_COMMUNITY_Community 251|Community 251]]
+- [[_COMMUNITY_Community 252|Community 252]]
 - [[_COMMUNITY_Community 253|Community 253]]
 - [[_COMMUNITY_Community 254|Community 254]]
 - [[_COMMUNITY_Community 255|Community 255]]
 - [[_COMMUNITY_Community 256|Community 256]]
+- [[_COMMUNITY_Community 257|Community 257]]
+- [[_COMMUNITY_Community 258|Community 258]]
 - [[_COMMUNITY_Community 261|Community 261]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `initialState()` - 137 edges
-2. `GameState` - 128 edges
+2. `GameState` - 131 edges
 3. `createInitialState` - 110 edges
 4. `coreReducer()` - 85 edges
 5. `GameScene` - 78 edges
 6. `rootReducer` - 75 edges
 7. `zoneInventory()` - 67 edges
-8. `UI_COLORS` - 63 edges
+8. `UI_COLORS` - 64 edges
 9. `svgState()` - 59 edges
 10. `getEntity()` - 52 edges
 
@@ -275,8 +285,8 @@
 
 ## Import Cycles
 - 1-file cycle: `src/balanceManager/CommandPalette.tsx -> src/balanceManager/CommandPalette.tsx`
-- 3-file cycle: `src/features/boss/slice.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
 - 3-file cycle: `src/features/quests/data.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/quests/data.ts`
+- 3-file cycle: `src/features/boss/slice.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
 - 3-file cycle: `src/features/runSummary/slice.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/runSummary/slice.ts`
 - 3-file cycle: `src/smokeTests.ts -> src/state.ts -> src/utils.ts -> src/smokeTests.ts`
 - 3-file cycle: `src/state/toolPowerRuntime.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts`
@@ -284,30 +294,30 @@
 - 4-file cycle: `src/features/boss/slice.ts -> src/features/bosses/data.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
 - 4-file cycle: `src/features/boss/slice.ts -> src/features/bosses/modifiers.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
 - 4-file cycle: `src/game/producedResource.ts -> src/utils.ts -> src/smokeTests.ts -> src/state.ts -> src/game/producedResource.ts`
-- 4-file cycle: `src/state/boardMutations.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/state/boardMutations.ts`
 - 4-file cycle: `src/smokeTests.ts -> src/state.ts -> src/state/toolPowerRuntime.ts -> src/utils.ts -> src/smokeTests.ts`
 - 4-file cycle: `src/features/farm/tools.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/features/farm/tools.ts`
 - 4-file cycle: `src/state/toolPowerRuntime.ts -> src/utils.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts`
+- 4-file cycle: `src/state/boardMutations.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/state/boardMutations.ts`
 - 4-file cycle: `src/state/toolPowerRuntime.ts -> src/state/zoneInventory.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts`
 - 5-file cycle: `src/features/boss/slice.ts -> src/features/bosses/data.ts -> src/features/bosses/modifiers.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
 - 5-file cycle: `src/features/boss/slice.ts -> src/features/bosses/modifiers.ts -> src/state/zoneInventory.ts -> src/types/state.ts -> src/types/gameStateFields.ts -> src/features/boss/slice.ts`
-- 5-file cycle: `src/config/tileSelectors.ts -> src/state/boardMutations.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/config/tileSelectors.ts`
 - 5-file cycle: `src/config/tileSelectors.ts -> src/utils.ts -> src/smokeTests.ts -> src/state.ts -> src/state/toolPowerRuntime.ts -> src/config/tileSelectors.ts`
-- 5-file cycle: `src/config/tileSelectors.ts -> src/utils.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/config/tileSelectors.ts`
+- 5-file cycle: `src/locBuilt.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/utils.ts -> src/locBuilt.ts`
+- 5-file cycle: `src/features/workers/aggregate.ts -> src/types/state.ts -> src/types/actionPayloads.ts -> src/state/toolPowerRuntime.ts -> src/utils.ts -> src/features/workers/aggregate.ts`
 
-## Communities (250 total, 26 thin omitted)
+## Communities (260 total, 40 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.04
-Nodes (73): producedResource(), seedQuestIdSeq(), BUILDINGS, MINE_TILE_POOL, RECIPES, tileFamilyResource(), TILES_PER_RESOURCE, UPGRADE_THRESHOLDS (+65 more)
+Cohesion: 0.05
+Nodes (62): rollHazard(), BIOMES, BUILDINGS, MINE_TILE_POOL, RECIPES, TILE_FAMILY_RESOURCE, TILES_WITH_CUSTOM_OUTPUT, UPGRADE_THRESHOLDS (+54 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.06
-Nodes (31): allBoons(), FARM_HAZARD_META, hasIcon(), BoardKindDetail(), BoardKindDetailProps, BoardKindLike, DANGER_KEYS, hasBoardKindDetail() (+23 more)
+Cohesion: 0.03
+Nodes (66): BalanceNavProvider(), allBoons(), defaultsForTileDiscoveryMethod(), getTileDiscoveryMethod(), TILE_DISCOVERY_METHOD_BY_ID, TILE_DISCOVERY_METHODS, TILE_DISCOVERY_PARAM_TYPES, TileDiscoveryMethod (+58 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.09
-Nodes (37): SMOKE_INVARIANTS, AnyMap, applyBeatResult(), beatChoices(), beatIsContinueOnly(), beatLines(), beatScene(), BeatSideEffects (+29 more)
+Cohesion: 0.07
+Nodes (52): applyFlagTriggers(), applyFlagTriggersWithResult(), evaluateFlagTriggers(), FLAG_CATEGORIES, flagCategory(), flagDef, FlagEvent, FlagGameState (+44 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.02
@@ -315,122 +325,122 @@ Nodes (94): ActivateRuneWildcardAction, AdvanceSeasonAction, BoonPurchaseAction,
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (72): CASTLE_NEEDS, CastleNeedsList(), CastleNeedsListProps, CastleScreenProps, castleOf(), CastleSubstate, initial, reduce() (+64 more)
+Nodes (81): castleOf(), CastleSubstate, initial, reduce(), CraftingScreen(), canPayForRecipe(), CanPayResult, CraftingSlice (+73 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.04
-Nodes (62): ALMANAC_TIERS, awardXp(), AwardXpResult, claimAlmanacTier(), ClaimTierResult, BossState, MENU_LINKS, ApplyGiftResult (+54 more)
+Nodes (62): BossModalProps, BossState, BossesScreenProps, CastleNeedsList(), CastleNeedsListProps, CastleScreenProps, ResourceKey, DailyReward (+54 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.10
-Nodes (24): ChipTone, EffectBadges(), EffectBit, PathsPanel(), PathsPanelProps, REASON_TONE, ReasonToneEntry, applyChoiceEffects() (+16 more)
+Nodes (22): ChipTone, EffectBadges(), EffectBit, PathsPanel(), PathsPanelProps, REASON_TONE, ReasonToneEntry, applyChoiceEffects() (+14 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.07
-Nodes (40): firstTriggeredByPreviewState(), addFlagWarnings(), BtnProps, BtnTone, cloneDraft(), collapsibleIds(), collectStoryWarnings(), deriveGraph() (+32 more)
+Cohesion: 0.15
+Nodes (19): ALMANAC_TIERS, awardXp(), AwardXpResult, claimAlmanacTier(), ClaimTierResult, claimQuest(), ClaimQuestResult, QuestEvent (+11 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.03
-Nodes (72): DYNAMIC_PREFIXES_CANVAS, getUsedIconKeys(), HARDCODED_USAGE, isIconUsed(), _resetIconUsageCacheForTests(), SVG_USAGE_LITERALS, WIRED_ICON_USAGE, ABILITIES (+64 more)
+Nodes (98): ALL_ITEM_KEY_VALUES, RESOURCE_KEY_VALUES, buildChainUpdatePayload(), ChainPathTile, ChainUpdateArgs, ChainUpdatePayload, NextUpgradeTile, producedResource() (+90 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.03
-Nodes (66): BalanceManagerApp(), buildHash(), decodeSeg(), initialWikiRoute(), ParsedHash, parseHash(), VALID, useBalanceRouter() (+58 more)
+Cohesion: 0.04
+Nodes (57): BalanceManagerApp(), buildHash(), decodeSeg(), initialWikiRoute(), ParsedHash, parseHash(), VALID, useBalanceRouter() (+49 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.04
-Nodes (38): BalanceNavContext, BalanceNavigate, BalanceNavProvider(), BalanceNavTarget, BalanceNavValue, useBalanceNav(), ATTACHMENT_FOOTER_STYLE, balanceEntityDomId() (+30 more)
+Nodes (54): BalanceNavContext, BalanceNavigate, BalanceNavTarget, BalanceNavValue, useBalanceNav(), ATTACHMENT_FOOTER_STYLE, balanceEntityDomId(), CraftingRecipeLinks() (+46 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
 Nodes (75): bannerEmblem(), drawAbilityTrigger(), drawAuditBell(), drawBangMark(), drawBannerAcorn, drawBannerHammer, drawBannerHearth, drawBannerSun (+67 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.05
-Nodes (48): FISH_BOARD_HARBOR, KIND_LABELS, MapEntryCost, MapNodeKind, MapRegion, MapRegionId, MINE_BOARD_EXTENDED, MINE_BOARD_STANDARD (+40 more)
+Cohesion: 0.07
+Nodes (41): FISH_BOARD_HARBOR, KIND_LABELS, MapEntryCost, MapNodeKind, MapRegion, MapRegionId, MINE_BOARD_EXTENDED, MINE_BOARD_STANDARD (+33 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.07
-Nodes (32): AchievementCard(), AchievementCardProps, AchievementLike, AchievementReward, hasAchievementCard(), humanizeCounter(), achievement(), BoonCard() (+24 more)
+Cohesion: 0.10
+Nodes (24): AchievementCard(), AchievementCardProps, AchievementLike, AchievementReward, hasAchievementCard(), humanizeCounter(), achievement(), enrichEntry() (+16 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.09
-Nodes (36): ApiaryIllustration(), ApothecaryIllustration(), BakeryIllustration(), BarnIllustration(), BreweryIllustration(), CaravanPostIllustration(), ChapelIllustration(), ClockTowerIllustration() (+28 more)
+Cohesion: 0.05
+Nodes (64): ApiaryIllustration(), ApothecaryIllustration(), BakeryIllustration(), BarnIllustration(), BreweryIllustration(), CaravanPostIllustration(), ChapelIllustration(), ClockTowerIllustration() (+56 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.08
-Nodes (6): GameScene, lerpHex(), TileObj, resourceByKey(), getRegistry(), setRegistry()
+Nodes (7): computeBakeScale(), buildCrossCollectedCredits(), cssColor(), GameScene, lerpHex(), resourceByKey(), getRegistry()
 
 ### Community 17 - "Community 17"
-Cohesion: 0.05
-Nodes (59): abilityCatalogEntrySchema, abilityParamDefSchema, AchievementEntry, achievementEntrySchema, achievementOverrideSchema, achievementsOverridesSchema, BalanceDraft, upgradeThresholdsOverridesSchema (+51 more)
+Cohesion: 0.04
+Nodes (86): abilityCatalogEntrySchema, abilityParamDefSchema, AchievementEntry, achievementEntrySchema, achievementOverrideSchema, achievementsOverridesSchema, upgradeThresholdsOverridesSchema, biomesOverridesSchema (+78 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.05
-Nodes (37): ACT_1_IDS, ACT_2_IDS, ACT_3_IDS, ACT_LABELS, BranchingNode(), CanvasSize, CompactNode(), EffectBadge (+29 more)
+Cohesion: 0.04
+Nodes (41): emptyHistory(), History, pushHistoryEntry(), redoHistoryState(), undoHistoryState(), useDraftHistory(), ACT_1_IDS, ACT_2_IDS (+33 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.08
-Nodes (46): BoardKind, ZoneTier, BuildingId, ZONE_UPGRADE_TARGET_GOLD, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, farmResources, HeirloomsState (+38 more)
+Cohesion: 0.06
+Nodes (55): BoardKind, TUNING_KEY_VALUES, TuningKey, useFocusTrap(), ZONE_UPGRADE_TARGET_GOLD, TuningOverrides, tuningSchema, farmResources (+47 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.13
-Nodes (24): normalizeHazardId(), TO_RUNTIME, tilesInCategory(), applyRevealTiles(), applyTransformAdjacent(), applyTransformAll(), sweepAtCoords(), _applyExplosives() (+16 more)
+Nodes (21): selectTilesForPower(), applyRevealTiles(), applyTransformAdjacent(), sweepAtCoords(), _applyExplosives(), _applyFillBias(), _applyScatterHazard(), applyTapTargetPower() (+13 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.04
-Nodes (54): ChainCell, FarmGridCell, FarmHazardSpawn, FarmHazardsState, FireCell, FireHazard, tickFire(), tickWolves() (+46 more)
+Cohesion: 0.06
+Nodes (59): FoundSettlementBlock(), isTapTargetPower(), ChainCell, FISH_CATEGORY_KEYS, isPearlChainValid(), PearlGridCell, PearlState, spawnPearl() (+51 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.14
 Nodes (20): buildBuildingCostMatrix(), buildCostMatrix(), buildingList(), buildResourceCostMatrix(), buildToolCostMatrix(), columnFor(), COST_MATRIX_IDS, CostColumnOption (+12 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.10
-Nodes (26): compare(), describeCond(), evaluate(), factIdsIn(), isLeaf(), OP_SYM, zoneBoardKinds(), zoneBuildingIds() (+18 more)
+Cohesion: 0.08
+Nodes (38): compare(), describeCond(), evaluate(), factIdsIn(), isLeaf(), OP_SYM, zoneBoardKinds(), zoneBuildingIds() (+30 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.06
-Nodes (18): ICONS, ICONS, ICONS, ICONS, ICONS, ICONS, drawFireHazard(), drawOneRat() (+10 more)
+Cohesion: 0.05
+Nodes (11): ICONS, ICONS, ICONS, ICONS, ICONS, ICONS, ICONS, ICON_KEYS (+3 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.06
-Nodes (33): MapNode, REGIONS, KeeperEncounterModalProps, BirdView, CartoPayload, CloudView, computeStatus(), drawDashedLine() (+25 more)
+Nodes (31): MapNode, REGIONS, BirdView, CartoPayload, CloudView, drawDashedLine(), drawDashedQuadCurve(), drawDashedRect() (+23 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.22
-Nodes (13): CategoryTag(), dropCategories(), farmBoard(), hasAnyDrops(), hasZoneDetail(), humanizeCategory(), representativeTileForCategory(), SEASON_ORDER (+5 more)
+Cohesion: 0.10
+Nodes (27): FieldDoc, CategoryTag(), dropCategories(), farmBoard(), hasAnyDrops(), hasZoneDetail(), humanizeCategory(), representativeTileForCategory() (+19 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.04
-Nodes (68): AchievementReward, ACHIEVEMENTS, AchievementsSlice, tickAchievement(), TickAchievementResult, BuildingAbilityInst, initial, reduce() (+60 more)
+Nodes (69): AchievementReward, ACHIEVEMENTS, AchievementsSlice, tickAchievement(), TickAchievementResult, BuildingAbilityInst, initial, reduce() (+61 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.06
-Nodes (31): asFlagArr(), ChoiceCardProps, ChoicesBlock(), ChoicesBlockProps, CURRENCIES, FLAG_OPTIONS, FlagTags(), FlagTagsProps (+23 more)
+Cohesion: 0.14
+Nodes (22): authoredLotCount(), TOWN_MAPS, TierUpgradeBanner(), BUILDING_NAME, CELL, HEAD, NODE_BY_ID, resolveFact() (+14 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.11
 Nodes (25): ext(), neighbors(), openCraftingTab(), BoardTile, ChainSceneResult, chainUntil(), clearSave(), closeStoryModalIfOpen() (+17 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.09
-Nodes (33): isTapTargetPower(), OrdersScreenProps, QuestCardProps, Dispatch, PuzzleToolModal(), ToolView(), DEFAULT_PIN_KEYS, DEFAULT_TOOL_PINS (+25 more)
+Cohesion: 0.14
+Nodes (15): DEFAULT_PIN_KEYS, DEFAULT_TOOL_PINS, entryFromItem(), FARM_TOOL_KEYS, FISH_TOOL_KEYS, MINE_TOOL_KEYS, TOOL_BOARD_KIND_LABELS, TOOL_BOARD_KIND_ORDER (+7 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.06
-Nodes (35): MAP_EDGES, MAP_NODES, ActionButtonProps, cardStyle, CartographyScreen(), CartographyScreenProps, ChipTone, FoundSettlementBlockProps (+27 more)
+Cohesion: 0.04
+Nodes (46): MAP_EDGES, MAP_NODES, ActionButtonProps, cardStyle, CartographyScreen(), CartographyScreenProps, ChipTone, FoundSettlementBlockProps (+38 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.12
-Nodes (15): Bar(), BAR_HEIGHT, clamp01(), PIP_SIZE, ProgressTrackProps, Ring(), RING_SIZE, ShowValue (+7 more)
+Cohesion: 0.09
+Nodes (42): animChestOpen(), animCoinStack(), animCrown(), animGemPile(), animGoblet(), animGoldBars(), animGoldKey(), animMap() (+34 more)
 
 ### Community 33 - "Community 33"
 Cohesion: 0.08
 Nodes (21): AlmanacTierCard(), AlmanacTierCardProps, AlmanacTierDef, CATEGORY_DEFAULT, CATEGORY_META, CategoryMeta, DisplayQuest, DisplayReward (+13 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (24): BADGE_TONE, BadgeTone, closeBtnStyle, EndedState, OutcomeBadge, outcomeBadges(), P, panelStyle (+16 more)
 
 ### Community 35 - "Community 35"
@@ -438,44 +448,44 @@ Cohesion: 0.14
 Nodes (12): BestMomentCard(), BIOME_TAGLINES, BIOME_TITLES, BondRow(), formatDelta(), npcName(), pickTagline(), pickTitle() (+4 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.14
-Nodes (11): buildCrossCollectedCredits(), categoryOf(), cellKey(), CROSS_COLLECT_PAIRINGS, CrossCollectPathCell, CrossCollectTarget, DIRS4, findCrossCollectTargets() (+3 more)
+Cohesion: 0.29
+Nodes (9): categoryOf(), cellKey(), CROSS_COLLECT_PAIRINGS, CrossCollectPathCell, CrossCollectTarget, DIRS4, findCrossCollectTargets(), hazardLocked() (+1 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.06
-Nodes (40): applyFlagTriggers(), applyFlagTriggersWithResult(), evaluateFlagTriggers(), FLAG_CATEGORIES, flagCategory(), flagDef, FlagEvent, FlagGameState (+32 more)
+Nodes (33): FLAG_READS, isRegisteredFlag(), AUTO_CAT, CatDot(), CATS, collectFlags(), DraftLike, effectiveFlagTriggers() (+25 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.07
-Nodes (42): LOCATION_TOWN_CONFIGS, LocationTownConfig, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, TOWN_THEMES, TownBiomeConfig, TownPlotRect, TownTheme (+34 more)
+Nodes (34): LOCATION_TOWN_CONFIGS, LocationTownConfig, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, TOWN_THEMES, TownBiomeConfig, TownPlotRect, TownTheme (+26 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.06
-Nodes (57): buildRecipesByOutput(), CanonicalRecipeDto, canonicalRecipeEntries(), DraftRecipeDto, isRecord(), parseCanonicalRecipe(), parseDraftRecipe(), parseDraftRecipes() (+49 more)
+Cohesion: 0.16
+Nodes (26): buildRecipesByOutput(), CanonicalRecipeDto, canonicalRecipeEntries(), DraftRecipeDto, isRecord(), parseCanonicalRecipe(), parseDraftRecipe(), parseDraftRecipes() (+18 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.07
-Nodes (27): BUILDING_KEYS, BuildingIllustration, BUSH, FOUNTAIN, ORE, PINE, Pt, ROCK (+19 more)
+Cohesion: 0.19
+Nodes (13): DYNAMIC_PREFIXES_CANVAS, getUsedIconKeys(), HARDCODED_USAGE, isIconUsed(), _resetIconUsageCacheForTests(), SVG_USAGE_LITERALS, WIRED_ICON_USAGE, DecorationId (+5 more)
 
 ### Community 41 - "Community 41"
-Cohesion: 0.06
-Nodes (39): cx(), Size, SIZES, StatusChip(), StatusChipProps, Tone, TONES, ToneSpec (+31 more)
+Cohesion: 0.10
+Nodes (21): AbilityLike, AbilityParam, AbilitySpec(), AbilitySpecProps, asAbility(), formatDefault(), hasAbilitySpec(), humanize() (+13 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.06
-Nodes (37): itemCommonOptional, ItemEntry, ResourceItemEntry, TileItemEntry, ToolItemEntry, toolItemSchema, ItemKind, ItemKindValue (+29 more)
+Cohesion: 0.12
+Nodes (16): Ability, AbilityParam, BuildingAbilityRef, Hazard, HazardId, Item, NPC, Recipe (+8 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.11
-Nodes (13): BottomSheet(), BottomSheetProps, DragState, Dialog, DialogCtx, DialogCtxValue, DialogProps, ParchmentDialog() (+5 more)
+Cohesion: 0.12
+Nodes (12): BottomSheet(), BottomSheetProps, DragState, Dialog, DialogCtx, DialogCtxValue, DialogProps, SIZES (+4 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.12
-Nodes (21): canAffordDecor(), canCraft(), CraftingScreen(), CraftingScreenProps, DecorationBrowserItem(), DecorationDetail(), DecorBrowserItemProps, decorCostEntries() (+13 more)
+Cohesion: 0.09
+Nodes (35): canAffordDecor(), canCraft(), CraftingScreenProps, DecorationBrowserItem(), DecorationDetail(), DecorBrowserItemProps, decorCostEntries(), DecorDef (+27 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.08
-Nodes (30): COLORS, GameScreenEmbed(), GameScreenEmbedProps, GAME_SCREEN_IMAGE_IDS, GAME_SCREEN_IMAGES, gameScreenImageFor(), ATTR_RENAME, camelCaseProp() (+22 more)
+Nodes (31): UI_COLORS, TierLadderTable(), GameScreenEmbed(), GameScreenEmbedProps, GAME_SCREEN_IMAGE_IDS, GAME_SCREEN_IMAGES, gameScreenImageFor(), ATTR_RENAME (+23 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.06
@@ -486,56 +496,56 @@ Cohesion: 0.10
 Nodes (29): drawMagicDust(), drawArcaneMissile(), drawHeal(), drawIceShard(), drawWind(), ICONS, drawBackpack(), drawBuildHammer() (+21 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (25): boonEffectMult(), applyGift(), bondBand, bondModifier(), clamp(), decayBond(), gainBond(), GIFT_DELTAS (+17 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.08
-Nodes (25): defaultsForTileDiscoveryMethod(), getTileDiscoveryMethod(), TILE_DISCOVERY_METHOD_BY_ID, TILE_DISCOVERY_METHODS, TILE_DISCOVERY_PARAM_TYPES, TileDiscoveryMethod, groupByTier(), METHOD_COLOR (+17 more)
+Cohesion: 0.18
+Nodes (13): groupByTier(), METHOD_COLOR, MethodBadge(), methodColor(), methodDesc(), methodName(), methodsPresent(), ProgressionTimeline() (+5 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.08
-Nodes (28): useNotifier(), useViewDirection(), App(), DUST_MOTES, HearthPhaserGame, PhaserMount(), PhaserMountProps, RewardBurstPayload (+20 more)
+Nodes (27): useNotifier(), useViewDirection(), App(), DUST_MOTES, HearthPhaserGame, PhaserMount(), PhaserMountProps, RewardBurstPayload (+19 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.10
-Nodes (35): describeSchema(), fieldChildren(), FieldDoc, getTag(), isPassthrough(), isVerboseEnumType(), isZodObject(), numberTypeString() (+27 more)
+Cohesion: 0.11
+Nodes (30): describeSchema(), fieldChildren(), getTag(), isPassthrough(), isVerboseEnumType(), isZodObject(), numberTypeString(), readDescription() (+22 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.07
-Nodes (14): ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS (+6 more)
+Cohesion: 0.05
+Nodes (14): ANIMATIONS, ANIMATIONS, animShootingStar(), ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS, ANIMATIONS (+6 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.24
-Nodes (13): reset(), clearAllCostColumns(), clearAllCostEdits(), clearCostEdit(), CostEdits, edits, emit(), EMPTY (+5 more)
+Cohesion: 0.28
+Nodes (10): clearAllCostEdits(), clearCostEdit(), CostEdits, edits, emit(), EMPTY, listeners, persist() (+2 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.06
-Nodes (23): DrawCallback, IconAnimationTicker, FilterBar(), SegmentedFilter(), ALL_CATEGORIES, ALL_ENTRIES, ANIMATE_OPTIONS, CANVAS_ENTRIES (+15 more)
+Cohesion: 0.05
+Nodes (37): DrawCallback, IconAnimationTicker, FilterBar(), SegmentedFilter(), VARIANTS, VARIANTS, VARIANTS, SEASONAL_TILES (+29 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.11
 Nodes (9): COLORS, SceneInitData, SceneLayers, SceneLayout, SEASON_PALETTES, SeasonPalette, seasonRanges(), SeasonStripScene (+1 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.13
-Nodes (19): CaveInHazard, ChainCell, clearCaveIn(), GasVentHazard, HazardDef, HAZARDS, hazardsActive(), LavaCell (+11 more)
+Cohesion: 0.12
+Nodes (17): CaveInHazard, ChainCell, clearCaveIn(), GasVentHazard, HazardDef, hazardsActive(), LavaCell, LavaHazard (+9 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.14
-Nodes (17): ConceptTileDraw, conceptTilesBaseUrl(), GifPlayer, loadConceptGifPlayer(), conceptTilesPreloadReady(), hasConceptTileAnim(), players, preloadConceptTileGifs() (+9 more)
+Cohesion: 0.13
+Nodes (18): ConceptTileDraw, conceptTilesBaseUrl(), GifPlayer, loadConceptGifPlayer(), conceptTileAnim(), conceptTilesPreloadReady(), hasConceptTileAnim(), players (+10 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.09
-Nodes (22): resolveTransformKey(), dimStrategyForPower(), ChainCell, computeBakeScale(), hasValidChain(), BIOME_GOLD_TILE, boardFrameFor(), PATH_COLORS_INVALID (+14 more)
+Cohesion: 0.10
+Nodes (19): ChainCell, hasValidChain(), BIOME_GOLD_TILE, boardFrameFor(), PATH_COLORS_INVALID, PATH_COLORS_VALID, ToolPower, idleAnimTime() (+11 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.09
-Nodes (25): DetailProgress(), buildingName(), CategoryRowViewModel, displayKey(), getTileDetailViewModel(), statusFor(), TileDetailViewModel, ALL_HAZARDS (+17 more)
+Cohesion: 0.08
+Nodes (30): DetailProgress(), activeIdForKey(), buildingName(), CATEGORY_PREFIXES, CategoryRowViewModel, ChainCommit, displayKey(), getActivePool() (+22 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.06
-Nodes (41): AbilityDef, AbilityInstance, AbilityParamDef, biomeOptions(), categoryOptions(), ParamField(), toolOptions(), Card() (+33 more)
+Cohesion: 0.08
+Nodes (33): AbilityDef, AbilityInstance, AbilityParamDef, biomeOptions(), categoryOptions(), ParamField(), toolOptions(), Card() (+25 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.25
@@ -546,8 +556,8 @@ Cohesion: 0.07
 Nodes (8): drawStarBanner(), ICONS, motifCrossedSwords(), motifLeaf(), motifSword(), motifTriLeaf(), star5(), TIER
 
 ### Community 63 - "Community 63"
-Cohesion: 0.10
-Nodes (33): conceptTileAnim(), SEASONAL_TILES, seasonalArtActive(), seasonalMaxIdleFrames(), hasSeasonalTile(), hasSeasonalTileAnim(), REGISTRY, SEASONAL_TILE_KEYS (+25 more)
+Cohesion: 0.13
+Nodes (23): bakeFireTile(), bakeScaleFor(), canvasTexture(), currentSeasonName(), drawCuteVine(), drawTileIcon(), lighten(), makeTextures() (+15 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.08
@@ -555,27 +565,27 @@ Nodes (25): BOARD_SPOTS, BoardKind, BoardSpot, buildTownPlan(), Pt, seededRng(),
 
 ### Community 65 - "Community 65"
 Cohesion: 0.07
-Nodes (25): baseProps, BiomeResource, BoardFrame(), buildVisibleToolList(), CHAIN_STAGES, disarmOtherTools(), dispatchUseTool(), DragGhost() (+17 more)
+Nodes (29): baseProps, BiomeResource, BoardFrame(), buildVisibleToolList(), CHAIN_STAGES, disarmOtherTools(), dispatchUseTool(), DragState (+21 more)
 
 ### Community 66 - "Community 66"
-Cohesion: 0.11
-Nodes (18): NavProps, NpcDef, Rect, Tutorial(), TUTORIAL_COLORS, TutorialProps, useTargetRect(), advanceStep() (+10 more)
+Cohesion: 0.13
+Nodes (10): NavProps, NpcDef, Rect, Tutorial(), TUTORIAL_COLORS, TutorialProps, useTargetRect(), STEPS (+2 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.12
-Nodes (22): AbilitiesEditor(), abilitiesForScope(), ABILITY_BY_ID, ABILITY_SCOPES, AbilityEntry, defaultParamsFor(), getAbility(), TRIGGERS (+14 more)
+Cohesion: 0.10
+Nodes (23): AbilitiesEditor(), abilitiesForScope(), ABILITY_BY_ID, ABILITY_PARAM_TYPES, ABILITY_SCOPES, AbilityEntry, defaultParamsFor(), getAbility() (+15 more)
 
 ### Community 68 - "Community 68"
-Cohesion: 0.18
-Nodes (10): InventoryScreen(), InventoryScreenProps, PRIMARY_FILTERS, readViewMode(), saveViewMode(), useDebounced(), useRecentOrder(), useViewMode() (+2 more)
+Cohesion: 0.33
+Nodes (4): readViewMode(), saveViewMode(), accordionInitialState, accordionReducer()
 
 ### Community 69 - "Community 69"
-Cohesion: 0.13
-Nodes (20): assessAllBosses(), assessBoss(), bandFor(), BOSS_DIFFICULTY_TIERS, BOSS_TIER_LABEL, BossLike, MODIFIER_LABEL, ModifierInfo (+12 more)
+Cohesion: 0.07
+Nodes (37): assessAllBosses(), assessBoss(), bandFor(), BOSS_DIFFICULTY_TIERS, BOSS_TIER_LABEL, BossLike, MODIFIER_LABEL, ModifierInfo (+29 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.07
-Nodes (27): baseTagForKind(), CARGO_KEYS, FOOD_KEYS, INVENTORY_SOURCE_TAGS, INVENTORY_TAGS, ItemDef, itemHasTag(), sourceTagsForItem() (+19 more)
+Cohesion: 0.08
+Nodes (18): BiomeItemEntry, RESOURCE_TO_THRESHOLD, AccordionAction, AccordionState, BiomeResourceEntry, cachedRecipesByOutput, FilterMode, InventoryBrowserItem (+10 more)
 
 ### Community 71 - "Community 71"
 Cohesion: 0.12
@@ -590,32 +600,32 @@ Cohesion: 0.15
 Nodes (25): findBeat(), allZoneInventory(), baseState(), boardState(), boardWithSeason(), builtFromPlots(), farmGrid, fishGrid (+17 more)
 
 ### Community 74 - "Community 74"
-Cohesion: 0.09
-Nodes (19): multiTierRecipes, simpleRecipes, labelFor(), buildGraph(), BuildGraphResult, RecipeIn, WikiEdgeDef, WikiNodeDef (+11 more)
+Cohesion: 0.12
+Nodes (13): labelFor(), WikiNodeDef, DragState, ItemDef, PinchState, RecipeDef, STATION_COLORS, ViewState (+5 more)
 
 ### Community 75 - "Community 75"
-Cohesion: 0.17
-Nodes (23): FoundSettlementBlock(), KeeperEntry, keeperForType(), KeeperPath, keeperPathInfo, KEEPERS, KeeperType, biomeForSettlementType() (+15 more)
+Cohesion: 0.15
+Nodes (12): ToolCardProps, ToolEntry, ToolStripProps, ToolEntry, visibleTools(), buildToolList(), MobileDock(), MobileDockProps (+4 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.10
-Nodes (17): BossesScreenProps, ActionBtnProps, DocWithLegacyFullscreen, ElWithLegacyFullscreen, isFullscreen(), MainTab(), SettingsModalProps, SettingsTabProps (+9 more)
+Cohesion: 0.11
+Nodes (16): ActionBtnProps, DocWithLegacyFullscreen, ElWithLegacyFullscreen, isFullscreen(), MainTab(), SettingsModalProps, SettingsTabProps, TOGGLE_ROWS (+8 more)
 
 ### Community 77 - "Community 77"
 Cohesion: 0.09
 Nodes (8): drawClover(), drawDirt(), drawJam(), drawPlank(), ICONS, rr(), drawLeaf(), ICONS
 
 ### Community 78 - "Community 78"
-Cohesion: 0.12
-Nodes (19): BOARD_ANIM_ALIASES, BOARD_ANIMATION_NAMES, BOARD_ANIMATIONS, BoardAnimationEntry, demoBoardAnimResetMs(), resolveBoardAnimName(), FarmRun, applyBoardStateToScene() (+11 more)
+Cohesion: 0.11
+Nodes (20): BOARD_ANIM_ALIASES, BOARD_ANIMATION_NAMES, BOARD_ANIMATIONS, BoardAnimationEntry, demoBoardAnimResetMs(), resolveBoardAnimName(), FarmRun, applyBoardStateToScene() (+12 more)
 
 ### Community 79 - "Community 79"
-Cohesion: 0.05
-Nodes (45): ATTRACT_KEYS, attractsRats(), countAttractsRatTiles(), effectiveRatSpawnRate(), GridCell, ChainCell, DeadlyPestsPatch, isDeadlyToPests() (+37 more)
+Cohesion: 0.12
+Nodes (19): ChainCell, DeadlyPestsPatch, isDeadlyToPests(), Rat, tryDeadlyPestsKill(), ChainCell, FarmHazardsState, GridCell (+11 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.12
-Nodes (16): CanvasIcon(), Icon(), labelForKey(), Placeholder(), placeholderLetter(), SVG_REGISTRY, SvgRender, TONE_FILL (+8 more)
+Cohesion: 0.15
+Nodes (19): CanvasIcon(), hasIcon(), Icon(), labelForKey(), Placeholder(), placeholderLetter(), SVG_REGISTRY, SvgRender (+11 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.10
@@ -634,12 +644,12 @@ Cohesion: 0.12
 Nodes (22): CharterProps, ChoiceLogEntry, deriveTermState(), FilterChipProps, formatChoiceEntry(), FormattedChoiceEntry, formatTimestamp(), PACT_TERMS (+14 more)
 
 ### Community 85 - "Community 85"
-Cohesion: 0.20
-Nodes (24): animMannaAutumn(), animMannaSpring(), animMannaSummer(), animMannaWinter(), AUTUMN_PAL, autumnMotes(), BUMPS, drawMannaAutumn() (+16 more)
+Cohesion: 0.19
+Nodes (25): animMannaAutumn(), animMannaSpring(), animMannaSummer(), animMannaWinter(), AUTUMN_PAL, autumnMotes(), BUMPS, drawMannaAutumn() (+17 more)
 
 ### Community 86 - "Community 86"
-Cohesion: 0.09
-Nodes (11): escapeRegExp(), runAction(), AnnotatedVisualScenario, BASE_VISUAL_SCENARIOS, canvasDiff, domDiff, expectationOverrideById, tileRoutes (+3 more)
+Cohesion: 0.11
+Nodes (17): AnnotatedVisualScenario, BASE_VISUAL_SCENARIOS, canvasDiff, DiffOptions, domDiff, expectationOverrideById, tileRoutes, VisualAction (+9 more)
 
 ### Community 87 - "Community 87"
 Cohesion: 0.22
@@ -666,12 +676,12 @@ Cohesion: 0.24
 Nodes (6): INTERNAL_VISUAL_VIEWS, SMOKE_SCENARIOS, readManifest(), BALANCE_VISUAL_SCENARIOS, BALANCE_VISUAL_SMOKE_SCENARIO_IDS, domDiff
 
 ### Community 93 - "Community 93"
-Cohesion: 0.11
-Nodes (15): ReceiptChip, useReceiptChips(), UseReceiptChipsOpts, FishLike, Hud(), HudProps, SEASON_EFFECTS, Chip (+7 more)
+Cohesion: 0.08
+Nodes (21): ANCHORS, PillProps, SIZES, TONE_OUTLINE, TONE_SOFT, TONE_SOLID, ReceiptChip, useReceiptChips() (+13 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.14
-Nodes (17): beatTriggerToCond(), buildFactSnapshot(), condToTrigger(), findLeafValue(), isFlagOnlyCond(), isStateCond(), BeatTrigger, conditionMatches() (+9 more)
+Nodes (13): ChainCell, FarmGridCell, FarmHazardSpawn, FarmHazardsState, FireCell, FireHazard, rollFarmHazard(), tickFire() (+5 more)
 
 ### Community 95 - "Community 95"
 Cohesion: 0.21
@@ -686,8 +696,8 @@ Cohesion: 0.23
 Nodes (22): AvatarFrameOpts, drawAvatarFrame(), drawBram(), drawEmberDrake(), drawFrostmaw(), drawHead(), drawLiss(), drawMira() (+14 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.14
-Nodes (16): BossFeatureProps, BossModal(), BossModalProps, bossPortraitKey(), GlyphProps, BOSS_UI, BossUiEntry, ActionCard() (+8 more)
+Cohesion: 0.15
+Nodes (15): BossFeatureProps, BossModal(), bossPortraitKey(), GlyphProps, BOSS_UI, BossUiEntry, ActionCard(), Actions() (+7 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.20
@@ -698,24 +708,24 @@ Cohesion: 0.12
 Nodes (14): Density, DensitySpec, humanize(), ResourceCell(), ResourceCellProps, Status, Badge(), BADGE_TONE (+6 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.19
-Nodes (16): tileFamily(), canExtendChain(), CATEGORY_TO_FAMILIES, ChainTile, clamp(), contrastRatio(), GridCell, hex() (+8 more)
+Cohesion: 0.18
+Nodes (17): tileFamily(), canExtendChain(), CATEGORY_TO_FAMILIES, ChainTile, clamp(), contrastRatio(), GridCell, hex() (+9 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.12
-Nodes (18): buildHash(), FEATURE_VIEW_KEYS, featureModules, FeatureModuleShape, KNOWN_MODALS, KNOWN_VIEWS, parseHash(), RouteDescriptor (+10 more)
+Nodes (19): buildHash(), FEATURE_VIEW_KEYS, featureModules, FeatureModuleShape, KNOWN_MODALS, KNOWN_VIEWS, parseHash(), RouteDescriptor (+11 more)
 
 ### Community 103 - "Community 103"
-Cohesion: 0.33
-Nodes (8): STORAGE_KEYS, clearSave(), _flushPersist(), flushPersistState(), loadSavedState(), persistStateNow(), SavedState, VOLATILE
+Cohesion: 0.31
+Nodes (14): blankMask(), Mask, maskBandH(), maskBandV(), maskDisc(), maskRect(), on(), paintSandPaths() (+6 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.14
-Nodes (24): AnyRecord, BeatLineShape, ChoiceShape, KNOWN_OPS, sanitizeBeatLines(), sanitizeBeatOnComplete(), sanitizeBeatRepeatCooldown(), sanitizeBeatTrigger (+16 more)
+Cohesion: 0.13
+Nodes (25): AnyRecord, BeatLineShape, ChoiceShape, KNOWN_OPS, sanitizeBeatLines(), sanitizeBeatOnComplete(), sanitizeBeatRepeatCooldown(), sanitizeBeatTrigger (+17 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.27
-Nodes (17): drawChowder(), drawCobblepath(), drawExplosives(), drawFishOilBottled(), drawGemcrown(), drawGoldring(), drawHarvestpie(), drawHoneyroll() (+9 more)
+Cohesion: 0.25
+Nodes (18): drawChowder(), drawCobblepath(), drawExplosives(), drawFishOilBottled(), drawGemcrown(), drawGoldring(), drawHarvestpie(), drawHoneyroll() (+10 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.38
@@ -726,8 +736,8 @@ Cohesion: 0.17
 Nodes (13): asArrayValues(), buildCommandIndex(), BuildIndexOptions, CommandEntry, CommandPaletteProps, DEFAULT_TONE, KIND_TO_TAB, KIND_TONE (+5 more)
 
 ### Community 108 - "Community 108"
-Cohesion: 0.04
-Nodes (51): ABILITY_ID_VALUES, AbilityId, BIOME_ID_VALUES, BiomeId, BOARD_ANIMATION_ID_VALUES, BoardAnimationId, BOON_ID_VALUES, BOSS_ID_VALUES (+43 more)
+Cohesion: 0.12
+Nodes (17): BOARD_ANIMATION_ID_VALUES, BoardAnimationId, BOON_ID_VALUES, BUILDING_ID_VALUES, DECORATION_ID_VALUES, NPC_ID_VALUES, NpcId, STORY_FLAG_CATEGORY_ID_VALUES (+9 more)
 
 ### Community 109 - "Community 109"
 Cohesion: 0.13
@@ -774,8 +784,8 @@ Cohesion: 0.20
 Nodes (3): drawComet(), drawCrescentMoon(), ICONS
 
 ### Community 120 - "Community 120"
-Cohesion: 0.22
-Nodes (10): addCostColumn(), columns, CostColumns, emit(), EMPTY, getCostColumns(), listeners, persist() (+2 more)
+Cohesion: 0.19
+Nodes (14): CostMatrixTable(), reset(), addCostColumn(), clearAllCostColumns(), columns, CostColumns, emit(), EMPTY (+6 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.22
@@ -810,8 +820,8 @@ Cohesion: 0.44
 Nodes (13): animBarn(), animCastle(), animChurch(), animCottage(), animMarketStall(), animTent(), animTower(), animWatermill() (+5 more)
 
 ### Community 130 - "Community 130"
-Cohesion: 0.15
-Nodes (14): ANIMATIONS, animShootingStar(), animDrill(), animHammer(), animNail(), animPaintbrush(), animSaw(), animScissors() (+6 more)
+Cohesion: 0.33
+Nodes (13): ANIMATIONS, animDrill(), animHammer(), animNail(), animPaintbrush(), animSaw(), animScissors(), animScrewdriver() (+5 more)
 
 ### Community 131 - "Community 131"
 Cohesion: 0.25
@@ -827,35 +837,35 @@ Nodes (13): drawCoal(), drawCopper(), drawCrystalVein(), drawGoldNugget(), drawI
 
 ### Community 134 - "Community 134"
 Cohesion: 0.08
-Nodes (24): AchievementDef, AchievementsScreen(), AchievementsScreenProps, AchievementsState, ALL_RESOURCES, GlyphProps, GROUP_META, GroupMeta (+16 more)
+Nodes (25): AchievementDef, AchievementsScreen(), AchievementsScreenProps, AchievementsState, ALL_RESOURCES, GlyphProps, GROUP_META, GroupMeta (+17 more)
 
 ### Community 136 - "Community 136"
 Cohesion: 0.15
 Nodes (8): AutoFitText(), AutoFitTextProps, Screen, ScreenComponent, ScreenCtx, ScreenCtxValue, ScreenProps, SubBlockProps
 
 ### Community 137 - "Community 137"
-Cohesion: 0.39
-Nodes (11): animBell(), animCandyCane(), animGift(), animGingerbread(), animHolly(), animOrnament(), animSnowman(), animWreath() (+3 more)
+Cohesion: 0.35
+Nodes (12): ANIMATIONS, animBell(), animCandyCane(), animGift(), animGingerbread(), animHolly(), animOrnament(), animSnowman() (+4 more)
 
 ### Community 138 - "Community 138"
 Cohesion: 0.33
 Nodes (12): ANIMATIONS, animBell(), animDrum(), animFiddle(), animFlute(), animHorn(), animLute(), animPanFlute() (+4 more)
 
 ### Community 139 - "Community 139"
-Cohesion: 0.07
-Nodes (43): blankMask(), Mask, maskBandH(), maskBandV(), maskDisc(), maskRect(), on(), paintSandPaths() (+35 more)
+Cohesion: 0.06
+Nodes (29): AuthoredBoard, AuthoredLot, AuthoredProp, AuthoredTownMap, getTownMap(), GRASS_ALT, GRASS_FLOWER, Grid (+21 more)
 
 ### Community 140 - "Community 140"
 Cohesion: 0.06
-Nodes (27): isDialogsDisabled(), BeatChoice, BeatLine, bondAmountForBeat(), ChoiceOutcome, Bubble, BeatChoice, BeatLine (+19 more)
+Nodes (26): isDialogsDisabled(), BeatChoice, BeatLine, bondAmountForBeat(), ChoiceOutcome, Bubble, BeatChoice, BeatLine (+18 more)
 
 ### Community 141 - "Community 141"
-Cohesion: 0.32
+Cohesion: 0.28
 Nodes (7): cx(), MetricCard(), MetricCardProps, MetricGrid(), Tone, TONES, ToneSpec
 
 ### Community 142 - "Community 142"
-Cohesion: 0.19
-Nodes (11): AddColumnControl(), Cell(), CellProps, CostMatrixTable(), CostMatrixTableProps, fmt(), costColumnOptions(), CostMatrixCell (+3 more)
+Cohesion: 0.21
+Nodes (10): AddColumnControl(), Cell(), CellProps, CostMatrixTableProps, fmt(), costColumnOptions(), CostMatrixCell, CostMatrixColumn (+2 more)
 
 ### Community 143 - "Community 143"
 Cohesion: 0.39
@@ -866,8 +876,8 @@ Cohesion: 0.20
 Nodes (4): ANIMATIONS, animRainCloud(), animSnowCloud(), cloudBody()
 
 ### Community 145 - "Community 145"
-Cohesion: 0.24
-Nodes (12): DiffOptions, VisualAction, visualScenarioById(), buildVisualScenario(), BuiltVisualScenario, getVisualScenario(), ListedVisualScenario, listVisualScenarios() (+4 more)
+Cohesion: 0.22
+Nodes (11): AbilitySource, AggregatorState, BuildingDef, builtBuildingSources(), computeAggregatedAbilities(), discoveredTileSources(), PER_HIRE_DISCRETE_ABILITIES, TILE_AGGREGATOR_TRIGGERS (+3 more)
 
 ### Community 146 - "Community 146"
 Cohesion: 0.30
@@ -886,24 +896,24 @@ Cohesion: 0.18
 Nodes (3): drawQuestBook(), drawShadow(), ICONS
 
 ### Community 150 - "Community 150"
-Cohesion: 0.25
-Nodes (6): ANCHORS, PillProps, SIZES, TONE_OUTLINE, TONE_SOFT, TONE_SOLID
+Cohesion: 0.27
+Nodes (9): AggregatedAbilities, BiomeDef, getEffectivePool(), applyPoolWeightAdds(), applySeasonPoolMods(), applySpawnPoolModifiers(), SpawnPoolModifierInput, SEASON_POOL_MODS (+1 more)
 
 ### Community 151 - "Community 151"
 Cohesion: 0.43
 Nodes (7): drawBakeryStation(), drawDecorStation(), drawForgeStation(), drawLarderStation(), drawShadow(), drawWorkshopStation(), ICONS
 
 ### Community 152 - "Community 152"
-Cohesion: 0.10
-Nodes (29): animBuckwheatAutumn(), animBuckwheatSpring(), animBuckwheatSummer(), animBuckwheatWinter(), drawBuckwheatAutumn(), drawBuckwheatSpring(), drawBuckwheatSummer(), drawBuckwheatWinter() (+21 more)
+Cohesion: 0.26
+Nodes (13): animWheatAutumn(), animWheatSpring(), animWheatSummer(), animWheatWinter(), autumnHead(), drawWheatAutumn(), drawWheatSpring(), drawWheatSummer() (+5 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.12
-Nodes (18): UI_COLORS, ActOrder, computeBondTimeline(), totalAbsoluteBondDelta(), BondTimelinePanelProps, NpcRow(), MatchRow(), C (+10 more)
+Cohesion: 0.07
+Nodes (31): ActOrder, computeBondTimeline(), totalAbsoluteBondDelta(), BondTimelinePanelProps, NpcRow(), BUCKET_COLOR, BUCKET_LABEL, HeatCell() (+23 more)
 
 ### Community 154 - "Community 154"
-Cohesion: 0.40
-Nodes (4): TUNING_KEY_VALUES, TuningKey, TuningOverrides, tuningSchema
+Cohesion: 0.29
+Nodes (9): animBuckwheatAutumn(), animBuckwheatSpring(), animBuckwheatSummer(), animBuckwheatWinter(), drawBuckwheatAutumn(), drawBuckwheatSpring(), drawBuckwheatSummer(), drawBuckwheatWinter() (+1 more)
 
 ### Community 155 - "Community 155"
 Cohesion: 0.42
@@ -918,8 +928,8 @@ Cohesion: 0.22
 Nodes (4): ANIMATIONS, animCoffee(), animTea(), steamWisp()
 
 ### Community 158 - "Community 158"
-Cohesion: 0.06
-Nodes (49): ABILITY_PARAM_TYPES, BuildingRecipes(), BuildingRecipesProps, hasBuildingRecipes(), recipeLinksForBuilding(), RecipeRelations(), RecipeRelationsProps, chipForUsage() (+41 more)
+Cohesion: 0.12
+Nodes (22): AbilityInstanceBody(), AbilityInstanceBodyProps, AbilityParamSchema, conceptForParamType(), formatParamValue(), humanizeTrigger(), COMPACT_CONCEPTS, ConceptRefCard() (+14 more)
 
 ### Community 159 - "Community 159"
 Cohesion: 0.20
@@ -938,12 +948,12 @@ Cohesion: 0.29
 Nodes (8): drawAnchor(), drawCrab(), drawLighthouse(), drawOctopus(), drawSeahorse(), drawStarfish(), ICONS, shadow()
 
 ### Community 165 - "Community 165"
-Cohesion: 0.09
-Nodes (21): allSettlementBiomes, allTiles, realAbilityEntity, realBossEntity, realBuildingEntity, realCategoryEntity, realHazardEntity, realModalEntity (+13 more)
+Cohesion: 0.04
+Nodes (54): Effect, Category, CATEGORY_LABEL, CATEGORY_ORDER, childrenOf(), effectCategory(), EffectChip(), effectRef() (+46 more)
 
 ### Community 166 - "Community 166"
-Cohesion: 0.22
-Nodes (14): affectedBeatCount(), applyReplacements(), findInStory(), FindOpts, isReplacementSafe(), makeRegex(), replaceField(), TextEntry (+6 more)
+Cohesion: 0.26
+Nodes (10): baseTagForKind(), CARGO_KEYS, FOOD_KEYS, INVENTORY_SOURCE_TAGS, INVENTORY_TAGS, ItemDef, itemHasTag(), sourceTagsForItem() (+2 more)
 
 ### Community 168 - "Community 168"
 Cohesion: 0.24
@@ -951,27 +961,31 @@ Nodes (5): SMOKE_SCENARIOS, DESKTOP_ONLY, domDiff, STORY_EDITOR_VISUAL_SCENARIOS
 
 ### Community 169 - "Community 169"
 Cohesion: 0.11
-Nodes (23): PlaythroughPanel(), PlaythroughPanelProps, REASON_LABEL, STRATEGY_TONE, StrategyToneEntry, applyChoiceState(), asArr(), freezeState() (+15 more)
+Nodes (22): PlaythroughPanel(), PlaythroughPanelProps, REASON_LABEL, STRATEGY_TONE, StrategyToneEntry, applyChoiceState(), asArr(), freezeState() (+14 more)
+
+### Community 170 - "Community 170"
+Cohesion: 0.24
+Nodes (10): BoonCard(), BoonCardProps, BoonCost, BoonEffect, BoonLike, CURRENCY_META, hasBoonCard(), humanizeEffect() (+2 more)
 
 ### Community 171 - "Community 171"
 Cohesion: 0.33
 Nodes (8): drawBiomeFarm(), drawBiomeMine(), drawCaveIn(), drawGasVent(), drawLava(), drawMole(), drawShadow(), ICONS
 
 ### Community 172 - "Community 172"
-Cohesion: 0.05
-Nodes (45): BUCKET_COLOR, BUCKET_LABEL, HeatCell(), HeatmapRow, hexToRgb(), asArr(), bucketFor(), BUCKETS (+37 more)
+Cohesion: 0.03
+Nodes (85): BeatSideEffects, TreeEdgeProps, asFlagArr(), ChoiceCardProps, ChoicesBlock(), ChoicesBlockProps, CURRENCIES, FLAG_OPTIONS (+77 more)
 
 ### Community 174 - "Community 174"
 Cohesion: 0.20
 Nodes (5): HoldRef, SIZES, SizeSpec, StepperProps, StepperSize
 
 ### Community 175 - "Community 175"
-Cohesion: 0.39
-Nodes (6): defaultBoardAnimForPower(), defaultsForToolPower(), TOOL_POWER_BY_ID, TOOL_POWER_PARAM_TYPES, TOOL_POWERS, ToolPowerEntry
+Cohesion: 0.15
+Nodes (14): defaultBoardAnimForPower(), defaultsForToolPower(), dimStrategyForPower(), TOOL_POWER_BY_ID, TOOL_POWER_PARAM_TYPES, TOOL_POWERS, ToolPowerEntry, realAbilityId (+6 more)
 
 ### Community 176 - "Community 176"
-Cohesion: 0.36
-Nodes (10): getItem(), _assertKind(), assertResource(), assertTile(), assertTool(), isResource(), isTile(), isTool() (+2 more)
+Cohesion: 0.40
+Nodes (8): _assertKind(), assertResource(), assertTile(), assertTool(), isResource(), isTile(), isTool(), _warnedPairs
 
 ### Community 177 - "Community 177"
 Cohesion: 0.36
@@ -982,8 +996,8 @@ Cohesion: 0.33
 Nodes (6): drawCypress(), drawFir(), drawOak(), drawWillow(), ICONS, trunk()
 
 ### Community 180 - "Community 180"
-Cohesion: 0.15
-Nodes (16): useFocusTrap(), TileIcon(), turnBudgetAdditiveBonusForZone(), turnBudgetForZone(), activeTileForZoneCategory(), CATEGORY_GLYPH, CATEGORY_LABEL, StartFarmingModal() (+8 more)
+Cohesion: 0.35
+Nodes (8): advanceStep(), endTutorial(), gotoStep(), initial, persistSeen(), reduce(), TutorialSubstate, modalForStep()
 
 ### Community 181 - "Community 181"
 Cohesion: 0.12
@@ -994,32 +1008,28 @@ Cohesion: 0.28
 Nodes (7): DESIGN_ICONS_MAP, IconRenderer, IconRenderProps, registerDesignIcons(), ErrorBoundaryProps, ErrorBoundaryState, registerSvgIcons()
 
 ### Community 184 - "Community 184"
-Cohesion: 0.14
-Nodes (15): allCells(), cellAt(), DIRS4, HAZARD_LOCKED(), selectColumn(), selectComponent(), selectCross(), selectRow() (+7 more)
+Cohesion: 0.17
+Nodes (15): allCells(), cellAt(), DIRS4, HAZARD_LOCKED(), resolveTransformKey(), selectColumn(), selectComponent(), selectCross() (+7 more)
 
 ### Community 185 - "Community 185"
-Cohesion: 0.35
-Nodes (9): isFireHazardEnabled(), farmBoard(), mineBoard(), getPuzzleBoardKind(), getSpawnableHazardIds(), IMPLEMENTED_SPAWN_IDS, isToolVisibleOnPuzzleBoard(), SETTLEMENT_HAZARD_TO_SPAWN (+1 more)
+Cohesion: 0.26
+Nodes (11): normalizeHazardId(), TO_RUNTIME, isFireHazardEnabled(), farmBoard(), mineBoard(), getPuzzleBoardKind(), getSpawnableHazardIds(), IMPLEMENTED_SPAWN_IDS (+3 more)
 
 ### Community 186 - "Community 186"
 Cohesion: 0.40
 Nodes (8): CostMatrixPage(), buildCostReport(), collectChanges(), CostChange, renderJsonPatch(), renderMarkdown(), buildAllCostMatrices(), CostOverrides
 
 ### Community 187 - "Community 187"
-Cohesion: 0.10
-Nodes (30): useDraftHistory(), ACT_LABEL, asList(), compareBeatOrder(), escapeMd(), OrderingScore, outcomeBadgeBits(), reachableBeatIds() (+22 more)
+Cohesion: 0.06
+Nodes (66): ACT_LABEL, asList(), compareBeatOrder(), escapeMd(), OrderingScore, outcomeBadgeBits(), reachableBeatIds(), renderBeat() (+58 more)
 
 ### Community 189 - "Community 189"
 Cohesion: 0.50
 Nodes (7): drawDonkey(), drawHorse(), drawMammoth(), drawMoose(), horseBase(), ICONS, shadow()
 
-### Community 190 - "Community 190"
-Cohesion: 0.18
-Nodes (18): AbilityEffects, abilityLabel(), AbilitySpec, AbilitySummary(), BrowserDetailLayout(), BrowserGrid(), BrowserItemButton(), CostEntry (+10 more)
-
 ### Community 191 - "Community 191"
-Cohesion: 0.45
-Nodes (14): animChestOpen(), animCoinStack(), animCrown(), animGemPile(), animGoblet(), animGoldBars(), animGoldKey(), animMap() (+6 more)
+Cohesion: 0.27
+Nodes (7): hasKeeperEncounter(), KeeperEncounter(), KeeperEncounterProps, KeeperLike, KeeperPath, OutcomeCardProps, keeper()
 
 ### Community 192 - "Community 192"
 Cohesion: 0.17
@@ -1030,8 +1040,8 @@ Cohesion: 0.52
 Nodes (6): cowBase(), drawCow(), drawLonghorn(), drawTriceratops(), ICONS, shadow()
 
 ### Community 195 - "Community 195"
-Cohesion: 0.35
-Nodes (13): drawChestClosed(), drawChestOpen(), drawCoinStack(), drawCrown(), drawGemPile(), drawGoblet(), drawGoldBars(), drawGoldKey() (+5 more)
+Cohesion: 0.25
+Nodes (6): multiTierRecipes, simpleRecipes, buildGraph(), BuildGraphResult, RecipeIn, WikiEdgeDef
 
 ### Community 196 - "Community 196"
 Cohesion: 0.29
@@ -1046,76 +1056,60 @@ Cohesion: 0.29
 Nodes (6): ANIMATIONS, animCandle(), animMagicDust(), animPotionBlue(), animPotionRed(), rand()
 
 ### Community 200 - "Community 200"
-Cohesion: 0.18
-Nodes (13): Effect, Category, CATEGORY_LABEL, CATEGORY_ORDER, childrenOf(), effectCategory(), EffectChip(), effectRef() (+5 more)
+Cohesion: 0.25
+Nodes (4): escapeRegExp(), runAction(), VISUAL_SCENARIOS, SCENARIO_EXPECTATIONS
 
 ### Community 201 - "Community 201"
 Cohesion: 0.50
 Nodes (3): AbilityCatalogEntry, filterAbilityCatalog(), CATALOG
 
 ### Community 202 - "Community 202"
-Cohesion: 0.21
-Nodes (10): categoriesForSubCategory(), CATEGORY_OF, CATEGORY_TO_SUBCATEGORY, groupedByCategory, SUB_CATEGORIES, SUB_CATEGORY_ICONS, SUB_CATEGORY_LABELS, TILE_CATEGORY_COLORS (+2 more)
+Cohesion: 0.11
+Nodes (18): CATEGORIES, categoriesForSubCategory(), CATEGORY_OF, CATEGORY_TO_SUBCATEGORY, groupedByCategory, SUB_CATEGORIES, SUB_CATEGORY_ICONS, SUB_CATEGORY_LABELS (+10 more)
 
 ### Community 204 - "Community 204"
 Cohesion: 0.48
 Nodes (6): drawLockbox(), drawPlayerScythe(), drawReshuffleHorn(), drawSeedpack(), drawShadow(), ICONS
 
 ### Community 208 - "Community 208"
-Cohesion: 0.33
-Nodes (4): WikiEntry, TileCategoryGroup, groupToolEntries(), ToolBoardKindGroup
+Cohesion: 0.43
+Nodes (7): drawFireHazard(), drawOneRat(), drawRatsHazard(), drawShadow(), drawSmokeHazard(), drawWolfHazard(), ICONS
 
 ### Community 210 - "Community 210"
-Cohesion: 0.33
-Nodes (5): flagCategories, flagNewEntrySchema, FlagPatch, flagPatchSchema, flagsOverridesSchema
+Cohesion: 0.39
+Nodes (5): ATTRACT_KEYS, attractsRats(), countAttractsRatTiles(), effectiveRatSpawnRate(), GridCell
 
 ### Community 211 - "Community 211"
-Cohesion: 0.11
-Nodes (28): advanceTransition(), Clip, drawFrame(), ensureSeasonalArtLoaded(), fallbackIdleIndex(), IDLE_FILES, loadListeners, paintSeasonalArt() (+20 more)
+Cohesion: 0.10
+Nodes (33): advanceTransition(), Clip, drawFrame(), ensureSeasonalArtLoaded(), fallbackIdleIndex(), IDLE_FILES, loadListeners, onSeasonalArtLoaded() (+25 more)
 
 ### Community 213 - "Community 213"
 Cohesion: 0.21
 Nodes (13): Body(), CloseButton(), CloseButtonProps, cx(), FeaturePanelComponent, FeaturePanelProps, Header(), HeaderProps (+5 more)
 
 ### Community 214 - "Community 214"
-Cohesion: 0.06
-Nodes (43): ResourceKey, FishState, HIGH_TIDE_POOL, initial, LOW_TIDE_POOL, mutateBottomRow(), reduce(), BIOMES (+35 more)
+Cohesion: 0.25
+Nodes (9): FishState, HIGH_TIDE_POOL, initial, LOW_TIDE_POOL, mutateBottomRow(), reduce(), FISH_TILE_POOL, fishStateOnBoard() (+1 more)
 
 ### Community 215 - "Community 215"
 Cohesion: 0.33
 Nodes (10): drawBell(), drawDrum(), drawFiddle(), drawFlute(), drawHorn(), drawLute(), drawPanFlute(), drawTambourine() (+2 more)
 
 ### Community 217 - "Community 217"
-Cohesion: 0.33
-Nodes (5): buildingIdSchema, zoneBoardsPatchSchema, tileItemSchema, zoneOverrideSchema, zonesOverridesSchema
-
-### Community 218 - "Community 218"
-Cohesion: 0.39
-Nodes (5): emptyHistory(), History, pushHistoryEntry(), redoHistoryState(), undoHistoryState()
+Cohesion: 0.29
+Nodes (6): ITEM_ALIAS_VALUES, ItemAliasKey, ItemKey, TILE_KEY_VALUES, TileKey, TOOL_KEY_VALUES
 
 ### Community 220 - "Community 220"
 Cohesion: 0.29
 Nodes (3): OptionLike, SegmentedControl, SegmentedControlProps
 
-### Community 221 - "Community 221"
-Cohesion: 0.38
-Nodes (5): FLAG_READS, directFlagReads(), HERE, SRC, walk()
-
 ### Community 226 - "Community 226"
-Cohesion: 0.09
-Nodes (30): CANONICAL_BUILDING_KEYS, CategoryPage(), CategoryPageProps, COST_MATRIX_CONCEPTS, enrichEntry(), conceptHeadlineStats(), distinctBiomesFromEntries(), distinctStationCount() (+22 more)
+Cohesion: 0.04
+Nodes (42): COLORS, hexToCss(), TileSwatch(), TD, TH, WorkerComparison(), REAL_ITEM_CONCEPT, ICON_CACHE (+34 more)
 
 ### Community 249 - "Community 249"
 Cohesion: 0.12
-Nodes (9): BlastResult, Board, TransformResult, AnyCell, AnyGrid, applyAreaBlast(), CellCoord, MutableCell (+1 more)
-
-### Community 253 - "Community 253"
-Cohesion: 0.16
-Nodes (9): ButtonProps, SIZES, TONE_SOFT, TONE_SOLID, BiomePicker(), BiomePickerProps, biomesForType(), SettlementBiomeDef (+1 more)
-
-### Community 254 - "Community 254"
-Cohesion: 0.25
-Nodes (3): MapPayload, PhaserMapProps, tapHandler
+Nodes (12): BlastResult, Board, TransformResult, AnyCell, AnyGrid, applyAreaBlast(), applyTransformAll(), CellCoord (+4 more)
 
 ### Community 255 - "Community 255"
 Cohesion: 0.26
@@ -1126,24 +1120,24 @@ Cohesion: 0.33
 Nodes (4): escapeRegExp(), runAction(), SMOKE_SCENARIOS, VISUAL_DESKTOP_SMOKE_SCENARIO_IDS
 
 ## Knowledge Gaps
-- **1394 isolated node(s):** `ErrorBoundaryState`, `ErrorBoundaryProps`, `HearthPhaserGame`, `RewardBurstPayload`, `PhaserMountProps` (+1389 more)
+- **1402 isolated node(s):** `ErrorBoundaryState`, `ErrorBoundaryProps`, `HearthPhaserGame`, `RewardBurstPayload`, `PhaserMountProps` (+1397 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **40 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `UI_COLORS` connect `Community 153` to `Community 1`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 13`, `Community 141`, `Community 142`, `Community 18`, `Community 26`, `Community 28`, `Community 158`, `Community 34`, `Community 37`, `Community 166`, `Community 41`, `Community 169`, `Community 172`, `Community 45`, `Community 49`, `Community 51`, `Community 54`, `Community 60`, `Community 66`, `Community 69`, `Community 200`, `Community 89`, `Community 96`, `Community 226`, `Community 107`, `Community 123`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **Why does `GameState` connect `Community 5` to `Community 0`, `Community 2`, `Community 4`, `Community 134`, `Community 8`, `Community 140`, `Community 19`, `Community 20`, `Community 21`, `Community 27`, `Community 30`, `Community 31`, `Community 33`, `Community 35`, `Community 38`, `Community 43`, `Community 44`, `Community 48`, `Community 50`, `Community 180`, `Community 181`, `Community 56`, `Community 185`, `Community 59`, `Community 190`, `Community 65`, `Community 66`, `Community 68`, `Community 70`, `Community 71`, `Community 73`, `Community 75`, `Community 76`, `Community 79`, `Community 84`, `Community 214`, `Community 90`, `Community 93`, `Community 98`, `Community 101`, `Community 102`, `Community 103`, `Community 106`, `Community 255`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
-- **Why does `COLORS` connect `Community 45` to `Community 1`, `Community 9`, `Community 10`, `Community 13`, `Community 142`, `Community 26`, `Community 158`, `Community 37`, `Community 41`, `Community 49`, `Community 51`, `Community 54`, `Community 60`, `Community 69`, `Community 200`, `Community 89`, `Community 96`, `Community 226`, `Community 107`, `Community 123`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `UI_COLORS` connect `Community 45` to `Community 1`, `Community 6`, `Community 9`, `Community 10`, `Community 141`, `Community 13`, `Community 142`, `Community 18`, `Community 153`, `Community 26`, `Community 28`, `Community 158`, `Community 34`, `Community 165`, `Community 37`, `Community 41`, `Community 170`, `Community 169`, `Community 172`, `Community 49`, `Community 51`, `Community 54`, `Community 187`, `Community 60`, `Community 191`, `Community 66`, `Community 69`, `Community 89`, `Community 96`, `Community 226`, `Community 107`, `Community 123`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+- **Why does `GameState` connect `Community 5` to `Community 0`, `Community 2`, `Community 4`, `Community 134`, `Community 7`, `Community 8`, `Community 140`, `Community 145`, `Community 19`, `Community 20`, `Community 21`, `Community 150`, `Community 27`, `Community 31`, `Community 33`, `Community 35`, `Community 38`, `Community 44`, `Community 48`, `Community 50`, `Community 180`, `Community 181`, `Community 56`, `Community 185`, `Community 59`, `Community 65`, `Community 66`, `Community 70`, `Community 71`, `Community 73`, `Community 75`, `Community 76`, `Community 79`, `Community 84`, `Community 214`, `Community 90`, `Community 93`, `Community 94`, `Community 98`, `Community 101`, `Community 102`, `Community 106`, `Community 255`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `TownScene` connect `Community 135` to `Community 14`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `ErrorBoundaryState`, `ErrorBoundaryProps`, `HearthPhaserGame` to the rest of the system?**
-  _1394 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1402 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.04087213599408721 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.045347360783602395 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.05632360471070148 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03386155129274395 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.09308510638297872 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06628621597892889 - nodes in this community are weakly interconnected._
