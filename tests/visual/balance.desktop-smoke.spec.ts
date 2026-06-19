@@ -8,6 +8,11 @@ for (const scenario of SMOKE_SCENARIOS) {
     await page.addInitScript(() => { window.localStorage.clear(); });
     await page.goto(`./b/${scenario.hash || ''}`);
     await page.waitForSelector('#root');
+    // The wiki main content is lazy-loaded behind <Suspense>; under parallel
+    // CPU load a fixed wait can screenshot the "Loading…" fallback. Wait for the
+    // resolved content wrapper instead so captures are deterministic.
+    await page.waitForSelector('.wiki-reveal', { state: 'attached' });
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading…'));
     await page.waitForTimeout(250);
     const screenshot = await page.locator('#root').screenshot({ animations: 'disabled', caret: 'hide' });
     expect(screenshot).toMatchSnapshot(`${scenario.id}.png`, { ...scenario.diff });

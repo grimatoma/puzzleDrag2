@@ -14,6 +14,7 @@ interface VisualBridgeApi {
   loadScenario: (id: string) => Promise<{ id: string; view?: string; modal?: unknown }>;
   click: (selector: string) => boolean;
   hover: (selector: string) => boolean;
+  enterBoard: (args?: { kind?: string }) => boolean;
   holdChain: (opts: { key: string; length: number }) => Promise<unknown>;
   playBoardAnimation: (opts: { name: string; tint?: unknown; pattern?: string }) => unknown;
   syncScene: () => boolean;
@@ -28,6 +29,12 @@ declare global {
     __hearthVisual?: VisualBridgeApi;
     __hearthVisualScenarioState?: unknown;
     __phaserScene?: GameScene | null;
+    /**
+     * Test-only board-entry hook installed by TownPhaserCanvas while the visual
+     * harness is active. Invokes the same handler a real tap on a Phaser
+     * board-entry tile fires (e.g. opening the Start Farming modal).
+     */
+    __hearthTownEnterBoard?: ((kind: string) => void) | undefined;
   }
 
   var __HEARTH_VISUAL_TESTING__: boolean | undefined;

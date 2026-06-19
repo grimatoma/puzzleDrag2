@@ -46,6 +46,9 @@ const clickText = (text: string): VisualAction => ({ type: "clickText", text });
 const clickPattern = (pattern: RegExp | string): VisualAction => ({ type: "clickRole", role: "button", namePattern: pattern });
 const hoverText = (text: string): VisualAction => ({ type: "hoverText", text });
 const api = (method: string, args?: Record<string, unknown>): VisualAction => ({ type: "api", method, args });
+// Enter a town board (farm/mine/fish). The board-entry tiles are Phaser canvas
+// objects with no DOM affordance, so we drive the real handler via the bridge.
+const enterBoard = (kind: string): VisualAction => api("enterBoard", { kind });
 
 const tileRoutes = [
   ["tiles-farm-grass", "#/tiles/farm/grass"],
@@ -72,10 +75,10 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "town-mine-settlement", state: "mineTown", hash: "#/town", diff: domDiff },
   { id: "town-harbor-settlement", state: "harborTown", hash: "#/town", diff: domDiff },
 
-  { id: "start-farming-default", state: "fresh", hash: "#/town", actions: [click("Enter Farm Field")], diff: domDiff },
-  { id: "start-farming-tile-chooser", state: "rich", hash: "#/town", actions: [click("Enter Farm Field"), clickPattern("Grass selected")], diff: domDiff },
+  { id: "start-farming-default", state: "fresh", hash: "#/town", actions: [enterBoard("farm")], diff: domDiff },
+  { id: "start-farming-tile-chooser", state: "rich", hash: "#/town", actions: [enterBoard("farm"), clickPattern("Grass selected")], diff: domDiff },
   { id: "entry-mine-locked", state: "mineLocked", hash: "#/town", diff: domDiff },
-  { id: "entry-mine-provision-empty", state: "mineTownNoFood", hash: "#/town", actions: [click("Enter Mine")], diff: domDiff },
+  { id: "entry-mine-provision-empty", state: "mineTownNoFood", hash: "#/town", actions: [enterBoard("mine")], diff: domDiff },
 
   { id: "board-farm-idle", state: "boardFarm", hash: "#/board", diff: canvasDiff },
   { id: "board-anim-demo", state: "boardFarm", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },

@@ -359,6 +359,15 @@ export function installVisualTestingBridge({ getState, dispatch }: {
     },
     click: (selector: string) => clickSelector(selector),
     hover: (selector: string) => hoverSelector(selector),
+    // Drive entry into a town board (farm/mine/fish). The board-entry tiles are
+    // Phaser canvas objects with no DOM affordance, so the harness can't click
+    // them via a selector; this fires the same handler a real tap would.
+    enterBoard: (args: { kind?: string } = {}) => {
+      const enter = window.__hearthTownEnterBoard;
+      if (typeof enter !== "function") return false;
+      enter(args.kind ?? "farm");
+      return true;
+    },
     holdChain,
     playBoardAnimation: (opts: { name: string; tint?: unknown; pattern?: string }) => playBoardAnimation(opts, api),
     syncScene: () => applyBoardStateToScene(window.__hearthVisualScenarioState ?? getState()),

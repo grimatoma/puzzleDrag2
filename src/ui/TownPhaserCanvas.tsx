@@ -194,6 +194,15 @@ export default function TownPhaserCanvas({
                 scene.events.on("town.clickboard", (kind: string) => {
                   onClickBoardRef.current(kind);
                 });
+
+                // Test-only handle: the Phaser board-entry tiles are canvas
+                // objects with no DOM affordance, so the visual harness cannot
+                // click them via getByRole. Expose the same handler a real tap
+                // fires so the bridge can drive board entry (e.g. opening the
+                // Start Farming modal). Mirrors window.__phaserScene.
+                if (typeof window !== "undefined" && window.__HEARTH_VISUAL_TESTING__) {
+                  window.__hearthTownEnterBoard = (kind: string) => onClickBoardRef.current(kind);
+                }
               }
             },
           },
@@ -270,6 +279,9 @@ export default function TownPhaserCanvas({
         game.__resizeObserver?.disconnect();
         game.destroy(true);
         gameRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.__hearthTownEnterBoard) {
+        window.__hearthTownEnterBoard = undefined;
       }
     };
   }, []);

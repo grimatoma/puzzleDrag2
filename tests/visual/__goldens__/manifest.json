@@ -131,15 +131,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterBoard",
+        "args": {
+          "kind": "farm"
+        }
       }
     ],
     "expectation": "Scenario start-farming-default renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -505,15 +507,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Mine"
+        "type": "api",
+        "method": "enterBoard",
+        "args": {
+          "kind": "mine"
+        }
       }
     ],
     "expectation": "Scenario entry-mine-provision-empty renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Mine.",
+      "Apply action api:enterBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -819,15 +823,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterBoard",
+        "args": {
+          "kind": "farm"
+        }
       }
     ],
     "expectation": "Scenario start-farming-default renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -837,9 +843,11 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterBoard",
+        "args": {
+          "kind": "farm"
+        }
       },
       {
         "type": "clickRole",
@@ -850,7 +858,7 @@
     "expectation": "Scenario start-farming-tile-chooser renders correctly at #/town after 2 scripted actions.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterBoard.",
       "Apply action clickRole:button:Grass selected.",
       "Compare UI and canvas output to the golden image."
     ]
