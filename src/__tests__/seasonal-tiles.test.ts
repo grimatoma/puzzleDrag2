@@ -5,6 +5,12 @@ import {
   seasonalTileAnim,
   hasSeasonalTile,
   hasSeasonalTileAnim,
+  seasonalTileTransition,
+  hasSeasonalTransition,
+  seasonalTileHasTransitions,
+  seasonalTilePrefersVector,
+  seasonalVectorAdvance,
+  resetSeasonalVectorState,
   SEASONAL_TILE_KEYS,
 } from "../textures/seasonal/seasonalTiles.js";
 import { SEASON_NAMES, type SeasonName } from "../textures/seasonal/types.js";
@@ -17,6 +23,10 @@ const GRAIN_KEYS = [
   "tile_grain_rice",
   "tile_grain_manna",
 ];
+
+// The all-vector showcase tiles: per-season draw+anim AND forward transitions.
+const SHOWCASE_KEYS = ["tile_tree_oak", "tile_flower_pansy", "tile_fruit_apple"];
+const ALL_KEYS = [...GRAIN_KEYS, ...SHOWCASE_KEYS];
 
 // Minimal CanvasRenderingContext2D stub: every method is a no-op, gradient
 // factories return an object with addColorStop. Exercises control flow of every
@@ -41,9 +51,9 @@ function makeStubCtx(): CanvasRenderingContext2D {
 }
 
 describe("seasonal tiles (grain pilot)", () => {
-  it("registers exactly the 5 grain keys", () => {
-    expect([...SEASONAL_TILE_KEYS].sort()).toEqual([...GRAIN_KEYS].sort());
-    for (const k of GRAIN_KEYS) expect(hasSeasonalTile(k)).toBe(true);
+  it("registers the grain pilot + the vector showcase keys", () => {
+    expect([...SEASONAL_TILE_KEYS].sort()).toEqual([...ALL_KEYS].sort());
+    for (const k of ALL_KEYS) expect(hasSeasonalTile(k)).toBe(true);
     expect(hasSeasonalTile("tile_grass_grass")).toBe(false);
   });
 
@@ -69,7 +79,7 @@ describe("seasonal tiles (grain pilot)", () => {
 
   it("seasonalTileDraw / seasonalTileAnim run without throwing across t-samples", () => {
     const ctx = makeStubCtx();
-    for (const key of GRAIN_KEYS) {
+    for (const key of ALL_KEYS) {
       for (const season of SEASON_NAMES) {
         const draw = seasonalTileDraw(key, season);
         expect(draw, `${key}/${season}`).toBeTypeOf("function");
@@ -90,5 +100,68 @@ describe("seasonal tiles (grain pilot)", () => {
     expect(hasSeasonalTileAnim("tile_grain_wheat", null)).toBe(false);
     // Non-seasonal key with no base icon animation → null.
     expect(seasonalTileAnim("tile_not_a_seasonal_key", "Spring" as SeasonName)).toBeNull();
+  });
+});
+
+describe("seasonal tile forward transitions (vector showcase)", () => {
+  it("only the showcase keys carry transitions, and prefer vector over baked art", () => {
+    for (const key of SHOWCASE_KEYS) {
+      expect(seasonalTileHasTransitions(key), key).toBe(true);
+      expect(seasonalTilePrefersVector(key), key).toBe(true);
+    }
+    for (const key of GRAIN_KEYS) {
+      expect(seasonalTileHasTransitions(key), key).toBe(false);
+      expect(seasonalTilePrefersVector(key), key).toBe(false);
+    }
+  });
+
+  it("each showcase key has all three forward transitions (0,1,2) and no winter→spring", () => {
+    for (const key of SHOWCASE_KEYS) {
+      for (const fromIdx of [0, 1, 2]) {
+        expect(hasSeasonalTransition(key, fromIdx), `${key}#${fromIdx}`).toBe(true);
+        expect(seasonalTileTransition(key, fromIdx), `${key}#${fromIdx}`).toBeTypeOf("function");
+      }
+      expect(hasSeasonalTransition(key, 3), `${key}#3`).toBe(false);
+      expect(seasonalTileTransition(key, 3), `${key}#3`).toBeNull();
+    }
+  });
+
+  it("transitions run without throwing across p-samples (incl. out-of-range)", () => {
+    const ctx = makeStubCtx();
+    for (const key of SHOWCASE_KEYS) {
+      for (const fromIdx of [0, 1, 2]) {
+        const fn = seasonalTileTransition(key, fromIdx)!;
+        for (const p of [-0.1, 0, 0.13, 0.5, 0.87, 1, 1.2]) {
+          expect(() => fn(ctx, p), `${key}#${fromIdx} @ ${p}`).not.toThrow();
+        }
+      }
+    }
+  });
+
+  it("seasonalVectorAdvance plays a forward step once then settles into the idle", () => {
+    resetSeasonalVectorState();
+    const key = "tile_tree_oak";
+    // First sighting in Spring: settle, no transition.
+    expect(seasonalVectorAdvance(key, "Spring", 0).transitioning).toBe(false);
+    // Season flips to Summer → a forward morph begins (fromIdx 0) and progresses.
+    const a = seasonalVectorAdvance(key, "Summer", 0);
+    expect(a.transitioning).toBe(true);
+    expect(a.fromIdx).toBe(0);
+    expect(a.p).toBeGreaterThanOrEqual(0);
+    const b = seasonalVectorAdvance(key, "Summer", 0.7);
+    expect(b.transitioning).toBe(true);
+    expect(b.p).toBeGreaterThan(a.p);
+    // Past the transition duration it settles — no longer transitioning.
+    expect(seasonalVectorAdvance(key, "Summer", 5).transitioning).toBe(false);
+  });
+
+  it("seasonalVectorAdvance snaps (no morph) on a non-adjacent jump or season reset", () => {
+    resetSeasonalVectorState();
+    const key = "tile_flower_pansy";
+    expect(seasonalVectorAdvance(key, "Spring", 0).transitioning).toBe(false);
+    // Spring → Autumn skips Summer: snap, don't morph.
+    expect(seasonalVectorAdvance(key, "Autumn", 1).transitioning).toBe(false);
+    // Autumn → Spring (new run wraps backward): snap, don't morph.
+    expect(seasonalVectorAdvance(key, "Spring", 2).transitioning).toBe(false);
   });
 });
