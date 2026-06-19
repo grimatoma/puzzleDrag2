@@ -21,6 +21,7 @@
 
 import { SEASON_NAMES, type SeasonName } from "./types.js";
 import { SEASONAL_MANIFEST } from "virtual:seasonal-subjects";
+import { VECTOR_PREFER_KEYS } from "./vectorPreferKeys.js";
 
 const DRAW = 64;        // px the art is blitted at, centered, in the 74px tile (any native frame size)
 const IDLE_MS = 130;    // ms per idle frame
@@ -33,8 +34,12 @@ const IDLE_FILES = ["idle-spring.png", "idle-summer.png", "idle-autumn.png", "id
 const TRANS_FILES = ["trans-spring-summer.png", "trans-summer-autumn.png", "trans-autumn-winter.png"] as const;
 
 /** tile key (== public/seasonal-tiles/<dir>/ folder name) -> the PNG filenames it ships,
- *  discovered at build time. `?? {}` keeps non-Vite tooling happy. */
-const MANIFEST: Record<string, string[]> = SEASONAL_MANIFEST ?? {};
+ *  discovered at build time. `?? {}` keeps non-Vite tooling happy. Keys claimed by the
+ *  all-vector showcase set are dropped here so their summer-anchor PNGs are ignored and
+ *  the hand-drawn vector art renders instead (the files stay on disk for an A/B). */
+const MANIFEST: Record<string, string[]> = Object.fromEntries(
+  Object.entries(SEASONAL_MANIFEST ?? {}).filter(([key]) => !VECTOR_PREFER_KEYS.has(key)),
+);
 
 /** Every tile key that has a seasonal-art folder (the *intent* set — used by menu icons
  *  to know a baked reference may exist and to kick the load). A key here can still be

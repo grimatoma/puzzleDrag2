@@ -5,7 +5,14 @@ import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 import { getRegistry } from "./types/phaserRegistry.js";
-import { seasonalTileDraw, seasonalTileAnim, SEASONAL_TILE_KEYS } from "./textures/seasonal/seasonalTiles.js";
+import {
+  seasonalTileDraw,
+  seasonalTileAnim,
+  seasonalTileTransition,
+  seasonalTileHasTransitions,
+  seasonalTilePrefersVector,
+  SEASONAL_TILE_KEYS,
+} from "./textures/seasonal/seasonalTiles.js";
 import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalTransFrame, seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
@@ -79,6 +86,10 @@ export interface SeasonalBake {
   idleFrame?: number;
   /** Bake `frame` of the `fromIdx → fromIdx+1` season transition clip (lockstep). */
   trans?: { fromIdx: number; frame: number };
+  /** Draw the procedural VECTOR forward transition `fromIdx → fromIdx+1` at
+   *  progress `p` (0..1) — the vector counterpart of `trans`, self-detected by
+   *  the board loop on a season flip (see `seasonalVectorAdvance`). */
+  vtrans?: { fromIdx: number; p: number };
 }
 
 export function paintTileCanvas(
@@ -125,11 +136,19 @@ export function paintTileCanvas(
   ctx.translate(w / 2, h / 2);
   // Tiles with discovered PNG art render pre-baked seasonal art (idle loop + forward
   // transitions); it fully replaces the procedural icon once any season has loaded.
-  const baked = seasonalArtActive(res.key);
+  // EXCEPT tiles authored with a full vector lifecycle (per-season draw+anim AND
+  // forward transitions) — those render their hand-drawn VECTOR art even when a
+  // baked PNG summer-anchor exists, so the vector animation wins over the pixel one.
+  const baked = seasonalArtActive(res.key) && !seasonalTilePrefersVector(res.key);
   const conceptAnim =
     !baked && isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
-  const anim = !baked && !conceptAnim && t != null && season ? seasonalTileAnim(res.key, season) : null;
-  const sdraw = !baked && !conceptAnim && season ? seasonalTileDraw(res.key, season) : null;
+  // A self-detected forward season transition (vector) takes the icon slot for the
+  // frame it's active; otherwise the per-season anim/static draw resolves as usual.
+  const vtrans =
+    !baked && !conceptAnim && bake?.vtrans && seasonalTileHasTransitions(res.key) ? bake.vtrans : null;
+  const anim =
+    !baked && !conceptAnim && !vtrans && t != null && season ? seasonalTileAnim(res.key, season) : null;
+  const sdraw = !baked && !conceptAnim && !vtrans && season ? seasonalTileDraw(res.key, season) : null;
   if (baked) {
     // Frame-bank baking: a specific idle frame (per-tile idle slot) or the lockstep
     // transition frame. Without a `bake` selector, fall back to the time-driven loop.
@@ -137,6 +156,7 @@ export function paintTileCanvas(
     else if (bake?.idleFrame != null) paintSeasonalIdleFrame(ctx, res.key, season, bake.idleFrame);
     else paintSeasonalArt(ctx, res.key, season, t ?? 0);
   } else if (conceptAnim) conceptAnim(ctx, t as number);
+  else if (vtrans) seasonalTileTransition(res.key, vtrans.fromIdx)?.(ctx, vtrans.p);
   else if (anim) anim(ctx, t as number);
   else if (sdraw) sdraw(ctx);
   else drawTileIcon(ctx, res.key);
@@ -157,14 +177,21 @@ export function currentSeasonName(scene: Phaser.Scene): SeasonName | null {
 /** Re-bake the cached textures of seasonal tiles in place for the current
  *  season. Cheap: only distinct seasonal keys present in BIOMES (≤5), and only
  *  textures already baked. Mutates the shared `tile_<key>`(+`_sel`) so every
- *  on-board sprite instance updates with no setTexture call. */
-export function rebakeSeasonalTilesForSeason(scene: Phaser.Scene) {
+ *  on-board sprite instance updates with no setTexture call.
+ *
+ *  `skipTransitionTiles` excludes tiles with forward vector transitions: with
+ *  motion ON the per-frame loop owns their season flip (it plays the morph), so
+ *  snapping them here would briefly show the destination season before the morph
+ *  starts. Leave it false (the default) for board resets / reduced motion, where
+ *  an immediate static bake to the current season is what we want. */
+export function rebakeSeasonalTilesForSeason(scene: Phaser.Scene, skipTransitionTiles = false) {
   const dpr = bakeScaleFor(scene);
   const season = currentSeasonName(scene);
   const seen = new Set<string>();
   Object.values(BIOMES).forEach((biome) => {
     [...biome.tiles, ...biome.resources].forEach((r) => {
       if (!SEASONAL_TILE_KEYS.has(r.key) || seen.has(r.key)) return;
+      if (skipTransitionTiles && seasonalTileHasTransitions(r.key)) return;
       seen.add(r.key);
       [false, true].forEach((selected) => {
         const key = `tile_${r.key}${selected ? "_sel" : ""}`;
