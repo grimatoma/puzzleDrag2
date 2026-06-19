@@ -25,8 +25,27 @@ const GRAIN_KEYS = [
 ];
 
 // The all-vector showcase tiles: per-season draw+anim AND forward transitions.
-const SHOWCASE_KEYS = ["tile_tree_oak", "tile_flower_pansy", "tile_fruit_apple"];
-const ALL_KEYS = [...GRAIN_KEYS, ...SHOWCASE_KEYS];
+const SHOWCASE_KEYS = [
+  "tile_tree_oak",
+  "tile_flower_pansy",
+  "tile_fruit_apple",
+  "tile_grain_corn",
+  "tile_fruit_pear",
+  "tile_fruit_lemon",
+  "tile_veg_pepper",
+  "tile_veg_mushroom",
+  "tile_veg_beet",
+  "tile_flower_heather",
+  "tile_flower_water_lily",
+  "tile_tree_birch",
+  "tile_herd_sheep",
+];
+// Corn graduated from an idle-only grain pilot to a full vector-transition tile,
+// so it appears in BOTH lists (same module). Dedupe for the registry-equality
+// check, and treat it as a transition tile (not a plain grain) below.
+const ALL_KEYS = [...new Set([...GRAIN_KEYS, ...SHOWCASE_KEYS])];
+// Grain keys that are idle-only (no forward transitions) — the pilot set minus corn.
+const PLAIN_GRAIN_KEYS = GRAIN_KEYS.filter((k) => !SHOWCASE_KEYS.includes(k));
 
 // Minimal CanvasRenderingContext2D stub: every method is a no-op, gradient
 // factories return an object with addColorStop. Exercises control flow of every
@@ -109,7 +128,7 @@ describe("seasonal tile forward transitions (vector showcase)", () => {
       expect(seasonalTileHasTransitions(key), key).toBe(true);
       expect(seasonalTilePrefersVector(key), key).toBe(true);
     }
-    for (const key of GRAIN_KEYS) {
+    for (const key of PLAIN_GRAIN_KEYS) {
       expect(seasonalTileHasTransitions(key), key).toBe(false);
       expect(seasonalTilePrefersVector(key), key).toBe(false);
     }

@@ -119,6 +119,12 @@ interface VectorState {
   fromIdx: number | null;
   /** Raw-clock seconds at which the active transition started. */
   startSec: number;
+  /** Raw-clock seconds at which we last SETTLED into `settledIdx` (tile creation,
+   *  a transition completing, or a snap). The idle clock is measured from here so
+   *  every fresh settle starts the idle at its rest pose — which equals the season
+   *  still and the frame the just-finished morph ended on, so the morph→idle
+   *  hand-off has no positional jump. */
+  settledStartSec: number;
 }
 
 const vectorState = new Map<string, VectorState>();
@@ -137,6 +143,9 @@ export interface VectorSeasonPlan {
   p: number;
   /** The season index to idle on when not transitioning. */
   idleIdx: number;
+  /** Seconds since this tile last settled into `idleIdx`. Feed this (not the raw
+   *  loop clock) to the idle anim so it starts at rest on every fresh settle. */
+  idleSec: number;
 }
 
 /**
@@ -155,7 +164,7 @@ export function seasonalVectorAdvance(
   const targetIdx = SEASON_NAMES.indexOf(season);
   let st = vectorState.get(key);
   if (!st) {
-    st = { settledIdx: targetIdx, fromIdx: null, startSec: tSec };
+    st = { settledIdx: targetIdx, fromIdx: null, startSec: tSec, settledStartSec: tSec };
     vectorState.set(key, st);
   }
 
@@ -167,6 +176,7 @@ export function seasonalVectorAdvance(
       st.startSec = tSec;
     } else {
       st.settledIdx = targetIdx;
+      st.settledStartSec = tSec;
     }
   }
 
@@ -175,10 +185,23 @@ export function seasonalVectorAdvance(
     if (p >= 1) {
       st.settledIdx = st.fromIdx + 1;
       st.fromIdx = null;
+      st.settledStartSec = tSec; // idle for the new season starts from rest here
     } else {
-      return { transitioning: true, fromIdx: st.fromIdx, p: p < 0 ? 0 : p, idleIdx: st.settledIdx };
+      return {
+        transitioning: true,
+        fromIdx: st.fromIdx,
+        p: p < 0 ? 0 : p,
+        idleIdx: st.settledIdx,
+        idleSec: 0,
+      };
     }
   }
 
-  return { transitioning: false, fromIdx: -1, p: 0, idleIdx: st.settledIdx };
+  return {
+    transitioning: false,
+    fromIdx: -1,
+    p: 0,
+    idleIdx: st.settledIdx,
+    idleSec: tSec - st.settledStartSec,
+  };
 }
