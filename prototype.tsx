@@ -303,7 +303,12 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { setRegistry(gameRef.current?.registry, "boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
   useEffect(() => { setRegistry(gameRef.current?.registry, "inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
-  useEffect(() => { setRegistry(gameRef.current?.registry, "inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
+  // `currentCap` only reads built buildings, the active location, hired workers,
+  // and the discovered/active tile selection (via computeAggregatedAbilities +
+  // locBuilt). Depending on the whole `gameState` re-ran this heavy aggregation
+  // on every dispatch (e.g. each chain tile mid-drag); narrow to its real inputs.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: deps are currentCap's real inputs, not the whole gameState
+  useEffect(() => { setRegistry(gameRef.current?.registry, "inventoryCap", currentCap(gameState) ?? 200); }, [gameState?.built, gameState?.mapCurrent, workers, tileCollection?.discovered, tileCollection?.activeByCategory]);
   // Sync hazards.fire so GameScene.fillBoard can overlay fire tiles on the board
   useEffect(() => {
     const fire = FIRE_HAZARD_ENABLED ? (gameState?.hazards?.fire as FireHazardPayload | null | undefined) ?? null : null;

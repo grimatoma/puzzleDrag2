@@ -11,7 +11,7 @@ import { seasonalSubjects } from "./tools/vite/seasonalSubjects.mjs";
 // Each page builds its own HTML + JS bundle. The Dev Panel bundle is
 // independent of Phaser/the game runtime and could be deployed standalone
 // (the two apps share state only via localStorage).
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     // Discover public/seasonal-tiles/<tileKey>/ folders -> `virtual:seasonal-subjects`
@@ -24,8 +24,11 @@ export default defineConfig({
   ],
   base: process.env.BASE_PATH || "/puzzleDrag2/",
   build: {
-    minify: false,
-    sourcemap: true,
+    // Minify production builds (`vite build`) to shrink the shipped JS. Dev
+    // (`vite serve`) stays unminified + sourcemapped so the Dev Panel's
+    // Animations-Demo bridge and other dev tooling remain readable.
+    minify: command === "build",
+    sourcemap: command !== "build",
     rollupOptions: {
       // Keep the main entry keyed `index` so its chunk lands as `index-*.js`
       // (preserves the existing build-test guardrails that look it up by name).
@@ -47,4 +50,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

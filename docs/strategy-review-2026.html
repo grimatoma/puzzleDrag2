@@ -162,7 +162,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
     <div class="card accent"><h4>3 · Add depth, safely</h4><p>Ship board-altering boons + ripeness-as-modifier — most depth for the least balance risk. <a href="#sys-new">→ Systems</a></p></div>
     <div class="card accent"><h4>4 · Give it identity</h4><p>Land the "Hollow &amp; Harvest" reskin + actually ship the keeper choice the story already promises. <a href="#story-pivot">→ Story</a></p></div>
     <div class="card accent"><h4>5 · Close the test gap</h4><p>Add real <em>click-path</em> e2e — today 19/20 specs bypass the UI entirely. <a href="#eng-tests">→ Tests</a></p></div>
-    <div class="card"><h4>+ Free wins</h4><p>Gitignore <code>graph.json</code> (6.5 MB) &amp; delete <code>_caps/</code> (5.5 MB); fix the per-dispatch aggregation; <code>minify:true</code>. <a href="#eng-perf">→ Engineering</a></p></div>
+    <div class="card"><h4>+ Free wins <span class="chip c-done">DONE</span></h4><p>Gitignored <code>graph.json</code> (6.5 MB) &amp; deleted <code>_caps/</code> (5.5 MB); fixed the per-dispatch aggregation; <code>minify</code> on for prod. <a href="#eng-perf">→ Engineering</a></p></div>
   </div>
 </section>
 
@@ -457,7 +457,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
       <ul>
         <li><code>concept-tiles/</code> + the <code>conceptTiles=1</code> flag (dead preview).</li>
         <li>Dead UI: Dev-Panel <code>FlagsTab</code>/<code>AchievementsTab</code>/<code>AbilitiesEditor</code>; Story-Editor <code>Stats</code>/<code>Heatmap</code>/<code>BondTimeline</code> panels; orphaned <code>.craft-strip</code> CSS; Frostmaw dead beats; the Festivals "coming soon" dead-end.</li>
-        <li>From version control: <code>_caps/</code> (5.5 MB) &amp; <code>graph.json</code> (6.5 MB) — gitignore both.</li>
+        <li>From version control: <code>_caps/</code> (5.5 MB) &amp; <code>graph.json</code> (6.5 MB) — gitignored both. <span class="chip c-done">DONE</span></li>
         <li>Mycelium &amp; Tilt as core-verb candidates.</li>
       </ul>
     </div>
@@ -472,12 +472,12 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
 <section id="eng-perf">
   <p class="kick">Efficiency</p>
   <h2>Runtime &amp; build wins</h2>
-  <div class="call warn">
-    <h4>Top runtime win — one effect re-aggregates on every dispatch.</h4>
-    <p><code>prototype.tsx:306</code> runs <code>currentCap()</code> → <code>computeAggregatedAbilities</code> (loops all workers + buildings + discovered tiles) on <strong>every action</strong> — including every chain tile during a drag — because its effect dep is the whole <code>gameState</code>. Narrow the dep to <code>[built, workers, tileCollection.discovered]</code>. Then scope the other ~31 whole-object registry-effect deps the same way.</p>
+  <div class="call tip">
+    <h4><span class="chip c-done">DONE</span> Top runtime win — the per-dispatch re-aggregation is fixed.</h4>
+    <p>The <code>inventoryCap</code> effect in <code>prototype.tsx</code> ran <code>currentCap()</code> → <code>computeAggregatedAbilities</code> (loops all workers + buildings + discovered tiles) on <strong>every action</strong> — including every chain tile during a drag — because its effect dep was the whole <code>gameState</code>. Its dep array is now narrowed to <code>[built, mapCurrent, workers, tileCollection.discovered, tileCollection.activeByCategory]</code> — the exact inputs <code>currentCap</code> reads, so behavior is unchanged. <strong>Still open:</strong> scope the other ~31 whole-object registry-effect deps the same way.</p>
   </div>
   <ul>
-    <li><strong>Build ships un-minified JS</strong> — <code>vite.config.js</code> has <code>minify:false</code> + <code>sourcemap:true</code> → 11.8 MB raw JS (Phaser is correctly code-split/lazy, though). Flip <code>minify:true</code> for prod and gate sourcemaps: ~2–3× smaller raw JS and faster mobile parse.</li>
+    <li><strong>Build ships un-minified JS</strong> <span class="chip c-done">DONE</span> — <code>vite.config.js</code> had <code>minify:false</code> + <code>sourcemap:true</code> → 11.8 MB raw JS. Now gated on the Vite command: <code>minify</code> on + sourcemaps off for prod (<code>vite build</code>), while dev (<code>vite serve</code>) stays unminified so the Dev-Panel Animations-Demo bridge and other dev tooling remain readable. ~2–3× smaller raw JS and faster mobile parse.</li>
     <li><strong>3 live WebGL contexts</strong> on the board+town path — well-managed (sleep/wake), no crash risk, flagged only for mobile memory awareness.</li>
     <li><strong>Texture churn &amp; reducer cloning are fine</strong> — guarded re-bake throttled to 20 fps on a 6×6 board; spread-based reducer, no deep clones.</li>
   </ul>
@@ -489,8 +489,8 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <table>
     <thead><tr><th>Path</th><th>Size</th><th>Action</th></tr></thead>
     <tbody>
-      <tr><td><code>graphify-out/graph.json</code></td><td class="num">6.5 MB</td><td>Gitignore — regenerable (<code>graphify update .</code>)</td></tr>
-      <tr><td><code>_caps/</code> (28 PNGs)</td><td class="num">5.5 MB</td><td>Delete + gitignore — dev screenshots, zero references</td></tr>
+      <tr><td><code>graphify-out/graph.json</code> + <code>GRAPH_REPORT.md</code></td><td class="num">6.5 MB</td><td><span class="chip c-done">DONE</span> Gitignored + <code>git rm --cached</code> — regenerable (<code>graphify update .</code>)</td></tr>
+      <tr><td><code>_caps/</code> (28 PNGs)</td><td class="num">5.5 MB</td><td><span class="chip c-done">DONE</span> Deleted + gitignored — dev screenshots, zero references</td></tr>
       <tr><td><code>docs/seasonal-tile-system/assets/</code> GIFs</td><td class="num">~12 MB</td><td>Re-encode / archive — re-shipped to Pages each deploy</td></tr>
       <tr><td><code>docs/hd2d-village/preview/</code> + camera ref PNGs</td><td class="num">~8 MB</td><td>Downscale concept screenshots</td></tr>
       <tr><td><code>src/GameScene.ts</code></td><td class="num">2,214 LOC</td><td>The one real god-file — extract the texture-bake methods</td></tr>
@@ -520,7 +520,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
     <thead><tr><th>#</th><th>Move</th><th>Why now</th><th>Balance</th><th>Cost</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>Wire town smoke (<code>SMOKE_BUILDINGS</code>)</td><td>Biggest "alive" win, zero art</td><td>none</td><td>S</td></tr>
-      <tr><td>2</td><td>Free cleanup: gitignore <code>graph.json</code>/<code>_caps</code>; fix the per-dispatch aggregation; <code>minify:true</code></td><td>Cheap perf + repo weight</td><td>none</td><td>S</td></tr>
+      <tr><td>2</td><td><span class="chip c-done">DONE</span> Free cleanup: gitignored <code>graph.json</code>/<code>_caps</code>; fixed the per-dispatch aggregation; <code>minify</code> on for prod</td><td>Cheap perf + repo weight</td><td>none</td><td>S</td></tr>
       <tr><td>3</td><td>Full season sets for top ~10 farm tiles</td><td>Makes the seasonal system visible; funds cosmetic packs</td><td>none</td><td>M</td></tr>
       <tr><td>4</td><td>Board-altering boons + ripeness modifier</td><td>Most depth for least risk</td><td>parallel-currency safe</td><td>M</td></tr>
       <tr><td>5</td><td>"Hollow &amp; Harvest" reskin + ship the keeper choice</td><td>Gives the game a silhouette</td><td>none (strings)</td><td>S–M</td></tr>
