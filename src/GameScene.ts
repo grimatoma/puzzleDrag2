@@ -2084,7 +2084,10 @@ export class GameScene extends Phaser.Scene {
           this._bakeVectorTransTile(res, false, season, plan.fromIdx, plan.p, dpr);
           if (sel) this._bakeVectorTransTile(res, true, season, plan.fromIdx, plan.p, dpr);
         } else {
-          const aSec = idleAnimTime(tSec, res.key);
+          // Idle from rest: `plan.idleSec` is 0 at each fresh settle, so the idle
+          // resumes exactly where the morph (or the season still) left off — no
+          // end-of-transition snap. The art's idle loop is seamless from t=0.
+          const aSec = plan.idleSec;
           this._bakeAnimatedTile(res, false, season, aSec, dpr);
           if (sel) this._bakeAnimatedTile(res, true, season, aSec, dpr);
         }

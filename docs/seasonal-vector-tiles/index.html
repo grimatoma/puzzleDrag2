@@ -79,11 +79,19 @@
     <div class="eyebrow">puzzleDrag2 · art trial</div>
     <h1>Seasonal vector tiles — animation preview</h1>
     <p class="lead">
-      Three board tiles drawn entirely with canvas vector paths (no pixel art), each with a
+      Thirteen board tiles drawn entirely with canvas vector paths (no pixel art), each with a
       full seasonal lifecycle: four per-season redraws, a subtle seamless <b>idle loop</b> per
       season, and forward season→season <b>transition morphs</b> played once when a run crosses a
       season boundary (Spring → Summer → Autumn → Winter). Everything below runs the
       <i>actual</i> tile-drawing code that would render on the board.
+    </p>
+    <p class="lead" style="margin-top:10px;">
+      Each tile is one parameterized <code>paint()</code> with a per-season parameter set; the
+      transitions are an <b>eased lerp of those params</b>. Two consequences fall out for free:
+      the subject keeps a <b>constant identity across all four seasons</b> (per the project art
+      doc — a cob stays a cob, a pepper stays a bell, a sheep stays a sheep; only colour, frost
+      and pad-dressing change), and every morph <b>starts and ends exactly on the neighbouring
+      season still</b>, so there is no snap at the hand-off into the idle.
     </p>
     <div class="note">
       This is a <b>preview before integration</b>. The animation engine wiring exists on the branch,
@@ -128,9 +136,20 @@
 
   <h2>What you're looking at</h2>
   <ul class="facts">
-    <li><b>Oak</b> (<code>tile_tree_oak</code>) — budding → lush canopy → russet + leaf-fall → bare + snow.</li>
-    <li><b>Pansy</b> (<code>tile_flower_pansy</code>) — bud → open 5-petal face → fading + seed pod → dormant under snow.</li>
-    <li><b>Apple</b> (<code>tile_fruit_apple</code>) — blossom → green set → ripe red (hero) → wizened + frost.</li>
+    <li><b>Trees</b> — <code>oak</code>, <code>birch</code>. The one category whose foliage shape may change
+      seasonally (bare in winter), but the trunk keeps the tree's identity.</li>
+    <li><b>Fruit</b> — <code>apple</code>, <code>pear</code>, <code>lemon</code>. One hero fruit, same
+      outline every season; ripeness shows in surface colour, not shape.</li>
+    <li><b>Grain</b> — <code>corn</code> (the iconic cob, husk green → peeling/yellow → drying → snow-capped;
+      always a cob, never a bare stalk).</li>
+    <li><b>Veg</b> — <code>pepper</code>, <code>mushroom</code>, <code>beet</code>.</li>
+    <li><b>Flower</b> — <code>pansy</code>, <code>heather</code>, <code>water&nbsp;lily</code>
+      (its pad reads as water, frozen over in winter).</li>
+    <li><b>Livestock</b> — <code>sheep</code>: fleece thickens through the year, snow on its back +
+      breath fog in winter.</li>
+    <li><b>Identity rule.</b> A tile keeps the SAME silhouette in all four seasons — only its surface
+      colour, frost/snow, and the pad's seasonal dressing (spring blossom, autumn fallen leaves,
+      winter snow) change. The subject is always clearly the same thing. (Trees are the lone exception.)</li>
     <li><b>Idle vs. transition.</b> Idle loops are seamless (driven by a continuous clock) and deliberately
       subtle — the board sprite adds its own sway, so these stay to canopy shimmer, petal sway, a glint, a
       drifting leaf/snowflake. Transitions morph <i>colour and shape only</i> (no brightness flash) and are
