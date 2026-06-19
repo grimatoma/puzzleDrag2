@@ -12,9 +12,10 @@
 #
 # Re-baselining visual goldens (NEVER do this on a Windows/local host — DOM drifts 3–5%,
 # Phaser WebGL ~38% off due to GPU/font differences; goldens must be made on this Linux runner):
-#   1. gh workflow run ci.yml -f update_goldens=true   (or trigger via the Actions tab)
-#   2. Download the `regenerated-goldens` artifact, unzip it over tests/visual/__goldens__/
-#   3. Eyeball the PNGs, commit them, open a PR.
+#   1. gh workflow run ci.yml -f update_goldens=true --ref <branch>   (or via the Actions tab)
+#   2. The `visual-rebaseline` job regenerates the goldens on the Linux runner and pushes
+#      them straight back onto <branch> (it also uploads a `regenerated-goldens` artifact).
+#   3. Eyeball the committed PNG diff on the PR.
 #   4. Once `visual-smoke` is green against the committed goldens, remove its `continue-on-error`
 #      and add `visual-smoke` to the required status checks above.
 
@@ -188,16 +189,24 @@ jobs:
             playwright-report/visual/
           retention-days: 7
 
-  # Manual re-baseline of the desktop visual goldens ON the canonical Linux
-  # runner (never local — see header). Trigger with:
-  #   gh workflow run ci.yml -f update_goldens=true
-  # then download the `regenerated-goldens` artifact and commit it.
+  # Re-baseline of the desktop visual goldens ON the canonical Linux runner
+  # (never local — see header). Trigger with:
+  #   gh workflow run ci.yml -f update_goldens=true --ref <branch>
+  # It regenerates the goldens and pushes them back onto <branch>; the
+  # `regenerated-goldens` artifact is also uploaded as a backup.
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Needs write access to push the regenerated goldens back to the branch.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the dispatched branch (not a detached HEAD) so we can
+          # commit the regenerated goldens straight back onto it.
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -211,3 +220,15 @@ jobs:
           name: regenerated-goldens
           path: tests/visual/__goldens__/
           retention-days: 7
+      - name: Commit & push regenerated goldens
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/visual/__goldens__/
+          if git diff --cached --quiet; then
+            echo "Goldens already match the CI runner — nothing to commit."
+          else
+            git commit -m "test(visual): re-baseline desktop goldens on CI runner"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
