@@ -6,9 +6,9 @@ import { visualizer } from "rollup-plugin-visualizer";
 import { VitePWA } from "vite-plugin-pwa";
 import { seasonalSubjects } from "./tools/vite/seasonalSubjects.mjs";
 
-// Same value drives Vite's `base` and the PWA manifest's start_url/scope, so
-// an installed app always launches into the deployed sub-path. `/puzzleDrag2/`
-// is the GitHub Pages base; CI/forks can override via BASE_PATH.
+// Drives Vite's `base` and the PWA service worker's navigation fallback so an
+// installed app stays scoped to the deployed sub-path. `/puzzleDrag2/` is the
+// GitHub Pages base; CI/forks can override via BASE_PATH.
 const BASE = process.env.BASE_PATH || "/puzzleDrag2/";
 
 // Multi-page build:
@@ -27,42 +27,24 @@ export default defineConfig(({ command }) => ({
     compression({ algorithm: "brotliCompress", ext: ".br" }),
     // Bundle analyzer: dist/stats.html after every build
     visualizer({ filename: "dist/stats.html", gzipSize: true, brotliSize: true }),
-    // Installable PWA: emits manifest.webmanifest + a Workbox service worker
-    // that precaches the build for offline play. `autoUpdate` means a new
-    // deploy is picked up and applied automatically the next time the player
-    // is online — no manual "update available" prompt. Emits sw.js /
-    // workbox-*.js / registerSW.js at the dist ROOT (not dist/assets/), so the
-    // phase-12-build asset guardrails are unaffected.
+    // Installable PWA: adds a Workbox service worker that precaches the build
+    // for offline play. The web app manifest + icons already live in the repo
+    // (public/site.webmanifest, public/icon-*.png, favicons — linked from
+    // index.html), so `manifest: false` keeps those authoritative and this
+    // plugin contributes ONLY the service worker. `autoUpdate` means a new
+    // deploy is picked up and applied automatically the next time the player is
+    // online — no manual "update available" prompt. Emits sw.js / workbox-*.js
+    // / registerSW.js at the dist ROOT (not dist/assets/), so the phase-12-build
+    // asset guardrails are unaffected.
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      // Static assets not reachable from the JS import graph that must still be
-      // precached (paths are relative to publicDir).
-      includeAssets: ["icons/apple-touch-icon.png", "icons/favicon.svg"],
-      manifest: {
-        name: "Hearthlands",
-        short_name: "Hearthlands",
-        description: "A cozy drag-to-chain farming and town-building puzzle.",
-        lang: "en",
-        start_url: BASE,
-        scope: BASE,
-        display: "standalone",
-        orientation: "any",
-        background_color: "#e9dfc6",
-        theme_color: "#e9dfc6",
-        // Relative srcs resolve against the manifest URL (…/manifest.webmanifest),
-        // so they stay correct regardless of BASE.
-        icons: [
-          { src: "icons/pwa-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icons/pwa-512.png", sizes: "512x512", type: "image/png" },
-          { src: "icons/pwa-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-          { src: "icons/pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        ],
-      },
+      // Use the hand-authored public/site.webmanifest instead of generating one.
+      manifest: false,
       workbox: {
-        // Precache the app shell + all game art for full offline play. The
-        // analyzer report and sourcemaps are excluded.
-        globPatterns: ["**/*.{js,css,html,svg,png,gif,webp,woff,woff2}"],
+        // Precache the app shell + all game art (incl. the manifest, favicons
+        // and app icons) for full offline play. Analyzer report + maps excluded.
+        globPatterns: ["**/*.{js,css,html,svg,png,gif,webp,ico,woff,woff2,webmanifest}"],
         globIgnores: ["**/stats.html", "**/*.map"],
         // Phaser's vendor chunk is ~1.5MB raw; lift the 2MB default so it is
         // precached rather than silently skipped (which would break offline).

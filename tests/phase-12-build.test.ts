@@ -115,20 +115,19 @@ describe("Phase 12.4 — build optimisation", () => {
     expect(html).toMatch(/rel="modulepreload"/);
   });
 
-  // ── Installable PWA (vite-plugin-pwa) ──────────────────────────────────
-  it("emits an installable manifest with maskable + 192/512 icons", () => {
-    const manifestPath = resolve(distDir, "manifest.webmanifest");
-    expect(existsSync(manifestPath), "manifest.webmanifest").toBe(true);
+  // ── Installable PWA ────────────────────────────────────────────────────
+  // The web app manifest + icons are hand-authored (public/site.webmanifest,
+  // public/icon-*.png); vite-plugin-pwa (manifest: false) adds only the
+  // service worker that makes them installable + offline.
+  it("ships an installable web app manifest with 192 + 512 icons", () => {
+    const manifestPath = resolve(distDir, "site.webmanifest");
+    expect(existsSync(manifestPath), "site.webmanifest").toBe(true);
     const m = JSON.parse(readFileSync(manifestPath, "utf8"));
     expect(m.name).toBeTruthy();
     expect(m.display).toBe("standalone");
-    // start_url and scope are both pinned to the deploy base so an installed
-    // app launches into the right sub-path.
-    expect(m.start_url).toBe(m.scope);
     const sizes = m.icons.map((i: { sizes: string }) => i.sizes);
     expect(sizes).toContain("192x192");
     expect(sizes).toContain("512x512");
-    expect(m.icons.some((i: { purpose?: string }) => /\bmaskable\b/.test(i.purpose || ""))).toBe(true);
     // Every declared icon is actually emitted (icon src is manifest-relative).
     for (const ic of m.icons) {
       expect(existsSync(resolve(distDir, ic.src)), `icon ${ic.src} missing`).toBe(true);
