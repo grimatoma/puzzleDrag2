@@ -16,7 +16,7 @@ import { assertTile } from "./types/guards.js";
 import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
-import { hasSeasonalTileAnim } from "./textures/seasonal/seasonalTiles.js";
+import { hasSeasonalTileAnim, seasonalTileHasTransitions, seasonalVectorAdvance } from "./textures/seasonal/seasonalTiles.js";
 import { preloadSeasonalArt, seasonalArtActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, SEASONAL_SUBJECT_KEYS } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -677,8 +677,12 @@ export class GameScene extends Phaser.Scene {
     this.drawBackground();
     // Re-bake seasonal tile textures (e.g. grain) so their art matches the
     // current season. Cheap: only distinct seasonal keys, in place. Fired on
-    // season flips (turnsUsed) and biome/board changes.
-    rebakeSeasonalTilesForSeason(this);
+    // season flips (turnsUsed) and biome/board changes. With motion ON, skip the
+    // vector-transition tiles (oak/pansy/apple): the per-frame loop plays their
+    // season morph, so snapping them here would flash the destination season
+    // first. Under reduced motion the loop is idle, so DON'T skip — bake their
+    // current-season still here instead.
+    rebakeSeasonalTilesForSeason(this, this._motionEnabled());
     // Baked-art tiles (willow, chicken, …) animate via the per-frame loop, which
     // plays the season transition on a motion-on flip — so we DON'T snap them here
     // then. Under reduced motion that loop is idle, so bake their current-season
@@ -2098,6 +2102,22 @@ export class GameScene extends Phaser.Scene {
           this._bankSeason.set(res.key, plan.resolvedIdleIdx);
         }
         // Settled idle: nothing more here — TileObj.ambient drives setFrame per tile.
+      } else if (seasonalTileHasTransitions(res.key)) {
+        // Procedural VECTOR tile with forward season transitions (oak/pansy/apple).
+        // The controller self-detects a season flip off the raw clock and reports
+        // a morph to play once before settling back into the per-season idle.
+        const plan = seasonalVectorAdvance(res.key, season, tSec);
+        if (plan.transitioning) {
+          this._bakeVectorTransTile(res, false, season, plan.fromIdx, plan.p, dpr);
+          if (sel) this._bakeVectorTransTile(res, true, season, plan.fromIdx, plan.p, dpr);
+        } else {
+          // Idle from rest: `plan.idleSec` is 0 at each fresh settle, so the idle
+          // resumes exactly where the morph (or the season still) left off — no
+          // end-of-transition snap. The art's idle loop is seamless from t=0.
+          const aSec = plan.idleSec;
+          this._bakeAnimatedTile(res, false, season, aSec, dpr);
+          if (sel) this._bakeAnimatedTile(res, true, season, aSec, dpr);
+        }
       } else {
         // Procedural seasonal anim (no baked art): keep the per-key staggered,
         // rest-paused re-bake of the shared texture.
@@ -2123,6 +2143,27 @@ export class GameScene extends Phaser.Scene {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season, tSec);
+    tex.refresh();
+  }
+
+  /** Re-bake one procedural vector-tile texture with its forward season morph
+   *  `fromIdx → fromIdx+1` at progress `p` (the season-transition counterpart of
+   *  {@link _bakeAnimatedTile}). */
+  private _bakeVectorTransTile(
+    res: TileRes,
+    selected: boolean,
+    season: SeasonName | null,
+    fromIdx: number,
+    p: number,
+    dpr: number,
+  ) {
+    const key = `tile_${res.key}${selected ? "_sel" : ""}`;
+    const tex = this.textures.get(key) as Phaser.Textures.CanvasTexture | undefined;
+    if (!tex || typeof tex.getContext !== "function") return;
+    const ctx = tex.getContext();
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTileCanvas(ctx, res as { key: string; look: { color: number } }, selected, TILE, TILE, season, undefined, { vtrans: { fromIdx, p } });
     tex.refresh();
   }
 

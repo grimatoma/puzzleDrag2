@@ -9,7 +9,10 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
  */
 
 test('SWITCH_BIOME farm → mine: biomeKey + grid swap, hazards initialised', async ({ page }) => {
-  await gotoFresh(page, { level: 5, coins: 2000 });
+  // canEnterBiome (src/state/biomeAccess.ts) gates the mine board on level ≥ 2
+  // AND being in a zone that has a mine board. Seed the player into the quarry
+  // (a mining zone) so entry is allowed.
+  await gotoFresh(page, { level: 5, coins: 2000, activeZone: 'quarry', mapCurrent: 'quarry' });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   const before = await getReactState(page);
   expect(before.biome).toBe('farm');
@@ -23,7 +26,8 @@ test('SWITCH_BIOME farm → mine: biomeKey + grid swap, hazards initialised', as
 });
 
 test('SWITCH_BIOME farm → fish: tide bookkeeping initialised', async ({ page }) => {
-  await gotoFresh(page, { level: 5, coins: 2000 });
+  // Fishing gates on level ≥ 3 + a zone with a fish board — seed into the harbor.
+  await gotoFresh(page, { level: 5, coins: 2000, activeZone: 'harbor', mapCurrent: 'harbor' });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'fish' });
   await waitForState(page, (s) => s.biome === 'fish');
@@ -34,7 +38,7 @@ test('SWITCH_BIOME farm → fish: tide bookkeeping initialised', async ({ page }
 });
 
 test('FISH/FORCE_TIDE_FLIP toggles tide and rotates bottom row', async ({ page }) => {
-  await gotoFresh(page, { level: 5, coins: 2000 });
+  await gotoFresh(page, { level: 5, coins: 2000, activeZone: 'harbor', mapCurrent: 'harbor' });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'fish' });
   await waitForState(page, (s) => s.biome === 'fish');

@@ -14,7 +14,11 @@ import {
  */
 
 test('plays 4 farm sessions end-to-end without crashing or losing state', async ({ page }) => {
-  test.setTimeout(180_000);
+  // Highest-coverage e2e: 4 full seasons of scene-driven chains + a mid-run
+  // reload. The per-chain settle waits + Phaser tweens make it genuinely slow
+  // on the headless CI runner (it overran the old 180s budget there at ~216s),
+  // so give it generous headroom. The job's overall timeout-minutes still caps it.
+  test.setTimeout(360_000);
   const errors = collectPageErrors(page);
 
   await gotoFresh(page);

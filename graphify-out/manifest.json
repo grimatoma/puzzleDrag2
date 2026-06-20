@@ -25,13 +25,13 @@
     "semantic_hash": "4acb6a30c0858e1e9ceb649da060dca5"
   },
   "prototype.tsx": {
-    "mtime": 1781800284.7262523,
-    "ast_hash": "5051cfdbbe542f196a31fcf74c116ff3",
+    "mtime": 1781923828.606892,
+    "ast_hash": "00f9fcdff413eb1b3107c7ad34b5495a",
     "semantic_hash": ""
   },
   "src/GameScene.ts": {
-    "mtime": 1781800549.365777,
-    "ast_hash": "e4872807b8cf224ada69b6b9ded92428",
+    "mtime": 1781923828.6078928,
+    "ast_hash": "c1c695de0e419e527f8fc7ded2d346d7",
     "semantic_hash": ""
   },
   "src/TileObj.ts": {
@@ -805,9 +805,9 @@
     "semantic_hash": "628bc49f626baea6492e81f7dfb270bc"
   },
   "src/__tests__/seasonal-tiles.test.ts": {
-    "mtime": 1781800285.0096557,
-    "ast_hash": "2d7e7afe55d0cc1f586e75f90da98078",
-    "semantic_hash": "2d7e7afe55d0cc1f586e75f90da98078"
+    "mtime": 1781923828.608893,
+    "ast_hash": "fe335bfaefacc0599efd46fe8c77968b",
+    "semantic_hash": ""
   },
   "src/__tests__/settlement-biomes.test.ts": {
     "mtime": 1781800285.0101845,
@@ -2130,8 +2130,8 @@
     "semantic_hash": ""
   },
   "src/features/cartography/index.tsx": {
-    "mtime": 1781800285.259256,
-    "ast_hash": "1280bfe2dc45d7e4613ead7775a4c862",
+    "mtime": 1781923828.6098926,
+    "ast_hash": "381a9f58a4f9801d5af3e7dd2bd1a3b3",
     "semantic_hash": ""
   },
   "src/features/cartography/lore.ts": {
@@ -2260,9 +2260,9 @@
     "semantic_hash": "8e8333585237f9e6c323bbfe0731b0c0"
   },
   "src/features/market/pricing.ts": {
-    "mtime": 1781800285.2821188,
-    "ast_hash": "4e0b5d34624af75542d114eae869105c",
-    "semantic_hash": "4e0b5d34624af75542d114eae869105c"
+    "mtime": 1781923828.6098926,
+    "ast_hash": "f83ca61d7605a347a7585e12038fe488",
+    "semantic_hash": ""
   },
   "src/features/market/slice.ts": {
     "mtime": 1781800285.2831192,
@@ -2525,8 +2525,8 @@
     "semantic_hash": "86f166ee1fff119fc1670a276e309252"
   },
   "src/state.ts": {
-    "mtime": 1781800285.3424528,
-    "ast_hash": "6e0f928f62c771fb169322912fbb3b36",
+    "mtime": 1781923828.6098926,
+    "ast_hash": "6acd5c4cd94d9888034f873e76685026",
     "semantic_hash": ""
   },
   "src/state/biomeAccess.ts": {
@@ -2705,8 +2705,8 @@
     "semantic_hash": "fe313bbdc58ecffcac717b82f7cdef9a"
   },
   "src/textures.ts": {
-    "mtime": 1781800285.371374,
-    "ast_hash": "8dca71557aa40a96f3fcfddc226778f7",
+    "mtime": 1781923828.6098926,
+    "ast_hash": "381522797425196def50fbbee23f30b1",
     "semantic_hash": ""
   },
   "src/textures/animations/arcane.ts": {
@@ -3140,9 +3140,9 @@
     "semantic_hash": "cb126244021495a9d41a224af13c8e7a"
   },
   "src/textures/seasonal/grain/corn.ts": {
-    "mtime": 1781800285.4463596,
-    "ast_hash": "1e1d41c2c92e4d789cad769620f56a25",
-    "semantic_hash": "1e1d41c2c92e4d789cad769620f56a25"
+    "mtime": 1781923828.6157825,
+    "ast_hash": "aa991293ecc7816ae856f2277239ec4b",
+    "semantic_hash": ""
   },
   "src/textures/seasonal/grain/manna.ts": {
     "mtime": 1781800285.4473596,
@@ -3160,14 +3160,14 @@
     "semantic_hash": "70646282209f302924b9d0fb0e062266"
   },
   "src/textures/seasonal/seasonalTiles.ts": {
-    "mtime": 1781800285.4513597,
-    "ast_hash": "3f3310a99fe40f4961cfcba74d61c283",
-    "semantic_hash": "3f3310a99fe40f4961cfcba74d61c283"
+    "mtime": 1781923828.6367848,
+    "ast_hash": "07a7fb6dedbb1762bb170d6af4b429de",
+    "semantic_hash": ""
   },
   "src/textures/seasonal/types.ts": {
-    "mtime": 1781800285.4513597,
-    "ast_hash": "627625d36a678f3ac807677582059821",
-    "semantic_hash": "627625d36a678f3ac807677582059821"
+    "mtime": 1781923828.6367848,
+    "ast_hash": "caffe3cbc1aa12883d463e36830afca4",
+    "semantic_hash": ""
   },
   "src/townLayout.ts": {
     "mtime": 1781800285.454359,
@@ -3390,8 +3390,8 @@
     "semantic_hash": ""
   },
   "src/ui/Inventory.tsx": {
-    "mtime": 1781800285.489002,
-    "ast_hash": "94eef0793aa878b1caa05171c6a93a33",
+    "mtime": 1781923828.654852,
+    "ast_hash": "4b318dbb978f062dc8911028c5c12f18",
     "semantic_hash": ""
   },
   "src/ui/LevelUpCinematic.tsx": {
@@ -3885,9 +3885,9 @@
     "semantic_hash": "a36aabb4bc332298c9a83801cb37d266"
   },
   "tests/e2e/biomes.spec.ts": {
-    "mtime": 1781800285.572933,
-    "ast_hash": "540f8e7a102873467a5d08e6bafd6126",
-    "semantic_hash": "540f8e7a102873467a5d08e6bafd6126"
+    "mtime": 1781923828.6553366,
+    "ast_hash": "b01998af7261d034c486c08e9ae218ab",
+    "semantic_hash": ""
   },
   "tests/e2e/boss.spec.ts": {
     "mtime": 1781800285.572933,
@@ -3895,29 +3895,29 @@
     "semantic_hash": "d372faeb4887673487d43d30ffe0115e"
   },
   "tests/e2e/chain.spec.ts": {
-    "mtime": 1781800285.5739336,
-    "ast_hash": "2d09adf572b6e46bef4c2f2a12018692",
-    "semantic_hash": "2d09adf572b6e46bef4c2f2a12018692"
+    "mtime": 1781923828.6562643,
+    "ast_hash": "28e5aa18e9ff4f7c0b22d07439a078c9",
+    "semantic_hash": ""
   },
   "tests/e2e/crafting.spec.ts": {
-    "mtime": 1781800285.5749319,
-    "ast_hash": "64b4fb6502ad838a2e4d0311babec421",
-    "semantic_hash": "64b4fb6502ad838a2e4d0311babec421"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "451a4f6435b399656fd88ea750855215",
+    "semantic_hash": ""
   },
   "tests/e2e/cuj-tools.spec.ts": {
-    "mtime": 1781800285.5749319,
-    "ast_hash": "7fa0fdabaaf084690e51b2b4b70615f8",
-    "semantic_hash": "7fa0fdabaaf084690e51b2b4b70615f8"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "66898f74de1f3ad7c751041d6a441cb8",
+    "semantic_hash": ""
   },
   "tests/e2e/dialog-draft.spec.ts": {
-    "mtime": 1781800285.575934,
-    "ast_hash": "61f757772fa76d3b018dc208e75ca45e",
-    "semantic_hash": "61f757772fa76d3b018dc208e75ca45e"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "ccacc663a2a0508723733d44ab945854",
+    "semantic_hash": ""
   },
   "tests/e2e/economy.spec.ts": {
-    "mtime": 1781800285.575934,
-    "ast_hash": "57e98f017b7a3d8d2b5673ef63575b19",
-    "semantic_hash": "57e98f017b7a3d8d2b5673ef63575b19"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "5718889853aef8e9eba91204128ac1d5",
+    "semantic_hash": ""
   },
   "tests/e2e/error-boundary.spec.ts": {
     "mtime": 1781800285.5769322,
@@ -3925,9 +3925,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/full-year.spec.ts": {
-    "mtime": 1781800285.5769322,
-    "ast_hash": "55b18f504e379acb8ba9dee813a3e6cf",
-    "semantic_hash": "55b18f504e379acb8ba9dee813a3e6cf"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "ba0ea5a81391806db453146195b02039",
+    "semantic_hash": ""
   },
   "tests/e2e/hazards.spec.ts": {
     "mtime": 1781800285.5779328,
@@ -3935,8 +3935,8 @@
     "semantic_hash": "cdee54da0235d44bb5e3f0bbc3be91ad"
   },
   "tests/e2e/helpers.ts": {
-    "mtime": 1781800285.578932,
-    "ast_hash": "6c37dbf37dab8449920e37eb074e12d4",
+    "mtime": 1781923828.6568148,
+    "ast_hash": "4bc3e42e011bbf400392823f33403f80",
     "semantic_hash": ""
   },
   "tests/e2e/hidpi.spec.ts": {
@@ -3945,19 +3945,19 @@
     "semantic_hash": "ad4af7d12ee466cf930f71fa5dc879bb"
   },
   "tests/e2e/menu.spec.ts": {
-    "mtime": 1781800285.579932,
-    "ast_hash": "271569e48ca2b4b2740b9df49034ac26",
-    "semantic_hash": "271569e48ca2b4b2740b9df49034ac26"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "90da42497f6aaced04b02e491a4f6459",
+    "semantic_hash": ""
   },
   "tests/e2e/navigation.spec.ts": {
-    "mtime": 1781800285.5809338,
-    "ast_hash": "dc03723016434b118fe22257e78ff1b3",
-    "semantic_hash": "dc03723016434b118fe22257e78ff1b3"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "2a49b4e2ca05c53f51ca80caa06cec10",
+    "semantic_hash": ""
   },
   "tests/e2e/orders-quests.spec.ts": {
-    "mtime": 1781800285.5809338,
-    "ast_hash": "9de399cc0a90188f0032352cfbf386c2",
-    "semantic_hash": "9de399cc0a90188f0032352cfbf386c2"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "cdfeb8a7cae11ebe6a79eb2ed2a715a9",
+    "semantic_hash": ""
   },
   "tests/e2e/save.spec.ts": {
     "mtime": 1781800285.5819345,
@@ -3970,8 +3970,8 @@
     "semantic_hash": "540970ae4508fce57037dda1c2063139"
   },
   "tests/e2e/smoke.spec.ts": {
-    "mtime": 1781800285.5839324,
-    "ast_hash": "d8b4dcd76ffbea1629202e2ea7603fa0",
+    "mtime": 1781923828.6568148,
+    "ast_hash": "a5e993bea8fd0a8b19eaceff4e697afa",
     "semantic_hash": ""
   },
   "tests/e2e/tile-collection.spec.ts": {
@@ -3980,9 +3980,9 @@
     "semantic_hash": "98d13d69b4dfb2095c0729af7aad1efe"
   },
   "tests/e2e/tools.spec.ts": {
-    "mtime": 1781800285.584932,
-    "ast_hash": "6e07f7441fbf7a3aefbbe8453b3e6674",
-    "semantic_hash": "6e07f7441fbf7a3aefbbe8453b3e6674"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "fb8f88ea9648294c44abd6ac606c6e9a",
+    "semantic_hash": ""
   },
   "tests/e2e/town-buildings.spec.ts": {
     "mtime": 1781800285.585932,
@@ -4010,9 +4010,9 @@
     "semantic_hash": "fcc6d084c89df5777e5279087dc65164"
   },
   "tests/phase-12-build.test.ts": {
-    "mtime": 1781800285.588932,
-    "ast_hash": "fde123e479a31508bb8fd468cfbb3fc4",
-    "semantic_hash": "fde123e479a31508bb8fd468cfbb3fc4"
+    "mtime": 1781923828.6568148,
+    "ast_hash": "cae6cc4e1bfd51cbeebdb38b9e59006a",
+    "semantic_hash": ""
   },
   "tests/phase-12-ci.test.ts": {
     "mtime": 1781800285.588932,
@@ -4175,8 +4175,8 @@
     "semantic_hash": ""
   },
   "vite.config.js": {
-    "mtime": 1781800285.9138846,
-    "ast_hash": "e15a7f846163ff78d564508ce53b3792",
+    "mtime": 1781923828.6568148,
+    "ast_hash": "a501aadd4a9ccd9e6737b81a7ae950c6",
     "semantic_hash": ""
   },
   "vitest.config.js": {
@@ -4315,13 +4315,13 @@
     "semantic_hash": ""
   },
   "src/textures/seasonal/seasonalArt.test.ts": {
-    "mtime": 1781800285.44936,
-    "ast_hash": "34c870392c7320953d157929554f15ed",
+    "mtime": 1781923828.6367848,
+    "ast_hash": "a4d6cedf9e062f6fad67c1fc68d20aa7",
     "semantic_hash": ""
   },
   "src/textures/seasonal/seasonalArt.ts": {
-    "mtime": 1781800285.4503589,
-    "ast_hash": "3f10c4ba4967c525295b4317efc90137",
+    "mtime": 1781923828.6367848,
+    "ast_hash": "2b126400fce7f5054a1ae42e71ab89ba",
     "semantic_hash": ""
   },
   "src/types/virtual-seasonal.d.ts": {
@@ -4524,6 +4524,11 @@
     "ast_hash": "ad63094388f2e9c6fa80e7c7dde806af",
     "semantic_hash": ""
   },
+  "src/__tests__/sell-price-unify.test.ts": {
+    "mtime": 1781923828.6098926,
+    "ast_hash": "6b2e7bd85b7a96fc5e6868d2ccda6cf4",
+    "semantic_hash": ""
+  },
   "src/game/dragFeedback.test.ts": {
     "mtime": 1781800502.5892293,
     "ast_hash": "c45f18d9ca2305edfbc8c7af56262e7f",
@@ -4532,6 +4537,326 @@
   "src/game/dragFeedback.ts": {
     "mtime": 1781800488.2720065,
     "ast_hash": "c90b5c95be810e00e6f685328e2c66a6",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/chicken.ts": {
+    "mtime": 1781923828.6098926,
+    "ast_hash": "59a8ed5f98877e48a7238984c609016e",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/dodo.ts": {
+    "mtime": 1781923828.6146848,
+    "ast_hash": "dccaefe4357a323316dd2af9506a86b2",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/goose.ts": {
+    "mtime": 1781923828.615425,
+    "ast_hash": "1627afae8db9c7f5497bd98c0849436a",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/hen.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "f09a2dfb8d8b3dfcc4af97b89000e980",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/parrot.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "372dfb645ac18e9af63ade761f41be81",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/pheasant.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "0021edf6f06b29facefdec05f28f6148",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/phoenix.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "df30146e6f71c64a98c8b2bfcf7def9e",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/rooster.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "ff8a48db6aa2dc2b9a12783c223867e6",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/bird/turkey.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "315863e721b29c2c7cfb7665c82f1a9b",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/cattle/cow.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "473e1996f78aa3078ab3ef4f1f7eccc7",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/cattle/longhorn.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "93c8b31b3d913052139d5af25d34e6d9",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/cattle/triceratops.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "cc57361696e56759cb3246c306758406",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fish/clam.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "345cde65ecaab224d3dfacd80bec075d",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fish/kelp.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "e6f54f7e6b56a32d30197d58af46e589",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fish/mackerel.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "e8f2da538bf948beda74d4c33fa70bc4",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fish/oyster.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "7b18090e267007d42114aaafd5b18f38",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/flower/heather.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "76a073370592c2ae8cfee188fa776494",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/flower/pansy.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "d4d05bb763c36142e9fe2a8be2067508",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/flower/waterLily.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "ba2f0cec00f346c12957903b766e21d0",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/apple.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "d88a8f955055d57505f2d2b7cf84521e",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/blackberry.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "a950f4e4b6ca13905b1892a5e6620895",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/coconut.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "8f14dbcd3c6ec3be94538e8e466df144",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/goldenApple.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "102ef24069a44515d8f8a0f8923611cc",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/jackfruit.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "e89e9d8cb1811945c6db9e40f8e76740",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/lemon.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "67eed28e0e9e9454e81a2a0ea805d303",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/pear.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "1c94b36374acd62c66ed233b93fd02d6",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/rambutan.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "44d52eac1c1a4f38c870e6b2448c1adf",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/fruit/starfruit.ts": {
+    "mtime": 1781923828.6157825,
+    "ast_hash": "cb3d7c1d7cbade01f7b9541c4b320912",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/grass/clover.ts": {
+    "mtime": 1781923828.631057,
+    "ast_hash": "7df2d81677959cb5cc8a381ec9e523ef",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/grass/grass.ts": {
+    "mtime": 1781923828.631057,
+    "ast_hash": "a3294b0f1b61005e3eff5a16c0bbe6f6",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/grass/meadow.ts": {
+    "mtime": 1781923828.6327257,
+    "ast_hash": "434b4b0a1b110f524b1bb76b4133ea5c",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/grass/spiky.ts": {
+    "mtime": 1781923828.6327257,
+    "ast_hash": "ca06039ac3925e3aa8f514335011ee5a",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/alpaca.ts": {
+    "mtime": 1781923828.6338167,
+    "ast_hash": "eb9cef6c613dbf19f315f7f9391ab8ca",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/boar.ts": {
+    "mtime": 1781923828.634755,
+    "ast_hash": "b6516b16fb629cffcabc2b27cb3824b7",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/goat.ts": {
+    "mtime": 1781923828.634755,
+    "ast_hash": "0bb6f83c4f1d3caee900e695bb640fd2",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/hog.ts": {
+    "mtime": 1781923828.6357808,
+    "ast_hash": "ba653b29c0393592ed1f8853e681921f",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/pig.ts": {
+    "mtime": 1781923828.6364534,
+    "ast_hash": "366a177a7e5af24d6121e64550e2d335",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/ram.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "d877f7b4edf2fbf3eb8b739d5d3670f9",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/sheep.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "2429f0a590f8589a22c6448f83a23192",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/herd/warthog.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "b0e991e0997058c96fe8e7226f77fcc9",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mine/gem.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "16d001bf4e6680447aa7365ea27587b8",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mine/gold.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "17d8c57a3c0ed01496064f97b2fc4a2a",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mount/donkey.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "3876a6ac8cff2134797b73c7e1d01800",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mount/horse.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "93e7f627a8cad77c8c0688789e19c68d",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mount/mammoth.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "37061466f1f760e6115f682c09e21528",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/mount/moose.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "d78410c58e704ff84aed203777e7e3e5",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/showcaseTiles.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "286bb48223788d33d95ea697bb2b917d",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/special/giantPearl.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "dad85659713e07f132d7e433e065df16",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/birch.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "98012e1ab394a01e1a8f8634611b60ec",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/cypress.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "02fefc43e5624abb04ffc87bdec0ce5b",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/fir.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "5368e22d2a4505e88e8d752fb8cd89ee",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/oak.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "afb57329b77ac1727be1c5a7b2e7d7f2",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/palm.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "e946041d957ad13c711100a0f2c6b4db",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/tree/willow.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "c332465d49b73fb5465e1e08944b809a",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/vectorPreferKeys.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "89133196e705551486bb35082e03116e",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/beet.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "1026cc6f58135a9f6d8fb4c215c5ffbe",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/broccoli.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "3a48478ea670b9a378675b7741dce24d",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/carrot.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "3214e98b89fd5455ba0ebc915cc0fa7e",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/cucumber.ts": {
+    "mtime": 1781923828.6367848,
+    "ast_hash": "17730b5ea4d301328b0b418d1d127cc7",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/eggplant.ts": {
+    "mtime": 1781923828.6520917,
+    "ast_hash": "6eb08d4461c681434ec115079814988b",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/mushroom.ts": {
+    "mtime": 1781923828.6520917,
+    "ast_hash": "83e43089e0af46309c7d01e53ac3effe",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/pepper.ts": {
+    "mtime": 1781923828.6520917,
+    "ast_hash": "77c6771f81afc27142b913f72751a00d",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/squash.ts": {
+    "mtime": 1781923828.6520917,
+    "ast_hash": "1c89ad1032f44b49991736288e178a03",
+    "semantic_hash": ""
+  },
+  "src/textures/seasonal/veg/turnip.ts": {
+    "mtime": 1781923828.6520917,
+    "ast_hash": "129416891561b2baeee5fb8f07b669b9",
     "semantic_hash": ""
   }
 }

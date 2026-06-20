@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { inv } from "../../src/testUtils/inventory.js";
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
@@ -9,7 +10,7 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
 test('BUY_RESOURCE debits coins and credits inventory', async ({ page }) => {
   await gotoFresh(page, { coins: 1000, inventory: { plank: 0 } });
   await dispatchAction(page, { type: 'BUY_RESOURCE', payload: { key: 'plank', qty: 3 } });
-  await waitForState(page, (s) => (s.inventory?.plank ?? 0) >= 3);
+  await waitForState(page, (s) => (inv(s).plank ?? 0) >= 3);
   const s = await getReactState(page);
   expect(s.coins).toBeLessThan(1000);
 });
@@ -17,7 +18,7 @@ test('BUY_RESOURCE debits coins and credits inventory', async ({ page }) => {
 test('SELL_RESOURCE credits coins and debits inventory', async ({ page }) => {
   await gotoFresh(page, { coins: 0, inventory: { plank: 5 } });
   await dispatchAction(page, { type: 'SELL_RESOURCE', payload: { key: 'plank', qty: 5 } });
-  await waitForState(page, (s) => (s.inventory?.plank ?? 0) === 0);
+  await waitForState(page, (s) => (inv(s).plank ?? 0) === 0);
   const s = await getReactState(page);
   expect(s.coins).toBeGreaterThan(0);
 });
@@ -29,5 +30,5 @@ test('BUY_RESOURCE with insufficient coins is rejected (no debit)', async ({ pag
   const s = await getReactState(page);
   // Either no purchase or partial — but the only valid no-op is coins still 1.
   expect(s.coins).toBe(1);
-  expect(s.inventory?.plank ?? 0).toBe(0);
+  expect(inv(s).plank ?? 0).toBe(0);
 });

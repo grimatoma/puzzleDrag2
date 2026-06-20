@@ -1,7 +1,7 @@
 import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
-import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
+import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
 import { rollRatSpawn, tickRats } from "./features/farm/rats.js";
 import { canEnterBiome } from "./state/biomeAccess.js";
@@ -668,6 +668,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Support both legacy action.key and Phase 12.5 action.payload.biome
       const key = action.key ?? action.payload?.biome;
       if (!key) return state;
+      // Reject unknown biome keys — only the three real board kinds exist
+      // (BiomeId in constants.ts). Without this guard a typo'd key would set
+      // state.biome to a nonexistent board and crash the scene's board-regen
+      // on the next render.
+      if (key !== "farm" && key !== "mine" && key !== "fish") return state;
       if (key === state.biomeKey) return state;
       const access = canEnterBiome(state, key) as { ok: boolean; reason?: string };
       if (!access.ok) {
@@ -1067,6 +1072,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE": {
+      if (!action.payload) return state; // malformed dispatch — no-op, don't throw
       const { key: buyKey, qty: buyQty } = action.payload;
       // Transitional: market still trades tile keys until PR 3 moves tiles out
       // of inventory. Cap-check against both lists.
@@ -1079,6 +1085,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       return applyTrade(state, action);
     }
     case "SELL_RESOURCE": {
+      if (!action.payload) return state; // malformed dispatch — no-op, don't throw
       return applyTrade(state, action);
     }
 
@@ -1255,7 +1262,9 @@ function coreReducer(state: GameState, action: Action): GameState {
       return { ...state, runes: (state.runes ?? 0) + amt };
     }
 
-    // Phase 10.3 — Sell a crafted item for its §10 sell price
+    // Sell a crafted item. Uses the unified sell price so an item pays the same
+    // as the equivalent SELL_RESOURCE would (closes the ~10× resource-vs-item
+    // payout fork); falls back to 10%-of-value when the key has no market price.
     case "SELL_ITEM": {
       const itemId = action.id ?? action.payload?.id;
       const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
@@ -1264,7 +1273,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const sellInv = zoneInventory(state, sellZone);
       const owned = inventoryQty(sellInv, itemId);
       if (owned < sellQty) return state;
-      const price = _sellPriceFor(itemId);
+      const price = _effectiveSellPrice(itemId, state.market?.prices);
       const proceeds = price * sellQty;
       return {
         ...state,

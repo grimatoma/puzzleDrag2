@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — Strategy Review · June 2026</title>
+<style>
+:root{
+  --parchment:#f6efe0; --parchment-soft:#fbf7eb; --paper:#f9f2dd; --bg:#efe6cf;
+  --ink:#2b2218; --ink-soft:#7a5e3f; --ink-faint:#a8926f;
+  --rule:#c9b993; --rule-soft:#dccfa9;
+  --ember:#c2531f; --ember-soft:#d6612a; --gold:#c99a2a; --gold-deep:#a9791a; --gold-soft:#e2b24a;
+  --moss:#5f7a30; --moss-soft:#7fa848; --rose:#9c3a4a; --danger:#b13a2a; --slate:#5a5e62;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.55;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 26px 120px}
+a{color:var(--ember);text-underline-offset:2px}
+p{max-width:76ch}
+code,.mono{font-family:var(--mono);font-size:.86em;background:rgba(201,185,147,.22);
+  border:1px solid var(--rule-soft);border-radius:4px;padding:1px 5px;color:var(--ink-soft)}
+
+/* Masthead */
+header.mast{padding:56px 0 22px}
+.mast .eyebrow{font-family:var(--sans);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--ember);font-weight:700;margin:0 0 12px}
+.mast h1{font-size:clamp(36px,6.5vw,66px);line-height:1;margin:0;font-weight:800;letter-spacing:-.01em;
+  text-shadow:0 1px 0 #fff,0 2px 0 rgba(201,185,147,.5)}
+.mast h1 .amp{color:var(--ember)}
+.mast .dek{font-size:18px;color:var(--ink-soft);max-width:66ch;margin:16px 0 0;font-style:italic}
+.mast hr{height:0;border:0;border-top:2px solid var(--ink);margin:26px 0 0;position:relative}
+.mast hr::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:1px solid var(--rule)}
+.statline{display:flex;flex-wrap:wrap;gap:24px;margin-top:20px;font-family:var(--sans)}
+.stat b{font-family:var(--serif);font-size:27px;font-weight:800;line-height:1;display:block}
+.stat span{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+.stat.e b{color:var(--ember)} .stat.m b{color:var(--moss)} .stat.g b{color:var(--gold-deep)}
+
+/* Tab bar */
+.tabs{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;margin:8px 0 18px;
+  background:linear-gradient(180deg,var(--bg) 70%,rgba(239,230,207,0));backdrop-filter:blur(2px);
+  border-bottom:1px solid var(--rule-soft)}
+.tab{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.01em;border:1.5px solid var(--rule);
+  background:var(--parchment-soft);color:var(--ink-soft);border-radius:999px;padding:7px 15px;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--parchment);border-color:var(--ink)}
+body.has-tabs .panel{display:none}
+body.has-tabs .panel.on{display:block;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Sections */
+section{padding:30px 0 6px;scroll-margin-top:70px}
+section + section{border-top:1px solid var(--rule-soft)}
+.kick{font-family:var(--sans);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 4px}
+h2{font-size:clamp(24px,3.2vw,34px);margin:.1em 0 .3em;font-weight:800;letter-spacing:-.01em}
+h3{font-size:19px;margin:1.3em 0 .3em;font-weight:800}
+h4{font-size:15px;margin:1.1em 0 .25em;font-family:var(--sans);letter-spacing:.02em;text-transform:uppercase;color:var(--ink-soft)}
+.lede{font-size:17.5px;color:var(--ink-soft);max-width:74ch;margin:.2em 0 1em}
+ul,ol{max-width:76ch} li{margin:.28em 0}
+
+/* Chips */
+.chip{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;
+  border-radius:5px;padding:2px 8px;display:inline-block;vertical-align:middle}
+.c-great{background:var(--moss)} .c-ok{background:var(--gold-deep)} .c-skip{background:var(--rose)}
+.c-ship{background:var(--ember)} .c-defer{background:var(--slate)} .c-done{background:var(--moss)}
+.c-p1{background:var(--ember)} .c-p2{background:var(--gold-deep)}
+
+/* Callouts */
+.call{border:1px solid var(--rule);border-left:5px solid var(--moss);border-radius:4px;background:var(--parchment);
+  padding:16px 20px;margin:16px 0;box-shadow:0 1px 0 rgba(201,185,147,.5)}
+.call.warn{border-left-color:var(--ember)} .call.tip{border-left-color:var(--gold-deep)}
+.call h4{margin:0 0 5px;color:var(--ink);font-family:var(--serif);text-transform:none;font-size:16px;letter-spacing:0}
+.call p{margin:.3em 0;color:var(--ink-soft)}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-align:left;
+  color:var(--ink-soft);border-bottom:2px solid var(--ink);padding:9px 10px}
+td{border-bottom:1px solid var(--rule-soft);padding:9px 10px;vertical-align:top}
+tr:hover td{background:rgba(201,185,147,.12)}
+.num{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:16px 0}
+.card{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;
+  box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.card h4{margin-top:0}
+.card.accent{border-left:4px solid var(--ember)}
+
+details{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 16px;margin:12px 0}
+summary{cursor:pointer;font-weight:700;font-family:var(--sans);font-size:14px}
+details[open]{padding-bottom:16px}
+
+.svgwrap{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:18px;margin:18px 0;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.svgwrap figcaption{font-size:13px;color:var(--ink-soft);font-style:italic;margin-top:8px;text-align:center}
+
+footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-family:var(--sans);
+  font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media(max-width:680px){.wrap{padding:0 15px 80px}.mast{padding-top:34px}.tabs{top:0}}
+@media print{
+  #grain,.tabs{display:none!important}
+  body.has-tabs .panel{display:block!important;animation:none}
+  body{background:#fff}
+  section{break-inside:avoid}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<canvas id="grain"></canvas>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Strategy Review · Hearthwood Vale · June 2026</p>
+  <h1>puzzleDrag2 <span class="amp">&amp;</span><br>the road ahead</h1>
+  <p class="dek">A grounded, opinionated review of where the game is and where to take it — art direction, new systems, story identity, monetization, UX, performance and tests. Every number below was measured, not estimated (6-agent source audit + the June UI review).</p>
+  <hr>
+  <div class="statline">
+    <div class="stat e"><b>~67k</b><span>LOC procedural art</span></div>
+    <div class="stat"><b>3 / 77</b><span>tiles with full seasons</span></div>
+    <div class="stat m"><b>6 / 10</b><span>prototypes worth keeping</span></div>
+    <div class="stat g"><b>3,701</b><span>unit tests</span></div>
+    <div class="stat e"><b>19 / 20</b><span>e2e bypass the UI</span></div>
+    <div class="stat"><b>~35 MB</b><span>removable cruft</span></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="art">Art &amp; World</button>
+  <button class="tab" data-tab="systems">Systems &amp; Balance</button>
+  <button class="tab" data-tab="story">Story</button>
+  <button class="tab" data-tab="product">Product &amp; UX</button>
+  <button class="tab" data-tab="eng">Engineering &amp; Roadmap</button>
+</nav>
+
+<!-- ───────────────────────── OVERVIEW ───────────────────────── -->
+<div class="panel on" id="overview">
+
+<section>
+  <p class="kick">The one-paragraph version</p>
+  <h2>A game that is already authored, not generic</h2>
+  <p class="lede">The core drag-to-chain loop feels good, the craft and quest surfaces are genuinely well-made, and there's a real warm parchment/ink design language with a zero-config seasonal-art pipeline that is quietly a superpower. What's missing is a <em>silhouette</em>: a generic title and premise, a town that doesn't move, and a seasonal-art system that's 96% unused. Fix three things and it crosses from "nice" to "memorable" — and none of them touch your balance.</p>
+  <div class="call">
+    <h4>Would I download this? — Yes, and keep it. But I wouldn't tell a friend yet.</h4>
+    <p>It already looks better than most cozy-puzzle shovelware. The gap is identity and aliveness, both fixable with machinery you've already built: <strong>(1)</strong> make the town breathe, <strong>(2)</strong> make the seasons visible, <strong>(3)</strong> give it a story silhouette.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kick">If you do nothing else</p>
+  <h2>Top 5 next moves, in order</h2>
+  <div class="grid">
+    <div class="card accent"><h4>1 · Wake the town</h4><p>Wire the already-defined <code>SMOKE_BUILDINGS</code> to a smoke emitter (copy <code>MapScene</code>). Zero new art, biggest "alive" win per hour. <a href="#art-pixel">→ Art</a></p></div>
+    <div class="card accent"><h4>2 · Make seasons visible</h4><p>Fund full 4-season sets for the top ~10 farm tiles (only 3/77 exist today). Doubles as the first cosmetic pack. <a href="#art-assets">→ Assets</a></p></div>
+    <div class="card accent"><h4>3 · Add depth, safely</h4><p>Ship board-altering boons + ripeness-as-modifier — most depth for the least balance risk. <a href="#sys-new">→ Systems</a></p></div>
+    <div class="card accent"><h4>4 · Give it identity</h4><p>Land the "Hollow &amp; Harvest" reskin + actually ship the keeper choice the story already promises. <a href="#story-pivot">→ Story</a></p></div>
+    <div class="card accent"><h4>5 · Close the test gap</h4><p>Add real <em>click-path</em> e2e — today 19/20 specs bypass the UI entirely. <a href="#eng-tests">→ Tests</a></p></div>
+    <div class="card"><h4>+ Free wins <span class="chip c-done">DONE</span></h4><p>Gitignored <code>graph.json</code> (6.5 MB) &amp; deleted <code>_caps/</code> (5.5 MB); fixed the per-dispatch aggregation; <code>minify</code> on for prod. <a href="#eng-perf">→ Engineering</a></p></div>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── ART & WORLD ───────────────────────── -->
+<div class="panel" id="art">
+
+<section id="art-pixel">
+  <p class="kick">Your lead question</p>
+  <h2>Pixel art vs SVG — the size argument runs backwards</h2>
+  <p class="lede">The instinct is "SVG is tiny, pixel art is heavy — going pixel will bloat the game." The measurements say that's not the real tradeoff, and the real win isn't size at all — it's that <strong>the town is currently dead.</strong></p>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>Procedural / SVG (today)</th><th>Pixel art (the seasonal pipeline)</th></tr></thead>
+    <tbody>
+      <tr><td>Building art code</td><td class="num">~4,700 LOC → <b>~46 KB gzip</b></td><td>near-zero code (drop a folder)</td></tr>
+      <tr><td>Share of JS bundle</td><td><b>~3% of Phaser</b> (Phaser = 6.9 MB raw / 855 KB gzip)</td><td>static assets, off the JS critical path</td></tr>
+      <tr><td>All pixel assets today</td><td>—</td><td class="num"><b>3.9 MB</b> total (77 tiles + town)</td></tr>
+      <tr><td>"Feels alive" animation</td><td><span class="chip c-skip">baked away</span> CSS anims are lost when the SVG is rasterized to a town texture</td><td><span class="chip c-great">native</span> spritesheets — what the pipeline already makes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="call warn">
+    <h4>The real finding: the town doesn't move, and that's a wiring gap — not an art gap.</h4>
+    <p><code>SMOKE_BUILDINGS</code> is defined in <code>config.ts</code> and <strong>wired to nothing</strong> — <code>TownScene</code> has zero tweens, zero smoke. The SVG buildings are rasterized to a flat static texture (<code>bakeSvgTexture</code>), so their flicker/wiggle is destroyed. Meanwhile <code>MapScene</code> is fully alive (rising smoke puffs, ember-glow, halo pulses). Your "little things doing nice animations" instinct is exactly right — the map already does it; the town just never got wired up.</p>
+  </div>
+
+  <h3>Recommendation — hybrid, in this order</h3>
+  <ol>
+    <li><strong>Wake the town with procedural ambient (zero new art).</strong> Wire <code>SMOKE_BUILDINGS</code> → a <code>makeSmokeColumn</code>-style emitter copied from <code>MapScene</code>.</li>
+    <li><strong>Pixel-art ~6 hero buildings</strong> (hearth, mill, bakery, forge, inn, home-tiers) as static PixelLab sprites dropped into the existing texture slot.</li>
+    <li><strong>Add 4–8-frame idle spritesheets</strong> for those heroes (chimney smoke, forge glow, mill sails) using the board's strip format — this is where pixel art's advantage actually lands.</li>
+    <li><strong>Keep SVG</strong> for the building-picker DOM preview (vector animates for free there), all HUD/menu icons, and any not-yet-arted building (perfect 46 KB placeholders).</li>
+    <li><strong>Leave the map procedural</strong> — it already reads as intentional and animated; reskinning 12 nodes is low ROI.</li>
+  </ol>
+  <p>Don't pixel-art all 30 buildings × 4 seasons: towns don't change with seasons, and that's weeks of generation for no payoff.</p>
+</section>
+
+<section id="art-clock">
+  <p class="kick">Day/night vs seasons</p>
+  <h2>Two clocks, and the contrast is a feature</h2>
+  <p class="lede">The board already compresses a full 4-season arc into one run (a "year in a harvest"). The town/map are the persistent <em>now</em>. Asking whether they conflict is the right question — and the answer is they shouldn't, because they should run on <strong>different axes of time</strong>.</p>
+
+  <figure class="svgwrap">
+    <svg viewBox="0 0 760 250" width="100%" role="img" aria-label="Two time clocks: the board cycles seasons within a run; the town cycles day to night.">
+      <style>
+        .lbl{font:700 13px var(--sans,sans-serif);fill:#2b2218}
+        .sub{font:italic 12px Georgia,serif;fill:#7a5e3f}
+        .ring{fill:none;stroke:#c9b993;stroke-width:2}
+      </style>
+      <!-- board clock: seasons -->
+      <g transform="translate(180,120)">
+        <circle r="78" class="ring"/>
+        <path d="M0,-78 A78,78 0 0,1 78,0 L0,0 Z" fill="#dbe6b5"/>
+        <path d="M78,0 A78,78 0 0,1 0,78 L0,0 Z" fill="#ecdfb0"/>
+        <path d="M0,78 A78,78 0 0,1 -78,0 L0,0 Z" fill="#e8c890"/>
+        <path d="M-78,0 A78,78 0 0,1 0,-78 L0,0 Z" fill="#dde4ea"/>
+        <circle r="78" class="ring"/>
+        <text x="42" y="-40" class="sub">spr</text><text x="42" y="48" class="sub">sum</text>
+        <text x="-52" y="48" class="sub">aut</text><text x="-52" y="-40" class="sub">win</text>
+        <text x="0" y="115" text-anchor="middle" class="lbl">BOARD — one run</text>
+        <text x="0" y="133" text-anchor="middle" class="sub">a whole year, compressed (time of YEAR)</text>
+      </g>
+      <!-- town clock: day/night -->
+      <g transform="translate(560,120)">
+        <circle r="78" class="ring"/>
+        <path d="M0,-78 A78,78 0 0,1 0,78 L0,0 Z" fill="#f7e2b6"/>
+        <path d="M0,78 A78,78 0 0,1 0,-78 L0,0 Z" fill="#cfd8e2"/>
+        <circle r="78" class="ring"/>
+        <circle cx="40" cy="-30" r="9" fill="#e2b24a"/>
+        <circle cx="-40" cy="30" r="8" fill="#fbf7eb" stroke="#c9b993"/>
+        <text x="0" y="115" text-anchor="middle" class="lbl">TOWN / MAP — persistent</text>
+        <text x="0" y="133" text-anchor="middle" class="sub">a slow day→night (time of DAY)</text>
+      </g>
+      <text x="370" y="124" text-anchor="middle" style="font:800 22px Georgia,serif;fill:#c2531f">⟂</text>
+    </svg>
+    <figcaption>Orthogonal axes can't disagree. Farm a frantic year in a run → come home to a calm evening in town. The contrast reads as a deliberate exhale.</figcaption>
+  </figure>
+
+  <p><strong>Give the town/map a slow day/night; keep the board's per-run season cycle.</strong> Day/night is cheap (a tint overlay + lamp glows at dusk — <code>MapScene</code>'s ember-glow is already 80% of it). The only way to create dissonance is to make both show "season" at once, so don't: town = time of day, board = time of year. No conflict, and the rhythm difference is a selling point.</p>
+</section>
+
+<section id="art-assets">
+  <p class="kick">Graphics &amp; assets</p>
+  <h2>What to add, change, and remove</h2>
+  <p class="lede">Assets are healthy and small (<span class="num">3.9 MB</span> public). The headline: the seasonal <em>system</em> is excellent and zero-config, but the seasonal <em>content</em> is ~4% complete.</p>
+  <div class="grid">
+    <div class="card"><h4 style="color:var(--moss)">Add</h4>
+      <ul>
+        <li><strong>4 missing tiles</strong> (<code>fish_cocoa/ink/jade</code>, <code>mine_silver</code>) — the only board resources still 100% vector. One summer still each closes the roster to 81/81.</li>
+        <li><strong>Full season sets for the top ~10 farm tiles</strong> — grass, wheat, apple, core veg. Makes the seasonal mechanic actually visible (only willow/carrot/chicken have full sets today).</li>
+        <li><strong>Town building art</strong> — the biggest visual-consistency delta vs the increasingly-real board, and the natural home for a cosmetic economy.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--gold-deep)">Change</h4>
+      <ul>
+        <li><strong>Style drift on the board</strong>: a player sees 3 pixel-art tiles, 74 flat summer stills, and 4 vector tiles at once. Bring the 74 summer-only tiles to one consistent quality bar.</li>
+        <li><strong>Doc payload</strong>: re-encode the ~6 MB of full-year review GIFs + downscale the hd2d preview PNGs — roughly halves the GitHub Pages deploy with zero gameplay impact.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--rose)">Remove</h4>
+      <ul>
+        <li><strong><code>public/concept-tiles/</code></strong> + <code>src/textures/conceptTiles/</code> + the <code>conceptTiles=1</code> flag — dead legacy preview, superseded by the seasonal pipeline. <em>(verify nobody demos with it first)</em></li>
+        <li>No other duplicate/unused art in <code>public/</code> — it's clean.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="art-systems">
+  <p class="kick">New visual systems</p>
+  <h2>Where new visuals would pay off</h2>
+  <ul>
+    <li><strong>Ambient world animation</strong> — smoke, forge glow, mill sails, the odd critter, swaying laundry. The single biggest "feels alive" lever; the map proves the pattern works.</li>
+    <li><strong>Day/night lighting on town/map</strong> — a cheap tint + lamp bloom at dusk (see the two-clocks section); pairs with the existing <code>docs/projects/18-town-2d-lighting.md</code> brief.</li>
+    <li><strong>The seasonal lifecycle, made visible</strong> — the transition animations exist for 3 tiles; surfacing the seedling→ripe→rotten arc ties directly into the Ripeness system (Systems tab) so the art and the mechanic reinforce each other.</li>
+    <li><strong>Weather flourishes</strong> — a rain/snow overlay keyed to the board season, reusing the season-transition cinematic brief (<code>17-season-flip-cinematic.md</code>).</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- ───────────────────────── SYSTEMS & BALANCE ───────────────────────── -->
+<div class="panel" id="systems">
+
+<section id="sys-bright">
+  <p class="kick">The rule that keeps balance safe</p>
+  <h2>What "breaking the balance" means</h2>
+  <p class="lede">The economy is rate-limited as <strong>coins/turn</strong> and <strong>resources/turn</strong> (each board action spends a turn; runs are turn-budgeted; chains pay <code>floor(N × value)</code> coins and roll capped resources). The bright line:</p>
+  <div class="call tip">
+    <h4>A system is balance-safe if it doesn't raise coins-per-turn or resources-per-turn above the current curve.</h4>
+    <p>The cleanest safe designs spend the <em>same</em> turn differently (skill expression, not extra yield), or pay out in a <strong>parallel currency</strong> (embers / coreIngots / runes) that already exists and feeds only the boons / meta layer — never coins or capped resources. Anything that routes through a tunable constant can be re-balanced by the existing AI playtest harness.</p>
+  </div>
+</section>
+
+<section id="sys-proto">
+  <p class="kick">The 10 prototypes</p>
+  <h2>Which ones are nice, which are "pretty stupid"</h2>
+  <p class="lede">All 10 are real, complete, playable implementations on a shared 238-line engine. Your instinct was right: Mycelium and Tilt are the off-brand ones; the timing/territory ones are the keepers.</p>
+  <table>
+    <thead><tr><th>Prototype</th><th>One line</th><th>Verdict</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Ripen &amp; Reap</strong></td><td>Per-tile seedling→ripe→rotten clock; harvest at peak, rot spreads</td><td><span class="chip c-great">GREAT</span></td><td>Pure timing/triage on the same gesture; rot is a self-balancing brake. Maps onto seasons.</td></tr>
+      <tr><td><strong>Cross-Pollinate</strong></td><td>Hug another family's cluster to graft ✦ hybrids</td><td><span class="chip c-great">GREAT</span></td><td>The standout — evolves the existing cross-collect into a discovery/combo layer with live preview.</td></tr>
+      <tr><td><strong>Loop Harvest</strong></td><td>Close a same-family loop, reap everything enclosed</td><td><span class="chip c-great">GREAT</span></td><td>Reinterprets the line as a boundary — a territory puzzle, zero new input.</td></tr>
+      <tr><td><strong>Deep Layers</strong></td><td>Mine cells are 4-deep; dig down to richer/deadlier layers</td><td><span class="chip c-great">GREAT</span></td><td>Adds the axis a flat grid lacks; reuses mine ores + hazards. Best fit for an existing biome.</td></tr>
+      <tr><td><strong>Two-Tone Braid</strong></td><td>Strict A,B,A,B alternation for a premium blend</td><td><span class="chip c-great">GREAT</span></td><td>New board-reading skill, only <code>canExtend</code> changes. Great as a boss/zone modifier.</td></tr>
+      <tr><td><strong>Tide Lanes</strong> ★</td><td>Carve a water lane; a boat sails it hauling catches</td><td><span class="chip c-great">GREAT</span></td><td>Richest single idea — but it's effectively a whole new biome. Treat as a <em>zone</em>, not a feature.</td></tr>
+      <tr><td><strong>River Run</strong></td><td>Bank chains earn a flow multiplier; dig adds channels</td><td><span class="chip c-ok">OK</span></td><td>Solid, but the flow multiplier is a direct income boost + a 2nd resource to balance.</td></tr>
+      <tr><td><strong>Brew Path</strong></td><td>Trace ingredients in recipe order for a perfect ×2</td><td><span class="chip c-ok">OK</span></td><td>Smart, but drops the same-family constraint (big identity change). Better as an occasional event board.</td></tr>
+      <tr><td><strong>Mycelium Spread</strong></td><td>Direct a living network that auto-harvests each tick</td><td><span class="chip c-skip">SKIP</span></td><td>Idle/passive income — decouples income from turns (the exact thing Hearthkeeping was cut for).</td></tr>
+      <tr><td><strong>Tilt</strong></td><td>Swipe to tilt the board; tiles slide &amp; auto-clear</td><td><span class="chip c-skip">SKIP</span></td><td>Replaces the deliberate drag-select verb with a 2048-style swipe — a different game.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="sys-new">
+  <p class="kick">Ranked new systems</p>
+  <h2>Add depth without touching the curve</h2>
+  <div class="grid">
+    <div class="card accent"><h4>1 · Board-altering boons <span class="chip c-ship">SHIP FIRST</span></h4>
+      <p>The boons system already has a typed effect registry + reducer hook, but every shipped boon is economy-only. Add <em>board-shape</em> effects (<code>min_chain_relax</code>, <code>wildcard_tile_chance</code>, <code>cross_collect_radius</code>) bought with embers/coreIngots.</p>
+      <p><strong>Safe because:</strong> parallel currency, balance-isolated by design; infra half-built (brief #04). No schema bump.</p>
+    </div>
+    <div class="card accent"><h4>2 · Ripeness as a board modifier <span class="chip c-ship">SHIP FIRST</span></h4>
+      <p>Seedling→ripe→rotten timing, switched on per-season or as a boss modifier, paying in rune progress.</p>
+      <p><strong>Safe because:</strong> changes <em>which</em> turn pays best, not how much; rot is a net income brake. Maps onto seasons + the seasonal art.</p>
+    </div>
+    <div class="card accent"><h4>3 · Cross-Pollinate hybrids <span class="chip c-ok">DELIGHT</span></h4>
+      <p>Routing to hug another family grafts ✦ hybrids — but credit a <strong>capped parallel "rare bloom" resource</strong> at a harness-tuned value, not the prototype's ×3 coin spike.</p>
+      <p><strong>Safe because:</strong> the whole thing sits on one knob (value + cap) the harness already audits.</p>
+    </div>
+    <div class="card"><h4>4 · Streak / combo meter <span class="chip c-defer">FEEL</span></h4>
+      <p>Consecutive non-dud chains build a visible meter that feeds rune/almanac XP and a flourish — <strong>never coins</strong>. Pure feel + parallel progression.</p>
+    </div>
+    <div class="card"><h4>5 · Enclosure reaping <span class="chip c-defer">SET-PIECE</span></h4>
+      <p>Loop Harvest's fence-and-reap, quarantined to rare "Festival Field" boards so the quadratic bonus is contained and rate-tunable.</p>
+    </div>
+    <div class="card"><h4>6 · Depth stacks (mine only) <span class="chip c-defer">BIOME</span></h4>
+      <p>Deep Layers in the mine biome: richer ore traded against flood/gas hazards that lock cells. Net income is risk-gated, not inflated.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── STORY ───────────────────────── -->
+<div class="panel" id="story">
+
+<section id="story-now">
+  <p class="kick">Is the story compelling?</p>
+  <h2>Thin-to-generic, with two good bones</h2>
+  <p class="lede">Verdict: don't keep it as-is — but it's a <strong>1–2 day reskin</strong>. The render path is 100% data-driven; only ~6 of 24 beats hard-reference a resource key; the fiction is a few hundred lines of strings across ~6 files (no schema, no actions, no reducers).</p>
+  <div class="grid">
+    <div class="card"><h4 style="color:var(--moss)">Keep these</h4>
+      <ul>
+        <li>The <strong>"banked, not snuffed"</strong> hook — your rising smoke wakes dormant sister-holds. Gives map expansion emotional logic most farm games lack.</li>
+        <li>The silent lantern-bearing <strong>Hollow Folk</strong> + "what is named remains, what is forgotten is reclaimed" — a distinctive, dignified register.</li>
+        <li><strong>Mira's Letter</strong> — genuinely well-written; proves the branching system works end to end.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--rose)">What's weak</h4>
+      <ul>
+        <li><strong>"Hearthwood Vale / relight the ancestral hearth"</strong> is maximally generic cozy-fantasy — Stardew/Fae Farm/Sun Haven all own it. Zero differentiation at the title.</li>
+        <li>The marketed <strong>keeper Coexist/Drive-Out choice is vaporware</strong> (parked + dead Frostmaw code). You're advertising depth you don't ship.</li>
+        <li>The melancholy/elegiac prose <strong>fights the candy-bright board art</strong> the project keeps drifting toward.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="story-pivot">
+  <p class="kick">Four directions, grounded → cookie-crazy</p>
+  <h2>Pivot options</h2>
+  <div class="grid">
+    <div class="card"><h4>A · "Emberwake" — sharpen, don't pivot</h4><p>Same world, rename it, cut the melancholy ~30%, and <em>actually ship the keeper fork</em>. Lowest cost; doesn't solve "no silhouette."</p></div>
+    <div class="card accent"><h4>B · "Hollow &amp; Harvest" <span class="chip c-ship">MY PICK</span></h4><p>Lean all the way into the Hollow Folk: chaining = "name and keep," reclaiming tiles from a slow tide of forgetting; the town is a visible bulwark of kept names. Turns the existing-but-vestigial machinery (named settlements, choice-log, Charter) into the actual point.</p></div>
+    <div class="card"><h4>C · "Spirits in the Pantry" — cozy-whimsical</h4><p>Cranky household gods you coax back with snacks; each keeper is a spirit you befriend or evict. Best <em>art-fit</em> for the bright board direction; broadly marketable; loses the one classy note.</p></div>
+    <div class="card"><h4>D · "Cinder &amp; Cosmos" — cookie-crazy</h4><p>The hearth is a dying star-seed; each sister-hold is a different <em>physics</em> (tidal, frozen, clockwork). Retro-justifies the wildly-varied zone atlas the team already wants. Highest ceiling, biggest tonal gamble.</p></div>
+  </div>
+  <div class="call">
+    <h4>Recommendation — ship Option B.</h4>
+    <p>It's the highest-distinctiveness option that's also the <em>smallest conceptual leap</em> (it's already in the bible, just buried as flavor). It fixes the honesty problem — the fiction and the systems finally agree — and it differentiates hard at the title. Same ~6 string files, no schema/action/reducer changes; the <code>name_settlement</code> prompt + choice-log are pre-built hooks. Fall back to C for maximum market-safety; reserve D for if the per-biome-physics zone atlas becomes the headline feature.</p>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── PRODUCT & UX ───────────────────────── -->
+<div class="panel" id="product">
+
+<section id="prod-awesome">
+  <p class="kick">What's awesome</p>
+  <h2>The parts that are genuinely good</h2>
+  <ul>
+    <li><strong>The crafting screen &amp; commission-card quest board</strong> — real state coverage (ready / missing-inputs / claimed) and in-world voice.</li>
+    <li><strong>The chain HUD</strong> — carried-progress + live + overflow fills, escalating tier colors, a medallion +N badge. Sophisticated feedback design.</li>
+    <li><strong>The gilded story dialogue system</strong>, the <strong>map side-rail</strong>, and the <strong>Charter</strong> — distinctive, dignified, cohesive.</li>
+    <li><strong>Both authoring tools</strong> (<code>/b/</code> Dev Panel, <code>/story/</code> Story Editor) — the node-graph story editor is a real tool, and both stay on-brand.</li>
+    <li><strong>The zero-config seasonal-tile pipeline</strong> — drop a folder, it bakes. This is your superpower; the only problem is you've used it on 3 tiles.</li>
+  </ul>
+</section>
+
+<section id="prod-ux">
+  <p class="kick">Where UX fails</p>
+  <h2>The recurring breakdowns</h2>
+  <p class="lede">From the June UI review (full ranked ledger in <a href="#eng-tests">ui-review-20260618/</a>): the design system is strong but discipline slips in predictable ways.</p>
+  <ul>
+    <li><strong>Token drift</strong> — ~150 ad-hoc color utilities + raw hex fork the design system (heaviest on board chrome, Settings/Menu, cartography).</li>
+    <li><strong>Sub-44px hit targets</strong> on the project's own <code>--tap-min</code> controls; <strong>sub-12px noun type</strong> against its own ≥12px floor.</li>
+    <li><strong>The board tool rack reads as a wall of gray</strong>; <strong>two town banners overlap</strong> top-center; quest cards <strong>float in a narrow column</strong> at desktop (~60% empty width).</li>
+    <li><strong>Inventory grid shows no item names</strong> (icon-only — bad on touch); Sell/Buy are tiny ghost pills.</li>
+    <li><strong>Localized generic-AI tells</strong> — off-palette Settings/Menu + <strong>purple/blue cartography buttons</strong> (not the sanctioned arcane violet).</li>
+  </ul>
+</section>
+
+<section id="prod-money">
+  <p class="kick">Monetization</p>
+  <h2>Cozy-ethical, zero pay-to-win</h2>
+  <p class="lede">There's no monetization today. Everything below is cosmetic, tied to systems that already exist, and never touches yield/thresholds.</p>
+  <table>
+    <thead><tr><th>Offer</th><th>Ties to</th><th>Revenue</th><th>Not-annoying</th><th>Build</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Seasonal tile-skin packs</strong></td><td>seasonal pipeline + tile collection</td><td>High</td><td>Very high</td><td>Low</td><td><span class="chip c-ship">SHIP 1st</span></td></tr>
+      <tr><td><strong>Decoration / town-skin packs</strong></td><td>decorations slice (already ships)</td><td>High</td><td>High</td><td>Med</td><td><span class="chip c-ship">SHIP 2nd</span></td></tr>
+      <tr><td><strong>Supporter + Name-Your-Village</strong></td><td>settings + heirloom meta</td><td>Med</td><td>Highest</td><td>Lowest</td><td><span class="chip c-ship">SHIP 3rd</span></td></tr>
+      <tr><td>Seasonal cosmetic pass</td><td>dailyStreak + runSummary</td><td>High</td><td>Med</td><td>High</td><td><span class="chip c-defer">DEFER</span></td></tr>
+      <tr><td>Cosmetic-only unlock doubler</td><td>—</td><td>Low-Med</td><td>High</td><td>Low</td><td><span class="chip c-defer">BUNDLE</span></td></tr>
+    </tbody>
+  </table>
+  <p><strong>Why tile skins first:</strong> the engine is 90% there (folder-discovery + render swap), it's the most-seen surface, and it <em>funds the 74 summer-only tiles' full season sets as the first packs.</em></p>
+  <div class="call warn">
+    <h4>Hard guardrails</h4>
+    <p>Never monetize coins/embers/gems/yield/thresholds/run-length. No energy timers, no loot boxes, no FOMO countdowns on the daily streak. Every paid item is one-time or fixed-content — no gacha, no consumables.</p>
+  </div>
+</section>
+
+<section id="prod-missing">
+  <p class="kick">Missing &amp; removable</p>
+  <h2>Gaps to fill, weight to cut</h2>
+  <div class="grid">
+    <div class="card"><h4 style="color:var(--moss)">Missing (highest leverage)</h4>
+      <ul>
+        <li><strong>Town aliveness</strong> (smoke / critters / day-night).</li>
+        <li>The <strong>keeper choice</strong> the story promises — ship it or stop marketing it.</li>
+        <li><strong>Full seasonal art content</strong> — 3/77 tiles done; the mechanic is invisible.</li>
+        <li><strong>Click-path test coverage</strong> + a daily-streak golden.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--rose)">Remove</h4>
+      <ul>
+        <li><code>concept-tiles/</code> + the <code>conceptTiles=1</code> flag (dead preview).</li>
+        <li>Dead UI: Dev-Panel <code>FlagsTab</code>/<code>AchievementsTab</code>/<code>AbilitiesEditor</code>; Story-Editor <code>Stats</code>/<code>Heatmap</code>/<code>BondTimeline</code> panels; orphaned <code>.craft-strip</code> CSS; Frostmaw dead beats; the Festivals "coming soon" dead-end.</li>
+        <li>From version control: <code>_caps/</code> (5.5 MB) &amp; <code>graph.json</code> (6.5 MB) — gitignored both. <span class="chip c-done">DONE</span></li>
+        <li>Mycelium &amp; Tilt as core-verb candidates.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── ENGINEERING & ROADMAP ───────────────────────── -->
+<div class="panel" id="eng">
+
+<section id="eng-perf">
+  <p class="kick">Efficiency</p>
+  <h2>Runtime &amp; build wins</h2>
+  <div class="call tip">
+    <h4><span class="chip c-done">DONE</span> Top runtime win — the per-dispatch re-aggregation is fixed.</h4>
+    <p>The <code>inventoryCap</code> effect in <code>prototype.tsx</code> ran <code>currentCap()</code> → <code>computeAggregatedAbilities</code> (loops all workers + buildings + discovered tiles) on <strong>every action</strong> — including every chain tile during a drag — because its effect dep was the whole <code>gameState</code>. Its dep array is now narrowed to <code>[built, mapCurrent, workers, tileCollection.discovered, tileCollection.activeByCategory]</code> — the exact inputs <code>currentCap</code> reads, so behavior is unchanged. <strong>Still open:</strong> scope the other ~31 whole-object registry-effect deps the same way.</p>
+  </div>
+  <ul>
+    <li><strong>Build ships un-minified JS</strong> <span class="chip c-done">DONE</span> — <code>vite.config.js</code> had <code>minify:false</code> + <code>sourcemap:true</code> → 11.8 MB raw JS. Now gated on the Vite command: <code>minify</code> on + sourcemaps off for prod (<code>vite build</code>), while dev (<code>vite serve</code>) stays unminified so the Dev-Panel Animations-Demo bridge and other dev tooling remain readable. ~2–3× smaller raw JS and faster mobile parse.</li>
+    <li><strong>3 live WebGL contexts</strong> on the board+town path — well-managed (sleep/wake), no crash risk, flagged only for mobile memory awareness.</li>
+    <li><strong>Texture churn &amp; reducer cloning are fine</strong> — guarded re-bake throttled to 20 fps on a 6×6 board; spread-based reducer, no deep clones.</li>
+  </ul>
+</section>
+
+<section id="eng-bloat">
+  <p class="kick">Large files &amp; repo weight</p>
+  <h2>~35 MB of removable cruft</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Size</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><code>graphify-out/graph.json</code> + <code>GRAPH_REPORT.md</code></td><td class="num">6.5 MB</td><td><span class="chip c-done">DONE</span> Gitignored + <code>git rm --cached</code> — regenerable (<code>graphify update .</code>)</td></tr>
+      <tr><td><code>_caps/</code> (28 PNGs)</td><td class="num">5.5 MB</td><td><span class="chip c-done">DONE</span> Deleted + gitignored — dev screenshots, zero references</td></tr>
+      <tr><td><code>docs/seasonal-tile-system/assets/</code> GIFs</td><td class="num">~12 MB</td><td>Re-encode / archive — re-shipped to Pages each deploy</td></tr>
+      <tr><td><code>docs/hd2d-village/preview/</code> + camera ref PNGs</td><td class="num">~8 MB</td><td>Downscale concept screenshots</td></tr>
+      <tr><td><code>src/GameScene.ts</code></td><td class="num">2,214 LOC</td><td>The one real god-file — extract the texture-bake methods</td></tr>
+    </tbody>
+  </table>
+  <p>The procedural-art definitions (<code>src/textures/**</code>, ~56k LOC / 33% of source) are large but cohesive and expected; only <code>GameScene.ts</code> is a true split candidate.</p>
+</section>
+
+<section id="eng-tests">
+  <p class="kick">Test coverage</p>
+  <h2>Deep on logic, shallow on clicks</h2>
+  <p class="lede"><strong>Good enough to refactor reducer/economy/save safely; not good enough for the UI-click or Phaser-input layer.</strong> Unit tier is deep (3,701 tests, every slice + save migrations covered). But <strong>19 of 20 e2e specs dispatch through a React-fiber bridge instead of clicking</strong> — so a button that stops calling its handler passes the whole suite. Goldens are mobile-thin (no <code>iphone-landscape</code> baselines; daily-streak has zero browser coverage and is suppressed in the seed).</p>
+  <h4>Add — highest value first</h4>
+  <ol>
+    <li><code>town-build-flow.spec</code> — enter farm → chain → close season → <strong>click</strong> Build → place → assert <code>built</code> grew &amp; debited.</li>
+    <li><code>daily-streak.spec</code> — boot without suppression, <strong>click</strong> claim, assert reward + date advance. (A launch-time blocker with zero coverage.)</li>
+    <li><code>found-zone.spec</code> — travel → <strong>click</strong> Found → biome pick → <code>TIER_UP</code>. The core progression loop has no e2e.</li>
+    <li><code>orders-fulfill-ui.spec</code> &amp; <code>run-summary-to-spend.spec</code> — guard the HUD/economy display seam.</li>
+    <li>Goldens: a <code>daily-streak-modal</code> scenario + re-baseline at <code>iphone-landscape</code> (on Linux — not regenerable on this Windows host).</li>
+  </ol>
+</section>
+
+<section id="eng-roadmap">
+  <p class="kick">Putting it together</p>
+  <h2>Prioritized roadmap</h2>
+  <table>
+    <thead><tr><th>#</th><th>Move</th><th>Why now</th><th>Balance</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Wire town smoke (<code>SMOKE_BUILDINGS</code>)</td><td>Biggest "alive" win, zero art</td><td>none</td><td>S</td></tr>
+      <tr><td>2</td><td><span class="chip c-done">DONE</span> Free cleanup: gitignored <code>graph.json</code>/<code>_caps</code>; fixed the per-dispatch aggregation; <code>minify</code> on for prod</td><td>Cheap perf + repo weight</td><td>none</td><td>S</td></tr>
+      <tr><td>3</td><td>Full season sets for top ~10 farm tiles</td><td>Makes the seasonal system visible; funds cosmetic packs</td><td>none</td><td>M</td></tr>
+      <tr><td>4</td><td>Board-altering boons + ripeness modifier</td><td>Most depth for least risk</td><td>parallel-currency safe</td><td>M</td></tr>
+      <tr><td>5</td><td>"Hollow &amp; Harvest" reskin + ship the keeper choice</td><td>Gives the game a silhouette</td><td>none (strings)</td><td>S–M</td></tr>
+      <tr><td>6</td><td>Click-path e2e + daily-streak golden</td><td>Unblocks safe UI refactors</td><td>n/a</td><td>M</td></tr>
+      <tr><td>7</td><td>Pixel-art ~6 hero buildings + idle spritesheets</td><td>Consistency + aliveness</td><td>none</td><td>M–L</td></tr>
+      <tr><td>8</td><td>Town/map day-night lighting</td><td>Mood + the "two clocks" payoff</td><td>none</td><td>M</td></tr>
+      <tr><td>9</td><td>Ship cosmetic monetization (tile skins → decorations → supporter)</td><td>Revenue, all cosmetic</td><td>none</td><td>M</td></tr>
+    </tbody>
+  </table>
+  <details>
+    <summary>Evidence appendix — the measured numbers behind every claim</summary>
+    <ul>
+      <li><strong>Art:</strong> SVG buildings 4,721 LOC / 231 KB src / ~46 KB gzip ≈ 3% of Phaser. <code>public/</code> = 3.9 MB (seasonal-tiles 3.5 MB / 95 PNGs / 77 subjects). Full season sets: willow, carrot, chicken (3). 74 summer-only. 4 tiles have no art folder. Town SVGs baked static via <code>TownScene.bakeSvgTexture</code>; <code>SMOKE_BUILDINGS</code> defined in <code>config.ts</code>, unused. <code>MapScene</code> has live smoke/glow/halo tweens.</li>
+      <li><strong>Bundle:</strong> Phaser 6.9 MB raw / 855 KB gzip / 584 KB brotli, code-split &amp; lazy. Total served JS 11.8 MB raw / 1.4 MB brotli. <code>minify:false</code>, <code>sourcemap:true</code> (19 MB of maps in <code>dist/</code>). <code>dist/docs</code> = 45 MB on disk; ~11 MB git-tracked actually ships.</li>
+      <li><strong>Economy levers:</strong> coins = <code>floor(N × value)</code> (<code>state.ts:409</code>); resources roll per <code>TILES_PER_RESOURCE</code> into a capped inventory; turn-budgeted runs. Parallel currencies: embers / coreIngots / gems / heirlooms. <code>SAVE_SCHEMA_VERSION = 47</code> with a live migration ladder. Boons registry at <code>features/boons/data.ts</code>.</li>
+      <li><strong>Story:</strong> <code>src/story.ts</code> 1,018 LOC; 3 acts, 15 main + 9 side beats; render 100% data-driven; ~6 beats hard-reference a resource key; reskin surface ≈ 6 files (strings + NPC names + lore + charter terms).</li>
+      <li><strong>Tests:</strong> 3,701 unit (318 files) + 256 phase-integration; 65 e2e across 20 specs (19 use the fiber bridge, 7 click); 82 game visual scenarios (14 desktop smoke), 113 golden PNGs (desktop + iphone-portrait only).</li>
+      <li><strong>Cleanup:</strong> 114 MB tracked (docs 44.7, tests 44.3, src 9.9, graphify 6.9, _caps 5.6). Removing <code>_caps</code> + <code>graph.json</code> + doc GIFs reclaims ~35 MB.</li>
+      <li><strong>Method:</strong> 6-agent grounded source audit (June 2026) + the companion June UI review (12-agent, 155 screenshots, 166 findings). Raw per-area reports retained alongside the UI-review artifacts.</li>
+    </ul>
+  </details>
+</section>
+
+</div>
+
+<footer>
+  <span>puzzleDrag2 strategy review · June 2026 · grounded 6-agent source audit + UI review</span>
+  <span>warm · authored · balance-safe</span>
+</footer>
+
+</div>
+<script>
+// Procedural paper grain — seeded, no imagery.
+(function(){
+  var c=document.getElementById('grain'),x=c&&c.getContext('2d');if(!x)return;
+  function seed(s){return function(){s=(1103515245*s+12345)&0x7fffffff;return s/0x7fffffff}}
+  function draw(){
+    var w=c.width=innerWidth,h=c.height=innerHeight,r=seed(11);x.clearRect(0,0,w,h);
+    for(var i=0;i<Math.floor(w*h/950);i++){var t=r();x.fillStyle='rgba('+(t<.5?'120,94,63':'255,247,230')+','+(0.04+r()*0.06)+')';x.fillRect(r()*w,r()*h,1,1);}
+    x.strokeStyle='rgba(120,94,63,0.05)';for(i=0;i<55;i++){var px=r()*w,py=r()*h,a=r()*Math.PI,l=8+r()*24;x.beginPath();x.moveTo(px,py);x.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);x.stroke();}
+    for(i=0;i<6;i++){var cx=r()*w,cy=r()*h,rad=120+r()*240,g=x.createRadialGradient(cx,cy,0,cx,cy,rad);g.addColorStop(0,'rgba(201,185,147,0.05)');g.addColorStop(1,'rgba(201,185,147,0)');x.fillStyle=g;x.fillRect(cx-rad,cy-rad,rad*2,rad*2);}
+  }
+  draw();var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(draw,200)});
+})();
+// Grouped tabs with deep-linking (degrades to full scroll with no JS / when printing).
+(function(){
+  var tabs=document.getElementById('tabs');if(!tabs)return;
+  document.body.classList.add('has-tabs');
+  var btns=[].slice.call(tabs.querySelectorAll('.tab'));
+  var panels=[].slice.call(document.querySelectorAll('.panel'));
+  function show(id,scrollSel){
+    var found=false;
+    panels.forEach(function(p){var on=p.id===id;p.classList.toggle('on',on);if(on)found=true;});
+    btns.forEach(function(b){b.classList.toggle('on',b.dataset.tab===id);});
+    if(found&&scrollSel){var el=document.querySelector(scrollSel);if(el)el.scrollIntoView();}
+    return found;
+  }
+  function fromHash(){
+    var hash=location.hash.replace('#','');if(!hash){show('overview');return;}
+    if(document.getElementById(hash)&&document.getElementById(hash).classList.contains('panel')){show(hash);return;}
+    var sec=document.getElementById(hash);
+    if(sec){var panel=sec.closest('.panel');if(panel){show(panel.id,'#'+hash);return;}}
+    show('overview');
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){history.pushState(null,'','#'+b.dataset.tab);show(b.dataset.tab);window.scrollTo({top:0});});});
+  // Intra-doc anchors switch tabs.
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1),el=document.getElementById(id);if(!el)return;
+      var panel=el.classList.contains('panel')?el:el.closest('.panel');
+      if(panel){e.preventDefault();history.pushState(null,'','#'+id);show(panel.id,el.classList.contains('panel')?null:'#'+id);if(panel.id===id)window.scrollTo({top:0});}
+    });
+  });
+  addEventListener('popstate',fromHash);fromHash();
+})();
+</script>
+</body>
+</html>

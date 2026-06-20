@@ -1,14 +1,14 @@
-# CI — lint + typecheck + test + build (gating) + e2e + visual smoke (non-blocking) on every PR vs main and push to main.
+# CI — lint + typecheck + test + build + e2e (gating) + visual smoke (non-blocking) on every PR vs main and push to main.
 # Branch protection (set in repo settings — adding jobs here does NOT auto-gate merges):
-#   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build
-#   - `e2e` lands NON-BLOCKING (continue-on-error): ~half the never-gated specs have rotted
-#     against current main. Add `e2e` to the required checks AFTER the specs are de-rotted and
-#     its `continue-on-error` is removed (see docs/projects/09-ci-e2e-gate-findings.md).
-#   - `visual-smoke` is also NON-BLOCKING; add it AFTER its goldens are re-baselined on CI and
+#   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build, e2e
+#   - `e2e` is now GATING: the rotted specs were de-rotted and its `continue-on-error` removed
+#     (see docs/projects/09-ci-e2e-gate-findings.md). A HUMAN must still add `e2e` to the required
+#     status checks above in repo settings — flipping continue-on-error here does NOT auto-gate merges.
+#   - `visual-smoke` is still NON-BLOCKING; add it AFTER its goldens are re-baselined on CI and
 #     its `continue-on-error` is removed (see the `visual-rebaseline` job + procedure below).
 #   - Require branches to be up to date before merging
 #   - Dismiss stale approvals on push
-# The gating checks must pass before a PR can merge; e2e + visual-smoke are informational for now.
+# The gating checks must pass before a PR can merge; visual-smoke is informational for now.
 #
 # Re-baselining visual goldens (NEVER do this on a Windows/local host — DOM drifts 3–5%,
 # Phaser WebGL ~38% off due to GPU/font differences; goldens must be made on this Linux runner):
@@ -120,14 +120,14 @@ jobs:
   # starts its own Vite via `webServer` (reuseExistingServer is a no-op on a
   # clean runner).
   #
-  # Lands NON-BLOCKING: ~half the never-before-gated specs have bit-rotted
-  # against current main (stale action fixtures, selectors, balance/unlock
-  # assumptions — NOT a regression here; see docs/projects/09-ci-e2e-gate-findings.md).
-  # De-rot the specs, then remove `continue-on-error` to make this gating.
+  # GATING: the previously-rotted specs were de-rotted (stale action fixtures,
+  # selectors, balance/unlock assumptions, the zoned-inventory model, and the
+  # dialogs-disabled-by-default flag — see docs/projects/09-ci-e2e-gate-findings.md).
+  # `npm run test:e2e` is green on chromium/Linux. A human must add `e2e` to the
+  # branch-protection required checks (see header) for it to actually block merges.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true # REMOVE once the rotted e2e specs are fixed (see findings doc)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

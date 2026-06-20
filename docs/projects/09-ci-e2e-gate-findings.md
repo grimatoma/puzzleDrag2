@@ -9,7 +9,7 @@ The infra from brief 09 landed in **PR #1229** (the `e2e`, `visual-smoke`, `visu
 - **CI result (PR #1229, run 27737992260): `32 passed / 31 failed`** (63 tests, chromium/Linux).
 - **Reproduced identically on the local Windows host** (via a `node_modules` junction → parent), so this is **deterministic rot, not CI flakiness and not a regression from PR #1229** — the only files PR #1229 changed in the e2e path were the console-error collectors (`helpers.ts`, `smoke.spec.ts`, `error-boundary.spec.ts`), none of which touch the state bridge / fixtures the failures stem from.
 
-Because of this, **both `e2e` and `visual-smoke` land `continue-on-error: true`** (informational). The gating checks remain `lint / typecheck / typecheck-tests / typecheck-test-files / test / build`.
+Because of this, **`e2e` and `visual-smoke` originally landed `continue-on-error: true`** (informational). The de-rot below has since fixed all e2e specs and **`e2e` is now gating** (`continue-on-error` removed); `visual-smoke` stays non-blocking until its goldens are re-baselined on CI. See **Resolution — DONE** at the bottom.
 
 This is exactly the failure mode brief 09 exists to *prevent going forward*: an ungated test layer silently rotting while the reducer churns. The gate now exists; the existing specs need a one-time repair.
 
@@ -48,3 +48,19 @@ This is exactly the failure mode brief 09 exists to *prevent going forward*: an 
 1. De-rot the 31 specs above (groups A–D). Reproduce locally without CI: junction the worktree `node_modules` to the parent, then `npx playwright test tests/e2e/<spec> --workers=1` (the `webServer` boots its own Vite from the worktree once `./node_modules/vite/bin/vite.js` resolves via the junction).
 2. When `npm run test:e2e` is green on a PR, remove `continue-on-error: true` from the `e2e` job in `.github/workflows/ci.yml` and add `e2e` to the branch-protection required checks.
 3. (Independently) re-baseline the visual goldens on CI (`gh workflow run ci.yml -f update_goldens=true`), commit, then flip `visual-smoke` the same way.
+
+## Resolution — DONE (de-rot landed)
+
+When the de-rot was actually run against current `main`, the suite was **38 failed / 25 passed** (worse than PR #1229's 32/31 — `main` drifted further: `hazards.spec` ×3 and `economy:25` had newly broken). All 63 specs now pass (`npm run test:e2e` green, chromium/Linux), and the `e2e` job's `continue-on-error` is removed (step 2 done). The shared root causes and the fixes:
+
+- **Shared test-harness fixes** (`tests/e2e/helpers.ts`):
+  - `triggerChainViaScene` detached the scene's drag methods (`const f = scene.startPath; f(t)`), so `this` was `undefined` and `startPath` threw on `this.locked` (it's now a class method, not an arrow field). Call them through the scene object. Unblocked `chain`, `full-year`, and any `chainUntil` user.
+  - `seedQuietSave` now pre-claims the daily-streak reward (`dailyStreak.lastClaimedDate = today`, keyed via `dayKeyForDate`) so the boot `LOGIN_TICK` doesn't open the `daily_streak` modal whose backdrop intercepted every UI-click spec. Also fixed `economy:25` (the modal's +25-coin reward made the no-op assertion read 26).
+- **A — biomes:** seed `activeZone`/`mapCurrent` into a zone that has the target board (`quarry` for mine, `harbor` for fish) to satisfy `canEnterBiome`. `:48` (invalid-key no-op) exposed a real reducer gap — `SWITCH_BIOME` accepted any key and crashed board-regen → added a guard rejecting non-`farm`/`mine`/`fish` keys (`src/state.ts`).
+- **B — navigation/smoke:** bottom-nav is now icon Tabs (stable `data-tour="nav-<key>"`); Quests moved into the Townsfolk view's tab; HUD crafting label is "Craft"; `Debug` is reached via the menu's "🛠 Debug"; the SeasonBar needs an active `FARM/ENTER` to show a non-zero budget.
+- **C — crafting/tools/cuj:** inventory is **zone-keyed** (`state.inventory[zoneId][key]`) — read via `testUtils/inventory.inv(s)`; recipe inputs use resource keys (`flour`/`eggs`/`plank`/`block`/`hay_bundle`/`dirt`, not `grain_flour`/`wood_plank`/tile keys). The cuj hotbar/modal flow is **portrait-only** (landscape ≥500px hides `[data-area="hotbar"]`) → run those in a portrait viewport and arm via the dropdown's own ARM button (the action-panel button sits under the open modal).
+- **D — reducer/fixture drift:** chains accrue fractional `resourceProgress` that rolls into inventory (tile keys no longer enter `state.inventory`); `BUY_RESOURCE`/`SELL_RESOURCE` hardened against a missing `payload` (the `error-boundary:22` crash); `dialog-draft` updated to the current side-beat firing model — beats fire on a `when` Cond tree (not the legacy `trigger:`), and dialogs are **suppressed by default** (`featureFlags.isDialogsDisabled`) so a dialog test must opt in via `__HEARTH_DISABLE_DIALOGS__ = false` and use ≥2 lines to route to the titled center-stage modal.
+
+Two small **defensive reducer guards** were added (not test weakening — they make the reducer match the invariants the tests document): the `SWITCH_BIOME` unknown-key guard and the `BUY/SELL_RESOURCE` missing-payload guards.
+
+Still open: `visual-smoke` (step 3 — re-baseline goldens on CI) is unchanged and remains non-blocking.

@@ -50,20 +50,24 @@ describe("fallbackIdleIndex — incremental season fallback rule", () => {
 describe("subject discovery + inactive guards", () => {
   it("discovers the shipped tile-key folders via the virtual manifest", () => {
     // Wired through the seasonalSubjects() Vite plugin scanning public/seasonal-tiles/.
-    expect(SEASONAL_SUBJECT_KEYS.has("tile_tree_willow")).toBe(true);
-    expect(SEASONAL_SUBJECT_KEYS.has("tile_bird_chicken")).toBe(true);
-    expect(SEASONAL_SUBJECT_KEYS.has("tile_veg_carrot")).toBe(true);
+    // Keys claimed by the all-vector showcase set (VECTOR_PREFER_KEYS) are filtered
+    // OUT of the baked manifest, so the discovered set is the baked-only remainder.
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_stone")).toBe(true);
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_coal")).toBe(true);
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_special_dirt")).toBe(true);
+    // ...and a vector-preferred key (willow ships a PNG folder too) is excluded:
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_tree_willow")).toBe(false);
   });
 
   it("art is inactive (procedural fallback) until sheets decode — no fetch in node", () => {
-    expect(seasonalArtActive("tile_tree_willow")).toBe(false);
+    expect(seasonalArtActive("tile_mine_stone")).toBe(false);
     expect(seasonalArtActive("tile_does_not_exist")).toBe(false);
   });
 
   it("paintSeasonalReference reports false for an inactive subject without throwing", () => {
     const calls: string[] = [];
     const ctx = { drawImage: () => calls.push("draw"), imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
-    expect(paintSeasonalReference(ctx, "tile_tree_willow")).toBe(false);
+    expect(paintSeasonalReference(ctx, "tile_mine_stone")).toBe(false);
     expect(calls).toEqual([]);
   });
 });

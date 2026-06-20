@@ -64,8 +64,15 @@ export async function seedQuietSave(page: Page, overrides: QuietSaveOverrides = 
           beat: "act1_arrival",
           flags: { intro_seen: true, _fired_act1_arrival: true },
         };
+        // Pre-claim today's daily-streak reward so the boot-time LOGIN_TICK
+        // (prototype.tsx, keyed on the local day via dayKeyForDate) is a no-op
+        // and never opens the `daily_streak` modal. Its backdrop otherwise
+        // intercepts every UI-click spec (crafting / cuj-tools / menu / nav).
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const baseDaily = { lastClaimedDate: today, currentDay: 1 };
         if (data && Object.keys(data).length > 0) {
-          const out = { version: saveVersion, story: baseStory, ...data } as Record<string, unknown>;
+          const out = { version: saveVersion, story: baseStory, dailyStreak: baseDaily, ...data } as Record<string, unknown>;
           if (data.story && typeof data.story === "object") {
             const story = data.story as Record<string, unknown>;
             const flags = (story.flags && typeof story.flags === "object" ? story.flags : {}) as Record<string, unknown>;
@@ -77,7 +84,7 @@ export async function seedQuietSave(page: Page, overrides: QuietSaveOverrides = 
           }
           localStorage.setItem("hearth.save.v1", JSON.stringify(out));
         } else {
-          localStorage.setItem("hearth.save.v1", JSON.stringify({ version: saveVersion, story: baseStory }));
+          localStorage.setItem("hearth.save.v1", JSON.stringify({ version: saveVersion, story: baseStory, dailyStreak: baseDaily }));
         }
       } catch {
         /* ignore */
@@ -85,6 +92,25 @@ export async function seedQuietSave(page: Page, overrides: QuietSaveOverrides = 
     },
     { overrides, saveVersion: SAVE_SCHEMA_VERSION },
   );
+  // Kill CSS animations/transitions so dynamically-mounted DOM overlays (the
+  // tool dropdown, action panel, story bar) settle instantly. On the slower CI
+  // runner an in-flight ~200ms drop animation leaves a button "not stable" for
+  // Playwright's actionability check well past the 30s test timeout — the cuj
+  // arming/cancel journeys timed out on Linux CI while passing locally. This is
+  // purely cosmetic (no spec asserts on an animation) and does not touch the
+  // Phaser canvas, which has its own tween layer.
+  await page.addInitScript(() => {
+    const css =
+      "*,*::before,*::after{animation-duration:0.001ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;transition-delay:0ms!important;scroll-behavior:auto!important;}";
+    const inject = () => {
+      const style = document.createElement("style");
+      style.setAttribute("data-e2e-no-anim", "");
+      style.textContent = css;
+      (document.head ?? document.documentElement).appendChild(style);
+    };
+    if (document.head) inject();
+    else document.addEventListener("DOMContentLoaded", inject, { once: true });
+  });
 }
 
 /** Wipe save + seed quiet flags + navigate + wait. Single call for most specs. */
@@ -238,9 +264,15 @@ export async function triggerChainViaScene(page: Page, length = 3): Promise<Chai
     ];
     const neighbors = (t: BoardTile) =>
       DIRS.map(([dr, dc]) => grid[t.row + dr]?.[t.col + dc]).filter(Boolean) as BoardTile[];
-    const startPath = scene.startPath as (t: BoardTile) => void;
-    const tryAddToPath = scene.tryAddToPath as (t: BoardTile) => void;
-    const endPath = scene.endPath as () => void;
+    // Call the scene's drag methods *through* the scene object so `this` is
+    // bound — they are regular class methods (not arrow fields), so a detached
+    // `const f = scene.startPath; f(tile)` call would run with `this===undefined`
+    // and throw on the first `this.locked` read.
+    const sceneObj = scene as unknown as {
+      startPath: (t: BoardTile) => void;
+      tryAddToPath: (t: BoardTile) => void;
+      endPath: () => void;
+    };
     for (const start of tiles) {
       const visited = new Set([start]);
       const path: BoardTile[] = [start];
@@ -256,9 +288,9 @@ export async function triggerChainViaScene(page: Page, length = 3): Promise<Chai
         return false;
       };
       if (ext(start)) {
-        startPath(path[0]);
-        for (let i = 1; i < path.length; i++) tryAddToPath(path[i]);
-        endPath();
+        sceneObj.startPath(path[0]);
+        for (let i = 1; i < path.length; i++) sceneObj.tryAddToPath(path[i]);
+        sceneObj.endPath();
         return { ok: true as const, type: start.res?.key ?? "", length: path.length };
       }
     }

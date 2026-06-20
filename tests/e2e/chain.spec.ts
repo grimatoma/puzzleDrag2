@@ -1,22 +1,36 @@
 import { test, expect } from '@playwright/test';
 import {
-  gotoFresh, triggerChainViaScene, getReactState, waitForState, dispatchAction,
+  gotoFresh, triggerChainViaScene, getReactState, dispatchAction, chainUntil,
 } from './helpers';
+import type { ReactStateSnapshot } from './helpers';
 
-test('drag-chain via scene API: turn advances and inventory grows', async ({ page }) => {
+// Total resources accrued in the active zone — both the rolled-up inventory and
+// the fractional resourceProgress buckets (both are zone-keyed in current main).
+function accruedResources(s: ReactStateSnapshot): number {
+  const z = (s.activeZone ?? s.mapCurrent ?? 'home') as string;
+  const sumBucket = (bucket: unknown): number => {
+    if (!bucket || typeof bucket !== 'object') return 0;
+    let total = 0;
+    for (const v of Object.values(bucket as Record<string, unknown>)) total += Number(v) || 0;
+    return total;
+  };
+  return sumBucket(s.inventory?.[z]) + sumBucket(s.resourceProgress?.[z]);
+}
+
+test('drag-chain via scene API: turn advances and resources accrue', async ({ page }) => {
   test.setTimeout(60_000);
   await gotoFresh(page);
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   const before = await getReactState(page);
   expect(before.turnsUsed).toBe(0);
-  // Allow up to two attempts — under parallel execution the very first chain
-  // attempt sometimes lands during the scene's initial fill animation.
-  let result = await triggerChainViaScene(page, 3);
-  if (!("ok" in result && result.ok)) result = await triggerChainViaScene(page, 3);
-  expect("ok" in result && result.ok).toBe(true);
-  const okResult = result as { ok: true; type: string; length: number };
-  const after = await waitForState(page, (s) => s.turnsUsed >= 1);
-  expect(after.inventory[okResult.type] ?? 0).toBeGreaterThan(0);
+  // Tile keys no longer enter state.inventory directly (state.ts CHAIN_COLLECTED):
+  // a chain accrues fractional resourceProgress[resourceKey] that rolls into the
+  // zone-keyed inventory once it crosses TILES_PER_RESOURCE. Drive chains until a
+  // turn is spent and some resource has accrued (progress and/or inventory).
+  const after = await chainUntil(page, (s) => s.turnsUsed >= 1 && accruedResources(s) > 0, { maxChains: 20 });
+  expect(after).not.toBeNull();
+  expect(after!.turnsUsed, 'turns advanced').toBeGreaterThanOrEqual(1);
+  expect(accruedResources(after!), 'resources accrued').toBeGreaterThan(0);
 });
 
 test('chain via touch: simulate drag on canvas', async ({ page }) => {

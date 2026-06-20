@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep Layers — puzzleDrag2 puzzle prototype #08</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../proto.css">
+<style>
+  /* depth badge + darkening overlay (page-specific) */
+  .cell .depth{position:absolute;top:3px;left:4px;min-width:14px;height:14px;padding:0 2px;
+    border-radius:5px;font:800 9px/14px var(--mono);text-align:center;color:#fdf6e8;
+    background:rgba(20,14,6,.62);box-shadow:0 1px 2px rgba(0,0,0,.4);pointer-events:none;z-index:2;}
+  /* darker tint as you go deeper — overlay grows with depth tier */
+  .cell .dpt-shade{position:absolute;inset:0;border-radius:11px;pointer-events:none;
+    background:#000;opacity:0;z-index:1;transition:opacity .12s ease;}
+  .cell.d-1 .dpt-shade{opacity:0;}
+  .cell.d-2 .dpt-shade{opacity:.10;}
+  .cell.d-3 .dpt-shade{opacity:.22;}
+  .cell.d-4 .dpt-shade{opacity:.34;}
+  /* hazards sitting on top of a revealed stack */
+  .cell.flooded{background:var(--f-water)!important;cursor:not-allowed;}
+  .cell.flooded .glyph{opacity:.9;}
+  .cell.flooded::before{content:"";position:absolute;inset:0;border-radius:11px;z-index:1;
+    background:repeating-linear-gradient(115deg,rgba(255,255,255,.16) 0 5px,transparent 5px 11px);pointer-events:none;}
+  .cell.gassed{box-shadow:0 0 0 3px var(--warn), inset 0 -3px 0 rgba(0,0,0,.12)!important;}
+  /* keep the glyph above the shade/flood layers */
+  .cell .glyph{position:relative;z-index:2;}
+  /* a freshly-revealed deeper layer flashes */
+  .cell.reveal{animation:reveal .34s ease;}
+  @keyframes reveal{0%{transform:scale(.86);filter:brightness(1.5);}60%{transform:scale(1.05);}100%{transform:scale(1);}}
+  /* gold glints */
+  .cell.f-gold{animation:goldGlow 2s ease-in-out infinite;}
+  @keyframes goldGlow{0%,100%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.10), 0 0 0 0 rgba(231,193,74,0);}50%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.10), 0 0 0 4px rgba(231,193,74,.4);}}
+  .tier-pill{display:inline-block;width:16px;height:16px;border-radius:4px;vertical-align:-3px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);margin-right:.35rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="../index.html">← All 10 prototypes</a>
+  <header class="hero">
+    <div class="eyebrow">Prototype 08 · mid→far · the <em>z-axis</em> seam</div>
+    <h1>Deep Layers</h1>
+    <p class="sub">The mine gains a third dimension. Each cell is a STACK — clear the top ore and you dig down to reveal the richer (and more dangerous) layer beneath. Stone over iron over gem over gold… but water floods and gas pockets wait in the deep. Excavate, do not just match.</p>
+    <div class="chips"><span class="chip">drag-to-chain</span> <span class="chip alt">+ stacked z-layers</span> <span class="chip alt">+ dig down for richer ore</span> <span class="chip alt">+ floods &amp; gas</span></div>
+  </header>
+
+  <div class="stage">
+    <div class="board-card dark">
+      <div class="board tight" id="board" style="--cols:6"></div>
+      <svg class="board-overlay" id="ov"></svg>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Excavation</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
+          <div class="stat"><div class="k">Deepest layer</div><div class="v" id="deepest">1</div></div>
+          <div class="stat"><div class="k">Gold found</div><div class="v" id="gold" style="color:#b88b16">0</div></div>
+          <div class="stat"><div class="k">Flooded cells</div><div class="v" id="flooded" style="color:var(--info)">0</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="reset">New board</button>
+        </div>
+        <p class="note" style="margin:.7rem 0 0">Chain 3+ touching tiles of the <b>same ore</b> (8 directions). On release you don't refill — each cleared cell <b>digs down</b> to the layer beneath.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Ore tiers → value</h2>
+        <div class="legend">
+          <div class="row"><span class="tier-pill" style="background:var(--f-stone)"></span> 🪨 Stone — surface · ×4</div>
+          <div class="row"><span class="tier-pill" style="background:var(--f-iron)"></span> ⛓️ Iron — ×9</div>
+          <div class="row"><span class="tier-pill" style="background:var(--f-gem)"></span> 💎 Gem — ×16</div>
+          <div class="row"><span class="tier-pill" style="background:var(--f-gold)"></span> <b>🟡 Gold — deep · ×30</b></div>
+          <div class="row" style="margin-top:.4rem"><span class="tier-pill" style="background:var(--f-water)"></span> 💧 Water — floods mined-out neighbours</div>
+          <div class="row"><span class="tier-pill" style="background:var(--f-coal)"></span> 💨 Gas — locks 4 neighbours for one turn</div>
+        </div>
+        <p class="note info" style="margin:.55rem 0 0">Value scales with the depth you reach: deeper ore pays far more, so dig — but mind the hazards waiting below.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>How to play</h3>
+    <ul>
+      <li><b>Drag</b> across 3+ touching tiles showing the <b>same ore</b> (8 directions). Release to excavate that vein.</li>
+      <li>There is no refill from above. Each cleared cell <b>digs one layer deeper in place</b> — revealing the richer ore beneath (or a hazard). The corner number is its current depth.</li>
+      <li>Score per tile scales with the <b>depth tier</b> you dug to: gold pays far more than stone. Push toward the deep gold seams.</li>
+      <li>Reveal <b>💧 water</b> and it floods the next turn, blocking mined-out neighbours. Reveal <b>💨 gas</b> and it locks the 4 neighbours for one turn, then disperses. A cell whose stack runs out is <b>mined out</b> (a gap — not chainable).</li>
+    </ul>
+    <p class="note info"><b>Why it is ours:</b> The mine already has hazards and tools; this adds the one dimension a flat grid lacks — DEPTH. Clearing becomes excavating, with risk/reward for digging deeper. It reuses ore families and the hazard vocabulary, but the board now has a hidden third axis.</p>
+  </div>
+</div>
+
+<script src="../proto.js"></script>
+<script>
+(function(){
+  const ROWS=6, COLS=6, MIN=3;
+  // ore tiers (shallow -> deep) used for both colour and value scaling
+  const TIER_OF = { stone:1, iron:2, gem:3, gold:4 };
+  const VALUE   = { stone:4, iron:9, gem:16, gold:30 };
+  const ORES = ['stone','iron','gem','gold'];          // matchable families
+  const HAZARDS = ['water','coal'];                    // coal glyph reused as "gas"
+  const isOre = f => ORES.includes(f);
+
+  const rng = PD.rng(20260818);
+  const boardEl = document.getElementById('board');
+  const ov = document.getElementById('ov');
+  const log = PD.logger(document.getElementById('log'));
+
+  // grid[r][c] = { stack:[bottom..top], flooded, gassed, gasTurns }
+  // visible layer = stack[stack.length-1]; empty stack => mined out.
+  let grid, cells, dragger;
+  let score=0, deepest=1, goldFound=0;
+
+  // --- stack generation: top mostly stone, richer + hazards deeper, gold rare/deep
+  function genStack(){
+    const depth = 4;                                   // every cell starts 4 layers tall
+    const stack = [];
+    // Build top-down (layer 0 = visible surface, layer 3 = deepest), then reverse
+    // so stack[len-1] is the visible top layer and stack[0] is the deepest.
+    const topDown = [];
+    for(let layer=0; layer<depth; layer++){
+      // layer 0 = visible surface, layer 3 = deepest
+      let fam;
+      const roll = rng();
+      if(layer===0){
+        fam = roll<0.82 ? 'stone' : (roll<0.93 ? 'iron' : 'gem');
+      } else if(layer===1){
+        fam = roll<0.10 ? 'water' : roll<0.55 ? 'iron' : roll<0.85 ? 'gem' : 'stone';
+      } else if(layer===2){
+        fam = roll<0.12 ? 'coal' : roll<0.18 ? 'water' : roll<0.55 ? 'gem' : roll<0.85 ? 'gold' : 'iron';
+      } else { // deepest
+        fam = roll<0.14 ? 'coal' : roll<0.62 ? 'gold' : roll<0.88 ? 'gem' : 'iron';
+      }
+      topDown.push(fam);
+    }
+    // stack stored bottom..top => reverse(topDown)
+    for(let i=topDown.length-1;i>=0;i--) stack.push(topDown[i]);
+    return { stack, flooded:false, gassed:false, gasTurns:0 };
+  }
+
+  function newBoard(){
+    grid=[];
+    for(let r=0;r<ROWS;r++){ grid[r]=[]; for(let c=0;c<COLS;c++) grid[r][c]=genStack(); }
+    score=0; deepest=1; goldFound=0;
+    renderAll(); refreshStats();
+    log('New shaft sunk — surface is mostly stone.','note');
+  }
+
+  function topFam(cell){ const s=cell.stack; return s.length? s[s.length-1] : null; }
+  function curDepth(cell){ return 4 - cell.stack.length + 1; } // 1 at surface .. 4 deepest
+
+  function paint(el,r,c){
+    const cell=grid[r][c];
+    const fam=topFam(cell);
+    if(fam==null){                                        // mined out gap
+      PD.paintTile(el,null);
+      if(cell.flooded){ el.classList.add('flooded','locked'); el.innerHTML='<span class="glyph">💧</span>'; }
+      return;
+    }
+    PD.paintTile(el,fam);
+    // depth shade overlay
+    const sh=document.createElement('span'); sh.className='dpt-shade'; el.appendChild(sh);
+    const d=curDepth(cell);
+    el.classList.add('d-'+d);
+    // corner depth badge
+    const badge=document.createElement('span'); badge.className='depth'; badge.textContent=d; el.appendChild(badge);
+    // hazard states
+    if(cell.flooded){ el.classList.add('flooded','locked'); }
+    if(cell.gassed){ el.classList.add('gassed','locked'); }
+  }
+  function renderAll(){ cells=PD.renderGrid(boardEl,ROWS,COLS,paint); attachDrag(); }
+  function repaint(r,c){ paint(cells[r][c],r,c); }
+
+  function chainable(r,c){
+    const cell=grid[r][c];
+    if(!cell || cell.flooded || cell.gassed) return false;
+    return isOre(topFam(cell));
+  }
+
+  function attachDrag(){
+    if(dragger) dragger.destroy();
+    dragger=PD.dragPath(boardEl,{
+      canExtend(path,r,c){
+        if(!chainable(r,c)) return false;
+        if(path.length===0) return true;                 // start cell (empty path)
+        const head=topFam(grid[path[0].r][path[0].c]);
+        if(topFam(grid[r][c])!==head) return false;
+        const last=path[path.length-1];
+        return Math.max(Math.abs(last.r-r),Math.abs(last.c-c))===1; // 8-adjacent
+      },
+      onExtend(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,'rgba(231,193,74,.92)'); },
+      onBacktrack(path){ paintSel(path); PD.drawPathOverlay(ov,boardEl,path,'rgba(231,193,74,.92)'); },
+      onEnd(path){ clearSel(); PD.drawPathOverlay(ov,boardEl,[]); commit(path); }
+    });
+  }
+  function paintSel(path){ clearSel(); path.forEach(p=>p.el.classList.add('sel')); }
+  function clearSel(){ boardEl.querySelectorAll('.cell.sel').forEach(e=>e.classList.remove('sel')); }
+
+  function commit(path){
+    if(path.length<MIN){ if(path.length>1) PD.toast('Need '+MIN+'+',''); return; }
+    decGas();                                            // age LAST turn's gas before this dig (one-turn lock)
+    const fam=topFam(grid[path[0].r][path[0].c]);
+    let gain=0, deepestThisDig=1; const revealed=[];
+    path.forEach(p=>{
+      const cell=grid[p.r][p.c];
+      const minedFam=topFam(cell);                       // the ore we just cleared
+      const minedDepth=curDepth(cell);
+      gain += VALUE[minedFam] || 0;
+      deepestThisDig=Math.max(deepestThisDig,minedDepth);
+      cell.stack.pop();                                  // DIG DOWN — pop the top layer
+      const now=topFam(cell);                            // newly revealed layer (or null)
+      if(now!=null){
+        deepest=Math.max(deepest, curDepth(cell));
+        if(now==='water') revealed.push({r:p.r,c:p.c,kind:'water'});
+        else if(now==='coal') revealed.push({r:p.r,c:p.c,kind:'gas'});
+      }
+    });
+    if(fam==='gold') goldFound += path.length;
+    score += gain;
+    deepest=Math.max(deepest,deepestThisDig);
+
+    // apply newly-revealed hazards
+    let floodSeed=0, gasSeed=0;
+    revealed.forEach(rv=>{
+      const cell=grid[rv.r][rv.c];
+      if(rv.kind==='water'){ floodSeed++; }
+      if(rv.kind==='gas'){ lockNeighbours(rv.r,rv.c); gasSeed++; cell.gassed=true; cell.gasTurns=1; }
+    });
+    if(floodSeed) spreadWater();                          // water spreads on the action it surfaced
+    // (newly-revealed gas keeps gasTurns=1 and survives to this render; it ages on the NEXT dig)
+
+    renderAll(); refreshStats();
+    flashReveal(revealed);
+
+    const tier = fam.charAt(0).toUpperCase()+fam.slice(1);
+    let msg='Dug '+path.length+'× '+tier+' (to depth '+deepestThisDig+') → +'+gain;
+    if(fam==='gold'){ msg='Struck GOLD ×'+path.length+' at depth '+deepestThisDig+' → +'+gain+'!'; }
+    log(msg, fam==='gold'?'good':'');
+    if(fam==='gold') PD.toast('Gold seam! +'+gain+' 🟡','good');
+    if(gasSeed) log('💨 Gas pocket hit — '+gasSeed+' pocket'+(gasSeed>1?'s':'')+' lock the surrounding rock.','bad');
+    if(floodSeed) log('💧 Water broke through — '+floodSeed+' source'+(floodSeed>1?'s':'')+' flooding mined-out ground.','bad');
+  }
+
+  // gas locks the 4-adjacent cells (orthogonal) that still have ore on top
+  function lockNeighbours(r,c){
+    PD.N4.forEach(([dr,dc])=>{
+      const nr=r+dr,nc=c+dc;
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+      const cell=grid[nr][nc];
+      if(!cell.flooded && topFam(cell)!=null){ cell.gassed=true; cell.gasTurns=Math.max(cell.gasTurns,1); }
+    });
+  }
+
+  // water spreads to mined-out 4-adjacent cells, blocking them
+  function spreadWater(){
+    const sources=[];
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const cell=grid[r][c];
+      if(topFam(cell)==='water' || cell.flooded) sources.push([r,c]);
+    }
+    sources.forEach(([r,c])=>{
+      PD.N4.forEach(([dr,dc])=>{
+        const nr=r+dr,nc=c+dc;
+        if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+        const cell=grid[nr][nc];
+        if(topFam(cell)==null && !cell.flooded){ cell.flooded=true; } // floods mined-out gaps only
+      });
+    });
+  }
+
+  // a "turn" passes (a real chain happened, or a degenerate release): age hazards
+  function resolveHazardTurn(){ decGas(); }
+  function decGasTurnsOnly(){ decGas(); }
+  function decGas(){
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const cell=grid[r][c];
+      if(cell.gassed){ cell.gasTurns--; if(cell.gasTurns<=0){ cell.gassed=false; } }
+    }
+  }
+
+  function flashReveal(revealed){
+    revealed.forEach(rv=>{ const el=cells[rv.r][rv.c]; if(el) el.classList.add('reveal'); });
+  }
+
+  function refreshStats(){
+    document.getElementById('score').textContent=score;
+    document.getElementById('deepest').textContent=deepest;
+    document.getElementById('gold').textContent=goldFound;
+    let fl=0;
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(grid[r][c].flooded) fl++;
+    document.getElementById('flooded').textContent=fl;
+  }
+
+  document.getElementById('reset').onclick=newBoard;
+  newBoard();
+})();
+</script>
+</body>
+</html>

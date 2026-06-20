@@ -100,10 +100,13 @@ describe("Phase 12.4 — build optimisation", () => {
     expect(existsSync(resolve(distDir, "stats.html"))).toBe(true);
   });
 
-  it("emits sourcemaps for the entry chunk", () => {
+  it("does not emit sourcemaps for production (minified) builds", () => {
+    // Production builds (`vite build`) ship minified with sourcemaps OFF to
+    // keep the bundle small; dev (`vite serve`) keeps both on for readable
+    // Dev-Panel tooling. Guard that no .map siblings leak into the prod dist/.
     const files = listFilesRecursive(assetsDir);
-    const map = files.find(f => /^index-/.test(f) && f.endsWith(".js.map"));
-    expect(map).toBeDefined();
+    const map = files.find(f => f.endsWith(".js.map") || f.endsWith(".css.map"));
+    expect(map, `unexpected sourcemap in prod build: ${map}`).toBeUndefined();
   });
 
   it("index.html contains modulepreload hints for vendor chunks", () => {

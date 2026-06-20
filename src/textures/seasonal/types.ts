@@ -23,3 +23,15 @@ export interface SeasonalVariant {
 
 /** All four seasons for a single tile key. */
 export type SeasonalTileEntry = Record<SeasonName, SeasonalVariant>;
+
+/** One FORWARD season→season morph. `p` runs 0..1: at p=0 the canvas should
+ *  read as the `from` season's still, at p=1 as the `to` season's still, with
+ *  the in-between staging the change (colour + shape — petals opening, leaves
+ *  turning then falling, snow settling). Drawn in the same origin-centered
+ *  −24..+24 box as the season `draw`s, and must be safe to call for any `p`. */
+export type SeasonalTransition = (ctx: CanvasRenderingContext2D, p: number) => void;
+
+/** Forward transitions for a tile, keyed by the FROM-season index:
+ *  0 = Spring→Summer, 1 = Summer→Autumn, 2 = Autumn→Winter. There is no
+ *  Winter→Spring (a run ends at Winter), so index 3 is intentionally absent. */
+export type SeasonalTransitionSet = Partial<Record<0 | 1 | 2, SeasonalTransition>>;
