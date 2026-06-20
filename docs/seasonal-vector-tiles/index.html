@@ -79,11 +79,11 @@
     <div class="eyebrow">puzzleDrag2 · art trial</div>
     <h1>Seasonal vector tiles — animation preview</h1>
     <p class="lead">
-      Thirteen board tiles drawn entirely with canvas vector paths (no pixel art), each with a
+      <b>Sixty-three</b> board tiles drawn entirely with canvas vector paths (no pixel art), each with a
       full seasonal lifecycle: four per-season redraws, a subtle seamless <b>idle loop</b> per
       season, and forward season→season <b>transition morphs</b> played once when a run crosses a
       season boundary (Spring → Summer → Autumn → Winter). Everything below runs the
-      <i>actual</i> tile-drawing code that would render on the board.
+      <i>actual</i> tile-drawing code that renders on the board.
     </p>
     <p class="lead" style="margin-top:10px;">
       Each tile is one parameterized <code>paint()</code> with a per-season parameter set; the
@@ -94,9 +94,9 @@
       season still</b>, so there is no snap at the hand-off into the idle.
     </p>
     <div class="note">
-      This is a <b>preview before integration</b>. The animation engine wiring exists on the branch,
-      but these tiles take vector precedence over their pixel summer-anchor PNGs only for these three
-      keys — the PNGs stay on disk so we can A/B. Use this page to sign off on the motion first.
+      These tiles are <b>wired into the board</b>: they take vector precedence over their pixel
+      summer-anchor PNGs for the whole set (the PNGs stay on disk for an A/B). This page renders the
+      same code at a larger size so the motion is easy to review.
     </div>
   </header>
 
@@ -135,18 +135,23 @@
   <div class="montage"><canvas id="montage"></canvas></div>
 
   <h2>What you're looking at</h2>
+  <p class="legend" style="margin-bottom:10px;">The full board roster — 63 tiles across every category:</p>
   <ul class="facts">
-    <li><b>Trees</b> — <code>oak</code>, <code>birch</code>. The one category whose foliage shape may change
-      seasonally (bare in winter), but the trunk keeps the tree's identity.</li>
-    <li><b>Fruit</b> — <code>apple</code>, <code>pear</code>, <code>lemon</code>. One hero fruit, same
-      outline every season; ripeness shows in surface colour, not shape.</li>
-    <li><b>Grain</b> — <code>corn</code> (the iconic cob, husk green → peeling/yellow → drying → snow-capped;
-      always a cob, never a bare stalk).</li>
-    <li><b>Veg</b> — <code>pepper</code>, <code>mushroom</code>, <code>beet</code>.</li>
-    <li><b>Flower</b> — <code>pansy</code>, <code>heather</code>, <code>water&nbsp;lily</code>
-      (its pad reads as water, frozen over in winter).</li>
-    <li><b>Livestock</b> — <code>sheep</code>: fleece thickens through the year, snow on its back +
+    <li><b>Trees</b> (6) — oak, birch, cypress, fir, palm, willow. The one category whose foliage shape may
+      change seasonally (evergreens hold + gain snow; deciduous thin/bare), but the trunk keeps identity.</li>
+    <li><b>Fruit</b> (9) — apple, pear, lemon, blackberry, coconut, golden apple, jackfruit, rambutan, starfruit.
+      One hero fruit, same outline every season; ripeness shows in surface colour, not shape.</li>
+    <li><b>Grain</b> (1) — corn (the iconic cob: husk green → peeling/yellow → drying → snow-capped; always a cob).</li>
+    <li><b>Veg</b> (9) — pepper, mushroom, beet, broccoli, carrot, cucumber, eggplant, squash, turnip.</li>
+    <li><b>Grass</b> (4) — grass, meadow, spiky, clover (raised tufts/mounds that sway and snow over).</li>
+    <li><b>Flower</b> (3) — pansy, heather, water&nbsp;lily (its pad reads as water, frozen over in winter).</li>
+    <li><b>Birds</b> (9) — chicken (with a spring chick), rooster, hen, turkey, goose, pheasant, parrot,
+      phoenix (sits in a winter melt-ring), dodo.</li>
+    <li><b>Livestock &amp; mounts</b> (19) — sheep, pig, hog, boar, warthog, alpaca, goat, ram; cow, longhorn,
+      triceratops; horse, donkey, moose (velvet→hard antlers), mammoth. Coat thickens, snow on the back +
       breath fog in winter.</li>
+    <li><b>Aquatic &amp; mineral</b> (7) — clam, oyster, mackerel, kelp, giant pearl (water pads that freeze to
+      ice); gem, gold (rock that gains a snow cap).</li>
     <li><b>Identity rule.</b> A tile keeps the SAME silhouette in all four seasons — only its surface
       colour, frost/snow, and the pad's seasonal dressing (spring blossom, autumn fallen leaves,
       winter snow) change. The subject is always clearly the same thing. (Trees are the lone exception.)</li>
@@ -165,7 +170,7 @@
   </footer>
 </div>
 
-<script src="./tiles.bundle.js"></script>
+<script src="./tiles.bundle.js?v=3"></script>
 <script>
 (function () {
   const DEMO = window.SEASONAL_DEMO;

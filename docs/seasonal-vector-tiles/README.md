@@ -1,7 +1,8 @@
 # Seasonal vector tiles — animation preview
 
-A standalone, self-contained preview of the all-vector seasonal tiles (13 of
-them, across tree / fruit / grain / veg / flower / livestock) — four per-season
+A standalone, self-contained preview of the all-vector seasonal tiles (63 of
+them, across every board category — tree / fruit / grain / veg / grass / flower /
+bird / herd / cattle / mount / fish / mineral / special) — four per-season
 redraws, subtle idle loops, and forward season→season transition morphs. It runs
 the **actual** tile-drawing code from `src/`, so it's a faithful "before
 integration" sign-off surface for the motion.
@@ -36,3 +37,12 @@ npx esbuild docs/seasonal-vector-tiles/_entry.ts --bundle --format=iife --target
   --outfile=docs/seasonal-vector-tiles/tiles.bundle.js
 rm docs/seasonal-vector-tiles/_entry.ts
 ```
+
+> The bundle has a stable filename, so `index.html` loads it with a cache-busting
+> query (`tiles.bundle.js?v=N`). **After regenerating, bump that `?v=` number in
+> `index.html`** — otherwise returning visitors (and the GitHub Pages CDN) may keep
+> serving the previously cached bundle and the page will look unchanged.
+>
+> The entry list above is the original three tiles; the live bundle includes all
+> thirteen — list every per-tile module under `src/textures/seasonal/**` when you
+> regenerate.
