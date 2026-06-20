@@ -1,26 +1,74 @@
 // Tile keys whose hand-drawn VECTOR seasonal art (per-season draw + idle anim +
 // forward season transitions) takes precedence over any baked PNG anchor of the
-// same key. These are the all-vector showcase tiles.
+// same key — the all-vector showcase set (63 tiles).
 //
 // Standalone with NO imports so both the vector registry (`seasonalTiles.ts`) and
 // the baked-art manifest (`seasonalArt.ts`) can read it without an import cycle.
 // The baked controller filters these keys out of its manifest, so their
-// summer-anchor PNGs are simply ignored at runtime — the files stay on disk
-// (intentional, for an A/B against the pixel route) but never render.
+// summer-anchor PNGs are ignored at runtime — the files stay on disk (intentional,
+// for an A/B against the pixel route) but never render.
 export const VECTOR_PREFER_KEYS: ReadonlySet<string> = new Set<string>([
-  // pilot trio
   "tile_tree_oak",
-  "tile_flower_pansy",
+  "tile_tree_birch",
+  "tile_tree_cypress",
+  "tile_tree_fir",
+  "tile_tree_palm",
+  "tile_tree_willow",
   "tile_fruit_apple",
-  // ten-tile expansion (grain · fruit · veg · flower · tree · livestock)
-  "tile_grain_corn",
   "tile_fruit_pear",
   "tile_fruit_lemon",
+  "tile_fruit_blackberry",
+  "tile_fruit_coconut",
+  "tile_fruit_golden_apple",
+  "tile_fruit_jackfruit",
+  "tile_fruit_rambutan",
+  "tile_fruit_starfruit",
+  "tile_grain_corn",
   "tile_veg_pepper",
   "tile_veg_mushroom",
   "tile_veg_beet",
-  "tile_flower_heather",
+  "tile_veg_broccoli",
+  "tile_veg_carrot",
+  "tile_veg_cucumber",
+  "tile_veg_eggplant",
+  "tile_veg_squash",
+  "tile_veg_turnip",
+  "tile_grass_grass",
+  "tile_grass_meadow",
+  "tile_grass_spiky",
+  "tile_bird_clover",
+  "tile_flower_pansy",
+  "tile_grass_heather",
   "tile_flower_water_lily",
-  "tile_tree_birch",
+  "tile_bird_chicken",
+  "tile_bird_rooster",
+  "tile_bird_hen",
+  "tile_bird_turkey",
+  "tile_bird_goose",
+  "tile_bird_pheasant",
+  "tile_bird_parrot",
+  "tile_bird_phoenix",
+  "tile_bird_dodo",
   "tile_herd_sheep",
+  "tile_herd_pig",
+  "tile_herd_hog",
+  "tile_herd_boar",
+  "tile_herd_warthog",
+  "tile_herd_alpaca",
+  "tile_herd_goat",
+  "tile_herd_ram",
+  "tile_cattle_cow",
+  "tile_cattle_longhorn",
+  "tile_cattle_triceratops",
+  "tile_mount_horse",
+  "tile_mount_donkey",
+  "tile_mount_moose",
+  "tile_mount_mammoth",
+  "tile_fish_clam",
+  "tile_fish_oyster",
+  "tile_fish_mackerel",
+  "tile_fish_kelp",
+  "tile_mine_gem",
+  "tile_mine_gold",
+  "tile_special_giant_pearl",
 ]);

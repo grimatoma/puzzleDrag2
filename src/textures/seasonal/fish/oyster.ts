@@ -230,7 +230,6 @@ const SP: Record<SeasonName, P> = {
 // Oyster geometry constants (the SAME silhouette every season). The open shell
 // is a low cupped bottom valve resting on the water, hinged at the back-left,
 // with the top valve lifted open behind it and the pearl nestled in the cup.
-const SHELL_CX = 0; // shell centre x
 const SHELL_CY = 8; // shell cup resting line on the pad
 const SHELL_HALF = 15; // half-width of the bottom valve
 
