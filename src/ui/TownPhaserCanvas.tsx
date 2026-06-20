@@ -171,6 +171,9 @@ export default function TownPhaserCanvas({
               // Bind event listeners to TownScene
               const scene = g.scene.scenes[0] as TownScene;
               if (scene) {
+                // Debug handle, mirroring the board's window.__phaserScene — lets
+                // QA/dev inspect the town scene (e.g. its ambient smokeColumns).
+                if (typeof window !== "undefined") window.__townScene = scene;
                 // Pass pre-boot data
                 g.registry.set("hwv.svgMap", svgMap);
 
@@ -267,6 +270,7 @@ export default function TownPhaserCanvas({
       const game = gameRef.current;
       if (game) {
         saveCamera(zoneIdRef.current);
+        if (typeof window !== "undefined") window.__townScene = null;
         game.__resizeObserver?.disconnect();
         game.destroy(true);
         gameRef.current = null;
