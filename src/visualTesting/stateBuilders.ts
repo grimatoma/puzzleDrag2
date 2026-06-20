@@ -283,9 +283,10 @@ function richState(): VisualStateTree {
       harbor: builtFromPlots(HARBOR_PLOTS),
     },
     settlements: {
-      // Zone Tier Ladder — a fully-grown game: home at City, quarry at Foundry
-      // City, so the built-out HOME_PLOTS/MINE_PLOTS render across all lots.
-      home: { founded: true, biome: "prairie", keeperPath: "coexist", tier: 2 },
+      // Zone Tier Ladder — a fully-grown game: home at City (top of the 4-rung
+      // ladder), quarry at Foundry City, so the built-out HOME_PLOTS/MINE_PLOTS
+      // render across all lots.
+      home: { founded: true, biome: "prairie", keeperPath: "coexist", tier: 3 },
       meadow: { founded: true, biome: "forest", keeperPath: "coexist" },
       quarry: { founded: true, biome: "mountain", keeperPath: "driveout", tier: 3 },
       harbor: { founded: true, biome: "coastal" },

@@ -44,6 +44,37 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
     void _removed;
     return { ...rest, version: 47 };
   },
+  // 47 → 48: the home zone was re-laddered from the 6-rung PC2 Camp→Manor curve
+  // to the 4-rung Outpost→Hamlet→Village→City town-layout design (3/6/12/20), and
+  // every lot was repositioned roads-first. Old rungs fold pairwise into the new
+  // ladder, so remap any saved home settlement tier into the new 0..3 range
+  // (Camp/Settlement keep their index; Village+Town → Village; City+Manor → City).
+  // Built-lot indices are left untouched: each new rung has ≥ the plots its
+  // absorbed old rungs had, so no placed building is orphaned (it simply sits at
+  // its new authored position — the intended relayout). Guards are by hand because
+  // the tests tsconfig runs with `strictNullChecks: false`.
+  47: (save) => {
+    const OLD_HOME_TIER_TO_NEW = [0, 1, 2, 2, 3, 3];
+    const settlements = save.settlements;
+    if (settlements && typeof settlements === "object") {
+      const home = (settlements as Record<string, unknown>).home;
+      if (home && typeof home === "object") {
+        const t = (home as Record<string, unknown>).tier;
+        if (typeof t === "number") {
+          const mapped = OLD_HOME_TIER_TO_NEW[Math.max(0, Math.min(5, Math.floor(t)))] ?? 3;
+          return {
+            ...save,
+            settlements: {
+              ...(settlements as Record<string, unknown>),
+              home: { ...(home as Record<string, unknown>), tier: mapped },
+            },
+            version: 48,
+          };
+        }
+      }
+    }
+    return { ...save, version: 48 };
+  },
 };
 
 export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";

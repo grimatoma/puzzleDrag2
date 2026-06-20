@@ -19,9 +19,9 @@ import { TOWN_MAPS, getTownMap, authoredLotCount } from "../ui/town/townMaps.js"
 beforeEach(() => global.localStorage.clear());
 
 describe("tier helpers", () => {
-  it("home and quarry each have a 6-rung ladder (PC2 Camp→Manor)", () => {
-    expect(tiersForZone("home").map((t) => t.id)).toEqual(["camp", "settlement", "village", "town", "city", "manor"]);
-    expect(maxTier("home")).toBe(5);
+  it("home has a 4-rung Outpost→City ladder; quarry has a 6-rung mine ladder", () => {
+    expect(tiersForZone("home").map((t) => t.id)).toEqual(["outpost", "hamlet", "village", "city"]);
+    expect(maxTier("home")).toBe(3);
     expect(tiersForZone("quarry").map((t) => t.id)).toEqual(["dig_site", "prospect", "mining_camp", "boomtown", "smeltworks", "foundry_city"]);
     expect(maxTier("quarry")).toBe(5);
   });
@@ -34,15 +34,16 @@ describe("tier helpers", () => {
   it("plotsForTier returns the rung's total plots", () => {
     expect(plotsForTier("home", 0)).toBe(3);
     expect(plotsForTier("home", 1)).toBe(6);
-    expect(plotsForTier("home", 5)).toBe(20);
+    expect(plotsForTier("home", 2)).toBe(12);
+    expect(plotsForTier("home", 3)).toBe(20);
     expect(plotsForTier("quarry", 0)).toBe(2);
     expect(plotsForTier("quarry", 5)).toBe(12);
   });
 
   it("unlockedBuildings accumulates rung-by-rung", () => {
     expect(unlockedBuildings("home", 0)).toContain("hearth");
-    expect(unlockedBuildings("home", 0)).not.toContain("forge"); // forge is a City (tier 4) unlock
-    expect(unlockedBuildings("home", 4)).toContain("forge");
+    expect(unlockedBuildings("home", 0)).not.toContain("forge"); // forge is a City (tier 3) unlock
+    expect(unlockedBuildings("home", 3)).toContain("forge");
     // rung 1 is a strict superset of rung 0
     const r0 = new Set(unlockedBuildings("home", 0));
     expect(unlockedBuildings("home", 1).filter((b) => r0.has(b)).length).toBe(r0.size);
@@ -98,7 +99,7 @@ describe("authored town maps", () => {
   });
 
   it("home and quarry are fully authored across all rungs", () => {
-    expect(TOWN_MAPS.home).toHaveLength(6);
+    expect(TOWN_MAPS.home).toHaveLength(4);
     expect(TOWN_MAPS.quarry).toHaveLength(6);
     for (const zoneId of ["home", "quarry"]) {
       tiersForZone(zoneId).forEach((_t, tier) => expect(getTownMap(zoneId, tier)).not.toBeNull());
@@ -142,7 +143,7 @@ describe("TIER_UP reducer", () => {
   });
 
   it("is a no-op at the top rung", () => {
-    let s = atHome({ coins: 999999, settlements: { home: { founded: true, tier: 5 } } });
+    let s = atHome({ coins: 999999, settlements: { home: { founded: true, tier: 3 } } });
     s = patchInventory(
       s,
       { hay_bundle: 999, plank: 999, iron_bar: 999, gold_bar: 999, cut_gem: 999, jade: 999, pearls: 999, honey: 999, horseshoe: 999 },

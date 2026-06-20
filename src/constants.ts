@@ -211,8 +211,12 @@ export const DEFAULT_HOME_BIOME = "prairie";
 // 46 → 47: was the Hearthkeeping idle layer (`embergarden`), since removed; the
 //          46→47 migrator is now a no-op version bump kept so idle-layer-era
 //          saves still load (we never roll a shipped version backward).
+// 47 → 48: home zone re-laddered from the 6-rung PC2 Camp→Manor curve to the
+//          4-rung Outpost→Hamlet→Village→City town-layout design (3/6/12/20) and
+//          its lots repositioned roads-first; the bump discards pre-layout saves
+//          so a placed building never lands on a moved lot.
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
-export const SAVE_SCHEMA_VERSION = 47;
+export const SAVE_SCHEMA_VERSION = 48;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,

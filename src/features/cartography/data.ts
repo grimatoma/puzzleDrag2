@@ -245,42 +245,40 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Brewery, BuildingId.Observatory,
     ],
     plotCount: 20,
-    // ── Town 1 ladder · 6 rungs, PC2 Camp→Manor (PC2 cost port). Manor (tier 5)
-    // equals today's flat home (20 plots + full buildings). Costs are resource-only
-    // (coins=0), ported from PC2's Town Upgrades. Plots grow 3/6/9/12/16/20 and
-    // must match the authored maps in src/ui/town/townMaps.ts (test-enforced).
+    // ── Town 1 ladder · 4 rungs, Outpost→City — ported from
+    // docs/town-layout/index.html (the roads-first growing-outpost mockup) and
+    // matching the authored maps in src/ui/town/townMaps.ts (test-enforced).
+    // Plots grow 3 → 6 → 12 → 20. Each rung absorbs one or two rungs of the old
+    // 6-rung PC2 Camp→Manor ladder: its `unlocks` are the union of the absorbed
+    // rungs (so the cumulative union still equals `buildings[]`, test-enforced)
+    // and its `upgradeCost` is the SUM of the absorbed rungs' costs, so the total
+    // resource climb to City is unchanged. Costs are resource-only (coins=0).
     tiers: [
       {
-        id: "camp", name: "Camp", plots: 3,
+        id: "outpost", name: "Outpost", plots: 3,
         unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Inn],
       },
       {
-        id: "settlement", name: "Settlement", plots: 6,
+        id: "hamlet", name: "Hamlet", plots: 6,
         unlocks: [BuildingId.Larder, BuildingId.Bakery, BuildingId.Housing, BuildingId.Silo],
         upgradeCost: { resources: { hay_bundle: 3, plank: 5, bread: 10, eggs: 4, soup: 2 } },
       },
       {
-        id: "village", name: "Village", plots: 9,
-        unlocks: [BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Watchtower],
-        upgradeCost: { resources: { eggs: 10, soup: 4, meat: 2, block: 20, coke: 4, silver_bar: 4 } },
-      },
-      {
-        id: "town", name: "Town", plots: 12,
-        unlocks: [BuildingId.Brewery, BuildingId.Chapel, BuildingId.Housing2, BuildingId.Apothecary, BuildingId.Kitchen],
-        upgradeCost: { resources: { soup: 8, milk: 1, coke: 10, silver_bar: 10, cocoa: 2, ink: 2 } },
-      },
-      {
-        id: "city", name: "City", plots: 16,
-        unlocks: [BuildingId.Workshop, BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Housing3, BuildingId.ClockTower],
-        upgradeCost: { resources: { honey: 1, horseshoe: 1, block: 20, coke: 10, cut_gem: 1, gold_bar: 3, ink: 2 } },
-      },
-      {
-        id: "manor", name: "Manor", plots: 20,
+        id: "village", name: "Village", plots: 12,
         unlocks: [
+          BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Watchtower,
+          BuildingId.Brewery, BuildingId.Chapel, BuildingId.Housing2, BuildingId.Apothecary, BuildingId.Kitchen,
+        ],
+        upgradeCost: { resources: { eggs: 10, soup: 12, meat: 2, block: 20, coke: 14, silver_bar: 14, milk: 1, cocoa: 2, ink: 2 } },
+      },
+      {
+        id: "city", name: "City", plots: 20,
+        unlocks: [
+          BuildingId.Workshop, BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Housing3, BuildingId.ClockTower,
           BuildingId.PowderStore, BuildingId.Portal, BuildingId.Observatory, BuildingId.Lighthouse,
           BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
         ],
-        upgradeCost: { resources: { honey: 2, horseshoe: 2, iron_bar: 30, cut_gem: 3, gold_bar: 10, jade: 1, pearls: 1 } },
+        upgradeCost: { resources: { honey: 3, horseshoe: 3, block: 20, coke: 10, cut_gem: 4, gold_bar: 13, ink: 2, iron_bar: 30, jade: 1, pearls: 1 } },
       },
     ],
   },
@@ -340,9 +338,9 @@ export const MAP_NODES: MapNode[] = [
     ],
     plotCount: 12,
     // ── Town 2 ladder · 6 rungs, mine-themed (Dig Site → Foundry City). Locked
-    // until home reaches its City rung (now tier 4 of the 6-rung home ladder).
-    // plotCount above is the top rung (12). Costs are resource-only (mine goods).
-    requiresZoneTier: { zone: "home", tier: 4 },
+    // until home reaches its City rung (now tier 3, the top of the 4-rung home
+    // ladder). plotCount above is the top rung (12). Costs resource-only (mine goods).
+    requiresZoneTier: { zone: "home", tier: 3 },
     tiers: [
       {
         id: "dig_site", name: "Dig Site", plots: 2,
