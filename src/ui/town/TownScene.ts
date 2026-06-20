@@ -725,26 +725,29 @@ export class TownScene extends Phaser.Scene {
   }
 
   // ── Camera ────────────────────────────────────────────────────────────────
-  // The ground is painted from the origin (0,0) to (plan.width, plan.height),
-  // so the content rect the camera must stay inside is simply that box.
   static readonly MIN_ZOOM = 0.5;
   static readonly MAX_ZOOM = 3;
 
   clampCamera() {
     const cam = this.cameras.main;
-    const wVisible = cam.width / cam.zoom;
-    const hVisible = cam.height / cam.zoom;
+    const zoom = cam.zoom;
+    const wVisible = cam.width / zoom;
+    const hVisible = cam.height / zoom;
     const townW = this.plan.width || 1280;
     const townH = this.plan.height || 960;
 
-    // When the viewport is larger than the town in a dimension, let the town
-    // slide anywhere between its left/top and right/bottom edges (always fully
-    // visible) rather than hard-locking it to centre. The old centre-lock fought
-    // focal-point zoom — it snapped the camera back to centre on every zoom step.
-    const minX = -Math.max(0, wVisible - townW);
-    const maxX = Math.max(0, townW - wVisible);
-    const minY = -Math.max(0, hVisible - townH);
-    const maxY = Math.max(0, townH - hVisible);
+    // When the town is smaller than the viewport in a dimension, centre it
+    // (whole town visible, no empty edge to push it against). When it's larger,
+    // allow free panning between its edges. Focal-point zoom only ever runs in
+    // the zoomed-in (town larger than viewport) regime, so the centre-lock never
+    // fights it — and keeping the fully-zoomed-out town centred is the desired
+    // framing anyway.
+    let minX, maxX;
+    if (wVisible >= townW) { minX = maxX = (townW - wVisible) / 2; }
+    else { minX = 0; maxX = townW - wVisible; }
+    let minY, maxY;
+    if (hVisible >= townH) { minY = maxY = (townH - hVisible) / 2; }
+    else { minY = 0; maxY = townH - hVisible; }
 
     cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
     cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
