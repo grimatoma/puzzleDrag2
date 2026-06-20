@@ -147,6 +147,32 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
   );
 }
 
+/** A read-only "card" that sits in the same grid as the tile slots, surfacing a
+ *  hazard that will be active on the field. Styled to match a TileSlot footprint
+ *  but with a danger tint + dashed border (and no ✎) so it reads as fixed. */
+function DangerCard({ hazard }: { hazard: string }) {
+  const label = hazard.replace(/_/g, " ");
+  return (
+    <div
+      className="flex flex-col items-center justify-center rounded-xl px-2 py-3 text-[12px] font-bold w-full"
+      style={{
+        background: "#f6e7e1",
+        color: "#7a2c1e",
+        border: "3px dashed #b56a52",
+        cursor: "default",
+      }}
+      aria-label={`Active danger: ${label}`}
+      title="This danger is active on the field and cannot be removed."
+    >
+      <span className="grid place-items-center" style={{ width: 56, height: 56 }}>
+        <Icon iconKey="dangers_header" size={44} />
+      </span>
+      <span className="mt-1 leading-tight text-center capitalize">{label}</span>
+      <span className="text-[10px] leading-tight mt-0.5 text-[#9a3a2a]/80">Danger</span>
+    </div>
+  );
+}
+
 interface TileChooserPopupProps {
   zoneCategory: string;
   state: GameState;
@@ -302,6 +328,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
   const baseTurns = zoneBaseTurns(zone);
   const buildingTurns = turnBudgetAdditiveBonusForZone(state, zoneId);
   const turns = turnBudgetForZone(state, zoneId, { useFertilizer });
+  const hazards = settlementHazards(state, zoneId);
   const okTileCount =
     !mustPick || selected.size === MAX_SLOTS;
   const canStart = canAfford && okTileCount;
@@ -339,17 +366,18 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
 
   return (
     <ParchmentDialog open onClose={onClose} size="lg" ariaLabel={`Start Farming — ${zone.name}`} backdropClassName="animate-fadein">
-      <ParchmentDialog.Body className="relative !px-6 !py-5">
+      <ParchmentDialog.Body className="relative !px-5 !py-4">
         <h2 className="font-bold text-[20px] text-on-panel-dim text-center mb-1">
           Start Farming — {zone.name}
         </h2>
-        <p className="text-on-panel-faint text-[12px] text-center mb-3 leading-relaxed">
+        <p className="text-on-panel-faint text-[12px] text-center mb-2.5 leading-snug">
           {mustPick
-            ? `Pick ${MAX_SLOTS} tile types to bring to the field. Tap ✎ to swap a tile variant.`
+            ? `Pick ${MAX_SLOTS} tile types to bring to the field. Tap ✎ to swap a variant.`
             : `These ${cats.length} tile types will be on the field. Tap a slot to pick a variant.`}
+          {hazards.length > 0 && " Red cards are dangers — always active, not editable."}
         </p>
 
-        <div className="grid grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-4 gap-2 mb-2.5">
           {cats.map((cat: string) => (
             <TileSlot
               key={cat}
@@ -361,38 +389,23 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
               onChoose={() => setChooserCat(cat)}
             />
           ))}
+          {hazards.map((h: string) => (
+            <DangerCard key={`hz-${h}`} hazard={h} />
+          ))}
         </div>
 
-        {/* Hazards / Dangers list */}
-        {(() => {
-          const hazards = settlementHazards(state, zoneId);
-          if (hazards.length === 0) return null;
-          return (
-            <div className="mb-3 flex flex-col gap-1">
-              <div className="text-[10px] uppercase tracking-wider text-[#9a3a2a] font-bold flex items-center gap-1">
-                <Icon iconKey="dangers_header" size={14} />
-                Active Dangers
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {hazards.map((h: string) => (
-                  <span key={h} className="text-[10px] font-bold bg-[#9a3a2a]/10 text-[#9a3a2a] border border-[#9a3a2a]/30 rounded-lg px-2 py-0.5 capitalize">
-                    {h.replace("_", " ")}
-                  </span>
-                ))}
-              </div>
+        {/* Turns + cost, merged into one compact card */}
+        <div className="hl-card mb-3 !p-2.5 gap-2">
+          <div>
+            <div className="flex items-center justify-between text-[13px] text-on-panel">
+              <span className="font-bold">Turns this session</span>
+              <span className="font-mono font-bold text-[16px]">{turns}</span>
             </div>
-          );
-        })()}
-
-        <div className="hl-card mb-3 !p-2.5">
-          <div className="flex items-center justify-between text-[13px] text-on-panel">
-            <span className="font-bold">Turns this session</span>
-            <span className="font-mono font-bold text-[16px]">{turns}</span>
+            <div className="mt-0.5 text-[11px] text-on-panel-faint">
+              Base {baseTurns}{buildingTurns > 0 ? ` + buildings ${buildingTurns}` : ""}{useFertilizer ? " × fertilizer" : ""}
+            </div>
           </div>
-          <div className="mt-0.5 text-[11px] text-on-panel-faint">
-            Base {baseTurns}{buildingTurns > 0 ? ` + buildings ${buildingTurns}` : ""}{useFertilizer ? " × fertilizer" : ""}
-          </div>
-          <label className="flex items-center gap-2 mt-2 text-[12px] text-on-panel">
+          <label className="flex items-center gap-2 text-[12px] text-on-panel">
             <input
               type="checkbox"
               checked={useFertilizer}
@@ -403,37 +416,39 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
               Use Fertilizer {fertilizerAvailable ? `(${fertilizerStock} on hand)` : "(none on hand)"} — doubles turns
             </span>
           </label>
-        </div>
-
-        <div className="flex items-center justify-between mb-3 text-[13px] gap-2">
-          <span className="text-on-panel font-bold">Cost to start</span>
-          <div className="flex items-center gap-2">
-            <span
-              className={`font-mono font-bold text-[15px] ${canAfford ? "text-[#2a5010]" : "text-[#a02020]"}`}
-            >
-              {cost}◉
-            </span>
-            <ZoneEntryCostInfo zoneId={zoneId} state={state} infoOnly />
+          <div className="h-px bg-[#8c7656]/30" />
+          <div className="flex items-center justify-between text-[13px] gap-2">
+            <span className="text-on-panel font-bold">Cost to start</span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`font-mono font-bold text-[15px] ${canAfford ? "text-[#2a5010]" : "text-[#a02020]"}`}
+              >
+                {cost}◉
+              </span>
+              <ZoneEntryCostInfo zoneId={zoneId} state={state} infoOnly />
+            </div>
           </div>
         </div>
 
-        <Button
-          tone="moss"
-          size="lg"
-          block
-          onClick={handleStart}
-          disabled={!canStart}
-          className="mb-2 !rounded-2xl shadow-lg"
-        >
-          {canAfford ? `Start (${cost}◉)` : "Not enough coin"}
-        </Button>
-        <Button
-          tone="iron"
-          block
-          onClick={onClose}
-        >
-          Cancel
-        </Button>
+        <div className="flex items-stretch gap-2">
+          <Button
+            tone="iron"
+            size="lg"
+            onClick={onClose}
+            className="flex-1 !rounded-2xl"
+          >
+            Cancel
+          </Button>
+          <Button
+            tone="moss"
+            size="lg"
+            onClick={handleStart}
+            disabled={!canStart}
+            className="flex-[2] !rounded-2xl shadow-lg"
+          >
+            {canAfford ? `Start (${cost}◉)` : "Not enough coin"}
+          </Button>
+        </div>
 
         {chooserCat && (
           <TileChooserPopup
