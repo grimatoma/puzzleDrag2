@@ -725,23 +725,44 @@ export class TownScene extends Phaser.Scene {
   }
 
   // ── Camera ────────────────────────────────────────────────────────────────
+  // The ground is painted from the origin (0,0) to (plan.width, plan.height),
+  // so the content rect the camera must stay inside is simply that box.
+  static readonly MIN_ZOOM = 0.5;
+  static readonly MAX_ZOOM = 3;
+
   clampCamera() {
     const cam = this.cameras.main;
-    const zoom = cam.zoom;
-    const wVisible = cam.width / zoom;
-    const hVisible = cam.height / zoom;
+    const wVisible = cam.width / cam.zoom;
+    const hVisible = cam.height / cam.zoom;
     const townW = this.plan.width || 1280;
     const townH = this.plan.height || 960;
 
-    let minX, maxX;
-    if (wVisible >= townW) { minX = maxX = (townW - wVisible) / 2; }
-    else { minX = 0; maxX = townW - wVisible; }
-    let minY, maxY;
-    if (hVisible >= townH) { minY = maxY = (townH - hVisible) / 2; }
-    else { minY = 0; maxY = townH - hVisible; }
+    // When the viewport is larger than the town in a dimension, let the town
+    // slide anywhere between its left/top and right/bottom edges (always fully
+    // visible) rather than hard-locking it to centre. The old centre-lock fought
+    // focal-point zoom — it snapped the camera back to centre on every zoom step.
+    const minX = -Math.max(0, wVisible - townW);
+    const maxX = Math.max(0, townW - wVisible);
+    const minY = -Math.max(0, hVisible - townH);
+    const maxY = Math.max(0, townH - hVisible);
 
     cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
     cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
+  }
+
+  // Zoom toward a screen-space focal point so the world point under the
+  // cursor / pinch centre stays put (instead of zooming about the camera mid).
+  zoomTo(targetZoom: number, screenX: number, screenY: number) {
+    const cam = this.cameras.main;
+    const z = Phaser.Math.Clamp(targetZoom, TownScene.MIN_ZOOM, TownScene.MAX_ZOOM);
+    if (z === cam.zoom) return;
+    const before = cam.getWorldPoint(screenX, screenY);
+    const bx = before.x, by = before.y;
+    cam.setZoom(z);
+    const after = cam.getWorldPoint(screenX, screenY);
+    cam.scrollX += bx - after.x;
+    cam.scrollY += by - after.y;
+    this.clampCamera();
   }
 
   setupCameraControls() {
@@ -754,35 +775,41 @@ export class TownScene extends Phaser.Scene {
         startDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         startZoom = this.cameras.main.zoom;
       } else {
+        // A fresh single-pointer gesture — assume a tap until it moves far
+        // enough to count as a drag.
         this.isDragging = false;
       }
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      // Two fingers down → pinch-zoom about the gesture midpoint.
       if (p1 && p2 && p1.isDown && p2.isDown) {
         const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         if (startDist > 0) {
           const factor = dist / startDist;
-          this.cameras.main.setZoom(Phaser.Math.Clamp(startZoom * factor, 0.5, 3));
-          this.clampCamera();
+          this.zoomTo(startZoom * factor, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
         }
+        // A pinch is never a tap.
+        this.isDragging = true;
         return;
       }
+      // One finger / button down → drag-pan.
       if (!pointer.isDown) return;
       const dx = pointer.x - pointer.prevPosition.x;
       const dy = pointer.y - pointer.prevPosition.y;
       if (Math.hypot(dx, dy) > 3) this.isDragging = true;
-      this.cameras.main.scrollX -= dx / this.cameras.main.zoom;
-      this.cameras.main.scrollY -= dy / this.cameras.main.zoom;
+      const cam = this.cameras.main;
+      cam.scrollX -= dx / cam.zoom;
+      cam.scrollY -= dy / cam.zoom;
       this.clampCamera();
     });
 
     this.input.on("wheel", (pointer: Phaser.Input.Pointer, _objs: unknown, _dx: number, deltaY: number) => {
       if (pointer.event) pointer.event.preventDefault();
-      const zoom = this.cameras.main.zoom - deltaY * 0.001;
-      this.cameras.main.setZoom(Phaser.Math.Clamp(zoom, 0.5, 3));
-      this.clampCamera();
+      const cam = this.cameras.main;
+      // Scale the step by current zoom so zooming feels consistent at every level.
+      this.zoomTo(cam.zoom - deltaY * 0.0015 * cam.zoom, pointer.x, pointer.y);
     });
   }
 
