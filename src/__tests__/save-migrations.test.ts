@@ -109,3 +109,27 @@ describe("saveMigrations — 46 → 47 (idle layer removed; no-op bump)", () => 
     expect(input.version).toBe(46);
   });
 });
+
+describe("saveMigrations — 47 → 48 (home re-laddered Camp→Manor ⇒ Outpost→City)", () => {
+  // Old 6-rung home tier index → new 4-rung index. Camp/Settlement keep their
+  // index; Village+Town fold into Village (2); City+Manor fold into City (3).
+  const cases: Array<[number, number]> = [[0, 0], [1, 1], [2, 2], [3, 2], [4, 3], [5, 3]];
+  for (const [oldTier, newTier] of cases) {
+    test(`remaps a v47 home tier ${oldTier} → ${newTier} and bumps to current`, () => {
+      const result = migrateSave({ version: 47, coins: 9, settlements: { home: { founded: true, tier: oldTier } } });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+      expect(result.save.settlements).toEqual({ home: { founded: true, tier: newTier } });
+      expect(result.save.coins).toBe(9);
+    });
+  }
+
+  test("a v47 save with no home settlement is a clean version bump", () => {
+    const result = migrateSave({ version: 47, coins: 3 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(result.save.coins).toBe(3);
+  });
+});

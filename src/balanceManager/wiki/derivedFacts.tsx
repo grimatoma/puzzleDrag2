@@ -6,12 +6,13 @@
  * hard-typed *structured* facts — tier-ladder rung names, plot counts, upgrade
  * costs, turn budgets, gating — that go stale the instant the underlying code
  * changes (the PC2 cost port, for one, left the Direction/Balance pages claiming
- * a 3-rung home ladder while the code shipped a 6-rung Camp→Manor ladder).
+ * a 3-rung home ladder while the code shipped a 6-rung Camp→Manor ladder; the
+ * home zone has since been re-laddered again to the 4-rung Outpost→City layout).
  *
  * THE FIX. Authored prose injects those facts live instead of typing them:
  *
  *   <div  data-wiki-tier-ladder="home"></div>          → generated ladder table
- *   <span data-wiki-fact="zone.home.rungCount"></span> → "6"
+ *   <span data-wiki-fact="zone.home.rungCount"></span> → "4"
  *
  * `HtmlBody.tsx` swaps each placeholder for the component below, which reads the
  * value from ZONES / cartography at render time. A number rendered this way can
@@ -88,11 +89,11 @@ function zoneBoardKind(zoneId: string): string | null {
  *   level         — the cartography unlock level
  *   rungCount     — number of settlement-tier rungs (0 when un-tiered)
  *   plotsTop      — total building plots at the top rung
- *   plotsByTier   — "3 → 6 → 9 → 12 → 16 → 20"
- *   firstTierName — first rung name (e.g. "Camp")
- *   topTierName   — top rung name (e.g. "Manor")
- *   ladderSpan    — "Camp → Manor" (first → top rung)
- *   tierNames     — "Camp → Settlement → … → Manor"
+ *   plotsByTier   — "3 → 6 → 12 → 20"
+ *   firstTierName — first rung name (e.g. "Outpost")
+ *   topTierName   — top rung name (e.g. "City")
+ *   ladderSpan    — "Outpost → City" (first → top rung)
+ *   tierNames     — "Outpost → Hamlet → Village → City"
  *   gate          — founding gate ("Greenmeadow at City"), or "none"
  *   dangerCount   — number of hazards on this zone's board
  */

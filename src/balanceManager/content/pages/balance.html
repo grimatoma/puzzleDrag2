@@ -28,16 +28,16 @@
 <p style="font-size:13px;color:#7a6f5c;">The other sinks sit <strong>in-range</strong>: building costs are <strong>resource-only</strong> too (a handful of planks/ore/goods each, tier-gated; the per-building <em>Cost to build</em> chip on each building page is the source of truth), tools cost 1–2 resources, and founding a new settlement costs <strong>300 coins</strong> and up (<code>SETTLEMENT_FOUNDING_BASE_COINS</code>). Coins are spent mainly on founding and the Market, not on raising buildings or tiers.</p>
 
 <h2>The settlement tier ladder</h2>
-<p>PC2's per-town rank ladder maps 1:1 onto our live <strong><span data-wiki-fact="zone.home.ladderSpan"></span></strong> home ladder (the live table above; see also Direction). All six rungs are live — Manor is the home zone's top rung, not parked. The cost column below is the <strong>PC2 reference</strong> we ported from; our real per-rung costs are the generated table above.</p>
+<p>PC2's per-town rank ladder folds onto our live <strong><span data-wiki-fact="zone.home.ladderSpan"></span></strong> home ladder (the live table above; see also Direction). The home zone is now the 4-rung <strong>Outpost → Hamlet → Village → City</strong> town-layout design (<code>docs/town-layout/index.html</code>): PC2's six ranks fold pairwise into our four rungs, and each rung's cost is the <em>sum</em> of the PC2 ranks it absorbs, so the total climb to City is unchanged. The cost column below is the <strong>PC2 reference</strong> we ported from; our real per-rung costs are the generated table above.</p>
 <table>
   <thead><tr><th>PC2 rank</th><th>Our rung</th><th>PC2 cost (illustrative reference)</th></tr></thead>
   <tbody>
-    <tr><td>Camp</td><td>Camp (0)</td><td>Wood 1</td></tr>
-    <tr><td>Settlement</td><td>Settlement (1)</td><td>Hay, Wood, Bread, Egg, Soup</td></tr>
+    <tr><td>Camp</td><td>Outpost (0)</td><td>Wood 1</td></tr>
+    <tr><td>Settlement</td><td>Hamlet (1)</td><td>Hay, Wood, Bread, Egg, Soup</td></tr>
     <tr><td>Village Hall</td><td>Village (2)</td><td>Egg 10, Soup 4, Meat 2, Stone 20, Coal 4, Silver 4</td></tr>
-    <tr><td>Town Hall</td><td>Town (3)</td><td>Soup 8, Milk, Coal 10, Silver 10, Cocoa 2, Ink 2</td></tr>
-    <tr><td>City Hall</td><td>City (4)</td><td>Honey, Horseshoe, Stone 20, Coal 10, Diamond, Gold 3, Ink 2</td></tr>
-    <tr><td>Manor</td><td>Manor (5)</td><td>Honey 2, Horseshoe 2, Iron 30, Diamond 3, Gold 10, Jade, Pearl</td></tr>
+    <tr><td>Town Hall</td><td>Village (2)</td><td>Soup 8, Milk, Coal 10, Silver 10, Cocoa 2, Ink 2</td></tr>
+    <tr><td>City Hall</td><td>City (3)</td><td>Honey, Horseshoe, Stone 20, Coal 10, Diamond, Gold 3, Ink 2</td></tr>
+    <tr><td>Manor</td><td>City (3)</td><td>Honey 2, Horseshoe 2, Iron 30, Diamond 3, Gold 10, Jade, Pearl</td></tr>
   </tbody>
 </table>
 

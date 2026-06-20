@@ -172,10 +172,10 @@ describe("HtmlBody — data-wiki-tier-ladder embed", () => {
     const { container } = renderHtml('<div data-wiki-tier-ladder="home"></div>');
     const table = container.querySelector("table");
     expect(table).not.toBeNull();
-    // The 6-rung home ladder Camp→Manor is read live from ZONES; the prose
+    // The 4-rung home ladder Outpost→City is read live from ZONES; the prose
     // never types these names, so they prove the embed pulls from code.
-    expect(container.textContent).toContain("Camp");
-    expect(container.textContent).toContain("Manor");
+    expect(container.textContent).toContain("Outpost");
+    expect(container.textContent).toContain("City");
   });
 
   it("ignores children and shows a note for an unknown zone id", () => {
@@ -191,11 +191,11 @@ describe("HtmlBody — data-wiki-tier-ladder embed", () => {
 
 describe("HtmlBody — data-wiki-fact embed", () => {
   it("renders the live rung count for the home zone", () => {
-    // home has a 6-rung ladder in code; the fact must read it live, not "3".
+    // home has a 4-rung ladder in code; the fact must read it live, not "3".
     const { container } = renderHtml(
       '<span data-wiki-fact="zone.home.rungCount"></span>',
     );
-    expect(container.textContent).toBe("6");
+    expect(container.textContent).toBe("4");
   });
 
   it("renders a visible marker (not a crash) for an unknown fact key", () => {

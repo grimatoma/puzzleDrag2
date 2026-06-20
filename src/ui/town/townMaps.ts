@@ -84,80 +84,111 @@ export interface AuthoredTownMap {
   well?: { cx: number; cy: number; r: number };
 }
 
-// ── Town 1 — home (farm) ladder · 6 rungs (PC2 Camp→Manor) ───────────────────
-// Lot centres on a 5-col × 4-row grid (20 max). The 20 positions are partitioned
-// into six stable-additive growth stages — Camp 3 → Settlement 6 → Village 9 →
-// Town 12 → City 16 → Manor 20 — so a placed building never moves as the town
-// grows (lot index i always sits at HOME_LOT_POS[i]).
-const LOT_W = 112;
-const LOT_H = 104;
-const HOME_COLS = [110, 240, 370, 500, 630];
-const HOME_ROWS = [280, 440, 600, 760];
-const lot = (index: number, col: number, row: number): AuthoredLot => ({
-  index,
-  cx: HOME_COLS[col],
-  cy: HOME_ROWS[row],
-  w: LOT_W,
-  h: LOT_H,
-});
-
-// index → [col, row], in the order lots are added as the town grows.
-const HOME_LOT_POS: ReadonlyArray<readonly [number, number]> = [
-  [0, 0], [1, 0], [0, 1],                 // Camp        (0–2)
-  [1, 1], [2, 0], [2, 1],                 // Settlement  (3–5)
-  [0, 2], [1, 2], [2, 2],                 // Village     (6–8)
-  [3, 0], [3, 1], [3, 2],                 // Town        (9–11)
-  [4, 0], [4, 1], [4, 2], [0, 3],         // City        (12–15)
-  [1, 3], [2, 3], [3, 3], [4, 3],         // Manor       (16–19)
+// ── Town 1 — home (Hearthwood Vale) ladder · 4 rungs (Outpost→City) ──────────
+// Ported from docs/town-layout/index.html (the roads-first "growing outpost →
+// city" mockup) via the growing-settlement-layout skill: a forest clearing on a
+// river that grows a single dirt main street into a bridged little city. Lots are
+// laid roads-first — each building FRONTS a street at a fixed setback — and the
+// 20 stable-additive lot positions slice cleanly at the 3 → 6 → 12 → 20 rung
+// cutpoints, so a placed building never moves as the town grows (lot index i
+// always sits at HOME_LOTS[i]). River, forest, cobble and the lived-in dressing
+// are a later art pass (see the doc + the skill); this port carries the layout +
+// the autotiled dirt road network, which grows ONE new route per rung.
+//
+// `[index, cx, cy, w, h]` (px, 1280×960 design space) is the verbatim resolved
+// output of the mockup's SPEC frontage solver, ordered by index so `slice(0,
+// plots)` yields each rung. Footprints vary per lot to kill the spreadsheet read.
+const HOME_LOTS: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [0, 451, 384, 128, 100], [1, 797, 390, 132, 96], [2, 298, 560, 100, 104],          // Outpost (0–2)
+  [3, 439, 552, 92, 100], [4, 318, 374, 112, 108], [5, 967, 387, 134, 98],           // Hamlet  (3–5)
+  [6, 160, 373, 92, 118], [7, 1111, 381, 132, 114], [8, 356, 209, 104, 110],
+  [9, 544, 210, 96, 124], [10, 769, 216, 134, 100], [11, 990, 216, 114, 112],        // Village (6–11)
+  [12, 1051, 557, 104, 106], [13, 1182, 559, 92, 98], [14, 1130, 150, 116, 104],
+  [15, 288, 689, 110, 102], [16, 427, 679, 96, 106], [17, 604, 690, 134, 96],
+  [18, 1056, 688, 108, 104], [19, 1193, 680, 100, 104],                              // City    (12–19)
 ];
+const hlot = (i: number): AuthoredLot => {
+  const [index, cx, cy, w, h] = HOME_LOTS[i];
+  return { index, cx, cy, w, h };
+};
 // Total plots at each rung (must equal the matching tiers[].plots in data.ts).
-const HOME_PLOTS = [3, 6, 9, 12, 16, 20];
+const HOME_PLOTS = [3, 6, 12, 20];
 
-// Farm board fixture, shared by all home rungs (right third of the map).
-const HOME_FARM_BOARD: AuthoredBoard = { kind: "farm", cx: 1010, cy: 470, w: 380, h: 520 };
-const HOME_PLAZA = { cx: 370, cy: 120, rx: px(4), ry: px(2) };
-const HOME_WELL = { cx: 370, cy: 120, r: 20 };
+// Farm parcel: the doc's fenced FIELD off the plaza, reached by the short farm
+// lane dropping south from the main street (no road runs under it).
+const HOME_FARM_BOARD: AuthoredBoard = { kind: "farm", cx: 816, cy: 656, w: 224, h: 160 };
+const HOME_PLAZA = { cx: 640, cy: 470, rx: 88, ry: 78 };
+const HOME_WELL = { cx: 640, cy: 470, r: 20 };
+
+// Road network in TILE units (the doc's pixel ROADS ÷32), tagged by the rung that
+// OPENS each route. Growth is a new route per rung, never a wider grid: Outpost
+// lays the main street + farm lane; Hamlet pushes the street E & W into the woods;
+// Village extends the spine and opens the north back lane + its connector; City
+// knits blocks with the south back lane, two cross-connectors and a spur into the
+// NE woods. Main streets are ≥3 wide so a two-sided autotile border fits.
+type HomeRoad =
+  | { axis: "H"; row: number; x1: number; x2: number; thick: number; tier: number }
+  | { axis: "V"; col: number; y1: number; y2: number; thick: number; tier: number };
+const HOME_ROADS: HomeRoad[] = [
+  { axis: "H", row: 15, x1: 13, x2: 27, thick: 3, tier: 0 }, // HS0 — main street
+  { axis: "V", col: 26, y1: 15, y2: 18, thick: 2, tier: 0 }, // FL  — farm lane to the field
+  { axis: "H", row: 15, x1: 8, x2: 13, thick: 3, tier: 1 },  // HS1w — push west
+  { axis: "H", row: 15, x1: 27, x2: 32, thick: 3, tier: 1 }, // HS1e — push east
+  { axis: "H", row: 15, x1: 3, x2: 8, thick: 3, tier: 2 },   // HS2w
+  { axis: "H", row: 15, x1: 0, x2: 3, thick: 2, tier: 2 },   // HS3w — west lane stub
+  { axis: "H", row: 15, x1: 32, x2: 36, thick: 3, tier: 2 }, // HS2e
+  { axis: "H", row: 9, x1: 8, x2: 39, thick: 2, tier: 2 },   // NBL — north back lane
+  { axis: "V", col: 18, y1: 9, y2: 14, thick: 2, tier: 2 },  // NS  — connector to the spine
+  { axis: "H", row: 24, x1: 5, x2: 39, thick: 2, tier: 3 },  // SBL — south back lane
+  { axis: "V", col: 18, y1: 15, y2: 24, thick: 2, tier: 3 }, // CN_w  — west cross-connector
+  { axis: "V", col: 31, y1: 15, y2: 24, thick: 2, tier: 3 }, // CN_e  — east cross-connector
+  { axis: "V", col: 28, y1: 9, y2: 14, thick: 2, tier: 3 },  // CN_ne — north-east connector
+  { axis: "V", col: 35, y1: 5, y2: 9, thick: 2, tier: 3 },   // RID — spur into the NE woods (lot 14)
+];
+
+function paintHomeRoads(m: boolean[][], tier: number): void {
+  for (const r of HOME_ROADS) {
+    if (r.tier > tier) continue;
+    if (r.axis === "H") maskBandH(m, r.x1, r.x2, r.row, r.thick);
+    else maskBandV(m, r.y1, r.y2, r.col, r.thick);
+  }
+}
 
 /**
- * Paint the ground shared by every home rung. The streets + plaza are described
- * as a single boolean MASK (where sand goes), then AUTOTILED into the grass↔sand
+ * Paint one home rung's ground. The plaza + the roads opened so far are described
+ * as a single boolean MASK (where dirt goes), then AUTOTILED into the grass↔sand
  * blob so every boundary gets a soft rounded transition instead of a hard DIRT
- * seam (see `roadAutotile.ts` + docs/road-system-proposal.html). Street widths
- * are ≥2 so a two-sided border fits — a 1-wide road can't carry one.
+ * seam (see `roadAutotile.ts`). The network visibly grows as `tier` rises.
  */
-function homeGround(seed: number): Grid {
+function homeGround(tier: number): Grid {
   const g = blankGrid(GRASS);
   const m = blankMask(ROWS, COLS);
-  maskDisc(m, 11, 4, 5, 3);          // town-green plaza around the well
-  maskBandH(m, 1, 23, 6, 3);         // top boulevard: plaza → spine
-  maskBandV(m, 6, 26, 1, 2);         // left avenue
-  maskBandV(m, 5, 27, 23, 2);        // spine separating town from the farm board
-  maskBandH(m, 1, 23, 11, 2);        // cross street between lot rows 0–1
-  maskBandH(m, 1, 23, 16, 2);        // cross street between lot rows 1–2
-  maskBandH(m, 1, 23, 21, 2);        // cross street between lot rows 2–3
-  maskRect(m, 23, 13, 3, 3);         // apron leading onto the farm board
-  paintSandPaths(g, m);              // overlay autotiled sand transitions
-  decorateGrass(g, seed);            // sprinkle variants on the remaining grass
+  maskDisc(m, 20, 15, 3, 2);     // town-green plaza around the well (centre of the main street)
+  paintHomeRoads(m, tier);       // grow the dirt road network one route per rung
+  maskRect(m, 24, 18, 4, 2);     // apron where the farm lane meets the fenced field
+  paintSandPaths(g, m);          // overlay autotiled grass↔dirt transitions
+  decorateGrass(g, tier);        // sprinkle variants on the remaining grass
   return g;
 }
 
 const HOME_PROPS_BASE: AuthoredProp[] = [
-  { kind: "signpost", x: 470, y: 135 },
-  { kind: "lamppost", x: 305, y: 360 },
+  { kind: "signpost", x: 706, y: 512 },
+  { kind: "lamppost", x: 578, y: 512 },
 ];
 
-/** Build one home rung map: ground + the first `plots` stable lots. */
-function homeRung(plots: number): AuthoredTownMap {
+/** Build one home rung map: ground grown to `tier` + the first `plots` stable lots. */
+function homeRung(tier: number): AuthoredTownMap {
+  const plots = HOME_PLOTS[tier];
   return {
-    groundTiles: homeGround(plots),
+    groundTiles: homeGround(tier),
     plaza: HOME_PLAZA,
     well: HOME_WELL,
     boards: [HOME_FARM_BOARD],
     props: HOME_PROPS_BASE,
-    lots: HOME_LOT_POS.slice(0, plots).map(([c, r], i) => lot(i, c, r)),
+    lots: HOME_LOTS.slice(0, plots).map(([index]) => hlot(index)),
   };
 }
-const HOME_MAPS: AuthoredTownMap[] = HOME_PLOTS.map(homeRung);
+const HOME_MAPS: AuthoredTownMap[] = HOME_PLOTS.map((_p, tier) => homeRung(tier));
 
 // ── Town 2 — quarry (mine) ladder · 6 rungs (mine-themed) ────────────────────
 // A mining settlement growing 2 → 4 → 6 → 8 → 10 → 12 lots on a 4-col × 3-row
