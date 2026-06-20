@@ -10,10 +10,9 @@ import {
   seasonalTileAnim,
   seasonalTileTransition,
   seasonalTileHasTransitions,
-  seasonalTilePrefersVector,
   SEASONAL_TILE_KEYS,
 } from "./textures/seasonal/seasonalTiles.js";
-import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalTransFrame, seasonalArtActive } from "./textures/seasonal/seasonalArt.js";
+import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalTransFrame, seasonalBakedActive } from "./textures/seasonal/seasonalArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -139,7 +138,8 @@ export function paintTileCanvas(
   // EXCEPT tiles authored with a full vector lifecycle (per-season draw+anim AND
   // forward transitions) — those render their hand-drawn VECTOR art even when a
   // baked PNG summer-anchor exists, so the vector animation wins over the pixel one.
-  const baked = seasonalArtActive(res.key) && !seasonalTilePrefersVector(res.key);
+  // The pixel-sprite override (Settings) flips those back to the pixel route too.
+  const baked = seasonalBakedActive(res.key);
   const conceptAnim =
     !baked && isConceptTileIconsEnabled() && t != null ? conceptTileAnim(res.key) : null;
   // A self-detected forward season transition (vector) takes the icon slot for the

@@ -33,18 +33,62 @@ const SUMMER = 1;
 const IDLE_FILES = ["idle-spring.png", "idle-summer.png", "idle-autumn.png", "idle-winter.png"] as const;
 const TRANS_FILES = ["trans-spring-summer.png", "trans-summer-autumn.png", "trans-autumn-winter.png"] as const;
 
-/** tile key (== public/seasonal-tiles/<dir>/ folder name) -> the PNG filenames it ships,
- *  discovered at build time. `?? {}` keeps non-Vite tooling happy. Keys claimed by the
- *  all-vector showcase set are dropped here so their summer-anchor PNGs are ignored and
- *  the hand-drawn vector art renders instead (the files stay on disk for an A/B). */
+/** Every tile key that ships a seasonal-art folder (== public/seasonal-tiles/<dir>/),
+ *  discovered at build time. `?? {}` keeps non-Vite tooling happy. */
+const FULL_MANIFEST: Record<string, string[]> = (SEASONAL_MANIFEST ?? {}) as Record<string, string[]>;
+
+/** The default baked manifest: every discovered folder EXCEPT the all-vector showcase
+ *  keys (their hand-drawn vector art wins by default, so their summer-anchor PNGs are
+ *  ignored at runtime — the files stay on disk for an A/B against the pixel route). */
 const MANIFEST: Record<string, string[]> = Object.fromEntries(
-  Object.entries(SEASONAL_MANIFEST ?? {}).filter(([key]) => !VECTOR_PREFER_KEYS.has(key)),
+  Object.entries(FULL_MANIFEST).filter(([key]) => !VECTOR_PREFER_KEYS.has(key)),
+);
+
+/** The vector-preferred keys that DO ship a baked PNG folder. Preloaded only when the
+ *  pixel-sprite override is on (see {@link setPixelSpriteOverride}) so a player can flip
+ *  the whole board from the vector art to the pixel sprites. */
+const OVERRIDE_MANIFEST: Record<string, string[]> = Object.fromEntries(
+  Object.entries(FULL_MANIFEST).filter(([key]) => VECTOR_PREFER_KEYS.has(key)),
 );
 
 /** Every tile key that has a seasonal-art folder (the *intent* set — used by menu icons
  *  to know a baked reference may exist and to kick the load). A key here can still be
- *  inactive if none of its sheets decoded; gate rendering on `seasonalArtActive()`. */
+ *  inactive if none of its sheets decoded; gate rendering on `seasonalBakedActive()`. */
 export const SEASONAL_SUBJECT_KEYS: ReadonlySet<string> = new Set(Object.keys(MANIFEST));
+
+// ─── Pixel-sprite override ────────────────────────────────────────────────────
+//
+// A Settings toggle that forces EVERY tile (including the all-vector showcase keys)
+// to render its baked PixelLab pixel sprite instead of the hand-drawn vector art.
+// The flag is persisted in the game settings (`hearth.settings`) so the menu-icon
+// path — which has no React wiring — can read it at module load; the React layer
+// calls `setPixelSpriteOverride()` to flip it at runtime.
+
+const SETTINGS_STORAGE_KEY = "hearth.settings";
+
+function readPixelOverrideFromStorage(): boolean {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SETTINGS_STORAGE_KEY) : null;
+    if (raw) return !!(JSON.parse(raw) as { pixelSpriteOverride?: boolean }).pixelSpriteOverride;
+  } catch { /* storage unavailable / corrupt */ }
+  return false;
+}
+
+let pixelOverride = readPixelOverrideFromStorage();
+
+/** Whether the pixel-sprite override is currently on. */
+export function isPixelSpriteOverride(): boolean {
+  return pixelOverride;
+}
+
+// Fires when the override flips (either direction) so the Phaser scene can re-bake.
+const overrideListeners = new Set<() => void>();
+
+/** Subscribe to pixel-sprite-override changes. Returns an unsubscribe. */
+export function onPixelSpriteOverrideChange(cb: () => void): () => void {
+  overrideListeners.add(cb);
+  return () => { overrideListeners.delete(cb); };
+}
 
 interface Clip {
   bmp: CanvasImageSource;
@@ -102,15 +146,12 @@ async function loadSheet(url: string): Promise<Clip | null> {
   }
 }
 
-/** Load every discovered subject's spritesheets once, fetching only the PNGs the
- *  manifest says are present (no 404 probing for not-yet-authored seasons). A subject
- *  becomes active as soon as ANY idle decodes — typically the Summer anchor dropped
- *  first. No-ops in environments without fetch / createImageBitmap (e.g. tests). */
-export async function preloadSeasonalArt(): Promise<void> {
-  loadKicked = true;
-  if (typeof fetch === "undefined" || typeof createImageBitmap === "undefined") return;
+/** Load one manifest's subjects, fetching only the PNGs it says are present (no 404
+ *  probing for not-yet-authored seasons). A subject becomes active as soon as ANY idle
+ *  decodes — typically the Summer anchor dropped first. */
+async function loadManifest(manifest: Record<string, string[]>): Promise<void> {
   await Promise.all(
-    Object.entries(MANIFEST).map(async ([key, files]) => {
+    Object.entries(manifest).map(async ([key, files]) => {
       if (states.get(key)?.active) return;
       const present = new Set(files);
       const u = baseUrl(key);
@@ -126,14 +167,67 @@ export async function preloadSeasonalArt(): Promise<void> {
       });
     }),
   );
+}
+
+/** Load every discovered subject's spritesheets once. The vector-preferred keys are only
+ *  fetched when the pixel-sprite override is on. No-ops in environments without fetch /
+ *  createImageBitmap (e.g. tests). */
+export async function preloadSeasonalArt(): Promise<void> {
+  loadKicked = true;
+  if (typeof fetch === "undefined" || typeof createImageBitmap === "undefined") return;
+  await loadManifest(MANIFEST);
+  if (pixelOverride) await loadManifest(OVERRIDE_MANIFEST);
   // Let menu icon canvases that baked before the art arrived re-bake now.
   loadListeners.forEach((cb) => cb());
 }
 
-/** True once a subject has at least one season decoded — i.e. its baked art should
- *  fully replace the procedural icon (and the sprite-angle sway). */
+/** Flip the pixel-sprite override at runtime. Turning it ON lazily preloads the
+ *  vector-preferred keys' baked PNGs (skipped by the default preload). Notifies menu-icon
+ *  canvases (loadListeners) and the Phaser scene (overrideListeners) so they re-bake to
+ *  the now-preferred art — in BOTH directions, since turning it off must restore the
+ *  vector art for those keys. */
+export async function setPixelSpriteOverride(on: boolean): Promise<void> {
+  if (pixelOverride === on) return;
+  pixelOverride = on;
+  if (on && typeof fetch !== "undefined" && typeof createImageBitmap !== "undefined") {
+    await loadManifest(OVERRIDE_MANIFEST);
+  }
+  loadListeners.forEach((cb) => cb());
+  overrideListeners.forEach((cb) => cb());
+}
+
+/** True once a subject has at least one season decoded — i.e. its baked art HAS loaded.
+ *  This is the raw load gate; use {@link seasonalBakedActive} for the render decision
+ *  (which also honours the vector preference and the pixel-sprite override). */
 export function seasonalArtActive(key: string): boolean {
   return !!states.get(key)?.active;
+}
+
+/** Whether `key` should render its BAKED pixel sprite right now: its sheets have decoded
+ *  AND it isn't an all-vector showcase key — UNLESS the pixel-sprite override forces the
+ *  pixel route for every key. The single render-time gate for "pixel vs vector". */
+export function seasonalBakedActive(key: string): boolean {
+  if (!states.get(key)?.active) return false;
+  if (VECTOR_PREFER_KEYS.has(key)) return pixelOverride;
+  return true;
+}
+
+/** Whether `key` could render baked art under the current settings — lets menu icons
+ *  decide whether to kick the art load and prefer the baked reference (the
+ *  vector-preferred keys only qualify while the override is on). */
+export function isPotentialBakedSubject(key: string): boolean {
+  return SEASONAL_SUBJECT_KEYS.has(key)
+    || (pixelOverride && Object.prototype.hasOwnProperty.call(OVERRIDE_MANIFEST, key));
+}
+
+/** Every loaded key that should render baked art right now (honours the override).
+ *  Used by the scene to know which tiles to re-bake as pixel-sprite frame-banks. */
+export function bakedActiveKeys(): string[] {
+  const out: string[] = [];
+  for (const key of states.keys()) {
+    if (seasonalBakedActive(key)) out.push(key);
+  }
+  return out;
 }
 
 /** The idle-clip index to draw for season `idx` given which seasons decoded: the exact

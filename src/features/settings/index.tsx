@@ -137,10 +137,13 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
 }
 
 // --- Settings tab ---
-const TOGGLE_ROWS = [
+const AUDIO_ROWS = [
   { key: 'sfxOn',     label: 'Sound Effects' },
   { key: 'musicOn',   label: 'Music' },
   { key: 'hapticsOn', label: 'Haptics' },
+];
+const GRAPHICS_ROWS = [
+  { key: 'pixelSpriteOverride', label: 'Pixel Sprite Tiles' },
 ];
 
 interface SettingsTabProps { settings?: Record<string, boolean>; dispatch: Dispatch }
@@ -162,7 +165,25 @@ function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
         Audio
       </div>
       <div className="flex flex-col gap-2">
-        {TOGGLE_ROWS.map(({ key, label }) => (
+        {AUDIO_ROWS.map(({ key, label }) => (
+          <div
+            key={key}
+            className="flex items-center justify-between py-2 px-3 rounded-xl border-2"
+            style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+          >
+            <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>{label}</span>
+            <Toggle
+              on={!!settings[key]}
+              onToggle={() => handleToggle(key)}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="hl-section-label text-center">
+        Graphics
+      </div>
+      <div className="flex flex-col gap-2">
+        {GRAPHICS_ROWS.map(({ key, label }) => (
           <div
             key={key}
             className="flex items-center justify-between py-2 px-3 rounded-xl border-2"

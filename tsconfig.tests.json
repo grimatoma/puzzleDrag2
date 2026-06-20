@@ -11,7 +11,8 @@
     "tests/playwright-env.d.ts",
     "tests/e2e/**/*.ts",
     "tests/visual/**/*.ts",
-    "src/__tests__/setup.ts"
+    "src/__tests__/setup.ts",
+    "src/types/virtual-seasonal.d.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

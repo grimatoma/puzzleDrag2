@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { seasonalArtActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
+import { seasonalBakedActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
 import { idleFrameAt } from "./textures/seasonalIdleTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 
@@ -157,7 +157,7 @@ export class TileObj {
     // that must not rotate — keep the sprite upright and, instead of the sway,
     // drive the idle FRAME per tile so each one rests then gestures on its own
     // staggered timer (no shared-texture lockstep loop).
-    if (seasonalArtActive(this.res.key)) {
+    if (seasonalBakedActive(this.res.key)) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       // Only frame-bank strips carry numbered frames; single-frame stills (and the
       // brief window before a strip is built) have only __BASE, where setFrame would
