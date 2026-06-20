@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS = {
   musicOn: true,
   hapticsOn: true,
   tutorialDisabled: false,
+  pixelSpriteOverride: false,
 };
 
 export const initial = {

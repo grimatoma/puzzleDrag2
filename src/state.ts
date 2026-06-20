@@ -26,6 +26,7 @@ import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
 import * as tutorial from "./features/tutorial/slice.js";
 import * as settings from "./features/settings/slice.js";
+import { setPixelSpriteOverride } from "./textures/seasonal/seasonalArt.js";
 import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
@@ -1697,6 +1698,12 @@ function runActionEffects(state: GameState, action: Action): void {
       // Persist the settings sub-state to its own localStorage key so it
       // survives a SETTINGS/RESET_SAVE clearing of the main save slot.
       settings.persistSettings((state.settings ?? {}) as Record<string, unknown>);
+      // The pixel-sprite override lives outside React (the Phaser scene + menu-icon
+      // canvases read it), so push the new value into the seasonal-art module, which
+      // preloads any now-needed PNGs and notifies those consumers to re-bake.
+      if (action.key === "pixelSpriteOverride") {
+        void setPixelSpriteOverride(!!state.settings?.pixelSpriteOverride);
+      }
       break;
     case "SETTINGS/RESET_SAVE":
       // Clears every hearth.* key. Runs after persistState above (which would

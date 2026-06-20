@@ -1,11 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   fallbackIdleIndex,
   seasonalArtActive,
+  seasonalBakedActive,
   paintSeasonalReference,
   advanceTransition,
   type TransState,
   SEASONAL_SUBJECT_KEYS,
+  isPixelSpriteOverride,
+  setPixelSpriteOverride,
+  isPotentialBakedSubject,
+  onPixelSpriteOverrideChange,
 } from "./seasonalArt.js";
 
 // SEASON_NAMES order: 0 Spring, 1 Summer, 2 Autumn, 3 Winter. Summer (1) is the anchor.
@@ -69,6 +74,40 @@ describe("subject discovery + inactive guards", () => {
     const ctx = { drawImage: () => calls.push("draw"), imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
     expect(paintSeasonalReference(ctx, "tile_mine_stone")).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("pixel-sprite override", () => {
+  afterEach(async () => { await setPixelSpriteOverride(false); });
+
+  it("defaults to off", () => {
+    expect(isPixelSpriteOverride()).toBe(false);
+  });
+
+  it("flips on/off and notifies subscribers (both directions)", async () => {
+    const calls: boolean[] = [];
+    const unsub = onPixelSpriteOverrideChange(() => calls.push(isPixelSpriteOverride()));
+    await setPixelSpriteOverride(true);
+    expect(isPixelSpriteOverride()).toBe(true);
+    await setPixelSpriteOverride(true); // no-op — already on
+    await setPixelSpriteOverride(false);
+    expect(isPixelSpriteOverride()).toBe(false);
+    unsub();
+    expect(calls).toEqual([true, false]);
+  });
+
+  it("a vector-preferred key only counts as a potential baked subject while the override is on", async () => {
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_tree_willow")).toBe(false);
+    expect(isPotentialBakedSubject("tile_tree_willow")).toBe(false);
+    await setPixelSpriteOverride(true);
+    expect(isPotentialBakedSubject("tile_tree_willow")).toBe(true);
+  });
+
+  it("seasonalBakedActive stays false for unloaded art regardless of the override (no fetch in node)", async () => {
+    expect(seasonalBakedActive("tile_tree_willow")).toBe(false);
+    expect(seasonalArtActive("tile_tree_willow")).toBe(false);
+    await setPixelSpriteOverride(true);
+    expect(seasonalBakedActive("tile_tree_willow")).toBe(false);
   });
 });
 

@@ -60,7 +60,7 @@ import { ICONS as G_WEAPONS } from "./categories/weapons.js";
 import { ICONS as G_SPELLS } from "./categories/spells.js";
 import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
-import { paintSeasonalReference, ensureSeasonalArtLoaded, SEASONAL_SUBJECT_KEYS } from "./seasonal/seasonalArt.js";
+import { paintSeasonalReference, ensureSeasonalArtLoaded, seasonalBakedActive, isPotentialBakedSubject } from "./seasonal/seasonalArt.js";
 
 export interface IconRegistryEntry {
   label?: string;
@@ -196,8 +196,8 @@ export function iconEntry(key: string): IconRegistryEntry | null {
  *  load (and in environments without them, e.g. tests / offline icon render) it kicks
  *  the load and falls through to the subject's procedural icon. */
 export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
-  if (SEASONAL_SUBJECT_KEYS.has(key)) {
-    if (paintSeasonalReference(ctx, key)) return true;
+  if (isPotentialBakedSubject(key)) {
+    if (seasonalBakedActive(key) && paintSeasonalReference(ctx, key)) return true;
     ensureSeasonalArtLoaded();
   }
   const entry = iconEntry(key);

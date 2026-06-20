@@ -27,6 +27,9 @@ export interface GameSettings {
   /** Feature flag: when true the onboarding tutorial never auto-starts.
    *  Lives in settings so it survives DEV/RESET_GAME (which preserves settings). */
   tutorialDisabled?: boolean;
+  /** When true, every tile renders its baked pixel sprite instead of the hand-drawn
+   *  vector art (overrides the all-vector showcase set). */
+  pixelSpriteOverride?: boolean;
   [key: string]: boolean | undefined;
 }
 

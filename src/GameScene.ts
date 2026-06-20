@@ -17,7 +17,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim, seasonalTileHasTransitions, seasonalVectorAdvance } from "./textures/seasonal/seasonalTiles.js";
-import { preloadSeasonalArt, seasonalArtActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, SEASONAL_SUBJECT_KEYS } from "./textures/seasonal/seasonalArt.js";
+import { preloadSeasonalArt, seasonalBakedActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, bakedActiveKeys, onPixelSpriteOverrideChange } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
@@ -135,6 +135,8 @@ export class GameScene extends Phaser.Scene {
   /** Baked-art keys whose `tile_<key>` is a frame-bank strip → resolved idle season
    *  index currently baked into it (skips redundant re-bakes across season ticks). */
   _bankSeason: Map<string, number> = new Map();
+  /** Teardown for the pixel-sprite-override subscription (set in create()). */
+  _unsubPixelOverride: (() => void) | null = null;
 
   // Misc scene objects
   sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -173,6 +175,16 @@ export class GameScene extends Phaser.Scene {
     // + season transitions); until then they show the procedural icon.
     preloadSeasonalArt().then(() => {
       if (this.scene.isActive()) this._rebakeBakedTiles();
+    });
+    // Pixel-sprite override (Settings): when it flips, the vector-preferred tiles switch
+    // between single-frame vector textures and baked frame-bank strips. The two have
+    // different texture topologies, so rebuild from scratch (like a resize) then re-bake
+    // the baked frame-banks — covers both directions (on restores pixels, off restores
+    // vector). The override module preloads the now-needed PNGs before it notifies us.
+    this._unsubPixelOverride = onPixelSpriteOverrideChange(() => {
+      if (!this.scene.isActive()) return;
+      regenerateTextures(this);
+      this._rebakeBakedTiles();
     });
     this.layoutDims();
     this.drawBackground();
@@ -273,6 +285,8 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener("blur", onDocPointerUp);
       for (const [event, fn] of registryListeners) this.registry.events.off(event, fn);
       this.scale.off("resize", onResize);
+      this._unsubPixelOverride?.();
+      this._unsubPixelOverride = null;
     });
 
     // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
@@ -2071,7 +2085,7 @@ export class GameScene extends Phaser.Scene {
         const t = row[c];
         if (
           t &&
-          (hasSeasonalTileAnim(t.res.key, season) || seasonalArtActive(t.res.key))
+          (hasSeasonalTileAnim(t.res.key, season) || seasonalBakedActive(t.res.key))
         ) {
           if (!reps.has(t.res.key)) reps.set(t.res.key, t.res);
           if (t.selected) selectedKeys.add(t.res.key);
@@ -2082,7 +2096,7 @@ export class GameScene extends Phaser.Scene {
     const dpr = this.bakeScale || this.dpr;
     for (const res of reps.values()) {
       const sel = selectedKeys.has(res.key);
-      if (seasonalArtActive(res.key)) {
+      if (seasonalBakedActive(res.key)) {
         // Baked PixelLab art. The per-frame canvas re-bake is gone for the idle
         // steady-state — `tile_<key>` is a frame-bank strip and each TileObj picks
         // its own frame (rest → play once → rest, staggered). This pass only drives
@@ -2255,8 +2269,7 @@ export class GameScene extends Phaser.Scene {
   private _rebakeBakedTiles() {
     const season = currentSeasonName(this);
     const dpr = this.bakeScale || this.dpr;
-    for (const key of SEASONAL_SUBJECT_KEYS) {
-      if (!seasonalArtActive(key)) continue;
+    for (const key of bakedActiveKeys()) {
       const res = resourceByKey(key);
       if (!res) continue;
       // Snap the transition state machine to the settled season (no transition).
