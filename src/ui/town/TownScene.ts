@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SMOKE_BUILDINGS } from "./config.js";
+import { renderGround, type GroundSpec } from "./proceduralGround.js";
 import {
   ensureSmokeTextures,
   makeSmokeColumn,
@@ -32,6 +33,12 @@ export interface TownPlan {
    * passes — the object layer (lots/boards/props) is unchanged.
    */
   groundTiles?: number[][];
+  /**
+   * Optional hand-rolled procedural ground (SDF terrain). When present it's baked
+   * into a resolution-scalable texture and drawn instead of `groundTiles`. See
+   * `proceduralGround.ts`.
+   */
+  groundSpec?: GroundSpec;
   plaza: { cx: number; cy: number; rx: number; ry: number };
   well: { cx: number; cy: number; r: number };
   lots: TownPlanLot[];
@@ -146,7 +153,9 @@ export class TownScene extends Phaser.Scene {
 
     this.groundLayer = this.map.createBlankLayer("ground", this.tileset)!;
     this.groundLayer.setDepth(-1000);
-    if (this.plan.groundTiles) {
+    if (this.plan.groundSpec && this.paintProceduralGround(this.plan.groundSpec)) {
+      // Hand-rolled SDF terrain (resolution-scalable) — preferred when authored.
+    } else if (this.plan.groundTiles) {
       // Hand-authored ground (Zone Tier Ladder) — paint straight from the grid.
       this.paintGroundTiles();
     } else {
@@ -236,6 +245,38 @@ export class TownScene extends Phaser.Scene {
 
   paintGrass() {
     this.groundLayer.fill(T.GRASS);
+  }
+
+  /**
+   * Bake the hand-rolled SDF terrain into a texture and draw it as the ground.
+   * The texture is keyed (and so cached by Phaser) across scene restarts, so the
+   * one-time bake happens at most once per (zone, tier). Returns false on failure
+   * so the caller can fall back to the tile ground.
+   */
+  paintProceduralGround(spec: GroundSpec): boolean {
+    const key = `procground_${spec.key ?? `${spec.width}x${spec.height}_${spec.seed}`}`;
+    try {
+      if (!this.textures.exists(key)) {
+        // 1.5× the design resolution keeps the ground crisp at typical zoom while
+        // keeping the one-time bake snappy; the SDF art is smooth, so any further
+        // upscale degrades gracefully (no staircase). Cached by key across restarts.
+        const SCALE = 1.5;
+        const img = renderGround(spec, SCALE);
+        const canvasTex = this.textures.createCanvas(key, img.width, img.height);
+        if (!canvasTex) return false;
+        const idata = canvasTex.context.createImageData(img.width, img.height);
+        idata.data.set(img.data);
+        canvasTex.context.putImageData(idata, 0, 0);
+        canvasTex.refresh();
+      }
+      const ground = this.add.image(0, 0, key).setOrigin(0, 0);
+      ground.setDisplaySize(this.plan.width, this.plan.height);
+      ground.setDepth(-1000);
+      return true;
+    } catch (e) {
+      console.warn("[town] procedural ground bake failed; falling back to tiles", e);
+      return false;
+    }
   }
 
   /** Paint the ground layer directly from an authored tile grid (rows × cols). */

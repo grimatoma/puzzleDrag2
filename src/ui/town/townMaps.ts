@@ -21,6 +21,7 @@
 // Ground uses the same Tuxemon tileset indices `TownScene` references.
 import type { TownPlan } from "./TownScene.js";
 import { blankMask, maskBandH, maskBandV, maskDisc, maskRect, paintSandPaths } from "./roadAutotile.js";
+import type { GroundSpec, GroundRoad } from "./proceduralGround.js";
 
 // Design space — must match TownScene's grid (40×30 @ 32px → 1280×960).
 const TILE = 32;
@@ -104,6 +105,12 @@ export interface AuthoredTownMap {
   props?: AuthoredProp[];
   /** Forest scatter (the town is a clearing in the woods); rendered by TownScene.drawTrees. */
   trees?: AuthoredTree[];
+  /**
+   * Hand-rolled procedural ground (SDF terrain). When present, TownScene bakes it
+   * into a resolution-scalable texture and uses it instead of `groundTiles` (which
+   * remains as a flat-tile fallback). See `proceduralGround.ts`.
+   */
+  groundSpec?: GroundSpec;
   plaza?: { cx: number; cy: number; rx: number; ry: number };
   well?: { cx: number; cy: number; r: number };
 }
@@ -122,14 +129,19 @@ export interface AuthoredTownMap {
 // `[index, cx, cy, w, h]` (px, 1280×960 design space) is the verbatim resolved
 // output of the mockup's SPEC frontage solver, ordered by index so `slice(0,
 // plots)` yields each rung. Footprints vary per lot to kill the spreadsheet read.
+// Lots are grouped into clean FRONTAGE ROWS: every lot on a street-side shares a
+// constant setback + uniform height, so the building bases (baseY = cy + h/2)
+// line up into a tidy row; only the width varies for interest. Front rows:
+//   main-street north  cy 385   ·  main-street south  cy 555
+//   north back lane    cy 219   ·  south back lane    cy 687   ·  ridge lane (lot 14)
 const HOME_LOTS: ReadonlyArray<readonly [number, number, number, number, number]> = [
-  [0, 451, 384, 128, 100], [1, 797, 390, 132, 96], [2, 298, 560, 100, 104],          // Outpost (0–2)
-  [3, 439, 552, 92, 100], [4, 318, 374, 112, 108], [5, 967, 387, 134, 98],           // Hamlet  (3–5)
-  [6, 160, 373, 92, 118], [7, 1111, 381, 132, 114], [8, 356, 209, 104, 110],
-  [9, 544, 210, 96, 124], [10, 769, 216, 134, 100], [11, 990, 216, 114, 112],        // Village (6–11)
-  [12, 1051, 557, 104, 106], [13, 1182, 559, 92, 98], [14, 1130, 150, 116, 104],
-  [15, 288, 689, 110, 102], [16, 427, 679, 96, 106], [17, 604, 690, 134, 96],
-  [18, 1056, 688, 108, 104], [19, 1193, 680, 100, 104],                              // City    (12–19)
+  [0, 455, 385, 128, 104], [1, 800, 385, 132, 104], [2, 300, 555, 104, 104],         // Outpost (0–2)
+  [3, 440, 555, 96, 104], [4, 318, 385, 112, 104], [5, 966, 385, 120, 104],          // Hamlet  (3–5)
+  [6, 178, 385, 100, 104], [7, 1110, 385, 128, 104], [8, 356, 219, 108, 104],
+  [9, 548, 219, 100, 104], [10, 770, 219, 128, 104], [11, 990, 219, 114, 104],        // Village (6–11)
+  [12, 1050, 555, 108, 104], [13, 1182, 555, 96, 104], [14, 1128, 168, 116, 104],
+  [15, 300, 687, 110, 104], [16, 446, 687, 100, 104], [17, 612, 687, 128, 104],
+  [18, 1056, 687, 108, 104], [19, 1192, 687, 100, 104],                              // City    (12–19)
 ];
 const hlot = (i: number): AuthoredLot => {
   const [index, cx, cy, w, h] = HOME_LOTS[i];
@@ -317,11 +329,61 @@ const HOME_PROPS_BASE: AuthoredProp[] = [
   { kind: "lamppost", x: 578, y: 512 },
 ];
 
+// ── Procedural-ground spec — the doc's exact pixel geometry (1280×960). The SDF
+// renderer (proceduralGround.ts) draws this as smooth terrain, so the road
+// centre-lines + half-widths are the doc's real values (incl. the diagonal NE
+// ridge lane, which an SDF renders for free). `tier` is the rung that opens each.
+const HOME_SPEC_ROADS: ReadonlyArray<{ seg: readonly [number, number, number, number]; half: number; tier: number }> = [
+  { seg: [400, 470, 870, 470], half: 17, tier: 0 },   // HS0 — main street
+  { seg: [816, 487, 816, 576], half: 11, tier: 0 },   // FL  — farm lane
+  { seg: [265, 470, 400, 470], half: 17, tier: 1 },   // HS1w
+  { seg: [870, 470, 1010, 470], half: 17, tier: 1 },  // HS1e
+  { seg: [80, 470, 265, 470], half: 17, tier: 2 },    // HS2w
+  { seg: [0, 470, 80, 470], half: 13, tier: 2 },      // HS3w
+  { seg: [1010, 470, 1150, 470], half: 17, tier: 2 }, // HS2e
+  { seg: [240, 300, 1240, 300], half: 13, tier: 2 },  // NBL — north back lane
+  { seg: [560, 300, 560, 453], half: 11, tier: 2 },   // NS  — connector
+  { seg: [255, 768, 1280, 768], half: 13, tier: 3 },  // SBL — south back lane (stops clear of the SW river)
+  { seg: [560, 487, 560, 768], half: 10, tier: 3 },   // CN_w
+  { seg: [976, 487, 976, 768], half: 10, tier: 3 },   // CN_e
+  { seg: [880, 300, 880, 453], half: 10, tier: 3 },   // CN_ne
+  { seg: [1040, 300, 1226, 150], half: 11, tier: 3 }, // RID — diagonal ridge lane
+];
+
+/** Build the hand-rolled procedural-ground spec for a home rung. */
+function homeGroundSpec(tier: number): GroundSpec {
+  const roads: GroundRoad[] = [];
+  for (const r of HOME_SPEC_ROADS) {
+    if (r.tier > tier) continue;
+    roads.push({ x1: r.seg[0], y1: r.seg[1], x2: r.seg[2], y2: r.seg[3], half: r.half });
+  }
+  // One clean crossing on the main street, baked at the Village. The deck is
+  // tilted ~5° so it sits square to the (slightly leaning) river, not rigidly
+  // axis-aligned; planks run across the road and the long sides read as rails.
+  const bridges = tier >= 2 ? [{ cx: 100, cy: 470, len: 96, wid: 46, angle: -0.09 }] : [];
+  return {
+    key: `home-t${tier}`,
+    width: DESIGN_W,
+    height: DESIGN_H,
+    seed: 1337,
+    river: { pts: HOME_RIVER, half: 27, bank: 22 },
+    pond: { cx: HOME_POND.cx, cy: HOME_POND.cy, rx: HOME_POND.rx, ry: HOME_POND.ry, bank: 18 },
+    roads,
+    // Cobbled plaza: a street-hugging lozenge that sits in the open corridor
+    // BETWEEN the north/south lot rows (never under a building), widening at City.
+    cobble: tier >= 2 ? [{ cx: HOME_PLAZA.cx, cy: HOME_PLAZA.cy, rx: tier >= 3 ? 232 : 196, ry: 33 }] : [],
+    field: { cx: HOME_FARM_BOARD.cx, cy: HOME_FARM_BOARD.cy, w: HOME_FARM_BOARD.w, h: HOME_FARM_BOARD.h },
+    bridges,
+    dock: HOME_DOCK.tier <= tier ? { x: HOME_DOCK.x, y0: HOME_DOCK.y0, y1: HOME_DOCK.y1, half: 13 } : null,
+  };
+}
+
 /** Build one home rung map: ground grown to `tier` + the first `plots` stable lots. */
 function homeRung(tier: number): AuthoredTownMap {
   const plots = HOME_PLOTS[tier];
   return {
-    groundTiles: homeGround(tier),
+    groundTiles: homeGround(tier), // flat-tile fallback if procedural baking is unavailable
+    groundSpec: homeGroundSpec(tier),
     plaza: HOME_PLAZA,
     well: HOME_WELL,
     boards: [HOME_FARM_BOARD],
@@ -466,6 +528,7 @@ function toPlan(m: AuthoredTownMap): TownPlan {
     width: DESIGN_W,
     height: DESIGN_H,
     groundTiles: m.groundTiles,
+    groundSpec: m.groundSpec,
     plaza,
     well: m.well ?? { cx: plaza.cx, cy: plaza.cy, r: 18 },
     lots: m.lots.map((l) => ({ index: l.index, cx: l.cx, cy: l.cy, w: l.w, h: l.h, row: "" })),
