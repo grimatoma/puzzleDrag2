@@ -75,6 +75,10 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
     }
     return { ...save, version: 48 };
   },
+  // 48 → 49: home lots were re-laid into aligned frontage rows (no schema-shape
+  // change). Pure version bump — buildings remain keyed by stable lot index; the
+  // bump just retires 48-era saves so none renders a building on a moved lot.
+  48: (save) => ({ ...save, version: 49 }),
 };
 
 export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";

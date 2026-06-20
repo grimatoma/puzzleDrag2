@@ -215,8 +215,11 @@ export const DEFAULT_HOME_BIOME = "prairie";
 //          4-rung Outpost→Hamlet→Village→City town-layout design (3/6/12/20) and
 //          its lots repositioned roads-first; the bump discards pre-layout saves
 //          so a placed building never lands on a moved lot.
+// 48 → 49: home lots re-laid into clean aligned frontage rows (hand-rolled
+//          procedural ground); lots moved again, so discard 48-era saves to avoid
+//          a placed building rendering on a shifted lot.
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
-export const SAVE_SCHEMA_VERSION = 48;
+export const SAVE_SCHEMA_VERSION = 49;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
