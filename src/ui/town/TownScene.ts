@@ -1,4 +1,12 @@
 import Phaser from "phaser";
+import { SMOKE_BUILDINGS } from "./config.js";
+import {
+  ensureSmokeTextures,
+  makeSmokeColumn,
+  advanceSmokeColumn,
+  makeEmberGlow,
+  type SmokeColumn,
+} from "../../textures/smoke.js";
 
 interface Pt { x: number; y: number }
 
@@ -80,10 +88,17 @@ export class TownScene extends Phaser.Scene {
   groundLayer!: Phaser.Tilemaps.TilemapLayer;
 
   buildingSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
+  buildingShadows: Phaser.GameObjects.Ellipse[] = []; // per-building, rebuilt with the sprites
   plotMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   boardZones: Phaser.GameObjects.Zone[] = []; // board hit areas, disabled while placing
   villagers: Phaser.GameObjects.Sprite[] = [];
   decorLayer!: Phaser.GameObjects.Layer; // depth-sorted props/trees/buildings
+
+  // Ambient chimney smoke + hearth/forge ember glow. Rebuilt alongside the
+  // buildings they belong to (see rebuildBuildingsAndPlots) so they never leak.
+  smokeColumns: SmokeColumn[] = [];
+  emberGlows: Phaser.GameObjects.Image[] = [];
+  private _fxTime = 0; // seconds accumulator driving the smoke wobble
 
   isDragging = false;
   initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
@@ -112,9 +127,16 @@ export class TownScene extends Phaser.Scene {
   }
 
   create() {
+    // Phaser auto-starts this scene once with no data before TownPhaserCanvas
+    // restarts it with the real plan. Bail cleanly on that dataless pass — every
+    // ground/object pass below dereferences `this.plan`, so without this guard an
+    // undefined plan throws and wedges the scene at CREATING (it then ignores the
+    // follow-up restart, leaving a blank town).
+    if (!this.plan) return;
     this.bakeSpriteTextures();
     this.bakeBuildingTextures();
     this.createCharacterAnims();
+    ensureSmokeTextures(this);
 
     // ── Tilemap ground (grass base, dirt roads/plaza, water) ────────────────
     this.map = this.make.tilemap({ tileWidth: TILE, tileHeight: TILE, width: GRID_COLS, height: GRID_ROWS });
@@ -491,8 +513,17 @@ export class TownScene extends Phaser.Scene {
   rebuildBuildingsAndPlots() {
     this.buildingSprites.forEach((s) => s.destroy());
     this.buildingSprites.clear();
+    this.buildingShadows.forEach((sh) => sh.destroy());
+    this.buildingShadows = [];
     this.plotMarkers.forEach((c) => c.destroy());
     this.plotMarkers.clear();
+
+    // Tear down the previous ambient smoke/ember (and kill the flicker tweens)
+    // so a state update or texture-bake rebuild can't leak emitters or tweens.
+    this.smokeColumns.forEach((sm) => sm.root.destroy());
+    this.smokeColumns = [];
+    this.emberGlows.forEach((g) => { this.tweens.killTweensOf(g); g.destroy(); });
+    this.emberGlows = [];
 
     const isPlacing = !!this.pendingBuilding;
 
@@ -509,7 +540,7 @@ export class TownScene extends Phaser.Scene {
         const texKey = `building_${buildingId}`;
         if (!this.textures.exists(texKey)) return; // wait for SVG bake
         const baseY = l.cy + l.h / 2;
-        this.addShadow(l.cx, baseY - 2, l.w * 0.62, l.h * 0.16, baseY, 0.14);
+        this.buildingShadows.push(this.addShadow(l.cx, baseY - 2, l.w * 0.62, l.h * 0.16, baseY, 0.14));
         const sprite = this.add.sprite(l.cx, baseY, texKey);
         sprite.setOrigin(0.5, 1);
         const scale = (l.w * 1.18) / sprite.width;
@@ -522,6 +553,7 @@ export class TownScene extends Phaser.Scene {
           sprite.on("pointerup", () => { if (!this.isDragging) this.events.emit("town.clickbuilding", buildingId); });
         }
         this.buildingSprites.set(l.index, sprite);
+        this.spawnBuildingAmbience(buildingId, l, baseY, sprite.displayHeight);
       } else {
         const container = this.add.container(l.cx, l.cy);
         container.setDepth(l.cy);
@@ -551,6 +583,32 @@ export class TownScene extends Phaser.Scene {
         this.plotMarkers.set(l.index, container);
       }
     });
+  }
+
+  /**
+   * For a built smoke-building, anchor a rising smoke column at a chimney offset
+   * and — for the hearth/forge — a flickering ember glow at its mouth. No-op for
+   * any building not in SMOKE_BUILDINGS. The created objects are tracked so the
+   * next rebuildBuildingsAndPlots tears them down (no leak).
+   */
+  spawnBuildingAmbience(buildingId: string, lot: TownPlanLot, baseY: number, displayHeight: number) {
+    if (!SMOKE_BUILDINGS.has(buildingId)) return;
+    const topY = baseY - displayHeight;
+    // Chimney near the roof peak, nudged to one side like a real flue.
+    const chimneyX = lot.cx + lot.w * 0.18;
+    const chimneyY = topY + displayHeight * 0.12;
+    const intensity = buildingId === "forge" || buildingId === "smokehouse" ? 0.95 : 0.75;
+    const column = makeSmokeColumn(this, chimneyX, chimneyY, intensity);
+    // Above its own building (depth baseY); a nearer building still occludes it.
+    column.root.setDepth(baseY + 1);
+    this.smokeColumns.push(column);
+
+    // Warm ember glow at the fire's mouth for the two flame buildings.
+    if (buildingId === "hearth" || buildingId === "forge") {
+      const glow = makeEmberGlow(this, lot.cx, baseY - displayHeight * 0.28, lot.w / 100);
+      glow.setDepth(baseY + 0.5);
+      this.emberGlows.push(glow);
+    }
   }
 
   spawnVillagers() {
@@ -586,6 +644,14 @@ export class TownScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number) {
+    // Ambient chimney smoke. Driven here (and via the ember flicker tweens), so
+    // a paused/slept scene stops it dead — no off-screen CPU.
+    if (this.smokeColumns.length) {
+      const dtSec = delta / 1000;
+      this._fxTime += dtSec;
+      for (const sm of this.smokeColumns) advanceSmokeColumn(sm, dtSec, this._fxTime);
+    }
+
     const dt = delta / 16.6;
     this.villagers.forEach((v) => {
       const currentWp = v.getData("currentWp") as number;

@@ -3,6 +3,7 @@
 // the bridge itself plus state.ts (HEARTH_VISUAL_TESTING flag check).
 
 import type { GameScene } from "../GameScene.js";
+import type { TownScene } from "../ui/town/TownScene.js";
 
 export {};
 
@@ -28,6 +29,7 @@ declare global {
     __hearthVisual?: VisualBridgeApi;
     __hearthVisualScenarioState?: unknown;
     __phaserScene?: GameScene | null;
+    __townScene?: TownScene | null;
   }
 
   var __HEARTH_VISUAL_TESTING__: boolean | undefined;
