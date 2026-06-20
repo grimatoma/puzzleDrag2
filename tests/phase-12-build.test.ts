@@ -114,4 +114,40 @@ describe("Phase 12.4 — build optimisation", () => {
     // Vite injects modulepreload for chunks; at minimum the react vendor should be there
     expect(html).toMatch(/rel="modulepreload"/);
   });
+
+  // ── Installable PWA (vite-plugin-pwa) ──────────────────────────────────
+  it("emits an installable manifest with maskable + 192/512 icons", () => {
+    const manifestPath = resolve(distDir, "manifest.webmanifest");
+    expect(existsSync(manifestPath), "manifest.webmanifest").toBe(true);
+    const m = JSON.parse(readFileSync(manifestPath, "utf8"));
+    expect(m.name).toBeTruthy();
+    expect(m.display).toBe("standalone");
+    // start_url and scope are both pinned to the deploy base so an installed
+    // app launches into the right sub-path.
+    expect(m.start_url).toBe(m.scope);
+    const sizes = m.icons.map((i: { sizes: string }) => i.sizes);
+    expect(sizes).toContain("192x192");
+    expect(sizes).toContain("512x512");
+    expect(m.icons.some((i: { purpose?: string }) => /\bmaskable\b/.test(i.purpose || ""))).toBe(true);
+    // Every declared icon is actually emitted (icon src is manifest-relative).
+    for (const ic of m.icons) {
+      expect(existsSync(resolve(distDir, ic.src)), `icon ${ic.src} missing`).toBe(true);
+    }
+  });
+
+  it("emits a service worker + registration shim, linked from index.html", () => {
+    expect(existsSync(resolve(distDir, "sw.js")), "sw.js").toBe(true);
+    expect(existsSync(resolve(distDir, "registerSW.js")), "registerSW.js").toBe(true);
+    const html = readFileSync(resolve(distDir, "index.html"), "utf8");
+    expect(html).toMatch(/rel="manifest"/);
+    expect(html).toMatch(/registerSW\.js/);
+    expect(html).toMatch(/rel="apple-touch-icon"/);
+  });
+
+  it("keeps the service worker out of dist/assets/", () => {
+    // The asset-budget/.gz/.br/sourcemap guardrails above only scan dist/assets/;
+    // the SW + workbox runtime must stay at the dist root or those checks miss it.
+    const files = listFilesRecursive(assetsDir);
+    expect(files.some(f => f === "sw.js" || /(^|\/)workbox-/.test(f))).toBe(false);
+  });
 });
