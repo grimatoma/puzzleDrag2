@@ -1,0 +1,34 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hearthlands">
+  <!-- Hearthlands favicon: a hearth flame over crossed logs on a warm cream
+       ground. Palette matches the in-app boot splash (index.html). -->
+  <defs>
+    <radialGradient id="hl-bg" cx="50%" cy="40%" r="72%">
+      <stop offset="0%" stop-color="#fbf3df"/>
+      <stop offset="55%" stop-color="#f0e2c2"/>
+      <stop offset="100%" stop-color="#ddca9f"/>
+    </radialGradient>
+    <radialGradient id="hl-glow" cx="50%" cy="58%" r="55%">
+      <stop offset="0%" stop-color="#ffb24a" stop-opacity="0.62"/>
+      <stop offset="60%" stop-color="#ffb24a" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffb24a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded app-icon ground -->
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="url(#hl-bg)"/>
+  <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="12.4" fill="none"
+        stroke="#8a623c" stroke-opacity="0.28" stroke-width="1.2"/>
+
+  <!-- Warm hearth glow behind the flame -->
+  <ellipse cx="32" cy="36" rx="21" ry="23" fill="url(#hl-glow)"/>
+
+  <!-- Crossed logs at the base -->
+  <rect x="14" y="46" width="36" height="7" rx="3.5" fill="#6e4a2c" transform="rotate(-9 32 49.5)"/>
+  <rect x="14" y="46" width="36" height="7" rx="3.5" fill="#825b37" transform="rotate(9 32 49.5)"/>
+  <rect x="16" y="46.4" width="32" height="2.2" rx="1.1" fill="#9a6e42" opacity="0.7" transform="rotate(-9 32 49.5)"/>
+
+  <!-- Flame: three nested licks (outer / mid / core) -->
+  <path fill="#e0631f" d="M32 7 C26 17 21 20 19 29 C17 38 23 50 32 50 C41 50 47 38 45 29 C43 20 38 17 32 7 Z"/>
+  <path fill="#ffaa2b" d="M32 16 C28.5 22 25.5 25 24.6 31 C23.7 38 27 46 32 46 C37 46 40.3 38 39.4 31 C38.5 25 35.5 22 32 16 Z"/>
+  <path fill="#ffe49a" d="M32 24 C30 28.5 28.6 30.5 28.6 34.5 C28.6 39.5 30 43 32 43 C34 43 35.4 39.5 35.4 34.5 C35.4 30.5 34 28.5 32 24 Z"/>
+</svg>
