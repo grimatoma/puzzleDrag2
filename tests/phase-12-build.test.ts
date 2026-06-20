@@ -134,19 +134,26 @@ describe("Phase 12.4 — build optimisation", () => {
     }
   });
 
-  it("emits a service worker + registration shim, linked from index.html", () => {
+  it("emits a service worker and registers it from the app bundle", () => {
     expect(existsSync(resolve(distDir, "sw.js")), "sw.js").toBe(true);
-    expect(existsSync(resolve(distDir, "registerSW.js")), "registerSW.js").toBe(true);
     const html = readFileSync(resolve(distDir, "index.html"), "utf8");
     expect(html).toMatch(/rel="manifest"/);
-    expect(html).toMatch(/registerSW\.js/);
     expect(html).toMatch(/rel="apple-touch-icon"/);
+    // Registration now lives in the app bundle (the <UpdateNudge> useRegisterSW
+    // hook) rather than a standalone registerSW.js shim, so the "new version"
+    // prompt can be wired up. Some emitted chunk must register the SW.
+    const registers = listFilesRecursive(assetsDir)
+      .filter((f) => f.endsWith(".js"))
+      .some((f) => readFileSync(resolve(assetsDir, f), "utf8").includes("serviceWorker"));
+    expect(registers, "no bundle registers navigator.serviceWorker").toBe(true);
   });
 
   it("keeps the service worker out of dist/assets/", () => {
     // The asset-budget/.gz/.br/sourcemap guardrails above only scan dist/assets/;
-    // the SW + workbox runtime must stay at the dist root or those checks miss it.
+    // the SW + its hashed workbox precache runtime must stay at the dist root or
+    // those checks miss it. (`workbox-window.*` is the CLIENT library the
+    // registration hook imports — it's a normal bundled asset and belongs here.)
     const files = listFilesRecursive(assetsDir);
-    expect(files.some(f => f === "sw.js" || /(^|\/)workbox-/.test(f))).toBe(false);
+    expect(files.some(f => f === "sw.js" || /(^|\/)workbox-[0-9a-f]+\.js$/.test(f))).toBe(false);
   });
 });

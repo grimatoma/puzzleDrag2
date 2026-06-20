@@ -31,13 +31,14 @@ export default defineConfig(({ command }) => ({
     // for offline play. The web app manifest + icons already live in the repo
     // (public/site.webmanifest, public/icon-*.png, favicons — linked from
     // index.html), so `manifest: false` keeps those authoritative and this
-    // plugin contributes ONLY the service worker. `autoUpdate` means a new
-    // deploy is picked up and applied automatically the next time the player is
-    // online — no manual "update available" prompt. Emits sw.js / workbox-*.js
-    // / registerSW.js at the dist ROOT (not dist/assets/), so the phase-12-build
-    // asset guardrails are unaffected.
+    // plugin contributes ONLY the service worker. `prompt` installs a new deploy
+    // in the background but waits for the player to confirm; <UpdateNudge> (the
+    // useRegisterSW hook) surfaces a "new version — Reload" banner so a fresh
+    // deploy isn't masked by the precache until the next cold load. Emits sw.js /
+    // workbox-*.js / registerSW.js at the dist ROOT (not dist/assets/), so the
+    // phase-12-build asset guardrails are unaffected.
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       injectRegister: "auto",
       // Use the hand-authored public/site.webmanifest instead of generating one.
       manifest: false,

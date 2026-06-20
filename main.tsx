@@ -3,6 +3,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import PuzzleCraftStylePhaserPrototype from "./prototype";
 import { registerDesignIcons } from "./src/ui/icons/index.jsx";
+import UpdateNudge from "./src/ui/UpdateNudge.jsx";
 
 registerDesignIcons();
 
@@ -63,5 +64,6 @@ class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundar
 createRoot(document.getElementById("root")!).render(
   <RootErrorBoundary>
     <PuzzleCraftStylePhaserPrototype />
+    <UpdateNudge />
   </RootErrorBoundary>,
 );
