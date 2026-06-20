@@ -114,4 +114,39 @@ describe("Phase 12.4 — build optimisation", () => {
     // Vite injects modulepreload for chunks; at minimum the react vendor should be there
     expect(html).toMatch(/rel="modulepreload"/);
   });
+
+  // ── Installable PWA ────────────────────────────────────────────────────
+  // The web app manifest + icons are hand-authored (public/site.webmanifest,
+  // public/icon-*.png); vite-plugin-pwa (manifest: false) adds only the
+  // service worker that makes them installable + offline.
+  it("ships an installable web app manifest with 192 + 512 icons", () => {
+    const manifestPath = resolve(distDir, "site.webmanifest");
+    expect(existsSync(manifestPath), "site.webmanifest").toBe(true);
+    const m = JSON.parse(readFileSync(manifestPath, "utf8"));
+    expect(m.name).toBeTruthy();
+    expect(m.display).toBe("standalone");
+    const sizes = m.icons.map((i: { sizes: string }) => i.sizes);
+    expect(sizes).toContain("192x192");
+    expect(sizes).toContain("512x512");
+    // Every declared icon is actually emitted (icon src is manifest-relative).
+    for (const ic of m.icons) {
+      expect(existsSync(resolve(distDir, ic.src)), `icon ${ic.src} missing`).toBe(true);
+    }
+  });
+
+  it("emits a service worker + registration shim, linked from index.html", () => {
+    expect(existsSync(resolve(distDir, "sw.js")), "sw.js").toBe(true);
+    expect(existsSync(resolve(distDir, "registerSW.js")), "registerSW.js").toBe(true);
+    const html = readFileSync(resolve(distDir, "index.html"), "utf8");
+    expect(html).toMatch(/rel="manifest"/);
+    expect(html).toMatch(/registerSW\.js/);
+    expect(html).toMatch(/rel="apple-touch-icon"/);
+  });
+
+  it("keeps the service worker out of dist/assets/", () => {
+    // The asset-budget/.gz/.br/sourcemap guardrails above only scan dist/assets/;
+    // the SW + workbox runtime must stay at the dist root or those checks miss it.
+    const files = listFilesRecursive(assetsDir);
+    expect(files.some(f => f === "sw.js" || /(^|\/)workbox-/.test(f))).toBe(false);
+  });
 });
