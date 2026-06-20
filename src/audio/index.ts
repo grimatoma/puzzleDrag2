@@ -110,6 +110,19 @@ const SOUNDS: Record<string, SoundDef> = {
   toolFired: {
     steps: [{ freq: 280, freqEnd: 140, dur: 110, type: 'square', gain: 0.07 }],
   },
+  // Per-tile tick during a drag-build. Pitched up by chain length at the call
+  // site (see tickPitch in game/dragFeedback.ts).
+  chainTick: {
+    steps: [{ freq: 330, freqEnd: 440, dur: 45, type: 'triangle', gain: 0.05 }],
+  },
+  // Chain crossed the collectable threshold — distinct, slightly brighter
+  // two-note confirm so it reads apart from the per-tile tick.
+  chainReady: {
+    steps: [
+      { freq: 523, dur: 55, type: 'square', gain: 0.05, gap: 60 },
+      { freq: 784, dur: 70, type: 'square', gain: 0.05, gap: 0, delay: 0.060 },
+    ],
+  },
 };
 
 /**
