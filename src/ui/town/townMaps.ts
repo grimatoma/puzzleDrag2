@@ -38,6 +38,27 @@ const DESIGN_H = ROWS * TILE; // 960
 const GRASS = 125;
 const GRASS_ALT = [126, 189];
 const GRASS_FLOWER = [120, 121];
+const WATER = 250; // deep solid water (mirrors TownScene's T.WATER)
+const DIRT = 173;  // clean tan path / bridge-deck / dock plank (sand-blob centre)
+
+/** Deterministic mulberry32 RNG (shared by the forest scatter). */
+function makeRng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Distance from (px,py) to segment (ax,ay)-(bx,by). */
+function distToSeg(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+  let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
 
 type Grid = number[][];
 
@@ -74,12 +95,15 @@ const px = (tile: number) => tile * TILE;
 export interface AuthoredLot { index: number; cx: number; cy: number; w: number; h: number }
 export interface AuthoredBoard { kind: "farm" | "mine" | "fish"; cx: number; cy: number; w: number; h: number }
 export interface AuthoredProp { kind: string; x: number; y: number }
+export interface AuthoredTree { x: number; y: number; r: number; cluster: number }
 
 export interface AuthoredTownMap {
   groundTiles: Grid;
   lots: AuthoredLot[];
   boards?: AuthoredBoard[];
   props?: AuthoredProp[];
+  /** Forest scatter (the town is a clearing in the woods); rendered by TownScene.drawTrees. */
+  trees?: AuthoredTree[];
   plaza?: { cx: number; cy: number; rx: number; ry: number };
   well?: { cx: number; cy: number; r: number };
 }
@@ -120,6 +144,39 @@ const HOME_FARM_BOARD: AuthoredBoard = { kind: "farm", cx: 816, cy: 656, w: 224,
 const HOME_PLAZA = { cx: 640, cy: 470, rx: 88, ry: 78 };
 const HOME_WELL = { cx: 640, cy: 470, r: 20 };
 
+// River + pond (the doc's RIVER / POND / BRIDGES / DOCK, px). The river wraps the
+// settlement's west and south edges — "a reason and a pulse" — and the main
+// street/back lane bridge it. The pond sits in the NW forest. Water is baked into
+// `groundTiles`: grass → autotiled sand shore → solid water, with bridge decks
+// and a plank dock laid back over the water.
+const HOME_RIVER: ReadonlyArray<readonly [number, number]> = [
+  [150, -10], [120, 150], [95, 330], [100, 470], [120, 620], [180, 760], [360, 842], [640, 872], [980, 892], [1290, 918],
+];
+const RIVER_HALF = 30; // px — water-core half-width
+const RIVER_BANK = 20; // px — extra sand shore beyond the water
+const HOME_POND = { cx: 110, cy: 105, rx: 78, ry: 64 };
+// Bridge decks, tagged by the rung that lays the road which crosses there.
+const HOME_BRIDGES: ReadonlyArray<{ x: number; y: number; tier: number }> = [
+  { x: 100, y: 470, tier: 2 }, // main street bridges the west river (Village)
+  { x: 190, y: 766, tier: 3 }, // south back lane bridges the SW river (City)
+];
+const HOME_DOCK = { x: 520, y0: 812, y1: 884, tier: 2 }; // plank fishing dock into the south water
+
+function homeRiverDist(px: number, py: number): number {
+  let d = 1e9;
+  for (let i = 0; i < HOME_RIVER.length - 1; i++) {
+    const a = HOME_RIVER[i], b = HOME_RIVER[i + 1];
+    d = Math.min(d, distToSeg(px, py, a[0], a[1], b[0], b[1]));
+  }
+  return d;
+}
+function inHomePond(px: number, py: number, pad = 0): boolean {
+  return ((px - HOME_POND.cx) / (HOME_POND.rx + pad)) ** 2 + ((py - HOME_POND.cy) / (HOME_POND.ry + pad)) ** 2 <= 1;
+}
+function inHomeWater(px: number, py: number): boolean {
+  return homeRiverDist(px, py) <= RIVER_HALF || inHomePond(px, py);
+}
+
 // Road network in TILE units (the doc's pixel ROADS ÷32), tagged by the rung that
 // OPENS each route. Growth is a new route per rung, never a wider grid: Outpost
 // lays the main street + farm lane; Hamlet pushes the street E & W into the woods;
@@ -155,10 +212,12 @@ function paintHomeRoads(m: boolean[][], tier: number): void {
 }
 
 /**
- * Paint one home rung's ground. The plaza + the roads opened so far are described
- * as a single boolean MASK (where dirt goes), then AUTOTILED into the grass↔sand
- * blob so every boundary gets a soft rounded transition instead of a hard DIRT
- * seam (see `roadAutotile.ts`). The network visibly grows as `tier` rises.
+ * Paint one home rung's ground. The plaza + the roads opened so far + the river's
+ * sand shore are described as a single boolean MASK (where sand goes), then
+ * AUTOTILED into the grass↔sand blob so every boundary gets a soft rounded
+ * transition (see `roadAutotile.ts`). The water core is then carved over the sand
+ * shore, and bridge decks + the dock are laid back over the water. The road
+ * network + the river crossings visibly grow as `tier` rises.
  */
 function homeGround(tier: number): Grid {
   const g = blankGrid(GRASS);
@@ -166,9 +225,91 @@ function homeGround(tier: number): Grid {
   maskDisc(m, 20, 15, 3, 2);     // town-green plaza around the well (centre of the main street)
   paintHomeRoads(m, tier);       // grow the dirt road network one route per rung
   maskRect(m, 24, 18, 4, 2);     // apron where the farm lane meets the fenced field
-  paintSandPaths(g, m);          // overlay autotiled grass↔dirt transitions
+  // Sand shore: mask every tile near the river/pond so grass → sand → water reads soft.
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const cx = x * TILE + TILE / 2, cy = y * TILE + TILE / 2;
+      if (homeRiverDist(cx, cy) <= RIVER_HALF + RIVER_BANK || inHomePond(cx, cy, RIVER_BANK)) m[y][x] = true;
+    }
+  }
+  paintSandPaths(g, m);          // overlay autotiled grass↔sand transitions (roads + shore)
+  // Carve the water core over the shore.
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const cx = x * TILE + TILE / 2, cy = y * TILE + TILE / 2;
+      if (inHomeWater(cx, cy)) g[y][x] = WATER;
+    }
+  }
+  // Bridge decks reconnect the roads across the river (dirt laid back over water).
+  for (const b of HOME_BRIDGES) {
+    if (b.tier > tier) continue;
+    const bx = Math.round(b.x / TILE), by = Math.round(b.y / TILE);
+    for (let ox = -2; ox <= 2; ox++)
+      for (let oy = -1; oy <= 1; oy++) {
+        const xx = bx + ox, yy = by + oy;
+        if (yy >= 0 && yy < ROWS && xx >= 0 && xx < COLS) g[yy][xx] = DIRT;
+      }
+  }
+  // Plank fishing dock reaching into the south water (opens with the Village).
+  if (HOME_DOCK.tier <= tier) {
+    const dx = Math.round(HOME_DOCK.x / TILE);
+    for (let py = HOME_DOCK.y0; py <= HOME_DOCK.y1; py += TILE) {
+      const yy = Math.round(py / TILE);
+      if (yy >= 0 && yy < ROWS && dx >= 0 && dx < COLS) g[yy][dx] = DIRT;
+    }
+  }
   decorateGrass(g, tier);        // sprinkle variants on the remaining grass
   return g;
+}
+
+// ── Forest: the town is a clearing in the woods, and the clearing GROWS each rung
+// (receding forest = the progress bar). Trees fill every tile that isn't water,
+// road frontage, a lot, the plaza, the farm field, or the central clearing. The
+// clear test is monotonic in `tier` (roads + lots only ever grow), so forest only
+// ever recedes — it never re-wilds.
+function homeCleared(px: number, py: number, tier: number): boolean {
+  if (((px - 660) / 250) ** 2 + ((py - 520) / 210) ** 2 <= 1) return true; // central clearing
+  if (((px - HOME_PLAZA.cx) / (HOME_PLAZA.rx + 24)) ** 2 + ((py - HOME_PLAZA.cy) / (HOME_PLAZA.ry + 24)) ** 2 <= 1) return true;
+  const f = HOME_FARM_BOARD;
+  if (px > f.cx - f.w / 2 - 24 && px < f.cx + f.w / 2 + 24 && py > f.cy - f.h / 2 - 24 && py < f.cy + f.h / 2 + 24) return true;
+  for (let i = 0; i < HOME_PLOTS[tier]; i++) {
+    const [, lx, ly, lw, lh] = HOME_LOTS[i];
+    if (Math.abs(px - lx) < lw / 2 + 18 && Math.abs(py - ly) < lh / 2 + 18) return true;
+  }
+  for (const r of HOME_ROADS) {
+    if (r.tier > tier) continue;
+    const pad = r.thick * TILE / 2 + 74;
+    let d: number;
+    if (r.axis === "H") {
+      const ry = r.row * TILE + TILE / 2;
+      d = distToSeg(px, py, Math.min(r.x1, r.x2) * TILE, ry, Math.max(r.x1, r.x2) * TILE, ry);
+    } else {
+      const rx = r.col * TILE + TILE / 2;
+      d = distToSeg(px, py, rx, Math.min(r.y1, r.y2) * TILE, rx, Math.max(r.y1, r.y2) * TILE);
+    }
+    if (d <= pad) return true;
+  }
+  return false;
+}
+
+function homeTrees(tier: number): AuthoredTree[] {
+  const rnd = makeRng(0x5eed01);
+  const out: AuthoredTree[] = [];
+  for (let c = 0; c < 58; c++) {
+    const cqx = rnd() * DESIGN_W, cqy = rnd() * DESIGN_H, base = rnd() < 0.5;
+    const n = 4 + Math.floor(rnd() * 9);
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * 6.2832, rad = rnd() * rnd() * 78;
+      const x = cqx + Math.cos(a) * rad, y = cqy + Math.sin(a) * rad;
+      const pine = rnd() < 0.5 ? !base : base; // draw is consumed regardless so positions stay stable across rungs
+      const r = 15 + rnd() * 8;
+      if (x < 10 || x > DESIGN_W - 10 || y < 10 || y > DESIGN_H - 10) continue;
+      if (inHomeWater(x, y) || homeCleared(x, y, tier)) continue;
+      out.push({ x, y, r, cluster: pine ? 0 : 1 });
+      if (out.length >= 240) return out;
+    }
+  }
+  return out;
 }
 
 const HOME_PROPS_BASE: AuthoredProp[] = [
@@ -185,6 +326,7 @@ function homeRung(tier: number): AuthoredTownMap {
     well: HOME_WELL,
     boards: [HOME_FARM_BOARD],
     props: HOME_PROPS_BASE,
+    trees: homeTrees(tier),
     lots: HOME_LOTS.slice(0, plots).map(([index]) => hlot(index)),
   };
 }
@@ -331,7 +473,7 @@ function toPlan(m: AuthoredTownMap): TownPlan {
     props: m.props ? m.props.map((p) => ({ ...p })) : [],
     roads: [],
     water: [],
-    trees: [],
+    trees: m.trees ? m.trees.map((t) => ({ ...t })) : [],
     waypoints: [],
     edges: [],
     bridges: [],
