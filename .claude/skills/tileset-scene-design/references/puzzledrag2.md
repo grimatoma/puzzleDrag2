@@ -1,62 +1,66 @@
 # puzzleDrag2 anchor — TownScene + Tuxemon tileset
 
-The settlement view (the `#/town` route) is where this skill applies today. It is a Phaser tilemap that
-currently violates the core rule: **roads are one flat tile, no autotiling, hard seams everywhere.**
-The full diagnosis + design lives in `docs/road-system-proposal.html` — read it for the before/after.
+The settlement view (the `#/town` route) is a Phaser tilemap. The grass↔sand autotiler this skill
+describes is **already shipped** for the hand-authored zone maps — `src/ui/town/roadAutotile.ts` +
+`src/ui/town/townMaps.ts`. So use this doc to **extend** it (a new terrain pair, a new zone, the
+still-flat procedural fallback), not to rebuild it. Background + before/after: `docs/road-system-proposal.html`.
+
+## The autotiler — already built, reuse it
+`src/ui/town/roadAutotile.ts` is the grass↔sand area autotiler:
+- `SAND` role→index map (verified against the sheet): **fill/iso `173`** · edges `149`(N) `197`(S)
+  `172`(W) `174`(E) · outer corners `148/150/196/198` · inner corners `170/171/194/195`.
+- `sandTileFor(mask, x, y)` classifies a cell's 8 neighbours → tile; `paintSandPaths(grid, mask)` overlays
+  the result. Mask stamps: `blankMask`, `maskRect`, `maskBandH`, `maskBandV`, `maskDisc`.
+
+`src/ui/town/townMaps.ts` authors the tier maps (home + quarry, **6 rungs each** — Camp→Manor /
+mine-themed). `homeGround`/`quarryGround` describe streets/plaza/yard as a sand MASK, then `paintSandPaths`
+autotiles it into the 30×40 `groundTiles`. Lot indices are stable-additive across rungs (test-enforced).
+
+- **Add a path/zone:** stamp a mask (`maskBandV`/`maskDisc`/…), call `paintSandPaths(grid, mask)`, done.
+- **Add a NEW transition pair** (e.g. grass↔water shore): give it its own role→index map + classifier and a
+  second overlay pass, painting lower-priority terrain first (see `references/autotiling.md` §5).
 
 ## The renderer
-- **`src/ui/town/TownScene.ts`** — Phaser scene. Grid is **40×30 @ 32px** (1280×960 design space).
-  - `paintRoads()` walks road polylines → `paintBand()` stamps a rectangle of `T.DIRT`.
-  - `paintPlaza()`, `paintFields()`, `drawBoards()` also stamp `T.DIRT` (flat).
-  - `T = { GRASS:26, GRASS_ALT:[50,51,76,77,98,99], GRASS_FLOWER:[120,121], DIRT:35, WATER:250 }`.
-  - When `plan.groundTiles` is present it paints straight from an authored grid and skips the procedural
-    passes (`paintGroundTiles()`).
-- **`src/ui/town/townMaps.ts`** — hand-authored tier maps (home Hamlet/Village/City, quarry rungs).
-  Roads drawn with `roadH()`/`roadV()` writing flat `DIRT` bands into a `number[][]` grid.
-- **`src/townLayout.ts`** — procedural `buildTownPlan()`. Already emits road **centre-lines + width**
-  (`roads: {points, width, kind}`), plaza ellipse, water polygons, bridges where roads cross the river.
-  Good semantic data that gets flattened too early.
-- **`src/ui/TownPhaserCanvas.tsx`** — React host that boots the scene.
-
-Both render paths (authored grid + procedural plan) end at the same flat-`DIRT` stamp, so an autotiler
-inserted at the paint step fixes **every** settlement at once.
+- **`src/ui/town/TownScene.ts`** — Phaser scene, 40×30 @ 32px (1280×960). `paintGroundTiles()` paints the
+  authored `groundTiles` straight through — this is the autotiled path.
+  - Clean flat fills are **`GRASS:125`** and **`DIRT:173`** (the sand-blob centre).
+    `T = { GRASS:125, GRASS_ALT:[126,189], GRASS_FLOWER:[120,121], DIRT:173, WATER:250 }`.
+  - ⚠️ **`26`/`35` and the `50/51/76/77/98/99` "variants" are NOT flat** — each carries a baked dark fleck
+    / sand patch (they are themselves transition tiles). Used as a flat fill they tile into a regular grid
+    of smudges. This bit the first pass; use `125`/`173`. (See the `T` comment in TownScene.ts.)
+- **Still flat — the open extension point:** the PROCEDURAL fallback (zones with no authored map).
+  `paintRoads()/paintPlaza()/paintFields()/paintBridges()` + `drawBoards()` still stamp flat `T.DIRT`
+  bands — no transitions. `src/townLayout.ts buildTownPlan()` already emits road centre-lines+width, plaza
+  ellipse, water polygons. To finish: rasterise those into a mask and run `paintSandPaths` instead of the
+  flat stamps (and bump STREET/AVENUE widths to ≥2) — one change fixes every procedural settlement.
+- **`src/ui/TownPhaserCanvas.tsx`** — React host that boots the scene. NB it's a SEPARATE Phaser game from
+  the puzzle `GameScene`; it is **not** `window.__phaserScene`.
 
 ## The tileset
-`public/town/tileset.png` — **Tuxemon sample tileset**, CC-BY-SA 4.0 (credited in
-`public/town/CREDITS.md`). 816×1020, **24 cols × 30 rows**, 32px, **extruded `margin=1, spacing=2`**.
-Index → `col=i%24, row=i//24`; pixel `sx=1+col*34, sy=1+row*34`.
+`public/town/tileset.png` — Tuxemon sample tileset, CC-BY-SA 4.0 (`public/town/CREDITS.md`). 816×1020,
+**24 cols × 30 rows**, 32px, extruded `margin=1, spacing=2`. Index → `col=i%24, row=i//24`; pixel
+`sx=1+col*34, sy=1+row*34`.
 
 Inspect it: `python .claude/skills/tileset-scene-design/scripts/tileset_montage.py public/town/tileset.png --tile 32 --cols 24 --margin 1 --spacing 2 --rows 0-9`
 
-### Transition sets already in the sheet (all unused today)
-- **grass ↔ sand rounded blob** (flat, soft, the right fit for paths):
-  fill `173` · edges `149`(top) `197`(bottom) `172`(left) `174`(right) ·
-  outer corners `148` `150` `196` `198` · inner corners `170` `171` `194` `195` · flower decals `151/175/199`.
-  These produced the "after" in the proposal — a soft 3-wide road + a rounded plaza, zero new art.
-- **grass ↔ dirt CLIFF** (cols 0–7, rows 0–4): brown organic edges with a light top-lip + grey stair
-  tiles. This is an **elevation/ledge** set — reads as a cliff face, NOT flat ground. Don't use it for
-  roads; it implies a drop.
-- **bridges** `219–223` (blue plank + rail) and **logs** `218` — wire at the river crossings
-  `buildTownPlan()` already computes.
-- **water** `250`; tree recipes (pine `168/192`), rocks `224/225`, fountain block `272…322`.
-
-## Wiring plan (matches docs/road-system-proposal.html)
-1. New `src/ui/town/roadAutotile.ts`: build masks from `plan.roads`/`plaza`/`fields`, run the 4-bit
-   line autotiler (roads) + blob (plaza/fields) using `references/autotiling.md`.
-2. `TownScene`: replace the flat-`DIRT` stamps in `paintRoads/paintPlaza/paintFields` with
-   "rasterise into mask → autotile". `townMaps.ts` `roadH/roadV` write the mask instead of the grid.
-3. Bump widths in `buildTownPlan`: `STREET` → 2 tiles (64px), `AVENUE` → 3 (96px) so a 2-sided border
-   fits and the avenue hierarchy returns.
-4. Phase 0 uses the sand-blob indices above (no art). Phases 1–2 swap in a bespoke dirt/gravel/cobble
-   family + material-by-tier (see proposal). `src/ui/town/config.ts` already has per-theme
-   `road/roadLine/dirtTint` to drive material palette.
+### Transition sets in the sheet
+- **grass ↔ sand rounded blob** (what the autotiler uses): centre `173` · edges `149/197/172/174` · outer
+  corners `148/150/196/198` · inner corners `170/171/194/195` · flower decals `151/175/199`.
+- **grass ↔ dirt CLIFF** (cols 0–7, rows 0–4): brown organic edges + grey stairs — an **elevation/ledge**
+  set, reads as a cliff face, NOT flat ground. The "brown cliff trap": don't use it for roads.
+- **bridges** `219–223` + **logs** `218` — for the river crossings `buildTownPlan()` computes (still unused).
+- **water** `250`; pine `168/192`, rocks `224/225`, fountain block `272…322`.
 
 ## Gotchas specific here
-- **Pixel-art crispness**: the town game boots Phaser with `render.pixelArt:true`. Keep tiles aligned to
-  the 32-grid; don't introduce sub-pixel road widths (snap to 16/32 — `townLayout` already snaps).
-- **Goldens**: this is deterministic; a road change shifts many visual goldens. Run `npm run test:visual`
-  and re-baseline intentionally (note: Windows host may not be the canonical golden host).
-- **The brown cliff trap**: it's tempting to use the brown blob (cols 0–7) for dirt roads because it's
-  brown — but it reads as a cliff edge. Use the sand blob (flat) for paths.
-- **1-wide roads**: today's `STREET≈30px` ≈ 1 tile can't carry a 2-sided soft border — hence the width
-  bump. An area-blob on a 1-wide road shows two half-edges and a hole at junctions.
+- **Pixel-art crispness**: Phaser boots with `render.pixelArt:true`. Keep tiles on the 32-grid; no
+  sub-pixel widths.
+- **Min width 2**: an area blob on a 1-wide road shows two half-edges + a hole at junctions. Authored maps
+  already keep streets ≥2 wide; the procedural widths still need a bump if you autotile that path.
+- **Goldens**: a ground change shifts the home/quarry settlement goldens (`town-home-*`, `shell-town-fresh`,
+  `town-mine-settlement`). Re-baseline intentionally on the canonical host (a Windows dev host often isn't it).
+- **Verify the town without pixels**: the settlement canvas is a separate Phaser game (not
+  `window.__phaserScene`) and is often `0×0`/hidden under a modal, so reading its pixels gives a stale fill.
+  Read back the DATA instead — in the running app,
+  `(await import('/puzzleDrag2/src/ui/town/townMaps.ts')).getTownMap('home',0).groundTiles` and tally the
+  indices. An offline PIL render that composites the real sheet (same `sx=1+col*34` math the scene uses) is
+  a pixel-faithful preview for design work.

@@ -142,7 +142,10 @@ If a needed pair has no transition set, make it — don't fall back to butting f
 - **Extrusion ignored** when slicing — `margin`/`spacing` off by a pixel smears every tile.
 
 ## puzzleDrag2 specifics
-This game's settlement view is a Phaser tilemap with all of the above *missing today* — roads are one
-flat tile, no autotiling. The exact tileset indices, the unused transition blobs already in the sheet,
-the files to wire (`TownScene.ts`, `townMaps.ts`, `townLayout.ts`), and the shipped design proposal are
-in **`references/puzzledrag2.md`**. Read it before touching the town map.
+This game's settlement view is a Phaser tilemap where the grass↔sand autotiler above is now **shipped**
+for the hand-authored zone maps (`src/ui/town/roadAutotile.ts` + `townMaps.ts`) — so extend it, don't
+rebuild it. The procedural fallback (`TownScene.paintRoads/paintPlaza/paintFields` for zones with no
+authored map) is the remaining flat-fill path. The autotiler's API + role→index map, the live tileset
+indices (note `26`/`35` are NOT flat fills — use `125`/`173`), the transition blobs in the sheet, and how
+to extend it to a new terrain or zone are in **`references/puzzledrag2.md`**. Read it before touching the
+town map.
