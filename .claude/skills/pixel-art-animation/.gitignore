@@ -1,3 +1,0 @@
-# The starter/preview scripts are meant to be run; ignore their byproducts.
-__pycache__/
-*.pyc

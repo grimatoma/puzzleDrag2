@@ -1,1 +1,0 @@
-{ "source": "PixelLab create_1_direction_object (128px)", "slice": { "top": 21, "right": 21, "bottom": 21, "left": 21 }, "recommendedSliceInset": 22, "repeat": "stretch", "native": { "w": 128, "h": 128 }, "fill": false, "note": "even plank border, transparent center — ideal 9-slice; detail is corner-safe so edges stretch cleanly" }
