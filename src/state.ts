@@ -1,5 +1,6 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
+import { effectiveTilesPerResource } from "./game/effectiveDivisor.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
@@ -359,10 +360,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // zoneResourceProgress[resourceKey], rolling into inventory once it
       // crosses TILES_PER_RESOURCE[key] (the income divisor — decoupled from the
       // board-tier-upgrade threshold). Tile keys no longer enter state.inventory.
+      // Worker/building reductions are applied via effectiveTilesPerResource.
+      const chainAgg = computeWorkerEffects(state);
       const progress: Partial<Record<ResourceKey, number>> = { ...zoneResourceProgress(state) };
       if (resourceKey) {
-        const thresholds = TILES_PER_RESOURCE;
-        const threshold = thresholds[key] ?? Infinity;
+        const threshold = effectiveTilesPerResource(state, key, chainAgg);
         const chainLenForProgress = chainLength ?? gained;
         const rk = resourceKey as ResourceKey;
         const newProgress = (progress[rk] ?? 0) + chainLenForProgress;
@@ -385,11 +387,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       // resourceKey stacks correctly.
       const crossCollected = (payload?.crossCollected ?? null) as Record<string, number> | null;
       if (crossCollected) {
-        const thresholds = TILES_PER_RESOURCE;
         for (const [tileKey, count] of Object.entries(crossCollected)) {
           if (!count) continue;
           const rk = (producedResource({ key: tileKey }) ?? tileKey) as ResourceKey;
-          const threshold = thresholds[tileKey] ?? Infinity;
+          const threshold = effectiveTilesPerResource(state, tileKey, chainAgg);
           const newProgress = (progress[rk] ?? 0) + count;
           const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
           progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;

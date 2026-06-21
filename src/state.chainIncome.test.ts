@@ -1,0 +1,69 @@
+/**
+ * Reducer income test: verifies that hiring grain workers increases flour yield
+ * from a CHAIN_COLLECTED action.
+ *
+ * grain category: lineBase = 5, lineFloor = 1, lineStep = 1.
+ * With 10 farmers (all hired): thresholdReduce["tile_grain_wheat"] = 10
+ * → effective divisor = max(1, 5 - 10) = 1.
+ * Raw divisor = 5.
+ *
+ * Chain of 6 tiles, resourceKey "flour":
+ *   - No workers:   6 / 5 = 1 flour (remainder 1 in progress)
+ *   - 10 farmers:   6 / 1 = 6 flour (remainder 0 in progress)
+ *
+ * Therefore strict > assertion is achievable.
+ */
+import { describe, it, expect } from "vitest";
+import { gameReducer } from "./state.js";
+import { mergeTestState } from "./testUtils/testState.js";
+import { inv, zoneProgress } from "./testUtils/inventory.js";
+
+const CHAIN_LENGTH = 6;
+
+function dispatchGrainChain(state: ReturnType<typeof mergeTestState>) {
+  return gameReducer(state, {
+    type: "CHAIN_COLLECTED",
+    payload: {
+      key: "tile_grain_wheat",
+      gained: CHAIN_LENGTH,
+      upgrades: 0,
+      value: 2,
+      chainLength: CHAIN_LENGTH,
+      resourceKey: "flour",
+    },
+  } as never);
+}
+
+describe("CHAIN_COLLECTED: worker reductions increase resource income", () => {
+  it("with no workers, wheat income uses raw divisor (baseline check)", () => {
+    const state = mergeTestState({
+      workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
+    });
+    const next = dispatchGrainChain(state);
+    // raw divisor = 5; chain 6 → floor(6/5) = 1 flour, remainder 1
+    expect(inv(next).flour ?? 0).toBe(1);
+    expect(zoneProgress(next).flour ?? 0).toBe(1);
+  });
+
+  it("with 10 farmers, wheat income uses reduced divisor → more flour", () => {
+    const state = mergeTestState({
+      workers: { hired: { farmer: 10, lumberjack: 0, miner: 0, baker: 0 } },
+    });
+    const next = dispatchGrainChain(state);
+    // effective divisor = max(1, 5 - 10) = 1; chain 6 → 6 flour
+    expect(inv(next).flour ?? 0).toBe(6);
+  });
+
+  it("worker income strictly greater than raw-divisor income for the same chain", () => {
+    const stateNoWorkers = mergeTestState({
+      workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
+    });
+    const stateFarmers = mergeTestState({
+      workers: { hired: { farmer: 10, lumberjack: 0, miner: 0, baker: 0 } },
+    });
+    const flourNoWorkers = inv(dispatchGrainChain(stateNoWorkers)).flour ?? 0;
+    const flourFarmers = inv(dispatchGrainChain(stateFarmers)).flour ?? 0;
+    // Strict > because chain=6 yields 1 unit at raw divisor 5, but 6 units at reduced divisor 1
+    expect(flourFarmers).toBeGreaterThan(flourNoWorkers);
+  });
+});
