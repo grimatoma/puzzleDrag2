@@ -6,15 +6,18 @@ import {
   makeSmokeColumn,
   advanceSmokeColumn,
   makeEmberGlow,
+  EMBER_GLOW_KEY,
   type SmokeColumn,
 } from "../../textures/smoke.js";
+import { TOWN_TILES, ttKey, ttOriginY, TREE_SPECIES } from "./tiles/manifest.js";
+import { makeWaterOverlay, advanceWaterOverlay, destroyWaterOverlay, type WaterOverlay } from "./water.js";
 
 interface Pt { x: number; y: number }
 
 export interface TownPlanLot { index: number; cx: number; cy: number; w: number; h: number; row: string }
 export interface TownPlanRoad { points: Pt[]; width: number; kind: "main" | "branch" | "loop" }
 export interface TownPlanWater { kind: "pond" | "river" | "shore"; polygon?: Pt[]; path?: Pt[]; width?: number }
-export interface TownPlanTree { x: number; y: number; r: number; cluster: number; front?: boolean }
+export interface TownPlanTree { x: number; y: number; r: number; cluster: number; front?: boolean; species?: string }
 export interface TownPlanWaypoint { x: number; y: number }
 export interface TownPlanBridge { x: number; y: number; angle: number; width: number }
 export interface TownPlanField { cx: number; cy: number; w: number; h: number; rows: number; angle: number }
@@ -105,6 +108,10 @@ export class TownScene extends Phaser.Scene {
   // buildings they belong to (see rebuildBuildingsAndPlots) so they never leak.
   smokeColumns: SmokeColumn[] = [];
   emberGlows: Phaser.GameObjects.Image[] = [];
+  // Animated flowing-water overlay (river/pond) + the per-prop ambient glows
+  // (lamps/lanterns) created alongside the static props in create().
+  waterOverlay: WaterOverlay | null = null;
+  propGlows: Phaser.GameObjects.Image[] = [];
   private _fxTime = 0; // seconds accumulator driving the smoke wobble
 
   isDragging = false;
@@ -145,6 +152,7 @@ export class TownScene extends Phaser.Scene {
     // follow-up restart, leaving a blank town).
     if (!this.plan) return;
     this.bakeSpriteTextures();
+    this.bakeTownTiles();
     this.bakeBuildingTextures();
     this.createCharacterAnims();
     ensureSmokeTextures(this);
@@ -172,6 +180,10 @@ export class TownScene extends Phaser.Scene {
       this.scatterGroundDetail();
     }
 
+    // ── Animated flowing-water overlay (river/pond), under every prop ───────────
+    this.propGlows = [];
+    this.waterOverlay = this.plan.groundSpec ? makeWaterOverlay(this, this.plan.groundSpec) : null;
+
     // ── Depth-sorted object layer ───────────────────────────────────────────
     this.drawBoards();
     this.drawTrees();
@@ -181,6 +193,14 @@ export class TownScene extends Phaser.Scene {
     this.drawLotDecor();
     this.rebuildBuildingsAndPlots();
     this.spawnVillagers();
+
+    // The water overlay's geometry-mask graphics isn't on the display list, so the
+    // scene's shutdown won't auto-destroy it — tear it down explicitly on restart.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      destroyWaterOverlay(this.waterOverlay);
+      this.waterOverlay = null;
+      this.propGlows = [];
+    });
 
     // ── Camera ──────────────────────────────────────────────────────────────
     if (this.initialCameraState) {
@@ -233,6 +253,78 @@ export class TownScene extends Phaser.Scene {
   bakeBuildingTextures() {
     const svgMap = this.registry.get("hwv.svgMap") as Record<string, string> || {};
     Object.entries(svgMap).forEach(([id, svg]) => this.bakeSvgTexture(`building_${id}`, svg));
+  }
+
+  /**
+   * Bake the reusable VECTOR tileset (manifest) into transparent textures keyed
+   * `tt_<name>`. Each Canvas-2D draw lives in a centred icon space (ground contact
+   * at ~y+22); we translate to the box centre and bake at 3× for crispness. Cached
+   * by key, so the one-time bake survives scene restarts.
+   */
+  bakeTownTiles() {
+    const dpr = 3;
+    for (const [name, spec] of Object.entries(TOWN_TILES)) {
+      const key = ttKey(name);
+      if (this.textures.exists(key)) continue;
+      const tex = this.textures.createCanvas(key, Math.ceil(spec.box * dpr), Math.ceil(spec.box * dpr));
+      if (!tex) continue;
+      const ctx = tex.getContext();
+      ctx.scale(dpr, dpr);
+      ctx.translate(spec.box / 2, spec.box / 2);
+      spec.draw(ctx);
+      tex.refresh();
+    }
+  }
+
+  /**
+   * Place a baked vector tile as a ground-anchored, depth-sorted sprite. `boxH` is
+   * the desired on-screen height of the tile's square box (world px). Returns null
+   * when the texture isn't baked (caller falls back to a Tuxemon recipe). The
+   * vector draws carry their own ground shadow, so callers must NOT add another.
+   */
+  placeTownTile(name: string, x: number, y: number, boxH: number, opts: { flip?: boolean; depth?: number } = {}): Phaser.GameObjects.Image | null {
+    const spec = TOWN_TILES[name];
+    const key = ttKey(name);
+    if (!spec || !this.textures.exists(key)) return null;
+    const sp = this.add.image(x, y, key);
+    sp.setOrigin(0.5, ttOriginY(spec));
+    sp.setScale(boxH / sp.height);
+    if (opts.flip) sp.setFlipX(true);
+    sp.setDepth(opts.depth ?? y);
+    return sp;
+  }
+
+  /**
+   * A gentle, stagger-phased canopy sway: a small rotation about the sprite's base
+   * origin so it BENDS rather than slides. Registered on the tween manager, so it
+   * freezes when the scene pauses and dies with the sprite on restart.
+   */
+  addSway(sp: Phaser.GameObjects.Image, amount = 0.03, dur = 2600) {
+    this.tweens.add({
+      targets: sp,
+      rotation: { from: -amount, to: amount },
+      duration: dur + Math.random() * 900,
+      delay: Math.random() * 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+  }
+
+  /** A warm additive glow that pulses (lamps/lanterns), tracked for teardown. */
+  addPropGlow(x: number, y: number, scale: number) {
+    const glow = this.add.image(x, y, EMBER_GLOW_KEY).setBlendMode(Phaser.BlendModes.ADD).setScale(scale).setAlpha(0.5);
+    glow.setDepth(y + 0.5);
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0.35, to: 0.7 },
+      scale: { from: scale * 0.85, to: scale * 1.08 },
+      duration: 1500 + Math.random() * 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    this.propGlows.push(glow);
   }
 
   createCharacterAnims() {
@@ -437,11 +529,15 @@ export class TownScene extends Phaser.Scene {
 
   drawTrees() {
     this.plan.trees.forEach((t) => {
+      // Vector species (reused from the shared tree catalog). cluster + position
+      // pick a stable species when the author didn't name one, for natural variety.
+      const species = t.species ?? TREE_SPECIES[(t.cluster + Math.round(Math.abs(t.x) + Math.abs(t.y))) % TREE_SPECIES.length];
+      const sp = this.placeTownTile(species, t.x, t.y, t.r * 6);
+      if (sp) { this.addSway(sp, 0.02); return; }
+      // Fallback: the old Tuxemon recipes (kept for any zone without vector art).
       const round = (t.cluster % 2 === 1);
       const sprite = this.add.image(t.x, t.y, round ? TREE2.key : PINE.key);
       if (round) {
-        // Round broadleaf canopy — anchor low and scale up so it reads as a
-        // full tree rather than a shrub.
         sprite.setOrigin(0.5, 0.82);
         sprite.setScale(Math.max(1.5, (t.r * 3.2) / TILE));
       } else {
@@ -455,6 +551,8 @@ export class TownScene extends Phaser.Scene {
 
   drawStreetTrees() {
     this.plan.streetTrees.forEach((t) => {
+      const sp = this.placeTownTile("bush", t.x, t.y, t.r * 3.4);
+      if (sp) { this.addSway(sp, 0.03); return; }
       const sprite = this.add.image(t.x, t.y, BUSH.key);
       sprite.setOrigin(0.5, 0.85);
       sprite.setScale(Math.max(0.8, (t.r * 2) / TILE));
@@ -463,25 +561,46 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
+  // How tall (world px) each prop kind's baked box renders. Tuned so the vector
+  // props sit naturally against the 104px-tall building lots.
+  private static readonly PROP_BOX_H: Record<string, number> = {
+    fountain: 104, signpost: 74, lamp: 92, lantern: 60, barrel: 54, well_bucket: 60,
+    flower_pot: 56, picket_fence: 70, bench: 64, birdhouse: 62, market_stall: 104,
+    rowboat: 86, dock_post: 70, boulder: 58, rock_cluster: 56, bush: 56, berry_bush: 56,
+    hedge: 64, log_pile: 66, plank_stack: 60, stone_pile: 60, crate: 50, sacks: 52,
+    hay_bale: 64, sawhorse: 56, cattail: 66, water_lily: 48,
+  };
+
+  // Map an authored prop `kind` to a manifest tile name (most are 1:1).
+  private static readonly PROP_TILE: Record<string, string> = {
+    lamppost: "lamp", planter: "flower_pot", cart: "crate", reeds: "cattail", lilypad: "water_lily",
+  };
+
   drawProps() {
     const props = this.plan.props ?? [];
-    // Fountain stands in for the plaza well.
+    // Fountain stands in for the plaza well — the vector centrepiece.
     const well = this.plan.well;
-    const fountain = this.add.image(well.cx, well.cy + 8, FOUNTAIN.key);
-    fountain.setOrigin(0.5, 0.7);
-    fountain.setScale(0.7);
-    fountain.setDepth(well.cy + 8);
-    this.addShadow(well.cx, well.cy + 12, 64, 22, well.cy + 8, 0.2);
+    if (!this.placeTownTile("fountain", well.cx, well.cy + 8, TownScene.PROP_BOX_H.fountain)) {
+      const fountain = this.add.image(well.cx, well.cy + 8, FOUNTAIN.key);
+      fountain.setOrigin(0.5, 0.7).setScale(0.7).setDepth(well.cy + 8);
+      this.addShadow(well.cx, well.cy + 12, 64, 22, well.cy + 8, 0.2);
+    }
 
     props.forEach((p) => {
-      if (p.kind === "well") return; // replaced by fountain
-      if (p.kind === "signpost") {
-        const s = this.add.image(p.x, p.y, SIGN.key);
-        s.setOrigin(0.5, 0.9).setDepth(p.y);
-      } else if (p.kind === "planter" || p.kind === "cart") {
-        const b = this.add.image(p.x, p.y, BUSH.key);
-        b.setOrigin(0.5, 0.85).setScale(1).setDepth(p.y);
-      } else if (p.kind === "lamppost") {
+      if (p.kind === "well") return; // replaced by the fountain
+      const name = TownScene.PROP_TILE[p.kind] ?? p.kind;
+      const boxH = TownScene.PROP_BOX_H[name] ?? 60;
+      const sp = this.placeTownTile(name, p.x, p.y, boxH, { flip: !!((Math.round(p.x) >> 1) & 1) });
+      if (sp) {
+        if (name === "lamp" || name === "lantern") this.addPropGlow(p.x, p.y - boxH * 0.34, boxH / 100);
+        else if (name === "cattail" || name === "bush" || name === "berry_bush") this.addSway(sp, 0.035);
+        else if (name === "rowboat") this.tweens.add({ targets: sp, y: p.y - 2, rotation: 0.02, duration: 2200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+        return;
+      }
+      // Fallback for the old recipe-only kinds.
+      if (p.kind === "signpost") this.add.image(p.x, p.y, SIGN.key).setOrigin(0.5, 0.9).setDepth(p.y);
+      else if (p.kind === "planter" || p.kind === "cart") this.add.image(p.x, p.y, BUSH.key).setOrigin(0.5, 0.85).setDepth(p.y);
+      else if (p.kind === "lamppost") {
         const g = this.add.graphics();
         g.fillStyle(0x4a3b2a, 1).fillRect(p.x - 2, p.y - 26, 4, 26);
         g.fillStyle(0xffe9a8, 1).fillCircle(p.x, p.y - 28, 5);
@@ -506,10 +625,11 @@ export class TownScene extends Phaser.Scene {
   drawLotDecor() {
     this.plan.lotDecor.forEach((d) => {
       if (d.kind === "shrub") {
-        const b = this.add.image(d.x, d.y, BUSH.key);
-        b.setOrigin(0.5, 0.85).setScale(0.7).setDepth(d.y);
+        if (this.placeTownTile("bush", d.x, d.y, 48)) return;
+        this.add.image(d.x, d.y, BUSH.key).setOrigin(0.5, 0.85).setScale(0.7).setDepth(d.y);
       } else {
-        // bed / pots → a small flower tile dropped into the ground layer
+        // bed / pots → a vector flower pot, or a flower tile in the ground layer.
+        if (this.placeTownTile("flower_pot", d.x, d.y, 52)) return;
         this.putGround(T.GRASS_FLOWER[(d.x + d.y) % T.GRASS_FLOWER.length], Math.round(d.x / TILE), Math.round(d.y / TILE));
       }
     });
@@ -697,10 +817,11 @@ export class TownScene extends Phaser.Scene {
   override update(_time: number, delta: number) {
     // Ambient chimney smoke. Driven here (and via the ember flicker tweens), so
     // a paused/slept scene stops it dead — no off-screen CPU.
-    if (this.smokeColumns.length) {
+    if (this.smokeColumns.length || this.waterOverlay) {
       const dtSec = delta / 1000;
       this._fxTime += dtSec;
       for (const sm of this.smokeColumns) advanceSmokeColumn(sm, dtSec, this._fxTime);
+      if (this.waterOverlay) advanceWaterOverlay(this.waterOverlay, dtSec);
     }
 
     const dt = delta / 16.6;

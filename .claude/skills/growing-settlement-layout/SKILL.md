@@ -22,7 +22,9 @@ description: >-
 Make a town read as a place that **grew**, not a grid that got bigger. A settlement the player upgrades
 should feel like a cheerful little outpost putting down roots and becoming a city — every upgrade a
 visible, earned milestone. This skill is the layout + staging craft for that. (The terrain *boundaries*
-inside it are `tileset-scene-design`; the *tiles* themselves are `pixellab` / `seasonal-tile-pipeline`.)
+inside it are `tileset-scene-design`; the *tiles* themselves are `pixellab` / `seasonal-tile-pipeline`.
+For the puzzleDrag2 town's reusable VECTOR props/decor/trees and road materials — the art that DRESSES the
+layout, baked Canvas-2D into TownScene — use `vector-tileset`.)
 
 ## The one idea everything follows from
 

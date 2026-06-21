@@ -20,7 +20,9 @@ description: >-
 
 Make a grid of tiles read as a place. The difference between "shipped game" and "programmer art" is
 almost never the individual tiles — it is whether the **boundaries between terrains** are handled. This
-skill is about those boundaries.
+skill is about those boundaries. (For the puzzleDrag2 town specifically, the ground is drawn from SDFs
+with smooth computed transitions and reusable road **materials**, and the props are reusable Canvas-2D
+VECTOR tiles, not an autotiled pixel tileset — see `vector-tileset`.)
 
 ## The one idea everything follows from
 

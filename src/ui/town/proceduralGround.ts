@@ -12,8 +12,11 @@
 // same code runs in a Node preview and in the browser (TownScene uploads the
 // bytes into a texture). See docs/town-layout/index.html for the reference look.
 
-export interface GroundRoad { x1: number; y1: number; x2: number; y2: number; half: number }
-export interface GroundEllipse { cx: number; cy: number; rx: number; ry: number }
+// A road segment. `material` names a reusable surface from the MATERIALS registry
+// (default "dirt"); transitions to grass + to any neighbouring material stay smooth
+// because they're distance-feathered, not authored as transition tiles.
+export interface GroundRoad { x1: number; y1: number; x2: number; y2: number; half: number; material?: GroundMaterial }
+export interface GroundEllipse { cx: number; cy: number; rx: number; ry: number; material?: GroundMaterial }
 export interface GroundRect { cx: number; cy: number; w: number; h: number }
 /** An oriented wooden bridge deck. `len` runs along the road, `wid` across it. */
 export interface GroundBridge { cx: number; cy: number; len: number; wid: number; angle: number }
@@ -65,7 +68,111 @@ const C = {
   flower: [
     [232, 104, 96], [240, 214, 96], [244, 244, 236], [206, 138, 224],
   ] as RGB[],
+  // Reusable road/paving materials. Each is a hi/lo tone pair (+ a grout colour for
+  // the block pavers). Referenced by name from GroundRoad/GroundEllipse.material so
+  // a paved street is a one-word change, reused across every zone.
+  gravelHi: [176, 170, 156] as RGB,
+  gravelLo: [128, 122, 110] as RGB,
+  packedHi: [170, 132, 88] as RGB,
+  packedLo: [132, 100, 64] as RGB,
+  flagHi: [214, 202, 178] as RGB,
+  flagLo: [170, 154, 124] as RGB,
+  flagGrout: [126, 110, 84] as RGB,
+  blockHi: [232, 216, 180] as RGB,   // crisp warm sandstone street blocks (the reference)
+  blockLo: [200, 178, 138] as RGB,
+  blockGrout: [146, 124, 92] as RGB,
+  brickHi: [196, 104, 80] as RGB,
+  brickLo: [134, 60, 44] as RGB,
+  brickGrout: [150, 138, 116] as RGB,
 };
+
+export type GroundMaterial =
+  | "dirt" | "packed_dirt" | "gravel" | "cobble" | "flagstone" | "stone_block" | "brick" | "sandstone";
+
+// Stable id order so the coarse field can store the nearest road's material in a
+// byte lattice and the pixel loop can dispatch on it.
+const MAT_ORDER: GroundMaterial[] = ["dirt", "packed_dirt", "gravel", "cobble", "flagstone", "stone_block", "brick", "sandstone"];
+const matIndexOf = (m?: GroundMaterial): number => {
+  const i = m ? MAT_ORDER.indexOf(m) : 0;
+  return i < 0 ? 0 : i;
+};
+
+/**
+ * Surface colour of a paving `material` at world (X,Y). `dEdge` is the signed
+ * distance to the road edge (negative inside) so the soft materials can darken at
+ * the trodden verge. The block pavers (flagstone/stone_block/brick/sandstone) draw
+ * tight rectangular units with a SHARP grout band + a top-left bevel highlight, so
+ * later-tier paved streets read crisp — unlike the soft cobble.
+ */
+function materialColor(material: GroundMaterial, X: number, Y: number, seed: number, dEdge: number): RGB {
+  switch (material) {
+    case "gravel": {
+      let c = mix(C.gravelLo, C.gravelHi, vnoise(X / 4, Y / 4, seed + 2));
+      const g = hash(Math.floor(X / 2.4), Math.floor(Y / 2.4), seed + 17);
+      if (g > 0.86) c = shade(c, 16); else if (g < 0.12) c = shade(c, -16);
+      return c;
+    }
+    case "packed_dirt": {
+      let c = mix(C.packedLo, C.packedHi, vnoise(X / 6, Y / 6, seed + 2));
+      c = shade(c, -smooth(-3, 1, dEdge) * 12);
+      return c;
+    }
+    case "flagstone":
+      return blockPaver(X, Y, seed, 26, 14, 1.4, C.flagLo, C.flagHi, C.flagGrout, 0, 16);
+    case "stone_block":
+      return blockPaver(X, Y, seed, 22, 18, 1.2, C.blockLo, C.blockHi, C.blockGrout, 0, 20);
+    case "sandstone":
+      return blockPaver(X, Y, seed, 30, 20, 1.6, C.blockLo, C.blockHi, C.blockGrout, 0, 14);
+    case "brick":
+      return blockPaver(X, Y, seed, 14, 7, 1.0, C.brickLo, C.brickHi, C.brickGrout, 0.5, 12);
+    case "cobble": {
+      // Jittered rounded setts with dark grout + a top-left bevel — soft, organic.
+      const cs = 12;
+      const jx = (hash(Math.floor(X / cs), Math.floor(Y / cs), seed + 7) - 0.5) * 4;
+      const jy = (hash(Math.floor(X / cs) + 99, Math.floor(Y / cs), seed + 7) - 0.5) * 4;
+      const fx = ((X + jx) % cs + cs) % cs, fy = ((Y + jy) % cs + cs) % cs;
+      const edge = Math.min(fx, cs - fx, fy, cs - fy);
+      const tone = hash(Math.floor((X + jx) / cs), Math.floor((Y + jy) / cs), seed + 13);
+      let cobble = mix(C.cobbleLo, C.cobbleHi, tone);
+      const bevel = (cs / 2 - fx) + (cs / 2 - fy);
+      cobble = shade(cobble, clamp01(0.5 + bevel * 0.06) * 16 - 8);
+      cobble = mix(C.cobbleLo, cobble, smooth(0.5, 2.0, edge));
+      return cobble;
+    }
+    case "dirt":
+    default: {
+      const dn = vnoise(X / 5, Y / 5, seed + 2);
+      let dirt = mix(C.dirtLo, C.dirt, dn);
+      const pb = hash(Math.floor(X / 3), Math.floor(Y / 3), seed + 17);
+      if (pb > 0.94) dirt = shade(dirt, 14);
+      else if (pb < 0.05) dirt = shade(dirt, -14);
+      dirt = shade(dirt, -smooth(-3, 1, dEdge) * 12);
+      return dirt;
+    }
+  }
+}
+
+/**
+ * A rectangular block paver. `cell` is the block size; `grout` the dark seam WIDTH
+ * (small = crisp); `cellW` scales block width vs height; `stagger` offsets alternate
+ * rows half a cell (brick bond); `bevel` is the top-left-lit relief strength.
+ */
+function blockPaver(X: number, Y: number, seed: number, cell: number, _grout: number, cellW: number, lo: RGB, hi: RGB, grout: RGB, stagger: number, bevel: number): RGB {
+  const cw = cell * cellW;
+  const row = Math.floor(Y / cell);
+  const xo = X + (stagger ? (row % 2) * cw * stagger : 0);
+  const gx = Math.floor(xo / cw), gy = row;
+  const tone = hash(gx, gy, seed + 5);
+  let c = mix(lo, hi, tone);
+  const fx = ((xo % cw) + cw) % cw, fy = ((Y % cell) + cell) % cell;
+  // Top-left bevel highlight / bottom-right shade so each block reads raised.
+  const b = (cell / 2 - fy) + (cw / 2 - fx);
+  c = shade(c, clamp01(0.5 + b * 0.05) * bevel - bevel / 2);
+  // Sharp grout: a narrow dark band hugging the block edges.
+  const edge = Math.min(fx, cw - fx, fy, cell - fy);
+  c = mix(grout, c, smooth(0.4, 1.8, edge));
+  return c;
+}
 
 // ── small math ───────────────────────────────────────────────────────────────
 const clamp01 = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
@@ -130,16 +237,17 @@ export function renderGround(spec: GroundSpec, scale: number): GroundImage {
   const CS = 4;
   const GW = Math.ceil(spec.width / CS) + 1, GH = Math.ceil(spec.height / CS) + 1;
   const roadF = new Float32Array(GW * GH);
+  const roadMatF = new Uint8Array(GW * GH); // nearest road's material id (MAT_ORDER index)
   const waterF = new Float32Array(GW * GH);
   for (let gy = 0; gy < GH; gy++) {
     const Y = gy * CS;
     for (let gx = 0; gx < GW; gx++) {
       const X = gx * CS;
-      let dRoad = 1e9;
+      let dRoad = 1e9, bestMat = 0;
       for (let i = 0; i < spec.roads.length; i++) {
         const r = spec.roads[i];
         const d = segDist(X, Y, r.x1, r.y1, r.x2, r.y2) - r.half;
-        if (d < dRoad) dRoad = d;
+        if (d < dRoad) { dRoad = d; bestMat = matIndexOf(r.material); }
       }
       let wd = 1e9;
       for (let i = 0; i < rpts.length - 1; i++) {
@@ -150,9 +258,16 @@ export function renderGround(spec: GroundSpec, scale: number): GroundImage {
       if (river) wd -= river.half; else wd = 1e9;
       if (pond) wd = Math.min(wd, ellipseSD(X, Y, pond));
       roadF[gy * GW + gx] = dRoad;
+      roadMatF[gy * GW + gx] = bestMat;
       waterF[gy * GW + gx] = wd;
     }
   }
+  /** Nearest-cell material id at world (X,Y) — block edges don't need interpolation. */
+  const sampleMat = (X: number, Y: number): number => {
+    const gx = Math.min(GW - 1, Math.max(0, Math.round(X / CS)));
+    const gy = Math.min(GH - 1, Math.max(0, Math.round(Y / CS)));
+    return roadMatF[gy * GW + gx];
+  };
   const sample = (f: Float32Array, X: number, Y: number): number => {
     const gx = X / CS, gy = Y / CS;
     const x0 = Math.min(GW - 2, Math.max(0, Math.floor(gx)));
@@ -189,38 +304,22 @@ export function renderGround(spec: GroundSpec, scale: number): GroundImage {
         }
       }
 
-      // ── dirt lanes (mottled, with pebbles + a darker trodden edge) ──
+      // ── road lanes — surface chosen by each road's reusable material ──
       const dRoad = sample(roadF, X, Y);
       if (dRoad < 3) {
-        const dn = vnoise(X / 5, Y / 5, seed + 2);
-        let dirt = mix(C.dirtLo, C.dirt, dn);
-        const pb = hash(Math.floor(X / 3), Math.floor(Y / 3), seed + 17);
-        if (pb > 0.94) dirt = shade(dirt, 14);        // light grit
-        else if (pb < 0.05) dirt = shade(dirt, -14);  // small stones
-        dirt = shade(dirt, -smooth(-3, 1, dRoad) * 12); // darker, packed at the verge
-        col = mix(col, dirt, smooth(3, -1, dRoad));
+        const surf = materialColor(MAT_ORDER[sampleMat(X, Y)], X, Y, seed, dRoad);
+        col = mix(col, surf, smooth(3, -1, dRoad));
       }
 
-      // ── cobbled paving over dirt ──
-      let cobbleCov = 0;
+      // ── paved areas (plaza / square) over the lanes; each carries its material ──
+      let cobbleCov = 0, cobbleMat: GroundMaterial = "cobble";
       for (let i = 0; i < spec.cobble.length; i++) {
-        const sd = ellipseSD(X, Y, spec.cobble[i]);
-        cobbleCov = Math.max(cobbleCov, smooth(2, -2, sd));
+        const cov = smooth(2, -2, ellipseSD(X, Y, spec.cobble[i]));
+        if (cov > cobbleCov) { cobbleCov = cov; cobbleMat = spec.cobble[i].material ?? "cobble"; }
       }
       if (cobbleCov > 0) {
-        // procedural setts: jittered grid cells, grout lines, per-stone tone + a
-        // top-left bevel highlight / bottom-right shade so each cobble reads round.
-        const cs = 12;
-        const jx = (hash(Math.floor(X / cs), Math.floor(Y / cs), seed + 7) - 0.5) * 4;
-        const jy = (hash(Math.floor(X / cs) + 99, Math.floor(Y / cs), seed + 7) - 0.5) * 4;
-        const fx = ((X + jx) % cs + cs) % cs, fy = ((Y + jy) % cs + cs) % cs;
-        const edge = Math.min(fx, cs - fx, fy, cs - fy);
-        const tone = hash(Math.floor((X + jx) / cs), Math.floor((Y + jy) / cs), seed + 13);
-        let cobble = mix(C.cobbleLo, C.cobbleHi, tone);
-        const bevel = (cs / 2 - fx) + (cs / 2 - fy); // + toward top-left of each sett
-        cobble = shade(cobble, clamp01(0.5 + bevel * 0.06) * 16 - 8);
-        cobble = mix(C.cobbleLo, cobble, smooth(0.5, 2.0, edge)); // dark grout between setts
-        col = mix(col, cobble, cobbleCov);
+        const surf = materialColor(cobbleMat, X, Y, seed, -10);
+        col = mix(col, surf, cobbleCov);
       }
 
       // ── river + pond: sandy shore, then water (sampled SDF) ──

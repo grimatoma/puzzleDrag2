@@ -21,7 +21,7 @@
 // Ground uses the same Tuxemon tileset indices `TownScene` references.
 import type { TownPlan } from "./TownScene.js";
 import { blankMask, maskBandH, maskBandV, maskDisc, maskRect, paintSandPaths } from "./roadAutotile.js";
-import type { GroundSpec, GroundRoad } from "./proceduralGround.js";
+import type { GroundSpec, GroundRoad, GroundMaterial } from "./proceduralGround.js";
 
 // Design space — must match TownScene's grid (40×30 @ 32px → 1280×960).
 const TILE = 32;
@@ -96,7 +96,7 @@ const px = (tile: number) => tile * TILE;
 export interface AuthoredLot { index: number; cx: number; cy: number; w: number; h: number }
 export interface AuthoredBoard { kind: "farm" | "mine" | "fish"; cx: number; cy: number; w: number; h: number }
 export interface AuthoredProp { kind: string; x: number; y: number }
-export interface AuthoredTree { x: number; y: number; r: number; cluster: number }
+export interface AuthoredTree { x: number; y: number; r: number; cluster: number; species?: string }
 
 export interface AuthoredTownMap {
   groundTiles: Grid;
@@ -304,6 +304,16 @@ function homeCleared(px: number, py: number, tier: number): boolean {
   return false;
 }
 
+// Species per tree for natural groves: willows hug the water, conifers and
+// broadleaves cluster by macro-group so a stand reads as one kind, not confetti.
+function homeTreeSpecies(x: number, y: number, pine: boolean, c: number): string {
+  if (homeRiverDist(x, y) <= RIVER_HALF + 70 || inHomePond(x, y, 70)) {
+    return c % 3 === 0 ? "tree_willow" : pine ? "tree_fir" : "tree_oak";
+  }
+  if (pine) return c % 2 ? "tree_fir" : "tree_cypress";
+  return c % 2 ? "tree_oak" : "tree_birch";
+}
+
 function homeTrees(tier: number): AuthoredTree[] {
   const rnd = makeRng(0x5eed01);
   const out: AuthoredTree[] = [];
@@ -317,45 +327,115 @@ function homeTrees(tier: number): AuthoredTree[] {
       const r = 15 + rnd() * 8;
       if (x < 10 || x > DESIGN_W - 10 || y < 10 || y > DESIGN_H - 10) continue;
       if (inHomeWater(x, y) || homeCleared(x, y, tier)) continue;
-      out.push({ x, y, r, cluster: pine ? 0 : 1 });
+      out.push({ x, y, r, cluster: pine ? 0 : 1, species: homeTreeSpecies(x, y, pine, c) });
       if (out.length >= 240) return out;
     }
   }
   return out;
 }
 
-const HOME_PROPS_BASE: AuthoredProp[] = [
-  { kind: "signpost", x: 706, y: 512 },
-  { kind: "lamppost", x: 578, y: 512 },
-];
+/** Place `n` props of `kind` evenly along a segment (inclusive of both ends). */
+function lineProps(out: AuthoredProp[], kind: string, x1: number, y1: number, x2: number, y2: number, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0 : i / (n - 1);
+    out.push({ kind, x: Math.round(x1 + (x2 - x1) * t), y: Math.round(y1 + (y2 - y1) * t) });
+  }
+}
+
+// Lived-in dressing, grown per rung and kept clear of lots/roads/boards/water. The
+// reference's life comes from this layering: a market square, lamps down the paved
+// street, fenced farm, construction clutter on the margins, and a living waterside.
+function homeProps(tier: number): AuthoredProp[] {
+  const out: AuthoredProp[] = [];
+  // Plaza approach signage + the two original lamps (every rung).
+  out.push({ kind: "signpost", x: 706, y: 512 });
+  lineProps(out, "lamppost", 470, 512, 810, 512, 2);
+
+  if (tier >= 1) {
+    // Market square wakes up: a striped stall, a bench, planters flanking the well.
+    out.push({ kind: "market_stall", x: 500, y: 466 });
+    out.push({ kind: "bench", x: 760, y: 466 });
+    out.push({ kind: "planter", x: 452, y: 452 }, { kind: "planter", x: 828, y: 452 });
+    out.push({ kind: "barrel", x: 548, y: 430 }, { kind: "crate", x: 590, y: 432 });
+    // First construction clutter on the open south margin.
+    out.push({ kind: "log_pile", x: 360, y: 632 }, { kind: "plank_stack", x: 470, y: 636 });
+    // Waterside life along the west river bank + pond.
+    out.push({ kind: "cattail", x: 152, y: 300 }, { kind: "cattail", x: 168, y: 372 });
+    out.push({ kind: "water_lily", x: 110, y: 104 }, { kind: "water_lily", x: 92, y: 128 });
+  }
+
+  if (tier >= 2) {
+    // Cobbled square fills in: more lamps down the paved street, a second stall.
+    lineProps(out, "lamppost", 300, 428, 980, 428, 4);
+    out.push({ kind: "market_stall", x: 820, y: 466 });
+    out.push({ kind: "flower_pot", x: 600, y: 500 }, { kind: "flower_pot", x: 690, y: 500 });
+    out.push({ kind: "lantern", x: 706, y: 438 });
+    // Fenced farm field (perimeter pickets) + hay/sacks at the gate.
+    lineProps(out, "picket_fence", 712, 580, 920, 580, 6);   // north fence
+    lineProps(out, "picket_fence", 712, 732, 920, 732, 6);   // south fence
+    out.push({ kind: "hay_bale", x: 690, y: 690 }, { kind: "sacks", x: 700, y: 640 });
+    // Boulders + hedges softening the clearing edge.
+    out.push({ kind: "boulder", x: 250, y: 300 }, { kind: "rock_cluster", x: 1040, y: 360 });
+    out.push({ kind: "hedge", x: 1110, y: 470 }, { kind: "berry_bush", x: 232, y: 470 });
+    // The dock comes alive — rowboat + mooring posts + lilies on the south water.
+    out.push({ kind: "rowboat", x: 500, y: 858 });
+    out.push({ kind: "dock_post", x: 506, y: 815 }, { kind: "dock_post", x: 534, y: 815 });
+    out.push({ kind: "water_lily", x: 580, y: 866 }, { kind: "water_lily", x: 632, y: 872 });
+    out.push({ kind: "cattail", x: 360, y: 822 }, { kind: "cattail", x: 700, y: 856 });
+  }
+
+  if (tier >= 3) {
+    // City: stone-block streets lined with lamps, a busy market + workshop clutter.
+    lineProps(out, "lamppost", 240, 282, 1240, 282, 6);   // north back lane
+    lineProps(out, "lamppost", 300, 786, 1180, 786, 6);   // south back lane
+    out.push({ kind: "market_stall", x: 640, y: 320 });
+    out.push({ kind: "bench", x: 560, y: 466 }, { kind: "bench", x: 720, y: 500 });
+    out.push({ kind: "stone_pile", x: 1090, y: 700 }, { kind: "plank_stack", x: 1150, y: 690 });
+    out.push({ kind: "sawhorse", x: 300, y: 700 }, { kind: "log_pile", x: 250, y: 712 });
+    out.push({ kind: "boulder", x: 1200, y: 250 }, { kind: "berry_bush", x: 1180, y: 360 });
+    out.push({ kind: "flower_pot", x: 470, y: 500 }, { kind: "flower_pot", x: 820, y: 500 });
+  }
+
+  return out;
+}
 
 // ── Procedural-ground spec — the doc's exact pixel geometry (1280×960). The SDF
 // renderer (proceduralGround.ts) draws this as smooth terrain, so the road
 // centre-lines + half-widths are the doc's real values (incl. the diagonal NE
 // ridge lane, which an SDF renders for free). `tier` is the rung that opens each.
-const HOME_SPEC_ROADS: ReadonlyArray<{ seg: readonly [number, number, number, number]; half: number; tier: number }> = [
-  { seg: [400, 470, 870, 470], half: 17, tier: 0 },   // HS0 — main street
-  { seg: [816, 487, 816, 576], half: 11, tier: 0 },   // FL  — farm lane
-  { seg: [265, 470, 400, 470], half: 17, tier: 1 },   // HS1w
-  { seg: [870, 470, 1010, 470], half: 17, tier: 1 },  // HS1e
-  { seg: [80, 470, 265, 470], half: 17, tier: 2 },    // HS2w
-  { seg: [0, 470, 80, 470], half: 13, tier: 2 },      // HS3w
-  { seg: [1010, 470, 1150, 470], half: 17, tier: 2 }, // HS2e
-  { seg: [240, 300, 1240, 300], half: 13, tier: 2 },  // NBL — north back lane
-  { seg: [560, 300, 560, 453], half: 11, tier: 2 },   // NS  — connector
-  { seg: [255, 768, 1280, 768], half: 13, tier: 3 },  // SBL — south back lane (stops clear of the SW river)
-  { seg: [560, 487, 560, 768], half: 10, tier: 3 },   // CN_w
-  { seg: [976, 487, 976, 768], half: 10, tier: 3 },   // CN_e
-  { seg: [880, 300, 880, 453], half: 10, tier: 3 },   // CN_ne
-  { seg: [1040, 300, 1226, 150], half: 11, tier: 3 }, // RID — diagonal ridge lane
+type RoadRole = "main" | "lane" | "farm";
+const HOME_SPEC_ROADS: ReadonlyArray<{ seg: readonly [number, number, number, number]; half: number; tier: number; role: RoadRole }> = [
+  { seg: [400, 470, 870, 470], half: 17, tier: 0, role: "main" },   // HS0 — main street
+  { seg: [816, 487, 816, 576], half: 11, tier: 0, role: "farm" },   // FL  — farm lane
+  { seg: [265, 470, 400, 470], half: 17, tier: 1, role: "main" },   // HS1w
+  { seg: [870, 470, 1010, 470], half: 17, tier: 1, role: "main" },  // HS1e
+  { seg: [80, 470, 265, 470], half: 17, tier: 2, role: "main" },    // HS2w
+  { seg: [0, 470, 80, 470], half: 13, tier: 2, role: "lane" },      // HS3w
+  { seg: [1010, 470, 1150, 470], half: 17, tier: 2, role: "main" }, // HS2e
+  { seg: [240, 300, 1240, 300], half: 13, tier: 2, role: "lane" },  // NBL — north back lane
+  { seg: [560, 300, 560, 453], half: 11, tier: 2, role: "lane" },   // NS  — connector
+  { seg: [255, 768, 1280, 768], half: 13, tier: 3, role: "lane" },  // SBL — south back lane (stops clear of the SW river)
+  { seg: [560, 487, 560, 768], half: 10, tier: 3, role: "lane" },   // CN_w
+  { seg: [976, 487, 976, 768], half: 10, tier: 3, role: "lane" },   // CN_e
+  { seg: [880, 300, 880, 453], half: 10, tier: 3, role: "lane" },   // CN_ne
+  { seg: [1040, 300, 1226, 150], half: 11, tier: 3, role: "lane" }, // RID — diagonal ridge lane
 ];
+
+// Reusable paving progression — the streets visibly "pave over" as the town tiers
+// up: dirt outpost → packed-dirt hamlet → cobble village → crisp stone-block city.
+// The farm lane stays gravel; back lanes lag the main street by a tier.
+function homeRoadMaterial(role: RoadRole, tier: number): GroundMaterial {
+  if (role === "farm") return "gravel";
+  if (role === "main") return tier >= 3 ? "stone_block" : tier >= 2 ? "cobble" : tier >= 1 ? "packed_dirt" : "dirt";
+  return tier >= 3 ? "cobble" : tier >= 1 ? "packed_dirt" : "dirt";
+}
 
 /** Build the hand-rolled procedural-ground spec for a home rung. */
 function homeGroundSpec(tier: number): GroundSpec {
   const roads: GroundRoad[] = [];
   for (const r of HOME_SPEC_ROADS) {
     if (r.tier > tier) continue;
-    roads.push({ x1: r.seg[0], y1: r.seg[1], x2: r.seg[2], y2: r.seg[3], half: r.half });
+    roads.push({ x1: r.seg[0], y1: r.seg[1], x2: r.seg[2], y2: r.seg[3], half: r.half, material: homeRoadMaterial(r.role, tier) });
   }
   // One clean crossing on the main street, baked at the Village. The deck is
   // tilted ~5° so it sits square to the (slightly leaning) river, not rigidly
@@ -369,9 +449,10 @@ function homeGroundSpec(tier: number): GroundSpec {
     river: { pts: HOME_RIVER, half: 27, bank: 22 },
     pond: { cx: HOME_POND.cx, cy: HOME_POND.cy, rx: HOME_POND.rx, ry: HOME_POND.ry, bank: 18 },
     roads,
-    // Cobbled plaza: a street-hugging lozenge that sits in the open corridor
-    // BETWEEN the north/south lot rows (never under a building), widening at City.
-    cobble: tier >= 2 ? [{ cx: HOME_PLAZA.cx, cy: HOME_PLAZA.cy, rx: tier >= 3 ? 232 : 196, ry: 33 }] : [],
+    // Paved town square: a street-hugging lozenge in the open corridor BETWEEN the
+    // north/south lot rows (never under a building), widening + upgrading to crisp
+    // stone block at City to match the reference's neat paved square.
+    cobble: tier >= 2 ? [{ cx: HOME_PLAZA.cx, cy: HOME_PLAZA.cy, rx: tier >= 3 ? 232 : 196, ry: 33, material: tier >= 3 ? "stone_block" : "flagstone" as GroundMaterial }] : [],
     field: { cx: HOME_FARM_BOARD.cx, cy: HOME_FARM_BOARD.cy, w: HOME_FARM_BOARD.w, h: HOME_FARM_BOARD.h },
     bridges,
     dock: HOME_DOCK.tier <= tier ? { x: HOME_DOCK.x, y0: HOME_DOCK.y0, y1: HOME_DOCK.y1, half: 13 } : null,
@@ -387,7 +468,7 @@ function homeRung(tier: number): AuthoredTownMap {
     plaza: HOME_PLAZA,
     well: HOME_WELL,
     boards: [HOME_FARM_BOARD],
-    props: HOME_PROPS_BASE,
+    props: homeProps(tier),
     trees: homeTrees(tier),
     lots: HOME_LOTS.slice(0, plots).map(([index]) => hlot(index)),
   };
