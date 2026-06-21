@@ -133,3 +133,14 @@ describe("saveMigrations — 47 → 48 (home re-laddered Camp→Manor ⇒ Outpos
     expect(result.save.coins).toBe(3);
   });
 });
+
+describe("saveMigrations — 49 → 50 (Town Hall civic economy added)", () => {
+  test("seeds a claimable civicEconomy slice on an old save", () => {
+    const result = migrateSave({ version: 49, coins: 7 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(result.save.civicEconomy).toEqual({ lastClaimedAt: null, pendingProvisions: {} });
+    expect(result.save.coins).toBe(7);
+  });
+});

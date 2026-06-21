@@ -320,6 +320,15 @@ export interface CraftAction {
   payload?: { id?: string; qty?: number };
 }
 
+export interface CivicClaimAction {
+  type: "CIVIC/CLAIM";
+  payload?: { now?: number };
+}
+
+export interface CivicOpenCarePackageAction {
+  type: "CIVIC/OPEN_CARE_PACKAGE";
+}
+
 export interface GrantRunesAction {
   type: "GRANT_RUNES";
   payload?: { amount?: number };
@@ -657,6 +666,8 @@ export type TypedActionType =
   | DevAddSuppliesAction["type"]
   | DevBuildAllAction["type"]
   | DevResetGameAction["type"]
+  | CivicClaimAction["type"]
+  | CivicOpenCarePackageAction["type"]
   | DevSetZoneTierAction["type"];
 
 export type TypedAction =
@@ -748,6 +759,8 @@ export type TypedAction =
   | DevAddSuppliesAction
   | DevBuildAllAction
   | DevResetGameAction
+  | CivicClaimAction
+  | CivicOpenCarePackageAction
   | DevSetZoneTierAction;
 
 /** Remaining catalog actions — must stay empty; add a {@link TypedAction} branch instead. */

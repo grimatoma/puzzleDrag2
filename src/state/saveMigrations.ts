@@ -79,6 +79,14 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
   // change). Pure version bump — buildings remain keyed by stable lot index; the
   // bump just retires 48-era saves so none renders a building on a moved lot.
   48: (save) => ({ ...save, version: 49 }),
+  // 49 → 50: added the Town Hall "Tithes & Provisions" civic economy. Seed the
+  // new `civicEconomy` slice on old saves so the Town Hall opens with a fresh
+  // (claimable) cooldown and no pending provisions.
+  49: (save) => ({
+    ...save,
+    civicEconomy: { lastClaimedAt: null, pendingProvisions: {} },
+    version: 50,
+  }),
 };
 
 export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";

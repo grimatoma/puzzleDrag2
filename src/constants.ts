@@ -23,6 +23,7 @@ export const SCENE_EVENTS = Object.freeze({
   CHAIN_FLOAT_TEXT: "chain-float-text",
   TOOL_FIRED: "tool-fired",
   REWARD_BURST: "reward-burst",
+  CARE_PACKAGE_OPENED: "care-package-opened",
 });
 
 type Brand<T, Name extends string> = T & { readonly __brand: Name };
@@ -219,7 +220,7 @@ export const DEFAULT_HOME_BIOME = "prairie";
 //          procedural ground); lots moved again, so discard 48-era saves to avoid
 //          a placed building rendering on a shifted lot.
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
-export const SAVE_SCHEMA_VERSION = 49;
+export const SAVE_SCHEMA_VERSION = 50;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
@@ -841,21 +842,21 @@ export const BUILDINGS = [
     ] },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { runes: 5 }, lv: 8, x: 440, y: 245, w: 100, h: 115, look: { color: "#4a2a7a" } },
   { id: "housing", name: "Housing Block",
-    desc: "Lodging for the settlement's hired hands — adds 1 to the hiring pool each season.",
+    desc: "Lodging for the settlement's hired hands — houses +1 Villager each season (Villagers are spent to hire townsfolk).",
     cost: { eggs: 10, meat: 1, block: 16, iron_bar: 10 }, lv: 2,
     x: 430, y: 262, w: 80, h: 92, look: { color: "#a07a4a" },
     abilities: [
       { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
     ] },
   { id: "housing2", name: "Housing Block",
-    desc: "Lodging for the settlement's hired hands — adds 1 to the hiring pool each season.",
+    desc: "Lodging for the settlement's hired hands — houses +1 Villager each season (Villagers are spent to hire townsfolk).",
     cost: { eggs: 10, meat: 1, block: 16, iron_bar: 10 }, lv: 2, requires: "housing",
     x: 520, y: 262, w: 80, h: 92, look: { color: "#a07a4a" },
     abilities: [
       { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
     ] },
   { id: "housing3", name: "Housing Block",
-    desc: "Lodging for the settlement's hired hands — adds 1 to the hiring pool each season.",
+    desc: "Lodging for the settlement's hired hands — houses +1 Villager each season (Villagers are spent to hire townsfolk).",
     cost: { eggs: 10, meat: 1, block: 16, iron_bar: 10 }, lv: 2, requires: "housing2",
     x: 610, y: 262, w: 80, h: 92, look: { color: "#a07a4a" },
     abilities: [

@@ -46,6 +46,7 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
+import * as civicEconomy from "./features/civicEconomy/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
@@ -70,7 +71,7 @@ export { createFreshState, generateSaveSeed, initialState };
 // never brick boot. See src/state/applyStoryOverrides.ts.
 setStoryOverrides((BALANCE_OVERRIDES.story as StoryOverrides | undefined) ?? null);
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, civicEconomy];
 
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
@@ -981,6 +982,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // contribute to the same `seasonBonus.coins` channel) ────────────────
       const bonusCoins = Math.round(((seasonAgg.seasonBonus as { coins?: number } | undefined)?.coins) ?? 0);
 
+      // ── worker_pool_step — built Housing Blocks add Villagers (the hiring
+      // currency) to the town's pool each season end. Hiring a worker spends a
+      // Villager; firing refunds one. (See features/workers/slice.ts.)
+      const villagerGain = Math.max(0, Math.floor((seasonAgg.seasonEndPoolStep as number | undefined) ?? 0));
+
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
         if (!state.npcs) return state.npcs;
@@ -994,6 +1000,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         ...state,
         tools,
         coins: state.coins + bonusCoins + SEASON_END_BONUS_COINS,
+        villagers: (state.villagers ?? 0) + villagerGain,
         turnsUsed: 0,
         farmRun: null,
         activeTrial: null,
@@ -1664,6 +1671,9 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Run summary modal open/close — owned by runSummary/slice
   "RUN_SUMMARY/OPEN",
   "RUN_SUMMARY/CLOSE",
+  // Town Hall economy — owned by civicEconomy/slice
+  "CIVIC/CLAIM",
+  "CIVIC/OPEN_CARE_PACKAGE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE

@@ -138,9 +138,19 @@ export default function TownPhaserCanvas({
           backgroundColor: "#5a7f36",
           transparent: false,
           scene: [TownScene],
+          // Scale.NONE (not FIT) — the canvas backing store is exactly
+          // width×height and displayed at CSS size via zoom 1/dpr, so it always
+          // fills the host with NO letterboxing. FIT would instead lock the
+          // game's internal aspect ratio at boot and centre-letterbox it inside
+          // the parent; when the host is measured during a transient layout on
+          // initial load (a too-short height), that baked-in wide aspect ratio
+          // letterboxes the map into a thin horizontal band — the "squished map"
+          // bug. TownScene already cover-zooms its camera (see coverZoom /
+          // restCamera) to fill any viewport shape, so FIT's aspect preservation
+          // is redundant and harmful. Mirrors the main board's PhaserMount.
           scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH,
+            mode: Phaser.Scale.NONE,
+            autoCenter: Phaser.Scale.NO_CENTER,
             zoom: 1 / dpr,
           },
           render: {

@@ -137,11 +137,13 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     embers: 0,
     coreIngots: 0,
     gems: 0,
+    villagers: 0,
     heirlooms: { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 },
     session: { selectedTiles: [], fertilizerUsed: false },
     keeperTrials: {},
     activeTrial: null,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
+    civicEconomy: { lastClaimedAt: null, pendingProvisions: {} },
     workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
     tileCollection: defaultTileCollectionSlice(),
     almanac: {
