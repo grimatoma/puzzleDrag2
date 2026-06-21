@@ -12,10 +12,12 @@
 #
 # Re-baselining visual goldens (NEVER do this on a Windows/local host — DOM drifts 3–5%,
 # Phaser WebGL ~38% off due to GPU/font differences; goldens must be made on this Linux runner):
-#   1. gh workflow run ci.yml -f update_goldens=true   (or trigger via the Actions tab)
-#   2. Download the `regenerated-goldens` artifact, unzip it over tests/visual/__goldens__/
-#   3. Eyeball the PNGs, commit them, open a PR.
-#   4. Once `visual-smoke` is green against the committed goldens, remove its `continue-on-error`
+#   1. gh workflow run ci.yml --ref <branch> -f update_goldens=true   (or trigger via the Actions
+#      tab, selecting the branch you want re-baselined).
+#   2. The `visual-rebaseline` job regenerates the desktop goldens on this Linux runner and commits
+#      them straight back to that branch (it also uploads a `regenerated-goldens` artifact for
+#      inspection). Pull the branch to review the new PNGs.
+#   3. Once `visual-smoke` is green against the committed goldens, remove its `continue-on-error`
 #      and add `visual-smoke` to the required status checks above.
 
 name: CI
@@ -190,12 +192,16 @@ jobs:
 
   # Manual re-baseline of the desktop visual goldens ON the canonical Linux
   # runner (never local — see header). Trigger with:
-  #   gh workflow run ci.yml -f update_goldens=true
-  # then download the `regenerated-goldens` artifact and commit it.
+  #   gh workflow run ci.yml --ref <branch> -f update_goldens=true
+  # The job regenerates the goldens and commits them straight back to the
+  # dispatched branch (and also uploads them as the `regenerated-goldens`
+  # artifact for inspection).
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -211,3 +217,17 @@ jobs:
           name: regenerated-goldens
           path: tests/visual/__goldens__/
           retention-days: 7
+      # Commit the freshly-baselined PNGs back to the dispatched branch so the
+      # author doesn't have to download + unzip the artifact by hand. No-ops
+      # cleanly when the render is already byte-identical to the committed goldens.
+      - name: Commit regenerated goldens
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/visual/__goldens__/
+          if git diff --cached --quiet; then
+            echo "Goldens already up to date — nothing to commit."
+          else
+            git commit -m "test(visual): re-baseline desktop goldens on CI runner"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
