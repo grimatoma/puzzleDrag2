@@ -60,7 +60,7 @@ import { ICONS as G_WEAPONS } from "./categories/weapons.js";
 import { ICONS as G_SPELLS } from "./categories/spells.js";
 import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
-import { paintSeasonalReference, ensureSeasonalArtLoaded, seasonalBakedActive, isPotentialBakedSubject } from "./seasonal/seasonalArt.js";
+import { paintSeasonalReference, ensureSeasonalArtLoaded, ensureAllSeasonalArtLoaded, seasonalArtActive, seasonalBakedActive, isPotentialBakedSubject, hasSeasonalArtFolder } from "./seasonal/seasonalArt.js";
 
 export interface IconRegistryEntry {
   label?: string;
@@ -187,6 +187,16 @@ export function iconEntry(key: string): IconRegistryEntry | null {
   return ICON_REGISTRY[key] ?? null;
 }
 
+/** How an icon resolves between its procedural ("canvas") draw and its baked
+ *  pixel-art ("pixel") seasonal reference still:
+ *   - `"auto"` (default): the live game behaviour — prefer the baked pixel sprite
+ *     whenever it's active (honours the vector preference + pixel-sprite override).
+ *   - `"canvas"`: always the procedural draw, never the baked sprite.
+ *   - `"pixel"`: prefer the baked sprite for ANY key that ships a folder (even the
+ *     vector-preferred showcase tiles), falling back to the procedural draw — i.e.
+ *     the "general icon" — for keys with no baked seasonal art. */
+export type IconVariant = "auto" | "canvas" | "pixel";
+
 /** Draw the registered icon for `key` at the canvas's current origin.
  *  Returns true if the key was found and drawn, false otherwise.
  *
@@ -194,9 +204,18 @@ export function iconEntry(key: string): IconRegistryEntry | null {
  *  `public/seasonal-tiles/<tileKey>/`) render their reference still here so every
  *  menu/wiki icon matches the board — drop-in, no per-icon wiring. Until the sheets
  *  load (and in environments without them, e.g. tests / offline icon render) it kicks
- *  the load and falls through to the subject's procedural icon. */
-export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
-  if (isPotentialBakedSubject(key)) {
+ *  the load and falls through to the subject's procedural icon.
+ *
+ *  `variant` lets callers (the wiki's tiles toggle) force the procedural draw or the
+ *  baked pixel sprite instead of the live "auto" behaviour. */
+export function drawIcon(ctx: CanvasRenderingContext2D, key: string, variant: IconVariant = "auto") {
+  if (variant === "pixel") {
+    if (hasSeasonalArtFolder(key)) {
+      if (seasonalArtActive(key) && paintSeasonalReference(ctx, key)) return true;
+      ensureAllSeasonalArtLoaded();
+    }
+    // Fall through to the procedural "general icon" for non-baked keys.
+  } else if (variant === "auto" && isPotentialBakedSubject(key)) {
     if (seasonalBakedActive(key) && paintSeasonalReference(ctx, key)) return true;
     ensureSeasonalArtLoaded();
   }

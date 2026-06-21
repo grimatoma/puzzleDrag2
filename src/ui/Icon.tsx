@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ICON_REGISTRY } from "../textures/iconRegistry.js";
+import { ICON_REGISTRY, type IconVariant } from "../textures/iconRegistry.js";
 import { paintIcon } from "../textures/paintIcon.js";
 import { onSeasonalArtLoaded } from "../textures/seasonal/seasonalArt.js";
 
@@ -39,19 +39,19 @@ onSeasonalArtLoaded(() => clearIconCache());
  * Mounts an off-screen canvas exactly once per unique (key, size, dpr) combination,
  * caches the resulting data URI, and renders as an <img> for maximum React performance.
  */
-export default function Icon({ iconKey, size = 24, className = "", style = {}, title }: { iconKey: string | null | undefined; size?: number; className?: string; style?: React.CSSProperties; title?: string }) {
+export default function Icon({ iconKey, size = 24, variant = "auto", className = "", style = {}, title }: { iconKey: string | null | undefined; size?: number; variant?: IconVariant; className?: string; style?: React.CSSProperties; title?: string }) {
   const [dataUri, setDataUri] = useState<string | null>(null);
 
   useEffect(() => {
     function getOrBake() {
       if (!iconKey) return null;
-      
+
       const entry = (ICON_REGISTRY as Record<string, unknown>)[iconKey];
       if (!entry) return null;
 
       const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
-      const cacheKey = `${iconKey}_${size}_${dpr}`;
-      
+      const cacheKey = `${iconKey}_${size}_${dpr}_${variant}`;
+
       if (ICON_CACHE.has(cacheKey)) {
         return ICON_CACHE.get(cacheKey) ?? null;
       }
@@ -62,10 +62,10 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
       canvas.height = size * dpr;
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
-      
+
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
-      paintIcon(ctx, iconKey, size);
+      paintIcon(ctx, iconKey, size, variant);
 
       const uri = canvas.toDataURL("image/png");
       ICON_CACHE.set(cacheKey, uri);
@@ -81,7 +81,7 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
 
     window.addEventListener("icon-cache-cleared", handleCacheCleared);
     return () => window.removeEventListener("icon-cache-cleared", handleCacheCleared);
-  }, [iconKey, size]);
+  }, [iconKey, size, variant]);
 
   if (!dataUri) {
     // Fallback block if icon is missing or not yet generated

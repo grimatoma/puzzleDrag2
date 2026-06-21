@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 import Icon from "../../ui/Icon.jsx";
+import type { IconVariant } from "../../textures/iconRegistry.js";
 import { COLORS, hexToCss } from "../shared.jsx";
 import { useWikiView } from "./wikiView.js";
 
@@ -53,6 +54,7 @@ export default function EntryGrid({
   emptyLabel = "No entries.",
   onSelect,
   renderVisual,
+  iconVariant = "auto",
 }: {
   entries: WikiEntry[] | null | undefined;
   emptyLabel?: ReactNode;
@@ -64,6 +66,12 @@ export default function EntryGrid({
    * illustration via EntityVisual).
    */
   renderVisual?: (entry: WikiEntry) => ReactNode;
+  /**
+   * Which icon representation to bake for each card — `"canvas"` (procedural),
+   * `"pixel"` (baked seasonal sprite, falling back to the general icon), or
+   * `"auto"` (live game behaviour). Used by the tiles page's canvas/pixel toggle.
+   */
+  iconVariant?: IconVariant;
 }) {
   const { view } = useWikiView();
   const [size, setSize] = useState<CardSize>("m");
@@ -117,7 +125,7 @@ export default function EntryGrid({
         // Visual: use iconKey if set, else emoji if set, else a muted initial placeholder
         const cardVisual = (() => {
           if (entry.iconKey) {
-            return <Icon iconKey={entry.iconKey} size={cfg.icon} />;
+            return <Icon iconKey={entry.iconKey} size={cfg.icon} variant={iconVariant} />;
           }
           if (entry.emoji) {
             return (

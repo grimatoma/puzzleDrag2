@@ -29,6 +29,7 @@ import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { describeSchema } from "../schemaDoc.js";
 import { groupTileEntries } from "./tileGrouping.js";
+import { IconVariantToggle } from "./IconVariantToggle.jsx";
 import { conceptHeadlineStats } from "./conceptStats.js";
 import { getEntity } from "./conceptEntities.js";
 import { infoboxFacts } from "./infoboxFacts.js";
@@ -84,6 +85,12 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
 
   // Tracks whether the recipe graph section is open (collapsed by default)
   const [graphOpen, setGraphOpen] = useState(false);
+
+  // Tiles page only: which icon representation the entry cards bake. "canvas"
+  // (the general procedural icon) is the default; "pixel" swaps in each tile's
+  // baked seasonal sprite where one exists (tiles with no baked art keep their
+  // general icon — the non-puzzle states always show the general icon).
+  const [tileIconVariant, setTileIconVariant] = useState<"canvas" | "pixel">("canvas");
 
   // Resolve concept descriptor — fall back to the first concept if unknown
   const concept = CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0];
@@ -159,8 +166,11 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       {/* ── 3. Entity gallery ─────────────────────────────────────────────── */}
       {conceptId === "tiles" ? (
         <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
-          <div className="wiki-section-heading">
-            Entries ({entries.length})
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="wiki-section-heading">
+              Entries ({entries.length})
+            </div>
+            <IconVariantToggle value={tileIconVariant} onChange={setTileIconVariant} />
           </div>
           {groupTileEntries(entries).map((subGroup) => (
             <section key={subGroup.sub} className="flex flex-col gap-3">
@@ -191,6 +201,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
                   <EntryGrid
                     entries={catGroup.entries}
                     onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+                    iconVariant={tileIconVariant}
                   />
                 </div>
               ))}
