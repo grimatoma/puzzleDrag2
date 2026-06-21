@@ -11,6 +11,9 @@ import {
   setPixelSpriteOverride,
   isPotentialBakedSubject,
   onPixelSpriteOverrideChange,
+  SEASONAL_FOLDER_KEYS,
+  hasSeasonalArtFolder,
+  seasonalTransFrameCount,
 } from "./seasonalArt.js";
 
 // SEASON_NAMES order: 0 Spring, 1 Summer, 2 Autumn, 3 Winter. Summer (1) is the anchor.
@@ -74,6 +77,30 @@ describe("subject discovery + inactive guards", () => {
     const ctx = { drawImage: () => calls.push("draw"), imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
     expect(paintSeasonalReference(ctx, "tile_mine_stone")).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("seasonal folder set (wiki Pixel-art toggle)", () => {
+  it("SEASONAL_FOLDER_KEYS includes the vector-preferred showcase keys that the baked set excludes", () => {
+    // The wiki "Pixel art" toggle can show a baked sprite for ANY key with a folder,
+    // including the vector-preferred showcase tiles filtered out of SEASONAL_SUBJECT_KEYS.
+    expect(SEASONAL_FOLDER_KEYS.has("tile_tree_willow")).toBe(true);
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_tree_willow")).toBe(false);
+    // The baked-only subjects are still a subset of the full folder set.
+    for (const key of SEASONAL_SUBJECT_KEYS) {
+      expect(SEASONAL_FOLDER_KEYS.has(key)).toBe(true);
+    }
+  });
+
+  it("hasSeasonalArtFolder matches the folder set and rejects unknown keys", () => {
+    expect(hasSeasonalArtFolder("tile_tree_willow")).toBe(true);
+    expect(hasSeasonalArtFolder("tile_mine_stone")).toBe(true);
+    expect(hasSeasonalArtFolder("tile_does_not_exist")).toBe(false);
+  });
+
+  it("seasonalTransFrameCount is 0 for inactive / unknown subjects (no sheets decoded in node)", () => {
+    expect(seasonalTransFrameCount("tile_mine_stone", 0)).toBe(0);
+    expect(seasonalTransFrameCount("tile_does_not_exist", 1)).toBe(0);
   });
 });
 

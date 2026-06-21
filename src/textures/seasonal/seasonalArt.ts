@@ -56,6 +56,22 @@ const OVERRIDE_MANIFEST: Record<string, string[]> = Object.fromEntries(
  *  inactive if none of its sheets decoded; gate rendering on `seasonalBakedActive()`. */
 export const SEASONAL_SUBJECT_KEYS: ReadonlySet<string> = new Set(Object.keys(MANIFEST));
 
+/** Every tile key that ships a seasonal-art folder, INCLUDING the vector-preferred
+ *  showcase keys (whose PNGs are otherwise only loaded under the override). Used by the
+ *  wiki's "Pixel art" toggle, which can show the baked sprite for any key that has one. */
+export const SEASONAL_FOLDER_KEYS: ReadonlySet<string> = new Set(Object.keys(FULL_MANIFEST));
+
+/** Whether `key` has a baked seasonal-art folder on disk (regardless of the vector
+ *  preference / override). The wiki uses this to decide if a "Pixel art" sprite exists. */
+export function hasSeasonalArtFolder(key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(FULL_MANIFEST, key);
+}
+
+/** Per-frame timing for the seasonal idle loops / transitions, in ms. Exported so
+ *  non-board previews (the wiki tile-detail table) animate at the same cadence. */
+export const SEASONAL_IDLE_MS = IDLE_MS;
+export const SEASONAL_TRANS_MS = TRANS_MS;
+
 // ─── Pixel-sprite override ────────────────────────────────────────────────────
 //
 // A Settings toggle that forces EVERY tile (including the all-vector showcase keys)
@@ -113,6 +129,7 @@ const states = new Map<string, State>();
 // canvases can use to re-bake once the art arrives.
 const loadListeners = new Set<() => void>();
 let loadKicked = false;
+let allLoadKicked = false;
 
 /** Subscribe to "seasonal art finished (pre)loading". Returns an unsubscribe.
  *  Fires once per `preloadSeasonalArt()` completion. */
@@ -127,6 +144,25 @@ export function onSeasonalArtLoaded(cb: () => void): () => void {
 export function ensureSeasonalArtLoaded(): void {
   if (loadKicked) return;
   void preloadSeasonalArt();
+}
+
+/** Load EVERY discovered subject's spritesheets — both the default manifest and the
+ *  vector-preferred (override) manifest — regardless of the pixel-sprite override.
+ *  The wiki "Pixel art" preview needs the baked sprite for any key that has a folder,
+ *  even the showcase tiles whose vector art normally wins. No-ops without fetch. */
+export async function preloadAllSeasonalArt(): Promise<void> {
+  loadKicked = true;
+  allLoadKicked = true;
+  if (typeof fetch === "undefined" || typeof createImageBitmap === "undefined") return;
+  await loadManifest(MANIFEST);
+  await loadManifest(OVERRIDE_MANIFEST);
+  loadListeners.forEach((cb) => cb());
+}
+
+/** Kick the one-time "load all seasonal folders" preload if nothing has started it. */
+export function ensureAllSeasonalArtLoaded(): void {
+  if (allLoadKicked) return;
+  void preloadAllSeasonalArt();
 }
 
 function baseUrl(dir: string): string {
@@ -369,6 +405,14 @@ export function seasonalIdleFrameCount(key: string, season: SeasonName | null): 
   if (!st || !st.active) return 0;
   const c = resolveIdle(st, seasonIdx(season, st.curIdx));
   return c ? c.frames : 0;
+}
+
+/** Frame count of the forward transition clip `fromIdx → fromIdx+1` (0 = Spring→Summer,
+ *  1 = Summer→Autumn, 2 = Autumn→Winter), or 0 when that transition has no art. */
+export function seasonalTransFrameCount(key: string, fromIdx: number): number {
+  const st = states.get(key);
+  if (!st || !st.active) return 0;
+  return st.trans[fromIdx]?.frames ?? 0;
 }
 
 /** The widest idle clip across every decoded season — the frame-bank width a subject

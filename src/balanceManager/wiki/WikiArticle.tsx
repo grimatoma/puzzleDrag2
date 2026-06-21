@@ -46,6 +46,7 @@ import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
 import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
 import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
+import { TileSeasonalShowcase } from "./TileSeasonalShowcase.jsx";
 import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
 import { BoardKindDetail, hasBoardKindDetail } from "./sections/BoardKindDetail.jsx";
 import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
@@ -358,6 +359,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {/* Tile unlock requirement (tile articles) */}
           {showTileUnlock && <TileUnlock tileId={entityKey} />}
+
+          {/* Seasonal idle animations + transitions table (tile articles) */}
+          {conceptId === "tiles" && <TileSeasonalShowcase tileKey={entityKey} />}
 
           {/* Zone drop rates & chain upgrades (zone articles) */}
           {showZoneDetail && entity != null && (

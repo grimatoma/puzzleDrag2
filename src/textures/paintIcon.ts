@@ -1,4 +1,4 @@
-import { drawIcon } from "./iconRegistry.js";
+import { drawIcon, type IconVariant } from "./iconRegistry.js";
 
 // iconRegistry draw functions emit paths around origin (0,0) sized for a
 // ~64x64 bounding box. Any renderer that paints an icon into a canvas must
@@ -11,7 +11,7 @@ export const ICON_DESIGN_BOX = 64;
  * transform in save/restore so the caller's transform/style state is
  * untouched. Returns the drawIcon() result (true if the key was found).
  */
-export function paintIcon(ctx: CanvasRenderingContext2D, iconKey: string, size: number) {
+export function paintIcon(ctx: CanvasRenderingContext2D, iconKey: string, size: number, variant: IconVariant = "auto") {
   ctx.save();
   ctx.translate(size / 2, size / 2);
   const scale = size / ICON_DESIGN_BOX;
@@ -20,7 +20,7 @@ export function paintIcon(ctx: CanvasRenderingContext2D, iconKey: string, size: 
   ctx.lineJoin = "round";
   let ok = false;
   try {
-    ok = drawIcon(ctx, iconKey);
+    ok = drawIcon(ctx, iconKey, variant);
   } catch (e) {
     if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV) {
       console.error("Icon draw failed: " + iconKey, e);
