@@ -27,4 +27,11 @@ describe("TILES_PER_RESOURCE tier scaling", () => {
   it("preserves legacy keys absent from TILE_TYPES", () => {
     expect(TILES_PER_RESOURCE.tile_mine_copper_ore).toBe(6);
   });
+
+  it("prices cross-category tiles by their produced-resource line, not display category", () => {
+    // clover/melon look like flowers/fruits but produce eggs (bird family).
+    // bird lineBase 6; clover tier1 => 7, melon tier3 => 9.
+    expect(TILES_PER_RESOURCE.tile_bird_clover).toBe(lineBase("bird") + 1 * tierStep("bird"));
+    expect(TILES_PER_RESOURCE.tile_bird_melon).toBe(lineBase("bird") + 3 * tierStep("bird"));
+  });
 });

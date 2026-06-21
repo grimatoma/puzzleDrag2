@@ -37,8 +37,8 @@ export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "Recip
 export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
 
 import type { ToolPowerDefinition } from "./config/schemas/shared.js";
-import { buildTilesPerResource } from "./config/productionLines.js";
-import { UPGRADE_THRESHOLDS as _UPGRADE_THRESHOLDS } from "./config/upgradeThresholds.js";
+import { buildTilesPerResource, PRODUCTION_LINES } from "./config/productionLines.js";
+import { UPGRADE_THRESHOLDS } from "./config/upgradeThresholds.js";
 import type {
   TileItemEntry,
   ResourceItemEntry,
@@ -242,7 +242,11 @@ export { UPGRADE_THRESHOLDS } from "./config/upgradeThresholds.js";
 // tier-scaled per productionLines so rarer variants cost more tiles (e.g. turkey 9
 // vs chicken 7). Tier-0 divisors equal lineBase (unchanged). The board-upgrade gate
 // (UPGRADE_THRESHOLDS) stays flat on purpose — only income gains tier scaling.
-export const TILES_PER_RESOURCE: Record<string, number> = buildTilesPerResource(_UPGRADE_THRESHOLDS);
+//
+// NOTE: declared after tileFamily/PRODUCTION_LINES so the resolver lambda can
+// reference them. Cross-category tiles (e.g. tile_bird_clover whose display
+// category is "flowers") are priced by their produced-resource family ("bird").
+// (declaration moved to after tileFamily below)
 
 export const SEASONS = [
   { name: "Spring", look: { iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 } },
@@ -348,6 +352,14 @@ export function tileFamilyResource(tileKey: string): string | null {
   return fam ? ((TILE_FAMILY_RESOURCE as Record<string, string>)[fam] ?? null) : null;
 }
 
+export const TILES_PER_RESOURCE: Record<string, number> = buildTilesPerResource(
+  UPGRADE_THRESHOLDS,
+  (t) => {
+    const fam = tileFamily(t.id);
+    return fam && PRODUCTION_LINES[fam] ? fam : t.category;
+  },
+);
+
 // Derived map: resource key → upgrade threshold of the tile that produces it.
 // Built once at module load from UPGRADE_THRESHOLDS + tileFamilyResource.
 // When multiple tile variants in the same family share a threshold (grass,
@@ -355,7 +367,7 @@ export function tileFamilyResource(tileKey: string): string | null {
 // threshold encountered (families are uniform in practice).
 export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
   const out: Record<string, number> = {};
-  for (const [tileKey, threshold] of Object.entries(_UPGRADE_THRESHOLDS)) {
+  for (const [tileKey, threshold] of Object.entries(UPGRADE_THRESHOLDS)) {
     const resource = tileFamilyResource(tileKey);
     if (resource && out[resource] == null) out[resource] = threshold as number;
   }

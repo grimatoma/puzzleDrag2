@@ -1,5 +1,8 @@
 import { TILE_TYPES } from "../features/tileCollection/data.js";
 
+/** Fallback income divisor when a tile has no production line (e.g. treasure tiles). */
+export const DEFAULT_LINE_BASE = 6;
+
 /** Per-production-line tuning. One entry per tile category that yields a resource. */
 export interface ProductionLine {
   /** tier-0 income divisor (tiles per resource). Equals today's per-category value. */
@@ -45,7 +48,7 @@ export const PRODUCTION_LINES: Record<string, ProductionLine> = {
 };
 
 export function lineBase(category: string): number {
-  return PRODUCTION_LINES[category]?.lineBase ?? 6;
+  return PRODUCTION_LINES[category]?.lineBase ?? DEFAULT_LINE_BASE;
 }
 export function tierStep(category: string): number {
   return PRODUCTION_LINES[category]?.tierStep ?? DEFAULTS.tierStep;
@@ -72,21 +75,29 @@ export function categoryOfTileKey(tileKey: string): string | null {
  * Tier-0 divisors are set to lineBase (unchanged from UPGRADE_THRESHOLDS for most
  * tiles). Board-upgrade gate (UPGRADE_THRESHOLDS) stays flat — only income is
  * tier-scaled here.
+ *
+ * The optional `lineCategoryForTile` resolver lets callers override which
+ * production line drives a tile's income divisor. When provided, it is called
+ * with each tile and should return the production-line key to use. This
+ * corrects cross-category tiles (e.g. tile_bird_clover whose display category
+ * is "flowers" but whose produced resource is from the "bird" line).
  */
 export function buildTilesPerResource(
   baseThresholds: Record<string, number>,
+  lineCategoryForTile?: (tile: { id: string; category: string; tier?: number }) => string,
 ): Record<string, number> {
   const out: Record<string, number> = { ...baseThresholds };
   for (const t of TILE_TYPES) {
-    if (!PRODUCTION_LINES[t.category]) {
+    const cat = lineCategoryForTile ? lineCategoryForTile(t) : t.category;
+    if (!PRODUCTION_LINES[cat]) {
       // Tiles with no production line (treasure, etc.) use legacy threshold if
-      // present, or fall back to the global default of 6 so every tile has a
+      // present, or fall back to the global default so every tile has a
       // valid positive divisor.
-      if (!(t.id in out)) out[t.id] = 6;
+      if (out[t.id] == null) out[t.id] = baseThresholds[t.id] ?? DEFAULT_LINE_BASE;
       continue;
     }
     const tier = Number(t.tier) || 0;
-    out[t.id] = lineBase(t.category) + tier * tierStep(t.category);
+    out[t.id] = lineBase(cat) + tier * tierStep(cat);
   }
   return out;
 }

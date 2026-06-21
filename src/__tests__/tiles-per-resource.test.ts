@@ -24,8 +24,8 @@
 import { describe, it, expect } from "vitest";
 import { inv, zoneProgress } from "../testUtils/inventory.js";
 import { gameReducer } from "../state.js";
-import { UPGRADE_THRESHOLDS, TILES_PER_RESOURCE } from "../constants.js";
-import { lineBase, categoryOfTileKey } from "../config/productionLines.js";
+import { UPGRADE_THRESHOLDS, TILES_PER_RESOURCE, tileFamily } from "../constants.js";
+import { lineBase, categoryOfTileKey, PRODUCTION_LINES } from "../config/productionLines.js";
 import { TILE_TYPES } from "../features/tileCollection/data.js";
 
 describe("TILES_PER_RESOURCE — decoupled income divisor", () => {
@@ -88,15 +88,20 @@ describe("TILES_PER_RESOURCE — decoupled income divisor", () => {
     );
 
     // General invariant: every tier>0 tile must have a higher divisor than
-    // lineBase(category), which is what a tier-0 tile of the same category has.
+    // lineBase(effectiveLine), where effectiveLine is the production line
+    // actually used for pricing (family if it has a line, else display category).
+    // Cross-category tiles like tile_bird_clover (display: flowers, family: bird)
+    // are priced by the bird line, not the flowers line.
     const higherTierTiles = TILE_TYPES.filter((t) => (Number(t.tier) || 0) > 0);
     for (const t of higherTierTiles) {
-      const cat = categoryOfTileKey(t.id);
-      if (!cat) continue;
-      const base = lineBase(cat);
+      const displayCat = categoryOfTileKey(t.id);
+      if (!displayCat) continue;
+      const fam = tileFamily(t.id);
+      const effectiveCat = fam && PRODUCTION_LINES[fam] ? fam : displayCat;
+      const base = lineBase(effectiveCat);
       expect(
         TILES_PER_RESOURCE[t.id],
-        `tier-${t.tier} tile ${t.id} (${cat}) divisor must exceed lineBase(${cat})=${base}`,
+        `tier-${t.tier} tile ${t.id} (line: ${effectiveCat}) divisor must exceed lineBase(${effectiveCat})=${base}`,
       ).toBeGreaterThan(base);
     }
   });
