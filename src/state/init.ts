@@ -137,6 +137,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     embers: 0,
     coreIngots: 0,
     gems: 0,
+    villagers: 0,
     heirlooms: { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 },
     session: { selectedTiles: [], fertilizerUsed: false },
     keeperTrials: {},

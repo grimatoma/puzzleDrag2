@@ -981,6 +981,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // contribute to the same `seasonBonus.coins` channel) ────────────────
       const bonusCoins = Math.round(((seasonAgg.seasonBonus as { coins?: number } | undefined)?.coins) ?? 0);
 
+      // ── worker_pool_step — built Housing Blocks add Villagers (the hiring
+      // currency) to the town's pool each season end. Hiring a worker spends a
+      // Villager; firing refunds one. (See features/workers/slice.ts.)
+      const villagerGain = Math.max(0, Math.floor((seasonAgg.seasonEndPoolStep as number | undefined) ?? 0));
+
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
         if (!state.npcs) return state.npcs;
@@ -994,6 +999,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         ...state,
         tools,
         coins: state.coins + bonusCoins + SEASON_END_BONUS_COINS,
+        villagers: (state.villagers ?? 0) + villagerGain,
         turnsUsed: 0,
         farmRun: null,
         activeTrial: null,

@@ -243,7 +243,7 @@ export const ABILITIES = Object.freeze([
     id: "worker_pool_step",
     name: "Worker Pool Step",
     look: { iconKey: "ui_home" },
-    desc: "Adds N to the townsfolk hiring pool each season end (Housing Block).",
+    desc: "Adds N Villagers to the townsfolk hiring pool each season end (Housing Block). Villagers are spent to hire workers.",
     scope: ["building"],
     trigger: "season_end",
     channel: "seasonEndPoolStep",

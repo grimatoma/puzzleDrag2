@@ -14,6 +14,9 @@ function workerState(coins) {
   return {
     ...createInitialState(),
     coins,
+    // Plenty of Villagers so these tests exercise the coin/resource ramp, not
+    // the Villager hiring gate (covered in tests/phase-4-workers.test.ts).
+    villagers: 100,
     inventory: { home: { tile_grass_grass: 10000,
       tile_tree_oak: 10000,
       tile_mine_stone: 10000,

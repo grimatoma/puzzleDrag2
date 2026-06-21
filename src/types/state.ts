@@ -255,6 +255,12 @@ export interface GameState {
   embers: number;
   coreIngots: number;
   gems: number;
+  /**
+   * Villager currency — settlement housing capacity used to hire townsfolk.
+   * Built Housing Blocks grant Villagers (via the `worker_pool_step` ability at
+   * season end); each WORKERS/HIRE spends 1, and WORKERS/FIRE refunds 1.
+   */
+  villagers: number;
   heirlooms: HeirloomsState;
   session: SessionState;
   keeperTrials: Record<string, unknown>;

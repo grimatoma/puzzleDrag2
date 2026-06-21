@@ -7,10 +7,11 @@ import { rootReducer, createInitialState } from "../src/state.js";
 import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
 
-function withCoins(coins) {
+function withCoins(coins, villagers = 10) {
   return {
     ...createInitialState(),
     coins,
+    villagers,
     inventory: { home: { tile_grass_grass: 100,
       tile_tree_oak: 100,
       tile_mine_stone: 100,
@@ -53,6 +54,17 @@ describe("Phase 4 — WORKERS/HIRE", () => {
     expect(next.coins).toBe(50);
     expect(inv(next).tile_grass_grass).toBe(98);
     expect(next.workers.hired.farmer).toBe(1);
+    // Each hire spends one Villager from the housing pool.
+    expect(next.villagers).toBe(9);
+  });
+
+  it("rejects hire when no Villager is available without debiting coins/resources", () => {
+    const s = withCoins(100, 0);
+    const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
+    expect(next.coins).toBe(100);
+    expect(inv(next).tile_grass_grass).toBe(100);
+    expect(next.villagers).toBe(0);
+    expect(next.workers.hired.farmer).toBe(0);
   });
 
   it("rejects hire when role resources are short without debiting coins", () => {
@@ -91,14 +103,17 @@ describe("Phase 4 — WORKERS/HIRE", () => {
 });
 
 describe("Phase 4 — WORKERS/FIRE", () => {
-  it("decrements hired count and does NOT refund coins", () => {
+  it("decrements hired count, does NOT refund coins, but refunds the Villager", () => {
     let s = withCoins(200);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.workers.hired.farmer).toBe(1);
+    expect(s.villagers).toBe(9);
     const coinsAfterHire = s.coins;
     const fired = rootReducer(s, { type: "WORKERS/FIRE", payload: { id: "farmer" } });
     expect(fired.workers.hired.farmer).toBe(0);
     expect(fired.coins).toBe(coinsAfterHire);
+    // Firing frees the Villager back into the pool.
+    expect(fired.villagers).toBe(10);
   });
 
   it("is a no-op for the workers slot when the count is already 0", () => {
@@ -106,6 +121,48 @@ describe("Phase 4 — WORKERS/FIRE", () => {
     const next = rootReducer(s, { type: "WORKERS/FIRE", payload: { id: "farmer" } });
     expect(next.workers).toEqual(s.workers);
     expect(next.coins).toBe(s.coins);
+  });
+});
+
+describe("Villager currency — Housing Blocks grant Villagers at season end", () => {
+  function withBuilt(state, ids) {
+    const map = state.mapCurrent ?? "home";
+    const builtForMap = { ...(state.built?.[map] ?? {}) };
+    for (const id of ids) builtForMap[id] = true;
+    return { ...state, built: { ...state.built, [map]: builtForMap } };
+  }
+
+  it("fresh state starts with zero Villagers", () => {
+    expect(createInitialState().villagers).toBe(0);
+  });
+
+  it("each built Housing Block adds 1 Villager when the season closes", () => {
+    let s = withBuilt(createInitialState(), ["hearth", "housing", "housing2", "housing3"]);
+    expect(s.villagers).toBe(0);
+    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.villagers).toBe(3);
+    // Villagers accumulate across seasons.
+    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.villagers).toBe(6);
+  });
+
+  it("no Housing Blocks → no Villagers granted at season end", () => {
+    let s = withBuilt(createInitialState(), ["hearth"]);
+    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.villagers).toBe(0);
+  });
+
+  it("end-to-end: earn a Villager, hire with it, then it is spent", () => {
+    let s = withBuilt(createInitialState(), ["hearth", "housing"]);
+    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.villagers).toBe(1);
+    s = { ...s, coins: 1000, inventory: { home: { tile_grass_grass: 100 } } };
+    s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
+    expect(s.workers.hired.farmer).toBe(1);
+    expect(s.villagers).toBe(0);
+    // Out of Villagers → the next hire is rejected.
+    const blocked = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
+    expect(blocked.workers.hired.farmer).toBe(1);
   });
 });
 
