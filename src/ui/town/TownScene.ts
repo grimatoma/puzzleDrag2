@@ -98,7 +98,6 @@ export class TownScene extends Phaser.Scene {
   groundLayer!: Phaser.Tilemaps.TilemapLayer;
 
   buildingSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
-  buildingShadows: Phaser.GameObjects.Ellipse[] = []; // per-building, rebuilt with the sprites
   plotMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   boardZones: Phaser.GameObjects.Zone[] = []; // board hit areas, disabled while placing
   villagers: Phaser.GameObjects.Sprite[] = [];
@@ -684,8 +683,6 @@ export class TownScene extends Phaser.Scene {
   rebuildBuildingsAndPlots() {
     this.buildingSprites.forEach((s) => s.destroy());
     this.buildingSprites.clear();
-    this.buildingShadows.forEach((sh) => sh.destroy());
-    this.buildingShadows = [];
     this.plotMarkers.forEach((c) => c.destroy());
     this.plotMarkers.clear();
 
@@ -711,7 +708,6 @@ export class TownScene extends Phaser.Scene {
         const texKey = `building_${buildingId}`;
         if (!this.textures.exists(texKey)) return; // wait for SVG bake
         const baseY = l.cy + l.h / 2;
-        this.buildingShadows.push(this.addShadow(l.cx, baseY - 2, l.w * 0.62, l.h * 0.16, baseY, 0.14));
         const sprite = this.add.sprite(l.cx, baseY, texKey);
         sprite.setOrigin(0.5, 1);
         const scale = (l.w * 1.18) / sprite.width;
