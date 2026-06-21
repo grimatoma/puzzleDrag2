@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import type { GameState, Dispatch } from "../../types/state.js";
+import { useAppUpdateReady, applyUpdate, checkForUpdate } from "../../appUpdate.js";
 
 export const modalKey = "menu";
 export const alwaysMounted = true;
@@ -78,6 +79,34 @@ async function toggleFullscreen(): Promise<void> {
   } catch { /* fullscreen not supported or denied */ }
 }
 
+// Update affordance: a prominent "refresh now" button when a new build is
+// waiting, otherwise a quiet "Check for Updates" that pokes the service worker.
+function UpdateButton() {
+  const ready = useAppUpdateReady();
+  const [checkedAt, setCheckedAt] = useState<number | null>(null);
+
+  if (ready) {
+    return (
+      <ActionBtn variant="ember" onClick={applyUpdate}>
+        ✨ Update Available — Refresh
+      </ActionBtn>
+    );
+  }
+
+  // After a manual check, give brief feedback. If a build is found, the banner
+  // (or this button flipping to "Refresh") takes over automatically.
+  return (
+    <ActionBtn
+      onClick={() => {
+        checkForUpdate();
+        setCheckedAt(Date.now());
+      }}
+    >
+      {checkedAt ? "↻ Checking…" : "↻ Check for Updates"}
+    </ActionBtn>
+  );
+}
+
 function MainTab({ dispatch }: { dispatch: Dispatch }) {
   const [fs, setFs] = useState<boolean>(isFullscreen());
   useEffect(() => {
@@ -121,6 +150,8 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/OPEN_DEBUG' })}>
           🛠 Debug
         </ActionBtn>
+
+        <UpdateButton />
 
         <a
           href={`${import.meta.env.BASE_URL}b/`}
