@@ -84,14 +84,15 @@ export interface NarrativePageDef {
 }
 
 // Locked-direction pages — the single, cohesive account of where the game is
-// going. `timeline` renders the generated ProgressionFeed (live from
-// PROGRESSION_TRIGGERS), not an authored fragment.
+// going. `progression` renders the interactive ProgressionPage (live from
+// PROGRESSION_TRIGGERS + zone/tile data): an unlock timeline with a cumulative
+// state report and cost filters. It consolidates the retired Direction,
+// Timeline and Balance-baseline pages (their hashes redirect to it in
+// WikiShell; their authored HTML is kept on disk as reference).
 export const NARRATIVE_PAGES: NarrativePageDef[] = [
-  { slug: "overview",  label: "Overview" },
-  { slug: "direction", label: "Direction" },
-  { slug: "timeline",  label: "Timeline" },
-  { slug: "balance",   label: "Balance baseline" },
-  { slug: "story",     label: "Story" },
+  { slug: "overview",    label: "Overview" },
+  { slug: "progression", label: "Progression" },
+  { slug: "story",       label: "Story" },
 ];
 
 // Parked / Future — fenced design content that is explicitly NOT the current

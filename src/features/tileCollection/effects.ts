@@ -11,6 +11,7 @@ interface TileTypeDiscovery {
   coinCost?: number;
   day?: number;
   buildingId?: string;
+  zoneId?: string;
 }
 
 /** Human-readable building name for a building id (falls back to the id). */
@@ -83,6 +84,39 @@ export function discoverTileTypesFromBuilding(state: GameState, buildingId: stri
   for (const t of TILE_TYPES as TileTypeDef[]) {
     if (t.discovery?.method !== "building") continue;
     if (t.discovery.buildingId !== buildingId) continue;
+    if (known[t.id]) continue;
+    ids.push(t.id);
+  }
+  if (ids.length === 0) {
+    return { discoveredIds: [], newDiscoveredMap: known };
+  }
+  // Stable order: tier ascending, then id alphabetical (mirrors chain discovery).
+  ids.sort((a, b) => {
+    const ta = typesMap[a];
+    const tb = typesMap[b];
+    return ((ta?.tier ?? 0) - (tb?.tier ?? 0)) || (a < b ? -1 : a > b ? 1 : 0);
+  });
+  const newDiscoveredMap: Record<string, boolean> = { ...known };
+  for (const id of ids) newDiscoveredMap[id] = true;
+  return { discoveredIds: ids, newDiscoveredMap };
+}
+
+// ─── Found-a-zone discovery ────────────────────────────────────────────────
+
+/**
+ * Pure function: checks every `zone`-method tile type against the zone the
+ * player just founded. Returns the same shape as `discoverTileTypesFromBuilding`
+ * so the FOUND_SETTLEMENT reducer can fold it in identically. This is the
+ * "unlock tiles by reaching a new zone" path (e.g. new mounts in a new region).
+ */
+export function discoverTileTypesFromZone(state: GameState, zoneId: string): { discoveredIds: string[]; newDiscoveredMap: Record<string, boolean> } {
+  const known: Record<string, boolean> = state.tileCollection?.discovered ?? {};
+  if (!zoneId) return { discoveredIds: [], newDiscoveredMap: known };
+  const ids: string[] = [];
+  const typesMap = TILE_TYPES_MAP as Record<string, TileTypeDef>;
+  for (const t of TILE_TYPES as TileTypeDef[]) {
+    if (t.discovery?.method !== "zone") continue;
+    if (t.discovery.zoneId !== zoneId) continue;
     if (known[t.id]) continue;
     ids.push(t.id);
   }
@@ -180,6 +214,7 @@ function statusFor(state: GameState, t: TileTypeDef): string {
     if (d.method === "buy") return "Discovered — purchased";
     if (d.method === "daily") return `Discovered — Day ${d.day} daily reward`;
     if (d.method === "building") return `Discovered — built the ${buildingName(d.buildingId)}`;
+    if (d.method === "zone") return `Discovered — reached ${d.zoneId ?? "a new zone"}`;
   }
 
   // Not yet discovered
@@ -198,6 +233,9 @@ function statusFor(state: GameState, t: TileTypeDef): string {
   }
   if (d.method === "building") {
     return `Locked — build the ${buildingName(d.buildingId)}`;
+  }
+  if (d.method === "zone") {
+    return `Locked — reach ${d.zoneId ?? "a new zone"}`;
   }
   return "Locked";
 }
@@ -297,6 +335,9 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
   } else if (d.method === "building") {
     action = "building";
     actionLabel = `Build the ${buildingName(d.buildingId)}`;
+  } else if (d.method === "zone") {
+    action = "zone";
+    actionLabel = `Reach ${d.zoneId ?? "a new zone"}`;
   }
 
   return {
