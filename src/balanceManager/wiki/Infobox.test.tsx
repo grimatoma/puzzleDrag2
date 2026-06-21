@@ -137,6 +137,26 @@ describe("Infobox — null entity (null-safe)", () => {
   });
 });
 
+// ─── Infobox — sticky rail (stays pinned, scrolls within itself) ──────────────
+
+describe("Infobox — sticky right rail", () => {
+  it("pins the aside (position: sticky) so it does not scroll away with the article", () => {
+    const conceptId = "buildings";
+    const entityKey = "hearth";
+    const entity = getEntity(conceptId, entityKey);
+    const { container } = render(
+      <Infobox conceptId={conceptId} entityKey={entityKey} entity={entity} />,
+    );
+    const aside = container.querySelector("aside") as HTMLElement;
+    expect(aside).not.toBeNull();
+    expect(aside.style.position).toBe("sticky");
+    expect(aside.style.top).toBe("0px");
+    // Capped height + auto overflow → it scrolls within itself when too tall.
+    expect(aside.style.maxHeight).toContain("100vh");
+    expect(aside.style.overflowY).toBe("auto");
+  });
+});
+
 // ─── Infobox — toolPowers (no asset → no iframe) ──────────────────────────────
 
 describe("Infobox — toolPowers (no asset → no iframe)", () => {

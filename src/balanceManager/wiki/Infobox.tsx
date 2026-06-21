@@ -50,6 +50,15 @@ export function Infobox({
         display: "flex",
         flexDirection: "column",
         gap: 10,
+        // Pin the rail so it stays in view while the article scrolls, and let
+        // it scroll within itself if it is taller than the viewport. Sticks to
+        // the article's scroll container (.wiki-main inner scroller); the
+        // offset accounts for the header + main pane padding above it.
+        position: "sticky",
+        top: 0,
+        alignSelf: "flex-start",
+        maxHeight: "calc(100vh - 96px)",
+        overflowY: "auto",
       }}
     >
       {/* Visual block — the entity's real asset, or nothing. Never an iframe. */}
