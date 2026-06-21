@@ -108,6 +108,10 @@ export class TownScene extends Phaser.Scene {
   private _fxTime = 0; // seconds accumulator driving the smoke wobble
 
   isDragging = false;
+  // Once the player pans/zooms, stop auto-recentring on resize so we don't yank
+  // the camera away from where they left it. Until then the resting framing
+  // tracks the viewport (matching the historical centre-lock behaviour).
+  userAdjustedCamera = false;
   initialCameraState?: { scrollX: number; scrollY: number; zoom: number };
   // Which settlement this scene is currently rendering. Lets the React bridge
   // persist/restore the right camera when restarting the scene for a new zone.
@@ -185,11 +189,17 @@ export class TownScene extends Phaser.Scene {
       this.cameras.main.scrollY = this.initialCameraState.scrollY;
     } else {
       this.cameras.main.setZoom(1.0);
+      this.restCamera();
     }
     this.cameras.main.setBackgroundColor("#4e7a39");
     this.setupCameraControls();
     this.clampCamera();
-    this.scale.on("resize", () => this.clampCamera());
+    this.scale.on("resize", () => {
+      // Keep a fresh (un-panned) town centred as the viewport changes; once the
+      // player has moved the camera, just keep their position in bounds.
+      if (!this.userAdjustedCamera && !this.initialCameraState) this.restCamera();
+      this.clampCamera();
+    });
 
     this.events.on("town.update_built", (data: { builtLots: Set<number>; buildingsMap: Record<number, string>; pendingBuilding: { id: string; name: string } | null }) => {
       this.builtLots = data.builtLots;
@@ -727,30 +737,49 @@ export class TownScene extends Phaser.Scene {
   // ── Camera ────────────────────────────────────────────────────────────────
   static readonly MIN_ZOOM = 0.5;
   static readonly MAX_ZOOM = 3;
+  // How far the camera may overscroll past the town's edges, as a fraction of
+  // the visible area. Half a screen of give is enough to guarantee the town can
+  // always be panned in BOTH axes — even when the 4:3 town is heavily
+  // letterboxed inside a very different viewport aspect (e.g. a tall portrait
+  // phone) — without ever letting it be dragged fully off screen. The grass
+  // margins + vignette painted by TownView make that overscroll read as terrain.
+  static readonly OVERSCROLL = 0.5;
+
+  /**
+   * Resting framing on (re)load. Reproduces the historical centre-lock exactly:
+   * centre an axis when the town is smaller than the viewport, otherwise sit at
+   * the town's top/left edge (scroll 0 — Phaser's default). Matching it byte-for-
+   * byte keeps the static visual goldens unchanged; the overscroll clamp only
+   * governs live panning/zooming afterwards.
+   */
+  restCamera() {
+    const cam = this.cameras.main;
+    const wVis = cam.width / cam.zoom;
+    const hVis = cam.height / cam.zoom;
+    const townW = this.plan.width || 1280;
+    const townH = this.plan.height || 960;
+    cam.scrollX = wVis >= townW ? (townW - wVis) / 2 : 0;
+    cam.scrollY = hVis >= townH ? (townH - hVis) / 2 : 0;
+  }
 
   clampCamera() {
     const cam = this.cameras.main;
-    const zoom = cam.zoom;
-    const wVisible = cam.width / zoom;
-    const hVisible = cam.height / zoom;
+    const wVisible = cam.width / cam.zoom;
+    const hVisible = cam.height / cam.zoom;
     const townW = this.plan.width || 1280;
     const townH = this.plan.height || 960;
 
-    // When the town is smaller than the viewport in a dimension, centre it
-    // (whole town visible, no empty edge to push it against). When it's larger,
-    // allow free panning between its edges. Focal-point zoom only ever runs in
-    // the zoomed-in (town larger than viewport) regime, so the centre-lock never
-    // fights it — and keeping the fully-zoomed-out town centred is the desired
-    // framing anyway.
-    let minX, maxX;
-    if (wVisible >= townW) { minX = maxX = (townW - wVisible) / 2; }
-    else { minX = 0; maxX = townW - wVisible; }
-    let minY, maxY;
-    if (hVisible >= townH) { minY = maxY = (townH - hVisible) / 2; }
-    else { minY = 0; maxY = townH - hVisible; }
-
-    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxX);
-    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxY);
+    // Sliding clamp with symmetric overscroll. A hard centre-lock (the old
+    // behaviour) freezes whichever axis is letterboxed — on a portrait phone
+    // that's the vertical axis across almost the whole zoom range — which both
+    // blocks panning and makes focal-point zoom appear to pivot on the centre
+    // (the lock overwrites zoomTo's scroll correction). Allowing overscroll keeps
+    // both axes free. The centred resting position (see centerCamera) sits well
+    // inside this range, so the static framing is unchanged.
+    const padX = wVisible * TownScene.OVERSCROLL;
+    const padY = hVisible * TownScene.OVERSCROLL;
+    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, -padX, townW - wVisible + padX);
+    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, -padY, townH - hVisible + padY);
   }
 
   // Zoom toward a screen-space focal point so the world point under the
@@ -792,6 +821,7 @@ export class TownScene extends Phaser.Scene {
         if (startDist > 0) {
           const factor = dist / startDist;
           this.zoomTo(startZoom * factor, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+          this.userAdjustedCamera = true;
         }
         // A pinch is never a tap.
         this.isDragging = true;
@@ -805,6 +835,7 @@ export class TownScene extends Phaser.Scene {
       const cam = this.cameras.main;
       cam.scrollX -= dx / cam.zoom;
       cam.scrollY -= dy / cam.zoom;
+      this.userAdjustedCamera = true;
       this.clampCamera();
     });
 
@@ -813,6 +844,7 @@ export class TownScene extends Phaser.Scene {
       const cam = this.cameras.main;
       // Scale the step by current zoom so zooming feels consistent at every level.
       this.zoomTo(cam.zoom - deltaY * 0.0015 * cam.zoom, pointer.x, pointer.y);
+      this.userAdjustedCamera = true;
     });
   }
 
