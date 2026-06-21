@@ -40,8 +40,8 @@ const NarrativePageLazy = lazy(() =>
 const WikiHomeLazy = lazy(() =>
   import("./WikiHome.jsx").then((m) => ({ default: m.WikiHome })),
 );
-const ProgressionFeedLazy = lazy(() =>
-  import("./sections/ProgressionFeed.jsx").then((m) => ({ default: m.default })),
+const ProgressionPageLazy = lazy(() =>
+  import("./sections/ProgressionPage.jsx").then((m) => ({ default: m.default })),
 );
 const CostMatrixPageLazy = lazy(() =>
   import("./sections/CostMatrixPage.jsx").then((m) => ({ default: m.CostMatrixPage })),
@@ -388,7 +388,11 @@ export default function WikiShell() {
   // keeps `#/page` (the canonical empty-hash landing, which the router
   // normalises focus → null) and `#/page/overview` resolving to the same page
   // and the same sidebar highlight.
-  const pageSlug = tab === "page" ? (focus ?? "overview") : null;
+  const rawPageSlug = tab === "page" ? (focus ?? "overview") : null;
+  // The Direction / Timeline / Balance pages were consolidated into the single
+  // Progression page; redirect their legacy hashes so old deep links still land.
+  const RETIRED_PAGE_SLUGS = new Set(["direction", "timeline", "balance"]);
+  const pageSlug = rawPageSlug && RETIRED_PAGE_SLUGS.has(rawPageSlug) ? "progression" : rawPageSlug;
 
   // ── Main pane content — switch on (tab, focus) ────────────────────────────
   let mainContent: React.ReactNode;
@@ -397,8 +401,8 @@ export default function WikiShell() {
     // category browser + start-here + prose). Other slugs render NarrativePage.
     if (pageSlug === "overview") {
       mainContent = <WikiHomeLazy navigate={navigate} />;
-    } else if (pageSlug === "timeline") {
-      mainContent = <ProgressionFeedLazy />;
+    } else if (pageSlug === "progression") {
+      mainContent = <ProgressionPageLazy />;
     } else {
       mainContent = <NarrativePageLazy slug={pageSlug!} />;
     }
