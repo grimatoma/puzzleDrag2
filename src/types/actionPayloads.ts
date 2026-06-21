@@ -559,6 +559,14 @@ export interface DevResetGameAction {
   type: "DEV/RESET_GAME";
 }
 
+export interface DevSetZoneTierAction {
+  type: "DEV/SET_ZONE_TIER";
+  /** Zone to override; defaults to the current zone when omitted. */
+  zoneId?: string;
+  /** Target tier index (clamped to the zone's ladder). */
+  tier: number;
+}
+
 /** Action types with dedicated interfaces in this module. */
 export type TypedActionType =
   | VisualLoadStateAction["type"]
@@ -648,7 +656,8 @@ export type TypedActionType =
   | DevFillToolsAction["type"]
   | DevAddSuppliesAction["type"]
   | DevBuildAllAction["type"]
-  | DevResetGameAction["type"];
+  | DevResetGameAction["type"]
+  | DevSetZoneTierAction["type"];
 
 export type TypedAction =
   | VisualLoadStateAction
@@ -738,7 +747,8 @@ export type TypedAction =
   | DevFillToolsAction
   | DevAddSuppliesAction
   | DevBuildAllAction
-  | DevResetGameAction;
+  | DevResetGameAction
+  | DevSetZoneTierAction;
 
 /** Remaining catalog actions — must stay empty; add a {@link TypedAction} branch instead. */
 export interface GenericAction {

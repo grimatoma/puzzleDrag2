@@ -157,3 +157,38 @@ describe("TIER_UP reducer", () => {
     expect(rootReducer(s, { type: "TIER_UP", payload: { zoneId: "nowhere" } })).toBe(s);
   });
 });
+
+describe("DEV/SET_ZONE_TIER reducer (dev override)", () => {
+  const atHome = (over = {}) => ({ ...createInitialState(), mapCurrent: "home", activeZone: "home", ...over });
+
+  it("force-sets any tier with no cost and ignores gating", () => {
+    let s = atHome({ coins: 0 }); // empty inventory, broke
+    s = rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "home", tier: 3 });
+    expect(settlementTier(s, "home")).toBe(3);
+    expect(s.coins).toBe(0);
+    // can also jump back down
+    s = rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "home", tier: 1 });
+    expect(settlementTier(s, "home")).toBe(1);
+  });
+
+  it("defaults to the current zone and founds it if needed", () => {
+    let s = atHome({ mapCurrent: "quarry", settlements: {} });
+    s = rootReducer(s, { type: "DEV/SET_ZONE_TIER", tier: 4 });
+    expect(s.settlements.quarry.founded).toBe(true);
+    expect(settlementTier(s, "quarry")).toBe(4);
+  });
+
+  it("clamps an out-of-range tier to the ladder", () => {
+    let s = atHome();
+    s = rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "home", tier: 99 });
+    expect(settlementTier(s, "home")).toBe(maxTier("home"));
+    s = rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "home", tier: -5 });
+    expect(settlementTier(s, "home")).toBe(0);
+  });
+
+  it("is a no-op for an unknown or un-tiered zone", () => {
+    const s = atHome();
+    expect(rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "nowhere", tier: 1 })).toBe(s);
+    expect(rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "meadow", tier: 1 })).toBe(s);
+  });
+});

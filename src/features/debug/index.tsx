@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { BIOMES } from "../../constants.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { tiersForZone, settlementTier, displayZoneName } from "../zones/data.js";
 import type { Dispatch, GameState } from "../../types/state";
 
 export const modalKey = "debug";
@@ -55,6 +56,10 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
   if (!open) return null;
 
   const biomeResources = [...(BIOMES[itemBiome]?.tiles ?? []), ...(BIOMES[itemBiome]?.resources ?? [])];
+
+  const currentZone = String(state.mapCurrent ?? 'home');
+  const zoneTiers = tiersForZone(currentZone);
+  const currentTier = settlementTier(state, currentZone);
 
   return (
     <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Debug Tools" backdropClassName="z-[70]">
@@ -171,6 +176,41 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
                 Feature flag: when OFF the onboarding tutorial never auto-starts. Persists across a game reset.
               </div>
             </div>
+          </div>
+
+          {/* Zone tier override — preview any settlement growth state */}
+          <div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Zone Tier</div>
+            {zoneTiers.length === 0 ? (
+              <div className="text-[10px] italic text-on-panel-faint">
+                {displayZoneName(state, currentZone)} has no tier ladder.
+              </div>
+            ) : (
+              <div
+                className="flex flex-col gap-1.5 py-2 px-2 rounded-lg border-2"
+                style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+              >
+                <div className="text-[11px] font-bold" style={{ color: '#2b2218' }}>
+                  {displayZoneName(state, currentZone)} — force upgrade level
+                </div>
+                <select
+                  value={currentTier}
+                  onChange={(e) =>
+                    dispatch({ type: 'DEV/SET_ZONE_TIER', zoneId: currentZone, tier: Number(e.target.value) })
+                  }
+                  className="hl-input !h-auto py-1 !text-[11px]"
+                >
+                  {zoneTiers.map((t, i) => (
+                    <option key={t.id} value={i}>
+                      Tier {i} — {t.name} ({t.plots} plots)
+                    </option>
+                  ))}
+                </select>
+                <div className="text-[10px] italic text-on-panel-faint">
+                  Sets the current zone's tier directly (no cost, ignores gating). Founds the zone if needed.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Triggers & Reset */}
