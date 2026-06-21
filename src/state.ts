@@ -18,7 +18,7 @@ import { driftPrices, applyTrade, pickMarketEvent } from "./market.js";
 import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
-import { discoverTileTypesFromChain, discoverTileTypesFromBuilding } from "./features/tileCollection/effects.js";
+import { discoverTileTypesFromChain, discoverTileTypesFromBuilding, discoverTileTypesFromZone } from "./features/tileCollection/effects.js";
 import { rollQuests } from "./features/quests/data.js";
 import { awardXp, XP_PER_LEVEL } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
@@ -753,11 +753,25 @@ function coreReducer(state: GameState, action: Action): GameState {
       // a missing/unknown choice falls back to the first option for the type).
       const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), action.payload?.biome) as { id: string; name: string } | null;
       if (!biome) return state;
-      return {
+      const afterFound: GameState = {
         ...state,
         coins: state.coins - (cost.coins ?? 0),
         settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id, tier: 0 } },
         bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a ${biome.name} settlement now. People will come.`, ms: 2400 },
+      };
+      // Reach-a-zone tile discovery: founding a zone unlocks any tile types whose
+      // discovery is gated on it (e.g. new mounts in a new region).
+      const zoneDiscovery = discoverTileTypesFromZone(afterFound, zoneId);
+      if (zoneDiscovery.discoveredIds.length === 0) return afterFound;
+      const tc = afterFound.tileCollection ?? defaultTileCollectionSlice();
+      const activeByCategory = { ...(tc.activeByCategory ?? {}) };
+      for (const id of zoneDiscovery.discoveredIds) {
+        const t = TILE_TYPES_MAP[id];
+        if (t && activeByCategory[t.category] == null) activeByCategory[t.category] = id;
+      }
+      return {
+        ...afterFound,
+        tileCollection: { ...tc, discovered: zoneDiscovery.newDiscoveredMap, activeByCategory },
       };
     }
     case "TIER_UP": {
