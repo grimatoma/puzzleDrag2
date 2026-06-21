@@ -58,6 +58,27 @@ function itemsOfKind(kind: string): ItemKindEntry[] {
   return out;
 }
 
+/**
+ * The set of resource keys that are produced by a crafting recipe (the
+ * "crafted" resources, e.g. bread, iron_hinge, chowder). Everything else of
+ * kind "resource" is a "base" resource gathered from the board / chains.
+ *
+ * Note: a recipe output is the source of truth here, NOT the presence of a
+ * `biome` field — several crafted goods (bread, supplies, cured_meat,
+ * iron_ration, festival_loaf, wedding_pie) carry a `biome` for expedition /
+ * order purposes yet are made at a station.
+ */
+export function craftedResourceKeys(): Set<string> {
+  const out = new Set<string>();
+  for (const rec of Object.values(RECIPES)) {
+    const item = (rec as { item?: unknown })?.item;
+    if (typeof item !== "string") continue;
+    const def = getItem(item) as { kind?: string } | undefined;
+    if (def?.kind === "resource") out.add(item);
+  }
+  return out;
+}
+
 function bossEntries() {
   return BOSSES.map((b) => ({
     key: b.id,
