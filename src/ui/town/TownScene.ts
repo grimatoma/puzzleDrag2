@@ -189,7 +189,7 @@ export class TownScene extends Phaser.Scene {
       this.cameras.main.scrollY = this.initialCameraState.scrollY;
     } else {
       this.cameras.main.setZoom(1.0);
-      this.centerCamera();
+      this.restCamera();
     }
     this.cameras.main.setBackgroundColor("#4e7a39");
     this.setupCameraControls();
@@ -197,7 +197,7 @@ export class TownScene extends Phaser.Scene {
     this.scale.on("resize", () => {
       // Keep a fresh (un-panned) town centred as the viewport changes; once the
       // player has moved the camera, just keep their position in bounds.
-      if (!this.userAdjustedCamera && !this.initialCameraState) this.centerCamera();
+      if (!this.userAdjustedCamera && !this.initialCameraState) this.restCamera();
       this.clampCamera();
     });
 
@@ -745,13 +745,21 @@ export class TownScene extends Phaser.Scene {
   // margins + vignette painted by TownView make that overscroll read as terrain.
   static readonly OVERSCROLL = 0.5;
 
-  /** Centre the town in the viewport — the resting framing on (re)load. */
-  centerCamera() {
+  /**
+   * Resting framing on (re)load. Reproduces the historical centre-lock exactly:
+   * centre an axis when the town is smaller than the viewport, otherwise sit at
+   * the town's top/left edge (scroll 0 — Phaser's default). Matching it byte-for-
+   * byte keeps the static visual goldens unchanged; the overscroll clamp only
+   * governs live panning/zooming afterwards.
+   */
+  restCamera() {
     const cam = this.cameras.main;
+    const wVis = cam.width / cam.zoom;
+    const hVis = cam.height / cam.zoom;
     const townW = this.plan.width || 1280;
     const townH = this.plan.height || 960;
-    cam.scrollX = (townW - cam.width / cam.zoom) / 2;
-    cam.scrollY = (townH - cam.height / cam.zoom) / 2;
+    cam.scrollX = wVis >= townW ? (townW - wVis) / 2 : 0;
+    cam.scrollY = hVis >= townH ? (townH - hVis) / 2 : 0;
   }
 
   clampCamera() {
