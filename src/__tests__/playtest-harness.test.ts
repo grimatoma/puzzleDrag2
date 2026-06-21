@@ -95,7 +95,7 @@ describe("playtest harness — family-value spread (audit metric)", () => {
     const sp = familyValueSpread();
     expect(sp.byResource.pearls).toBeDefined();
     expect(sp.byResource.pie).toBeDefined();
-    expect(sp.byResource.pearls.realizedValuePerTile).toBeCloseTo(160, 6);   // 800 / 5
+    expect(sp.byResource.pearls.realizedValuePerTile).toBeCloseTo(800 / 6, 6); // 800 / 6: oyster tier-1 scaling raised divisor 5→6
     expect(sp.byResource.pie.realizedValuePerTile).toBeCloseTo(90 / 7, 6);   // ≈ 12.857
     expect(sp.byResource.pearls.flag).toBe("high");
     expect(sp.flagged).toBe(true);

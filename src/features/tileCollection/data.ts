@@ -1,4 +1,4 @@
-import { UPGRADE_THRESHOLDS } from "../../constants.js";
+import { UPGRADE_THRESHOLDS } from "../../config/upgradeThresholds.js";
 import { expandAbilitiesToEffects } from "../../config/abilitiesAggregate.js";
 
 export const CATEGORIES = [
