@@ -65,3 +65,28 @@ const CATEGORY_BY_TILE_KEY: Record<string, string> = Object.fromEntries(
 export function categoryOfTileKey(tileKey: string): string | null {
   return CATEGORY_BY_TILE_KEY[tileKey] ?? null;
 }
+
+/**
+ * Build the TILES_PER_RESOURCE map: seeded from UPGRADE_THRESHOLDS to preserve
+ * legacy keys, then tier-scaled per productionLines for every tile in TILE_TYPES.
+ * Tier-0 divisors are set to lineBase (unchanged from UPGRADE_THRESHOLDS for most
+ * tiles). Board-upgrade gate (UPGRADE_THRESHOLDS) stays flat — only income is
+ * tier-scaled here.
+ */
+export function buildTilesPerResource(
+  baseThresholds: Record<string, number>,
+): Record<string, number> {
+  const out: Record<string, number> = { ...baseThresholds };
+  for (const t of TILE_TYPES) {
+    if (!PRODUCTION_LINES[t.category]) {
+      // Tiles with no production line (treasure, etc.) use legacy threshold if
+      // present, or fall back to the global default of 6 so every tile has a
+      // valid positive divisor.
+      if (!(t.id in out)) out[t.id] = 6;
+      continue;
+    }
+    const tier = Number(t.tier) || 0;
+    out[t.id] = lineBase(t.category) + tier * tierStep(t.category);
+  }
+  return out;
+}

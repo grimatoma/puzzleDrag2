@@ -36,6 +36,8 @@ export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "Recip
 export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
 
 import type { ToolPowerDefinition } from "./config/schemas/shared.js";
+import { buildTilesPerResource } from "./config/productionLines.js";
+import { UPGRADE_THRESHOLDS as _UPGRADE_THRESHOLDS } from "./config/upgradeThresholds.js";
 import type {
   TileItemEntry,
   ResourceItemEntry,
@@ -221,40 +223,11 @@ export const DEFAULT_HOME_BIOME = "prairie";
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
 export const SAVE_SCHEMA_VERSION = 49;
 
-export const UPGRADE_THRESHOLDS = {
-  tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
-  tile_grain_wheat: 5,
-  tile_mine_stone: 8,
-  tile_mine_iron_ore: 6, tile_mine_copper_ore: 6, tile_mine_coal: 7, tile_mine_gem: 5, tile_mine_gold: 6, tile_mine_silver: 6,
-  // Birds → Eggs (chain 6). Existing bird tiles get explicit thresholds now
-  // that they upgrade to the new `eggs` product.
-  tile_bird_turkey: 6, tile_bird_clover: 6, tile_bird_melon: 6,
-  tile_veg_carrot: 6, tile_veg_eggplant: 6, tile_veg_turnip: 6, tile_veg_beet: 6, tile_veg_cucumber: 6,
-  tile_veg_squash: 6, tile_veg_mushroom: 6, tile_veg_pepper: 6, tile_veg_broccoli: 6,
-  // Catalog-import placeholders. All default to 6 — balance comes later.
-  tile_grass_heather: 6,
-  tile_grain_corn: 6, tile_grain_buckwheat: 6, tile_grain_manna: 6, tile_grain_rice: 6,
-  // Fruits → Pie (catalog §4: 7 fruits → 1 pie)
-  tile_fruit_apple: 7, tile_fruit_pear: 7, tile_fruit_golden_apple: 7, tile_fruit_blackberry: 7,
-  tile_fruit_rambutan: 7, tile_fruit_starfruit: 7, tile_fruit_coconut: 7, tile_fruit_lemon: 7, tile_fruit_jackfruit: 7,
-  // Flowers → Honey (catalog §4: 10 flowers → 1 honey)
-  tile_flower_pansy: 10, tile_flower_water_lily: 10,
-  // Trees → Plank (one-step)
-  tile_tree_oak: 6, tile_tree_birch: 6, tile_tree_willow: 6, tile_tree_fir: 6, tile_tree_cypress: 6, tile_tree_palm: 6,
-  // Birds → Eggs (one-step)
-  tile_bird_pheasant: 6, tile_bird_chicken: 6, tile_bird_hen: 6, tile_bird_rooster: 6, tile_bird_wild_goose: 6, tile_bird_goose: 6,
-  tile_bird_parrot: 6, tile_bird_phoenix: 6, tile_bird_dodo: 6, tile_bird_pig_in_disguise: 6,
-  // Herd Animals → Meat (catalog §4: 5 herd → 1 meat)
-  tile_herd_pig: 5, tile_herd_hog: 5, tile_herd_boar: 5, tile_herd_warthog: 5,
-  tile_herd_sheep: 5, tile_herd_alpaca: 5, tile_herd_goat: 5, tile_herd_ram: 5,
-  // Cattle → Milk (catalog §4: 6 cattle → 1 milk)
-  tile_cattle_cow: 6, tile_cattle_longhorn: 6, tile_cattle_triceratops: 6,
-  // Mounts → Horseshoe (catalog §4: 10 mounts → 1 horseshoe)
-  tile_mount_horse: 10, tile_mount_donkey: 10, tile_mount_moose: 10, tile_mount_mammoth: 10,
-  // Fish biome — flat one-step chains.
-  tile_fish_sardine: 5, tile_fish_mackerel: 5, tile_fish_clam: 5, tile_fish_kelp: 6, tile_fish_oyster: 5,
-  tile_fish_cocoa: 5, tile_fish_ink: 5, tile_fish_jade: 5,
-};
+// UPGRADE_THRESHOLDS lives in a standalone file so that tileCollection/data.ts
+// can import it without pulling in the rest of constants.ts (which would create
+// a circular dependency through productionLines.ts). Re-exported here so all
+// existing consumers that import from constants.ts continue to work unchanged.
+export { UPGRADE_THRESHOLDS } from "./config/upgradeThresholds.js";
 
 // Tiles-per-resource — the INCOME divisor, keyed by tile key. How many collected
 // tiles of a family yield ONE inventory resource: the CHAIN_COLLECTED reducer
@@ -264,10 +237,11 @@ export const UPGRADE_THRESHOLDS = {
 // DECOUPLED from UPGRADE_THRESHOLDS on purpose: UPGRADE_THRESHOLDS sets how many
 // chained tiles upgrade a *board tile* to its next type (and gates tile discovery
 // + the HUD "next tile" bar), whereas this divisor sets *resource income*. Seeded
-// equal to UPGRADE_THRESHOLDS so income is unchanged at introduction — tune the two
-// independently in the economy balance pass (lower this for more income without
-// speeding up board-tier upgrades, and vice-versa).
-export const TILES_PER_RESOURCE: Record<string, number> = { ...UPGRADE_THRESHOLDS };
+// from UPGRADE_THRESHOLDS to preserve legacy keys not in TILE_TYPES, then
+// tier-scaled per productionLines so rarer variants cost more tiles (e.g. turkey 9
+// vs chicken 7). Tier-0 divisors equal lineBase (unchanged). The board-upgrade gate
+// (UPGRADE_THRESHOLDS) stays flat on purpose — only income gains tier scaling.
+export const TILES_PER_RESOURCE: Record<string, number> = buildTilesPerResource(_UPGRADE_THRESHOLDS);
 
 export const SEASONS = [
   { name: "Spring", look: { iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 } },
@@ -380,7 +354,7 @@ export function tileFamilyResource(tileKey: string): string | null {
 // threshold encountered (families are uniform in practice).
 export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
   const out: Record<string, number> = {};
-  for (const [tileKey, threshold] of Object.entries(UPGRADE_THRESHOLDS)) {
+  for (const [tileKey, threshold] of Object.entries(_UPGRADE_THRESHOLDS)) {
     const resource = tileFamilyResource(tileKey);
     if (resource && out[resource] == null) out[resource] = threshold as number;
   }
