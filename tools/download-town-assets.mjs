@@ -2,12 +2,10 @@ import fs from "fs";
 import path from "path";
 import https from "https";
 
+// NB: public/town/tileset.png is now ORIGINAL generated art — author it with
+// `node tools/gen-town-tileset.mjs`, NOT here. This script only fetches the
+// remaining third-party asset (the character walk atlas). See public/town/CREDITS.md.
 const assets = [
-  {
-    // Tuxemon sample tileset, 32px extruded (margin=1, spacing=2). CC-BY-SA (Tuxemon project).
-    url: "https://raw.githubusercontent.com/mikewesthad/phaser-3-tilemap-blog-posts/master/examples/post-1/assets/tilesets/tuxmon-sample-32px-extruded.png",
-    dest: "public/town/tileset.png",
-  },
   {
     // "Misa" 4-direction top-down walk atlas (png + JSONHash). Tuxemon character
     // sprite, CC-BY-SA 4.0, via the Phaser RPG tutorial project. See public/town/CREDITS.md.
