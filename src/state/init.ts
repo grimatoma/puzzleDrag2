@@ -142,6 +142,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     keeperTrials: {},
     activeTrial: null,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
+    civicEconomy: { lastClaimedAt: null, pendingProvisions: {} },
     workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
     tileCollection: defaultTileCollectionSlice(),
     almanac: {

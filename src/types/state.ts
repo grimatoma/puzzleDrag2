@@ -260,6 +260,8 @@ export interface GameState {
   keeperTrials: Record<string, unknown>;
   activeTrial: Record<string, unknown> | null;
   dailyStreak: { lastClaimedDate: string | null; currentDay: number; [k: string]: unknown };
+  /** Town Hall "Tithes & Provisions" economy — see features/civicEconomy. */
+  civicEconomy: { lastClaimedAt: number | null; pendingProvisions: Record<string, number> };
   workers: { hired: Record<string, number>; [k: string]: unknown };
   tileCollection: {
     discovered: Record<string, boolean>;

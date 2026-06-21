@@ -227,6 +227,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key, row, col }: { key: string; row: number; col: number }) =>
                 dispatch({ type: "TOOL_FIRED", key: key as ToolKey, row, col }),
               );
+              scene.events.on(SCENE_EVENTS.CARE_PACKAGE_OPENED, () => dispatch({ type: "CIVIC/OPEN_CARE_PACKAGE" }));
               scene.events.on(SCENE_EVENTS.REWARD_BURST, (data: RewardBurstPayload) => {
                 const canvas = scene?.game?.canvas;
                 if (!canvas || !data.coins) return;
@@ -295,6 +296,13 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { setRegistry(gameRef.current?.registry, "grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
   useEffect(() => { setRegistry(gameRef.current?.registry, "biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
+  // Civic economy: flag whether a care-package crate should seed on the next
+  // board. Placed BEFORE the newBoardNonce sync so that when a Town Hall claim
+  // bumps the nonce, this flag is already up-to-date when regenerateBoard runs.
+  useEffect(() => {
+    const pending = gameState?.civicEconomy?.pendingProvisions ?? {};
+    setRegistry(gameRef.current?.registry, "carePackagePending", Object.keys(pending).length > 0);
+  }, [gameState?.civicEconomy?.pendingProvisions]);
   // Sync the board-regen nonce. Placed after the biomeKey / activeZone /
   // sessionSelectedTiles / tileCollection effects so the scene's regenerate
   // (fired synchronously when this value changes) sees an up-to-date pool.

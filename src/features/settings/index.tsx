@@ -147,6 +147,10 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
           🏆 Trophies
         </ActionBtn>
 
+        <ActionBtn onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'town_hall' })}>
+          🏛 Town Hall
+        </ActionBtn>
+
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/OPEN_DEBUG' })}>
           🛠 Debug
         </ActionBtn>

@@ -23,6 +23,7 @@ export const SCENE_EVENTS = Object.freeze({
   CHAIN_FLOAT_TEXT: "chain-float-text",
   TOOL_FIRED: "tool-fired",
   REWARD_BURST: "reward-burst",
+  CARE_PACKAGE_OPENED: "care-package-opened",
 });
 
 type Brand<T, Name extends string> = T & { readonly __brand: Name };
@@ -219,7 +220,7 @@ export const DEFAULT_HOME_BIOME = "prairie";
 //          procedural ground); lots moved again, so discard 48-era saves to avoid
 //          a placed building rendering on a shifted lot.
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
-export const SAVE_SCHEMA_VERSION = 49;
+export const SAVE_SCHEMA_VERSION = 50;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_grass: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,

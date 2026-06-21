@@ -92,6 +92,10 @@ export interface GameRegistryContract {
   hazardFire: FireHazardPayload | null;
   hazardRats: unknown[] | null;
 
+  // Civic economy — true while a care-package crate should seed onto the next
+  // freshly generated board (cleared once the player opens it).
+  carePackagePending: boolean;
+
   // Scene → React outputs: computed by `_syncWorkerEffects` and read back by
   // the reducer + UI to derive thresholds and bonuses.
   effectiveThresholds: Record<string, number>;
