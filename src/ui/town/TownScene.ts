@@ -207,7 +207,8 @@ export class TownScene extends Phaser.Scene {
       this.cameras.main.scrollX = this.initialCameraState.scrollX;
       this.cameras.main.scrollY = this.initialCameraState.scrollY;
     } else {
-      this.cameras.main.setZoom(1.0);
+      // restCamera sets the cover zoom + centres (no fixed 1.0 — that left a
+      // blank grass margin above/below the 4:3 map on a portrait phone).
       this.restCamera();
     }
     this.cameras.main.setBackgroundColor("#4e7a39");
@@ -863,20 +864,38 @@ export class TownScene extends Phaser.Scene {
   static readonly OVERSCROLL = 0.5;
 
   /**
-   * Resting framing on (re)load. Reproduces the historical centre-lock exactly:
-   * centre an axis when the town is smaller than the viewport, otherwise sit at
-   * the town's top/left edge (scroll 0 — Phaser's default). Matching it byte-for-
-   * byte keeps the static visual goldens unchanged; the overscroll clamp only
-   * governs live panning/zooming afterwards.
+   * Minimum zoom at which the town fully COVERS the viewport — i.e. the visible
+   * world region fits entirely inside the 4:3 town, leaving no letterbox gutter
+   * of camera background. On a wide (≈4:3) viewport this is ~1.0; on a tall
+   * portrait phone it's >1 (the town is zoomed in until its shorter side fills),
+   * which is what kills the big blank grass band above/below the map.
+   */
+  coverZoom() {
+    const cam = this.cameras.main;
+    const townW = this.plan.width || 1280;
+    const townH = this.plan.height || 960;
+    const cover = Math.max(cam.width / townW, cam.height / townH);
+    return Phaser.Math.Clamp(cover, TownScene.MIN_ZOOM, TownScene.MAX_ZOOM);
+  }
+
+  /**
+   * Resting framing on (re)load: zoom so the town COVERS the viewport (no blank
+   * background border around the finite 4:3 map), then centre it. Previously this
+   * sat at a fixed zoom of 1.0, which on a portrait phone left the visible area
+   * taller than the 960px map and so showed a large blank grass margin above and
+   * below it. The overscroll clamp still governs live panning/zooming afterwards.
    */
   restCamera() {
     const cam = this.cameras.main;
-    const wVis = cam.width / cam.zoom;
-    const hVis = cam.height / cam.zoom;
+    cam.setZoom(this.coverZoom());
     const townW = this.plan.width || 1280;
     const townH = this.plan.height || 960;
-    cam.scrollX = wVis >= townW ? (townW - wVis) / 2 : 0;
-    cam.scrollY = hVis >= townH ? (townH - hVis) / 2 : 0;
+    // Phaser scrolls about the camera CENTRE (origin 0.5), so scrollX/Y is not the
+    // view's top-left. centerOn() does the origin-correct maths (scroll = centre −
+    // half the viewport) to put the town's centre at the screen centre. Setting
+    // scroll as if it were the top-left (the old code) only centred correctly at
+    // zoom 1; once zoomed in to cover, it showed the town's bottom/right edge.
+    cam.centerOn(townW / 2, townH / 2);
   }
 
   clampCamera() {
@@ -895,8 +914,16 @@ export class TownScene extends Phaser.Scene {
     // inside this range, so the static framing is unchanged.
     const padX = wVisible * TownScene.OVERSCROLL;
     const padY = hVisible * TownScene.OVERSCROLL;
-    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, -padX, townW - wVisible + padX);
-    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, -padY, townH - hVisible + padY);
+    // Bounds are expressed on the visible world rect's top-left, but scrollX/Y is
+    // measured from the camera CENTRE (origin 0.5): worldView.x = scrollX + camW/2
+    // − wVis/2. Convert the clamp into scroll space through that offset so it's
+    // correct at any zoom. At zoom 1 the offset is 0, so this is identical to the
+    // old clamp (desktop framing unchanged); zoomed in it no longer yanks the
+    // cover-centred town back and reopens a blank margin.
+    const offX = cam.width / 2 - wVisible / 2;
+    const offY = cam.height / 2 - hVisible / 2;
+    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, -padX - offX, townW - wVisible + padX - offX);
+    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, -padY - offY, townH - hVisible + padY - offY);
   }
 
   // Zoom toward a screen-space focal point so the world point under the
