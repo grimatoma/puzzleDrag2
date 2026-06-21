@@ -342,14 +342,54 @@ function lineProps(out: AuthoredProp[], kind: string, x1: number, y1: number, x2
   }
 }
 
+// Street lamps DERIVED from the road geometry so they always hug the pavement and
+// line up, instead of floating at hand-typed coordinates. Each lit street is a
+// horizontal centre-line (main street + the two back lanes) grown to `tier`; we walk
+// it at a fixed spacing and drop a lamp on each verge, just outside the pavement
+// (offset = road half-width + a small margin, landing in the grass strip between the
+// kerb and the building frontage). The two sides are staggered half a span for the
+// classic alternating-streetlamp read, and any lamp that would fall in the river is
+// culled.
+interface LampLine { y: number; x1: number; x2: number; half: number }
+function homeLampLines(tier: number): LampLine[] {
+  const lines: LampLine[] = [];
+  const mains = HOME_SPEC_ROADS.filter((r) => r.role === "main" && r.tier <= tier);
+  if (mains.length) {
+    let x1 = Infinity, x2 = -Infinity;
+    for (const r of mains) { x1 = Math.min(x1, r.seg[0], r.seg[2]); x2 = Math.max(x2, r.seg[0], r.seg[2]); }
+    lines.push({ y: 470, x1, x2, half: 17 });        // main street (full open extent)
+  }
+  if (tier >= 2) lines.push({ y: 300, x1: 240, x2: 1240, half: 13 }); // north back lane
+  if (tier >= 3) lines.push({ y: 768, x1: 255, x2: 1180, half: 13 }); // south back lane
+  return lines;
+}
+function addStreetLamps(out: AuthoredProp[], tier: number): void {
+  const SPACING = 178, MARGIN = 9, END_INSET = 26;
+  for (const ln of homeLampLines(tier)) {
+    const off = ln.half + MARGIN;
+    const span = ln.x2 - ln.x1;
+    const n = Math.max(1, Math.round(span / SPACING));
+    for (let side = 0; side < 2; side++) {
+      const y = ln.y + (side ? off : -off);
+      const stagger = side ? span / n / 2 : 0;
+      for (let i = 0; i <= n; i++) {
+        const x = ln.x1 + span * (i / n) + stagger;
+        if (x < ln.x1 + END_INSET || x > ln.x2 - END_INSET) continue;
+        if (inHomeWater(x, y)) continue;
+        out.push({ kind: "lamppost", x: Math.round(x), y: Math.round(y) });
+      }
+    }
+  }
+}
+
 // Lived-in dressing, grown per rung and kept clear of lots/roads/boards/water. The
 // reference's life comes from this layering: a market square, lamps down the paved
 // street, fenced farm, construction clutter on the margins, and a living waterside.
 function homeProps(tier: number): AuthoredProp[] {
   const out: AuthoredProp[] = [];
-  // Plaza approach signage + the two original lamps (every rung).
+  // Plaza approach signage (every rung) + lamps lining every open street.
   out.push({ kind: "signpost", x: 706, y: 512 });
-  lineProps(out, "lamppost", 470, 512, 810, 512, 2);
+  addStreetLamps(out, tier);
 
   if (tier >= 1) {
     // Market square wakes up: a striped stall, a bench, planters flanking the well.
@@ -365,8 +405,7 @@ function homeProps(tier: number): AuthoredProp[] {
   }
 
   if (tier >= 2) {
-    // Cobbled square fills in: more lamps down the paved street, a second stall.
-    lineProps(out, "lamppost", 300, 428, 980, 428, 4);
+    // Cobbled square fills in: a second stall, planters, a hanging lantern at the sign.
     out.push({ kind: "market_stall", x: 820, y: 466 });
     out.push({ kind: "flower_pot", x: 600, y: 500 }, { kind: "flower_pot", x: 690, y: 500 });
     out.push({ kind: "lantern", x: 706, y: 438 });
@@ -385,9 +424,8 @@ function homeProps(tier: number): AuthoredProp[] {
   }
 
   if (tier >= 3) {
-    // City: stone-block streets lined with lamps, a busy market + workshop clutter.
-    lineProps(out, "lamppost", 240, 282, 1240, 282, 6);   // north back lane
-    lineProps(out, "lamppost", 300, 786, 1180, 786, 6);   // south back lane
+    // City: stone-block streets, a busy market + workshop clutter (lamps line every
+    // street via addStreetLamps).
     out.push({ kind: "market_stall", x: 640, y: 320 });
     out.push({ kind: "bench", x: 560, y: 466 }, { kind: "bench", x: 720, y: 500 });
     out.push({ kind: "stone_pile", x: 1090, y: 700 }, { kind: "plank_stack", x: 1150, y: 690 });
@@ -430,6 +468,35 @@ function homeRoadMaterial(role: RoadRole, tier: number): GroundMaterial {
   return tier >= 3 ? "cobble" : tier >= 1 ? "packed_dirt" : "dirt";
 }
 
+// Frontage paths — a short walkway from every building to the street it fronts, so
+// the town reads as "clear roads with a path to each building" instead of houses
+// marooned on grass. For each visible lot we drop a perpendicular onto the NEAREST
+// open road centre-line (main streets are listed first, so the small frontage-row
+// setback always wins the tie over a road on the building's back) and lay a narrow
+// packed-dirt path from the lot centre to that foot. The inner half is hidden under
+// the building sprite; the visible stretch runs from the building's base to the
+// pavement. Paths inherit the stable lot indices, so they never move as the town
+// grows. Half-width stays below the main roads' so the SDF lets the wider street win
+// at the junction (material is picked by `dist − half`).
+function homeFrontagePaths(tier: number): GroundRoad[] {
+  const open = HOME_SPEC_ROADS.filter((r) => r.tier <= tier);
+  const paths: GroundRoad[] = [];
+  for (let i = 0; i < HOME_PLOTS[tier]; i++) {
+    const [, cx, cy] = HOME_LOTS[i];
+    let best = Infinity, fx = cx, fy = cy;
+    for (const r of open) {
+      const [x1, y1, x2, y2] = r.seg;
+      const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy;
+      let t = L ? ((cx - x1) * dx + (cy - y1) * dy) / L : 0;
+      t = Math.max(0, Math.min(1, t));
+      const fpx = x1 + dx * t, fpy = y1 + dy * t, d = Math.hypot(cx - fpx, cy - fpy);
+      if (d < best - 0.5) { best = d; fx = fpx; fy = fpy; } // −0.5 epsilon → ties favour the fronting (earlier) street
+    }
+    paths.push({ x1: cx, y1: cy, x2: Math.round(fx), y2: Math.round(fy), half: 9, material: "packed_dirt" });
+  }
+  return paths;
+}
+
 /** Build the hand-rolled procedural-ground spec for a home rung. */
 function homeGroundSpec(tier: number): GroundSpec {
   const roads: GroundRoad[] = [];
@@ -437,6 +504,7 @@ function homeGroundSpec(tier: number): GroundSpec {
     if (r.tier > tier) continue;
     roads.push({ x1: r.seg[0], y1: r.seg[1], x2: r.seg[2], y2: r.seg[3], half: r.half, material: homeRoadMaterial(r.role, tier) });
   }
+  roads.push(...homeFrontagePaths(tier)); // building → street walkways
   // One clean crossing on the main street, baked at the Village. The deck is
   // tilted ~5° so it sits square to the (slightly leaning) river, not rigidly
   // axis-aligned; planks run across the road and the long sides read as rails.
