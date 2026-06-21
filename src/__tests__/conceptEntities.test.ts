@@ -269,6 +269,12 @@ const KNOWN_COLLISIONS: Record<string, string> = {
   // precedes `boardKinds` in CONCEPTS order, so it wins the bare-key round-trip.
   // Board-kind nav uses the prefixed "boardKinds:fish" focus, so this is benign.
   fish: "categories",
+  // "fruit_picker" is both a tool item and the FruitPicker worker id; tools (3rd)
+  // precedes workers (11th) in CONCEPTS order, so tools wins.
+  fruit_picker: "tools",
+  // "herder" is both the Herder worker id and an achievement id; workers (11th)
+  // precedes achievements in CONCEPTS order, so workers wins.
+  herder: "workers",
 };
 
 describe("conceptForKey — strong ownership round-trip (every entry in every concept)", () => {

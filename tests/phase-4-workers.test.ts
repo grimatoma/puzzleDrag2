@@ -21,9 +21,13 @@ function withCoins(coins, villagers = 10) {
 }
 
 describe("Phase 4 — TYPE_WORKERS data shape", () => {
-  it("ships the four expected type-tier workers", () => {
-    const ids = TYPE_WORKERS.map((w) => w.id).sort();
-    expect(ids).toEqual(["baker", "farmer", "lumberjack", "miner"]);
+  it("ships the four base type-tier workers plus 14 production-line workers", () => {
+    const ids = new Set(TYPE_WORKERS.map((w) => w.id));
+    expect(ids.has("baker")).toBe(true);
+    expect(ids.has("farmer")).toBe(true);
+    expect(ids.has("lumberjack")).toBe(true);
+    expect(ids.has("miner")).toBe(true);
+    expect(TYPE_WORKERS.length).toBe(18);
   });
 
   it("each worker has maxCount >= 10 and a non-zero hireCost", () => {
@@ -43,7 +47,10 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
 describe("Phase 4 — fresh state seeds workers slice", () => {
   it("state.workers.hired starts at 0 for every type", () => {
     const s = createInitialState();
-    expect(s.workers.hired).toEqual({ farmer: 0, lumberjack: 0, miner: 0, baker: 0 });
+    // All 18 workers (4 base + 14 production-line) start at 0.
+    for (const w of TYPE_WORKERS) {
+      expect(s.workers.hired[w.id] ?? 0).toBe(0);
+    }
   });
 });
 
