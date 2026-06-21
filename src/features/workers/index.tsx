@@ -92,7 +92,9 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   const resourceCost = nextHireResourceCost(worker, count);
   const inv = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as GameState);
   const canPayResources = Object.entries(resourceCost).every(([key, amount]) => inventoryQty(inv, key) >= amount);
-  const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && count < worker.maxCount;
+  const villagersAvailable = state?.villagers ?? 0;
+  const hasVillager = villagersAvailable >= 1;
+  const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && hasVillager && count < worker.maxCount;
   const canFire = count > 0;
   interface CostEntry {
     key: string;
@@ -113,6 +115,16 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
       have: state?.coins ?? 0,
       showHave: true,
       check: true,
+    },
+    {
+      key: "villager",
+      label: "Villager",
+      amount: 1,
+      icon: <Icon iconKey="ui_home" size={18} title="" />,
+      have: villagersAvailable,
+      showHave: true,
+      check: true,
+      ok: hasVillager,
     },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
@@ -184,6 +196,7 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
   const [selectedId, setSelectedId] = useState<string | null>(TYPE_WORKERS[0]?.id ?? null);
   const selected = TYPE_WORKERS.find((w) => w.id === selectedId) ?? TYPE_WORKERS[0] ?? null;
   const totalHired = Object.values(hired).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const villagersAvailable = state?.villagers ?? 0;
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col gap-3">
@@ -194,10 +207,13 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
           <div className="hl-board-head__title">Hands for Hire</div>
           <div className="hl-board-head__sub">Take on willing folk from around the vale — every hand shoulders part of the work.</div>
         </div>
+        <span className="hl-board-pill">
+          <Icon iconKey="ui_home" size={14} title="" /> {villagersAvailable} villager{villagersAvailable === 1 ? "" : "s"}
+        </span>
         <span className="hl-board-pill">{totalHired} hired</span>
       </div>
       <div className="hl-text-faint px-1 text-[11px] leading-snug">
-        Each hire shaves a tile off the listed chain (or an input off a recipe), stacking up to the max count.
+        Each hire costs 1 Villager plus materials. Build Housing Blocks in town to earn Villagers each season. Hires shave a tile off the listed chain (or an input off a recipe), stacking up to the max count.
       </div>
       <BrowserDetailLayout
         toolbar={undefined}
