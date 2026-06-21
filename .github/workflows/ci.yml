@@ -189,13 +189,18 @@ jobs:
           retention-days: 7
 
   # Manual re-baseline of the desktop visual goldens ON the canonical Linux
-  # runner (never local — see header). Trigger with:
-  #   gh workflow run ci.yml -f update_goldens=true
-  # then download the `regenerated-goldens` artifact and commit it.
+  # runner (never local — see header). Trigger on a feature branch with:
+  #   gh workflow run ci.yml --ref <branch> -f update_goldens=true
+  # The job regenerates the PNGs and commits them straight back to the branch it
+  # ran on (it also uploads them as the `regenerated-goldens` artifact as a
+  # fallback). Open a PR from that branch; once `visual-smoke` is green against
+  # the new goldens, remove its `continue-on-error` and add it to required checks.
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: write # push the regenerated goldens back to the triggering branch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -205,7 +210,22 @@ jobs:
       - run: npm ci
       - name: Install Playwright chromium (+ system deps)
         run: npx playwright install --with-deps chromium
+      # update mode writes new PNGs; it exits non-zero if a non-pixel failure
+      # (e.g. a click timeout) prevents a capture, so don't fail the job on it —
+      # we still want to commit every golden that WAS refreshed.
       - run: npm run test:visual:update # writes new PNGs into tests/visual/__goldens__/
+        continue-on-error: true
+      - name: Commit regenerated goldens back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- tests/visual/__goldens__/; then
+            echo "No golden changes to commit."
+          else
+            git add tests/visual/__goldens__/
+            git commit -m "chore(visual): re-baseline desktop goldens on CI runner"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: regenerated-goldens
