@@ -11,9 +11,9 @@ export enum WorkerTypeId {
   Peasant = "peasant",                  // grass (bulk, step 2)
   Poultryman = "poultryman",            // bird
   VegetablePicker = "vegetable_picker", // vegetables
-  FruitPicker = "fruit_picker",         // fruits
+  FruitPicker = "fruit_harvester",      // fruits
   BeeKeeper = "bee_keeper",             // flowers
-  Herder = "herder",                    // herd_animals
+  Herder = "herdsman",                  // herd_animals
   Dairywoman = "dairywoman",            // cattle
   Wrangler = "wrangler",                // mounts
   IronMiner = "iron_miner",             // mine_iron_ore
