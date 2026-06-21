@@ -293,6 +293,7 @@ export function regenerateTextures(scene: Phaser.Scene) {
   // it still needs to track the current bake scale so resize-driven regens
   // keep it crisp alongside the resource tiles.
   bakeFireTile(scene, dpr);
+  bakeCarePackageTile(scene, dpr);
   // Refresh all on-board sprite frames so they pick up the new textures.
   // GameScene attaches `grid` (TileObj[][]) at runtime; each TileObj has
   // `selected: boolean`, `res: { key: string }`, and a Phaser sprite.
@@ -370,6 +371,54 @@ function bakeFireTile(scene: Phaser.Scene, dpr: number) {
   });
 }
 
+// Care-package crate (civic-economy provisions delivery). A wooden supply box
+// banded with a bright ribbon so it reads as a "gift" the player taps to open.
+function bakeCarePackageTile(scene: Phaser.Scene, dpr: number) {
+  [false, true].forEach((selected) => {
+    const key = `tile_care_package${selected ? "_sel" : ""}`;
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      // ground shadow
+      ctx.fillStyle = "rgba(0,0,0,.22)";
+      ctx.beginPath();
+      ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (selected) {
+        rr(ctx, 3, 1, w - 6, h - 6, 16);
+        ctx.fillStyle = "rgba(214,97,42,.30)";
+        ctx.fill();
+      }
+      // crate body
+      const bx = 10, by = 12, bw = w - 20, bh = h - 22;
+      rr(ctx, bx, by, bw, bh, 6);
+      const wood = ctx.createLinearGradient(0, by, 0, by + bh);
+      wood.addColorStop(0, "#b07a3c");
+      wood.addColorStop(1, "#7a4a1c");
+      ctx.fillStyle = wood;
+      ctx.fill();
+      ctx.lineWidth = selected ? 5 : 3;
+      ctx.strokeStyle = selected ? "#ffce54" : "#5a360f";
+      ctx.stroke();
+      // plank seams
+      ctx.strokeStyle = "rgba(60,34,12,.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx + 4, by + bh / 2); ctx.lineTo(bx + bw - 4, by + bh / 2);
+      ctx.stroke();
+      // ribbon cross
+      ctx.fillStyle = "#d6612a";
+      ctx.fillRect(w / 2 - 5, by, 10, bh);
+      ctx.fillRect(bx, by + bh / 2 - 5, bw, 10);
+      // bow
+      ctx.fillStyle = "#ffce54";
+      ctx.beginPath();
+      ctx.arc(w / 2, by + 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }, dpr);
+  });
+}
+
 export function makeTextures(scene: Phaser.Scene) {
   const dpr = bakeScaleFor(scene);
   const season = currentSeasonName(scene);
@@ -385,6 +434,8 @@ export function makeTextures(scene: Phaser.Scene) {
 
   // ─── Fire hazard tile (dark background + orange-red flame) ──────────────────
   bakeFireTile(scene, dpr);
+  // ─── Care-package crate (civic-economy provisions delivery) ─────────────────
+  bakeCarePackageTile(scene, dpr);
 
   canvasTexture(scene, "spark", 72, 72, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);

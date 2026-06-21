@@ -49,6 +49,9 @@ import {
   type RegistryGrid,
 } from "./types/phaserRegistry.js";
 
+/** Tile key for the civic-economy "care-package" crate (no biome, never pooled). */
+const CARE_PACKAGE_TILE_KEY = "care_package";
+
 function registryToolPower(value: unknown): ToolPower | null {
   if (!value || typeof value !== "object") return null;
   const id = (value as { id?: unknown }).id;
@@ -1008,6 +1011,25 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Care-package crate (civic economy provisions): when the player has claimed
+    // provisions at the Town Hall, seed exactly one crate onto a freshly
+    // generated board. Only on `initial` fills (board regen / entry), never on
+    // mid-board refills, so a collapse can't spawn a second crate before React
+    // clears the pending flag.
+    if (initial && getRegistry(this.registry, "carePackagePending") && !this._hasCarePackageTile()) {
+      const cr = Phaser.Math.Between(0, ROWS - 1);
+      const cc = Phaser.Math.Between(0, COLS - 1);
+      const existing = this.grid[cr][cc];
+      if (existing) { this.tweens.killTweensOf(existing.sprite); existing.destroy(); }
+      const cx = this.boardX + cc * ts + ts / 2;
+      const cy = this.boardY + cr * ts + ts / 2;
+      const crateRes = { key: CARE_PACKAGE_TILE_KEY, value: 0, label: "Care Package", look: { sway: null }, next: null };
+      const crateTile = new TileObj(this, cx, initial ? cy - 500 : cy - 140, cc, cr, crateRes);
+      crateTile.sprite.setScale(this.tileSpriteScale);
+      this.grid[cr][cc] = crateTile;
+      this.tweens.add({ targets: crateTile.sprite, y: cy, duration: this._dur(initial ? 450 + cr * 28 : 210), ease: "Back.Out" });
+    }
+
     // 1.2 — Dead-board auto-shuffle: after every non-initial fill, check for valid chains.
     if (!initial) {
       const delay = 240;
@@ -1340,8 +1362,44 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
+  /** True when a care-package crate already occupies a cell on the board. */
+  _hasCarePackageTile(): boolean {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (this.grid[r]?.[c]?.res.key === CARE_PACKAGE_TILE_KEY) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Open the crate: burst + remove the tile, tell React to grant provisions, refill. */
+  openCarePackage(tile: TileObj): void {
+    if (this.locked) return;
+    const { x, y } = tile;
+    this.grid[tile.row][tile.col] = null;
+    this.emitCollectParticles(x, y, "#f4c430", 12);
+    this.tweens.killTweensOf(tile.sprite);
+    this.tweens.add({
+      targets: tile.sprite,
+      scale: 0,
+      angle: 220,
+      duration: this._dur(240),
+      ease: "Back.In",
+      onComplete: () => tile.destroy(),
+    });
+    this.events.emit(SCENE_EVENTS.CARE_PACKAGE_OPENED, {});
+    this.time.delayedCall(180, () => this.collapseBoard());
+  }
+
   startPath(tile: TileObj): void {
     if (this.locked) return;
+    // Care-package crate (civic economy "provisions" delivery): a single special
+    // tile that can't form a chain. Tap it to open it — it grants the queued
+    // free tools via the CARE_PACKAGE_OPENED → CIVIC/OPEN_CARE_PACKAGE flow.
+    if (tile.res.key === CARE_PACKAGE_TILE_KEY) {
+      this.openCarePackage(tile);
+      return;
+    }
     const pendingKey = getRegistry(this.registry, "toolPending");
     const armedPower = getRegistry(this.registry, "toolPendingPower")
       ?? (pendingKey ? getItem(pendingKey)?.power : null);
