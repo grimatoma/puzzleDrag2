@@ -1581,6 +1581,21 @@ function coreReducer(state: GameState, action: Action): GameState {
         const currentZone = (state.mapCurrent as string | undefined) ?? "home";
         return { ...state, built: { ...state.built, [currentZone]: { ...locBuilt(state), ...allIds, _plots: plots } } };
       }
+      if (action.type === "DEV/SET_ZONE_TIER") {
+        // Force-override a settlement's tier for previewing zone states in dev.
+        // Bypasses cost and gating; clamps to the zone's ladder. Founds the
+        // zone if it isn't yet, so the override always renders.
+        const zoneId = action.zoneId ?? (state.mapCurrent as string | undefined) ?? "home";
+        if (!ZONES[zoneId]) return state;
+        const top = maxTier(zoneId);
+        if (top < 0) return state;                                 // un-tiered zone
+        const tier = Math.min(Math.max(0, Math.floor(action.tier)), top);
+        const prevEntry = (state.settlements?.[zoneId] as Record<string, unknown> | undefined) ?? {};
+        return {
+          ...state,
+          settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, founded: true, tier } },
+        };
+      }
       if (action.type === "DEV/RESET_GAME") {
         // Wipe all persisted state and reset to initial state, preserving settings.
         clearSave();
