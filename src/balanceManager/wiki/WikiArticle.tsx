@@ -297,8 +297,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
         </div>
       </div>
 
-      {/* Two-column layout: main content + right-rail Infobox */}
-      <div className="flex gap-4 items-start min-w-0">
+      {/* Two-column layout: main content + right-rail Infobox.
+          Stacks to a single column on phones (see .wiki-article-body in
+          wikiTheme.css) so the content column isn't crushed by the 190px rail. */}
+      <div className="wiki-article-body flex gap-4 items-start min-w-0">
         {/* LEFT: main content column */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 wiki-reveal-stagger">
           {/* Table of contents */}

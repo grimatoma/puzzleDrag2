@@ -40,6 +40,7 @@ export function Infobox({
 
   return (
     <aside
+      className="wiki-infobox"
       style={{
         width: 190,
         flexShrink: 0,
