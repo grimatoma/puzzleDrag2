@@ -1302,13 +1302,11 @@
   max-width: 100%;
 }
 
-/* Schema field tables (FieldsTable / KeyValueTable): size to content so columns
- * keep their natural width and the .wiki-table-scroll wrapper can scroll them
- * horizontally on narrow screens. A plain width:100% would instead shrink the
- * table to the (tiny) container and wrap every cell one character per line. */
+/* Schema field tables (FieldsTable / KeyValueTable). On desktop they fill the
+ * content column exactly as the old `w-full` did (so layout is unchanged); the
+ * narrow-screen override below switches them to size-to-content + scroll. */
 .wiki-root .wiki-schema-table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
 }
 
 /* Schema field tables: cap Type column width so aliases stay readable. */
@@ -1471,6 +1469,15 @@
     width: 100% !important;
     position: static !important;
     max-height: none !important;
+  }
+
+  /* Size schema tables to their content so the .wiki-table-scroll wrapper can
+   * scroll them horizontally instead of crushing every cell to one character
+   * per line. Scoped to phones so desktop layout (and its visual goldens) stay
+   * unchanged. */
+  .wiki-root .wiki-schema-table {
+    width: max-content;
+    min-width: 100%;
   }
 }
 
