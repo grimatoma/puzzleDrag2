@@ -8,6 +8,7 @@ import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
+import { isBiomeLocked, canEnterBiome } from "../state/biomeAccess.js";
 import { buildTownPlan } from "../townLayout.js";
 import TownPhaserCanvas from "./TownPhaserCanvas.jsx";
 import Icon from "./Icon.jsx";
@@ -314,6 +315,10 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
   );
   const freePlots = plotCount - occupiedPlots;
 
+  // Accessible labels for the puzzle-board entry CTAs (also the source of the
+  // "Enter Farm Field" / "Enter Mine" / "Enter Harbor" accessible names).
+  const BOARD_ENTRY_LABEL: Record<string, string> = { farm: "Farm Field", mine: "Mine", fish: "Harbor" };
+
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: marginGrass }}>
       {/* Pan/zoom world — the top-down map (terrain, roads, fields, plaza, board
@@ -399,6 +404,41 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
             ? <><Icon iconKey="ui_cancel" size={12} className="inline align-text-top mr-1" />Cancel placement</>
             : <><Icon iconKey="ui_build" size={12} className="inline align-text-top mr-1" />Build  ·  {freePlots}/{plotCount} plots</>}
         </button>
+      )}
+
+      {/* Board-entry CTAs — accessible DOM buttons that open each puzzle board
+          the zone exposes. The in-canvas board plates pan and zoom with the
+          Phaser camera, so they carry no accessibility tree; these fixed
+          screen-space buttons make board entry reachable by keyboard, screen
+          reader and role-based tests (e.g. "Enter Farm Field"). Hidden while
+          placing a building so they don't compete with plot selection. */}
+      {!pendingBuilding && townPlan.boards.length > 0 && (
+        <div className="absolute z-30 flex flex-col gap-2 items-start" style={{ left: "1.5rem", bottom: "10%" }}>
+          {townPlan.boards.map((b: { kind: string }) => {
+            const label = BOARD_ENTRY_LABEL[b.kind] ?? b.kind;
+            const locked = isBiomeLocked(state, b.kind);
+            return (
+              <button
+                key={b.kind}
+                type="button"
+                disabled={locked}
+                onClick={() => { if (!locked) setEntryBiome(b.kind); }}
+                aria-label={locked ? `${label} (locked)` : `Enter ${label}`}
+                title={locked ? (canEnterBiome(state, b.kind).reason ?? "Locked") : undefined}
+                className="rounded-full font-bold shadow-lg border-[3px] border-white disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  padding: "0.65rem 1.1rem",
+                  background: locked ? "#cdbfa6" : "#f4e4c1",
+                  color: "#2b2218",
+                  fontSize: "clamp(11px,1.2vw,14px)",
+                }}
+              >
+                <Icon iconKey="ui_enter" size={12} className="inline align-text-top mr-1" />
+                {`Enter ${label}`}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* Placement-mode hint banner */}
