@@ -15,7 +15,7 @@
 import React, { useState } from "react";
 import { COLORS } from "../shared.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
-import { CONCEPTS } from "./concepts.js";
+import { CONCEPTS, craftedResourceKeys } from "./concepts.js";
 import EntryGrid from "./EntryGrid.jsx";
 import type { WikiEntry, WikiEntryFact } from "./EntryGrid.jsx";
 import { EntityVisual } from "./EntityVisual.jsx";
@@ -85,12 +85,36 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
   // Tracks whether the recipe graph section is open (collapsed by default)
   const [graphOpen, setGraphOpen] = useState(false);
 
+  // Resources concept only: filter the gallery between base (gathered) and
+  // crafted (recipe-produced) resources.
+  const [resourceFilter, setResourceFilter] = useState<"all" | "base" | "crafted">("all");
+
   // Resolve concept descriptor — fall back to the first concept if unknown
   const concept = CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0];
 
   // Entries from the live config — enriched with up to 3 fact chips each
   const rawEntries = concept.getEntries();
   const entries = rawEntries.map((e) => enrichEntry(conceptId, e as unknown as WikiEntry));
+
+  // Base-vs-crafted split for the Resources concept. `crafted` = produced by a
+  // recipe; everything else of kind "resource" is gathered from the board.
+  const isResources = conceptId === "resources";
+  const craftedKeys = isResources ? craftedResourceKeys() : null;
+  const craftedCount = craftedKeys
+    ? entries.filter((e) => craftedKeys.has(e.key)).length
+    : 0;
+  const baseCount = entries.length - craftedCount;
+  const galleryEntries =
+    craftedKeys && resourceFilter !== "all"
+      ? entries.filter((e) =>
+          resourceFilter === "crafted" ? craftedKeys.has(e.key) : !craftedKeys.has(e.key),
+        )
+      : entries;
+  const RESOURCE_FILTERS: Array<{ id: "all" | "base" | "crafted"; label: string; count: number }> = [
+    { id: "all", label: "All", count: entries.length },
+    { id: "base", label: "Base", count: baseCount },
+    { id: "crafted", label: "Crafted", count: craftedCount },
+  ];
 
   // Attribute count (used inside ReferenceSection intro line only)
   const cs = schemaForConcept(conceptId);
@@ -229,10 +253,38 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       ) : (
         <div data-testid="wiki-entry-gallery">
           <div className="wiki-section-heading mb-2">
-            Entries ({entries.length})
+            Entries ({galleryEntries.length})
           </div>
+          {isResources && (
+            <div
+              role="group"
+              aria-label="Filter resources"
+              className="flex flex-wrap gap-1 mb-2"
+            >
+              {RESOURCE_FILTERS.map((option) => {
+                const active = resourceFilter === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setResourceFilter(option.id)}
+                    className="rounded-md px-2.5 py-1 text-[12px] font-semibold border cursor-pointer transition-colors"
+                    style={{
+                      borderColor: active ? COLORS.ember : COLORS.border,
+                      background: active ? COLORS.ember : COLORS.parchment,
+                      color: active ? "#fff" : COLORS.inkSubtle,
+                    }}
+                  >
+                    {option.label}{" "}
+                    <span style={{ opacity: 0.75 }}>({option.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <EntryGrid
-            entries={entries}
+            entries={galleryEntries}
             onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
             renderVisual={
               conceptId === "buildings"

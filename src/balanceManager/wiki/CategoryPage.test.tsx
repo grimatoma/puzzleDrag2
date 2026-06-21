@@ -156,6 +156,41 @@ describe("CategoryPage — buildings (schema-backed concept)", () => {
   });
 });
 
+describe("CategoryPage — resources base/crafted filter", () => {
+  it("renders a base/crafted filter group on the resources concept", () => {
+    const { container } = renderPage("resources");
+    const group = container.querySelector('[aria-label="Filter resources"]');
+    expect(group).not.toBeNull();
+    const body = group?.textContent ?? "";
+    expect(body).toMatch(/all/i);
+    expect(body).toMatch(/base/i);
+    expect(body).toMatch(/crafted/i);
+  });
+
+  it("does NOT render the filter group on other concepts", () => {
+    const { container } = renderPage("buildings");
+    expect(container.querySelector('[aria-label="Filter resources"]')).toBeNull();
+  });
+
+  it("shows only crafted resources (e.g. bread) when 'Crafted' is selected", () => {
+    renderPage("resources");
+    // bread is crafted at the bakery; flour is a base/gathered resource.
+    expect(screen.queryByTitle("bread")).not.toBeNull();
+    expect(screen.queryByTitle("flour")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /crafted/i }));
+    expect(screen.queryByTitle("bread")).not.toBeNull();
+    expect(screen.queryByTitle("flour")).toBeNull();
+  });
+
+  it("shows only base resources (e.g. flour) when 'Base' is selected", () => {
+    renderPage("resources");
+    fireEvent.click(screen.getByRole("button", { name: /^base/i }));
+    expect(screen.queryByTitle("flour")).not.toBeNull();
+    expect(screen.queryByTitle("bread")).toBeNull();
+  });
+});
+
 // ─── Test 2: Status wiring ────────────────────────────────────────────────────
 
 describe("CategoryPage — bosses (PARTIAL status badge)", () => {
