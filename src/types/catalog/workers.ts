@@ -11,9 +11,9 @@ export enum WorkerTypeId {
   Peasant = "peasant",                  // grass (bulk, step 2)
   Poultryman = "poultryman",            // bird
   VegetablePicker = "vegetable_picker", // vegetables
-  FruitPicker = "fruit_harvester",      // fruits
+  FruitPicker = "fruit_harvester",      // fruits — value avoids collision with the existing fruit_picker tool item
   BeeKeeper = "bee_keeper",             // flowers
-  Herder = "herdsman",                  // herd_animals
+  Herder = "herdsman",                  // herd_animals — value avoids collision with the existing herder achievement
   Dairywoman = "dairywoman",            // cattle
   Wrangler = "wrangler",                // mounts
   IronMiner = "iron_miner",             // mine_iron_ore

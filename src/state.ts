@@ -45,6 +45,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
+import { defaultWorkersSlice } from "./features/workers/data.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import * as civicEconomy from "./features/civicEconomy/slice.js";
@@ -1629,7 +1630,7 @@ function coreReducer(state: GameState, action: Action): GameState {
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
-          workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
+          workers: defaultWorkersSlice(),
           tileCollection: defaultTileCollectionSlice() };
       }
       return state;

@@ -47,9 +47,10 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
 describe("Phase 4 — fresh state seeds workers slice", () => {
   it("state.workers.hired starts at 0 for every type", () => {
     const s = createInitialState();
-    // All 18 workers (4 base + 14 production-line) start at 0.
+    // All 18 workers (4 base + 14 production-line) must be present and seeded to 0.
+    // Using toBe(0) without ?? 0 so absence (undefined) fails the assertion.
     for (const w of TYPE_WORKERS) {
-      expect(s.workers.hired[w.id] ?? 0).toBe(0);
+      expect(s.workers.hired[w.id]).toBe(0);
     }
   });
 });
